@@ -1,0 +1,24 @@
+{
+  "sessionId": "2026-03-18-md-piece",
+  "projectId": "md-piece-1773806160005",
+  "projectName": "md.piece",
+  "initializedAt": "2026-03-18T03:56:00.016Z",
+  "lastActivity": "2026-03-18T03:56:00.016Z",
+  "currentCycle": 0,
+  "currentPhase": 1,
+  "synapticStrength": 0,
+  "enforcement": {
+    "mode": "STRICT",
+    "persistence": {
+      "enabled": true,
+      "autoValidate": true,
+      "rejectNonCompliant": true,
+      "violationThreshold": 3
+    }
+  },
+  "agentState": {
+    "complianceScore": 100,
+    "violationsCount": 0,
+    "successfulCycles": 0
+  }
+}
