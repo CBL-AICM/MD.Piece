@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import patients, doctors, symptoms
+from backend.routers import patients, doctors, symptoms
 
 app = FastAPI(title="MD.Piece API", version="1.0.0")
 
