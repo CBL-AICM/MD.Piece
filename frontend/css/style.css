@@ -79,3 +79,39 @@ button.primary:hover { background: #1558b0; }
   border-radius: 0 8px 8px 0;
   margin-top: 12px;
 }
+
+.contributor-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.contributor-card:last-child { border-bottom: none; }
+
+.contributor-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.contributor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.contributor-name {
+  font-weight: 600;
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.contributor-name:hover { text-decoration: underline; }
+
+.contributor-commits {
+  font-size: 0.85rem;
+  color: #666;
+}
