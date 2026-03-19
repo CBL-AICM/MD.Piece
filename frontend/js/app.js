@@ -1,9 +1,11 @@
 const API = "http://localhost:8000";
+const GITHUB_REPO = "human530/MD.Piece";
 
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients };
+  const pages = { home, symptoms, doctors, patients, contributors };
   app.innerHTML = pages[page]?.() || "";
+  if (page === "contributors") loadContributors();
 }
 
 function home() {
@@ -60,6 +62,34 @@ async function addPatient() {
   const data = await res.json();
   document.getElementById("patient-result").innerHTML =
     `<div class="advice-box">已新增：${data.name}，${data.age}歲</div>`;
+}
+
+function contributors() {
+  return `
+    <div class="card">
+      <h2>GitHub 貢獻者</h2>
+      <p style="margin-top:8px;color:#666">感謝所有為 MD.Piece 貢獻的開發者</p>
+      <div id="contributors-list" style="margin-top:16px">載入中...</div>
+    </div>`;
+}
+
+async function loadContributors() {
+  const list = document.getElementById("contributors-list");
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contributors`);
+    if (!res.ok) throw new Error("無法取得貢獻者資料");
+    const data = await res.json();
+    list.innerHTML = data.map(c => `
+      <div class="contributor-card">
+        <img src="${c.avatar_url}" alt="${c.login}" class="contributor-avatar" />
+        <div class="contributor-info">
+          <a href="${c.html_url}" target="_blank" rel="noopener noreferrer" class="contributor-name">${c.login}</a>
+          <span class="contributor-commits">${c.contributions} 次提交</span>
+        </div>
+      </div>`).join("");
+  } catch (e) {
+    list.innerHTML = `<p style="color:#d32f2f">${e.message}</p>`;
+  }
 }
 
 if ("serviceWorker" in navigator) {
