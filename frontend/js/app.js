@@ -1,15 +1,17 @@
 const API = "http://localhost:8000";
+const GITHUB_REPO = "human530/MD.Piece";
 
 // ─── 路由 ──────────────────────────────────────────────────
 
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records };
+  const pages = { home, symptoms, doctors, patients, records, contributors };
   app.innerHTML = pages[page]?.() || "";
   // 頁面載入後的初始化
   if (page === "doctors") loadDoctors();
   if (page === "patients") loadPatients();
   if (page === "records") loadRecordsPage();
+  if (page === "contributors") loadContributors();
 }
 
 // ─── 首頁 ──────────────────────────────────────────────────
@@ -334,6 +336,36 @@ async function deleteRecord(id) {
   if (!confirm("確定刪除此病歷？")) return;
   await fetch(`${API}/records/${id}`, { method: "DELETE" });
   searchRecords();
+}
+
+// ─── 貢獻者 ───────────────────────────────────────────────
+
+function contributors() {
+  return `
+    <div class="card">
+      <h2>GitHub 貢獻者</h2>
+      <p style="margin-top:8px;color:#666">感謝所有為 MD.Piece 貢獻的開發者</p>
+      <div id="contributors-list" style="margin-top:16px">載入中...</div>
+    </div>`;
+}
+
+async function loadContributors() {
+  const list = document.getElementById("contributors-list");
+  try {
+    const res = await fetch("https://api.github.com/repos/" + GITHUB_REPO + "/contributors");
+    if (!res.ok) throw new Error("無法取得貢獻者資料");
+    const data = await res.json();
+    list.innerHTML = data.map(function(c) {
+      return '<div class="contributor-card">' +
+        '<img src="' + c.avatar_url + '" alt="' + c.login + '" class="contributor-avatar" />' +
+        '<div class="contributor-info">' +
+        '<a href="' + c.html_url + '" target="_blank" rel="noopener noreferrer" class="contributor-name">' + c.login + '</a>' +
+        '<span class="contributor-commits">' + c.contributions + ' 次提交</span>' +
+        '</div></div>';
+    }).join("");
+  } catch (e) {
+    list.innerHTML = '<p style="color:#d32f2f">' + e.message + '</p>';
+  }
 }
 
 // ─── Service Worker ───────────────────────────────────────
