@@ -2,14 +2,17 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-SYMPTOM_ADVICE = {
-    "fever": "請多喝水、休息，若超過38.5°C請就醫",
-    "headache": "可服用止痛藥，若持續超過24小時請就醫",
-    "chest pain": "請立即就醫或撥打119",
-    "cough": "多休息、補充水分，持續超過一週請就醫",
-}
+# 症狀記錄 - 五層遞進問卷、人體輪廓圖、拍照記錄
 
-@router.get("/advice")
-def get_advice(symptom: str):
-    advice = SYMPTOM_ADVICE.get(symptom.lower(), "建議就醫，請諮詢醫師")
-    return {"symptom": symptom, "advice": advice}
+@router.get("/")
+def get_symptoms(patient_id: str):
+    return {"symptoms": []}
+
+@router.post("/")
+def create_symptom(patient_id: str, body_part: str, severity: int, description: str = ""):
+    return {"status": "recorded"}
+
+@router.get("/infection-check")
+def check_infection(patient_id: str):
+    # 每日感染篩查：發燒、呼吸道、泌尿道、皮膚、腸胃道
+    return {"infection_flag": False}

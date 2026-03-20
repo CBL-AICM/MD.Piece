@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "md-piece": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "python", "server.py"],
+      "cwd": "${workspaceFolder}/mcp_server"
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(uvicorn *)",
+      "Bash(python *)",
+      "Bash(pip *)",
+      "Bash(uv *)",
+      "Bash(npm *)",
+      "Bash(node *)"
+    ]
+  }
+}
