@@ -267,3 +267,17 @@ button.secondary:hover { background: #d2e3fc; }
   font-size: 0.85rem;
   color: #666;
 }
+
+/* ─── Department badge ──────────────────────────────────── */
+
+.dept-badge {
+  display: inline-block;
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 6px;
+  vertical-align: middle;
+}

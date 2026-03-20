@@ -5,12 +5,13 @@ const GITHUB_REPO = "human530/MD.Piece";
 
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records, contributors };
+  const pages = { home, symptoms, doctors, patients, records, departments, contributors };
   app.innerHTML = pages[page]?.() || "";
   // 頁面載入後的初始化
   if (page === "doctors") loadDoctors();
   if (page === "patients") loadPatients();
   if (page === "records") loadRecordsPage();
+  if (page === "departments") loadDepartments();
   if (page === "contributors") loadContributors();
 }
 
@@ -28,6 +29,7 @@ function home() {
       <p>• 病歷管理 - 建立與查詢就診記錄</p>
       <p>• 醫師列表 - 管理醫師資料</p>
       <p>• 病患管理 - 管理病患資料</p>
+      <p>• 科別管理 - 管理醫院科別與科別醫師</p>
     </div>`;
 }
 
@@ -112,6 +114,7 @@ function doctors() {
       <input id="d-name" placeholder="醫師姓名" />
       <input id="d-specialty" placeholder="專科（例如：內科、外科）" />
       <input id="d-phone" placeholder="電話（選填）" />
+      <select id="d-department"><option value="">選擇科別（選填）</option></select>
       <button class="primary" onclick="addDoctor()">新增</button>
     </div>
     <div class="card">
@@ -121,16 +124,31 @@ function doctors() {
 }
 
 async function loadDoctors() {
-  const res = await fetch(`${API}/doctors/`);
-  const data = await res.json();
+  const [dRes, deptRes] = await Promise.all([
+    fetch(`${API}/doctors/`).then(r => r.json()),
+    fetch(`${API}/departments/`).then(r => r.json()).catch(() => ({ departments: [] })),
+  ]);
+
+  // 填入科別 dropdown
+  const deptSelect = document.getElementById("d-department");
+  if (deptSelect) {
+    const opts = (deptRes.departments || []).map(d =>
+      `<option value="${d.id}">${d.name}</option>`
+    ).join("");
+    deptSelect.innerHTML = `<option value="">選擇科別（選填）</option>${opts}`;
+  }
+
+  const deptMap = Object.fromEntries((deptRes.departments || []).map(d => [d.id, d.name]));
+
   const el = document.getElementById("doctor-list");
-  if (!data.doctors?.length) {
+  if (!dRes.doctors?.length) {
     el.innerHTML = "<p>尚無醫師資料</p>";
     return;
   }
-  el.innerHTML = data.doctors.map(d => `
+  el.innerHTML = dRes.doctors.map(d => `
     <div class="record-card">
       <strong>${d.name}</strong> — ${d.specialty}
+      ${d.department_id ? `<span class="dept-badge">${deptMap[d.department_id] || ""}</span>` : ""}
       ${d.phone ? `<span style="color:#666"> | ${d.phone}</span>` : ""}
       <button class="btn-delete" onclick="deleteDoctor('${d.id}')">刪除</button>
     </div>
@@ -141,16 +159,18 @@ async function addDoctor() {
   const name = document.getElementById("d-name").value;
   const specialty = document.getElementById("d-specialty").value;
   const phone = document.getElementById("d-phone").value || undefined;
+  const department_id = document.getElementById("d-department")?.value || undefined;
   if (!name || !specialty) return;
   await fetch(`${API}/doctors/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, specialty, phone }),
+    body: JSON.stringify({ name, specialty, phone, department_id }),
   });
   loadDoctors();
   document.getElementById("d-name").value = "";
   document.getElementById("d-specialty").value = "";
   document.getElementById("d-phone").value = "";
+  if (document.getElementById("d-department")) document.getElementById("d-department").value = "";
 }
 
 async function deleteDoctor(id) {
@@ -336,6 +356,103 @@ async function deleteRecord(id) {
   if (!confirm("確定刪除此病歷？")) return;
   await fetch(`${API}/records/${id}`, { method: "DELETE" });
   searchRecords();
+}
+
+// ─── 科別管理 ─────────────────────────────────────────────
+
+function departments() {
+  return `
+    <div class="card">
+      <h2>新增科別</h2>
+      <input id="dept-name" placeholder="科別名稱（例如：心臟科）" />
+      <input id="dept-code" placeholder="代碼（選填，例如：CA）" />
+      <input id="dept-desc" placeholder="說明（選填）" />
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="primary" onclick="addDepartment()">新增</button>
+        <button class="secondary" onclick="seedDepartments()">初始化預設科別</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>科別列表</h2>
+      <div id="dept-list"><p>載入中...</p></div>
+    </div>
+    <div class="card" id="dept-detail-card" style="display:none">
+      <div id="dept-detail"></div>
+    </div>`;
+}
+
+async function loadDepartments() {
+  const res = await fetch(`${API}/departments/`);
+  const data = await res.json();
+  const el = document.getElementById("dept-list");
+  if (!data.departments?.length) {
+    el.innerHTML = '<p>尚無科別資料。點「初始化預設科別」快速建立常用科別。</p>';
+    return;
+  }
+  el.innerHTML = data.departments.map(d => `
+    <div class="record-card" style="cursor:pointer" onclick="loadDepartmentDetail('${d.id}')">
+      <strong>${d.name}</strong>
+      ${d.code ? `<span class="dept-badge">${d.code}</span>` : ""}
+      ${d.description ? `<span style="color:#666;font-size:0.85rem"> — ${d.description}</span>` : ""}
+      <button class="btn-delete" onclick="event.stopPropagation();deleteDepartment('${d.id}')">刪除</button>
+    </div>
+  `).join("");
+}
+
+async function loadDepartmentDetail(deptId) {
+  const res = await fetch(`${API}/departments/${deptId}/doctors`);
+  const data = await res.json();
+  const card = document.getElementById("dept-detail-card");
+  const detail = document.getElementById("dept-detail");
+  card.style.display = "block";
+  const doctorList = data.doctors?.length
+    ? data.doctors.map(d => `<div class="record-card"><strong>${d.name}</strong> — ${d.specialty}${d.phone ? ` | ${d.phone}` : ""}</div>`).join("")
+    : "<p>此科別尚無醫師</p>";
+  detail.innerHTML = `
+    <h3>${data.department.name} 科別醫師</h3>
+    ${data.department.description ? `<p style="color:#666;margin-bottom:8px">${data.department.description}</p>` : ""}
+    ${doctorList}`;
+  card.scrollIntoView({ behavior: "smooth" });
+}
+
+async function addDepartment() {
+  const name = document.getElementById("dept-name").value;
+  const code = document.getElementById("dept-code").value || undefined;
+  const description = document.getElementById("dept-desc").value || undefined;
+  if (!name) return;
+  await fetch(`${API}/departments/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, code, description }),
+  });
+  loadDepartments();
+  document.getElementById("dept-name").value = "";
+  document.getElementById("dept-code").value = "";
+  document.getElementById("dept-desc").value = "";
+}
+
+async function deleteDepartment(id) {
+  if (!confirm("確定刪除此科別？")) return;
+  await fetch(`${API}/departments/${id}`, { method: "DELETE" });
+  loadDepartments();
+  document.getElementById("dept-detail-card").style.display = "none";
+}
+
+async function seedDepartments() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = "初始化中...";
+  try {
+    const res = await fetch(`${API}/departments/seed`, { method: "POST" });
+    const data = await res.json();
+    alert(data.message);
+    loadDepartments();
+  } catch (e) {
+    alert("初始化失敗，請確認後端是否啟動");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "初始化預設科別";
+  }
 }
 
 // ─── 貢獻者 ───────────────────────────────────────────────

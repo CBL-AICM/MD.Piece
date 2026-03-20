@@ -2,6 +2,20 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
+# ─── Department ────────────────────────────────────────────
+
+class DepartmentCreate(BaseModel):
+    name: str
+    code: str | None = None
+    description: str | None = None
+
+
+class DepartmentUpdate(BaseModel):
+    name: str | None = None
+    code: str | None = None
+    description: str | None = None
+
+
 # ─── Patient ───────────────────────────────────────────────
 
 class PatientCreate(BaseModel):
@@ -24,12 +38,14 @@ class DoctorCreate(BaseModel):
     name: str
     specialty: str
     phone: str | None = None
+    department_id: str | None = None
 
 
 class DoctorUpdate(BaseModel):
     name: str | None = None
     specialty: str | None = None
     phone: str | None = None
+    department_id: str | None = None
 
 
 # ─── Medical Record ───────────────────────────────────────
