@@ -4,6 +4,7 @@ const GITHUB_REPO = "human530/MD.Piece";
 // ─── 路由 ──────────────────────────────────────────────────
 
 function showPage(page) {
+  currentPage = page;
   const app = document.getElementById("app");
   const pages = { home, symptoms, doctors, patients, records, contributors };
   app.innerHTML = pages[page]?.() || "";
@@ -366,6 +367,100 @@ async function loadContributors() {
   } catch (e) {
     list.innerHTML = '<p style="color:#d32f2f">' + e.message + '</p>';
   }
+}
+
+// ─── 鍵盤快捷鍵 ──────────────────────────────────────────
+
+const PAGE_SHORTCUTS = {
+  "1": "home",
+  "2": "symptoms",
+  "3": "records",
+  "4": "doctors",
+  "5": "patients",
+  "6": "contributors",
+};
+
+document.addEventListener("keydown", function (e) {
+  // 如果焦點在輸入框，只處理 Enter 和 Escape
+  const tag = e.target.tagName;
+  const isInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+  // Escape：回首頁或取消焦點
+  if (e.key === "Escape") {
+    if (isInput) {
+      e.target.blur();
+    } else {
+      showPage("home");
+    }
+    return;
+  }
+
+  // Enter：在輸入框中觸發對應頁面的提交
+  if (e.key === "Enter" && isInput && !e.ctrlKey && !e.metaKey) {
+    if (tag === "TEXTAREA") return; // textarea 允許換行
+    e.preventDefault();
+    const page = getCurrentPage();
+    if (page === "symptoms") analyzeSymptoms();
+    else if (page === "doctors") addDoctor();
+    else if (page === "patients") addPatient();
+    else if (page === "records") {
+      if (e.target.id === "filter-diagnosis") searchRecords();
+      else addRecord();
+    }
+    return;
+  }
+
+  // 數字鍵切換頁面（不在輸入框時）
+  if (!isInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const page = PAGE_SHORTCUTS[e.key];
+    if (page) {
+      e.preventDefault();
+      showPage(page);
+      return;
+    }
+
+    // ? 鍵顯示快捷鍵說明
+    if (e.key === "?" || e.key === "/") {
+      e.preventDefault();
+      toggleShortcutHelp();
+    }
+  }
+});
+
+let currentPage = "home";
+function getCurrentPage() {
+  return currentPage;
+}
+
+function toggleShortcutHelp() {
+  let overlay = document.getElementById("shortcut-help");
+  if (overlay) {
+    overlay.remove();
+    return;
+  }
+  overlay = document.createElement("div");
+  overlay.id = "shortcut-help";
+  overlay.className = "shortcut-overlay";
+  overlay.innerHTML = `
+    <div class="shortcut-dialog">
+      <h3>鍵盤快捷鍵</h3>
+      <table>
+        <tr><td><kbd>1</kbd></td><td>首頁</td></tr>
+        <tr><td><kbd>2</kbd></td><td>症狀分析</td></tr>
+        <tr><td><kbd>3</kbd></td><td>病歷管理</td></tr>
+        <tr><td><kbd>4</kbd></td><td>醫師列表</td></tr>
+        <tr><td><kbd>5</kbd></td><td>病患管理</td></tr>
+        <tr><td><kbd>6</kbd></td><td>貢獻者</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>提交表單</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>回首頁 / 取消焦點</td></tr>
+        <tr><td><kbd>?</kbd></td><td>顯示/隱藏此說明</td></tr>
+      </table>
+      <button class="primary" onclick="toggleShortcutHelp()">關閉</button>
+    </div>`;
+  overlay.addEventListener("click", function (ev) {
+    if (ev.target === overlay) toggleShortcutHelp();
+  });
+  document.body.appendChild(overlay);
 }
 
 // ─── Service Worker ───────────────────────────────────────
