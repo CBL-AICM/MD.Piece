@@ -316,6 +316,82 @@ async def get_symptom_history(patient_id: str) -> str:
     return "\n".join(lines)
 
 
+# ─── 科別工具 ──────────────────────────────────────────────
+
+@mcp.tool()
+async def get_departments() -> str:
+    """取得所有科別列表。"""
+    data = await api_get("/departments/")
+    if data is None:
+        return "無法取得科別資料，請確認 MD.Piece backend 是否已啟動。"
+    departments = data.get("departments", [])
+    if not departments:
+        return "目前沒有任何科別記錄。可執行 seed_departments() 初始化預設科別。"
+    lines = []
+    for d in departments:
+        line = f"- {d['name']}"
+        if d.get("code"):
+            line += f"（{d['code']}）"
+        if d.get("description"):
+            line += f" — {d['description']}"
+        line += f" ID: {d['id']}"
+        lines.append(line)
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def get_department_doctors(department_id: str) -> str:
+    """取得某科別下的所有醫師。
+
+    Args:
+        department_id: 科別 UUID
+    """
+    data = await api_get(f"/departments/{department_id}/doctors")
+    if data is None:
+        return "無法取得科別醫師資料。"
+    dept = data.get("department", {})
+    doctors = data.get("doctors", [])
+    lines = [f"科別：{dept.get('name', '未知')}"]
+    if not doctors:
+        lines.append("此科別目前沒有醫師。")
+    else:
+        for d in doctors:
+            line = f"- {d['name']}（{d['specialty']}）ID: {d['id']}"
+            if d.get("phone"):
+                line += f" | {d['phone']}"
+            lines.append(line)
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def create_department(name: str, code: str = "", description: str = "") -> str:
+    """建立新科別。
+
+    Args:
+        name: 科別名稱（例如：心臟科）
+        code: 代碼（選填，例如：CA）
+        description: 說明（選填）
+    """
+    body: dict[str, Any] = {"name": name}
+    if code:
+        body["code"] = code
+    if description:
+        body["description"] = description
+    data = await api_post("/departments/", body)
+    if data is None:
+        return "建立科別失敗。"
+    return f"科別已建立：{data.get('name')}，ID: {data.get('id')}"
+
+
+@mcp.tool()
+async def seed_departments() -> str:
+    """初始化 15 個預設科別（重複執行安全）。"""
+    data = await api_post("/departments/seed", {})
+    if data is None:
+        return "初始化失敗，請確認 MD.Piece backend 是否已啟動。"
+    return data.get("message", "完成")
+
+
 # ─── 啟動 ──────────────────────────────────────────────────
 
 def main():
