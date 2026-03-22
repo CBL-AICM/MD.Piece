@@ -293,6 +293,111 @@ async def analyze_symptoms(symptoms: str, patient_id: str = "") -> str:
 
 
 @mcp.tool()
+async def get_experiments(kept: str = "") -> str:
+    """取得 AutoResearch 實驗結果清單。
+
+    Args:
+        kept: 篩選條件（選填："true" 只顯示保留的，"false" 只顯示還原的）
+    """
+    params = f"?kept={kept}" if kept in ("true", "false") else ""
+    data = await api_get(f"/research/{params}")
+    if data is None:
+        return "無法取得實驗資料，請確認 MD.Piece backend 是否已啟動。"
+    experiments = data.get("experiments", [])
+    if not experiments:
+        return "目前沒有任何實驗結果。請從 Colab 執行訓練後回傳。"
+    lines = []
+    for e in experiments:
+        metrics = []
+        if e.get("val_bpb") is not None:
+            metrics.append(f"bpb={e['val_bpb']:.4f}")
+        if e.get("train_loss") is not None:
+            metrics.append(f"loss={e['train_loss']:.4f}")
+        if e.get("steps"):
+            metrics.append(f"{e['steps']} steps")
+        status = "kept" if e.get("kept") else ("reverted" if e.get("kept") is False else "")
+        date = (e.get("submitted_at") or "")[:10]
+        line = f"- {e['name']} [{status}] {' | '.join(metrics)} ({date})"
+        lines.append(line)
+    return f"共 {len(experiments)} 個實驗：\n" + "\n".join(lines)
+
+
+@mcp.tool()
+async def get_experiment_stats() -> str:
+    """取得 AutoResearch 實驗統計摘要：最佳成績、改善率、訓練時間等。"""
+    data = await api_get("/research/stats")
+    if data is None:
+        return "無法取得統計資料。"
+    lines = [
+        f"總實驗數: {data.get('total', 0)}",
+        f"有 bpb 數據: {data.get('with_bpb', 0)}",
+        f"最佳 val_bpb: {data.get('best_bpb', 'N/A')} ({data.get('best_experiment', 'N/A')})",
+        f"保留: {data.get('kept_count', 0)} | 還原: {data.get('reverted_count', 0)}",
+        f"改善率: {data.get('improvement_rate', 'N/A')}%",
+        f"總訓練時間: {data.get('total_duration_hours', 0)} 小時",
+    ]
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def get_experiment_leaderboard(top_n: int = 5) -> str:
+    """取得 val_bpb 排行榜（越低越好）。
+
+    Args:
+        top_n: 顯示前幾名（預設 5）
+    """
+    data = await api_get(f"/research/leaderboard?top_n={top_n}")
+    if data is None:
+        return "無法取得排行榜資料。"
+    ranking = data.get("leaderboard", [])
+    if not ranking:
+        return "尚無排行資料。"
+    lines = []
+    for r in ranking:
+        dur = f"{r['duration_seconds']:.0f}s" if r.get("duration_seconds") else "-"
+        lines.append(f"#{r['rank']} {r['name']}: bpb={r['val_bpb']:.4f} ({dur})")
+    return f"Top {len(ranking)} 排行榜：\n" + "\n".join(lines)
+
+
+@mcp.tool()
+async def submit_experiment_result(
+    name: str,
+    val_bpb: float = 0,
+    train_loss: float = 0,
+    steps: int = 0,
+    duration_seconds: float = 0,
+    notes: str = "",
+    kept: bool = False,
+) -> str:
+    """提交 AutoResearch 實驗結果。
+
+    Args:
+        name: 實驗名稱
+        val_bpb: 驗證 bits-per-byte 分數
+        train_loss: 訓練損失
+        steps: 訓練步數
+        duration_seconds: 訓練時間（秒）
+        notes: 備註
+        kept: 是否保留此實驗
+    """
+    body = {"name": name, "kept": kept}
+    if val_bpb:
+        body["val_bpb"] = val_bpb
+    if train_loss:
+        body["train_loss"] = train_loss
+    if steps:
+        body["steps"] = steps
+    if duration_seconds:
+        body["duration_seconds"] = duration_seconds
+    if notes:
+        body["notes"] = notes
+    data = await api_post("/research/", body)
+    if data is None:
+        return "提交實驗結果失敗。"
+    return f"實驗已提交：{data.get('message', name)}"
+
+
+@mcp.tool()
 async def get_symptom_history(patient_id: str) -> str:
     """取得病患的 AI 症狀分析歷史。
 
