@@ -347,24 +347,39 @@ function research() {
     <div class="card">
       <h2>AutoResearch 實驗管理</h2>
       <p style="margin-top:8px;color:#666">
-        此環境無 GPU。請在 Google Colab 執行訓練，結果會自動回傳至此頁面。
+        基於 <a href="https://github.com/karpathy/autoresearch" target="_blank">karpathy/autoresearch</a> —
+        AI Agent 自動修改模型、訓練、評估、保留最佳結果。
       </p>
-      <div style="display:flex;gap:8px;margin-top:12px">
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="primary" onclick="loadExperiments()">重新整理</button>
         <button class="secondary" onclick="checkGpuStatus()">檢查 GPU 狀態</button>
+        <button class="secondary" onclick="document.getElementById('tsv-upload').click()">匯入 results.tsv</button>
+        <input type="file" id="tsv-upload" accept=".tsv,.csv" style="display:none" onchange="uploadTsv(this)" />
       </div>
       <div id="gpu-status"></div>
     </div>
     <div class="card">
+      <h3>val_bpb 趨勢</h3>
+      <div id="bpb-chart" style="position:relative;height:200px;margin:12px 0">
+        <canvas id="bpb-canvas" style="width:100%;height:100%"></canvas>
+      </div>
+      <div id="best-bpb" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
       <h3>手動提交實驗結果</h3>
       <input id="exp-name" placeholder="實驗名稱（例如：baseline-run-1）" />
-      <input id="exp-bpb" type="number" step="0.001" placeholder="val_bpb 分數" />
-      <input id="exp-loss" type="number" step="0.001" placeholder="train_loss" />
-      <input id="exp-steps" type="number" placeholder="訓練步數" />
-      <input id="exp-duration" type="number" placeholder="訓練時間（秒）" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input id="exp-bpb" type="number" step="0.001" placeholder="val_bpb 分數" />
+        <input id="exp-loss" type="number" step="0.001" placeholder="train_loss" />
+        <input id="exp-steps" type="number" placeholder="訓練步數" />
+        <input id="exp-duration" type="number" placeholder="訓練時間（秒）" />
+      </div>
       <textarea id="exp-notes" placeholder="備註（模型設定、觀察等）"></textarea>
       <input id="exp-colab" placeholder="Colab 連結（選填）" />
-      <button class="primary" onclick="submitExperiment()">提交結果</button>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <label style="font-size:0.9rem"><input type="checkbox" id="exp-kept" /> 保留此實驗</label>
+        <button class="primary" onclick="submitExperiment()">提交結果</button>
+      </div>
     </div>
     <div class="card">
       <h3>實驗結果</h3>
@@ -374,11 +389,29 @@ function research() {
 
 async function loadExperiments() {
   try {
-    const res = await fetch(API + "/research/");
-    const data = await res.json();
-    const el = document.getElementById("experiment-list");
+    var [listRes, statsRes] = await Promise.all([
+      fetch(API + "/research/"),
+      fetch(API + "/research/stats"),
+    ]);
+    var data = await listRes.json();
+    var stats = await statsRes.json();
+
+    // 畫圖表
+    renderBpbChart(stats.chart_data || []);
+
+    // 顯示最佳結果
+    var bestEl = document.getElementById("best-bpb");
+    if (bestEl && stats.best_bpb != null) {
+      bestEl.innerHTML = '<div class="advice-box">' +
+        '<strong>最佳 val_bpb：</strong>' + stats.best_bpb.toFixed(4) +
+        ' (' + stats.best_experiment + ')' +
+        ' — 共 ' + stats.total + ' 個實驗，' + stats.with_bpb + ' 個有 bpb 數據</div>';
+    }
+
+    // 顯示實驗列表
+    var el = document.getElementById("experiment-list");
     if (!data.experiments?.length) {
-      el.innerHTML = "<p>尚無實驗結果。請從 Colab 執行訓練後回傳。</p>";
+      el.innerHTML = "<p>尚無實驗結果。請從 Colab 執行訓練後回傳，或匯入 results.tsv。</p>";
       return;
     }
     el.innerHTML = data.experiments.map(function(e) {
@@ -387,9 +420,14 @@ async function loadExperiments() {
       if (e.train_loss != null) metrics.push("loss: " + e.train_loss);
       if (e.steps != null) metrics.push(e.steps + " steps");
       if (e.duration_seconds != null) metrics.push(Math.round(e.duration_seconds) + "s");
+      var keptBadge = e.kept === true
+        ? '<span class="urgency-badge urgency-low" style="font-size:0.75rem;padding:2px 8px">kept</span>'
+        : e.kept === false
+        ? '<span class="urgency-badge urgency-high" style="font-size:0.75rem;padding:2px 8px">reverted</span>'
+        : '';
       return '<div class="record-card">' +
         '<div class="record-header">' +
-        '<strong>' + e.name + '</strong> — ' + (e.submitted_at || "").slice(0, 10) +
+        '<strong>' + e.name + '</strong> ' + keptBadge + ' — ' + (e.submitted_at || "").slice(0, 10) +
         '<button class="btn-delete" onclick="deleteExperiment(\'' + e.id + '\')">刪除</button>' +
         '</div>' +
         (metrics.length ? '<p>' + metrics.join(' | ') + '</p>' : '') +
@@ -403,6 +441,79 @@ async function loadExperiments() {
   }
 }
 
+function renderBpbChart(chartData) {
+  var canvas = document.getElementById("bpb-canvas");
+  if (!canvas || !chartData.length) {
+    var chartDiv = document.getElementById("bpb-chart");
+    if (chartDiv) chartDiv.innerHTML = '<p style="color:#888;text-align:center;padding:40px 0">尚無 val_bpb 數據</p>';
+    return;
+  }
+  var ctx = canvas.getContext("2d");
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * (window.devicePixelRatio || 1);
+  canvas.height = rect.height * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  var W = rect.width, H = rect.height;
+  var pad = { top: 10, right: 20, bottom: 30, left: 50 };
+
+  var vals = chartData.map(function(d) { return d.val_bpb; });
+  var minV = Math.min.apply(null, vals);
+  var maxV = Math.max.apply(null, vals);
+  var range = maxV - minV || 0.1;
+  minV -= range * 0.1;
+  maxV += range * 0.1;
+
+  var plotW = W - pad.left - pad.right;
+  var plotH = H - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Y axis
+  ctx.strokeStyle = "#ddd";
+  ctx.fillStyle = "#888";
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "right";
+  for (var i = 0; i <= 4; i++) {
+    var yVal = minV + (maxV - minV) * (1 - i / 4);
+    var yPos = pad.top + plotH * (i / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, yPos);
+    ctx.lineTo(W - pad.right, yPos);
+    ctx.stroke();
+    ctx.fillText(yVal.toFixed(3), pad.left - 5, yPos + 4);
+  }
+
+  // Plot line
+  ctx.strokeStyle = "#1a73e8";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (var j = 0; j < chartData.length; j++) {
+    var x = pad.left + (plotW * j / Math.max(chartData.length - 1, 1));
+    var y = pad.top + plotH * (1 - (chartData[j].val_bpb - minV) / (maxV - minV));
+    if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Dots
+  for (var k = 0; k < chartData.length; k++) {
+    var dx = pad.left + (plotW * k / Math.max(chartData.length - 1, 1));
+    var dy = pad.top + plotH * (1 - (chartData[k].val_bpb - minV) / (maxV - minV));
+    ctx.beginPath();
+    ctx.arc(dx, dy, 4, 0, Math.PI * 2);
+    ctx.fillStyle = chartData[k].kept ? "#43a047" : "#ef5350";
+    ctx.fill();
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // X label
+  ctx.fillStyle = "#888";
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Experiments", W / 2, H - 5);
+}
+
 async function submitExperiment() {
   var name = document.getElementById("exp-name").value;
   if (!name) { alert("請輸入實驗名稱"); return; }
@@ -414,6 +525,7 @@ async function submitExperiment() {
     duration_seconds: parseFloat(document.getElementById("exp-duration").value) || undefined,
     notes: document.getElementById("exp-notes").value || undefined,
     colab_url: document.getElementById("exp-colab").value || undefined,
+    kept: document.getElementById("exp-kept").checked,
   };
   await fetch(API + "/research/", {
     method: "POST",
@@ -425,6 +537,22 @@ async function submitExperiment() {
     var el = document.getElementById(id);
     if (el) el.value = "";
   });
+  document.getElementById("exp-kept").checked = false;
+}
+
+async function uploadTsv(input) {
+  if (!input.files.length) return;
+  var formData = new FormData();
+  formData.append("file", input.files[0]);
+  try {
+    var res = await fetch(API + "/research/batch", { method: "POST", body: formData });
+    var data = await res.json();
+    alert("匯入成功：" + data.count + " 個實驗");
+    loadExperiments();
+  } catch (e) {
+    alert("匯入失敗：" + e.message);
+  }
+  input.value = "";
 }
 
 async function deleteExperiment(id) {
