@@ -144,12 +144,14 @@ def compare_experiments(
     if len(id_list) < 2:
         raise HTTPException(status_code=400, detail="至少需要 2 個實驗 ID")
 
-    try:
-        res = supabase.table("experiments").select("*").in_("id", id_list).execute()
-        results = res.data or []
-    except Exception as e:
-        logger.error(f"Failed to fetch experiments for compare: {e}")
-        results = []
+    results = []
+    for exp_id in id_list:
+        try:
+            res = supabase.table("experiments").select("*").eq("id", exp_id).execute()
+            if res.data:
+                results.append(res.data[0])
+        except Exception as e:
+            logger.error(f"Failed to fetch experiment {exp_id}: {e}")
 
     if len(results) < 2:
         raise HTTPException(status_code=404, detail="找不到足夠的實驗來比較")
@@ -162,79 +164,6 @@ def compare_experiments(
         "experiments": results,
         "best_bpb": best_bpb,
         "best_experiment": next((e["name"] for e in results if e.get("val_bpb") == best_bpb), None),
-    }
-
-
-@router.get("/dashboard")
-def dashboard(top_n: int = Query(5, description="排行榜前 N 名")):
-    """一次取得實驗列表、統計、排行榜（避免 3 次重複查詢）"""
-    experiments = _fetch_experiments()
-    sorted_exps = sorted(experiments, key=lambda e: e.get("submitted_at", ""))
-
-    # --- stats ---
-    chart_data = []
-    best_bpb = None
-    best_name = None
-    kept_count = 0
-    reverted_count = 0
-    total_duration = 0.0
-
-    for e in sorted_exps:
-        if e.get("kept") is True:
-            kept_count += 1
-        elif e.get("kept") is False:
-            reverted_count += 1
-        if e.get("duration_seconds"):
-            total_duration += e["duration_seconds"]
-        if e.get("val_bpb") is not None:
-            chart_data.append({
-                "name": e["name"],
-                "val_bpb": e["val_bpb"],
-                "train_loss": e.get("train_loss"),
-                "submitted_at": e.get("submitted_at"),
-                "kept": e.get("kept"),
-                "steps": e.get("steps"),
-                "duration_seconds": e.get("duration_seconds"),
-            })
-            if best_bpb is None or e["val_bpb"] < best_bpb:
-                best_bpb = e["val_bpb"]
-                best_name = e["name"]
-
-    decided = kept_count + reverted_count
-    improvement_rate = round(kept_count / decided * 100, 1) if decided > 0 else None
-
-    stats = {
-        "total": len(experiments),
-        "with_bpb": len(chart_data),
-        "best_bpb": best_bpb,
-        "best_experiment": best_name,
-        "kept_count": kept_count,
-        "reverted_count": reverted_count,
-        "improvement_rate": improvement_rate,
-        "total_duration_hours": round(total_duration / 3600, 2) if total_duration else 0,
-        "chart_data": chart_data,
-    }
-
-    # --- leaderboard ---
-    with_bpb = [e for e in experiments if e.get("val_bpb") is not None]
-    with_bpb.sort(key=lambda e: e["val_bpb"])
-    ranking = []
-    for i, e in enumerate(with_bpb[:top_n]):
-        ranking.append({
-            "rank": i + 1,
-            "name": e["name"],
-            "val_bpb": e["val_bpb"],
-            "train_loss": e.get("train_loss"),
-            "steps": e.get("steps"),
-            "duration_seconds": e.get("duration_seconds"),
-            "kept": e.get("kept"),
-            "submitted_at": e.get("submitted_at"),
-        })
-
-    return {
-        "experiments": experiments,
-        "stats": stats,
-        "leaderboard": ranking,
     }
 
 

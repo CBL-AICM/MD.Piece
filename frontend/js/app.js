@@ -450,13 +450,16 @@ var _allExperiments = [];
 
 async function loadExperiments() {
   try {
-    var dashRes = await fetch(API + "/research/dashboard?top_n=5");
-    var dash = await dashRes.json();
+    var [listRes, statsRes, lbRes] = await Promise.all([
+      fetch(API + "/research/"),
+      fetch(API + "/research/stats"),
+      fetch(API + "/research/leaderboard?top_n=5"),
+    ]);
+    var data = await listRes.json();
+    var stats = await statsRes.json();
+    var lb = await lbRes.json();
 
-    var stats = dash.stats;
-    var lb = { leaderboard: dash.leaderboard };
-
-    _allExperiments = dash.experiments || [];
+    _allExperiments = data.experiments || [];
 
     // 統計卡片
     renderStatsCards(stats);

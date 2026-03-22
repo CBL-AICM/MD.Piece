@@ -37,9 +37,9 @@ async def analyze(body: SymptomAnalysisRequest):
 
     # 如果有 patient_id，取得病患資料作為參考
     patient_info = None
-    sb = get_supabase() if body.patient_id else None
     if body.patient_id:
-        result = sb.table("patients").select("age,gender").eq("id", body.patient_id).execute()
+        sb = get_supabase()
+        result = sb.table("patients").select("name,age,gender").eq("id", body.patient_id).execute()
         if result.data:
             patient_info = result.data[0]
 
@@ -52,6 +52,7 @@ async def analyze(body: SymptomAnalysisRequest):
 
     # 記錄到 symptoms_log
     if body.patient_id:
+        sb = get_supabase()
         sb.table("symptoms_log").insert({
             "patient_id": body.patient_id,
             "symptoms": body.symptoms,
