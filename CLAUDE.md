@@ -38,6 +38,11 @@ md.piece/
 ├── frontend/                    # PWA 前端（HTML/CSS/JS）
 ├── mcp_server/
 │   └── server.py                # MCP server（連接 backend）
+├── autoresearch/                # 自動研究模組（基於 karpathy/autoresearch）
+│   ├── prepare.py               # 資料準備與 tokenizer（不可修改）
+│   ├── train.py                 # 訓練腳本（AI agent 修改此檔）
+│   ├── program.md               # Agent 指令
+│   └── pyproject.toml           # 依賴
 ├── docs/                        # 專案文件
 ├── config/                      # 設定檔
 └── tests/                       # 測試
@@ -60,6 +65,11 @@ pip install -r backend/requirements.txt
 
 # 安裝 MCP server 依賴
 cd mcp_server && uv sync
+
+# 自動研究模組（需要 NVIDIA GPU）
+cd autoresearch && uv sync
+uv run prepare.py          # 一次性資料準備
+uv run train.py            # 執行訓練實驗（5 分鐘）
 ```
 
 ---
