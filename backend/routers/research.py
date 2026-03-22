@@ -5,11 +5,27 @@ from datetime import datetime
 import csv
 import io
 import logging
-
-from backend.services.supabase_service import supabase
+import os
+import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Supabase or in-memory fallback
+_use_memory = False
+_memory_store: list = []  # in-memory fallback for experiments
+_memory_counter = 0
+
+try:
+    from backend.services.supabase_service import supabase as _sb_client
+    # Test if Supabase is actually configured
+    if not (os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_KEY")):
+        raise RuntimeError("No credentials")
+    supabase = _sb_client
+except Exception:
+    supabase = None
+    _use_memory = True
+    logger.warning("Supabase unavailable — research router using in-memory storage")
 
 
 class ExperimentSubmit(BaseModel):
@@ -26,13 +42,47 @@ class ExperimentSubmit(BaseModel):
 
 
 def _fetch_experiments():
-    """從 Supabase 取得所有實驗（按時間倒序）"""
+    """從 Supabase 或記憶體取得所有實驗（按時間倒序）"""
+    if _use_memory:
+        return sorted(_memory_store, key=lambda e: e.get("submitted_at", ""), reverse=True)
     try:
         res = supabase.table("experiments").select("*").order("submitted_at", desc=True).execute()
         return res.data or []
     except Exception as e:
         logger.error(f"Failed to fetch experiments: {e}")
         return []
+
+
+def _insert_experiment(row: dict):
+    """插入實驗到 Supabase 或記憶體"""
+    if _use_memory:
+        row["id"] = str(uuid.uuid4())
+        _memory_store.append(row)
+        return row
+    res = supabase.table("experiments").insert(row).execute()
+    return res.data[0] if res.data else row
+
+
+def _delete_experiment_by_id(exp_id: str):
+    """刪除實驗"""
+    if _use_memory:
+        for i, e in enumerate(_memory_store):
+            if e.get("id") == exp_id:
+                return _memory_store.pop(i)
+        return None
+    res = supabase.table("experiments").delete().eq("id", exp_id).execute()
+    return res.data[0] if res.data else None
+
+
+def _get_experiment_by_id(exp_id: str):
+    """取得單一實驗"""
+    if _use_memory:
+        for e in _memory_store:
+            if e.get("id") == exp_id:
+                return e
+        return None
+    res = supabase.table("experiments").select("*").eq("id", exp_id).execute()
+    return res.data[0] if res.data else None
 
 
 @router.get("/")
@@ -147,9 +197,9 @@ def compare_experiments(
     results = []
     for exp_id in id_list:
         try:
-            res = supabase.table("experiments").select("*").eq("id", exp_id).execute()
-            if res.data:
-                results.append(res.data[0])
+            exp = _get_experiment_by_id(exp_id)
+            if exp:
+                results.append(exp)
         except Exception as e:
             logger.error(f"Failed to fetch experiment {exp_id}: {e}")
 
@@ -194,13 +244,13 @@ def gpu_status():
 def get_experiment(experiment_id: str):
     """取得單一實驗結果"""
     try:
-        res = supabase.table("experiments").select("*").eq("id", experiment_id).execute()
+        exp = _get_experiment_by_id(experiment_id)
     except Exception as e:
         logger.error(f"Failed to fetch experiment {experiment_id}: {e}")
         raise HTTPException(status_code=500, detail="Database error")
-    if not res.data:
+    if not exp:
         raise HTTPException(status_code=404, detail="Experiment not found")
-    return res.data[0]
+    return exp
 
 
 @router.post("/")
@@ -219,11 +269,11 @@ def submit_experiment(data: ExperimentSubmit):
         "submitted_at": datetime.utcnow().isoformat(),
     }
     try:
-        res = supabase.table("experiments").insert(row).execute()
+        saved = _insert_experiment(row)
     except Exception as e:
         logger.error(f"Failed to insert experiment: {e}")
         raise HTTPException(status_code=500, detail="Failed to save experiment")
-    return {"message": "Experiment submitted", "experiment": res.data[0] if res.data else row}
+    return {"message": "Experiment submitted", "experiment": saved}
 
 
 @router.post("/batch")
@@ -247,7 +297,7 @@ async def batch_import_tsv(file: UploadFile = File(...)):
             "submitted_at": row.get("timestamp", datetime.utcnow().isoformat()),
         }
         try:
-            supabase.table("experiments").insert(exp).execute()
+            _insert_experiment(exp)
             imported += 1
         except Exception as e:
             logger.error(f"Failed to import row: {e}")
@@ -260,11 +310,11 @@ async def batch_import_tsv(file: UploadFile = File(...)):
 def delete_experiment(experiment_id: str):
     """刪除實驗結果"""
     try:
-        res = supabase.table("experiments").delete().eq("id", experiment_id).execute()
+        deleted = _delete_experiment_by_id(experiment_id)
     except Exception as e:
         logger.error(f"Failed to delete experiment {experiment_id}: {e}")
         raise HTTPException(status_code=500, detail="Database error")
-    if not res.data:
+    if not deleted:
         raise HTTPException(status_code=404, detail="Experiment not found")
     return {"message": "Deleted"}
 
