@@ -5,12 +5,13 @@ const GITHUB_REPO = "human530/MD.Piece";
 
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records, contributors };
+  const pages = { home, symptoms, doctors, patients, records, research, contributors };
   app.innerHTML = pages[page]?.() || "";
   // 頁面載入後的初始化
   if (page === "doctors") loadDoctors();
   if (page === "patients") loadPatients();
   if (page === "records") loadRecordsPage();
+  if (page === "research") loadExperiments();
   if (page === "contributors") loadContributors();
 }
 
@@ -28,6 +29,7 @@ function home() {
       <p>• 病歷管理 - 建立與查詢就診記錄</p>
       <p>• 醫師列表 - 管理醫師資料</p>
       <p>• 病患管理 - 管理病患資料</p>
+      <p>• 自動研究 - AutoResearch 實驗管理（Colab GPU 訓練）</p>
     </div>`;
 }
 
@@ -336,6 +338,112 @@ async function deleteRecord(id) {
   if (!confirm("確定刪除此病歷？")) return;
   await fetch(`${API}/records/${id}`, { method: "DELETE" });
   searchRecords();
+}
+
+// ─── 自動研究 ─────────────────────────────────────────────
+
+function research() {
+  return `
+    <div class="card">
+      <h2>AutoResearch 實驗管理</h2>
+      <p style="margin-top:8px;color:#666">
+        此環境無 GPU。請在 Google Colab 執行訓練，結果會自動回傳至此頁面。
+      </p>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="primary" onclick="loadExperiments()">重新整理</button>
+        <button class="secondary" onclick="checkGpuStatus()">檢查 GPU 狀態</button>
+      </div>
+      <div id="gpu-status"></div>
+    </div>
+    <div class="card">
+      <h3>手動提交實驗結果</h3>
+      <input id="exp-name" placeholder="實驗名稱（例如：baseline-run-1）" />
+      <input id="exp-bpb" type="number" step="0.001" placeholder="val_bpb 分數" />
+      <input id="exp-loss" type="number" step="0.001" placeholder="train_loss" />
+      <input id="exp-steps" type="number" placeholder="訓練步數" />
+      <input id="exp-duration" type="number" placeholder="訓練時間（秒）" />
+      <textarea id="exp-notes" placeholder="備註（模型設定、觀察等）"></textarea>
+      <input id="exp-colab" placeholder="Colab 連結（選填）" />
+      <button class="primary" onclick="submitExperiment()">提交結果</button>
+    </div>
+    <div class="card">
+      <h3>實驗結果</h3>
+      <div id="experiment-list"><p>載入中...</p></div>
+    </div>`;
+}
+
+async function loadExperiments() {
+  try {
+    const res = await fetch(API + "/research/");
+    const data = await res.json();
+    const el = document.getElementById("experiment-list");
+    if (!data.experiments?.length) {
+      el.innerHTML = "<p>尚無實驗結果。請從 Colab 執行訓練後回傳。</p>";
+      return;
+    }
+    el.innerHTML = data.experiments.map(function(e) {
+      var metrics = [];
+      if (e.val_bpb != null) metrics.push("val_bpb: " + e.val_bpb);
+      if (e.train_loss != null) metrics.push("loss: " + e.train_loss);
+      if (e.steps != null) metrics.push(e.steps + " steps");
+      if (e.duration_seconds != null) metrics.push(Math.round(e.duration_seconds) + "s");
+      return '<div class="record-card">' +
+        '<div class="record-header">' +
+        '<strong>' + e.name + '</strong> — ' + (e.submitted_at || "").slice(0, 10) +
+        '<button class="btn-delete" onclick="deleteExperiment(\'' + e.id + '\')">刪除</button>' +
+        '</div>' +
+        (metrics.length ? '<p>' + metrics.join(' | ') + '</p>' : '') +
+        (e.notes ? '<p style="color:#666">' + e.notes + '</p>' : '') +
+        (e.colab_url ? '<p><a href="' + e.colab_url + '" target="_blank">Colab 連結</a></p>' : '') +
+        '</div>';
+    }).join("");
+  } catch (e) {
+    var el = document.getElementById("experiment-list");
+    if (el) el.innerHTML = '<p style="color:#d32f2f">無法載入，請確認後端是否啟動。</p>';
+  }
+}
+
+async function submitExperiment() {
+  var name = document.getElementById("exp-name").value;
+  if (!name) { alert("請輸入實驗名稱"); return; }
+  var body = {
+    name: name,
+    val_bpb: parseFloat(document.getElementById("exp-bpb").value) || undefined,
+    train_loss: parseFloat(document.getElementById("exp-loss").value) || undefined,
+    steps: parseInt(document.getElementById("exp-steps").value) || undefined,
+    duration_seconds: parseFloat(document.getElementById("exp-duration").value) || undefined,
+    notes: document.getElementById("exp-notes").value || undefined,
+    colab_url: document.getElementById("exp-colab").value || undefined,
+  };
+  await fetch(API + "/research/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  loadExperiments();
+  ["exp-name", "exp-bpb", "exp-loss", "exp-steps", "exp-duration", "exp-notes", "exp-colab"].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+}
+
+async function deleteExperiment(id) {
+  if (!confirm("確定刪除此實驗結果？")) return;
+  await fetch(API + "/research/" + id, { method: "DELETE" });
+  loadExperiments();
+}
+
+async function checkGpuStatus() {
+  var el = document.getElementById("gpu-status");
+  try {
+    var res = await fetch(API + "/research/status/gpu");
+    var data = await res.json();
+    el.innerHTML = '<div class="advice-box" style="margin-top:8px">' +
+      '<strong>GPU 狀態：</strong>' + (data.has_gpu ? '可用' : '不可用') +
+      '<br>' + data.message + '</div>';
+  } catch (e) {
+    el.innerHTML = '<div class="advice-box" style="margin-top:8px;color:#d32f2f">無法檢查 GPU 狀態</div>';
+  }
 }
 
 // ─── 貢獻者 ───────────────────────────────────────────────
