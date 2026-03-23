@@ -6,9 +6,9 @@
   "kernel_type": "notebook",
   "is_private": "true",
   "enable_gpu": "true",
-  "enable_internet": "true",
+  "enable_internet": "false",
   "keywords": ["autoresearch", "gpu", "training"],
-  "dataset_sources": [],
+  "dataset_sources": ["lisa530/autoresearch"],
   "kernel_sources": [],
   "competition_sources": []
 }
