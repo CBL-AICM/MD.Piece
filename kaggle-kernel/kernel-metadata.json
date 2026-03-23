@@ -1,0 +1,14 @@
+{
+  "id": "lisa530/autoresearch-mdpiece",
+  "title": "AutoResearch - MD.Piece",
+  "code_file": "autoresearch-kaggle.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_internet": "true",
+  "keywords": ["autoresearch", "gpu", "training"],
+  "dataset_sources": [],
+  "kernel_sources": [],
+  "competition_sources": []
+}
