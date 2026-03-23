@@ -1,6 +1,6 @@
 {
   "id": "lisa530/autoresearch-mdpiece",
-  "title": "AutoResearch - MD.Piece",
+  "title": "autoresearch-mdpiece",
   "code_file": "autoresearch-kaggle.ipynb",
   "language": "python",
   "kernel_type": "notebook",
