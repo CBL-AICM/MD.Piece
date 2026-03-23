@@ -18,6 +18,25 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+# ── Supabase 直連（可選） ────────────────────────────────
+_supabase_client = None
+
+
+def _init_supabase(url: str, key: str):
+    """初始化 Supabase client（Colab 直連用）"""
+    global _supabase_client
+    try:
+        from supabase import create_client
+        _supabase_client = create_client(url, key)
+        print(f"  📡 Supabase 直連已啟用")
+        return True
+    except ImportError:
+        print("  ⚠️ supabase-py 未安裝，請執行: pip install supabase")
+        return False
+    except Exception as e:
+        print(f"  ⚠️ Supabase 連線失敗: {e}")
+        return False
+
 
 # ── 實驗假設列表（每輪依序嘗試） ──────────────────────────
 HYPOTHESES = [
@@ -178,29 +197,41 @@ def apply_patch(train_path: Path, patch: dict) -> bool:
     return True
 
 
-# ── API 回傳 ──────────────────────────────────────────────
-def submit_to_api(api_url: str, result: dict):
-    """POST experiment result to MD.Piece API"""
-    if not api_url:
-        return
-    try:
-        import requests
-        payload = {
-            "name": result["name"],
-            "val_bpb": result.get("val_bpb"),
-            "train_loss": result.get("train_loss"),
-            "steps": result.get("steps"),
-            "duration_seconds": result.get("duration_seconds"),
-            "notes": result.get("description", ""),
-            "kept": result.get("kept", False),
-        }
-        r = requests.post(f"{api_url}/research/", json=payload, timeout=10)
-        if r.ok:
-            print(f"  📡 Submitted to API: {r.json().get('message')}")
-        else:
-            print(f"  ⚠️ API error {r.status_code}: {r.text[:100]}")
-    except Exception as e:
-        print(f"  ⚠️ Could not reach API: {e}")
+# ── 結果回傳（API 或 Supabase 直連） ─────────────────────
+def submit_result(result: dict, api_url: str = ""):
+    """回傳實驗結果：優先 Supabase 直連，fallback 到 API"""
+    row = {
+        "name": result["name"],
+        "val_bpb": result.get("val_bpb"),
+        "train_loss": result.get("train_loss"),
+        "steps": result.get("steps"),
+        "duration_seconds": result.get("duration_seconds"),
+        "notes": result.get("description", ""),
+        "kept": result.get("kept", False),
+        "submitted_at": datetime.utcnow().isoformat(),
+    }
+
+    # 優先用 Supabase 直連
+    if _supabase_client is not None:
+        try:
+            res = _supabase_client.table("experiments").insert(row).execute()
+            if res.data:
+                print(f"  📡 Supabase: 已寫入 ({res.data[0].get('id', '?')})")
+                return
+        except Exception as e:
+            print(f"  ⚠️ Supabase 寫入失敗: {e}")
+
+    # Fallback: POST to API
+    if api_url:
+        try:
+            import requests
+            r = requests.post(f"{api_url}/research/", json=row, timeout=10)
+            if r.ok:
+                print(f"  📡 API: {r.json().get('message')}")
+            else:
+                print(f"  ⚠️ API error {r.status_code}: {r.text[:100]}")
+        except Exception as e:
+            print(f"  ⚠️ Could not reach API: {e}")
 
 
 # ── 主循環 ────────────────────────────────────────────────
@@ -208,8 +239,16 @@ def main():
     parser = argparse.ArgumentParser(description="AutoResearch experiment runner")
     parser.add_argument("--rounds", type=int, default=5, help="Number of experiment rounds")
     parser.add_argument("--api-url", type=str, default="", help="MD.Piece API URL (e.g. http://localhost:8000)")
+    parser.add_argument("--supabase-url", type=str, default="", help="Supabase project URL (直連，不需後端)")
+    parser.add_argument("--supabase-key", type=str, default="", help="Supabase anon/service key")
     parser.add_argument("--results-tsv", type=str, default="results.tsv", help="Path to results TSV file")
     args = parser.parse_args()
+
+    # 初始化 Supabase 直連（如果有提供）
+    sb_url = args.supabase_url or os.environ.get("SUPABASE_URL", "")
+    sb_key = args.supabase_key or os.environ.get("SUPABASE_KEY", "")
+    if sb_url and sb_key:
+        _init_supabase(sb_url, sb_key)
 
     train_path = Path("train.py")
     if not train_path.exists():
@@ -244,7 +283,7 @@ def main():
         **baseline,
     }
     append_result(results_path, baseline_result)
-    submit_to_api(args.api_url, baseline_result)
+    submit_result(baseline_result, api_url=args.api_url)
 
     # ── Step 2: Experiment loop ──
     hypotheses = HYPOTHESES[: args.rounds]
@@ -288,7 +327,7 @@ def main():
             **{k: v for k, v in result.items() if k != "error"},
         }
         append_result(results_path, exp_result)
-        submit_to_api(args.api_url, exp_result)
+        submit_result(exp_result, api_url=args.api_url)
 
     # ── Summary ──
     print(f"\n{'='*60}")
