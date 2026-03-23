@@ -158,6 +158,9 @@ def run_training(timeout_extra: int = 60) -> dict:
 
 # ── Git 操作 ──────────────────────────────────────────────
 def git_commit(message: str):
+    # Ensure git user is configured (Colab may not have it)
+    subprocess.run(["git", "config", "user.email", "colab@example.com"], capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Colab"], capture_output=True)
     subprocess.run(["git", "add", "-A"], check=True)
     subprocess.run(["git", "commit", "-am", message], check=True)
 
