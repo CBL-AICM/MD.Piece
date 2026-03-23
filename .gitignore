@@ -16,6 +16,9 @@ node_modules/
 # Claude Code worktrees
 .claude/worktrees/
 
+# Cloned repos (used for Kaggle dataset packaging)
+autoresearch/
+
 # OS
 .DS_Store
 Thumbs.db

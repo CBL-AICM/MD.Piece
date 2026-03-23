@@ -23,18 +23,13 @@ from pathlib import Path
 HYPOTHESES = [
     {
         "name": "deeper-model",
-        "description": "增加模型深度 n_layer 8→12",
-        "patch": {"target": "n_layer", "old": "8", "new": "12"},
+        "description": "增加模型深度 DEPTH 8→12",
+        "patch": {"target": "DEPTH", "old": "DEPTH = 8", "new": "DEPTH = 12"},
     },
     {
-        "name": "wider-model",
-        "description": "增加模型寬度 n_embd 512→768",
-        "patch": {"target": "n_embd", "old": "512", "new": "768"},
-    },
-    {
-        "name": "more-heads",
-        "description": "增加注意力頭數 n_head 4→8, n_kv_head 4→8",
-        "patch": {"target": "n_head", "old": "4", "new": "8"},
+        "name": "wider-aspect",
+        "description": "增加 ASPECT_RATIO 64→96（更寬的模型）",
+        "patch": {"target": "ASPECT_RATIO", "old": "ASPECT_RATIO = 64", "new": "ASPECT_RATIO = 96"},
     },
     {
         "name": "larger-batch",
@@ -42,34 +37,49 @@ HYPOTHESES = [
         "patch": {"target": "TOTAL_BATCH_SIZE", "find_multiply": 2},
     },
     {
-        "name": "higher-lr",
-        "description": "提高學習率 ×1.5",
-        "patch": {"target": "learning_rate", "find_multiply": 1.5},
+        "name": "higher-matrix-lr",
+        "description": "提高 Muon matrix LR ×1.5",
+        "patch": {"target": "MATRIX_LR", "find_multiply": 1.5},
     },
     {
-        "name": "lower-lr",
-        "description": "降低學習率 ×0.5",
-        "patch": {"target": "learning_rate", "find_multiply": 0.5},
+        "name": "lower-matrix-lr",
+        "description": "降低 Muon matrix LR ×0.5",
+        "patch": {"target": "MATRIX_LR", "find_multiply": 0.5},
     },
     {
-        "name": "longer-warmup",
-        "description": "增加 warmup 步數",
-        "patch": {"target": "warmup_steps", "find_multiply": 2},
+        "name": "higher-embedding-lr",
+        "description": "提高 embedding LR ×1.5",
+        "patch": {"target": "EMBEDDING_LR", "find_multiply": 1.5},
+    },
+    {
+        "name": "more-warmup",
+        "description": "增加 warmup ratio 0.0→0.1",
+        "patch": {"target": "WARMUP_RATIO", "old": "WARMUP_RATIO = 0.0", "new": "WARMUP_RATIO = 0.1"},
+    },
+    {
+        "name": "less-warmdown",
+        "description": "減少 warmdown ratio 0.5→0.3",
+        "patch": {"target": "WARMDOWN_RATIO", "old": "WARMDOWN_RATIO = 0.5", "new": "WARMDOWN_RATIO = 0.3"},
     },
     {
         "name": "window-pattern-SSSS",
-        "description": "改變 attention window pattern 為全 sliding",
-        "patch": {"target": "window_pattern", "old": "'SSSL'", "new": "'SSSS'"},
+        "description": "attention window 全 sliding",
+        "patch": {"target": "WINDOW_PATTERN", "old": 'WINDOW_PATTERN = "SSSL"', "new": 'WINDOW_PATTERN = "SSSS"'},
     },
     {
         "name": "window-pattern-SLSL",
-        "description": "改變 attention window pattern 為交替",
-        "patch": {"target": "window_pattern", "old": "'SSSL'", "new": "'SLSL'"},
+        "description": "attention window 交替",
+        "patch": {"target": "WINDOW_PATTERN", "old": 'WINDOW_PATTERN = "SSSL"', "new": 'WINDOW_PATTERN = "SLSL"'},
     },
     {
-        "name": "sequence-len-4096",
-        "description": "增加序列長度 2048→4096",
-        "patch": {"target": "sequence_len", "old": "2048", "new": "4096"},
+        "name": "less-weight-decay",
+        "description": "降低 weight decay 0.2→0.05",
+        "patch": {"target": "WEIGHT_DECAY", "old": "WEIGHT_DECAY = 0.2", "new": "WEIGHT_DECAY = 0.05"},
+    },
+    {
+        "name": "smaller-batch",
+        "description": "減小 device batch size 128→64（省 VRAM）",
+        "patch": {"target": "DEVICE_BATCH_SIZE", "old": "DEVICE_BATCH_SIZE = 128", "new": "DEVICE_BATCH_SIZE = 64"},
     },
 ]
 
