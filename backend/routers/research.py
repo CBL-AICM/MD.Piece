@@ -85,6 +85,25 @@ def _get_experiment_by_id(exp_id: str):
     return res.data[0] if res.data else None
 
 
+@router.get("/health")
+def health_check():
+    """連線健康檢查 — Colab runner 用來驗證 API 可達"""
+    storage = "supabase" if not _use_memory else "in-memory"
+    count = len(_memory_store) if _use_memory else None
+    if not _use_memory:
+        try:
+            res = supabase.table("experiments").select("id", count="exact").execute()
+            count = res.count if hasattr(res, "count") else len(res.data or [])
+        except Exception:
+            count = -1
+    return {
+        "status": "ok",
+        "storage": storage,
+        "experiment_count": count,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
 @router.get("/")
 def list_experiments(
     kept: Optional[bool] = Query(None, description="篩選 kept/reverted"),

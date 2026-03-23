@@ -178,29 +178,70 @@ def apply_patch(train_path: Path, patch: dict) -> bool:
     return True
 
 
-# ── API 回傳 ──────────────────────────────────────────────
-def submit_to_api(api_url: str, result: dict):
-    """POST experiment result to MD.Piece API"""
+# ── API 連線 ──────────────────────────────────────────────
+def check_api_connection(api_url: str) -> bool:
+    """啟動時驗證 API 是否可達"""
+    if not api_url:
+        return False
+    try:
+        import requests
+        r = requests.get(f"{api_url}/research/health", timeout=10)
+        if r.ok:
+            data = r.json()
+            print(f"  ✅ API 連線成功 — storage: {data.get('storage')}, "
+                  f"experiments: {data.get('experiment_count')}")
+            return True
+        else:
+            print(f"  ⚠️ API 回應異常 ({r.status_code}): {r.text[:100]}")
+            return False
+    except Exception as e:
+        print(f"  ❌ 無法連線到 API: {e}")
+        print(f"     提示：如果在 Colab 上執行，localhost:8000 指向 Colab VM，不是你的本機。")
+        print(f"     請使用 ngrok 或公開 URL，例如：")
+        print(f"       ngrok http 8000  →  取得 https://xxxx.ngrok.io")
+        print(f"       python autoresearch_runner.py --api-url https://xxxx.ngrok.io")
+        return False
+
+
+def submit_to_api(api_url: str, result: dict, max_retries: int = 3):
+    """POST experiment result to MD.Piece API（含重試）"""
     if not api_url:
         return
     try:
         import requests
-        payload = {
-            "name": result["name"],
-            "val_bpb": result.get("val_bpb"),
-            "train_loss": result.get("train_loss"),
-            "steps": result.get("steps"),
-            "duration_seconds": result.get("duration_seconds"),
-            "notes": result.get("description", ""),
-            "kept": result.get("kept", False),
-        }
-        r = requests.post(f"{api_url}/research/", json=payload, timeout=10)
-        if r.ok:
-            print(f"  📡 Submitted to API: {r.json().get('message')}")
-        else:
-            print(f"  ⚠️ API error {r.status_code}: {r.text[:100]}")
-    except Exception as e:
-        print(f"  ⚠️ Could not reach API: {e}")
+    except ImportError:
+        print("  ⚠️ requests 未安裝，無法回傳 API")
+        return
+
+    payload = {
+        "name": result["name"],
+        "val_bpb": result.get("val_bpb"),
+        "train_loss": result.get("train_loss"),
+        "steps": result.get("steps"),
+        "duration_seconds": result.get("duration_seconds"),
+        "notes": result.get("description", ""),
+        "kept": result.get("kept", False),
+    }
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            r = requests.post(f"{api_url}/research/", json=payload, timeout=15)
+            if r.ok:
+                print(f"  📡 Submitted to API: {r.json().get('message')}")
+                return
+            else:
+                print(f"  ⚠️ API error {r.status_code}: {r.text[:100]}")
+                if r.status_code < 500:
+                    return  # Client error, don't retry
+        except Exception as e:
+            print(f"  ⚠️ API attempt {attempt}/{max_retries} failed: {e}")
+
+        if attempt < max_retries:
+            wait = 2 ** attempt
+            print(f"  ⏳ Retrying in {wait}s...")
+            time.sleep(wait)
+
+    print(f"  ❌ 所有重試失敗，結果已存在本地 TSV，可稍後用 batch import 匯入。")
 
 
 # ── 主循環 ────────────────────────────────────────────────
@@ -225,6 +266,16 @@ def main():
     print(f"   Rounds: {args.rounds}")
     print(f"   API: {args.api_url or '(none)'}")
     print("=" * 60)
+
+    # ── 連線檢查 ──
+    api_connected = False
+    if args.api_url:
+        print("\n🔗 檢查 API 連線...")
+        api_connected = check_api_connection(args.api_url)
+        if not api_connected:
+            print("  ⚠️ 將繼續執行，結果僅存在本地 TSV。完成後可手動匯入。")
+    else:
+        print("\n  ℹ️ 未設定 API URL，結果僅存在本地 TSV。")
 
     print("\n📊 Round 0: Baseline")
     baseline = run_training()

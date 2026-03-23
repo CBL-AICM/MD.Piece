@@ -11,7 +11,7 @@ function showPage(page) {
   if (page === "doctors") loadDoctors();
   if (page === "patients") loadPatients();
   if (page === "records") loadRecordsPage();
-  if (page === "research") loadExperiments();
+  if (page === "research") { checkApiConnection(); loadExperiments(); }
   if (page === "contributors") loadContributors();
 }
 
@@ -373,11 +373,13 @@ function research() {
       </p>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="primary" onclick="loadExperiments()">重新整理</button>
+        <button class="secondary" onclick="checkApiConnection()">測試 API 連線</button>
         <button class="secondary" onclick="checkGpuStatus()">檢查 GPU 狀態</button>
         <button class="secondary" onclick="document.getElementById('tsv-upload').click()">匯入 results.tsv</button>
         <button class="secondary" onclick="exportExperiments()">匯出 TSV</button>
         <input type="file" id="tsv-upload" accept=".tsv,.csv" style="display:none" onchange="uploadTsv(this)" />
       </div>
+      <div id="connection-status"></div>
       <div id="gpu-status"></div>
     </div>
     <div class="card">
@@ -825,6 +827,31 @@ async function checkGpuStatus() {
       '<br>' + data.message + '</div>';
   } catch (e) {
     el.innerHTML = '<div class="advice-box" style="margin-top:8px;color:#d32f2f">無法檢查 GPU 狀態</div>';
+  }
+}
+
+async function checkApiConnection() {
+  var el = document.getElementById("connection-status");
+  if (!el) return;
+  el.innerHTML = '<span style="color:#888">檢查中...</span>';
+  try {
+    var start = Date.now();
+    var res = await fetch(API + "/research/health", { signal: AbortSignal.timeout(5000) });
+    var latency = Date.now() - start;
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var data = await res.json();
+    el.innerHTML = '<div class="advice-box" style="margin-top:8px;border-left:3px solid #43a047">' +
+      '<strong style="color:#43a047">連線正常</strong>' +
+      ' — 延遲 ' + latency + 'ms' +
+      '，儲存方式：' + data.storage +
+      '，實驗數：' + (data.experiment_count >= 0 ? data.experiment_count : 'N/A') +
+      '</div>';
+  } catch (e) {
+    el.innerHTML = '<div class="advice-box" style="margin-top:8px;border-left:3px solid #d32f2f">' +
+      '<strong style="color:#d32f2f">連線失敗</strong>' +
+      ' — 後端 (' + API + ') 無回應' +
+      '<br><span style="font-size:0.85rem;color:#666">請確認後端已啟動：uvicorn backend.main:app --reload --port 8000</span>' +
+      '</div>';
   }
 }
 
