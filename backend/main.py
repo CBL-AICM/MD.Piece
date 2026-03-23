@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import patients, doctors, symptoms, records, research
+from backend.routers import patients, doctors, symptoms, records, research, education
 
 app = FastAPI(title="MD.Piece API", version="2.0.0")
 
@@ -16,6 +16,7 @@ app.include_router(doctors.router, prefix="/doctors", tags=["doctors"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(records.router, prefix="/records", tags=["records"])
 app.include_router(research.router, prefix="/research", tags=["research"])
+app.include_router(education.router, prefix="/education", tags=["education"])
 
 
 @app.get("/")
