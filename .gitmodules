@@ -1,3 +1,6 @@
 [submodule "storm"]
 	path = storm
 	url = https://github.com/stanford-oval/storm.git
+[submodule "vite-plugin-pwa"]
+	path = vite-plugin-pwa
+	url = https://github.com/vite-pwa/vite-plugin-pwa.git
