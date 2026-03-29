@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#1a73e8"/>
+  <text x="256" y="200" text-anchor="middle" font-family="Arial,sans-serif" font-size="120" font-weight="bold" fill="white">MD</text>
+  <text x="256" y="340" text-anchor="middle" font-family="Arial,sans-serif" font-size="80" fill="white" opacity="0.9">.Piece</text>
+  <path d="M170 380 h172" stroke="white" stroke-width="4" opacity="0.5"/>
+  <text x="256" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" fill="white" opacity="0.7">Healthcare PWA</text>
+</svg>
