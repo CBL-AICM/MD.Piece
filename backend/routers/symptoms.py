@@ -43,41 +43,41 @@ def get_advice(symptom: str):
 
 
 @router.post("/analyze")
-async def analyze(body: SymptomAnalysisRequest):
+async def analyze(symptom_request: SymptomAnalysisRequest):
     """AI 症狀分析。"""
-    if not body.symptoms:
+    if not symptom_request.symptoms:
         raise HTTPException(status_code=400, detail="請提供至少一個症狀")
 
     # 如果有 patient_id，取得病患資料作為參考
     patient_info = None
-    if body.patient_id:
-        sb = get_supabase()
-        result = sb.table("patients").select("name,age,gender").eq("id", body.patient_id).execute()
-        if result.data:
-            patient_info = result.data[0]
+    if symptom_request.patient_id:
+        supabase_client = get_supabase()
+        db_result = supabase_client.table("patients").select("name,age,gender").eq("id", symptom_request.patient_id).execute()
+        if db_result.data:
+            patient_info = db_result.data[0]
 
     # 呼叫 AI 分析
-    ai_result = await analyze_symptoms(
-        symptoms=body.symptoms,
+    ai_analysis_result = await analyze_symptoms(
+        symptoms=symptom_request.symptoms,
         patient_age=patient_info.get("age") if patient_info else None,
         patient_gender=patient_info.get("gender") if patient_info else None,
     )
 
     # 記錄到 symptoms_log
-    if body.patient_id:
-        sb = get_supabase()
-        sb.table("symptoms_log").insert({
-            "patient_id": body.patient_id,
-            "symptoms": body.symptoms,
-            "ai_response": ai_result,
+    if symptom_request.patient_id:
+        supabase_client = get_supabase()
+        supabase_client.table("symptoms_log").insert({
+            "patient_id": symptom_request.patient_id,
+            "symptoms": symptom_request.symptoms,
+            "ai_response": ai_analysis_result,
         }).execute()
 
-    return ai_result
+    return ai_analysis_result
 
 
 @router.get("/history/{patient_id}")
 def get_symptom_history(patient_id: str):
     """取得病患的症狀分析歷史。"""
-    sb = get_supabase()
-    result = sb.table("symptoms_log").select("*").eq("patient_id", patient_id).order("created_at", desc=True).execute()
-    return {"history": result.data}
+    supabase_client = get_supabase()
+    db_result = supabase_client.table("symptoms_log").select("*").eq("patient_id", patient_id).order("created_at", desc=True).execute()
+    return {"history": db_result.data}

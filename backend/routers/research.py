@@ -44,12 +44,12 @@ class ExperimentSubmit(BaseModel):
 def _fetch_experiments():
     """從 Supabase 或記憶體取得所有實驗（按時間倒序）"""
     if _use_memory:
-        return sorted(_memory_store, key=lambda e: e.get("submitted_at", ""), reverse=True)
+        return sorted(_memory_store, key=lambda experiment_entry: experiment_entry.get("submitted_at", ""), reverse=True)
     try:
-        res = supabase.table("experiments").select("*").order("submitted_at", desc=True).execute()
-        return res.data or []
-    except Exception as e:
-        logger.error(f"Failed to fetch experiments: {e}")
+        db_result = supabase.table("experiments").select("*").order("submitted_at", desc=True).execute()
+        return db_result.data or []
+    except Exception as fetch_error:
+        logger.error(f"Failed to fetch experiments: {fetch_error}")
         return []
 
 
@@ -59,30 +59,30 @@ def _insert_experiment(row: dict):
         row["id"] = str(uuid.uuid4())
         _memory_store.append(row)
         return row
-    res = supabase.table("experiments").insert(row).execute()
-    return res.data[0] if res.data else row
+    db_result = supabase.table("experiments").insert(row).execute()
+    return db_result.data[0] if db_result.data else row
 
 
 def _delete_experiment_by_id(exp_id: str):
     """刪除實驗"""
     if _use_memory:
-        for i, e in enumerate(_memory_store):
-            if e.get("id") == exp_id:
-                return _memory_store.pop(i)
+        for index, experiment_entry in enumerate(_memory_store):
+            if experiment_entry.get("id") == exp_id:
+                return _memory_store.pop(index)
         return None
-    res = supabase.table("experiments").delete().eq("id", exp_id).execute()
-    return res.data[0] if res.data else None
+    db_result = supabase.table("experiments").delete().eq("id", exp_id).execute()
+    return db_result.data[0] if db_result.data else None
 
 
 def _get_experiment_by_id(exp_id: str):
     """取得單一實驗"""
     if _use_memory:
-        for e in _memory_store:
-            if e.get("id") == exp_id:
-                return e
+        for experiment_entry in _memory_store:
+            if experiment_entry.get("id") == exp_id:
+                return experiment_entry
         return None
-    res = supabase.table("experiments").select("*").eq("id", exp_id).execute()
-    return res.data[0] if res.data else None
+    db_result = supabase.table("experiments").select("*").eq("id", exp_id).execute()
+    return db_result.data[0] if db_result.data else None
 
 
 @router.get("/")
@@ -96,17 +96,17 @@ def list_experiments(
     experiments = _fetch_experiments()
 
     if kept is not None:
-        experiments = [e for e in experiments if e.get("kept") == kept]
+        experiments = [experiment_entry for experiment_entry in experiments if experiment_entry.get("kept") == kept]
 
     if search:
-        q = search.lower()
-        experiments = [e for e in experiments if
-                       q in (e.get("name") or "").lower() or
-                       q in (e.get("notes") or "").lower()]
+        search_query = search.lower()
+        experiments = [experiment_entry for experiment_entry in experiments if
+                       search_query in (experiment_entry.get("name") or "").lower() or
+                       search_query in (experiment_entry.get("notes") or "").lower()]
 
     if sort_by and sort_by != "submitted_at":
         reverse = sort_by != "val_bpb"  # val_bpb lower is better
-        experiments.sort(key=lambda e: e.get(sort_by) or float("inf"), reverse=reverse)
+        experiments.sort(key=lambda experiment_entry: experiment_entry.get(sort_by) or float("inf"), reverse=reverse)
 
     if limit and limit > 0:
         experiments = experiments[:limit]
@@ -118,7 +118,7 @@ def list_experiments(
 def experiment_stats():
     """取得實驗統計：最佳 val_bpb、趨勢資料、改善率"""
     experiments = _fetch_experiments()
-    sorted_exps = sorted(experiments, key=lambda e: e.get("submitted_at", ""))
+    sorted_exps = sorted(experiments, key=lambda experiment_entry: experiment_entry.get("submitted_at", ""))
     chart_data = []
     best_bpb = None
     best_name = None
@@ -126,26 +126,26 @@ def experiment_stats():
     reverted_count = 0
     total_duration = 0.0
 
-    for e in sorted_exps:
-        if e.get("kept") is True:
+    for experiment_entry in sorted_exps:
+        if experiment_entry.get("kept") is True:
             kept_count += 1
-        elif e.get("kept") is False:
+        elif experiment_entry.get("kept") is False:
             reverted_count += 1
-        if e.get("duration_seconds"):
-            total_duration += e["duration_seconds"]
-        if e.get("val_bpb") is not None:
+        if experiment_entry.get("duration_seconds"):
+            total_duration += experiment_entry["duration_seconds"]
+        if experiment_entry.get("val_bpb") is not None:
             chart_data.append({
-                "name": e["name"],
-                "val_bpb": e["val_bpb"],
-                "train_loss": e.get("train_loss"),
-                "submitted_at": e.get("submitted_at"),
-                "kept": e.get("kept"),
-                "steps": e.get("steps"),
-                "duration_seconds": e.get("duration_seconds"),
+                "name": experiment_entry["name"],
+                "val_bpb": experiment_entry["val_bpb"],
+                "train_loss": experiment_entry.get("train_loss"),
+                "submitted_at": experiment_entry.get("submitted_at"),
+                "kept": experiment_entry.get("kept"),
+                "steps": experiment_entry.get("steps"),
+                "duration_seconds": experiment_entry.get("duration_seconds"),
             })
-            if best_bpb is None or e["val_bpb"] < best_bpb:
-                best_bpb = e["val_bpb"]
-                best_name = e["name"]
+            if best_bpb is None or experiment_entry["val_bpb"] < best_bpb:
+                best_bpb = experiment_entry["val_bpb"]
+                best_name = experiment_entry["name"]
 
     # 計算改善率（kept / total with decisions）
     decided = kept_count + reverted_count
@@ -168,19 +168,19 @@ def experiment_stats():
 def leaderboard(top_n: int = Query(10, description="排行榜顯示前 N 名")):
     """val_bpb 排行榜（越低越好）"""
     experiments = _fetch_experiments()
-    with_bpb = [e for e in experiments if e.get("val_bpb") is not None]
-    with_bpb.sort(key=lambda e: e["val_bpb"])
+    with_bpb = [experiment_entry for experiment_entry in experiments if experiment_entry.get("val_bpb") is not None]
+    with_bpb.sort(key=lambda experiment_entry: experiment_entry["val_bpb"])
     ranking = []
-    for i, e in enumerate(with_bpb[:top_n]):
+    for rank_index, experiment_entry in enumerate(with_bpb[:top_n]):
         ranking.append({
-            "rank": i + 1,
-            "name": e["name"],
-            "val_bpb": e["val_bpb"],
-            "train_loss": e.get("train_loss"),
-            "steps": e.get("steps"),
-            "duration_seconds": e.get("duration_seconds"),
-            "kept": e.get("kept"),
-            "submitted_at": e.get("submitted_at"),
+            "rank": rank_index + 1,
+            "name": experiment_entry["name"],
+            "val_bpb": experiment_entry["val_bpb"],
+            "train_loss": experiment_entry.get("train_loss"),
+            "steps": experiment_entry.get("steps"),
+            "duration_seconds": experiment_entry.get("duration_seconds"),
+            "kept": experiment_entry.get("kept"),
+            "submitted_at": experiment_entry.get("submitted_at"),
         })
     return {"leaderboard": ranking, "total_experiments": len(experiments)}
 
@@ -190,7 +190,7 @@ def compare_experiments(
     ids: str = Query(..., description="要比較的實驗 ID，逗號分隔"),
 ):
     """比較多個實驗結果"""
-    id_list = [i.strip() for i in ids.split(",") if i.strip()]
+    id_list = [id_str.strip() for id_str in ids.split(",") if id_str.strip()]
     if len(id_list) < 2:
         raise HTTPException(status_code=400, detail="至少需要 2 個實驗 ID")
 
@@ -200,20 +200,20 @@ def compare_experiments(
             exp = _get_experiment_by_id(exp_id)
             if exp:
                 results.append(exp)
-        except Exception as e:
-            logger.error(f"Failed to fetch experiment {exp_id}: {e}")
+        except Exception as fetch_error:
+            logger.error(f"Failed to fetch experiment {exp_id}: {fetch_error}")
 
     if len(results) < 2:
         raise HTTPException(status_code=404, detail="找不到足夠的實驗來比較")
 
     # 找出最佳
-    bpb_values = [e["val_bpb"] for e in results if e.get("val_bpb") is not None]
+    bpb_values = [experiment_entry["val_bpb"] for experiment_entry in results if experiment_entry.get("val_bpb") is not None]
     best_bpb = min(bpb_values) if bpb_values else None
 
     return {
         "experiments": results,
         "best_bpb": best_bpb,
-        "best_experiment": next((e["name"] for e in results if e.get("val_bpb") == best_bpb), None),
+        "best_experiment": next((experiment_entry["name"] for experiment_entry in results if experiment_entry.get("val_bpb") == best_bpb), None),
     }
 
 
@@ -225,8 +225,8 @@ def export_tsv():
     fieldnames = ["name", "val_bpb", "train_loss", "steps", "duration_seconds", "kept", "notes", "submitted_at"]
     writer = csv.DictWriter(output, fieldnames=fieldnames, delimiter="\t", extrasaction="ignore")
     writer.writeheader()
-    for e in experiments:
-        writer.writerow(e)
+    for experiment_entry in experiments:
+        writer.writerow(experiment_entry)
     return {"tsv": output.getvalue(), "count": len(experiments)}
 
 
@@ -245,8 +245,8 @@ def get_experiment(experiment_id: str):
     """取得單一實驗結果"""
     try:
         exp = _get_experiment_by_id(experiment_id)
-    except Exception as e:
-        logger.error(f"Failed to fetch experiment {experiment_id}: {e}")
+    except Exception as fetch_error:
+        logger.error(f"Failed to fetch experiment {experiment_id}: {fetch_error}")
         raise HTTPException(status_code=500, detail="Database error")
     if not exp:
         raise HTTPException(status_code=404, detail="Experiment not found")
@@ -270,8 +270,8 @@ def submit_experiment(data: ExperimentSubmit):
     }
     try:
         saved = _insert_experiment(row)
-    except Exception as e:
-        logger.error(f"Failed to insert experiment: {e}")
+    except Exception as insert_error:
+        logger.error(f"Failed to insert experiment: {insert_error}")
         raise HTTPException(status_code=500, detail="Failed to save experiment")
     return {"message": "Experiment submitted", "experiment": saved}
 
@@ -299,8 +299,8 @@ async def batch_import_tsv(file: UploadFile = File(...)):
         try:
             _insert_experiment(exp)
             imported += 1
-        except Exception as e:
-            logger.error(f"Failed to import row: {e}")
+        except Exception as import_error:
+            logger.error(f"Failed to import row: {import_error}")
             errors += 1
 
     return {"message": f"Imported {imported} experiments", "count": imported, "errors": errors}
@@ -311,23 +311,23 @@ def delete_experiment(experiment_id: str):
     """刪除實驗結果"""
     try:
         deleted = _delete_experiment_by_id(experiment_id)
-    except Exception as e:
-        logger.error(f"Failed to delete experiment {experiment_id}: {e}")
+    except Exception as delete_error:
+        logger.error(f"Failed to delete experiment {experiment_id}: {delete_error}")
         raise HTTPException(status_code=500, detail="Database error")
     if not deleted:
         raise HTTPException(status_code=404, detail="Experiment not found")
     return {"message": "Deleted"}
 
 
-def _safe_float(val):
+def _safe_float(raw_value):
     try:
-        return float(val) if val else None
+        return float(raw_value) if raw_value else None
     except (ValueError, TypeError):
         return None
 
 
-def _safe_int(val):
+def _safe_int(raw_value):
     try:
-        return int(val) if val else None
+        return int(raw_value) if raw_value else None
     except (ValueError, TypeError):
         return None

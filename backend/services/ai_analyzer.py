@@ -13,16 +13,16 @@ async def analyze_symptoms(
     if not api_key:
         return _fallback_analysis(symptoms)
 
-    client = anthropic.Anthropic(api_key=api_key)
+    anthropic_client = anthropic.Anthropic(api_key=api_key)
 
     patient_context = ""
     if patient_age or patient_gender:
-        parts = []
+        patient_context_parts = []
         if patient_age:
-            parts.append(f"年齡：{patient_age}歲")
+            patient_context_parts.append(f"年齡：{patient_age}歲")
         if patient_gender:
-            parts.append(f"性別：{patient_gender}")
-        patient_context = f"\n病患資訊：{', '.join(parts)}"
+            patient_context_parts.append(f"性別：{patient_gender}")
+        patient_context = f"\n病患資訊：{', '.join(patient_context_parts)}"
 
     system_prompt = """你是一個醫療輔助 AI，負責根據症狀提供初步分析建議。
 重要：你的分析僅供參考，不構成醫療診斷。請務必建議使用者就醫。
@@ -41,16 +41,16 @@ async def analyze_symptoms(
     user_message = f"症狀：{', '.join(symptoms)}{patient_context}"
 
     try:
-        response = client.messages.create(
+        response = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1024,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
         )
 
-        text = response.content[0].text
-        result = json.loads(text)
-        return result
+        response_text = response.content[0].text
+        parsed_analysis = json.loads(response_text)
+        return parsed_analysis
     except (json.JSONDecodeError, Exception):
         return _fallback_analysis(symptoms)
 
@@ -68,13 +68,13 @@ def _fallback_analysis(symptoms: list[str]) -> dict:
 
     urgency = "low"
     for symptom in symptoms:
-        s = symptom.lower()
-        if s in urgency_keywords:
-            urgency = urgency_keywords[s]
+        symptom_lower = symptom.lower()
+        if symptom_lower in urgency_keywords:
+            urgency = urgency_keywords[symptom_lower]
             break
-        for kw, urg in urgency_keywords.items():
-            if kw in s:
-                urgency = urg
+        for urgency_keyword, urgency_level in urgency_keywords.items():
+            if urgency_keyword in symptom_lower:
+                urgency = urgency_level
                 break
 
     return {

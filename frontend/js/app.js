@@ -56,17 +56,17 @@ function symptoms() {
 async function analyzeSymptoms() {
   const input = document.getElementById("symptom-input").value;
   if (!input.trim()) return;
-  const symptoms = input.split(",").map(s => s.trim()).filter(Boolean);
-  const el = document.getElementById("analysis-result");
-  el.innerHTML = '<div class="loading">分析中...</div>';
+  const symptoms = input.split(",").map(symptom_text => symptom_text.trim()).filter(Boolean);
+  const analysis_result_element = document.getElementById("analysis-result");
+  analysis_result_element.innerHTML = '<div class="loading">分析中...</div>';
 
   try {
-    const res = await fetch(`${API}/symptoms/analyze`, {
+    const api_response = await fetch(`${API}/symptoms/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symptoms }),
     });
-    const data = await res.json();
+    const response_data = await api_response.json();
 
     const urgencyMap = {
       emergency: { label: "緊急", cls: "urgency-emergency" },
@@ -74,35 +74,35 @@ async function analyzeSymptoms() {
       medium: { label: "中", cls: "urgency-medium" },
       low: { label: "低", cls: "urgency-low" },
     };
-    const urg = urgencyMap[data.urgency] || urgencyMap.low;
+    const urgency_info = urgencyMap[response_data.urgency] || urgencyMap.low;
 
-    const conditions = (data.conditions || [])
-      .map(c => `<li><strong>${c.name}</strong> — 可能性：${c.likelihood}</li>`)
+    const conditions = (response_data.conditions || [])
+      .map(condition_item => `<li><strong>${condition_item.name}</strong> — 可能性：${condition_item.likelihood}</li>`)
       .join("");
 
-    el.innerHTML = `
+    analysis_result_element.innerHTML = `
       <div class="ai-result-card">
-        <div class="urgency-badge ${urg.cls}">緊急程度：${urg.label}</div>
+        <div class="urgency-badge ${urgency_info.cls}">緊急程度：${urgency_info.label}</div>
         <h4>可能病因</h4>
         <ul>${conditions}</ul>
         <h4>建議科別</h4>
-        <p>${data.recommended_department || "家醫科"}</p>
+        <p>${response_data.recommended_department || "家醫科"}</p>
         <h4>建議</h4>
-        <p>${data.advice || ""}</p>
-        <div class="disclaimer">${data.disclaimer || "此分析僅供參考，不構成醫療診斷。如有不適請立即就醫。"}</div>
+        <p>${response_data.advice || ""}</p>
+        <div class="disclaimer">${response_data.disclaimer || "此分析僅供參考，不構成醫療診斷。如有不適請立即就醫。"}</div>
       </div>`;
-  } catch (e) {
-    el.innerHTML = '<div class="advice-box">分析失敗，請確認後端是否啟動。</div>';
+  } catch (fetch_error) {
+    analysis_result_element.innerHTML = '<div class="advice-box">分析失敗，請確認後端是否啟動。</div>';
   }
 }
 
 async function quickAdvice() {
   const input = document.getElementById("symptom-input").value.split(",")[0].trim();
   if (!input) return;
-  const res = await fetch(`${API}/symptoms/advice?symptom=${encodeURIComponent(input)}`);
-  const data = await res.json();
+  const api_response = await fetch(`${API}/symptoms/advice?symptom=${encodeURIComponent(input)}`);
+  const response_data = await api_response.json();
   document.getElementById("analysis-result").innerHTML =
-    `<div class="advice-box"><strong>${data.symptom}</strong>：${data.advice}</div>`;
+    `<div class="advice-box"><strong>${response_data.symptom}</strong>：${response_data.advice}</div>`;
 }
 
 // ─── 醫師列表 ──────────────────────────────────────────────
@@ -123,18 +123,18 @@ function doctors() {
 }
 
 async function loadDoctors() {
-  const res = await fetch(`${API}/doctors/`);
-  const data = await res.json();
-  const el = document.getElementById("doctor-list");
-  if (!data.doctors?.length) {
-    el.innerHTML = "<p>尚無醫師資料</p>";
+  const api_response = await fetch(`${API}/doctors/`);
+  const response_data = await api_response.json();
+  const doctor_list_element = document.getElementById("doctor-list");
+  if (!response_data.doctors?.length) {
+    doctor_list_element.innerHTML = "<p>尚無醫師資料</p>";
     return;
   }
-  el.innerHTML = data.doctors.map(d => `
+  doctor_list_element.innerHTML = response_data.doctors.map(doctor_entry => `
     <div class="record-card">
-      <strong>${d.name}</strong> — ${d.specialty}
-      ${d.phone ? `<span style="color:#666"> | ${d.phone}</span>` : ""}
-      <button class="btn-delete" onclick="deleteDoctor('${d.id}')">刪除</button>
+      <strong>${doctor_entry.name}</strong> — ${doctor_entry.specialty}
+      ${doctor_entry.phone ? `<span style="color:#666"> | ${doctor_entry.phone}</span>` : ""}
+      <button class="btn-delete" onclick="deleteDoctor('${doctor_entry.id}')">刪除</button>
     </div>
   `).join("");
 }
@@ -155,9 +155,9 @@ async function addDoctor() {
   document.getElementById("d-phone").value = "";
 }
 
-async function deleteDoctor(id) {
+async function deleteDoctor(doctor_id) {
   if (!confirm("確定刪除此醫師？")) return;
-  await fetch(`${API}/doctors/${id}`, { method: "DELETE" });
+  await fetch(`${API}/doctors/${doctor_id}`, { method: "DELETE" });
   loadDoctors();
 }
 
@@ -180,20 +180,20 @@ function patients() {
 }
 
 async function loadPatients() {
-  const res = await fetch(`${API}/patients/`);
-  const data = await res.json();
-  const el = document.getElementById("patient-list");
-  if (!data.patients?.length) {
-    el.innerHTML = "<p>尚無病患資料</p>";
+  const api_response = await fetch(`${API}/patients/`);
+  const response_data = await api_response.json();
+  const patient_list_element = document.getElementById("patient-list");
+  if (!response_data.patients?.length) {
+    patient_list_element.innerHTML = "<p>尚無病患資料</p>";
     return;
   }
-  el.innerHTML = data.patients.map(p => `
+  patient_list_element.innerHTML = response_data.patients.map(patient_entry => `
     <div class="record-card">
-      <strong>${p.name}</strong> — ${p.age}歲
-      ${p.gender ? ` | ${p.gender === "male" ? "男" : "女"}` : ""}
-      ${p.phone ? ` | ${p.phone}` : ""}
-      <button class="btn-delete" onclick="deletePatient('${p.id}')">刪除</button>
-      <button class="btn-view" onclick="showPage('records');setTimeout(()=>{document.getElementById('r-patient').value='${p.id}';searchRecords()},100)">查看病歷</button>
+      <strong>${patient_entry.name}</strong> — ${patient_entry.age}歲
+      ${patient_entry.gender ? ` | ${patient_entry.gender === "male" ? "男" : "女"}` : ""}
+      ${patient_entry.phone ? ` | ${patient_entry.phone}` : ""}
+      <button class="btn-delete" onclick="deletePatient('${patient_entry.id}')">刪除</button>
+      <button class="btn-view" onclick="showPage('records');setTimeout(()=>{document.getElementById('r-patient').value='${patient_entry.id}';searchRecords()},100)">查看病歷</button>
     </div>
   `).join("");
 }
@@ -216,9 +216,9 @@ async function addPatient() {
   document.getElementById("p-phone").value = "";
 }
 
-async function deletePatient(id) {
+async function deletePatient(patient_id) {
   if (!confirm("確定刪除此病患？相關病歷也會一併刪除。")) return;
-  await fetch(`${API}/patients/${id}`, { method: "DELETE" });
+  await fetch(`${API}/patients/${patient_id}`, { method: "DELETE" });
   loadPatients();
 }
 
@@ -252,24 +252,24 @@ function records() {
 
 async function loadRecordsPage() {
   // 載入病患和醫師 dropdown
-  const [pRes, dRes] = await Promise.all([
-    fetch(`${API}/patients/`).then(r => r.json()),
-    fetch(`${API}/doctors/`).then(r => r.json()),
+  const [patients_response, doctors_response] = await Promise.all([
+    fetch(`${API}/patients/`).then(patients_fetch_response => patients_fetch_response.json()),
+    fetch(`${API}/doctors/`).then(doctors_fetch_response => doctors_fetch_response.json()),
   ]);
 
-  const patientOpts = (pRes.patients || []).map(p =>
-    `<option value="${p.id}">${p.name} (${p.age}歲)</option>`
+  const patientOpts = (patients_response.patients || []).map(patient_entry =>
+    `<option value="${patient_entry.id}">${patient_entry.name} (${patient_entry.age}歲)</option>`
   ).join("");
-  const doctorOpts = (dRes.doctors || []).map(d =>
-    `<option value="${d.id}">${d.name} — ${d.specialty}</option>`
+  const doctorOpts = (doctors_response.doctors || []).map(doctor_entry =>
+    `<option value="${doctor_entry.id}">${doctor_entry.name} — ${doctor_entry.specialty}</option>`
   ).join("");
 
-  const rp = document.getElementById("r-patient");
-  const rd = document.getElementById("r-doctor");
-  const fp = document.getElementById("filter-patient");
-  if (rp) rp.innerHTML = `<option value="">選擇病患</option>${patientOpts}`;
-  if (rd) rd.innerHTML = `<option value="">選擇醫師（選填）</option>${doctorOpts}`;
-  if (fp) fp.innerHTML = `<option value="">所有病患</option>${patientOpts}`;
+  const record_patient_select = document.getElementById("r-patient");
+  const record_doctor_select = document.getElementById("r-doctor");
+  const filter_patient_select = document.getElementById("filter-patient");
+  if (record_patient_select) record_patient_select.innerHTML = `<option value="">選擇病患</option>${patientOpts}`;
+  if (record_doctor_select) record_doctor_select.innerHTML = `<option value="">選擇醫師（選填）</option>${doctorOpts}`;
+  if (filter_patient_select) filter_patient_select.innerHTML = `<option value="">所有病患</option>${patientOpts}`;
 
   searchRecords();
 }
@@ -281,7 +281,7 @@ async function addRecord() {
   const dateVal = document.getElementById("r-date").value;
   const visit_date = dateVal ? new Date(dateVal).toISOString() : undefined;
   const symptomsStr = document.getElementById("r-symptoms").value;
-  const symptoms = symptomsStr ? symptomsStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+  const symptoms = symptomsStr ? symptomsStr.split(",").map(symptom_text => symptom_text.trim()).filter(Boolean) : [];
   const diagnosis = document.getElementById("r-diagnosis").value || undefined;
   const prescription = document.getElementById("r-prescription").value || undefined;
   const notes = document.getElementById("r-notes").value || undefined;
@@ -294,8 +294,8 @@ async function addRecord() {
   searchRecords();
   // 清空表單
   ["r-symptoms", "r-diagnosis", "r-prescription", "r-notes"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = "";
+    const form_field = document.getElementById(id);
+    if (form_field) form_field.value = "";
   });
 }
 
@@ -306,37 +306,37 @@ async function searchRecords() {
   if (patientId) url += `patient_id=${patientId}&`;
   if (diagnosis) url += `diagnosis=${encodeURIComponent(diagnosis)}&`;
 
-  const res = await fetch(url);
-  const data = await res.json();
-  const el = document.getElementById("record-list");
+  const api_response = await fetch(url);
+  const response_data = await api_response.json();
+  const record_list_element = document.getElementById("record-list");
 
-  if (!data.records?.length) {
-    el.innerHTML = "<p>尚無病歷資料</p>";
+  if (!response_data.records?.length) {
+    record_list_element.innerHTML = "<p>尚無病歷資料</p>";
     return;
   }
 
-  el.innerHTML = data.records.map(r => {
-    const date = r.visit_date ? new Date(r.visit_date).toLocaleDateString("zh-TW") : "未記錄";
-    const patientName = r.patients?.name || "未知";
-    const doctorName = r.doctors?.name || "未指定";
-    const symptoms = (r.symptoms || []).join(", ");
+  record_list_element.innerHTML = response_data.records.map(record_entry => {
+    const date = record_entry.visit_date ? new Date(record_entry.visit_date).toLocaleDateString("zh-TW") : "未記錄";
+    const patientName = record_entry.patients?.name || "未知";
+    const doctorName = record_entry.doctors?.name || "未指定";
+    const symptoms = (record_entry.symptoms || []).join(", ");
     return `
       <div class="record-card">
         <div class="record-header">
           <strong>${patientName}</strong> — ${date} — 醫師：${doctorName}
-          <button class="btn-delete" onclick="deleteRecord('${r.id}')">刪除</button>
+          <button class="btn-delete" onclick="deleteRecord('${record_entry.id}')">刪除</button>
         </div>
         ${symptoms ? `<p><strong>症狀：</strong>${symptoms}</p>` : ""}
-        ${r.diagnosis ? `<p><strong>診斷：</strong>${r.diagnosis}</p>` : ""}
-        ${r.prescription ? `<p><strong>處方：</strong>${r.prescription}</p>` : ""}
-        ${r.notes ? `<p><strong>備註：</strong>${r.notes}</p>` : ""}
+        ${record_entry.diagnosis ? `<p><strong>診斷：</strong>${record_entry.diagnosis}</p>` : ""}
+        ${record_entry.prescription ? `<p><strong>處方：</strong>${record_entry.prescription}</p>` : ""}
+        ${record_entry.notes ? `<p><strong>備註：</strong>${record_entry.notes}</p>` : ""}
       </div>`;
   }).join("");
 }
 
-async function deleteRecord(id) {
+async function deleteRecord(record_id) {
   if (!confirm("確定刪除此病歷？")) return;
-  await fetch(`${API}/records/${id}`, { method: "DELETE" });
+  await fetch(`${API}/records/${record_id}`, { method: "DELETE" });
   searchRecords();
 }
 
@@ -344,19 +344,19 @@ async function deleteRecord(id) {
 
 function showToast(msg, type) {
   type = type || "info";
-  var existing = document.getElementById("toast-container");
-  if (!existing) {
-    existing = document.createElement("div");
-    existing.id = "toast-container";
-    existing.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px";
-    document.body.appendChild(existing);
+  var toast_container = document.getElementById("toast-container");
+  if (!toast_container) {
+    toast_container = document.createElement("div");
+    toast_container.id = "toast-container";
+    toast_container.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px";
+    document.body.appendChild(toast_container);
   }
   var colors = { success: "#43a047", error: "#d32f2f", info: "#1a73e8", warning: "#ef6c00" };
-  var toast = document.createElement("div");
-  toast.style.cssText = "padding:12px 20px;border-radius:8px;color:white;font-size:0.9rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.3s;max-width:360px;background:" + (colors[type] || colors.info);
-  toast.textContent = msg;
-  existing.appendChild(toast);
-  setTimeout(function() { toast.style.opacity = "0"; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+  var toast_element = document.createElement("div");
+  toast_element.style.cssText = "padding:12px 20px;border-radius:8px;color:white;font-size:0.9rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.3s;max-width:360px;background:" + (colors[type] || colors.info);
+  toast_element.textContent = msg;
+  toast_container.appendChild(toast_element);
+  setTimeout(function() { toast_element.style.opacity = "0"; setTimeout(function() { toast_element.remove(); }, 300); }, 3000);
 }
 
 // ─── 自動研究 ─────────────────────────────────────────────
@@ -450,16 +450,16 @@ var _allExperiments = [];
 
 async function loadExperiments() {
   try {
-    var [listRes, statsRes, lbRes] = await Promise.all([
+    var [list_response, stats_response, leaderboard_response] = await Promise.all([
       fetch(API + "/research/"),
       fetch(API + "/research/stats"),
       fetch(API + "/research/leaderboard?top_n=5"),
     ]);
-    var data = await listRes.json();
-    var stats = await statsRes.json();
-    var lb = await lbRes.json();
+    var experiments_data = await list_response.json();
+    var stats = await stats_response.json();
+    var leaderboard_data = await leaderboard_response.json();
 
-    _allExperiments = data.experiments || [];
+    _allExperiments = experiments_data.experiments || [];
 
     // 統計卡片
     renderStatsCards(stats);
@@ -468,28 +468,28 @@ async function loadExperiments() {
     renderBpbChart(stats.chart_data || []);
 
     // 顯示最佳結果
-    var bestEl = document.getElementById("best-bpb");
-    if (bestEl && stats.best_bpb != null) {
-      bestEl.innerHTML = '<div class="advice-box">' +
+    var best_bpb_element = document.getElementById("best-bpb");
+    if (best_bpb_element && stats.best_bpb != null) {
+      best_bpb_element.innerHTML = '<div class="advice-box">' +
         '<strong>最佳 val_bpb：</strong>' + stats.best_bpb.toFixed(4) +
         ' (' + stats.best_experiment + ')' +
         ' — 共 ' + stats.total + ' 個實驗，' + stats.with_bpb + ' 個有 bpb 數據</div>';
     }
 
     // 排行榜
-    renderLeaderboard(lb.leaderboard || []);
+    renderLeaderboard(leaderboard_data.leaderboard || []);
 
     // 顯示實驗列表
     renderExperimentList(_allExperiments);
-  } catch (e) {
-    var el = document.getElementById("experiment-list");
-    if (el) el.innerHTML = '<p style="color:#d32f2f">無法載入，請確認後端是否啟動。</p>';
+  } catch (load_error) {
+    var experiment_list_element = document.getElementById("experiment-list");
+    if (experiment_list_element) experiment_list_element.innerHTML = '<p style="color:#d32f2f">無法載入，請確認後端是否啟動。</p>';
   }
 }
 
 function renderStatsCards(stats) {
-  var el = document.getElementById("research-stats");
-  if (!el) return;
+  var stats_element = document.getElementById("research-stats");
+  if (!stats_element) return;
   var cards = [
     { label: "總實驗數", value: stats.total || 0, color: "#1a73e8" },
     { label: "保留 (Kept)", value: stats.kept_count || 0, color: "#43a047" },
@@ -498,32 +498,32 @@ function renderStatsCards(stats) {
     { label: "最佳 val_bpb", value: stats.best_bpb != null ? stats.best_bpb.toFixed(4) : "N/A", color: "#7b1fa2" },
     { label: "總訓練時間", value: stats.total_duration_hours + "h", color: "#00838f" },
   ];
-  el.innerHTML = cards.map(function(c) {
-    return '<div style="text-align:center;padding:12px;background:#f8f9fa;border-radius:8px;border-left:3px solid ' + c.color + '">' +
-      '<div style="font-size:1.4rem;font-weight:700;color:' + c.color + '">' + c.value + '</div>' +
-      '<div style="font-size:0.8rem;color:#666;margin-top:4px">' + c.label + '</div></div>';
+  stats_element.innerHTML = cards.map(function(stat_card) {
+    return '<div style="text-align:center;padding:12px;background:#f8f9fa;border-radius:8px;border-left:3px solid ' + stat_card.color + '">' +
+      '<div style="font-size:1.4rem;font-weight:700;color:' + stat_card.color + '">' + stat_card.value + '</div>' +
+      '<div style="font-size:0.8rem;color:#666;margin-top:4px">' + stat_card.label + '</div></div>';
   }).join("");
 }
 
 function renderLeaderboard(ranking) {
-  var el = document.getElementById("leaderboard");
-  if (!el) return;
+  var leaderboard_element = document.getElementById("leaderboard");
+  if (!leaderboard_element) return;
   if (!ranking.length) {
-    el.innerHTML = '<p style="color:#888">尚無排行資料</p>';
+    leaderboard_element.innerHTML = '<p style="color:#888">尚無排行資料</p>';
     return;
   }
   var medals = ["#FFD700", "#C0C0C0", "#CD7F32"];
-  el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem">' +
+  leaderboard_element.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem">' +
     '<tr style="border-bottom:2px solid #e0e0e0"><th style="text-align:left;padding:6px">#</th><th style="text-align:left;padding:6px">名稱</th><th style="text-align:right;padding:6px">val_bpb</th><th style="text-align:right;padding:6px">loss</th><th style="text-align:right;padding:6px">耗時</th></tr>' +
-    ranking.map(function(r) {
-      var medal = r.rank <= 3 ? '<span style="color:' + medals[r.rank - 1] + ';font-weight:bold">' + r.rank + '</span>' : r.rank;
-      var dur = r.duration_seconds ? Math.round(r.duration_seconds) + "s" : "-";
+    ranking.map(function(ranking_entry) {
+      var medal = ranking_entry.rank <= 3 ? '<span style="color:' + medals[ranking_entry.rank - 1] + ';font-weight:bold">' + ranking_entry.rank + '</span>' : ranking_entry.rank;
+      var duration_display = ranking_entry.duration_seconds ? Math.round(ranking_entry.duration_seconds) + "s" : "-";
       return '<tr style="border-bottom:1px solid #f0f0f0">' +
         '<td style="padding:6px">' + medal + '</td>' +
-        '<td style="padding:6px">' + r.name + '</td>' +
-        '<td style="text-align:right;padding:6px;font-weight:600;color:#1a73e8">' + (r.val_bpb != null ? r.val_bpb.toFixed(4) : "-") + '</td>' +
-        '<td style="text-align:right;padding:6px">' + (r.train_loss != null ? r.train_loss.toFixed(4) : "-") + '</td>' +
-        '<td style="text-align:right;padding:6px;color:#666">' + dur + '</td></tr>';
+        '<td style="padding:6px">' + ranking_entry.name + '</td>' +
+        '<td style="text-align:right;padding:6px;font-weight:600;color:#1a73e8">' + (ranking_entry.val_bpb != null ? ranking_entry.val_bpb.toFixed(4) : "-") + '</td>' +
+        '<td style="text-align:right;padding:6px">' + (ranking_entry.train_loss != null ? ranking_entry.train_loss.toFixed(4) : "-") + '</td>' +
+        '<td style="text-align:right;padding:6px;color:#666">' + duration_display + '</td></tr>';
     }).join("") + '</table>';
 }
 
@@ -535,59 +535,59 @@ function filterExperiments() {
   var filtered = _allExperiments.slice();
 
   if (search) {
-    filtered = filtered.filter(function(e) {
-      return (e.name || "").toLowerCase().indexOf(search) !== -1 ||
-             (e.notes || "").toLowerCase().indexOf(search) !== -1;
+    filtered = filtered.filter(function(experiment_entry) {
+      return (experiment_entry.name || "").toLowerCase().indexOf(search) !== -1 ||
+             (experiment_entry.notes || "").toLowerCase().indexOf(search) !== -1;
     });
   }
 
   if (keptFilter === "true") {
-    filtered = filtered.filter(function(e) { return e.kept === true; });
+    filtered = filtered.filter(function(experiment_entry) { return experiment_entry.kept === true; });
   } else if (keptFilter === "false") {
-    filtered = filtered.filter(function(e) { return e.kept === false; });
+    filtered = filtered.filter(function(experiment_entry) { return experiment_entry.kept === false; });
   }
 
   if (sortBy === "val_bpb") {
-    filtered.sort(function(a, b) { return (a.val_bpb || Infinity) - (b.val_bpb || Infinity); });
+    filtered.sort(function(exp_a, exp_b) { return (exp_a.val_bpb || Infinity) - (exp_b.val_bpb || Infinity); });
   } else if (sortBy === "train_loss") {
-    filtered.sort(function(a, b) { return (a.train_loss || Infinity) - (b.train_loss || Infinity); });
+    filtered.sort(function(exp_a, exp_b) { return (exp_a.train_loss || Infinity) - (exp_b.train_loss || Infinity); });
   } else if (sortBy === "duration_seconds") {
-    filtered.sort(function(a, b) { return (b.duration_seconds || 0) - (a.duration_seconds || 0); });
+    filtered.sort(function(exp_a, exp_b) { return (exp_b.duration_seconds || 0) - (exp_a.duration_seconds || 0); });
   }
 
   renderExperimentList(filtered);
 }
 
 function renderExperimentList(experiments) {
-  var el = document.getElementById("experiment-list");
-  if (!el) return;
+  var experiment_list_element = document.getElementById("experiment-list");
+  if (!experiment_list_element) return;
   if (!experiments.length) {
-    el.innerHTML = "<p>尚無實驗結果。請從 Colab 執行訓練後回傳，或匯入 results.tsv。</p>";
+    experiment_list_element.innerHTML = "<p>尚無實驗結果。請從 Colab 執行訓練後回傳，或匯入 results.tsv。</p>";
     return;
   }
-  el.innerHTML = '<p style="color:#888;font-size:0.85rem;margin-bottom:8px">共 ' + experiments.length + ' 筆結果</p>' +
-    experiments.map(function(e) {
+  experiment_list_element.innerHTML = '<p style="color:#888;font-size:0.85rem;margin-bottom:8px">共 ' + experiments.length + ' 筆結果</p>' +
+    experiments.map(function(experiment_entry) {
       var metrics = [];
-      if (e.val_bpb != null) metrics.push('<span style="font-weight:600;color:#1a73e8">bpb: ' + e.val_bpb.toFixed(4) + '</span>');
-      if (e.train_loss != null) metrics.push("loss: " + e.train_loss.toFixed(4));
-      if (e.steps != null) metrics.push(e.steps + " steps");
-      if (e.duration_seconds != null) {
-        var d = e.duration_seconds;
-        metrics.push(d >= 3600 ? (d / 3600).toFixed(1) + "h" : d >= 60 ? Math.round(d / 60) + "m" : Math.round(d) + "s");
+      if (experiment_entry.val_bpb != null) metrics.push('<span style="font-weight:600;color:#1a73e8">bpb: ' + experiment_entry.val_bpb.toFixed(4) + '</span>');
+      if (experiment_entry.train_loss != null) metrics.push("loss: " + experiment_entry.train_loss.toFixed(4));
+      if (experiment_entry.steps != null) metrics.push(experiment_entry.steps + " steps");
+      if (experiment_entry.duration_seconds != null) {
+        var duration_seconds = experiment_entry.duration_seconds;
+        metrics.push(duration_seconds >= 3600 ? (duration_seconds / 3600).toFixed(1) + "h" : duration_seconds >= 60 ? Math.round(duration_seconds / 60) + "m" : Math.round(duration_seconds) + "s");
       }
-      var keptBadge = e.kept === true
+      var keptBadge = experiment_entry.kept === true
         ? '<span class="urgency-badge urgency-low" style="font-size:0.75rem;padding:2px 8px">kept</span>'
-        : e.kept === false
+        : experiment_entry.kept === false
         ? '<span class="urgency-badge urgency-high" style="font-size:0.75rem;padding:2px 8px">reverted</span>'
         : '';
       return '<div class="record-card">' +
         '<div class="record-header">' +
-        '<strong>' + e.name + '</strong> ' + keptBadge + ' — ' + (e.submitted_at || "").slice(0, 10) +
-        '<button class="btn-delete" onclick="deleteExperiment(\'' + e.id + '\')">刪除</button>' +
+        '<strong>' + experiment_entry.name + '</strong> ' + keptBadge + ' — ' + (experiment_entry.submitted_at || "").slice(0, 10) +
+        '<button class="btn-delete" onclick="deleteExperiment(\'' + experiment_entry.id + '\')">刪除</button>' +
         '</div>' +
         (metrics.length ? '<p>' + metrics.join(' | ') + '</p>' : '') +
-        (e.notes ? '<p style="color:#666;font-size:0.9rem">' + e.notes + '</p>' : '') +
-        (e.colab_url ? '<p><a href="' + e.colab_url + '" target="_blank">Colab 連結</a></p>' : '') +
+        (experiment_entry.notes ? '<p style="color:#666;font-size:0.9rem">' + experiment_entry.notes + '</p>' : '') +
+        (experiment_entry.colab_url ? '<p><a href="' + experiment_entry.colab_url + '" target="_blank">Colab 連結</a></p>' : '') +
         '</div>';
     }).join("");
 }
@@ -609,9 +609,9 @@ function renderBpbChart(chartData) {
   var W = rect.width, H = rect.height;
   var pad = { top: 15, right: 20, bottom: 30, left: 55 };
 
-  var vals = chartData.map(function(d) { return d.val_bpb; });
-  var minV = Math.min.apply(null, vals);
-  var maxV = Math.max.apply(null, vals);
+  var bpb_values = chartData.map(function(chart_point) { return chart_point.val_bpb; });
+  var minV = Math.min.apply(null, bpb_values);
+  var maxV = Math.max.apply(null, bpb_values);
   var range = maxV - minV || 0.1;
   minV -= range * 0.1;
   maxV += range * 0.1;
@@ -680,7 +680,7 @@ function renderBpbChart(chartData) {
   ctx.stroke();
 
   // Best line
-  var bestIdx = vals.indexOf(Math.min.apply(null, vals));
+  var bestIdx = bpb_values.indexOf(Math.min.apply(null, bpb_values));
   ctx.strokeStyle = "rgba(67, 160, 71, 0.4)";
   ctx.lineWidth = 1;
   ctx.setLineDash([6, 4]);
@@ -709,26 +709,26 @@ function renderBpbChart(chartData) {
 
   // Tooltip 事件
   canvas.onmousemove = function(evt) {
-    var cRect = canvas.getBoundingClientRect();
-    var mx = evt.clientX - cRect.left;
+    var canvas_rect = canvas.getBoundingClientRect();
+    var mouse_x = evt.clientX - canvas_rect.left;
     var tooltip = document.getElementById("chart-tooltip");
     if (!tooltip) return;
-    var hit = -1;
-    for (var t = 0; t < points.length; t++) {
-      if (Math.abs(mx - points[t].x) < 15) { hit = t; break; }
+    var hit_index = -1;
+    for (var point_idx = 0; point_idx < points.length; point_idx++) {
+      if (Math.abs(mouse_x - points[point_idx].x) < 15) { hit_index = point_idx; break; }
     }
-    if (hit >= 0) {
-      var d = chartData[hit];
-      var lines = [d.name];
-      lines.push("val_bpb: " + d.val_bpb.toFixed(4));
-      if (d.train_loss != null) lines.push("loss: " + d.train_loss.toFixed(4));
-      if (d.steps) lines.push("steps: " + d.steps);
-      if (d.duration_seconds) lines.push("duration: " + Math.round(d.duration_seconds) + "s");
-      lines.push(d.kept ? "kept" : d.kept === false ? "reverted" : "");
-      tooltip.textContent = lines.filter(Boolean).join("\n");
+    if (hit_index >= 0) {
+      var hovered_data = chartData[hit_index];
+      var tooltip_lines = [hovered_data.name];
+      tooltip_lines.push("val_bpb: " + hovered_data.val_bpb.toFixed(4));
+      if (hovered_data.train_loss != null) tooltip_lines.push("loss: " + hovered_data.train_loss.toFixed(4));
+      if (hovered_data.steps) tooltip_lines.push("steps: " + hovered_data.steps);
+      if (hovered_data.duration_seconds) tooltip_lines.push("duration: " + Math.round(hovered_data.duration_seconds) + "s");
+      tooltip_lines.push(hovered_data.kept ? "kept" : hovered_data.kept === false ? "reverted" : "");
+      tooltip.textContent = tooltip_lines.filter(Boolean).join("\n");
       tooltip.style.display = "block";
-      tooltip.style.left = Math.min(points[hit].x + 10, W - 180) + "px";
-      tooltip.style.top = (points[hit].y - 10) + "px";
+      tooltip.style.left = Math.min(points[hit_index].x + 10, W - 180) + "px";
+      tooltip.style.top = (points[hit_index].y - 10) + "px";
     } else {
       tooltip.style.display = "none";
     }
@@ -753,21 +753,21 @@ async function submitExperiment() {
     kept: document.getElementById("exp-kept").checked,
   };
   try {
-    var res = await fetch(API + "/research/", {
+    var api_response = await fetch(API + "/research/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error("HTTP " + res.status);
+    if (!api_response.ok) throw new Error("HTTP " + api_response.status);
     showToast("實驗已提交：" + name, "success");
     loadExperiments();
     ["exp-name", "exp-bpb", "exp-loss", "exp-steps", "exp-duration", "exp-notes", "exp-colab"].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) el.value = "";
+      var form_field = document.getElementById(id);
+      if (form_field) form_field.value = "";
     });
     document.getElementById("exp-kept").checked = false;
-  } catch (e) {
-    showToast("提交失敗：" + e.message, "error");
+  } catch (submit_error) {
+    showToast("提交失敗：" + submit_error.message, "error");
   }
 }
 
@@ -776,55 +776,55 @@ async function uploadTsv(input) {
   var formData = new FormData();
   formData.append("file", input.files[0]);
   try {
-    var res = await fetch(API + "/research/batch", { method: "POST", body: formData });
-    var data = await res.json();
-    showToast("匯入成功：" + data.count + " 個實驗" + (data.errors ? "，" + data.errors + " 個失敗" : ""), data.errors ? "warning" : "success");
+    var api_response = await fetch(API + "/research/batch", { method: "POST", body: formData });
+    var response_data = await api_response.json();
+    showToast("匯入成功：" + response_data.count + " 個實驗" + (response_data.errors ? "，" + response_data.errors + " 個失敗" : ""), response_data.errors ? "warning" : "success");
     loadExperiments();
-  } catch (e) {
-    showToast("匯入失敗：" + e.message, "error");
+  } catch (upload_error) {
+    showToast("匯入失敗：" + upload_error.message, "error");
   }
   input.value = "";
 }
 
 async function exportExperiments() {
   try {
-    var res = await fetch(API + "/research/export");
-    var data = await res.json();
-    if (!data.tsv) { showToast("無資料可匯出", "warning"); return; }
-    var blob = new Blob([data.tsv], { type: "text/tab-separated-values" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "experiments_" + new Date().toISOString().slice(0, 10) + ".tsv";
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("已匯出 " + data.count + " 筆實驗", "success");
-  } catch (e) {
-    showToast("匯出失敗：" + e.message, "error");
+    var api_response = await fetch(API + "/research/export");
+    var response_data = await api_response.json();
+    if (!response_data.tsv) { showToast("無資料可匯出", "warning"); return; }
+    var tsv_blob = new Blob([response_data.tsv], { type: "text/tab-separated-values" });
+    var download_url = URL.createObjectURL(tsv_blob);
+    var download_link = document.createElement("a");
+    download_link.href = download_url;
+    download_link.download = "experiments_" + new Date().toISOString().slice(0, 10) + ".tsv";
+    download_link.click();
+    URL.revokeObjectURL(download_url);
+    showToast("已匯出 " + response_data.count + " 筆實驗", "success");
+  } catch (export_error) {
+    showToast("匯出失敗：" + export_error.message, "error");
   }
 }
 
-async function deleteExperiment(id) {
+async function deleteExperiment(experiment_id) {
   if (!confirm("確定刪除此實驗結果？")) return;
   try {
-    await fetch(API + "/research/" + id, { method: "DELETE" });
+    await fetch(API + "/research/" + experiment_id, { method: "DELETE" });
     showToast("實驗已刪除", "success");
     loadExperiments();
-  } catch (e) {
+  } catch (delete_error) {
     showToast("刪除失敗", "error");
   }
 }
 
 async function checkGpuStatus() {
-  var el = document.getElementById("gpu-status");
+  var gpu_status_element = document.getElementById("gpu-status");
   try {
-    var res = await fetch(API + "/research/status/gpu");
-    var data = await res.json();
-    el.innerHTML = '<div class="advice-box" style="margin-top:8px">' +
-      '<strong>GPU 狀態：</strong>' + (data.has_gpu ? '可用' : '不可用') +
-      '<br>' + data.message + '</div>';
-  } catch (e) {
-    el.innerHTML = '<div class="advice-box" style="margin-top:8px;color:#d32f2f">無法檢查 GPU 狀態</div>';
+    var api_response = await fetch(API + "/research/status/gpu");
+    var response_data = await api_response.json();
+    gpu_status_element.innerHTML = '<div class="advice-box" style="margin-top:8px">' +
+      '<strong>GPU 狀態：</strong>' + (response_data.has_gpu ? '可用' : '不可用') +
+      '<br>' + response_data.message + '</div>';
+  } catch (fetch_error) {
+    gpu_status_element.innerHTML = '<div class="advice-box" style="margin-top:8px;color:#d32f2f">無法檢查 GPU 狀態</div>';
   }
 }
 
@@ -840,21 +840,21 @@ function contributors() {
 }
 
 async function loadContributors() {
-  const list = document.getElementById("contributors-list");
+  const contributors_list_element = document.getElementById("contributors-list");
   try {
-    const res = await fetch("https://api.github.com/repos/" + GITHUB_REPO + "/contributors");
-    if (!res.ok) throw new Error("無法取得貢獻者資料");
-    const data = await res.json();
-    list.innerHTML = data.map(function(c) {
+    const api_response = await fetch("https://api.github.com/repos/" + GITHUB_REPO + "/contributors");
+    if (!api_response.ok) throw new Error("無法取得貢獻者資料");
+    const contributors_data = await api_response.json();
+    contributors_list_element.innerHTML = contributors_data.map(function(contributor_entry) {
       return '<div class="contributor-card">' +
-        '<img src="' + c.avatar_url + '" alt="' + c.login + '" class="contributor-avatar" />' +
+        '<img src="' + contributor_entry.avatar_url + '" alt="' + contributor_entry.login + '" class="contributor-avatar" />' +
         '<div class="contributor-info">' +
-        '<a href="' + c.html_url + '" target="_blank" rel="noopener noreferrer" class="contributor-name">' + c.login + '</a>' +
-        '<span class="contributor-commits">' + c.contributions + ' 次提交</span>' +
+        '<a href="' + contributor_entry.html_url + '" target="_blank" rel="noopener noreferrer" class="contributor-name">' + contributor_entry.login + '</a>' +
+        '<span class="contributor-commits">' + contributor_entry.contributions + ' 次提交</span>' +
         '</div></div>';
     }).join("");
-  } catch (e) {
-    list.innerHTML = '<p style="color:#d32f2f">' + e.message + '</p>';
+  } catch (fetch_error) {
+    contributors_list_element.innerHTML = '<p style="color:#d32f2f">' + fetch_error.message + '</p>';
   }
 }
 

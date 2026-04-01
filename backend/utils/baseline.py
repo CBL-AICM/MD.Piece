@@ -10,9 +10,9 @@ def calculate_baseline(records: list[dict]) -> dict:
     if not records:
         return {}
 
-    pain_scores = [r["pain"] for r in records if "pain" in r]
-    emotion_scores = [r["emotion"] for r in records if "emotion" in r]
-    med_rates = [r["medication_rate"] for r in records if "medication_rate" in r]
+    pain_scores = [daily_record["pain"] for daily_record in records if "pain" in daily_record]
+    emotion_scores = [daily_record["emotion"] for daily_record in records if "emotion" in daily_record]
+    med_rates = [daily_record["medication_rate"] for daily_record in records if "medication_rate" in daily_record]
 
     return {
         "pain_mean": statistics.mean(pain_scores) if pain_scores else None,
