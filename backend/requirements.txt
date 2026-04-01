@@ -4,3 +4,4 @@ supabase
 python-dotenv
 anthropic
 knowledge-storm
+gpt-researcher
