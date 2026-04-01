@@ -13,6 +13,9 @@ logger = logging.getLogger("md-piece-mcp")
 # 初始化 MCP server
 mcp = FastMCP("md-piece")
 
+# GPT-Researcher 報告預覽字元上限
+REPORT_PREVIEW_LENGTH = 1500
+
 # MD.Piece FastAPI backend URL
 API_BASE = "http://localhost:8000"
 
@@ -418,6 +421,49 @@ async def get_symptom_history(patient_id: str) -> str:
         ai = h.get("ai_response", {})
         urgency = ai.get("urgency", "N/A") if ai else "N/A"
         lines.append(f"[{date}] 症狀: {symptoms} | 緊急程度: {urgency}")
+    return "\n".join(lines)
+
+
+# ─── GPT-Researcher 工具 ──────────────────────────────────────
+
+@mcp.tool()
+async def research_medical_topic(topic: str, report_type: str = "research_report") -> str:
+    """使用 GPT-Researcher 對醫療主題進行深度研究，產出含引用來源的完整報告。
+
+    Args:
+        topic: 研究主題，例如「高血壓治療指引 2024」
+        report_type: 報告類型 - research_report（完整）、outline_report（大綱）、resource_report（來源彙整）
+    """
+    data = await api_post("/gpt-researcher/research", {"topic": topic, "report_type": report_type})
+    if data is None:
+        return "GPT-Researcher 研究失敗，請確認 backend 是否已啟動且 OPENAI_API_KEY / TAVILY_API_KEY 已設定。"
+    report = data.get("report", "")
+    source_count = data.get("source_count", 0)
+    if not report:
+        return f"研究完成但未產生報告內容。(來源數: {source_count})"
+    preview = report[:REPORT_PREVIEW_LENGTH] + ("…（報告已截斷）" if len(report) > REPORT_PREVIEW_LENGTH else "")
+    return f"【{topic}】研究報告（共 {source_count} 個來源）：\n\n{preview}"
+
+
+@mcp.tool()
+async def collect_medical_sources(topic: str, max_sources: int = 10) -> str:
+    """蒐集醫療主題的相關文獻來源（URL、標題、摘錄），可作為 STORM 文章生成的原始素材。
+
+    Args:
+        topic: 搜尋主題，例如「糖尿病飲食管理」
+        max_sources: 最多蒐集幾筆來源（預設 10）
+    """
+    data = await api_post("/gpt-researcher/sources", {"topic": topic, "max_sources": max_sources})
+    if data is None:
+        return "來源蒐集失敗，請確認 backend 是否已啟動且 OPENAI_API_KEY / TAVILY_API_KEY 已設定。"
+    sources = data.get("sources", [])
+    if not sources:
+        return f"未找到「{topic}」的相關來源。"
+    lines = [f"【{topic}】共 {len(sources)} 筆來源："]
+    for i, src in enumerate(sources, 1):
+        title = src.get("title") or src.get("url", "（無標題）")
+        url = src.get("url", "")
+        lines.append(f"{i}. {title}\n   {url}")
     return "\n".join(lines)
 
 
