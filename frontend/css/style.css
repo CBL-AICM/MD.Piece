@@ -45,7 +45,7 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 
 /* ═══════════════════════════════════════════════════════════
-   LANDING PAGE
+   LANDING PAGE (static, clean design)
    ═══════════════════════════════════════════════════════════ */
 
 #landing {
@@ -57,14 +57,7 @@ body {
   align-items: center;
   justify-content: center;
   background: radial-gradient(ellipse at 50% 30%, #1a1d3a 0%, #0b0e1a 70%);
-  transition: opacity .8s ease, transform .8s ease;
   overflow: hidden;
-}
-
-#landing.hide {
-  opacity: 0;
-  transform: scale(1.05);
-  pointer-events: none;
 }
 
 #star-canvas {
@@ -87,175 +80,25 @@ body {
   z-index: 1;
 }
 
-/* ─── Nebula Blobs ────────────────────────────────────── */
+/* ─── Nebula Blobs (static) ───────────────────────────── */
 .nebula {
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
   pointer-events: none;
   z-index: 1;
-  transition: transform 0.3s ease-out;
 }
 
 .nebula-1 {
   width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(74,158,255,0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(74,158,255,0.10) 0%, transparent 70%);
   top: -10%; right: -5%;
-  animation: nebulaFloat 20s ease-in-out infinite;
 }
 
 .nebula-2 {
   width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(124,92,191,0.10) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(124,92,191,0.08) 0%, transparent 70%);
   bottom: -10%; left: -5%;
-  animation: nebulaFloat 25s ease-in-out 5s infinite reverse;
-}
-
-@keyframes nebulaFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -20px) scale(1.05); }
-  66% { transform: translate(-20px, 30px) scale(0.95); }
-}
-
-/* ─── Constellation Lines ─────────────────────────────── */
-.constellation-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.constellation-line {
-  stroke: rgba(74,158,255,0.06);
-  stroke-width: 1;
-  stroke-dasharray: 8 8;
-  animation: constellationDash 20s linear infinite;
-}
-
-@keyframes constellationDash {
-  to { stroke-dashoffset: -200; }
-}
-
-/* ─── Pulse Rings ──────────────────────────────────────── */
-.landing-rings {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.ring {
-  position: absolute;
-  border: 1px solid rgba(74, 158, 255, 0.06);
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.ring-1 {
-  width: 300px; height: 300px;
-  animation: ringPulse 6s ease-in-out infinite;
-}
-
-.ring-2 {
-  width: 500px; height: 500px;
-  animation: ringPulse 6s ease-in-out 2s infinite;
-}
-
-.ring-3 {
-  width: 700px; height: 700px;
-  animation: ringPulse 6s ease-in-out 4s infinite;
-}
-
-@keyframes ringPulse {
-  0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
-/* ─── Floating Orbs ───────────────────────────────────── */
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 1;
-  transition: transform 0.3s ease-out;
-}
-
-.orb-1 {
-  width: 8px; height: 8px;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
-  top: 18%; left: 12%;
-  animation: orbFloat 8s ease-in-out infinite;
-}
-
-.orb-2 {
-  width: 5px; height: 5px;
-  background: var(--purple);
-  box-shadow: 0 0 10px var(--purple);
-  top: 25%; right: 18%;
-  animation: orbFloat 10s ease-in-out 1s infinite;
-}
-
-.orb-3 {
-  width: 10px; height: 10px;
-  background: var(--success);
-  box-shadow: 0 0 15px var(--success);
-  bottom: 30%; left: 22%;
-  animation: orbFloat 12s ease-in-out 2s infinite;
-  opacity: 0.6;
-}
-
-.orb-4 {
-  width: 6px; height: 6px;
-  background: var(--warning);
-  box-shadow: 0 0 10px var(--warning);
-  top: 55%; right: 10%;
-  animation: orbFloat 9s ease-in-out 3s infinite;
-}
-
-.orb-5 {
-  width: 4px; height: 4px;
-  background: #fff;
-  box-shadow: 0 0 8px rgba(255,255,255,0.8);
-  top: 12%; right: 32%;
-  animation: orbFloat 7s ease-in-out 0.5s infinite;
-}
-
-.orb-6 {
-  width: 7px; height: 7px;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
-  bottom: 20%; right: 25%;
-  animation: orbFloat 11s ease-in-out 4s infinite;
-}
-
-.orb-7 {
-  width: 3px; height: 3px;
-  background: var(--purple);
-  box-shadow: 0 0 6px var(--purple);
-  top: 40%; left: 8%;
-  animation: orbFloat 14s ease-in-out 2.5s infinite;
-}
-
-.orb-8 {
-  width: 5px; height: 5px;
-  background: #fff;
-  box-shadow: 0 0 8px rgba(255,255,255,0.6);
-  bottom: 15%; left: 40%;
-  animation: orbFloat 8s ease-in-out 1.5s infinite;
-}
-
-@keyframes orbFloat {
-  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
-  25% { transform: translate(20px, -30px); opacity: 0.8; }
-  50% { transform: translate(-15px, -50px); opacity: 0.5; }
-  75% { transform: translate(25px, -20px); opacity: 0.9; }
 }
 
 /* ─── Hero Section ────────────────────────────────────── */
@@ -272,11 +115,9 @@ body {
 .landing-content {
   position: relative;
   text-align: center;
-  animation: fadeInUp .8s ease;
-  transition: transform 0.15s ease-out;
 }
 
-/* ─── Glow Halo ───────────────────────────────────────── */
+/* ─── Glow Halo (static) ─────────────────────────────── */
 .logo-halo {
   position: absolute;
   width: 320px;
@@ -284,15 +125,10 @@ body {
   top: -80px;
   left: 50%;
   transform: translateX(-50%);
-  background: radial-gradient(circle, var(--accent-glow) 0%, rgba(124,92,191,0.08) 50%, transparent 70%);
+  background: radial-gradient(circle, var(--accent-glow) 0%, rgba(124,92,191,0.06) 50%, transparent 70%);
   border-radius: 50%;
-  animation: haloBreath 4s ease-in-out infinite;
+  opacity: 0.5;
   pointer-events: none;
-}
-
-@keyframes haloBreath {
-  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
-  50% { opacity: 0.8; transform: translateX(-50%) scale(1.15); }
 }
 
 .landing-logo {
@@ -302,53 +138,43 @@ body {
   margin: 0 auto 28px;
 }
 
-/* Puzzle piece shape via CSS */
+/* Puzzle pieces (static positions) */
 .puzzle-piece {
   position: absolute;
   border-radius: 4px;
-  transition: all .6s cubic-bezier(.4,0,.2,1);
 }
 
 .puzzle-piece-1 {
   width: 68px; height: 68px;
   background: linear-gradient(135deg, var(--accent), #6bb8ff);
-  box-shadow: 0 0 20px rgba(74,158,255,0.4);
+  box-shadow: 0 0 20px rgba(74,158,255,0.3);
   top: 10px; left: 30px;
   clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
-  animation: floatPiece 4s ease-in-out infinite;
 }
 
 .puzzle-piece-2 {
   width: 68px; height: 68px;
   background: linear-gradient(135deg, var(--purple), #a88be0);
-  box-shadow: 0 0 20px rgba(124,92,191,0.4);
+  box-shadow: 0 0 20px rgba(124,92,191,0.3);
   top: 10px; right: 30px;
   clip-path: polygon(0% 0%, 0% 100%, 70% 100%, 70% 85%, 85% 85%, 85% 70%, 100% 70%, 100% 0%);
-  animation: floatPiece 4s ease-in-out 1s infinite;
 }
 
 .puzzle-piece-3 {
   width: 68px; height: 68px;
   background: linear-gradient(135deg, #e8a33d, #f0c97a);
-  box-shadow: 0 0 20px rgba(232,163,61,0.4);
+  box-shadow: 0 0 20px rgba(232,163,61,0.3);
   bottom: 16px; left: 30px;
   clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
-  animation: floatPiece 4s ease-in-out 2s infinite;
 }
 
 .puzzle-piece-4 {
   width: 68px; height: 68px;
   background: linear-gradient(135deg, var(--success), #7ad4a5);
-  box-shadow: 0 0 20px rgba(76,175,125,0.4);
+  box-shadow: 0 0 20px rgba(76,175,125,0.3);
   bottom: 16px; right: 30px;
   clip-path: polygon(0% 0%, 0% 100%, 100% 100%, 100% 30%, 85% 30%, 85% 15%, 70% 15%, 70% 0%);
-  animation: floatPiece 4s ease-in-out 3s infinite;
 }
-
-#landing.assembling .puzzle-piece-1 { top: 35px; left: 50px; }
-#landing.assembling .puzzle-piece-2 { top: 35px; right: 50px; }
-#landing.assembling .puzzle-piece-3 { bottom: 35px; left: 50px; }
-#landing.assembling .puzzle-piece-4 { bottom: 35px; right: 50px; }
 
 .landing-title {
   font-family: "Orbitron", sans-serif;
@@ -360,12 +186,6 @@ body {
   background-clip: text;
   margin-bottom: 12px;
   letter-spacing: 6px;
-  animation: titleGlow 3s ease-in-out infinite alternate;
-}
-
-@keyframes titleGlow {
-  0% { filter: drop-shadow(0 0 8px var(--accent-glow)); }
-  100% { filter: drop-shadow(0 0 20px var(--purple-glow)); }
 }
 
 .landing-subtitle {
@@ -373,15 +193,6 @@ body {
   color: var(--text-dim);
   margin-bottom: 36px;
   letter-spacing: 2px;
-  min-height: 1.5em;
-  border-right: 2px solid var(--accent);
-  display: inline-block;
-  padding-right: 4px;
-  animation: cursorBlink 0.8s step-end infinite;
-}
-
-@keyframes cursorBlink {
-  50% { border-color: transparent; }
 }
 
 /* ─── Enter Button ────────────────────────────────────── */
@@ -430,23 +241,7 @@ body {
   border-radius: inherit;
   z-index: -1;
   filter: blur(14px);
-  opacity: .5;
-}
-
-.btn-enter::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-  animation: btnShimmer 3s ease-in-out infinite;
-}
-
-@keyframes btnShimmer {
-  0% { left: -100%; }
-  50%, 100% { left: 100%; }
+  opacity: .4;
 }
 
 /* ─── Feature Badges ──────────────────────────────────── */
@@ -469,7 +264,6 @@ body {
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: var(--radius-pill);
   backdrop-filter: blur(4px);
-  animation: fadeInUp 1s ease backwards;
   transition: var(--transition);
 }
 
@@ -478,11 +272,6 @@ body {
   border-color: rgba(74,158,255,0.2);
   color: var(--text);
 }
-
-.landing-badge:nth-child(1) { animation-delay: 0.4s; }
-.landing-badge:nth-child(2) { animation-delay: 0.6s; }
-.landing-badge:nth-child(3) { animation-delay: 0.8s; }
-.landing-badge:nth-child(4) { animation-delay: 1.0s; }
 
 .landing-badge svg {
   color: var(--accent);
@@ -503,7 +292,6 @@ body {
   border-bottom: 1px solid rgba(255,255,255,0.06);
   backdrop-filter: blur(8px);
   width: 100%;
-  animation: fadeInUp 1.2s ease backwards 1s;
 }
 
 .stat-item {
@@ -539,14 +327,14 @@ body {
   background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent);
 }
 
-/* ─── ECG Heartbeat Line ──────────────────────────────── */
+/* ─── ECG Line (static decoration) ────────────────────── */
 .ecg-line {
   position: absolute;
   bottom: 60px;
   left: 0;
   right: 0;
   height: 60px;
-  opacity: 0.10;
+  opacity: 0.08;
   pointer-events: none;
   z-index: 1;
 }
@@ -562,14 +350,6 @@ body {
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 2400;
-  stroke-dashoffset: 2400;
-  animation: ecgDraw 4s linear infinite;
-}
-
-@keyframes ecgDraw {
-  0% { stroke-dashoffset: 2400; }
-  100% { stroke-dashoffset: 0; }
 }
 
 /* ─── Landing Footer ──────────────────────────────────── */
