@@ -17,81 +17,26 @@
   <!-- ★ Star canvas (always behind everything) -->
   <canvas id="star-canvas"></canvas>
 
-  <!-- ★ Landing Page -->
+  <!-- ★ Landing Page — Cinematic Intro -->
   <div id="landing">
-    <!-- Static grid overlay -->
-    <div class="landing-grid"></div>
-
-    <!-- Static nebula blobs (background decoration) -->
-    <div class="nebula nebula-1"></div>
-    <div class="nebula nebula-2"></div>
-
-    <!-- ─── Hero Section ─── -->
-    <div class="landing-hero">
-      <div class="landing-content" id="landing-content">
-        <div class="logo-halo"></div>
-
-        <div class="landing-logo">
-          <div class="puzzle-piece puzzle-piece-1"></div>
-          <div class="puzzle-piece puzzle-piece-2"></div>
-          <div class="puzzle-piece puzzle-piece-3"></div>
-          <div class="puzzle-piece puzzle-piece-4"></div>
-        </div>
-        <h1 class="landing-title">MD.Piece</h1>
-        <p class="landing-subtitle">醫療輔助平台 — 拼湊健康的每一片</p>
-
-        <div class="landing-features">
-          <div class="landing-badge"><i data-lucide="brain" style="width:16px;height:16px"></i> AI 症狀分析</div>
-          <div class="landing-badge"><i data-lucide="file-text" style="width:16px;height:16px"></i> 病歷管理</div>
-          <div class="landing-badge"><i data-lucide="shield-check" style="width:16px;height:16px"></i> 隱私安全</div>
-          <div class="landing-badge"><i data-lucide="flask-conical" style="width:16px;height:16px"></i> 自動研究</div>
-        </div>
-
-        <button class="btn-enter" onclick="enterApp()">
-          <span class="btn-enter-text">進入平台</span>
-          <span class="btn-enter-arrow">&rarr;</span>
-        </button>
+    <div class="intro-stage">
+      <!-- Puzzle pieces fly in from corners and assemble -->
+      <div class="intro-logo">
+        <div class="intro-piece intro-piece-1"></div>
+        <div class="intro-piece intro-piece-2"></div>
+        <div class="intro-piece intro-piece-3"></div>
+        <div class="intro-piece intro-piece-4"></div>
+        <div class="intro-flash"></div>
       </div>
+
+      <!-- Title appears after assembly -->
+      <h1 class="intro-title">MD.Piece</h1>
+      <div class="intro-divider"></div>
+      <p class="intro-tagline">將那些日常碎片拼起<br>陪你走出那些治療中的迷霧</p>
     </div>
 
-    <!-- ─── Stats Bar ─── -->
-    <div class="landing-stats">
-      <div class="stat-item">
-        <span class="stat-num">6</span>
-        <span class="stat-label">核心模組</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-num">100</span><span class="stat-num-suffix">%</span>
-        <span class="stat-label">開源免費</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-num">24</span><span class="stat-num-suffix">/7</span>
-        <span class="stat-label">AI 可用</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-num">PWA</span>
-        <span class="stat-label">跨平台</span>
-      </div>
-    </div>
-
-    <!-- Static ECG line (decoration only, no animation) -->
-    <div class="ecg-line">
-      <svg viewBox="0 0 1200 60" preserveAspectRatio="none">
-        <polyline class="ecg-trace" points="0,30 160,30 200,30 220,10 240,50 260,5 280,55 300,30 340,30 500,30 540,30 560,10 580,50 600,5 620,55 640,30 680,30 840,30 880,30 900,10 920,50 940,5 960,55 980,30 1020,30 1200,30" />
-      </svg>
-    </div>
-
-    <!-- Bottom info -->
-    <div class="landing-footer">
-      <span>CBL-AICM Lab</span>
-      <span class="landing-dot"></span>
-      <span>v2.0</span>
-      <span class="landing-dot"></span>
-      <span>Open Source</span>
-    </div>
+    <span class="intro-lab">CBL-AICM Lab</span>
+    <span class="intro-skip">click to skip</span>
   </div>
 
   <!-- ★ Main App (hidden until enter) -->
@@ -224,18 +169,29 @@
     })();
 
     // ─── Landing → App Transition ──────────────────────────
-    lucide.createIcons();
+    // Auto-enter after intro sequence finishes (~5s)
+    let introPlayed = false;
+    let introTimer = setTimeout(() => enterApp(), 5000);
+
+    // Click anywhere on landing to skip
+    document.getElementById('landing').addEventListener('click', () => {
+      clearTimeout(introTimer);
+      enterApp();
+    });
 
     function enterApp() {
+      if (introPlayed) return;
+      introPlayed = true;
+      clearTimeout(introTimer);
+
       const landing = document.getElementById('landing');
-      landing.style.opacity = '0';
-      landing.style.transition = 'opacity 0.5s ease';
+      landing.classList.add('fade-out');
       setTimeout(() => {
         landing.style.display = 'none';
         document.getElementById('app-wrapper').classList.add('show');
         showPage('home');
         lucide.createIcons();
-      }, 500);
+      }, 800);
     }
 
     // ─── Sidebar Navigation ────────────────────────────────
@@ -269,7 +225,7 @@
       if ('caches' in window) {
         caches.keys().then(keys => {
           keys.forEach(key => {
-            if (!key.includes('v9')) caches.delete(key);
+            if (!key.includes('v10')) caches.delete(key);
           });
         });
       }
