@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v2";
+const CACHE_VERSION = "mdpiece-v3";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -54,22 +54,21 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Static assets: cache first, fallback to network
+  // Static assets: network first, fallback to cache
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(e.request).then((res) => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(e.request, clone));
-        }
-        return res;
-      });
-    }).catch(() => {
-      // Offline fallback
-      if (e.request.destination === "document") {
-        return caches.match("/index.html");
+    fetch(e.request).then((res) => {
+      if (res.ok) {
+        const clone = res.clone();
+        caches.open(STATIC_CACHE).then((cache) => cache.put(e.request, clone));
       }
+      return res;
+    }).catch(() => {
+      return caches.match(e.request).then((cached) => {
+        if (cached) return cached;
+        if (e.request.destination === "document") {
+          return caches.match("/index.html");
+        }
+      });
     })
   );
 });
