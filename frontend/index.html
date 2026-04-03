@@ -10,6 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="description" content="PWA 醫療輔助平台，支援醫病溝通與 AI 症狀分析" />
   <link rel="stylesheet" href="css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
 <body>
@@ -27,7 +28,7 @@
       </div>
       <h1 class="landing-title">MD.Piece</h1>
       <p class="landing-subtitle">醫療輔助平台 — 拼湊健康的每一片</p>
-      <button class="btn-enter" onclick="enterApp()">✦ 進入平台</button>
+      <button class="btn-enter" onclick="enterApp()">進入平台</button>
     </div>
   </div>
 
@@ -44,29 +45,29 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <h1>MD.Piece</h1>
-        <p>🧩 MEDICAL PLATFORM</p>
+        <p>MEDICAL PLATFORM</p>
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" onclick="navigateTo('home', this)">
-          <span class="nav-icon">🏠</span> 首頁
+          <span class="nav-icon"><i data-lucide="layout-dashboard" style="width:18px;height:18px"></i></span> 首頁
         </button>
         <button class="nav-item" onclick="navigateTo('symptoms', this)">
-          <span class="nav-icon">🔬</span> 症狀分析
+          <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> 症狀分析
         </button>
         <button class="nav-item" onclick="navigateTo('records', this)">
-          <span class="nav-icon">📋</span> 病歷管理
+          <span class="nav-icon"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></span> 病歷管理
         </button>
         <button class="nav-item" onclick="navigateTo('doctors', this)">
-          <span class="nav-icon">👨‍⚕️</span> 醫師列表
+          <span class="nav-icon"><i data-lucide="stethoscope" style="width:18px;height:18px"></i></span> 醫師列表
         </button>
         <button class="nav-item" onclick="navigateTo('patients', this)">
-          <span class="nav-icon">🧑‍🤝‍🧑</span> 病患管理
+          <span class="nav-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span> 病患管理
         </button>
         <button class="nav-item" onclick="navigateTo('research', this)">
-          <span class="nav-icon">🧪</span> 自動研究
+          <span class="nav-icon"><i data-lucide="flask-conical" style="width:18px;height:18px"></i></span> 自動研究
         </button>
         <button class="nav-item" onclick="navigateTo('contributors', this)">
-          <span class="nav-icon">⭐</span> 貢獻者
+          <span class="nav-icon"><i data-lucide="heart-handshake" style="width:18px;height:18px"></i></span> 貢獻者
         </button>
       </nav>
     </aside>
@@ -168,6 +169,7 @@
         landing.classList.add('hide');
         document.getElementById('app-wrapper').classList.add('show');
         showPage('home');
+        lucide.createIcons();
       }, 700);
       setTimeout(() => { landing.style.display = 'none'; }, 1500);
     }

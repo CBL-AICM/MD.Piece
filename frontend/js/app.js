@@ -6,13 +6,26 @@ const GITHUB_REPO = "CBL-AICM/MD.Piece";
 function showPage(page) {
   const app = document.getElementById("app");
   const pages = { home, symptoms, doctors, patients, records, research, contributors };
-  app.innerHTML = pages[page]?.() || "";
-  // 頁面載入後的初始化
-  if (page === "doctors") loadDoctors();
-  if (page === "patients") loadPatients();
-  if (page === "records") loadRecordsPage();
-  if (page === "research") loadExperiments();
-  if (page === "contributors") loadContributors();
+  // Page transition
+  app.style.opacity = '0';
+  app.style.transform = 'translateY(12px)';
+  setTimeout(() => {
+    app.innerHTML = pages[page]?.() || "";
+    // 頁面載入後的初始化
+    if (page === "doctors") loadDoctors();
+    if (page === "patients") loadPatients();
+    if (page === "records") loadRecordsPage();
+    if (page === "research") loadExperiments();
+    if (page === "contributors") loadContributors();
+    // Render Lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    // Fade in
+    requestAnimationFrame(() => {
+      app.style.transition = 'opacity .3s ease, transform .3s ease';
+      app.style.opacity = '1';
+      app.style.transform = 'translateY(0)';
+    });
+  }, 150);
 }
 
 // ─── 首頁 ──────────────────────────────────────────────────
@@ -20,37 +33,37 @@ function showPage(page) {
 function home() {
   return `
     <div class="card">
-      <h2>🧩 歡迎使用 MD.Piece</h2>
+      <h2>歡迎使用 MD.Piece</h2>
       <p style="margin-top:8px">拼湊健康的每一片 — 醫病溝通、病歷管理與 AI 症狀分析平台</p>
     </div>
     <div class="feature-grid">
       <div class="feature-card" onclick="navigateTo('symptoms',null)">
-        <div class="feature-icon">🔬</div>
+        <div class="feature-icon"><i data-lucide="scan-search"></i></div>
         <h4>症狀分析</h4>
         <p>AI 智慧分析症狀，提供初步建議</p>
       </div>
       <div class="feature-card" onclick="navigateTo('records',null)">
-        <div class="feature-icon">📋</div>
+        <div class="feature-icon"><i data-lucide="clipboard-list"></i></div>
         <h4>病歷管理</h4>
         <p>建立與查詢就診紀錄</p>
       </div>
       <div class="feature-card" onclick="navigateTo('doctors',null)">
-        <div class="feature-icon">👨‍⚕️</div>
+        <div class="feature-icon"><i data-lucide="stethoscope"></i></div>
         <h4>醫師列表</h4>
         <p>管理醫師資料與專科</p>
       </div>
       <div class="feature-card" onclick="navigateTo('patients',null)">
-        <div class="feature-icon">🧑‍🤝‍🧑</div>
+        <div class="feature-icon"><i data-lucide="users"></i></div>
         <h4>病患管理</h4>
         <p>管理病患基本資料</p>
       </div>
       <div class="feature-card" onclick="navigateTo('research',null)">
-        <div class="feature-icon">🧪</div>
+        <div class="feature-icon"><i data-lucide="flask-conical"></i></div>
         <h4>自動研究</h4>
         <p>AutoResearch 實驗管理</p>
       </div>
       <div class="feature-card" onclick="navigateTo('contributors',null)">
-        <div class="feature-icon">⭐</div>
+        <div class="feature-icon"><i data-lucide="heart-handshake"></i></div>
         <h4>貢獻者</h4>
         <p>GitHub 社群貢獻</p>
       </div>

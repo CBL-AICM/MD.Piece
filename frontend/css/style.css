@@ -271,7 +271,16 @@ body {
 .nav-icon {
   width: 20px;
   text-align: center;
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.nav-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
 }
 
 /* ─── Main content ──────────────────────────────────────── */
@@ -793,8 +802,14 @@ button.secondary:hover {
 }
 
 .feature-icon {
-  font-size: 2rem;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  color: var(--accent);
+}
+
+.feature-icon svg {
+  width: 32px;
+  height: 32px;
+  stroke-width: 1.5;
 }
 
 .feature-card h4 {
