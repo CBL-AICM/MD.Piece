@@ -111,11 +111,19 @@ _SCHEMAS = {
 }
 
 
+_db_initialized = False
+
 def _get_conn():
+    global _db_initialized
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    if not _db_initialized:
+        for sql in _SCHEMAS.values():
+            conn.execute(sql)
+        conn.commit()
+        _db_initialized = True
     return conn
 
 
