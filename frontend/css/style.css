@@ -74,6 +74,70 @@ body {
   pointer-events: none;
 }
 
+/* ─── Grid Overlay ────────────────────────────────────── */
+.landing-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(74,158,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74,158,255,0.03) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ─── Nebula Blobs ────────────────────────────────────── */
+.nebula {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 1;
+  transition: transform 0.3s ease-out;
+}
+
+.nebula-1 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(74,158,255,0.12) 0%, transparent 70%);
+  top: -10%; right: -5%;
+  animation: nebulaFloat 20s ease-in-out infinite;
+}
+
+.nebula-2 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(124,92,191,0.10) 0%, transparent 70%);
+  bottom: -10%; left: -5%;
+  animation: nebulaFloat 25s ease-in-out 5s infinite reverse;
+}
+
+@keyframes nebulaFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 30px) scale(0.95); }
+}
+
+/* ─── Constellation Lines ─────────────────────────────── */
+.constellation-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.constellation-line {
+  stroke: rgba(74,158,255,0.06);
+  stroke-width: 1;
+  stroke-dasharray: 8 8;
+  animation: constellationDash 20s linear infinite;
+}
+
+@keyframes constellationDash {
+  to { stroke-dashoffset: -200; }
+}
+
 /* ─── Pulse Rings ──────────────────────────────────────── */
 .landing-rings {
   position: absolute;
@@ -81,11 +145,12 @@ body {
   left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  z-index: 1;
 }
 
 .ring {
   position: absolute;
-  border: 1px solid rgba(74, 158, 255, 0.08);
+  border: 1px solid rgba(74, 158, 255, 0.06);
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -112,15 +177,378 @@ body {
   50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
+/* ─── Floating Orbs ───────────────────────────────────── */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  transition: transform 0.3s ease-out;
+}
+
+.orb-1 {
+  width: 8px; height: 8px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  top: 18%; left: 12%;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+
+.orb-2 {
+  width: 5px; height: 5px;
+  background: var(--purple);
+  box-shadow: 0 0 10px var(--purple);
+  top: 25%; right: 18%;
+  animation: orbFloat 10s ease-in-out 1s infinite;
+}
+
+.orb-3 {
+  width: 10px; height: 10px;
+  background: var(--success);
+  box-shadow: 0 0 15px var(--success);
+  bottom: 30%; left: 22%;
+  animation: orbFloat 12s ease-in-out 2s infinite;
+  opacity: 0.6;
+}
+
+.orb-4 {
+  width: 6px; height: 6px;
+  background: var(--warning);
+  box-shadow: 0 0 10px var(--warning);
+  top: 55%; right: 10%;
+  animation: orbFloat 9s ease-in-out 3s infinite;
+}
+
+.orb-5 {
+  width: 4px; height: 4px;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255,255,255,0.8);
+  top: 12%; right: 32%;
+  animation: orbFloat 7s ease-in-out 0.5s infinite;
+}
+
+.orb-6 {
+  width: 7px; height: 7px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  bottom: 20%; right: 25%;
+  animation: orbFloat 11s ease-in-out 4s infinite;
+}
+
+.orb-7 {
+  width: 3px; height: 3px;
+  background: var(--purple);
+  box-shadow: 0 0 6px var(--purple);
+  top: 40%; left: 8%;
+  animation: orbFloat 14s ease-in-out 2.5s infinite;
+}
+
+.orb-8 {
+  width: 5px; height: 5px;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255,255,255,0.6);
+  bottom: 15%; left: 40%;
+  animation: orbFloat 8s ease-in-out 1.5s infinite;
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+  25% { transform: translate(20px, -30px); opacity: 0.8; }
+  50% { transform: translate(-15px, -50px); opacity: 0.5; }
+  75% { transform: translate(25px, -20px); opacity: 0.9; }
+}
+
+/* ─── Hero Section ────────────────────────────────────── */
+.landing-hero {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+}
+
+.landing-content {
+  position: relative;
+  text-align: center;
+  animation: fadeInUp .8s ease;
+  transition: transform 0.15s ease-out;
+}
+
+/* ─── Glow Halo ───────────────────────────────────────── */
+.logo-halo {
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, var(--accent-glow) 0%, rgba(124,92,191,0.08) 50%, transparent 70%);
+  border-radius: 50%;
+  animation: haloBreath 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes haloBreath {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.8; transform: translateX(-50%) scale(1.15); }
+}
+
+.landing-logo {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 28px;
+}
+
+/* Puzzle piece shape via CSS */
+.puzzle-piece {
+  position: absolute;
+  border-radius: 4px;
+  transition: all .6s cubic-bezier(.4,0,.2,1);
+}
+
+.puzzle-piece-1 {
+  width: 68px; height: 68px;
+  background: linear-gradient(135deg, var(--accent), #6bb8ff);
+  box-shadow: 0 0 20px rgba(74,158,255,0.4);
+  top: 10px; left: 30px;
+  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
+  animation: floatPiece 4s ease-in-out infinite;
+}
+
+.puzzle-piece-2 {
+  width: 68px; height: 68px;
+  background: linear-gradient(135deg, var(--purple), #a88be0);
+  box-shadow: 0 0 20px rgba(124,92,191,0.4);
+  top: 10px; right: 30px;
+  clip-path: polygon(0% 0%, 0% 100%, 70% 100%, 70% 85%, 85% 85%, 85% 70%, 100% 70%, 100% 0%);
+  animation: floatPiece 4s ease-in-out 1s infinite;
+}
+
+.puzzle-piece-3 {
+  width: 68px; height: 68px;
+  background: linear-gradient(135deg, #e8a33d, #f0c97a);
+  box-shadow: 0 0 20px rgba(232,163,61,0.4);
+  bottom: 16px; left: 30px;
+  clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
+  animation: floatPiece 4s ease-in-out 2s infinite;
+}
+
+.puzzle-piece-4 {
+  width: 68px; height: 68px;
+  background: linear-gradient(135deg, var(--success), #7ad4a5);
+  box-shadow: 0 0 20px rgba(76,175,125,0.4);
+  bottom: 16px; right: 30px;
+  clip-path: polygon(0% 0%, 0% 100%, 100% 100%, 100% 30%, 85% 30%, 85% 15%, 70% 15%, 70% 0%);
+  animation: floatPiece 4s ease-in-out 3s infinite;
+}
+
+#landing.assembling .puzzle-piece-1 { top: 35px; left: 50px; }
+#landing.assembling .puzzle-piece-2 { top: 35px; right: 50px; }
+#landing.assembling .puzzle-piece-3 { bottom: 35px; left: 50px; }
+#landing.assembling .puzzle-piece-4 { bottom: 35px; right: 50px; }
+
+.landing-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+  letter-spacing: 6px;
+  animation: titleGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+  0% { filter: drop-shadow(0 0 8px var(--accent-glow)); }
+  100% { filter: drop-shadow(0 0 20px var(--purple-glow)); }
+}
+
+.landing-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-dim);
+  margin-bottom: 36px;
+  letter-spacing: 2px;
+  min-height: 1.5em;
+  border-right: 2px solid var(--accent);
+  display: inline-block;
+  padding-right: 4px;
+  animation: cursorBlink 0.8s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  50% { border-color: transparent; }
+}
+
+/* ─── Enter Button ────────────────────────────────────── */
+.btn-enter {
+  position: relative;
+  padding: 16px 56px;
+  font-size: 1.15rem;
+  font-family: "Noto Sans TC", sans-serif;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 0 30px var(--accent-glow), 0 0 60px var(--purple-glow);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-enter:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 0 50px var(--accent-glow), 0 0 100px var(--purple-glow);
+}
+
+.btn-enter:hover .btn-enter-arrow {
+  transform: translateX(6px);
+}
+
+.btn-enter:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-enter-arrow {
+  font-size: 1.3rem;
+  transition: transform .3s ease;
+}
+
+.btn-enter::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--accent), var(--purple), var(--accent));
+  border-radius: inherit;
+  z-index: -1;
+  filter: blur(14px);
+  opacity: .5;
+}
+
+.btn-enter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: btnShimmer 3s ease-in-out infinite;
+}
+
+@keyframes btnShimmer {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+
+/* ─── Feature Badges ──────────────────────────────────── */
+.landing-features {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+
+.landing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-pill);
+  backdrop-filter: blur(4px);
+  animation: fadeInUp 1s ease backwards;
+  transition: var(--transition);
+}
+
+.landing-badge:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(74,158,255,0.2);
+  color: var(--text);
+}
+
+.landing-badge:nth-child(1) { animation-delay: 0.4s; }
+.landing-badge:nth-child(2) { animation-delay: 0.6s; }
+.landing-badge:nth-child(3) { animation-delay: 0.8s; }
+.landing-badge:nth-child(4) { animation-delay: 1.0s; }
+
+.landing-badge svg {
+  color: var(--accent);
+}
+
+/* ─── Stats Bar ───────────────────────────────────────── */
+.landing-stats {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 20px 48px;
+  margin-bottom: 24px;
+  background: rgba(255,255,255,0.03);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(8px);
+  width: 100%;
+  animation: fadeInUp 1.2s ease backwards 1s;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-num {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-num-suffix {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 36px;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent);
+}
+
 /* ─── ECG Heartbeat Line ──────────────────────────────── */
 .ecg-line {
   position: absolute;
-  bottom: 15%;
+  bottom: 60px;
   left: 0;
   right: 0;
   height: 60px;
-  opacity: 0.12;
+  opacity: 0.10;
   pointer-events: none;
+  z-index: 1;
 }
 
 .ecg-line svg {
@@ -134,261 +562,35 @@ body {
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 1200;
-  stroke-dashoffset: 1200;
+  stroke-dasharray: 2400;
+  stroke-dashoffset: 2400;
   animation: ecgDraw 4s linear infinite;
 }
 
 @keyframes ecgDraw {
-  0% { stroke-dashoffset: 1200; }
+  0% { stroke-dashoffset: 2400; }
   100% { stroke-dashoffset: 0; }
 }
 
-/* ─── Glow Halo ───────────────────────────────────────── */
-.logo-halo {
-  position: absolute;
-  width: 280px;
-  height: 280px;
-  top: -60px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-  border-radius: 50%;
-  animation: haloBreath 4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes haloBreath {
-  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
-  50% { opacity: 0.8; transform: translateX(-50%) scale(1.15); }
-}
-
-/* ─── Floating Orbs ───────────────────────────────────── */
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  filter: blur(1px);
-}
-
-.orb-1 {
-  width: 6px; height: 6px;
-  background: var(--accent);
-  top: 20%; left: 15%;
-  animation: orbFloat 8s ease-in-out infinite;
-}
-
-.orb-2 {
-  width: 4px; height: 4px;
-  background: var(--purple);
-  top: 30%; right: 20%;
-  animation: orbFloat 10s ease-in-out 1s infinite;
-}
-
-.orb-3 {
-  width: 8px; height: 8px;
-  background: var(--success);
-  bottom: 25%; left: 25%;
-  animation: orbFloat 12s ease-in-out 2s infinite;
-  opacity: 0.6;
-}
-
-.orb-4 {
-  width: 5px; height: 5px;
-  background: var(--warning);
-  top: 60%; right: 12%;
-  animation: orbFloat 9s ease-in-out 3s infinite;
-}
-
-.orb-5 {
-  width: 3px; height: 3px;
-  background: #fff;
-  top: 15%; right: 35%;
-  animation: orbFloat 7s ease-in-out 0.5s infinite;
-}
-
-@keyframes orbFloat {
-  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
-  25% { transform: translate(20px, -30px); opacity: 0.8; }
-  50% { transform: translate(-15px, -50px); opacity: 0.5; }
-  75% { transform: translate(25px, -20px); opacity: 0.9; }
-}
-
-.landing-content {
+/* ─── Landing Footer ──────────────────────────────────── */
+.landing-footer {
   position: relative;
-  z-index: 2;
-  text-align: center;
-  animation: fadeInUp .8s ease;
-}
-
-.landing-logo {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  margin: 0 auto 24px;
-}
-
-/* Puzzle piece shape via CSS */
-.puzzle-piece {
-  position: absolute;
-  border-radius: 4px;
-  transition: all .6s cubic-bezier(.4,0,.2,1);
-}
-
-.puzzle-piece-1 {
-  width: 60px; height: 60px;
-  background: linear-gradient(135deg, var(--accent), #6bb8ff);
-  top: 10px; left: 30px;
-  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
-  animation: floatPiece 4s ease-in-out infinite;
-}
-
-.puzzle-piece-2 {
-  width: 60px; height: 60px;
-  background: linear-gradient(135deg, var(--purple), #a88be0);
-  top: 10px; right: 30px;
-  clip-path: polygon(0% 0%, 0% 100%, 70% 100%, 70% 85%, 85% 85%, 85% 70%, 100% 70%, 100% 0%);
-  animation: floatPiece 4s ease-in-out 1s infinite;
-}
-
-.puzzle-piece-3 {
-  width: 60px; height: 60px;
-  background: linear-gradient(135deg, #e8a33d, #f0c97a);
-  bottom: 20px; left: 30px;
-  clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
-  animation: floatPiece 4s ease-in-out 2s infinite;
-}
-
-.puzzle-piece-4 {
-  width: 60px; height: 60px;
-  background: linear-gradient(135deg, var(--success), #7ad4a5);
-  bottom: 20px; right: 30px;
-  clip-path: polygon(0% 0%, 0% 100%, 100% 100%, 100% 30%, 85% 30%, 85% 15%, 70% 15%, 70% 0%);
-  animation: floatPiece 4s ease-in-out 3s infinite;
-}
-
-#landing.assembling .puzzle-piece-1 { top: 30px; left: 48px; }
-#landing.assembling .puzzle-piece-2 { top: 30px; right: 48px; }
-#landing.assembling .puzzle-piece-3 { bottom: 40px; left: 48px; }
-#landing.assembling .puzzle-piece-4 { bottom: 40px; right: 48px; }
-
-.landing-title {
-  font-family: "Orbitron", sans-serif;
-  font-size: 3rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 8px;
-  letter-spacing: 4px;
-}
-
-.landing-subtitle {
-  font-size: 1.1rem;
-  color: var(--text-dim);
-  margin-bottom: 40px;
-  letter-spacing: 2px;
-}
-
-.btn-enter {
-  position: relative;
-  padding: 14px 48px;
-  font-size: 1.1rem;
-  font-family: "Noto Sans TC", sans-serif;
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-  border: none;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  overflow: hidden;
-  transition: var(--transition);
-  box-shadow: 0 0 30px var(--accent-glow), 0 0 60px var(--purple-glow);
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.btn-enter:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 40px var(--accent-glow), 0 0 80px var(--purple-glow);
-}
-
-.btn-enter:hover .btn-enter-arrow {
-  transform: translateX(4px);
-}
-
-.btn-enter-arrow {
-  font-size: 1.2rem;
-  transition: transform .3s ease;
-}
-
-.btn-enter::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  background: linear-gradient(135deg, var(--accent), var(--purple), var(--accent));
-  border-radius: inherit;
-  z-index: -1;
-  filter: blur(12px);
-  opacity: .5;
-}
-
-/* Shimmer effect on button */
-.btn-enter::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  animation: btnShimmer 3s ease-in-out infinite;
-}
-
-@keyframes btnShimmer {
-  0% { left: -100%; }
-  50%, 100% { left: 100%; }
-}
-
-/* ─── Feature Badges ──────────────────────────────────── */
-.landing-features {
+  z-index: 10;
   display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 36px;
-  flex-wrap: wrap;
-}
-
-.landing-badge {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius-pill);
-  animation: fadeInUp 1s ease backwards;
-}
-
-.landing-badge:nth-child(1) { animation-delay: 0.4s; }
-.landing-badge:nth-child(2) { animation-delay: 0.6s; }
-.landing-badge:nth-child(3) { animation-delay: 0.8s; }
-
-.landing-badge svg {
-  color: var(--accent);
-}
-
-/* ─── Version Tag ─────────────────────────────────────── */
-.landing-version {
-  margin-top: 20px;
+  gap: 12px;
+  padding: 16px;
   font-size: 0.7rem;
   color: var(--text-muted);
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
+}
+
+.landing-dot {
+  width: 3px;
+  height: 3px;
+  background: var(--text-muted);
+  border-radius: 50%;
 }
 
 /* ═══════════════════════════════════════════════════════════

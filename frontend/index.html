@@ -19,6 +19,9 @@
 
   <!-- ★ Landing Page -->
   <div id="landing">
+    <!-- Grid overlay for depth -->
+    <div class="landing-grid"></div>
+
     <!-- Pulse rings background effect -->
     <div class="landing-rings">
       <div class="ring ring-1"></div>
@@ -26,39 +29,9 @@
       <div class="ring ring-3"></div>
     </div>
 
-    <!-- ECG heartbeat line -->
-    <div class="ecg-line">
-      <svg viewBox="0 0 600 60" preserveAspectRatio="none">
-        <polyline class="ecg-trace" points="0,30 80,30 100,30 110,10 120,50 130,5 140,55 150,30 170,30 250,30 270,30 280,10 290,50 300,5 310,55 320,30 340,30 420,30 440,30 450,10 460,50 470,5 480,55 490,30 510,30 600,30" />
-      </svg>
-    </div>
-
-    <div class="landing-content">
-      <!-- Glow halo behind logo -->
-      <div class="logo-halo"></div>
-
-      <div class="landing-logo">
-        <div class="puzzle-piece puzzle-piece-1"></div>
-        <div class="puzzle-piece puzzle-piece-2"></div>
-        <div class="puzzle-piece puzzle-piece-3"></div>
-        <div class="puzzle-piece puzzle-piece-4"></div>
-      </div>
-      <h1 class="landing-title">MD.Piece</h1>
-      <p class="landing-subtitle">醫療輔助平台 — 拼湊健康的每一片</p>
-
-      <!-- Feature badges -->
-      <div class="landing-features">
-        <div class="landing-badge"><i data-lucide="brain" style="width:16px;height:16px"></i> AI 症狀分析</div>
-        <div class="landing-badge"><i data-lucide="file-text" style="width:16px;height:16px"></i> 病歷管理</div>
-        <div class="landing-badge"><i data-lucide="shield-check" style="width:16px;height:16px"></i> 隱私安全</div>
-      </div>
-
-      <button class="btn-enter" onclick="enterApp()">
-        <span class="btn-enter-text">進入平台</span>
-        <span class="btn-enter-arrow">&rarr;</span>
-      </button>
-      <p class="landing-version">v2.0 / Open Source</p>
-    </div>
+    <!-- Nebula gradient blobs -->
+    <div class="nebula nebula-1"></div>
+    <div class="nebula nebula-2"></div>
 
     <!-- Floating orbs -->
     <div class="orb orb-1"></div>
@@ -66,6 +39,88 @@
     <div class="orb orb-3"></div>
     <div class="orb orb-4"></div>
     <div class="orb orb-5"></div>
+    <div class="orb orb-6"></div>
+    <div class="orb orb-7"></div>
+    <div class="orb orb-8"></div>
+
+    <!-- Connecting lines (constellation effect) -->
+    <svg class="constellation-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+      <line class="constellation-line" x1="150" y1="120" x2="350" y2="200" />
+      <line class="constellation-line" x1="350" y1="200" x2="500" y2="150" />
+      <line class="constellation-line" x1="700" y1="100" x2="900" y2="180" />
+      <line class="constellation-line" x1="900" y1="180" x2="1050" y2="120" />
+      <line class="constellation-line" x1="100" y1="500" x2="250" y2="600" />
+      <line class="constellation-line" x1="250" y1="600" x2="400" y2="550" />
+      <line class="constellation-line" x1="800" y1="550" x2="950" y2="650" />
+      <line class="constellation-line" x1="950" y1="650" x2="1100" y2="580" />
+    </svg>
+
+    <!-- ─── Hero Section ─── -->
+    <div class="landing-hero">
+      <div class="landing-content" id="landing-content">
+        <div class="logo-halo"></div>
+
+        <div class="landing-logo">
+          <div class="puzzle-piece puzzle-piece-1"></div>
+          <div class="puzzle-piece puzzle-piece-2"></div>
+          <div class="puzzle-piece puzzle-piece-3"></div>
+          <div class="puzzle-piece puzzle-piece-4"></div>
+        </div>
+        <h1 class="landing-title">MD.Piece</h1>
+        <p class="landing-subtitle" id="landing-subtitle"></p>
+
+        <div class="landing-features">
+          <div class="landing-badge"><i data-lucide="brain" style="width:16px;height:16px"></i> AI 症狀分析</div>
+          <div class="landing-badge"><i data-lucide="file-text" style="width:16px;height:16px"></i> 病歷管理</div>
+          <div class="landing-badge"><i data-lucide="shield-check" style="width:16px;height:16px"></i> 隱私安全</div>
+          <div class="landing-badge"><i data-lucide="flask-conical" style="width:16px;height:16px"></i> 自動研究</div>
+        </div>
+
+        <button class="btn-enter" onclick="enterApp()">
+          <span class="btn-enter-text">進入平台</span>
+          <span class="btn-enter-arrow">&rarr;</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── Stats Bar ─── -->
+    <div class="landing-stats">
+      <div class="stat-item">
+        <span class="stat-num" data-target="6">0</span>
+        <span class="stat-label">核心模組</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num" data-target="100">0</span><span class="stat-num-suffix">%</span>
+        <span class="stat-label">開源免費</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num" data-target="24">0</span><span class="stat-num-suffix">/7</span>
+        <span class="stat-label">AI 可用</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-num">PWA</span>
+        <span class="stat-label">跨平台</span>
+      </div>
+    </div>
+
+    <!-- ECG heartbeat line -->
+    <div class="ecg-line">
+      <svg viewBox="0 0 1200 60" preserveAspectRatio="none">
+        <polyline class="ecg-trace" points="0,30 160,30 200,30 220,10 240,50 260,5 280,55 300,30 340,30 500,30 540,30 560,10 580,50 600,5 620,55 640,30 680,30 840,30 880,30 900,10 920,50 940,5 960,55 980,30 1020,30 1200,30" />
+      </svg>
+    </div>
+
+    <!-- Bottom info -->
+    <div class="landing-footer">
+      <span>CBL-AICM Lab</span>
+      <span class="landing-dot"></span>
+      <span>v2.0</span>
+      <span class="landing-dot"></span>
+      <span>Open Source</span>
+    </div>
   </div>
 
   <!-- ★ Main App (hidden until enter) -->
@@ -198,8 +253,57 @@
     })();
 
     // ─── Landing → App Transition ──────────────────────────
-    // Init landing page icons
     lucide.createIcons();
+
+    // Typewriter subtitle
+    (function typewriter() {
+      const el = document.getElementById('landing-subtitle');
+      const text = '醫療輔助平台 — 拼湊健康的每一片';
+      let i = 0;
+      function type() {
+        if (i <= text.length) {
+          el.textContent = text.slice(0, i);
+          i++;
+          setTimeout(type, 60);
+        }
+      }
+      setTimeout(type, 600);
+    })();
+
+    // Animated stat counters
+    (function animateStats() {
+      const nums = document.querySelectorAll('.stat-num[data-target]');
+      nums.forEach(el => {
+        const target = parseInt(el.dataset.target);
+        const duration = 1500;
+        const start = performance.now();
+        function tick(now) {
+          const progress = Math.min((now - start) / duration, 1);
+          const ease = 1 - Math.pow(1 - progress, 3);
+          el.textContent = Math.round(target * ease);
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+        setTimeout(() => requestAnimationFrame(tick), 800);
+      });
+    })();
+
+    // Mouse parallax on landing
+    document.getElementById('landing').addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 2;
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      const content = document.getElementById('landing-content');
+      if (content) {
+        content.style.transform = `translate(${x * -8}px, ${y * -8}px)`;
+      }
+      document.querySelectorAll('.orb').forEach((orb, i) => {
+        const factor = (i + 1) * 6;
+        orb.style.transform = `translate(${x * factor}px, ${y * factor}px)`;
+      });
+      document.querySelectorAll('.nebula').forEach((n, i) => {
+        const factor = (i + 1) * 12;
+        n.style.transform = `translate(${x * factor}px, ${y * factor}px)`;
+      });
+    });
 
     function enterApp() {
       const landing = document.getElementById('landing');
