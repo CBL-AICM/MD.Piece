@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#1a73e8" />
+  <meta name="theme-color" content="#0b0e1a" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,34 +13,199 @@
   <title>MD.Piece</title>
 </head>
 <body>
-  <header>
-    <h1>MD.Piece</h1>
-    <p>醫療輔助平台</p>
-  </header>
+  <!-- ★ Star canvas (always behind everything) -->
+  <canvas id="star-canvas"></canvas>
 
-  <nav>
-    <button onclick="showPage('home')">首頁</button>
-    <button onclick="showPage('symptoms')">症狀分析</button>
-    <button onclick="showPage('records')">病歷管理</button>
-    <button onclick="showPage('doctors')">醫師列表</button>
-    <button onclick="showPage('patients')">病患管理</button>
-    <button onclick="showPage('research')">自動研究</button>
-    <button onclick="showPage('contributors')">貢獻者</button>
-  </nav>
+  <!-- ★ Landing Page -->
+  <div id="landing">
+    <div class="landing-content">
+      <div class="landing-logo">
+        <div class="puzzle-piece puzzle-piece-1"></div>
+        <div class="puzzle-piece puzzle-piece-2"></div>
+        <div class="puzzle-piece puzzle-piece-3"></div>
+        <div class="puzzle-piece puzzle-piece-4"></div>
+      </div>
+      <h1 class="landing-title">MD.Piece</h1>
+      <p class="landing-subtitle">醫療輔助平台 — 拼湊健康的每一片</p>
+      <button class="btn-enter" onclick="enterApp()">✦ 進入平台</button>
+    </div>
+  </div>
 
-  <main id="app"></main>
+  <!-- ★ Main App (hidden until enter) -->
+  <div id="app-wrapper">
+    <!-- Puzzle decorations -->
+    <div class="puzzle-deco puzzle-deco-1"></div>
+    <div class="puzzle-deco puzzle-deco-2"></div>
+
+    <!-- Sidebar backdrop (mobile) -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h1>MD.Piece</h1>
+        <p>🧩 MEDICAL PLATFORM</p>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" onclick="navigateTo('home', this)">
+          <span class="nav-icon">🏠</span> 首頁
+        </button>
+        <button class="nav-item" onclick="navigateTo('symptoms', this)">
+          <span class="nav-icon">🔬</span> 症狀分析
+        </button>
+        <button class="nav-item" onclick="navigateTo('records', this)">
+          <span class="nav-icon">📋</span> 病歷管理
+        </button>
+        <button class="nav-item" onclick="navigateTo('doctors', this)">
+          <span class="nav-icon">👨‍⚕️</span> 醫師列表
+        </button>
+        <button class="nav-item" onclick="navigateTo('patients', this)">
+          <span class="nav-icon">🧑‍🤝‍🧑</span> 病患管理
+        </button>
+        <button class="nav-item" onclick="navigateTo('research', this)">
+          <span class="nav-icon">🧪</span> 自動研究
+        </button>
+        <button class="nav-item" onclick="navigateTo('contributors', this)">
+          <span class="nav-icon">⭐</span> 貢獻者
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main content area -->
+    <div class="main-content">
+      <div class="topbar">
+        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <h2 id="page-title">首頁</h2>
+        <span style="font-size:.75rem;color:var(--text-muted)">v2.0</span>
+      </div>
+      <main id="app"></main>
+    </div>
+  </div>
 
   <script src="js/app.js"></script>
   <script>
+    // ─── Star Field Animation ──────────────────────────────
+    (function() {
+      const canvas = document.getElementById('star-canvas');
+      const ctx = canvas.getContext('2d');
+      let stars = [];
+      let shootingStars = [];
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function createStars() {
+        stars = [];
+        const count = Math.floor((canvas.width * canvas.height) / 3000);
+        for (let i = 0; i < count; i++) {
+          stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r: Math.random() * 1.5 + 0.3,
+            a: Math.random(),
+            speed: Math.random() * 0.005 + 0.002,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+      }
+
+      function maybeShootingStar() {
+        if (Math.random() < 0.003 && shootingStars.length < 2) {
+          shootingStars.push({
+            x: Math.random() * canvas.width * 0.7,
+            y: Math.random() * canvas.height * 0.3,
+            len: Math.random() * 60 + 40,
+            speed: Math.random() * 4 + 6,
+            a: 1
+          });
+        }
+      }
+
+      function draw(time) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Stars
+        for (const s of stars) {
+          const alpha = 0.3 + 0.7 * ((Math.sin(time * s.speed + s.phase) + 1) / 2);
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(200, 220, 255, ${alpha * s.a})`;
+          ctx.fill();
+        }
+
+        // Shooting stars
+        for (let i = shootingStars.length - 1; i >= 0; i--) {
+          const ss = shootingStars[i];
+          ctx.beginPath();
+          ctx.moveTo(ss.x, ss.y);
+          ctx.lineTo(ss.x - ss.len, ss.y - ss.len * 0.4);
+          ctx.strokeStyle = `rgba(180, 210, 255, ${ss.a})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ss.x += ss.speed;
+          ss.y += ss.speed * 0.4;
+          ss.a -= 0.01;
+          if (ss.a <= 0) shootingStars.splice(i, 1);
+        }
+
+        maybeShootingStar();
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', () => { resize(); createStars(); });
+      resize();
+      createStars();
+      requestAnimationFrame(draw);
+    })();
+
+    // ─── Landing → App Transition ──────────────────────────
+    function enterApp() {
+      const landing = document.getElementById('landing');
+      landing.classList.add('assembling');
+      setTimeout(() => {
+        landing.classList.add('hide');
+        document.getElementById('app-wrapper').classList.add('show');
+        showPage('home');
+      }, 700);
+      setTimeout(() => { landing.style.display = 'none'; }, 1500);
+    }
+
+    // ─── Sidebar Navigation ────────────────────────────────
+    const pageTitles = {
+      home: '首頁', symptoms: '症狀分析', records: '病歷管理',
+      doctors: '醫師列表', patients: '病患管理',
+      research: '自動研究', contributors: '貢獻者'
+    };
+
+    function navigateTo(page, btn) {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.getElementById('page-title').textContent = pageTitles[page] || page;
+      showPage(page);
+      closeSidebar();
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-backdrop').classList.toggle('show');
+    }
+
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-backdrop').classList.remove('show');
+    }
+
+    // ─── Service Worker ────────────────────────────────────
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("/sw.js").then((reg) => {
-          console.log("SW registered:", reg.scope);
           reg.addEventListener("updatefound", () => {
             const newWorker = reg.installing;
             newWorker.addEventListener("statechange", () => {
               if (newWorker.state === "activated" && navigator.serviceWorker.controller) {
-                console.log("New SW activated, content updated.");
+                console.log("New SW activated.");
               }
             });
           });

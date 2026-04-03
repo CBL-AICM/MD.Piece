@@ -1,5 +1,5 @@
-const API = "http://localhost:8000";
-const GITHUB_REPO = "human530/MD.Piece";
+const API = window.location.hostname === "localhost" ? "http://localhost:8000" : "";
+const GITHUB_REPO = "CBL-AICM/MD.Piece";
 
 // ─── 路由 ──────────────────────────────────────────────────
 
@@ -20,16 +20,40 @@ function showPage(page) {
 function home() {
   return `
     <div class="card">
-      <h2>歡迎使用 MD.Piece</h2>
-      <p style="margin-top:8px">本平台提供醫病溝通、病歷管理與 AI 症狀分析服務</p>
+      <h2>🧩 歡迎使用 MD.Piece</h2>
+      <p style="margin-top:8px">拼湊健康的每一片 — 醫病溝通、病歷管理與 AI 症狀分析平台</p>
     </div>
-    <div class="card">
-      <h3>功能總覽</h3>
-      <p>• 症狀分析 - AI 智慧分析症狀，提供初步建議</p>
-      <p>• 病歷管理 - 建立與查詢就診記錄</p>
-      <p>• 醫師列表 - 管理醫師資料</p>
-      <p>• 病患管理 - 管理病患資料</p>
-      <p>• 自動研究 - AutoResearch 實驗管理（Colab GPU 訓練）</p>
+    <div class="feature-grid">
+      <div class="feature-card" onclick="navigateTo('symptoms',null)">
+        <div class="feature-icon">🔬</div>
+        <h4>症狀分析</h4>
+        <p>AI 智慧分析症狀，提供初步建議</p>
+      </div>
+      <div class="feature-card" onclick="navigateTo('records',null)">
+        <div class="feature-icon">📋</div>
+        <h4>病歷管理</h4>
+        <p>建立與查詢就診紀錄</p>
+      </div>
+      <div class="feature-card" onclick="navigateTo('doctors',null)">
+        <div class="feature-icon">👨‍⚕️</div>
+        <h4>醫師列表</h4>
+        <p>管理醫師資料與專科</p>
+      </div>
+      <div class="feature-card" onclick="navigateTo('patients',null)">
+        <div class="feature-icon">🧑‍🤝‍🧑</div>
+        <h4>病患管理</h4>
+        <p>管理病患基本資料</p>
+      </div>
+      <div class="feature-card" onclick="navigateTo('research',null)">
+        <div class="feature-icon">🧪</div>
+        <h4>自動研究</h4>
+        <p>AutoResearch 實驗管理</p>
+      </div>
+      <div class="feature-card" onclick="navigateTo('contributors',null)">
+        <div class="feature-icon">⭐</div>
+        <h4>貢獻者</h4>
+        <p>GitHub 社群貢獻</p>
+      </div>
     </div>`;
 }
 
