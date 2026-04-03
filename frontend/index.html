@@ -342,19 +342,48 @@
       document.getElementById('sidebar-backdrop').classList.remove('show');
     }
 
-    // ─── Service Worker ────────────────────────────────────
+    // ─── Service Worker (auto-update + force refresh) ─────
     if ("serviceWorker" in navigator) {
+      // First: nuke all old caches immediately
+      if ('caches' in window) {
+        caches.keys().then(keys => {
+          keys.forEach(key => {
+            if (!key.includes('v7')) caches.delete(key);
+          });
+        });
+      }
+
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("/sw.js").then((reg) => {
+          // Check for updates every 30 seconds
+          setInterval(() => reg.update(), 30000);
+
           reg.addEventListener("updatefound", () => {
             const newWorker = reg.installing;
             newWorker.addEventListener("statechange", () => {
-              if (newWorker.state === "activated" && navigator.serviceWorker.controller) {
-                console.log("New SW activated.");
+              if (newWorker.state === "activated") {
+                // Force reload when new SW takes over
+                window.location.reload();
               }
             });
           });
         }).catch((err) => console.warn("SW registration failed:", err));
+
+        // If a SW is waiting, tell it to activate now
+        navigator.serviceWorker.ready.then((reg) => {
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+
+        // Reload when new SW takes control
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
       });
     }
   </script>

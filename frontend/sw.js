@@ -34,6 +34,13 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+// Listen for skip waiting message from client
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 // Fetch: network-first for API, cache-first for static
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
