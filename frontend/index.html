@@ -19,7 +19,24 @@
 
   <!-- ★ Landing Page -->
   <div id="landing">
+    <!-- Pulse rings background effect -->
+    <div class="landing-rings">
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-3"></div>
+    </div>
+
+    <!-- ECG heartbeat line -->
+    <div class="ecg-line">
+      <svg viewBox="0 0 600 60" preserveAspectRatio="none">
+        <polyline class="ecg-trace" points="0,30 80,30 100,30 110,10 120,50 130,5 140,55 150,30 170,30 250,30 270,30 280,10 290,50 300,5 310,55 320,30 340,30 420,30 440,30 450,10 460,50 470,5 480,55 490,30 510,30 600,30" />
+      </svg>
+    </div>
+
     <div class="landing-content">
+      <!-- Glow halo behind logo -->
+      <div class="logo-halo"></div>
+
       <div class="landing-logo">
         <div class="puzzle-piece puzzle-piece-1"></div>
         <div class="puzzle-piece puzzle-piece-2"></div>
@@ -28,8 +45,27 @@
       </div>
       <h1 class="landing-title">MD.Piece</h1>
       <p class="landing-subtitle">醫療輔助平台 — 拼湊健康的每一片</p>
-      <button class="btn-enter" onclick="enterApp()">進入平台</button>
+
+      <!-- Feature badges -->
+      <div class="landing-features">
+        <div class="landing-badge"><i data-lucide="brain" style="width:16px;height:16px"></i> AI 症狀分析</div>
+        <div class="landing-badge"><i data-lucide="file-text" style="width:16px;height:16px"></i> 病歷管理</div>
+        <div class="landing-badge"><i data-lucide="shield-check" style="width:16px;height:16px"></i> 隱私安全</div>
+      </div>
+
+      <button class="btn-enter" onclick="enterApp()">
+        <span class="btn-enter-text">進入平台</span>
+        <span class="btn-enter-arrow">&rarr;</span>
+      </button>
+      <p class="landing-version">v2.0 / Open Source</p>
     </div>
+
+    <!-- Floating orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="orb orb-4"></div>
+    <div class="orb orb-5"></div>
   </div>
 
   <!-- ★ Main App (hidden until enter) -->
@@ -162,6 +198,9 @@
     })();
 
     // ─── Landing → App Transition ──────────────────────────
+    // Init landing page icons
+    lucide.createIcons();
+
     function enterApp() {
       const landing = document.getElementById('landing');
       landing.classList.add('assembling');

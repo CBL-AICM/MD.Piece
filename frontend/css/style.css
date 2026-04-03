@@ -58,6 +58,7 @@ body {
   justify-content: center;
   background: radial-gradient(ellipse at 50% 30%, #1a1d3a 0%, #0b0e1a 70%);
   transition: opacity .8s ease, transform .8s ease;
+  overflow: hidden;
 }
 
 #landing.hide {
@@ -71,6 +72,146 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+}
+
+/* ─── Pulse Rings ──────────────────────────────────────── */
+.landing-rings {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.ring {
+  position: absolute;
+  border: 1px solid rgba(74, 158, 255, 0.08);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ring-1 {
+  width: 300px; height: 300px;
+  animation: ringPulse 6s ease-in-out infinite;
+}
+
+.ring-2 {
+  width: 500px; height: 500px;
+  animation: ringPulse 6s ease-in-out 2s infinite;
+}
+
+.ring-3 {
+  width: 700px; height: 700px;
+  animation: ringPulse 6s ease-in-out 4s infinite;
+}
+
+@keyframes ringPulse {
+  0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ─── ECG Heartbeat Line ──────────────────────────────── */
+.ecg-line {
+  position: absolute;
+  bottom: 15%;
+  left: 0;
+  right: 0;
+  height: 60px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.ecg-line svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ecg-trace {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: ecgDraw 4s linear infinite;
+}
+
+@keyframes ecgDraw {
+  0% { stroke-dashoffset: 1200; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ─── Glow Halo ───────────────────────────────────────── */
+.logo-halo {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: haloBreath 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes haloBreath {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.8; transform: translateX(-50%) scale(1.15); }
+}
+
+/* ─── Floating Orbs ───────────────────────────────────── */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(1px);
+}
+
+.orb-1 {
+  width: 6px; height: 6px;
+  background: var(--accent);
+  top: 20%; left: 15%;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+
+.orb-2 {
+  width: 4px; height: 4px;
+  background: var(--purple);
+  top: 30%; right: 20%;
+  animation: orbFloat 10s ease-in-out 1s infinite;
+}
+
+.orb-3 {
+  width: 8px; height: 8px;
+  background: var(--success);
+  bottom: 25%; left: 25%;
+  animation: orbFloat 12s ease-in-out 2s infinite;
+  opacity: 0.6;
+}
+
+.orb-4 {
+  width: 5px; height: 5px;
+  background: var(--warning);
+  top: 60%; right: 12%;
+  animation: orbFloat 9s ease-in-out 3s infinite;
+}
+
+.orb-5 {
+  width: 3px; height: 3px;
+  background: #fff;
+  top: 15%; right: 35%;
+  animation: orbFloat 7s ease-in-out 0.5s infinite;
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+  25% { transform: translate(20px, -30px); opacity: 0.8; }
+  50% { transform: translate(-15px, -50px); opacity: 0.5; }
+  75% { transform: translate(25px, -20px); opacity: 0.9; }
 }
 
 .landing-content {
@@ -164,11 +305,23 @@ body {
   overflow: hidden;
   transition: var(--transition);
   box-shadow: 0 0 30px var(--accent-glow), 0 0 60px var(--purple-glow);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .btn-enter:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 40px var(--accent-glow), 0 0 80px var(--purple-glow);
+}
+
+.btn-enter:hover .btn-enter-arrow {
+  transform: translateX(4px);
+}
+
+.btn-enter-arrow {
+  font-size: 1.2rem;
+  transition: transform .3s ease;
 }
 
 .btn-enter::after {
@@ -180,6 +333,62 @@ body {
   z-index: -1;
   filter: blur(12px);
   opacity: .5;
+}
+
+/* Shimmer effect on button */
+.btn-enter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: btnShimmer 3s ease-in-out infinite;
+}
+
+@keyframes btnShimmer {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+
+/* ─── Feature Badges ──────────────────────────────────── */
+.landing-features {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 36px;
+  flex-wrap: wrap;
+}
+
+.landing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-pill);
+  animation: fadeInUp 1s ease backwards;
+}
+
+.landing-badge:nth-child(1) { animation-delay: 0.4s; }
+.landing-badge:nth-child(2) { animation-delay: 0.6s; }
+.landing-badge:nth-child(3) { animation-delay: 0.8s; }
+
+.landing-badge svg {
+  color: var(--accent);
+}
+
+/* ─── Version Tag ─────────────────────────────────────── */
+.landing-version {
+  margin-top: 20px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 /* ═══════════════════════════════════════════════════════════
