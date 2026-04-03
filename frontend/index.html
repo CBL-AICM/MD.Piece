@@ -171,7 +171,7 @@
     // ─── Landing → App Transition ──────────────────────────
     // Auto-enter after intro sequence finishes (~5s)
     let introPlayed = false;
-    let introTimer = setTimeout(() => enterApp(), 5000);
+    let introTimer = setTimeout(() => enterApp(), 7500);
 
     // Click anywhere on landing to skip
     document.getElementById('landing').addEventListener('click', () => {
@@ -225,7 +225,7 @@
       if ('caches' in window) {
         caches.keys().then(keys => {
           keys.forEach(key => {
-            if (!key.includes('v10')) caches.delete(key);
+            if (!key.includes('v11')) caches.delete(key);
           });
         });
       }
