@@ -9,7 +9,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-1.0-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000?style=flat-square&logo=vercel)](https://vercel.com)
 [![PWA](https://img.shields.io/badge/PWA-Enabled-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#)
-[![CI](https://github.com/human530/MD.Piece/actions/workflows/python-app.yml/badge.svg)](https://github.com/human530/MD.Piece/actions/workflows/python-app.yml)
+[![CI](https://github.com/CBL-AICM/MD.Piece/actions/workflows/python-app.yml/badge.svg)](https://github.com/CBL-AICM/MD.Piece/actions/workflows/python-app.yml)
 
 </div>
 
@@ -176,6 +176,34 @@ uv run server.py
 1. Fork 此專案
 2. 建立功能分支：`git checkout -b feature/your-feature`
 3. 提交變更並開啟 Pull Request
+
+### 貢獻者
+
+<!-- CONTRIBUTORS:START -->
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/human530"><img src="https://avatars.githubusercontent.com/u/268499868?v=4" width="60" style="border-radius:50%" /><br /><sub><b>human530</b></sub></a><br /><sub>46 commits</sub></td>
+    <td align="center"><a href="https://github.com/claude"><img src="https://avatars.githubusercontent.com/u/81847?v=4" width="60" style="border-radius:50%" /><br /><sub><b>claude</b></sub></a><br /><sub>27 commits</sub></td>
+    <td align="center"><a href="https://github.com/lisa980530"><img src="https://avatars.githubusercontent.com/u/259302424?v=4" width="60" style="border-radius:50%" /><br /><sub><b>lisa980530</b></sub></a><br /><sub>2 commits</sub></td>
+  </tr>
+</table>
+<!-- CONTRIBUTORS:END -->
+
+---
+
+## 📊 專案狀態
+
+<!-- STATUS:START -->
+| 指標 | 數值 |
+|------|------|
+| 總 Commits | 75 |
+| 追蹤檔案數 | 740 |
+| Python 程式碼行數 | 31169 |
+| API 模組數 | 12 |
+| 最後更新 | 2026-04-03 |
+
+_自動更新於 2026-04-03 22:00 (UTC+8)_
+<!-- STATUS:END -->
 
 ---
 
