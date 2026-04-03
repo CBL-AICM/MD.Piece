@@ -22,3 +22,6 @@ autoresearch/
 # OS
 .DS_Store
 Thumbs.db
+
+# SQLite database
+md_piece.db
