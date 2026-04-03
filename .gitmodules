@@ -4,3 +4,9 @@
 [submodule "vite-plugin-pwa"]
 	path = vite-plugin-pwa
 	url = https://github.com/vite-pwa/vite-plugin-pwa.git
+[submodule "gpt-researcher"]
+	path = gpt-researcher
+	url = https://github.com/human530/gpt-researcher.git
+[submodule "dify"]
+	path = dify
+	url = https://github.com/human530/dify.git

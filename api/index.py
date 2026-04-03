@@ -1,9 +1,16 @@
+import sys
+import os
+
+# Ensure project root is on the path so "backend.xxx" imports work
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routers import (
     patients, doctors, symptoms,
     education, emotions, medications,
     reports, triage, xiaohe,
+    records, research,
 )
 
 app = FastAPI(title="MD.Piece API", version="1.0.0")
@@ -24,7 +31,10 @@ app.include_router(medications.router, prefix="/medications", tags=["medications
 app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(triage.router, prefix="/triage", tags=["triage"])
 app.include_router(xiaohe.router, prefix="/xiaohe", tags=["xiaohe"])
+app.include_router(records.router, prefix="/records", tags=["records"])
+app.include_router(research.router, prefix="/research", tags=["research"])
 
-@app.get("/")
+
+@app.get("/api")
 def root():
-    return {"message": "MD.Piece API is running"}
+    return {"message": "MD.Piece API is running", "version": "1.0.0"}
