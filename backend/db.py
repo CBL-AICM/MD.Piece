@@ -90,10 +90,44 @@ _SCHEMAS = {
         CREATE TABLE IF NOT EXISTS medications (
             id TEXT PRIMARY KEY,
             patient_id TEXT,
-            name TEXT,
+            name TEXT NOT NULL,
             dosage TEXT,
             frequency TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
+            category TEXT,
+            purpose TEXT,
+            instructions TEXT,
+            photo_data TEXT,
+            recognized_from_photo INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
+    "medication_logs": """
+        CREATE TABLE IF NOT EXISTS medication_logs (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT,
+            medication_id TEXT,
+            taken INTEGER DEFAULT 1,
+            taken_at TEXT DEFAULT (datetime('now')),
+            skip_reason TEXT,
+            notes TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (medication_id) REFERENCES medications(id)
+        )""",
+    "medication_effects": """
+        CREATE TABLE IF NOT EXISTS medication_effects (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT,
+            medication_id TEXT,
+            effectiveness INTEGER DEFAULT 3,
+            side_effects TEXT,
+            symptom_changes TEXT,
+            notes TEXT,
+            recorded_at TEXT DEFAULT (datetime('now')),
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (medication_id) REFERENCES medications(id)
         )""",
     "experiments": """
         CREATE TABLE IF NOT EXISTS experiments (

@@ -17,7 +17,7 @@ function setCurrentUser(user) {
 
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records, research, education, contributors };
+  const pages = { home, symptoms, doctors, patients, records, medications, research, education, contributors };
   // Page transition
   app.style.opacity = '0';
   app.style.transform = 'translateY(12px)';
@@ -30,6 +30,7 @@ function showPage(page) {
     if (page === "research") loadExperiments();
     if (page === "contributors") loadContributors();
     if (page === "education") loadEducationPage();
+    if (page === "medications") loadMedicationsPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -142,7 +143,7 @@ function home() {
       </div>
       <div class="dash-stats">
         <div class="dash-stat">
-          <span class="dash-stat-num">7</span>
+          <span class="dash-stat-num">8</span>
           <span class="dash-stat-label">可用任務</span>
         </div>
         <div class="dash-stat-divider"></div>
@@ -180,6 +181,12 @@ function home() {
         <div class="mission-icon"><i data-lucide="users"></i></div>
         <h4>病患管理</h4>
         <p>關懷每一位患者</p>
+        <span class="mission-tag tag-ready">可執行</span>
+      </div>
+      <div class="mission-card mission-amber" onclick="navigateTo('medications',null)">
+        <div class="mission-icon"><i data-lucide="pill"></i></div>
+        <h4>藥物管理</h4>
+        <p>拍藥袋、記服藥、追療效</p>
         <span class="mission-tag tag-ready">可執行</span>
       </div>
       <div class="mission-card mission-teal" onclick="navigateTo('education',null)">
@@ -527,6 +534,296 @@ function showToast(msg, type) {
   toast.textContent = msg;
   existing.appendChild(toast);
   setTimeout(function() { toast.style.opacity = "0"; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+}
+
+// ─── 藥物管理 ─────────────────────────────────────────────
+
+var _medsList = [];
+var _medsPatientId = null;
+
+function medications() {
+  var user = getCurrentUser();
+  _medsPatientId = user ? user.id : "demo-patient";
+  return `
+    <div class="card">
+      <h2>藥物管理</h2>
+      <p style="margin-top:8px;color:var(--text-dim)">拍攝藥袋即可自動辨識藥物，記錄服藥、追蹤療效。</p>
+    </div>
+    <div class="card">
+      <h3><i data-lucide="camera" style="width:18px;height:18px;vertical-align:middle"></i> 藥袋辨識</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">拍攝或上傳藥袋照片，AI 自動辨識藥物資訊</p>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="primary" onclick="document.getElementById('med-camera').click()">
+          <i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍攝藥袋
+        </button>
+        <button class="secondary" onclick="document.getElementById('med-upload').click()">
+          <i data-lucide="upload" style="width:14px;height:14px;vertical-align:middle"></i> 上傳照片
+        </button>
+        <input type="file" id="med-camera" accept="image/*" capture="environment" style="display:none" onchange="handleMedPhoto(this)" />
+        <input type="file" id="med-upload" accept="image/*" style="display:none" onchange="handleMedPhoto(this)" />
+      </div>
+      <div id="med-photo-preview" style="margin-top:12px"></div>
+      <div id="med-recognize-result" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>我的藥物</h3>
+        <button class="secondary" onclick="loadMedicationsPage()" style="padding:4px 12px;font-size:0.85rem">重新整理</button>
+      </div>
+      <div id="med-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
+    </div>
+    <div class="card">
+      <h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;vertical-align:middle"></i> 服藥統計</h3>
+      <div id="med-stats" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
+      <div id="med-chart" style="position:relative;height:200px;margin-top:16px">
+        <canvas id="adherence-canvas" style="width:100%;height:100%"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3><i data-lucide="file-text" style="width:18px;height:18px;vertical-align:middle"></i> 回診報告</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">產出藥物管理報告供下次回診使用</p>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <select id="report-days" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)">
+          <option value="7">最近 7 天</option>
+          <option value="14">最近 14 天</option>
+          <option value="30" selected>最近 30 天</option>
+          <option value="90">最近 90 天</option>
+        </select>
+        <button class="primary" onclick="generateMedReport()">產出報告</button>
+      </div>
+      <div id="med-report" style="margin-top:12px"></div>
+    </div>`;
+}
+
+function loadMedicationsPage() {
+  fetch(API + "/medications/?patient_id=" + _medsPatientId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _medsList = (data.medications || []).filter(function(m) { return m.active !== 0; });
+      renderMedList();
+    })
+    .catch(function() { showToast("載入藥物列表失敗", "error"); });
+
+  fetch(API + "/medications/stats?patient_id=" + _medsPatientId + "&days=30")
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderMedStats(data); })
+    .catch(function() {});
+}
+
+function renderMedList() {
+  var el = document.getElementById("med-list");
+  if (!_medsList.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">尚無藥物紀錄，拍攝藥袋開始記錄吧！</p>';
+    return;
+  }
+  var html = '<div style="display:grid;gap:10px">';
+  _medsList.forEach(function(med) {
+    var catColor = med.category ? 'var(--accent)' : 'var(--text-muted)';
+    html += '<div class="med-item">' +
+      '<div style="display:flex;justify-content:space-between;align-items:start">' +
+      '<div>' +
+      '<strong>' + med.name + '</strong>' +
+      (med.dosage ? ' <span style="color:var(--text-dim);font-size:0.85rem">' + med.dosage + '</span>' : '') +
+      (med.category ? '<br><span class="med-tag" style="border-color:' + catColor + ';color:' + catColor + '">' + med.category + '</span>' : '') +
+      (med.frequency ? '<br><span style="font-size:0.85rem;color:var(--text-dim)">' + med.frequency + '</span>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:4px">' +
+      '<button class="med-action-btn med-take" onclick="logMedTaken(\'' + med.id + '\',true)" title="已服藥">✓</button>' +
+      '<button class="med-action-btn med-skip" onclick="logMedTaken(\'' + med.id + '\',false)" title="跳過">✗</button>' +
+      '<button class="med-action-btn med-effect" onclick="showEffectForm(\'' + med.id + '\',\'' + med.name + '\')" title="記錄療效">★</button>' +
+      '</div></div></div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function handleMedPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64Full = e.target.result;
+    var mediaType = file.type || "image/jpeg";
+    var base64Data = base64Full.split(",")[1];
+
+    document.getElementById("med-photo-preview").innerHTML =
+      '<img src="' + base64Full + '" style="max-width:100%;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />';
+    document.getElementById("med-recognize-result").innerHTML =
+      '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
+      '<div class="loading-spinner"></div><p style="margin-top:8px">AI 正在辨識藥袋...</p></div>';
+
+    fetch(API + "/medications/recognize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.recognized > 0) {
+          var html = '<div style="padding:12px;background:rgba(85,184,138,0.1);border-radius:var(--radius-sm);border:1px solid var(--success)">';
+          html += '<strong style="color:var(--success)">辨識成功！找到 ' + data.recognized + ' 種藥物</strong>';
+          data.medications.forEach(function(med) {
+            html += '<div style="margin-top:8px;padding:8px;background:var(--bg-glass);border-radius:4px">';
+            html += '<strong>' + med.name + '</strong>';
+            if (med.dosage) html += ' · ' + med.dosage;
+            if (med.frequency) html += '<br><span style="font-size:0.85rem;color:var(--text-dim)">' + med.frequency + '</span>';
+            if (med.purpose) html += '<br><span style="font-size:0.85rem;color:var(--accent)">' + med.purpose + '</span>';
+            html += '</div>';
+          });
+          html += '</div>';
+          document.getElementById("med-recognize-result").innerHTML = html;
+          loadMedicationsPage();
+        } else {
+          document.getElementById("med-recognize-result").innerHTML =
+            '<p style="color:var(--warning)">無法辨識藥物，請嘗試拍攝更清晰的照片。</p>' +
+            (data.raw_text ? '<details><summary style="font-size:0.85rem;color:var(--text-muted);cursor:pointer">原始辨識文字</summary><pre style="font-size:0.8rem;white-space:pre-wrap;margin-top:4px">' + data.raw_text + '</pre></details>' : '');
+        }
+      })
+      .catch(function() {
+        document.getElementById("med-recognize-result").innerHTML =
+          '<p style="color:var(--danger)">辨識失敗，請稍後再試。</p>';
+      });
+  };
+  reader.readAsDataURL(file);
+  input.value = "";
+}
+
+function logMedTaken(medId, taken) {
+  var skipReason = "";
+  if (!taken) {
+    skipReason = prompt("為什麼跳過這次服藥？（可留空）") || "";
+  }
+  fetch(API + "/medications/log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ patient_id: _medsPatientId, medication_id: medId, taken: taken, skip_reason: skipReason })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function() { showToast(taken ? "已記錄服藥 ✓" : "已記錄跳過", taken ? "success" : "info"); })
+    .catch(function() { showToast("記錄失敗", "error"); });
+}
+
+function showEffectForm(medId, medName) {
+  var eff = prompt(medName + " 療效如何？（1=沒效果 ~ 5=非常有效）", "3");
+  if (!eff) return;
+  var effNum = parseInt(eff);
+  if (effNum < 1 || effNum > 5 || isNaN(effNum)) { showToast("請輸入 1-5 的數字", "warning"); return; }
+  var sideEffects = prompt("有任何副作用嗎？（沒有就留空）") || "";
+  var changes = prompt("症狀有什麼改善？（沒有就留空）") || "";
+
+  fetch(API + "/medications/effects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      patient_id: _medsPatientId, medication_id: medId,
+      effectiveness: effNum, side_effects: sideEffects, symptom_changes: changes
+    })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function() { showToast("療效紀錄已儲存", "success"); })
+    .catch(function() { showToast("紀錄失敗", "error"); });
+}
+
+function renderMedStats(data) {
+  var el = document.getElementById("med-stats");
+  var s = data.summary;
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">' +
+    '<div class="stat-box"><div class="stat-num">' + s.total_medications + '</div><div class="stat-label">藥物種類</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + s.adherence_rate + '%</div><div class="stat-label">服藥率</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + s.total_logs + '</div><div class="stat-label">服藥紀錄</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + s.days + '天</div><div class="stat-label">統計期間</div></div>' +
+    '</div>';
+
+  // 畫服藥率折線圖
+  if (data.adherence_trend && data.adherence_trend.length > 1) {
+    drawAdherenceChart(data.adherence_trend);
+  }
+}
+
+function drawAdherenceChart(trend) {
+  var canvas = document.getElementById("adherence-canvas");
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  ctx.scale(2, 2);
+  var w = rect.width, h = rect.height;
+  var pad = { top: 20, right: 10, bottom: 30, left: 40 };
+  var cw = w - pad.left - pad.right;
+  var ch = h - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // 背景格線
+  ctx.strokeStyle = "rgba(0,0,0,0.06)";
+  ctx.lineWidth = 0.5;
+  for (var i = 0; i <= 4; i++) {
+    var y = pad.top + (ch / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cw, y); ctx.stroke();
+  }
+
+  // Y 軸標籤
+  ctx.fillStyle = "var(--text-muted)";
+  ctx.font = "10px 'Noto Sans TC'";
+  ctx.textAlign = "right";
+  for (var i = 0; i <= 4; i++) {
+    ctx.fillText((100 - i * 25) + "%", pad.left - 4, pad.top + (ch / 4) * i + 4);
+  }
+
+  // 折線
+  ctx.beginPath();
+  ctx.strokeStyle = "#4DB6AC";
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  trend.forEach(function(d, idx) {
+    var x = pad.left + (cw / (trend.length - 1)) * idx;
+    var y = pad.top + ch - (d.rate / 100 * ch);
+    if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // 資料點
+  trend.forEach(function(d, idx) {
+    var x = pad.left + (cw / (trend.length - 1)) * idx;
+    var y = pad.top + ch - (d.rate / 100 * ch);
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = d.rate >= 80 ? "var(--success)" : d.rate >= 50 ? "var(--warning)" : "var(--danger)";
+    ctx.fill();
+  });
+
+  // X 軸日期
+  ctx.fillStyle = "var(--text-muted)";
+  ctx.font = "9px 'Noto Sans TC'";
+  ctx.textAlign = "center";
+  var step = Math.max(1, Math.floor(trend.length / 6));
+  trend.forEach(function(d, idx) {
+    if (idx % step === 0 || idx === trend.length - 1) {
+      var x = pad.left + (cw / (trend.length - 1)) * idx;
+      ctx.fillText(d.date.slice(5), x, h - 4);
+    }
+  });
+}
+
+function generateMedReport() {
+  var days = document.getElementById("report-days").value;
+  document.getElementById("med-report").innerHTML =
+    '<div style="text-align:center;padding:30px;color:var(--text-muted)">' +
+    '<div class="loading-spinner"></div><p style="margin-top:8px">正在產出回診報告...</p></div>';
+
+  fetch(API + "/medications/report?patient_id=" + _medsPatientId + "&days=" + days)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById("med-report").innerHTML =
+        '<div style="padding:16px;background:var(--bg-glass);border-radius:var(--radius-sm);border:1px solid var(--border-glass)">' +
+        markdownToHtml(data.report) + '</div>';
+    })
+    .catch(function() {
+      document.getElementById("med-report").innerHTML =
+        '<p style="color:var(--danger)">報告生成失敗，請稍後再試。</p>';
+    });
 }
 
 // ─── 衛教專欄 ─────────────────────────────────────────────

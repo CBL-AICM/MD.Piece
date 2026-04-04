@@ -1193,6 +1193,10 @@ button.secondary:hover {
 .mission-teal::before  { background: radial-gradient(circle at 50% 0%, rgba(77,182,172,0.08), transparent 70%); }
 .mission-teal .mission-icon { color: #4DB6AC; background: rgba(77,182,172,0.1); }
 
+.mission-amber  { border-top-color: #E8A84B; }
+.mission-amber::before  { background: radial-gradient(circle at 50% 0%, rgba(232,168,75,0.08), transparent 70%); }
+.mission-amber .mission-icon { color: #E8A84B; background: rgba(232,168,75,0.1); }
+
 .mission-icon {
   width: 48px;
   height: 48px;
@@ -1362,6 +1366,60 @@ button.secondary:hover {
   .sidebar-backdrop.show {
     display: block;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MEDICATIONS — 藥物管理
+   ═══════════════════════════════════════════════════════════ */
+
+.med-item {
+  padding: 12px 14px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  transition: var(--transition);
+}
+.med-item:hover { background: var(--bg-glass-hover); }
+
+.med-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 1px 8px;
+  border: 1px solid;
+  border-radius: var(--radius-pill);
+  margin-top: 4px;
+}
+
+.med-action-btn {
+  width: 32px; height: 32px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition);
+  display: flex; align-items: center; justify-content: center;
+}
+.med-take:hover { background: rgba(85,184,138,0.15); border-color: var(--success); }
+.med-skip:hover { background: rgba(217,77,77,0.1); border-color: var(--danger); }
+.med-effect:hover { background: rgba(232,168,75,0.1); border-color: #E8A84B; }
+
+.stat-box {
+  padding: 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+.stat-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 2px;
 }
 
 /* ═══════════════════════════════════════════════════════════
