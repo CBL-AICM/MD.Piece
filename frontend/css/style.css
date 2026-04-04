@@ -324,6 +324,7 @@ body {
   font-size: 0.7rem;
   font-weight: 400;
   letter-spacing: 4px;
+  text-indent: 4px;
   opacity: 0.75;
 }
 
@@ -331,6 +332,7 @@ body {
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 3px;
+  text-indent: 3px;
 }
 
 .intro-enter:hover {
