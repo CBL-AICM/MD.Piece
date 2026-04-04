@@ -589,7 +589,7 @@ body {
   top: 0;
   z-index: 50;
   padding: 16px 32px;
-  background: rgba(11,14,26,0.85);
+  background: rgba(26,29,48,0.85);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-glass);
   display: flex;
@@ -1067,7 +1067,180 @@ button.secondary:hover {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   HOME PAGE FEATURE CARDS
+   DASHBOARD — WELCOME + MISSION CARDS
+   ═══════════════════════════════════════════════════════════ */
+
+.dash-welcome {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.dash-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.dash-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.dash-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dash-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.dash-stat-num {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.dash-stat-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.dash-stat-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(to bottom, transparent, var(--border-glass), transparent);
+}
+
+/* ─── Mission Grid ──────────────────────────────────────── */
+
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.mission-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  border-top: 3px solid transparent;
+}
+
+.mission-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity var(--transition);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.mission-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow);
+  background: var(--bg-glass-hover);
+}
+
+.mission-card:hover::before { opacity: 1; }
+
+.mission-blue  { border-top-color: var(--accent); }
+.mission-blue::before  { background: radial-gradient(circle at 50% 0%, rgba(126,181,255,0.08), transparent 70%); }
+.mission-blue .mission-icon { color: var(--accent); background: rgba(126,181,255,0.1); }
+
+.mission-purple { border-top-color: var(--purple); }
+.mission-purple::before { background: radial-gradient(circle at 50% 0%, rgba(180,154,232,0.08), transparent 70%); }
+.mission-purple .mission-icon { color: var(--purple); background: rgba(180,154,232,0.1); }
+
+.mission-rose  { border-top-color: var(--rose); }
+.mission-rose::before  { background: radial-gradient(circle at 50% 0%, rgba(232,160,185,0.08), transparent 70%); }
+.mission-rose .mission-icon { color: var(--rose); background: rgba(232,160,185,0.1); }
+
+.mission-mint  { border-top-color: var(--success); }
+.mission-mint::before  { background: radial-gradient(circle at 50% 0%, rgba(126,207,165,0.08), transparent 70%); }
+.mission-mint .mission-icon { color: var(--success); background: rgba(126,207,165,0.1); }
+
+.mission-gold  { border-top-color: var(--warning); }
+.mission-gold::before  { background: radial-gradient(circle at 50% 0%, rgba(240,201,122,0.08), transparent 70%); }
+.mission-gold .mission-icon { color: var(--warning); background: rgba(240,201,122,0.1); }
+
+.mission-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.mission-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+}
+
+.mission-card h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.mission-card p {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.mission-tag {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.tag-ready {
+  color: var(--success);
+  background: rgba(126,207,165,0.12);
+  border: 1px solid rgba(126,207,165,0.2);
+}
+
+.tag-community {
+  color: var(--purple);
+  background: rgba(180,154,232,0.12);
+  border: 1px solid rgba(180,154,232,0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE GRID (legacy)
    ═══════════════════════════════════════════════════════════ */
 
 .feature-grid {
@@ -1159,6 +1332,17 @@ button.secondary:hover {
 
   .feature-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .mission-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .dash-welcome {
+    padding: 20px;
+    flex-direction: column;
+    text-align: center;
   }
 
   /* Tap backdrop to close sidebar */

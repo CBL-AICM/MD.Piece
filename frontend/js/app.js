@@ -32,40 +32,64 @@ function showPage(page) {
 
 function home() {
   return `
-    <div class="card">
-      <h2>歡迎使用 MD.Piece</h2>
-      <p style="margin-top:8px">拼湊健康的每一片 — 醫病溝通、病歷管理與 AI 症狀分析平台</p>
+    <div class="dash-welcome">
+      <div class="dash-welcome-text">
+        <h2 class="dash-title">任務總覽</h2>
+        <p class="dash-subtitle">選擇你的下一步行動</p>
+      </div>
+      <div class="dash-stats">
+        <div class="dash-stat">
+          <span class="dash-stat-num">6</span>
+          <span class="dash-stat-label">可用任務</span>
+        </div>
+        <div class="dash-stat-divider"></div>
+        <div class="dash-stat">
+          <span class="dash-stat-num">AI</span>
+          <span class="dash-stat-label">分析引擎</span>
+        </div>
+        <div class="dash-stat-divider"></div>
+        <div class="dash-stat">
+          <span class="dash-stat-num">PWA</span>
+          <span class="dash-stat-label">跨平台</span>
+        </div>
+      </div>
     </div>
-    <div class="feature-grid">
-      <div class="feature-card" onclick="navigateTo('symptoms',null)">
-        <div class="feature-icon"><i data-lucide="scan-search"></i></div>
+    <div class="mission-grid">
+      <div class="mission-card mission-blue" onclick="navigateTo('symptoms',null)">
+        <div class="mission-icon"><i data-lucide="scan-search"></i></div>
         <h4>症狀分析</h4>
-        <p>AI 智慧分析症狀，提供初步建議</p>
+        <p>AI 助你釐清身體訊號</p>
+        <span class="mission-tag tag-ready">可執行</span>
       </div>
-      <div class="feature-card" onclick="navigateTo('records',null)">
-        <div class="feature-icon"><i data-lucide="clipboard-list"></i></div>
+      <div class="mission-card mission-purple" onclick="navigateTo('records',null)">
+        <div class="mission-icon"><i data-lucide="clipboard-list"></i></div>
         <h4>病歷管理</h4>
-        <p>建立與查詢就診紀錄</p>
+        <p>守護每一次就診紀錄</p>
+        <span class="mission-tag tag-ready">可執行</span>
       </div>
-      <div class="feature-card" onclick="navigateTo('doctors',null)">
-        <div class="feature-icon"><i data-lucide="stethoscope"></i></div>
+      <div class="mission-card mission-rose" onclick="navigateTo('doctors',null)">
+        <div class="mission-icon"><i data-lucide="stethoscope"></i></div>
         <h4>醫師列表</h4>
-        <p>管理醫師資料與專科</p>
+        <p>管理你的醫療團隊</p>
+        <span class="mission-tag tag-ready">可執行</span>
       </div>
-      <div class="feature-card" onclick="navigateTo('patients',null)">
-        <div class="feature-icon"><i data-lucide="users"></i></div>
+      <div class="mission-card mission-mint" onclick="navigateTo('patients',null)">
+        <div class="mission-icon"><i data-lucide="users"></i></div>
         <h4>病患管理</h4>
-        <p>管理病患基本資料</p>
+        <p>關懷每一位患者</p>
+        <span class="mission-tag tag-ready">可執行</span>
       </div>
-      <div class="feature-card" onclick="navigateTo('research',null)">
-        <div class="feature-icon"><i data-lucide="flask-conical"></i></div>
+      <div class="mission-card mission-gold" onclick="navigateTo('research',null)">
+        <div class="mission-icon"><i data-lucide="flask-conical"></i></div>
         <h4>自動研究</h4>
-        <p>AutoResearch 實驗管理</p>
+        <p>探索醫學前沿</p>
+        <span class="mission-tag tag-ready">可執行</span>
       </div>
-      <div class="feature-card" onclick="navigateTo('contributors',null)">
-        <div class="feature-icon"><i data-lucide="heart-handshake"></i></div>
+      <div class="mission-card mission-purple" onclick="navigateTo('contributors',null)">
+        <div class="mission-icon"><i data-lucide="heart-handshake"></i></div>
         <h4>貢獻者</h4>
-        <p>GitHub 社群貢獻</p>
+        <p>共同打造的力量</p>
+        <span class="mission-tag tag-community">社群</span>
       </div>
     </div>`;
 }
