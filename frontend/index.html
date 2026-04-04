@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#1a1d30" />
+  <meta name="theme-color" content="#D6DDE3" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -157,11 +157,11 @@
         stars = [];
         // Warm star palette: soft white, pale gold, lavender, rose
         const colors = [
-          [220, 230, 255],  // soft blue-white
-          [255, 235, 210],  // warm cream
-          [230, 210, 255],  // lavender
-          [255, 210, 230],  // soft rose
-          [200, 225, 255],  // sky blue
+          [120, 145, 190],  // steel blue
+          [155, 135, 190],  // muted purple
+          [190, 135, 160],  // dusty rose
+          [115, 165, 145],  // sage green
+          [165, 150, 115],  // warm taupe
         ];
         const count = Math.floor((canvas.width * canvas.height) / 2800);
         for (let i = 0; i < count; i++) {
@@ -208,7 +208,7 @@
           ctx.beginPath();
           ctx.moveTo(ss.x, ss.y);
           ctx.lineTo(ss.x - ss.len, ss.y - ss.len * 0.4);
-          ctx.strokeStyle = `rgba(220, 200, 255, ${ss.a})`;
+          ctx.strokeStyle = `rgba(130, 110, 175, ${ss.a})`;
           ctx.lineWidth = 1.5;
           ctx.stroke();
           ss.x += ss.speed;
