@@ -158,7 +158,33 @@ def list_supported_diseases():
     return {"diseases": diseases}
 
 
-# ── STORM 深度研究（文獻搜尋 + 含引用論文生成）──────────
+# ── STORM 深度研究（文獻搜尋 + 口語化轉譯）─────────────
+
+REWRITE_PROMPT = (
+    "你是 MD.Piece 平台的衛教編輯。以下是一篇由研究引擎產出的學術性醫療文章，"
+    "請你將它改寫成一般患者看得懂的口語化衛教文章。\n\n"
+    "改寫規則：\n"
+    "1. 去掉所有學術引用標記（[1]、[2] 等），但保留文末的參考來源清單\n"
+    "2. 專業術語全部替換成生活化用語，如果非得用就加括號解釋\n"
+    "3. 語氣溫暖親切，像朋友在跟你聊天，不是醫生在唸報告\n"
+    "4. 安撫為主——不要嚇患者，長期風險要說，但一定要搭配正面的管理方法\n"
+    "5. 加入適當 emoji 讓文章更親切\n"
+    "6. 台灣情境——提到的醫療制度、飲食習慣用台灣的\n"
+    "7. 保持原文的重要醫學資訊完整性，只改表達方式\n"
+    "8. 結尾給予鼓勵與希望\n\n"
+    "回覆格式：使用 Markdown，用標題分段。"
+)
+
+
+def _rewrite_for_patient(raw_report: str) -> str:
+    """將 STORM/Co-STORM 的學術產出轉譯成患者看得懂的口語文章"""
+    if not raw_report or len(raw_report.strip()) < 50:
+        return raw_report
+    try:
+        return call_claude(REWRITE_PROMPT, raw_report)
+    except Exception as e:
+        logger.warning(f"Rewrite failed, returning raw report: {e}")
+        return raw_report
 
 
 class ResearchRequest(BaseModel):
@@ -173,7 +199,7 @@ class CoStormRequest(BaseModel):
 
 @router.post("/research/storm")
 def storm_research(body: ResearchRequest):
-    """STORM 深度研究：多輪文獻搜尋 → 大綱 → 含引用的長篇研究文���"""
+    """STORM 深度研究：文獻搜尋 → 研究報告 → 口語化轉譯給患者"""
     try:
         from backend.services.storm_service import run_storm_research, STORM_AVAILABLE
     except ImportError:
@@ -182,7 +208,6 @@ def storm_research(body: ResearchRequest):
     if not STORM_AVAILABLE:
         raise HTTPException(status_code=503, detail="knowledge-storm 套件未安裝")
 
-    # 如果提供 ICD-10，自動組合主題
     topic = body.topic
     if body.icd10_code:
         disease = ICD10_MAP.get(body.icd10_code[:3])
@@ -192,12 +217,16 @@ def storm_research(body: ResearchRequest):
     result = run_storm_research(topic)
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
+
+    # 保留原始研究報告，另外產出患者版口語文章
+    result["raw_report"] = result.get("report", "")
+    result["report"] = _rewrite_for_patient(result["raw_report"])
     return result
 
 
 @router.post("/research/costorm")
 def costorm_research(body: CoStormRequest):
-    """Co-STORM 協作研究：AI + 醫師共同策展深度衛教文章"""
+    """Co-STORM 協作研究：AI + 醫師共同策展 → 口語化轉譯給患者"""
     try:
         from backend.services.storm_service import run_costorm_research, STORM_AVAILABLE
     except ImportError:
@@ -209,6 +238,9 @@ def costorm_research(body: CoStormRequest):
     result = run_costorm_research(body.topic, body.doctor_inputs or None)
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
+
+    result["raw_report"] = result.get("report", "")
+    result["report"] = _rewrite_for_patient(result["raw_report"])
     return result
 
 
