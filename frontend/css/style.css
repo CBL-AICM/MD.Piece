@@ -268,9 +268,11 @@ body {
 .intro-reveal {
   position: relative;
   z-index: 10;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
   margin-top: 20px;
   opacity: 0;
@@ -287,6 +289,7 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: 8px;
+  text-indent: 8px;
 }
 
 .intro-divider {
@@ -300,6 +303,7 @@ body {
   font-size: 0.9rem;
   color: var(--text-dim);
   letter-spacing: 2px;
+  text-indent: 2px;
   line-height: 2;
 }
 
@@ -316,7 +320,7 @@ body {
   transition: all 0.3s ease;
   box-shadow: 0 0 30px var(--accent-glow), 0 0 60px var(--purple-glow);
   animation: btn-appear 0.6s ease-out 7.2s forwards;
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
