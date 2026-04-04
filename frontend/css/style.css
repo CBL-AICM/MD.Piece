@@ -1434,131 +1434,245 @@ button.secondary:hover {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   REGISTRATION PAGE
+   ID CARD REGISTRATION OVERLAY
    ═══════════════════════════════════════════════════════════ */
 
-.register-container {
+#register-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 80px);
   padding: 24px;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+#register-overlay.show { opacity: 1; }
+
+/* Card done → flip out */
+#register-overlay.card-done .idcard {
+  animation: cardFlipOut .6s ease forwards;
+}
+@keyframes cardFlipOut {
+  to { transform: perspective(800px) rotateY(90deg) scale(.9); opacity: 0; }
 }
 
-.register-card {
-  background: var(--bg-glass);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius);
-  padding: 40px 36px;
-  max-width: 460px;
-  width: 100%;
-  animation: fadeInUp .5s ease;
+.idcard-scene {
+  perspective: 1000px;
 }
 
-.register-header {
-  text-align: center;
-  margin-bottom: 28px;
+.idcard {
+  position: relative;
+  width: 380px;
+  max-width: 90vw;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.5);
+  box-shadow:
+    0 8px 40px rgba(0,0,0,0.12),
+    0 1px 3px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.8);
+  overflow: hidden;
+  animation: cardSlideIn .6s cubic-bezier(.34,1.56,.64,1) both;
+  font-family: 'Noto Sans TC', sans-serif;
 }
 
-.register-header h2 {
-  font-size: 1.4rem;
+@keyframes cardSlideIn {
+  from { transform: translateY(40px) scale(.92); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Top accent bar */
+.idcard-bar {
+  height: 6px;
+  background: linear-gradient(90deg, var(--accent), var(--purple), var(--rose));
+}
+
+/* Header */
+.idcard-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 16px 24px 0;
+}
+
+.idcard-logo {
+  font-family: 'Orbitron', sans-serif;
   font-weight: 700;
-  color: var(--text);
-  margin-bottom: 8px;
+  font-size: 1.1rem;
+  color: var(--accent);
+  letter-spacing: 2px;
 }
 
-.register-header p {
-  font-size: 0.88rem;
-  color: var(--text-dim);
+.idcard-type {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
 }
 
-.register-label {
+/* Avatar */
+.idcard-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  background: rgba(91,159,232,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 18px auto 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+}
+.idcard-avatar:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+.idcard-avatar svg {
+  width: 36px;
+  height: 36px;
+  color: var(--accent);
+  stroke-width: 1.5;
+}
+.idcard-avatar-hint {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  opacity: 0.7;
+}
+
+/* Form fields */
+.idcard-fields {
+  padding: 14px 24px;
+}
+
+.idcard-field {
+  margin-bottom: 16px;
+}
+
+.idcard-field-label {
   display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.idcard-field input {
+  width: 100%;
+  background: rgba(142,165,184,0.08);
+  border: 1.5px solid rgba(142,165,184,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  transition: var(--transition);
+  font-family: 'Noto Sans TC', sans-serif;
+}
+.idcard-field input::placeholder { color: var(--text-muted); opacity: 0.5; }
+.idcard-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* Role selection row */
+.idcard-role-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.idcard-role-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  background: rgba(142,165,184,0.06);
+  border: 2px solid rgba(142,165,184,0.18);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: 'Noto Sans TC', sans-serif;
+}
+.idcard-role-btn i { width: 18px; height: 18px; }
+.idcard-role-btn:hover {
+  background: rgba(91,159,232,0.06);
+  border-color: rgba(91,159,232,0.3);
+}
+
+.idcard-role-btn.selected {
+  border-color: var(--accent);
+  background: rgba(91,159,232,0.1);
+  color: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+#idrole-patient.selected {
+  border-color: var(--rose);
+  background: rgba(208,138,138,0.1);
+  color: var(--rose);
+  box-shadow: 0 0 14px var(--rose-glow);
+}
+
+/* Footer */
+.idcard-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 24px 20px;
+  gap: 12px;
+}
+
+.idcard-issued {
+  flex-shrink: 0;
+}
+
+.idcard-date {
+  display: block;
+  font-family: 'Orbitron', monospace;
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-dim);
   letter-spacing: 1px;
-  margin-bottom: 8px;
 }
 
-.role-select {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 6px;
-}
-
-.role-card {
-  background: var(--bg-surface);
-  border: 2px solid var(--border-glass);
-  border-radius: var(--radius);
-  padding: 20px 14px;
-  text-align: center;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.role-card:hover {
-  background: var(--bg-glass-hover);
-  border-color: var(--text-muted);
-}
-
-.role-card.selected {
-  border-color: var(--accent);
-  background: rgba(91,159,232,0.12);
-  box-shadow: 0 0 20px var(--accent-glow);
-}
-
-.role-card h4 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-.role-card p {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.role-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+.idcard-submit {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin: 0 auto 12px;
-}
-
-.role-icon svg {
-  width: 24px;
-  height: 24px;
-  stroke-width: 1.8;
-}
-
-.role-icon-doctor {
-  background: rgba(91,159,232,0.15);
-  color: var(--accent);
-}
-
-.role-icon-patient {
-  background: rgba(208,138,138,0.15);
-  color: var(--rose);
-}
-
-.register-btn {
-  width: 100%;
-  margin-top: 24px;
-  padding: 14px;
-  font-size: 1rem;
+  gap: 6px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border: none;
+  border-radius: 10px;
+  font-size: 0.88rem;
   font-weight: 600;
-  letter-spacing: 1px;
+  color: #fff;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: 'Noto Sans TC', sans-serif;
+  white-space: nowrap;
 }
-
-.register-btn:disabled {
-  opacity: 0.4;
+.idcard-submit i { width: 16px; height: 16px; }
+.idcard-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(91,159,232,0.35);
+}
+.idcard-submit:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
   transform: none !important;
   box-shadow: none !important;

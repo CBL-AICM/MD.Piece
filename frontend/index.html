@@ -88,6 +88,62 @@
     <span class="intro-lab">CBL-AICM Lab</span>
   </div>
 
+  <!-- ★ ID Card Registration Overlay (shown on star canvas) -->
+  <div id="register-overlay" style="display:none">
+    <div class="idcard-scene">
+      <div class="idcard">
+        <!-- Card top accent bar -->
+        <div class="idcard-bar"></div>
+
+        <!-- Card header -->
+        <div class="idcard-header">
+          <div class="idcard-logo">MD.Piece</div>
+          <div class="idcard-type">MEMBER IDENTITY CARD</div>
+        </div>
+
+        <!-- Avatar area -->
+        <div class="idcard-avatar" id="idcard-avatar" onclick="cycleAvatarColor()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="5"/>
+            <path d="M3 21v-2a7 7 0 0114 0v2"/>
+          </svg>
+          <span class="idcard-avatar-hint">點擊換色</span>
+        </div>
+
+        <!-- Form fields styled like card info -->
+        <div class="idcard-fields">
+          <div class="idcard-field">
+            <span class="idcard-field-label">姓名 NAME</span>
+            <input id="idcard-name" type="text" placeholder="輸入你的暱稱" maxlength="20" autocomplete="off" />
+          </div>
+
+          <div class="idcard-field">
+            <span class="idcard-field-label">身分 ROLE</span>
+            <div class="idcard-role-row">
+              <button class="idcard-role-btn" id="idrole-doctor" onclick="selectIdRole('doctor')">
+                <i data-lucide="stethoscope"></i> 醫師
+              </button>
+              <button class="idcard-role-btn" id="idrole-patient" onclick="selectIdRole('patient')">
+                <i data-lucide="heart-pulse"></i> 患者
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card bottom: issue info + submit -->
+        <div class="idcard-footer">
+          <div class="idcard-issued">
+            <span class="idcard-field-label">發卡日 ISSUED</span>
+            <span class="idcard-date" id="idcard-date"></span>
+          </div>
+          <button class="idcard-submit" id="idcard-submit" onclick="submitIdCard()" disabled>
+            <i data-lucide="check-circle"></i> 確認發卡
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ★ Main App (hidden until enter) -->
   <div id="app-wrapper">
     <!-- Puzzle decorations -->
@@ -237,15 +293,14 @@
       landing.classList.add('fade-out');
       setTimeout(() => {
         landing.style.display = 'none';
-        document.getElementById('app-wrapper').classList.add('show');
-        // Check if user is registered
         const user = getCurrentUser();
         if (user) {
+          document.getElementById('app-wrapper').classList.add('show');
           showPage('home');
+          lucide.createIcons();
         } else {
-          showRegister();
+          showIdCardRegister();
         }
-        lucide.createIcons();
       }, 800);
     }
 

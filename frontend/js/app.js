@@ -41,70 +41,65 @@ function showPage(page) {
   }, 150);
 }
 
-// ─── 註冊頁面 ────────────────────────────────────────────────
-
-function showRegister() {
-  const app = document.getElementById("app");
-  app.innerHTML = `
-    <div class="register-container">
-      <div class="register-card">
-        <div class="register-header">
-          <h2>歡迎加入 MD.Piece</h2>
-          <p>告訴我們你是誰，開啟專屬體驗</p>
-        </div>
-        <div class="register-form">
-          <label class="register-label">你的暱稱</label>
-          <input id="reg-nickname" type="text" placeholder="輸入暱稱..." maxlength="20" autocomplete="off" />
-
-          <label class="register-label" style="margin-top:18px">你的角色</label>
-          <div class="role-select">
-            <div class="role-card" id="role-doctor" onclick="selectRole('doctor')">
-              <div class="role-icon role-icon-doctor"><i data-lucide="stethoscope"></i></div>
-              <h4>醫師</h4>
-              <p>管理患者、查看病歷</p>
-            </div>
-            <div class="role-card" id="role-patient" onclick="selectRole('patient')">
-              <div class="role-icon role-icon-patient"><i data-lucide="heart-pulse"></i></div>
-              <h4>患者</h4>
-              <p>記錄症狀、追蹤健康</p>
-            </div>
-          </div>
-
-          <button class="primary register-btn" id="reg-submit" onclick="submitRegister()" disabled>
-            開始使用
-          </button>
-        </div>
-      </div>
-    </div>`;
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-  document.getElementById('reg-nickname').addEventListener('input', validateRegForm);
-}
+// ─── 註冊頁面（ID Card 風格，覆蓋在星空上）──────────────
 
 let _selectedRole = null;
+const _avatarColors = ['#5B9FE8','#9B80D4','#D08A8A','#55B88A','#D9A54A','#E87B5B','#7BC8E8'];
+let _avatarIdx = 0;
 
-function selectRole(role) {
+function showIdCardRegister() {
+  const overlay = document.getElementById('register-overlay');
+  overlay.style.display = 'flex';
+  // Set today's date
+  const now = new Date();
+  document.getElementById('idcard-date').textContent =
+    `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+  // Random starting color
+  _avatarIdx = Math.floor(Math.random() * _avatarColors.length);
+  applyAvatarColor();
+  // Animate in
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('idcard-name').addEventListener('input', validateIdCard);
+}
+
+function cycleAvatarColor() {
+  _avatarIdx = (_avatarIdx + 1) % _avatarColors.length;
+  applyAvatarColor();
+}
+
+function applyAvatarColor() {
+  const el = document.getElementById('idcard-avatar');
+  if (el) {
+    el.style.background = _avatarColors[_avatarIdx] + '22';
+    el.style.borderColor = _avatarColors[_avatarIdx];
+    el.querySelector('svg').style.color = _avatarColors[_avatarIdx];
+  }
+}
+
+function selectIdRole(role) {
   _selectedRole = role;
-  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById(`role-${role}`).classList.add('selected');
-  validateRegForm();
+  document.querySelectorAll('.idcard-role-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById(`idrole-${role}`).classList.add('selected');
+  validateIdCard();
 }
 
-function validateRegForm() {
-  const nickname = document.getElementById('reg-nickname')?.value.trim();
-  const btn = document.getElementById('reg-submit');
-  if (btn) btn.disabled = !(nickname && _selectedRole);
+function validateIdCard() {
+  const name = document.getElementById('idcard-name')?.value.trim();
+  const btn = document.getElementById('idcard-submit');
+  if (btn) btn.disabled = !(name && _selectedRole);
 }
 
-async function submitRegister() {
-  const nickname = document.getElementById('reg-nickname').value.trim();
+async function submitIdCard() {
+  const nickname = document.getElementById('idcard-name').value.trim();
   if (!nickname || !_selectedRole) return;
 
-  const btn = document.getElementById('reg-submit');
+  const btn = document.getElementById('idcard-submit');
   btn.disabled = true;
-  btn.textContent = '建立中...';
+  btn.innerHTML = '<i data-lucide="loader"></i> 發卡中…';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
-  const colors = ['#5B9FE8', '#9B80D4', '#D08A8A', '#55B88A', '#D9A54A'];
-  const avatar_color = colors[Math.floor(Math.random() * colors.length)];
+  const avatar_color = _avatarColors[_avatarIdx];
 
   try {
     const res = await fetch(`${API}/auth/register`, {
@@ -114,17 +109,21 @@ async function submitRegister() {
     });
     const user = await res.json();
     setCurrentUser(user);
-    showPage('home');
-    // Activate sidebar
-    document.querySelectorAll('.nav-item').forEach((b, i) => {
-      b.classList.toggle('active', i === 0);
-    });
-  } catch (e) {
-    // Fallback: save locally if backend unavailable
+  } catch {
     const user = { id: crypto.randomUUID(), nickname, role: _selectedRole, avatar_color };
     setCurrentUser(user);
-    showPage('home');
   }
+
+  // Card flip-out animation, then enter app
+  const overlay = document.getElementById('register-overlay');
+  overlay.classList.add('card-done');
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.classList.remove('show','card-done');
+    document.getElementById('app-wrapper').classList.add('show');
+    showPage('home');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }, 700);
 }
 
 // ─── 首頁 ──────────────────────────────────────────────────
