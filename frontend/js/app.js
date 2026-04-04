@@ -5,7 +5,7 @@ const GITHUB_REPO = "CBL-AICM/MD.Piece";
 
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records, research, contributors };
+  const pages = { home, symptoms, doctors, patients, records, research, education, contributors };
   // Page transition
   app.style.opacity = '0';
   app.style.transform = 'translateY(12px)';
@@ -17,6 +17,7 @@ function showPage(page) {
     if (page === "records") loadRecordsPage();
     if (page === "research") loadExperiments();
     if (page === "contributors") loadContributors();
+    if (page === "education") loadEducationPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -39,7 +40,7 @@ function home() {
       </div>
       <div class="dash-stats">
         <div class="dash-stat">
-          <span class="dash-stat-num">6</span>
+          <span class="dash-stat-num">7</span>
           <span class="dash-stat-label">可用任務</span>
         </div>
         <div class="dash-stat-divider"></div>
@@ -77,6 +78,12 @@ function home() {
         <div class="mission-icon"><i data-lucide="users"></i></div>
         <h4>病患管理</h4>
         <p>關懷每一位患者</p>
+        <span class="mission-tag tag-ready">可執行</span>
+      </div>
+      <div class="mission-card mission-teal" onclick="navigateTo('education',null)">
+        <div class="mission-icon"><i data-lucide="book-heart"></i></div>
+        <h4>衛教專欄</h4>
+        <p>溫暖易懂的健康知識</p>
         <span class="mission-tag tag-ready">可執行</span>
       </div>
       <div class="mission-card mission-gold" onclick="navigateTo('research',null)">
@@ -418,6 +425,164 @@ function showToast(msg, type) {
   toast.textContent = msg;
   existing.appendChild(toast);
   setTimeout(function() { toast.style.opacity = "0"; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+}
+
+// ─── 衛教專欄 ─────────────────────────────────────────────
+
+var _eduDiseases = [];
+var _eduDimensions = [];
+
+function education() {
+  return `
+    <div class="card">
+      <h2>衛教專欄</h2>
+      <p style="margin-top:8px;color:var(--text-dim)">
+        選擇您的疾病，我們會用最溫暖、最易懂的方式，幫您了解疾病管理的每個面向。
+      </p>
+    </div>
+    <div class="card">
+      <h3>選擇疾病</h3>
+      <div id="edu-disease-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:12px">
+        <p style="color:var(--text-muted)">載入中...</p>
+      </div>
+    </div>
+    <div id="edu-dimensions-section" style="display:none">
+      <div class="card">
+        <h3 id="edu-disease-title"></h3>
+        <p style="margin-top:4px;color:var(--text-dim)">選擇您想了解的面向</p>
+        <div id="edu-dim-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:12px"></div>
+      </div>
+    </div>
+    <div id="edu-content-section" style="display:none">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="secondary" onclick="eduBackToDimensions()" style="padding:4px 12px;font-size:0.85rem">← 返回</button>
+          <h3 id="edu-content-title"></h3>
+        </div>
+        <div id="edu-content-body" style="margin-top:16px;line-height:1.8"></div>
+      </div>
+    </div>`;
+}
+
+var _eduSelectedDisease = null;
+
+function loadEducationPage() {
+  fetch(API + "/education/diseases")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _eduDiseases = data.diseases || [];
+      renderDiseaseGrid();
+    })
+    .catch(function() { showToast("載入疾病列表失敗", "error"); });
+}
+
+function renderDiseaseGrid() {
+  var el = document.getElementById("edu-disease-grid");
+  if (!_eduDiseases.length) { el.innerHTML = "<p>尚無支援的疾病</p>"; return; }
+
+  var byCategory = {};
+  _eduDiseases.forEach(function(d) {
+    if (!byCategory[d.category]) byCategory[d.category] = [];
+    byCategory[d.category].push(d);
+  });
+
+  var html = "";
+  var catIcons = {
+    "代謝疾病": "activity", "心血管疾病": "heart-pulse", "呼吸系統疾病": "wind",
+    "消化系統疾病": "utensils", "肌肉骨骼疾病": "bone", "腎臟疾病": "droplets",
+    "神經退化疾病": "brain", "精神疾病": "smile", "腫瘤追蹤": "shield-check", "未分類": "file-question"
+  };
+
+  Object.keys(byCategory).forEach(function(cat) {
+    html += '<div style="grid-column:1/-1;margin-top:8px"><strong style="color:var(--text-dim);font-size:0.85rem">' + cat + '</strong></div>';
+    byCategory[cat].forEach(function(d) {
+      var icon = catIcons[cat] || "file-text";
+      html += '<button class="edu-disease-btn" onclick="selectEduDisease(\'' + d.icd10 + '\',\'' + d.name + '\')">' +
+        '<i data-lucide="' + icon + '" style="width:16px;height:16px"></i> ' +
+        '<span>' + d.name + '</span>' +
+        '<small style="color:var(--text-muted)">' + d.icd10 + '</small>' +
+        '</button>';
+    });
+  });
+  el.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function selectEduDisease(icd10, name) {
+  _eduSelectedDisease = { icd10: icd10, name: name };
+  document.getElementById("edu-disease-title").textContent = name + "（" + icd10 + "）— 六大衛教維度";
+  document.getElementById("edu-dimensions-section").style.display = "block";
+  document.getElementById("edu-content-section").style.display = "none";
+
+  var dims = [
+    { key: "disease_awareness", label: "疾病管理", desc: "了解疾病、治療與費用", icon: "clipboard-check", color: "var(--accent)" },
+    { key: "symptom_recognition", label: "症狀辨認", desc: "學會辨別身體訊號", icon: "search-check", color: "var(--purple)" },
+    { key: "medication_knowledge", label: "用藥知識", desc: "藥物不可怕，是好朋友", icon: "pill", color: "var(--rose)" },
+    { key: "self_management", label: "自我管理", desc: "飲食、運動、生活調整", icon: "salad", color: "var(--success)" },
+    { key: "emergency_response", label: "緊急應變", desc: "什麼時候該去看醫生", icon: "siren", color: "var(--warning)" },
+    { key: "complication_awareness", label: "併發症認知", desc: "了解風險，更有信心", icon: "shield-alert", color: "var(--danger)" },
+  ];
+
+  var html = "";
+  dims.forEach(function(d) {
+    html += '<button class="edu-dim-btn" onclick="loadEduContent(\'' + d.key + '\',\'' + d.label + '\')" style="border-left:3px solid ' + d.color + '">' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+      '<i data-lucide="' + d.icon + '" style="width:20px;height:20px;color:' + d.color + '"></i>' +
+      '<div><strong>' + d.label + '</strong><br><small style="color:var(--text-dim)">' + d.desc + '</small></div>' +
+      '</div></button>';
+  });
+  document.getElementById("edu-dim-grid").innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  document.getElementById("edu-dimensions-section").scrollIntoView({ behavior: "smooth" });
+}
+
+function loadEduContent(dimension, label) {
+  document.getElementById("edu-content-section").style.display = "block";
+  document.getElementById("edu-content-title").textContent =
+    _eduSelectedDisease.name + " — " + label;
+  document.getElementById("edu-content-body").innerHTML =
+    '<div style="text-align:center;padding:40px;color:var(--text-muted)">' +
+    '<div class="loading-spinner"></div>' +
+    '<p style="margin-top:12px">正在為您準備溫暖的衛教內容...</p></div>';
+
+  document.getElementById("edu-content-section").scrollIntoView({ behavior: "smooth" });
+
+  fetch(API + "/education/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ icd10_code: _eduSelectedDisease.icd10, dimension: dimension })
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error("API error");
+      return r.json();
+    })
+    .then(function(data) {
+      document.getElementById("edu-content-body").innerHTML = markdownToHtml(data.content);
+    })
+    .catch(function() {
+      document.getElementById("edu-content-body").innerHTML =
+        '<p style="color:var(--danger)">內容生成失敗，請稍後再試。</p>';
+    });
+}
+
+function eduBackToDimensions() {
+  document.getElementById("edu-content-section").style.display = "none";
+  document.getElementById("edu-dimensions-section").scrollIntoView({ behavior: "smooth" });
+}
+
+function markdownToHtml(md) {
+  if (!md) return "";
+  return md
+    .replace(/^### (.+)$/gm, '<h4 style="margin-top:16px;margin-bottom:8px;color:var(--accent)">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="margin-top:20px;margin-bottom:8px">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2 style="margin-top:24px;margin-bottom:12px">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '<li style="margin-left:20px;margin-bottom:4px">$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:20px;margin-bottom:4px"><strong>$1.</strong> $2</li>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
 }
 
 // ─── 自動研究 ─────────────────────────────────────────────

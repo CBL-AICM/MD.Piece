@@ -9,6 +9,7 @@ class PatientCreate(BaseModel):
     age: int
     gender: str | None = None
     phone: str | None = None
+    icd10_codes: list[str] = []
 
 
 class PatientUpdate(BaseModel):
@@ -16,6 +17,7 @@ class PatientUpdate(BaseModel):
     age: int | None = None
     gender: str | None = None
     phone: str | None = None
+    icd10_codes: list[str] | None = None
 
 
 # ─── Doctor ────────────────────────────────────────────────

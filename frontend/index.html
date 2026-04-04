@@ -119,6 +119,9 @@
         <button class="nav-item" onclick="navigateTo('patients', this)">
           <span class="nav-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span> 病患管理
         </button>
+        <button class="nav-item" onclick="navigateTo('education', this)">
+          <span class="nav-icon"><i data-lucide="book-heart" style="width:18px;height:18px"></i></span> 衛教專欄
+        </button>
         <button class="nav-item" onclick="navigateTo('research', this)">
           <span class="nav-icon"><i data-lucide="flask-conical" style="width:18px;height:18px"></i></span> 自動研究
         </button>
@@ -244,7 +247,7 @@
     const pageTitles = {
       home: '首頁', symptoms: '症狀分析', records: '病歷管理',
       doctors: '醫師列表', patients: '病患管理',
-      research: '自動研究', contributors: '貢獻者'
+      education: '衛教專欄', research: '自動研究', contributors: '貢獻者'
     };
 
     function navigateTo(page, btn) {
