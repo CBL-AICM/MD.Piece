@@ -262,27 +262,25 @@
       document.getElementById('sidebar-backdrop').classList.remove('show');
     }
 
-    // ─── Service Worker (auto-update + force refresh) ─────
+    // ─── Service Worker (aggressive auto-update) ──────────
     if ("serviceWorker" in navigator) {
-      // First: nuke all old caches immediately
+      // Nuke ALL caches on every page load — always get fresh content
       if ('caches' in window) {
         caches.keys().then(keys => {
-          keys.forEach(key => {
-            if (!key.includes('v13')) caches.delete(key);
-          });
+          keys.forEach(key => caches.delete(key));
         });
       }
 
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").then((reg) => {
-          // Check for updates every 30 seconds
-          setInterval(() => reg.update(), 30000);
+        // updateViaCache: 'none' bypasses HTTP cache for sw.js
+        navigator.serviceWorker.register("/sw.js", { updateViaCache: 'none' }).then((reg) => {
+          // Check for SW updates every 10 seconds
+          setInterval(() => reg.update(), 10000);
 
           reg.addEventListener("updatefound", () => {
             const newWorker = reg.installing;
             newWorker.addEventListener("statechange", () => {
               if (newWorker.state === "activated") {
-                // Force reload when new SW takes over
                 window.location.reload();
               }
             });
