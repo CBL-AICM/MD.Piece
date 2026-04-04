@@ -17,26 +17,72 @@
   <!-- ★ Star canvas (always behind everything) -->
   <canvas id="star-canvas"></canvas>
 
-  <!-- ★ Landing Page — Cinematic Intro -->
+  <!-- ★ Landing Page — Doctor & Patient Puzzle Assembly -->
   <div id="landing">
-    <div class="intro-stage">
-      <!-- Puzzle pieces fly in from corners and assemble -->
-      <div class="intro-logo">
-        <div class="intro-piece intro-piece-1"></div>
-        <div class="intro-piece intro-piece-2"></div>
-        <div class="intro-piece intro-piece-3"></div>
-        <div class="intro-piece intro-piece-4"></div>
-        <div class="intro-flash"></div>
+
+    <!-- Phase 1: Puzzle pieces rain down -->
+    <div class="puzzle-rain">
+      <div class="rain-piece rp-1"></div>
+      <div class="rain-piece rp-2"></div>
+      <div class="rain-piece rp-3"></div>
+      <div class="rain-piece rp-4"></div>
+      <div class="rain-piece rp-5"></div>
+      <div class="rain-piece rp-6"></div>
+      <div class="rain-piece rp-7"></div>
+      <div class="rain-piece rp-8"></div>
+      <div class="rain-piece rp-9"></div>
+      <div class="rain-piece rp-10"></div>
+    </div>
+
+    <!-- Phase 2-3: Doctor + Patient + Puzzle Assembly -->
+    <div class="intro-scene" id="intro-scene">
+      <!-- Doctor (left) -->
+      <div class="intro-figure figure-left">
+        <div class="figure-avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="5"/>
+            <path d="M3 21v-2a7 7 0 0114 0v2"/>
+            <line x1="19" y1="8" x2="23" y2="8"/>
+            <line x1="21" y1="6" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <span class="figure-label">醫師</span>
+        <div class="figure-beam"></div>
       </div>
 
-      <!-- Title appears after assembly -->
+      <!-- Center: Puzzle assembles here -->
+      <div class="intro-puzzle-area">
+        <div class="intro-puzzle">
+          <div class="pp pp-1"><span class="pp-text">AI 分析</span></div>
+          <div class="pp pp-2"><span class="pp-text">病歷管理</span></div>
+          <div class="pp pp-3"><span class="pp-text">醫病溝通</span></div>
+          <div class="pp pp-4"><span class="pp-text">隱私安全</span></div>
+          <div class="puzzle-flash"></div>
+        </div>
+      </div>
+
+      <!-- Patient (right) -->
+      <div class="intro-figure figure-right">
+        <div class="figure-avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="5"/>
+            <path d="M3 21v-2a7 7 0 0114 0v2"/>
+          </svg>
+        </div>
+        <span class="figure-label">患者</span>
+        <div class="figure-beam"></div>
+      </div>
+    </div>
+
+    <!-- Phase 4-5: Logo rises, tagline + enter button -->
+    <div class="intro-reveal" id="intro-reveal">
       <h1 class="intro-title">MD.Piece</h1>
       <div class="intro-divider"></div>
       <p class="intro-tagline">將那些日常碎片拼起<br>陪你走出那些治療中的迷霧</p>
+      <button class="intro-enter" onclick="enterApp()">點擊進入</button>
     </div>
 
     <span class="intro-lab">CBL-AICM Lab</span>
-    <span class="intro-skip">click to skip</span>
   </div>
 
   <!-- ★ Main App (hidden until enter) -->
@@ -169,22 +215,9 @@
     })();
 
     // ─── Landing → App Transition ──────────────────────────
-    // Auto-enter after intro sequence finishes (~5s)
-    let introPlayed = false;
-    let introTimer = setTimeout(() => enterApp(), 7500);
-
-    // Click anywhere on landing to skip
-    document.getElementById('landing').addEventListener('click', () => {
-      clearTimeout(introTimer);
-      enterApp();
-    });
-
     function enterApp() {
-      if (introPlayed) return;
-      introPlayed = true;
-      clearTimeout(introTimer);
-
       const landing = document.getElementById('landing');
+      if (landing.classList.contains('fade-out')) return;
       landing.classList.add('fade-out');
       setTimeout(() => {
         landing.style.display = 'none';
@@ -225,7 +258,7 @@
       if ('caches' in window) {
         caches.keys().then(keys => {
           keys.forEach(key => {
-            if (!key.includes('v11')) caches.delete(key);
+            if (!key.includes('v12')) caches.delete(key);
           });
         });
       }

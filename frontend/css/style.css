@@ -45,7 +45,7 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 
 /* ═══════════════════════════════════════════════════════════
-   INTRO CINEMATIC (game-style opening sequence)
+   INTRO CINEMATIC — Doctor & Patient Puzzle Assembly
    ═══════════════════════════════════════════════════════════ */
 
 #landing {
@@ -53,11 +53,11 @@ body {
   inset: 0;
   z-index: 1000;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: radial-gradient(ellipse at 50% 40%, rgba(26,29,58,0.5) 0%, rgba(11,14,26,0.3) 70%);
   overflow: hidden;
-  cursor: pointer;
   transition: opacity 0.8s ease;
 }
 
@@ -73,135 +73,279 @@ body {
   pointer-events: none;
 }
 
-/* ─── Intro Stage ─────────────────────────────────────── */
-.intro-stage {
+/* ─── Puzzle Rain (Phase 1) ───────────────────────────── */
+.puzzle-rain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.rain-piece {
+  position: absolute;
+  top: -30px;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  opacity: 0;
+  clip-path: polygon(25% 0%, 25% 20%, 0% 20%, 0% 100%, 100% 100%, 100% 0%);
+}
+
+.rp-1  { left: 10%; background: rgba(74,158,255,0.5);  animation: rain-fall 2.2s ease-in 0.1s forwards; }
+.rp-2  { left: 25%; background: rgba(124,92,191,0.5);  animation: rain-fall 2.0s ease-in 0.4s forwards; }
+.rp-3  { left: 40%; background: rgba(232,163,61,0.5);  animation: rain-fall 2.4s ease-in 0.2s forwards; }
+.rp-4  { left: 55%; background: rgba(76,175,125,0.5);  animation: rain-fall 2.1s ease-in 0.5s forwards; }
+.rp-5  { left: 70%; background: rgba(74,158,255,0.4);  animation: rain-fall 2.3s ease-in 0.15s forwards; }
+.rp-6  { left: 85%; background: rgba(124,92,191,0.4);  animation: rain-fall 2.0s ease-in 0.6s forwards; }
+.rp-7  { left: 18%; background: rgba(76,175,125,0.4);  animation: rain-fall 2.5s ease-in 0.3s forwards; }
+.rp-8  { left: 48%; background: rgba(232,163,61,0.4);  animation: rain-fall 2.2s ease-in 0.45s forwards; }
+.rp-9  { left: 62%; background: rgba(74,158,255,0.3);  animation: rain-fall 2.1s ease-in 0.55s forwards; }
+.rp-10 { left: 78%; background: rgba(124,92,191,0.3);  animation: rain-fall 2.3s ease-in 0.35s forwards; }
+
+/* ─── Intro Scene (Figures + Puzzle) ──────────────────── */
+.intro-scene {
   position: relative;
   z-index: 10;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
+  justify-content: center;
+  gap: 48px;
+  animation: scene-rise 1.2s ease-out 5.2s forwards;
 }
 
-/* ─── Puzzle Logo Assembly ────────────────────────────── */
-.intro-logo {
+/* ─── Figures ─────────────────────────────────────────── */
+.intro-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+}
+
+.figure-left {
+  animation: enter-left 1.2s ease-out 1.8s forwards;
+}
+
+.figure-right {
+  animation: enter-right 1.2s ease-out 2.0s forwards;
+}
+
+.figure-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}
+
+.figure-avatar svg {
+  width: 34px;
+  height: 34px;
+}
+
+.figure-left .figure-avatar {
+  color: var(--accent);
+  border-color: rgba(74,158,255,0.2);
+  box-shadow: 0 0 24px rgba(74,158,255,0.15);
+}
+
+.figure-right .figure-avatar {
+  color: var(--purple);
+  border-color: rgba(124,92,191,0.2);
+  box-shadow: 0 0 24px rgba(124,92,191,0.15);
+}
+
+.figure-beam {
+  height: 2px;
+  border-radius: 1px;
+  opacity: 0;
+}
+
+.figure-left .figure-beam {
+  width: 40px;
+  background: linear-gradient(90deg, transparent, var(--accent));
+  position: absolute;
+  right: -44px;
+  top: 36px;
+  animation: beam-show 0.6s ease-out 2.8s forwards;
+}
+
+.figure-right .figure-beam {
+  width: 40px;
+  background: linear-gradient(270deg, transparent, var(--purple));
+  position: absolute;
+  left: -44px;
+  top: 36px;
+  animation: beam-show 0.6s ease-out 2.9s forwards;
+}
+
+.figure-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+/* ─── Puzzle Assembly (Phase 3) ───────────────────────── */
+.intro-puzzle-area {
+  position: relative;
+}
+
+.intro-puzzle {
   position: relative;
   width: 160px;
   height: 160px;
-  margin-bottom: 36px;
 }
 
-.intro-piece {
+.pp {
   position: absolute;
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   will-change: transform, opacity;
 }
 
-.intro-piece-1 {
+.pp-1 {
   background: linear-gradient(135deg, var(--accent), #6bb8ff);
-  top: 8px; left: 12px;
+  top: 4px; left: 4px;
   clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
-  animation: fly-tl 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
+  animation: gather-1 1.4s cubic-bezier(0.16, 1, 0.3, 1) 2.8s forwards;
 }
 
-.intro-piece-2 {
+.pp-2 {
   background: linear-gradient(135deg, var(--purple), #a88be0);
-  top: 8px; right: 12px;
+  top: 4px; right: 4px;
   clip-path: polygon(0% 0%, 0% 100%, 70% 100%, 70% 85%, 85% 85%, 85% 70%, 100% 70%, 100% 0%);
-  animation: fly-tr 1.8s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
+  animation: gather-2 1.4s cubic-bezier(0.16, 1, 0.3, 1) 3.0s forwards;
 }
 
-.intro-piece-3 {
+.pp-3 {
   background: linear-gradient(135deg, #e8a33d, #f0c97a);
-  bottom: 12px; left: 12px;
+  bottom: 4px; left: 4px;
   clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
-  animation: fly-bl 1.8s cubic-bezier(0.16, 1, 0.3, 1) 1.0s forwards;
+  animation: gather-3 1.4s cubic-bezier(0.16, 1, 0.3, 1) 2.9s forwards;
 }
 
-.intro-piece-4 {
+.pp-4 {
   background: linear-gradient(135deg, var(--success), #7ad4a5);
-  bottom: 12px; right: 12px;
+  bottom: 4px; right: 4px;
   clip-path: polygon(0% 0%, 0% 100%, 100% 100%, 100% 30%, 85% 30%, 85% 15%, 70% 15%, 70% 0%);
-  animation: fly-br 1.8s cubic-bezier(0.16, 1, 0.3, 1) 1.4s forwards;
+  animation: gather-4 1.4s cubic-bezier(0.16, 1, 0.3, 1) 3.1s forwards;
 }
 
-/* Flash burst when pieces lock into place */
-.intro-flash {
+/* Text on puzzle pieces */
+.pp-text {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 1px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  opacity: 0;
+  animation: text-show 0.5s ease-out 4.5s forwards;
+}
+
+/* Flash burst */
+.puzzle-flash {
   position: absolute;
   inset: -50px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(74,158,255,0.5) 0%, rgba(124,92,191,0.2) 40%, transparent 70%);
   opacity: 0;
   pointer-events: none;
-  animation: lock-flash 0.8s ease-out 3.2s forwards;
+  animation: lock-flash 0.8s ease-out 4.2s forwards;
 }
 
-/* ─── Title ───────────────────────────────────────────── */
+/* ─── Reveal Section (Phase 4-5) ─────────────────────── */
+.intro-reveal {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  margin-top: 20px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: reveal-show 1s ease-out 5.8s forwards;
+}
+
 .intro-title {
   font-family: "Orbitron", sans-serif;
-  font-size: 3.2rem;
+  font-size: 2.8rem;
   font-weight: 700;
   background: linear-gradient(135deg, var(--accent), var(--purple));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: 8px;
-  opacity: 0;
-  transform: translateY(12px);
-  animation: intro-up 0.9s ease-out 3.8s forwards;
 }
 
-/* ─── Tagline ─────────────────────────────────────────── */
-.intro-tagline {
-  font-size: 0.95rem;
-  color: var(--text-dim);
-  letter-spacing: 2.5px;
-  line-height: 2;
-  margin-top: 20px;
-  max-width: 500px;
-  opacity: 0;
-  transform: translateY(8px);
-  animation: intro-up 0.9s ease-out 5.0s forwards;
-}
-
-/* ─── Divider line between title and tagline ──────────── */
 .intro-divider {
   width: 60px;
   height: 1px;
+  margin: 14px auto;
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  margin-top: 16px;
-  opacity: 0;
-  animation: intro-up 0.6s ease-out 4.5s forwards;
 }
 
-/* ─── Skip hint ───────────────────────────────────────── */
-.intro-skip {
-  position: fixed;
-  bottom: 28px;
-  font-size: 0.65rem;
-  color: var(--text-muted);
+.intro-tagline {
+  font-size: 0.9rem;
+  color: var(--text-dim);
   letter-spacing: 2px;
-  text-transform: uppercase;
+  line-height: 2;
+}
+
+.intro-enter {
+  margin-top: 28px;
+  padding: 14px 52px;
+  font-size: 1rem;
+  font-family: "Noto Sans TC", sans-serif;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
   opacity: 0;
-  animation: intro-up 0.4s ease-out 1.5s forwards;
-  z-index: 1001;
-  pointer-events: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 30px var(--accent-glow), 0 0 60px var(--purple-glow);
+  animation: btn-appear 0.6s ease-out 7.2s forwards;
+}
+
+.intro-enter:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 0 50px var(--accent-glow), 0 0 100px var(--purple-glow);
+}
+
+.intro-enter:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.intro-enter::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--accent), var(--purple), var(--accent));
+  border-radius: inherit;
+  z-index: -1;
+  filter: blur(14px);
+  opacity: 0.4;
 }
 
 /* ─── Lab watermark ───────────────────────────────────── */
 .intro-lab {
   position: fixed;
-  bottom: 28px;
+  bottom: 24px;
   left: 32px;
   font-size: 0.6rem;
   color: var(--text-muted);
   letter-spacing: 2px;
   text-transform: uppercase;
   opacity: 0;
-  animation: intro-up 0.4s ease-out 5.3s forwards;
+  animation: fade-in 0.4s ease-out 5.5s forwards;
   z-index: 1001;
   pointer-events: none;
 }
@@ -210,47 +354,97 @@ body {
    INTRO KEYFRAMES
    ═══════════════════════════════════════════════════════════ */
 
-@keyframes fly-tl {
-  0%   { opacity: 0; transform: translate(-300px, -300px) rotate(-150deg) scale(0.3); }
-  25%  { opacity: 0.7; }
-  82%  { transform: translate(5px, 5px) rotate(5deg) scale(1.08); }
-  100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1);
-         box-shadow: 0 0 28px rgba(74,158,255,0.4); }
+/* Phase 1: Puzzle rain */
+@keyframes rain-fall {
+  0%   { opacity: 0; transform: translateY(0) rotate(0deg); }
+  8%   { opacity: 0.6; }
+  65%  { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(85vh) rotate(220deg); }
 }
 
-@keyframes fly-tr {
-  0%   { opacity: 0; transform: translate(300px, -300px) rotate(150deg) scale(0.3); }
-  25%  { opacity: 0.7; }
-  82%  { transform: translate(-5px, 5px) rotate(-5deg) scale(1.08); }
-  100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1);
-         box-shadow: 0 0 28px rgba(124,92,191,0.4); }
+/* Phase 2: Figures enter */
+@keyframes enter-left {
+  0%   { opacity: 0; transform: translateX(-80px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes fly-bl {
-  0%   { opacity: 0; transform: translate(-300px, 300px) rotate(150deg) scale(0.3); }
-  25%  { opacity: 0.7; }
-  82%  { transform: translate(5px, -5px) rotate(-5deg) scale(1.08); }
-  100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1);
-         box-shadow: 0 0 28px rgba(232,163,61,0.4); }
+@keyframes enter-right {
+  0%   { opacity: 0; transform: translateX(80px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes fly-br {
-  0%   { opacity: 0; transform: translate(300px, 300px) rotate(-150deg) scale(0.3); }
-  25%  { opacity: 0.7; }
-  82%  { transform: translate(-5px, -5px) rotate(5deg) scale(1.08); }
-  100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1);
-         box-shadow: 0 0 28px rgba(76,175,125,0.4); }
+@keyframes beam-show {
+  0%   { opacity: 0; width: 0; }
+  100% { opacity: 0.6; width: 40px; }
 }
 
+/* Phase 3: Pieces gather from scattered positions */
+@keyframes gather-1 {
+  0%   { opacity: 0; transform: translate(-140px, -100px) rotate(-50deg) scale(0.35); }
+  25%  { opacity: 0.7; }
+  85%  { transform: translate(4px, 4px) rotate(4deg) scale(1.06); }
+  100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1);
+         box-shadow: 0 0 24px rgba(74,158,255,0.35); }
+}
+
+@keyframes gather-2 {
+  0%   { opacity: 0; transform: translate(140px, -120px) rotate(50deg) scale(0.35); }
+  25%  { opacity: 0.7; }
+  85%  { transform: translate(-4px, 4px) rotate(-4deg) scale(1.06); }
+  100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1);
+         box-shadow: 0 0 24px rgba(124,92,191,0.35); }
+}
+
+@keyframes gather-3 {
+  0%   { opacity: 0; transform: translate(-120px, 120px) rotate(45deg) scale(0.35); }
+  25%  { opacity: 0.7; }
+  85%  { transform: translate(4px, -4px) rotate(-3deg) scale(1.06); }
+  100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1);
+         box-shadow: 0 0 24px rgba(232,163,61,0.35); }
+}
+
+@keyframes gather-4 {
+  0%   { opacity: 0; transform: translate(120px, 100px) rotate(-45deg) scale(0.35); }
+  25%  { opacity: 0.7; }
+  85%  { transform: translate(-4px, -4px) rotate(3deg) scale(1.06); }
+  100% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1);
+         box-shadow: 0 0 24px rgba(76,175,125,0.35); }
+}
+
+/* Flash when pieces lock */
 @keyframes lock-flash {
   0%   { opacity: 0; transform: scale(0.4); }
   35%  { opacity: 1; }
-  100% { opacity: 0; transform: scale(2); }
+  100% { opacity: 0; transform: scale(2.2); }
 }
 
-@keyframes intro-up {
-  0%   { opacity: 0; transform: translateY(12px); }
+/* Text on pieces */
+@keyframes text-show {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Phase 4: Scene rises */
+@keyframes scene-rise {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50px); }
+}
+
+/* Reveal section */
+@keyframes reveal-show {
+  0%   { opacity: 0; transform: translateY(20px); }
   100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Enter button */
+@keyframes btn-appear {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* ═══════════════════════════════════════════════════════════
