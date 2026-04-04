@@ -331,23 +331,11 @@ body {
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 3px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.enter-arrow {
-  font-size: 1.3rem;
-  transition: transform 0.3s ease;
 }
 
 .intro-enter:hover {
   transform: translateY(-3px) scale(1.03);
   box-shadow: 0 0 50px var(--accent-glow), 0 0 100px var(--purple-glow);
-}
-
-.intro-enter:hover .enter-arrow {
-  transform: translateX(5px);
 }
 
 .intro-enter:active {
