@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0b0e1a" />
+  <meta name="theme-color" content="#1a1d30" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -152,7 +152,15 @@
 
       function createStars() {
         stars = [];
-        const count = Math.floor((canvas.width * canvas.height) / 3000);
+        // Warm star palette: soft white, pale gold, lavender, rose
+        const colors = [
+          [220, 230, 255],  // soft blue-white
+          [255, 235, 210],  // warm cream
+          [230, 210, 255],  // lavender
+          [255, 210, 230],  // soft rose
+          [200, 225, 255],  // sky blue
+        ];
+        const count = Math.floor((canvas.width * canvas.height) / 2800);
         for (let i = 0; i < count; i++) {
           stars.push({
             x: Math.random() * canvas.width,
@@ -160,7 +168,8 @@
             r: Math.random() * 1.5 + 0.3,
             a: Math.random(),
             speed: Math.random() * 0.005 + 0.002,
-            phase: Math.random() * Math.PI * 2
+            phase: Math.random() * Math.PI * 2,
+            color: colors[Math.floor(Math.random() * colors.length)]
           });
         }
       }
@@ -180,12 +189,13 @@
       function draw(time) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Stars
+        // Stars — multi-color warm palette
         for (const s of stars) {
           const alpha = 0.3 + 0.7 * ((Math.sin(time * s.speed + s.phase) + 1) / 2);
+          const [r, g, b] = s.color;
           ctx.beginPath();
           ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(200, 220, 255, ${alpha * s.a})`;
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha * s.a})`;
           ctx.fill();
         }
 
@@ -195,7 +205,7 @@
           ctx.beginPath();
           ctx.moveTo(ss.x, ss.y);
           ctx.lineTo(ss.x - ss.len, ss.y - ss.len * 0.4);
-          ctx.strokeStyle = `rgba(180, 210, 255, ${ss.a})`;
+          ctx.strokeStyle = `rgba(220, 200, 255, ${ss.a})`;
           ctx.lineWidth = 1.5;
           ctx.stroke();
           ss.x += ss.speed;
@@ -258,7 +268,7 @@
       if ('caches' in window) {
         caches.keys().then(keys => {
           keys.forEach(key => {
-            if (!key.includes('v12')) caches.delete(key);
+            if (!key.includes('v13')) caches.delete(key);
           });
         });
       }
