@@ -1433,3 +1433,134 @@ button.secondary:hover {
   to { transform: rotate(360deg); }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   REGISTRATION PAGE
+   ═══════════════════════════════════════════════════════════ */
+
+.register-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 80px);
+  padding: 24px;
+}
+
+.register-card {
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 40px 36px;
+  max-width: 460px;
+  width: 100%;
+  animation: fadeInUp .5s ease;
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.register-header h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.register-header p {
+  font-size: 0.88rem;
+  color: var(--text-dim);
+}
+
+.register-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.role-select {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.role-card {
+  background: var(--bg-surface);
+  border: 2px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 20px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.role-card:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--text-muted);
+}
+
+.role-card.selected {
+  border-color: var(--accent);
+  background: rgba(91,159,232,0.12);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.role-card h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.role-card p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.role-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.role-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+}
+
+.role-icon-doctor {
+  background: rgba(91,159,232,0.15);
+  color: var(--accent);
+}
+
+.role-icon-patient {
+  background: rgba(208,138,138,0.15);
+  color: var(--rose);
+}
+
+.register-btn {
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.register-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+

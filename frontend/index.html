@@ -238,7 +238,13 @@
       setTimeout(() => {
         landing.style.display = 'none';
         document.getElementById('app-wrapper').classList.add('show');
-        showPage('home');
+        // Check if user is registered
+        const user = getCurrentUser();
+        if (user) {
+          showPage('home');
+        } else {
+          showRegister();
+        }
         lucide.createIcons();
       }, 800);
     }

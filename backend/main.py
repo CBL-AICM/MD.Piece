@@ -6,7 +6,7 @@ from pathlib import Path
 from backend.routers import (
     patients, doctors, symptoms,
     education, emotions, medications,
-    records, reports, research, triage, xiaohe,
+    records, reports, research, triage, xiaohe, auth,
 )
 
 app = FastAPI(title="MD.Piece API", version="1.0.0")
@@ -29,6 +29,7 @@ app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(research.router, prefix="/research", tags=["research"])
 app.include_router(triage.router, prefix="/triage", tags=["triage"])
 app.include_router(xiaohe.router, prefix="/xiaohe", tags=["xiaohe"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
 
 # Serve frontend static files
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"

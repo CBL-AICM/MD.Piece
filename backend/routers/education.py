@@ -158,6 +158,81 @@ def list_supported_diseases():
     return {"diseases": diseases}
 
 
+# ── STORM 深度研究（文獻搜尋 + 含引用論文生成）──────────
+
+
+class ResearchRequest(BaseModel):
+    topic: str
+    icd10_code: Optional[str] = None
+
+
+class CoStormRequest(BaseModel):
+    topic: str
+    doctor_inputs: list[str] = []
+
+
+@router.post("/research/storm")
+def storm_research(body: ResearchRequest):
+    """STORM 深度研究：多輪文獻搜尋 → 大綱 → 含引用的長篇研究文���"""
+    try:
+        from backend.services.storm_service import run_storm_research, STORM_AVAILABLE
+    except ImportError:
+        raise HTTPException(status_code=503, detail="STORM 服務未安裝")
+
+    if not STORM_AVAILABLE:
+        raise HTTPException(status_code=503, detail="knowledge-storm 套件未安裝")
+
+    # 如果提供 ICD-10，自動組合主題
+    topic = body.topic
+    if body.icd10_code:
+        disease = ICD10_MAP.get(body.icd10_code[:3])
+        if disease and disease not in topic:
+            topic = f"{disease} {topic}"
+
+    result = run_storm_research(topic)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
+@router.post("/research/costorm")
+def costorm_research(body: CoStormRequest):
+    """Co-STORM 協作研究：AI + 醫師共同策展深度衛教文章"""
+    try:
+        from backend.services.storm_service import run_costorm_research, STORM_AVAILABLE
+    except ImportError:
+        raise HTTPException(status_code=503, detail="STORM 服務未安裝")
+
+    if not STORM_AVAILABLE:
+        raise HTTPException(status_code=503, detail="knowledge-storm 套件未安裝")
+
+    result = run_costorm_research(body.topic, body.doctor_inputs or None)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
+@router.get("/research/status")
+def storm_status():
+    """檢查 STORM/Co-STORM 可用狀態"""
+    try:
+        from backend.services.storm_service import STORM_AVAILABLE
+        available = STORM_AVAILABLE
+    except ImportError:
+        available = False
+
+    import os
+    return {
+        "storm_available": available,
+        "search_engine": (
+            "tavily" if os.getenv("TAVILY_API_KEY")
+            else "serper" if os.getenv("SERPER_API_KEY")
+            else "duckduckgo"
+        ),
+        "anthropic_key_set": bool(os.getenv("ANTHROPIC_API_KEY")),
+    }
+
+
 # ── 原有靜態衛教 ────────────────────────────────────────
 
 

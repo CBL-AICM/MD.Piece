@@ -60,3 +60,11 @@ class MedicalRecordUpdate(BaseModel):
 class SymptomAnalysisRequest(BaseModel):
     symptoms: list[str]
     patient_id: str | None = None
+
+
+# ─── User / Auth ──────────────────────────────────────────
+
+class UserCreate(BaseModel):
+    nickname: str
+    role: str  # 'doctor' or 'patient'
+    avatar_color: str | None = None

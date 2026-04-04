@@ -25,3 +25,5 @@ Thumbs.db
 
 # SQLite database
 md_piece.db
+.vercel
+.env*.local

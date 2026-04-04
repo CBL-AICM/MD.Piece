@@ -108,6 +108,14 @@ _SCHEMAS = {
             kept INTEGER DEFAULT 0,
             submitted_at TEXT DEFAULT (datetime('now'))
         )""",
+    "users": """
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            nickname TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('doctor', 'patient')),
+            avatar_color TEXT DEFAULT '#5B9FE8',
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
 }
 
 
