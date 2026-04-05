@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════
-// MD.Piece — Landing Cinematic Animation
-// Phase 1: Puzzle pieces rain with scattered medical words
-// Phase 2: Doctor + Patient hands enter, reaching to connect
-// Phase 3: Hands connect → flash → pieces fly into heart
-// Phase 4: Heart pulses with ECG line, tagline + button
+// MD.Piece — Landing Cinematic Animation (v2)
+// 1. Warm puzzle pieces rain + floating words scatter separately
+// 2. Doctor hand (from below) + Patient hand (from above) meet
+// 3. Flash → pieces fly into heart shape filled with jigsaws
+// 4. Bold heart outline + ECG heartbeat + tagline + enter
 // ═══════════════════════════════════════════════════════════
 
 (function () {
@@ -16,260 +16,322 @@
   let running = true;
   const t0 = performance.now();
 
-  // ── Timeline (seconds) ──
+  /* ── Timeline (seconds) ── */
   const T = {
     rainEnd:    3.0,
-    handsStart: 3.0,
+    wordsStart: 0.8,
+    handsStart: 3.2,
     handsMeet:  5.5,
     flash:      5.8,
     handsGone:  6.8,
-    heartStart: 6.0,
-    heartDone:  8.2,
-    heartbeat:  8.5,
-    textShow:   9.0,
-    btnShow:    10.0,
+    heartStart: 6.2,
+    heartDone:  8.8,
+    ecgStart:   9.0,
+    textShow:   10.0,
+    btnShow:    11.0,
   };
 
-  // ── Palette ──
+  /* ── Warm beige palette (matching reference images) ── */
   const PIECE_COLORS = [
-    '#7EB5FF','#B49AE8','#E8A0B9','#7ECFA5','#F0C97A',
-    '#A8D0FF','#CDB8F0','#D08A8A','#55B88A','#D9A54A',
-    '#5B9FE8','#9B80D4','#E87B5B','#7BC8E8','#B8A080',
+    '#E8DDD0','#DDD1C2','#F0E5D5','#D5CCBF','#E3D8C8',
+    '#CFC5B5','#EBE1D2','#D9CFC1','#E5DBCC','#D2C8B5',
+    '#DFD5C5','#E7DCD0',
   ];
-  const HEART_FILLS = [
-    'rgba(232,224,210,0.90)','rgba(222,215,202,0.90)',
-    'rgba(240,232,218,0.90)','rgba(228,220,208,0.90)',
-    'rgba(235,228,215,0.90)','rgba(218,212,200,0.90)',
+  const HEART_COLORS = [
+    '#EDE4D8','#E0D7CB','#F2EBE0','#D8D0C5',
+    '#E8DFD2','#DBD2C5','#EFE8DC','#E3DAD0',
+    '#D5CCC0','#EEEAD6','#E6DDD0','#DED5C8',
   ];
-  const WORDS = [
-    '疾病','未知','迷茫','藥','健康',
-    '症狀','希望','治療','陪伴','守護',
-    '診斷','康復','疼痛','勇氣','信任',
-  ];
+  const WORDS = ['疾病','未知','迷茫','藥','健康','症狀','希望','治療','陪伴','守護'];
 
-  // ── State ──
-  let rainPcs = [];
-  let heartCells = [];
+  /* ── State ── */
+  let pieces = [];
+  let floatingWords = [];
+  let heartPieces = [];
   let flashAlpha = 0;
-  let hbProg = 0;
+  let ecgProg = 0;
   let textShown = false, btnShown = false;
 
-  // ── Util ──
-  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
-  const lerp  = (a,b,t) => a + (b - a) * t;
-  const easeO = t => 1 - Math.pow(1 - t, 3);
+  /* ── Utils ── */
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp  = (a, b, t) => a + (b - a) * t;
+  const easeO  = t => 1 - Math.pow(1 - t, 3);
   const easeIO = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2;
 
+  /* ── Heart containment ── */
   function isInHeart(px, py, hcx, hcy, s) {
     const x = (px - hcx) / s;
     const y = -(py - hcy) / (s * 0.85) + 0.35;
-    const x2 = x*x, y2 = y*y;
-    return Math.pow(x2 + y2 - 1, 3) - x2 * y2 * y <= 0;
+    return Math.pow(x*x + y*y - 1, 3) - x*x * y*y * y <= 0;
   }
 
-  // ── Draw a jigsaw piece ──
-  function drawPiece(x, y, sz, ang, col, alpha, word) {
+  /* ═══════════════════════════════════════════════════════════
+     DRAW: Jigsaw piece (proper tabs/indents, warm style)
+     ═══════════════════════════════════════════════════════════ */
+  function drawJigsaw(x, y, size, angle, color, alpha, tabs) {
+    if (alpha <= 0) return;
+    if (!tabs) tabs = { top: 1, right: -1, bottom: 1, left: -1 };
     ctx.save();
     ctx.globalAlpha = clamp(alpha, 0, 1);
     ctx.translate(x, y);
-    ctx.rotate(ang);
-    const s = sz / 2, tab = s * 0.3;
+    ctx.rotate(angle);
+
+    const s = size / 2;
+    const t = size * 0.17;
 
     ctx.beginPath();
+    // Top edge
     ctx.moveTo(-s, -s);
-    ctx.lineTo(-s*.15, -s);
-    ctx.bezierCurveTo(-s*.15, -s-tab, s*.15, -s-tab, s*.15, -s);
+    if (tabs.top) {
+      ctx.lineTo(-s * 0.28, -s);
+      ctx.bezierCurveTo(-s * 0.18, -s - tabs.top * t * 0.5,
+                         -s * 0.12, -s - tabs.top * t,
+                         0, -s - tabs.top * t);
+      ctx.bezierCurveTo( s * 0.12, -s - tabs.top * t,
+                          s * 0.18, -s - tabs.top * t * 0.5,
+                          s * 0.28, -s);
+    }
     ctx.lineTo(s, -s);
-    ctx.lineTo(s, -s*.15);
-    ctx.bezierCurveTo(s+tab, -s*.15, s+tab, s*.15, s, s*.15);
+    // Right edge
+    if (tabs.right) {
+      ctx.lineTo(s, -s * 0.28);
+      ctx.bezierCurveTo(s + tabs.right * t * 0.5, -s * 0.18,
+                         s + tabs.right * t, -s * 0.12,
+                         s + tabs.right * t, 0);
+      ctx.bezierCurveTo(s + tabs.right * t, s * 0.12,
+                         s + tabs.right * t * 0.5, s * 0.18,
+                         s, s * 0.28);
+    }
     ctx.lineTo(s, s);
+    // Bottom edge
+    if (tabs.bottom) {
+      ctx.lineTo(s * 0.28, s);
+      ctx.bezierCurveTo(s * 0.18, s + tabs.bottom * t * 0.5,
+                         s * 0.12, s + tabs.bottom * t,
+                         0, s + tabs.bottom * t);
+      ctx.bezierCurveTo(-s * 0.12, s + tabs.bottom * t,
+                         -s * 0.18, s + tabs.bottom * t * 0.5,
+                         -s * 0.28, s);
+    }
     ctx.lineTo(-s, s);
-    ctx.lineTo(-s, s*.15);
-    ctx.bezierCurveTo(-s-tab*.6, s*.15, -s-tab*.6, -s*.15, -s, -s*.15);
+    // Left edge
+    if (tabs.left) {
+      ctx.lineTo(-s, s * 0.28);
+      ctx.bezierCurveTo(-s - tabs.left * t * 0.5, s * 0.18,
+                         -s - tabs.left * t, s * 0.12,
+                         -s - tabs.left * t, 0);
+      ctx.bezierCurveTo(-s - tabs.left * t, -s * 0.12,
+                         -s - tabs.left * t * 0.5, -s * 0.18,
+                         -s, -s * 0.28);
+    }
     ctx.closePath();
 
-    ctx.fillStyle = col;
+    // Shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.08)';
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetY = 2;
+    ctx.fillStyle = color;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Border
+    ctx.strokeStyle = 'rgba(175,165,148,0.45)';
     ctx.lineWidth = 1.2;
     ctx.stroke();
-
-    if (word) {
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      ctx.font = `bold ${sz * 0.26}px "Noto Sans TC", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.35)';
-      ctx.shadowBlur = 3;
-      ctx.fillText(word, 0, 0);
-      ctx.shadowBlur = 0;
-    }
     ctx.restore();
   }
 
-  // ── Draw heart grid cell ──
-  function drawCell(c) {
-    if (c.alpha <= 0) return;
+  /* ═══════════════════════════════════════════════════════════
+     DRAW: Floating word (separate from pieces)
+     ═══════════════════════════════════════════════════════════ */
+  function drawWord(word, x, y, alpha, bob) {
+    if (alpha <= 0) return;
     ctx.save();
-    ctx.globalAlpha = clamp(c.alpha, 0, 1);
-    ctx.translate(c.x, c.y);
-    const s = c.size / 2, tab = s * 0.22;
-
-    ctx.beginPath();
-    ctx.moveTo(-s, -s);
-    if (c.tt) { ctx.lineTo(-s*.1,-s); ctx.bezierCurveTo(-s*.1,-s-tab, s*.1,-s-tab, s*.1,-s); }
-    ctx.lineTo(s, -s);
-    if (c.tr) { ctx.lineTo(s,-s*.1); ctx.bezierCurveTo(s+tab,-s*.1, s+tab,s*.1, s,s*.1); }
-    ctx.lineTo(s, s);
-    if (c.tb) { ctx.lineTo(s*.1,s); ctx.bezierCurveTo(s*.1,s+tab, -s*.1,s+tab, -s*.1,s); }
-    ctx.lineTo(-s, s);
-    if (c.tl) { ctx.lineTo(-s,s*.1); ctx.bezierCurveTo(-s-tab,s*.1, -s-tab,-s*.1, -s,-s*.1); }
-    ctx.closePath();
-
-    ctx.fillStyle = c.color;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(175,165,148,0.35)';
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
+    ctx.globalAlpha = clamp(alpha, 0, 1);
+    const fs = Math.min(W, H) * 0.03;
+    ctx.font = `300 ${fs}px "Noto Sans TC", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(100, 95, 85, 0.55)';
+    ctx.fillText(word, x, y + Math.sin(bob) * 3);
     ctx.restore();
   }
 
-  // ── Draw a hand (doctor or patient) ──
-  function drawHand(isDoc, progress, fadeAlpha) {
+  /* ═══════════════════════════════════════════════════════════
+     DRAW: Hand — bold line-art with bezier curves
+     ═══════════════════════════════════════════════════════════ */
+  function traceHand(ctx) {
+    ctx.beginPath();
+    // Start lower-left of forearm
+    ctx.moveTo(-18, 160);
+    ctx.lineTo(-18, 15);
+    // Left palm up to pinky
+    ctx.bezierCurveTo(-20, 5, -22, -5, -22, -12);
+    // Pinky
+    ctx.bezierCurveTo(-22, -22, -21, -35, -18, -42);
+    ctx.bezierCurveTo(-16, -46, -13, -45, -12, -41);
+    ctx.bezierCurveTo(-10, -35, -10, -28, -10, -22);
+    // Ring
+    ctx.bezierCurveTo(-9, -32, -7, -45, -5, -51);
+    ctx.bezierCurveTo(-3, -54, 0, -53, 1, -49);
+    ctx.bezierCurveTo(2, -42, 2, -32, 2, -24);
+    // Middle (tallest)
+    ctx.bezierCurveTo(3, -36, 5, -52, 7, -61);
+    ctx.bezierCurveTo(9, -65, 12, -64, 13, -60);
+    ctx.bezierCurveTo(14, -52, 14, -38, 14, -26);
+    // Index
+    ctx.bezierCurveTo(15, -36, 17, -48, 19, -55);
+    ctx.bezierCurveTo(21, -58, 24, -57, 25, -53);
+    ctx.bezierCurveTo(26, -46, 26, -36, 25, -26);
+    // Right palm down to thumb gap
+    ctx.bezierCurveTo(25, -16, 24, -6, 22, 0);
+    // Thumb (extends right, always same side so rotation mirrors correctly)
+    ctx.bezierCurveTo(26, -4, 33, -12, 37, -9);
+    ctx.bezierCurveTo(41, -6, 41, 3, 37, 7);
+    ctx.bezierCurveTo(33, 11, 26, 12, 22, 10);
+    // Right forearm
+    ctx.lineTo(18, 15);
+    ctx.lineTo(18, 160);
+    ctx.closePath();
+  }
+
+  function drawHand(isDoctor, progress, fadeAlpha) {
     if (progress <= 0 || fadeAlpha <= 0) return;
     const ep = easeO(clamp(progress, 0, 1));
-    const dir = isDoc ? -1 : 1;
+    const sc = Math.min(W, H) / 550;
 
-    // Animate from bottom-corner toward center
-    const sx = cx + dir * (W * 0.55 + 80);
-    const sy = H + 180;
-    const ex = cx + dir * 50;
-    const ey = cy + 30;
+    let startY, endY, xOffset, rotation;
+    if (isDoctor) {
+      startY = H + 200;
+      endY   = cy + 62 * sc;
+      xOffset = -18 * sc;
+      rotation = 0;
+    } else {
+      startY = -200;
+      endY   = cy - 62 * sc;
+      xOffset = 18 * sc;
+      rotation = Math.PI;
+    }
 
-    const hx = lerp(sx, ex, ep);
-    const hy = lerp(sy, ey, ep);
-    // Arm rotation: tilted when entering, straightens toward center
-    const baseAng = isDoc ? (Math.PI * 0.65) : (-Math.PI * 0.65);
-    const meetAng = isDoc ? (Math.PI * 0.5) : (-Math.PI * 0.5);
-    const ang = lerp(baseAng, meetAng, ep);
+    const hx = cx + xOffset;
+    const hy = lerp(startY, endY, ep);
 
     ctx.save();
     ctx.globalAlpha = clamp(fadeAlpha, 0, 1);
     ctx.translate(hx, hy);
-    ctx.rotate(ang);
+    ctx.rotate(rotation);
+    ctx.scale(sc, sc);
 
-    // ── Forearm (long shape going "up" in local coords = toward corner) ──
-    const aw = 48, ah = 240;
-    ctx.fillStyle = 'rgba(242,237,230,0.93)';
-    ctx.strokeStyle = 'rgba(50,55,70,0.28)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-aw/2, 0);
-    ctx.lineTo(-aw/2, ah);
-    ctx.quadraticCurveTo(-aw/2, ah+15, 0, ah+15);
-    ctx.quadraticCurveTo(aw/2, ah+15, aw/2, ah);
-    ctx.lineTo(aw/2, 0);
-    ctx.closePath();
+    // Hand fill (warm gradient)
+    traceHand(ctx);
+    const grad = ctx.createLinearGradient(0, -65, 0, 50);
+    grad.addColorStop(0, 'rgba(240, 228, 212, 0.96)');
+    grad.addColorStop(1, 'rgba(225, 210, 192, 0.96)');
+    ctx.fillStyle = grad;
     ctx.fill();
+
+    // Hand outline (bold line-art)
+    traceHand(ctx);
+    ctx.strokeStyle = '#3A3F4B';
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Sleeve cuff
-    ctx.strokeStyle = 'rgba(50,55,70,0.2)';
-    ctx.lineWidth = 1.5;
+    // Palm lines (subtle detail)
+    ctx.strokeStyle = 'rgba(58, 63, 75, 0.15)';
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(-aw/2-2, 12); ctx.lineTo(aw/2+2, 12);
-    ctx.moveTo(-aw/2-2, 18); ctx.lineTo(aw/2+2, 18);
+    ctx.moveTo(-14, -8);
+    ctx.quadraticCurveTo(0, -13, 16, -8);
     ctx.stroke();
-
-    // ── Hand (palm + fingers, going "down" = toward center) ──
-    ctx.fillStyle = 'rgba(235,226,215,0.92)';
-    ctx.strokeStyle = 'rgba(50,55,70,0.25)';
-    ctx.lineWidth = 2;
-
-    // Palm
     ctx.beginPath();
-    ctx.moveTo(-aw/2 - 4, 0);
-    ctx.lineTo(-aw/2 - 4, -42);
-    // 4 finger bumps
-    const fw = (aw + 8) / 4;
-    for (let i = 0; i < 4; i++) {
-      const bx = -aw/2 - 4 + i * fw;
-      ctx.quadraticCurveTo(bx + fw*0.5, -56, bx + fw, -42);
-    }
-    ctx.lineTo(aw/2 + 4, 0);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(-10, 0);
+    ctx.quadraticCurveTo(2, -4, 14, 0);
     ctx.stroke();
 
-    // Thumb (side of palm)
-    const thumbSide = isDoc ? 1 : -1;
+    // Sleeve cuff lines
+    ctx.strokeStyle = 'rgba(58, 63, 75, 0.25)';
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.ellipse(thumbSide * (aw/2 + 14), -8, 10, 22, thumbSide * 0.25, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(-20, 16); ctx.lineTo(20, 16);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-20, 22); ctx.lineTo(20, 22);
     ctx.stroke();
 
-    // ── Medical identifier ──
-    if (isDoc) {
-      // Blue cross on sleeve
-      ctx.strokeStyle = 'rgba(91,159,232,0.75)';
+    if (isDoctor) {
+      // Medical cross on sleeve
+      ctx.strokeStyle = 'rgba(91, 159, 232, 0.75)';
       ctx.lineWidth = 3.5;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(0, 70); ctx.lineTo(0, 92);
-      ctx.moveTo(-11, 81); ctx.lineTo(11, 81);
+      ctx.moveTo(0, 50); ctx.lineTo(0, 72);
+      ctx.moveTo(-11, 61); ctx.lineTo(11, 61);
       ctx.stroke();
     } else {
-      // Pink wristband
-      ctx.fillStyle = 'rgba(208,138,138,0.45)';
-      ctx.beginPath();
-      ctx.moveTo(-aw/2-2, 22); ctx.lineTo(aw/2+2, 22);
-      ctx.lineTo(aw/2+2, 34); ctx.lineTo(-aw/2-2, 34);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(208,138,138,0.65)';
+      // Patient wristband
+      ctx.fillStyle = 'rgba(232, 165, 185, 0.4)';
+      ctx.fillRect(-20, 26, 40, 10);
+      ctx.strokeStyle = 'rgba(208, 138, 160, 0.6)';
       ctx.lineWidth = 1;
-      ctx.stroke();
+      ctx.strokeRect(-20, 26, 40, 10);
     }
 
-    // ── Puzzle piece held in fingers ──
-    const pc = isDoc ? 'rgba(91,159,232,0.6)' : 'rgba(208,138,138,0.55)';
-    drawPiece(0, -62, 30, 0, pc, 1, null);
+    // Puzzle piece held at fingertips
+    const pc = isDoctor ? 'rgba(142, 183, 215, 0.85)' : 'rgba(232, 190, 200, 0.85)';
+    drawJigsaw(5, -70, 22, 0, pc, 1,
+      { top: 1, right: 0, bottom: -1, left: 0 });
 
     ctx.restore();
   }
 
-  // ── Heart outline (parametric) ──
+  /* ═══════════════════════════════════════════════════════════
+     DRAW: Heart outline (bold, parametric)
+     ═══════════════════════════════════════════════════════════ */
+  function getHeartScale() { return Math.min(W, H) * 0.17; }
+  function getHeartCY() { return cy - getHeartScale() * 0.12; }
+
   function drawHeartOutline(alpha) {
     if (alpha <= 0) return;
     const s = getHeartScale();
     const hcy = getHeartCY();
     ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = 'rgba(55,60,75,0.25)';
-    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = clamp(alpha, 0, 1);
+    ctx.strokeStyle = '#3A3F4B';
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
-    for (let t = 0; t <= Math.PI * 2 + 0.1; t += 0.02) {
-      const px = cx + 16 * Math.pow(Math.sin(t), 3) * s / 16;
-      const py = hcy - (13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t)) * s / 16;
-      if (t === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.02) {
+      const px = cx + 16 * Math.pow(Math.sin(a), 3) * s / 16;
+      const py = hcy - (13*Math.cos(a) - 5*Math.cos(2*a)
+                 - 2*Math.cos(3*a) - Math.cos(4*a)) * s / 16;
+      if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.closePath();
     ctx.stroke();
     ctx.restore();
   }
 
-  // ── ECG heartbeat line ──
+  /* ═══════════════════════════════════════════════════════════
+     DRAW: ECG heartbeat line
+     ═══════════════════════════════════════════════════════════ */
   function drawECG(progress) {
     if (progress <= 0) return;
     const s = getHeartScale();
     const hcy = getHeartCY();
-    const lineW = s * 1.6;
+    const lineW = s * 1.8;
     const startX = cx - lineW / 2;
-    const baseY = hcy + s * 0.05;
+    const baseY = hcy + s * 0.06;
 
     ctx.save();
-    ctx.strokeStyle = 'rgba(91,159,232,0.7)';
-    ctx.lineWidth = 2.5;
+    // Glow
+    ctx.shadowColor = 'rgba(91, 159, 232, 0.4)';
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = 'rgba(91, 159, 232, 0.85)';
+    ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -279,36 +341,37 @@
       const n = i / 200;
       const px = startX + n * lineW;
       let dy = 0;
-      if      (n > 0.12 && n < 0.20) dy = -7 * Math.sin((n-0.12)/0.08*Math.PI);
-      else if (n > 0.28 && n < 0.32) dy = 10;
-      else if (n > 0.32 && n < 0.38) dy = -38 * Math.sin((n-0.32)/0.06*Math.PI);
-      else if (n > 0.38 && n < 0.43) dy = 12 * Math.sin((n-0.38)/0.05*Math.PI);
-      else if (n > 0.55 && n < 0.66) dy = -10 * Math.sin((n-0.55)/0.11*Math.PI);
+      if      (n > 0.10 && n < 0.18) dy = -8 * Math.sin((n - 0.10) / 0.08 * Math.PI);
+      else if (n > 0.26 && n < 0.30) dy = 12;
+      else if (n > 0.30 && n < 0.37) dy = -48 * Math.sin((n - 0.30) / 0.07 * Math.PI);
+      else if (n > 0.37 && n < 0.42) dy = 16 * Math.sin((n - 0.37) / 0.05 * Math.PI);
+      else if (n > 0.53 && n < 0.64) dy = -12 * Math.sin((n - 0.53) / 0.11 * Math.PI);
       if (i === 0) ctx.moveTo(px, baseY + dy); else ctx.lineTo(px, baseY + dy);
     }
     ctx.stroke();
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
 
-  // ── Flash ──
+  /* ═══════════════════════════════════════════════════════════
+     DRAW: Flash
+     ═══════════════════════════════════════════════════════════ */
   function drawFlash() {
     if (flashAlpha <= 0) return;
     ctx.save();
     ctx.globalAlpha = flashAlpha;
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W,H)*0.4);
-    g.addColorStop(0, 'rgba(255,255,255,0.9)');
-    g.addColorStop(0.4, 'rgba(200,220,255,0.3)');
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.5);
+    g.addColorStop(0, 'rgba(255,255,255,0.95)');
+    g.addColorStop(0.3, 'rgba(220,230,255,0.4)');
     g.addColorStop(1, 'transparent');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
 
-  // ── Helpers for heart geometry ──
-  function getHeartScale() { return Math.min(W, H) * 0.105; }
-  function getHeartCY() { return cy - getHeartScale() * 0.3; }
-
-  // ── Init ──
+  /* ═══════════════════════════════════════════════════════════
+     INITIALIZATION
+     ═══════════════════════════════════════════════════════════ */
   function resize() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
@@ -316,20 +379,29 @@
     cy = H / 2 - 20;
   }
 
-  function createRain() {
-    rainPcs = [];
-    for (let i = 0; i < WORDS.length; i++) {
-      rainPcs.push({
-        word: WORDS[i],
+  const TAB_CONFIGS = [
+    { top: 1, right:-1, bottom: 1, left: 0 },
+    { top:-1, right: 1, bottom: 0, left:-1 },
+    { top: 0, right:-1, bottom:-1, left: 1 },
+    { top: 1, right: 0, bottom:-1, left: 1 },
+    { top:-1, right:-1, bottom: 1, left: 0 },
+    { top: 0, right: 1, bottom: 1, left:-1 },
+  ];
+
+  function createPieces() {
+    pieces = [];
+    for (let i = 0; i < 12; i++) {
+      pieces.push({
         color: PIECE_COLORS[i],
-        size: 40 + Math.random() * 18,
-        x: W * 0.08 + Math.random() * W * 0.84,
-        y: -50 - Math.random() * 400,
-        vx: (Math.random() - 0.5) * 1.2,
-        vy: 2 + Math.random() * 3,
+        size: 36 + Math.random() * 22,
+        tabs: TAB_CONFIGS[i % TAB_CONFIGS.length],
+        x: W * 0.1 + Math.random() * W * 0.8,
+        y: -50 - Math.random() * 500,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: 2 + Math.random() * 3.5,
         angle: Math.random() * Math.PI * 2,
-        va: (Math.random() - 0.5) * 0.03,
-        sx: W * 0.1 + Math.random() * W * 0.8,
+        va: (Math.random() - 0.5) * 0.04,
+        sx: W * 0.08 + Math.random() * W * 0.84,
         sy: H * 0.15 + Math.random() * H * 0.55,
         hx: cx, hy: cy,
         settled: false,
@@ -338,135 +410,170 @@
     }
   }
 
-  function createHeartGrid() {
-    heartCells = [];
+  function createWords() {
+    floatingWords = [];
+    for (let i = 0; i < WORDS.length; i++) {
+      floatingWords.push({
+        text: WORDS[i],
+        x: W * 0.12 + Math.random() * W * 0.76,
+        y: H * 0.1 + Math.random() * H * 0.6,
+        alpha: 0,
+        bob: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  function createHeartPieces() {
+    heartPieces = [];
     const s = getHeartScale();
     const hcy = getHeartCY();
-    const ps = 21;
+    const ps = Math.max(32, s * 0.36);
+    const spacing = ps * 0.88;
 
-    for (let y = hcy - s * 1.25; y < hcy + s * 0.95; y += ps) {
-      for (let x = cx - s * 1.35; x < cx + s * 1.35; x += ps) {
+    for (let y = hcy - s * 1.25; y < hcy + s * 0.95; y += spacing) {
+      for (let x = cx - s * 1.35; x < cx + s * 1.35; x += spacing) {
         if (isInHeart(x, y, cx, hcy, s)) {
-          heartCells.push({
-            x, y, size: ps,
-            color: HEART_FILLS[Math.floor(Math.random() * HEART_FILLS.length)],
-            alpha: 0,
-            tt: Math.random() > 0.5, tr: Math.random() > 0.5,
-            tb: Math.random() > 0.5, tl: Math.random() > 0.5,
+          heartPieces.push({
+            x, y, size: ps, alpha: 0,
+            color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
+            tabs: {
+              top:    (Math.random() > .5 ? 1 : -1),
+              right:  (Math.random() > .5 ? 1 : -1),
+              bottom: (Math.random() > .5 ? 1 : -1),
+              left:   (Math.random() > .5 ? 1 : -1),
+            },
           });
         }
       }
     }
 
-    // Assign heart targets to rain pieces (spread evenly)
-    const step = Math.max(1, Math.floor(heartCells.length / rainPcs.length));
-    for (let i = 0; i < rainPcs.length; i++) {
-      const ci = Math.min(i * step, heartCells.length - 1);
-      rainPcs[i].hx = heartCells[ci].x;
-      rainPcs[i].hy = heartCells[ci].y;
+    // Map falling pieces → heart targets
+    if (heartPieces.length > 0) {
+      const step = Math.max(1, Math.floor(heartPieces.length / pieces.length));
+      for (let i = 0; i < pieces.length; i++) {
+        const idx = Math.min(i * step, heartPieces.length - 1);
+        pieces[i].hx = heartPieces[idx].x;
+        pieces[i].hy = heartPieces[idx].y;
+      }
     }
   }
 
-  // ── Main Loop ──
+  /* ═══════════════════════════════════════════════════════════
+     ANIMATION LOOP
+     ═══════════════════════════════════════════════════════════ */
   function animate(now) {
     if (!running) return;
     const t = (now - t0) / 1000;
     ctx.clearRect(0, 0, W, H);
 
-    // ── Phase 1: Rain + scatter ──
-    const isPreHeart = t < T.heartStart;
-    for (const p of rainPcs) {
-      if (isPreHeart) {
-        if (!p.settled) {
-          p.vy += 0.025;
-          p.x += p.vx;
-          p.y += p.vy;
-          p.angle += p.va;
-          // Begin settling
-          if (t > T.rainEnd * 0.6) {
-            const st = clamp((t - T.rainEnd * 0.6) / (T.rainEnd * 0.4), 0, 1);
-            p.x = lerp(p.x, p.sx, st * 0.06);
-            p.y = lerp(p.y, p.sy, st * 0.06);
-            p.vx *= 0.97; p.vy *= 0.97; p.va *= 0.97;
-            if (st > 0.85) p.settled = true;
+    try {
+      const preHeart = t < T.heartStart;
+
+      /* ── Phase 1: Puzzle pieces rain ── */
+      for (const p of pieces) {
+        if (preHeart) {
+          if (!p.settled) {
+            p.vy += 0.03;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.angle += p.va;
+            if (t > T.rainEnd * 0.5) {
+              const st = clamp((t - T.rainEnd * 0.5) / (T.rainEnd * 0.5), 0, 1);
+              p.x = lerp(p.x, p.sx, st * 0.06);
+              p.y = lerp(p.y, p.sy, st * 0.06);
+              p.vx *= 0.97; p.vy *= 0.97; p.va *= 0.97;
+              if (st > 0.9) p.settled = true;
+            }
+          }
+          drawJigsaw(p.x, p.y, p.size, p.angle, p.color, p.alpha, p.tabs);
+        } else {
+          const hp = easeIO(clamp((t - T.heartStart) / (T.heartDone - T.heartStart - 0.5), 0, 1));
+          const fx = lerp(p.sx, p.hx, hp);
+          const fy = lerp(p.sy, p.hy, hp);
+          const fa = lerp(p.angle, 0, hp);
+          const fAlpha = 1 - hp * 0.9;
+          const fSz = p.size * (1 - hp * 0.4);
+          if (hp < 0.95) drawJigsaw(fx, fy, fSz, fa, p.color, fAlpha, p.tabs);
+        }
+      }
+
+      /* ── Floating words (separate from pieces) ── */
+      for (const w of floatingWords) {
+        if (preHeart) {
+          if (t >= T.wordsStart) w.alpha = Math.min(w.alpha + 0.008, 0.7);
+          drawWord(w.text, w.x, w.y, w.alpha, w.bob + t * 1.5);
+        } else {
+          w.alpha = Math.max(w.alpha - 0.025, 0);
+          if (w.alpha > 0) drawWord(w.text, w.x, w.y, w.alpha, w.bob + t * 1.5);
+        }
+      }
+
+      /* ── Phase 2: Hands (doctor from below, patient from above) ── */
+      if (t >= T.handsStart) {
+        const prog = clamp((t - T.handsStart) / (T.handsMeet - T.handsStart), 0, 1);
+        let fade = 1;
+        if (t > T.flash) fade = 1 - clamp((t - T.flash) / (T.handsGone - T.flash), 0, 1);
+        drawHand(true, prog, fade);
+        drawHand(false, prog, fade);
+      }
+
+      /* ── Flash ── */
+      if (t >= T.flash && t < T.flash + 0.8) {
+        flashAlpha = 1 - (t - T.flash) / 0.8;
+      } else {
+        flashAlpha = 0;
+      }
+      drawFlash();
+
+      /* ── Phase 3: Heart formation ── */
+      if (t >= T.heartStart) {
+        const hp = clamp((t - T.heartStart) / (T.heartDone - T.heartStart), 0, 1);
+        const ehp = easeIO(hp);
+        for (let i = 0; i < heartPieces.length; i++) {
+          const delay = (i / heartPieces.length) * 0.5;
+          heartPieces[i].alpha = clamp((ehp - delay) / (1 - delay), 0, 1);
+          if (heartPieces[i].alpha > 0) {
+            drawJigsaw(
+              heartPieces[i].x, heartPieces[i].y,
+              heartPieces[i].size, 0,
+              heartPieces[i].color, heartPieces[i].alpha,
+              heartPieces[i].tabs
+            );
           }
         }
-        drawPiece(p.x, p.y, p.size, p.angle, p.color, p.alpha, p.word);
-      } else {
-        // Fly to heart
-        const hp = easeIO(clamp((t - T.heartStart) / (T.heartDone - T.heartStart - 0.5), 0, 1));
-        const fx = lerp(p.sx, p.hx, hp);
-        const fy = lerp(p.sy, p.hy, hp);
-        const fa = lerp(p.angle, 0, hp);
-        const fAlpha = 1 - hp * 0.85;
-        const fSize = p.size * (1 - hp * 0.35);
-        if (hp < 0.95) {
-          drawPiece(fx, fy, fSize, fa, p.color, fAlpha, hp < 0.4 ? p.word : null);
-        }
-      }
-    }
-
-    // ── Phase 2: Hands ──
-    if (t >= T.handsStart) {
-      const prog = clamp((t - T.handsStart) / (T.handsMeet - T.handsStart), 0, 1);
-      let fade = 1;
-      if (t > T.flash) fade = 1 - clamp((t - T.flash) / (T.handsGone - T.flash), 0, 1);
-      drawHand(true, prog, fade);
-      drawHand(false, prog, fade);
-    }
-
-    // ── Flash ──
-    if (t >= T.flash && t < T.flash + 0.8) {
-      flashAlpha = 1 - (t - T.flash) / 0.8;
-    } else {
-      flashAlpha = 0;
-    }
-    drawFlash();
-
-    // ── Phase 3: Heart formation ──
-    if (t >= T.heartStart) {
-      const hp = clamp((t - T.heartStart) / (T.heartDone - T.heartStart), 0, 1);
-      const ehp = easeIO(hp);
-
-      // Staggered fade-in of cells
-      for (let i = 0; i < heartCells.length; i++) {
-        const delay = (i / heartCells.length) * 0.55;
-        heartCells[i].alpha = clamp((ehp - delay) / (1 - delay), 0, 1);
-        drawCell(heartCells[i]);
+        if (hp > 0.65) drawHeartOutline(clamp((hp - 0.65) / 0.3, 0, 0.85));
       }
 
-      // Heart outline
-      if (hp > 0.6) {
-        drawHeartOutline(clamp((hp - 0.6) / 0.4, 0, 0.7));
+      /* ── Phase 4: ECG ── */
+      if (t >= T.ecgStart) {
+        ecgProg = clamp((t - T.ecgStart) / 2.0, 0, 1);
+        drawECG(ecgProg);
       }
-    }
 
-    // ── Phase 4: Heartbeat ECG ──
-    if (t >= T.heartbeat) {
-      hbProg = clamp((t - T.heartbeat) / 2.2, 0, 1);
-      drawECG(hbProg);
-    }
-
-    // ── Phase 5: Show text/button ──
-    if (t >= T.textShow && !textShown) {
-      textShown = true;
-      const el = document.getElementById('landing-text');
-      if (el) el.classList.add('show');
-    }
-    if (t >= T.btnShow && !btnShown) {
-      btnShown = true;
-      const el = document.getElementById('landing-enter');
-      if (el) el.classList.add('show');
+      /* ── Phase 5: Text + Button ── */
+      if (t >= T.textShow && !textShown) {
+        textShown = true;
+        const el = document.getElementById('landing-text');
+        if (el) el.classList.add('show');
+      }
+      if (t >= T.btnShow && !btnShown) {
+        btnShown = true;
+        const el = document.getElementById('landing-enter');
+        if (el) el.classList.add('show');
+      }
+    } catch (err) {
+      console.error('[landing] animation error:', err);
     }
 
     requestAnimationFrame(animate);
   }
 
-  // ── Start ──
+  /* ── Start ── */
   resize();
-  window.addEventListener('resize', () => { resize(); createHeartGrid(); });
-  createRain();
-  createHeartGrid();
+  window.addEventListener('resize', () => { resize(); createHeartPieces(); });
+  createPieces();
+  createWords();
+  createHeartPieces();
   requestAnimationFrame(animate);
 
   window.stopLandingAnim = () => { running = false; };
