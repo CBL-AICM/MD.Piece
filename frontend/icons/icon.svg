@@ -1,7 +1,67 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#1a73e8"/>
-  <text x="256" y="200" text-anchor="middle" font-family="Arial,sans-serif" font-size="120" font-weight="bold" fill="white">MD</text>
-  <text x="256" y="340" text-anchor="middle" font-family="Arial,sans-serif" font-size="80" fill="white" opacity="0.9">.Piece</text>
-  <path d="M170 380 h172" stroke="white" stroke-width="4" opacity="0.5"/>
-  <text x="256" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" fill="white" opacity="0.7">Healthcare PWA</text>
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5B8FAB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2C5F7A;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="figureGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D0E8F2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="pieceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F4A261;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E76F51;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="100" fill="url(#bgGrad)"/>
+
+  <!-- Subtle inner glow ring -->
+  <rect x="16" y="16" width="480" height="480" rx="88" fill="none" stroke="white" stroke-width="2" opacity="0.15"/>
+
+  <!-- === Left figure (Patient) === -->
+  <!-- Head -->
+  <circle cx="158" cy="148" r="44" fill="url(#figureGrad)" opacity="0.95"/>
+  <!-- Body -->
+  <path d="M100 310 Q100 240 158 230 Q216 240 216 310 L216 330 Q158 345 100 330 Z"
+        fill="url(#figureGrad)" opacity="0.9"/>
+  <!-- Arms reaching right -->
+  <path d="M210 265 Q240 260 258 272" stroke="white" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.85"/>
+
+  <!-- === Right figure (Doctor) === -->
+  <!-- Head -->
+  <circle cx="354" cy="148" r="44" fill="url(#figureGrad)" opacity="0.95"/>
+  <!-- Doctor cross badge -->
+  <rect x="342" y="136" width="24" height="6" rx="3" fill="#E76F51"/>
+  <rect x="351" y="127" width="6" height="24" rx="3" fill="#E76F51"/>
+  <!-- Body -->
+  <path d="M296 310 Q296 240 354 230 Q412 240 412 310 L412 330 Q354 345 296 330 Z"
+        fill="url(#figureGrad)" opacity="0.9"/>
+  <!-- Arms reaching left -->
+  <path d="M302 265 Q272 260 254 272" stroke="white" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.85"/>
+
+  <!-- === Puzzle piece in the center (connecting both figures) === -->
+  <!-- Main puzzle body -->
+  <rect x="220" y="248" width="72" height="72" rx="8" fill="url(#pieceGrad)"/>
+  <!-- Top tab -->
+  <circle cx="256" cy="244" r="14" fill="url(#pieceGrad)"/>
+  <!-- Bottom notch (concave) -->
+  <circle cx="256" cy="324" r="14" fill="url(#bgGrad)"/>
+  <!-- Left notch -->
+  <circle cx="216" cy="284" r="12" fill="url(#bgGrad)"/>
+  <!-- Right tab -->
+  <circle cx="296" cy="284" r="12" fill="url(#pieceGrad)"/>
+  <!-- Highlight on puzzle -->
+  <rect x="228" y="256" width="20" height="8" rx="4" fill="white" opacity="0.35"/>
+
+  <!-- === MD.Piece text === -->
+  <text x="256" y="408" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="58" font-weight="bold"
+        fill="white" opacity="0.97" letter-spacing="1">MD</text>
+  <text x="256" y="455" text-anchor="middle"
+        font-family="Arial, sans-serif"
+        font-size="30" font-weight="500"
+        fill="white" opacity="0.75" letter-spacing="4">.PIECE</text>
 </svg>
