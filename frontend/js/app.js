@@ -44,7 +44,7 @@ function showPage(page) {
 
 // ─── 註冊頁面（ID Card 風格，覆蓋在星空上）──────────────
 
-let _selectedRole = null;
+let _selectedRole = 'patient'; // 此網站為患者專用
 const _avatarColors = ['#5B9FE8','#9B80D4','#D08A8A','#55B88A','#D9A54A','#E87B5B','#7BC8E8'];
 let _avatarIdx = 0;
 
@@ -88,7 +88,7 @@ function selectIdRole(role) {
 function validateIdCard() {
   const name = document.getElementById('idcard-name')?.value.trim();
   const btn = document.getElementById('idcard-submit');
-  if (btn) btn.disabled = !(name && _selectedRole);
+  if (btn) btn.disabled = !name;
 }
 
 async function submitIdCard() {

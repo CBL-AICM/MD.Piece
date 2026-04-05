@@ -2,7 +2,7 @@
    MD.Piece — Soft Starry Puzzle Theme
    ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700&display=swap');
+/* Fonts loaded via <link> in HTML head for faster rendering */
 
 :root {
   --bg-deep:    #A8BACB;

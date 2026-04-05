@@ -9,6 +9,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="description" content="PWA 醫療輔助平台，支援醫病溝通與 AI 症狀分析" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
@@ -45,7 +48,7 @@
         <!-- Card header -->
         <div class="idcard-header">
           <div class="idcard-logo">MD.Piece</div>
-          <div class="idcard-type">MEMBER IDENTITY CARD</div>
+          <div class="idcard-type">患者身分卡 PATIENT CARD</div>
         </div>
 
         <!-- Avatar area -->
@@ -62,18 +65,6 @@
           <div class="idcard-field">
             <span class="idcard-field-label">姓名 NAME</span>
             <input id="idcard-name" type="text" placeholder="輸入你的暱稱" maxlength="20" autocomplete="off" />
-          </div>
-
-          <div class="idcard-field">
-            <span class="idcard-field-label">身分 ROLE</span>
-            <div class="idcard-role-row">
-              <button class="idcard-role-btn" id="idrole-doctor" onclick="selectIdRole('doctor')">
-                <i data-lucide="stethoscope"></i> 醫師
-              </button>
-              <button class="idcard-role-btn" id="idrole-patient" onclick="selectIdRole('patient')">
-                <i data-lucide="heart-pulse"></i> 患者
-              </button>
-            </div>
           </div>
         </div>
 
