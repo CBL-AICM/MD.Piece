@@ -1,67 +1,87 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#5B8FAB;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2C5F7A;stop-opacity:1" />
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6FA3BF"/>
+      <stop offset="100%" stop-color="#1E4D6B"/>
     </linearGradient>
-    <linearGradient id="figureGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#D0E8F2;stop-opacity:1" />
+    <linearGradient id="figL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#C8E0EE"/>
     </linearGradient>
-    <linearGradient id="pieceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#F4A261;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#E76F51;stop-opacity:1" />
+    <linearGradient id="figR" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#C8E0EE"/>
+    </linearGradient>
+    <linearGradient id="heart" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F4A261"/>
+      <stop offset="100%" stop-color="#E63946"/>
     </linearGradient>
   </defs>
 
-  <!-- Background rounded square -->
-  <rect width="512" height="512" rx="100" fill="url(#bgGrad)"/>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
 
-  <!-- Subtle inner glow ring -->
-  <rect x="16" y="16" width="480" height="480" rx="88" fill="none" stroke="white" stroke-width="2" opacity="0.15"/>
+  <!-- ====== LEFT FIGURE (leaning right, patient) ====== -->
+  <!-- Head - upper left -->
+  <circle cx="168" cy="130" r="46" fill="url(#figL)"/>
+  <!-- Hair suggestion -->
+  <path d="M132 118 Q140 90 168 86 Q196 90 204 118" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+  <!-- Neck -->
+  <rect x="156" y="172" width="24" height="28" rx="10" fill="url(#figL)" opacity="0.9"/>
+  <!-- Body curving right and down - forms left half of heart -->
+  <path d="M168 195
+           Q148 210 132 240
+           Q112 280 120 320
+           Q130 360 168 375
+           Q210 388 250 375
+           Q270 368 272 355"
+        fill="none" stroke="url(#figL)" stroke-width="52" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"/>
+  <!-- Left arm reaching toward center -->
+  <path d="M200 260 Q230 248 254 260"
+        fill="none" stroke="url(#figL)" stroke-width="22" stroke-linecap="round" opacity="0.85"/>
 
-  <!-- === Left figure (Patient) === -->
-  <!-- Head -->
-  <circle cx="158" cy="148" r="44" fill="url(#figureGrad)" opacity="0.95"/>
-  <!-- Body -->
-  <path d="M100 310 Q100 240 158 230 Q216 240 216 310 L216 330 Q158 345 100 330 Z"
-        fill="url(#figureGrad)" opacity="0.9"/>
-  <!-- Arms reaching right -->
-  <path d="M210 265 Q240 260 258 272" stroke="white" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <!-- ====== RIGHT FIGURE (leaning left, doctor) ====== -->
+  <!-- Head - upper right -->
+  <circle cx="344" cy="130" r="46" fill="url(#figR)"/>
+  <!-- Hair suggestion -->
+  <path d="M308 118 Q316 90 344 86 Q372 90 380 118" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+  <!-- Doctor cross on chest -->
+  <rect x="332" y="120" width="24" height="7" rx="3.5" fill="#E63946"/>
+  <rect x="340" y="112" width="7" height="24" rx="3.5" fill="#E63946"/>
+  <!-- Neck -->
+  <rect x="332" y="172" width="24" height="28" rx="10" fill="url(#figR)" opacity="0.9"/>
+  <!-- Body curving left and down - forms right half of heart -->
+  <path d="M344 195
+           Q364 210 380 240
+           Q400 280 392 320
+           Q382 360 344 375
+           Q302 388 262 375
+           Q242 368 240 355"
+        fill="none" stroke="url(#figR)" stroke-width="52" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"/>
+  <!-- Right arm reaching toward center -->
+  <path d="M312 260 Q282 248 258 260"
+        fill="none" stroke="url(#figR)" stroke-width="22" stroke-linecap="round" opacity="0.85"/>
 
-  <!-- === Right figure (Doctor) === -->
-  <!-- Head -->
-  <circle cx="354" cy="148" r="44" fill="url(#figureGrad)" opacity="0.95"/>
-  <!-- Doctor cross badge -->
-  <rect x="342" y="136" width="24" height="6" rx="3" fill="#E76F51"/>
-  <rect x="351" y="127" width="6" height="24" rx="3" fill="#E76F51"/>
-  <!-- Body -->
-  <path d="M296 310 Q296 240 354 230 Q412 240 412 310 L412 330 Q354 345 296 330 Z"
-        fill="url(#figureGrad)" opacity="0.9"/>
-  <!-- Arms reaching left -->
-  <path d="M302 265 Q272 260 254 272" stroke="white" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <!-- ====== HEART / CONNECTING ELEMENT in center ====== -->
+  <!-- Heart shape where hands meet -->
+  <path d="M256 298
+           C256 298 226 276 226 258
+           C226 244 236 237 246 240
+           C251 242 256 248 256 248
+           C256 248 261 242 266 240
+           C276 237 286 244 286 258
+           C286 276 256 298 256 298 Z"
+        fill="url(#heart)"/>
 
-  <!-- === Puzzle piece in the center (connecting both figures) === -->
-  <!-- Main puzzle body -->
-  <rect x="220" y="248" width="72" height="72" rx="8" fill="url(#pieceGrad)"/>
-  <!-- Top tab -->
-  <circle cx="256" cy="244" r="14" fill="url(#pieceGrad)"/>
-  <!-- Bottom notch (concave) -->
-  <circle cx="256" cy="324" r="14" fill="url(#bgGrad)"/>
-  <!-- Left notch -->
-  <circle cx="216" cy="284" r="12" fill="url(#bgGrad)"/>
-  <!-- Right tab -->
-  <circle cx="296" cy="284" r="12" fill="url(#pieceGrad)"/>
-  <!-- Highlight on puzzle -->
-  <rect x="228" y="256" width="20" height="8" rx="4" fill="white" opacity="0.35"/>
-
-  <!-- === MD.Piece text === -->
-  <text x="256" y="408" text-anchor="middle"
-        font-family="Georgia, 'Times New Roman', serif"
-        font-size="58" font-weight="bold"
-        fill="white" opacity="0.97" letter-spacing="1">MD</text>
-  <text x="256" y="455" text-anchor="middle"
+  <!-- ====== TEXT ====== -->
+  <text x="256" y="426"
+        text-anchor="middle"
+        font-family="Georgia, serif"
+        font-size="62" font-weight="bold"
+        fill="white" letter-spacing="2">MD</text>
+  <text x="256" y="470"
+        text-anchor="middle"
         font-family="Arial, sans-serif"
-        font-size="30" font-weight="500"
-        fill="white" opacity="0.75" letter-spacing="4">.PIECE</text>
+        font-size="32" font-weight="400"
+        fill="white" opacity="0.78" letter-spacing="5">.PIECE</text>
 </svg>
