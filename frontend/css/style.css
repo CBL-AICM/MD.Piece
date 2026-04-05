@@ -98,15 +98,15 @@ body {
 }
 
 .landing-logo {
-  font-family: "Orbitron", sans-serif;
-  font-size: 2.6rem;
-  font-weight: 700;
+  font-family: "Sacramento", cursive;
+  font-size: 3.2rem;
+  font-weight: 400;
   background: linear-gradient(135deg, var(--accent), var(--purple));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 8px;
-  text-indent: 8px;
+  letter-spacing: 3px;
+  text-indent: 3px;
 }
 
 .landing-divider {
@@ -238,9 +238,9 @@ body {
 }
 
 .sidebar-brand h1 {
-  font-family: "Orbitron", sans-serif;
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-family: "Sacramento", cursive;
+  font-size: 1.6rem;
+  font-weight: 400;
   background: linear-gradient(135deg, var(--accent), var(--purple));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -714,7 +714,7 @@ button.secondary:hover {
 }
 
 .stat-value {
-  font-family: "Orbitron", sans-serif;
+  font-family: "Noto Sans TC", sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--accent);
@@ -839,7 +839,7 @@ button.secondary:hover {
 }
 
 .dash-stat-num {
-  font-family: "Orbitron", sans-serif;
+  font-family: "Noto Sans TC", sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--accent);
@@ -1284,9 +1284,9 @@ button.secondary:hover {
 }
 
 .idcard-logo {
-  font-family: 'Orbitron', sans-serif;
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-family: "Sacramento", cursive;
+  font-weight: 400;
+  font-size: 1.4rem;
   color: var(--accent);
   letter-spacing: 2px;
 }
@@ -1428,7 +1428,7 @@ button.secondary:hover {
 
 .idcard-date {
   display: block;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Noto Sans TC', monospace;
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-dim);
