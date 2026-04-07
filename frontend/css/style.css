@@ -100,11 +100,11 @@ body {
 /* ─── Logo image (hand-drawn sketch) ──────────────────── */
 .landing-logo-img {
   display: block;
-  width: 120px;
+  width: 220px;
   height: auto;
-  margin: 0 auto 8px;
-  filter: invert(15%) sepia(20%) saturate(400%) hue-rotate(190deg) brightness(0.9) contrast(1.1);
-  opacity: 0.85;
+  margin: 0 auto 4px;
+  border-radius: 18px;
+  opacity: 0.95;
 }
 
 .landing-logo {
