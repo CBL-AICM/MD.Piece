@@ -1,9 +1,8 @@
 // ═══════════════════════════════════════════════════════════
-// MD.Piece — Landing Cinematic Animation (v2)
-// 1. Warm puzzle pieces rain + floating words scatter separately
-// 2. Doctor hand (from below) + Patient hand (from above) meet
-// 3. Flash → pieces fly into heart shape filled with jigsaws
-// 4. Bold heart outline + ECG heartbeat + tagline + enter
+// MD.Piece — Landing Cinematic Animation (v3)
+// 1. Warm puzzle pieces rain + floating words scatter
+// 2. Flash → pieces fly into heart shape filled with jigsaws
+// 3. Bold heart outline + ECG heartbeat + tagline + enter
 // ═══════════════════════════════════════════════════════════
 
 (function () {
@@ -20,18 +19,15 @@
   const T = {
     rainEnd:    3.0,
     wordsStart: 0.8,
-    handsStart: 3.2,
-    handsMeet:  5.5,
-    flash:      5.8,
-    handsGone:  6.8,
-    heartStart: 6.2,
-    heartDone:  8.8,
-    ecgStart:   9.0,
-    textShow:   10.0,
-    btnShow:    11.0,
+    flash:      3.8,
+    heartStart: 4.2,
+    heartDone:  6.8,
+    ecgStart:   7.0,
+    textShow:   8.0,
+    btnShow:    9.0,
   };
 
-  /* ── Warm beige palette (matching reference images) ── */
+  /* ── Warm beige palette ── */
   const PIECE_COLORS = [
     '#E8DDD0','#DDD1C2','#F0E5D5','#D5CCBF','#E3D8C8',
     '#CFC5B5','#EBE1D2','#D9CFC1','#E5DBCC','#D2C8B5',
@@ -66,7 +62,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-     DRAW: Jigsaw piece (proper tabs/indents, warm style)
+     DRAW: Jigsaw piece
      ═══════════════════════════════════════════════════════════ */
   function drawJigsaw(x, y, size, angle, color, alpha, tabs) {
     if (alpha <= 0) return;
@@ -80,7 +76,6 @@
     const t = size * 0.17;
 
     ctx.beginPath();
-    // Top edge
     ctx.moveTo(-s, -s);
     if (tabs.top) {
       ctx.lineTo(-s * 0.28, -s);
@@ -92,7 +87,6 @@
                           s * 0.28, -s);
     }
     ctx.lineTo(s, -s);
-    // Right edge
     if (tabs.right) {
       ctx.lineTo(s, -s * 0.28);
       ctx.bezierCurveTo(s + tabs.right * t * 0.5, -s * 0.18,
@@ -103,7 +97,6 @@
                          s, s * 0.28);
     }
     ctx.lineTo(s, s);
-    // Bottom edge
     if (tabs.bottom) {
       ctx.lineTo(s * 0.28, s);
       ctx.bezierCurveTo(s * 0.18, s + tabs.bottom * t * 0.5,
@@ -114,7 +107,6 @@
                          -s * 0.28, s);
     }
     ctx.lineTo(-s, s);
-    // Left edge
     if (tabs.left) {
       ctx.lineTo(-s, s * 0.28);
       ctx.bezierCurveTo(-s - tabs.left * t * 0.5, s * 0.18,
@@ -126,7 +118,6 @@
     }
     ctx.closePath();
 
-    // Shadow
     ctx.shadowColor = 'rgba(0,0,0,0.08)';
     ctx.shadowBlur = 5;
     ctx.shadowOffsetY = 2;
@@ -135,7 +126,6 @@
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    // Border
     ctx.strokeStyle = 'rgba(175,165,148,0.45)';
     ctx.lineWidth = 1.2;
     ctx.stroke();
@@ -143,7 +133,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-     DRAW: Floating word (separate from pieces)
+     DRAW: Floating word
      ═══════════════════════════════════════════════════════════ */
   function drawWord(word, x, y, alpha, bob) {
     if (alpha <= 0) return;
@@ -159,136 +149,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-     DRAW: Hand — bold line-art with bezier curves
-     ═══════════════════════════════════════════════════════════ */
-  function traceHand(ctx) {
-    ctx.beginPath();
-    // Start lower-left of forearm
-    ctx.moveTo(-18, 160);
-    ctx.lineTo(-18, 15);
-    // Left palm up to pinky
-    ctx.bezierCurveTo(-20, 5, -22, -5, -22, -12);
-    // Pinky
-    ctx.bezierCurveTo(-22, -22, -21, -35, -18, -42);
-    ctx.bezierCurveTo(-16, -46, -13, -45, -12, -41);
-    ctx.bezierCurveTo(-10, -35, -10, -28, -10, -22);
-    // Ring
-    ctx.bezierCurveTo(-9, -32, -7, -45, -5, -51);
-    ctx.bezierCurveTo(-3, -54, 0, -53, 1, -49);
-    ctx.bezierCurveTo(2, -42, 2, -32, 2, -24);
-    // Middle (tallest)
-    ctx.bezierCurveTo(3, -36, 5, -52, 7, -61);
-    ctx.bezierCurveTo(9, -65, 12, -64, 13, -60);
-    ctx.bezierCurveTo(14, -52, 14, -38, 14, -26);
-    // Index
-    ctx.bezierCurveTo(15, -36, 17, -48, 19, -55);
-    ctx.bezierCurveTo(21, -58, 24, -57, 25, -53);
-    ctx.bezierCurveTo(26, -46, 26, -36, 25, -26);
-    // Right palm down to thumb gap
-    ctx.bezierCurveTo(25, -16, 24, -6, 22, 0);
-    // Thumb (extends right, always same side so rotation mirrors correctly)
-    ctx.bezierCurveTo(26, -4, 33, -12, 37, -9);
-    ctx.bezierCurveTo(41, -6, 41, 3, 37, 7);
-    ctx.bezierCurveTo(33, 11, 26, 12, 22, 10);
-    // Right forearm
-    ctx.lineTo(18, 15);
-    ctx.lineTo(18, 160);
-    ctx.closePath();
-  }
-
-  function drawHand(isDoctor, progress, fadeAlpha) {
-    if (progress <= 0 || fadeAlpha <= 0) return;
-    const ep = easeO(clamp(progress, 0, 1));
-    const sc = Math.min(W, H) / 550;
-
-    let startY, endY, xOffset, rotation;
-    if (isDoctor) {
-      startY = H + 200;
-      endY   = cy + 62 * sc;
-      xOffset = -18 * sc;
-      rotation = 0;
-    } else {
-      startY = -200;
-      endY   = cy - 62 * sc;
-      xOffset = 18 * sc;
-      rotation = Math.PI;
-    }
-
-    const hx = cx + xOffset;
-    const hy = lerp(startY, endY, ep);
-
-    ctx.save();
-    ctx.globalAlpha = clamp(fadeAlpha, 0, 1);
-    ctx.translate(hx, hy);
-    ctx.rotate(rotation);
-    ctx.scale(sc, sc);
-
-    // Hand fill (warm gradient)
-    traceHand(ctx);
-    const grad = ctx.createLinearGradient(0, -65, 0, 50);
-    grad.addColorStop(0, 'rgba(240, 228, 212, 0.96)');
-    grad.addColorStop(1, 'rgba(225, 210, 192, 0.96)');
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // Hand outline (bold line-art)
-    traceHand(ctx);
-    ctx.strokeStyle = '#3A3F4B';
-    ctx.lineWidth = 2.8;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-
-    // Palm lines (subtle detail)
-    ctx.strokeStyle = 'rgba(58, 63, 75, 0.15)';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(-14, -8);
-    ctx.quadraticCurveTo(0, -13, 16, -8);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-10, 0);
-    ctx.quadraticCurveTo(2, -4, 14, 0);
-    ctx.stroke();
-
-    // Sleeve cuff lines
-    ctx.strokeStyle = 'rgba(58, 63, 75, 0.25)';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.moveTo(-20, 16); ctx.lineTo(20, 16);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-20, 22); ctx.lineTo(20, 22);
-    ctx.stroke();
-
-    if (isDoctor) {
-      // Medical cross on sleeve
-      ctx.strokeStyle = 'rgba(91, 159, 232, 0.75)';
-      ctx.lineWidth = 3.5;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(0, 50); ctx.lineTo(0, 72);
-      ctx.moveTo(-11, 61); ctx.lineTo(11, 61);
-      ctx.stroke();
-    } else {
-      // Patient wristband
-      ctx.fillStyle = 'rgba(232, 165, 185, 0.4)';
-      ctx.fillRect(-20, 26, 40, 10);
-      ctx.strokeStyle = 'rgba(208, 138, 160, 0.6)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(-20, 26, 40, 10);
-    }
-
-    // Puzzle piece held at fingertips
-    const pc = isDoctor ? 'rgba(142, 183, 215, 0.85)' : 'rgba(232, 190, 200, 0.85)';
-    drawJigsaw(5, -70, 22, 0, pc, 1,
-      { top: 1, right: 0, bottom: -1, left: 0 });
-
-    ctx.restore();
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     DRAW: Heart outline (bold, parametric)
+     DRAW: Heart outline
      ═══════════════════════════════════════════════════════════ */
   function getHeartScale() { return Math.min(W, H) * 0.17; }
   function getHeartCY() { return cy - getHeartScale() * 0.12; }
@@ -327,7 +188,6 @@
     const baseY = hcy + s * 0.06;
 
     ctx.save();
-    // Glow
     ctx.shadowColor = 'rgba(91, 159, 232, 0.4)';
     ctx.shadowBlur = 8;
     ctx.strokeStyle = 'rgba(91, 159, 232, 0.85)';
@@ -447,7 +307,6 @@
       }
     }
 
-    // Map falling pieces → heart targets
     if (heartPieces.length > 0) {
       const step = Math.max(1, Math.floor(heartPieces.length / pieces.length));
       for (let i = 0; i < pieces.length; i++) {
@@ -497,7 +356,7 @@
         }
       }
 
-      /* ── Floating words (separate from pieces) ── */
+      /* ── Floating words ── */
       for (const w of floatingWords) {
         if (preHeart) {
           if (t >= T.wordsStart) w.alpha = Math.min(w.alpha + 0.008, 0.7);
@@ -508,15 +367,6 @@
         }
       }
 
-      /* ── Phase 2: Hands (doctor from below, patient from above) ── */
-      if (t >= T.handsStart) {
-        const prog = clamp((t - T.handsStart) / (T.handsMeet - T.handsStart), 0, 1);
-        let fade = 1;
-        if (t > T.flash) fade = 1 - clamp((t - T.flash) / (T.handsGone - T.flash), 0, 1);
-        drawHand(true, prog, fade);
-        drawHand(false, prog, fade);
-      }
-
       /* ── Flash ── */
       if (t >= T.flash && t < T.flash + 0.8) {
         flashAlpha = 1 - (t - T.flash) / 0.8;
@@ -525,7 +375,7 @@
       }
       drawFlash();
 
-      /* ── Phase 3: Heart formation ── */
+      /* ── Phase 2: Heart formation ── */
       if (t >= T.heartStart) {
         const hp = clamp((t - T.heartStart) / (T.heartDone - T.heartStart), 0, 1);
         const ehp = easeIO(hp);
@@ -544,13 +394,13 @@
         if (hp > 0.65) drawHeartOutline(clamp((hp - 0.65) / 0.3, 0, 0.85));
       }
 
-      /* ── Phase 4: ECG ── */
+      /* ── Phase 3: ECG ── */
       if (t >= T.ecgStart) {
         ecgProg = clamp((t - T.ecgStart) / 2.0, 0, 1);
         drawECG(ecgProg);
       }
 
-      /* ── Phase 5: Text + Button ── */
+      /* ── Phase 4: Text + Button ── */
       if (t >= T.textShow && !textShown) {
         textShown = true;
         const el = document.getElementById('landing-text');
