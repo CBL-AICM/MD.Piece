@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import logging
 
 from backend.db import get_supabase
-from backend.services.claude_service import recognize_medicine_bag, call_claude
+from backend.services.llm_service import recognize_medicine_bag, call_claude
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
