@@ -10,7 +10,7 @@ from backend.services.knowledge_analysis import (
     get_education_priorities,
     get_comprehension_distribution,
 )
-from backend.services.claude_service import call_claude
+from backend.services.llm_service import call_claude
 from backend.utils.icd10 import (
     ICD10_MAP,
     KNOWLEDGE_DIMENSIONS,
