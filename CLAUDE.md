@@ -78,3 +78,42 @@ cd mcp_server && uv sync
 - 主分支：`main`
 - 功能分支命名：`claude/feature-name`
 - 每個功能開獨立 PR，不直接 push main
+
+---
+
+## 多工並行開發
+
+本專案支援四種 Claude Code 多工方式，腳本位於 `scripts/multi-task/`。
+
+### 1. Subagents（子 Agent）
+在對話中直接請 Claude 用多個 subagent 並行處理任務，無需額外設定。
+適合：快速並行研究、程式碼審查、探索性調查。
+參考：`scripts/multi-task/subagents-example.md`
+
+### 2. Git Worktrees
+用獨立的工作目錄同時開發多個功能，不互相干擾。
+```bash
+# 建立 worktree
+./scripts/multi-task/worktree-manager.sh create auth-feature
+# 列出所有 worktrees
+./scripts/multi-task/worktree-manager.sh list
+# 在 worktree 中啟動 Claude Code
+./scripts/multi-task/worktree-manager.sh launch auth-feature
+```
+
+### 3. Agent Teams（實驗功能）
+已在 `.claude/settings.json` 啟用 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`。
+多個 Agent 組成團隊協作，適合複雜多模組任務。
+
+### 4. 非互動模式批次處理
+用 `claude -p` 並行跑多個任務，結果輸出到 `output/batch-results/`。
+```bash
+# 並行分析所有後端模組
+./scripts/multi-task/batch-runner.sh analyze
+# 並行程式碼審查（安全/效能/前端）
+./scripts/multi-task/batch-runner.sh review
+# 並行生成測試
+./scripts/multi-task/batch-runner.sh test-gen
+# 自訂任務
+./scripts/multi-task/batch-runner.sh custom scripts/multi-task/sample-tasks.txt
+```

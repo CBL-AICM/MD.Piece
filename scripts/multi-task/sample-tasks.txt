@@ -1,0 +1,7 @@
+# MD.Piece 批次任務範例檔
+# 每行一個任務，# 開頭為註解，空行會被忽略
+
+檢查 backend/routers/patients.py 的 API 是否有缺少輸入驗證的端點，以繁體中文回覆
+檢查 backend/routers/symptoms.py 是否正確處理了所有可能的錯誤狀態，以繁體中文回覆
+分析 backend/services/supabase_service.py 的資料庫查詢效能，以繁體中文回覆
+檢查 frontend/ 的 PWA manifest 和 service worker 設定是否完整，以繁體中文回覆
