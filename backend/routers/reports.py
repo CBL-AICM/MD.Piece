@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from backend.db import get_supabase
-from backend.services.claude_service import call_claude
+from backend.services.llm_service import call_claude
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
