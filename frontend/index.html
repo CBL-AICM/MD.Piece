@@ -26,7 +26,30 @@
 
     <!-- Text overlay (shown by JS after heart forms) -->
     <div class="landing-text" id="landing-text">
-      <img src="icons/logo.png?v=2" alt="MD.Piece" class="landing-logo-img" />
+      <svg class="landing-logo-img" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MD.Piece logo">
+        <defs>
+          <linearGradient id="mdpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#5B9FE8" />
+            <stop offset="100%" stop-color="#9B80D4" />
+          </linearGradient>
+          <linearGradient id="mdpGradSoft" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#5B9FE8" stop-opacity="0.18" />
+            <stop offset="100%" stop-color="#9B80D4" stop-opacity="0.18" />
+          </linearGradient>
+        </defs>
+        <!-- soft glow backdrop -->
+        <circle cx="120" cy="120" r="110" fill="url(#mdpGradSoft)" />
+        <!-- puzzle piece with top tab -->
+        <path d="M60,80 Q60,60 80,60 L100,60 Q100,40 120,40 Q140,40 140,60 L160,60 Q180,60 180,80 L180,100 Q200,100 200,120 Q200,140 180,140 L180,180 Q180,200 160,200 L80,200 Q60,200 60,180 L60,140 Q40,140 40,120 Q40,100 60,100 Z"
+              fill="url(#mdpGrad)" />
+        <!-- heart inside -->
+        <path d="M120,176 C120,176 72,143 72,108 C72,90 86,82 98,93 C106,100 114,110 120,120 C126,110 134,100 142,93 C154,82 168,90 168,108 C168,143 120,176 120,176 Z"
+              fill="#ffffff" fill-opacity="0.94" />
+        <!-- pulse / ECG line -->
+        <path d="M78,126 L95,126 L103,108 L112,150 L120,94 L128,150 L137,108 L145,126 L162,126"
+              fill="none" stroke="url(#mdpGrad)" stroke-width="3.6"
+              stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
       <h1 class="landing-logo">MD.Piece</h1>
       <div class="landing-divider"></div>
       <p class="landing-tagline">將日常碎片拼起<br>醫起攜手走出治療中的迷霧</p>

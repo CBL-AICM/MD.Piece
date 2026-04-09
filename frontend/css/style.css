@@ -97,14 +97,20 @@ body {
   transform: translateY(0);
 }
 
-/* ─── Logo image (hand-drawn sketch) ──────────────────── */
+/* ─── Logo mark (inline SVG) ──────────────────────────── */
 .landing-logo-img {
   display: block;
-  width: 220px;
-  height: auto;
+  width: 200px;
+  height: 200px;
   margin: 0 auto 4px;
-  border-radius: 18px;
-  opacity: 0.95;
+  filter: drop-shadow(0 6px 24px rgba(91, 159, 232, 0.35))
+          drop-shadow(0 2px 8px rgba(155, 128, 212, 0.25));
+  animation: mdp-logo-float 6s ease-in-out infinite;
+}
+
+@keyframes mdp-logo-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
 }
 
 .landing-logo {
