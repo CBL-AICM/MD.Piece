@@ -129,6 +129,16 @@ _SCHEMAS = {
             FOREIGN KEY (patient_id) REFERENCES patients(id),
             FOREIGN KEY (medication_id) REFERENCES medications(id)
         )""",
+    "xiaohe_conversations": """
+        CREATE TABLE IF NOT EXISTS xiaohe_conversations (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            user_message TEXT,
+            reply TEXT,
+            mode TEXT DEFAULT 'patient',
+            version TEXT DEFAULT 'normal',
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
     "experiments": """
         CREATE TABLE IF NOT EXISTS experiments (
             id TEXT PRIMARY KEY,
