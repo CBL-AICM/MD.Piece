@@ -1,199 +1,158 @@
-import json
-import logging
-from datetime import datetime, timedelta, timezone
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+from typing import Optional
+import logging
 
 from backend.db import get_supabase
-from backend.services.llm_service import call_claude
+from backend.utils.triage_rules import check_emergency, EMERGENCY_SYMPTOMS
 from backend.utils.baseline import calculate_baseline
-from backend.utils.triage_rules import EMERGENCY_SYMPTOMS, check_emergency
+from backend.services.llm_service import call_claude
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# 雙層 AI 分流：規則引擎 + LLM 個人化基準線判斷
-
-TRIAGE_SYSTEM_PROMPT = (
-    "你是 MD.Piece 平台的智慧分診助手。\n"
-    "根據患者今日的症狀數據和個人化基準線，判斷患者狀態。\n\n"
-    "判斷等級：\n"
-    "- stable：狀況穩定，繼續按時服藥和追蹤\n"
-    "- follow_up：有偏離基準的趨勢，建議提早回診\n"
-    "- emergency：需要立即就醫（此等級通常由規則引擎處理）\n\n"
-    "回覆必須是純 JSON 格式（不要 markdown code block）：\n"
-    '{"result": "stable/follow_up/emergency", '
-    '"message": "給患者的一句話說明（繁體中文、溫暖語氣）", '
-    '"details": "給醫療人員的專業判斷依據（簡潔）", '
-    '"concerns": ["需要關注的項目"]}\n\n'
-    "判斷原則：\n"
-    "1. 今日數據在基準線正常範圍 -> stable\n"
-    "2. 疼痛、情緒、服藥率偏離基準 1 個標準差以上 -> follow_up\n"
-    "3. 語氣溫暖，不要嚇患者\n"
-    "4. 偏保守 — 寧可提早回診，不要漏掉警訊"
-)
+# 雙層 AI 分流 - 規則引擎 + LLM 個人化基準線判斷
 
 
 class TriageRequest(BaseModel):
     patient_id: str
     symptoms: list[str] = []
-    pain_score: int | None = None       # 1-10
-    temperature: float | None = None    # 體溫 (°C)
+    temperature: float = 0
     is_immunosuppressed: bool = False
-    emotion_score: int | None = None    # 1-5
+    pain_score: int | None = None
+    emotion_score: int | None = None
     medication_taken: bool | None = None
-
-
-# ── 分診評估 ─────────────────────────────────────────────────
+    notes: str = ""
 
 
 @router.post("/evaluate")
 def evaluate_triage(body: TriageRequest):
-    """雙層分診評估：規則引擎 → LLM 個人化判斷"""
+    """
+    雙層分流評估：
+    第一層：規則引擎（急診清單觸發 → 直接 Emergency）
+    第二層：LLM 依個人基準線判斷 Stable / Follow-up / Emergency
+    """
+    # 第一層：規則引擎
+    is_emergency = check_emergency(
+        symptoms=body.symptoms,
+        is_immunosuppressed=body.is_immunosuppressed,
+        temperature=body.temperature,
+    )
 
-    # ── 第一層：規則引擎 — 急診直接攔截 ──
-    temp = body.temperature or 0
-    if check_emergency(body.symptoms, body.is_immunosuppressed, temp):
-        matched = [s for s in body.symptoms if s in EMERGENCY_SYMPTOMS]
+    if is_emergency:
+        triggered = [s for s in body.symptoms if s in EMERGENCY_SYMPTOMS]
         return {
             "result": "emergency",
-            "layer": "rule_engine",
+            "layer": 1,
             "message": "偵測到緊急症狀，請立即就醫或撥打 119！",
-            "details": f"觸發急診規則：{', '.join(matched) if matched else '免疫抑制合併發燒'}",
-            "concerns": matched or ["免疫抑制合併發燒"],
+            "triggered_symptoms": triggered,
+            "temperature_alert": body.temperature >= 38.0 and body.is_immunosuppressed,
         }
 
-    # ── 第二層：LLM + 個人化基準線 ──
+    # 第二層：LLM 基準線比對
     sb = get_supabase()
-    since = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
 
-    emotion_records = (
-        sb.table("emotions")
-        .select("*")
-        .eq("patient_id", body.patient_id)
-        .gte("created_at", since)
-        .order("created_at")
-        .execute()
+    # 取得病患資訊
+    patient_result = sb.table("patients").select("*").eq("id", body.patient_id).execute()
+    patient = patient_result.data[0] if patient_result.data else {}
+
+    # 組合今日數據
+    today_data = {
+        "symptoms": body.symptoms,
+        "temperature": body.temperature,
+        "pain_score": body.pain_score,
+        "emotion_score": body.emotion_score,
+        "medication_taken": body.medication_taken,
+        "notes": body.notes,
+    }
+
+    system_prompt = (
+        "你是 MD.Piece 的分流判斷助手。根據病患今日回報的數據，判斷其健康狀態。\n"
+        "回覆格式必須是以下三種之一：\n"
+        "- stable：今天狀況穩定，繼續按時服藥\n"
+        "- follow_up：建議近期回診追蹤\n"
+        "- emergency：建議立即就醫\n\n"
+        "回覆格式：先寫判斷結果（stable/follow_up/emergency），換行後寫一句簡短說明。\n"
+        "語氣溫暖、不恐嚇，用繁體中文。"
     )
-    med_logs = (
-        sb.table("medication_logs")
-        .select("*")
-        .eq("patient_id", body.patient_id)
-        .gte("taken_at", since)
-        .execute()
-    )
 
-    emotion_data = emotion_records.data or []
-    med_data = med_logs.data or []
-
-    # 建立基準線數據
-    baseline_records = []
-    total_meds = len(med_data) if med_data else 0
-    taken_meds = sum(1 for m in med_data if m.get("taken"))
-    med_rate = taken_meds / total_meds if total_meds else 1.0
-
-    for e in emotion_data:
-        record = {"emotion": e.get("score", 3), "medication_rate": med_rate}
-        if body.pain_score is not None:
-            record["pain"] = body.pain_score
-        baseline_records.append(record)
-
-    baseline = calculate_baseline(baseline_records) if baseline_records else {}
-
-    # 組合今日數據摘要
-    today_parts = ["患者今日狀態："]
-    today_parts.append(f"- 症狀：{', '.join(body.symptoms) if body.symptoms else '無特別症狀'}")
-    if body.pain_score is not None:
-        today_parts.append(f"- 疼痛評分：{body.pain_score}/10")
+    parts = [
+        f"病患：{patient.get('name', '未知')}，{patient.get('age', '未知')}歲",
+        "今日回報：",
+        f"- 症狀：{', '.join(body.symptoms) if body.symptoms else '無特殊症狀'}",
+    ]
     if body.temperature:
-        today_parts.append(f"- 體溫：{body.temperature} C")
+        parts.append(f"- 體溫：{body.temperature}°C")
+    if body.pain_score is not None:
+        parts.append(f"- 疼痛分數：{body.pain_score}/10")
     if body.emotion_score is not None:
-        today_parts.append(f"- 情緒評分：{body.emotion_score}/5")
-    if body.medication_taken is not None:
-        today_parts.append(f"- 今日服藥：{'已服藥' if body.medication_taken else '未服藥'}")
-
-    if baseline:
-        today_parts.append("\n個人化基準線（近兩週平均）：")
-        if baseline.get("pain_mean") is not None:
-            today_parts.append(
-                f"- 疼痛平均：{baseline['pain_mean']:.1f}"
-                f"（標準差 {baseline['pain_stdev']:.1f}）"
-            )
-        if baseline.get("emotion_mean") is not None:
-            today_parts.append(f"- 情緒平均：{baseline['emotion_mean']:.1f}")
-        if baseline.get("medication_rate_mean") is not None:
-            today_parts.append(f"- 服藥率平均：{baseline['medication_rate_mean']:.0%}")
-    else:
-        today_parts.append("\n（尚無足夠的歷史數據建立基準線）")
-
-    today_summary = "\n".join(today_parts)
+        parts.append(f"- 情緒分數：{body.emotion_score}/5")
+    med_status = "是" if body.medication_taken else "否" if body.medication_taken is not None else "未回報"
+    parts.append(f"- 今日是否服藥：{med_status}")
+    if body.notes:
+        parts.append(f"- 備註：{body.notes}")
+    user_message = "\n".join(parts)
 
     try:
-        raw = call_claude(TRIAGE_SYSTEM_PROMPT, today_summary)
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        llm_result = json.loads(raw)
+        llm_response = call_claude(system_prompt, user_message)
+        lines = llm_response.strip().split("\n", 1)
+        result_tag = lines[0].strip().lower()
+
+        if result_tag not in ("stable", "follow_up", "emergency"):
+            result_tag = "stable"
+        message = lines[1].strip() if len(lines) > 1 else "狀況評估完成"
     except Exception as e:
-        logger.warning(f"Triage LLM failed: {e}")
-        llm_result = {
-            "result": "stable",
-            "message": "系統暫時無法進行 AI 分析，建議您依平時狀態判斷。如有不適請聯繫醫師。",
-            "details": f"LLM 分析失敗：{e}",
-            "concerns": [],
-        }
+        logger.error(f"Triage LLM call failed: {e}")
+        result_tag = "stable"
+        message = "AI 分流暫時無法使用，根據您回報的症狀暫判為穩定，如有不適請就醫。"
 
-    llm_result["layer"] = "llm_baseline"
-    llm_result["baseline"] = baseline
-    return llm_result
-
-
-# ── 基準線查詢 ───────────────────────────────────────────────
+    return {
+        "result": result_tag,
+        "layer": 2,
+        "message": message,
+        "today_data": today_data,
+    }
 
 
 @router.get("/baseline/{patient_id}")
 def get_baseline(patient_id: str):
-    """取得個人化基準線：前兩週症狀 / 服藥 / 情緒平均值"""
+    """取得個人化基準線：根據近兩週情緒與服藥紀錄計算"""
     sb = get_supabase()
-    since = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
+    from datetime import datetime, timedelta
+    since = (datetime.utcnow() - timedelta(days=14)).isoformat()
 
-    emotions = (
-        sb.table("emotions")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .gte("created_at", since)
-        .execute()
-    )
-    med_logs = (
-        sb.table("medication_logs")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .gte("taken_at", since)
-        .execute()
-    )
+    # 取得情緒紀錄
+    emotions = sb.table("emotions").select("*").eq("patient_id", patient_id).gte("created_at", since).execute().data or []
 
-    emotion_data = emotions.data or []
-    med_data = med_logs.data or []
+    # 取得服藥紀錄
+    med_logs = sb.table("medication_logs").select("*").eq("patient_id", patient_id).gte("taken_at", since).execute().data or []
 
-    baseline_records = []
-    total = len(med_data) if med_data else 0
-    taken = sum(1 for m in med_data if m.get("taken"))
+    # 組合成 baseline 計算格式
+    records = []
+    for e in emotions:
+        records.append({
+            "emotion": e.get("score", 3),
+            "pain": 0,
+            "medication_rate": 1.0,
+        })
 
-    for e in emotion_data:
-        record = {"emotion": e.get("score", 3)}
-        if total:
-            record["medication_rate"] = taken / total
-        baseline_records.append(record)
+    if med_logs:
+        total = len(med_logs)
+        taken = sum(1 for l in med_logs if l.get("taken"))
+        med_rate = taken / total if total else 1.0
+        for r in records:
+            r["medication_rate"] = med_rate
 
-    baseline = calculate_baseline(baseline_records) if baseline_records else {}
+    baseline = calculate_baseline(records)
 
     return {
-        "patient_id": patient_id,
         "baseline": baseline,
-        "data_points": {
-            "emotion_records": len(emotion_data),
-            "medication_logs": len(med_data),
-        },
-        "period": "14 days",
+        "data_points": len(records),
+        "period_days": 14,
     }
+
+
+@router.get("/emergency-symptoms")
+def list_emergency_symptoms():
+    """列出所有觸發急診的症狀清單"""
+    return {"symptoms": EMERGENCY_SYMPTOMS}

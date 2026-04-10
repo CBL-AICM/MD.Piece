@@ -5,27 +5,11 @@ from datetime import datetime
 import csv
 import io
 import logging
-import os
-import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Supabase or in-memory fallback
-_use_memory = False
-_memory_store: list = []  # in-memory fallback for experiments
-_memory_counter = 0
-
-try:
-    from backend.services.supabase_service import supabase as _sb_client
-    # Test if Supabase is actually configured
-    if not (os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_KEY")):
-        raise RuntimeError("No credentials")
-    supabase = _sb_client
-except Exception:
-    supabase = None
-    _use_memory = True
-    logger.warning("Supabase unavailable — research router using in-memory storage")
+from backend.db import get_supabase
 
 
 class ExperimentSubmit(BaseModel):
@@ -42,11 +26,10 @@ class ExperimentSubmit(BaseModel):
 
 
 def _fetch_experiments():
-    """從 Supabase 或記憶體取得所有實驗（按時間倒序）"""
-    if _use_memory:
-        return sorted(_memory_store, key=lambda e: e.get("submitted_at", ""), reverse=True)
+    """從資料庫取得所有實驗（按時間倒序）"""
     try:
-        res = supabase.table("experiments").select("*").order("submitted_at", desc=True).execute()
+        sb = get_supabase()
+        res = sb.table("experiments").select("*").order("submitted_at", desc=True).execute()
         return res.data or []
     except Exception as e:
         logger.error(f"Failed to fetch experiments: {e}")
@@ -54,34 +37,23 @@ def _fetch_experiments():
 
 
 def _insert_experiment(row: dict):
-    """插入實驗到 Supabase 或記憶體"""
-    if _use_memory:
-        row["id"] = str(uuid.uuid4())
-        _memory_store.append(row)
-        return row
-    res = supabase.table("experiments").insert(row).execute()
+    """插入實驗到資料庫"""
+    sb = get_supabase()
+    res = sb.table("experiments").insert(row).execute()
     return res.data[0] if res.data else row
 
 
 def _delete_experiment_by_id(exp_id: str):
     """刪除實驗"""
-    if _use_memory:
-        for i, e in enumerate(_memory_store):
-            if e.get("id") == exp_id:
-                return _memory_store.pop(i)
-        return None
-    res = supabase.table("experiments").delete().eq("id", exp_id).execute()
+    sb = get_supabase()
+    res = sb.table("experiments").delete().eq("id", exp_id).execute()
     return res.data[0] if res.data else None
 
 
 def _get_experiment_by_id(exp_id: str):
     """取得單一實驗"""
-    if _use_memory:
-        for e in _memory_store:
-            if e.get("id") == exp_id:
-                return e
-        return None
-    res = supabase.table("experiments").select("*").eq("id", exp_id).execute()
+    sb = get_supabase()
+    res = sb.table("experiments").select("*").eq("id", exp_id).execute()
     return res.data[0] if res.data else None
 
 

@@ -75,7 +75,7 @@ _SCHEMAS = {
             id TEXT PRIMARY KEY,
             patient_id TEXT,
             symptoms TEXT,
-            result TEXT,
+            ai_response TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
     "emotions": """

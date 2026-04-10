@@ -10,7 +10,7 @@ from backend.routers import (
     patients, doctors, symptoms,
     education, emotions, medications,
     reports, triage, xiaohe,
-    records, research,
+    records, research, auth,
 )
 
 app = FastAPI(title="MD.Piece API", version="1.0.0")
@@ -33,6 +33,7 @@ app.include_router(triage.router, prefix="/triage", tags=["triage"])
 app.include_router(xiaohe.router, prefix="/xiaohe", tags=["xiaohe"])
 app.include_router(records.router, prefix="/records", tags=["records"])
 app.include_router(research.router, prefix="/research", tags=["research"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
 
 
 @app.get("/api")
