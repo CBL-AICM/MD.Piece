@@ -813,7 +813,417 @@ button.secondary:hover {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   DASHBOARD — WELCOME + MISSION CARDS
+   HOME PAGE — Puzzle + Medical Theme
+   ═══════════════════════════════════════════════════════════ */
+
+.home-page {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Floating puzzle piece decorations */
+.home-deco {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  color: var(--text);
+  opacity: 0.04;
+}
+
+.home-deco-1 {
+  width: 80px;
+  top: -10px;
+  right: 20px;
+  animation: puzzleFloat1 8s ease-in-out infinite;
+}
+
+.home-deco-2 {
+  width: 50px;
+  top: 320px;
+  left: -15px;
+  animation: puzzleFloat2 10s ease-in-out infinite;
+}
+
+.home-deco-3 {
+  width: 65px;
+  bottom: 80px;
+  right: 40px;
+  animation: puzzleFloat3 12s ease-in-out infinite;
+}
+
+@keyframes puzzleFloat1 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(8deg); }
+}
+
+@keyframes puzzleFloat2 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(10px) rotate(-6deg); }
+}
+
+@keyframes puzzleFloat3 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(5deg); }
+}
+
+/* Welcome Banner */
+.home-welcome {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.home-welcome::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.home-welcome-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.home-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  border: 2px solid var(--border-glass);
+}
+
+.home-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.home-calm {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.home-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.home-day {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.home-datestr {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+/* Quick Actions */
+.home-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.hq-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.hq-btn:hover {
+  transform: translateY(-3px);
+  background: var(--bg-glass-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.hq-btn:active {
+  transform: translateY(-1px);
+}
+
+.hq-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hq-icon svg { width: 18px; height: 18px; stroke-width: 1.8; }
+
+.hq-symptoms .hq-icon { background: rgba(91,159,232,0.12); color: var(--accent); }
+.hq-meds .hq-icon     { background: rgba(232,168,75,0.12);  color: #E8A84B; }
+.hq-records .hq-icon   { background: rgba(155,128,212,0.12); color: var(--purple); }
+.hq-edu .hq-icon       { background: rgba(77,182,172,0.12);  color: #4DB6AC; }
+
+/* Overview Cards Row */
+.home-ov-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.home-ov {
+  background: var(--bg-glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+
+.home-ov-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.home-ov-body { font-size: 0.85rem; color: var(--text-dim); }
+
+.home-ov-placeholder,
+.home-ov-empty {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.home-med-count {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.home-med-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.home-med-go {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: var(--accent);
+  background: rgba(91,159,232,0.1);
+  border: 1px solid rgba(91,159,232,0.2);
+  border-radius: var(--radius-pill);
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.home-med-go:hover { background: rgba(91,159,232,0.2); }
+
+.home-tip-text {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--text-dim);
+  position: relative;
+  padding-left: 18px;
+}
+
+.home-tip-text::before {
+  content: '\275D';
+  position: absolute;
+  left: 0;
+  top: -2px;
+  font-size: 1.1rem;
+  color: var(--purple);
+  opacity: 0.4;
+}
+
+/* Section Label */
+.home-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.home-section-label svg { color: var(--text-muted); }
+
+/* Puzzle Card Grid */
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.pzl-card {
+  position: relative;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 22px 18px 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  overflow: visible;
+  margin-top: 8px;
+}
+
+/* Puzzle tab connector (top) */
+.pzl-tab {
+  position: absolute;
+  top: -7px;
+  left: 24px;
+  width: 18px;
+  height: 14px;
+  border-radius: 9px 9px 4px 4px;
+  background: var(--pzl-c, var(--accent));
+  opacity: 0.25;
+  transition: var(--transition);
+}
+
+/* Puzzle notch connector (right side) */
+.pzl-card::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--pzl-c, var(--accent));
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.pzl-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow);
+  background: var(--bg-glass-hover);
+}
+
+.pzl-card:hover .pzl-tab {
+  opacity: 0.5;
+  transform: scaleY(1.15);
+}
+
+.pzl-card:hover::after {
+  opacity: 0.15;
+}
+
+.pzl-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  color: var(--pzl-c, var(--accent));
+  background: var(--pzl-bg, rgba(91,159,232,0.1));
+}
+
+.pzl-icon svg { width: 22px; height: 22px; stroke-width: 1.8; }
+
+.pzl-card h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.pzl-card p {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* Puzzle color variants */
+.pzl-blue     { --pzl-c: var(--accent);  --pzl-bg: rgba(91,159,232,0.1); }
+.pzl-purple   { --pzl-c: var(--purple);  --pzl-bg: rgba(155,128,212,0.1); }
+.pzl-rose     { --pzl-c: var(--rose);    --pzl-bg: rgba(208,138,138,0.1); }
+.pzl-mint     { --pzl-c: var(--success); --pzl-bg: rgba(85,184,138,0.1); }
+.pzl-amber    { --pzl-c: #E8A84B;       --pzl-bg: rgba(232,168,75,0.1); }
+.pzl-teal     { --pzl-c: #4DB6AC;       --pzl-bg: rgba(77,182,172,0.1); }
+.pzl-gold     { --pzl-c: var(--warning); --pzl-bg: rgba(217,165,74,0.1); }
+.pzl-lavender { --pzl-c: #9B80D4;       --pzl-bg: rgba(155,128,212,0.1); }
+
+/* Home Footer */
+.home-footer {
+  text-align: center;
+  padding: 20px 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.home-footer svg { color: var(--text-muted); }
+
+.home-footer p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  font-weight: 300;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD — WELCOME + MISSION CARDS (legacy)
    ═══════════════════════════════════════════════════════════ */
 
 .dash-welcome {
@@ -1097,6 +1507,39 @@ button.secondary:hover {
     padding: 20px;
     flex-direction: column;
     text-align: center;
+  }
+
+  /* Home page responsive */
+  .home-welcome {
+    padding: 20px;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .home-welcome-left {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .home-date {
+    align-items: center;
+  }
+
+  .home-quick {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .home-ov-row {
+    grid-template-columns: 1fr;
+  }
+
+  .home-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .pzl-card {
+    padding: 18px 14px 14px;
   }
 
   /* Tap backdrop to close sidebar */

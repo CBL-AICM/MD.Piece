@@ -24,6 +24,7 @@ function showPage(page) {
   setTimeout(() => {
     app.innerHTML = pages[page]?.() || "";
     // 頁面載入後的初始化
+    if (page === "home") loadHomePage();
     if (page === "doctors") loadDoctors();
     if (page === "patients") loadPatients();
     if (page === "records") loadRecordsPage();
@@ -129,85 +130,155 @@ async function submitIdCard() {
 
 // ─── 首頁 ──────────────────────────────────────────────────
 
+function getGreetingMessage() {
+  var msgs = [
+    '每一小步，都是照顧自己的開始',
+    '健康是一塊一塊拼起來的拼圖',
+    '慢慢來，我們陪你一起',
+    '今天也要好好照顧自己喔',
+    '記錄每個碎片，拼出完整的你',
+    '你不是一個人，我們一直都在',
+  ];
+  return msgs[Math.floor(Math.random() * msgs.length)];
+}
+
+function getHealthTip() {
+  var tips = [
+    '深呼吸三次，讓肩膀放鬆下來，你做得很好。',
+    '喝一杯溫水，給身體最簡單的關愛。',
+    '今天有按時吃藥嗎？每一次準時都是對自己的守護。',
+    '散步十分鐘，陽光是最好的維他命。',
+    '寫下今天的感受，情緒也是健康的一塊拼圖。',
+    '睡前放下手機，讓大腦也好好休息。',
+    '跟身邊的人說說話，連結也是一種療癒。',
+    '不用完美，只要每天進步一點點就好。',
+  ];
+  return tips[Math.floor(Math.random() * tips.length)];
+}
+
+function homeCard(page, icon, title, desc, color) {
+  return `<div class="pzl-card pzl-${color}" onclick="navigateTo('${page}',null)">
+    <div class="pzl-tab"></div>
+    <div class="pzl-icon"><i data-lucide="${icon}"></i></div>
+    <h4>${title}</h4>
+    <p>${desc}</p></div>`;
+}
+
 function home() {
   const user = getCurrentUser();
-  const greeting = user
-    ? `<h2 class="dash-title">${user.role === 'doctor' ? '🩺' : '💙'} ${user.nickname}，歡迎回來</h2>
-       <p class="dash-subtitle">選擇你的下一步行動</p>`
-    : `<h2 class="dash-title">任務總覽</h2>
-       <p class="dash-subtitle">選擇你的下一步行動</p>`;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? '早安' : hour < 18 ? '午安' : '晚安';
+  const today = new Date();
+  const dateStr = today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0');
+  const dayStr = '星期' + ['日','一','二','三','四','五','六'][today.getDay()];
+  const name = user ? user.nickname : '你';
+  const ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
+
   return `
-    <div class="dash-welcome">
-      <div class="dash-welcome-text">
-        ${greeting}
-      </div>
-      <div class="dash-stats">
-        <div class="dash-stat">
-          <span class="dash-stat-num">8</span>
-          <span class="dash-stat-label">可用任務</span>
+    <div class="home-page">
+      <svg class="home-deco home-deco-1" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
+      <svg class="home-deco home-deco-2" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
+      <svg class="home-deco home-deco-3" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
+
+      <div class="home-welcome">
+        <div class="home-welcome-left">
+          <img src="icons/logo-core.jpg" alt="MD.Piece" class="home-logo" />
+          <div>
+            <h2 class="home-title">${greeting}，${name}</h2>
+            <p class="home-calm">${getGreetingMessage()}</p>
+          </div>
         </div>
-        <div class="dash-stat-divider"></div>
-        <div class="dash-stat">
-          <span class="dash-stat-num">AI</span>
-          <span class="dash-stat-label">分析引擎</span>
-        </div>
-        <div class="dash-stat-divider"></div>
-        <div class="dash-stat">
-          <span class="dash-stat-num">PWA</span>
-          <span class="dash-stat-label">跨平台</span>
+        <div class="home-date">
+          <span class="home-day">${dayStr}</span>
+          <span class="home-datestr">${dateStr}</span>
         </div>
       </div>
-    </div>
-    <div class="mission-grid">
-      <div class="mission-card mission-blue" onclick="navigateTo('symptoms',null)">
-        <div class="mission-icon"><i data-lucide="scan-search"></i></div>
-        <h4>症狀分析</h4>
-        <p>AI 助你釐清身體訊號</p>
-        <span class="mission-tag tag-ready">可執行</span>
+
+      <div class="home-quick">
+        <button class="hq-btn hq-symptoms" onclick="navigateTo('symptoms',null)">
+          <span class="hq-icon"><i data-lucide="scan-search"></i></span>
+          <span>記錄症狀</span>
+        </button>
+        <button class="hq-btn hq-meds" onclick="navigateTo('medications',null)">
+          <span class="hq-icon"><i data-lucide="pill"></i></span>
+          <span>服藥打卡</span>
+        </button>
+        <button class="hq-btn hq-records" onclick="navigateTo('records',null)">
+          <span class="hq-icon"><i data-lucide="clipboard-list"></i></span>
+          <span>查看病歷</span>
+        </button>
+        <button class="hq-btn hq-edu" onclick="navigateTo('education',null)">
+          <span class="hq-icon"><i data-lucide="book-heart"></i></span>
+          <span>衛教知識</span>
+        </button>
       </div>
-      <div class="mission-card mission-purple" onclick="navigateTo('records',null)">
-        <div class="mission-icon"><i data-lucide="clipboard-list"></i></div>
-        <h4>病歷管理</h4>
-        <p>守護每一次就診紀錄</p>
-        <span class="mission-tag tag-ready">可執行</span>
+
+      <div class="home-ov-row">
+        <div class="home-ov">
+          <div class="home-ov-head">
+            <i data-lucide="calendar-check" style="width:16px;height:16px;color:var(--accent)"></i>
+            <span>今日服藥</span>
+          </div>
+          <div id="home-med-summary" class="home-ov-body">
+            <p class="home-ov-placeholder">載入中...</p>
+          </div>
+        </div>
+        <div class="home-ov">
+          <div class="home-ov-head">
+            <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--purple)"></i>
+            <span>健康小語</span>
+          </div>
+          <div class="home-ov-body">
+            <p class="home-tip-text">${getHealthTip()}</p>
+          </div>
+        </div>
       </div>
-      <div class="mission-card mission-rose" onclick="navigateTo('doctors',null)">
-        <div class="mission-icon"><i data-lucide="stethoscope"></i></div>
-        <h4>醫師列表</h4>
-        <p>管理你的醫療團隊</p>
-        <span class="mission-tag tag-ready">可執行</span>
+
+      <div class="home-section-label">
+        <svg viewBox="0 0 48 48" width="16" height="16"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor" opacity="0.5"/></svg>
+        功能拼圖
       </div>
-      <div class="mission-card mission-mint" onclick="navigateTo('patients',null)">
-        <div class="mission-icon"><i data-lucide="users"></i></div>
-        <h4>病患管理</h4>
-        <p>關懷每一位患者</p>
-        <span class="mission-tag tag-ready">可執行</span>
+      <div class="home-grid">
+        ${homeCard('symptoms','scan-search','症狀分析','AI 助你釐清身體訊號','blue')}
+        ${homeCard('records','clipboard-list','病歷管理','守護每一次就診紀錄','purple')}
+        ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
+        ${homeCard('patients','users','病患管理','關懷每一位患者','mint')}
+        ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
+        ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
+        ${homeCard('research','flask-conical','自動研究','探索醫學前沿','gold')}
+        ${homeCard('contributors','heart-handshake','貢獻者','共同打造的力量','lavender')}
       </div>
-      <div class="mission-card mission-amber" onclick="navigateTo('medications',null)">
-        <div class="mission-icon"><i data-lucide="pill"></i></div>
-        <h4>藥物管理</h4>
-        <p>拍藥袋、記服藥、追療效</p>
-        <span class="mission-tag tag-ready">可執行</span>
-      </div>
-      <div class="mission-card mission-teal" onclick="navigateTo('education',null)">
-        <div class="mission-icon"><i data-lucide="book-heart"></i></div>
-        <h4>衛教專欄</h4>
-        <p>溫暖易懂的健康知識</p>
-        <span class="mission-tag tag-ready">可執行</span>
-      </div>
-      <div class="mission-card mission-gold" onclick="navigateTo('research',null)">
-        <div class="mission-icon"><i data-lucide="flask-conical"></i></div>
-        <h4>自動研究</h4>
-        <p>探索醫學前沿</p>
-        <span class="mission-tag tag-ready">可執行</span>
-      </div>
-      <div class="mission-card mission-purple" onclick="navigateTo('contributors',null)">
-        <div class="mission-icon"><i data-lucide="heart-handshake"></i></div>
-        <h4>貢獻者</h4>
-        <p>共同打造的力量</p>
-        <span class="mission-tag tag-community">社群</span>
+
+      <div class="home-footer">
+        <svg viewBox="0 0 48 48" width="20" height="20"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor" opacity="0.12"/></svg>
+        <p>將日常碎片拼起，醫起走出治療的迷霧</p>
       </div>
     </div>`;
+}
+
+function loadHomePage() {
+  var user = getCurrentUser();
+  var pid = user ? user.id : 'demo-patient';
+
+  fetch(API + '/medications/?patient_id=' + pid)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var el = document.getElementById('home-med-summary');
+      if (!el) return;
+      var meds = (data.medications || []).filter(function(m) { return m.active !== 0; });
+      if (!meds.length) {
+        el.innerHTML = '<p class="home-ov-empty">尚無藥物紀錄，從藥物管理開始記錄吧</p>';
+        return;
+      }
+      el.innerHTML =
+        '<div class="home-med-count">' + meds.length + '</div>' +
+        '<div class="home-med-label">種藥物追蹤中</div>' +
+        '<button class="home-med-go" onclick="navigateTo(\'medications\',null)">前往服藥 →</button>';
+    })
+    .catch(function() {
+      var el = document.getElementById('home-med-summary');
+      if (el) el.innerHTML = '<p class="home-ov-empty">開始記錄你的第一顆藥物吧</p>';
+    });
 }
 
 // ─── 症狀分析 ──────────────────────────────────────────────
