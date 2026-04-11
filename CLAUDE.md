@@ -27,6 +27,7 @@ md.piece/
 │   │   ├── triage.py            # 分診建議
 │   │   ├── reports.py           # 報告生成
 │   │   ├── education.py         # 衛教資訊
+│   │   ├── vitals.py            # 生理紀錄（體溫/血壓/心率/血糖/血氧/體重）
 │   │   └── xiaohe.py            # 小核功能
 │   ├── services/
 │   │   ├── claude_service.py    # Claude AI 整合
