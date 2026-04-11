@@ -1,33 +1,51 @@
 /* ═══════════════════════════════════════════════════════════
-   MD.Piece — Soft Starry Puzzle Theme
+   MD.Piece — Space Digital Medical Theme
    ═══════════════════════════════════════════════════════════ */
 
 /* Fonts loaded via <link> in HTML head for faster rendering */
 
 :root {
-  --bg-deep:    #A8BACB;
-  --bg-mid:     #9BAFBF;
-  --bg-surface: rgba(255,255,255,0.12);
-  --bg-glass:   rgba(255,255,255,0.15);
-  --bg-glass-hover: rgba(255,255,255,0.24);
-  --border-glass: rgba(255,255,255,0.18);
-  --accent:     #5B9FE8;
-  --accent-glow:#5B9FE830;
-  --purple:     #9B80D4;
-  --purple-glow:#9B80D425;
-  --rose:       #D08A8A;
-  --rose-glow:  #D08A8A1A;
-  --success:    #55B88A;
-  --warning:    #D9A54A;
+  /* Space background */
+  --bg-deep:    #0B1426;
+  --bg-mid:     #132036;
+  --bg-surface: rgba(255,255,255,0.04);
+  --bg-glass:   rgba(255,255,255,0.07);
+  --bg-glass-hover: rgba(255,255,255,0.13);
+  --border-glass: rgba(255,255,255,0.10);
+
+  /* Klein blue family */
+  --accent:     #2B5CE6;
+  --accent-glow:#2B5CE625;
+  --klein:      #002FA7;
+
+  /* Medical teal-green */
+  --teal:       #00D4AA;
+  --teal-glow:  #00D4AA20;
+
+  /* Warm cream/beige */
+  --cream:      #E8DCC8;
+  --cream-dim:  #C4B8A5;
+
+  /* Accents */
+  --purple:     #7C6BC4;
+  --purple-glow:#7C6BC420;
+  --rose:       #C47878;
+  --rose-glow:  #C478781A;
+  --success:    #00D4AA;
+  --warning:    #E8A84B;
   --danger:     #D94D4D;
-  --text:       #2C3142;
-  --text-dim:   #3E4A60;
-  --text-muted: #6B7894;
+
+  /* Text — light on dark */
+  --text:       #E8E4DF;
+  --text-dim:   #B0A89E;
+  --text-muted: #6E6860;
+
+  /* UI tokens */
   --radius:     12px;
   --radius-sm:  8px;
   --radius-pill:20px;
-  --shadow:     0 4px 24px rgba(0,0,0,0.12);
-  --shadow-sm:  0 2px 12px rgba(0,0,0,0.08);
+  --shadow:     0 4px 24px rgba(0,0,0,0.35);
+  --shadow-sm:  0 2px 12px rgba(0,0,0,0.25);
   --transition: .25s cubic-bezier(.4,0,.2,1);
 }
 
@@ -35,7 +53,7 @@
 
 body {
   font-family: "Noto Sans TC", sans-serif;
-  background: linear-gradient(180deg, #8EA5B8 0%, #A8BACB 45%, #B8C8D5 100%);
+  background: linear-gradient(180deg, #0B1426 0%, #132036 45%, #1A2942 100%);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
@@ -335,7 +353,7 @@ body {
   top: 0;
   z-index: 50;
   padding: 16px 32px;
-  background: rgba(142,165,184,0.85);
+  background: rgba(19,32,54,0.85);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-glass);
   display: flex;
@@ -435,7 +453,7 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-glow);
-  background: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.08);
 }
 
 input::placeholder, textarea::placeholder {
@@ -992,10 +1010,10 @@ button.secondary:hover {
 
 .hq-icon svg { width: 18px; height: 18px; stroke-width: 1.8; }
 
-.hq-symptoms .hq-icon { background: rgba(91,159,232,0.12); color: var(--accent); }
-.hq-meds .hq-icon     { background: rgba(232,168,75,0.12);  color: #E8A84B; }
-.hq-records .hq-icon   { background: rgba(155,128,212,0.12); color: var(--purple); }
-.hq-edu .hq-icon       { background: rgba(77,182,172,0.12);  color: #4DB6AC; }
+.hq-symptoms .hq-icon { background: rgba(43,92,230,0.15);  color: var(--accent); }
+.hq-meds .hq-icon     { background: rgba(0,212,170,0.15);   color: var(--teal); }
+.hq-records .hq-icon   { background: rgba(124,107,196,0.15); color: var(--purple); }
+.hq-edu .hq-icon       { background: rgba(232,220,200,0.15); color: var(--cream); }
 
 /* Overview Cards Row */
 .home-ov-row {
@@ -1192,14 +1210,14 @@ button.secondary:hover {
 }
 
 /* Puzzle color variants */
-.pzl-blue     { --pzl-c: var(--accent);  --pzl-bg: rgba(91,159,232,0.1); }
-.pzl-purple   { --pzl-c: var(--purple);  --pzl-bg: rgba(155,128,212,0.1); }
-.pzl-rose     { --pzl-c: var(--rose);    --pzl-bg: rgba(208,138,138,0.1); }
-.pzl-mint     { --pzl-c: var(--success); --pzl-bg: rgba(85,184,138,0.1); }
-.pzl-amber    { --pzl-c: #E8A84B;       --pzl-bg: rgba(232,168,75,0.1); }
-.pzl-teal     { --pzl-c: #4DB6AC;       --pzl-bg: rgba(77,182,172,0.1); }
-.pzl-gold     { --pzl-c: var(--warning); --pzl-bg: rgba(217,165,74,0.1); }
-.pzl-lavender { --pzl-c: #9B80D4;       --pzl-bg: rgba(155,128,212,0.1); }
+.pzl-blue     { --pzl-c: var(--accent);   --pzl-bg: rgba(43,92,230,0.15); }
+.pzl-purple   { --pzl-c: var(--purple);   --pzl-bg: rgba(124,107,196,0.15); }
+.pzl-rose     { --pzl-c: var(--cream);    --pzl-bg: rgba(232,220,200,0.12); }
+.pzl-mint     { --pzl-c: var(--teal);     --pzl-bg: rgba(0,212,170,0.12); }
+.pzl-amber    { --pzl-c: #E8A84B;         --pzl-bg: rgba(232,168,75,0.12); }
+.pzl-teal     { --pzl-c: #00BFA5;         --pzl-bg: rgba(0,191,165,0.12); }
+.pzl-gold     { --pzl-c: var(--cream-dim);--pzl-bg: rgba(196,184,165,0.12); }
+.pzl-lavender { --pzl-c: #8B7FD4;         --pzl-bg: rgba(139,127,212,0.12); }
 
 /* Home Footer */
 .home-footer {
@@ -1712,14 +1730,14 @@ button.secondary:hover {
   position: relative;
   width: 380px;
   max-width: 90vw;
-  background: rgba(255,255,255,0.88);
+  background: rgba(19,32,54,0.92);
   backdrop-filter: blur(20px);
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.5);
+  border: 1px solid var(--border-glass);
   box-shadow:
-    0 8px 40px rgba(0,0,0,0.12),
-    0 1px 3px rgba(0,0,0,0.06),
-    inset 0 1px 0 rgba(255,255,255,0.8);
+    0 8px 40px rgba(0,0,0,0.4),
+    0 1px 3px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.05);
   overflow: hidden;
   animation: cardSlideIn .6s cubic-bezier(.34,1.56,.64,1) both;
   font-family: 'Noto Sans TC', sans-serif;
@@ -1814,8 +1832,8 @@ button.secondary:hover {
 
 .idcard-field input {
   width: 100%;
-  background: rgba(142,165,184,0.08);
-  border: 1.5px solid rgba(142,165,184,0.2);
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(255,255,255,0.12);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 1rem;
@@ -1844,8 +1862,8 @@ button.secondary:hover {
   justify-content: center;
   gap: 6px;
   padding: 10px 8px;
-  background: rgba(142,165,184,0.06);
-  border: 2px solid rgba(142,165,184,0.18);
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(255,255,255,0.12);
   border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 600;
