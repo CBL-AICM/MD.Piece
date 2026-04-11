@@ -152,6 +152,20 @@ _SCHEMAS = {
             kept INTEGER DEFAULT 0,
             submitted_at TEXT DEFAULT (datetime('now'))
         )""",
+    "vitals": """
+        CREATE TABLE IF NOT EXISTS vitals (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT,
+            type TEXT NOT NULL,
+            value REAL NOT NULL,
+            value2 REAL,
+            unit TEXT,
+            context TEXT,
+            notes TEXT,
+            measured_at TEXT DEFAULT (datetime('now')),
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
     "users": """
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
