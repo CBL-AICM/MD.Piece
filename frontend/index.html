@@ -49,7 +49,7 @@
         <!-- Card header -->
         <div class="idcard-header">
           <div class="idcard-logo">MD.Piece</div>
-          <div class="idcard-type">患者身分卡 PATIENT CARD</div>
+          <div class="idcard-type" id="idcard-type">患者身分卡 PATIENT CARD</div>
         </div>
 
         <!-- Avatar area -->
@@ -63,6 +63,17 @@
 
         <!-- Form fields styled like card info -->
         <div class="idcard-fields">
+          <div class="idcard-field">
+            <span class="idcard-field-label">身分 ROLE</span>
+            <div class="idcard-role-row">
+              <button type="button" class="idcard-role-btn selected" id="idrole-patient" onclick="selectIdRole('patient')">
+                <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle"></i> 患者
+              </button>
+              <button type="button" class="idcard-role-btn" id="idrole-doctor" onclick="selectIdRole('doctor')">
+                <i data-lucide="stethoscope" style="width:14px;height:14px;vertical-align:middle"></i> 醫師
+              </button>
+            </div>
+          </div>
           <div class="idcard-field">
             <span class="idcard-field-label">姓名 NAME</span>
             <input id="idcard-name" type="text" placeholder="輸入你的暱稱" maxlength="20" autocomplete="off" />
@@ -99,34 +110,8 @@
         <h1>MD.Piece</h1>
         <p>MEDICAL PLATFORM</p>
       </div>
-      <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="navigateTo('home', this)">
-          <span class="nav-icon"><i data-lucide="layout-dashboard" style="width:18px;height:18px"></i></span> 首頁
-        </button>
-        <button class="nav-item" onclick="navigateTo('symptoms', this)">
-          <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> 症狀分析
-        </button>
-        <button class="nav-item" onclick="navigateTo('records', this)">
-          <span class="nav-icon"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></span> 病歷管理
-        </button>
-        <button class="nav-item" onclick="navigateTo('doctors', this)">
-          <span class="nav-icon"><i data-lucide="stethoscope" style="width:18px;height:18px"></i></span> 醫師列表
-        </button>
-        <button class="nav-item" onclick="navigateTo('patients', this)">
-          <span class="nav-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span> 病患管理
-        </button>
-        <button class="nav-item" onclick="navigateTo('medications', this)">
-          <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span> 藥物管理
-        </button>
-        <button class="nav-item" onclick="navigateTo('education', this)">
-          <span class="nav-icon"><i data-lucide="book-heart" style="width:18px;height:18px"></i></span> 衛教專欄
-        </button>
-        <button class="nav-item" onclick="navigateTo('research', this)">
-          <span class="nav-icon"><i data-lucide="flask-conical" style="width:18px;height:18px"></i></span> 自動研究
-        </button>
-        <button class="nav-item" onclick="navigateTo('contributors', this)">
-          <span class="nav-icon"><i data-lucide="heart-handshake" style="width:18px;height:18px"></i></span> 貢獻者
-        </button>
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <!-- Dynamically rendered by renderNav() in app.js -->
       </nav>
     </aside>
 
@@ -240,8 +225,9 @@
         landing.style.display = 'none';
         const user = getCurrentUser();
         if (user) {
+          renderNav(user.role || 'patient');
           document.getElementById('app-wrapper').classList.add('show');
-          showPage('home');
+          showPage(user.role === 'doctor' ? 'doctorDashboard' : 'home');
           lucide.createIcons();
         } else {
           showIdCardRegister();
@@ -253,7 +239,8 @@
     const pageTitles = {
       home: '首頁', symptoms: '症狀分析', records: '病歷管理',
       doctors: '醫師列表', patients: '病患管理', medications: '藥物管理',
-      education: '衛教專欄', research: '自動研究', contributors: '貢獻者'
+      education: '衛教專欄', research: '自動研究', contributors: '貢獻者',
+      doctorDashboard: '醫師儀表板', doctorPatients: '我的患者',
     };
 
     function navigateTo(page, btn) {

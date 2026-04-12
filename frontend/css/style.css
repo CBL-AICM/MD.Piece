@@ -1942,3 +1942,331 @@ button.secondary:hover {
   box-shadow: none !important;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   REGISTRATION — ROLE TOGGLE
+   ═══════════════════════════════════════════════════════════ */
+
+.idcard-role-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.idcard-role-btn {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.idcard-role-btn:hover {
+  background: var(--bg-glass);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.idcard-role-btn.selected {
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 12px var(--accent-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DOCTOR PORTAL — DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
+
+.doc-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doc-avatar i { width: 20px; height: 20px; }
+
+.doc-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin: 20px 0 4px;
+}
+
+.doc-stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 16px 14px;
+  text-align: center;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.doc-stat-card:hover {
+  background: var(--bg-glass);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.doc-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px;
+}
+
+.doc-stat-icon i { width: 18px; height: 18px; }
+
+.doc-stat-num {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+
+.doc-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DOCTOR PORTAL — PATIENT LIST
+   ═══════════════════════════════════════════════════════════ */
+
+.doc-patient-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.doc-patient-card:hover {
+  border-color: rgba(255,255,255,0.2);
+}
+
+.doc-patient-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.doc-patient-header:hover {
+  background: var(--bg-glass);
+}
+
+.doc-patient-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doc-patient-avatar i { width: 16px; height: 16px; }
+
+.doc-patient-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-patient-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.doc-patient-badge {
+  background: rgba(43,92,230,0.15);
+  color: var(--accent);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.doc-chevron { width: 18px; height: 18px; }
+
+/* ─── Patient detail body ─────────────────────────────── */
+
+.doc-patient-body {
+  border-top: 1px solid var(--border-glass);
+  background: rgba(0,0,0,0.1);
+}
+
+.doc-detail-body {
+  padding: 16px;
+}
+
+.doc-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.doc-detail-stat {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.doc-detail-stat-num {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.doc-detail-stat-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.doc-detail-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.doc-detail-section {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.doc-detail-section h4 {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.doc-tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.doc-tag {
+  background: rgba(43,92,230,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(43,92,230,0.25);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-size: 0.8rem;
+}
+
+.doc-med-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.doc-med-item:last-child { border-bottom: none; }
+
+.doc-record-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-glass);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.doc-record-item:last-child { border-bottom: none; }
+
+.doc-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ─── Monthly report output box ──────────────────────── */
+
+.doc-report-box {
+  background: linear-gradient(135deg, rgba(0,212,170,0.05), rgba(43,92,230,0.05));
+  border: 1px solid rgba(0,212,170,0.2);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.doc-report-content {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: var(--text-dim);
+}
+
+.doc-report-content h1, .doc-report-content h2, .doc-report-content h3 {
+  color: var(--text);
+  margin: 12px 0 6px;
+}
+
+.doc-report-content strong { color: var(--text); }
+
+.doc-report-content ul { padding-left: 18px; margin: 4px 0; }
+
+.doc-report-content li { margin: 3px 0; }
+
+/* ─── Loading spinner ─────────────────────────────────── */
+
+.loading-spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-glass);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+

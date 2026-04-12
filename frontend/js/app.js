@@ -17,7 +17,7 @@ function setCurrentUser(user) {
 
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records, medications, research, education, contributors };
+  const pages = { home, symptoms, doctors, patients, records, medications, research, education, contributors, doctorDashboard, doctorPatients };
   // Page transition
   app.style.opacity = '0';
   app.style.transform = 'translateY(12px)';
@@ -32,6 +32,8 @@ function showPage(page) {
     if (page === "contributors") loadContributors();
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
+    if (page === "doctorDashboard") loadDoctorDashboard();
+    if (page === "doctorPatients") loadDoctorPatients();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -45,9 +47,45 @@ function showPage(page) {
 
 // ─── 註冊頁面（ID Card 風格，覆蓋在星空上）──────────────
 
-let _selectedRole = 'patient'; // 此網站為患者專用
+let _selectedRole = 'patient'; // 'patient' or 'doctor'
 const _avatarColors = ['#5B9FE8','#9B80D4','#D08A8A','#55B88A','#D9A54A','#E87B5B','#7BC8E8'];
 let _avatarIdx = 0;
+
+// ─── 動態導航（依角色渲染）────────────────────────────────
+
+const NAV_ITEMS = {
+  patient: [
+    { page: 'home',         icon: 'layout-dashboard', label: '首頁' },
+    { page: 'symptoms',     icon: 'scan-search',       label: '症狀分析' },
+    { page: 'records',      icon: 'clipboard-list',    label: '病歷管理' },
+    { page: 'doctors',      icon: 'stethoscope',       label: '醫師列表' },
+    { page: 'patients',     icon: 'users',             label: '病患管理' },
+    { page: 'medications',  icon: 'pill',              label: '藥物管理' },
+    { page: 'education',    icon: 'book-heart',        label: '衛教專欄' },
+    { page: 'research',     icon: 'flask-conical',     label: '自動研究' },
+    { page: 'contributors', icon: 'heart-handshake',   label: '貢獻者' },
+  ],
+  doctor: [
+    { page: 'doctorDashboard', icon: 'layout-dashboard', label: '醫師儀表板' },
+    { page: 'doctorPatients',  icon: 'users',             label: '我的患者' },
+    { page: 'records',         icon: 'clipboard-list',    label: '病歷查詢' },
+    { page: 'education',       icon: 'book-heart',        label: '衛教專欄' },
+    { page: 'research',        icon: 'flask-conical',     label: '自動研究' },
+    { page: 'contributors',    icon: 'heart-handshake',   label: '貢獻者' },
+  ],
+};
+
+function renderNav(role) {
+  const nav = document.getElementById('sidebar-nav');
+  if (!nav) return;
+  const items = NAV_ITEMS[role] || NAV_ITEMS.patient;
+  nav.innerHTML = items.map((item, i) =>
+    `<button class="nav-item${i === 0 ? ' active' : ''}" onclick="navigateTo('${item.page}', this)">
+      <span class="nav-icon"><i data-lucide="${item.icon}" style="width:18px;height:18px"></i></span> ${item.label}
+    </button>`
+  ).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
 
 function showIdCardRegister() {
   const overlay = document.getElementById('register-overlay');
@@ -83,6 +121,10 @@ function selectIdRole(role) {
   _selectedRole = role;
   document.querySelectorAll('.idcard-role-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById(`idrole-${role}`).classList.add('selected');
+  const typeEl = document.getElementById('idcard-type');
+  if (typeEl) {
+    typeEl.textContent = role === 'doctor' ? '醫師身分卡 DOCTOR CARD' : '患者身分卡 PATIENT CARD';
+  }
   validateIdCard();
 }
 
@@ -122,8 +164,11 @@ async function submitIdCard() {
   setTimeout(() => {
     overlay.style.display = 'none';
     overlay.classList.remove('show','card-done');
+    const savedUser = getCurrentUser();
+    const role = savedUser?.role || 'patient';
+    renderNav(role);
     document.getElementById('app-wrapper').classList.add('show');
-    showPage('home');
+    showPage(role === 'doctor' ? 'doctorDashboard' : 'home');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 700);
 }
@@ -1694,6 +1739,361 @@ async function loadContributors() {
   } catch (e) {
     list.innerHTML = '<p style="color:var(--danger)">' + e.message + '</p>';
   }
+}
+
+// ─── 醫師儀表板 ───────────────────────────────────────────
+
+function doctorDashboard() {
+  var user = getCurrentUser();
+  var name = user ? user.nickname : '醫師';
+  var ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
+  var hour = new Date().getHours();
+  var greeting = hour < 12 ? '早安' : hour < 18 ? '午安' : '晚安';
+  var today = new Date();
+  var dateStr = today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0');
+  var dayStr = '星期' + ['日','一','二','三','四','五','六'][today.getDay()];
+
+  return `
+    <div class="home-page">
+      <svg class="home-deco home-deco-1" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
+      <svg class="home-deco home-deco-2" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
+
+      <div class="home-welcome">
+        <div class="home-welcome-left">
+          <div class="doc-avatar" style="background:${ac}22;border-color:${ac}">
+            <i data-lucide="stethoscope" style="color:${ac}"></i>
+          </div>
+          <div>
+            <h2 class="home-title">${greeting}，${name} 醫師</h2>
+            <p class="home-calm" style="color:var(--teal)">醫師診療後台 · Doctor Portal</p>
+          </div>
+        </div>
+        <div class="home-date">
+          <span class="home-day">${dayStr}</span>
+          <span class="home-datestr">${dateStr}</span>
+        </div>
+      </div>
+
+      <div class="doc-stats-row" id="doc-stats-row">
+        <div class="doc-stat-card">
+          <div class="doc-stat-icon" style="background:rgba(43,92,230,0.15)"><i data-lucide="users" style="color:var(--accent)"></i></div>
+          <div class="doc-stat-num" id="doc-stat-patients">—</div>
+          <div class="doc-stat-label">總病患數</div>
+        </div>
+        <div class="doc-stat-card">
+          <div class="doc-stat-icon" style="background:rgba(0,212,170,0.12)"><i data-lucide="clipboard-list" style="color:var(--teal)"></i></div>
+          <div class="doc-stat-num" id="doc-stat-records">—</div>
+          <div class="doc-stat-label">總病歷數</div>
+        </div>
+        <div class="doc-stat-card">
+          <div class="doc-stat-icon" style="background:rgba(124,107,196,0.15)"><i data-lucide="pill" style="color:var(--purple)"></i></div>
+          <div class="doc-stat-num" id="doc-stat-meds">—</div>
+          <div class="doc-stat-label">追蹤藥物</div>
+        </div>
+        <div class="doc-stat-card">
+          <div class="doc-stat-icon" style="background:rgba(232,163,61,0.12)"><i data-lucide="scan-search" style="color:var(--warning)"></i></div>
+          <div class="doc-stat-num" id="doc-stat-symptoms">—</div>
+          <div class="doc-stat-label">症狀回報（近7天）</div>
+        </div>
+      </div>
+
+      <div class="home-quick">
+        <button class="hq-btn hq-symptoms" onclick="navigateTo('doctorPatients',null)">
+          <span class="hq-icon"><i data-lucide="users"></i></span><span>查看患者</span>
+        </button>
+        <button class="hq-btn hq-records" onclick="navigateTo('records',null)">
+          <span class="hq-icon"><i data-lucide="clipboard-list"></i></span><span>病歷查詢</span>
+        </button>
+        <button class="hq-btn hq-edu" onclick="navigateTo('education',null)">
+          <span class="hq-icon"><i data-lucide="book-heart"></i></span><span>衛教專欄</span>
+        </button>
+        <button class="hq-btn hq-meds" onclick="navigateTo('research',null)">
+          <span class="hq-icon"><i data-lucide="flask-conical"></i></span><span>自動研究</span>
+        </button>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3><i data-lucide="clock" style="width:16px;height:16px;vertical-align:middle;margin-right:6px"></i>最近就診記錄</h3>
+        <div id="doc-recent-records" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
+      </div>
+    </div>`;
+}
+
+async function loadDoctorDashboard() {
+  try {
+    var [pRes, rRes] = await Promise.all([
+      fetch(API + '/patients/').then(r => r.json()),
+      fetch(API + '/records/').then(r => r.json()),
+    ]);
+    var patients = pRes.patients || [];
+    var records = rRes.records || [];
+
+    var el = document.getElementById('doc-stat-patients');
+    if (el) el.textContent = patients.length;
+    var el2 = document.getElementById('doc-stat-records');
+    if (el2) el2.textContent = records.length;
+
+    // Count meds & recent symptoms across all patients (use first 20 patients for performance)
+    var totalMeds = 0, totalSymptoms7d = 0;
+    var since7d = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+    var samplePatients = patients.slice(0, 20);
+    await Promise.all(samplePatients.map(async function(p) {
+      try {
+        var mRes = await fetch(API + '/medications/?patient_id=' + p.id).then(r => r.json());
+        totalMeds += (mRes.medications || []).filter(m => m.active !== 0).length;
+      } catch(e) {}
+    }));
+
+    var el3 = document.getElementById('doc-stat-meds');
+    if (el3) el3.textContent = totalMeds;
+    var el4 = document.getElementById('doc-stat-symptoms');
+    if (el4) el4.textContent = '—';
+
+    // Recent records
+    var recentEl = document.getElementById('doc-recent-records');
+    if (!recentEl) return;
+    var recent = records.slice(0, 8);
+    if (!recent.length) {
+      recentEl.innerHTML = '<p style="color:var(--text-muted)">尚無就診記錄</p>';
+      return;
+    }
+    recentEl.innerHTML = recent.map(function(r) {
+      var date = r.visit_date ? new Date(r.visit_date).toLocaleDateString('zh-TW') : '未記錄';
+      var patientName = r.patients?.name || '未知';
+      var doctorName = r.doctors?.name || '未指定';
+      return `<div class="record-card" style="cursor:pointer" onclick="navigateTo('doctorPatients',null)">
+        <div class="record-header">
+          <strong>${patientName}</strong>
+          <span style="font-size:0.82rem;color:var(--text-muted)">${date}</span>
+        </div>
+        ${r.diagnosis ? `<p><strong style="color:var(--accent)">診斷：</strong>${r.diagnosis}</p>` : ''}
+        <p style="font-size:0.82rem;color:var(--text-muted)">主治醫師：${doctorName}</p>
+      </div>`;
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch(e) {
+    showToast('載入醫師儀表板失敗', 'error');
+  }
+}
+
+// ─── 醫師：我的患者 ───────────────────────────────────────
+
+function doctorPatients() {
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2><i data-lucide="users" style="width:20px;height:20px;vertical-align:middle;margin-right:6px"></i>病患總覽</h2>
+        <button class="secondary" onclick="loadDoctorPatients()" style="padding:6px 14px;font-size:0.85rem;margin:0">
+          <i data-lucide="refresh-cw" style="width:14px;height:14px;vertical-align:middle"></i> 重新整理
+        </button>
+      </div>
+      <div class="filter-bar" style="margin-top:12px">
+        <input id="dp-search" placeholder="搜尋患者姓名..." oninput="filterDoctorPatients()" style="margin:0" />
+        <select id="dp-filter-gender" onchange="filterDoctorPatients()" style="margin:0;flex:0 0 auto;width:auto">
+          <option value="">所有性別</option>
+          <option value="male">男</option>
+          <option value="female">女</option>
+        </select>
+      </div>
+    </div>
+    <div id="doc-patient-list"><p style="color:var(--text-muted);text-align:center;padding:40px">載入中...</p></div>
+    <div id="doc-patient-detail" style="display:none"></div>`;
+}
+
+var _docPatients = [];
+
+async function loadDoctorPatients() {
+  try {
+    var res = await fetch(API + '/patients/').then(r => r.json());
+    _docPatients = res.patients || [];
+    renderDoctorPatientList(_docPatients);
+  } catch(e) {
+    document.getElementById('doc-patient-list').innerHTML =
+      '<p style="color:var(--danger);text-align:center;padding:40px">載入失敗，請確認後端是否啟動。</p>';
+  }
+}
+
+function filterDoctorPatients() {
+  var q = (document.getElementById('dp-search')?.value || '').toLowerCase();
+  var g = document.getElementById('dp-filter-gender')?.value || '';
+  var filtered = _docPatients.filter(function(p) {
+    var nameMatch = !q || p.name.toLowerCase().includes(q);
+    var genderMatch = !g || p.gender === g;
+    return nameMatch && genderMatch;
+  });
+  renderDoctorPatientList(filtered);
+}
+
+function renderDoctorPatientList(list) {
+  var el = document.getElementById('doc-patient-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="card"><p style="color:var(--text-muted);text-align:center;padding:20px">尚無病患資料</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(function(p) {
+    var genderLabel = p.gender === 'male' ? '男' : p.gender === 'female' ? '女' : '未填';
+    var genderColor = p.gender === 'male' ? 'var(--accent)' : p.gender === 'female' ? 'var(--rose)' : 'var(--text-muted)';
+    return `
+      <div class="doc-patient-card" id="dpc-${p.id}">
+        <div class="doc-patient-header" onclick="togglePatientDetail('${p.id}', '${p.name.replace(/'/g,'')}')">
+          <div class="doc-patient-avatar" style="background:var(--accent)22;border-color:var(--accent)">
+            <i data-lucide="user" style="color:var(--accent)"></i>
+          </div>
+          <div class="doc-patient-info">
+            <strong>${p.name}</strong>
+            <span style="font-size:0.85rem;color:var(--text-dim)">${p.age} 歲 · <span style="color:${genderColor}">${genderLabel}</span>${p.phone ? ' · ' + p.phone : ''}</span>
+          </div>
+          <div class="doc-patient-meta">
+            <span class="doc-patient-badge" id="dpc-badge-${p.id}" style="display:none">
+              <i data-lucide="loader" style="width:12px;height:12px"></i>
+            </span>
+            <i data-lucide="chevron-down" class="doc-chevron" id="dpc-chevron-${p.id}" style="color:var(--text-muted);transition:transform .25s"></i>
+          </div>
+        </div>
+        <div class="doc-patient-body" id="dpb-${p.id}" style="display:none"></div>
+      </div>`;
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+var _expandedPatient = null;
+
+async function togglePatientDetail(patientId, patientName) {
+  var body = document.getElementById('dpb-' + patientId);
+  var chevron = document.getElementById('dpc-chevron-' + patientId);
+  var badge = document.getElementById('dpc-badge-' + patientId);
+
+  if (body.style.display !== 'none') {
+    body.style.display = 'none';
+    if (chevron) chevron.style.transform = '';
+    _expandedPatient = null;
+    return;
+  }
+
+  // Collapse previously expanded
+  if (_expandedPatient && _expandedPatient !== patientId) {
+    var prevBody = document.getElementById('dpb-' + _expandedPatient);
+    var prevChevron = document.getElementById('dpc-chevron-' + _expandedPatient);
+    if (prevBody) prevBody.style.display = 'none';
+    if (prevChevron) prevChevron.style.transform = '';
+  }
+  _expandedPatient = patientId;
+
+  if (chevron) chevron.style.transform = 'rotate(180deg)';
+  body.style.display = 'block';
+  body.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted)"><div class="loading-spinner"></div><p style="margin-top:8px">載入患者資料...</p></div>';
+  if (badge) { badge.style.display = 'inline-flex'; if (typeof lucide !== 'undefined') lucide.createIcons(); }
+
+  try {
+    var data = await fetch(API + '/patients/' + patientId + '/overview').then(r => r.json());
+    if (badge) badge.style.display = 'none';
+    renderPatientDetail(patientId, patientName, data, body);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch(e) {
+    body.innerHTML = '<p style="color:var(--danger);padding:16px">載入失敗</p>';
+    if (badge) badge.style.display = 'none';
+  }
+}
+
+function renderPatientDetail(patientId, patientName, data, container) {
+  var avgEmo = data.avg_emotion_score;
+  var emoColor = !avgEmo ? 'var(--text-muted)' : avgEmo >= 4 ? 'var(--teal)' : avgEmo >= 3 ? 'var(--warning)' : 'var(--danger)';
+  var emoLabel = !avgEmo ? '無資料' : avgEmo >= 4 ? '良好' : avgEmo >= 3 ? '普通' : '需關注';
+
+  var recentSymptoms = (data.recent_symptoms || []).slice(0, 5).map(function(s) {
+    return '<span class="doc-tag">' + (s.symptoms ? s.symptoms.join(', ') : (s.symptom_text || '—')) + '</span>';
+  }).join('') || '<span style="color:var(--text-muted)">無記錄</span>';
+
+  var activeMeds = (data.active_medications || []).map(function(m) {
+    return `<div class="doc-med-item"><i data-lucide="pill" style="width:13px;height:13px;color:var(--warning)"></i> ${m.name}${m.dosage ? ' · ' + m.dosage : ''}</div>`;
+  }).join('') || '<span style="color:var(--text-muted)">無用藥記錄</span>';
+
+  var recentRecords = (data.recent_records || []).slice(0, 3).map(function(r) {
+    var date = r.visit_date ? new Date(r.visit_date).toLocaleDateString('zh-TW') : '未記錄';
+    return `<div class="doc-record-item">
+      <span style="font-size:0.82rem;color:var(--text-muted)">${date}</span>
+      <span>${r.diagnosis || '無診斷記錄'}</span>
+    </div>`;
+  }).join('') || '<span style="color:var(--text-muted)">無就診紀錄</span>';
+
+  container.innerHTML = `
+    <div class="doc-detail-body">
+      <div class="doc-detail-stats">
+        <div class="doc-detail-stat">
+          <span class="doc-detail-stat-num" style="color:var(--warning)">${data.symptom_count_30d || 0}</span>
+          <span class="doc-detail-stat-label">近30天症狀</span>
+        </div>
+        <div class="doc-detail-stat">
+          <span class="doc-detail-stat-num" style="color:var(--accent)">${data.medication_count || 0}</span>
+          <span class="doc-detail-stat-label">追蹤藥物</span>
+        </div>
+        <div class="doc-detail-stat">
+          <span class="doc-detail-stat-num" style="color:${emoColor}">${avgEmo || '—'}</span>
+          <span class="doc-detail-stat-label">情緒指數 · ${emoLabel}</span>
+        </div>
+        <div class="doc-detail-stat">
+          <span class="doc-detail-stat-num" style="color:var(--teal)">${(data.recent_records || []).length}</span>
+          <span class="doc-detail-stat-label">就診紀錄</span>
+        </div>
+      </div>
+
+      <div class="doc-detail-sections">
+        <div class="doc-detail-section">
+          <h4><i data-lucide="scan-search" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>近期症狀</h4>
+          <div class="doc-tag-group">${recentSymptoms}</div>
+        </div>
+        <div class="doc-detail-section">
+          <h4><i data-lucide="pill" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>用藥清單</h4>
+          <div>${activeMeds}</div>
+        </div>
+        <div class="doc-detail-section">
+          <h4><i data-lucide="clipboard-list" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>就診記錄</h4>
+          <div>${recentRecords}</div>
+        </div>
+      </div>
+
+      <div class="doc-detail-actions">
+        <button class="primary" onclick="generatePatientMonthlyReport('${patientId}', '${patientName.replace(/'/g,'')}')" style="font-size:0.85rem;padding:8px 16px;margin:0">
+          <i data-lucide="file-text" style="width:14px;height:14px;vertical-align:middle"></i> 產出月報
+        </button>
+        <button class="secondary" onclick="doctorAddRecord('${patientId}')" style="font-size:0.85rem;padding:8px 16px;margin:0">
+          <i data-lucide="plus" style="width:14px;height:14px;vertical-align:middle"></i> 新增就診記錄
+        </button>
+      </div>
+
+      <div id="doc-report-${patientId}" style="margin-top:12px"></div>
+    </div>`;
+}
+
+async function generatePatientMonthlyReport(patientId, patientName) {
+  var el = document.getElementById('doc-report-' + patientId);
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted)"><div class="loading-spinner"></div><p style="margin-top:8px">正在產出 ' + patientName + ' 的月度報告...</p></div>';
+  try {
+    var data = await fetch(API + '/reports/' + patientId + '/monthly').then(r => r.json());
+    el.innerHTML = `
+      <div class="doc-report-box">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <i data-lucide="file-text" style="color:var(--teal)"></i>
+          <strong>${patientName} — 月度臨床摘要</strong>
+        </div>
+        <div class="doc-report-content">${markdownToHtml(data.report || data.content || '無報告內容')}</div>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:8px">
+          生成時間：${new Date(data.generated_at || Date.now()).toLocaleString('zh-TW')}
+        </p>
+      </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch(e) {
+    el.innerHTML = '<p style="color:var(--danger)">月報產出失敗，請稍後再試。</p>';
+  }
+}
+
+function doctorAddRecord(patientId) {
+  navigateTo('records', null);
+  setTimeout(function() {
+    var sel = document.getElementById('r-patient');
+    if (sel) { sel.value = patientId; }
+  }, 400);
 }
 
 // ─── Service Worker ───────────────────────────────────────
