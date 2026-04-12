@@ -147,14 +147,15 @@ body {
 }
 
 .landing-logo {
-  font-family: "Sacramento", cursive;
-  font-size: 3.6rem;
+  font-family: "Allura", "Sacramento", cursive;
+  font-size: 4.4rem;
   font-weight: 400;
   background: linear-gradient(135deg, var(--accent), var(--teal));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
+  line-height: 1.1;
 }
 
 .landing-divider {
@@ -1626,7 +1627,7 @@ button.secondary:hover {
   }
 
   .landing-logo {
-    font-size: 2.6rem;
+    font-size: 3.2rem;
   }
 
   .puzzle-piece { width: 45px !important; height: 45px !important; }
