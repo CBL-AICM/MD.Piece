@@ -147,14 +147,15 @@ body {
 }
 
 .landing-logo {
-  font-family: "Allura", "Sacramento", cursive;
-  font-size: 4.4rem;
-  font-weight: 400;
+  font-family: "Cormorant Garamond", "Noto Serif TC", serif;
+  font-style: italic;
+  font-size: 3.8rem;
+  font-weight: 500;
   background: linear-gradient(135deg, var(--accent), var(--teal));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   line-height: 1.1;
 }
 
