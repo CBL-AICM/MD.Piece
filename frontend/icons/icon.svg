@@ -1,7 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#1a73e8"/>
-  <text x="256" y="200" text-anchor="middle" font-family="Arial,sans-serif" font-size="120" font-weight="bold" fill="white">MD</text>
-  <text x="256" y="340" text-anchor="middle" font-family="Arial,sans-serif" font-size="80" fill="white" opacity="0.9">.Piece</text>
-  <path d="M170 380 h172" stroke="white" stroke-width="4" opacity="0.5"/>
-  <text x="256" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" fill="white" opacity="0.7">Healthcare PWA</text>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <defs>
+    <linearGradient id="creamGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EDE0C8"/>
+      <stop offset="100%" stop-color="#D9C8A8"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D94B42"/>
+      <stop offset="100%" stop-color="#B43A33"/>
+    </linearGradient>
+    <linearGradient id="whiteGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F1EADB"/>
+    </linearGradient>
+    <clipPath id="capClip">
+      <rect x="-26" y="-12" width="52" height="24" rx="12" ry="12"/>
+    </clipPath>
+  </defs>
+  <path d="
+    M 15 15
+    L 40 15
+    A 10 10 0 0 1 60 15
+    L 85 15
+    L 85 85
+    L 60 85
+    A 10 10 0 0 0 40 85
+    L 15 85
+    Z"
+    fill="url(#creamGrad)"
+    stroke="#A89270"
+    stroke-width="1.6"
+    stroke-linejoin="round"/>
+  <g transform="translate(50 50) rotate(-30)">
+    <g clip-path="url(#capClip)">
+      <rect x="-26" y="-12" width="26" height="24" fill="url(#redGrad)"/>
+      <rect x="0" y="-12" width="26" height="24" fill="url(#whiteGrad)"/>
+      <ellipse cx="-14" cy="-6" rx="7" ry="2.2" fill="#FFFFFF" fill-opacity="0.28"/>
+      <ellipse cx="12" cy="-6" rx="7" ry="2.2" fill="#FFFFFF" fill-opacity="0.55"/>
+    </g>
+    <line x1="0" y1="-12" x2="0" y2="12" stroke="#3A2E20" stroke-width="1.2" stroke-linecap="round"/>
+    <rect x="-26" y="-12" width="52" height="24" rx="12" ry="12" fill="none" stroke="#3A2E20" stroke-width="1.6"/>
+  </g>
 </svg>

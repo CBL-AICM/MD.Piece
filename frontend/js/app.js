@@ -180,20 +180,22 @@ function home() {
       <svg class="home-deco home-deco-2" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
       <svg class="home-deco home-deco-3" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
 
-      <div class="home-welcome">
-        <div class="home-welcome-left">
+      <!-- Hero: Logo + Greeting split -->
+      <div class="home-hero">
+        <div class="home-hero-left">
           <img src="icons/logo-core.png" alt="MD.Piece" class="home-logo" />
-          <div>
-            <h2 class="home-title">${greeting}，${name}</h2>
-            <p class="home-calm">${getGreetingMessage()}</p>
-          </div>
         </div>
-        <div class="home-date">
-          <span class="home-day">${dayStr}</span>
-          <span class="home-datestr">${dateStr}</span>
+        <div class="home-hero-right">
+          <h2 class="home-title">${greeting}，${name}</h2>
+          <p class="home-calm">${getGreetingMessage()}</p>
+          <div class="home-date-row">
+            <span class="home-datestr">${dateStr}</span>
+            <span class="home-day">${dayStr}</span>
+          </div>
         </div>
       </div>
 
+      <!-- Quick Actions — spread wider -->
       <div class="home-quick">
         <button class="hq-btn hq-symptoms" onclick="navigateTo('symptoms',null)">
           <span class="hq-icon"><i data-lucide="scan-search"></i></span>
@@ -213,7 +215,8 @@ function home() {
         </button>
       </div>
 
-      <div class="home-ov-row">
+      <!-- Three-column info row -->
+      <div class="home-info-row">
         <div class="home-ov">
           <div class="home-ov-head">
             <i data-lucide="calendar-check" style="width:16px;height:16px;color:var(--accent)"></i>
@@ -232,8 +235,19 @@ function home() {
             <p class="home-tip-text">${getHealthTip()}</p>
           </div>
         </div>
+        <div class="home-ov">
+          <div class="home-ov-head">
+            <i data-lucide="activity" style="width:16px;height:16px;color:var(--teal)"></i>
+            <span>平台狀態</span>
+          </div>
+          <div class="home-ov-body">
+            <p class="home-ov-status"><span class="status-dot"></span> 系統正常運行</p>
+            <p class="home-ov-ver">v2.0 · PWA 醫療輔助平台</p>
+          </div>
+        </div>
       </div>
 
+      <!-- Feature grid label -->
       <div class="home-section-label">
         <svg viewBox="0 0 48 48" width="16" height="16"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor" opacity="0.5"/></svg>
         功能拼圖
@@ -249,9 +263,11 @@ function home() {
         ${homeCard('contributors','heart-handshake','貢獻者','共同打造的力量','lavender')}
       </div>
 
+      <!-- Footer tagline -->
       <div class="home-footer">
         <svg viewBox="0 0 48 48" width="20" height="20"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor" opacity="0.12"/></svg>
         <p>將日常碎片拼起，醫起走出治療的迷霧</p>
+        <p class="home-footer-credit">CBL-AICM Lab · Piece by Piece</p>
       </div>
     </div>`;
 }

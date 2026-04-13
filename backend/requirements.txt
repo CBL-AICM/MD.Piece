@@ -2,5 +2,5 @@ fastapi
 uvicorn
 supabase
 python-dotenv
-anthropic
+httpx
 knowledge-storm
