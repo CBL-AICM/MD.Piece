@@ -21,41 +21,41 @@
 }
 
 :root {
-  /* FOLK & FEY palette — winter dusk (每色分開使用) */
-  --bg-deep:    #E4DED7;   /* body 主底 */
-  --bg-mid:     #D5C3BB;   /* sidebar / 次底 */
-  --bg-soft:    #A5A7B2;   /* 分隔/安靜區塊 */
-  --bg-surface: rgba(255,255,255,0.55);
-  --bg-glass:   rgba(228,222,215,0.92);
-  --bg-glass-hover: rgba(213,195,187,0.92);
-  --border-glass: rgba(72,83,100,0.22);
+  /* Winter Birch palette — 每色分開角色，絕不混色 */
+  --bg-deep:    #F8FBFD;   /* body 主底 — icy white */
+  --bg-mid:     #EBEBEC;   /* sidebar / 次底 — light grey */
+  --bg-soft:    #DCEDF7;   /* 強調淺色 / accent wash — pale sky */
+  --bg-surface: #F8FBFD;
+  --bg-glass:   #EBEBEC;
+  --bg-glass-hover: #DCEDF7;
+  --border-glass: rgba(104,93,90,0.18);
 
-  /* Primary dust blue */
-  --accent:     #8289A4;
-  --accent-glow:#8289A433;
-  --klein:      #485364;   /* 深 Slate (text/強調) */
+  /* Primary — pale sky accent */
+  --accent:     #DCEDF7;
+  --accent-glow:#DCEDF766;
+  --klein:      #685D5A;   /* 深色強調 — deep warm brown */
 
-  /* Secondary grey-lavender */
-  --teal:       #A5A7B2;
-  --teal-glow:  #A5A7B233;
+  /* Secondary — warm grey */
+  --teal:       #848388;
+  --teal-glow:  #84838833;
 
-  /* Cream */
-  --cream:      #E4DED7;
-  --cream-dim:  #D5C3BB;
+  /* Surfaces */
+  --cream:      #F8FBFD;
+  --cream-dim:  #EBEBEC;
 
   /* Accents — palette-only */
-  --purple:     #8289A4;
-  --purple-glow:#8289A433;
-  --rose:       #D5C3BB;
-  --rose-glow:  #D5C3BB33;
-  --success:    #A5A7B2;
-  --warning:    #C9A48C;
-  --danger:     #A87266;
+  --purple:     #DCEDF7;
+  --purple-glow:#DCEDF766;
+  --rose:       #EBEBEC;
+  --rose-glow:  #EBEBEC66;
+  --success:    #848388;
+  --warning:    #848388;
+  --danger:     #685D5A;
 
-  /* Text — Slate on warm cream */
-  --text:       #485364;
-  --text-dim:   #8289A4;
-  --text-muted: #A5A7B2;
+  /* Text — deep warm brown on icy white */
+  --text:       #685D5A;
+  --text-dim:   #848388;
+  --text-muted: #848388;
 
   /* UI tokens */
   --radius:     14px;
@@ -70,7 +70,7 @@
 
 body {
   font-family: "Noto Sans TC", sans-serif;
-  background: #E4DED7;
+  background: #F8FBFD;
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
@@ -447,7 +447,7 @@ body {
   top: 0;
   z-index: 50;
   padding: 16px 32px;
-  background: rgba(19,32,54,0.85);
+  background: #EBEBEC;
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-glass);
   display: flex;
