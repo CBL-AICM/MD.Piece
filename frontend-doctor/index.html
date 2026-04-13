@@ -1,35 +1,13 @@
 <!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MD.Piece 醫師端</title>
-  <link rel="icon" href="/favicon.ico" />
-  <link rel="stylesheet" href="css/doctor.css" />
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">MD</span>
-      <span class="brand-name">Piece · 醫師端</span>
-    </div>
-    <nav class="nav">
-      <button class="nav-item active" data-page="dashboard">儀表板</button>
-      <button class="nav-item" data-page="patients">病患清單</button>
-      <button class="nav-item" data-page="records">病歷</button>
-      <button class="nav-item" data-page="settings">設定</button>
-    </nav>
-  </header>
-
-  <main id="app">
-    <section class="placeholder">
-      <h1>醫師端骨架已建立</h1>
-      <p>後端 API：<code id="api-url">http://localhost:8000</code></p>
-      <p>功能模組將於後續陸續加入。</p>
-      <div class="status" id="status">正在檢查後端連線…</div>
-    </section>
-  </main>
-
-  <script src="js/doctor.js"></script>
-</body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend-doctor</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
