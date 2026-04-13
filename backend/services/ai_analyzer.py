@@ -1,6 +1,9 @@
-import os
 import json
-import anthropic
+import logging
+
+from backend.services.llm_service import call_claude
+
+logger = logging.getLogger(__name__)
 
 
 async def analyze_symptoms(
@@ -8,13 +11,7 @@ async def analyze_symptoms(
     patient_age: int | None = None,
     patient_gender: str | None = None,
 ) -> dict:
-    """使用 Claude API 分析症狀，回傳結構化結果。"""
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        return _fallback_analysis(symptoms)
-
-    client = anthropic.Anthropic(api_key=api_key)
-
+    """使用本地 Ollama 分析症狀，回傳結構化結果。"""
     patient_context = ""
     if patient_age or patient_gender:
         parts = []
@@ -27,7 +24,7 @@ async def analyze_symptoms(
     system_prompt = """你是一個醫療輔助 AI，負責根據症狀提供初步分析建議。
 重要：你的分析僅供參考，不構成醫療診斷。請務必建議使用者就醫。
 
-請以 JSON 格式回覆，包含以下欄位：
+請以 JSON 格式回覆（純 JSON，不要 markdown code block），包含以下欄位：
 {
   "conditions": [{"name": "可能病因", "likelihood": "高/中/低"}],
   "recommended_department": "建議就診科別",
@@ -41,22 +38,17 @@ async def analyze_symptoms(
     user_message = f"症狀：{', '.join(symptoms)}{patient_context}"
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
-        )
-
-        text = response.content[0].text
-        result = json.loads(text)
-        return result
-    except (json.JSONDecodeError, Exception):
+        text = call_claude(system_prompt, user_message).strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        return json.loads(text)
+    except (json.JSONDecodeError, Exception) as e:
+        logger.warning(f"analyze_symptoms fallback: {e}")
         return _fallback_analysis(symptoms)
 
 
 def _fallback_analysis(symptoms: list[str]) -> dict:
-    """當 AI 不可用時的備用分析。"""
+    """當本地 LLM 不可用時的備用分析。"""
     urgency_keywords = {
         "chest pain": "emergency",
         "胸痛": "emergency",
@@ -82,5 +74,5 @@ def _fallback_analysis(symptoms: list[str]) -> dict:
         "recommended_department": "家醫科",
         "urgency": urgency,
         "advice": f"您描述了以下症狀：{', '.join(symptoms)}。建議儘速就醫，由醫師進行專業評估。",
-        "disclaimer": "此為系統基本建議，非 AI 分析結果。請設定 ANTHROPIC_API_KEY 以啟用 AI 分析功能。",
+        "disclaimer": "此為系統基本建議，非 AI 分析結果。請確認本地 Ollama 服務已啟動。",
     }
