@@ -94,6 +94,7 @@ function validateIdCard() {
 
 async function submitIdCard() {
   const nickname = document.getElementById('idcard-name').value.trim();
+  const id_number = document.getElementById('idcard-idno')?.value.trim().toUpperCase() || '';
   if (!nickname || !_selectedRole) return;
 
   const btn = document.getElementById('idcard-submit');
@@ -107,12 +108,13 @@ async function submitIdCard() {
     const res = await fetch(`${API}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, role: _selectedRole, avatar_color })
+      body: JSON.stringify({ nickname, role: _selectedRole, avatar_color, id_number })
     });
     const user = await res.json();
+    user.id_number = id_number;
     setCurrentUser(user);
   } catch {
-    const user = { id: crypto.randomUUID(), nickname, role: _selectedRole, avatar_color };
+    const user = { id: crypto.randomUUID(), nickname, role: _selectedRole, avatar_color, id_number };
     setCurrentUser(user);
   }
 
@@ -183,7 +185,7 @@ function home() {
       <!-- Hero: Logo + Greeting split -->
       <div class="home-hero">
         <div class="home-hero-left">
-          <img src="icons/logo-core.png" alt="MD.Piece" class="home-logo" />
+          <img src="icons/logo-core.jpg" alt="MD.Piece" class="home-logo" />
         </div>
         <div class="home-hero-right">
           <h2 class="home-title">${greeting}，${name}</h2>

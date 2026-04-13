@@ -29,7 +29,7 @@
     <div class="landing-split" id="landing-text">
       <!-- Left: Logo -->
       <div class="landing-left">
-        <img src="icons/logo-core.png" alt="MD.Piece" class="landing-logo-img" />
+        <img src="icons/logo-core.jpg" alt="MD.Piece" class="landing-logo-img" />
       </div>
       <!-- Right: Title + Tagline + Button -->
       <div class="landing-right">
@@ -56,38 +56,81 @@
   <div id="register-overlay" style="display:none">
     <div class="idcard-scene">
       <div class="idcard">
-        <!-- Card top accent bar -->
-        <div class="idcard-bar"></div>
+        <!-- Wavy paper texture watermark -->
+        <div class="idcard-watermark"></div>
 
-        <!-- Card header -->
-        <div class="idcard-header">
-          <div class="idcard-logo">MD.Piece</div>
-          <div class="idcard-type">患者身分卡 PATIENT CARD</div>
-        </div>
-
-        <!-- Avatar area -->
-        <div class="idcard-avatar" id="idcard-avatar" onclick="cycleAvatarColor()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="8" r="5"/>
-            <path d="M3 21v-2a7 7 0 0114 0v2"/>
-          </svg>
-          <span class="idcard-avatar-hint">點擊換色</span>
-        </div>
-
-        <!-- Form fields styled like card info -->
-        <div class="idcard-fields">
-          <div class="idcard-field">
-            <span class="idcard-field-label">姓名 NAME</span>
-            <input id="idcard-name" type="text" placeholder="輸入你的暱稱" maxlength="20" autocomplete="off" />
+        <!-- Top header: brand · title · mark -->
+        <div class="idcard-top">
+          <div class="idcard-brand">
+            <span class="idcard-brand-line1">MD</span>
+            <span class="idcard-brand-line2">PIECE</span>
+          </div>
+          <div class="idcard-title-block">
+            <h1 class="idcard-title">IDENTITY CARD</h1>
+            <p class="idcard-subtitle">MD.PIECE MEDICAL</p>
+          </div>
+          <div class="idcard-mark">
+            <span class="idcard-mark-letter">M</span>
+            <span class="idcard-mark-text">MD.PIECE<br/>MEDICAL</span>
           </div>
         </div>
 
-        <!-- Card bottom: issue info + submit -->
-        <div class="idcard-footer">
-          <div class="idcard-issued">
-            <span class="idcard-field-label">發卡日 ISSUED</span>
-            <span class="idcard-date" id="idcard-date"></span>
+        <!-- Body: photo · info -->
+        <div class="idcard-body">
+          <div class="idcard-photo" id="idcard-avatar" onclick="cycleAvatarColor()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="5"/>
+              <path d="M3 21v-2a7 7 0 0114 0v2"/>
+            </svg>
+            <span class="idcard-photo-hint">點擊換色</span>
           </div>
+
+          <div class="idcard-info">
+            <div class="idcard-cell idcard-cell-name">
+              <span class="idcard-label">NAME</span>
+              <input id="idcard-name" type="text" placeholder="輸入你的暱稱" maxlength="20" autocomplete="off" />
+            </div>
+
+            <div class="idcard-cell idcard-cell-name">
+              <span class="idcard-label">ID NO. 身分證號</span>
+              <input id="idcard-idno" type="text" placeholder="A123456789" maxlength="10" autocomplete="off" />
+            </div>
+
+            <div class="idcard-row">
+              <div class="idcard-cell">
+                <span class="idcard-label">DATE ISSUED</span>
+                <span class="idcard-value" id="idcard-date"></span>
+              </div>
+              <div class="idcard-cell">
+                <span class="idcard-label">ROLE</span>
+                <span class="idcard-value">PATIENT</span>
+              </div>
+            </div>
+
+            <div class="idcard-row idcard-row-bottom">
+              <div class="idcard-cell">
+                <span class="idcard-label">FINGERPRINT</span>
+                <div class="idcard-fingerprint">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 11.5a2.5 2.5 0 0 1 5 0v1.5a8.5 8.5 0 0 1-1.4 4.7"/>
+                    <path d="M8.4 8.6a5.5 5.5 0 0 1 8.6 4.4v1.5a11.5 11.5 0 0 1-.6 3.6"/>
+                    <path d="M5.4 12a8.5 8.5 0 0 1 8.6-8.5 9 9 0 0 1 4 1"/>
+                    <path d="M9.5 13.5a2.5 2.5 0 0 1 5 0c0 1.5-.5 3.5-1.5 5"/>
+                    <path d="M12 16v4"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="idcard-cell">
+                <span class="idcard-label">SIGNATURE</span>
+                <div class="idcard-signature">MD.Piece</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom: credit + submit -->
+        <div class="idcard-bottom">
+          <span class="idcard-credit">DESIGNED BY @MD.PIECE</span>
           <button class="idcard-submit" id="idcard-submit" onclick="submitIdCard()" disabled>
             <i data-lucide="check-circle"></i> 確認發卡
           </button>
@@ -108,7 +151,7 @@
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <img src="icons/logo-core.png" alt="MD.Piece" class="sidebar-logo-img" />
+        <img src="icons/logo-core.jpg" alt="MD.Piece" class="sidebar-logo-img" />
         <h1>MD.Piece</h1>
         <p>MEDICAL PLATFORM</p>
       </div>

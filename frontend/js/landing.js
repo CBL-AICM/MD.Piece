@@ -14,13 +14,13 @@
   let running = true;
   const t0 = performance.now();
 
-  /* ── Color palette (space medical theme) ── */
+  /* ── Color palette (Winter Birch — landing) ── */
   const COLORS = [
-    'rgba(43,92,230,0.12)',   // accent blue
-    'rgba(0,212,170,0.10)',   // teal
-    'rgba(124,107,196,0.10)', // purple
-    'rgba(0,47,167,0.08)',    // klein blue
-    'rgba(232,220,200,0.06)', // cream
+    'rgba(220,237,247,0.60)', // pale sky
+    'rgba(235,235,236,0.50)', // neutral grey
+    'rgba(248,251,253,0.55)', // icy white
+    'rgba(132,131,136,0.28)', // warm grey
+    'rgba(104,93,90,0.22)',   // deep warm brown
   ];
 
   /* ── Puzzle pieces floating in space ── */
@@ -88,7 +88,7 @@
         vx: (Math.random() - 0.5) * 0.4,
         vy: (Math.random() - 0.5) * 0.3 - 0.1,
         color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        alpha: 0.3 + Math.random() * 0.5,
+        alpha: 0.55 + Math.random() * 0.4,
         phase: Math.random() * Math.PI * 2,
       });
     }
