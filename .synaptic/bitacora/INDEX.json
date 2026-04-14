@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "projectId": "md-piece-1776127842529",
+  "projectName": "MD.Piece",
+  "totalCycles": 0,
+  "currentTomeId": 1,
+  "cyclesPerTome": 50,
+  "tomes": [
+    {
+      "tomeId": 1,
+      "cycleRange": {
+        "from": 1,
+        "to": 50
+      },
+      "dateRange": {
+        "from": "2026-04-14T00:50:42.641Z",
+        "to": ""
+      },
+      "summary": "",
+      "keyDecisions": [],
+      "cycleCount": 0,
+      "successCount": 0,
+      "failureCount": 0,
+      "jsonPath": "tomes/tome-001.json",
+      "mdPath": "tomes/tome-001.md",
+      "closed": false
+    }
+  ],
+  "decisionIndex": [],
+  "metrics": {
+    "totalDecisions": 0,
+    "optionDistribution": {
+      "A": 0,
+      "B": 0,
+      "C": 0
+    },
+    "overallSuccessRate": 0,
+    "averageCompliance": 0,
+    "phaseDistribution": {}
+  },
+  "lastUpdated": "2026-04-14T00:50:42.641Z"
+}

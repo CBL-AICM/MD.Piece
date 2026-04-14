@@ -1,4 +1,4 @@
-# RULES.md - md.piece
+# RULES.md - MD.Piece
 
 ## SYNAPTIC Protocol v3.0 - Project Rules
 
@@ -48,7 +48,7 @@
 
 ### 3.2 Documentation Requirements
 - Every cycle must update BITACORA.md
-- Every decision must be recorded
+- Every decision must be recorded in INTELLIGENCE.json
 - All trade-offs must be documented
 
 ### 3.3 Validation
@@ -60,9 +60,8 @@
 
 ## 4. PROJECT-SPECIFIC RULES
 
-### Project: md.piece
-### Description: Project md.piece
-
+### Project: MD.Piece
+### Description: Project MD.Piece
 
 ---
 
@@ -74,5 +73,5 @@
 
 ---
 
-*Last Updated: 2026-03-18T03:56:00.016Z*
+*Last Updated: 2026-04-15T06:30:00+08:00*
 *SYNAPTIC Protocol v3.0*

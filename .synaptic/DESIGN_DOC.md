@@ -1,4 +1,4 @@
-# DESIGN_DOC.md - md.piece
+# DESIGN_DOC.md - MD.Piece
 
 ## SYNAPTIC Protocol v3.0 - Architecture Document
 
@@ -7,16 +7,19 @@
 ## 1. PROJECT OVERVIEW
 
 ### 1.1 Project Name
-md.piece
+MD.Piece
 
 ### 1.2 Description
-Project md.piece
+Project MD.Piece
 
 ### 1.3 Project Type
-To be defined
+Capture and OCR workflow planning
 
 ### 1.4 Domain
 General
+
+### 1.5 Current Phase
+Foundation with capture/OCR planning assets
 
 ---
 
@@ -26,7 +29,7 @@ General
 
 | ID | Decision | Option Selected | Date | Rationale |
 |----|----------|-----------------|------|-----------|
-| - | - | - | - | - |
+| AD-001 | Primer entregable para OCR capture | Documentacion + esqueletos Web y Flutter + contrato API | 2026-04-15 | El proyecto aun no tiene stack definido, por lo que se prioriza una base transferible antes de elegir implementacion final |
 
 *Decisions will be logged here as they are made through Decision Gates*
 
@@ -35,10 +38,10 @@ General
 ## 3. TECHNOLOGY STACK
 
 ### 3.1 Frontend
-To be defined
+Candidate references include React + TypeScript and Flutter
 
 ### 3.2 Backend
-To be defined
+OCR API contract defined, implementation pending
 
 ### 3.3 Infrastructure
 To be defined
@@ -47,18 +50,28 @@ To be defined
 
 ## 4. SYSTEM COMPONENTS
 
-*Components will be documented as they are designed*
+### Planned Components
+
+- Capture UI module
+- Capture quality evaluation
+- Image preprocessing pipeline
+- OCR recognition service
+- Result confirmation flow
 
 ### Component Diagram
-```
-[To be generated]
+```text
+[Capture UI] -> [Capture Evaluate API] -> [OCR Recognize API] -> [Result Review]
 ```
 
 ---
 
 ## 5. DATA FLOW
 
-*Data flow will be documented as architecture evolves*
+1. User opens capture screen
+2. Frontend evaluates capture readiness
+3. Approved capture is submitted for OCR
+4. OCR response returns text and confidence
+5. User confirms or retries
 
 ---
 
@@ -68,16 +81,23 @@ To be defined
 - [ ] Authorization rules documented
 - [ ] Data encryption requirements specified
 - [ ] API security measures planned
+- [ ] OCR image retention policy defined
 
 ---
 
 ## 7. PATTERNS & CONVENTIONS
 
 ### Patterns to Follow
-*Will be populated as decisions are made*
+
+- Shared capture state model across clients
+- Separate evaluation and recognition API responsibilities
+- Clear user-facing remediation messages for capture failures
 
 ### Anti-patterns to Avoid
-*Will be populated based on learnings*
+
+- Tightly coupling camera UI to OCR vendor logic
+- Returning vague errors to end users
+- Mixing ephemeral build artifacts into source control
 
 ---
 
@@ -86,8 +106,20 @@ To be defined
 | Cycle | Change | Impact | Synaptic Strength |
 |-------|--------|--------|-------------------|
 | 0 | Initial creation | Baseline | 0% |
+| 1 | OCR planning docs and reference apps added | Foundation package ready for review | 18% |
+| 2 | Web example build validated and repo prepared for push | Implementation baseline stabilized | 24% |
+
+---
+
+## 9. TECHNICAL NOTES
+
+- Se agrego un paquete de referencia en `context/` y `examples/`
+- El ejemplo Web usa React + TypeScript + Vite como referencia de interfaz
+- El ejemplo Flutter define flujo de estados y puntos de integracion para camara y OCR
+- El contrato API separa evaluacion de captura y reconocimiento OCR
 
 ---
 
 *Created: 2026-03-18T03:56:00.016Z*
+*Updated: 2026-04-15T06:30:00+08:00*
 *SYNAPTIC Protocol v3.0 - Architecture Evolution Tracking*

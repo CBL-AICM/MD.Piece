@@ -1,23 +1,45 @@
 {
   "projectSummary": {
-    "name": "md.piece",
-    "description": "Project md.piece",
+    "name": "MD.Piece",
+    "description": "Project MD.Piece",
     "currentPhase": "foundation",
-    "overallProgress": "Project initialized, awaiting first requirement"
+    "overallProgress": "Capture and OCR planning package created with docs, API contract, and reference app skeletons"
   },
-  "decisions": [],
-  "roadmap": [],
-  "learnings": [],
+  "decisions": [
+    {
+      "id": "AD-001",
+      "title": "Start with transferable OCR capture assets before locking stack",
+      "selectedOption": "Documentation plus Web and Flutter skeletons",
+      "date": "2026-04-15",
+      "rationale": "The repo has no established stack, so a cross-platform first-pass gives faster review and alignment."
+    }
+  ],
+  "roadmap": [
+    "Choose primary client stack: Web or Flutter",
+    "Replace mock capture evaluation with real camera input",
+    "Implement OCR backend using the defined API contract",
+    "Add end-to-end tests once the production stack is selected"
+  ],
+  "learnings": [
+    "The workspace started without application code, so foundation assets needed to be created before implementation.",
+    "A shared capture state model helps keep Web and Flutter behavior aligned.",
+    "The GitHub remote already exists and should be integrated through a branch workflow instead of rewriting main."
+  ],
   "implementationState": {
-    "lastCompletedTask": "Project workspace initialization",
-    "currentTask": "Awaiting first user requirement",
-    "pendingTasks": [],
+    "lastCompletedTask": "Created OCR capture documentation and reference implementation skeletons",
+    "currentTask": "Push review branch with OCR planning package",
+    "pendingTasks": [
+      "Connect a real camera source",
+      "Implement document edge detection and image preprocessing",
+      "Wire the OCR API to a real service"
+    ],
     "blockers": []
   },
   "contextNotes": [
-    "Project \"md.piece\" created with SYNAPTIC Protocol v3.0",
+    "Project \"MD.Piece\" created with SYNAPTIC Protocol v3.0",
     "Enforcement mode: STRICT",
-    "Domain: General"
+    "Domain: General",
+    "OCR capture planning assets added on 2026-04-15"
   ],
-  "lastUpdated": "2026-03-18T03:56:00.017Z"
+  "lastUpdated": "2026-04-15T06:30:00+08:00"
 }

@@ -9,6 +9,8 @@ venv/
 
 # Node
 node_modules/
+examples/web-react/node_modules/
+examples/web-react/dist/
 
 # IDE
 .idea/
@@ -27,3 +29,8 @@ Thumbs.db
 md_piece.db
 .vercel
 .env*.local
+
+*.log
+
+.synaptic/backups/
+.synaptic/session.json
