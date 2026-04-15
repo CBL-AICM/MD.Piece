@@ -763,18 +763,71 @@ function handleMedPhoto(input) {
           document.getElementById("med-recognize-result").innerHTML = html;
           loadMedicationsPage();
         } else {
-          document.getElementById("med-recognize-result").innerHTML =
-            '<p style="color:var(--warning)">無法辨識藥物，請嘗試拍攝更清晰的照片。</p>' +
-            (data.raw_text ? '<details><summary style="font-size:0.85rem;color:var(--text-muted);cursor:pointer">原始辨識文字</summary><pre style="font-size:0.8rem;white-space:pre-wrap;margin-top:4px">' + data.raw_text + '</pre></details>' : '');
+          renderManualMedForm(data.raw_text || "", "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。");
         }
       })
       .catch(function() {
-        document.getElementById("med-recognize-result").innerHTML =
-          '<p style="color:var(--danger)">辨識失敗，請稍後再試。</p>';
+        renderManualMedForm("", "辨識服務連線失敗，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。");
       });
   };
   reader.readAsDataURL(file);
   input.value = "";
+}
+
+function renderManualMedForm(rawText, hint) {
+  var raw = (rawText || "").replace(/"/g, "&quot;");
+  var html =
+    '<div style="padding:12px;background:rgba(230,180,80,0.08);border-radius:var(--radius-sm);border:1px solid var(--warning)">' +
+      '<p style="color:var(--warning);margin:0 0 8px">' + hint + '</p>' +
+      (rawText ? '<details style="margin-bottom:8px"><summary style="font-size:0.85rem;color:var(--text-muted);cursor:pointer">原始辨識文字（可複製參考）</summary><pre style="font-size:0.8rem;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow:auto">' + rawText + '</pre></details>' : '') +
+      '<div style="display:grid;gap:8px">' +
+        '<label style="font-size:0.85rem;color:var(--text-dim)">藥物名稱 <span style="color:var(--danger)">*</span>' +
+          '<input id="manual-med-name" type="text" placeholder="例：Panadol 普拿疼" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '<label style="font-size:0.85rem;color:var(--text-dim)">劑量' +
+          '<input id="manual-med-dosage" type="text" placeholder="例：500mg / 1顆" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '<label style="font-size:0.85rem;color:var(--text-dim)">服用頻率' +
+          '<input id="manual-med-frequency" type="text" placeholder="例：每日三次、飯後服用" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '<label style="font-size:0.85rem;color:var(--text-dim)">分類' +
+          '<input id="manual-med-category" type="text" placeholder="例：止痛藥、降血壓" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '<label style="font-size:0.85rem;color:var(--text-dim)">用途' +
+          '<input id="manual-med-purpose" type="text" placeholder="例：緩解頭痛、控制血壓" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '<label style="font-size:0.85rem;color:var(--text-dim)">備註 / 指示' +
+          '<textarea id="manual-med-instructions" rows="2" placeholder="例：飯後 30 分鐘服用；避免與葡萄柚汁併用" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);resize:vertical"></textarea></label>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px">' +
+        '<button class="primary" onclick="submitManualMed()">加入我的藥物</button>' +
+        '<button class="secondary" onclick="document.getElementById(\'med-recognize-result\').innerHTML=\'\'">取消</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById("med-recognize-result").innerHTML = html;
+}
+
+function submitManualMed() {
+  var name = (document.getElementById("manual-med-name").value || "").trim();
+  if (!name) { showToast("請至少填寫藥物名稱", "warning"); return; }
+  var body = {
+    patient_id: _medsPatientId,
+    name: name,
+    dosage: (document.getElementById("manual-med-dosage").value || "").trim() || null,
+    frequency: (document.getElementById("manual-med-frequency").value || "").trim() || null,
+    category: (document.getElementById("manual-med-category").value || "").trim() || null,
+    purpose: (document.getElementById("manual-med-purpose").value || "").trim() || null,
+    instructions: (document.getElementById("manual-med-instructions").value || "").trim() || null,
+  };
+  fetch(API + "/medications/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  })
+    .then(function(r) { if (!r.ok) throw new Error("save_failed"); return r.json(); })
+    .then(function() {
+      showToast("已加入藥物 ✓", "success");
+      document.getElementById("med-recognize-result").innerHTML =
+        '<p style="color:var(--success)">已成功加入「' + name + '」到我的藥物。</p>';
+      document.getElementById("med-photo-preview").innerHTML = "";
+      loadMedicationsPage();
+    })
+    .catch(function() { showToast("加入失敗，請稍後再試", "error"); });
 }
 
 function logMedTaken(medId, taken) {
