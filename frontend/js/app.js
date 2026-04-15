@@ -819,15 +819,28 @@ function submitManualMed() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   })
-    .then(function(r) { if (!r.ok) throw new Error("save_failed"); return r.json(); })
-    .then(function() {
+    .then(function(r) {
+      return r.text().then(function(t) {
+        var parsed; try { parsed = JSON.parse(t); } catch (e) { parsed = { detail: t }; }
+        return { ok: r.ok, status: r.status, data: parsed };
+      });
+    })
+    .then(function(res) {
+      if (!res.ok) {
+        var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
+        showToast("加入失敗：" + msg, "error");
+        var box = document.getElementById("med-recognize-result");
+        box.insertAdjacentHTML("beforeend",
+          '<p style="color:var(--danger);margin-top:8px;font-size:0.85rem">伺服器回應：' + msg + '</p>');
+        return;
+      }
       showToast("已加入藥物 ✓", "success");
       document.getElementById("med-recognize-result").innerHTML =
         '<p style="color:var(--success)">已成功加入「' + name + '」到我的藥物。</p>';
       document.getElementById("med-photo-preview").innerHTML = "";
       loadMedicationsPage();
     })
-    .catch(function() { showToast("加入失敗，請稍後再試", "error"); });
+    .catch(function(err) { showToast("加入失敗：" + (err && err.message || "網路錯誤"), "error"); });
 }
 
 function logMedTaken(medId, taken) {

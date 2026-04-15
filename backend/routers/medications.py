@@ -62,7 +62,13 @@ def create_medication(body: MedicationCreate):
     """手動新增藥物"""
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
-    result = sb.table("medications").insert(data).execute()
+    try:
+        result = sb.table("medications").insert(data).execute()
+    except Exception as e:
+        logger.error(f"Create medication failed: {e}")
+        raise HTTPException(status_code=400, detail=f"新增藥物失敗：{e}")
+    if not result.data:
+        raise HTTPException(status_code=400, detail="新增失敗（資料庫未回傳資料）")
     return result.data[0]
 
 
