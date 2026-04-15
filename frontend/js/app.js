@@ -13,6 +13,19 @@ function setCurrentUser(user) {
   localStorage.setItem('mdpiece_user', JSON.stringify(user));
 }
 
+// 取得或建立一個穩定 UUID（避免 demo 模式下 patient_id 不是 UUID 導致後端寫入失敗）
+function getStablePatientId() {
+  var user = getCurrentUser();
+  if (user && user.id) return user.id;
+  var demoId = localStorage.getItem('mdpiece_demo_pid');
+  if (!demoId) {
+    demoId = (crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : 'demo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('mdpiece_demo_pid', demoId);
+  }
+  return demoId;
+}
+
 // ─── 路由 ──────────────────────────────────────────────────
 
 function showPage(page) {
@@ -276,7 +289,7 @@ function home() {
 
 function loadHomePage() {
   var user = getCurrentUser();
-  var pid = user ? user.id : 'demo-patient';
+  var pid = getStablePatientId();
 
   fetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
@@ -632,7 +645,7 @@ var _medsPatientId = null;
 
 function medications() {
   var user = getCurrentUser();
-  _medsPatientId = user ? user.id : "demo-patient";
+  _medsPatientId = getStablePatientId();
   return `
     <div class="card">
       <h2>藥物管理</h2>
@@ -746,32 +759,203 @@ function handleMedPhoto(input) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType })
     })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.recognized > 0) {
-          var html = '<div style="padding:12px;background:rgba(85,184,138,0.1);border-radius:var(--radius-sm);border:1px solid var(--success)">';
-          html += '<strong style="color:var(--success)">辨識成功！找到 ' + data.recognized + ' 種藥物</strong>';
-          data.medications.forEach(function(med) {
+      .then(function(r) {
+        return r.text().then(function(t) {
+          var parsed; try { parsed = JSON.parse(t); } catch (e) { parsed = { detail: t }; }
+          return { ok: r.ok, status: r.status, data: parsed };
+        });
+      })
+      .then(function(res) {
+        if (!res.ok) {
+          var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
+          renderManualMedForm("", "辨識失敗：" + msg + "。你可以改用手動填寫下方資料。");
+          return;
+        }
+        var data = res.data || {};
+        var saved = data.medications || [];
+        var parsed = data.parsed || [];
+        var errors = data.errors || [];
+
+        if (saved.length > 0 && errors.length === 0) {
+          // 全部成功寫入，顯示成功卡 + 列表
+          var html = '<div style="padding:12px;background:rgba(85,184,138,0.08);border-radius:var(--radius-sm);border:1px solid var(--success)">';
+          html += '<strong style="color:var(--success)">✓ 已加入 ' + saved.length + ' 種藥物到我的藥物</strong>';
+          saved.forEach(function(med) {
             html += '<div style="margin-top:8px;padding:8px;background:var(--bg-glass);border-radius:4px">';
-            html += '<strong>' + med.name + '</strong>';
-            if (med.dosage) html += ' · ' + med.dosage;
-            if (med.frequency) html += '<br><span style="font-size:0.85rem;color:var(--text-dim)">' + med.frequency + '</span>';
-            if (med.purpose) html += '<br><span style="font-size:0.85rem;color:var(--accent)">' + med.purpose + '</span>';
+            html += '<strong>' + escapeHtml(med.name) + '</strong>';
+            if (med.dosage) html += ' · ' + escapeHtml(med.dosage);
+            if (med.frequency) html += '<br><span style="font-size:0.85rem;color:var(--text-dim)">' + escapeHtml(med.frequency) + '</span>';
+            if (med.purpose) html += '<br><span style="font-size:0.85rem;color:var(--accent)">' + escapeHtml(med.purpose) + '</span>';
             html += '</div>';
           });
           html += '</div>';
           document.getElementById("med-recognize-result").innerHTML = html;
+          showToast("已加入 " + saved.length + " 種藥物 ✓", "success");
           loadMedicationsPage();
-        } else {
-          renderManualMedForm(data.raw_text || "", "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。");
+          return;
         }
+
+        if (parsed.length > 0) {
+          // 辨識出內容但部分/全部寫入失敗 → 顯示可編輯卡片讓使用者確認後推入
+          renderRecognizedEditable(parsed, errors, data.raw_text || "", saved);
+          return;
+        }
+
+        // 完全辨識不到
+        renderManualMedForm(data.raw_text || "", "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。");
       })
-      .catch(function() {
-        renderManualMedForm("", "辨識服務連線失敗，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。");
+      .catch(function(err) {
+        renderManualMedForm("", "辨識服務連線失敗（" + (err && err.message || "網路錯誤") + "），你可以改用手動填寫下方資料。");
       });
   };
   reader.readAsDataURL(file);
   input.value = "";
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// 辨識成功但寫入失敗 / 部分失敗 → 提供逐筆可編輯卡片
+function renderRecognizedEditable(parsed, errors, rawText, alreadySaved) {
+  var errMap = {};
+  (errors || []).forEach(function(e) { errMap[e.name] = e.error; });
+  var savedNames = {};
+  (alreadySaved || []).forEach(function(m) { savedNames[m.name] = true; });
+
+  var rows = parsed.map(function(m, i) {
+    var isSaved = savedNames[m.name];
+    var errMsg = errMap[m.name];
+    var bgTint = isSaved ? "rgba(85,184,138,0.08)" : (errMsg ? "rgba(220,80,80,0.08)" : "var(--bg-glass)");
+    var borderTint = isSaved ? "var(--success)" : (errMsg ? "var(--danger)" : "var(--border-glass)");
+    return (
+      '<div class="rec-med-card" data-idx="' + i + '" style="padding:10px;background:' + bgTint + ';border:1px solid ' + borderTint + ';border-radius:var(--radius-sm);display:grid;gap:6px">' +
+        (isSaved ? '<div style="color:var(--success);font-size:0.8rem">已寫入 ✓</div>' :
+         errMsg ? '<div style="color:var(--danger);font-size:0.8rem">寫入失敗：' + escapeHtml(errMsg) + '</div>' : '') +
+        '<input class="rec-name" type="text" value="' + escapeHtml(m.name) + '" placeholder="藥物名稱 *" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+          '<input class="rec-dosage" type="text" value="' + escapeHtml(m.dosage) + '" placeholder="劑量" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+          '<input class="rec-frequency" type="text" value="' + escapeHtml(m.frequency) + '" placeholder="頻率" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+          '<input class="rec-category" type="text" value="' + escapeHtml(m.category) + '" placeholder="分類" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+          '<input class="rec-purpose" type="text" value="' + escapeHtml(m.purpose) + '" placeholder="用途" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+        '</div>' +
+        '<textarea class="rec-instructions" rows="2" placeholder="備註 / 指示" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);resize:vertical">' + escapeHtml(m.instructions) + '</textarea>' +
+        (isSaved ? '' : '<button class="primary" onclick="submitRecognizedOne(this)" style="padding:6px 10px;font-size:0.85rem">加入這筆到我的藥物</button>') +
+      '</div>'
+    );
+  }).join("");
+
+  var header = errors && errors.length
+    ? '<p style="color:var(--warning);margin:0 0 8px">辨識成功但部分寫入失敗，請確認內容後重新送出。</p>'
+    : '<p style="color:var(--text-dim);margin:0 0 8px">已辨識出以下藥物，請確認內容後一鍵加入我的藥物。</p>';
+
+  var html =
+    '<div style="padding:12px;background:rgba(160,140,220,0.06);border-radius:var(--radius-sm);border:1px solid var(--border-glass)">' +
+      header +
+      (rawText ? '<details style="margin-bottom:8px"><summary style="font-size:0.85rem;color:var(--text-muted);cursor:pointer">原始辨識文字</summary><pre style="font-size:0.8rem;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow:auto">' + escapeHtml(rawText) + '</pre></details>' : '') +
+      '<div id="rec-med-cards" style="display:grid;gap:10px">' + rows + '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px">' +
+        '<button class="primary" onclick="submitAllRecognized()">全部加入我的藥物</button>' +
+        '<button class="secondary" onclick="document.getElementById(\'med-recognize-result\').innerHTML=\'\'">取消</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById("med-recognize-result").innerHTML = html;
+}
+
+function _collectRecCard(card) {
+  return {
+    patient_id: _medsPatientId,
+    name: (card.querySelector(".rec-name").value || "").trim(),
+    dosage: (card.querySelector(".rec-dosage").value || "").trim() || null,
+    frequency: (card.querySelector(".rec-frequency").value || "").trim() || null,
+    category: (card.querySelector(".rec-category").value || "").trim() || null,
+    purpose: (card.querySelector(".rec-purpose").value || "").trim() || null,
+    instructions: (card.querySelector(".rec-instructions").value || "").trim() || null,
+  };
+}
+
+function submitRecognizedOne(btn) {
+  var card = btn.closest(".rec-med-card");
+  var body = _collectRecCard(card);
+  if (!body.name) { showToast("藥物名稱不能空白", "warning"); return; }
+  btn.disabled = true; btn.textContent = "加入中...";
+  fetch(API + "/medications/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  })
+    .then(function(r) {
+      return r.text().then(function(t) {
+        var p; try { p = JSON.parse(t); } catch (e) { p = { detail: t }; }
+        return { ok: r.ok, status: r.status, data: p };
+      });
+    })
+    .then(function(res) {
+      if (!res.ok) {
+        var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
+        showToast("加入失敗：" + msg, "error");
+        btn.disabled = false; btn.textContent = "重試加入";
+        return;
+      }
+      card.style.background = "rgba(85,184,138,0.08)";
+      card.style.borderColor = "var(--success)";
+      btn.outerHTML = '<div style="color:var(--success);font-size:0.85rem;text-align:center">已寫入 ✓</div>';
+      showToast("已加入「" + body.name + "」", "success");
+      loadMedicationsPage();
+    })
+    .catch(function(err) {
+      showToast("加入失敗：" + (err && err.message || "網路錯誤"), "error");
+      btn.disabled = false; btn.textContent = "重試加入";
+    });
+}
+
+function submitAllRecognized() {
+  var cards = document.querySelectorAll("#rec-med-cards .rec-med-card");
+  var pending = [];
+  cards.forEach(function(c) {
+    var hasSaveBtn = c.querySelector("button.primary");
+    if (hasSaveBtn) pending.push(c);
+  });
+  if (!pending.length) { showToast("沒有需要加入的項目", "info"); return; }
+  var okCount = 0, failCount = 0, done = 0;
+  pending.forEach(function(card) {
+    var btn = card.querySelector("button.primary");
+    var body = _collectRecCard(card);
+    if (!body.name) { failCount++; done++; if (done === pending.length) _afterBulkAdd(okCount, failCount); return; }
+    btn.disabled = true; btn.textContent = "加入中...";
+    fetch(API + "/medications/", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+      .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: r.ok, data: {} }; }); })
+      .then(function(res) {
+        if (res.ok) {
+          okCount++;
+          card.style.background = "rgba(85,184,138,0.08)";
+          card.style.borderColor = "var(--success)";
+          btn.outerHTML = '<div style="color:var(--success);font-size:0.85rem;text-align:center">已寫入 ✓</div>';
+        } else {
+          failCount++;
+          btn.disabled = false; btn.textContent = "重試加入";
+        }
+      })
+      .catch(function() { failCount++; btn.disabled = false; btn.textContent = "重試加入"; })
+      .finally(function() {
+        done++;
+        if (done === pending.length) _afterBulkAdd(okCount, failCount);
+      });
+  });
+}
+
+function _afterBulkAdd(ok, fail) {
+  if (ok && !fail) showToast("已加入 " + ok + " 種藥物 ✓", "success");
+  else if (ok && fail) showToast("加入 " + ok + " 成功、" + fail + " 失敗", "warning");
+  else showToast("加入失敗，請檢查欄位", "error");
+  if (ok) loadMedicationsPage();
 }
 
 function renderManualMedForm(rawText, hint) {

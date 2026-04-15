@@ -11,6 +11,28 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _ensure_patient_exists(sb, patient_id: str) -> None:
+    """
+    確保 patients 表裡有對應的 row，避免 medications.patient_id FK 失敗。
+    若不存在：嘗試用 users 表的 nickname 建 stub；都查不到就用 "訪客"。
+    """
+    try:
+        existing = sb.table("patients").select("id").eq("id", patient_id).limit(1).execute()
+        if existing.data:
+            return
+        name = "訪客"
+        try:
+            u = sb.table("users").select("nickname").eq("id", patient_id).limit(1).execute()
+            if u.data and u.data[0].get("nickname"):
+                name = u.data[0]["nickname"]
+        except Exception:
+            pass
+        sb.table("patients").insert({"id": patient_id, "name": name}).execute()
+    except Exception as e:
+        # 如果 patients 表 schema 或 RLS 不允許，這裡就不硬插；交給後續 insert 的錯誤回報
+        logger.warning(f"ensure_patient_exists skipped for {patient_id}: {e}")
+
+
 # ── Models ────────────────────────────────────────────────
 
 class MedicationCreate(BaseModel):
@@ -61,6 +83,7 @@ def get_medications(patient_id: str = Query(...)):
 def create_medication(body: MedicationCreate):
     """手動新增藥物"""
     sb = get_supabase()
+    _ensure_patient_exists(sb, body.patient_id)
     data = body.model_dump(exclude_none=True)
     try:
         result = sb.table("medications").insert(data).execute()
@@ -87,25 +110,43 @@ def delete_medication(medication_id: str):
 @router.post("/recognize")
 def recognize_from_photo(body: MedicationPhotoUpload):
     """
-    上傳藥袋照片 → Claude Vision 辨識 → 自動建立藥物紀錄
+    上傳藥袋照片 → Claude Vision 辨識 → 自動建立藥物紀錄。
+    回傳：
+      - recognized: 成功寫入資料庫的筆數
+      - medications: 已寫入的藥物 rows
+      - parsed: 從影像辨識出來的原始資料（即使寫入失敗也會回傳，供前端手動編輯）
+      - raw_text: LLM 原始文字（方便 debug）
+      - errors: 若有寫入錯誤，逐筆回報
     """
-    recognition = recognize_medicine_bag(body.image_base64, body.media_type)
-    meds = recognition.get("medications", [])
+    try:
+        recognition = recognize_medicine_bag(body.image_base64, body.media_type)
+    except Exception as e:
+        logger.error(f"recognize_medicine_bag failed: {e}")
+        raise HTTPException(status_code=500, detail=f"影像辨識服務失敗：{e}")
+
+    meds = recognition.get("medications", []) or []
+    raw_text = recognition.get("raw_text", "")
 
     if not meds:
         return {
             "recognized": 0,
             "medications": [],
-            "message": "無法辨識藥袋內容，請嘗試拍攝更清晰的照片",
-            "raw_text": recognition.get("raw_text", ""),
+            "parsed": [],
+            "raw_text": raw_text,
+            "message": "無法辨識藥袋內容，請嘗試拍攝更清晰的照片，或手動填寫下方資料。",
+            "errors": [],
         }
 
     sb = get_supabase()
+    _ensure_patient_exists(sb, body.patient_id)
+
     saved = []
+    errors = []
+    parsed = []
     for med in meds:
-        data = {
+        row = {
             "patient_id": body.patient_id,
-            "name": med.get("name", "未知藥物"),
+            "name": (med.get("name") or "未知藥物").strip() or "未知藥物",
             "dosage": med.get("dosage"),
             "frequency": med.get("frequency"),
             "category": med.get("category"),
@@ -113,14 +154,31 @@ def recognize_from_photo(body: MedicationPhotoUpload):
             "instructions": med.get("instructions"),
             "recognized_from_photo": 1,
         }
-        result = sb.table("medications").insert(data).execute()
-        if result.data:
-            saved.append(result.data[0])
+        parsed.append({k: v for k, v in row.items() if k != "recognized_from_photo"})
+        try:
+            result = sb.table("medications").insert(row).execute()
+            if result.data:
+                saved.append(result.data[0])
+            else:
+                errors.append({"name": row["name"], "error": "資料庫未回傳資料"})
+        except Exception as e:
+            logger.error(f"Insert recognized med failed: {e}")
+            errors.append({"name": row["name"], "error": str(e)})
+
+    if saved:
+        message = f"成功辨識並寫入 {len(saved)} 種藥物"
+    elif errors:
+        message = "辨識成功但寫入失敗，可手動調整後重新送出。"
+    else:
+        message = "辨識完成"
 
     return {
         "recognized": len(saved),
         "medications": saved,
-        "message": f"成功辨識 {len(saved)} 種藥物",
+        "parsed": parsed,
+        "raw_text": raw_text,
+        "message": message,
+        "errors": errors,
     }
 
 
