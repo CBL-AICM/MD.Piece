@@ -160,6 +160,60 @@ _SCHEMAS = {
             avatar_color TEXT DEFAULT '#5B9FE8',
             created_at TEXT DEFAULT (datetime('now'))
         )""",
+    "doctor_notes": """
+        CREATE TABLE IF NOT EXISTS doctor_notes (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            doctor_id TEXT,
+            record_id TEXT,
+            content TEXT NOT NULL,
+            next_focus TEXT,
+            tags TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+            FOREIGN KEY (record_id) REFERENCES medical_records(id)
+        )""",
+    "medication_changes": """
+        CREATE TABLE IF NOT EXISTS medication_changes (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            medication_id TEXT NOT NULL,
+            doctor_id TEXT,
+            change_type TEXT NOT NULL CHECK(change_type IN
+                ('start', 'stop', 'dose_up', 'dose_down', 'switch', 'frequency', 'other')),
+            previous_dosage TEXT,
+            new_dosage TEXT,
+            previous_frequency TEXT,
+            new_frequency TEXT,
+            reason TEXT,
+            effective_date TEXT DEFAULT (datetime('now')),
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (medication_id) REFERENCES medications(id),
+            FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+        )""",
+    "alerts": """
+        CREATE TABLE IF NOT EXISTS alerts (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            alert_type TEXT NOT NULL CHECK(alert_type IN
+                ('er_visit', 'missed_medication', 'self_discontinued',
+                 'infection', 'low_mood', 'psych_crisis', 'other')),
+            severity TEXT NOT NULL DEFAULT 'medium' CHECK(severity IN ('low', 'medium', 'high', 'critical')),
+            title TEXT NOT NULL,
+            detail TEXT,
+            metadata TEXT,
+            source TEXT,
+            acknowledged INTEGER DEFAULT 0,
+            acknowledged_by TEXT,
+            acknowledged_at TEXT,
+            resolved INTEGER DEFAULT 0,
+            resolved_at TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
 }
 
 

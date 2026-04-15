@@ -1,7 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#1a73e8"/>
-  <text x="256" y="200" text-anchor="middle" font-family="Arial,sans-serif" font-size="120" font-weight="bold" fill="white">MD</text>
-  <text x="256" y="340" text-anchor="middle" font-family="Arial,sans-serif" font-size="80" fill="white" opacity="0.9">.Piece</text>
-  <path d="M170 380 h172" stroke="white" stroke-width="4" opacity="0.5"/>
-  <text x="256" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" fill="white" opacity="0.7">Healthcare PWA</text>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <defs>
+    <linearGradient id="creamGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EDE0C8"/>
+      <stop offset="100%" stop-color="#D9C8A8"/>
+    </linearGradient>
+  </defs>
+  <path d="
+    M 15 15
+    L 40 15
+    A 10 10 0 0 1 60 15
+    L 85 15
+    L 85 40
+    A 10 10 0 0 1 85 60
+    L 85 85
+    L 60 85
+    A 10 10 0 0 0 40 85
+    L 15 85
+    L 15 60
+    A 10 10 0 0 0 15 40
+    Z"
+    fill="url(#creamGrad)"
+    stroke="#A89270"
+    stroke-width="1.6"
+    stroke-linejoin="round"/>
+  <g transform="translate(20, 20) scale(2.5)" fill="none" stroke="#3A2E20" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>
+    <path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08v0c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/>
+    <path d="m18 15-2-2"/>
+    <path d="m15 18-2-2"/>
+  </g>
 </svg>
