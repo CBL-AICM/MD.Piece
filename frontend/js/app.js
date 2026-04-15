@@ -182,7 +182,7 @@ function home() {
 
       <div class="home-welcome">
         <div class="home-welcome-left">
-          <img src="icons/logo-core.png" alt="MD.Piece" class="home-logo" />
+          <img src="icons/logo-core.jpg" alt="MD.Piece" class="home-logo" />
           <div>
             <h2 class="home-title">${greeting}，${name}</h2>
             <p class="home-calm">${getGreetingMessage()}</p>
@@ -287,7 +287,7 @@ function symptoms() {
   return `
     <div class="card">
       <h2>AI 症狀分析</h2>
-      <p style="margin-bottom:12px;color:var(--text-dim)">輸入您的症狀，AI 將提供初步分析建議</p>
+      <p style="margin-bottom:12px;color:#666">輸入您的症狀，AI 將提供初步分析建議</p>
       <input id="symptom-input" placeholder="輸入症狀（以逗號分隔），例如：fever, headache, cough" />
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="primary" onclick="analyzeSymptoms()">AI 分析</button>
@@ -297,7 +297,7 @@ function symptoms() {
     </div>
     <div class="card">
       <h3>快速查詢</h3>
-      <p style="color:var(--text-dim);font-size:0.9rem">支援：fever、headache、chest pain、cough</p>
+      <p style="color:#666;font-size:0.9rem">支援：fever、headache、chest pain、cough</p>
     </div>`;
 }
 
@@ -381,7 +381,7 @@ async function loadDoctors() {
   el.innerHTML = data.doctors.map(d => `
     <div class="record-card">
       <strong>${d.name}</strong> — ${d.specialty}
-      ${d.phone ? `<span style="color:var(--text-dim)"> | ${d.phone}</span>` : ""}
+      ${d.phone ? `<span style="color:#666"> | ${d.phone}</span>` : ""}
       <button class="btn-delete" onclick="deleteDoctor('${d.id}')">刪除</button>
     </div>
   `).join("");
@@ -599,7 +599,7 @@ function showToast(msg, type) {
     existing.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px";
     document.body.appendChild(existing);
   }
-  var colors = { success: "#00D4AA", error: "#D94D4D", info: "#2B5CE6", warning: "#E8A84B" };
+  var colors = { success: "#43a047", error: "#d32f2f", info: "#1a73e8", warning: "#ef6c00" };
   var toast = document.createElement("div");
   toast.style.cssText = "padding:12px 20px;border-radius:8px;color:white;font-size:0.9rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.3s;max-width:360px;background:" + (colors[type] || colors.info);
   toast.textContent = msg;
@@ -828,7 +828,7 @@ function drawAdherenceChart(trend) {
   ctx.clearRect(0, 0, w, h);
 
   // 背景格線
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.strokeStyle = "rgba(0,0,0,0.06)";
   ctx.lineWidth = 0.5;
   for (var i = 0; i <= 4; i++) {
     var y = pad.top + (ch / 4) * i;
@@ -836,7 +836,7 @@ function drawAdherenceChart(trend) {
   }
 
   // Y 軸標籤
-  ctx.fillStyle = "#6E6860";
+  ctx.fillStyle = "var(--text-muted)";
   ctx.font = "10px 'Noto Sans TC'";
   ctx.textAlign = "right";
   for (var i = 0; i <= 4; i++) {
@@ -845,7 +845,7 @@ function drawAdherenceChart(trend) {
 
   // 折線
   ctx.beginPath();
-  ctx.strokeStyle = "#00D4AA";
+  ctx.strokeStyle = "#4DB6AC";
   ctx.lineWidth = 2;
   ctx.lineJoin = "round";
   trend.forEach(function(d, idx) {
@@ -866,7 +866,7 @@ function drawAdherenceChart(trend) {
   });
 
   // X 軸日期
-  ctx.fillStyle = "#6E6860";
+  ctx.fillStyle = "var(--text-muted)";
   ctx.font = "9px 'Noto Sans TC'";
   ctx.textAlign = "center";
   var step = Math.max(1, Math.floor(trend.length / 6));
@@ -1205,8 +1205,8 @@ function research() {
   return `
     <div class="card">
       <h2>AutoResearch 實驗管理</h2>
-      <p style="margin-top:8px;color:var(--text-dim)">
-        基於 <a href="https://github.com/karpathy/autoresearch" target="_blank" style="color:var(--accent)">karpathy/autoresearch</a> —
+      <p style="margin-top:8px;color:#666">
+        基於 <a href="https://github.com/karpathy/autoresearch" target="_blank">karpathy/autoresearch</a> —
         AI Agent 自動修改模型、訓練、評估、保留最佳結果。
       </p>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -1253,7 +1253,7 @@ function research() {
       <div id="experiment-list"><p>載入中...</p></div>
     </div>
     <div class="card" id="submit-card">
-      <h3 style="cursor:pointer" onclick="toggleSubmitForm()">手動提交實驗結果 <span id="submit-toggle" style="font-size:0.8rem;color:var(--text-muted)">展開</span></h3>
+      <h3 style="cursor:pointer" onclick="toggleSubmitForm()">手動提交實驗結果 <span id="submit-toggle" style="font-size:0.8rem;color:#888">展開</span></h3>
       <div id="submit-form" style="display:none">
         <input id="exp-name" placeholder="實驗名稱（例如：baseline-run-1）" />
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -1321,7 +1321,7 @@ async function loadExperiments() {
     renderExperimentList(_allExperiments);
   } catch (e) {
     var el = document.getElementById("experiment-list");
-    if (el) el.innerHTML = '<p style="color:var(--danger)">無法載入，請確認後端是否啟動。</p>';
+    if (el) el.innerHTML = '<p style="color:#d32f2f">無法載入，請確認後端是否啟動。</p>';
   }
 }
 
@@ -1329,17 +1329,17 @@ function renderStatsCards(stats) {
   var el = document.getElementById("research-stats");
   if (!el) return;
   var cards = [
-    { label: "總實驗數", value: stats.total || 0, color: "var(--accent)" },
-    { label: "保留 (Kept)", value: stats.kept_count || 0, color: "var(--success)" },
-    { label: "還原 (Reverted)", value: stats.reverted_count || 0, color: "var(--danger)" },
-    { label: "改善率", value: stats.improvement_rate != null ? stats.improvement_rate + "%" : "N/A", color: "var(--warning)" },
-    { label: "最佳 val_bpb", value: stats.best_bpb != null ? stats.best_bpb.toFixed(4) : "N/A", color: "var(--purple)" },
-    { label: "總訓練時間", value: stats.total_duration_hours + "h", color: "var(--teal)" },
+    { label: "總實驗數", value: stats.total || 0, color: "#1a73e8" },
+    { label: "保留 (Kept)", value: stats.kept_count || 0, color: "#43a047" },
+    { label: "還原 (Reverted)", value: stats.reverted_count || 0, color: "#ef5350" },
+    { label: "改善率", value: stats.improvement_rate != null ? stats.improvement_rate + "%" : "N/A", color: "#ef6c00" },
+    { label: "最佳 val_bpb", value: stats.best_bpb != null ? stats.best_bpb.toFixed(4) : "N/A", color: "#7b1fa2" },
+    { label: "總訓練時間", value: stats.total_duration_hours + "h", color: "#00838f" },
   ];
   el.innerHTML = cards.map(function(c) {
-    return '<div style="text-align:center;padding:12px;background:var(--bg-surface);border-radius:8px;border-left:3px solid ' + c.color + ';border:1px solid var(--border-glass)">' +
+    return '<div style="text-align:center;padding:12px;background:#f8f9fa;border-radius:8px;border-left:3px solid ' + c.color + '">' +
       '<div style="font-size:1.4rem;font-weight:700;color:' + c.color + '">' + c.value + '</div>' +
-      '<div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">' + c.label + '</div></div>';
+      '<div style="font-size:0.8rem;color:#666;margin-top:4px">' + c.label + '</div></div>';
   }).join("");
 }
 
@@ -1347,21 +1347,21 @@ function renderLeaderboard(ranking) {
   var el = document.getElementById("leaderboard");
   if (!el) return;
   if (!ranking.length) {
-    el.innerHTML = '<p style="color:var(--text-muted)">尚無排行資料</p>';
+    el.innerHTML = '<p style="color:#888">尚無排行資料</p>';
     return;
   }
   var medals = ["#FFD700", "#C0C0C0", "#CD7F32"];
   el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem">' +
-    '<tr style="border-bottom:2px solid var(--border-glass)"><th style="text-align:left;padding:6px;color:var(--text)">#</th><th style="text-align:left;padding:6px;color:var(--text)">名稱</th><th style="text-align:right;padding:6px;color:var(--text)">val_bpb</th><th style="text-align:right;padding:6px;color:var(--text)">loss</th><th style="text-align:right;padding:6px;color:var(--text)">耗時</th></tr>' +
+    '<tr style="border-bottom:2px solid #e0e0e0"><th style="text-align:left;padding:6px">#</th><th style="text-align:left;padding:6px">名稱</th><th style="text-align:right;padding:6px">val_bpb</th><th style="text-align:right;padding:6px">loss</th><th style="text-align:right;padding:6px">耗時</th></tr>' +
     ranking.map(function(r) {
       var medal = r.rank <= 3 ? '<span style="color:' + medals[r.rank - 1] + ';font-weight:bold">' + r.rank + '</span>' : r.rank;
       var dur = r.duration_seconds ? Math.round(r.duration_seconds) + "s" : "-";
-      return '<tr style="border-bottom:1px solid var(--border-glass)">' +
-        '<td style="padding:6px;color:var(--text)">' + medal + '</td>' +
-        '<td style="padding:6px;color:var(--text)">' + r.name + '</td>' +
-        '<td style="text-align:right;padding:6px;font-weight:600;color:var(--accent)">' + (r.val_bpb != null ? r.val_bpb.toFixed(4) : "-") + '</td>' +
-        '<td style="text-align:right;padding:6px;color:var(--text-dim)">' + (r.train_loss != null ? r.train_loss.toFixed(4) : "-") + '</td>' +
-        '<td style="text-align:right;padding:6px;color:var(--text-muted)">' + dur + '</td></tr>';
+      return '<tr style="border-bottom:1px solid #f0f0f0">' +
+        '<td style="padding:6px">' + medal + '</td>' +
+        '<td style="padding:6px">' + r.name + '</td>' +
+        '<td style="text-align:right;padding:6px;font-weight:600;color:#1a73e8">' + (r.val_bpb != null ? r.val_bpb.toFixed(4) : "-") + '</td>' +
+        '<td style="text-align:right;padding:6px">' + (r.train_loss != null ? r.train_loss.toFixed(4) : "-") + '</td>' +
+        '<td style="text-align:right;padding:6px;color:#666">' + dur + '</td></tr>';
     }).join("") + '</table>';
 }
 
@@ -1403,10 +1403,10 @@ function renderExperimentList(experiments) {
     el.innerHTML = "<p>尚無實驗結果。請從 Colab 執行訓練後回傳，或匯入 results.tsv。</p>";
     return;
   }
-  el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:8px">共 ' + experiments.length + ' 筆結果</p>' +
+  el.innerHTML = '<p style="color:#888;font-size:0.85rem;margin-bottom:8px">共 ' + experiments.length + ' 筆結果</p>' +
     experiments.map(function(e) {
       var metrics = [];
-      if (e.val_bpb != null) metrics.push('<span style="font-weight:600;color:var(--accent)">bpb: ' + e.val_bpb.toFixed(4) + '</span>');
+      if (e.val_bpb != null) metrics.push('<span style="font-weight:600;color:#1a73e8">bpb: ' + e.val_bpb.toFixed(4) + '</span>');
       if (e.train_loss != null) metrics.push("loss: " + e.train_loss.toFixed(4));
       if (e.steps != null) metrics.push(e.steps + " steps");
       if (e.duration_seconds != null) {
@@ -1424,7 +1424,7 @@ function renderExperimentList(experiments) {
         '<button class="btn-delete" onclick="deleteExperiment(\'' + e.id + '\')">刪除</button>' +
         '</div>' +
         (metrics.length ? '<p>' + metrics.join(' | ') + '</p>' : '') +
-        (e.notes ? '<p style="color:var(--text-dim);font-size:0.9rem">' + e.notes + '</p>' : '') +
+        (e.notes ? '<p style="color:#666;font-size:0.9rem">' + e.notes + '</p>' : '') +
         (e.colab_url ? '<p><a href="' + e.colab_url + '" target="_blank">Colab 連結</a></p>' : '') +
         '</div>';
     }).join("");
@@ -1435,7 +1435,7 @@ function renderBpbChart(chartData) {
   var canvas = document.getElementById("bpb-canvas");
   if (!canvas || !chartData.length) {
     var chartDiv = document.getElementById("bpb-chart");
-    if (chartDiv) chartDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px 0">尚無 val_bpb 數據</p>';
+    if (chartDiv) chartDiv.innerHTML = '<p style="color:#888;text-align:center;padding:40px 0">尚無 val_bpb 數據</p>';
     return;
   }
   var ctx = canvas.getContext("2d");
@@ -1461,14 +1461,14 @@ function renderBpbChart(chartData) {
 
   // 背景漸層
   var gradient = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
-  gradient.addColorStop(0, "rgba(43, 92, 230, 0.08)");
-  gradient.addColorStop(1, "rgba(43, 92, 230, 0)");
+  gradient.addColorStop(0, "rgba(26, 115, 232, 0.05)");
+  gradient.addColorStop(1, "rgba(26, 115, 232, 0)");
   ctx.fillStyle = gradient;
   ctx.fillRect(pad.left, pad.top, plotW, plotH);
 
   // Y axis grid
-  ctx.strokeStyle = "rgba(255,255,255,0.1)";
-  ctx.fillStyle = "#B0A89E";
+  ctx.strokeStyle = "#e8e8e8";
+  ctx.fillStyle = "#888";
   ctx.font = "11px sans-serif";
   ctx.textAlign = "right";
   for (var i = 0; i <= 4; i++) {
@@ -1501,13 +1501,13 @@ function renderBpbChart(chartData) {
   ctx.lineTo(points[points.length - 1].x, H - pad.bottom);
   ctx.closePath();
   var areaGrad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
-  areaGrad.addColorStop(0, "rgba(43, 92, 230, 0.2)");
-  areaGrad.addColorStop(1, "rgba(43, 92, 230, 0.02)");
+  areaGrad.addColorStop(0, "rgba(26, 115, 232, 0.15)");
+  areaGrad.addColorStop(1, "rgba(26, 115, 232, 0.02)");
   ctx.fillStyle = areaGrad;
   ctx.fill();
 
   // Plot line
-  ctx.strokeStyle = "#2B5CE6";
+  ctx.strokeStyle = "#1a73e8";
   ctx.lineWidth = 2.5;
   ctx.lineJoin = "round";
   ctx.beginPath();
@@ -1532,15 +1532,15 @@ function renderBpbChart(chartData) {
   for (var k = 0; k < points.length; k++) {
     ctx.beginPath();
     ctx.arc(points[k].x, points[k].y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = chartData[k].kept ? "#00D4AA" : chartData[k].kept === false ? "#D94D4D" : "#6E6860";
+    ctx.fillStyle = chartData[k].kept ? "#43a047" : chartData[k].kept === false ? "#ef5350" : "#999";
     ctx.fill();
-    ctx.strokeStyle = "#132036";
+    ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
     ctx.stroke();
   }
 
   // X label
-  ctx.fillStyle = "#B0A89E";
+  ctx.fillStyle = "#888";
   ctx.font = "11px sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("Experiments (" + chartData.length + ")", W / 2, H - 5);
@@ -1662,7 +1662,7 @@ async function checkGpuStatus() {
       '<strong>GPU 狀態：</strong>' + (data.has_gpu ? '可用' : '不可用') +
       '<br>' + data.message + '</div>';
   } catch (e) {
-    el.innerHTML = '<div class="advice-box" style="margin-top:8px;color:var(--danger)">無法檢查 GPU 狀態</div>';
+    el.innerHTML = '<div class="advice-box" style="margin-top:8px;color:#d32f2f">無法檢查 GPU 狀態</div>';
   }
 }
 
@@ -1672,7 +1672,7 @@ function contributors() {
   return `
     <div class="card">
       <h2>GitHub 貢獻者</h2>
-      <p style="margin-top:8px;color:var(--text-dim)">感謝所有為 MD.Piece 貢獻的開發者</p>
+      <p style="margin-top:8px;color:#666">感謝所有為 MD.Piece 貢獻的開發者</p>
       <div id="contributors-list" style="margin-top:16px">載入中...</div>
     </div>`;
 }
@@ -1692,7 +1692,7 @@ async function loadContributors() {
         '</div></div>';
     }).join("");
   } catch (e) {
-    list.innerHTML = '<p style="color:var(--danger)">' + e.message + '</p>';
+    list.innerHTML = '<p style="color:#d32f2f">' + e.message + '</p>';
   }
 }
 
