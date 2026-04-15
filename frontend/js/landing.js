@@ -289,20 +289,40 @@
     const ps = Math.max(32, s * 0.36);
     const spacing = ps * 0.88;
 
-    for (let y = hcy - s * 1.25; y < hcy + s * 0.95; y += spacing) {
-      for (let x = cx - s * 1.35; x < cx + s * 1.35; x += spacing) {
-        if (isInHeart(x, y, cx, hcy, s)) {
-          heartPieces.push({
-            x, y, size: ps, alpha: 0,
-            color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
-            tabs: {
-              top:    (Math.random() > .5 ? 1 : -1),
-              right:  (Math.random() > .5 ? 1 : -1),
-              bottom: (Math.random() > .5 ? 1 : -1),
-              left:   (Math.random() > .5 ? 1 : -1),
-            },
-          });
-        }
+    // Extend bounds to fully cover the heart (bottom tip reaches ~hcy + 1.15s)
+    const yStart = hcy - s * 1.3;
+    const yEnd   = hcy + s * 1.25;
+    const xStart = cx  - s * 1.6;
+    const xEnd   = cx  + s * 1.6;
+
+    // Track piece index by grid position so adjacent tabs can interlock
+    const indexMap = new Map(); // "col,row" → index in heartPieces
+
+    let row = 0;
+    for (let y = yStart; y < yEnd; y += spacing, row++) {
+      let col = 0;
+      for (let x = xStart; x < xEnd; x += spacing, col++) {
+        if (!isInHeart(x, y, cx, hcy, s)) continue;
+
+        // Derive left/top tabs from neighbours so pieces interlock
+        const leftIdx = indexMap.get(`${col - 1},${row}`);
+        const topIdx  = indexMap.get(`${col},${row - 1}`);
+
+        const rightTab  = Math.random() > 0.5 ? 1 : -1;
+        const bottomTab = Math.random() > 0.5 ? 1 : -1;
+        const leftTab   = leftIdx !== undefined
+          ? -heartPieces[leftIdx].tabs.right
+          : (Math.random() > 0.5 ? 1 : -1);
+        const topTab    = topIdx !== undefined
+          ? -heartPieces[topIdx].tabs.bottom
+          : (Math.random() > 0.5 ? 1 : -1);
+
+        indexMap.set(`${col},${row}`, heartPieces.length);
+        heartPieces.push({
+          x, y, size: ps, alpha: 0,
+          color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
+          tabs: { top: topTab, right: rightTab, bottom: bottomTab, left: leftTab },
+        });
       }
     }
 
