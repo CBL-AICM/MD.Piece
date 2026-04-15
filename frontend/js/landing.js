@@ -27,16 +27,16 @@
     btnShow:    9.0,
   };
 
-  /* ── Warm beige palette ── */
+  /* ── Winter dusk palette ── */
   const PIECE_COLORS = [
-    '#E8DDD0','#DDD1C2','#F0E5D5','#D5CCBF','#E3D8C8',
-    '#CFC5B5','#EBE1D2','#D9CFC1','#E5DBCC','#D2C8B5',
-    '#DFD5C5','#E7DCD0',
+    '#D8D1CC','#CEC5C0','#C5BDC0','#B8B6BE','#B0B1BB',
+    '#A7A9B4','#9FA5B3','#989FB0','#CFC4BE','#D4C7C0',
+    '#C2BCC0','#ABB0BE',
   ];
   const HEART_COLORS = [
-    '#EDE4D8','#E0D7CB','#F2EBE0','#D8D0C5',
-    '#E8DFD2','#DBD2C5','#EFE8DC','#E3DAD0',
-    '#D5CCC0','#EEEAD6','#E6DDD0','#DED5C8',
+    '#DDD5CF','#D4CCC6','#CBC4C2','#C4C0C3',
+    '#B9BAC1','#B0B4BE','#A9AFBB','#9EA7B8',
+    '#CFC7C3','#D8D0CA','#C6C0C0','#B8BDC7',
   ];
   const WORDS = ['疾病','未知','迷茫','藥','健康','症狀','希望','治療','陪伴','守護'];
 
@@ -126,8 +126,8 @@
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    ctx.strokeStyle = 'rgba(175,165,148,0.45)';
-    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(72,83,100,0.18)';
+    ctx.lineWidth = 1;
     ctx.stroke();
     ctx.restore();
   }
@@ -182,16 +182,15 @@
   function drawECG(progress) {
     if (progress <= 0) return;
     const s = getHeartScale();
-    const hcy = getHeartCY();
-    const lineW = s * 1.8;
+    const lineW = Math.max(W * 0.88, s * 2.4);
     const startX = cx - lineW / 2;
-    const baseY = hcy + s * 0.06;
+    const baseY = H * 0.76;
 
     ctx.save();
-    ctx.shadowColor = 'rgba(91, 159, 232, 0.4)';
-    ctx.shadowBlur = 8;
-    ctx.strokeStyle = 'rgba(91, 159, 232, 0.85)';
-    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(130, 137, 164, 0.12)';
+    ctx.shadowBlur = 4;
+    ctx.strokeStyle = 'rgba(72, 83, 100, 0.18)';
+    ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -201,11 +200,11 @@
       const n = i / 200;
       const px = startX + n * lineW;
       let dy = 0;
-      if      (n > 0.10 && n < 0.18) dy = -8 * Math.sin((n - 0.10) / 0.08 * Math.PI);
-      else if (n > 0.26 && n < 0.30) dy = 12;
-      else if (n > 0.30 && n < 0.37) dy = -48 * Math.sin((n - 0.30) / 0.07 * Math.PI);
-      else if (n > 0.37 && n < 0.42) dy = 16 * Math.sin((n - 0.37) / 0.05 * Math.PI);
-      else if (n > 0.53 && n < 0.64) dy = -12 * Math.sin((n - 0.53) / 0.11 * Math.PI);
+      if      (n > 0.10 && n < 0.18) dy = -4 * Math.sin((n - 0.10) / 0.08 * Math.PI);
+      else if (n > 0.26 && n < 0.30) dy = 6;
+      else if (n > 0.30 && n < 0.37) dy = -24 * Math.sin((n - 0.30) / 0.07 * Math.PI);
+      else if (n > 0.37 && n < 0.42) dy = 8 * Math.sin((n - 0.37) / 0.05 * Math.PI);
+      else if (n > 0.53 && n < 0.64) dy = -6 * Math.sin((n - 0.53) / 0.11 * Math.PI);
       if (i === 0) ctx.moveTo(px, baseY + dy); else ctx.lineTo(px, baseY + dy);
     }
     ctx.stroke();
