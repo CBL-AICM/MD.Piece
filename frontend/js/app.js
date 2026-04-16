@@ -654,6 +654,15 @@ function medications() {
     <div class="card">
       <h3><i data-lucide="camera" style="width:18px;height:18px;vertical-align:middle"></i> 藥袋辨識</h3>
       <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">拍攝或上傳藥袋照片，AI 自動辨識藥物資訊</p>
+      <div style="margin-top:10px;padding:10px 12px;background:rgba(100,140,200,0.08);border-radius:var(--radius-sm);border:1px solid rgba(100,140,200,0.2);font-size:0.85rem;color:var(--text-dim)">
+        <strong style="color:var(--text-main);font-size:0.85rem">拍攝小提示</strong>
+        <ul style="margin:6px 0 0 16px;padding:0;line-height:1.6">
+          <li>將藥袋平放在桌面，避免皺摺遮蓋文字</li>
+          <li>在光線充足處拍攝，避免反光與陰影</li>
+          <li>確保<strong>藥名、劑量、用法</strong>等文字完整入鏡</li>
+          <li>一次拍一包藥袋，避免多包重疊</li>
+        </ul>
+      </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="primary" onclick="document.getElementById('med-camera').click()">
           <i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍攝藥袋
