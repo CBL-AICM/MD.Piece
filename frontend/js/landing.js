@@ -157,6 +157,9 @@
       contentShown = true;
       const el = document.getElementById('landing-text');
       if (el) el.classList.add('show');
+      // Concept block reveals alongside (its own CSS delay handles the staggered fade-in)
+      const concept = document.getElementById('landing-concept');
+      if (concept) concept.classList.add('show');
     }
 
     // Button is already visible in the split layout (no separate show needed)

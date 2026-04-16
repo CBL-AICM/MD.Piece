@@ -94,7 +94,9 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 32px 0 40px;
   transition: opacity 0.8s ease;
   background:
     radial-gradient(ellipse at 80% 15%, rgba(220,237,247,0.55), transparent 60%),
@@ -259,6 +261,95 @@ body {
   font-weight: 700;
   letter-spacing: 3px;
   text-indent: 3px;
+}
+
+/* ─── Platform concept / philosophy intro ──────────────── */
+.landing-concept {
+  position: relative;
+  z-index: 10;
+  margin: 38px auto 0;
+  padding: 22px 32px 24px;
+  max-width: 620px;
+  width: calc(100% - 12vw);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 1.4s ease 0.4s, transform 1.2s ease 0.4s;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(248,251,253,0.72), rgba(220,237,247,0.32));
+  border: 1px solid rgba(132,131,136,0.22);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 10px 32px rgba(104,93,90,0.10);
+}
+.landing-concept.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.landing-concept-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Cormorant Garamond", "Noto Serif TC", serif;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 6px;
+  text-indent: 6px;
+  color: #848388;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.landing-concept-label::before,
+.landing-concept-label::after {
+  content: "";
+  display: inline-block;
+  width: 32px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #848388, transparent);
+}
+
+.landing-concept-text {
+  font-family: "Noto Serif TC", "Cormorant Garamond", serif;
+  font-size: 0.98rem;
+  line-height: 2.1;
+  letter-spacing: 1.6px;
+  color: #685D5A;
+  margin: 0;
+}
+.landing-concept-text em {
+  font-style: normal;
+  color: #685D5A;
+  background: linear-gradient(180deg, transparent 60%, rgba(220,237,247,0.9) 60%);
+  padding: 0 3px;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Three dots under the concept — symbolising pieces */
+.landing-concept-mark {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.landing-concept-mark span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #848388;
+  opacity: 0.45;
+  animation: conceptDot 3s ease-in-out infinite;
+}
+.landing-concept-mark span:nth-child(2) { animation-delay: 0.3s; }
+.landing-concept-mark span:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes conceptDot {
+  0%, 100% { transform: translateY(0); opacity: 0.35; }
+  50%      { transform: translateY(-3px); opacity: 0.85; }
 }
 
 /* ─── Floating puzzle decorations on landing ──────────── */
@@ -1667,6 +1758,25 @@ button.secondary:hover {
 
   .landing-logo {
     font-size: 3.2rem;
+  }
+
+  .landing-concept {
+    margin-top: 28px;
+    padding: 18px 20px 20px;
+    width: calc(100% - 32px);
+  }
+  .landing-concept-text {
+    font-size: 0.92rem;
+    line-height: 1.95;
+    letter-spacing: 1.2px;
+  }
+  .landing-concept-label {
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+  }
+  .landing-concept-label::before,
+  .landing-concept-label::after {
+    width: 22px;
   }
 
   .puzzle-piece { width: 45px !important; height: 45px !important; }
