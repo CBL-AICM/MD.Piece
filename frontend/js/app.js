@@ -784,32 +784,11 @@ function handleMedPhoto(input) {
           return;
         }
         var data = res.data || {};
-        var saved = data.medications || [];
         var parsed = data.parsed || [];
-        var errors = data.errors || [];
-
-        if (saved.length > 0 && errors.length === 0) {
-          // 全部成功寫入，顯示成功卡 + 列表
-          var html = '<div style="padding:12px;background:rgba(85,184,138,0.08);border-radius:var(--radius-sm);border:1px solid var(--success)">';
-          html += '<strong style="color:var(--success)">✓ 已加入 ' + saved.length + ' 種藥物到我的藥物</strong>';
-          saved.forEach(function(med) {
-            html += '<div style="margin-top:8px;padding:8px;background:var(--bg-glass);border-radius:4px">';
-            html += '<strong>' + escapeHtml(med.name) + '</strong>';
-            if (med.dosage) html += ' · ' + escapeHtml(med.dosage);
-            if (med.frequency) html += '<br><span style="font-size:0.85rem;color:var(--text-dim)">' + escapeHtml(med.frequency) + '</span>';
-            if (med.purpose) html += '<br><span style="font-size:0.85rem;color:var(--accent)">' + escapeHtml(med.purpose) + '</span>';
-            html += '</div>';
-          });
-          html += '</div>';
-          document.getElementById("med-recognize-result").innerHTML = html;
-          showToast("已加入 " + saved.length + " 種藥物 ✓", "success");
-          loadMedicationsPage();
-          return;
-        }
 
         if (parsed.length > 0) {
-          // 辨識出內容但部分/全部寫入失敗 → 顯示可編輯卡片讓使用者確認後推入
-          renderRecognizedEditable(parsed, errors, data.raw_text || "", saved);
+          // 辨識成功 → 一律走可編輯確認卡片，讓患者檢視標準欄位後才寫入
+          renderRecognizedEditable(parsed, [], data.raw_text || "", []);
           return;
         }
 
@@ -837,6 +816,7 @@ function renderRecognizedEditable(parsed, errors, rawText, alreadySaved) {
   var savedNames = {};
   (alreadySaved || []).forEach(function(m) { savedNames[m.name] = true; });
 
+  var inputStyle = "padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)";
   var rows = parsed.map(function(m, i) {
     var isSaved = savedNames[m.name];
     var errMsg = errMap[m.name];
@@ -846,16 +826,24 @@ function renderRecognizedEditable(parsed, errors, rawText, alreadySaved) {
       '<div class="rec-med-card" data-idx="' + i + '" style="padding:10px;background:' + bgTint + ';border:1px solid ' + borderTint + ';border-radius:var(--radius-sm);display:grid;gap:6px">' +
         (isSaved ? '<div style="color:var(--success);font-size:0.8rem">已寫入 ✓</div>' :
          errMsg ? '<div style="color:var(--danger);font-size:0.8rem">寫入失敗：' + escapeHtml(errMsg) + '</div>' : '') +
-        '<input class="rec-name" type="text" value="' + escapeHtml(m.name) + '" placeholder="藥物名稱 *" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+        '<input class="rec-name" type="text" value="' + escapeHtml(m.name) + '" placeholder="藥名 *（必填）" style="' + inputStyle + '" />' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
-          '<input class="rec-dosage" type="text" value="' + escapeHtml(m.dosage) + '" placeholder="劑量" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
-          '<input class="rec-frequency" type="text" value="' + escapeHtml(m.frequency) + '" placeholder="頻率" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+          '<input class="rec-dosage" type="text" value="' + escapeHtml(m.dosage) + '" placeholder="劑量（例：500mg）" style="' + inputStyle + '" />' +
+          '<input class="rec-frequency" type="text" value="' + escapeHtml(m.frequency) + '" placeholder="頻率（例：一天三次）" style="' + inputStyle + '" />' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
-          '<input class="rec-category" type="text" value="' + escapeHtml(m.category) + '" placeholder="分類" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
-          '<input class="rec-purpose" type="text" value="' + escapeHtml(m.purpose) + '" placeholder="用途" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+          '<input class="rec-usage" type="text" value="' + escapeHtml(m.usage) + '" placeholder="用法（飯前/飯後/睡前）" style="' + inputStyle + '" />' +
+          '<input class="rec-duration" type="text" value="' + escapeHtml(m.duration) + '" placeholder="療程（例：7 天）" style="' + inputStyle + '" />' +
         '</div>' +
-        '<textarea class="rec-instructions" rows="2" placeholder="備註 / 指示" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);resize:vertical">' + escapeHtml(m.instructions) + '</textarea>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+          '<input class="rec-category" type="text" value="' + escapeHtml(m.category) + '" placeholder="分類" style="' + inputStyle + '" />' +
+          '<input class="rec-purpose" type="text" value="' + escapeHtml(m.purpose) + '" placeholder="用途" style="' + inputStyle + '" />' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+          '<input class="rec-hospital" type="text" value="' + escapeHtml(m.hospital) + '" placeholder="醫院/診所" style="' + inputStyle + '" />' +
+          '<input class="rec-prescribed-date" type="text" value="' + escapeHtml(m.prescribed_date) + '" placeholder="開立日期（YYYY-MM-DD）" style="' + inputStyle + '" />' +
+        '</div>' +
+        '<textarea class="rec-instructions" rows="2" placeholder="備註 / 注意事項" style="' + inputStyle + ';resize:vertical">' + escapeHtml(m.instructions) + '</textarea>' +
         (isSaved ? '' : '<button class="primary" onclick="submitRecognizedOne(this)" style="padding:6px 10px;font-size:0.85rem">加入這筆到我的藥物</button>') +
       '</div>'
     );
@@ -879,14 +867,32 @@ function renderRecognizedEditable(parsed, errors, rawText, alreadySaved) {
 }
 
 function _collectRecCard(card) {
+  var val = function(sel) { var el = card.querySelector(sel); return el ? (el.value || "").trim() : ""; };
+  // 資料庫目前只有 dosage/frequency/category/purpose/instructions 欄位，
+  // 新增的 usage/duration/hospital/prescribed_date 先合併到 frequency / instructions
+  // 以保留資訊又不用改 schema
+  var frequency = val(".rec-frequency");
+  var usage = val(".rec-usage");
+  var freqCombined = [frequency, usage].filter(Boolean).join("・");
+
+  var instructions = val(".rec-instructions");
+  var duration = val(".rec-duration");
+  var hospital = val(".rec-hospital");
+  var pdate = val(".rec-prescribed-date");
+  var extra = [];
+  if (duration) extra.push("療程：" + duration);
+  if (hospital) extra.push("醫院：" + hospital);
+  if (pdate) extra.push("開立日期：" + pdate);
+  var instCombined = [instructions, extra.join("；")].filter(Boolean).join("\n");
+
   return {
     patient_id: _medsPatientId,
-    name: (card.querySelector(".rec-name").value || "").trim(),
-    dosage: (card.querySelector(".rec-dosage").value || "").trim() || null,
-    frequency: (card.querySelector(".rec-frequency").value || "").trim() || null,
-    category: (card.querySelector(".rec-category").value || "").trim() || null,
-    purpose: (card.querySelector(".rec-purpose").value || "").trim() || null,
-    instructions: (card.querySelector(".rec-instructions").value || "").trim() || null,
+    name: val(".rec-name"),
+    dosage: val(".rec-dosage") || null,
+    frequency: freqCombined || null,
+    category: val(".rec-category") || null,
+    purpose: val(".rec-purpose") || null,
+    instructions: instCombined || null,
   };
 }
 
@@ -976,18 +982,34 @@ function renderManualMedForm(rawText, hint) {
       '<p style="color:var(--warning);margin:0 0 8px">' + escapeHtml(hint) + '</p>' +
       (rawText ? '<details style="margin-bottom:8px"><summary style="font-size:0.85rem;color:var(--text-muted);cursor:pointer">原始辨識文字（可複製參考）</summary><pre style="font-size:0.8rem;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow:auto">' + escapeHtml(rawText) + '</pre></details>' : '') +
       '<div style="display:grid;gap:8px">' +
-        '<label style="font-size:0.85rem;color:var(--text-dim)">藥物名稱 <span style="color:var(--danger)">*</span>' +
+        '<label style="font-size:0.85rem;color:var(--text-dim)">藥名 <span style="color:var(--danger)">*</span>' +
           '<input id="manual-med-name" type="text" placeholder="例：Panadol 普拿疼" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
-        '<label style="font-size:0.85rem;color:var(--text-dim)">劑量' +
-          '<input id="manual-med-dosage" type="text" placeholder="例：500mg / 1顆" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
-        '<label style="font-size:0.85rem;color:var(--text-dim)">服用頻率' +
-          '<input id="manual-med-frequency" type="text" placeholder="例：每日三次、飯後服用" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
-        '<label style="font-size:0.85rem;color:var(--text-dim)">分類' +
-          '<input id="manual-med-category" type="text" placeholder="例：止痛藥、降血壓" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
-        '<label style="font-size:0.85rem;color:var(--text-dim)">用途' +
-          '<input id="manual-med-purpose" type="text" placeholder="例：緩解頭痛、控制血壓" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
-        '<label style="font-size:0.85rem;color:var(--text-dim)">備註 / 指示' +
-          '<textarea id="manual-med-instructions" rows="2" placeholder="例：飯後 30 分鐘服用；避免與葡萄柚汁併用" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);resize:vertical"></textarea></label>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<label style="font-size:0.85rem;color:var(--text-dim)">劑量' +
+            '<input id="manual-med-dosage" type="text" placeholder="例：500mg / 1顆" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+          '<label style="font-size:0.85rem;color:var(--text-dim)">頻率' +
+            '<input id="manual-med-frequency" type="text" placeholder="例：一天三次" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<label style="font-size:0.85rem;color:var(--text-dim)">用法' +
+            '<input id="manual-med-usage" type="text" placeholder="飯前 / 飯後 / 睡前" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+          '<label style="font-size:0.85rem;color:var(--text-dim)">療程' +
+            '<input id="manual-med-duration" type="text" placeholder="例：7 天 / 長期" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<label style="font-size:0.85rem;color:var(--text-dim)">分類' +
+            '<input id="manual-med-category" type="text" placeholder="例：止痛藥" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+          '<label style="font-size:0.85rem;color:var(--text-dim)">用途' +
+            '<input id="manual-med-purpose" type="text" placeholder="例：緩解頭痛" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<label style="font-size:0.85rem;color:var(--text-dim)">醫院 / 診所' +
+            '<input id="manual-med-hospital" type="text" placeholder="例：台大醫院" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+          '<label style="font-size:0.85rem;color:var(--text-dim)">開立日期' +
+            '<input id="manual-med-prescribed-date" type="text" placeholder="YYYY-MM-DD" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
+        '</div>' +
+        '<label style="font-size:0.85rem;color:var(--text-dim)">備註 / 注意事項' +
+          '<textarea id="manual-med-instructions" rows="2" placeholder="例：避免與葡萄柚汁併用" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);resize:vertical"></textarea></label>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
         '<button class="primary" onclick="submitManualMed()">加入我的藥物</button>' +
@@ -998,16 +1020,32 @@ function renderManualMedForm(rawText, hint) {
 }
 
 function submitManualMed() {
-  var name = (document.getElementById("manual-med-name").value || "").trim();
+  var g = function(id) { var el = document.getElementById(id); return el ? (el.value || "").trim() : ""; };
+  var name = g("manual-med-name");
   if (!name) { showToast("請至少填寫藥物名稱", "warning"); return; }
+
+  var frequency = g("manual-med-frequency");
+  var usage = g("manual-med-usage");
+  var freqCombined = [frequency, usage].filter(Boolean).join("・");
+
+  var instructions = g("manual-med-instructions");
+  var duration = g("manual-med-duration");
+  var hospital = g("manual-med-hospital");
+  var pdate = g("manual-med-prescribed-date");
+  var extra = [];
+  if (duration) extra.push("療程：" + duration);
+  if (hospital) extra.push("醫院：" + hospital);
+  if (pdate) extra.push("開立日期：" + pdate);
+  var instCombined = [instructions, extra.join("；")].filter(Boolean).join("\n");
+
   var body = {
     patient_id: _medsPatientId,
     name: name,
-    dosage: (document.getElementById("manual-med-dosage").value || "").trim() || null,
-    frequency: (document.getElementById("manual-med-frequency").value || "").trim() || null,
-    category: (document.getElementById("manual-med-category").value || "").trim() || null,
-    purpose: (document.getElementById("manual-med-purpose").value || "").trim() || null,
-    instructions: (document.getElementById("manual-med-instructions").value || "").trim() || null,
+    dosage: g("manual-med-dosage") || null,
+    frequency: freqCombined || null,
+    category: g("manual-med-category") || null,
+    purpose: g("manual-med-purpose") || null,
+    instructions: instCombined || null,
   };
   fetch(API + "/medications/", {
     method: "POST",

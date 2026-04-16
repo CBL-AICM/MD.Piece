@@ -137,48 +137,31 @@ def recognize_from_photo(body: MedicationPhotoUpload):
             "errors": [],
         }
 
-    sb = get_supabase()
-    _ensure_patient_exists(sb, body.patient_id)
-
-    saved = []
-    errors = []
+    # 只做辨識，不自動寫入 DB
+    # 讓前端顯示可編輯卡片，由使用者確認後再按「加入我的藥物」寫入
+    # 原因：每家醫院版型不同，辨識結果需人工確認；強迫走確認流程可避免錯誤資料污染藥物清單
     parsed = []
     for med in meds:
-        row = {
-            "patient_id": body.patient_id,
-            "name": (med.get("name") or "未知藥物").strip() or "未知藥物",
+        parsed.append({
+            "name": (med.get("name") or "").strip() or "未知藥物",
             "dosage": med.get("dosage"),
             "frequency": med.get("frequency"),
+            "usage": med.get("usage"),
+            "duration": med.get("duration"),
             "category": med.get("category"),
             "purpose": med.get("purpose"),
             "instructions": med.get("instructions"),
-            "recognized_from_photo": 1,
-        }
-        parsed.append({k: v for k, v in row.items() if k != "recognized_from_photo"})
-        try:
-            result = sb.table("medications").insert(row).execute()
-            if result.data:
-                saved.append(result.data[0])
-            else:
-                errors.append({"name": row["name"], "error": "資料庫未回傳資料"})
-        except Exception as e:
-            logger.error(f"Insert recognized med failed: {e}")
-            errors.append({"name": row["name"], "error": str(e)})
-
-    if saved:
-        message = f"成功辨識並寫入 {len(saved)} 種藥物"
-    elif errors:
-        message = "辨識成功但寫入失敗，可手動調整後重新送出。"
-    else:
-        message = "辨識完成"
+            "hospital": med.get("hospital"),
+            "prescribed_date": med.get("prescribed_date"),
+        })
 
     return {
-        "recognized": len(saved),
-        "medications": saved,
+        "recognized": 0,
+        "medications": [],
         "parsed": parsed,
         "raw_text": raw_text,
-        "message": message,
-        "errors": errors,
+        "message": f"辨識出 {len(parsed)} 種藥物，請確認後加入我的藥物。",
+        "errors": [],
     }
 
 
