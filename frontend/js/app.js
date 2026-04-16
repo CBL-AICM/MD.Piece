@@ -661,6 +661,9 @@ function medications() {
         <button class="secondary" onclick="document.getElementById('med-upload').click()">
           <i data-lucide="upload" style="width:14px;height:14px;vertical-align:middle"></i> 上傳照片
         </button>
+        <button class="secondary" onclick="renderManualMedForm('','直接填寫藥物資訊，按「加入我的藥物」即可寫入。')">
+          <i data-lucide="pencil" style="width:14px;height:14px;vertical-align:middle"></i> 手動輸入
+        </button>
         <input type="file" id="med-camera" accept="image/*" capture="environment" style="display:none" onchange="handleMedPhoto(this)" />
         <input type="file" id="med-upload" accept="image/*" style="display:none" onchange="handleMedPhoto(this)" />
       </div>
