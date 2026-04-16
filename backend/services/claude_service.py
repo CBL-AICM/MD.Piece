@@ -72,7 +72,9 @@ def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") ->
         raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
+        result["raw_text"] = raw
+        return result
     except json.JSONDecodeError:
         logger.warning(f"Medicine bag recognition returned non-JSON: {raw[:200]}")
         return {"medications": [], "raw_text": raw}

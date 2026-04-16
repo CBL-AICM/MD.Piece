@@ -959,11 +959,10 @@ function _afterBulkAdd(ok, fail) {
 }
 
 function renderManualMedForm(rawText, hint) {
-  var raw = (rawText || "").replace(/"/g, "&quot;");
   var html =
     '<div style="padding:12px;background:rgba(230,180,80,0.08);border-radius:var(--radius-sm);border:1px solid var(--warning)">' +
-      '<p style="color:var(--warning);margin:0 0 8px">' + hint + '</p>' +
-      (rawText ? '<details style="margin-bottom:8px"><summary style="font-size:0.85rem;color:var(--text-muted);cursor:pointer">原始辨識文字（可複製參考）</summary><pre style="font-size:0.8rem;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow:auto">' + rawText + '</pre></details>' : '') +
+      '<p style="color:var(--warning);margin:0 0 8px">' + escapeHtml(hint) + '</p>' +
+      (rawText ? '<details style="margin-bottom:8px"><summary style="font-size:0.85rem;color:var(--text-muted);cursor:pointer">原始辨識文字（可複製參考）</summary><pre style="font-size:0.8rem;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow:auto">' + escapeHtml(rawText) + '</pre></details>' : '') +
       '<div style="display:grid;gap:8px">' +
         '<label style="font-size:0.85rem;color:var(--text-dim)">藥物名稱 <span style="color:var(--danger)">*</span>' +
           '<input id="manual-med-name" type="text" placeholder="例：Panadol 普拿疼" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" /></label>' +
