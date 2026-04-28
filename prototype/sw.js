@@ -1,4 +1,4 @@
-const CACHE_NAME = "md-piece-pwa-v9";
+const CACHE_NAME = "md-piece-pwa-v16";
 const APP_ASSETS = [
   "./",
   "./index.html",

@@ -1,11 +1,7 @@
 {
   "builds": [
     {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "frontend/**",
+      "src": "prototype/**",
       "use": "@vercel/static"
     }
   ],
@@ -30,49 +26,26 @@
       ]
     },
     {
-      "source": "/css/(.*)",
+      "source": "/styles.css",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
       ]
     },
     {
-      "source": "/js/(.*)",
+      "source": "/scripts/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
       ]
     },
     {
-      "source": "/icons/(.*)",
+      "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+        { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
       ]
     }
   ],
   "routes": [
-    { "src": "/patients/(.*)", "dest": "api/index.py" },
-    { "src": "/patients", "dest": "api/index.py" },
-    { "src": "/doctors/(.*)", "dest": "api/index.py" },
-    { "src": "/doctors", "dest": "api/index.py" },
-    { "src": "/symptoms/(.*)", "dest": "api/index.py" },
-    { "src": "/symptoms", "dest": "api/index.py" },
-    { "src": "/education/(.*)", "dest": "api/index.py" },
-    { "src": "/education", "dest": "api/index.py" },
-    { "src": "/emotions/(.*)", "dest": "api/index.py" },
-    { "src": "/emotions", "dest": "api/index.py" },
-    { "src": "/medications/(.*)", "dest": "api/index.py" },
-    { "src": "/medications", "dest": "api/index.py" },
-    { "src": "/reports/(.*)", "dest": "api/index.py" },
-    { "src": "/reports", "dest": "api/index.py" },
-    { "src": "/triage/(.*)", "dest": "api/index.py" },
-    { "src": "/triage", "dest": "api/index.py" },
-    { "src": "/xiaohe/(.*)", "dest": "api/index.py" },
-    { "src": "/xiaohe", "dest": "api/index.py" },
-    { "src": "/records/(.*)", "dest": "api/index.py" },
-    { "src": "/records", "dest": "api/index.py" },
-    { "src": "/research/(.*)", "dest": "api/index.py" },
-    { "src": "/research", "dest": "api/index.py" },
-    { "src": "/auth/(.*)", "dest": "api/index.py" },
-    { "src": "/auth", "dest": "api/index.py" },
-    { "src": "/(.*)", "dest": "frontend/$1" }
+    { "src": "/", "dest": "prototype/index.html" },
+    { "src": "/(.*)", "dest": "prototype/$1" }
   ]
 }
