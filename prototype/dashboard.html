@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD.Piece</title>
+  <meta name="theme-color" content="#173b6f">
+  <link rel="icon" href="./assets/app-icon-connect.png" type="image/png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="dashboard-body">
+  <div class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      <div class="dashboard-brand">
+        <img class="dashboard-brand-mark" src="./assets/app-icon-connect.png" alt="MD.Piece icon">
+        <div>
+          <h1>MD.Piece</h1>
+          <p>MEDICAL PLATFORM</p>
+        </div>
+      </div>
+
+      <div class="dashboard-menu">
+        <p class="dashboard-menu-heading">衛教功能</p>
+        <div class="dashboard-menu-item">
+          <span class="dashboard-menu-icon">◎</span>
+          <span>症狀衛教</span>
+        </div>
+        <div class="dashboard-menu-item">
+          <span class="dashboard-menu-icon">◌</span>
+          <span>疾病衛教</span>
+        </div>
+        <div class="dashboard-menu-item">
+          <span class="dashboard-menu-icon">◔</span>
+          <span>藥物衛教</span>
+        </div>
+        <div class="dashboard-menu-item">
+          <span class="dashboard-menu-icon">△</span>
+          <span>數據報告衛教</span>
+        </div>
+        <div class="dashboard-menu-item">
+          <span class="dashboard-menu-icon">◫</span>
+          <span>生理數據紀錄</span>
+        </div>
+        <div class="dashboard-menu-item">
+          <span class="dashboard-menu-icon">✦</span>
+          <span>每日小故事</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div>
+          <p class="dashboard-topbar-kicker">首頁</p>
+          <strong>MD.Piece</strong>
+        </div>
+        <a class="dashboard-exit" href="./index.html">回到開始頁</a>
+      </header>
+
+      <section class="dashboard-content">
+        <article class="dashboard-welcome-card">
+          <img class="dashboard-welcome-logo" src="./assets/app-icon-connect.png" alt="MD.Piece icon">
+          <div class="dashboard-welcome-copy">
+            <h2>午安，lisa</h2>
+            <p class="dashboard-welcome-date">2026/04/20 星期一</p>
+            <div class="dashboard-welcome-meta">
+              <span class="dashboard-visit-chip">下次回診 2026/05/04 14:30</span>
+            </div>
+          </div>
+          <div class="dashboard-mood-panel" aria-label="每日情緒標示">
+            <p class="dashboard-panel-label">每日情緒</p>
+            <div class="dashboard-mood-list">
+              <button class="dashboard-mood-chip" type="button" data-mood="開心" aria-pressed="false">開心</button>
+              <button class="dashboard-mood-chip" type="button" data-mood="沒感覺" aria-pressed="false">沒感覺</button>
+              <button class="dashboard-mood-chip" type="button" data-mood="難過" aria-pressed="false">難過</button>
+              <button class="dashboard-mood-chip" type="button" data-mood="生氣" aria-pressed="false">生氣</button>
+            </div>
+          </div>
+        </article>
+
+        <section class="dashboard-board-frame">
+          <div class="dashboard-board-inner">
+            <div class="dashboard-puzzle-stage">
+              <svg id="puzzle-board" class="puzzle-svg" viewBox="-22 -22 644 644" aria-label="九宮格拼圖功能入口"></svg>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="./scripts/feature-data.js"></script>
+  <script src="./scripts/dashboard.js" defer></script>
+  <script src="./scripts/register-sw.js" defer></script>
+</body>
+</html>
