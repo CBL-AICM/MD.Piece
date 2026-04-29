@@ -129,7 +129,7 @@ md.piece/
 
 ```bash
 # 1. Clone 專案
-git clone https://github.com/human530/MD.Piece.git
+git clone https://github.com/CBL-AICM/MD.Piece.git
 cd MD.Piece
 
 # 2. 設定環境變數
