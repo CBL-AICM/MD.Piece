@@ -53,9 +53,18 @@ frontend-doctor/
 
 依 proposal 7.3 分 Phase 實作：
 
-- **Phase 0** ✓ 骨架（本 PR）
-- **Phase 1** 後端補表（`doctor_notes`、`medication_changes`、`alerts`）
-- **Phase 2** 患者優先序 + 警示燈號
-- **Phase 3** 快速預覽 + 時間軸 + 備註
-- **Phase 4** 三十天整合報告（Recharts 圖表）+ 調藥追蹤 + 跨回診比較
+- **Phase 0** ✓ 骨架
+- **Phase 1** ✓ 後端補表（`doctor_notes`、`medication_changes`、`alerts`）
+- **Phase 2** ✓ 患者優先序 + 警示燈號（`PatientList`、`Alerts`）
+- **Phase 3** ✓ 快速預覽 + 時間軸 + 備註（`PatientDetail`）
+- **Phase 4**（部分）患者整合報告：情緒 × 服藥順從率（`Reports`）；待補：跨回診比較、LLM 文字摘要
 - **Phase 5** 建議問診清單 + 衛教審核推送（LLM）
+
+## 與患者端的串接
+
+醫師端與患者端 PWA 共用同一個 FastAPI 後端與 Supabase 資料庫：
+
+- 患者每日情緒（`/emotions`）、服藥打卡（`/medications/log`）、症狀分析會即時呈現在患者詳情頁
+- 醫師寫入的備註（`/doctor-notes`）、調藥（`/medication-changes`）、警示確認/結案（`/alerts`）會反過來影響後續排序與提醒
+- 後端 API 主機若不在 localhost，請至「設定」頁覆蓋 API base（存於 `localStorage.mdp.apiBase`）
+- 進行寫入時的醫師身份也存在「設定」（`localStorage.mdp.doctorId`）
