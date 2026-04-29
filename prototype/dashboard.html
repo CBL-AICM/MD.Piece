@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD.Piece</title>
+  <meta name="theme-color" content="#173b6f">
+  <link rel="icon" href="./assets/app-icon-connect.png" type="image/png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="dashboard-body">
+  <div class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      <div class="dashboard-brand">
+        <img class="dashboard-brand-mark" src="./assets/app-icon-connect.png" alt="MD.Piece icon">
+        <div>
+          <h1>MD.Piece</h1>
+          <p>CARE NOTEBOOK</p>
+        </div>
+      </div>
+
+      <div class="dashboard-menu">
+        <p class="dashboard-menu-heading">今日照護</p>
+        <a class="dashboard-menu-item" href="./pages/symptoms.html">
+          <span class="dashboard-menu-icon">◎</span>
+          <span>症狀紀錄</span>
+        </a>
+        <a class="dashboard-menu-item" href="./pages/education.html">
+          <span class="dashboard-menu-icon">◌</span>
+          <span>療效回饋</span>
+        </a>
+        <a class="dashboard-menu-item" href="./pages/medications.html">
+          <span class="dashboard-menu-icon">◔</span>
+          <span>藥物快記</span>
+        </a>
+        <a class="dashboard-menu-item" href="./pages/labs.html">
+          <span class="dashboard-menu-icon">△</span>
+          <span>報告重點</span>
+        </a>
+        <a class="dashboard-menu-item" href="./pages/condition-education.html">
+          <span class="dashboard-menu-icon">◫</span>
+          <span>生理數據紀錄</span>
+        </a>
+        <a class="dashboard-menu-item" href="./pages/previsit.html">
+          <span class="dashboard-menu-icon">✦</span>
+          <span>診前碎片</span>
+        </a>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div>
+          <p class="dashboard-topbar-kicker">安心整理，不急著一次完成</p>
+          <strong>MD.Piece</strong>
+        </div>
+        <a class="dashboard-exit" href="./index.html">回到開始頁</a>
+      </header>
+
+      <section class="dashboard-content">
+        <article class="dashboard-welcome-card">
+          <img class="dashboard-welcome-logo" src="./assets/app-icon-connect.png" alt="MD.Piece icon">
+          <div class="dashboard-welcome-copy">
+            <h2>午安，lisa</h2>
+            <p class="dashboard-welcome-date">2026/04/20 星期一</p>
+            <div class="dashboard-welcome-meta">
+              <span class="dashboard-visit-chip">下次回診 2026/05/04 14:30</span>
+            </div>
+          </div>
+          <div class="dashboard-mood-panel" aria-label="每日情緒標示">
+            <p class="dashboard-panel-label">今天狀態</p>
+            <div class="dashboard-mood-list">
+              <button class="dashboard-mood-chip" type="button" data-mood="穩定" aria-pressed="false">穩定</button>
+              <button class="dashboard-mood-chip" type="button" data-mood="有點累" aria-pressed="false">有點累</button>
+              <button class="dashboard-mood-chip" type="button" data-mood="有點焦慮" aria-pressed="false">有點焦慮</button>
+              <button class="dashboard-mood-chip" type="button" data-mood="想先記重點" aria-pressed="false">想先記重點</button>
+            </div>
+          </div>
+        </article>
+
+        <section class="dashboard-board-frame">
+          <div class="dashboard-board-inner">
+            <div class="dashboard-puzzle-stage">
+              <svg id="puzzle-board" class="puzzle-svg" viewBox="-22 -22 644 644" aria-label="九宮格拼圖功能入口"></svg>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="./scripts/feature-data.js"></script>
+  <script src="./scripts/dashboard.js" defer></script>
+  <script src="./scripts/register-sw.js" defer></script>
+</body>
+</html>
