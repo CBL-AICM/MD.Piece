@@ -1,6 +1,31 @@
 const API = window.location.hostname === "localhost" ? "http://localhost:8000" : "";
 const GITHUB_REPO = "CBL-AICM/MD.Piece";
 
+// ─── 顯示模式（年長版 / 普通版）─────────────────────────────
+// 'senior' = 大字體、寬按鈕、高對比；'standard' = 原本的精緻 UI
+
+function getMode() {
+  return localStorage.getItem('mdpiece_mode') || 'standard';
+}
+
+function setMode(mode) {
+  const m = mode === 'senior' ? 'senior' : 'standard';
+  localStorage.setItem('mdpiece_mode', m);
+  document.documentElement.setAttribute('data-mode', m);
+  // 同步切換按鈕顯示
+  document.querySelectorAll('[data-mode-toggle]').forEach(function (el) {
+    el.textContent = m === 'senior' ? '切換為普通版' : '切換為年長版';
+    el.setAttribute('aria-pressed', m === 'senior' ? 'true' : 'false');
+  });
+}
+
+function toggleMode() {
+  setMode(getMode() === 'senior' ? 'standard' : 'senior');
+}
+
+// 在 DOMContentLoaded 之前先把屬性掛上，避免閃爍
+document.documentElement.setAttribute('data-mode', getMode());
+
 // ─── 使用者狀態 ─────────────────────────────────────────────
 
 function getCurrentUser() {

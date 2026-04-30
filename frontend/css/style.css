@@ -2161,3 +2161,139 @@ button.secondary:hover {
   .idcard-row { grid-template-columns: 1fr 1fr; gap: 10px; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   側邊欄底部模式切換按鈕（兩種模式都會用到）
+   ═══════════════════════════════════════════════════════════ */
+
+.sidebar-foot {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border-glass);
+  background: var(--bg-mid);
+}
+.mode-toggle {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.mode-toggle:hover { background: var(--bg-glass-hover); border-color: var(--accent); }
+.mode-toggle[aria-pressed="true"] {
+  background: var(--klein);
+  color: #fff;
+  border-color: var(--klein);
+}
+.mode-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   年長版（[data-mode="senior"]）— 大字體、大按鈕、高對比
+   原則：只覆寫尺寸／間距／對比，不重做佈局
+   ═══════════════════════════════════════════════════════════ */
+
+html[data-mode="senior"] {
+  font-size: 18px; /* 全站 rem 基準 +12.5% */
+}
+
+/* 文字主色加深，提升對比 */
+html[data-mode="senior"] {
+  --text: #2D2521;
+  --text-dim: #4A4642;
+  --text-muted: #5A5450;
+  --border-glass: rgba(45,37,33,0.32);
+  --shadow:    0 6px 22px rgba(42,45,85,0.28);
+  --shadow-sm: 0 3px 12px rgba(42,45,85,0.18);
+}
+
+/* Topbar 主標題加大 */
+html[data-mode="senior"] .topbar { padding: 22px 32px; }
+html[data-mode="senior"] .topbar h2 { font-size: 1.65rem; font-weight: 700; }
+
+/* Sidebar：寬一點、字大、按鈕也大 */
+html[data-mode="senior"] .sidebar { width: 260px; }
+html[data-mode="senior"] .main-content { margin-left: 260px; }
+html[data-mode="senior"] .sidebar-brand h1 { font-size: 1.35rem; }
+html[data-mode="senior"] .sidebar-brand p { font-size: 0.85rem; letter-spacing: 0.6px; }
+html[data-mode="senior"] .nav-item {
+  padding: 18px 22px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  gap: 16px;
+}
+html[data-mode="senior"] .nav-icon svg { width: 26px; height: 26px; stroke-width: 2; }
+html[data-mode="senior"] .nav-item.active {
+  background: rgba(91,159,232,0.22);
+  border-left-width: 5px;
+  color: #2D2521;
+}
+
+/* 卡片 — 內距加寬，h2/h3 變大 */
+html[data-mode="senior"] .card { padding: 26px 28px; border-radius: 18px; }
+html[data-mode="senior"] .card h2 { font-size: 1.6rem; }
+html[data-mode="senior"] .card h3 { font-size: 1.25rem; }
+html[data-mode="senior"] .card p { font-size: 1.05rem; line-height: 1.75; }
+
+/* 表單 — 大輸入框、大字 */
+html[data-mode="senior"] input,
+html[data-mode="senior"] select,
+html[data-mode="senior"] textarea {
+  padding: 16px 18px;
+  font-size: 1.1rem;
+  border-width: 2px;
+  border-radius: 12px;
+}
+html[data-mode="senior"] textarea { min-height: 90px; }
+
+/* 按鈕 — 加高觸控區、加大字、加粗 */
+html[data-mode="senior"] button.primary,
+html[data-mode="senior"] button.secondary {
+  padding: 16px 32px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  min-height: 56px;
+  border-radius: 12px;
+}
+html[data-mode="senior"] button.primary {
+  box-shadow: 0 4px 16px rgba(91,159,232,0.45);
+}
+
+/* Mode toggle 在年長版下也放大 */
+html[data-mode="senior"] .mode-toggle {
+  padding: 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  min-height: 56px;
+}
+html[data-mode="senior"] .mode-hint { font-size: 0.95rem; }
+
+/* 病歷／藥物卡片 */
+html[data-mode="senior"] .record-card { padding: 18px 22px; }
+html[data-mode="senior"] .record-card p { font-size: 1.05rem; }
+
+/* hamburger 在小螢幕也大一點 */
+html[data-mode="senior"] .hamburger { font-size: 1.6rem; padding: 6px 10px; }
+
+/* 取消大量裝飾色弱化的 dim 字 — 在年長版改用主文色 */
+html[data-mode="senior"] .nav-item { color: #2D2521; }
+html[data-mode="senior"] .nav-item:hover { color: #2D2521; }
+
+/* 年長版隱藏裝飾性「v2.0」「貢獻者」等較少用到的小元素，避免分心 */
+html[data-mode="senior"] .topbar > span:last-child { display: none; }
+
+/* 焦點環加粗以利可見性 */
+html[data-mode="senior"] *:focus-visible {
+  outline: 3px solid var(--klein);
+  outline-offset: 3px;
+}
+

@@ -184,6 +184,12 @@
           <span class="nav-icon"><i data-lucide="heart-handshake" style="width:18px;height:18px"></i></span> 貢獻者
         </button>
       </nav>
+      <div class="sidebar-foot">
+        <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
+          切換為年長版
+        </button>
+        <p class="mode-hint">年長版：放大字體與按鈕、提高對比</p>
+      </div>
     </aside>
 
     <!-- Main content area -->
@@ -299,11 +305,15 @@
           document.getElementById('app-wrapper').classList.add('show');
           showPage('home');
           lucide.createIcons();
+          setMode(getMode());
         } else {
           showIdCardRegister();
         }
       }, 800);
     }
+
+    // 初始化模式按鈕文字（即使尚未進入 app）
+    document.addEventListener('DOMContentLoaded', () => setMode(getMode()));
 
     // ─── Sidebar Navigation ────────────────────────────────
     const pageTitles = {
