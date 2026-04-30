@@ -1,24 +1,38 @@
-const MOCK = [
-  { id: 'p1', name: '王小明', age: 62, priority: 'crit', lastVisit: '3/28', note: 'ER 訪視 · 連續 2 日漏藥' },
-  { id: 'p2', name: '林美華', age: 54, priority: 'err', lastVisit: '4/02', note: '情緒分數低於基線' },
-  { id: 'p3', name: '陳志強', age: 47, priority: 'warn', lastVisit: '4/08', note: '劑量調整後待追蹤' },
-  { id: 'p4', name: '張淑芬', age: 71, priority: 'warn', lastVisit: '3/30', note: '疼痛評分上升' },
-  { id: 'p5', name: '李家興', age: 38, priority: 'ok', lastVisit: '4/10', note: '穩定' },
-  { id: 'p6', name: '黃雅婷', age: 29, priority: 'ok', lastVisit: '4/09', note: '穩定' },
-]
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { apiGet } from '../lib/api.js'
 
-const LABEL = {
-  crit: '需立即關注',
-  err: '需立即關注',
-  warn: '需要關注',
-  ok: '狀況穩定',
+const PRIORITY_LABEL = {
+  needs_immediate_attention: '需立即關注',
+  needs_attention: '需要關注',
+  stable: '狀況穩定',
+}
+
+const PRIORITY_BADGE = {
+  needs_immediate_attention: 'crit',
+  needs_attention: 'warn',
+  stable: 'ok',
 }
 
 export default function PatientList() {
+  const [patients, setPatients] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    apiGet('/doctor-dashboard/priority')
+      .then((d) => setPatients(d.patients || []))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
     <>
       <h1 className="page-title">患者清單</h1>
-      <p className="page-sub">依需要關注程度自動排序（示範資料）</p>
+      <p className="page-sub">依需要關注程度自動排序（個人化基準線比對）</p>
+
+      {loading && <p className="page-sub">載入中…</p>}
+      {error && <p className="page-sub" style={{ color: 'var(--err)' }}>連線失敗：{error}</p>}
 
       <div className="card" style={{ padding: 0 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -27,27 +41,44 @@ export default function PatientList() {
               <th style={th}>狀態</th>
               <th style={th}>姓名</th>
               <th style={th}>年齡</th>
-              <th style={th}>上次回診</th>
-              <th style={th}>重點</th>
+              <th style={th}>未處理警示</th>
+              <th style={th}>本期重點</th>
             </tr>
           </thead>
           <tbody>
-            {MOCK.map((p) => (
-              <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={td}><span className={`badge ${p.priority}`}>{LABEL[p.priority]}</span></td>
-                <td style={{ ...td, fontWeight: 600 }}>{p.name}</td>
-                <td style={td}>{p.age}</td>
-                <td style={{ ...td, color: 'var(--text-dim)' }}>{p.lastVisit}</td>
-                <td style={{ ...td, color: 'var(--text-dim)' }}>{p.note}</td>
+            {patients.map((p) => (
+              <tr key={p.patient_id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={td}>
+                  <span className={`badge ${PRIORITY_BADGE[p.priority] || 'ok'}`}>
+                    {PRIORITY_LABEL[p.priority] || p.priority}
+                  </span>
+                </td>
+                <td style={{ ...td, fontWeight: 600 }}>
+                  <Link to={`/patients/${p.patient_id}`}>{p.patient_name || '匿名'}</Link>
+                </td>
+                <td style={td}>{p.age ?? '—'}</td>
+                <td style={td}>
+                  {p.alerts_count > 0 ? (
+                    <span style={{ color: p.critical_alerts_count ? 'var(--err)' : 'var(--text-dim)' }}>
+                      {p.alerts_count}（高 {p.critical_alerts_count}）
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--text-faint)' }}>無</span>
+                  )}
+                </td>
+                <td style={{ ...td, color: 'var(--text-dim)' }}>{p.reason}</td>
               </tr>
             ))}
+            {!loading && !patients.length && (
+              <tr>
+                <td colSpan={5} style={{ ...td, textAlign: 'center', color: 'var(--text-faint)' }}>
+                  尚無追蹤中的患者
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-
-      <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text-faint)' }}>
-        * 示範資料，Phase 2 會接上實際患者與警示系統
-      </p>
     </>
   )
 }

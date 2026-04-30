@@ -46,6 +46,8 @@ _SCHEMAS = {
             age INTEGER,
             gender TEXT,
             phone TEXT,
+            icd10_codes TEXT,
+            is_immunosuppressed INTEGER DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
     "doctors": """
@@ -228,9 +230,22 @@ def _get_conn():
     if not _db_initialized:
         for sql in _SCHEMAS.values():
             conn.execute(sql)
+        # Backward-compatible column adds for tables that may pre-date new columns
+        _add_column_if_missing(conn, "patients", "icd10_codes", "TEXT")
+        _add_column_if_missing(conn, "patients", "is_immunosuppressed", "INTEGER DEFAULT 0")
         conn.commit()
         _db_initialized = True
     return conn
+
+
+def _add_column_if_missing(conn, table: str, column: str, ddl: str) -> None:
+    try:
+        cols = conn.execute(f'PRAGMA table_info("{table}")').fetchall()
+        names = {c[1] for c in cols}
+        if column not in names:
+            conn.execute(f'ALTER TABLE "{table}" ADD COLUMN "{column}" {ddl}')
+    except sqlite3.OperationalError as e:
+        logger.debug(f"add column {table}.{column} skipped: {e}")
 
 
 def _init_db():

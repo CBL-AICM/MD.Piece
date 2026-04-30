@@ -3,6 +3,9 @@ from pydantic import BaseModel
 from typing import Optional
 import logging
 
+from datetime import datetime, timedelta, timezone
+
+from backend.db import get_supabase
 from backend.services.knowledge_analysis import (
     get_disease_profile,
     compare_across_diseases,
@@ -11,6 +14,11 @@ from backend.services.knowledge_analysis import (
     get_comprehension_distribution,
 )
 from backend.services.llm_service import call_claude
+from backend.utils.disease_knowledge import (
+    DISEASE_KNOWLEDGE,
+    get_disease_knowledge,
+    list_supported_diseases as ds_list,
+)
 from backend.utils.icd10 import (
     ICD10_MAP,
     KNOWLEDGE_DIMENSIONS,
@@ -276,6 +284,160 @@ def get_articles(icd10_code: str = ""):
 @router.get("/idle-hints")
 def get_idle_hints():
     return {"hints": []}
+
+
+# ── 固定衛教知識庫（含「不是你的病」區塊） ────────────────
+
+
+@router.get("/knowledge")
+def list_disease_knowledge():
+    """列出所有支援固定衛教的疾病"""
+    return {"diseases": ds_list()}
+
+
+@router.get("/knowledge/{icd10_code}")
+def disease_knowledge(icd10_code: str):
+    """取得單一疾病的結構化衛教（含「不是你的病」消除焦慮區塊）"""
+    data = get_disease_knowledge(icd10_code)
+    if not data:
+        raise HTTPException(status_code=404, detail=f"目前知識庫尚未涵蓋 {icd10_code}")
+    return {"icd10": icd10_code[:3], **data}
+
+
+# ── 個人化衛教（依醫師備註 + 患者數據動態生成） ───────────
+
+
+PERSONALIZED_PROMPT = (
+    "你是 MD.Piece 的個人化衛教助手。\n"
+    "請依患者本次回診後的狀況，生成一段 300-500 字的客製化衛教文字。\n\n"
+    "嚴格遵守：\n"
+    "1. 不要顯示原始檢驗數字，改用「比上次高了一些」「醫師覺得穩定」等白話\n"
+    "2. 強調醫師已經知悉並處理，讓患者安心\n"
+    "3. 結合醫師本次備註中可告知患者的部分（不要透露治療決策的敏感內容）\n"
+    "4. 給可以立刻照做的生活建議（飲食、運動、作息），不要空泛\n"
+    "5. 結尾給予正向鼓勵\n"
+    "6. 繁體中文，Markdown 格式，可用 emoji"
+)
+
+
+class PersonalizedEducationRequest(BaseModel):
+    patient_id: str
+    note_id: str | None = None  # 醫師備註 id；不給就用最新一筆
+    custom_focus: str | None = None  # 醫師額外指定主題
+    auto_send: bool = False  # True = 直接推送（仍需醫師按下確認鈕）
+
+
+@router.post("/personalized")
+def generate_personalized(body: PersonalizedEducationRequest):
+    """
+    依醫師備註 + 患者最新資料生成個人化衛教草稿。
+    醫師預覽後可一鍵推送（auto_send=true）。
+    """
+    sb = get_supabase()
+
+    # 取得患者
+    p_res = sb.table("patients").select("*").eq("id", body.patient_id).execute()
+    patient = p_res.data[0] if p_res.data else None
+    if not patient:
+        raise HTTPException(status_code=404, detail="找不到該患者")
+
+    # 取得醫師備註
+    note = None
+    if body.note_id:
+        n_res = sb.table("doctor_notes").select("*").eq("id", body.note_id).execute()
+        note = n_res.data[0] if n_res.data else None
+    else:
+        n_res = (
+            sb.table("doctor_notes")
+            .select("*")
+            .eq("patient_id", body.patient_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        note = n_res.data[0] if n_res.data else None
+
+    # 患者最近 30 天的數據摘要
+    since = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    sym_count = len(
+        sb.table("symptoms_log")
+        .select("id")
+        .eq("patient_id", body.patient_id)
+        .gte("created_at", since)
+        .execute()
+        .data
+        or []
+    )
+    emotion_rows = (
+        sb.table("emotions")
+        .select("score")
+        .eq("patient_id", body.patient_id)
+        .gte("created_at", since)
+        .execute()
+        .data
+        or []
+    )
+    avg_emo = round(sum(e.get("score", 0) for e in emotion_rows) / len(emotion_rows), 1) if emotion_rows else None
+    med_logs = (
+        sb.table("medication_logs")
+        .select("taken")
+        .eq("patient_id", body.patient_id)
+        .gte("taken_at", since)
+        .execute()
+        .data
+        or []
+    )
+    adherence = (
+        round(sum(1 for m in med_logs if m.get("taken")) / len(med_logs) * 100, 1)
+        if med_logs
+        else None
+    )
+    meds = (
+        sb.table("medications")
+        .select("name,category")
+        .eq("patient_id", body.patient_id)
+        .execute()
+        .data
+        or []
+    )
+
+    icd_codes = patient.get("icd10_codes") or []
+    diseases = [ICD10_MAP.get(c[:3], c) for c in icd_codes]
+
+    user_prompt_lines = [
+        f"患者：{patient.get('name', '匿名')}，{patient.get('age', '?')} 歲",
+        f"目前疾病：{', '.join(diseases) if diseases else '未指定'}",
+        f"目前用藥：{', '.join(m['name'] for m in meds) if meds else '無'}",
+        f"近 30 天症狀記錄：{sym_count} 筆",
+        f"近 30 天平均情緒：{avg_emo if avg_emo is not None else '尚無'}/5",
+        f"近 30 天服藥率：{adherence if adherence is not None else '尚無'}%",
+    ]
+    if note:
+        user_prompt_lines.append("")
+        user_prompt_lines.append("醫師本次備註（請挑選可告知患者的部分）：")
+        user_prompt_lines.append(note.get("content", ""))
+        if note.get("next_focus"):
+            user_prompt_lines.append(f"下次回診觀察重點：{note['next_focus']}")
+    if body.custom_focus:
+        user_prompt_lines.append("")
+        user_prompt_lines.append(f"醫師額外指定主題：{body.custom_focus}")
+
+    user_message = "\n".join(user_prompt_lines)
+
+    try:
+        content = call_claude(PERSONALIZED_PROMPT, user_message)
+    except Exception as e:
+        logger.error(f"Personalized education generation failed: {e}")
+        raise HTTPException(status_code=500, detail="個人化衛教生成失敗，請稍後再試")
+
+    return {
+        "patient_id": body.patient_id,
+        "note_id": note.get("id") if note else None,
+        "draft": content,
+        "auto_send": body.auto_send,
+        "needs_doctor_review": not body.auto_send,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 # ── 慢性病知識理解度分析 ──────────────────────────────
