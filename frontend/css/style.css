@@ -83,7 +83,8 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 
 /* ═══════════════════════════════════════════════════════════
-   LANDING CINEMATIC — Puzzle Rain → Hands → Heart
+   LANDING — Mint Terminal × Starlit Pieces (v5)
+   數位終端 × 星空 × 拼圖碎片 · 粉嫩藍綠
    ═══════════════════════════════════════════════════════════ */
 
 #landing {
@@ -95,17 +96,73 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: opacity 0.8s ease;
+  font-family: "Noto Sans TC", sans-serif;
+  transition: opacity 0.8s ease, background 0.5s ease, color 0.5s ease;
+}
+
+/* ── DARK theme (default · 夜空終端) ────────────────────── */
+#landing[data-theme="dark"] {
+  --landing-text:   #E8FFF9;
+  --landing-dim:    #8FC9BE;
+  --landing-mint:   #A8F0E0;
+  --landing-aqua:   #7FE7D9;
+  --landing-pop:    #B8F2EA;
+  --landing-pink:   #FFD6E8;
+  --landing-term:   #5EEAD4;
+  --landing-card:   rgba(168,240,224,0.06);
+  --landing-border: rgba(168,240,224,0.28);
+  --landing-glow:   rgba(94,234,212,0.45);
   background:
-    radial-gradient(ellipse at 80% 15%, rgba(220,237,247,0.55), transparent 60%),
-    radial-gradient(ellipse at 15% 80%, rgba(235,235,236,0.45), transparent 55%),
-    linear-gradient(180deg, #F8FBFD 0%, #DCEDF7 55%, #EBEBEC 100%);
-  color: #685D5A;
-  --landing-text:  #685D5A;
-  --landing-dim:   #848388;
-  --landing-card:  #F8FBFD;
-  --landing-mid:   #DCEDF7;
-  --landing-grey:  #EBEBEC;
+    radial-gradient(ellipse at 78% 18%, rgba(127,231,217,0.18), transparent 55%),
+    radial-gradient(ellipse at 18% 82%, rgba(255,214,232,0.12), transparent 55%),
+    linear-gradient(180deg, #07171C 0%, #0F2A30 55%, #133A40 100%);
+  color: var(--landing-text);
+}
+
+/* ── LIGHT theme (粉嫩日光) ─────────────────────────────── */
+#landing[data-theme="light"] {
+  --landing-text:   #1F4D49;
+  --landing-dim:    #4F8A82;
+  --landing-mint:   #5EC9B5;
+  --landing-aqua:   #3FB8A6;
+  --landing-pop:    #2BAA92;
+  --landing-pink:   #F4A8C8;
+  --landing-term:   #1F8F7A;
+  --landing-card:   rgba(255,255,255,0.55);
+  --landing-border: rgba(94,201,181,0.4);
+  --landing-glow:   rgba(94,201,181,0.32);
+  background:
+    radial-gradient(ellipse at 78% 18%, rgba(168,240,224,0.65), transparent 55%),
+    radial-gradient(ellipse at 18% 82%, rgba(255,214,232,0.45), transparent 55%),
+    linear-gradient(180deg, #EAFBF6 0%, #D1F2E8 55%, #BFEAD9 100%);
+  color: var(--landing-text);
+}
+
+/* ── Scanline overlay (terminal feel) ──────────────────── */
+#landing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 11;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(94,234,212,0.025) 3px,
+    rgba(94,234,212,0.025) 4px
+  );
+  mix-blend-mode: overlay;
+}
+#landing[data-theme="light"]::after {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(31,77,73,0.03) 3px,
+    rgba(31,77,73,0.03) 4px
+  );
+  mix-blend-mode: multiply;
 }
 
 #landing.fade-out {
@@ -126,7 +183,40 @@ body {
   pointer-events: none;
 }
 
-/* ─── Split layout (logo left, text right) ────────────── */
+/* ── Theme toggle (terminal chip) ──────────────────────── */
+.theme-toggle {
+  position: fixed;
+  top: 22px;
+  right: 24px;
+  z-index: 1002;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: var(--landing-term);
+  background: var(--landing-card);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--landing-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-transform: uppercase;
+}
+.theme-toggle:hover {
+  color: var(--landing-pop);
+  border-color: var(--landing-term);
+  box-shadow: 0 0 18px var(--landing-glow);
+  transform: translateY(-1px);
+}
+.theme-toggle .tt-bracket { opacity: 0.65; }
+.theme-toggle .tt-icon { font-size: 0.85rem; line-height: 1; }
+
+/* ── Split layout ─────────────────────────────────────── */
 .landing-split {
   position: relative;
   z-index: 10;
@@ -139,7 +229,7 @@ body {
   transform: translateY(18px);
   transition: opacity 1.2s ease, transform 1s ease;
   pointer-events: none;
-  max-width: 900px;
+  max-width: 920px;
   width: 100%;
 }
 .landing-split.show {
@@ -148,16 +238,13 @@ body {
   pointer-events: auto;
 }
 
-/* ─── Left: Logo image ──────────────────────────────────── */
-.landing-left {
-  flex-shrink: 0;
-}
+.landing-left { flex-shrink: 0; }
 
 .landing-logo-img {
   width: 240px;
   height: auto;
   border-radius: 20px;
-  filter: drop-shadow(0 4px 24px rgba(43,92,230,0.2));
+  filter: drop-shadow(0 4px 28px var(--landing-glow));
   animation: logoFloat 6s ease-in-out infinite;
 }
 
@@ -166,11 +253,29 @@ body {
   50% { transform: translateY(-10px); }
 }
 
-/* ─── Right: Text content ───────────────────────────────── */
 .landing-right {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+/* Terminal prompt above title */
+.landing-prompt {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  color: var(--landing-term);
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+.landing-prompt::after {
+  content: "_";
+  display: inline-block;
+  margin-left: 2px;
+  animation: terminalBlink 1.05s steps(1, end) infinite;
+}
+@keyframes terminalBlink {
+  50% { opacity: 0; }
 }
 
 .landing-logo {
@@ -178,22 +283,23 @@ body {
   font-style: normal;
   font-size: 3.8rem;
   font-weight: 400;
-  color: #685D5A;
+  color: var(--landing-text);
   letter-spacing: 1px;
   line-height: 1.1;
+  text-shadow: 0 0 28px var(--landing-glow);
 }
 
 .landing-divider {
   width: 60px;
   height: 2px;
   margin: 14px 0;
-  background: linear-gradient(90deg, #848388, #DCEDF7, transparent);
+  background: linear-gradient(90deg, var(--landing-mint), var(--landing-pink), transparent);
   border-radius: 1px;
 }
 
 .landing-tagline {
   font-size: 1rem;
-  color: #685D5A;
+  color: var(--landing-text);
   letter-spacing: 2px;
   line-height: 2.2;
   font-weight: 400;
@@ -201,97 +307,115 @@ body {
 
 .landing-sub-tagline {
   display: inline-block;
-  font-size: 0.72rem;
-  color: #685D5A;
-  letter-spacing: 1.5px;
-  margin-top: 4px;
-  font-style: italic;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    transparent 35%,
-    rgba(220,237,247,0.85) 35%,
-    rgba(220,237,247,0.85) 92%,
-    transparent 92%
-  );
-  padding: 0 6px;
-  border-radius: 2px;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.7rem;
+  color: var(--landing-dim);
+  letter-spacing: 1.4px;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border-left: 2px solid var(--landing-mint);
+  background: linear-gradient(90deg, var(--landing-card), transparent);
+  border-radius: 0 4px 4px 0;
 }
 
-/* ─── Enter button ─────────────────────────────────────── */
+/* ── Enter button — terminal bracket style ─────────────── */
 .landing-enter {
   position: relative;
   margin-top: 28px;
-  padding: 14px 44px 16px;
-  font-family: "Noto Sans TC", sans-serif;
-  color: #F8FBFD;
-  background: #685D5A;
-  border: none;
-  border-radius: var(--radius-pill);
+  padding: 14px 32px 16px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  color: var(--landing-text);
+  background: var(--landing-card);
+  border: 1px solid var(--landing-border);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 22px rgba(104,93,90,0.35);
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  overflow: visible;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.landing-enter::before,
+.landing-enter::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--landing-term);
+  transition: all 0.3s ease;
+}
+.landing-enter::before {
+  top: 6px; left: 6px;
+  border-right: none; border-bottom: none;
+}
+.landing-enter::after {
+  bottom: 6px; right: 6px;
+  border-left: none; border-top: none;
 }
 .landing-enter:hover {
-  transform: translateY(-3px) scale(1.03);
-  background: #848388;
-  box-shadow: 0 6px 30px rgba(104,93,90,0.45);
+  transform: translateY(-3px);
+  border-color: var(--landing-term);
+  box-shadow: 0 0 28px var(--landing-glow), inset 0 0 18px rgba(94,234,212,0.08);
+  color: var(--landing-pop);
 }
-.landing-enter:active {
-  transform: translateY(0) scale(0.98);
+.landing-enter:hover::before,
+.landing-enter:hover::after {
+  width: 18px; height: 18px;
 }
+.landing-enter:active { transform: translateY(0) scale(0.98); }
 
 .enter-sub {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 400;
   letter-spacing: 4px;
   text-indent: 4px;
-  opacity: 0.8;
+  opacity: 0.78;
+  color: var(--landing-term);
 }
 .enter-main {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 3px;
   text-indent: 3px;
 }
+.enter-main::before {
+  content: "> ";
+  color: var(--landing-term);
+  opacity: 0.85;
+}
 
-/* ─── Floating puzzle decorations on landing ──────────── */
+/* ── Floating puzzle decorations (CSS layer) ───────────── */
 .landing-deco {
   position: fixed;
   z-index: 5;
-  opacity: 0.06;
+  opacity: 0.22;
   pointer-events: none;
+  filter: drop-shadow(0 0 12px var(--landing-glow));
+  transition: background 0.5s ease, opacity 0.5s ease;
 }
+#landing[data-theme="light"] .landing-deco { opacity: 0.45; }
+
 .landing-deco-1 {
-  top: 8%;
-  left: 5%;
-  width: 100px;
-  height: 100px;
-  background: var(--accent);
+  top: 8%; left: 5%;
+  width: 100px; height: 100px;
+  background: var(--landing-mint);
   clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
   animation: landingFloat1 10s ease-in-out infinite;
 }
 .landing-deco-2 {
-  bottom: 12%;
-  right: 8%;
-  width: 70px;
-  height: 70px;
-  background: var(--teal);
+  bottom: 12%; right: 8%;
+  width: 70px; height: 70px;
+  background: var(--landing-pink);
   clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
   animation: landingFloat2 12s ease-in-out infinite;
 }
 .landing-deco-3 {
-  top: 60%;
-  left: 12%;
-  width: 55px;
-  height: 55px;
-  background: var(--purple);
+  top: 60%; left: 12%;
+  width: 55px; height: 55px;
+  background: var(--landing-aqua);
   clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
   animation: landingFloat1 14s ease-in-out 3s infinite;
 }
@@ -304,19 +428,25 @@ body {
   50% { transform: translateY(10px) rotate(-6deg); }
 }
 
-/* ─── Lab watermark ───────────────────────────────────── */
+/* ── Lab watermark ─────────────────────────────────────── */
 .intro-lab {
   position: fixed;
   bottom: 24px;
   left: 32px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
   font-size: 0.6rem;
-  color: var(--text-muted);
+  color: var(--landing-dim);
   letter-spacing: 2px;
   text-transform: uppercase;
   opacity: 0;
   animation: fade-in 0.4s ease-out 4s forwards;
   z-index: 1001;
   pointer-events: none;
+}
+.intro-lab::before {
+  content: "// ";
+  color: var(--landing-term);
+  opacity: 0.7;
 }
 
 @keyframes fade-in {

@@ -14,14 +14,27 @@
   let running = true;
   const t0 = performance.now();
 
-  /* ── Color palette (Winter Birch — landing) ── */
-  const COLORS = [
-    'rgba(220,237,247,0.60)', // pale sky
-    'rgba(235,235,236,0.50)', // neutral grey
-    'rgba(248,251,253,0.55)', // icy white
-    'rgba(132,131,136,0.28)', // warm grey
-    'rgba(104,93,90,0.22)',   // deep warm brown
-  ];
+  /* ── Color palettes (mint terminal — theme-aware) ── */
+  const PALETTES = {
+    dark: [
+      'rgba(168,240,224,0.55)', // mint
+      'rgba(127,231,217,0.50)', // aqua
+      'rgba(184,242,234,0.55)', // pop
+      'rgba(255,214,232,0.40)', // pastel pink
+      'rgba(94,234,212,0.35)',  // terminal mint
+    ],
+    light: [
+      'rgba(94,201,181,0.45)',  // mint
+      'rgba(63,184,166,0.40)',  // aqua
+      'rgba(244,168,200,0.45)', // soft pink
+      'rgba(130,221,204,0.50)', // pop
+      'rgba(43,170,146,0.30)',  // deep terminal
+    ],
+  };
+  function currentPalette() {
+    const t = document.getElementById('landing')?.dataset.theme || 'dark';
+    return PALETTES[t] || PALETTES.dark;
+  }
 
   /* ── Puzzle pieces floating in space ── */
   let pieces = [];
@@ -77,6 +90,7 @@
 
   /* ── Create floating pieces ── */
   function createPieces() {
+    const colors = currentPalette();
     pieces = [];
     for (let i = 0; i < PIECE_COUNT; i++) {
       pieces.push({
@@ -87,10 +101,16 @@
         va: (Math.random() - 0.5) * 0.003,
         vx: (Math.random() - 0.5) * 0.4,
         vy: (Math.random() - 0.5) * 0.3 - 0.1,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        color: colors[Math.floor(Math.random() * colors.length)],
         alpha: 0.55 + Math.random() * 0.4,
         phase: Math.random() * Math.PI * 2,
       });
+    }
+  }
+  function recolorPieces() {
+    const colors = currentPalette();
+    for (const p of pieces) {
+      p.color = colors[Math.floor(Math.random() * colors.length)];
     }
   }
 
@@ -144,11 +164,13 @@
     }
 
     // Tiny particles (like dust motes in space)
+    const isDark = (document.getElementById('landing')?.dataset.theme || 'dark') !== 'light';
+    const dustRGB = isDark ? '184, 242, 234' : '94, 201, 181';
     for (const pt of particles) {
       const a = pt.alpha * (0.5 + 0.5 * Math.sin(t * pt.speed * 300 + pt.phase));
       ctx.beginPath();
       ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(200, 220, 255, ${a})`;
+      ctx.fillStyle = `rgba(${dustRGB}, ${a})`;
       ctx.fill();
     }
 
@@ -175,6 +197,7 @@
     createPieces();
     createParticles();
   });
+  window.addEventListener('landing-theme-change', recolorPieces);
   createPieces();
   createParticles();
   requestAnimationFrame(animate);
