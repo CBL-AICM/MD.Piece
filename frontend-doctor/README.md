@@ -68,3 +68,13 @@ frontend-doctor/
 - 醫師寫入的備註（`/doctor-notes`）、調藥（`/medication-changes`）、警示確認/結案（`/alerts`）會反過來影響後續排序與提醒
 - 後端 API 主機若不在 localhost，請至「設定」頁覆蓋 API base（存於 `localStorage.mdp.apiBase`）
 - 進行寫入時的醫師身份也存在「設定」（`localStorage.mdp.doctorId`）
+
+## 線上部署（子路徑 `/doctor`）
+
+醫師端與患者端共用同一個 Vercel 專案，醫師端掛在 `https://mdpiece.life/doctor`：
+
+- 根目錄 `vercel.json` 用 `@vercel/static-build` 在部署時跑 `npm run build`，輸出 `frontend-doctor/dist/`
+- 路由：`/doctor/assets/*` → 靜態資源；`/doctor` 與其他 SPA 路徑 → `index.html`（React Router 接手）
+- `vite.config.js` 在 build 模式下自動把 `base` 設為 `/doctor/`，所以 dev (`npm run dev`) 仍走 `http://localhost:3001/`
+- `main.jsx` 用 `import.meta.env.BASE_URL` 設 React Router `basename`，dev 與線上都對
+- `.env.production` 的 `VITE_API_URL=` 為空字串 → 線上 build 走相對 root 路徑，例如 `fetch('/patients/')` 會被 Vercel 路由到 `api/index.py`

@@ -1,4 +1,6 @@
-const DEFAULT_API = import.meta.env.VITE_API_URL || '/api'
+// 用 ?? 而不是 ||：production build 同源呼叫時 VITE_API_URL 是空字串，
+// 我們希望保留空字串而不要 fallback 到 '/api'（dev 才需要 '/api' 走 Vite proxy）
+const DEFAULT_API = import.meta.env.VITE_API_URL ?? '/api'
 
 export function getApiBase() {
   if (typeof window !== 'undefined') {
