@@ -274,8 +274,6 @@ function home() {
         ${homeCard('patients','users','病患管理','關懷每一位患者','mint')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
         ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
-        ${homeCard('research','flask-conical','自動研究','探索醫學前沿','gold')}
-        ${homeCard('contributors','heart-handshake','貢獻者','共同打造的力量','lavender')}
       </div>
 
       <!-- Footer tagline -->
