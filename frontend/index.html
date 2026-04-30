@@ -162,6 +162,15 @@
         <button class="nav-item" onclick="navigateTo('symptoms', this)">
           <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> 症狀分析
         </button>
+        <button class="nav-item" onclick="navigateTo('daily', this)">
+          <span class="nav-icon"><i data-lucide="calendar-check" style="width:18px;height:18px"></i></span> 每日記錄
+        </button>
+        <button class="nav-item" onclick="navigateTo('labs', this)">
+          <span class="nav-icon"><i data-lucide="flask-round" style="width:18px;height:18px"></i></span> 檢驗結果
+        </button>
+        <button class="nav-item" onclick="navigateTo('knowledge', this)">
+          <span class="nav-icon"><i data-lucide="book-open" style="width:18px;height:18px"></i></span> 疾病衛教
+        </button>
         <button class="nav-item" onclick="navigateTo('records', this)">
           <span class="nav-icon"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></span> 病歷管理
         </button>
@@ -198,6 +207,7 @@
   </div>
 
   <script src="js/app.js"></script>
+  <script src="js/daily.js"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
@@ -309,7 +319,8 @@
     const pageTitles = {
       home: '首頁', symptoms: '症狀分析', records: '病歷管理',
       doctors: '醫師列表', patients: '病患管理', medications: '藥物管理',
-      education: '衛教專欄', research: '自動研究', contributors: '貢獻者'
+      education: '衛教專欄', research: '自動研究', contributors: '貢獻者',
+      daily: '每日記錄', labs: '檢驗結果', knowledge: '疾病衛教'
     };
 
     function navigateTo(page, btn) {

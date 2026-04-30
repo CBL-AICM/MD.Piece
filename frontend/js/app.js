@@ -30,7 +30,11 @@ function getStablePatientId() {
 
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records, medications, research, education, contributors };
+  const D = window.DailyFeatures || {};
+  const pages = {
+    home, symptoms, doctors, patients, records, medications, research, education, contributors,
+    daily: D.dailyPage, labs: D.labsPage, knowledge: D.knowledgePage,
+  };
   // Page transition
   app.style.opacity = '0';
   app.style.transform = 'translateY(12px)';
@@ -45,6 +49,9 @@ function showPage(page) {
     if (page === "contributors") loadContributors();
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
+    if (page === "daily" && D.initDaily) D.initDaily();
+    if (page === "labs" && D.initLabs) D.initLabs();
+    if (page === "knowledge" && D.initKnowledge) D.initKnowledge();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
