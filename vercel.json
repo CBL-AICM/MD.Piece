@@ -73,6 +73,12 @@
     { "src": "/research", "dest": "api/index.py" },
     { "src": "/auth/(.*)", "dest": "api/index.py" },
     { "src": "/auth", "dest": "api/index.py" },
+    { "src": "/alerts/(.*)", "dest": "api/index.py" },
+    { "src": "/alerts", "dest": "api/index.py" },
+    { "src": "/doctor-notes/(.*)", "dest": "api/index.py" },
+    { "src": "/doctor-notes", "dest": "api/index.py" },
+    { "src": "/medication-changes/(.*)", "dest": "api/index.py" },
+    { "src": "/medication-changes", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
 }
