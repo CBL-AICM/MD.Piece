@@ -7,6 +7,11 @@
     {
       "src": "frontend/**",
       "use": "@vercel/static"
+    },
+    {
+      "src": "frontend-doctor/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
     }
   ],
   "headers": [
@@ -73,6 +78,15 @@
     { "src": "/research", "dest": "api/index.py" },
     { "src": "/auth/(.*)", "dest": "api/index.py" },
     { "src": "/auth", "dest": "api/index.py" },
+    { "src": "/alerts/(.*)", "dest": "api/index.py" },
+    { "src": "/alerts", "dest": "api/index.py" },
+    { "src": "/doctor-notes/(.*)", "dest": "api/index.py" },
+    { "src": "/doctor-notes", "dest": "api/index.py" },
+    { "src": "/medication-changes/(.*)", "dest": "api/index.py" },
+    { "src": "/medication-changes", "dest": "api/index.py" },
+    { "src": "/doctor/(.+\\..+)", "dest": "frontend-doctor/$1" },
+    { "src": "/doctor", "dest": "frontend-doctor/index.html" },
+    { "src": "/doctor/(.*)", "dest": "frontend-doctor/index.html" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
 }
