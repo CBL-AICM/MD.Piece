@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime, timedelta
+from pydantic import BaseModel, Field
+from typing import Optional, List
+from datetime import datetime, timedelta, date
 import logging
 
 from backend.db import get_supabase
@@ -69,6 +69,37 @@ class EffectRecord(BaseModel):
     notes: str | None = None
 
 
+class ParsedMedication(BaseModel):
+    name: str
+    dosage: str | None = None
+    frequency: str | None = None
+    usage: str | None = None
+    duration: str | None = None
+    category: str | None = None
+    purpose: str | None = None
+    instructions: str | None = None
+    hospital: str | None = None
+    prescribed_date: str | None = None
+
+
+class BulkConfirmRecognized(BaseModel):
+    patient_id: str
+    medications: List[ParsedMedication]
+
+
+class BulkLogItem(BaseModel):
+    medication_id: str
+    taken: bool = True
+    skip_reason: str | None = None
+    notes: str | None = None
+
+
+class BulkLog(BaseModel):
+    patient_id: str
+    taken_at: str | None = None
+    items: List[BulkLogItem] = Field(default_factory=list)
+
+
 # ── 藥物 CRUD ─────────────────────────────────────────────
 
 @router.get("/")
@@ -118,11 +149,21 @@ def recognize_from_photo(body: MedicationPhotoUpload):
       - raw_text: LLM 原始文字（方便 debug）
       - errors: 若有寫入錯誤，逐筆回報
     """
+    # 拍照辨識常見故障：Ollama 沒開、模型沒下載、超時、JSON 解析失敗。
+    # 一律不丟 500，回 200 + 明確訊息，前端才能優雅地切到「手動選單」流程。
     try:
         recognition = recognize_medicine_bag(body.image_base64, body.media_type)
     except Exception as e:
         logger.error(f"recognize_medicine_bag failed: {e}")
-        raise HTTPException(status_code=500, detail=f"影像辨識服務失敗：{e}")
+        return {
+            "recognized": 0,
+            "medications": [],
+            "parsed": [],
+            "raw_text": "",
+            "message": f"影像辨識服務暫時無法使用（{type(e).__name__}），請改用手動方式新增藥物。",
+            "errors": [str(e)],
+            "fallback": "manual",
+        }
 
     meds = recognition.get("medications", []) or []
     raw_text = recognition.get("raw_text", "")
@@ -135,6 +176,7 @@ def recognize_from_photo(body: MedicationPhotoUpload):
             "raw_text": raw_text,
             "message": "無法辨識藥袋內容，請嘗試拍攝更清晰的照片，或手動填寫下方資料。",
             "errors": [],
+            "fallback": "manual",
         }
 
     # 只做辨識，不自動寫入 DB
@@ -162,6 +204,69 @@ def recognize_from_photo(body: MedicationPhotoUpload):
         "raw_text": raw_text,
         "message": f"辨識出 {len(parsed)} 種藥物，請確認後加入我的藥物。",
         "errors": [],
+        "fallback": None,
+    }
+
+
+def _merge_instructions(p: ParsedMedication) -> str | None:
+    """把辨識結果中沒有對應欄位的補充資訊合併進 instructions 欄。"""
+    parts = []
+    if p.instructions:
+        parts.append(p.instructions.strip())
+    if p.usage:
+        parts.append(f"用法：{p.usage}")
+    if p.duration:
+        parts.append(f"療程：{p.duration}")
+    if p.hospital:
+        parts.append(f"來源：{p.hospital}")
+    if p.prescribed_date:
+        parts.append(f"開立日期：{p.prescribed_date}")
+    return " / ".join(parts) if parts else None
+
+
+@router.post("/confirm")
+def confirm_recognized_medications(body: BulkConfirmRecognized):
+    """
+    辨識→確認→批次寫入「我的藥物」。
+    前端流程：呼叫 /recognize 拿到 parsed，使用者編輯/勾選後再 POST 到這裡。
+    """
+    if not body.medications:
+        raise HTTPException(status_code=400, detail="沒有要新增的藥物")
+
+    sb = get_supabase()
+    _ensure_patient_exists(sb, body.patient_id)
+
+    inserted = []
+    errors = []
+    for idx, p in enumerate(body.medications):
+        name = (p.name or "").strip()
+        if not name:
+            errors.append({"index": idx, "error": "藥名為空"})
+            continue
+        data = {
+            "patient_id": body.patient_id,
+            "name": name,
+            "dosage": p.dosage,
+            "frequency": p.frequency,
+            "category": p.category,
+            "purpose": p.purpose,
+            "instructions": _merge_instructions(p),
+            "recognized_from_photo": 1,
+        }
+        data = {k: v for k, v in data.items() if v is not None}
+        try:
+            result = sb.table("medications").insert(data).execute()
+            if result.data:
+                inserted.append(result.data[0])
+        except Exception as e:
+            logger.error(f"confirm_recognized insert failed for {name}: {e}")
+            errors.append({"index": idx, "name": name, "error": str(e)})
+
+    return {
+        "inserted": len(inserted),
+        "medications": inserted,
+        "errors": errors,
+        "message": f"已加入 {len(inserted)} 筆藥物到我的藥物清單" + (f"，{len(errors)} 筆失敗" if errors else ""),
     }
 
 
@@ -181,6 +286,111 @@ def log_medication(body: MedicationLogCreate):
     }
     result = sb.table("medication_logs").insert(data).execute()
     return result.data[0]
+
+
+@router.post("/log/bulk")
+def log_medications_bulk(body: BulkLog):
+    """
+    患者一次勾選多個藥物打卡（搭配 /menu 使用）。
+    回傳每筆 log 的寫入結果。
+    """
+    if not body.items:
+        raise HTTPException(status_code=400, detail="沒有要打卡的藥物")
+
+    sb = get_supabase()
+    taken_at = body.taken_at or datetime.utcnow().isoformat()
+    inserted = []
+    errors = []
+    for item in body.items:
+        data = {
+            "patient_id": body.patient_id,
+            "medication_id": item.medication_id,
+            "taken": 1 if item.taken else 0,
+            "taken_at": taken_at,
+            "skip_reason": item.skip_reason,
+            "notes": item.notes,
+        }
+        try:
+            result = sb.table("medication_logs").insert(data).execute()
+            if result.data:
+                inserted.append(result.data[0])
+        except Exception as e:
+            logger.error(f"bulk log failed for {item.medication_id}: {e}")
+            errors.append({"medication_id": item.medication_id, "error": str(e)})
+
+    return {
+        "logged": len(inserted),
+        "logs": inserted,
+        "errors": errors,
+    }
+
+
+@router.get("/menu")
+def medication_menu(patient_id: str = Query(...)):
+    """
+    產生今日服藥選單：列出患者所有有效藥物，附上今日是否已打卡，
+    讓患者直接勾選「今天吃了哪些」。
+    回傳：
+      - items: 每筆藥物 + taken_today / log_count_today / last_taken_at
+      - today: ISO 日期（UTC）
+    """
+    sb = get_supabase()
+    today = date.today().isoformat()
+    since = today + "T00:00:00"
+    until = today + "T23:59:59"
+
+    meds = sb.table("medications").select("*").eq("patient_id", patient_id).execute().data or []
+    active_meds = [m for m in meds if m.get("active", 1)]
+
+    today_logs = (
+        sb.table("medication_logs")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .gte("taken_at", since)
+        .lte("taken_at", until)
+        .execute()
+        .data
+        or []
+    )
+    all_logs = (
+        sb.table("medication_logs")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .order("taken_at", desc=True)
+        .execute()
+        .data
+        or []
+    )
+
+    last_taken_map: dict[str, str] = {}
+    for log in all_logs:
+        mid = log.get("medication_id")
+        if mid and log.get("taken") and mid not in last_taken_map:
+            last_taken_map[mid] = log.get("taken_at")
+
+    items = []
+    for m in active_meds:
+        mid = m["id"]
+        today_for_med = [l for l in today_logs if l.get("medication_id") == mid]
+        items.append({
+            "id": mid,
+            "name": m.get("name"),
+            "dosage": m.get("dosage"),
+            "frequency": m.get("frequency"),
+            "category": m.get("category"),
+            "purpose": m.get("purpose"),
+            "instructions": m.get("instructions"),
+            "taken_today": any(l.get("taken") for l in today_for_med),
+            "log_count_today": len(today_for_med),
+            "last_taken_at": last_taken_map.get(mid),
+        })
+
+    return {
+        "today": today,
+        "patient_id": patient_id,
+        "total": len(items),
+        "items": items,
+    }
 
 
 @router.get("/logs")
@@ -379,4 +589,210 @@ def generate_report(
         "report": report_text,
         "stats": stats,
         "period_days": days,
+    }
+
+
+# ── 醫師端：整體用藥概覽 ──────────────────────────────────
+
+@router.get("/doctor-summary")
+def doctor_summary(
+    patient_id: str = Query(...),
+    days: int = Query(30, description="統計區間（天），對應「上次回診至今」"),
+):
+    """
+    醫師端視角：患者整體用藥折線、服藥情況、藥物使用總結。
+    回傳結構供醫師端 UI 直接渲染：
+      - patient: 病患基本資料
+      - period: { days, since, until }
+      - overall: 整體服藥率、總用藥數、區間紀錄筆數
+      - per_medication: 各藥物服藥率/最近一次服用/平均療效/副作用紀錄
+      - adherence_trend: 每日服藥率折線
+      - effect_trend: 療效折線
+      - missed_alerts: 連續漏服 ≥ 2 天的警示
+      - summary: AI 摘要（可給醫師當回診筆記參考）
+    """
+    sb = get_supabase()
+
+    patient_rows = sb.table("patients").select("*").eq("id", patient_id).limit(1).execute().data or []
+    patient = patient_rows[0] if patient_rows else {"id": patient_id, "name": "未知"}
+
+    until_dt = datetime.utcnow()
+    since_dt = until_dt - timedelta(days=days)
+    since = since_dt.isoformat()
+    until = until_dt.isoformat()
+
+    meds = sb.table("medications").select("*").eq("patient_id", patient_id).execute().data or []
+    active_meds = [m for m in meds if m.get("active", 1)]
+    inactive_meds = [m for m in meds if not m.get("active", 1)]
+
+    logs = (
+        sb.table("medication_logs")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .gte("taken_at", since)
+        .order("taken_at")
+        .execute()
+        .data
+        or []
+    )
+    effects = (
+        sb.table("medication_effects")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .gte("recorded_at", since)
+        .order("recorded_at")
+        .execute()
+        .data
+        or []
+    )
+
+    total_logs = len(logs)
+    taken_count = sum(1 for l in logs if l.get("taken"))
+    overall_adherence = round(taken_count / total_logs * 100, 1) if total_logs else 0.0
+
+    # 每日服藥率
+    daily: dict[str, dict] = {}
+    for log in logs:
+        day = (log.get("taken_at") or "")[:10]
+        if not day:
+            continue
+        d = daily.setdefault(day, {"taken": 0, "total": 0})
+        d["total"] += 1
+        if log.get("taken"):
+            d["taken"] += 1
+    adherence_trend = [
+        {
+            "date": day,
+            "rate": round(d["taken"] / d["total"] * 100, 1) if d["total"] else 0.0,
+            "taken": d["taken"],
+            "total": d["total"],
+        }
+        for day, d in sorted(daily.items())
+    ]
+
+    effect_trend = [
+        {
+            "date": (e.get("recorded_at") or "")[:10],
+            "effectiveness": e.get("effectiveness"),
+            "medication_id": e.get("medication_id"),
+            "side_effects": e.get("side_effects"),
+        }
+        for e in effects
+    ]
+
+    # 各藥物明細
+    per_medication = []
+    for m in active_meds:
+        mid = m["id"]
+        m_logs = [l for l in logs if l.get("medication_id") == mid]
+        m_taken = [l for l in m_logs if l.get("taken")]
+        m_effects = [e for e in effects if e.get("medication_id") == mid]
+        avg_eff = (
+            round(sum(e.get("effectiveness", 0) for e in m_effects) / len(m_effects), 2)
+            if m_effects
+            else None
+        )
+        side_effects_seen = sorted({
+            (e.get("side_effects") or "").strip()
+            for e in m_effects
+            if (e.get("side_effects") or "").strip()
+        })
+        last_taken_at = m_taken[-1].get("taken_at") if m_taken else None
+        per_medication.append({
+            "id": mid,
+            "name": m.get("name"),
+            "dosage": m.get("dosage"),
+            "frequency": m.get("frequency"),
+            "category": m.get("category"),
+            "purpose": m.get("purpose"),
+            "adherence_rate": round(len(m_taken) / len(m_logs) * 100, 1) if m_logs else 0.0,
+            "log_count": len(m_logs),
+            "last_taken_at": last_taken_at,
+            "avg_effectiveness": avg_eff,
+            "effect_records": len(m_effects),
+            "side_effects": side_effects_seen,
+        })
+
+    # 漏服警示：最近 7 天每天服藥率 < 50% 的藥物
+    missed_alerts = []
+    cutoff = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    recent_logs = [l for l in logs if (l.get("taken_at") or "") >= cutoff]
+    for m in active_meds:
+        mid = m["id"]
+        m_recent = [l for l in recent_logs if l.get("medication_id") == mid]
+        if not m_recent:
+            missed_alerts.append({
+                "medication_id": mid,
+                "name": m.get("name"),
+                "reason": "近 7 天無服藥紀錄",
+            })
+            continue
+        m_taken = sum(1 for l in m_recent if l.get("taken"))
+        rate = m_taken / len(m_recent) * 100 if m_recent else 0
+        if rate < 50:
+            missed_alerts.append({
+                "medication_id": mid,
+                "name": m.get("name"),
+                "reason": f"近 7 天服藥率 {round(rate, 1)}%",
+            })
+
+    # AI 摘要（給醫師當回診筆記參考）
+    summary_text: str | None = None
+    if active_meds:
+        digest = (
+            f"病患：{patient.get('name', '未知')}（{days} 天區間）\n"
+            f"整體服藥率：{overall_adherence}%（{taken_count}/{total_logs} 筆紀錄）\n"
+            f"用藥數：{len(active_meds)} 種，停用 {len(inactive_meds)} 種\n\n"
+            "各藥物：\n"
+        )
+        for pm in per_medication:
+            digest += f"- {pm['name']}"
+            if pm.get("dosage"):
+                digest += f"（{pm['dosage']}）"
+            digest += f"：服藥率 {pm['adherence_rate']}%"
+            if pm.get("avg_effectiveness") is not None:
+                digest += f"，平均療效 {pm['avg_effectiveness']}/5"
+            if pm.get("side_effects"):
+                digest += f"，回報副作用：{', '.join(pm['side_effects'])}"
+            digest += "\n"
+        if missed_alerts:
+            digest += "\n警示：\n"
+            for a in missed_alerts:
+                digest += f"- {a['name']}：{a['reason']}\n"
+
+        prompt = (
+            "你是一位協助醫師的回診摘要助手。請根據以下患者用藥資料，"
+            "用條列式產出『回診重點摘要』供醫師快速判讀，不要套話、不要說『建議就醫』。\n"
+            "格式（Markdown）：\n"
+            "## 用藥概況\n"
+            "## 服藥順從性\n"
+            "## 療效與副作用觀察\n"
+            "## 需要醫師關注的重點\n"
+        )
+        try:
+            summary_text = call_claude(prompt, digest)
+        except Exception as e:
+            logger.error(f"doctor-summary AI failed: {e}")
+            summary_text = None
+
+    return {
+        "patient": {
+            "id": patient.get("id"),
+            "name": patient.get("name"),
+            "age": patient.get("age"),
+            "gender": patient.get("gender"),
+        },
+        "period": {"days": days, "since": since, "until": until},
+        "overall": {
+            "adherence_rate": overall_adherence,
+            "total_log_records": total_logs,
+            "taken_count": taken_count,
+            "active_medications": len(active_meds),
+            "inactive_medications": len(inactive_meds),
+        },
+        "per_medication": per_medication,
+        "adherence_trend": adherence_trend,
+        "effect_trend": effect_trend,
+        "missed_alerts": missed_alerts,
+        "summary": summary_text,
     }
