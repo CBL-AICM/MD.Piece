@@ -467,14 +467,96 @@ async function loadPatients() {
     return;
   }
   el.innerHTML = data.patients.map(p => `
-    <div class="record-card">
+    <div class="record-card" id="patient-row-${p.id}">
       <strong>${p.name}</strong> — ${p.age}歲
       ${p.gender ? ` | ${p.gender === "male" ? "男" : "女"}` : ""}
       ${p.phone ? ` | ${p.phone}` : ""}
       <button class="btn-delete" onclick="deletePatient('${p.id}')">刪除</button>
       <button class="btn-view" onclick="showPage('records');setTimeout(()=>{document.getElementById('r-patient').value='${p.id}';searchRecords()},100)">查看病歷</button>
+      <button class="btn-view" onclick="toggleDoctorSummary('${p.id}')">醫師摘要</button>
+      <div id="doctor-summary-${p.id}" style="display:none;margin-top:10px"></div>
     </div>
   `).join("");
+}
+
+function toggleDoctorSummary(patientId) {
+  var box = document.getElementById("doctor-summary-" + patientId);
+  if (!box) return;
+  if (box.style.display !== "none" && box.innerHTML) {
+    box.style.display = "none";
+    return;
+  }
+  box.style.display = "block";
+  box.innerHTML = '<p style="color:var(--text-muted);padding:8px">載入中（產生 AI 摘要可能需要 10–30 秒）...</p>';
+  var days = 30;
+  fetch(API + "/medications/doctor-summary?patient_id=" + patientId + "&days=" + days)
+    .then(function(r) { return r.json(); })
+    .then(function(j) { renderDoctorSummary(box, j); })
+    .catch(function(e) {
+      box.innerHTML = '<p style="color:var(--danger)">載入失敗：' + escapeHtml(e && e.message || "網路錯誤") + '</p>';
+    });
+}
+
+function renderDoctorSummary(box, j) {
+  var ov = j.overall || {};
+  var per = j.per_medication || [];
+  var alerts = j.missed_alerts || [];
+
+  var stat = function(num, label) {
+    return '<div class="stat-box"><div class="stat-num">' + num + '</div><div class="stat-label">' + label + '</div></div>';
+  };
+  var statsRow =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px">' +
+      stat(ov.adherence_rate + "%", "整體服藥率") +
+      stat(ov.active_medications || 0, "用藥中") +
+      stat(ov.total_log_records || 0, "區間打卡") +
+      stat((j.period && j.period.days) + "天", "統計區間") +
+    '</div>';
+
+  var perRows = per.length
+    ? per.map(function(p) {
+        var rate = p.adherence_rate;
+        var color = rate >= 80 ? "var(--success)" : rate >= 50 ? "var(--warning)" : "var(--danger)";
+        var last = p.last_taken_at ? p.last_taken_at.slice(0, 16).replace("T", " ") : "—";
+        var avgEff = (p.avg_effectiveness != null) ? (p.avg_effectiveness + " / 5") : "—";
+        var sides = (p.side_effects && p.side_effects.length) ? p.side_effects.join("、") : "—";
+        return (
+          '<div style="padding:8px 10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);background:var(--bg-glass)">' +
+            '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
+              '<strong>' + escapeHtml(p.name || "") + (p.dosage ? '<span style="color:var(--text-dim);font-weight:normal"> ' + escapeHtml(p.dosage) + '</span>' : '') + '</strong>' +
+              '<span style="color:' + color + ';font-weight:600">' + rate + '%</span>' +
+            '</div>' +
+            '<div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">' +
+              '最近服用：' + last + '　|　平均療效：' + avgEff + '　|　副作用：' + escapeHtml(sides) +
+            '</div>' +
+          '</div>'
+        );
+      }).join("")
+    : '<p style="color:var(--text-muted)">無有效藥物</p>';
+
+  var alertHtml = alerts.length
+    ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(220,80,80,0.08);border:1px solid var(--danger);border-radius:var(--radius-sm)">' +
+        '<strong style="color:var(--danger)">⚠ 服藥警示</strong>' +
+        '<ul style="margin:4px 0 0 18px">' +
+        alerts.map(function(a) { return '<li>' + escapeHtml(a.name) + ' — ' + escapeHtml(a.reason) + '</li>'; }).join("") +
+        '</ul>' +
+      '</div>'
+    : "";
+
+  var summaryHtml = j.summary
+    ? '<details open style="margin-top:10px"><summary style="cursor:pointer;color:var(--accent)">AI 回診重點摘要</summary>' +
+        '<div style="margin-top:6px;padding:10px;background:var(--bg-glass);border-radius:var(--radius-sm);white-space:pre-wrap;font-size:0.9rem">' + escapeHtml(j.summary) + '</div>' +
+      '</details>'
+    : '<p style="margin-top:8px;color:var(--text-muted);font-size:0.85rem">（AI 摘要服務未啟用，僅顯示結構化資料）</p>';
+
+  box.innerHTML =
+    '<div style="padding:10px;background:rgba(120,180,200,0.06);border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
+      statsRow +
+      '<div style="font-weight:600;margin:6px 0 4px">各藥物服藥情況</div>' +
+      '<div style="display:grid;gap:6px">' + perRows + '</div>' +
+      alertHtml +
+      summaryHtml +
+    '</div>';
 }
 
 async function addPatient() {
@@ -680,6 +762,11 @@ function medications() {
       <div id="med-recognize-result" style="margin-top:12px"></div>
     </div>
     <div class="card">
+      <h3><i data-lucide="check-circle-2" style="width:18px;height:18px;vertical-align:middle"></i> 今日服藥</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">勾選今天已經吃過的藥，按一鍵送出。</p>
+      <div id="med-menu" style="margin-top:10px"><p style="color:var(--text-muted)">載入中...</p></div>
+    </div>
+    <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h3>我的藥物</h3>
         <button class="secondary" onclick="loadMedicationsPage()" style="padding:4px 12px;font-size:0.85rem">重新整理</button>
@@ -722,6 +809,80 @@ function loadMedicationsPage() {
     .then(function(r) { return r.json(); })
     .then(function(data) { renderMedStats(data); })
     .catch(function() {});
+
+  loadTodayMenu();
+}
+
+function loadTodayMenu() {
+  var el = document.getElementById("med-menu");
+  if (!el) return;
+  fetch(API + "/medications/menu?patient_id=" + _medsPatientId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var items = data.items || [];
+      if (!items.length) {
+        el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:12px">尚無藥物，請先從上方加入。</p>';
+        return;
+      }
+      var rows = items.map(function(it) {
+        var checked = it.taken_today ? "checked" : "";
+        var taken = it.taken_today
+          ? '<span style="color:var(--success);font-size:0.8rem">今日已記錄</span>'
+          : '<span style="color:var(--text-muted);font-size:0.8rem">未記錄</span>';
+        var meta = [it.dosage, it.frequency].filter(Boolean).join("・");
+        return (
+          '<label class="menu-row" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);background:var(--bg-glass);cursor:pointer">' +
+            '<input type="checkbox" class="menu-check" data-mid="' + it.id + '" ' + checked + ' style="width:18px;height:18px;cursor:pointer" />' +
+            '<div style="flex:1;min-width:0">' +
+              '<div><strong>' + escapeHtml(it.name) + '</strong>' + (meta ? ' <span style="color:var(--text-dim);font-size:0.85rem">' + escapeHtml(meta) + '</span>' : '') + '</div>' +
+              '<div>' + taken + '</div>' +
+            '</div>' +
+          '</label>'
+        );
+      }).join("");
+      el.innerHTML =
+        '<div style="display:grid;gap:6px">' + rows + '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:10px">' +
+          '<button class="primary" onclick="submitTodayMenu()">送出勾選的服藥紀錄</button>' +
+          '<button class="secondary" onclick="loadTodayMenu()" style="padding:6px 12px;font-size:0.85rem">重新整理</button>' +
+        '</div>' +
+        '<p style="margin-top:6px;color:var(--text-muted);font-size:0.8rem">說明：只有「新勾選」的藥物會送出，已記錄的不會重複寫入。</p>';
+    })
+    .catch(function() {
+      el.innerHTML = '<p style="color:var(--danger)">載入今日服藥選單失敗</p>';
+    });
+}
+
+function submitTodayMenu() {
+  var checks = document.querySelectorAll("#med-menu .menu-check");
+  var items = [];
+  checks.forEach(function(c) {
+    // 只送出本次新勾選的（原本未記錄、現在勾選）
+    if (c.checked && !c.defaultChecked) {
+      items.push({ medication_id: c.getAttribute("data-mid"), taken: true });
+    }
+  });
+  if (!items.length) {
+    showToast("沒有新勾選的藥物", "info");
+    return;
+  }
+  fetch(API + "/medications/log/bulk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ patient_id: _medsPatientId, items: items })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var n = (data && data.logged) || 0;
+      showToast("已記錄 " + n + " 筆服藥 ✓", "success");
+      loadTodayMenu();
+      // 刷新統計
+      fetch(API + "/medications/stats?patient_id=" + _medsPatientId + "&days=30")
+        .then(function(r) { return r.json(); })
+        .then(function(d) { renderMedStats(d); })
+        .catch(function() {});
+    })
+    .catch(function() { showToast("送出失敗", "error"); });
 }
 
 function renderMedList() {
@@ -932,41 +1093,69 @@ function submitRecognizedOne(btn) {
 }
 
 function submitAllRecognized() {
-  var cards = document.querySelectorAll("#rec-med-cards .rec-med-card");
-  var pending = [];
-  cards.forEach(function(c) {
-    var hasSaveBtn = c.querySelector("button.primary");
-    if (hasSaveBtn) pending.push(c);
+  var cards = Array.prototype.slice.call(document.querySelectorAll("#rec-med-cards .rec-med-card"));
+  var pendingCards = cards.filter(function(c) { return c.querySelector("button.primary"); });
+  if (!pendingCards.length) { showToast("沒有需要加入的項目", "info"); return; }
+
+  var meds = [];
+  pendingCards.forEach(function(card) {
+    var v = function(sel) { var el = card.querySelector(sel); return el ? (el.value || "").trim() : ""; };
+    meds.push({
+      name: v(".rec-name"),
+      dosage: v(".rec-dosage") || null,
+      frequency: v(".rec-frequency") || null,
+      usage: v(".rec-usage") || null,
+      duration: v(".rec-duration") || null,
+      category: v(".rec-category") || null,
+      purpose: v(".rec-purpose") || null,
+      instructions: v(".rec-instructions") || null,
+      hospital: v(".rec-hospital") || null,
+      prescribed_date: v(".rec-prescribed-date") || null,
+    });
   });
-  if (!pending.length) { showToast("沒有需要加入的項目", "info"); return; }
-  var okCount = 0, failCount = 0, done = 0;
-  pending.forEach(function(card) {
-    var btn = card.querySelector("button.primary");
-    var body = _collectRecCard(card);
-    if (!body.name) { failCount++; done++; if (done === pending.length) _afterBulkAdd(okCount, failCount); return; }
-    btn.disabled = true; btn.textContent = "加入中...";
-    fetch(API + "/medications/", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    })
-      .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: r.ok, data: {} }; }); })
-      .then(function(res) {
-        if (res.ok) {
-          okCount++;
+
+  pendingCards.forEach(function(c) {
+    var b = c.querySelector("button.primary");
+    if (b) { b.disabled = true; b.textContent = "加入中..."; }
+  });
+
+  fetch(API + "/medications/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ patient_id: _medsPatientId, medications: meds })
+  })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      var data = res.data || {};
+      var ok = data.inserted || 0;
+      var errs = data.errors || [];
+      var fail = errs.length;
+      var failedIdx = {};
+      errs.forEach(function(e) { failedIdx[e.index] = e.error || "未知錯誤"; });
+
+      pendingCards.forEach(function(card, i) {
+        var btn = card.querySelector("button.primary");
+        if (failedIdx[i] != null) {
+          if (btn) { btn.disabled = false; btn.textContent = "重試加入"; }
+          var note = card.querySelector(".rec-fail-note");
+          if (!note) {
+            card.insertAdjacentHTML("afterbegin", '<div class="rec-fail-note" style="color:var(--danger);font-size:0.8rem">寫入失敗：' + escapeHtml(failedIdx[i]) + '</div>');
+          }
+        } else {
           card.style.background = "rgba(85,184,138,0.08)";
           card.style.borderColor = "var(--success)";
-          btn.outerHTML = '<div style="color:var(--success);font-size:0.85rem;text-align:center">已寫入 ✓</div>';
-        } else {
-          failCount++;
-          btn.disabled = false; btn.textContent = "重試加入";
+          if (btn) btn.outerHTML = '<div style="color:var(--success);font-size:0.85rem;text-align:center">已寫入 ✓</div>';
         }
-      })
-      .catch(function() { failCount++; btn.disabled = false; btn.textContent = "重試加入"; })
-      .finally(function() {
-        done++;
-        if (done === pending.length) _afterBulkAdd(okCount, failCount);
       });
-  });
+      _afterBulkAdd(ok, fail);
+    })
+    .catch(function(err) {
+      pendingCards.forEach(function(c) {
+        var b = c.querySelector("button.primary");
+        if (b) { b.disabled = false; b.textContent = "重試加入"; }
+      });
+      showToast("送出失敗：" + (err && err.message || "網路錯誤"), "error");
+    });
 }
 
 function _afterBulkAdd(ok, fail) {
