@@ -522,14 +522,6 @@ function symptoms() {
         <div class="ts-body">${renderPeriodSummary(stats)}</div>
       </section>
 
-      <div class="sym-actions">
-        <button class="primary-btn" onclick="syncSymptomsToDoctor()" type="button">
-          <i data-lucide="send"></i>
-          <span>同步給醫師</span>
-          <span class="cmd-hint">// 回診時自動帶到診間</span>
-        </button>
-      </div>
-
     </div>
   `;
 }
@@ -743,26 +735,6 @@ function openVisitDatePrompt() {
     nextVisit: nextVisit.trim() || null
   });
   showPage('symptoms');
-}
-// 同步給醫師（患者端動作）— 在後端就緒前先標記時間戳
-function syncSymptomsToDoctor() {
-  const stats = getPeriodStats();
-  if (stats.entries.length === 0) {
-    alert('此期間還沒有任何症狀紀錄，無法同步。');
-    return;
-  }
-  const now = new Date().toISOString();
-  try {
-    const log = JSON.parse(localStorage.getItem('mdpiece_sync_log') || '[]');
-    log.push({ at: now, count: stats.entries.length });
-    localStorage.setItem('mdpiece_sync_log', JSON.stringify(log));
-  } catch (e) {}
-  alert(
-    '✓ 已標記同步\n\n' +
-    `期間：${stats.periodStart.toISOString().slice(0,10)} ~ ${now.slice(0,10)}\n` +
-    `紀錄筆數：${stats.entries.length}\n\n` +
-    '回診當天，這些資料會自動帶到診間給醫師。\n（後端串接後即時上傳）'
-  );
 }
 
 async function analyzeSymptoms() {
