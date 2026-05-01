@@ -467,22 +467,22 @@ body {
 
 /* ── App theme tokens ─────────────────────────────────── */
 #app-wrapper[data-theme="dark"] {
-  --app-bg:         #0B1F25;
-  --app-grid:       rgba(94,234,212,0.07);
-  --app-text:       #E8FFF9;
-  --app-text-dim:   #8FC9BE;
+  --app-bg:         #1A4045;
+  --app-grid:       rgba(168,240,224,0.10);
+  --app-text:       #EFFFFB;
+  --app-text-dim:   #A8D8CE;
   --app-mint:       #A8F0E0;
   --app-aqua:       #7FE7D9;
   --app-pink:       #FFD6E8;
-  --app-blue:       #9FD8FF;
+  --app-blue:       #B8DEFF;
   --app-term:       #5EEAD4;
-  --app-panel:      #102C32;
-  --app-panel-soft: #16383F;
-  --app-chrome-1:   #1F4D49;
-  --app-chrome-2:   #2A6A60;
-  --app-border:     rgba(168,240,224,0.3);
-  --app-shadow:     0 4px 0 rgba(7,23,28,0.55);
-  --app-glow:       rgba(94,234,212,0.4);
+  --app-panel:      #245058;
+  --app-panel-soft: #2D6068;
+  --app-chrome-1:   #2D6A66;
+  --app-chrome-2:   #3F8B82;
+  --app-border:     rgba(168,240,224,0.4);
+  --app-shadow:     0 4px 0 rgba(10,30,32,0.5);
+  --app-glow:       rgba(94,234,212,0.45);
 }
 #app-wrapper[data-theme="light"] {
   --app-bg:         #F4FBF9;
@@ -526,27 +526,27 @@ body {
 }
 .win-titlebar-name {
   flex: 1;
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0.5px;
   color: var(--app-text);
-  padding: 6px 10px;
+  padding: 8px 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .win-titlebar-controls {
   display: inline-flex;
-  gap: 4px;
-  padding-right: 6px;
+  gap: 5px;
+  padding-right: 8px;
 }
 .win-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 16px;
-  font-size: 0.7rem;
+  width: 22px;
+  height: 20px;
+  font-size: 0.85rem;
   background: var(--app-panel);
   border: 1px solid var(--app-border);
   color: var(--app-text);
@@ -560,7 +560,7 @@ body {
 .sidebar {
   position: fixed;
   top: 14px; left: 14px;
-  width: 220px;
+  width: 248px;
   height: calc(100vh - 28px);
   background: var(--app-panel);
   border: 1.5px solid var(--app-border);
@@ -593,20 +593,20 @@ body {
 }
 
 .sidebar-logo-img {
-  width: 40px;
+  width: 48px;
   height: auto;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   border: 1.5px solid var(--app-border);
   border-radius: 6px;
   background: var(--app-panel);
-  padding: 2px;
+  padding: 3px;
   filter: none;
   opacity: 1;
 }
 
 .sidebar-brand h1 {
   font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: 1.05rem;
+  font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   background: none;
@@ -621,27 +621,27 @@ body {
 
 .sidebar-brand p {
   font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: .62rem;
+  font-size: .75rem;
   color: var(--app-text-dim);
   letter-spacing: 1.5px;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 6px;
+  padding: 12px 8px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  margin-bottom: 2px;
+  gap: 12px;
+  padding: 11px 12px;
+  margin-bottom: 3px;
   color: var(--app-text);
   font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: .82rem;
+  font-size: .98rem;
   cursor: pointer;
   border: 1px solid transparent;
   border-radius: 3px;
@@ -677,15 +677,15 @@ body {
   flex-shrink: 0;
 }
 .nav-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   stroke-width: 2;
 }
 
 /* ── Main content & topbar ──────────────────────────── */
 .main-content {
   flex: 1;
-  margin-left: 248px;
+  margin-left: 276px;
   min-height: 100vh;
   position: relative;
   padding: 14px 14px 14px 0;
@@ -724,12 +724,12 @@ body {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--app-text);
-  padding: 8px 12px;
+  padding: 12px 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -752,10 +752,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 22px;
+  width: 32px;
+  height: 26px;
   margin-right: 6px;
-  font-size: 0.85rem;
+  font-size: 1rem;
   line-height: 1;
   background: var(--app-panel);
   color: var(--app-text);
@@ -787,11 +787,21 @@ body {
 }
 
 #app {
-  max-width: 900px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 24px 32px;
+  padding: 28px 36px 60px;
+  font-size: 1.02rem;
+  line-height: 1.7;
   animation: fadeIn .3s ease;
+  position: relative;
+  z-index: 2;
 }
+
+/* In standard (young) mode, give body text more presence */
+html[data-mode="standard"] #app { font-size: 1.05rem; }
+html[data-mode="standard"] #app h2 { font-size: 1.5rem; }
+html[data-mode="standard"] #app h3 { font-size: 1.2rem; }
+html[data-mode="standard"] #app p { font-size: 1.02rem; }
 
 /* ═══════════════════════════════════════════════════════════
    SENIOR MODE — 年長版：清爽乾淨、無視窗 chrome
@@ -1345,6 +1355,65 @@ button.secondary:hover {
   clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
   animation: floatPiece 10s ease-in-out 2s infinite;
 }
+
+/* ── Standard (young) mode: brighter puzzle pieces ───── */
+html[data-mode="standard"] .puzzle-deco { opacity: 0.32; }
+html[data-mode="standard"] .puzzle-deco-1 {
+  top: 8%; right: 4%;
+  width: 140px; height: 140px;
+  background: var(--app-mint);
+  filter: drop-shadow(0 0 16px var(--app-glow));
+  animation: floatPiece 9s ease-in-out infinite;
+}
+html[data-mode="standard"] .puzzle-deco-2 {
+  bottom: 18%; right: 8%;
+  left: auto;
+  width: 95px; height: 95px;
+  background: var(--app-pink);
+  filter: drop-shadow(0 0 14px rgba(255,214,232,0.6));
+  animation: floatPiece 11s ease-in-out 2s infinite;
+}
+
+/* Extra pieces only in standard mode */
+html[data-mode="standard"] #app-wrapper.show::before,
+html[data-mode="standard"] #app-wrapper.show::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.28;
+}
+html[data-mode="standard"] #app-wrapper.show::before {
+  top: 38%; right: 3%;
+  width: 60px; height: 60px;
+  background: var(--app-aqua);
+  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
+  filter: drop-shadow(0 0 10px var(--app-glow));
+  animation: floatPieceB 13s ease-in-out infinite;
+}
+html[data-mode="standard"] #app-wrapper.show::after {
+  bottom: 6%; right: 18%;
+  width: 55px; height: 55px;
+  background: var(--app-blue);
+  clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
+  filter: drop-shadow(0 0 10px rgba(184,222,255,0.5));
+  animation: floatPieceB 15s ease-in-out 4s infinite;
+}
+
+@keyframes floatPieceB {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(-10deg); }
+}
+
+/* Page-level deco containers (for inner pages to add more pieces) */
+.page-deco {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.22;
+  filter: drop-shadow(0 0 12px var(--app-glow));
+}
+html[data-mode="senior"] .page-deco { display: none; }
 
 /* ═══════════════════════════════════════════════════════════
    ANIMATIONS
