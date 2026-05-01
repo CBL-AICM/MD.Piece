@@ -707,7 +707,7 @@ function renderPeriodSummary(stats) {
     return '<p class="sym-empty">// 此期間還沒有紀錄 — 從上面選一個症狀開始。</p>';
   }
   return `
-    <p class="sym-instruct">// 已自動累計，回診當天會同步給醫師參考。</p>
+    <p class="sym-instruct">// 自上次回診以來已自動累計，依出現頻率排序。</p>
     <ul class="sym-summary-list">
       ${sorted.map(([id, s]) => {
         const c = SYMPTOM_CATEGORIES.find(x => x.id === id);
