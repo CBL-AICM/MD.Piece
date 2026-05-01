@@ -149,7 +149,7 @@
   </div>
 
   <!-- ★ Main App (hidden until enter) -->
-  <div id="app-wrapper">
+  <div id="app-wrapper" data-theme="dark">
     <!-- Puzzle decorations -->
     <div class="puzzle-deco puzzle-deco-1"></div>
     <div class="puzzle-deco puzzle-deco-2"></div>
@@ -159,6 +159,15 @@
 
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
+      <!-- Retro window title bar -->
+      <div class="win-titlebar sidebar-titlebar">
+        <span class="win-titlebar-name">navigator.exe</span>
+        <span class="win-titlebar-controls">
+          <span class="win-btn">─</span>
+          <span class="win-btn">▢</span>
+          <span class="win-btn win-btn-close">✕</span>
+        </span>
+      </div>
       <div class="sidebar-brand">
         <img src="icons/logo-core.jpg" alt="MD.Piece" class="sidebar-logo-img" />
         <h1>MD.Piece</h1>
@@ -197,10 +206,22 @@
 
     <!-- Main content area -->
     <div class="main-content">
-      <div class="topbar">
+      <div class="topbar win-titlebar">
         <button class="hamburger" onclick="toggleSidebar()">☰</button>
-        <h2 id="page-title">首頁</h2>
-        <span style="font-size:.75rem;color:var(--text-muted)">v2.0</span>
+        <span class="topbar-filename">
+          <span class="topbar-prefix">C:\md.piece&gt;</span>
+          <span id="page-title">home</span><span class="topbar-ext">.html</span>
+        </span>
+        <span class="topbar-spacer"></span>
+        <button class="app-theme-toggle" id="app-theme-toggle" type="button" onclick="toggleAppTheme()" title="切換主題">
+          <span class="att-icon" id="att-icon">☾</span>
+        </button>
+        <span class="topbar-version">v2.0</span>
+        <span class="win-titlebar-controls topbar-wincontrols">
+          <span class="win-btn">─</span>
+          <span class="win-btn">▢</span>
+          <span class="win-btn win-btn-close">✕</span>
+        </span>
       </div>
       <main id="app"></main>
     </div>
@@ -329,11 +350,33 @@
       const theme = saved === 'light' ? 'light' : 'dark';
       const el = document.getElementById('landing');
       if (el) el.dataset.theme = theme;
+      const app = document.getElementById('app-wrapper');
+      if (app) app.dataset.theme = theme;
       const ico = document.getElementById('tt-icon');
       const lab = document.getElementById('tt-label');
       if (ico) ico.textContent = theme === 'dark' ? '☾' : '☀';
       if (lab) lab.textContent = theme.toUpperCase();
+      const aIco = document.getElementById('att-icon');
+      if (aIco) aIco.textContent = theme === 'dark' ? '☾' : '☀';
     })();
+
+    // ─── App Theme Toggle (in topbar) ──────────────────────
+    function toggleAppTheme() {
+      const app = document.getElementById('app-wrapper');
+      if (!app) return;
+      const next = app.dataset.theme === 'dark' ? 'light' : 'dark';
+      app.dataset.theme = next;
+      const lp = document.getElementById('landing');
+      if (lp) lp.dataset.theme = next;
+      const aIco = document.getElementById('att-icon');
+      if (aIco) aIco.textContent = next === 'dark' ? '☾' : '☀';
+      const ico = document.getElementById('tt-icon');
+      const lab = document.getElementById('tt-label');
+      if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
+      if (lab) lab.textContent = next.toUpperCase();
+      try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
+    }
 
     // ─── Landing → App Transition ──────────────────────────
     function enterApp() {
