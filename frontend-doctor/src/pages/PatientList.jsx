@@ -1,56 +1,165 @@
-const MOCK = [
-  { id: 'p1', name: '王小明', age: 62, priority: 'crit', lastVisit: '3/28', note: 'ER 訪視 · 連續 2 日漏藥' },
-  { id: 'p2', name: '林美華', age: 54, priority: 'err', lastVisit: '4/02', note: '情緒分數低於基線' },
-  { id: 'p3', name: '陳志強', age: 47, priority: 'warn', lastVisit: '4/08', note: '劑量調整後待追蹤' },
-  { id: 'p4', name: '張淑芬', age: 71, priority: 'warn', lastVisit: '3/30', note: '疼痛評分上升' },
-  { id: 'p5', name: '李家興', age: 38, priority: 'ok', lastVisit: '4/10', note: '穩定' },
-  { id: 'p6', name: '黃雅婷', age: 29, priority: 'ok', lastVisit: '4/09', note: '穩定' },
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { apiGet } from '../lib/api.js'
+import { patientPriority, ALERT_TYPE_LABEL } from '../lib/priority.js'
+import { fmtShort } from '../lib/format.js'
+
+const FILTERS = [
+  { key: 'all', label: '全部' },
+  { key: 'attention', label: '需關注' },
+  { key: 'stable', label: '穩定' },
 ]
 
-const LABEL = {
-  crit: '需立即關注',
-  err: '需立即關注',
-  warn: '需要關注',
-  ok: '狀況穩定',
-}
-
 export default function PatientList() {
+  const [patients, setPatients] = useState([])
+  const [alertsByPatient, setAlertsByPatient] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState(null)
+  const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    Promise.all([
+      apiGet('/patients/'),
+      apiGet('/alerts/', { resolved: false }),
+    ])
+      .then(([p, a]) => {
+        if (!alive) return
+        setPatients(p.patients ?? [])
+        const map = {}
+        for (const al of a.alerts ?? []) {
+          if (!map[al.patient_id]) map[al.patient_id] = []
+          map[al.patient_id].push(al)
+        }
+        setAlertsByPatient(map)
+      })
+      .catch((e) => alive && setErr(e.message))
+      .finally(() => alive && setLoading(false))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const rows = useMemo(() => {
+    const enriched = patients.map((p) => {
+      const alerts = alertsByPatient[p.id] ?? []
+      const prio = patientPriority(alerts)
+      return { ...p, _alerts: alerts, _prio: prio }
+    })
+    enriched.sort((a, b) => {
+      if (b._prio.rank !== a._prio.rank) return b._prio.rank - a._prio.rank
+      return (a.name ?? '').localeCompare(b.name ?? '', 'zh-Hant')
+    })
+    return enriched
+  }, [patients, alertsByPatient])
+
+  const filtered = useMemo(() => {
+    let r = rows
+    if (filter === 'attention') r = r.filter((x) => x._prio.rank > 0)
+    if (filter === 'stable') r = r.filter((x) => x._prio.rank === 0)
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      r = r.filter((x) =>
+        (x.name ?? '').toLowerCase().includes(q) ||
+        (x.phone ?? '').toLowerCase().includes(q) ||
+        (x.id ?? '').toLowerCase().includes(q)
+      )
+    }
+    return r
+  }, [rows, filter, search])
+
+  const counts = useMemo(() => {
+    const attention = rows.filter((x) => x._prio.rank > 0).length
+    return { total: rows.length, attention, stable: rows.length - attention }
+  }, [rows])
+
   return (
     <>
-      <h1 className="page-title">患者清單</h1>
-      <p className="page-sub">依需要關注程度自動排序（示範資料）</p>
+      <div className="page-head-row">
+        <div>
+          <h1 className="page-title">患者清單</h1>
+          <p className="page-sub">依未處理警示的嚴重度自動排序</p>
+        </div>
+        <div className="page-stats">
+          <span><strong>{counts.total}</strong> 位追蹤中</span>
+          <span className="dot" />
+          <span style={{ color: 'var(--err)' }}><strong>{counts.attention}</strong> 需關注</span>
+        </div>
+      </div>
+
+      <div className="toolbar">
+        <div className="range-tabs">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              className={`range-tab ${filter === f.key ? 'active' : ''}`}
+              onClick={() => setFilter(f.key)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <input
+          className="text-input"
+          placeholder="搜尋姓名、電話或 ID"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {err && <div className="error-bar">{err}</div>}
 
       <div className="card" style={{ padding: 0 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="data-table">
           <thead>
-            <tr style={{ color: 'var(--text-dim)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-              <th style={th}>狀態</th>
-              <th style={th}>姓名</th>
-              <th style={th}>年齡</th>
-              <th style={th}>上次回診</th>
-              <th style={th}>重點</th>
+            <tr>
+              <th style={{ width: 140 }}>狀態</th>
+              <th>姓名</th>
+              <th style={{ width: 80 }}>年齡</th>
+              <th style={{ width: 90 }}>性別</th>
+              <th style={{ width: 110 }}>建檔</th>
+              <th>主要警示</th>
             </tr>
           </thead>
           <tbody>
-            {MOCK.map((p) => (
-              <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={td}><span className={`badge ${p.priority}`}>{LABEL[p.priority]}</span></td>
-                <td style={{ ...td, fontWeight: 600 }}>{p.name}</td>
-                <td style={td}>{p.age}</td>
-                <td style={{ ...td, color: 'var(--text-dim)' }}>{p.lastVisit}</td>
-                <td style={{ ...td, color: 'var(--text-dim)' }}>{p.note}</td>
-              </tr>
-            ))}
+            {loading && (
+              <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)' }}>載入中…</td></tr>
+            )}
+            {!loading && filtered.length === 0 && (
+              <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)' }}>
+                {patients.length === 0 ? '尚無患者資料' : '沒有符合條件的患者'}
+              </td></tr>
+            )}
+            {filtered.map((p) => {
+              const a = p._prio.alert
+              return (
+                <tr key={p.id}>
+                  <td><span className={`badge ${p._prio.badge}`}>{p._prio.label}</span></td>
+                  <td className="cell-strong">
+                    <Link to={`/patients/${p.id}`} className="row-link">{p.name ?? '（未命名）'}</Link>
+                  </td>
+                  <td>{p.age ?? '—'}</td>
+                  <td className="cell-dim">{p.gender ?? '—'}</td>
+                  <td className="cell-dim">{fmtShort(p.created_at)}</td>
+                  <td className="cell-dim">
+                    {a ? (
+                      <>
+                        <strong style={{ color: 'var(--text)' }}>
+                          {ALERT_TYPE_LABEL[a.alert_type] ?? a.alert_type}
+                        </strong>
+                        {a.title ? ` · ${a.title}` : ''}
+                      </>
+                    ) : (
+                      '無未處理警示'
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
-
-      <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text-faint)' }}>
-        * 示範資料，Phase 2 會接上實際患者與警示系統
-      </p>
     </>
   )
 }
-
-const th = { textAlign: 'left', padding: '14px 20px', fontWeight: 600 }
-const td = { padding: '14px 20px', fontSize: 14 }

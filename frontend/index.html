@@ -13,7 +13,7 @@
   <meta name="description" content="PWA 醫療輔助平台，支援醫病溝通與 AI 症狀分析" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
@@ -23,8 +23,16 @@
   <canvas id="star-canvas"></canvas>
 
   <!-- ★ Landing Page — Split Layout -->
-  <div id="landing">
+  <div id="landing" data-theme="dark">
     <canvas id="landing-canvas"></canvas>
+
+    <!-- Theme toggle (terminal-style) -->
+    <button class="theme-toggle" id="theme-toggle" type="button" onclick="toggleLandingTheme()">
+      <span class="tt-bracket">[</span>
+      <span class="tt-icon" id="tt-icon">☾</span>
+      <span id="tt-label">DARK</span>
+      <span class="tt-bracket">]</span>
+    </button>
 
     <div class="landing-split" id="landing-text">
       <!-- Left: Logo -->
@@ -33,6 +41,7 @@
       </div>
       <!-- Right: Title + Tagline + Button -->
       <div class="landing-right">
+        <p class="landing-prompt">&gt; INIT MD.PIECE</p>
         <h1 class="landing-logo">MD.Piece</h1>
         <div class="landing-divider"></div>
         <p class="landing-tagline">將日常碎片拼起<br>醫起走出治療的迷霧</p>
@@ -140,7 +149,7 @@
   </div>
 
   <!-- ★ Main App (hidden until enter) -->
-  <div id="app-wrapper">
+  <div id="app-wrapper" data-theme="dark">
     <!-- Puzzle decorations -->
     <div class="puzzle-deco puzzle-deco-1"></div>
     <div class="puzzle-deco puzzle-deco-2"></div>
@@ -150,51 +159,91 @@
 
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
+      <!-- Retro window title bar -->
+      <div class="win-titlebar sidebar-titlebar">
+        <span class="win-titlebar-name">navigator.exe</span>
+        <span class="win-titlebar-controls">
+          <span class="win-btn">─</span>
+          <span class="win-btn">▢</span>
+          <span class="win-btn win-btn-close">✕</span>
+        </span>
+      </div>
+      <button class="sidebar-brand" onclick="goHome()" type="button" title="返回首頁">
         <img src="icons/logo-core.jpg" alt="MD.Piece" class="sidebar-logo-img" />
         <h1>MD.Piece</h1>
         <p>MEDICAL PLATFORM</p>
-      </div>
+      </button>
       <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="navigateTo('home', this)">
-          <span class="nav-icon"><i data-lucide="layout-dashboard" style="width:18px;height:18px"></i></span> 首頁
-        </button>
-        <button class="nav-item" onclick="navigateTo('symptoms', this)">
+        <button class="nav-item active" onclick="navigateTo('symptoms', this)">
           <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> 症狀紀錄
         </button>
-        <button class="nav-item" onclick="navigateTo('records', this)">
-          <span class="nav-icon"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></span> 病歷管理
-        </button>
-        <button class="nav-item" onclick="navigateTo('doctors', this)">
-          <span class="nav-icon"><i data-lucide="stethoscope" style="width:18px;height:18px"></i></span> 醫師列表
-        </button>
-        <button class="nav-item" onclick="navigateTo('patients', this)">
-          <span class="nav-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span> 病患管理
-        </button>
         <button class="nav-item" onclick="navigateTo('medications', this)">
-          <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span> 藥物管理
+          <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span> 藥物紀錄
+        </button>
+        <button class="nav-item" onclick="navigateTo('vitals', this)">
+          <span class="nav-icon"><i data-lucide="activity" style="width:18px;height:18px"></i></span> 生理紀錄
+        </button>
+        <button class="nav-item" onclick="navigateTo('memo', this)">
+          <span class="nav-icon"><i data-lucide="sticky-note" style="width:18px;height:18px"></i></span> Memo
+        </button>
+        <button class="nav-item" onclick="navigateTo('previsit', this)">
+          <span class="nav-icon"><i data-lucide="clipboard-check" style="width:18px;height:18px"></i></span> 診前報告
         </button>
         <button class="nav-item" onclick="navigateTo('education', this)">
           <span class="nav-icon"><i data-lucide="book-heart" style="width:18px;height:18px"></i></span> 衛教專欄
         </button>
-        <button class="nav-item" onclick="navigateTo('research', this)">
-          <span class="nav-icon"><i data-lucide="flask-conical" style="width:18px;height:18px"></i></span> 自動研究
+        <button class="nav-item" onclick="navigateTo('story', this)">
+          <span class="nav-icon"><i data-lucide="book-open" style="width:18px;height:18px"></i></span> 每日故事
         </button>
-        <button class="nav-item" onclick="navigateTo('contributors', this)">
-          <span class="nav-icon"><i data-lucide="heart-handshake" style="width:18px;height:18px"></i></span> 貢獻者
+        <button class="nav-item" onclick="navigateTo('labs', this)">
+          <span class="nav-icon"><i data-lucide="trending-up" style="width:18px;height:18px"></i></span> 報告數值
+        </button>
+        <button class="nav-item" onclick="navigateTo('pieces', this)">
+          <span class="nav-icon"><i data-lucide="puzzle" style="width:18px;height:18px"></i></span> 你的碎片
+        </button>
+        <button class="nav-item" onclick="navigateTo('chat', this)">
+          <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span> 醫療 Chat
         </button>
         <a class="nav-item" href="doctor.html" style="text-decoration:none;display:flex;align-items:center;margin-top:12px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px">
           <span class="nav-icon"><i data-lucide="briefcase-medical" style="width:18px;height:18px"></i></span> 醫師端 →
         </a>
       </nav>
+      <div class="sidebar-foot">
+        <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
+          切換為年長版
+        </button>
+        <p class="mode-hint">年長版：放大字體與按鈕、提高對比</p>
+        <button class="logout-btn" onclick="logout()" type="button">
+          <span class="nav-icon"><i data-lucide="log-out" style="width:16px;height:16px"></i></span>
+          <span class="logout-label">登出</span>
+          <span class="logout-cmd">$ exit</span>
+        </button>
+      </div>
     </aside>
 
     <!-- Main content area -->
     <div class="main-content">
-      <div class="topbar">
+      <div class="topbar win-titlebar">
         <button class="hamburger" onclick="toggleSidebar()">☰</button>
-        <h2 id="page-title">首頁</h2>
-        <span style="font-size:.75rem;color:var(--text-muted)">v2.0</span>
+        <button class="topbar-back" onclick="goHome()" type="button" title="返回首頁">
+          <span class="tb-arrow">←</span>
+          <span class="tb-zh">返回首頁</span>
+          <span class="tb-cd">// cd ..</span>
+        </button>
+        <span class="topbar-filename">
+          <span class="topbar-prefix">C:\md.piece&gt;</span>
+          <span id="page-title">home</span><span class="topbar-ext">.html</span>
+        </span>
+        <span class="topbar-spacer"></span>
+        <button class="app-theme-toggle" id="app-theme-toggle" type="button" onclick="toggleAppTheme()" title="切換主題">
+          <span class="att-icon" id="att-icon">☾</span>
+        </button>
+        <span class="topbar-version">v2.0</span>
+        <span class="win-titlebar-controls topbar-wincontrols">
+          <span class="win-btn">─</span>
+          <span class="win-btn">▢</span>
+          <span class="win-btn win-btn-close">✕</span>
+        </span>
       </div>
       <main id="app"></main>
     </div>
@@ -215,16 +264,29 @@
         canvas.height = window.innerHeight;
       }
 
+      function getStarPalette() {
+        const t = document.getElementById('landing')?.dataset.theme || 'dark';
+        if (t === 'light') {
+          return [
+            [255, 255, 255],
+            [168, 240, 224],
+            [127, 231, 217],
+            [255, 214, 232],
+            [184, 242, 234],
+          ];
+        }
+        return [
+          [232, 255, 249],  // mint white
+          [184, 242, 234],  // pop aqua
+          [127, 231, 217],  // mint
+          [255, 214, 232],  // pastel pink
+          [168, 240, 224],  // soft mint
+        ];
+      }
+
       function createStars() {
         stars = [];
-        // Twilight star palette: bright on soft blue sky
-        const colors = [
-          [230, 240, 255],  // ice white
-          [255, 235, 200],  // warm cream
-          [220, 210, 255],  // soft lavender
-          [255, 215, 230],  // pale rose
-          [200, 230, 255],  // sky glow
-        ];
+        const colors = getStarPalette();
         const count = Math.floor((canvas.width * canvas.height) / 2200);
         for (let i = 0; i < count; i++) {
           stars.push({
@@ -270,7 +332,7 @@
           ctx.beginPath();
           ctx.moveTo(ss.x, ss.y);
           ctx.lineTo(ss.x - ss.len, ss.y - ss.len * 0.4);
-          ctx.strokeStyle = `rgba(210, 200, 255, ${ss.a})`;
+          ctx.strokeStyle = `rgba(127, 231, 217, ${ss.a})`;
           ctx.lineWidth = 1.5;
           ctx.stroke();
           ss.x += ss.speed;
@@ -284,10 +346,59 @@
       }
 
       window.addEventListener('resize', () => { resize(); createStars(); });
+      window.addEventListener('landing-theme-change', () => createStars());
       resize();
       createStars();
       requestAnimationFrame(draw);
     })();
+
+    // ─── Landing Theme Toggle (dark / light) ───────────────
+    function toggleLandingTheme() {
+      const el = document.getElementById('landing');
+      if (!el) return;
+      const next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+      el.dataset.theme = next;
+      const ico = document.getElementById('tt-icon');
+      const lab = document.getElementById('tt-label');
+      if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
+      if (lab) lab.textContent = next.toUpperCase();
+      try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
+    }
+
+    (function initLandingTheme() {
+      let saved = null;
+      try { saved = localStorage.getItem('mdpiece_landing_theme'); } catch (e) {}
+      const theme = saved === 'light' ? 'light' : 'dark';
+      const el = document.getElementById('landing');
+      if (el) el.dataset.theme = theme;
+      const app = document.getElementById('app-wrapper');
+      if (app) app.dataset.theme = theme;
+      const ico = document.getElementById('tt-icon');
+      const lab = document.getElementById('tt-label');
+      if (ico) ico.textContent = theme === 'dark' ? '☾' : '☀';
+      if (lab) lab.textContent = theme.toUpperCase();
+      const aIco = document.getElementById('att-icon');
+      if (aIco) aIco.textContent = theme === 'dark' ? '☾' : '☀';
+    })();
+
+    // ─── App Theme Toggle (in topbar) ──────────────────────
+    function toggleAppTheme() {
+      const app = document.getElementById('app-wrapper');
+      if (!app) return;
+      const next = app.dataset.theme === 'dark' ? 'light' : 'dark';
+      app.dataset.theme = next;
+      const lp = document.getElementById('landing');
+      if (lp) lp.dataset.theme = next;
+      const aIco = document.getElementById('att-icon');
+      if (aIco) aIco.textContent = next === 'dark' ? '☾' : '☀';
+      const ico = document.getElementById('tt-icon');
+      const lab = document.getElementById('tt-label');
+      if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
+      if (lab) lab.textContent = next.toUpperCase();
+      try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
+    }
 
     // ─── Landing → App Transition ──────────────────────────
     function enterApp() {
@@ -302,24 +413,65 @@
           document.getElementById('app-wrapper').classList.add('show');
           showPage('home');
           lucide.createIcons();
+          setMode(getMode());
         } else {
           showIdCardRegister();
         }
       }, 800);
     }
 
+    // 初始化模式按鈕文字（即使尚未進入 app）
+    document.addEventListener('DOMContentLoaded', () => setMode(getMode()));
+
     // ─── Sidebar Navigation ────────────────────────────────
+    // 普通版 (Y2K) 顯示為檔名風格；年長版會經 CSS 隱藏前綴/副檔
     const pageTitles = {
-      home: '首頁', symptoms: '症狀紀錄', records: '病歷管理',
-      doctors: '醫師列表', patients: '病患管理', medications: '藥物管理',
-      education: '衛教專欄', research: '自動研究', contributors: '貢獻者'
+      home: 'home',
+      symptoms: 'symptoms',
+      medications: 'medications',
+      vitals: 'vitals',
+      memo: 'memo',
+      previsit: 'previsit',
+      education: 'education',
+      story: 'daily-story',
+      labs: 'lab-values',
+      pieces: 'your-pieces',
+      chat: 'med-chat',
+      // legacy / fallback
+      records: 'records', doctors: 'doctors', patients: 'patients'
+    };
+    // 年長版顯示用中文（CSS 在 senior 模式會把 prefix/ext 隱藏，只剩 page-title）
+    const pageTitlesSenior = {
+      home: '首頁',
+      symptoms: '症狀紀錄',
+      medications: '藥物紀錄',
+      vitals: '生理紀錄',
+      memo: 'Memo',
+      previsit: '診前報告',
+      education: '衛教專欄',
+      story: '每日故事',
+      labs: '報告數值',
+      pieces: '你的碎片',
+      chat: '醫療 Chat',
+      records: '病歷管理', doctors: '醫師列表', patients: '病患管理'
     };
 
     function navigateTo(page, btn) {
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
-      document.getElementById('page-title').textContent = pageTitles[page] || page;
+      const isSenior = document.documentElement.getAttribute('data-mode') === 'senior';
+      const map = isSenior ? pageTitlesSenior : pageTitles;
+      document.getElementById('page-title').textContent = map[page] || page;
       showPage(page);
+      closeSidebar();
+    }
+
+    function goHome() {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      const isSenior = document.documentElement.getAttribute('data-mode') === 'senior';
+      const map = isSenior ? pageTitlesSenior : pageTitles;
+      document.getElementById('page-title').textContent = map.home || 'home';
+      showPage('home');
       closeSidebar();
     }
 

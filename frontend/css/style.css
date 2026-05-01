@@ -83,7 +83,8 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 
 /* ═══════════════════════════════════════════════════════════
-   LANDING CINEMATIC — Puzzle Rain → Hands → Heart
+   LANDING — Mint Terminal × Starlit Pieces (v5)
+   數位終端 × 星空 × 拼圖碎片 · 粉嫩藍綠
    ═══════════════════════════════════════════════════════════ */
 
 #landing {
@@ -95,17 +96,73 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: opacity 0.8s ease;
+  font-family: "Noto Sans TC", sans-serif;
+  transition: opacity 0.8s ease, background 0.5s ease, color 0.5s ease;
+}
+
+/* ── DARK theme (default · 夜空終端) ────────────────────── */
+#landing[data-theme="dark"] {
+  --landing-text:   #E8FFF9;
+  --landing-dim:    #8FC9BE;
+  --landing-mint:   #A8F0E0;
+  --landing-aqua:   #7FE7D9;
+  --landing-pop:    #B8F2EA;
+  --landing-pink:   #FFD6E8;
+  --landing-term:   #5EEAD4;
+  --landing-card:   rgba(168,240,224,0.06);
+  --landing-border: rgba(168,240,224,0.28);
+  --landing-glow:   rgba(94,234,212,0.45);
   background:
-    radial-gradient(ellipse at 80% 15%, rgba(220,237,247,0.55), transparent 60%),
-    radial-gradient(ellipse at 15% 80%, rgba(235,235,236,0.45), transparent 55%),
-    linear-gradient(180deg, #F8FBFD 0%, #DCEDF7 55%, #EBEBEC 100%);
-  color: #685D5A;
-  --landing-text:  #685D5A;
-  --landing-dim:   #848388;
-  --landing-card:  #F8FBFD;
-  --landing-mid:   #DCEDF7;
-  --landing-grey:  #EBEBEC;
+    radial-gradient(ellipse at 78% 18%, rgba(127,231,217,0.18), transparent 55%),
+    radial-gradient(ellipse at 18% 82%, rgba(255,214,232,0.12), transparent 55%),
+    linear-gradient(180deg, #07171C 0%, #0F2A30 55%, #133A40 100%);
+  color: var(--landing-text);
+}
+
+/* ── LIGHT theme (粉嫩日光) ─────────────────────────────── */
+#landing[data-theme="light"] {
+  --landing-text:   #1F4D49;
+  --landing-dim:    #4F8A82;
+  --landing-mint:   #5EC9B5;
+  --landing-aqua:   #3FB8A6;
+  --landing-pop:    #2BAA92;
+  --landing-pink:   #F4A8C8;
+  --landing-term:   #1F8F7A;
+  --landing-card:   rgba(255,255,255,0.55);
+  --landing-border: rgba(94,201,181,0.4);
+  --landing-glow:   rgba(94,201,181,0.32);
+  background:
+    radial-gradient(ellipse at 78% 18%, rgba(168,240,224,0.65), transparent 55%),
+    radial-gradient(ellipse at 18% 82%, rgba(255,214,232,0.45), transparent 55%),
+    linear-gradient(180deg, #EAFBF6 0%, #D1F2E8 55%, #BFEAD9 100%);
+  color: var(--landing-text);
+}
+
+/* ── Scanline overlay (terminal feel) ──────────────────── */
+#landing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 11;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(94,234,212,0.025) 3px,
+    rgba(94,234,212,0.025) 4px
+  );
+  mix-blend-mode: overlay;
+}
+#landing[data-theme="light"]::after {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(31,77,73,0.03) 3px,
+    rgba(31,77,73,0.03) 4px
+  );
+  mix-blend-mode: multiply;
 }
 
 #landing.fade-out {
@@ -126,7 +183,40 @@ body {
   pointer-events: none;
 }
 
-/* ─── Split layout (logo left, text right) ────────────── */
+/* ── Theme toggle (terminal chip) ──────────────────────── */
+.theme-toggle {
+  position: fixed;
+  top: 22px;
+  right: 24px;
+  z-index: 1002;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: var(--landing-term);
+  background: var(--landing-card);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--landing-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-transform: uppercase;
+}
+.theme-toggle:hover {
+  color: var(--landing-pop);
+  border-color: var(--landing-term);
+  box-shadow: 0 0 18px var(--landing-glow);
+  transform: translateY(-1px);
+}
+.theme-toggle .tt-bracket { opacity: 0.65; }
+.theme-toggle .tt-icon { font-size: 0.85rem; line-height: 1; }
+
+/* ── Split layout ─────────────────────────────────────── */
 .landing-split {
   position: relative;
   z-index: 10;
@@ -139,7 +229,7 @@ body {
   transform: translateY(18px);
   transition: opacity 1.2s ease, transform 1s ease;
   pointer-events: none;
-  max-width: 900px;
+  max-width: 920px;
   width: 100%;
 }
 .landing-split.show {
@@ -148,16 +238,13 @@ body {
   pointer-events: auto;
 }
 
-/* ─── Left: Logo image ──────────────────────────────────── */
-.landing-left {
-  flex-shrink: 0;
-}
+.landing-left { flex-shrink: 0; }
 
 .landing-logo-img {
   width: 240px;
   height: auto;
   border-radius: 20px;
-  filter: drop-shadow(0 4px 24px rgba(43,92,230,0.2));
+  filter: drop-shadow(0 4px 28px var(--landing-glow));
   animation: logoFloat 6s ease-in-out infinite;
 }
 
@@ -166,11 +253,29 @@ body {
   50% { transform: translateY(-10px); }
 }
 
-/* ─── Right: Text content ───────────────────────────────── */
 .landing-right {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+/* Terminal prompt above title */
+.landing-prompt {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  color: var(--landing-term);
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+.landing-prompt::after {
+  content: "_";
+  display: inline-block;
+  margin-left: 2px;
+  animation: terminalBlink 1.05s steps(1, end) infinite;
+}
+@keyframes terminalBlink {
+  50% { opacity: 0; }
 }
 
 .landing-logo {
@@ -178,22 +283,23 @@ body {
   font-style: normal;
   font-size: 3.8rem;
   font-weight: 400;
-  color: #685D5A;
+  color: var(--landing-text);
   letter-spacing: 1px;
   line-height: 1.1;
+  text-shadow: 0 0 28px var(--landing-glow);
 }
 
 .landing-divider {
   width: 60px;
   height: 2px;
   margin: 14px 0;
-  background: linear-gradient(90deg, #848388, #DCEDF7, transparent);
+  background: linear-gradient(90deg, var(--landing-mint), var(--landing-pink), transparent);
   border-radius: 1px;
 }
 
 .landing-tagline {
   font-size: 1rem;
-  color: #685D5A;
+  color: var(--landing-text);
   letter-spacing: 2px;
   line-height: 2.2;
   font-weight: 400;
@@ -201,97 +307,115 @@ body {
 
 .landing-sub-tagline {
   display: inline-block;
-  font-size: 0.72rem;
-  color: #685D5A;
-  letter-spacing: 1.5px;
-  margin-top: 4px;
-  font-style: italic;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    transparent 35%,
-    rgba(220,237,247,0.85) 35%,
-    rgba(220,237,247,0.85) 92%,
-    transparent 92%
-  );
-  padding: 0 6px;
-  border-radius: 2px;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.7rem;
+  color: var(--landing-dim);
+  letter-spacing: 1.4px;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border-left: 2px solid var(--landing-mint);
+  background: linear-gradient(90deg, var(--landing-card), transparent);
+  border-radius: 0 4px 4px 0;
 }
 
-/* ─── Enter button ─────────────────────────────────────── */
+/* ── Enter button — terminal bracket style ─────────────── */
 .landing-enter {
   position: relative;
   margin-top: 28px;
-  padding: 14px 44px 16px;
-  font-family: "Noto Sans TC", sans-serif;
-  color: #F8FBFD;
-  background: #685D5A;
-  border: none;
-  border-radius: var(--radius-pill);
+  padding: 14px 32px 16px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  color: var(--landing-text);
+  background: var(--landing-card);
+  border: 1px solid var(--landing-border);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 22px rgba(104,93,90,0.35);
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  overflow: visible;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.landing-enter::before,
+.landing-enter::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--landing-term);
+  transition: all 0.3s ease;
+}
+.landing-enter::before {
+  top: 6px; left: 6px;
+  border-right: none; border-bottom: none;
+}
+.landing-enter::after {
+  bottom: 6px; right: 6px;
+  border-left: none; border-top: none;
 }
 .landing-enter:hover {
-  transform: translateY(-3px) scale(1.03);
-  background: #848388;
-  box-shadow: 0 6px 30px rgba(104,93,90,0.45);
+  transform: translateY(-3px);
+  border-color: var(--landing-term);
+  box-shadow: 0 0 28px var(--landing-glow), inset 0 0 18px rgba(94,234,212,0.08);
+  color: var(--landing-pop);
 }
-.landing-enter:active {
-  transform: translateY(0) scale(0.98);
+.landing-enter:hover::before,
+.landing-enter:hover::after {
+  width: 18px; height: 18px;
 }
+.landing-enter:active { transform: translateY(0) scale(0.98); }
 
 .enter-sub {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 400;
   letter-spacing: 4px;
   text-indent: 4px;
-  opacity: 0.8;
+  opacity: 0.78;
+  color: var(--landing-term);
 }
 .enter-main {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 3px;
   text-indent: 3px;
 }
+.enter-main::before {
+  content: "> ";
+  color: var(--landing-term);
+  opacity: 0.85;
+}
 
-/* ─── Floating puzzle decorations on landing ──────────── */
+/* ── Floating puzzle decorations (CSS layer) ───────────── */
 .landing-deco {
   position: fixed;
   z-index: 5;
-  opacity: 0.06;
+  opacity: 0.22;
   pointer-events: none;
+  filter: drop-shadow(0 0 12px var(--landing-glow));
+  transition: background 0.5s ease, opacity 0.5s ease;
 }
+#landing[data-theme="light"] .landing-deco { opacity: 0.45; }
+
 .landing-deco-1 {
-  top: 8%;
-  left: 5%;
-  width: 100px;
-  height: 100px;
-  background: var(--accent);
+  top: 8%; left: 5%;
+  width: 100px; height: 100px;
+  background: var(--landing-mint);
   clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
   animation: landingFloat1 10s ease-in-out infinite;
 }
 .landing-deco-2 {
-  bottom: 12%;
-  right: 8%;
-  width: 70px;
-  height: 70px;
-  background: var(--teal);
+  bottom: 12%; right: 8%;
+  width: 70px; height: 70px;
+  background: var(--landing-pink);
   clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
   animation: landingFloat2 12s ease-in-out infinite;
 }
 .landing-deco-3 {
-  top: 60%;
-  left: 12%;
-  width: 55px;
-  height: 55px;
-  background: var(--purple);
+  top: 60%; left: 12%;
+  width: 55px; height: 55px;
+  background: var(--landing-aqua);
   clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
   animation: landingFloat1 14s ease-in-out 3s infinite;
 }
@@ -304,19 +428,25 @@ body {
   50% { transform: translateY(10px) rotate(-6deg); }
 }
 
-/* ─── Lab watermark ───────────────────────────────────── */
+/* ── Lab watermark ─────────────────────────────────────── */
 .intro-lab {
   position: fixed;
   bottom: 24px;
   left: 32px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
   font-size: 0.6rem;
-  color: var(--text-muted);
+  color: var(--landing-dim);
   letter-spacing: 2px;
   text-transform: uppercase;
   opacity: 0;
   animation: fade-in 0.4s ease-out 4s forwards;
   z-index: 1001;
   pointer-events: none;
+}
+.intro-lab::before {
+  content: "// ";
+  color: var(--landing-term);
+  opacity: 0.7;
 }
 
 @keyframes fade-in {
@@ -325,7 +455,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MAIN APP LAYOUT
+   MAIN APP LAYOUT — Y2K Retro Desktop (sidebar + topbar)
    ═══════════════════════════════════════════════════════════ */
 
 #app-wrapper {
@@ -333,148 +463,623 @@ body {
   min-height: 100vh;
 }
 
-#app-wrapper.show {
-  display: flex;
+#app-wrapper.show { display: flex; }
+
+/* ── App theme tokens ─────────────────────────────────── */
+/* Dark = 單寧藍（denim） + 薄荷／粉螢光點綴（cyan-on-denim 經典終端機） */
+#app-wrapper[data-theme="dark"] {
+  --app-bg:         #1F3553;   /* denim navy */
+  --app-grid:       rgba(160,200,245,0.10);
+  --app-text:       #ECF3FF;   /* icy blue-white */
+  --app-text-dim:   #9FB8D4;
+  --app-mint:       #A8F0E0;
+  --app-aqua:       #7FE7D9;
+  --app-pink:       #FFD6E8;
+  --app-blue:       #B8DEFF;
+  --app-term:       #5EEAD4;   /* keep mint cyan for prompts/labels */
+  --app-panel:      #294670;   /* mid denim panel */
+  --app-panel-soft: #345889;   /* lighter denim wash */
+  --app-chrome-1:   #2C4773;
+  --app-chrome-2:   #436FA8;
+  --app-border:     rgba(184,222,255,0.42);
+  --app-shadow:     0 4px 0 rgba(13,25,42,0.55);
+  --app-glow:       rgba(94,234,212,0.45);
+}
+#app-wrapper[data-theme="light"] {
+  --app-bg:         #F4FBF9;
+  --app-grid:       rgba(94,201,181,0.12);
+  --app-text:       #1F4D49;
+  --app-text-dim:   #5C8B85;
+  --app-mint:       #5EC9B5;
+  --app-aqua:       #3FB8A6;
+  --app-pink:       #F4A8C8;
+  --app-blue:       #B8DEFF;
+  --app-term:       #1F8F7A;
+  --app-panel:      #FDF6FA;
+  --app-panel-soft: #FFEEF5;
+  --app-chrome-1:   #FFC8DD;
+  --app-chrome-2:   #B8DEFF;
+  --app-border:     #1F4D49;
+  --app-shadow:     2px 2px 0 #1F4D49;
+  --app-glow:       rgba(94,201,181,0.35);
 }
 
-/* ─── Sidebar ───────────────────────────────────────────── */
+/* Body grid background — only when app is shown */
+#app-wrapper.show {
+  background-color: var(--app-bg);
+  background-image:
+    linear-gradient(var(--app-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--app-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-attachment: fixed;
+  color: var(--app-text);
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
 
+/* ═══════ Generic retro window title bar ═══════ */
+.win-titlebar {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
+  border: 1.5px solid var(--app-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.win-titlebar-name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--app-text);
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-titlebar-controls {
+  display: inline-flex;
+  gap: 5px;
+  padding-right: 8px;
+}
+.win-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 20px;
+  font-size: 0.85rem;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  cursor: default;
+  user-select: none;
+  line-height: 1;
+}
+.win-btn-close { background: var(--app-pink); }
+
+/* ── Sidebar — file explorer window ──────────────────── */
 .sidebar {
   position: fixed;
-  top: 0; left: 0;
-  width: 220px;
-  height: 100vh;
-  background: var(--bg-mid);
-  border-right: 1px solid var(--border-glass);
+  top: 14px; left: 14px;
+  width: 248px;
+  height: calc(100vh - 28px);
+  background: var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 4px;
   display: flex;
   flex-direction: column;
-  padding: 20px 0;
+  padding: 0;
   z-index: 100;
-  transition: transform var(--transition);
+  box-shadow: var(--app-shadow);
+  transition: transform var(--transition), background 0.3s ease, border-color 0.3s ease;
+  overflow: hidden;
+}
+
+.sidebar-titlebar {
+  border: none;
+  border-bottom: 1.5px solid var(--app-border);
+  padding-left: 4px;
+  flex-shrink: 0;
 }
 
 .sidebar-brand {
-  padding: 8px 20px 24px;
-  border-bottom: 1px solid var(--border-glass);
-  margin-bottom: 8px;
+  padding: 14px 16px 16px;
+  border: none;
+  border-bottom: 1px dashed var(--app-border);
+  margin: 0;
+  background: var(--app-panel-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  color: inherit;
+  transition: background 0.2s ease;
+}
+.sidebar-brand:hover {
+  background: var(--app-mint);
+  color: #1F3553;
+}
+.sidebar-brand:hover h1,
+.sidebar-brand:hover h1::before,
+.sidebar-brand:hover p {
+  color: #1F3553;
+  -webkit-text-fill-color: #1F3553;
 }
 
 .sidebar-logo-img {
   width: 48px;
   height: auto;
   margin-bottom: 6px;
-  filter: invert(15%) sepia(20%) saturate(400%) hue-rotate(190deg) brightness(0.9) contrast(1.1);
-  opacity: 0.8;
+  border: 1.5px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-panel);
+  padding: 3px;
+  filter: none;
+  opacity: 1;
 }
 
 .sidebar-brand h1 {
-  font-family: "Sacramento", cursive;
-  font-size: 1.6rem;
-  font-weight: 400;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: none;
+  -webkit-text-fill-color: var(--app-text);
+  color: var(--app-text);
+  position: relative;
+}
+.sidebar-brand h1::before {
+  content: "▸ ";
+  color: var(--app-term);
 }
 
 .sidebar-brand p {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
   font-size: .75rem;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  margin-top: 4px;
+  color: var(--app-text-dim);
+  letter-spacing: 1.5px;
+  margin-top: 3px;
 }
 
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 12px 8px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 20px;
-  color: #666b96;
-  font-size: .9rem;
+  padding: 11px 12px;
+  margin-bottom: 3px;
+  color: var(--app-text);
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: .98rem;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
   background: none;
   width: 100%;
   text-align: left;
-  font-family: inherit;
-  transition: var(--transition);
-  border-left: 3px solid transparent;
+  transition: all 0.15s ease;
 }
 
 .nav-item:hover {
-  color: #666b96;
-  background: var(--bg-glass);
+  background: var(--app-panel-soft);
+  border-color: var(--app-border);
+  color: var(--app-text);
 }
 
 .nav-item.active {
-  color: #666b96;
-  background: rgba(91,159,232,0.12);
-  border-left-color: var(--accent);
+  background: var(--app-mint);
+  border-color: var(--app-border);
+  color: #0B1F25;
+  font-weight: 600;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4), inset -1px -1px 0 rgba(0,0,0,0.15);
+}
+#app-wrapper[data-theme="dark"] .nav-item.active {
+  color: #07171C;
 }
 
 .nav-icon {
   width: 20px;
-  text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
   color: inherit;
+  flex-shrink: 0;
 }
-
 .nav-icon svg {
   width: 18px;
   height: 18px;
-  stroke-width: 1.8;
+  stroke-width: 2;
 }
 
-/* ─── Main content ──────────────────────────────────────── */
-
+/* ── Main content & topbar ──────────────────────────── */
 .main-content {
   flex: 1;
-  margin-left: 220px;
+  margin-left: 276px;
   min-height: 100vh;
   position: relative;
+  padding: 14px 14px 14px 0;
 }
 
 .topbar {
   position: sticky;
-  top: 0;
+  top: 14px;
   z-index: 50;
-  padding: 16px 32px;
-  background: #EBEBEC;
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-glass);
+  padding: 0;
+  border-radius: 4px;
+  box-shadow: var(--app-shadow);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
+  background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
+  backdrop-filter: none;
 }
 
-.topbar h2 {
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.hamburger {
+.topbar .hamburger {
   display: none;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 1.5rem;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  font-size: 1rem;
   cursor: pointer;
-  padding: 4px 8px;
+  margin-left: 6px;
+  width: 26px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+}
+
+/* Back button — 中文主、終端機 cd .. 註解風為輔 */
+.topbar-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  padding: 7px 14px;
+  background: var(--app-panel);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.topbar-back .tb-arrow {
+  color: var(--app-term);
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.topbar-back .tb-zh {
+  color: var(--app-text);
+}
+.topbar-back .tb-cd {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.7rem;
+  color: var(--app-term);
+  opacity: 0.55;
+  letter-spacing: 0.5px;
+}
+.topbar-back:hover {
+  background: var(--app-mint);
+  border-color: var(--app-mint);
+  color: #1F3553;
+  box-shadow: 0 0 14px var(--app-glow);
+}
+.topbar-back:hover .tb-arrow,
+.topbar-back:hover .tb-zh,
+.topbar-back:hover .tb-cd { color: #1F3553; opacity: 1; }
+
+/* Senior mode — clean「← 返回首頁」, no terminal hint */
+html[data-mode="senior"] .topbar-back {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  color: var(--text);
+  font-size: 1.05rem;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+}
+html[data-mode="senior"] .topbar-back .tb-cd { display: none; }
+html[data-mode="senior"] .topbar-back .tb-zh { color: var(--text); font-size: 1.05rem; }
+html[data-mode="senior"] .topbar-back .tb-arrow { color: var(--klein); font-size: 1.15rem; }
+html[data-mode="senior"] .topbar-back:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: none;
+}
+html[data-mode="senior"] .topbar-back:hover .tb-arrow,
+html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
+
+/* Mobile — 收掉 cd .. 註解，只留 ← 返回首頁 */
+@media (max-width: 480px) {
+  .topbar-back .tb-cd { display: none; }
+  .topbar-back { padding: 6px 10px; font-size: 0.88rem; }
+}
+
+.topbar-filename {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-text);
+  padding: 12px 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.5px;
+}
+.topbar-prefix {
+  color: var(--app-term);
+  font-weight: 500;
+  margin-right: 6px;
+  opacity: 0.85;
+}
+.topbar-ext {
+  color: var(--app-text-dim);
+  font-weight: 400;
+}
+
+.topbar-spacer { flex: 0 0 1px; }
+
+.app-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  margin-right: 6px;
+  font-size: 1rem;
+  line-height: 1;
+  background: var(--app-panel);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.app-theme-toggle:hover {
+  background: var(--app-mint);
+  color: #07171C;
+  box-shadow: 0 0 12px var(--app-glow);
+}
+
+.topbar-version {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.65rem;
+  color: var(--app-text-dim);
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border: 1px dashed var(--app-border);
+  border-radius: 2px;
+  margin-right: 6px;
+}
+
+.topbar-wincontrols {
+  margin-right: 6px;
+  padding-right: 0;
 }
 
 #app {
-  max-width: 900px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 24px 32px;
+  padding: 28px 36px 60px;
+  font-size: 1.02rem;
+  line-height: 1.7;
   animation: fadeIn .3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Standard (young) mode: #app becomes a terminal pane ─── */
+html[data-mode="standard"] #app {
+  font-size: 1.05rem;
+  margin: 18px auto 30px;
+  padding: 38px 32px 46px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.18)),
+    var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 6px;
+  box-shadow: var(--app-shadow), inset 0 0 80px rgba(94,234,212,0.06);
+  font-family: "Noto Sans TC", sans-serif;
+}
+/* Top-left filepath label ▸ /md.piece/pages/xxx — bash */
+html[data-mode="standard"] #app::before {
+  content: "▸ /md.piece/pages/" attr(data-page) " — bash";
+  position: absolute;
+  top: -11px;
+  left: 22px;
+  padding: 3px 12px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: var(--app-term);
+  background: var(--app-bg);
+  border: 1.5px solid var(--app-border);
+  border-radius: 3px;
+  white-space: nowrap;
+  z-index: 3;
+}
+/* Bottom status bar */
+html[data-mode="standard"] #app::after {
+  content: "─[ ready ]─[ tty1 ]─[ mode: standard ]─[ uptime: piecing... ]─";
+  position: absolute;
+  left: 14px; right: 14px;
+  bottom: 10px;
+  padding: 4px 10px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  color: var(--app-term);
+  border-top: 1px dashed var(--app-border);
+  background: linear-gradient(180deg, transparent, rgba(94,234,212,0.06));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 3;
+  opacity: 0.9;
+}
+/* Subtle CRT scanlines on terminal pane */
+html[data-mode="standard"] #app {
+  background-image:
+    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.18)),
+    repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(94,234,212,0.025) 3px, rgba(94,234,212,0.025) 4px);
+}
+
+html[data-mode="standard"] #app h2 { font-size: 1.5rem; }
+html[data-mode="standard"] #app h3 { font-size: 1.2rem; }
+html[data-mode="standard"] #app p { font-size: 1.02rem; }
+
+/* ═══════════════════════════════════════════════════════════
+   SENIOR MODE — 年長版：清爽乾淨、無視窗 chrome
+   覆蓋 Y2K 視覺，保留大字體 / 高對比 / 寬按鈕
+   ═══════════════════════════════════════════════════════════ */
+
+html[data-mode="senior"] #app-wrapper.show {
+  background: #F8FBFD;
+  background-image: none;
+  color: var(--text);
+}
+
+/* 隱藏所有 Y2K 視窗裝飾 */
+html[data-mode="senior"] .sidebar-titlebar,
+html[data-mode="senior"] .topbar-prefix,
+html[data-mode="senior"] .topbar-ext,
+html[data-mode="senior"] .topbar-wincontrols,
+html[data-mode="senior"] .app-theme-toggle {
+  display: none !important;
+}
+
+/* Sidebar — 恢復簡潔 */
+html[data-mode="senior"] .sidebar {
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--bg-mid);
+  border: none;
+  border-right: 1px solid var(--border-glass);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 20px 0;
+}
+
+html[data-mode="senior"] .sidebar-brand {
+  background: transparent;
+  border-bottom: 1px solid var(--border-glass);
+  padding: 8px 20px 24px;
+}
+
+html[data-mode="senior"] .sidebar-logo-img {
+  width: 48px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  filter: invert(15%) sepia(20%) saturate(400%) hue-rotate(190deg) brightness(0.9) contrast(1.1);
+  opacity: 0.8;
+}
+
+html[data-mode="senior"] .sidebar-brand h1 {
+  font-family: "Sacramento", cursive;
+  font-weight: 400;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+html[data-mode="senior"] .sidebar-brand h1::before { content: ""; }
+
+html[data-mode="senior"] .sidebar-brand p {
+  font-family: "Noto Sans TC", sans-serif;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+html[data-mode="senior"] .sidebar-nav { padding: 8px 0; }
+
+html[data-mode="senior"] .nav-item {
+  font-family: "Noto Sans TC", sans-serif;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  margin-bottom: 0;
+  padding: 12px 20px;
+  color: #2D2521;
+}
+
+html[data-mode="senior"] .nav-item:hover {
+  background: var(--bg-glass);
+  border-color: transparent;
+  border-left-color: var(--accent);
+  color: #2D2521;
+}
+
+html[data-mode="senior"] .nav-item.active {
+  background: rgba(91,159,232,0.12);
+  border-color: transparent;
+  border-left-color: var(--accent);
+  color: #2D2521;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+/* Main content — 還原無 padding 邊框 */
+html[data-mode="senior"] .main-content {
+  margin-left: 260px;
+  padding: 0;
+}
+
+/* Topbar — 恢復簡潔 sticky 列 */
+html[data-mode="senior"] .topbar {
+  position: sticky;
+  top: 0;
+  padding: 22px 32px;
+  background: #EBEBEC;
+  backdrop-filter: blur(16px);
+  border: none;
+  border-bottom: 1px solid var(--border-glass);
+  border-radius: 0;
+  box-shadow: none;
+  font-family: "Noto Sans TC", sans-serif;
+  background-image: none;
+}
+
+html[data-mode="senior"] .topbar-filename {
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: 0;
+  letter-spacing: normal;
+}
+
+html[data-mode="senior"] .topbar-version {
+  font-family: "Noto Sans TC", sans-serif;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  letter-spacing: normal;
+  padding: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -894,6 +1499,280 @@ button.secondary:hover {
   background: var(--purple);
   clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
   animation: floatPiece 10s ease-in-out 2s infinite;
+}
+
+/* ── Standard (young) mode: brighter puzzle pieces ───── */
+html[data-mode="standard"] .puzzle-deco { opacity: 0.32; }
+html[data-mode="standard"] .puzzle-deco-1 {
+  top: 8%; right: 4%;
+  width: 140px; height: 140px;
+  background: var(--app-mint);
+  filter: drop-shadow(0 0 16px var(--app-glow));
+  animation: floatPiece 9s ease-in-out infinite;
+}
+html[data-mode="standard"] .puzzle-deco-2 {
+  bottom: 18%; right: 8%;
+  left: auto;
+  width: 95px; height: 95px;
+  background: var(--app-pink);
+  filter: drop-shadow(0 0 14px rgba(255,214,232,0.6));
+  animation: floatPiece 11s ease-in-out 2s infinite;
+}
+
+/* Extra pieces only in standard mode */
+html[data-mode="standard"] #app-wrapper.show::before,
+html[data-mode="standard"] #app-wrapper.show::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.28;
+}
+html[data-mode="standard"] #app-wrapper.show::before {
+  top: 38%; right: 3%;
+  width: 60px; height: 60px;
+  background: var(--app-aqua);
+  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
+  filter: drop-shadow(0 0 10px var(--app-glow));
+  animation: floatPieceB 13s ease-in-out infinite;
+}
+html[data-mode="standard"] #app-wrapper.show::after {
+  bottom: 6%; right: 18%;
+  width: 55px; height: 55px;
+  background: var(--app-blue);
+  clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
+  filter: drop-shadow(0 0 10px rgba(184,222,255,0.5));
+  animation: floatPieceB 15s ease-in-out 4s infinite;
+}
+
+@keyframes floatPieceB {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(-10deg); }
+}
+
+/* Page-level deco containers (for inner pages to add more pieces) */
+.page-deco {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.22;
+  filter: drop-shadow(0 0 12px var(--app-glow));
+}
+html[data-mode="senior"] .page-deco { display: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   TERMINAL CARD — 終端機輸出風 placeholder
+   ═══════════════════════════════════════════════════════════ */
+
+.term-card {
+  max-width: 720px;
+  margin: 12px auto 30px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  color: var(--app-text);
+  position: relative;
+}
+
+/* Top / bottom ASCII-style frame headers */
+.term-card-head, .term-card-foot {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--app-term);
+  letter-spacing: 1px;
+  user-select: none;
+}
+.term-card-head { margin-bottom: 4px; }
+.term-card-foot { margin-top: 4px; opacity: 0.8; }
+.term-card-head .tc-l, .term-card-foot .tc-l { color: var(--app-term); }
+.term-card-head .tc-r, .term-card-foot .tc-r { color: var(--app-term); margin-left: auto; }
+.term-card-head .tc-name {
+  flex: 1;
+  text-align: center;
+  color: var(--app-text);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.term-card-foot .tc-name {
+  flex: 1;
+  text-align: center;
+  color: var(--app-text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+}
+
+/* Body — the actual terminal output area */
+.term-card-body {
+  padding: 22px 28px 26px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.02)),
+    var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
+  border-radius: 4px;
+  box-shadow: inset 0 0 40px rgba(94,234,212,0.05), 0 4px 0 rgba(13,25,42,0.45);
+  position: relative;
+  overflow: hidden;
+}
+.term-card-body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(94,234,212,0.03) 3px,
+    rgba(94,234,212,0.03) 4px
+  );
+}
+.term-card-body > * { position: relative; }
+
+/* Command prompt line: root@mdpiece:~/page$ open --feature page */
+.tc-prompt {
+  font-family: inherit;
+  font-size: 0.95rem;
+  margin: 0 0 22px;
+  color: var(--app-text);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tc-user { color: var(--app-mint); }
+.tc-colon { color: var(--app-text-dim); }
+.tc-path { color: var(--app-blue); }
+.tc-dollar { color: var(--app-term); margin: 0 6px; font-weight: 600; }
+
+/* Output block: icon + title + desc */
+.tc-output {
+  text-align: center;
+  padding: 18px 10px 22px;
+  border-left: 2px solid var(--app-term);
+  background: linear-gradient(90deg, rgba(94,234,212,0.06), transparent 70%);
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 22px;
+}
+.tc-icon-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+.tc-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--app-mint);
+  color: #1F3553;
+  border: 1.5px solid var(--app-border);
+  border-radius: 8px;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.45), 0 0 22px var(--app-glow);
+}
+.tc-icon svg { width: 32px; height: 32px; stroke-width: 2; }
+.tc-icon-frame {
+  position: absolute;
+  inset: -8px;
+  border: 1px dashed var(--app-term);
+  border-radius: 12px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.tc-title {
+  font-family: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--app-text);
+  letter-spacing: 0.6px;
+  margin: 4px 0 8px;
+}
+.tc-arrow { color: var(--app-term); margin-right: 6px; }
+
+.tc-desc {
+  font-family: "Noto Sans TC", sans-serif;
+  color: var(--app-text-dim);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0 auto;
+  max-width: 460px;
+}
+
+/* Progress bar (ASCII) */
+.tc-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.88rem;
+  margin-bottom: 18px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+.tc-progress-label { color: var(--app-text-dim); letter-spacing: 1px; }
+.tc-progress-bar { color: var(--app-term); flex: 1; letter-spacing: -1px; }
+.tc-progress-pct { color: var(--app-mint); font-weight: 600; }
+
+/* Status block (multi-line preformatted) */
+.tc-status {
+  font-family: inherit;
+  font-size: 0.84rem;
+  line-height: 1.85;
+  color: var(--app-text-dim);
+  margin: 0;
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.2);
+  border-left: 2px solid var(--app-blue);
+  border-radius: 0 3px 3px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.tc-status-ok { color: var(--app-mint); font-weight: 600; }
+.tc-blink {
+  color: var(--app-term);
+  animation: terminalBlink 1.2s steps(1) infinite;
+}
+
+/* ── Senior mode override — clean, no terminal frame ── */
+html[data-mode="senior"] .term-card {
+  font-family: "Noto Sans TC", sans-serif;
+  max-width: 640px;
+}
+html[data-mode="senior"] .term-card-head,
+html[data-mode="senior"] .term-card-foot { display: none; }
+html[data-mode="senior"] .term-card-body {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow);
+  padding: 36px 32px;
+}
+html[data-mode="senior"] .term-card-body::before { display: none; }
+html[data-mode="senior"] .tc-prompt,
+html[data-mode="senior"] .tc-progress,
+html[data-mode="senior"] .tc-status { display: none; }
+html[data-mode="senior"] .tc-output {
+  border-left: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+html[data-mode="senior"] .tc-icon {
+  background: var(--accent);
+  color: var(--klein);
+  box-shadow: var(--shadow-sm);
+}
+html[data-mode="senior"] .tc-icon-frame { display: none; }
+html[data-mode="senior"] .tc-title {
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 1.65rem;
+  color: var(--text);
+}
+html[data-mode="senior"] .tc-arrow { display: none; }
+html[data-mode="senior"] .tc-desc {
+  font-family: "Noto Sans TC", sans-serif;
+  color: var(--text);
+  font-size: 1.15rem;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1622,20 +2501,28 @@ button.secondary:hover {
 
 @media (max-width: 768px) {
   .sidebar {
+    top: 0; left: 0;
+    height: 100vh;
+    width: 240px;
+    border-radius: 0;
+    border: none;
+    border-right: 1.5px solid var(--app-border);
+    box-shadow: none;
     transform: translateX(-100%);
   }
 
   .sidebar.open {
     transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0,0,0,0.25);
+    box-shadow: 6px 0 24px rgba(0,0,0,0.35);
   }
 
   .main-content {
     margin-left: 0;
+    padding: 8px;
   }
 
-  .hamburger {
-    display: block;
+  .topbar .hamburger {
+    display: inline-flex;
   }
 
   #app {
@@ -1643,8 +2530,10 @@ button.secondary:hover {
   }
 
   .topbar {
-    padding: 12px 16px;
+    top: 8px;
+    padding: 0;
   }
+  .topbar-version { display: none; }
 
   .landing-split {
     flex-direction: column;
@@ -2159,5 +3048,223 @@ button.secondary:hover {
   .idcard-body { grid-template-columns: 100px 1fr; gap: 12px; }
   .idcard-title { font-size: 1.3rem; letter-spacing: 2.5px; }
   .idcard-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   側邊欄底部模式切換按鈕（兩種模式都會用到）
+   ═══════════════════════════════════════════════════════════ */
+
+.sidebar-foot {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border-glass);
+  background: var(--bg-mid);
+}
+.mode-toggle {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.mode-toggle:hover { background: var(--bg-glass-hover); border-color: var(--accent); }
+.mode-toggle[aria-pressed="true"] {
+  background: var(--klein);
+  color: #fff;
+  border-color: var(--klein);
+}
+.mode-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ── Logout button ──────────────────────────────────── */
+.logout-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.logout-btn .nav-icon { width: 18px; }
+.logout-btn .logout-label { flex: 1; text-align: left; }
+.logout-btn .logout-cmd {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  opacity: 0.55;
+  display: none;
+}
+.logout-btn:hover {
+  background: rgba(255, 100, 130, 0.08);
+  border-color: #FF6B8A;
+  color: #FF6B8A;
+}
+.logout-btn:hover .logout-cmd { opacity: 0.85; }
+
+/* Standard (Y2K young) mode — terminal-style logout */
+html[data-mode="standard"] .logout-btn {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  border-radius: 3px;
+  font-size: 0.92rem;
+  letter-spacing: 0.5px;
+}
+html[data-mode="standard"] .logout-btn .logout-cmd {
+  display: inline;
+  color: var(--app-pink);
+}
+html[data-mode="standard"] .logout-btn:hover {
+  background: var(--app-pink);
+  border-color: var(--app-pink);
+  color: #1F3553;
+  box-shadow: 0 0 14px rgba(255,214,232,0.5), inset 1px 1px 0 rgba(255,255,255,0.4);
+}
+html[data-mode="standard"] .logout-btn:hover .logout-cmd { opacity: 1; color: #1F3553; }
+html[data-mode="standard"] .sidebar-foot {
+  background: var(--app-panel-soft);
+  border-top: 1px solid var(--app-border);
+}
+html[data-mode="standard"] .mode-toggle {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  border-radius: 3px;
+}
+html[data-mode="standard"] .mode-toggle:hover {
+  background: var(--app-mint);
+  border-color: var(--app-mint);
+  color: #1F3553;
+}
+html[data-mode="standard"] .mode-hint {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  color: var(--app-text-dim);
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
+}
+html[data-mode="standard"] .mode-hint::before {
+  content: "// ";
+  color: var(--app-term);
+  opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   年長版（[data-mode="senior"]）— 大字體、大按鈕、高對比
+   原則：只覆寫尺寸／間距／對比，不重做佈局
+   ═══════════════════════════════════════════════════════════ */
+
+html[data-mode="senior"] {
+  font-size: 18px; /* 全站 rem 基準 +12.5% */
+}
+
+/* 文字主色加深，提升對比 */
+html[data-mode="senior"] {
+  --text: #2D2521;
+  --text-dim: #4A4642;
+  --text-muted: #5A5450;
+  --border-glass: rgba(45,37,33,0.32);
+  --shadow:    0 6px 22px rgba(42,45,85,0.28);
+  --shadow-sm: 0 3px 12px rgba(42,45,85,0.18);
+}
+
+/* Topbar 主標題加大 */
+html[data-mode="senior"] .topbar { padding: 22px 32px; }
+html[data-mode="senior"] .topbar h2 { font-size: 1.65rem; font-weight: 700; }
+
+/* Sidebar：寬一點、字大、按鈕也大 */
+html[data-mode="senior"] .sidebar { width: 260px; }
+html[data-mode="senior"] .main-content { margin-left: 260px; }
+html[data-mode="senior"] .sidebar-brand h1 { font-size: 1.35rem; }
+html[data-mode="senior"] .sidebar-brand p { font-size: 0.85rem; letter-spacing: 0.6px; }
+html[data-mode="senior"] .nav-item {
+  padding: 18px 22px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  gap: 16px;
+}
+html[data-mode="senior"] .nav-icon svg { width: 26px; height: 26px; stroke-width: 2; }
+html[data-mode="senior"] .nav-item.active {
+  background: rgba(91,159,232,0.22);
+  border-left-width: 5px;
+  color: #2D2521;
+}
+
+/* 卡片 — 內距加寬，h2/h3 變大 */
+html[data-mode="senior"] .card { padding: 26px 28px; border-radius: 18px; }
+html[data-mode="senior"] .card h2 { font-size: 1.6rem; }
+html[data-mode="senior"] .card h3 { font-size: 1.25rem; }
+html[data-mode="senior"] .card p { font-size: 1.05rem; line-height: 1.75; }
+
+/* 表單 — 大輸入框、大字 */
+html[data-mode="senior"] input,
+html[data-mode="senior"] select,
+html[data-mode="senior"] textarea {
+  padding: 16px 18px;
+  font-size: 1.1rem;
+  border-width: 2px;
+  border-radius: 12px;
+}
+html[data-mode="senior"] textarea { min-height: 90px; }
+
+/* 按鈕 — 加高觸控區、加大字、加粗 */
+html[data-mode="senior"] button.primary,
+html[data-mode="senior"] button.secondary {
+  padding: 16px 32px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  min-height: 56px;
+  border-radius: 12px;
+}
+html[data-mode="senior"] button.primary {
+  box-shadow: 0 4px 16px rgba(91,159,232,0.45);
+}
+
+/* Mode toggle 在年長版下也放大 */
+html[data-mode="senior"] .mode-toggle {
+  padding: 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  min-height: 56px;
+}
+html[data-mode="senior"] .mode-hint { font-size: 0.95rem; }
+
+/* 病歷／藥物卡片 */
+html[data-mode="senior"] .record-card { padding: 18px 22px; }
+html[data-mode="senior"] .record-card p { font-size: 1.05rem; }
+
+/* hamburger 在小螢幕也大一點 */
+html[data-mode="senior"] .hamburger { font-size: 1.6rem; padding: 6px 10px; }
+
+/* 取消大量裝飾色弱化的 dim 字 — 在年長版改用主文色 */
+html[data-mode="senior"] .nav-item { color: #2D2521; }
+html[data-mode="senior"] .nav-item:hover { color: #2D2521; }
+
+/* 年長版隱藏裝飾性「v2.0」「貢獻者」等較少用到的小元素，避免分心 */
+html[data-mode="senior"] .topbar > span:last-child { display: none; }
+
+/* 焦點環加粗以利可見性 */
+html[data-mode="senior"] *:focus-visible {
+  outline: 3px solid var(--klein);
+  outline-offset: 3px;
 }
 

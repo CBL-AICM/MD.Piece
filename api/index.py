@@ -11,6 +11,7 @@ from backend.routers import (
     education, emotions, medications,
     reports, triage, xiaohe,
     records, research, auth,
+    doctor_notes, medication_changes, alerts,
 )
 
 app = FastAPI(title="MD.Piece API", version="1.0.0")
@@ -34,6 +35,9 @@ app.include_router(xiaohe.router, prefix="/xiaohe", tags=["xiaohe"])
 app.include_router(records.router, prefix="/records", tags=["records"])
 app.include_router(research.router, prefix="/research", tags=["research"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(doctor_notes.router, prefix="/doctor-notes", tags=["doctor-notes"])
+app.include_router(medication_changes.router, prefix="/medication-changes", tags=["medication-changes"])
+app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 
 
 @app.get("/api")

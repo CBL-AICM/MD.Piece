@@ -1,6 +1,31 @@
 const API = window.location.hostname === "localhost" ? "http://localhost:8000" : "";
 const GITHUB_REPO = "CBL-AICM/MD.Piece";
 
+// ─── 顯示模式（年長版 / 普通版）─────────────────────────────
+// 'senior' = 大字體、寬按鈕、高對比；'standard' = 原本的精緻 UI
+
+function getMode() {
+  return localStorage.getItem('mdpiece_mode') || 'standard';
+}
+
+function setMode(mode) {
+  const m = mode === 'senior' ? 'senior' : 'standard';
+  localStorage.setItem('mdpiece_mode', m);
+  document.documentElement.setAttribute('data-mode', m);
+  // 同步切換按鈕顯示
+  document.querySelectorAll('[data-mode-toggle]').forEach(function (el) {
+    el.textContent = m === 'senior' ? '切換為普通版' : '切換為年長版';
+    el.setAttribute('aria-pressed', m === 'senior' ? 'true' : 'false');
+  });
+}
+
+function toggleMode() {
+  setMode(getMode() === 'senior' ? 'standard' : 'senior');
+}
+
+// 在 DOMContentLoaded 之前先把屬性掛上，避免閃爍
+document.documentElement.setAttribute('data-mode', getMode());
+
 // ─── 使用者狀態 ─────────────────────────────────────────────
 
 function getCurrentUser() {
@@ -11,6 +36,16 @@ function getCurrentUser() {
 
 function setCurrentUser(user) {
   localStorage.setItem('mdpiece_user', JSON.stringify(user));
+}
+
+// 登出 — 清除使用者資料並回到 landing
+function logout() {
+  if (!confirm('確定要登出嗎？\n\n$ exit\n\n下次回來會回到歡迎頁。')) return;
+  try {
+    localStorage.removeItem('mdpiece_user');
+    localStorage.removeItem('mdpiece_demo_pid');
+  } catch (e) {}
+  window.location.reload();
 }
 
 // 取得或建立一個穩定 UUID（避免 demo 模式下 patient_id 不是 UUID 導致後端寫入失敗）
@@ -28,9 +63,70 @@ function getStablePatientId() {
 
 // ─── 路由 ──────────────────────────────────────────────────
 
+// 占位頁（功能尚未實作）— 終端機輸出風格
+function placeholderPage(label, hint, iconName, slug, pct) {
+  pct = pct || 67;
+  const filled = Math.round(pct / 5);
+  const bar = '█'.repeat(filled) + '░'.repeat(20 - filled);
+  return `
+    <section class="term-card">
+      <header class="term-card-head">
+        <span class="tc-l">┌──[</span>
+        <span class="tc-name">${slug || 'page'}.exe</span>
+        <span class="tc-r">]──┐</span>
+      </header>
+      <div class="term-card-body">
+        <p class="tc-prompt"><span class="tc-user">root@mdpiece</span><span class="tc-colon">:</span><span class="tc-path">~/${slug || 'page'}</span><span class="tc-dollar">$</span> open --feature ${slug || 'page'}</p>
+        <div class="tc-output">
+          <div class="tc-icon-wrap">
+            <span class="tc-icon"><i data-lucide="${iconName}"></i></span>
+            <span class="tc-icon-frame"></span>
+          </div>
+          <h2 class="tc-title"><span class="tc-arrow">▸</span> ${label}</h2>
+          <p class="tc-desc">${hint}</p>
+        </div>
+        <div class="tc-progress" aria-label="building progress">
+          <span class="tc-progress-label">building</span>
+          <span class="tc-progress-bar">[${bar}]</span>
+          <span class="tc-progress-pct">${pct}%</span>
+        </div>
+        <pre class="tc-status">
+[ STATUS  ] <span class="tc-status-ok">SCHEDULED</span>
+[ STAGE   ] design → wireframe → <span class="tc-blink">building_</span>
+[ ETA     ] coming soon · piece by piece</pre>
+      </div>
+      <footer class="term-card-foot">
+        <span class="tc-l">└──[</span>
+        <span class="tc-name">press · any · key · to · continue</span>
+        <span class="tc-r">]──┘</span>
+      </footer>
+    </section>
+  `;
+}
+const vitals   = () => placeholderPage('生理紀錄',  '記錄血壓、心率、體重、體溫等日常生理數據。', 'activity', 'vitals', 42);
+const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note', 'memo', 80);
+const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
+const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
+const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
+const pieces   = () => placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle', 'your-pieces', 67);
+const chat     = () => placeholderPage('醫療 Chat', '24/7 AI 醫療諮詢，有疑問隨時聊。', 'message-circle-heart', 'med-chat', 50);
+
+// 頁面在 terminal pane 中顯示的檔名（用於 #app 的 data-page）
+const pageSlugForTerminal = {
+  home: 'home', symptoms: 'symptoms', medications: 'medications',
+  vitals: 'vitals', memo: 'memo', previsit: 'previsit',
+  education: 'education', story: 'daily-story', labs: 'lab-values',
+  pieces: 'your-pieces', chat: 'med-chat',
+  records: 'records', doctors: 'doctors', patients: 'patients'
+};
+
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records, medications, research, education, contributors };
+  app.setAttribute('data-page', pageSlugForTerminal[page] || page);
+  const pages = {
+    home, symptoms, doctors, patients, records, medications, education,
+    vitals, memo, previsit, story, labs, pieces, chat
+  };
   // Page transition
   app.style.opacity = '0';
   app.style.transform = 'translateY(12px)';
@@ -41,8 +137,6 @@ function showPage(page) {
     if (page === "doctors") loadDoctors();
     if (page === "patients") loadPatients();
     if (page === "records") loadRecordsPage();
-    if (page === "research") loadExperiments();
-    if (page === "contributors") loadContributors();
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
     if (page === "symptoms") loadSymptomsPage();
@@ -275,8 +369,6 @@ function home() {
         ${homeCard('patients','users','病患管理','關懷每一位患者','mint')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
         ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
-        ${homeCard('research','flask-conical','自動研究','探索醫學前沿','gold')}
-        ${homeCard('contributors','heart-handshake','貢獻者','共同打造的力量','lavender')}
       </div>
 
       <!-- Footer tagline -->
@@ -2380,504 +2472,6 @@ function markdownToHtml(md) {
     .replace(/\n/g, '<br>');
 }
 
-// ─── 自動研究 ─────────────────────────────────────────────
-
-var _researchChartData = []; // 供 tooltip 使用
-
-function research() {
-  return `
-    <div class="card">
-      <h2>AutoResearch 實驗管理</h2>
-      <p style="margin-top:8px;color:var(--text-dim)">
-        基於 <a href="https://github.com/karpathy/autoresearch" target="_blank" style="color:var(--accent)">karpathy/autoresearch</a> —
-        AI Agent 自動修改模型、訓練、評估、保留最佳結果。
-      </p>
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="primary" onclick="loadExperiments()">重新整理</button>
-        <button class="secondary" onclick="checkGpuStatus()">檢查 GPU 狀態</button>
-        <button class="secondary" onclick="document.getElementById('tsv-upload').click()">匯入 results.tsv</button>
-        <button class="secondary" onclick="exportExperiments()">匯出 TSV</button>
-        <input type="file" id="tsv-upload" accept=".tsv,.csv" style="display:none" onchange="uploadTsv(this)" />
-      </div>
-      <div id="gpu-status"></div>
-    </div>
-    <div class="card">
-      <h3>統計總覽</h3>
-      <div id="research-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px"></div>
-    </div>
-    <div class="card">
-      <h3>val_bpb 趨勢</h3>
-      <div id="bpb-chart" style="position:relative;height:220px;margin:12px 0">
-        <canvas id="bpb-canvas" style="width:100%;height:100%"></canvas>
-        <div id="chart-tooltip" style="display:none;position:absolute;background:rgba(0,0,0,0.85);color:white;padding:8px 12px;border-radius:6px;font-size:0.8rem;pointer-events:none;white-space:pre-line;z-index:10"></div>
-      </div>
-      <div id="best-bpb" style="margin-top:8px"></div>
-    </div>
-    <div class="card">
-      <h3>排行榜 (Top 5)</h3>
-      <div id="leaderboard"></div>
-    </div>
-    <div class="card">
-      <h3>篩選與搜尋</h3>
-      <div class="filter-bar">
-        <input id="exp-search" placeholder="搜尋名稱或備註..." style="flex:2" oninput="filterExperiments()" />
-        <select id="exp-filter-kept" onchange="filterExperiments()" style="flex:1">
-          <option value="">全部</option>
-          <option value="true">Kept</option>
-          <option value="false">Reverted</option>
-        </select>
-        <select id="exp-sort" onchange="filterExperiments()" style="flex:1">
-          <option value="submitted_at">時間排序</option>
-          <option value="val_bpb">val_bpb 排序</option>
-          <option value="train_loss">loss 排序</option>
-          <option value="duration_seconds">耗時排序</option>
-        </select>
-      </div>
-      <div id="experiment-list"><p>載入中...</p></div>
-    </div>
-    <div class="card" id="submit-card">
-      <h3 style="cursor:pointer" onclick="toggleSubmitForm()">手動提交實驗結果 <span id="submit-toggle" style="font-size:0.8rem;color:var(--text-muted)">展開</span></h3>
-      <div id="submit-form" style="display:none">
-        <input id="exp-name" placeholder="實驗名稱（例如：baseline-run-1）" />
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input id="exp-bpb" type="number" step="0.001" placeholder="val_bpb 分數" />
-          <input id="exp-loss" type="number" step="0.001" placeholder="train_loss" />
-          <input id="exp-steps" type="number" placeholder="訓練步數" />
-          <input id="exp-duration" type="number" placeholder="訓練時間（秒）" />
-        </div>
-        <textarea id="exp-notes" placeholder="備註（模型設定、觀察等）"></textarea>
-        <input id="exp-colab" placeholder="Colab 連結（選填）" />
-        <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-          <label style="font-size:0.9rem"><input type="checkbox" id="exp-kept" /> 保留此實驗</label>
-          <button class="primary" onclick="submitExperiment()">提交結果</button>
-        </div>
-      </div>
-    </div>`;
-}
-
-function toggleSubmitForm() {
-  var form = document.getElementById("submit-form");
-  var toggle = document.getElementById("submit-toggle");
-  if (form.style.display === "none") {
-    form.style.display = "block";
-    toggle.textContent = "收起";
-  } else {
-    form.style.display = "none";
-    toggle.textContent = "展開";
-  }
-}
-
-var _allExperiments = [];
-
-async function loadExperiments() {
-  try {
-    var [listRes, statsRes, lbRes] = await Promise.all([
-      fetch(API + "/research/"),
-      fetch(API + "/research/stats"),
-      fetch(API + "/research/leaderboard?top_n=5"),
-    ]);
-    var data = await listRes.json();
-    var stats = await statsRes.json();
-    var lb = await lbRes.json();
-
-    _allExperiments = data.experiments || [];
-
-    // 統計卡片
-    renderStatsCards(stats);
-
-    // 畫圖表
-    renderBpbChart(stats.chart_data || []);
-
-    // 顯示最佳結果
-    var bestEl = document.getElementById("best-bpb");
-    if (bestEl && stats.best_bpb != null) {
-      bestEl.innerHTML = '<div class="advice-box">' +
-        '<strong>最佳 val_bpb：</strong>' + stats.best_bpb.toFixed(4) +
-        ' (' + stats.best_experiment + ')' +
-        ' — 共 ' + stats.total + ' 個實驗，' + stats.with_bpb + ' 個有 bpb 數據</div>';
-    }
-
-    // 排行榜
-    renderLeaderboard(lb.leaderboard || []);
-
-    // 顯示實驗列表
-    renderExperimentList(_allExperiments);
-  } catch (e) {
-    var el = document.getElementById("experiment-list");
-    if (el) el.innerHTML = '<p style="color:var(--danger)">無法載入，請確認後端是否啟動。</p>';
-  }
-}
-
-function renderStatsCards(stats) {
-  var el = document.getElementById("research-stats");
-  if (!el) return;
-  var cards = [
-    { label: "總實驗數", value: stats.total || 0, color: "var(--accent)" },
-    { label: "保留 (Kept)", value: stats.kept_count || 0, color: "var(--success)" },
-    { label: "還原 (Reverted)", value: stats.reverted_count || 0, color: "var(--danger)" },
-    { label: "改善率", value: stats.improvement_rate != null ? stats.improvement_rate + "%" : "N/A", color: "var(--warning)" },
-    { label: "最佳 val_bpb", value: stats.best_bpb != null ? stats.best_bpb.toFixed(4) : "N/A", color: "var(--purple)" },
-    { label: "總訓練時間", value: stats.total_duration_hours + "h", color: "var(--teal)" },
-  ];
-  el.innerHTML = cards.map(function(c) {
-    return '<div style="text-align:center;padding:12px;background:var(--bg-surface);border-radius:8px;border-left:3px solid ' + c.color + ';border:1px solid var(--border-glass)">' +
-      '<div style="font-size:1.4rem;font-weight:700;color:' + c.color + '">' + c.value + '</div>' +
-      '<div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">' + c.label + '</div></div>';
-  }).join("");
-}
-
-function renderLeaderboard(ranking) {
-  var el = document.getElementById("leaderboard");
-  if (!el) return;
-  if (!ranking.length) {
-    el.innerHTML = '<p style="color:var(--text-muted)">尚無排行資料</p>';
-    return;
-  }
-  var medals = ["#FFD700", "#C0C0C0", "#CD7F32"];
-  el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem">' +
-    '<tr style="border-bottom:2px solid var(--border-glass)"><th style="text-align:left;padding:6px;color:var(--text)">#</th><th style="text-align:left;padding:6px;color:var(--text)">名稱</th><th style="text-align:right;padding:6px;color:var(--text)">val_bpb</th><th style="text-align:right;padding:6px;color:var(--text)">loss</th><th style="text-align:right;padding:6px;color:var(--text)">耗時</th></tr>' +
-    ranking.map(function(r) {
-      var medal = r.rank <= 3 ? '<span style="color:' + medals[r.rank - 1] + ';font-weight:bold">' + r.rank + '</span>' : r.rank;
-      var dur = r.duration_seconds ? Math.round(r.duration_seconds) + "s" : "-";
-      return '<tr style="border-bottom:1px solid var(--border-glass)">' +
-        '<td style="padding:6px;color:var(--text)">' + medal + '</td>' +
-        '<td style="padding:6px;color:var(--text)">' + r.name + '</td>' +
-        '<td style="text-align:right;padding:6px;font-weight:600;color:var(--accent)">' + (r.val_bpb != null ? r.val_bpb.toFixed(4) : "-") + '</td>' +
-        '<td style="text-align:right;padding:6px;color:var(--text-dim)">' + (r.train_loss != null ? r.train_loss.toFixed(4) : "-") + '</td>' +
-        '<td style="text-align:right;padding:6px;color:var(--text-muted)">' + dur + '</td></tr>';
-    }).join("") + '</table>';
-}
-
-function filterExperiments() {
-  var search = (document.getElementById("exp-search").value || "").toLowerCase();
-  var keptFilter = document.getElementById("exp-filter-kept").value;
-  var sortBy = document.getElementById("exp-sort").value;
-
-  var filtered = _allExperiments.slice();
-
-  if (search) {
-    filtered = filtered.filter(function(e) {
-      return (e.name || "").toLowerCase().indexOf(search) !== -1 ||
-             (e.notes || "").toLowerCase().indexOf(search) !== -1;
-    });
-  }
-
-  if (keptFilter === "true") {
-    filtered = filtered.filter(function(e) { return e.kept === true; });
-  } else if (keptFilter === "false") {
-    filtered = filtered.filter(function(e) { return e.kept === false; });
-  }
-
-  if (sortBy === "val_bpb") {
-    filtered.sort(function(a, b) { return (a.val_bpb || Infinity) - (b.val_bpb || Infinity); });
-  } else if (sortBy === "train_loss") {
-    filtered.sort(function(a, b) { return (a.train_loss || Infinity) - (b.train_loss || Infinity); });
-  } else if (sortBy === "duration_seconds") {
-    filtered.sort(function(a, b) { return (b.duration_seconds || 0) - (a.duration_seconds || 0); });
-  }
-
-  renderExperimentList(filtered);
-}
-
-function renderExperimentList(experiments) {
-  var el = document.getElementById("experiment-list");
-  if (!el) return;
-  if (!experiments.length) {
-    el.innerHTML = "<p>尚無實驗結果。請從 Colab 執行訓練後回傳，或匯入 results.tsv。</p>";
-    return;
-  }
-  el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:8px">共 ' + experiments.length + ' 筆結果</p>' +
-    experiments.map(function(e) {
-      var metrics = [];
-      if (e.val_bpb != null) metrics.push('<span style="font-weight:600;color:var(--accent)">bpb: ' + e.val_bpb.toFixed(4) + '</span>');
-      if (e.train_loss != null) metrics.push("loss: " + e.train_loss.toFixed(4));
-      if (e.steps != null) metrics.push(e.steps + " steps");
-      if (e.duration_seconds != null) {
-        var d = e.duration_seconds;
-        metrics.push(d >= 3600 ? (d / 3600).toFixed(1) + "h" : d >= 60 ? Math.round(d / 60) + "m" : Math.round(d) + "s");
-      }
-      var keptBadge = e.kept === true
-        ? '<span class="urgency-badge urgency-low" style="font-size:0.75rem;padding:2px 8px">kept</span>'
-        : e.kept === false
-        ? '<span class="urgency-badge urgency-high" style="font-size:0.75rem;padding:2px 8px">reverted</span>'
-        : '';
-      return '<div class="record-card">' +
-        '<div class="record-header">' +
-        '<strong>' + e.name + '</strong> ' + keptBadge + ' — ' + (e.submitted_at || "").slice(0, 10) +
-        '<button class="btn-delete" onclick="deleteExperiment(\'' + e.id + '\')">刪除</button>' +
-        '</div>' +
-        (metrics.length ? '<p>' + metrics.join(' | ') + '</p>' : '') +
-        (e.notes ? '<p style="color:var(--text-dim);font-size:0.9rem">' + e.notes + '</p>' : '') +
-        (e.colab_url ? '<p><a href="' + e.colab_url + '" target="_blank">Colab 連結</a></p>' : '') +
-        '</div>';
-    }).join("");
-}
-
-function renderBpbChart(chartData) {
-  _researchChartData = chartData;
-  var canvas = document.getElementById("bpb-canvas");
-  if (!canvas || !chartData.length) {
-    var chartDiv = document.getElementById("bpb-chart");
-    if (chartDiv) chartDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px 0">尚無 val_bpb 數據</p>';
-    return;
-  }
-  var ctx = canvas.getContext("2d");
-  var rect = canvas.parentElement.getBoundingClientRect();
-  var dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-  var W = rect.width, H = rect.height;
-  var pad = { top: 15, right: 20, bottom: 30, left: 55 };
-
-  var vals = chartData.map(function(d) { return d.val_bpb; });
-  var minV = Math.min.apply(null, vals);
-  var maxV = Math.max.apply(null, vals);
-  var range = maxV - minV || 0.1;
-  minV -= range * 0.1;
-  maxV += range * 0.1;
-
-  var plotW = W - pad.left - pad.right;
-  var plotH = H - pad.top - pad.bottom;
-
-  ctx.clearRect(0, 0, W, H);
-
-  // 背景漸層
-  var gradient = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
-  gradient.addColorStop(0, "rgba(43, 92, 230, 0.08)");
-  gradient.addColorStop(1, "rgba(43, 92, 230, 0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(pad.left, pad.top, plotW, plotH);
-
-  // Y axis grid
-  ctx.strokeStyle = "rgba(255,255,255,0.1)";
-  ctx.fillStyle = "#B0A89E";
-  ctx.font = "11px sans-serif";
-  ctx.textAlign = "right";
-  for (var i = 0; i <= 4; i++) {
-    var yVal = minV + (maxV - minV) * (1 - i / 4);
-    var yPos = pad.top + plotH * (i / 4);
-    ctx.beginPath();
-    ctx.setLineDash([4, 4]);
-    ctx.moveTo(pad.left, yPos);
-    ctx.lineTo(W - pad.right, yPos);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillText(yVal.toFixed(3), pad.left - 5, yPos + 4);
-  }
-
-  // 計算座標
-  var points = [];
-  for (var j = 0; j < chartData.length; j++) {
-    points.push({
-      x: pad.left + (plotW * j / Math.max(chartData.length - 1, 1)),
-      y: pad.top + plotH * (1 - (chartData[j].val_bpb - minV) / (maxV - minV)),
-    });
-  }
-
-  // 填充面積
-  ctx.beginPath();
-  ctx.moveTo(points[0].x, H - pad.bottom);
-  for (var a = 0; a < points.length; a++) {
-    ctx.lineTo(points[a].x, points[a].y);
-  }
-  ctx.lineTo(points[points.length - 1].x, H - pad.bottom);
-  ctx.closePath();
-  var areaGrad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
-  areaGrad.addColorStop(0, "rgba(43, 92, 230, 0.2)");
-  areaGrad.addColorStop(1, "rgba(43, 92, 230, 0.02)");
-  ctx.fillStyle = areaGrad;
-  ctx.fill();
-
-  // Plot line
-  ctx.strokeStyle = "#2B5CE6";
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  for (var l = 0; l < points.length; l++) {
-    if (l === 0) ctx.moveTo(points[l].x, points[l].y);
-    else ctx.lineTo(points[l].x, points[l].y);
-  }
-  ctx.stroke();
-
-  // Best line
-  var bestIdx = vals.indexOf(Math.min.apply(null, vals));
-  ctx.strokeStyle = "rgba(67, 160, 71, 0.4)";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([6, 4]);
-  ctx.beginPath();
-  ctx.moveTo(pad.left, points[bestIdx].y);
-  ctx.lineTo(W - pad.right, points[bestIdx].y);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Dots
-  for (var k = 0; k < points.length; k++) {
-    ctx.beginPath();
-    ctx.arc(points[k].x, points[k].y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = chartData[k].kept ? "#00D4AA" : chartData[k].kept === false ? "#D94D4D" : "#6E6860";
-    ctx.fill();
-    ctx.strokeStyle = "#132036";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-
-  // X label
-  ctx.fillStyle = "#B0A89E";
-  ctx.font = "11px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("Experiments (" + chartData.length + ")", W / 2, H - 5);
-
-  // Tooltip 事件
-  canvas.onmousemove = function(evt) {
-    var cRect = canvas.getBoundingClientRect();
-    var mx = evt.clientX - cRect.left;
-    var tooltip = document.getElementById("chart-tooltip");
-    if (!tooltip) return;
-    var hit = -1;
-    for (var t = 0; t < points.length; t++) {
-      if (Math.abs(mx - points[t].x) < 15) { hit = t; break; }
-    }
-    if (hit >= 0) {
-      var d = chartData[hit];
-      var lines = [d.name];
-      lines.push("val_bpb: " + d.val_bpb.toFixed(4));
-      if (d.train_loss != null) lines.push("loss: " + d.train_loss.toFixed(4));
-      if (d.steps) lines.push("steps: " + d.steps);
-      if (d.duration_seconds) lines.push("duration: " + Math.round(d.duration_seconds) + "s");
-      lines.push(d.kept ? "kept" : d.kept === false ? "reverted" : "");
-      tooltip.textContent = lines.filter(Boolean).join("\n");
-      tooltip.style.display = "block";
-      tooltip.style.left = Math.min(points[hit].x + 10, W - 180) + "px";
-      tooltip.style.top = (points[hit].y - 10) + "px";
-    } else {
-      tooltip.style.display = "none";
-    }
-  };
-  canvas.onmouseleave = function() {
-    var tooltip = document.getElementById("chart-tooltip");
-    if (tooltip) tooltip.style.display = "none";
-  };
-}
-
-async function submitExperiment() {
-  var name = document.getElementById("exp-name").value;
-  if (!name) { showToast("請輸入實驗名稱", "warning"); return; }
-  var body = {
-    name: name,
-    val_bpb: parseFloat(document.getElementById("exp-bpb").value) || undefined,
-    train_loss: parseFloat(document.getElementById("exp-loss").value) || undefined,
-    steps: parseInt(document.getElementById("exp-steps").value) || undefined,
-    duration_seconds: parseFloat(document.getElementById("exp-duration").value) || undefined,
-    notes: document.getElementById("exp-notes").value || undefined,
-    colab_url: document.getElementById("exp-colab").value || undefined,
-    kept: document.getElementById("exp-kept").checked,
-  };
-  try {
-    var res = await fetch(API + "/research/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    showToast("實驗已提交：" + name, "success");
-    loadExperiments();
-    ["exp-name", "exp-bpb", "exp-loss", "exp-steps", "exp-duration", "exp-notes", "exp-colab"].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) el.value = "";
-    });
-    document.getElementById("exp-kept").checked = false;
-  } catch (e) {
-    showToast("提交失敗：" + e.message, "error");
-  }
-}
-
-async function uploadTsv(input) {
-  if (!input.files.length) return;
-  var formData = new FormData();
-  formData.append("file", input.files[0]);
-  try {
-    var res = await fetch(API + "/research/batch", { method: "POST", body: formData });
-    var data = await res.json();
-    showToast("匯入成功：" + data.count + " 個實驗" + (data.errors ? "，" + data.errors + " 個失敗" : ""), data.errors ? "warning" : "success");
-    loadExperiments();
-  } catch (e) {
-    showToast("匯入失敗：" + e.message, "error");
-  }
-  input.value = "";
-}
-
-async function exportExperiments() {
-  try {
-    var res = await fetch(API + "/research/export");
-    var data = await res.json();
-    if (!data.tsv) { showToast("無資料可匯出", "warning"); return; }
-    var blob = new Blob([data.tsv], { type: "text/tab-separated-values" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "experiments_" + new Date().toISOString().slice(0, 10) + ".tsv";
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("已匯出 " + data.count + " 筆實驗", "success");
-  } catch (e) {
-    showToast("匯出失敗：" + e.message, "error");
-  }
-}
-
-async function deleteExperiment(id) {
-  if (!confirm("確定刪除此實驗結果？")) return;
-  try {
-    await fetch(API + "/research/" + id, { method: "DELETE" });
-    showToast("實驗已刪除", "success");
-    loadExperiments();
-  } catch (e) {
-    showToast("刪除失敗", "error");
-  }
-}
-
-async function checkGpuStatus() {
-  var el = document.getElementById("gpu-status");
-  try {
-    var res = await fetch(API + "/research/status/gpu");
-    var data = await res.json();
-    el.innerHTML = '<div class="advice-box" style="margin-top:8px">' +
-      '<strong>GPU 狀態：</strong>' + (data.has_gpu ? '可用' : '不可用') +
-      '<br>' + data.message + '</div>';
-  } catch (e) {
-    el.innerHTML = '<div class="advice-box" style="margin-top:8px;color:var(--danger)">無法檢查 GPU 狀態</div>';
-  }
-}
-
-// ─── 貢獻者 ───────────────────────────────────────────────
-
-function contributors() {
-  return `
-    <div class="card">
-      <h2>GitHub 貢獻者</h2>
-      <p style="margin-top:8px;color:var(--text-dim)">感謝所有為 MD.Piece 貢獻的開發者</p>
-      <div id="contributors-list" style="margin-top:16px">載入中...</div>
-    </div>`;
-}
-
-async function loadContributors() {
-  const list = document.getElementById("contributors-list");
-  try {
-    const res = await fetch("https://api.github.com/repos/" + GITHUB_REPO + "/contributors");
-    if (!res.ok) throw new Error("無法取得貢獻者資料");
-    const data = await res.json();
-    list.innerHTML = data.map(function(c) {
-      return '<div class="contributor-card">' +
-        '<img src="' + c.avatar_url + '" alt="' + c.login + '" class="contributor-avatar" />' +
-        '<div class="contributor-info">' +
-        '<a href="' + c.html_url + '" target="_blank" rel="noopener noreferrer" class="contributor-name">' + c.login + '</a>' +
-        '<span class="contributor-commits">' + c.contributions + ' 次提交</span>' +
-        '</div></div>';
-    }).join("");
-  } catch (e) {
-    list.innerHTML = '<p style="color:var(--danger)">' + e.message + '</p>';
-  }
-}
 
 // ─── Service Worker ───────────────────────────────────────
 

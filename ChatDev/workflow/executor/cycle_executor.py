@@ -458,7 +458,6 @@ class CycleExecutor:
         result_lock = threading.Lock()
 
         def record_external(nodes: Set[str]) -> None:
-            nonlocal external_nodes
             if not nodes:
                 return
             with result_lock:
