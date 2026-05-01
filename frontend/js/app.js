@@ -38,6 +38,16 @@ function setCurrentUser(user) {
   localStorage.setItem('mdpiece_user', JSON.stringify(user));
 }
 
+// 登出 — 清除使用者資料並回到 landing
+function logout() {
+  if (!confirm('確定要登出嗎？\n\n$ exit\n\n下次回來會回到歡迎頁。')) return;
+  try {
+    localStorage.removeItem('mdpiece_user');
+    localStorage.removeItem('mdpiece_demo_pid');
+  } catch (e) {}
+  window.location.reload();
+}
+
 // 取得或建立一個穩定 UUID（避免 demo 模式下 patient_id 不是 UUID 導致後端寫入失敗）
 function getStablePatientId() {
   var user = getCurrentUser();
@@ -53,27 +63,66 @@ function getStablePatientId() {
 
 // ─── 路由 ──────────────────────────────────────────────────
 
-// 占位頁（功能尚未實作）— 帶拼圖風格的 placeholder
-function placeholderPage(label, hint, iconName) {
+// 占位頁（功能尚未實作）— 終端機輸出風格
+function placeholderPage(label, hint, iconName, slug, pct) {
+  pct = pct || 67;
+  const filled = Math.round(pct / 5);
+  const bar = '█'.repeat(filled) + '░'.repeat(20 - filled);
   return `
-    <div class="placeholder-card">
-      <div class="placeholder-icon"><i data-lucide="${iconName}"></i></div>
-      <h2>${label}</h2>
-      <p class="placeholder-hint">${hint}</p>
-      <p class="placeholder-meta">// 此功能正在拼上去 — Coming soon</p>
-    </div>
+    <section class="term-card">
+      <header class="term-card-head">
+        <span class="tc-l">┌──[</span>
+        <span class="tc-name">${slug || 'page'}.exe</span>
+        <span class="tc-r">]──┐</span>
+      </header>
+      <div class="term-card-body">
+        <p class="tc-prompt"><span class="tc-user">root@mdpiece</span><span class="tc-colon">:</span><span class="tc-path">~/${slug || 'page'}</span><span class="tc-dollar">$</span> open --feature ${slug || 'page'}</p>
+        <div class="tc-output">
+          <div class="tc-icon-wrap">
+            <span class="tc-icon"><i data-lucide="${iconName}"></i></span>
+            <span class="tc-icon-frame"></span>
+          </div>
+          <h2 class="tc-title"><span class="tc-arrow">▸</span> ${label}</h2>
+          <p class="tc-desc">${hint}</p>
+        </div>
+        <div class="tc-progress" aria-label="building progress">
+          <span class="tc-progress-label">building</span>
+          <span class="tc-progress-bar">[${bar}]</span>
+          <span class="tc-progress-pct">${pct}%</span>
+        </div>
+        <pre class="tc-status">
+[ STATUS  ] <span class="tc-status-ok">SCHEDULED</span>
+[ STAGE   ] design → wireframe → <span class="tc-blink">building_</span>
+[ ETA     ] coming soon · piece by piece</pre>
+      </div>
+      <footer class="term-card-foot">
+        <span class="tc-l">└──[</span>
+        <span class="tc-name">press · any · key · to · continue</span>
+        <span class="tc-r">]──┘</span>
+      </footer>
+    </section>
   `;
 }
-const vitals   = () => placeholderPage('生理紀錄',  '記錄血壓、心率、體重、體溫等日常生理數據。', 'activity');
-const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note');
-const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check');
-const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open');
-const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up');
-const pieces   = () => placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle');
-const chat     = () => placeholderPage('醫療 Chat', '24/7 AI 醫療諮詢，有疑問隨時聊。', 'message-circle-heart');
+const vitals   = () => placeholderPage('生理紀錄',  '記錄血壓、心率、體重、體溫等日常生理數據。', 'activity', 'vitals', 42);
+const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note', 'memo', 80);
+const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
+const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
+const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
+const pieces   = () => placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle', 'your-pieces', 67);
+const chat     = () => placeholderPage('醫療 Chat', '24/7 AI 醫療諮詢，有疑問隨時聊。', 'message-circle-heart', 'med-chat', 50);
+
+// 頁面在 terminal pane 中顯示的檔名（用於 #app 的 data-page）
+const pageSlugForTerminal = {
+  home: 'home', symptoms: 'symptoms', medications: 'medications',
+  vitals: 'vitals', memo: 'memo', previsit: 'previsit',
+  education: 'education', story: 'daily-story', labs: 'lab-values',
+  pieces: 'your-pieces', chat: 'med-chat',
+  records: 'records', doctors: 'doctors', patients: 'patients'
+};
 
 function showPage(page) {
   const app = document.getElementById("app");
+  app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, patients, records, medications, education,
     vitals, memo, previsit, story, labs, pieces, chat

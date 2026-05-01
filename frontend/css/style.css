@@ -466,22 +466,23 @@ body {
 #app-wrapper.show { display: flex; }
 
 /* ── App theme tokens ─────────────────────────────────── */
+/* Dark = 單寧藍（denim） + 薄荷／粉螢光點綴（cyan-on-denim 經典終端機） */
 #app-wrapper[data-theme="dark"] {
-  --app-bg:         #1A4045;
-  --app-grid:       rgba(168,240,224,0.10);
-  --app-text:       #EFFFFB;
-  --app-text-dim:   #A8D8CE;
+  --app-bg:         #1F3553;   /* denim navy */
+  --app-grid:       rgba(160,200,245,0.10);
+  --app-text:       #ECF3FF;   /* icy blue-white */
+  --app-text-dim:   #9FB8D4;
   --app-mint:       #A8F0E0;
   --app-aqua:       #7FE7D9;
   --app-pink:       #FFD6E8;
   --app-blue:       #B8DEFF;
-  --app-term:       #5EEAD4;
-  --app-panel:      #245058;
-  --app-panel-soft: #2D6068;
-  --app-chrome-1:   #2D6A66;
-  --app-chrome-2:   #3F8B82;
-  --app-border:     rgba(168,240,224,0.4);
-  --app-shadow:     0 4px 0 rgba(10,30,32,0.5);
+  --app-term:       #5EEAD4;   /* keep mint cyan for prompts/labels */
+  --app-panel:      #294670;   /* mid denim panel */
+  --app-panel-soft: #345889;   /* lighter denim wash */
+  --app-chrome-1:   #2C4773;
+  --app-chrome-2:   #436FA8;
+  --app-border:     rgba(184,222,255,0.42);
+  --app-shadow:     0 4px 0 rgba(13,25,42,0.55);
   --app-glow:       rgba(94,234,212,0.45);
 }
 #app-wrapper[data-theme="light"] {
@@ -797,8 +798,63 @@ body {
   z-index: 2;
 }
 
-/* In standard (young) mode, give body text more presence */
-html[data-mode="standard"] #app { font-size: 1.05rem; }
+/* ── Standard (young) mode: #app becomes a terminal pane ─── */
+html[data-mode="standard"] #app {
+  font-size: 1.05rem;
+  margin: 18px auto 30px;
+  padding: 38px 32px 46px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.18)),
+    var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 6px;
+  box-shadow: var(--app-shadow), inset 0 0 80px rgba(94,234,212,0.06);
+  font-family: "Noto Sans TC", sans-serif;
+}
+/* Top-left filepath label ▸ /md.piece/pages/xxx — bash */
+html[data-mode="standard"] #app::before {
+  content: "▸ /md.piece/pages/" attr(data-page) " — bash";
+  position: absolute;
+  top: -11px;
+  left: 22px;
+  padding: 3px 12px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: var(--app-term);
+  background: var(--app-bg);
+  border: 1.5px solid var(--app-border);
+  border-radius: 3px;
+  white-space: nowrap;
+  z-index: 3;
+}
+/* Bottom status bar */
+html[data-mode="standard"] #app::after {
+  content: "─[ ready ]─[ tty1 ]─[ mode: standard ]─[ uptime: piecing... ]─";
+  position: absolute;
+  left: 14px; right: 14px;
+  bottom: 10px;
+  padding: 4px 10px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  color: var(--app-term);
+  border-top: 1px dashed var(--app-border);
+  background: linear-gradient(180deg, transparent, rgba(94,234,212,0.06));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 3;
+  opacity: 0.9;
+}
+/* Subtle CRT scanlines on terminal pane */
+html[data-mode="standard"] #app {
+  background-image:
+    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.18)),
+    repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(94,234,212,0.025) 3px, rgba(94,234,212,0.025) 4px);
+}
+
 html[data-mode="standard"] #app h2 { font-size: 1.5rem; }
 html[data-mode="standard"] #app h3 { font-size: 1.2rem; }
 html[data-mode="standard"] #app p { font-size: 1.02rem; }
@@ -1415,112 +1471,220 @@ html[data-mode="standard"] #app-wrapper.show::after {
 }
 html[data-mode="senior"] .page-deco { display: none; }
 
-/* ── Placeholder card for unimplemented pages ─────────── */
-.placeholder-card {
-  max-width: 560px;
-  margin: 60px auto;
-  padding: 48px 36px;
+/* ═══════════════════════════════════════════════════════════
+   TERMINAL CARD — 終端機輸出風 placeholder
+   ═══════════════════════════════════════════════════════════ */
+
+.term-card {
+  max-width: 720px;
+  margin: 12px auto 30px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  color: var(--app-text);
+  position: relative;
+}
+
+/* Top / bottom ASCII-style frame headers */
+.term-card-head, .term-card-foot {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--app-term);
+  letter-spacing: 1px;
+  user-select: none;
+}
+.term-card-head { margin-bottom: 4px; }
+.term-card-foot { margin-top: 4px; opacity: 0.8; }
+.term-card-head .tc-l, .term-card-foot .tc-l { color: var(--app-term); }
+.term-card-head .tc-r, .term-card-foot .tc-r { color: var(--app-term); margin-left: auto; }
+.term-card-head .tc-name {
+  flex: 1;
   text-align: center;
-  background: var(--app-panel);
+  color: var(--app-text);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.term-card-foot .tc-name {
+  flex: 1;
+  text-align: center;
+  color: var(--app-text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+}
+
+/* Body — the actual terminal output area */
+.term-card-body {
+  padding: 22px 28px 26px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.02)),
+    var(--app-panel-soft);
   border: 1.5px solid var(--app-border);
-  border-radius: 6px;
-  box-shadow: var(--app-shadow);
+  border-radius: 4px;
+  box-shadow: inset 0 0 40px rgba(94,234,212,0.05), 0 4px 0 rgba(13,25,42,0.45);
   position: relative;
   overflow: hidden;
 }
-.placeholder-card::before {
+.term-card-body::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 28px;
-  background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
-  border-bottom: 1.5px solid var(--app-border);
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(94,234,212,0.03) 3px,
+    rgba(94,234,212,0.03) 4px
+  );
 }
-.placeholder-card::after {
-  content: "─ ▢ ✕";
-  position: absolute;
-  top: 6px; right: 12px;
-  font-family: "JetBrains Mono", "Courier New", monospace;
-  font-size: 0.85rem;
-  letter-spacing: 4px;
-  color: var(--app-text);
-  opacity: 0.7;
-}
-.placeholder-card > * { position: relative; z-index: 1; }
-.placeholder-card > :first-child { margin-top: 28px; }
+.term-card-body > * { position: relative; }
 
-.placeholder-icon {
+/* Command prompt line: root@mdpiece:~/page$ open --feature page */
+.tc-prompt {
+  font-family: inherit;
+  font-size: 0.95rem;
+  margin: 0 0 22px;
+  color: var(--app-text);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tc-user { color: var(--app-mint); }
+.tc-colon { color: var(--app-text-dim); }
+.tc-path { color: var(--app-blue); }
+.tc-dollar { color: var(--app-term); margin: 0 6px; font-weight: 600; }
+
+/* Output block: icon + title + desc */
+.tc-output {
+  text-align: center;
+  padding: 18px 10px 22px;
+  border-left: 2px solid var(--app-term);
+  background: linear-gradient(90deg, rgba(94,234,212,0.06), transparent 70%);
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 22px;
+}
+.tc-icon-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+.tc-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
-  margin-bottom: 18px;
+  width: 64px;
+  height: 64px;
   background: var(--app-mint);
+  color: #1F3553;
   border: 1.5px solid var(--app-border);
-  border-radius: 12px;
-  color: #07171C;
-  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4), 0 0 22px var(--app-glow);
+  border-radius: 8px;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.45), 0 0 22px var(--app-glow);
 }
-.placeholder-icon svg {
-  width: 36px;
-  height: 36px;
-  stroke-width: 2;
+.tc-icon svg { width: 32px; height: 32px; stroke-width: 2; }
+.tc-icon-frame {
+  position: absolute;
+  inset: -8px;
+  border: 1px dashed var(--app-term);
+  border-radius: 12px;
+  opacity: 0.5;
+  pointer-events: none;
 }
 
-.placeholder-card h2 {
-  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+.tc-title {
+  font-family: inherit;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--app-text);
-  margin-bottom: 12px;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+  margin: 4px 0 8px;
 }
-.placeholder-card h2::before {
-  content: "▸ ";
-  color: var(--app-term);
-}
+.tc-arrow { color: var(--app-term); margin-right: 6px; }
 
-.placeholder-hint {
+.tc-desc {
+  font-family: "Noto Sans TC", sans-serif;
   color: var(--app-text-dim);
-  font-size: 1.02rem;
+  font-size: 1rem;
   line-height: 1.7;
-  margin-bottom: 16px;
+  margin: 0 auto;
+  max-width: 460px;
 }
 
-.placeholder-meta {
-  font-family: "JetBrains Mono", "Courier New", monospace;
-  font-size: 0.78rem;
+/* Progress bar (ASCII) */
+.tc-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.88rem;
+  margin-bottom: 18px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+.tc-progress-label { color: var(--app-text-dim); letter-spacing: 1px; }
+.tc-progress-bar { color: var(--app-term); flex: 1; letter-spacing: -1px; }
+.tc-progress-pct { color: var(--app-mint); font-weight: 600; }
+
+/* Status block (multi-line preformatted) */
+.tc-status {
+  font-family: inherit;
+  font-size: 0.84rem;
+  line-height: 1.85;
+  color: var(--app-text-dim);
+  margin: 0;
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.2);
+  border-left: 2px solid var(--app-blue);
+  border-radius: 0 3px 3px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.tc-status-ok { color: var(--app-mint); font-weight: 600; }
+.tc-blink {
   color: var(--app-term);
-  letter-spacing: 1px;
-  opacity: 0.85;
+  animation: terminalBlink 1.2s steps(1) infinite;
 }
 
-/* Senior mode: clean, no chrome */
-html[data-mode="senior"] .placeholder-card {
+/* ── Senior mode override — clean, no terminal frame ── */
+html[data-mode="senior"] .term-card {
+  font-family: "Noto Sans TC", sans-serif;
+  max-width: 640px;
+}
+html[data-mode="senior"] .term-card-head,
+html[data-mode="senior"] .term-card-foot { display: none; }
+html[data-mode="senior"] .term-card-body {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
   box-shadow: var(--shadow);
+  padding: 36px 32px;
 }
-html[data-mode="senior"] .placeholder-card::before,
-html[data-mode="senior"] .placeholder-card::after { display: none; }
-html[data-mode="senior"] .placeholder-card > :first-child { margin-top: 0; }
-html[data-mode="senior"] .placeholder-card h2 {
-  font-family: "Noto Sans TC", sans-serif;
-  font-size: 1.65rem;
-  color: var(--text);
+html[data-mode="senior"] .term-card-body::before { display: none; }
+html[data-mode="senior"] .tc-prompt,
+html[data-mode="senior"] .tc-progress,
+html[data-mode="senior"] .tc-status { display: none; }
+html[data-mode="senior"] .tc-output {
+  border-left: none;
+  background: none;
+  padding: 0;
+  margin: 0;
 }
-html[data-mode="senior"] .placeholder-card h2::before { content: ""; }
-html[data-mode="senior"] .placeholder-icon {
+html[data-mode="senior"] .tc-icon {
   background: var(--accent);
   color: var(--klein);
   box-shadow: var(--shadow-sm);
 }
-html[data-mode="senior"] .placeholder-hint {
+html[data-mode="senior"] .tc-icon-frame { display: none; }
+html[data-mode="senior"] .tc-title {
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 1.65rem;
   color: var(--text);
-  font-size: 1.1rem;
 }
-html[data-mode="senior"] .placeholder-meta { color: var(--text-muted); }
+html[data-mode="senior"] .tc-arrow { display: none; }
+html[data-mode="senior"] .tc-desc {
+  font-family: "Noto Sans TC", sans-serif;
+  color: var(--text);
+  font-size: 1.15rem;
+}
 
 /* ═══════════════════════════════════════════════════════════
    ANIMATIONS
@@ -2831,6 +2995,88 @@ html[data-mode="senior"] .placeholder-meta { color: var(--text-muted); }
   margin-top: 6px;
   line-height: 1.5;
   text-align: center;
+}
+
+/* ── Logout button ──────────────────────────────────── */
+.logout-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.logout-btn .nav-icon { width: 18px; }
+.logout-btn .logout-label { flex: 1; text-align: left; }
+.logout-btn .logout-cmd {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  opacity: 0.55;
+  display: none;
+}
+.logout-btn:hover {
+  background: rgba(255, 100, 130, 0.08);
+  border-color: #FF6B8A;
+  color: #FF6B8A;
+}
+.logout-btn:hover .logout-cmd { opacity: 0.85; }
+
+/* Standard (Y2K young) mode — terminal-style logout */
+html[data-mode="standard"] .logout-btn {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  border-radius: 3px;
+  font-size: 0.92rem;
+  letter-spacing: 0.5px;
+}
+html[data-mode="standard"] .logout-btn .logout-cmd {
+  display: inline;
+  color: var(--app-pink);
+}
+html[data-mode="standard"] .logout-btn:hover {
+  background: var(--app-pink);
+  border-color: var(--app-pink);
+  color: #1F3553;
+  box-shadow: 0 0 14px rgba(255,214,232,0.5), inset 1px 1px 0 rgba(255,255,255,0.4);
+}
+html[data-mode="standard"] .logout-btn:hover .logout-cmd { opacity: 1; color: #1F3553; }
+html[data-mode="standard"] .sidebar-foot {
+  background: var(--app-panel-soft);
+  border-top: 1px solid var(--app-border);
+}
+html[data-mode="standard"] .mode-toggle {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  border-radius: 3px;
+}
+html[data-mode="standard"] .mode-toggle:hover {
+  background: var(--app-mint);
+  border-color: var(--app-mint);
+  color: #1F3553;
+}
+html[data-mode="standard"] .mode-hint {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  color: var(--app-text-dim);
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
+}
+html[data-mode="standard"] .mode-hint::before {
+  content: "// ";
+  color: var(--app-term);
+  opacity: 0.7;
 }
 
 /* ═══════════════════════════════════════════════════════════
