@@ -319,6 +319,7 @@ var _symPatientId = null;
 var _symCatalog = [];
 var _symSelected = null;
 var _symSeverity = 3;
+var _symRangeDays = 30;
 
 function symptoms() {
   _symPatientId = getStablePatientId();
@@ -334,8 +335,20 @@ function symptoms() {
       <div id="sym-entry-form" style="margin-top:14px;display:none"></div>
     </div>
     <div class="card">
-      <h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;vertical-align:middle"></i> 我的症狀趨勢</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;vertical-align:middle"></i> 我的症狀趨勢</h3>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:0.85rem;color:var(--text-dim)">區間：</label>
+          <select id="sym-range" onchange="setSymRange(parseInt(this.value))" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)">
+            <option value="30" selected>30 天</option>
+            <option value="90">90 天</option>
+            <option value="180">180 天</option>
+            <option value="365">365 天</option>
+          </select>
+        </div>
+      </div>
       <div id="sym-summary" style="margin-top:10px"><p style="color:var(--text-muted)">載入中...</p></div>
+      <div id="sym-pain-summary" style="margin-top:10px"></div>
       <div id="sym-trend-chart" style="position:relative;height:220px;margin-top:12px">
         <canvas id="sym-canvas" style="width:100%;height:100%"></canvas>
       </div>
@@ -351,6 +364,11 @@ function symptoms() {
       </div>
       <div id="analysis-result"></div>
     </div>`;
+}
+
+function setSymRange(days) {
+  _symRangeDays = days || 30;
+  loadSymTrend();
 }
 
 function loadSymptomsPage() {
@@ -491,34 +509,74 @@ function submitSymptomEntry() {
 }
 
 function loadSymTrend() {
-  fetch(API + "/symptoms/trend?patient_id=" + _symPatientId + "&days=30")
+  var days = _symRangeDays || 30;
+  fetch(API + "/symptoms/trend?patient_id=" + _symPatientId + "&days=" + days)
     .then(function(r) { return r.json(); })
     .then(function(d) { renderSymTrend(d); })
     .catch(function() {});
 }
 
 function renderSymTrend(d) {
+  var days = (d.period && d.period.days) || 30;
   var sumEl = document.getElementById("sym-summary");
   if (sumEl) {
     var by = d.by_symptom || [];
     if (!by.length) {
-      sumEl.innerHTML = '<p style="color:var(--text-muted)">最近 30 天尚無症狀紀錄。點上方症狀按鈕開始記錄吧！</p>';
+      sumEl.innerHTML = '<p style="color:var(--text-muted)">最近 ' + days + ' 天尚無症狀紀錄。點上方症狀按鈕開始記錄吧！</p>';
     } else {
       var stats =
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:8px">' +
           '<div class="stat-box"><div class="stat-num">' + d.total_entries + '</div><div class="stat-label">總紀錄</div></div>' +
           '<div class="stat-box"><div class="stat-num">' + by.length + '</div><div class="stat-label">症狀類型</div></div>' +
-          '<div class="stat-box"><div class="stat-num">' + d.period.days + '天</div><div class="stat-label">區間</div></div>' +
+          '<div class="stat-box"><div class="stat-num">' + days + '天</div><div class="stat-label">區間</div></div>' +
         '</div>';
       var rows = by.map(function(s) {
+        var freqColor = s.per_week >= 3 ? "var(--danger)" : s.per_week >= 1 ? "var(--warning)" : "var(--accent)";
         return (
-          '<div style="display:flex;justify-content:space-between;padding:6px 8px;border:1px solid var(--border-glass);border-radius:4px;background:var(--bg-glass)">' +
-            '<span><strong>' + escapeHtml(s.label) + '</strong> × ' + s.total + '</span>' +
-            '<span style="color:var(--text-dim);font-size:0.85rem">平均 ' + (s.avg_severity != null ? s.avg_severity : "—") + ' / 5</span>' +
+          '<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;padding:6px 8px;border:1px solid var(--border-glass);border-radius:4px;background:var(--bg-glass);align-items:center">' +
+            '<div><strong>' + escapeHtml(s.label) + '</strong> × ' + s.total +
+              '<span style="color:var(--text-dim);font-size:0.75rem"> （' + s.active_days + ' 天）</span>' +
+            '</div>' +
+            '<div style="font-size:0.85rem"><span style="color:' + freqColor + ';font-weight:600">' + s.per_week + '</span><span style="color:var(--text-dim)"> 次/週</span></div>' +
+            '<div style="color:var(--text-dim);font-size:0.85rem">平均 ' + (s.avg_severity != null ? s.avg_severity : "—") + ' / 5</div>' +
           '</div>'
         );
       }).join("");
       sumEl.innerHTML = stats + '<div style="display:grid;gap:4px">' + rows + '</div>';
+    }
+  }
+
+  // 長期疼痛統計（pain_summary）
+  var painEl = document.getElementById("sym-pain-summary");
+  if (painEl) {
+    var ps = d.pain_summary || {};
+    var items = ps.items || [];
+    if (!items.length) {
+      painEl.innerHTML = '';
+    } else {
+      var rows = items.map(function(p) {
+        var color = p.per_week >= 3 ? "var(--danger)" : p.per_week >= 1 ? "var(--warning)" : "var(--accent)";
+        var firstSeen = p.first_recorded_at ? p.first_recorded_at.slice(0, 10) : "—";
+        var lastSeen = p.last_recorded_at ? p.last_recorded_at.slice(0, 10) : "—";
+        return (
+          '<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:6px 8px;border:1px solid var(--border-glass);border-radius:4px;background:var(--bg-glass);font-size:0.85rem;align-items:center">' +
+            '<div><strong>' + escapeHtml(p.label) + '</strong>' +
+              '<div style="color:var(--text-dim);font-size:0.72rem">' + firstSeen + ' → ' + lastSeen + '</div>' +
+            '</div>' +
+            '<div><span style="color:' + color + ';font-weight:600">' + p.per_week + '</span><span style="color:var(--text-dim)"> 次/週</span></div>' +
+            '<div>共 ' + p.total + ' 次<span style="color:var(--text-dim)">（' + p.active_days + ' 天）</span></div>' +
+            '<div>平均 ' + (p.avg_severity != null ? p.avg_severity : "—") + ' / 5</div>' +
+          '</div>'
+        );
+      }).join("");
+      painEl.innerHTML =
+        '<div style="padding:8px;background:rgba(220,80,80,0.04);border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
+          '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px">' +
+            '<strong style="color:var(--danger)">長期疼痛統計</strong>' +
+            '<span style="font-size:0.85rem;color:var(--text-dim)">總 ' + ps.total + ' 次・' + ps.types + ' 類・約 ' + ps.per_week + ' 次/週・' + ps.per_month + ' 次/月</span>' +
+          '</div>' +
+          '<div style="display:grid;gap:4px">' + rows + '</div>' +
+        '</div>';
     }
   }
 
