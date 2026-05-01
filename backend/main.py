@@ -42,4 +42,9 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 def root():
     return FileResponse(FRONTEND_DIR / "index.html")
 
+@app.get("/doctor")
+def doctor_portal():
+    """醫師端獨立入口；別名為 /doctor.html。"""
+    return FileResponse(FRONTEND_DIR / "doctor.html")
+
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
