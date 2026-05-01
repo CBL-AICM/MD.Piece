@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0B1426" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <title>MD.Piece — 醫師端</title>
+  <style>
+    body { background: #0B1426; color: var(--text-main, #E8E5E0); font-family: 'Noto Sans TC', sans-serif; margin: 0; }
+    .dp-shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+    .dp-side { background: rgba(20,30,50,0.6); border-right: 1px solid rgba(255,255,255,0.08); padding: 16px; overflow-y: auto; }
+    .dp-side h1 { font-size: 1.1rem; margin: 0 0 4px; display:flex; align-items:center; gap:6px; }
+    .dp-side .sub { font-size: 0.8rem; color: var(--text-dim, #A8A39C); margin-bottom: 14px; }
+    .dp-search { width: 100%; padding: 8px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: inherit; font-size: 0.9rem; }
+    .dp-patient-list { margin-top: 12px; display: grid; gap: 6px; }
+    .dp-pt { padding: 10px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.15s; }
+    .dp-pt:hover { background: rgba(255,255,255,0.05); border-color: rgba(0,212,170,0.4); }
+    .dp-pt.active { background: rgba(0,212,170,0.08); border-color: var(--accent, #00D4AA); }
+    .dp-pt .name { font-weight: 600; font-size: 0.95rem; }
+    .dp-pt .meta { font-size: 0.78rem; color: var(--text-dim, #A8A39C); margin-top: 2px; }
+    .dp-main { padding: 24px; overflow-y: auto; max-width: 1100px; }
+    .dp-empty { text-align: center; padding: 80px 20px; color: var(--text-dim, #A8A39C); }
+    .dp-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .dp-header h2 { margin: 0; }
+    .dp-back { color: var(--text-dim, #A8A39C); font-size: 0.85rem; text-decoration: none; padding: 6px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; }
+    .dp-back:hover { color: var(--accent, #00D4AA); border-color: var(--accent, #00D4AA); }
+    .dp-card { background: rgba(20,30,50,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .dp-card h3 { margin: 0 0 10px; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
+    .dp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+    .dp-stat { padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; text-align: center; }
+    .dp-stat-num { font-size: 1.5rem; font-weight: 600; color: var(--accent, #00D4AA); }
+    .dp-stat-lbl { font-size: 0.78rem; color: var(--text-dim, #A8A39C); margin-top: 2px; }
+    .dp-row { padding: 8px 10px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.02); margin-bottom: 4px; font-size: 0.88rem; display: grid; gap: 4px; }
+    .dp-range select { padding: 5px 10px; background: rgba(255,255,255,0.04); color: inherit; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; }
+    .dp-loading { color: var(--text-dim, #A8A39C); padding: 12px; text-align: center; }
+    .dp-summary-md { white-space: pre-wrap; font-size: 0.88rem; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; line-height: 1.6; }
+    .dp-canvas-wrap { position: relative; height: 220px; margin-top: 8px; }
+    @media (max-width: 768px) {
+      .dp-shell { grid-template-columns: 1fr; }
+      .dp-side { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); max-height: 280px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dp-shell">
+    <aside class="dp-side">
+      <h1><i data-lucide="stethoscope" style="width:18px;height:18px"></i> MD.Piece 醫師端</h1>
+      <div class="sub">點選病患查看用藥與症狀摘要</div>
+      <a class="dp-back" href="index.html">← 回病患端</a>
+      <input id="dp-search" class="dp-search" placeholder="搜尋姓名..." style="margin-top:14px" oninput="filterPatients(this.value)" />
+      <div id="dp-patient-list" class="dp-patient-list">
+        <div class="dp-loading">載入病患中...</div>
+      </div>
+    </aside>
+    <main class="dp-main">
+      <div id="dp-content">
+        <div class="dp-empty">
+          <i data-lucide="user-round-search" style="width:48px;height:48px;opacity:0.4"></i>
+          <p style="margin-top:12px;font-size:1.1rem">從左側選一位病患開始</p>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="js/doctor-portal.js"></script>
+  <script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>
