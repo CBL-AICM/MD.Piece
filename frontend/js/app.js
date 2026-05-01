@@ -843,17 +843,60 @@ function renderMedList() {
   el.innerHTML = html;
 }
 
+// 把使用者選的檔案統一壓成 JPEG（長邊 ≤ 2048）。
+// 目的：縮短上傳時間、避免 HEIC/PNG/超大圖造成 Vision API 失敗或 media_type 不對。
+// 失敗（瀏覽器無法 decode，例如 HEIC on Chrome）→ 回傳原始 dataURL，至少還能試。
+function _preprocessMedImage(file) {
+  return new Promise(function(resolve) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var originalDataUrl = e.target.result;
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var MAX = 2048;
+          var w = img.naturalWidth, h = img.naturalHeight;
+          var scale = Math.min(1, MAX / Math.max(w, h));
+          var cw = Math.round(w * scale), ch = Math.round(h * scale);
+          var canvas = document.createElement("canvas");
+          canvas.width = cw; canvas.height = ch;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, cw, ch);
+          var jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+          resolve({
+            dataUrl: jpegDataUrl,
+            base64: jpegDataUrl.split(",")[1],
+            mediaType: "image/jpeg",
+          });
+        } catch (err) {
+          resolve({
+            dataUrl: originalDataUrl,
+            base64: originalDataUrl.split(",")[1],
+            mediaType: file.type || "image/jpeg",
+          });
+        }
+      };
+      img.onerror = function() {
+        // 瀏覽器無法解碼（HEIC 等）→ 直接送原始 base64，由後端嘗試
+        resolve({
+          dataUrl: originalDataUrl,
+          base64: originalDataUrl.split(",")[1],
+          mediaType: file.type || "image/jpeg",
+        });
+      };
+      img.src = originalDataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function handleMedPhoto(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var base64Full = e.target.result;
-    var mediaType = file.type || "image/jpeg";
-    var base64Data = base64Full.split(",")[1];
 
+  _preprocessMedImage(file).then(function(prep) {
     document.getElementById("med-photo-preview").innerHTML =
-      '<img src="' + base64Full + '" style="max-width:100%;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />';
+      '<img src="' + prep.dataUrl + '" style="max-width:100%;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />';
     document.getElementById("med-recognize-result").innerHTML =
       '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
       '<div class="loading-spinner"></div><p style="margin-top:8px">AI 正在辨識藥袋...</p></div>';
@@ -861,7 +904,7 @@ function handleMedPhoto(input) {
     fetch(API + "/medications/recognize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType })
+      body: JSON.stringify({ patient_id: _medsPatientId, image_base64: prep.base64, media_type: prep.mediaType })
     })
       .then(function(r) {
         return r.text().then(function(t) {
@@ -880,7 +923,17 @@ function handleMedPhoto(input) {
 
         if (parsed.length > 0) {
           // 辨識成功 → 一律走可編輯確認卡片，讓患者檢視標準欄位後才寫入
+          // stage === "names" 表示只抓到藥名，其他欄位需使用者補
           renderRecognizedEditable(parsed, [], data.raw_text || "", []);
+          if (data.stage === "names") {
+            var hint = document.getElementById("med-recognize-result");
+            if (hint) {
+              var note = document.createElement("div");
+              note.style.cssText = "padding:8px 10px;margin-bottom:8px;background:rgba(255,200,80,0.12);border:1px solid rgba(255,200,80,0.4);border-radius:var(--radius-sm);font-size:0.85rem;color:var(--text-dim)";
+              note.textContent = "⚠ 只成功辨識出藥名，劑量/頻率等欄位請自行補上再加入。";
+              hint.insertBefore(note, hint.firstChild);
+            }
+          }
           return;
         }
 
@@ -890,8 +943,8 @@ function handleMedPhoto(input) {
       .catch(function(err) {
         renderManualMedForm("", "辨識服務連線失敗（" + (err && err.message || "網路錯誤") + "），你可以改用手動填寫下方資料。");
       });
-  };
-  reader.readAsDataURL(file);
+  });
+
   input.value = "";
 }
 

@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 import logging
 
 from backend.db import get_supabase
-from backend.services.llm_service import recognize_medicine_bag, call_claude
+from backend.services.claude_service import recognize_medicine_bag
+from backend.services.llm_service import call_claude
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -126,6 +127,7 @@ def recognize_from_photo(body: MedicationPhotoUpload):
 
     meds = recognition.get("medications", []) or []
     raw_text = recognition.get("raw_text", "")
+    stage = recognition.get("stage", "unknown")
 
     if not meds:
         return {
@@ -133,6 +135,7 @@ def recognize_from_photo(body: MedicationPhotoUpload):
             "medications": [],
             "parsed": [],
             "raw_text": raw_text,
+            "stage": stage,
             "message": "無法辨識藥袋內容，請嘗試拍攝更清晰的照片，或手動填寫下方資料。",
             "errors": [],
         }
@@ -155,12 +158,18 @@ def recognize_from_photo(body: MedicationPhotoUpload):
             "prescribed_date": med.get("prescribed_date"),
         })
 
+    if stage == "names":
+        msg = f"辨識出 {len(parsed)} 種藥物（僅藥名），其餘欄位請手動補上後再加入。"
+    else:
+        msg = f"辨識出 {len(parsed)} 種藥物，請確認後加入我的藥物。"
+
     return {
         "recognized": 0,
         "medications": [],
         "parsed": parsed,
         "raw_text": raw_text,
-        "message": f"辨識出 {len(parsed)} 種藥物，請確認後加入我的藥物。",
+        "stage": stage,
+        "message": msg,
         "errors": [],
     }
 
