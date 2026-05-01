@@ -469,21 +469,21 @@ body {
 /* Dark = 單寧藍（denim） + 薄荷／粉螢光點綴（cyan-on-denim 經典終端機） */
 #app-wrapper[data-theme="dark"] {
   --app-bg:         #1F3553;   /* denim navy */
-  --app-grid:       rgba(160,200,245,0.10);
-  --app-text:       #ECF3FF;   /* icy blue-white */
-  --app-text-dim:   #9FB8D4;
-  --app-mint:       #A8F0E0;
-  --app-aqua:       #7FE7D9;
-  --app-pink:       #FFD6E8;
-  --app-blue:       #B8DEFF;
-  --app-term:       #5EEAD4;   /* keep mint cyan for prompts/labels */
-  --app-panel:      #294670;   /* mid denim panel */
-  --app-panel-soft: #345889;   /* lighter denim wash */
-  --app-chrome-1:   #2C4773;
-  --app-chrome-2:   #436FA8;
-  --app-border:     rgba(184,222,255,0.42);
+  --app-grid:       rgba(180,210,255,0.12);
+  --app-text:       #F1F6FF;   /* near-white blue-cream */
+  --app-text-dim:   #BFD2EC;   /* 提亮 — 不要藕色 */
+  --app-mint:       #B0F4E5;
+  --app-aqua:       #8AEDDD;
+  --app-pink:       #FFB3D1;   /* 提亮 — 不再是藕色／粉灰 */
+  --app-blue:       #C9E4FF;
+  --app-term:       #6CF0D8;
+  --app-panel:      #2E4F7C;   /* 提亮一階 */
+  --app-panel-soft: #3D6499;
+  --app-chrome-1:   #34568A;
+  --app-chrome-2:   #4A7BBE;
+  --app-border:     rgba(195,225,255,0.5);
   --app-shadow:     0 4px 0 rgba(13,25,42,0.55);
-  --app-glow:       rgba(94,234,212,0.45);
+  --app-glow:       rgba(108,240,216,0.5);
 }
 #app-wrapper[data-theme="light"] {
   --app-bg:         #F4FBF9;
@@ -2646,8 +2646,8 @@ html[data-mode="senior"] .tc-desc {
   line-height: 1.65;
 }
 .lf-contrast {
-  font-size: 0.88rem; padding: 8px 12px;
-  background: rgba(255,214,232,0.1);
+  font-size: 0.92rem; padding: 10px 14px;
+  background: rgba(255,179,209,0.16);
   border-left: 2px solid var(--app-pink);
   border-radius: 0 3px 3px 0;
   color: var(--app-text);
