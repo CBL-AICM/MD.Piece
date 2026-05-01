@@ -53,9 +53,31 @@ function getStablePatientId() {
 
 // ─── 路由 ──────────────────────────────────────────────────
 
+// 占位頁（功能尚未實作）— 帶拼圖風格的 placeholder
+function placeholderPage(label, hint, iconName) {
+  return `
+    <div class="placeholder-card">
+      <div class="placeholder-icon"><i data-lucide="${iconName}"></i></div>
+      <h2>${label}</h2>
+      <p class="placeholder-hint">${hint}</p>
+      <p class="placeholder-meta">// 此功能正在拼上去 — Coming soon</p>
+    </div>
+  `;
+}
+const vitals   = () => placeholderPage('生理紀錄',  '記錄血壓、心率、體重、體溫等日常生理數據。', 'activity');
+const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note');
+const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check');
+const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open');
+const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up');
+const pieces   = () => placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle');
+const chat     = () => placeholderPage('醫療 Chat', '24/7 AI 醫療諮詢，有疑問隨時聊。', 'message-circle-heart');
+
 function showPage(page) {
   const app = document.getElementById("app");
-  const pages = { home, symptoms, doctors, patients, records, medications, education };
+  const pages = {
+    home, symptoms, doctors, patients, records, medications, education,
+    vitals, memo, previsit, story, labs, pieces, chat
+  };
   // Page transition
   app.style.opacity = '0';
   app.style.transform = 'translateY(12px)';
