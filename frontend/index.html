@@ -168,11 +168,11 @@
           <span class="win-btn win-btn-close">✕</span>
         </span>
       </div>
-      <div class="sidebar-brand">
+      <button class="sidebar-brand" onclick="goHome()" type="button" title="返回首頁">
         <img src="icons/logo-core.jpg" alt="MD.Piece" class="sidebar-logo-img" />
         <h1>MD.Piece</h1>
         <p>MEDICAL PLATFORM</p>
-      </div>
+      </button>
       <nav class="sidebar-nav">
         <button class="nav-item active" onclick="navigateTo('symptoms', this)">
           <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> 症狀紀錄
@@ -222,6 +222,11 @@
     <div class="main-content">
       <div class="topbar win-titlebar">
         <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <button class="topbar-back" onclick="goHome()" type="button" title="返回首頁">
+          <span class="tb-arrow">←</span>
+          <span class="tb-cd">cd ..</span>
+          <span class="tb-zh">返回</span>
+        </button>
         <span class="topbar-filename">
           <span class="topbar-prefix">C:\md.piece&gt;</span>
           <span id="page-title">home</span><span class="topbar-ext">.html</span>
@@ -455,6 +460,15 @@
       const map = isSenior ? pageTitlesSenior : pageTitles;
       document.getElementById('page-title').textContent = map[page] || page;
       showPage(page);
+      closeSidebar();
+    }
+
+    function goHome() {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      const isSenior = document.documentElement.getAttribute('data-mode') === 'senior';
+      const map = isSenior ? pageTitlesSenior : pageTitles;
+      document.getElementById('page-title').textContent = map.home || 'home';
+      showPage('home');
       closeSidebar();
     }
 

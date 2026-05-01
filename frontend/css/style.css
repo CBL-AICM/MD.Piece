@@ -584,6 +584,7 @@ body {
 
 .sidebar-brand {
   padding: 14px 16px 16px;
+  border: none;
   border-bottom: 1px dashed var(--app-border);
   margin: 0;
   background: var(--app-panel-soft);
@@ -591,6 +592,22 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  color: inherit;
+  transition: background 0.2s ease;
+}
+.sidebar-brand:hover {
+  background: var(--app-mint);
+  color: #1F3553;
+}
+.sidebar-brand:hover h1,
+.sidebar-brand:hover h1::before,
+.sidebar-brand:hover p {
+  color: #1F3553;
+  -webkit-text-fill-color: #1F3553;
 }
 
 .sidebar-logo-img {
@@ -719,6 +736,65 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 2px;
+}
+
+/* Back button — terminal style cd .. */
+.topbar-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 6px 12px;
+  background: var(--app-panel);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+}
+.topbar-back .tb-arrow { color: var(--app-term); font-weight: 700; }
+.topbar-back .tb-cd    { color: var(--app-text); opacity: 0.85; }
+.topbar-back .tb-zh    { display: none; color: var(--app-text-dim); font-size: 0.78rem; }
+.topbar-back:hover {
+  background: var(--app-mint);
+  border-color: var(--app-mint);
+  color: #1F3553;
+  box-shadow: 0 0 14px var(--app-glow);
+}
+.topbar-back:hover .tb-arrow,
+.topbar-back:hover .tb-cd,
+.topbar-back:hover .tb-zh { color: #1F3553; opacity: 1; }
+
+/* Senior mode — simpler 「← 首頁」label */
+html[data-mode="senior"] .topbar-back {
+  font-family: "Noto Sans TC", sans-serif;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  color: var(--text);
+  font-size: 1rem;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+}
+html[data-mode="senior"] .topbar-back .tb-cd { display: none; }
+html[data-mode="senior"] .topbar-back .tb-zh { display: inline; color: var(--text); font-size: 1rem; }
+html[data-mode="senior"] .topbar-back .tb-arrow { color: var(--klein); font-size: 1.1rem; }
+html[data-mode="senior"] .topbar-back:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: none;
+}
+html[data-mode="senior"] .topbar-back:hover .tb-arrow,
+html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
+
+/* Hide back button on mobile when sidebar closed (hamburger takes over) */
+@media (max-width: 480px) {
+  .topbar-back .tb-cd { display: none; }
+  .topbar-back .tb-zh { display: inline; }
 }
 
 .topbar-filename {
