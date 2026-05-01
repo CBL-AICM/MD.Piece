@@ -187,7 +187,7 @@ function home() {
   const today = new Date();
   const dateStr = today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0');
   const dayStr = '星期' + ['日','一','二','三','四','五','六'][today.getDay()];
-  const name = user ? user.nickname : '你';
+  const name = (user && user.nickname) ? user.nickname : '你';
   const ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
 
   return `
@@ -213,7 +213,7 @@ function home() {
 
       <!-- Quick Actions — spread wider -->
       <div class="home-quick">
-        <button class="hq-btn hq-symptoms" onclick="navigateTo('symptoms',null)">
+        <button class="hq-btn hq-symptoms" onclick="navigateTo('symptoms',null);setTimeout(scrollToSymCatalog,150)">
           <span class="hq-icon"><i data-lucide="scan-search"></i></span>
           <span>記錄症狀</span>
         </button>
@@ -269,7 +269,7 @@ function home() {
         功能拼圖
       </div>
       <div class="home-grid">
-        ${homeCard('symptoms','scan-search','症狀分析','AI 助你釐清身體訊號','blue')}
+        ${homeCard('symptoms','scan-search','症狀紀錄','記錄不適、看趨勢、辨識疼痛頻率','blue')}
         ${homeCard('records','clipboard-list','病歷管理','守護每一次就診紀錄','purple')}
         ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
         ${homeCard('patients','users','病患管理','關懷每一位患者','mint')}
@@ -397,6 +397,13 @@ function symptoms() {
 function setSymRange(days) {
   _symRangeDays = days || 30;
   loadSymTrend();
+}
+
+function scrollToSymCatalog() {
+  var el = document.getElementById("sym-catalog-grid");
+  if (el && el.scrollIntoView) {
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function loadSymptomsPage() {
