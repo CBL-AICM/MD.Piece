@@ -167,15 +167,27 @@ def recognize_from_photo(body: MedicationPhotoUpload):
 
     meds = recognition.get("medications", []) or []
     raw_text = recognition.get("raw_text", "")
+    err_kind = recognition.get("error")
 
     if not meds:
+        # 依錯誤類型給更精準的訊息
+        if err_kind and "Timeout" in err_kind:
+            msg = "影像辨識超時（本機 LLM 在 CPU 上需數分鐘）。請稍後再試一次，或改用手動填寫。"
+        elif err_kind == "json_parse_failed":
+            msg = "辨識完成但回傳格式異常（模型輸出無法解析），請改用手動填寫，下方有原始文字可參考。"
+        elif err_kind in ("ConnectError", "ConnectionError") or (err_kind and "Connect" in err_kind):
+            msg = "辨識服務未啟動（Ollama 沒回應）。請啟動 Ollama 或改用手動填寫。"
+        elif err_kind == "empty_image":
+            msg = "未收到影像資料，請重新拍攝。"
+        else:
+            msg = "無法辨識藥袋內容，請嘗試拍攝更清晰的照片，或手動填寫下方資料。"
         return {
             "recognized": 0,
             "medications": [],
             "parsed": [],
             "raw_text": raw_text,
-            "message": "無法辨識藥袋內容，請嘗試拍攝更清晰的照片，或手動填寫下方資料。",
-            "errors": [],
+            "message": msg,
+            "errors": [err_kind] if err_kind else [],
             "fallback": "manual",
         }
 
