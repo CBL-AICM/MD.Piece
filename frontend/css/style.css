@@ -794,6 +794,140 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   SENIOR MODE — 年長版：清爽乾淨、無視窗 chrome
+   覆蓋 Y2K 視覺，保留大字體 / 高對比 / 寬按鈕
+   ═══════════════════════════════════════════════════════════ */
+
+html[data-mode="senior"] #app-wrapper.show {
+  background: #F8FBFD;
+  background-image: none;
+  color: var(--text);
+}
+
+/* 隱藏所有 Y2K 視窗裝飾 */
+html[data-mode="senior"] .sidebar-titlebar,
+html[data-mode="senior"] .topbar-prefix,
+html[data-mode="senior"] .topbar-ext,
+html[data-mode="senior"] .topbar-wincontrols,
+html[data-mode="senior"] .app-theme-toggle {
+  display: none !important;
+}
+
+/* Sidebar — 恢復簡潔 */
+html[data-mode="senior"] .sidebar {
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--bg-mid);
+  border: none;
+  border-right: 1px solid var(--border-glass);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 20px 0;
+}
+
+html[data-mode="senior"] .sidebar-brand {
+  background: transparent;
+  border-bottom: 1px solid var(--border-glass);
+  padding: 8px 20px 24px;
+}
+
+html[data-mode="senior"] .sidebar-logo-img {
+  width: 48px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  filter: invert(15%) sepia(20%) saturate(400%) hue-rotate(190deg) brightness(0.9) contrast(1.1);
+  opacity: 0.8;
+}
+
+html[data-mode="senior"] .sidebar-brand h1 {
+  font-family: "Sacramento", cursive;
+  font-weight: 400;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+html[data-mode="senior"] .sidebar-brand h1::before { content: ""; }
+
+html[data-mode="senior"] .sidebar-brand p {
+  font-family: "Noto Sans TC", sans-serif;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+html[data-mode="senior"] .sidebar-nav { padding: 8px 0; }
+
+html[data-mode="senior"] .nav-item {
+  font-family: "Noto Sans TC", sans-serif;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  margin-bottom: 0;
+  padding: 12px 20px;
+  color: #2D2521;
+}
+
+html[data-mode="senior"] .nav-item:hover {
+  background: var(--bg-glass);
+  border-color: transparent;
+  border-left-color: var(--accent);
+  color: #2D2521;
+}
+
+html[data-mode="senior"] .nav-item.active {
+  background: rgba(91,159,232,0.12);
+  border-color: transparent;
+  border-left-color: var(--accent);
+  color: #2D2521;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+/* Main content — 還原無 padding 邊框 */
+html[data-mode="senior"] .main-content {
+  margin-left: 260px;
+  padding: 0;
+}
+
+/* Topbar — 恢復簡潔 sticky 列 */
+html[data-mode="senior"] .topbar {
+  position: sticky;
+  top: 0;
+  padding: 22px 32px;
+  background: #EBEBEC;
+  backdrop-filter: blur(16px);
+  border: none;
+  border-bottom: 1px solid var(--border-glass);
+  border-radius: 0;
+  box-shadow: none;
+  font-family: "Noto Sans TC", sans-serif;
+  background-image: none;
+}
+
+html[data-mode="senior"] .topbar-filename {
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: 0;
+  letter-spacing: normal;
+}
+
+html[data-mode="senior"] .topbar-version {
+  font-family: "Noto Sans TC", sans-serif;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  letter-spacing: normal;
+  padding: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
    CARDS & GLASS MORPHISM
    ═══════════════════════════════════════════════════════════ */
 
