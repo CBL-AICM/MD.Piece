@@ -320,6 +320,9 @@ var _symCatalog = [];
 var _symSelected = null;
 var _symSeverity = 3;
 var _symRangeDays = 30;
+var _docViewPatients = [];
+var _docViewSelected = null;
+var _docViewDays = 30;
 
 function symptoms() {
   _symPatientId = getStablePatientId();
@@ -327,6 +330,31 @@ function symptoms() {
     <div class="card">
       <h2>症狀紀錄</h2>
       <p style="margin-top:8px;color:var(--text-dim)">點選下方症狀類別記錄不適。每一筆都會累計到下次回診，醫師可看趨勢折線。</p>
+    </div>
+    <div class="card">
+      <details>
+        <summary style="cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:600">
+          <i data-lucide="briefcase-medical" style="width:16px;height:16px;vertical-align:middle"></i>
+          醫師視角 — 檢視其他病患的累計與長期疼痛
+          <span style="margin-left:auto;font-size:0.78rem;color:var(--text-dim);font-weight:400">點開展開 / 也可以直接開 <a href="doctor.html" style="color:var(--accent)">獨立醫師端</a></span>
+        </summary>
+        <div style="margin-top:12px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+            <label style="font-size:0.85rem;color:var(--text-dim)">病患：</label>
+            <select id="dv-patient" onchange="onDocViewPatientChange(this.value)" style="padding:5px 10px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);min-width:200px">
+              <option value="">— 載入中 —</option>
+            </select>
+            <label style="font-size:0.85rem;color:var(--text-dim);margin-left:8px">區間：</label>
+            <select id="dv-range" onchange="onDocViewRangeChange(parseInt(this.value))" style="padding:5px 10px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)">
+              <option value="30" selected>30 天</option>
+              <option value="90">90 天</option>
+              <option value="180">180 天</option>
+              <option value="365">365 天</option>
+            </select>
+          </div>
+          <div id="dv-content"><p style="color:var(--text-muted);font-size:0.85rem">選擇上方病患後顯示用藥摘要 + 症狀趨勢 + 長期疼痛統計</p></div>
+        </div>
+      </details>
     </div>
     <div class="card">
       <h3><i data-lucide="list" style="width:18px;height:18px;vertical-align:middle"></i> 我有什麼不舒服？</h3>
@@ -380,6 +408,203 @@ function loadSymptomsPage() {
       if (el) el.innerHTML = '<p style="color:var(--danger)">無法載入症狀目錄</p>';
     });
   loadSymTrend();
+  loadDocViewPatients();
+}
+
+// ── 醫師視角（嵌入版） ──────────────────────────────────
+function loadDocViewPatients() {
+  fetch(API + "/patients/")
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      _docViewPatients = d.patients || [];
+      var sel = document.getElementById("dv-patient");
+      if (!sel) return;
+      var opts = '<option value="">— 選擇病患 —</option>';
+      _docViewPatients.forEach(function(p) {
+        var meta = (p.age != null ? p.age + "歲" : "") + (p.gender ? "・" + (p.gender === "male" ? "男" : "女") : "");
+        opts += '<option value="' + p.id + '">' + escapeHtml(p.name || "—") + (meta ? " (" + meta + ")" : "") + '</option>';
+      });
+      sel.innerHTML = opts;
+    })
+    .catch(function() {
+      var sel = document.getElementById("dv-patient");
+      if (sel) sel.innerHTML = '<option value="">載入失敗</option>';
+    });
+}
+
+function onDocViewPatientChange(pid) {
+  _docViewSelected = pid || null;
+  if (!pid) {
+    document.getElementById("dv-content").innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem">選擇上方病患後顯示用藥摘要 + 症狀趨勢 + 長期疼痛統計</p>';
+    return;
+  }
+  loadDocViewDashboard();
+}
+
+function onDocViewRangeChange(days) {
+  _docViewDays = days || 30;
+  if (_docViewSelected) loadDocViewDashboard();
+}
+
+function loadDocViewDashboard() {
+  var pid = _docViewSelected;
+  var days = _docViewDays;
+  var box = document.getElementById("dv-content");
+  if (!box) return;
+
+  // 預先放骨架，兩個區塊各別填充
+  box.innerHTML =
+    '<div id="dv-meds-box" style="margin-bottom:12px"><p style="color:var(--text-muted)">載入用藥摘要中...</p></div>' +
+    '<div id="dv-sym-box" style="padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);background:rgba(120,180,200,0.04)">' +
+      '<div style="font-weight:600;margin-bottom:4px">回診間症狀累計（折線）</div>' +
+      '<div id="dv-sym-summary" style="font-size:0.85rem;color:var(--text-dim)">載入中...</div>' +
+      '<div id="dv-sym-pain" style="margin-top:8px"></div>' +
+      '<div style="position:relative;height:200px;margin-top:8px">' +
+        '<canvas id="dv-sym-canvas" style="width:100%;height:100%"></canvas>' +
+      '</div>' +
+    '</div>';
+
+  // 用藥摘要：直接重用既有的 renderDoctorSummary，只是把目標 box 換成 dv-meds-box
+  fetch(API + "/medications/doctor-summary?patient_id=" + pid + "&days=" + days)
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      var medsBox = document.getElementById("dv-meds-box");
+      if (!medsBox) return;
+      // 我們不要 patient list 那個 toggle 的整套行為，僅借用 renderDoctorSummary 的 markup
+      // renderDoctorSummary 寫入 box.innerHTML 後會異步去 fetch /symptoms/trend → 這裡我們覆蓋掉
+      renderDocViewMedSummary(medsBox, j);
+    })
+    .catch(function() {
+      var medsBox = document.getElementById("dv-meds-box");
+      if (medsBox) medsBox.innerHTML = '<p style="color:var(--danger)">用藥摘要載入失敗</p>';
+    });
+
+  // 症狀趨勢：重用 loadDoctorSymptomTrend 的渲染邏輯，但寫入 dv-sym 的容器
+  fetch(API + "/symptoms/trend?patient_id=" + pid + "&days=" + days)
+    .then(function(r) { return r.json(); })
+    .then(function(d) { renderDocViewSymTrend(d); })
+    .catch(function() {
+      var s = document.getElementById("dv-sym-summary");
+      if (s) s.innerHTML = '<span style="color:var(--danger)">載入失敗</span>';
+    });
+}
+
+function renderDocViewMedSummary(box, j) {
+  var ov = j.overall || {};
+  var per = j.per_medication || [];
+  var alerts = j.missed_alerts || [];
+
+  var stat = function(num, label) {
+    return '<div class="stat-box"><div class="stat-num">' + num + '</div><div class="stat-label">' + label + '</div></div>';
+  };
+  var statsRow =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px">' +
+      stat(ov.adherence_rate + "%", "整體服藥率") +
+      stat(ov.active_medications || 0, "用藥中") +
+      stat(ov.total_log_records || 0, "區間打卡") +
+      stat((j.period && j.period.days) + "天", "統計區間") +
+    '</div>';
+
+  var perRows = per.length
+    ? per.map(function(p) {
+        var rate = p.adherence_rate;
+        var color = rate >= 80 ? "var(--success)" : rate >= 50 ? "var(--warning)" : "var(--danger)";
+        var last = p.last_taken_at ? p.last_taken_at.slice(0, 16).replace("T", " ") : "—";
+        var avgEff = (p.avg_effectiveness != null) ? (p.avg_effectiveness + " / 5") : "—";
+        var sides = (p.side_effects && p.side_effects.length) ? p.side_effects.join("、") : "—";
+        return (
+          '<div style="padding:8px 10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);background:var(--bg-glass)">' +
+            '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
+              '<strong>' + escapeHtml(p.name || "") + (p.dosage ? '<span style="color:var(--text-dim);font-weight:normal"> ' + escapeHtml(p.dosage) + '</span>' : '') + '</strong>' +
+              '<span style="color:' + color + ';font-weight:600">' + rate + '%</span>' +
+            '</div>' +
+            '<div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">最近：' + last + ' | 療效：' + avgEff + ' | 副作用：' + escapeHtml(sides) + '</div>' +
+          '</div>'
+        );
+      }).join("")
+    : '<p style="color:var(--text-muted)">無有效藥物</p>';
+
+  var alertHtml = alerts.length
+    ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(220,80,80,0.08);border:1px solid var(--danger);border-radius:var(--radius-sm)">' +
+        '<strong style="color:var(--danger)">⚠ 服藥警示</strong>' +
+        '<ul style="margin:4px 0 0 18px;font-size:0.85rem">' +
+        alerts.map(function(a) { return '<li>' + escapeHtml(a.name) + ' — ' + escapeHtml(a.reason) + '</li>'; }).join("") +
+        '</ul>' +
+      '</div>'
+    : "";
+
+  var summaryHtml = j.summary
+    ? '<details open style="margin-top:10px"><summary style="cursor:pointer;color:var(--accent)">AI 回診重點摘要</summary>' +
+        '<div style="margin-top:6px;padding:10px;background:var(--bg-glass);border-radius:var(--radius-sm);white-space:pre-wrap;font-size:0.9rem">' + escapeHtml(j.summary) + '</div>' +
+      '</details>'
+    : '<p style="margin-top:8px;color:var(--text-muted);font-size:0.85rem">（AI 摘要服務未啟用，僅顯示結構化資料）</p>';
+
+  box.innerHTML =
+    '<div style="padding:10px;background:rgba(120,180,200,0.06);border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
+      '<div style="font-weight:600;margin-bottom:6px">用藥摘要</div>' +
+      statsRow +
+      '<div style="font-weight:600;margin:6px 0 4px">各藥物服藥情況</div>' +
+      '<div style="display:grid;gap:6px">' + perRows + '</div>' +
+      alertHtml +
+      summaryHtml +
+    '</div>';
+}
+
+function renderDocViewSymTrend(d) {
+  var sumEl = document.getElementById("dv-sym-summary");
+  if (sumEl) {
+    var by = d.by_symptom || [];
+    if (!by.length) {
+      sumEl.innerHTML = '<span style="color:var(--text-muted)">區間內無症狀紀錄</span>';
+    } else {
+      sumEl.innerHTML = "區間累計 " + d.total_entries + " 筆，" +
+        by.slice(0, 4).map(function(s) {
+          return escapeHtml(s.label) + " ×" + s.total + "（平均 " + (s.avg_severity != null ? s.avg_severity : "—") + "/5；約 " + s.per_week + " 次/週）";
+        }).join("；") + (by.length > 4 ? "…" : "");
+    }
+  }
+
+  var painEl = document.getElementById("dv-sym-pain");
+  if (painEl) {
+    var ps = d.pain_summary || {};
+    var items = ps.items || [];
+    if (!items.length) {
+      painEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">區間內無疼痛類紀錄</div>';
+    } else {
+      var rows = items.map(function(p) {
+        var color = p.per_week >= 3 ? "var(--danger)" : p.per_week >= 1 ? "var(--warning)" : "var(--accent)";
+        var firstSeen = p.first_recorded_at ? p.first_recorded_at.slice(0, 10) : "—";
+        var lastSeen = p.last_recorded_at ? p.last_recorded_at.slice(0, 10) : "—";
+        return (
+          '<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:6px 8px;border:1px solid var(--border-glass);border-radius:4px;background:var(--bg-glass);font-size:0.85rem;align-items:center">' +
+            '<div><strong>' + escapeHtml(p.label) + '</strong>' +
+              '<div style="color:var(--text-dim);font-size:0.72rem">' + firstSeen + ' → ' + lastSeen + '</div>' +
+            '</div>' +
+            '<div><span style="color:' + color + ';font-weight:600">' + p.per_week + '</span><span style="color:var(--text-dim)"> 次/週</span></div>' +
+            '<div>共 ' + p.total + ' 次<span style="color:var(--text-dim)">（' + p.active_days + ' 天）</span></div>' +
+            '<div>平均 ' + (p.avg_severity != null ? p.avg_severity : "—") + ' / 5</div>' +
+          '</div>'
+        );
+      }).join("");
+      painEl.innerHTML =
+        '<div style="margin-top:8px;padding:8px;background:rgba(220,80,80,0.04);border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
+          '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px">' +
+            '<strong style="color:var(--danger)">長期疼痛統計</strong>' +
+            '<span style="font-size:0.85rem;color:var(--text-dim)">總 ' + ps.total + ' 次・' + ps.types + ' 類・約 ' + ps.per_week + ' 次/週・' + ps.per_month + ' 次/月</span>' +
+          '</div>' +
+          '<div style="display:grid;gap:4px">' + rows + '</div>' +
+        '</div>';
+    }
+  }
+
+  // 重用既有的繪圖函式：drawSymTrendChart 寫死 canvas id 為 "sym-canvas"，這裡先借 id 切換
+  var canvas = document.getElementById("dv-sym-canvas");
+  if (canvas) {
+    var origId = canvas.id;
+    canvas.id = "sym-canvas";
+    drawSymTrendChart(d);
+    canvas.id = origId;
+  }
 }
 
 function renderSymCatalog() {
