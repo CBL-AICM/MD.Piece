@@ -78,6 +78,18 @@ _SCHEMAS = {
             ai_response TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
+    "symptom_entries": """
+        CREATE TABLE IF NOT EXISTS symptom_entries (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            symptom_type TEXT NOT NULL,
+            severity INTEGER DEFAULT 3,
+            location TEXT,
+            notes TEXT,
+            recorded_at TEXT DEFAULT (datetime('now')),
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
     "emotions": """
         CREATE TABLE IF NOT EXISTS emotions (
             id TEXT PRIMARY KEY,

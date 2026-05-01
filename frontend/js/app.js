@@ -45,6 +45,7 @@ function showPage(page) {
     if (page === "contributors") loadContributors();
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
+    if (page === "symptoms") loadSymptomsPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -314,22 +315,290 @@ function loadHomePage() {
 
 // ─── 症狀分析 ──────────────────────────────────────────────
 
+var _symPatientId = null;
+var _symCatalog = [];
+var _symSelected = null;
+var _symSeverity = 3;
+
 function symptoms() {
+  _symPatientId = getStablePatientId();
   return `
     <div class="card">
-      <h2>AI 症狀分析</h2>
-      <p style="margin-bottom:12px;color:var(--text-dim)">輸入您的症狀，AI 將提供初步分析建議</p>
-      <input id="symptom-input" placeholder="輸入症狀（以逗號分隔），例如：fever, headache, cough" />
+      <h2>症狀紀錄</h2>
+      <p style="margin-top:8px;color:var(--text-dim)">點選下方症狀類別記錄不適。每一筆都會累計到下次回診，醫師可看趨勢折線。</p>
+    </div>
+    <div class="card">
+      <h3><i data-lucide="list" style="width:18px;height:18px;vertical-align:middle"></i> 我有什麼不舒服？</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.85rem">點選最接近的症狀；不確定時點問號 (?) 看說明。</p>
+      <div id="sym-catalog-grid" style="margin-top:10px"><p style="color:var(--text-muted)">載入中...</p></div>
+      <div id="sym-entry-form" style="margin-top:14px;display:none"></div>
+    </div>
+    <div class="card">
+      <h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;vertical-align:middle"></i> 我的症狀趨勢</h3>
+      <div id="sym-summary" style="margin-top:10px"><p style="color:var(--text-muted)">載入中...</p></div>
+      <div id="sym-trend-chart" style="position:relative;height:220px;margin-top:12px">
+        <canvas id="sym-canvas" style="width:100%;height:100%"></canvas>
+      </div>
+      <div id="sym-recent" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h3><i data-lucide="sparkles" style="width:18px;height:18px;vertical-align:middle"></i> AI 症狀分析（選用）</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.85rem">輸入英文關鍵字，AI 給初步建議。</p>
+      <input id="symptom-input" placeholder="例如：fever, headache, cough" style="margin-top:6px" />
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="primary" onclick="analyzeSymptoms()">AI 分析</button>
         <button class="secondary" onclick="quickAdvice()">快速查詢</button>
       </div>
       <div id="analysis-result"></div>
-    </div>
-    <div class="card">
-      <h3>快速查詢</h3>
-      <p style="color:var(--text-dim);font-size:0.9rem">支援：fever、headache、chest pain、cough</p>
     </div>`;
+}
+
+function loadSymptomsPage() {
+  fetch(API + "/symptoms/catalog")
+    .then(function(r) { return r.json(); })
+    .then(function(d) { _symCatalog = d.items || []; renderSymCatalog(); })
+    .catch(function() {
+      var el = document.getElementById("sym-catalog-grid");
+      if (el) el.innerHTML = '<p style="color:var(--danger)">無法載入症狀目錄</p>';
+    });
+  loadSymTrend();
+}
+
+function renderSymCatalog() {
+  var el = document.getElementById("sym-catalog-grid");
+  if (!el) return;
+  var cards = _symCatalog.map(function(s) {
+    return (
+      '<div class="sym-card" data-key="' + s.key + '" style="position:relative;padding:10px 12px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);background:var(--bg-glass);cursor:pointer;display:flex;flex-direction:column;gap:4px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:start;gap:6px">' +
+          '<strong style="font-size:0.95rem">' + escapeHtml(s.label) + '</strong>' +
+          '<button onclick="event.stopPropagation();toggleSymHelp(\'' + s.key + '\')" title="說明" style="background:none;border:1px solid var(--border-glass);color:var(--text-dim);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:0.75rem;line-height:1">?</button>' +
+        '</div>' +
+        '<div class="sym-help" id="sym-help-' + s.key + '" style="display:none;font-size:0.8rem;color:var(--text-dim);line-height:1.5;padding:6px 8px;background:rgba(120,180,200,0.08);border-radius:4px">' + escapeHtml(s.description) + '</div>' +
+      '</div>'
+    );
+  }).join("");
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">' + cards + '</div>';
+  el.querySelectorAll(".sym-card").forEach(function(c) {
+    c.addEventListener("click", function() { selectSymptom(c.getAttribute("data-key")); });
+  });
+}
+
+function toggleSymHelp(key) {
+  var el = document.getElementById("sym-help-" + key);
+  if (!el) return;
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+function selectSymptom(key) {
+  var item = _symCatalog.find(function(s) { return s.key === key; });
+  if (!item) return;
+  _symSelected = item;
+  _symSeverity = 3;
+  // 高亮選中的卡片
+  document.querySelectorAll(".sym-card").forEach(function(c) {
+    var on = c.getAttribute("data-key") === key;
+    c.style.borderColor = on ? "var(--accent)" : "var(--border-glass)";
+    c.style.background = on ? "rgba(0,212,170,0.08)" : "var(--bg-glass)";
+  });
+  renderSymEntryForm();
+}
+
+function renderSymEntryForm() {
+  var el = document.getElementById("sym-entry-form");
+  if (!el || !_symSelected) return;
+  el.style.display = "block";
+  var sev = _symSeverity;
+  var sevLabel = ["", "輕微", "輕度", "中度", "嚴重", "非常嚴重"][sev];
+  el.innerHTML =
+    '<div style="padding:12px;border:1px solid var(--accent);border-radius:var(--radius-sm);background:rgba(0,212,170,0.04)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<strong>' + escapeHtml(_symSelected.label) + '</strong>' +
+        '<span style="color:var(--text-dim);font-size:0.8rem">' + escapeHtml(_symSelected.description) + '</span>' +
+      '</div>' +
+      '<div style="margin-top:10px">' +
+        '<label style="display:block;font-size:0.85rem;color:var(--text-dim);margin-bottom:4px">嚴重度：<strong style="color:var(--text-main)">' + sev + ' / 5（' + sevLabel + '）</strong></label>' +
+        '<input id="sym-sev" type="range" min="1" max="5" step="1" value="' + sev + '" style="width:100%" oninput="updateSymSev(this.value)" />' +
+      '</div>' +
+      '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+        '<input id="sym-location" placeholder="位置（選填，例：左側太陽穴）" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+        '<input id="sym-notes" placeholder="備註（選填）" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px">' +
+        '<button class="primary" onclick="submitSymptomEntry()">記錄這次症狀</button>' +
+        '<button class="secondary" onclick="cancelSymptomEntry()">取消</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function updateSymSev(v) {
+  _symSeverity = parseInt(v) || 3;
+  renderSymEntryForm();
+}
+
+function cancelSymptomEntry() {
+  _symSelected = null;
+  var el = document.getElementById("sym-entry-form");
+  if (el) { el.style.display = "none"; el.innerHTML = ""; }
+  document.querySelectorAll(".sym-card").forEach(function(c) {
+    c.style.borderColor = "var(--border-glass)"; c.style.background = "var(--bg-glass)";
+  });
+}
+
+function submitSymptomEntry() {
+  if (!_symSelected) return;
+  var loc = (document.getElementById("sym-location") || {}).value || "";
+  var notes = (document.getElementById("sym-notes") || {}).value || "";
+  fetch(API + "/symptoms/entries", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      patient_id: _symPatientId,
+      symptom_type: _symSelected.key,
+      severity: _symSeverity,
+      location: loc.trim() || null,
+      notes: notes.trim() || null,
+    })
+  })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok) {
+        showToast("紀錄失敗：" + ((res.data && res.data.detail) || "未知錯誤"), "error");
+        return;
+      }
+      showToast("已記錄「" + _symSelected.label + "」", "success");
+      cancelSymptomEntry();
+      loadSymTrend();
+    })
+    .catch(function() { showToast("紀錄失敗，請檢查連線", "error"); });
+}
+
+function loadSymTrend() {
+  fetch(API + "/symptoms/trend?patient_id=" + _symPatientId + "&days=30")
+    .then(function(r) { return r.json(); })
+    .then(function(d) { renderSymTrend(d); })
+    .catch(function() {});
+}
+
+function renderSymTrend(d) {
+  var sumEl = document.getElementById("sym-summary");
+  if (sumEl) {
+    var by = d.by_symptom || [];
+    if (!by.length) {
+      sumEl.innerHTML = '<p style="color:var(--text-muted)">最近 30 天尚無症狀紀錄。點上方症狀按鈕開始記錄吧！</p>';
+    } else {
+      var stats =
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:8px">' +
+          '<div class="stat-box"><div class="stat-num">' + d.total_entries + '</div><div class="stat-label">總紀錄</div></div>' +
+          '<div class="stat-box"><div class="stat-num">' + by.length + '</div><div class="stat-label">症狀類型</div></div>' +
+          '<div class="stat-box"><div class="stat-num">' + d.period.days + '天</div><div class="stat-label">區間</div></div>' +
+        '</div>';
+      var rows = by.map(function(s) {
+        return (
+          '<div style="display:flex;justify-content:space-between;padding:6px 8px;border:1px solid var(--border-glass);border-radius:4px;background:var(--bg-glass)">' +
+            '<span><strong>' + escapeHtml(s.label) + '</strong> × ' + s.total + '</span>' +
+            '<span style="color:var(--text-dim);font-size:0.85rem">平均 ' + (s.avg_severity != null ? s.avg_severity : "—") + ' / 5</span>' +
+          '</div>'
+        );
+      }).join("");
+      sumEl.innerHTML = stats + '<div style="display:grid;gap:4px">' + rows + '</div>';
+    }
+  }
+
+  drawSymTrendChart(d);
+
+  var recEl = document.getElementById("sym-recent");
+  if (recEl) {
+    var recent = d.recent || [];
+    if (!recent.length) {
+      recEl.innerHTML = "";
+    } else {
+      var rows = recent.map(function(r) {
+        var when = (r.recorded_at || "").slice(0, 16).replace("T", " ");
+        return (
+          '<div style="font-size:0.85rem;color:var(--text-dim);padding:4px 0;border-bottom:1px solid var(--border-glass)">' +
+            '<strong style="color:var(--text-main)">' + escapeHtml(r.label) + '</strong> ' +
+            '・' + r.severity + '/5' +
+            (r.location ? '・' + escapeHtml(r.location) : '') +
+            ' <span style="float:right">' + when + '</span>' +
+            (r.notes ? '<div style="margin-top:2px">' + escapeHtml(r.notes) + '</div>' : '') +
+          '</div>'
+        );
+      }).join("");
+      recEl.innerHTML = '<details><summary style="cursor:pointer;color:var(--text-dim)">最近 ' + recent.length + ' 筆紀錄</summary><div style="margin-top:6px">' + rows + '</div></details>';
+    }
+  }
+}
+
+function drawSymTrendChart(d) {
+  var canvas = document.getElementById("sym-canvas");
+  if (!canvas) return;
+  var dates = d.dates || [];
+  var series = (d.series || []).slice(0, 6); // 最多畫 6 條（前 6 個常見症狀）
+  var ctx = canvas.getContext("2d");
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2; canvas.height = rect.height * 2;
+  ctx.scale(2, 2);
+  var w = rect.width, h = rect.height;
+  var pad = { top: 14, right: 10, bottom: 32, left: 30 };
+  var cw = w - pad.left - pad.right, ch = h - pad.top - pad.bottom;
+  ctx.clearRect(0, 0, w, h);
+
+  if (!dates.length || !series.length) {
+    ctx.fillStyle = "#6E6860"; ctx.font = "12px 'Noto Sans TC'"; ctx.textAlign = "center";
+    ctx.fillText("尚無症狀資料", w / 2, h / 2);
+    return;
+  }
+
+  // y 軸 = 該日總次數的最大值
+  var maxCount = 1;
+  series.forEach(function(s) {
+    s.counts.forEach(function(v) { if (v > maxCount) maxCount = v; });
+  });
+
+  // 格線
+  ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 0.5;
+  for (var i = 0; i <= 4; i++) {
+    var y = pad.top + (ch / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cw, y); ctx.stroke();
+  }
+  ctx.fillStyle = "#6E6860"; ctx.font = "10px 'Noto Sans TC'"; ctx.textAlign = "right";
+  for (var i = 0; i <= 4; i++) {
+    var v = Math.round(maxCount - (maxCount / 4) * i);
+    ctx.fillText(v, pad.left - 4, pad.top + (ch / 4) * i + 4);
+  }
+
+  // x 軸 — 顯示首/中/末日期
+  ctx.textAlign = "center";
+  [0, Math.floor(dates.length / 2), dates.length - 1].forEach(function(i) {
+    var x = pad.left + (cw / Math.max(1, dates.length - 1)) * i;
+    ctx.fillText(dates[i].slice(5), x, pad.top + ch + 16);
+  });
+
+  // 折線（多條，每條一色）
+  var colors = ["#00D4AA", "#5B9FE8", "#E89B5B", "#C977E8", "#E85B7A", "#7AE85B"];
+  series.forEach(function(s, idx) {
+    var color = colors[idx % colors.length];
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2; ctx.lineJoin = "round";
+    ctx.beginPath();
+    s.counts.forEach(function(v, i) {
+      var x = pad.left + (cw / Math.max(1, dates.length - 1)) * i;
+      var y = pad.top + ch - (v / maxCount * ch);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+
+  // 圖例
+  ctx.textAlign = "left"; ctx.font = "10px 'Noto Sans TC'";
+  series.forEach(function(s, idx) {
+    var color = colors[idx % colors.length];
+    var x = pad.left + 4 + idx * 80;
+    if (x + 70 > pad.left + cw) return; // 超出就略過
+    ctx.fillStyle = color; ctx.fillRect(x, pad.top - 12, 8, 8);
+    ctx.fillStyle = "#A8A39C";
+    ctx.fillText(s.label + " (" + s.total + ")", x + 12, pad.top - 4);
+  });
 }
 
 async function analyzeSymptoms() {
@@ -549,6 +818,7 @@ function renderDoctorSummary(box, j) {
       '</details>'
     : '<p style="margin-top:8px;color:var(--text-muted);font-size:0.85rem">（AI 摘要服務未啟用，僅顯示結構化資料）</p>';
 
+  var symBlockId = "doc-sym-trend-" + (j.patient && j.patient.id || "x");
   box.innerHTML =
     '<div style="padding:10px;background:rgba(120,180,200,0.06);border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
       statsRow +
@@ -556,7 +826,53 @@ function renderDoctorSummary(box, j) {
       '<div style="display:grid;gap:6px">' + perRows + '</div>' +
       alertHtml +
       summaryHtml +
+      '<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border-glass)">' +
+        '<div style="font-weight:600;margin-bottom:4px">回診間症狀累計（折線）</div>' +
+        '<div id="' + symBlockId + '-summary" style="font-size:0.85rem;color:var(--text-dim)">載入中...</div>' +
+        '<div style="position:relative;height:200px;margin-top:8px">' +
+          '<canvas id="' + symBlockId + '-canvas" style="width:100%;height:100%"></canvas>' +
+        '</div>' +
+      '</div>' +
     '</div>';
+
+  // 異步載入並繪製症狀折線
+  var pid = j.patient && j.patient.id;
+  var days = (j.period && j.period.days) || 30;
+  if (pid) loadDoctorSymptomTrend(pid, days, symBlockId);
+}
+
+function loadDoctorSymptomTrend(patientId, days, blockId) {
+  fetch(API + "/symptoms/trend?patient_id=" + patientId + "&days=" + days)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var sumEl = document.getElementById(blockId + "-summary");
+      if (sumEl) {
+        var by = d.by_symptom || [];
+        if (!by.length) {
+          sumEl.innerHTML = '<span style="color:var(--text-muted)">區間內無症狀紀錄</span>';
+        } else {
+          sumEl.innerHTML = "區間累計 " + d.total_entries + " 筆，" +
+            by.slice(0, 4).map(function(s) {
+              return escapeHtml(s.label) + " ×" + s.total + "（平均 " + (s.avg_severity != null ? s.avg_severity : "—") + "/5）";
+            }).join("；") + (by.length > 4 ? "…" : "");
+        }
+      }
+      drawCanvasSymTrend(blockId + "-canvas", d);
+    })
+    .catch(function() {
+      var sumEl = document.getElementById(blockId + "-summary");
+      if (sumEl) sumEl.innerHTML = '<span style="color:var(--danger)">載入失敗</span>';
+    });
+}
+
+function drawCanvasSymTrend(canvasId, d) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  // 暫時把 canvas 包成 sym-canvas 風格，重用上面的繪圖邏輯
+  var origId = canvas.id;
+  canvas.id = "sym-canvas";
+  drawSymTrendChart(d);
+  canvas.id = origId;
 }
 
 async function addPatient() {
