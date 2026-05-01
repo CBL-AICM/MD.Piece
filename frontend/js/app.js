@@ -407,21 +407,362 @@ function loadHomePage() {
 // ─── 症狀分析 ──────────────────────────────────────────────
 
 function symptoms() {
+  const stats = getPeriodStats();
+  const v = getVisitDates();
+  const today = new Date();
+  const periodDays = Math.max(1, Math.ceil((today - stats.periodStart) / 86400000));
+  const totalCount = Object.values(stats.byCategory).reduce((s, c) => s + c.count, 0);
+  let topId = null, topCount = 0;
+  for (const cid in stats.byCategory) {
+    if (stats.byCategory[cid].count > topCount) { topId = cid; topCount = stats.byCategory[cid].count; }
+  }
+  const topCat = topId ? SYMPTOM_CATEGORIES.find(c => c.id === topId) : null;
+  const nextVisitDay = v.nextVisit ? Math.ceil((new Date(v.nextVisit) - today) / 86400000) : null;
+  const todayStr = today.toISOString().slice(0, 10);
+  const todayEntries = stats.entries.filter(e => e.recordedAt.slice(0, 10) === todayStr);
+
   return `
-    <div class="card">
-      <h2>AI 症狀分析</h2>
-      <p style="margin-bottom:12px;color:var(--text-dim)">輸入您的症狀，AI 將提供初步分析建議</p>
-      <input id="symptom-input" placeholder="輸入症狀（以逗號分隔），例如：fever, headache, cough" />
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="primary" onclick="analyzeSymptoms()">AI 分析</button>
-        <button class="secondary" onclick="quickAdvice()">快速查詢</button>
+    <div class="sym-page">
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ status</span>
+          <span class="ts-tag">period_summary</span>
+        </header>
+        <div class="ts-body">
+          <div class="ts-stat-grid">
+            <div class="ts-stat">
+              <span class="ts-stat-label">// 累計天數</span>
+              <span class="ts-stat-num">${periodDays}</span>
+              <span class="ts-stat-unit">days</span>
+            </div>
+            <div class="ts-stat">
+              <span class="ts-stat-label">// 已記錄</span>
+              <span class="ts-stat-num">${totalCount}</span>
+              <span class="ts-stat-unit">次</span>
+            </div>
+            <div class="ts-stat">
+              <span class="ts-stat-label">// 最常出現</span>
+              <span class="ts-stat-num sm">${topCat ? topCat.zh : '—'}</span>
+              <span class="ts-stat-unit">${topCat ? topCount + ' 次' : '尚無紀錄'}</span>
+            </div>
+            <div class="ts-stat">
+              <span class="ts-stat-label">// 距下次回診</span>
+              <span class="ts-stat-num">${nextVisitDay !== null ? Math.max(0, nextVisitDay) : '—'}</span>
+              <span class="ts-stat-unit">${nextVisitDay !== null ? 'days' : '尚未設定'}</span>
+            </div>
+          </div>
+          <button class="sym-link-btn" onclick="openVisitDatePrompt()">
+            <i data-lucide="calendar-cog"></i><span>設定回診日期</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ ./record-symptom</span>
+          <span class="ts-tag">choose_category</span>
+        </header>
+        <div class="ts-body">
+          <p class="sym-instruct">選擇你現在感覺到的症狀（每張卡片都附上判斷說明）：</p>
+          <div class="sym-category-grid">
+            ${SYMPTOM_CATEGORIES.map(c => `
+              <button class="sym-cat-card" onclick="openSymptomLog('${c.id}')" type="button">
+                <div class="scc-icon scc-${c.color}"><i data-lucide="${c.icon}"></i></div>
+                <div class="scc-name">${c.zh}</div>
+                <div class="scc-short">${c.short}</div>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </section>
+
+      <section class="term-section" id="sym-logform" style="display:none">
+        <header class="ts-head">
+          <span class="ts-prompt">$ ./log-entry</span>
+          <span class="ts-tag" id="logform-cat-tag">—</span>
+        </header>
+        <div class="ts-body" id="logform-body"></div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ tail -f today.log</span>
+          <span class="ts-tag">${todayEntries.length} entries</span>
+        </header>
+        <div class="ts-body">
+          ${todayEntries.length === 0 ? `
+            <p class="sym-empty">// 今天還沒有紀錄。選一個症狀類別開始記錄吧。</p>
+          ` : `
+            <ul class="sym-entry-list">
+              ${todayEntries.slice().reverse().map(e => {
+                const c = SYMPTOM_CATEGORIES.find(x => x.id === e.categoryId);
+                const time = new Date(e.recordedAt).toTimeString().slice(0, 5);
+                return `
+                  <li class="sym-entry">
+                    <span class="se-time">${time}</span>
+                    <span class="se-cat scc-${c?.color || 'mint'}">${c?.zh || e.categoryId}</span>
+                    <span class="se-bar">${renderIntensityBar(e.intensity)}</span>
+                    <span class="se-meta">程度 ${e.intensity}/10 · ${e.frequency || 1} 次</span>
+                    <button class="se-del" onclick="deleteSymptomEntryAndRefresh('${e.id}')" title="刪除">×</button>
+                    ${e.notes ? `<span class="se-notes">${escapeHtml(e.notes)}</span>` : ''}
+                  </li>
+                `;
+              }).join('')}
+            </ul>
+          `}
+        </div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ summary --period last_${periodDays}_days</span>
+          <span class="ts-tag">accumulated</span>
+        </header>
+        <div class="ts-body">${renderPeriodSummary(stats)}</div>
+      </section>
+
+      <div class="sym-actions">
+        <button class="primary-btn" onclick="syncSymptomsToDoctor()" type="button">
+          <i data-lucide="send"></i>
+          <span>同步給醫師</span>
+          <span class="cmd-hint">// 回診時自動帶到診間</span>
+        </button>
       </div>
-      <div id="analysis-result"></div>
+
     </div>
-    <div class="card">
-      <h3>快速查詢</h3>
-      <p style="color:var(--text-dim);font-size:0.9rem">支援：fever、headache、chest pain、cough</p>
-    </div>`;
+  `;
+}
+
+// ── Symptom data & helpers ─────────────────────────────────
+const SYMPTOM_CATEGORIES = [
+  { id:'headache', zh:'頭痛', icon:'brain', color:'pink',
+    short:'頭部明顯的疼痛感',
+    detail:'可能集中在前額、太陽穴、後腦勺或整個頭部，鈍痛或抽痛皆有可能。',
+    contrast:'不同於「頭暈」（不穩）和「暈眩」（轉動）—— 頭痛是真的會「痛」。' },
+  { id:'dizziness', zh:'頭暈', icon:'wind', color:'aqua',
+    short:'輕飄飄、頭重腳輕、快暈倒',
+    detail:'比較像快要昏倒或站不穩。常見原因：低血糖、脫水、貧血、姿勢性低血壓。',
+    contrast:'不同於「暈眩」—— 頭暈不會看到周圍在轉。' },
+  { id:'vertigo', zh:'暈眩', icon:'rotate-cw', color:'mint',
+    short:'天旋地轉，自己或周圍在轉動',
+    detail:'常與內耳問題（梅尼爾氏症、耳石脫落 BPPV）或前庭神經有關。',
+    contrast:'不同於「頭暈」—— 暈眩有清楚的「轉動感」。' },
+  { id:'neuralgia', zh:'神經痛', icon:'zap', color:'pink',
+    short:'像觸電、燒灼、針刺、刀割的痛',
+    detail:'沿神經分佈，發作性、尖銳。常見：坐骨神經痛、三叉神經痛、糖尿病神經病變。',
+    contrast:'不同於「肌肉痠痛」—— 神經痛更尖銳、有電擊感。' },
+  { id:'joint', zh:'關節痛', icon:'bone', color:'blue',
+    short:'關節（膝、肘、手指、肩）的疼痛、僵硬、紅腫',
+    detail:'可能伴隨活動受限、晨僵。常見：退化性關節炎、類風濕、痛風。',
+    contrast:'不同於「肌肉痠痛」—— 關節痛集中在關節處，活動時更明顯。' },
+  { id:'muscle', zh:'肌肉痠痛', icon:'dumbbell', color:'aqua',
+    short:'肌肉的痠痛、僵硬、無力',
+    detail:'常見於運動後、姿勢不良、感冒、或纖維肌痛。' },
+  { id:'fever', zh:'發燒', icon:'thermometer', color:'pink',
+    short:'體溫 ≥ 37.5°C，可能伴隨畏寒、出汗',
+    detail:'若 ≥ 38.5°C 或持續 3 天以上應就醫。記錄時可在備註寫下實測體溫。' },
+  { id:'fatigue', zh:'疲勞無力', icon:'battery-low', color:'aqua',
+    short:'極度倦怠、提不起勁，休息也難恢復',
+    detail:'與一般累不同，是持續性的，可能與貧血、甲狀腺、慢性病有關。' },
+  { id:'nausea', zh:'噁心嘔吐', icon:'cloud-rain', color:'mint',
+    short:'想吐或實際嘔吐',
+    detail:'可能與腸胃問題、藥物副作用、暈眩或頭痛同時出現。' },
+  { id:'cough', zh:'咳嗽', icon:'megaphone', color:'blue',
+    short:'反射性將氣道分泌物或刺激物排出',
+    detail:'可分為乾咳與有痰咳。超過 3 週為慢性咳嗽，建議就醫。' },
+  { id:'chest', zh:'胸痛胸悶', icon:'heart-pulse', color:'pink',
+    short:'胸口悶、壓迫感、刺痛',
+    detail:'若伴隨喘、冒冷汗、痛感放射到左肩或下巴，立即就醫。',
+    contrast:'⚠️ 警示症狀，記得儘快諮詢醫師。' },
+  { id:'breath', zh:'呼吸困難', icon:'activity', color:'aqua',
+    short:'喘不過氣、呼吸費力',
+    detail:'可能與氣喘、心臟、肺部問題有關。記錄發生時的活動狀態（休息中？運動後？）。' },
+  { id:'insomnia', zh:'失眠', icon:'moon', color:'mint',
+    short:'睡不著、易醒、太早醒',
+    detail:'長期失眠影響身心，建議在備註記下入睡時間與睡眠品質。' },
+];
+
+function getSymptomEntries() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_symptoms') || '[]'); }
+  catch { return []; }
+}
+function saveSymptomEntry(entry) {
+  const all = getSymptomEntries();
+  all.push(entry);
+  localStorage.setItem('mdpiece_symptoms', JSON.stringify(all));
+}
+function deleteSymptomEntry(id) {
+  localStorage.setItem('mdpiece_symptoms',
+    JSON.stringify(getSymptomEntries().filter(e => e.id !== id)));
+}
+function getVisitDates() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_visit_dates') || '{}'); }
+  catch { return {}; }
+}
+function saveVisitDates(d) {
+  localStorage.setItem('mdpiece_visit_dates', JSON.stringify(d));
+}
+function getPeriodStart() {
+  const v = getVisitDates();
+  if (v.lastVisit) {
+    const d = new Date(v.lastVisit);
+    if (!isNaN(d.getTime())) return d;
+  }
+  const fallback = new Date(); fallback.setDate(fallback.getDate() - 30);
+  return fallback;
+}
+function getPeriodStats() {
+  const start = getPeriodStart();
+  const entries = getSymptomEntries().filter(e => new Date(e.recordedAt) >= start);
+  const byCategory = {};
+  for (const e of entries) {
+    if (!byCategory[e.categoryId]) byCategory[e.categoryId] = { count: 0, intensitySum: 0 };
+    byCategory[e.categoryId].count += (e.frequency || 1);
+    byCategory[e.categoryId].intensitySum += (e.intensity || 0) * (e.frequency || 1);
+  }
+  return { entries, byCategory, periodStart: start };
+}
+
+function openSymptomLog(catId) {
+  const c = SYMPTOM_CATEGORIES.find(x => x.id === catId);
+  if (!c) return;
+  const form = document.getElementById('sym-logform');
+  document.getElementById('logform-cat-tag').textContent = c.id + '.entry';
+  document.getElementById('logform-body').innerHTML = `
+    <div class="lf-explain">
+      <div class="lf-icon scc-${c.color}"><i data-lucide="${c.icon}"></i></div>
+      <div class="lf-info">
+        <h3>${c.zh}</h3>
+        <p class="lf-detail">${c.detail}</p>
+        ${c.contrast ? `<p class="lf-contrast"><strong>不確定？</strong>${c.contrast}</p>` : ''}
+      </div>
+    </div>
+    <div class="lf-form">
+      <label class="lf-label">疼痛 / 不適程度（1 = 輕微，10 = 劇烈）</label>
+      <div class="lf-slider-wrap">
+        <input type="range" id="lf-intensity" min="1" max="10" value="5" oninput="updateIntensityBar(this.value)" />
+        <div class="lf-bar" id="lf-bar">${renderIntensityBar(5)}</div>
+        <span class="lf-bar-value" id="lf-bar-value">5</span>
+      </div>
+      <label class="lf-label">頻率（今天感覺到幾次）</label>
+      <div class="lf-freq-wrap">
+        <button class="lf-freq-btn" onclick="adjustFreq(-1)" type="button">−</button>
+        <span class="lf-freq-num" id="lf-freq">1</span>
+        <button class="lf-freq-btn" onclick="adjustFreq(1)" type="button">+</button>
+        <span class="lf-freq-unit">次</span>
+      </div>
+      <label class="lf-label">備註（選填）</label>
+      <textarea id="lf-notes" placeholder="例如：早上起床時、運動後、伴隨頭暈、體溫 38.2°C..." rows="2"></textarea>
+      <div class="lf-actions">
+        <button class="primary-btn" onclick="submitSymptomLog('${catId}')" type="button">
+          <i data-lucide="check"></i><span>新增紀錄</span>
+        </button>
+        <button class="secondary-btn" onclick="cancelSymptomLog()" type="button">取消</button>
+      </div>
+    </div>
+  `;
+  form.style.display = 'block';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function cancelSymptomLog() {
+  const f = document.getElementById('sym-logform');
+  if (f) f.style.display = 'none';
+}
+function updateIntensityBar(v) {
+  document.getElementById('lf-bar').innerHTML = renderIntensityBar(v);
+  document.getElementById('lf-bar-value').textContent = v;
+}
+function adjustFreq(delta) {
+  const el = document.getElementById('lf-freq');
+  el.textContent = Math.max(1, parseInt(el.textContent || '1') + delta);
+}
+function submitSymptomLog(catId) {
+  const intensity = parseInt(document.getElementById('lf-intensity').value);
+  const frequency = parseInt(document.getElementById('lf-freq').textContent);
+  const notes = document.getElementById('lf-notes').value.trim();
+  saveSymptomEntry({
+    id: 'sym-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    categoryId: catId, intensity, frequency, notes,
+    recordedAt: new Date().toISOString()
+  });
+  showPage('symptoms');
+}
+function deleteSymptomEntryAndRefresh(id) {
+  if (!confirm('刪除這筆紀錄？')) return;
+  deleteSymptomEntry(id);
+  showPage('symptoms');
+}
+function renderIntensityBar(v) {
+  v = parseInt(v) || 0;
+  const blocks = ['▁','▂','▂','▃','▃','▄','▄','▅','▆','█'];
+  let out = '';
+  for (let i = 0; i < 10; i++) {
+    out += i < v
+      ? `<span class="ib-on">${blocks[i]}</span>`
+      : `<span class="ib-off">${blocks[i]}</span>`;
+  }
+  return out;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// 患者端期間累計（純文字摘要，不含趨勢圖 — 趨勢圖屬於醫師端）
+function renderPeriodSummary(stats) {
+  const sorted = Object.entries(stats.byCategory).sort((a, b) => b[1].count - a[1].count);
+  if (sorted.length === 0) {
+    return '<p class="sym-empty">// 此期間還沒有紀錄 — 從上面選一個症狀開始。</p>';
+  }
+  return `
+    <p class="sym-instruct">// 已自動累計，回診當天會同步給醫師參考。</p>
+    <ul class="sym-summary-list">
+      ${sorted.map(([id, s]) => {
+        const c = SYMPTOM_CATEGORIES.find(x => x.id === id);
+        const avg = (s.intensitySum / s.count).toFixed(1);
+        const color = c?.color || 'mint';
+        return `
+          <li class="sym-summary-row">
+            <span class="ssr-name scc-${color}">${c?.zh || id}</span>
+            <span class="ssr-count"><strong>${s.count}</strong> 次</span>
+            <span class="ssr-avg">平均強度 <strong>${avg}</strong>/10</span>
+          </li>
+        `;
+      }).join('')}
+    </ul>
+  `;
+}
+function openVisitDatePrompt() {
+  const v = getVisitDates();
+  const lastVisit = prompt('上次回診日期 (YYYY-MM-DD)，留空 = 不變更：', v.lastVisit || '');
+  if (lastVisit === null) return;
+  const nextVisit = prompt('下次回診日期 (YYYY-MM-DD)，留空 = 尚未排定：', v.nextVisit || '');
+  if (nextVisit === null) return;
+  saveVisitDates({
+    lastVisit: lastVisit.trim() || null,
+    nextVisit: nextVisit.trim() || null
+  });
+  showPage('symptoms');
+}
+// 同步給醫師（患者端動作）— 在後端就緒前先標記時間戳
+function syncSymptomsToDoctor() {
+  const stats = getPeriodStats();
+  if (stats.entries.length === 0) {
+    alert('此期間還沒有任何症狀紀錄，無法同步。');
+    return;
+  }
+  const now = new Date().toISOString();
+  try {
+    const log = JSON.parse(localStorage.getItem('mdpiece_sync_log') || '[]');
+    log.push({ at: now, count: stats.entries.length });
+    localStorage.setItem('mdpiece_sync_log', JSON.stringify(log));
+  } catch (e) {}
+  alert(
+    '✓ 已標記同步\n\n' +
+    `期間：${stats.periodStart.toISOString().slice(0,10)} ~ ${now.slice(0,10)}\n` +
+    `紀錄筆數：${stats.entries.length}\n\n` +
+    '回診當天，這些資料會自動帶到診間給醫師。\n（後端串接後即時上傳）'
+  );
 }
 
 async function analyzeSymptoms() {
