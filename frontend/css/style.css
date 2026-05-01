@@ -1415,6 +1415,113 @@ html[data-mode="standard"] #app-wrapper.show::after {
 }
 html[data-mode="senior"] .page-deco { display: none; }
 
+/* ── Placeholder card for unimplemented pages ─────────── */
+.placeholder-card {
+  max-width: 560px;
+  margin: 60px auto;
+  padding: 48px 36px;
+  text-align: center;
+  background: var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 6px;
+  box-shadow: var(--app-shadow);
+  position: relative;
+  overflow: hidden;
+}
+.placeholder-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 28px;
+  background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
+  border-bottom: 1.5px solid var(--app-border);
+}
+.placeholder-card::after {
+  content: "─ ▢ ✕";
+  position: absolute;
+  top: 6px; right: 12px;
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 0.85rem;
+  letter-spacing: 4px;
+  color: var(--app-text);
+  opacity: 0.7;
+}
+.placeholder-card > * { position: relative; z-index: 1; }
+.placeholder-card > :first-child { margin-top: 28px; }
+
+.placeholder-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 18px;
+  background: var(--app-mint);
+  border: 1.5px solid var(--app-border);
+  border-radius: 12px;
+  color: #07171C;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4), 0 0 22px var(--app-glow);
+}
+.placeholder-icon svg {
+  width: 36px;
+  height: 36px;
+  stroke-width: 2;
+}
+
+.placeholder-card h2 {
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--app-text);
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+.placeholder-card h2::before {
+  content: "▸ ";
+  color: var(--app-term);
+}
+
+.placeholder-hint {
+  color: var(--app-text-dim);
+  font-size: 1.02rem;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.placeholder-meta {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 0.78rem;
+  color: var(--app-term);
+  letter-spacing: 1px;
+  opacity: 0.85;
+}
+
+/* Senior mode: clean, no chrome */
+html[data-mode="senior"] .placeholder-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow);
+}
+html[data-mode="senior"] .placeholder-card::before,
+html[data-mode="senior"] .placeholder-card::after { display: none; }
+html[data-mode="senior"] .placeholder-card > :first-child { margin-top: 0; }
+html[data-mode="senior"] .placeholder-card h2 {
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 1.65rem;
+  color: var(--text);
+}
+html[data-mode="senior"] .placeholder-card h2::before { content: ""; }
+html[data-mode="senior"] .placeholder-icon {
+  background: var(--accent);
+  color: var(--klein);
+  box-shadow: var(--shadow-sm);
+}
+html[data-mode="senior"] .placeholder-hint {
+  color: var(--text);
+  font-size: 1.1rem;
+}
+html[data-mode="senior"] .placeholder-meta { color: var(--text-muted); }
+
 /* ═══════════════════════════════════════════════════════════
    ANIMATIONS
    ═══════════════════════════════════════════════════════════ */

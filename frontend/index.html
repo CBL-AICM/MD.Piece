@@ -174,26 +174,35 @@
         <p>MEDICAL PLATFORM</p>
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="navigateTo('home', this)">
-          <span class="nav-icon"><i data-lucide="layout-dashboard" style="width:18px;height:18px"></i></span> 首頁
-        </button>
-        <button class="nav-item" onclick="navigateTo('symptoms', this)">
-          <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> 症狀分析
-        </button>
-        <button class="nav-item" onclick="navigateTo('records', this)">
-          <span class="nav-icon"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></span> 病歷管理
-        </button>
-        <button class="nav-item" onclick="navigateTo('doctors', this)">
-          <span class="nav-icon"><i data-lucide="stethoscope" style="width:18px;height:18px"></i></span> 醫師列表
-        </button>
-        <button class="nav-item" onclick="navigateTo('patients', this)">
-          <span class="nav-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span> 病患管理
+        <button class="nav-item active" onclick="navigateTo('symptoms', this)">
+          <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> 症狀紀錄
         </button>
         <button class="nav-item" onclick="navigateTo('medications', this)">
-          <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span> 藥物管理
+          <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span> 藥物紀錄
+        </button>
+        <button class="nav-item" onclick="navigateTo('vitals', this)">
+          <span class="nav-icon"><i data-lucide="activity" style="width:18px;height:18px"></i></span> 生理紀錄
+        </button>
+        <button class="nav-item" onclick="navigateTo('memo', this)">
+          <span class="nav-icon"><i data-lucide="sticky-note" style="width:18px;height:18px"></i></span> Memo
+        </button>
+        <button class="nav-item" onclick="navigateTo('previsit', this)">
+          <span class="nav-icon"><i data-lucide="clipboard-check" style="width:18px;height:18px"></i></span> 診前報告
         </button>
         <button class="nav-item" onclick="navigateTo('education', this)">
           <span class="nav-icon"><i data-lucide="book-heart" style="width:18px;height:18px"></i></span> 衛教專欄
+        </button>
+        <button class="nav-item" onclick="navigateTo('story', this)">
+          <span class="nav-icon"><i data-lucide="book-open" style="width:18px;height:18px"></i></span> 每日故事
+        </button>
+        <button class="nav-item" onclick="navigateTo('labs', this)">
+          <span class="nav-icon"><i data-lucide="trending-up" style="width:18px;height:18px"></i></span> 報告數值
+        </button>
+        <button class="nav-item" onclick="navigateTo('pieces', this)">
+          <span class="nav-icon"><i data-lucide="puzzle" style="width:18px;height:18px"></i></span> 你的碎片
+        </button>
+        <button class="nav-item" onclick="navigateTo('chat', this)">
+          <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span> 醫療 Chat
         </button>
       </nav>
       <div class="sidebar-foot">
@@ -402,16 +411,44 @@
     document.addEventListener('DOMContentLoaded', () => setMode(getMode()));
 
     // ─── Sidebar Navigation ────────────────────────────────
+    // 普通版 (Y2K) 顯示為檔名風格；年長版會經 CSS 隱藏前綴/副檔
     const pageTitles = {
-      home: '首頁', symptoms: '症狀分析', records: '病歷管理',
-      doctors: '醫師列表', patients: '病患管理', medications: '藥物管理',
-      education: '衛教專欄'
+      home: 'home',
+      symptoms: 'symptoms',
+      medications: 'medications',
+      vitals: 'vitals',
+      memo: 'memo',
+      previsit: 'previsit',
+      education: 'education',
+      story: 'daily-story',
+      labs: 'lab-values',
+      pieces: 'your-pieces',
+      chat: 'med-chat',
+      // legacy / fallback
+      records: 'records', doctors: 'doctors', patients: 'patients'
+    };
+    // 年長版顯示用中文（CSS 在 senior 模式會把 prefix/ext 隱藏，只剩 page-title）
+    const pageTitlesSenior = {
+      home: '首頁',
+      symptoms: '症狀紀錄',
+      medications: '藥物紀錄',
+      vitals: '生理紀錄',
+      memo: 'Memo',
+      previsit: '診前報告',
+      education: '衛教專欄',
+      story: '每日故事',
+      labs: '報告數值',
+      pieces: '你的碎片',
+      chat: '醫療 Chat',
+      records: '病歷管理', doctors: '醫師列表', patients: '病患管理'
     };
 
     function navigateTo(page, btn) {
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
-      document.getElementById('page-title').textContent = pageTitles[page] || page;
+      const isSenior = document.documentElement.getAttribute('data-mode') === 'senior';
+      const map = isSenior ? pageTitlesSenior : pageTitles;
+      document.getElementById('page-title').textContent = map[page] || page;
       showPage(page);
       closeSidebar();
     }
