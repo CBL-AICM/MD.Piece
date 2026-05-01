@@ -410,6 +410,11 @@ function renderSymEntryForm() {
   el.style.display = "block";
   var sev = _symSeverity;
   var sevLabel = ["", "輕微", "輕度", "中度", "嚴重", "非常嚴重"][sev];
+  // 預設成現在的本地時間（datetime-local 需 yyyy-MM-ddTHH:mm 不含秒）
+  var now = new Date();
+  var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
+  var defaultTs = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
+                  "T" + pad(now.getHours()) + ":" + pad(now.getMinutes());
   el.innerHTML =
     '<div style="padding:12px;border:1px solid var(--accent);border-radius:var(--radius-sm);background:rgba(0,212,170,0.04)">' +
       '<div style="display:flex;justify-content:space-between;align-items:center">' +
@@ -419,6 +424,10 @@ function renderSymEntryForm() {
       '<div style="margin-top:10px">' +
         '<label style="display:block;font-size:0.85rem;color:var(--text-dim);margin-bottom:4px">嚴重度：<strong style="color:var(--text-main)">' + sev + ' / 5（' + sevLabel + '）</strong></label>' +
         '<input id="sym-sev" type="range" min="1" max="5" step="1" value="' + sev + '" style="width:100%" oninput="updateSymSev(this.value)" />' +
+      '</div>' +
+      '<div style="margin-top:8px">' +
+        '<label style="display:block;font-size:0.85rem;color:var(--text-dim);margin-bottom:4px">發生時間（可改成稍早，例如補登）</label>' +
+        '<input id="sym-time" type="datetime-local" value="' + defaultTs + '" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);width:100%" />' +
       '</div>' +
       '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
         '<input id="sym-location" placeholder="位置（選填，例：左側太陽穴）" style="padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)" />' +
@@ -449,6 +458,13 @@ function submitSymptomEntry() {
   if (!_symSelected) return;
   var loc = (document.getElementById("sym-location") || {}).value || "";
   var notes = (document.getElementById("sym-notes") || {}).value || "";
+  var tsLocal = (document.getElementById("sym-time") || {}).value || "";
+  // 把 datetime-local 的本地時間轉成 ISO（含時區）→ 後端會 parse 並比對
+  var recordedAt = null;
+  if (tsLocal) {
+    var dt = new Date(tsLocal);
+    if (!isNaN(dt.getTime())) recordedAt = dt.toISOString();
+  }
   fetch(API + "/symptoms/entries", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -458,6 +474,7 @@ function submitSymptomEntry() {
       severity: _symSeverity,
       location: loc.trim() || null,
       notes: notes.trim() || null,
+      recorded_at: recordedAt,
     })
   })
     .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
@@ -755,18 +772,25 @@ function toggleDoctorSummary(patientId) {
     box.style.display = "none";
     return;
   }
+  loadDoctorSummary(patientId, 30);
+}
+
+function loadDoctorSummary(patientId, days) {
+  var box = document.getElementById("doctor-summary-" + patientId);
+  if (!box) return;
   box.style.display = "block";
   box.innerHTML = '<p style="color:var(--text-muted);padding:8px">載入中（產生 AI 摘要可能需要 10–30 秒）...</p>';
-  var days = 30;
   fetch(API + "/medications/doctor-summary?patient_id=" + patientId + "&days=" + days)
     .then(function(r) { return r.json(); })
-    .then(function(j) { renderDoctorSummary(box, j); })
+    .then(function(j) { renderDoctorSummary(box, j, patientId, days); })
     .catch(function(e) {
       box.innerHTML = '<p style="color:var(--danger)">載入失敗：' + escapeHtml(e && e.message || "網路錯誤") + '</p>';
     });
 }
 
-function renderDoctorSummary(box, j) {
+function renderDoctorSummary(box, j, patientId, days) {
+  patientId = patientId || (j.patient && j.patient.id);
+  days = days || (j.period && j.period.days) || 30;
   var ov = j.overall || {};
   var per = j.per_medication || [];
   var alerts = j.missed_alerts || [];
@@ -818,9 +842,23 @@ function renderDoctorSummary(box, j) {
       '</details>'
     : '<p style="margin-top:8px;color:var(--text-muted);font-size:0.85rem">（AI 摘要服務未啟用，僅顯示結構化資料）</p>';
 
-  var symBlockId = "doc-sym-trend-" + (j.patient && j.patient.id || "x");
+  var symBlockId = "doc-sym-trend-" + patientId;
+  var rangeOpts = [30, 90, 180, 365].map(function(n) {
+    var sel = (n === days) ? "selected" : "";
+    return '<option value="' + n + '" ' + sel + '>' + n + ' 天</option>';
+  }).join("");
+  var rangeBar =
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">' +
+      '<label style="font-size:0.85rem;color:var(--text-dim)">統計區間：</label>' +
+      '<select onchange="loadDoctorSummary(\'' + patientId + '\', parseInt(this.value))" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)">' +
+        rangeOpts +
+      '</select>' +
+      '<span style="font-size:0.8rem;color:var(--text-muted)">（涵蓋上次回診至今的長期區間）</span>' +
+    '</div>';
+
   box.innerHTML =
     '<div style="padding:10px;background:rgba(120,180,200,0.06);border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
+      rangeBar +
       statsRow +
       '<div style="font-weight:600;margin:6px 0 4px">各藥物服藥情況</div>' +
       '<div style="display:grid;gap:6px">' + perRows + '</div>' +
@@ -829,16 +867,14 @@ function renderDoctorSummary(box, j) {
       '<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border-glass)">' +
         '<div style="font-weight:600;margin-bottom:4px">回診間症狀累計（折線）</div>' +
         '<div id="' + symBlockId + '-summary" style="font-size:0.85rem;color:var(--text-dim)">載入中...</div>' +
+        '<div id="' + symBlockId + '-pain" style="margin-top:8px"></div>' +
         '<div style="position:relative;height:200px;margin-top:8px">' +
           '<canvas id="' + symBlockId + '-canvas" style="width:100%;height:100%"></canvas>' +
         '</div>' +
       '</div>' +
     '</div>';
 
-  // 異步載入並繪製症狀折線
-  var pid = j.patient && j.patient.id;
-  var days = (j.period && j.period.days) || 30;
-  if (pid) loadDoctorSymptomTrend(pid, days, symBlockId);
+  if (patientId) loadDoctorSymptomTrend(patientId, days, symBlockId);
 }
 
 function loadDoctorSymptomTrend(patientId, days, blockId) {
@@ -853,10 +889,45 @@ function loadDoctorSymptomTrend(patientId, days, blockId) {
         } else {
           sumEl.innerHTML = "區間累計 " + d.total_entries + " 筆，" +
             by.slice(0, 4).map(function(s) {
-              return escapeHtml(s.label) + " ×" + s.total + "（平均 " + (s.avg_severity != null ? s.avg_severity : "—") + "/5）";
+              return escapeHtml(s.label) + " ×" + s.total + "（平均 " + (s.avg_severity != null ? s.avg_severity : "—") + "/5；約 " + s.per_week + " 次/週）";
             }).join("；") + (by.length > 4 ? "…" : "");
         }
       }
+
+      // 長期疼痛統計
+      var painEl = document.getElementById(blockId + "-pain");
+      if (painEl) {
+        var ps = d.pain_summary || {};
+        var items = ps.items || [];
+        if (!items.length) {
+          painEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">區間內無疼痛類紀錄</div>';
+        } else {
+          var rows = items.map(function(p) {
+            var color = p.per_week >= 3 ? "var(--danger)" : p.per_week >= 1 ? "var(--warning)" : "var(--accent)";
+            var firstSeen = p.first_recorded_at ? p.first_recorded_at.slice(0, 10) : "—";
+            var lastSeen = p.last_recorded_at ? p.last_recorded_at.slice(0, 10) : "—";
+            return (
+              '<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px;padding:6px 8px;border:1px solid var(--border-glass);border-radius:4px;background:var(--bg-glass);font-size:0.85rem;align-items:center">' +
+                '<div><strong>' + escapeHtml(p.label) + '</strong>' +
+                  '<div style="color:var(--text-dim);font-size:0.75rem">' + firstSeen + ' → ' + lastSeen + '</div>' +
+                '</div>' +
+                '<div><span style="color:' + color + ';font-weight:600">' + p.per_week + '</span><span style="color:var(--text-dim)"> 次/週</span></div>' +
+                '<div>共 ' + p.total + ' 次<span style="color:var(--text-dim)">（' + p.active_days + ' 天）</span></div>' +
+                '<div>平均 ' + (p.avg_severity != null ? p.avg_severity : "—") + ' / 5</div>' +
+              '</div>'
+            );
+          }).join("");
+          painEl.innerHTML =
+            '<div style="margin-top:8px;padding:8px;background:rgba(220,80,80,0.04);border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
+              '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px">' +
+                '<strong style="color:var(--danger)">長期疼痛統計</strong>' +
+                '<span style="font-size:0.85rem;color:var(--text-dim)">總 ' + ps.total + ' 次・' + ps.types + ' 類・約 ' + ps.per_week + ' 次/週・' + ps.per_month + ' 次/月</span>' +
+              '</div>' +
+              '<div style="display:grid;gap:4px">' + rows + '</div>' +
+            '</div>';
+        }
+      }
+
       drawCanvasSymTrend(blockId + "-canvas", d);
     })
     .catch(function() {

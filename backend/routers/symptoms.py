@@ -48,6 +48,7 @@ SYMPTOM_CATALOG = [
      "description": "皮膚發癢、紅疹、起疹塊。"},
 ]
 SYMPTOM_LABELS = {s["key"]: s["label"] for s in SYMPTOM_CATALOG}
+SYMPTOM_CATEGORIES = {s["key"]: s["category"] for s in SYMPTOM_CATALOG}
 VALID_SYMPTOM_KEYS = set(SYMPTOM_LABELS.keys())
 
 
@@ -251,16 +252,23 @@ def symptom_trend(
         agg = by_symptom.setdefault(key, {
             "key": key,
             "label": SYMPTOM_LABELS.get(key, key),
+            "category": SYMPTOM_CATEGORIES.get(key),
             "total": 0,
             "sev_sum": 0,
             "max_severity": 0,
+            "first_recorded_at": None,
             "last_recorded_at": None,
+            "active_days": set(),
         })
         agg["total"] += 1
         agg["sev_sum"] += sev
         agg["max_severity"] = max(agg["max_severity"], sev)
-        if not agg["last_recorded_at"] or r.get("recorded_at") > agg["last_recorded_at"]:
-            agg["last_recorded_at"] = r.get("recorded_at")
+        rec = r.get("recorded_at") or ""
+        if not agg["first_recorded_at"] or rec < agg["first_recorded_at"]:
+            agg["first_recorded_at"] = rec
+        if not agg["last_recorded_at"] or rec > agg["last_recorded_at"]:
+            agg["last_recorded_at"] = rec
+        agg["active_days"].add(day)
 
     series = []
     for key, agg in sorted(by_symptom.items(), key=lambda kv: -kv[1]["total"]):
@@ -282,17 +290,37 @@ def symptom_trend(
             "total": agg["total"],
         })
 
+    period_days = max(1, days)
     by_symptom_list = []
     for v in by_symptom.values():
+        total = v["total"]
+        per_week = round(total / period_days * 7, 2)
+        per_month = round(total / period_days * 30, 2)
         by_symptom_list.append({
             "key": v["key"],
             "label": v["label"],
-            "total": v["total"],
-            "avg_severity": round(v["sev_sum"] / v["total"], 2) if v["total"] else None,
+            "category": v["category"],
+            "total": total,
+            "avg_severity": round(v["sev_sum"] / total, 2) if total else None,
             "max_severity": v["max_severity"],
+            "first_recorded_at": v["first_recorded_at"],
             "last_recorded_at": v["last_recorded_at"],
+            "active_days": len(v["active_days"]),
+            "per_week": per_week,
+            "per_month": per_month,
         })
     by_symptom_list.sort(key=lambda x: -x["total"])
+
+    # 疼痛專屬統計（category == 'pain'）
+    pain_items = [b for b in by_symptom_list if b["category"] == "pain"]
+    pain_total = sum(b["total"] for b in pain_items)
+    pain_summary = {
+        "total": pain_total,
+        "types": len(pain_items),
+        "per_week": round(pain_total / period_days * 7, 2),
+        "per_month": round(pain_total / period_days * 30, 2),
+        "items": pain_items,
+    }
 
     recent = [
         {
@@ -312,6 +340,7 @@ def symptom_trend(
         "dates": dates,
         "series": series,
         "by_symptom": by_symptom_list,
+        "pain_summary": pain_summary,
         "recent": recent,
         "total_entries": len(rows),
     }
