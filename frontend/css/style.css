@@ -2856,19 +2856,6 @@ html[data-mode="senior"] .tc-desc {
 .ssr-count strong { color: var(--app-mint); font-size: 1.05rem; }
 .ssr-avg strong { color: var(--app-pink); }
 
-/* Action row */
-.sym-actions {
-  display: flex; justify-content: flex-end; gap: 10px;
-  flex-wrap: wrap;
-  padding: 4px 0 8px;
-}
-.cmd-hint {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.72rem;
-  color: var(--app-term);
-  opacity: 0.65;
-  margin-left: 4px;
-}
 
 /* ── Senior mode overrides — clean, large text, no terminal ASCII ── */
 html[data-mode="senior"] .term-section {
