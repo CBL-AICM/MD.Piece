@@ -2045,19 +2045,6 @@ function vitals() {
         '</div>' +
       '</section>' +
 
-      '<section class="term-section">' +
-        '<header class="ts-head">' +
-          '<span class="ts-prompt">$ ./send-to-doctor</span>' +
-          '<span class="ts-tag">share_with_doctor</span>' +
-        '</header>' +
-        '<div class="ts-body">' +
-          '<p class="sym-instruct">// 所有紀錄會自動匯整給醫師端 — 此處可顯式同步並產生最近 30 天摘要。</p>' +
-          '<button class="primary-btn" type="button" onclick="syncVitalsToDoctor()">' +
-            '<i data-lucide="send"></i><span>立即匯整給醫師</span></button>' +
-          '<div id="vit-sync-result" class="vit-sync-result"></div>' +
-        '</div>' +
-      '</section>' +
-
     '</div>'
   );
 }
@@ -2392,41 +2379,6 @@ function deleteVitalRecord(id) {
   fetch(API + '/vitals/' + id, { method: 'DELETE' })
     .then(function() { refreshVitalsData(); })
     .catch(function() { showToast('刪除失敗', 'error'); });
-}
-
-function syncVitalsToDoctor() {
-  var pid = getStablePatientId();
-  var resultEl = document.getElementById('vit-sync-result');
-  if (resultEl) resultEl.innerHTML = '<p class="sym-empty">// 整理中...</p>';
-
-  fetch(API + '/vitals/doctor/' + pid + '?days=30')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (!resultEl) return;
-      var metrics = data.metrics || {};
-      var keys = Object.keys(metrics);
-      if (keys.length === 0) {
-        resultEl.innerHTML = '<p class="sym-empty">// 最近 30 天沒有紀錄可匯整。</p>';
-        return;
-      }
-      var rows = keys.map(function(k) {
-        var m = metrics[k];
-        var latest = m.latest || {};
-        var lv = latest.value + (latest.value2 != null ? ' / ' + latest.value2 : '');
-        return '<li class="vit-sync-row">' +
-          '<span class="vh-name">' + escapeHtml(m.label || k) + '</span>' +
-          '<span class="vh-val"><strong>' + lv + '</strong> <small>' + escapeHtml(m.unit || '') + '</small></span>' +
-          '<span class="vh-meta">' + m.count + ' 筆 / 30 天</span>' +
-          '</li>';
-      }).join('');
-      resultEl.innerHTML =
-        '<p class="vit-sync-ok">✓ 已匯整 ' + data.total_records + ' 筆紀錄至醫師端摘要：</p>' +
-        '<ul class="vit-sync-list">' + rows + '</ul>';
-      showToast('已匯整 ' + data.total_records + ' 筆紀錄給醫師', 'success');
-    })
-    .catch(function(e) {
-      if (resultEl) resultEl.innerHTML = '<p class="sym-empty">// 同步失敗：' + e.message + '</p>';
-    });
 }
 
 // ─── Service Worker ───────────────────────────────────────
