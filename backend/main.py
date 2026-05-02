@@ -1,3 +1,5 @@
+import logging
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,8 +11,41 @@ from backend.routers import (
     records, reports, research, triage, xiaohe, auth,
     doctor_notes, medication_changes, alerts,
 )
+from backend.db import get_supabase
+from backend.services.auth_service import hash_password
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="MD.Piece API", version="1.0.0")
+
+
+@app.on_event("startup")
+def _seed_initial_doctor():
+    """若資料庫沒有任何 doctor 帳號，依環境變數建立一組初始醫師帳號。"""
+    username = os.getenv("INITIAL_DOCTOR_USERNAME", "doctor")
+    password = os.getenv("INITIAL_DOCTOR_PASSWORD", "mdpiece2026")
+    nickname = os.getenv("INITIAL_DOCTOR_NICKNAME", "測試醫師")
+    try:
+        sb = get_supabase()
+        existing = sb.table("users").select("*").eq("username", username).execute().data
+        if existing:
+            return
+        any_doctor = sb.table("users").select("*").eq("role", "doctor").execute().data
+        if any_doctor:
+            return
+        sb.table("users").insert({
+            "username": username,
+            "password_hash": hash_password(password),
+            "nickname": nickname,
+            "role": "doctor",
+            "is_active": 1,
+        }).execute()
+        logger.warning(
+            "已建立初始醫師帳號 username=%s（正式環境請用環境變數覆寫並更換密碼）",
+            username,
+        )
+    except Exception as e:
+        logger.exception("seed initial doctor failed: %s", e)
 
 app.add_middleware(
     CORSMiddleware,

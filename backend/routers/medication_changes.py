@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from backend.db import get_supabase
+from backend.dependencies import require_doctor
 from backend.models import MedicationChangeCreate
 
 router = APIRouter()
@@ -21,9 +22,11 @@ def list_changes(
 
 
 @router.post("/")
-def create_change(body: MedicationChangeCreate):
+def create_change(body: MedicationChangeCreate, user: dict = Depends(require_doctor)):
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
+    if not data.get("doctor_id") and user.get("linked_doctor_id"):
+        data["doctor_id"] = user["linked_doctor_id"]
     valid_types = {"start", "stop", "dose_up", "dose_down", "switch", "frequency", "other"}
     if data["change_type"] not in valid_types:
         raise HTTPException(status_code=400, detail=f"change_type 必須為 {valid_types}")
@@ -32,7 +35,7 @@ def create_change(body: MedicationChangeCreate):
 
 
 @router.delete("/{change_id}")
-def delete_change(change_id: str):
+def delete_change(change_id: str, _user: dict = Depends(require_doctor)):
     sb = get_supabase()
     result = sb.table("medication_changes").delete().eq("id", change_id).execute()
     if not result.data:

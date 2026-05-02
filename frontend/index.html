@@ -50,6 +50,9 @@
           <span class="enter-sub">醫患同行</span>
           <span class="enter-main">開始守護</span>
         </button>
+        <a class="landing-doctor-link" href="#" onclick="goToDoctorApp(event)">
+          我是醫師 → 進入醫師端
+        </a>
       </div>
     </div>
 
@@ -395,6 +398,19 @@
       if (lab) lab.textContent = next.toUpperCase();
       try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
       window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
+    }
+
+    // ─── Doctor app entry ──────────────────────────────────
+    function goToDoctorApp(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const port = window.location.port;
+      // Dev: 病患端 (3000) 或同源後端 (8000) → 醫師端 Vite dev server (3001)
+      if (port === '3000' || port === '8000') {
+        window.location.href = `${window.location.protocol}//${window.location.hostname}:3001/`;
+      } else {
+        // Production: 同網域子路徑
+        window.location.href = '/doctor/';
+      }
     }
 
     // ─── Landing → App Transition ──────────────────────────

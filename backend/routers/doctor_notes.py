@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from backend.db import get_supabase
+from backend.dependencies import require_doctor
 from backend.models import DoctorNoteCreate, DoctorNoteUpdate
 
 router = APIRouter()
@@ -27,7 +28,9 @@ def get_note(note_id: str):
 
 
 @router.post("/")
-def create_note(body: DoctorNoteCreate):
+def create_note(body: DoctorNoteCreate, user: dict = Depends(require_doctor)):
+    if not body.doctor_id and user.get("linked_doctor_id"):
+        body.doctor_id = user["linked_doctor_id"]
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
     result = sb.table("doctor_notes").insert(data).execute()
@@ -35,7 +38,7 @@ def create_note(body: DoctorNoteCreate):
 
 
 @router.put("/{note_id}")
-def update_note(note_id: str, body: DoctorNoteUpdate):
+def update_note(note_id: str, body: DoctorNoteUpdate, _user: dict = Depends(require_doctor)):
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
     if not data:
@@ -49,7 +52,7 @@ def update_note(note_id: str, body: DoctorNoteUpdate):
 
 
 @router.delete("/{note_id}")
-def delete_note(note_id: str):
+def delete_note(note_id: str, _user: dict = Depends(require_doctor)):
     sb = get_supabase()
     result = sb.table("doctor_notes").delete().eq("id", note_id).execute()
     if not result.data:

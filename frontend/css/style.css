@@ -387,6 +387,26 @@ body {
   opacity: 0.85;
 }
 
+.landing-doctor-link {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 6px 14px;
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  color: var(--landing-term, #5eeac4);
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  opacity: 0.55;
+  text-decoration: none;
+  font-family: 'JetBrains Mono', monospace;
+  transition: opacity 0.18s, background 0.18s;
+}
+.landing-doctor-link:hover {
+  opacity: 1;
+  background: rgba(94, 234, 212, 0.08);
+}
+
 /* ── Floating puzzle decorations (CSS layer) ───────────── */
 .landing-deco {
   position: fixed;
