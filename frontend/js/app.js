@@ -2389,6 +2389,21 @@ function eduOpenBook(key) {
     nb.innerHTML = renderTopicsNotebook(book);
   }
 
+  // 用事件委派處理章節點擊（避免 inline onclick + escape 問題）
+  if (!nb.dataset.boundDelegate) {
+    nb.addEventListener("click", function(e) {
+      var btn = e.target.closest && e.target.closest("[data-action]");
+      if (!btn || !nb.contains(btn)) return;
+      var action = btn.getAttribute("data-action");
+      if (action === "pick-disease") {
+        eduPickDisease(btn.getAttribute("data-icd10"), btn.getAttribute("data-name"));
+      } else if (action === "open-content") {
+        eduOpenContent(btn.getAttribute("data-key"), btn.getAttribute("data-label"));
+      }
+    });
+    nb.dataset.boundDelegate = "1";
+  }
+
   eduSwitchStage("edu-stage-notebook");
   eduRenderBreadcrumb();
   // 重置筆記本翻開動畫
@@ -2398,16 +2413,17 @@ function eduOpenBook(key) {
 
 function renderTopicsNotebook(book) {
   var listHtml = book.topics.map(function(t) {
-    var safe = t.key.replace(/'/g, "\\'");
-    return '<button class="nb-item" onclick="eduOpenContent(\'' + safe + '\',\'' + t.label.replace(/'/g, "\\'") + '\')">' +
-           '<strong>' + t.label + '</strong>' +
-           (t.desc ? '<small>' + t.desc + '</small>' : '') +
+    return '<button class="nb-item" data-action="open-content"' +
+           ' data-key="' + escapeHtml(t.key) + '"' +
+           ' data-label="' + escapeHtml(t.label) + '">' +
+           '<strong>' + escapeHtml(t.label) + '</strong>' +
+           (t.desc ? '<small>' + escapeHtml(t.desc) + '</small>' : '') +
            '</button>';
   }).join("");
 
   return '<div class="nb-page right" style="grid-column:1/-1">' +
-           '<div class="nb-heading"><i data-lucide="' + book.icon + '" style="width:20px;height:20px"></i> ' + book.title + '</div>' +
-           (book.intro ? '<div class="nb-subtle">' + book.intro + '</div>' : '') +
+           '<div class="nb-heading"><i data-lucide="' + escapeHtml(book.icon) + '" style="width:20px;height:20px"></i> ' + escapeHtml(book.title) + '</div>' +
+           (book.intro ? '<div class="nb-subtle">' + escapeHtml(book.intro) + '</div>' : '') +
            '<div class="nb-list">' + listHtml + '</div>' +
          '</div>';
 }
@@ -2425,12 +2441,13 @@ function renderDiseaseNotebook() {
     leftHtml = '<div class="nb-empty">疾病列表載入中… 若持續看到此訊息，請確認後端服務是否已啟動。</div>';
   } else {
     Object.keys(byCategory).forEach(function(cat) {
-      leftHtml += '<div style="margin-top:8px;font-size:.78rem;color:var(--text-dim);letter-spacing:1px">' + cat + '</div>';
+      leftHtml += '<div style="margin-top:8px;font-size:.78rem;color:var(--text-dim);letter-spacing:1px">' + escapeHtml(cat) + '</div>';
       byCategory[cat].forEach(function(d) {
         var sel = (_eduSelectedDisease && _eduSelectedDisease.icd10 === d.icd10) ? ' selected' : '';
-        leftHtml += '<button class="nb-item' + sel + '" onclick="eduPickDisease(\'' +
-                    d.icd10 + '\',\'' + d.name.replace(/'/g, "\\'") + '\')">' +
-                    '<strong>' + d.name + '</strong><small>ICD-10：' + d.icd10 + '</small>' +
+        leftHtml += '<button class="nb-item' + sel + '" data-action="pick-disease"' +
+                    ' data-icd10="' + escapeHtml(d.icd10) + '"' +
+                    ' data-name="' + escapeHtml(d.name) + '">' +
+                    '<strong>' + escapeHtml(d.name) + '</strong><small>ICD-10：' + escapeHtml(d.icd10) + '</small>' +
                     '</button>';
       });
     });
@@ -2439,8 +2456,10 @@ function renderDiseaseNotebook() {
   var rightHtml;
   if (_eduSelectedDisease) {
     rightHtml = EDU_DISEASE_DIMENSIONS.map(function(d) {
-      return '<button class="nb-item" onclick="eduOpenContent(\'' + d.key + '\',\'' + d.label + '\')">' +
-             '<strong>' + d.label + '</strong><small>' + d.desc + '</small></button>';
+      return '<button class="nb-item" data-action="open-content"' +
+             ' data-key="' + escapeHtml(d.key) + '"' +
+             ' data-label="' + escapeHtml(d.label) + '">' +
+             '<strong>' + escapeHtml(d.label) + '</strong><small>' + escapeHtml(d.desc) + '</small></button>';
     }).join("");
     rightHtml = '<div class="nb-list">' + rightHtml + '</div>';
   } else {
@@ -2455,7 +2474,7 @@ function renderDiseaseNotebook() {
     '</div>' +
     '<div class="nb-page right">' +
       '<div class="nb-heading"><i data-lucide="layers" style="width:20px;height:20px"></i> 六大衛教維度</div>' +
-      '<div class="nb-subtle">' + (_eduSelectedDisease ? _eduSelectedDisease.name + '（' + _eduSelectedDisease.icd10 + '）' : '尚未選擇疾病') + '</div>' +
+      '<div class="nb-subtle">' + (_eduSelectedDisease ? escapeHtml(_eduSelectedDisease.name) + '（' + escapeHtml(_eduSelectedDisease.icd10) + '）' : '尚未選擇疾病') + '</div>' +
       rightHtml +
     '</div>';
 }
