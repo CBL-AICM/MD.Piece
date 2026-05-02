@@ -78,6 +78,10 @@ class RegisterRequest(BaseModel):
     avatar_color: str | None = None
     linked_doctor_id: str | None = None
     linked_patient_id: str | None = None
+    # 醫師註冊時帶入；用來自動建立 doctors 表的紀錄
+    doctor_name: str | None = None
+    specialty: str | None = None
+    phone: str | None = None
 
 
 class LoginRequest(BaseModel):

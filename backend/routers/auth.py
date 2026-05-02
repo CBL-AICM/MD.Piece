@@ -41,11 +41,26 @@ def register(body: RegisterRequest):
         raise HTTPException(status_code=403, detail="醫師註冊已關閉，請聯絡管理者")
     if len(body.password) < 6:
         raise HTTPException(status_code=400, detail="密碼至少 6 碼")
+    if body.role == "doctor" and not (body.doctor_name and body.specialty):
+        raise HTTPException(status_code=400, detail="醫師註冊需填姓名與科別")
 
     sb = get_supabase()
     existing = sb.table("users").select("*").eq("username", body.username).execute().data
     if existing:
         raise HTTPException(status_code=409, detail="帳號已被使用")
+
+    linked_doctor_id = body.linked_doctor_id
+    if body.role == "doctor" and not linked_doctor_id:
+        doctor_payload = {
+            "name": body.doctor_name,
+            "specialty": body.specialty,
+        }
+        if body.phone:
+            doctor_payload["phone"] = body.phone
+        doc_res = sb.table("doctors").insert(doctor_payload).execute()
+        if not doc_res.data:
+            raise HTTPException(status_code=500, detail="建立醫師資料失敗")
+        linked_doctor_id = doc_res.data[0]["id"]
 
     data = {
         "username": body.username,
@@ -53,7 +68,7 @@ def register(body: RegisterRequest):
         "nickname": body.nickname,
         "role": body.role,
         "avatar_color": body.avatar_color,
-        "linked_doctor_id": body.linked_doctor_id,
+        "linked_doctor_id": linked_doctor_id,
         "linked_patient_id": body.linked_patient_id,
         "is_active": 1,
     }
