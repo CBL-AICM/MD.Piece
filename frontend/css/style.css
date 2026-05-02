@@ -809,7 +809,8 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
 /* Mobile — 收掉 cd .. 註解，只留 ← 返回首頁 */
 @media (max-width: 480px) {
   .topbar-back .tb-cd { display: none; }
-  .topbar-back { padding: 6px 10px; font-size: 0.88rem; }
+  .topbar-back { padding: 6px 10px; font-size: 0.85rem; margin-left: 4px; }
+  .topbar-back .tb-zh { display: none; }
 }
 
 .topbar-filename {
@@ -3299,6 +3300,9 @@ html[data-mode="senior"] .vt-bmi-meta {
    ═══════════════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
+  /* Avoid horizontal scroll from floating puzzle decorations */
+  #app-wrapper.show { overflow-x: hidden; }
+
   .sidebar {
     top: 0; left: 0;
     height: 100vh;
@@ -3318,21 +3322,39 @@ html[data-mode="senior"] .vt-bmi-meta {
   .main-content {
     margin-left: 0;
     padding: 8px;
+    min-width: 0;
   }
 
   .topbar .hamburger {
     display: inline-flex;
   }
 
-  #app {
+  #app,
+  html[data-mode="standard"] #app {
     padding: 16px;
+    margin: 8px auto 16px;
   }
+
+  /* Decorative terminal labels overflow on narrow screens */
+  html[data-mode="standard"] #app::before,
+  html[data-mode="standard"] #app::after { display: none; }
 
   .topbar {
     top: 8px;
     padding: 0;
+    gap: 4px;
   }
-  .topbar-version { display: none; }
+  .topbar-version,
+  .topbar-wincontrols,
+  .topbar-prefix,
+  .topbar-ext { display: none; }
+  .topbar-filename { padding: 10px 6px; font-size: 0.92rem; min-width: 0; }
+  .app-theme-toggle { margin-right: 4px; }
+
+  /* Hide oversized floating puzzle pieces that bleed past viewport */
+  .puzzle-deco,
+  html[data-mode="standard"] #app-wrapper.show::before,
+  html[data-mode="standard"] #app-wrapper.show::after { display: none; }
 
   .landing-split {
     flex-direction: column;
