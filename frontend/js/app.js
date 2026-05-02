@@ -104,7 +104,7 @@ function placeholderPage(label, hint, iconName, slug, pct) {
   `;
 }
 // 生理紀錄使用獨立 vitals() 函式（見下方）
-const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note', 'memo', 80);
+// Memo 使用獨立 memo() 函式（見下方）— IG 貼文風格
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
@@ -2377,6 +2377,376 @@ function checkStormStatus() {
     })
     .catch(function() { showToast("無法檢查 STORM 狀態", "error"); });
 }
+
+// ─── Memo（IG 貼文風格）──────────────────────────────────
+
+function getMemos() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_memos') || '[]'); }
+  catch { return []; }
+}
+
+function saveMemos(arr) {
+  localStorage.setItem('mdpiece_memos', JSON.stringify(arr));
+}
+
+const MEMO_MOODS = [
+  { id: 'calm',   label: '平穩',   emoji: '🌿', color: '#9BCFB1' },
+  { id: 'tired',  label: '疲倦',   emoji: '🌙', color: '#A6B4D4' },
+  { id: 'pain',   label: '不舒服', emoji: '🩹', color: '#E8A3A3' },
+  { id: 'happy',  label: '開心',   emoji: '☀️', color: '#F1C779' },
+  { id: 'worry',  label: '焦慮',   emoji: '🌧️', color: '#B8A8D9' },
+  { id: 'note',   label: '備註',   emoji: '📌', color: '#C9C0B8' }
+];
+
+function getMoodMeta(id) {
+  return MEMO_MOODS.find(m => m.id === id) || MEMO_MOODS[5];
+}
+
+function memo() {
+  const memos = getMemos().slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const user = getCurrentUser();
+  const name = (user && user.name) ? user.name : '我';
+  const initial = name.slice(0, 1).toUpperCase();
+  const totalLikes = memos.reduce((s, m) => s + (m.liked ? 1 : 0), 0);
+  const totalSaves = memos.reduce((s, m) => s + (m.saved ? 1 : 0), 0);
+
+  return `
+    <div class="memo-page">
+
+      <header class="memo-hero">
+        <div class="memo-hero-bg"></div>
+        <div class="memo-hero-inner">
+          <div class="memo-hero-title">
+            <span class="memo-hero-handle">@${name}</span>
+            <h1>Memo · 心事相簿</h1>
+            <p>把今天的小事拍成一張貼文，留給自己 — 也留給醫師。</p>
+          </div>
+          <div class="memo-hero-stats">
+            <div><b>${memos.length}</b><span>貼文</span></div>
+            <div><b>${totalLikes}</b><span>愛心</span></div>
+            <div><b>${totalSaves}</b><span>收藏</span></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="memo-composer" id="memo-composer">
+        <div class="memo-composer-head">
+          <div class="memo-avatar" aria-hidden="true">${initial}</div>
+          <div class="memo-composer-meta">
+            <strong>${name}</strong>
+            <span>分享一則新的 memo…</span>
+          </div>
+        </div>
+
+        <textarea id="memo-input" class="memo-input"
+          placeholder="今天身體怎麼樣？ 想跟醫師說的小事、提醒自己的細節…" maxlength="500"></textarea>
+
+        <div class="memo-image-preview" id="memo-image-preview" style="display:none;">
+          <img id="memo-image-img" alt="預覽圖" />
+          <button type="button" class="memo-image-clear" onclick="clearMemoImage()" aria-label="移除圖片">×</button>
+        </div>
+
+        <div class="memo-mood-row" role="radiogroup" aria-label="心情">
+          ${MEMO_MOODS.map((m, i) => `
+            <button type="button" class="memo-mood-chip ${i === 0 ? 'on' : ''}"
+              data-mood="${m.id}" style="--mood-c:${m.color}"
+              onclick="selectMemoMood('${m.id}')" aria-pressed="${i === 0 ? 'true' : 'false'}">
+              <span class="memo-mood-emoji">${m.emoji}</span>
+              <span class="memo-mood-label">${m.label}</span>
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="memo-composer-foot">
+          <div class="memo-composer-tools">
+            <label class="memo-tool" title="加入照片">
+              <i data-lucide="image"></i>
+              <input type="file" accept="image/*" onchange="onMemoImagePicked(event)" hidden />
+            </label>
+            <button class="memo-tool" type="button" title="標籤" onclick="insertMemoTag()">
+              <i data-lucide="hash"></i>
+            </button>
+            <span class="memo-counter" id="memo-counter">0 / 500</span>
+          </div>
+          <button class="memo-publish" type="button" onclick="publishMemo()">
+            <i data-lucide="send"></i><span>發佈</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="memo-feed-tabs">
+        <button class="memo-tab on" data-tab="all" onclick="filterMemoFeed('all', this)">
+          <i data-lucide="layout-grid"></i><span>全部</span>
+        </button>
+        <button class="memo-tab" data-tab="liked" onclick="filterMemoFeed('liked', this)">
+          <i data-lucide="heart"></i><span>我的愛心</span>
+        </button>
+        <button class="memo-tab" data-tab="saved" onclick="filterMemoFeed('saved', this)">
+          <i data-lucide="bookmark"></i><span>收藏</span>
+        </button>
+      </div>
+
+      <section class="memo-feed" id="memo-feed">
+        ${renderMemoFeed(memos, 'all', name, initial)}
+      </section>
+
+      <p class="memo-end">— 已經到底了，今天先這樣 —</p>
+    </div>
+  `;
+}
+
+function renderMemoFeed(memos, tab, name, initial) {
+  let list = memos;
+  if (tab === 'liked') list = memos.filter(m => m.liked);
+  if (tab === 'saved') list = memos.filter(m => m.saved);
+
+  if (!list.length) {
+    return `
+      <div class="memo-empty">
+        <div class="memo-empty-icon"><i data-lucide="camera"></i></div>
+        <p>${tab === 'all' ? '還沒有任何 memo — 上方寫下你的第一則。'
+            : tab === 'liked' ? '還沒有按過愛心的 memo。'
+            : '還沒收藏任何 memo。'}</p>
+      </div>
+    `;
+  }
+
+  return list.map(m => renderMemoCard(m, name, initial)).join('');
+}
+
+function renderMemoCard(m, name, initial) {
+  const mood = getMoodMeta(m.mood);
+  const d = new Date(m.createdAt);
+  const now = new Date();
+  const diffMin = Math.round((now - d) / 60000);
+  let timeStr;
+  if (diffMin < 1) timeStr = '剛剛';
+  else if (diffMin < 60) timeStr = `${diffMin} 分鐘前`;
+  else if (diffMin < 1440) timeStr = `${Math.floor(diffMin/60)} 小時前`;
+  else if (diffMin < 10080) timeStr = `${Math.floor(diffMin/1440)} 天前`;
+  else timeStr = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+
+  const text = (m.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(#[^\s#<]+)/g, '<span class="memo-hashtag">$1</span>')
+    .replace(/\n/g, '<br>');
+
+  return `
+    <article class="memo-card" data-id="${m.id}" style="--card-mood:${mood.color}">
+      <header class="memo-card-head">
+        <div class="memo-avatar memo-avatar-ring">${initial}</div>
+        <div class="memo-card-meta">
+          <strong>${name}</strong>
+          <span class="memo-card-sub">
+            <span class="memo-mood-tag" style="background:${mood.color}22;color:${mood.color}">
+              ${mood.emoji} ${mood.label}
+            </span>
+            · ${timeStr}
+          </span>
+        </div>
+        <button class="memo-more" onclick="deleteMemo('${m.id}')" title="刪除這則 memo">
+          <i data-lucide="trash-2"></i>
+        </button>
+      </header>
+
+      ${m.image ? `
+        <div class="memo-card-media">
+          <img src="${m.image}" alt="memo 圖片" loading="lazy" />
+          <span class="memo-media-tint" style="background:linear-gradient(180deg, transparent 60%, ${mood.color}33)"></span>
+        </div>
+      ` : `
+        <div class="memo-card-banner" style="background:
+          radial-gradient(circle at 20% 20%, ${mood.color}55, transparent 55%),
+          radial-gradient(circle at 80% 80%, ${mood.color}33, transparent 60%),
+          linear-gradient(135deg, ${mood.color}1f, ${mood.color}0a)">
+          <span class="memo-banner-emoji">${mood.emoji}</span>
+        </div>
+      `}
+
+      <div class="memo-card-actions">
+        <button class="memo-act ${m.liked ? 'liked' : ''}" onclick="toggleMemoLike('${m.id}', this)" title="愛心">
+          <i data-lucide="heart"></i>
+        </button>
+        <button class="memo-act" onclick="focusMemoComposer()" title="寫一則新的">
+          <i data-lucide="message-circle"></i>
+        </button>
+        <button class="memo-act" onclick="shareMemo('${m.id}')" title="複製文字">
+          <i data-lucide="send"></i>
+        </button>
+        <button class="memo-act memo-act-end ${m.saved ? 'saved' : ''}" onclick="toggleMemoSave('${m.id}', this)" title="收藏">
+          <i data-lucide="bookmark"></i>
+        </button>
+      </div>
+
+      <div class="memo-card-body">
+        ${m.liked ? `<p class="memo-likes"><b>你</b> 給了這則一個愛心 ❤</p>` : ''}
+        <p class="memo-text"><b>${name}</b> ${text}</p>
+        <p class="memo-time">${timeStr}</p>
+      </div>
+    </article>
+  `;
+}
+
+let _selectedMood = 'calm';
+let _pendingMemoImage = null;
+
+function selectMemoMood(id) {
+  _selectedMood = id;
+  document.querySelectorAll('.memo-mood-chip').forEach(b => {
+    const on = b.dataset.mood === id;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
+function onMemoImagePicked(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    showToast && showToast('圖片太大，請選 3MB 以內的', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    _pendingMemoImage = ev.target.result;
+    const wrap = document.getElementById('memo-image-preview');
+    const img = document.getElementById('memo-image-img');
+    if (img) img.src = _pendingMemoImage;
+    if (wrap) wrap.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearMemoImage() {
+  _pendingMemoImage = null;
+  const wrap = document.getElementById('memo-image-preview');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function insertMemoTag() {
+  const ta = document.getElementById('memo-input');
+  if (!ta) return;
+  const pos = ta.selectionStart || ta.value.length;
+  ta.value = ta.value.slice(0, pos) + ' #' + ta.value.slice(pos);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = pos + 2;
+  updateMemoCounter();
+}
+
+function updateMemoCounter() {
+  const ta = document.getElementById('memo-input');
+  const c = document.getElementById('memo-counter');
+  if (!ta || !c) return;
+  c.textContent = `${ta.value.length} / 500`;
+}
+
+function publishMemo() {
+  const ta = document.getElementById('memo-input');
+  const text = (ta?.value || '').trim();
+  if (!text && !_pendingMemoImage) {
+    showToast && showToast('寫點什麼或加張圖片再發佈吧', 'info');
+    return;
+  }
+  const newMemo = {
+    id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'm-' + Date.now(),
+    text: text,
+    image: _pendingMemoImage || null,
+    mood: _selectedMood,
+    liked: false,
+    saved: false,
+    createdAt: new Date().toISOString()
+  };
+  const all = getMemos();
+  all.push(newMemo);
+  saveMemos(all);
+  if (ta) ta.value = '';
+  clearMemoImage();
+  selectMemoMood('calm');
+  refreshMemoFeed();
+  showToast && showToast('已發佈 ✦', 'success');
+}
+
+function refreshMemoFeed() {
+  const feed = document.getElementById('memo-feed');
+  if (!feed) return;
+  const tab = document.querySelector('.memo-tab.on')?.dataset.tab || 'all';
+  const memos = getMemos().slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const user = getCurrentUser();
+  const name = (user && user.name) ? user.name : '我';
+  const initial = name.slice(0, 1).toUpperCase();
+  feed.innerHTML = renderMemoFeed(memos, tab, name, initial);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  // 更新頂部統計
+  const hero = document.querySelector('.memo-hero-stats');
+  if (hero) {
+    const totalLikes = memos.reduce((s, m) => s + (m.liked ? 1 : 0), 0);
+    const totalSaves = memos.reduce((s, m) => s + (m.saved ? 1 : 0), 0);
+    hero.innerHTML = `
+      <div><b>${memos.length}</b><span>貼文</span></div>
+      <div><b>${totalLikes}</b><span>愛心</span></div>
+      <div><b>${totalSaves}</b><span>收藏</span></div>
+    `;
+  }
+}
+
+function filterMemoFeed(tab, btn) {
+  document.querySelectorAll('.memo-tab').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  refreshMemoFeed();
+}
+
+function toggleMemoLike(id, btn) {
+  const all = getMemos();
+  const m = all.find(x => x.id === id);
+  if (!m) return;
+  m.liked = !m.liked;
+  saveMemos(all);
+  if (btn) {
+    btn.classList.toggle('liked', m.liked);
+    btn.classList.add('pop');
+    setTimeout(() => btn.classList.remove('pop'), 320);
+  }
+  refreshMemoFeed();
+}
+
+function toggleMemoSave(id, btn) {
+  const all = getMemos();
+  const m = all.find(x => x.id === id);
+  if (!m) return;
+  m.saved = !m.saved;
+  saveMemos(all);
+  if (btn) btn.classList.toggle('saved', m.saved);
+  refreshMemoFeed();
+}
+
+function deleteMemo(id) {
+  if (!confirm('刪除這則 memo？')) return;
+  saveMemos(getMemos().filter(m => m.id !== id));
+  refreshMemoFeed();
+}
+
+function shareMemo(id) {
+  const m = getMemos().find(x => x.id === id);
+  if (!m) return;
+  const text = m.text || '(圖片 memo)';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast && showToast('已複製到剪貼簿', 'success');
+    });
+  }
+}
+
+function focusMemoComposer() {
+  const ta = document.getElementById('memo-input');
+  if (ta) {
+    ta.focus();
+    ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+// 監聽 textarea 字數
+document.addEventListener('input', function(e) {
+  if (e.target && e.target.id === 'memo-input') updateMemoCounter();
+});
 
 function markdownToHtml(md) {
   if (!md) return "";
