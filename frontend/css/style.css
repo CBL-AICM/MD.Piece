@@ -21,41 +21,41 @@
 }
 
 :root {
-  /* Winter Birch palette — 每色分開角色，絕不混色 */
-  --bg-deep:    #F8FBFD;   /* body 主底 — icy white */
-  --bg-mid:     #EBEBEC;   /* sidebar / 次底 — light grey */
-  --bg-soft:    #DCEDF7;   /* 強調淺色 / accent wash — pale sky */
-  --bg-surface: #F8FBFD;
-  --bg-glass:   #EBEBEC;
-  --bg-glass-hover: #DCEDF7;
-  --border-glass: rgba(104,93,90,0.18);
+  /* Cozy Storybook palette — 暖米白 / 奶油 / 土橘 / 霧藍 / 塵粉 */
+  --bg-deep:    #FBF6EC;   /* body 主底 — warm cream */
+  --bg-mid:     #F2E4D0;   /* sidebar / 次底 — soft tan wash */
+  --bg-soft:    #F5E1CB;   /* 強調淺色 / accent wash — peach wash */
+  --bg-surface: #FFFAF0;   /* 卡片表面 — off-white cream */
+  --bg-glass:   #F2E4D0;
+  --bg-glass-hover: #E8C9A3;
+  --border-glass: rgba(92,58,50,0.22);
 
-  /* Primary — pale sky accent */
-  --accent:     #DCEDF7;
-  --accent-glow:#DCEDF766;
-  --klein:      #685D5A;   /* 深色強調 — deep warm brown */
+  /* Primary — warm tan accent (shiba orange) */
+  --accent:     #C97F4B;
+  --accent-glow:#C97F4B55;
+  --klein:      #5C3A32;   /* 深色強調 — warm dark brown outline */
 
-  /* Secondary — warm grey */
-  --teal:       #848388;
-  --teal-glow:  #84838833;
+  /* Secondary — dusty slate blue (sky pane) */
+  --teal:       #9DAEC0;
+  --teal-glow:  #9DAEC033;
 
   /* Surfaces */
-  --cream:      #F8FBFD;
-  --cream-dim:  #EBEBEC;
+  --cream:      #FFFAF0;
+  --cream-dim:  #F5E9D0;
 
   /* Accents — palette-only */
-  --purple:     #DCEDF7;
-  --purple-glow:#DCEDF766;
-  --rose:       #EBEBEC;
-  --rose-glow:  #EBEBEC66;
-  --success:    #848388;
-  --warning:    #848388;
-  --danger:     #685D5A;
+  --purple:     #9DAEC0;   /* dusty slate */
+  --purple-glow:#9DAEC055;
+  --rose:       #E8B4A0;   /* dusty rose */
+  --rose-glow:  #E8B4A055;
+  --success:    #8FA68A;   /* sage */
+  --warning:    #D89968;   /* warm orange */
+  --danger:     #B8553F;   /* burnt sienna */
 
-  /* Text — deep warm brown on icy white */
-  --text:       #685D5A;
-  --text-dim:   #848388;
-  --text-muted: #848388;
+  /* Text — warm dark brown on cream */
+  --text:       #5C3A32;
+  --text-dim:   #8B7868;
+  --text-muted: #A89685;
 
   /* UI tokens */
   --radius:     14px;
@@ -70,7 +70,7 @@
 
 body {
   font-family: "Noto Sans TC", sans-serif;
-  background: #F8FBFD;
+  background: #FBF6EC;
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
@@ -119,22 +119,22 @@ body {
   color: var(--landing-text);
 }
 
-/* ── LIGHT theme (粉嫩日光) ─────────────────────────────── */
+/* ── LIGHT theme (暖陽插畫日光) ─────────────────────────────── */
 #landing[data-theme="light"] {
-  --landing-text:   #1F4D49;
-  --landing-dim:    #4F8A82;
-  --landing-mint:   #5EC9B5;
-  --landing-aqua:   #3FB8A6;
-  --landing-pop:    #2BAA92;
-  --landing-pink:   #F4A8C8;
-  --landing-term:   #1F8F7A;
-  --landing-card:   rgba(255,255,255,0.55);
-  --landing-border: rgba(94,201,181,0.4);
-  --landing-glow:   rgba(94,201,181,0.32);
+  --landing-text:   #5C3A32;
+  --landing-dim:    #8B7868;
+  --landing-mint:   #9DAEC0;
+  --landing-aqua:   #7E94A8;
+  --landing-pop:    #C97F4B;
+  --landing-pink:   #E8B4A0;
+  --landing-term:   #B8553F;
+  --landing-card:   rgba(255,250,240,0.68);
+  --landing-border: rgba(92,58,50,0.35);
+  --landing-glow:   rgba(201,127,75,0.32);
   background:
-    radial-gradient(ellipse at 78% 18%, rgba(168,240,224,0.65), transparent 55%),
-    radial-gradient(ellipse at 18% 82%, rgba(255,214,232,0.45), transparent 55%),
-    linear-gradient(180deg, #EAFBF6 0%, #D1F2E8 55%, #BFEAD9 100%);
+    radial-gradient(ellipse at 78% 18%, rgba(232,201,163,0.7), transparent 55%),
+    radial-gradient(ellipse at 18% 82%, rgba(232,180,160,0.45), transparent 55%),
+    linear-gradient(180deg, #FBF6EC 0%, #F5E9D0 55%, #E8D4B8 100%);
   color: var(--landing-text);
 }
 
@@ -159,8 +159,8 @@ body {
     0deg,
     transparent 0,
     transparent 3px,
-    rgba(31,77,73,0.03) 3px,
-    rgba(31,77,73,0.03) 4px
+    rgba(92,58,50,0.04) 3px,
+    rgba(92,58,50,0.04) 4px
   );
   mix-blend-mode: multiply;
 }
@@ -484,24 +484,26 @@ body {
   --app-border:     rgba(195,225,255,0.5);
   --app-shadow:     0 4px 0 rgba(13,25,42,0.55);
   --app-glow:       rgba(108,240,216,0.5);
+  --app-chip-text:  #0B1F25;   /* dark text on light chips */
 }
 #app-wrapper[data-theme="light"] {
-  --app-bg:         #F4FBF9;
-  --app-grid:       rgba(94,201,181,0.12);
-  --app-text:       #1F4D49;
-  --app-text-dim:   #5C8B85;
-  --app-mint:       #5EC9B5;
-  --app-aqua:       #3FB8A6;
-  --app-pink:       #F4A8C8;
-  --app-blue:       #B8DEFF;
-  --app-term:       #1F8F7A;
-  --app-panel:      #FDF6FA;
-  --app-panel-soft: #FFEEF5;
-  --app-chrome-1:   #FFC8DD;
-  --app-chrome-2:   #B8DEFF;
-  --app-border:     #1F4D49;
-  --app-shadow:     2px 2px 0 #1F4D49;
-  --app-glow:       rgba(94,201,181,0.35);
+  --app-bg:         #FBF6EC;   /* warm cream wall */
+  --app-grid:       rgba(92,58,50,0.08);
+  --app-text:       #5C3A32;   /* warm dark brown outline */
+  --app-text-dim:   #8B7868;   /* muted brown */
+  --app-mint:       #9DAEC0;   /* dusty slate (window pane) */
+  --app-aqua:       #7E94A8;   /* deeper slate */
+  --app-pink:       #E8B4A0;   /* dusty rose */
+  --app-blue:       #C8D5DD;   /* sky-pane blue */
+  --app-term:       #C97F4B;   /* shiba tan accent */
+  --app-panel:      #FFFAF0;   /* off-white cream panel */
+  --app-panel-soft: #F5E1CB;   /* peach wash */
+  --app-chrome-1:   #E8C9A3;   /* warm tan chrome */
+  --app-chrome-2:   #D8E3E5;   /* pale window blue */
+  --app-border:     #5C3A32;
+  --app-shadow:     2px 2px 0 #5C3A32;
+  --app-glow:       rgba(201,127,75,0.35);
+  --app-chip-text:  #5C3A32;   /* warm brown text on light chips */
 }
 
 /* Body grid background — only when app is shown */
@@ -601,13 +603,13 @@ body {
 }
 .sidebar-brand:hover {
   background: var(--app-mint);
-  color: #1F3553;
+  color: var(--app-chip-text);
 }
 .sidebar-brand:hover h1,
 .sidebar-brand:hover h1::before,
 .sidebar-brand:hover p {
-  color: #1F3553;
-  -webkit-text-fill-color: #1F3553;
+  color: var(--app-chip-text);
+  -webkit-text-fill-color: var(--app-chip-text);
 }
 
 .sidebar-logo-img {
@@ -678,7 +680,7 @@ body {
 .nav-item.active {
   background: var(--app-mint);
   border-color: var(--app-border);
-  color: #0B1F25;
+  color: var(--app-chip-text);
   font-weight: 600;
   box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4), inset -1px -1px 0 rgba(0,0,0,0.15);
 }
@@ -776,12 +778,12 @@ body {
 .topbar-back:hover {
   background: var(--app-mint);
   border-color: var(--app-mint);
-  color: #1F3553;
+  color: var(--app-chip-text);
   box-shadow: 0 0 14px var(--app-glow);
 }
 .topbar-back:hover .tb-arrow,
 .topbar-back:hover .tb-zh,
-.topbar-back:hover .tb-cd { color: #1F3553; opacity: 1; }
+.topbar-back:hover .tb-cd { color: var(--app-chip-text); opacity: 1; }
 
 /* Senior mode — clean「← 返回首頁」, no terminal hint */
 html[data-mode="senior"] .topbar-back {
@@ -856,7 +858,7 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
 }
 .app-theme-toggle:hover {
   background: var(--app-mint);
-  color: #07171C;
+  color: var(--app-chip-text);
   box-shadow: 0 0 12px var(--app-glow);
 }
 
@@ -954,7 +956,7 @@ html[data-mode="standard"] #app p { font-size: 1.02rem; }
    ═══════════════════════════════════════════════════════════ */
 
 html[data-mode="senior"] #app-wrapper.show {
-  background: #F8FBFD;
+  background: #FBF6EC;
   background-image: none;
   color: var(--text);
 }
@@ -1054,7 +1056,7 @@ html[data-mode="senior"] .topbar {
   position: sticky;
   top: 0;
   padding: 22px 32px;
-  background: #EBEBEC;
+  background: #F2E4D0;
   backdrop-filter: blur(16px);
   border: none;
   border-bottom: 1px solid var(--border-glass);
@@ -1664,7 +1666,7 @@ html[data-mode="senior"] .page-deco { display: none; }
   width: 64px;
   height: 64px;
   background: var(--app-mint);
-  color: #1F3553;
+  color: var(--app-chip-text);
   border: 1.5px solid var(--app-border);
   border-radius: 8px;
   box-shadow: inset 1px 1px 0 rgba(255,255,255,0.45), 0 0 22px var(--app-glow);
@@ -2573,13 +2575,13 @@ html[data-mode="senior"] .tc-desc {
   border-radius: 6px;
   border: 1.5px solid var(--app-border);
   margin-bottom: 4px;
-  color: #1F3553;
+  color: var(--app-chip-text);
   flex-shrink: 0;
 }
 .scc-icon svg { width: 22px; height: 22px; stroke-width: 2; }
 .scc-mint { background: var(--app-mint); }
 .scc-aqua { background: var(--app-aqua); }
-.scc-pink { background: var(--app-pink); color: #1F3553; }
+.scc-pink { background: var(--app-pink); color: var(--app-chip-text); }
 .scc-blue { background: var(--app-blue); }
 .scc-name { font-weight: 700; font-size: 1.02rem; color: var(--app-text); }
 .scc-short { font-size: 0.8rem; color: var(--app-text-dim); line-height: 1.55; }
@@ -2599,7 +2601,7 @@ html[data-mode="senior"] .tc-desc {
   border-radius: 8px;
   border: 1.5px solid var(--app-border);
   flex-shrink: 0;
-  color: #1F3553;
+  color: var(--app-chip-text);
 }
 .lf-icon svg { width: 26px; height: 26px; stroke-width: 2; }
 .lf-info h3 {
@@ -2687,7 +2689,7 @@ html[data-mode="senior"] .tc-desc {
   cursor: pointer;
   transition: all 0.15s;
 }
-.lf-freq-btn:hover { background: var(--app-mint); color: #1F3553; border-color: var(--app-mint); }
+.lf-freq-btn:hover { background: var(--app-mint); color: var(--app-chip-text); border-color: var(--app-mint); }
 .lf-freq-num {
   min-width: 36px; text-align: center;
   font-family: "JetBrains Mono", monospace;
@@ -2729,7 +2731,7 @@ html[data-mode="senior"] .tc-desc {
 }
 .primary-btn {
   background: var(--app-mint);
-  color: #1F3553;
+  color: var(--app-chip-text);
   border: 1px solid var(--app-border);
   box-shadow: 0 0 18px var(--app-glow), inset 1px 1px 0 rgba(255,255,255,0.4);
 }
@@ -2771,7 +2773,7 @@ html[data-mode="senior"] .tc-desc {
   padding: 3px 10px;
   border-radius: 3px;
   font-size: 0.85rem;
-  color: #1F3553;
+  color: var(--app-chip-text);
   font-weight: 600;
 }
 .se-bar { letter-spacing: -1px; }
@@ -2799,7 +2801,7 @@ html[data-mode="senior"] .tc-desc {
   font-size: 1rem;
   transition: all 0.15s;
 }
-.se-del:hover { background: var(--app-pink); color: #1F3553; border-color: var(--app-pink); }
+.se-del:hover { background: var(--app-pink); color: var(--app-chip-text); border-color: var(--app-pink); }
 
 /* Period summary (text only — no chart) */
 .sym-summary-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 8px; }
@@ -2817,7 +2819,7 @@ html[data-mode="senior"] .tc-desc {
 .ssr-name {
   padding: 3px 10px;
   border-radius: 3px;
-  color: #1F3553;
+  color: var(--app-chip-text);
   font-weight: 700;
   font-size: 0.95rem;
   text-align: center;
@@ -2950,7 +2952,7 @@ html[data-mode="senior"] .sym-link-btn {
   border-radius: 5px;
   flex-shrink: 0;
   border: 1px solid var(--app-border);
-  color: #1F3553;
+  color: var(--app-chip-text);
 }
 .vt-toggle-icon svg { width: 16px; height: 16px; stroke-width: 2; }
 .vt-toggle-name { flex: 1; font-size: 0.9rem; font-weight: 500; }
@@ -2966,7 +2968,7 @@ html[data-mode="senior"] .sym-link-btn {
   border-radius: 50%;
   background: var(--app-pink);
   border: 1px solid var(--app-border);
-  color: #1F3553;
+  color: var(--app-chip-text);
   font-size: 0.85rem; font-weight: 700;
   cursor: pointer;
   display: none;
@@ -3070,7 +3072,7 @@ html[data-mode="senior"] .vt-unit-select option { background: #fff; color: var(-
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 4px;
   border: 1px solid var(--app-border);
-  color: #1F3553;
+  color: var(--app-chip-text);
 }
 .vt-snap-icon svg { width: 14px; height: 14px; stroke-width: 2; }
 .vt-snap-name { font-weight: 600; color: var(--app-text); }
@@ -3107,7 +3109,7 @@ html[data-mode="senior"] .vt-unit-select option { background: #fff; color: var(-
 .vt-rec-btn {
   padding: 4px 10px;
   background: var(--app-mint);
-  color: #1F3553;
+  color: var(--app-chip-text);
   border: 1px solid var(--app-border);
   border-radius: 3px;
   font-family: "JetBrains Mono", monospace;
@@ -3229,7 +3231,7 @@ html[data-mode="senior"] .vt-unit-select option { background: #fff; color: var(-
 .vh-name {
   padding: 2px 9px;
   border-radius: 3px;
-  color: #1F3553;
+  color: var(--app-chip-text);
   font-weight: 700;
   font-size: 0.85rem;
   text-align: center;
@@ -3933,10 +3935,10 @@ html[data-mode="standard"] .logout-btn .logout-cmd {
 html[data-mode="standard"] .logout-btn:hover {
   background: var(--app-pink);
   border-color: var(--app-pink);
-  color: #1F3553;
+  color: var(--app-chip-text);
   box-shadow: 0 0 14px rgba(255,214,232,0.5), inset 1px 1px 0 rgba(255,255,255,0.4);
 }
-html[data-mode="standard"] .logout-btn:hover .logout-cmd { opacity: 1; color: #1F3553; }
+html[data-mode="standard"] .logout-btn:hover .logout-cmd { opacity: 1; color: var(--app-chip-text); }
 html[data-mode="standard"] .sidebar-foot {
   background: var(--app-panel-soft);
   border-top: 1px solid var(--app-border);
@@ -3951,7 +3953,7 @@ html[data-mode="standard"] .mode-toggle {
 html[data-mode="standard"] .mode-toggle:hover {
   background: var(--app-mint);
   border-color: var(--app-mint);
-  color: #1F3553;
+  color: var(--app-chip-text);
 }
 html[data-mode="standard"] .mode-hint {
   font-family: "JetBrains Mono", "Courier New", monospace;
