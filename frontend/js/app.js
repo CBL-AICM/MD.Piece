@@ -108,7 +108,21 @@ const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
-const pieces   = () => placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle', 'your-pieces', 67);
+function pieces() {
+  return `
+    <div class="card" style="margin-bottom:14px">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="puzzle" style="width:22px;height:22px"></i> 你的碎片
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        每讀完衛教書房裡一個章節，那本書就會在這裡留下一塊拼圖。讀越多、拼圖越完整 — 看見完整的你。
+      </p>
+      <div id="pieces-summary" style="margin-top:12px;font-size:.85rem;color:var(--text-dim)"></div>
+    </div>
+    <div class="card">
+      <div id="pieces-board"></div>
+    </div>`;
+}
 const chat     = () => placeholderPage('醫療 Chat', '24/7 AI 醫療諮詢，有疑問隨時聊。', 'message-circle-heart', 'med-chat', 50);
 
 // 頁面在 terminal pane 中顯示的檔名（用於 #app 的 data-page）
@@ -138,6 +152,7 @@ function showPage(page) {
     if (page === "patients") loadPatients();
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
+    if (page === "pieces") loadPiecesPage();
     if (page === "medications") loadMedicationsPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -2099,6 +2114,50 @@ var _eduSelectedDisease = null;
 var _eduSelectedBook = null;
 var _eduSelectedDimension = null;  // 給疾病百科用：當前選到的維度
 var _eduSelectedTopic = null;      // 給一般書本用：當前選到的章節 key
+var _eduPendingOpenBook = null;    // 從「你的碎片」跳過來時要自動翻開的書
+
+// 拼圖收集系統 — 讀過任一章節就在書背貼上拼圖塊；全部讀完整本書亮起來
+var EDU_READ_STORE_KEY = "mdpiece_edu_read_v1";
+function eduLoadReadState() {
+  try {
+    var raw = localStorage.getItem(EDU_READ_STORE_KEY);
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === "object") ? parsed : {};
+  } catch (e) { return {}; }
+}
+function eduSaveReadState(state) {
+  try { localStorage.setItem(EDU_READ_STORE_KEY, JSON.stringify(state)); } catch (e) { /* quota etc. */ }
+}
+function eduMarkRead(bookKey, topicKey) {
+  if (!bookKey || !topicKey) return;
+  var s = eduLoadReadState();
+  if (!s[bookKey]) s[bookKey] = [];
+  if (s[bookKey].indexOf(topicKey) === -1) s[bookKey].push(topicKey);
+  eduSaveReadState(s);
+}
+// 回傳 { read: 已讀章節數, total: 總章節數, ratio: 0..1, complete: bool }
+function eduBookProgress(book) {
+  var s = eduLoadReadState();
+  var read = (s[book.key] || []).length;
+  var total;
+  if (book.dynamic === "diseases") {
+    total = EDU_DISEASE_DIMENSIONS.length;  // 動態書以維度數為總數
+  } else {
+    total = (book.topics || []).length;
+  }
+  if (!total) return { read: 0, total: 0, ratio: 0, complete: false };
+  var ratio = Math.min(1, read / total);
+  return { read: read, total: total, ratio: ratio, complete: ratio >= 1 };
+}
+// 拼圖塊 SVG — 四面都帶凸耳，分兩層：水彩填色 + 手繪墨線描邊
+var EDU_PUZZLE_PATH = "M4 4 H9 C9 1.6 10.3 1 12 1 C13.7 1 15 1.6 15 4 H20 V9 C22.4 9 23 10.3 23 12 C23 13.7 22.4 15 20 15 V20 H15 C15 22.4 13.7 23 12 23 C10.3 23 9 22.4 9 20 H4 V15 C1.6 15 1 13.7 1 12 C1 10.3 1.6 9 4 9 Z";
+function eduPuzzleSvg(extraClass) {
+  return '<svg class="puzzle-svg ' + (extraClass || '') + '" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
+           '<path class="pz-fill" d="' + EDU_PUZZLE_PATH + '"/>' +
+           '<path class="pz-stroke" d="' + EDU_PUZZLE_PATH + '"/>' +
+         '</svg>';
+}
 
 // 衛教主題 20 本書，分四層書架。
 // 點開書 → 直接進入筆記本跨頁：左頁是章節清單、右頁就是內容。
@@ -2390,15 +2449,19 @@ function renderBookshelf() {
   var html = "";
   shelves.forEach(function(s) {
     html += '<div class="shelf">';
-    html += '<div class="shelf-label">' + s.label + '</div>';
+    html += '<div class="shelf-label">' + escapeHtml(s.label) + '</div>';
     html += '<div class="shelf-row">';
     s.books.forEach(function(b) {
+      var p = eduBookProgress(b);
+      var stateClass = p.complete ? " complete" : (p.read > 0 ? " partial" : "");
+      var badgeTitle = p.total ? (p.read + " / " + p.total + " 章節已讀") : "";
       html +=
-        '<button class="book ' + b.color + ' ' + b.size + '" ' +
-        'onclick="eduOpenBook(\'' + b.key + '\')" title="' + b.title + '">' +
+        '<button class="book ' + b.color + ' ' + b.size + stateClass + '" ' +
+        'onclick="eduOpenBook(\'' + b.key + '\')" title="' + escapeHtml(b.title + (badgeTitle ? "・" + badgeTitle : "")) + '">' +
+          '<span class="book-piece">' + eduPuzzleSvg() + '</span>' +
           '<i data-lucide="' + b.icon + '" class="book-icon" style="width:18px;height:18px"></i>' +
-          '<span class="book-title">' + b.title + '</span>' +
-          '<span class="book-tag">' + b.tag + '</span>' +
+          '<span class="book-title">' + escapeHtml(b.title) + '</span>' +
+          '<span class="book-tag">' + escapeHtml(b.tag) + '</span>' +
         '</button>';
     });
     html += '</div>';
@@ -2412,8 +2475,22 @@ function loadEducationPage() {
   // 首次載入時抓疾病列表，給「疾病百科」這本書用
   fetch(API + "/education/diseases")
     .then(function(r) { return r.json(); })
-    .then(function(data) { _eduDiseases = data.diseases || []; })
+    .then(function(data) {
+      _eduDiseases = data.diseases || [];
+      // 從「你的碎片」跳過來時，等資料就緒後再翻開疾病百科
+      if (_eduPendingOpenBook === "diseases") {
+        eduOpenBook("diseases");
+        _eduPendingOpenBook = null;
+      }
+    })
     .catch(function() { /* 不擋整體 UI */ });
+
+  // 從「你的碎片」跳過來：自動翻開該本書（疾病百科除外，等上面 fetch 回來）
+  if (_eduPendingOpenBook && _eduPendingOpenBook !== "diseases") {
+    var bk = _eduPendingOpenBook;
+    _eduPendingOpenBook = null;
+    setTimeout(function() { eduOpenBook(bk); }, 60);
+  }
 
   // 確保 lucide icon 出現
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
@@ -2434,8 +2511,14 @@ function eduGoToShelf() {
   _eduSelectedDisease = null;
   _eduSelectedDimension = null;
   _eduSelectedTopic = null;
+  // 重繪書架，拼圖徽章才會反映剛剛讀過的章節
+  var wrap = document.querySelector("#edu-stage-shelf .bookshelf-wrap");
+  if (wrap) {
+    wrap.innerHTML = '<div class="bookshelf-title">— 衛教書房・四層書架 —</div>' + renderBookshelf();
+  }
   eduRenderBreadcrumb();
   eduSwitchStage("edu-stage-shelf");
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function eduRenderBreadcrumb() {
@@ -2610,6 +2693,14 @@ function eduOpenContent(key, label) {
     if (nb) nb.innerHTML = renderNotebookSpread();
   }
 
+  // 收集拼圖：標記為已讀（離開書架前都會看到拼圖塊更新）
+  var prevProgress = eduBookProgress(book);
+  eduMarkRead(book.key, key);
+  var nowProgress = eduBookProgress(book);
+  if (nowProgress.complete && !prevProgress.complete) {
+    showToast("拼圖塊收齊！「" + book.title + "」已蒐集完整一塊。", "success");
+  }
+
   var rightEl = document.getElementById("edu-notebook-right");
   if (!rightEl) return;
   rightEl.innerHTML =
@@ -2650,6 +2741,80 @@ function eduOpenContent(key, label) {
       var body = document.getElementById("edu-content-body");
       if (body) body.innerHTML = eduFallbackContent(book, label);
     });
+}
+
+// ─── 你的碎片（拼圖牆） ───────────────────────────────────
+function loadPiecesPage() {
+  var board = document.getElementById("pieces-board");
+  var summary = document.getElementById("pieces-summary");
+  if (!board) return;
+
+  var shelfNames = [
+    "免疫專區", "認識與辨識", "治療與管理", "預防與支持"
+  ];
+  var byShelf = [[], [], [], []];
+  EDU_BOOKS.forEach(function(b) { byShelf[b.shelf].push(b); });
+
+  var totalBooks = EDU_BOOKS.length;
+  var collectedFull = 0;
+  var collectedAny  = 0;
+  EDU_BOOKS.forEach(function(b) {
+    var p = eduBookProgress(b);
+    if (p.complete) collectedFull++;
+    else if (p.read > 0) collectedAny++;
+  });
+
+  if (summary) {
+    summary.innerHTML =
+      '<span style="color:var(--text)">完整收齊 <strong>' + collectedFull + '</strong> 塊</span>' +
+      '・正在拼 <strong>' + collectedAny + '</strong> 塊' +
+      '・總共 <strong>' + totalBooks + '</strong> 塊';
+  }
+
+  var html = "";
+  byShelf.forEach(function(books, idx) {
+    if (!books.length) return;
+    html += '<div class="pcs-row-label">' + escapeHtml(shelfNames[idx]) + '</div>';
+    html += '<div class="pcs-row">';
+    books.forEach(function(b) {
+      var p = eduBookProgress(b);
+      var cls = "pcs-piece " + b.color;
+      if (p.complete) cls += " complete";
+      else if (p.read > 0) cls += " partial";
+      var label = b.title + (p.total ? "（" + p.read + "/" + p.total + "）" : "");
+      html +=
+        '<button class="' + cls + '" data-book="' + escapeHtml(b.key) + '" title="' + escapeHtml(label) + '">' +
+          eduPuzzleSvg("pcs-shape") +
+          '<span class="pcs-body">' +
+            '<span class="pcs-icon"><i data-lucide="' + escapeHtml(b.icon) + '" style="width:22px;height:22px"></i></span>' +
+            '<span class="pcs-title">' + escapeHtml(b.title) + '</span>' +
+            (p.total ? '<span class="pcs-meta">' + p.read + ' / ' + p.total + '</span>' : '') +
+          '</span>' +
+        '</button>';
+    });
+    html += '</div>';
+  });
+
+  board.innerHTML = html;
+
+  // 委派點擊：跳到衛教專欄並自動翻開該本書
+  if (!board.dataset.boundDelegate) {
+    board.addEventListener("click", function(e) {
+      var btn = e.target.closest && e.target.closest("[data-book]");
+      if (!btn) return;
+      var bookKey = btn.getAttribute("data-book");
+      _eduPendingOpenBook = bookKey;
+      // 切換到衛教頁；使用 navigateTo 才能同步側邊選單高亮
+      if (typeof navigateTo === "function") {
+        navigateTo("education", null);
+      } else {
+        showPage("education");
+      }
+    });
+    board.dataset.boundDelegate = "1";
+  }
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function eduFallbackContent(book, label) {
