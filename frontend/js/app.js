@@ -2386,7 +2386,17 @@ function getMemos() {
 }
 
 function saveMemos(arr) {
-  localStorage.setItem('mdpiece_memos', JSON.stringify(arr));
+  try {
+    localStorage.setItem('mdpiece_memos', JSON.stringify(arr));
+    return true;
+  } catch (e) {
+    const quota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
+    showToast && showToast(
+      quota ? '儲存空間已滿 — 試著刪掉一些含圖片的舊 memo' : '儲存失敗：' + (e?.message || '未知錯誤'),
+      'error'
+    );
+    return false;
+  }
 }
 
 const MEMO_MOODS = [
@@ -2403,6 +2413,9 @@ function getMoodMeta(id) {
 }
 
 function memo() {
+  // 重置 composer 狀態 — 避免從別頁回到 memo 後殘留上一輪選擇
+  _selectedMood = 'calm';
+  _pendingMemoImage = null;
   const memos = getMemos().slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
   const user = getCurrentUser();
   const rawName = (user && user.name) ? user.name : '我';
@@ -2659,10 +2672,11 @@ function publishMemo() {
   };
   const all = getMemos();
   all.push(newMemo);
-  saveMemos(all);
+  if (!saveMemos(all)) return;  // 配額滿等錯誤已由 saveMemos 顯示，保留輸入內容讓使用者重試
   if (ta) ta.value = '';
   clearMemoImage();
   selectMemoMood('calm');
+  updateMemoCounter();
   refreshMemoFeed();
   showToast && showToast('已發佈 ✦', 'success');
 }
