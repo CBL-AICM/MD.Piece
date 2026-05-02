@@ -2100,10 +2100,10 @@ var _eduSelectedBook = null;
 var _eduSelectedDimension = null;  // 給疾病百科用：當前選到的維度
 var _eduSelectedTopic = null;      // 給一般書本用：當前選到的章節 key
 
-// 風濕免疫專區 + 一般主題，共 19 本書，分四層書架。
+// 衛教主題 20 本書，分四層書架。
 // 點開書 → 直接進入筆記本跨頁：左頁是章節清單、右頁就是內容。
 var EDU_BOOKS = [
-  // ── 第一層：風濕免疫專區（與風濕科合作，主力衛教） ──
+  // ── 第一層：免疫專區 ──
   { key: "rheum_overview", title: "自體免疫總論", tag: "AUTOIMMUNE", color: "c-purple", size: "tall", icon: "shield-alert",
     shelf: 0, intro: "免疫系統為什麼會誤把自己當敵人？了解風濕免疫疾病的共通語言。",
     topics: [
@@ -2176,7 +2176,7 @@ var EDU_BOOKS = [
       { key: "fm_meds",      label: "藥物選擇",       desc: "Pregabalin、Duloxetine、Amitriptyline" }
     ] },
   { key: "rheum_biologics", title: "生物製劑指南", tag: "BIOLOGICS", color: "c-blue", size: "tall", icon: "syringe",
-    shelf: 0, intro: "生物製劑、JAK 抑制劑：聽起來高科技，其實已是風濕科日常。",
+    shelf: 0, intro: "生物製劑、JAK 抑制劑：聽起來高科技，其實已是免疫疾病的日常。",
     topics: [
       { key: "bio_what",     label: "什麼是生物製劑", desc: "與小分子標靶藥的差別" },
       { key: "bio_classes",  label: "藥物類別速查",   desc: "TNFi / IL-6 / IL-17 / JAKi / B-cell" },
@@ -2324,7 +2324,7 @@ function education() {
         <i data-lucide="book-heart" style="width:22px;height:22px"></i> 衛教書房
       </h2>
       <p style="margin-top:6px;color:var(--text-dim)">
-        從書架上挑一本書翻開——每一本都是一個健康主題。第一層是和風濕科一起整理的免疫專區。
+        從書架上挑一本書翻開——每一本都是一個健康主題。
         翻開後左頁是章節清單，點任一章節，內容就會直接寫在右頁。
       </p>
       <div id="edu-breadcrumb" class="edu-breadcrumb" style="margin-top:12px">
@@ -2380,7 +2380,7 @@ function education() {
 
 function renderBookshelf() {
   var shelves = [
-    { label: "Shelf 01 ・ 風濕免疫專區（與風濕科合作）", books: [] },
+    { label: "Shelf 01 ・ 免疫專區", books: [] },
     { label: "Shelf 02 ・ 認識與辨識", books: [] },
     { label: "Shelf 03 ・ 治療與管理", books: [] },
     { label: "Shelf 04 ・ 預防與支持", books: [] }

@@ -3558,143 +3558,192 @@ html[data-mode="senior"] .vt-bmi-meta {
 .edu-breadcrumb .crumb.current { color: var(--text); font-weight: 600; }
 .edu-breadcrumb .sep { opacity: .5; }
 
-/* ─── Stage 1 : Bookshelf ──────────────────────────────────── */
+/* ─── Stage 1 : Bookshelf （水彩手繪木櫃） ───────────────── */
+/* 整個書櫃像用水彩畫在紙上的木箱：暖棕底、墨色描邊、灑了幾滴水彩 */
 .bookshelf-wrap {
-  padding: 18px 8px 8px;
+  position: relative;
+  padding: 14px 18px 18px;
   background:
-    radial-gradient(ellipse at center top, rgba(220,237,247,0.5), transparent 60%),
-    linear-gradient(180deg, #F4EFE9 0%, #E8DFD3 100%);
-  border-radius: var(--radius);
-  border: 1px solid var(--border-glass);
-  box-shadow: inset 0 2px 6px rgba(104,93,90,0.08);
+    /* 灑點水彩噴點 */
+    radial-gradient(circle at 78% 12%, rgba(90,55,25,0.18) 1.8px, transparent 2.4px),
+    radial-gradient(circle at 22% 38%, rgba(90,55,25,0.14) 1.2px, transparent 1.8px),
+    radial-gradient(circle at 88% 58%, rgba(90,55,25,0.16) 2px,   transparent 2.6px),
+    radial-gradient(circle at 12% 78%, rgba(90,55,25,0.12) 1.4px, transparent 2px),
+    radial-gradient(circle at 62% 88%, rgba(90,55,25,0.15) 1.6px, transparent 2.2px),
+    /* 木紋暈染 */
+    radial-gradient(ellipse at 28% 22%, rgba(255,238,210,0.55) 0%, transparent 55%),
+    radial-gradient(ellipse at 78% 78%, rgba(110,70,35,0.30)  0%, transparent 60%),
+    linear-gradient(180deg, #E5C19A 0%, #D4A37A 55%, #B98255 100%);
+  border: 2.5px solid #3a2418;
+  border-radius: 6px 8px 7px 9px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.30),
+    inset 0 0 28px rgba(90,55,25,0.20),
+    0 10px 26px rgba(60,35,15,0.18),
+    0 2px 0 rgba(60,35,15,0.10);
+  /* 邊緣微微歪斜模擬手繪 */
+  filter: drop-shadow(0 1px 0 rgba(60,35,15,0.08));
+}
+/* 一條柔和高光，模擬水彩亮部 */
+.bookshelf-wrap::before {
+  content: "";
+  position: absolute; pointer-events: none;
+  top: 8px; left: 14px; width: 30%; height: 18%;
+  background: linear-gradient(135deg, rgba(255,250,235,0.45), transparent 70%);
+  border-radius: 50%;
+  filter: blur(8px);
 }
 .bookshelf-title {
-  font-size: .9rem; color: var(--text-dim);
-  text-align: center; margin-bottom: 14px; letter-spacing: 2px;
+  font-size: .88rem;
+  color: #4a2f1c;
+  text-align: center;
+  margin-bottom: 10px;
+  letter-spacing: 6px;
+  font-weight: 500;
+  opacity: .65;
 }
 
 .shelf {
   position: relative;
-  margin-bottom: 28px;
-  padding: 0 14px;
+  margin: 0;
+  padding: 14px 12px 10px;
+  /* 每層書櫃下緣是手繪墨線 */
+  border-bottom: 2.5px solid #3a2418;
+  /* 木櫃內陰影 */
+  background:
+    linear-gradient(180deg,
+      rgba(60,35,15,0.20) 0%,
+      rgba(60,35,15,0.05) 18%,
+      transparent 35%,
+      transparent 78%,
+      rgba(60,35,15,0.10) 100%);
+  min-height: 180px;
 }
+.shelf:last-child { border-bottom: none; padding-bottom: 4px; }
+
 .shelf-label {
-  font-size: .78rem; color: var(--text-dim);
-  letter-spacing: 3px; margin: 0 0 8px 4px;
+  font-size: .72rem;
+  color: #5a3a1a;
+  letter-spacing: 4px;
+  margin: 0 0 6px 4px;
   text-transform: uppercase;
+  opacity: .55;
+  font-weight: 500;
 }
 .shelf-row {
-  display: flex; align-items: flex-end; justify-content: flex-start;
-  gap: 10px; min-height: 170px; padding: 0 8px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 5px;
+  min-height: 162px;
+  padding: 6px 4px 0;
   flex-wrap: wrap;
 }
-/* The wooden plank under each row of books */
-.shelf-plank {
-  height: 14px;
-  background:
-    linear-gradient(180deg, #8B6F4E 0%, #6B5236 50%, #4A3622 100%);
-  border-radius: 3px;
-  box-shadow:
-    0 4px 8px rgba(0,0,0,0.25),
-    inset 0 1px 0 rgba(255,255,255,0.15),
-    inset 0 -2px 4px rgba(0,0,0,0.3);
-  position: relative;
-}
-.shelf-plank::before {
-  content: "";
-  position: absolute; left: 0; right: 0; top: -3px; height: 3px;
-  background: linear-gradient(180deg, rgba(0,0,0,0.25), transparent);
-  filter: blur(2px);
-}
+/* 把舊版「木板」隱藏（HTML 還在輸出 .shelf-plank） */
+.shelf-plank { display: none; }
 
-/* ─── Book spine ───────────────────────────────────────────── */
+/* ─── Book spine （水彩淡色 + 手繪墨線） ──────────────────── */
 .book {
   position: relative;
-  width: 56px;
-  height: 160px;
+  width: 50px;
+  height: 152px;
   cursor: pointer;
-  border-radius: 3px 6px 6px 3px;
-  background: var(--book-color, #685D5A);
+  border: 1.8px solid #2a1810;
+  border-radius: 3px 4px 3px 4px;
+  background: var(--book-color, #C9B4A0);
+  /* 水彩暈染感：內側偏白、邊緣偏深 */
   background-image:
-    linear-gradient(90deg,
-      rgba(0,0,0,0.35) 0%,
-      rgba(0,0,0,0.10) 6%,
-      rgba(255,255,255,0.18) 12%,
-      transparent 22%,
-      transparent 78%,
-      rgba(0,0,0,0.10) 90%,
-      rgba(0,0,0,0.35) 100%
-    );
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.45) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(0,0,0,0.10)       0%, transparent 60%),
+    linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.05) 100%);
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.12),
-    0 6px 10px rgba(0,0,0,0.25);
-  transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: space-between;
-  padding: 12px 4px;
-  color: #fff;
+    inset 0 0 0 1px rgba(255,255,255,0.45),
+    2px 4px 0 rgba(60,35,15,0.18);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 3px 12px;
+  color: #2a1810;
   flex-shrink: 0;
-  border: none;
   font-family: "Noto Sans TC", sans-serif;
 }
-/* gold bands on top and bottom of spine */
-.book::before, .book::after {
+/* 書背上下兩條手繪橫線 */
+.book::before,
+.book::after {
   content: "";
-  position: absolute; left: 6px; right: 6px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  position: absolute;
+  left: 5px; right: 5px;
+  height: 1.4px;
+  background: #2a1810;
+  opacity: .75;
+  border-radius: 1px;
 }
-.book::before { top: 8px; }
-.book::after  { bottom: 8px; }
+.book::before { top: 9px; }
+.book::after  { bottom: 9px; }
 
-.book:hover {
-  transform: translateY(-10px) rotate(-1deg);
+/* 自然傾斜的微擾 — 不規則的書傾斜不同角度 */
+.shelf-row .book:nth-child(3n+1) { transform: rotate(-1.5deg); }
+.shelf-row .book:nth-child(3n+2) { transform: rotate(0.8deg); }
+.shelf-row .book:nth-child(5n)   { transform: rotate(2deg); }
+.shelf-row .book:nth-child(7n)   { transform: rotate(-2.5deg) translateY(-2px); }
+
+.book:hover,
+.shelf-row .book:nth-child(3n+1):hover,
+.shelf-row .book:nth-child(3n+2):hover,
+.shelf-row .book:nth-child(5n):hover,
+.shelf-row .book:nth-child(7n):hover {
+  transform: translateY(-12px) rotate(-3deg);
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.18),
-    0 14px 20px rgba(0,0,0,0.3);
+    inset 0 0 0 1px rgba(255,255,255,0.55),
+    4px 8px 0 rgba(60,35,15,0.22);
+  z-index: 2;
 }
+
 .book .book-icon {
-  margin-top: 6px;
-  opacity: 0.9;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+  margin-top: 4px;
+  opacity: .8;
+  color: #2a1810;
 }
 .book .book-title {
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 4px;
   line-height: 1.1;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
   padding: 4px 0;
   white-space: nowrap;
+  color: #2a1810;
 }
 .book .book-tag {
-  font-size: 0.55rem;
+  font-size: 0.50rem;
   letter-spacing: 1px;
-  opacity: 0.7;
+  opacity: .55;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  color: #2a1810;
 }
 
-/* Slight variation on book heights for natural look */
-.book.tall   { height: 168px; }
-.book.medium { height: 158px; }
-.book.short  { height: 148px; }
+/* 高度自然變化 */
+.book.tall   { height: 162px; }
+.book.medium { height: 150px; }
+.book.short  { height: 138px; }
 
-/* Book color presets */
-.book.c-brown  { --book-color: #6B4423; }
-.book.c-rust   { --book-color: #A14B2A; }
-.book.c-blue   { --book-color: #2E5A7B; }
-.book.c-rose   { --book-color: #B0506A; }
-.book.c-green  { --book-color: #4A6B3A; }
-.book.c-lime   { --book-color: #708A3E; }
-.book.c-purple { --book-color: #5E4A7B; }
-.book.c-red    { --book-color: #8C2E2E; }
-.book.c-cyan   { --book-color: #3A6B7B; }
-.book.c-indigo { --book-color: #3D3A6B; }
-.book.c-pink   { --book-color: #B86B85; }
-.book.c-amber  { --book-color: #9B6B2E; }
+/* 水彩淡色書本 — 取代深色書背 */
+.book.c-brown  { --book-color: #D9B68A; }  /* 暖駝 */
+.book.c-rust   { --book-color: #D89A82; }  /* 杏桃 */
+.book.c-blue   { --book-color: #A8C0D2; }  /* 霧藍 */
+.book.c-rose   { --book-color: #D8A8B4; }  /* 藕粉 */
+.book.c-green  { --book-color: #A8C2A2; }  /* 鼠尾草 */
+.book.c-lime   { --book-color: #C8CC9E; }  /* 苔黃 */
+.book.c-purple { --book-color: #B5A8C8; }  /* 薰衣草 */
+.book.c-red    { --book-color: #D49090; }  /* 玫瑰紅 */
+.book.c-cyan   { --book-color: #A8C8C9; }  /* 霧青 */
+.book.c-indigo { --book-color: #9897B8; }  /* 灰紫藍 */
+.book.c-pink   { --book-color: #E0BDC9; }  /* 淡粉 */
+.book.c-amber  { --book-color: #DCC196; }  /* 蜂蜜 */
 
 /* ─── Stage 2 : Open notebook spread ───────────────────────── */
 .notebook-wrap {
