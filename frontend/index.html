@@ -177,6 +177,9 @@
         <button class="nav-item active" onclick="navigateTo('symptoms', this)">
           <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> 症狀紀錄
         </button>
+        <button class="nav-item" onclick="navigateTo('analysis', this)">
+          <span class="nav-icon"><i data-lucide="sparkles" style="width:18px;height:18px"></i></span> 症狀分析
+        </button>
         <button class="nav-item" onclick="navigateTo('medications', this)">
           <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span> 藥物紀錄
         </button>
@@ -425,6 +428,7 @@
     const pageTitles = {
       home: 'home',
       symptoms: 'symptoms',
+      analysis: 'symptom-analysis',
       medications: 'medications',
       vitals: 'vitals',
       memo: 'memo',
@@ -441,6 +445,7 @@
     const pageTitlesSenior = {
       home: '首頁',
       symptoms: '症狀紀錄',
+      analysis: '症狀分析',
       medications: '藥物紀錄',
       vitals: '生理紀錄',
       memo: 'Memo',
