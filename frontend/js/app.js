@@ -108,10 +108,8 @@ const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
-function pieces() {
-  return placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle', 'your-pieces', 67);
-}
-const chat     = () => placeholderPage('醫療 Chat', '24/7 AI 醫療諮詢，有疑問隨時聊。', 'message-circle-heart', 'med-chat', 50);
+const pieces   = () => placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle', 'your-pieces', 67);
+const chat     = () => placeholderPage('醫起聊天', '24/7 AI 醫療諮詢，有疑問隨時聊。', 'message-circle-heart', 'med-chat', 50);
 
 // 頁面在 terminal pane 中顯示的檔名（用於 #app 的 data-page）
 const pageSlugForTerminal = {
