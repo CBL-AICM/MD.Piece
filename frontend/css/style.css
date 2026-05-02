@@ -2999,6 +2999,44 @@ html[data-mode="senior"] .sym-link-btn {
   outline: none;
 }
 .vt-add-custom input:focus { border-color: var(--app-term); box-shadow: 0 0 0 2px rgba(108,240,216,0.18); }
+
+.vt-unit-select {
+  flex: 1; min-width: 180px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  padding: 8px 32px 8px 10px;
+  color: var(--app-text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><polyline points='1,1 6,6 11,1' fill='none' stroke='%236CF0D8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.vt-unit-select:focus { border-color: var(--app-term); box-shadow: 0 0 0 2px rgba(108,240,216,0.18); }
+.vt-unit-select option { background: var(--app-bg); color: var(--app-text); }
+.vt-unit-select optgroup {
+  background: var(--app-panel);
+  color: var(--app-term);
+  font-style: normal;
+  font-weight: 600;
+}
+
+html[data-mode="senior"] .vt-unit-select {
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 1rem;
+  padding: 9px 32px 9px 12px;
+  background-color: var(--bg-surface);
+  color: var(--text);
+  border: 1px solid var(--border-glass);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><polyline points='1,1 6,6 11,1' fill='none' stroke='%23685D5A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+html[data-mode="senior"] .vt-unit-select option { background: #fff; color: var(--text); }
+
 .vt-small-btn { padding: 8px 14px; font-size: 0.88rem; }
 
 /* Snapshot grid */
