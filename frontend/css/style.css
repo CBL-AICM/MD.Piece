@@ -2086,36 +2086,6 @@ html[data-mode="senior"] .tc-desc {
   opacity: 0.4;
 }
 
-/* Platform status */
-.home-ov-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  margin-bottom: 4px;
-}
-
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 6px var(--teal-glow);
-  animation: statusPulse 2s ease-in-out infinite;
-}
-
-@keyframes statusPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.home-ov-ver {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
 /* Footer credit line */
 .home-footer-credit {
   font-size: 0.72rem;
