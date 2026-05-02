@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0B1426" />
+  <meta name="theme-color" id="meta-theme-color" content="#FBF6EC" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#07171C" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FBF6EC" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="description" content="PWA 醫療輔助平台，支援醫病溝通與 AI 症狀分析" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -349,6 +351,13 @@
       requestAnimationFrame(draw);
     })();
 
+    // ─── Sync mobile browser chrome colour with current theme ───
+    function updateThemeColor(theme) {
+      const meta = document.getElementById('meta-theme-color');
+      if (!meta) return;
+      meta.setAttribute('content', theme === 'dark' ? '#07171C' : '#FBF6EC');
+    }
+
     // ─── Landing Theme Toggle (dark / light) ───────────────
     function toggleLandingTheme() {
       const el = document.getElementById('landing');
@@ -360,6 +369,7 @@
       if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
       if (lab) lab.textContent = next.toUpperCase();
       try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      updateThemeColor(next);
       window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
     }
 
@@ -377,6 +387,7 @@
       if (lab) lab.textContent = theme.toUpperCase();
       const aIco = document.getElementById('att-icon');
       if (aIco) aIco.textContent = theme === 'dark' ? '☾' : '☀';
+      updateThemeColor(theme);
     })();
 
     // ─── App Theme Toggle (in topbar) ──────────────────────
@@ -394,6 +405,7 @@
       if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
       if (lab) lab.textContent = next.toUpperCase();
       try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      updateThemeColor(next);
       window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
     }
 
