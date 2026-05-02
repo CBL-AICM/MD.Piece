@@ -344,16 +344,6 @@ function home() {
             <p class="home-tip-text">${getHealthTip()}</p>
           </div>
         </div>
-        <div class="home-ov">
-          <div class="home-ov-head">
-            <i data-lucide="activity" style="width:16px;height:16px;color:var(--teal)"></i>
-            <span>平台狀態</span>
-          </div>
-          <div class="home-ov-body">
-            <p class="home-ov-status"><span class="status-dot"></span> 系統正常運行</p>
-            <p class="home-ov-ver">v2.0 · PWA 醫療輔助平台</p>
-          </div>
-        </div>
       </div>
 
       <!-- Feature grid label -->
