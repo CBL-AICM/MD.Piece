@@ -2405,8 +2405,10 @@ function getMoodMeta(id) {
 function memo() {
   const memos = getMemos().slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
   const user = getCurrentUser();
-  const name = (user && user.name) ? user.name : '我';
-  const initial = name.slice(0, 1).toUpperCase();
+  const rawName = (user && user.name) ? user.name : '我';
+  const rawInitial = rawName.slice(0, 1).toUpperCase();
+  const name = escapeHtml(rawName);
+  const initial = escapeHtml(rawInitial);
   const totalLikes = memos.reduce((s, m) => s + (m.liked ? 1 : 0), 0);
   const totalSaves = memos.reduce((s, m) => s + (m.saved ? 1 : 0), 0);
 
@@ -2671,8 +2673,9 @@ function refreshMemoFeed() {
   const tab = document.querySelector('.memo-tab.on')?.dataset.tab || 'all';
   const memos = getMemos().slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
   const user = getCurrentUser();
-  const name = (user && user.name) ? user.name : '我';
-  const initial = name.slice(0, 1).toUpperCase();
+  const rawName = (user && user.name) ? user.name : '我';
+  const name = escapeHtml(rawName);
+  const initial = escapeHtml(rawName.slice(0, 1).toUpperCase());
   feed.innerHTML = renderMemoFeed(memos, tab, name, initial);
   if (typeof lucide !== 'undefined') lucide.createIcons();
   // 更新頂部統計
