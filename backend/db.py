@@ -194,6 +194,20 @@ _SCHEMAS = {
             FOREIGN KEY (medication_id) REFERENCES medications(id),
             FOREIGN KEY (doctor_id) REFERENCES doctors(id)
         )""",
+    "vitals": """
+        CREATE TABLE IF NOT EXISTS vitals (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            metric_type TEXT NOT NULL,
+            label TEXT,
+            value REAL,
+            value2 REAL,
+            unit TEXT,
+            notes TEXT,
+            recorded_at TEXT DEFAULT (datetime('now')),
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
     "alerts": """
         CREATE TABLE IF NOT EXISTS alerts (
             id TEXT PRIMARY KEY,

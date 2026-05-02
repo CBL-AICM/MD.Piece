@@ -103,7 +103,6 @@ function placeholderPage(label, hint, iconName, slug, pct) {
     </section>
   `;
 }
-const vitals   = () => placeholderPage('生理紀錄',  '記錄血壓、心率、體重、體溫等日常生理數據。', 'activity', 'vitals', 42);
 const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note', 'memo', 80);
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
@@ -139,6 +138,7 @@ function showPage(page) {
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
+    if (page === "vitals") loadVitalsPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -1909,6 +1909,525 @@ function markdownToHtml(md) {
     .replace(/\n/g, '<br>');
 }
 
+
+// ─── 生理紀錄 (Vitals) ─────────────────────────────────────
+// 患者自記身高、體重、BMI、血壓、血糖等數值，可選擇要追蹤哪些指標，
+// 也可自訂個人指標。所有數據會匯回給醫師端參考。
+
+const VITAL_METRICS = [
+  { id: 'weight',            label: '體重',  unit: 'kg',     icon: 'scale',          color: 'mint',  hint: '建議晨起空腹量測' },
+  { id: 'height',            label: '身高',  unit: 'cm',     icon: 'ruler',          color: 'aqua',  hint: '通常變化不大，可少量量測' },
+  { id: 'bmi',               label: 'BMI',  unit: 'kg/m²',  icon: 'gauge',          color: 'blue',  hint: '可由身高/體重自動計算' },
+  { id: 'blood_pressure',    label: '血壓',  unit: 'mmHg',   icon: 'activity',       color: 'pink',  hint: '收縮 / 舒張，例：120/80', dual: true,
+    valueLabel: '收縮壓 (SYS)', value2Label: '舒張壓 (DIA)' },
+  { id: 'blood_sugar',       label: '血糖',  unit: 'mg/dL',  icon: 'droplet',        color: 'pink',  hint: '空腹 70-99，飯後 < 140' },
+  { id: 'heart_rate',        label: '心率',  unit: 'bpm',    icon: 'heart-pulse',    color: 'pink',  hint: '靜息 60-100' },
+  { id: 'body_temperature',  label: '體溫',  unit: '°C',     icon: 'thermometer',    color: 'pink',  hint: '正常 36.0-37.5°C' },
+  { id: 'oxygen_saturation', label: '血氧',  unit: '%',      icon: 'wind',           color: 'aqua',  hint: '正常 ≥ 95%' },
+  { id: 'waist',             label: '腰圍',  unit: 'cm',     icon: 'circle-dot',     color: 'mint',  hint: '男 < 90、女 < 80' },
+];
+
+function getEnabledVitalIds() {
+  try {
+    var raw = localStorage.getItem('mdpiece_vital_enabled');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return ['weight', 'blood_pressure', 'blood_sugar', 'heart_rate', 'body_temperature'];
+}
+
+function setEnabledVitalIds(ids) {
+  localStorage.setItem('mdpiece_vital_enabled', JSON.stringify(ids));
+}
+
+function getCustomVitalDefs() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_vital_custom') || '[]'); }
+  catch { return []; }
+}
+
+function saveCustomVitalDef(def) {
+  var all = getCustomVitalDefs();
+  if (all.some(function(d) { return d.label === def.label; })) return;
+  all.push(def);
+  localStorage.setItem('mdpiece_vital_custom', JSON.stringify(all));
+}
+
+function deleteCustomVitalDef(label) {
+  var all = getCustomVitalDefs().filter(function(d) { return d.label !== label; });
+  localStorage.setItem('mdpiece_vital_custom', JSON.stringify(all));
+}
+
+function vitals() {
+  var enabled = getEnabledVitalIds();
+  var customs = getCustomVitalDefs();
+  var pickerEnabled = VITAL_METRICS.map(function(m) {
+    var on = enabled.indexOf(m.id) >= 0;
+    return '<label class="vit-pick' + (on ? ' on' : '') + '">' +
+      '<input type="checkbox" ' + (on ? 'checked' : '') + ' value="' + m.id + '" onchange="toggleVitalMetric(this)">' +
+      '<i data-lucide="' + m.icon + '"></i><span>' + m.label + '</span>' +
+      '<small>' + m.unit + '</small></label>';
+  }).join('');
+
+  return (
+    '<div class="vit-page">' +
+
+      '<section class="term-section">' +
+        '<header class="ts-head">' +
+          '<span class="ts-prompt">$ status --vitals</span>' +
+          '<span class="ts-tag">latest_values</span>' +
+        '</header>' +
+        '<div class="ts-body">' +
+          '<p class="sym-instruct">// 你最近的生理數值快覽 — 點任一卡片即可記錄新值。</p>' +
+          '<div id="vit-summary-grid" class="vit-summary-grid"><p class="sym-empty">// 載入中...</p></div>' +
+        '</div>' +
+      '</section>' +
+
+      '<section class="term-section">' +
+        '<header class="ts-head">' +
+          '<span class="ts-prompt">$ ./pick-metrics</span>' +
+          '<span class="ts-tag">choose_what_to_track</span>' +
+        '</header>' +
+        '<div class="ts-body">' +
+          '<p class="sym-instruct">勾選你想追蹤的指標 — 沒勾選的會收進「更多」中。</p>' +
+          '<div class="vit-pick-grid">' + pickerEnabled + '</div>' +
+        '</div>' +
+      '</section>' +
+
+      '<section class="term-section">' +
+        '<header class="ts-head">' +
+          '<span class="ts-prompt">$ ./record</span>' +
+          '<span class="ts-tag">add_value</span>' +
+        '</header>' +
+        '<div class="ts-body">' +
+          '<p class="sym-instruct">選擇指標、輸入數值 — 也可以新增屬於你自己的指標。</p>' +
+          '<div class="vit-record-bar">' +
+            '<select id="vit-metric-select" onchange="onVitalMetricChange()"></select>' +
+            '<div id="vit-input-area" class="vit-input-area"></div>' +
+            '<button class="primary-btn" type="button" onclick="submitVital()">' +
+              '<i data-lucide="check"></i><span>記錄</span></button>' +
+          '</div>' +
+          '<label class="lf-label">備註（選填）</label>' +
+          '<textarea id="vit-notes" placeholder="例如：飯後 30 分鐘量、運動完..." rows="2"></textarea>' +
+          '<div class="vit-custom-row">' +
+            '<button class="secondary-btn" type="button" onclick="openCustomVitalForm()">' +
+              '<i data-lucide="plus"></i><span>新增自訂指標</span></button>' +
+            (customs.length ? '<span class="vit-custom-list">' +
+              customs.map(function(c) {
+                return '<span class="vit-custom-chip">' + escapeHtml(c.label) +
+                  (c.unit ? ' (' + escapeHtml(c.unit) + ')' : '') +
+                  '<button onclick="removeCustomVital(\'' + escapeHtml(c.label).replace(/'/g, "\\'") + '\')" title="移除">×</button></span>';
+              }).join('') + '</span>' : '') +
+          '</div>' +
+          '<div id="vit-custom-form" class="vit-custom-form" style="display:none">' +
+            '<label class="lf-label">指標名稱</label>' +
+            '<input id="vit-custom-name" placeholder="例如：尿酸、肺活量、步數..." />' +
+            '<label class="lf-label">單位（選填）</label>' +
+            '<input id="vit-custom-unit" placeholder="例如：mg/dL、L、步" />' +
+            '<div class="lf-actions">' +
+              '<button class="primary-btn" type="button" onclick="saveCustomVital()">' +
+                '<i data-lucide="check"></i><span>新增</span></button>' +
+              '<button class="secondary-btn" type="button" onclick="closeCustomVitalForm()">取消</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</section>' +
+
+      '<section class="term-section">' +
+        '<header class="ts-head">' +
+          '<span class="ts-prompt">$ tail -f vitals.log</span>' +
+          '<span class="ts-tag" id="vit-history-tag">recent</span>' +
+        '</header>' +
+        '<div class="ts-body">' +
+          '<div class="vit-history-filter">' +
+            '<label class="lf-label" style="margin:0">篩選：</label>' +
+            '<select id="vit-history-filter" onchange="renderVitalHistory()"><option value="">全部</option></select>' +
+          '</div>' +
+          '<div id="vit-history-list"><p class="sym-empty">// 載入中...</p></div>' +
+        '</div>' +
+      '</section>' +
+
+      '<section class="term-section">' +
+        '<header class="ts-head">' +
+          '<span class="ts-prompt">$ ./send-to-doctor</span>' +
+          '<span class="ts-tag">share_with_doctor</span>' +
+        '</header>' +
+        '<div class="ts-body">' +
+          '<p class="sym-instruct">// 所有紀錄會自動匯整給醫師端 — 此處可顯式同步並產生最近 30 天摘要。</p>' +
+          '<button class="primary-btn" type="button" onclick="syncVitalsToDoctor()">' +
+            '<i data-lucide="send"></i><span>立即匯整給醫師</span></button>' +
+          '<div id="vit-sync-result" class="vit-sync-result"></div>' +
+        '</div>' +
+      '</section>' +
+
+    '</div>'
+  );
+}
+
+// 暫存：當前頁的全部紀錄（避免每次重 render 都打 API）
+var _vitalsCache = [];
+
+function loadVitalsPage() {
+  populateVitalSelect();
+  refreshVitalsData();
+}
+
+function populateVitalSelect() {
+  var enabled = getEnabledVitalIds();
+  var customs = getCustomVitalDefs();
+  var sel = document.getElementById('vit-metric-select');
+  if (!sel) return;
+  var options = '';
+  // Standard enabled metrics
+  VITAL_METRICS.forEach(function(m) {
+    if (enabled.indexOf(m.id) >= 0) {
+      options += '<option value="' + m.id + '">' + m.label + ' (' + m.unit + ')</option>';
+    }
+  });
+  // Custom metrics
+  customs.forEach(function(c) {
+    options += '<option value="custom::' + escapeHtml(c.label) + '">[自訂] ' + escapeHtml(c.label) +
+      (c.unit ? ' (' + escapeHtml(c.unit) + ')' : '') + '</option>';
+  });
+  // Disabled metrics still selectable from a "more" group
+  var disabledOpts = '';
+  VITAL_METRICS.forEach(function(m) {
+    if (enabled.indexOf(m.id) < 0) {
+      disabledOpts += '<option value="' + m.id + '">' + m.label + ' (' + m.unit + ')</option>';
+    }
+  });
+  if (disabledOpts) options += '<optgroup label="── 其他 ──">' + disabledOpts + '</optgroup>';
+  sel.innerHTML = options || '<option value="">尚無可選指標</option>';
+  onVitalMetricChange();
+
+  // History filter
+  var filter = document.getElementById('vit-history-filter');
+  if (filter) {
+    var opts = '<option value="">全部</option>';
+    VITAL_METRICS.forEach(function(m) {
+      opts += '<option value="' + m.id + '">' + m.label + '</option>';
+    });
+    customs.forEach(function(c) {
+      opts += '<option value="custom::' + escapeHtml(c.label) + '">[自訂] ' + escapeHtml(c.label) + '</option>';
+    });
+    filter.innerHTML = opts;
+  }
+}
+
+function onVitalMetricChange() {
+  var sel = document.getElementById('vit-metric-select');
+  var area = document.getElementById('vit-input-area');
+  if (!sel || !area) return;
+  var val = sel.value;
+  var def = _resolveVitalDef(val);
+  if (!def) { area.innerHTML = ''; return; }
+
+  if (def.dual) {
+    area.innerHTML =
+      '<div class="vit-dual">' +
+        '<input id="vit-value" type="number" step="0.1" placeholder="' + (def.valueLabel || '主要值') + '" />' +
+        '<span class="vit-sep">/</span>' +
+        '<input id="vit-value2" type="number" step="0.1" placeholder="' + (def.value2Label || '次要值') + '" />' +
+        '<span class="vit-unit">' + (def.unit || '') + '</span>' +
+      '</div>' +
+      (def.hint ? '<small class="vit-hint">' + def.hint + '</small>' : '');
+  } else if (def.id === 'bmi') {
+    area.innerHTML =
+      '<div class="vit-single">' +
+        '<input id="vit-value" type="number" step="0.1" placeholder="BMI 數值" />' +
+        '<span class="vit-unit">' + (def.unit || '') + '</span>' +
+        '<button class="vit-mini-btn" type="button" onclick="autoFillBmi()" title="從最近的身高/體重自動計算">⚡ 自動算</button>' +
+      '</div>' +
+      '<small class="vit-hint">' + (def.hint || '') + '</small>';
+  } else {
+    area.innerHTML =
+      '<div class="vit-single">' +
+        '<input id="vit-value" type="number" step="0.1" placeholder="輸入' + def.label + '" />' +
+        '<span class="vit-unit">' + (def.unit || '') + '</span>' +
+      '</div>' +
+      (def.hint ? '<small class="vit-hint">' + def.hint + '</small>' : '');
+  }
+}
+
+function _resolveVitalDef(val) {
+  if (!val) return null;
+  if (val.indexOf('custom::') === 0) {
+    var label = val.slice('custom::'.length);
+    var custom = getCustomVitalDefs().find(function(c) { return c.label === label; });
+    if (!custom) return null;
+    return { id: 'custom', label: custom.label, unit: custom.unit || '', icon: 'sparkles', color: 'aqua' };
+  }
+  return VITAL_METRICS.find(function(m) { return m.id === val; }) || null;
+}
+
+function autoFillBmi() {
+  var heightRec = _vitalsCache.find(function(r) { return r.metric_type === 'height'; });
+  var weightRec = _vitalsCache.find(function(r) { return r.metric_type === 'weight'; });
+  if (!heightRec || !weightRec) {
+    showToast('需要先記錄身高與體重才能自動計算 BMI', 'warning');
+    return;
+  }
+  var hM = heightRec.value / 100.0;
+  var bmi = weightRec.value / (hM * hM);
+  var input = document.getElementById('vit-value');
+  if (input) input.value = bmi.toFixed(1);
+}
+
+function toggleVitalMetric(checkbox) {
+  var enabled = getEnabledVitalIds();
+  var id = checkbox.value;
+  if (checkbox.checked) {
+    if (enabled.indexOf(id) < 0) enabled.push(id);
+  } else {
+    enabled = enabled.filter(function(x) { return x !== id; });
+  }
+  setEnabledVitalIds(enabled);
+  checkbox.parentElement.classList.toggle('on', checkbox.checked);
+  populateVitalSelect();
+}
+
+function openCustomVitalForm() {
+  var f = document.getElementById('vit-custom-form');
+  if (f) f.style.display = 'block';
+}
+function closeCustomVitalForm() {
+  var f = document.getElementById('vit-custom-form');
+  if (f) f.style.display = 'none';
+  var n = document.getElementById('vit-custom-name'); if (n) n.value = '';
+  var u = document.getElementById('vit-custom-unit'); if (u) u.value = '';
+}
+function saveCustomVital() {
+  var name = (document.getElementById('vit-custom-name') || {}).value;
+  var unit = (document.getElementById('vit-custom-unit') || {}).value;
+  if (!name || !name.trim()) { showToast('指標名稱不能空白', 'warning'); return; }
+  saveCustomVitalDef({ label: name.trim(), unit: (unit || '').trim() });
+  closeCustomVitalForm();
+  populateVitalSelect();
+  // re-render the section for the chip list
+  showPage('vitals');
+  showToast('已新增自訂指標「' + name.trim() + '」', 'success');
+}
+function removeCustomVital(label) {
+  if (!confirm('移除自訂指標「' + label + '」？已記錄的數據不會被刪除。')) return;
+  deleteCustomVitalDef(label);
+  showPage('vitals');
+}
+
+function submitVital() {
+  var sel = document.getElementById('vit-metric-select');
+  var notesEl = document.getElementById('vit-notes');
+  if (!sel) return;
+  var def = _resolveVitalDef(sel.value);
+  if (!def) { showToast('請先選擇指標', 'warning'); return; }
+
+  var v = parseFloat((document.getElementById('vit-value') || {}).value);
+  if (isNaN(v)) { showToast('請輸入有效的數值', 'warning'); return; }
+
+  var body = {
+    patient_id: getStablePatientId(),
+    metric_type: def.id === 'custom' ? 'custom' : def.id,
+    label: def.label,
+    value: v,
+    unit: def.unit,
+    notes: (notesEl && notesEl.value.trim()) || null,
+  };
+  if (def.dual) {
+    var v2 = parseFloat((document.getElementById('vit-value2') || {}).value);
+    if (isNaN(v2)) { showToast('請輸入第二個數值（如舒張壓）', 'warning'); return; }
+    body.value2 = v2;
+  }
+
+  fetch(API + '/vitals/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(function(r) {
+      if (!r.ok) return r.text().then(function(t) { throw new Error(t || ('HTTP ' + r.status)); });
+      return r.json();
+    })
+    .then(function() {
+      showToast('已記錄 ' + def.label + ' = ' + v + (def.unit ? ' ' + def.unit : ''), 'success');
+      // 清空輸入
+      var i1 = document.getElementById('vit-value'); if (i1) i1.value = '';
+      var i2 = document.getElementById('vit-value2'); if (i2) i2.value = '';
+      if (notesEl) notesEl.value = '';
+      refreshVitalsData();
+    })
+    .catch(function(e) { showToast('記錄失敗：' + e.message, 'error'); });
+}
+
+function refreshVitalsData() {
+  var pid = getStablePatientId();
+  fetch(API + '/vitals/?patient_id=' + pid + '&days=180')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _vitalsCache = data.vitals || [];
+      renderVitalSummary();
+      renderVitalHistory();
+    })
+    .catch(function() {
+      _vitalsCache = [];
+      var s = document.getElementById('vit-summary-grid');
+      if (s) s.innerHTML = '<p class="sym-empty">// 暫時無法載入紀錄，請確認後端是否啟動。</p>';
+    });
+}
+
+function renderVitalSummary() {
+  var el = document.getElementById('vit-summary-grid');
+  if (!el) return;
+  var enabled = getEnabledVitalIds();
+  var customs = getCustomVitalDefs();
+
+  // Build display list = enabled standard + customs
+  var entries = [];
+  VITAL_METRICS.forEach(function(m) {
+    if (enabled.indexOf(m.id) >= 0) entries.push({ key: m.id, def: m });
+  });
+  customs.forEach(function(c) {
+    entries.push({ key: 'custom::' + c.label, def: { id: 'custom', label: c.label, unit: c.unit || '', icon: 'sparkles', color: 'aqua' }, customLabel: c.label });
+  });
+
+  if (entries.length === 0) {
+    el.innerHTML = '<p class="sym-empty">// 尚未啟用任何指標 — 從下方勾選你想追蹤的項目。</p>';
+    return;
+  }
+
+  el.innerHTML = entries.map(function(e) {
+    var def = e.def;
+    // 找最新一筆
+    var latest = _vitalsCache.find(function(r) {
+      if (e.customLabel) return r.metric_type === 'custom' && r.label === e.customLabel;
+      return r.metric_type === def.id;
+    });
+
+    var valHtml = '<span class="vsc-empty">尚無紀錄</span>';
+    var timeHtml = '';
+    if (latest) {
+      var v = latest.value;
+      var v2 = latest.value2;
+      valHtml = '<span class="vsc-val">' + v +
+        (v2 != null ? ' / ' + v2 : '') +
+        '</span><span class="vsc-unit">' + (latest.unit || def.unit || '') + '</span>';
+      var t = latest.recorded_at ? new Date(latest.recorded_at) : null;
+      if (t && !isNaN(t.getTime())) {
+        timeHtml = '<span class="vsc-time">' + _vitalRelTime(t) + '</span>';
+      }
+    }
+
+    return (
+      '<button class="vit-summary-card scc-' + (def.color || 'mint') + '" onclick="quickRecordVital(\'' +
+        (e.customLabel ? 'custom::' + escapeHtml(e.customLabel).replace(/'/g, "\\'") : def.id) + '\')" type="button">' +
+        '<div class="vsc-head"><i data-lucide="' + def.icon + '"></i><span>' + escapeHtml(def.label) + '</span></div>' +
+        '<div class="vsc-body">' + valHtml + '</div>' +
+        '<div class="vsc-foot">' + timeHtml + '<span class="vsc-add">+ 記錄</span></div>' +
+      '</button>'
+    );
+  }).join('');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _vitalRelTime(d) {
+  var diffMs = Date.now() - d.getTime();
+  var diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return '剛剛';
+  if (diffMin < 60) return diffMin + ' 分鐘前';
+  var diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return diffHr + ' 小時前';
+  var diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return diffDay + ' 天前';
+  return d.toISOString().slice(0, 10);
+}
+
+function quickRecordVital(value) {
+  var sel = document.getElementById('vit-metric-select');
+  if (sel) {
+    sel.value = value;
+    onVitalMetricChange();
+    var input = document.getElementById('vit-value');
+    if (input) input.focus();
+    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function renderVitalHistory() {
+  var listEl = document.getElementById('vit-history-list');
+  var tagEl = document.getElementById('vit-history-tag');
+  var filterEl = document.getElementById('vit-history-filter');
+  if (!listEl) return;
+
+  var filter = filterEl ? filterEl.value : '';
+  var rows = _vitalsCache.slice();
+  if (filter) {
+    if (filter.indexOf('custom::') === 0) {
+      var customLabel = filter.slice('custom::'.length);
+      rows = rows.filter(function(r) { return r.metric_type === 'custom' && r.label === customLabel; });
+    } else {
+      rows = rows.filter(function(r) { return r.metric_type === filter; });
+    }
+  }
+
+  if (tagEl) tagEl.textContent = rows.length + ' entries';
+
+  if (rows.length === 0) {
+    listEl.innerHTML = '<p class="sym-empty">// 此範圍尚無紀錄。</p>';
+    return;
+  }
+
+  listEl.innerHTML = '<ul class="vit-history">' + rows.slice(0, 60).map(function(r) {
+    var t = r.recorded_at ? new Date(r.recorded_at) : null;
+    var dateStr = (t && !isNaN(t.getTime())) ? (t.toISOString().slice(0, 10) + ' ' + t.toTimeString().slice(0, 5)) : '';
+    var valStr = r.value + (r.value2 != null ? ' / ' + r.value2 : '');
+    return '<li class="vit-history-row">' +
+      '<span class="vh-date">' + dateStr + '</span>' +
+      '<span class="vh-name">' + escapeHtml(r.label || r.metric_type) + '</span>' +
+      '<span class="vh-val"><strong>' + valStr + '</strong> <small>' + escapeHtml(r.unit || '') + '</small></span>' +
+      (r.notes ? '<span class="vh-notes">' + escapeHtml(r.notes) + '</span>' : '') +
+      '<button class="vh-del" onclick="deleteVitalRecord(\'' + r.id + '\')" title="刪除">×</button>' +
+      '</li>';
+  }).join('') + '</ul>';
+}
+
+function deleteVitalRecord(id) {
+  if (!confirm('刪除這筆紀錄？')) return;
+  fetch(API + '/vitals/' + id, { method: 'DELETE' })
+    .then(function() { refreshVitalsData(); })
+    .catch(function() { showToast('刪除失敗', 'error'); });
+}
+
+function syncVitalsToDoctor() {
+  var pid = getStablePatientId();
+  var resultEl = document.getElementById('vit-sync-result');
+  if (resultEl) resultEl.innerHTML = '<p class="sym-empty">// 整理中...</p>';
+
+  fetch(API + '/vitals/doctor/' + pid + '?days=30')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!resultEl) return;
+      var metrics = data.metrics || {};
+      var keys = Object.keys(metrics);
+      if (keys.length === 0) {
+        resultEl.innerHTML = '<p class="sym-empty">// 最近 30 天沒有紀錄可匯整。</p>';
+        return;
+      }
+      var rows = keys.map(function(k) {
+        var m = metrics[k];
+        var latest = m.latest || {};
+        var lv = latest.value + (latest.value2 != null ? ' / ' + latest.value2 : '');
+        return '<li class="vit-sync-row">' +
+          '<span class="vh-name">' + escapeHtml(m.label || k) + '</span>' +
+          '<span class="vh-val"><strong>' + lv + '</strong> <small>' + escapeHtml(m.unit || '') + '</small></span>' +
+          '<span class="vh-meta">' + m.count + ' 筆 / 30 天</span>' +
+          '</li>';
+      }).join('');
+      resultEl.innerHTML =
+        '<p class="vit-sync-ok">✓ 已匯整 ' + data.total_records + ' 筆紀錄至醫師端摘要：</p>' +
+        '<ul class="vit-sync-list">' + rows + '</ul>';
+      showToast('已匯整 ' + data.total_records + ' 筆紀錄給醫師', 'success');
+    })
+    .catch(function(e) {
+      if (resultEl) resultEl.innerHTML = '<p class="sym-empty">// 同步失敗：' + e.message + '</p>';
+    });
+}
 
 // ─── Service Worker ───────────────────────────────────────
 

@@ -3694,3 +3694,273 @@ html[data-mode="senior"] *:focus-visible {
   outline-offset: 3px;
 }
 
+
+/* ─── Vitals Page (生理紀錄) ──────────────────────────────── */
+.vit-page { display: flex; flex-direction: column; gap: 18px; }
+
+/* Summary cards grid */
+.vit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.vit-summary-card {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+.vit-summary-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--app-mint);
+  opacity: 0.85;
+}
+.vit-summary-card.scc-aqua::before { background: var(--app-aqua); }
+.vit-summary-card.scc-pink::before { background: var(--app-pink); }
+.vit-summary-card.scc-blue::before { background: var(--app-blue); }
+.vit-summary-card:hover {
+  border-color: var(--app-mint);
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px var(--app-glow);
+}
+.vsc-head {
+  display: flex; align-items: center; gap: 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+  color: var(--app-text-dim);
+  letter-spacing: 0.5px;
+}
+.vsc-head svg { width: 16px; height: 16px; color: var(--app-mint); }
+.vsc-body {
+  display: flex; align-items: baseline; gap: 6px;
+  font-family: "JetBrains Mono", monospace;
+}
+.vsc-val {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--app-mint);
+  letter-spacing: -0.5px;
+}
+.vsc-unit {
+  font-size: 0.85rem;
+  color: var(--app-text-dim);
+}
+.vsc-empty {
+  font-size: 0.95rem;
+  color: var(--app-text-dim);
+  font-style: italic;
+}
+.vsc-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.75rem;
+  color: var(--app-text-dim);
+  font-family: "JetBrains Mono", monospace;
+}
+.vsc-add { color: var(--app-mint); opacity: 0.85; }
+
+/* Pick-metrics chips */
+.vit-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.vit-pick {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--app-text-dim);
+  font-family: "JetBrains Mono", monospace;
+  transition: all 0.15s;
+}
+.vit-pick:hover { border-color: var(--app-mint); }
+.vit-pick.on {
+  background: rgba(176,244,229,0.12);
+  border-color: var(--app-mint);
+  color: var(--app-text);
+}
+.vit-pick input { accent-color: var(--app-mint); margin: 0; }
+.vit-pick svg { width: 14px; height: 14px; }
+.vit-pick small { color: var(--app-text-dim); margin-left: auto; font-size: 0.75rem; }
+
+/* Record bar */
+.vit-record-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin-bottom: 8px;
+}
+.vit-record-bar select,
+.vit-input-area input,
+.vit-custom-form input {
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  padding: 9px 12px;
+  color: var(--app-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.vit-record-bar select { min-width: 180px; }
+.vit-record-bar select:focus,
+.vit-input-area input:focus,
+.vit-custom-form input:focus {
+  border-color: var(--app-term);
+  box-shadow: 0 0 0 2px rgba(94,234,212,0.2);
+}
+.vit-input-area { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 220px; }
+.vit-single, .vit-dual { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vit-single input, .vit-dual input {
+  flex: 1; min-width: 90px; max-width: 160px;
+}
+.vit-sep { font-family: "JetBrains Mono", monospace; color: var(--app-text-dim); font-size: 1.1rem; }
+.vit-unit {
+  font-family: "JetBrains Mono", monospace;
+  color: var(--app-text-dim);
+  font-size: 0.9rem;
+  min-width: 50px;
+}
+.vit-mini-btn {
+  background: transparent;
+  border: 1px dashed var(--app-mint);
+  color: var(--app-mint);
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.vit-mini-btn:hover { background: rgba(176,244,229,0.12); }
+.vit-hint {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--app-text-dim);
+  font-family: "JetBrains Mono", monospace;
+  margin-top: 4px;
+}
+
+/* Custom metric */
+.vit-custom-row {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  margin-top: 14px;
+}
+.vit-custom-list { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.vit-custom-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(138,237,221,0.12);
+  border: 1px solid var(--app-aqua);
+  color: var(--app-text);
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  font-family: "JetBrains Mono", monospace;
+}
+.vit-custom-chip button {
+  background: transparent; border: none; color: var(--app-pink);
+  cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 2px;
+}
+.vit-custom-form {
+  margin-top: 14px;
+  padding: 14px;
+  background: rgba(0,0,0,0.22);
+  border: 1px dashed var(--app-border);
+  border-radius: 4px;
+}
+.vit-custom-form input { width: 100%; margin-top: 4px; }
+
+/* History */
+.vit-history-filter {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.vit-history-filter select {
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.vit-history { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.vit-history-row {
+  display: grid;
+  grid-template-columns: 130px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.88rem;
+}
+.vh-date { color: var(--app-text-dim); font-size: 0.8rem; }
+.vh-name { color: var(--app-text); font-weight: 600; }
+.vh-val { color: var(--app-mint); }
+.vh-val small { color: var(--app-text-dim); font-weight: 400; }
+.vh-notes {
+  grid-column: 2 / -1;
+  color: var(--app-text-dim);
+  font-size: 0.82rem;
+  font-style: italic;
+  margin-top: 2px;
+}
+.vh-del {
+  background: transparent; border: none; color: var(--app-pink);
+  cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 4px 8px;
+  border-radius: 3px;
+}
+.vh-del:hover { background: rgba(255,179,209,0.15); }
+
+/* Sync to doctor */
+.vit-sync-result { margin-top: 12px; }
+.vit-sync-ok {
+  font-family: "JetBrains Mono", monospace;
+  color: var(--app-mint);
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+.vit-sync-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.vit-sync-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.18);
+  border-left: 2px solid var(--app-aqua);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+}
+.vh-meta { color: var(--app-text-dim); font-size: 0.78rem; }
+
+/* Senior mode tweaks for vitals */
+html[data-mode="senior"] .vit-summary-card { padding: 18px 20px; }
+html[data-mode="senior"] .vsc-val { font-size: 1.9rem; }
+html[data-mode="senior"] .vit-pick { font-size: 1rem; padding: 10px 14px; }
+html[data-mode="senior"] .vit-history-row {
+  grid-template-columns: 1fr;
+  gap: 4px;
+  font-size: 1rem;
+  padding: 14px 16px;
+}
+html[data-mode="senior"] .vh-date { font-size: 0.95rem; }
+html[data-mode="senior"] .vit-record-bar select,
+html[data-mode="senior"] .vit-input-area input,
+html[data-mode="senior"] .vit-custom-form input {
+  font-size: 1.05rem;
+  padding: 12px 14px;
+}
