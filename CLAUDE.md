@@ -78,3 +78,10 @@ cd mcp_server && uv sync
 - 主分支：`main`
 - 功能分支命名：`claude/feature-name`
 - 每個功能開獨立 PR，不直接 push main
+
+---
+
+## 部署規則
+
+- Production domain：`www.mdpiece.life/`（由 Vercel 綁定 `main` 分支）
+- 每次部署直接部署到 `www.mdpiece.life/`：當使用者說「部署」時，將 PR 合併到 `main`，由 Vercel 自動發布到 production domain
