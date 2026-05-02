@@ -3650,6 +3650,7 @@ html[data-mode="senior"] .vt-bmi-meta {
   width: 50px;
   height: 152px;
   cursor: pointer;
+  overflow: hidden;
   border: 1.8px solid #2a1810;
   border-radius: 3px 4px 3px 4px;
   background: var(--book-color, #C9B4A0);
@@ -3720,12 +3721,18 @@ html[data-mode="senior"] .vt-bmi-meta {
   color: #2a1810;
 }
 .book .book-tag {
-  font-size: 0.50rem;
-  letter-spacing: 1px;
-  opacity: .55;
+  writing-mode: vertical-rl;
+  text-orientation: sideways;
+  font-size: 0.5rem;
+  letter-spacing: 2px;
+  opacity: .5;
   text-transform: uppercase;
-  margin-bottom: 2px;
   color: #2a1810;
+  white-space: nowrap;
+  padding: 2px 0 4px;
+  line-height: 1;
+  max-height: 70px;
+  overflow: hidden;
 }
 
 /* 高度自然變化 */
