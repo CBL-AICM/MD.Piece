@@ -103,7 +103,7 @@ function placeholderPage(label, hint, iconName, slug, pct) {
     </section>
   `;
 }
-const vitals   = () => placeholderPage('生理紀錄',  '記錄血壓、心率、體重、體溫等日常生理數據。', 'activity', 'vitals', 42);
+// 生理紀錄使用獨立 vitals() 函式（見下方）
 const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note', 'memo', 80);
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
@@ -725,6 +725,436 @@ function openVisitDatePrompt() {
     nextVisit: nextVisit.trim() || null
   });
   showPage('symptoms');
+}
+
+// ═══════════════════════════════════════════════════════════
+// 生理紀錄（VITALS）— 9 預設 + 自訂、BP 雙欄、BMI 自動算、歷史
+// ═══════════════════════════════════════════════════════════
+
+const VITAL_METRICS = [
+  { id:'weight',  zh:'體重', icon:'weight',      unit:'kg',    range:[10,300], step:0.1, color:'mint' },
+  { id:'height',  zh:'身高', icon:'ruler',       unit:'cm',    range:[50,250], step:0.5, color:'aqua' },
+  { id:'bmi',     zh:'BMI',  icon:'gauge',       unit:'',      calc:true,                color:'pink' },
+  { id:'bp',      zh:'血壓', icon:'heart-pulse', unit:'mmHg',  dual:true,                color:'pink' },
+  { id:'glucose', zh:'血糖', icon:'droplet',     unit:'mg/dL', range:[40,500], step:1,   color:'blue' },
+  { id:'heart',   zh:'心率', icon:'activity',    unit:'bpm',   range:[30,220], step:1,   color:'pink' },
+  { id:'temp',    zh:'體溫', icon:'thermometer', unit:'°C',    range:[33,42],  step:0.1, color:'pink' },
+  { id:'spo2',    zh:'血氧', icon:'wind',        unit:'%',     range:[70,100], step:1,   color:'aqua' },
+  { id:'waist',   zh:'腰圍', icon:'circle',      unit:'cm',    range:[40,200], step:0.5, color:'mint' },
+];
+
+const DEFAULT_TRACKED = ['weight','bp','heart','glucose'];
+
+function getTrackedMetricIds() {
+  try {
+    const raw = localStorage.getItem('mdpiece_vitals_tracked');
+    if (raw === null) return DEFAULT_TRACKED.slice();
+    return JSON.parse(raw);
+  } catch { return DEFAULT_TRACKED.slice(); }
+}
+function setTrackedMetricIds(ids) {
+  localStorage.setItem('mdpiece_vitals_tracked', JSON.stringify(ids));
+}
+function getCustomMetrics() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_vitals_custom') || '[]'); }
+  catch { return []; }
+}
+function saveCustomMetric(m) {
+  const arr = getCustomMetrics();
+  arr.push(m);
+  localStorage.setItem('mdpiece_vitals_custom', JSON.stringify(arr));
+}
+function deleteCustomMetric(id) {
+  localStorage.setItem('mdpiece_vitals_custom',
+    JSON.stringify(getCustomMetrics().filter(m => m.id !== id)));
+  // also remove from tracked
+  setTrackedMetricIds(getTrackedMetricIds().filter(x => x !== id));
+}
+function getAllMetrics() {
+  return VITAL_METRICS.concat(getCustomMetrics().map(m => ({ ...m, custom: true, color: m.color || 'blue' })));
+}
+function findMetric(id) {
+  return getAllMetrics().find(m => m.id === id);
+}
+
+function getVitalEntries() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_vitals_entries') || '[]'); }
+  catch { return []; }
+}
+function saveVitalEntry(e) {
+  const arr = getVitalEntries();
+  arr.push(e);
+  localStorage.setItem('mdpiece_vitals_entries', JSON.stringify(arr));
+}
+function deleteVitalEntry(id) {
+  localStorage.setItem('mdpiece_vitals_entries',
+    JSON.stringify(getVitalEntries().filter(e => e.id !== id)));
+}
+function getLatestEntry(metricId) {
+  const arr = getVitalEntries().filter(e => e.metricId === metricId);
+  if (arr.length === 0) return null;
+  arr.sort((a, b) => new Date(b.recordedAt) - new Date(a.recordedAt));
+  return arr[0];
+}
+function calculateBMI() {
+  const w = getLatestEntry('weight'), h = getLatestEntry('height');
+  if (!w || !h) return null;
+  const wKg = parseFloat(w.value);
+  const hM = parseFloat(h.value) / 100;
+  if (!wKg || !hM) return null;
+  return (wKg / (hM * hM)).toFixed(1);
+}
+
+function vitals() {
+  const tracked = getTrackedMetricIds();
+  const allMetrics = getAllMetrics();
+  const trackedMetrics = tracked.map(id => allMetrics.find(m => m.id === id)).filter(Boolean);
+  const totalEntries = getVitalEntries().length;
+  const latestAcross = getVitalEntries().sort((a,b) => new Date(b.recordedAt) - new Date(a.recordedAt))[0];
+  const lastUpdate = latestAcross ? new Date(latestAcross.recordedAt) : null;
+  const lastUpdateStr = lastUpdate ? `${(lastUpdate.getMonth()+1)}/${lastUpdate.getDate()} ${lastUpdate.toTimeString().slice(0,5)}` : '—';
+
+  return `
+    <div class="sym-page">
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ status</span>
+          <span class="ts-tag">vitals_overview</span>
+        </header>
+        <div class="ts-body">
+          <div class="ts-stat-grid">
+            <div class="ts-stat">
+              <span class="ts-stat-label">// 追蹤中</span>
+              <span class="ts-stat-num">${trackedMetrics.length}</span>
+              <span class="ts-stat-unit">項指標</span>
+            </div>
+            <div class="ts-stat">
+              <span class="ts-stat-label">// 總紀錄</span>
+              <span class="ts-stat-num">${totalEntries}</span>
+              <span class="ts-stat-unit">筆</span>
+            </div>
+            <div class="ts-stat">
+              <span class="ts-stat-label">// 自訂指標</span>
+              <span class="ts-stat-num">${getCustomMetrics().length}</span>
+              <span class="ts-stat-unit">項</span>
+            </div>
+            <div class="ts-stat">
+              <span class="ts-stat-label">// 上次更新</span>
+              <span class="ts-stat-num sm">${lastUpdateStr}</span>
+              <span class="ts-stat-unit">${lastUpdate ? '已記錄' : '尚無紀錄'}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ ./track --setup</span>
+          <span class="ts-tag">${tracked.length} selected</span>
+        </header>
+        <div class="ts-body">
+          <p class="sym-instruct">勾選你要追蹤的指標（可隨時調整）：</p>
+          <div class="vt-toggle-grid">
+            ${allMetrics.map(m => {
+              const on = tracked.includes(m.id);
+              return `
+                <button class="vt-toggle ${on ? 'on' : ''}" onclick="toggleVitalTracked('${m.id}')" type="button">
+                  <span class="vt-toggle-icon scc-${m.color}"><i data-lucide="${m.icon}"></i></span>
+                  <span class="vt-toggle-name">${m.zh}${m.unit ? ` <small>${m.unit}</small>` : ''}</span>
+                  <span class="vt-toggle-check">${on ? '✓' : ''}</span>
+                  ${m.custom ? `<button class="vt-cm-del" onclick="deleteCustomMetricAndRefresh(event,'${m.id}')" title="刪除自訂">×</button>` : ''}
+                </button>
+              `;
+            }).join('')}
+          </div>
+          <div class="vt-add-custom">
+            <span class="vt-add-prompt">$ add-metric</span>
+            <input id="vt-custom-name" placeholder="名稱（例：尿酸）" maxlength="20" />
+            <input id="vt-custom-unit" placeholder="單位（例：mg/dL）" maxlength="10" />
+            <button class="primary-btn vt-small-btn" onclick="addCustomMetricUI()" type="button">
+              <i data-lucide="plus"></i><span>新增</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="term-section" id="vt-logform" style="display:none">
+        <header class="ts-head">
+          <span class="ts-prompt">$ ./record</span>
+          <span class="ts-tag" id="vt-logform-tag">—</span>
+        </header>
+        <div class="ts-body" id="vt-logform-body"></div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ snapshot</span>
+          <span class="ts-tag">latest_per_metric</span>
+        </header>
+        <div class="ts-body">
+          ${trackedMetrics.length === 0 ? `
+            <p class="sym-empty">// 還沒有追蹤任何指標 — 上面勾選一個開始。</p>
+          ` : `
+            <div class="vt-snapshot-grid">
+              ${trackedMetrics.map(m => renderVitalSnapshotCard(m)).join('')}
+            </div>
+          `}
+        </div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ tail -n 30 vitals.log</span>
+          <span class="ts-tag">history</span>
+        </header>
+        <div class="ts-body">
+          ${renderVitalHistory()}
+        </div>
+      </section>
+
+    </div>
+  `;
+}
+
+function renderVitalSnapshotCard(m) {
+  const latest = getLatestEntry(m.id);
+  let valDisplay, timeStr = '尚無紀錄', isBmi = m.id === 'bmi';
+  if (m.id === 'bmi') {
+    const bmi = calculateBMI();
+    if (bmi) {
+      valDisplay = `<span class="vt-val">${bmi}</span>`;
+      timeStr = '依最新身高/體重計算';
+    } else {
+      valDisplay = `<span class="vt-val sm">—</span>`;
+      timeStr = '需要身高與體重';
+    }
+  } else if (latest) {
+    if (m.dual) {
+      valDisplay = `<span class="vt-val">${latest.value}/${latest.value2}</span><span class="vt-unit">${m.unit}</span>`;
+    } else {
+      valDisplay = `<span class="vt-val">${latest.value}</span><span class="vt-unit">${m.unit || ''}</span>`;
+    }
+    const d = new Date(latest.recordedAt);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dDay = new Date(d); dDay.setHours(0,0,0,0);
+    const diffDays = Math.round((today - dDay) / 86400000);
+    if (diffDays === 0) timeStr = `今天 ${d.toTimeString().slice(0,5)}`;
+    else if (diffDays === 1) timeStr = `昨天 ${d.toTimeString().slice(0,5)}`;
+    else timeStr = `${diffDays} 天前`;
+  } else {
+    valDisplay = `<span class="vt-val sm">—</span>`;
+  }
+  return `
+    <div class="vt-snap scc-${m.color}-bd">
+      <div class="vt-snap-head">
+        <span class="vt-snap-icon scc-${m.color}"><i data-lucide="${m.icon}"></i></span>
+        <span class="vt-snap-name">${m.zh}</span>
+      </div>
+      <div class="vt-snap-body">
+        ${valDisplay}
+      </div>
+      <div class="vt-snap-foot">
+        <span class="vt-snap-time">${timeStr}</span>
+        <button class="vt-rec-btn" onclick="openVitalLog('${m.id}')" type="button">
+          ${isBmi ? '計算' : '記一筆'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderVitalHistory() {
+  const all = getVitalEntries().slice().sort((a, b) => new Date(b.recordedAt) - new Date(a.recordedAt));
+  if (all.length === 0) {
+    return '<p class="sym-empty">// 還沒有任何紀錄 — 點上面快覽卡片的「記一筆」開始。</p>';
+  }
+  const filterMetric = window.__vtFilter || 'all';
+  const filtered = filterMetric === 'all' ? all : all.filter(e => e.metricId === filterMetric);
+  const allMetrics = getAllMetrics();
+  const filterOptions = '<option value="all">全部指標</option>' +
+    allMetrics.map(m => `<option value="${m.id}" ${filterMetric === m.id ? 'selected' : ''}>${m.zh}</option>`).join('');
+  const rows = filtered.slice(0, 30).map(e => {
+    const m = allMetrics.find(x => x.id === e.metricId);
+    const d = new Date(e.recordedAt);
+    const dateStr = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} ${d.toTimeString().slice(0,5)}`;
+    const valStr = m?.dual ? `${e.value}/${e.value2}` : `${e.value}`;
+    return `
+      <li class="vt-hist-row">
+        <span class="vh-date">${dateStr}</span>
+        <span class="vh-name scc-${m?.color || 'blue'}">${m?.zh || e.metricId}</span>
+        <span class="vh-val"><strong>${valStr}</strong> <small>${m?.unit || ''}</small></span>
+        ${e.notes ? `<span class="vh-notes">${escapeHtml(e.notes)}</span>` : ''}
+        <button class="se-del" onclick="deleteVitalEntryAndRefresh('${e.id}')" title="刪除">×</button>
+      </li>
+    `;
+  }).join('');
+  return `
+    <div class="vt-hist-filter">
+      <label class="vt-hist-label">$ filter</label>
+      <select class="vt-hist-select" onchange="setVitalFilter(this.value)">
+        ${filterOptions}
+      </select>
+      <span class="vt-hist-count">${filtered.length} 筆</span>
+    </div>
+    <ul class="vt-hist-list">${rows}</ul>
+  `;
+}
+
+function setVitalFilter(v) {
+  window.__vtFilter = v;
+  showPage('vitals');
+}
+
+function toggleVitalTracked(id) {
+  const cur = getTrackedMetricIds();
+  const next = cur.includes(id) ? cur.filter(x => x !== id) : cur.concat(id);
+  setTrackedMetricIds(next);
+  showPage('vitals');
+}
+
+function addCustomMetricUI() {
+  const name = document.getElementById('vt-custom-name').value.trim();
+  const unit = document.getElementById('vt-custom-unit').value.trim();
+  if (!name) { alert('請輸入指標名稱'); return; }
+  const id = 'custom-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  const colors = ['blue','aqua','mint','pink'];
+  saveCustomMetric({
+    id, zh: name, icon: 'tag', unit,
+    color: colors[Math.floor(Math.random() * colors.length)]
+  });
+  // auto-track newly added
+  setTrackedMetricIds(getTrackedMetricIds().concat(id));
+  showPage('vitals');
+}
+
+function deleteCustomMetricAndRefresh(ev, id) {
+  ev.stopPropagation();
+  if (!confirm('刪除此自訂指標？已記錄的歷史會保留。')) return;
+  deleteCustomMetric(id);
+  showPage('vitals');
+}
+
+function openVitalLog(metricId) {
+  const m = findMetric(metricId);
+  if (!m) return;
+  const form = document.getElementById('vt-logform');
+  document.getElementById('vt-logform-tag').textContent = m.id + '.entry';
+  let body = `
+    <div class="lf-explain">
+      <div class="lf-icon scc-${m.color}"><i data-lucide="${m.icon}"></i></div>
+      <div class="lf-info">
+        <h3>${m.zh}${m.unit ? ` <small style="opacity:0.7">${m.unit}</small>` : ''}</h3>
+        <p class="lf-detail">輸入目前數值，可選填備註（例如：飯前/飯後、運動後）。</p>
+      </div>
+    </div>
+    <div class="lf-form">
+  `;
+  if (m.id === 'bmi') {
+    const bmi = calculateBMI();
+    body += `
+      <p class="vt-bmi-note">BMI 由最新身高與體重自動計算 — 不需要手動輸入。</p>
+      <div class="vt-bmi-result">
+        ${bmi ? `<span class="vt-val">${bmi}</span>` : '<span class="vt-val sm">尚無資料</span>'}
+        <span class="vt-bmi-meta">${bmi ? interpretBMI(parseFloat(bmi)) : '請先記錄身高與體重'}</span>
+      </div>
+      <div class="lf-actions">
+        ${bmi ? `<button class="primary-btn" onclick="saveBmiSnapshot('${bmi}')" type="button">
+          <i data-lucide="bookmark"></i><span>記下這次的 BMI</span>
+        </button>` : ''}
+        <button class="secondary-btn" onclick="cancelVitalLog()" type="button">取消</button>
+      </div>
+    `;
+  } else if (m.dual) {
+    body += `
+      <label class="lf-label">收縮壓 / 舒張壓 (${m.unit})</label>
+      <div class="vt-dual-wrap">
+        <input type="number" id="vt-val1" placeholder="例 120" min="40" max="260" step="1" />
+        <span class="vt-dual-sep">/</span>
+        <input type="number" id="vt-val2" placeholder="例 80" min="30" max="160" step="1" />
+        <span class="vt-dual-unit">${m.unit}</span>
+      </div>
+      <label class="lf-label">備註（選填）</label>
+      <textarea id="vt-notes" placeholder="例如：起床後測量、有運動..." rows="2"></textarea>
+      <div class="lf-actions">
+        <button class="primary-btn" onclick="submitVitalEntry('${m.id}')" type="button">
+          <i data-lucide="check"></i><span>新增紀錄</span>
+        </button>
+        <button class="secondary-btn" onclick="cancelVitalLog()" type="button">取消</button>
+      </div>
+    `;
+  } else {
+    body += `
+      <label class="lf-label">數值${m.unit ? ` (${m.unit})` : ''}</label>
+      <input type="number" id="vt-val1" placeholder="輸入數值" ${m.range ? `min="${m.range[0]}" max="${m.range[1]}"` : ''} ${m.step ? `step="${m.step}"` : 'step="any"'} />
+      <label class="lf-label">備註（選填）</label>
+      <textarea id="vt-notes" placeholder="例如：飯前、運動後..." rows="2"></textarea>
+      <div class="lf-actions">
+        <button class="primary-btn" onclick="submitVitalEntry('${m.id}')" type="button">
+          <i data-lucide="check"></i><span>新增紀錄</span>
+        </button>
+        <button class="secondary-btn" onclick="cancelVitalLog()" type="button">取消</button>
+      </div>
+    `;
+  }
+  body += `</div>`;
+  document.getElementById('vt-logform-body').innerHTML = body;
+  form.style.display = 'block';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelVitalLog() {
+  const f = document.getElementById('vt-logform');
+  if (f) f.style.display = 'none';
+}
+
+function submitVitalEntry(metricId) {
+  const m = findMetric(metricId);
+  if (!m) return;
+  const v1 = document.getElementById('vt-val1').value;
+  if (!v1) { alert('請輸入數值'); return; }
+  const entry = {
+    id: 'vt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    metricId,
+    value: parseFloat(v1),
+    recordedAt: new Date().toISOString()
+  };
+  if (m.dual) {
+    const v2 = document.getElementById('vt-val2').value;
+    if (!v2) { alert('請完整輸入收縮 / 舒張壓'); return; }
+    entry.value2 = parseFloat(v2);
+  }
+  const notes = document.getElementById('vt-notes').value.trim();
+  if (notes) entry.notes = notes;
+  saveVitalEntry(entry);
+  showPage('vitals');
+}
+
+function saveBmiSnapshot(bmi) {
+  saveVitalEntry({
+    id: 'vt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    metricId: 'bmi',
+    value: parseFloat(bmi),
+    notes: 'auto-calculated',
+    recordedAt: new Date().toISOString()
+  });
+  showPage('vitals');
+}
+
+function deleteVitalEntryAndRefresh(id) {
+  if (!confirm('刪除這筆紀錄？')) return;
+  deleteVitalEntry(id);
+  showPage('vitals');
+}
+
+function interpretBMI(v) {
+  if (v < 18.5) return '體重過輕';
+  if (v < 24)   return '健康範圍';
+  if (v < 27)   return '體重過重';
+  if (v < 30)   return '輕度肥胖';
+  if (v < 35)   return '中度肥胖';
+  return '重度肥胖';
 }
 
 async function analyzeSymptoms() {
