@@ -2092,83 +2092,175 @@ function generateMedReport() {
     });
 }
 
-// ─── 衛教專欄（書架 / 筆記本 三層 UI）────────────────────────
+// ─── 衛教專欄（書架 / 翻開筆記本 兩層 UI）─────────────────────
 
 var _eduDiseases = [];
 var _eduSelectedDisease = null;
 var _eduSelectedBook = null;
+var _eduSelectedDimension = null;  // 給疾病百科用：當前選到的維度
+var _eduSelectedTopic = null;      // 給一般書本用：當前選到的章節 key
 
-// 12 本書，分成三層書架。每本書打開後是一本筆記本，內含多個章節。
+// 風濕免疫專區 + 一般主題，共 19 本書，分四層書架。
+// 點開書 → 直接進入筆記本跨頁：左頁是章節清單、右頁就是內容。
 var EDU_BOOKS = [
-  // ── 第一層：認識與辨識 ──
+  // ── 第一層：風濕免疫專區（與風濕科合作，主力衛教） ──
+  { key: "rheum_overview", title: "自體免疫總論", tag: "AUTOIMMUNE", color: "c-purple", size: "tall", icon: "shield-alert",
+    shelf: 0, intro: "免疫系統為什麼會誤把自己當敵人？了解風濕免疫疾病的共通語言。",
+    topics: [
+      { key: "what_is_autoimm", label: "什麼是自體免疫疾病", desc: "免疫失衡如何造成多系統發炎" },
+      { key: "common_sx",       label: "常見警訊",         desc: "晨僵、雷諾現象、皮疹、不明發燒" },
+      { key: "labs_panel",      label: "免疫抽血看什麼",   desc: "ANA、RF、anti-CCP、補體、ENA panel" },
+      { key: "flare",           label: "什麼是疾病活動度", desc: "DAS28、SLEDAI、BASDAI 簡介" },
+      { key: "vac_immune",      label: "疫苗與免疫抑制",   desc: "活性疫苗禁忌、流感與肺炎接種時機" },
+      { key: "preg_plan",       label: "懷孕計畫",         desc: "穩定期再受孕，藥物分級與替換" }
+    ] },
+  { key: "rheum_ra", title: "類風濕關節炎", tag: "RA", color: "c-rose", size: "tall", icon: "hand",
+    shelf: 0, intro: "RA 是免疫系統把自己的關節當敵人。早期治療能保住關節功能。",
+    topics: [
+      { key: "ra_recognize",  label: "認識 RA",       desc: "對稱性多關節腫痛、晨僵超過 30 分鐘" },
+      { key: "ra_diagnosis",  label: "診斷與分級",    desc: "2010 ACR/EULAR 分類標準" },
+      { key: "ra_labs",       label: "抽血指標",      desc: "RF、anti-CCP、ESR、CRP 怎麼看" },
+      { key: "ra_dmards",     label: "傳統 DMARD",    desc: "MTX、HCQ、SSZ、Leflunomide" },
+      { key: "ra_biologics",  label: "生物製劑",      desc: "TNFi、IL-6i、JAKi 的選擇" },
+      { key: "ra_joint_care", label: "關節保護與運動",desc: "省力動作、副木、水中運動" },
+      { key: "ra_pregnancy",  label: "RA 與懷孕",     desc: "備孕、孕期、哺乳的藥物調整" }
+    ] },
+  { key: "rheum_sle", title: "紅斑性狼瘡", tag: "SLE", color: "c-red", size: "tall", icon: "flame",
+    shelf: 0, intro: "SLE 像千面女郎，可影響皮膚、關節、腎臟、神經、血液。",
+    topics: [
+      { key: "sle_what",      label: "什麼是 SLE",      desc: "為什麼會發病、誰是高風險族群" },
+      { key: "sle_criteria",  label: "分類標準",        desc: "2019 EULAR/ACR 分類條目" },
+      { key: "sle_labs",      label: "抽血指標",        desc: "ANA、anti-dsDNA、anti-Sm、補體 C3/C4" },
+      { key: "sle_lupus_neph",label: "狼瘡腎炎",        desc: "蛋白尿、腎切片、I–VI 級分類" },
+      { key: "sle_meds",      label: "用藥地圖",        desc: "HCQ、類固醇、MMF、Belimumab、Anifrolumab" },
+      { key: "sle_sun",       label: "防曬與生活",      desc: "UV 觸發、SPF50+、避免日正當中" },
+      { key: "sle_pregnancy", label: "SLE 與懷孕",      desc: "穩定 6 個月以上、低劑量 ASA" }
+    ] },
+  { key: "rheum_as", title: "僵直性脊椎炎", tag: "AS / axSpA", color: "c-indigo", size: "medium", icon: "spine",
+    shelf: 0, intro: "年輕男性的下背痛不是閃到腰——可能是 AS 在敲門。",
+    topics: [
+      { key: "as_back_pain", label: "發炎性下背痛",   desc: "晨僵、活動後改善、夜間痛醒" },
+      { key: "as_hlab27",    label: "HLA-B27 與影像", desc: "薦腸關節炎 X 光、MRI 骨髓水腫" },
+      { key: "as_exercise",  label: "運動與姿勢",     desc: "伸展、深呼吸、避免長時間彎腰" },
+      { key: "as_meds",      label: "NSAID 與生物製劑",desc: "TNFi、IL-17i 的健保條件" },
+      { key: "as_comorb",    label: "相關共病",       desc: "葡萄膜炎、銀屑病、發炎性腸道" },
+      { key: "as_daily",     label: "生活與工作",     desc: "辦公桌、開車、睡姿建議" }
+    ] },
+  { key: "rheum_gout", title: "痛風與高尿酸", tag: "GOUT", color: "c-amber", size: "short", icon: "zap",
+    shelf: 0, intro: "痛起來像被火燒——但只要好好控尿酸，就不必再忍。",
+    topics: [
+      { key: "gout_attack", label: "急性發作怎麼辦",   desc: "冰敷、抬高、NSAID 或秋水仙素" },
+      { key: "gout_diet",   label: "飲食地雷",         desc: "海鮮、內臟、含糖飲料、酒類" },
+      { key: "gout_safe",   label: "可以放心吃的",     desc: "乳製品、咖啡、櫻桃、足量水" },
+      { key: "gout_uric",   label: "降尿酸藥物",       desc: "Allopurinol、Febuxostat、Benzbromarone" },
+      { key: "gout_tophi",  label: "痛風石與腎結石",   desc: "尿酸鹽結晶造成的長期傷害" },
+      { key: "gout_metab",  label: "與代謝症候群",     desc: "高血壓、糖尿病、脂肪肝的連動" }
+    ] },
+  { key: "rheum_sjogren", title: "乾燥症", tag: "SJÖGREN", color: "c-cyan", size: "medium", icon: "droplet",
+    shelf: 0, intro: "口乾、眼乾不只是老化——也可能是免疫系統打到外分泌腺。",
+    topics: [
+      { key: "sj_self_check", label: "口乾眼乾自我評估", desc: "Schirmer test、唾液流速、SSI 量表" },
+      { key: "sj_labs",       label: "診斷工具",         desc: "anti-SSA/Ro、anti-SSB/La、唇腺切片" },
+      { key: "sj_eye_care",   label: "眼睛照護",         desc: "人工淚液、淚管栓塞、Cyclosporine" },
+      { key: "sj_mouth_care", label: "口腔照護",         desc: "人工唾液、Pilocarpine、含氟漱口" },
+      { key: "sj_systemic",   label: "全身性表現",       desc: "周邊神經病變、肺間質、腎小管酸中毒" },
+      { key: "sj_lymphoma",   label: "淋巴瘤風險",       desc: "腫大唾液腺與長期追蹤" }
+    ] },
+  { key: "rheum_fibro", title: "纖維肌痛症", tag: "FM", color: "c-pink", size: "short", icon: "waves",
+    shelf: 0, intro: "全身廣泛性疼痛、卻找不到發炎——纖維肌痛症需要被看見。",
+    topics: [
+      { key: "fm_what",      label: "中樞性敏感化",   desc: "為什麼疼痛訊號被放大" },
+      { key: "fm_criteria",  label: "診斷標準",       desc: "2016 ACR：WPI + SSS 評分" },
+      { key: "fm_sleep",     label: "睡眠與情緒",     desc: "睡眠衛生與認知行為治療" },
+      { key: "fm_exercise",  label: "漸進式運動",     desc: "水中、瑜珈、太極的劑量" },
+      { key: "fm_meds",      label: "藥物選擇",       desc: "Pregabalin、Duloxetine、Amitriptyline" }
+    ] },
+  { key: "rheum_biologics", title: "生物製劑指南", tag: "BIOLOGICS", color: "c-blue", size: "tall", icon: "syringe",
+    shelf: 0, intro: "生物製劑、JAK 抑制劑：聽起來高科技，其實已是風濕科日常。",
+    topics: [
+      { key: "bio_what",     label: "什麼是生物製劑", desc: "與小分子標靶藥的差別" },
+      { key: "bio_classes",  label: "藥物類別速查",   desc: "TNFi / IL-6 / IL-17 / JAKi / B-cell" },
+      { key: "bio_nhi",      label: "健保給付條件",   desc: "DAS28、申請與續用、半年評估" },
+      { key: "bio_self_inj", label: "居家自行注射",   desc: "皮下注射步驟、針頭處理、儲存" },
+      { key: "bio_infect",   label: "感染預防",       desc: "結核、B 肝、帶狀皰疹疫苗" },
+      { key: "bio_vaccine",  label: "疫苗時機",       desc: "活性疫苗禁忌與最佳接種時間" },
+      { key: "bio_side",     label: "副作用辨識",     desc: "注射部位反應、過敏、肝腎追蹤" }
+    ] },
+
+  // ── 第二層：認識與辨識 ──
   { key: "diseases", title: "疾病百科", tag: "DISEASES", color: "c-brown",  size: "tall",   icon: "book-open-text",
-    shelf: 0, intro: "查找疾病、了解病程、認識六大衛教維度。",
+    shelf: 1, intro: "查找疾病、了解病程、認識六大衛教維度。",
     dynamic: "diseases" },
   { key: "symptoms", title: "症狀辨識", tag: "SYMPTOMS", color: "c-rust",   size: "medium", icon: "search-check",
-    shelf: 0, intro: "學會分辨身體傳來的訊號，知道該不該擔心。",
+    shelf: 1, intro: "學會分辨身體傳來的訊號，知道該不該擔心。",
     topics: [
       { key: "fever",     label: "發燒處理", desc: "什麼時候只是小感冒、什麼時候要就醫" },
       { key: "headache",  label: "頭痛分辨", desc: "緊張型、偏頭痛與危險性頭痛" },
       { key: "chest_pain",label: "胸痛訊號", desc: "心臟、肌肉、消化道的胸痛差異" },
       { key: "abd_pain",  label: "腹痛位置", desc: "依疼痛部位推測可能的器官" },
       { key: "dizzy",     label: "頭暈與眩暈", desc: "姿勢性、耳石症、血壓變化" },
-      { key: "rash",      label: "皮膚紅疹", desc: "蕁麻疹、過敏、感染的辨別" }
+      { key: "joint_pain",label: "關節腫痛",   desc: "對稱、晨僵、紅熱——免疫科的警訊" },
+      { key: "rash",      label: "皮膚紅疹", desc: "蕁麻疹、過敏、感染、自體免疫的辨別" }
     ] },
   { key: "labs", title: "檢驗報告", tag: "LAB DATA", color: "c-blue", size: "short", icon: "flask-conical",
-    shelf: 0, intro: "把抽血、影像、心電圖的數字翻譯成你聽得懂的話。",
+    shelf: 1, intro: "把抽血、影像、心電圖的數字翻譯成你聽得懂的話。",
     topics: [
       { key: "cbc",      label: "血液常規 CBC", desc: "白血球、紅血球、血紅素、血小板" },
       { key: "lipid",    label: "血脂三項", desc: "總膽固醇、LDL、HDL、三酸甘油脂" },
       { key: "liver",    label: "肝功能",  desc: "AST、ALT、Bilirubin、ALP" },
       { key: "kidney",   label: "腎功能",  desc: "Creatinine、BUN、eGFR、尿蛋白" },
       { key: "hba1c",    label: "糖化血色素", desc: "HbA1c 與三個月平均血糖" },
-      { key: "thyroid",  label: "甲狀腺功能", desc: "TSH、T3、T4 解讀" }
+      { key: "thyroid",  label: "甲狀腺功能", desc: "TSH、T3、T4 解讀" },
+      { key: "esr_crp",  label: "ESR / CRP",  desc: "發炎指標的解讀與限制" }
     ] },
 
-  // ── 第二層：治療與管理 ──
+  // ── 第三層：治療與管理 ──
   { key: "medications", title: "藥物指南", tag: "MEDS", color: "c-pink", size: "tall", icon: "pill",
-    shelf: 1, intro: "藥不是敵人，是隊友。學會跟藥物相處。",
+    shelf: 2, intro: "藥不是敵人，是隊友。學會跟藥物相處。",
     topics: [
       { key: "schedule",  label: "用藥時間", desc: "飯前、飯後、睡前的差別" },
       { key: "missed",    label: "忘記吃藥怎麼辦", desc: "什麼時候補、什麼時候別補" },
       { key: "interact",  label: "藥物交互作用", desc: "葡萄柚、保健食品、酒類" },
       { key: "side_eff",  label: "常見副作用", desc: "出現後該停藥還是先觀察" },
       { key: "store",     label: "藥物保存", desc: "冰箱藥、避光、效期管理" },
-      { key: "stop",      label: "可以自己停藥嗎", desc: "降血壓、抗生素、類固醇的提醒" }
+      { key: "stop",      label: "可以自己停藥嗎", desc: "降血壓、抗生素、類固醇的提醒" },
+      { key: "steroid",   label: "類固醇正解", desc: "副作用、減量、月亮臉與骨鬆" }
     ] },
   { key: "nutrition", title: "飲食營養", tag: "DIET", color: "c-green", size: "medium", icon: "salad",
-    shelf: 1, intro: "把廚房變成第二個藥房，從每一餐照顧自己。",
+    shelf: 2, intro: "把廚房變成第二個藥房，從每一餐照顧自己。",
     topics: [
       { key: "balance",   label: "六大類食物", desc: "我的餐盤怎麼分配" },
       { key: "lowsalt",   label: "低鹽飲食", desc: "高血壓、心衰、腎臟病" },
       { key: "lowcarb",   label: "控醣飲食", desc: "糖尿病、減重者的主食安排" },
       { key: "lowfat",    label: "低脂飲食", desc: "高血脂、膽結石、脂肪肝" },
       { key: "highprot",  label: "高蛋白飲食", desc: "術後、銀髮、肌少症" },
+      { key: "antiinflam",label: "抗發炎飲食", desc: "地中海、Omega-3、適合自體免疫" },
       { key: "fluid",     label: "水分管理", desc: "腎臟病與心衰的喝水拿捏" }
     ] },
   { key: "exercise", title: "運動復健", tag: "REHAB", color: "c-lime", size: "short", icon: "activity",
-    shelf: 1, intro: "從沙發起身的第一步，就是復原的開始。",
+    shelf: 2, intro: "從沙發起身的第一步，就是復原的開始。",
     topics: [
       { key: "aerobic",   label: "有氧運動", desc: "走路、游泳、騎車的劑量" },
       { key: "strength",  label: "肌力訓練", desc: "彈力帶、自體重的家居版本" },
       { key: "balance",   label: "平衡訓練", desc: "預防跌倒的每日 5 分鐘" },
       { key: "stretch",   label: "伸展放鬆", desc: "下背痛、肩頸緊繃的自救" },
+      { key: "joint_save",label: "關節保護式運動", desc: "RA / OA 友善動作" },
       { key: "post_op",   label: "術後復健", desc: "膝關節、髖關節置換後" },
       { key: "stroke",    label: "中風復健", desc: "黃金期與居家照護動作" }
     ] },
 
-  // ── 第三層：預防與支持 ──
+  // ── 第四層：預防與支持 ──
   { key: "mental", title: "心理健康", tag: "MIND", color: "c-purple", size: "medium", icon: "brain",
-    shelf: 2, intro: "情緒也是身體的一部份，照顧它，身體才完整。",
+    shelf: 3, intro: "情緒也是身體的一部份，照顧它，身體才完整。",
     topics: [
       { key: "anxiety",   label: "焦慮自助", desc: "深呼吸、定向、漸進式放鬆" },
       { key: "depress",   label: "認識憂鬱", desc: "持續兩週的訊號與就醫時機" },
       { key: "sleep",     label: "睡眠衛生", desc: "不靠安眠藥的入睡技巧" },
-      { key: "grief",     label: "面對失落", desc: "悲傷的五個階段" },
+      { key: "chronic_pain_mind", label: "慢性疼痛的心理", desc: "疼痛—情緒—睡眠的循環" },
       { key: "stress",    label: "壓力管理", desc: "工作、家庭、照顧者的喘息" }
     ] },
   { key: "emergency", title: "急救應變", tag: "SOS", color: "c-red", size: "tall", icon: "siren",
-    shelf: 2, intro: "三分鐘決定一切——學會正確呼救與第一時間處理。",
+    shelf: 3, intro: "三分鐘決定一切——學會正確呼救與第一時間處理。",
     topics: [
       { key: "cpr",       label: "CPR 心肺復甦", desc: "壓胸節奏與 AED 使用" },
       { key: "choke",     label: "哈姆立克法", desc: "成人、兒童與嬰兒的差別" },
@@ -2178,7 +2270,7 @@ var EDU_BOOKS = [
       { key: "anaphyl",   label: "過敏性休克", desc: "EpiPen 與 119 的時機" }
     ] },
   { key: "prevent", title: "預防保健", tag: "PREVENT", color: "c-cyan", size: "medium", icon: "shield-check",
-    shelf: 2, intro: "在生病之前先一步——疫苗、篩檢與生活習慣。",
+    shelf: 3, intro: "在生病之前先一步——疫苗、篩檢與生活習慣。",
     topics: [
       { key: "vaccine",   label: "成人疫苗", desc: "流感、肺炎鏈球菌、帶狀皰疹" },
       { key: "screen",    label: "癌症篩檢", desc: "四癌篩檢、低劑量肺部 CT" },
@@ -2187,7 +2279,7 @@ var EDU_BOOKS = [
       { key: "weight",    label: "體重管理", desc: "BMI、腰圍、體脂與內臟脂肪" }
     ] },
   { key: "chronic", title: "慢性病管理", tag: "CHRONIC", color: "c-indigo", size: "tall", icon: "clipboard-check",
-    shelf: 2, intro: "慢性病不是結束，是每天和身體和解的開始。",
+    shelf: 3, intro: "慢性病不是結束，是每天和身體和解的開始。",
     topics: [
       { key: "diary",     label: "自我監測日誌", desc: "血壓、血糖、體重的紀錄要點" },
       { key: "goal",      label: "與醫師討論目標", desc: "個人化目標而非教科書數字" },
@@ -2196,7 +2288,7 @@ var EDU_BOOKS = [
       { key: "burnout",   label: "照顧疲勞", desc: "病人與家屬的喘息空間" }
     ] },
   { key: "women_kids", title: "婦幼保健", tag: "MOM&KIDS", color: "c-rose", size: "short", icon: "baby",
-    shelf: 2, intro: "孕期、哺乳、成長——給媽媽與孩子的暖心提醒。",
+    shelf: 3, intro: "孕期、哺乳、成長——給媽媽與孩子的暖心提醒。",
     topics: [
       { key: "preg",      label: "孕期保健", desc: "葉酸、產檢時程、體重增加" },
       { key: "breastfeed",label: "哺乳指南", desc: "親餵、瓶餵、副食品銜接" },
@@ -2205,7 +2297,7 @@ var EDU_BOOKS = [
       { key: "fever_kid", label: "兒童發燒處理", desc: "退燒藥與就醫指標" }
     ] },
   { key: "elder", title: "銀髮照護", tag: "ELDER", color: "c-amber", size: "medium", icon: "heart-handshake",
-    shelf: 2, intro: "陪伴長輩好好變老——失能、失智、跌倒、營養。",
+    shelf: 3, intro: "陪伴長輩好好變老——失能、失智、跌倒、營養。",
     topics: [
       { key: "fall",      label: "預防跌倒", desc: "居家環境與肌力訓練" },
       { key: "dementia",  label: "失智照護", desc: "早期徵兆與互動技巧" },
@@ -2232,7 +2324,8 @@ function education() {
         <i data-lucide="book-heart" style="width:22px;height:22px"></i> 衛教書房
       </h2>
       <p style="margin-top:6px;color:var(--text-dim)">
-        從書架上挑一本書翻開，每一本都是一個健康主題。點開就像翻開筆記本一樣，內頁可以再選不同章節。
+        從書架上挑一本書翻開——每一本都是一個健康主題。第一層是和風濕科一起整理的免疫專區。
+        翻開後左頁是章節清單，點任一章節，內容就會直接寫在右頁。
       </p>
       <div id="edu-breadcrumb" class="edu-breadcrumb" style="margin-top:12px">
         <button class="crumb current" onclick="eduGoToShelf()"><i data-lucide="library" style="width:14px;height:14px;vertical-align:middle"></i> 書架</button>
@@ -2242,27 +2335,15 @@ function education() {
     <!-- Stage 1 : Bookshelf -->
     <div id="edu-stage-shelf" class="edu-stage active">
       <div class="bookshelf-wrap">
-        <div class="bookshelf-title">— 衛教書房・三層書架 —</div>
+        <div class="bookshelf-title">— 衛教書房・四層書架 —</div>
         ${renderBookshelf()}
       </div>
     </div>
 
-    <!-- Stage 2 : Open notebook -->
+    <!-- Stage 2 : Open notebook（左頁 = 章節清單，右頁 = 內容） -->
     <div id="edu-stage-notebook" class="edu-stage">
       <div class="notebook-wrap">
         <div id="edu-notebook" class="notebook"></div>
-      </div>
-    </div>
-
-    <!-- Stage 3 : Notebook content -->
-    <div id="edu-stage-content" class="edu-stage">
-      <div class="nb-content-wrap">
-        <div class="nb-content">
-          <div class="nb-content-head">
-            <div id="edu-content-title" class="nb-content-title"></div>
-          </div>
-          <div id="edu-content-body" style="font-size:.95rem"></div>
-        </div>
       </div>
       <div class="card" style="margin-top:14px">
         <h3 style="display:flex;align-items:center;gap:6px;font-size:1rem">
@@ -2299,9 +2380,10 @@ function education() {
 
 function renderBookshelf() {
   var shelves = [
-    { label: "Shelf 01 ・ 認識與辨識", books: [] },
-    { label: "Shelf 02 ・ 治療與管理", books: [] },
-    { label: "Shelf 03 ・ 預防與支持", books: [] }
+    { label: "Shelf 01 ・ 風濕免疫專區（與風濕科合作）", books: [] },
+    { label: "Shelf 02 ・ 認識與辨識", books: [] },
+    { label: "Shelf 03 ・ 治療與管理", books: [] },
+    { label: "Shelf 04 ・ 預防與支持", books: [] }
   ];
   EDU_BOOKS.forEach(function(b) { shelves[b.shelf].books.push(b); });
 
@@ -2339,7 +2421,7 @@ function loadEducationPage() {
 
 // ── Stage 切換 ──────────────────────────────────────────────
 function eduSwitchStage(stageId) {
-  var ids = ["edu-stage-shelf", "edu-stage-notebook", "edu-stage-content"];
+  var ids = ["edu-stage-shelf", "edu-stage-notebook"];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.classList.toggle("active", id === stageId);
@@ -2350,6 +2432,8 @@ function eduSwitchStage(stageId) {
 function eduGoToShelf() {
   _eduSelectedBook = null;
   _eduSelectedDisease = null;
+  _eduSelectedDimension = null;
+  _eduSelectedTopic = null;
   eduRenderBreadcrumb();
   eduSwitchStage("edu-stage-shelf");
 }
@@ -2357,19 +2441,24 @@ function eduGoToShelf() {
 function eduRenderBreadcrumb() {
   var el = document.getElementById("edu-breadcrumb");
   if (!el) return;
-  var html = '<button class="crumb' + (!_eduSelectedBook ? ' current' : '') + '" onclick="eduGoToShelf()">' +
+  var html = '<button class="crumb' + (!_eduSelectedBook ? ' current' : '') + '" data-edu-crumb="shelf">' +
              '<i data-lucide="library" style="width:14px;height:14px;vertical-align:middle"></i> 書架</button>';
   if (_eduSelectedBook) {
     html += '<span class="sep">›</span>';
-    var bookCurrent = _eduSelectedBook && !document.getElementById("edu-stage-content").classList.contains("active");
-    html += '<button class="crumb' + (bookCurrent ? ' current' : '') + '" onclick="eduOpenBook(\'' + _eduSelectedBook.key + '\')">' +
-            '<i data-lucide="' + _eduSelectedBook.icon + '" style="width:14px;height:14px;vertical-align:middle"></i> ' +
-            _eduSelectedBook.title + '</button>';
-  }
-  if (document.getElementById("edu-stage-content") && document.getElementById("edu-stage-content").classList.contains("active")) {
-    html += '<span class="sep">›</span><span class="crumb current">內容</span>';
+    html += '<span class="crumb current">' +
+            '<i data-lucide="' + escapeHtml(_eduSelectedBook.icon) + '" style="width:14px;height:14px;vertical-align:middle"></i> ' +
+            escapeHtml(_eduSelectedBook.title) + '</span>';
   }
   el.innerHTML = html;
+  // breadcrumb 用事件委派，避免 inline onclick
+  if (!el.dataset.boundDelegate) {
+    el.addEventListener("click", function(e) {
+      var btn = e.target.closest && e.target.closest('[data-edu-crumb]');
+      if (!btn) return;
+      if (btn.getAttribute("data-edu-crumb") === "shelf") eduGoToShelf();
+    });
+    el.dataset.boundDelegate = "1";
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -2379,15 +2468,12 @@ function eduOpenBook(key) {
   if (!book) return;
   _eduSelectedBook = book;
   _eduSelectedDisease = null;
+  _eduSelectedDimension = null;
+  _eduSelectedTopic = null;
 
   var nb = document.getElementById("edu-notebook");
-  if (book.dynamic === "diseases") {
-    nb.classList.remove("single");
-    nb.innerHTML = renderDiseaseNotebook();
-  } else {
-    nb.classList.add("single");
-    nb.innerHTML = renderTopicsNotebook(book);
-  }
+  nb.classList.remove("single");
+  nb.innerHTML = renderNotebookSpread();
 
   // 用事件委派處理章節點擊（避免 inline onclick + escape 問題）
   if (!nb.dataset.boundDelegate) {
@@ -2399,6 +2485,11 @@ function eduOpenBook(key) {
         eduPickDisease(btn.getAttribute("data-icd10"), btn.getAttribute("data-name"));
       } else if (action === "open-content") {
         eduOpenContent(btn.getAttribute("data-key"), btn.getAttribute("data-label"));
+      } else if (action === "back-to-list") {
+        _eduSelectedTopic = null;
+        _eduSelectedDimension = null;
+        document.getElementById("edu-notebook-right").innerHTML = renderRightPagePlaceholder();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       }
     });
     nb.dataset.boundDelegate = "1";
@@ -2411,40 +2502,73 @@ function eduOpenBook(key) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function renderTopicsNotebook(book) {
+// 統一的兩頁式筆記本：左頁 = 清單；右頁 = 內容區（id 固定，方便就地替換）
+function renderNotebookSpread() {
+  var book = _eduSelectedBook;
+  if (!book) return "";
+  var leftHtml = (book.dynamic === "diseases") ? renderDiseaseLeftPage() : renderTopicsLeftPage(book);
+  return '' +
+    '<div class="nb-page left">' + leftHtml + '</div>' +
+    '<div class="nb-page right" id="edu-notebook-right">' + renderRightPagePlaceholder() + '</div>';
+}
+
+function renderTopicsLeftPage(book) {
   var listHtml = book.topics.map(function(t) {
-    return '<button class="nb-item" data-action="open-content"' +
+    var sel = (_eduSelectedTopic === t.key) ? ' selected' : '';
+    return '<button class="nb-item' + sel + '" data-action="open-content"' +
            ' data-key="' + escapeHtml(t.key) + '"' +
            ' data-label="' + escapeHtml(t.label) + '">' +
            '<strong>' + escapeHtml(t.label) + '</strong>' +
            (t.desc ? '<small>' + escapeHtml(t.desc) + '</small>' : '') +
            '</button>';
   }).join("");
-
-  return '<div class="nb-page right" style="grid-column:1/-1">' +
-           '<div class="nb-heading"><i data-lucide="' + escapeHtml(book.icon) + '" style="width:20px;height:20px"></i> ' + escapeHtml(book.title) + '</div>' +
-           (book.intro ? '<div class="nb-subtle">' + escapeHtml(book.intro) + '</div>' : '') +
-           '<div class="nb-list">' + listHtml + '</div>' +
-         '</div>';
+  return '<div class="nb-heading"><i data-lucide="' + escapeHtml(book.icon) + '" style="width:20px;height:20px"></i> ' + escapeHtml(book.title) + '</div>' +
+         (book.intro ? '<div class="nb-subtle">' + escapeHtml(book.intro) + '</div>' : '') +
+         '<div class="nb-list">' + listHtml + '</div>';
 }
 
-function renderDiseaseNotebook() {
-  // 左頁：疾病分類列表；右頁：選了疾病後出現六大維度
+function renderRightPagePlaceholder() {
+  var book = _eduSelectedBook;
+  if (!book) return '';
+  if (book.dynamic === "diseases") {
+    if (!_eduSelectedDisease) {
+      return '<div class="nb-heading"><i data-lucide="layers" style="width:20px;height:20px"></i> 六大衛教維度</div>' +
+             '<div class="nb-empty">← 先從左頁挑一個疾病，這裡才會展開六大維度，再點任一維度直接讀內容。</div>';
+    }
+    // 已選疾病但尚未選維度：顯示維度清單
+    var listHtml = EDU_DISEASE_DIMENSIONS.map(function(d) {
+      return '<button class="nb-item" data-action="open-content"' +
+             ' data-key="' + escapeHtml(d.key) + '"' +
+             ' data-label="' + escapeHtml(d.label) + '">' +
+             '<strong>' + escapeHtml(d.label) + '</strong><small>' + escapeHtml(d.desc) + '</small></button>';
+    }).join("");
+    return '<div class="nb-heading"><i data-lucide="layers" style="width:20px;height:20px"></i> 六大衛教維度</div>' +
+           '<div class="nb-subtle">' + escapeHtml(_eduSelectedDisease.name) + '（' + escapeHtml(_eduSelectedDisease.icd10) + '）</div>' +
+           '<div class="nb-list">' + listHtml + '</div>';
+  }
+  // 一般書本的初始右頁：書本說明 + 提示
+  return '<div class="nb-heading"><i data-lucide="bookmark" style="width:20px;height:20px"></i> 章節導讀</div>' +
+         '<div class="nb-subtle">' + escapeHtml(book.intro || "") + '</div>' +
+         '<p style="margin-top:14px;color:var(--text-dim);font-size:.9rem;line-height:1.8">' +
+         '左邊那一頁列出了這本書的所有章節。點任一章節，內容就會直接寫在這一頁；想換章節就再點別的，或按下方「← 章節清單」回到提示。</p>';
+}
+
+function renderDiseaseLeftPage() {
   var byCategory = {};
   _eduDiseases.forEach(function(d) {
     if (!byCategory[d.category]) byCategory[d.category] = [];
     byCategory[d.category].push(d);
   });
 
-  var leftHtml = '';
+  var listHtml = '';
   if (!_eduDiseases.length) {
-    leftHtml = '<div class="nb-empty">疾病列表載入中… 若持續看到此訊息，請確認後端服務是否已啟動。</div>';
+    listHtml = '<div class="nb-empty">疾病列表載入中… 若持續看到此訊息，請確認後端服務是否已啟動。</div>';
   } else {
     Object.keys(byCategory).forEach(function(cat) {
-      leftHtml += '<div style="margin-top:8px;font-size:.78rem;color:var(--text-dim);letter-spacing:1px">' + escapeHtml(cat) + '</div>';
+      listHtml += '<div style="margin-top:8px;font-size:.78rem;color:var(--text-dim);letter-spacing:1px">' + escapeHtml(cat) + '</div>';
       byCategory[cat].forEach(function(d) {
         var sel = (_eduSelectedDisease && _eduSelectedDisease.icd10 === d.icd10) ? ' selected' : '';
-        leftHtml += '<button class="nb-item' + sel + '" data-action="pick-disease"' +
+        listHtml += '<button class="nb-item' + sel + '" data-action="pick-disease"' +
                     ' data-icd10="' + escapeHtml(d.icd10) + '"' +
                     ' data-name="' + escapeHtml(d.name) + '">' +
                     '<strong>' + escapeHtml(d.name) + '</strong><small>ICD-10：' + escapeHtml(d.icd10) + '</small>' +
@@ -2453,66 +2577,59 @@ function renderDiseaseNotebook() {
     });
   }
 
-  var rightHtml;
-  if (_eduSelectedDisease) {
-    rightHtml = EDU_DISEASE_DIMENSIONS.map(function(d) {
-      return '<button class="nb-item" data-action="open-content"' +
-             ' data-key="' + escapeHtml(d.key) + '"' +
-             ' data-label="' + escapeHtml(d.label) + '">' +
-             '<strong>' + escapeHtml(d.label) + '</strong><small>' + escapeHtml(d.desc) + '</small></button>';
-    }).join("");
-    rightHtml = '<div class="nb-list">' + rightHtml + '</div>';
-  } else {
-    rightHtml = '<div class="nb-empty">← 先從左頁挑一個疾病，這裡才會展開六大衛教維度。</div>';
-  }
-
-  return '' +
-    '<div class="nb-page left">' +
-      '<div class="nb-heading"><i data-lucide="list" style="width:20px;height:20px"></i> 疾病列表</div>' +
-      '<div class="nb-subtle">挑一個你想了解的疾病</div>' +
-      '<div class="nb-list">' + leftHtml + '</div>' +
-    '</div>' +
-    '<div class="nb-page right">' +
-      '<div class="nb-heading"><i data-lucide="layers" style="width:20px;height:20px"></i> 六大衛教維度</div>' +
-      '<div class="nb-subtle">' + (_eduSelectedDisease ? escapeHtml(_eduSelectedDisease.name) + '（' + escapeHtml(_eduSelectedDisease.icd10) + '）' : '尚未選擇疾病') + '</div>' +
-      rightHtml +
-    '</div>';
+  return '<div class="nb-heading"><i data-lucide="list" style="width:20px;height:20px"></i> 疾病列表</div>' +
+         '<div class="nb-subtle">挑一個疾病，右頁就會展開六大衛教維度</div>' +
+         '<div class="nb-list">' + listHtml + '</div>';
 }
 
 function eduPickDisease(icd10, name) {
   _eduSelectedDisease = { icd10: icd10, name: name };
-  document.getElementById("edu-notebook").innerHTML = renderDiseaseNotebook();
+  _eduSelectedDimension = null;
+  // 重新渲染整個跨頁（左頁要更新 selected 狀態，右頁要顯示維度清單）
+  document.getElementById("edu-notebook").innerHTML = renderNotebookSpread();
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// ── Stage 3: 翻到內容頁 ────────────────────────────────────
+// 在右頁就地寫入內容（不再切換 stage）
 function eduOpenContent(key, label) {
   if (!_eduSelectedBook) return;
   var book = _eduSelectedBook;
 
-  var titleText, body, fetchBody;
+  var titleText, fetchBody;
   if (book.dynamic === "diseases") {
     if (!_eduSelectedDisease) { showToast("請先選擇疾病", "warning"); return; }
+    _eduSelectedDimension = key;
     titleText = _eduSelectedDisease.name + " — " + label;
     fetchBody = { icd10_code: _eduSelectedDisease.icd10, dimension: key };
   } else {
+    _eduSelectedTopic = key;
     titleText = book.title + " — " + label;
-    // 對非疾病類書本，把章節資訊作為主題交給後端生成
     fetchBody = { dimension: key, topic: book.title + "：" + label };
+    // 重新渲染左頁讓 selected 狀態反映目前章節
+    var nb = document.getElementById("edu-notebook");
+    if (nb) nb.innerHTML = renderNotebookSpread();
   }
 
-  document.getElementById("edu-content-title").textContent = titleText;
-  document.getElementById("edu-content-body").innerHTML =
-    '<div style="text-align:center;padding:40px;color:var(--text-muted)">' +
-    '<div class="loading-spinner"></div>' +
-    '<p style="margin-top:12px">正在為您準備溫暖的衛教內容…</p></div>';
-  document.getElementById("storm-result-section").style.display = "none";
+  var rightEl = document.getElementById("edu-notebook-right");
+  if (!rightEl) return;
+  rightEl.innerHTML =
+    '<div class="nb-content-head">' +
+      '<div class="nb-content-title">' + escapeHtml(titleText) + '</div>' +
+      '<button class="secondary" data-action="back-to-list" style="padding:4px 10px;font-size:.8rem">← 章節清單</button>' +
+    '</div>' +
+    '<div id="edu-content-body" style="font-size:.94rem;line-height:1.85">' +
+      '<div style="text-align:center;padding:40px;color:var(--text-muted)">' +
+        '<div class="loading-spinner"></div>' +
+        '<p style="margin-top:12px">正在為您準備溫暖的衛教內容…</p>' +
+      '</div>' +
+    '</div>';
+
   var stormInput = document.getElementById("storm-topic");
   if (stormInput) stormInput.value = titleText + " 衛教研究";
+  var stormResult = document.getElementById("storm-result-section");
+  if (stormResult) stormResult.style.display = "none";
 
-  eduSwitchStage("edu-stage-content");
-  eduRenderBreadcrumb();
-  document.getElementById("edu-stage-content").scrollIntoView({ behavior: "smooth" });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   fetch(API + "/education/generate", {
     method: "POST",
@@ -2526,11 +2643,12 @@ function eduOpenContent(key, label) {
     .then(function(data) {
       var content = data.content || data.report || "";
       if (!content) throw new Error("空內容");
-      document.getElementById("edu-content-body").innerHTML = markdownToHtml(content);
+      var body = document.getElementById("edu-content-body");
+      if (body) body.innerHTML = markdownToHtml(content);
     })
     .catch(function() {
-      // 後端尚未支援此書時的暖場文案（仍然完整呈現筆記本內容版面）
-      document.getElementById("edu-content-body").innerHTML = eduFallbackContent(book, label);
+      var body = document.getElementById("edu-content-body");
+      if (body) body.innerHTML = eduFallbackContent(book, label);
     });
 }
 
