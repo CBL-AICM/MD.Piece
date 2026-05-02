@@ -4089,3 +4089,302 @@ html[data-mode="senior"] *:focus-visible {
   outline-offset: 3px;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   MOBILE Y2K APP SHELL — 手機專用排版（≤768px）
+   ───────────────────────────────────────────────────────────
+   桌面完全不受影響；手機改成「頂簡 header + 底部 dock + 更多
+   sheet」的 app 結構，並把所有 grid 強制單欄、padding 收緊。
+   ═══════════════════════════════════════════════════════════ */
+
+.mobile-dock,
+.more-sheet,
+.more-sheet-backdrop { display: none; }
+
+@media (max-width: 768px) {
+  /* ─ Hide sidebar/backdrop entirely on mobile (dock takes over) ─ */
+  .sidebar,
+  .sidebar-backdrop,
+  .topbar .hamburger { display: none !important; }
+  .main-content { margin-left: 0; padding: 0; }
+
+  /* ─ Slim topbar (filename only) ─ */
+  .topbar {
+    position: sticky;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    z-index: 50;
+  }
+  .topbar .topbar-back { display: none; }
+  .topbar-filename {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .topbar-filename::before {
+    content: "$ ";
+    color: var(--app-term);
+    font-weight: 700;
+  }
+
+  /* ─ Content pane: single column + padding for dock ─ */
+  #app,
+  html[data-mode="standard"] #app {
+    margin: 0;
+    padding: 16px 14px 96px;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    background-image: none;
+    max-width: 100%;
+    font-size: 0.98rem;
+  }
+  html[data-mode="standard"] #app::before,
+  html[data-mode="standard"] #app::after { display: none !important; }
+
+  /* Force every multi-col grid in content to single col */
+  #app .home-grid,
+  #app .home-info-row,
+  #app .home-quick,
+  #app .feature-grid,
+  #app .mission-grid,
+  #app [style*="grid-template-columns"]:not([data-no-mobile-stack]) {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  /* Quick actions stay 2-col on phone (more compact) */
+  #app .home-quick { grid-template-columns: repeat(2, 1fr) !important; }
+
+  .home-hero {
+    padding: 18px 16px;
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .home-hero-right { text-align: center; }
+
+  /* ─ Mobile dock — Y2K terminal taskbar ─ */
+  .mobile-dock {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 90;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    gap: 4px;
+    background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
+    border-top: 1.5px solid var(--app-border);
+    box-shadow: 0 -2px 0 rgba(0,0,0,0.08), 0 -8px 24px rgba(0,0,0,0.12);
+    font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  }
+  #app-wrapper[data-theme="dark"] .mobile-dock {
+    box-shadow: 0 -2px 0 rgba(0,0,0,0.4), 0 -8px 24px rgba(0,0,0,0.45);
+  }
+
+  .dock-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 4px 6px;
+    background: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: 3px;
+    color: var(--app-text);
+    font: inherit;
+    font-size: 0.65rem;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    min-width: 0;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .dock-btn:active { transform: translateY(1px); }
+  .dock-btn .dock-icon {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--app-term);
+  }
+  .dock-btn .dock-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+  .dock-btn .dock-label {
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+  .dock-btn.active {
+    background: var(--app-mint);
+    color: var(--app-chip-text);
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.45), inset -1px -1px 0 rgba(0,0,0,0.18);
+  }
+  .dock-btn.active .dock-icon { color: var(--app-chip-text); }
+  #app-wrapper[data-theme="dark"] .dock-btn.active { color: #07171C; }
+
+  /* Center "home" button — bigger and elevated */
+  .dock-btn-home {
+    flex: 0 0 56px;
+    margin-top: -14px;
+    padding: 10px;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    background: var(--app-panel);
+    border: 1.5px solid var(--app-border);
+    box-shadow: 0 4px 0 var(--app-border), 0 6px 14px rgba(0,0,0,0.18);
+    position: relative;
+  }
+  .dock-btn-home .dock-icon { width: 24px; height: 24px; }
+  .dock-btn-home .dock-icon svg { width: 22px; height: 22px; }
+  .dock-btn-home .dock-home-glow {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--app-glow), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  .dock-btn-home.active .dock-home-glow { opacity: 1; }
+  .dock-btn-home.active {
+    background: var(--app-mint);
+    color: var(--app-chip-text);
+  }
+
+  /* ─ More sheet (slides up) ─ */
+  .more-sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .more-sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+
+  .more-sheet {
+    display: block;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 101;
+    padding: 8px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--app-panel);
+    border-top: 1.5px solid var(--app-border);
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.25);
+    transform: translateY(110%);
+    transition: transform 0.28s cubic-bezier(.32,.72,.32,1);
+    max-height: 78vh;
+    overflow-y: auto;
+    font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  }
+  .more-sheet.open { transform: translateY(0); }
+
+  .more-sheet-handle {
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 8px;
+    border-radius: 2px;
+    background: var(--app-text-dim);
+    opacity: 0.4;
+  }
+
+  .more-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 6px 12px;
+    border-bottom: 1px dashed var(--app-border);
+  }
+  .more-sheet-prompt {
+    color: var(--app-term);
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .more-sheet-title {
+    flex: 1;
+    color: var(--app-text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .more-sheet-close {
+    width: 28px;
+    height: 24px;
+    background: var(--app-pink);
+    border: 1px solid var(--app-border);
+    color: var(--app-text);
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  .more-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 14px 0;
+  }
+  .more-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 8px;
+    background: var(--app-panel-soft);
+    border: 1px solid var(--app-border);
+    border-radius: 4px;
+    color: var(--app-text);
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .more-item:active { background: var(--app-mint); color: var(--app-chip-text); }
+  .more-item i,
+  .more-item svg {
+    width: 22px;
+    height: 22px;
+    color: var(--app-term);
+  }
+
+  .more-sheet-foot {
+    padding-top: 10px;
+    border-top: 1px dashed var(--app-border);
+    display: grid;
+    gap: 8px;
+  }
+  .more-sheet-foot .mode-toggle,
+  .more-sheet-foot .logout-btn {
+    width: 100%;
+  }
+
+  /* ─ Senior mode tweaks for dock ─ */
+  html[data-mode="senior"] .mobile-dock {
+    background: #FFFAF0;
+    border-top: 1px solid var(--border-glass);
+    font-family: "Noto Sans TC", sans-serif;
+  }
+  html[data-mode="senior"] .dock-btn {
+    background: transparent;
+    border-color: var(--border-glass);
+    font-size: 0.85rem;
+  }
+  html[data-mode="senior"] .dock-btn .dock-label { font-size: 0.85rem; }
+  html[data-mode="senior"] .dock-btn .dock-icon svg { width: 22px; height: 22px; }
+  html[data-mode="senior"] .more-sheet { font-family: "Noto Sans TC", sans-serif; }
+  html[data-mode="senior"] .more-item { font-size: 0.95rem; padding: 18px 10px; }
+}
+

@@ -246,6 +246,74 @@
       </div>
       <main id="app"></main>
     </div>
+
+    <!-- Mobile bottom dock (≤768px only) -->
+    <nav class="mobile-dock" aria-label="主導覽">
+      <button class="dock-btn" data-dock="symptoms" onclick="dockNavigate('symptoms', this)">
+        <span class="dock-icon"><i data-lucide="scan-search"></i></span>
+        <span class="dock-label">症狀</span>
+      </button>
+      <button class="dock-btn" data-dock="medications" onclick="dockNavigate('medications', this)">
+        <span class="dock-icon"><i data-lucide="pill"></i></span>
+        <span class="dock-label">藥物</span>
+      </button>
+      <button class="dock-btn dock-btn-home" data-dock="home" onclick="dockNavigate('home', this)" aria-label="首頁">
+        <span class="dock-home-glow"></span>
+        <span class="dock-icon"><i data-lucide="home"></i></span>
+      </button>
+      <button class="dock-btn" data-dock="chat" onclick="dockNavigate('chat', this)">
+        <span class="dock-icon"><i data-lucide="message-circle-heart"></i></span>
+        <span class="dock-label">聊天</span>
+      </button>
+      <button class="dock-btn" data-dock="more" onclick="toggleMoreSheet()">
+        <span class="dock-icon"><i data-lucide="menu"></i></span>
+        <span class="dock-label">更多</span>
+      </button>
+    </nav>
+
+    <!-- Mobile "更多" sheet -->
+    <div class="more-sheet-backdrop" onclick="closeMoreSheet()"></div>
+    <div class="more-sheet" role="dialog" aria-label="更多功能">
+      <div class="more-sheet-handle"></div>
+      <div class="more-sheet-head">
+        <span class="more-sheet-prompt">$</span>
+        <span class="more-sheet-title">more.exe</span>
+        <button class="more-sheet-close" onclick="closeMoreSheet()" aria-label="關閉">✕</button>
+      </div>
+      <div class="more-sheet-grid">
+        <button class="more-item" onclick="dockNavigate('vitals')">
+          <i data-lucide="activity"></i><span>生理紀錄</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('memo')">
+          <i data-lucide="sticky-note"></i><span>Memo</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('previsit')">
+          <i data-lucide="clipboard-check"></i><span>診前報告</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('education')">
+          <i data-lucide="book-heart"></i><span>衛教專欄</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('story')">
+          <i data-lucide="book-open"></i><span>每日故事</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('labs')">
+          <i data-lucide="trending-up"></i><span>報告數值</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('pieces')">
+          <i data-lucide="puzzle"></i><span>你的碎片</span>
+        </button>
+      </div>
+      <div class="more-sheet-foot">
+        <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
+          切換為年長版
+        </button>
+        <button class="logout-btn" onclick="logout()" type="button">
+          <span class="nav-icon"><i data-lucide="log-out" style="width:16px;height:16px"></i></span>
+          <span class="logout-label">登出</span>
+          <span class="logout-cmd">$ exit</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <script src="js/app.js"></script>
@@ -465,6 +533,18 @@
       records: '病歷管理', doctors: '醫師列表', patients: '病患管理'
     };
 
+    function syncDockActive(page) {
+      document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+      const direct = document.querySelector(`.dock-btn[data-dock="${page}"]`);
+      if (direct) {
+        direct.classList.add('active');
+      } else {
+        // page lives inside "more" sheet
+        const moreBtn = document.querySelector('.dock-btn[data-dock="more"]');
+        if (moreBtn) moreBtn.classList.add('active');
+      }
+    }
+
     function navigateTo(page, btn) {
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
@@ -472,7 +552,32 @@
       const map = isSenior ? pageTitlesSenior : pageTitles;
       document.getElementById('page-title').textContent = map[page] || page;
       showPage(page);
+      syncDockActive(page);
       closeSidebar();
+    }
+
+    function dockNavigate(page, btn) {
+      // mirror nav-item active state for sidebar consistency
+      const navBtn = Array.from(document.querySelectorAll('.nav-item'))
+        .find(b => b.getAttribute('onclick')?.includes(`'${page}'`));
+      navigateTo(page, navBtn);
+      closeMoreSheet();
+    }
+
+    function toggleMoreSheet() {
+      const sheet = document.querySelector('.more-sheet');
+      const back = document.querySelector('.more-sheet-backdrop');
+      const open = sheet.classList.toggle('open');
+      back.classList.toggle('show', open);
+      document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+      if (open) {
+        document.querySelector('.dock-btn[data-dock="more"]')?.classList.add('active');
+      }
+    }
+
+    function closeMoreSheet() {
+      document.querySelector('.more-sheet')?.classList.remove('open');
+      document.querySelector('.more-sheet-backdrop')?.classList.remove('show');
     }
 
     function goHome() {
@@ -481,7 +586,9 @@
       const map = isSenior ? pageTitlesSenior : pageTitles;
       document.getElementById('page-title').textContent = map.home || 'home';
       showPage('home');
+      syncDockActive('home');
       closeSidebar();
+      closeMoreSheet();
     }
 
     function toggleSidebar() {
