@@ -2536,7 +2536,7 @@ function eduOpenContent(key, label) {
 
 function eduFallbackContent(book, label) {
   return '' +
-    '<h3>' + book.title + '：' + label + '</h3>' +
+    '<h3>' + escapeHtml(book.title) + '：' + escapeHtml(label) + '</h3>' +
     '<p>這一頁正在編寫中——之後會由 AI 根據最新文獻自動填上溫暖、易懂的內容。</p>' +
     '<p>在那之前，你可以：</p>' +
     '<ul>' +
@@ -2544,7 +2544,7 @@ function eduFallbackContent(book, label) {
       '<li>回到書架挑另一本書，先看看其他主題。</li>' +
       '<li>把你想知道的細節寫進「醫療 Chat」，由 AI 直接回答。</li>' +
     '</ul>' +
-    '<p style="color:var(--text-dim);margin-top:14px">' + (book.intro || '') + '</p>';
+    '<p style="color:var(--text-dim);margin-top:14px">' + escapeHtml(book.intro || '') + '</p>';
 }
 
 // ── STORM / Co-STORM 深度研究 ─────────────────────────────
