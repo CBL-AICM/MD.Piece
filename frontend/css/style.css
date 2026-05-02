@@ -4388,3 +4388,300 @@ html[data-mode="senior"] *:focus-visible {
   html[data-mode="senior"] .more-item { font-size: 0.95rem; padding: 18px 10px; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   MOBILE — MODERN APP OVERRIDE (≤768px)
+   ───────────────────────────────────────────────────────────
+   桌面保留 Y2K 終端機風；手機完全切到「真．手機 app」樣式：
+   sans-serif、軟卡片、iOS 式底部 nav、無終端機裝飾。
+   置於 Y2K shell 之後，讓所有 Y2K mobile 規則被乾淨覆寫。
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* ─ Body：純色暖米白，去掉桌面格線 ─ */
+  #app-wrapper.show {
+    background-color: #FBF6EC;
+    background-image: none;
+    font-family: "Noto Sans TC", sans-serif;
+  }
+  #app-wrapper[data-theme="dark"].show {
+    background-color: #1F3553;
+  }
+
+  /* ─ Topbar：純淨頁面標題列（去終端機 chrome） ─ */
+  .topbar,
+  .topbar.win-titlebar {
+    background: rgba(255, 250, 240, 0.92);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border: none;
+    border-bottom: 1px solid var(--border-glass);
+    box-shadow: none;
+    padding: 4px 10px;
+    height: 48px;
+    gap: 8px;
+  }
+  #app-wrapper[data-theme="dark"] .topbar {
+    background: rgba(31, 53, 83, 0.92);
+    border-bottom-color: rgba(255,255,255,0.08);
+  }
+  .topbar .topbar-back,
+  .topbar .topbar-version,
+  .topbar .topbar-wincontrols,
+  .topbar .topbar-prefix,
+  .topbar .topbar-ext { display: none !important; }
+  .topbar-filename {
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+    justify-content: center;
+    padding: 0;
+    letter-spacing: 0;
+  }
+  .topbar-filename::before { content: none !important; }
+  #app-wrapper[data-theme="dark"] .topbar-filename { color: #F1F6FF; }
+  .app-theme-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    margin-right: 4px;
+    font-size: 1.1rem;
+  }
+  .app-theme-toggle:hover {
+    background: rgba(92,58,50,0.08);
+    color: var(--text);
+    box-shadow: none;
+  }
+  #app-wrapper[data-theme="dark"] .app-theme-toggle { color: #F1F6FF; }
+
+  /* ─ Content area：軟卡片、寬鬆 padding、無終端機框 ─ */
+  #app,
+  html[data-mode="standard"] #app {
+    background: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 14px 16px 100px !important;
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.98rem;
+    color: var(--text);
+  }
+  #app-wrapper[data-theme="dark"] #app { color: #F1F6FF; }
+  html[data-mode="standard"] #app::before,
+  html[data-mode="standard"] #app::after { display: none !important; }
+
+  /* Soft-card defaults for content blocks */
+  #app .home-hero,
+  #app .home-ov,
+  #app .pzl-card,
+  #app .term-card,
+  #app .stat-box,
+  #app .med-item,
+  #app .dash-welcome {
+    background: var(--cream);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(92,58,50,0.06);
+    backdrop-filter: none;
+  }
+  #app-wrapper[data-theme="dark"] #app .home-hero,
+  #app-wrapper[data-theme="dark"] #app .home-ov,
+  #app-wrapper[data-theme="dark"] #app .pzl-card,
+  #app-wrapper[data-theme="dark"] #app .term-card,
+  #app-wrapper[data-theme="dark"] #app .stat-box,
+  #app-wrapper[data-theme="dark"] #app .med-item,
+  #app-wrapper[data-theme="dark"] #app .dash-welcome {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.12);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
+
+  /* Quick action buttons → softer iOS chip */
+  #app .hq-btn {
+    background: var(--cream);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(92,58,50,0.05);
+    padding: 18px 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  /* ─ Dock：iOS-style pill nav ─ */
+  .mobile-dock {
+    background: rgba(255,250,240,0.92);
+    backdrop-filter: saturate(140%) blur(14px);
+    -webkit-backdrop-filter: saturate(140%) blur(14px);
+    border-top: 1px solid var(--border-glass);
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.6);
+    font-family: "Noto Sans TC", sans-serif;
+    padding: 6px 10px calc(8px + env(safe-area-inset-bottom));
+    gap: 2px;
+  }
+  #app-wrapper[data-theme="dark"] .mobile-dock {
+    background: rgba(31,53,83,0.94);
+    border-top-color: rgba(255,255,255,0.08);
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.04);
+  }
+  .dock-btn {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    padding: 6px 4px 4px;
+    box-shadow: none !important;
+  }
+  .dock-btn .dock-icon { color: inherit !important; }
+  .dock-btn .dock-icon svg { width: 22px; height: 22px; stroke-width: 1.8; }
+  .dock-btn .dock-label {
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.68rem;
+    font-weight: 500;
+  }
+  .dock-btn.active {
+    background: transparent !important;
+    color: var(--accent) !important;
+    box-shadow: none !important;
+  }
+  #app-wrapper[data-theme="dark"] .dock-btn { color: rgba(241,246,255,0.55); }
+  #app-wrapper[data-theme="dark"] .dock-btn.active { color: #FFB37A !important; }
+
+  /* Center home button → floating iOS-style pill */
+  .dock-btn-home {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    margin-top: -16px;
+    border-radius: 50% !important;
+    background: var(--accent) !important;
+    color: #fff !important;
+    border: 3px solid #FBF6EC !important;
+    box-shadow: 0 6px 16px rgba(201,127,75,0.35) !important;
+  }
+  .dock-btn-home .dock-icon { color: #fff !important; }
+  .dock-btn-home .dock-icon svg { width: 24px; height: 24px; stroke-width: 2; }
+  .dock-btn-home.active {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+  .dock-btn-home.active .dock-icon { color: #fff !important; }
+  .dock-btn-home .dock-home-glow { display: none; }
+  #app-wrapper[data-theme="dark"] .dock-btn-home {
+    border-color: #1F3553 !important;
+  }
+
+  /* ─ More sheet：iOS bottom sheet ─ */
+  .more-sheet {
+    background: #FFFAF0;
+    border-top: none;
+    border-radius: 22px 22px 0 0;
+    font-family: "Noto Sans TC", sans-serif;
+    box-shadow: 0 -12px 40px rgba(20,25,40,0.18);
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet {
+    background: #2E4F7C;
+    color: #F1F6FF;
+  }
+  .more-sheet-handle {
+    width: 38px;
+    height: 5px;
+    margin: 8px auto 4px;
+    background: rgba(92,58,50,0.25);
+    opacity: 1;
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet-handle { background: rgba(255,255,255,0.3); }
+  .more-sheet-head {
+    padding: 6px 4px 14px;
+    border-bottom: 1px solid var(--border-glass);
+  }
+  .more-sheet-prompt { display: none; }
+  .more-sheet-title {
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--text);
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet-title { color: #F1F6FF; }
+  .more-sheet-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(92,58,50,0.08);
+    border: none;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet-close {
+    background: rgba(255,255,255,0.1);
+    color: #F1F6FF;
+  }
+  .more-sheet-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 16px 0 12px;
+  }
+  .more-item {
+    background: transparent;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 6px;
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: var(--text);
+    gap: 8px;
+  }
+  .more-item:active { background: rgba(201,127,75,0.12); color: var(--accent); }
+  .more-item i,
+  .more-item svg {
+    width: 26px;
+    height: 26px;
+    color: var(--accent);
+    stroke-width: 1.7;
+  }
+  #app-wrapper[data-theme="dark"] .more-item { color: #F1F6FF; }
+  #app-wrapper[data-theme="dark"] .more-item i,
+  #app-wrapper[data-theme="dark"] .more-item svg { color: #FFB37A; }
+
+  .more-sheet-foot {
+    padding: 12px 0 4px;
+    border-top: 1px solid var(--border-glass);
+    gap: 10px;
+  }
+  .more-sheet-foot .mode-toggle {
+    background: rgba(201,127,75,0.1);
+    border: none;
+    border-radius: 12px;
+    color: var(--accent);
+    font-family: "Noto Sans TC", sans-serif;
+    font-weight: 600;
+    padding: 13px 16px;
+  }
+  .more-sheet-foot .logout-btn {
+    background: transparent;
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    font-family: "Noto Sans TC", sans-serif;
+    color: var(--danger);
+    padding: 13px 16px;
+  }
+  .more-sheet-foot .logout-btn .logout-cmd { display: none; }
+
+  /* ─ Senior mode：放大字級即可，外觀已是 mobile-app 風 ─ */
+  html[data-mode="senior"] .dock-btn .dock-label { font-size: 0.85rem; }
+  html[data-mode="senior"] .dock-btn .dock-icon svg { width: 26px; height: 26px; }
+  html[data-mode="senior"] .more-item { font-size: 0.95rem; padding: 18px 8px; }
+  html[data-mode="senior"] .more-item i,
+  html[data-mode="senior"] .more-item svg { width: 28px; height: 28px; }
+}
+
