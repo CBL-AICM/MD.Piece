@@ -2104,7 +2104,7 @@ var _eduSelectedTopic = null;      // 給一般書本用：當前選到的章節
 // 點開書 → 直接進入筆記本跨頁：左頁是章節清單、右頁就是內容。
 var EDU_BOOKS = [
   // ── 第一層：免疫專區 ──
-  { key: "rheum_overview", title: "自體免疫總論", tag: "AUTOIMMUNE", color: "c-purple", size: "tall", icon: "shield-alert",
+  { key: "rheum_overview", title: "自體免疫總論", nameEn: "Autoimmune Disease", tag: "AID", color: "c-purple", size: "tall", icon: "shield-alert",
     shelf: 0, intro: "免疫系統為什麼會誤把自己當敵人？了解風濕免疫疾病的共通語言。",
     topics: [
       { key: "what_is_autoimm", label: "什麼是自體免疫疾病", desc: "免疫失衡如何造成多系統發炎" },
@@ -2114,7 +2114,7 @@ var EDU_BOOKS = [
       { key: "vac_immune",      label: "疫苗與免疫抑制",   desc: "活性疫苗禁忌、流感與肺炎接種時機" },
       { key: "preg_plan",       label: "懷孕計畫",         desc: "穩定期再受孕，藥物分級與替換" }
     ] },
-  { key: "rheum_ra", title: "類風濕關節炎", tag: "RA", color: "c-rose", size: "tall", icon: "hand",
+  { key: "rheum_ra", title: "類風濕關節炎", nameEn: "Rheumatoid Arthritis", tag: "RA", color: "c-rose", size: "tall", icon: "hand",
     shelf: 0, intro: "RA 是免疫系統把自己的關節當敵人。早期治療能保住關節功能。",
     topics: [
       { key: "ra_recognize",  label: "認識 RA",       desc: "對稱性多關節腫痛、晨僵超過 30 分鐘" },
@@ -2125,7 +2125,7 @@ var EDU_BOOKS = [
       { key: "ra_joint_care", label: "關節保護與運動",desc: "省力動作、副木、水中運動" },
       { key: "ra_pregnancy",  label: "RA 與懷孕",     desc: "備孕、孕期、哺乳的藥物調整" }
     ] },
-  { key: "rheum_sle", title: "紅斑性狼瘡", tag: "SLE", color: "c-red", size: "tall", icon: "flame",
+  { key: "rheum_sle", title: "紅斑性狼瘡", nameEn: "Lupus Erythematosus", tag: "SLE", color: "c-red", size: "tall", icon: "flame",
     shelf: 0, intro: "SLE 像千面女郎，可影響皮膚、關節、腎臟、神經、血液。",
     topics: [
       { key: "sle_what",      label: "什麼是 SLE",      desc: "為什麼會發病、誰是高風險族群" },
@@ -2136,7 +2136,7 @@ var EDU_BOOKS = [
       { key: "sle_sun",       label: "防曬與生活",      desc: "UV 觸發、SPF50+、避免日正當中" },
       { key: "sle_pregnancy", label: "SLE 與懷孕",      desc: "穩定 6 個月以上、低劑量 ASA" }
     ] },
-  { key: "rheum_as", title: "僵直性脊椎炎", tag: "AS / axSpA", color: "c-indigo", size: "medium", icon: "spine",
+  { key: "rheum_as", title: "僵直性脊椎炎", nameEn: "Ankylosing Spondylitis", tag: "AS", color: "c-indigo", size: "medium", icon: "spine",
     shelf: 0, intro: "年輕男性的下背痛不是閃到腰——可能是 AS 在敲門。",
     topics: [
       { key: "as_back_pain", label: "發炎性下背痛",   desc: "晨僵、活動後改善、夜間痛醒" },
@@ -2146,7 +2146,7 @@ var EDU_BOOKS = [
       { key: "as_comorb",    label: "相關共病",       desc: "葡萄膜炎、銀屑病、發炎性腸道" },
       { key: "as_daily",     label: "生活與工作",     desc: "辦公桌、開車、睡姿建議" }
     ] },
-  { key: "rheum_gout", title: "痛風與高尿酸", tag: "GOUT", color: "c-amber", size: "short", icon: "zap",
+  { key: "rheum_gout", title: "痛風與高尿酸", nameEn: "Gout & Hyperuricemia", tag: "Gout", color: "c-amber", size: "short", icon: "zap",
     shelf: 0, intro: "痛起來像被火燒——但只要好好控尿酸，就不必再忍。",
     topics: [
       { key: "gout_attack", label: "急性發作怎麼辦",   desc: "冰敷、抬高、NSAID 或秋水仙素" },
@@ -2156,7 +2156,7 @@ var EDU_BOOKS = [
       { key: "gout_tophi",  label: "痛風石與腎結石",   desc: "尿酸鹽結晶造成的長期傷害" },
       { key: "gout_metab",  label: "與代謝症候群",     desc: "高血壓、糖尿病、脂肪肝的連動" }
     ] },
-  { key: "rheum_sjogren", title: "乾燥症", tag: "SJÖGREN", color: "c-cyan", size: "medium", icon: "droplet",
+  { key: "rheum_sjogren", title: "乾燥症", nameEn: "Sjögren Syndrome", tag: "SS", color: "c-cyan", size: "medium", icon: "droplet",
     shelf: 0, intro: "口乾、眼乾不只是老化——也可能是免疫系統打到外分泌腺。",
     topics: [
       { key: "sj_self_check", label: "口乾眼乾自我評估", desc: "Schirmer test、唾液流速、SSI 量表" },
@@ -2166,7 +2166,7 @@ var EDU_BOOKS = [
       { key: "sj_systemic",   label: "全身性表現",       desc: "周邊神經病變、肺間質、腎小管酸中毒" },
       { key: "sj_lymphoma",   label: "淋巴瘤風險",       desc: "腫大唾液腺與長期追蹤" }
     ] },
-  { key: "rheum_fibro", title: "纖維肌痛症", tag: "FM", color: "c-pink", size: "short", icon: "waves",
+  { key: "rheum_fibro", title: "纖維肌痛症", nameEn: "Fibromyalgia", tag: "FM", color: "c-pink", size: "short", icon: "waves",
     shelf: 0, intro: "全身廣泛性疼痛、卻找不到發炎——纖維肌痛症需要被看見。",
     topics: [
       { key: "fm_what",      label: "中樞性敏感化",   desc: "為什麼疼痛訊號被放大" },
@@ -2175,7 +2175,7 @@ var EDU_BOOKS = [
       { key: "fm_exercise",  label: "漸進式運動",     desc: "水中、瑜珈、太極的劑量" },
       { key: "fm_meds",      label: "藥物選擇",       desc: "Pregabalin、Duloxetine、Amitriptyline" }
     ] },
-  { key: "rheum_biologics", title: "生物製劑指南", tag: "BIOLOGICS", color: "c-blue", size: "tall", icon: "syringe",
+  { key: "rheum_biologics", title: "生物製劑指南", nameEn: "Biologic Therapy", tag: "Bio", color: "c-blue", size: "tall", icon: "syringe",
     shelf: 0, intro: "生物製劑、JAK 抑制劑：聽起來高科技，其實已是免疫疾病的日常。",
     topics: [
       { key: "bio_what",     label: "什麼是生物製劑", desc: "與小分子標靶藥的差別" },
@@ -2188,10 +2188,10 @@ var EDU_BOOKS = [
     ] },
 
   // ── 第二層：認識與辨識 ──
-  { key: "diseases", title: "疾病百科", tag: "DISEASES", color: "c-brown",  size: "tall",   icon: "book-open-text",
+  { key: "diseases", title: "疾病百科", nameEn: "Disease Encyclopedia", tag: "Dx", color: "c-brown",  size: "tall",   icon: "book-open-text",
     shelf: 1, intro: "查找疾病、了解病程、認識六大衛教維度。",
     dynamic: "diseases" },
-  { key: "symptoms", title: "症狀辨識", tag: "SYMPTOMS", color: "c-rust",   size: "medium", icon: "search-check",
+  { key: "symptoms", title: "症狀辨識", nameEn: "Symptom Recognition", tag: "Sx", color: "c-rust",   size: "medium", icon: "search-check",
     shelf: 1, intro: "學會分辨身體傳來的訊號，知道該不該擔心。",
     topics: [
       { key: "fever",     label: "發燒處理", desc: "什麼時候只是小感冒、什麼時候要就醫" },
@@ -2202,7 +2202,7 @@ var EDU_BOOKS = [
       { key: "joint_pain",label: "關節腫痛",   desc: "對稱、晨僵、紅熱——免疫科的警訊" },
       { key: "rash",      label: "皮膚紅疹", desc: "蕁麻疹、過敏、感染、自體免疫的辨別" }
     ] },
-  { key: "labs", title: "檢驗報告", tag: "LAB DATA", color: "c-blue", size: "short", icon: "flask-conical",
+  { key: "labs", title: "檢驗報告", nameEn: "Laboratory Report", tag: "Lab", color: "c-blue", size: "short", icon: "flask-conical",
     shelf: 1, intro: "把抽血、影像、心電圖的數字翻譯成你聽得懂的話。",
     topics: [
       { key: "cbc",      label: "血液常規 CBC", desc: "白血球、紅血球、血紅素、血小板" },
@@ -2215,7 +2215,7 @@ var EDU_BOOKS = [
     ] },
 
   // ── 第三層：治療與管理 ──
-  { key: "medications", title: "藥物指南", tag: "MEDS", color: "c-pink", size: "tall", icon: "pill",
+  { key: "medications", title: "藥物指南", nameEn: "Medication Guide", tag: "Rx", color: "c-pink", size: "tall", icon: "pill",
     shelf: 2, intro: "藥不是敵人，是隊友。學會跟藥物相處。",
     topics: [
       { key: "schedule",  label: "用藥時間", desc: "飯前、飯後、睡前的差別" },
@@ -2226,7 +2226,7 @@ var EDU_BOOKS = [
       { key: "stop",      label: "可以自己停藥嗎", desc: "降血壓、抗生素、類固醇的提醒" },
       { key: "steroid",   label: "類固醇正解", desc: "副作用、減量、月亮臉與骨鬆" }
     ] },
-  { key: "nutrition", title: "飲食營養", tag: "DIET", color: "c-green", size: "medium", icon: "salad",
+  { key: "nutrition", title: "飲食營養", nameEn: "Nutrition & Diet", tag: "Diet", color: "c-green", size: "medium", icon: "salad",
     shelf: 2, intro: "把廚房變成第二個藥房，從每一餐照顧自己。",
     topics: [
       { key: "balance",   label: "六大類食物", desc: "我的餐盤怎麼分配" },
@@ -2237,7 +2237,7 @@ var EDU_BOOKS = [
       { key: "antiinflam",label: "抗發炎飲食", desc: "地中海、Omega-3、適合自體免疫" },
       { key: "fluid",     label: "水分管理", desc: "腎臟病與心衰的喝水拿捏" }
     ] },
-  { key: "exercise", title: "運動復健", tag: "REHAB", color: "c-lime", size: "short", icon: "activity",
+  { key: "exercise", title: "運動復健", nameEn: "Exercise & Rehab", tag: "Rehab", color: "c-lime", size: "short", icon: "activity",
     shelf: 2, intro: "從沙發起身的第一步，就是復原的開始。",
     topics: [
       { key: "aerobic",   label: "有氧運動", desc: "走路、游泳、騎車的劑量" },
@@ -2250,7 +2250,7 @@ var EDU_BOOKS = [
     ] },
 
   // ── 第四層：預防與支持 ──
-  { key: "mental", title: "心理健康", tag: "MIND", color: "c-purple", size: "medium", icon: "brain",
+  { key: "mental", title: "心理健康", nameEn: "Mental Health", tag: "MH", color: "c-purple", size: "medium", icon: "brain",
     shelf: 3, intro: "情緒也是身體的一部份，照顧它，身體才完整。",
     topics: [
       { key: "anxiety",   label: "焦慮自助", desc: "深呼吸、定向、漸進式放鬆" },
@@ -2259,7 +2259,7 @@ var EDU_BOOKS = [
       { key: "chronic_pain_mind", label: "慢性疼痛的心理", desc: "疼痛—情緒—睡眠的循環" },
       { key: "stress",    label: "壓力管理", desc: "工作、家庭、照顧者的喘息" }
     ] },
-  { key: "emergency", title: "急救應變", tag: "SOS", color: "c-red", size: "tall", icon: "siren",
+  { key: "emergency", title: "急救應變", nameEn: "Emergency Care", tag: "ER", color: "c-red", size: "tall", icon: "siren",
     shelf: 3, intro: "三分鐘決定一切——學會正確呼救與第一時間處理。",
     topics: [
       { key: "cpr",       label: "CPR 心肺復甦", desc: "壓胸節奏與 AED 使用" },
@@ -2269,7 +2269,7 @@ var EDU_BOOKS = [
       { key: "stroke_sx", label: "中風辨識 FAST", desc: "Face / Arm / Speech / Time" },
       { key: "anaphyl",   label: "過敏性休克", desc: "EpiPen 與 119 的時機" }
     ] },
-  { key: "prevent", title: "預防保健", tag: "PREVENT", color: "c-cyan", size: "medium", icon: "shield-check",
+  { key: "prevent", title: "預防保健", nameEn: "Prevention & Wellness", tag: "Prev", color: "c-cyan", size: "medium", icon: "shield-check",
     shelf: 3, intro: "在生病之前先一步——疫苗、篩檢與生活習慣。",
     topics: [
       { key: "vaccine",   label: "成人疫苗", desc: "流感、肺炎鏈球菌、帶狀皰疹" },
@@ -2278,7 +2278,7 @@ var EDU_BOOKS = [
       { key: "smoke",     label: "戒菸戒酒", desc: "戒菸門診與替代療法" },
       { key: "weight",    label: "體重管理", desc: "BMI、腰圍、體脂與內臟脂肪" }
     ] },
-  { key: "chronic", title: "慢性病管理", tag: "CHRONIC", color: "c-indigo", size: "tall", icon: "clipboard-check",
+  { key: "chronic", title: "慢性病管理", nameEn: "Chronic Disease", tag: "CD", color: "c-indigo", size: "tall", icon: "clipboard-check",
     shelf: 3, intro: "慢性病不是結束，是每天和身體和解的開始。",
     topics: [
       { key: "diary",     label: "自我監測日誌", desc: "血壓、血糖、體重的紀錄要點" },
@@ -2287,7 +2287,7 @@ var EDU_BOOKS = [
       { key: "follow",    label: "回診準備", desc: "把問題寫下來、把藥袋帶上" },
       { key: "burnout",   label: "照顧疲勞", desc: "病人與家屬的喘息空間" }
     ] },
-  { key: "women_kids", title: "婦幼保健", tag: "MOM&KIDS", color: "c-rose", size: "short", icon: "baby",
+  { key: "women_kids", title: "婦幼保健", nameEn: "Maternal & Child", tag: "M&C", color: "c-rose", size: "short", icon: "baby",
     shelf: 3, intro: "孕期、哺乳、成長——給媽媽與孩子的暖心提醒。",
     topics: [
       { key: "preg",      label: "孕期保健", desc: "葉酸、產檢時程、體重增加" },
@@ -2296,7 +2296,7 @@ var EDU_BOOKS = [
       { key: "growth",    label: "生長發育", desc: "身高體重曲線、語言發展" },
       { key: "fever_kid", label: "兒童發燒處理", desc: "退燒藥與就醫指標" }
     ] },
-  { key: "elder", title: "銀髮照護", tag: "ELDER", color: "c-amber", size: "medium", icon: "heart-handshake",
+  { key: "elder", title: "銀髮照護", nameEn: "Elder Care", tag: "Eld", color: "c-amber", size: "medium", icon: "heart-handshake",
     shelf: 3, intro: "陪伴長輩好好變老——失能、失智、跌倒、營養。",
     topics: [
       { key: "fall",      label: "預防跌倒", desc: "居家環境與肌力訓練" },
@@ -2395,9 +2395,12 @@ function renderBookshelf() {
     s.books.forEach(function(b) {
       html +=
         '<button class="book ' + b.color + ' ' + b.size + '" ' +
-        'onclick="eduOpenBook(\'' + b.key + '\')" title="' + escapeHtml(b.title) + '">' +
-          '<i data-lucide="' + b.icon + '" class="book-icon" style="width:18px;height:18px"></i>' +
-          '<span class="book-title">' + escapeHtml(b.title) + '</span>' +
+        'onclick="eduOpenBook(\'' + b.key + '\')" title="' + escapeHtml(b.title + (b.nameEn ? "・" + b.nameEn : "")) + '">' +
+          '<i data-lucide="' + b.icon + '" class="book-icon" style="width:16px;height:16px"></i>' +
+          '<span class="book-spine">' +
+            '<span class="book-title">' + escapeHtml(b.title) + '</span>' +
+            (b.nameEn ? '<span class="book-subtitle">' + escapeHtml(b.nameEn) + '</span>' : '') +
+          '</span>' +
           '<span class="book-tag">' + escapeHtml(b.tag) + '</span>' +
         '</button>';
     });
