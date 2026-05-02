@@ -2678,16 +2678,26 @@ function refreshMemoFeed() {
   const initial = escapeHtml(rawName.slice(0, 1).toUpperCase());
   feed.innerHTML = renderMemoFeed(memos, tab, name, initial);
   if (typeof lucide !== 'undefined') lucide.createIcons();
-  // 更新頂部統計
+  // 更新頂部統計（用 DOM API 避免將 localStorage 衍生資料注入 innerHTML）
   const hero = document.querySelector('.memo-hero-stats');
   if (hero) {
     const totalLikes = memos.reduce((s, m) => s + (m.liked ? 1 : 0), 0);
     const totalSaves = memos.reduce((s, m) => s + (m.saved ? 1 : 0), 0);
-    hero.innerHTML = `
-      <div><b>${memos.length}</b><span>貼文</span></div>
-      <div><b>${totalLikes}</b><span>愛心</span></div>
-      <div><b>${totalSaves}</b><span>收藏</span></div>
-    `;
+    const stats = [
+      { n: memos.length, label: '貼文' },
+      { n: totalLikes,  label: '愛心' },
+      { n: totalSaves,  label: '收藏' }
+    ];
+    hero.textContent = '';
+    stats.forEach(s => {
+      const div = document.createElement('div');
+      const b = document.createElement('b');
+      b.textContent = String(Number(s.n) || 0);
+      const span = document.createElement('span');
+      span.textContent = s.label;
+      div.append(b, span);
+      hero.append(div);
+    });
   }
 }
 
