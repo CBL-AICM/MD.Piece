@@ -2418,7 +2418,7 @@ function memo() {
   _pendingMemoImage = null;
   const memos = getMemos().slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
   const user = getCurrentUser();
-  const rawName = (user && user.name) ? user.name : '我';
+  const rawName = (user && (user.nickname || user.name)) ? (user.nickname || user.name) : '我';
   const rawInitial = rawName.slice(0, 1).toUpperCase();
   const name = escapeHtml(rawName);
   const initial = escapeHtml(rawInitial);
@@ -2635,6 +2635,9 @@ function clearMemoImage() {
   _pendingMemoImage = null;
   const wrap = document.getElementById('memo-image-preview');
   if (wrap) wrap.style.display = 'none';
+  // 清掉 file input 值，否則同一張圖再選不會觸發 change
+  const fileInput = document.querySelector('.memo-tool input[type="file"]');
+  if (fileInput) fileInput.value = '';
 }
 
 function insertMemoTag() {
@@ -2687,7 +2690,7 @@ function refreshMemoFeed() {
   const tab = document.querySelector('.memo-tab.on')?.dataset.tab || 'all';
   const memos = getMemos().slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
   const user = getCurrentUser();
-  const rawName = (user && user.name) ? user.name : '我';
+  const rawName = (user && (user.nickname || user.name)) ? (user.nickname || user.name) : '我';
   const name = escapeHtml(rawName);
   const initial = escapeHtml(rawName.slice(0, 1).toUpperCase());
   feed.innerHTML = renderMemoFeed(memos, tab, name, initial);
