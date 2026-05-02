@@ -870,8 +870,61 @@ function vitals() {
           </div>
           <div class="vt-add-custom">
             <span class="vt-add-prompt">$ add-metric</span>
-            <input id="vt-custom-name" placeholder="名稱（例：尿酸）" maxlength="20" />
-            <input id="vt-custom-unit" placeholder="單位（例：mg/dL）" maxlength="10" />
+            <input id="vt-custom-name" placeholder="名稱（例：尿酸、步數、視力）" maxlength="20" />
+            <select id="vt-custom-unit" class="vt-unit-select">
+              <option value="">— 無單位 —</option>
+              <optgroup label="醫療數值">
+                <option value="mg/dL">mg/dL（血糖、膽固醇）</option>
+                <option value="mmol/L">mmol/L（血糖）</option>
+                <option value="mmHg">mmHg（血壓）</option>
+                <option value="bpm">bpm（每分鐘心跳）</option>
+                <option value="IU">IU（國際單位）</option>
+              </optgroup>
+              <optgroup label="百分比">
+                <option value="%">%（百分比、血氧）</option>
+              </optgroup>
+              <optgroup label="重量">
+                <option value="kg">kg（公斤）</option>
+                <option value="g">g（公克）</option>
+                <option value="lb">lb（磅）</option>
+              </optgroup>
+              <optgroup label="長度">
+                <option value="cm">cm（公分）</option>
+                <option value="mm">mm（毫米）</option>
+                <option value="m">m（公尺）</option>
+              </optgroup>
+              <optgroup label="體積／容量">
+                <option value="ml">ml（毫升）</option>
+                <option value="cc">cc（立方公分）</option>
+                <option value="L">L（公升）</option>
+                <option value="杯">杯</option>
+                <option value="瓶">瓶</option>
+              </optgroup>
+              <optgroup label="溫度">
+                <option value="°C">°C（攝氏）</option>
+                <option value="°F">°F（華氏）</option>
+              </optgroup>
+              <optgroup label="次數／數量">
+                <option value="次">次</option>
+                <option value="步">步</option>
+                <option value="顆">顆</option>
+                <option value="片">片</option>
+                <option value="包">包</option>
+              </optgroup>
+              <optgroup label="時間">
+                <option value="分鐘">分鐘</option>
+                <option value="小時">小時</option>
+                <option value="天">天</option>
+              </optgroup>
+              <optgroup label="能量">
+                <option value="kcal">kcal（大卡）</option>
+              </optgroup>
+              <optgroup label="評級">
+                <option value="級">級</option>
+                <option value="分">分（評分）</option>
+                <option value="星">星</option>
+              </optgroup>
+            </select>
             <button class="primary-btn vt-small-btn" onclick="addCustomMetricUI()" type="button">
               <i data-lucide="plus"></i><span>新增</span>
             </button>
