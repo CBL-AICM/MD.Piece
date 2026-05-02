@@ -102,6 +102,27 @@ class MedicationChangeCreate(BaseModel):
     effective_date: datetime | None = None
 
 
+# ─── Memo ─────────────────────────────────────────────────
+
+class MemoCreate(BaseModel):
+    patient_id: str
+    content: str | None = None
+    photo_data: str | None = None
+    photo_caption: str | None = None
+    tags: list[str] = []
+    for_doctor: bool = True
+    event_date: datetime | None = None
+
+
+class MemoUpdate(BaseModel):
+    content: str | None = None
+    photo_data: str | None = None
+    photo_caption: str | None = None
+    tags: list[str] | None = None
+    for_doctor: bool | None = None
+    event_date: datetime | None = None
+
+
 # ─── Alerts ───────────────────────────────────────────────
 
 class AlertCreate(BaseModel):

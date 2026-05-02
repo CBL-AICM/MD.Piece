@@ -194,6 +194,21 @@ _SCHEMAS = {
             FOREIGN KEY (medication_id) REFERENCES medications(id),
             FOREIGN KEY (doctor_id) REFERENCES doctors(id)
         )""",
+    "memos": """
+        CREATE TABLE IF NOT EXISTS memos (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            content TEXT,
+            photo_data TEXT,
+            photo_caption TEXT,
+            tags TEXT,
+            for_doctor INTEGER DEFAULT 1,
+            included_in_report INTEGER DEFAULT 0,
+            event_date TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
     "alerts": """
         CREATE TABLE IF NOT EXISTS alerts (
             id TEXT PRIMARY KEY,

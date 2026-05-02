@@ -104,8 +104,8 @@ function placeholderPage(label, hint, iconName, slug, pct) {
   `;
 }
 const vitals   = () => placeholderPage('生理紀錄',  '記錄血壓、心率、體重、體溫等日常生理數據。', 'activity', 'vitals', 42);
-const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note', 'memo', 80);
-const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
+const memo     = () => memoPage();
+const previsit = () => previsitPage();
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
 const pieces   = () => placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle', 'your-pieces', 67);
@@ -139,6 +139,8 @@ function showPage(page) {
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
+    if (page === "memo") loadMemoPage();
+    if (page === "previsit") loadPrevisitPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -1907,6 +1909,314 @@ function markdownToHtml(md) {
     .replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:20px;margin-bottom:4px"><strong>$1.</strong> $2</li>')
     .replace(/\n\n/g, '<br><br>')
     .replace(/\n/g, '<br>');
+}
+
+
+// ─── Memo（隨手筆記）─────────────────────────────────────
+// 記錄想跟醫師說的話、回診期間發生的事，可附照片，
+// 並能在回診前彙整成「診前報告」。
+
+let _memoPhotoData = null;        // base64 string (no data: prefix) of selected photo
+let _memoPhotoPreviewSrc = null;  // full data URL for preview only
+
+function memoPage() {
+  return `
+    <div class="memo-page">
+      <header class="page-head">
+        <h2><i data-lucide="sticky-note"></i> Memo · 隨手筆記</h2>
+        <p class="page-sub">把這次回診間想跟醫師說的話、發生的事先記下來，照片也可以。</p>
+      </header>
+
+      <section class="memo-compose">
+        <textarea id="memo-content" rows="4"
+          placeholder="今天發生什麼事？想跟醫師說什麼？例：吃藥後皮膚有紅疹、晚上比較容易睡、頭痛變頻繁..."></textarea>
+
+        <div class="memo-photo-row">
+          <label class="memo-photo-btn">
+            <i data-lucide="camera"></i> 拍照 / 選圖
+            <input type="file" accept="image/*" capture="environment"
+              onchange="handleMemoPhoto(this)" style="display:none" />
+          </label>
+          <input id="memo-photo-caption" type="text"
+            placeholder="照片說明（例：紅疹位置、藥袋上的成分）" />
+        </div>
+        <div id="memo-photo-preview"></div>
+
+        <div class="memo-flags">
+          <label class="memo-toggle">
+            <input id="memo-for-doctor" type="checkbox" checked />
+            <span>想跟醫師說（會放進診前報告）</span>
+          </label>
+        </div>
+
+        <div class="memo-actions">
+          <button class="primary" onclick="saveMemo()">
+            <i data-lucide="save"></i> 存下來
+          </button>
+          <button class="secondary" onclick="clearMemoForm()">清空</button>
+          <button class="secondary" onclick="navigateTo('previsit',null)">
+            <i data-lucide="clipboard-check"></i> 看診前報告
+          </button>
+        </div>
+      </section>
+
+      <section class="memo-list-section">
+        <div class="memo-list-head">
+          <h3>已記錄（近 30 天）</h3>
+          <select id="memo-filter" onchange="loadMemoPage()">
+            <option value="all">全部</option>
+            <option value="for_doctor">想跟醫師說</option>
+            <option value="self">自己留存</option>
+          </select>
+        </div>
+        <div id="memo-list" class="memo-list">
+          <p class="memo-empty">載入中...</p>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function handleMemoPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  if (file.size > 5 * 1024 * 1024) {
+    showToast("照片太大，請選 5MB 以下的檔案", "warning");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    _memoPhotoPreviewSrc = e.target.result;
+    _memoPhotoData = String(_memoPhotoPreviewSrc).split(",")[1] || null;
+    document.getElementById("memo-photo-preview").innerHTML =
+      '<div class="memo-photo-preview-wrap">' +
+      '<img src="' + _memoPhotoPreviewSrc + '" alt="memo 照片預覽" />' +
+      '<button class="memo-photo-remove" onclick="clearMemoPhoto()" title="移除照片"><i data-lucide="x"></i></button>' +
+      '</div>';
+    if (typeof lucide !== "undefined") lucide.createIcons();
+  };
+  reader.readAsDataURL(file);
+  input.value = "";
+}
+
+function clearMemoPhoto() {
+  _memoPhotoData = null;
+  _memoPhotoPreviewSrc = null;
+  const el = document.getElementById("memo-photo-preview");
+  if (el) el.innerHTML = "";
+}
+
+function clearMemoForm() {
+  document.getElementById("memo-content").value = "";
+  document.getElementById("memo-photo-caption").value = "";
+  document.getElementById("memo-for-doctor").checked = true;
+  clearMemoPhoto();
+}
+
+async function saveMemo() {
+  const content = document.getElementById("memo-content").value.trim();
+  const caption = document.getElementById("memo-photo-caption").value.trim();
+  const forDoctor = document.getElementById("memo-for-doctor").checked;
+
+  if (!content && !_memoPhotoData) {
+    showToast("至少要寫點什麼或附張照片喔", "warning");
+    return;
+  }
+
+  const body = {
+    patient_id: getStablePatientId(),
+    content: content || null,
+    photo_data: _memoPhotoData,
+    photo_caption: caption || null,
+    for_doctor: forDoctor,
+  };
+
+  try {
+    const res = await fetch(API + "/memos/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      let msg;
+      try { msg = JSON.parse(t).detail; } catch { msg = t; }
+      showToast("存檔失敗：" + msg, "error");
+      return;
+    }
+    showToast("已存下這則 memo ✓", "success");
+    clearMemoForm();
+    loadMemoPage();
+  } catch (err) {
+    showToast("存檔失敗：" + (err && err.message || "網路錯誤"), "error");
+  }
+}
+
+async function loadMemoPage() {
+  const listEl = document.getElementById("memo-list");
+  if (!listEl) return;
+  const pid = getStablePatientId();
+  const filter = (document.getElementById("memo-filter") || {}).value || "all";
+
+  let url = API + "/memos/?patient_id=" + encodeURIComponent(pid);
+  if (filter === "for_doctor") url += "&for_doctor=true";
+  if (filter === "self") url += "&for_doctor=false";
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const memos = data.memos || [];
+    if (!memos.length) {
+      listEl.innerHTML = '<p class="memo-empty">還沒有 memo，從上方開始記錄吧。</p>';
+      return;
+    }
+    listEl.innerHTML = memos.map(renderMemoCard).join("");
+    if (typeof lucide !== "undefined") lucide.createIcons();
+  } catch {
+    listEl.innerHTML = '<p class="memo-empty">載入失敗，稍後再試。</p>';
+  }
+}
+
+function renderMemoCard(m) {
+  const date = (m.created_at || "").slice(0, 16).replace("T", " ");
+  const badge = Number(m.for_doctor) === 1
+    ? '<span class="memo-badge memo-badge-doc">想跟醫師說</span>'
+    : '<span class="memo-badge memo-badge-self">自己留存</span>';
+  const inReport = Number(m.included_in_report) === 1
+    ? '<span class="memo-badge memo-badge-report">已納入報告</span>' : '';
+  const photo = m.photo_data
+    ? '<img src="data:image/jpeg;base64,' + m.photo_data + '" alt="memo 照片" class="memo-card-photo" />'
+    : '';
+  const caption = m.photo_caption
+    ? '<p class="memo-card-caption">📷 ' + escapeHtml(m.photo_caption) + '</p>' : '';
+  const content = m.content
+    ? '<p class="memo-card-content">' + escapeHtml(m.content) + '</p>' : '';
+
+  return (
+    '<article class="memo-card">' +
+      '<header class="memo-card-head">' +
+        '<span class="memo-card-date">' + date + '</span>' +
+        badge + inReport +
+        '<button class="memo-card-del" onclick="deleteMemo(\'' + m.id + '\')" title="刪除">' +
+          '<i data-lucide="trash-2"></i></button>' +
+      '</header>' +
+      content + photo + caption +
+    '</article>'
+  );
+}
+
+async function deleteMemo(id) {
+  if (!confirm("確定要刪除這則 memo？")) return;
+  try {
+    const res = await fetch(API + "/memos/" + id, { method: "DELETE" });
+    if (!res.ok) { showToast("刪除失敗", "error"); return; }
+    showToast("已刪除", "success");
+    loadMemoPage();
+  } catch {
+    showToast("刪除失敗", "error");
+  }
+}
+
+// ─── 診前報告 ─────────────────────────────────────────────
+
+function previsitPage() {
+  return `
+    <div class="previsit-page">
+      <header class="page-head">
+        <h2><i data-lucide="clipboard-check"></i> 診前報告</h2>
+        <p class="page-sub">把這段期間記下的 memo 整理成一份報告，回診時可以直接給醫師看。</p>
+      </header>
+
+      <div class="previsit-controls">
+        <label>整理範圍：
+          <select id="previsit-days">
+            <option value="7">近 7 天</option>
+            <option value="14">近 14 天</option>
+            <option value="30" selected>近 30 天</option>
+            <option value="60">近 60 天</option>
+            <option value="90">近 90 天</option>
+          </select>
+        </label>
+        <button class="primary" onclick="generatePrevisitReport()">
+          <i data-lucide="sparkles"></i> 產出報告
+        </button>
+        <button class="secondary" onclick="navigateTo('memo',null)">
+          <i data-lucide="sticky-note"></i> 回去記 memo
+        </button>
+      </div>
+
+      <div class="previsit-meta" id="previsit-meta"></div>
+      <div id="previsit-report" class="previsit-report"></div>
+    </div>
+  `;
+}
+
+function loadPrevisitPage() {
+  // 進頁面就先預覽近 30 天的 memo 數，提示使用者
+  const pid = getStablePatientId();
+  fetch(API + "/memos/?patient_id=" + encodeURIComponent(pid) + "&limit=200")
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      const memos = data.memos || [];
+      const total = memos.length;
+      const docNum = memos.filter(function (m) { return Number(m.for_doctor) === 1; }).length;
+      const photoNum = memos.filter(function (m) { return !!m.photo_data; }).length;
+      const meta = document.getElementById("previsit-meta");
+      if (!meta) return;
+      meta.innerHTML =
+        '<div class="previsit-stat"><strong>' + total + '</strong><span>memo 數</span></div>' +
+        '<div class="previsit-stat"><strong>' + docNum + '</strong><span>想跟醫師說</span></div>' +
+        '<div class="previsit-stat"><strong>' + photoNum + '</strong><span>含照片</span></div>';
+    })
+    .catch(function () {});
+}
+
+async function generatePrevisitReport() {
+  const days = document.getElementById("previsit-days").value || 30;
+  const pid = getStablePatientId();
+  const reportEl = document.getElementById("previsit-report");
+  reportEl.innerHTML =
+    '<div class="previsit-loading">' +
+    '<div class="loading-spinner"></div>' +
+    '<p>正在整理你的 memo...</p></div>';
+
+  try {
+    const res = await fetch(API + "/memos/" + pid + "/previsit-report?days=" + days);
+    const data = await res.json();
+    if (!res.ok) {
+      reportEl.innerHTML = '<p class="memo-empty">產生失敗：' + (data.detail || "未知錯誤") + '</p>';
+      return;
+    }
+    const meta =
+      '<p class="previsit-report-meta">期間共 ' + data.memo_count +
+      ' 則 memo · 想跟醫師說 ' + (data.for_doctor_count || 0) +
+      ' 則 · 含照片 ' + (data.photo_count || 0) + ' 則</p>';
+    reportEl.innerHTML =
+      '<div class="previsit-report-card">' +
+        meta +
+        '<div class="previsit-report-body">' + markdownToHtml(data.report || "") + '</div>' +
+        '<div class="previsit-report-actions">' +
+          '<button class="secondary" onclick="copyPrevisitReport()">複製文字</button>' +
+          '<button class="secondary" onclick="window.print()">列印</button>' +
+        '</div>' +
+      '</div>';
+    if (typeof lucide !== "undefined") lucide.createIcons();
+    window._previsitReportText = data.report || "";
+  } catch (err) {
+    reportEl.innerHTML = '<p class="memo-empty">連線失敗：' + (err && err.message || "") + '</p>';
+  }
+}
+
+function copyPrevisitReport() {
+  const txt = window._previsitReportText || "";
+  if (!txt) { showToast("沒有可複製的內容", "info"); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(function () {
+      showToast("已複製到剪貼簿 ✓", "success");
+    }, function () { showToast("複製失敗", "error"); });
+  } else {
+    showToast("此瀏覽器不支援複製", "warning");
+  }
 }
 
 
