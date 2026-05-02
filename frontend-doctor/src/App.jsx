@@ -1,12 +1,29 @@
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
+import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import Dashboard from './pages/Dashboard.jsx'
 import PatientList from './pages/PatientList.jsx'
 import PatientDetail from './pages/PatientDetail.jsx'
 import Reports from './pages/Reports.jsx'
 import Alerts from './pages/Alerts.jsx'
 import Settings from './pages/Settings.jsx'
+import Login from './pages/Login.jsx'
+import Register from './pages/Register.jsx'
+import { clearSession, getUser, isAuthenticated } from './lib/auth.js'
 
-export default function App() {
+function RequireAuth({ children }) {
+  const location = useLocation()
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+  return children
+}
+
+function Shell({ children }) {
+  const navigate = useNavigate()
+  const user = getUser()
+  const onLogout = () => {
+    clearSession()
+    navigate('/login', { replace: true })
+  }
   return (
     <div className="app">
       <header className="topbar">
@@ -25,19 +42,40 @@ export default function App() {
           <NavLink to="/alerts" className="nav-item">警示</NavLink>
           <NavLink to="/settings" className="nav-item">設定</NavLink>
         </nav>
+        <div className="topbar-user">
+          {user && <span className="cell-dim">{user.nickname || user.username}</span>}
+          <button type="button" className="btn btn-ghost" onClick={onLogout}>登出</button>
+        </div>
       </header>
 
-      <main>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/patients" element={<PatientList />} />
-          <Route path="/patients/:id" element={<PatientDetail />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/alerts" element={<Alerts />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </main>
+      <main>{children}</main>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route
+        path="/*"
+        element={
+          <RequireAuth>
+            <Shell>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/patients" element={<PatientList />} />
+                <Route path="/patients/:id" element={<PatientDetail />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/alerts" element={<Alerts />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </Shell>
+          </RequireAuth>
+        }
+      />
+    </Routes>
   )
 }

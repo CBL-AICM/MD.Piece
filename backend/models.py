@@ -70,6 +70,27 @@ class UserCreate(BaseModel):
     avatar_color: str | None = None
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    nickname: str
+    role: str  # 'doctor' or 'patient'
+    avatar_color: str | None = None
+    linked_doctor_id: str | None = None
+    linked_patient_id: str | None = None
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: dict
+
+
 # ─── Doctor Notes ─────────────────────────────────────────
 
 class DoctorNoteCreate(BaseModel):

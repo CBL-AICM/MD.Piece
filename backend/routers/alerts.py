@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone
 from backend.db import get_supabase
+from backend.dependencies import require_doctor
 from backend.models import AlertCreate, AlertUpdate
 
 router = APIRouter()
@@ -55,13 +56,14 @@ def create_alert(body: AlertCreate):
 
 
 @router.put("/{alert_id}")
-def update_alert(alert_id: str, body: AlertUpdate):
+def update_alert(alert_id: str, body: AlertUpdate, user: dict = Depends(require_doctor)):
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
     if "acknowledged" in data:
         data["acknowledged"] = 1 if data["acknowledged"] else 0
         if data["acknowledged"]:
             data["acknowledged_at"] = datetime.now(timezone.utc).isoformat()
+            data.setdefault("acknowledged_by", user.get("linked_doctor_id") or user.get("id"))
     if "resolved" in data:
         data["resolved"] = 1 if data["resolved"] else 0
         if data["resolved"]:
@@ -75,7 +77,7 @@ def update_alert(alert_id: str, body: AlertUpdate):
 
 
 @router.delete("/{alert_id}")
-def delete_alert(alert_id: str):
+def delete_alert(alert_id: str, _user: dict = Depends(require_doctor)):
     sb = get_supabase()
     result = sb.table("alerts").delete().eq("id", alert_id).execute()
     if not result.data:

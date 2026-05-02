@@ -155,9 +155,14 @@ _SCHEMAS = {
     "users": """
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
+            username TEXT UNIQUE,
+            password_hash TEXT,
             nickname TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('doctor', 'patient')),
             avatar_color TEXT DEFAULT '#5B9FE8',
+            linked_doctor_id TEXT,
+            linked_patient_id TEXT,
+            is_active INTEGER DEFAULT 1,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
     "doctor_notes": """
@@ -229,14 +234,34 @@ def _get_conn():
         for sql in _SCHEMAS.values():
             conn.execute(sql)
         conn.commit()
+        _migrate_users(conn)
         _db_initialized = True
     return conn
+
+
+_USER_COLUMN_MIGRATIONS = [
+    ("username", "TEXT"),
+    ("password_hash", "TEXT"),
+    ("linked_doctor_id", "TEXT"),
+    ("linked_patient_id", "TEXT"),
+    ("is_active", "INTEGER DEFAULT 1"),
+]
+
+
+def _migrate_users(conn):
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+    for col, ddl in _USER_COLUMN_MIGRATIONS:
+        if col not in existing:
+            conn.execute(f'ALTER TABLE users ADD COLUMN {col} {ddl}')
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL")
+    conn.commit()
 
 
 def _init_db():
     conn = _get_conn()
     for sql in _SCHEMAS.values():
         conn.execute(sql)
+    _migrate_users(conn)
     conn.commit()
     conn.close()
     logger.info(f"SQLite database initialized at {DB_PATH}")
