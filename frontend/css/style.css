@@ -6168,3 +6168,190 @@ html[data-mode="senior"] .visit-modal-cancel,
 html[data-mode="senior"] .visit-modal-save {
   padding: 14px 22px; font-size: 1rem; min-height: 52px;
 }
+
+/* ─── 報告數值 Lab Values ──────────────────────────────────── */
+
+.labs-hero h2 { color: var(--text); }
+
+.labs-form .labs-form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.labs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.labs-field-wide { flex: 1 1 100%; }
+.labs-field-small { flex: 0 1 110px; }
+.labs-field span {
+  font-size: .82rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.labs-field input,
+.labs-field select {
+  padding: 9px 12px;
+  border: 1px solid rgba(92, 58, 50, 0.18);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: .95rem;
+  font-family: inherit;
+}
+.labs-field input:focus,
+.labs-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.labs-submit {
+  align-self: stretch;
+  padding: 10px 20px;
+  white-space: nowrap;
+}
+
+.labs-result { padding: 18px; }
+.labs-result-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(92, 58, 50, 0.15);
+}
+.labs-result-emoji { font-size: 2rem; line-height: 1; }
+.labs-result-item {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.labs-result-input {
+  font-size: .85rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.labs-result-status {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: .85rem;
+  font-weight: 600;
+  background: var(--bg-mid);
+  color: var(--text);
+}
+.labs-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(92, 58, 50, 0.08);
+}
+.labs-result-row strong { color: var(--text-dim); font-size: .88rem; }
+.labs-result-row span { color: var(--text); font-weight: 500; }
+.labs-result-block { margin-top: 12px; }
+.labs-result-block strong {
+  display: block;
+  font-size: .88rem;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.labs-result-block p { margin: 0; line-height: 1.55; color: var(--text); }
+.labs-result-warn {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: #FCE5DD;
+  color: #B5371A;
+  border-radius: 8px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.labs-result-disclaimer {
+  margin-top: 14px;
+  font-size: .78rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* 狀態色框邊 */
+.labs-st-ok    { border-left: 4px solid #5DAA72; }
+.labs-st-warn  { border-left: 4px solid #D9A54A; }
+.labs-st-bad   { border-left: 4px solid #C9554B; }
+.labs-st-unk   { border-left: 4px solid var(--text-muted); }
+
+.labs-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  margin: 0;
+}
+.labs-spin { animation: labs-spin 1s linear infinite; width: 16px; height: 16px; }
+@keyframes labs-spin { to { transform: rotate(360deg); } }
+
+.labs-error {
+  margin: 0;
+  color: #B5371A;
+  background: #FCE5DD;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.labs-history-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.labs-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.labs-history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.labs-history-item:hover { background: var(--bg-soft); }
+.labs-history-emoji { font-size: 1.2rem; }
+.labs-history-body { flex: 1; min-width: 0; }
+.labs-history-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+.labs-history-top strong { color: var(--text); font-size: .95rem; }
+.labs-history-value { color: var(--text-dim); font-size: .88rem; }
+.labs-history-meta {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.labs-empty {
+  color: var(--text-muted);
+  font-size: .88rem;
+  text-align: center;
+  padding: 16px;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .labs-form-row { flex-direction: column; align-items: stretch; }
+  .labs-field, .labs-field-small { flex: 1 1 auto; }
+  .labs-submit { width: 100%; }
+}

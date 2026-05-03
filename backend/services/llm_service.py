@@ -1,21 +1,27 @@
 import base64
 import json
 import logging
+import os
 import httpx
 
 logger = logging.getLogger(__name__)
 
-# 本地 LLM 服務（Ollama）
-# 零成本、零隱私風險，所有資料不出本機
-# 應用場景：分流判斷、白話解讀、小禾對話、問診清單、30天報告、藥袋辨識
+# 多 provider LLM 服務
+# - 本地開發：LLM_PROVIDER=ollama（預設）→ 零成本、資料不出本機
+# - 雲端部署：LLM_PROVIDER=groq → 免費額度大、速度快，無需自架 GPU
+# 應用場景：分流判斷、白話解讀、小禾對話、問診清單、30天報告、藥袋辨識、檢驗值解讀
 
-OLLAMA_BASE = "http://localhost:11434"
-TEXT_MODEL = "qwen2.5:7b"
-VISION_MODEL = "llava:7b"
+OLLAMA_BASE = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "qwen2.5:7b")
+VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "llava:7b")
+
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_BASE = "https://api.groq.com/openai/v1"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 
-def call_claude(system_prompt: str, user_message: str) -> str:
-    """文字生成（相容原 claude_service 簽名）"""
+def _call_ollama(system_prompt: str, user_message: str) -> str:
     resp = httpx.post(
         f"{OLLAMA_BASE}/api/chat",
         json={
@@ -30,6 +36,36 @@ def call_claude(system_prompt: str, user_message: str) -> str:
     )
     resp.raise_for_status()
     return resp.json()["message"]["content"]
+
+
+def _call_groq(system_prompt: str, user_message: str) -> str:
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY not set; cannot use Groq provider")
+    resp = httpx.post(
+        f"{GROQ_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": GROQ_MODEL,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            "temperature": 0.4,
+        },
+        timeout=60.0,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
+def call_claude(system_prompt: str, user_message: str) -> str:
+    """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider"""
+    if LLM_PROVIDER == "groq":
+        return _call_groq(system_prompt, user_message)
+    return _call_ollama(system_prompt, user_message)
 
 
 def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") -> dict:

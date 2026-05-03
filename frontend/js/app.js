@@ -402,7 +402,69 @@ function memoRenderList() {
 
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
-const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
+function labs() {
+  return `
+    <div class="card labs-hero">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="trending-up" style="width:22px;height:22px"></i> 報告數值
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        輸入任何檢驗項目（血液、肝腎、免疫、罕見值都可以），AI 會告訴你正常範圍、是否異常、生活建議。<strong>結果僅供參考，不取代醫師判讀。</strong>
+      </p>
+    </div>
+
+    <div class="card labs-form">
+      <div class="labs-form-row">
+        <label class="labs-field labs-field-wide">
+          <span>檢驗項目</span>
+          <input type="text" id="lab-name" placeholder="例：血紅素、ANA、IgE、CRP、總膽固醇" />
+        </label>
+      </div>
+      <div class="labs-form-row">
+        <label class="labs-field">
+          <span>數值</span>
+          <input type="text" id="lab-value" placeholder="例：12.3 / 陽性 / >200" />
+        </label>
+        <label class="labs-field">
+          <span>單位（選填）</span>
+          <input type="text" id="lab-unit" placeholder="例：g/dL、mg/dL、IU/mL" />
+        </label>
+      </div>
+      <div class="labs-form-row">
+        <label class="labs-field labs-field-small">
+          <span>年齡</span>
+          <input type="number" id="lab-age" min="0" max="120" placeholder="28" />
+        </label>
+        <label class="labs-field labs-field-small">
+          <span>性別</span>
+          <select id="lab-sex">
+            <option value="">不指定</option>
+            <option value="female">女</option>
+            <option value="male">男</option>
+            <option value="other">其他</option>
+          </select>
+        </label>
+        <button class="primary labs-submit" onclick="labsCheck()">
+          <i data-lucide="search" style="width:14px;height:14px;vertical-align:middle"></i> 查詢
+        </button>
+      </div>
+    </div>
+
+    <div id="lab-result" class="card labs-result" style="display:none"></div>
+
+    <div class="card labs-history">
+      <div class="labs-history-head">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:6px">
+          <i data-lucide="history" style="width:16px;height:16px"></i> 查詢紀錄
+        </h3>
+        <button class="ghost" onclick="labsClearHistory()" title="清除紀錄（僅存於此裝置）">
+          <i data-lucide="trash-2" style="width:14px;height:14px"></i> 清除
+        </button>
+      </div>
+      <div id="labs-history-list" class="labs-history-list"></div>
+    </div>
+  `;
+}
 const account  = () => accountPage();
 // pieces() 為實作頁面（位於下方）— 將上次回診後的紀錄做統整保留。
 
@@ -435,6 +497,7 @@ function showPage(page) {
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
+    if (page === "labs") loadLabsPage();
     if (page === "pieces") loadPiecesPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
@@ -3926,6 +3989,146 @@ function markdownToHtml(md) {
     .replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:20px;margin-bottom:4px"><strong>$1.</strong> $2</li>')
     .replace(/\n\n/g, '<br><br>')
     .replace(/\n/g, '<br>');
+}
+
+
+// ─── 報告數值（Lab Values）─────────────────────────────────
+// 隱私：紀錄只存 sessionStorage（關分頁即消失），後端 stateless 不寫 DB
+
+const LABS_HISTORY_KEY = 'mdpiece_labs_history';
+const LABS_STATUS_META = {
+  low:      { label: '偏低',     emoji: '🟡', cls: 'labs-st-warn' },
+  normal:   { label: '正常',     emoji: '🟢', cls: 'labs-st-ok' },
+  high:     { label: '偏高',     emoji: '🟡', cls: 'labs-st-warn' },
+  critical: { label: '嚴重異常', emoji: '🔴', cls: 'labs-st-bad' },
+  unknown:  { label: '無法判讀', emoji: '⚪', cls: 'labs-st-unk' },
+};
+
+function labsLoadHistory() {
+  try { return JSON.parse(sessionStorage.getItem(LABS_HISTORY_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function labsSaveHistory(arr) {
+  try { sessionStorage.setItem(LABS_HISTORY_KEY, JSON.stringify(arr.slice(0, 30))); }
+  catch (e) { /* quota exceeded — ignore */ }
+}
+
+function loadLabsPage() {
+  labsRenderHistory();
+}
+
+function labsRenderHistory() {
+  const listEl = document.getElementById('labs-history-list');
+  if (!listEl) return;
+  const items = labsLoadHistory();
+  if (!items.length) {
+    listEl.innerHTML = '<p class="labs-empty">尚無查詢紀錄。紀錄僅存於此分頁，關閉後即清除。</p>';
+    return;
+  }
+  listEl.innerHTML = items.map((it, idx) => {
+    const meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
+    const time = new Date(it.at).toLocaleString('zh-TW', { hour12: false });
+    return '' +
+      '<article class="labs-history-item ' + meta.cls + '" onclick="labsShowFromHistory(' + idx + ')">' +
+        '<span class="labs-history-emoji">' + meta.emoji + '</span>' +
+        '<div class="labs-history-body">' +
+          '<div class="labs-history-top">' +
+            '<strong>' + escapeHtml(it.name) + '</strong>' +
+            '<span class="labs-history-value">' + escapeHtml(it.value) +
+              (it.unit ? ' ' + escapeHtml(it.unit) : '') + '</span>' +
+          '</div>' +
+          '<div class="labs-history-meta">' + meta.label + ' · ' + time + '</div>' +
+        '</div>' +
+      '</article>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function labsShowFromHistory(idx) {
+  const items = labsLoadHistory();
+  const it = items[idx];
+  if (!it) return;
+  labsRenderResult(it.result, { name: it.name, value: it.value, unit: it.unit });
+}
+
+function labsClearHistory() {
+  if (!confirm('確定要清除所有查詢紀錄嗎？')) return;
+  sessionStorage.removeItem(LABS_HISTORY_KEY);
+  labsRenderHistory();
+  const r = document.getElementById('lab-result');
+  if (r) { r.style.display = 'none'; r.innerHTML = ''; }
+}
+
+async function labsCheck() {
+  const name  = document.getElementById('lab-name').value.trim();
+  const value = document.getElementById('lab-value').value.trim();
+  const unit  = document.getElementById('lab-unit').value.trim();
+  const ageS  = document.getElementById('lab-age').value.trim();
+  const sex   = document.getElementById('lab-sex').value;
+
+  if (!name || !value) {
+    alert('請輸入檢驗項目與數值');
+    return;
+  }
+
+  const resultEl = document.getElementById('lab-result');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<p class="labs-loading"><i data-lucide="loader" class="labs-spin"></i> AI 解讀中…</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  try {
+    const body = { name, value };
+    if (unit) body.unit = unit;
+    if (ageS) body.age = parseInt(ageS, 10);
+    if (sex)  body.sex = sex;
+
+    const res = await fetch(`${API}/labs/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '查詢失敗');
+    }
+    const data = await res.json();
+
+    labsRenderResult(data, { name, value, unit });
+
+    const hist = labsLoadHistory();
+    hist.unshift({ name, value, unit, status: data.status, result: data, at: Date.now() });
+    labsSaveHistory(hist);
+    labsRenderHistory();
+  } catch (e) {
+    resultEl.innerHTML = '<p class="labs-error">查詢失敗：' + escapeHtml(e.message || '未知錯誤') + '</p>';
+  }
+}
+
+function labsRenderResult(data, input) {
+  const meta = LABS_STATUS_META[data.status] || LABS_STATUS_META.unknown;
+  const resultEl = document.getElementById('lab-result');
+  resultEl.style.display = 'block';
+  resultEl.className = 'card labs-result ' + meta.cls;
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  resultEl.innerHTML = '' +
+    '<div class="labs-result-head">' +
+      '<span class="labs-result-emoji">' + meta.emoji + '</span>' +
+      '<div>' +
+        '<div class="labs-result-item">' + escapeHtml(data.item || input.name) + '</div>' +
+        '<div class="labs-result-input">你輸入：' + escapeHtml(input.value) +
+          (input.unit ? ' ' + escapeHtml(input.unit) : '') + '</div>' +
+      '</div>' +
+      '<span class="labs-result-status">' + meta.label + '</span>' +
+    '</div>' +
+    '<div class="labs-result-row"><strong>參考範圍</strong><span>' + escapeHtml(data.normal_range || '—') + '</span></div>' +
+    '<div class="labs-result-block"><strong>這個指標代表</strong><p>' + escapeHtml(data.meaning || '—') + '</p></div>' +
+    '<div class="labs-result-block"><strong>建議</strong><p>' + escapeHtml(data.advice || '—') + '</p></div>' +
+    (data.see_doctor
+      ? '<div class="labs-result-warn"><i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle"></i> 建議盡快就醫評估</div>'
+      : '') +
+    '<p class="labs-result-disclaimer">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 
