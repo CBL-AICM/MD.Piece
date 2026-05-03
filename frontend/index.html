@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=cozy-warm-2" />
+  <link rel="stylesheet" href="css/style.css?v=trim-features-1" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
@@ -283,8 +283,8 @@
         <button class="nav-item" onclick="navigateTo('pieces', this)">
           <span class="nav-icon"><i data-lucide="puzzle" style="width:18px;height:18px"></i></span> 你的碎片
         </button>
-        <button class="nav-item" onclick="navigateTo('chat', this)">
-          <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span> 醫起聊天
+        <button class="nav-item" onclick="navigateTo('settings', this)">
+          <span class="nav-icon"><i data-lucide="settings" style="width:18px;height:18px"></i></span> 系統設定
         </button>
         <button class="nav-item" onclick="navigateTo('account', this)">
           <span class="nav-icon"><i data-lucide="user-cog" style="width:18px;height:18px"></i></span> 帳號設定
@@ -319,6 +319,9 @@
         <span class="topbar-spacer"></span>
         <button class="app-theme-toggle" id="app-theme-toggle" type="button" onclick="toggleAppTheme()" title="切換主題">
           <span class="att-icon" id="att-icon">☾</span>
+        </button>
+        <button class="app-settings-btn" id="app-settings-btn" type="button" onclick="navigateTo('settings', null)" title="系統設定" aria-label="系統設定">
+          <i data-lucide="settings" style="width:16px;height:16px"></i>
         </button>
         <span class="topbar-version">v2.0</span>
         <span class="win-titlebar-controls topbar-wincontrols">
@@ -518,10 +521,10 @@
       story: 'daily-story',
       labs: 'lab-values',
       pieces: 'your-pieces',
-      chat: 'med-chat',
+      settings: 'settings',
       account: 'account',
       // legacy / fallback
-      records: 'records', doctors: 'doctors', patients: 'patients'
+      records: 'records', doctors: 'doctors'
     };
     // 年長版顯示用中文（CSS 在 senior 模式會把 prefix/ext 隱藏，只剩 page-title）
     const pageTitlesSenior = {
@@ -535,9 +538,9 @@
       story: '每日故事',
       labs: '報告數值',
       pieces: '你的碎片',
-      chat: '醫起聊天',
+      settings: '系統設定',
       account: '帳號設定',
-      records: '病歷管理', doctors: '醫師列表', patients: '病患管理'
+      records: '病歷管理', doctors: '醫師列表'
     };
 
     function navigateTo(page, btn) {
