@@ -80,10 +80,10 @@ def login(body: UserLogin):
     sb = get_supabase()
     result = sb.table("users").select("*").eq("username", body.username).execute()
     if not result.data:
-        raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
+        raise HTTPException(status_code=404, detail="此帳號尚未註冊")
     user = result.data[0]
     if not _verify_password(body.password, user.get("password_hash", "")):
-        raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
+        raise HTTPException(status_code=401, detail="密碼錯誤")
     if user.get("role") == "doctor":
         if not body.doctor_key:
             raise HTTPException(status_code=403, detail="醫師登入需要通行碼")
