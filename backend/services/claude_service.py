@@ -1,4 +1,10 @@
-import anthropic
+try:
+    import anthropic
+    _anthropic_available = True
+except ImportError:
+    anthropic = None
+    _anthropic_available = False
+
 import base64
 import json
 import logging
@@ -8,7 +14,7 @@ logger = logging.getLogger(__name__)
 # Claude API 呼叫服務
 # 應用場景：分流判斷、白話解讀、小禾對話、問診清單、30天報告、藥袋辨識
 
-client = anthropic.Anthropic()  # 讀取 ANTHROPIC_API_KEY
+client = anthropic.Anthropic() if _anthropic_available else None  # 讀取 ANTHROPIC_API_KEY
 
 
 def call_claude(system_prompt: str, user_message: str) -> str:

@@ -403,6 +403,7 @@ function memoRenderList() {
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
+const account  = () => accountPage();
 // pieces() 為實作頁面（位於下方）— 將上次回診後的紀錄做統整保留。
 
 // 頁面在 terminal pane 中顯示的檔名（用於 #app 的 data-page）
@@ -410,7 +411,7 @@ const pageSlugForTerminal = {
   home: 'home', symptoms: 'symptoms', medications: 'medications',
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
-  pieces: 'your-pieces',
+  pieces: 'your-pieces', account: 'account',
   settings: 'settings',
   records: 'records', doctors: 'doctors'
 };
@@ -420,7 +421,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, memo, previsit, story, labs, pieces, settings
+    vitals, memo, previsit, story, labs, pieces, account, settings
   };
   // Page transition
   app.style.opacity = '0';
@@ -435,6 +436,7 @@ function showPage(page) {
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
     if (page === "pieces") loadPiecesPage();
+    if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -447,91 +449,409 @@ function showPage(page) {
   }, 150);
 }
 
-// ─── 註冊頁面（ID Card 風格，覆蓋在星空上）──────────────
+// ─── 登入 / 註冊 ───────────────────────────────────────────
 
-let _selectedRole = 'patient'; // 此網站為患者專用
-const _avatarColors = ['#5B9FE8','#9B80D4','#D08A8A','#55B88A','#D9A54A','#E87B5B','#7BC8E8'];
-let _avatarIdx = 0;
+let _authRole = 'patient';
+let _loginRole = 'patient';
+let _regAvatarDataUrl = '';
 
 function showIdCardRegister() {
   const overlay = document.getElementById('register-overlay');
   overlay.style.display = 'flex';
-  // Set today's date
-  const now = new Date();
-  document.getElementById('idcard-date').textContent =
-    `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
-  // Random starting color
-  _avatarIdx = Math.floor(Math.random() * _avatarColors.length);
-  applyAvatarColor();
-  // Animate in
+  switchAuthTab('login');
+  // 預填上次登入過的帳號（若有）
+  const lastUsername = localStorage.getItem('mdpiece_last_username') || '';
+  const loginInput = document.getElementById('login-username');
+  if (loginInput && lastUsername) loginInput.value = lastUsername;
+  // 綁定頭像上傳一次
+  const fileInput = document.getElementById('reg-avatar-file');
+  if (fileInput && !fileInput.dataset.bound) {
+    fileInput.dataset.bound = '1';
+    fileInput.addEventListener('change', onRegAvatarPicked);
+  }
   requestAnimationFrame(() => overlay.classList.add('show'));
   if (typeof lucide !== 'undefined') lucide.createIcons();
-  document.getElementById('idcard-name').addEventListener('input', validateIdCard);
 }
 
-function cycleAvatarColor() {
-  _avatarIdx = (_avatarIdx + 1) % _avatarColors.length;
-  applyAvatarColor();
+function switchAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('auth-tab-login').classList.toggle('active', isLogin);
+  document.getElementById('auth-tab-register').classList.toggle('active', !isLogin);
+  document.getElementById('auth-panel-login').classList.toggle('active', isLogin);
+  document.getElementById('auth-panel-register').classList.toggle('active', !isLogin);
+  document.getElementById('login-error').hidden = true;
+  document.getElementById('register-error').hidden = true;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function applyAvatarColor() {
-  const el = document.getElementById('idcard-avatar');
-  if (el) {
-    el.style.background = _avatarColors[_avatarIdx] + '22';
-    el.style.borderColor = _avatarColors[_avatarIdx];
-    el.querySelector('svg').style.color = _avatarColors[_avatarIdx];
+function selectAuthRole(role) {
+  _authRole = role;
+  document.querySelectorAll('.auth-role-btn[data-role]').forEach(b => {
+    b.classList.toggle('selected', b.dataset.role === role);
+  });
+  const field = document.getElementById('reg-doctor-key-field');
+  if (field) field.hidden = role !== 'doctor';
+}
+
+function selectLoginRole(role) {
+  _loginRole = role;
+  document.querySelectorAll('.auth-role-btn[data-login-role]').forEach(b => {
+    b.classList.toggle('selected', b.dataset.loginRole === role);
+  });
+  const field = document.getElementById('login-doctor-key-field');
+  if (field) field.hidden = role !== 'doctor';
+  document.getElementById('login-error').hidden = true;
+}
+
+function onRegAvatarPicked(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  shrinkImageToDataUrl(file, 320, 0.85).then(dataUrl => {
+    _regAvatarDataUrl = dataUrl;
+    const img = document.getElementById('reg-avatar-img');
+    const ph = document.getElementById('reg-avatar-placeholder');
+    const clr = document.getElementById('reg-avatar-clear');
+    img.src = dataUrl;
+    img.hidden = false;
+    if (ph) ph.hidden = true;
+    if (clr) clr.hidden = false;
+  }).catch(() => showAuthError('register', '圖片讀取失敗'));
+}
+
+function clearRegAvatar() {
+  _regAvatarDataUrl = '';
+  const img = document.getElementById('reg-avatar-img');
+  const ph = document.getElementById('reg-avatar-placeholder');
+  const clr = document.getElementById('reg-avatar-clear');
+  const file = document.getElementById('reg-avatar-file');
+  if (img) { img.hidden = true; img.src = ''; }
+  if (ph) ph.hidden = false;
+  if (clr) clr.hidden = true;
+  if (file) file.value = '';
+}
+
+function shrinkImageToDataUrl(file, maxSize, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality || 0.85));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function showAuthError(panel, msg) {
+  const el = document.getElementById(`${panel}-error`);
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+async function submitLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const doctor_key = document.getElementById('login-doctor-key').value.trim();
+  if (!username || !password) return;
+  if (_loginRole === 'doctor' && !doctor_key) {
+    showAuthError('login', '請輸入醫師通行碼');
+    return;
+  }
+  const btn = document.getElementById('login-submit');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader"></i> 登入中…';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('login-error').hidden = true;
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username, password,
+        doctor_key: _loginRole === 'doctor' ? doctor_key : null,
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '登入失敗');
+    }
+    const user = await res.json();
+    finishAuth(user);
+  } catch (e) {
+    showAuthError('login', e.message || '登入失敗，請稍後再試');
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 }
 
-function selectIdRole(role) {
-  _selectedRole = role;
-  document.querySelectorAll('.idcard-role-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById(`idrole-${role}`).classList.add('selected');
-  validateIdCard();
-}
+async function submitRegister() {
+  const nickname = document.getElementById('reg-nickname').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
 
-function validateIdCard() {
-  const name = document.getElementById('idcard-name')?.value.trim();
-  const btn = document.getElementById('idcard-submit');
-  if (btn) btn.disabled = !name;
-}
+  if (password !== password2) {
+    showAuthError('register', '兩次輸入的密碼不一致');
+    return;
+  }
+  if (password.length < 6) {
+    showAuthError('register', '密碼至少 6 個字元');
+    return;
+  }
 
-async function submitIdCard() {
-  const nickname = document.getElementById('idcard-name').value.trim();
-  const id_number = document.getElementById('idcard-idno')?.value.trim().toUpperCase() || '';
-  if (!nickname || !_selectedRole) return;
+  const doctor_key = document.getElementById('reg-doctor-key').value.trim();
+  if (_authRole === 'doctor' && !doctor_key) {
+    showAuthError('register', '請輸入醫師通行碼');
+    return;
+  }
 
-  const btn = document.getElementById('idcard-submit');
+  const btn = document.getElementById('register-submit');
+  const original = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<i data-lucide="loader"></i> 發卡中…';
+  btn.innerHTML = '<i data-lucide="loader"></i> 建立中…';
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('register-error').hidden = true;
 
-  const avatar_color = _avatarColors[_avatarIdx];
+  const payload = {
+    username, password, nickname,
+    role: _authRole,
+    avatar_url: _regAvatarDataUrl || null,
+    doctor_key: _authRole === 'doctor' ? doctor_key : null,
+  };
 
   try {
     const res = await fetch(`${API}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, role: _selectedRole, avatar_color, id_number })
+      body: JSON.stringify(payload)
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '註冊失敗');
+    }
     const user = await res.json();
-    user.id_number = id_number;
-    setCurrentUser(user);
-  } catch {
-    const user = { id: crypto.randomUUID(), nickname, role: _selectedRole, avatar_color, id_number };
-    setCurrentUser(user);
+    finishAuth(user);
+  } catch (e) {
+    showAuthError('register', e.message || '註冊失敗，請稍後再試');
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
+}
 
-  // Card flip-out animation, then enter app
+function finishAuth(user) {
+  setCurrentUser(user);
+  if (user.username) {
+    try { localStorage.setItem('mdpiece_last_username', user.username); } catch {}
+  }
   const overlay = document.getElementById('register-overlay');
-  overlay.classList.add('card-done');
+  overlay.classList.remove('show');
   setTimeout(() => {
     overlay.style.display = 'none';
-    overlay.classList.remove('show','card-done');
     document.getElementById('app-wrapper').classList.add('show');
     showPage('home');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-  }, 700);
+  }, 250);
+}
+
+// 切換帳號 — 不二次確認，直接回到登入頁
+function switchAccount() {
+  try { localStorage.removeItem('mdpiece_user'); } catch {}
+  try { localStorage.removeItem('mdpiece_demo_pid'); } catch {}
+  window.location.reload();
+}
+
+// ─── 帳號設定頁面 ──────────────────────────────────────────
+
+function accountPage() {
+  const u = getCurrentUser() || {};
+  const roleLabel = u.role === 'doctor' ? '醫師' : '患者';
+  const roleIcon = u.role === 'doctor' ? 'stethoscope' : 'heart-pulse';
+  const avatarHtml = u.avatar_url
+    ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
+    : `<span class="acct-avatar-fallback" style="background:${u.avatar_color || '#5B9FE8'}22;color:${u.avatar_color || '#5B9FE8'};border-color:${u.avatar_color || '#5B9FE8'}">
+         ${(u.nickname || '?').slice(0,1)}
+       </span>`;
+  return `
+    <section class="acct-wrap">
+      <header class="acct-head">
+        <h2><i data-lucide="user-cog"></i> 帳號設定</h2>
+        <p>管理你的個人資料、頭像與密碼。</p>
+      </header>
+
+      <div class="acct-card">
+        <div class="acct-profile">
+          <label class="acct-avatar" id="acct-avatar" title="點擊更換頭像">
+            <input type="file" id="acct-avatar-file" accept="image/*" hidden />
+            ${avatarHtml}
+            <span class="acct-avatar-edit"><i data-lucide="camera"></i></span>
+          </label>
+          <div class="acct-meta">
+            <div class="acct-row"><span class="acct-key">帳號</span><span class="acct-val">${u.username || '—'}</span></div>
+            <div class="acct-row"><span class="acct-key">身份</span><span class="acct-val"><i data-lucide="${roleIcon}" style="width:14px;height:14px"></i> ${roleLabel}</span></div>
+            <div class="acct-row"><span class="acct-key">建立時間</span><span class="acct-val">${u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</span></div>
+          </div>
+        </div>
+
+        <form class="acct-form" onsubmit="event.preventDefault(); saveProfile();">
+          <h3>個人資料</h3>
+          <label class="acct-field">
+            <span>暱稱</span>
+            <input id="acct-nickname" type="text" maxlength="20" value="${(u.nickname || '').replace(/"/g, '&quot;')}" required />
+          </label>
+          <label class="acct-field">
+            <span>頭像主色</span>
+            <input id="acct-color" type="color" value="${u.avatar_color || '#5B9FE8'}" />
+          </label>
+          <p class="acct-msg" id="acct-profile-msg" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="save"></i> 儲存資料</button>
+        </form>
+
+        <form class="acct-form" onsubmit="event.preventDefault(); savePassword();">
+          <h3>變更密碼</h3>
+          <label class="acct-field">
+            <span>目前密碼</span>
+            <input id="acct-pw-current" type="password" autocomplete="current-password" required />
+          </label>
+          <label class="acct-field">
+            <span>新密碼</span>
+            <input id="acct-pw-new" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+          <label class="acct-field">
+            <span>確認新密碼</span>
+            <input id="acct-pw-new2" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+          <p class="acct-msg" id="acct-pw-msg" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="key-round"></i> 更新密碼</button>
+        </form>
+
+        <div class="acct-actions">
+          <button class="acct-action acct-action-secondary" onclick="switchAccount()">
+            <i data-lucide="users"></i> 切換帳號
+          </button>
+          <button class="acct-action acct-action-danger" onclick="logout()">
+            <i data-lucide="log-out"></i> 登出
+          </button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function loadAccountPage() {
+  const fileInput = document.getElementById('acct-avatar-file');
+  if (fileInput) fileInput.addEventListener('change', onAccountAvatarPicked);
+  const colorInput = document.getElementById('acct-color');
+  if (colorInput) {
+    colorInput.addEventListener('input', () => {
+      const fb = document.querySelector('#acct-avatar .acct-avatar-fallback');
+      if (fb) {
+        fb.style.background = colorInput.value + '22';
+        fb.style.color = colorInput.value;
+        fb.style.borderColor = colorInput.value;
+      }
+    });
+  }
+}
+
+async function onAccountAvatarPicked(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const u = getCurrentUser();
+  if (!u) return;
+  try {
+    const dataUrl = await shrinkImageToDataUrl(file, 320, 0.85);
+    const res = await fetch(`${API}/auth/user/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatar_url: dataUrl })
+    });
+    if (!res.ok) throw new Error('更新頭像失敗');
+    const updated = await res.json();
+    setCurrentUser({ ...u, ...updated });
+    showPage('account');
+  } catch (err) {
+    showAccountMsg('acct-profile-msg', err.message || '更新頭像失敗', true);
+  }
+}
+
+async function saveProfile() {
+  const u = getCurrentUser();
+  if (!u) return;
+  const nickname = document.getElementById('acct-nickname').value.trim();
+  const avatar_color = document.getElementById('acct-color').value;
+  if (!nickname) return;
+  try {
+    const res = await fetch(`${API}/auth/user/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, avatar_color })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '更新失敗');
+    }
+    const updated = await res.json();
+    setCurrentUser({ ...u, ...updated });
+    showAccountMsg('acct-profile-msg', '已儲存', false);
+  } catch (e) {
+    showAccountMsg('acct-profile-msg', e.message, true);
+  }
+}
+
+async function savePassword() {
+  const u = getCurrentUser();
+  if (!u) return;
+  const cur = document.getElementById('acct-pw-current').value;
+  const next = document.getElementById('acct-pw-new').value;
+  const next2 = document.getElementById('acct-pw-new2').value;
+  if (next !== next2) {
+    showAccountMsg('acct-pw-msg', '兩次輸入的新密碼不一致', true);
+    return;
+  }
+  if (next.length < 6) {
+    showAccountMsg('acct-pw-msg', '新密碼至少 6 個字元', true);
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/auth/user/${u.id}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: cur, new_password: next })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '更新密碼失敗');
+    }
+    document.getElementById('acct-pw-current').value = '';
+    document.getElementById('acct-pw-new').value = '';
+    document.getElementById('acct-pw-new2').value = '';
+    showAccountMsg('acct-pw-msg', '密碼已更新', false);
+  } catch (e) {
+    showAccountMsg('acct-pw-msg', e.message, true);
+  }
+}
+
+function showAccountMsg(id, msg, isError) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden = false;
+  el.classList.toggle('acct-msg-error', !!isError);
+  el.classList.toggle('acct-msg-ok', !isError);
 }
 
 // ─── 首頁 ──────────────────────────────────────────────────
