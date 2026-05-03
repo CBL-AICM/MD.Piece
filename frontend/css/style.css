@@ -4496,14 +4496,17 @@ html[data-mode="senior"] *:focus-visible {
   #app-wrapper[data-theme="dark"] #app .term-card,
   #app-wrapper[data-theme="dark"] #app .stat-box,
   #app-wrapper[data-theme="dark"] #app .med-item,
-  #app-wrapper[data-theme="dark"] #app .dash-welcome {
-    background: rgba(255,255,255,0.06);
-    border-color: rgba(255,255,255,0.12);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  #app-wrapper[data-theme="dark"] #app .dash-welcome,
+  #app-wrapper[data-theme="dark"] #app .hq-btn {
+    background: #243F61 !important;
+    border: 1px solid #3D6499 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.30) !important;
+    backdrop-filter: none !important;
+    color: #F1F6FF !important;
   }
 
-  /* Quick action buttons → softer iOS chip */
-  #app .hq-btn {
+  /* Quick action buttons → softer iOS chip (light theme only) */
+  #app-wrapper[data-theme="light"] #app .hq-btn {
     background: var(--cream);
     border: 1px solid var(--border-glass);
     border-radius: 14px;
