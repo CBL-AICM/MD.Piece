@@ -9,7 +9,11 @@
       "Bash(uv *)",
       "Bash(npm *)",
       "Bash(node *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "mcp__Supabase__list_projects",
+      "mcp__Supabase__restore_project",
+      "mcp__Supabase__list_tables",
+      "mcp__Supabase__apply_migration"
     ]
   }
 }
