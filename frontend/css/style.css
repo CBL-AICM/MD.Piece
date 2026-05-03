@@ -6363,48 +6363,9 @@ html[data-mode="senior"] .visit-modal-save {
 
 .previsit-controls {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.previsit-range-row {
-  display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.previsit-label {
-  font-size: .88rem;
-  color: var(--text-dim);
-  font-weight: 500;
-}
-.previsit-chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.pv-chip {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(92, 58, 50, 0.18);
-  background: var(--bg-surface);
-  color: var(--text-dim);
-  font-size: .85rem;
-  cursor: pointer;
-  transition: all .15s;
-  font-family: inherit;
-}
-.pv-chip:hover {
-  background: var(--bg-soft);
-  color: var(--text);
-}
-.pv-chip.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: 500;
 }
 .previsit-generate {
-  align-self: flex-start;
   padding: 10px 24px;
 }
 

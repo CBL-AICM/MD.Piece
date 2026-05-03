@@ -71,7 +71,7 @@ class PrevisitResponse(BaseModel):
 
 
 def _build_user_message(req: PrevisitRequest) -> str:
-    parts = [f"時間範圍：最近 {req.days} 天\n"]
+    parts = ["以下為使用者目前累積的紀錄：\n"]
 
     if req.symptoms:
         parts.append("【症狀紀錄】")

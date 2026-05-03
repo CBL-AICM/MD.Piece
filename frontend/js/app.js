@@ -412,16 +412,6 @@ function previsit() {
     </div>
 
     <div class="card previsit-controls no-print">
-      <div class="previsit-range-row">
-        <span class="previsit-label">時間範圍</span>
-        <div class="previsit-chips" id="previsit-chips">
-          <button class="pv-chip" data-days="3" onclick="previsitSetDays(3)">3 天</button>
-          <button class="pv-chip" data-days="7" onclick="previsitSetDays(7)">7 天</button>
-          <button class="pv-chip active" data-days="14" onclick="previsitSetDays(14)">14 天</button>
-          <button class="pv-chip" data-days="30" onclick="previsitSetDays(30)">30 天</button>
-          <button class="pv-chip" data-days="90" onclick="previsitSetDays(90)">90 天</button>
-        </div>
-      </div>
       <button class="primary previsit-generate" onclick="previsitGenerate()">
         <i data-lucide="sparkles" style="width:16px;height:16px;vertical-align:middle"></i> 生成診前報告
       </button>
@@ -4190,33 +4180,15 @@ function labsRenderResult(data, input) {
 // 隱私：memo 來自 localStorage、症狀/用藥從後端拉，整合後傳 LLM。
 // 結果暫存記憶體（不寫 sessionStorage，因為通常一次性使用）。
 
-let _previsitDays = 14;
 let _previsitGenerating = false;
 
 function loadPrevisitPage() {
-  // 重新進頁面時重設天數狀態（與 chip 預設一致）+ 清空 result
-  _previsitDays = 14;
   const r = document.getElementById('previsit-result');
   if (r) { r.style.display = 'none'; r.innerHTML = ''; }
 }
 
-function previsitSetDays(d) {
-  _previsitDays = d;
-  document.querySelectorAll('#previsit-chips .pv-chip').forEach(b => {
-    b.classList.toggle('active', String(b.dataset.days) === String(d));
-  });
-}
-
-function previsitWithinDays(iso, days) {
-  if (!iso) return false;
-  const t = Date.parse(iso);
-  if (isNaN(t)) return false;
-  return (Date.now() - t) <= days * 86400000;
-}
-
 async function previsitGatherData() {
   const pid = getStablePatientId();
-  const days = _previsitDays;
 
   let symptoms = [];
   let medications = [];
@@ -4236,35 +4208,35 @@ async function previsitGatherData() {
     }
   } catch (e) { /* 同上 */ }
 
-  // 過濾最近 N 天
-  symptoms = (Array.isArray(symptoms) ? symptoms : []).filter(s =>
-    previsitWithinDays(s.created_at || s.recorded_at, days)
-  ).map(s => ({
+  symptoms = (Array.isArray(symptoms) ? symptoms : []).map(s => ({
     name: s.name || s.symptom || s.title,
     severity: s.severity ? String(s.severity) : null,
     note: s.note || s.description || null,
     created_at: s.created_at || s.recorded_at,
   }));
-  medications = (Array.isArray(medications) ? medications : []).map(m => ({
-    name: m.name,
-    dosage: m.dosage,
-    frequency: m.frequency,
-    note: m.instructions || m.note || null,
-  }));
+  // 過濾停用藥（active=0 / false）
+  medications = (Array.isArray(medications) ? medications : [])
+    .filter(m => m.active !== 0 && m.active !== false)
+    .map(m => ({
+      name: m.name,
+      dosage: m.dosage,
+      frequency: m.frequency,
+      note: m.instructions || m.note || null,
+    }));
 
-  // Memo（給醫師標記 + 最近 N 天）
+  // Memo 給醫師標記
   let memos = [];
   try {
-    memos = (typeof memoLoad === 'function' ? memoLoad() : []).filter(m =>
-      m.forDoctor && previsitWithinDays(m.createdAt, days)
-    ).map(m => ({
-      text: m.text || '',
-      forDoctor: !!m.forDoctor,
-      createdAt: m.createdAt,
-    }));
+    memos = (typeof memoLoad === 'function' ? memoLoad() : [])
+      .filter(m => m.forDoctor)
+      .map(m => ({
+        text: m.text || '',
+        forDoctor: !!m.forDoctor,
+        createdAt: m.createdAt,
+      }));
   } catch (e) { memos = []; }
 
-  return { days, symptoms, medications, memos };
+  return { symptoms, medications, memos };
 }
 
 async function previsitGenerate() {
@@ -4281,7 +4253,7 @@ async function previsitGenerate() {
     const payload = await previsitGatherData();
     const total = payload.symptoms.length + payload.medications.length + payload.memos.length;
     if (total === 0) {
-      resultEl.innerHTML = '<div class="card previsit-empty"><i data-lucide="info" style="width:18px;height:18px;vertical-align:middle"></i> 最近 ' + payload.days + ' 天沒有任何紀錄。先到症狀/用藥/Memo 頁紀錄一些再生成報告。</div>';
+      resultEl.innerHTML = '<div class="card previsit-empty"><i data-lucide="info" style="width:18px;height:18px;vertical-align:middle"></i> 目前沒有任何紀錄。先到症狀/用藥/Memo 頁紀錄一些再生成報告。</div>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
@@ -4324,7 +4296,7 @@ function previsitRender(data, payload) {
       '<header class="pv-head">' +
         '<div>' +
           '<h3 class="pv-title">診前摘要</h3>' +
-          '<p class="pv-meta">' + escapeHtml(name) + ' · ' + today + ' · 過去 ' + payload.days + ' 天</p>' +
+          '<p class="pv-meta">' + escapeHtml(name) + ' · ' + today + '</p>' +
         '</div>' +
         '<div class="pv-actions no-print">' +
           '<button class="ghost" onclick="previsitCopy()" title="複製為文字">' +
