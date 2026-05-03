@@ -3439,183 +3439,122 @@ function initUserSettings() {
 initUserSettings();
 
 function settings() {
-  const user = getCurrentUser();
-  const fs   = getSetting('fontSize', 'normal');
-  const th   = (function(){ try { return localStorage.getItem(SETTINGS_KEYS.theme) || 'auto'; } catch(e){ return 'auto'; } })();
-  const md   = getMode();
-  const mo   = getSetting('motion', 'on');
-  const so   = getSetting('sound', 'on');
-  const de   = getSetting('density', 'cozy');
-  const name = user ? (user.nickname || '訪客') : '訪客';
-  const idno = user && user.id_number ? user.id_number : '—';
-  const ac   = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
+  var user = getCurrentUser();
+  var fs   = getSetting('fontSize', 'normal');
+  var th;
+  try { th = localStorage.getItem(SETTINGS_KEYS.theme) || 'auto'; } catch (e) { th = 'auto'; }
+  var md   = getMode();
+  var mo   = getSetting('motion', 'on');
+  var so   = getSetting('sound', 'on');
+  var de   = getSetting('density', 'cozy');
+  var name = user ? (user.nickname || '訪客') : '訪客';
+  var idno = user && user.id_number ? user.id_number : '—';
+  var ac   = (user && user.avatar_color) ? user.avatar_color : '#C97F4B';
 
-  const seg = (group, opts, current) => opts.map(o =>
-    `<button class="seg-btn ${o.value === current ? 'active' : ''}" data-group="${group}" data-value="${o.value}" onclick="onSettingChange('${group}','${o.value}')">${o.label}</button>`
-  ).join('');
+  function seg(group, opts, current) {
+    return opts.map(function(o) {
+      var act = o.value === current ? ' active' : '';
+      return '<button type="button" class="set-seg-btn' + act + '"'
+        + ' data-group="' + group + '" data-value="' + o.value + '"'
+        + ' onclick="onSettingChange(\'' + group + '\',\'' + o.value + '\')">'
+        + o.label + '</button>';
+    }).join('');
+  }
 
-  return `
-    <section class="settings-page">
-      <header class="settings-header">
-        <div class="settings-title-block">
-          <p class="settings-eyebrow">// system &gt; preferences</p>
-          <h2 class="settings-title"><i data-lucide="settings"></i> 系統設定</h2>
-          <p class="settings-sub">調整顯示、輔助功能與資料管理。設定會自動儲存到此裝置。</p>
-        </div>
-        <div class="settings-user-card" style="--ac:${ac}">
-          <span class="suc-avatar"><i data-lucide="user"></i></span>
-          <div class="suc-meta">
-            <strong>${name}</strong>
-            <span>身分證 ${idno}</span>
-          </div>
-        </div>
-      </header>
+  function row(title, desc, control) {
+    return '<div class="set-row">'
+      + '<div class="set-row-text"><strong>' + title + '</strong>'
+      + (desc ? '<p>' + desc + '</p>' : '') + '</div>'
+      + '<div class="set-row-ctrl">' + control + '</div>'
+      + '</div>';
+  }
 
-      <!-- 顯示 -->
-      <div class="settings-group">
-        <div class="settings-group-head">
-          <i data-lucide="monitor"></i><h3>顯示</h3>
-        </div>
+  function sw(id, key, on, onVal, offVal) {
+    return '<label class="set-switch">'
+      + '<input type="checkbox" id="' + id + '"' + (on ? ' checked' : '')
+      + ' onchange="onSwitchChange(\'' + key + '\', this.checked ? \'' + onVal + '\' : \'' + offVal + '\')" />'
+      + '<span class="set-switch-track"><span class="set-switch-thumb"></span></span>'
+      + '</label>';
+  }
 
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>字體大小</strong>
-            <p>調整介面文字的閱讀大小，立即生效。</p>
-          </div>
-          <div class="settings-seg" id="seg-fontSize">
-            ${seg('fontSize', [
+  return ''
+    + '<section class="set-page">'
+    + '  <header class="set-hero">'
+    + '    <div class="set-hero-icon" style="--ac:' + ac + '"><i data-lucide="settings-2"></i></div>'
+    + '    <div class="set-hero-text">'
+    + '      <p class="set-eyebrow">// system &gt; preferences</p>'
+    + '      <h2>系統設定</h2>'
+    + '      <p class="set-sub">調整顯示、輔助功能與資料管理。所有設定僅儲存在此裝置。</p>'
+    + '    </div>'
+    + '    <div class="set-hero-user">'
+    + '      <span>當前使用者</span>'
+    + '      <strong>' + name + '</strong>'
+    + '      <code>' + idno + '</code>'
+    + '    </div>'
+    + '  </header>'
+
+    // 顯示
+    + '  <div class="set-group">'
+    + '    <h3 class="set-group-title"><i data-lucide="monitor"></i> 顯示</h3>'
+    +      row('字體大小', '介面文字大小，立即生效。',
+            '<div class="set-seg">' + seg('fontSize', [
               {value:'small',  label:'小'},
               {value:'normal', label:'標準'},
               {value:'large',  label:'大'},
               {value:'xlarge', label:'特大'}
-            ], fs)}
-          </div>
-        </div>
-
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>主題</strong>
-            <p>深色適合夜間，淺色適合白天，跟隨系統會自動切換。</p>
-          </div>
-          <div class="settings-seg" id="seg-theme">
-            ${seg('theme', [
+            ], fs) + '</div>')
+    +      row('主題', '深色／淺色／跟隨系統。',
+            '<div class="set-seg">' + seg('theme', [
               {value:'light', label:'☀ 淺色'},
               {value:'dark',  label:'☾ 深色'},
-              {value:'auto',  label:'⌬ 跟隨系統'}
-            ], th)}
-          </div>
-        </div>
-
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>顯示模式</strong>
-            <p>「年長版」放大字體與按鈕、加強對比，方便長輩使用。</p>
-          </div>
-          <div class="settings-seg" id="seg-mode">
-            ${seg('mode', [
+              {value:'auto',  label:'⌬ 自動'}
+            ], th) + '</div>')
+    +      row('顯示模式', '年長版會放大字體與按鈕、強化對比。',
+            '<div class="set-seg">' + seg('mode', [
               {value:'standard', label:'普通版'},
               {value:'senior',   label:'年長版'}
-            ], md)}
-          </div>
-        </div>
-
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>介面密度</strong>
-            <p>「緊湊」減少間距，「舒適」較寬鬆，適合觸控操作。</p>
-          </div>
-          <div class="settings-seg" id="seg-density">
-            ${seg('density', [
+            ], md) + '</div>')
+    +      row('介面密度', '「緊湊」較省空間；「舒適」更易觸控。',
+            '<div class="set-seg">' + seg('density', [
               {value:'cozy',    label:'舒適'},
               {value:'compact', label:'緊湊'}
-            ], de)}
-          </div>
-        </div>
-      </div>
+            ], de) + '</div>')
+    + '  </div>'
 
-      <!-- 輔助 -->
-      <div class="settings-group">
-        <div class="settings-group-head">
-          <i data-lucide="accessibility"></i><h3>輔助與互動</h3>
-        </div>
+    // 輔助
+    + '  <div class="set-group">'
+    + '    <h3 class="set-group-title"><i data-lucide="accessibility"></i> 輔助與互動</h3>'
+    +      row('動畫效果', '關閉可減少暈眩、省電。',
+            sw('sw-motion', 'motion', mo === 'on', 'on', 'reduced'))
+    +      row('提示音效', '操作回饋與提醒。',
+            sw('sw-sound', 'sound', so === 'on', 'on', 'off'))
+    + '  </div>'
 
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>動畫效果</strong>
-            <p>關閉後可降低暈眩感、節省電力。</p>
-          </div>
-          <label class="settings-switch">
-            <input type="checkbox" id="sw-motion" ${mo === 'on' ? 'checked' : ''} onchange="onSwitchChange('motion', this.checked ? 'on' : 'reduced')" />
-            <span class="sw-track"><span class="sw-thumb"></span></span>
-          </label>
-        </div>
+    // 帳號與資料
+    + '  <div class="set-group">'
+    + '    <h3 class="set-group-title"><i data-lucide="database"></i> 帳號與資料</h3>'
+    +      row('重新整理 / 清除快取', '畫面卡舊版時可手動清除。',
+            '<button class="set-btn" onclick="settingsClearCache()"><i data-lucide="refresh-cw"></i> 立即重整</button>')
+    +      row('重新發卡', '清除 ID 卡，下次回到歡迎頁。',
+            '<button class="set-btn set-btn-warn" onclick="settingsResetCard()"><i data-lucide="id-card"></i> 重新發卡</button>')
+    +      row('登出', '結束本次工作階段。',
+            '<button class="set-btn set-btn-danger" onclick="logout()"><i data-lucide="log-out"></i> 登出</button>')
+    + '  </div>'
 
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>提示音效</strong>
-            <p>操作回饋與提醒提示音。</p>
-          </div>
-          <label class="settings-switch">
-            <input type="checkbox" id="sw-sound" ${so === 'on' ? 'checked' : ''} onchange="onSwitchChange('sound', this.checked ? 'on' : 'off')" />
-            <span class="sw-track"><span class="sw-thumb"></span></span>
-          </label>
-        </div>
-      </div>
-
-      <!-- 帳號與資料 -->
-      <div class="settings-group">
-        <div class="settings-group-head">
-          <i data-lucide="database"></i><h3>帳號與資料</h3>
-        </div>
-
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>重新整理 / 清除快取</strong>
-            <p>當畫面顯示異常或更新後仍卡舊版時，可手動清除。</p>
-          </div>
-          <button class="settings-btn" onclick="settingsClearCache()">
-            <i data-lucide="refresh-cw"></i> 立即重整
-          </button>
-        </div>
-
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>重新發卡</strong>
-            <p>清除目前 ID 卡資料並回到歡迎頁，可重新註冊。</p>
-          </div>
-          <button class="settings-btn settings-btn-warn" onclick="settingsResetCard()">
-            <i data-lucide="id-card"></i> 重新發卡
-          </button>
-        </div>
-
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <strong>登出</strong>
-            <p>結束本次工作階段，下次回來會回到歡迎頁。</p>
-          </div>
-          <button class="settings-btn settings-btn-danger" onclick="logout()">
-            <i data-lucide="log-out"></i> 登出
-          </button>
-        </div>
-      </div>
-
-      <!-- 關於 -->
-      <div class="settings-group">
-        <div class="settings-group-head">
-          <i data-lucide="info"></i><h3>關於 MD.Piece</h3>
-        </div>
-        <div class="settings-about">
-          <p><strong>MD.Piece</strong> · 將日常碎片拼起，醫起走出治療的迷霧。</p>
-          <ul>
-            <li>版本：<code>v2.0</code></li>
-            <li>作者：余家馨</li>
-            <li>網站：<a href="https://www.mdpiece.life/" target="_blank" rel="noopener">www.mdpiece.life</a></li>
-            <li>原始碼：<a href="https://github.com/${GITHUB_REPO}" target="_blank" rel="noopener">${GITHUB_REPO}</a></li>
-          </ul>
-        </div>
-      </div>
-    </section>
-  `;
+    // 關於
+    + '  <div class="set-group">'
+    + '    <h3 class="set-group-title"><i data-lucide="info"></i> 關於 MD.Piece</h3>'
+    + '    <div class="set-about">'
+    + '      <p><strong>MD.Piece</strong> · 將日常碎片拼起，醫起走出治療的迷霧。</p>'
+    + '      <dl class="set-about-grid">'
+    + '        <dt>版本</dt><dd><code>v2.0</code></dd>'
+    + '        <dt>作者</dt><dd>余家馨</dd>'
+    + '        <dt>網站</dt><dd><a href="https://www.mdpiece.life/" target="_blank" rel="noopener">www.mdpiece.life</a></dd>'
+    + '        <dt>原始碼</dt><dd><a href="https://github.com/' + GITHUB_REPO + '" target="_blank" rel="noopener">' + GITHUB_REPO + '</a></dd>'
+    + '      </dl>'
+    + '    </div>'
+    + '  </div>'
+    + '</section>';
 }
 
 function loadSettingsPage() {
@@ -3637,7 +3576,7 @@ function onSettingChange(group, value) {
     applyDensity(value);
   }
   // 更新該群組按鈕的 active 狀態
-  document.querySelectorAll(`.seg-btn[data-group="${group}"]`).forEach(b => {
+  document.querySelectorAll('.set-seg-btn[data-group="' + group + '"]').forEach(function(b) {
     b.classList.toggle('active', b.dataset.value === value);
   });
   if (typeof showToast === 'function') showToast('已儲存設定', 'success');
