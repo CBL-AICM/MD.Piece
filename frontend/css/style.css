@@ -3709,6 +3709,219 @@ html[data-mode="senior"] .vt-bmi-meta {
   .memo-quick { grid-template-columns: 1fr; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   LABS — 報告數值
+   ═══════════════════════════════════════════════════════════ */
+
+.lab-add-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.lab-add-grid:has(#lab-sex-field:not([style*="none"])) {
+  grid-template-columns: 1.6fr .6fr 1fr 1fr;
+}
+.lab-field { display: flex; flex-direction: column; gap: 4px; }
+.lab-field label {
+  font-size: .82rem;
+  color: var(--text-dim);
+  display: flex; align-items: baseline; gap: 4px;
+}
+.lab-unit-hint { color: var(--text-muted); font-size: .75rem; }
+.lab-field select,
+.lab-field input {
+  padding: 8px 10px;
+  font-size: .92rem;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: "Noto Sans TC", sans-serif;
+}
+.lab-field select:focus,
+.lab-field input:focus { outline: none; border-color: var(--klein); }
+
+.lab-range-hint {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  font-size: .85rem;
+  color: var(--text-dim);
+}
+.lab-range-hint:empty { display: none; }
+.lab-meta-pill {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+.lab-cat-stable        { background: #DCEDF7; color: #2E5A7B; }
+.lab-cat-fluctuating   { background: #F1ECDC; color: #8B6F4E; }
+.lab-cat-inflammation  { background: #F7DCDC; color: #8C2E2E; }
+.lab-meta-range strong { color: var(--text); }
+.lab-meta-hint {
+  flex-basis: 100%;
+  font-size: .8rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.lab-list-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.lab-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 20px;
+  padding: 0 6px;
+  background: var(--bg-glass-hover);
+  border-radius: 999px;
+  font-size: .75rem;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+/* 卡片版 — 最新狀態 */
+.lab-latest { display: flex; flex-direction: column; gap: 12px; }
+.lab-item {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.lab-item.lab-level-normal      { border-left-color: #6FA378; }
+.lab-item.lab-level-borderline  { border-left-color: #D4A552; }
+.lab-item.lab-level-attention   { border-left-color: #C97A3A; }
+.lab-item.lab-level-concerning  { border-left-color: #B0506A; }
+
+.lab-item-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px;
+}
+.lab-item-name {
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.lab-item-value {
+  margin-top: 2px;
+  font-size: 1.4rem;
+  line-height: 1.1;
+  color: var(--text);
+}
+.lab-item-value small {
+  font-size: .75rem;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+.lab-item-status { text-align: right; }
+.lab-status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: .78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.lab-status-pill.lab-level-normal      { background: #DEEAD9; color: #4A6B3A; }
+.lab-status-pill.lab-level-borderline  { background: #F1E6C4; color: #8B6F2E; }
+.lab-status-pill.lab-level-attention   { background: #F1DAC4; color: #8B4F2E; }
+.lab-status-pill.lab-level-concerning  { background: #F1C4D0; color: #8C2E4A; }
+.lab-item-date {
+  display: block;
+  margin-top: 4px;
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+.lab-item-headline {
+  font-weight: 600;
+  font-size: .92rem;
+  color: var(--text);
+}
+.lab-item-msg {
+  font-size: .9rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+.lab-item-foot {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  font-size: .8rem;
+  color: var(--text-dim);
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-glass);
+}
+.lab-hint-tag {
+  background: var(--bg-glass-hover);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: .78rem;
+}
+.lab-del {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: inline-flex;
+}
+.lab-del:hover { color: var(--danger); background: var(--bg-glass-hover); }
+
+/* 列表版 — 歷史紀錄（緊湊） */
+.lab-history { display: flex; flex-direction: column; gap: 6px; }
+.lab-row {
+  display: grid;
+  grid-template-columns: 100px 1.5fr 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  font-size: .88rem;
+}
+.lab-row.lab-level-normal      { border-left-color: #6FA378; }
+.lab-row.lab-level-borderline  { border-left-color: #D4A552; }
+.lab-row.lab-level-attention   { border-left-color: #C97A3A; }
+.lab-row.lab-level-concerning  { border-left-color: #B0506A; }
+.lab-row-date  { color: var(--text-dim); font-size: .8rem; }
+.lab-row-name  { color: var(--text); }
+.lab-row-value { color: var(--text); text-align: right; }
+.lab-row-value strong { font-size: 1rem; }
+
+.lab-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: .9rem;
+  border: 1.5px dashed var(--border-glass);
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 700px) {
+  .lab-add-grid { grid-template-columns: 1fr 1fr; }
+  .lab-add-grid:has(#lab-sex-field:not([style*="none"])) { grid-template-columns: 1fr 1fr; }
+  .lab-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    row-gap: 4px;
+  }
+  .lab-row-date  { grid-column: 1; grid-row: 1; }
+  .lab-status-pill { grid-column: 2; grid-row: 1; justify-self: end; }
+  .lab-row-name  { grid-column: 1; grid-row: 2; }
+  .lab-row-value { grid-column: 2; grid-row: 2; }
+  .lab-del { grid-column: 2; grid-row: 1; align-self: start; }
+}
+
 .loading-spinner {
   width: 32px;
   height: 32px;

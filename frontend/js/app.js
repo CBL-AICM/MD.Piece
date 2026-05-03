@@ -401,8 +401,532 @@ function memoRenderList() {
 }
 
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
+
+// ─── 報告數值（檢驗報告解讀） ────────────────────────────────
+// 每個項目分三類：
+//   stable        穩定型，偏離就比較有意義（Cr / TSH / Plt …）
+//   fluctuating   會浮動型，輕微偏離不用緊張（HbA1c / 血糖 / 血脂 / 肝指數 …）
+//   inflammation  發炎指標，超標就值得留意，沒有「borderline」狀態（CRP / ESR / Ferritin / CK）
+//
+// direction：哪一邊算異常
+//   high  超出 high 才異常（多數）
+//   low   低於 low 才異常（如 HDL — 越高越好）
+//   both  兩端都要顧（穩定型常見）
+//
+// tolerance：fluctuating 類別的「輕微偏離緩衝區」相對倍數（high 端：value ≤ high × (1 + tol) 算 borderline）
+//             stable 類別：較緊（0.10 左右）
+//             inflammation：不會用到（直接跳 attention）
+// concern：明顯異常的閾值（value ≥ high × (1 + concern) 進入 concerning）
+var LAB_ITEMS = [
+  // 血糖 ─────────────────────────────────────
+  { key: "hba1c", group: "血糖", name: "糖化血色素 HbA1c", unit: "%",
+    category: "fluctuating", direction: "high",
+    range: [4.0, 5.6], tolerance: 0.15, concern: 0.30,
+    hint: "代表三個月平均血糖；若有糖尿病，醫師通常會把目標訂在 6.5–7.0%。" },
+  { key: "fpg", group: "血糖", name: "空腹血糖 FPG", unit: "mg/dL",
+    category: "fluctuating", direction: "high",
+    range: [70, 99], tolerance: 0.25, concern: 0.55,
+    hint: "受前一晚進食、壓力、睡眠影響，單次偏高常見。連續多次 ≥ 126 才算糖尿病標準。" },
+  { key: "ppg", group: "血糖", name: "飯後 2 小時血糖", unit: "mg/dL",
+    category: "fluctuating", direction: "high",
+    range: [70, 139], tolerance: 0.25, concern: 0.50,
+    hint: "與當餐內容、份量直接相關。重點看趨勢，不是單一數字。" },
+
+  // 血脂 ─────────────────────────────────────
+  { key: "tc", group: "血脂", name: "總膽固醇 TC", unit: "mg/dL",
+    category: "fluctuating", direction: "high",
+    range: [100, 200], tolerance: 0.20, concern: 0.40,
+    hint: "受飲食影響大。配合 LDL/HDL 一起看更準。" },
+  { key: "ldl", group: "血脂", name: "低密度膽固醇 LDL", unit: "mg/dL",
+    category: "fluctuating", direction: "high",
+    range: [50, 130], tolerance: 0.20, concern: 0.50,
+    hint: "「壞」膽固醇。心血管風險高的人目標更嚴（< 100 或 < 70）。" },
+  { key: "hdl", group: "血脂", name: "高密度膽固醇 HDL", unit: "mg/dL",
+    category: "fluctuating", direction: "low",
+    range: [40, 90], tolerance: 0.15, concern: 0.30,
+    hint: "「好」膽固醇，越高越好。運動和健康脂肪能拉高它。" },
+  { key: "tg", group: "血脂", name: "三酸甘油脂 TG", unit: "mg/dL",
+    category: "fluctuating", direction: "high",
+    range: [40, 150], tolerance: 0.30, concern: 0.70,
+    hint: "飯後抽血最容易偏高。請確認是空腹值。受飲酒、含糖飲料影響大。" },
+
+  // 肝功能 ────────────────────────────────────
+  { key: "ast", group: "肝功能", name: "AST / GOT", unit: "U/L",
+    category: "fluctuating", direction: "high",
+    range: [10, 40], tolerance: 0.25, concern: 1.0,
+    hint: "劇烈運動、熬夜、感冒都可能讓它輕微偏高。明顯升高才需要找原因。" },
+  { key: "alt", group: "肝功能", name: "ALT / GPT", unit: "U/L",
+    category: "fluctuating", direction: "high",
+    range: [10, 40], tolerance: 0.25, concern: 1.0,
+    hint: "比 AST 更專一指向肝臟。脂肪肝常見輕微升高。" },
+
+  // 腎功能 ────────────────────────────────────
+  { key: "cr", group: "腎功能", name: "肌酸酐 Creatinine", unit: "mg/dL",
+    category: "stable", direction: "both",
+    range: [0.6, 1.3], tolerance: 0.10, concern: 0.30,
+    hint: "腎功能指標，相對穩定；偏高代表腎臟過濾能力下降，要追蹤。" },
+  { key: "egfr", group: "腎功能", name: "腎絲球過濾率 eGFR", unit: "mL/min/1.73m²",
+    category: "stable", direction: "low",
+    range: [60, 120], tolerance: 0.10, concern: 0.30,
+    hint: "< 60 代表慢性腎臟病。年齡會自然下降一些。" },
+  { key: "bun", group: "腎功能", name: "尿素氮 BUN", unit: "mg/dL",
+    category: "fluctuating", direction: "high",
+    range: [7, 20], tolerance: 0.30, concern: 0.80,
+    hint: "受水分、蛋白質攝取影響很大。脫水時容易升高，多喝水通常會回來。" },
+
+  // 血液常規 ─────────────────────────────────
+  { key: "wbc", group: "血液常規", name: "白血球 WBC", unit: "/μL",
+    category: "fluctuating", direction: "both",
+    range: [4000, 10000], tolerance: 0.20, concern: 0.50,
+    hint: "受感染、壓力、運動影響。明顯偏低或偏高才需要找原因。" },
+  { key: "hb", group: "血液常規", name: "血紅素 Hb", unit: "g/dL",
+    category: "fluctuating", direction: "low",
+    range: [12, 17], tolerance: 0.10, concern: 0.25,
+    hint: "女性常因經期偏低一點。明顯偏低（< 10）才會頭暈疲倦。" },
+  { key: "plt", group: "血液常規", name: "血小板 Plt", unit: "/μL",
+    category: "stable", direction: "both",
+    range: [150000, 400000], tolerance: 0.10, concern: 0.30,
+    hint: "凝血功能指標。相對穩定，偏離正常範圍要找原因。" },
+
+  // 內分泌 ────────────────────────────────────
+  { key: "tsh", group: "內分泌", name: "甲狀腺刺激素 TSH", unit: "μIU/mL",
+    category: "stable", direction: "both",
+    range: [0.4, 4.0], tolerance: 0.15, concern: 0.50,
+    hint: "甲狀腺功能指標。偏高代表功能低下、偏低代表亢進。" },
+
+  // 尿酸 ────────────────────────────────────
+  { key: "ua", group: "代謝", name: "尿酸 Uric Acid", unit: "mg/dL",
+    category: "fluctuating", direction: "high",
+    range: [3.5, 7.2], tolerance: 0.15, concern: 0.40,
+    hint: "受飲食（海鮮、內臟、酒）影響大。輕微偏高常見，明顯升高才會痛風發作。" },
+
+  // 發炎指標 ⚠ ───────────────────────────────
+  { key: "crp", group: "發炎指標", name: "C-反應蛋白 CRP", unit: "mg/dL",
+    category: "inflammation", direction: "high",
+    range: [0, 0.5], tolerance: 0, concern: 5.0,
+    hint: "急性發炎指標。任何超標都值得追問是不是有感染或免疫活動。" },
+  { key: "esr", group: "發炎指標", name: "紅血球沉降速率 ESR", unit: "mm/hr",
+    category: "inflammation", direction: "high",
+    range: [0, 20], tolerance: 0, concern: 1.0,
+    hint: "慢性發炎指標。對自體免疫疾病的活動度敏感。" },
+  { key: "ferritin", group: "發炎指標", name: "鐵蛋白 Ferritin", unit: "ng/mL",
+    category: "inflammation", direction: "high",
+    range: [30, 300], tolerance: 0, concern: 2.0,
+    hint: "也算發炎指標。極高常見於成人型史迪爾氏症、發炎反應、鐵沉積。" },
+  { key: "ck", group: "發炎指標", name: "肌酸激酶 CK / CPK", unit: "U/L",
+    category: "inflammation", direction: "high",
+    range: [30, 200], tolerance: 0, concern: 2.0,
+    hint: "肌肉發炎或運動後升高。明顯高（> 1000）要小心橫紋肌溶解。" }
+];
+
+var LAB_STORE_KEY = "mdpiece_labs_v1";
+var LAB_SEX_STORE_KEY = "mdpiece_labs_sex_v1";
+
+function labLoad() {
+  try {
+    var raw = localStorage.getItem(LAB_STORE_KEY);
+    if (!raw) return [];
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) { return []; }
+}
+function labSaveAll(arr) {
+  try { localStorage.setItem(LAB_STORE_KEY, JSON.stringify(arr)); }
+  catch (e) { showToast("儲存失敗，可能空間不足", "error"); }
+}
+function labLoadSex() {
+  try { return localStorage.getItem(LAB_SEX_STORE_KEY) || "F"; }
+  catch (e) { return "F"; }
+}
+function labSaveSex(s) {
+  try { localStorage.setItem(LAB_SEX_STORE_KEY, s); } catch (e) {}
+}
+
+// 核心：給定項目與數值，回傳狀態與貼心訊息
+//   level: 'normal' | 'borderline' | 'attention' | 'concerning'
+function labEvaluate(item, value) {
+  var v = Number(value);
+  if (isNaN(v)) return null;
+  var lo = item.range[0], hi = item.range[1];
+  var dir = item.direction;
+  var cat = item.category;
+  var tol = item.tolerance || 0;
+  var concernMul = item.concern || 0.5;
+
+  // 判斷「方向」：value 在哪一側偏離
+  var sideHigh = (dir === "high" || dir === "both") && v > hi;
+  var sideLow  = (dir === "low"  || dir === "both") && v < lo;
+  var inRange = !sideHigh && !sideLow;
+
+  // 計算偏離程度（用相對倍數）
+  var ratio = 0; // value / threshold
+  if (sideHigh) ratio = (v - hi) / Math.max(hi, 1);
+  else if (sideLow) ratio = (lo - v) / Math.max(lo, 1);
+
+  var level, headline, msg;
+
+  if (inRange) {
+    level = "normal";
+    headline = "落在正常範圍";
+    msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，在正常範圍 " + lo + "–" + hi + " 內，這是好消息。";
+  } else if (cat === "inflammation") {
+    // 發炎指標：直接 attention 起跳
+    if (ratio >= concernMul) {
+      level = "concerning";
+      headline = "明顯升高的發炎指標";
+      msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，明顯超過正常上限 " + hi + "。" +
+            "這個指標升高代表體內可能有感染、自體免疫活動度上升、或其他發炎反應。建議盡快聯絡醫師確認原因。";
+    } else {
+      level = "attention";
+      headline = "發炎指標超出正常";
+      msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，正常應 ≤ " + hi + "。" +
+            "這是身體的發炎指標——即使只是輕微超標，也值得留意，可能是感染或免疫系統活躍。下次回診請務必跟醫師確認。";
+    }
+  } else if (cat === "fluctuating") {
+    // 浮動型：先給「輕微偏離（會浮動）」的緩衝區
+    if (ratio <= tol) {
+      level = "borderline";
+      headline = sideHigh ? "稍微偏高（會浮動）" : "稍微偏低（會浮動）";
+      msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，比正常範圍 " + lo + "–" + hi + " " +
+            (sideHigh ? "高一點點" : "低一點點") + "。" +
+            "這個指標其實會隨著飲食、運動、壓力、睡眠起伏，輕微偏離很常見，先不用太擔心。下次回診時可以再追蹤看看。";
+    } else if (ratio <= concernMul) {
+      level = "attention";
+      headline = sideHigh ? "明顯偏高，建議追蹤" : "明顯偏低，建議追蹤";
+      msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，正常範圍 " + lo + "–" + hi + "。" +
+            "雖然這個指標會浮動，但這次的差距不算小，建議下次回診跟醫師確認，必要時可以再驗一次看看趨勢。";
+    } else {
+      level = "concerning";
+      headline = sideHigh ? "明顯異常偏高" : "明顯異常偏低";
+      msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，明顯超出正常範圍 " + lo + "–" + hi + "。" +
+            "建議盡快聯絡醫師、必要時就醫釐清原因。";
+    }
+  } else {
+    // stable：較緊
+    if (ratio <= tol) {
+      level = "attention";
+      headline = sideHigh ? "略偏高，建議追蹤" : "略偏低，建議追蹤";
+      msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，剛超出正常範圍 " + lo + "–" + hi + "。" +
+            "這個指標相對穩定，即使只是輕微偏離，也建議下次回診告訴醫師。";
+    } else if (ratio <= concernMul) {
+      level = "attention";
+      headline = sideHigh ? "明顯偏高" : "明顯偏低";
+      msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，超出正常範圍 " + lo + "–" + hi + "。" +
+            "這個指標代表器官功能可能有變化，請跟醫師討論下一步檢查。";
+    } else {
+      level = "concerning";
+      headline = sideHigh ? "明顯異常偏高" : "明顯異常偏低";
+      msg = "你的 " + item.name + " 是 " + v + " " + item.unit + "，明顯超出正常範圍 " + lo + "–" + hi + "。" +
+            "建議盡快聯絡醫師處理。";
+    }
+  }
+
+  return {
+    level: level,
+    headline: headline,
+    message: msg,
+    rangeText: lo + "–" + hi + " " + item.unit,
+    hint: item.hint || "",
+    sideHigh: sideHigh,
+    sideLow: sideLow
+  };
+}
+
+function loadLabsPage() {
+  // 填充項目下拉選單
+  var sel = document.getElementById("lab-item-select");
+  if (sel) {
+    var byGroup = {};
+    LAB_ITEMS.forEach(function(it) {
+      if (!byGroup[it.group]) byGroup[it.group] = [];
+      byGroup[it.group].push(it);
+    });
+    var html = '<option value="">— 選擇檢驗項目 —</option>';
+    Object.keys(byGroup).forEach(function(g) {
+      html += '<optgroup label="' + escapeHtml(g) + '">';
+      byGroup[g].forEach(function(it) {
+        html += '<option value="' + escapeHtml(it.key) + '">' + escapeHtml(it.name) + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    sel.innerHTML = html;
+  }
+
+  var sexSel = document.getElementById("lab-sex-select");
+  if (sexSel) sexSel.value = labLoadSex();
+
+  var dateInput = document.getElementById("lab-date-input");
+  if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+
+  labOnItemChange();
+  labRenderLatest();
+  labRenderHistory();
+
+  if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+}
+
+function labGetItem(key) {
+  return LAB_ITEMS.find(function(it) { return it.key === key; });
+}
+
+function labOnItemChange() {
+  var sel = document.getElementById("lab-item-select");
+  var unitHint = document.getElementById("lab-unit-hint");
+  var rangeHint = document.getElementById("lab-range-hint");
+  var input = document.getElementById("lab-value-input");
+  if (!sel) return;
+  var it = labGetItem(sel.value);
+  if (!it) {
+    if (unitHint) unitHint.textContent = "";
+    if (rangeHint) rangeHint.innerHTML = "";
+    if (input) { input.placeholder = "例如：5.8"; input.disabled = false; }
+    return;
+  }
+  if (unitHint) unitHint.textContent = "（" + it.unit + "）";
+  if (input) input.placeholder = "在 " + it.range[0] + " – " + it.range[1] + " " + it.unit + " 之間";
+  if (rangeHint) {
+    var catLabel = it.category === "inflammation" ? "發炎指標 ⚠" :
+                   it.category === "stable" ? "穩定型" : "會浮動";
+    rangeHint.innerHTML =
+      '<div class="lab-meta-pill lab-cat-' + it.category + '">' + catLabel + '</div>' +
+      '<div class="lab-meta-range">正常範圍 <strong>' + it.range[0] + '–' + it.range[1] + ' ' + it.unit + '</strong></div>' +
+      (it.hint ? '<div class="lab-meta-hint">' + escapeHtml(it.hint) + '</div>' : '');
+  }
+}
+
+function labAddEntry() {
+  var key = document.getElementById("lab-item-select").value;
+  var rawVal = document.getElementById("lab-value-input").value;
+  var date = document.getElementById("lab-date-input").value;
+  if (!key) { showToast("請先選擇項目", "warning"); return; }
+  var item = labGetItem(key);
+  if (!item) return;
+  var v = parseFloat(rawVal);
+  if (isNaN(v)) { showToast("請輸入有效數值", "warning"); return; }
+  if (!date) date = new Date().toISOString().slice(0, 10);
+
+  // 記住性別
+  var sex = document.getElementById("lab-sex-select").value || "F";
+  labSaveSex(sex);
+
+  var entries = labLoad();
+  entries.unshift({
+    id: "lab_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+    itemKey: key,
+    value: v,
+    date: date,
+    createdAt: new Date().toISOString()
+  });
+  labSaveAll(entries);
+
+  // 重置表單（保留項目）
+  document.getElementById("lab-value-input").value = "";
+
+  labRenderLatest();
+  labRenderHistory();
+
+  // 跳出評估訊息
+  var evalRes = labEvaluate(item, v);
+  if (evalRes) {
+    var t = evalRes.level === "normal" ? "success" :
+            evalRes.level === "concerning" ? "error" : "warning";
+    showToast(evalRes.headline + "：" + item.name + " " + v + " " + item.unit, t);
+  }
+}
+
+function labDelete(id) {
+  if (!confirm("確定要刪除這筆紀錄？")) return;
+  var entries = labLoad().filter(function(e) { return e.id !== id; });
+  labSaveAll(entries);
+  labRenderLatest();
+  labRenderHistory();
+}
+
+function labRenderEntryCard(entry, item, evalRes) {
+  if (!item || !evalRes) return "";
+  var levelLabel = {
+    normal: "正常", borderline: "輕微偏離", attention: "需要注意", concerning: "明顯異常"
+  }[evalRes.level];
+  return '' +
+    '<article class="lab-item lab-level-' + evalRes.level + '">' +
+      '<header class="lab-item-head">' +
+        '<div>' +
+          '<div class="lab-item-name">' + escapeHtml(item.name) + '</div>' +
+          '<div class="lab-item-value">' +
+            '<strong>' + entry.value + '</strong> ' +
+            '<small>' + escapeHtml(item.unit) + '</small>' +
+          '</div>' +
+        '</div>' +
+        '<div class="lab-item-status">' +
+          '<span class="lab-status-pill lab-level-' + evalRes.level + '">' + levelLabel + '</span>' +
+          '<span class="lab-item-date">' + escapeHtml(entry.date) + '</span>' +
+        '</div>' +
+      '</header>' +
+      '<div class="lab-item-headline">' + escapeHtml(evalRes.headline) + '</div>' +
+      '<p class="lab-item-msg">' + escapeHtml(evalRes.message) + '</p>' +
+      '<div class="lab-item-foot">' +
+        '<span>正常範圍：' + escapeHtml(evalRes.rangeText) + '</span>' +
+        (evalRes.hint ? '<span class="lab-hint-tag">💡 ' + escapeHtml(evalRes.hint) + '</span>' : '') +
+        '<button class="lab-del" onclick="labDelete(\'' + entry.id + '\')" title="刪除">' +
+          '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
+        '</button>' +
+      '</div>' +
+    '</article>';
+}
+
+function labRenderLatest() {
+  var el = document.getElementById("lab-latest-list");
+  var countEl = document.getElementById("lab-latest-count");
+  if (!el) return;
+
+  var all = labLoad();
+  // 每個 itemKey 只保留最新一筆
+  var seen = {};
+  var latest = [];
+  all.forEach(function(e) {
+    if (!seen[e.itemKey]) {
+      seen[e.itemKey] = true;
+      latest.push(e);
+    }
+  });
+
+  if (countEl) countEl.textContent = latest.length;
+
+  if (!latest.length) {
+    el.innerHTML = '<div class="lab-empty">還沒有檢驗紀錄 — 從上方選一個項目開始輸入吧。</div>';
+    return;
+  }
+
+  // 把需要注意/異常的排到前面
+  var rank = { concerning: 0, attention: 1, borderline: 2, normal: 3 };
+  latest.sort(function(a, b) {
+    var ia = labGetItem(a.itemKey), ib = labGetItem(b.itemKey);
+    if (!ia || !ib) return 0;
+    var ea = labEvaluate(ia, a.value), eb = labEvaluate(ib, b.value);
+    return (rank[ea.level] || 9) - (rank[eb.level] || 9);
+  });
+
+  el.innerHTML = latest.map(function(e) {
+    var item = labGetItem(e.itemKey);
+    if (!item) return "";
+    var ev = labEvaluate(item, e.value);
+    return labRenderEntryCard(e, item, ev);
+  }).join("");
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function labRenderHistory() {
+  var el = document.getElementById("lab-history-list");
+  var countEl = document.getElementById("lab-history-count");
+  if (!el) return;
+
+  var all = labLoad();
+  if (countEl) countEl.textContent = all.length;
+
+  if (!all.length) {
+    el.innerHTML = '<div class="lab-empty">還沒有歷史紀錄。</div>';
+    return;
+  }
+
+  // 已按 createdAt 倒序（unshift 進去的）；保險再 sort 一下
+  all.sort(function(a, b) {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return a.createdAt < b.createdAt ? 1 : -1;
+  });
+
+  el.innerHTML = all.map(function(e) {
+    var item = labGetItem(e.itemKey);
+    if (!item) return "";
+    var ev = labEvaluate(item, e.value);
+    var levelLabel = {
+      normal: "正常", borderline: "輕微偏離", attention: "需要注意", concerning: "明顯異常"
+    }[ev.level];
+    return '<div class="lab-row lab-level-' + ev.level + '">' +
+      '<span class="lab-row-date">' + escapeHtml(e.date) + '</span>' +
+      '<span class="lab-row-name">' + escapeHtml(item.name) + '</span>' +
+      '<span class="lab-row-value"><strong>' + e.value + '</strong> ' + escapeHtml(item.unit) + '</span>' +
+      '<span class="lab-status-pill lab-level-' + ev.level + '">' + levelLabel + '</span>' +
+      '<button class="lab-del" onclick="labDelete(\'' + e.id + '\')" title="刪除">' +
+        '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
+      '</button>' +
+    '</div>';
+  }).join("");
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
-const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
+function labs() {
+  return `
+    <div class="card lab-hero">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="trending-up" style="width:22px;height:22px"></i> 報告數值
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        把抽血報告的數字輸入進來，立刻知道是落在正常範圍、還是值得留意。
+        <strong style="color:var(--text)">很多生理指標其實會浮動</strong>——輕微偏高大多不用緊張；
+        但<strong style="color:#B0506A">發炎指標</strong>只要超標就值得注意。
+      </p>
+    </div>
+
+    <div class="card lab-add">
+      <h3 style="font-size:1rem;display:flex;align-items:center;gap:6px">
+        <i data-lucide="plus-circle" style="width:18px;height:18px"></i> 新增一筆檢驗值
+      </h3>
+      <div class="lab-add-grid">
+        <div class="lab-field">
+          <label>項目</label>
+          <select id="lab-item-select" onchange="labOnItemChange()">
+            <option value="">— 選擇檢驗項目 —</option>
+          </select>
+        </div>
+        <div class="lab-field" id="lab-sex-field" style="display:none">
+          <label>性別</label>
+          <select id="lab-sex-select">
+            <option value="F">女性</option>
+            <option value="M">男性</option>
+          </select>
+        </div>
+        <div class="lab-field">
+          <label>數值 <span id="lab-unit-hint" class="lab-unit-hint"></span></label>
+          <input type="number" step="any" id="lab-value-input" placeholder="例如：5.8" />
+        </div>
+        <div class="lab-field">
+          <label>檢驗日期</label>
+          <input type="date" id="lab-date-input" />
+        </div>
+      </div>
+      <div id="lab-range-hint" class="lab-range-hint"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button class="primary" onclick="labAddEntry()">
+          <i data-lucide="check" style="width:14px;height:14px;vertical-align:middle"></i> 加入
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lab-list-head">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:6px">
+          <i data-lucide="activity" style="width:18px;height:18px"></i>
+          <span>最新狀態</span>
+          <span class="lab-count" id="lab-latest-count">0</span>
+        </h3>
+        <small style="color:var(--text-dim)">每個項目顯示最近一次的數值</small>
+      </div>
+      <div id="lab-latest-list" class="lab-latest"></div>
+    </div>
+
+    <div class="card">
+      <div class="lab-list-head">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:6px">
+          <i data-lucide="archive" style="width:18px;height:18px"></i>
+          <span>所有歷史紀錄</span>
+          <span class="lab-count" id="lab-history-count">0</span>
+        </h3>
+      </div>
+      <div id="lab-history-list" class="lab-history"></div>
+    </div>
+  `;
+}
 const pieces   = () => placeholderPage('你的碎片',  '所有紀錄都會在這裡拼起 — 看見完整的你。', 'puzzle', 'your-pieces', 67);
 const chat     = () => placeholderPage('醫起聊天', '24/7 AI 醫療諮詢，有疑問隨時聊。', 'message-circle-heart', 'med-chat', 50);
 
@@ -435,6 +959,7 @@ function showPage(page) {
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
+    if (page === "labs") loadLabsPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
