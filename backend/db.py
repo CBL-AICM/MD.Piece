@@ -270,6 +270,20 @@ def _init_db():
 
 # ─── Supabase-compatible query builder backed by SQLite ───────
 
+import re as _re
+
+_IDENT_RE = _re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _safe_ident(name):
+    """Validate an SQL identifier (table or column name) against a strict
+    allowlist before interpolation. Raises ValueError on rejection so we
+    fail closed rather than risk an injected fragment reaching the DB."""
+    if not isinstance(name, str) or not _IDENT_RE.match(name):
+        raise ValueError(f"unsafe SQL identifier: {name!r}")
+    return name
+
+
 class _SqliteResult:
     def __init__(self, data):
         self.data = data
@@ -316,32 +330,32 @@ class _SqliteQuery:
 
     # ─── Condition builders ─────────────
     def eq(self, col, val):
-        self._conditions.append(f'"{col}" = ?')
+        self._conditions.append(f'"{_safe_ident(col)}" = ?')
         self._params.append(val)
         return self
 
     def neq(self, col, val):
-        self._conditions.append(f'"{col}" != ?')
+        self._conditions.append(f'"{_safe_ident(col)}" != ?')
         self._params.append(val)
         return self
 
     def gte(self, col, val):
-        self._conditions.append(f'"{col}" >= ?')
+        self._conditions.append(f'"{_safe_ident(col)}" >= ?')
         self._params.append(val)
         return self
 
     def lte(self, col, val):
-        self._conditions.append(f'"{col}" <= ?')
+        self._conditions.append(f'"{_safe_ident(col)}" <= ?')
         self._params.append(val)
         return self
 
     def ilike(self, col, val):
-        self._conditions.append(f'"{col}" LIKE ? COLLATE NOCASE')
+        self._conditions.append(f'"{_safe_ident(col)}" LIKE ? COLLATE NOCASE')
         self._params.append(val)
         return self
 
     def order(self, col, desc=False, **kwargs):
-        self._order_col = col
+        self._order_col = _safe_ident(col)
         self._order_desc = desc
         return self
 
@@ -389,12 +403,13 @@ class _SqliteQuery:
 
     def _exec_select(self, conn):
         where, params = self._where_clause()
-        sql = f'SELECT * FROM "{self._table}"{where}'
+        table = _safe_ident(self._table)
+        sql = f'SELECT * FROM "{table}"{where}'
         if self._order_col:
             direction = "DESC" if self._order_desc else "ASC"
-            sql += f' ORDER BY "{self._order_col}" {direction}'
+            sql += f' ORDER BY "{_safe_ident(self._order_col)}" {direction}'
         if self._limit_n:
-            sql += f" LIMIT {self._limit_n}"
+            sql += f" LIMIT {int(self._limit_n)}"
 
         rows = conn.execute(sql, params).fetchall()
         data = [self._deserialize_row(dict(r)) for r in rows]
@@ -414,11 +429,12 @@ class _SqliteQuery:
 
         for row in data:
             for ref_table, ref_cols in joins:
-                fk_col = f"{ref_table[:-1]}_id" if ref_table.endswith("s") else f"{ref_table}_id"
+                safe_ref = _safe_ident(ref_table)
+                fk_col = f"{safe_ref[:-1]}_id" if safe_ref.endswith("s") else f"{safe_ref}_id"
                 fk_val = row.get(fk_col)
                 if fk_val:
                     ref_row = conn.execute(
-                        f'SELECT * FROM "{ref_table}" WHERE id = ?', (fk_val,)
+                        f'SELECT * FROM "{safe_ref}" WHERE id = ?', (fk_val,)
                     ).fetchone()
                     if ref_row:
                         ref_dict = dict(ref_row)
@@ -442,9 +458,11 @@ class _SqliteQuery:
 
         # Serialize complex types
         serialized = {k: self._serialize_value(v) for k, v in data.items()}
-        cols = ', '.join(f'"{k}"' for k in serialized.keys())
+        table = _safe_ident(self._table)
+        col_idents = [_safe_ident(k) for k in serialized.keys()]
+        cols = ', '.join(f'"{k}"' for k in col_idents)
         placeholders = ', '.join('?' for _ in serialized)
-        sql = f'INSERT INTO "{self._table}" ({cols}) VALUES ({placeholders})'
+        sql = f'INSERT INTO "{table}" ({cols}) VALUES ({placeholders})'
         conn.execute(sql, list(serialized.values()))
         conn.commit()
         return _SqliteResult([data])
@@ -455,24 +473,27 @@ class _SqliteQuery:
             return _SqliteResult([])
 
         serialized = {k: self._serialize_value(v) for k, v in data.items()}
-        set_clause = ', '.join(f'"{k}" = ?' for k in serialized.keys())
+        table = _safe_ident(self._table)
+        col_idents = [_safe_ident(k) for k in serialized.keys()]
+        set_clause = ', '.join(f'"{k}" = ?' for k in col_idents)
         set_params = list(serialized.values())
         where, where_params = self._where_clause()
-        sql = f'UPDATE "{self._table}" SET {set_clause}{where}'
+        sql = f'UPDATE "{table}" SET {set_clause}{where}'
         conn.execute(sql, set_params + where_params)
         conn.commit()
 
-        select_sql = f'SELECT * FROM "{self._table}"{where}'
+        select_sql = f'SELECT * FROM "{table}"{where}'
         rows = conn.execute(select_sql, where_params).fetchall()
         return _SqliteResult([self._deserialize_row(dict(r)) for r in rows])
 
     def _exec_delete(self, conn):
+        table = _safe_ident(self._table)
         where, params = self._where_clause()
-        select_sql = f'SELECT * FROM "{self._table}"{where}'
+        select_sql = f'SELECT * FROM "{table}"{where}'
         rows = conn.execute(select_sql, params).fetchall()
         data = [self._deserialize_row(dict(r)) for r in rows]
 
-        sql = f'DELETE FROM "{self._table}"{where}'
+        sql = f'DELETE FROM "{table}"{where}'
         conn.execute(sql, params)
         conn.commit()
         return _SqliteResult(data)
