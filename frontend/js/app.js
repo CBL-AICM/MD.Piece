@@ -4448,61 +4448,84 @@ async function loadDoctorPatientView() {
 
 // ── 總覽 ────────────────────────────────────────────────
 async function renderDocOverview(p, body) {
-  const [vitalsRes, medsRes, recordsRes, symRes] = await Promise.all([
+  const [vitalsRes, medsRes, recordsRes, symRes, statRes] = await Promise.all([
     fetch(`${API}/vitals/?patient_id=${p.id}`).then(r => r.ok ? r.json() : { vitals: [] }).catch(() => ({ vitals: [] })),
     fetch(`${API}/medications/?patient_id=${p.id}`).then(r => r.ok ? r.json() : { medications: [] }).catch(() => ({ medications: [] })),
     fetch(`${API}/records/patient/${p.id}`).then(r => r.ok ? r.json() : { records: [] }).catch(() => ({ records: [] })),
     fetch(`${API}/symptoms/history/${p.id}`).then(r => r.ok ? r.json() : { history: [] }).catch(() => ({ history: [] })),
+    fetch(`${API}/medications/stats?patient_id=${p.id}&days=30`).then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   const vitals = vitalsRes.vitals || [];
   const meds = (medsRes.medications || []).filter(m => m.active !== 0);
+  const inactive = (medsRes.medications || []).filter(m => m.active === 0);
   const records = recordsRes.records || [];
   const sym = symRes.history || [];
-  const lastVital = vitals[vitals.length - 1];
-  const lastSym = sym[0];
-  const lastRecord = records[0];
+  const compliance = statRes?.compliance_rate ?? statRes?.adherence ?? null;
+
+  // 活動熱力圖：合併 vitals/sym/records 30 天
+  const byDate = {};
+  const addDate = (iso) => { if (!iso) return; const k = iso.slice(0, 10); byDate[k] = (byDate[k] || 0) + 1; };
+  vitals.forEach(v => addDate(v.recorded_at));
+  sym.forEach(s => addDate(s.created_at));
+  records.forEach(r => addDate(r.visit_date || r.created_at));
+
+  // 緊急程度分布
+  const urgCount = { low: 0, medium: 0, high: 0, emergency: 0 };
+  sym.forEach(s => { const u = s.ai_response?.urgency || 'low'; urgCount[u] = (urgCount[u] || 0) + 1; });
+  const urgSegs = [
+    { label: 'Low',       value: urgCount.low,       color: '#10B981' },
+    { label: 'Medium',    value: urgCount.medium,    color: '#F59E0B' },
+    { label: 'High',      value: urgCount.high,      color: '#F97316' },
+    { label: 'Emergency', value: urgCount.emergency, color: '#DC2626' },
+  ].filter(s => s.value > 0);
 
   body.innerHTML = `
-    <div class="doc-ov-grid">
-      <div class="doc-stat doc-stat-mint">
-        <span class="doc-stat-ic"><i data-lucide="activity"></i></span>
-        <span class="doc-stat-num">${vitals.length}</span>
-        <span class="doc-stat-lbl">生理紀錄筆數</span>
-        <span class="doc-stat-sub">${lastVital ? '最近：' + relTime(lastVital.recorded_at) : '尚無紀錄'}</span>
-      </div>
-      <div class="doc-stat doc-stat-amber">
-        <span class="doc-stat-ic"><i data-lucide="pill"></i></span>
-        <span class="doc-stat-num">${meds.length}</span>
-        <span class="doc-stat-lbl">使用中藥物</span>
-        <span class="doc-stat-sub">${meds.length ? meds.slice(0,2).map(m => m.name).join('、') : '無'}</span>
-      </div>
-      <div class="doc-stat doc-stat-rose">
-        <span class="doc-stat-ic"><i data-lucide="scan-search"></i></span>
-        <span class="doc-stat-num">${sym.length}</span>
-        <span class="doc-stat-lbl">症狀分析次數</span>
-        <span class="doc-stat-sub">${lastSym ? '最近：' + relTime(lastSym.created_at) : '尚無紀錄'}</span>
-      </div>
-      <div class="doc-stat doc-stat-blue">
-        <span class="doc-stat-ic"><i data-lucide="clipboard-list"></i></span>
-        <span class="doc-stat-num">${records.length}</span>
-        <span class="doc-stat-lbl">就診紀錄</span>
-        <span class="doc-stat-sub">${lastRecord ? '最近：' + (lastRecord.visit_date ? new Date(lastRecord.visit_date).toLocaleDateString() : '—') : '尚無紀錄'}</span>
-      </div>
-    </div>
-
-    <div class="doc-ov-row">
+    <div class="doc-grid-2x2">
       <div class="doc-card">
-        <h3><i data-lucide="trending-up" style="width:16px;height:16px"></i> 近期關鍵指標</h3>
+        <h3><i data-lucide="calendar-days" style="width:16px;height:16px"></i> 近 30 天活動熱力圖</h3>
+        ${renderHeatmap(byDate, { days: 30 })}
+        <div class="doc-legend">
+          <span>少</span>
+          <span class="dh-leg dh-l1"></span><span class="dh-leg dh-l2"></span>
+          <span class="dh-leg dh-l3"></span><span class="dh-leg dh-l4"></span>
+          <span>多</span>
+          <span class="doc-legend-meta">${Object.values(byDate).reduce((a, b) => a + b, 0)} 筆活動</span>
+        </div>
+      </div>
+
+      <div class="doc-card">
+        <h3><i data-lucide="trending-up" style="width:16px;height:16px"></i> 關鍵指標趨勢</h3>
         ${renderOverviewSparklines(vitals)}
       </div>
+
       <div class="doc-card">
-        <h3><i data-lucide="alert-circle" style="width:16px;height:16px"></i> 最新就診</h3>
-        ${lastRecord ? `
-          <p class="doc-ov-line"><span class="doc-ov-k">日期</span><span class="doc-ov-v">${lastRecord.visit_date ? new Date(lastRecord.visit_date).toLocaleString() : '—'}</span></p>
-          <p class="doc-ov-line"><span class="doc-ov-k">診斷</span><span class="doc-ov-v">${escapeHtml(lastRecord.diagnosis || '—')}</span></p>
-          <p class="doc-ov-line"><span class="doc-ov-k">處方</span><span class="doc-ov-v">${escapeHtml(lastRecord.prescription || '—')}</span></p>
-          ${lastRecord.notes ? `<p class="doc-ov-notes">${escapeHtml(lastRecord.notes)}</p>` : ''}
-        ` : '<p class="doc-empty">尚無就診紀錄</p>'}
+        <h3><i data-lucide="pie-chart" style="width:16px;height:16px"></i> 症狀緊急程度分布</h3>
+        ${urgSegs.length ? `
+          <div class="doc-donut-wrap">
+            ${renderDonut(urgSegs, { size: 140, label: sym.length, sub: '次分析' })}
+            <ul class="doc-legend-list">
+              ${urgSegs.map(s => `<li><span class="dl-sw" style="background:${s.color}"></span>${s.label}<b>${s.value}</b></li>`).join('')}
+            </ul>
+          </div>
+        ` : '<p class="doc-empty">無症狀分析資料</p>'}
+      </div>
+
+      <div class="doc-card">
+        <h3><i data-lucide="percent" style="width:16px;height:16px"></i> 用藥概況</h3>
+        <div class="doc-donut-wrap">
+          ${compliance != null
+            ? renderGauge(compliance * 100, { label: Math.round(compliance * 100) + '%', sub: '30 天順從性' })
+            : renderDonut(
+                [{ label: '使用中', value: meds.length, color: 'var(--doc-accent)' },
+                 { label: '已停用', value: inactive.length, color: 'var(--doc-border-strong)' }].filter(s => s.value > 0),
+                { size: 140, label: meds.length, sub: '使用中' }
+              )}
+          <ul class="doc-legend-list">
+            <li><span class="dl-sw" style="background:var(--doc-accent)"></span>使用中<b>${meds.length}</b></li>
+            <li><span class="dl-sw" style="background:var(--doc-border-strong)"></span>已停用<b>${inactive.length}</b></li>
+            <li><span class="dl-sw" style="background:#0891B2"></span>就診次數<b>${records.length}</b></li>
+          </ul>
+        </div>
       </div>
     </div>
   `;
@@ -4516,18 +4539,19 @@ function renderOverviewSparklines(vitals) {
     const ai = priority.indexOf(a), bi = priority.indexOf(b);
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
   }).slice(0, 4);
-  return `<div class="doc-spark-grid">
+  return `<div class="doc-spark-list">
     ${ids.map(id => {
       const arr = byMetric[id];
       const last = arr[arr.length - 1];
       const valStr = last.value2 != null ? `${last.value}/${last.value2}` : `${last.value}`;
-      return `<div class="doc-spark">
-        <div class="doc-spark-head">
-          <span class="doc-spark-name">${escapeHtml(last.metric_name || id)}</span>
-          <span class="doc-spark-val">${valStr} <small>${escapeHtml(last.unit || '')}</small></span>
-        </div>
-        ${renderLineChart(arr, { width: 280, height: 60, compact: true })}
-        <div class="doc-spark-foot">${arr.length} 筆 · 最近 ${relTime(last.recorded_at)}</div>
+      const delta = arr.length > 1 ? (last.value - arr[0].value) : 0;
+      const dArrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '−';
+      const dCls = delta > 0 ? 'up' : delta < 0 ? 'dn' : 'eq';
+      return `<div class="doc-spark-row">
+        <span class="dsr-name">${escapeHtml(last.metric_name || id)}</span>
+        <span class="dsr-chart">${renderLineChart(arr, { width: 200, height: 36, compact: true })}</span>
+        <span class="dsr-val">${valStr}<small>${escapeHtml(last.unit || '')}</small></span>
+        <span class="dsr-delta dsr-${dCls}">${dArrow}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -4537,25 +4561,73 @@ function renderOverviewSparklines(vitals) {
 async function renderDocPrevisit(p, body) {
   body.innerHTML = `<div class="doc-loading"><i data-lucide="loader"></i> 產生診前報告中…</div>`;
   if (typeof lucide !== 'undefined') lucide.createIcons();
-  const [chkRes, monRes] = await Promise.all([
+  const [chkRes, monRes, symRes, statRes] = await Promise.all([
     fetch(`${API}/reports/${p.id}/checklist`).then(r => r.ok ? r.json() : null).catch(() => null),
     fetch(`${API}/reports/${p.id}/monthly`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API}/symptoms/history/${p.id}`).then(r => r.ok ? r.json() : { history: [] }).catch(() => ({ history: [] })),
+    fetch(`${API}/medications/stats?patient_id=${p.id}&days=30`).then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   const checklist = chkRes?.checklist || [];
   const monthlyMd = monRes?.report || monRes?.markdown || monRes?.summary || '（暫無 30 天月度報告）';
+  const sym = symRes.history || [];
+  const compliance = statRes?.compliance_rate ?? statRes?.adherence ?? null;
+
+  // 風險分數：症狀緊急加權 + 服藥順從性反向 + 高頻症狀
+  const urgWeight = { low: 1, medium: 3, high: 6, emergency: 10 };
+  let symScore = 0;
+  sym.slice(0, 20).forEach(s => { symScore += urgWeight[s.ai_response?.urgency || 'low']; });
+  const adhPenalty = compliance != null ? Math.max(0, (1 - compliance) * 40) : 10;
+  const riskRaw = Math.min(100, symScore + adhPenalty);
+  const riskColor = riskRaw < 25 ? '#10B981' : riskRaw < 55 ? '#F59E0B' : riskRaw < 80 ? '#F97316' : '#DC2626';
+  const riskLabel = riskRaw < 25 ? '低' : riskRaw < 55 ? '中' : riskRaw < 80 ? '高' : '緊急';
+
+  // 關注點：依緊急程度排出 top 部位/症狀
+  const concernFreq = {};
+  sym.slice(0, 30).forEach(s => {
+    const w = urgWeight[s.ai_response?.urgency || 'low'];
+    const list = Array.isArray(s.symptoms) ? s.symptoms : [];
+    list.forEach(t => { if (!t) return; concernFreq[t] = (concernFreq[t] || 0) + w; });
+  });
+  const concerns = Object.entries(concernFreq).sort((a, b) => b[1] - a[1]).slice(0, 6)
+    .map(([label, value]) => ({ label, value }));
+
   body.innerHTML = `
-    <div class="doc-card doc-checklist">
-      <h3><i data-lucide="list-checks" style="width:16px;height:16px"></i> 問診清單（AI 建議的三件事）</h3>
-      ${checklist.length ? `<ol class="doc-chk-list">
-        ${checklist.map((c, i) => `<li><span class="doc-chk-num">${i + 1}</span><span>${escapeHtml(c)}</span></li>`).join('')}
-      </ol>` : '<p class="doc-empty">尚無資料</p>'}
-      <p class="doc-foot-meta">產生時間：${chkRes?.generated_at ? new Date(chkRes.generated_at).toLocaleString() : '—'}</p>
+    <div class="doc-grid-2-1">
+      <div class="doc-card">
+        <h3><i data-lucide="gauge-circle" style="width:16px;height:16px"></i> 整體風險分數</h3>
+        <div class="doc-gauge-wrap">
+          ${renderGauge(riskRaw, { label: Math.round(riskRaw), sub: '/ 100', color: riskColor })}
+          <div class="doc-gauge-meta">
+            <span class="dgm-tag" style="color:${riskColor};border-color:${riskColor}">${riskLabel}</span>
+            <p>依近期症狀緊急程度與服藥順從性綜合計算</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="doc-card">
+        <h3><i data-lucide="bar-chart-2" style="width:16px;height:16px"></i> 重點關注事項（加權）</h3>
+        ${concerns.length
+          ? renderHBarChart(concerns, { color: 'var(--doc-warn)' })
+          : '<p class="doc-empty">尚無資料</p>'}
+      </div>
     </div>
 
-    <div class="doc-card doc-monthly">
-      <h3><i data-lucide="file-text" style="width:16px;height:16px"></i> 30 天整合報告</h3>
-      <div class="doc-md">${renderSimpleMarkdown(monthlyMd)}</div>
+    <div class="doc-card">
+      <h3><i data-lucide="list-checks" style="width:16px;height:16px"></i> AI 問診建議（三件事）</h3>
+      ${checklist.length ? `<div class="doc-chk-chips">
+        ${checklist.map((c, i) => `
+          <div class="doc-chk-chip">
+            <span class="dcc-num">${i + 1}</span>
+            <p>${escapeHtml(c)}</p>
+          </div>
+        `).join('')}
+      </div>` : '<p class="doc-empty">尚無資料</p>'}
     </div>
+
+    <details class="doc-card doc-monthly-details">
+      <summary><i data-lucide="file-text" style="width:14px;height:14px"></i> 展開 30 天整合報告（純文字）</summary>
+      <div class="doc-md">${renderSimpleMarkdown(monthlyMd)}</div>
+    </details>
   `;
 }
 
@@ -4591,18 +4663,6 @@ async function renderDocVitals(p, body) {
               </div>
             </div>
             ${renderLineChart(arr, { width: 720, height: 220 })}
-            <details class="doc-vital-details">
-              <summary>查看原始紀錄（${arr.length} 筆）</summary>
-              <ul class="doc-vital-rows">
-                ${arr.slice().reverse().slice(0, 30).map(e => `
-                  <li>
-                    <span class="dvr-time">${new Date(e.recorded_at).toLocaleString()}</span>
-                    <span class="dvr-val"><b>${e.value2 != null ? e.value + '/' + e.value2 : e.value}</b> ${escapeHtml(e.unit || '')}</span>
-                    ${e.notes ? `<span class="dvr-note">${escapeHtml(e.notes)}</span>` : ''}
-                  </li>
-                `).join('')}
-              </ul>
-            </details>
           </div>
         `;
       }).join('')}
@@ -4613,55 +4673,76 @@ async function renderDocVitals(p, body) {
 // ── 藥物紀錄 ───────────────────────────────────────────
 async function renderDocMeds(p, body) {
   body.innerHTML = `<div class="doc-loading"><i data-lucide="loader"></i> 載入中…</div>`;
-  const [medsRes, statRes] = await Promise.all([
+  const [medsRes, statRes, logsRes] = await Promise.all([
     fetch(`${API}/medications/?patient_id=${p.id}`).then(r => r.ok ? r.json() : { medications: [] }).catch(() => ({ medications: [] })),
     fetch(`${API}/medications/stats?patient_id=${p.id}&days=30`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API}/medications/logs?patient_id=${p.id}&days=30`).then(r => r.ok ? r.json() : { logs: [] }).catch(() => ({ logs: [] })),
   ]);
   const meds = medsRes.medications || [];
   const active = meds.filter(m => m.active !== 0);
   const inactive = meds.filter(m => m.active === 0);
   const compliance = statRes?.compliance_rate ?? statRes?.adherence ?? null;
+  const logs = logsRes.logs || [];
+
+  // 每日服藥熱力圖
+  const dailyTake = {};
+  logs.forEach(l => {
+    if (l.taken === false) return;
+    const k = (l.taken_at || l.created_at || '').slice(0, 10);
+    if (k) dailyTake[k] = (dailyTake[k] || 0) + 1;
+  });
+  // 每藥順從性 bar
+  const perMedFreq = {};
+  logs.forEach(l => {
+    const id = l.medication_id;
+    if (!perMedFreq[id]) perMedFreq[id] = { taken: 0, total: 0 };
+    perMedFreq[id].total += 1;
+    if (l.taken !== false) perMedFreq[id].taken += 1;
+  });
+  const perMedBars = active.map(m => {
+    const f = perMedFreq[m.id] || { taken: 0, total: 0 };
+    const pct = f.total > 0 ? Math.round(f.taken / f.total * 100) : 0;
+    return { label: m.name, value: pct, sub: `${f.taken}/${f.total || '—'}` };
+  }).filter(x => x.value > 0 || perMedFreq[active.find(a => a.name === x.label)?.id]);
 
   body.innerHTML = `
-    <div class="doc-card">
-      <h3><i data-lucide="percent" style="width:16px;height:16px"></i> 30 天服藥順從性</h3>
-      ${compliance != null ? `
-        <div class="doc-compliance">
-          <div class="doc-comp-ring" style="--pct:${Math.round(compliance * 100)}">
-            <span>${Math.round(compliance * 100)}%</span>
-          </div>
-          <p class="doc-comp-meta">基於最近 30 天的服藥紀錄計算</p>
-        </div>
-      ` : '<p class="doc-empty">尚無服藥紀錄統計</p>'}
-    </div>
-
-    <div class="doc-card">
-      <h3><i data-lucide="pill" style="width:16px;height:16px"></i> 使用中藥物（${active.length}）</h3>
-      ${active.length ? `
-        <ul class="doc-med-list">
-          ${active.map(m => `
-            <li class="doc-med">
-              <span class="doc-med-name">${escapeHtml(m.name)}</span>
-              <span class="doc-med-meta">
-                ${m.dosage ? `<span><i>劑量</i>${escapeHtml(m.dosage)}</span>` : ''}
-                ${m.frequency ? `<span><i>頻率</i>${escapeHtml(m.frequency)}</span>` : ''}
-                ${m.purpose ? `<span><i>用途</i>${escapeHtml(m.purpose)}</span>` : ''}
-              </span>
-              ${m.instructions ? `<p class="doc-med-instr">${escapeHtml(m.instructions)}</p>` : ''}
-            </li>
-          `).join('')}
-        </ul>
-      ` : '<p class="doc-empty">目前沒有使用中藥物</p>'}
-    </div>
-
-    ${inactive.length ? `
+    <div class="doc-grid-2-1">
       <div class="doc-card">
-        <h3><i data-lucide="archive" style="width:16px;height:16px"></i> 已停用 / 歷史用藥（${inactive.length}）</h3>
-        <ul class="doc-med-list doc-med-list-dim">
-          ${inactive.map(m => `<li class="doc-med"><span class="doc-med-name">${escapeHtml(m.name)}</span> <span class="doc-med-meta">${escapeHtml(m.dosage || '')}</span></li>`).join('')}
-        </ul>
+        <h3><i data-lucide="percent" style="width:16px;height:16px"></i> 30 天服藥順從性</h3>
+        <div class="doc-gauge-wrap">
+          ${compliance != null
+            ? renderGauge(compliance * 100, { label: Math.round(compliance * 100) + '%', sub: '已服用比例' })
+            : '<p class="doc-empty">尚無服藥紀錄</p>'}
+          <div class="doc-gauge-meta">
+            <ul class="doc-legend-list">
+              <li><span class="dl-sw" style="background:var(--doc-accent)"></span>使用中藥物<b>${active.length}</b></li>
+              <li><span class="dl-sw" style="background:var(--doc-border-strong)"></span>已停用<b>${inactive.length}</b></li>
+              <li><span class="dl-sw" style="background:var(--doc-success)"></span>30 天打卡<b>${logs.filter(l => l.taken !== false).length}</b></li>
+            </ul>
+          </div>
+        </div>
       </div>
-    ` : ''}
+
+      <div class="doc-card">
+        <h3><i data-lucide="calendar-check" style="width:16px;height:16px"></i> 每日服藥熱力圖（30 天）</h3>
+        ${Object.keys(dailyTake).length
+          ? renderHeatmap(dailyTake, { days: 30, color: 'green' })
+          : '<p class="doc-empty">尚無每日打卡資料</p>'}
+        <div class="doc-legend">
+          <span>少</span>
+          <span class="dh-leg dh-l1 dh-green"></span><span class="dh-leg dh-l2 dh-green"></span>
+          <span class="dh-leg dh-l3 dh-green"></span><span class="dh-leg dh-l4 dh-green"></span>
+          <span>多</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-card">
+      <h3><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> 各藥物 30 天順從率</h3>
+      ${perMedBars.length
+        ? renderHBarChart(perMedBars, { color: 'var(--doc-accent)', suffix: '%', max: 100 })
+        : '<p class="doc-empty">尚無打卡資料可比對</p>'}
+    </div>
   `;
 }
 
@@ -4675,53 +4756,191 @@ async function renderDocSymptoms(p, body) {
     body.innerHTML = `<p class="doc-empty">// 患者尚未做過任何症狀分析</p>`;
     return;
   }
-  // 統計詞頻
+  // 詞頻
   const freq = {};
   items.forEach(it => {
     const list = Array.isArray(it.symptoms) ? it.symptoms : (typeof it.symptoms === 'string' ? [it.symptoms] : []);
     list.forEach(s => { if (!s) return; freq[s] = (freq[s] || 0) + 1; });
   });
-  const topSym = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const topSym = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8)
+    .map(([label, value]) => ({ label, value }));
+
+  // 緊急程度分布
+  const urgCount = { low: 0, medium: 0, high: 0, emergency: 0 };
+  items.forEach(it => { const u = it.ai_response?.urgency || 'low'; urgCount[u] = (urgCount[u] || 0) + 1; });
+  const urgSegs = [
+    { label: 'Low',       value: urgCount.low,       color: '#10B981' },
+    { label: 'Medium',    value: urgCount.medium,    color: '#F59E0B' },
+    { label: 'High',      value: urgCount.high,      color: '#F97316' },
+    { label: 'Emergency', value: urgCount.emergency, color: '#DC2626' },
+  ].filter(s => s.value > 0);
+
+  // 科別分布
+  const dept = {};
+  items.forEach(it => { const d = it.ai_response?.recommended_department; if (d) dept[d] = (dept[d] || 0) + 1; });
+  const deptBars = Object.entries(dept).sort((a, b) => b[1] - a[1]).slice(0, 6)
+    .map(([label, value]) => ({ label, value }));
+
+  // 每日次數時序
+  const dailyCount = {};
+  items.forEach(it => { const k = (it.created_at || '').slice(0, 10); if (k) dailyCount[k] = (dailyCount[k] || 0) + 1; });
+  const dailyArr = buildDailySeries(dailyCount, 30);
 
   body.innerHTML = `
     <div class="doc-card">
-      <h3><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> 症狀詞頻（最常出現）</h3>
-      ${topSym.length ? `
-        <div class="doc-bar-list">
-          ${topSym.map(([s, n]) => {
-            const max = topSym[0][1];
-            const pct = Math.round(n / max * 100);
-            return `
-              <div class="doc-bar-row">
-                <span class="doc-bar-name">${escapeHtml(s)}</span>
-                <span class="doc-bar-track"><span class="doc-bar-fill" style="width:${pct}%"></span></span>
-                <span class="doc-bar-count">${n}</span>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      ` : '<p class="doc-empty">無</p>'}
+      <h3><i data-lucide="activity" style="width:16px;height:16px"></i> 近 30 天症狀分析次數趨勢</h3>
+      ${renderLineChart(dailyArr, { width: 720, height: 180 })}
     </div>
 
-    <div class="doc-card">
-      <h3><i data-lucide="history" style="width:16px;height:16px"></i> 分析歷史（${items.length}）</h3>
-      <ul class="doc-sym-list">
-        ${items.slice(0, 30).map(it => {
-          const list = Array.isArray(it.symptoms) ? it.symptoms : [];
-          const ai = it.ai_response || {};
-          const urg = ai.urgency || 'low';
-          return `
-            <li class="doc-sym-row">
-              <span class="doc-sym-time">${new Date(it.created_at).toLocaleString()}</span>
-              <span class="doc-sym-tags">${list.map(s => `<span class="doc-sym-tag">${escapeHtml(s)}</span>`).join('')}</span>
-              <span class="doc-sym-urg doc-urg-${urg}">${urg.toUpperCase()}</span>
-              ${ai.recommended_department ? `<span class="doc-sym-dept">→ ${escapeHtml(ai.recommended_department)}</span>` : ''}
-            </li>
-          `;
-        }).join('')}
-      </ul>
+    <div class="doc-grid-2-1">
+      <div class="doc-card">
+        <h3><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> 症狀詞頻 Top 8</h3>
+        ${topSym.length ? renderHBarChart(topSym, { color: 'var(--doc-accent)' }) : '<p class="doc-empty">無</p>'}
+      </div>
+
+      <div class="doc-card">
+        <h3><i data-lucide="pie-chart" style="width:16px;height:16px"></i> 緊急程度分布</h3>
+        ${urgSegs.length ? `
+          <div class="doc-donut-wrap">
+            ${renderDonut(urgSegs, { size: 140, label: items.length, sub: '次分析' })}
+            <ul class="doc-legend-list">
+              ${urgSegs.map(s => `<li><span class="dl-sw" style="background:${s.color}"></span>${s.label}<b>${s.value}</b></li>`).join('')}
+            </ul>
+          </div>
+        ` : '<p class="doc-empty">無</p>'}
+      </div>
     </div>
+
+    ${deptBars.length ? `
+      <div class="doc-card">
+        <h3><i data-lucide="hospital" style="width:16px;height:16px"></i> AI 建議科別分布</h3>
+        ${renderHBarChart(deptBars, { color: 'var(--doc-info)' })}
+      </div>
+    ` : ''}
   `;
+}
+
+// ── 甜甜圈圖 ───────────────────────────────────────────
+function renderDonut(segments, opts) {
+  opts = opts || {};
+  const size = opts.size || 140;
+  const thickness = opts.thickness || 18;
+  const r = (size - thickness) / 2;
+  const cx = size / 2, cy = size / 2;
+  const total = segments.reduce((a, s) => a + s.value, 0) || 1;
+  const C = 2 * Math.PI * r;
+  let offset = 0;
+  const arcs = segments.map(s => {
+    const len = (s.value / total) * C;
+    const dasharray = `${len.toFixed(2)} ${(C - len).toFixed(2)}`;
+    const dashoffset = -offset;
+    offset += len;
+    return `<circle class="ddo-arc" cx="${cx}" cy="${cy}" r="${r}" fill="none"
+      stroke="${s.color}" stroke-width="${thickness}"
+      stroke-dasharray="${dasharray}" stroke-dashoffset="${dashoffset}"
+      transform="rotate(-90 ${cx} ${cy})" />`;
+  }).join('');
+  const labelHtml = opts.label != null ? `
+    <text class="ddo-label" x="${cx}" y="${cy - 2}" text-anchor="middle">${opts.label}</text>
+    ${opts.sub ? `<text class="ddo-sub" x="${cx}" y="${cy + 16}" text-anchor="middle">${opts.sub}</text>` : ''}
+  ` : '';
+  return `<svg class="doc-donut" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--doc-border)" stroke-width="${thickness}" />
+    ${arcs}
+    ${labelHtml}
+  </svg>`;
+}
+
+// ── 半圓儀表（風險／順從性等百分比） ───────────────────
+function renderGauge(value, opts) {
+  opts = opts || {};
+  const max = opts.max || 100;
+  const pct = Math.min(1, Math.max(0, value / max));
+  const size = opts.size || 160;
+  const thickness = opts.thickness || 16;
+  const r = (size - thickness) / 2;
+  const cx = size / 2, cy = size / 2;
+  const C = Math.PI * r; // 半圓周長
+  const filled = (C * pct).toFixed(2);
+  const rest = (C - filled).toFixed(2);
+  const color = opts.color || 'var(--doc-accent)';
+  return `<svg class="doc-gauge" viewBox="0 0 ${size} ${size * 0.62}" width="${size}" height="${size * 0.62}">
+    <path d="M ${thickness/2} ${cy} A ${r} ${r} 0 0 1 ${size - thickness/2} ${cy}"
+      fill="none" stroke="var(--doc-border)" stroke-width="${thickness}" stroke-linecap="round" />
+    <path d="M ${thickness/2} ${cy} A ${r} ${r} 0 0 1 ${size - thickness/2} ${cy}"
+      fill="none" stroke="${color}" stroke-width="${thickness}" stroke-linecap="round"
+      stroke-dasharray="${filled} ${rest}" />
+    <text class="dgg-label" x="${cx}" y="${cy - 6}" text-anchor="middle">${opts.label != null ? opts.label : Math.round(pct * 100)}</text>
+    ${opts.sub ? `<text class="dgg-sub" x="${cx}" y="${cy + 12}" text-anchor="middle">${opts.sub}</text>` : ''}
+  </svg>`;
+}
+
+// ── 橫條圖 ─────────────────────────────────────────────
+function renderHBarChart(items, opts) {
+  opts = opts || {};
+  if (!items.length) return '<p class="doc-empty">無</p>';
+  const max = opts.max != null ? opts.max : Math.max(...items.map(i => i.value));
+  const color = opts.color || 'var(--doc-accent)';
+  const suffix = opts.suffix || '';
+  return `<div class="doc-hbar-list">
+    ${items.map(it => {
+      const pct = max > 0 ? Math.round(it.value / max * 100) : 0;
+      return `<div class="doc-hbar-row">
+        <span class="dhb-name">${escapeHtml(it.label)}</span>
+        <span class="dhb-track"><span class="dhb-fill" style="width:${pct}%;background:${color}"></span></span>
+        <span class="dhb-val">${it.value}${suffix}${it.sub ? ` <small>${escapeHtml(it.sub)}</small>` : ''}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── 熱力圖（日曆方塊）─────────────────────────────────
+function renderHeatmap(byDate, opts) {
+  opts = opts || {};
+  const days = opts.days || 30;
+  const colorClass = opts.color === 'green' ? 'dh-green' : '';
+  // 從今天往回 days 天
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const cells = [];
+  let max = 1;
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const k = d.toISOString().slice(0, 10);
+    const v = byDate[k] || 0;
+    if (v > max) max = v;
+    cells.push({ d, k, v });
+  }
+  const level = v => {
+    if (v <= 0) return 0;
+    const r = v / max;
+    if (r <= 0.25) return 1;
+    if (r <= 0.5) return 2;
+    if (r <= 0.75) return 3;
+    return 4;
+  };
+  return `<div class="doc-heatmap" role="grid">
+    ${cells.map(c => `
+      <div class="dh-cell dh-l${level(c.v)} ${colorClass}"
+           title="${c.k} · ${c.v} 筆"></div>
+    `).join('')}
+  </div>`;
+}
+
+// ── 補齊每日序列（讓摺線圖連續）─────────────────────
+function buildDailySeries(byDate, days) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const out = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const k = d.toISOString().slice(0, 10);
+    out.push({
+      recorded_at: d.toISOString(),
+      value: byDate[k] || 0,
+      metric_name: '',
+      unit: '次',
+    });
+  }
+  return out;
 }
 
 // ── 摺線圖 SVG ─────────────────────────────────────────

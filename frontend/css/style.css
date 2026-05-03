@@ -7173,3 +7173,279 @@ html[data-mode="senior"] .visit-modal-save {
   .doc-sym-row { grid-template-columns: 1fr; gap: 4px; }
   .doc-bar-row { grid-template-columns: 90px 1fr 30px; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   醫師端圖表元件 — 甜甜圈 / 儀表 / 橫條 / 熱力圖
+   ═══════════════════════════════════════════════════════════ */
+
+/* 2x2 grid 與 2:1 grid */
+.doc-grid-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.doc-grid-2-1 {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media (max-width: 880px) {
+  .doc-grid-2x2, .doc-grid-2-1 { grid-template-columns: 1fr; }
+}
+
+/* 甜甜圈 */
+.doc-donut { display: block; }
+.doc-donut .ddo-arc { transition: stroke-dashoffset .5s ease; }
+.doc-donut .ddo-label {
+  font-size: 22px;
+  font-weight: 700;
+  fill: var(--doc-fg);
+  font-family: 'Noto Sans TC', sans-serif;
+}
+.doc-donut .ddo-sub {
+  font-size: 10px;
+  fill: var(--doc-fg-muted);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+}
+.doc-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.doc-legend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 140px;
+  font-size: 0.82rem;
+}
+.doc-legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--doc-fg-dim);
+  border-bottom: 1px dashed var(--doc-border);
+}
+.doc-legend-list li:last-child { border-bottom: 0; }
+.doc-legend-list li b {
+  margin-left: auto;
+  color: var(--doc-fg);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.dl-sw {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* 半圓儀表 */
+.doc-gauge { display: block; max-width: 100%; }
+.doc-gauge .dgg-label {
+  font-size: 28px;
+  font-weight: 700;
+  fill: var(--doc-fg);
+  font-family: 'Noto Sans TC', sans-serif;
+}
+.doc-gauge .dgg-sub {
+  font-size: 10px;
+  fill: var(--doc-fg-muted);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+}
+.doc-gauge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.doc-gauge-meta {
+  flex: 1;
+  min-width: 160px;
+  font-size: 0.85rem;
+  color: var(--doc-fg-dim);
+}
+.doc-gauge-meta p { margin: 6px 0 0; }
+.dgm-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* 橫條圖 */
+.doc-hbar-list { display: flex; flex-direction: column; gap: 8px; }
+.doc-hbar-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 80px;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.dhb-name {
+  color: var(--doc-fg);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dhb-track {
+  height: 14px;
+  background: var(--doc-bg);
+  border: 1px solid var(--doc-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.dhb-fill {
+  display: block;
+  height: 100%;
+  transition: width .5s ease;
+}
+.dhb-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--doc-fg);
+}
+.dhb-val small {
+  font-weight: 400;
+  color: var(--doc-fg-muted);
+  font-size: 0.74rem;
+  margin-left: 4px;
+}
+
+/* 熱力圖 */
+.doc-heatmap {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14px, 1fr));
+  grid-auto-rows: 14px;
+  gap: 3px;
+  padding: 8px 0;
+}
+.dh-cell {
+  width: 100%;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--doc-bg);
+  border: 1px solid var(--doc-border);
+  cursor: pointer;
+}
+.dh-cell.dh-l1 { background: #DBEAFE; border-color: #BFDBFE; }
+.dh-cell.dh-l2 { background: #93C5FD; border-color: #60A5FA; }
+.dh-cell.dh-l3 { background: #3B82F6; border-color: #2563EB; }
+.dh-cell.dh-l4 { background: #1D4ED8; border-color: #1E40AF; }
+.dh-cell.dh-green.dh-l1 { background: #DCFCE7; border-color: #BBF7D0; }
+.dh-cell.dh-green.dh-l2 { background: #86EFAC; border-color: #4ADE80; }
+.dh-cell.dh-green.dh-l3 { background: #22C55E; border-color: #16A34A; }
+.dh-cell.dh-green.dh-l4 { background: #15803D; border-color: #166534; }
+#app-wrapper.doctor-mode[data-theme="dark"] .dh-cell.dh-l1 { background: #1E3A8A; border-color: #1E40AF; }
+#app-wrapper.doctor-mode[data-theme="dark"] .dh-cell.dh-l2 { background: #2563EB; border-color: #3B82F6; }
+#app-wrapper.doctor-mode[data-theme="dark"] .dh-cell.dh-l3 { background: #60A5FA; border-color: #93C5FD; }
+#app-wrapper.doctor-mode[data-theme="dark"] .dh-cell.dh-l4 { background: #93C5FD; border-color: #BFDBFE; }
+
+.doc-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 0.74rem;
+  color: var(--doc-fg-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.dh-leg {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 2px;
+}
+.dh-leg.dh-l1 { background: #DBEAFE; }
+.dh-leg.dh-l2 { background: #93C5FD; }
+.dh-leg.dh-l3 { background: #3B82F6; }
+.dh-leg.dh-l4 { background: #1D4ED8; }
+.dh-leg.dh-green.dh-l1 { background: #DCFCE7; }
+.dh-leg.dh-green.dh-l2 { background: #86EFAC; }
+.dh-leg.dh-green.dh-l3 { background: #22C55E; }
+.dh-leg.dh-green.dh-l4 { background: #15803D; }
+.doc-legend-meta { margin-left: auto; color: var(--doc-fg-dim); }
+
+/* 總覽 sparkline 列（橫式，縮版） */
+.doc-spark-list { display: flex; flex-direction: column; gap: 2px; }
+.doc-spark-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px 24px;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--doc-border);
+  font-size: 0.85rem;
+}
+.doc-spark-row:last-child { border-bottom: 0; }
+.dsr-name { color: var(--doc-fg-dim); font-weight: 500; }
+.dsr-chart { display: block; }
+.dsr-chart svg { width: 100%; height: 36px; display: block; }
+.dsr-val { text-align: right; font-weight: 600; color: var(--doc-fg); font-variant-numeric: tabular-nums; }
+.dsr-val small { color: var(--doc-fg-muted); font-weight: 400; font-size: 0.72rem; margin-left: 2px; }
+.dsr-delta { text-align: center; font-size: 0.78rem; }
+.dsr-up { color: var(--doc-danger); }
+.dsr-dn { color: var(--doc-success); }
+.dsr-eq { color: var(--doc-fg-muted); }
+
+/* 診前報告 — checklist chips */
+.doc-chk-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.doc-chk-chip {
+  position: relative;
+  padding: 12px 14px 12px 38px;
+  background: var(--doc-bg);
+  border: 1px solid var(--doc-border);
+  border-left: 3px solid var(--doc-accent);
+  border-radius: 4px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--doc-fg);
+}
+.doc-chk-chip p { margin: 0; }
+.dcc-num {
+  position: absolute;
+  top: 12px;
+  left: 10px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--doc-accent);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-monthly-details {
+  cursor: pointer;
+}
+.doc-monthly-details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--doc-fg-dim);
+  list-style: none;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.doc-monthly-details summary::-webkit-details-marker { display: none; }
+.doc-monthly-details summary:hover { color: var(--doc-accent); }
+.doc-monthly-details[open] summary { color: var(--doc-fg); margin-bottom: 12px; }
