@@ -505,15 +505,141 @@ class _SqliteSupabase:
         return _SqliteQuery(name)
 
 
+# ─── PostgREST shim over httpx (used on Vercel where the
+#     `supabase` package was removed for bundle size) ─────────
+
+try:
+    import httpx
+    _httpx_available = True
+except ImportError:
+    httpx = None
+    _httpx_available = False
+
+
+class _HttpxResult:
+    def __init__(self, data):
+        self.data = data
+
+
+class _HttpxQuery:
+    """Minimal PostgREST client mimicking the Supabase query-builder API."""
+
+    def __init__(self, base_url, headers, table_name):
+        self._base = base_url
+        self._headers = headers
+        self._table = _safe_ident(table_name)
+        self._op = "select"
+        self._select_cols = "*"
+        self._filters = []     # list of (col, "eq.val") tuples
+        self._order = None     # (col, desc)
+        self._limit = None
+        self._payload = None
+
+    # operation setters
+    def select(self, cols="*", **_):
+        self._op = "select"; self._select_cols = cols; return self
+    def insert(self, data, **_):
+        self._op = "insert"; self._payload = data; return self
+    def update(self, data, **_):
+        self._op = "update"; self._payload = data; return self
+    def delete(self, **_):
+        self._op = "delete"; return self
+
+    # conditions — encode for PostgREST query string
+    def _add(self, col, op, val):
+        self._filters.append((_safe_ident(col), f"{op}.{val}"))
+        return self
+    def eq(self, col, val):     return self._add(col, "eq", val)
+    def neq(self, col, val):    return self._add(col, "neq", val)
+    def gte(self, col, val):    return self._add(col, "gte", val)
+    def lte(self, col, val):    return self._add(col, "lte", val)
+    def ilike(self, col, val):  return self._add(col, "ilike", val)
+
+    def order(self, col, desc=False, **_):
+        self._order = (_safe_ident(col), bool(desc))
+        return self
+    def limit(self, n):
+        self._limit = int(n); return self
+
+    def _build_qs(self, extra=None):
+        params = []
+        for col, val in self._filters:
+            params.append((col, val))
+        if self._order:
+            col, desc = self._order
+            params.append(("order", f"{col}.{'desc' if desc else 'asc'}"))
+        if self._limit is not None:
+            params.append(("limit", str(self._limit)))
+        if extra:
+            params.extend(extra)
+        return params
+
+    def execute(self):
+        url = f"{self._base}/rest/v1/{self._table}"
+        if self._op == "select":
+            params = self._build_qs([("select", self._select_cols)])
+            r = httpx.get(url, headers=self._headers, params=params, timeout=10.0)
+            r.raise_for_status()
+            return _HttpxResult(r.json())
+
+        if self._op == "insert":
+            headers = {**self._headers, "Prefer": "return=representation"}
+            body = self._payload if isinstance(self._payload, list) else [self._payload]
+            r = httpx.post(url, headers=headers, json=body, timeout=10.0)
+            if r.status_code >= 400:
+                logger.error("Supabase insert failed: %s — %s", r.status_code, r.text)
+                r.raise_for_status()
+            return _HttpxResult(r.json())
+
+        if self._op == "update":
+            headers = {**self._headers, "Prefer": "return=representation"}
+            params = self._build_qs()
+            r = httpx.patch(url, headers=headers, params=params, json=self._payload, timeout=10.0)
+            if r.status_code >= 400:
+                logger.error("Supabase update failed: %s — %s", r.status_code, r.text)
+                r.raise_for_status()
+            return _HttpxResult(r.json())
+
+        if self._op == "delete":
+            headers = {**self._headers, "Prefer": "return=representation"}
+            params = self._build_qs()
+            r = httpx.delete(url, headers=headers, params=params, timeout=10.0)
+            if r.status_code >= 400:
+                logger.error("Supabase delete failed: %s — %s", r.status_code, r.text)
+                r.raise_for_status()
+            return _HttpxResult(r.json())
+
+
+class _HttpxSupabase:
+    def __init__(self, url, key):
+        self._url = url.rstrip("/")
+        self._headers = {
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        }
+
+    def table(self, name):
+        return _HttpxQuery(self._url, self._headers, name)
+
+
 # ─── Public API ───────────────────────────────────────────────
 
 def get_supabase():
     """取得資料庫 client。有 Supabase 憑證用 Supabase，否則用 SQLite。"""
     global _client
     if _client is None:
-        if _supabase_available and SUPABASE_URL and SUPABASE_KEY:
-            _client = create_client(SUPABASE_URL, SUPABASE_KEY)
-            logger.info("Connected to Supabase")
+        if SUPABASE_URL and SUPABASE_KEY:
+            if _supabase_available:
+                _client = create_client(SUPABASE_URL, SUPABASE_KEY)
+                logger.info("Connected to Supabase via supabase-py")
+            elif _httpx_available:
+                _client = _HttpxSupabase(SUPABASE_URL, SUPABASE_KEY)
+                logger.info("Connected to Supabase via httpx PostgREST shim")
+            else:
+                _init_db()
+                _client = _SqliteSupabase()
+                logger.warning("Supabase creds present but no client lib — falling back to SQLite")
         else:
             _init_db()
             _client = _SqliteSupabase()
