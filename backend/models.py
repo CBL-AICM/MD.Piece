@@ -72,11 +72,13 @@ class UserCreate(BaseModel):
     avatar_color: str | None = None
     avatar_url: str | None = None
     id_number: str | None = None
+    doctor_key: str | None = None  # 醫師註冊需要的通行碼
 
 
 class UserLogin(BaseModel):
     username: str
     password: str
+    doctor_key: str | None = None  # 醫師登入需要的通行碼
 
 
 class UserUpdate(BaseModel):

@@ -88,6 +88,10 @@
             <span class="auth-label">密碼</span>
             <input id="login-password" type="password" autocomplete="current-password" placeholder="輸入密碼" minlength="6" required />
           </label>
+          <label class="auth-field">
+            <span class="auth-label">醫師通行碼 <span class="auth-label-hint">(僅醫師需填)</span></span>
+            <input id="login-doctor-key" type="password" autocomplete="off" placeholder="如為醫師帳號請填寫通行碼" />
+          </label>
           <p class="auth-error" id="login-error" hidden></p>
           <button class="auth-submit" id="login-submit" type="submit">
             <i data-lucide="log-in"></i> 登入
@@ -124,6 +128,11 @@
               </button>
             </div>
           </div>
+
+          <label class="auth-field" id="reg-doctor-key-field" hidden>
+            <span class="auth-label">醫師通行碼 <span class="auth-label-hint">(由院方提供)</span></span>
+            <input id="reg-doctor-key" type="password" autocomplete="off" placeholder="輸入醫師通行碼" />
+          </label>
 
           <label class="auth-field">
             <span class="auth-label">暱稱</span>

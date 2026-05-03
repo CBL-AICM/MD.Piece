@@ -5106,3 +5106,12 @@ html[data-mode="senior"] *:focus-visible {
   .acct-card { padding: 18px; }
   .acct-profile { flex-direction: column; align-items: flex-start; }
 }
+
+.auth-label-hint {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted, #A89685);
+  font-size: 0.7rem;
+  margin-left: 4px;
+}
