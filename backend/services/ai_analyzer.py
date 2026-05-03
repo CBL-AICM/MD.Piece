@@ -1,6 +1,12 @@
 import os
 import json
-import anthropic
+
+try:
+    import anthropic
+    _anthropic_available = True
+except ImportError:
+    anthropic = None
+    _anthropic_available = False
 
 
 async def analyze_symptoms(
@@ -10,7 +16,7 @@ async def analyze_symptoms(
 ) -> dict:
     """使用 Claude API 分析症狀，回傳結構化結果。"""
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not api_key:
+    if not api_key or not _anthropic_available:
         return _fallback_analysis(symptoms)
 
     client = anthropic.Anthropic(api_key=api_key)
