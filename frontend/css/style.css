@@ -5348,6 +5348,89 @@ html[data-mode="senior"] .pz-tl-meta,
 html[data-mode="senior"] .pz-period-range { font-size: 1rem; }
 html[data-mode="senior"] .pz-save-btn,
 html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem; min-height: 52px; }
+
+/* ─── Pieces · 過去回診週期歷史 ─────────────────────────────── */
+.pz-history-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.pz-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pz-h-card {
+  background: var(--app-chrome-0, #fff);
+  border: 1px solid var(--app-border, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pz-h-card-current {
+  border-style: dashed;
+  border-color: var(--app-term, #b8743f);
+  background: color-mix(in srgb, var(--app-term, #b8743f) 4%, transparent);
+}
+.pz-h-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pz-h-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+.pz-h-date i { width: 16px; height: 16px; color: var(--app-term); }
+.pz-h-doc {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--app-text-dim);
+}
+.pz-h-kind {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--app-chrome-1, rgba(0,0,0,0.05));
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+.pz-h-days { font-weight: 600; color: var(--app-term); }
+.pz-h-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 0.85rem;
+  color: var(--app-text-dim);
+}
+.pz-h-stats b { color: var(--app-text); font-weight: 700; }
+.pz-h-body { font-size: 0.9rem; }
+.pz-h-empty { color: var(--app-text-dim); font-size: 0.85rem; margin: 0; }
+.pz-h-foot { display: flex; justify-content: flex-end; }
+.pz-h-del {
+  background: transparent;
+  border: 1px solid var(--app-border, rgba(0,0,0,0.08));
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  color: var(--app-text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.pz-h-del:hover { color: var(--danger, #c0392b); border-color: var(--danger, #c0392b); }
+.pz-h-del i { width: 14px; height: 14px; }
+
+/* ═══════════════════════════════════════════════════════════
    AUTH OVERLAY (login / register)
    ═══════════════════════════════════════════════════════════ */
 
