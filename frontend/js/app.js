@@ -4194,7 +4194,8 @@ let _previsitDays = 14;
 let _previsitGenerating = false;
 
 function loadPrevisitPage() {
-  // 重新進頁面時清空 result
+  // 重新進頁面時重設天數狀態（與 chip 預設一致）+ 清空 result
+  _previsitDays = 14;
   const r = document.getElementById('previsit-result');
   if (r) { r.style.display = 'none'; r.innerHTML = ''; }
 }
@@ -4219,13 +4220,20 @@ async function previsitGatherData() {
 
   let symptoms = [];
   let medications = [];
+  // 後端回傳 wrapped 物件：/symptoms → {symptoms: [...]}、/medications → {medications: [...]}
   try {
     const r1 = await fetch(`${API}/symptoms/?patient_id=${encodeURIComponent(pid)}`);
-    if (r1.ok) symptoms = await r1.json();
+    if (r1.ok) {
+      const j = await r1.json();
+      symptoms = Array.isArray(j) ? j : (j.symptoms || j.history || []);
+    }
   } catch (e) { /* 無資料就空陣列 */ }
   try {
     const r2 = await fetch(`${API}/medications/?patient_id=${encodeURIComponent(pid)}`);
-    if (r2.ok) medications = await r2.json();
+    if (r2.ok) {
+      const j = await r2.json();
+      medications = Array.isArray(j) ? j : (j.medications || []);
+    }
   } catch (e) { /* 同上 */ }
 
   // 過濾最近 N 天

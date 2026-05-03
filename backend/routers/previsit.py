@@ -148,10 +148,14 @@ def generate_previsit(body: PrevisitRequest):
         )
 
     def _list(key):
-        v = data.get(key, [])
+        v = data.get(key)
+        if v is None:
+            return []
         if isinstance(v, str):
-            return [v]
-        return [str(x) for x in v if x]
+            return [v] if v.strip() else []
+        if isinstance(v, (list, tuple)):
+            return [str(x) for x in v if x]
+        return [str(v)]
 
     return PrevisitResponse(
         chief_complaints=_list("chief_complaints"),
