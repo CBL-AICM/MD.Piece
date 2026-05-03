@@ -35,7 +35,15 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 _client = None
 
 # ─── SQLite DB path ──────────────────────────────────────────
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "md_piece.db")
+# Vercel's /var/task is read-only; only /tmp is writable. Detect serverless
+# and put the DB there so the SQLite fallback at least boots (data is
+# ephemeral per cold start).
+def _default_db_path():
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        return "/tmp/md_piece.db"
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "md_piece.db")
+
+DB_PATH = _default_db_path()
 
 # ─── Table schemas (auto-create) ─────────────────────────────
 _SCHEMAS = {
@@ -155,9 +163,13 @@ _SCHEMAS = {
     "users": """
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
+            username TEXT UNIQUE,
+            password_hash TEXT,
             nickname TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('doctor', 'patient')),
             avatar_color TEXT DEFAULT '#5B9FE8',
+            avatar_url TEXT,
+            id_number TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
     "doctor_notes": """
@@ -228,9 +240,31 @@ def _get_conn():
     if not _db_initialized:
         for sql in _SCHEMAS.values():
             conn.execute(sql)
+        _migrate_users_table(conn)
         conn.commit()
         _db_initialized = True
     return conn
+
+
+def _migrate_users_table(conn):
+    """Add auth-related columns to existing users tables."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
+    additions = [
+        ("username", "TEXT"),
+        ("password_hash", "TEXT"),
+        ("avatar_url", "TEXT"),
+        ("id_number", "TEXT"),
+    ]
+    for name, decl in additions:
+        if name not in cols:
+            try:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {name} {decl}")
+            except sqlite3.OperationalError:
+                pass
+    try:
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL")
+    except sqlite3.OperationalError:
+        pass
 
 
 def _init_db():
@@ -243,6 +277,20 @@ def _init_db():
 
 
 # ─── Supabase-compatible query builder backed by SQLite ───────
+
+import re as _re
+
+_IDENT_RE = _re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _safe_ident(name):
+    """Validate an SQL identifier (table or column name) against a strict
+    allowlist before interpolation. Raises ValueError on rejection so we
+    fail closed rather than risk an injected fragment reaching the DB."""
+    if not isinstance(name, str) or not _IDENT_RE.match(name):
+        raise ValueError(f"unsafe SQL identifier: {name!r}")
+    return name
+
 
 class _SqliteResult:
     def __init__(self, data):
@@ -290,32 +338,32 @@ class _SqliteQuery:
 
     # ─── Condition builders ─────────────
     def eq(self, col, val):
-        self._conditions.append(f'"{col}" = ?')
+        self._conditions.append(f'"{_safe_ident(col)}" = ?')
         self._params.append(val)
         return self
 
     def neq(self, col, val):
-        self._conditions.append(f'"{col}" != ?')
+        self._conditions.append(f'"{_safe_ident(col)}" != ?')
         self._params.append(val)
         return self
 
     def gte(self, col, val):
-        self._conditions.append(f'"{col}" >= ?')
+        self._conditions.append(f'"{_safe_ident(col)}" >= ?')
         self._params.append(val)
         return self
 
     def lte(self, col, val):
-        self._conditions.append(f'"{col}" <= ?')
+        self._conditions.append(f'"{_safe_ident(col)}" <= ?')
         self._params.append(val)
         return self
 
     def ilike(self, col, val):
-        self._conditions.append(f'"{col}" LIKE ? COLLATE NOCASE')
+        self._conditions.append(f'"{_safe_ident(col)}" LIKE ? COLLATE NOCASE')
         self._params.append(val)
         return self
 
     def order(self, col, desc=False, **kwargs):
-        self._order_col = col
+        self._order_col = _safe_ident(col)
         self._order_desc = desc
         return self
 
@@ -363,12 +411,13 @@ class _SqliteQuery:
 
     def _exec_select(self, conn):
         where, params = self._where_clause()
-        sql = f'SELECT * FROM "{self._table}"{where}'
+        table = _safe_ident(self._table)
+        sql = f'SELECT * FROM "{table}"{where}'
         if self._order_col:
             direction = "DESC" if self._order_desc else "ASC"
-            sql += f' ORDER BY "{self._order_col}" {direction}'
+            sql += f' ORDER BY "{_safe_ident(self._order_col)}" {direction}'
         if self._limit_n:
-            sql += f" LIMIT {self._limit_n}"
+            sql += f" LIMIT {int(self._limit_n)}"
 
         rows = conn.execute(sql, params).fetchall()
         data = [self._deserialize_row(dict(r)) for r in rows]
@@ -388,11 +437,12 @@ class _SqliteQuery:
 
         for row in data:
             for ref_table, ref_cols in joins:
-                fk_col = f"{ref_table[:-1]}_id" if ref_table.endswith("s") else f"{ref_table}_id"
+                safe_ref = _safe_ident(ref_table)
+                fk_col = f"{safe_ref[:-1]}_id" if safe_ref.endswith("s") else f"{safe_ref}_id"
                 fk_val = row.get(fk_col)
                 if fk_val:
                     ref_row = conn.execute(
-                        f'SELECT * FROM "{ref_table}" WHERE id = ?', (fk_val,)
+                        f'SELECT * FROM "{safe_ref}" WHERE id = ?', (fk_val,)
                     ).fetchone()
                     if ref_row:
                         ref_dict = dict(ref_row)
@@ -416,9 +466,11 @@ class _SqliteQuery:
 
         # Serialize complex types
         serialized = {k: self._serialize_value(v) for k, v in data.items()}
-        cols = ', '.join(f'"{k}"' for k in serialized.keys())
+        table = _safe_ident(self._table)
+        col_idents = [_safe_ident(k) for k in serialized.keys()]
+        cols = ', '.join(f'"{k}"' for k in col_idents)
         placeholders = ', '.join('?' for _ in serialized)
-        sql = f'INSERT INTO "{self._table}" ({cols}) VALUES ({placeholders})'
+        sql = f'INSERT INTO "{table}" ({cols}) VALUES ({placeholders})'
         conn.execute(sql, list(serialized.values()))
         conn.commit()
         return _SqliteResult([data])
@@ -429,24 +481,27 @@ class _SqliteQuery:
             return _SqliteResult([])
 
         serialized = {k: self._serialize_value(v) for k, v in data.items()}
-        set_clause = ', '.join(f'"{k}" = ?' for k in serialized.keys())
+        table = _safe_ident(self._table)
+        col_idents = [_safe_ident(k) for k in serialized.keys()]
+        set_clause = ', '.join(f'"{k}" = ?' for k in col_idents)
         set_params = list(serialized.values())
         where, where_params = self._where_clause()
-        sql = f'UPDATE "{self._table}" SET {set_clause}{where}'
+        sql = f'UPDATE "{table}" SET {set_clause}{where}'
         conn.execute(sql, set_params + where_params)
         conn.commit()
 
-        select_sql = f'SELECT * FROM "{self._table}"{where}'
+        select_sql = f'SELECT * FROM "{table}"{where}'
         rows = conn.execute(select_sql, where_params).fetchall()
         return _SqliteResult([self._deserialize_row(dict(r)) for r in rows])
 
     def _exec_delete(self, conn):
+        table = _safe_ident(self._table)
         where, params = self._where_clause()
-        select_sql = f'SELECT * FROM "{self._table}"{where}'
+        select_sql = f'SELECT * FROM "{table}"{where}'
         rows = conn.execute(select_sql, params).fetchall()
         data = [self._deserialize_row(dict(r)) for r in rows]
 
-        sql = f'DELETE FROM "{self._table}"{where}'
+        sql = f'DELETE FROM "{table}"{where}'
         conn.execute(sql, params)
         conn.commit()
         return _SqliteResult(data)
@@ -458,15 +513,141 @@ class _SqliteSupabase:
         return _SqliteQuery(name)
 
 
+# ─── PostgREST shim over httpx (used on Vercel where the
+#     `supabase` package was removed for bundle size) ─────────
+
+try:
+    import httpx
+    _httpx_available = True
+except ImportError:
+    httpx = None
+    _httpx_available = False
+
+
+class _HttpxResult:
+    def __init__(self, data):
+        self.data = data
+
+
+class _HttpxQuery:
+    """Minimal PostgREST client mimicking the Supabase query-builder API."""
+
+    def __init__(self, base_url, headers, table_name):
+        self._base = base_url
+        self._headers = headers
+        self._table = _safe_ident(table_name)
+        self._op = "select"
+        self._select_cols = "*"
+        self._filters = []     # list of (col, "eq.val") tuples
+        self._order = None     # (col, desc)
+        self._limit = None
+        self._payload = None
+
+    # operation setters
+    def select(self, cols="*", **_):
+        self._op = "select"; self._select_cols = cols; return self
+    def insert(self, data, **_):
+        self._op = "insert"; self._payload = data; return self
+    def update(self, data, **_):
+        self._op = "update"; self._payload = data; return self
+    def delete(self, **_):
+        self._op = "delete"; return self
+
+    # conditions — encode for PostgREST query string
+    def _add(self, col, op, val):
+        self._filters.append((_safe_ident(col), f"{op}.{val}"))
+        return self
+    def eq(self, col, val):     return self._add(col, "eq", val)
+    def neq(self, col, val):    return self._add(col, "neq", val)
+    def gte(self, col, val):    return self._add(col, "gte", val)
+    def lte(self, col, val):    return self._add(col, "lte", val)
+    def ilike(self, col, val):  return self._add(col, "ilike", val)
+
+    def order(self, col, desc=False, **_):
+        self._order = (_safe_ident(col), bool(desc))
+        return self
+    def limit(self, n):
+        self._limit = int(n); return self
+
+    def _build_qs(self, extra=None):
+        params = []
+        for col, val in self._filters:
+            params.append((col, val))
+        if self._order:
+            col, desc = self._order
+            params.append(("order", f"{col}.{'desc' if desc else 'asc'}"))
+        if self._limit is not None:
+            params.append(("limit", str(self._limit)))
+        if extra:
+            params.extend(extra)
+        return params
+
+    def execute(self):
+        url = f"{self._base}/rest/v1/{self._table}"
+        if self._op == "select":
+            params = self._build_qs([("select", self._select_cols)])
+            r = httpx.get(url, headers=self._headers, params=params, timeout=10.0)
+            r.raise_for_status()
+            return _HttpxResult(r.json())
+
+        if self._op == "insert":
+            headers = {**self._headers, "Prefer": "return=representation"}
+            body = self._payload if isinstance(self._payload, list) else [self._payload]
+            r = httpx.post(url, headers=headers, json=body, timeout=10.0)
+            if r.status_code >= 400:
+                logger.error("Supabase insert failed: %s — %s", r.status_code, r.text)
+                r.raise_for_status()
+            return _HttpxResult(r.json())
+
+        if self._op == "update":
+            headers = {**self._headers, "Prefer": "return=representation"}
+            params = self._build_qs()
+            r = httpx.patch(url, headers=headers, params=params, json=self._payload, timeout=10.0)
+            if r.status_code >= 400:
+                logger.error("Supabase update failed: %s — %s", r.status_code, r.text)
+                r.raise_for_status()
+            return _HttpxResult(r.json())
+
+        if self._op == "delete":
+            headers = {**self._headers, "Prefer": "return=representation"}
+            params = self._build_qs()
+            r = httpx.delete(url, headers=headers, params=params, timeout=10.0)
+            if r.status_code >= 400:
+                logger.error("Supabase delete failed: %s — %s", r.status_code, r.text)
+                r.raise_for_status()
+            return _HttpxResult(r.json())
+
+
+class _HttpxSupabase:
+    def __init__(self, url, key):
+        self._url = url.rstrip("/")
+        self._headers = {
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        }
+
+    def table(self, name):
+        return _HttpxQuery(self._url, self._headers, name)
+
+
 # ─── Public API ───────────────────────────────────────────────
 
 def get_supabase():
     """取得資料庫 client。有 Supabase 憑證用 Supabase，否則用 SQLite。"""
     global _client
     if _client is None:
-        if _supabase_available and SUPABASE_URL and SUPABASE_KEY:
-            _client = create_client(SUPABASE_URL, SUPABASE_KEY)
-            logger.info("Connected to Supabase")
+        if SUPABASE_URL and SUPABASE_KEY:
+            if _supabase_available:
+                _client = create_client(SUPABASE_URL, SUPABASE_KEY)
+                logger.info("Connected to Supabase via supabase-py")
+            elif _httpx_available:
+                _client = _HttpxSupabase(SUPABASE_URL, SUPABASE_KEY)
+                logger.info("Connected to Supabase via httpx PostgREST shim")
+            else:
+                _init_db()
+                _client = _SqliteSupabase()
+                logger.warning("Supabase creds present but no client lib — falling back to SQLite")
         else:
             _init_db()
             _client = _SqliteSupabase()
