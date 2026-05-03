@@ -35,7 +35,15 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 _client = None
 
 # ─── SQLite DB path ──────────────────────────────────────────
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "md_piece.db")
+# Vercel's /var/task is read-only; only /tmp is writable. Detect serverless
+# and put the DB there so the SQLite fallback at least boots (data is
+# ephemeral per cold start).
+def _default_db_path():
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        return "/tmp/md_piece.db"
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "md_piece.db")
+
+DB_PATH = _default_db_path()
 
 # ─── Table schemas (auto-create) ─────────────────────────────
 _SCHEMAS = {
