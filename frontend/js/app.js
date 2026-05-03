@@ -3266,7 +3266,9 @@ async function labsCheck() {
 function labsRenderResult(data, input) {
   const meta = LABS_STATUS_META[data.status] || LABS_STATUS_META.unknown;
   const resultEl = document.getElementById('lab-result');
+  resultEl.style.display = 'block';
   resultEl.className = 'card labs-result ' + meta.cls;
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   resultEl.innerHTML = '' +
     '<div class="labs-result-head">' +
       '<span class="labs-result-emoji">' + meta.emoji + '</span>' +
