@@ -1333,15 +1333,60 @@ function renderPeriodSummary(stats) {
 }
 function openVisitDatePrompt() {
   const v = getVisitDates();
-  const lastVisit = prompt('上次回診日期 (YYYY-MM-DD)，留空 = 不變更：', v.lastVisit || '');
-  if (lastVisit === null) return;
-  const nextVisit = prompt('下次回診日期 (YYYY-MM-DD)，留空 = 尚未排定：', v.nextVisit || '');
-  if (nextVisit === null) return;
-  saveVisitDates({
-    lastVisit: lastVisit.trim() || null,
-    nextVisit: nextVisit.trim() || null
+  const last = v.lastVisit || '';
+  const next = v.nextVisit || '';
+  // 移除舊的（如果有）
+  const old = document.getElementById('visit-date-modal');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'visit-date-modal';
+  overlay.className = 'visit-modal-overlay';
+  overlay.innerHTML = `
+    <div class="visit-modal" role="dialog" aria-labelledby="visit-modal-title">
+      <header class="visit-modal-head">
+        <h3 id="visit-modal-title"><i data-lucide="calendar-cog"></i> 設定回診日期</h3>
+        <button class="visit-modal-close" type="button" aria-label="關閉">×</button>
+      </header>
+      <div class="visit-modal-body">
+        <label class="visit-modal-field">
+          <span>上次回診</span>
+          <input type="date" id="vm-last" value="${last}" />
+          <button type="button" class="visit-modal-clear" data-clear="vm-last">清除</button>
+        </label>
+        <label class="visit-modal-field">
+          <span>下次回診</span>
+          <input type="date" id="vm-next" value="${next}" />
+          <button type="button" class="visit-modal-clear" data-clear="vm-next">清除</button>
+        </label>
+        <p class="visit-modal-hint">統整期間會以「上次回診」為起點。下次回診用來提醒倒數。</p>
+      </div>
+      <footer class="visit-modal-foot">
+        <button type="button" class="visit-modal-cancel">取消</button>
+        <button type="button" class="visit-modal-save"><i data-lucide="check"></i> 儲存</button>
+      </footer>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  const close = () => overlay.remove();
+  overlay.querySelector('.visit-modal-close').onclick = close;
+  overlay.querySelector('.visit-modal-cancel').onclick = close;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelectorAll('.visit-modal-clear').forEach(btn => {
+    btn.onclick = () => { document.getElementById(btn.dataset.clear).value = ''; };
   });
-  showPage('symptoms');
+  overlay.querySelector('.visit-modal-save').onclick = () => {
+    const lastVisit = document.getElementById('vm-last').value || null;
+    const nextVisit = document.getElementById('vm-next').value || null;
+    saveVisitDates({ lastVisit, nextVisit });
+    close();
+    // 留在原頁，重新渲染當前頁以反映新日期
+    const currentPage = document.getElementById('app')?.getAttribute('data-page') || 'symptoms';
+    const slugToPage = { 'your-pieces': 'pieces', 'symptoms': 'symptoms' };
+    showPage(slugToPage[currentPage] || 'symptoms');
+  };
 }
 
 // ═══════════════════════════════════════════════════════════
