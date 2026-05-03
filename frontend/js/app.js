@@ -3533,38 +3533,77 @@ function piecesComputeCurrent() {
 
 function piecesNum(v) { return Number(v) || 0; }
 
-function piecesRenderCard(p, opts) {
-  opts = opts || {};
-  var topHtml = (p.topCats && p.topCats.length)
-    ? '<ul class="pz-cat-list">' + p.topCats.map(function(c) {
-        return '<li class="pz-cat"><span class="pz-cat-icon scc-' + escapeHtml(c.color || 'mint') + '"><i data-lucide="' + escapeHtml(c.icon || 'circle') + '"></i></span>'
-          + '<span class="pz-cat-name">' + escapeHtml(c.zh || c.id || '') + '</span>'
-          + '<span class="pz-cat-count">' + piecesNum(c.count) + '</span></li>';
-      }).join('') + '</ul>'
-    : '<p class="pz-h-empty">這個週期沒有症狀紀錄。</p>';
+function piecesTopCatsHtml(topCats) {
+  if (!topCats || !topCats.length) {
+    return '<p class="pz-h-empty">這個週期沒有症狀紀錄。</p>';
+  }
+  return '<ul class="pz-cat-list">' + topCats.map(function(c) {
+    return '<li class="pz-cat"><span class="pz-cat-icon scc-' + escapeHtml(c.color || 'mint') + '"><i data-lucide="' + escapeHtml(c.icon || 'circle') + '"></i></span>'
+      + '<span class="pz-cat-name">' + escapeHtml(c.zh || c.id || '') + '</span>'
+      + '<span class="pz-cat-count">' + piecesNum(c.count) + '</span></li>';
+  }).join('') + '</ul>';
+}
 
+// 目前週期：大型 live 卡片，保存按鈕直接放在裡面
+function piecesRenderCurrent(p) {
+  var since = p.since ? piecesFormatDate(p.since) : '—';
+  var until = piecesFormatDate(p.until);
+  var hasAny = piecesNum(p.symptomCount) + piecesNum(p.memoCount) + piecesNum(p.vitalCount) > 0;
+
+  return '<article class="pz-live">'
+    +   '<div class="pz-live-glow"></div>'
+    +   '<header class="pz-live-head">'
+    +     '<div class="pz-live-tag"><span class="pz-live-dot"></span><span>進行中</span></div>'
+    +     '<div class="pz-live-period">'
+    +       '<span class="pz-live-range">' + escapeHtml(since) + ' — ' + escapeHtml(until) + '</span>'
+    +       '<span class="pz-live-days">' + piecesNum(p.days) + ' 天</span>'
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="pz-live-stats">'
+    +     '<div class="pz-stat"><span class="pz-stat-num">' + piecesNum(p.symptomCount) + '</span><span class="pz-stat-lbl">症狀次數</span></div>'
+    +     '<div class="pz-stat"><span class="pz-stat-num">' + piecesNum(p.symptomEntries) + '</span><span class="pz-stat-lbl">症狀筆數</span></div>'
+    +     '<div class="pz-stat"><span class="pz-stat-num">' + piecesNum(p.avgIntensity).toFixed(1) + '</span><span class="pz-stat-lbl">平均強度</span></div>'
+    +     '<div class="pz-stat"><span class="pz-stat-num">' + piecesNum(p.memoCount) + '</span><span class="pz-stat-lbl">Memo（' + piecesNum(p.memoForDoctor) + ' 給醫師）</span></div>'
+    +     '<div class="pz-stat"><span class="pz-stat-num">' + piecesNum(p.vitalCount) + '</span><span class="pz-stat-lbl">生理紀錄</span></div>'
+    +   '</div>'
+    +   '<div class="pz-live-top">' + piecesTopCatsHtml(p.topCats) + '</div>'
+    +   '<footer class="pz-live-foot">'
+    +     '<p class="pz-live-hint">' + (hasAny ? '回診結束後可以把這個週期封存成一片碎片，然後開新週期。' : '當期還沒有任何紀錄，先去症狀／Memo／生理紀錄頁建立看看。') + '</p>'
+    +     '<button class="pz-live-btn" id="pz-archive-btn"><i data-lucide="archive"></i> 保存這次的碎片並開新週期</button>'
+    +   '</footer>'
+    + '</article>';
+}
+
+// 過去的碎片：時間軸列（預設摺疊，點擊展開）
+function piecesRenderArchiveItem(p) {
   var since = p.since ? piecesFormatDate(p.since) : '—';
   var until = piecesFormatDate(p.savedAt || p.until);
-  var titleIcon = opts.current ? 'circle-dashed' : 'puzzle';
-  var titleText = opts.current ? '目前週期（尚未保存）' : '回診週期';
 
-  return '<article class="pz-h-card' + (opts.current ? ' pz-h-card-current' : '') + '">'
-    +   '<header class="pz-h-head">'
-    +     '<div class="pz-h-date"><i data-lucide="' + titleIcon + '"></i><strong>' + escapeHtml(since) + ' — ' + escapeHtml(until) + '</strong></div>'
-    +     '<div class="pz-h-doc"><span class="pz-h-kind">' + titleText + '</span><span class="pz-h-days">' + piecesNum(p.days) + ' 天</span></div>'
-    +   '</header>'
-    +   '<div class="pz-h-stats">'
-    +     '<span>症狀 <b>' + piecesNum(p.symptomCount) + '</b> 次</span>'
-    +     '<span>共 <b>' + piecesNum(p.symptomEntries) + '</b> 筆</span>'
-    +     '<span>平均強度 <b>' + piecesNum(p.avgIntensity).toFixed(1) + '</b></span>'
-    +     '<span>Memo <b>' + piecesNum(p.memoCount) + '</b>（' + piecesNum(p.memoForDoctor) + ' 給醫師）</span>'
-    +     '<span>生理 <b>' + piecesNum(p.vitalCount) + '</b> 筆</span>'
+  return '<li class="pz-arch" data-piece-id="' + escapeHtml(p.id || '') + '">'
+    +   '<span class="pz-arch-dot" aria-hidden="true"></span>'
+    +   '<button class="pz-arch-row" data-action="toggle" aria-expanded="false">'
+    +     '<span class="pz-arch-date"><strong>' + escapeHtml(since) + '</strong><span class="pz-arch-sep">—</span><strong>' + escapeHtml(until) + '</strong></span>'
+    +     '<span class="pz-arch-chips">'
+    +       '<span class="pz-chip"><i data-lucide="calendar"></i>' + piecesNum(p.days) + ' 天</span>'
+    +       '<span class="pz-chip"><i data-lucide="scan-search"></i>' + piecesNum(p.symptomCount) + '</span>'
+    +       '<span class="pz-chip"><i data-lucide="sticky-note"></i>' + piecesNum(p.memoCount) + '</span>'
+    +       '<span class="pz-chip"><i data-lucide="activity"></i>' + piecesNum(p.vitalCount) + '</span>'
+    +     '</span>'
+    +     '<span class="pz-arch-caret"><i data-lucide="chevron-down"></i></span>'
+    +   '</button>'
+    +   '<div class="pz-arch-detail" hidden>'
+    +     '<div class="pz-arch-stats">'
+    +       '<span>症狀 <b>' + piecesNum(p.symptomCount) + '</b> 次（共 <b>' + piecesNum(p.symptomEntries) + '</b> 筆）</span>'
+    +       '<span>平均強度 <b>' + piecesNum(p.avgIntensity).toFixed(1) + '</b></span>'
+    +       '<span>Memo <b>' + piecesNum(p.memoCount) + '</b>（<b>' + piecesNum(p.memoForDoctor) + '</b> 給醫師）</span>'
+    +       '<span>生理 <b>' + piecesNum(p.vitalCount) + '</b> 筆</span>'
+    +     '</div>'
+    +     '<div class="pz-arch-top">' + piecesTopCatsHtml(p.topCats) + '</div>'
+    +     '<div class="pz-arch-foot">'
+    +       '<button class="pz-h-del" data-action="delete"><i data-lucide="trash-2"></i> 刪除這片碎片</button>'
+    +     '</div>'
     +   '</div>'
-    +   '<div class="pz-h-body">' + topHtml + '</div>'
-    + (opts.current
-        ? ''
-        : '<footer class="pz-h-foot"><button class="pz-h-del" data-piece-id="' + escapeHtml(p.id || '') + '"><i data-lucide="trash-2"></i> 刪除</button></footer>')
-    + '</article>';
+    + '</li>';
 }
 
 function pieces() {
@@ -3582,19 +3621,12 @@ function pieces() {
     + '    </div>\n'
     + '  </header>\n'
     + '\n'
-    + '  <section class="pz-block">\n'
-    + '    <h3 class="pz-block-title"><i data-lucide="circle-dashed"></i> 目前週期</h3>\n'
-    + '    <div id="pz-current"></div>\n'
-    + '  </section>\n'
+    + '  <div id="pz-current"></div>\n'
     + '\n'
-    + '  <section class="pz-block">\n'
-    + '    <h3 class="pz-block-title"><i data-lucide="history"></i> 過去的碎片</h3>\n'
-    + '    <div class="pz-history-list" id="pz-history-list"></div>\n'
+    + '  <section class="pz-arch-section">\n'
+    + '    <h3 class="pz-arch-title"><i data-lucide="history"></i> 過去的碎片</h3>\n'
+    + '    <ol class="pz-arch-list" id="pz-history-list"></ol>\n'
     + '  </section>\n'
-    + '\n'
-    + '  <div class="pz-actions">\n'
-    + '    <button class="pz-save-btn" onclick="piecesArchiveCurrent()"><i data-lucide="archive"></i> 保存這次的碎片並開新週期</button>\n'
-    + '  </div>\n'
     + '</section>\n';
 }
 
@@ -3606,7 +3638,9 @@ function loadPiecesPage() {
   });
 
   var curEl = document.getElementById('pz-current');
-  if (curEl) curEl.innerHTML = piecesRenderCard(current, { current: true });
+  if (curEl) curEl.innerHTML = piecesRenderCurrent(current);
+  var archBtn = document.getElementById('pz-archive-btn');
+  if (archBtn) archBtn.addEventListener('click', piecesArchiveCurrent);
 
   var sumEl = document.getElementById('pz-history-summary');
   if (sumEl) sumEl.textContent = history.length ? ('共 ' + history.length + ' 次') : '尚無紀錄';
@@ -3614,12 +3648,24 @@ function loadPiecesPage() {
   var listEl = document.getElementById('pz-history-list');
   if (listEl) {
     listEl.innerHTML = history.length
-      ? history.map(function(p) { return piecesRenderCard(p, { current: false }); }).join('')
-      : '<p class="pz-empty">還沒有保存過任何碎片。回診結束後按下方按鈕，就會把當期紀錄總結成一片碎片留下來。</p>';
+      ? history.map(piecesRenderArchiveItem).join('')
+      : '<li class="pz-empty">還沒有保存過任何碎片。回診結束後按上方按鈕，就會把當期紀錄總結成一片碎片留下來。</li>';
     listEl.onclick = function(ev) {
-      var btn = ev.target.closest && ev.target.closest('.pz-h-del');
-      if (!btn) return;
-      piecesDeleteHistory(btn.getAttribute('data-piece-id'));
+      var actionEl = ev.target.closest && ev.target.closest('[data-action]');
+      if (!actionEl) return;
+      var item = actionEl.closest('.pz-arch');
+      if (!item) return;
+      var action = actionEl.getAttribute('data-action');
+      if (action === 'toggle') {
+        var detail = item.querySelector('.pz-arch-detail');
+        var row = item.querySelector('.pz-arch-row');
+        var open = item.classList.toggle('is-open');
+        if (detail) detail.hidden = !open;
+        if (row) row.setAttribute('aria-expanded', open ? 'true' : 'false');
+      } else if (action === 'delete') {
+        ev.stopPropagation();
+        piecesDeleteHistory(item.getAttribute('data-piece-id'));
+      }
     };
   }
   if (typeof lucide !== 'undefined') lucide.createIcons();
