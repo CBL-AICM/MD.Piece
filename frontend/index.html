@@ -3,18 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0B1426" />
+  <meta name="theme-color" id="meta-theme-color" content="#FFFFFF" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1F3553" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="description" content="PWA 醫療輔助平台，支援醫病溝通與 AI 症狀分析" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=cozy-warm-2" />
+  <link rel="stylesheet" href="css/style.css?v=mobile-app-5" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
@@ -63,6 +65,51 @@
 
   <!-- ★ ID Card Registration Overlay (shown on star canvas) -->
   <div id="register-overlay" style="display:none">
+    <!-- Decorative puzzle pieces -->
+    <span class="reg-bg-deco reg-puzzle reg-deco-1"></span>
+    <span class="reg-bg-deco reg-puzzle reg-puzzle-alt reg-deco-2"></span>
+    <span class="reg-bg-deco reg-puzzle reg-deco-3"></span>
+    <span class="reg-bg-deco reg-puzzle reg-puzzle-alt reg-deco-4"></span>
+    <span class="reg-bg-deco reg-puzzle reg-deco-5"></span>
+    <span class="reg-bg-deco reg-puzzle reg-puzzle-alt reg-deco-6"></span>
+
+    <!-- Decorative medical icons -->
+    <span class="reg-bg-deco reg-med reg-med-1" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    </span>
+    <span class="reg-bg-deco reg-med reg-med-2" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/>
+        <path d="m8.5 8.5 7 7"/>
+      </svg>
+    </span>
+    <span class="reg-bg-deco reg-med reg-med-3" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/>
+        <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/>
+        <circle cx="20" cy="10" r="2"/>
+      </svg>
+    </span>
+    <span class="reg-bg-deco reg-med reg-med-4" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v20M2 12h20"/>
+      </svg>
+    </span>
+    <span class="reg-bg-deco reg-med reg-med-5" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12h3l3-9 6 18 3-9h3"/>
+      </svg>
+    </span>
+
+    <!-- EKG line at the bottom -->
+    <span class="reg-ekg" aria-hidden="true">
+      <svg viewBox="0 0 800 50" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M0 25 L120 25 L140 25 L150 10 L165 40 L180 5 L195 45 L210 25 L350 25 L370 25 L380 12 L395 38 L410 25 L560 25 L580 25 L590 8 L605 42 L620 25 L800 25"/>
+      </svg>
+    </span>
+
     <div class="idcard-scene">
       <div class="idcard">
         <!-- Wavy paper texture watermark -->
@@ -244,6 +291,74 @@
       </div>
       <main id="app"></main>
     </div>
+
+    <!-- Mobile bottom dock (≤768px only) -->
+    <nav class="mobile-dock" aria-label="主導覽">
+      <button class="dock-btn" data-dock="symptoms" onclick="dockNavigate('symptoms', this)">
+        <span class="dock-icon"><i data-lucide="scan-search"></i></span>
+        <span class="dock-label">症狀</span>
+      </button>
+      <button class="dock-btn" data-dock="medications" onclick="dockNavigate('medications', this)">
+        <span class="dock-icon"><i data-lucide="pill"></i></span>
+        <span class="dock-label">藥物</span>
+      </button>
+      <button class="dock-btn dock-btn-home" data-dock="home" onclick="dockNavigate('home', this)" aria-label="首頁">
+        <span class="dock-home-glow"></span>
+        <span class="dock-icon"><i data-lucide="home"></i></span>
+      </button>
+      <button class="dock-btn" data-dock="chat" onclick="dockNavigate('chat', this)">
+        <span class="dock-icon"><i data-lucide="message-circle-heart"></i></span>
+        <span class="dock-label">聊天</span>
+      </button>
+      <button class="dock-btn" data-dock="more" onclick="toggleMoreSheet()">
+        <span class="dock-icon"><i data-lucide="menu"></i></span>
+        <span class="dock-label">更多</span>
+      </button>
+    </nav>
+
+    <!-- Mobile "更多" sheet -->
+    <div class="more-sheet-backdrop" onclick="closeMoreSheet()"></div>
+    <div class="more-sheet" role="dialog" aria-label="更多功能">
+      <div class="more-sheet-handle"></div>
+      <div class="more-sheet-head">
+        <span class="more-sheet-prompt">$</span>
+        <span class="more-sheet-title">more.exe</span>
+        <button class="more-sheet-close" onclick="closeMoreSheet()" aria-label="關閉">✕</button>
+      </div>
+      <div class="more-sheet-grid">
+        <button class="more-item" onclick="dockNavigate('vitals')">
+          <i data-lucide="activity"></i><span>生理紀錄</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('memo')">
+          <i data-lucide="sticky-note"></i><span>Memo</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('previsit')">
+          <i data-lucide="clipboard-check"></i><span>診前報告</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('education')">
+          <i data-lucide="book-heart"></i><span>衛教專欄</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('story')">
+          <i data-lucide="book-open"></i><span>每日故事</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('labs')">
+          <i data-lucide="trending-up"></i><span>報告數值</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('pieces')">
+          <i data-lucide="puzzle"></i><span>你的碎片</span>
+        </button>
+      </div>
+      <div class="more-sheet-foot">
+        <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
+          切換為年長版
+        </button>
+        <button class="logout-btn" onclick="logout()" type="button">
+          <span class="nav-icon"><i data-lucide="log-out" style="width:16px;height:16px"></i></span>
+          <span class="logout-label">登出</span>
+          <span class="logout-cmd">$ exit</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <script src="js/app.js"></script>
@@ -349,6 +464,13 @@
       requestAnimationFrame(draw);
     })();
 
+    // ─── Sync mobile browser chrome colour with current theme ───
+    function updateThemeColor(theme) {
+      const meta = document.getElementById('meta-theme-color');
+      if (!meta) return;
+      meta.setAttribute('content', theme === 'dark' ? '#1F3553' : '#FFFFFF');
+    }
+
     // ─── Landing Theme Toggle (dark / light) ───────────────
     function toggleLandingTheme() {
       const el = document.getElementById('landing');
@@ -360,6 +482,7 @@
       if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
       if (lab) lab.textContent = next.toUpperCase();
       try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      updateThemeColor(next);
       window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
     }
 
@@ -377,6 +500,7 @@
       if (lab) lab.textContent = theme.toUpperCase();
       const aIco = document.getElementById('att-icon');
       if (aIco) aIco.textContent = theme === 'dark' ? '☾' : '☀';
+      updateThemeColor(theme);
     })();
 
     // ─── App Theme Toggle (in topbar) ──────────────────────
@@ -394,6 +518,7 @@
       if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
       if (lab) lab.textContent = next.toUpperCase();
       try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      updateThemeColor(next);
       window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
     }
 
@@ -453,6 +578,18 @@
       records: '病歷管理', doctors: '醫師列表', patients: '病患管理'
     };
 
+    function syncDockActive(page) {
+      document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+      const direct = document.querySelector(`.dock-btn[data-dock="${page}"]`);
+      if (direct) {
+        direct.classList.add('active');
+      } else {
+        // page lives inside "more" sheet
+        const moreBtn = document.querySelector('.dock-btn[data-dock="more"]');
+        if (moreBtn) moreBtn.classList.add('active');
+      }
+    }
+
     function navigateTo(page, btn) {
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
@@ -460,7 +597,32 @@
       const map = isSenior ? pageTitlesSenior : pageTitles;
       document.getElementById('page-title').textContent = map[page] || page;
       showPage(page);
+      syncDockActive(page);
       closeSidebar();
+    }
+
+    function dockNavigate(page, btn) {
+      // mirror nav-item active state for sidebar consistency
+      const navBtn = Array.from(document.querySelectorAll('.nav-item'))
+        .find(b => b.getAttribute('onclick')?.includes(`'${page}'`));
+      navigateTo(page, navBtn);
+      closeMoreSheet();
+    }
+
+    function toggleMoreSheet() {
+      const sheet = document.querySelector('.more-sheet');
+      const back = document.querySelector('.more-sheet-backdrop');
+      const open = sheet.classList.toggle('open');
+      back.classList.toggle('show', open);
+      document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+      if (open) {
+        document.querySelector('.dock-btn[data-dock="more"]')?.classList.add('active');
+      }
+    }
+
+    function closeMoreSheet() {
+      document.querySelector('.more-sheet')?.classList.remove('open');
+      document.querySelector('.more-sheet-backdrop')?.classList.remove('show');
     }
 
     function goHome() {
@@ -469,7 +631,9 @@
       const map = isSenior ? pageTitlesSenior : pageTitles;
       document.getElementById('page-title').textContent = map.home || 'home';
       showPage('home');
+      syncDockActive('home');
       closeSidebar();
+      closeMoreSheet();
     }
 
     function toggleSidebar() {

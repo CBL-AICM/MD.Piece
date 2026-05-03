@@ -809,7 +809,8 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
 /* Mobile — 收掉 cd .. 註解，只留 ← 返回首頁 */
 @media (max-width: 480px) {
   .topbar-back .tb-cd { display: none; }
-  .topbar-back { padding: 6px 10px; font-size: 0.88rem; }
+  .topbar-back { padding: 6px 10px; font-size: 0.85rem; margin-left: 4px; }
+  .topbar-back .tb-zh { display: none; }
 }
 
 .topbar-filename {
@@ -3299,6 +3300,9 @@ html[data-mode="senior"] .vt-bmi-meta {
    ═══════════════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
+  /* Avoid horizontal scroll from floating puzzle decorations */
+  #app-wrapper.show { overflow-x: hidden; }
+
   .sidebar {
     top: 0; left: 0;
     height: 100vh;
@@ -3318,21 +3322,39 @@ html[data-mode="senior"] .vt-bmi-meta {
   .main-content {
     margin-left: 0;
     padding: 8px;
+    min-width: 0;
   }
 
   .topbar .hamburger {
     display: inline-flex;
   }
 
-  #app {
+  #app,
+  html[data-mode="standard"] #app {
     padding: 16px;
+    margin: 8px auto 16px;
   }
+
+  /* Decorative terminal labels overflow on narrow screens */
+  html[data-mode="standard"] #app::before,
+  html[data-mode="standard"] #app::after { display: none; }
 
   .topbar {
     top: 8px;
     padding: 0;
+    gap: 4px;
   }
-  .topbar-version { display: none; }
+  .topbar-version,
+  .topbar-wincontrols,
+  .topbar-prefix,
+  .topbar-ext { display: none; }
+  .topbar-filename { padding: 10px 6px; font-size: 0.92rem; min-width: 0; }
+  .app-theme-toggle { margin-right: 4px; }
+
+  /* Hide oversized floating puzzle pieces that bleed past viewport */
+  .puzzle-deco,
+  html[data-mode="standard"] #app-wrapper.show::before,
+  html[data-mode="standard"] #app-wrapper.show::after { display: none; }
 
   .landing-split {
     flex-direction: column;
@@ -4146,8 +4168,70 @@ html[data-mode="senior"] .vt-bmi-meta {
   padding: 24px;
   opacity: 0;
   transition: opacity .5s ease;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(168,240,224,0.55), transparent 42%),
+    radial-gradient(circle at 82% 18%, rgba(255,214,232,0.45), transparent 42%),
+    radial-gradient(circle at 70% 88%, rgba(232,201,163,0.55), transparent 45%),
+    linear-gradient(160deg, #FFF6E8 0%, #F0F5E8 45%, #E6F2EC 100%);
+  overflow: hidden;
 }
 #register-overlay.show { opacity: 1; }
+
+/* Background scatter — puzzle pieces + medical icons */
+.reg-bg-deco {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  filter: drop-shadow(0 4px 12px rgba(20,25,40,0.08));
+  animation: regFloat 11s ease-in-out infinite;
+}
+.reg-bg-deco svg { display: block; width: 100%; height: 100%; }
+
+/* Puzzle pieces (CSS clip-path) */
+.reg-puzzle {
+  background: var(--accent);
+  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
+  opacity: 0.18;
+}
+.reg-puzzle-alt {
+  clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
+}
+
+.reg-deco-1 { top: 6%;  left: 5%;  width: 90px;  height: 90px; background: #C97F4B; opacity: 0.16; }
+.reg-deco-2 { top: 11%; right: 8%; width: 70px;  height: 70px; background: #9DAEC0; opacity: 0.18; animation-delay: -2s; }
+.reg-deco-3 { bottom: 14%; left: 7%; width: 80px; height: 80px; background: #A8F0E0; opacity: 0.20; animation-delay: -5s; }
+.reg-deco-4 { bottom: 8%; right: 6%; width: 110px; height: 110px; background: #FFD6E8; opacity: 0.18; animation-delay: -7s; }
+.reg-deco-5 { top: 45%; left: 3%; width: 50px; height: 50px; background: #E8B4A0; opacity: 0.22; animation-delay: -3s; }
+.reg-deco-6 { top: 55%; right: 4%; width: 60px; height: 60px; background: #B8F2EA; opacity: 0.22; animation-delay: -6s; }
+
+/* Medical icons via SVG */
+.reg-med {
+  opacity: 0.22;
+  color: #C97F4B;
+}
+.reg-med-1 { top: 22%; left: 18%; width: 36px; height: 36px; color: #B8553F; animation-delay: -1s; }
+.reg-med-2 { bottom: 20%; right: 22%; width: 42px; height: 42px; color: #4FA88A; animation-delay: -4s; }
+.reg-med-3 { top: 70%; left: 22%; width: 38px; height: 38px; color: #C97F4B; animation-delay: -8s; }
+.reg-med-4 { top: 30%; right: 32%; width: 32px; height: 32px; color: #7A6BAB; animation-delay: -2.5s; }
+.reg-med-5 { top: 8%; left: 42%; width: 30px; height: 30px; color: #B6914A; animation-delay: -5.5s; }
+
+@keyframes regFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-14px) rotate(6deg); }
+}
+
+/* EKG line across bottom */
+.reg-ekg {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 4%;
+  height: 50px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  color: #C97F4B;
+}
+.reg-ekg svg { width: 100%; height: 100%; }
 
 /* Card done → flip out */
 #register-overlay.card-done .idcard {
@@ -4159,6 +4243,8 @@ html[data-mode="senior"] .vt-bmi-meta {
 
 .idcard-scene {
   perspective: 1000px;
+  position: relative;
+  z-index: 2;
 }
 
 /* ─── ID Card (Identity Card style) ──────────────────────── */
@@ -4168,6 +4254,10 @@ html[data-mode="senior"] .vt-bmi-meta {
   max-width: 94vw;
   aspect-ratio: 1.62 / 1;
   background:
+    /* puzzle piece motif scattered (subtle) */
+    radial-gradient(circle at 88% 20%, rgba(168,240,224,0.32), transparent 25%),
+    radial-gradient(circle at 12% 80%, rgba(232,180,160,0.30), transparent 25%),
+    /* paper texture lines */
     repeating-linear-gradient(
       115deg,
       rgba(255,255,255,0.55) 0 1px,
@@ -4178,12 +4268,13 @@ html[data-mode="senior"] .vt-bmi-meta {
       rgba(255,255,255,0.35) 0 1px,
       transparent 1px 28px
     ),
-    linear-gradient(135deg, #E2EAEC 0%, #D7E4E8 45%, #C8DCE2 100%);
-  border: 1.5px solid #1A2230;
+    /* warm cream gradient base */
+    linear-gradient(135deg, #FFF8E7 0%, #FBEFD8 45%, #F4E2C5 100%);
+  border: 1.5px solid #5C3A32;
   border-radius: 14px;
   box-shadow:
-    0 18px 50px rgba(20,25,40,0.45),
-    0 2px 6px rgba(20,25,40,0.25),
+    0 18px 50px rgba(92,58,50,0.35),
+    0 2px 6px rgba(92,58,50,0.20),
     inset 0 0 0 1px rgba(255,255,255,0.6);
   overflow: hidden;
   animation: cardSlideIn .6s cubic-bezier(.34,1.56,.64,1) both;
@@ -4652,5 +4743,821 @@ html[data-mode="senior"] .topbar > span:last-child { display: none; }
 html[data-mode="senior"] *:focus-visible {
   outline: 3px solid var(--klein);
   outline-offset: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE Y2K APP SHELL — 手機專用排版（≤768px）
+   ───────────────────────────────────────────────────────────
+   桌面完全不受影響；手機改成「頂簡 header + 底部 dock + 更多
+   sheet」的 app 結構，並把所有 grid 強制單欄、padding 收緊。
+   ═══════════════════════════════════════════════════════════ */
+
+.mobile-dock,
+.more-sheet,
+.more-sheet-backdrop { display: none; }
+
+@media (max-width: 768px) {
+  /* ─ Hide sidebar/backdrop entirely on mobile (dock takes over) ─ */
+  .sidebar,
+  .sidebar-backdrop,
+  .topbar .hamburger { display: none !important; }
+  .main-content { margin-left: 0; padding: 0; }
+
+  /* ─ Slim topbar (filename only) ─ */
+  .topbar {
+    position: sticky;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    z-index: 50;
+  }
+  .topbar .topbar-back { display: none; }
+  .topbar-filename {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .topbar-filename::before {
+    content: "$ ";
+    color: var(--app-term);
+    font-weight: 700;
+  }
+
+  /* ─ Content pane: single column + padding for dock ─ */
+  #app,
+  html[data-mode="standard"] #app {
+    margin: 0;
+    padding: 16px 14px 96px;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    background-image: none;
+    max-width: 100%;
+    font-size: 0.98rem;
+  }
+  html[data-mode="standard"] #app::before,
+  html[data-mode="standard"] #app::after { display: none !important; }
+
+  /* Force every multi-col grid in content to single col */
+  #app .home-grid,
+  #app .home-info-row,
+  #app .home-quick,
+  #app .feature-grid,
+  #app .mission-grid,
+  #app [style*="grid-template-columns"]:not([data-no-mobile-stack]) {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  /* Quick actions stay 2-col on phone (more compact) */
+  #app .home-quick { grid-template-columns: repeat(2, 1fr) !important; }
+
+  .home-hero {
+    padding: 18px 16px;
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .home-hero-right { text-align: center; }
+
+  /* ─ Mobile dock — Y2K terminal taskbar ─ */
+  .mobile-dock {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 90;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    gap: 4px;
+    background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
+    border-top: 1.5px solid var(--app-border);
+    box-shadow: 0 -2px 0 rgba(0,0,0,0.08), 0 -8px 24px rgba(0,0,0,0.12);
+    font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  }
+  #app-wrapper[data-theme="dark"] .mobile-dock {
+    box-shadow: 0 -2px 0 rgba(0,0,0,0.4), 0 -8px 24px rgba(0,0,0,0.45);
+  }
+
+  .dock-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 4px 6px;
+    background: var(--app-panel);
+    border: 1px solid var(--app-border);
+    border-radius: 3px;
+    color: var(--app-text);
+    font: inherit;
+    font-size: 0.65rem;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    min-width: 0;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .dock-btn:active { transform: translateY(1px); }
+  .dock-btn .dock-icon {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--app-term);
+  }
+  .dock-btn .dock-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+  .dock-btn .dock-label {
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+  .dock-btn.active {
+    background: var(--app-mint);
+    color: var(--app-chip-text);
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.45), inset -1px -1px 0 rgba(0,0,0,0.18);
+  }
+  .dock-btn.active .dock-icon { color: var(--app-chip-text); }
+  #app-wrapper[data-theme="dark"] .dock-btn.active { color: #07171C; }
+
+  /* Center "home" button — bigger and elevated */
+  .dock-btn-home {
+    flex: 0 0 56px;
+    margin-top: -14px;
+    padding: 10px;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    background: var(--app-panel);
+    border: 1.5px solid var(--app-border);
+    box-shadow: 0 4px 0 var(--app-border), 0 6px 14px rgba(0,0,0,0.18);
+    position: relative;
+  }
+  .dock-btn-home .dock-icon { width: 24px; height: 24px; }
+  .dock-btn-home .dock-icon svg { width: 22px; height: 22px; }
+  .dock-btn-home .dock-home-glow {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--app-glow), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  .dock-btn-home.active .dock-home-glow { opacity: 1; }
+  .dock-btn-home.active {
+    background: var(--app-mint);
+    color: var(--app-chip-text);
+  }
+
+  /* ─ More sheet (slides up) ─ */
+  .more-sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .more-sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+
+  .more-sheet {
+    display: block;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 101;
+    padding: 8px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--app-panel);
+    border-top: 1.5px solid var(--app-border);
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.25);
+    transform: translateY(110%);
+    transition: transform 0.28s cubic-bezier(.32,.72,.32,1);
+    max-height: 78vh;
+    overflow-y: auto;
+    font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  }
+  .more-sheet.open { transform: translateY(0); }
+
+  .more-sheet-handle {
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 8px;
+    border-radius: 2px;
+    background: var(--app-text-dim);
+    opacity: 0.4;
+  }
+
+  .more-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 6px 12px;
+    border-bottom: 1px dashed var(--app-border);
+  }
+  .more-sheet-prompt {
+    color: var(--app-term);
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .more-sheet-title {
+    flex: 1;
+    color: var(--app-text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .more-sheet-close {
+    width: 28px;
+    height: 24px;
+    background: var(--app-pink);
+    border: 1px solid var(--app-border);
+    color: var(--app-text);
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  .more-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 14px 0;
+  }
+  .more-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 8px;
+    background: var(--app-panel-soft);
+    border: 1px solid var(--app-border);
+    border-radius: 4px;
+    color: var(--app-text);
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .more-item:active { background: var(--app-mint); color: var(--app-chip-text); }
+  .more-item i,
+  .more-item svg {
+    width: 22px;
+    height: 22px;
+    color: var(--app-term);
+  }
+
+  .more-sheet-foot {
+    padding-top: 10px;
+    border-top: 1px dashed var(--app-border);
+    display: grid;
+    gap: 8px;
+  }
+  .more-sheet-foot .mode-toggle,
+  .more-sheet-foot .logout-btn {
+    width: 100%;
+  }
+
+  /* ─ Senior mode tweaks for dock ─ */
+  html[data-mode="senior"] .mobile-dock {
+    background: #FFFAF0;
+    border-top: 1px solid var(--border-glass);
+    font-family: "Noto Sans TC", sans-serif;
+  }
+  html[data-mode="senior"] .dock-btn {
+    background: transparent;
+    border-color: var(--border-glass);
+    font-size: 0.85rem;
+  }
+  html[data-mode="senior"] .dock-btn .dock-label { font-size: 0.85rem; }
+  html[data-mode="senior"] .dock-btn .dock-icon svg { width: 22px; height: 22px; }
+  html[data-mode="senior"] .more-sheet { font-family: "Noto Sans TC", sans-serif; }
+  html[data-mode="senior"] .more-item { font-size: 0.95rem; padding: 18px 10px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE — MODERN APP OVERRIDE (≤768px)
+   ───────────────────────────────────────────────────────────
+   桌面保留 Y2K 終端機風；手機完全切到「真．手機 app」樣式：
+   sans-serif、軟卡片、iOS 式底部 nav、無終端機裝飾。
+   置於 Y2K shell 之後，讓所有 Y2K mobile 規則被乾淨覆寫。
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* ─ Body：純色暖米白，去掉桌面格線 ─ */
+  #app-wrapper.show {
+    background-color: #FBF6EC;
+    background-image: none;
+    font-family: "Noto Sans TC", sans-serif;
+  }
+  #app-wrapper[data-theme="dark"].show {
+    background-color: #1F3553;
+  }
+
+  /* ─ Topbar：純淨頁面標題列（去終端機 chrome） ─ */
+  .topbar,
+  .topbar.win-titlebar {
+    background: rgba(255, 250, 240, 0.92);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border: none;
+    border-bottom: 1px solid var(--border-glass);
+    box-shadow: none;
+    padding: 4px 10px;
+    height: 48px;
+    gap: 8px;
+  }
+  #app-wrapper[data-theme="dark"] .topbar {
+    background: rgba(31, 53, 83, 0.92);
+    border-bottom-color: rgba(255,255,255,0.08);
+  }
+  .topbar .topbar-back,
+  .topbar .topbar-version,
+  .topbar .topbar-wincontrols,
+  .topbar .topbar-prefix,
+  .topbar .topbar-ext { display: none !important; }
+  .topbar-filename {
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+    justify-content: center;
+    padding: 0;
+    letter-spacing: 0;
+  }
+  .topbar-filename::before { content: none !important; }
+  #app-wrapper[data-theme="dark"] .topbar-filename { color: #F1F6FF; }
+  .app-theme-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    margin-right: 4px;
+    font-size: 1.1rem;
+  }
+  .app-theme-toggle:hover {
+    background: rgba(92,58,50,0.08);
+    color: var(--text);
+    box-shadow: none;
+  }
+  #app-wrapper[data-theme="dark"] .app-theme-toggle { color: #F1F6FF; }
+
+  /* ─ Content area：軟卡片、寬鬆 padding、無終端機框 ─ */
+  #app,
+  html[data-mode="standard"] #app {
+    background: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 14px 16px 100px !important;
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.98rem;
+    color: var(--text);
+  }
+  #app-wrapper[data-theme="dark"] #app { color: #F1F6FF; }
+  html[data-mode="standard"] #app::before,
+  html[data-mode="standard"] #app::after { display: none !important; }
+
+  /* Soft-card defaults for content blocks */
+  #app .home-hero,
+  #app .home-ov,
+  #app .pzl-card,
+  #app .term-card,
+  #app .stat-box,
+  #app .med-item,
+  #app .dash-welcome {
+    background: var(--cream);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(92,58,50,0.06);
+    backdrop-filter: none;
+  }
+  #app-wrapper[data-theme="dark"] #app .home-hero,
+  #app-wrapper[data-theme="dark"] #app .home-ov,
+  #app-wrapper[data-theme="dark"] #app .pzl-card,
+  #app-wrapper[data-theme="dark"] #app .term-card,
+  #app-wrapper[data-theme="dark"] #app .stat-box,
+  #app-wrapper[data-theme="dark"] #app .med-item,
+  #app-wrapper[data-theme="dark"] #app .dash-welcome,
+  #app-wrapper[data-theme="dark"] #app .hq-btn {
+    background: #243F61 !important;
+    border: 1px solid #3D6499 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.30) !important;
+    backdrop-filter: none !important;
+    color: #F1F6FF !important;
+  }
+
+  /* Quick action buttons → softer iOS chip (light theme only) */
+  #app-wrapper[data-theme="light"] #app .hq-btn {
+    background: var(--cream);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(92,58,50,0.05);
+    padding: 18px 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  /* ─ Dock：iOS-style pill nav ─ */
+  .mobile-dock {
+    background: rgba(255,250,240,0.92);
+    backdrop-filter: saturate(140%) blur(14px);
+    -webkit-backdrop-filter: saturate(140%) blur(14px);
+    border-top: 1px solid var(--border-glass);
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.6);
+    font-family: "Noto Sans TC", sans-serif;
+    padding: 6px 10px calc(8px + env(safe-area-inset-bottom));
+    gap: 2px;
+  }
+  #app-wrapper[data-theme="dark"] .mobile-dock {
+    background: rgba(31,53,83,0.94);
+    border-top-color: rgba(255,255,255,0.08);
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.04);
+  }
+  .dock-btn {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    padding: 6px 4px 4px;
+    box-shadow: none !important;
+  }
+  .dock-btn .dock-icon { color: inherit !important; }
+  .dock-btn .dock-icon svg { width: 22px; height: 22px; stroke-width: 1.8; }
+  .dock-btn .dock-label {
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.68rem;
+    font-weight: 500;
+  }
+  .dock-btn.active {
+    background: transparent !important;
+    color: var(--accent) !important;
+    box-shadow: none !important;
+  }
+  #app-wrapper[data-theme="dark"] .dock-btn { color: rgba(241,246,255,0.55); }
+  #app-wrapper[data-theme="dark"] .dock-btn.active { color: #FFB37A !important; }
+
+  /* Center home button → floating iOS-style pill */
+  .dock-btn-home {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    margin-top: -16px;
+    border-radius: 50% !important;
+    background: var(--accent) !important;
+    color: #fff !important;
+    border: 3px solid #FBF6EC !important;
+    box-shadow: 0 6px 16px rgba(201,127,75,0.35) !important;
+  }
+  .dock-btn-home .dock-icon { color: #fff !important; }
+  .dock-btn-home .dock-icon svg { width: 24px; height: 24px; stroke-width: 2; }
+  .dock-btn-home.active {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+  .dock-btn-home.active .dock-icon { color: #fff !important; }
+  .dock-btn-home .dock-home-glow { display: none; }
+  #app-wrapper[data-theme="dark"] .dock-btn-home {
+    border-color: #1F3553 !important;
+  }
+
+  /* ─ More sheet：iOS bottom sheet ─ */
+  .more-sheet {
+    background: #FFFAF0;
+    border-top: none;
+    border-radius: 22px 22px 0 0;
+    font-family: "Noto Sans TC", sans-serif;
+    box-shadow: 0 -12px 40px rgba(20,25,40,0.18);
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet {
+    background: #2E4F7C;
+    color: #F1F6FF;
+  }
+  .more-sheet-handle {
+    width: 38px;
+    height: 5px;
+    margin: 8px auto 4px;
+    background: rgba(92,58,50,0.25);
+    opacity: 1;
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet-handle { background: rgba(255,255,255,0.3); }
+  .more-sheet-head {
+    padding: 6px 4px 14px;
+    border-bottom: 1px solid var(--border-glass);
+  }
+  .more-sheet-prompt { display: none; }
+  .more-sheet-title {
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--text);
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet-title { color: #F1F6FF; }
+  .more-sheet-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(92,58,50,0.08);
+    border: none;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet-close {
+    background: rgba(255,255,255,0.1);
+    color: #F1F6FF;
+  }
+  .more-sheet-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 16px 0 12px;
+  }
+  .more-item {
+    background: transparent;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 6px;
+    font-family: "Noto Sans TC", sans-serif;
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: var(--text);
+    gap: 8px;
+  }
+  .more-item:active { background: rgba(201,127,75,0.12); color: var(--accent); }
+  .more-item i,
+  .more-item svg {
+    width: 26px;
+    height: 26px;
+    color: var(--accent);
+    stroke-width: 1.7;
+  }
+  #app-wrapper[data-theme="dark"] .more-item { color: #F1F6FF; }
+  #app-wrapper[data-theme="dark"] .more-item i,
+  #app-wrapper[data-theme="dark"] .more-item svg { color: #FFB37A; }
+
+  .more-sheet-foot {
+    padding: 12px 0 4px;
+    border-top: 1px solid var(--border-glass);
+    gap: 10px;
+  }
+  .more-sheet-foot .mode-toggle {
+    background: rgba(201,127,75,0.1);
+    border: none;
+    border-radius: 12px;
+    color: var(--accent);
+    font-family: "Noto Sans TC", sans-serif;
+    font-weight: 600;
+    padding: 13px 16px;
+  }
+  .more-sheet-foot .logout-btn {
+    background: transparent;
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    font-family: "Noto Sans TC", sans-serif;
+    color: var(--danger);
+    padding: 13px 16px;
+  }
+  .more-sheet-foot .logout-btn .logout-cmd { display: none; }
+
+  /* ─ Senior mode：放大字級即可，外觀已是 mobile-app 風 ─ */
+  html[data-mode="senior"] .dock-btn .dock-label { font-size: 0.85rem; }
+  html[data-mode="senior"] .dock-btn .dock-icon svg { width: 26px; height: 26px; }
+  html[data-mode="senior"] .more-item { font-size: 0.95rem; padding: 18px 8px; }
+  html[data-mode="senior"] .more-item i,
+  html[data-mode="senior"] .more-item svg { width: 28px; height: 28px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE — LIGHT PALETTE REFRESH（≤768px, light theme only）
+   ───────────────────────────────────────────────────────────
+   把手機亮版從「暖棕大地色」改成乾淨的「白底深灰字」app 樣式，
+   暖陶 accent 仍當點綴。所有面板都不透明（去毛玻璃）。
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  #app-wrapper[data-theme="light"].show {
+    background-color: #FAF6EE;
+    background-image: none;
+    color: #1F232B;
+  }
+
+  /* Topbar：純白不透明 */
+  #app-wrapper[data-theme="light"] .topbar,
+  #app-wrapper[data-theme="light"] .topbar.win-titlebar {
+    background: #FFFFFF;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  #app-wrapper[data-theme="light"] .topbar-filename { color: #1F232B; }
+  #app-wrapper[data-theme="light"] .app-theme-toggle { color: #1F232B; }
+  #app-wrapper[data-theme="light"] .app-theme-toggle:hover {
+    background: #F0F1F5;
+    color: #1F232B;
+  }
+
+  /* 內容區字色 */
+  #app-wrapper[data-theme="light"] #app { color: #1F232B; }
+  #app-wrapper[data-theme="light"] #app h1,
+  #app-wrapper[data-theme="light"] #app h2,
+  #app-wrapper[data-theme="light"] #app h3,
+  #app-wrapper[data-theme="light"] #app h4,
+  #app-wrapper[data-theme="light"] #app .home-title,
+  #app-wrapper[data-theme="light"] #app .stat-num { color: #1F232B; }
+  #app-wrapper[data-theme="light"] #app .home-calm,
+  #app-wrapper[data-theme="light"] #app .home-datestr,
+  #app-wrapper[data-theme="light"] #app .home-day,
+  #app-wrapper[data-theme="light"] #app .stat-label,
+  #app-wrapper[data-theme="light"] #app small { color: #6B7280; }
+
+  /* 卡片：純白、輕邊框、無毛玻璃 */
+  #app-wrapper[data-theme="light"] #app .home-ov,
+  #app-wrapper[data-theme="light"] #app .pzl-card,
+  #app-wrapper[data-theme="light"] #app .term-card,
+  #app-wrapper[data-theme="light"] #app .stat-box,
+  #app-wrapper[data-theme="light"] #app .med-item,
+  #app-wrapper[data-theme="light"] #app .dash-welcome,
+  #app-wrapper[data-theme="light"] #app .hq-btn {
+    background: #FFFFFF;
+    border: 1px solid #EFE3D2;
+    box-shadow: 0 2px 8px rgba(92,58,50,0.06);
+    backdrop-filter: none;
+    color: #1F232B;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-btn { color: #1F232B; }
+
+  /* Hero card：暖陶漸層帶溫度感 */
+  #app-wrapper[data-theme="light"] #app .home-hero {
+    background: linear-gradient(135deg, #FFF6EA 0%, #FFFAF2 60%, #FFEEDE 100%);
+    border: 1px solid #F1DCC0;
+    box-shadow: 0 4px 14px rgba(201,127,75,0.10);
+    backdrop-filter: none;
+    color: #1F232B;
+  }
+
+  /* 4 顆 quick action 卡片：每張給不同 icon 色塊 */
+  #app-wrapper[data-theme="light"] #app .hq-symptoms .hq-icon {
+    background: #FFE7DA; color: #C97F4B;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-meds .hq-icon {
+    background: #DFF1E8; color: #4FA88A;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-records .hq-icon {
+    background: #E8E4F4; color: #7A6BAB;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-edu .hq-icon {
+    background: #FCF1D6; color: #B6914A;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-icon { border-radius: 12px; }
+  #app-wrapper[data-theme="light"] #app .hq-icon svg { stroke-width: 2; }
+
+  /* Dock：純白不透明 */
+  #app-wrapper[data-theme="light"] .mobile-dock {
+    background: #FFFFFF;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-top: 1px solid #E5E7EB;
+    box-shadow: 0 -1px 0 rgba(15,23,42,0.04);
+  }
+  #app-wrapper[data-theme="light"] .dock-btn { color: #B89A82; }
+  #app-wrapper[data-theme="light"] .dock-btn.active { color: #C97F4B !important; }
+  #app-wrapper[data-theme="light"] .dock-btn-home {
+    background: #C97F4B !important;
+    color: #FFFFFF !important;
+    border-color: #FFFFFF !important;
+    box-shadow: 0 6px 16px rgba(201,127,75,0.32) !important;
+  }
+
+  /* More sheet：純白不透明 */
+  #app-wrapper[data-theme="light"] .more-sheet {
+    background: #FFFFFF;
+    color: #1F232B;
+    backdrop-filter: none;
+    box-shadow: 0 -12px 40px rgba(15,23,42,0.18);
+  }
+  #app-wrapper[data-theme="light"] .more-sheet-handle { background: #D1D5DB; }
+  #app-wrapper[data-theme="light"] .more-sheet-head { border-bottom-color: #E5E7EB; }
+  #app-wrapper[data-theme="light"] .more-sheet-title { color: #1F232B; }
+  #app-wrapper[data-theme="light"] .more-sheet-close {
+    background: #F0F1F5;
+    color: #1F232B;
+  }
+  #app-wrapper[data-theme="light"] .more-item { color: #1F232B; }
+  #app-wrapper[data-theme="light"] .more-item i,
+  #app-wrapper[data-theme="light"] .more-item svg { color: #C97F4B; }
+  #app-wrapper[data-theme="light"] .more-item:active {
+    background: rgba(201,127,75,0.10);
+    color: #C97F4B;
+  }
+  #app-wrapper[data-theme="light"] .more-sheet-foot { border-top-color: #E5E7EB; }
+  #app-wrapper[data-theme="light"] .more-sheet-foot .mode-toggle {
+    background: rgba(201,127,75,0.1);
+    color: #C97F4B;
+  }
+  #app-wrapper[data-theme="light"] .more-sheet-foot .logout-btn {
+    border: 1px solid #E5E7EB;
+    color: #B8553F;
+  }
+
+  /* 暗版手機：補一個不透明的覆寫，避免毛玻璃 */
+  #app-wrapper[data-theme="dark"] .topbar,
+  #app-wrapper[data-theme="dark"] .topbar.win-titlebar {
+    background: #1F3553;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  #app-wrapper[data-theme="dark"] .mobile-dock {
+    background: #1F3553;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet {
+    background: #2E4F7C;
+    backdrop-filter: none;
+  }
+
+  /* 暗版手機：紮實深藍底（拿掉星空 + 半透明卡片） */
+  #app-wrapper[data-theme="dark"].show {
+    background-color: #16263D;
+    background-image: none;
+    color: #F1F6FF;
+  }
+  #app-wrapper[data-theme="dark"] #app { color: #F1F6FF; }
+
+  #app-wrapper[data-theme="dark"] #app .home-hero,
+  #app-wrapper[data-theme="dark"] #app .home-ov,
+  #app-wrapper[data-theme="dark"] #app .pzl-card,
+  #app-wrapper[data-theme="dark"] #app .term-card,
+  #app-wrapper[data-theme="dark"] #app .stat-box,
+  #app-wrapper[data-theme="dark"] #app .med-item,
+  #app-wrapper[data-theme="dark"] #app .dash-welcome,
+  #app-wrapper[data-theme="dark"] #app .hq-btn {
+    background: #243F61 !important;
+    border: 1px solid #3D6499 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.30);
+    backdrop-filter: none;
+    color: #F1F6FF;
+  }
+  #app-wrapper[data-theme="dark"] #app h1,
+  #app-wrapper[data-theme="dark"] #app h2,
+  #app-wrapper[data-theme="dark"] #app h3,
+  #app-wrapper[data-theme="dark"] #app h4,
+  #app-wrapper[data-theme="dark"] #app .home-title,
+  #app-wrapper[data-theme="dark"] #app .stat-num { color: #F1F6FF; }
+  #app-wrapper[data-theme="dark"] #app .home-calm,
+  #app-wrapper[data-theme="dark"] #app .home-datestr,
+  #app-wrapper[data-theme="dark"] #app .home-day,
+  #app-wrapper[data-theme="dark"] #app .stat-label,
+  #app-wrapper[data-theme="dark"] #app small { color: #BFD2EC; }
+
+  #app-wrapper[data-theme="dark"] .dock-btn { color: #8FA9C9; }
+  #app-wrapper[data-theme="dark"] .dock-btn.active { color: #FFB37A !important; }
+  #app-wrapper[data-theme="dark"] .dock-btn-home {
+    background: #C97F4B !important;
+    color: #FFFFFF !important;
+    border-color: #16263D !important;
+    box-shadow: 0 6px 16px rgba(201,127,75,0.45) !important;
+  }
+
+  #app-wrapper[data-theme="dark"] .more-item { color: #F1F6FF; }
+  #app-wrapper[data-theme="dark"] .more-item i,
+  #app-wrapper[data-theme="dark"] .more-item svg { color: #FFB37A; }
+  #app-wrapper[data-theme="dark"] .more-item:active {
+    background: rgba(255,179,122,0.15);
+  }
+
+  /* ─ Landing page：手機把按鈕改不透明（原本 6% 透明度看不見） ─ */
+  #landing .landing-enter,
+  #landing .theme-toggle {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #landing[data-theme="dark"] .landing-enter,
+  #landing[data-theme="dark"] .theme-toggle {
+    background: #1A2F37 !important;
+    border-color: rgba(168,240,224,0.45) !important;
+  }
+  #landing[data-theme="light"] .landing-enter,
+  #landing[data-theme="light"] .theme-toggle {
+    background: #FFFAF0 !important;
+    border-color: rgba(92,58,50,0.4) !important;
+  }
 }
 
