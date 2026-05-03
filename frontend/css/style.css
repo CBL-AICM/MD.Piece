@@ -6355,3 +6355,177 @@ html[data-mode="senior"] .visit-modal-save {
   .labs-field, .labs-field-small { flex: 1 1 auto; }
   .labs-submit { width: 100%; }
 }
+
+
+/* ─── 診前報告 Previsit ────────────────────────────────────── */
+
+.previsit-hero h2 { color: var(--text); }
+
+.previsit-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.previsit-range-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.previsit-label {
+  font-size: .88rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.previsit-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pv-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(92, 58, 50, 0.18);
+  background: var(--bg-surface);
+  color: var(--text-dim);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+}
+.pv-chip:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+.pv-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+.previsit-generate {
+  align-self: flex-start;
+  padding: 10px 24px;
+}
+
+.previsit-result { margin-top: 16px; }
+.previsit-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  margin: 0;
+}
+.previsit-spin {
+  animation: previsit-spin 1s linear infinite;
+  width: 16px; height: 16px;
+}
+@keyframes previsit-spin { to { transform: rotate(360deg); } }
+.previsit-error {
+  color: #B5371A;
+  background: #FCE5DD;
+  border-left: 4px solid #C9554B;
+}
+.previsit-empty {
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.previsit-card {
+  border-left: 4px solid var(--accent);
+}
+.pv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(92, 58, 50, 0.15);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.pv-title {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+.pv-meta {
+  margin: 4px 0 0;
+  font-size: .82rem;
+  color: var(--text-muted);
+}
+.pv-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.pv-actions button {
+  font-size: .82rem;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pv-summary {
+  background: var(--bg-soft);
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 500;
+  margin: 0 0 16px;
+  line-height: 1.55;
+}
+.pv-section {
+  margin: 14px 0;
+}
+.pv-section h4 {
+  font-size: .95rem;
+  color: var(--text);
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.pv-list {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text);
+  line-height: 1.7;
+}
+.pv-list li { margin: 2px 0; }
+.pv-empty {
+  margin: 0;
+  font-size: .85rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.pv-highlights .pv-list {
+  background: rgba(201, 127, 75, 0.06);
+  padding: 8px 8px 8px 30px;
+  border-radius: 8px;
+}
+.pv-disclaimer {
+  margin-top: 16px;
+  font-size: .78rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* 列印模式 — 簡潔黑白給醫師看 */
+@media print {
+  body * { visibility: hidden; }
+  .previsit-card, .previsit-card * { visibility: visible; }
+  .previsit-card {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    border: none;
+    box-shadow: none;
+    background: #fff;
+    color: #000;
+    padding: 20px;
+  }
+  .no-print, .pv-actions { display: none !important; }
+  .pv-summary { background: #f5f5f5; color: #000; }
+  .pv-highlights .pv-list { background: #f5f5f5; }
+  .pv-title, .pv-section h4 { color: #000; }
+}
