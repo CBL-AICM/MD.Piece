@@ -4685,3 +4685,129 @@ html[data-mode="senior"] *:focus-visible {
   html[data-mode="senior"] .more-item svg { width: 28px; height: 28px; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   MOBILE — LIGHT PALETTE REFRESH（≤768px, light theme only）
+   ───────────────────────────────────────────────────────────
+   把手機亮版從「暖棕大地色」改成乾淨的「白底深灰字」app 樣式，
+   暖陶 accent 仍當點綴。所有面板都不透明（去毛玻璃）。
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  #app-wrapper[data-theme="light"].show {
+    background-color: #F4F5F8;
+    background-image: none;
+    color: #1F232B;
+  }
+
+  /* Topbar：純白不透明 */
+  #app-wrapper[data-theme="light"] .topbar,
+  #app-wrapper[data-theme="light"] .topbar.win-titlebar {
+    background: #FFFFFF;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  #app-wrapper[data-theme="light"] .topbar-filename { color: #1F232B; }
+  #app-wrapper[data-theme="light"] .app-theme-toggle { color: #1F232B; }
+  #app-wrapper[data-theme="light"] .app-theme-toggle:hover {
+    background: #F0F1F5;
+    color: #1F232B;
+  }
+
+  /* 內容區字色 */
+  #app-wrapper[data-theme="light"] #app { color: #1F232B; }
+  #app-wrapper[data-theme="light"] #app h1,
+  #app-wrapper[data-theme="light"] #app h2,
+  #app-wrapper[data-theme="light"] #app h3,
+  #app-wrapper[data-theme="light"] #app h4,
+  #app-wrapper[data-theme="light"] #app .home-title,
+  #app-wrapper[data-theme="light"] #app .stat-num { color: #1F232B; }
+  #app-wrapper[data-theme="light"] #app .home-calm,
+  #app-wrapper[data-theme="light"] #app .home-datestr,
+  #app-wrapper[data-theme="light"] #app .home-day,
+  #app-wrapper[data-theme="light"] #app .stat-label,
+  #app-wrapper[data-theme="light"] #app small { color: #6B7280; }
+
+  /* 卡片：純白、輕邊框、無毛玻璃 */
+  #app-wrapper[data-theme="light"] #app .home-hero,
+  #app-wrapper[data-theme="light"] #app .home-ov,
+  #app-wrapper[data-theme="light"] #app .pzl-card,
+  #app-wrapper[data-theme="light"] #app .term-card,
+  #app-wrapper[data-theme="light"] #app .stat-box,
+  #app-wrapper[data-theme="light"] #app .med-item,
+  #app-wrapper[data-theme="light"] #app .dash-welcome,
+  #app-wrapper[data-theme="light"] #app .hq-btn {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+    backdrop-filter: none;
+    color: #1F232B;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-btn { color: #1F232B; }
+
+  /* Dock：純白不透明 */
+  #app-wrapper[data-theme="light"] .mobile-dock {
+    background: #FFFFFF;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-top: 1px solid #E5E7EB;
+    box-shadow: 0 -1px 0 rgba(15,23,42,0.04);
+  }
+  #app-wrapper[data-theme="light"] .dock-btn { color: #9CA3AF; }
+  #app-wrapper[data-theme="light"] .dock-btn.active { color: #C97F4B !important; }
+  #app-wrapper[data-theme="light"] .dock-btn-home {
+    background: #C97F4B !important;
+    color: #FFFFFF !important;
+    border-color: #FFFFFF !important;
+    box-shadow: 0 6px 16px rgba(201,127,75,0.32) !important;
+  }
+
+  /* More sheet：純白不透明 */
+  #app-wrapper[data-theme="light"] .more-sheet {
+    background: #FFFFFF;
+    color: #1F232B;
+    backdrop-filter: none;
+    box-shadow: 0 -12px 40px rgba(15,23,42,0.18);
+  }
+  #app-wrapper[data-theme="light"] .more-sheet-handle { background: #D1D5DB; }
+  #app-wrapper[data-theme="light"] .more-sheet-head { border-bottom-color: #E5E7EB; }
+  #app-wrapper[data-theme="light"] .more-sheet-title { color: #1F232B; }
+  #app-wrapper[data-theme="light"] .more-sheet-close {
+    background: #F0F1F5;
+    color: #1F232B;
+  }
+  #app-wrapper[data-theme="light"] .more-item { color: #1F232B; }
+  #app-wrapper[data-theme="light"] .more-item i,
+  #app-wrapper[data-theme="light"] .more-item svg { color: #C97F4B; }
+  #app-wrapper[data-theme="light"] .more-item:active {
+    background: rgba(201,127,75,0.10);
+    color: #C97F4B;
+  }
+  #app-wrapper[data-theme="light"] .more-sheet-foot { border-top-color: #E5E7EB; }
+  #app-wrapper[data-theme="light"] .more-sheet-foot .mode-toggle {
+    background: rgba(201,127,75,0.1);
+    color: #C97F4B;
+  }
+  #app-wrapper[data-theme="light"] .more-sheet-foot .logout-btn {
+    border: 1px solid #E5E7EB;
+    color: #B8553F;
+  }
+
+  /* 暗版手機：補一個不透明的覆寫，避免毛玻璃 */
+  #app-wrapper[data-theme="dark"] .topbar,
+  #app-wrapper[data-theme="dark"] .topbar.win-titlebar {
+    background: #1F3553;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  #app-wrapper[data-theme="dark"] .mobile-dock {
+    background: #1F3553;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  #app-wrapper[data-theme="dark"] .more-sheet {
+    background: #2E4F7C;
+    backdrop-filter: none;
+  }
+}
+

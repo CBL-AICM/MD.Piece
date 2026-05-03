@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" id="meta-theme-color" content="#FBF6EC" />
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#07171C" />
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FBF6EC" />
+  <meta name="theme-color" id="meta-theme-color" content="#FFFFFF" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1F3553" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   <link rel="manifest" href="manifest.json" />
@@ -423,7 +423,7 @@
     function updateThemeColor(theme) {
       const meta = document.getElementById('meta-theme-color');
       if (!meta) return;
-      meta.setAttribute('content', theme === 'dark' ? '#07171C' : '#FBF6EC');
+      meta.setAttribute('content', theme === 'dark' ? '#1F3553' : '#FFFFFF');
     }
 
     // ─── Landing Theme Toggle (dark / light) ───────────────
