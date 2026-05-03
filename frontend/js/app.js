@@ -3322,7 +3322,7 @@ function settings() {
           <p><strong>MD.Piece</strong> · 將日常碎片拼起，醫起走出治療的迷霧。</p>
           <ul>
             <li>版本：<code>v2.0</code></li>
-            <li>作者：CBL-AICM Lab</li>
+            <li>作者：余家馨</li>
             <li>網站：<a href="https://www.mdpiece.life/" target="_blank" rel="noopener">www.mdpiece.life</a></li>
             <li>原始碼：<a href="https://github.com/${GITHUB_REPO}" target="_blank" rel="noopener">${GITHUB_REPO}</a></li>
           </ul>
