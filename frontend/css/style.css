@@ -5983,3 +5983,165 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
   font-size: 0.7rem;
   margin-left: 4px;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   VISIT DATE MODAL — 回診日期日曆選單
+   ═══════════════════════════════════════════════════════════ */
+.visit-modal-overlay {
+  position: fixed; inset: 0;
+  z-index: 9999;
+  background: rgba(15, 25, 40, 0.55);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  animation: vm-fade .18s ease;
+}
+@keyframes vm-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.visit-modal {
+  background: var(--app-panel);
+  color: var(--app-text);
+  border: 1.5px solid var(--app-border);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: vm-pop .22s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes vm-pop {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+.visit-modal-head {
+  display: flex; align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px dashed var(--app-border);
+  gap: 10px;
+}
+.visit-modal-head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.05rem;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.visit-modal-head h3 i { width: 18px; height: 18px; color: var(--app-term); }
+.visit-modal-close {
+  background: transparent; border: none;
+  font-size: 1.5rem; line-height: 1;
+  color: var(--app-text-dim);
+  cursor: pointer;
+  padding: 0 6px;
+}
+.visit-modal-close:hover { color: var(--app-text); }
+
+.visit-modal-body {
+  padding: 18px;
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+.visit-modal-field {
+  display: grid;
+  grid-template-columns: 5em 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+}
+.visit-modal-field > span {
+  color: var(--app-text-dim);
+  font-weight: 600;
+}
+.visit-modal-field input[type="date"] {
+  padding: 10px 12px;
+  border: 1.5px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  min-width: 0;
+}
+.visit-modal-field input[type="date"]:focus {
+  outline: none;
+  border-color: var(--app-term);
+  box-shadow: 0 0 0 3px var(--app-glow);
+}
+/* 深色主題：日期 picker 圖示反白 */
+#app-wrapper[data-theme="dark"] .visit-modal-field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
+}
+.visit-modal-clear {
+  background: transparent;
+  border: 1px solid var(--app-border);
+  color: var(--app-text-dim);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.visit-modal-clear:hover { color: var(--app-text); border-color: var(--app-text); }
+
+.visit-modal-hint {
+  font-size: 0.82rem;
+  color: var(--app-text-dim);
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+
+.visit-modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px dashed var(--app-border);
+  background: var(--app-panel-soft);
+}
+.visit-modal-cancel, .visit-modal-save {
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1.5px solid var(--app-border);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.visit-modal-cancel {
+  background: transparent;
+  color: var(--app-text);
+}
+.visit-modal-cancel:hover { background: var(--app-bg); }
+.visit-modal-save {
+  background: var(--app-term);
+  color: var(--app-chip-text);
+  border-color: var(--app-term);
+}
+.visit-modal-save:hover { box-shadow: 0 4px 16px var(--app-glow); transform: translateY(-1px); }
+.visit-modal-save i { width: 15px; height: 15px; }
+
+/* 手機 — 欄位改直排 */
+@media (max-width: 480px) {
+  .visit-modal-field {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "label clear" "input input";
+    row-gap: 6px;
+  }
+  .visit-modal-field > span { grid-area: label; }
+  .visit-modal-field input { grid-area: input; }
+  .visit-modal-clear { grid-area: clear; justify-self: end; }
+}
+
+/* 年長版 — 加大觸控區 */
+html[data-mode="senior"] .visit-modal { width: min(500px, 100%); }
+html[data-mode="senior"] .visit-modal-field input[type="date"] {
+  padding: 14px 16px;
+  font-size: 1.05rem;
+  min-height: 50px;
+}
+html[data-mode="senior"] .visit-modal-cancel,
+html[data-mode="senior"] .visit-modal-save {
+  padding: 14px 22px; font-size: 1rem; min-height: 52px;
+}
