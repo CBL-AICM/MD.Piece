@@ -155,9 +155,13 @@ _SCHEMAS = {
     "users": """
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
+            username TEXT UNIQUE,
+            password_hash TEXT,
             nickname TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('doctor', 'patient')),
             avatar_color TEXT DEFAULT '#5B9FE8',
+            avatar_url TEXT,
+            id_number TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
     "doctor_notes": """
@@ -228,9 +232,31 @@ def _get_conn():
     if not _db_initialized:
         for sql in _SCHEMAS.values():
             conn.execute(sql)
+        _migrate_users_table(conn)
         conn.commit()
         _db_initialized = True
     return conn
+
+
+def _migrate_users_table(conn):
+    """Add auth-related columns to existing users tables."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
+    additions = [
+        ("username", "TEXT"),
+        ("password_hash", "TEXT"),
+        ("avatar_url", "TEXT"),
+        ("id_number", "TEXT"),
+    ]
+    for name, decl in additions:
+        if name not in cols:
+            try:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {name} {decl}")
+            except sqlite3.OperationalError:
+                pass
+    try:
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL")
+    except sqlite3.OperationalError:
+        pass
 
 
 def _init_db():

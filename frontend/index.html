@@ -61,89 +61,96 @@
     <span class="intro-lab">CBL-AICM Lab</span>
   </div>
 
-  <!-- ★ ID Card Registration Overlay (shown on star canvas) -->
+  <!-- ★ Auth Overlay (login / register) -->
   <div id="register-overlay" style="display:none">
-    <div class="idcard-scene">
-      <div class="idcard">
-        <!-- Wavy paper texture watermark -->
-        <div class="idcard-watermark"></div>
-
-        <!-- Top header: brand · title · mark -->
-        <div class="idcard-top">
-          <div class="idcard-brand">
-            <span class="idcard-brand-line1">MD</span>
-            <span class="idcard-brand-line2">PIECE</span>
+    <div class="auth-scene">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-brand">
+            <span class="auth-brand-line1">MD</span>
+            <span class="auth-brand-line2">PIECE</span>
           </div>
-          <div class="idcard-title-block">
-            <h1 class="idcard-title">IDENTITY CARD</h1>
-            <p class="idcard-subtitle">MD.PIECE MEDICAL</p>
-          </div>
-          <div class="idcard-mark">
-            <span class="idcard-mark-letter">M</span>
-            <span class="idcard-mark-text">MD.PIECE<br/>MEDICAL</span>
-          </div>
+          <p class="auth-subtitle">MEDICAL PLATFORM</p>
         </div>
 
-        <!-- Body: photo · info -->
-        <div class="idcard-body">
-          <div class="idcard-photo" id="idcard-avatar" onclick="cycleAvatarColor()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="8" r="5"/>
-              <path d="M3 21v-2a7 7 0 0114 0v2"/>
-            </svg>
-            <span class="idcard-photo-hint">點擊換色</span>
-          </div>
-
-          <div class="idcard-info">
-            <div class="idcard-cell idcard-cell-name">
-              <span class="idcard-label">NAME</span>
-              <input id="idcard-name" type="text" placeholder="輸入你的暱稱" maxlength="20" autocomplete="off" />
-            </div>
-
-            <div class="idcard-cell idcard-cell-name">
-              <span class="idcard-label">ID NO. 身分證號</span>
-              <input id="idcard-idno" type="text" placeholder="A123456789" maxlength="10" autocomplete="off" />
-            </div>
-
-            <div class="idcard-row">
-              <div class="idcard-cell">
-                <span class="idcard-label">DATE ISSUED</span>
-                <span class="idcard-value" id="idcard-date"></span>
-              </div>
-              <div class="idcard-cell">
-                <span class="idcard-label">ROLE</span>
-                <span class="idcard-value">PATIENT</span>
-              </div>
-            </div>
-
-            <div class="idcard-row idcard-row-bottom">
-              <div class="idcard-cell">
-                <span class="idcard-label">FINGERPRINT</span>
-                <div class="idcard-fingerprint">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 11.5a2.5 2.5 0 0 1 5 0v1.5a8.5 8.5 0 0 1-1.4 4.7"/>
-                    <path d="M8.4 8.6a5.5 5.5 0 0 1 8.6 4.4v1.5a11.5 11.5 0 0 1-.6 3.6"/>
-                    <path d="M5.4 12a8.5 8.5 0 0 1 8.6-8.5 9 9 0 0 1 4 1"/>
-                    <path d="M9.5 13.5a2.5 2.5 0 0 1 5 0c0 1.5-.5 3.5-1.5 5"/>
-                    <path d="M12 16v4"/>
-                  </svg>
-                </div>
-              </div>
-              <div class="idcard-cell">
-                <span class="idcard-label">SIGNATURE</span>
-                <div class="idcard-signature">MD.Piece</div>
-              </div>
-            </div>
-          </div>
+        <div class="auth-tabs" role="tablist">
+          <button class="auth-tab active" id="auth-tab-login" role="tab" onclick="switchAuthTab('login')">登入</button>
+          <button class="auth-tab" id="auth-tab-register" role="tab" onclick="switchAuthTab('register')">註冊</button>
         </div>
 
-        <!-- Bottom: credit + submit -->
-        <div class="idcard-bottom">
-          <span class="idcard-credit">DESIGNED BY @MD.PIECE</span>
-          <button class="idcard-submit" id="idcard-submit" onclick="submitIdCard()" disabled>
-            <i data-lucide="check-circle"></i> 確認發卡
+        <!-- LOGIN PANEL -->
+        <form class="auth-panel active" id="auth-panel-login" onsubmit="event.preventDefault(); submitLogin();">
+          <label class="auth-field">
+            <span class="auth-label">帳號</span>
+            <input id="login-username" type="text" autocomplete="username" placeholder="你的帳號" maxlength="32" required />
+          </label>
+          <label class="auth-field">
+            <span class="auth-label">密碼</span>
+            <input id="login-password" type="password" autocomplete="current-password" placeholder="輸入密碼" minlength="6" required />
+          </label>
+          <p class="auth-error" id="login-error" hidden></p>
+          <button class="auth-submit" id="login-submit" type="submit">
+            <i data-lucide="log-in"></i> 登入
           </button>
-        </div>
+          <p class="auth-switch-hint">還沒有帳號？<a href="#" onclick="event.preventDefault(); switchAuthTab('register')">立即註冊</a></p>
+        </form>
+
+        <!-- REGISTER PANEL -->
+        <form class="auth-panel" id="auth-panel-register" onsubmit="event.preventDefault(); submitRegister();">
+          <div class="auth-avatar-row">
+            <label class="auth-avatar" id="reg-avatar" title="點擊上傳頭像">
+              <input id="reg-avatar-file" type="file" accept="image/*" hidden />
+              <img id="reg-avatar-img" alt="" hidden />
+              <span class="auth-avatar-placeholder" id="reg-avatar-placeholder">
+                <i data-lucide="camera"></i>
+                <span>上傳頭像</span>
+              </span>
+            </label>
+            <div class="auth-avatar-meta">
+              <p class="auth-avatar-title">個人頭像</p>
+              <p class="auth-avatar-hint">點擊圓圈上傳照片，可以是自拍或喜歡的圖片</p>
+              <button type="button" class="auth-avatar-clear" id="reg-avatar-clear" onclick="clearRegAvatar()" hidden>移除</button>
+            </div>
+          </div>
+
+          <div class="auth-role-row">
+            <span class="auth-label">身份</span>
+            <div class="auth-role-btns">
+              <button type="button" class="auth-role-btn selected" data-role="patient" onclick="selectAuthRole('patient')">
+                <i data-lucide="heart-pulse"></i> 患者
+              </button>
+              <button type="button" class="auth-role-btn" data-role="doctor" onclick="selectAuthRole('doctor')">
+                <i data-lucide="stethoscope"></i> 醫師
+              </button>
+            </div>
+          </div>
+
+          <label class="auth-field">
+            <span class="auth-label">暱稱</span>
+            <input id="reg-nickname" type="text" placeholder="顯示在介面上的名字" maxlength="20" required />
+          </label>
+
+          <label class="auth-field">
+            <span class="auth-label">帳號</span>
+            <input id="reg-username" type="text" autocomplete="username" placeholder="3-32 字元，限英數字 _ . -" maxlength="32" pattern="[A-Za-z0-9_.\-]{3,32}" required />
+          </label>
+
+          <label class="auth-field">
+            <span class="auth-label">密碼</span>
+            <input id="reg-password" type="password" autocomplete="new-password" placeholder="至少 6 個字元" minlength="6" required />
+          </label>
+
+          <label class="auth-field">
+            <span class="auth-label">確認密碼</span>
+            <input id="reg-password2" type="password" autocomplete="new-password" placeholder="再次輸入密碼" minlength="6" required />
+          </label>
+
+          <p class="auth-error" id="register-error" hidden></p>
+          <button class="auth-submit" id="register-submit" type="submit">
+            <i data-lucide="user-plus"></i> 建立帳號
+          </button>
+          <p class="auth-switch-hint">已經有帳號？<a href="#" onclick="event.preventDefault(); switchAuthTab('login')">直接登入</a></p>
+        </form>
       </div>
     </div>
   </div>
@@ -203,6 +210,9 @@
         </button>
         <button class="nav-item" onclick="navigateTo('chat', this)">
           <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span> 醫起聊天
+        </button>
+        <button class="nav-item" onclick="navigateTo('account', this)">
+          <span class="nav-icon"><i data-lucide="user-cog" style="width:18px;height:18px"></i></span> 帳號設定
         </button>
       </nav>
       <div class="sidebar-foot">
@@ -434,6 +444,7 @@
       labs: 'lab-values',
       pieces: 'your-pieces',
       chat: 'med-chat',
+      account: 'account',
       // legacy / fallback
       records: 'records', doctors: 'doctors', patients: 'patients'
     };
@@ -450,6 +461,7 @@
       labs: '報告數值',
       pieces: '你的碎片',
       chat: '醫起聊天',
+      account: '帳號設定',
       records: '病歷管理', doctors: '醫師列表', patients: '病患管理'
     };
 
