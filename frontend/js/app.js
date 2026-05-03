@@ -451,6 +451,7 @@ function showPage(page) {
 // ─── 登入 / 註冊 ───────────────────────────────────────────
 
 let _authRole = 'patient';
+let _loginRole = 'patient';
 let _regAvatarDataUrl = '';
 
 function showIdCardRegister() {
@@ -484,11 +485,21 @@ function switchAuthTab(tab) {
 
 function selectAuthRole(role) {
   _authRole = role;
-  document.querySelectorAll('.auth-role-btn').forEach(b => {
+  document.querySelectorAll('.auth-role-btn[data-role]').forEach(b => {
     b.classList.toggle('selected', b.dataset.role === role);
   });
   const field = document.getElementById('reg-doctor-key-field');
   if (field) field.hidden = role !== 'doctor';
+}
+
+function selectLoginRole(role) {
+  _loginRole = role;
+  document.querySelectorAll('.auth-role-btn[data-login-role]').forEach(b => {
+    b.classList.toggle('selected', b.dataset.loginRole === role);
+  });
+  const field = document.getElementById('login-doctor-key-field');
+  if (field) field.hidden = role !== 'doctor';
+  document.getElementById('login-error').hidden = true;
 }
 
 function onRegAvatarPicked(e) {
@@ -552,6 +563,10 @@ async function submitLogin() {
   const password = document.getElementById('login-password').value;
   const doctor_key = document.getElementById('login-doctor-key').value.trim();
   if (!username || !password) return;
+  if (_loginRole === 'doctor' && !doctor_key) {
+    showAuthError('login', '請輸入醫師通行碼');
+    return;
+  }
   const btn = document.getElementById('login-submit');
   const original = btn.innerHTML;
   btn.disabled = true;
@@ -562,7 +577,10 @@ async function submitLogin() {
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, doctor_key: doctor_key || null })
+      body: JSON.stringify({
+        username, password,
+        doctor_key: _loginRole === 'doctor' ? doctor_key : null,
+      })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

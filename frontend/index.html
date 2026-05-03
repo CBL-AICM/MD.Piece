@@ -80,6 +80,18 @@
 
         <!-- LOGIN PANEL -->
         <form class="auth-panel active" id="auth-panel-login" onsubmit="event.preventDefault(); submitLogin();">
+          <div class="auth-role-row">
+            <span class="auth-label">身份</span>
+            <div class="auth-role-btns">
+              <button type="button" class="auth-role-btn selected" data-login-role="patient" onclick="selectLoginRole('patient')">
+                <i data-lucide="heart-pulse"></i> 患者
+              </button>
+              <button type="button" class="auth-role-btn" data-login-role="doctor" onclick="selectLoginRole('doctor')">
+                <i data-lucide="stethoscope"></i> 醫師
+              </button>
+            </div>
+          </div>
+
           <label class="auth-field">
             <span class="auth-label">帳號</span>
             <input id="login-username" type="text" autocomplete="username" placeholder="你的帳號" maxlength="32" required />
@@ -88,9 +100,9 @@
             <span class="auth-label">密碼</span>
             <input id="login-password" type="password" autocomplete="current-password" placeholder="輸入密碼" minlength="6" required />
           </label>
-          <label class="auth-field">
-            <span class="auth-label">醫師通行碼 <span class="auth-label-hint">(僅醫師需填)</span></span>
-            <input id="login-doctor-key" type="password" autocomplete="off" placeholder="如為醫師帳號請填寫通行碼" />
+          <label class="auth-field" id="login-doctor-key-field" hidden>
+            <span class="auth-label">醫師通行碼</span>
+            <input id="login-doctor-key" type="password" autocomplete="off" placeholder="輸入醫師通行碼" />
           </label>
           <p class="auth-error" id="login-error" hidden></p>
           <button class="auth-submit" id="login-submit" type="submit">
@@ -130,7 +142,7 @@
           </div>
 
           <label class="auth-field" id="reg-doctor-key-field" hidden>
-            <span class="auth-label">醫師通行碼 <span class="auth-label-hint">(由院方提供)</span></span>
+            <span class="auth-label">醫師通行碼</span>
             <input id="reg-doctor-key" type="password" autocomplete="off" placeholder="輸入醫師通行碼" />
           </label>
 
