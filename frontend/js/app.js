@@ -104,7 +104,302 @@ function placeholderPage(label, hint, iconName, slug, pct) {
   `;
 }
 // 生理紀錄使用獨立 vitals() 函式（見下方）
-const memo     = () => placeholderPage('Memo',      '隨手記下任何想跟醫師說、或想自己留存的小事。', 'sticky-note', 'memo', 80);
+function memo() {
+  return `
+    <div class="card memo-hero">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="sticky-note" style="width:22px;height:22px"></i> Memo
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        隨手拍下症狀、藥袋、傷口；或寫下下次門診要跟醫師說的話。所有 memo 都存在這台裝置上。
+      </p>
+    </div>
+
+    <div class="card memo-quick">
+      <button class="memo-quick-btn memo-quick-photo" onclick="memoStartPhoto()">
+        <i data-lucide="camera" style="width:24px;height:24px"></i>
+        <div>
+          <strong>拍張照片</strong>
+          <small>症狀、藥袋、傷口、皮疹…</small>
+        </div>
+      </button>
+      <button class="memo-quick-btn memo-quick-text" onclick="memoStartText()">
+        <i data-lucide="message-square-text" style="width:24px;height:24px"></i>
+        <div>
+          <strong>寫下要說的話</strong>
+          <small>下次門診想跟醫師講的事</small>
+        </div>
+      </button>
+    </div>
+
+    <input type="file" id="memo-photo-input" accept="image/*" capture="environment" style="display:none" onchange="memoOnPhotoPicked(event)" />
+
+    <div class="card memo-composer" id="memo-composer" style="display:none">
+      <div class="memo-composer-head">
+        <strong id="memo-composer-title">新 memo</strong>
+        <button class="ghost" onclick="memoCancelCompose()" aria-label="取消">
+          <i data-lucide="x" style="width:18px;height:18px"></i>
+        </button>
+      </div>
+      <div id="memo-photo-preview" style="display:none"></div>
+      <textarea id="memo-text" rows="4" placeholder="想跟醫師說 / 想自己留存的事..."></textarea>
+      <div class="memo-composer-row">
+        <label class="memo-check">
+          <input type="checkbox" id="memo-for-doctor" />
+          <span>給醫師看（下次門診帶這條）</span>
+        </label>
+        <button class="primary" onclick="memoSave()">
+          <i data-lucide="save" style="width:14px;height:14px;vertical-align:middle"></i> 儲存
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="memo-list-head">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:6px">
+          <i data-lucide="archive" style="width:18px;height:18px"></i>
+          <span id="memo-list-title">所有 memo</span>
+          <span class="memo-count" id="memo-count">0</span>
+        </h3>
+        <div class="memo-filter">
+          <button class="memo-filter-btn active" data-filter="all" onclick="memoSetFilter('all')">全部</button>
+          <button class="memo-filter-btn" data-filter="doctor" onclick="memoSetFilter('doctor')">給醫師</button>
+          <button class="memo-filter-btn" data-filter="self" onclick="memoSetFilter('self')">自己</button>
+        </div>
+      </div>
+      <div id="memo-list" class="memo-list"></div>
+    </div>
+  `;
+}
+// ─── Memo（拍照 + 給醫師留言 + 給自己備忘） ──────────────────
+var MEMO_STORE_KEY = "mdpiece_memos_v1";
+var _memoFilter = "all";          // all / doctor / self
+var _memoComposeMode = null;       // "photo" | "text" | null
+var _memoStagedPhoto = null;       // dataURL，等待儲存
+
+function memoLoad() {
+  try {
+    var raw = localStorage.getItem(MEMO_STORE_KEY);
+    if (!raw) return [];
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) { return []; }
+}
+function memoSaveAll(arr) {
+  try { localStorage.setItem(MEMO_STORE_KEY, JSON.stringify(arr)); }
+  catch (e) { showToast("儲存失敗，可能空間不足", "error"); }
+}
+
+function loadMemoPage() {
+  _memoFilter = "all";
+  _memoComposeMode = null;
+  _memoStagedPhoto = null;
+  memoRenderList();
+  if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+}
+
+// ── 觸發新增 ──────────────────────────────────────────────
+function memoStartPhoto() {
+  _memoComposeMode = "photo";
+  // 開啟系統相機 / 檔案選擇器
+  var input = document.getElementById("memo-photo-input");
+  if (input) { input.value = ""; input.click(); }
+}
+
+function memoStartText() {
+  _memoComposeMode = "text";
+  _memoStagedPhoto = null;
+  memoOpenComposer("寫下要說的話", { forDoctor: true });
+}
+
+function memoOnPhotoPicked(ev) {
+  var file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  if (!file.type || file.type.indexOf("image/") !== 0) {
+    showToast("請選擇圖片檔", "warning");
+    return;
+  }
+  // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
+  memoCompressImage(file, 1280, 0.85).then(function(dataUrl) {
+    _memoStagedPhoto = dataUrl;
+    memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
+  }).catch(function() {
+    showToast("照片讀取失敗", "error");
+  });
+}
+
+function memoCompressImage(file, maxDim, quality) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onerror = function() { reject(new Error("read failed")); };
+    reader.onload = function() {
+      var img = new Image();
+      img.onerror = function() { reject(new Error("decode failed")); };
+      img.onload = function() {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var tw = Math.round(w * scale), th = Math.round(h * scale);
+        var canvas = document.createElement("canvas");
+        canvas.width = tw; canvas.height = th;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, tw, th);
+        try { resolve(canvas.toDataURL("image/jpeg", quality)); }
+        catch (e) { reject(e); }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function memoOpenComposer(title, opts) {
+  opts = opts || {};
+  var box = document.getElementById("memo-composer");
+  if (!box) return;
+  document.getElementById("memo-composer-title").textContent = title;
+  document.getElementById("memo-text").value = "";
+  document.getElementById("memo-for-doctor").checked = !!opts.forDoctor;
+
+  var preview = document.getElementById("memo-photo-preview");
+  if (_memoStagedPhoto) {
+    preview.style.display = "block";
+    preview.innerHTML = '<img src="' + _memoStagedPhoto + '" alt="預覽" />';
+  } else {
+    preview.style.display = "none";
+    preview.innerHTML = "";
+  }
+  box.style.display = "block";
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  setTimeout(function() {
+    var ta = document.getElementById("memo-text");
+    if (ta) ta.focus();
+  }, 50);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function memoCancelCompose() {
+  _memoComposeMode = null;
+  _memoStagedPhoto = null;
+  var box = document.getElementById("memo-composer");
+  if (box) box.style.display = "none";
+}
+
+function memoSave() {
+  var text = (document.getElementById("memo-text").value || "").trim();
+  var forDoctor = document.getElementById("memo-for-doctor").checked;
+  if (!_memoStagedPhoto && !text) {
+    showToast("寫點什麼或加張照片再儲存", "warning");
+    return;
+  }
+  var memos = memoLoad();
+  memos.unshift({
+    id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+    type: _memoStagedPhoto ? "photo" : "text",
+    photo: _memoStagedPhoto || null,
+    text: text,
+    forDoctor: !!forDoctor,
+    createdAt: new Date().toISOString()
+  });
+  memoSaveAll(memos);
+  memoCancelCompose();
+  memoRenderList();
+  showToast("已儲存", "success");
+}
+
+function memoDelete(id) {
+  if (!confirm("確定要刪除這則 memo？")) return;
+  var memos = memoLoad().filter(function(m) { return m.id !== id; });
+  memoSaveAll(memos);
+  memoRenderList();
+}
+
+function memoToggleDoctor(id) {
+  var memos = memoLoad();
+  var m = memos.find(function(x) { return x.id === id; });
+  if (!m) return;
+  m.forDoctor = !m.forDoctor;
+  memoSaveAll(memos);
+  memoRenderList();
+}
+
+function memoSetFilter(f) {
+  _memoFilter = f;
+  document.querySelectorAll(".memo-filter-btn").forEach(function(b) {
+    b.classList.toggle("active", b.getAttribute("data-filter") === f);
+  });
+  memoRenderList();
+}
+
+function memoFormatTime(iso) {
+  var d = new Date(iso);
+  var now = new Date();
+  var diff = (now - d) / 1000;
+  if (diff < 60) return "剛剛";
+  if (diff < 3600) return Math.floor(diff / 60) + " 分鐘前";
+  if (diff < 86400) return Math.floor(diff / 3600) + " 小時前";
+  if (diff < 604800) return Math.floor(diff / 86400) + " 天前";
+  return d.toISOString().slice(0, 10);
+}
+
+function memoRenderList() {
+  var listEl = document.getElementById("memo-list");
+  var countEl = document.getElementById("memo-count");
+  var titleEl = document.getElementById("memo-list-title");
+  if (!listEl) return;
+
+  var all = memoLoad();
+  var filtered = all.filter(function(m) {
+    if (_memoFilter === "doctor") return !!m.forDoctor;
+    if (_memoFilter === "self")   return !m.forDoctor;
+    return true;
+  });
+
+  if (countEl) countEl.textContent = filtered.length;
+  if (titleEl) {
+    titleEl.textContent = _memoFilter === "doctor" ? "給醫師的話" :
+                          _memoFilter === "self"   ? "自己的備忘" : "所有 memo";
+  }
+
+  if (!filtered.length) {
+    listEl.innerHTML =
+      '<div class="memo-empty">' +
+        (all.length ? '這個分類下還沒有 memo，換個篩選看看。' :
+                      '還沒有 memo —— 從上方「拍照片」或「寫下要說的話」開始吧。') +
+      '</div>';
+    return;
+  }
+
+  var html = filtered.map(function(m) {
+    var bodyHtml = "";
+    if (m.photo) {
+      bodyHtml += '<img class="memo-photo" src="' + m.photo + '" alt="memo 照片" />';
+    }
+    if (m.text) {
+      bodyHtml += '<div class="memo-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
+    }
+    var pill = m.forDoctor
+      ? '<span class="memo-pill memo-pill-doctor"><i data-lucide="stethoscope" style="width:12px;height:12px"></i> 給醫師</span>'
+      : '<span class="memo-pill memo-pill-self"><i data-lucide="user" style="width:12px;height:12px"></i> 自己</span>';
+    return '' +
+      '<article class="memo-item">' +
+        '<div class="memo-item-meta">' +
+          pill +
+          '<span class="memo-time">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>' +
+          '<button class="memo-toggle" onclick="memoToggleDoctor(\'' + m.id + '\')" title="切換給醫師／自己">' +
+            '<i data-lucide="repeat" style="width:14px;height:14px"></i>' +
+          '</button>' +
+          '<button class="memo-del" onclick="memoDelete(\'' + m.id + '\')" title="刪除">' +
+            '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
+          '</button>' +
+        '</div>' +
+        '<div class="memo-item-body">' + bodyHtml + '</div>' +
+      '</article>';
+  }).join("");
+
+  listEl.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 const labs     = () => placeholderPage('報告數值',  '檢驗報告數據彙整、視覺化趨勢追蹤。', 'trending-up', 'lab-values', 28);
@@ -139,6 +434,7 @@ function showPage(page) {
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
+    if (page === "memo") loadMemoPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in

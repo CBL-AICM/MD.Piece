@@ -3522,6 +3522,193 @@ html[data-mode="senior"] .vt-bmi-meta {
   transform: translateY(-1px);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   MEMO — 拍照 + 給醫師留言
+   ═══════════════════════════════════════════════════════════ */
+
+.memo-quick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.memo-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--bg-glass);
+  border: 1.5px solid var(--border-glass);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: "Noto Sans TC", sans-serif;
+  transition: var(--transition);
+}
+.memo-quick-btn:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--klein);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.memo-quick-btn i { color: var(--klein); flex-shrink: 0; }
+.memo-quick-btn strong { display: block; font-size: 1rem; }
+.memo-quick-btn small { display: block; color: var(--text-dim); font-size: .8rem; margin-top: 2px; }
+.memo-quick-photo i { color: #B5651D; }
+.memo-quick-text  i { color: #4A6B7B; }
+
+.memo-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.memo-composer-head {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.memo-composer-head strong {
+  font-size: 1rem;
+  color: var(--text);
+}
+.memo-composer button.ghost {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  padding: 4px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+.memo-composer button.ghost:hover { background: var(--bg-glass-hover); color: var(--text); }
+#memo-photo-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-sm);
+}
+.memo-composer textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 10px 12px;
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: .95rem;
+  line-height: 1.6;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.memo-composer textarea:focus { outline: none; border-color: var(--klein); }
+.memo-composer-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap;
+}
+.memo-check {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .9rem; color: var(--text-dim);
+  cursor: pointer;
+}
+.memo-check input[type="checkbox"] { accent-color: var(--klein); width: 16px; height: 16px; }
+
+.memo-list-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.memo-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 20px;
+  padding: 0 6px;
+  background: var(--bg-glass-hover);
+  border-radius: 999px;
+  font-size: .75rem;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+.memo-filter { display: inline-flex; gap: 4px; }
+.memo-filter-btn {
+  padding: 4px 10px;
+  font-size: .82rem;
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  border-radius: 999px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: "Noto Sans TC", sans-serif;
+}
+.memo-filter-btn:hover { background: var(--bg-glass-hover); color: var(--text); }
+.memo-filter-btn.active {
+  background: var(--klein);
+  color: #fff;
+  border-color: var(--klein);
+}
+
+.memo-list { display: flex; flex-direction: column; gap: 10px; }
+.memo-item {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.memo-item-meta {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .82rem;
+  color: var(--text-dim);
+}
+.memo-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  font-size: .75rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.memo-pill-doctor { background: #DCEDF7; color: #2E5A7B; }
+.memo-pill-self   { background: #EBEBEC; color: #685D5A; }
+.memo-time { flex: 1; }
+.memo-toggle, .memo-del {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  transition: var(--transition);
+}
+.memo-toggle:hover { color: var(--klein); background: var(--bg-glass-hover); }
+.memo-del:hover    { color: var(--danger); background: var(--bg-glass-hover); }
+
+.memo-item-body { display: flex; flex-direction: column; gap: 8px; }
+.memo-photo {
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+  align-self: flex-start;
+  cursor: zoom-in;
+}
+.memo-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: .95rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+.memo-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: .9rem;
+  border: 1.5px dashed var(--border-glass);
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 600px) {
+  .memo-quick { grid-template-columns: 1fr; }
+}
+
 .loading-spinner {
   width: 32px;
   height: 32px;
