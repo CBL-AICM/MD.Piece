@@ -427,7 +427,31 @@ function labs() {
         </label>
         <label class="labs-field">
           <span>單位（選填）</span>
-          <input type="text" id="lab-unit" placeholder="例：g/dL、mg/dL、IU/mL" />
+          <input type="text" id="lab-unit" list="lab-unit-options" placeholder="點選或輸入" />
+          <datalist id="lab-unit-options">
+            <option value="g/dL"></option>
+            <option value="mg/dL"></option>
+            <option value="mmol/L"></option>
+            <option value="μmol/L"></option>
+            <option value="ng/mL"></option>
+            <option value="pg/mL"></option>
+            <option value="μg/dL"></option>
+            <option value="IU/mL"></option>
+            <option value="U/L"></option>
+            <option value="mIU/L"></option>
+            <option value="mEq/L"></option>
+            <option value="%"></option>
+            <option value="/μL"></option>
+            <option value="10^3/μL"></option>
+            <option value="10^4/μL"></option>
+            <option value="10^6/μL"></option>
+            <option value="mm/hr"></option>
+            <option value="mmHg"></option>
+            <option value="bpm"></option>
+            <option value="陰性"></option>
+            <option value="陽性"></option>
+            <option value="titer (例：1:80)"></option>
+          </datalist>
         </label>
       </div>
       <div class="labs-form-row">

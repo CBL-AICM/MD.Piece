@@ -106,7 +106,7 @@ def check_lab_value(body: LabCheckRequest):
         raw = call_claude(LAB_SYSTEM_PROMPT, user_msg)
     except Exception as e:
         logger.error(f"Lab check LLM call failed: {e}")
-        raise HTTPException(status_code=503, detail="解讀服務暫時無法使用，請稍後再試")
+        raise HTTPException(status_code=503, detail=f"解讀服務暫時無法使用：{type(e).__name__}: {e}")
 
     raw = _strip_code_fence(raw)
     try:
