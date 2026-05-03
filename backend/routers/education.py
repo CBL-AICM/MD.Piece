@@ -11,6 +11,7 @@ from backend.services.knowledge_analysis import (
     get_comprehension_distribution,
 )
 from backend.services.llm_service import call_claude
+from backend.services import education_content
 from backend.utils.icd10 import (
     ICD10_MAP,
     KNOWLEDGE_DIMENSIONS,
@@ -269,8 +270,43 @@ def storm_status():
 
 
 @router.get("/articles")
-def get_articles(icd10_code: str = ""):
-    return {"articles": []}
+def get_articles(
+    icd10_code: str = "",
+    dimension: str = "",
+    tag: str = "",
+    featured: bool = False,
+):
+    """列出 content/education/ 下的 Markdown 文章（卡片版，不含 body）"""
+    items = education_content.list_articles(
+        icd10=icd10_code or None,
+        dimension=dimension or None,
+        tag=tag or None,
+        featured_only=featured,
+    )
+    return {"articles": [a.to_card() for a in items]}
+
+
+@router.get("/articles/featured")
+def get_featured_articles(limit: int = 5):
+    """首頁推送：精選文章（標記 featured: true 的）"""
+    items = education_content.list_articles(featured_only=True)
+    return {"articles": [a.to_card() for a in items[:limit]]}
+
+
+@router.get("/articles/{slug}")
+def get_article(slug: str):
+    """取得完整文章內容（含 Markdown body 與來源清單）"""
+    article = education_content.get_article(slug)
+    if not article:
+        raise HTTPException(status_code=404, detail=f"找不到文章: {slug}")
+    return article.to_full()
+
+
+@router.post("/articles/reload")
+def reload_articles():
+    """強制重新讀取 Markdown 檔（部署後不需手動呼叫，重啟即可）"""
+    count = education_content.reload_articles()
+    return {"reloaded": count}
 
 
 @router.get("/idle-hints")
