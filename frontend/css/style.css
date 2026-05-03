@@ -4698,40 +4698,60 @@ html[data-mode="senior"] *:focus-visible {
 }
 
 .auth-deco-puzzle {
-  opacity: 0.18;
-  filter: drop-shadow(0 4px 14px rgba(92,58,50,0.18));
+  opacity: 0.45;
+  filter: drop-shadow(0 4px 10px rgba(92,58,50,0.18));
   animation: authFloat 11s ease-in-out infinite;
+  overflow: visible;
 }
+.auth-deco-puzzle use { color: var(--klein, #5C3A32); }
 
 .puzzle-a {
-  top: 8%; left: -28px;
-  width: 130px; height: 130px;
-  background: var(--accent, #C97F4B);
-  clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
+  top: 6%; left: -32px;
+  width: 140px; height: 140px;
+  color: var(--klein, #5C3A32);
+  animation-name: floatPuzzleA;
   animation-delay: 0s;
 }
 .puzzle-b {
-  top: 14%; right: -36px;
-  width: 110px; height: 110px;
-  background: var(--klein, #5C3A32);
-  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
+  top: 12%; right: -40px;
+  width: 120px; height: 120px;
+  color: var(--accent, #C97F4B);
+  animation-name: floatPuzzleB;
   animation-delay: 1.5s;
+  opacity: 0.38;
 }
 .puzzle-c {
-  bottom: 10%; left: 8%;
-  width: 90px; height: 90px;
-  background: #D9A54A;
-  clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 30%, 85% 30%, 85% 15%, 70% 15%, 70% 0%);
+  bottom: 8%; left: 6%;
+  width: 100px; height: 100px;
+  color: var(--klein, #5C3A32);
+  animation-name: floatPuzzleC;
   animation-delay: 3s;
-  opacity: 0.16;
+  opacity: 0.32;
 }
 .puzzle-d {
-  bottom: 18%; right: 6%;
-  width: 100px; height: 100px;
-  background: #E87B5B;
-  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 70% 100%, 70% 85%, 85% 85%, 85% 70%, 100% 70%, 100% 0%);
+  bottom: 14%; right: 4%;
+  width: 110px; height: 110px;
+  color: var(--accent, #C97F4B);
+  animation-name: floatPuzzleD;
   animation-delay: 4.5s;
-  opacity: 0.14;
+  opacity: 0.4;
+}
+
+@keyframes floatPuzzleA {
+  0%, 100% { transform: translateY(0)    rotate(-18deg); }
+  50%      { transform: translateY(-14px) rotate(-12deg); }
+}
+@keyframes floatPuzzleB {
+  0%, 100% { transform: translateY(0)    rotate(22deg); }
+  50%      { transform: translateY(-12px) rotate(28deg); }
+}
+@keyframes floatPuzzleC {
+  0%, 100% { transform: translateY(0)    rotate(34deg); }
+  50%      { transform: translateY(-10px) rotate(40deg); }
+}
+@keyframes floatPuzzleD {
+  0%, 100% { transform: translateY(0)    rotate(-12deg); }
+  50%      { transform: translateY(-12px) rotate(-6deg); }
 }
 
 .auth-deco-icon {
@@ -4783,15 +4803,16 @@ html[data-mode="senior"] *:focus-visible {
   filter: drop-shadow(0 2px 4px rgba(201,127,75,0.3));
 }
 .auth-motif-piece {
-  width: 22px; height: 22px;
-  background: var(--accent, #C97F4B);
-  clip-path: polygon(0% 0%, 0% 70%, 18% 70%, 18% 85%, 38% 85%, 38% 100%, 100% 100%, 100% 0%);
-  opacity: 0.55;
+  width: 26px; height: 26px;
+  color: var(--accent, #C97F4B);
+  opacity: 0.85;
+  overflow: visible;
+  transform: rotate(-12deg);
 }
 .auth-motif-piece-r {
-  background: var(--klein, #5C3A32);
-  clip-path: polygon(0% 0%, 0% 100%, 62% 100%, 62% 85%, 82% 85%, 82% 70%, 100% 70%, 100% 0%);
-  opacity: 0.45;
+  color: var(--klein, #5C3A32);
+  opacity: 0.7;
+  transform: rotate(14deg);
 }
 
 .auth-scene {
@@ -4821,30 +4842,25 @@ html[data-mode="senior"] *:focus-visible {
   z-index: 1;
 }
 
-/* Tiny corner puzzle piece on the card itself */
-.auth-card::before {
-  content: "";
+/* Real puzzle-piece corner accents on the card */
+.auth-card-corner {
   position: absolute;
-  top: -10px; right: -10px;
-  width: 28px; height: 28px;
-  background: var(--accent, #C97F4B);
-  clip-path: polygon(0% 0%, 0% 100%, 62% 100%, 62% 85%, 82% 85%, 82% 70%, 100% 70%, 100% 0%);
-  opacity: 0.85;
-  filter: drop-shadow(0 4px 8px rgba(92,58,50,0.25));
-  transform: rotate(8deg);
+  width: 56px; height: 56px;
   pointer-events: none;
+  overflow: visible;
+  filter: drop-shadow(0 4px 10px rgba(92,58,50,0.25));
 }
-.auth-card::after {
-  content: "";
-  position: absolute;
-  bottom: -8px; left: -8px;
-  width: 22px; height: 22px;
-  background: var(--klein, #5C3A32);
-  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
-  opacity: 0.7;
-  filter: drop-shadow(0 4px 8px rgba(92,58,50,0.25));
-  transform: rotate(-12deg);
-  pointer-events: none;
+.auth-card-corner-tr {
+  top: -22px; right: -22px;
+  color: var(--accent, #C97F4B);
+  transform: rotate(28deg);
+  opacity: 0.95;
+}
+.auth-card-corner-bl {
+  bottom: -22px; left: -22px;
+  color: var(--klein, #5C3A32);
+  transform: rotate(-22deg);
+  opacity: 0.85;
 }
 
 @keyframes authCardIn {
