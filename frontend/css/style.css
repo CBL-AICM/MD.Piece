@@ -4809,5 +4809,59 @@ html[data-mode="senior"] *:focus-visible {
     background: #2E4F7C;
     backdrop-filter: none;
   }
+
+  /* 暗版手機：紮實深藍底（拿掉星空 + 半透明卡片） */
+  #app-wrapper[data-theme="dark"].show {
+    background-color: #16263D;
+    background-image: none;
+    color: #F1F6FF;
+  }
+  #app-wrapper[data-theme="dark"] #app { color: #F1F6FF; }
+
+  #app-wrapper[data-theme="dark"] #app .home-hero,
+  #app-wrapper[data-theme="dark"] #app .home-ov,
+  #app-wrapper[data-theme="dark"] #app .pzl-card,
+  #app-wrapper[data-theme="dark"] #app .term-card,
+  #app-wrapper[data-theme="dark"] #app .stat-box,
+  #app-wrapper[data-theme="dark"] #app .med-item,
+  #app-wrapper[data-theme="dark"] #app .dash-welcome,
+  #app-wrapper[data-theme="dark"] #app .hq-btn {
+    background: #243F61 !important;
+    border: 1px solid #3D6499 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.30);
+    backdrop-filter: none;
+    color: #F1F6FF;
+  }
+  #app-wrapper[data-theme="dark"] #app h1,
+  #app-wrapper[data-theme="dark"] #app h2,
+  #app-wrapper[data-theme="dark"] #app h3,
+  #app-wrapper[data-theme="dark"] #app h4,
+  #app-wrapper[data-theme="dark"] #app .home-title,
+  #app-wrapper[data-theme="dark"] #app .stat-num { color: #F1F6FF; }
+  #app-wrapper[data-theme="dark"] #app .home-calm,
+  #app-wrapper[data-theme="dark"] #app .home-datestr,
+  #app-wrapper[data-theme="dark"] #app .home-day,
+  #app-wrapper[data-theme="dark"] #app .stat-label,
+  #app-wrapper[data-theme="dark"] #app small { color: #BFD2EC; }
+
+  #app-wrapper[data-theme="dark"] .dock-btn { color: #8FA9C9; }
+  #app-wrapper[data-theme="dark"] .dock-btn.active { color: #FFB37A !important; }
+  #app-wrapper[data-theme="dark"] .dock-btn-home {
+    background: #C97F4B !important;
+    color: #FFFFFF !important;
+    border-color: #16263D !important;
+    box-shadow: 0 6px 16px rgba(201,127,75,0.45) !important;
+  }
+
+  #app-wrapper[data-theme="dark"] .more-item { color: #F1F6FF; }
+  #app-wrapper[data-theme="dark"] .more-item i,
+  #app-wrapper[data-theme="dark"] .more-item svg { color: #FFB37A; }
+  #app-wrapper[data-theme="dark"] .more-item:active {
+    background: rgba(255,179,122,0.15);
+  }
+
+  /* 手機收掉星空 canvas（讓背景純粹） */
+  #star-canvas,
+  #landing-canvas { display: none !important; }
 }
 
