@@ -1340,6 +1340,9 @@ function openVisitDatePrompt() {
   const overlay = document.createElement('div');
   overlay.id = 'visit-date-modal';
   overlay.className = 'visit-modal-overlay';
+  // 把當前 app 主題複製到 overlay，讓 modal 顯示對應的深/淺色
+  const appTheme = document.getElementById('app-wrapper')?.dataset.theme || 'light';
+  overlay.dataset.theme = appTheme;
   // 注意：日期值用 setAttribute 設定（避免 XSS），不要插值進 innerHTML
   overlay.innerHTML = `
     <div class="visit-modal" role="dialog" aria-labelledby="visit-modal-title">
