@@ -862,6 +862,31 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
   box-shadow: 0 0 12px var(--app-glow);
 }
 
+.app-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  margin-right: 6px;
+  background: var(--app-panel);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.app-settings-btn:hover {
+  background: var(--app-mint);
+  color: var(--app-chip-text);
+  box-shadow: 0 0 12px var(--app-glow);
+  transform: rotate(45deg);
+}
+html[data-mode="senior"] .app-settings-btn {
+  width: 44px;
+  height: 36px;
+}
+
 .topbar-version {
   font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
   font-size: 0.65rem;

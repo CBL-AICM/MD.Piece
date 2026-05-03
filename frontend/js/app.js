@@ -656,6 +656,7 @@ function home() {
         ${homeCard('patients','users','病患管理','關懷每一位患者','mint')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
         ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
+        ${homeCard('settings','settings','系統設定','字體、主題、年長版等偏好','amber')}
       </div>
 
       <!-- Footer tagline -->

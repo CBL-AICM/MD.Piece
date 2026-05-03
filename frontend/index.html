@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=cozy-warm-settings-1" />
+  <link rel="stylesheet" href="css/style.css?v=cozy-warm-settings-2" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
@@ -237,6 +237,9 @@
         <span class="topbar-spacer"></span>
         <button class="app-theme-toggle" id="app-theme-toggle" type="button" onclick="toggleAppTheme()" title="切換主題">
           <span class="att-icon" id="att-icon">☾</span>
+        </button>
+        <button class="app-settings-btn" id="app-settings-btn" type="button" onclick="navigateTo('settings', null)" title="系統設定" aria-label="系統設定">
+          <i data-lucide="settings" style="width:16px;height:16px"></i>
         </button>
         <span class="topbar-version">v2.0</span>
         <span class="win-titlebar-controls topbar-wincontrols">
