@@ -520,7 +520,6 @@ var LAB_ITEMS = [
 ];
 
 var LAB_STORE_KEY = "mdpiece_labs_v1";
-var LAB_SEX_STORE_KEY = "mdpiece_labs_sex_v1";
 
 function labLoad() {
   try {
@@ -533,13 +532,6 @@ function labLoad() {
 function labSaveAll(arr) {
   try { localStorage.setItem(LAB_STORE_KEY, JSON.stringify(arr)); }
   catch (e) { showToast("儲存失敗，可能空間不足", "error"); }
-}
-function labLoadSex() {
-  try { return localStorage.getItem(LAB_SEX_STORE_KEY) || "F"; }
-  catch (e) { return "F"; }
-}
-function labSaveSex(s) {
-  try { localStorage.setItem(LAB_SEX_STORE_KEY, s); } catch (e) {}
 }
 
 // 核心：給定項目與數值，回傳狀態與貼心訊息
@@ -652,9 +644,6 @@ function loadLabsPage() {
     sel.innerHTML = html;
   }
 
-  var sexSel = document.getElementById("lab-sex-select");
-  if (sexSel) sexSel.value = labLoadSex();
-
   var dateInput = document.getElementById("lab-date-input");
   if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
 
@@ -704,10 +693,6 @@ function labAddEntry() {
   var v = parseFloat(rawVal);
   if (isNaN(v)) { showToast("請輸入有效數值", "warning"); return; }
   if (!date) date = new Date().toISOString().slice(0, 10);
-
-  // 記住性別
-  var sex = document.getElementById("lab-sex-select").value || "F";
-  labSaveSex(sex);
 
   var entries = labLoad();
   entries.unshift({
@@ -877,13 +862,6 @@ function labs() {
           <label>項目</label>
           <select id="lab-item-select" onchange="labOnItemChange()">
             <option value="">— 選擇檢驗項目 —</option>
-          </select>
-        </div>
-        <div class="lab-field" id="lab-sex-field" style="display:none">
-          <label>性別</label>
-          <select id="lab-sex-select">
-            <option value="F">女性</option>
-            <option value="M">男性</option>
           </select>
         </div>
         <div class="lab-field">

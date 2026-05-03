@@ -3719,9 +3719,6 @@ html[data-mode="senior"] .vt-bmi-meta {
   gap: 10px;
   margin-top: 10px;
 }
-.lab-add-grid:has(#lab-sex-field:not([style*="none"])) {
-  grid-template-columns: 1.6fr .6fr 1fr 1fr;
-}
 .lab-field { display: flex; flex-direction: column; gap: 4px; }
 .lab-field label {
   font-size: .82rem;
@@ -3909,7 +3906,6 @@ html[data-mode="senior"] .vt-bmi-meta {
 
 @media (max-width: 700px) {
   .lab-add-grid { grid-template-columns: 1fr 1fr; }
-  .lab-add-grid:has(#lab-sex-field:not([style*="none"])) { grid-template-columns: 1fr 1fr; }
   .lab-row {
     grid-template-columns: 1fr auto;
     grid-template-rows: auto auto;
