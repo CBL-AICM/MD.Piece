@@ -4859,9 +4859,5 @@ html[data-mode="senior"] *:focus-visible {
   #app-wrapper[data-theme="dark"] .more-item:active {
     background: rgba(255,179,122,0.15);
   }
-
-  /* 手機收掉星空 canvas（讓背景純粹） */
-  #star-canvas,
-  #landing-canvas { display: none !important; }
 }
 
