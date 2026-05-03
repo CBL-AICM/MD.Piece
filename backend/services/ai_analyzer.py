@@ -1,6 +1,9 @@
-import os
 import json
-import anthropic
+import logging
+
+from backend.services.llm_service import call_claude
+
+logger = logging.getLogger(__name__)
 
 
 async def analyze_symptoms(
@@ -8,13 +11,7 @@ async def analyze_symptoms(
     patient_age: int | None = None,
     patient_gender: str | None = None,
 ) -> dict:
-    """使用 Claude API 分析症狀，回傳結構化結果。"""
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        return _fallback_analysis(symptoms)
-
-    client = anthropic.Anthropic(api_key=api_key)
-
+    """使用本地 Ollama LLM 分析症狀，回傳結構化結果。"""
     patient_context = ""
     if patient_age or patient_gender:
         parts = []
@@ -36,22 +33,17 @@ async def analyze_symptoms(
   "disclaimer": "免責聲明"
 }
 
-只回覆 JSON，不要加其他文字。"""
+只回覆 JSON，不要加其他文字、不要包 markdown code block。"""
 
     user_message = f"症狀：{', '.join(symptoms)}{patient_context}"
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
-        )
-
-        text = response.content[0].text
-        result = json.loads(text)
-        return result
-    except (json.JSONDecodeError, Exception):
+        raw = call_claude(system_prompt, user_message).strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        return json.loads(raw)
+    except (json.JSONDecodeError, Exception) as e:
+        logger.warning(f"Ollama symptom analysis failed: {e}")
         return _fallback_analysis(symptoms)
 
 
@@ -82,5 +74,5 @@ def _fallback_analysis(symptoms: list[str]) -> dict:
         "recommended_department": "家醫科",
         "urgency": urgency,
         "advice": f"您描述了以下症狀：{', '.join(symptoms)}。建議儘速就醫，由醫師進行專業評估。",
-        "disclaimer": "此為系統基本建議，非 AI 分析結果。請設定 ANTHROPIC_API_KEY 以啟用 AI 分析功能。",
+        "disclaimer": "此為系統備援建議，非 AI 分析結果。請確認本機 Ollama 服務（http://localhost:11434）以及 qwen2.5:7b 模型已啟動。",
     }
