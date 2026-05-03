@@ -3531,13 +3531,15 @@ function piecesComputeCurrent() {
   };
 }
 
+function piecesNum(v) { return Number(v) || 0; }
+
 function piecesRenderCard(p, opts) {
   opts = opts || {};
   var topHtml = (p.topCats && p.topCats.length)
     ? '<ul class="pz-cat-list">' + p.topCats.map(function(c) {
-        return '<li class="pz-cat"><span class="pz-cat-icon scc-' + (c.color || 'mint') + '"><i data-lucide="' + (c.icon || 'circle') + '"></i></span>'
-          + '<span class="pz-cat-name">' + escapeHtml(c.zh || c.id) + '</span>'
-          + '<span class="pz-cat-count">' + (c.count || 0) + '</span></li>';
+        return '<li class="pz-cat"><span class="pz-cat-icon scc-' + escapeHtml(c.color || 'mint') + '"><i data-lucide="' + escapeHtml(c.icon || 'circle') + '"></i></span>'
+          + '<span class="pz-cat-name">' + escapeHtml(c.zh || c.id || '') + '</span>'
+          + '<span class="pz-cat-count">' + piecesNum(c.count) + '</span></li>';
       }).join('') + '</ul>'
     : '<p class="pz-h-empty">這個週期沒有症狀紀錄。</p>';
 
@@ -3548,20 +3550,20 @@ function piecesRenderCard(p, opts) {
 
   return '<article class="pz-h-card' + (opts.current ? ' pz-h-card-current' : '') + '">'
     +   '<header class="pz-h-head">'
-    +     '<div class="pz-h-date"><i data-lucide="' + titleIcon + '"></i><strong>' + since + ' — ' + until + '</strong></div>'
-    +     '<div class="pz-h-doc"><span class="pz-h-kind">' + titleText + '</span><span class="pz-h-days">' + (p.days || 0) + ' 天</span></div>'
+    +     '<div class="pz-h-date"><i data-lucide="' + titleIcon + '"></i><strong>' + escapeHtml(since) + ' — ' + escapeHtml(until) + '</strong></div>'
+    +     '<div class="pz-h-doc"><span class="pz-h-kind">' + titleText + '</span><span class="pz-h-days">' + piecesNum(p.days) + ' 天</span></div>'
     +   '</header>'
     +   '<div class="pz-h-stats">'
-    +     '<span>症狀 <b>' + (p.symptomCount || 0) + '</b> 次</span>'
-    +     '<span>共 <b>' + (p.symptomEntries || 0) + '</b> 筆</span>'
-    +     '<span>平均強度 <b>' + (p.avgIntensity || 0).toFixed(1) + '</b></span>'
-    +     '<span>Memo <b>' + (p.memoCount || 0) + '</b>（' + (p.memoForDoctor || 0) + ' 給醫師）</span>'
-    +     '<span>生理 <b>' + (p.vitalCount || 0) + '</b> 筆</span>'
+    +     '<span>症狀 <b>' + piecesNum(p.symptomCount) + '</b> 次</span>'
+    +     '<span>共 <b>' + piecesNum(p.symptomEntries) + '</b> 筆</span>'
+    +     '<span>平均強度 <b>' + piecesNum(p.avgIntensity).toFixed(1) + '</b></span>'
+    +     '<span>Memo <b>' + piecesNum(p.memoCount) + '</b>（' + piecesNum(p.memoForDoctor) + ' 給醫師）</span>'
+    +     '<span>生理 <b>' + piecesNum(p.vitalCount) + '</b> 筆</span>'
     +   '</div>'
     +   '<div class="pz-h-body">' + topHtml + '</div>'
     + (opts.current
         ? ''
-        : '<footer class="pz-h-foot"><button class="pz-h-del" onclick="piecesDeleteHistory(\'' + (p.id || '') + '\')"><i data-lucide="trash-2"></i> 刪除</button></footer>')
+        : '<footer class="pz-h-foot"><button class="pz-h-del" data-piece-id="' + escapeHtml(p.id || '') + '"><i data-lucide="trash-2"></i> 刪除</button></footer>')
     + '</article>';
 }
 
@@ -3614,6 +3616,11 @@ function loadPiecesPage() {
     listEl.innerHTML = history.length
       ? history.map(function(p) { return piecesRenderCard(p, { current: false }); }).join('')
       : '<p class="pz-empty">還沒有保存過任何碎片。回診結束後按下方按鈕，就會把當期紀錄總結成一片碎片留下來。</p>';
+    listEl.onclick = function(ev) {
+      var btn = ev.target.closest && ev.target.closest('.pz-h-del');
+      if (!btn) return;
+      piecesDeleteHistory(btn.getAttribute('data-piece-id'));
+    };
   }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
