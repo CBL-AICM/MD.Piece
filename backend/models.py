@@ -65,9 +65,32 @@ class SymptomAnalysisRequest(BaseModel):
 # ─── User / Auth ──────────────────────────────────────────
 
 class UserCreate(BaseModel):
+    username: str
+    password: str
     nickname: str
     role: str  # 'doctor' or 'patient'
     avatar_color: str | None = None
+    avatar_url: str | None = None
+    id_number: str | None = None
+    doctor_key: str | None = None  # 醫師註冊需要的通行碼
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+    doctor_key: str | None = None  # 醫師登入需要的通行碼
+
+
+class UserUpdate(BaseModel):
+    nickname: str | None = None
+    avatar_color: str | None = None
+    avatar_url: str | None = None
+    id_number: str | None = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
 
 
 # ─── Doctor Notes ─────────────────────────────────────────
