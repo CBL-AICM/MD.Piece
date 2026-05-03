@@ -78,6 +78,22 @@ def _strip_code_fence(raw: str) -> str:
     return raw
 
 
+def _coerce_bool(value, default: bool = False) -> bool:
+    """LLM 可能回 true/false（bool）、"true"/"false"（str）、1/0（int）。
+    避免 bool("false") == True 的陷阱，明確處理字串。"""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in ("true", "yes", "1", "是", "需要"):
+            return True
+        if v in ("false", "no", "0", "否", "不需要", ""):
+            return False
+    return default
+
+
 @router.post("/check", response_model=LabCheckResponse)
 def check_lab_value(body: LabCheckRequest):
     """解讀單一檢驗值是否正常 + 給生活建議"""
@@ -113,6 +129,6 @@ def check_lab_value(body: LabCheckRequest):
         status=data.get("status", "unknown"),
         meaning=data.get("meaning", ""),
         advice=data.get("advice", ""),
-        see_doctor=bool(data.get("see_doctor", False)),
+        see_doctor=_coerce_bool(data.get("see_doctor"), default=False),
         disclaimer=data.get("disclaimer", "本結果僅供參考，請以實際檢驗單位與醫師判讀為準"),
     )
