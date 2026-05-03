@@ -1333,8 +1333,6 @@ function renderPeriodSummary(stats) {
 }
 function openVisitDatePrompt() {
   const v = getVisitDates();
-  const last = v.lastVisit || '';
-  const next = v.nextVisit || '';
   // 移除舊的（如果有）
   const old = document.getElementById('visit-date-modal');
   if (old) old.remove();
@@ -1342,6 +1340,7 @@ function openVisitDatePrompt() {
   const overlay = document.createElement('div');
   overlay.id = 'visit-date-modal';
   overlay.className = 'visit-modal-overlay';
+  // 注意：日期值用 setAttribute 設定（避免 XSS），不要插值進 innerHTML
   overlay.innerHTML = `
     <div class="visit-modal" role="dialog" aria-labelledby="visit-modal-title">
       <header class="visit-modal-head">
@@ -1351,12 +1350,12 @@ function openVisitDatePrompt() {
       <div class="visit-modal-body">
         <label class="visit-modal-field">
           <span>上次回診</span>
-          <input type="date" id="vm-last" value="${last}" />
+          <input type="date" id="vm-last" />
           <button type="button" class="visit-modal-clear" data-clear="vm-last">清除</button>
         </label>
         <label class="visit-modal-field">
           <span>下次回診</span>
-          <input type="date" id="vm-next" value="${next}" />
+          <input type="date" id="vm-next" />
           <button type="button" class="visit-modal-clear" data-clear="vm-next">清除</button>
         </label>
         <p class="visit-modal-hint">統整期間會以「上次回診」為起點。下次回診用來提醒倒數。</p>
@@ -1368,6 +1367,9 @@ function openVisitDatePrompt() {
     </div>
   `;
   document.body.appendChild(overlay);
+  // 用 .value 賦值，瀏覽器會驗證日期字串、不會被當 HTML 處理
+  overlay.querySelector('#vm-last').value = v.lastVisit || '';
+  overlay.querySelector('#vm-next').value = v.nextVisit || '';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
   const close = () => overlay.remove();
