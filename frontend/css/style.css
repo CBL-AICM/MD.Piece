@@ -5990,21 +5990,49 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
 .visit-modal-overlay {
   position: fixed; inset: 0;
   z-index: 9999;
-  background: rgba(15, 25, 40, 0.55);
-  backdrop-filter: blur(4px);
+  background: rgba(8, 14, 26, 0.78);
   display: grid;
   place-items: center;
   padding: 16px;
   animation: vm-fade .18s ease;
+  /* 因為 overlay 直接掛在 body 上，#app-wrapper 內的 --app-* vars 不會繼承
+     所以這裡顯式指定（淺色預設） */
+  --app-bg:         #FBF6EC;
+  --app-text:       #5C3A32;
+  --app-text-dim:   #8B7868;
+  --app-panel:      #FFFAF0;
+  --app-panel-soft: #F5E1CB;
+  --app-border:     #5C3A32;
+  --app-term:       #C97F4B;
+  --app-glow:       rgba(201,127,75,0.35);
+  --app-chip-text:  #5C3A32;
+}
+/* 深色主題的 vars */
+.visit-modal-overlay[data-theme="dark"] {
+  --app-bg:         #1F3553;
+  --app-text:       #F1F6FF;
+  --app-text-dim:   #BFD2EC;
+  --app-panel:      #2E4F7C;
+  --app-panel-soft: #3D6499;
+  --app-border:     rgba(195,225,255,0.5);
+  --app-term:       #6CF0D8;
+  --app-glow:       rgba(108,240,216,0.5);
+  --app-chip-text:  #0B1F25;
+}
+/* 深色主題：日期 picker 圖示反白 */
+.visit-modal-overlay[data-theme="dark"] .visit-modal-field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
 }
 @keyframes vm-fade { from { opacity: 0 } to { opacity: 1 } }
 
+/* modal 本體 — 完全不透明，依 overlay 上的 vars 取色 */
 .visit-modal {
   background: var(--app-panel);
   color: var(--app-text);
-  border: 1.5px solid var(--app-border);
+  border: 2px solid var(--app-border);
   border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.55);
   width: min(420px, 100%);
   display: flex;
   flex-direction: column;
@@ -6068,11 +6096,6 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
   outline: none;
   border-color: var(--app-term);
   box-shadow: 0 0 0 3px var(--app-glow);
-}
-/* 深色主題：日期 picker 圖示反白 */
-#app-wrapper[data-theme="dark"] .visit-modal-field input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.85);
-  cursor: pointer;
 }
 .visit-modal-clear {
   background: transparent;
