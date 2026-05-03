@@ -4697,7 +4697,7 @@ html[data-mode="senior"] *:focus-visible {
 
 @media (max-width: 768px) {
   #app-wrapper[data-theme="light"].show {
-    background-color: #F4F5F8;
+    background-color: #FAF6EE;
     background-image: none;
     color: #1F232B;
   }
@@ -4732,7 +4732,6 @@ html[data-mode="senior"] *:focus-visible {
   #app-wrapper[data-theme="light"] #app small { color: #6B7280; }
 
   /* 卡片：純白、輕邊框、無毛玻璃 */
-  #app-wrapper[data-theme="light"] #app .home-hero,
   #app-wrapper[data-theme="light"] #app .home-ov,
   #app-wrapper[data-theme="light"] #app .pzl-card,
   #app-wrapper[data-theme="light"] #app .term-card,
@@ -4741,12 +4740,37 @@ html[data-mode="senior"] *:focus-visible {
   #app-wrapper[data-theme="light"] #app .dash-welcome,
   #app-wrapper[data-theme="light"] #app .hq-btn {
     background: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+    border: 1px solid #EFE3D2;
+    box-shadow: 0 2px 8px rgba(92,58,50,0.06);
     backdrop-filter: none;
     color: #1F232B;
   }
   #app-wrapper[data-theme="light"] #app .hq-btn { color: #1F232B; }
+
+  /* Hero card：暖陶漸層帶溫度感 */
+  #app-wrapper[data-theme="light"] #app .home-hero {
+    background: linear-gradient(135deg, #FFF6EA 0%, #FFFAF2 60%, #FFEEDE 100%);
+    border: 1px solid #F1DCC0;
+    box-shadow: 0 4px 14px rgba(201,127,75,0.10);
+    backdrop-filter: none;
+    color: #1F232B;
+  }
+
+  /* 4 顆 quick action 卡片：每張給不同 icon 色塊 */
+  #app-wrapper[data-theme="light"] #app .hq-symptoms .hq-icon {
+    background: #FFE7DA; color: #C97F4B;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-meds .hq-icon {
+    background: #DFF1E8; color: #4FA88A;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-records .hq-icon {
+    background: #E8E4F4; color: #7A6BAB;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-edu .hq-icon {
+    background: #FCF1D6; color: #B6914A;
+  }
+  #app-wrapper[data-theme="light"] #app .hq-icon { border-radius: 12px; }
+  #app-wrapper[data-theme="light"] #app .hq-icon svg { stroke-width: 2; }
 
   /* Dock：純白不透明 */
   #app-wrapper[data-theme="light"] .mobile-dock {
@@ -4756,7 +4780,7 @@ html[data-mode="senior"] *:focus-visible {
     border-top: 1px solid #E5E7EB;
     box-shadow: 0 -1px 0 rgba(15,23,42,0.04);
   }
-  #app-wrapper[data-theme="light"] .dock-btn { color: #9CA3AF; }
+  #app-wrapper[data-theme="light"] .dock-btn { color: #B89A82; }
   #app-wrapper[data-theme="light"] .dock-btn.active { color: #C97F4B !important; }
   #app-wrapper[data-theme="light"] .dock-btn-home {
     background: #C97F4B !important;
