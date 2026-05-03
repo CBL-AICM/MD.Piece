@@ -499,15 +499,26 @@ const pageSlugForTerminal = {
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', account: 'account',
   settings: 'settings',
-  records: 'records', doctors: 'doctors'
+  records: 'records', doctors: 'doctors',
+  docHome: 'doctor-dashboard',
+  docPatient: 'patient-detail'
 };
 
 function showPage(page) {
   const app = document.getElementById("app");
+  // 醫師角色：把 home/其他患者頁路由轉到醫師端
+  const cu = getCurrentUser();
+  if (cu && cu.role === 'doctor') {
+    const docMap = { home: 'docHome', dashboard: 'docHome', account: 'account', settings: 'settings' };
+    page = docMap[page] || (page.startsWith('docPatient') ? page : 'docHome');
+  }
+  renderSidebarNav();
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, memo, previsit, story, labs, pieces, account, settings
+    vitals, memo, previsit, story, labs, pieces, account, settings,
+    docHome: doctorHomePage,
+    docPatient: doctorPatientView,
   };
   // Page transition
   app.style.opacity = '0';
@@ -525,6 +536,8 @@ function showPage(page) {
     if (page === "pieces") loadPiecesPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
+    if (page === "docHome") loadDoctorHomePage();
+    if (page === "docPatient") loadDoctorPatientView();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -749,7 +762,12 @@ function finishAuth(user) {
   setTimeout(() => {
     overlay.style.display = 'none';
     document.getElementById('app-wrapper').classList.add('show');
-    showPage('home');
+    if (user.role === 'doctor') {
+      document.getElementById('app-wrapper').classList.add('doctor-mode');
+      showPage('docHome');
+    } else {
+      showPage('home');
+    }
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 250);
 }
@@ -1935,17 +1953,42 @@ function submitVitalEntry(metricId) {
   const notes = document.getElementById('vt-notes').value.trim();
   if (notes) entry.notes = notes;
   saveVitalEntry(entry);
+  syncVitalToBackend(m, entry);
   showPage('vitals');
 }
 
+// 同步 vitals 到後端，讓醫師端可讀取畫摺線圖（失敗不影響本地紀錄）
+function syncVitalToBackend(metric, entry) {
+  const pid = getStablePatientId();
+  if (!pid) return;
+  const payload = {
+    patient_id: pid,
+    metric_id: metric.id,
+    metric_name: metric.zh,
+    unit: metric.unit || null,
+    value: entry.value,
+    value2: entry.value2 != null ? entry.value2 : null,
+    notes: entry.notes || null,
+    recorded_at: entry.recordedAt,
+  };
+  fetch(API + '/vitals/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch(() => {});
+}
+
 function saveBmiSnapshot(bmi) {
-  saveVitalEntry({
+  const entry = {
     id: 'vt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
     metricId: 'bmi',
     value: parseFloat(bmi),
     notes: 'auto-calculated',
     recordedAt: new Date().toISOString()
-  });
+  };
+  saveVitalEntry(entry);
+  const m = findMetric('bmi');
+  if (m) syncVitalToBackend(m, entry);
   showPage('vitals');
 }
 
@@ -4156,10 +4199,661 @@ function labsRenderResult(data, input) {
 }
 
 
+// ═══════════════════════════════════════════════════════════
+// 醫師端 — Doctor Dashboard
+// 醫師登入後看到全新的儀表板：依患者序號（username）查詢，
+// 一頁集中顯示診前報告、生理紀錄摺線圖、藥物、症狀。
+// ═══════════════════════════════════════════════════════════
+
+const DOC_LAST_PATIENT_KEY = 'mdpiece_doc_last_patient';
+
+function getDoctorLastPatient() {
+  try { return JSON.parse(localStorage.getItem(DOC_LAST_PATIENT_KEY)); }
+  catch { return null; }
+}
+function setDoctorLastPatient(p) {
+  if (!p) localStorage.removeItem(DOC_LAST_PATIENT_KEY);
+  else localStorage.setItem(DOC_LAST_PATIENT_KEY, JSON.stringify(p));
+}
+
+function renderSidebarNav() {
+  const nav = document.querySelector('.sidebar-nav');
+  if (!nav) return;
+  const u = getCurrentUser();
+  const isDoctor = u && u.role === 'doctor';
+  if (nav.dataset.role === (isDoctor ? 'doctor' : 'patient')) return;
+  nav.dataset.role = isDoctor ? 'doctor' : 'patient';
+  if (isDoctor) {
+    nav.innerHTML = `
+      <button class="nav-item active" onclick="navigateTo('docHome', this)">
+        <span class="nav-icon"><i data-lucide="layout-dashboard" style="width:18px;height:18px"></i></span> 醫師儀表板
+      </button>
+      <button class="nav-item" onclick="docFocusLookup()">
+        <span class="nav-icon"><i data-lucide="search" style="width:18px;height:18px"></i></span> 病患序號查詢
+      </button>
+      <button class="nav-item" onclick="docOpenLastPatient()">
+        <span class="nav-icon"><i data-lucide="user-round" style="width:18px;height:18px"></i></span> 最近查看
+      </button>
+      <button class="nav-item" onclick="navigateTo('account', this)">
+        <span class="nav-icon"><i data-lucide="user-cog" style="width:18px;height:18px"></i></span> 帳號設定
+      </button>
+      <button class="nav-item" onclick="navigateTo('settings', this)">
+        <span class="nav-icon"><i data-lucide="settings" style="width:18px;height:18px"></i></span> 系統設定
+      </button>
+    `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+function docFocusLookup() {
+  navigateTo('docHome', null);
+  setTimeout(() => {
+    const el = document.getElementById('doc-lookup-input');
+    if (el) { el.focus(); el.select?.(); }
+  }, 200);
+}
+
+function docOpenLastPatient() {
+  const last = getDoctorLastPatient();
+  if (!last) {
+    docFocusLookup();
+    setTimeout(() => {
+      const err = document.getElementById('doc-lookup-error');
+      if (err) { err.textContent = '尚未查看過任何病患'; err.hidden = false; }
+    }, 250);
+    return;
+  }
+  loadDoctorPatientById(last);
+}
+
+function doctorHomePage() {
+  const u = getCurrentUser() || {};
+  const last = getDoctorLastPatient();
+  const lastName = last ? (last.nickname || last.username) : null;
+  return `
+    <div class="doc-page">
+      <section class="doc-hero">
+        <div class="doc-hero-l">
+          <span class="doc-hero-ic"><i data-lucide="stethoscope"></i></span>
+        </div>
+        <div class="doc-hero-r">
+          <h2>醫師端 · 儀表板</h2>
+          <p class="doc-hero-sub">${u.nickname || '醫師'}，請輸入病患序號開始查看</p>
+        </div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ ./lookup-patient</span>
+          <span class="ts-tag">enter_username</span>
+        </header>
+        <div class="ts-body">
+          <p class="sym-instruct">請輸入病患的序號（即患者註冊時的帳號）：</p>
+          <form class="doc-lookup-form" onsubmit="event.preventDefault(); submitDoctorLookup();">
+            <input id="doc-lookup-input" type="text" autocomplete="off"
+                   placeholder="例：patient001" maxlength="32" required />
+            <button type="submit" class="primary-btn">
+              <i data-lucide="search"></i><span>查詢病患</span>
+            </button>
+          </form>
+          <p class="auth-error" id="doc-lookup-error" hidden></p>
+          ${last ? `
+            <div class="doc-recent">
+              <span class="doc-recent-label">// 最近查看</span>
+              <button class="doc-recent-chip" onclick="docOpenLastPatient()">
+                <i data-lucide="user-round" style="width:14px;height:14px"></i>
+                <span>${escapeHtml(lastName)}</span>
+                <span class="doc-recent-uid">@${escapeHtml(last.username)}</span>
+              </button>
+              <button class="doc-recent-clear" onclick="docClearLastPatient()" title="清除">×</button>
+            </div>
+          ` : ''}
+        </div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">$ help</span>
+          <span class="ts-tag">about_dashboard</span>
+        </header>
+        <div class="ts-body">
+          <div class="doc-cap-grid">
+            <div class="doc-cap"><i data-lucide="clipboard-check"></i><h4>診前報告</h4><p>AI 整理的問診清單與 30 天月度報告</p></div>
+            <div class="doc-cap"><i data-lucide="activity"></i><h4>生理紀錄</h4><p>體重、血壓、血糖、心率等指標摺線圖</p></div>
+            <div class="doc-cap"><i data-lucide="pill"></i><h4>藥物紀錄</h4><p>用藥清單與服藥順從率</p></div>
+            <div class="doc-cap"><i data-lucide="scan-search"></i><h4>症狀紀錄</h4><p>症狀分析歷史與頻率統計</p></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function loadDoctorHomePage() {
+  const inp = document.getElementById('doc-lookup-input');
+  if (inp) inp.focus();
+}
+
+function docClearLastPatient() {
+  setDoctorLastPatient(null);
+  showPage('docHome');
+}
+
+async function submitDoctorLookup() {
+  const inp = document.getElementById('doc-lookup-input');
+  const err = document.getElementById('doc-lookup-error');
+  const username = (inp?.value || '').trim();
+  if (err) err.hidden = true;
+  if (!username) return;
+  try {
+    const res = await fetch(`${API}/auth/lookup?username=${encodeURIComponent(username)}`);
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.detail || '查詢失敗');
+    }
+    const patient = await res.json();
+    setDoctorLastPatient({ id: patient.id, username: patient.username, nickname: patient.nickname });
+    loadDoctorPatientById(patient);
+  } catch (e) {
+    if (err) { err.textContent = e.message || '查詢失敗'; err.hidden = false; }
+  }
+}
+
+let _docPatient = null;
+let _docTab = 'overview';
+
+function loadDoctorPatientById(p) {
+  _docPatient = p;
+  _docTab = 'overview';
+  showPage('docPatient');
+}
+
+function doctorPatientView() {
+  const p = _docPatient || getDoctorLastPatient();
+  if (!p) return doctorHomePage();
+  const avatar = p.avatar_url
+    ? `<img src="${p.avatar_url}" alt="" />`
+    : `<span class="doc-pv-init" style="background:${p.avatar_color || '#5B9FE8'}22;color:${p.avatar_color || '#5B9FE8'};border-color:${p.avatar_color || '#5B9FE8'}">${(p.nickname || '?').slice(0,1)}</span>`;
+  const tabs = [
+    { id: 'overview', label: '總覽',     icon: 'layout-dashboard' },
+    { id: 'previsit', label: '診前報告', icon: 'clipboard-check' },
+    { id: 'vitals',   label: '生理紀錄', icon: 'activity' },
+    { id: 'meds',     label: '藥物紀錄', icon: 'pill' },
+    { id: 'symptoms', label: '症狀紀錄', icon: 'scan-search' },
+  ];
+  return `
+    <div class="doc-page doc-patient">
+      <section class="doc-pv-head">
+        <button class="doc-back" onclick="navigateTo('docHome', null)">
+          <i data-lucide="arrow-left" style="width:14px;height:14px"></i>
+          <span>返回</span>
+        </button>
+        <div class="doc-pv-id">
+          <div class="doc-pv-avatar">${avatar}</div>
+          <div class="doc-pv-meta">
+            <h2>${escapeHtml(p.nickname || '未命名')}</h2>
+            <p class="doc-pv-sub">序號 <code>${escapeHtml(p.username || '—')}</code> · ${p.id_number ? '身分證 ' + escapeHtml(p.id_number) : 'PID ' + (p.id || '').slice(0,8)}</p>
+            <p class="doc-pv-sub doc-pv-sub-dim">建立於 ${p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</p>
+          </div>
+        </div>
+        <div class="doc-pv-actions">
+          <button class="secondary-btn" onclick="docRefresh()" title="重新整理">
+            <i data-lucide="refresh-cw" style="width:14px;height:14px"></i>
+            <span>重新整理</span>
+          </button>
+        </div>
+      </section>
+
+      <nav class="doc-tabs">
+        ${tabs.map(t => `
+          <button class="doc-tab ${_docTab === t.id ? 'active' : ''}" onclick="docSwitchTab('${t.id}')">
+            <i data-lucide="${t.icon}" style="width:14px;height:14px"></i>
+            <span>${t.label}</span>
+          </button>
+        `).join('')}
+      </nav>
+
+      <div id="doc-tab-body" class="doc-tab-body">
+        <div class="doc-loading"><i data-lucide="loader" style="width:18px;height:18px"></i> 載入中…</div>
+      </div>
+    </div>
+  `;
+}
+
+function docSwitchTab(tab) {
+  _docTab = tab;
+  showPage('docPatient');
+}
+
+function docRefresh() {
+  showPage('docPatient');
+}
+
+async function loadDoctorPatientView() {
+  const p = _docPatient;
+  if (!p) return;
+  const body = document.getElementById('doc-tab-body');
+  if (!body) return;
+  try {
+    if (_docTab === 'overview')      await renderDocOverview(p, body);
+    else if (_docTab === 'previsit') await renderDocPrevisit(p, body);
+    else if (_docTab === 'vitals')   await renderDocVitals(p, body);
+    else if (_docTab === 'meds')     await renderDocMeds(p, body);
+    else if (_docTab === 'symptoms') await renderDocSymptoms(p, body);
+  } catch (e) {
+    body.innerHTML = `<p class="doc-error">載入失敗：${escapeHtml(e.message || String(e))}</p>`;
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ── 總覽 ────────────────────────────────────────────────
+async function renderDocOverview(p, body) {
+  const [vitalsRes, medsRes, recordsRes, symRes] = await Promise.all([
+    fetch(`${API}/vitals/?patient_id=${p.id}`).then(r => r.ok ? r.json() : { vitals: [] }).catch(() => ({ vitals: [] })),
+    fetch(`${API}/medications/?patient_id=${p.id}`).then(r => r.ok ? r.json() : { medications: [] }).catch(() => ({ medications: [] })),
+    fetch(`${API}/records/patient/${p.id}`).then(r => r.ok ? r.json() : { records: [] }).catch(() => ({ records: [] })),
+    fetch(`${API}/symptoms/history/${p.id}`).then(r => r.ok ? r.json() : { history: [] }).catch(() => ({ history: [] })),
+  ]);
+  const vitals = vitalsRes.vitals || [];
+  const meds = (medsRes.medications || []).filter(m => m.active !== 0);
+  const records = recordsRes.records || [];
+  const sym = symRes.history || [];
+  const lastVital = vitals[vitals.length - 1];
+  const lastSym = sym[0];
+  const lastRecord = records[0];
+
+  body.innerHTML = `
+    <div class="doc-ov-grid">
+      <div class="doc-stat doc-stat-mint">
+        <span class="doc-stat-ic"><i data-lucide="activity"></i></span>
+        <span class="doc-stat-num">${vitals.length}</span>
+        <span class="doc-stat-lbl">生理紀錄筆數</span>
+        <span class="doc-stat-sub">${lastVital ? '最近：' + relTime(lastVital.recorded_at) : '尚無紀錄'}</span>
+      </div>
+      <div class="doc-stat doc-stat-amber">
+        <span class="doc-stat-ic"><i data-lucide="pill"></i></span>
+        <span class="doc-stat-num">${meds.length}</span>
+        <span class="doc-stat-lbl">使用中藥物</span>
+        <span class="doc-stat-sub">${meds.length ? meds.slice(0,2).map(m => m.name).join('、') : '無'}</span>
+      </div>
+      <div class="doc-stat doc-stat-rose">
+        <span class="doc-stat-ic"><i data-lucide="scan-search"></i></span>
+        <span class="doc-stat-num">${sym.length}</span>
+        <span class="doc-stat-lbl">症狀分析次數</span>
+        <span class="doc-stat-sub">${lastSym ? '最近：' + relTime(lastSym.created_at) : '尚無紀錄'}</span>
+      </div>
+      <div class="doc-stat doc-stat-blue">
+        <span class="doc-stat-ic"><i data-lucide="clipboard-list"></i></span>
+        <span class="doc-stat-num">${records.length}</span>
+        <span class="doc-stat-lbl">就診紀錄</span>
+        <span class="doc-stat-sub">${lastRecord ? '最近：' + (lastRecord.visit_date ? new Date(lastRecord.visit_date).toLocaleDateString() : '—') : '尚無紀錄'}</span>
+      </div>
+    </div>
+
+    <div class="doc-ov-row">
+      <div class="doc-card">
+        <h3><i data-lucide="trending-up" style="width:16px;height:16px"></i> 近期關鍵指標</h3>
+        ${renderOverviewSparklines(vitals)}
+      </div>
+      <div class="doc-card">
+        <h3><i data-lucide="alert-circle" style="width:16px;height:16px"></i> 最新就診</h3>
+        ${lastRecord ? `
+          <p class="doc-ov-line"><span class="doc-ov-k">日期</span><span class="doc-ov-v">${lastRecord.visit_date ? new Date(lastRecord.visit_date).toLocaleString() : '—'}</span></p>
+          <p class="doc-ov-line"><span class="doc-ov-k">診斷</span><span class="doc-ov-v">${escapeHtml(lastRecord.diagnosis || '—')}</span></p>
+          <p class="doc-ov-line"><span class="doc-ov-k">處方</span><span class="doc-ov-v">${escapeHtml(lastRecord.prescription || '—')}</span></p>
+          ${lastRecord.notes ? `<p class="doc-ov-notes">${escapeHtml(lastRecord.notes)}</p>` : ''}
+        ` : '<p class="doc-empty">尚無就診紀錄</p>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderOverviewSparklines(vitals) {
+  if (!vitals.length) return '<p class="doc-empty">// 此患者尚未上傳任何生理紀錄</p>';
+  const byMetric = groupBy(vitals, v => v.metric_id);
+  const priority = ['bp', 'glucose', 'heart', 'weight', 'spo2', 'temp'];
+  const ids = Object.keys(byMetric).sort((a, b) => {
+    const ai = priority.indexOf(a), bi = priority.indexOf(b);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+  }).slice(0, 4);
+  return `<div class="doc-spark-grid">
+    ${ids.map(id => {
+      const arr = byMetric[id];
+      const last = arr[arr.length - 1];
+      const valStr = last.value2 != null ? `${last.value}/${last.value2}` : `${last.value}`;
+      return `<div class="doc-spark">
+        <div class="doc-spark-head">
+          <span class="doc-spark-name">${escapeHtml(last.metric_name || id)}</span>
+          <span class="doc-spark-val">${valStr} <small>${escapeHtml(last.unit || '')}</small></span>
+        </div>
+        ${renderLineChart(arr, { width: 280, height: 60, compact: true })}
+        <div class="doc-spark-foot">${arr.length} 筆 · 最近 ${relTime(last.recorded_at)}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── 診前報告 ───────────────────────────────────────────
+async function renderDocPrevisit(p, body) {
+  body.innerHTML = `<div class="doc-loading"><i data-lucide="loader"></i> 產生診前報告中…</div>`;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  const [chkRes, monRes] = await Promise.all([
+    fetch(`${API}/reports/${p.id}/checklist`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API}/reports/${p.id}/monthly`).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  const checklist = chkRes?.checklist || [];
+  const monthlyMd = monRes?.report || monRes?.markdown || monRes?.summary || '（暫無 30 天月度報告）';
+  body.innerHTML = `
+    <div class="doc-card doc-checklist">
+      <h3><i data-lucide="list-checks" style="width:16px;height:16px"></i> 問診清單（AI 建議的三件事）</h3>
+      ${checklist.length ? `<ol class="doc-chk-list">
+        ${checklist.map((c, i) => `<li><span class="doc-chk-num">${i + 1}</span><span>${escapeHtml(c)}</span></li>`).join('')}
+      </ol>` : '<p class="doc-empty">尚無資料</p>'}
+      <p class="doc-foot-meta">產生時間：${chkRes?.generated_at ? new Date(chkRes.generated_at).toLocaleString() : '—'}</p>
+    </div>
+
+    <div class="doc-card doc-monthly">
+      <h3><i data-lucide="file-text" style="width:16px;height:16px"></i> 30 天整合報告</h3>
+      <div class="doc-md">${renderSimpleMarkdown(monthlyMd)}</div>
+    </div>
+  `;
+}
+
+// ── 生理紀錄（摺線圖） ──────────────────────────────────
+async function renderDocVitals(p, body) {
+  body.innerHTML = `<div class="doc-loading"><i data-lucide="loader"></i> 載入中…</div>`;
+  const res = await fetch(`${API}/vitals/?patient_id=${p.id}`);
+  const data = res.ok ? await res.json() : { vitals: [] };
+  const vitals = data.vitals || [];
+  if (!vitals.length) {
+    body.innerHTML = `<p class="doc-empty">// 此患者尚未上傳任何生理紀錄。<br/>提示：患者需在新版 App 中記錄生理數值才會同步到雲端。</p>`;
+    return;
+  }
+  const byMetric = groupBy(vitals, v => v.metric_id);
+  const ids = Object.keys(byMetric);
+  body.innerHTML = `
+    <div class="doc-vital-list">
+      ${ids.map(id => {
+        const arr = byMetric[id];
+        const last = arr[arr.length - 1];
+        const lastVal = last.value2 != null ? `${last.value}/${last.value2}` : `${last.value}`;
+        const stats = computeStats(arr);
+        return `
+          <div class="doc-card doc-vital">
+            <div class="doc-vital-head">
+              <h3>${escapeHtml(last.metric_name || id)} <small>${escapeHtml(last.unit || '')}</small></h3>
+              <div class="doc-vital-stats">
+                <span><b>${lastVal}</b><i>最新</i></span>
+                <span><b>${stats.avg}</b><i>平均</i></span>
+                <span><b>${stats.min}</b><i>最低</i></span>
+                <span><b>${stats.max}</b><i>最高</i></span>
+                <span><b>${arr.length}</b><i>筆數</i></span>
+              </div>
+            </div>
+            ${renderLineChart(arr, { width: 720, height: 220 })}
+            <details class="doc-vital-details">
+              <summary>查看原始紀錄（${arr.length} 筆）</summary>
+              <ul class="doc-vital-rows">
+                ${arr.slice().reverse().slice(0, 30).map(e => `
+                  <li>
+                    <span class="dvr-time">${new Date(e.recorded_at).toLocaleString()}</span>
+                    <span class="dvr-val"><b>${e.value2 != null ? e.value + '/' + e.value2 : e.value}</b> ${escapeHtml(e.unit || '')}</span>
+                    ${e.notes ? `<span class="dvr-note">${escapeHtml(e.notes)}</span>` : ''}
+                  </li>
+                `).join('')}
+              </ul>
+            </details>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ── 藥物紀錄 ───────────────────────────────────────────
+async function renderDocMeds(p, body) {
+  body.innerHTML = `<div class="doc-loading"><i data-lucide="loader"></i> 載入中…</div>`;
+  const [medsRes, statRes] = await Promise.all([
+    fetch(`${API}/medications/?patient_id=${p.id}`).then(r => r.ok ? r.json() : { medications: [] }).catch(() => ({ medications: [] })),
+    fetch(`${API}/medications/stats?patient_id=${p.id}&days=30`).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  const meds = medsRes.medications || [];
+  const active = meds.filter(m => m.active !== 0);
+  const inactive = meds.filter(m => m.active === 0);
+  const compliance = statRes?.compliance_rate ?? statRes?.adherence ?? null;
+
+  body.innerHTML = `
+    <div class="doc-card">
+      <h3><i data-lucide="percent" style="width:16px;height:16px"></i> 30 天服藥順從性</h3>
+      ${compliance != null ? `
+        <div class="doc-compliance">
+          <div class="doc-comp-ring" style="--pct:${Math.round(compliance * 100)}">
+            <span>${Math.round(compliance * 100)}%</span>
+          </div>
+          <p class="doc-comp-meta">基於最近 30 天的服藥紀錄計算</p>
+        </div>
+      ` : '<p class="doc-empty">尚無服藥紀錄統計</p>'}
+    </div>
+
+    <div class="doc-card">
+      <h3><i data-lucide="pill" style="width:16px;height:16px"></i> 使用中藥物（${active.length}）</h3>
+      ${active.length ? `
+        <ul class="doc-med-list">
+          ${active.map(m => `
+            <li class="doc-med">
+              <span class="doc-med-name">${escapeHtml(m.name)}</span>
+              <span class="doc-med-meta">
+                ${m.dosage ? `<span><i>劑量</i>${escapeHtml(m.dosage)}</span>` : ''}
+                ${m.frequency ? `<span><i>頻率</i>${escapeHtml(m.frequency)}</span>` : ''}
+                ${m.purpose ? `<span><i>用途</i>${escapeHtml(m.purpose)}</span>` : ''}
+              </span>
+              ${m.instructions ? `<p class="doc-med-instr">${escapeHtml(m.instructions)}</p>` : ''}
+            </li>
+          `).join('')}
+        </ul>
+      ` : '<p class="doc-empty">目前沒有使用中藥物</p>'}
+    </div>
+
+    ${inactive.length ? `
+      <div class="doc-card">
+        <h3><i data-lucide="archive" style="width:16px;height:16px"></i> 已停用 / 歷史用藥（${inactive.length}）</h3>
+        <ul class="doc-med-list doc-med-list-dim">
+          ${inactive.map(m => `<li class="doc-med"><span class="doc-med-name">${escapeHtml(m.name)}</span> <span class="doc-med-meta">${escapeHtml(m.dosage || '')}</span></li>`).join('')}
+        </ul>
+      </div>
+    ` : ''}
+  `;
+}
+
+// ── 症狀紀錄 ───────────────────────────────────────────
+async function renderDocSymptoms(p, body) {
+  body.innerHTML = `<div class="doc-loading"><i data-lucide="loader"></i> 載入中…</div>`;
+  const res = await fetch(`${API}/symptoms/history/${p.id}`);
+  const data = res.ok ? await res.json() : { history: [] };
+  const items = data.history || [];
+  if (!items.length) {
+    body.innerHTML = `<p class="doc-empty">// 患者尚未做過任何症狀分析</p>`;
+    return;
+  }
+  // 統計詞頻
+  const freq = {};
+  items.forEach(it => {
+    const list = Array.isArray(it.symptoms) ? it.symptoms : (typeof it.symptoms === 'string' ? [it.symptoms] : []);
+    list.forEach(s => { if (!s) return; freq[s] = (freq[s] || 0) + 1; });
+  });
+  const topSym = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  body.innerHTML = `
+    <div class="doc-card">
+      <h3><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> 症狀詞頻（最常出現）</h3>
+      ${topSym.length ? `
+        <div class="doc-bar-list">
+          ${topSym.map(([s, n]) => {
+            const max = topSym[0][1];
+            const pct = Math.round(n / max * 100);
+            return `
+              <div class="doc-bar-row">
+                <span class="doc-bar-name">${escapeHtml(s)}</span>
+                <span class="doc-bar-track"><span class="doc-bar-fill" style="width:${pct}%"></span></span>
+                <span class="doc-bar-count">${n}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : '<p class="doc-empty">無</p>'}
+    </div>
+
+    <div class="doc-card">
+      <h3><i data-lucide="history" style="width:16px;height:16px"></i> 分析歷史（${items.length}）</h3>
+      <ul class="doc-sym-list">
+        ${items.slice(0, 30).map(it => {
+          const list = Array.isArray(it.symptoms) ? it.symptoms : [];
+          const ai = it.ai_response || {};
+          const urg = ai.urgency || 'low';
+          return `
+            <li class="doc-sym-row">
+              <span class="doc-sym-time">${new Date(it.created_at).toLocaleString()}</span>
+              <span class="doc-sym-tags">${list.map(s => `<span class="doc-sym-tag">${escapeHtml(s)}</span>`).join('')}</span>
+              <span class="doc-sym-urg doc-urg-${urg}">${urg.toUpperCase()}</span>
+              ${ai.recommended_department ? `<span class="doc-sym-dept">→ ${escapeHtml(ai.recommended_department)}</span>` : ''}
+            </li>
+          `;
+        }).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+// ── 摺線圖 SVG ─────────────────────────────────────────
+function renderLineChart(arr, opts) {
+  opts = opts || {};
+  const W = opts.width || 720;
+  const H = opts.height || 220;
+  const padL = opts.compact ? 8 : 38;
+  const padR = opts.compact ? 8 : 12;
+  const padT = opts.compact ? 6 : 14;
+  const padB = opts.compact ? 6 : 26;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+
+  if (!arr.length) return `<svg class="doc-chart" viewBox="0 0 ${W} ${H}"></svg>`;
+
+  // 取所有 y 值（含 value2 雙線）
+  const hasDual = arr.some(p => p.value2 != null);
+  const ys = arr.flatMap(p => hasDual ? [p.value, p.value2].filter(v => v != null) : [p.value]);
+  const ts = arr.map(p => +new Date(p.recorded_at));
+  const yMin = Math.min(...ys);
+  const yMax = Math.max(...ys);
+  const tMin = Math.min(...ts);
+  const tMax = Math.max(...ts);
+  const yPad = (yMax - yMin) * 0.15 || Math.abs(yMax) * 0.1 || 1;
+  const yLo = yMin - yPad;
+  const yHi = yMax + yPad;
+  const tRange = (tMax - tMin) || 1;
+
+  const xOf = t => padL + (t - tMin) / tRange * innerW;
+  const yOf = v => padT + (1 - (v - yLo) / (yHi - yLo)) * innerH;
+
+  const buildPath = (key) => arr
+    .filter(p => p[key] != null)
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(+new Date(p.recorded_at)).toFixed(1)},${yOf(p[key]).toFixed(1)}`)
+    .join(' ');
+
+  const path1 = buildPath('value');
+  const path2 = hasDual ? buildPath('value2') : '';
+
+  // 軸線（非 compact）
+  let axis = '';
+  if (!opts.compact) {
+    const ticks = 4;
+    let yTicks = '';
+    for (let i = 0; i <= ticks; i++) {
+      const v = yLo + (yHi - yLo) * (i / ticks);
+      const y = yOf(v);
+      yTicks += `<line class="dlc-grid" x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" />`;
+      yTicks += `<text class="dlc-axis" x="${padL - 6}" y="${(y + 4).toFixed(1)}" text-anchor="end">${v.toFixed(yHi - yLo > 10 ? 0 : 1)}</text>`;
+    }
+    const dStart = new Date(tMin);
+    const dEnd = new Date(tMax);
+    const fmt = d => `${d.getMonth() + 1}/${d.getDate()}`;
+    axis = `${yTicks}
+      <text class="dlc-axis" x="${padL}" y="${H - 6}" text-anchor="start">${fmt(dStart)}</text>
+      <text class="dlc-axis" x="${W - padR}" y="${H - 6}" text-anchor="end">${fmt(dEnd)}</text>`;
+  }
+
+  const dots = arr.map(p => `<circle class="dlc-dot" cx="${xOf(+new Date(p.recorded_at)).toFixed(1)}" cy="${yOf(p.value).toFixed(1)}" r="${opts.compact ? 1.6 : 2.4}" />`).join('');
+  const dots2 = hasDual ? arr.filter(p => p.value2 != null).map(p => `<circle class="dlc-dot dlc-dot-2" cx="${xOf(+new Date(p.recorded_at)).toFixed(1)}" cy="${yOf(p.value2).toFixed(1)}" r="${opts.compact ? 1.6 : 2.4}" />`).join('') : '';
+
+  return `
+    <svg class="doc-chart ${opts.compact ? 'doc-chart-compact' : ''}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      ${axis}
+      <path class="dlc-line" d="${path1}" />
+      ${path2 ? `<path class="dlc-line dlc-line-2" d="${path2}" />` : ''}
+      ${dots}
+      ${dots2}
+    </svg>
+  `;
+}
+
+// ── 工具 ───────────────────────────────────────────────
+function groupBy(arr, fn) {
+  const out = {};
+  for (const x of arr) {
+    const k = fn(x);
+    (out[k] = out[k] || []).push(x);
+  }
+  return out;
+}
+function computeStats(arr) {
+  const ys = arr.map(p => p.value);
+  const sum = ys.reduce((a, b) => a + b, 0);
+  const avg = (sum / ys.length).toFixed(1);
+  return { avg, min: Math.min(...ys).toFixed(1), max: Math.max(...ys).toFixed(1) };
+}
+function relTime(iso) {
+  if (!iso) return '—';
+  const t = new Date(iso);
+  const diff = Date.now() - t.getTime();
+  const d = Math.floor(diff / 86400000);
+  if (d < 1) {
+    const h = Math.floor(diff / 3600000);
+    if (h < 1) return '剛剛';
+    return `${h} 小時前`;
+  }
+  if (d < 30) return `${d} 天前`;
+  return t.toLocaleDateString();
+}
+function renderSimpleMarkdown(md) {
+  if (!md) return '';
+  const esc = String(md).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return esc
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)(?!\s*<li>)/gs, '<ul>$1</ul>')
+    .replace(/\n\n+/g, '</p><p>')
+    .replace(/^(?!<)(.+)$/gm, function (m) { return m.startsWith('<') ? m : '<p>' + m + '</p>'; })
+    .replace(/<p><\/p>/g, '');
+}
+
 // ─── Service Worker ───────────────────────────────────────
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
 }
 
-showPage("home");
+// 啟動：醫師角色直接進醫師端 home，否則進患者 home
+(function bootApp() {
+  const u = getCurrentUser();
+  const wrap = document.getElementById('app-wrapper');
+  if (u && u.role === 'doctor') {
+    if (wrap) wrap.classList.add('doctor-mode');
+    renderSidebarNav();
+    showPage('docHome');
+  } else {
+    if (wrap) wrap.classList.remove('doctor-mode');
+    showPage('home');
+  }
+})();

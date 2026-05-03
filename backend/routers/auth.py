@@ -128,6 +128,19 @@ def change_password(user_id: str, body: PasswordChange):
     return {"ok": True}
 
 
+@router.get("/lookup")
+def lookup_patient(username: str):
+    """醫師端依患者序號（username）查詢病患公開資料。"""
+    sb = get_supabase()
+    result = sb.table("users").select("*").eq("username", username).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="找不到此序號的帳號")
+    user = result.data[0]
+    if user.get("role") != "patient":
+        raise HTTPException(status_code=400, detail="此序號不是患者帳號")
+    return _public_user(user)
+
+
 @router.get("/users")
 def list_users():
     sb = get_supabase()
