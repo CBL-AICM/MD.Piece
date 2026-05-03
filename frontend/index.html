@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=mobile-app-5" />
+  <link rel="stylesheet" href="css/style.css?v=mobile-app-6" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
@@ -251,6 +251,9 @@
         <button class="nav-item" onclick="navigateTo('chat', this)">
           <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span> 醫起聊天
         </button>
+        <button class="nav-item" onclick="navigateTo('profile', this)">
+          <span class="nav-icon"><i data-lucide="id-card" style="width:18px;height:18px"></i></span> 個人檔案
+        </button>
       </nav>
       <div class="sidebar-foot">
         <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
@@ -346,6 +349,9 @@
         </button>
         <button class="more-item" onclick="dockNavigate('pieces')">
           <i data-lucide="puzzle"></i><span>你的碎片</span>
+        </button>
+        <button class="more-item" onclick="dockNavigate('profile')">
+          <i data-lucide="id-card"></i><span>個人檔案</span>
         </button>
       </div>
       <div class="more-sheet-foot">
@@ -559,6 +565,7 @@
       labs: 'lab-values',
       pieces: 'your-pieces',
       chat: 'med-chat',
+      profile: 'profile',
       // legacy / fallback
       records: 'records', doctors: 'doctors', patients: 'patients'
     };
@@ -575,6 +582,7 @@
       labs: '報告數值',
       pieces: '你的碎片',
       chat: '醫起聊天',
+      profile: '個人檔案',
       records: '病歷管理', doctors: '醫師列表', patients: '病患管理'
     };
 

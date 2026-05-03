@@ -116,7 +116,7 @@ const pageSlugForTerminal = {
   home: 'home', symptoms: 'symptoms', medications: 'medications',
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
-  pieces: 'your-pieces', chat: 'med-chat',
+  pieces: 'your-pieces', chat: 'med-chat', profile: 'profile',
   records: 'records', doctors: 'doctors', patients: 'patients'
 };
 
@@ -125,7 +125,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, patients, records, medications, education,
-    vitals, memo, previsit, story, labs, pieces, chat
+    vitals, memo, previsit, story, labs, pieces, chat, profile
   };
   // Page transition
   app.style.opacity = '0';
@@ -139,6 +139,7 @@ function showPage(page) {
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
+    if (page === "profile") loadProfilePage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -148,6 +149,150 @@ function showPage(page) {
       app.style.transform = 'translateY(0)';
     });
   }, 150);
+}
+
+// ─── 個人檔案頁面 ──────────────────────────────────────
+
+function profile() {
+  return `
+    <div class="profile-page">
+      <!-- ID card preview -->
+      <div class="profile-card">
+        <div class="profile-card-deco profile-card-deco-1"></div>
+        <div class="profile-card-deco profile-card-deco-2"></div>
+        <div class="profile-card-head">
+          <div class="profile-card-brand">
+            <span>MD</span><span>PIECE</span>
+          </div>
+          <span class="profile-card-role" id="profile-role">PATIENT</span>
+        </div>
+        <div class="profile-card-body">
+          <div class="profile-avatar" id="profile-avatar" onclick="cycleProfileAvatar()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="5"/>
+              <path d="M3 21v-2a7 7 0 0114 0v2"/>
+            </svg>
+            <span class="profile-avatar-hint">點擊換色</span>
+          </div>
+          <div class="profile-card-info">
+            <div class="profile-row"><span class="profile-label">NAME 暱稱</span><span class="profile-value" id="profile-nickname">—</span></div>
+            <div class="profile-row"><span class="profile-label">ID NO. 身分證號</span><span class="profile-value" id="profile-idno">—</span></div>
+            <div class="profile-row"><span class="profile-label">DATE ISSUED 發卡日</span><span class="profile-value" id="profile-issued">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit personal info -->
+      <section class="profile-section">
+        <h3 class="profile-section-title"><i data-lucide="user-cog"></i> 編輯資料</h3>
+        <div class="profile-field">
+          <label for="pf-nickname">暱稱</label>
+          <input id="pf-nickname" type="text" maxlength="20" placeholder="輸入暱稱" autocomplete="off" />
+        </div>
+        <div class="profile-field">
+          <label for="pf-idno">身分證號</label>
+          <input id="pf-idno" type="text" maxlength="10" placeholder="A123456789" autocomplete="off" />
+        </div>
+        <button class="profile-save-btn" onclick="saveProfile()">
+          <i data-lucide="check"></i> 儲存變更
+        </button>
+      </section>
+
+      <!-- Display preferences -->
+      <section class="profile-section">
+        <h3 class="profile-section-title"><i data-lucide="settings-2"></i> 顯示設定</h3>
+        <button class="profile-row-btn" onclick="toggleAppTheme();setTimeout(loadProfilePage,100)">
+          <span class="prb-left"><i data-lucide="moon-star"></i> 主題</span>
+          <span class="prb-right" id="pf-theme-status">深色</span>
+        </button>
+        <button class="profile-row-btn" data-mode-toggle onclick="toggleMode();setTimeout(loadProfilePage,100)">
+          <span class="prb-left"><i data-lucide="text-cursor-input"></i> 字級模式</span>
+          <span class="prb-right" id="pf-mode-status">一般</span>
+        </button>
+      </section>
+
+      <!-- Account -->
+      <section class="profile-section">
+        <h3 class="profile-section-title"><i data-lucide="shield-check"></i> 帳號</h3>
+        <button class="profile-row-btn profile-danger" onclick="logout()">
+          <span class="prb-left"><i data-lucide="log-out"></i> 登出</span>
+          <span class="prb-right">→</span>
+        </button>
+      </section>
+    </div>
+  `;
+}
+
+let _profileAvatarIdx = 0;
+
+function loadProfilePage() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+  setText('profile-nickname', user.nickname || '—');
+  setText('profile-idno', user.id_number || '—');
+  setText('profile-role', (user.role || 'PATIENT').toUpperCase());
+
+  const issued = user.created_at ? new Date(user.created_at) : new Date();
+  if (!isNaN(issued)) {
+    setText('profile-issued',
+      `${issued.getFullYear()}.${String(issued.getMonth()+1).padStart(2,'0')}.${String(issued.getDate()).padStart(2,'0')}`);
+  }
+
+  _profileAvatarIdx = _avatarColors.indexOf(user.avatar_color);
+  if (_profileAvatarIdx < 0) _profileAvatarIdx = 0;
+  applyProfileAvatarColor();
+
+  const nickEl = document.getElementById('pf-nickname');
+  const idnoEl = document.getElementById('pf-idno');
+  if (nickEl) nickEl.value = user.nickname || '';
+  if (idnoEl) idnoEl.value = user.id_number || '';
+
+  const theme = document.getElementById('app-wrapper')?.dataset.theme || 'dark';
+  setText('pf-theme-status', theme === 'dark' ? '深色' : '淺色');
+  const mode = document.documentElement.getAttribute('data-mode') || 'standard';
+  setText('pf-mode-status', mode === 'senior' ? '年長版' : '一般');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function cycleProfileAvatar() {
+  _profileAvatarIdx = (_profileAvatarIdx + 1) % _avatarColors.length;
+  applyProfileAvatarColor();
+}
+
+function applyProfileAvatarColor() {
+  const el = document.getElementById('profile-avatar');
+  if (!el) return;
+  const c = _avatarColors[_profileAvatarIdx];
+  el.style.background = c + '22';
+  el.style.borderColor = c;
+  const svg = el.querySelector('svg');
+  if (svg) svg.style.color = c;
+}
+
+function saveProfile() {
+  const user = getCurrentUser();
+  if (!user) return;
+  user.nickname = (document.getElementById('pf-nickname')?.value || '').trim() || user.nickname;
+  user.id_number = (document.getElementById('pf-idno')?.value || '').trim().toUpperCase();
+  user.avatar_color = _avatarColors[_profileAvatarIdx];
+  setCurrentUser(user);
+
+  const btn = document.querySelector('.profile-save-btn');
+  if (btn) {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="check-circle-2"></i> 已儲存 ✓';
+    btn.classList.add('saved');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.classList.remove('saved');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }, 1500);
+  }
+  loadProfilePage();
 }
 
 // ─── 註冊頁面（ID Card 風格，覆蓋在星空上）──────────────
