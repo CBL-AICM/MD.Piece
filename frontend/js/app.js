@@ -4313,6 +4313,25 @@ function doctorHomePage() {
 
       <section class="term-section">
         <header class="ts-head">
+          <span class="ts-prompt">$ ./demo --seed</span>
+          <span class="ts-tag">test_data</span>
+        </header>
+        <div class="ts-body">
+          <div class="doc-demo-row">
+            <div class="doc-demo-info">
+              <h4>建立測試病患（demo_patient）</h4>
+              <p>一鍵注入 30 天的生理紀錄、用藥、服藥打卡、症狀分析與就診紀錄，方便驗證 dashboard 視覺。重複按會重置該帳號的所有資料。</p>
+            </div>
+            <button class="primary-btn doc-demo-btn" onclick="docSeedDemoPatient(this)">
+              <i data-lucide="database"></i><span>建立 / 重置</span>
+            </button>
+          </div>
+          <p class="doc-demo-msg" id="doc-demo-msg" hidden></p>
+        </div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
           <span class="ts-prompt">$ help</span>
           <span class="ts-tag">about_dashboard</span>
         </header>
@@ -4356,6 +4375,53 @@ async function submitDoctorLookup() {
     loadDoctorPatientById(patient);
   } catch (e) {
     if (err) { err.textContent = e.message || '查詢失敗'; err.hidden = false; }
+  }
+}
+
+async function docSeedDemoPatient(btn) {
+  const msg = document.getElementById('doc-demo-msg');
+  if (msg) { msg.hidden = true; msg.classList.remove('doc-demo-err', 'doc-demo-ok'); }
+  const original = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader"></i><span>建立中…</span>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  try {
+    const res = await fetch(`${API}/dev/seed_patient`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'demo_patient', nickname: '示範病患', password: 'demo1234' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '建立失敗');
+    if (msg) {
+      msg.classList.add('doc-demo-ok');
+      msg.innerHTML = `✓ 已建立 <code>${escapeHtml(data.patient.username)}</code>　·
+        生理紀錄 <b>${data.summary.vitals}</b> 筆、藥物 <b>${data.summary.medications}</b> 種、
+        服藥打卡 <b>${data.summary.medication_logs}</b> 筆、症狀分析 <b>${data.summary.symptoms}</b> 次、
+        就診紀錄 <b>${data.summary.records}</b> 筆`;
+      msg.hidden = false;
+    }
+    // 直接帶進病患詳情
+    setDoctorLastPatient({
+      id: data.patient.id, username: data.patient.username, nickname: data.patient.nickname,
+    });
+    setTimeout(() => loadDoctorPatientById({
+      id: data.patient.id, username: data.patient.username, nickname: data.patient.nickname,
+    }), 600);
+  } catch (e) {
+    if (msg) {
+      msg.classList.add('doc-demo-err');
+      msg.textContent = '× ' + (e.message || '建立失敗');
+      msg.hidden = false;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = original;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
   }
 }
 
