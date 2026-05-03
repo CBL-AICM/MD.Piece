@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=mobile-app-4" />
+  <link rel="stylesheet" href="css/style.css?v=mobile-app-5" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
@@ -65,6 +65,51 @@
 
   <!-- ★ ID Card Registration Overlay (shown on star canvas) -->
   <div id="register-overlay" style="display:none">
+    <!-- Decorative puzzle pieces -->
+    <span class="reg-bg-deco reg-puzzle reg-deco-1"></span>
+    <span class="reg-bg-deco reg-puzzle reg-puzzle-alt reg-deco-2"></span>
+    <span class="reg-bg-deco reg-puzzle reg-deco-3"></span>
+    <span class="reg-bg-deco reg-puzzle reg-puzzle-alt reg-deco-4"></span>
+    <span class="reg-bg-deco reg-puzzle reg-deco-5"></span>
+    <span class="reg-bg-deco reg-puzzle reg-puzzle-alt reg-deco-6"></span>
+
+    <!-- Decorative medical icons -->
+    <span class="reg-bg-deco reg-med reg-med-1" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    </span>
+    <span class="reg-bg-deco reg-med reg-med-2" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/>
+        <path d="m8.5 8.5 7 7"/>
+      </svg>
+    </span>
+    <span class="reg-bg-deco reg-med reg-med-3" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/>
+        <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/>
+        <circle cx="20" cy="10" r="2"/>
+      </svg>
+    </span>
+    <span class="reg-bg-deco reg-med reg-med-4" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v20M2 12h20"/>
+      </svg>
+    </span>
+    <span class="reg-bg-deco reg-med reg-med-5" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12h3l3-9 6 18 3-9h3"/>
+      </svg>
+    </span>
+
+    <!-- EKG line at the bottom -->
+    <span class="reg-ekg" aria-hidden="true">
+      <svg viewBox="0 0 800 50" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M0 25 L120 25 L140 25 L150 10 L165 40 L180 5 L195 45 L210 25 L350 25 L370 25 L380 12 L395 38 L410 25 L560 25 L580 25 L590 8 L605 42 L620 25 L800 25"/>
+      </svg>
+    </span>
+
     <div class="idcard-scene">
       <div class="idcard">
         <!-- Wavy paper texture watermark -->
