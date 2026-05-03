@@ -4654,3 +4654,299 @@ html[data-mode="senior"] *:focus-visible {
   outline-offset: 3px;
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   SETTINGS PAGE — system preferences
+   ═══════════════════════════════════════════════════════════ */
+
+/* 動畫關閉時的全域降速 */
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* 介面密度 */
+html[data-density="compact"] .settings-row { padding: 12px 16px; gap: 12px; }
+html[data-density="compact"] .settings-group { padding: 14px; }
+
+.settings-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--app-text);
+}
+
+.settings-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  background: var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 16px;
+  box-shadow: var(--app-shadow);
+}
+
+.settings-eyebrow {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+  color: var(--app-term);
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.settings-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.55rem;
+  margin: 0;
+  color: var(--app-text);
+}
+.settings-title i { width: 26px; height: 26px; color: var(--app-term); }
+
+.settings-sub {
+  margin-top: 6px;
+  color: var(--app-text-dim);
+  font-size: 0.92rem;
+}
+
+.settings-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
+}
+.suc-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--ac, #5B9FE8) 18%, transparent);
+  color: var(--ac, #5B9FE8);
+  border: 1.5px solid var(--ac, #5B9FE8);
+}
+.suc-avatar i { width: 20px; height: 20px; }
+.suc-meta { display: flex; flex-direction: column; line-height: 1.25; }
+.suc-meta strong { font-size: 1rem; color: var(--app-text); }
+.suc-meta span {
+  font-size: 0.78rem;
+  color: var(--app-text-dim);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+.settings-group {
+  background: var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--app-shadow);
+}
+
+.settings-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px dashed var(--app-border);
+}
+.settings-group-head i { width: 18px; height: 18px; color: var(--app-term); }
+.settings-group-head h3 {
+  font-size: 1.05rem;
+  margin: 0;
+  color: var(--app-text);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 4px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--app-border) 40%, transparent);
+  flex-wrap: wrap;
+}
+.settings-row:last-child { border-bottom: none; }
+
+.settings-row-info { flex: 1 1 280px; min-width: 220px; }
+.settings-row-info strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 4px;
+  color: var(--app-text);
+}
+.settings-row-info p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--app-text-dim);
+  line-height: 1.5;
+}
+
+/* Segmented control */
+.settings-seg {
+  display: inline-flex;
+  background: var(--app-bg);
+  border: 1.5px solid var(--app-border);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.seg-btn {
+  border: none;
+  background: transparent;
+  color: var(--app-text-dim);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  font-family: inherit;
+}
+.seg-btn:hover { color: var(--app-text); }
+.seg-btn.active {
+  background: var(--app-term);
+  color: var(--app-chip-text);
+  box-shadow: 0 2px 8px var(--app-glow);
+}
+
+/* Switch */
+.settings-switch {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.settings-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.sw-track {
+  display: inline-block;
+  width: 52px; height: 28px;
+  background: var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
+  border-radius: 999px;
+  position: relative;
+  transition: background var(--transition);
+}
+.sw-thumb {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  background: var(--app-text);
+  border-radius: 50%;
+  transition: transform var(--transition), background var(--transition);
+}
+.settings-switch input:checked + .sw-track {
+  background: var(--app-term);
+  border-color: var(--app-term);
+}
+.settings-switch input:checked + .sw-track .sw-thumb {
+  transform: translateX(24px);
+  background: var(--app-chip-text);
+}
+.settings-switch input:focus-visible + .sw-track {
+  outline: 2px solid var(--app-term);
+  outline-offset: 2px;
+}
+
+/* Buttons */
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--app-panel-soft);
+  color: var(--app-text);
+  border: 1.5px solid var(--app-border);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--transition), background var(--transition), box-shadow var(--transition);
+  font-family: inherit;
+}
+.settings-btn i { width: 16px; height: 16px; }
+.settings-btn:hover {
+  transform: translateY(-1px);
+  background: var(--app-chrome-1);
+  box-shadow: var(--app-shadow);
+}
+.settings-btn-warn {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+.settings-btn-warn:hover { background: color-mix(in srgb, var(--warning) 15%, var(--app-panel-soft)); }
+.settings-btn-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.settings-btn-danger:hover { background: color-mix(in srgb, var(--danger) 15%, var(--app-panel-soft)); }
+
+/* About */
+.settings-about p { margin: 8px 0; }
+.settings-about ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 16px;
+}
+.settings-about li {
+  font-size: 0.9rem;
+  color: var(--app-text-dim);
+}
+.settings-about code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+  color: var(--app-term);
+}
+.settings-about a {
+  color: var(--app-term);
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+}
+.settings-about a:hover { color: var(--app-text); }
+
+/* 年長版 — 強化可讀性與按鈕觸控 */
+html[data-mode="senior"] .settings-title { font-size: 1.7rem; }
+html[data-mode="senior"] .settings-row-info strong { font-size: 1.1rem; }
+html[data-mode="senior"] .settings-row-info p { font-size: 0.98rem; }
+html[data-mode="senior"] .seg-btn {
+  padding: 12px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  min-height: 48px;
+}
+html[data-mode="senior"] .sw-track { width: 64px; height: 34px; }
+html[data-mode="senior"] .sw-thumb { width: 26px; height: 26px; }
+html[data-mode="senior"] .settings-switch input:checked + .sw-track .sw-thumb {
+  transform: translateX(30px);
+}
+html[data-mode="senior"] .settings-btn {
+  padding: 14px 22px;
+  font-size: 1rem;
+  min-height: 52px;
+}
+
+/* 手機 — 行內元素改為直排 */
+@media (max-width: 640px) {
+  .settings-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .settings-seg { align-self: flex-start; }
+  .settings-header { align-items: flex-start; }
+}

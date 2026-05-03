@@ -412,6 +412,7 @@ const pageSlugForTerminal = {
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', chat: 'med-chat',
+  settings: 'settings',
   records: 'records', doctors: 'doctors', patients: 'patients'
 };
 
@@ -420,7 +421,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, patients, records, medications, education,
-    vitals, memo, previsit, story, labs, pieces, chat
+    vitals, memo, previsit, story, labs, pieces, chat, settings
   };
   // Page transition
   app.style.opacity = '0';
@@ -435,6 +436,7 @@ function showPage(page) {
     if (page === "education") loadEducationPage();
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
+    if (page === "settings") loadSettingsPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -3071,6 +3073,313 @@ function checkStormStatus() {
       document.getElementById("storm-status").innerHTML = html;
     })
     .catch(function() { showToast("無法檢查 STORM 狀態", "error"); });
+}
+
+// ─── 系統設定（Settings）───────────────────────────────────
+// 控制：字體大小、主題（深/淺/跟隨系統）、顯示模式、動效、提示音、
+//       重設 ID 卡、清除快取/重新整理、關於
+
+const SETTINGS_KEYS = {
+  fontSize: 'mdpiece_font_size',      // small | normal | large | xlarge
+  theme:    'mdpiece_theme_pref',     // dark | light | auto
+  motion:   'mdpiece_motion',         // on | reduced
+  sound:    'mdpiece_sound',          // on | off
+  density:  'mdpiece_density'         // cozy | compact
+};
+
+const FONT_SIZE_PX = { small: 14, normal: 16, large: 18, xlarge: 20 };
+
+function getSetting(key, fallback) {
+  try { return localStorage.getItem(SETTINGS_KEYS[key]) || fallback; }
+  catch (e) { return fallback; }
+}
+
+function setSetting(key, value) {
+  try { localStorage.setItem(SETTINGS_KEYS[key], value); } catch (e) {}
+}
+
+function applyFontSize(size) {
+  const px = FONT_SIZE_PX[size] || FONT_SIZE_PX.normal;
+  document.documentElement.style.fontSize = px + 'px';
+  document.documentElement.setAttribute('data-font-size', size);
+}
+
+function applyTheme(pref) {
+  const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
+  const app = document.getElementById('app-wrapper');
+  const lp  = document.getElementById('landing');
+  if (app) app.dataset.theme = resolved;
+  if (lp) lp.dataset.theme = resolved;
+  const aIco = document.getElementById('att-icon');
+  if (aIco) aIco.textContent = resolved === 'dark' ? '☾' : '☀';
+  const ico = document.getElementById('tt-icon');
+  const lab = document.getElementById('tt-label');
+  if (ico) ico.textContent = resolved === 'dark' ? '☾' : '☀';
+  if (lab) lab.textContent = resolved.toUpperCase();
+  // 與既有 toggle 共用 storage key（保持向下相容）
+  try { localStorage.setItem('mdpiece_landing_theme', resolved); } catch (e) {}
+  window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: resolved }));
+}
+
+function applyMotion(motion) {
+  document.documentElement.setAttribute('data-motion', motion);
+}
+
+function applyDensity(density) {
+  document.documentElement.setAttribute('data-density', density);
+}
+
+function initUserSettings() {
+  applyFontSize(getSetting('fontSize', 'normal'));
+  applyMotion(getSetting('motion', 'on'));
+  applyDensity(getSetting('density', 'cozy'));
+  // 主題：若使用者尚未選擇，沿用既有 mdpiece_landing_theme，否則 auto
+  let themePref = null;
+  try { themePref = localStorage.getItem(SETTINGS_KEYS.theme); } catch (e) {}
+  if (themePref) applyTheme(themePref);
+  // 監聽系統主題變化（auto 模式才生效）
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => {
+      const pref = (function(){ try { return localStorage.getItem(SETTINGS_KEYS.theme); } catch(e){ return null; } })();
+      if (pref === 'auto') applyTheme('auto');
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+}
+initUserSettings();
+
+function settings() {
+  const user = getCurrentUser();
+  const fs   = getSetting('fontSize', 'normal');
+  const th   = (function(){ try { return localStorage.getItem(SETTINGS_KEYS.theme) || 'auto'; } catch(e){ return 'auto'; } })();
+  const md   = getMode();
+  const mo   = getSetting('motion', 'on');
+  const so   = getSetting('sound', 'on');
+  const de   = getSetting('density', 'cozy');
+  const name = user ? (user.nickname || '訪客') : '訪客';
+  const idno = user && user.id_number ? user.id_number : '—';
+  const ac   = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
+
+  const seg = (group, opts, current) => opts.map(o =>
+    `<button class="seg-btn ${o.value === current ? 'active' : ''}" data-group="${group}" data-value="${o.value}" onclick="onSettingChange('${group}','${o.value}')">${o.label}</button>`
+  ).join('');
+
+  return `
+    <section class="settings-page">
+      <header class="settings-header">
+        <div class="settings-title-block">
+          <p class="settings-eyebrow">// system &gt; preferences</p>
+          <h2 class="settings-title"><i data-lucide="settings"></i> 系統設定</h2>
+          <p class="settings-sub">調整顯示、輔助功能與資料管理。設定會自動儲存到此裝置。</p>
+        </div>
+        <div class="settings-user-card" style="--ac:${ac}">
+          <span class="suc-avatar"><i data-lucide="user"></i></span>
+          <div class="suc-meta">
+            <strong>${name}</strong>
+            <span>身分證 ${idno}</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- 顯示 -->
+      <div class="settings-group">
+        <div class="settings-group-head">
+          <i data-lucide="monitor"></i><h3>顯示</h3>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>字體大小</strong>
+            <p>調整介面文字的閱讀大小，立即生效。</p>
+          </div>
+          <div class="settings-seg" id="seg-fontSize">
+            ${seg('fontSize', [
+              {value:'small',  label:'小'},
+              {value:'normal', label:'標準'},
+              {value:'large',  label:'大'},
+              {value:'xlarge', label:'特大'}
+            ], fs)}
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>主題</strong>
+            <p>深色適合夜間，淺色適合白天，跟隨系統會自動切換。</p>
+          </div>
+          <div class="settings-seg" id="seg-theme">
+            ${seg('theme', [
+              {value:'light', label:'☀ 淺色'},
+              {value:'dark',  label:'☾ 深色'},
+              {value:'auto',  label:'⌬ 跟隨系統'}
+            ], th)}
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>顯示模式</strong>
+            <p>「年長版」放大字體與按鈕、加強對比，方便長輩使用。</p>
+          </div>
+          <div class="settings-seg" id="seg-mode">
+            ${seg('mode', [
+              {value:'standard', label:'普通版'},
+              {value:'senior',   label:'年長版'}
+            ], md)}
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>介面密度</strong>
+            <p>「緊湊」減少間距，「舒適」較寬鬆，適合觸控操作。</p>
+          </div>
+          <div class="settings-seg" id="seg-density">
+            ${seg('density', [
+              {value:'cozy',    label:'舒適'},
+              {value:'compact', label:'緊湊'}
+            ], de)}
+          </div>
+        </div>
+      </div>
+
+      <!-- 輔助 -->
+      <div class="settings-group">
+        <div class="settings-group-head">
+          <i data-lucide="accessibility"></i><h3>輔助與互動</h3>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>動畫效果</strong>
+            <p>關閉後可降低暈眩感、節省電力。</p>
+          </div>
+          <label class="settings-switch">
+            <input type="checkbox" id="sw-motion" ${mo === 'on' ? 'checked' : ''} onchange="onSwitchChange('motion', this.checked ? 'on' : 'reduced')" />
+            <span class="sw-track"><span class="sw-thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>提示音效</strong>
+            <p>操作回饋與提醒提示音。</p>
+          </div>
+          <label class="settings-switch">
+            <input type="checkbox" id="sw-sound" ${so === 'on' ? 'checked' : ''} onchange="onSwitchChange('sound', this.checked ? 'on' : 'off')" />
+            <span class="sw-track"><span class="sw-thumb"></span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 帳號與資料 -->
+      <div class="settings-group">
+        <div class="settings-group-head">
+          <i data-lucide="database"></i><h3>帳號與資料</h3>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>重新整理 / 清除快取</strong>
+            <p>當畫面顯示異常或更新後仍卡舊版時，可手動清除。</p>
+          </div>
+          <button class="settings-btn" onclick="settingsClearCache()">
+            <i data-lucide="refresh-cw"></i> 立即重整
+          </button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>重新發卡</strong>
+            <p>清除目前 ID 卡資料並回到歡迎頁，可重新註冊。</p>
+          </div>
+          <button class="settings-btn settings-btn-warn" onclick="settingsResetCard()">
+            <i data-lucide="id-card"></i> 重新發卡
+          </button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <strong>登出</strong>
+            <p>結束本次工作階段，下次回來會回到歡迎頁。</p>
+          </div>
+          <button class="settings-btn settings-btn-danger" onclick="logout()">
+            <i data-lucide="log-out"></i> 登出
+          </button>
+        </div>
+      </div>
+
+      <!-- 關於 -->
+      <div class="settings-group">
+        <div class="settings-group-head">
+          <i data-lucide="info"></i><h3>關於 MD.Piece</h3>
+        </div>
+        <div class="settings-about">
+          <p><strong>MD.Piece</strong> · 將日常碎片拼起，醫起走出治療的迷霧。</p>
+          <ul>
+            <li>版本：<code>v2.0</code></li>
+            <li>作者：CBL-AICM Lab</li>
+            <li>網站：<a href="https://www.mdpiece.life/" target="_blank" rel="noopener">www.mdpiece.life</a></li>
+            <li>原始碼：<a href="https://github.com/${GITHUB_REPO}" target="_blank" rel="noopener">${GITHUB_REPO}</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function loadSettingsPage() {
+  // 確保 Lucide 圖示渲染
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function onSettingChange(group, value) {
+  if (group === 'fontSize') {
+    setSetting('fontSize', value);
+    applyFontSize(value);
+  } else if (group === 'theme') {
+    try { localStorage.setItem(SETTINGS_KEYS.theme, value); } catch (e) {}
+    applyTheme(value);
+  } else if (group === 'mode') {
+    setMode(value);
+  } else if (group === 'density') {
+    setSetting('density', value);
+    applyDensity(value);
+  }
+  // 更新該群組按鈕的 active 狀態
+  document.querySelectorAll(`.seg-btn[data-group="${group}"]`).forEach(b => {
+    b.classList.toggle('active', b.dataset.value === value);
+  });
+  if (typeof showToast === 'function') showToast('已儲存設定', 'success');
+}
+
+function onSwitchChange(key, value) {
+  setSetting(key, value);
+  if (key === 'motion') applyMotion(value);
+  if (typeof showToast === 'function') showToast('已儲存設定', 'success');
+}
+
+function settingsClearCache() {
+  if (!confirm('將清除本機快取並重新載入頁面，繼續嗎？')) return;
+  try {
+    if ('caches' in window) {
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).finally(() => location.reload());
+    } else {
+      location.reload();
+    }
+  } catch (e) { location.reload(); }
+}
+
+function settingsResetCard() {
+  if (!confirm('確定要重新發卡？\n\n會清除目前 ID 卡與本機暫存資料，\n下次進入會重新註冊。')) return;
+  try {
+    localStorage.removeItem('mdpiece_user');
+    localStorage.removeItem('mdpiece_demo_pid');
+  } catch (e) {}
+  window.location.reload();
 }
 
 function markdownToHtml(md) {
