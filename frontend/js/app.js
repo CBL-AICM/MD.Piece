@@ -400,6 +400,209 @@ function memoRenderList() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// ── 每日故事：分類推送（疾病 / 健康快訊 / 最新資訊）─────────
+var STORY_CATEGORIES = [
+  { key: "disease",    label: "疾病故事", icon: "stethoscope", desc: "用故事的方式，把一個疾病講給你聽" },
+  { key: "quick_tip",  label: "健康快訊", icon: "zap",         desc: "今天就能用的小知識" },
+  { key: "news",       label: "最新資訊", icon: "newspaper",   desc: "醫療新聞、衛教快報" }
+];
+
+function story() {
+  var sectionsHtml = STORY_CATEGORIES.map(function(c) {
+    return '' +
+      '<div class="card story-section" id="story-section-' + c.key + '">' +
+        '<div class="story-section-head">' +
+          '<span class="story-section-cat story-cat-' + c.key + '">' +
+            '<i data-lucide="' + c.icon + '" style="width:14px;height:14px;vertical-align:middle"></i> ' + c.label +
+          '</span>' +
+          '<span class="story-section-date" id="story-date-' + c.key + '">—</span>' +
+        '</div>' +
+        '<p class="story-section-desc">' + c.desc + '</p>' +
+        '<div class="story-section-body" id="story-body-' + c.key + '">' +
+          '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入中…</div>' +
+        '</div>' +
+      '</div>';
+  }).join("");
+
+  return `
+    <div class="card story-hero">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="book-open" style="width:22px;height:22px"></i> 每日故事
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        每天三則：一篇疾病故事、一則健康快訊、一份最新資訊——用故事的方式，陪你慢慢讀懂自己的身體。
+      </p>
+    </div>
+
+    ${sectionsHtml}
+
+    <div class="card" id="story-newsfeed-card">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="rss" style="width:16px;height:16px"></i> 衛福部最新公告
+      </h3>
+      <p class="story-section-desc" style="margin-top:6px">
+        來自衛福部 RSS，每小時更新一次，點標題會在新分頁開啟原文。
+      </p>
+      <div id="story-newsfeed-list" class="story-newsfeed-list">
+        <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+      </div>
+    </div>
+
+    <div class="card" id="story-archive-card">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="history" style="width:16px;height:16px"></i> 過去幾天
+      </h3>
+      <p class="story-section-desc" style="margin-top:6px">
+        最近錯過的也補得回來。點任一張卡片可以打開那天的文章。
+      </p>
+      <div id="story-archive-list" class="story-archive-list">
+        <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+      </div>
+    </div>
+  `;
+}
+
+function loadStoryPage() {
+  fetch(API + "/education/articles/daily?days=7")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var today = (data && data.today) || {};
+      STORY_CATEGORIES.forEach(function(c) {
+        renderStorySection(c.key, today[c.key]);
+      });
+      renderStoryNewsFeed((data && data.news_feed) || []);
+      renderStoryArchive((data && data.archive) || []);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      STORY_CATEGORIES.forEach(function(c) {
+        var body = document.getElementById("story-body-" + c.key);
+        if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入失敗，請稍後再試。</div>';
+      });
+      var nf = document.getElementById("story-newsfeed-list");
+      if (nf) nf.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">無法取得最新公告。</div>';
+      var arc = document.getElementById("story-archive-list");
+      if (arc) arc.innerHTML = '';
+    });
+}
+
+function renderStorySection(catKey, article) {
+  var dateEl = document.getElementById("story-date-" + catKey);
+  var body = document.getElementById("story-body-" + catKey);
+  if (!body) return;
+  if (!article) {
+    if (dateEl) dateEl.textContent = "";
+    body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">這個分類今天還沒有故事。</div>';
+    return;
+  }
+  if (!window._eduArticles) window._eduArticles = {};
+  window._eduArticles[article.slug] = article;
+
+  if (dateEl) dateEl.textContent = article.pushed_on || "";
+
+  var tags = (article.tags || []).map(function(t) {
+    return '<span class="story-tag">' + escapeHtml(t) + '</span>';
+  }).join("");
+  var sources = (article.sources || []).map(function(s) {
+    return '<li>' + escapeHtml(s) + '</li>';
+  }).join("");
+  var bodyHtml = article.body
+    ? '<div class="story-body">' + markdownToHtml(article.body) + '</div>'
+    : '<div style="color:var(--text-dim);font-size:.9rem">內容尚未提供。</div>';
+
+  body.innerHTML =
+    '<h3 class="story-title">' + escapeHtml(article.title) + '</h3>' +
+    (article.summary ? '<p class="story-summary">' + escapeHtml(article.summary) + '</p>' : '') +
+    (tags ? '<div class="story-tags">' + tags + '</div>' : '') +
+    bodyHtml +
+    (sources
+      ? '<div class="story-sources"><div class="story-sources-head">參考來源</div><ol>' + sources + '</ol></div>'
+      : '') +
+    (article.reviewed_at ? '<div class="story-reviewed">最後審稿：' + escapeHtml(article.reviewed_at) + '</div>' : '');
+}
+
+function renderStoryNewsFeed(items) {
+  var list = document.getElementById("story-newsfeed-list");
+  if (!list) return;
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">目前沒有可顯示的公告。</div>';
+    return;
+  }
+  list.innerHTML = items.map(function(n) {
+    var link = n.link ? escapeHtml(n.link) : "";
+    var title = escapeHtml(n.title || "（無標題）");
+    var summary = n.summary ? '<p class="story-news-summary">' + escapeHtml(n.summary) + '</p>' : "";
+    var pub = n.published ? '<span class="story-news-date">' + escapeHtml(n.published) + '</span>' : "";
+    var titleHtml = link
+      ? '<a class="story-news-title" href="' + link + '" target="_blank" rel="noopener noreferrer">' + title + '</a>'
+      : '<span class="story-news-title">' + title + '</span>';
+    return '<article class="story-news-item">' + titleHtml + pub + summary + '</article>';
+  }).join("");
+}
+
+function renderStoryArchive(days) {
+  var list = document.getElementById("story-archive-list");
+  if (!list) return;
+  if (!days.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">還沒有歷史紀錄。</div>';
+    return;
+  }
+  if (!window._eduArticles) window._eduArticles = {};
+  list.innerHTML = days.map(function(day) {
+    var rows = STORY_CATEGORIES.map(function(c) {
+      var a = day.items && day.items[c.key];
+      if (!a) return '';
+      window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
+      return '<button class="story-archive-item" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">' +
+               '<span class="story-archive-cat story-cat-' + c.key + '">' + escapeHtml(c.label) + '</span>' +
+               '<span class="story-archive-title">' + escapeHtml(a.title) + '</span>' +
+               (a.summary ? '<span class="story-archive-summary">' + escapeHtml(a.summary) + '</span>' : '') +
+             '</button>';
+    }).join("");
+    return '<div class="story-archive-day">' +
+             '<div class="story-archive-day-head">' + escapeHtml(day.date) + '</div>' +
+             '<div class="story-archive-day-grid">' + rows + '</div>' +
+           '</div>';
+  }).join("");
+}
+
+function storyOpenArchive(slug, catKey) {
+  var cached = (window._eduArticles && window._eduArticles[slug]) || null;
+
+  // RSS fallback 卡（slug 以 news-feed- 開頭）不是真的 markdown article，
+  // 後端 /education/articles/{slug} 會 404；直接用 archive 已經帶過來的 payload 渲染。
+  var isExternal = (slug && slug.indexOf("news-feed-") === 0)
+    || (cached && (cached.external_link || cached.body));
+  if (isExternal && cached) {
+    var key1 = catKey || cached.category || "news";
+    renderStorySection(key1, cached);
+    var section1 = document.getElementById("story-section-" + key1);
+    if (section1) section1.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+    .then(function(r) {
+      if (!r.ok) throw new Error("not found");
+      return r.json();
+    })
+    .then(function(article) {
+      var prev = (window._eduArticles && window._eduArticles[slug]) || {};
+      article.pushed_on = prev.pushed_on || article.pushed_on;
+      var key = catKey || article.category || "disease";
+      renderStorySection(key, article);
+      var section = document.getElementById("story-section-" + key);
+      if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      var key = catKey || "disease";
+      var body = document.getElementById("story-body-" + key);
+      if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">找不到這篇文章。</div>';
+    });
+}
+
 function previsit() {
   return ''
     + '<section class="pv-page">'
@@ -718,7 +921,6 @@ function previsitDownloadDoc(html) {
   setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
   if (typeof showToast === 'function') showToast('已開始下載 Word 檔', 'success');
 }
-const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 function labs() {
   return `
     <div class="card labs-hero">
@@ -836,6 +1038,7 @@ function showPage(page) {
     if (page === "doctors") loadDoctors();
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
+    if (page === "story") loadStoryPage();
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
     if (page === "labs") loadLabsPage();
