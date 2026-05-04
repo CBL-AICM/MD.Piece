@@ -3,15 +3,26 @@ import { useParams, Link } from 'react-router-dom'
 import {
   apiGet, apiPost, apiPut, apiDelete, getActiveDoctorId,
 } from '../lib/api.js'
+import { fetchPatientById } from '../lib/patients.js'
+import { getCurrentUser } from '../lib/auth.js'
+import { getReadSet, markRead } from '../lib/readState.js'
 import {
   ALERT_TYPE_LABEL, SEVERITY_LABEL, SEVERITY_TO_BADGE, patientPriority,
 } from '../lib/priority.js'
 import { fmtDate, relativeTime } from '../lib/format.js'
 import TrendChart from '../components/TrendChart.jsx'
+import ChartsPanel from '../components/ChartsPanel.jsx'
+import BodyHeatmap from '../components/BodyHeatmap.jsx'
+import TreatmentTimeline from '../components/TreatmentTimeline.jsx'
+import VisitLineCompare from '../components/VisitLineCompare.jsx'
 
 const TABS = [
   { key: 'overview', label: '快速預覽' },
+  { key: 'pushes', label: '患者推送' },
+  { key: 'charts', label: '圖表分析' },
+  { key: 'treatment', label: '治療歷程' },
   { key: 'timeline', label: '時間軸' },
+  { key: 'symptoms', label: '症狀分析' },
   { key: 'medications', label: '用藥' },
   { key: 'alerts', label: '警示' },
   { key: 'notes', label: '醫師備註' },
@@ -27,6 +38,7 @@ export default function PatientDetail() {
   const [emotionTrend, setEmotionTrend] = useState([])
   const [medStats, setMedStats] = useState(null)
   const [medChanges, setMedChanges] = useState([])
+  const [symptoms, setSymptoms] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
 
@@ -34,14 +46,15 @@ export default function PatientDetail() {
     setLoading(true)
     setErr(null)
     try {
-      const [p, a, n, r, em, ms, mc] = await Promise.all([
-        apiGet(`/patients/${id}`),
-        apiGet('/alerts/', { patient_id: id }),
-        apiGet('/doctor-notes/', { patient_id: id }),
-        apiGet(`/records/patient/${id}`),
+      const [p, a, n, r, em, ms, mc, sy] = await Promise.all([
+        fetchPatientById(id),
+        apiGet('/alerts/', { patient_id: id }).catch(() => ({ alerts: [] })),
+        apiGet('/doctor-notes/', { patient_id: id }).catch(() => ({ notes: [] })),
+        apiGet(`/records/patient/${id}`).catch(() => ({ records: [] })),
         apiGet('/emotions/trend', { patient_id: id, days: 30 }).catch(() => ({ trend: [] })),
         apiGet('/medications/stats', { patient_id: id, days: 30 }).catch(() => null),
         apiGet('/medication-changes/', { patient_id: id }).catch(() => ({ changes: [] })),
+        apiGet(`/symptoms/history/${id}`).catch(() => ({ history: [] })),
       ])
       setPatient(p)
       setAlerts(a.alerts ?? [])
@@ -50,6 +63,7 @@ export default function PatientDetail() {
       setEmotionTrend(em.trend ?? [])
       setMedStats(ms)
       setMedChanges(mc.changes ?? [])
+      setSymptoms(sy.history ?? [])
     } catch (e) {
       setErr(e.message)
     } finally {
@@ -123,15 +137,32 @@ export default function PatientDetail() {
       </div>
 
       <div className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`tab ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          let badge = null
+          if (t.key === 'pushes') {
+            const me = getCurrentUser()
+            const myDrTag = me?.id ? `dr_${me.id}` : null
+            const visible = (notes || []).filter((n) => {
+              if (!Array.isArray(n.tags) || !n.tags.includes('patient_push')) return false
+              const hasDrTag = n.tags.some((x) => typeof x === 'string' && x.startsWith('dr_'))
+              if (!hasDrTag) return true
+              return myDrTag ? n.tags.includes(myDrTag) : false
+            })
+            const readSet = getReadSet()
+            const u = visible.filter((n) => !readSet.has(n.id)).length
+            if (u > 0) badge = u
+          }
+          return (
+            <button
+              key={t.key}
+              className={`tab ${tab === t.key ? 'active' : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+              {badge != null && <span className="tab-badge">{badge}</span>}
+            </button>
+          )
+        })}
       </div>
 
       {err && <div className="error-bar">{err}</div>}
@@ -146,10 +177,40 @@ export default function PatientDetail() {
           medStats={medStats}
         />
       )}
+      {tab === 'pushes' && <PushesPanel notes={notes} />}
+      {tab === 'charts' && (
+        <ChartsPanel
+          emotionTrend={emotionTrend}
+          medStats={medStats}
+          symptoms={symptoms}
+          alerts={alerts}
+          notes={notes}
+          medChanges={medChanges}
+        />
+      )}
+      {tab === 'treatment' && (
+        <TreatmentTimeline
+          symptoms={symptoms}
+          emotionTrend={emotionTrend}
+          medChanges={medChanges}
+          medStats={medStats}
+        />
+      )}
       {tab === 'timeline' && <TimelinePanel records={records} alerts={alerts} notes={notes} medChanges={medChanges} />}
+      {tab === 'symptoms' && <SymptomsPanel symptoms={symptoms} />}
       {tab === 'medications' && <MedicationsPanel medStats={medStats} medChanges={medChanges} />}
       {tab === 'alerts' && <AlertsPanel alerts={alerts} onChanged={reload} />}
-      {tab === 'notes' && <NotesPanel patientId={id} notes={notes} onChanged={reload} />}
+      {tab === 'notes' && (
+        <NotesPanel
+          patientId={id}
+          notes={notes}
+          records={records}
+          emotionTrend={emotionTrend}
+          medStats={medStats}
+          symptoms={symptoms}
+          onChanged={reload}
+        />
+      )}
     </>
   )
 }
@@ -226,6 +287,11 @@ function OverviewPanel({ patient, activeAlerts, notes, records, emotionTrend, me
         ) : (
           <div className="placeholder">尚無情緒或服藥日誌資料</div>
         )}
+      </div>
+
+      <div className="card" style={{ gridColumn: '1 / -1' }}>
+        <h3 className="section-h">各藥物服藥順從率（30 天）</h3>
+        <AdherenceBars meds={medStats?.medications} />
       </div>
     </div>
   )
@@ -377,6 +443,141 @@ function MedicationsPanel({ medStats, medChanges }) {
   )
 }
 
+// ─── 患者推送 ─────────────────────────────────────────────
+// 患者端「診前報告 → 推送給醫師」會 POST /doctor-notes/ 並標 tags=["patient_push", <cat>]
+// 這裡只展示有 patient_push tag 的紀錄
+
+const PUSH_CAT_LABEL = {
+  symptoms: '症狀記錄',
+  medications: '用藥情況',
+  emotions: '情緒打卡',
+  vitals: '生理紀錄',
+  labs: '檢驗報告',
+  message: '患者留言',
+}
+const PUSH_CAT_COLOR = {
+  symptoms: '#ff6b81',
+  medications: '#3ddc97',
+  emotions: '#9a7bff',
+  vitals: '#6ea8ff',
+  labs: '#ffb86b',
+  message: '#5a6572',
+}
+
+function PushesPanel({ notes }) {
+  const me = getCurrentUser()
+  const myDrTag = me?.id ? `dr_${me.id}` : null
+  // 患者推送：含 patient_push tag，且未指定醫師（公開）或指定到我
+  const pushes = (notes || []).filter((n) => {
+    if (!Array.isArray(n.tags) || !n.tags.includes('patient_push')) return false
+    const hasDrTag = n.tags.some((t) => typeof t === 'string' && t.startsWith('dr_'))
+    if (!hasDrTag) return true
+    return myDrTag ? n.tags.includes(myDrTag) : false
+  })
+  const readSet = getReadSet()
+
+  useEffect(() => {
+    // 進入 panel 後，把目前可見的推送標記為已讀
+    if (pushes.length > 0) markRead(pushes.map((p) => p.id))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pushes.length])
+
+  if (pushes.length === 0) {
+    return (
+      <div className="placeholder">
+        患者尚未從「診前報告」推送任何紀錄給您。
+        <p className="cell-dim" style={{ marginTop: 8, fontSize: 13 }}>
+          患者可在 PWA「診前報告」綁定主治醫師後一鍵推送，內容會出現在這裡。
+        </p>
+      </div>
+    )
+  }
+  const sorted = [...pushes].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at),
+  )
+  return (
+    <div className="push-list">
+      {sorted.map((n) => {
+        const cat = (n.tags || []).find((t) =>
+          t !== 'patient_push' && !(typeof t === 'string' && t.startsWith('dr_'))
+        ) || 'message'
+        const color = PUSH_CAT_COLOR[cat] || '#5a6572'
+        const isUnread = !readSet.has(n.id)
+        return (
+          <div key={n.id} className={`push-card ${isUnread ? 'push-card-unread' : ''}`}>
+            <div className="push-card-head">
+              <span className="push-cat" style={{ color, borderColor: color + '55' }}>
+                {PUSH_CAT_LABEL[cat] || cat}
+              </span>
+              {isUnread && <span className="push-unread-dot" title="未讀" />}
+              <span className="cell-dim" style={{ marginLeft: 'auto' }}>
+                {fmtDate(n.created_at, true)} · {relativeTime(n.created_at)}
+              </span>
+            </div>
+            <pre className="push-content">{n.content}</pre>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── 症狀分析 ─────────────────────────────────────────────
+
+function SymptomsPanel({ symptoms }) {
+  const sorted = [...(symptoms || [])].sort(
+    (a, b) => new Date(b.created_at ?? 0) - new Date(a.created_at ?? 0),
+  )
+  return (
+    <>
+      <div className="card">
+        <h3 className="section-h">身體部位熱點圖</h3>
+        <BodyHeatmap symptoms={symptoms} />
+      </div>
+      {sorted.length === 0 && (
+        <div className="placeholder" style={{ marginTop: 12 }}>尚無症狀分析紀錄</div>
+      )}
+      {sorted.length > 0 && <SymptomsList sorted={sorted} />}
+    </>
+  )
+}
+
+function SymptomsList({ sorted }) {
+  return (
+    <div className="symptom-list">
+      {sorted.map((s) => {
+        const ai = s.ai_response || {}
+        const tags = Array.isArray(s.symptoms) ? s.symptoms : []
+        const summary = ai.summary || ai.assessment || ai.advice || ''
+        const possible = Array.isArray(ai.possible_conditions) ? ai.possible_conditions : []
+        const urgency = ai.urgency || ai.triage_level
+        const recommend = ai.recommendation || ai.suggestion
+        return (
+          <div key={s.id} className="card symptom-card">
+            <div className="symptom-head">
+              <span className="cell-dim">{fmtDate(s.created_at, true)} · {relativeTime(s.created_at)}</span>
+              {urgency && <span className={`badge ${urgency === 'high' || urgency === 'critical' ? 'err' : urgency === 'low' ? 'ok' : 'warn'}`}>{urgency}</span>}
+            </div>
+            {tags.length > 0 && (
+              <div className="symptom-tags">
+                {tags.map((t, i) => (<span key={i} className="badge">{t}</span>))}
+              </div>
+            )}
+            {summary && <p className="symptom-summary">{summary}</p>}
+            {possible.length > 0 && (
+              <div className="symptom-possible">
+                <strong>可能狀況：</strong>
+                <span className="cell-dim">{possible.map((c) => (typeof c === 'string' ? c : c?.name || c?.condition)).filter(Boolean).join('、')}</span>
+              </div>
+            )}
+            {recommend && <p className="symptom-recommend"><strong>建議：</strong>{recommend}</p>}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── 警示 ─────────────────────────────────────────────────
 
 function AlertsPanel({ alerts, onChanged }) {
@@ -439,12 +640,21 @@ function AlertsPanel({ alerts, onChanged }) {
 
 // ─── 醫師備註 ─────────────────────────────────────────────
 
-function NotesPanel({ patientId, notes, onChanged }) {
+function NotesPanel({ patientId, notes, records = [], emotionTrend = [], medStats, symptoms = [], onChanged }) {
   const [content, setContent] = useState('')
   const [nextFocus, setNextFocus] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [err, setErr] = useState(null)
   const doctorId = getActiveDoctorId()
+
+  // 上次 vs 這次回診對比
+  const visitCompare = useMemo(() => {
+    const sorted = [...(records || [])].sort(
+      (a, b) => new Date(b.visit_date ?? b.created_at) - new Date(a.visit_date ?? a.created_at),
+    )
+    if (sorted.length < 2) return null
+    return { current: sorted[0], previous: sorted[1] }
+  }, [records])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -480,6 +690,26 @@ function NotesPanel({ patientId, notes, onChanged }) {
 
   return (
     <>
+      {visitCompare && (
+        <div className="card visit-compare">
+          <h3 className="section-h">回診對比 — 這次 vs 上次</h3>
+          <div className="visit-compare-grid">
+            <VisitCol title="上次回診" record={visitCompare.previous} />
+            <VisitCol title="這次回診" record={visitCompare.current} highlight />
+          </div>
+          <h4 style={{ margin: '18px 0 0', fontSize: 14, color: 'var(--text)' }}>
+            上下次折線比對（回診前 14 天）
+          </h4>
+          <VisitLineCompare
+            previous={visitCompare.previous}
+            current={visitCompare.current}
+            emotionTrend={emotionTrend}
+            medStats={medStats}
+            symptoms={symptoms}
+          />
+        </div>
+      )}
+
       <form className="card" onSubmit={submit}>
         <h3 className="section-h">新增備註</h3>
         {!doctorId && (
@@ -528,5 +758,57 @@ function NotesPanel({ patientId, notes, onChanged }) {
         </div>
       )}
     </>
+  )
+}
+
+function AdherenceBars({ meds }) {
+  const list = (meds || []).filter((m) => m && m.name)
+  if (list.length === 0) {
+    return <div className="placeholder">尚無藥物或服藥打卡紀錄</div>
+  }
+  return (
+    <div className="adh-bars">
+      {list.map((m) => {
+        const rate = m.adherence_rate ?? 0
+        const color = rate >= 80 ? 'var(--ok)' : rate >= 50 ? 'var(--warn)' : 'var(--err)'
+        return (
+          <div key={m.id} className="adh-row">
+            <div className="adh-label">
+              <strong>{m.name}</strong>
+              {m.dosage && <span className="cell-dim"> · {m.dosage}</span>}
+              {m.category && <span className="cell-dim"> · {m.category}</span>}
+            </div>
+            <div className="adh-track">
+              <span className="adh-fill" style={{ width: `${rate}%`, background: color }} />
+            </div>
+            <div className="adh-num" style={{ color }}>{rate}%</div>
+            <div className="adh-meta cell-dim">
+              {m.total_logs ?? 0} 筆打卡
+              {m.avg_effectiveness != null && ` · 療效 ${m.avg_effectiveness}/5`}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function VisitCol({ title, record, highlight }) {
+  return (
+    <div className={`visit-col ${highlight ? 'visit-col-current' : ''}`}>
+      <div className="visit-col-head">{title}</div>
+      <div className="visit-col-date">{fmtDate(record.visit_date ?? record.created_at)}</div>
+      <dl className="kv">
+        <dt>診斷</dt><dd>{record.diagnosis || '—'}</dd>
+        <dt>處方</dt><dd>{record.prescription || '—'}</dd>
+        <dt>備註</dt><dd>{record.notes || '—'}</dd>
+        {Array.isArray(record.symptoms) && record.symptoms.length > 0 && (
+          <>
+            <dt>症狀</dt>
+            <dd>{record.symptoms.join('、')}</dd>
+          </>
+        )}
+      </dl>
+    </div>
   )
 }

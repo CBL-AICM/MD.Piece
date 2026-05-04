@@ -248,6 +248,8 @@ def log_medication(body: MedicationLogCreate):
     且 body.force == False，會回 409 並附帶風險訊息，前端再決定要不要強制送出。
 
     跳過服藥（taken == False）或固定時段藥（早 / 中 / 晚）不會被擋。
+
+    寫入後若近 7 天服藥率 < 50% 自動建立 missed_medication 警示。
     """
     sb = get_supabase()
     safety_payload: dict | None = None
@@ -287,6 +289,41 @@ def log_medication(body: MedicationLogCreate):
     out = dict(result.data[0]) if result.data else {}
     if safety_payload is not None:
         out["safety"] = safety_payload
+
+    # ── 自動警示：近 7 天打卡 >= 5 筆且服藥率 < 50% → missed_medication ──
+    try:
+        since = (datetime.utcnow() - timedelta(days=7)).isoformat()
+        recent = (
+            sb.table("medication_logs").select("taken")
+            .eq("patient_id", body.patient_id).gte("taken_at", since)
+            .execute().data or []
+        )
+        if len(recent) >= 5:
+            taken = sum(1 for r in recent if r.get("taken"))
+            rate = taken / len(recent)
+            if rate < 0.5:
+                day_ago = (datetime.utcnow() - timedelta(days=1)).isoformat()
+                existing = (
+                    sb.table("alerts").select("id")
+                    .eq("patient_id", body.patient_id)
+                    .eq("alert_type", "missed_medication")
+                    .eq("resolved", 0)
+                    .gte("created_at", day_ago)
+                    .limit(1).execute().data or []
+                )
+                if not existing:
+                    sb.table("alerts").insert({
+                        "patient_id": body.patient_id,
+                        "alert_type": "missed_medication",
+                        "severity": "high" if rate < 0.3 else "medium",
+                        "title": f"服藥順從率偏低（近 7 天 {int(rate*100)}%）",
+                        "detail": "建議下次回診詢問是否有副作用或忘記服藥的原因。",
+                        "acknowledged": 0,
+                        "resolved": 0,
+                    }).execute()
+    except Exception:
+        pass
+
     return out
 
 

@@ -550,3 +550,500 @@ code {
   font-size: 12.5px;
   color: var(--text);
 }
+
+/* ─── Symptoms ───────────────────────────── */
+.symptom-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+.symptom-card {
+  padding: 14px 16px;
+}
+.symptom-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.symptom-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.symptom-summary {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.symptom-possible {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.symptom-recommend {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ─── Auth (Login / Register) ───────────────────────────── */
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: var(--shadow);
+}
+.auth-header { text-align: center; margin-bottom: 16px; }
+.auth-header .brand { display: inline-flex; }
+.auth-sub {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 12px 0 0;
+}
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  margin: 16px 0 18px;
+}
+.auth-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 9px 0;
+  font-size: 14px;
+  border-radius: 7px;
+  transition: all 0.15s;
+}
+.auth-tab.active {
+  background: linear-gradient(180deg, rgba(110,168,255,0.2), rgba(110,168,255,0.08));
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(110,168,255,0.25);
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.auth-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.auth-field { display: flex; flex-direction: column; gap: 5px; }
+.auth-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+.auth-submit {
+  margin-top: 6px;
+  padding: 11px 0;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.auth-foot {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+  color: var(--text-faint);
+  font-size: 11.5px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* ─── Topbar user / logout ──────────────────────────────── */
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar-user-name {
+  font-size: 13.5px;
+  color: var(--text);
+  padding: 6px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.topbar-user-spec { color: var(--text-dim); }
+
+@media (max-width: 720px) {
+  .auth-row { grid-template-columns: 1fr; }
+  .topbar { flex-wrap: wrap; gap: 10px; }
+  .topbar-user { width: 100%; justify-content: flex-end; }
+}
+/* ─── Report (AI 回診報告) ─────────────────────────── */
+.report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.report-body {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  line-height: 1.7;
+  font-size: 14.5px;
+}
+.report-body h1, .report-body h2, .report-body h3 {
+  margin: 18px 0 8px;
+  font-weight: 700;
+}
+.report-body h1 { font-size: 17px; color: var(--accent); }
+.report-body h2 { font-size: 15.5px; color: var(--text); }
+.report-body h3 { font-size: 14.5px; color: var(--text); }
+.report-body p { margin: 6px 0; }
+.report-body ul { margin: 6px 0 12px 18px; padding: 0; }
+.report-body li { margin: 3px 0; }
+.report-body strong { color: var(--text); }
+.report-body em { color: var(--text-dim); font-style: normal; background: rgba(255,255,255,0.04); padding: 0 4px; border-radius: 3px; }
+.report-body code {
+  background: var(--panel-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 13px;
+}
+.report-body hr {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 14px 0;
+}
+.report-meta {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+.disclaimer {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(255, 184, 107, 0.08);
+  border: 1px solid rgba(255, 184, 107, 0.25);
+  border-radius: 8px;
+  color: var(--warn);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.disclaimer strong { color: var(--text); }
+
+
+/* ─── Charts grid (圖表分析 tab) ─────────────────────── */
+.charts-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1080px) {
+  .charts-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ─── Heatmap (閃點圖) ───────────────────────────────── */
+.heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 11.5px;
+}
+.heatmap-header, .heatmap-row {
+  display: grid;
+  grid-template-columns: 56px repeat(12, 1fr);
+  gap: 3px;
+  align-items: center;
+}
+.heatmap-col-label {
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 10.5px;
+}
+.heatmap-row-label {
+  color: var(--text-dim);
+  font-weight: 500;
+  text-align: right;
+  padding-right: 6px;
+}
+.heatmap-cell {
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 11px;
+  cursor: default;
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: transform .1s;
+}
+.heatmap-cell:hover { transform: scale(1.08); }
+
+/* ─── Body Heatmap (身體部位熱點圖) ─────────────── */
+.body-heatmap {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .body-heatmap { grid-template-columns: 1fr; }
+}
+.body-svg-wrap {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+}
+.body-svg { width: 200px; height: auto; }
+.body-svg path { transition: fill 0.2s; }
+.body-svg path:hover { fill-opacity: 1 !important; }
+.body-legend h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.body-region-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.body-region-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.body-region-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+.body-region-name { color: var(--text); flex: 1; }
+.body-region-count { color: var(--accent); font-weight: 600; font-size: 12.5px; }
+.body-disclaimer {
+  margin: 14px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
+/* ─── Visit Compare (回診對比) ────────────────────── */
+.visit-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 8px;
+}
+@media (max-width: 720px) {
+  .visit-compare-grid { grid-template-columns: 1fr; }
+}
+.visit-col {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.visit-col-current {
+  border-color: rgba(110, 168, 255, 0.4);
+  background: linear-gradient(180deg, rgba(110,168,255,0.05), transparent);
+}
+.visit-col-head {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.visit-col-date {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+
+/* ─── Patient pushes (患者推送) ─────────────────── */
+.push-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.push-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.push-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.push-cat {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+.push-content {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+/* ─── Unread states ─────────────────────────────── */
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--err);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.push-card-unread {
+  border-color: rgba(255, 107, 129, 0.35);
+  box-shadow: 0 0 0 1px rgba(255, 107, 129, 0.15);
+}
+.push-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--err);
+  box-shadow: 0 0 6px var(--err);
+}
+
+/* ─── Mobile responsive ─────────────────────────── */
+@media (max-width: 720px) {
+  main { padding: 16px 14px 48px; }
+  .topbar { padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
+  .topbar .nav { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .nav-item { padding: 6px 10px; font-size: 13px; white-space: nowrap; }
+  .page-title { font-size: 20px; }
+  .summary-grid { grid-template-columns: 1fr 1fr; }
+  .profile-grid { grid-template-columns: 1fr 1fr; }
+  .overview-grid { grid-template-columns: 1fr; }
+
+  /* PatientDetail tabs 改成可橫向卷動 */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { height: 4px; }
+  .tab { white-space: nowrap; padding: 8px 12px; font-size: 13px; }
+
+  .data-table { font-size: 12.5px; }
+  .data-table th, .data-table td { padding: 8px 10px; }
+
+  /* Charts grid 收成單欄 */
+  .charts-grid { grid-template-columns: 1fr; }
+  .chart-card { padding: 14px 12px; }
+
+  /* Heatmap 縮 */
+  .heatmap-header, .heatmap-row {
+    grid-template-columns: 48px repeat(12, 1fr);
+    gap: 2px;
+  }
+  .heatmap-cell { height: 22px; font-size: 10px; }
+  .heatmap-row-label { font-size: 11px; padding-right: 4px; }
+  .heatmap-col-label { font-size: 9.5px; }
+
+  /* Auth card */
+  .auth-card { padding: 20px 18px; }
+}
+
+@media (max-width: 480px) {
+  .summary-grid { grid-template-columns: 1fr; }
+  .profile-grid { grid-template-columns: 1fr; }
+  .topbar-user-name { font-size: 12px; padding: 4px 8px; }
+}
+
+/* ─── Adherence bars (各藥物服藥率) ─────────────── */
+.adh-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.adh-row {
+  display: grid;
+  grid-template-columns: 1.4fr 2fr 60px 1.2fr;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+.adh-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adh-track {
+  height: 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.adh-fill {
+  display: block;
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.4s ease-out;
+}
+.adh-num { font-weight: 700; text-align: right; font-family: ui-monospace, "SF Mono", monospace; }
+.adh-meta { font-size: 11.5px; }
+
+@media (max-width: 720px) {
+  .adh-row { grid-template-columns: 1fr; gap: 4px; }
+  .adh-meta { font-size: 11px; }
+}

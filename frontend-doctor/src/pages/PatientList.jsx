@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet } from '../lib/api.js'
+import { fetchAllPatients } from '../lib/patients.js'
 import { patientPriority, ALERT_TYPE_LABEL } from '../lib/priority.js'
 import { fmtShort } from '../lib/format.js'
+import { getCurrentUser } from '../lib/auth.js'
+import { getReadSet } from '../lib/readState.js'
 
 const FILTERS = [
   { key: 'all', label: '全部' },
@@ -13,6 +16,7 @@ const FILTERS = [
 export default function PatientList() {
   const [patients, setPatients] = useState([])
   const [alertsByPatient, setAlertsByPatient] = useState({})
+  const [pushesByPatient, setPushesByPatient] = useState({})
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
   const [filter, setFilter] = useState('all')
@@ -21,18 +25,31 @@ export default function PatientList() {
   useEffect(() => {
     let alive = true
     Promise.all([
-      apiGet('/patients/'),
-      apiGet('/alerts/', { resolved: false }),
+      fetchAllPatients(),
+      apiGet('/alerts/', { resolved: false }).catch(() => ({ alerts: [] })),
+      apiGet('/doctor-notes/').catch(() => ({ notes: [] })),
     ])
-      .then(([p, a]) => {
+      .then(([ps, a, dn]) => {
         if (!alive) return
-        setPatients(p.patients ?? [])
+        setPatients(ps)
         const map = {}
         for (const al of a.alerts ?? []) {
           if (!map[al.patient_id]) map[al.patient_id] = []
           map[al.patient_id].push(al)
         }
         setAlertsByPatient(map)
+        // 把 patient_push 按 patient_id 分組（且過濾到我作為主治醫師的）
+        const me = getCurrentUser()
+        const myDrTag = me?.id ? `dr_${me.id}` : null
+        const pmap = {}
+        for (const n of dn.notes ?? []) {
+          if (!Array.isArray(n.tags) || !n.tags.includes('patient_push')) continue
+          const hasDrTag = n.tags.some((t) => typeof t === 'string' && t.startsWith('dr_'))
+          if (hasDrTag && (!myDrTag || !n.tags.includes(myDrTag))) continue
+          if (!pmap[n.patient_id]) pmap[n.patient_id] = []
+          pmap[n.patient_id].push(n)
+        }
+        setPushesByPatient(pmap)
       })
       .catch((e) => alive && setErr(e.message))
       .finally(() => alive && setLoading(false))
@@ -41,11 +58,14 @@ export default function PatientList() {
     }
   }, [])
 
+  const readSet = useMemo(() => getReadSet(), [pushesByPatient])
   const rows = useMemo(() => {
     const enriched = patients.map((p) => {
       const alerts = alertsByPatient[p.id] ?? []
       const prio = patientPriority(alerts)
-      return { ...p, _alerts: alerts, _prio: prio }
+      const pushes = pushesByPatient[p.id] ?? []
+      const unread = pushes.filter((n) => !readSet.has(n.id)).length
+      return { ...p, _alerts: alerts, _prio: prio, _pushes: pushes, _unread: unread }
     })
     enriched.sort((a, b) => {
       if (b._prio.rank !== a._prio.rank) return b._prio.rank - a._prio.rank
@@ -62,6 +82,7 @@ export default function PatientList() {
       const q = search.trim().toLowerCase()
       r = r.filter((x) =>
         (x.name ?? '').toLowerCase().includes(q) ||
+        (x.username ?? '').toLowerCase().includes(q) ||
         (x.phone ?? '').toLowerCase().includes(q) ||
         (x.id ?? '').toLowerCase().includes(q)
       )
@@ -102,7 +123,7 @@ export default function PatientList() {
         </div>
         <input
           className="text-input"
-          placeholder="搜尋姓名、電話或 ID"
+          placeholder="搜尋姓名、帳號、電話或 ID"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -119,15 +140,16 @@ export default function PatientList() {
               <th style={{ width: 80 }}>年齡</th>
               <th style={{ width: 90 }}>性別</th>
               <th style={{ width: 110 }}>建檔</th>
+              <th style={{ width: 110 }}>未讀推送</th>
               <th>主要警示</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)' }}>載入中…</td></tr>
+              <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)' }}>載入中…</td></tr>
             )}
             {!loading && filtered.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)' }}>
+              <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)' }}>
                 {patients.length === 0 ? '尚無患者資料' : '沒有符合條件的患者'}
               </td></tr>
             )}
@@ -142,6 +164,13 @@ export default function PatientList() {
                   <td>{p.age ?? '—'}</td>
                   <td className="cell-dim">{p.gender ?? '—'}</td>
                   <td className="cell-dim">{fmtShort(p.created_at)}</td>
+                  <td>
+                    {p._unread > 0
+                      ? <span className="badge crit">{p._unread} 則未讀</span>
+                      : (p._pushes.length > 0
+                          ? <span className="cell-dim">{p._pushes.length} 則已讀</span>
+                          : <span className="cell-dim">—</span>)}
+                  </td>
                   <td className="cell-dim">
                     {a ? (
                       <>

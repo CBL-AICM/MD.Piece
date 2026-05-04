@@ -38,8 +38,10 @@ MONTHLY_SYSTEM_PROMPT = (
     "3. **情緒追蹤** — 平均分、趨勢方向、是否有連續低落\n"
     "4. **用藥順從性** — 服藥率、漏藥模式、療效回饋\n"
     "5. **就診紀錄** — 期間內的就診次數與診斷摘要\n"
-    "6. **建議關注** — 需要醫師在下次門診特別留意的項目\n\n"
-    "使用 Markdown 格式，簡潔專業。如果某類數據不足，註明「資料不足」而非杜撰。"
+    "6. **患者主動推送** — 把患者透過「診前報告」推送給您的事項整理出來，這是患者本人最在意的，請特別重視\n"
+    "7. **建議關注** — 需要醫師在下次門診特別留意的項目\n\n"
+    "使用 Markdown 格式，簡潔專業。如果某類數據不足，註明「資料不足」而非杜撰。\n"
+    "結尾務必加一行：「⚠ 本報告由 AI 整理，不可作為診斷或醫療依據。」"
 )
 
 # ── 患者帶去診間用的白話摘要 prompt ────────────────────────
@@ -231,9 +233,18 @@ def get_monthly_report(patient_id: str):
         sb.table("medical_records").select("*").eq("patient_id", patient_id)
         .gte("visit_date", since[:10]).order("visit_date").execute().data or []
     ), [])
+    # 患者主動推送（doctor_notes 中 tags 含 patient_push）
+    pushes_raw = _safe_query(lambda: (
+        sb.table("doctor_notes").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since).order("created_at", desc=True).execute().data or []
+    ), [])
+    pushes_data = [
+        n for n in pushes_raw
+        if isinstance(n.get("tags"), list) and "patient_push" in n["tags"]
+    ]
 
     # 如果完全無資料
-    has_data = symptoms_data or emotions_data or med_logs_data or records_data
+    has_data = symptoms_data or emotions_data or med_logs_data or records_data or pushes_data
     if not has_data:
         return {
             "patient_id": patient_id,
@@ -313,6 +324,20 @@ def get_monthly_report(patient_id: str):
             parts.append(f"  - {date}：{diag}")
     else:
         parts.append("\n就診紀錄：無")
+
+    # 患者主動推送（最重要，因為這是患者本人在乎的事）
+    if pushes_data:
+        parts.append(f"\n患者主動推送（{len(pushes_data)} 則）— **這是患者本人特別想讓您注意的事項**：")
+        for p in pushes_data[:10]:
+            d = (p.get("created_at") or "?")[:10]
+            tags = p.get("tags", []) or []
+            cat = next((t for t in tags if t != "patient_push"), "其他")
+            content = (p.get("content") or "").strip()
+            if len(content) > 200:
+                content = content[:200] + "…"
+            parts.append(f"  - [{d}][{cat}] {content}")
+    else:
+        parts.append("\n患者主動推送：無")
 
     data_summary = "\n".join(parts)
 
