@@ -56,7 +56,32 @@ def _parse_scalar(raw: str):
         return True
     if raw.lower() in {"false", "no"}:
         return False
+    # Inline list: [a, b, "c, d"] — supports unquoted CJK items and quoted commas.
+    if raw.startswith("[") and raw.endswith("]"):
+        return _split_inline_list(raw[1:-1])
     return _strip_quotes(raw)
+
+
+def _split_inline_list(body: str) -> list[str]:
+    items: list[str] = []
+    buf: list[str] = []
+    quote: Optional[str] = None
+    for ch in body:
+        if quote:
+            if ch == quote:
+                quote = None
+                continue
+            buf.append(ch)
+        elif ch in {'"', "'"}:
+            quote = ch
+        elif ch == ",":
+            items.append("".join(buf).strip())
+            buf = []
+        else:
+            buf.append(ch)
+    if buf:
+        items.append("".join(buf).strip())
+    return [_strip_quotes(item) for item in items if item]
 
 
 def _parse_frontmatter(text: str) -> dict:
