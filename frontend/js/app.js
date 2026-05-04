@@ -4934,23 +4934,43 @@ function chatSetVersion(v) {
   try { localStorage.setItem(CHAT_VERSION_KEY, v); } catch (e) {}
 }
 
-// 小禾吉祥物 — 改用 MD.Piece logo，typing/thinking 用旁邊的氣泡點點區分狀態
+// 小禾吉祥物 — Claude Code 風 ASCII 顏文字兔
 // state: 'idle' | 'typing' | 'thinking'
-// frame: 保留參數讓既有 typing 動畫呼叫端不爆炸（目前由 CSS 動畫處理）
+// frame: 0/1 — typing 狀態下交替的「左手敲 / 右手敲」鍵盤動畫
 function chatMascotSvg(state, frame) {
   state = state || 'idle';
-  var stateClass = 'chat-mascot-' + state;
-  var ariaLabel = state === 'typing' ? '小禾正在打字'
-                : state === 'thinking' ? '小禾思考中'
-                : '小禾';
-  var bubble = '';
-  if (state === 'typing' || state === 'thinking') {
-    bubble = '<span class="chat-mascot-bubble" aria-hidden="true"><i></i><i></i><i></i></span>';
+  if (state === 'typing') {
+    // 三行：耳朵、臉、雙手在鍵盤上交替敲擊
+    var bottom = (frame % 2 === 0)
+      ? ' o⌨<span class="chat-mascot-keys">▓▓▓</span>'   // 左手按下
+      : ' <span class="chat-mascot-keys">▓▓▓</span>⌨o';  // 右手按下
+    var ascii = ''
+      + ' (\\(\\\n'
+      + ' ( •ω•)\n'
+      + bottom;
+    return ''
+      + '<div class="chat-mascot-img-wrap chat-mascot-typing">'
+      +   '<pre class="chat-mascot-ascii" aria-label="小禾正在打字">' + ascii + '</pre>'
+      + '</div>';
   }
+  if (state === 'thinking') {
+    var thinkAscii = ''
+      + ' (\\(\\\n'
+      + ' ( -ㅅ-)\n'
+      + ' (  づ<span class="chat-mascot-spark">?</span>';
+    return ''
+      + '<div class="chat-mascot-img-wrap chat-mascot-thinking">'
+      +   '<pre class="chat-mascot-ascii" aria-label="小禾思考中">' + thinkAscii + '</pre>'
+      + '</div>';
+  }
+  // idle
+  var idleAscii = ''
+    + ' (\\(\\\n'
+    + ' ( •ㅅ•)\n'
+    + ' (  づ<span class="chat-mascot-spark">♥</span>';
   return ''
-    + '<div class="chat-mascot-img-wrap ' + stateClass + '">'
-    +   '<img class="chat-mascot-img" src="icons/logo.png" alt="' + ariaLabel + '" draggable="false" />'
-    +   bubble
+    + '<div class="chat-mascot-img-wrap chat-mascot-idle">'
+    +   '<pre class="chat-mascot-ascii" aria-label="小禾">' + idleAscii + '</pre>'
     + '</div>';
 }
 
