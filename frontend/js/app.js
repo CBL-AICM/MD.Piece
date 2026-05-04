@@ -401,7 +401,138 @@ function memoRenderList() {
 }
 
 const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
-const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
+function story() {
+  return `
+    <div class="card story-hero">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="book-open" style="width:22px;height:22px"></i> 每日故事
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        每天一篇，醫療團隊精選的衛教文章，陪你慢慢讀懂自己的身體。
+      </p>
+    </div>
+
+    <div class="card" id="story-today-card">
+      <div class="story-today-head">
+        <span class="story-today-label">
+          <i data-lucide="sparkles" style="width:14px;height:14px;vertical-align:middle"></i>
+          今日推送
+        </span>
+        <span class="story-today-date" id="story-today-date">—</span>
+      </div>
+      <div id="story-today-body">
+        <div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入中…</div>
+      </div>
+    </div>
+
+    <div class="card" id="story-archive-card">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="history" style="width:16px;height:16px"></i> 過去幾天
+      </h3>
+      <p style="margin-top:6px;margin-bottom:10px;color:var(--text-dim);font-size:.85rem">
+        最近錯過的也補得回來。點任一張卡片可以打開那天的文章。
+      </p>
+      <div id="story-archive-list" class="story-archive-list">
+        <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+      </div>
+    </div>
+  `;
+}
+
+// ── 每日故事：每天一篇衛教文章 ──────────────────────────────
+function loadStoryPage() {
+  fetch(API + "/education/articles/daily?days=7")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      renderStoryToday(data && data.today);
+      renderStoryArchive((data && data.archive) || []);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      var body = document.getElementById("story-today-body");
+      if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入失敗，請稍後再試。</div>';
+      var list = document.getElementById("story-archive-list");
+      if (list) list.innerHTML = '';
+    });
+}
+
+function renderStoryToday(article) {
+  var dateEl = document.getElementById("story-today-date");
+  var body = document.getElementById("story-today-body");
+  if (!body) return;
+  if (!article) {
+    if (dateEl) dateEl.textContent = "";
+    body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">今天還沒有可推送的文章。</div>';
+    return;
+  }
+  // 快取，方便歷程文章開啟時共用
+  if (!window._eduArticles) window._eduArticles = {};
+  window._eduArticles[article.slug] = article;
+
+  if (dateEl) dateEl.textContent = article.pushed_on || "";
+
+  var tags = (article.tags || []).map(function(t) {
+    return '<span class="story-tag">' + escapeHtml(t) + '</span>';
+  }).join("");
+  var sources = (article.sources || []).map(function(s) {
+    return '<li>' + escapeHtml(s) + '</li>';
+  }).join("");
+  var bodyHtml = article.body
+    ? '<div class="story-body">' + markdownToHtml(article.body) + '</div>'
+    : '<div style="color:var(--text-dim);font-size:.9rem">內容尚未提供。</div>';
+
+  body.innerHTML =
+    '<h3 class="story-title">' + escapeHtml(article.title) + '</h3>' +
+    (article.summary ? '<p class="story-summary">' + escapeHtml(article.summary) + '</p>' : '') +
+    (tags ? '<div class="story-tags">' + tags + '</div>' : '') +
+    bodyHtml +
+    (sources
+      ? '<div class="story-sources"><div class="story-sources-head">參考來源</div><ol>' + sources + '</ol></div>'
+      : '') +
+    (article.reviewed_at ? '<div class="story-reviewed">最後審稿：' + escapeHtml(article.reviewed_at) + '</div>' : '');
+}
+
+function renderStoryArchive(items) {
+  var list = document.getElementById("story-archive-list");
+  if (!list) return;
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">還沒有歷史紀錄。</div>';
+    return;
+  }
+  if (!window._eduArticles) window._eduArticles = {};
+  list.innerHTML = items.map(function(a) {
+    window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
+    return '<button class="story-archive-item" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\')">' +
+             '<span class="story-archive-date">' + escapeHtml(a.pushed_on || "") + '</span>' +
+             '<span class="story-archive-title">' + escapeHtml(a.title) + '</span>' +
+             (a.summary ? '<span class="story-archive-summary">' + escapeHtml(a.summary) + '</span>' : '') +
+           '</button>';
+  }).join("");
+}
+
+function storyOpenArchive(slug) {
+  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+    .then(function(r) {
+      if (!r.ok) throw new Error("not found");
+      return r.json();
+    })
+    .then(function(article) {
+      var prev = (window._eduArticles && window._eduArticles[slug]) || {};
+      article.pushed_on = prev.pushed_on || article.pushed_on;
+      renderStoryToday(article);
+      var label = document.querySelector("#story-today-card .story-today-label");
+      if (label) {
+        label.innerHTML = '<i data-lucide="history" style="width:14px;height:14px;vertical-align:middle"></i> 那天的故事';
+      }
+      var card = document.getElementById("story-today-card");
+      if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      var body = document.getElementById("story-today-body");
+      if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">找不到這篇文章。</div>';
+    });
+}
 function labs() {
   return `
     <div class="card labs-hero">
@@ -519,6 +650,7 @@ function showPage(page) {
     if (page === "doctors") loadDoctors();
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
+    if (page === "story") loadStoryPage();
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
     if (page === "labs") loadLabsPage();

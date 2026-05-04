@@ -222,6 +222,45 @@ def get_featured_articles(limit: int = 5):
     return {"articles": [a.to_card() for a in items[:limit]]}
 
 
+@router.get("/articles/daily")
+def get_daily_article(days: int = 7):
+    """每日故事：依日期決定今日要推送的文章，並回傳近 N 天的歷程。
+
+    - 優先從 featured 文章中輪播；若不足則從全部文章補足。
+    - 同一天回傳同一篇，不需要儲存狀態。
+    """
+    from datetime import date, timedelta
+
+    pool = education_content.list_articles(featured_only=True)
+    if not pool:
+        pool = education_content.list_articles()
+    if not pool:
+        return {"today": None, "archive": []}
+
+    pool = sorted(pool, key=lambda a: a.slug)
+    n = len(pool)
+
+    def pick_for(d: date):
+        idx = d.toordinal() % n
+        return pool[idx]
+
+    today = date.today()
+    today_article = pick_for(today)
+
+    days = max(1, min(days, 30))
+    archive = []
+    for i in range(1, days):
+        d = today - timedelta(days=i)
+        a = pick_for(d)
+        card = a.to_card()
+        card["pushed_on"] = d.isoformat()
+        archive.append(card)
+
+    today_full = today_article.to_full()
+    today_full["pushed_on"] = today.isoformat()
+    return {"today": today_full, "archive": archive}
+
+
 @router.get("/articles/{slug}")
 def get_article(slug: str):
     """取得完整文章內容（含 Markdown body 與來源清單）"""

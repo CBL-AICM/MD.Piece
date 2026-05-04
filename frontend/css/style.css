@@ -6474,3 +6474,122 @@ html[data-mode="senior"] .visit-modal-save {
   .labs-field, .labs-field-small { flex: 1 1 auto; }
   .labs-submit { width: 100%; }
 }
+
+/* ─── 每日故事 Daily Story ──────────────────────────────────── */
+.story-hero h2 { margin: 0; }
+
+.story-today-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.story-today-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  font-size: .78rem;
+  color: var(--text-dim);
+}
+.story-today-date {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82rem;
+  color: var(--text-dim);
+}
+.story-title {
+  margin: 4px 0 8px;
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+.story-summary {
+  margin: 0 0 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.story-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 14px;
+}
+.story-tag {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: var(--bg-soft);
+  font-size: .74rem;
+  color: var(--text-dim);
+}
+.story-body {
+  line-height: 1.85;
+  margin-top: 6px;
+}
+.story-body h1, .story-body h2, .story-body h3 {
+  margin-top: 1.4em;
+}
+.story-sources {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+.story-sources-head {
+  font-size: .85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-dim);
+}
+.story-sources ol {
+  padding-left: 20px;
+  color: var(--text-dim);
+  font-size: .85rem;
+  line-height: 1.6;
+}
+.story-reviewed {
+  margin-top: 14px;
+  font-size: .75rem;
+  color: var(--text-dim);
+}
+
+.story-archive-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.story-archive-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease;
+}
+.story-archive-item:hover {
+  border-color: var(--accent, #4a90e2);
+  transform: translateY(-1px);
+}
+.story-archive-date {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .72rem;
+  color: var(--text-dim);
+}
+.story-archive-title {
+  font-weight: 600;
+  line-height: 1.4;
+}
+.story-archive-summary {
+  font-size: .8rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
