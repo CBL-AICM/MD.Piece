@@ -14,6 +14,7 @@ import TrendChart from '../components/TrendChart.jsx'
 import ChartsPanel from '../components/ChartsPanel.jsx'
 import BodyHeatmap from '../components/BodyHeatmap.jsx'
 import TreatmentTimeline from '../components/TreatmentTimeline.jsx'
+import VisitLineCompare from '../components/VisitLineCompare.jsx'
 
 const TABS = [
   { key: 'overview', label: '快速預覽' },
@@ -200,7 +201,15 @@ export default function PatientDetail() {
       {tab === 'medications' && <MedicationsPanel medStats={medStats} medChanges={medChanges} />}
       {tab === 'alerts' && <AlertsPanel alerts={alerts} onChanged={reload} />}
       {tab === 'notes' && (
-        <NotesPanel patientId={id} notes={notes} records={records} onChanged={reload} />
+        <NotesPanel
+          patientId={id}
+          notes={notes}
+          records={records}
+          emotionTrend={emotionTrend}
+          medStats={medStats}
+          symptoms={symptoms}
+          onChanged={reload}
+        />
       )}
     </>
   )
@@ -278,6 +287,11 @@ function OverviewPanel({ patient, activeAlerts, notes, records, emotionTrend, me
         ) : (
           <div className="placeholder">尚無情緒或服藥日誌資料</div>
         )}
+      </div>
+
+      <div className="card" style={{ gridColumn: '1 / -1' }}>
+        <h3 className="section-h">各藥物服藥順從率（30 天）</h3>
+        <AdherenceBars meds={medStats?.medications} />
       </div>
     </div>
   )
@@ -626,7 +640,7 @@ function AlertsPanel({ alerts, onChanged }) {
 
 // ─── 醫師備註 ─────────────────────────────────────────────
 
-function NotesPanel({ patientId, notes, records = [], onChanged }) {
+function NotesPanel({ patientId, notes, records = [], emotionTrend = [], medStats, symptoms = [], onChanged }) {
   const [content, setContent] = useState('')
   const [nextFocus, setNextFocus] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -683,6 +697,16 @@ function NotesPanel({ patientId, notes, records = [], onChanged }) {
             <VisitCol title="上次回診" record={visitCompare.previous} />
             <VisitCol title="這次回診" record={visitCompare.current} highlight />
           </div>
+          <h4 style={{ margin: '18px 0 0', fontSize: 14, color: 'var(--text)' }}>
+            上下次折線比對（回診前 14 天）
+          </h4>
+          <VisitLineCompare
+            previous={visitCompare.previous}
+            current={visitCompare.current}
+            emotionTrend={emotionTrend}
+            medStats={medStats}
+            symptoms={symptoms}
+          />
         </div>
       )}
 
@@ -734,6 +758,38 @@ function NotesPanel({ patientId, notes, records = [], onChanged }) {
         </div>
       )}
     </>
+  )
+}
+
+function AdherenceBars({ meds }) {
+  const list = (meds || []).filter((m) => m && m.name)
+  if (list.length === 0) {
+    return <div className="placeholder">尚無藥物或服藥打卡紀錄</div>
+  }
+  return (
+    <div className="adh-bars">
+      {list.map((m) => {
+        const rate = m.adherence_rate ?? 0
+        const color = rate >= 80 ? 'var(--ok)' : rate >= 50 ? 'var(--warn)' : 'var(--err)'
+        return (
+          <div key={m.id} className="adh-row">
+            <div className="adh-label">
+              <strong>{m.name}</strong>
+              {m.dosage && <span className="cell-dim"> · {m.dosage}</span>}
+              {m.category && <span className="cell-dim"> · {m.category}</span>}
+            </div>
+            <div className="adh-track">
+              <span className="adh-fill" style={{ width: `${rate}%`, background: color }} />
+            </div>
+            <div className="adh-num" style={{ color }}>{rate}%</div>
+            <div className="adh-meta cell-dim">
+              {m.total_logs ?? 0} 筆打卡
+              {m.avg_effectiveness != null && ` · 療效 ${m.avg_effectiveness}/5`}
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 

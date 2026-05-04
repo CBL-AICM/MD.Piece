@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import {
   ResponsiveContainer, LineChart, Line,
-  ScatterChart, Scatter, ZAxis,
-  ComposedChart, Bar, Area,
+  ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell,
 } from 'recharts'
+import Scatter3D from './Scatter3D.jsx'
 
 const AXIS_TICK = { fill: '#8b97a6', fontSize: 11 }
 const AXIS_LINE = { stroke: '#1e2a3a' }
@@ -108,28 +108,6 @@ export default function ChartsPanel({ emotionTrend, medStats, symptoms, alerts, 
       .map((d) => ({ x: d.adherence, y: d.emotion, date: d.date }))
   }, [lineData])
 
-  // 5. 氣泡圖（3D 替代）：x=日期 y=情緒 z=當日症狀數
-  const bubbleData = useMemo(() => {
-    const map = new Map()
-    for (const d of lineData) {
-      if (d.emotion != null) {
-        map.set(d.rawDate, { date: d.date, x: d.rawDate, y: d.emotion, z: 1 })
-      }
-    }
-    for (const s of symptoms ?? []) {
-      const k = (s.created_at || '').slice(0, 10)
-      if (map.has(k)) {
-        const ex = map.get(k)
-        const arr = Array.isArray(s.symptoms) ? s.symptoms : []
-        ex.z = (ex.z || 1) + arr.length
-      }
-    }
-    return [...map.values()].map((d) => ({
-      ...d,
-      xIdx: lineData.findIndex((x) => x.rawDate === d.x),
-    })).filter((d) => d.xIdx >= 0)
-  }, [lineData, symptoms])
-
   return (
     <div className="charts-grid">
       {/* 折線圖 */}
@@ -197,22 +175,14 @@ export default function ChartsPanel({ emotionTrend, medStats, symptoms, alerts, 
         ) : <div className="placeholder">需要同時有情緒與服藥紀錄</div>}
       </ChartCard>
 
-      {/* 氣泡圖（3D 替代） */}
-      <ChartCard title="氣泡圖 — 三維視覺化（時間 × 情緒 × 症狀數）"
-        sub="x＝日期 y＝情緒分數 點大小＝當日症狀紀錄筆數">
-        {bubbleData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <ScatterChart margin={{ top: 10, right: 16, left: -8, bottom: 0 }}>
-              <CartesianGrid stroke={GRID_STROKE} strokeDasharray="3 3" />
-              <XAxis type="number" dataKey="xIdx" name="日序" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
-              <YAxis type="number" dataKey="y" name="情緒" domain={[0, 100]} tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
-              <ZAxis type="number" dataKey="z" range={[40, 360]} name="症狀數" />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={TOOLTIP_STYLE}
-                formatter={(v, n, p) => n === '日序' ? [p.payload.date, '日期'] : [v, n]} />
-              <Scatter data={bubbleData} fill="#ffb86b" />
-            </ScatterChart>
-          </ResponsiveContainer>
-        ) : <div className="placeholder">尚無情緒紀錄</div>}
+      {/* 真 3D 散布圖（plotly via CDN，可旋轉） */}
+      <ChartCard title="3D 散布圖 — 日期 × 情緒 × 服藥率"
+        sub="點顏色與大小＝當日症狀數；可滑鼠拖曳旋轉、滾輪縮放。">
+        <Scatter3D
+          emotionTrend={emotionTrend}
+          medStats={medStats}
+          symptoms={symptoms}
+        />
       </ChartCard>
     </div>
   )
