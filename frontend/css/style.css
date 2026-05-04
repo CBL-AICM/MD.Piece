@@ -6379,28 +6379,34 @@ html[data-mode="senior"] .visit-modal-save {
 }
 
 .chat-mascot-wrap {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 78px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.chat-mascot-wrap-lg { width: 80px; height: 88px; }
+.chat-mascot-wrap-lg { width: 88px; height: 108px; }
 .chat-mascot-svg { width: 100%; height: 100%; display: block; }
 .chat-mascot-svg .chat-mascot-blush { animation: chat-blush 4s ease-in-out infinite; }
-.chat-mascot-typing { animation: chat-bob 0.9s ease-in-out infinite; }
+.chat-mascot-typing  { animation: chat-bob 0.9s ease-in-out infinite; }
 .chat-mascot-thinking { animation: chat-bob 1.6s ease-in-out infinite; }
-.chat-mascot-typing .chat-mascot-mouth {
-  transform-origin: 40px 60px;
-  animation: chat-mouth 0.4s ease-in-out infinite alternate;
+.chat-mascot-svg .chat-mascot-ear-l { transform-origin: 32px 30px; animation: chat-ear-l 5s ease-in-out infinite; }
+.chat-mascot-svg .chat-mascot-ear-r { transform-origin: 68px 30px; animation: chat-ear-r 5s ease-in-out infinite; }
+.chat-mascot-typing .chat-mascot-ear-l,
+.chat-mascot-typing .chat-mascot-ear-r {
+  animation-duration: 1.2s;
 }
 @keyframes chat-bob {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-3px); }
 }
-@keyframes chat-mouth {
-  from { transform: scaleY(1); }
-  to   { transform: scaleY(0.6); }
+@keyframes chat-ear-l {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(-6deg); }
+}
+@keyframes chat-ear-r {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(6deg); }
 }
 @keyframes chat-blush {
   0%, 100% { opacity: 0.55; }
