@@ -29,8 +29,18 @@ except BaseException:
     _supabase_available = False
     Client = None
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+# Production fallback：本專案的 Supabase publishable (anon) key 與 URL。
+# anon key 設計上就是公開的（前端 client-side 也會看到），commit 進 repo 沒
+# 安全風險；若有設環境變數則優先採用（典型情境是改用 service_role 以 bypass RLS）。
+_DEFAULT_SUPABASE_URL = "https://tbqvpqvvvgfgaezxbhkz.supabase.co"
+_DEFAULT_SUPABASE_KEY = (
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRicXZwcXZ2dmdmZ2FlenhiaGt6Iiwicm9sZSI6ImFub24i"
+    "LCJpYXQiOjE3NzM2NTA3OTYsImV4cCI6MjA4OTIyNjc5Nn0."
+    "gMiXYsqw6V4GlvGLZx8ZHXZMudnx5no_cD9E5aQ3kVs"
+)
+SUPABASE_URL = os.getenv("SUPABASE_URL") or _DEFAULT_SUPABASE_URL
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or _DEFAULT_SUPABASE_KEY
 
 _client = None
 
