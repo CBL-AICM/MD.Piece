@@ -3,6 +3,7 @@ title: 糖尿病飲食：不是不能吃，是要會搭
 slug: diabetes-diet-tips
 icd10: E11
 dimension: self_management
+category: quick_tip
 tags:
   - 糖尿病
   - 飲食

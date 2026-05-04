@@ -3,6 +3,7 @@ title: 氣喘的警訊：什麼時候該衝急診？
 slug: asthma-warning-signs
 icd10: J45
 dimension: emergency_response
+category: disease
 tags:
   - 氣喘
   - 急救

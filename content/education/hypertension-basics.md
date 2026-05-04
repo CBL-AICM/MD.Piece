@@ -3,6 +3,7 @@ title: 高血壓是什麼？三個生活比喻就懂
 slug: hypertension-basics
 icd10: I10
 dimension: disease_awareness
+category: disease
 tags:
   - 高血壓
   - 入門

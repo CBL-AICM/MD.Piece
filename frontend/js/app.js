@@ -54,11 +54,30 @@ function getStablePatientId() {
   if (user && user.id) return user.id;
   var demoId = localStorage.getItem('mdpiece_demo_pid');
   if (!demoId) {
-    demoId = (crypto && crypto.randomUUID) ? crypto.randomUUID()
-      : 'demo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    demoId = generateSecureId();
     localStorage.setItem('mdpiece_demo_pid', demoId);
   }
   return demoId;
+}
+
+// 產生 demo patient_id — 一律用 Web Crypto，避免 Math.random 流入 user_id（CodeQL）
+function generateSecureId() {
+  if (typeof crypto !== 'undefined') {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    if (typeof crypto.getRandomValues === 'function') {
+      var b = new Uint8Array(16);
+      crypto.getRandomValues(b);
+      // RFC 4122 v4
+      b[6] = (b[6] & 0x0f) | 0x40;
+      b[8] = (b[8] & 0x3f) | 0x80;
+      var hex = Array.prototype.map.call(b, function(x) {
+        return ('00' + x.toString(16)).slice(-2);
+      }).join('');
+      return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+    }
+  }
+  // 最後保險：所有現代瀏覽器都已支援 Web Crypto，這條基本上跑不到
+  throw new Error('Web Crypto API unavailable');
 }
 
 // ─── 路由 ──────────────────────────────────────────────────
@@ -400,8 +419,532 @@ function memoRenderList() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-const previsit = () => previsitPage();
-const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
+// ── 每日故事：分類推送（疾病 / 健康快訊 / 最新資訊）─────────
+var STORY_CATEGORIES = [
+  { key: "disease",    label: "疾病故事", icon: "stethoscope", desc: "用故事的方式，把一個疾病講給你聽" },
+  { key: "quick_tip",  label: "健康快訊", icon: "zap",         desc: "今天就能用的小知識" },
+  { key: "news",       label: "最新資訊", icon: "newspaper",   desc: "醫療新聞、衛教快報" }
+];
+
+function story() {
+  var sectionsHtml = STORY_CATEGORIES.map(function(c) {
+    return '' +
+      '<div class="card story-section" id="story-section-' + c.key + '">' +
+        '<div class="story-section-head">' +
+          '<span class="story-section-cat story-cat-' + c.key + '">' +
+            '<i data-lucide="' + c.icon + '" style="width:14px;height:14px;vertical-align:middle"></i> ' + c.label +
+          '</span>' +
+          '<span class="story-section-date" id="story-date-' + c.key + '">—</span>' +
+        '</div>' +
+        '<p class="story-section-desc">' + c.desc + '</p>' +
+        '<div class="story-section-body" id="story-body-' + c.key + '">' +
+          '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入中…</div>' +
+        '</div>' +
+      '</div>';
+  }).join("");
+
+  return `
+    <div class="card story-hero">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="book-open" style="width:22px;height:22px"></i> 每日故事
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        每天三則：一篇疾病故事、一則健康快訊、一份最新資訊——用故事的方式，陪你慢慢讀懂自己的身體。
+      </p>
+    </div>
+
+    ${sectionsHtml}
+
+    <div class="card" id="story-newsfeed-card">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="rss" style="width:16px;height:16px"></i> 衛福部最新公告
+      </h3>
+      <p class="story-section-desc" style="margin-top:6px">
+        來自衛福部 RSS，每小時更新一次，點標題會在新分頁開啟原文。
+      </p>
+      <div id="story-newsfeed-list" class="story-newsfeed-list">
+        <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+      </div>
+    </div>
+
+    <div class="card" id="story-archive-card">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="history" style="width:16px;height:16px"></i> 過去幾天
+      </h3>
+      <p class="story-section-desc" style="margin-top:6px">
+        最近錯過的也補得回來。點任一張卡片可以打開那天的文章。
+      </p>
+      <div id="story-archive-list" class="story-archive-list">
+        <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+      </div>
+    </div>
+  `;
+}
+
+function loadStoryPage() {
+  fetch(API + "/education/articles/daily?days=7")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var today = (data && data.today) || {};
+      STORY_CATEGORIES.forEach(function(c) {
+        renderStorySection(c.key, today[c.key]);
+      });
+      renderStoryNewsFeed((data && data.news_feed) || []);
+      renderStoryArchive((data && data.archive) || []);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      STORY_CATEGORIES.forEach(function(c) {
+        var body = document.getElementById("story-body-" + c.key);
+        if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入失敗，請稍後再試。</div>';
+      });
+      var nf = document.getElementById("story-newsfeed-list");
+      if (nf) nf.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">無法取得最新公告。</div>';
+      var arc = document.getElementById("story-archive-list");
+      if (arc) arc.innerHTML = '';
+    });
+}
+
+function renderStorySection(catKey, article) {
+  var dateEl = document.getElementById("story-date-" + catKey);
+  var body = document.getElementById("story-body-" + catKey);
+  if (!body) return;
+  if (!article) {
+    if (dateEl) dateEl.textContent = "";
+    body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">這個分類今天還沒有故事。</div>';
+    return;
+  }
+  if (!window._eduArticles) window._eduArticles = {};
+  window._eduArticles[article.slug] = article;
+
+  if (dateEl) dateEl.textContent = article.pushed_on || "";
+
+  var tags = (article.tags || []).map(function(t) {
+    return '<span class="story-tag">' + escapeHtml(t) + '</span>';
+  }).join("");
+  var sources = (article.sources || []).map(function(s) {
+    return '<li>' + escapeHtml(s) + '</li>';
+  }).join("");
+  var bodyHtml = article.body
+    ? '<div class="story-body">' + markdownToHtml(article.body) + '</div>'
+    : '<div style="color:var(--text-dim);font-size:.9rem">內容尚未提供。</div>';
+
+  body.innerHTML =
+    '<h3 class="story-title">' + escapeHtml(article.title) + '</h3>' +
+    (article.summary ? '<p class="story-summary">' + escapeHtml(article.summary) + '</p>' : '') +
+    (tags ? '<div class="story-tags">' + tags + '</div>' : '') +
+    bodyHtml +
+    (sources
+      ? '<div class="story-sources"><div class="story-sources-head">參考來源</div><ol>' + sources + '</ol></div>'
+      : '') +
+    (article.reviewed_at ? '<div class="story-reviewed">最後審稿：' + escapeHtml(article.reviewed_at) + '</div>' : '');
+}
+
+function renderStoryNewsFeed(items) {
+  var list = document.getElementById("story-newsfeed-list");
+  if (!list) return;
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">目前沒有可顯示的公告。</div>';
+    return;
+  }
+  list.innerHTML = items.map(function(n) {
+    var link = n.link ? escapeHtml(n.link) : "";
+    var title = escapeHtml(n.title || "（無標題）");
+    var summary = n.summary ? '<p class="story-news-summary">' + escapeHtml(n.summary) + '</p>' : "";
+    var pub = n.published ? '<span class="story-news-date">' + escapeHtml(n.published) + '</span>' : "";
+    var titleHtml = link
+      ? '<a class="story-news-title" href="' + link + '" target="_blank" rel="noopener noreferrer">' + title + '</a>'
+      : '<span class="story-news-title">' + title + '</span>';
+    return '<article class="story-news-item">' + titleHtml + pub + summary + '</article>';
+  }).join("");
+}
+
+function renderStoryArchive(days) {
+  var list = document.getElementById("story-archive-list");
+  if (!list) return;
+  if (!days.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">還沒有歷史紀錄。</div>';
+    return;
+  }
+  if (!window._eduArticles) window._eduArticles = {};
+  list.innerHTML = days.map(function(day) {
+    var rows = STORY_CATEGORIES.map(function(c) {
+      var a = day.items && day.items[c.key];
+      if (!a) return '';
+      window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
+      return '<button class="story-archive-item" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">' +
+               '<span class="story-archive-cat story-cat-' + c.key + '">' + escapeHtml(c.label) + '</span>' +
+               '<span class="story-archive-title">' + escapeHtml(a.title) + '</span>' +
+               (a.summary ? '<span class="story-archive-summary">' + escapeHtml(a.summary) + '</span>' : '') +
+             '</button>';
+    }).join("");
+    return '<div class="story-archive-day">' +
+             '<div class="story-archive-day-head">' + escapeHtml(day.date) + '</div>' +
+             '<div class="story-archive-day-grid">' + rows + '</div>' +
+           '</div>';
+  }).join("");
+}
+
+function storyOpenArchive(slug, catKey) {
+  var cached = (window._eduArticles && window._eduArticles[slug]) || null;
+
+  // RSS fallback 卡（slug 以 news-feed- 開頭）不是真的 markdown article，
+  // 後端 /education/articles/{slug} 會 404；直接用 archive 已經帶過來的 payload 渲染。
+  var isExternal = (slug && slug.indexOf("news-feed-") === 0)
+    || (cached && (cached.external_link || cached.body));
+  if (isExternal && cached) {
+    var key1 = catKey || cached.category || "news";
+    renderStorySection(key1, cached);
+    var section1 = document.getElementById("story-section-" + key1);
+    if (section1) section1.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+    .then(function(r) {
+      if (!r.ok) throw new Error("not found");
+      return r.json();
+    })
+    .then(function(article) {
+      var prev = (window._eduArticles && window._eduArticles[slug]) || {};
+      article.pushed_on = prev.pushed_on || article.pushed_on;
+      var key = catKey || article.category || "disease";
+      renderStorySection(key, article);
+      var section = document.getElementById("story-section-" + key);
+      if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      var key = catKey || "disease";
+      var body = document.getElementById("story-body-" + key);
+      if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">找不到這篇文章。</div>';
+    });
+}
+
+function previsit() {
+  return ''
+    + '<section class="pv-page">'
+    + '  <header class="pv-header">'
+    + '    <div>'
+    + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
+    + '      <h2 class="pv-title"><i data-lucide="clipboard-check"></i> 診前報告</h2>'
+    + '      <p class="pv-sub">看診前 30 秒讀完：AI 幫你整理近 30 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
+    + '    </div>'
+    + '    <div class="pv-actions-top">'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
+    + '        <i data-lucide="refresh-cw"></i> 重新生成'
+    + '      </button>'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'pdf\')" title="下載 PDF（會開啟列印視窗，請選擇「另存為 PDF」）">'
+    + '        <i data-lucide="file-down"></i> 下載 PDF'
+    + '      </button>'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'doc\')" title="下載 Word（.doc）">'
+    + '        <i data-lucide="file-text"></i> 下載 Word'
+    + '      </button>'
+    + '      <button class="pv-btn pv-btn-primary" onclick="previsitCopy()" title="複製為純文字帶去診間">'
+    + '        <i data-lucide="clipboard-copy"></i> 複製給醫師'
+    + '      </button>'
+    + '    </div>'
+    + '  </header>'
+    + ''
+    + '  <section class="pv-section pv-checklist">'
+    + '    <h3 class="pv-section-title"><i data-lucide="list-checks"></i> 這次最該問醫師的三件事</h3>'
+    + '    <ol id="pv-checklist-list" class="pv-checklist-list">'
+    + '      <li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>'
+    + '    </ol>'
+    + '    <p class="pv-source" id="pv-checklist-source"></p>'
+    + '  </section>'
+    + ''
+    + '  <section class="pv-section pv-report">'
+    + '    <h3 class="pv-section-title"><i data-lucide="file-text"></i> 30 天健康摘要</h3>'
+    + '    <div class="pv-stats" id="pv-stats"></div>'
+    + '    <div id="pv-report-body" class="pv-report-body">'
+    + '      <p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>'
+    + '    </div>'
+    + '    <p class="pv-source" id="pv-report-source"></p>'
+    + '  </section>'
+    + ''
+    + '  <p class="pv-disclaimer"><i data-lucide="info"></i> 本報告由 AI 整理你輸入的紀錄，僅供與醫師溝通參考，不取代醫師診斷。</p>'
+    + '</section>'
+    + pushHubBlock();
+}
+
+// ─── 診前報告 (Pre-consultation Report) ──────────────────────
+
+var _previsitData = { checklist: null, report: null };
+
+function loadPrevisitPage() {
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+
+  _previsitData = { checklist: null, report: null };
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/checklist')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _previsitData.checklist = data;
+      previsitRenderChecklist(data);
+    })
+    .catch(function() {
+      previsitRenderChecklistError();
+    });
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _previsitData.report = data;
+      previsitRenderReport(data);
+    })
+    .catch(function() {
+      previsitRenderReportError();
+    });
+
+  // 載入「推送給醫師」區塊（醫師清單 + 推送歷史）
+  if (typeof loadPushHubBlock === 'function') loadPushHubBlock();
+}
+
+function previsitRenderChecklist(data) {
+  var listEl = document.getElementById('pv-checklist-list');
+  var srcEl = document.getElementById('pv-checklist-source');
+  if (!listEl) return;
+  var items = (data && Array.isArray(data.checklist)) ? data.checklist : [];
+  if (!items.length) {
+    listEl.innerHTML = '<li class="pv-empty">目前沒有足夠的紀錄產生提問清單，先到症狀／情緒／用藥頁面留下紀錄吧。</li>';
+  } else {
+    listEl.innerHTML = items.map(function(text, i) {
+      return '<li class="pv-check-item">'
+        + '<span class="pv-check-num">' + (i + 1) + '</span>'
+        + '<span class="pv-check-text">' + escapeHtml(text) + '</span>'
+        + '</li>';
+    }).join('');
+  }
+  if (srcEl) srcEl.textContent = previsitSourceLabel(data);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderChecklistError() {
+  var listEl = document.getElementById('pv-checklist-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<li class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</li>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderReport(data) {
+  var bodyEl = document.getElementById('pv-report-body');
+  var statsEl = document.getElementById('pv-stats');
+  var srcEl = document.getElementById('pv-report-source');
+  if (!bodyEl) return;
+
+  var raw = (data && data.raw_data) || {};
+  if (statsEl) {
+    statsEl.innerHTML = ''
+      + previsitStatCard('scan-search', '症狀', raw.symptom_count, '筆')
+      + previsitStatCard('smile', '情緒', raw.emotion_count, '次')
+      + previsitStatCard('pill', '用藥', raw.medication_count, '種')
+      + previsitStatCard('stethoscope', '就診', raw.visit_count, '次');
+  }
+
+  var report = (data && data.report) || '';
+  if (!report) {
+    bodyEl.innerHTML = '<p class="pv-empty">尚無報告內容。</p>';
+  } else {
+    bodyEl.innerHTML = markdownToHtml(report);
+  }
+
+  if (srcEl) srcEl.textContent = previsitSourceLabel(data);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderReportError() {
+  var bodyEl = document.getElementById('pv-report-body');
+  if (!bodyEl) return;
+  bodyEl.innerHTML = '<p class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitStatCard(icon, label, value, unit) {
+  var n = (value === undefined || value === null) ? 0 : value;
+  return '<div class="pv-stat">'
+    + '<span class="pv-stat-icon"><i data-lucide="' + icon + '"></i></span>'
+    + '<div class="pv-stat-body">'
+    +   '<div class="pv-stat-num">' + n + ' <small>' + unit + '</small></div>'
+    +   '<div class="pv-stat-label">' + label + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function previsitSourceLabel(data) {
+  if (!data) return '';
+  var src = data.source || '';
+  var when = data.generated_at ? new Date(data.generated_at).toLocaleString() : '';
+  var srcLabel = src === 'ai' ? 'AI 生成'
+    : src === 'default' ? '預設提示（紀錄不足）'
+    : src === 'no_data' ? '紀錄不足'
+    : src;
+  return when ? (srcLabel + ' · ' + when) : srcLabel;
+}
+
+function previsitReload() {
+  var listEl = document.getElementById('pv-checklist-list');
+  var bodyEl = document.getElementById('pv-report-body');
+  if (listEl) listEl.innerHTML = '<li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>';
+  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  loadPrevisitPage();
+}
+
+function previsitCopy() {
+  var d = _previsitData || {};
+  var lines = [];
+  lines.push('【MD.Piece 診前報告】');
+  lines.push('產出時間：' + new Date().toLocaleString());
+  lines.push('');
+  lines.push('▍這次想問醫師的三件事');
+  var items = d.checklist && Array.isArray(d.checklist.checklist) ? d.checklist.checklist : [];
+  if (items.length) {
+    items.forEach(function(t, i) { lines.push((i + 1) + '. ' + t); });
+  } else {
+    lines.push('（尚無資料）');
+  }
+  lines.push('');
+  lines.push('▍30 天健康摘要');
+  if (d.report && d.report.raw_data) {
+    var r = d.report.raw_data;
+    lines.push('症狀 ' + (r.symptom_count || 0) + ' 筆 · 情緒 ' + (r.emotion_count || 0) + ' 次 · 用藥 ' + (r.medication_count || 0) + ' 種 · 就診 ' + (r.visit_count || 0) + ' 次');
+    lines.push('');
+  }
+  lines.push((d.report && d.report.report) || '（尚無資料）');
+
+  var text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      if (typeof showToast === 'function') showToast('已複製，貼到任何地方都可以', 'success');
+    }, function() {
+      previsitFallbackCopy(text);
+    });
+  } else {
+    previsitFallbackCopy(text);
+  }
+}
+
+function previsitFallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+  if (typeof showToast === 'function') showToast('已複製', 'success');
+}
+
+// 下載 PDF / Word：先抓 patient-summary（300–500 字白話摘要），
+// 再用 HTML 包成可列印的版面 → PDF 走 window.print()，Word 走 .doc Blob
+function previsitDownload(format) {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) {
+    if (typeof showToast === 'function') showToast('找不到使用者，請先登入', 'warning');
+    return;
+  }
+  if (typeof showToast === 'function') showToast('AI 撰寫中，請稍候…', 'info');
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var summary = (data && data.summary) || '（暫無摘要）';
+      var counts = (data && data.raw_data) || {};
+      var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
+      var html = previsitBuildPrintableHTML(summary, counts, checklist);
+      if (format === 'doc') {
+        previsitDownloadDoc(html);
+      } else {
+        previsitOpenPrint(html);
+      }
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('產生報告失敗，請稍後再試', 'error');
+    });
+}
+
+function previsitBuildPrintableHTML(summary, counts, checklist) {
+  var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  var paragraphs = String(summary).split(/\n\s*\n/).map(function(p) {
+    return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+  var checklistHtml = checklist.length
+    ? '<ol>' + checklist.map(function(t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ol>'
+    : '<p style="color:#888">（暫無）</p>';
+  var statsHtml = ''
+    + '<table class="stats"><tr>'
+    +   '<td><strong>' + (counts.symptom_count || 0) + '</strong><span>症狀紀錄</span></td>'
+    +   '<td><strong>' + (counts.emotion_count || 0) + '</strong><span>情緒紀錄</span></td>'
+    +   '<td><strong>' + (counts.medication_count || 0) + '</strong><span>用藥</span></td>'
+    +   '<td><strong>' + (counts.visit_count || 0) + '</strong><span>就診</span></td>'
+    + '</tr></table>';
+
+  return ''
+    + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
+    + '<title>MD.Piece 診前報告 ' + dateStr + '</title>'
+    + '<style>'
+    + '  @page { size: A4; margin: 18mm 16mm; }'
+    + '  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color: #222; line-height: 1.75; font-size: 14px; }'
+    + '  h1 { font-size: 22px; margin: 0 0 4px; }'
+    + '  .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
+    + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
+    + '  p { margin: 0 0 10px; }'
+    + '  ol { padding-left: 22px; margin: 0; }'
+    + '  ol li { margin-bottom: 6px; }'
+    + '  table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }'
+    + '  table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
+    + '  table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
+    + '  table.stats td span { font-size: 11px; color: #666; }'
+    + '  .footer { margin-top: 28px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 11px; color: #888; }'
+    + '</style></head><body>'
+    + '<h1>診前報告</h1>'
+    + '<div class="meta">產出日期：' + dateStr + ' · 由 MD.Piece 整理過去 30 天的紀錄</div>'
+    + '<h2>近 30 天紀錄概覽</h2>'
+    + statsHtml
+    + '<h2>給醫師的話（患者整理）</h2>'
+    + paragraphs
+    + '<h2>這次想請醫師確認的事</h2>'
+    + checklistHtml
+    + '<div class="footer">本報告由 AI 整理患者自行輸入的紀錄，僅供醫病溝通參考，不取代醫師診斷。</div>'
+    + '</body></html>';
+}
+
+function previsitOpenPrint(html) {
+  var w = window.open('', '_blank');
+  if (!w) {
+    if (typeof showToast === 'function') showToast('瀏覽器擋掉了新視窗，請允許彈出視窗', 'warning');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // 等資源載入再開列印對話框
+  w.onload = function() {
+    setTimeout(function() {
+      try { w.focus(); w.print(); } catch (e) {}
+    }, 250);
+  };
+}
+
+function previsitDownloadDoc(html) {
+  // Word 可以直接讀 HTML，副檔名用 .doc + application/msword
+  var blob = new Blob(['﻿', html], { type: 'application/msword' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'MD.Piece-診前報告-' + new Date().toISOString().slice(0, 10) + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  if (typeof showToast === 'function') showToast('已開始下載 Word 檔', 'success');
+}
+
 function labs() {
   return `
     <div class="card labs-hero">
@@ -497,7 +1040,7 @@ const pageSlugForTerminal = {
   home: 'home', symptoms: 'symptoms', medications: 'medications',
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
-  pieces: 'your-pieces', account: 'account',
+  pieces: 'your-pieces', chat: 'med-chat', account: 'account',
   settings: 'settings',
   records: 'records', doctors: 'doctors'
 };
@@ -507,7 +1050,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, memo, previsit, story, labs, pieces, account, settings
+    vitals, memo, previsit, story, labs, pieces, chat, account, settings
   };
   // Page transition
   app.style.opacity = '0';
@@ -519,13 +1062,15 @@ function showPage(page) {
     if (page === "doctors") loadDoctors();
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
+    if (page === "story") loadStoryPage();
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
     if (page === "labs") loadLabsPage();
     if (page === "pieces") loadPiecesPage();
+    if (page === "chat") loadChatPage();
+    if (page === "previsit") loadPrevisitPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
-    if (page === "previsit") loadPrevisitPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -770,9 +1315,7 @@ function accountPage() {
   const roleIcon = u.role === 'doctor' ? 'stethoscope' : 'heart-pulse';
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
-    : `<span class="acct-avatar-fallback" style="background:${u.avatar_color || '#5B9FE8'}22;color:${u.avatar_color || '#5B9FE8'};border-color:${u.avatar_color || '#5B9FE8'}">
-         ${(u.nickname || '?').slice(0,1)}
-       </span>`;
+    : `<img src="icons/heko-avatar.svg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
   return `
     <section class="acct-wrap">
       <header class="acct-head">
@@ -970,6 +1513,83 @@ function getHealthTip() {
   return tips[Math.floor(Math.random() * tips.length)];
 }
 
+// === 下次回診（patient-set；存 localStorage，per-user）=========================
+function _nextVisitKey() {
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var pid = u.id_number || u.username || 'guest';
+  return 'mdpiece_next_visit_' + pid;
+}
+function loadNextVisit() {
+  try { return localStorage.getItem(_nextVisitKey()) || ''; } catch (e) { return ''; }
+}
+function saveNextVisit(iso) {
+  try {
+    if (iso) localStorage.setItem(_nextVisitKey(), iso);
+    else     localStorage.removeItem(_nextVisitKey());
+  } catch (e) {}
+}
+function _daysBetween(isoDate) {
+  // 以「日」為單位差距，今日 0
+  var t = new Date(isoDate + 'T00:00:00');
+  var n = new Date();
+  n.setHours(0,0,0,0);
+  return Math.round((t - n) / 86400000);
+}
+function renderNextVisitChip() {
+  var iso = loadNextVisit();
+  if (!iso) {
+    return ''
+      + '<button type="button" class="home-visit-chip home-visit-chip-empty" '
+      +   'onclick="openNextVisitEditor()">'
+      +   '<i data-lucide="calendar-plus" style="width:14px;height:14px"></i>'
+      +   '<span>設定下次回診</span>'
+      + '</button>'
+      + '<input type="date" id="home-visit-input" class="home-visit-input" '
+      +   'onchange="onNextVisitChange(this.value)" hidden />';
+  }
+  var d = _daysBetween(iso);
+  var label;
+  var cls = 'home-visit-chip';
+  if (d > 0)       { label = '剩 ' + d + ' 天'; }
+  else if (d === 0){ label = '就是今天！'; cls += ' home-visit-chip-today'; }
+  else             { label = (-d) + ' 天前已回診'; cls += ' home-visit-chip-past'; }
+  var pretty = iso.replace(/-/g, '/').slice(5); // MM/DD
+  return ''
+    + '<button type="button" class="' + cls + '" onclick="openNextVisitEditor()" title="點此修改">'
+    +   '<i data-lucide="calendar-check-2" style="width:14px;height:14px"></i>'
+    +   '<span>下次回診 ' + pretty + '</span>'
+    +   '<span class="home-visit-countdown">' + label + '</span>'
+    + '</button>'
+    + '<button type="button" class="home-visit-clear" onclick="clearNextVisit()" title="清除">'
+    +   '<i data-lucide="x" style="width:12px;height:12px"></i>'
+    + '</button>'
+    + '<input type="date" id="home-visit-input" class="home-visit-input" '
+    +   'value="' + iso + '" onchange="onNextVisitChange(this.value)" hidden />';
+}
+function openNextVisitEditor() {
+  var inp = document.getElementById('home-visit-input');
+  if (!inp) return;
+  inp.hidden = false;
+  // 開啟原生日期 picker（Chrome 支援；其他瀏覽器至少會 focus）
+  try { inp.showPicker && inp.showPicker(); } catch (e) {}
+  inp.focus();
+}
+function onNextVisitChange(val) {
+  if (!val) return;
+  saveNextVisit(val);
+  refreshNextVisitChip();
+}
+function clearNextVisit() {
+  saveNextVisit('');
+  refreshNextVisitChip();
+}
+function refreshNextVisitChip() {
+  var row = document.getElementById('home-visit-row');
+  if (!row) return;
+  row.innerHTML = renderNextVisitChip();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function homeCard(page, icon, title, desc, color) {
   return `<div class="pzl-card pzl-${color}" onclick="navigateTo('${page}',null)">
     <div class="pzl-tab"></div>
@@ -987,6 +1607,7 @@ function home() {
   const dayStr = '星期' + ['日','一','二','三','四','五','六'][today.getDay()];
   const name = user ? user.nickname : '你';
   const ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
+  const heroAvatarSrc = (user && user.avatar_url) ? user.avatar_url : 'icons/heko-avatar.svg';
 
   return `
     <div class="home-page">
@@ -997,7 +1618,7 @@ function home() {
       <!-- Hero: Logo + Greeting split -->
       <div class="home-hero">
         <div class="home-hero-left">
-          <img src="icons/logo-core.jpg" alt="MD.Piece" class="home-logo" />
+          <img src="${heroAvatarSrc}" alt="${name} 頭像" class="home-logo home-logo-avatar" />
         </div>
         <div class="home-hero-right">
           <h2 class="home-title">${greeting}，${name}</h2>
@@ -1005,6 +1626,9 @@ function home() {
           <div class="home-date-row">
             <span class="home-datestr">${dateStr}</span>
             <span class="home-day">${dayStr}</span>
+          </div>
+          <div class="home-visit-row" id="home-visit-row">
+            ${renderNextVisitChip()}
           </div>
         </div>
       </div>
@@ -1062,6 +1686,7 @@ function home() {
         ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
         ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
+        ${homeCard('chat','message-circle-heart','醫起聊天','和小禾聊聊，幫你把感受寫成文章','rose')}
         ${homeCard('settings','settings','系統設定','字體、主題、年長版等偏好','amber')}
       </div>
 
@@ -2296,47 +2921,188 @@ function loadMedicationsPage() {
     .catch(function() {});
 }
 
+// 把藥分到 早 / 中 / 晚 / 其他 四個時段；同一顆早晚都吃的藥會出現在「早」與「晚」兩格
+var MED_SLOT_DEFS = [
+  { key: "morning", label: "早",   icon: "sunrise", hint: "起床後・早餐"   },
+  { key: "noon",    label: "中午", icon: "sun",     hint: "午餐前後"       },
+  { key: "evening", label: "晚",   icon: "moon",    hint: "晚餐・睡前"     },
+  { key: "other",   label: "其他", icon: "clock",   hint: "間隔型・需要時" },
+];
+
+function _bucketMeds(meds) {
+  var buckets = { morning: [], noon: [], evening: [], other: [] };
+  (meds || []).forEach(function(med) {
+    if (med.is_other) {
+      buckets.other.push(med);
+      return;
+    }
+    var slots = (med.slots && med.slots.length) ? med.slots : ["morning"];
+    slots.forEach(function(s) {
+      if (buckets[s]) buckets[s].push(med);
+    });
+  });
+  return buckets;
+}
+
 function renderMedList() {
   var el = document.getElementById("med-list");
   if (!_medsList.length) {
     el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">尚無藥物紀錄，拍攝藥袋開始記錄吧！</p>';
     return;
   }
-  var html = '<div style="display:grid;gap:10px">';
-  _medsList.forEach(function(med) {
-    var catColor = med.category ? 'var(--accent)' : 'var(--text-muted)';
-    html += '<div class="med-item">' +
-      '<div style="display:flex;justify-content:space-between;align-items:start">' +
-      '<div>' +
-      '<strong>' + med.name + '</strong>' +
-      (med.dosage ? ' <span style="color:var(--text-dim);font-size:0.85rem">' + med.dosage + '</span>' : '') +
-      (med.category ? '<br><span class="med-tag" style="border-color:' + catColor + ';color:' + catColor + '">' + med.category + '</span>' : '') +
-      (med.frequency ? '<br><span style="font-size:0.85rem;color:var(--text-dim)">' + med.frequency + '</span>' : '') +
-      '</div>' +
-      '<div style="display:flex;gap:4px">' +
-      '<button class="med-action-btn med-take" onclick="logMedTaken(\'' + med.id + '\',true)" title="已服藥">✓</button>' +
-      '<button class="med-action-btn med-skip" onclick="logMedTaken(\'' + med.id + '\',false)" title="跳過">✗</button>' +
-      '<button class="med-action-btn med-effect" onclick="showEffectForm(\'' + med.id + '\',\'' + med.name + '\')" title="記錄療效">★</button>' +
-      '</div></div></div>';
+
+  var buckets = _bucketMeds(_medsList);
+  var html = '<div class="med-slots">';
+
+  MED_SLOT_DEFS.forEach(function(def) {
+    var meds = buckets[def.key];
+    var isOther = def.key === "other";
+    if (!meds.length) {
+      // 沒有藥的時段也顯示空殼，讓使用者一眼知道結構
+      html +=
+        '<section class="med-slot med-slot-empty">' +
+          '<header class="med-slot-head">' +
+            '<span class="med-slot-icon"><i data-lucide="' + def.icon + '"></i></span>' +
+            '<div><div class="med-slot-label">' + def.label + '</div>' +
+            '<div class="med-slot-hint">' + def.hint + '</div></div>' +
+          '</header>' +
+          '<p class="med-slot-empty-msg">這個時段還沒有藥。</p>' +
+        '</section>';
+      return;
+    }
+    html +=
+      '<section class="med-slot">' +
+        '<header class="med-slot-head">' +
+          '<span class="med-slot-icon"><i data-lucide="' + def.icon + '"></i></span>' +
+          '<div><div class="med-slot-label">' + def.label + ' <span class="med-slot-count">' + meds.length + '</span></div>' +
+          '<div class="med-slot-hint">' + def.hint + '</div></div>' +
+        '</header>' +
+        '<div class="med-slot-grid">';
+    meds.forEach(function(med) {
+      html += _renderMedCard(med, def.key, isOther);
+    });
+    html += '</div></section>';
   });
+
   html += '</div>';
   el.innerHTML = html;
+  if (window.lucide && window.lucide.createIcons) {
+    try { window.lucide.createIcons(); } catch (e) {}
+  }
+}
+
+function _renderMedCard(med, slotKey, isOther) {
+  var name = escapeHtml(med.name || "未命名藥物");
+  var dosage = med.dosage ? '<span class="med-card-dosage">' + escapeHtml(med.dosage) + '</span>' : '';
+  var freq = med.frequency ? '<div class="med-card-freq">' + escapeHtml(med.frequency) + '</div>' : '';
+  var meta = "";
+  if (isOther) {
+    if (med.interval_hours) {
+      meta += '<span class="med-card-tag med-card-tag-interval">每 ' + med.interval_hours + ' 小時</span>';
+    }
+    if (med.is_prn) {
+      meta += '<span class="med-card-tag med-card-tag-prn">需要時</span>';
+    }
+    if (!meta) {
+      meta = '<span class="med-card-tag">間隔型</span>';
+    }
+  } else if (med.category) {
+    meta = '<span class="med-card-tag">' + escapeHtml(med.category) + '</span>';
+  }
+
+  var safeName = (med.name || "").replace(/'/g, "\\'");
+  return (
+    '<button type="button" class="med-card" data-id="' + med.id + '" data-slot="' + slotKey + '"' +
+      ' onclick="tapMedTake(\'' + med.id + '\',\'' + slotKey + '\')">' +
+      '<div class="med-card-row">' +
+        '<div class="med-card-title">' +
+          '<strong>' + name + '</strong>' + dosage +
+        '</div>' +
+        meta +
+      '</div>' +
+      freq +
+      '<div class="med-card-actions" onclick="event.stopPropagation()">' +
+        '<span class="med-card-take">✓ 點一下打卡</span>' +
+        '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="跳過">✗</button>' +
+        '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="記錄療效">★</button>' +
+      '</div>' +
+    '</button>'
+  );
+}
+
+// 點卡片即打卡：固定時段藥（早/中/晚）直接寫入；
+// 「其他」型藥（每 X 小時 / PRN）也走同一條 POST /log，
+// 後端會在 < 4 小時內回 409 dose_too_soon，由 logMedTaken 攔下並彈警告。
+function tapMedTake(medId, slotKey) {
+  logMedTaken(medId, true);
+}
+
+// 把過大的相片壓縮到 1600px 寬以內、JPEG 0.85 — 多數手機相片直接傳會超過
+// Vercel 4.5MB 上傳上限，導致「藥袋一直拍攝失敗」。
+// 壓縮失敗時會 fallback 用原檔，不阻擋流程。
+function _compressMedPhoto(file) {
+  return new Promise(function(resolve) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var dataUrl = e.target.result;
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var maxEdge = 1600;
+          var w = img.width, h = img.height;
+          if (Math.max(w, h) > maxEdge) {
+            var scale = maxEdge / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
+          var canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#fff";  // 白底 — 處理透明 PNG，避免 JPEG 黑底
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          var compressed = canvas.toDataURL("image/jpeg", 0.85);
+          resolve({ dataUrl: compressed, mediaType: "image/jpeg" });
+        } catch (err) {
+          resolve({ dataUrl: dataUrl, mediaType: file.type || "image/jpeg" });
+        }
+      };
+      img.onerror = function() { resolve({ dataUrl: dataUrl, mediaType: file.type || "image/jpeg" }); };
+      img.src = dataUrl;
+    };
+    reader.onerror = function() { resolve(null); };
+    reader.readAsDataURL(file);
+  });
 }
 
 function handleMedPhoto(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var base64Full = e.target.result;
-    var mediaType = file.type || "image/jpeg";
-    var base64Data = base64Full.split(",")[1];
+
+  document.getElementById("med-photo-preview").innerHTML =
+    '<div style="text-align:center;padding:8px;color:var(--text-muted);font-size:0.85rem">壓縮並上傳照片...</div>';
+  document.getElementById("med-recognize-result").innerHTML = "";
+
+  _compressMedPhoto(file).then(function(prepared) {
+    if (!prepared) {
+      renderManualMedForm("", "讀取照片失敗，請改用手動填寫下方資料。");
+      return;
+    }
+    var dataUrl = prepared.dataUrl;
+    var mediaType = prepared.mediaType;
+    var base64Data = dataUrl.split(",")[1];
 
     document.getElementById("med-photo-preview").innerHTML =
-      '<img src="' + base64Full + '" style="max-width:100%;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />';
+      '<img src="' + dataUrl + '" style="max-width:100%;max-height:240px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />' +
+      '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">' +
+      '已壓縮為 ' + (Math.round(base64Data.length * 0.75 / 1024)) + ' KB，' +
+      '若辨識仍失敗，可改用手動填寫。</div>';
     document.getElementById("med-recognize-result").innerHTML =
       '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
-      '<div class="loading-spinner"></div><p style="margin-top:8px">AI 正在辨識藥袋...</p></div>';
+      '<div class="loading-spinner"></div>' +
+      '<p style="margin-top:8px">AI 正在辨識藥袋...</p>' +
+      '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">第一次辨識較慢，最多約 30 秒</p>' +
+      '</div>';
 
     fetch(API + "/medications/recognize", {
       method: "POST",
@@ -2352,6 +3118,7 @@ function handleMedPhoto(input) {
       .then(function(res) {
         if (!res.ok) {
           var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
+          if (typeof msg !== "string") msg = JSON.stringify(msg);
           renderManualMedForm("", "辨識失敗：" + msg + "。你可以改用手動填寫下方資料。");
           return;
         }
@@ -2359,19 +3126,31 @@ function handleMedPhoto(input) {
         var parsed = data.parsed || [];
 
         if (parsed.length > 0) {
-          // 辨識成功 → 一律走可編輯確認卡片，讓患者檢視標準欄位後才寫入
           renderRecognizedEditable(parsed, [], data.raw_text || "", []);
           return;
         }
 
-        // 完全辨識不到
-        renderManualMedForm(data.raw_text || "", "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。");
+        // 沒辨識出任何藥；把每個 vision provider 的失敗訊息一併秀出，方便排查
+        var providerNote = "";
+        if (data.errors && data.errors.length) {
+          var lines = data.errors.map(function(e) {
+            return "• " + (e.provider || "?") + "：" + (e.error || "未知錯誤");
+          }).join("\n");
+          providerNote = "\n\n（嘗試過的辨識服務）\n" + lines;
+        }
+        renderManualMedForm(
+          (data.raw_text || "") + providerNote,
+          "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。"
+        );
       })
       .catch(function(err) {
-        renderManualMedForm("", "辨識服務連線失敗（" + (err && err.message || "網路錯誤") + "），你可以改用手動填寫下方資料。");
+        renderManualMedForm(
+          "",
+          "辨識服務連線失敗（" + (err && err.message || "網路錯誤") + "），你可以改用手動填寫下方資料。"
+        );
       });
-  };
-  reader.readAsDataURL(file);
+  });
+
   input.value = "";
 }
 
@@ -2388,16 +3167,30 @@ function renderRecognizedEditable(parsed, errors, rawText, alreadySaved) {
   var savedNames = {};
   (alreadySaved || []).forEach(function(m) { savedNames[m.name] = true; });
 
+  var SLOT_LABEL = { morning: "早", noon: "中午", evening: "晚", other: "其他" };
   var inputStyle = "padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)";
   var rows = parsed.map(function(m, i) {
     var isSaved = savedNames[m.name];
     var errMsg = errMap[m.name];
     var bgTint = isSaved ? "rgba(85,184,138,0.08)" : (errMsg ? "rgba(220,80,80,0.08)" : "var(--bg-glass)");
     var borderTint = isSaved ? "var(--success)" : (errMsg ? "var(--danger)" : "var(--border-glass)");
+    var sched = m.schedule || {};
+    var slotTags = "";
+    if (sched.is_other) {
+      var bits = [];
+      if (sched.interval_hours) bits.push("每 " + sched.interval_hours + " 小時");
+      if (sched.is_prn) bits.push("需要時");
+      slotTags = '<span class="rec-slot-tag rec-slot-other">其他' + (bits.length ? "・" + bits.join("・") : "") + '</span>';
+    } else if (sched.slots && sched.slots.length) {
+      slotTags = sched.slots.map(function(s) {
+        return '<span class="rec-slot-tag rec-slot-' + s + '">' + (SLOT_LABEL[s] || s) + '</span>';
+      }).join("");
+    }
     return (
       '<div class="rec-med-card" data-idx="' + i + '" style="padding:10px;background:' + bgTint + ';border:1px solid ' + borderTint + ';border-radius:var(--radius-sm);display:grid;gap:6px">' +
         (isSaved ? '<div style="color:var(--success);font-size:0.8rem">已寫入 ✓</div>' :
          errMsg ? '<div style="color:var(--danger);font-size:0.8rem">寫入失敗：' + escapeHtml(errMsg) + '</div>' : '') +
+        (slotTags ? '<div class="rec-slot-tags">預計分類：' + slotTags + '</div>' : '') +
         '<input class="rec-name" type="text" value="' + escapeHtml(m.name) + '" placeholder="藥名 *（必填）" style="' + inputStyle + '" />' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
           '<input class="rec-dosage" type="text" value="' + escapeHtml(m.dosage) + '" placeholder="劑量（例：500mg）" style="' + inputStyle + '" />' +
@@ -2648,19 +3441,97 @@ function submitManualMed() {
     .catch(function(err) { showToast("加入失敗：" + (err && err.message || "網路錯誤"), "error"); });
 }
 
-function logMedTaken(medId, taken) {
+function logMedTaken(medId, taken, opts) {
+  opts = opts || {};
   var skipReason = "";
-  if (!taken) {
+  if (!taken && !opts.skipReason) {
     skipReason = prompt("為什麼跳過這次服藥？（可留空）") || "";
+  } else if (opts.skipReason) {
+    skipReason = opts.skipReason;
   }
+
+  var body = {
+    patient_id: _medsPatientId,
+    medication_id: medId,
+    taken: taken,
+    skip_reason: skipReason || null,
+    force: !!opts.force
+  };
+
   fetch(API + "/medications/log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ patient_id: _medsPatientId, medication_id: medId, taken: taken, skip_reason: skipReason })
+    body: JSON.stringify(body)
   })
-    .then(function(r) { return r.json(); })
-    .then(function() { showToast(taken ? "已記錄服藥 ✓" : "已記錄跳過", taken ? "success" : "info"); })
+    .then(function(r) {
+      return r.text().then(function(t) {
+        var p; try { p = JSON.parse(t); } catch (e) { p = { detail: t }; }
+        return { ok: r.ok, status: r.status, data: p };
+      });
+    })
+    .then(function(res) {
+      if (res.status === 409 && res.data && res.data.detail && res.data.detail.code === "dose_too_soon") {
+        // 4 小時內重複服「其他」型藥 → 跳警告，由患者決定要不要強制記錄
+        showDoseSafetyDialog(medId, res.data.detail);
+        return;
+      }
+      if (!res.ok) {
+        var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
+        showToast("記錄失敗：" + (typeof msg === "string" ? msg : JSON.stringify(msg)), "error");
+        return;
+      }
+      showToast(taken ? "已記錄服藥 ✓" : "已記錄跳過", taken ? "success" : "info");
+      loadMedicationsPage();
+    })
     .catch(function() { showToast("記錄失敗", "error"); });
+}
+
+// 4 小時間隔警告 modal：超過閾值時，攔下 logMedTaken，
+// 解釋短時間重複服藥的風險，再給「我了解風險，仍要記錄」的退路。
+function showDoseSafetyDialog(medId, detail) {
+  closeDoseSafetyDialog();
+  var safety = (detail && detail.safety) || {};
+  var hours = safety.hours_since_last;
+  var required = safety.required_hours || detail.min_hours || 4;
+  var remaining = safety.hours_remaining;
+  var msg = (detail && detail.message) || "距離上次服藥太近，可能造成藥效過量風險。";
+
+  var html =
+    '<div class="dose-safety-backdrop" id="dose-safety-modal" onclick="closeDoseSafetyDialog()">' +
+      '<div class="dose-safety-card" onclick="event.stopPropagation()">' +
+        '<div class="dose-safety-head">' +
+          '<span class="dose-safety-icon">⚠️</span>' +
+          '<h3>服藥風險警告</h3>' +
+        '</div>' +
+        '<p class="dose-safety-msg">' + escapeHtml(msg) + '</p>' +
+        '<dl class="dose-safety-meta">' +
+          (hours != null ? '<div><dt>距離上次服藥</dt><dd>' + Number(hours).toFixed(1) + ' 小時</dd></div>' : '') +
+          '<div><dt>建議間隔</dt><dd>至少 ' + required + ' 小時</dd></div>' +
+          (remaining != null ? '<div><dt>還需等待</dt><dd>' + Number(remaining).toFixed(1) + ' 小時</dd></div>' : '') +
+        '</dl>' +
+        '<div class="dose-safety-actions">' +
+          '<button type="button" class="secondary" onclick="closeDoseSafetyDialog()">取消，再等等</button>' +
+          '<button type="button" class="dose-safety-force" onclick="confirmForceLog(\'' + medId + '\')">' +
+            '我了解風險，仍要記錄' +
+          '</button>' +
+        '</div>' +
+        '<p class="dose-safety-foot">若症狀無法忍受，請聯繫醫師或藥師，不要自行加量。</p>' +
+      '</div>' +
+    '</div>';
+
+  var holder = document.createElement("div");
+  holder.innerHTML = html;
+  document.body.appendChild(holder.firstChild);
+}
+
+function closeDoseSafetyDialog() {
+  var el = document.getElementById("dose-safety-modal");
+  if (el) el.remove();
+}
+
+function confirmForceLog(medId) {
+  closeDoseSafetyDialog();
+  logMedTaken(medId, true, { force: true });
 }
 
 function showEffectForm(medId, medName) {
@@ -4015,6 +4886,592 @@ function initUserSettings() {
 }
 initUserSettings();
 
+// ─── 醫起聊天（Chat with 小禾）────────────────────────────────
+// Claude Code 風格：終端機框 + 吉祥物 + 打字機輸出
+// 後端 endpoint: POST /xiaohe/chat  { user_id, message, mode, version }
+
+const CHAT_HISTORY_KEY = 'mdpiece_chat_history';
+const CHAT_MODE_KEY    = 'mdpiece_chat_mode';      // patient / family
+const CHAT_VERSION_KEY = 'mdpiece_chat_version';   // normal / elderly
+var _chatTyping = false;
+var _chatTypeTimer = null;
+
+function chatLoadHistory() {
+  try {
+    var raw = localStorage.getItem(CHAT_HISTORY_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+// 把 localStorage 內的訊息轉成後端 history 格式（最近 N 輪 user/bot）
+function chatBuildApiHistory(maxTurns) {
+  var n = maxTurns || 12;
+  var hist = chatLoadHistory();
+  var out = [];
+  for (var i = 0; i < hist.length; i++) {
+    var m = hist[i];
+    if (!m || !m.text) continue;
+    var role = (m.role === 'user') ? 'user' : 'assistant';
+    out.push({ role: role, content: String(m.text) });
+  }
+  return out.slice(-n);
+}
+function chatSaveHistory(list) {
+  try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list.slice(-80))); }
+  catch (e) {}
+}
+function chatGetMode() {
+  try { return localStorage.getItem(CHAT_MODE_KEY) || 'patient'; } catch (e) { return 'patient'; }
+}
+function chatGetVersion() {
+  // 自動以使用者「年長版」UI mode 為預設
+  try {
+    var v = localStorage.getItem(CHAT_VERSION_KEY);
+    if (v) return v;
+  } catch (e) {}
+  return (typeof getMode === 'function' && getMode() === 'senior') ? 'elderly' : 'normal';
+}
+function chatSetMode(m) {
+  try { localStorage.setItem(CHAT_MODE_KEY, m); } catch (e) {}
+}
+function chatSetVersion(v) {
+  try { localStorage.setItem(CHAT_VERSION_KEY, v); } catch (e) {}
+}
+
+// 小禾吉祥物 — Claude Code 風 ASCII 顏文字兔
+// state: 'idle' | 'typing' | 'thinking'
+// frame: 0/1 — typing 狀態下交替的「左手敲 / 右手敲」鍵盤動畫
+function chatMascotSvg(state, frame) {
+  state = state || 'idle';
+  if (state === 'typing') {
+    // 三行：耳朵、臉、雙手在鍵盤上交替敲擊
+    var bottom = (frame % 2 === 0)
+      ? ' o⌨<span class="chat-mascot-keys">▓▓▓</span>'   // 左手按下
+      : ' <span class="chat-mascot-keys">▓▓▓</span>⌨o';  // 右手按下
+    var ascii = ''
+      + ' (\\(\\\n'
+      + ' ( •ω•)\n'
+      + bottom;
+    return ''
+      + '<div class="chat-mascot-img-wrap chat-mascot-typing">'
+      +   '<pre class="chat-mascot-ascii" aria-label="小禾正在打字">' + ascii + '</pre>'
+      + '</div>';
+  }
+  if (state === 'thinking') {
+    var thinkAscii = ''
+      + ' (\\(\\\n'
+      + ' ( -ㅅ-)\n'
+      + ' (  づ<span class="chat-mascot-spark">?</span>';
+    return ''
+      + '<div class="chat-mascot-img-wrap chat-mascot-thinking">'
+      +   '<pre class="chat-mascot-ascii" aria-label="小禾思考中">' + thinkAscii + '</pre>'
+      + '</div>';
+  }
+  // idle
+  var idleAscii = ''
+    + ' (\\(\\\n'
+    + ' ( •ㅅ•)\n'
+    + ' (  づ<span class="chat-mascot-spark">♥</span>';
+  return ''
+    + '<div class="chat-mascot-img-wrap chat-mascot-idle">'
+    +   '<pre class="chat-mascot-ascii" aria-label="小禾">' + idleAscii + '</pre>'
+    + '</div>';
+}
+
+function chatGreeting() {
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var name = u.nickname || '你';
+  var v = chatGetVersion();
+  if (v === 'elderly') {
+    return '你好啊，' + name + '。我是小禾，今天身體有沒有比較舒服？慢慢說，我都聽。';
+  }
+  return '嗨～' + name + '！我是小禾 🌱 今天想聊什麼？身體、心情、或是寫一篇文章都可以。';
+}
+
+function chat() {
+  var hist = chatLoadHistory();
+  var mode = chatGetMode();
+  var ver  = chatGetVersion();
+
+  var msgsHtml = hist.length
+    ? hist.map(chatRenderMessage).join('')
+    : ''
+      + '<div class="chat-msg chat-msg-bot">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatGreeting() + '</div>'
+      +   '</div>'
+      + '</div>';
+
+  return ''
+    + '<section class="chat-page">'
+    + '  <header class="chat-header">'
+    + '    <div class="chat-mascot-wrap chat-mascot-wrap-lg" id="chat-mascot">'
+    +        chatMascotSvg('idle')
+    + '    </div>'
+    + '    <div class="chat-header-text">'
+    + '      <p class="chat-eyebrow">// chat &gt; xiaohe.ai</p>'
+    + '      <h2 class="chat-title">醫起聊天</h2>'
+    + '      <p class="chat-sub">小禾陪你聊聊，把感受拼成一段話、一篇文章。</p>'
+    + '    </div>'
+    + '    <div class="chat-toggles">'
+    + '      <div class="chat-seg" role="tablist" aria-label="對話對象">'
+    + '        <button type="button" class="chat-seg-btn' + (mode === 'patient' ? ' active' : '') + '" onclick="chatSwitchMode(\'patient\')">我是患者</button>'
+    + '        <button type="button" class="chat-seg-btn' + (mode === 'family'  ? ' active' : '') + '" onclick="chatSwitchMode(\'family\')">我是家屬</button>'
+    + '      </div>'
+    + '      <div class="chat-seg" role="tablist" aria-label="語氣">'
+    + '        <button type="button" class="chat-seg-btn' + (ver === 'normal'  ? ' active' : '') + '" onclick="chatSwitchVersion(\'normal\')">一般</button>'
+    + '        <button type="button" class="chat-seg-btn' + (ver === 'elderly' ? ' active' : '') + '" onclick="chatSwitchVersion(\'elderly\')">年長版</button>'
+    + '      </div>'
+    + '    </div>'
+    + '  </header>'
+
+    + '  <div class="chat-stream" id="chat-stream">'
+    +      msgsHtml
+    + '  </div>'
+
+    + '  <div class="chat-suggest" id="chat-suggest">'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我今天比較喘，要怎麼觀察？\')">今天比較喘</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'幫我把最近三天的不舒服整理成一段話\')">整理近況</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我有點焦慮，可以陪我說說話嗎？\')">陪我聊聊</button>'
+    + '    <button type="button" class="chat-chip chat-chip-special" onclick="chatGenerateArticle()">'
+    + '      <i data-lucide="sparkles" style="width:14px;height:14px"></i> 生成一篇文章'
+    + '    </button>'
+    + '  </div>'
+
+    + '  <form class="chat-input-bar" id="chat-form" onsubmit="event.preventDefault(); chatSend();">'
+    + '    <span class="chat-prompt">$</span>'
+    + '    <input id="chat-input" class="chat-input" type="text" autocomplete="off" placeholder="跟小禾說說話… (Enter 送出)" />'
+    + '    <button type="button" class="chat-mic" id="chat-mic" onclick="chatToggleMic()" title="按住說話 / 點一下開始辨識">'
+    + '      <i data-lucide="mic" style="width:16px;height:16px"></i>'
+    + '    </button>'
+    + '    <button type="submit" class="chat-send" id="chat-send">'
+    + '      <i data-lucide="send" style="width:16px;height:16px"></i>'
+    + '      <span>送出</span>'
+    + '    </button>'
+    + '    <button type="button" class="chat-clear" onclick="chatClear()" title="清空對話">'
+    + '      <i data-lucide="trash-2" style="width:14px;height:14px"></i>'
+    + '    </button>'
+    + '  </form>'
+    + '  <p class="chat-disclaimer">小禾不是醫師，僅作為陪伴與資訊參考；身體不適請務必就醫。</p>'
+    + '</section>';
+}
+
+function chatRenderMessage(m) {
+  if (m.role === 'user') {
+    return ''
+      + '<div class="chat-msg chat-msg-user">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatEscape(m.text) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  if (m.role === 'article') {
+    return ''
+      + '<div class="chat-msg chat-msg-bot chat-msg-article">'
+      +   '<div class="chat-bubble chat-bubble-article">'
+      +     '<div class="chat-article-head"><i data-lucide="file-text"></i> 小禾為你寫的一篇</div>'
+      +     '<div class="chat-text chat-article-text">' + chatEscape(m.text) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  return ''
+    + '<div class="chat-msg chat-msg-bot">'
+    +   '<div class="chat-bubble">'
+    +     '<div class="chat-text">' + chatEscape(m.text) + '</div>'
+    +   '</div>'
+    + '</div>';
+}
+
+function chatEscape(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
+function loadChatPage() {
+  var input = document.getElementById('chat-input');
+  if (input) {
+    input.focus();
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatSend();
+      }
+    });
+  }
+  chatScrollToBottom();
+}
+
+function chatScrollToBottom() {
+  var s = document.getElementById('chat-stream');
+  if (s) s.scrollTop = s.scrollHeight;
+}
+
+function chatSwitchMode(m) {
+  chatSetMode(m);
+  document.querySelectorAll('.chat-toggles .chat-seg').forEach(function(seg, i) {
+    if (i !== 0) return;
+    seg.querySelectorAll('.chat-seg-btn').forEach(function(b, j) {
+      var want = (j === 0) ? 'patient' : 'family';
+      b.classList.toggle('active', want === m);
+    });
+  });
+  showToast(m === 'family' ? '切換為家屬模式' : '切換為患者模式', 'info');
+}
+
+function chatSwitchVersion(v) {
+  chatSetVersion(v);
+  document.querySelectorAll('.chat-toggles .chat-seg').forEach(function(seg, i) {
+    if (i !== 1) return;
+    seg.querySelectorAll('.chat-seg-btn').forEach(function(b, j) {
+      var want = (j === 0) ? 'normal' : 'elderly';
+      b.classList.toggle('active', want === v);
+    });
+  });
+  showToast(v === 'elderly' ? '切換為年長版語氣' : '切換為一般語氣', 'info');
+}
+
+function chatQuickAsk(text) {
+  var input = document.getElementById('chat-input');
+  if (input) input.value = text;
+  chatSend();
+}
+
+function chatClear() {
+  if (!confirm('清空對話紀錄？')) return;
+  try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch (e) {}
+  // 重新渲染
+  var stream = document.getElementById('chat-stream');
+  if (stream) {
+    stream.innerHTML = ''
+      + '<div class="chat-msg chat-msg-bot">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatGreeting() + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function chatAppendMessage(role, text) {
+  var stream = document.getElementById('chat-stream');
+  if (!stream) return null;
+  var wrap = document.createElement('div');
+  wrap.innerHTML = chatRenderMessage({ role: role, text: text });
+  var node = wrap.firstChild;
+  stream.appendChild(node);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  chatScrollToBottom();
+  return node;
+}
+
+function chatShowThinking() {
+  var stream = document.getElementById('chat-stream');
+  if (!stream) return null;
+  var node = document.createElement('div');
+  node.className = 'chat-msg chat-msg-bot chat-msg-thinking';
+  node.id = 'chat-thinking';
+  node.innerHTML = ''
+    + '<div class="chat-bubble">'
+    +   '<div class="chat-typing-dots"><span></span><span></span><span></span></div>'
+    + '</div>';
+  stream.appendChild(node);
+  chatSetMascotState('thinking');
+  chatScrollToBottom();
+  return node;
+}
+
+function chatRemoveThinking() {
+  var n = document.getElementById('chat-thinking');
+  if (n && n.parentNode) n.parentNode.removeChild(n);
+}
+
+var _chatMascotTypingTimer = null;
+function chatSetMascotState(state) {
+  var wrap = document.getElementById('chat-mascot');
+  if (!wrap) return;
+  // 停掉之前可能在跑的 typing 動畫
+  if (_chatMascotTypingTimer) {
+    clearInterval(_chatMascotTypingTimer);
+    _chatMascotTypingTimer = null;
+  }
+  if (state === 'typing') {
+    var frame = 0;
+    wrap.innerHTML = chatMascotSvg('typing', frame);
+    _chatMascotTypingTimer = setInterval(function () {
+      frame = (frame + 1) % 2;
+      var w = document.getElementById('chat-mascot');
+      if (!w) { clearInterval(_chatMascotTypingTimer); _chatMascotTypingTimer = null; return; }
+      w.innerHTML = chatMascotSvg('typing', frame);
+    }, 140);
+    return;
+  }
+  wrap.innerHTML = chatMascotSvg(state);
+}
+
+// 打字機效果：把文字一個個塞進 element
+function chatTypeInto(node, text, opts, onDone) {
+  opts = opts || {};
+  var speed = opts.speed || 22; // ms per char
+  var i = 0;
+  if (_chatTypeTimer) { clearInterval(_chatTypeTimer); _chatTypeTimer = null; }
+  _chatTyping = true;
+  chatSetMascotState('typing');
+  node.innerHTML = '<span class="chat-caret">▌</span>';
+  _chatTypeTimer = setInterval(function() {
+    if (i >= text.length) {
+      clearInterval(_chatTypeTimer); _chatTypeTimer = null;
+      _chatTyping = false;
+      node.innerHTML = chatEscape(text);
+      chatSetMascotState('idle');
+      if (typeof onDone === 'function') onDone();
+      chatScrollToBottom();
+      return;
+    }
+    var partial = text.slice(0, i + 1);
+    node.innerHTML = chatEscape(partial) + '<span class="chat-caret">▌</span>';
+    chatScrollToBottom();
+    i += 1;
+  }, speed);
+}
+
+// === 語音輸入（webkitSpeechRecognition）=========================================
+var _chatRec = null;
+var _chatRecActive = false;
+
+function chatToggleMic() {
+  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Rec) {
+    showToast('這個瀏覽器不支援語音輸入（建議用 Chrome/Edge/Safari）', 'warning');
+    return;
+  }
+  if (_chatRecActive && _chatRec) {
+    try { _chatRec.stop(); } catch (e) {}
+    return;
+  }
+  var rec = new Rec();
+  rec.lang = 'zh-TW';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+
+  var input = document.getElementById('chat-input');
+  var btn = document.getElementById('chat-mic');
+  if (btn) btn.classList.add('chat-mic-active');
+  _chatRecActive = true;
+  _chatRec = rec;
+
+  var finalText = '';
+  rec.onresult = function (ev) {
+    var interim = '';
+    for (var i = ev.resultIndex; i < ev.results.length; i++) {
+      var r = ev.results[i];
+      if (r.isFinal) finalText += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    if (input) input.value = (finalText + interim).trim();
+  };
+  rec.onerror = function (ev) {
+    if (ev && ev.error === 'not-allowed') {
+      showToast('需要允許麥克風權限才能用語音輸入', 'error');
+    } else if (ev && ev.error && ev.error !== 'no-speech' && ev.error !== 'aborted') {
+      showToast('語音辨識：' + ev.error, 'warning');
+    }
+  };
+  rec.onend = function () {
+    _chatRecActive = false;
+    _chatRec = null;
+    if (btn) btn.classList.remove('chat-mic-active');
+    // 講完自動送出（如果有內容）
+    if (input && (input.value || '').trim()) chatSend();
+  };
+
+  try { rec.start(); }
+  catch (e) {
+    _chatRecActive = false;
+    _chatRec = null;
+    if (btn) btn.classList.remove('chat-mic-active');
+    showToast('啟動語音失敗：' + (e.message || e), 'error');
+  }
+}
+
+function chatSend() {
+  if (_chatTyping) { showToast('小禾正在說話…等一下下', 'info'); return; }
+  var input = document.getElementById('chat-input');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+
+  // 在 push 新訊息「之前」抓歷史，讓 history 不含本則 message
+  var apiHistory = chatBuildApiHistory(12);
+
+  var hist = chatLoadHistory();
+  hist.push({ role: 'user', text: text, t: Date.now() });
+  chatSaveHistory(hist);
+  chatAppendMessage('user', text);
+
+  chatShowThinking();
+
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : 'demo';
+  var body = {
+    user_id: pid,
+    message: text,
+    mode: chatGetMode(),
+    version: chatGetVersion(),
+    history: apiHistory
+  };
+
+  chatStreamReply(body, /*fallback*/ '抱歉，小禾沒收到回覆，可以再說一次嗎？');
+}
+
+// 把後端 SSE 流逐 token 渲染進 bot 氣泡；同時保持小禾打字動畫
+function chatStreamReply(body, fallbackText) {
+  fetch(API + '/xiaohe/chat/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+    body: JSON.stringify(body)
+  }).then(function (resp) {
+    if (!resp.ok || !resp.body) throw new Error('stream not available: ' + resp.status);
+    chatRemoveThinking();
+    chatSetMascotState('typing');
+    _chatTyping = true;
+
+    var node = chatAppendMessage('bot', '');
+    var textEl = node ? node.querySelector('.chat-text') : null;
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buf = '';
+    var fullText = '';
+
+    function pump() {
+      return reader.read().then(function (r) {
+        if (r.done) return;
+        buf += decoder.decode(r.value, { stream: true });
+        // SSE 事件以兩個換行分隔
+        var parts = buf.split(/\n\n/);
+        buf = parts.pop();
+        for (var i = 0; i < parts.length; i++) {
+          var line = parts[i];
+          if (!line) continue;
+          // 取出 data: 後的 JSON
+          var idx = line.indexOf('data:');
+          if (idx < 0) continue;
+          var payload = line.slice(idx + 5).trim();
+          var obj = null;
+          try { obj = JSON.parse(payload); } catch (e) { continue; }
+          if (obj.delta && textEl) {
+            fullText += obj.delta;
+            textEl.innerHTML = chatEscape(fullText);
+            chatScrollToBottom();
+          }
+          if (obj.done) {
+            // 結束
+          }
+        }
+        return pump();
+      });
+    }
+
+    return pump().then(function () {
+      _chatTyping = false;
+      chatSetMascotState('idle');
+      var h = chatLoadHistory();
+      h.push({ role: 'bot', text: fullText || fallbackText || '', t: Date.now() });
+      chatSaveHistory(h);
+    });
+  }).catch(function (err) {
+    _chatTyping = false;
+    chatRemoveThinking();
+    chatSetMascotState('idle');
+    // 串流失敗 → 退回非串流的 chat
+    chatNonStreamFallback(body, fallbackText);
+  });
+}
+
+// 串流不通時的 fallback：用原本的 /xiaohe/chat 並以 typewriter 效果顯示
+function chatNonStreamFallback(body, fallbackText) {
+  fetch(API + '/xiaohe/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(function (r) { return r.json().catch(function () { return {}; }); })
+    .then(function (data) {
+      var reply = (data && data.reply) ? String(data.reply)
+        : (fallbackText || '網路有點忙，等一下再試試看。');
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (!textEl) return;
+      chatTypeInto(textEl, reply, {}, function () {
+        var h = chatLoadHistory();
+        h.push({ role: 'bot', text: reply, t: Date.now() });
+        chatSaveHistory(h);
+      });
+    })
+    .catch(function () {
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (textEl) chatTypeInto(textEl, '網路有點忙，等一下再試試看。');
+    });
+}
+
+// 「生成一篇文章」— 把最近的對話交給小禾，請它整理成一篇短文，
+// 然後以打字機方式產出（像 Claude Code 打字打一打產出文章）
+function chatGenerateArticle() {
+  if (_chatTyping) { showToast('小禾正在說話…等一下下', 'info'); return; }
+  var hist = chatLoadHistory();
+  var recent = hist.slice(-12).map(function(m) {
+    var who = m.role === 'user' ? '我' : '小禾';
+    return who + '：' + m.text;
+  }).join('\n');
+
+  var prompt = ''
+    + '請依據下面這段對話，幫我寫一篇 200~350 字的短文，'
+    + '主題是「最近的我」，溫暖、口語化、第一人稱、分 2~3 段，'
+    + '結尾給自己一句鼓勵。如果對話內容不足，就以一般問候與健康提醒為主。\n\n'
+    + '【對話】\n' + (recent || '（尚無對話）');
+
+  // 把使用者意圖也記下來
+  hist.push({ role: 'user', text: '幫我把這段對話寫成一篇文章', t: Date.now() });
+  chatSaveHistory(hist);
+  chatAppendMessage('user', '幫我把這段對話寫成一篇文章');
+
+  chatShowThinking();
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : 'demo';
+  fetch(API + '/xiaohe/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: pid, message: prompt,
+      mode: chatGetMode(), version: chatGetVersion(),
+      history: chatBuildApiHistory(12)
+    })
+  })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
+    .then(function(data) {
+      chatRemoveThinking();
+      var article = (data && data.reply) ? String(data.reply)
+        : '今天先好好喝杯水，深呼吸三次。明天再來把感受寫下來，我會等你。';
+      var node = chatAppendMessage('article', '');
+      var textEl = node ? node.querySelector('.chat-article-text') : null;
+      if (!textEl) return;
+      chatTypeInto(textEl, article, { speed: 18 }, function() {
+        var h = chatLoadHistory();
+        h.push({ role: 'article', text: article, t: Date.now() });
+        chatSaveHistory(h);
+      });
+    })
+    .catch(function() {
+      chatRemoveThinking();
+      var fallback = '網路有點忙，等一下再試試看寫文章。';
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (textEl) chatTypeInto(textEl, fallback);
+    });
+}
+
 function settings() {
   var user = getCurrentUser();
   var fs   = getSetting('fontSize', 'normal');
@@ -4361,12 +5818,13 @@ function setMyDoctor(d) {
   else localStorage.removeItem('mdpiece_my_doctor');
 }
 
-function previsitPage() {
+// 推送給醫師區塊 — 注入在 main 的 previsit() 頁面尾巴
+function pushHubBlock() {
   return (
-    '<section class="previsit-wrap">' +
+    '<section class="previsit-wrap" style="margin-top:24px">' +
       '<header class="previsit-head">' +
-        '<h2><i data-lucide="clipboard-check" style="width:22px;height:22px"></i> 診前報告 — 推送給醫師</h2>' +
-        '<p>把近一週的紀錄整理給主治醫師，他在醫師端就能看到你想讓他注意的事情。</p>' +
+        '<h2><i data-lucide="send" style="width:22px;height:22px"></i> 推送給醫師</h2>' +
+        '<p>把近一週的紀錄推給主治醫師，他在醫師端就能看到你特別想他注意的事情。</p>' +
       '</header>' +
       '<div class="previsit-doctor-row" id="previsit-doctor-row">載入醫師清單中…</div>' +
       '<div class="previsit-grid">' +
@@ -4540,7 +5998,7 @@ async function _buildCategorySummary(cat, pid) {
 }
 
 
-async function loadPrevisitPage() {
+async function loadPushHubBlock() {
   // 1. 醫師清單 + 當前綁定
   var row = document.getElementById('previsit-doctor-row');
   if (!row) return;

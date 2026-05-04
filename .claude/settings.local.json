@@ -9,7 +9,9 @@
       "Bash(uv *)",
       "Bash(npm *)",
       "Bash(node *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(cp /root/.claude/uploads/dff6a707-2916-4059-809b-cfcf1350183c/c604b943-18212.jpg /tmp/_orig.jpg)",
+      "Bash(python3)"
     ]
   }
 }
