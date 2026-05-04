@@ -10,10 +10,13 @@ import {
 import { fmtDate, relativeTime } from '../lib/format.js'
 import TrendChart from '../components/TrendChart.jsx'
 import ChartsPanel from '../components/ChartsPanel.jsx'
+import BodyHeatmap from '../components/BodyHeatmap.jsx'
+import TreatmentTimeline from '../components/TreatmentTimeline.jsx'
 
 const TABS = [
   { key: 'overview', label: '快速預覽' },
   { key: 'charts', label: '圖表分析' },
+  { key: 'treatment', label: '治療歷程' },
   { key: 'timeline', label: '時間軸' },
   { key: 'symptoms', label: '症狀分析' },
   { key: 'medications', label: '用藥' },
@@ -163,11 +166,21 @@ export default function PatientDetail() {
           medChanges={medChanges}
         />
       )}
+      {tab === 'treatment' && (
+        <TreatmentTimeline
+          symptoms={symptoms}
+          emotionTrend={emotionTrend}
+          medChanges={medChanges}
+          medStats={medStats}
+        />
+      )}
       {tab === 'timeline' && <TimelinePanel records={records} alerts={alerts} notes={notes} medChanges={medChanges} />}
       {tab === 'symptoms' && <SymptomsPanel symptoms={symptoms} />}
       {tab === 'medications' && <MedicationsPanel medStats={medStats} medChanges={medChanges} />}
       {tab === 'alerts' && <AlertsPanel alerts={alerts} onChanged={reload} />}
-      {tab === 'notes' && <NotesPanel patientId={id} notes={notes} onChanged={reload} />}
+      {tab === 'notes' && (
+        <NotesPanel patientId={id} notes={notes} records={records} onChanged={reload} />
+      )}
     </>
   )
 }
@@ -398,12 +411,24 @@ function MedicationsPanel({ medStats, medChanges }) {
 // ─── 症狀分析 ─────────────────────────────────────────────
 
 function SymptomsPanel({ symptoms }) {
-  if (!symptoms || symptoms.length === 0) {
-    return <div className="placeholder">尚無症狀分析紀錄</div>
-  }
-  const sorted = [...symptoms].sort(
+  const sorted = [...(symptoms || [])].sort(
     (a, b) => new Date(b.created_at ?? 0) - new Date(a.created_at ?? 0),
   )
+  return (
+    <>
+      <div className="card">
+        <h3 className="section-h">身體部位熱點圖</h3>
+        <BodyHeatmap symptoms={symptoms} />
+      </div>
+      {sorted.length === 0 && (
+        <div className="placeholder" style={{ marginTop: 12 }}>尚無症狀分析紀錄</div>
+      )}
+      {sorted.length > 0 && <SymptomsList sorted={sorted} />}
+    </>
+  )
+}
+
+function SymptomsList({ sorted }) {
   return (
     <div className="symptom-list">
       {sorted.map((s) => {
@@ -501,12 +526,21 @@ function AlertsPanel({ alerts, onChanged }) {
 
 // ─── 醫師備註 ─────────────────────────────────────────────
 
-function NotesPanel({ patientId, notes, onChanged }) {
+function NotesPanel({ patientId, notes, records = [], onChanged }) {
   const [content, setContent] = useState('')
   const [nextFocus, setNextFocus] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [err, setErr] = useState(null)
   const doctorId = getActiveDoctorId()
+
+  // 上次 vs 這次回診對比
+  const visitCompare = useMemo(() => {
+    const sorted = [...(records || [])].sort(
+      (a, b) => new Date(b.visit_date ?? b.created_at) - new Date(a.visit_date ?? a.created_at),
+    )
+    if (sorted.length < 2) return null
+    return { current: sorted[0], previous: sorted[1] }
+  }, [records])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -542,6 +576,16 @@ function NotesPanel({ patientId, notes, onChanged }) {
 
   return (
     <>
+      {visitCompare && (
+        <div className="card visit-compare">
+          <h3 className="section-h">回診對比 — 這次 vs 上次</h3>
+          <div className="visit-compare-grid">
+            <VisitCol title="上次回診" record={visitCompare.previous} />
+            <VisitCol title="這次回診" record={visitCompare.current} highlight />
+          </div>
+        </div>
+      )}
+
       <form className="card" onSubmit={submit}>
         <h3 className="section-h">新增備註</h3>
         {!doctorId && (
@@ -590,5 +634,25 @@ function NotesPanel({ patientId, notes, onChanged }) {
         </div>
       )}
     </>
+  )
+}
+
+function VisitCol({ title, record, highlight }) {
+  return (
+    <div className={`visit-col ${highlight ? 'visit-col-current' : ''}`}>
+      <div className="visit-col-head">{title}</div>
+      <div className="visit-col-date">{fmtDate(record.visit_date ?? record.created_at)}</div>
+      <dl className="kv">
+        <dt>診斷</dt><dd>{record.diagnosis || '—'}</dd>
+        <dt>處方</dt><dd>{record.prescription || '—'}</dd>
+        <dt>備註</dt><dd>{record.notes || '—'}</dd>
+        {Array.isArray(record.symptoms) && record.symptoms.length > 0 && (
+          <>
+            <dt>症狀</dt>
+            <dd>{record.symptoms.join('、')}</dd>
+          </>
+        )}
+      </dl>
+    </div>
   )
 }

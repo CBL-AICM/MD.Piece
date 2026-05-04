@@ -804,3 +804,96 @@ code {
   transition: transform .1s;
 }
 .heatmap-cell:hover { transform: scale(1.08); }
+
+/* ─── Body Heatmap (身體部位熱點圖) ─────────────── */
+.body-heatmap {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .body-heatmap { grid-template-columns: 1fr; }
+}
+.body-svg-wrap {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+}
+.body-svg { width: 200px; height: auto; }
+.body-svg path { transition: fill 0.2s; }
+.body-svg path:hover { fill-opacity: 1 !important; }
+.body-legend h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.body-region-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.body-region-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.body-region-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+.body-region-name { color: var(--text); flex: 1; }
+.body-region-count { color: var(--accent); font-weight: 600; font-size: 12.5px; }
+.body-disclaimer {
+  margin: 14px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
+/* ─── Visit Compare (回診對比) ────────────────────── */
+.visit-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 8px;
+}
+@media (max-width: 720px) {
+  .visit-compare-grid { grid-template-columns: 1fr; }
+}
+.visit-col {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.visit-col-current {
+  border-color: rgba(110, 168, 255, 0.4);
+  background: linear-gradient(180deg, rgba(110,168,255,0.05), transparent);
+}
+.visit-col-head {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.visit-col-date {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
