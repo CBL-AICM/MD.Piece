@@ -3810,15 +3810,14 @@ html[data-mode="senior"] .vt-bmi-meta {
   filter: blur(8px);
 }
 .bookshelf-title {
-  font-family: "Long Cang", "ZCOOL XiaoWei", "Noto Sans TC", cursive;
-  font-size: 1.1rem;
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: .95rem;
   color: #4a2f1c;
   text-align: center;
   margin-bottom: 12px;
-  letter-spacing: 8px;
-  font-weight: 400;
-  opacity: .75;
-  transform: rotate(-0.4deg);
+  letter-spacing: 6px;
+  font-weight: 500;
+  opacity: .65;
 }
 
 .shelf {
@@ -3840,15 +3839,14 @@ html[data-mode="senior"] .vt-bmi-meta {
 .shelf:last-child { border-bottom: none; padding-bottom: 4px; }
 
 .shelf-label {
-  font-family: "ZCOOL XiaoWei", "Long Cang", "Noto Sans TC", serif;
-  font-size: .85rem;
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: .75rem;
   color: #5a3a1a;
   letter-spacing: 4px;
   margin: 0 0 6px 4px;
-  opacity: .65;
-  font-weight: 400;
-  transform: rotate(-0.3deg);
-  display: inline-block;
+  text-transform: uppercase;
+  opacity: .55;
+  font-weight: 500;
 }
 .shelf-row {
   display: flex;
@@ -4099,16 +4097,15 @@ html[data-mode="senior"] .vt-bmi-meta {
 }
 
 .nb-heading {
-  font-family: "Long Cang", "ZCOOL XiaoWei", "Noto Sans TC", cursive;
-  font-size: 1.55rem;
-  font-weight: 400;
-  color: #2A1810;
-  padding-bottom: 14px;
-  margin-bottom: 20px;
-  display: flex; align-items: center; gap: 12px;
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 10px;
   position: relative;
-  letter-spacing: 3px;
-  transform: rotate(-0.3deg);
+  letter-spacing: 1.2px;
 }
 /* 水彩筆刷下緣（取代虛線） */
 .nb-heading::after {
@@ -4124,14 +4121,12 @@ html[data-mode="senior"] .vt-bmi-meta {
   filter: blur(0.4px);
 }
 .nb-subtle {
-  font-family: "ZCOOL XiaoWei", "Noto Sans TC", serif;
+  font-family: "Noto Sans TC", sans-serif;
   color: var(--text-dim);
-  font-size: .95rem;
-  margin-bottom: 18px;
-  line-height: 1.7;
-  letter-spacing: 0.5px;
-  transform: rotate(-0.2deg);
-  display: block;
+  font-size: .85rem;
+  margin-bottom: 16px;
+  line-height: 1.65;
+  font-style: italic;
 }
 
 .nb-list {
@@ -4148,17 +4143,14 @@ html[data-mode="senior"] .vt-bmi-meta {
   text-align: left;
   font-size: .94rem;
   color: var(--text);
-  font-family: "ZCOOL XiaoWei", "Noto Sans TC", serif;
-  letter-spacing: 0.8px;
+  font-family: "Noto Sans TC", sans-serif;
   transition: var(--transition);
   line-height: 1.55;
   counter-increment: nbitem;
 }
 .nb-item strong {
-  font-family: "ZCOOL XiaoWei", "Noto Sans TC", serif;
-  font-weight: 400;
-  font-size: 1.02rem;
-  letter-spacing: 1px;
+  font-family: "Noto Sans TC", sans-serif;
+  font-weight: 600;
 }
 /* 圓形章節編號（手繪水彩風） */
 .nb-item::before {
@@ -4238,14 +4230,13 @@ html[data-mode="senior"] .vt-bmi-meta {
   filter: blur(0.4px);
 }
 .nb-content-title {
-  font-family: "Long Cang", "ZCOOL XiaoWei", "Noto Sans TC", cursive;
-  font-size: 1.5rem;
-  font-weight: 400;
-  color: #2A1810;
-  letter-spacing: 2px;
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 1px;
   flex: 1;
   line-height: 1.4;
-  transform: rotate(-0.3deg);
 }
 #edu-content-body h2, #edu-content-body h3, #edu-content-body h4 {
   font-family: "Noto Sans TC", sans-serif;
