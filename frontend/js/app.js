@@ -1315,7 +1315,7 @@ function accountPage() {
   const roleIcon = u.role === 'doctor' ? 'stethoscope' : 'heart-pulse';
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
-    : `<img src="icons/heko-avatar.svg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
+    : `<img src="icons/xiaohe.jpg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
   return `
     <section class="acct-wrap">
       <header class="acct-head">
@@ -1607,7 +1607,7 @@ function home() {
   const dayStr = '星期' + ['日','一','二','三','四','五','六'][today.getDay()];
   const name = user ? user.nickname : '你';
   const ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
-  const heroAvatarSrc = (user && user.avatar_url) ? user.avatar_url : 'icons/heko-avatar.svg';
+  const heroAvatarSrc = (user && user.avatar_url) ? user.avatar_url : 'icons/xiaohe.jpg';
 
   return `
     <div class="home-page">
