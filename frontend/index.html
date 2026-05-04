@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=visit-modal-solid-1" />
+  <link rel="stylesheet" href="css/style.css?v=chat-multi-voice-stream-1" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
@@ -283,6 +283,9 @@
         <button class="nav-item" onclick="navigateTo('pieces', this)">
           <span class="nav-icon"><i data-lucide="puzzle" style="width:18px;height:18px"></i></span> 你的碎片
         </button>
+        <button class="nav-item" onclick="navigateTo('chat', this)">
+          <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span> 醫起聊天
+        </button>
         <button class="nav-item" onclick="navigateTo('settings', this)">
           <span class="nav-icon"><i data-lucide="settings" style="width:18px;height:18px"></i></span> 系統設定
         </button>
@@ -334,7 +337,7 @@
     </div>
   </div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=chat-multi-voice-stream-1"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
@@ -521,6 +524,7 @@
       story: 'daily-story',
       labs: 'lab-values',
       pieces: 'your-pieces',
+      chat: 'med-chat',
       settings: 'settings',
       account: 'account',
       // legacy / fallback
@@ -538,6 +542,7 @@
       story: '每日故事',
       labs: '報告數值',
       pieces: '你的碎片',
+      chat: '醫起聊天',
       settings: '系統設定',
       account: '帳號設定',
       records: '病歷管理', doctors: '醫師列表'

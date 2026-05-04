@@ -54,11 +54,30 @@ function getStablePatientId() {
   if (user && user.id) return user.id;
   var demoId = localStorage.getItem('mdpiece_demo_pid');
   if (!demoId) {
-    demoId = (crypto && crypto.randomUUID) ? crypto.randomUUID()
-      : 'demo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    demoId = generateSecureId();
     localStorage.setItem('mdpiece_demo_pid', demoId);
   }
   return demoId;
+}
+
+// 產生 demo patient_id — 一律用 Web Crypto，避免 Math.random 流入 user_id（CodeQL）
+function generateSecureId() {
+  if (typeof crypto !== 'undefined') {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    if (typeof crypto.getRandomValues === 'function') {
+      var b = new Uint8Array(16);
+      crypto.getRandomValues(b);
+      // RFC 4122 v4
+      b[6] = (b[6] & 0x0f) | 0x40;
+      b[8] = (b[8] & 0x3f) | 0x80;
+      var hex = Array.prototype.map.call(b, function(x) {
+        return ('00' + x.toString(16)).slice(-2);
+      }).join('');
+      return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+    }
+  }
+  // 最後保險：所有現代瀏覽器都已支援 Web Crypto，這條基本上跑不到
+  throw new Error('Web Crypto API unavailable');
 }
 
 // ─── 路由 ──────────────────────────────────────────────────
@@ -1016,7 +1035,7 @@ const pageSlugForTerminal = {
   home: 'home', symptoms: 'symptoms', medications: 'medications',
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
-  pieces: 'your-pieces', account: 'account',
+  pieces: 'your-pieces', chat: 'med-chat', account: 'account',
   settings: 'settings',
   records: 'records', doctors: 'doctors'
 };
@@ -1026,7 +1045,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, memo, previsit, story, labs, pieces, account, settings
+    vitals, memo, previsit, story, labs, pieces, chat, account, settings
   };
   // Page transition
   app.style.opacity = '0';
@@ -1043,6 +1062,7 @@ function showPage(page) {
     if (page === "memo") loadMemoPage();
     if (page === "labs") loadLabsPage();
     if (page === "pieces") loadPiecesPage();
+    if (page === "chat") loadChatPage();
     if (page === "previsit") loadPrevisitPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
@@ -1582,6 +1602,7 @@ function home() {
         ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
         ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
+        ${homeCard('chat','message-circle-heart','醫起聊天','和小禾聊聊，幫你把感受寫成文章','rose')}
         ${homeCard('settings','settings','系統設定','字體、主題、年長版等偏好','amber')}
       </div>
 
@@ -4534,6 +4555,592 @@ function initUserSettings() {
   }
 }
 initUserSettings();
+
+// ─── 醫起聊天（Chat with 小禾）────────────────────────────────
+// Claude Code 風格：終端機框 + 吉祥物 + 打字機輸出
+// 後端 endpoint: POST /xiaohe/chat  { user_id, message, mode, version }
+
+const CHAT_HISTORY_KEY = 'mdpiece_chat_history';
+const CHAT_MODE_KEY    = 'mdpiece_chat_mode';      // patient / family
+const CHAT_VERSION_KEY = 'mdpiece_chat_version';   // normal / elderly
+var _chatTyping = false;
+var _chatTypeTimer = null;
+
+function chatLoadHistory() {
+  try {
+    var raw = localStorage.getItem(CHAT_HISTORY_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+// 把 localStorage 內的訊息轉成後端 history 格式（最近 N 輪 user/bot）
+function chatBuildApiHistory(maxTurns) {
+  var n = maxTurns || 12;
+  var hist = chatLoadHistory();
+  var out = [];
+  for (var i = 0; i < hist.length; i++) {
+    var m = hist[i];
+    if (!m || !m.text) continue;
+    var role = (m.role === 'user') ? 'user' : 'assistant';
+    out.push({ role: role, content: String(m.text) });
+  }
+  return out.slice(-n);
+}
+function chatSaveHistory(list) {
+  try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list.slice(-80))); }
+  catch (e) {}
+}
+function chatGetMode() {
+  try { return localStorage.getItem(CHAT_MODE_KEY) || 'patient'; } catch (e) { return 'patient'; }
+}
+function chatGetVersion() {
+  // 自動以使用者「年長版」UI mode 為預設
+  try {
+    var v = localStorage.getItem(CHAT_VERSION_KEY);
+    if (v) return v;
+  } catch (e) {}
+  return (typeof getMode === 'function' && getMode() === 'senior') ? 'elderly' : 'normal';
+}
+function chatSetMode(m) {
+  try { localStorage.setItem(CHAT_MODE_KEY, m); } catch (e) {}
+}
+function chatSetVersion(v) {
+  try { localStorage.setItem(CHAT_VERSION_KEY, v); } catch (e) {}
+}
+
+// 小禾吉祥物 — Claude Code 風 ASCII 顏文字兔
+// state: 'idle' | 'typing' | 'thinking'
+// frame: 0/1 — typing 狀態下交替的「左手敲 / 右手敲」鍵盤動畫
+function chatMascotSvg(state, frame) {
+  state = state || 'idle';
+  if (state === 'typing') {
+    // 三行：耳朵、臉、雙手在鍵盤上交替敲擊
+    var bottom = (frame % 2 === 0)
+      ? ' o⌨<span class="chat-mascot-keys">▓▓▓</span>'   // 左手按下
+      : ' <span class="chat-mascot-keys">▓▓▓</span>⌨o';  // 右手按下
+    var ascii = ''
+      + ' (\\(\\\n'
+      + ' ( •ω•)\n'
+      + bottom;
+    return ''
+      + '<div class="chat-mascot-img-wrap chat-mascot-typing">'
+      +   '<pre class="chat-mascot-ascii" aria-label="小禾正在打字">' + ascii + '</pre>'
+      + '</div>';
+  }
+  if (state === 'thinking') {
+    var thinkAscii = ''
+      + ' (\\(\\\n'
+      + ' ( -ㅅ-)\n'
+      + ' (  づ<span class="chat-mascot-spark">?</span>';
+    return ''
+      + '<div class="chat-mascot-img-wrap chat-mascot-thinking">'
+      +   '<pre class="chat-mascot-ascii" aria-label="小禾思考中">' + thinkAscii + '</pre>'
+      + '</div>';
+  }
+  // idle
+  var idleAscii = ''
+    + ' (\\(\\\n'
+    + ' ( •ㅅ•)\n'
+    + ' (  づ<span class="chat-mascot-spark">♥</span>';
+  return ''
+    + '<div class="chat-mascot-img-wrap chat-mascot-idle">'
+    +   '<pre class="chat-mascot-ascii" aria-label="小禾">' + idleAscii + '</pre>'
+    + '</div>';
+}
+
+function chatGreeting() {
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var name = u.nickname || '你';
+  var v = chatGetVersion();
+  if (v === 'elderly') {
+    return '你好啊，' + name + '。我是小禾，今天身體有沒有比較舒服？慢慢說，我都聽。';
+  }
+  return '嗨～' + name + '！我是小禾 🌱 今天想聊什麼？身體、心情、或是寫一篇文章都可以。';
+}
+
+function chat() {
+  var hist = chatLoadHistory();
+  var mode = chatGetMode();
+  var ver  = chatGetVersion();
+
+  var msgsHtml = hist.length
+    ? hist.map(chatRenderMessage).join('')
+    : ''
+      + '<div class="chat-msg chat-msg-bot">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatGreeting() + '</div>'
+      +   '</div>'
+      + '</div>';
+
+  return ''
+    + '<section class="chat-page">'
+    + '  <header class="chat-header">'
+    + '    <div class="chat-mascot-wrap chat-mascot-wrap-lg" id="chat-mascot">'
+    +        chatMascotSvg('idle')
+    + '    </div>'
+    + '    <div class="chat-header-text">'
+    + '      <p class="chat-eyebrow">// chat &gt; xiaohe.ai</p>'
+    + '      <h2 class="chat-title">醫起聊天</h2>'
+    + '      <p class="chat-sub">小禾陪你聊聊，把感受拼成一段話、一篇文章。</p>'
+    + '    </div>'
+    + '    <div class="chat-toggles">'
+    + '      <div class="chat-seg" role="tablist" aria-label="對話對象">'
+    + '        <button type="button" class="chat-seg-btn' + (mode === 'patient' ? ' active' : '') + '" onclick="chatSwitchMode(\'patient\')">我是患者</button>'
+    + '        <button type="button" class="chat-seg-btn' + (mode === 'family'  ? ' active' : '') + '" onclick="chatSwitchMode(\'family\')">我是家屬</button>'
+    + '      </div>'
+    + '      <div class="chat-seg" role="tablist" aria-label="語氣">'
+    + '        <button type="button" class="chat-seg-btn' + (ver === 'normal'  ? ' active' : '') + '" onclick="chatSwitchVersion(\'normal\')">一般</button>'
+    + '        <button type="button" class="chat-seg-btn' + (ver === 'elderly' ? ' active' : '') + '" onclick="chatSwitchVersion(\'elderly\')">年長版</button>'
+    + '      </div>'
+    + '    </div>'
+    + '  </header>'
+
+    + '  <div class="chat-stream" id="chat-stream">'
+    +      msgsHtml
+    + '  </div>'
+
+    + '  <div class="chat-suggest" id="chat-suggest">'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我今天比較喘，要怎麼觀察？\')">今天比較喘</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'幫我把最近三天的不舒服整理成一段話\')">整理近況</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我有點焦慮，可以陪我說說話嗎？\')">陪我聊聊</button>'
+    + '    <button type="button" class="chat-chip chat-chip-special" onclick="chatGenerateArticle()">'
+    + '      <i data-lucide="sparkles" style="width:14px;height:14px"></i> 生成一篇文章'
+    + '    </button>'
+    + '  </div>'
+
+    + '  <form class="chat-input-bar" id="chat-form" onsubmit="event.preventDefault(); chatSend();">'
+    + '    <span class="chat-prompt">$</span>'
+    + '    <input id="chat-input" class="chat-input" type="text" autocomplete="off" placeholder="跟小禾說說話… (Enter 送出)" />'
+    + '    <button type="button" class="chat-mic" id="chat-mic" onclick="chatToggleMic()" title="按住說話 / 點一下開始辨識">'
+    + '      <i data-lucide="mic" style="width:16px;height:16px"></i>'
+    + '    </button>'
+    + '    <button type="submit" class="chat-send" id="chat-send">'
+    + '      <i data-lucide="send" style="width:16px;height:16px"></i>'
+    + '      <span>送出</span>'
+    + '    </button>'
+    + '    <button type="button" class="chat-clear" onclick="chatClear()" title="清空對話">'
+    + '      <i data-lucide="trash-2" style="width:14px;height:14px"></i>'
+    + '    </button>'
+    + '  </form>'
+    + '  <p class="chat-disclaimer">小禾不是醫師，僅作為陪伴與資訊參考；身體不適請務必就醫。</p>'
+    + '</section>';
+}
+
+function chatRenderMessage(m) {
+  if (m.role === 'user') {
+    return ''
+      + '<div class="chat-msg chat-msg-user">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatEscape(m.text) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  if (m.role === 'article') {
+    return ''
+      + '<div class="chat-msg chat-msg-bot chat-msg-article">'
+      +   '<div class="chat-bubble chat-bubble-article">'
+      +     '<div class="chat-article-head"><i data-lucide="file-text"></i> 小禾為你寫的一篇</div>'
+      +     '<div class="chat-text chat-article-text">' + chatEscape(m.text) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  return ''
+    + '<div class="chat-msg chat-msg-bot">'
+    +   '<div class="chat-bubble">'
+    +     '<div class="chat-text">' + chatEscape(m.text) + '</div>'
+    +   '</div>'
+    + '</div>';
+}
+
+function chatEscape(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
+function loadChatPage() {
+  var input = document.getElementById('chat-input');
+  if (input) {
+    input.focus();
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatSend();
+      }
+    });
+  }
+  chatScrollToBottom();
+}
+
+function chatScrollToBottom() {
+  var s = document.getElementById('chat-stream');
+  if (s) s.scrollTop = s.scrollHeight;
+}
+
+function chatSwitchMode(m) {
+  chatSetMode(m);
+  document.querySelectorAll('.chat-toggles .chat-seg').forEach(function(seg, i) {
+    if (i !== 0) return;
+    seg.querySelectorAll('.chat-seg-btn').forEach(function(b, j) {
+      var want = (j === 0) ? 'patient' : 'family';
+      b.classList.toggle('active', want === m);
+    });
+  });
+  showToast(m === 'family' ? '切換為家屬模式' : '切換為患者模式', 'info');
+}
+
+function chatSwitchVersion(v) {
+  chatSetVersion(v);
+  document.querySelectorAll('.chat-toggles .chat-seg').forEach(function(seg, i) {
+    if (i !== 1) return;
+    seg.querySelectorAll('.chat-seg-btn').forEach(function(b, j) {
+      var want = (j === 0) ? 'normal' : 'elderly';
+      b.classList.toggle('active', want === v);
+    });
+  });
+  showToast(v === 'elderly' ? '切換為年長版語氣' : '切換為一般語氣', 'info');
+}
+
+function chatQuickAsk(text) {
+  var input = document.getElementById('chat-input');
+  if (input) input.value = text;
+  chatSend();
+}
+
+function chatClear() {
+  if (!confirm('清空對話紀錄？')) return;
+  try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch (e) {}
+  // 重新渲染
+  var stream = document.getElementById('chat-stream');
+  if (stream) {
+    stream.innerHTML = ''
+      + '<div class="chat-msg chat-msg-bot">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatGreeting() + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function chatAppendMessage(role, text) {
+  var stream = document.getElementById('chat-stream');
+  if (!stream) return null;
+  var wrap = document.createElement('div');
+  wrap.innerHTML = chatRenderMessage({ role: role, text: text });
+  var node = wrap.firstChild;
+  stream.appendChild(node);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  chatScrollToBottom();
+  return node;
+}
+
+function chatShowThinking() {
+  var stream = document.getElementById('chat-stream');
+  if (!stream) return null;
+  var node = document.createElement('div');
+  node.className = 'chat-msg chat-msg-bot chat-msg-thinking';
+  node.id = 'chat-thinking';
+  node.innerHTML = ''
+    + '<div class="chat-bubble">'
+    +   '<div class="chat-typing-dots"><span></span><span></span><span></span></div>'
+    + '</div>';
+  stream.appendChild(node);
+  chatSetMascotState('thinking');
+  chatScrollToBottom();
+  return node;
+}
+
+function chatRemoveThinking() {
+  var n = document.getElementById('chat-thinking');
+  if (n && n.parentNode) n.parentNode.removeChild(n);
+}
+
+var _chatMascotTypingTimer = null;
+function chatSetMascotState(state) {
+  var wrap = document.getElementById('chat-mascot');
+  if (!wrap) return;
+  // 停掉之前可能在跑的 typing 動畫
+  if (_chatMascotTypingTimer) {
+    clearInterval(_chatMascotTypingTimer);
+    _chatMascotTypingTimer = null;
+  }
+  if (state === 'typing') {
+    var frame = 0;
+    wrap.innerHTML = chatMascotSvg('typing', frame);
+    _chatMascotTypingTimer = setInterval(function () {
+      frame = (frame + 1) % 2;
+      var w = document.getElementById('chat-mascot');
+      if (!w) { clearInterval(_chatMascotTypingTimer); _chatMascotTypingTimer = null; return; }
+      w.innerHTML = chatMascotSvg('typing', frame);
+    }, 140);
+    return;
+  }
+  wrap.innerHTML = chatMascotSvg(state);
+}
+
+// 打字機效果：把文字一個個塞進 element
+function chatTypeInto(node, text, opts, onDone) {
+  opts = opts || {};
+  var speed = opts.speed || 22; // ms per char
+  var i = 0;
+  if (_chatTypeTimer) { clearInterval(_chatTypeTimer); _chatTypeTimer = null; }
+  _chatTyping = true;
+  chatSetMascotState('typing');
+  node.innerHTML = '<span class="chat-caret">▌</span>';
+  _chatTypeTimer = setInterval(function() {
+    if (i >= text.length) {
+      clearInterval(_chatTypeTimer); _chatTypeTimer = null;
+      _chatTyping = false;
+      node.innerHTML = chatEscape(text);
+      chatSetMascotState('idle');
+      if (typeof onDone === 'function') onDone();
+      chatScrollToBottom();
+      return;
+    }
+    var partial = text.slice(0, i + 1);
+    node.innerHTML = chatEscape(partial) + '<span class="chat-caret">▌</span>';
+    chatScrollToBottom();
+    i += 1;
+  }, speed);
+}
+
+// === 語音輸入（webkitSpeechRecognition）=========================================
+var _chatRec = null;
+var _chatRecActive = false;
+
+function chatToggleMic() {
+  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Rec) {
+    showToast('這個瀏覽器不支援語音輸入（建議用 Chrome/Edge/Safari）', 'warning');
+    return;
+  }
+  if (_chatRecActive && _chatRec) {
+    try { _chatRec.stop(); } catch (e) {}
+    return;
+  }
+  var rec = new Rec();
+  rec.lang = 'zh-TW';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+
+  var input = document.getElementById('chat-input');
+  var btn = document.getElementById('chat-mic');
+  if (btn) btn.classList.add('chat-mic-active');
+  _chatRecActive = true;
+  _chatRec = rec;
+
+  var finalText = '';
+  rec.onresult = function (ev) {
+    var interim = '';
+    for (var i = ev.resultIndex; i < ev.results.length; i++) {
+      var r = ev.results[i];
+      if (r.isFinal) finalText += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    if (input) input.value = (finalText + interim).trim();
+  };
+  rec.onerror = function (ev) {
+    if (ev && ev.error === 'not-allowed') {
+      showToast('需要允許麥克風權限才能用語音輸入', 'error');
+    } else if (ev && ev.error && ev.error !== 'no-speech' && ev.error !== 'aborted') {
+      showToast('語音辨識：' + ev.error, 'warning');
+    }
+  };
+  rec.onend = function () {
+    _chatRecActive = false;
+    _chatRec = null;
+    if (btn) btn.classList.remove('chat-mic-active');
+    // 講完自動送出（如果有內容）
+    if (input && (input.value || '').trim()) chatSend();
+  };
+
+  try { rec.start(); }
+  catch (e) {
+    _chatRecActive = false;
+    _chatRec = null;
+    if (btn) btn.classList.remove('chat-mic-active');
+    showToast('啟動語音失敗：' + (e.message || e), 'error');
+  }
+}
+
+function chatSend() {
+  if (_chatTyping) { showToast('小禾正在說話…等一下下', 'info'); return; }
+  var input = document.getElementById('chat-input');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+
+  // 在 push 新訊息「之前」抓歷史，讓 history 不含本則 message
+  var apiHistory = chatBuildApiHistory(12);
+
+  var hist = chatLoadHistory();
+  hist.push({ role: 'user', text: text, t: Date.now() });
+  chatSaveHistory(hist);
+  chatAppendMessage('user', text);
+
+  chatShowThinking();
+
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : 'demo';
+  var body = {
+    user_id: pid,
+    message: text,
+    mode: chatGetMode(),
+    version: chatGetVersion(),
+    history: apiHistory
+  };
+
+  chatStreamReply(body, /*fallback*/ '抱歉，小禾沒收到回覆，可以再說一次嗎？');
+}
+
+// 把後端 SSE 流逐 token 渲染進 bot 氣泡；同時保持小禾打字動畫
+function chatStreamReply(body, fallbackText) {
+  fetch(API + '/xiaohe/chat/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+    body: JSON.stringify(body)
+  }).then(function (resp) {
+    if (!resp.ok || !resp.body) throw new Error('stream not available: ' + resp.status);
+    chatRemoveThinking();
+    chatSetMascotState('typing');
+    _chatTyping = true;
+
+    var node = chatAppendMessage('bot', '');
+    var textEl = node ? node.querySelector('.chat-text') : null;
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buf = '';
+    var fullText = '';
+
+    function pump() {
+      return reader.read().then(function (r) {
+        if (r.done) return;
+        buf += decoder.decode(r.value, { stream: true });
+        // SSE 事件以兩個換行分隔
+        var parts = buf.split(/\n\n/);
+        buf = parts.pop();
+        for (var i = 0; i < parts.length; i++) {
+          var line = parts[i];
+          if (!line) continue;
+          // 取出 data: 後的 JSON
+          var idx = line.indexOf('data:');
+          if (idx < 0) continue;
+          var payload = line.slice(idx + 5).trim();
+          var obj = null;
+          try { obj = JSON.parse(payload); } catch (e) { continue; }
+          if (obj.delta && textEl) {
+            fullText += obj.delta;
+            textEl.innerHTML = chatEscape(fullText);
+            chatScrollToBottom();
+          }
+          if (obj.done) {
+            // 結束
+          }
+        }
+        return pump();
+      });
+    }
+
+    return pump().then(function () {
+      _chatTyping = false;
+      chatSetMascotState('idle');
+      var h = chatLoadHistory();
+      h.push({ role: 'bot', text: fullText || fallbackText || '', t: Date.now() });
+      chatSaveHistory(h);
+    });
+  }).catch(function (err) {
+    _chatTyping = false;
+    chatRemoveThinking();
+    chatSetMascotState('idle');
+    // 串流失敗 → 退回非串流的 chat
+    chatNonStreamFallback(body, fallbackText);
+  });
+}
+
+// 串流不通時的 fallback：用原本的 /xiaohe/chat 並以 typewriter 效果顯示
+function chatNonStreamFallback(body, fallbackText) {
+  fetch(API + '/xiaohe/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(function (r) { return r.json().catch(function () { return {}; }); })
+    .then(function (data) {
+      var reply = (data && data.reply) ? String(data.reply)
+        : (fallbackText || '網路有點忙，等一下再試試看。');
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (!textEl) return;
+      chatTypeInto(textEl, reply, {}, function () {
+        var h = chatLoadHistory();
+        h.push({ role: 'bot', text: reply, t: Date.now() });
+        chatSaveHistory(h);
+      });
+    })
+    .catch(function () {
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (textEl) chatTypeInto(textEl, '網路有點忙，等一下再試試看。');
+    });
+}
+
+// 「生成一篇文章」— 把最近的對話交給小禾，請它整理成一篇短文，
+// 然後以打字機方式產出（像 Claude Code 打字打一打產出文章）
+function chatGenerateArticle() {
+  if (_chatTyping) { showToast('小禾正在說話…等一下下', 'info'); return; }
+  var hist = chatLoadHistory();
+  var recent = hist.slice(-12).map(function(m) {
+    var who = m.role === 'user' ? '我' : '小禾';
+    return who + '：' + m.text;
+  }).join('\n');
+
+  var prompt = ''
+    + '請依據下面這段對話，幫我寫一篇 200~350 字的短文，'
+    + '主題是「最近的我」，溫暖、口語化、第一人稱、分 2~3 段，'
+    + '結尾給自己一句鼓勵。如果對話內容不足，就以一般問候與健康提醒為主。\n\n'
+    + '【對話】\n' + (recent || '（尚無對話）');
+
+  // 把使用者意圖也記下來
+  hist.push({ role: 'user', text: '幫我把這段對話寫成一篇文章', t: Date.now() });
+  chatSaveHistory(hist);
+  chatAppendMessage('user', '幫我把這段對話寫成一篇文章');
+
+  chatShowThinking();
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : 'demo';
+  fetch(API + '/xiaohe/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: pid, message: prompt,
+      mode: chatGetMode(), version: chatGetVersion(),
+      history: chatBuildApiHistory(12)
+    })
+  })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
+    .then(function(data) {
+      chatRemoveThinking();
+      var article = (data && data.reply) ? String(data.reply)
+        : '今天先好好喝杯水，深呼吸三次。明天再來把感受寫下來，我會等你。';
+      var node = chatAppendMessage('article', '');
+      var textEl = node ? node.querySelector('.chat-article-text') : null;
+      if (!textEl) return;
+      chatTypeInto(textEl, article, { speed: 18 }, function() {
+        var h = chatLoadHistory();
+        h.push({ role: 'article', text: article, t: Date.now() });
+        chatSaveHistory(h);
+      });
+    })
+    .catch(function() {
+      chatRemoveThinking();
+      var fallback = '網路有點忙，等一下再試試看寫文章。';
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (textEl) chatTypeInto(textEl, fallback);
+    });
+}
 
 function settings() {
   var user = getCurrentUser();

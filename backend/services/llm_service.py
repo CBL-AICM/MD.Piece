@@ -39,16 +39,21 @@ except Exception as e:  # ImportError 或 client 初始化失敗
     _anthropic_client = None
 
 
-def _call_ollama(system_prompt: str, user_message: str) -> str:
+# ==============================================================================
+# Non-streaming providers
+# ==============================================================================
+
+def _call_ollama(system_prompt: str, user_message: str, history=None) -> str:
+    msgs = [{"role": "system", "content": system_prompt}]
+    if history:
+        msgs.extend(history)
+    msgs.append({"role": "user", "content": user_message})
     resp = httpx.post(
         f"{OLLAMA_BASE}/api/chat",
         json={
             "model": TEXT_MODEL,
             "stream": False,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
+            "messages": msgs,
         },
         timeout=120.0,
     )
@@ -56,9 +61,13 @@ def _call_ollama(system_prompt: str, user_message: str) -> str:
     return resp.json()["message"]["content"]
 
 
-def _call_groq(system_prompt: str, user_message: str) -> str:
+def _call_groq(system_prompt: str, user_message: str, history=None) -> str:
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY not set; cannot use Groq provider")
+    msgs = [{"role": "system", "content": system_prompt}]
+    if history:
+        msgs.extend(history)
+    msgs.append({"role": "user", "content": user_message})
     resp = httpx.post(
         f"{GROQ_BASE}/chat/completions",
         headers={
@@ -67,10 +76,7 @@ def _call_groq(system_prompt: str, user_message: str) -> str:
         },
         json={
             "model": GROQ_MODEL,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
+            "messages": msgs,
             "temperature": 0.4,
         },
         timeout=60.0,
@@ -79,16 +85,18 @@ def _call_groq(system_prompt: str, user_message: str) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
-def _call_anthropic(system_prompt: str, user_message: str) -> str:
+def _call_anthropic(system_prompt: str, user_message: str, history=None) -> str:
     if _anthropic_client is None:
         raise RuntimeError(
             "ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝；無法使用 Anthropic provider"
         )
+    msgs = list(history) if history else []
+    msgs.append({"role": "user", "content": user_message})
     msg = _anthropic_client.messages.create(
         model=ANTHROPIC_MODEL,
         max_tokens=ANTHROPIC_MAX_TOKENS,
         system=system_prompt,
-        messages=[{"role": "user", "content": user_message}],
+        messages=msgs,
     )
     return msg.content[0].text
 
@@ -112,9 +120,12 @@ def _fallback_chain(primary: str):
     return chain
 
 
-def call_claude(system_prompt: str, user_message: str) -> str:
+def call_claude(system_prompt: str, user_message: str, history=None) -> str:
     """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider，
-    主 provider 失敗時自動降級到下一個可用的（anthropic → groq → ollama）。"""
+    主 provider 失敗時自動降級到下一個可用的（anthropic → groq → ollama）。
+
+    history: 可選，[{role: 'user'|'assistant', content: str}, ...] 多輪歷史
+    """
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _PROVIDERS else "ollama")
     last_err = None
     for name in chain:
@@ -122,12 +133,130 @@ def call_claude(system_prompt: str, user_message: str) -> str:
         if fn is None:
             continue
         try:
-            return fn(system_prompt, user_message)
+            return fn(system_prompt, user_message, history)
         except Exception as e:
             last_err = e
             logger.warning(f"LLM provider {name} 失敗，嘗試下一個：{e}")
             continue
     raise RuntimeError(f"所有 LLM provider 都失敗，最後錯誤：{last_err}")
+
+
+# ==============================================================================
+# Streaming providers
+# ==============================================================================
+
+def _stream_ollama(system_prompt: str, user_message: str, history=None):
+    msgs = [{"role": "system", "content": system_prompt}]
+    if history:
+        msgs.extend(history)
+    msgs.append({"role": "user", "content": user_message})
+    with httpx.stream(
+        "POST",
+        f"{OLLAMA_BASE}/api/chat",
+        json={"model": TEXT_MODEL, "stream": True, "messages": msgs},
+        timeout=120.0,
+    ) as resp:
+        resp.raise_for_status()
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            chunk = (obj.get("message") or {}).get("content") or ""
+            if chunk:
+                yield chunk
+            if obj.get("done"):
+                break
+
+
+def _stream_groq(system_prompt: str, user_message: str, history=None):
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY not set; cannot use Groq provider")
+    msgs = [{"role": "system", "content": system_prompt}]
+    if history:
+        msgs.extend(history)
+    msgs.append({"role": "user", "content": user_message})
+    with httpx.stream(
+        "POST",
+        f"{GROQ_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": GROQ_MODEL,
+            "messages": msgs,
+            "temperature": 0.4,
+            "stream": True,
+        },
+        timeout=60.0,
+    ) as resp:
+        resp.raise_for_status()
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            # OpenAI 風格 SSE：以 "data: " 開頭
+            if line.startswith("data: "):
+                payload = line[len("data: "):].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                choices = obj.get("choices") or []
+                if not choices:
+                    continue
+                delta = (choices[0].get("delta") or {}).get("content") or ""
+                if delta:
+                    yield delta
+
+
+def _stream_anthropic(system_prompt: str, user_message: str, history=None):
+    if _anthropic_client is None:
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝；無法使用 Anthropic provider"
+        )
+    msgs = list(history) if history else []
+    msgs.append({"role": "user", "content": user_message})
+    with _anthropic_client.messages.stream(
+        model=ANTHROPIC_MODEL,
+        max_tokens=ANTHROPIC_MAX_TOKENS,
+        system=system_prompt,
+        messages=msgs,
+    ) as stream:
+        for text in stream.text_stream:
+            if text:
+                yield text
+
+
+_STREAM_PROVIDERS = {
+    "ollama": _stream_ollama,
+    "groq": _stream_groq,
+    "anthropic": _stream_anthropic,
+}
+
+
+def stream_claude(system_prompt: str, user_message: str, history=None):
+    """串流文字生成（產生純文字片段的 generator）；主 provider 失敗時自動降級。"""
+    chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _STREAM_PROVIDERS else "ollama")
+    last_err = None
+    for name in chain:
+        fn = _STREAM_PROVIDERS.get(name)
+        if fn is None:
+            continue
+        try:
+            # 用 list-iter 包裝以便偵測第一個 yield 之前的錯誤
+            gen = fn(system_prompt, user_message, history)
+            yield from gen
+            return
+        except Exception as e:
+            last_err = e
+            logger.warning(f"LLM stream provider {name} 失敗，嘗試下一個：{e}")
+            continue
+    raise RuntimeError(f"所有 LLM stream provider 都失敗，最後錯誤：{last_err}")
 
 
 def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") -> dict:
