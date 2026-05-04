@@ -3027,6 +3027,17 @@ function education() {
 
     <!-- Stage 1 : Bookshelf -->
     <div id="edu-stage-shelf" class="edu-stage active">
+      <div id="edu-featured" class="card" style="margin-bottom:14px">
+        <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+          <i data-lucide="sparkles" style="width:18px;height:18px"></i> 今日精選
+        </h3>
+        <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
+          人工審稿過的衛教文章——附文獻來源，看得安心。
+        </p>
+        <div id="edu-featured-list" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+          <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+        </div>
+      </div>
       <div class="bookshelf-wrap">
         <div class="bookshelf-title">— 衛教書房・四層書架 —</div>
         ${renderBookshelf()}
@@ -3081,8 +3092,141 @@ function loadEducationPage() {
     .then(function(data) { _eduDiseases = data.diseases || []; })
     .catch(function() { /* 不擋整體 UI */ });
 
+  loadFeaturedArticles();
+
   // 確保 lucide icon 出現
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+}
+
+// ── 精選文章（GitHub 審稿過的 Markdown 文章）──────────────
+var _eduArticles = {};            // slug -> card / full article
+var _eduArticleByIcd10Dim = {};   // "I10:disease_awareness" -> slug
+
+function loadFeaturedArticles() {
+  var el = document.getElementById("edu-featured-list");
+  // 抓全部文章建索引（給書本章節對照用），再過濾出 featured 顯示在卡片區
+  fetch(API + "/education/articles")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = (data && data.articles) || [];
+      _eduArticles = {};
+      _eduArticleByIcd10Dim = {};
+      arts.forEach(function(a) {
+        _eduArticles[a.slug] = a;
+        if (a.icd10 && a.dimension) {
+          var key = String(a.icd10).substring(0, 3).toUpperCase() + ":" + a.dimension;
+          _eduArticleByIcd10Dim[key] = a.slug;
+        }
+      });
+
+      if (!el) return;
+      var featured = arts.filter(function(a) { return a.featured; }).slice(0, 6);
+      if (!featured.length) {
+        el.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">尚無精選文章。</div>';
+        return;
+      }
+      el.innerHTML = featured.map(function(a) {
+        var tagHtml = (a.tags || []).slice(0, 3).map(function(t) {
+          return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:var(--bg-soft);font-size:.72rem;color:var(--text-dim);margin-right:4px">' + escapeHtml(t) + '</span>';
+        }).join("");
+        return '<button class="article-card" onclick="eduOpenArticle(\'' + escapeHtml(a.slug) + '\')" ' +
+               'style="text-align:left;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);cursor:pointer;display:flex;flex-direction:column;gap:6px">' +
+               '<div style="font-weight:600;line-height:1.4">' + escapeHtml(a.title) + '</div>' +
+               (a.summary ? '<div style="font-size:.82rem;color:var(--text-dim);line-height:1.5">' + escapeHtml(a.summary) + '</div>' : '') +
+               (tagHtml ? '<div style="margin-top:4px">' + tagHtml + '</div>' : '') +
+               '</button>';
+      }).join("");
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      if (el) el.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">載入精選文章失敗。</div>';
+    });
+}
+
+// 從目前書本 + 章節 key 找有沒有審稿過的文章可以用
+function findCuratedArticleSlug(book, topicKey) {
+  if (!book) return null;
+  // 1. 章節物件上有顯式 article 欄位 → 直接用
+  var topic = (book.topics || []).find(function(t) { return t.key === topicKey; });
+  if (topic && topic.article && _eduArticles[topic.article]) return topic.article;
+  // 2. 疾病百科：用 ICD10 prefix + dimension 自動配對
+  if (book.dynamic === "diseases" && _eduSelectedDisease) {
+    var key = String(_eduSelectedDisease.icd10).substring(0, 3).toUpperCase() + ":" + topicKey;
+    return _eduArticleByIcd10Dim[key] || null;
+  }
+  return null;
+}
+
+function eduOpenArticle(slug) {
+  var nb = document.getElementById("edu-notebook");
+  if (!nb) return;
+  // 重設書本狀態，避免 breadcrumb 顯示舊書名
+  _eduSelectedBook = null;
+  _eduSelectedDisease = null;
+  _eduSelectedDimension = null;
+  _eduSelectedTopic = null;
+
+  // 先用快取資料展開（標題、摘要、tag、來源），body 再從完整 API 抓
+  var card = _eduArticles[slug];
+  nb.classList.remove("single");
+  nb.innerHTML = renderArticleSpread(card || { title: "載入中…", slug: slug }, null);
+  eduSwitchStage("edu-stage-notebook");
+  eduRenderArticleBreadcrumb(card ? card.title : "文章");
+
+  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+    .then(function(r) {
+      if (!r.ok) throw new Error("not found");
+      return r.json();
+    })
+    .then(function(article) {
+      _eduArticles[slug] = article;
+      nb.innerHTML = renderArticleSpread(article, article.body || "");
+      eduRenderArticleBreadcrumb(article.title);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      nb.innerHTML = '<div class="nb-empty" style="padding:30px">找不到這篇文章。</div>';
+    });
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderArticleSpread(article, body) {
+  var sources = (article.sources || []).map(function(s) {
+    return '<li style="margin-bottom:6px;line-height:1.5;font-size:.85rem">' + escapeHtml(s) + '</li>';
+  }).join("");
+  var tags = (article.tags || []).map(function(t) {
+    return '<span style="display:inline-block;padding:3px 9px;border-radius:10px;background:var(--bg-soft);font-size:.75rem;color:var(--text-dim);margin:2px">' + escapeHtml(t) + '</span>';
+  }).join("");
+  var leftHtml =
+    '<div class="nb-heading"><i data-lucide="bookmark" style="width:20px;height:20px"></i> 文章資訊</div>' +
+    (article.summary ? '<div class="nb-subtle" style="line-height:1.6">' + escapeHtml(article.summary) + '</div>' : '') +
+    (tags ? '<div style="margin-top:12px">' + tags + '</div>' : '') +
+    (sources ? '<div style="margin-top:18px">' +
+       '<div style="font-size:.85rem;font-weight:600;margin-bottom:8px;color:var(--text-dim)">參考來源</div>' +
+       '<ol style="padding-left:20px;color:var(--text-dim)">' + sources + '</ol>' +
+       '</div>' : '') +
+    (article.reviewed_at ? '<div style="margin-top:16px;font-size:.75rem;color:var(--text-dim)">最後審稿：' + escapeHtml(article.reviewed_at) + '</div>' : '');
+
+  var rightInner = (body == null)
+    ? '<div class="nb-empty" style="padding:30px">內容載入中…</div>'
+    : '<div style="line-height:1.85">' + markdownToHtml(body) + '</div>';
+
+  return '<div class="nb-page left">' + leftHtml + '</div>' +
+         '<div class="nb-page right" id="edu-notebook-right">' + rightInner + '</div>';
+}
+
+function eduRenderArticleBreadcrumb(title) {
+  var el = document.getElementById("edu-breadcrumb");
+  if (!el) return;
+  el.innerHTML =
+    '<button class="crumb" data-edu-crumb="shelf">' +
+    '<i data-lucide="library" style="width:14px;height:14px;vertical-align:middle"></i> 書架</button>' +
+    '<span class="sep">›</span>' +
+    '<span class="crumb current">' +
+    '<i data-lucide="sparkles" style="width:14px;height:14px;vertical-align:middle"></i> ' +
+    escapeHtml(title) + '</span>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ── Stage 切換 ──────────────────────────────────────────────
@@ -3293,6 +3437,27 @@ function eduOpenContent(key, label) {
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
+  // 1) 先看有沒有人工審稿過的文章可以對應到這個章節 → 直接出文章
+  var curatedSlug = findCuratedArticleSlug(book, key);
+  if (curatedSlug) {
+    fetch(API + "/education/articles/" + encodeURIComponent(curatedSlug))
+      .then(function(r) { if (!r.ok) throw new Error("not found"); return r.json(); })
+      .then(function(article) {
+        _eduArticles[article.slug] = article;
+        eduRenderCuratedArticleInRight(article, titleText);
+      })
+      .catch(function() {
+        // 文章 fetch 失敗就降級到 LLM 生成
+        eduGenerateContent(fetchBody, book, label);
+      });
+    return;
+  }
+
+  // 2) 沒有對應文章 → 走原本的 Claude 即時生成
+  eduGenerateContent(fetchBody, book, label);
+}
+
+function eduGenerateContent(fetchBody, book, label) {
   fetch(API + "/education/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -3312,6 +3477,40 @@ function eduOpenContent(key, label) {
       var body = document.getElementById("edu-content-body");
       if (body) body.innerHTML = eduFallbackContent(book, label);
     });
+}
+
+function eduRenderCuratedArticleInRight(article, titleText) {
+  var rightEl = document.getElementById("edu-notebook-right");
+  if (!rightEl) return;
+  var sourcesHtml = (article.sources || []).map(function(s) {
+    return '<li style="margin-bottom:6px;line-height:1.5;font-size:.85rem">' + escapeHtml(s) + '</li>';
+  }).join("");
+  var sourcesBlock = sourcesHtml
+    ? '<details style="margin-top:22px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-soft)">' +
+        '<summary style="cursor:pointer;font-size:.85rem;font-weight:600">參考來源（' + (article.sources || []).length + '）</summary>' +
+        '<ol style="margin-top:10px;padding-left:20px;color:var(--text-dim)">' + sourcesHtml + '</ol>' +
+      '</details>'
+    : '';
+  var reviewedBlock = article.reviewed_at
+    ? '<div style="margin-top:14px;font-size:.75rem;color:var(--text-dim)">最後人工審稿：' + escapeHtml(article.reviewed_at) + '</div>'
+    : '';
+  var summaryBlock = article.summary
+    ? '<div style="margin:12px 0;padding:10px 12px;border-left:3px solid var(--accent);background:var(--bg-soft);font-size:.9rem;line-height:1.6">' + escapeHtml(article.summary) + '</div>'
+    : '';
+
+  rightEl.innerHTML =
+    '<div class="nb-content-head">' +
+      '<div class="nb-content-title">' + escapeHtml(titleText) +
+        ' <span style="margin-left:6px;display:inline-block;padding:2px 8px;border-radius:10px;background:#e8f5e9;color:#2e7d32;font-size:.7rem;font-weight:600;vertical-align:middle">✓ 已審稿</span>' +
+      '</div>' +
+      '<button class="secondary" data-action="back-to-list" style="padding:4px 10px;font-size:.8rem">← 章節清單</button>' +
+    '</div>' +
+    summaryBlock +
+    '<div style="font-size:.94rem;line-height:1.85">' + markdownToHtml(article.body || "") + '</div>' +
+    sourcesBlock +
+    reviewedBlock;
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function eduFallbackContent(book, label) {

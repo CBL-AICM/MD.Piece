@@ -11,6 +11,7 @@ from backend.services.knowledge_analysis import (
     get_comprehension_distribution,
 )
 from backend.services.llm_service import call_claude
+from backend.services import education_content
 from backend.utils.icd10 import (
     ICD10_MAP,
     KNOWLEDGE_DIMENSIONS,
@@ -95,30 +96,69 @@ SYSTEM_PROMPT = (
 
 
 class EducationRequest(BaseModel):
-    icd10_code: str
-    dimension: str
+    icd10_code: Optional[str] = None
+    dimension: Optional[str] = None
+    topic: Optional[str] = None
 
 
 # ── 衛教文章生成（Claude API）────────────────────────────
 
 
+GENERIC_TOPIC_PROMPT = (
+    "請以 MD.Piece 衛教助手的身分，為一位患者撰寫主題為「{topic}」的衛教文章。\n\n"
+    "撰稿要求：\n"
+    "1. 用最溫暖、最淺顯易懂的語氣，像朋友在跟你聊天\n"
+    "2. 必要的醫學名詞要立刻用括號或比喻解釋\n"
+    "3. 結構清楚：先講「這是什麼」，再講「為什麼重要」，最後給「可以怎麼做」\n"
+    "4. 重點放在安心與實用——讓患者讀完覺得「我知道該做什麼了」\n"
+    "5. 適當使用 emoji 讓文章更親切\n"
+    "6. 用台灣的醫療制度、健保、飲食習慣作為背景\n"
+    "7. 文末提醒：詳細治療仍以主治醫師判斷為準\n\n"
+    "回覆格式：使用 Markdown，分段加標題，長度控制在 600–1000 字。"
+)
+
+
 @router.post("/generate")
 def generate_education(body: EducationRequest):
-    """根據 ICD-10 代碼 + 六大維度，生成個人化衛教文章"""
-    prefix = body.icd10_code[:3]
-    disease_name = ICD10_MAP.get(prefix)
-    if not disease_name:
-        raise HTTPException(status_code=400, detail=f"不支援的 ICD-10 代碼: {body.icd10_code}")
+    """生成衛教文章。
 
-    if body.dimension not in DIMENSION_PROMPTS:
+    兩種模式（自動切換）：
+    1. ICD-10 + 六大維度：套用該維度的細緻 prompt 模板
+    2. 自由主題（topic）：給非疾病類的章節用，用通用 prompt
+    """
+    # 模式 1：ICD-10 + dimension
+    if body.icd10_code and body.dimension and body.dimension in DIMENSION_PROMPTS:
+        prefix = body.icd10_code[:3]
+        disease_name = ICD10_MAP.get(prefix)
+        if not disease_name:
+            raise HTTPException(status_code=400, detail=f"不支援的 ICD-10 代碼: {body.icd10_code}")
+
+        prompt_template = DIMENSION_PROMPTS[body.dimension]
+        user_message = prompt_template.format(disease=disease_name)
+
+        try:
+            content = call_claude(SYSTEM_PROMPT, user_message)
+        except Exception as e:
+            logger.error(f"Claude API error: {e}")
+            raise HTTPException(status_code=500, detail="衛教內容生成失敗，請稍後再試")
+
+        return {
+            "icd10_code": prefix,
+            "disease_name": disease_name,
+            "dimension": body.dimension,
+            "dimension_label": KNOWLEDGE_DIMENSIONS[body.dimension],
+            "content": content,
+        }
+
+    # 模式 2：自由主題（用於 SLE、RA、營養、急救等非疾病百科的書本章節）
+    topic = body.topic or body.dimension
+    if not topic:
         raise HTTPException(
             status_code=400,
-            detail=f"無效的維度: {body.dimension}，可用: {list(DIMENSION_PROMPTS.keys())}",
+            detail="請提供 icd10_code+dimension（疾病百科）或 topic（一般章節）",
         )
 
-    prompt_template = DIMENSION_PROMPTS[body.dimension]
-    user_message = prompt_template.format(disease=disease_name)
-
+    user_message = GENERIC_TOPIC_PROMPT.format(topic=topic)
     try:
         content = call_claude(SYSTEM_PROMPT, user_message)
     except Exception as e:
@@ -126,10 +166,7 @@ def generate_education(body: EducationRequest):
         raise HTTPException(status_code=500, detail="衛教內容生成失敗，請稍後再試")
 
     return {
-        "icd10_code": prefix,
-        "disease_name": disease_name,
-        "dimension": body.dimension,
-        "dimension_label": KNOWLEDGE_DIMENSIONS[body.dimension],
+        "topic": topic,
         "content": content,
     }
 
@@ -162,8 +199,43 @@ def list_supported_diseases():
 
 
 @router.get("/articles")
-def get_articles(icd10_code: str = ""):
-    return {"articles": []}
+def get_articles(
+    icd10_code: str = "",
+    dimension: str = "",
+    tag: str = "",
+    featured: bool = False,
+):
+    """列出 content/education/ 下的 Markdown 文章（卡片版，不含 body）"""
+    items = education_content.list_articles(
+        icd10=icd10_code or None,
+        dimension=dimension or None,
+        tag=tag or None,
+        featured_only=featured,
+    )
+    return {"articles": [a.to_card() for a in items]}
+
+
+@router.get("/articles/featured")
+def get_featured_articles(limit: int = 5):
+    """首頁推送：精選文章（標記 featured: true 的）"""
+    items = education_content.list_articles(featured_only=True)
+    return {"articles": [a.to_card() for a in items[:limit]]}
+
+
+@router.get("/articles/{slug}")
+def get_article(slug: str):
+    """取得完整文章內容（含 Markdown body 與來源清單）"""
+    article = education_content.get_article(slug)
+    if not article:
+        raise HTTPException(status_code=404, detail=f"找不到文章: {slug}")
+    return article.to_full()
+
+
+@router.post("/articles/reload")
+def reload_articles():
+    """強制重新讀取 Markdown 檔（部署後不需手動呼叫，重啟即可）"""
+    count = education_content.reload_articles()
+    return {"reloaded": count}
 
 
 @router.get("/idle-hints")
