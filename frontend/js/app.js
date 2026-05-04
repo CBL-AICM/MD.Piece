@@ -525,6 +525,7 @@ function showPage(page) {
     if (page === "pieces") loadPiecesPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
+    if (page === "previsit") loadPrevisitPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -4351,6 +4352,15 @@ var PUSH_CATS = [
   { key: 'labs', label: '檢驗報告', icon: 'trending-up', desc: '近期檢驗值與 AI 解讀' },
 ];
 
+function getMyDoctor() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_my_doctor')) || null; }
+  catch { return null; }
+}
+function setMyDoctor(d) {
+  if (d) localStorage.setItem('mdpiece_my_doctor', JSON.stringify(d));
+  else localStorage.removeItem('mdpiece_my_doctor');
+}
+
 function previsitPage() {
   return (
     '<section class="previsit-wrap">' +
@@ -4358,6 +4368,7 @@ function previsitPage() {
         '<h2><i data-lucide="clipboard-check" style="width:22px;height:22px"></i> 診前報告 — 推送給醫師</h2>' +
         '<p>把近一週的紀錄整理給主治醫師，他在醫師端就能看到你想讓他注意的事情。</p>' +
       '</header>' +
+      '<div class="previsit-doctor-row" id="previsit-doctor-row">載入醫師清單中…</div>' +
       '<div class="previsit-grid">' +
         PUSH_CATS.map(function(c) {
           return '<div class="previsit-card" id="push-card-' + c.key + '">' +
@@ -4408,14 +4419,17 @@ async function pushCategoryToDoctor(cat) {
       _pushSetStatus(cat, '近 7 天沒有資料可推送', 'warning');
       return;
     }
+    var myDr = getMyDoctor();
+    var tags = ['patient_push', cat];
+    if (myDr && myDr.id) tags.push('dr_' + myDr.id);
     await fetch(API + '/doctor-notes/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({
         patient_id: pid,
-        doctor_id: null,
+        doctor_id: myDr ? myDr.id : null,
         content: summary,
-        tags: ['patient_push', cat],
+        tags: tags,
       }),
     }).then(function(r) {
       if (!r.ok) throw new Error('推送失敗');
@@ -4435,14 +4449,17 @@ async function pushCustomMessageToDoctor() {
   if (!text) { showToast('請先寫下想說的話', 'warning'); return; }
   _pushSetStatus('message', '送出中…', 'loading');
   try {
+    var myDr2 = getMyDoctor();
+    var tags2 = ['patient_push', 'message'];
+    if (myDr2 && myDr2.id) tags2.push('dr_' + myDr2.id);
     await fetch(API + '/doctor-notes/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({
         patient_id: pid,
-        doctor_id: null,
+        doctor_id: myDr2 ? myDr2.id : null,
         content: text,
-        tags: ['patient_push', 'message'],
+        tags: tags2,
       }),
     }).then(function(r) { if (!r.ok) throw new Error('送出失敗'); });
     if (ta) ta.value = '';
@@ -4520,6 +4537,105 @@ async function _buildCategorySummary(cat, pid) {
     return lines.join('\n');
   }
   return '';
+}
+
+
+async function loadPrevisitPage() {
+  // 1. 醫師清單 + 當前綁定
+  var row = document.getElementById('previsit-doctor-row');
+  if (!row) return;
+  try {
+    var res = await fetch(API + '/auth/users');
+    var users = res.ok ? (await res.json()).users || [] : [];
+    var doctors = users.filter(function(u) { return u.role === 'doctor'; });
+    var current = getMyDoctor();
+    if (!doctors.length) {
+      row.innerHTML = '<p class="previsit-doctor-empty">系統中尚無醫師帳號，您仍可推送，所有醫師都會看得到。</p>';
+    } else {
+      var options = '<option value="">— 推送給所有醫師（公開）—</option>' +
+        doctors.map(function(d) {
+          var sel = current && current.id === d.id ? ' selected' : '';
+          return '<option value="' + d.id + '"' + sel + '>' +
+            escapeHtml(d.nickname || d.username) + '</option>';
+        }).join('');
+      row.innerHTML =
+        '<label class="previsit-doctor-label">' +
+          '<i data-lucide="stethoscope" style="width:16px;height:16px"></i>' +
+          '<span>主治醫師</span>' +
+        '</label>' +
+        '<select id="previsit-doctor-select" onchange="onMyDoctorChange(this)">' + options + '</select>' +
+        (current ? '<span class="previsit-doctor-bound">已綁定：' + escapeHtml(current.nickname || current.username) + '</span>' : '');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+  } catch (e) {
+    row.innerHTML = '<p class="previsit-doctor-empty">無法載入醫師清單（' + escapeHtml(e.message || '') + '）</p>';
+  }
+  // 2. 推送歷史
+  loadPushHistory();
+}
+
+function onMyDoctorChange(sel) {
+  var id = sel.value;
+  if (!id) { setMyDoctor(null); showToast('已取消綁定', 'success'); return; }
+  // 查 user 物件
+  var name = sel.options[sel.selectedIndex].textContent;
+  setMyDoctor({ id: id, nickname: name });
+  showToast('已綁定主治醫師：' + name, 'success');
+  var bound = document.querySelector('.previsit-doctor-bound');
+  if (bound) bound.textContent = '已綁定：' + name;
+  else {
+    var row = document.getElementById('previsit-doctor-row');
+    if (row) {
+      var span = document.createElement('span');
+      span.className = 'previsit-doctor-bound';
+      span.textContent = '已綁定：' + name;
+      row.appendChild(span);
+    }
+  }
+}
+
+async function loadPushHistory() {
+  var pid = getStablePatientId();
+  if (!pid) return;
+  // 從 doctor_notes 抓含 patient_push 的紀錄
+  try {
+    var res = await fetch(API + '/doctor-notes/?patient_id=' + encodeURIComponent(pid));
+    var notes = res.ok ? (await res.json()).notes || [] : [];
+    var pushes = notes.filter(function(n) {
+      return Array.isArray(n.tags) && n.tags.indexOf('patient_push') >= 0;
+    });
+    var box = document.getElementById('push-history-list');
+    if (!box) {
+      // 動態插入容器
+      var wrap = document.querySelector('.previsit-wrap');
+      if (!wrap) return;
+      var div = document.createElement('div');
+      div.className = 'previsit-history';
+      div.innerHTML =
+        '<h3><i data-lucide="history" style="width:16px;height:16px"></i> 我推送過什麼</h3>' +
+        '<div id="push-history-list"></div>';
+      wrap.appendChild(div);
+      box = document.getElementById('push-history-list');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    if (!pushes.length) {
+      box.innerHTML = '<p class="previsit-empty">尚未推送過任何紀錄</p>';
+      return;
+    }
+    var labels = { symptoms: '症狀', medications: '用藥', emotions: '情緒', vitals: '生理', labs: '檢驗', message: '留言' };
+    box.innerHTML = pushes.slice(0, 20).map(function(n) {
+      var cat = (n.tags || []).find(function(t) { return t !== 'patient_push' && t.indexOf('dr_') !== 0; }) || 'message';
+      var when = (n.created_at || '').slice(0, 16).replace('T', ' ');
+      var preview = (n.content || '').slice(0, 80);
+      return '<div class="push-history-row">' +
+        '<span class="push-history-cat">' + (labels[cat] || cat) + '</span>' +
+        '<span class="push-history-when">' + when + '</span>' +
+        '<span class="push-history-preview">' + escapeHtml(preview) + (n.content && n.content.length > 80 ? '…' : '') + '</span>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    /* ignore */
+  }
 }
 
 

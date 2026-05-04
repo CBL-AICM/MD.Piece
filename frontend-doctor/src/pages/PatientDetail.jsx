@@ -4,6 +4,8 @@ import {
   apiGet, apiPost, apiPut, apiDelete, getActiveDoctorId,
 } from '../lib/api.js'
 import { fetchPatientById } from '../lib/patients.js'
+import { getCurrentUser } from '../lib/auth.js'
+import { getReadSet, markRead } from '../lib/readState.js'
 import {
   ALERT_TYPE_LABEL, SEVERITY_LABEL, SEVERITY_TO_BADGE, patientPriority,
 } from '../lib/priority.js'
@@ -134,15 +136,32 @@ export default function PatientDetail() {
       </div>
 
       <div className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`tab ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          let badge = null
+          if (t.key === 'pushes') {
+            const me = getCurrentUser()
+            const myDrTag = me?.id ? `dr_${me.id}` : null
+            const visible = (notes || []).filter((n) => {
+              if (!Array.isArray(n.tags) || !n.tags.includes('patient_push')) return false
+              const hasDrTag = n.tags.some((x) => typeof x === 'string' && x.startsWith('dr_'))
+              if (!hasDrTag) return true
+              return myDrTag ? n.tags.includes(myDrTag) : false
+            })
+            const readSet = getReadSet()
+            const u = visible.filter((n) => !readSet.has(n.id)).length
+            if (u > 0) badge = u
+          }
+          return (
+            <button
+              key={t.key}
+              className={`tab ${tab === t.key ? 'active' : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+              {badge != null && <span className="tab-badge">{badge}</span>}
+            </button>
+          )
+        })}
       </div>
 
       {err && <div className="error-bar">{err}</div>}
@@ -432,13 +451,29 @@ const PUSH_CAT_COLOR = {
 }
 
 function PushesPanel({ notes }) {
-  const pushes = (notes || []).filter((n) => Array.isArray(n.tags) && n.tags.includes('patient_push'))
+  const me = getCurrentUser()
+  const myDrTag = me?.id ? `dr_${me.id}` : null
+  // 患者推送：含 patient_push tag，且未指定醫師（公開）或指定到我
+  const pushes = (notes || []).filter((n) => {
+    if (!Array.isArray(n.tags) || !n.tags.includes('patient_push')) return false
+    const hasDrTag = n.tags.some((t) => typeof t === 'string' && t.startsWith('dr_'))
+    if (!hasDrTag) return true
+    return myDrTag ? n.tags.includes(myDrTag) : false
+  })
+  const readSet = getReadSet()
+
+  useEffect(() => {
+    // 進入 panel 後，把目前可見的推送標記為已讀
+    if (pushes.length > 0) markRead(pushes.map((p) => p.id))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pushes.length])
+
   if (pushes.length === 0) {
     return (
       <div className="placeholder">
-        患者尚未從「診前報告」推送任何紀錄。
+        患者尚未從「診前報告」推送任何紀錄給您。
         <p className="cell-dim" style={{ marginTop: 8, fontSize: 13 }}>
-          當患者在 PWA 點擊推送按鈕時，內容會出現在這裡。
+          患者可在 PWA「診前報告」綁定主治醫師後一鍵推送，內容會出現在這裡。
         </p>
       </div>
     )
@@ -449,15 +484,21 @@ function PushesPanel({ notes }) {
   return (
     <div className="push-list">
       {sorted.map((n) => {
-        const cat = (n.tags || []).find((t) => t !== 'patient_push') || 'message'
+        const cat = (n.tags || []).find((t) =>
+          t !== 'patient_push' && !(typeof t === 'string' && t.startsWith('dr_'))
+        ) || 'message'
         const color = PUSH_CAT_COLOR[cat] || '#5a6572'
+        const isUnread = !readSet.has(n.id)
         return (
-          <div key={n.id} className="push-card">
+          <div key={n.id} className={`push-card ${isUnread ? 'push-card-unread' : ''}`}>
             <div className="push-card-head">
               <span className="push-cat" style={{ color, borderColor: color + '55' }}>
                 {PUSH_CAT_LABEL[cat] || cat}
               </span>
-              <span className="cell-dim">{fmtDate(n.created_at, true)} · {relativeTime(n.created_at)}</span>
+              {isUnread && <span className="push-unread-dot" title="未讀" />}
+              <span className="cell-dim" style={{ marginLeft: 'auto' }}>
+                {fmtDate(n.created_at, true)} · {relativeTime(n.created_at)}
+              </span>
             </div>
             <pre className="push-content">{n.content}</pre>
           </div>

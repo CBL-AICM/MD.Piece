@@ -54,16 +54,30 @@ async function handle(res, method, path) {
   return res.json()
 }
 
+function authHeaders(extra) {
+  const h = { ...(extra || {}) }
+  try {
+    const raw = window?.localStorage?.getItem('mdp.doctorUser')
+    if (raw) {
+      const u = JSON.parse(raw)
+      if (u?.id) h['X-User-Id'] = u.id
+    }
+  } catch {
+    // ignore
+  }
+  return h
+}
+
 export async function apiGet(path, params) {
   const url = buildUrl(path, params)
-  const res = await fetch(url)
+  const res = await fetch(url, { headers: authHeaders() })
   return handle(res, 'GET', path)
 }
 
 export async function apiPost(path, body) {
   const res = await fetch(buildUrl(path), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body ?? {}),
   })
   return handle(res, 'POST', path)
@@ -72,13 +86,13 @@ export async function apiPost(path, body) {
 export async function apiPut(path, body) {
   const res = await fetch(buildUrl(path), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body ?? {}),
   })
   return handle(res, 'PUT', path)
 }
 
 export async function apiDelete(path) {
-  const res = await fetch(buildUrl(path), { method: 'DELETE' })
+  const res = await fetch(buildUrl(path), { method: 'DELETE', headers: authHeaders() })
   return handle(res, 'DELETE', path)
 }

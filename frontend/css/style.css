@@ -6596,3 +6596,105 @@ html[data-mode="senior"] .visit-modal-save {
   font-size: 0.82rem;
   line-height: 1.6;
 }
+
+/* ─── 診前報告 — 醫師選單 + 推送歷史 ─── */
+.previsit-doctor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-mid);
+  border: 1px solid var(--bg-glass-hover);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.previsit-doctor-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 600;
+}
+.previsit-doctor-row select {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-glass-hover);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  flex: 1;
+  min-width: 200px;
+}
+.previsit-doctor-row select:focus { outline: none; border-color: var(--accent); }
+.previsit-doctor-bound {
+  font-size: 0.82rem;
+  color: var(--accent);
+  background: var(--bg-surface);
+  border: 1px dashed var(--accent-glow);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.previsit-doctor-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.previsit-history {
+  margin-top: 24px;
+  background: var(--bg-mid);
+  border: 1px solid var(--bg-glass-hover);
+  border-radius: 12px;
+  padding: 16px;
+}
+.previsit-history h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.push-history-row {
+  display: grid;
+  grid-template-columns: 70px 130px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--bg-glass-hover);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.push-history-row:last-child { border-bottom: none; }
+.push-history-cat {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  align-self: center;
+}
+.push-history-when {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+}
+.push-history-preview {
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.previsit-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 8px 0;
+}
+
+@media (max-width: 600px) {
+  .push-history-row { grid-template-columns: 1fr; gap: 4px; }
+  .push-history-cat { text-align: left; padding: 1px 8px; width: fit-content; }
+}

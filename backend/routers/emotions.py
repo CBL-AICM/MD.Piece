@@ -30,7 +30,7 @@ def get_emotions(
 
 @router.post("/")
 def log_emotion(body: EmotionLog):
-    """記錄今日情緒"""
+    """記錄今日情緒；若連續低落則自動建立警示。"""
     if body.score < 1 or body.score > 5:
         raise HTTPException(status_code=400, detail="score 必須在 1-5 之間")
     sb = get_supabase()
@@ -40,6 +40,42 @@ def log_emotion(body: EmotionLog):
         "note": body.note,
     }
     result = sb.table("emotions").insert(data).execute()
+
+    # ── 自動警示：近 7 天 score<=2 達 3 天 → 建立 low_mood 警示 ─────
+    try:
+        if body.score <= 2:
+            since = (datetime.utcnow() - timedelta(days=7)).isoformat()
+            recent = (
+                sb.table("emotions").select("score,created_at")
+                .eq("patient_id", body.patient_id).gte("created_at", since)
+                .execute().data or []
+            )
+            low_count = sum(1 for r in recent if (r.get("score") or 5) <= 2)
+            if low_count >= 3:
+                # 24 小時內已有相同 alert 就不重複
+                day_ago = (datetime.utcnow() - timedelta(days=1)).isoformat()
+                existing = (
+                    sb.table("alerts").select("id")
+                    .eq("patient_id", body.patient_id)
+                    .eq("alert_type", "low_mood")
+                    .eq("resolved", 0)
+                    .gte("created_at", day_ago)
+                    .limit(1).execute().data or []
+                )
+                if not existing:
+                    sb.table("alerts").insert({
+                        "patient_id": body.patient_id,
+                        "alert_type": "low_mood",
+                        "severity": "medium" if low_count == 3 else "high",
+                        "title": f"連續情緒低落（近 7 天 {low_count} 天 ≤ 2 分）",
+                        "detail": "建議於下次回診評估心理狀態，必要時轉介心理諮商。",
+                        "acknowledged": 0,
+                        "resolved": 0,
+                    }).execute()
+    except Exception:
+        # 警示寫失敗不影響情緒紀錄主流程
+        pass
+
     return result.data[0]
 
 
