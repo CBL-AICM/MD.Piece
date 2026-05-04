@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from backend.db import get_supabase
+
+SCORE_EMOJI = {1: "😢", 2: "😟", 3: "😐", 4: "🙂", 5: "😄"}
 
 router = APIRouter()
 
@@ -62,6 +64,68 @@ def check_silent_guardian(patient_id: str = Query(...)):
         "low_days": low_count,
         "total_records": len(records),
         "message": "偵測到連續低落情緒，建議關懷此病患" if alert else "情緒狀態正常",
+    }
+
+
+@router.get("/daily")
+def get_daily_mood(
+    patient_id: str = Query(...),
+    days: int = Query(30, ge=1, le=365, description="查詢最近幾天"),
+):
+    """
+    每日心情彙整：將同一天的多筆紀錄聚合為一筆，便於日曆/時間軸顯示。
+
+    每日回傳：日期、平均分數（四捨五入）、最高/最低分數、表情符號、
+    當日最後一則 note、紀錄筆數。缺漏的日期不會補零。
+    """
+    sb = get_supabase()
+    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    result = (
+        sb.table("emotions")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .gte("created_at", since)
+        .order("created_at")
+        .execute()
+    )
+    records = result.data or []
+
+    by_day: dict[str, list[dict]] = {}
+    for r in records:
+        day = (r.get("created_at") or "")[:10]
+        if not day:
+            continue
+        by_day.setdefault(day, []).append(r)
+
+    daily = []
+    for day in sorted(by_day.keys()):
+        items = by_day[day]
+        scores = [it.get("score") for it in items if it.get("score") is not None]
+        if not scores:
+            continue
+        avg = round(sum(scores) / len(scores), 1)
+        last_note = next(
+            (it.get("note") for it in reversed(items) if it.get("note")), ""
+        )
+        daily.append({
+            "date": day,
+            "average_score": avg,
+            "max_score": max(scores),
+            "min_score": min(scores),
+            "emoji": SCORE_EMOJI.get(round(avg), "😐"),
+            "note": last_note,
+            "count": len(items),
+        })
+
+    all_scores = [s for d in daily for s in [d["average_score"]]]
+    overall_avg = round(sum(all_scores) / len(all_scores), 1) if all_scores else None
+
+    return {
+        "patient_id": patient_id,
+        "days": days,
+        "daily": daily,
+        "days_logged": len(daily),
+        "overall_average": overall_avg,
     }
 
 
