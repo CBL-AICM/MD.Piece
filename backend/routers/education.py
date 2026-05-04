@@ -262,12 +262,41 @@ def get_daily_article(days: int = 7):
             return None
         return pool[d.toordinal() % len(pool)]
 
+    feed_items = news_feed.fetch_news(limit=6)
+
+    def news_card_from_feed(d: "date", offset: int = 0) -> Optional[dict]:
+        """把 RSS item 包成 article-shaped dict，當作那天的 news 故事。"""
+        if not feed_items:
+            return None
+        item = feed_items[offset % len(feed_items)]
+        title = item.get("title") or "（最新公告）"
+        summary = item.get("summary") or ""
+        link = item.get("link") or ""
+        body_lines = [summary] if summary else []
+        if link:
+            body_lines.append("\n[原文連結]({}）".format(link).replace("）", ")"))
+        return {
+            "slug": "news-feed-" + d.isoformat() + "-" + str(offset),
+            "title": title,
+            "summary": summary[:140],
+            "category": "news",
+            "tags": ["衛福部公告"],
+            "sources": [link] if link else [],
+            "body": "\n\n".join(body_lines).strip(),
+            "pushed_on": d.isoformat(),
+            "external_link": link,
+        }
+
     today = date.today()
     today_picks: dict[str, Any] = {}
     for cat in DAILY_CATEGORIES:
         a = pick_for(cat, today)
         if a is None:
-            today_picks[cat] = None
+            # news 分類沒有 markdown 文章時，退回今日 RSS 第一則
+            if cat == "news":
+                today_picks[cat] = news_card_from_feed(today, 0)
+            else:
+                today_picks[cat] = None
             continue
         full = a.to_full()
         full["pushed_on"] = today.isoformat()
@@ -281,7 +310,11 @@ def get_daily_article(days: int = 7):
         for cat in DAILY_CATEGORIES:
             a = pick_for(cat, d)
             if a is None:
-                day_entry["items"][cat] = None
+                if cat == "news":
+                    # 歷程的 news 也用 RSS 後續項目佔位（offset = i）
+                    day_entry["items"][cat] = news_card_from_feed(d, i)
+                else:
+                    day_entry["items"][cat] = None
             else:
                 card = a.to_card()
                 card["pushed_on"] = d.isoformat()
@@ -291,7 +324,7 @@ def get_daily_article(days: int = 7):
     return {
         "today": today_picks,
         "archive": archive,
-        "news_feed": news_feed.fetch_news(limit=6),
+        "news_feed": feed_items,
     }
 
 
