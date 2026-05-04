@@ -326,6 +326,122 @@ def medication_stats(
     }
 
 
+@router.get("/daily-improvement")
+def daily_improvement(
+    patient_id: str = Query(...),
+    days: int = Query(30, ge=1, le=365),
+):
+    """
+    每日用藥改善：把每天的服藥率與療效平均值合成 improvement_score，
+    並計算與前一天的差值（delta），用於折線圖呈現病患每日的用藥改善程度。
+
+    - improvement_score：服藥率（50%）+ 療效（50%, 1-5 → 0-100），缺一項則只用另一項。
+    - 沒有任何資料的日期不會出現。
+    - summary.trend：improving / declining / stable / insufficient_data。
+    """
+    sb = get_supabase()
+    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+
+    logs = (
+        sb.table("medication_logs")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .gte("taken_at", since)
+        .execute()
+        .data
+        or []
+    )
+    effects = (
+        sb.table("medication_effects")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .gte("recorded_at", since)
+        .execute()
+        .data
+        or []
+    )
+
+    by_day: dict[str, dict] = {}
+    for log in logs:
+        day = (log.get("taken_at") or "")[:10]
+        if not day:
+            continue
+        d = by_day.setdefault(day, {"taken": 0, "total": 0, "effects": []})
+        d["total"] += 1
+        if log.get("taken"):
+            d["taken"] += 1
+    for e in effects:
+        day = (e.get("recorded_at") or "")[:10]
+        if not day:
+            continue
+        score = e.get("effectiveness")
+        if score is None:
+            continue
+        d = by_day.setdefault(day, {"taken": 0, "total": 0, "effects": []})
+        d["effects"].append(score)
+
+    daily = []
+    prev_score: Optional[float] = None
+    for day in sorted(by_day.keys()):
+        d = by_day[day]
+        adherence = round(d["taken"] / d["total"] * 100, 1) if d["total"] else None
+        avg_eff = round(sum(d["effects"]) / len(d["effects"]), 2) if d["effects"] else None
+
+        adherence_part = adherence  # 0-100 or None
+        eff_part = (avg_eff / 5 * 100) if avg_eff is not None else None  # 0-100 or None
+        parts = [p for p in (adherence_part, eff_part) if p is not None]
+        if not parts:
+            continue
+        if adherence_part is not None and eff_part is not None:
+            improvement_score = round(adherence_part * 0.5 + eff_part * 0.5, 1)
+        else:
+            improvement_score = round(parts[0], 1)
+
+        delta = round(improvement_score - prev_score, 1) if prev_score is not None else None
+        daily.append({
+            "date": day,
+            "adherence_rate": adherence,
+            "taken": d["taken"],
+            "total_doses": d["total"],
+            "avg_effectiveness": avg_eff,
+            "effect_records": len(d["effects"]),
+            "improvement_score": improvement_score,
+            "delta_vs_prev": delta,
+        })
+        prev_score = improvement_score
+
+    if len(daily) >= 2:
+        first, last = daily[0]["improvement_score"], daily[-1]["improvement_score"]
+        diff = round(last - first, 1)
+        if diff >= 5:
+            trend = "improving"
+        elif diff <= -5:
+            trend = "declining"
+        else:
+            trend = "stable"
+        summary = {
+            "trend": trend,
+            "first_score": first,
+            "last_score": last,
+            "overall_delta": diff,
+        }
+    else:
+        summary = {
+            "trend": "insufficient_data",
+            "first_score": daily[0]["improvement_score"] if daily else None,
+            "last_score": daily[0]["improvement_score"] if daily else None,
+            "overall_delta": 0.0,
+        }
+
+    return {
+        "patient_id": patient_id,
+        "days": days,
+        "daily": daily,
+        "days_logged": len(daily),
+        "summary": summary,
+    }
+
+
 # ── 回診報告 ──────────────────────────────────────────────
 
 @router.get("/report")
