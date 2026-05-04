@@ -6401,7 +6401,17 @@ html[data-mode="senior"] .visit-modal-save {
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 3px 4px rgba(92,58,50,0.16));
+  filter: drop-shadow(0 1px 2px rgba(92,58,50,0.10));
+}
+.chat-mascot-svg .chat-mascot-spark {
+  transform-origin: 60px 100px;
+  transform-box: fill-box;
+  animation: chat-spark 2.4s ease-in-out infinite;
+}
+.chat-mascot-typing .chat-mascot-svg .chat-mascot-spark { animation-duration: 0.8s; }
+@keyframes chat-spark {
+  0%, 100% { transform: rotate(0deg) scale(1);   opacity: 0.85; }
+  50%      { transform: rotate(45deg) scale(1.15); opacity: 1; }
 }
 .chat-mascot-svg .chat-mascot-ear-l { transform-origin: 42px 56px; }
 .chat-mascot-svg .chat-mascot-ear-r { transform-origin: 78px 56px; }
