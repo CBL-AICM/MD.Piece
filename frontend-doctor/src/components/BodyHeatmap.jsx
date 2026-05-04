@@ -115,7 +115,7 @@ export default function BodyHeatmap({ symptoms }) {
       <div className="body-legend">
         <h4>區域熱點</h4>
         <p className="cell-dim" style={{ marginTop: 0 }}>
-          月痛月紅 — 滑鼠移到部位顯示次數。共統計到 <strong>{total}</strong> 筆症狀。
+          越痛越紅 — 滑鼠移到部位顯示次數。共統計到 <strong>{total}</strong> 筆症狀。
         </p>
         <ul className="body-region-list">
           {[...KEYWORD_MAP.map((m) => m[0])].map((id) => {
