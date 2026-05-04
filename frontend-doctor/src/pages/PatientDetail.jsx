@@ -15,6 +15,7 @@ import TreatmentTimeline from '../components/TreatmentTimeline.jsx'
 
 const TABS = [
   { key: 'overview', label: '快速預覽' },
+  { key: 'pushes', label: '患者推送' },
   { key: 'charts', label: '圖表分析' },
   { key: 'treatment', label: '治療歷程' },
   { key: 'timeline', label: '時間軸' },
@@ -156,6 +157,7 @@ export default function PatientDetail() {
           medStats={medStats}
         />
       )}
+      {tab === 'pushes' && <PushesPanel notes={notes} />}
       {tab === 'charts' && (
         <ChartsPanel
           emotionTrend={emotionTrend}
@@ -405,6 +407,63 @@ function MedicationsPanel({ medStats, medChanges }) {
         )}
       </div>
     </>
+  )
+}
+
+// ─── 患者推送 ─────────────────────────────────────────────
+// 患者端「診前報告 → 推送給醫師」會 POST /doctor-notes/ 並標 tags=["patient_push", <cat>]
+// 這裡只展示有 patient_push tag 的紀錄
+
+const PUSH_CAT_LABEL = {
+  symptoms: '症狀記錄',
+  medications: '用藥情況',
+  emotions: '情緒打卡',
+  vitals: '生理紀錄',
+  labs: '檢驗報告',
+  message: '患者留言',
+}
+const PUSH_CAT_COLOR = {
+  symptoms: '#ff6b81',
+  medications: '#3ddc97',
+  emotions: '#9a7bff',
+  vitals: '#6ea8ff',
+  labs: '#ffb86b',
+  message: '#5a6572',
+}
+
+function PushesPanel({ notes }) {
+  const pushes = (notes || []).filter((n) => Array.isArray(n.tags) && n.tags.includes('patient_push'))
+  if (pushes.length === 0) {
+    return (
+      <div className="placeholder">
+        患者尚未從「診前報告」推送任何紀錄。
+        <p className="cell-dim" style={{ marginTop: 8, fontSize: 13 }}>
+          當患者在 PWA 點擊推送按鈕時，內容會出現在這裡。
+        </p>
+      </div>
+    )
+  }
+  const sorted = [...pushes].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at),
+  )
+  return (
+    <div className="push-list">
+      {sorted.map((n) => {
+        const cat = (n.tags || []).find((t) => t !== 'patient_push') || 'message'
+        const color = PUSH_CAT_COLOR[cat] || '#5a6572'
+        return (
+          <div key={n.id} className="push-card">
+            <div className="push-card-head">
+              <span className="push-cat" style={{ color, borderColor: color + '55' }}>
+                {PUSH_CAT_LABEL[cat] || cat}
+              </span>
+              <span className="cell-dim">{fmtDate(n.created_at, true)} · {relativeTime(n.created_at)}</span>
+            </div>
+            <pre className="push-content">{n.content}</pre>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 

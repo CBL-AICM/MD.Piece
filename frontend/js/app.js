@@ -400,7 +400,7 @@ function memoRenderList() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
+const previsit = () => previsitPage();
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 function labs() {
   return `
@@ -4336,6 +4336,190 @@ function labsRenderResult(data, input) {
       : '') +
     '<p class="labs-result-disclaimer">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+
+// ─── 診前報告 / 推送給醫師 ─────────────────────────────────
+// 患者把近期紀錄推送給醫師端：使用既有 /doctor-notes/ 表，
+// tags = ["patient_push", <category>]，doctor_id 留空（任一醫師可看）
+
+var PUSH_CATS = [
+  { key: 'symptoms', label: '症狀記錄', icon: 'scan-search', desc: '近 7 天的症狀分析與打卡' },
+  { key: 'medications', label: '用藥情況', icon: 'pill', desc: '使用中的藥物 + 服藥率' },
+  { key: 'emotions', label: '情緒打卡', icon: 'heart-pulse', desc: '近 7 天每日情緒分數' },
+  { key: 'vitals', label: '生理紀錄', icon: 'activity', desc: '近期血壓、血糖、體重等' },
+  { key: 'labs', label: '檢驗報告', icon: 'trending-up', desc: '近期檢驗值與 AI 解讀' },
+];
+
+function previsitPage() {
+  return (
+    '<section class="previsit-wrap">' +
+      '<header class="previsit-head">' +
+        '<h2><i data-lucide="clipboard-check" style="width:22px;height:22px"></i> 診前報告 — 推送給醫師</h2>' +
+        '<p>把近一週的紀錄整理給主治醫師，他在醫師端就能看到你想讓他注意的事情。</p>' +
+      '</header>' +
+      '<div class="previsit-grid">' +
+        PUSH_CATS.map(function(c) {
+          return '<div class="previsit-card" id="push-card-' + c.key + '">' +
+            '<div class="previsit-card-head">' +
+              '<i data-lucide="' + c.icon + '" style="width:20px;height:20px"></i>' +
+              '<div>' +
+                '<h3>' + c.label + '</h3>' +
+                '<p>' + c.desc + '</p>' +
+              '</div>' +
+            '</div>' +
+            '<button class="previsit-push-btn" onclick="pushCategoryToDoctor(\'' + c.key + '\')">' +
+              '<i data-lucide="send" style="width:14px;height:14px"></i> 推送給醫師' +
+            '</button>' +
+            '<div class="previsit-status" id="push-status-' + c.key + '"></div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="previsit-message">' +
+        '<h3><i data-lucide="message-square" style="width:18px;height:18px"></i> 想跟醫師說的話</h3>' +
+        '<textarea id="push-custom-text" rows="3" placeholder="例如：這週副作用比較明顯，希望可以調整劑量…"></textarea>' +
+        '<button class="previsit-push-btn" onclick="pushCustomMessageToDoctor()">' +
+          '<i data-lucide="send" style="width:14px;height:14px"></i> 送出留言' +
+        '</button>' +
+        '<div class="previsit-status" id="push-status-message"></div>' +
+      '</div>' +
+      '<div class="previsit-disclaimer">' +
+        '⚠ 推送的資料會出現在醫師端「患者推送」面板，僅供您的主治醫師臨床參考；' +
+        'MD.Piece 為 AI 輔助工具，不可作為診斷或醫療依據。' +
+      '</div>' +
+    '</section>'
+  );
+}
+
+function _pushSetStatus(key, text, type) {
+  var el = document.getElementById('push-status-' + key);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'previsit-status ' + (type ? 'previsit-status-' + type : '');
+}
+
+async function pushCategoryToDoctor(cat) {
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  _pushSetStatus(cat, '收集資料中…', 'loading');
+  try {
+    var summary = await _buildCategorySummary(cat, pid);
+    if (!summary) {
+      _pushSetStatus(cat, '近 7 天沒有資料可推送', 'warning');
+      return;
+    }
+    await fetch(API + '/doctor-notes/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_id: pid,
+        doctor_id: null,
+        content: summary,
+        tags: ['patient_push', cat],
+      }),
+    }).then(function(r) {
+      if (!r.ok) throw new Error('推送失敗');
+    });
+    _pushSetStatus(cat, '✓ 已推送，剛剛 ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), 'ok');
+    showToast('已推送 ' + (PUSH_CATS.find(function(c) { return c.key === cat; }) || {}).label + ' 給醫師', 'success');
+  } catch (e) {
+    _pushSetStatus(cat, '推送失敗：' + (e.message || ''), 'error');
+  }
+}
+
+async function pushCustomMessageToDoctor() {
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var ta = document.getElementById('push-custom-text');
+  var text = (ta && ta.value || '').trim();
+  if (!text) { showToast('請先寫下想說的話', 'warning'); return; }
+  _pushSetStatus('message', '送出中…', 'loading');
+  try {
+    await fetch(API + '/doctor-notes/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_id: pid,
+        doctor_id: null,
+        content: text,
+        tags: ['patient_push', 'message'],
+      }),
+    }).then(function(r) { if (!r.ok) throw new Error('送出失敗'); });
+    if (ta) ta.value = '';
+    _pushSetStatus('message', '✓ 已送出', 'ok');
+    showToast('留言已送給醫師', 'success');
+  } catch (e) {
+    _pushSetStatus('message', '送出失敗：' + (e.message || ''), 'error');
+  }
+}
+
+async function _buildCategorySummary(cat, pid) {
+  var pidQ = encodeURIComponent(pid);
+  if (cat === 'symptoms') {
+    var res = await fetch(API + '/symptoms/history/' + pidQ).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    var hist = res && res.history || [];
+    var since = Date.now() - 7 * 86400000;
+    var recent = hist.filter(function(x) { return new Date(x.created_at).getTime() >= since; });
+    if (!recent.length) return '';
+    var lines = ['【近 7 天症狀紀錄】共 ' + recent.length + ' 筆'];
+    recent.slice(0, 8).forEach(function(s) {
+      var d = (s.created_at || '').slice(0, 10);
+      var arr = Array.isArray(s.symptoms) ? s.symptoms.join('、') : (s.symptoms || '');
+      var ai = (s.ai_response && (s.ai_response.summary || s.ai_response.assessment)) || '';
+      lines.push('• ' + d + '：' + arr + (ai ? '（' + ai.slice(0, 60) + '）' : ''));
+    });
+    return lines.join('\n');
+  }
+  if (cat === 'medications') {
+    var meds = await fetch(API + '/medications/?patient_id=' + pidQ).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    var stats = await fetch(API + '/medications/stats?patient_id=' + pidQ + '&days=7').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    var active = ((meds && meds.medications) || []).filter(function(m) { return m.active !== 0; });
+    if (!active.length && !stats) return '';
+    var rate = stats && stats.summary && stats.summary.adherence_rate;
+    var lines = ['【近 7 天用藥情況】使用中藥物 ' + active.length + ' 種' + (rate != null ? '，服藥率 ' + rate + '%' : '')];
+    active.slice(0, 10).forEach(function(m) {
+      lines.push('• ' + m.name + (m.dosage ? '（' + m.dosage + '）' : '') + (m.frequency ? ' · ' + m.frequency : ''));
+    });
+    return lines.join('\n');
+  }
+  if (cat === 'emotions') {
+    var em = await fetch(API + '/emotions/trend?patient_id=' + pidQ + '&days=7').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    if (!em || !em.trend || !em.trend.length) return '';
+    var avg = em.average_score;
+    var lines = ['【近 7 天情緒打卡】平均 ' + (avg != null ? avg : '—') + '/5，共 ' + em.total_records + ' 筆'];
+    em.trend.slice(-7).forEach(function(t) {
+      lines.push('• ' + t.date + '：' + t.score + ' 分');
+    });
+    return lines.join('\n');
+  }
+  if (cat === 'vitals') {
+    // vitals 端點不一定存在；用 localStorage 後備
+    try {
+      var raw = localStorage.getItem('mdpiece_vitals_v1');
+      var arr = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(arr) || !arr.length) return '';
+      var since = Date.now() - 7 * 86400000;
+      var recent = arr.filter(function(v) { return v.ts && new Date(v.ts).getTime() >= since; });
+      if (!recent.length) return '';
+      var lines = ['【近 7 天生理紀錄】共 ' + recent.length + ' 筆'];
+      recent.slice(0, 12).forEach(function(v) {
+        var d = (v.ts || '').slice(0, 10);
+        lines.push('• ' + d + '：' + (v.metric || '指標') + ' ' + (v.value || '') + (v.unit || ''));
+      });
+      return lines.join('\n');
+    } catch { return ''; }
+  }
+  if (cat === 'labs') {
+    var labs = await fetch(API + '/labs/?patient_id=' + pidQ).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    var arr = (labs && (labs.labs || labs.items)) || [];
+    if (!arr.length) return '';
+    var lines = ['【檢驗報告】共 ' + arr.length + ' 筆'];
+    arr.slice(0, 10).forEach(function(l) {
+      lines.push('• ' + (l.test_name || l.name || '檢驗') + '：' + (l.value || '') + ' ' + (l.unit || ''));
+    });
+    return lines.join('\n');
+  }
+  return '';
 }
 
 
