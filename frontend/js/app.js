@@ -2997,6 +2997,45 @@ var EDU_BOOKS = [
       { key: "sarcop",    label: "肌少症", desc: "蛋白質補充與阻力訓練" },
       { key: "polyphar",  label: "多重用藥", desc: "藥袋大整理與重複用藥" },
       { key: "advcare",   label: "預立醫療", desc: "ACP、AD 與安寧的選擇" }
+    ] },
+
+  // ── 第五層：專科系列 ──
+  { key: "psych", title: "精神疾病", nameEn: "Psychiatric Disorders", tag: "Psy", color: "c-purple", size: "tall", icon: "brain-circuit",
+    shelf: 4, intro: "精神疾病不是個性問題，是大腦的疾病——是可以治療、可以好的。",
+    topics: [
+      { key: "depression",   label: "重度憂鬱症",     desc: "DSM-5 診斷、抗憂鬱藥、心理治療" },
+      { key: "anxiety_dx",   label: "焦慮症光譜",     desc: "廣泛性、恐慌、社交、特定恐懼" },
+      { key: "bipolar",      label: "雙相情緒障礙",   desc: "情緒高低起伏與情緒穩定劑" },
+      { key: "ocd",          label: "強迫症 OCD",     desc: "強迫思考、強迫行為、ERP 治療" },
+      { key: "ptsd",         label: "創傷後壓力症",   desc: "閃回、過度警覺、EMDR" },
+      { key: "schizophrenia",label: "思覺失調症",     desc: "幻覺、妄想、抗精神病藥物" },
+      { key: "adhd",         label: "注意力不足過動", desc: "成人 ADHD 也常見，藥物與行為策略" },
+      { key: "addiction",    label: "成癮與戒斷",     desc: "酒精、菸、安眠藥的戒治路徑" },
+      { key: "suicide_help", label: "自殺意念求助",   desc: "1925 安心專線與陪伴的方式" }
+    ] },
+  { key: "peds", title: "小兒科", nameEn: "Pediatrics", tag: "Peds", color: "c-pink", size: "tall", icon: "stethoscope",
+    shelf: 4, intro: "孩子的不舒服說不清楚——這本書幫你聽懂他的身體在講什麼。",
+    topics: [
+      { key: "kid_fever",     label: "兒童發燒處理",   desc: "幾度算發燒、退燒藥怎麼用、何時要急診" },
+      { key: "infection",     label: "常見傳染病",     desc: "腸病毒、流感、輪狀、玫瑰疹、皰疹齦炎" },
+      { key: "kid_allergy",   label: "過敏與氣喘",     desc: "鼻過敏、異位性皮膚炎、食物過敏" },
+      { key: "growth_chart",  label: "生長發育里程碑", desc: "身高體重、語言、動作的關鍵時程" },
+      { key: "kid_vaccine",   label: "疫苗接種時程",   desc: "公費 + 自費的完整時程表" },
+      { key: "kid_nutrition", label: "兒童飲食",       desc: "副食品、挑食、肥胖的飲食調整" },
+      { key: "learning",      label: "學習與注意力",   desc: "ADHD、學習障礙、自閉症光譜" },
+      { key: "kid_emergency", label: "兒童急症辨識",   desc: "脫水、抽搐、呼吸窘迫、頭部外傷" }
+    ] },
+  { key: "neuro", title: "神經疾病", nameEn: "Neurology", tag: "Neuro", color: "c-blue", size: "tall", icon: "zap",
+    shelf: 4, intro: "頭痛、手麻、記憶變差——神經系統的求救訊號要學會辨認。",
+    topics: [
+      { key: "migraine",      label: "頭痛分類",       desc: "偏頭痛、緊張型、叢集型與危險性頭痛" },
+      { key: "stroke_full",   label: "中風辨識與處置", desc: "FAST 口訣、黃金 3 小時、復健歷程" },
+      { key: "dementia_full", label: "失智症與 MCI",   desc: "阿茲海默、血管型、輕度認知障礙" },
+      { key: "parkinson",     label: "帕金森氏症",     desc: "顫抖、僵硬、動作緩慢與用藥" },
+      { key: "epilepsy",      label: "癲癇",           desc: "發作種類、抗癲癇藥、駕車規範" },
+      { key: "neuropathy",    label: "周邊神經病變",   desc: "糖尿病、化療、自體免疫造成的麻痛" },
+      { key: "ms",            label: "多發性硬化症",   desc: "復發緩解型、疾病修飾治療" },
+      { key: "facial_palsy",  label: "顏面神經麻痺",   desc: "貝爾氏麻痺、類固醇黃金期、復健" }
     ] }
 ];
 
@@ -3057,7 +3096,8 @@ function renderBookshelf() {
     { label: "Shelf 01 ・ 免疫專區", books: [] },
     { label: "Shelf 02 ・ 認識與辨識", books: [] },
     { label: "Shelf 03 ・ 治療與管理", books: [] },
-    { label: "Shelf 04 ・ 預防與支持", books: [] }
+    { label: "Shelf 04 ・ 預防與支持", books: [] },
+    { label: "Shelf 05 ・ 專科系列",   books: [] }
   ];
   EDU_BOOKS.forEach(function(b) { shelves[b.shelf].books.push(b); });
 
