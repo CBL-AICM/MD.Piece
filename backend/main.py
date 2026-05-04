@@ -9,6 +9,7 @@ from backend.routers import (
     records, reports, research, triage, xiaohe, auth,
     doctor_notes, medication_changes, alerts, labs,
 )
+from backend.services import llm_service
 
 app = FastAPI(title="MD.Piece API", version="1.0.0")
 
@@ -35,6 +36,31 @@ app.include_router(doctor_notes.router, prefix="/doctor-notes", tags=["doctor-no
 app.include_router(medication_changes.router, prefix="/medication-changes", tags=["medication-changes"])
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 app.include_router(labs.router, prefix="/labs", tags=["labs"])
+
+@app.get("/health/llm")
+def health_llm():
+    """檢查 LLM provider 連線狀態與目前的 fallback chain。"""
+    import httpx
+    chain = llm_service._fallback_chain(
+        llm_service.LLM_PROVIDER if llm_service.LLM_PROVIDER in llm_service._PROVIDERS else "ollama"
+    )
+    status = {}
+    if "ollama" in chain:
+        try:
+            r = httpx.get(f"{llm_service.OLLAMA_BASE}/api/tags", timeout=2.0)
+            status["ollama"] = "ok" if r.status_code == 200 else f"http_{r.status_code}"
+        except Exception as e:
+            status["ollama"] = f"down ({type(e).__name__})"
+    if "anthropic" in chain:
+        status["anthropic"] = "ready" if llm_service._anthropic_client else "no_key"
+    if "groq" in chain:
+        status["groq"] = "ready" if llm_service.GROQ_API_KEY else "no_key"
+    return {
+        "primary": llm_service.LLM_PROVIDER,
+        "fallback_chain": chain,
+        "status": status,
+    }
+
 
 # Serve frontend static files
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"

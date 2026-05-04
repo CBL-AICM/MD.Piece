@@ -6474,3 +6474,218 @@ html[data-mode="senior"] .visit-modal-save {
   .labs-field, .labs-field-small { flex: 1 1 auto; }
   .labs-submit { width: 100%; }
 }
+
+/* ─── 診前報告 (Pre-consultation Report) ─────────────────── */
+.pv-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pv-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pv-eyebrow {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+  color: var(--app-text-dim);
+  margin: 0 0 4px;
+}
+.pv-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--app-text);
+}
+.pv-title i { width: 22px; height: 22px; color: var(--app-term); }
+.pv-sub {
+  margin: 6px 0 0;
+  color: var(--app-text-dim);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  max-width: 56ch;
+}
+.pv-actions-top {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--app-border);
+  background: var(--app-panel);
+  color: var(--app-text);
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: transform var(--transition), background var(--transition);
+}
+.pv-btn:hover { transform: translateY(-1px); }
+.pv-btn i { width: 14px; height: 14px; }
+.pv-btn-primary {
+  background: var(--app-term);
+  color: #fff;
+  border-color: var(--app-term);
+}
+.pv-btn-ghost { background: var(--app-panel-soft); }
+
+.pv-section {
+  background: var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--app-shadow);
+}
+.pv-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--app-text);
+}
+.pv-section-title i { width: 16px; height: 16px; color: var(--app-term); }
+
+.pv-checklist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pv-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--app-panel-soft);
+  border: 1px solid var(--app-border);
+  line-height: 1.55;
+}
+.pv-check-num {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--app-term);
+  color: #fff;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.pv-check-text { flex: 1; color: var(--app-text); }
+
+.pv-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.pv-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--app-panel-soft);
+  border: 1px solid var(--app-border);
+}
+.pv-stat-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--app-term) 18%, transparent);
+  color: var(--app-term);
+}
+.pv-stat-icon i { width: 16px; height: 16px; }
+.pv-stat-num {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--app-text);
+  line-height: 1.1;
+}
+.pv-stat-num small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--app-text-dim);
+}
+.pv-stat-label {
+  font-size: 0.78rem;
+  color: var(--app-text-dim);
+}
+
+.pv-report-body {
+  font-size: 0.94rem;
+  line-height: 1.75;
+  color: var(--app-text);
+}
+.pv-report-body h2,
+.pv-report-body h3,
+.pv-report-body h4 { color: var(--app-text); }
+
+.pv-source {
+  margin: 10px 0 0;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.74rem;
+  color: var(--app-text-dim);
+}
+
+.pv-disclaimer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--app-text-dim);
+  margin: 0;
+}
+.pv-disclaimer i { width: 14px; height: 14px; }
+
+.pv-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--app-text-dim);
+  margin: 6px 0;
+}
+.pv-spin {
+  animation: pv-spin 1s linear infinite;
+  width: 16px; height: 16px;
+}
+@keyframes pv-spin { to { transform: rotate(360deg); } }
+
+.pv-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger, #c0392b);
+}
+.pv-empty {
+  color: var(--app-text-dim);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .pv-header { flex-direction: column; align-items: stretch; }
+  .pv-actions-top { width: 100%; }
+  .pv-actions-top .pv-btn { flex: 1; justify-content: center; }
+}
+
+html[data-mode="senior"] .pv-title { font-size: 1.7rem; }
+html[data-mode="senior"] .pv-sub,
+html[data-mode="senior"] .pv-check-text,
+html[data-mode="senior"] .pv-report-body { font-size: 1.05rem; }
+html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
