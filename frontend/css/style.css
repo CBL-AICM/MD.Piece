@@ -5796,6 +5796,16 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
 .auth-avatar-placeholder i {
   width: 22px; height: 22px;
 }
+.auth-avatar-default {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+.acct-avatar-default {
+  background: #FCF7F0;
+  object-fit: contain !important;
+}
 .auth-avatar-meta { flex: 1; }
 .auth-avatar-title {
   margin: 0 0 2px;
