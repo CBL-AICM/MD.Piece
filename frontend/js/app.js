@@ -3038,36 +3038,6 @@ function education() {
       <div class="notebook-wrap">
         <div id="edu-notebook" class="notebook"></div>
       </div>
-      <div class="card" style="margin-top:14px">
-        <h3 style="display:flex;align-items:center;gap:6px;font-size:1rem">
-          <i data-lucide="search" style="width:18px;height:18px"></i> 想知道更多？深度文獻研究
-        </h3>
-        <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
-          使用 STORM 引擎搜尋醫學文獻，自動產出含引用來源的深度研究報告。
-        </p>
-        <div style="margin-top:10px">
-          <input id="storm-topic" placeholder="輸入研究主題" style="width:100%" />
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <button class="primary" onclick="runStormResearch()">
-              <i data-lucide="zap" style="width:14px;height:14px;vertical-align:middle"></i> STORM 文獻研究
-            </button>
-            <button class="secondary" onclick="runCoStormResearch()">
-              <i data-lucide="users" style="width:14px;height:14px;vertical-align:middle"></i> Co-STORM 協作研究
-            </button>
-            <button class="secondary" onclick="checkStormStatus()">
-              <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle"></i> 檢查狀態
-            </button>
-          </div>
-        </div>
-        <div id="storm-status" style="margin-top:8px"></div>
-        <div id="storm-result-section" style="display:none;margin-top:12px">
-          <div style="display:flex;align-items:center;gap:8px">
-            <h3 id="storm-result-title" style="font-size:.95rem"></h3>
-          </div>
-          <div id="storm-sources" style="margin-top:8px"></div>
-          <div id="storm-result-body" style="margin-top:12px;line-height:1.8"></div>
-        </div>
-      </div>
     </div>`;
 }
 
@@ -3321,11 +3291,6 @@ function eduOpenContent(key, label) {
       '</div>' +
     '</div>';
 
-  var stormInput = document.getElementById("storm-topic");
-  if (stormInput) stormInput.value = titleText + " 衛教研究";
-  var stormResult = document.getElementById("storm-result-section");
-  if (stormResult) stormResult.style.display = "none";
-
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
   fetch(API + "/education/generate", {
@@ -3355,119 +3320,10 @@ function eduFallbackContent(book, label) {
     '<p>這一頁正在編寫中——之後會由 AI 根據最新文獻自動填上溫暖、易懂的內容。</p>' +
     '<p>在那之前，你可以：</p>' +
     '<ul>' +
-      '<li>使用下方的 <strong>STORM 文獻研究</strong>，立刻幫你產出帶有引用來源的研究報告。</li>' +
       '<li>回到書架挑另一本書，先看看其他主題。</li>' +
       '<li>把你想知道的細節寫進「醫療 Chat」，由 AI 直接回答。</li>' +
     '</ul>' +
     '<p style="color:var(--text-dim);margin-top:14px">' + escapeHtml(book.intro || '') + '</p>';
-}
-
-// ── STORM / Co-STORM 深度研究 ─────────────────────────────
-
-function runStormResearch() {
-  var topic = document.getElementById("storm-topic").value.trim();
-  if (!topic) { showToast("請輸入研究主題", "warning"); return; }
-
-  var resultSection = document.getElementById("storm-result-section");
-  resultSection.style.display = "block";
-  document.getElementById("storm-result-title").textContent = "STORM 研究：" + topic;
-  document.getElementById("storm-sources").innerHTML = "";
-  document.getElementById("storm-result-body").innerHTML =
-    '<div style="text-align:center;padding:60px;color:var(--text-muted)">' +
-    '<div class="loading-spinner"></div>' +
-    '<p style="margin-top:16px">STORM 正在搜尋文獻並生成研究報告...</p>' +
-    '<p style="font-size:0.85rem;margin-top:4px">這可能需要數分鐘，請耐心等待</p></div>';
-  resultSection.scrollIntoView({ behavior: "smooth" });
-
-  var body = { topic: topic };
-  if (_eduSelectedDisease) body.icd10_code = _eduSelectedDisease.icd10;
-
-  fetch(API + "/education/research/storm", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  })
-    .then(function(r) {
-      if (!r.ok) throw new Error("API error");
-      return r.json();
-    })
-    .then(function(data) {
-      document.getElementById("storm-result-body").innerHTML = markdownToHtml(data.report || "無內容");
-      if (data.sources && data.sources.length > 0) {
-        document.getElementById("storm-sources").innerHTML =
-          '<details style="margin-bottom:8px"><summary style="cursor:pointer;color:var(--accent);font-size:0.9rem">' +
-          '引用來源（' + data.source_count + ' 篇）</summary>' +
-          '<ul style="margin-top:8px;font-size:0.85rem;color:var(--text-dim)">' +
-          data.sources.map(function(s) { return '<li style="margin-bottom:4px;word-break:break-all">' + s + '</li>'; }).join("") +
-          '</ul></details>';
-      }
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    })
-    .catch(function(e) {
-      document.getElementById("storm-result-body").innerHTML =
-        '<p style="color:var(--danger)">研究生成失敗：' + e.message + '</p>';
-    });
-}
-
-function runCoStormResearch() {
-  var topic = document.getElementById("storm-topic").value.trim();
-  if (!topic) { showToast("請輸入研究主題", "warning"); return; }
-
-  var doctorInput = prompt("請輸入醫師觀點或問題（可留空讓 AI 自主研究）：");
-  var doctorInputs = doctorInput ? [doctorInput] : [];
-
-  var resultSection = document.getElementById("storm-result-section");
-  resultSection.style.display = "block";
-  document.getElementById("storm-result-title").textContent = "Co-STORM 協作研究：" + topic;
-  document.getElementById("storm-sources").innerHTML = "";
-  document.getElementById("storm-result-body").innerHTML =
-    '<div style="text-align:center;padding:60px;color:var(--text-muted)">' +
-    '<div class="loading-spinner"></div>' +
-    '<p style="margin-top:16px">Co-STORM 正在進行多方協作研究...</p>' +
-    '<p style="font-size:0.85rem;margin-top:4px">AI 專家群正在討論，這需要較長時間</p></div>';
-  resultSection.scrollIntoView({ behavior: "smooth" });
-
-  fetch(API + "/education/research/costorm", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ topic: topic, doctor_inputs: doctorInputs })
-  })
-    .then(function(r) {
-      if (!r.ok) throw new Error("API error");
-      return r.json();
-    })
-    .then(function(data) {
-      var html = markdownToHtml(data.report || "無內容");
-      if (data.conversation && data.conversation.length > 0) {
-        html += '<hr style="margin:24px 0;border-color:var(--border-glass)">';
-        html += '<h4 style="color:var(--purple)">研究討論過程</h4>';
-        data.conversation.forEach(function(turn) {
-          var roleColor = turn.role === "doctor" ? "var(--accent)" : "var(--text-dim)";
-          html += '<div style="margin:8px 0;padding:8px 12px;border-left:3px solid ' + roleColor + ';background:var(--bg-glass);border-radius:4px">' +
-            '<strong style="color:' + roleColor + '">' + turn.role + '</strong>: ' + turn.utterance + '</div>';
-        });
-      }
-      document.getElementById("storm-result-body").innerHTML = html;
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    })
-    .catch(function(e) {
-      document.getElementById("storm-result-body").innerHTML =
-        '<p style="color:var(--danger)">協作研究失敗：' + e.message + '</p>';
-    });
-}
-
-function checkStormStatus() {
-  fetch(API + "/education/research/status")
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var html = '<div style="padding:8px 12px;background:var(--bg-glass);border-radius:var(--radius-sm);font-size:0.85rem;margin-top:8px">';
-      html += '<div>STORM 引擎：' + (data.storm_available ? '<span style="color:var(--success)">可用</span>' : '<span style="color:var(--danger)">未安裝</span>') + '</div>';
-      html += '<div>搜尋引擎：<strong>' + data.search_engine + '</strong></div>';
-      html += '<div>Anthropic API：' + (data.anthropic_key_set ? '<span style="color:var(--success)">已設定</span>' : '<span style="color:var(--danger)">未設定</span>') + '</div>';
-      html += '</div>';
-      document.getElementById("storm-status").innerHTML = html;
-    })
-    .catch(function() { showToast("無法檢查 STORM 狀態", "error"); });
 }
 
 // ─── 你的碎片（Pieces）— 上次回診以來的紀錄統整 ─────────────

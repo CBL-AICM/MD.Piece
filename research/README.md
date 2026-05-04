@@ -6,7 +6,6 @@
 
 | 資料夾 | 工具 | 職責 |
 |--------|------|------|
-| `storm/` | Stanford STORM / Co-STORM | 自動產生結構化長篇衛教文章，支援醫師審核介入 |
 | `gpt_researcher/` | gpt-researcher | 蒐集醫學文獻、研究報告、最新指引 |
 
 ## 輸出流向
