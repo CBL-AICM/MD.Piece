@@ -3282,6 +3282,9 @@ function findCuratedArticleSlug(book, topicKey) {
     var key = String(_eduSelectedDisease.icd10).substring(0, 3).toUpperCase() + ":" + topicKey;
     return _eduArticleByIcd10Dim[key] || null;
   }
+  // 3. 通用書本：依 <bookKey>-<topicKey> 命名慣例自動配對
+  var convSlug = book.key + "-" + topicKey;
+  if (_eduArticles[convSlug]) return convSlug;
   return null;
 }
 
