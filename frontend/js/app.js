@@ -400,7 +400,26 @@ function memoRenderList() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
+function previsit() {
+  return `
+    <div class="card previsit-hero">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="clipboard-check" style="width:22px;height:22px"></i> 診前報告
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        看診前一鍵整理你最近的症狀、用藥與想跟醫師說的事。AI 會挑重點濃縮成醫師三十秒能看完的摘要。
+      </p>
+    </div>
+
+    <div class="card previsit-controls no-print">
+      <button class="primary previsit-generate" onclick="previsitGenerate()">
+        <i data-lucide="sparkles" style="width:16px;height:16px;vertical-align:middle"></i> 生成診前報告
+      </button>
+    </div>
+
+    <div id="previsit-result" class="previsit-result" style="display:none"></div>
+  `;
+}
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 function labs() {
   return `
@@ -522,6 +541,7 @@ function showPage(page) {
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
     if (page === "labs") loadLabsPage();
+    if (page === "previsit") loadPrevisitPage();
     if (page === "pieces") loadPiecesPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
@@ -4009,6 +4029,173 @@ function labsRenderResult(data, input) {
       : '') +
     '<p class="labs-result-disclaimer">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+
+// ─── 診前報告（Pre-visit Report）─────────────────────────────
+// 隱私：memo 來自 localStorage、症狀/用藥從後端拉，整合後傳 LLM。
+// 結果暫存記憶體（不寫 sessionStorage，因為通常一次性使用）。
+
+let _previsitGenerating = false;
+
+function loadPrevisitPage() {
+  const r = document.getElementById('previsit-result');
+  if (r) { r.style.display = 'none'; r.innerHTML = ''; }
+}
+
+async function previsitGatherData() {
+  const pid = getStablePatientId();
+
+  let symptoms = [];
+  let medications = [];
+  // 症狀真正的歷史在 /symptoms/history/{pid}（/symptoms/?patient_id 是空殼回傳）
+  // 後端回傳 wrapped 物件：/symptoms/history → {history: [...]}、/medications → {medications: [...]}
+  try {
+    const r1 = await fetch(`${API}/symptoms/history/${encodeURIComponent(pid)}`);
+    if (r1.ok) {
+      const j = await r1.json();
+      symptoms = Array.isArray(j) ? j : (j.history || j.symptoms || []);
+    }
+  } catch (e) { /* 無資料就空陣列 */ }
+  try {
+    const r2 = await fetch(`${API}/medications/?patient_id=${encodeURIComponent(pid)}`);
+    if (r2.ok) {
+      const j = await r2.json();
+      medications = Array.isArray(j) ? j : (j.medications || []);
+    }
+  } catch (e) { /* 同上 */ }
+
+  // symptoms_log 每筆有 symptoms (string[]) 與 ai_response，把症狀清單合併成單行
+  symptoms = (Array.isArray(symptoms) ? symptoms : []).map(s => {
+    const list = Array.isArray(s.symptoms) ? s.symptoms.filter(Boolean) : [];
+    const name = list.length ? list.join('、') : (s.name || s.symptom || s.title || '');
+    return {
+      name,
+      severity: s.severity ? String(s.severity) : null,
+      note: s.note || s.description || null,
+      created_at: s.created_at || s.recorded_at,
+    };
+  }).filter(s => s.name);
+  // 過濾停用藥（active=0 / false）
+  medications = (Array.isArray(medications) ? medications : [])
+    .filter(m => m.active !== 0 && m.active !== false)
+    .map(m => ({
+      name: m.name,
+      dosage: m.dosage,
+      frequency: m.frequency,
+      note: m.instructions || m.note || null,
+    }));
+
+  // Memo 給醫師標記
+  let memos = [];
+  try {
+    memos = (typeof memoLoad === 'function' ? memoLoad() : [])
+      .filter(m => m.forDoctor)
+      .map(m => ({
+        text: m.text || '',
+        forDoctor: !!m.forDoctor,
+        createdAt: m.createdAt,
+      }));
+  } catch (e) { memos = []; }
+
+  return { symptoms, medications, memos };
+}
+
+async function previsitGenerate() {
+  if (_previsitGenerating) return;
+  _previsitGenerating = true;
+
+  const resultEl = document.getElementById('previsit-result');
+  resultEl.style.display = 'block';
+  resultEl.className = 'previsit-result';
+  resultEl.innerHTML = '<div class="card"><p class="previsit-loading"><i data-lucide="loader" class="previsit-spin"></i> 整理紀錄中…AI 正在挑重點</p></div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  try {
+    const payload = await previsitGatherData();
+    const total = payload.symptoms.length + payload.medications.length + payload.memos.length;
+    if (total === 0) {
+      resultEl.innerHTML = '<div class="card previsit-empty"><i data-lucide="info" style="width:18px;height:18px;vertical-align:middle"></i> 目前沒有任何紀錄。先到症狀/用藥/Memo 頁紀錄一些再生成報告。</div>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      return;
+    }
+
+    const res = await fetch(`${API}/previsit/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '生成失敗');
+    }
+    const data = await res.json();
+    previsitRender(data, payload);
+  } catch (e) {
+    resultEl.innerHTML = '<div class="card previsit-error">生成失敗：' + escapeHtml(e.message || '未知錯誤') + '</div>';
+  } finally {
+    _previsitGenerating = false;
+  }
+}
+
+function previsitRenderList(items, emptyText) {
+  if (!items || !items.length) {
+    return '<p class="pv-empty">' + escapeHtml(emptyText) + '</p>';
+  }
+  return '<ul class="pv-list">' +
+    items.map(s => '<li>' + escapeHtml(s) + '</li>').join('') +
+    '</ul>';
+}
+
+function previsitRender(data, payload) {
+  const resultEl = document.getElementById('previsit-result');
+  const today = new Date().toLocaleDateString('zh-TW');
+  const user = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  const name = user.name || user.username || '使用者';
+
+  resultEl.innerHTML = '' +
+    '<article class="card previsit-card">' +
+      '<header class="pv-head">' +
+        '<div>' +
+          '<h3 class="pv-title">診前摘要</h3>' +
+          '<p class="pv-meta">' + escapeHtml(name) + ' · ' + today + '</p>' +
+        '</div>' +
+        '<div class="pv-actions no-print">' +
+          '<button class="ghost" onclick="previsitCopy()" title="複製為文字">' +
+            '<i data-lucide="copy" style="width:14px;height:14px"></i> 複製' +
+          '</button>' +
+          '<button class="ghost" onclick="window.print()" title="列印或存成 PDF">' +
+            '<i data-lucide="printer" style="width:14px;height:14px"></i> 列印' +
+          '</button>' +
+          '<button class="ghost" onclick="previsitGenerate()" title="重新生成">' +
+            '<i data-lucide="refresh-cw" style="width:14px;height:14px"></i> 重新生成' +
+          '</button>' +
+        '</div>' +
+      '</header>' +
+      (data.summary ? '<p class="pv-summary">' + escapeHtml(data.summary) + '</p>' : '') +
+      '<section class="pv-section"><h4>① 主要不舒服</h4>' + previsitRenderList(data.chief_complaints, '近期無症狀紀錄') + '</section>' +
+      '<section class="pv-section"><h4>② 用藥狀況</h4>' + previsitRenderList(data.medication_status, '無用藥紀錄') + '</section>' +
+      '<section class="pv-section"><h4>③ 想跟醫師說的事</h4>' + previsitRenderList(data.questions_for_doctor, '尚未在 Memo 標記「給醫師」') + '</section>' +
+      '<section class="pv-section pv-highlights"><h4>④ AI 重點提示</h4>' + previsitRenderList(data.ai_highlights, '無特別重點') + '</section>' +
+      '<p class="pv-disclaimer">' + escapeHtml(data.disclaimer || '本摘要僅供參考，請以醫師判讀為準') + '</p>' +
+    '</article>';
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function previsitCopy() {
+  const el = document.querySelector('.previsit-card');
+  if (!el) return;
+  const text = el.innerText || el.textContent || '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => alert('已複製到剪貼簿'),
+      () => alert('複製失敗，請手動選取')
+    );
+  } else {
+    alert('此瀏覽器不支援自動複製，請手動選取');
+  }
 }
 
 

@@ -86,6 +86,8 @@
     { "src": "/medication-changes", "dest": "api/index.py" },
     { "src": "/labs/(.*)", "dest": "api/index.py" },
     { "src": "/labs", "dest": "api/index.py" },
+    { "src": "/previsit/(.*)", "dest": "api/index.py" },
+    { "src": "/previsit", "dest": "api/index.py" },
     { "src": "/doctor/(.+\\..+)", "dest": "frontend-doctor/$1" },
     { "src": "/doctor", "dest": "frontend-doctor/index.html" },
     { "src": "/doctor/(.*)", "dest": "frontend-doctor/index.html" },
