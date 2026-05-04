@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=visit-modal-solid-1" />
+  <link rel="stylesheet" href="css/style.css?v=doctor-portal-1" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
@@ -334,6 +334,54 @@
     </div>
   </div>
 
+  <!-- ★ Doctor Portal (shown only for role=doctor) -->
+  <div id="doctor-portal" data-theme="dark" hidden>
+    <header class="dp-topbar">
+      <div class="dp-brand">
+        <img src="icons/logo-core.jpg" alt="MD.Piece" class="dp-brand-logo" />
+        <div class="dp-brand-text">
+          <h1>MD.Piece</h1>
+          <p>DOCTOR PORTAL</p>
+        </div>
+      </div>
+      <div class="dp-topbar-right">
+        <span class="dp-user" id="dp-user-name">醫師</span>
+        <button class="dp-theme-btn" type="button" onclick="toggleAppTheme()" title="切換主題">
+          <span id="dp-theme-icon">☾</span>
+        </button>
+        <button class="dp-logout" type="button" onclick="logout()">
+          <i data-lucide="log-out" style="width:14px;height:14px"></i> 登出
+        </button>
+      </div>
+    </header>
+
+    <div class="dp-body">
+      <aside class="dp-list">
+        <div class="dp-list-head">
+          <h2><i data-lucide="users" style="width:16px;height:16px"></i> 病患清單</h2>
+          <button class="dp-refresh" onclick="loadDoctorPatients()" title="重新整理">
+            <i data-lucide="refresh-cw" style="width:14px;height:14px"></i>
+          </button>
+        </div>
+        <div class="dp-search-wrap">
+          <i data-lucide="search" style="width:14px;height:14px"></i>
+          <input id="dp-search" type="text" placeholder="搜尋病患暱稱 / 帳號" oninput="filterDoctorPatients()" />
+        </div>
+        <div id="dp-patient-list" class="dp-patient-list">
+          <p class="dp-empty">載入中…</p>
+        </div>
+      </aside>
+
+      <main class="dp-detail" id="dp-detail">
+        <div class="dp-detail-empty" id="dp-detail-empty">
+          <i data-lucide="stethoscope" style="width:48px;height:48px"></i>
+          <h3>選擇左側病患</h3>
+          <p>檢視症狀、情緒、用藥與備註</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
   <script src="js/app.js"></script>
   <script src="js/landing.js"></script>
   <script>
@@ -494,7 +542,9 @@
       setTimeout(() => {
         landing.style.display = 'none';
         const user = getCurrentUser();
-        if (user) {
+        if (user && user.role === 'doctor' && typeof enterDoctorPortal === 'function') {
+          enterDoctorPortal();
+        } else if (user) {
           document.getElementById('app-wrapper').classList.add('show');
           showPage('home');
           lucide.createIcons();
