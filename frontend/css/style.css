@@ -6476,7 +6476,8 @@ html[data-mode="senior"] .visit-modal-save {
 }
 
 /* ─── 每日故事 Daily Story ──────────────────────────────────── */
-.story-hero h2 { margin: 0; }
+.story-hero h2 { margin: 0; color: var(--app-text); }
+.story-hero p { color: var(--app-text); opacity: .9; }
 
 .story-section-head {
   display: flex;
@@ -6489,40 +6490,47 @@ html[data-mode="senior"] .visit-modal-save {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 999px;
   font-size: .82rem;
   font-weight: 700;
-  background: var(--app-panel-soft);
   color: var(--app-text);
-  border: 1px solid var(--app-border);
+  background: var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
 }
-/* 分類徽章配色：兩種主題下都有足夠對比 */
-.story-cat-disease   { background: #c93350; color: #ffffff; border-color: #8a1f36; }
-.story-cat-quick_tip { background: #d97706; color: #ffffff; border-color: #92400e; }
-.story-cat-news      { background: #1e6cb6; color: #ffffff; border-color: #0b3f73; }
+/* 柔和色塊 + 主題字色：兩種 theme 下都跟著主色走，不再用白字 */
+.story-cat-disease   { background: var(--app-pink);  border-color: var(--app-text); }
+.story-cat-quick_tip { background: var(--app-term);  border-color: var(--app-text); color: var(--app-text); }
+.story-cat-news      { background: var(--app-blue);  border-color: var(--app-text); }
+[data-theme="dark"] .story-cat-quick_tip { color: #2d1a06; }
+[data-theme="dark"] .story-cat-disease   { color: #2d1018; }
+[data-theme="dark"] .story-cat-news      { color: #0b1f3a; }
 [data-mode="senior"] .story-section-cat { font-size: 1rem; padding: 6px 14px; }
 
 .story-section-date {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: .82rem;
-  color: var(--app-text-dim);
+  color: var(--app-text);
+  opacity: .8;
 }
 .story-section-desc {
   margin: 0 0 10px;
-  font-size: .85rem;
-  color: var(--app-text-dim);
+  font-size: .9rem;
+  color: var(--app-text);
+  opacity: .9;
 }
 .story-title {
   margin: 4px 0 8px;
   font-size: 1.25rem;
   line-height: 1.4;
   color: var(--app-text);
+  font-weight: 700;
 }
 .story-summary {
   margin: 0 0 12px;
-  color: var(--app-text-dim);
-  line-height: 1.6;
+  color: var(--app-text);
+  line-height: 1.7;
+  font-size: .95rem;
 }
 .story-tags {
   display: flex;
@@ -6537,18 +6545,28 @@ html[data-mode="senior"] .visit-modal-save {
   background: var(--app-panel-soft);
   color: var(--app-text);
   border: 1px solid var(--app-border);
-  font-size: .74rem;
+  font-size: .76rem;
 }
 .story-body {
   line-height: 1.85;
   margin-top: 6px;
   color: var(--app-text);
 }
+.story-body * { color: var(--app-text); }
 .story-body h1, .story-body h2, .story-body h3 {
   margin-top: 1.4em;
   color: var(--app-text);
+  font-weight: 700;
 }
-.story-body a { color: var(--app-aqua); }
+.story-body a { color: var(--app-term); text-decoration: underline; }
+.story-body blockquote {
+  border-left: 3px solid var(--app-border);
+  padding-left: 12px;
+  margin: 12px 0;
+  color: var(--app-text);
+  opacity: .9;
+  font-style: italic;
+}
 .story-sources {
   margin-top: 18px;
   padding-top: 14px;
@@ -6556,20 +6574,22 @@ html[data-mode="senior"] .visit-modal-save {
 }
 .story-sources-head {
   font-size: .85rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 8px;
-  color: var(--app-text-dim);
+  color: var(--app-text);
 }
 .story-sources ol {
   padding-left: 20px;
-  color: var(--app-text-dim);
+  color: var(--app-text);
   font-size: .85rem;
-  line-height: 1.6;
+  line-height: 1.7;
+  opacity: .85;
 }
 .story-reviewed {
   margin-top: 14px;
-  font-size: .75rem;
-  color: var(--app-text-dim);
+  font-size: .78rem;
+  color: var(--app-text);
+  opacity: .7;
 }
 
 .story-archive-list {
@@ -6579,11 +6599,11 @@ html[data-mode="senior"] .visit-modal-save {
 }
 .story-archive-day-head {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: .82rem;
+  font-size: .85rem;
   color: var(--app-text);
   margin-bottom: 6px;
   letter-spacing: .02em;
-  font-weight: 600;
+  font-weight: 700;
 }
 .story-archive-day-grid {
   display: grid;
@@ -6597,14 +6617,14 @@ html[data-mode="senior"] .visit-modal-save {
   text-align: left;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid var(--app-border);
+  border: 1.5px solid var(--app-border);
   background: var(--app-panel-soft);
   color: var(--app-text);
   cursor: pointer;
   transition: border-color .15s ease, transform .15s ease, background .15s ease;
 }
 .story-archive-item:hover {
-  border-color: var(--app-aqua);
+  border-color: var(--app-text);
   transform: translateY(-1px);
 }
 .story-archive-cat {
@@ -6614,15 +6634,17 @@ html[data-mode="senior"] .visit-modal-save {
   border-radius: 999px;
   font-size: .72rem;
   font-weight: 700;
+  border: 1px solid var(--app-text);
 }
 .story-archive-title {
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.4;
   color: var(--app-text);
 }
 .story-archive-summary {
-  font-size: .8rem;
-  color: var(--app-text-dim);
+  font-size: .82rem;
+  color: var(--app-text);
+  opacity: .85;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -6640,10 +6662,10 @@ html[data-mode="senior"] .visit-modal-save {
 .story-news-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid var(--app-border);
+  border: 1.5px solid var(--app-border);
   background: var(--app-panel-soft);
   color: var(--app-text);
 }
@@ -6652,19 +6674,22 @@ html[data-mode="senior"] .visit-modal-save {
   line-height: 1.4;
   color: var(--app-text);
   text-decoration: none;
+  font-size: .95rem;
 }
-a.story-news-title { color: var(--app-aqua); }
-a.story-news-title:hover { text-decoration: underline; }
+a.story-news-title { color: var(--app-text); text-decoration: underline; text-decoration-color: var(--app-term); }
+a.story-news-title:hover { color: var(--app-term); }
 .story-news-date {
-  font-size: .72rem;
-  color: var(--app-text-dim);
+  font-size: .74rem;
+  color: var(--app-text);
+  opacity: .7;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .story-news-summary {
   margin: 2px 0 0;
-  font-size: .85rem;
+  font-size: .88rem;
   line-height: 1.6;
   color: var(--app-text);
+  opacity: .9;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
