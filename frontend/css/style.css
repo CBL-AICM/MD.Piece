@@ -1982,6 +1982,91 @@ html[data-mode="senior"] .tc-desc {
   letter-spacing: 1px;
 }
 
+.home-visit-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.home-visit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(201,127,75,0.10);
+  border: 1.5px solid rgba(201,127,75,0.32);
+  color: var(--klein, #5C3A32);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+  font-family: inherit;
+}
+.home-visit-chip:hover {
+  background: rgba(201,127,75,0.18);
+  border-color: rgba(201,127,75,0.55);
+}
+.home-visit-chip:active { transform: scale(0.97); }
+.home-visit-chip-empty {
+  background: transparent;
+  border-style: dashed;
+  color: var(--text-muted, #A89685);
+  font-weight: 500;
+}
+.home-visit-chip-empty:hover { color: var(--klein, #5C3A32); }
+.home-visit-countdown {
+  background: #C97F4B;
+  color: #FFFFFF;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.home-visit-chip-today .home-visit-countdown {
+  background: #D9534F;
+  animation: visit-pulse 1.4s ease-in-out infinite;
+}
+.home-visit-chip-past {
+  opacity: 0.7;
+}
+.home-visit-chip-past .home-visit-countdown {
+  background: #8E8680;
+}
+.home-visit-clear {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted, #A89685);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.home-visit-clear:hover {
+  background: rgba(0,0,0,0.06);
+  color: var(--klein, #5C3A32);
+}
+.home-visit-input {
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border: 1.5px solid rgba(201,127,75,0.4);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--klein, #5C3A32);
+}
+@keyframes visit-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
 /* Quick Actions */
 .home-quick {
   display: grid;

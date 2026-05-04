@@ -1508,6 +1508,83 @@ function getHealthTip() {
   return tips[Math.floor(Math.random() * tips.length)];
 }
 
+// === 下次回診（patient-set；存 localStorage，per-user）=========================
+function _nextVisitKey() {
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var pid = u.id_number || u.username || 'guest';
+  return 'mdpiece_next_visit_' + pid;
+}
+function loadNextVisit() {
+  try { return localStorage.getItem(_nextVisitKey()) || ''; } catch (e) { return ''; }
+}
+function saveNextVisit(iso) {
+  try {
+    if (iso) localStorage.setItem(_nextVisitKey(), iso);
+    else     localStorage.removeItem(_nextVisitKey());
+  } catch (e) {}
+}
+function _daysBetween(isoDate) {
+  // 以「日」為單位差距，今日 0
+  var t = new Date(isoDate + 'T00:00:00');
+  var n = new Date();
+  n.setHours(0,0,0,0);
+  return Math.round((t - n) / 86400000);
+}
+function renderNextVisitChip() {
+  var iso = loadNextVisit();
+  if (!iso) {
+    return ''
+      + '<button type="button" class="home-visit-chip home-visit-chip-empty" '
+      +   'onclick="openNextVisitEditor()">'
+      +   '<i data-lucide="calendar-plus" style="width:14px;height:14px"></i>'
+      +   '<span>設定下次回診</span>'
+      + '</button>'
+      + '<input type="date" id="home-visit-input" class="home-visit-input" '
+      +   'onchange="onNextVisitChange(this.value)" hidden />';
+  }
+  var d = _daysBetween(iso);
+  var label;
+  var cls = 'home-visit-chip';
+  if (d > 0)       { label = '剩 ' + d + ' 天'; }
+  else if (d === 0){ label = '就是今天！'; cls += ' home-visit-chip-today'; }
+  else             { label = (-d) + ' 天前已回診'; cls += ' home-visit-chip-past'; }
+  var pretty = iso.replace(/-/g, '/').slice(5); // MM/DD
+  return ''
+    + '<button type="button" class="' + cls + '" onclick="openNextVisitEditor()" title="點此修改">'
+    +   '<i data-lucide="calendar-check-2" style="width:14px;height:14px"></i>'
+    +   '<span>下次回診 ' + pretty + '</span>'
+    +   '<span class="home-visit-countdown">' + label + '</span>'
+    + '</button>'
+    + '<button type="button" class="home-visit-clear" onclick="clearNextVisit()" title="清除">'
+    +   '<i data-lucide="x" style="width:12px;height:12px"></i>'
+    + '</button>'
+    + '<input type="date" id="home-visit-input" class="home-visit-input" '
+    +   'value="' + iso + '" onchange="onNextVisitChange(this.value)" hidden />';
+}
+function openNextVisitEditor() {
+  var inp = document.getElementById('home-visit-input');
+  if (!inp) return;
+  inp.hidden = false;
+  // 開啟原生日期 picker（Chrome 支援；其他瀏覽器至少會 focus）
+  try { inp.showPicker && inp.showPicker(); } catch (e) {}
+  inp.focus();
+}
+function onNextVisitChange(val) {
+  if (!val) return;
+  saveNextVisit(val);
+  refreshNextVisitChip();
+}
+function clearNextVisit() {
+  saveNextVisit('');
+  refreshNextVisitChip();
+}
+function refreshNextVisitChip() {
+  var row = document.getElementById('home-visit-row');
+  if (!row) return;
+  row.innerHTML = renderNextVisitChip();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function homeCard(page, icon, title, desc, color) {
   return `<div class="pzl-card pzl-${color}" onclick="navigateTo('${page}',null)">
     <div class="pzl-tab"></div>
@@ -1544,6 +1621,9 @@ function home() {
           <div class="home-date-row">
             <span class="home-datestr">${dateStr}</span>
             <span class="home-day">${dayStr}</span>
+          </div>
+          <div class="home-visit-row" id="home-visit-row">
+            ${renderNextVisitChip()}
           </div>
         </div>
       </div>
