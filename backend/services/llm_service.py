@@ -21,16 +21,17 @@ GROQ_BASE = "https://api.groq.com/openai/v1"
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 
-def _call_ollama(system_prompt: str, user_message: str) -> str:
+def _call_ollama(system_prompt: str, user_message: str, history=None) -> str:
+    msgs = [{"role": "system", "content": system_prompt}]
+    if history:
+        msgs.extend(history)
+    msgs.append({"role": "user", "content": user_message})
     resp = httpx.post(
         f"{OLLAMA_BASE}/api/chat",
         json={
             "model": TEXT_MODEL,
             "stream": False,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
+            "messages": msgs,
         },
         timeout=120.0,
     )
@@ -38,9 +39,13 @@ def _call_ollama(system_prompt: str, user_message: str) -> str:
     return resp.json()["message"]["content"]
 
 
-def _call_groq(system_prompt: str, user_message: str) -> str:
+def _call_groq(system_prompt: str, user_message: str, history=None) -> str:
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY not set; cannot use Groq provider")
+    msgs = [{"role": "system", "content": system_prompt}]
+    if history:
+        msgs.extend(history)
+    msgs.append({"role": "user", "content": user_message})
     resp = httpx.post(
         f"{GROQ_BASE}/chat/completions",
         headers={
@@ -49,10 +54,7 @@ def _call_groq(system_prompt: str, user_message: str) -> str:
         },
         json={
             "model": GROQ_MODEL,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
+            "messages": msgs,
             "temperature": 0.4,
         },
         timeout=60.0,
@@ -61,11 +63,93 @@ def _call_groq(system_prompt: str, user_message: str) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
-def call_claude(system_prompt: str, user_message: str) -> str:
-    """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider"""
+def call_claude(system_prompt: str, user_message: str, history=None) -> str:
+    """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider
+
+    history: 可選，[{role: 'user'|'assistant', content: str}, ...] 多輪歷史
+    """
     if LLM_PROVIDER == "groq":
-        return _call_groq(system_prompt, user_message)
-    return _call_ollama(system_prompt, user_message)
+        return _call_groq(system_prompt, user_message, history)
+    return _call_ollama(system_prompt, user_message, history)
+
+
+# === Streaming =================================================================
+
+def _stream_ollama(system_prompt: str, user_message: str, history=None):
+    msgs = [{"role": "system", "content": system_prompt}]
+    if history:
+        msgs.extend(history)
+    msgs.append({"role": "user", "content": user_message})
+    with httpx.stream(
+        "POST",
+        f"{OLLAMA_BASE}/api/chat",
+        json={"model": TEXT_MODEL, "stream": True, "messages": msgs},
+        timeout=120.0,
+    ) as resp:
+        resp.raise_for_status()
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            chunk = (obj.get("message") or {}).get("content") or ""
+            if chunk:
+                yield chunk
+            if obj.get("done"):
+                break
+
+
+def _stream_groq(system_prompt: str, user_message: str, history=None):
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY not set; cannot use Groq provider")
+    msgs = [{"role": "system", "content": system_prompt}]
+    if history:
+        msgs.extend(history)
+    msgs.append({"role": "user", "content": user_message})
+    with httpx.stream(
+        "POST",
+        f"{GROQ_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": GROQ_MODEL,
+            "messages": msgs,
+            "temperature": 0.4,
+            "stream": True,
+        },
+        timeout=60.0,
+    ) as resp:
+        resp.raise_for_status()
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            # OpenAI 風格 SSE：以 "data: " 開頭
+            if line.startswith("data: "):
+                payload = line[len("data: "):].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                choices = obj.get("choices") or []
+                if not choices:
+                    continue
+                delta = (choices[0].get("delta") or {}).get("content") or ""
+                if delta:
+                    yield delta
+
+
+def stream_claude(system_prompt: str, user_message: str, history=None):
+    """串流文字生成（產生純文字片段的 generator）"""
+    if LLM_PROVIDER == "groq":
+        yield from _stream_groq(system_prompt, user_message, history)
+    else:
+        yield from _stream_ollama(system_prompt, user_message, history)
 
 
 def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") -> dict:

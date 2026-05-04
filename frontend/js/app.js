@@ -4051,6 +4051,20 @@ function chatLoadHistory() {
     return Array.isArray(arr) ? arr : [];
   } catch (e) { return []; }
 }
+
+// 把 localStorage 內的訊息轉成後端 history 格式（最近 N 輪 user/bot）
+function chatBuildApiHistory(maxTurns) {
+  var n = maxTurns || 12;
+  var hist = chatLoadHistory();
+  var out = [];
+  for (var i = 0; i < hist.length; i++) {
+    var m = hist[i];
+    if (!m || !m.text) continue;
+    var role = (m.role === 'user') ? 'user' : 'assistant';
+    out.push({ role: role, content: String(m.text) });
+  }
+  return out.slice(-n);
+}
 function chatSaveHistory(list) {
   try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list.slice(-80))); }
   catch (e) {}
@@ -4176,6 +4190,9 @@ function chat() {
     + '  <form class="chat-input-bar" id="chat-form" onsubmit="event.preventDefault(); chatSend();">'
     + '    <span class="chat-prompt">$</span>'
     + '    <input id="chat-input" class="chat-input" type="text" autocomplete="off" placeholder="跟小禾說說話… (Enter 送出)" />'
+    + '    <button type="button" class="chat-mic" id="chat-mic" onclick="chatToggleMic()" title="按住說話 / 點一下開始辨識">'
+    + '      <i data-lucide="mic" style="width:16px;height:16px"></i>'
+    + '    </button>'
     + '    <button type="submit" class="chat-send" id="chat-send">'
     + '      <i data-lucide="send" style="width:16px;height:16px"></i>'
     + '      <span>送出</span>'
@@ -4367,6 +4384,66 @@ function chatTypeInto(node, text, opts, onDone) {
   }, speed);
 }
 
+// === 語音輸入（webkitSpeechRecognition）=========================================
+var _chatRec = null;
+var _chatRecActive = false;
+
+function chatToggleMic() {
+  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Rec) {
+    showToast('這個瀏覽器不支援語音輸入（建議用 Chrome/Edge/Safari）', 'warning');
+    return;
+  }
+  if (_chatRecActive && _chatRec) {
+    try { _chatRec.stop(); } catch (e) {}
+    return;
+  }
+  var rec = new Rec();
+  rec.lang = 'zh-TW';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+
+  var input = document.getElementById('chat-input');
+  var btn = document.getElementById('chat-mic');
+  if (btn) btn.classList.add('chat-mic-active');
+  _chatRecActive = true;
+  _chatRec = rec;
+
+  var finalText = '';
+  rec.onresult = function (ev) {
+    var interim = '';
+    for (var i = ev.resultIndex; i < ev.results.length; i++) {
+      var r = ev.results[i];
+      if (r.isFinal) finalText += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    if (input) input.value = (finalText + interim).trim();
+  };
+  rec.onerror = function (ev) {
+    if (ev && ev.error === 'not-allowed') {
+      showToast('需要允許麥克風權限才能用語音輸入', 'error');
+    } else if (ev && ev.error && ev.error !== 'no-speech' && ev.error !== 'aborted') {
+      showToast('語音辨識：' + ev.error, 'warning');
+    }
+  };
+  rec.onend = function () {
+    _chatRecActive = false;
+    _chatRec = null;
+    if (btn) btn.classList.remove('chat-mic-active');
+    // 講完自動送出（如果有內容）
+    if (input && (input.value || '').trim()) chatSend();
+  };
+
+  try { rec.start(); }
+  catch (e) {
+    _chatRecActive = false;
+    _chatRec = null;
+    if (btn) btn.classList.remove('chat-mic-active');
+    showToast('啟動語音失敗：' + (e.message || e), 'error');
+  }
+}
+
 function chatSend() {
   if (_chatTyping) { showToast('小禾正在說話…等一下下', 'info'); return; }
   var input = document.getElementById('chat-input');
@@ -4374,6 +4451,9 @@ function chatSend() {
   var text = (input.value || '').trim();
   if (!text) return;
   input.value = '';
+
+  // 在 push 新訊息「之前」抓歷史，讓 history 不含本則 message
+  var apiHistory = chatBuildApiHistory(12);
 
   var hist = chatLoadHistory();
   hist.push({ role: 'user', text: text, t: Date.now() });
@@ -4387,34 +4467,101 @@ function chatSend() {
     user_id: pid,
     message: text,
     mode: chatGetMode(),
-    version: chatGetVersion()
+    version: chatGetVersion(),
+    history: apiHistory
   };
 
+  chatStreamReply(body, /*fallback*/ '抱歉，小禾沒收到回覆，可以再說一次嗎？');
+}
+
+// 把後端 SSE 流逐 token 渲染進 bot 氣泡；同時保持小禾打字動畫
+function chatStreamReply(body, fallbackText) {
+  fetch(API + '/xiaohe/chat/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+    body: JSON.stringify(body)
+  }).then(function (resp) {
+    if (!resp.ok || !resp.body) throw new Error('stream not available: ' + resp.status);
+    chatRemoveThinking();
+    chatSetMascotState('typing');
+    _chatTyping = true;
+
+    var node = chatAppendMessage('bot', '');
+    var textEl = node ? node.querySelector('.chat-text') : null;
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buf = '';
+    var fullText = '';
+
+    function pump() {
+      return reader.read().then(function (r) {
+        if (r.done) return;
+        buf += decoder.decode(r.value, { stream: true });
+        // SSE 事件以兩個換行分隔
+        var parts = buf.split(/\n\n/);
+        buf = parts.pop();
+        for (var i = 0; i < parts.length; i++) {
+          var line = parts[i];
+          if (!line) continue;
+          // 取出 data: 後的 JSON
+          var idx = line.indexOf('data:');
+          if (idx < 0) continue;
+          var payload = line.slice(idx + 5).trim();
+          var obj = null;
+          try { obj = JSON.parse(payload); } catch (e) { continue; }
+          if (obj.delta && textEl) {
+            fullText += obj.delta;
+            textEl.innerHTML = chatEscape(fullText);
+            chatScrollToBottom();
+          }
+          if (obj.done) {
+            // 結束
+          }
+        }
+        return pump();
+      });
+    }
+
+    return pump().then(function () {
+      _chatTyping = false;
+      chatSetMascotState('idle');
+      var h = chatLoadHistory();
+      h.push({ role: 'bot', text: fullText || fallbackText || '', t: Date.now() });
+      chatSaveHistory(h);
+    });
+  }).catch(function (err) {
+    _chatTyping = false;
+    chatRemoveThinking();
+    chatSetMascotState('idle');
+    // 串流失敗 → 退回非串流的 chat
+    chatNonStreamFallback(body, fallbackText);
+  });
+}
+
+// 串流不通時的 fallback：用原本的 /xiaohe/chat 並以 typewriter 效果顯示
+function chatNonStreamFallback(body, fallbackText) {
   fetch(API + '/xiaohe/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
-    .then(function(r) { return r.json().catch(function() { return {}; }); })
-    .then(function(data) {
-      chatRemoveThinking();
+    .then(function (r) { return r.json().catch(function () { return {}; }); })
+    .then(function (data) {
       var reply = (data && data.reply) ? String(data.reply)
-        : '抱歉，小禾沒收到回覆，可以再說一次嗎？';
+        : (fallbackText || '網路有點忙，等一下再試試看。');
       var node = chatAppendMessage('bot', '');
       var textEl = node ? node.querySelector('.chat-text') : null;
       if (!textEl) return;
-      chatTypeInto(textEl, reply, {}, function() {
+      chatTypeInto(textEl, reply, {}, function () {
         var h = chatLoadHistory();
         h.push({ role: 'bot', text: reply, t: Date.now() });
         chatSaveHistory(h);
       });
     })
-    .catch(function() {
-      chatRemoveThinking();
-      var fallback = '網路有點忙，等一下再試試看。如果不舒服請就醫。';
+    .catch(function () {
       var node = chatAppendMessage('bot', '');
       var textEl = node ? node.querySelector('.chat-text') : null;
-      if (textEl) chatTypeInto(textEl, fallback);
+      if (textEl) chatTypeInto(textEl, '網路有點忙，等一下再試試看。');
     });
 }
 
@@ -4446,7 +4593,8 @@ function chatGenerateArticle() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       user_id: pid, message: prompt,
-      mode: chatGetMode(), version: chatGetVersion()
+      mode: chatGetMode(), version: chatGetVersion(),
+      history: chatBuildApiHistory(12)
     })
   })
     .then(function(r) { return r.json().catch(function() { return {}; }); })

@@ -1,11 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Literal
 from datetime import datetime, timedelta
+import json
 import logging
 
 from backend.db import get_supabase
-from backend.services.llm_service import call_claude
+from backend.services.llm_service import call_claude, stream_claude
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -54,11 +56,17 @@ XIAOHE_PERSONAS = {
 }
 
 
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
 class ChatRequest(BaseModel):
     user_id: str
     message: str
     mode: str = "patient"  # patient / family
     version: str = "normal"  # normal / elderly
+    history: Optional[List[ChatTurn]] = None  # 最近幾輪對話（不含本則）
 
 
 @router.post("/chat")
@@ -77,8 +85,13 @@ def chat_with_xiaohe(body: ChatRequest):
 
     system_prompt = XIAOHE_PERSONAS[persona_key]
 
+    # 把 history 限制在最近 12 輪，避免 token 爆掉
+    hist = None
+    if body.history:
+        hist = [{"role": t.role, "content": t.content} for t in body.history[-12:]]
+
     try:
-        reply = call_claude(system_prompt, body.message)
+        reply = call_claude(system_prompt, body.message, history=hist)
     except Exception as e:
         logger.error(f"Xiaohe chat failed: {e}")
         reply = "抱歉，小禾現在有點忙，等一下再聊好嗎？如果你有任何不舒服，記得跟醫師說喔！"
@@ -88,6 +101,45 @@ def chat_with_xiaohe(body: ChatRequest):
         "mode": body.mode,
         "version": body.version,
     }
+
+
+@router.post("/chat/stream")
+def chat_with_xiaohe_stream(body: ChatRequest):
+    """與小禾 AI 對話 — 串流版本（SSE）。每個事件是一段 token，最後送 done"""
+    if not body.message.strip():
+        raise HTTPException(status_code=400, detail="請輸入訊息")
+
+    if body.mode == "family":
+        persona_key = "family"
+    elif body.version == "elderly":
+        persona_key = "patient_elderly"
+    else:
+        persona_key = "patient_normal"
+    system_prompt = XIAOHE_PERSONAS[persona_key]
+
+    hist = None
+    if body.history:
+        hist = [{"role": t.role, "content": t.content} for t in body.history[-12:]]
+
+    def event_gen():
+        try:
+            for chunk in stream_claude(system_prompt, body.message, history=hist):
+                yield "data: " + json.dumps({"delta": chunk}, ensure_ascii=False) + "\n\n"
+            yield "data: " + json.dumps({"done": True}) + "\n\n"
+        except Exception as e:
+            logger.error(f"Xiaohe chat stream failed: {e}")
+            fallback = "抱歉，小禾現在有點忙，等一下再聊好嗎？"
+            yield "data: " + json.dumps({"delta": fallback}, ensure_ascii=False) + "\n\n"
+            yield "data: " + json.dumps({"done": True, "error": str(e)}) + "\n\n"
+
+    return StreamingResponse(
+        event_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",  # 關閉 nginx buffering
+        },
+    )
 
 
 @router.get("/emotion-summary/{patient_id}")
