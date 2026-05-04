@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet } from '../lib/api.js'
+import { fetchAllPatients } from '../lib/patients.js'
 import { patientPriority, ALERT_TYPE_LABEL } from '../lib/priority.js'
 import { fmtShort } from '../lib/format.js'
 
@@ -21,12 +22,12 @@ export default function PatientList() {
   useEffect(() => {
     let alive = true
     Promise.all([
-      apiGet('/patients/'),
-      apiGet('/alerts/', { resolved: false }),
+      fetchAllPatients(),
+      apiGet('/alerts/', { resolved: false }).catch(() => ({ alerts: [] })),
     ])
-      .then(([p, a]) => {
+      .then(([ps, a]) => {
         if (!alive) return
-        setPatients(p.patients ?? [])
+        setPatients(ps)
         const map = {}
         for (const al of a.alerts ?? []) {
           if (!map[al.patient_id]) map[al.patient_id] = []
@@ -62,6 +63,7 @@ export default function PatientList() {
       const q = search.trim().toLowerCase()
       r = r.filter((x) =>
         (x.name ?? '').toLowerCase().includes(q) ||
+        (x.username ?? '').toLowerCase().includes(q) ||
         (x.phone ?? '').toLowerCase().includes(q) ||
         (x.id ?? '').toLowerCase().includes(q)
       )
@@ -102,7 +104,7 @@ export default function PatientList() {
         </div>
         <input
           className="text-input"
-          placeholder="搜尋姓名、電話或 ID"
+          placeholder="搜尋姓名、帳號、電話或 ID"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

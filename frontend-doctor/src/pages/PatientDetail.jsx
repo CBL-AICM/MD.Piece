@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import {
   apiGet, apiPost, apiPut, apiDelete, getActiveDoctorId,
 } from '../lib/api.js'
+import { fetchPatientById } from '../lib/patients.js'
 import {
   ALERT_TYPE_LABEL, SEVERITY_LABEL, SEVERITY_TO_BADGE, patientPriority,
 } from '../lib/priority.js'
@@ -37,10 +38,10 @@ export default function PatientDetail() {
     setErr(null)
     try {
       const [p, a, n, r, em, ms, mc, sy] = await Promise.all([
-        apiGet(`/patients/${id}`),
-        apiGet('/alerts/', { patient_id: id }),
-        apiGet('/doctor-notes/', { patient_id: id }),
-        apiGet(`/records/patient/${id}`),
+        fetchPatientById(id),
+        apiGet('/alerts/', { patient_id: id }).catch(() => ({ alerts: [] })),
+        apiGet('/doctor-notes/', { patient_id: id }).catch(() => ({ notes: [] })),
+        apiGet(`/records/patient/${id}`).catch(() => ({ records: [] })),
         apiGet('/emotions/trend', { patient_id: id, days: 30 }).catch(() => ({ trend: [] })),
         apiGet('/medications/stats', { patient_id: id, days: 30 }).catch(() => null),
         apiGet('/medication-changes/', { patient_id: id }).catch(() => ({ changes: [] })),

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet, getApiBase } from '../lib/api.js'
+import { fetchAllPatients } from '../lib/patients.js'
 import {
   ALERT_TYPE_LABEL, SEVERITY_TO_BADGE, SEVERITY_LABEL, SEVERITY_RANK,
 } from '../lib/priority.js'
@@ -18,18 +19,18 @@ export default function Dashboard() {
   useEffect(() => {
     let alive = true
     Promise.all([
-      apiGet('/patients/'),
-      apiGet('/alerts/', { resolved: false }),
-      apiGet('/alerts/'),
-      apiGet('/doctor-notes/'),
+      fetchAllPatients(),
+      apiGet('/alerts/', { resolved: false }).catch(() => ({ alerts: [] })),
+      apiGet('/alerts/').catch(() => ({ alerts: [] })),
+      apiGet('/doctor-notes/').catch(() => ({ notes: [] })),
     ])
-      .then(([p, oa, a, n]) => {
+      .then(([ps, oa, a, n]) => {
         if (!alive) return
-        setPatients(p.patients ?? [])
+        setPatients(ps)
         setOpenAlerts(oa.alerts ?? [])
         setAllAlerts(a.alerts ?? [])
         setNotes(n.notes ?? [])
-        setBackend({ status: `已連線 · ${getApiBase()}`, ok: true })
+        setBackend({ status: `已連線 · ${getApiBase() || '同源'}`, ok: true })
       })
       .catch((e) => {
         if (!alive) return

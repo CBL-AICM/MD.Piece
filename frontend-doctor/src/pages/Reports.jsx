@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiGet } from '../lib/api.js'
+import { fetchAllPatients } from '../lib/patients.js'
 import TrendChart from '../components/TrendChart.jsx'
 
 const RANGES = [
@@ -18,10 +19,10 @@ export default function Reports() {
   const [err, setErr] = useState(null)
 
   useEffect(() => {
-    apiGet('/patients/')
-      .then((r) => {
-        setPatients(r.patients ?? [])
-        if (r.patients?.length && !patientId) setPatientId(r.patients[0].id)
+    fetchAllPatients()
+      .then((ps) => {
+        setPatients(ps)
+        if (ps.length && !patientId) setPatientId(ps[0].id)
       })
       .catch((e) => setErr(e.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,7 +91,9 @@ export default function Reports() {
         >
           {patients.length === 0 && <option value="">尚無患者</option>}
           {patients.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}（{p.age ?? '?'} 歲）</option>
+            <option key={p.id} value={p.id}>
+              {p.name}{p.age != null ? `（${p.age} 歲）` : ''}{p.username ? ` · @${p.username}` : ''}
+            </option>
           ))}
         </select>
         <div className="range-tabs">
