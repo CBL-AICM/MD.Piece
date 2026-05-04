@@ -2997,6 +2997,130 @@ var EDU_BOOKS = [
       { key: "sarcop",    label: "肌少症", desc: "蛋白質補充與阻力訓練" },
       { key: "polyphar",  label: "多重用藥", desc: "藥袋大整理與重複用藥" },
       { key: "advcare",   label: "預立醫療", desc: "ACP、AD 與安寧的選擇" }
+    ] },
+
+  // ── 第五層：精神系列 ──
+  { key: "psych_mood", title: "情緒障礙", nameEn: "Mood Disorders", tag: "Mood", color: "c-purple", size: "tall", icon: "cloud-rain",
+    shelf: 4, intro: "情緒不只是「想開一點」——是大腦化學物質的失衡，可以治療。",
+    topics: [
+      { key: "mdd",           label: "重度憂鬱症",     desc: "DSM-5 診斷、抗憂鬱藥、心理治療" },
+      { key: "persistent_dep",label: "持續性憂鬱症",   desc: "兩年以上的低落，不是性格問題" },
+      { key: "bipolar",       label: "雙相情緒障礙",   desc: "高低起伏與情緒穩定劑" },
+      { key: "seasonal",      label: "季節性情緒障礙", desc: "冬季憂鬱、光照治療" },
+      { key: "postpartum",    label: "產後憂鬱",       desc: "與產後情緒低落 baby blues 的差別" }
+    ] },
+  { key: "psych_anxiety", title: "焦慮譜系", nameEn: "Anxiety Spectrum", tag: "Anx", color: "c-rose", size: "tall", icon: "wind",
+    shelf: 4, intro: "焦慮不是膽小，是大腦的警報系統太敏感——可以調回正常音量。",
+    topics: [
+      { key: "gad",           label: "廣泛性焦慮症",   desc: "對所有事情都擔心個沒完" },
+      { key: "panic",         label: "恐慌症",         desc: "突發心悸、瀕死感的處理" },
+      { key: "social",        label: "社交焦慮症",     desc: "在人前說話、聚餐就崩潰" },
+      { key: "phobia",        label: "特定恐懼症",     desc: "怕蟲、怕高、怕針的暴露療法" },
+      { key: "ocd",           label: "強迫症 OCD",     desc: "強迫思考、強迫行為、ERP" },
+      { key: "ptsd",          label: "創傷後壓力症",   desc: "閃回、過度警覺、EMDR" }
+    ] },
+  { key: "psych_severe", title: "思覺失調與成癮", nameEn: "Psychosis & Addiction", tag: "Psy", color: "c-indigo", size: "tall", icon: "sparkles",
+    shelf: 4, intro: "幻覺、妄想、戒不掉的物質——都是大腦的疾病，不是道德問題。",
+    topics: [
+      { key: "schizophrenia", label: "思覺失調症",     desc: "幻覺、妄想、抗精神病藥" },
+      { key: "delusional",    label: "妄想症",         desc: "局部的、固定的錯誤信念" },
+      { key: "alcohol",       label: "酒癮戒治",       desc: "戒斷症狀與治療藥物" },
+      { key: "smoking",       label: "菸癮戒治",       desc: "戒菸門診、尼古丁替代、伐尼克蘭" },
+      { key: "sedative",      label: "安眠藥依賴",     desc: "苯二氮平類的減量計畫" }
+    ] },
+  { key: "psych_neurodev", title: "神經發展疾患", nameEn: "Neurodevelopmental", tag: "ND", color: "c-cyan", size: "tall", icon: "puzzle",
+    shelf: 4, intro: "從小到大跟著的大腦差異——自閉、ADHD 不是「長大就好」，但有方法好好相處。",
+    topics: [
+      { key: "asd_adult",     label: "成人自閉症光譜", desc: "高功能、亞斯伯格、社交特質與支持" },
+      { key: "adhd_adult",    label: "成人 ADHD",      desc: "拖延、衝動、注意力與藥物管理" },
+      { key: "tourette",      label: "妥瑞症",         desc: "抽動、聲音抽動、共病焦慮" },
+      { key: "id",            label: "智能發展障礙",   desc: "輕中重度的支持需求與資源" },
+      { key: "ld_adult",      label: "學習障礙",       desc: "閱讀、書寫、數學的特定學障" },
+      { key: "dcd",           label: "動作協調障礙",   desc: "笨手笨腳、書寫困難的辨識" }
+    ] },
+
+  // ── 第六層：小兒系列 ──
+  { key: "peds_common", title: "兒童常見病", nameEn: "Common Pediatric", tag: "Peds", color: "c-amber", size: "tall", icon: "thermometer",
+    shelf: 5, intro: "孩子的常見不舒服——這本書幫你判斷在家照顧 vs. 該去看醫生。",
+    topics: [
+      { key: "kid_fever",     label: "兒童發燒",       desc: "幾度算發燒、退燒藥、何時急診" },
+      { key: "ge_dehydration",label: "腸胃炎與脫水",   desc: "電解質補充、口服補液、警訊" },
+      { key: "uri",           label: "上呼吸道感染",   desc: "感冒、喉嚨痛、流感的辨別" },
+      { key: "om",            label: "中耳炎",         desc: "抗生素時機、反覆感染處理" },
+      { key: "ad_kid",        label: "異位性皮膚炎",   desc: "保濕、外用類固醇、避開誘因" }
+    ] },
+  { key: "peds_allergy", title: "過敏與氣喘", nameEn: "Allergy & Asthma", tag: "Allg", color: "c-cyan", size: "medium", icon: "wind",
+    shelf: 5, intro: "鼻塞、咳嗽、起疹子——孩子過敏不少見，可以從生活控制起來。",
+    topics: [
+      { key: "ar",            label: "鼻過敏",         desc: "鼻塞、流鼻水、抗組織胺與鼻噴劑" },
+      { key: "food_allergy",  label: "食物過敏",       desc: "蛋奶、花生、海鮮的辨識與處理" },
+      { key: "kid_asthma",    label: "兒童氣喘",       desc: "急救噴劑、保養藥、行動計畫" },
+      { key: "urticaria",     label: "蕁麻疹",         desc: "急性、慢性蕁麻疹的處理" },
+      { key: "atopic_triad",  label: "異位性三聯症",   desc: "氣喘 + 鼻過敏 + 異位性皮膚炎" }
+    ] },
+  { key: "peds_growth", title: "生長與發展", nameEn: "Growth & Development", tag: "G&D", color: "c-rose", size: "tall", icon: "baby",
+    shelf: 5, intro: "孩子長得好不好？這本書幫你對照里程碑、安排疫苗與營養。",
+    topics: [
+      { key: "growth_chart",  label: "身高體重曲線",   desc: "百分位、生長遲滯與性早熟" },
+      { key: "language",      label: "語言發展里程碑", desc: "1 歲、2 歲、3 歲該會的話" },
+      { key: "motor",         label: "動作發展",       desc: "翻身、爬、走、跑的關鍵期" },
+      { key: "kid_vaccine",   label: "兒童疫苗時程",   desc: "公費 + 自費的完整時程表" },
+      { key: "kid_nutrition", label: "副食品與飲食",   desc: "副食品銜接、挑食、肥胖" }
+    ] },
+  { key: "peds_mental", title: "兒童精神與學習", nameEn: "Pediatric Mental", tag: "PM", color: "c-pink", size: "medium", icon: "graduation-cap",
+    shelf: 5, intro: "上課坐不住、不講話、害怕上學——孩子的內心需要被看見。",
+    topics: [
+      { key: "kid_adhd",      label: "兒童 ADHD",      desc: "注意力、衝動、過動的評估與藥物" },
+      { key: "asd",           label: "自閉症光譜",     desc: "早期跡象、早療資源" },
+      { key: "ld",            label: "學習障礙",       desc: "讀寫、數學的特定學障" },
+      { key: "kid_anxiety",   label: "兒童焦慮",       desc: "分離焦慮、選擇性緘默" },
+      { key: "school_adapt",  label: "校園適應問題",   desc: "拒學、霸凌、轉學的支持" }
+    ] },
+
+  // ── 第七層：神經系列 ──
+  { key: "neuro_headache", title: "頭痛專區", nameEn: "Headache Care", tag: "HA", color: "c-rose", size: "tall", icon: "brain",
+    shelf: 6, intro: "頭痛分很多種——學會辨識，才知道該吃止痛藥還是衝急診。",
+    topics: [
+      { key: "migraine",      label: "偏頭痛",         desc: "前兆、誘因、急性與預防用藥" },
+      { key: "tth",           label: "緊張型頭痛",     desc: "肩頸僵硬與生活壓力" },
+      { key: "cluster",       label: "叢集型頭痛",     desc: "「自殺型頭痛」的辨識與治療" },
+      { key: "danger_ha",     label: "危險性頭痛",     desc: "忽然劇烈、伴神經學異常要急診" },
+      { key: "facial_palsy",  label: "顏面神經麻痺",   desc: "貝爾氏麻痺、類固醇黃金期" }
+    ] },
+  { key: "neuro_stroke", title: "腦血管疾病", nameEn: "Cerebrovascular", tag: "CVA", color: "c-red", size: "tall", icon: "droplet",
+    shelf: 6, intro: "中風是急症——黃金 3 小時，越早治療恢復越好。",
+    topics: [
+      { key: "ischemic",      label: "缺血性中風",     desc: "血栓溶解、取栓、黃金時間窗" },
+      { key: "hemorrhagic",   label: "出血性中風",     desc: "高血壓、動脈瘤的破裂風險" },
+      { key: "tia",           label: "短暫性缺血 TIA", desc: "「小中風」是大中風的警訊" },
+      { key: "stroke_rehab",  label: "中風復健",       desc: "黃金期、語言、吞嚥、肢體" },
+      { key: "stroke_prev",   label: "中風預防",       desc: "血壓、心房顫動、抗凝血藥" }
+    ] },
+  { key: "neuro_degen", title: "退化性神經疾病", nameEn: "Neurodegenerative", tag: "Deg", color: "c-amber", size: "medium", icon: "sunset",
+    shelf: 6, intro: "失智、帕金森不是必然的老化——早期介入能延緩很多。",
+    topics: [
+      { key: "alzheimer",     label: "阿茲海默失智",   desc: "記憶為主、Donepezil、Lecanemab" },
+      { key: "vascular_dem",  label: "血管型失智",     desc: "與中風相關，控好血管因子" },
+      { key: "lbd",           label: "路易氏體失智",   desc: "幻覺、運動障礙合併認知" },
+      { key: "parkinson",     label: "帕金森氏症",     desc: "顫抖、僵硬、慢動作與 L-dopa" },
+      { key: "als",           label: "漸凍症 ALS",     desc: "運動神經元退化的支持照護" }
+    ] },
+  { key: "neuro_epilepsy", title: "癲癇與神經免疫", nameEn: "Epilepsy & NeuroImmune", tag: "EpNI", color: "c-cyan", size: "medium", icon: "zap",
+    shelf: 6, intro: "突發抽搐或反覆發炎——神經系統也會有自己的「電」與「免疫」問題。",
+    topics: [
+      { key: "epi_dx",        label: "癲癇診斷與分類", desc: "局部、全身、腦電圖、影像" },
+      { key: "aed",           label: "抗癲癇用藥",     desc: "選藥原則與駕車規範" },
+      { key: "ms",            label: "多發性硬化症",   desc: "復發緩解、疾病修飾治療" },
+      { key: "auto_enc",      label: "自體免疫腦炎",   desc: "近年新發現的可治療腦炎" }
+    ] },
+  { key: "neuro_pain", title: "神經痛與周邊神經", nameEn: "Neuropathy", tag: "PN", color: "c-blue", size: "tall", icon: "network",
+    shelf: 6, intro: "麻、刺、燒灼的痛——那是神經本身在叫救命，跟肌肉酸痛不一樣。",
+    topics: [
+      { key: "dpn",           label: "糖尿病神經病變", desc: "腳麻、刺痛與血糖控制" },
+      { key: "tn",            label: "三叉神經痛",     desc: "臉部劇痛、Carbamazepine" },
+      { key: "phn",           label: "帶狀皰疹後神經痛", desc: "皮蛇後遺症與疫苗預防" },
+      { key: "cts",           label: "腕隧道症候群",   desc: "手麻、夜間加重、護腕與手術" },
+      { key: "cipn",          label: "化療後神經病變", desc: "癌友常見的麻痛照護" }
     ] }
 ];
 
@@ -3057,7 +3181,10 @@ function renderBookshelf() {
     { label: "Shelf 01 ・ 免疫專區", books: [] },
     { label: "Shelf 02 ・ 認識與辨識", books: [] },
     { label: "Shelf 03 ・ 治療與管理", books: [] },
-    { label: "Shelf 04 ・ 預防與支持", books: [] }
+    { label: "Shelf 04 ・ 預防與支持", books: [] },
+    { label: "Shelf 05 ・ 精神系列",   books: [] },
+    { label: "Shelf 06 ・ 小兒系列",   books: [] },
+    { label: "Shelf 07 ・ 神經系列",   books: [] }
   ];
   EDU_BOOKS.forEach(function(b) { shelves[b.shelf].books.push(b); });
 
