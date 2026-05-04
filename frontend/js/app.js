@@ -3026,8 +3026,17 @@ var EDU_BOOKS = [
       { key: "delusional",    label: "妄想症",         desc: "局部的、固定的錯誤信念" },
       { key: "alcohol",       label: "酒癮戒治",       desc: "戒斷症狀與治療藥物" },
       { key: "smoking",       label: "菸癮戒治",       desc: "戒菸門診、尼古丁替代、伐尼克蘭" },
-      { key: "sedative",      label: "安眠藥依賴",     desc: "苯二氮平類的減量計畫" },
-      { key: "adhd",          label: "ADHD 注意力不足",desc: "成人 ADHD、藥物與行為策略" }
+      { key: "sedative",      label: "安眠藥依賴",     desc: "苯二氮平類的減量計畫" }
+    ] },
+  { key: "psych_neurodev", title: "神經發展疾患", nameEn: "Neurodevelopmental", tag: "ND", color: "c-cyan", size: "tall", icon: "puzzle",
+    shelf: 4, intro: "從小到大跟著的大腦差異——自閉、ADHD 不是「長大就好」，但有方法好好相處。",
+    topics: [
+      { key: "asd_adult",     label: "成人自閉症光譜", desc: "高功能、亞斯伯格、社交特質與支持" },
+      { key: "adhd_adult",    label: "成人 ADHD",      desc: "拖延、衝動、注意力與藥物管理" },
+      { key: "tourette",      label: "妥瑞症",         desc: "抽動、聲音抽動、共病焦慮" },
+      { key: "id",            label: "智能發展障礙",   desc: "輕中重度的支持需求與資源" },
+      { key: "ld_adult",      label: "學習障礙",       desc: "閱讀、書寫、數學的特定學障" },
+      { key: "dcd",           label: "動作協調障礙",   desc: "笨手笨腳、書寫困難的辨識" }
     ] },
 
   // ── 第六層：小兒系列 ──
