@@ -6393,11 +6393,62 @@ html[data-mode="senior"] .visit-modal-save {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  overflow: hidden;
   background: #FCF7F0;
   border: 2px solid rgba(201,127,75,0.35);
   box-shadow: 0 2px 6px rgba(92,58,50,0.08);
   transform-origin: 50% 60%;
+  position: relative;
+  overflow: visible;
+}
+.chat-mascot-img-wrap > .chat-mascot-img {
+  border-radius: 50%;
+  overflow: hidden;
+}
+.chat-mascot-bubble {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  background: #FFFFFF;
+  border: 1.5px solid rgba(92,58,50,0.25);
+  border-radius: 12px;
+  padding: 4px 7px;
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(92,58,50,0.12);
+  animation: chat-bubble-pop 220ms ease-out;
+}
+.chat-mascot-bubble::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  background: #FFFFFF;
+  border-left: 1.5px solid rgba(92,58,50,0.25);
+  border-bottom: 1.5px solid rgba(92,58,50,0.25);
+  transform: rotate(45deg);
+  border-bottom-left-radius: 2px;
+}
+.chat-mascot-bubble i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #C97F4B;
+  display: inline-block;
+  animation: chat-dot 1.1s ease-in-out infinite;
+}
+.chat-mascot-bubble i:nth-child(2) { animation-delay: 0.18s; }
+.chat-mascot-bubble i:nth-child(3) { animation-delay: 0.36s; }
+.chat-mascot-thinking .chat-mascot-bubble i { background: #6B7E8A; }
+@keyframes chat-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30%           { transform: translateY(-3px); opacity: 1; }
+}
+@keyframes chat-bubble-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
 }
 .chat-mascot-img {
   width: 100%;

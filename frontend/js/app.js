@@ -4077,9 +4077,15 @@ function chatSetVersion(v) {
 function chatMascotSvg(state) {
   // state: 'idle' | 'typing' | 'thinking'
   state = state || 'idle';
+  var bubble = (state === 'typing' || state === 'thinking')
+    ? '<span class="chat-mascot-bubble" aria-hidden="true">'
+    +   '<i></i><i></i><i></i>'
+    + '</span>'
+    : '';
   return ''
     + '<div class="chat-mascot-img-wrap chat-mascot-' + state + '">'
     +   '<img src="icons/xiaohe.jpg" alt="小禾" class="chat-mascot-img" draggable="false" />'
+    +   bubble
     + '</div>';
 }
 
