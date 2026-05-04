@@ -32,6 +32,7 @@ except BaseException:
 # Production fallback：本專案的 Supabase publishable (anon) key 與 URL。
 # anon key 設計上就是公開的（前端 client-side 也會看到），commit 進 repo 沒
 # 安全風險；若有設環境變數則優先採用（典型情境是改用 service_role 以 bypass RLS）。
+# 對應的 Supabase migration: md_piece_full_schema_and_anon_access (RLS 已 disable)。
 _DEFAULT_SUPABASE_URL = "https://tbqvpqvvvgfgaezxbhkz.supabase.co"
 _DEFAULT_SUPABASE_KEY = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
