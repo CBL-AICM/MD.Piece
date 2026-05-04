@@ -1310,9 +1310,7 @@ function accountPage() {
   const roleIcon = u.role === 'doctor' ? 'stethoscope' : 'heart-pulse';
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
-    : `<span class="acct-avatar-fallback" style="background:${u.avatar_color || '#5B9FE8'}22;color:${u.avatar_color || '#5B9FE8'};border-color:${u.avatar_color || '#5B9FE8'}">
-         ${(u.nickname || '?').slice(0,1)}
-       </span>`;
+    : `<img src="icons/heko-avatar.svg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
   return `
     <section class="acct-wrap">
       <header class="acct-head">
