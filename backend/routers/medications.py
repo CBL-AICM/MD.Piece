@@ -326,6 +326,107 @@ def medication_stats(
     }
 
 
+CHECK_IN_INTERVAL_DAYS = 3
+
+
+@router.get("/check-in/due")
+def check_in_due(
+    patient_id: str = Query(...),
+    interval_days: int = Query(CHECK_IN_INTERVAL_DAYS, ge=1, le=30),
+):
+    """
+    服藥追蹤提醒：每 interval_days（預設 3 天）至少問一次。
+
+    回傳是否該觸發提醒、距離上次紀錄幾天、下次到期日。
+    判斷依據：medication_logs 的 taken_at 與 medication_effects 的 recorded_at 取最新者。
+    若該病患有開立藥物但從未紀錄，視為立即到期。
+    """
+    sb = get_supabase()
+
+    meds = (
+        sb.table("medications")
+        .select("id, active")
+        .eq("patient_id", patient_id)
+        .execute()
+        .data
+        or []
+    )
+    has_active_med = any(m.get("active", 1) for m in meds)
+    if not has_active_med:
+        return {
+            "due": False,
+            "reason": "no_active_medication",
+            "interval_days": interval_days,
+            "last_check_in": None,
+            "days_since_last": None,
+            "next_due_at": None,
+        }
+
+    last_log = (
+        sb.table("medication_logs")
+        .select("taken_at")
+        .eq("patient_id", patient_id)
+        .order("taken_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    last_effect = (
+        sb.table("medication_effects")
+        .select("recorded_at")
+        .eq("patient_id", patient_id)
+        .order("recorded_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+
+    candidates = []
+    if last_log:
+        candidates.append(last_log[0].get("taken_at"))
+    if last_effect:
+        candidates.append(last_effect[0].get("recorded_at"))
+    candidates = [c for c in candidates if c]
+
+    if not candidates:
+        return {
+            "due": True,
+            "reason": "never_logged",
+            "interval_days": interval_days,
+            "last_check_in": None,
+            "days_since_last": None,
+            "next_due_at": datetime.utcnow().isoformat(),
+            "message": "尚未填過服藥/療效紀錄，請完成首次回報。",
+        }
+
+    last_iso = max(candidates)
+    try:
+        last_dt = datetime.fromisoformat(last_iso.replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        last_dt = datetime.utcnow() - timedelta(days=interval_days + 1)
+
+    delta = datetime.utcnow() - last_dt
+    days_since = round(delta.total_seconds() / 86400, 2)
+    next_due = last_dt + timedelta(days=interval_days)
+    due = datetime.utcnow() >= next_due
+
+    return {
+        "due": due,
+        "reason": "interval_elapsed" if due else "within_interval",
+        "interval_days": interval_days,
+        "last_check_in": last_iso,
+        "days_since_last": days_since,
+        "next_due_at": next_due.isoformat(),
+        "message": (
+            f"距離上次紀錄已 {days_since} 天，請更新服藥/療效。"
+            if due
+            else f"下次請在 {next_due.date().isoformat()} 前再回報一次。"
+        ),
+    }
+
+
 @router.get("/daily-improvement")
 def daily_improvement(
     patient_id: str = Query(...),
