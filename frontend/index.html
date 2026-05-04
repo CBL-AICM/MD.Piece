@@ -236,6 +236,24 @@
     <div class="puzzle-deco puzzle-deco-1"></div>
     <div class="puzzle-deco puzzle-deco-2"></div>
 
+    <!-- Mobile faux status bar (phone-app feel) -->
+    <div class="mobile-statusbar" aria-hidden="true">
+      <span class="msb-time" id="msb-time">--:--</span>
+      <span class="msb-notch"></span>
+      <span class="msb-icons">
+        <span class="msb-sig"><i></i><i></i><i></i><i></i></span>
+        <span class="msb-wifi">
+          <svg viewBox="0 0 16 12" width="14" height="10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+            <path d="M1 4.2 A11 11 0 0 1 15 4.2"/>
+            <path d="M3.2 6.6 A8 8 0 0 1 12.8 6.6"/>
+            <path d="M5.6 9 A4.6 4.6 0 0 1 10.4 9"/>
+            <circle cx="8" cy="10.6" r="0.7" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="msb-batt"><i class="msb-batt-fill"></i></span>
+      </span>
+    </div>
+
     <!-- Sidebar backdrop (mobile) -->
     <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
@@ -335,6 +353,41 @@
       </div>
       <main id="app"></main>
     </div>
+
+    <!-- Mobile bottom tab bar (multi-layer phone-app navigation) -->
+    <nav class="mobile-tabbar" role="tablist" aria-label="主導覽">
+      <div class="mtab-rail"></div>
+      <button class="mtab" data-mtab="home" onclick="mobileTabTo('home', this)" type="button">
+        <span class="mtab-icon"><i data-lucide="home" style="width:20px;height:20px"></i></span>
+        <span class="mtab-label">首頁</span>
+        <span class="mtab-dot"></span>
+      </button>
+      <button class="mtab" data-mtab="symptoms" onclick="mobileTabTo('symptoms', this)" type="button">
+        <span class="mtab-icon"><i data-lucide="scan-search" style="width:20px;height:20px"></i></span>
+        <span class="mtab-label">症狀</span>
+        <span class="mtab-dot"></span>
+      </button>
+      <button class="mtab mtab-fab" data-mtab="quickadd" onclick="mobileQuickAdd(this)" type="button" aria-label="快速紀錄">
+        <span class="mtab-fab-ring"></span>
+        <span class="mtab-fab-core">
+          <i data-lucide="plus" style="width:22px;height:22px"></i>
+        </span>
+        <span class="mtab-fab-label">紀錄</span>
+      </button>
+      <button class="mtab" data-mtab="medications" onclick="mobileTabTo('medications', this)" type="button">
+        <span class="mtab-icon"><i data-lucide="pill" style="width:20px;height:20px"></i></span>
+        <span class="mtab-label">藥物</span>
+        <span class="mtab-dot"></span>
+      </button>
+      <button class="mtab" data-mtab="more" onclick="openMobileMore(this)" type="button">
+        <span class="mtab-icon"><i data-lucide="layers" style="width:20px;height:20px"></i></span>
+        <span class="mtab-label">更多</span>
+        <span class="mtab-dot"></span>
+      </button>
+    </nav>
+
+    <!-- Mobile home indicator (iOS-like stripe) -->
+    <span class="mobile-home-indicator" aria-hidden="true"></span>
   </div>
 
   <script src="js/app.js?v=home-next-visit-1"></script>
@@ -576,6 +629,65 @@
       document.getElementById('sidebar').classList.remove('open');
       document.getElementById('sidebar-backdrop').classList.remove('show');
     }
+
+    // ─── Mobile tab bar ──────────────────────────────────
+    function setActiveMobileTab(name) {
+      document.querySelectorAll('.mtab').forEach(b => {
+        b.classList.toggle('active', b.dataset.mtab === name);
+      });
+    }
+
+    function mobileTabTo(page, btn) {
+      setActiveMobileTab(btn ? btn.dataset.mtab : page);
+      navigateTo(page, null);
+    }
+
+    function mobileQuickAdd(btn) {
+      // FAB animation pulse
+      if (btn) {
+        btn.classList.remove('pulse');
+        void btn.offsetWidth;
+        btn.classList.add('pulse');
+      }
+      // Default quick action: jump into 症狀紀錄 page (most common entry)
+      setActiveMobileTab('symptoms');
+      navigateTo('symptoms', null);
+    }
+
+    function openMobileMore(btn) {
+      setActiveMobileTab('more');
+      // Reuse existing sidebar as the "更多" sheet
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('sidebar-backdrop').classList.add('show');
+    }
+
+    // Sync mobile tab highlight with page changes from anywhere
+    (function syncMobileTabs() {
+      const map = { home:'home', symptoms:'symptoms', medications:'medications' };
+      const orig = window.showPage;
+      if (typeof orig === 'function') {
+        window.showPage = function(p) {
+          orig.apply(this, arguments);
+          const tab = map[p] || null;
+          if (tab) setActiveMobileTab(tab);
+          else document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+        };
+      }
+    })();
+
+    // ─── Mobile status bar clock ─────────────────────────
+    (function mobileClock() {
+      function tick() {
+        const t = document.getElementById('msb-time');
+        if (!t) return;
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        t.textContent = hh + ':' + mm;
+      }
+      tick();
+      setInterval(tick, 30000);
+    })();
 
     // ─── Service Worker (aggressive auto-update) ──────────
     if ("serviceWorker" in navigator) {
