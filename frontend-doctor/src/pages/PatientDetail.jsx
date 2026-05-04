@@ -12,6 +12,7 @@ import TrendChart from '../components/TrendChart.jsx'
 const TABS = [
   { key: 'overview', label: '快速預覽' },
   { key: 'timeline', label: '時間軸' },
+  { key: 'symptoms', label: '症狀分析' },
   { key: 'medications', label: '用藥' },
   { key: 'alerts', label: '警示' },
   { key: 'notes', label: '醫師備註' },
@@ -27,6 +28,7 @@ export default function PatientDetail() {
   const [emotionTrend, setEmotionTrend] = useState([])
   const [medStats, setMedStats] = useState(null)
   const [medChanges, setMedChanges] = useState([])
+  const [symptoms, setSymptoms] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
 
@@ -34,7 +36,7 @@ export default function PatientDetail() {
     setLoading(true)
     setErr(null)
     try {
-      const [p, a, n, r, em, ms, mc] = await Promise.all([
+      const [p, a, n, r, em, ms, mc, sy] = await Promise.all([
         apiGet(`/patients/${id}`),
         apiGet('/alerts/', { patient_id: id }),
         apiGet('/doctor-notes/', { patient_id: id }),
@@ -42,6 +44,7 @@ export default function PatientDetail() {
         apiGet('/emotions/trend', { patient_id: id, days: 30 }).catch(() => ({ trend: [] })),
         apiGet('/medications/stats', { patient_id: id, days: 30 }).catch(() => null),
         apiGet('/medication-changes/', { patient_id: id }).catch(() => ({ changes: [] })),
+        apiGet(`/symptoms/history/${id}`).catch(() => ({ history: [] })),
       ])
       setPatient(p)
       setAlerts(a.alerts ?? [])
@@ -50,6 +53,7 @@ export default function PatientDetail() {
       setEmotionTrend(em.trend ?? [])
       setMedStats(ms)
       setMedChanges(mc.changes ?? [])
+      setSymptoms(sy.history ?? [])
     } catch (e) {
       setErr(e.message)
     } finally {
@@ -147,6 +151,7 @@ export default function PatientDetail() {
         />
       )}
       {tab === 'timeline' && <TimelinePanel records={records} alerts={alerts} notes={notes} medChanges={medChanges} />}
+      {tab === 'symptoms' && <SymptomsPanel symptoms={symptoms} />}
       {tab === 'medications' && <MedicationsPanel medStats={medStats} medChanges={medChanges} />}
       {tab === 'alerts' && <AlertsPanel alerts={alerts} onChanged={reload} />}
       {tab === 'notes' && <NotesPanel patientId={id} notes={notes} onChanged={reload} />}
@@ -374,6 +379,50 @@ function MedicationsPanel({ medStats, medChanges }) {
         )}
       </div>
     </>
+  )
+}
+
+// ─── 症狀分析 ─────────────────────────────────────────────
+
+function SymptomsPanel({ symptoms }) {
+  if (!symptoms || symptoms.length === 0) {
+    return <div className="placeholder">尚無症狀分析紀錄</div>
+  }
+  const sorted = [...symptoms].sort(
+    (a, b) => new Date(b.created_at ?? 0) - new Date(a.created_at ?? 0),
+  )
+  return (
+    <div className="symptom-list">
+      {sorted.map((s) => {
+        const ai = s.ai_response || {}
+        const tags = Array.isArray(s.symptoms) ? s.symptoms : []
+        const summary = ai.summary || ai.assessment || ai.advice || ''
+        const possible = Array.isArray(ai.possible_conditions) ? ai.possible_conditions : []
+        const urgency = ai.urgency || ai.triage_level
+        const recommend = ai.recommendation || ai.suggestion
+        return (
+          <div key={s.id} className="card symptom-card">
+            <div className="symptom-head">
+              <span className="cell-dim">{fmtDate(s.created_at, true)} · {relativeTime(s.created_at)}</span>
+              {urgency && <span className={`badge ${urgency === 'high' || urgency === 'critical' ? 'err' : urgency === 'low' ? 'ok' : 'warn'}`}>{urgency}</span>}
+            </div>
+            {tags.length > 0 && (
+              <div className="symptom-tags">
+                {tags.map((t, i) => (<span key={i} className="badge">{t}</span>))}
+              </div>
+            )}
+            {summary && <p className="symptom-summary">{summary}</p>}
+            {possible.length > 0 && (
+              <div className="symptom-possible">
+                <strong>可能狀況：</strong>
+                <span className="cell-dim">{possible.map((c) => (typeof c === 'string' ? c : c?.name || c?.condition)).filter(Boolean).join('、')}</span>
+              </div>
+            )}
+            {recommend && <p className="symptom-recommend"><strong>建議：</strong>{recommend}</p>}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
