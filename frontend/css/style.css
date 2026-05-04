@@ -6390,59 +6390,36 @@ html[data-mode="senior"] .visit-modal-save {
   width: 100%;
   height: 100%;
   display: inline-flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   background: transparent;
-  transform-origin: 50% 80%;
+  transform-origin: 50% 60%;
   position: relative;
   overflow: visible;
 }
-.chat-mascot-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  filter: drop-shadow(0 1px 2px rgba(92,58,50,0.10));
+.chat-mascot-ascii {
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", "Menlo", "Consolas", monospace;
+  font-size: 16px;
+  line-height: 1.05;
+  color: #BAB1AA;
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+  text-align: left;
+  letter-spacing: 0;
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
 }
-.chat-mascot-svg .chat-mascot-spark {
-  transform-origin: 60px 100px;
-  transform-box: fill-box;
+.chat-mascot-wrap-lg .chat-mascot-ascii { font-size: 22px; line-height: 1.05; }
+.chat-mascot-ascii .chat-mascot-spark {
+  color: #C97F4B;
+  display: inline-block;
   animation: chat-spark 2.4s ease-in-out infinite;
 }
-.chat-mascot-typing .chat-mascot-svg .chat-mascot-spark { animation-duration: 0.8s; }
+.chat-mascot-typing .chat-mascot-ascii .chat-mascot-spark { animation-duration: 0.5s; }
 @keyframes chat-spark {
-  0%, 100% { transform: rotate(0deg) scale(1);   opacity: 0.85; }
-  50%      { transform: rotate(45deg) scale(1.15); opacity: 1; }
-}
-.chat-mascot-svg .chat-mascot-ear-l { transform-origin: 42px 56px; }
-.chat-mascot-svg .chat-mascot-ear-r { transform-origin: 78px 56px; }
-.chat-mascot-svg .chat-mascot-ear-l { animation: chat-ear-l 5.2s ease-in-out infinite; }
-.chat-mascot-svg .chat-mascot-ear-r { animation: chat-ear-r 5.2s ease-in-out infinite; }
-.chat-mascot-typing  .chat-mascot-svg .chat-mascot-ear-l,
-.chat-mascot-typing  .chat-mascot-svg .chat-mascot-ear-r { animation-duration: 1.2s; }
-.chat-mascot-svg .chat-mascot-blush { animation: chat-blush 4s ease-in-out infinite; transform-origin: center; }
-.chat-mascot-svg .chat-mascot-paw-l { transform-origin: 35px 90px; }
-.chat-mascot-svg .chat-mascot-paw-r { transform-origin: 85px 90px; }
-.chat-mascot-typing  .chat-mascot-svg .chat-mascot-paw-l { animation: chat-paw-l 0.8s ease-in-out infinite; }
-.chat-mascot-typing  .chat-mascot-svg .chat-mascot-paw-r { animation: chat-paw-r 0.8s ease-in-out infinite; }
-@keyframes chat-ear-l {
-  0%, 100% { transform: rotate(0deg); }
-  50%      { transform: rotate(-7deg); }
-}
-@keyframes chat-ear-r {
-  0%, 100% { transform: rotate(0deg); }
-  50%      { transform: rotate(7deg); }
-}
-@keyframes chat-blush {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 0.9; }
-}
-@keyframes chat-paw-l {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50%      { transform: translateY(-2px) rotate(-6deg); }
-}
-@keyframes chat-paw-r {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50%      { transform: translateY(-2px) rotate(6deg); }
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.2); }
 }
 .chat-mascot-bubble {
   position: absolute;

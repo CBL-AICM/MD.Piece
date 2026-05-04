@@ -4073,55 +4073,26 @@ function chatSetVersion(v) {
   try { localStorage.setItem(CHAT_VERSION_KEY, v); } catch (e) {}
 }
 
-// 小禾吉祥物 — Claude Code 風：灰色細線，單一橘色重點
+// 小禾吉祥物 — Claude Code 風 ASCII 顏文字兔
 function chatMascotSvg(state) {
   // state: 'idle' | 'typing' | 'thinking'
   state = state || 'idle';
-  var bubble = (state === 'typing' || state === 'thinking')
-    ? '<span class="chat-mascot-bubble" aria-hidden="true">'
-    +   '<i></i><i></i><i></i>'
-    + '</span>'
-    : '';
-  var stroke = '#6B635E';
-  var sw = '1.6';
-  var accent = '#C97F4B';
-  var svg = ''
-    + '<svg class="chat-mascot-svg" viewBox="0 0 120 138" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round">'
-    // 身體
-    +   '<ellipse cx="60" cy="102" rx="32" ry="27"/>'
-    // 腳
-    +   '<ellipse cx="42" cy="125" rx="10" ry="5"/>'
-    +   '<ellipse cx="78" cy="125" rx="10" ry="5"/>'
-    // 前手
-    +   '<ellipse class="chat-mascot-paw chat-mascot-paw-l" cx="35" cy="94" rx="7.5" ry="10.5"/>'
-    +   '<ellipse class="chat-mascot-paw chat-mascot-paw-r" cx="85" cy="94" rx="7.5" ry="10.5"/>'
-    // 左耳
-    +   '<g class="chat-mascot-ear chat-mascot-ear-l">'
-    +     '<path d="M36 12 C27 22 25 44 33 58 L48 56 C44 38 44 20 48 10 Z"/>'
-    +     '<path d="M40 22 C36 32 36 46 40 53" stroke="' + accent + '" stroke-width="1.4"/>'
-    +   '</g>'
-    // 右耳
-    +   '<g class="chat-mascot-ear chat-mascot-ear-r">'
-    +     '<path d="M84 12 C93 22 95 44 87 58 L72 56 C76 38 76 20 72 10 Z"/>'
-    +     '<path d="M80 22 C84 32 84 46 80 53" stroke="' + accent + '" stroke-width="1.4"/>'
-    +   '</g>'
-    // 頭
-    +   '<ellipse cx="60" cy="62" rx="29" ry="26"/>'
-    // 眼睛（細線瞇瞇眼）
-    +   '<path class="chat-mascot-eye chat-mascot-eye-l" d="M45 60 Q49 63 53 60"/>'
-    +   '<path class="chat-mascot-eye chat-mascot-eye-r" d="M67 60 Q71 63 75 60"/>'
-    // 鼻 + 微笑
-    +   '<path d="M58 68 L62 68 L60 70.5 Z" fill="' + stroke + '"/>'
-    +   '<path class="chat-mascot-mouth" d="M60 70.5 Q57 73 55 72 M60 70.5 Q63 73 65 72"/>'
-    // Claude Code 標誌：身上一個小橘星（提示這是 AI）
-    +   '<g class="chat-mascot-spark" transform="translate(60 100)">'
-    +     '<path d="M0 -6 L1.6 -1.6 L6 0 L1.6 1.6 L0 6 L-1.6 1.6 L-6 0 L-1.6 -1.6 Z" fill="' + accent + '" stroke="none"/>'
-    +   '</g>'
-    + '</svg>';
+  // 三行：耳朵、臉、手＋愛心
+  var face;
+  if (state === 'typing')        face = '( •ω•)';
+  else if (state === 'thinking') face = '( -ㅅ-)';
+  else                            face = '( •ㅅ•)';
+  var tail;
+  if (state === 'typing')        tail = '<span class="chat-mascot-spark">▍</span>';
+  else if (state === 'thinking') tail = '<span class="chat-mascot-spark">?</span>';
+  else                            tail = '<span class="chat-mascot-spark">♥</span>';
+  var ascii = ''
+    + ' (\\(\\\n'
+    + ' ' + face + '\n'
+    + ' (  づ';
   return ''
     + '<div class="chat-mascot-img-wrap chat-mascot-' + state + '">'
-    +   svg
-    +   bubble
+    +   '<pre class="chat-mascot-ascii" aria-label="小禾">' + ascii + tail + '</pre>'
     + '</div>';
 }
 
