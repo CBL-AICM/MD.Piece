@@ -413,6 +413,12 @@ function previsit() {
     + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
     + '        <i data-lucide="refresh-cw"></i> 重新生成'
     + '      </button>'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'pdf\')" title="下載 PDF（會開啟列印視窗，請選擇「另存為 PDF」）">'
+    + '        <i data-lucide="file-down"></i> 下載 PDF'
+    + '      </button>'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'doc\')" title="下載 Word（.doc）">'
+    + '        <i data-lucide="file-text"></i> 下載 Word'
+    + '      </button>'
     + '      <button class="pv-btn pv-btn-primary" onclick="previsitCopy()" title="複製為純文字帶去診間">'
     + '        <i data-lucide="clipboard-copy"></i> 複製給醫師'
     + '      </button>'
@@ -606,6 +612,111 @@ function previsitFallbackCopy(text) {
   try { document.execCommand('copy'); } catch (e) {}
   document.body.removeChild(ta);
   if (typeof showToast === 'function') showToast('已複製', 'success');
+}
+
+// 下載 PDF / Word：先抓 patient-summary（300–500 字白話摘要），
+// 再用 HTML 包成可列印的版面 → PDF 走 window.print()，Word 走 .doc Blob
+function previsitDownload(format) {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) {
+    if (typeof showToast === 'function') showToast('找不到使用者，請先登入', 'warning');
+    return;
+  }
+  if (typeof showToast === 'function') showToast('AI 撰寫中，請稍候…', 'info');
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var summary = (data && data.summary) || '（暫無摘要）';
+      var counts = (data && data.raw_data) || {};
+      var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
+      var html = previsitBuildPrintableHTML(summary, counts, checklist);
+      if (format === 'doc') {
+        previsitDownloadDoc(html);
+      } else {
+        previsitOpenPrint(html);
+      }
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('產生報告失敗，請稍後再試', 'error');
+    });
+}
+
+function previsitBuildPrintableHTML(summary, counts, checklist) {
+  var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  var paragraphs = String(summary).split(/\n\s*\n/).map(function(p) {
+    return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+  var checklistHtml = checklist.length
+    ? '<ol>' + checklist.map(function(t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ol>'
+    : '<p style="color:#888">（暫無）</p>';
+  var statsHtml = ''
+    + '<table class="stats"><tr>'
+    +   '<td><strong>' + (counts.symptom_count || 0) + '</strong><span>症狀紀錄</span></td>'
+    +   '<td><strong>' + (counts.emotion_count || 0) + '</strong><span>情緒紀錄</span></td>'
+    +   '<td><strong>' + (counts.medication_count || 0) + '</strong><span>用藥</span></td>'
+    +   '<td><strong>' + (counts.visit_count || 0) + '</strong><span>就診</span></td>'
+    + '</tr></table>';
+
+  return ''
+    + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
+    + '<title>MD.Piece 診前報告 ' + dateStr + '</title>'
+    + '<style>'
+    + '  @page { size: A4; margin: 18mm 16mm; }'
+    + '  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color: #222; line-height: 1.75; font-size: 14px; }'
+    + '  h1 { font-size: 22px; margin: 0 0 4px; }'
+    + '  .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
+    + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
+    + '  p { margin: 0 0 10px; }'
+    + '  ol { padding-left: 22px; margin: 0; }'
+    + '  ol li { margin-bottom: 6px; }'
+    + '  table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }'
+    + '  table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
+    + '  table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
+    + '  table.stats td span { font-size: 11px; color: #666; }'
+    + '  .footer { margin-top: 28px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 11px; color: #888; }'
+    + '</style></head><body>'
+    + '<h1>診前報告</h1>'
+    + '<div class="meta">產出日期：' + dateStr + ' · 由 MD.Piece 整理過去 30 天的紀錄</div>'
+    + '<h2>近 30 天紀錄概覽</h2>'
+    + statsHtml
+    + '<h2>給醫師的話（患者整理）</h2>'
+    + paragraphs
+    + '<h2>這次想請醫師確認的事</h2>'
+    + checklistHtml
+    + '<div class="footer">本報告由 AI 整理患者自行輸入的紀錄，僅供醫病溝通參考，不取代醫師診斷。</div>'
+    + '</body></html>';
+}
+
+function previsitOpenPrint(html) {
+  var w = window.open('', '_blank');
+  if (!w) {
+    if (typeof showToast === 'function') showToast('瀏覽器擋掉了新視窗，請允許彈出視窗', 'warning');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // 等資源載入再開列印對話框
+  w.onload = function() {
+    setTimeout(function() {
+      try { w.focus(); w.print(); } catch (e) {}
+    }, 250);
+  };
+}
+
+function previsitDownloadDoc(html) {
+  // Word 可以直接讀 HTML，副檔名用 .doc + application/msword
+  var blob = new Blob(['﻿', html], { type: 'application/msword' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'MD.Piece-診前報告-' + new Date().toISOString().slice(0, 10) + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  if (typeof showToast === 'function') showToast('已開始下載 Word 檔', 'success');
 }
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 function labs() {
