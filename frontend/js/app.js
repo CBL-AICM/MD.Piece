@@ -4073,7 +4073,7 @@ function chatSetVersion(v) {
   try { localStorage.setItem(CHAT_VERSION_KEY, v); } catch (e) {}
 }
 
-// 小禾吉祥物 — 使用實際手繪圖（icons/xiaohe.jpg）
+// 小禾吉祥物 — 繪本風圓兔子（灰身、紅內耳、深咖啡描邊）
 function chatMascotSvg(state) {
   // state: 'idle' | 'typing' | 'thinking'
   state = state || 'idle';
@@ -4082,9 +4082,65 @@ function chatMascotSvg(state) {
     +   '<i></i><i></i><i></i>'
     + '</span>'
     : '';
+  var svg = ''
+    + '<svg class="chat-mascot-svg" viewBox="0 0 120 138" xmlns="http://www.w3.org/2000/svg">'
+    +   '<defs>'
+    +     '<radialGradient id="hekoFur" cx="50%" cy="32%" r="72%">'
+    +       '<stop offset="0%"  stop-color="#E4DCD4"/>'
+    +       '<stop offset="55%" stop-color="#BAB1AA"/>'
+    +       '<stop offset="100%" stop-color="#7E7670"/>'
+    +     '</radialGradient>'
+    +     '<radialGradient id="hekoEar" cx="50%" cy="50%" r="60%">'
+    +       '<stop offset="0%"  stop-color="#F58576"/>'
+    +       '<stop offset="100%" stop-color="#B83A2E"/>'
+    +     '</radialGradient>'
+    +     '<linearGradient id="hekoBib" x1="0" y1="0" x2="0" y2="1">'
+    +       '<stop offset="0%"  stop-color="#6E655F"/>'
+    +       '<stop offset="100%" stop-color="#463F3B"/>'
+    +     '</linearGradient>'
+    +   '</defs>'
+    // 身體
+    +   '<ellipse cx="60" cy="102" rx="33" ry="28" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.6" stroke-linejoin="round"/>'
+    // 腳掌
+    +   '<ellipse cx="42" cy="126" rx="11" ry="6" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.2"/>'
+    +   '<ellipse cx="78" cy="126" rx="11" ry="6" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.2"/>'
+    +   '<ellipse cx="42" cy="126" rx="5" ry="2.4" fill="#F2A6A6" opacity="0.55"/>'
+    +   '<ellipse cx="78" cy="126" rx="5" ry="2.4" fill="#F2A6A6" opacity="0.55"/>'
+    // 前手
+    +   '<ellipse class="chat-mascot-paw chat-mascot-paw-l" cx="35" cy="94" rx="8" ry="11" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.2"/>'
+    +   '<ellipse class="chat-mascot-paw chat-mascot-paw-r" cx="85" cy="94" rx="8" ry="11" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.2"/>'
+    // 圍兜
+    +   '<path d="M40 82 Q60 96 80 82 Q78 100 60 104 Q42 100 40 82 Z" fill="url(#hekoBib)" opacity="0.85" stroke="#3A2A24" stroke-width="1.6" stroke-linejoin="round"/>'
+    // 左耳
+    +   '<g class="chat-mascot-ear chat-mascot-ear-l">'
+    +     '<path d="M36 10 C26 22 24 44 32 58 L48 56 C44 38 44 20 48 8 Z" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'
+    +     '<path d="M40 22 C36 32 36 46 40 54 L46 52 C44 40 44 26 47 18 Z" fill="url(#hekoEar)"/>'
+    +   '</g>'
+    // 右耳
+    +   '<g class="chat-mascot-ear chat-mascot-ear-r">'
+    +     '<path d="M84 10 C94 22 96 44 88 58 L72 56 C76 38 76 20 72 8 Z" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'
+    +     '<path d="M80 22 C84 32 84 46 80 54 L74 52 C76 40 76 26 73 18 Z" fill="url(#hekoEar)"/>'
+    +   '</g>'
+    // 頭
+    +   '<ellipse cx="60" cy="62" rx="30" ry="27" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.6"/>'
+    // 兩側臉頰絨毛
+    +   '<path d="M30 70 Q24 76 30 82 Q34 76 34 72 Z" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2"/>'
+    +   '<path d="M90 70 Q96 76 90 82 Q86 76 86 72 Z" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2"/>'
+    // 眼睛（圓點）
+    +   '<ellipse class="chat-mascot-eye chat-mascot-eye-l" cx="49" cy="60" rx="2.8" ry="3.4" fill="#2A1F1A"/>'
+    +   '<ellipse class="chat-mascot-eye chat-mascot-eye-r" cx="71" cy="60" rx="2.8" ry="3.4" fill="#2A1F1A"/>'
+    +   '<circle cx="49.6" cy="58.6" r="0.9" fill="#FFFFFF"/>'
+    +   '<circle cx="71.6" cy="58.6" r="0.9" fill="#FFFFFF"/>'
+    // 鼻 + 微笑
+    +   '<path d="M58 68 L62 68 L60 71 Z" fill="#3A2A24"/>'
+    +   '<path class="chat-mascot-mouth" d="M60 71 Q57 74.5 54 73.2 M60 71 Q63 74.5 66 73.2" stroke="#3A2A24" stroke-width="1.7" fill="none" stroke-linecap="round"/>'
+    // 腮紅
+    +   '<ellipse class="chat-mascot-blush" cx="38" cy="68" rx="4.2" ry="2.5" fill="#F2A6A6" opacity="0.7"/>'
+    +   '<ellipse class="chat-mascot-blush" cx="82" cy="68" rx="4.2" ry="2.5" fill="#F2A6A6" opacity="0.7"/>'
+    + '</svg>';
   return ''
     + '<div class="chat-mascot-img-wrap chat-mascot-' + state + '">'
-    +   '<img src="icons/xiaohe.jpg" alt="小禾" class="chat-mascot-img" draggable="false" />'
+    +   svg
     +   bubble
     + '</div>';
 }
