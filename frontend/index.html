@@ -2,8 +2,9 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0B1426" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#F8FBFD" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0B1426" media="(prefers-color-scheme: dark)" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   <link rel="manifest" href="manifest.json" />
@@ -189,11 +190,68 @@
     <!-- Main content area -->
     <div class="main-content">
       <div class="topbar">
-        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="選單">
+          <i data-lucide="menu" style="width:22px;height:22px"></i>
+        </button>
         <h2 id="page-title">首頁</h2>
-        <span style="font-size:.75rem;color:var(--text-muted)">v2.0</span>
+        <button class="topbar-action" onclick="navigateTo('contributors', null)" aria-label="關於">
+          <i data-lucide="info" style="width:20px;height:20px"></i>
+        </button>
       </div>
       <main id="app"></main>
+    </div>
+
+    <!-- Mobile bottom tab bar (shown only on small screens) -->
+    <nav class="bottom-nav" id="bottom-nav" aria-label="主要導航">
+      <button class="bnav-item active" data-page="home" onclick="navigateBottom('home', this)">
+        <i data-lucide="home" class="bnav-icon"></i>
+        <span class="bnav-label">首頁</span>
+      </button>
+      <button class="bnav-item" data-page="symptoms" onclick="navigateBottom('symptoms', this)">
+        <i data-lucide="scan-search" class="bnav-icon"></i>
+        <span class="bnav-label">症狀</span>
+      </button>
+      <button class="bnav-item bnav-center" data-page="medications" onclick="navigateBottom('medications', this)">
+        <span class="bnav-fab"><i data-lucide="pill" style="width:24px;height:24px"></i></span>
+        <span class="bnav-label">藥物</span>
+      </button>
+      <button class="bnav-item" data-page="education" onclick="navigateBottom('education', this)">
+        <i data-lucide="book-heart" class="bnav-icon"></i>
+        <span class="bnav-label">衛教</span>
+      </button>
+      <button class="bnav-item" data-page="__more" onclick="openMoreSheet()">
+        <i data-lucide="more-horizontal" class="bnav-icon"></i>
+        <span class="bnav-label">更多</span>
+      </button>
+    </nav>
+
+    <!-- Mobile "more" bottom sheet -->
+    <div class="sheet-backdrop" id="sheet-backdrop" onclick="closeMoreSheet()"></div>
+    <div class="more-sheet" id="more-sheet" role="dialog" aria-label="更多功能">
+      <div class="more-sheet-handle"></div>
+      <div class="more-sheet-title">更多功能</div>
+      <div class="more-sheet-grid">
+        <button class="more-cell" data-page="records" onclick="navigateBottom('records', null); closeMoreSheet()">
+          <span class="more-cell-icon"><i data-lucide="clipboard-list"></i></span>
+          <span>病歷管理</span>
+        </button>
+        <button class="more-cell" data-page="doctors" onclick="navigateBottom('doctors', null); closeMoreSheet()">
+          <span class="more-cell-icon"><i data-lucide="stethoscope"></i></span>
+          <span>醫師列表</span>
+        </button>
+        <button class="more-cell" data-page="patients" onclick="navigateBottom('patients', null); closeMoreSheet()">
+          <span class="more-cell-icon"><i data-lucide="users"></i></span>
+          <span>病患管理</span>
+        </button>
+        <button class="more-cell" data-page="research" onclick="navigateBottom('research', null); closeMoreSheet()">
+          <span class="more-cell-icon"><i data-lucide="flask-conical"></i></span>
+          <span>自動研究</span>
+        </button>
+        <button class="more-cell" data-page="contributors" onclick="navigateBottom('contributors', null); closeMoreSheet()">
+          <span class="more-cell-icon"><i data-lucide="heart-handshake"></i></span>
+          <span>貢獻者</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -315,9 +373,31 @@
     function navigateTo(page, btn) {
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
+      // Sync sidebar nav item even when triggered from bottom-nav / sheet
+      if (!btn) {
+        const sideBtn = Array.from(document.querySelectorAll('.sidebar .nav-item'))
+          .find(b => (b.getAttribute('onclick')||'').includes(`'${page}'`));
+        if (sideBtn) sideBtn.classList.add('active');
+      }
+      // Sync bottom-nav active
+      document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+      const bn = document.querySelector(`.bnav-item[data-page="${page}"]`);
+      if (bn) bn.classList.add('active');
       document.getElementById('page-title').textContent = pageTitles[page] || page;
       showPage(page);
       closeSidebar();
+      // Scroll content to top — feels more like a native app screen change
+      const main = document.querySelector('.main-content');
+      if (main) main.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
+    function navigateBottom(page, btn) {
+      navigateTo(page, null);
+      if (btn) {
+        document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
     }
 
     function toggleSidebar() {
@@ -328,6 +408,15 @@
     function closeSidebar() {
       document.getElementById('sidebar').classList.remove('open');
       document.getElementById('sidebar-backdrop').classList.remove('show');
+    }
+
+    function openMoreSheet() {
+      document.getElementById('more-sheet').classList.add('open');
+      document.getElementById('sheet-backdrop').classList.add('show');
+    }
+    function closeMoreSheet() {
+      document.getElementById('more-sheet').classList.remove('open');
+      document.getElementById('sheet-backdrop').classList.remove('show');
     }
 
     // ─── Service Worker (aggressive auto-update) ──────────
