@@ -16,7 +16,8 @@
       "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__get_project_url",
       "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__get_publishable_keys",
       "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__list_tables",
-      "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__apply_migration"
+      "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__apply_migration",
+      "mcp__d8e8d98c-f4fa-4123-ad9c-2730c1d1f021__deploy_to_vercel"
     ]
   }
 }
