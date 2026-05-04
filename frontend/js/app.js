@@ -3093,6 +3093,7 @@ var EDU_BOOKS = [
       { key: "ischemic",      label: "缺血性中風",     desc: "血栓溶解、取栓、黃金時間窗" },
       { key: "hemorrhagic",   label: "出血性中風",     desc: "高血壓、動脈瘤的破裂風險" },
       { key: "tia",           label: "短暫性缺血 TIA", desc: "「小中風」是大中風的警訊" },
+      { key: "moyamoya",      label: "毛毛樣腦血管疾病", desc: "頸內動脈狹窄、煙霧狀側枝循環、繞道手術" },
       { key: "stroke_rehab",  label: "中風復健",       desc: "黃金期、語言、吞嚥、肢體" },
       { key: "stroke_prev",   label: "中風預防",       desc: "血壓、心房顫動、抗凝血藥" }
     ] },
