@@ -6553,10 +6553,14 @@ html[data-mode="senior"] .visit-modal-save {
   color: var(--app-text);
 }
 .story-body * { color: var(--app-text); }
+/* 標題用灰藍：light 深板岩藍，dark 霧藍 */
+.story-body { --story-accent: #4F6B86; }
+#app-wrapper[data-theme="dark"] .story-body { --story-accent: #A8C2DC; }
+
 .story-body h1, .story-body h2, .story-body h3 {
   margin-top: 1.4em;
   margin-bottom: .4em;
-  color: var(--app-term);
+  color: var(--story-accent);
   font-weight: 800;
   letter-spacing: .01em;
 }
@@ -6564,13 +6568,13 @@ html[data-mode="senior"] .visit-modal-save {
 .story-body h2 {
   font-size: 1.1rem;
   padding-left: 10px;
-  border-left: 4px solid var(--app-term);
+  border-left: 4px solid var(--story-accent);
 }
 .story-body h3 { font-size: 1rem; }
-.story-body strong { color: var(--app-term); font-weight: 700; }
-.story-body a { color: var(--app-term); text-decoration: underline; }
+.story-body strong { color: var(--story-accent); font-weight: 700; }
+.story-body a { color: var(--story-accent); text-decoration: underline; }
 .story-body blockquote {
-  border-left: 3px solid var(--app-term);
+  border-left: 3px solid var(--story-accent);
   padding: 6px 12px;
   margin: 12px 0;
   background: var(--app-panel-soft);
