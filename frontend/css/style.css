@@ -2120,6 +2120,54 @@ html[data-mode="senior"] .tc-desc {
   opacity: 0.4;
 }
 
+/* 今日心情卡 / 服藥追蹤提醒 / 每日改善 ─────────── */
+.home-mood-emoji {
+  font-size: 2rem;
+  line-height: 1;
+  display: inline-block;
+  margin-right: 6px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+}
+.home-mood-score {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text);
+  vertical-align: middle;
+}
+.med-checkin-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(232,136,156,0.12), rgba(232,136,156,0.04));
+  border: 1px solid rgba(232,136,156,0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  color: var(--text);
+}
+.med-improvement-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.med-improvement-trend.up { background: rgba(76,175,144,0.15); color: #4caf90; border: 1px solid rgba(76,175,144,0.3); }
+.med-improvement-trend.down { background: rgba(232,136,156,0.15); color: #e8889c; border: 1px solid rgba(232,136,156,0.3); }
+.med-improvement-trend.flat { background: rgba(91,159,232,0.12); color: var(--accent); border: 1px solid rgba(91,159,232,0.25); }
+.med-improvement-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
 /* Footer credit line */
 .home-footer-credit {
   font-size: 0.72rem;

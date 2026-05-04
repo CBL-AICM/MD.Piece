@@ -1661,7 +1661,8 @@ function loadHomePage() {
       var last = daily[daily.length - 1];
       var avg = data.overall_average;
       el.innerHTML =
-        '<div class="home-med-count" style="font-size:1.6rem">' + (last.emoji || '🙂') + ' ' + last.average_score + '</div>' +
+        '<div><span class="home-mood-emoji">' + (last.emoji || '🙂') + '</span>' +
+        '<span class="home-mood-score">' + last.average_score + '</span></div>' +
         '<div class="home-med-label">最新一筆 · 7 天均 ' + (avg != null ? avg : '—') + '</div>' +
         '<button class="home-med-go" onclick="navigateTo(\'chat\',null)">更新心情 →</button>';
     })
@@ -2896,13 +2897,13 @@ function renderMedCheckIn(data) {
   if (!card || !body) return;
   if (!data || !data.due) { card.style.display = "none"; return; }
   card.style.display = "block";
-  card.style.borderLeft = "3px solid var(--rose, #e8889c)";
   var msg = data.message || "請更新今日的服藥紀錄";
   body.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">' +
-    '<span style="color:var(--text-main)">' + msg + '</span>' +
+    '<div class="med-checkin-banner">' +
+    '<span><i data-lucide="alert-circle" style="width:16px;height:16px;vertical-align:middle;color:#e8889c"></i> ' + msg + '</span>' +
     '<button class="primary" onclick="document.getElementById(\'med-list\').scrollIntoView({behavior:\'smooth\'})">立即記錄</button>' +
     '</div>';
+  if (typeof lucide !== "undefined") lucide.createIcons();
 }
 
 function renderMedImprovement(data) {
@@ -2913,33 +2914,85 @@ function renderMedImprovement(data) {
   var summary = (data && data.summary) || {};
   if (!daily.length) {
     sumEl.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem">尚無資料，紀錄服藥與療效後即可看到趨勢。</p>';
+    var c0 = canvas.getContext("2d");
+    c0.clearRect(0, 0, canvas.width, canvas.height);
     return;
   }
-  var trendLabel = { improving: "↑ 改善中", declining: "↓ 下降中", stable: "→ 平穩", insufficient_data: "資料不足" };
-  var color = summary.trend === "improving" ? "#4caf90" : summary.trend === "declining" ? "#e8889c" : "var(--accent)";
+  var trendMap = {
+    improving:        { cls: "up",   label: "↑ 改善中",   color: "#4caf90" },
+    declining:        { cls: "down", label: "↓ 下降中",   color: "#e8889c" },
+    stable:           { cls: "flat", label: "→ 平穩",     color: "#5b9fe8" },
+    insufficient_data:{ cls: "flat", label: "· 資料累積中", color: "#5b9fe8" },
+  };
+  var t = trendMap[summary.trend] || trendMap.stable;
+  var last = daily[daily.length - 1];
+  var deltaTxt = summary.overall_delta != null
+    ? (summary.overall_delta > 0 ? "+" : "") + summary.overall_delta
+    : "—";
   sumEl.innerHTML =
-    '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.9rem">' +
-    '<span><strong style="color:' + color + '">' + (trendLabel[summary.trend] || summary.trend) + '</strong></span>' +
-    '<span style="color:var(--text-dim)">最近一次：' + (daily[daily.length - 1].improvement_score) + '</span>' +
-    (summary.overall_delta != null ? '<span style="color:var(--text-dim)">期間變化：' + (summary.overall_delta > 0 ? '+' : '') + summary.overall_delta + '</span>' : '') +
-    '<span style="color:var(--text-dim)">' + daily.length + ' 天有紀錄</span>' +
+    '<div class="med-improvement-meta">' +
+    '<span class="med-improvement-trend ' + t.cls + '">' + t.label + '</span>' +
+    '<span>最近：<strong style="color:var(--text)">' + last.improvement_score + '</strong> 分</span>' +
+    '<span>期間變化：<strong style="color:var(--text)">' + deltaTxt + '</strong></span>' +
+    '<span>' + daily.length + ' 天有紀錄</span>' +
     '</div>';
+
+  var dpr = window.devicePixelRatio || 1;
   var ctx = canvas.getContext("2d");
   var rect = canvas.getBoundingClientRect();
-  var w = canvas.width = rect.width * (window.devicePixelRatio || 1);
-  var h = canvas.height = rect.height * (window.devicePixelRatio || 1);
+  var w = canvas.width = rect.width * dpr;
+  var h = canvas.height = rect.height * dpr;
   ctx.clearRect(0, 0, w, h);
-  var pad = 12 * (window.devicePixelRatio || 1);
+  var pad = 14 * dpr;
+
+  // baseline (50 分) 與框
+  ctx.strokeStyle = "rgba(120,140,170,0.18)";
+  ctx.lineWidth = 1 * dpr;
+  ctx.beginPath();
+  var midY = h - pad - (h - 2 * pad) * 0.5;
+  ctx.setLineDash([4 * dpr, 4 * dpr]);
+  ctx.moveTo(pad, midY); ctx.lineTo(w - pad, midY); ctx.stroke();
+  ctx.setLineDash([]);
+
   var pts = daily.map(function(d, i) {
-    return { x: pad + (w - 2 * pad) * (daily.length === 1 ? 0.5 : i / (daily.length - 1)), y: h - pad - (h - 2 * pad) * (d.improvement_score / 100) };
+    return {
+      x: pad + (w - 2 * pad) * (daily.length === 1 ? 0.5 : i / (daily.length - 1)),
+      y: h - pad - (h - 2 * pad) * (d.improvement_score / 100),
+    };
   });
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2 * (window.devicePixelRatio || 1);
+
+  // 漸層填色
+  var grad = ctx.createLinearGradient(0, pad, 0, h - pad);
+  var rgb = t.color === "#4caf90" ? "76,175,144" : t.color === "#e8889c" ? "232,136,156" : "91,159,232";
+  grad.addColorStop(0, "rgba(" + rgb + ",0.28)");
+  grad.addColorStop(1, "rgba(" + rgb + ",0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, h - pad);
+  pts.forEach(function(p) { ctx.lineTo(p.x, p.y); });
+  ctx.lineTo(pts[pts.length - 1].x, h - pad);
+  ctx.closePath();
+  ctx.fill();
+
+  // 折線
+  ctx.strokeStyle = t.color;
+  ctx.lineWidth = 2 * dpr;
+  ctx.lineJoin = "round";
   ctx.beginPath();
   pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
   ctx.stroke();
-  ctx.fillStyle = color;
-  pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, 3 * (window.devicePixelRatio || 1), 0, 2 * Math.PI); ctx.fill(); });
+
+  // 圓點
+  ctx.fillStyle = t.color;
+  pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, 3 * dpr, 0, 2 * Math.PI); ctx.fill(); });
+
+  // y 軸標示
+  ctx.fillStyle = "rgba(120,140,170,0.7)";
+  ctx.font = (10 * dpr) + "px system-ui";
+  ctx.textAlign = "left";
+  ctx.fillText("100", 2 * dpr, pad + 4 * dpr);
+  ctx.fillText("50",  2 * dpr, midY + 4 * dpr);
+  ctx.fillText("0",   2 * dpr, h - pad + 4 * dpr);
 }
 
 function renderMedList() {
