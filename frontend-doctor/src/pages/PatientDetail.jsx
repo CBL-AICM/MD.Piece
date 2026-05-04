@@ -9,9 +9,11 @@ import {
 } from '../lib/priority.js'
 import { fmtDate, relativeTime } from '../lib/format.js'
 import TrendChart from '../components/TrendChart.jsx'
+import ChartsPanel from '../components/ChartsPanel.jsx'
 
 const TABS = [
   { key: 'overview', label: '快速預覽' },
+  { key: 'charts', label: '圖表分析' },
   { key: 'timeline', label: '時間軸' },
   { key: 'symptoms', label: '症狀分析' },
   { key: 'medications', label: '用藥' },
@@ -149,6 +151,16 @@ export default function PatientDetail() {
           records={records}
           emotionTrend={emotionTrend}
           medStats={medStats}
+        />
+      )}
+      {tab === 'charts' && (
+        <ChartsPanel
+          emotionTrend={emotionTrend}
+          medStats={medStats}
+          symptoms={symptoms}
+          alerts={alerts}
+          notes={notes}
+          medChanges={medChanges}
         />
       )}
       {tab === 'timeline' && <TimelinePanel records={records} alerts={alerts} notes={notes} medChanges={medChanges} />}
