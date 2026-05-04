@@ -6488,8 +6488,6 @@ html[data-mode="senior"] .visit-modal-save {
 
 .story-hero h2 { margin: 0; color: var(--story-text-dark); }
 .story-hero p { color: var(--story-text-dark); opacity: .9; }
-#app-wrapper[data-theme="dark"] .story-hero h2,
-#app-wrapper[data-theme="dark"] .story-hero p { color: var(--story-text-light); }
 
 .story-section-head {
   display: flex;
@@ -6539,10 +6537,6 @@ html[data-mode="senior"] .visit-modal-save {
   font-size: .95rem;
   font-weight: 500;
 }
-#app-wrapper[data-theme="dark"] .story-section-date { color: var(--story-text-light-mid); }
-#app-wrapper[data-theme="dark"] .story-section-desc,
-#app-wrapper[data-theme="dark"] .story-title,
-#app-wrapper[data-theme="dark"] .story-summary { color: var(--story-text-light); }
 .story-tags {
   display: flex;
   flex-wrap: wrap;
@@ -6613,43 +6607,14 @@ html[data-mode="senior"] .visit-modal-save {
   font-size: .9em;
 }
 
-/* dark theme override：故事頁全部換成實心深色系列 */
-#app-wrapper[data-theme="dark"] .story-body,
-#app-wrapper[data-theme="dark"] .story-body *,
-#app-wrapper[data-theme="dark"] .story-body p,
-#app-wrapper[data-theme="dark"] .story-body td,
-#app-wrapper[data-theme="dark"] .story-body th,
-#app-wrapper[data-theme="dark"] .story-body code,
-#app-wrapper[data-theme="dark"] .story-body blockquote { color: var(--story-text-light); }
-#app-wrapper[data-theme="dark"] .story-body h1,
-#app-wrapper[data-theme="dark"] .story-body h2,
-#app-wrapper[data-theme="dark"] .story-body h3,
-#app-wrapper[data-theme="dark"] .story-body strong,
-#app-wrapper[data-theme="dark"] .story-body a {
-  color: var(--story-accent-light);
+/* 故事頁強制 ul/ol/li 也用深色，避免被其他 list 樣式覆蓋 */
+.story-body ul, .story-body ol, .story-body li {
+  color: var(--story-text-dark) !important;
 }
-#app-wrapper[data-theme="dark"] .story-body h2 { border-left-color: var(--story-accent-light); }
-#app-wrapper[data-theme="dark"] .story-body blockquote {
-  border-left-color: var(--story-accent-light);
-  background: #162940;  /* 深 navy 嵌入層 */
-}
-#app-wrapper[data-theme="dark"] .story-body th,
-#app-wrapper[data-theme="dark"] .story-body code { background: #162940; }
-#app-wrapper[data-theme="dark"] .story-body td,
-#app-wrapper[data-theme="dark"] .story-body th { border-color: #3D6499; }
-#app-wrapper[data-theme="dark"] .story-tag {
-  background: #1F3553;
-  color: var(--story-text-light);
-  border-color: #3D6499;
-}
-#app-wrapper[data-theme="dark"] .story-section-cat {
-  background: #162940;
-  color: var(--story-text-light);
-  border-color: #3D6499;
-}
-#app-wrapper[data-theme="dark"] .story-cat-disease   { background: #3A1421; border-color: #6A2238; color: #FFD9DF; }
-#app-wrapper[data-theme="dark"] .story-cat-quick_tip { background: #3A2511; border-color: #7A4F1A; color: #FFE3B0; }
-#app-wrapper[data-theme="dark"] .story-cat-news      { background: #112340; border-color: #2D5278; color: #C9DDF5; }
+.story-body ul { padding-left: 22px; margin: 8px 0; }
+.story-body ol { padding-left: 22px; margin: 8px 0; }
+.story-body li { line-height: 1.8; margin: 4px 0; }
+.story-body li::marker { color: var(--story-accent-dark); }
 
 .story-sources {
   margin-top: 18px;
@@ -6673,9 +6638,6 @@ html[data-mode="senior"] .visit-modal-save {
   font-size: .78rem;
   color: var(--story-text-mid);
 }
-#app-wrapper[data-theme="dark"] .story-sources-head,
-#app-wrapper[data-theme="dark"] .story-sources ol { color: var(--story-text-light); }
-#app-wrapper[data-theme="dark"] .story-reviewed { color: var(--story-text-light-mid); }
 
 .story-archive-list {
   display: flex;
@@ -6736,18 +6698,6 @@ html[data-mode="senior"] .visit-modal-save {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-#app-wrapper[data-theme="dark"] .story-archive-day-head,
-#app-wrapper[data-theme="dark"] .story-archive-title { color: var(--story-text-light); }
-#app-wrapper[data-theme="dark"] .story-archive-summary { color: var(--story-text-light-mid); }
-#app-wrapper[data-theme="dark"] .story-archive-item {
-  background: rgba(255,255,255,0.06);
-  border-color: var(--story-text-light-mid);
-  color: var(--story-text-light);
-}
-#app-wrapper[data-theme="dark"] .story-archive-cat {
-  border-color: var(--story-text-light);
-  color: var(--story-text-light);
-}
 
 /* 衛福部 RSS 新聞清單 */
 .story-newsfeed-list {
@@ -6790,12 +6740,3 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-#app-wrapper[data-theme="dark"] .story-news-item {
-  background: rgba(255,255,255,0.06);
-  border-color: var(--story-text-light-mid);
-  color: var(--story-text-light);
-}
-#app-wrapper[data-theme="dark"] .story-news-title { color: var(--story-text-light); }
-#app-wrapper[data-theme="dark"] a.story-news-title { color: var(--story-accent-light); }
-#app-wrapper[data-theme="dark"] .story-news-date { color: var(--story-text-light-mid); }
-#app-wrapper[data-theme="dark"] .story-news-summary { color: var(--story-text-light); }
