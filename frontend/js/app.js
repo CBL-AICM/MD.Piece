@@ -1310,9 +1310,7 @@ function accountPage() {
   const roleIcon = u.role === 'doctor' ? 'stethoscope' : 'heart-pulse';
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
-    : `<span class="acct-avatar-fallback" style="background:${u.avatar_color || '#5B9FE8'}22;color:${u.avatar_color || '#5B9FE8'};border-color:${u.avatar_color || '#5B9FE8'}">
-         ${(u.nickname || '?').slice(0,1)}
-       </span>`;
+    : `<img src="icons/heko-avatar.svg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
   return `
     <section class="acct-wrap">
       <header class="acct-head">
@@ -1527,6 +1525,7 @@ function home() {
   const dayStr = '星期' + ['日','一','二','三','四','五','六'][today.getDay()];
   const name = user ? user.nickname : '你';
   const ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
+  const heroAvatarSrc = (user && user.avatar_url) ? user.avatar_url : 'icons/heko-avatar.svg';
 
   return `
     <div class="home-page">
@@ -1537,7 +1536,7 @@ function home() {
       <!-- Hero: Logo + Greeting split -->
       <div class="home-hero">
         <div class="home-hero-left">
-          <img src="icons/logo-core.jpg" alt="MD.Piece" class="home-logo" />
+          <img src="${heroAvatarSrc}" alt="${name} 頭像" class="home-logo home-logo-avatar" />
         </div>
         <div class="home-hero-right">
           <h2 class="home-title">${greeting}，${name}</h2>

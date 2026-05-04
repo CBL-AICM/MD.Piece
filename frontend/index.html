@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=chat-multi-voice-stream-1" />
+  <link rel="stylesheet" href="css/style.css?v=heko-default-avatar-2" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <title>MD.Piece</title>
 </head>
@@ -172,13 +172,13 @@
               <input id="reg-avatar-file" type="file" accept="image/*" hidden />
               <img id="reg-avatar-img" alt="" hidden />
               <span class="auth-avatar-placeholder" id="reg-avatar-placeholder">
-                <i data-lucide="camera"></i>
-                <span>上傳頭像</span>
+                <img src="icons/heko-avatar.svg" alt="預設頭像（小禾）" class="auth-avatar-default" />
+                <span>點此上傳</span>
               </span>
             </label>
             <div class="auth-avatar-meta">
               <p class="auth-avatar-title">個人頭像</p>
-              <p class="auth-avatar-hint">點擊圓圈上傳照片，可以是自拍或喜歡的圖片</p>
+              <p class="auth-avatar-hint">沒上傳的話會自動用「小禾」當頭像</p>
               <button type="button" class="auth-avatar-clear" id="reg-avatar-clear" onclick="clearRegAvatar()" hidden>移除</button>
             </div>
           </div>
@@ -337,7 +337,7 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=chat-multi-voice-stream-1"></script>
+  <script src="js/app.js?v=heko-default-avatar-2"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
