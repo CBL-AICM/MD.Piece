@@ -1050,7 +1050,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, memo, previsit, story, labs, pieces, chat, account, settings
+    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings
   };
   // Page transition
   app.style.opacity = '0';
@@ -1069,6 +1069,7 @@ function showPage(page) {
     if (page === "pieces") loadPiecesPage();
     if (page === "chat") loadChatPage();
     if (page === "previsit") loadPrevisitPage();
+    if (page === "emotions") loadEmotionsPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     // Render Lucide icons
@@ -6253,6 +6254,143 @@ async function loadPushHistory() {
   } catch (e) {
     /* ignore */
   }
+}
+
+
+// ─── 情緒紀錄 ────────────────────────────────────────────
+// 五階情緒打卡 + 7 天迷你折線圖 + 自動觸發 silent-guardian 警示
+
+var EMOTION_LEVELS = [
+  { score: 5, emoji: '😄', label: '很好', color: '#3ddc97' },
+  { score: 4, emoji: '🙂', label: '不錯', color: '#7ed4b8' },
+  { score: 3, emoji: '😐', label: '普通', color: '#9DAEC0' },
+  { score: 2, emoji: '😟', label: '低落', color: '#E8B4A0' },
+  { score: 1, emoji: '😢', label: '很糟', color: '#ff6b81' },
+];
+
+function emotions() {
+  return (
+    '<section class="emotions-wrap">' +
+      '<header class="emotions-head">' +
+        '<h2><i data-lucide="smile" style="width:22px;height:22px"></i> 情緒紀錄</h2>' +
+        '<p>每天花 10 秒幫自己打個卡。連續低落會自動提醒你的醫師。</p>' +
+      '</header>' +
+
+      '<div class="emotions-card">' +
+        '<h3>今天感覺如何？</h3>' +
+        '<div class="emotions-scale">' +
+          EMOTION_LEVELS.map(function(l) {
+            return '<button class="emotions-btn" data-score="' + l.score + '" ' +
+              'onclick="selectEmotion(' + l.score + ')" ' +
+              'style="--em-color:' + l.color + '">' +
+              '<span class="emotions-emoji">' + l.emoji + '</span>' +
+              '<span class="emotions-label">' + l.label + '</span>' +
+            '</button>';
+          }).join('') +
+        '</div>' +
+        '<textarea id="emotion-note" rows="2" maxlength="200" placeholder="想多說一點？（選填，最多 200 字）"></textarea>' +
+        '<button class="emotions-submit" id="emotion-submit" onclick="submitEmotion()" disabled>' +
+          '<i data-lucide="send" style="width:14px;height:14px"></i> 送出今日打卡' +
+        '</button>' +
+        '<div id="emotion-status" class="emotions-status"></div>' +
+      '</div>' +
+
+      '<div class="emotions-card">' +
+        '<h3>近 7 天情緒走勢</h3>' +
+        '<div id="emotion-trend-chart" class="emotions-trend"></div>' +
+        '<p class="emotions-summary" id="emotion-summary"></p>' +
+      '</div>' +
+    '</section>'
+  );
+}
+
+var _emotionSelected = null;
+
+function selectEmotion(score) {
+  _emotionSelected = score;
+  document.querySelectorAll('.emotions-btn').forEach(function(b) {
+    b.classList.toggle('selected', Number(b.getAttribute('data-score')) === score);
+  });
+  var btn = document.getElementById('emotion-submit');
+  if (btn) btn.disabled = false;
+}
+
+async function submitEmotion() {
+  if (_emotionSelected == null) { showToast('請先選一個表情', 'warning'); return; }
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var note = (document.getElementById('emotion-note').value || '').trim();
+  var btn = document.getElementById('emotion-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader"></i> 送出中…';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  try {
+    var res = await fetch(API + '/emotions/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
+      body: JSON.stringify({ patient_id: pid, score: _emotionSelected, note: note }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.detail || '送出失敗');
+    }
+    document.getElementById('emotion-note').value = '';
+    document.getElementById('emotion-status').innerHTML =
+      '✓ 已記錄今天的心情，' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('emotion-status').className = 'emotions-status emotions-status-ok';
+    _emotionSelected = null;
+    document.querySelectorAll('.emotions-btn').forEach(function(b) { b.classList.remove('selected'); });
+    showToast('情緒打卡完成', 'success');
+    renderEmotionTrend();
+  } catch (e) {
+    document.getElementById('emotion-status').textContent = '送出失敗：' + (e.message || '');
+    document.getElementById('emotion-status').className = 'emotions-status emotions-status-error';
+  } finally {
+    btn.innerHTML = '<i data-lucide="send" style="width:14px;height:14px"></i> 送出今日打卡';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+async function renderEmotionTrend() {
+  var pid = getStablePatientId();
+  if (!pid) return;
+  var box = document.getElementById('emotion-trend-chart');
+  var summaryEl = document.getElementById('emotion-summary');
+  if (!box) return;
+  try {
+    var res = await fetch(API + '/emotions/trend?patient_id=' + encodeURIComponent(pid) + '&days=7');
+    var data = res.ok ? await res.json() : null;
+    var trend = (data && data.trend) || [];
+    if (!trend.length) {
+      box.innerHTML = '<p class="emotions-empty">還沒有任何打卡紀錄，今天是個好開始。</p>';
+      if (summaryEl) summaryEl.textContent = '';
+      return;
+    }
+    var maxBars = 7;
+    var bars = trend.slice(-maxBars).map(function(t) {
+      var pct = (t.score || 0) / 5 * 100;
+      var lvl = EMOTION_LEVELS.find(function(l) { return l.score === t.score; }) || EMOTION_LEVELS[2];
+      return '<div class="emotions-bar-col">' +
+        '<div class="emotions-bar" style="height:' + pct + '%;background:' + lvl.color + '" title="' + t.date + ' ' + t.score + '/5"></div>' +
+        '<span class="emotions-bar-date">' + t.date.slice(5) + '</span>' +
+      '</div>';
+    }).join('');
+    box.innerHTML = '<div class="emotions-bars">' + bars + '</div>';
+    if (summaryEl) {
+      var avg = data.average_score;
+      summaryEl.textContent =
+        '平均 ' + (avg != null ? avg : '—') + '/5　·　共 ' + data.total_records + ' 筆' +
+        (avg != null && avg <= 2.5 ? '　·　偵測到偏低，建議跟醫師談談' : '');
+    }
+  } catch (e) {
+    box.innerHTML = '<p class="emotions-empty">載入失敗：' + escapeHtml(e.message || '') + '</p>';
+  }
+}
+
+function loadEmotionsPage() {
+  _emotionSelected = null;
+  if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+  renderEmotionTrend();
 }
 
 

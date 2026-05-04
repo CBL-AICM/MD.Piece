@@ -8414,4 +8414,166 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
       0 4px 0 var(--app-border),
       0 8px 18px rgba(92,58,50,0.10);
   }
+/* ───────── 情緒紀錄頁 ───────── */
+.emotions-wrap {
+  padding: 16px 4px 32px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.emotions-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.emotions-head p {
+  margin: 0 0 22px;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+.emotions-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-glass-hover);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.emotions-card h3 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+.emotions-scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.emotions-btn {
+  background: var(--bg-mid);
+  border: 2px solid var(--bg-glass-hover);
+  border-radius: 12px;
+  padding: 14px 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s;
+  --em-color: var(--accent);
+}
+.emotions-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--em-color);
+  background: var(--bg-surface);
+}
+.emotions-btn.selected {
+  background: var(--bg-surface);
+  border-color: var(--em-color);
+  box-shadow: 0 0 0 2px var(--em-color, var(--accent-glow));
+  transform: translateY(-2px);
+}
+.emotions-emoji {
+  font-size: 2rem;
+  line-height: 1;
+}
+.emotions-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+.emotions-btn.selected .emotions-label {
+  color: var(--em-color);
+  font-weight: 600;
+}
+.emotions-card textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-mid);
+  border: 1px solid var(--bg-glass-hover);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  color: var(--text);
+  resize: vertical;
+  margin-bottom: 12px;
+}
+.emotions-card textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.emotions-submit {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: filter .15s;
+  width: 100%;
+  justify-content: center;
+}
+.emotions-submit:hover:not(:disabled) { filter: brightness(1.05); }
+.emotions-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.emotions-status {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  min-height: 1.2em;
+  color: var(--text-muted);
+}
+.emotions-status-ok { color: var(--accent); }
+.emotions-status-error { color: var(--rose); }
+
+.emotions-trend {
+  min-height: 140px;
+}
+.emotions-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 140px;
+  gap: 8px;
+  padding: 0 4px;
+}
+.emotions-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  justify-content: flex-end;
+}
+.emotions-bar {
+  width: 100%;
+  max-width: 36px;
+  border-radius: 6px 6px 0 0;
+  min-height: 8%;
+  transition: height .3s;
+}
+.emotions-bar-date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.emotions-summary {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+.emotions-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 32px 16px;
+  margin: 0;
 }
