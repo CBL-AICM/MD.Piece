@@ -494,7 +494,8 @@ const account  = () => accountPage();
 
 // 頁面在 terminal pane 中顯示的檔名（用於 #app 的 data-page）
 const pageSlugForTerminal = {
-  home: 'home', symptoms: 'symptoms', medications: 'medications',
+  home: 'home', symptoms: 'symptoms', analysis: 'symptom-analysis',
+  medications: 'medications',
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', account: 'account',
@@ -506,7 +507,7 @@ function showPage(page) {
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
-    home, symptoms, doctors, records, medications, education,
+    home, symptoms, analysis, doctors, records, medications, education,
     vitals, memo, previsit, story, labs, pieces, account, settings
   };
   // Page transition
@@ -1056,7 +1057,7 @@ function home() {
         功能拼圖
       </div>
       <div class="home-grid">
-        ${homeCard('symptoms','scan-search','症狀分析','AI 助你釐清身體訊號','blue')}
+        ${homeCard('analysis','scan-search','症狀分析','AI 助你釐清身體訊號','blue')}
         ${homeCard('records','clipboard-list','病歷管理','守護每一次就診紀錄','purple')}
         ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
@@ -1962,6 +1963,33 @@ function interpretBMI(v) {
   if (v < 30)   return '輕度肥胖';
   if (v < 35)   return '中度肥胖';
   return '重度肥胖';
+}
+
+// ─── 症狀分析（AI 分析，獨立於症狀紀錄）──────────────────
+
+function analysis() {
+  return `
+    <div class="card">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="scan-search" style="width:20px;height:20px"></i> AI 症狀分析
+      </h2>
+      <p style="color:var(--text-dim);font-size:.9rem;margin-top:4px">
+        輸入你目前感受到的症狀（多個請用逗號分隔），AI 會評估可能病因、緊急程度與建議科別。
+      </p>
+      <textarea id="symptom-input" rows="3" placeholder="例如：發燒, 喉嚨痛, 全身無力" style="width:100%;margin-top:10px"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="primary" onclick="analyzeSymptoms()">
+          <i data-lucide="sparkles" style="width:14px;height:14px;vertical-align:middle"></i> AI 分析
+        </button>
+        <button class="secondary" onclick="quickAdvice()">
+          <i data-lucide="message-circle" style="width:14px;height:14px;vertical-align:middle"></i> 快速建議
+        </button>
+      </div>
+      <div id="analysis-result" style="margin-top:14px"></div>
+      <p style="color:var(--text-muted);font-size:.8rem;margin-top:14px">
+        ※ 此分析僅供參考，不構成醫療診斷。如有不適請就醫。
+      </p>
+    </div>`;
 }
 
 async function analyzeSymptoms() {
