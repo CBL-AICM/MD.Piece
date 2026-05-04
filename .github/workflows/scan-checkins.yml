@@ -1,0 +1,38 @@
+name: Scan medication check-ins
+
+# 每日 UTC 04:00（台灣時間中午 12 點）掃描一次：
+# 把超過 3 天沒回報服藥的病患寫入 alerts 表。
+# 需要 repo secret：
+#   API_BASE_URL  例如 https://www.mdpiece.life
+#   CRON_TOKEN    與 production 環境變數 CRON_TOKEN 相同（驗證來源）
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      interval_days:
+        description: "幾天沒回報就觸發 alert"
+        required: false
+        default: "3"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /alerts/scan-checkins
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          CRON_TOKEN: ${{ secrets.CRON_TOKEN }}
+          INTERVAL_DAYS: ${{ inputs.interval_days || '3' }}
+        run: |
+          if [ -z "$API_BASE_URL" ]; then
+            echo "missing secret API_BASE_URL"; exit 1
+          fi
+          curl --fail --show-error --silent \
+            -X POST "$API_BASE_URL/alerts/scan-checkins?interval_days=$INTERVAL_DAYS" \
+            -H "X-Cron-Token: $CRON_TOKEN" \
+            -H "Content-Type: application/json"

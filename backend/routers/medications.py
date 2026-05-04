@@ -433,6 +433,223 @@ def medication_stats(
     }
 
 
+CHECK_IN_INTERVAL_DAYS = 3
+
+
+@router.get("/check-in/due")
+def check_in_due(
+    patient_id: str = Query(...),
+    interval_days: int = Query(CHECK_IN_INTERVAL_DAYS, ge=1, le=30),
+):
+    """
+    服藥追蹤提醒：每 interval_days（預設 3 天）至少問一次。
+
+    回傳是否該觸發提醒、距離上次紀錄幾天、下次到期日。
+    判斷依據：medication_logs 的 taken_at 與 medication_effects 的 recorded_at 取最新者。
+    若該病患有開立藥物但從未紀錄，視為立即到期。
+    """
+    sb = get_supabase()
+
+    meds = (
+        sb.table("medications")
+        .select("id, active")
+        .eq("patient_id", patient_id)
+        .execute()
+        .data
+        or []
+    )
+    has_active_med = any(m.get("active", 1) for m in meds)
+    if not has_active_med:
+        return {
+            "due": False,
+            "reason": "no_active_medication",
+            "interval_days": interval_days,
+            "last_check_in": None,
+            "days_since_last": None,
+            "next_due_at": None,
+        }
+
+    last_log = (
+        sb.table("medication_logs")
+        .select("taken_at")
+        .eq("patient_id", patient_id)
+        .order("taken_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    last_effect = (
+        sb.table("medication_effects")
+        .select("recorded_at")
+        .eq("patient_id", patient_id)
+        .order("recorded_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+
+    candidates = []
+    if last_log:
+        candidates.append(last_log[0].get("taken_at"))
+    if last_effect:
+        candidates.append(last_effect[0].get("recorded_at"))
+    candidates = [c for c in candidates if c]
+
+    if not candidates:
+        return {
+            "due": True,
+            "reason": "never_logged",
+            "interval_days": interval_days,
+            "last_check_in": None,
+            "days_since_last": None,
+            "next_due_at": datetime.utcnow().isoformat(),
+            "message": "尚未填過服藥/療效紀錄，請完成首次回報。",
+        }
+
+    last_iso = max(candidates)
+    try:
+        last_dt = datetime.fromisoformat(last_iso.replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        last_dt = datetime.utcnow() - timedelta(days=interval_days + 1)
+
+    delta = datetime.utcnow() - last_dt
+    days_since = round(delta.total_seconds() / 86400, 2)
+    next_due = last_dt + timedelta(days=interval_days)
+    due = datetime.utcnow() >= next_due
+
+    return {
+        "due": due,
+        "reason": "interval_elapsed" if due else "within_interval",
+        "interval_days": interval_days,
+        "last_check_in": last_iso,
+        "days_since_last": days_since,
+        "next_due_at": next_due.isoformat(),
+        "message": (
+            f"距離上次紀錄已 {days_since} 天，請更新服藥/療效。"
+            if due
+            else f"下次請在 {next_due.date().isoformat()} 前再回報一次。"
+        ),
+    }
+
+
+@router.get("/daily-improvement")
+def daily_improvement(
+    patient_id: str = Query(...),
+    days: int = Query(30, ge=1, le=365),
+):
+    """
+    每日用藥改善：把每天的服藥率與療效平均值合成 improvement_score，
+    並計算與前一天的差值（delta），用於折線圖呈現病患每日的用藥改善程度。
+
+    - improvement_score：服藥率（50%）+ 療效（50%, 1-5 → 0-100），缺一項則只用另一項。
+    - 沒有任何資料的日期不會出現。
+    - summary.trend：improving / declining / stable / insufficient_data。
+    """
+    sb = get_supabase()
+    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+
+    logs = (
+        sb.table("medication_logs")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .gte("taken_at", since)
+        .execute()
+        .data
+        or []
+    )
+    effects = (
+        sb.table("medication_effects")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .gte("recorded_at", since)
+        .execute()
+        .data
+        or []
+    )
+
+    by_day: dict[str, dict] = {}
+    for log in logs:
+        day = (log.get("taken_at") or "")[:10]
+        if not day:
+            continue
+        d = by_day.setdefault(day, {"taken": 0, "total": 0, "effects": []})
+        d["total"] += 1
+        if log.get("taken"):
+            d["taken"] += 1
+    for e in effects:
+        day = (e.get("recorded_at") or "")[:10]
+        if not day:
+            continue
+        score = e.get("effectiveness")
+        if score is None:
+            continue
+        d = by_day.setdefault(day, {"taken": 0, "total": 0, "effects": []})
+        d["effects"].append(score)
+
+    daily = []
+    prev_score: Optional[float] = None
+    for day in sorted(by_day.keys()):
+        d = by_day[day]
+        adherence = round(d["taken"] / d["total"] * 100, 1) if d["total"] else None
+        avg_eff = round(sum(d["effects"]) / len(d["effects"]), 2) if d["effects"] else None
+
+        adherence_part = adherence  # 0-100 or None
+        eff_part = (avg_eff / 5 * 100) if avg_eff is not None else None  # 0-100 or None
+        parts = [p for p in (adherence_part, eff_part) if p is not None]
+        if not parts:
+            continue
+        if adherence_part is not None and eff_part is not None:
+            improvement_score = round(adherence_part * 0.5 + eff_part * 0.5, 1)
+        else:
+            improvement_score = round(parts[0], 1)
+
+        delta = round(improvement_score - prev_score, 1) if prev_score is not None else None
+        daily.append({
+            "date": day,
+            "adherence_rate": adherence,
+            "taken": d["taken"],
+            "total_doses": d["total"],
+            "avg_effectiveness": avg_eff,
+            "effect_records": len(d["effects"]),
+            "improvement_score": improvement_score,
+            "delta_vs_prev": delta,
+        })
+        prev_score = improvement_score
+
+    if len(daily) >= 2:
+        first, last = daily[0]["improvement_score"], daily[-1]["improvement_score"]
+        diff = round(last - first, 1)
+        if diff >= 5:
+            trend = "improving"
+        elif diff <= -5:
+            trend = "declining"
+        else:
+            trend = "stable"
+        summary = {
+            "trend": trend,
+            "first_score": first,
+            "last_score": last,
+            "overall_delta": diff,
+        }
+    else:
+        summary = {
+            "trend": "insufficient_data",
+            "first_score": daily[0]["improvement_score"] if daily else None,
+            "last_score": daily[0]["improvement_score"] if daily else None,
+            "overall_delta": 0.0,
+        }
+
+    return {
+        "patient_id": patient_id,
+        "days": days,
+        "daily": daily,
+        "days_logged": len(daily),
+        "summary": summary,
+    }
+
+
 # ── 回診報告 ──────────────────────────────────────────────
 
 @router.get("/report")

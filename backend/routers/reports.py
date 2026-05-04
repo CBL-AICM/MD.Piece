@@ -480,3 +480,119 @@ def get_patient_summary(patient_id: str):
         "raw_data": counts,
     }
 
+
+# ── 心情 × 用藥改善 相關性 ──────────────────────────────────
+
+
+def _pearson(xs: list[float], ys: list[float]) -> float | None:
+    n = len(xs)
+    if n < 2 or len(ys) != n:
+        return None
+    mx = sum(xs) / n
+    my = sum(ys) / n
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    dx2 = sum((x - mx) ** 2 for x in xs)
+    dy2 = sum((y - my) ** 2 for y in ys)
+    denom = (dx2 * dy2) ** 0.5
+    if denom == 0:
+        return None
+    return round(num / denom, 3)
+
+
+@router.get("/{patient_id}/wellness-correlation")
+def wellness_correlation(patient_id: str, days: int = 30):
+    """
+    每日「心情」與「用藥改善程度」的相關性（Pearson）。
+    回傳並排的每日序列與相關係數，前端可畫雙線圖。
+    """
+    if days < 2:
+        raise HTTPException(status_code=400, detail="days 必須 >= 2")
+    sb = get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    emotions = _safe_query(lambda: (
+        sb.table("emotions").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since).execute().data or []
+    ), [])
+    logs = _safe_query(lambda: (
+        sb.table("medication_logs").select("*").eq("patient_id", patient_id)
+        .gte("taken_at", since).execute().data or []
+    ), [])
+    effects = _safe_query(lambda: (
+        sb.table("medication_effects").select("*").eq("patient_id", patient_id)
+        .gte("recorded_at", since).execute().data or []
+    ), [])
+
+    mood_by_day: dict[str, list[float]] = {}
+    for e in emotions:
+        day = (e.get("created_at") or "")[:10]
+        s = e.get("score")
+        if day and s is not None:
+            mood_by_day.setdefault(day, []).append(s)
+
+    med_by_day: dict[str, dict] = {}
+    for log in logs:
+        day = (log.get("taken_at") or "")[:10]
+        if not day:
+            continue
+        d = med_by_day.setdefault(day, {"taken": 0, "total": 0, "effects": []})
+        d["total"] += 1
+        if log.get("taken"):
+            d["taken"] += 1
+    for ef in effects:
+        day = (ef.get("recorded_at") or "")[:10]
+        score = ef.get("effectiveness")
+        if not day or score is None:
+            continue
+        d = med_by_day.setdefault(day, {"taken": 0, "total": 0, "effects": []})
+        d["effects"].append(score)
+
+    series = []
+    paired_x, paired_y = [], []
+    all_days = sorted(set(mood_by_day) | set(med_by_day))
+    for day in all_days:
+        moods = mood_by_day.get(day, [])
+        mood_avg = round(sum(moods) / len(moods), 2) if moods else None
+
+        d = med_by_day.get(day)
+        if d:
+            adherence = (d["taken"] / d["total"] * 100) if d["total"] else None
+            eff = (sum(d["effects"]) / len(d["effects"]) / 5 * 100) if d["effects"] else None
+            parts = [p for p in (adherence, eff) if p is not None]
+            if not parts:
+                improvement = None
+            elif adherence is not None and eff is not None:
+                improvement = round(adherence * 0.5 + eff * 0.5, 1)
+            else:
+                improvement = round(parts[0], 1)
+        else:
+            improvement = None
+
+        series.append({"date": day, "mood": mood_avg, "improvement": improvement})
+        if mood_avg is not None and improvement is not None:
+            paired_x.append(mood_avg)
+            paired_y.append(improvement)
+
+    r = _pearson(paired_x, paired_y)
+    if r is None:
+        interpretation = "資料不足，至少需要 2 個同時有心情與用藥資料的日子"
+    elif r >= 0.5:
+        interpretation = "心情與用藥改善呈中至強正相關，服藥規律的日子心情較佳"
+    elif r >= 0.2:
+        interpretation = "弱正相關，存在一致趨勢但不顯著"
+    elif r > -0.2:
+        interpretation = "幾乎無相關"
+    elif r > -0.5:
+        interpretation = "弱負相關，需要更多資料釐清"
+    else:
+        interpretation = "中至強負相關，建議主動關心並檢視藥物副作用"
+
+    return {
+        "patient_id": patient_id,
+        "days": days,
+        "series": series,
+        "paired_days": len(paired_x),
+        "pearson_r": r,
+        "interpretation": interpretation,
+    }
+

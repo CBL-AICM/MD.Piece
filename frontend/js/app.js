@@ -1661,6 +1661,15 @@ function home() {
         </div>
         <div class="home-ov">
           <div class="home-ov-head">
+            <i data-lucide="smile" style="width:16px;height:16px;color:var(--rose, #e8889c)"></i>
+            <span>今日心情</span>
+          </div>
+          <div id="home-mood-summary" class="home-ov-body">
+            <p class="home-ov-placeholder">載入中...</p>
+          </div>
+        </div>
+        <div class="home-ov">
+          <div class="home-ov-head">
             <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--purple)"></i>
             <span>健康小語</span>
           </div>
@@ -1716,6 +1725,30 @@ function loadHomePage() {
     .catch(function() {
       var el = document.getElementById('home-med-summary');
       if (el) el.innerHTML = '<p class="home-ov-empty">開始記錄你的第一顆藥物吧</p>';
+    });
+
+  fetch(API + '/emotions/daily?patient_id=' + pid + '&days=7')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var el = document.getElementById('home-mood-summary');
+      if (!el) return;
+      var daily = (data && data.daily) || [];
+      if (!daily.length) {
+        el.innerHTML = '<p class="home-ov-empty">尚未記錄心情，按下方按鈕分享今天的感覺</p>'
+          + '<button class="home-med-go" onclick="navigateTo(\'chat\',null)">記錄心情 →</button>';
+        return;
+      }
+      var last = daily[daily.length - 1];
+      var avg = data.overall_average;
+      el.innerHTML =
+        '<div><span class="home-mood-emoji">' + (last.emoji || '🙂') + '</span>' +
+        '<span class="home-mood-score">' + last.average_score + '</span></div>' +
+        '<div class="home-med-label">最新一筆 · 7 天均 ' + (avg != null ? avg : '—') + '</div>' +
+        '<button class="home-med-go" onclick="navigateTo(\'chat\',null)">更新心情 →</button>';
+    })
+    .catch(function() {
+      var el = document.getElementById('home-mood-summary');
+      if (el) el.innerHTML = '<p class="home-ov-empty">分享你今天的感受吧</p>';
     });
 }
 
@@ -2878,6 +2911,18 @@ function medications() {
       </div>
       <div id="med-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
     </div>
+    <div class="card" id="med-checkin-card" style="display:none">
+      <h3><i data-lucide="bell" style="width:18px;height:18px;vertical-align:middle"></i> 服藥追蹤提醒</h3>
+      <div id="med-checkin-body" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> 每日改善</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">服藥率 + 療效 合成的每日改善分數</p>
+      <div id="med-improvement-summary" style="margin-top:8px"></div>
+      <div id="med-improvement-chart" style="position:relative;height:140px;margin-top:8px">
+        <canvas id="improvement-canvas" style="width:100%;height:100%"></canvas>
+      </div>
+    </div>
     <div class="card">
       <h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;vertical-align:middle"></i> 服藥統計</h3>
       <div id="med-stats" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
@@ -2914,6 +2959,120 @@ function loadMedicationsPage() {
     .then(function(r) { return r.json(); })
     .then(function(data) { renderMedStats(data); })
     .catch(function() {});
+
+  fetch(API + "/medications/check-in/due?patient_id=" + _medsPatientId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderMedCheckIn(data); })
+    .catch(function() {});
+
+  fetch(API + "/medications/daily-improvement?patient_id=" + _medsPatientId + "&days=30")
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderMedImprovement(data); })
+    .catch(function() {});
+}
+
+function renderMedCheckIn(data) {
+  var card = document.getElementById("med-checkin-card");
+  var body = document.getElementById("med-checkin-body");
+  if (!card || !body) return;
+  if (!data || !data.due) { card.style.display = "none"; return; }
+  card.style.display = "block";
+  var msg = data.message || "請更新今日的服藥紀錄";
+  body.innerHTML =
+    '<div class="med-checkin-banner">' +
+    '<span><i data-lucide="alert-circle" style="width:16px;height:16px;vertical-align:middle;color:#e8889c"></i> ' + msg + '</span>' +
+    '<button class="primary" onclick="document.getElementById(\'med-list\').scrollIntoView({behavior:\'smooth\'})">立即記錄</button>' +
+    '</div>';
+  if (typeof lucide !== "undefined") lucide.createIcons();
+}
+
+function renderMedImprovement(data) {
+  var sumEl = document.getElementById("med-improvement-summary");
+  var canvas = document.getElementById("improvement-canvas");
+  if (!sumEl || !canvas) return;
+  var daily = (data && data.daily) || [];
+  var summary = (data && data.summary) || {};
+  if (!daily.length) {
+    sumEl.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem">尚無資料，紀錄服藥與療效後即可看到趨勢。</p>';
+    var c0 = canvas.getContext("2d");
+    c0.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+  var trendMap = {
+    improving:        { cls: "up",   label: "↑ 改善中",   color: "#4caf90" },
+    declining:        { cls: "down", label: "↓ 下降中",   color: "#e8889c" },
+    stable:           { cls: "flat", label: "→ 平穩",     color: "#5b9fe8" },
+    insufficient_data:{ cls: "flat", label: "· 資料累積中", color: "#5b9fe8" },
+  };
+  var t = trendMap[summary.trend] || trendMap.stable;
+  var last = daily[daily.length - 1];
+  var deltaTxt = summary.overall_delta != null
+    ? (summary.overall_delta > 0 ? "+" : "") + summary.overall_delta
+    : "—";
+  sumEl.innerHTML =
+    '<div class="med-improvement-meta">' +
+    '<span class="med-improvement-trend ' + t.cls + '">' + t.label + '</span>' +
+    '<span>最近：<strong style="color:var(--text)">' + last.improvement_score + '</strong> 分</span>' +
+    '<span>期間變化：<strong style="color:var(--text)">' + deltaTxt + '</strong></span>' +
+    '<span>' + daily.length + ' 天有紀錄</span>' +
+    '</div>';
+
+  var dpr = window.devicePixelRatio || 1;
+  var ctx = canvas.getContext("2d");
+  var rect = canvas.getBoundingClientRect();
+  var w = canvas.width = rect.width * dpr;
+  var h = canvas.height = rect.height * dpr;
+  ctx.clearRect(0, 0, w, h);
+  var pad = 14 * dpr;
+
+  // baseline (50 分) 與框
+  ctx.strokeStyle = "rgba(120,140,170,0.18)";
+  ctx.lineWidth = 1 * dpr;
+  ctx.beginPath();
+  var midY = h - pad - (h - 2 * pad) * 0.5;
+  ctx.setLineDash([4 * dpr, 4 * dpr]);
+  ctx.moveTo(pad, midY); ctx.lineTo(w - pad, midY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  var pts = daily.map(function(d, i) {
+    return {
+      x: pad + (w - 2 * pad) * (daily.length === 1 ? 0.5 : i / (daily.length - 1)),
+      y: h - pad - (h - 2 * pad) * (d.improvement_score / 100),
+    };
+  });
+
+  // 漸層填色
+  var grad = ctx.createLinearGradient(0, pad, 0, h - pad);
+  var rgb = t.color === "#4caf90" ? "76,175,144" : t.color === "#e8889c" ? "232,136,156" : "91,159,232";
+  grad.addColorStop(0, "rgba(" + rgb + ",0.28)");
+  grad.addColorStop(1, "rgba(" + rgb + ",0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, h - pad);
+  pts.forEach(function(p) { ctx.lineTo(p.x, p.y); });
+  ctx.lineTo(pts[pts.length - 1].x, h - pad);
+  ctx.closePath();
+  ctx.fill();
+
+  // 折線
+  ctx.strokeStyle = t.color;
+  ctx.lineWidth = 2 * dpr;
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+  ctx.stroke();
+
+  // 圓點
+  ctx.fillStyle = t.color;
+  pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, 3 * dpr, 0, 2 * Math.PI); ctx.fill(); });
+
+  // y 軸標示
+  ctx.fillStyle = "rgba(120,140,170,0.7)";
+  ctx.font = (10 * dpr) + "px system-ui";
+  ctx.textAlign = "left";
+  ctx.fillText("100", 2 * dpr, pad + 4 * dpr);
+  ctx.fillText("50",  2 * dpr, midY + 4 * dpr);
+  ctx.fillText("0",   2 * dpr, h - pad + 4 * dpr);
 }
 
 // 把藥分到 早 / 中 / 晚 / 其他 四個時段；同一顆早晚都吃的藥會出現在「早」與「晚」兩格
