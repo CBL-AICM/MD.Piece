@@ -6613,7 +6613,7 @@ html[data-mode="senior"] .visit-modal-save {
   font-size: .9em;
 }
 
-/* dark theme override：所有故事內文用淺色 */
+/* dark theme override：故事頁全部換成實心深色系列 */
 #app-wrapper[data-theme="dark"] .story-body,
 #app-wrapper[data-theme="dark"] .story-body *,
 #app-wrapper[data-theme="dark"] .story-body p,
@@ -6631,15 +6631,25 @@ html[data-mode="senior"] .visit-modal-save {
 #app-wrapper[data-theme="dark"] .story-body h2 { border-left-color: var(--story-accent-light); }
 #app-wrapper[data-theme="dark"] .story-body blockquote {
   border-left-color: var(--story-accent-light);
-  background: rgba(255,255,255,0.06);
+  background: #162940;  /* 深 navy 嵌入層 */
 }
 #app-wrapper[data-theme="dark"] .story-body th,
-#app-wrapper[data-theme="dark"] .story-body code { background: rgba(255,255,255,0.08); }
+#app-wrapper[data-theme="dark"] .story-body code { background: #162940; }
+#app-wrapper[data-theme="dark"] .story-body td,
+#app-wrapper[data-theme="dark"] .story-body th { border-color: #3D6499; }
 #app-wrapper[data-theme="dark"] .story-tag {
-  background: rgba(255,255,255,0.08);
+  background: #1F3553;
   color: var(--story-text-light);
-  border-color: var(--story-text-light-mid);
+  border-color: #3D6499;
 }
+#app-wrapper[data-theme="dark"] .story-section-cat {
+  background: #162940;
+  color: var(--story-text-light);
+  border-color: #3D6499;
+}
+#app-wrapper[data-theme="dark"] .story-cat-disease   { background: #3A1421; border-color: #6A2238; color: #FFD9DF; }
+#app-wrapper[data-theme="dark"] .story-cat-quick_tip { background: #3A2511; border-color: #7A4F1A; color: #FFE3B0; }
+#app-wrapper[data-theme="dark"] .story-cat-news      { background: #112340; border-color: #2D5278; color: #C9DDF5; }
 
 .story-sources {
   margin-top: 18px;
