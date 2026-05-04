@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
+import logging
 from backend.routers import (
     patients, doctors, symptoms,
     education, emotions, medications,
@@ -10,6 +11,8 @@ from backend.routers import (
     doctor_notes, medication_changes, alerts, labs,
 )
 from backend.services import llm_service
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="MD.Piece API", version="1.0.0")
 
@@ -19,6 +22,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RuntimeError)
+async def runtime_error_handler(request: Request, exc: RuntimeError):
+    msg = str(exc)
+    is_db_offline = ("SUPABASE_URL" in msg) or ("Supabase" in msg) or ("Serverless" in msg)
+    if is_db_offline:
+        logger.warning(f"DB offline at {request.url.path}: {msg}")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "db_offline",
+                "detail": "資料庫尚未連線（後端缺少 SUPABASE_URL / SUPABASE_KEY 環境變數）。"
+                          "請聯絡管理者於 Vercel 後台補上憑證後重試。",
+                "path": request.url.path,
+            },
+        )
+    raise exc
 
 app.include_router(patients.router, prefix="/patients", tags=["patients"])
 app.include_router(doctors.router, prefix="/doctors", tags=["doctors"])
