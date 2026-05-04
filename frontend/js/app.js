@@ -497,7 +497,7 @@ const pageSlugForTerminal = {
   home: 'home', symptoms: 'symptoms', medications: 'medications',
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
-  pieces: 'your-pieces', account: 'account',
+  pieces: 'your-pieces', chat: 'med-chat', account: 'account',
   settings: 'settings',
   records: 'records', doctors: 'doctors'
 };
@@ -507,7 +507,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, memo, previsit, story, labs, pieces, account, settings
+    vitals, memo, previsit, story, labs, pieces, chat, account, settings
   };
   // Page transition
   app.style.opacity = '0';
@@ -523,6 +523,7 @@ function showPage(page) {
     if (page === "memo") loadMemoPage();
     if (page === "labs") loadLabsPage();
     if (page === "pieces") loadPiecesPage();
+    if (page === "chat") loadChatPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     // Render Lucide icons
@@ -1061,6 +1062,7 @@ function home() {
         ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
         ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
+        ${homeCard('chat','message-circle-heart','醫起聊天','和小禾聊聊，幫你把感受寫成文章','rose')}
         ${homeCard('settings','settings','系統設定','字體、主題、年長版等偏好','amber')}
       </div>
 
@@ -4012,6 +4014,409 @@ function initUserSettings() {
   }
 }
 initUserSettings();
+
+// ─── 醫起聊天（Chat with 小禾）────────────────────────────────
+// Claude Code 風格：終端機框 + 吉祥物 + 打字機輸出
+// 後端 endpoint: POST /xiaohe/chat  { user_id, message, mode, version }
+
+const CHAT_HISTORY_KEY = 'mdpiece_chat_history';
+const CHAT_MODE_KEY    = 'mdpiece_chat_mode';      // patient / family
+const CHAT_VERSION_KEY = 'mdpiece_chat_version';   // normal / elderly
+var _chatTyping = false;
+var _chatTypeTimer = null;
+
+function chatLoadHistory() {
+  try {
+    var raw = localStorage.getItem(CHAT_HISTORY_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+function chatSaveHistory(list) {
+  try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list.slice(-80))); }
+  catch (e) {}
+}
+function chatGetMode() {
+  try { return localStorage.getItem(CHAT_MODE_KEY) || 'patient'; } catch (e) { return 'patient'; }
+}
+function chatGetVersion() {
+  // 自動以使用者「年長版」UI mode 為預設
+  try {
+    var v = localStorage.getItem(CHAT_VERSION_KEY);
+    if (v) return v;
+  } catch (e) {}
+  return (typeof getMode === 'function' && getMode() === 'senior') ? 'elderly' : 'normal';
+}
+function chatSetMode(m) {
+  try { localStorage.setItem(CHAT_MODE_KEY, m); } catch (e) {}
+}
+function chatSetVersion(v) {
+  try { localStorage.setItem(CHAT_VERSION_KEY, v); } catch (e) {}
+}
+
+// 小禾吉祥物 — 簡單可愛的「米粒/小芽」風格 SVG
+function chatMascotSvg(state) {
+  // state: 'idle' | 'typing' | 'thinking'
+  state = state || 'idle';
+  return ''
+    + '<svg class="chat-mascot-svg chat-mascot-' + state + '" viewBox="0 0 80 88" xmlns="http://www.w3.org/2000/svg">'
+    +   '<defs>'
+    +     '<radialGradient id="hekoBody" cx="50%" cy="40%" r="60%">'
+    +       '<stop offset="0%" stop-color="#FFE9C9"/>'
+    +       '<stop offset="100%" stop-color="#E8B97C"/>'
+    +     '</radialGradient>'
+    +   '</defs>'
+    +   '<path d="M40 4c-3 6-1 12 3 16-2 5-5 6-8 6-3 0-7-2-9-7 4-3 9-9 14-15z" fill="#7BB872"/>'
+    +   '<ellipse cx="40" cy="50" rx="28" ry="32" fill="url(#hekoBody)" stroke="#C97F4B" stroke-width="1.5"/>'
+    +   '<circle cx="30" cy="46" r="3.2" fill="#3A2A24"/>'
+    +   '<circle cx="50" cy="46" r="3.2" fill="#3A2A24"/>'
+    +   '<circle class="chat-mascot-blush" cx="24" cy="56" r="3" fill="#F2A6A6" opacity="0.7"/>'
+    +   '<circle class="chat-mascot-blush" cx="56" cy="56" r="3" fill="#F2A6A6" opacity="0.7"/>'
+    +   '<path class="chat-mascot-mouth" d="M34 58 Q40 64 46 58" stroke="#5C3A32" stroke-width="2" fill="none" stroke-linecap="round"/>'
+    + '</svg>';
+}
+
+function chatGreeting() {
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var name = u.nickname || '你';
+  var v = chatGetVersion();
+  if (v === 'elderly') {
+    return '你好啊，' + name + '。我是小禾，今天身體有沒有比較舒服？慢慢說，我都聽。';
+  }
+  return '嗨～' + name + '！我是小禾 🌱 今天想聊什麼？身體、心情、或是寫一篇文章都可以。';
+}
+
+function chat() {
+  var hist = chatLoadHistory();
+  var mode = chatGetMode();
+  var ver  = chatGetVersion();
+
+  var msgsHtml = hist.length
+    ? hist.map(chatRenderMessage).join('')
+    : ''
+      + '<div class="chat-msg chat-msg-bot">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatGreeting() + '</div>'
+      +   '</div>'
+      + '</div>';
+
+  return ''
+    + '<section class="chat-page">'
+    + '  <header class="chat-header">'
+    + '    <div class="chat-mascot-wrap chat-mascot-wrap-lg" id="chat-mascot">'
+    +        chatMascotSvg('idle')
+    + '    </div>'
+    + '    <div class="chat-header-text">'
+    + '      <p class="chat-eyebrow">// chat &gt; xiaohe.ai</p>'
+    + '      <h2 class="chat-title">醫起聊天</h2>'
+    + '      <p class="chat-sub">小禾陪你聊聊，把感受拼成一段話、一篇文章。</p>'
+    + '    </div>'
+    + '    <div class="chat-toggles">'
+    + '      <div class="chat-seg" role="tablist" aria-label="對話對象">'
+    + '        <button type="button" class="chat-seg-btn' + (mode === 'patient' ? ' active' : '') + '" onclick="chatSwitchMode(\'patient\')">我是患者</button>'
+    + '        <button type="button" class="chat-seg-btn' + (mode === 'family'  ? ' active' : '') + '" onclick="chatSwitchMode(\'family\')">我是家屬</button>'
+    + '      </div>'
+    + '      <div class="chat-seg" role="tablist" aria-label="語氣">'
+    + '        <button type="button" class="chat-seg-btn' + (ver === 'normal'  ? ' active' : '') + '" onclick="chatSwitchVersion(\'normal\')">一般</button>'
+    + '        <button type="button" class="chat-seg-btn' + (ver === 'elderly' ? ' active' : '') + '" onclick="chatSwitchVersion(\'elderly\')">年長版</button>'
+    + '      </div>'
+    + '    </div>'
+    + '  </header>'
+
+    + '  <div class="chat-stream" id="chat-stream">'
+    +      msgsHtml
+    + '  </div>'
+
+    + '  <div class="chat-suggest" id="chat-suggest">'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我今天比較喘，要怎麼觀察？\')">今天比較喘</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'幫我把最近三天的不舒服整理成一段話\')">整理近況</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我有點焦慮，可以陪我說說話嗎？\')">陪我聊聊</button>'
+    + '    <button type="button" class="chat-chip chat-chip-special" onclick="chatGenerateArticle()">'
+    + '      <i data-lucide="sparkles" style="width:14px;height:14px"></i> 生成一篇文章'
+    + '    </button>'
+    + '  </div>'
+
+    + '  <form class="chat-input-bar" id="chat-form" onsubmit="event.preventDefault(); chatSend();">'
+    + '    <span class="chat-prompt">$</span>'
+    + '    <input id="chat-input" class="chat-input" type="text" autocomplete="off" placeholder="跟小禾說說話… (Enter 送出)" />'
+    + '    <button type="submit" class="chat-send" id="chat-send">'
+    + '      <i data-lucide="send" style="width:16px;height:16px"></i>'
+    + '      <span>送出</span>'
+    + '    </button>'
+    + '    <button type="button" class="chat-clear" onclick="chatClear()" title="清空對話">'
+    + '      <i data-lucide="trash-2" style="width:14px;height:14px"></i>'
+    + '    </button>'
+    + '  </form>'
+    + '  <p class="chat-disclaimer">小禾不是醫師，僅作為陪伴與資訊參考；身體不適請務必就醫。</p>'
+    + '</section>';
+}
+
+function chatRenderMessage(m) {
+  if (m.role === 'user') {
+    return ''
+      + '<div class="chat-msg chat-msg-user">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatEscape(m.text) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  if (m.role === 'article') {
+    return ''
+      + '<div class="chat-msg chat-msg-bot chat-msg-article">'
+      +   '<div class="chat-bubble chat-bubble-article">'
+      +     '<div class="chat-article-head"><i data-lucide="file-text"></i> 小禾為你寫的一篇</div>'
+      +     '<div class="chat-text chat-article-text">' + chatEscape(m.text) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  return ''
+    + '<div class="chat-msg chat-msg-bot">'
+    +   '<div class="chat-bubble">'
+    +     '<div class="chat-text">' + chatEscape(m.text) + '</div>'
+    +   '</div>'
+    + '</div>';
+}
+
+function chatEscape(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
+function loadChatPage() {
+  var input = document.getElementById('chat-input');
+  if (input) {
+    input.focus();
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatSend();
+      }
+    });
+  }
+  chatScrollToBottom();
+}
+
+function chatScrollToBottom() {
+  var s = document.getElementById('chat-stream');
+  if (s) s.scrollTop = s.scrollHeight;
+}
+
+function chatSwitchMode(m) {
+  chatSetMode(m);
+  document.querySelectorAll('.chat-toggles .chat-seg').forEach(function(seg, i) {
+    if (i !== 0) return;
+    seg.querySelectorAll('.chat-seg-btn').forEach(function(b, j) {
+      var want = (j === 0) ? 'patient' : 'family';
+      b.classList.toggle('active', want === m);
+    });
+  });
+  showToast(m === 'family' ? '切換為家屬模式' : '切換為患者模式', 'info');
+}
+
+function chatSwitchVersion(v) {
+  chatSetVersion(v);
+  document.querySelectorAll('.chat-toggles .chat-seg').forEach(function(seg, i) {
+    if (i !== 1) return;
+    seg.querySelectorAll('.chat-seg-btn').forEach(function(b, j) {
+      var want = (j === 0) ? 'normal' : 'elderly';
+      b.classList.toggle('active', want === v);
+    });
+  });
+  showToast(v === 'elderly' ? '切換為年長版語氣' : '切換為一般語氣', 'info');
+}
+
+function chatQuickAsk(text) {
+  var input = document.getElementById('chat-input');
+  if (input) input.value = text;
+  chatSend();
+}
+
+function chatClear() {
+  if (!confirm('清空對話紀錄？')) return;
+  try { localStorage.removeItem(CHAT_HISTORY_KEY); } catch (e) {}
+  // 重新渲染
+  var stream = document.getElementById('chat-stream');
+  if (stream) {
+    stream.innerHTML = ''
+      + '<div class="chat-msg chat-msg-bot">'
+      +   '<div class="chat-bubble">'
+      +     '<div class="chat-text">' + chatGreeting() + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function chatAppendMessage(role, text) {
+  var stream = document.getElementById('chat-stream');
+  if (!stream) return null;
+  var wrap = document.createElement('div');
+  wrap.innerHTML = chatRenderMessage({ role: role, text: text });
+  var node = wrap.firstChild;
+  stream.appendChild(node);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  chatScrollToBottom();
+  return node;
+}
+
+function chatShowThinking() {
+  var stream = document.getElementById('chat-stream');
+  if (!stream) return null;
+  var node = document.createElement('div');
+  node.className = 'chat-msg chat-msg-bot chat-msg-thinking';
+  node.id = 'chat-thinking';
+  node.innerHTML = ''
+    + '<div class="chat-bubble">'
+    +   '<div class="chat-typing-dots"><span></span><span></span><span></span></div>'
+    + '</div>';
+  stream.appendChild(node);
+  chatSetMascotState('thinking');
+  chatScrollToBottom();
+  return node;
+}
+
+function chatRemoveThinking() {
+  var n = document.getElementById('chat-thinking');
+  if (n && n.parentNode) n.parentNode.removeChild(n);
+}
+
+function chatSetMascotState(state) {
+  var wrap = document.getElementById('chat-mascot');
+  if (!wrap) return;
+  wrap.innerHTML = chatMascotSvg(state);
+}
+
+// 打字機效果：把文字一個個塞進 element
+function chatTypeInto(node, text, opts, onDone) {
+  opts = opts || {};
+  var speed = opts.speed || 22; // ms per char
+  var i = 0;
+  if (_chatTypeTimer) { clearInterval(_chatTypeTimer); _chatTypeTimer = null; }
+  _chatTyping = true;
+  chatSetMascotState('typing');
+  node.innerHTML = '<span class="chat-caret">▌</span>';
+  _chatTypeTimer = setInterval(function() {
+    if (i >= text.length) {
+      clearInterval(_chatTypeTimer); _chatTypeTimer = null;
+      _chatTyping = false;
+      node.innerHTML = chatEscape(text);
+      chatSetMascotState('idle');
+      if (typeof onDone === 'function') onDone();
+      chatScrollToBottom();
+      return;
+    }
+    var partial = text.slice(0, i + 1);
+    node.innerHTML = chatEscape(partial) + '<span class="chat-caret">▌</span>';
+    chatScrollToBottom();
+    i += 1;
+  }, speed);
+}
+
+function chatSend() {
+  if (_chatTyping) { showToast('小禾正在說話…等一下下', 'info'); return; }
+  var input = document.getElementById('chat-input');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+
+  var hist = chatLoadHistory();
+  hist.push({ role: 'user', text: text, t: Date.now() });
+  chatSaveHistory(hist);
+  chatAppendMessage('user', text);
+
+  chatShowThinking();
+
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : 'demo';
+  var body = {
+    user_id: pid,
+    message: text,
+    mode: chatGetMode(),
+    version: chatGetVersion()
+  };
+
+  fetch(API + '/xiaohe/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
+    .then(function(data) {
+      chatRemoveThinking();
+      var reply = (data && data.reply) ? String(data.reply)
+        : '抱歉，小禾沒收到回覆，可以再說一次嗎？';
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (!textEl) return;
+      chatTypeInto(textEl, reply, {}, function() {
+        var h = chatLoadHistory();
+        h.push({ role: 'bot', text: reply, t: Date.now() });
+        chatSaveHistory(h);
+      });
+    })
+    .catch(function() {
+      chatRemoveThinking();
+      var fallback = '網路有點忙，等一下再試試看。如果不舒服請就醫。';
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (textEl) chatTypeInto(textEl, fallback);
+    });
+}
+
+// 「生成一篇文章」— 把最近的對話交給小禾，請它整理成一篇短文，
+// 然後以打字機方式產出（像 Claude Code 打字打一打產出文章）
+function chatGenerateArticle() {
+  if (_chatTyping) { showToast('小禾正在說話…等一下下', 'info'); return; }
+  var hist = chatLoadHistory();
+  var recent = hist.slice(-12).map(function(m) {
+    var who = m.role === 'user' ? '我' : '小禾';
+    return who + '：' + m.text;
+  }).join('\n');
+
+  var prompt = ''
+    + '請依據下面這段對話，幫我寫一篇 200~350 字的短文，'
+    + '主題是「最近的我」，溫暖、口語化、第一人稱、分 2~3 段，'
+    + '結尾給自己一句鼓勵。如果對話內容不足，就以一般問候與健康提醒為主。\n\n'
+    + '【對話】\n' + (recent || '（尚無對話）');
+
+  // 把使用者意圖也記下來
+  hist.push({ role: 'user', text: '幫我把這段對話寫成一篇文章', t: Date.now() });
+  chatSaveHistory(hist);
+  chatAppendMessage('user', '幫我把這段對話寫成一篇文章');
+
+  chatShowThinking();
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : 'demo';
+  fetch(API + '/xiaohe/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: pid, message: prompt,
+      mode: chatGetMode(), version: chatGetVersion()
+    })
+  })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
+    .then(function(data) {
+      chatRemoveThinking();
+      var article = (data && data.reply) ? String(data.reply)
+        : '今天先好好喝杯水，深呼吸三次。明天再來把感受寫下來，我會等你。';
+      var node = chatAppendMessage('article', '');
+      var textEl = node ? node.querySelector('.chat-article-text') : null;
+      if (!textEl) return;
+      chatTypeInto(textEl, article, { speed: 18 }, function() {
+        var h = chatLoadHistory();
+        h.push({ role: 'article', text: article, t: Date.now() });
+        chatSaveHistory(h);
+      });
+    })
+    .catch(function() {
+      chatRemoveThinking();
+      var fallback = '網路有點忙，等一下再試試看寫文章。';
+      var node = chatAppendMessage('bot', '');
+      var textEl = node ? node.querySelector('.chat-text') : null;
+      if (textEl) chatTypeInto(textEl, fallback);
+    });
+}
 
 function settings() {
   var user = getCurrentUser();
