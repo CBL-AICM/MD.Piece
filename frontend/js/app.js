@@ -54,11 +54,30 @@ function getStablePatientId() {
   if (user && user.id) return user.id;
   var demoId = localStorage.getItem('mdpiece_demo_pid');
   if (!demoId) {
-    demoId = (crypto && crypto.randomUUID) ? crypto.randomUUID()
-      : 'demo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    demoId = generateSecureId();
     localStorage.setItem('mdpiece_demo_pid', demoId);
   }
   return demoId;
+}
+
+// 產生 demo patient_id — 一律用 Web Crypto，避免 Math.random 流入 user_id（CodeQL）
+function generateSecureId() {
+  if (typeof crypto !== 'undefined') {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    if (typeof crypto.getRandomValues === 'function') {
+      var b = new Uint8Array(16);
+      crypto.getRandomValues(b);
+      // RFC 4122 v4
+      b[6] = (b[6] & 0x0f) | 0x40;
+      b[8] = (b[8] & 0x3f) | 0x80;
+      var hex = Array.prototype.map.call(b, function(x) {
+        return ('00' + x.toString(16)).slice(-2);
+      }).join('');
+      return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+    }
+  }
+  // 最後保險：所有現代瀏覽器都已支援 Web Crypto，這條基本上跑不到
+  throw new Error('Web Crypto API unavailable');
 }
 
 // ─── 路由 ──────────────────────────────────────────────────
