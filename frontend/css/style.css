@@ -7958,3 +7958,460 @@ html[data-mode="senior"] .pv-sub,
 html[data-mode="senior"] .pv-check-text,
 html[data-mode="senior"] .pv-report-body { font-size: 1.05rem; }
 html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE PWA SHELL — Phone-app feel (Y2K terminal × cozy)
+   只在 ≤768px 啟用：狀態列 / 底部頁籤 / FAB / 多層卡片
+   ═══════════════════════════════════════════════════════════ */
+
+.mobile-statusbar,
+.mobile-tabbar,
+.mobile-home-indicator { display: none; }
+
+@media (max-width: 768px) {
+
+  /* ── 0. App-wrapper acts like a phone surface ─────────── */
+  #app-wrapper.show {
+    position: relative;
+    min-height: 100vh;
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0));
+    /* keep grid bg from desktop, but darker corners feel like a phone */
+  }
+  #app-wrapper.show::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    border-radius: 22px;
+    box-shadow: inset 0 0 0 2px var(--app-border), inset 0 0 60px rgba(0,0,0,0.15);
+    z-index: 1;
+    opacity: .55;
+  }
+
+  /* ── 1. Faux status bar ───────────────────────────────── */
+  .mobile-statusbar {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    height: 28px;
+    align-items: center;
+    padding: 0 16px;
+    font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--app-text);
+    background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
+    border-bottom: 1.5px solid var(--app-border);
+    user-select: none;
+  }
+  .msb-time {
+    color: var(--app-term);
+    text-shadow: 0 0 6px var(--app-glow);
+    min-width: 44px;
+  }
+  .msb-notch {
+    flex: 1;
+    height: 14px;
+    margin: 0 14px;
+    border-radius: 14px;
+    background: rgba(0,0,0,0.32);
+    border: 1px solid var(--app-border);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  .msb-notch::after {
+    content: "";
+    position: absolute;
+    right: 8px; top: 50%;
+    transform: translateY(-50%);
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--app-term);
+    box-shadow: 0 0 6px var(--app-term);
+  }
+  .msb-icons { display: inline-flex; align-items: center; gap: 7px; color: var(--app-text); }
+  .msb-sig { display: inline-flex; gap: 1.5px; align-items: flex-end; height: 11px; }
+  .msb-sig i {
+    width: 2px;
+    background: currentColor;
+    border-radius: 1px;
+    display: inline-block;
+  }
+  .msb-sig i:nth-child(1) { height: 4px; }
+  .msb-sig i:nth-child(2) { height: 6px; }
+  .msb-sig i:nth-child(3) { height: 8px; }
+  .msb-sig i:nth-child(4) { height: 10px; opacity: 0.45; }
+  .msb-wifi { display: inline-flex; }
+  .msb-batt {
+    width: 22px; height: 11px;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    padding: 1px;
+    position: relative;
+  }
+  .msb-batt::after {
+    content: "";
+    position: absolute;
+    right: -3px; top: 3px;
+    width: 2px; height: 5px;
+    background: currentColor;
+    border-radius: 0 1px 1px 0;
+  }
+  .msb-batt-fill {
+    display: block;
+    height: 100%;
+    width: 78%;
+    background: var(--app-mint);
+    border-radius: 1px;
+  }
+
+  /* ── 2. Compact mobile app bar (replaces .topbar look) ─ */
+  .main-content {
+    margin-left: 0;
+    padding: 0;
+  }
+  .topbar {
+    position: sticky;
+    top: 28px;                /* sit under status bar */
+    margin: 8px 10px 0;
+    border-radius: 10px;
+    padding: 6px 8px;
+    gap: 6px;
+    border: 1.5px solid var(--app-border);
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+    z-index: 55;
+  }
+  .topbar .hamburger {
+    display: inline-flex;
+    width: 32px; height: 30px;
+    font-size: 1.05rem;
+    margin-left: 2px;
+    border-radius: 6px;
+  }
+  .topbar-back {
+    padding: 6px 10px;
+    margin-left: 4px;
+    font-size: 0.86rem;
+    border-radius: 6px;
+  }
+  .topbar-back .tb-cd { display: none; }
+  .topbar-filename {
+    font-size: 0.78rem;
+    padding: 4px 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 38vw;
+  }
+  .topbar-prefix { display: none; }
+  .topbar-ext { opacity: 0.5; }
+  .topbar-version { display: none; }
+  .topbar-wincontrols { display: none !important; }
+  .app-theme-toggle, .app-settings-btn {
+    width: 32px; height: 30px;
+    border-radius: 6px;
+  }
+
+  /* ── 3. Page transition — phone-app slide ─────────────── */
+  #app {
+    padding: 14px 12px 24px;
+    min-height: calc(100vh - 28px - 60px - 76px);
+    position: relative;
+    z-index: 2;
+  }
+  #app > * {
+    animation: mob-enter .32s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes mob-enter {
+    0% { opacity: 0; transform: translateY(14px) scale(.985); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ── 4. Layered card / sheet feel — multi-layer paper ── */
+  /* Stack effect: any direct section under #app gets a faint
+     paper-stack shadow behind it, like cards layered on a desk. */
+  #app .card,
+  #app .home-section,
+  #app .home-hero,
+  #app .pzl-card,
+  #app .med-slot,
+  #app .stat-box,
+  #app .vt-card,
+  #app .pv-card {
+    position: relative;
+    border-radius: 14px;
+    box-shadow:
+      0 1px 0 var(--app-border),
+      0 4px 0 var(--app-panel-soft),
+      0 5px 0 var(--app-border),
+      0 10px 24px rgba(0,0,0,0.18);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  #app .home-section + .home-section,
+  #app .card + .card { margin-top: 18px; }
+
+  #app .home-section:active,
+  #app .card:active,
+  #app .pzl-card:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 1px 0 var(--app-border),
+      0 2px 0 var(--app-panel-soft),
+      0 3px 0 var(--app-border),
+      0 6px 14px rgba(0,0,0,0.18);
+  }
+
+  /* Section heading chips — phone-app style */
+  #app .home-section-label,
+  #app .section-title,
+  #app h2 {
+    font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── 5. Sidebar = bottom-up "更多" sheet ───────────────── */
+  .sidebar {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 78vh;
+    border-radius: 22px 22px 0 0;
+    border: 1.5px solid var(--app-border);
+    border-bottom: none;
+    transform: translateY(100%);
+    transition: transform .35s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.35);
+    z-index: 200;
+  }
+  .sidebar.open {
+    transform: translateY(0);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.45);
+  }
+  .sidebar::before {
+    content: "";
+    position: absolute;
+    top: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 44px; height: 4px;
+    border-radius: 4px;
+    background: var(--app-border);
+    opacity: 0.55;
+  }
+  .sidebar-titlebar { margin-top: 14px; border-radius: 0; }
+  .sidebar-brand { padding: 12px 16px; }
+  .sidebar-logo-img { width: 40px; }
+  .sidebar-brand h1 { font-size: 1.1rem; }
+  .sidebar-nav {
+    padding: 10px 10px 10px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    align-content: start;
+  }
+  .nav-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px;
+    margin: 0;
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    background: var(--app-panel-soft);
+    font-size: 0.92rem;
+    min-height: 64px;
+  }
+  .nav-item .nav-icon { width: 22px; }
+  .nav-item .nav-icon svg { width: 20px; height: 20px; }
+  .sidebar-foot {
+    padding: 10px 14px calc(20px + env(safe-area-inset-bottom));
+  }
+  .sidebar-backdrop {
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(2px);
+    z-index: 150;
+  }
+
+  /* ── 6. Bottom tab bar (phone-app navigation) ─────────── */
+  .mobile-tabbar {
+    display: flex;
+    position: fixed;
+    left: 8px; right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    height: 64px;
+    z-index: 100;
+    align-items: stretch;
+    justify-content: space-between;
+    padding: 6px 6px;
+    background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
+    border: 1.5px solid var(--app-border);
+    border-radius: 18px;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.3), 0 14px 30px rgba(0,0,0,0.25);
+    font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  }
+  .mtab-rail {
+    position: absolute;
+    inset: auto 14px 5px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--app-border);
+    opacity: 0.35;
+  }
+  .mtab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    color: var(--app-text-dim);
+    cursor: pointer;
+    position: relative;
+    padding: 4px 2px 6px;
+    font: inherit;
+    transition: color .18s ease, transform .18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mtab .mtab-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    transition: background .18s ease, color .18s ease, transform .18s ease;
+  }
+  .mtab .mtab-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.6px;
+    color: inherit;
+  }
+  .mtab .mtab-dot {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--app-term);
+    box-shadow: 0 0 6px var(--app-term);
+    transition: transform .2s ease;
+  }
+  .mtab:active { transform: translateY(1px); }
+  .mtab.active {
+    color: var(--app-text);
+  }
+  .mtab.active .mtab-icon {
+    background: var(--app-mint);
+    color: var(--app-chip-text);
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4),
+                inset -1px -1px 0 rgba(0,0,0,0.18);
+  }
+  .mtab.active .mtab-dot { transform: translateX(-50%) scale(1); }
+
+  /* Center FAB — protrudes above the tab bar */
+  .mtab.mtab-fab {
+    flex: 0 0 70px;
+    position: relative;
+    z-index: 1;
+  }
+  .mtab.mtab-fab .mtab-fab-ring {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
+    border: 1.5px solid var(--app-border);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.28), 0 0 0 6px var(--app-bg);
+    z-index: 0;
+  }
+  .mtab.mtab-fab .mtab-fab-core {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--app-mint);
+    color: var(--app-chip-text);
+    border: 1.5px solid var(--app-border);
+    box-shadow: 0 0 18px var(--app-glow), inset 1px 1px 0 rgba(255,255,255,0.5);
+    z-index: 2;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .mtab.mtab-fab .mtab-fab-label {
+    position: absolute;
+    bottom: 6px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.66rem;
+    letter-spacing: 1px;
+    color: var(--app-text);
+  }
+  .mtab.mtab-fab:active .mtab-fab-core {
+    transform: translateX(-50%) scale(0.94);
+  }
+  .mtab.mtab-fab.pulse .mtab-fab-core {
+    animation: mtab-fab-pulse .6s ease;
+  }
+  @keyframes mtab-fab-pulse {
+    0%   { box-shadow: 0 0 0 0 var(--app-glow), inset 1px 1px 0 rgba(255,255,255,0.5); }
+    50%  { box-shadow: 0 0 0 14px transparent, inset 1px 1px 0 rgba(255,255,255,0.5); }
+    100% { box-shadow: 0 0 18px var(--app-glow), inset 1px 1px 0 rgba(255,255,255,0.5); }
+  }
+
+  /* ── 7. Home indicator hidden (floating tabbar serves anchor role) ── */
+
+  /* ── 8. Page-level cards (already styled) get tighter mobile spacing ── */
+  .home-grid { grid-template-columns: 1fr !important; gap: 12px; }
+  .home-quick { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+  .home-info-row { grid-template-columns: 1fr !important; }
+  .stat-box { padding: 14px 10px; }
+  .med-slot-grid { grid-template-columns: 1fr !important; }
+
+  /* Make any standalone primary action button fit phone width */
+  #app .btn-primary,
+  #app .auth-submit,
+  #app .home-cta {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Hide the puzzle decorations on mobile — too noisy on small screens */
+  .puzzle-deco-1, .puzzle-deco-2 { display: none; }
+}
+
+/* Senior mode tweaks for mobile (bigger taps) */
+@media (max-width: 768px) {
+  html[data-mode="senior"] .mtab .mtab-label { font-size: 0.78rem; }
+  html[data-mode="senior"] .mtab .mtab-icon { width: 32px; height: 32px; }
+  html[data-mode="senior"] .mobile-tabbar { height: 72px; }
+  html[data-mode="senior"] .nav-item { font-size: 1.02rem; min-height: 72px; }
+}
+
+/* Light theme tweaks — softer shadows on the cream palette */
+@media (max-width: 768px) {
+  #app-wrapper[data-theme="light"] .mobile-tabbar {
+    box-shadow: 2px 2px 0 var(--app-border), 0 10px 24px rgba(92,58,50,0.12);
+  }
+  #app-wrapper[data-theme="light"] #app .home-section,
+  #app-wrapper[data-theme="light"] #app .card,
+  #app-wrapper[data-theme="light"] #app .pzl-card,
+  #app-wrapper[data-theme="light"] #app .home-hero {
+    box-shadow:
+      0 1px 0 var(--app-border),
+      0 3px 0 var(--app-panel-soft),
+      0 4px 0 var(--app-border),
+      0 8px 18px rgba(92,58,50,0.10);
+  }
+}
