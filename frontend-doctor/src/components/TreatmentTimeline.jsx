@@ -68,7 +68,7 @@ export default function TreatmentTimeline({ symptoms, emotionTrend, medChanges, 
   // 為了在圖上畫垂直線，把 medChanges 的 effective_date 對到 series.label
   const dateToLabel = new Map(series.map((s) => [s.date, s.label]))
   const lineEvents = changes.map((c) => {
-    const d = (c.effective_date ?? c.created_at || '').slice(0, 10)
+    const d = ((c.effective_date ?? c.created_at) || '').slice(0, 10)
     return { label: dateToLabel.get(d) || d.slice(5), c }
   })
 
@@ -130,7 +130,7 @@ export default function TreatmentTimeline({ symptoms, emotionTrend, medChanges, 
             <tbody>
               {compares.map((cmp, i) => {
                 const c = cmp.change
-                const date = (c.effective_date ?? c.created_at || '').slice(0, 10)
+                const date = ((c.effective_date ?? c.created_at) || '').slice(0, 10)
                 return (
                   <tr key={i}>
                     <td className="cell-strong">{date}</td>
