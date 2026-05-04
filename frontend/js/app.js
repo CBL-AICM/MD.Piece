@@ -400,7 +400,213 @@ function memoRenderList() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
+function previsit() {
+  return ''
+    + '<section class="pv-page">'
+    + '  <header class="pv-header">'
+    + '    <div>'
+    + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
+    + '      <h2 class="pv-title"><i data-lucide="clipboard-check"></i> 診前報告</h2>'
+    + '      <p class="pv-sub">看診前 30 秒讀完：AI 幫你整理近 30 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
+    + '    </div>'
+    + '    <div class="pv-actions-top">'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
+    + '        <i data-lucide="refresh-cw"></i> 重新生成'
+    + '      </button>'
+    + '      <button class="pv-btn pv-btn-primary" onclick="previsitCopy()" title="複製為純文字帶去診間">'
+    + '        <i data-lucide="clipboard-copy"></i> 複製給醫師'
+    + '      </button>'
+    + '    </div>'
+    + '  </header>'
+    + ''
+    + '  <section class="pv-section pv-checklist">'
+    + '    <h3 class="pv-section-title"><i data-lucide="list-checks"></i> 這次最該問醫師的三件事</h3>'
+    + '    <ol id="pv-checklist-list" class="pv-checklist-list">'
+    + '      <li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>'
+    + '    </ol>'
+    + '    <p class="pv-source" id="pv-checklist-source"></p>'
+    + '  </section>'
+    + ''
+    + '  <section class="pv-section pv-report">'
+    + '    <h3 class="pv-section-title"><i data-lucide="file-text"></i> 30 天健康摘要</h3>'
+    + '    <div class="pv-stats" id="pv-stats"></div>'
+    + '    <div id="pv-report-body" class="pv-report-body">'
+    + '      <p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>'
+    + '    </div>'
+    + '    <p class="pv-source" id="pv-report-source"></p>'
+    + '  </section>'
+    + ''
+    + '  <p class="pv-disclaimer"><i data-lucide="info"></i> 本報告由 AI 整理你輸入的紀錄，僅供與醫師溝通參考，不取代醫師診斷。</p>'
+    + '</section>';
+}
+
+// ─── 診前報告 (Pre-consultation Report) ──────────────────────
+
+var _previsitData = { checklist: null, report: null };
+
+function loadPrevisitPage() {
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+
+  _previsitData = { checklist: null, report: null };
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/checklist')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _previsitData.checklist = data;
+      previsitRenderChecklist(data);
+    })
+    .catch(function() {
+      previsitRenderChecklistError();
+    });
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _previsitData.report = data;
+      previsitRenderReport(data);
+    })
+    .catch(function() {
+      previsitRenderReportError();
+    });
+}
+
+function previsitRenderChecklist(data) {
+  var listEl = document.getElementById('pv-checklist-list');
+  var srcEl = document.getElementById('pv-checklist-source');
+  if (!listEl) return;
+  var items = (data && Array.isArray(data.checklist)) ? data.checklist : [];
+  if (!items.length) {
+    listEl.innerHTML = '<li class="pv-empty">目前沒有足夠的紀錄產生提問清單，先到症狀／情緒／用藥頁面留下紀錄吧。</li>';
+  } else {
+    listEl.innerHTML = items.map(function(text, i) {
+      return '<li class="pv-check-item">'
+        + '<span class="pv-check-num">' + (i + 1) + '</span>'
+        + '<span class="pv-check-text">' + escapeHtml(text) + '</span>'
+        + '</li>';
+    }).join('');
+  }
+  if (srcEl) srcEl.textContent = previsitSourceLabel(data);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderChecklistError() {
+  var listEl = document.getElementById('pv-checklist-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<li class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</li>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderReport(data) {
+  var bodyEl = document.getElementById('pv-report-body');
+  var statsEl = document.getElementById('pv-stats');
+  var srcEl = document.getElementById('pv-report-source');
+  if (!bodyEl) return;
+
+  var raw = (data && data.raw_data) || {};
+  if (statsEl) {
+    statsEl.innerHTML = ''
+      + previsitStatCard('scan-search', '症狀', raw.symptom_count, '筆')
+      + previsitStatCard('smile', '情緒', raw.emotion_count, '次')
+      + previsitStatCard('pill', '用藥', raw.medication_count, '種')
+      + previsitStatCard('stethoscope', '就診', raw.visit_count, '次');
+  }
+
+  var report = (data && data.report) || '';
+  if (!report) {
+    bodyEl.innerHTML = '<p class="pv-empty">尚無報告內容。</p>';
+  } else {
+    bodyEl.innerHTML = markdownToHtml(report);
+  }
+
+  if (srcEl) srcEl.textContent = previsitSourceLabel(data);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderReportError() {
+  var bodyEl = document.getElementById('pv-report-body');
+  if (!bodyEl) return;
+  bodyEl.innerHTML = '<p class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitStatCard(icon, label, value, unit) {
+  var n = (value === undefined || value === null) ? 0 : value;
+  return '<div class="pv-stat">'
+    + '<span class="pv-stat-icon"><i data-lucide="' + icon + '"></i></span>'
+    + '<div class="pv-stat-body">'
+    +   '<div class="pv-stat-num">' + n + ' <small>' + unit + '</small></div>'
+    +   '<div class="pv-stat-label">' + label + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function previsitSourceLabel(data) {
+  if (!data) return '';
+  var src = data.source || '';
+  var when = data.generated_at ? new Date(data.generated_at).toLocaleString() : '';
+  var srcLabel = src === 'ai' ? 'AI 生成'
+    : src === 'default' ? '預設提示（紀錄不足）'
+    : src === 'no_data' ? '紀錄不足'
+    : src;
+  return when ? (srcLabel + ' · ' + when) : srcLabel;
+}
+
+function previsitReload() {
+  var listEl = document.getElementById('pv-checklist-list');
+  var bodyEl = document.getElementById('pv-report-body');
+  if (listEl) listEl.innerHTML = '<li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>';
+  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  loadPrevisitPage();
+}
+
+function previsitCopy() {
+  var d = _previsitData || {};
+  var lines = [];
+  lines.push('【MD.Piece 診前報告】');
+  lines.push('產出時間：' + new Date().toLocaleString());
+  lines.push('');
+  lines.push('▍這次想問醫師的三件事');
+  var items = d.checklist && Array.isArray(d.checklist.checklist) ? d.checklist.checklist : [];
+  if (items.length) {
+    items.forEach(function(t, i) { lines.push((i + 1) + '. ' + t); });
+  } else {
+    lines.push('（尚無資料）');
+  }
+  lines.push('');
+  lines.push('▍30 天健康摘要');
+  if (d.report && d.report.raw_data) {
+    var r = d.report.raw_data;
+    lines.push('症狀 ' + (r.symptom_count || 0) + ' 筆 · 情緒 ' + (r.emotion_count || 0) + ' 次 · 用藥 ' + (r.medication_count || 0) + ' 種 · 就診 ' + (r.visit_count || 0) + ' 次');
+    lines.push('');
+  }
+  lines.push((d.report && d.report.report) || '（尚無資料）');
+
+  var text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      if (typeof showToast === 'function') showToast('已複製，貼到任何地方都可以', 'success');
+    }, function() {
+      previsitFallbackCopy(text);
+    });
+  } else {
+    previsitFallbackCopy(text);
+  }
+}
+
+function previsitFallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+  if (typeof showToast === 'function') showToast('已複製', 'success');
+}
 const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
 function labs() {
   return `
@@ -523,6 +729,7 @@ function showPage(page) {
     if (page === "memo") loadMemoPage();
     if (page === "labs") loadLabsPage();
     if (page === "pieces") loadPiecesPage();
+    if (page === "previsit") loadPrevisitPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     // Render Lucide icons
