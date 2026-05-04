@@ -57,7 +57,68 @@ def _parse_scalar(raw: str):
         return True
     if raw.lower() in {"false", "no"}:
         return False
+    # Inline list: [a, b, "c, d"] — supports unquoted CJK items, quoted commas,
+    # apostrophes inside words, and YAML-style escapes.
+    if raw.startswith("[") and raw.endswith("]"):
+        return _split_inline_list(raw[1:-1])
     return _strip_quotes(raw)
+
+
+def _split_inline_list(body: str) -> list[str]:
+    """Split YAML-ish inline list. Quotes only count at item boundaries —
+    apostrophes inside words (Children's Health, O'Brien) stay literal.
+    Inside a quoted item, a doubled quote escapes to a literal one
+    (YAML 'a''b' → a'b). Inside a double-quoted item, backslash escapes
+    are honoured (YAML "a\\"b" → a"b, "\\n" → newline).
+    """
+    items: list[str] = []
+    buf: list[str] = []
+    quote: Optional[str] = None
+    in_value = False
+    i = 0
+    n = len(body)
+    while i < n:
+        ch = body[i]
+        if quote is not None:
+            # Backslash escapes inside double-quoted scalars (YAML).
+            if quote == '"' and ch == "\\" and i + 1 < n:
+                nxt = body[i + 1]
+                buf.append({"n": "\n", "t": "\t", "r": "\r"}.get(nxt, nxt))
+                i += 2
+                continue
+            if ch == quote:
+                # YAML doubled-quote escape: '' → ' (and "" → ").
+                if i + 1 < n and body[i + 1] == quote:
+                    buf.append(ch)
+                    i += 2
+                    continue
+                quote = None
+                i += 1
+                continue
+            buf.append(ch)
+            i += 1
+            continue
+        if not in_value:
+            if ch.isspace():
+                i += 1
+                continue
+            if ch in {'"', "'"}:
+                quote = ch
+                in_value = True
+                i += 1
+                continue
+        if ch == ",":
+            items.append("".join(buf).strip())
+            buf = []
+            in_value = False
+            i += 1
+            continue
+        in_value = True
+        buf.append(ch)
+        i += 1
+    if in_value:
+        items.append("".join(buf).strip())
+    return [item for item in items if item]
 
 
 def _parse_frontmatter(text: str) -> dict:

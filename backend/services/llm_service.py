@@ -9,7 +9,13 @@ logger = logging.getLogger(__name__)
 # 多 provider LLM 服務
 # - 本地開發：LLM_PROVIDER=ollama（預設）→ 零成本、資料不出本機
 # - 雲端部署：LLM_PROVIDER=groq → 免費額度大、速度快，無需自架 GPU
+# - 雲端 fallback：LLM_PROVIDER=anthropic → 用 Claude API（需要 ANTHROPIC_API_KEY）
 # 應用場景：分流判斷、白話解讀、小禾對話、問診清單、30天報告、藥袋辨識、檢驗值解讀
+#
+# auto-fallback：若主 provider（預設 ollama）連不上 / 失敗，會自動降級到
+#   1) anthropic（若有 ANTHROPIC_API_KEY）
+#   2) groq（若有 GROQ_API_KEY）
+# 這樣 Vercel serverless（沒辦法跑 Ollama）也能正常運作。
 
 OLLAMA_BASE = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "qwen2.5:7b")
@@ -19,6 +25,18 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_BASE = "https://api.groq.com/openai/v1"
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+ANTHROPIC_MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS", "1024"))
+
+try:
+    import anthropic as _anthropic_sdk
+    _anthropic_client = _anthropic_sdk.Anthropic() if ANTHROPIC_API_KEY else None
+except Exception as e:  # ImportError 或 client 初始化失敗
+    logger.warning(f"Anthropic SDK 未啟用：{e}")
+    _anthropic_sdk = None
+    _anthropic_client = None
 
 
 def _call_ollama(system_prompt: str, user_message: str) -> str:
@@ -61,11 +79,55 @@ def _call_groq(system_prompt: str, user_message: str) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
+def _call_anthropic(system_prompt: str, user_message: str) -> str:
+    if _anthropic_client is None:
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝；無法使用 Anthropic provider"
+        )
+    msg = _anthropic_client.messages.create(
+        model=ANTHROPIC_MODEL,
+        max_tokens=ANTHROPIC_MAX_TOKENS,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_message}],
+    )
+    return msg.content[0].text
+
+
+_PROVIDERS = {
+    "ollama": _call_ollama,
+    "groq": _call_groq,
+    "anthropic": _call_anthropic,
+}
+
+
+def _fallback_chain(primary: str):
+    """主 provider 之後可用的備援順序（依 API key 是否存在過濾）。"""
+    chain = [primary]
+    if _anthropic_client is not None and "anthropic" not in chain:
+        chain.append("anthropic")
+    if GROQ_API_KEY and "groq" not in chain:
+        chain.append("groq")
+    if "ollama" not in chain:
+        chain.append("ollama")
+    return chain
+
+
 def call_claude(system_prompt: str, user_message: str) -> str:
-    """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider"""
-    if LLM_PROVIDER == "groq":
-        return _call_groq(system_prompt, user_message)
-    return _call_ollama(system_prompt, user_message)
+    """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider，
+    主 provider 失敗時自動降級到下一個可用的（anthropic → groq → ollama）。"""
+    chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _PROVIDERS else "ollama")
+    last_err = None
+    for name in chain:
+        fn = _PROVIDERS.get(name)
+        if fn is None:
+            continue
+        try:
+            return fn(system_prompt, user_message)
+        except Exception as e:
+            last_err = e
+            logger.warning(f"LLM provider {name} 失敗，嘗試下一個：{e}")
+            continue
+    raise RuntimeError(f"所有 LLM provider 都失敗，最後錯誤：{last_err}")
 
 
 def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") -> dict:
