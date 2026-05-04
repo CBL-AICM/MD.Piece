@@ -634,9 +634,17 @@ class _HttpxSupabase:
 # ─── Public API ───────────────────────────────────────────────
 
 def get_supabase():
-    """取得資料庫 client。有 Supabase 憑證用 Supabase，否則用 SQLite。"""
+    """取得資料庫 client。有 Supabase 憑證用 Supabase，否則用 SQLite。
+
+    在 serverless 環境（Vercel / Lambda）下，/tmp/ 是 ephemeral 的，
+    每個 function instance 各自獨立、cold start 後消失。若沒有 Supabase
+    憑證就 fallback 到 SQLite，會導致「註冊後資料隨機消失」的 bug
+    （instance A 寫入的帳號，instance B 看不到）。為避免這種「靜默」
+    資料遺失，serverless 模式下強制要求 Supabase 憑證。
+    """
     global _client
     if _client is None:
+        is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
         if SUPABASE_URL and SUPABASE_KEY:
             if _supabase_available:
                 _client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -645,10 +653,21 @@ def get_supabase():
                 _client = _HttpxSupabase(SUPABASE_URL, SUPABASE_KEY)
                 logger.info("Connected to Supabase via httpx PostgREST shim")
             else:
+                if is_serverless:
+                    raise RuntimeError(
+                        "Serverless 環境偵測到 Supabase 憑證，但 supabase-py 與 httpx "
+                        "皆無法載入；無法使用 SQLite fallback（資料會在 cold start 後遺失）。"
+                    )
                 _init_db()
                 _client = _SqliteSupabase()
                 logger.warning("Supabase creds present but no client lib — falling back to SQLite")
         else:
+            if is_serverless:
+                raise RuntimeError(
+                    "Serverless 環境（Vercel / Lambda）必須設定 SUPABASE_URL 與 SUPABASE_KEY。"
+                    "在 /tmp/ 上的 SQLite 是 ephemeral，會造成註冊後帳號隨機消失。"
+                    "請到 Vercel Dashboard → Project → Settings → Environment Variables 設定憑證。"
+                )
             _init_db()
             _client = _SqliteSupabase()
             logger.info("Using SQLite database (local)")

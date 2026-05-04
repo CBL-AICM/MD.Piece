@@ -419,8 +419,527 @@ function memoRenderList() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-const previsit = () => placeholderPage('診前報告',  '看診前自動整理症狀、藥物、生理變化，醫師一眼看懂。', 'clipboard-check', 'previsit', 35);
-const story    = () => placeholderPage('每日故事',  '今天身體跟你說了什麼？把它寫成一則屬於你的故事。', 'book-open', 'daily-story', 55);
+// ── 每日故事：分類推送（疾病 / 健康快訊 / 最新資訊）─────────
+var STORY_CATEGORIES = [
+  { key: "disease",    label: "疾病故事", icon: "stethoscope", desc: "用故事的方式，把一個疾病講給你聽" },
+  { key: "quick_tip",  label: "健康快訊", icon: "zap",         desc: "今天就能用的小知識" },
+  { key: "news",       label: "最新資訊", icon: "newspaper",   desc: "醫療新聞、衛教快報" }
+];
+
+function story() {
+  var sectionsHtml = STORY_CATEGORIES.map(function(c) {
+    return '' +
+      '<div class="card story-section" id="story-section-' + c.key + '">' +
+        '<div class="story-section-head">' +
+          '<span class="story-section-cat story-cat-' + c.key + '">' +
+            '<i data-lucide="' + c.icon + '" style="width:14px;height:14px;vertical-align:middle"></i> ' + c.label +
+          '</span>' +
+          '<span class="story-section-date" id="story-date-' + c.key + '">—</span>' +
+        '</div>' +
+        '<p class="story-section-desc">' + c.desc + '</p>' +
+        '<div class="story-section-body" id="story-body-' + c.key + '">' +
+          '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入中…</div>' +
+        '</div>' +
+      '</div>';
+  }).join("");
+
+  return `
+    <div class="card story-hero">
+      <h2 style="display:flex;align-items:center;gap:8px">
+        <i data-lucide="book-open" style="width:22px;height:22px"></i> 每日故事
+      </h2>
+      <p style="margin-top:6px;color:var(--text-dim)">
+        每天三則：一篇疾病故事、一則健康快訊、一份最新資訊——用故事的方式，陪你慢慢讀懂自己的身體。
+      </p>
+    </div>
+
+    ${sectionsHtml}
+
+    <div class="card" id="story-newsfeed-card">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="rss" style="width:16px;height:16px"></i> 衛福部最新公告
+      </h3>
+      <p class="story-section-desc" style="margin-top:6px">
+        來自衛福部 RSS，每小時更新一次，點標題會在新分頁開啟原文。
+      </p>
+      <div id="story-newsfeed-list" class="story-newsfeed-list">
+        <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+      </div>
+    </div>
+
+    <div class="card" id="story-archive-card">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="history" style="width:16px;height:16px"></i> 過去幾天
+      </h3>
+      <p class="story-section-desc" style="margin-top:6px">
+        最近錯過的也補得回來。點任一張卡片可以打開那天的文章。
+      </p>
+      <div id="story-archive-list" class="story-archive-list">
+        <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+      </div>
+    </div>
+  `;
+}
+
+function loadStoryPage() {
+  fetch(API + "/education/articles/daily?days=7")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var today = (data && data.today) || {};
+      STORY_CATEGORIES.forEach(function(c) {
+        renderStorySection(c.key, today[c.key]);
+      });
+      renderStoryNewsFeed((data && data.news_feed) || []);
+      renderStoryArchive((data && data.archive) || []);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      STORY_CATEGORIES.forEach(function(c) {
+        var body = document.getElementById("story-body-" + c.key);
+        if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入失敗，請稍後再試。</div>';
+      });
+      var nf = document.getElementById("story-newsfeed-list");
+      if (nf) nf.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">無法取得最新公告。</div>';
+      var arc = document.getElementById("story-archive-list");
+      if (arc) arc.innerHTML = '';
+    });
+}
+
+function renderStorySection(catKey, article) {
+  var dateEl = document.getElementById("story-date-" + catKey);
+  var body = document.getElementById("story-body-" + catKey);
+  if (!body) return;
+  if (!article) {
+    if (dateEl) dateEl.textContent = "";
+    body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">這個分類今天還沒有故事。</div>';
+    return;
+  }
+  if (!window._eduArticles) window._eduArticles = {};
+  window._eduArticles[article.slug] = article;
+
+  if (dateEl) dateEl.textContent = article.pushed_on || "";
+
+  var tags = (article.tags || []).map(function(t) {
+    return '<span class="story-tag">' + escapeHtml(t) + '</span>';
+  }).join("");
+  var sources = (article.sources || []).map(function(s) {
+    return '<li>' + escapeHtml(s) + '</li>';
+  }).join("");
+  var bodyHtml = article.body
+    ? '<div class="story-body">' + markdownToHtml(article.body) + '</div>'
+    : '<div style="color:var(--text-dim);font-size:.9rem">內容尚未提供。</div>';
+
+  body.innerHTML =
+    '<h3 class="story-title">' + escapeHtml(article.title) + '</h3>' +
+    (article.summary ? '<p class="story-summary">' + escapeHtml(article.summary) + '</p>' : '') +
+    (tags ? '<div class="story-tags">' + tags + '</div>' : '') +
+    bodyHtml +
+    (sources
+      ? '<div class="story-sources"><div class="story-sources-head">參考來源</div><ol>' + sources + '</ol></div>'
+      : '') +
+    (article.reviewed_at ? '<div class="story-reviewed">最後審稿：' + escapeHtml(article.reviewed_at) + '</div>' : '');
+}
+
+function renderStoryNewsFeed(items) {
+  var list = document.getElementById("story-newsfeed-list");
+  if (!list) return;
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">目前沒有可顯示的公告。</div>';
+    return;
+  }
+  list.innerHTML = items.map(function(n) {
+    var link = n.link ? escapeHtml(n.link) : "";
+    var title = escapeHtml(n.title || "（無標題）");
+    var summary = n.summary ? '<p class="story-news-summary">' + escapeHtml(n.summary) + '</p>' : "";
+    var pub = n.published ? '<span class="story-news-date">' + escapeHtml(n.published) + '</span>' : "";
+    var titleHtml = link
+      ? '<a class="story-news-title" href="' + link + '" target="_blank" rel="noopener noreferrer">' + title + '</a>'
+      : '<span class="story-news-title">' + title + '</span>';
+    return '<article class="story-news-item">' + titleHtml + pub + summary + '</article>';
+  }).join("");
+}
+
+function renderStoryArchive(days) {
+  var list = document.getElementById("story-archive-list");
+  if (!list) return;
+  if (!days.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">還沒有歷史紀錄。</div>';
+    return;
+  }
+  if (!window._eduArticles) window._eduArticles = {};
+  list.innerHTML = days.map(function(day) {
+    var rows = STORY_CATEGORIES.map(function(c) {
+      var a = day.items && day.items[c.key];
+      if (!a) return '';
+      window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
+      return '<button class="story-archive-item" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">' +
+               '<span class="story-archive-cat story-cat-' + c.key + '">' + escapeHtml(c.label) + '</span>' +
+               '<span class="story-archive-title">' + escapeHtml(a.title) + '</span>' +
+               (a.summary ? '<span class="story-archive-summary">' + escapeHtml(a.summary) + '</span>' : '') +
+             '</button>';
+    }).join("");
+    return '<div class="story-archive-day">' +
+             '<div class="story-archive-day-head">' + escapeHtml(day.date) + '</div>' +
+             '<div class="story-archive-day-grid">' + rows + '</div>' +
+           '</div>';
+  }).join("");
+}
+
+function storyOpenArchive(slug, catKey) {
+  var cached = (window._eduArticles && window._eduArticles[slug]) || null;
+
+  // RSS fallback 卡（slug 以 news-feed- 開頭）不是真的 markdown article，
+  // 後端 /education/articles/{slug} 會 404；直接用 archive 已經帶過來的 payload 渲染。
+  var isExternal = (slug && slug.indexOf("news-feed-") === 0)
+    || (cached && (cached.external_link || cached.body));
+  if (isExternal && cached) {
+    var key1 = catKey || cached.category || "news";
+    renderStorySection(key1, cached);
+    var section1 = document.getElementById("story-section-" + key1);
+    if (section1) section1.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+    .then(function(r) {
+      if (!r.ok) throw new Error("not found");
+      return r.json();
+    })
+    .then(function(article) {
+      var prev = (window._eduArticles && window._eduArticles[slug]) || {};
+      article.pushed_on = prev.pushed_on || article.pushed_on;
+      var key = catKey || article.category || "disease";
+      renderStorySection(key, article);
+      var section = document.getElementById("story-section-" + key);
+      if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      var key = catKey || "disease";
+      var body = document.getElementById("story-body-" + key);
+      if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">找不到這篇文章。</div>';
+    });
+}
+
+function previsit() {
+  return ''
+    + '<section class="pv-page">'
+    + '  <header class="pv-header">'
+    + '    <div>'
+    + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
+    + '      <h2 class="pv-title"><i data-lucide="clipboard-check"></i> 診前報告</h2>'
+    + '      <p class="pv-sub">看診前 30 秒讀完：AI 幫你整理近 30 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
+    + '    </div>'
+    + '    <div class="pv-actions-top">'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
+    + '        <i data-lucide="refresh-cw"></i> 重新生成'
+    + '      </button>'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'pdf\')" title="下載 PDF（會開啟列印視窗，請選擇「另存為 PDF」）">'
+    + '        <i data-lucide="file-down"></i> 下載 PDF'
+    + '      </button>'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'doc\')" title="下載 Word（.doc）">'
+    + '        <i data-lucide="file-text"></i> 下載 Word'
+    + '      </button>'
+    + '      <button class="pv-btn pv-btn-primary" onclick="previsitCopy()" title="複製為純文字帶去診間">'
+    + '        <i data-lucide="clipboard-copy"></i> 複製給醫師'
+    + '      </button>'
+    + '    </div>'
+    + '  </header>'
+    + ''
+    + '  <section class="pv-section pv-checklist">'
+    + '    <h3 class="pv-section-title"><i data-lucide="list-checks"></i> 這次最該問醫師的三件事</h3>'
+    + '    <ol id="pv-checklist-list" class="pv-checklist-list">'
+    + '      <li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>'
+    + '    </ol>'
+    + '    <p class="pv-source" id="pv-checklist-source"></p>'
+    + '  </section>'
+    + ''
+    + '  <section class="pv-section pv-report">'
+    + '    <h3 class="pv-section-title"><i data-lucide="file-text"></i> 30 天健康摘要</h3>'
+    + '    <div class="pv-stats" id="pv-stats"></div>'
+    + '    <div id="pv-report-body" class="pv-report-body">'
+    + '      <p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>'
+    + '    </div>'
+    + '    <p class="pv-source" id="pv-report-source"></p>'
+    + '  </section>'
+    + ''
+    + '  <p class="pv-disclaimer"><i data-lucide="info"></i> 本報告由 AI 整理你輸入的紀錄，僅供與醫師溝通參考，不取代醫師診斷。</p>'
+    + '</section>';
+}
+
+// ─── 診前報告 (Pre-consultation Report) ──────────────────────
+
+var _previsitData = { checklist: null, report: null };
+
+function loadPrevisitPage() {
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+
+  _previsitData = { checklist: null, report: null };
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/checklist')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _previsitData.checklist = data;
+      previsitRenderChecklist(data);
+    })
+    .catch(function() {
+      previsitRenderChecklistError();
+    });
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _previsitData.report = data;
+      previsitRenderReport(data);
+    })
+    .catch(function() {
+      previsitRenderReportError();
+    });
+}
+
+function previsitRenderChecklist(data) {
+  var listEl = document.getElementById('pv-checklist-list');
+  var srcEl = document.getElementById('pv-checklist-source');
+  if (!listEl) return;
+  var items = (data && Array.isArray(data.checklist)) ? data.checklist : [];
+  if (!items.length) {
+    listEl.innerHTML = '<li class="pv-empty">目前沒有足夠的紀錄產生提問清單，先到症狀／情緒／用藥頁面留下紀錄吧。</li>';
+  } else {
+    listEl.innerHTML = items.map(function(text, i) {
+      return '<li class="pv-check-item">'
+        + '<span class="pv-check-num">' + (i + 1) + '</span>'
+        + '<span class="pv-check-text">' + escapeHtml(text) + '</span>'
+        + '</li>';
+    }).join('');
+  }
+  if (srcEl) srcEl.textContent = previsitSourceLabel(data);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderChecklistError() {
+  var listEl = document.getElementById('pv-checklist-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<li class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</li>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderReport(data) {
+  var bodyEl = document.getElementById('pv-report-body');
+  var statsEl = document.getElementById('pv-stats');
+  var srcEl = document.getElementById('pv-report-source');
+  if (!bodyEl) return;
+
+  var raw = (data && data.raw_data) || {};
+  if (statsEl) {
+    statsEl.innerHTML = ''
+      + previsitStatCard('scan-search', '症狀', raw.symptom_count, '筆')
+      + previsitStatCard('smile', '情緒', raw.emotion_count, '次')
+      + previsitStatCard('pill', '用藥', raw.medication_count, '種')
+      + previsitStatCard('stethoscope', '就診', raw.visit_count, '次');
+  }
+
+  var report = (data && data.report) || '';
+  if (!report) {
+    bodyEl.innerHTML = '<p class="pv-empty">尚無報告內容。</p>';
+  } else {
+    bodyEl.innerHTML = markdownToHtml(report);
+  }
+
+  if (srcEl) srcEl.textContent = previsitSourceLabel(data);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitRenderReportError() {
+  var bodyEl = document.getElementById('pv-report-body');
+  if (!bodyEl) return;
+  bodyEl.innerHTML = '<p class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitStatCard(icon, label, value, unit) {
+  var n = (value === undefined || value === null) ? 0 : value;
+  return '<div class="pv-stat">'
+    + '<span class="pv-stat-icon"><i data-lucide="' + icon + '"></i></span>'
+    + '<div class="pv-stat-body">'
+    +   '<div class="pv-stat-num">' + n + ' <small>' + unit + '</small></div>'
+    +   '<div class="pv-stat-label">' + label + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function previsitSourceLabel(data) {
+  if (!data) return '';
+  var src = data.source || '';
+  var when = data.generated_at ? new Date(data.generated_at).toLocaleString() : '';
+  var srcLabel = src === 'ai' ? 'AI 生成'
+    : src === 'default' ? '預設提示（紀錄不足）'
+    : src === 'no_data' ? '紀錄不足'
+    : src;
+  return when ? (srcLabel + ' · ' + when) : srcLabel;
+}
+
+function previsitReload() {
+  var listEl = document.getElementById('pv-checklist-list');
+  var bodyEl = document.getElementById('pv-report-body');
+  if (listEl) listEl.innerHTML = '<li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>';
+  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  loadPrevisitPage();
+}
+
+function previsitCopy() {
+  var d = _previsitData || {};
+  var lines = [];
+  lines.push('【MD.Piece 診前報告】');
+  lines.push('產出時間：' + new Date().toLocaleString());
+  lines.push('');
+  lines.push('▍這次想問醫師的三件事');
+  var items = d.checklist && Array.isArray(d.checklist.checklist) ? d.checklist.checklist : [];
+  if (items.length) {
+    items.forEach(function(t, i) { lines.push((i + 1) + '. ' + t); });
+  } else {
+    lines.push('（尚無資料）');
+  }
+  lines.push('');
+  lines.push('▍30 天健康摘要');
+  if (d.report && d.report.raw_data) {
+    var r = d.report.raw_data;
+    lines.push('症狀 ' + (r.symptom_count || 0) + ' 筆 · 情緒 ' + (r.emotion_count || 0) + ' 次 · 用藥 ' + (r.medication_count || 0) + ' 種 · 就診 ' + (r.visit_count || 0) + ' 次');
+    lines.push('');
+  }
+  lines.push((d.report && d.report.report) || '（尚無資料）');
+
+  var text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      if (typeof showToast === 'function') showToast('已複製，貼到任何地方都可以', 'success');
+    }, function() {
+      previsitFallbackCopy(text);
+    });
+  } else {
+    previsitFallbackCopy(text);
+  }
+}
+
+function previsitFallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+  if (typeof showToast === 'function') showToast('已複製', 'success');
+}
+
+// 下載 PDF / Word：先抓 patient-summary（300–500 字白話摘要），
+// 再用 HTML 包成可列印的版面 → PDF 走 window.print()，Word 走 .doc Blob
+function previsitDownload(format) {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) {
+    if (typeof showToast === 'function') showToast('找不到使用者，請先登入', 'warning');
+    return;
+  }
+  if (typeof showToast === 'function') showToast('AI 撰寫中，請稍候…', 'info');
+
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var summary = (data && data.summary) || '（暫無摘要）';
+      var counts = (data && data.raw_data) || {};
+      var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
+      var html = previsitBuildPrintableHTML(summary, counts, checklist);
+      if (format === 'doc') {
+        previsitDownloadDoc(html);
+      } else {
+        previsitOpenPrint(html);
+      }
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('產生報告失敗，請稍後再試', 'error');
+    });
+}
+
+function previsitBuildPrintableHTML(summary, counts, checklist) {
+  var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  var paragraphs = String(summary).split(/\n\s*\n/).map(function(p) {
+    return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+  var checklistHtml = checklist.length
+    ? '<ol>' + checklist.map(function(t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ol>'
+    : '<p style="color:#888">（暫無）</p>';
+  var statsHtml = ''
+    + '<table class="stats"><tr>'
+    +   '<td><strong>' + (counts.symptom_count || 0) + '</strong><span>症狀紀錄</span></td>'
+    +   '<td><strong>' + (counts.emotion_count || 0) + '</strong><span>情緒紀錄</span></td>'
+    +   '<td><strong>' + (counts.medication_count || 0) + '</strong><span>用藥</span></td>'
+    +   '<td><strong>' + (counts.visit_count || 0) + '</strong><span>就診</span></td>'
+    + '</tr></table>';
+
+  return ''
+    + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
+    + '<title>MD.Piece 診前報告 ' + dateStr + '</title>'
+    + '<style>'
+    + '  @page { size: A4; margin: 18mm 16mm; }'
+    + '  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color: #222; line-height: 1.75; font-size: 14px; }'
+    + '  h1 { font-size: 22px; margin: 0 0 4px; }'
+    + '  .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
+    + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
+    + '  p { margin: 0 0 10px; }'
+    + '  ol { padding-left: 22px; margin: 0; }'
+    + '  ol li { margin-bottom: 6px; }'
+    + '  table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }'
+    + '  table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
+    + '  table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
+    + '  table.stats td span { font-size: 11px; color: #666; }'
+    + '  .footer { margin-top: 28px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 11px; color: #888; }'
+    + '</style></head><body>'
+    + '<h1>診前報告</h1>'
+    + '<div class="meta">產出日期：' + dateStr + ' · 由 MD.Piece 整理過去 30 天的紀錄</div>'
+    + '<h2>近 30 天紀錄概覽</h2>'
+    + statsHtml
+    + '<h2>給醫師的話（患者整理）</h2>'
+    + paragraphs
+    + '<h2>這次想請醫師確認的事</h2>'
+    + checklistHtml
+    + '<div class="footer">本報告由 AI 整理患者自行輸入的紀錄，僅供醫病溝通參考，不取代醫師診斷。</div>'
+    + '</body></html>';
+}
+
+function previsitOpenPrint(html) {
+  var w = window.open('', '_blank');
+  if (!w) {
+    if (typeof showToast === 'function') showToast('瀏覽器擋掉了新視窗，請允許彈出視窗', 'warning');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // 等資源載入再開列印對話框
+  w.onload = function() {
+    setTimeout(function() {
+      try { w.focus(); w.print(); } catch (e) {}
+    }, 250);
+  };
+}
+
+function previsitDownloadDoc(html) {
+  // Word 可以直接讀 HTML，副檔名用 .doc + application/msword
+  var blob = new Blob(['﻿', html], { type: 'application/msword' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'MD.Piece-診前報告-' + new Date().toISOString().slice(0, 10) + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  if (typeof showToast === 'function') showToast('已開始下載 Word 檔', 'success');
+}
 function labs() {
   return `
     <div class="card labs-hero">
@@ -538,11 +1057,13 @@ function showPage(page) {
     if (page === "doctors") loadDoctors();
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
+    if (page === "story") loadStoryPage();
     if (page === "medications") loadMedicationsPage();
     if (page === "memo") loadMemoPage();
     if (page === "labs") loadLabsPage();
     if (page === "pieces") loadPiecesPage();
     if (page === "chat") loadChatPage();
+    if (page === "previsit") loadPrevisitPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     // Render Lucide icons
@@ -3114,6 +3635,7 @@ var EDU_BOOKS = [
       { key: "ischemic",      label: "缺血性中風",     desc: "血栓溶解、取栓、黃金時間窗" },
       { key: "hemorrhagic",   label: "出血性中風",     desc: "高血壓、動脈瘤的破裂風險" },
       { key: "tia",           label: "短暫性缺血 TIA", desc: "「小中風」是大中風的警訊" },
+      { key: "moyamoya",      label: "毛毛樣腦血管疾病", desc: "頸內動脈狹窄、煙霧狀側枝循環、繞道手術" },
       { key: "stroke_rehab",  label: "中風復健",       desc: "黃金期、語言、吞嚥、肢體" },
       { key: "stroke_prev",   label: "中風預防",       desc: "血壓、心房顫動、抗凝血藥" }
     ] },
