@@ -1525,6 +1525,7 @@ function home() {
   const dayStr = '星期' + ['日','一','二','三','四','五','六'][today.getDay()];
   const name = user ? user.nickname : '你';
   const ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
+  const heroAvatarSrc = (user && user.avatar_url) ? user.avatar_url : 'icons/heko-avatar.svg';
 
   return `
     <div class="home-page">
@@ -1535,7 +1536,7 @@ function home() {
       <!-- Hero: Logo + Greeting split -->
       <div class="home-hero">
         <div class="home-hero-left">
-          <img src="icons/logo-core.jpg" alt="MD.Piece" class="home-logo" />
+          <img src="${heroAvatarSrc}" alt="${name} 頭像" class="home-logo home-logo-avatar" />
         </div>
         <div class="home-hero-right">
           <h2 class="home-title">${greeting}，${name}</h2>

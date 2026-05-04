@@ -1937,6 +1937,13 @@ html[data-mode="senior"] .tc-desc {
   filter: drop-shadow(0 2px 8px rgba(43,92,230,0.25));
   animation: logoFloat 5s ease-in-out infinite;
 }
+.home-logo-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  background: #FCF7F0;
+  border: 2px solid rgba(201,127,75,0.35);
+  filter: drop-shadow(0 2px 6px rgba(92,58,50,0.2));
+}
 
 .home-hero-right {
   flex: 1;
