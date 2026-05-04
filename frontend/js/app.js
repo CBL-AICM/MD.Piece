@@ -4074,25 +4074,42 @@ function chatSetVersion(v) {
 }
 
 // 小禾吉祥物 — Claude Code 風 ASCII 顏文字兔
-function chatMascotSvg(state) {
-  // state: 'idle' | 'typing' | 'thinking'
+// state: 'idle' | 'typing' | 'thinking'
+// frame: 0/1 — typing 狀態下交替的「左手敲 / 右手敲」鍵盤動畫
+function chatMascotSvg(state, frame) {
   state = state || 'idle';
-  // 三行：耳朵、臉、手＋愛心
-  var face;
-  if (state === 'typing')        face = '( •ω•)';
-  else if (state === 'thinking') face = '( -ㅅ-)';
-  else                            face = '( •ㅅ•)';
-  var tail;
-  if (state === 'typing')        tail = '<span class="chat-mascot-spark">▍</span>';
-  else if (state === 'thinking') tail = '<span class="chat-mascot-spark">?</span>';
-  else                            tail = '<span class="chat-mascot-spark">♥</span>';
-  var ascii = ''
+  if (state === 'typing') {
+    // 三行：耳朵、臉、雙手在鍵盤上交替敲擊
+    var bottom = (frame % 2 === 0)
+      ? ' o⌨<span class="chat-mascot-keys">▓▓▓</span>'   // 左手按下
+      : ' <span class="chat-mascot-keys">▓▓▓</span>⌨o';  // 右手按下
+    var ascii = ''
+      + ' (\\(\\\n'
+      + ' ( •ω•)\n'
+      + bottom;
+    return ''
+      + '<div class="chat-mascot-img-wrap chat-mascot-typing">'
+      +   '<pre class="chat-mascot-ascii" aria-label="小禾正在打字">' + ascii + '</pre>'
+      + '</div>';
+  }
+  if (state === 'thinking') {
+    var thinkAscii = ''
+      + ' (\\(\\\n'
+      + ' ( -ㅅ-)\n'
+      + ' (  づ<span class="chat-mascot-spark">?</span>';
+    return ''
+      + '<div class="chat-mascot-img-wrap chat-mascot-thinking">'
+      +   '<pre class="chat-mascot-ascii" aria-label="小禾思考中">' + thinkAscii + '</pre>'
+      + '</div>';
+  }
+  // idle
+  var idleAscii = ''
     + ' (\\(\\\n'
-    + ' ' + face + '\n'
-    + ' (  づ';
+    + ' ( •ㅅ•)\n'
+    + ' (  づ<span class="chat-mascot-spark">♥</span>';
   return ''
-    + '<div class="chat-mascot-img-wrap chat-mascot-' + state + '">'
-    +   '<pre class="chat-mascot-ascii" aria-label="小禾">' + ascii + tail + '</pre>'
+    + '<div class="chat-mascot-img-wrap chat-mascot-idle">'
+    +   '<pre class="chat-mascot-ascii" aria-label="小禾">' + idleAscii + '</pre>'
     + '</div>';
 }
 
@@ -4301,9 +4318,26 @@ function chatRemoveThinking() {
   if (n && n.parentNode) n.parentNode.removeChild(n);
 }
 
+var _chatMascotTypingTimer = null;
 function chatSetMascotState(state) {
   var wrap = document.getElementById('chat-mascot');
   if (!wrap) return;
+  // 停掉之前可能在跑的 typing 動畫
+  if (_chatMascotTypingTimer) {
+    clearInterval(_chatMascotTypingTimer);
+    _chatMascotTypingTimer = null;
+  }
+  if (state === 'typing') {
+    var frame = 0;
+    wrap.innerHTML = chatMascotSvg('typing', frame);
+    _chatMascotTypingTimer = setInterval(function () {
+      frame = (frame + 1) % 2;
+      var w = document.getElementById('chat-mascot');
+      if (!w) { clearInterval(_chatMascotTypingTimer); _chatMascotTypingTimer = null; return; }
+      w.innerHTML = chatMascotSvg('typing', frame);
+    }, 140);
+    return;
+  }
   wrap.innerHTML = chatMascotSvg(state);
 }
 
