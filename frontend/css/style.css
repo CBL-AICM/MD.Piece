@@ -6555,17 +6555,47 @@ html[data-mode="senior"] .visit-modal-save {
 .story-body * { color: var(--app-text); }
 .story-body h1, .story-body h2, .story-body h3 {
   margin-top: 1.4em;
-  color: var(--app-text);
-  font-weight: 700;
+  margin-bottom: .4em;
+  color: var(--app-term);
+  font-weight: 800;
+  letter-spacing: .01em;
 }
+.story-body h1 { font-size: 1.35rem; }
+.story-body h2 {
+  font-size: 1.1rem;
+  padding-left: 10px;
+  border-left: 4px solid var(--app-term);
+}
+.story-body h3 { font-size: 1rem; }
+.story-body strong { color: var(--app-term); font-weight: 700; }
 .story-body a { color: var(--app-term); text-decoration: underline; }
 .story-body blockquote {
-  border-left: 3px solid var(--app-border);
-  padding-left: 12px;
+  border-left: 3px solid var(--app-term);
+  padding: 6px 12px;
   margin: 12px 0;
+  background: var(--app-panel-soft);
   color: var(--app-text);
-  opacity: .9;
+  opacity: .92;
   font-style: italic;
+  border-radius: 0 8px 8px 0;
+}
+.story-body table {
+  border-collapse: collapse;
+  margin: 10px 0;
+  width: 100%;
+  font-size: .9rem;
+}
+.story-body th, .story-body td {
+  border: 1px solid var(--app-border);
+  padding: 6px 10px;
+  color: var(--app-text);
+}
+.story-body th { background: var(--app-panel-soft); font-weight: 700; }
+.story-body code {
+  background: var(--app-panel-soft);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: .9em;
 }
 .story-sources {
   margin-top: 18px;
