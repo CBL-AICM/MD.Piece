@@ -4073,52 +4073,14 @@ function chatSetVersion(v) {
   try { localStorage.setItem(CHAT_VERSION_KEY, v); } catch (e) {}
 }
 
-// 小禾吉祥物 — 灰色兔子，紅色內耳、瞇瞇眼笑臉
+// 小禾吉祥物 — 使用實際手繪圖（icons/xiaohe.jpg）
 function chatMascotSvg(state) {
   // state: 'idle' | 'typing' | 'thinking'
   state = state || 'idle';
   return ''
-    + '<svg class="chat-mascot-svg chat-mascot-' + state + '" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">'
-    +   '<defs>'
-    +     '<radialGradient id="hekoFur" cx="50%" cy="40%" r="65%">'
-    +       '<stop offset="0%"  stop-color="#D9D2CC"/>'
-    +       '<stop offset="100%" stop-color="#8E8680"/>'
-    +     '</radialGradient>'
-    +     '<radialGradient id="hekoEarIn" cx="50%" cy="50%" r="60%">'
-    +       '<stop offset="0%"  stop-color="#F26B5E"/>'
-    +       '<stop offset="100%" stop-color="#B83A2E"/>'
-    +     '</radialGradient>'
-    +   '</defs>'
-    // 左耳
-    +   '<g class="chat-mascot-ear chat-mascot-ear-l">'
-    +     '<path d="M28 6 C18 14 16 30 22 44 L34 42 C32 28 32 16 36 8 Z" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.2" stroke-linejoin="round"/>'
-    +     '<path d="M30 14 C26 22 26 32 30 40 L34 38 C33 28 33 20 35 14 Z" fill="url(#hekoEarIn)"/>'
-    +   '</g>'
-    // 右耳
-    +   '<g class="chat-mascot-ear chat-mascot-ear-r">'
-    +     '<path d="M72 6 C82 14 84 30 78 44 L66 42 C68 28 68 16 64 8 Z" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.2" stroke-linejoin="round"/>'
-    +     '<path d="M70 14 C74 22 74 32 70 40 L66 38 C67 28 67 20 65 14 Z" fill="url(#hekoEarIn)"/>'
-    +   '</g>'
-    // 頭
-    +   '<ellipse cx="50" cy="58" rx="28" ry="24" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.2"/>'
-    // 瞇瞇眼（' '）— 兩條短直線
-    +   '<path class="chat-mascot-eye chat-mascot-eye-l" d="M41 52 L41 58" stroke="#2A1F1A" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
-    +   '<path class="chat-mascot-eye chat-mascot-eye-r" d="M59 52 L59 58" stroke="#2A1F1A" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
-    // 鼻 + 嘴（小三角＋微笑）
-    +   '<path d="M48 62 L52 62 L50 65 Z" fill="#3A2A24"/>'
-    +   '<path class="chat-mascot-mouth" d="M50 65 Q46 70 43 67 M50 65 Q54 70 57 67" stroke="#3A2A24" stroke-width="1.8" fill="none" stroke-linecap="round"/>'
-    // 腮紅
-    +   '<circle class="chat-mascot-blush" cx="32" cy="64" r="3" fill="#F2A6A6" opacity="0.65"/>'
-    +   '<circle class="chat-mascot-blush" cx="68" cy="64" r="3" fill="#F2A6A6" opacity="0.65"/>'
-    // 圍兜（深灰）
-    +   '<path d="M30 78 Q50 90 70 78 Q70 96 50 100 Q30 96 30 78 Z" fill="#5C5450" stroke="#3A2A24" stroke-width="2"/>'
-    // 小手
-    +   '<ellipse cx="26" cy="86" rx="6" ry="7" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2"/>'
-    +   '<ellipse cx="74" cy="86" rx="6" ry="7" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2"/>'
-    // 腳
-    +   '<ellipse cx="40" cy="110" rx="8" ry="5" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2"/>'
-    +   '<ellipse cx="60" cy="110" rx="8" ry="5" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2"/>'
-    + '</svg>';
+    + '<div class="chat-mascot-img-wrap chat-mascot-' + state + '">'
+    +   '<img src="icons/xiaohe.jpg" alt="小禾" class="chat-mascot-img" draggable="false" />'
+    + '</div>';
 }
 
 function chatGreeting() {
