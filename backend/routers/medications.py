@@ -1,11 +1,17 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 from backend.db import get_supabase
 from backend.services.llm_service import recognize_medicine_bag, call_claude
+from backend.utils.medication_schedule import (
+    DEFAULT_MIN_INTERVAL_HOURS,
+    annotate_medication,
+    check_dose_safety,
+    parse_time_slots,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -58,6 +64,9 @@ class MedicationLogCreate(BaseModel):
     taken_at: str | None = None
     skip_reason: str | None = None
     notes: str | None = None
+    # 「其他」分類（每 X 小時 / PRN）的藥按下打卡時，前端可帶上 force=true
+    # 表示已看過 4 小時間隔風險警告、堅持要記錄
+    force: bool = False
 
 
 class EffectRecord(BaseModel):
@@ -71,12 +80,22 @@ class EffectRecord(BaseModel):
 
 # ── 藥物 CRUD ─────────────────────────────────────────────
 
+def _augment_with_schedule(meds: list[dict]) -> list[dict]:
+    """在每個 medication dict 上掛 slots / interval_hours / bucket / is_other。"""
+    out = []
+    for m in meds or []:
+        mm = dict(m)
+        mm.update(annotate_medication(mm))
+        out.append(mm)
+    return out
+
+
 @router.get("/")
 def get_medications(patient_id: str = Query(...)):
-    """取得患者的所有藥物"""
+    """取得患者的所有藥物，附加服藥時段標籤（早 / 中 / 晚 / 其他）。"""
     sb = get_supabase()
     result = sb.table("medications").select("*").eq("patient_id", patient_id).order("created_at", desc=True).execute()
-    return {"medications": result.data}
+    return {"medications": _augment_with_schedule(result.data or [])}
 
 
 @router.post("/")
@@ -128,13 +147,16 @@ def recognize_from_photo(body: MedicationPhotoUpload):
     raw_text = recognition.get("raw_text", "")
 
     if not meds:
+        # 所有 vision provider 都失敗或都沒辨識出內容 → 把每個 provider 的失敗訊息
+        # 一併回傳，方便前端與後端排查（例如 Vercel 上看不到任何 provider 是否被啟用）。
         return {
             "recognized": 0,
             "medications": [],
             "parsed": [],
             "raw_text": raw_text,
+            "provider": recognition.get("provider"),
+            "errors": recognition.get("errors", []),
             "message": "無法辨識藥袋內容，請嘗試拍攝更清晰的照片，或手動填寫下方資料。",
-            "errors": [],
         }
 
     # 只做辨識，不自動寫入 DB
@@ -155,22 +177,104 @@ def recognize_from_photo(body: MedicationPhotoUpload):
             "prescribed_date": med.get("prescribed_date"),
         })
 
+    # 為每筆 parsed 結果預先標記它會被歸到哪個時段（早 / 中 / 晚 / 其他），
+    # 讓前端在「確認加入」前就能顯示分類，使用者比較有信心。
+    for p in parsed:
+        p["schedule"] = parse_time_slots(p.get("frequency"), p.get("usage"))
+
     return {
         "recognized": 0,
         "medications": [],
         "parsed": parsed,
         "raw_text": raw_text,
+        "provider": recognition.get("provider"),
+        "errors": recognition.get("errors", []),
         "message": f"辨識出 {len(parsed)} 種藥物，請確認後加入我的藥物。",
-        "errors": [],
     }
 
 
 # ── 服藥日誌 ──────────────────────────────────────────────
 
+def _recent_logs(sb, patient_id: str, medication_id: str, days: int = 2) -> list[dict]:
+    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    res = (
+        sb.table("medication_logs")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .eq("medication_id", medication_id)
+        .gte("taken_at", since)
+        .order("taken_at", desc=True)
+        .execute()
+    )
+    return res.data or []
+
+
+def _load_med(sb, medication_id: str) -> dict | None:
+    res = sb.table("medications").select("*").eq("id", medication_id).limit(1).execute()
+    return res.data[0] if res.data else None
+
+
+@router.get("/can-take")
+def can_take(patient_id: str = Query(...), medication_id: str = Query(...)):
+    """
+    檢查現在是否能服這顆藥（前端在打卡前 call，可預覽風險）。
+
+    回傳 dose safety 結果（含 hours_since_last / required_hours / level / message）
+    以及該藥物目前的 schedule（slots / interval_hours / is_other），
+    讓前端決定要不要彈跳安全警告。
+    """
+    sb = get_supabase()
+    med = _load_med(sb, medication_id)
+    if not med:
+        raise HTTPException(status_code=404, detail="找不到該藥物")
+    schedule = annotate_medication(med)
+    logs = _recent_logs(sb, patient_id, medication_id)
+    safety = check_dose_safety(logs, interval_hours=schedule.get("interval_hours"))
+    return {
+        "medication_id": medication_id,
+        "name": med.get("name"),
+        "schedule": schedule,
+        "safety": safety,
+    }
+
+
 @router.post("/log")
 def log_medication(body: MedicationLogCreate):
-    """記錄服藥（打卡）"""
+    """
+    記錄服藥（打卡）。
+
+    對「其他」分類（每 X 小時 / PRN）的藥：服藥前會檢查最近一次打卡時間，
+    若距離 < 安全間隔（預設 4 小時，或藥物標示的間隔較長者），
+    且 body.force == False，會回 409 並附帶風險訊息，前端再決定要不要強制送出。
+
+    跳過服藥（taken == False）或固定時段藥（早 / 中 / 晚）不會被擋。
+    """
     sb = get_supabase()
+    safety_payload: dict | None = None
+
+    if body.taken:
+        med = _load_med(sb, body.medication_id)
+        if not med:
+            raise HTTPException(status_code=404, detail="找不到該藥物")
+        schedule = annotate_medication(med)
+        # 只對「其他」分類強制安全檢查（每 X 小時 / PRN 才會有過量風險）；
+        # 早 / 中 / 晚 是固定時段，醫師指定怎麼吃就怎麼吃，不要擋。
+        if schedule.get("is_other"):
+            logs = _recent_logs(sb, body.patient_id, body.medication_id)
+            safety = check_dose_safety(logs, interval_hours=schedule.get("interval_hours"))
+            safety_payload = safety
+            if not safety["allowed"] and not body.force:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "dose_too_soon",
+                        "message": safety["message"],
+                        "safety": safety,
+                        "schedule": schedule,
+                        "min_hours": DEFAULT_MIN_INTERVAL_HOURS,
+                    },
+                )
+
     data = {
         "patient_id": body.patient_id,
         "medication_id": body.medication_id,
@@ -180,7 +284,10 @@ def log_medication(body: MedicationLogCreate):
         "notes": body.notes,
     }
     result = sb.table("medication_logs").insert(data).execute()
-    return result.data[0]
+    out = dict(result.data[0]) if result.data else {}
+    if safety_payload is not None:
+        out["safety"] = safety_payload
+    return out
 
 
 @router.get("/logs")

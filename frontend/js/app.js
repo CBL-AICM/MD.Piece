@@ -2836,47 +2836,188 @@ function loadMedicationsPage() {
     .catch(function() {});
 }
 
+// 把藥分到 早 / 中 / 晚 / 其他 四個時段；同一顆早晚都吃的藥會出現在「早」與「晚」兩格
+var MED_SLOT_DEFS = [
+  { key: "morning", label: "早",   icon: "sunrise", hint: "起床後・早餐"   },
+  { key: "noon",    label: "中午", icon: "sun",     hint: "午餐前後"       },
+  { key: "evening", label: "晚",   icon: "moon",    hint: "晚餐・睡前"     },
+  { key: "other",   label: "其他", icon: "clock",   hint: "間隔型・需要時" },
+];
+
+function _bucketMeds(meds) {
+  var buckets = { morning: [], noon: [], evening: [], other: [] };
+  (meds || []).forEach(function(med) {
+    if (med.is_other) {
+      buckets.other.push(med);
+      return;
+    }
+    var slots = (med.slots && med.slots.length) ? med.slots : ["morning"];
+    slots.forEach(function(s) {
+      if (buckets[s]) buckets[s].push(med);
+    });
+  });
+  return buckets;
+}
+
 function renderMedList() {
   var el = document.getElementById("med-list");
   if (!_medsList.length) {
     el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">尚無藥物紀錄，拍攝藥袋開始記錄吧！</p>';
     return;
   }
-  var html = '<div style="display:grid;gap:10px">';
-  _medsList.forEach(function(med) {
-    var catColor = med.category ? 'var(--accent)' : 'var(--text-muted)';
-    html += '<div class="med-item">' +
-      '<div style="display:flex;justify-content:space-between;align-items:start">' +
-      '<div>' +
-      '<strong>' + med.name + '</strong>' +
-      (med.dosage ? ' <span style="color:var(--text-dim);font-size:0.85rem">' + med.dosage + '</span>' : '') +
-      (med.category ? '<br><span class="med-tag" style="border-color:' + catColor + ';color:' + catColor + '">' + med.category + '</span>' : '') +
-      (med.frequency ? '<br><span style="font-size:0.85rem;color:var(--text-dim)">' + med.frequency + '</span>' : '') +
-      '</div>' +
-      '<div style="display:flex;gap:4px">' +
-      '<button class="med-action-btn med-take" onclick="logMedTaken(\'' + med.id + '\',true)" title="已服藥">✓</button>' +
-      '<button class="med-action-btn med-skip" onclick="logMedTaken(\'' + med.id + '\',false)" title="跳過">✗</button>' +
-      '<button class="med-action-btn med-effect" onclick="showEffectForm(\'' + med.id + '\',\'' + med.name + '\')" title="記錄療效">★</button>' +
-      '</div></div></div>';
+
+  var buckets = _bucketMeds(_medsList);
+  var html = '<div class="med-slots">';
+
+  MED_SLOT_DEFS.forEach(function(def) {
+    var meds = buckets[def.key];
+    var isOther = def.key === "other";
+    if (!meds.length) {
+      // 沒有藥的時段也顯示空殼，讓使用者一眼知道結構
+      html +=
+        '<section class="med-slot med-slot-empty">' +
+          '<header class="med-slot-head">' +
+            '<span class="med-slot-icon"><i data-lucide="' + def.icon + '"></i></span>' +
+            '<div><div class="med-slot-label">' + def.label + '</div>' +
+            '<div class="med-slot-hint">' + def.hint + '</div></div>' +
+          '</header>' +
+          '<p class="med-slot-empty-msg">這個時段還沒有藥。</p>' +
+        '</section>';
+      return;
+    }
+    html +=
+      '<section class="med-slot">' +
+        '<header class="med-slot-head">' +
+          '<span class="med-slot-icon"><i data-lucide="' + def.icon + '"></i></span>' +
+          '<div><div class="med-slot-label">' + def.label + ' <span class="med-slot-count">' + meds.length + '</span></div>' +
+          '<div class="med-slot-hint">' + def.hint + '</div></div>' +
+        '</header>' +
+        '<div class="med-slot-grid">';
+    meds.forEach(function(med) {
+      html += _renderMedCard(med, def.key, isOther);
+    });
+    html += '</div></section>';
   });
+
   html += '</div>';
   el.innerHTML = html;
+  if (window.lucide && window.lucide.createIcons) {
+    try { window.lucide.createIcons(); } catch (e) {}
+  }
+}
+
+function _renderMedCard(med, slotKey, isOther) {
+  var name = escapeHtml(med.name || "未命名藥物");
+  var dosage = med.dosage ? '<span class="med-card-dosage">' + escapeHtml(med.dosage) + '</span>' : '';
+  var freq = med.frequency ? '<div class="med-card-freq">' + escapeHtml(med.frequency) + '</div>' : '';
+  var meta = "";
+  if (isOther) {
+    if (med.interval_hours) {
+      meta += '<span class="med-card-tag med-card-tag-interval">每 ' + med.interval_hours + ' 小時</span>';
+    }
+    if (med.is_prn) {
+      meta += '<span class="med-card-tag med-card-tag-prn">需要時</span>';
+    }
+    if (!meta) {
+      meta = '<span class="med-card-tag">間隔型</span>';
+    }
+  } else if (med.category) {
+    meta = '<span class="med-card-tag">' + escapeHtml(med.category) + '</span>';
+  }
+
+  var safeName = (med.name || "").replace(/'/g, "\\'");
+  return (
+    '<button type="button" class="med-card" data-id="' + med.id + '" data-slot="' + slotKey + '"' +
+      ' onclick="tapMedTake(\'' + med.id + '\',\'' + slotKey + '\')">' +
+      '<div class="med-card-row">' +
+        '<div class="med-card-title">' +
+          '<strong>' + name + '</strong>' + dosage +
+        '</div>' +
+        meta +
+      '</div>' +
+      freq +
+      '<div class="med-card-actions" onclick="event.stopPropagation()">' +
+        '<span class="med-card-take">✓ 點一下打卡</span>' +
+        '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="跳過">✗</button>' +
+        '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="記錄療效">★</button>' +
+      '</div>' +
+    '</button>'
+  );
+}
+
+// 點卡片即打卡：固定時段藥（早/中/晚）直接寫入；
+// 「其他」型藥（每 X 小時 / PRN）也走同一條 POST /log，
+// 後端會在 < 4 小時內回 409 dose_too_soon，由 logMedTaken 攔下並彈警告。
+function tapMedTake(medId, slotKey) {
+  logMedTaken(medId, true);
+}
+
+// 把過大的相片壓縮到 1600px 寬以內、JPEG 0.85 — 多數手機相片直接傳會超過
+// Vercel 4.5MB 上傳上限，導致「藥袋一直拍攝失敗」。
+// 壓縮失敗時會 fallback 用原檔，不阻擋流程。
+function _compressMedPhoto(file) {
+  return new Promise(function(resolve) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var dataUrl = e.target.result;
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var maxEdge = 1600;
+          var w = img.width, h = img.height;
+          if (Math.max(w, h) > maxEdge) {
+            var scale = maxEdge / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
+          var canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#fff";  // 白底 — 處理透明 PNG，避免 JPEG 黑底
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          var compressed = canvas.toDataURL("image/jpeg", 0.85);
+          resolve({ dataUrl: compressed, mediaType: "image/jpeg" });
+        } catch (err) {
+          resolve({ dataUrl: dataUrl, mediaType: file.type || "image/jpeg" });
+        }
+      };
+      img.onerror = function() { resolve({ dataUrl: dataUrl, mediaType: file.type || "image/jpeg" }); };
+      img.src = dataUrl;
+    };
+    reader.onerror = function() { resolve(null); };
+    reader.readAsDataURL(file);
+  });
 }
 
 function handleMedPhoto(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var base64Full = e.target.result;
-    var mediaType = file.type || "image/jpeg";
-    var base64Data = base64Full.split(",")[1];
+
+  document.getElementById("med-photo-preview").innerHTML =
+    '<div style="text-align:center;padding:8px;color:var(--text-muted);font-size:0.85rem">壓縮並上傳照片...</div>';
+  document.getElementById("med-recognize-result").innerHTML = "";
+
+  _compressMedPhoto(file).then(function(prepared) {
+    if (!prepared) {
+      renderManualMedForm("", "讀取照片失敗，請改用手動填寫下方資料。");
+      return;
+    }
+    var dataUrl = prepared.dataUrl;
+    var mediaType = prepared.mediaType;
+    var base64Data = dataUrl.split(",")[1];
 
     document.getElementById("med-photo-preview").innerHTML =
-      '<img src="' + base64Full + '" style="max-width:100%;max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />';
+      '<img src="' + dataUrl + '" style="max-width:100%;max-height:240px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />' +
+      '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">' +
+      '已壓縮為 ' + (Math.round(base64Data.length * 0.75 / 1024)) + ' KB，' +
+      '若辨識仍失敗，可改用手動填寫。</div>';
     document.getElementById("med-recognize-result").innerHTML =
       '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
-      '<div class="loading-spinner"></div><p style="margin-top:8px">AI 正在辨識藥袋...</p></div>';
+      '<div class="loading-spinner"></div>' +
+      '<p style="margin-top:8px">AI 正在辨識藥袋...</p>' +
+      '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">第一次辨識較慢，最多約 30 秒</p>' +
+      '</div>';
 
     fetch(API + "/medications/recognize", {
       method: "POST",
@@ -2892,6 +3033,7 @@ function handleMedPhoto(input) {
       .then(function(res) {
         if (!res.ok) {
           var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
+          if (typeof msg !== "string") msg = JSON.stringify(msg);
           renderManualMedForm("", "辨識失敗：" + msg + "。你可以改用手動填寫下方資料。");
           return;
         }
@@ -2899,19 +3041,31 @@ function handleMedPhoto(input) {
         var parsed = data.parsed || [];
 
         if (parsed.length > 0) {
-          // 辨識成功 → 一律走可編輯確認卡片，讓患者檢視標準欄位後才寫入
           renderRecognizedEditable(parsed, [], data.raw_text || "", []);
           return;
         }
 
-        // 完全辨識不到
-        renderManualMedForm(data.raw_text || "", "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。");
+        // 沒辨識出任何藥；把每個 vision provider 的失敗訊息一併秀出，方便排查
+        var providerNote = "";
+        if (data.errors && data.errors.length) {
+          var lines = data.errors.map(function(e) {
+            return "• " + (e.provider || "?") + "：" + (e.error || "未知錯誤");
+          }).join("\n");
+          providerNote = "\n\n（嘗試過的辨識服務）\n" + lines;
+        }
+        renderManualMedForm(
+          (data.raw_text || "") + providerNote,
+          "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。"
+        );
       })
       .catch(function(err) {
-        renderManualMedForm("", "辨識服務連線失敗（" + (err && err.message || "網路錯誤") + "），你可以改用手動填寫下方資料。");
+        renderManualMedForm(
+          "",
+          "辨識服務連線失敗（" + (err && err.message || "網路錯誤") + "），你可以改用手動填寫下方資料。"
+        );
       });
-  };
-  reader.readAsDataURL(file);
+  });
+
   input.value = "";
 }
 
@@ -2928,16 +3082,30 @@ function renderRecognizedEditable(parsed, errors, rawText, alreadySaved) {
   var savedNames = {};
   (alreadySaved || []).forEach(function(m) { savedNames[m.name] = true; });
 
+  var SLOT_LABEL = { morning: "早", noon: "中午", evening: "晚", other: "其他" };
   var inputStyle = "padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)";
   var rows = parsed.map(function(m, i) {
     var isSaved = savedNames[m.name];
     var errMsg = errMap[m.name];
     var bgTint = isSaved ? "rgba(85,184,138,0.08)" : (errMsg ? "rgba(220,80,80,0.08)" : "var(--bg-glass)");
     var borderTint = isSaved ? "var(--success)" : (errMsg ? "var(--danger)" : "var(--border-glass)");
+    var sched = m.schedule || {};
+    var slotTags = "";
+    if (sched.is_other) {
+      var bits = [];
+      if (sched.interval_hours) bits.push("每 " + sched.interval_hours + " 小時");
+      if (sched.is_prn) bits.push("需要時");
+      slotTags = '<span class="rec-slot-tag rec-slot-other">其他' + (bits.length ? "・" + bits.join("・") : "") + '</span>';
+    } else if (sched.slots && sched.slots.length) {
+      slotTags = sched.slots.map(function(s) {
+        return '<span class="rec-slot-tag rec-slot-' + s + '">' + (SLOT_LABEL[s] || s) + '</span>';
+      }).join("");
+    }
     return (
       '<div class="rec-med-card" data-idx="' + i + '" style="padding:10px;background:' + bgTint + ';border:1px solid ' + borderTint + ';border-radius:var(--radius-sm);display:grid;gap:6px">' +
         (isSaved ? '<div style="color:var(--success);font-size:0.8rem">已寫入 ✓</div>' :
          errMsg ? '<div style="color:var(--danger);font-size:0.8rem">寫入失敗：' + escapeHtml(errMsg) + '</div>' : '') +
+        (slotTags ? '<div class="rec-slot-tags">預計分類：' + slotTags + '</div>' : '') +
         '<input class="rec-name" type="text" value="' + escapeHtml(m.name) + '" placeholder="藥名 *（必填）" style="' + inputStyle + '" />' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
           '<input class="rec-dosage" type="text" value="' + escapeHtml(m.dosage) + '" placeholder="劑量（例：500mg）" style="' + inputStyle + '" />' +
@@ -3188,19 +3356,97 @@ function submitManualMed() {
     .catch(function(err) { showToast("加入失敗：" + (err && err.message || "網路錯誤"), "error"); });
 }
 
-function logMedTaken(medId, taken) {
+function logMedTaken(medId, taken, opts) {
+  opts = opts || {};
   var skipReason = "";
-  if (!taken) {
+  if (!taken && !opts.skipReason) {
     skipReason = prompt("為什麼跳過這次服藥？（可留空）") || "";
+  } else if (opts.skipReason) {
+    skipReason = opts.skipReason;
   }
+
+  var body = {
+    patient_id: _medsPatientId,
+    medication_id: medId,
+    taken: taken,
+    skip_reason: skipReason || null,
+    force: !!opts.force
+  };
+
   fetch(API + "/medications/log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ patient_id: _medsPatientId, medication_id: medId, taken: taken, skip_reason: skipReason })
+    body: JSON.stringify(body)
   })
-    .then(function(r) { return r.json(); })
-    .then(function() { showToast(taken ? "已記錄服藥 ✓" : "已記錄跳過", taken ? "success" : "info"); })
+    .then(function(r) {
+      return r.text().then(function(t) {
+        var p; try { p = JSON.parse(t); } catch (e) { p = { detail: t }; }
+        return { ok: r.ok, status: r.status, data: p };
+      });
+    })
+    .then(function(res) {
+      if (res.status === 409 && res.data && res.data.detail && res.data.detail.code === "dose_too_soon") {
+        // 4 小時內重複服「其他」型藥 → 跳警告，由患者決定要不要強制記錄
+        showDoseSafetyDialog(medId, res.data.detail);
+        return;
+      }
+      if (!res.ok) {
+        var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
+        showToast("記錄失敗：" + (typeof msg === "string" ? msg : JSON.stringify(msg)), "error");
+        return;
+      }
+      showToast(taken ? "已記錄服藥 ✓" : "已記錄跳過", taken ? "success" : "info");
+      loadMedicationsPage();
+    })
     .catch(function() { showToast("記錄失敗", "error"); });
+}
+
+// 4 小時間隔警告 modal：超過閾值時，攔下 logMedTaken，
+// 解釋短時間重複服藥的風險，再給「我了解風險，仍要記錄」的退路。
+function showDoseSafetyDialog(medId, detail) {
+  closeDoseSafetyDialog();
+  var safety = (detail && detail.safety) || {};
+  var hours = safety.hours_since_last;
+  var required = safety.required_hours || detail.min_hours || 4;
+  var remaining = safety.hours_remaining;
+  var msg = (detail && detail.message) || "距離上次服藥太近，可能造成藥效過量風險。";
+
+  var html =
+    '<div class="dose-safety-backdrop" id="dose-safety-modal" onclick="closeDoseSafetyDialog()">' +
+      '<div class="dose-safety-card" onclick="event.stopPropagation()">' +
+        '<div class="dose-safety-head">' +
+          '<span class="dose-safety-icon">⚠️</span>' +
+          '<h3>服藥風險警告</h3>' +
+        '</div>' +
+        '<p class="dose-safety-msg">' + escapeHtml(msg) + '</p>' +
+        '<dl class="dose-safety-meta">' +
+          (hours != null ? '<div><dt>距離上次服藥</dt><dd>' + Number(hours).toFixed(1) + ' 小時</dd></div>' : '') +
+          '<div><dt>建議間隔</dt><dd>至少 ' + required + ' 小時</dd></div>' +
+          (remaining != null ? '<div><dt>還需等待</dt><dd>' + Number(remaining).toFixed(1) + ' 小時</dd></div>' : '') +
+        '</dl>' +
+        '<div class="dose-safety-actions">' +
+          '<button type="button" class="secondary" onclick="closeDoseSafetyDialog()">取消，再等等</button>' +
+          '<button type="button" class="dose-safety-force" onclick="confirmForceLog(\'' + medId + '\')">' +
+            '我了解風險，仍要記錄' +
+          '</button>' +
+        '</div>' +
+        '<p class="dose-safety-foot">若症狀無法忍受，請聯繫醫師或藥師，不要自行加量。</p>' +
+      '</div>' +
+    '</div>';
+
+  var holder = document.createElement("div");
+  holder.innerHTML = html;
+  document.body.appendChild(holder.firstChild);
+}
+
+function closeDoseSafetyDialog() {
+  var el = document.getElementById("dose-safety-modal");
+  if (el) el.remove();
+}
+
+function confirmForceLog(medId) {
+  closeDoseSafetyDialog();
+  logMedTaken(medId, true, { force: true });
 }
 
 function showEffectForm(medId, medName) {
