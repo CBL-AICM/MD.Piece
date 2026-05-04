@@ -3501,6 +3501,230 @@ html[data-mode="senior"] .vt-bmi-meta {
   margin-top: 2px;
 }
 
+/* ── 早 / 中 / 晚 / 其他 分時段卡片 ─────────────────────────── */
+.med-slots {
+  display: grid;
+  gap: 14px;
+}
+.med-slot {
+  padding: 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md, 12px);
+}
+.med-slot-empty .med-slot-empty-msg {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 8px 0 0;
+}
+.med-slot-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.med-slot-icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-glass);
+  color: var(--accent);
+}
+.med-slot-icon svg { width: 18px; height: 18px; }
+.med-slot-label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+.med-slot-count {
+  display: inline-block;
+  font-size: 0.75rem;
+  background: var(--accent);
+  color: #fff;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill, 999px);
+  margin-left: 6px;
+}
+.med-slot-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.med-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+/* 點擊卡片即打卡 */
+.med-card {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  text-align: left;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  transition: var(--transition);
+  font: inherit;
+}
+.med-card:hover {
+  background: rgba(85,184,138,0.08);
+  border-color: var(--success);
+}
+.med-card:active { transform: scale(0.99); }
+.med-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.med-card-title strong { font-size: 1rem; }
+.med-card-dosage {
+  margin-left: 6px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+.med-card-freq {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.med-card-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border-glass);
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.03);
+}
+.med-card-tag-interval {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.med-card-tag-prn {
+  border-color: var(--warning, #E8A84B);
+  color: var(--warning, #E8A84B);
+}
+.med-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.med-card-take {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--success);
+  font-weight: 600;
+}
+.med-card-mini {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.med-card-mini:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
+/* 辨識結果卡片上的「預計分類」標籤 */
+.rec-slot-tags {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rec-slot-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border-glass);
+}
+.rec-slot-morning { color: #E8A84B; border-color: #E8A84B; }
+.rec-slot-noon    { color: #00D4AA; border-color: #00D4AA; }
+.rec-slot-evening { color: #6E7BFF; border-color: #6E7BFF; }
+.rec-slot-other   { color: var(--warning, #E8A84B); border-color: var(--warning, #E8A84B); }
+
+/* 4 小時間隔風險警告 modal */
+.dose-safety-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+.dose-safety-card {
+  max-width: 420px;
+  width: 100%;
+  background: #1c1d22;
+  color: #fff;
+  border: 1px solid var(--warning, #E8A84B);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+.dose-safety-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dose-safety-head h3 { margin: 0; font-size: 1.05rem; color: var(--warning, #E8A84B); }
+.dose-safety-icon { font-size: 1.3rem; }
+.dose-safety-msg {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #f3f3f3;
+  margin: 6px 0 12px;
+}
+.dose-safety-meta {
+  display: grid;
+  gap: 4px;
+  background: rgba(255,255,255,0.04);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+}
+.dose-safety-meta div { display: flex; justify-content: space-between; }
+.dose-safety-meta dt { margin: 0; color: var(--text-dim); }
+.dose-safety-meta dd { margin: 0; color: #fff; font-weight: 600; }
+.dose-safety-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.dose-safety-actions button { min-width: 120px; padding: 8px 14px; }
+.dose-safety-force {
+  background: var(--warning, #E8A84B);
+  color: #1c1d22;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dose-safety-force:hover { filter: brightness(1.05); }
+.dose-safety-foot {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin: 0;
+}
+
 /* ═══════════════════════════════════════════════════════════
    EDUCATION — 衛教專欄
    ═════���══════════════════��══════════════════════════════════ */
