@@ -694,3 +694,63 @@ code {
   .topbar { flex-wrap: wrap; gap: 10px; }
   .topbar-user { width: 100%; justify-content: flex-end; }
 }
+/* ─── Report (AI 回診報告) ─────────────────────────── */
+.report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.report-body {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  line-height: 1.7;
+  font-size: 14.5px;
+}
+.report-body h1, .report-body h2, .report-body h3 {
+  margin: 18px 0 8px;
+  font-weight: 700;
+}
+.report-body h1 { font-size: 17px; color: var(--accent); }
+.report-body h2 { font-size: 15.5px; color: var(--text); }
+.report-body h3 { font-size: 14.5px; color: var(--text); }
+.report-body p { margin: 6px 0; }
+.report-body ul { margin: 6px 0 12px 18px; padding: 0; }
+.report-body li { margin: 3px 0; }
+.report-body strong { color: var(--text); }
+.report-body em { color: var(--text-dim); font-style: normal; background: rgba(255,255,255,0.04); padding: 0 4px; border-radius: 3px; }
+.report-body code {
+  background: var(--panel-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 13px;
+}
+.report-body hr {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 14px 0;
+}
+.report-meta {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+.disclaimer {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(255, 184, 107, 0.08);
+  border: 1px solid rgba(255, 184, 107, 0.25);
+  border-radius: 8px;
+  color: var(--warn);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.disclaimer strong { color: var(--text); }
+

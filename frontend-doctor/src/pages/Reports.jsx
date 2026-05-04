@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiGet } from '../lib/api.js'
 import { fetchAllPatients } from '../lib/patients.js'
+import { renderMarkdown } from '../lib/markdown.js'
 import TrendChart from '../components/TrendChart.jsx'
 
 const RANGES = [
@@ -17,6 +18,9 @@ export default function Reports() {
   const [medStats, setMedStats] = useState(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState(null)
+  const [report, setReport] = useState(null)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportErr, setReportErr] = useState(null)
 
   useEffect(() => {
     fetchAllPatients()
@@ -42,7 +46,24 @@ export default function Reports() {
       })
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false))
+    // 切換患者就清掉舊報告
+    setReport(null)
+    setReportErr(null)
   }, [patientId, days])
+
+  const generateReport = async () => {
+    if (!patientId) return
+    setReportLoading(true)
+    setReportErr(null)
+    try {
+      const r = await apiGet(`/reports/${patientId}/monthly`)
+      setReport(r)
+    } catch (e) {
+      setReportErr(e.message)
+    } finally {
+      setReportLoading(false)
+    }
+  }
 
   const emotionData = useMemo(() => {
     const byDay = new Map()
@@ -110,6 +131,50 @@ export default function Reports() {
       </div>
 
       {err && <div className="error-bar">{err}</div>}
+
+      {/* AI 回診報告 */}
+      <div className="card report-card" style={{ marginBottom: 16 }}>
+        <div className="report-head">
+          <div>
+            <h2 className="section-h" style={{ margin: 0 }}>AI 回診報告（30 天）</h2>
+            <p className="cell-dim" style={{ margin: '6px 0 0', fontSize: 13 }}>
+              整合症狀／情緒／用藥／就診紀錄，由 Claude 產出專業摘要供醫師參考。
+            </p>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={generateReport}
+            disabled={!patientId || reportLoading}
+          >
+            {reportLoading ? '產生中…' : (report ? '重新產生' : '產生報告')}
+          </button>
+        </div>
+        {reportErr && <div className="error-bar inline" style={{ marginTop: 12 }}>{reportErr}</div>}
+        {report && (
+          <>
+            <div
+              className="report-body"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(report.report) }}
+            />
+            <div className="report-meta">
+              <span>產生時間：{new Date(report.generated_at).toLocaleString('zh-TW')}</span>
+              <span>· 來源：{report.source === 'ai' ? 'Claude AI' : '原始摘要'}</span>
+              {report.raw_data && (
+                <span>· 樣本：症狀 {report.raw_data.symptom_count} / 情緒 {report.raw_data.emotion_count} / 用藥 {report.raw_data.medication_count} / 就診 {report.raw_data.visit_count}</span>
+              )}
+            </div>
+            <div className="disclaimer">
+              ⚠ MD.Piece 為 AI 輔助工具，僅作為醫病溝通與資料整理用途。
+              <strong> 本報告不可作為診斷或醫療依據</strong>，所有臨床判斷仍應由執業醫師依專業評估後決定。
+            </div>
+          </>
+        )}
+        {!report && !reportLoading && (
+          <p className="cell-dim" style={{ margin: '12px 0 0' }}>
+            選好患者後點「產生報告」即可。
+          </p>
+        )}
+      </div>
 
       {selected && (
         <div className="profile-grid">
