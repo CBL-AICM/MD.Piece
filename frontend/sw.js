@@ -1,12 +1,12 @@
-const CACHE_VERSION = "mdpiece-v39";
+const CACHE_VERSION = "mdpiece-v40-mobile-shell";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=cozy-warm-2",
-  "/js/app.js",
+  "/css/style.css?v=mobile-shell-1",
+  "/js/app.js?v=mobile-shell-1",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
