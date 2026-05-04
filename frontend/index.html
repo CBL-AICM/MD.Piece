@@ -495,8 +495,10 @@
         landing.style.display = 'none';
         const user = getCurrentUser();
         if (user) {
-          document.getElementById('app-wrapper').classList.add('show');
-          showPage('home');
+          const wrap = document.getElementById('app-wrapper');
+          wrap.classList.add('show');
+          if (user.role === 'doctor') wrap.classList.add('doctor-mode');
+          showPage(user.role === 'doctor' ? 'docHome' : 'home');
           lucide.createIcons();
           setMode(getMode());
         } else {
