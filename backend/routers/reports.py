@@ -66,31 +66,56 @@ PATIENT_SUMMARY_SYSTEM_PROMPT = (
 # ── 共用：收集近 30 天資料 ───────────────────────────────────
 
 
+def _empty_summary():
+    """DB 整體無法連線時的預設回傳：空 summary、零計數、has_data=False。"""
+    return (
+        "報告期間：近 30 天\n症狀記錄：無\n情緒記錄：無\n用藥紀錄：無\n就診紀錄：無",
+        {"symptom_count": 0, "emotion_count": 0, "medication_count": 0, "visit_count": 0},
+        False,
+    )
+
+
+def _safe_query(fn, default):
+    """執行 Supabase 查詢，失敗（憑證未設、表不存在、RLS 拒絕等）回傳預設值，
+    避免單一資料源失效就讓整個報告 500。"""
+    try:
+        return fn()
+    except Exception as e:
+        logger.warning(f"Supabase query 失敗，使用空資料：{e}")
+        return default
+
+
 def _collect_30d_summary(patient_id: str):
-    """收集近 30 天症狀／情緒／用藥／就診資料，回傳 (summary_text, raw_counts, has_data)。"""
-    sb = get_supabase()
+    """收集近 30 天症狀／情緒／用藥／就診資料，回傳 (summary_text, raw_counts, has_data)。
+    任何 DB / 連線錯誤都會 swallow 成空資料，讓上層仍能產生「資料不足」版本的報告。"""
+    try:
+        sb = get_supabase()
+    except Exception as e:
+        logger.warning(f"無法連線資料庫，產生空摘要：{e}")
+        return _empty_summary()
+
     since = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
 
-    symptoms_data = (
+    symptoms_data = _safe_query(lambda: (
         sb.table("symptoms_log").select("*").eq("patient_id", patient_id)
         .gte("created_at", since).order("created_at").execute().data or []
-    )
-    emotions_data = (
+    ), [])
+    emotions_data = _safe_query(lambda: (
         sb.table("emotions").select("*").eq("patient_id", patient_id)
         .gte("created_at", since).order("created_at").execute().data or []
-    )
-    meds_data = (
+    ), [])
+    meds_data = _safe_query(lambda: (
         sb.table("medications").select("*").eq("patient_id", patient_id)
         .execute().data or []
-    )
-    med_logs_data = (
+    ), [])
+    med_logs_data = _safe_query(lambda: (
         sb.table("medication_logs").select("*").eq("patient_id", patient_id)
         .gte("taken_at", since).execute().data or []
-    )
-    records_data = (
+    ), [])
+    records_data = _safe_query(lambda: (
         sb.table("medical_records").select("*").eq("patient_id", patient_id)
         .gte("visit_date", since[:10]).order("visit_date").execute().data or []
-    )
+    ), [])
 
     has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data)
     parts = ["報告期間：近 30 天\n"]
@@ -173,53 +198,39 @@ def _collect_30d_summary(patient_id: str):
 @router.get("/{patient_id}/monthly")
 def get_monthly_report(patient_id: str):
     """30 天整合月度報告：症狀 + 情緒 + 用藥 + 就診摘要"""
-    sb = get_supabase()
+    try:
+        sb = get_supabase()
+    except Exception as e:
+        logger.warning(f"monthly: 無法連線資料庫：{e}")
+        return {
+            "patient_id": patient_id,
+            "report": "目前資料庫尚未連線，無法產出 30 天健康摘要。請稍後再試。",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "source": "db_offline",
+            "raw_data": {"symptom_count": 0, "emotion_count": 0, "medication_count": 0, "visit_count": 0},
+        }
     since = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
 
-    # 收集各面向資料
-    symptoms_result = (
-        sb.table("symptoms_log")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .gte("created_at", since)
-        .order("created_at")
-        .execute()
-    )
-    emotions_result = (
-        sb.table("emotions")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .gte("created_at", since)
-        .order("created_at")
-        .execute()
-    )
-    meds_result = (
-        sb.table("medications")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .execute()
-    )
-    med_logs_result = (
-        sb.table("medication_logs")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .gte("taken_at", since)
-        .execute()
-    )
-    records_result = (
-        sb.table("medical_records")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .gte("visit_date", since[:10])
-        .order("visit_date")
-        .execute()
-    )
-
-    symptoms_data = symptoms_result.data or []
-    emotions_data = emotions_result.data or []
-    meds_data = meds_result.data or []
-    med_logs_data = med_logs_result.data or []
-    records_data = records_result.data or []
+    # 收集各面向資料（任一資料源失敗都不會炸整支 endpoint）
+    symptoms_data = _safe_query(lambda: (
+        sb.table("symptoms_log").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since).order("created_at").execute().data or []
+    ), [])
+    emotions_data = _safe_query(lambda: (
+        sb.table("emotions").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since).order("created_at").execute().data or []
+    ), [])
+    meds_data = _safe_query(lambda: (
+        sb.table("medications").select("*").eq("patient_id", patient_id).execute().data or []
+    ), [])
+    med_logs_data = _safe_query(lambda: (
+        sb.table("medication_logs").select("*").eq("patient_id", patient_id)
+        .gte("taken_at", since).execute().data or []
+    ), [])
+    records_data = _safe_query(lambda: (
+        sb.table("medical_records").select("*").eq("patient_id", patient_id)
+        .gte("visit_date", since[:10]).order("visit_date").execute().data or []
+    ), [])
 
     # 如果完全無資料
     has_data = symptoms_data or emotions_data or med_logs_data or records_data
@@ -331,36 +342,34 @@ def get_monthly_report(patient_id: str):
 @router.get("/{patient_id}/checklist")
 def get_consultation_checklist(patient_id: str):
     """建議問診清單：根據近期數據，生成這次最需要確認的三件事"""
-    sb = get_supabase()
+    try:
+        sb = get_supabase()
+    except Exception as e:
+        logger.warning(f"checklist: 無法連線資料庫，回預設清單：{e}")
+        return {
+            "patient_id": patient_id,
+            "checklist": [
+                "目前身體整體感覺如何？有沒有新的不舒服？",
+                "目前的藥有沒有按時吃？有沒有什麼困難？",
+                "生活和心情上有沒有需要醫師幫忙的地方？",
+            ],
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "source": "db_offline",
+        }
 
-    # 收集患者近期資料
-    symptoms_result = (
-        sb.table("symptoms_log")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .order("created_at", desc=True)
-        .limit(10)
-        .execute()
-    )
-    emotions_result = (
-        sb.table("emotions")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .order("created_at", desc=True)
-        .limit(10)
-        .execute()
-    )
-    medications_result = (
-        sb.table("medications")
-        .select("*")
-        .eq("patient_id", patient_id)
-        .eq("active", 1)
-        .execute()
-    )
-
-    symptoms_data = symptoms_result.data or []
-    emotions_data = emotions_result.data or []
-    medications_data = medications_result.data or []
+    # 收集患者近期資料（任一失敗都當空陣列處理）
+    symptoms_data = _safe_query(lambda: (
+        sb.table("symptoms_log").select("*").eq("patient_id", patient_id)
+        .order("created_at", desc=True).limit(10).execute().data or []
+    ), [])
+    emotions_data = _safe_query(lambda: (
+        sb.table("emotions").select("*").eq("patient_id", patient_id)
+        .order("created_at", desc=True).limit(10).execute().data or []
+    ), [])
+    medications_data = _safe_query(lambda: (
+        sb.table("medications").select("*").eq("patient_id", patient_id)
+        .eq("active", 1).execute().data or []
+    ), [])
 
     # 如果完全沒有資料，回傳預設清單
     if not symptoms_data and not emotions_data and not medications_data:
