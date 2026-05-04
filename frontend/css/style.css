@@ -6478,26 +6478,36 @@ html[data-mode="senior"] .visit-modal-save {
 /* ─── 每日故事 Daily Story ──────────────────────────────────── */
 .story-hero h2 { margin: 0; }
 
-.story-today-head {
+.story-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
-.story-today-label {
+.story-section-cat {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--bg-soft);
   font-size: .78rem;
-  color: var(--text-dim);
+  font-weight: 600;
+  background: var(--bg-soft);
+  color: var(--text);
 }
-.story-today-date {
+.story-cat-disease   { background: #fde7ec; color: #9b2335; }
+.story-cat-quick_tip { background: #fff4d6; color: #8a5a00; }
+.story-cat-news      { background: #e0f2fe; color: #0b5887; }
+[data-mode="senior"] .story-section-cat { font-size: 1rem; padding: 6px 12px; }
+.story-section-date {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: .82rem;
+  color: var(--text-dim);
+}
+.story-section-desc {
+  margin: 0 0 10px;
+  font-size: .85rem;
   color: var(--text-dim);
 }
 .story-title {
@@ -6555,6 +6565,18 @@ html[data-mode="senior"] .visit-modal-save {
 }
 
 .story-archive-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.story-archive-day-head {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .8rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  letter-spacing: .02em;
+}
+.story-archive-day-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
@@ -6575,10 +6597,13 @@ html[data-mode="senior"] .visit-modal-save {
   border-color: var(--accent, #4a90e2);
   transform: translateY(-1px);
 }
-.story-archive-date {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: .72rem;
-  color: var(--text-dim);
+.story-archive-cat {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 600;
 }
 .story-archive-title {
   font-weight: 600;
@@ -6590,6 +6615,45 @@ html[data-mode="senior"] .visit-modal-save {
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 衛福部 RSS 新聞清單 */
+.story-newsfeed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+.story-news-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+}
+.story-news-title {
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+  text-decoration: none;
+}
+a.story-news-title:hover { text-decoration: underline; }
+.story-news-date {
+  font-size: .72rem;
+  color: var(--text-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.story-news-summary {
+  margin: 2px 0 0;
+  font-size: .82rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

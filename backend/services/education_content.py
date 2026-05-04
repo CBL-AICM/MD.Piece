@@ -28,6 +28,7 @@ class Article:
     summary: str = ""
     icd10: Optional[str] = None
     dimension: Optional[str] = None
+    category: Optional[str] = None  # disease | quick_tip | news
     tags: list[str] = field(default_factory=list)
     sources: list[str] = field(default_factory=list)
     featured: bool = False
@@ -110,6 +111,7 @@ def _load_article(path: Path) -> Optional[Article]:
         summary=str(meta.get("summary", "")),
         icd10=meta.get("icd10") or None,
         dimension=meta.get("dimension") or None,
+        category=(str(meta.get("category")).lower() if meta.get("category") else None),
         tags=list(meta.get("tags") or []),
         sources=list(meta.get("sources") or []),
         featured=bool(meta.get("featured", False)),

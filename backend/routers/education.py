@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Any, Optional
 import logging
 
 from backend.services.knowledge_analysis import (
@@ -12,6 +12,7 @@ from backend.services.knowledge_analysis import (
 )
 from backend.services.llm_service import call_claude
 from backend.services import education_content
+from backend.services import news_feed
 from backend.utils.icd10 import (
     ICD10_MAP,
     KNOWLEDGE_DIMENSIONS,
@@ -222,43 +223,76 @@ def get_featured_articles(limit: int = 5):
     return {"articles": [a.to_card() for a in items[:limit]]}
 
 
+DAILY_CATEGORIES = ("disease", "quick_tip", "news")
+
+
 @router.get("/articles/daily")
 def get_daily_article(days: int = 7):
-    """每日故事：依日期決定今日要推送的文章，並回傳近 N 天的歷程。
+    """每日故事：每天依分類各推一篇（疾病故事 / 健康快訊 / 最新資訊），加上近 N 天歷程與外部新聞。
 
-    - 優先從 featured 文章中輪播；若不足則從全部文章補足。
-    - 同一天回傳同一篇，不需要儲存狀態。
+    - 三個分類各自輪播；若某分類沒有文章，該欄位回 null。
+    - news 分類除了 markdown 文章，另外從 RSS 補幾則最新醫療資訊。
+    - 同一天回傳同一組，不需要儲存狀態。
     """
     from datetime import date, timedelta
 
-    pool = education_content.list_articles(featured_only=True)
-    if not pool:
-        pool = education_content.list_articles()
-    if not pool:
-        return {"today": None, "archive": []}
+    all_articles = education_content.list_articles()
+    if not all_articles:
+        return {
+            "today": {c: None for c in DAILY_CATEGORIES},
+            "archive": [],
+            "news_feed": news_feed.fetch_news(limit=6),
+        }
 
-    pool = sorted(pool, key=lambda a: a.slug)
-    n = len(pool)
+    by_category: dict[str, list] = {c: [] for c in DAILY_CATEGORIES}
+    for a in all_articles:
+        cat = (a.category or "").lower()
+        if cat in by_category:
+            by_category[cat].append(a)
+        elif a.featured:
+            # 沒標 category 的舊文章退到 disease 池，避免空欄位
+            by_category["disease"].append(a)
 
-    def pick_for(d: date):
-        idx = d.toordinal() % n
-        return pool[idx]
+    for cat in by_category:
+        by_category[cat].sort(key=lambda a: a.slug)
+
+    def pick_for(cat: str, d: "date"):
+        pool = by_category.get(cat) or []
+        if not pool:
+            return None
+        return pool[d.toordinal() % len(pool)]
 
     today = date.today()
-    today_article = pick_for(today)
+    today_picks: dict[str, Any] = {}
+    for cat in DAILY_CATEGORIES:
+        a = pick_for(cat, today)
+        if a is None:
+            today_picks[cat] = None
+            continue
+        full = a.to_full()
+        full["pushed_on"] = today.isoformat()
+        today_picks[cat] = full
 
     days = max(1, min(days, 30))
     archive = []
     for i in range(1, days):
         d = today - timedelta(days=i)
-        a = pick_for(d)
-        card = a.to_card()
-        card["pushed_on"] = d.isoformat()
-        archive.append(card)
+        day_entry = {"date": d.isoformat(), "items": {}}
+        for cat in DAILY_CATEGORIES:
+            a = pick_for(cat, d)
+            if a is None:
+                day_entry["items"][cat] = None
+            else:
+                card = a.to_card()
+                card["pushed_on"] = d.isoformat()
+                day_entry["items"][cat] = card
+        archive.append(day_entry)
 
-    today_full = today_article.to_full()
-    today_full["pushed_on"] = today.isoformat()
-    return {"today": today_full, "archive": archive}
+    return {
+        "today": today_picks,
+        "archive": archive,
+        "news_feed": news_feed.fetch_news(limit=6),
+    }
 
 
 @router.get("/articles/{slug}")
