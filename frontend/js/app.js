@@ -4101,9 +4101,9 @@ function chatMascotSvg(state) {
     +   '</g>'
     // 頭
     +   '<ellipse cx="50" cy="58" rx="28" ry="24" fill="url(#hekoFur)" stroke="#3A2A24" stroke-width="2.2"/>'
-    // 瞇瞇眼（^ ^）
-    +   '<path class="chat-mascot-eye chat-mascot-eye-l" d="M37 56 Q41 51 45 56" stroke="#2A1F1A" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
-    +   '<path class="chat-mascot-eye chat-mascot-eye-r" d="M55 56 Q59 51 63 56" stroke="#2A1F1A" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
+    // 瞇瞇眼（' '）— 兩條短直線
+    +   '<path class="chat-mascot-eye chat-mascot-eye-l" d="M41 52 L41 58" stroke="#2A1F1A" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
+    +   '<path class="chat-mascot-eye chat-mascot-eye-r" d="M59 52 L59 58" stroke="#2A1F1A" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
     // 鼻 + 嘴（小三角＋微笑）
     +   '<path d="M48 62 L52 62 L50 65 Z" fill="#3A2A24"/>'
     +   '<path class="chat-mascot-mouth" d="M50 65 Q46 70 43 67 M50 65 Q54 70 57 67" stroke="#3A2A24" stroke-width="1.8" fill="none" stroke-linecap="round"/>'
