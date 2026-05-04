@@ -4192,12 +4192,13 @@ async function previsitGatherData() {
 
   let symptoms = [];
   let medications = [];
-  // 後端回傳 wrapped 物件：/symptoms → {symptoms: [...]}、/medications → {medications: [...]}
+  // 症狀真正的歷史在 /symptoms/history/{pid}（/symptoms/?patient_id 是空殼回傳）
+  // 後端回傳 wrapped 物件：/symptoms/history → {history: [...]}、/medications → {medications: [...]}
   try {
-    const r1 = await fetch(`${API}/symptoms/?patient_id=${encodeURIComponent(pid)}`);
+    const r1 = await fetch(`${API}/symptoms/history/${encodeURIComponent(pid)}`);
     if (r1.ok) {
       const j = await r1.json();
-      symptoms = Array.isArray(j) ? j : (j.symptoms || j.history || []);
+      symptoms = Array.isArray(j) ? j : (j.history || j.symptoms || []);
     }
   } catch (e) { /* 無資料就空陣列 */ }
   try {
@@ -4208,12 +4209,17 @@ async function previsitGatherData() {
     }
   } catch (e) { /* 同上 */ }
 
-  symptoms = (Array.isArray(symptoms) ? symptoms : []).map(s => ({
-    name: s.name || s.symptom || s.title,
-    severity: s.severity ? String(s.severity) : null,
-    note: s.note || s.description || null,
-    created_at: s.created_at || s.recorded_at,
-  }));
+  // symptoms_log 每筆有 symptoms (string[]) 與 ai_response，把症狀清單合併成單行
+  symptoms = (Array.isArray(symptoms) ? symptoms : []).map(s => {
+    const list = Array.isArray(s.symptoms) ? s.symptoms.filter(Boolean) : [];
+    const name = list.length ? list.join('、') : (s.name || s.symptom || s.title || '');
+    return {
+      name,
+      severity: s.severity ? String(s.severity) : null,
+      note: s.note || s.description || null,
+      created_at: s.created_at || s.recorded_at,
+    };
+  }).filter(s => s.name);
   // 過濾停用藥（active=0 / false）
   medications = (Array.isArray(medications) ? medications : [])
     .filter(m => m.active !== 0 && m.active !== false)

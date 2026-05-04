@@ -157,11 +157,14 @@ def generate_previsit(body: PrevisitRequest):
             return [str(x) for x in v if x]
         return [str(v)]
 
+    summary_val = data.get("summary")
+    summary = "" if summary_val is None else str(summary_val)
+
     return PrevisitResponse(
         chief_complaints=_list("chief_complaints"),
         medication_status=_list("medication_status"),
         questions_for_doctor=_list("questions_for_doctor"),
         ai_highlights=_list("ai_highlights"),
-        summary=str(data.get("summary", "")),
+        summary=summary,
         disclaimer="本摘要僅供參考，請以醫師判讀為準",
     )
