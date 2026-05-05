@@ -2751,6 +2751,70 @@ html[data-mode="senior"] .tc-desc {
 .scc-name { font-weight: 700; font-size: 1.02rem; color: var(--app-text); }
 .scc-short { font-size: 0.8rem; color: var(--app-text-dim); line-height: 1.55; }
 
+/* 自訂症狀卡 */
+.sym-cat-card-custom { position: relative; }
+.scc-badge {
+  position: absolute;
+  top: 8px; right: 28px;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 100px;
+  background: var(--app-mint);
+  color: var(--app-chip-text);
+  font-weight: 700;
+}
+.scc-del {
+  position: absolute;
+  top: 6px; right: 8px;
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: rgba(184,85,63,0.15);
+  color: var(--danger, #B8553F);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.scc-del:hover { background: var(--danger, #B8553F); color: #fff; transform: scale(1.08); }
+
+/* 其他症狀（+）卡 */
+.sym-cat-card-other {
+  border-style: dashed !important;
+  border-width: 1.5px !important;
+  border-color: var(--accent, #C97F4B) !important;
+  background: linear-gradient(180deg, var(--app-panel), rgba(201,127,75,0.06)) !important;
+}
+.sym-cat-card-other:hover {
+  border-style: solid !important;
+  background: linear-gradient(180deg, var(--app-panel), rgba(201,127,75,0.16)) !important;
+}
+.scc-other {
+  background: var(--accent, #C97F4B) !important;
+  color: #fff !important;
+}
+.sym-cat-card-other .scc-name { color: var(--accent, #C97F4B) !important; }
+
+/* 自訂症狀名稱輸入框 */
+.lf-text-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--app-panel-soft, var(--bg-mid));
+  border: 1.5px solid var(--app-border, var(--border-glass));
+  border-radius: 8px;
+  color: var(--app-text, var(--text));
+  font-family: inherit;
+  font-size: 1.02rem;
+  margin-bottom: 14px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.lf-text-input:focus {
+  outline: none;
+  border-color: var(--accent, #C97F4B);
+  box-shadow: 0 0 0 3px rgba(201,127,75,0.15);
+}
+
 /* Log form */
 .lf-explain {
   display: flex; gap: 14px; align-items: flex-start;

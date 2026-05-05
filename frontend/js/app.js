@@ -1788,7 +1788,7 @@ function symptoms() {
   for (const cid in stats.byCategory) {
     if (stats.byCategory[cid].count > topCount) { topId = cid; topCount = stats.byCategory[cid].count; }
   }
-  const topCat = topId ? SYMPTOM_CATEGORIES.find(c => c.id === topId) : null;
+  const topCat = topId ? findSymptomCat(topId) : null;
   const nextVisitDay = v.nextVisit ? Math.ceil((new Date(v.nextVisit) - today) / 86400000) : null;
   const todayStr = today.toISOString().slice(0, 10);
   const todayEntries = stats.entries.filter(e => e.recordedAt.slice(0, 10) === todayStr);
@@ -1836,7 +1836,7 @@ function symptoms() {
           <span class="ts-tag">choose_category</span>
         </header>
         <div class="ts-body">
-          <p class="sym-instruct">選擇你現在感覺到的症狀（每張卡片都附上判斷說明）：</p>
+          <p class="sym-instruct">選擇你現在感覺到的症狀（每張卡片都附上判斷說明），沒看到的點「其他症狀」自訂：</p>
           <div class="sym-category-grid">
             ${SYMPTOM_CATEGORIES.map(c => `
               <button class="sym-cat-card" onclick="openSymptomLog('${c.id}')" type="button">
@@ -1845,6 +1845,20 @@ function symptoms() {
                 <div class="scc-short">${c.short}</div>
               </button>
             `).join('')}
+            ${getCustomSymptomCats().map(c => `
+              <button class="sym-cat-card sym-cat-card-custom" onclick="openSymptomLog('${c.id}')" type="button">
+                <span class="scc-badge">自訂</span>
+                <span class="scc-del" onclick="event.stopPropagation(); removeCustomSymptomCatAndRefresh('${c.id}')" title="刪除這個自訂症狀">×</span>
+                <div class="scc-icon scc-${c.color}"><i data-lucide="${c.icon}"></i></div>
+                <div class="scc-name">${escapeHtml(c.zh)}</div>
+                <div class="scc-short">${c.short}</div>
+              </button>
+            `).join('')}
+            <button class="sym-cat-card sym-cat-card-other" onclick="openOtherSymptomLog()" type="button">
+              <div class="scc-icon scc-other"><i data-lucide="plus"></i></div>
+              <div class="scc-name">其他症狀</div>
+              <div class="scc-short">沒看到？自己打症狀名稱（會記住下次）</div>
+            </button>
           </div>
         </div>
       </section>
@@ -1868,7 +1882,7 @@ function symptoms() {
           ` : `
             <ul class="sym-entry-list">
               ${todayEntries.slice().reverse().map(e => {
-                const c = SYMPTOM_CATEGORIES.find(x => x.id === e.categoryId);
+                const c = findSymptomCat(e.categoryId);
                 const time = new Date(e.recordedAt).toTimeString().slice(0, 5);
                 return `
                   <li class="sym-entry">
@@ -1947,6 +1961,47 @@ const SYMPTOM_CATEGORIES = [
     detail:'長期失眠影響身心，建議在備註記下入睡時間與睡眠品質。' },
 ];
 
+// ─── 自訂症狀（其他病症）──────────────────────────
+// 使用者第一次輸入後存到 localStorage，下次直接出現在卡片列。
+const CUSTOM_SYM_KEY = 'mdpiece_custom_symptom_categories';
+const CUSTOM_SYM_COLORS = ['mint','aqua','pink','blue'];
+
+function getCustomSymptomCats() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_SYM_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveCustomSymptomCats(list) {
+  localStorage.setItem(CUSTOM_SYM_KEY, JSON.stringify(list));
+}
+function addCustomSymptomCat(name) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return null;
+  const list = getCustomSymptomCats();
+  // 已存在就直接回傳（避免重複）
+  const dup = list.find(c => c.zh === trimmed);
+  if (dup) return dup;
+  const id = 'custom_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const color = CUSTOM_SYM_COLORS[list.length % CUSTOM_SYM_COLORS.length];
+  const cat = {
+    id, zh: trimmed, icon: 'plus-circle', color,
+    short: '自訂症狀',
+    detail: '使用者自訂症狀。建議在備註寫下發生時的細節（部位、誘因、持續時間）。',
+    custom: true,
+  };
+  list.push(cat);
+  saveCustomSymptomCats(list);
+  return cat;
+}
+function removeCustomSymptomCat(id) {
+  const list = getCustomSymptomCats().filter(c => c.id !== id);
+  saveCustomSymptomCats(list);
+}
+function findSymptomCat(id) {
+  return SYMPTOM_CATEGORIES.find(x => x.id === id)
+    || getCustomSymptomCats().find(x => x.id === id)
+    || null;
+}
+
 function getSymptomEntries() {
   try { return JSON.parse(localStorage.getItem('mdpiece_symptoms') || '[]'); }
   catch { return []; }
@@ -1989,7 +2044,7 @@ function getPeriodStats() {
 }
 
 function openSymptomLog(catId) {
-  const c = SYMPTOM_CATEGORIES.find(x => x.id === catId);
+  const c = findSymptomCat(catId);
   if (!c) return;
   const form = document.getElementById('sym-logform');
   document.getElementById('logform-cat-tag').textContent = c.id + '.entry';
@@ -2033,6 +2088,78 @@ function openSymptomLog(catId) {
 function cancelSymptomLog() {
   const f = document.getElementById('sym-logform');
   if (f) f.style.display = 'none';
+}
+
+// ─── 其他症狀（自訂）的兩段式表單 ──────────────────
+function openOtherSymptomLog() {
+  const form = document.getElementById('sym-logform');
+  document.getElementById('logform-cat-tag').textContent = 'custom.entry';
+  document.getElementById('logform-body').innerHTML = `
+    <div class="lf-explain">
+      <div class="lf-icon scc-other"><i data-lucide="plus"></i></div>
+      <div class="lf-info">
+        <h3>其他症狀</h3>
+        <p class="lf-detail">寫下你想記錄的症狀名稱，例如「咽喉痛」「腹脹」「焦慮發作」。儲存後下次它就會出現在卡片列。</p>
+      </div>
+    </div>
+    <div class="lf-form">
+      <label class="lf-label">症狀名稱</label>
+      <input id="lf-custom-name" type="text" class="lf-text-input" maxlength="20"
+        placeholder="例：咽喉痛 / 耳鳴 / 腹脹 / 皮膚癢" autocomplete="off" />
+      <label class="lf-label">嚴重程度（1 = 輕微，10 = 劇烈）</label>
+      <div class="lf-slider-wrap">
+        <input type="range" id="lf-intensity" min="1" max="10" value="5" oninput="updateIntensityBar(this.value)" />
+        <div class="lf-bar" id="lf-bar">${renderIntensityBar(5)}</div>
+        <span class="lf-bar-value" id="lf-bar-value">5</span>
+      </div>
+      <label class="lf-label">頻率（今天感覺到幾次）</label>
+      <div class="lf-freq-wrap">
+        <button class="lf-freq-btn" onclick="adjustFreq(-1)" type="button">−</button>
+        <span class="lf-freq-num" id="lf-freq">1</span>
+        <button class="lf-freq-btn" onclick="adjustFreq(1)" type="button">+</button>
+        <span class="lf-freq-unit">次</span>
+      </div>
+      <label class="lf-label">備註（建議寫部位、誘因、持續時間）</label>
+      <textarea id="lf-notes" placeholder="例如：吞嚥時痛、左側、持續 2 天、伴隨輕微咳嗽..." rows="2"></textarea>
+      <div class="lf-actions">
+        <button class="primary-btn" onclick="submitOtherSymptomLog()" type="button">
+          <i data-lucide="check"></i><span>新增紀錄</span>
+        </button>
+        <button class="secondary-btn" onclick="cancelSymptomLog()" type="button">取消</button>
+      </div>
+    </div>
+  `;
+  form.style.display = 'block';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => { const i = document.getElementById('lf-custom-name'); if (i) i.focus(); }, 100);
+}
+
+function submitOtherSymptomLog() {
+  const name = (document.getElementById('lf-custom-name').value || '').trim();
+  if (!name) {
+    showToast && showToast('請先填症狀名稱', 'warning');
+    document.getElementById('lf-custom-name').focus();
+    return;
+  }
+  const cat = addCustomSymptomCat(name);
+  if (!cat) return;
+  const intensity = parseInt(document.getElementById('lf-intensity').value);
+  const frequency = parseInt(document.getElementById('lf-freq').textContent);
+  const notes = document.getElementById('lf-notes').value.trim();
+  saveSymptomEntry({
+    id: 'sym-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    categoryId: cat.id, intensity, frequency, notes,
+    recordedAt: new Date().toISOString()
+  });
+  showToast && showToast('已記錄並加入卡片列', 'success');
+  showPage('symptoms');
+}
+
+function removeCustomSymptomCatAndRefresh(id) {
+  if (!confirm('刪除這個自訂症狀？已記錄的資料不會被刪除（仍會顯示症狀名稱）。')) return;
+  removeCustomSymptomCat(id);
+  showPage('symptoms');
 }
 function updateIntensityBar(v) {
   document.getElementById('lf-bar').innerHTML = renderIntensityBar(v);
@@ -2082,7 +2209,7 @@ function renderPeriodSummary(stats) {
     <p class="sym-instruct">// 自上次回診以來已自動累計，依出現頻率排序。</p>
     <ul class="sym-summary-list">
       ${sorted.map(([id, s]) => {
-        const c = SYMPTOM_CATEGORIES.find(x => x.id === id);
+        const c = findSymptomCat(id);
         const avg = (s.intensitySum / s.count).toFixed(1);
         const color = c?.color || 'mint';
         return `
@@ -4828,8 +4955,7 @@ function piecesComputeStats() {
     freqSum += f;
   });
   var topCats = Object.keys(byCat).map(function(id) {
-    var cat = (typeof SYMPTOM_CATEGORIES !== 'undefined')
-      ? SYMPTOM_CATEGORIES.find(function(c) { return c.id === id; }) : null;
+    var cat = (typeof findSymptomCat === 'function') ? findSymptomCat(id) : null;
     return { id: id, count: byCat[id], zh: cat ? cat.zh : id, icon: cat ? cat.icon : 'circle', color: cat ? cat.color : 'mint' };
   }).sort(function(a, b) { return b.count - a.count; }).slice(0, 4);
   var avgIntensity = freqSum ? (intensitySum / freqSum) : 0;
@@ -4873,8 +4999,8 @@ function piecesComputeStats() {
 }
 
 function getCategoryName(id) {
-  if (typeof SYMPTOM_CATEGORIES === 'undefined') return id;
-  var c = SYMPTOM_CATEGORIES.find(function(x) { return x.id === id; });
+  if (typeof findSymptomCat !== 'function') return id;
+  var c = findSymptomCat(id);
   return c ? c.zh : id;
 }
 
