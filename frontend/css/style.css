@@ -8906,6 +8906,77 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   font-size: 0.8rem;
 }
 #app-wrapper[data-theme="dark"] .diet-pick-price-tag { color: #E0B25E; }
+
+.diet-pick-cal-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.diet-pick-cal-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 8px;
+  background: rgba(93, 170, 114, 0.15);
+  color: #2E7A3F;
+  border-radius: 100px; font-weight: 600;
+  font-size: 0.8rem;
+}
+#app-wrapper[data-theme="dark"] .diet-pick-cal-tag { color: #7ed4b8; }
+
+.diet-pick-flags {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--app-border, var(--border));
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.diet-pick-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer;
+  color: var(--text);
+}
+.diet-pick-toggle input { width: 16px; height: 16px; cursor: pointer; }
+
+.diet-pick-dislike { margin-bottom: 12px; }
+.diet-pick-dislike-row {
+  display: flex; flex-wrap: wrap; gap: 4px; min-height: 24px;
+  margin-bottom: 6px;
+}
+.diet-pick-dislike-empty {
+  font-size: 0.82rem; color: var(--text-dim); font-style: italic;
+}
+.diet-pick-dislike-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 4px 3px 10px;
+  background: rgba(201, 85, 75, 0.12);
+  color: #C9554B;
+  border-radius: 100px; font-size: 0.82rem;
+}
+.diet-pick-dislike-chip button {
+  background: none; border: none; color: inherit;
+  width: 18px; height: 18px; line-height: 1;
+  border-radius: 50%; cursor: pointer; font-size: 1rem;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.diet-pick-dislike-chip button:hover { background: rgba(201, 85, 75, 0.2); }
+.diet-pick-dislike-input {
+  display: flex; gap: 6px;
+}
+.diet-pick-dislike-input input {
+  flex: 1; padding: 6px 10px;
+  background: var(--app-panel-soft, transparent);
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 6px; font-size: 0.88rem; color: var(--text);
+  font-family: inherit;
+}
+.diet-pick-dislike-input button {
+  width: 36px; padding: 0;
+  background: var(--app-panel-soft, transparent);
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 6px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text);
+}
+.diet-pick-dislike-input button:hover { background: var(--klein, #5b9fe8); color: #fff; border-color: var(--klein); }
 .diet-pick-tab {
   padding: 6px 12px;
   background: var(--app-panel-soft, transparent);

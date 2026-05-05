@@ -6528,6 +6528,24 @@ function diet() {
                 + p[1] + '</button>';
             }).join('')
     +     '</div>'
+    +     '<div class="diet-pick-cal-tabs" id="diet-pick-cal-tabs">'
+    +       [['any','不限熱量'],['low','輕量（≤350）'],['mid','一般（350–650）'],['high','高熱量（650+）']].map(function(p) {
+              return '<button class="diet-pick-tab diet-pick-cal' + (p[0]==='any'?' active':'') + '" '
+                + 'data-pick-cal="' + p[0] + '" onclick="dietPickSetCal(\'' + p[0] + '\')">'
+                + p[1] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<div class="diet-pick-flags">'
+    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-nearby" onchange="dietPickToggleNearby(this.checked)" /> <span>只推附近能取得（超商/便當店/早餐店）</span></label>'
+    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-avoid-recent" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>避開本週吃過的</span></label>'
+    +     '</div>'
+    +     '<div class="diet-pick-dislike">'
+    +       '<div class="diet-pick-dislike-row" id="diet-pick-dislike-chips"></div>'
+    +       '<div class="diet-pick-dislike-input">'
+    +         '<input type="text" id="diet-pick-dislike-add" maxlength="20" placeholder="不吃什麼？例：香菜、辣椒" />'
+    +         '<button onclick="dietPickAddDislike()" type="button"><i data-lucide="plus" style="width:14px;height:14px"></i></button>'
+    +       '</div>'
+    +     '</div>'
     +     '<div id="diet-pick-result" class="diet-pick-result diet-pick-empty">'
     +       '<i data-lucide="utensils" style="width:28px;height:28px"></i>'
     +       '<div>按下面的按鈕，幫你抽一道菜</div>'
@@ -6597,11 +6615,28 @@ function diet() {
 }
 
 // 吃什麼神器
-var _dietPickMealType = 'any';   // any/breakfast/lunch/dinner/snack
-var _dietPickPrice    = 'any';   // any/$/$$/$$$
-var _dietPickHistory = [];       // 已被丟掉的菜名
-var _dietPickCurrent = null;     // 當前推薦
-var _dietPickLoading = false;
+var _dietPickMealType    = 'any';   // any/breakfast/lunch/dinner/snack
+var _dietPickPrice       = 'any';   // any/$/$$/$$$
+var _dietPickCal         = 'any';   // any/low/mid/high
+var _dietPickNearby      = false;
+var _dietPickAvoidRecent = true;
+var _dietPickDislikes    = [];      // 個人黑名單，localStorage 持久化
+var _dietPickHistory     = [];      // 已被丟掉的菜名
+var _dietPickCurrent     = null;
+var _dietPickLoading     = false;
+
+var DIET_DISLIKE_KEY = 'mdpiece_diet_dislikes';
+
+function dietPickLoadDislikes() {
+  try {
+    var raw = localStorage.getItem(DIET_DISLIKE_KEY);
+    _dietPickDislikes = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(_dietPickDislikes)) _dietPickDislikes = [];
+  } catch (e) { _dietPickDislikes = []; }
+}
+function dietPickSaveDislikes() {
+  try { localStorage.setItem(DIET_DISLIKE_KEY, JSON.stringify(_dietPickDislikes)); } catch (e) {}
+}
 
 function dietPickSetMeal(m) {
   _dietPickMealType = m;
@@ -6619,6 +6654,59 @@ function dietPickSetPrice(p) {
   });
 }
 
+function dietPickSetCal(c) {
+  _dietPickCal = c;
+  _dietPickHistory = [];
+  document.querySelectorAll('#diet-pick-cal-tabs .diet-pick-cal').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-pick-cal') === c);
+  });
+}
+
+function dietPickToggleNearby(on) {
+  _dietPickNearby = !!on;
+  _dietPickHistory = [];
+}
+
+function dietPickToggleAvoidRecent(on) {
+  _dietPickAvoidRecent = !!on;
+  _dietPickHistory = [];
+}
+
+function dietPickAddDislike() {
+  var input = document.getElementById('diet-pick-dislike-add');
+  if (!input) return;
+  var v = (input.value || '').trim();
+  if (!v) return;
+  if (_dietPickDislikes.indexOf(v) === -1) {
+    _dietPickDislikes.push(v);
+    dietPickSaveDislikes();
+    dietPickRenderDislikes();
+  }
+  input.value = '';
+  input.focus();
+}
+
+function dietPickRemoveDislike(idx) {
+  _dietPickDislikes.splice(idx, 1);
+  dietPickSaveDislikes();
+  dietPickRenderDislikes();
+}
+
+function dietPickRenderDislikes() {
+  var box = document.getElementById('diet-pick-dislike-chips');
+  if (!box) return;
+  if (!_dietPickDislikes.length) {
+    box.innerHTML = '<span class="diet-pick-dislike-empty">還沒設定不吃的食材</span>';
+    return;
+  }
+  box.innerHTML = _dietPickDislikes.map(function(d, i) {
+    return '<span class="diet-pick-dislike-chip">'
+      + chatEscape(d)
+      + '<button onclick="dietPickRemoveDislike(' + i + ')" type="button" aria-label="移除">×</button>'
+      + '</span>';
+  }).join('');
+}
+
 function dietPickMeal(isReroll) {
   if (_dietPickLoading) return;
   var pid = getStablePatientId();
@@ -6634,8 +6722,12 @@ function dietPickMeal(isReroll) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   var qs = '?meal_type=' + encodeURIComponent(_dietPickMealType)
-         + '&price_tier=' + encodeURIComponent(_dietPickPrice);
+         + '&price_tier=' + encodeURIComponent(_dietPickPrice)
+         + '&calorie_tier=' + encodeURIComponent(_dietPickCal)
+         + '&nearby=' + (_dietPickNearby ? 'true' : 'false')
+         + '&avoid_recent=' + (_dietPickAvoidRecent ? 'true' : 'false');
   if (_dietPickHistory.length) qs += '&exclude=' + encodeURIComponent(_dietPickHistory.join(','));
+  if (_dietPickDislikes.length) qs += '&dislike=' + encodeURIComponent(_dietPickDislikes.join(','));
   fetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs)
     .then(function(r) { return r.json(); })
     .then(function(g) {
@@ -6678,6 +6770,9 @@ function renderDietPick(g) {
           + ((g.price_tier || g.price_twd)
               ? '<span class="diet-pick-price-tag">' + chatEscape(g.price_tier || '') + (g.price_twd ? ' · 約 NT$' + g.price_twd : '') + '</span>'
               : '')
+          + ((g.calorie_kcal || g.calorie_tier)
+              ? '<span class="diet-pick-cal-tag">' + (g.calorie_kcal ? g.calorie_kcal + ' kcal' : chatEscape(g.calorie_tier || '')) + '</span>'
+              : '')
         + '</div>'
         : '')
     + (components ? '<div class="diet-pick-chips">' + components + '</div>' : '')
@@ -6713,8 +6808,13 @@ function loadDietPage() {
   _dietLogMeal = 'breakfast';
   _dietPickMealType = 'any';
   _dietPickPrice = 'any';
+  _dietPickCal = 'any';
+  _dietPickNearby = false;
+  _dietPickAvoidRecent = true;
   _dietPickHistory = [];
   _dietPickCurrent = null;
+  dietPickLoadDislikes();
+  setTimeout(function() { dietPickRenderDislikes(); }, 50);
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
   fetchDietGuide();
   fetchDietTodayRecords();
