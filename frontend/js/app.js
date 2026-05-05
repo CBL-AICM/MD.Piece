@@ -6645,8 +6645,13 @@ function renderDietPick(g) {
   var components = (g.components || []).map(function(c) {
     return '<span class="diet-pick-chip">' + chatEscape(c) + '</span>';
   }).join('');
+  var mealLabelMap = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心' };
+  var mealBadge = (_dietPickMealType === 'any' && g.meal_type)
+    ? '<span class="diet-pick-meal-badge">幫你抽了個 ' + mealLabelMap[g.meal_type] + '</span>'
+    : '';
   box.className = 'diet-pick-result diet-pick-show';
   box.innerHTML = ''
+    + mealBadge
     + '<div class="diet-pick-name">' + chatEscape(g.name) + '</div>'
     + (g.cuisine || g.where_to_get
         ? '<div class="diet-pick-meta">'
@@ -6666,8 +6671,9 @@ function renderDietPick(g) {
 
 function dietPickLogIt() {
   if (!_dietPickCurrent || !_dietPickCurrent.name) return;
-  // 把推薦填入打卡欄位，meal_type 跟著選的餐別走（any → breakfast 預設值）
-  var meal = _dietPickMealType !== 'any' ? _dietPickMealType : 'lunch';
+  // meal_type 優先使用後端回傳的解析後餐別（'any' 已被自動轉成 breakfast/lunch/dinner/snack）
+  var meal = _dietPickCurrent.meal_type
+    || (_dietPickMealType !== 'any' ? _dietPickMealType : 'lunch');
   dietPickLogMeal(meal);
   var foodsField = document.getElementById('diet-log-foods');
   if (foodsField) {

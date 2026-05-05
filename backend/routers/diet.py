@@ -198,10 +198,25 @@ PICK_SYSTEM_PROMPT = (
     "規則：\n"
     "1. name 必須是具體可立刻買到/做到的菜色，不要寫『健康餐』『均衡飲食』這種模糊詞\n"
     "2. 完全避開患者疾病禁忌（痛風→無海鮮/啤酒/內臟；糖尿病→無含糖飲料/精緻糖；高血壓→低鈉；自體免疫→無花生/酒精）\n"
-    "3. 一律繁體中文台灣用語\n"
-    "4. 不要給出 exclude 名單裡已經被丟掉的菜\n"
-    "5. 寧可常見好取得，不要瞎掰罕見料理\n"
+    "3. **必須符合指定餐別時段**：\n"
+    "   - breakfast → 早餐性質：蛋餅/吐司/粥/三明治/豆漿米漿/燕麥/水煮蛋等，不要推中午便當\n"
+    "   - lunch → 中餐：便當/飯類/麵類/定食等正餐，份量足\n"
+    "   - dinner → 晚餐：清淡正餐為主，避免油炸大餐\n"
+    "   - snack → 點心：水果/堅果/優格/小份量輕食，不是正餐\n"
+    "4. 一律繁體中文台灣用語\n"
+    "5. 不要給出 exclude 名單裡已經被丟掉的菜\n"
+    "6. 寧可常見好取得，不要瞎掰罕見料理\n"
 )
+
+
+def _auto_meal_by_hour(now: Optional[datetime] = None) -> str:
+    """依目前台灣時間自動決定餐別（'any' 時用）。"""
+    h = (now or datetime.utcnow() + timedelta(hours=8)).hour  # UTC+8
+    if 5 <= h < 10:    return "breakfast"
+    if 10 <= h < 14:   return "lunch"
+    if 14 <= h < 17:   return "snack"
+    if 17 <= h < 21:   return "dinner"
+    return "snack"
 
 
 def _diagnosis_flags(diagnoses: List[str]) -> dict:
@@ -217,36 +232,60 @@ def _diagnosis_flags(diagnoses: List[str]) -> dict:
     }
 
 
-# 每道菜標記哪些情況『不適合』（fallback 用；LLM 主路徑會自己處理）
+# 每道菜標記：_unfit（不適合的疾病旗標）、_meals（適合的餐別）
+# fallback 用；LLM 主路徑會自己處理疾病與餐別
 PICK_FALLBACK_POOL = [
-    {"name": "滷肉飯配燙青菜",     "components": ["滷肉", "白飯", "青菜", "滷蛋"],          "cuisine": "台", "where_to_get": "自助餐",     "reason": "便當店標配，澱粉蛋白蔬菜都有",
-     "_unfit": ["hypertension"]},  # 滷汁鈉偏高
-    {"name": "蒜泥白肉便當",       "components": ["白肉", "蒜泥醬", "白飯", "高麗菜"],       "cuisine": "台", "where_to_get": "便當店",     "reason": "蒸煮為主、油不重",
-     "_unfit": []},
-    {"name": "味噌鮭魚定食",       "components": ["鮭魚", "白飯", "味噌湯", "醃菜"],         "cuisine": "日", "where_to_get": "日式定食店", "reason": "鮭魚蛋白質好、好消化",
-     "_unfit": ["gout", "hypertension"]},  # 海魚普林、味噌湯鈉
-    {"name": "雞肉飯便當",         "components": ["雞絲", "雞汁飯", "燙青菜", "蛋"],         "cuisine": "台", "where_to_get": "便當店",     "reason": "嘉義雞肉飯經典款",
-     "_unfit": []},
-    {"name": "玉米蛋餅+無糖豆漿",  "components": ["蛋餅皮", "玉米", "蛋", "無糖豆漿"],       "cuisine": "台早", "where_to_get": "早餐店",   "reason": "早餐快速款",
-     "_unfit": []},
-    {"name": "番茄炒蛋蓋飯",       "components": ["番茄", "蛋", "白飯", "蔥"],               "cuisine": "中", "where_to_get": "自煮",       "reason": "30 秒能想到的家常",
-     "_unfit": []},
-    {"name": "雞胸肉沙拉",         "components": ["雞胸肉", "生菜", "番茄", "玉米"],         "cuisine": "西", "where_to_get": "輕食店",     "reason": "高蛋白低油",
-     "_unfit": []},
-    {"name": "牛肉麵（清燉）",     "components": ["牛肉", "麵條", "青菜", "蘿蔔"],           "cuisine": "台", "where_to_get": "麵店",       "reason": "清燉湯頭比紅燒少油鈉",
-     "_unfit": ["gout", "hypertension"]},  # 牛肉普林、湯鈉
-    {"name": "蒸蛋豆腐+地瓜飯",    "components": ["蒸蛋", "豆腐", "地瓜", "白飯"],           "cuisine": "中", "where_to_get": "自煮",       "reason": "好消化、植物蛋白",
-     "_unfit": ["ckd"]},  # 豆製品蛋白偏多
+    # ── 早餐 ──
+    {"name": "玉米蛋餅+無糖豆漿",  "components": ["蛋餅皮", "玉米", "蛋", "無糖豆漿"],       "cuisine": "台早", "where_to_get": "早餐店",   "reason": "早餐快速款、蛋白質有",
+     "_unfit": [], "_meals": ["breakfast"]},
     {"name": "鹹粥配蘿蔔糕",       "components": ["米", "瘦肉", "香菇", "蘿蔔糕"],           "cuisine": "台早", "where_to_get": "早餐店",   "reason": "溫熱好入口",
-     "_unfit": ["hypertension"]},
+     "_unfit": ["hypertension"], "_meals": ["breakfast"]},
+    {"name": "雞肉三明治+無糖紅茶", "components": ["全麥吐司", "雞胸肉", "生菜", "番茄"],     "cuisine": "西", "where_to_get": "早餐店",     "reason": "好攜帶、蛋白質充足",
+     "_unfit": [], "_meals": ["breakfast"]},
+    {"name": "燕麥粥+水煮蛋+水果", "components": ["燕麥", "牛奶", "水煮蛋", "香蕉"],         "cuisine": "西", "where_to_get": "自煮",       "reason": "高纖好消化",
+     "_unfit": [], "_meals": ["breakfast"]},
+    {"name": "饅頭夾蛋+無糖豆漿",  "components": ["饅頭", "蛋", "肉鬆", "無糖豆漿"],         "cuisine": "中", "where_to_get": "早餐店",     "reason": "經典中式早餐",
+     "_unfit": [], "_meals": ["breakfast"]},
+
+    # ── 午餐 ──
+    {"name": "滷肉飯配燙青菜",     "components": ["滷肉", "白飯", "青菜", "滷蛋"],          "cuisine": "台", "where_to_get": "自助餐",     "reason": "便當店標配，澱粉蛋白蔬菜都有",
+     "_unfit": ["hypertension"], "_meals": ["lunch", "dinner"]},
+    {"name": "蒜泥白肉便當",       "components": ["白肉", "蒜泥醬", "白飯", "高麗菜"],       "cuisine": "台", "where_to_get": "便當店",     "reason": "蒸煮為主、油不重",
+     "_unfit": [], "_meals": ["lunch", "dinner"]},
+    {"name": "雞肉飯便當",         "components": ["雞絲", "雞汁飯", "燙青菜", "蛋"],         "cuisine": "台", "where_to_get": "便當店",     "reason": "嘉義雞肉飯經典款",
+     "_unfit": [], "_meals": ["lunch", "dinner"]},
+    {"name": "牛肉麵（清燉）",     "components": ["牛肉", "麵條", "青菜", "蘿蔔"],           "cuisine": "台", "where_to_get": "麵店",       "reason": "清燉湯頭比紅燒少油鈉",
+     "_unfit": ["gout", "hypertension"], "_meals": ["lunch", "dinner"]},
     {"name": "雞絲涼麵（少醬）",   "components": ["雞絲", "麵條", "小黃瓜", "胡麻醬"],       "cuisine": "台", "where_to_get": "便利商店",   "reason": "夏天清爽選擇",
-     "_unfit": ["diabetes"]},  # 醬汁糖
+     "_unfit": ["diabetes"], "_meals": ["lunch"]},
+    {"name": "豬肉水餃（10 顆）+ 燙青菜", "components": ["豬肉水餃", "燙青菜"],             "cuisine": "中", "where_to_get": "水餃店",     "reason": "簡單一餐解決",
+     "_unfit": ["hypertension"], "_meals": ["lunch", "dinner"]},
+    {"name": "雞胸肉沙拉碗",       "components": ["雞胸肉", "生菜", "番茄", "玉米", "藜麥"], "cuisine": "西", "where_to_get": "輕食店",     "reason": "高蛋白低油",
+     "_unfit": [], "_meals": ["lunch"]},
+
+    # ── 晚餐 ──
+    {"name": "味噌鮭魚定食",       "components": ["鮭魚", "白飯", "味噌湯", "醃菜"],         "cuisine": "日", "where_to_get": "日式定食店", "reason": "鮭魚蛋白質好、好消化",
+     "_unfit": ["gout", "hypertension"], "_meals": ["lunch", "dinner"]},
+    {"name": "番茄炒蛋蓋飯",       "components": ["番茄", "蛋", "白飯", "蔥"],               "cuisine": "中", "where_to_get": "自煮",       "reason": "30 秒能想到的家常",
+     "_unfit": [], "_meals": ["lunch", "dinner"]},
+    {"name": "蒸蛋豆腐+地瓜飯",    "components": ["蒸蛋", "豆腐", "地瓜", "白飯"],           "cuisine": "中", "where_to_get": "自煮",       "reason": "好消化、植物蛋白",
+     "_unfit": ["ckd"], "_meals": ["dinner"]},
     {"name": "清蒸魚配糙米飯",     "components": ["白肉魚", "糙米飯", "燙青菜"],             "cuisine": "中", "where_to_get": "自煮",       "reason": "低油低鈉、高纖",
-     "_unfit": ["gout"]},
-    {"name": "豬肉水餃（10 顆）",  "components": ["豬肉水餃", "酸辣湯"],                     "cuisine": "中", "where_to_get": "水餃店",     "reason": "簡單一餐解決",
-     "_unfit": ["hypertension"]},
-    {"name": "雞肉三明治",         "components": ["全麥吐司", "雞胸肉", "生菜", "番茄"],     "cuisine": "西", "where_to_get": "早餐店",     "reason": "好攜帶、蛋白質充足",
-     "_unfit": []},
+     "_unfit": ["gout"], "_meals": ["dinner"]},
+    {"name": "蔬菜雞肉湯麵",       "components": ["雞胸肉", "麵", "高麗菜", "蘿蔔"],         "cuisine": "中", "where_to_get": "麵店",       "reason": "晚餐清淡好消化",
+     "_unfit": [], "_meals": ["dinner"]},
+
+    # ── 點心 ──
+    {"name": "希臘優格+藍莓",      "components": ["無糖優格", "藍莓", "燕麥粒"],             "cuisine": "西", "where_to_get": "超商",       "reason": "蛋白質+抗氧化",
+     "_unfit": [], "_meals": ["snack"]},
+    {"name": "水煮蛋+小番茄",      "components": ["水煮蛋", "小番茄"],                       "cuisine": "—", "where_to_get": "超商",       "reason": "簡單高蛋白",
+     "_unfit": [], "_meals": ["snack"]},
+    {"name": "綜合堅果一小把",     "components": ["杏仁", "腰果", "核桃"],                   "cuisine": "—", "where_to_get": "超商",       "reason": "好油脂、有飽足感",
+     "_unfit": ["autoimmune"], "_meals": ["snack"]},
+    {"name": "香蕉+無糖豆漿",      "components": ["香蕉", "無糖豆漿"],                       "cuisine": "—", "where_to_get": "超商",       "reason": "下午低血糖救援",
+     "_unfit": ["ckd"], "_meals": ["snack"]},
+    {"name": "蘋果切片+花生醬",    "components": ["蘋果", "花生醬"],                         "cuisine": "西", "where_to_get": "超商",       "reason": "纖維+蛋白質",
+     "_unfit": ["autoimmune"], "_meals": ["snack"]},
 ]
 
 
@@ -258,21 +297,34 @@ def _filter_pool_by_diagnoses(pool: list, flags: dict) -> list:
     return [m for m in pool if not (set(m.get("_unfit") or []) & active)]
 
 
+def _filter_pool_by_meal(pool: list, meal: str) -> list:
+    """只留下適合該餐別的菜（_meals 欄位包含 meal）。'any' 不過濾。"""
+    if meal == "any" or not meal:
+        return pool
+    return [m for m in pool if meal in (m.get("_meals") or [])]
+
+
 @router.get("/pick/{patient_id}")
 def pick_meal(
     patient_id: str,
     meal_type: str = Query("any", description="breakfast/lunch/dinner/snack/any"),
     exclude: str = Query("", description="逗號分隔，已被丟掉的菜色，避免重複推薦"),
 ):
-    """吃什麼神器：依病史隨機推薦一道具體菜色，避開禁忌與已丟掉的選項。"""
+    """吃什麼神器：依病史 + 餐別時段隨機推薦一道具體菜色，避開禁忌與已丟掉的選項。"""
     diagnoses = _patient_diagnoses(patient_id)
     excluded = [x.strip() for x in exclude.split(",") if x.strip()]
 
+    # any → 依現在台灣時間自動決定
+    resolved_meal = _auto_meal_by_hour() if meal_type == "any" else meal_type
+    if resolved_meal not in {"breakfast", "lunch", "dinner", "snack"}:
+        resolved_meal = "lunch"
+
+    meal_zh = {"breakfast": "早餐", "lunch": "午餐", "dinner": "晚餐", "snack": "點心"}[resolved_meal]
     user_msg = (
         f"患者已知診斷：{', '.join(diagnoses) if diagnoses else '（無紀錄）'}\n"
-        f"想吃的餐別：{meal_type}\n"
+        f"想吃的餐別：{resolved_meal}（{meal_zh}）\n"
         f"已經被丟掉的菜（不要再推）：{', '.join(excluded) if excluded else '（無）'}\n"
-        "請給一道具體菜色的推薦 JSON。"
+        "請給一道**符合該餐別性質**且符合疾病禁忌的具體菜色 JSON。"
     )
 
     try:
@@ -283,22 +335,24 @@ def pick_meal(
         parsed = {}
 
     if not parsed or not parsed.get("name"):
-        # Fallback：依疾病旗標過濾後隨機抽一個沒被排除的
+        # Fallback：依餐別 + 疾病旗標過濾後隨機抽一個沒被排除的
         import random
         flags = _diagnosis_flags(diagnoses)
-        safe_pool = _filter_pool_by_diagnoses(PICK_FALLBACK_POOL, flags)
-        # 排除已被丟掉的
+        meal_pool = _filter_pool_by_meal(PICK_FALLBACK_POOL, resolved_meal)
+        safe_pool = _filter_pool_by_diagnoses(meal_pool, flags)
         pool = [m for m in safe_pool if m["name"] not in excluded]
-        # 若全濾光，退回完整 safe_pool；再退回原 pool
+        # 全濾光時的退讓順序：safe_pool → meal_pool → 全部
         if not pool:
-            pool = safe_pool or PICK_FALLBACK_POOL
+            pool = safe_pool or meal_pool or PICK_FALLBACK_POOL
         choice = dict(random.choice(pool))
         choice.pop("_unfit", None)
+        choice.pop("_meals", None)
         choice.setdefault("reason", "先給你一個常見的選擇")
         choice["fallback"] = True
         parsed = choice
 
     parsed["diagnoses"] = diagnoses
+    parsed["meal_type"] = resolved_meal
     return parsed
 
 
