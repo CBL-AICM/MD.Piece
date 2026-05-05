@@ -10171,6 +10171,11 @@ html[data-mode="senior"] .mood-cal-btn {
   font-size: 1.1rem !important;
 }
 
+/* 年長版 home 頁不需要「返回首頁」按鈕（已經在首頁了）*/
+html[data-mode="senior"] .main-content:has(#app[data-page="home"]) .topbar-back {
+  display: none !important;
+}
+
 /* ═══════════════════════════════════════════════════════════
    SENIOR MODE — 一頁式 home（問候 + 全功能 tile）
    砍掉 quick actions、今日服藥、心情、tip、底部 tabbar
