@@ -10176,6 +10176,55 @@ html[data-mode="senior"] .main-content:has(#app[data-page="home"]) .topbar-back 
   display: none !important;
 }
 
+/* 年長版設定頁：segment / 動作按鈕不要套全域大按鈕規則，避免跑版 */
+html[data-mode="senior"] .set-seg {
+  flex-wrap: wrap !important;
+  max-width: 100% !important;
+  width: 100%;
+}
+html[data-mode="senior"] .set-seg-btn {
+  padding: 8px 14px !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  min-height: 38px !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--sm-text-dim) !important;
+}
+html[data-mode="senior"] .set-seg-btn.active {
+  background: var(--sm-accent) !important;
+  color: #fff !important;
+  border-color: var(--sm-accent) !important;
+}
+html[data-mode="senior"] .set-btn {
+  padding: 10px 16px !important;
+  font-size: 1rem !important;
+  min-height: 44px !important;
+  width: auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+}
+html[data-mode="senior"] .set-row-ctrl {
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  html[data-mode="senior"] .set-row-ctrl {
+    width: 100%;
+  }
+  html[data-mode="senior"] .set-seg {
+    width: 100%;
+  }
+  html[data-mode="senior"] .set-seg-btn {
+    flex: 1 1 auto;
+    padding: 8px 10px !important;
+    font-size: 0.9rem !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════
    SENIOR MODE — 一頁式 home（問候 + 全功能 tile）
    砍掉 quick actions、今日服藥、心情、tip、底部 tabbar
