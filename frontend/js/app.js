@@ -5247,7 +5247,7 @@ function chatGreeting() {
   if (v === 'elderly') {
     return '你好啊，' + name + '。我是小禾，今天身體有沒有比較舒服？慢慢說，我都聽。';
   }
-  return '嗨～' + name + '！我是小禾 🌱 今天想聊什麼？身體、心情、或是寫一篇文章都可以。';
+  return '嗨，' + name + '，我是小禾。今天想聊什麼都可以，身體、心情、或是想寫點東西都行。';
 }
 
 function chat() {
