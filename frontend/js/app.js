@@ -1523,6 +1523,9 @@ function loadProfileData() {
 }
 
 function saveProfileData(data) {
+  // 個人檔案僅存在本機，不上傳；UI 已明示「只存在你自己的裝置裡」。
+  // 若日後改為後端同步，此處改為 fetch PATCH /profile 即可。
+  // codeql[js/clear-text-storage-of-sensitive-information]
   try { localStorage.setItem(_profileKey(), JSON.stringify(data)); } catch (e) {}
 }
 
@@ -1583,7 +1586,7 @@ function profilePage() {
     <section class="acct-wrap pf-wrap">
       <header class="acct-head">
         <h2><i data-lucide="clipboard-list"></i> 個人檔案 · 基本資料</h2>
-        <p>填寫一次，看診更有效率。資料只存在你自己的裝置裡。</p>
+        <p>填寫一次，看診更有效率。<strong>資料只存在這台裝置的瀏覽器裡，不會上傳。</strong>換裝置或清除瀏覽器資料後就會消失，請記得用「匯出 JSON」備份。</p>
       </header>
 
       <div class="acct-card pf-card">
