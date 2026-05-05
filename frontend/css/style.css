@@ -8678,3 +8678,255 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 }
 .bi-actions .primary i,
 .bi-actions .btn-quiet i { width: 16px; height: 16px; }
+
+/* ═══════════════════════════════════════════════════════════
+   SENIOR MODE — 全米色 / 大字 / 無裝飾
+   壓制式覆寫：放在檔末以蓋過所有先前規則。
+   ═══════════════════════════════════════════════════════════ */
+
+html[data-mode="senior"] {
+  --sm-bg: #F4E9D5;        /* 主背景米色 */
+  --sm-panel: #FBF5E8;     /* 卡片米色（更淺） */
+  --sm-panel-2: #EFE2C8;   /* 次層米色 */
+  --sm-text: #2B2118;      /* 高對比深棕 */
+  --sm-text-dim: #5A4A36;  /* 次要文字 */
+  --sm-accent: #8B5A2B;    /* 暖棕色重點 */
+  --sm-border: #C9B58E;    /* 邊框 */
+}
+
+/* 1. 全部背景統一米色 ───────────────────────── */
+html[data-mode="senior"],
+html[data-mode="senior"] body,
+html[data-mode="senior"] #app-wrapper,
+html[data-mode="senior"] #app-wrapper.show,
+html[data-mode="senior"] .main-content,
+html[data-mode="senior"] .topbar,
+html[data-mode="senior"] .sidebar {
+  background: var(--sm-bg) !important;
+  background-image: none !important;
+  color: var(--sm-text) !important;
+}
+
+html[data-mode="senior"] .card,
+html[data-mode="senior"] .glass-panel,
+html[data-mode="senior"] .panel,
+html[data-mode="senior"] section.card,
+html[data-mode="senior"] .home-hero,
+html[data-mode="senior"] .term-card,
+html[data-mode="senior"] .term-section,
+html[data-mode="senior"] .pzl-card,
+html[data-mode="senior"] .mission-card,
+html[data-mode="senior"] .home-tip,
+html[data-mode="senior"] .acct-card,
+html[data-mode="senior"] .basic-info-form,
+html[data-mode="senior"] input,
+html[data-mode="senior"] textarea,
+html[data-mode="senior"] select {
+  background: var(--sm-panel) !important;
+  background-image: none !important;
+  border: 1px solid var(--sm-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  color: var(--sm-text) !important;
+}
+
+/* 2. 移除所有裝飾元素 ───────────────────────── */
+html[data-mode="senior"] .puzzle-deco,
+html[data-mode="senior"] .page-deco,
+html[data-mode="senior"] .auth-deco-layer,
+html[data-mode="senior"] .auth-deco,
+html[data-mode="senior"] .auth-card-corner,
+html[data-mode="senior"] .auth-motif,
+html[data-mode="senior"] .mobile-statusbar,
+html[data-mode="senior"] .sidebar-titlebar,
+html[data-mode="senior"] .topbar-prefix,
+html[data-mode="senior"] .topbar-ext,
+html[data-mode="senior"] .topbar-wincontrols,
+html[data-mode="senior"] .app-theme-toggle,
+html[data-mode="senior"] .pzl-card::after,
+html[data-mode="senior"] .home-hero::before,
+html[data-mode="senior"] .home-hero::after,
+html[data-mode="senior"] .home-tip-text::before,
+html[data-mode="senior"] .card::before,
+html[data-mode="senior"] .term-card-body::before,
+html[data-mode="senior"] .mission-card::before,
+html[data-mode="senior"] #app-wrapper.show::before,
+html[data-mode="senior"] #app-wrapper.show::after {
+  display: none !important;
+  background: none !important;
+  content: none !important;
+  opacity: 0 !important;
+}
+
+/* 3. 關掉動畫、模糊、漸層 ─────────────────── */
+html[data-mode="senior"] *,
+html[data-mode="senior"] *::before,
+html[data-mode="senior"] *::after {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+/* 4. 字體放大、加粗、提高行距 ───────────── */
+html[data-mode="senior"] {
+  font-size: 18px;
+}
+html[data-mode="senior"] body,
+html[data-mode="senior"] #app,
+html[data-mode="senior"] #app p,
+html[data-mode="senior"] #app li,
+html[data-mode="senior"] #app dd,
+html[data-mode="senior"] #app dt,
+html[data-mode="senior"] #app label,
+html[data-mode="senior"] #app span {
+  font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif !important;
+  font-size: 1.15rem !important;
+  line-height: 1.7 !important;
+  letter-spacing: 0.02em !important;
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] #app h1,
+html[data-mode="senior"] #app h2 {
+  font-family: "Noto Sans TC", sans-serif !important;
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  color: var(--sm-text) !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--sm-text) !important;
+}
+html[data-mode="senior"] #app h3 {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] #app h4 {
+  font-size: 1.25rem !important;
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] .topbar-filename,
+html[data-mode="senior"] #page-title {
+  font-size: 1.75rem !important;
+  font-weight: 700 !important;
+  color: var(--sm-text) !important;
+}
+
+/* 5. 表單輸入加大 ──────────────────────────── */
+html[data-mode="senior"] input,
+html[data-mode="senior"] textarea,
+html[data-mode="senior"] select {
+  font-size: 1.15rem !important;
+  padding: 14px 16px !important;
+  min-height: 52px;
+}
+html[data-mode="senior"] textarea { min-height: 96px; }
+
+/* 6. 按鈕：大、單色、無裝飾 ─────────────── */
+html[data-mode="senior"] button,
+html[data-mode="senior"] .btn,
+html[data-mode="senior"] .primary,
+html[data-mode="senior"] .auth-submit {
+  font-family: "Noto Sans TC", sans-serif !important;
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+  padding: 14px 22px !important;
+  min-height: 52px !important;
+  border-radius: 12px !important;
+  background: var(--sm-panel) !important;
+  background-image: none !important;
+  color: var(--sm-text) !important;
+  border: 1px solid var(--sm-border) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  letter-spacing: 0.02em !important;
+}
+html[data-mode="senior"] button.primary,
+html[data-mode="senior"] .btn-primary,
+html[data-mode="senior"] .auth-submit,
+html[data-mode="senior"] .nav-item.active,
+html[data-mode="senior"] .bi-actions .primary {
+  background: var(--sm-accent) !important;
+  color: #FFF8EC !important;
+  border-color: var(--sm-accent) !important;
+}
+html[data-mode="senior"] button:hover,
+html[data-mode="senior"] .btn:hover {
+  background: var(--sm-panel-2) !important;
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] button.primary:hover,
+html[data-mode="senior"] .btn-primary:hover {
+  background: #6F4720 !important;
+  color: #FFF8EC !important;
+}
+
+/* 7. Sidebar nav：大字、簡單高亮 ─────────── */
+html[data-mode="senior"] .sidebar {
+  border: none !important;
+  border-right: 1px solid var(--sm-border) !important;
+}
+html[data-mode="senior"] .sidebar-brand h1 {
+  font-family: "Noto Sans TC", sans-serif !important;
+  font-size: 1.5rem !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: var(--sm-text) !important;
+  color: var(--sm-text) !important;
+  font-weight: 700 !important;
+}
+html[data-mode="senior"] .sidebar-brand p {
+  font-size: 0.95rem !important;
+  color: var(--sm-text-dim) !important;
+}
+html[data-mode="senior"] .nav-item {
+  font-size: 1.2rem !important;
+  font-weight: 500 !important;
+  padding: 16px 22px !important;
+  color: var(--sm-text) !important;
+  background: transparent !important;
+  border: none !important;
+  border-left: 4px solid transparent !important;
+  border-radius: 0 !important;
+  min-height: 56px;
+}
+html[data-mode="senior"] .nav-item:hover {
+  background: var(--sm-panel) !important;
+  border-left-color: var(--sm-accent) !important;
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] .nav-item.active {
+  background: var(--sm-panel-2) !important;
+  border-left: 4px solid var(--sm-accent) !important;
+  color: var(--sm-text) !important;
+  font-weight: 700 !important;
+}
+html[data-mode="senior"] .nav-icon i { width: 22px !important; height: 22px !important; }
+
+/* 8. Topbar 簡化 ───────────────────────────── */
+html[data-mode="senior"] .topbar {
+  border: none !important;
+  border-bottom: 1px solid var(--sm-border) !important;
+  border-radius: 0 !important;
+  padding: 20px 28px !important;
+}
+
+/* 9. 連結 / 重點顏色用 accent ─────────────── */
+html[data-mode="senior"] a,
+html[data-mode="senior"] .auth-switch-hint a {
+  color: var(--sm-accent) !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 10. 行動裝置 tab bar 簡化 ───────────────── */
+html[data-mode="senior"] .mtab,
+html[data-mode="senior"] .mobile-tabbar {
+  background: var(--sm-panel) !important;
+  border-color: var(--sm-border) !important;
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] .mtab.active {
+  color: var(--sm-accent) !important;
+}
