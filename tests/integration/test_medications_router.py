@@ -27,7 +27,12 @@ os.environ["SQLITE_DB_PATH"] = _TMP_DB.name
 import backend.db as db_mod  # noqa: E402
 
 db_mod.DB_PATH = _TMP_DB.name
+# 蓋掉模組級 Supabase 預設值，否則 get_supabase() 會走 Supabase / httpx 分支，
+# 不會呼叫 _init_db()，後續 DELETE 就會撞到「table 不存在」。
+db_mod.SUPABASE_URL = ""
+db_mod.SUPABASE_KEY = ""
 db_mod._client = None  # type: ignore[attr-defined]
+db_mod._init_db()
 
 from fastapi.testclient import TestClient  # noqa: E402
 

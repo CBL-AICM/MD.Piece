@@ -1747,7 +1747,7 @@ function loadHomePage() {
       var daily = (data && data.daily) || [];
       if (!daily.length) {
         el.innerHTML = '<p class="home-ov-empty">尚未記錄心情，按下方按鈕分享今天的感覺</p>'
-          + '<button class="home-med-go" onclick="navigateTo(\'chat\',null)">記錄心情 →</button>';
+          + '<button class="home-med-go" onclick="navigateTo(\'emotions\',null)">記錄心情 →</button>';
         return;
       }
       var last = daily[daily.length - 1];
@@ -1756,7 +1756,7 @@ function loadHomePage() {
         '<div><span class="home-mood-emoji">' + (last.emoji || '🙂') + '</span>' +
         '<span class="home-mood-score">' + last.average_score + '</span></div>' +
         '<div class="home-med-label">最新一筆 · 7 天均 ' + (avg != null ? avg : '—') + '</div>' +
-        '<button class="home-med-go" onclick="navigateTo(\'chat\',null)">更新心情 →</button>';
+        '<button class="home-med-go" onclick="navigateTo(\'emotions\',null)">更新心情 →</button>';
     })
     .catch(function() {
       var el = document.getElementById('home-mood-summary');
