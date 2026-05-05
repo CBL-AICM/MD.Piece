@@ -7107,9 +7107,9 @@ function diet() {
     +     '<div id="diet-drink-result" class="diet-drink-result"></div>'
     +   '</div>'
 
-    +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card" style="display:none">'
+    +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card">'
     +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
-    +     '<div id="diet-caffeine-body"></div>'
+    +     '<div id="diet-caffeine-body"><p class="diet-empty">載入中…</p></div>'
     +   '</div>'
 
     +   '<div class="diet-card" id="diet-targets">'
@@ -7403,7 +7403,6 @@ function fetchCaffeineGuide() {
   var card = document.getElementById('diet-caffeine-card');
   var body = document.getElementById('diet-caffeine-body');
   if (!card || !body) return;
-  if (card.style.display === 'block') return;  // 已展開
   fetch(API + '/diet/caffeine-guide')
     .then(function(r) { return r.json(); })
     .then(function(g) {
@@ -7426,10 +7425,11 @@ function fetchCaffeineGuide() {
         +   '</div>'
         +   '<div><div class="diet-caf-subtitle">這些族群要注意</div>' + warns + '</div>'
         + '</div>';
-      card.style.display = 'block';
       if (typeof lucide !== 'undefined') lucide.createIcons();
     })
-    .catch(function() {});
+    .catch(function() {
+      body.innerHTML = '<p class="diet-empty">載入失敗，稍後再試</p>';
+    });
 }
 
 
@@ -7468,11 +7468,10 @@ function loadDietPage() {
     dietPickRenderDislikes();
     var drinkBox = document.getElementById('diet-drink-result');
     if (drinkBox) drinkBox.innerHTML = '';
-    var caf = document.getElementById('diet-caffeine-card');
-    if (caf) caf.style.display = 'none';
   }, 50);
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
   fetchDietGuide();
+  fetchCaffeineGuide();
   fetchDietTodayRecords();
 }
 
