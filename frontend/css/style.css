@@ -8567,47 +8567,159 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   font-size: 1.05rem;
   color: var(--text);
 }
-.emotions-scale {
+/* ── 情緒電力 — 滑動電池選擇器（普通版／Y2K） ── */
+.batt-hint {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+}
+.batt-picker {
+  --batt-color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.batt-shell {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.batt-body {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 4px;
+  padding: 6px;
+  border: 2.5px solid var(--text);
+  border-radius: 14px;
+  background: var(--bg-mid);
+  height: 80px;
+  touch-action: none;
+  cursor: pointer;
+  outline: none;
 }
-.emotions-btn {
+.batt-body:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-glow, rgba(134, 199, 184, 0.4));
+}
+.batt-tip {
+  width: 8px;
+  height: 28px;
+  background: var(--text);
+  border-radius: 0 4px 4px 0;
+  margin-left: 3px;
+}
+.batt-cell {
+  background: transparent;
+  border-radius: 6px;
+  transition: background 180ms ease, transform 120ms ease;
+  pointer-events: none;
+}
+.batt-cell.is-filled {
+  background: var(--batt-color);
+  animation: batt-pop 220ms ease-out;
+}
+@keyframes batt-pop {
+  0%   { transform: scaleY(0.4); opacity: 0.5; }
+  100% { transform: scaleY(1);   opacity: 1; }
+}
+.batt-readout {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-mid);
+  border: 1px solid var(--bg-glass-hover);
+  border-radius: 14px;
+  padding: 12px 18px;
+  min-width: 220px;
+  transition: border-color 180ms ease;
+}
+.batt-picker.is-set .batt-readout {
+  border-color: var(--batt-color);
+}
+.batt-emoji {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+.batt-readout-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.batt-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--batt-color);
+  letter-spacing: 0.02em;
+}
+.batt-label {
+  font-size: 0.92rem;
+  color: var(--text-dim);
+}
+.batt-picker.is-set .batt-label {
+  color: var(--text);
+}
+
+/* ── 情緒電力 — 年長版心情圖標選擇器 ── */
+.mood-senior-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.mood-senior-btn {
+  --em-color: var(--accent);
   background: var(--bg-mid);
   border: 2px solid var(--bg-glass-hover);
-  border-radius: 12px;
-  padding: 14px 4px;
+  border-radius: 14px;
+  padding: 16px 6px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   transition: all .15s;
-  --em-color: var(--accent);
 }
-.emotions-btn:hover {
+.mood-senior-btn:hover {
   transform: translateY(-2px);
   border-color: var(--em-color);
-  background: var(--bg-surface);
 }
-.emotions-btn.selected {
+.mood-senior-btn.selected {
   background: var(--bg-surface);
   border-color: var(--em-color);
-  box-shadow: 0 0 0 2px var(--em-color, var(--accent-glow));
+  box-shadow: 0 0 0 3px var(--em-color);
   transform: translateY(-2px);
 }
-.emotions-emoji {
-  font-size: 2rem;
-  line-height: 1;
-}
-.emotions-label {
-  font-size: 0.78rem;
+.mood-senior-emoji { font-size: 2.4rem; line-height: 1; }
+.mood-senior-label {
+  font-size: 1rem;
   color: var(--text-dim);
-}
-.emotions-btn.selected .emotions-label {
-  color: var(--em-color);
   font-weight: 600;
+}
+.mood-senior-btn.selected .mood-senior-label { color: var(--em-color); }
+
+/* 顯示／隱藏切換 */
+.mood-senior-only { display: none; }
+html[data-mode="senior"] .mood-default-only { display: none; }
+html[data-mode="senior"] .mood-senior-only { display: block; }
+html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
+
+/* 手機適配 */
+@media (max-width: 480px) {
+  .batt-body { height: 68px; }
+  .batt-tip { height: 22px; width: 7px; }
+  .batt-emoji { font-size: 1.9rem; }
+  .batt-pct { font-size: 1.25rem; }
+  .batt-readout { padding: 10px 14px; min-width: 0; width: 100%; }
+  .mood-senior-picker { gap: 6px; }
+  .mood-senior-btn { padding: 12px 2px; border-radius: 12px; }
+  .mood-senior-emoji { font-size: 1.9rem; }
+  .mood-senior-label { font-size: 0.82rem; }
 }
 .emotions-card textarea {
   width: 100%;

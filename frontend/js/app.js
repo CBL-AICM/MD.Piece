@@ -6540,14 +6540,34 @@ function emotions() {
 
       '<div class="emotions-card mood-today">' +
         '<h3>今天剩多少電？</h3>' +
-        '<div class="emotions-scale">' +
-          EMOTION_LEVELS.map(function(l) {
-            return '<button class="emotions-btn" data-score="' + l.score + '" ' +
+        '<p class="batt-hint mood-default-only">手指在電池上滑動，到第幾格就是幾格電</p>' +
+        '<p class="batt-hint mood-senior-only">點下你今天的心情</p>' +
+        '<div class="batt-picker mood-default-only" id="batt-picker">' +
+          '<div class="batt-shell">' +
+            '<div class="batt-body" id="batt-body" role="slider" aria-label="情緒電量" ' +
+              'aria-valuemin="1" aria-valuemax="5" aria-valuenow="0" tabindex="0">' +
+              EMOTION_LEVELS.slice().reverse().map(function(l) {
+                return '<div class="batt-cell" data-score="' + l.score + '" ' +
+                  'aria-label="' + l.label + ' ' + l.pct + '%"></div>';
+              }).join('') +
+            '</div>' +
+            '<div class="batt-tip"></div>' +
+          '</div>' +
+          '<div class="batt-readout">' +
+            '<span class="batt-emoji" id="batt-emoji">⚡</span>' +
+            '<div class="batt-readout-text">' +
+              '<span class="batt-pct" id="batt-pct">— %</span>' +
+              '<span class="batt-label" id="batt-label">點電池選電量</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="mood-senior-picker mood-senior-only" id="mood-senior-picker">' +
+          EMOTION_LEVELS.slice().reverse().map(function(l) {
+            return '<button type="button" class="mood-senior-btn" data-score="' + l.score + '" ' +
               'onclick="selectEmotion(' + l.score + ')" ' +
               'style="--em-color:' + l.color + '">' +
-              '<span class="emotions-emoji">' + l.emoji + '</span>' +
-              '<span class="emotions-pct">' + l.pct + '%</span>' +
-              '<span class="emotions-label">' + l.label + '</span>' +
+              '<span class="mood-senior-emoji">' + l.emoji + '</span>' +
+              '<span class="mood-senior-label">' + l.label + '</span>' +
             '</button>';
           }).join('') +
         '</div>' +
@@ -6601,14 +6621,124 @@ function emotions() {
 }
 
 var _emotionSelected = null;
+var _battDragging = false;
 
 function selectEmotion(score) {
-  _emotionSelected = score;
-  document.querySelectorAll('.emotions-btn').forEach(function(b) {
-    b.classList.toggle('selected', Number(b.getAttribute('data-score')) === score);
+  var s = Math.max(1, Math.min(5, Math.round(score)));
+  if (_emotionSelected === s) return;
+  _emotionSelected = s;
+  var lvl = EMOTION_LEVELS.find(function(l) { return l.score === s; });
+  if (!lvl) return;
+
+  var picker = document.getElementById('batt-picker');
+  if (picker) {
+    picker.classList.add('is-set');
+    picker.style.setProperty('--batt-color', lvl.color);
+  }
+  document.querySelectorAll('#batt-body .batt-cell').forEach(function(c) {
+    var cs = Number(c.getAttribute('data-score'));
+    c.classList.toggle('is-filled', cs <= s);
   });
+  var body = document.getElementById('batt-body');
+  if (body) body.setAttribute('aria-valuenow', String(s));
+
+  var emoji = document.getElementById('batt-emoji');
+  var pct = document.getElementById('batt-pct');
+  var label = document.getElementById('batt-label');
+  if (emoji) emoji.textContent = lvl.emoji;
+  if (pct) pct.textContent = lvl.pct + '%';
+  if (label) label.textContent = lvl.label;
+
+  document.querySelectorAll('#mood-senior-picker .mood-senior-btn').forEach(function(b) {
+    b.classList.toggle('selected', Number(b.getAttribute('data-score')) === s);
+  });
+
   var btn = document.getElementById('emotion-submit');
   if (btn) btn.disabled = false;
+
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try { navigator.vibrate(8); } catch (_) {}
+  }
+}
+
+function _resetBattery() {
+  _emotionSelected = null;
+  var picker = document.getElementById('batt-picker');
+  if (picker) {
+    picker.classList.remove('is-set');
+    picker.style.removeProperty('--batt-color');
+  }
+  document.querySelectorAll('#batt-body .batt-cell').forEach(function(c) {
+    c.classList.remove('is-filled');
+  });
+  var body = document.getElementById('batt-body');
+  if (body) body.setAttribute('aria-valuenow', '0');
+  var emoji = document.getElementById('batt-emoji');
+  var pct = document.getElementById('batt-pct');
+  var label = document.getElementById('batt-label');
+  if (emoji) emoji.textContent = '⚡';
+  if (pct) pct.textContent = '— %';
+  if (label) label.textContent = '點電池選電量';
+  document.querySelectorAll('#mood-senior-picker .mood-senior-btn').forEach(function(b) {
+    b.classList.remove('selected');
+  });
+}
+
+function _battScoreAt(clientX) {
+  var body = document.getElementById('batt-body');
+  if (!body) return null;
+  var cells = body.querySelectorAll('.batt-cell');
+  if (!cells.length) return null;
+  var first = cells[0].getBoundingClientRect();
+  var last = cells[cells.length - 1].getBoundingClientRect();
+  if (clientX <= first.left) return Number(cells[0].getAttribute('data-score'));
+  if (clientX >= last.right) return Number(cells[cells.length - 1].getAttribute('data-score'));
+  for (var i = 0; i < cells.length; i++) {
+    var r = cells[i].getBoundingClientRect();
+    if (clientX >= r.left && clientX <= r.right) {
+      return Number(cells[i].getAttribute('data-score'));
+    }
+  }
+  return null;
+}
+
+function _initBatteryPicker() {
+  var body = document.getElementById('batt-body');
+  if (!body || body.dataset.bound === '1') return;
+  body.dataset.bound = '1';
+
+  function onDown(e) {
+    _battDragging = true;
+    if (e.pointerId != null && body.setPointerCapture) {
+      try { body.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    var s = _battScoreAt(e.clientX);
+    if (s != null) selectEmotion(s);
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if (!_battDragging) return;
+    var s = _battScoreAt(e.clientX);
+    if (s != null) selectEmotion(s);
+  }
+  function onUp() { _battDragging = false; }
+
+  body.addEventListener('pointerdown', onDown);
+  body.addEventListener('pointermove', onMove);
+  body.addEventListener('pointerup', onUp);
+  body.addEventListener('pointercancel', onUp);
+  body.addEventListener('pointerleave', onUp);
+
+  body.addEventListener('keydown', function(e) {
+    var cur = _emotionSelected || 0;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      selectEmotion(Math.min(5, cur + 1)); e.preventDefault();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      selectEmotion(Math.max(1, cur - 1)); e.preventDefault();
+    } else if (e.key >= '1' && e.key <= '5') {
+      selectEmotion(Number(e.key)); e.preventDefault();
+    }
+  });
 }
 
 async function submitEmotion() {
@@ -6634,8 +6764,7 @@ async function submitEmotion() {
     document.getElementById('emotion-status').innerHTML =
       '✓ 已記錄今天的心情，' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('emotion-status').className = 'emotions-status emotions-status-ok';
-    _emotionSelected = null;
-    document.querySelectorAll('.emotions-btn').forEach(function(b) { b.classList.remove('selected'); });
+    _resetBattery();
     showToast('情緒打卡完成', 'success');
     refreshMoodViews();
   } catch (e) {
@@ -6899,6 +7028,7 @@ function loadEmotionsPage() {
   _moodCalCursor = new Date();
   _moodCalCursor = new Date(_moodCalCursor.getFullYear(), _moodCalCursor.getMonth(), 1);
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+  setTimeout(_initBatteryPicker, 0);
   refreshMoodViews();
 }
 
