@@ -44,11 +44,15 @@ async function handle(res, method, path) {
     let detail = ''
     try {
       const body = await res.json()
-      detail = body?.detail ? ` — ${body.detail}` : ''
+      if (body?.detail) detail = body.detail
     } catch {
       // ignore
     }
-    throw new Error(`${method} ${path} → ${res.status}${detail}`)
+    const err = new Error(detail || `${method} ${path} → ${res.status}`)
+    err.status = res.status
+    err.method = method
+    err.path = path
+    throw err
   }
   if (res.status === 204) return null
   return res.json()
