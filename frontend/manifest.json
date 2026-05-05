@@ -27,8 +27,8 @@
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     },
     {
-      "name": "病歷管理",
-      "short_name": "病歷",
+      "name": "我的基本資料",
+      "short_name": "基本資料",
       "url": "/?page=records",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     }

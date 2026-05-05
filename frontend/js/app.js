@@ -1662,8 +1662,8 @@ function home() {
           <span>服藥打卡</span>
         </button>
         <button class="hq-btn hq-records" onclick="navigateTo('records',null)">
-          <span class="hq-icon"><i data-lucide="clipboard-list"></i></span>
-          <span>查看病歷</span>
+          <span class="hq-icon"><i data-lucide="id-card"></i></span>
+          <span>基本資料</span>
         </button>
         <button class="hq-btn hq-edu" onclick="navigateTo('education',null)">
           <span class="hq-icon"><i data-lucide="book-heart"></i></span>
@@ -1709,7 +1709,7 @@ function home() {
       </div>
       <div class="home-grid">
         ${homeCard('symptoms','scan-search','症狀分析','AI 助你釐清身體訊號','blue')}
-        ${homeCard('records','clipboard-list','病歷管理','守護每一次就診紀錄','purple')}
+        ${homeCard('records','id-card','我的基本資料','性別、過敏、慢性病… 看診時帶著走','purple')}
         ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
         ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
@@ -2749,122 +2749,206 @@ async function deleteDoctor(id) {
   loadDoctors();
 }
 
-// ─── 病歷管理 ──────────────────────────────────────────────
+// ─── 我的基本資料 ──────────────────────────────────────────
+// 存 localStorage：性別 / 生日 / 身高 / 體重 / 血型 / 過敏 / 慢性病 / 緊急聯絡人
+// 看診時可一鍵複製給醫師，不取代帳號的暱稱頭像（那放在 /account）。
+
+const BASIC_INFO_KEY = 'mdpiece_basic_info';
+
+function getBasicInfo() {
+  try { return JSON.parse(localStorage.getItem(BASIC_INFO_KEY)) || {}; }
+  catch { return {}; }
+}
+
+function setBasicInfo(info) {
+  localStorage.setItem(BASIC_INFO_KEY, JSON.stringify(info));
+}
+
+function calcAge(birthday) {
+  if (!birthday) return '';
+  const b = new Date(birthday);
+  if (isNaN(b)) return '';
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age >= 0 ? age + ' 歲' : '';
+}
+
+function calcBMI(h, w) {
+  const hn = parseFloat(h), wn = parseFloat(w);
+  if (!hn || !wn) return '';
+  const bmi = wn / Math.pow(hn / 100, 2);
+  return bmi.toFixed(1);
+}
 
 function records() {
+  const info = getBasicInfo();
+  const v = (k) => (info[k] || '').toString().replace(/"/g, '&quot;');
   return `
-    <div class="card">
-      <h2>新增病歷</h2>
-      <div class="form-grid">
-        <select id="r-patient"><option value="">選擇病患</option></select>
-        <select id="r-doctor"><option value="">選擇醫師（選填）</option></select>
-        <input id="r-date" type="date" />
-        <input id="r-symptoms" placeholder="症狀（逗號分隔）" />
-        <textarea id="r-diagnosis" placeholder="診斷"></textarea>
-        <textarea id="r-prescription" placeholder="處方"></textarea>
-        <textarea id="r-notes" placeholder="備註"></textarea>
-      </div>
-      <button class="primary" onclick="addRecord()">建立病歷</button>
-    </div>
-    <div class="card">
-      <h2>搜尋病歷</h2>
-      <div class="filter-bar">
-        <select id="filter-patient"><option value="">所有病患</option></select>
-        <input id="filter-diagnosis" placeholder="搜尋診斷..." />
-        <button class="primary" onclick="searchRecords()">搜尋</button>
-      </div>
-      <div id="record-list"><p>載入中...</p></div>
-    </div>`;
+    <section class="card">
+      <h2><i data-lucide="id-card"></i> 我的基本資料</h2>
+      <p class="sub-hint">這些資料只存在這台裝置上，看診時可以快速複製給醫師。</p>
+      <form class="basic-info-form" onsubmit="event.preventDefault(); saveBasicInfo();">
+        <div class="bi-grid">
+          <label class="bi-field">
+            <span>性別</span>
+            <select id="bi-gender">
+              <option value="">— 不填 —</option>
+              <option value="male" ${info.gender === 'male' ? 'selected' : ''}>男</option>
+              <option value="female" ${info.gender === 'female' ? 'selected' : ''}>女</option>
+              <option value="other" ${info.gender === 'other' ? 'selected' : ''}>其他</option>
+            </select>
+          </label>
+          <label class="bi-field">
+            <span>生日</span>
+            <input id="bi-birthday" type="date" value="${v('birthday')}" onchange="document.getElementById('bi-age-display').textContent = (function(b){return calcAge(b);})(this.value)" />
+            <small class="bi-hint" id="bi-age-display">${calcAge(info.birthday)}</small>
+          </label>
+          <label class="bi-field">
+            <span>血型</span>
+            <select id="bi-blood">
+              <option value="">— 不填 —</option>
+              ${['A','B','O','AB','A+','A-','B+','B-','O+','O-','AB+','AB-'].map(t =>
+                `<option value="${t}" ${info.blood === t ? 'selected' : ''}>${t}</option>`).join('')}
+            </select>
+          </label>
+          <label class="bi-field">
+            <span>身高（cm）</span>
+            <input id="bi-height" type="number" min="0" max="300" step="0.1" value="${v('height')}"
+              oninput="document.getElementById('bi-bmi-display').textContent = calcBMI(this.value, document.getElementById('bi-weight').value) ? 'BMI ' + calcBMI(this.value, document.getElementById('bi-weight').value) : ''" />
+          </label>
+          <label class="bi-field">
+            <span>體重（kg）</span>
+            <input id="bi-weight" type="number" min="0" max="500" step="0.1" value="${v('weight')}"
+              oninput="document.getElementById('bi-bmi-display').textContent = calcBMI(document.getElementById('bi-height').value, this.value) ? 'BMI ' + calcBMI(document.getElementById('bi-height').value, this.value) : ''" />
+            <small class="bi-hint" id="bi-bmi-display">${calcBMI(info.height, info.weight) ? 'BMI ' + calcBMI(info.height, info.weight) : ''}</small>
+          </label>
+        </div>
+
+        <label class="bi-field">
+          <span>過敏史（藥物 / 食物 / 環境，沒有就留空）</span>
+          <textarea id="bi-allergies" rows="2" placeholder="例：青黴素過敏、海鮮過敏">${v('allergies')}</textarea>
+        </label>
+        <label class="bi-field">
+          <span>慢性疾病 / 重大病史</span>
+          <textarea id="bi-conditions" rows="2" placeholder="例：高血壓、第二型糖尿病、氣喘">${v('conditions')}</textarea>
+        </label>
+        <label class="bi-field">
+          <span>目前主要疾病 / 治療中</span>
+          <textarea id="bi-current-disease" rows="2" placeholder="例：乳癌第二期 化療中、腰椎間盤突出">${v('current_disease')}</textarea>
+        </label>
+        <label class="bi-field">
+          <span>長期服用藥物</span>
+          <textarea id="bi-meds" rows="2" placeholder="例：Metformin 500mg 每日 2 次">${v('meds')}</textarea>
+        </label>
+
+        <div class="bi-grid">
+          <label class="bi-field">
+            <span>主治醫師</span>
+            <input id="bi-doctor-name" type="text" maxlength="30" placeholder="醫師姓名" value="${v('doctor_name')}" />
+          </label>
+          <label class="bi-field">
+            <span>醫院 / 科別</span>
+            <input id="bi-hospital" type="text" maxlength="50" placeholder="例：台大醫院 腫瘤科" value="${v('hospital')}" />
+          </label>
+        </div>
+
+        <div class="bi-grid">
+          <label class="bi-field">
+            <span>緊急聯絡人姓名</span>
+            <input id="bi-emergency-name" type="text" maxlength="30" value="${v('emergency_name')}" />
+          </label>
+          <label class="bi-field">
+            <span>緊急聯絡人電話</span>
+            <input id="bi-emergency-phone" type="tel" maxlength="20" value="${v('emergency_phone')}" />
+          </label>
+        </div>
+
+        <p class="acct-msg" id="bi-msg" hidden></p>
+        <div class="bi-actions">
+          <button type="submit" class="primary"><i data-lucide="save"></i> 儲存</button>
+          <button type="button" class="btn-quiet" onclick="copyBasicInfo()"><i data-lucide="clipboard-copy"></i> 複製給醫師</button>
+        </div>
+      </form>
+    </section>`;
 }
 
-async function loadRecordsPage() {
-  // 載入病患和醫師 dropdown
-  const [pRes, dRes] = await Promise.all([
-    fetch(`${API}/patients/`).then(r => r.json()),
-    fetch(`${API}/doctors/`).then(r => r.json()),
-  ]);
-
-  const patientOpts = (pRes.patients || []).map(p =>
-    `<option value="${p.id}">${p.name} (${p.age}歲)</option>`
-  ).join("");
-  const doctorOpts = (dRes.doctors || []).map(d =>
-    `<option value="${d.id}">${d.name} — ${d.specialty}</option>`
-  ).join("");
-
-  const rp = document.getElementById("r-patient");
-  const rd = document.getElementById("r-doctor");
-  const fp = document.getElementById("filter-patient");
-  if (rp) rp.innerHTML = `<option value="">選擇病患</option>${patientOpts}`;
-  if (rd) rd.innerHTML = `<option value="">選擇醫師（選填）</option>${doctorOpts}`;
-  if (fp) fp.innerHTML = `<option value="">所有病患</option>${patientOpts}`;
-
-  searchRecords();
+function loadRecordsPage() {
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-async function addRecord() {
-  const patient_id = document.getElementById("r-patient").value;
-  if (!patient_id) { alert("請選擇病患"); return; }
-  const doctor_id = document.getElementById("r-doctor").value || undefined;
-  const dateVal = document.getElementById("r-date").value;
-  const visit_date = dateVal ? new Date(dateVal).toISOString() : undefined;
-  const symptomsStr = document.getElementById("r-symptoms").value;
-  const symptoms = symptomsStr ? symptomsStr.split(",").map(s => s.trim()).filter(Boolean) : [];
-  const diagnosis = document.getElementById("r-diagnosis").value || undefined;
-  const prescription = document.getElementById("r-prescription").value || undefined;
-  const notes = document.getElementById("r-notes").value || undefined;
-
-  await fetch(`${API}/records/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ patient_id, doctor_id, visit_date, symptoms, diagnosis, prescription, notes }),
-  });
-  searchRecords();
-  // 清空表單
-  ["r-symptoms", "r-diagnosis", "r-prescription", "r-notes"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = "";
-  });
+function saveBasicInfo() {
+  const info = {
+    gender: document.getElementById('bi-gender').value,
+    birthday: document.getElementById('bi-birthday').value,
+    blood: document.getElementById('bi-blood').value,
+    height: document.getElementById('bi-height').value,
+    weight: document.getElementById('bi-weight').value,
+    allergies: document.getElementById('bi-allergies').value.trim(),
+    conditions: document.getElementById('bi-conditions').value.trim(),
+    current_disease: document.getElementById('bi-current-disease').value.trim(),
+    meds: document.getElementById('bi-meds').value.trim(),
+    doctor_name: document.getElementById('bi-doctor-name').value.trim(),
+    hospital: document.getElementById('bi-hospital').value.trim(),
+    emergency_name: document.getElementById('bi-emergency-name').value.trim(),
+    emergency_phone: document.getElementById('bi-emergency-phone').value.trim(),
+  };
+  setBasicInfo(info);
+  const msg = document.getElementById('bi-msg');
+  if (msg) {
+    msg.textContent = '已儲存到本機';
+    msg.hidden = false;
+    setTimeout(() => { msg.hidden = true; }, 2000);
+  }
+  showToast && showToast('基本資料已儲存', 'success');
 }
 
-async function searchRecords() {
-  const patientId = document.getElementById("filter-patient")?.value || "";
-  const diagnosis = document.getElementById("filter-diagnosis")?.value || "";
-  let url = `${API}/records/?`;
-  if (patientId) url += `patient_id=${patientId}&`;
-  if (diagnosis) url += `diagnosis=${encodeURIComponent(diagnosis)}&`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-  const el = document.getElementById("record-list");
-
-  if (!data.records?.length) {
-    el.innerHTML = "<p>尚無病歷資料</p>";
+function copyBasicInfo() {
+  const info = getBasicInfo();
+  const u = getCurrentUser() || {};
+  const lines = ['【基本資料】'];
+  if (u.nickname) lines.push('姓名：' + u.nickname);
+  const genderMap = { male: '男', female: '女', other: '其他' };
+  if (info.gender) lines.push('性別：' + (genderMap[info.gender] || info.gender));
+  if (info.birthday) {
+    const age = calcAge(info.birthday);
+    lines.push('生日：' + info.birthday + (age ? '（' + age + '）' : ''));
+  }
+  if (info.blood) lines.push('血型：' + info.blood);
+  if (info.height) lines.push('身高：' + info.height + ' cm');
+  if (info.weight) lines.push('體重：' + info.weight + ' kg');
+  const bmi = calcBMI(info.height, info.weight);
+  if (bmi) lines.push('BMI：' + bmi);
+  if (info.allergies) lines.push('過敏史：' + info.allergies);
+  if (info.conditions) lines.push('慢性病史：' + info.conditions);
+  if (info.current_disease) lines.push('目前主要疾病：' + info.current_disease);
+  if (info.meds) lines.push('長期用藥：' + info.meds);
+  if (info.doctor_name || info.hospital) {
+    lines.push('主治醫師：' + [info.doctor_name, info.hospital].filter(Boolean).join('｜'));
+  }
+  if (info.emergency_name || info.emergency_phone) {
+    lines.push('緊急聯絡人：' + [info.emergency_name, info.emergency_phone].filter(Boolean).join(' '));
+  }
+  if (lines.length === 1) {
+    showToast && showToast('還沒填任何資料', 'warning');
     return;
   }
-
-  el.innerHTML = data.records.map(r => {
-    const date = r.visit_date ? new Date(r.visit_date).toLocaleDateString("zh-TW") : "未記錄";
-    const patientName = r.patients?.name || "未知";
-    const doctorName = r.doctors?.name || "未指定";
-    const symptoms = (r.symptoms || []).join(", ");
-    return `
-      <div class="record-card">
-        <div class="record-header">
-          <strong>${patientName}</strong> — ${date} — 醫師：${doctorName}
-          <button class="btn-delete" onclick="deleteRecord('${r.id}')">刪除</button>
-        </div>
-        ${symptoms ? `<p><strong>症狀：</strong>${symptoms}</p>` : ""}
-        ${r.diagnosis ? `<p><strong>診斷：</strong>${r.diagnosis}</p>` : ""}
-        ${r.prescription ? `<p><strong>處方：</strong>${r.prescription}</p>` : ""}
-        ${r.notes ? `<p><strong>備註：</strong>${r.notes}</p>` : ""}
-      </div>`;
-  }).join("");
-}
-
-async function deleteRecord(id) {
-  if (!confirm("確定刪除此病歷？")) return;
-  await fetch(`${API}/records/${id}`, { method: "DELETE" });
-  searchRecords();
+  const text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => showToast && showToast('已複製到剪貼簿', 'success'),
+      () => showToast && showToast('複製失敗', 'warning')
+    );
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showToast && showToast('已複製到剪貼簿', 'success'); }
+    catch { showToast && showToast('複製失敗', 'warning'); }
+    document.body.removeChild(ta);
+  }
 }
 
 // ─── Toast 通知 ──────────────────────────────────────────
