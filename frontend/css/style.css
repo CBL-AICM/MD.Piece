@@ -8891,8 +8891,21 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 .diet-pick-sub { margin: 0 0 10px; font-size: 0.88rem; color: var(--text-dim); }
 .diet-pick-meal-tabs {
   display: flex; gap: 4px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.diet-pick-price-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
   margin-bottom: 12px;
 }
+.diet-pick-price-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 8px;
+  background: rgba(217, 165, 74, 0.15);
+  color: #B27B1A;
+  border-radius: 100px; font-weight: 600;
+  font-size: 0.8rem;
+}
+#app-wrapper[data-theme="dark"] .diet-pick-price-tag { color: #E0B25E; }
 .diet-pick-tab {
   padding: 6px 12px;
   background: var(--app-panel-soft, transparent);

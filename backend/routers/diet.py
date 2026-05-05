@@ -206,6 +206,15 @@ PICK_SYSTEM_PROMPT = (
     "4. 一律繁體中文台灣用語\n"
     "5. 不要給出 exclude 名單裡已經被丟掉的菜\n"
     "6. 寧可常見好取得，不要瞎掰罕見料理\n"
+    "7. 在台灣可以善用便利商店（7-11、全家）的品項：御飯糰、關東煮、茶葉蛋、"
+    "低卡便當、御便當、優格、無糖豆漿、地瓜、香蕉、即食雞胸、蛋沙拉三明治、"
+    "蕎麥涼麵、味噌湯、低糖燕麥飲、蘿蔔糕等。where_to_get 寫『7-11』或『全家』即可。\n"
+    "8. **必須符合患者指定的價位等級**：\n"
+    "   - $ → 整餐控制在 100 元台幣內（超商御飯糰、便當店便當、自煮、麵店小份）\n"
+    "   - $$ → 100-200 元（一般便當/麵食/簡餐）\n"
+    "   - $$$ → 200 元以上（餐廳定食、健康餐盒、輕食店沙拉碗）\n"
+    "   - any → 不限\n"
+    '   並把估計價位寫在 JSON 多一個欄位 "price_tier": "$/$$/$$$"，整數預估價位 "price_twd": <數字>\n'
 )
 
 
@@ -236,56 +245,72 @@ def _diagnosis_flags(diagnoses: List[str]) -> dict:
 # fallback 用；LLM 主路徑會自己處理疾病與餐別
 PICK_FALLBACK_POOL = [
     # ── 早餐 ──
-    {"name": "玉米蛋餅+無糖豆漿",  "components": ["蛋餅皮", "玉米", "蛋", "無糖豆漿"],       "cuisine": "台早", "where_to_get": "早餐店",   "reason": "早餐快速款、蛋白質有",
+    {"name": "玉米蛋餅+無糖豆漿",  "components": ["蛋餅皮", "玉米", "蛋", "無糖豆漿"],       "cuisine": "台早", "where_to_get": "早餐店",   "reason": "早餐快速款、蛋白質有",         "price_tier": "$",  "price_twd": 70,
      "_unfit": [], "_meals": ["breakfast"]},
-    {"name": "鹹粥配蘿蔔糕",       "components": ["米", "瘦肉", "香菇", "蘿蔔糕"],           "cuisine": "台早", "where_to_get": "早餐店",   "reason": "溫熱好入口",
+    {"name": "鹹粥配蘿蔔糕",       "components": ["米", "瘦肉", "香菇", "蘿蔔糕"],           "cuisine": "台早", "where_to_get": "早餐店",   "reason": "溫熱好入口",                    "price_tier": "$",  "price_twd": 80,
      "_unfit": ["hypertension"], "_meals": ["breakfast"]},
-    {"name": "雞肉三明治+無糖紅茶", "components": ["全麥吐司", "雞胸肉", "生菜", "番茄"],     "cuisine": "西", "where_to_get": "早餐店",     "reason": "好攜帶、蛋白質充足",
+    {"name": "雞肉三明治+無糖紅茶", "components": ["全麥吐司", "雞胸肉", "生菜", "番茄"],     "cuisine": "西", "where_to_get": "早餐店",     "reason": "好攜帶、蛋白質充足",            "price_tier": "$",  "price_twd": 90,
      "_unfit": [], "_meals": ["breakfast"]},
-    {"name": "燕麥粥+水煮蛋+水果", "components": ["燕麥", "牛奶", "水煮蛋", "香蕉"],         "cuisine": "西", "where_to_get": "自煮",       "reason": "高纖好消化",
+    {"name": "燕麥粥+水煮蛋+水果", "components": ["燕麥", "牛奶", "水煮蛋", "香蕉"],         "cuisine": "西", "where_to_get": "自煮",       "reason": "高纖好消化",                    "price_tier": "$",  "price_twd": 50,
      "_unfit": [], "_meals": ["breakfast"]},
-    {"name": "饅頭夾蛋+無糖豆漿",  "components": ["饅頭", "蛋", "肉鬆", "無糖豆漿"],         "cuisine": "中", "where_to_get": "早餐店",     "reason": "經典中式早餐",
+    {"name": "饅頭夾蛋+無糖豆漿",  "components": ["饅頭", "蛋", "肉鬆", "無糖豆漿"],         "cuisine": "中", "where_to_get": "早餐店",     "reason": "經典中式早餐",                  "price_tier": "$",  "price_twd": 60,
      "_unfit": [], "_meals": ["breakfast"]},
 
     # ── 午餐 ──
-    {"name": "滷肉飯配燙青菜",     "components": ["滷肉", "白飯", "青菜", "滷蛋"],          "cuisine": "台", "where_to_get": "自助餐",     "reason": "便當店標配，澱粉蛋白蔬菜都有",
+    {"name": "滷肉飯配燙青菜",     "components": ["滷肉", "白飯", "青菜", "滷蛋"],          "cuisine": "台", "where_to_get": "自助餐",     "reason": "便當店標配，澱粉蛋白蔬菜都有",  "price_tier": "$",  "price_twd": 90,
      "_unfit": ["hypertension"], "_meals": ["lunch", "dinner"]},
-    {"name": "蒜泥白肉便當",       "components": ["白肉", "蒜泥醬", "白飯", "高麗菜"],       "cuisine": "台", "where_to_get": "便當店",     "reason": "蒸煮為主、油不重",
+    {"name": "蒜泥白肉便當",       "components": ["白肉", "蒜泥醬", "白飯", "高麗菜"],       "cuisine": "台", "where_to_get": "便當店",     "reason": "蒸煮為主、油不重",              "price_tier": "$$", "price_twd": 110,
      "_unfit": [], "_meals": ["lunch", "dinner"]},
-    {"name": "雞肉飯便當",         "components": ["雞絲", "雞汁飯", "燙青菜", "蛋"],         "cuisine": "台", "where_to_get": "便當店",     "reason": "嘉義雞肉飯經典款",
+    {"name": "雞肉飯便當",         "components": ["雞絲", "雞汁飯", "燙青菜", "蛋"],         "cuisine": "台", "where_to_get": "便當店",     "reason": "嘉義雞肉飯經典款",              "price_tier": "$",  "price_twd": 90,
      "_unfit": [], "_meals": ["lunch", "dinner"]},
-    {"name": "牛肉麵（清燉）",     "components": ["牛肉", "麵條", "青菜", "蘿蔔"],           "cuisine": "台", "where_to_get": "麵店",       "reason": "清燉湯頭比紅燒少油鈉",
+    {"name": "牛肉麵（清燉）",     "components": ["牛肉", "麵條", "青菜", "蘿蔔"],           "cuisine": "台", "where_to_get": "麵店",       "reason": "清燉湯頭比紅燒少油鈉",          "price_tier": "$$", "price_twd": 180,
      "_unfit": ["gout", "hypertension"], "_meals": ["lunch", "dinner"]},
-    {"name": "雞絲涼麵（少醬）",   "components": ["雞絲", "麵條", "小黃瓜", "胡麻醬"],       "cuisine": "台", "where_to_get": "便利商店",   "reason": "夏天清爽選擇",
+    {"name": "雞絲涼麵（少醬）",   "components": ["雞絲", "麵條", "小黃瓜", "胡麻醬"],       "cuisine": "台", "where_to_get": "便利商店",   "reason": "夏天清爽選擇",                  "price_tier": "$",  "price_twd": 75,
      "_unfit": ["diabetes"], "_meals": ["lunch"]},
-    {"name": "豬肉水餃（10 顆）+ 燙青菜", "components": ["豬肉水餃", "燙青菜"],             "cuisine": "中", "where_to_get": "水餃店",     "reason": "簡單一餐解決",
+    {"name": "豬肉水餃（10 顆）+ 燙青菜", "components": ["豬肉水餃", "燙青菜"],             "cuisine": "中", "where_to_get": "水餃店",     "reason": "簡單一餐解決",                  "price_tier": "$$", "price_twd": 130,
      "_unfit": ["hypertension"], "_meals": ["lunch", "dinner"]},
-    {"name": "雞胸肉沙拉碗",       "components": ["雞胸肉", "生菜", "番茄", "玉米", "藜麥"], "cuisine": "西", "where_to_get": "輕食店",     "reason": "高蛋白低油",
+    {"name": "雞胸肉沙拉碗",       "components": ["雞胸肉", "生菜", "番茄", "玉米", "藜麥"], "cuisine": "西", "where_to_get": "輕食店",     "reason": "高蛋白低油",                    "price_tier": "$$$","price_twd": 220,
      "_unfit": [], "_meals": ["lunch"]},
 
     # ── 晚餐 ──
-    {"name": "味噌鮭魚定食",       "components": ["鮭魚", "白飯", "味噌湯", "醃菜"],         "cuisine": "日", "where_to_get": "日式定食店", "reason": "鮭魚蛋白質好、好消化",
+    {"name": "味噌鮭魚定食",       "components": ["鮭魚", "白飯", "味噌湯", "醃菜"],         "cuisine": "日", "where_to_get": "日式定食店", "reason": "鮭魚蛋白質好、好消化",          "price_tier": "$$$","price_twd": 280,
      "_unfit": ["gout", "hypertension"], "_meals": ["lunch", "dinner"]},
-    {"name": "番茄炒蛋蓋飯",       "components": ["番茄", "蛋", "白飯", "蔥"],               "cuisine": "中", "where_to_get": "自煮",       "reason": "30 秒能想到的家常",
+    {"name": "番茄炒蛋蓋飯",       "components": ["番茄", "蛋", "白飯", "蔥"],               "cuisine": "中", "where_to_get": "自煮",       "reason": "30 秒能想到的家常",             "price_tier": "$",  "price_twd": 40,
      "_unfit": [], "_meals": ["lunch", "dinner"]},
-    {"name": "蒸蛋豆腐+地瓜飯",    "components": ["蒸蛋", "豆腐", "地瓜", "白飯"],           "cuisine": "中", "where_to_get": "自煮",       "reason": "好消化、植物蛋白",
+    {"name": "蒸蛋豆腐+地瓜飯",    "components": ["蒸蛋", "豆腐", "地瓜", "白飯"],           "cuisine": "中", "where_to_get": "自煮",       "reason": "好消化、植物蛋白",              "price_tier": "$",  "price_twd": 50,
      "_unfit": ["ckd"], "_meals": ["dinner"]},
-    {"name": "清蒸魚配糙米飯",     "components": ["白肉魚", "糙米飯", "燙青菜"],             "cuisine": "中", "where_to_get": "自煮",       "reason": "低油低鈉、高纖",
+    {"name": "清蒸魚配糙米飯",     "components": ["白肉魚", "糙米飯", "燙青菜"],             "cuisine": "中", "where_to_get": "自煮",       "reason": "低油低鈉、高纖",                "price_tier": "$$", "price_twd": 120,
      "_unfit": ["gout"], "_meals": ["dinner"]},
-    {"name": "蔬菜雞肉湯麵",       "components": ["雞胸肉", "麵", "高麗菜", "蘿蔔"],         "cuisine": "中", "where_to_get": "麵店",       "reason": "晚餐清淡好消化",
+    {"name": "蔬菜雞肉湯麵",       "components": ["雞胸肉", "麵", "高麗菜", "蘿蔔"],         "cuisine": "中", "where_to_get": "麵店",       "reason": "晚餐清淡好消化",                "price_tier": "$$", "price_twd": 140,
      "_unfit": [], "_meals": ["dinner"]},
 
     # ── 點心 ──
-    {"name": "希臘優格+藍莓",      "components": ["無糖優格", "藍莓", "燕麥粒"],             "cuisine": "西", "where_to_get": "超商",       "reason": "蛋白質+抗氧化",
+    {"name": "希臘優格+藍莓",      "components": ["無糖優格", "藍莓", "燕麥粒"],             "cuisine": "西", "where_to_get": "7-11",       "reason": "蛋白質+抗氧化",                 "price_tier": "$$", "price_twd": 110,
      "_unfit": [], "_meals": ["snack"]},
-    {"name": "水煮蛋+小番茄",      "components": ["水煮蛋", "小番茄"],                       "cuisine": "—", "where_to_get": "超商",       "reason": "簡單高蛋白",
+    {"name": "茶葉蛋+小番茄",      "components": ["茶葉蛋", "小番茄"],                       "cuisine": "—", "where_to_get": "7-11",       "reason": "簡單高蛋白",                    "price_tier": "$",  "price_twd": 35,
      "_unfit": [], "_meals": ["snack"]},
-    {"name": "綜合堅果一小把",     "components": ["杏仁", "腰果", "核桃"],                   "cuisine": "—", "where_to_get": "超商",       "reason": "好油脂、有飽足感",
+    {"name": "綜合堅果一小把",     "components": ["杏仁", "腰果", "核桃"],                   "cuisine": "—", "where_to_get": "全家",       "reason": "好油脂、有飽足感",              "price_tier": "$",  "price_twd": 60,
      "_unfit": ["autoimmune"], "_meals": ["snack"]},
-    {"name": "香蕉+無糖豆漿",      "components": ["香蕉", "無糖豆漿"],                       "cuisine": "—", "where_to_get": "超商",       "reason": "下午低血糖救援",
+    {"name": "香蕉+無糖豆漿",      "components": ["香蕉", "無糖豆漿"],                       "cuisine": "—", "where_to_get": "7-11",       "reason": "下午低血糖救援",                "price_tier": "$",  "price_twd": 50,
      "_unfit": ["ckd"], "_meals": ["snack"]},
-    {"name": "蘋果切片+花生醬",    "components": ["蘋果", "花生醬"],                         "cuisine": "西", "where_to_get": "超商",       "reason": "纖維+蛋白質",
-     "_unfit": ["autoimmune"], "_meals": ["snack"]},
+    {"name": "夯番薯",             "components": ["地瓜"],                                   "cuisine": "—", "where_to_get": "7-11",       "reason": "高纖低 GI 又有飽足感",          "price_tier": "$",  "price_twd": 35,
+     "_unfit": ["ckd"], "_meals": ["snack", "breakfast"]},
+
+    # ── 超商（早 / 午 / 晚 都能吃） ──
+    {"name": "鮪魚御飯糰+無糖綠茶", "components": ["御飯糰", "鮪魚", "無糖綠茶"],            "cuisine": "—", "where_to_get": "7-11",       "reason": "通勤時最快的早餐",              "price_tier": "$",  "price_twd": 65,
+     "_unfit": ["gout"], "_meals": ["breakfast", "lunch"]},
+    {"name": "鹽味雞胸肉+地瓜+無糖豆漿", "components": ["即食雞胸肉", "地瓜", "無糖豆漿"],   "cuisine": "—", "where_to_get": "7-11",       "reason": "高蛋白健身餐",                  "price_tier": "$$", "price_twd": 130,
+     "_unfit": ["ckd"], "_meals": ["lunch", "dinner"]},
+    {"name": "低卡蔬菜雞肉便當",   "components": ["雞胸肉", "糙米飯", "青花菜", "南瓜"],     "cuisine": "—", "where_to_get": "全家",       "reason": "便當區熱量最低那一格",          "price_tier": "$$", "price_twd": 130,
+     "_unfit": [], "_meals": ["lunch", "dinner"]},
+    {"name": "蛋沙拉三明治+牛奶",  "components": ["全麥三明治", "蛋沙拉", "鮮奶"],           "cuisine": "西", "where_to_get": "全家",       "reason": "好攜帶補蛋白",                  "price_tier": "$",  "price_twd": 80,
+     "_unfit": [], "_meals": ["breakfast", "lunch"]},
+    {"name": "關東煮（蛋+蘿蔔+青菜捲）", "components": ["茶葉蛋", "白蘿蔔", "蔬菜捲", "杏鮑菇"], "cuisine": "—", "where_to_get": "7-11",   "reason": "暖胃低油",                      "price_tier": "$",  "price_twd": 80,
+     "_unfit": ["hypertension"], "_meals": ["lunch", "dinner", "snack"]},
+    {"name": "蕎麥涼麵+和風醬",    "components": ["蕎麥麵", "海苔", "蔥花"],                 "cuisine": "日", "where_to_get": "7-11",       "reason": "夏天低 GI 選擇",                "price_tier": "$$", "price_twd": 100,
+     "_unfit": [], "_meals": ["lunch"]},
+    {"name": "燕麥牛奶+水煮蛋",    "components": ["即食燕麥", "鮮奶", "水煮蛋"],             "cuisine": "—", "where_to_get": "全家",       "reason": "懶人早餐",                      "price_tier": "$",  "price_twd": 70,
+     "_unfit": [], "_meals": ["breakfast"]},
 ]
 
 
@@ -304,13 +329,24 @@ def _filter_pool_by_meal(pool: list, meal: str) -> list:
     return [m for m in pool if meal in (m.get("_meals") or [])]
 
 
+def _filter_pool_by_price(pool: list, price_tier: str) -> list:
+    """依價位等級過濾（$/$$/$$$）。'any' 不過濾。"""
+    if price_tier in ("any", "", None):
+        return pool
+    return [m for m in pool if (m.get("price_tier") or "") == price_tier]
+
+
+VALID_PRICE_TIERS = {"any", "$", "$$", "$$$"}
+
+
 @router.get("/pick/{patient_id}")
 def pick_meal(
     patient_id: str,
-    meal_type: str = Query("any", description="breakfast/lunch/dinner/snack/any"),
-    exclude: str = Query("", description="逗號分隔，已被丟掉的菜色，避免重複推薦"),
+    meal_type:  str = Query("any", description="breakfast/lunch/dinner/snack/any"),
+    price_tier: str = Query("any", description="$ / $$ / $$$ / any（價位等級）"),
+    exclude:    str = Query("",    description="逗號分隔，已被丟掉的菜色，避免重複推薦"),
 ):
-    """吃什麼神器：依病史 + 餐別時段隨機推薦一道具體菜色，避開禁忌與已丟掉的選項。"""
+    """吃什麼神器：依病史 + 餐別時段 + 價位隨機推薦一道具體菜色。"""
     diagnoses = _patient_diagnoses(patient_id)
     excluded = [x.strip() for x in exclude.split(",") if x.strip()]
 
@@ -319,12 +355,18 @@ def pick_meal(
     if resolved_meal not in {"breakfast", "lunch", "dinner", "snack"}:
         resolved_meal = "lunch"
 
+    if price_tier not in VALID_PRICE_TIERS:
+        price_tier = "any"
+
     meal_zh = {"breakfast": "早餐", "lunch": "午餐", "dinner": "晚餐", "snack": "點心"}[resolved_meal]
+    price_zh_map = {"$": "100 元以內", "$$": "100-200 元", "$$$": "200 元以上", "any": "不限"}
     user_msg = (
         f"患者已知診斷：{', '.join(diagnoses) if diagnoses else '（無紀錄）'}\n"
         f"想吃的餐別：{resolved_meal}（{meal_zh}）\n"
+        f"預算價位：{price_tier}（{price_zh_map[price_tier]}）\n"
         f"已經被丟掉的菜（不要再推）：{', '.join(excluded) if excluded else '（無）'}\n"
-        "請給一道**符合該餐別性質**且符合疾病禁忌的具體菜色 JSON。"
+        "請給一道**符合餐別 + 預算 + 疾病禁忌**的具體菜色 JSON，"
+        "務必同時填 price_tier 與 price_twd 兩個欄位。"
     )
 
     try:
@@ -335,15 +377,16 @@ def pick_meal(
         parsed = {}
 
     if not parsed or not parsed.get("name"):
-        # Fallback：依餐別 + 疾病旗標過濾後隨機抽一個沒被排除的
+        # Fallback：依 餐別 → 疾病 → 價位 過濾後隨機抽一個沒被排除的
         import random
         flags = _diagnosis_flags(diagnoses)
-        meal_pool = _filter_pool_by_meal(PICK_FALLBACK_POOL, resolved_meal)
-        safe_pool = _filter_pool_by_diagnoses(meal_pool, flags)
-        pool = [m for m in safe_pool if m["name"] not in excluded]
-        # 全濾光時的退讓順序：safe_pool → meal_pool → 全部
+        meal_pool   = _filter_pool_by_meal(PICK_FALLBACK_POOL, resolved_meal)
+        safe_pool   = _filter_pool_by_diagnoses(meal_pool, flags)
+        priced_pool = _filter_pool_by_price(safe_pool, price_tier)
+        pool = [m for m in priced_pool if m["name"] not in excluded]
+        # 退讓：價位濾光 → safe_pool；safe_pool 也光 → meal_pool；都光 → 全部
         if not pool:
-            pool = safe_pool or meal_pool or PICK_FALLBACK_POOL
+            pool = priced_pool or safe_pool or meal_pool or PICK_FALLBACK_POOL
         choice = dict(random.choice(pool))
         choice.pop("_unfit", None)
         choice.pop("_meals", None)
@@ -351,8 +394,9 @@ def pick_meal(
         choice["fallback"] = True
         parsed = choice
 
-    parsed["diagnoses"] = diagnoses
-    parsed["meal_type"] = resolved_meal
+    parsed["diagnoses"]  = diagnoses
+    parsed["meal_type"]  = resolved_meal
+    parsed.setdefault("price_tier", price_tier if price_tier != "any" else None)
     return parsed
 
 

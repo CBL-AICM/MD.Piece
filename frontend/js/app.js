@@ -6521,6 +6521,13 @@ function diet() {
                 + p[1] + '</button>';
             }).join('')
     +     '</div>'
+    +     '<div class="diet-pick-price-tabs" id="diet-pick-price-tabs">'
+    +       [['any','不限預算'],['$','$（≤100）'],['$$','$$（100–200）'],['$$$','$$$（200+）']].map(function(p) {
+              return '<button class="diet-pick-tab diet-pick-price' + (p[0]==='any'?' active':'') + '" '
+                + 'data-pick-price="' + p[0] + '" onclick="dietPickSetPrice(\'' + p[0] + '\')">'
+                + p[1] + '</button>';
+            }).join('')
+    +     '</div>'
     +     '<div id="diet-pick-result" class="diet-pick-result diet-pick-empty">'
     +       '<i data-lucide="utensils" style="width:28px;height:28px"></i>'
     +       '<div>按下面的按鈕，幫你抽一道菜</div>'
@@ -6591,14 +6598,24 @@ function diet() {
 
 // 吃什麼神器
 var _dietPickMealType = 'any';   // any/breakfast/lunch/dinner/snack
+var _dietPickPrice    = 'any';   // any/$/$$/$$$
 var _dietPickHistory = [];       // 已被丟掉的菜名
 var _dietPickCurrent = null;     // 當前推薦
 var _dietPickLoading = false;
 
 function dietPickSetMeal(m) {
   _dietPickMealType = m;
+  _dietPickHistory = [];
   document.querySelectorAll('#diet-pick-meal-tabs .diet-pick-tab').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-pick-meal') === m);
+  });
+}
+
+function dietPickSetPrice(p) {
+  _dietPickPrice = p;
+  _dietPickHistory = [];
+  document.querySelectorAll('#diet-pick-price-tabs .diet-pick-price').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-pick-price') === p);
   });
 }
 
@@ -6616,7 +6633,8 @@ function dietPickMeal(isReroll) {
     box.innerHTML = '<i data-lucide="loader-2" style="width:24px;height:24px"></i><div>幫你想想…</div>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
-  var qs = '?meal_type=' + encodeURIComponent(_dietPickMealType);
+  var qs = '?meal_type=' + encodeURIComponent(_dietPickMealType)
+         + '&price_tier=' + encodeURIComponent(_dietPickPrice);
   if (_dietPickHistory.length) qs += '&exclude=' + encodeURIComponent(_dietPickHistory.join(','));
   fetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs)
     .then(function(r) { return r.json(); })
@@ -6653,10 +6671,13 @@ function renderDietPick(g) {
   box.innerHTML = ''
     + mealBadge
     + '<div class="diet-pick-name">' + chatEscape(g.name) + '</div>'
-    + (g.cuisine || g.where_to_get
+    + (g.cuisine || g.where_to_get || g.price_tier || g.price_twd
         ? '<div class="diet-pick-meta">'
           + (g.cuisine ? '<span>' + chatEscape(g.cuisine) + '</span>' : '')
           + (g.where_to_get ? '<span class="diet-pick-where"><i data-lucide="map-pin" style="width:12px;height:12px"></i> ' + chatEscape(g.where_to_get) + '</span>' : '')
+          + ((g.price_tier || g.price_twd)
+              ? '<span class="diet-pick-price-tag">' + chatEscape(g.price_tier || '') + (g.price_twd ? ' · 約 NT$' + g.price_twd : '') + '</span>'
+              : '')
         + '</div>'
         : '')
     + (components ? '<div class="diet-pick-chips">' + components + '</div>' : '')
@@ -6691,6 +6712,7 @@ function loadDietPage() {
   _dietSelectedMeal = 'breakfast';
   _dietLogMeal = 'breakfast';
   _dietPickMealType = 'any';
+  _dietPickPrice = 'any';
   _dietPickHistory = [];
   _dietPickCurrent = null;
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
