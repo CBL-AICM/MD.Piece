@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v46-i18n-v1";
+const CACHE_VERSION = "mdpiece-v47-rx-photo";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=i18n-v1",
-  "/js/i18n.js?v=i18n-v1",
-  "/js/app.js?v=i18n-v1",
+  "/css/style.css?v=rx-photo",
+  "/js/i18n.js?v=rx-photo",
+  "/js/app.js?v=rx-photo",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

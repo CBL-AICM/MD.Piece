@@ -3114,23 +3114,23 @@ function medications() {
   return `
     <div class="card">
       <h2>藥物管理</h2>
-      <p style="margin-top:8px;color:var(--text-dim)">拍攝藥袋即可自動辨識藥物，記錄服藥、追蹤療效。</p>
+      <p style="margin-top:8px;color:var(--text-dim)">拍攝<strong>藥袋或藥單</strong>即可自動辨識藥物，記錄服藥、追蹤療效。</p>
     </div>
     <div class="card">
-      <h3><i data-lucide="camera" style="width:18px;height:18px;vertical-align:middle"></i> 藥袋辨識</h3>
-      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">拍攝或上傳藥袋照片，AI 自動辨識藥物資訊</p>
+      <h3><i data-lucide="camera" style="width:18px;height:18px;vertical-align:middle"></i> 藥袋／藥單辨識</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">拍攝或上傳<strong>藥袋、藥單、處方箋</strong>照片，AI 自動辨識藥物資訊</p>
       <div style="margin-top:10px;padding:10px 12px;background:rgba(100,140,200,0.08);border-radius:var(--radius-sm);border:1px solid rgba(100,140,200,0.2);font-size:0.85rem;color:var(--text-dim)">
         <strong style="color:var(--text-main);font-size:0.85rem">拍攝小提示</strong>
         <ul style="margin:6px 0 0 16px;padding:0;line-height:1.6">
-          <li>將藥袋平放在桌面，避免皺摺遮蓋文字</li>
-          <li>在光線充足處拍攝，避免反光與陰影</li>
-          <li>確保<strong>藥名、劑量、用法</strong>等文字完整入鏡</li>
-          <li>一次拍一包藥袋，避免多包重疊</li>
+          <li>把藥單／藥袋<strong>放滿整個畫面</strong>，不要從遠處拍（小字會糊掉）</li>
+          <li>平放在桌面，避免皺摺、傾斜、反光</li>
+          <li>在光線充足處拍攝，盡量讓<strong>藥名、劑量、用法</strong>清楚可讀</li>
+          <li>多包藥袋請一次拍一包；長條藥單可一次完整入鏡</li>
         </ul>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="primary" onclick="document.getElementById('med-camera').click()">
-          <i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍攝藥袋
+          <i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍攝藥袋／藥單
         </button>
         <button class="secondary" onclick="document.getElementById('med-upload').click()">
           <i data-lucide="upload" style="width:14px;height:14px;vertical-align:middle"></i> 上傳照片
@@ -3431,8 +3431,9 @@ function tapMedTake(medId, slotKey) {
   logMedTaken(medId, true);
 }
 
-// 把過大的相片壓縮到 1600px 寬以內、JPEG 0.85 — 多數手機相片直接傳會超過
+// 把過大的相片壓縮到 2400px 長邊以內、JPEG 0.88 — 多數手機相片直接傳會超過
 // Vercel 4.5MB 上傳上限，導致「藥袋一直拍攝失敗」。
+// 解析度需要夠高，否則藥單上的小字（藥名、劑量）會被縮到 LLM 看不清楚。
 // 壓縮失敗時會 fallback 用原檔，不阻擋流程。
 function _compressMedPhoto(file) {
   return new Promise(function(resolve) {
@@ -3442,7 +3443,7 @@ function _compressMedPhoto(file) {
       var img = new Image();
       img.onload = function() {
         try {
-          var maxEdge = 1600;
+          var maxEdge = 2400;
           var w = img.width, h = img.height;
           if (Math.max(w, h) > maxEdge) {
             var scale = maxEdge / Math.max(w, h);
@@ -3455,7 +3456,7 @@ function _compressMedPhoto(file) {
           ctx.fillStyle = "#fff";  // 白底 — 處理透明 PNG，避免 JPEG 黑底
           ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
-          var compressed = canvas.toDataURL("image/jpeg", 0.85);
+          var compressed = canvas.toDataURL("image/jpeg", 0.88);
           resolve({ dataUrl: compressed, mediaType: "image/jpeg" });
         } catch (err) {
           resolve({ dataUrl: dataUrl, mediaType: file.type || "image/jpeg" });
@@ -3494,7 +3495,7 @@ function handleMedPhoto(input) {
     document.getElementById("med-recognize-result").innerHTML =
       '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
       '<div class="loading-spinner"></div>' +
-      '<p style="margin-top:8px">AI 正在辨識藥袋...</p>' +
+      '<p style="margin-top:8px">AI 正在辨識藥袋／藥單...</p>' +
       '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">第一次辨識較慢，最多約 30 秒</p>' +
       '</div>';
 
