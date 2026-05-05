@@ -1048,7 +1048,11 @@ const pageSlugForTerminal = {
   records: 'records', doctors: 'doctors'
 };
 
+// Track the current page so we can re-render on language switch
+var _currentPageKey = null;
+
 function showPage(page) {
+  _currentPageKey = page;
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
@@ -1086,6 +1090,11 @@ function showPage(page) {
     });
   }, 150);
 }
+
+// 語言切換時，重新渲染當前頁面（讓字典中文/英文切換立即生效）
+window.addEventListener('mdpiece-lang-change', function () {
+  if (_currentPageKey) showPage(_currentPageKey);
+});
 
 // ─── 登入 / 註冊 ───────────────────────────────────────────
 
@@ -1509,30 +1518,18 @@ function showAccountMsg(id, msg, isError) {
 
 // ─── 首頁 ──────────────────────────────────────────────────
 
+// i18n helpers (fallback to identity if i18n module hasn't loaded)
+function _T(k) { return (window.MDPiece_i18n && window.MDPiece_i18n.t) ? window.MDPiece_i18n.t(k) : k; }
+function _Tf(k, vars) { return (window.MDPiece_i18n && window.MDPiece_i18n.tf) ? window.MDPiece_i18n.tf(k, vars) : k; }
+
 function getGreetingMessage() {
-  var msgs = [
-    '每一小步，都是照顧自己的開始',
-    '健康是一塊一塊拼起來的拼圖',
-    '慢慢來，我們陪你一起',
-    '今天也要好好照顧自己喔',
-    '記錄每個碎片，拼出完整的你',
-    '你不是一個人，我們一直都在',
-  ];
-  return msgs[Math.floor(Math.random() * msgs.length)];
+  var i = Math.floor(Math.random() * 6);
+  return _T('home.calm.' + i);
 }
 
 function getHealthTip() {
-  var tips = [
-    '深呼吸三次，讓肩膀放鬆下來，你做得很好。',
-    '喝一杯溫水，給身體最簡單的關愛。',
-    '今天有按時吃藥嗎？每一次準時都是對自己的守護。',
-    '散步十分鐘，陽光是最好的維他命。',
-    '寫下今天的感受，情緒也是健康的一塊拼圖。',
-    '睡前放下手機，讓大腦也好好休息。',
-    '跟身邊的人說說話，連結也是一種療癒。',
-    '不用完美，只要每天進步一點點就好。',
-  ];
-  return tips[Math.floor(Math.random() * tips.length)];
+  var i = Math.floor(Math.random() * 8);
+  return _T('home.tip.' + i);
 }
 
 // === 下次回診（patient-set；存 localStorage，per-user）=========================
@@ -1564,7 +1561,7 @@ function renderNextVisitChip() {
       + '<button type="button" class="home-visit-chip home-visit-chip-empty" '
       +   'onclick="openNextVisitEditor()">'
       +   '<i data-lucide="calendar-plus" style="width:14px;height:14px"></i>'
-      +   '<span>設定下次回診</span>'
+      +   '<span>' + _T('home.visit.set') + '</span>'
       + '</button>'
       + '<input type="date" id="home-visit-input" class="home-visit-input" '
       +   'onchange="onNextVisitChange(this.value)" hidden />';
@@ -1572,17 +1569,17 @@ function renderNextVisitChip() {
   var d = _daysBetween(iso);
   var label;
   var cls = 'home-visit-chip';
-  if (d > 0)       { label = '剩 ' + d + ' 天'; }
-  else if (d === 0){ label = '就是今天！'; cls += ' home-visit-chip-today'; }
-  else             { label = (-d) + ' 天前已回診'; cls += ' home-visit-chip-past'; }
+  if (d > 0)       { label = _Tf('home.visit.daysLeft', { n: d }); }
+  else if (d === 0){ label = _T('home.visit.today'); cls += ' home-visit-chip-today'; }
+  else             { label = _Tf('home.visit.daysAgo', { n: (-d) }); cls += ' home-visit-chip-past'; }
   var pretty = iso.replace(/-/g, '/').slice(5); // MM/DD
   return ''
-    + '<button type="button" class="' + cls + '" onclick="openNextVisitEditor()" title="點此修改">'
+    + '<button type="button" class="' + cls + '" onclick="openNextVisitEditor()" title="' + _T('home.visit.editTitle') + '">'
     +   '<i data-lucide="calendar-check-2" style="width:14px;height:14px"></i>'
-    +   '<span>下次回診 ' + pretty + '</span>'
+    +   '<span>' + _T('home.visit.label') + ' ' + pretty + '</span>'
     +   '<span class="home-visit-countdown">' + label + '</span>'
     + '</button>'
-    + '<button type="button" class="home-visit-clear" onclick="clearNextVisit()" title="清除">'
+    + '<button type="button" class="home-visit-clear" onclick="clearNextVisit()" title="' + _T('home.visit.clearTitle') + '">'
     +   '<i data-lucide="x" style="width:12px;height:12px"></i>'
     + '</button>'
     + '<input type="date" id="home-visit-input" class="home-visit-input" '
@@ -1623,13 +1620,17 @@ function homeCard(page, icon, title, desc, color) {
 function home() {
   const user = getCurrentUser();
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? '早安' : hour < 18 ? '午安' : '晚安';
+  const greetKey = hour < 12 ? 'home.greet.morning' : hour < 18 ? 'home.greet.afternoon' : 'home.greet.evening';
+  const greeting = _T(greetKey);
+  const _lang = (window.MDPiece_i18n && window.MDPiece_i18n.getLang && window.MDPiece_i18n.getLang()) || 'zh-TW';
+  const greetSep = _lang === 'zh-TW' ? '，' : ', ';
   const today = new Date();
   const dateStr = today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0');
-  const dayStr = '星期' + ['日','一','二','三','四','五','六'][today.getDay()];
-  const name = user ? user.nickname : '你';
+  const dayStr = _T('home.weekday.prefix') + _T('home.weekday.' + today.getDay());
+  const name = user ? user.nickname : _T('home.greet.fallbackName');
   const ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
   const heroAvatarSrc = (user && user.avatar_url) ? user.avatar_url : 'icons/xiaohe.jpg';
+  const avatarAlt = _Tf('home.avatarAlt', { name: name });
 
   return `
     <div class="home-page">
@@ -1640,10 +1641,10 @@ function home() {
       <!-- Hero: Logo + Greeting split -->
       <div class="home-hero">
         <div class="home-hero-left">
-          <img src="${heroAvatarSrc}" alt="${name} 頭像" class="home-logo home-logo-avatar" />
+          <img src="${heroAvatarSrc}" alt="${avatarAlt}" class="home-logo home-logo-avatar" />
         </div>
         <div class="home-hero-right">
-          <h2 class="home-title">${greeting}，${name}</h2>
+          <h2 class="home-title">${greeting}${greetSep}${name}</h2>
           <p class="home-calm">${getGreetingMessage()}</p>
           <div class="home-date-row">
             <span class="home-datestr">${dateStr}</span>
@@ -1659,19 +1660,19 @@ function home() {
       <div class="home-quick">
         <button class="hq-btn hq-symptoms" onclick="navigateTo('symptoms',null)">
           <span class="hq-icon"><i data-lucide="scan-search"></i></span>
-          <span>記錄症狀</span>
+          <span>${_T('home.quick.symptoms')}</span>
         </button>
         <button class="hq-btn hq-meds" onclick="navigateTo('medications',null)">
           <span class="hq-icon"><i data-lucide="pill"></i></span>
-          <span>服藥打卡</span>
+          <span>${_T('home.quick.meds')}</span>
         </button>
         <button class="hq-btn hq-records" onclick="navigateTo('records',null)">
           <span class="hq-icon"><i data-lucide="id-card"></i></span>
-          <span>基本資料</span>
+          <span>${_T('home.quick.records')}</span>
         </button>
         <button class="hq-btn hq-edu" onclick="navigateTo('education',null)">
           <span class="hq-icon"><i data-lucide="book-heart"></i></span>
-          <span>衛教知識</span>
+          <span>${_T('home.quick.education')}</span>
         </button>
       </div>
 
@@ -1680,25 +1681,25 @@ function home() {
         <div class="home-ov">
           <div class="home-ov-head">
             <i data-lucide="calendar-check" style="width:16px;height:16px;color:var(--accent)"></i>
-            <span>今日服藥</span>
+            <span>${_T('home.ov.meds')}</span>
           </div>
           <div id="home-med-summary" class="home-ov-body">
-            <p class="home-ov-placeholder">載入中...</p>
+            <p class="home-ov-placeholder">${_T('home.ov.loading')}</p>
           </div>
         </div>
         <div class="home-ov">
           <div class="home-ov-head">
             <i data-lucide="smile" style="width:16px;height:16px;color:var(--rose, #e8889c)"></i>
-            <span>今日心情</span>
+            <span>${_T('home.ov.mood')}</span>
           </div>
           <div id="home-mood-summary" class="home-ov-body">
-            <p class="home-ov-placeholder">載入中...</p>
+            <p class="home-ov-placeholder">${_T('home.ov.loading')}</p>
           </div>
         </div>
         <div class="home-ov">
           <div class="home-ov-head">
             <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--purple)"></i>
-            <span>健康小語</span>
+            <span>${_T('home.ov.tip')}</span>
           </div>
           <div class="home-ov-body">
             <p class="home-tip-text">${getHealthTip()}</p>
@@ -1709,23 +1710,23 @@ function home() {
       <!-- Feature grid label -->
       <div class="home-section-label">
         <svg viewBox="0 0 48 48" width="16" height="16"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor" opacity="0.5"/></svg>
-        功能拼圖
+        ${_T('home.section.label')}
       </div>
       <div class="home-grid">
-        ${homeCard('symptoms','scan-search','症狀分析','AI 助你釐清身體訊號','blue')}
-        ${homeCard('records','id-card','我的基本資料','性別、過敏、慢性病… 看診時帶著走','purple')}
-        ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
-        ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
-        ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
-        ${homeCard('chat','message-circle-heart','醫起聊天','和小禾聊聊，幫你把感受寫成文章','rose')}
-        ${homeCard('settings','settings','系統設定','字體、主題、年長版等偏好','amber')}
+        ${homeCard('symptoms','scan-search',_T('home.card.symptoms.title'),_T('home.card.symptoms.desc'),'blue')}
+        ${homeCard('records','id-card',_T('home.card.records.title'),_T('home.card.records.desc'),'purple')}
+        ${homeCard('doctors','stethoscope',_T('home.card.doctors.title'),_T('home.card.doctors.desc'),'rose')}
+        ${homeCard('medications','pill',_T('home.card.medications.title'),_T('home.card.medications.desc'),'amber')}
+        ${homeCard('education','book-heart',_T('home.card.education.title'),_T('home.card.education.desc'),'teal')}
+        ${homeCard('chat','message-circle-heart',_T('home.card.chat.title'),_T('home.card.chat.desc'),'rose')}
+        ${homeCard('settings','settings',_T('home.card.settings.title'),_T('home.card.settings.desc'),'amber')}
       </div>
 
       <!-- Footer tagline -->
       <div class="home-footer">
         <svg viewBox="0 0 48 48" width="20" height="20"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor" opacity="0.12"/></svg>
-        <p>將日常碎片拼起，醫起走出治療的迷霧</p>
-        <p class="home-footer-credit">CBL-AICM Lab · Piece by Piece</p>
+        <p>${_T('home.footer.tagline')}</p>
+        <p class="home-footer-credit">${_T('home.footer.credit')}</p>
       </div>
     </div>`;
 }
@@ -1741,17 +1742,17 @@ function loadHomePage() {
       if (!el) return;
       var meds = (data.medications || []).filter(function(m) { return m.active !== 0; });
       if (!meds.length) {
-        el.innerHTML = '<p class="home-ov-empty">尚無藥物紀錄，從藥物管理開始記錄吧</p>';
+        el.innerHTML = '<p class="home-ov-empty">' + _T('home.med.empty') + '</p>';
         return;
       }
       el.innerHTML =
         '<div class="home-med-count">' + meds.length + '</div>' +
-        '<div class="home-med-label">種藥物追蹤中</div>' +
-        '<button class="home-med-go" onclick="navigateTo(\'medications\',null)">前往服藥 →</button>';
+        '<div class="home-med-label">' + _T('home.med.tracking') + '</div>' +
+        '<button class="home-med-go" onclick="navigateTo(\'medications\',null)">' + _T('home.med.go') + '</button>';
     })
     .catch(function() {
       var el = document.getElementById('home-med-summary');
-      if (el) el.innerHTML = '<p class="home-ov-empty">開始記錄你的第一顆藥物吧</p>';
+      if (el) el.innerHTML = '<p class="home-ov-empty">' + _T('home.med.error') + '</p>';
     });
 
   fetch(API + '/emotions/daily?patient_id=' + pid + '&days=7')
@@ -1761,8 +1762,8 @@ function loadHomePage() {
       if (!el) return;
       var daily = (data && data.daily) || [];
       if (!daily.length) {
-        el.innerHTML = '<p class="home-ov-empty">尚未記錄心情，按下方按鈕分享今天的感覺</p>'
-          + '<button class="home-med-go" onclick="navigateTo(\'emotions\',null)">記錄心情 →</button>';
+        el.innerHTML = '<p class="home-ov-empty">' + _T('home.mood.empty') + '</p>'
+          + '<button class="home-med-go" onclick="navigateTo(\'emotions\',null)">' + _T('home.mood.go') + '</button>';
         return;
       }
       var last = daily[daily.length - 1];
@@ -1772,12 +1773,12 @@ function loadHomePage() {
       el.innerHTML =
         '<div><span class="home-mood-emoji">' + (last.emoji || '🙂') + '</span>' +
         '<span class="home-mood-score">' + lastPct + '%</span></div>' +
-        '<div class="home-med-label">最新電量 · 7 天平均 ' + (avgPct != null ? avgPct + '%' : '—') + '</div>' +
-        '<button class="home-med-go" onclick="navigateTo(\'emotions\',null)">更新電量 →</button>';
+        '<div class="home-med-label">' + _Tf('home.mood.latestAvg', { avg: (avgPct != null ? avgPct + '%' : '—') }) + '</div>' +
+        '<button class="home-med-go" onclick="navigateTo(\'emotions\',null)">' + _T('home.mood.update') + '</button>';
     })
     .catch(function() {
       var el = document.getElementById('home-mood-summary');
-      if (el) el.innerHTML = '<p class="home-ov-empty">分享你今天的感受吧</p>';
+      if (el) el.innerHTML = '<p class="home-ov-empty">' + _T('home.mood.error') + '</p>';
     });
 }
 

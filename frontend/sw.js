@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v50-rx-photo";
+const CACHE_VERSION = "mdpiece-v51-i18n-home";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
