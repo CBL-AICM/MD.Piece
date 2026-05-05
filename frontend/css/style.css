@@ -9897,3 +9897,60 @@ html[data-mode="senior"] .mtab.active {
 @media (min-width: 769px) {
   .mood-line-tabs { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Senior mode 下「電量日曆」grid 修復
+   senior 通用 button 規則 (padding 14/22 + min-height 52) 會把
+   .mood-cal-cell 撐成大方塊；這裡強制 grid 與 cell 尺寸
+   ═══════════════════════════════════════════════════════════ */
+html[data-mode="senior"] .mood-cal-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 6px !important;
+}
+html[data-mode="senior"] .mood-cal-wk {
+  display: block !important;
+  text-align: center !important;
+  padding: 6px 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+}
+html[data-mode="senior"] .mood-cal-cell {
+  padding: 4px !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: 100% !important;
+  font-size: 0.95rem !important;
+  border-radius: 10px !important;
+  aspect-ratio: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+html[data-mode="senior"] .mood-cal-day { font-size: 0.95rem !important; }
+html[data-mode="senior"] .mood-cal-emoji { font-size: 1.1rem !important; }
+
+/* 圖例 + tip 同樣強制 flex */
+html[data-mode="senior"] .mood-cal-legend {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px 14px !important;
+  margin-top: 14px !important;
+}
+html[data-mode="senior"] .mood-cal-tip {
+  display: block !important;
+  margin-top: 10px !important;
+}
+
+/* 月份切換 ‹ › 在 senior 下改回小尺寸 */
+html[data-mode="senior"] .mood-cal-btn {
+  padding: 6px 12px !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  font-size: 1.1rem !important;
+}
