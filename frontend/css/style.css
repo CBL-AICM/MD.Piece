@@ -8635,6 +8635,266 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   margin: 0;
 }
 
+/* ── 心情頁 v2：日曆 / 折線 / 總表 ───────────────────── */
+.mood-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.mood-card-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+/* —— 日曆 —— */
+.mood-cal-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+.mood-cal-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--bg-glass-hover);
+  background: var(--bg-mid);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+.mood-cal-btn:hover {
+  background: var(--bg-surface);
+  color: var(--text);
+}
+.mood-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.mood-cal-wk {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 4px 0;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.mood-cal-cell {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px solid var(--bg-glass-hover);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px;
+  position: relative;
+  transition: transform .12s, box-shadow .12s;
+}
+.mood-cal-cell.is-empty {
+  border: none;
+  background: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+.mood-cal-cell.has-data {
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.mood-cal-cell:hover:not(.is-empty) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+.mood-cal-cell.is-today {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.mood-cal-day {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+}
+.mood-cal-cell.has-data .mood-cal-day {
+  color: rgba(20, 25, 35, 0.7);
+  font-weight: 600;
+}
+.mood-cal-emoji {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.mood-cal-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.mood-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.mood-legend-txt {
+  margin-right: 6px;
+}
+.mood-cal-tip {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  background: var(--bg-mid);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  text-align: center;
+  min-height: 1.2em;
+}
+
+/* —— 折線圖 —— */
+.mood-line-tabs {
+  display: inline-flex;
+  background: var(--bg-mid);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.mood-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  font-family: inherit;
+}
+.mood-tab:hover { color: var(--text-dim); }
+.mood-tab.is-active {
+  background: var(--bg-surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.mood-line {
+  width: 100%;
+  min-height: 200px;
+}
+.mood-line-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.mood-line-summary {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* —— 總表 —— */
+.mood-table-toggle {
+  border: 1px solid var(--bg-glass-hover);
+  background: var(--bg-mid);
+  color: var(--text-dim);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.mood-table-toggle:hover {
+  background: var(--bg-surface);
+  color: var(--text);
+}
+.mood-table-wrap {
+  overflow-x: auto;
+}
+.mood-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.mood-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--bg-glass-hover);
+}
+.mood-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  vertical-align: middle;
+}
+.mood-table tbody tr:last-child td { border-bottom: none; }
+.mood-table tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
+.mood-td-date {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.mood-td-emoji {
+  font-size: 1.2rem;
+  text-align: center;
+  width: 32px;
+}
+.mood-td-note {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mood-table-muted {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin-left: 2px;
+}
+
+@media (max-width: 480px) {
+  .mood-cal-grid { gap: 4px; }
+  .mood-cal-day { font-size: 0.66rem; }
+  .mood-cal-emoji { font-size: 0.9rem; }
+  .mood-table th:nth-child(4),
+  .mood-table td:nth-child(4) { display: none; }   /* 隱藏「區間」欄 */
+  .mood-td-note { max-width: 120px; }
+}
+
+/* Light theme 微調 */
+#app-wrapper[data-theme="light"] .mood-cal-cell.has-data .mood-cal-day {
+  color: rgba(60, 40, 35, 0.85);
+}
+#app-wrapper[data-theme="light"] .mood-cal-cell.has-data {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
 /* ═══════════════════════════════════════════════════════════
    MOBILE — 強制滿版（蓋掉所有 max-width / margin auto / 殘留 padding）
    ═══════════════════════════════════════════════════════════ */
