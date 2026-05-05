@@ -7043,6 +7043,15 @@ var DIET_MEAL_LABEL = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', 
 var _dietGuide = null;
 var _dietSelectedMeal = 'breakfast';
 
+// 基本衛教預設值（沒登入或 API 失敗時也至少顯示這些）
+var DIET_BASELINE_TARGETS = { protein_g: 60, water_ml: 2000, fiber_g: 25 };
+var DIET_BASELINE_TIPS = [
+  '三餐定時定量，避免暴飲暴食',
+  '每餐都有蛋白質、蔬菜與全穀類',
+  '減少油炸、加工食品與含糖飲料',
+  '餐前 30 分鐘喝一杯水有助消化',
+];
+
 function diet() {
   return ''
     + '<section class="diet-wrap">'
@@ -7050,6 +7059,24 @@ function diet() {
     +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
     +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
     +   '</header>'
+
+    +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card">'
+    +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
+    +     '<div id="diet-caffeine-body"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-targets">'
+    +     '<h3><i data-lucide="target" style="width:16px;height:16px"></i> 今日營養目標</h3>'
+    +     '<div class="diet-target-row" id="diet-target-row">'
+    +       '<div class="diet-target-skel">載入中…</div>'
+    +     '</div>'
+    +     '<ul class="diet-tips" id="diet-tips"></ul>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-warnings-card">'
+    +     '<h3><i data-lucide="alert-triangle" style="width:16px;height:16px"></i> 你要特別注意</h3>'
+    +     '<div id="diet-warnings"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
 
     +   '<div class="diet-card diet-pick-card">'
     +     '<h3><i data-lucide="dices" style="width:16px;height:16px"></i> 吃什麼神器</h3>'
@@ -7105,24 +7132,6 @@ function diet() {
     +       '</button>'
     +     '</div>'
     +     '<div id="diet-drink-result" class="diet-drink-result"></div>'
-    +   '</div>'
-
-    +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card">'
-    +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
-    +     '<div id="diet-caffeine-body"><p class="diet-empty">載入中…</p></div>'
-    +   '</div>'
-
-    +   '<div class="diet-card" id="diet-targets">'
-    +     '<h3><i data-lucide="target" style="width:16px;height:16px"></i> 今日營養目標</h3>'
-    +     '<div class="diet-target-row" id="diet-target-row">'
-    +       '<div class="diet-target-skel">載入中…</div>'
-    +     '</div>'
-    +     '<ul class="diet-tips" id="diet-tips"></ul>'
-    +   '</div>'
-
-    +   '<div class="diet-card" id="diet-warnings-card">'
-    +     '<h3><i data-lucide="alert-triangle" style="width:16px;height:16px"></i> 你要特別注意</h3>'
-    +     '<div id="diet-warnings"><p class="diet-empty">載入中…</p></div>'
     +   '</div>'
 
     +   '<div class="diet-card" id="diet-suggest-card">'
@@ -7476,19 +7485,22 @@ function loadDietPage() {
 }
 
 function fetchDietGuide() {
+  // 先把基本衛教 render 上去，再去打 API；API 回來再用個人化資料蓋過
+  renderDietTargets(DIET_BASELINE_TARGETS, DIET_BASELINE_TIPS);
   var pid = getStablePatientId();
   if (!pid) { renderDietWarnings([]); renderDietSuggestions({}); return; }
   fetch(API + '/diet/guide/' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(g) {
       _dietGuide = g || {};
-      renderDietTargets(g.daily_targets || {}, g.general_tips || []);
+      var t = g.daily_targets && Object.keys(g.daily_targets).length ? g.daily_targets : DIET_BASELINE_TARGETS;
+      var tips = (g.general_tips && g.general_tips.length) ? g.general_tips : DIET_BASELINE_TIPS;
+      renderDietTargets(t, tips);
       renderDietWarnings(g.warnings || []);
       renderDietSuggestions(g.meal_suggestions || {});
     })
     .catch(function(e) {
-      var box = document.getElementById('diet-target-row');
-      if (box) box.innerHTML = '<div class="diet-empty">載入失敗，稍後再試</div>';
+      // 失敗時保留基本衛教，不要把畫面換成「載入失敗」
     });
 }
 
