@@ -1632,6 +1632,40 @@ function home() {
   const heroAvatarSrc = (user && user.avatar_url) ? user.avatar_url : 'icons/xiaohe.jpg';
   const avatarAlt = _Tf('home.avatarAlt', { name: name });
 
+  // 年長版：簡化成「問候 + 全功能 tile 網格」一頁式
+  if (getMode() === 'senior') {
+    const seniorTiles = [
+      ['symptoms',    'scan-search',           'nav.symptoms'],
+      ['medications', 'pill',                  'nav.medications'],
+      ['vitals',      'activity',              'nav.vitals'],
+      ['emotions',    'battery-charging',      'nav.emotions'],
+      ['diet',        'utensils-crossed',      'nav.diet'],
+      ['memo',        'sticky-note',           'nav.memo'],
+      ['previsit',    'clipboard-check',       'nav.previsit'],
+      ['education',   'book-heart',            'nav.education'],
+      ['story',       'book-open',             'nav.story'],
+      ['labs',        'trending-up',           'nav.labs'],
+      ['pieces',      'puzzle',                'nav.pieces'],
+      ['chat',        'message-circle-heart',  'nav.chat'],
+      ['settings',    'settings',              'nav.settings'],
+      ['account',     'user-cog',              'nav.account'],
+    ];
+    const tilesHtml = seniorTiles.map(function(t) {
+      return '<button class="home-senior-tile" onclick="navigateTo(\'' + t[0] + '\',null)">' +
+             '<span class="hst-icon"><i data-lucide="' + t[1] + '"></i></span>' +
+             '<span class="hst-label">' + _T(t[2]) + '</span>' +
+             '</button>';
+    }).join('');
+    return '' +
+      '<div class="home-page home-senior">' +
+        '<div class="home-senior-hero">' +
+          '<h2 class="home-senior-greet">' + greeting + greetSep + name + '</h2>' +
+          '<p class="home-senior-date">' + dateStr + '　' + dayStr + '</p>' +
+        '</div>' +
+        '<div class="home-senior-grid">' + tilesHtml + '</div>' +
+      '</div>';
+  }
+
   return `
     <div class="home-page">
       <svg class="home-deco home-deco-1" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
