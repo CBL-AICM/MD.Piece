@@ -2866,15 +2866,15 @@ async function quickAdvice() {
 function doctors() {
   return `
     <div class="card">
-      <h2>新增醫師</h2>
-      <input id="d-name" placeholder="醫師姓名" />
-      <input id="d-specialty" placeholder="專科（例如：內科、外科）" />
-      <input id="d-phone" placeholder="電話（選填）" />
-      <button class="primary" onclick="addDoctor()">新增</button>
+      <h2>${_T('doctors.add.title')}</h2>
+      <input id="d-name" placeholder="${_T('doctors.placeholder.name')}" />
+      <input id="d-specialty" placeholder="${_T('doctors.placeholder.specialty')}" />
+      <input id="d-phone" placeholder="${_T('doctors.placeholder.phone')}" />
+      <button class="primary" onclick="addDoctor()">${_T('doctors.add.submit')}</button>
     </div>
     <div class="card">
-      <h2>醫師列表</h2>
-      <div id="doctor-list"><p>載入中...</p></div>
+      <h2>${_T('doctors.list.title')}</h2>
+      <div id="doctor-list"><p>${_T('doctors.list.loading')}</p></div>
     </div>`;
 }
 
@@ -2883,14 +2883,14 @@ async function loadDoctors() {
   const data = await res.json();
   const el = document.getElementById("doctor-list");
   if (!data.doctors?.length) {
-    el.innerHTML = "<p>尚無醫師資料</p>";
+    el.innerHTML = `<p>${_T('doctors.list.empty')}</p>`;
     return;
   }
   el.innerHTML = data.doctors.map(d => `
     <div class="record-card">
       <strong>${d.name}</strong> — ${d.specialty}
       ${d.phone ? `<span style="color:var(--text-dim)"> | ${d.phone}</span>` : ""}
-      <button class="btn-delete" onclick="deleteDoctor('${d.id}')">刪除</button>
+      <button class="btn-delete" onclick="deleteDoctor('${d.id}')">${_T('doctors.delete')}</button>
     </div>
   `).join("");
 }
@@ -2912,7 +2912,7 @@ async function addDoctor() {
 }
 
 async function deleteDoctor(id) {
-  if (!confirm("確定刪除此醫師？")) return;
+  if (!confirm(_T('doctors.delete.confirm'))) return;
   await fetch(`${API}/doctors/${id}`, { method: "DELETE" });
   loadDoctors();
 }
@@ -3148,30 +3148,30 @@ function medications() {
   _medsPatientId = getStablePatientId();
   return `
     <div class="card">
-      <h2>藥物管理</h2>
-      <p style="margin-top:8px;color:var(--text-dim)">拍攝<strong>藥袋或藥單</strong>即可自動辨識藥物，記錄服藥、追蹤療效。</p>
+      <h2>${_T('meds.title')}</h2>
+      <p style="margin-top:8px;color:var(--text-dim)">${_T('meds.intro.prefix')}<strong>${_T('meds.intro.bold')}</strong>${_T('meds.intro.suffix')}</p>
     </div>
     <div class="card">
-      <h3><i data-lucide="camera" style="width:18px;height:18px;vertical-align:middle"></i> 藥袋／藥單辨識</h3>
-      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">拍攝或上傳<strong>藥袋、藥單、處方箋</strong>照片，AI 自動辨識藥物資訊</p>
+      <h3><i data-lucide="camera" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.recognize.title')}</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">${_T('meds.recognize.desc.prefix')}<strong>${_T('meds.recognize.desc.bold')}</strong>${_T('meds.recognize.desc.suffix')}</p>
       <div style="margin-top:10px;padding:10px 12px;background:rgba(100,140,200,0.08);border-radius:var(--radius-sm);border:1px solid rgba(100,140,200,0.2);font-size:0.85rem;color:var(--text-dim)">
-        <strong style="color:var(--text-main);font-size:0.85rem">拍攝小提示</strong>
+        <strong style="color:var(--text-main);font-size:0.85rem">${_T('meds.tips.title')}</strong>
         <ul style="margin:6px 0 0 16px;padding:0;line-height:1.6">
-          <li>把藥單／藥袋<strong>放滿整個畫面</strong>，不要從遠處拍（小字會糊掉）</li>
-          <li>平放在桌面，避免皺摺、傾斜、反光</li>
-          <li>在光線充足處拍攝，盡量讓<strong>藥名、劑量、用法</strong>清楚可讀</li>
-          <li>多包藥袋請一次拍一包；長條藥單可一次完整入鏡</li>
+          <li>${_T('meds.tips.1.prefix')}<strong>${_T('meds.tips.1.bold')}</strong>${_T('meds.tips.1.suffix')}</li>
+          <li>${_T('meds.tips.2')}</li>
+          <li>${_T('meds.tips.3.prefix')}<strong>${_T('meds.tips.3.bold')}</strong>${_T('meds.tips.3.suffix')}</li>
+          <li>${_T('meds.tips.4')}</li>
         </ul>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="primary" onclick="document.getElementById('med-camera').click()">
-          <i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍攝藥袋／藥單
+          <i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> ${_T('meds.btn.capture')}
         </button>
         <button class="secondary" onclick="document.getElementById('med-upload').click()">
-          <i data-lucide="upload" style="width:14px;height:14px;vertical-align:middle"></i> 上傳照片
+          <i data-lucide="upload" style="width:14px;height:14px;vertical-align:middle"></i> ${_T('meds.btn.upload')}
         </button>
-        <button class="secondary" onclick="renderManualMedForm('','直接填寫藥物資訊，按「加入我的藥物」即可寫入。')">
-          <i data-lucide="pencil" style="width:14px;height:14px;vertical-align:middle"></i> 手動輸入
+        <button class="secondary" onclick="renderManualMedForm('', _T('meds.manual.hint'))">
+          <i data-lucide="pencil" style="width:14px;height:14px;vertical-align:middle"></i> ${_T('meds.btn.manual')}
         </button>
         <input type="file" id="med-camera" accept="image/*" capture="environment" style="display:none" onchange="handleMedPhoto(this)" />
         <input type="file" id="med-upload" accept="image/*" style="display:none" onchange="handleMedPhoto(this)" />
@@ -3181,41 +3181,41 @@ function medications() {
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <h3>我的藥物</h3>
-        <button class="secondary" onclick="loadMedicationsPage()" style="padding:4px 12px;font-size:0.85rem">重新整理</button>
+        <h3>${_T('meds.list.title')}</h3>
+        <button class="secondary" onclick="loadMedicationsPage()" style="padding:4px 12px;font-size:0.85rem">${_T('meds.list.refresh')}</button>
       </div>
-      <div id="med-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
+      <div id="med-list" style="margin-top:12px"><p style="color:var(--text-muted)">${_T('meds.list.loading')}</p></div>
     </div>
     <div class="card" id="med-checkin-card" style="display:none">
-      <h3><i data-lucide="bell" style="width:18px;height:18px;vertical-align:middle"></i> 服藥追蹤提醒</h3>
+      <h3><i data-lucide="bell" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.checkin.title')}</h3>
       <div id="med-checkin-body" style="margin-top:8px"></div>
     </div>
     <div class="card">
-      <h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> 每日改善</h3>
-      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">服藥率 + 療效 合成的每日改善分數</p>
+      <h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.improvement.title')}</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">${_T('meds.improvement.desc')}</p>
       <div id="med-improvement-summary" style="margin-top:8px"></div>
       <div id="med-improvement-chart" style="position:relative;height:140px;margin-top:8px">
         <canvas id="improvement-canvas" style="width:100%;height:100%"></canvas>
       </div>
     </div>
     <div class="card">
-      <h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;vertical-align:middle"></i> 服藥統計</h3>
-      <div id="med-stats" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
+      <h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.stats.title')}</h3>
+      <div id="med-stats" style="margin-top:12px"><p style="color:var(--text-muted)">${_T('meds.list.loading')}</p></div>
       <div id="med-chart" style="position:relative;height:200px;margin-top:16px">
         <canvas id="adherence-canvas" style="width:100%;height:100%"></canvas>
       </div>
     </div>
     <div class="card">
-      <h3><i data-lucide="file-text" style="width:18px;height:18px;vertical-align:middle"></i> 回診報告</h3>
-      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">產出藥物管理報告供下次回診使用</p>
+      <h3><i data-lucide="file-text" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.report.title')}</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">${_T('meds.report.desc')}</p>
       <div style="display:flex;gap:8px;margin-top:8px">
         <select id="report-days" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)">
-          <option value="7">最近 7 天</option>
-          <option value="14">最近 14 天</option>
-          <option value="30" selected>最近 30 天</option>
-          <option value="90">最近 90 天</option>
+          <option value="7">${_T('meds.report.days7')}</option>
+          <option value="14">${_T('meds.report.days14')}</option>
+          <option value="30" selected>${_T('meds.report.days30')}</option>
+          <option value="90">${_T('meds.report.days90')}</option>
         </select>
-        <button class="primary" onclick="generateMedReport()">產出報告</button>
+        <button class="primary" onclick="generateMedReport()">${_T('meds.report.generate')}</button>
       </div>
       <div id="med-report" style="margin-top:12px"></div>
     </div>`;
@@ -3376,7 +3376,7 @@ function _bucketMeds(meds) {
 function renderMedList() {
   var el = document.getElementById("med-list");
   if (!_medsList.length) {
-    el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">尚無藥物紀錄，拍攝藥袋開始記錄吧！</p>';
+    el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">' + _T('meds.list.empty') + '</p>';
     return;
   }
 
