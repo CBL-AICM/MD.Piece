@@ -216,6 +216,37 @@ body {
 .theme-toggle .tt-bracket { opacity: 0.65; }
 .theme-toggle .tt-icon { font-size: 0.85rem; line-height: 1; }
 
+/* ── Landing language toggle (sits next to theme toggle) ── */
+.lang-toggle {
+  position: fixed;
+  top: 22px;
+  right: 130px;
+  z-index: 1002;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  color: var(--landing-term);
+  background: var(--landing-card);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--landing-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.lang-toggle:hover {
+  color: var(--landing-pop);
+  border-color: var(--landing-term);
+  box-shadow: 0 0 18px var(--landing-glow);
+  transform: translateY(-1px);
+}
+.lang-toggle .tt-bracket { opacity: 0.65; }
+
 /* ── Split layout ─────────────────────────────────────── */
 .landing-split {
   position: relative;
@@ -862,6 +893,32 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
   box-shadow: 0 0 12px var(--app-glow);
 }
 
+/* App topbar language toggle — same look as theme toggle */
+.app-lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 26px;
+  padding: 0 6px;
+  margin-right: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  background: var(--app-panel);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.app-lang-toggle:hover {
+  background: var(--app-mint);
+  color: var(--app-chip-text);
+  box-shadow: 0 0 12px var(--app-glow);
+}
+
 .app-settings-btn {
   display: inline-flex;
   align-items: center;
@@ -882,9 +939,13 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
   box-shadow: 0 0 12px var(--app-glow);
   transform: rotate(45deg);
 }
-html[data-mode="senior"] .app-settings-btn {
+html[data-mode="senior"] .app-settings-btn,
+html[data-mode="senior"] .app-lang-toggle {
   width: 44px;
   height: 36px;
+}
+html[data-mode="senior"] .app-lang-toggle {
+  font-size: 0.95rem;
 }
 
 .topbar-version {
@@ -8174,10 +8235,11 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   .topbar-ext { opacity: 0.5; }
   .topbar-version { display: none; }
   .topbar-wincontrols { display: none !important; }
-  .app-theme-toggle, .app-settings-btn {
+  .app-theme-toggle, .app-settings-btn, .app-lang-toggle {
     width: 32px; height: 30px;
     border-radius: 6px;
   }
+  .app-lang-toggle { font-size: 0.7rem; }
 
   /* ── 3. Page transition — phone-app slide ─────────────── */
   #app {

@@ -12,9 +12,12 @@ function setMode(mode) {
   const m = mode === 'senior' ? 'senior' : 'standard';
   localStorage.setItem('mdpiece_mode', m);
   document.documentElement.setAttribute('data-mode', m);
-  // 同步切換按鈕顯示
+  // 同步切換按鈕顯示（i18n 化：透過字典決定中/英文標籤）
+  const t = (window.MDPiece_i18n && window.MDPiece_i18n.t) || ((k) => k);
+  const labelKey = m === 'senior' ? 'mode.toNormal' : 'mode.toSenior';
+  const fallback = m === 'senior' ? '切換為普通版' : '切換為年長版';
   document.querySelectorAll('[data-mode-toggle]').forEach(function (el) {
-    el.textContent = m === 'senior' ? '切換為普通版' : '切換為年長版';
+    el.textContent = window.MDPiece_i18n ? t(labelKey) : fallback;
     el.setAttribute('aria-pressed', m === 'senior' ? 'true' : 'false');
   });
 }
