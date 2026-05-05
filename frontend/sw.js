@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v53-rx-pipeline";
+const CACHE_VERSION = "mdpiece-v54-rx-upload-fix";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=rx-pipeline",
-  "/js/i18n.js?v=rx-pipeline",
-  "/js/app.js?v=rx-pipeline",
+  "/css/style.css?v=rx-upload-fix",
+  "/js/i18n.js?v=rx-upload-fix",
+  "/js/app.js?v=rx-upload-fix",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
