@@ -1219,7 +1219,18 @@ async function submitLogin() {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || '登入失敗');
+      const detail = err.detail || '登入失敗';
+      if (detail.indexOf('醫師') >= 0 && detail.indexOf('通行碼') >= 0) {
+        if (_loginRole !== 'doctor') selectLoginRole('doctor');
+        showAuthError('login', '此帳號為醫師身份，請輸入醫師通行碼');
+        const keyInput = document.getElementById('login-doctor-key');
+        if (keyInput) { keyInput.focus(); keyInput.select(); }
+        btn.disabled = false;
+        btn.innerHTML = original;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+      }
+      throw new Error(detail);
     }
     const user = await res.json();
     finishAuth(user);
