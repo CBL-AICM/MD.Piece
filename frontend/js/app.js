@@ -1287,10 +1287,16 @@ async function submitRegister() {
 }
 
 function finishAuth(user) {
-  setCurrentUser(user);
   if (user.username) {
     try { localStorage.setItem('mdpiece_last_username', user.username); } catch {}
   }
+  if (user.role === 'doctor') {
+    try { localStorage.setItem('mdp.doctorUser', JSON.stringify(user)); } catch {}
+    try { localStorage.removeItem('mdpiece_user'); } catch {}
+    window.location.assign('/doctor/');
+    return;
+  }
+  setCurrentUser(user);
   const overlay = document.getElementById('register-overlay');
   overlay.classList.remove('show');
   setTimeout(() => {
