@@ -10181,6 +10181,9 @@ html[data-mode="senior"] .set-seg {
   flex-wrap: wrap !important;
   max-width: 100% !important;
   width: 100%;
+  background: var(--sm-panel-2) !important;
+  border: 1px solid var(--sm-border) !important;
+  border-radius: 999px !important;
 }
 html[data-mode="senior"] .set-seg-btn {
   padding: 8px 14px !important;
@@ -10205,6 +10208,9 @@ html[data-mode="senior"] .set-btn {
   display: inline-flex !important;
   align-items: center;
   gap: 6px;
+  background: var(--sm-panel) !important;
+  border: 1px solid var(--sm-border) !important;
+  color: var(--sm-text) !important;
 }
 html[data-mode="senior"] .set-row-ctrl {
   flex-wrap: wrap;
@@ -10223,6 +10229,68 @@ html[data-mode="senior"] .set-row-ctrl {
     padding: 8px 10px !important;
     font-size: 0.9rem !important;
   }
+}
+
+/* 年長版設定頁整體無印化（hero / group / row / 文字色） */
+html[data-mode="senior"] .set-page {
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] .set-hero,
+html[data-mode="senior"] .set-group {
+  background: var(--sm-panel) !important;
+  border: 1px solid var(--sm-border) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+html[data-mode="senior"] .set-hero-icon {
+  background: var(--sm-panel-2) !important;
+  color: var(--sm-text) !important;
+  border: 1px solid var(--sm-border) !important;
+  border-radius: 4px !important;
+}
+html[data-mode="senior"] .set-eyebrow {
+  display: none !important;
+}
+html[data-mode="senior"] .set-hero-text h2,
+html[data-mode="senior"] .set-hero-user strong {
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] .set-sub,
+html[data-mode="senior"] .set-hero-user span {
+  color: var(--sm-text-dim) !important;
+}
+html[data-mode="senior"] .set-hero-user {
+  background: var(--sm-panel-2) !important;
+  border: 1px solid var(--sm-border) !important;
+  border-radius: 4px !important;
+}
+html[data-mode="senior"] .set-hero-user code {
+  color: var(--sm-text) !important;
+  font-family: "Noto Sans TC", sans-serif !important;
+}
+html[data-mode="senior"] .set-group-title {
+  color: var(--sm-text) !important;
+  border-bottom: 1px solid var(--sm-border) !important;
+}
+html[data-mode="senior"] .set-group-title i {
+  color: var(--sm-text-dim) !important;
+}
+html[data-mode="senior"] .set-row {
+  border-bottom-color: var(--sm-border) !important;
+}
+html[data-mode="senior"] .set-row-text strong {
+  color: var(--sm-text) !important;
+}
+html[data-mode="senior"] .set-row-text p {
+  color: var(--sm-text-dim) !important;
+}
+
+/* 開關 track / thumb 灰階化 */
+html[data-mode="senior"] .set-switch-track {
+  background: var(--sm-border) !important;
+}
+html[data-mode="senior"] .set-switch input:checked + .set-switch-track {
+  background: var(--sm-accent) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════
