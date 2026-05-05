@@ -1,12 +1,12 @@
-const CACHE_VERSION = "mdpiece-v44-basic-info";
+const CACHE_VERSION = "mdpiece-v45-mood-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=basic-info-1",
-  "/js/app.js?v=basic-info-1",
+  "/css/style.css?v=mood-v2",
+  "/js/app.js?v=mood-v2",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
