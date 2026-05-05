@@ -697,4 +697,4 @@ def get_diet_records(
         return {"records": rows.data or []}
     except Exception as e:
         logger.error(f"讀取飲食紀錄失敗：{e}")
-        return {"records": [], "error": str(e)}
+        return {"records": [], "error": "讀取飲食紀錄失敗"}
