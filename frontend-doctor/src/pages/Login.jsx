@@ -109,7 +109,7 @@ function RegisterForm({ onAuthed }) {
   const goNext = (e) => {
     e.preventDefault()
     setErr(null)
-    if (!/^[A-Za-z0-9_.\-]{3,32}$/.test(form.username)) {
+    if (!/^[A-Za-z0-9_.-]{3,32}$/.test(form.username)) {
       setErr('帳號限英數字 _ . -，3-32 字元')
       return
     }
@@ -153,7 +153,7 @@ function RegisterForm({ onAuthed }) {
         <Field label="帳號">
           <input className="text-input" required value={form.username}
             onChange={set('username')} placeholder="英數字 _ . - 共 3-32 字元"
-            pattern="[A-Za-z0-9_.\-]{3,32}" autoFocus />
+            pattern="[A-Za-z0-9_.-]{3,32}" autoFocus />
         </Field>
         <div className="auth-row">
           <Field label="密碼">

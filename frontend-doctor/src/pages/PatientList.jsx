@@ -58,6 +58,8 @@ export default function PatientList() {
     }
   }, [])
 
+  // 重新讀 localStorage 的已讀集；每次 pushesByPatient 變動就刷新
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const readSet = useMemo(() => getReadSet(), [pushesByPatient])
   const rows = useMemo(() => {
     const enriched = patients.map((p) => {
@@ -72,7 +74,7 @@ export default function PatientList() {
       return (a.name ?? '').localeCompare(b.name ?? '', 'zh-Hant')
     })
     return enriched
-  }, [patients, alertsByPatient])
+  }, [patients, alertsByPatient, pushesByPatient, readSet])
 
   const filtered = useMemo(() => {
     let r = rows

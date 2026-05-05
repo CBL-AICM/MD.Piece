@@ -2817,10 +2817,16 @@ async function analyzeSymptoms() {
 async function quickAdvice() {
   const input = document.getElementById("symptom-input").value.split(",")[0].trim();
   if (!input) return;
-  const res = await fetch(`${API}/symptoms/advice?symptom=${encodeURIComponent(input)}`);
-  const data = await res.json();
-  document.getElementById("analysis-result").innerHTML =
-    `<div class="advice-box"><strong>${data.symptom}</strong>：${data.advice}</div>`;
+  const el = document.getElementById("analysis-result");
+  try {
+    const res = await fetch(`${API}/symptoms/advice?symptom=${encodeURIComponent(input)}`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    el.innerHTML =
+      `<div class="advice-box"><strong>${escapeHtml(data.symptom)}</strong>：${escapeHtml(data.advice)}</div>`;
+  } catch {
+    el.innerHTML = '<div class="advice-box">建議查詢失敗，請確認後端連線後再試。</div>';
+  }
 }
 
 // ─── 醫師列表 ──────────────────────────────────────────────
@@ -2841,20 +2847,25 @@ function doctors() {
 }
 
 async function loadDoctors() {
-  const res = await fetch(`${API}/doctors/`);
-  const data = await res.json();
   const el = document.getElementById("doctor-list");
-  if (!data.doctors?.length) {
-    el.innerHTML = "<p>尚無醫師資料</p>";
-    return;
+  try {
+    const res = await fetch(`${API}/doctors/`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.doctors?.length) {
+      el.innerHTML = "<p>尚無醫師資料</p>";
+      return;
+    }
+    el.innerHTML = data.doctors.map(d => `
+      <div class="record-card">
+        <strong>${escapeHtml(d.name)}</strong> — ${escapeHtml(d.specialty)}
+        ${d.phone ? `<span style="color:var(--text-dim)"> | ${escapeHtml(d.phone)}</span>` : ""}
+        <button class="btn-delete" data-doctor-id="${escapeHtml(d.id)}" onclick="deleteDoctor(this.dataset.doctorId)">刪除</button>
+      </div>
+    `).join("");
+  } catch {
+    el.innerHTML = "<p>無法載入醫師列表</p>";
   }
-  el.innerHTML = data.doctors.map(d => `
-    <div class="record-card">
-      <strong>${d.name}</strong> — ${d.specialty}
-      ${d.phone ? `<span style="color:var(--text-dim)"> | ${d.phone}</span>` : ""}
-      <button class="btn-delete" onclick="deleteDoctor('${d.id}')">刪除</button>
-    </div>
-  `).join("");
 }
 
 async function addDoctor() {
@@ -3543,12 +3554,6 @@ function handleMedPhoto(input) {
   });
 
   input.value = "";
-}
-
-function escapeHtml(s) {
-  return String(s == null ? "" : s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 // 辨識成功但寫入失敗 / 部分失敗 → 提供逐筆可編輯卡片
