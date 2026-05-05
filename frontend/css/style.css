@@ -8579,6 +8579,329 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════
+   情緒紀錄 — 日系插畫 / 手繪塗鴉 / 潑墨筆觸
+   washi paper 底 + sumi ink 線 + 粉彩水洗 + 飄落櫻
+   ═══════════════════════════════════════════════════════════ */
+
+.em-jp {
+  position: relative;
+  padding: 32px 18px 56px;
+  max-width: 760px;
+  margin: 0 auto;
+  --em-paper: #F8EFDC;
+  --em-paper-2: #FBF4E2;
+  --em-sumi: #2B2118;
+  --em-sumi-soft: #5C4A3C;
+  --em-sakura: #F8B5C2;
+  --em-blush: #F4A8A0;
+  --em-leaf: #A5C8B5;
+  --em-peach: #E89A6B;
+  --em-yuzu: #F0C26B;
+  --em-mist: #C8A8C0;
+}
+
+/* 整段 wrapper 套米紙紋理 */
+.em-jp::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 8%, rgba(248,181,194,0.18), transparent 35%),
+    radial-gradient(circle at 90% 35%, rgba(165,200,181,0.18), transparent 35%),
+    radial-gradient(circle at 30% 92%, rgba(232,154,107,0.14), transparent 40%),
+    var(--em-paper);
+  z-index: 0;
+  border-radius: 18px;
+}
+.em-jp > * { position: relative; z-index: 1; }
+
+/* 紙張 grain texture */
+.em-deco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 18px;
+}
+.em-paper {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0.6;
+  mix-blend-mode: multiply;
+}
+
+/* 潑墨 ─ 三朵不同顏色潑灑分布在角落 */
+.em-splash { position: absolute; pointer-events: none; }
+.em-splash-1 { top: -30px; left: -36px; width: 200px; height: 170px; transform: rotate(-12deg); }
+.em-splash-2 { top: 180px; right: -28px; width: 160px; height: 130px; transform: rotate(22deg); }
+.em-splash-3 { bottom: -20px; left: 18%; width: 180px; height: 150px; transform: rotate(-32deg); opacity: 0.85; }
+
+/* 飄落櫻花瓣 ─ 慢慢 sway */
+.em-petal { position: absolute; pointer-events: none; }
+.em-petal-1 {
+  top: 10%; right: 12%; width: 28px; height: 28px;
+  transform: rotate(20deg);
+  animation: emPetalSway 9s ease-in-out infinite;
+}
+.em-petal-2 {
+  top: 64%; left: 8%; width: 22px; height: 22px;
+  transform: rotate(-18deg);
+  animation: emPetalSway 11s ease-in-out infinite reverse;
+}
+@keyframes emPetalSway {
+  0%, 100% { transform: rotate(20deg) translateY(0); }
+  50%      { transform: rotate(-12deg) translateY(8px); }
+}
+
+/* 手寫日文符號點綴 */
+.em-mark {
+  position: absolute;
+  font-family: "Sacramento", "ZenMaruGothic", serif;
+  color: var(--em-sumi);
+  opacity: 0.35;
+  pointer-events: none;
+}
+.em-mark-1 { top: 28%; left: 4%; font-size: 28px; transform: rotate(-8deg); }
+.em-mark-2 { top: 48%; right: 6%; font-size: 24px; transform: rotate(14deg); }
+.em-mark-3 { bottom: 8%; right: 10%; font-size: 22px; transform: rotate(-20deg); }
+
+/* 標題區 ─ 印鑑 + 大字日式 */
+.em-head-jp {
+  text-align: center;
+  margin: 0 0 24px;
+  padding: 8px 0 14px;
+}
+.em-stamp {
+  display: inline-block;
+  width: 54px; height: 54px;
+  border: 2.5px solid #B33B2A;
+  border-radius: 6px;
+  background: #FBF4E2;
+  color: #B33B2A;
+  font-family: "Noto Serif TC", "DFKai-SB", serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 50px;
+  text-align: center;
+  transform: rotate(-4deg);
+  box-shadow: 1px 2px 0 rgba(43,33,24,0.08);
+  margin-bottom: 6px;
+}
+.em-stamp span { display: block; }
+.em-head-jp h2 {
+  font-family: "Noto Serif TC", "DFKai-SB", serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--em-sumi);
+  margin: 4px 0;
+  letter-spacing: 0.06em;
+  background: none;
+  -webkit-text-fill-color: var(--em-sumi);
+}
+.em-sub-jp {
+  font-family: "Sacramento", "Noto Serif TC", serif;
+  font-size: 0.95rem;
+  color: var(--em-sumi-soft);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+.em-sub-zh {
+  font-size: 0.82rem;
+  color: var(--em-sumi-soft);
+  margin: 4px 0 0;
+  opacity: 0.75;
+}
+
+/* 卡片 ─ 紙片質感 + 手繪邊框 */
+.em-card-jp {
+  background: var(--em-paper-2);
+  border: 1.5px solid var(--em-sumi);
+  border-radius: 4px 18px 4px 18px;
+  padding: 22px 22px 20px;
+  margin: 0 0 20px;
+  position: relative;
+  box-shadow:
+    1px 2px 0 rgba(43,33,24,0.12),
+    0 6px 18px rgba(43,33,24,0.06);
+}
+/* 手寫感角落小裝飾 */
+.em-card-corner {
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 2px solid var(--em-sumi);
+}
+.em-card-corner-tl {
+  top: -2px; left: -2px;
+  border-right: none; border-bottom: none;
+  border-radius: 6px 0 0 0;
+}
+.em-card-corner-br {
+  bottom: -2px; right: -2px;
+  border-left: none; border-top: none;
+  border-radius: 0 0 6px 0;
+}
+
+/* h3 ─ 毛筆刷字感 highlight */
+.em-h3-jp {
+  font-family: "Noto Serif TC", "DFKai-SB", serif;
+  font-size: 1.18rem;
+  color: var(--em-sumi);
+  margin: 0 0 18px;
+  letter-spacing: 0.04em;
+}
+.em-brush {
+  display: inline-block;
+  position: relative;
+  padding: 0 4px;
+  background-image: linear-gradient(120deg, transparent 12%, rgba(248,181,194,0.55) 12%, rgba(248,181,194,0.55) 86%, transparent 86%);
+  background-repeat: no-repeat;
+  background-size: 100% 60%;
+  background-position: 0 75%;
+}
+
+/* 表情按鈕 ─ 紙卡 + 手繪邊框 */
+.em-btn-jp {
+  background: #FFFAF0 !important;
+  border: 1.8px solid var(--em-sumi) !important;
+  border-radius: 14px 6px 14px 6px !important;
+  padding: 12px 4px 10px !important;
+  position: relative;
+  box-shadow: 1px 2px 0 rgba(43,33,24,0.18);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.em-btn-jp:hover {
+  transform: translateY(-3px) rotate(-1.5deg) !important;
+  box-shadow: 2px 4px 0 rgba(43,33,24,0.22) !important;
+}
+.em-btn-jp.selected {
+  transform: translateY(-3px) rotate(0deg) !important;
+  background: var(--em-color) !important;
+  box-shadow:
+    2px 4px 0 rgba(43,33,24,0.28),
+    0 0 0 3px rgba(43,33,24,0.12) !important;
+}
+.em-btn-jp.selected .em-kanji,
+.em-btn-jp.selected .emotions-label { color: #FBF4E2 !important; }
+
+.em-mascot {
+  display: block;
+  margin: 0 auto 4px;
+}
+.em-face {
+  width: 56px; height: 56px;
+  display: block;
+  margin: 0 auto;
+}
+.em-kanji {
+  font-family: "Noto Serif TC", "DFKai-SB", serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--em-sumi);
+  line-height: 1;
+  margin-top: 2px;
+}
+.em-btn-jp .emotions-label {
+  font-size: 0.72rem !important;
+  color: var(--em-sumi-soft) !important;
+  letter-spacing: 0.06em;
+}
+
+/* textarea ─ 紙張感 */
+.em-card-jp textarea {
+  background: #FFFAF0 !important;
+  border: 1.4px dashed var(--em-sumi) !important;
+  border-radius: 4px !important;
+  font-family: "Noto Serif TC", "Sacramento", serif !important;
+  color: var(--em-sumi) !important;
+  font-size: 0.95rem !important;
+  padding: 12px 14px !important;
+}
+.em-card-jp textarea:focus {
+  outline: none;
+  border-color: var(--em-peach) !important;
+  border-style: solid !important;
+}
+
+/* 送出按鈕 ─ 印章式 */
+.em-submit-jp {
+  background: var(--em-sumi) !important;
+  color: #FBF4E2 !important;
+  border: 1.5px solid var(--em-sumi) !important;
+  border-radius: 4px !important;
+  padding: 12px 18px !important;
+  font-family: "Noto Serif TC", serif !important;
+  font-size: 0.98rem !important;
+  letter-spacing: 0.1em !important;
+  box-shadow: 2px 3px 0 rgba(43,33,24,0.2);
+  transform: translateZ(0);
+}
+.em-submit-jp:hover:not(:disabled) {
+  background: #4A3828 !important;
+  filter: none !important;
+  transform: translate(-1px,-1px);
+  box-shadow: 3px 4px 0 rgba(43,33,24,0.25);
+}
+.em-submit-jp:disabled {
+  background: #B5A992 !important;
+  color: #FBF4E2 !important;
+  border-color: #B5A992 !important;
+  box-shadow: 1px 2px 0 rgba(43,33,24,0.1);
+}
+
+/* 趨勢長條圖 ─ 換成水洗墨色 */
+.em-card-jp .emotions-bar {
+  border-radius: 8px 8px 2px 2px !important;
+  border: 1.5px solid var(--em-sumi);
+  box-shadow: inset 0 -4px 0 rgba(43,33,24,0.1);
+}
+.em-card-jp .emotions-bar-date {
+  font-family: "Noto Serif TC", serif !important;
+  color: var(--em-sumi-soft) !important;
+}
+.em-card-jp .emotions-summary {
+  font-family: "Noto Serif TC", serif !important;
+  color: var(--em-sumi) !important;
+  font-size: 0.9rem !important;
+}
+.em-card-jp .emotions-empty {
+  font-family: "Noto Serif TC", "Sacramento", serif !important;
+  color: var(--em-sumi-soft) !important;
+  font-size: 1rem !important;
+}
+
+/* 狀態訊息 */
+.em-card-jp .emotions-status { color: var(--em-sumi-soft) !important; }
+.em-card-jp .emotions-status-ok { color: #5A8A6A !important; }
+.em-card-jp .emotions-status-error { color: #B33B2A !important; }
+
+/* 手機 ─ 角色加大 / 標題微縮 */
+@media (max-width: 540px) {
+  .em-jp { padding: 22px 12px 48px; }
+  .em-face { width: 44px; height: 44px; }
+  .em-head-jp h2 { font-size: 1.55rem; }
+  .em-kanji { font-size: 0.95rem; }
+  .em-btn-jp .emotions-label { font-size: 0.66rem !important; }
+  .em-splash-1, .em-splash-2, .em-splash-3 { opacity: 0.55; }
+}
+
+/* 年長版下放棄塗鴉風，回歸極簡米色 */
+html[data-mode="senior"] .em-jp::before,
+html[data-mode="senior"] .em-deco { display: none !important; }
+html[data-mode="senior"] .em-card-jp {
+  border: 1px solid var(--sm-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+html[data-mode="senior"] .em-btn-jp {
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+html[data-mode="senior"] .em-submit-jp { box-shadow: none !important; }
+
+/* ═══════════════════════════════════════════════════════════
    MOBILE — 強制滿版（蓋掉所有 max-width / margin auto / 殘留 padding）
    ═══════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {

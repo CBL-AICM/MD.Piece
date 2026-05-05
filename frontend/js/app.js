@@ -6360,44 +6360,157 @@ async function loadPushHistory() {
 
 // ─── 情緒紀錄 ────────────────────────────────────────────
 // 五階情緒打卡 + 7 天迷你折線圖 + 自動觸發 silent-guardian 警示
+// 視覺：日系插畫風 / 手繪塗鴉 / 潑墨筆觸 / 粉彩與墨色混合
 
 var EMOTION_LEVELS = [
-  { score: 5, emoji: '😄', label: '很好', color: '#3ddc97' },
-  { score: 4, emoji: '🙂', label: '不錯', color: '#7ed4b8' },
-  { score: 3, emoji: '😐', label: '普通', color: '#9DAEC0' },
-  { score: 2, emoji: '😟', label: '低落', color: '#E8B4A0' },
-  { score: 1, emoji: '😢', label: '很糟', color: '#ff6b81' },
+  { score: 5, emoji: '😄', kanji: '晴', label: '很好', sub: 'sun', color: '#E89A6B' },
+  { score: 4, emoji: '🙂', kanji: '凪', label: '不錯', sub: 'calm', color: '#A5C8B5' },
+  { score: 3, emoji: '😐', kanji: '曇', label: '普通', sub: 'cloudy', color: '#B5BFC9' },
+  { score: 2, emoji: '😟', kanji: '霧', label: '低落', sub: 'foggy', color: '#C8A8C0' },
+  { score: 1, emoji: '😢', kanji: '雨', label: '很糟', sub: 'rainy', color: '#7A8A9C' },
 ];
+
+// 5 隻手繪角色 SVG — 粗黑墨線 + 粉彩水洗，每隻有鮮明特徵
+function emotionMascot(score) {
+  var faces = {
+    5: '<svg class="em-face" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">' +
+         '<defs><filter id="emInk5"><feTurbulence baseFrequency="0.9" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="1.2"/></filter></defs>' +
+         '<circle cx="40" cy="42" r="26" fill="#FCE4D2" stroke="#2B2118" stroke-width="2.4" stroke-linejoin="round" filter="url(#emInk5)"/>' +
+         '<path d="M16 22 q4 -7 12 -4" stroke="#2B2118" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+         '<path d="M52 16 q8 0 14 8" stroke="#2B2118" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+         // sparkle eyes
+         '<path d="M28 38 l3 3 M31 38 l-3 3 M29.5 35.5 v6" stroke="#2B2118" stroke-width="2" stroke-linecap="round"/>' +
+         '<path d="M48 38 l3 3 M51 38 l-3 3 M49.5 35.5 v6" stroke="#2B2118" stroke-width="2" stroke-linecap="round"/>' +
+         // big smile
+         '<path d="M28 50 q12 14 24 0" stroke="#2B2118" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
+         // blush
+         '<ellipse cx="22" cy="48" rx="4" ry="2.4" fill="#F4A8A0" opacity="0.7"/>' +
+         '<ellipse cx="58" cy="48" rx="4" ry="2.4" fill="#F4A8A0" opacity="0.7"/>' +
+         // sparkles
+         '<path d="M68 26 l2 4 4 2 -4 2 -2 4 -2 -4 -4 -2 4 -2z" fill="#E89A6B" opacity="0.85"/>' +
+         '<path d="M10 50 l1.4 2.6 2.6 1.4 -2.6 1.4 -1.4 2.6 -1.4 -2.6 -2.6 -1.4 2.6 -1.4z" fill="#F0C26B" opacity="0.9"/>' +
+       '</svg>',
+
+    4: '<svg class="em-face" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">' +
+         '<defs><filter id="emInk4"><feTurbulence baseFrequency="0.85" numOctaves="2" seed="11"/><feDisplacementMap in="SourceGraphic" scale="1.1"/></filter></defs>' +
+         '<circle cx="40" cy="42" r="26" fill="#DCE9DE" stroke="#2B2118" stroke-width="2.4" stroke-linejoin="round" filter="url(#emInk4)"/>' +
+         // chill closed eyes (arcs)
+         '<path d="M22 38 q5 -4 10 0" stroke="#2B2118" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+         '<path d="M48 38 q5 -4 10 0" stroke="#2B2118" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+         // gentle smile
+         '<path d="M30 50 q10 8 20 0" stroke="#2B2118" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
+         // small flower at ear
+         '<g transform="translate(64,28)">' +
+           '<circle cx="0" cy="0" r="3.2" fill="#F8B5C2" stroke="#2B2118" stroke-width="1.4"/>' +
+           '<circle cx="-4" cy="-2" r="2.4" fill="#F8B5C2" stroke="#2B2118" stroke-width="1.2"/>' +
+           '<circle cx="3" cy="-3" r="2.4" fill="#F8B5C2" stroke="#2B2118" stroke-width="1.2"/>' +
+           '<circle cx="0" cy="0" r="1.2" fill="#E89A6B"/>' +
+         '</g>' +
+         // gentle leaf doodle
+         '<path d="M10 32 q6 -4 14 -1" stroke="#5A8A6A" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.6"/>' +
+       '</svg>',
+
+    3: '<svg class="em-face" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">' +
+         '<defs><filter id="emInk3"><feTurbulence baseFrequency="0.85" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1"/></filter></defs>' +
+         '<circle cx="40" cy="42" r="26" fill="#E8E8E0" stroke="#2B2118" stroke-width="2.4" stroke-linejoin="round" filter="url(#emInk3)"/>' +
+         // dot eyes
+         '<circle cx="29" cy="38" r="2.2" fill="#2B2118"/>' +
+         '<circle cx="51" cy="38" r="2.2" fill="#2B2118"/>' +
+         // flat mouth - slight wobble
+         '<path d="M30 52 q10 -1 20 0" stroke="#2B2118" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+         // floating "?" doodle
+         '<path d="M62 18 q4 -4 8 0 q2 4 -3 6 v3 M67 32 v.5" stroke="#2B2118" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.7"/>' +
+         // single hair tuft
+         '<path d="M38 14 q3 -4 6 0" stroke="#2B2118" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+       '</svg>',
+
+    2: '<svg class="em-face" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">' +
+         '<defs><filter id="emInk2"><feTurbulence baseFrequency="0.85" numOctaves="2" seed="13"/><feDisplacementMap in="SourceGraphic" scale="1.2"/></filter></defs>' +
+         '<circle cx="40" cy="42" r="26" fill="#E5DCE5" stroke="#2B2118" stroke-width="2.4" stroke-linejoin="round" filter="url(#emInk2)"/>' +
+         // droopy eyes
+         '<path d="M22 36 q5 5 10 1" stroke="#2B2118" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+         '<path d="M48 37 q5 5 10 1" stroke="#2B2118" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+         // wavy frown
+         '<path d="M28 56 q6 -8 12 -2 q6 6 12 -2" stroke="#2B2118" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+         // tear drop
+         '<path d="M55 46 q-2 5 0 8 q2 -3 0 -8z" fill="#9CC8E2" stroke="#2B2118" stroke-width="1.4" stroke-linejoin="round"/>' +
+         // sticking-up sad hair tuft
+         '<path d="M40 14 q-3 -6 -6 -3 M40 14 q3 -7 7 -2" stroke="#2B2118" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+         // small sigh symbol
+         '<text x="62" y="22" font-family="serif" font-size="14" fill="#2B2118" opacity="0.55" font-style="italic">…</text>' +
+       '</svg>',
+
+    1: '<svg class="em-face" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">' +
+         '<defs><filter id="emInk1"><feTurbulence baseFrequency="0.95" numOctaves="3" seed="19"/><feDisplacementMap in="SourceGraphic" scale="1.6"/></filter></defs>' +
+         // ink splash background
+         '<path d="M12 38 q-4 -8 4 -10 q-2 -8 8 -6 q2 -8 12 -4 q4 -6 14 -2 q6 -4 12 4 q8 0 6 10 q6 4 -2 12 q4 8 -8 8 q0 8 -10 4 q-4 8 -14 2 q-8 6 -16 -2 q-10 0 -8 -10 q-6 -2 2 -6z" fill="#3A3030" opacity="0.18"/>' +
+         '<circle cx="40" cy="42" r="26" fill="#D8D8DC" stroke="#2B2118" stroke-width="2.6" stroke-linejoin="round" filter="url(#emInk1)"/>' +
+         // X eyes (scrunched)
+         '<path d="M24 34 l8 8 M32 34 l-8 8" stroke="#2B2118" stroke-width="2.6" stroke-linecap="round"/>' +
+         '<path d="M48 34 l8 8 M56 34 l-8 8" stroke="#2B2118" stroke-width="2.6" stroke-linecap="round"/>' +
+         // wavy grimace
+         '<path d="M26 56 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" stroke="#2B2118" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
+         // rain drops
+         '<path d="M16 16 l-2 6 M16 16 q3 1 -2 6 q-3 -1 2 -6z" fill="#7A8A9C" stroke="#2B2118" stroke-width="1.2"/>' +
+         '<path d="M68 12 l-2 6 M68 12 q3 1 -2 6 q-3 -1 2 -6z" fill="#7A8A9C" stroke="#2B2118" stroke-width="1.2"/>' +
+         '<path d="M72 38 l-2 6 M72 38 q3 1 -2 6 q-3 -1 2 -6z" fill="#7A8A9C" stroke="#2B2118" stroke-width="1.2"/>' +
+       '</svg>'
+  };
+  return faces[score] || faces[3];
+}
 
 function emotions() {
   return (
-    '<section class="emotions-wrap">' +
-      '<header class="emotions-head">' +
-        '<h2><i data-lucide="smile" style="width:22px;height:22px"></i> 情緒紀錄</h2>' +
-        '<p>每天花 10 秒幫自己打個卡。連續低落會自動提醒你的醫師。</p>' +
+    '<section class="emotions-wrap em-jp">' +
+      // washi paper bg + ink splash decorations
+      '<div class="em-deco" aria-hidden="true">' +
+        '<svg class="em-paper" viewBox="0 0 100 100" preserveAspectRatio="none"><filter id="emPaper"><feTurbulence baseFrequency="0.85" numOctaves="3" seed="42"/><feColorMatrix values="0 0 0 0 0.92 0 0 0 0 0.86 0 0 0 0 0.74 0 0 0 0.06 0"/></filter><rect width="100" height="100" filter="url(#emPaper)"/></svg>' +
+        // ink splashes
+        '<svg class="em-splash em-splash-1" viewBox="0 0 120 100"><path d="M20 50 q-10 -25 12 -28 q4 -14 22 -8 q8 -14 28 -4 q18 -2 22 16 q14 6 4 22 q10 14 -8 20 q-2 16 -22 10 q-10 14 -28 4 q-16 6 -24 -10 q-16 -2 -6 -22z" fill="#2B2118" opacity="0.18"/><circle cx="98" cy="20" r="3" fill="#2B2118" opacity="0.4"/><circle cx="14" cy="78" r="2" fill="#2B2118" opacity="0.5"/></svg>' +
+        '<svg class="em-splash em-splash-2" viewBox="0 0 120 100"><path d="M30 30 q-8 16 8 22 q-4 14 14 14 q4 14 24 6 q14 6 18 -10 q14 -2 8 -18 q4 -14 -14 -16 q-4 -16 -22 -8 q-12 -8 -22 4 q-14 -2 -14 6z" fill="#C8A8C0" opacity="0.45"/></svg>' +
+        '<svg class="em-splash em-splash-3" viewBox="0 0 120 100"><path d="M60 14 q-20 6 -16 26 q-16 10 -4 26 q-4 18 16 16 q8 16 24 4 q20 4 18 -16 q14 -10 0 -22 q4 -16 -14 -18 q-12 -16 -24 -16z" fill="#A5C8B5" opacity="0.4"/></svg>' +
+        // floating sketch sakura petals
+        '<svg class="em-petal em-petal-1" viewBox="0 0 24 24"><path d="M12 2 q-5 3 -3 8 q-6 -1 -5 6 q-1 6 6 6 q-1 5 5 4 q5 1 5 -4 q7 0 6 -6 q1 -7 -5 -6 q2 -5 -3 -8 q-3 -2 -6 0z" fill="#F8B5C2" stroke="#2B2118" stroke-width="0.8" opacity="0.85"/><circle cx="12" cy="12" r="1.6" fill="#E89A6B"/></svg>' +
+        '<svg class="em-petal em-petal-2" viewBox="0 0 24 24"><path d="M12 2 q-5 3 -3 8 q-6 -1 -5 6 q-1 6 6 6 q-1 5 5 4 q5 1 5 -4 q7 0 6 -6 q1 -7 -5 -6 q2 -5 -3 -8 q-3 -2 -6 0z" fill="#FCDDD8" stroke="#2B2118" stroke-width="0.8" opacity="0.75"/></svg>' +
+        // small kana-like marks
+        '<span class="em-mark em-mark-1">◯</span>' +
+        '<span class="em-mark em-mark-2">々</span>' +
+        '<span class="em-mark em-mark-3">✻</span>' +
+      '</div>' +
+
+      '<header class="emotions-head em-head-jp">' +
+        '<div class="em-stamp"><span>心</span></div>' +
+        '<h2>今日のきもち</h2>' +
+        '<p class="em-sub-jp">·　花十秒，把心情留個印記　·</p>' +
+        '<p class="em-sub-zh">連續低落會自動提醒你的醫師</p>' +
       '</header>' +
 
-      '<div class="emotions-card">' +
-        '<h3>今天感覺如何？</h3>' +
+      '<div class="emotions-card em-card-jp">' +
+        '<div class="em-card-corner em-card-corner-tl"></div>' +
+        '<div class="em-card-corner em-card-corner-br"></div>' +
+        '<h3 class="em-h3-jp"><span class="em-brush">今天</span>感覺如何？</h3>' +
         '<div class="emotions-scale">' +
           EMOTION_LEVELS.map(function(l) {
-            return '<button class="emotions-btn" data-score="' + l.score + '" ' +
+            return '<button class="emotions-btn em-btn-jp" data-score="' + l.score + '" ' +
               'onclick="selectEmotion(' + l.score + ')" ' +
               'style="--em-color:' + l.color + '">' +
-              '<span class="emotions-emoji">' + l.emoji + '</span>' +
+              '<span class="em-mascot">' + emotionMascot(l.score) + '</span>' +
+              '<span class="em-kanji">' + l.kanji + '</span>' +
               '<span class="emotions-label">' + l.label + '</span>' +
             '</button>';
           }).join('') +
         '</div>' +
         '<textarea id="emotion-note" rows="2" maxlength="200" placeholder="想多說一點？（選填，最多 200 字）"></textarea>' +
-        '<button class="emotions-submit" id="emotion-submit" onclick="submitEmotion()" disabled>' +
+        '<button class="emotions-submit em-submit-jp" id="emotion-submit" onclick="submitEmotion()" disabled>' +
           '<i data-lucide="send" style="width:14px;height:14px"></i> 送出今日打卡' +
         '</button>' +
         '<div id="emotion-status" class="emotions-status"></div>' +
       '</div>' +
 
-      '<div class="emotions-card">' +
-        '<h3>近 7 天情緒走勢</h3>' +
+      '<div class="emotions-card em-card-jp">' +
+        '<div class="em-card-corner em-card-corner-tl"></div>' +
+        '<div class="em-card-corner em-card-corner-br"></div>' +
+        '<h3 class="em-h3-jp"><span class="em-brush">近 7 天</span>情緒走勢</h3>' +
         '<div id="emotion-trend-chart" class="emotions-trend"></div>' +
         '<p class="emotions-summary" id="emotion-summary"></p>' +
       '</div>' +
