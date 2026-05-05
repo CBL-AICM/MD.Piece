@@ -659,7 +659,7 @@ function previsit() {
     + '    <h3 class="pv-section-title"><i data-lucide="file-text"></i> 30 天健康摘要</h3>'
     + '    <div class="pv-stats" id="pv-stats"></div>'
     + '    <div id="pv-report-body" class="pv-report-body">'
-    + '      <p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>'
+    +        mascotLoader('小禾正在幫你寫摘要…')
     + '    </div>'
     + '    <p class="pv-source" id="pv-report-source"></p>'
     + '  </section>'
@@ -789,7 +789,7 @@ function previsitReload() {
   var listEl = document.getElementById('pv-checklist-list');
   var bodyEl = document.getElementById('pv-report-body');
   if (listEl) listEl.innerHTML = '<li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>';
-  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>';
+  if (bodyEl) bodyEl.innerHTML = mascotLoader('小禾正在幫你寫摘要…');
   if (typeof lucide !== 'undefined') lucide.createIcons();
   loadPrevisitPage();
 }
@@ -1648,6 +1648,14 @@ function home() {
           <div class="home-visit-row" id="home-visit-row">
             ${renderNextVisitChip()}
           </div>
+        </div>
+      </div>
+
+      <!-- 小禾 idle 招呼 → 點擊跳到醫起聊天 -->
+      <div class="home-mascot-greet-row">
+        <div class="home-mascot-greet" onclick="navigateTo('chat',null)" title="找小禾聊聊">
+          <div class="chat-mascot-wrap">${chatMascotSvg('idle')}</div>
+          <span class="home-mascot-greet-text">// 小禾在這 &gt; 點我聊聊</span>
         </div>
       </div>
 
@@ -2646,7 +2654,7 @@ async function analyzeSymptoms() {
   if (!input.trim()) return;
   const symptoms = input.split(",").map(s => s.trim()).filter(Boolean);
   const el = document.getElementById("analysis-result");
-  el.innerHTML = '<div class="loading">分析中...</div>';
+  el.innerHTML = mascotLoader('小禾正在分析你的症狀…');
 
   try {
     const res = await fetch(`${API}/symptoms/analyze`, {
@@ -3359,11 +3367,7 @@ function handleMedPhoto(input) {
       '已壓縮為 ' + (Math.round(base64Data.length * 0.75 / 1024)) + ' KB，' +
       '若辨識仍失敗，可改用手動填寫。</div>';
     document.getElementById("med-recognize-result").innerHTML =
-      '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
-      '<div class="loading-spinner"></div>' +
-      '<p style="margin-top:8px">AI 正在辨識藥袋...</p>' +
-      '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">第一次辨識較慢，最多約 30 秒</p>' +
-      '</div>';
+      mascotLoader('小禾正在辨識藥袋…', { hint: '第一次辨識較慢，最多約 30 秒' });
 
     fetch(API + "/medications/recognize", {
       method: "POST",
@@ -3902,8 +3906,7 @@ function drawAdherenceChart(trend) {
 function generateMedReport() {
   var days = document.getElementById("report-days").value;
   document.getElementById("med-report").innerHTML =
-    '<div style="text-align:center;padding:30px;color:var(--text-muted)">' +
-    '<div class="loading-spinner"></div><p style="margin-top:8px">正在產出回診報告...</p></div>';
+    mascotLoader('小禾正在產出回診報告…');
 
   fetch(API + "/medications/report?patient_id=" + _medsPatientId + "&days=" + days)
     .then(function(r) { return r.json(); })
@@ -4690,10 +4693,7 @@ function eduOpenContent(key, label) {
       '<button class="secondary" data-action="back-to-list" style="padding:4px 10px;font-size:.8rem">← 章節清單</button>' +
     '</div>' +
     '<div id="edu-content-body" style="font-size:.94rem;line-height:1.85">' +
-      '<div style="text-align:center;padding:40px;color:var(--text-muted)">' +
-        '<div class="loading-spinner"></div>' +
-        '<p style="margin-top:12px">正在為您準備溫暖的衛教內容…</p>' +
-      '</div>' +
+      mascotLoader('小禾正在準備溫暖的衛教內容…') +
     '</div>';
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -5471,6 +5471,38 @@ function chatSetMascotState(state) {
   wrap.innerHTML = chatMascotSvg(state);
 }
 
+// 通用「小禾載入中」: 給 AI/串流類載入畫面用，動畫由共用 timer 驅動
+var _mascotLoaderTimer = null;
+var _mascotLoaderFrame = 0;
+function _tickMascotLoaders() {
+  var nodes = document.querySelectorAll('[data-mascot-loader]');
+  if (!nodes.length) {
+    if (_mascotLoaderTimer) { clearInterval(_mascotLoaderTimer); _mascotLoaderTimer = null; }
+    return;
+  }
+  _mascotLoaderFrame = (_mascotLoaderFrame + 1) % 2;
+  for (var i = 0; i < nodes.length; i++) {
+    nodes[i].innerHTML = chatMascotSvg('typing', _mascotLoaderFrame);
+  }
+}
+function _ensureMascotLoaderTimer() {
+  if (_mascotLoaderTimer) return;
+  _mascotLoaderTimer = setInterval(_tickMascotLoaders, 140);
+}
+function mascotLoader(text, opts) {
+  opts = opts || {};
+  setTimeout(_ensureMascotLoaderTimer, 0);
+  var hint = opts.hint ? '<p class="mascot-loader-hint">' + opts.hint + '</p>' : '';
+  return ''
+    + '<div class="mascot-loader">'
+    +   '<div class="chat-mascot-wrap" data-mascot-loader>'
+    +     chatMascotSvg('typing', 0)
+    +   '</div>'
+    +   '<p class="mascot-loader-text">' + (text || '小禾正在處理…') + '</p>'
+    +   hint
+    + '</div>';
+}
+
 // 打字機效果：把文字一個個塞進 element
 function chatTypeInto(node, text, opts, onDone) {
   opts = opts || {};
@@ -6000,7 +6032,7 @@ async function labsCheck() {
 
   const resultEl = document.getElementById('lab-result');
   resultEl.style.display = 'block';
-  resultEl.innerHTML = '<p class="labs-loading"><i data-lucide="loader" class="labs-spin"></i> AI 解讀中…</p>';
+  resultEl.innerHTML = mascotLoader('小禾正在解讀檢驗結果…');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
   try {
