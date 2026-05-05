@@ -95,6 +95,7 @@ function LoginForm({ onAuthed }) {
 }
 
 function RegisterForm({ onAuthed }) {
+  const [step, setStep] = useState(1)
   const [form, setForm] = useState({
     nickname: '', username: '', password: '', password2: '',
     doctor_key: '',
@@ -105,15 +106,33 @@ function RegisterForm({ onAuthed }) {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  const submit = async (e) => {
+  const goNext = (e) => {
     e.preventDefault()
     setErr(null)
-    if (form.password !== form.password2) {
-      setErr('兩次輸入的密碼不一致')
+    if (!/^[A-Za-z0-9_.\-]{3,32}$/.test(form.username)) {
+      setErr('帳號限英數字 _ . -，3-32 字元')
       return
     }
     if (form.password.length < 6) {
       setErr('密碼至少 6 個字元')
+      return
+    }
+    if (form.password !== form.password2) {
+      setErr('兩次輸入的密碼不一致')
+      return
+    }
+    if (!form.doctor_key.trim()) {
+      setErr('請輸入醫師通行碼')
+      return
+    }
+    setStep(2)
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setErr(null)
+    if (!form.nickname.trim()) {
+      setErr('請輸入姓名 / 暱稱')
       return
     }
     setBusy(true)
@@ -127,33 +146,44 @@ function RegisterForm({ onAuthed }) {
     }
   }
 
-  return (
-    <form className="auth-form" onSubmit={submit}>
-      <Field label="姓名 / 暱稱">
-        <input className="text-input" required maxLength={30} value={form.nickname}
-          onChange={set('nickname')} placeholder="顯示在介面上的醫師姓名" />
-      </Field>
-      <div className="auth-row">
+  if (step === 1) {
+    return (
+      <form className="auth-form" onSubmit={goNext}>
+        <p className="auth-step-hint">步驟 1 / 2 · 帳號設定</p>
         <Field label="帳號">
           <input className="text-input" required value={form.username}
             onChange={set('username')} placeholder="英數字 _ . - 共 3-32 字元"
-            pattern="[A-Za-z0-9_.\-]{3,32}" />
+            pattern="[A-Za-z0-9_.\-]{3,32}" autoFocus />
         </Field>
+        <div className="auth-row">
+          <Field label="密碼">
+            <input className="text-input" type="password" required minLength={6} value={form.password}
+              onChange={set('password')} placeholder="至少 6 字元" />
+          </Field>
+          <Field label="確認密碼">
+            <input className="text-input" type="password" required minLength={6} value={form.password2}
+              onChange={set('password2')} placeholder="再次輸入密碼" />
+          </Field>
+        </div>
         <Field label="醫師通行碼">
           <input className="text-input" type="password" required value={form.doctor_key}
             onChange={set('doctor_key')} placeholder="醫師專屬通行碼" />
         </Field>
-      </div>
-      <div className="auth-row">
-        <Field label="密碼">
-          <input className="text-input" type="password" required minLength={6} value={form.password}
-            onChange={set('password')} placeholder="至少 6 字元" />
-        </Field>
-        <Field label="確認密碼">
-          <input className="text-input" type="password" required minLength={6} value={form.password2}
-            onChange={set('password2')} placeholder="再次輸入密碼" />
-        </Field>
-      </div>
+        {err && <div className="error-bar inline">{err}</div>}
+        <button className="btn btn-primary auth-submit" type="submit">
+          下一步：填寫基本資料
+        </button>
+      </form>
+    )
+  }
+
+  return (
+    <form className="auth-form" onSubmit={submit}>
+      <p className="auth-step-hint">步驟 2 / 2 · 基本資料</p>
+      <Field label="姓名 / 暱稱">
+        <input className="text-input" required maxLength={30} value={form.nickname}
+          onChange={set('nickname')} placeholder="顯示在介面上的醫師姓名" autoFocus />
+      </Field>
       <Field label="科別">
         <select className="text-input" value={form.specialty} onChange={set('specialty')}>
           {SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -178,9 +208,15 @@ function RegisterForm({ onAuthed }) {
           placeholder="例如 02-1234-5678" />
       </Field>
       {err && <div className="error-bar inline">{err}</div>}
-      <button className="btn btn-primary auth-submit" disabled={busy}>
-        {busy ? '建立中…' : '建立醫師帳號'}
-      </button>
+      <div className="auth-row">
+        <button type="button" className="btn btn-quiet auth-submit"
+          onClick={() => { setErr(null); setStep(1) }} disabled={busy}>
+          上一步
+        </button>
+        <button className="btn btn-primary auth-submit" type="submit" disabled={busy}>
+          {busy ? '建立中…' : '建立醫師帳號'}
+        </button>
+      </div>
     </form>
   )
 }
