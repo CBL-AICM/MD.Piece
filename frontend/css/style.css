@@ -8391,12 +8391,69 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   .puzzle-deco-1, .puzzle-deco-2 { display: none; }
 }
 
-/* Senior mode tweaks for mobile (bigger taps) */
+/* Senior mode tweaks for mobile (bigger taps + layout fixes) */
 @media (max-width: 768px) {
   html[data-mode="senior"] .mtab .mtab-label { font-size: 0.78rem; }
   html[data-mode="senior"] .mtab .mtab-icon { width: 32px; height: 32px; }
   html[data-mode="senior"] .mobile-tabbar { height: 72px; }
   html[data-mode="senior"] .nav-item { font-size: 1.02rem; min-height: 72px; }
+
+  /* Tabbar overlap：年長版 tabbar 高 72px，wrapper 底部 padding 要對應 (預設 76px 是給 64px tabbar 用的) */
+  html[data-mode="senior"] #app-wrapper.show {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0));
+  }
+
+  /* Sidebar：手機上原本就是底部抽屜 width:100%，但 senior 桌機規則寫死 260px 蓋掉了 → 還原 */
+  html[data-mode="senior"] .sidebar {
+    width: 100%;
+    max-width: 100%;
+  }
+  html[data-mode="senior"] .main-content {
+    margin-left: 0;
+  }
+
+  /* 字大撐破卡片：縮小 padding、收斂標題尺寸、允許長字斷行 */
+  html[data-mode="senior"] #app {
+    padding: 16px 12px 28px;
+  }
+  html[data-mode="senior"] .card,
+  html[data-mode="senior"] #app .home-section,
+  html[data-mode="senior"] #app .home-hero,
+  html[data-mode="senior"] #app .pzl-card {
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+  html[data-mode="senior"] #app h2 { font-size: 1.35rem; line-height: 1.4; }
+  html[data-mode="senior"] #app h3 { font-size: 1.12rem; line-height: 1.45; }
+  html[data-mode="senior"] #app p,
+  html[data-mode="senior"] #app li { font-size: 1rem; line-height: 1.7; }
+  html[data-mode="senior"] #app,
+  html[data-mode="senior"] #app * {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* 按鈕跑出螢幕：移除 min-width、改全寬、縮小 padding，避免左右捲 */
+  html[data-mode="senior"] button.primary,
+  html[data-mode="senior"] button.secondary {
+    padding: 14px 18px;
+    font-size: 1.05rem;
+    min-width: 0;
+    width: 100%;
+    min-height: 52px;
+  }
+  html[data-mode="senior"] #app button {
+    max-width: 100%;
+  }
+  html[data-mode="senior"] .sym-card button,
+  html[data-mode="senior"] #app .btn-row button {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Topbar 縮邊距，避免在窄螢幕擠爆 */
+  html[data-mode="senior"] .topbar { padding: 10px 12px; }
+  html[data-mode="senior"] .topbar h2 { font-size: 1.2rem; }
 }
 
 /* Light theme tweaks — softer shadows on the cream palette */
