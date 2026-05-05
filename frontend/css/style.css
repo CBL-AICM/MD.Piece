@@ -9612,6 +9612,43 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
 @media (max-width: 600px) {
   .diet-caf-grid { grid-template-columns: 1fr; gap: 14px; }
 }
+
+/* 基本營養素衛教 */
+.diet-basic-nutrients-card { background: linear-gradient(135deg, rgba(76,175,80,0.06), rgba(76,175,80,0.01)); }
+.diet-card-sub { margin: 0 0 14px; color: var(--text-dim); font-size: 0.9rem; line-height: 1.5; }
+.diet-nutrient-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.diet-nutrient {
+  background: var(--app-panel, rgba(255,255,255,0.6));
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 10px; padding: 12px 14px;
+}
+.diet-nutrient-head {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 6px; flex-wrap: wrap;
+}
+.diet-nutrient-head strong { font-size: 0.98rem; color: var(--text); }
+.diet-nutrient-daily {
+  margin-left: auto; font-size: 0.78rem; color: var(--text-dim);
+  background: rgba(76,175,80,0.1); padding: 2px 8px; border-radius: 100px;
+}
+.diet-nutrient-role { font-size: 0.86rem; color: var(--text); margin-bottom: 4px; line-height: 1.45; }
+.diet-nutrient-sources { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; margin-bottom: 4px; }
+.diet-nutrient-label {
+  display: inline-block; font-size: 0.72rem; color: var(--text-dim);
+  background: var(--app-panel-soft, rgba(0,0,0,0.04));
+  padding: 1px 6px; border-radius: 4px; margin-right: 6px;
+}
+.diet-nutrient-tip {
+  font-size: 0.82rem; color: var(--text); line-height: 1.5;
+  border-left: 3px solid rgba(76,175,80,0.4); padding-left: 8px; margin-top: 6px;
+}
+@media (max-width: 600px) {
+  .diet-nutrient-grid { grid-template-columns: 1fr; }
+}
+
 .diet-pick-tab {
   padding: 6px 12px;
   background: var(--app-panel-soft, transparent);

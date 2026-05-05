@@ -7043,6 +7043,86 @@ var DIET_MEAL_LABEL = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', 
 var _dietGuide = null;
 var _dietSelectedMeal = 'breakfast';
 
+// 基本衛教預設值（沒登入或 API 失敗時也至少顯示這些）
+var DIET_BASELINE_TARGETS = { protein_g: 60, water_ml: 2000, fiber_g: 25 };
+var DIET_BASELINE_TIPS = [
+  '三餐定時定量，避免暴飲暴食',
+  '每餐都有蛋白質、蔬菜與全穀類',
+  '減少油炸、加工食品與含糖飲料',
+  '餐前 30 分鐘喝一杯水有助消化',
+];
+
+// 基本營養素衛教（固定內容，與個人化資料無關）
+var DIET_BASIC_NUTRIENTS = [
+  {
+    name: '蛋白質',
+    icon: 'beef',
+    daily: '每公斤體重 1.0–1.2 g（運動者 1.4–1.7 g）',
+    role: '修復組織、製造酵素與抗體',
+    sources: '魚、雞胸、蛋、豆腐、無糖豆漿、希臘優格',
+    tip: '每餐都要有一份手掌大的蛋白質，分散吃比一次大量好吸收',
+  },
+  {
+    name: '碳水化合物',
+    icon: 'wheat',
+    daily: '佔每日總熱量 50–60%',
+    role: '主要能量來源，供給大腦與肌肉',
+    sources: '糙米、燕麥、地瓜、全麥麵包、水果',
+    tip: '選低 GI 全穀類，少吃精緻糖與含糖飲料',
+  },
+  {
+    name: '脂肪（好油）',
+    icon: 'droplet',
+    daily: '佔每日總熱量 20–30%',
+    role: '吸收脂溶性維生素、合成荷爾蒙',
+    sources: '橄欖油、酪梨、堅果、鯖魚、鮭魚',
+    tip: '多吃 Omega-3，避開油炸與反式脂肪（人造奶油、酥油）',
+  },
+  {
+    name: '膳食纖維',
+    icon: 'leaf',
+    daily: '每天 25–35 g',
+    role: '促進腸道蠕動、穩定血糖、餵養好菌',
+    sources: '蔬菜、水果、燕麥、糙米、豆類',
+    tip: '一天至少 3 份蔬菜（一份約一個拳頭大）+ 2 份水果',
+  },
+  {
+    name: '水分',
+    icon: 'glass-water',
+    daily: '每天 2000–2500 ml（依體重 30 ml/kg 估算）',
+    role: '代謝廢物、調節體溫、運送養分',
+    sources: '白開水、無糖茶、清湯',
+    tip: '看尿色：淡黃就夠，深黃要再多喝；別等口渴才喝',
+  },
+  {
+    name: '維生素 & 礦物質',
+    icon: 'sparkles',
+    daily: '從多色蔬果中自然攝取',
+    role: '維生素 D / B 群、鈣、鐵、鋅參與骨骼、造血、免疫',
+    sources: '深色蔬菜、彩色水果、海帶、堅果、紅肉、蛋黃',
+    tip: '彩虹飲食法：紅黃綠紫白每天都吃一點，比單吃保健品有效',
+  },
+];
+
+function renderBasicNutrients() {
+  var box = document.getElementById('diet-basic-nutrients');
+  if (!box) return;
+  box.innerHTML = DIET_BASIC_NUTRIENTS.map(function(n) {
+    return ''
+      + '<div class="diet-nutrient">'
+      +   '<div class="diet-nutrient-head">'
+      +     '<i data-lucide="' + n.icon + '" style="width:16px;height:16px"></i>'
+      +     '<strong>' + chatEscape(n.name) + '</strong>'
+      +     '<span class="diet-nutrient-daily">' + chatEscape(n.daily) + '</span>'
+      +   '</div>'
+      +   '<div class="diet-nutrient-role">' + chatEscape(n.role) + '</div>'
+      +   '<div class="diet-nutrient-sources"><span class="diet-nutrient-label">食物來源</span>' + chatEscape(n.sources) + '</div>'
+      +   '<div class="diet-nutrient-tip">' + chatEscape(n.tip) + '</div>'
+      + '</div>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function diet() {
   return ''
     + '<section class="diet-wrap">'
@@ -7050,6 +7130,30 @@ function diet() {
     +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
     +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
     +   '</header>'
+
+    +   '<div class="diet-card diet-basic-nutrients-card">'
+    +     '<h3><i data-lucide="apple" style="width:16px;height:16px"></i> 基本營養素衛教</h3>'
+    +     '<p class="diet-card-sub">每天身體都需要的六大基本營養素，照著吃就不會差太多。</p>'
+    +     '<div id="diet-basic-nutrients" class="diet-nutrient-grid"></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card">'
+    +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
+    +     '<div id="diet-caffeine-body"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-targets">'
+    +     '<h3><i data-lucide="target" style="width:16px;height:16px"></i> 今日營養目標</h3>'
+    +     '<div class="diet-target-row" id="diet-target-row">'
+    +       '<div class="diet-target-skel">載入中…</div>'
+    +     '</div>'
+    +     '<ul class="diet-tips" id="diet-tips"></ul>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-warnings-card">'
+    +     '<h3><i data-lucide="alert-triangle" style="width:16px;height:16px"></i> 你要特別注意</h3>'
+    +     '<div id="diet-warnings"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
 
     +   '<div class="diet-card diet-pick-card">'
     +     '<h3><i data-lucide="dices" style="width:16px;height:16px"></i> 吃什麼神器</h3>'
@@ -7105,24 +7209,6 @@ function diet() {
     +       '</button>'
     +     '</div>'
     +     '<div id="diet-drink-result" class="diet-drink-result"></div>'
-    +   '</div>'
-
-    +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card" style="display:none">'
-    +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
-    +     '<div id="diet-caffeine-body"></div>'
-    +   '</div>'
-
-    +   '<div class="diet-card" id="diet-targets">'
-    +     '<h3><i data-lucide="target" style="width:16px;height:16px"></i> 今日營養目標</h3>'
-    +     '<div class="diet-target-row" id="diet-target-row">'
-    +       '<div class="diet-target-skel">載入中…</div>'
-    +     '</div>'
-    +     '<ul class="diet-tips" id="diet-tips"></ul>'
-    +   '</div>'
-
-    +   '<div class="diet-card" id="diet-warnings-card">'
-    +     '<h3><i data-lucide="alert-triangle" style="width:16px;height:16px"></i> 你要特別注意</h3>'
-    +     '<div id="diet-warnings"><p class="diet-empty">載入中…</p></div>'
     +   '</div>'
 
     +   '<div class="diet-card" id="diet-suggest-card">'
@@ -7403,7 +7489,6 @@ function fetchCaffeineGuide() {
   var card = document.getElementById('diet-caffeine-card');
   var body = document.getElementById('diet-caffeine-body');
   if (!card || !body) return;
-  if (card.style.display === 'block') return;  // 已展開
   fetch(API + '/diet/caffeine-guide')
     .then(function(r) { return r.json(); })
     .then(function(g) {
@@ -7426,10 +7511,11 @@ function fetchCaffeineGuide() {
         +   '</div>'
         +   '<div><div class="diet-caf-subtitle">這些族群要注意</div>' + warns + '</div>'
         + '</div>';
-      card.style.display = 'block';
       if (typeof lucide !== 'undefined') lucide.createIcons();
     })
-    .catch(function() {});
+    .catch(function() {
+      body.innerHTML = '<p class="diet-empty">載入失敗，稍後再試</p>';
+    });
 }
 
 
@@ -7468,28 +7554,31 @@ function loadDietPage() {
     dietPickRenderDislikes();
     var drinkBox = document.getElementById('diet-drink-result');
     if (drinkBox) drinkBox.innerHTML = '';
-    var caf = document.getElementById('diet-caffeine-card');
-    if (caf) caf.style.display = 'none';
   }, 50);
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+  renderBasicNutrients();
   fetchDietGuide();
+  fetchCaffeineGuide();
   fetchDietTodayRecords();
 }
 
 function fetchDietGuide() {
+  // 先把基本衛教 render 上去，再去打 API；API 回來再用個人化資料蓋過
+  renderDietTargets(DIET_BASELINE_TARGETS, DIET_BASELINE_TIPS);
   var pid = getStablePatientId();
   if (!pid) { renderDietWarnings([]); renderDietSuggestions({}); return; }
   fetch(API + '/diet/guide/' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(g) {
       _dietGuide = g || {};
-      renderDietTargets(g.daily_targets || {}, g.general_tips || []);
+      var t = g.daily_targets && Object.keys(g.daily_targets).length ? g.daily_targets : DIET_BASELINE_TARGETS;
+      var tips = (g.general_tips && g.general_tips.length) ? g.general_tips : DIET_BASELINE_TIPS;
+      renderDietTargets(t, tips);
       renderDietWarnings(g.warnings || []);
       renderDietSuggestions(g.meal_suggestions || {});
     })
     .catch(function(e) {
-      var box = document.getElementById('diet-target-row');
-      if (box) box.innerHTML = '<div class="diet-empty">載入失敗，稍後再試</div>';
+      // 失敗時保留基本衛教，不要把畫面換成「載入失敗」
     });
 }
 

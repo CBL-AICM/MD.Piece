@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v46-i18n-v1";
+const CACHE_VERSION = "mdpiece-v49-diet-basic-nutrients";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
