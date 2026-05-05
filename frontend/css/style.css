@@ -10172,6 +10172,111 @@ html[data-mode="senior"] .mood-cal-btn {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   SENIOR MODE — 一頁式 home（問候 + 全功能 tile）
+   砍掉 quick actions、今日服藥、心情、tip、底部 tabbar
+   ═══════════════════════════════════════════════════════════ */
+
+/* 年長版隱藏底部 tabbar——所有功能都在 home tile */
+html[data-mode="senior"] .mobile-tabbar {
+  display: none !important;
+}
+html[data-mode="senior"] #app-wrapper.show {
+  padding-bottom: env(safe-area-inset-bottom, 0) !important;
+}
+
+html[data-mode="senior"] .home-senior {
+  padding: 8px 4px 24px;
+}
+
+html[data-mode="senior"] .home-senior-hero {
+  text-align: center;
+  padding: 20px 12px 24px;
+}
+html[data-mode="senior"] .home-senior-greet {
+  font-size: 1.6rem !important;
+  font-weight: 600 !important;
+  color: var(--sm-text) !important;
+  margin: 0 0 6px !important;
+}
+html[data-mode="senior"] .home-senior-date {
+  font-size: 1rem !important;
+  color: var(--sm-text-dim) !important;
+  margin: 0 !important;
+}
+
+html[data-mode="senior"] .home-senior-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+html[data-mode="senior"] .home-senior-tile {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  background: var(--sm-panel) !important;
+  border: 1px solid var(--sm-border) !important;
+  border-radius: 4px !important;
+  padding: 24px 12px !important;
+  min-height: 120px !important;
+  width: 100% !important;
+  cursor: pointer;
+  color: var(--sm-text) !important;
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}
+html[data-mode="senior"] .home-senior-tile:hover,
+html[data-mode="senior"] .home-senior-tile:active {
+  background: var(--sm-panel-2) !important;
+}
+html[data-mode="senior"] .home-senior-tile .hst-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sm-text);
+}
+html[data-mode="senior"] .home-senior-tile .hst-icon i {
+  width: 32px !important;
+  height: 32px !important;
+  stroke-width: 1.5 !important;
+}
+html[data-mode="senior"] .home-senior-tile .hst-label {
+  font-size: 1.05rem !important;
+  line-height: 1.3 !important;
+  text-align: center;
+}
+
+/* 桌機 senior：3 欄 tile 更寬鬆 */
+@media (min-width: 769px) {
+  html[data-mode="senior"] .home-senior {
+    padding: 16px 24px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  html[data-mode="senior"] .home-senior-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  html[data-mode="senior"] .home-senior-tile {
+    min-height: 140px !important;
+    padding: 28px 16px !important;
+  }
+  html[data-mode="senior"] .home-senior-tile .hst-icon i {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  html[data-mode="senior"] .home-senior-tile .hst-label {
+    font-size: 1.15rem !important;
+  }
+  html[data-mode="senior"] .home-senior-greet {
+    font-size: 2rem !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    SENIOR MODE — 手機字體壓縮（避免跑版）
    檔末壓制式覆寫的 1.15rem / 2rem / 1.5rem !important 在手機
    會跑版，這裡用 media query + !important 覆蓋手機尺寸。
