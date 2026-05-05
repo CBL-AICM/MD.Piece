@@ -1764,11 +1764,13 @@ function loadHomePage() {
       }
       var last = daily[daily.length - 1];
       var avg = data.overall_average;
+      var lastPct = _moodPercent(last.average_score);
+      var avgPct = (avg != null) ? _moodPercent(avg) : null;
       el.innerHTML =
         '<div><span class="home-mood-emoji">' + (last.emoji || '🙂') + '</span>' +
-        '<span class="home-mood-score">' + last.average_score + '</span></div>' +
-        '<div class="home-med-label">最新一筆 · 7 天均 ' + (avg != null ? avg : '—') + '</div>' +
-        '<button class="home-med-go" onclick="navigateTo(\'emotions\',null)">更新心情 →</button>';
+        '<span class="home-mood-score">' + lastPct + '%</span></div>' +
+        '<div class="home-med-label">最新電量 · 7 天平均 ' + (avgPct != null ? avgPct + '%' : '—') + '</div>' +
+        '<button class="home-med-go" onclick="navigateTo(\'emotions\',null)">更新電量 →</button>';
     })
     .catch(function() {
       var el = document.getElementById('home-mood-summary');
@@ -6192,7 +6194,7 @@ function labsRenderResult(data, input) {
 var PUSH_CATS = [
   { key: 'symptoms', label: '症狀記錄', icon: 'scan-search', desc: '近 7 天的症狀分析與打卡' },
   { key: 'medications', label: '用藥情況', icon: 'pill', desc: '使用中的藥物 + 服藥率' },
-  { key: 'emotions', label: '情緒打卡', icon: 'heart-pulse', desc: '近 7 天每日情緒分數' },
+  { key: 'emotions', label: '情緒電力', icon: 'battery-charging', desc: '近 7 天每日情緒電量' },
   { key: 'vitals', label: '生理紀錄', icon: 'activity', desc: '近期血壓、血糖、體重等' },
   { key: 'labs', label: '檢驗報告', icon: 'trending-up', desc: '近期檢驗值與 AI 解讀' },
 ];
@@ -6349,7 +6351,8 @@ async function _buildCategorySummary(cat, pid) {
     var em = await fetch(API + '/emotions/trend?patient_id=' + pidQ + '&days=7').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
     if (!em || !em.trend || !em.trend.length) return '';
     var avg = em.average_score;
-    var lines = ['【近 7 天情緒打卡】平均 ' + (avg != null ? avg : '—') + '/5，共 ' + em.total_records + ' 筆'];
+    var avgPct = (avg != null) ? _moodPercent(avg) : null;
+    var lines = ['【近 7 天情緒電量】平均 ' + (avgPct != null ? avgPct + '%' : '—') + '，共 ' + em.total_records + ' 筆'];
     em.trend.slice(-7).forEach(function(t) {
       lines.push('• ' + t.date + '：' + t.score + ' 分');
     });
@@ -6489,12 +6492,18 @@ async function loadPushHistory() {
 // 五階情緒打卡 + 7 天迷你折線圖 + 自動觸發 silent-guardian 警示
 
 var EMOTION_LEVELS = [
-  { score: 5, emoji: '😄', label: '很好', color: '#86C7B8' },
-  { score: 4, emoji: '🙂', label: '不錯', color: '#B5D6C4' },
-  { score: 3, emoji: '😐', label: '普通', color: '#D6CFC2' },
-  { score: 2, emoji: '😟', label: '低落', color: '#E0B89A' },
-  { score: 1, emoji: '😢', label: '很糟', color: '#C97B7B' },
+  { score: 5, pct: 100, emoji: '😄', label: '滿電',   color: '#86C7B8' },
+  { score: 4, pct:  75, emoji: '🙂', label: '充飽中', color: '#B5D6C4' },
+  { score: 3, pct:  50, emoji: '😐', label: '中等',   color: '#D6CFC2' },
+  { score: 2, pct:  25, emoji: '😟', label: '低電量', color: '#E0B89A' },
+  { score: 1, pct:   0, emoji: '😢', label: '沒電',   color: '#C97B7B' },
 ];
+
+function _moodPercent(score) {
+  if (score == null) return null;
+  // score 1~5 → 0%~100%（線性）
+  return Math.round((Math.max(1, Math.min(5, score)) - 1) * 25);
+}
 
 function _moodColor(score) {
   if (score == null) return 'transparent';
@@ -6510,22 +6519,34 @@ function _moodEmoji(score) {
   return lvl ? lvl.emoji : '';
 }
 
+// SVG 電池圖示，依 percent 0-100 填充
+function _batteryGlyph(percent, color) {
+  var p = Math.max(0, Math.min(100, percent || 0));
+  var fillW = 24 * (p / 100);
+  return '<svg class="mood-batt" viewBox="0 0 32 18" aria-hidden="true">' +
+    '<rect x="1" y="2" width="26" height="14" rx="2.5" ry="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+    '<rect x="28" y="6" width="3" height="6" rx="1" fill="currentColor"/>' +
+    '<rect x="2.5" y="3.5" width="' + fillW + '" height="11" rx="1.5" fill="' + (color || 'currentColor') + '"/>' +
+  '</svg>';
+}
+
 function emotions() {
   return (
     '<section class="emotions-wrap">' +
       '<header class="emotions-head">' +
-        '<h2><i data-lucide="smile" style="width:22px;height:22px"></i> 情緒紀錄</h2>' +
-        '<p>每天花 10 秒幫自己打個卡。連續低落會自動提醒你的醫師。</p>' +
+        '<h2><i data-lucide="battery-charging" style="width:22px;height:22px"></i> 情緒電力</h2>' +
+        '<p>把今天的「心情電量」打卡留下，連續低電量會自動提醒你的醫師。</p>' +
       '</header>' +
 
       '<div class="emotions-card mood-today">' +
-        '<h3>今天感覺如何？</h3>' +
+        '<h3>今天剩多少電？</h3>' +
         '<div class="emotions-scale">' +
           EMOTION_LEVELS.map(function(l) {
             return '<button class="emotions-btn" data-score="' + l.score + '" ' +
               'onclick="selectEmotion(' + l.score + ')" ' +
               'style="--em-color:' + l.color + '">' +
               '<span class="emotions-emoji">' + l.emoji + '</span>' +
+              '<span class="emotions-pct">' + l.pct + '%</span>' +
               '<span class="emotions-label">' + l.label + '</span>' +
             '</button>';
           }).join('') +
@@ -6539,7 +6560,7 @@ function emotions() {
 
       '<div class="emotions-card mood-cal-card">' +
         '<div class="mood-card-head">' +
-          '<h3>心情日曆</h3>' +
+          '<h3>電量日曆</h3>' +
           '<div class="mood-cal-nav">' +
             '<button class="mood-cal-btn" onclick="moodCalShift(-1)" aria-label="上個月">‹</button>' +
             '<span id="mood-cal-label">—</span>' +
@@ -6549,7 +6570,7 @@ function emotions() {
         '<div id="mood-cal" class="mood-cal"></div>' +
         '<div class="mood-cal-legend">' +
           EMOTION_LEVELS.slice().reverse().map(function(l) {
-            return '<span class="mood-legend-dot" style="background:' + l.color + '"></span><span class="mood-legend-txt">' + l.label + '</span>';
+            return '<span class="mood-legend-dot" style="background:' + l.color + '"></span><span class="mood-legend-txt">' + l.pct + '% ' + l.label + '</span>';
           }).join('') +
         '</div>' +
         '<p id="mood-cal-tip" class="mood-cal-tip">點選格子可看當日紀錄</p>' +
@@ -6557,7 +6578,7 @@ function emotions() {
 
       '<div class="emotions-card mood-line-card">' +
         '<div class="mood-card-head">' +
-          '<h3>近 30 天折線</h3>' +
+          '<h3>電量走勢</h3>' +
           '<div class="mood-line-tabs">' +
             '<button class="mood-tab" data-days="7"  onclick="moodLineRange(7)">7 天</button>' +
             '<button class="mood-tab is-active" data-days="30" onclick="moodLineRange(30)">30 天</button>' +
@@ -6570,7 +6591,7 @@ function emotions() {
 
       '<div class="emotions-card mood-table-card">' +
         '<div class="mood-card-head">' +
-          '<h3>心情總表</h3>' +
+          '<h3>電量總表</h3>' +
           '<button class="mood-table-toggle" id="mood-table-toggle" onclick="moodTableToggle()">展開全部</button>' +
         '</div>' +
         '<div id="mood-table" class="mood-table-wrap"></div>' +
@@ -6687,10 +6708,11 @@ function renderMoodCalendar() {
     var emoji = rec ? rec.emoji : '';
     var isToday = key === todayKey;
     var classes = 'mood-cal-cell' + (rec ? ' has-data' : '') + (isToday ? ' is-today' : '');
+    var pctTip = rec ? _moodPercent(rec.average_score) : null;
     cells.push(
       '<button class="' + classes + '" style="background:' + bg + '" ' +
         'onclick="moodCalSelect(\'' + key + '\')" ' +
-        'aria-label="' + key + (rec ? ' 平均 ' + rec.average_score + '/5' : '') + '">' +
+        'aria-label="' + key + (rec ? ' 電量 ' + pctTip + '%' : '') + '">' +
         '<span class="mood-cal-day">' + d + '</span>' +
         (emoji ? '<span class="mood-cal-emoji">' + emoji + '</span>' : '') +
       '</button>'
@@ -6709,10 +6731,13 @@ function moodCalSelect(dateKey) {
     return;
   }
   var note = rec.note ? '「' + rec.note + '」' : '（無備註）';
+  var avgPct = _moodPercent(rec.average_score);
+  var loPct = _moodPercent(rec.min_score);
+  var hiPct = _moodPercent(rec.max_score);
   tip.innerHTML =
     '<strong>' + dateKey + '</strong> ' + (rec.emoji || '') +
-    ' 平均 <strong>' + rec.average_score + '/5</strong>' +
-    ' · 範圍 ' + rec.min_score + '–' + rec.max_score +
+    ' 平均電量 <strong>' + avgPct + '%</strong>' +
+    ' · 範圍 ' + loPct + '–' + hiPct + '%' +
     ' · ' + rec.count + ' 筆 · ' + escapeHtml(note);
 }
 
@@ -6775,15 +6800,16 @@ function renderMoodLine() {
       var yBot = yFor(rec.min_score);
       rangeRects += '<rect x="' + (x - 3) + '" y="' + yTop + '" width="6" height="' + (yBot - yTop) + '" fill="#86C7B8" opacity="0.18" rx="2"/>';
     }
-    pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="3.5" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="1.2"><title>' + k + ' 平均 ' + rec.average_score + '/5</title></circle>';
+    pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="3.5" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="1.2"><title>' + k + ' 電量 ' + _moodPercent(rec.average_score) + '%</title></circle>';
   });
 
-  // 橫向格線（1~5）
+  // 橫向格線（0% / 25% / 50% / 75% / 100%）
   var grid = '';
   for (var s = 1; s <= 5; s++) {
     var y = yFor(s);
+    var pctLabel = (s - 1) * 25;
     grid += '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="rgba(160,160,180,0.18)" stroke-dasharray="2 4"/>';
-    grid += '<text x="' + (PAD_L - 6) + '" y="' + (y + 3) + '" text-anchor="end" font-size="10" fill="rgba(160,160,180,0.7)" font-family="JetBrains Mono, monospace">' + s + '</text>';
+    grid += '<text x="' + (PAD_L - 6) + '" y="' + (y + 3) + '" text-anchor="end" font-size="10" fill="rgba(160,160,180,0.7)" font-family="JetBrains Mono, monospace">' + pctLabel + '%</text>';
   }
 
   // X 軸日期 label（每隔幾天標一次）
@@ -6809,9 +6835,12 @@ function renderMoodLine() {
   var lo = Math.min.apply(null, scores);
   var hi = Math.max.apply(null, scores);
   if (sumEl) {
+    var avgPct = Math.round((avg - 1) * 25);
+    var loPct = (lo - 1) * 25;
+    var hiPct = (hi - 1) * 25;
     sumEl.textContent =
-      '平均 ' + avg.toFixed(1) + '/5　·　最低 ' + lo + '　·　最高 ' + hi + '　·　' + pts.length + ' 天有紀錄' +
-      (avg <= 2.5 ? '　·　偵測到偏低，建議跟醫師談談' : '');
+      '平均電量 ' + avgPct + '%　·　最低 ' + loPct + '%　·　最高 ' + hiPct + '%　·　' + pts.length + ' 天有紀錄' +
+      (avg <= 2.5 ? '　·　偵測到電量偏低，建議跟醫師談談' : '');
   }
 }
 
@@ -6834,11 +6863,14 @@ function renderMoodTable() {
   var rows = _moodTableExpanded ? daily : daily.slice(0, 7);
   var trs = rows.map(function(d) {
     var note = d.note ? escapeHtml(d.note) : '<span class="mood-table-muted">—</span>';
+    var avgPct = _moodPercent(d.average_score);
+    var loPct = _moodPercent(d.min_score);
+    var hiPct = _moodPercent(d.max_score);
     return '<tr>' +
       '<td class="mood-td-date">' + d.date.slice(5) + '</td>' +
       '<td class="mood-td-emoji" style="color:' + _moodColor(d.average_score) + '">' + (d.emoji || '') + '</td>' +
-      '<td><strong>' + d.average_score + '</strong><span class="mood-table-muted">/5</span></td>' +
-      '<td>' + d.min_score + '–' + d.max_score + '</td>' +
+      '<td><strong>' + avgPct + '%</strong></td>' +
+      '<td>' + loPct + '–' + hiPct + '%</td>' +
       '<td>' + d.count + '</td>' +
       '<td class="mood-td-note">' + note + '</td>' +
     '</tr>';
@@ -6846,7 +6878,7 @@ function renderMoodTable() {
   box.innerHTML =
     '<table class="mood-table">' +
       '<thead><tr>' +
-        '<th>日期</th><th></th><th>平均</th><th>區間</th><th>筆數</th><th>備註</th>' +
+        '<th>日期</th><th></th><th>平均電量</th><th>區間</th><th>筆數</th><th>備註</th>' +
       '</tr></thead>' +
       '<tbody>' + trs + '</tbody>' +
     '</table>';
