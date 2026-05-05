@@ -1033,6 +1033,7 @@ function labs() {
   `;
 }
 const account  = () => accountPage();
+const profile  = () => profilePage();
 // pieces() 為實作頁面（位於下方）— 將上次回診後的紀錄做統整保留。
 
 // 頁面在 terminal pane 中顯示的檔名（用於 #app 的 data-page）
@@ -1041,7 +1042,7 @@ const pageSlugForTerminal = {
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', chat: 'med-chat', account: 'account',
-  settings: 'settings',
+  settings: 'settings', profile: 'profile',
   records: 'records', doctors: 'doctors'
 };
 
@@ -1050,7 +1051,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings
+    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, profile
   };
   // Page transition
   app.style.opacity = '0';
@@ -1072,6 +1073,7 @@ function showPage(page) {
     if (page === "emotions") loadEmotionsPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
+    if (page === "profile") loadProfilePage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -1486,6 +1488,452 @@ function showAccountMsg(id, msg, isError) {
   el.classList.toggle('acct-msg-ok', !isError);
 }
 
+// ─── 個人檔案 / 基本資料 ──────────────────────────────────
+// 患者填寫醫療相關的基本資料；以 user.id 為 key 存到 localStorage。
+
+const PROFILE_CHRONIC_OPTIONS = [
+  '高血壓', '糖尿病', '心臟病', '高血脂', '氣喘',
+  '癌症', '腎臟病', '肝病', '中風', '甲狀腺',
+  '憂鬱症', '焦慮症', '失眠', '其他'
+];
+
+const PROFILE_RELATIONSHIPS = ['配偶', '父親', '母親', '子女', '兄弟姊妹', '朋友', '其他'];
+const PROFILE_LANGUAGES = ['中文（國語）', '台語', '客語', '英文', '日文', '原住民語', '其他'];
+const PROFILE_BLOODS = ['A', 'B', 'AB', 'O', '不知道'];
+const PROFILE_RH = ['+', '-', '不知道'];
+const PROFILE_INSURANCE = ['一般健保', '退休', '榮民', '低收入戶', '中低收入戶', '其他'];
+const PROFILE_DEPARTMENTS = [
+  '家醫科', '內科', '心臟內科', '腎臟內科', '腸胃內科', '新陳代謝科',
+  '神經內科', '胸腔內科', '感染科', '血液腫瘤科', '免疫風濕科',
+  '外科', '骨科', '婦產科', '兒科', '皮膚科', '眼科',
+  '耳鼻喉科', '泌尿科', '精神科', '復健科', '中醫', '其他'
+];
+
+function _profileKey() {
+  const u = getCurrentUser() || {};
+  return 'mdpiece_profile_' + (u.id || u.username || 'guest');
+}
+
+function loadProfileData() {
+  try {
+    const raw = localStorage.getItem(_profileKey());
+    if (!raw) return {};
+    return JSON.parse(raw) || {};
+  } catch (e) { return {}; }
+}
+
+function saveProfileData(data) {
+  // 個人檔案僅存在本機，不上傳；UI 已明示「只存在你自己的裝置裡」。
+  // 若日後改為後端同步，此處改為 fetch PATCH /profile 即可。
+  // codeql[js/clear-text-storage-of-sensitive-information]
+  try { localStorage.setItem(_profileKey(), JSON.stringify(data)); } catch (e) {}
+}
+
+function _calcAge(birthDate) {
+  if (!birthDate) return '';
+  const b = new Date(birthDate);
+  if (isNaN(b)) return '';
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age >= 0 && age < 130 ? age : '';
+}
+
+function _calcBmi(h, w) {
+  const hM = parseFloat(h) / 100;
+  const wK = parseFloat(w);
+  if (!hM || !wK || hM <= 0) return '';
+  return (wK / (hM * hM)).toFixed(1);
+}
+
+function _bmiLabel(bmi) {
+  const v = parseFloat(bmi);
+  if (!v) return '';
+  if (v < 18.5) return '過輕';
+  if (v < 24) return '健康';
+  if (v < 27) return '過重';
+  if (v < 30) return '輕度肥胖';
+  if (v < 35) return '中度肥胖';
+  return '重度肥胖';
+}
+
+function _esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function _opts(list, current) {
+  return list.map(v => `<option value="${_esc(v)}"${v === current ? ' selected' : ''}>${_esc(v)}</option>`).join('');
+}
+
+function profilePage() {
+  const u = getCurrentUser() || {};
+  const p = loadProfileData();
+  const age = _calcAge(p.birth_date);
+  const bmi = _calcBmi(p.height_cm, p.weight_kg);
+  const chronicSet = new Set(p.chronic_conditions || []);
+
+  const chronicChips = PROFILE_CHRONIC_OPTIONS.map(name => `
+    <label class="pf-chip${chronicSet.has(name) ? ' selected' : ''}">
+      <input type="checkbox" value="${_esc(name)}"${chronicSet.has(name) ? ' checked' : ''} />
+      <span>${_esc(name)}</span>
+    </label>
+  `).join('');
+
+  return `
+    <section class="acct-wrap pf-wrap">
+      <header class="acct-head">
+        <h2><i data-lucide="clipboard-list"></i> 個人檔案 · 基本資料</h2>
+        <p>填寫一次，看診更有效率。<strong>資料只存在這台裝置的瀏覽器裡，不會上傳。</strong>換裝置或清除瀏覽器資料後就會消失，請記得用「匯出 JSON」備份。</p>
+      </header>
+
+      <div class="acct-card pf-card">
+
+        <!-- ① 基本資料 -->
+        <form class="acct-form pf-form" id="pf-form-basic" onsubmit="event.preventDefault(); saveProfileSection('basic');">
+          <h3><i data-lucide="user" style="width:16px;height:16px;vertical-align:-2px"></i> 基本資料</h3>
+          <div class="pf-grid">
+            <label class="acct-field">
+              <span>中文姓名</span>
+              <input id="pf-name" type="text" maxlength="40" value="${_esc(p.name || u.nickname || '')}" placeholder="例：王小明" />
+            </label>
+            <label class="acct-field">
+              <span>英文姓名</span>
+              <input id="pf-name-en" type="text" maxlength="60" value="${_esc(p.name_en || '')}" placeholder="例：Wang Xiaoming" />
+            </label>
+            <label class="acct-field">
+              <span>性別</span>
+              <select id="pf-gender">
+                <option value="">— 請選擇 —</option>
+                ${_opts(['男', '女', '其他', '不願透露'], p.gender)}
+              </select>
+            </label>
+            <label class="acct-field">
+              <span>出生日期</span>
+              <input id="pf-birth" type="date" value="${_esc(p.birth_date || '')}" oninput="updateProfileAge()" />
+            </label>
+            <label class="acct-field">
+              <span>年齡（自動）</span>
+              <input id="pf-age" type="text" readonly value="${age === '' ? '' : age + ' 歲'}" />
+            </label>
+            <label class="acct-field">
+              <span>身分證 / 居留證號</span>
+              <input id="pf-id-no" type="text" maxlength="20" value="${_esc(p.id_no || '')}" placeholder="A123456789" />
+            </label>
+            <label class="acct-field">
+              <span>慣用語言</span>
+              <select id="pf-lang">
+                <option value="">— 請選擇 —</option>
+                ${_opts(PROFILE_LANGUAGES, p.language)}
+              </select>
+            </label>
+          </div>
+          <p class="acct-msg" id="pf-msg-basic" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="save"></i> 儲存基本資料</button>
+        </form>
+
+        <!-- ② 身體資訊 -->
+        <form class="acct-form pf-form" id="pf-form-body" onsubmit="event.preventDefault(); saveProfileSection('body');">
+          <h3><i data-lucide="activity" style="width:16px;height:16px;vertical-align:-2px"></i> 身體資訊</h3>
+          <div class="pf-grid">
+            <label class="acct-field">
+              <span>身高（cm）</span>
+              <input id="pf-height" type="number" min="50" max="250" step="0.1" value="${_esc(p.height_cm || '')}" placeholder="170" oninput="updateProfileBmi()" />
+            </label>
+            <label class="acct-field">
+              <span>體重（kg）</span>
+              <input id="pf-weight" type="number" min="10" max="300" step="0.1" value="${_esc(p.weight_kg || '')}" placeholder="65" oninput="updateProfileBmi()" />
+            </label>
+            <label class="acct-field">
+              <span>BMI（自動）</span>
+              <input id="pf-bmi" type="text" readonly value="${bmi ? bmi + '　' + _bmiLabel(bmi) : ''}" />
+            </label>
+            <label class="acct-field">
+              <span>血型</span>
+              <select id="pf-blood">
+                <option value="">— 請選擇 —</option>
+                ${_opts(PROFILE_BLOODS, p.blood_type)}
+              </select>
+            </label>
+            <label class="acct-field">
+              <span>Rh</span>
+              <select id="pf-rh">
+                <option value="">— 請選擇 —</option>
+                ${_opts(PROFILE_RH, p.rh)}
+              </select>
+            </label>
+          </div>
+          <p class="acct-msg" id="pf-msg-body" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="save"></i> 儲存身體資訊</button>
+        </form>
+
+        <!-- ③ 聯絡資訊 -->
+        <form class="acct-form pf-form" id="pf-form-contact" onsubmit="event.preventDefault(); saveProfileSection('contact');">
+          <h3><i data-lucide="phone" style="width:16px;height:16px;vertical-align:-2px"></i> 聯絡資訊</h3>
+          <div class="pf-grid">
+            <label class="acct-field">
+              <span>手機號碼</span>
+              <input id="pf-phone" type="tel" maxlength="20" value="${_esc(p.phone || '')}" placeholder="0912-345-678" />
+            </label>
+            <label class="acct-field">
+              <span>Email</span>
+              <input id="pf-email" type="email" maxlength="120" value="${_esc(p.email || '')}" placeholder="you@example.com" />
+            </label>
+            <label class="acct-field pf-col-2">
+              <span>居住地址</span>
+              <input id="pf-address" type="text" maxlength="200" value="${_esc(p.address || '')}" placeholder="例：台北市中正區重慶南路一段 122 號" />
+            </label>
+          </div>
+          <p class="acct-msg" id="pf-msg-contact" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="save"></i> 儲存聯絡資訊</button>
+        </form>
+
+        <!-- ④ 緊急聯絡人 -->
+        <form class="acct-form pf-form" id="pf-form-emerg" onsubmit="event.preventDefault(); saveProfileSection('emerg');">
+          <h3><i data-lucide="life-buoy" style="width:16px;height:16px;vertical-align:-2px"></i> 緊急聯絡人</h3>
+          <div class="pf-grid">
+            <label class="acct-field">
+              <span>姓名</span>
+              <input id="pf-emerg-name" type="text" maxlength="40" value="${_esc(p.emergency_name || '')}" placeholder="例：王大明" />
+            </label>
+            <label class="acct-field">
+              <span>關係</span>
+              <select id="pf-emerg-rel">
+                <option value="">— 請選擇 —</option>
+                ${_opts(PROFILE_RELATIONSHIPS, p.emergency_relation)}
+              </select>
+            </label>
+            <label class="acct-field">
+              <span>聯絡電話</span>
+              <input id="pf-emerg-phone" type="tel" maxlength="20" value="${_esc(p.emergency_phone || '')}" placeholder="0912-345-678" />
+            </label>
+          </div>
+          <p class="acct-msg" id="pf-msg-emerg" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="save"></i> 儲存緊急聯絡人</button>
+        </form>
+
+        <!-- ⑤ 健康概況 -->
+        <form class="acct-form pf-form" id="pf-form-health" onsubmit="event.preventDefault(); saveProfileSection('health');">
+          <h3><i data-lucide="heart-pulse" style="width:16px;height:16px;vertical-align:-2px"></i> 健康概況</h3>
+
+          <label class="acct-field">
+            <span>慢性病史（可複選）</span>
+            <div class="pf-chips" id="pf-chronic-chips">${chronicChips}</div>
+          </label>
+
+          <label class="acct-field">
+            <span>主要疾病 / 長期診斷</span>
+            <textarea id="pf-main-dx" rows="2" placeholder="例：第二型糖尿病、原發性高血壓">${_esc(p.main_diagnosis || '')}</textarea>
+          </label>
+
+          <div class="pf-grid">
+            <label class="acct-field pf-col-2">
+              <span>藥物過敏</span>
+              <textarea id="pf-allergy-drug" rows="2" placeholder="例：青黴素 (Penicillin)、磺胺類藥物">${_esc(p.allergy_drug || '')}</textarea>
+            </label>
+            <label class="acct-field pf-col-2">
+              <span>食物 / 其他過敏</span>
+              <textarea id="pf-allergy-other" rows="2" placeholder="例：花生、海鮮、乳膠">${_esc(p.allergy_other || '')}</textarea>
+            </label>
+            <label class="acct-field pf-col-2">
+              <span>家族病史</span>
+              <textarea id="pf-family-hx" rows="2" placeholder="例：父親有高血壓、母親有糖尿病">${_esc(p.family_history || '')}</textarea>
+            </label>
+            <label class="acct-field pf-col-2">
+              <span>目前長期用藥</span>
+              <textarea id="pf-meds" rows="2" placeholder="例：Metformin 500mg 一日二次；Amlodipine 5mg 每日早上">${_esc(p.long_term_meds || '')}</textarea>
+            </label>
+            <label class="acct-field pf-col-2">
+              <span>飲酒 / 抽菸 / 嚼檳榔</span>
+              <input id="pf-habits" type="text" maxlength="200" value="${_esc(p.habits || '')}" placeholder="例：偶爾飲酒；不抽菸；不嚼檳榔" />
+            </label>
+          </div>
+          <p class="acct-msg" id="pf-msg-health" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="save"></i> 儲存健康概況</button>
+        </form>
+
+        <!-- ⑥ 主治醫療 / 保險 -->
+        <form class="acct-form pf-form" id="pf-form-care" onsubmit="event.preventDefault(); saveProfileSection('care');">
+          <h3><i data-lucide="stethoscope" style="width:16px;height:16px;vertical-align:-2px"></i> 主治醫療 / 保險</h3>
+          <div class="pf-grid">
+            <label class="acct-field">
+              <span>主治醫師</span>
+              <input id="pf-doctor" type="text" maxlength="40" value="${_esc(p.primary_doctor || '')}" placeholder="例：林志明 醫師" />
+            </label>
+            <label class="acct-field">
+              <span>醫院 / 診所</span>
+              <input id="pf-hospital" type="text" maxlength="80" value="${_esc(p.hospital || '')}" placeholder="例：台大醫院" />
+            </label>
+            <label class="acct-field">
+              <span>科別</span>
+              <select id="pf-dept">
+                <option value="">— 請選擇 —</option>
+                ${_opts(PROFILE_DEPARTMENTS, p.department)}
+              </select>
+            </label>
+            <label class="acct-field">
+              <span>病歷號</span>
+              <input id="pf-mrn" type="text" maxlength="40" value="${_esc(p.mrn || '')}" placeholder="選填" />
+            </label>
+            <label class="acct-field">
+              <span>健保身分</span>
+              <select id="pf-insurance">
+                <option value="">— 請選擇 —</option>
+                ${_opts(PROFILE_INSURANCE, p.insurance)}
+              </select>
+            </label>
+            <label class="acct-field pf-checkbox">
+              <span>重大傷病卡</span>
+              <label class="pf-switch">
+                <input id="pf-catastrophic" type="checkbox"${p.catastrophic_card ? ' checked' : ''} />
+                <span>持有</span>
+              </label>
+            </label>
+          </div>
+          <p class="acct-msg" id="pf-msg-care" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="save"></i> 儲存醫療資訊</button>
+        </form>
+
+        <div class="acct-actions">
+          <button class="acct-action" onclick="exportProfile()" type="button">
+            <i data-lucide="download"></i> 匯出 JSON
+          </button>
+          <button class="acct-action acct-action-danger" onclick="clearProfile()" type="button">
+            <i data-lucide="trash-2"></i> 清除全部資料
+          </button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function loadProfilePage() {
+  // 切換 chip 樣式
+  const chipsBox = document.getElementById('pf-chronic-chips');
+  if (chipsBox) {
+    chipsBox.addEventListener('change', e => {
+      const chip = e.target.closest('.pf-chip');
+      if (chip) chip.classList.toggle('selected', e.target.checked);
+    });
+  }
+}
+
+function updateProfileAge() {
+  const v = document.getElementById('pf-birth')?.value;
+  const out = document.getElementById('pf-age');
+  if (out) {
+    const a = _calcAge(v);
+    out.value = a === '' ? '' : a + ' 歲';
+  }
+}
+
+function updateProfileBmi() {
+  const h = document.getElementById('pf-height')?.value;
+  const w = document.getElementById('pf-weight')?.value;
+  const out = document.getElementById('pf-bmi');
+  if (out) {
+    const b = _calcBmi(h, w);
+    out.value = b ? b + '　' + _bmiLabel(b) : '';
+  }
+}
+
+function _val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function _checked(id) {
+  const el = document.getElementById(id);
+  return !!(el && el.checked);
+}
+
+function saveProfileSection(section) {
+  const data = loadProfileData();
+  let msgId = '';
+
+  if (section === 'basic') {
+    msgId = 'pf-msg-basic';
+    Object.assign(data, {
+      name: _val('pf-name'),
+      name_en: _val('pf-name-en'),
+      gender: _val('pf-gender'),
+      birth_date: _val('pf-birth'),
+      id_no: _val('pf-id-no'),
+      language: _val('pf-lang'),
+    });
+  } else if (section === 'body') {
+    msgId = 'pf-msg-body';
+    Object.assign(data, {
+      height_cm: _val('pf-height'),
+      weight_kg: _val('pf-weight'),
+      blood_type: _val('pf-blood'),
+      rh: _val('pf-rh'),
+    });
+  } else if (section === 'contact') {
+    msgId = 'pf-msg-contact';
+    Object.assign(data, {
+      phone: _val('pf-phone'),
+      email: _val('pf-email'),
+      address: _val('pf-address'),
+    });
+  } else if (section === 'emerg') {
+    msgId = 'pf-msg-emerg';
+    Object.assign(data, {
+      emergency_name: _val('pf-emerg-name'),
+      emergency_relation: _val('pf-emerg-rel'),
+      emergency_phone: _val('pf-emerg-phone'),
+    });
+  } else if (section === 'health') {
+    msgId = 'pf-msg-health';
+    const chronics = Array.from(
+      document.querySelectorAll('#pf-chronic-chips input[type="checkbox"]:checked')
+    ).map(el => el.value);
+    Object.assign(data, {
+      chronic_conditions: chronics,
+      main_diagnosis: _val('pf-main-dx'),
+      allergy_drug: _val('pf-allergy-drug'),
+      allergy_other: _val('pf-allergy-other'),
+      family_history: _val('pf-family-hx'),
+      long_term_meds: _val('pf-meds'),
+      habits: _val('pf-habits'),
+    });
+  } else if (section === 'care') {
+    msgId = 'pf-msg-care';
+    Object.assign(data, {
+      primary_doctor: _val('pf-doctor'),
+      hospital: _val('pf-hospital'),
+      department: _val('pf-dept'),
+      mrn: _val('pf-mrn'),
+      insurance: _val('pf-insurance'),
+      catastrophic_card: _checked('pf-catastrophic'),
+    });
+  }
+
+  data.updated_at = new Date().toISOString();
+  saveProfileData(data);
+  showAccountMsg(msgId, '已儲存到本機', false);
+}
+
+function exportProfile() {
+  const data = loadProfileData();
+  const u = getCurrentUser() || {};
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mdpiece-profile-' + (u.username || 'me') + '.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+}
+
+function clearProfile() {
+  if (!confirm('確定要清除個人檔案的全部資料嗎？此動作無法復原。')) return;
+  try { localStorage.removeItem(_profileKey()); } catch (e) {}
+  showPage('profile');
+}
+
 // ─── 首頁 ──────────────────────────────────────────────────
 
 function getGreetingMessage() {
@@ -1644,9 +2092,9 @@ function home() {
           <span class="hq-icon"><i data-lucide="pill"></i></span>
           <span>服藥打卡</span>
         </button>
-        <button class="hq-btn hq-records" onclick="navigateTo('records',null)">
+        <button class="hq-btn hq-records" onclick="navigateTo('profile',null)">
           <span class="hq-icon"><i data-lucide="clipboard-list"></i></span>
-          <span>查看病歷</span>
+          <span>個人檔案</span>
         </button>
         <button class="hq-btn hq-edu" onclick="navigateTo('education',null)">
           <span class="hq-icon"><i data-lucide="book-heart"></i></span>
@@ -1692,7 +2140,7 @@ function home() {
       </div>
       <div class="home-grid">
         ${homeCard('symptoms','scan-search','症狀分析','AI 助你釐清身體訊號','blue')}
-        ${homeCard('records','clipboard-list','病歷管理','守護每一次就診紀錄','purple')}
+        ${homeCard('profile','clipboard-list','個人檔案','基本資料、過敏與長期用藥','purple')}
         ${homeCard('doctors','stethoscope','醫師列表','管理你的醫療團隊','rose')}
         ${homeCard('medications','pill','藥物管理','拍藥袋、記服藥、追療效','amber')}
         ${homeCard('education','book-heart','衛教專欄','溫暖易懂的健康知識','teal')}
