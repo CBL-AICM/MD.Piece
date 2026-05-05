@@ -6489,11 +6489,11 @@ async function loadPushHistory() {
 // 五階情緒打卡 + 7 天迷你折線圖 + 自動觸發 silent-guardian 警示
 
 var EMOTION_LEVELS = [
-  { score: 5, emoji: '😄', label: '很好', color: '#86C7B8' },
-  { score: 4, emoji: '🙂', label: '不錯', color: '#B5D6C4' },
-  { score: 3, emoji: '😐', label: '普通', color: '#D6CFC2' },
-  { score: 2, emoji: '😟', label: '低落', color: '#E0B89A' },
-  { score: 1, emoji: '😢', label: '很糟', color: '#C97B7B' },
+  { score: 5, emoji: '😄', label: '很好', desc: '神清氣爽',  color: '#8FA68A', soft: 'rgba(143,166,138,0.18)' },
+  { score: 4, emoji: '🙂', label: '不錯', desc: '今天順順的', color: '#C9B07F', soft: 'rgba(201,176,127,0.18)' },
+  { score: 3, emoji: '😐', label: '普通', desc: '平平的一天', color: '#9DAEC0', soft: 'rgba(157,174,192,0.18)' },
+  { score: 2, emoji: '😟', label: '低落', desc: '有點悶悶的', color: '#D89968', soft: 'rgba(216,153,104,0.18)' },
+  { score: 1, emoji: '😢', label: '很糟', desc: '需要被接住',  color: '#B8553F', soft: 'rgba(184,85,63,0.18)' },
 ];
 
 function _moodColor(score) {
@@ -6514,69 +6514,56 @@ function emotions() {
   return (
     '<section class="emotions-wrap">' +
       '<header class="emotions-head">' +
-        '<h2><i data-lucide="smile" style="width:22px;height:22px"></i> 情緒紀錄</h2>' +
-        '<p>每天花 10 秒幫自己打個卡。連續低落會自動提醒你的醫師。</p>' +
+        '<div class="em-head-icon"><i data-lucide="heart-pulse" style="width:24px;height:24px"></i></div>' +
+        '<h2>情緒紀錄</h2>' +
+        '<p>每天花 10 秒幫自己打個卡，連續低落會自動提醒你的醫師。</p>' +
       '</header>' +
 
-      '<div class="emotions-card mood-today">' +
-        '<h3>今天感覺如何？</h3>' +
+      '<div class="emotions-card em-card-pick">' +
+        '<div class="em-card-header">' +
+          '<span class="em-card-eyebrow">TODAY</span>' +
+          '<h3>今天感覺如何？</h3>' +
+          '<p class="em-card-hint">點一個最貼近現在的表情</p>' +
+        '</div>' +
         '<div class="emotions-scale">' +
           EMOTION_LEVELS.map(function(l) {
             return '<button class="emotions-btn" data-score="' + l.score + '" ' +
               'onclick="selectEmotion(' + l.score + ')" ' +
-              'style="--em-color:' + l.color + '">' +
+              'style="--em-color:' + l.color + ';--em-soft:' + l.soft + '" ' +
+              'title="' + l.desc + '">' +
               '<span class="emotions-emoji">' + l.emoji + '</span>' +
               '<span class="emotions-label">' + l.label + '</span>' +
+              '<span class="emotions-desc">' + l.desc + '</span>' +
             '</button>';
           }).join('') +
         '</div>' +
-        '<textarea id="emotion-note" rows="2" maxlength="200" placeholder="想多說一點？（選填，最多 200 字）"></textarea>' +
+        '<label class="em-note-wrap">' +
+          '<span class="em-note-label">想多說一點？<span class="em-note-counter" id="emotion-note-counter">0 / 200</span></span>' +
+          '<textarea id="emotion-note" rows="2" maxlength="200" placeholder="今天讓你心情這樣的事…（選填）" oninput="updateEmotionNoteCounter()"></textarea>' +
+        '</label>' +
         '<button class="emotions-submit" id="emotion-submit" onclick="submitEmotion()" disabled>' +
-          '<i data-lucide="send" style="width:14px;height:14px"></i> 送出今日打卡' +
+          '<i data-lucide="send" style="width:16px;height:16px"></i> 送出今日打卡' +
         '</button>' +
         '<div id="emotion-status" class="emotions-status"></div>' +
       '</div>' +
 
-      '<div class="emotions-card mood-cal-card">' +
-        '<div class="mood-card-head">' +
-          '<h3>心情日曆</h3>' +
-          '<div class="mood-cal-nav">' +
-            '<button class="mood-cal-btn" onclick="moodCalShift(-1)" aria-label="上個月">‹</button>' +
-            '<span id="mood-cal-label">—</span>' +
-            '<button class="mood-cal-btn" onclick="moodCalShift(1)" aria-label="下個月">›</button>' +
-          '</div>' +
+      '<div class="emotions-card em-card-trend">' +
+        '<div class="em-card-header">' +
+          '<span class="em-card-eyebrow">LAST 7 DAYS</span>' +
+          '<h3>近 7 天情緒走勢</h3>' +
         '</div>' +
-        '<div id="mood-cal" class="mood-cal"></div>' +
-        '<div class="mood-cal-legend">' +
-          EMOTION_LEVELS.slice().reverse().map(function(l) {
-            return '<span class="mood-legend-dot" style="background:' + l.color + '"></span><span class="mood-legend-txt">' + l.label + '</span>';
-          }).join('') +
-        '</div>' +
-        '<p id="mood-cal-tip" class="mood-cal-tip">點選格子可看當日紀錄</p>' +
-      '</div>' +
-
-      '<div class="emotions-card mood-line-card">' +
-        '<div class="mood-card-head">' +
-          '<h3>近 30 天折線</h3>' +
-          '<div class="mood-line-tabs">' +
-            '<button class="mood-tab" data-days="7"  onclick="moodLineRange(7)">7 天</button>' +
-            '<button class="mood-tab is-active" data-days="30" onclick="moodLineRange(30)">30 天</button>' +
-            '<button class="mood-tab" data-days="90" onclick="moodLineRange(90)">90 天</button>' +
-          '</div>' +
-        '</div>' +
-        '<div id="mood-line" class="mood-line"></div>' +
-        '<p id="mood-line-summary" class="mood-line-summary"></p>' +
-      '</div>' +
-
-      '<div class="emotions-card mood-table-card">' +
-        '<div class="mood-card-head">' +
-          '<h3>心情總表</h3>' +
-          '<button class="mood-table-toggle" id="mood-table-toggle" onclick="moodTableToggle()">展開全部</button>' +
-        '</div>' +
-        '<div id="mood-table" class="mood-table-wrap"></div>' +
+        '<div class="em-stat-row" id="emotion-stat-row"></div>' +
+        '<div id="emotion-trend-chart" class="emotions-trend"></div>' +
+        '<p class="emotions-summary" id="emotion-summary"></p>' +
       '</div>' +
     '</section>'
   );
+}
+
+function updateEmotionNoteCounter() {
+  var el = document.getElementById('emotion-note');
+  var c = document.getElementById('emotion-note-counter');
+  if (el && c) c.textContent = (el.value.length || 0) + ' / 200';
 }
 
 var _emotionSelected = null;
@@ -6767,13 +6754,63 @@ function renderMoodLine() {
       path += ''; // 跳過
       return;
     }
-    var y = yFor(rec.average_score);
-    path += (path && _moodCache.byDate[allDates[idx - 1]] ? ' L ' : ' M ') + x.toFixed(1) + ' ' + y.toFixed(1);
-    // min-max 範圍帶
-    if (rec.min_score !== rec.max_score) {
-      var yTop = yFor(rec.max_score);
-      var yBot = yFor(rec.min_score);
-      rangeRects += '<rect x="' + (x - 3) + '" y="' + yTop + '" width="6" height="' + (yBot - yTop) + '" fill="#86C7B8" opacity="0.18" rx="2"/>';
+    var maxBars = 7;
+    var lastN = trend.slice(-maxBars);
+    var gridLines = '<div class="emotions-grid">' +
+      [4,3,2,1].map(function(){ return '<span></span>'; }).join('') + '</div>';
+    var bars = lastN.map(function(t) {
+      var pct = (t.score || 0) / 5 * 100;
+      var lvl = EMOTION_LEVELS.find(function(l) { return l.score === t.score; }) || EMOTION_LEVELS[2];
+      var weekday = (function(d) {
+        var w = ['日','一','二','三','四','五','六'];
+        var dt = new Date(d);
+        return isNaN(dt) ? '' : w[dt.getDay()];
+      })(t.date);
+      return '<div class="emotions-bar-col" data-score="' + (t.score || 0) + '">' +
+        '<span class="emotions-bar-num">' + (t.score || '—') + '</span>' +
+        '<div class="emotions-bar" style="height:' + pct + '%;--bar-color:' + lvl.color + '" title="' + t.date + ' ' + t.score + '/5"></div>' +
+        '<span class="emotions-bar-date">' + t.date.slice(5) + '</span>' +
+        '<span class="emotions-bar-wk">週' + weekday + '</span>' +
+      '</div>';
+    }).join('');
+    box.innerHTML = '<div class="emotions-chart-wrap">' + gridLines +
+      '<div class="emotions-bars">' + bars + '</div></div>';
+    // 統計列
+    var statRow = document.getElementById('emotion-stat-row');
+    if (statRow) {
+      var avg = data.average_score;
+      var scores = lastN.map(function(t){ return t.score || 0; }).filter(function(x){ return x > 0; });
+      var hi = scores.length ? Math.max.apply(null, scores) : null;
+      var lo = scores.length ? Math.min.apply(null, scores) : null;
+      var avgLvl = avg != null ? (EMOTION_LEVELS.find(function(l){ return l.score === Math.round(avg); }) || EMOTION_LEVELS[2]) : null;
+      statRow.innerHTML =
+        '<div class="em-stat" style="--em-color:' + (avgLvl ? avgLvl.color : 'var(--accent)') + '">' +
+          '<span class="em-stat-label">7 日平均</span>' +
+          '<span class="em-stat-value">' + (avg != null ? avg : '—') + '</span>' +
+          '<span class="em-stat-foot">滿分 5</span>' +
+        '</div>' +
+        '<div class="em-stat">' +
+          '<span class="em-stat-label">最高</span>' +
+          '<span class="em-stat-value">' + (hi != null ? hi : '—') + '</span>' +
+          '<span class="em-stat-foot">最佳一天</span>' +
+        '</div>' +
+        '<div class="em-stat">' +
+          '<span class="em-stat-label">最低</span>' +
+          '<span class="em-stat-value">' + (lo != null ? lo : '—') + '</span>' +
+          '<span class="em-stat-foot">最低一天</span>' +
+        '</div>' +
+        '<div class="em-stat">' +
+          '<span class="em-stat-label">總筆數</span>' +
+          '<span class="em-stat-value">' + (data.total_records || 0) + '</span>' +
+          '<span class="em-stat-foot">已記錄</span>' +
+        '</div>';
+    }
+    if (summaryEl) {
+      var avg2 = data.average_score;
+      summaryEl.innerHTML = avg2 != null && avg2 <= 2.5
+        ? '<i data-lucide="alert-circle" style="width:14px;height:14px"></i>偵測到偏低，建議跟醫師談談'
+        : '<i data-lucide="check-circle-2" style="width:14px;height:14px"></i>持續紀錄能讓醫師更了解你';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
     pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="3.5" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="1.2"><title>' + k + ' 平均 ' + rec.average_score + '/5</title></circle>';
   });

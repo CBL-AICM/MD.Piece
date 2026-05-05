@@ -8536,428 +8536,432 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
       0 8px 18px rgba(92,58,50,0.10);
   }
 /* ───────── 情緒紀錄頁 ───────── */
+/* ─── 情緒紀錄 — 精緻版 ────────────────────────────── */
 .emotions-wrap {
-  padding: 16px 4px 32px;
-  max-width: 720px;
+  padding: 16px 4px 40px;
+  max-width: 760px;
   margin: 0 auto;
 }
+
+/* 標題區：圓圖示 + 大字 */
+.emotions-head {
+  text-align: center;
+  margin: 8px 0 22px;
+  position: relative;
+}
+.em-head-icon {
+  width: 56px; height: 56px;
+  margin: 0 auto 10px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--rose) 100%);
+  color: #fff;
+  box-shadow:
+    0 8px 22px rgba(201,127,75,0.28),
+    inset 0 -3px 8px rgba(0,0,0,0.08),
+    inset 0 2px 4px rgba(255,255,255,0.4);
+}
 .emotions-head h2 {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
+  font-size: 1.45rem;
+  font-weight: 700;
   color: var(--text);
+  letter-spacing: 0.02em;
 }
 .emotions-head p {
-  margin: 0 0 22px;
+  margin: 0;
   color: var(--text-dim);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
+
+/* 卡片：奶油底 + 微 shadow + 漸層左邊條 */
 .emotions-card {
   background: var(--bg-surface);
-  border: 1px solid var(--bg-glass-hover);
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 16px;
+  border: 1px solid rgba(92,58,50,0.12);
+  border-radius: 18px;
+  padding: 22px 22px 20px;
+  margin-bottom: 18px;
+  position: relative;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.6) inset,
+    0 4px 16px rgba(92,58,50,0.06);
+  overflow: hidden;
+}
+.emotions-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--accent), var(--rose));
+  opacity: 0.85;
+}
+
+.em-card-header { margin-bottom: 18px; }
+.em-card-eyebrow {
+  display: inline-block;
+  font-family: 'JetBrains Mono', 'Menlo', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  background: rgba(201,127,75,0.1);
+  padding: 3px 10px;
+  border-radius: 100px;
+  margin-bottom: 8px;
 }
 .emotions-card h3 {
-  margin: 0 0 14px;
-  font-size: 1.05rem;
+  margin: 0 0 4px;
+  font-size: 1.18rem;
+  font-weight: 700;
   color: var(--text);
+  letter-spacing: 0.01em;
 }
+.em-card-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* 5 階表情按鈕 ── 大表情 + 顏色塊 + 名稱 + 描述 */
 .emotions-scale {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 .emotions-btn {
-  background: var(--bg-mid);
-  border: 2px solid var(--bg-glass-hover);
-  border-radius: 12px;
-  padding: 14px 4px;
+  --em-color: var(--accent);
+  --em-soft: rgba(201,127,75,0.18);
+  position: relative;
+  background: linear-gradient(180deg, var(--bg-surface), #FBF2E2);
+  border: 1.5px solid rgba(92,58,50,0.12);
+  border-radius: 16px;
+  padding: 16px 6px 12px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  transition: all .15s;
-  --em-color: var(--accent);
+  gap: 4px;
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease, border-color .2s ease, background .2s ease;
+  overflow: hidden;
+}
+.emotions-btn::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 3px;
+  background: var(--em-color);
+  opacity: 0;
+  transition: opacity .2s ease;
 }
 .emotions-btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--em-color);
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--bg-surface), var(--em-soft));
+  box-shadow: 0 8px 18px rgba(92,58,50,0.1);
 }
+.emotions-btn:hover::before { opacity: 0.7; }
 .emotions-btn.selected {
-  background: var(--bg-surface);
+  transform: translateY(-3px);
   border-color: var(--em-color);
-  box-shadow: 0 0 0 2px var(--em-color, var(--accent-glow));
-  transform: translateY(-2px);
+  background: linear-gradient(180deg, var(--em-soft), var(--bg-surface));
+  box-shadow:
+    0 0 0 2px var(--em-color),
+    0 10px 22px rgba(92,58,50,0.12);
+}
+.emotions-btn.selected::before { opacity: 1; }
+.emotions-btn.selected .emotions-emoji { animation: emPop .35s cubic-bezier(.34,1.56,.64,1); }
+@keyframes emPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.18); }
+  100% { transform: scale(1.08); }
 }
 .emotions-emoji {
-  font-size: 2rem;
+  font-size: 2.4rem;
   line-height: 1;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 2px 3px rgba(92,58,50,0.12));
+  transition: transform .2s ease;
 }
+.emotions-btn:hover .emotions-emoji { transform: scale(1.06); }
 .emotions-label {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-}
-.emotions-btn.selected .emotions-label {
-  color: var(--em-color);
+  font-size: 0.85rem;
   font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.emotions-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+.emotions-btn.selected .emotions-label { color: var(--em-color); }
+.emotions-btn.selected .emotions-desc  { color: var(--text-dim); }
+
+/* 備註輸入 */
+.em-note-wrap {
+  display: block;
+  margin-bottom: 14px;
+}
+.em-note-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.em-note-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }
 .emotions-card textarea {
   width: 100%;
-  padding: 10px 12px;
-  background: var(--bg-mid);
-  border: 1px solid var(--bg-glass-hover);
-  border-radius: 8px;
+  padding: 12px 14px;
+  background: #FFFCF5;
+  border: 1.5px solid rgba(92,58,50,0.14);
+  border-radius: 12px;
   font-family: inherit;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   color: var(--text);
   resize: vertical;
-  margin-bottom: 12px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  line-height: 1.55;
 }
+.emotions-card textarea::placeholder { color: var(--text-muted); }
 .emotions-card textarea:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(201,127,75,0.15);
 }
+
+/* 送出按鈕 ── 漸層 + soft shadow */
 .emotions-submit {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, #B66A38 100%);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 10px 18px;
+  border-radius: 12px;
+  padding: 14px 20px;
   cursor: pointer;
-  font-size: 0.92rem;
+  font-size: 0.98rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transition: filter .15s;
+  gap: 8px;
+  transition: transform .15s ease, box-shadow .2s ease, filter .15s;
   width: 100%;
   justify-content: center;
+  box-shadow:
+    0 6px 18px rgba(201,127,75,0.32),
+    inset 0 1px 0 rgba(255,255,255,0.25);
 }
-.emotions-submit:hover:not(:disabled) { filter: brightness(1.05); }
+.emotions-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 24px rgba(201,127,75,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.emotions-submit:active:not(:disabled) { transform: translateY(0); }
 .emotions-submit:disabled {
-  opacity: 0.45;
+  background: linear-gradient(135deg, #D5C0A8, #C4AE92);
+  color: #FFFCF5;
+  box-shadow: 0 2px 6px rgba(92,58,50,0.1);
   cursor: not-allowed;
 }
+
 .emotions-status {
-  margin-top: 10px;
-  font-size: 0.85rem;
+  margin-top: 12px;
+  font-size: 0.86rem;
   min-height: 1.2em;
+  text-align: center;
   color: var(--text-muted);
 }
-.emotions-status-ok { color: var(--accent); }
-.emotions-status-error { color: var(--rose); }
+.emotions-status-ok { color: var(--success); font-weight: 600; }
+.emotions-status-error { color: var(--danger); font-weight: 600; }
 
-.emotions-trend {
-  min-height: 140px;
+/* 統計列：4 個小卡 */
+.em-stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.em-stat {
+  --em-color: var(--accent);
+  background: linear-gradient(180deg, #FBF2E2, var(--bg-surface));
+  border: 1px solid rgba(92,58,50,0.1);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.em-stat::before {
+  content: "";
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  top: 0;
+  width: 30%;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--em-color);
+  opacity: 0.7;
+}
+.em-stat-label {
+  display: block;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.em-stat-value {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--em-color);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.em-stat-foot {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* 走勢圖：垂直 bar + 數字 + 週幾 + 背景格線 */
+.emotions-trend { min-height: 200px; }
+.emotions-chart-wrap {
+  position: relative;
+  padding: 16px 6px 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #FBF2E2 0%, var(--bg-surface) 100%);
+  border: 1px solid rgba(92,58,50,0.08);
+}
+.emotions-grid {
+  position: absolute;
+  left: 14px; right: 14px;
+  top: 28px; bottom: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 0;
+}
+.emotions-grid span {
+  display: block;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, rgba(92,58,50,0.18) 0 5px, transparent 5px 10px);
 }
 .emotions-bars {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 140px;
-  gap: 8px;
-  padding: 0 4px;
+  height: 170px;
+  gap: 6px;
+  padding: 0 8px;
+  position: relative;
+  z-index: 1;
 }
 .emotions-bar-col {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   height: 100%;
   justify-content: flex-end;
 }
-.emotions-bar {
-  width: 100%;
-  max-width: 36px;
-  border-radius: 6px 6px 0 0;
-  min-height: 8%;
-  transition: height .3s;
-}
-.emotions-bar-date {
-  font-size: 0.72rem;
-  color: var(--text-muted);
+.emotions-bar-num {
+  font-size: 0.75rem;
   font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+.emotions-bar {
+  --bar-color: var(--accent);
+  width: 100%;
+  max-width: 38px;
+  border-radius: 8px 8px 4px 4px;
+  min-height: 8%;
+  background: linear-gradient(180deg, var(--bar-color) 0%, color-mix(in srgb, var(--bar-color) 70%, #5C3A32) 100%);
+  box-shadow:
+    0 -1px 0 rgba(255,255,255,0.25) inset,
+    0 4px 8px rgba(92,58,50,0.12);
+  transition: height .4s cubic-bezier(.4,0,.2,1), filter .15s ease;
+  cursor: pointer;
+  position: relative;
+}
+.emotions-bar-col:hover .emotions-bar { filter: brightness(1.08); }
+.emotions-bar-date {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 4px;
+}
+.emotions-bar-wk {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
 }
 .emotions-summary {
-  margin: 12px 0 0;
-  font-size: 0.85rem;
+  margin: 14px 0 0;
+  font-size: 0.86rem;
   color: var(--text-dim);
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
 }
+.emotions-summary i { color: var(--accent); }
 .emotions-empty {
   text-align: center;
   color: var(--text-muted);
-  font-size: 0.9rem;
-  padding: 32px 16px;
+  font-size: 0.92rem;
+  padding: 40px 16px;
   margin: 0;
+  line-height: 1.6;
 }
 
-/* ── 心情頁 v2：日曆 / 折線 / 總表 ───────────────────── */
-.mood-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-.mood-card-head h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  color: var(--text);
+/* 手機 ── 5 階做兩排（3+2），bar 細一點 */
+@media (max-width: 540px) {
+  .emotions-scale { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .emotions-emoji { font-size: 2rem; }
+  .emotions-label { font-size: 0.78rem; }
+  .emotions-desc  { font-size: 0.62rem; }
+  .em-stat-row { grid-template-columns: repeat(2, 1fr); }
+  .em-stat-value { font-size: 1.5rem; }
+  .emotions-bars { height: 140px; gap: 4px; }
 }
 
-/* —— 日曆 —— */
-.mood-cal-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.88rem;
-  color: var(--text-dim);
-  font-family: 'JetBrains Mono', monospace;
+/* 年長版回退（沿用 sm-* 變數）*/
+html[data-mode="senior"] .emotions-card,
+html[data-mode="senior"] .emotions-btn,
+html[data-mode="senior"] .em-stat,
+html[data-mode="senior"] .emotions-chart-wrap {
+  background: var(--sm-panel) !important;
+  border-color: var(--sm-border) !important;
+  box-shadow: none !important;
 }
-.mood-cal-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid var(--bg-glass-hover);
-  background: var(--bg-mid);
-  color: var(--text-dim);
-  cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .15s, color .15s;
+html[data-mode="senior"] .emotions-card::before,
+html[data-mode="senior"] .em-stat::before,
+html[data-mode="senior"] .emotions-btn::before { display: none !important; }
+html[data-mode="senior"] .em-head-icon {
+  background: var(--sm-accent) !important;
+  box-shadow: none !important;
 }
-.mood-cal-btn:hover {
-  background: var(--bg-surface);
-  color: var(--text);
+html[data-mode="senior"] .emotions-submit {
+  background: var(--sm-accent) !important;
+  box-shadow: none !important;
 }
-.mood-cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-}
-.mood-cal-wk {
-  text-align: center;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  padding: 4px 0;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-}
-.mood-cal-cell {
-  aspect-ratio: 1;
-  border-radius: 10px;
-  border: 1px solid var(--bg-glass-hover);
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  padding: 2px;
-  position: relative;
-  transition: transform .12s, box-shadow .12s;
-}
-.mood-cal-cell.is-empty {
-  border: none;
-  background: transparent;
-  cursor: default;
-  pointer-events: none;
-}
-.mood-cal-cell.has-data {
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-.mood-cal-cell:hover:not(.is-empty) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
-}
-.mood-cal-cell.is-today {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-.mood-cal-day {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  font-family: 'JetBrains Mono', monospace;
-  line-height: 1;
-}
-.mood-cal-cell.has-data .mood-cal-day {
-  color: rgba(20, 25, 35, 0.7);
-  font-weight: 600;
-}
-.mood-cal-emoji {
-  font-size: 1.05rem;
-  line-height: 1;
-}
-.mood-cal-legend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px 14px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-.mood-legend-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  margin-right: 4px;
-  vertical-align: middle;
-}
-.mood-legend-txt {
-  margin-right: 6px;
-}
-.mood-cal-tip {
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  background: var(--bg-mid);
-  border-radius: 8px;
-  font-size: 0.82rem;
-  color: var(--text-dim);
-  line-height: 1.5;
-  text-align: center;
-  min-height: 1.2em;
-}
-
-/* —— 折線圖 —— */
-.mood-line-tabs {
-  display: inline-flex;
-  background: var(--bg-mid);
-  border-radius: 999px;
-  padding: 3px;
-  gap: 2px;
-}
-.mood-tab {
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: background .15s, color .15s;
-  font-family: inherit;
-}
-.mood-tab:hover { color: var(--text-dim); }
-.mood-tab.is-active {
-  background: var(--bg-surface);
-  color: var(--text);
-  font-weight: 600;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-}
-.mood-line {
-  width: 100%;
-  min-height: 200px;
-}
-.mood-line-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-.mood-line-summary {
-  margin: 10px 0 0;
-  font-size: 0.82rem;
-  color: var(--text-dim);
-  text-align: center;
-}
-
-/* —— 總表 —— */
-.mood-table-toggle {
-  border: 1px solid var(--bg-glass-hover);
-  background: var(--bg-mid);
-  color: var(--text-dim);
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .15s, color .15s;
-}
-.mood-table-toggle:hover {
-  background: var(--bg-surface);
-  color: var(--text);
-}
-.mood-table-wrap {
-  overflow-x: auto;
-}
-.mood-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-.mood-table th {
-  text-align: left;
-  font-weight: 600;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--bg-glass-hover);
-}
-.mood-table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  vertical-align: middle;
-}
-.mood-table tbody tr:last-child td { border-bottom: none; }
-.mood-table tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
-.mood-td-date {
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-.mood-td-emoji {
-  font-size: 1.2rem;
-  text-align: center;
-  width: 32px;
-}
-.mood-td-note {
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.mood-table-muted {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  margin-left: 2px;
-}
-
-@media (max-width: 480px) {
-  .mood-cal-grid { gap: 4px; }
-  .mood-cal-day { font-size: 0.66rem; }
-  .mood-cal-emoji { font-size: 0.9rem; }
-  .mood-table th:nth-child(4),
-  .mood-table td:nth-child(4) { display: none; }   /* 隱藏「區間」欄 */
-  .mood-td-note { max-width: 120px; }
-}
-
-/* Light theme 微調 */
-#app-wrapper[data-theme="light"] .mood-cal-cell.has-data .mood-cal-day {
-  color: rgba(60, 40, 35, 0.85);
-}
-#app-wrapper[data-theme="light"] .mood-cal-cell.has-data {
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
-}
+html[data-mode="senior"] .emotions-bar { background: var(--bar-color) !important; box-shadow: none !important; }
 
 /* ═══════════════════════════════════════════════════════════
    MOBILE — 強制滿版（蓋掉所有 max-width / margin auto / 殘留 padding）
