@@ -9771,18 +9771,19 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SENIOR MODE — 全米色 / 大字 / 無裝飾
+   SENIOR MODE — 無印風 / 大字 / 無裝飾
    壓制式覆寫：放在檔末以蓋過所有先前規則。
+   配色：白底 + 灰階 + 單一炭灰重點，零裝飾。
    ═══════════════════════════════════════════════════════════ */
 
 html[data-mode="senior"] {
-  --sm-bg: #F4E9D5;        /* 主背景米色 */
-  --sm-panel: #FBF5E8;     /* 卡片米色（更淺） */
-  --sm-panel-2: #EFE2C8;   /* 次層米色 */
-  --sm-text: #2B2118;      /* 高對比深棕 */
-  --sm-text-dim: #5A4A36;  /* 次要文字 */
-  --sm-accent: #8B5A2B;    /* 暖棕色重點 */
-  --sm-border: #C9B58E;    /* 邊框 */
+  --sm-bg: #FAFAFA;        /* 主背景—近白 */
+  --sm-panel: #FFFFFF;     /* 卡片—純白 */
+  --sm-panel-2: #F2F2F2;   /* 次層—淺灰 */
+  --sm-text: #2A2A2A;      /* 高對比深灰（近黑） */
+  --sm-text-dim: #6B6B6B;  /* 次要文字—中灰 */
+  --sm-accent: #2A2A2A;    /* 炭灰重點—無彩色 */
+  --sm-border: #E5E5E5;    /* 邊框—淺灰 */
 }
 
 /* 1. 全部背景統一米色 ───────────────────────── */
@@ -9816,13 +9817,17 @@ html[data-mode="senior"] select {
   background: var(--sm-panel) !important;
   background-image: none !important;
   border: 1px solid var(--sm-border) !important;
-  border-radius: 12px !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
   color: var(--sm-text) !important;
 }
 
 /* 2. 移除所有裝飾元素 ───────────────────────── */
 html[data-mode="senior"] .puzzle-deco,
+html[data-mode="senior"] .home-deco,
+html[data-mode="senior"] .home-deco-1,
+html[data-mode="senior"] .home-deco-2,
+html[data-mode="senior"] .home-deco-3,
 html[data-mode="senior"] .page-deco,
 html[data-mode="senior"] .auth-deco-layer,
 html[data-mode="senior"] .auth-deco,
@@ -9921,10 +9926,10 @@ html[data-mode="senior"] .primary,
 html[data-mode="senior"] .auth-submit {
   font-family: "Noto Sans TC", sans-serif !important;
   font-size: 1.2rem !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   padding: 14px 22px !important;
   min-height: 52px !important;
-  border-radius: 12px !important;
+  border-radius: 4px !important;
   background: var(--sm-panel) !important;
   background-image: none !important;
   color: var(--sm-text) !important;
@@ -9939,7 +9944,7 @@ html[data-mode="senior"] .auth-submit,
 html[data-mode="senior"] .nav-item.active,
 html[data-mode="senior"] .bi-actions .primary {
   background: var(--sm-accent) !important;
-  color: #FFF8EC !important;
+  color: #FFFFFF !important;
   border-color: var(--sm-accent) !important;
 }
 html[data-mode="senior"] button:hover,
@@ -9949,8 +9954,8 @@ html[data-mode="senior"] .btn:hover {
 }
 html[data-mode="senior"] button.primary:hover,
 html[data-mode="senior"] .btn-primary:hover {
-  background: #6F4720 !important;
-  color: #FFF8EC !important;
+  background: #1A1A1A !important;
+  color: #FFFFFF !important;
 }
 
 /* 7. Sidebar nav：大字、簡單高亮 ─────────── */
@@ -9973,25 +9978,25 @@ html[data-mode="senior"] .sidebar-brand p {
 }
 html[data-mode="senior"] .nav-item {
   font-size: 1.2rem !important;
-  font-weight: 500 !important;
+  font-weight: 400 !important;
   padding: 16px 22px !important;
   color: var(--sm-text) !important;
   background: transparent !important;
   border: none !important;
-  border-left: 4px solid transparent !important;
+  border-left: 2px solid transparent !important;
   border-radius: 0 !important;
   min-height: 56px;
 }
 html[data-mode="senior"] .nav-item:hover {
-  background: var(--sm-panel) !important;
-  border-left-color: var(--sm-accent) !important;
+  background: var(--sm-panel-2) !important;
+  border-left-color: transparent !important;
   color: var(--sm-text) !important;
 }
 html[data-mode="senior"] .nav-item.active {
   background: var(--sm-panel-2) !important;
-  border-left: 4px solid var(--sm-accent) !important;
+  border-left: 2px solid var(--sm-accent) !important;
   color: var(--sm-text) !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
 }
 html[data-mode="senior"] .nav-icon i { width: 22px !important; height: 22px !important; }
 
