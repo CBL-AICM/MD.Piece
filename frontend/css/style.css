@@ -10170,3 +10170,73 @@ html[data-mode="senior"] .mood-cal-btn {
   width: auto !important;
   font-size: 1.1rem !important;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SENIOR MODE — 手機字體壓縮（避免跑版）
+   檔末壓制式覆寫的 1.15rem / 2rem / 1.5rem !important 在手機
+   會跑版，這裡用 media query + !important 覆蓋手機尺寸。
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  html[data-mode="senior"] {
+    font-size: 16px !important;
+  }
+  html[data-mode="senior"] body,
+  html[data-mode="senior"] #app,
+  html[data-mode="senior"] #app p,
+  html[data-mode="senior"] #app li,
+  html[data-mode="senior"] #app dd,
+  html[data-mode="senior"] #app dt,
+  html[data-mode="senior"] #app label,
+  html[data-mode="senior"] #app span {
+    font-size: 1rem !important;
+    line-height: 1.6 !important;
+  }
+  html[data-mode="senior"] #app h1,
+  html[data-mode="senior"] #app h2 {
+    font-size: 1.35rem !important;
+    line-height: 1.4 !important;
+  }
+  html[data-mode="senior"] #app h3 {
+    font-size: 1.15rem !important;
+    line-height: 1.45 !important;
+  }
+  html[data-mode="senior"] #app h4 {
+    font-size: 1.05rem !important;
+  }
+  html[data-mode="senior"] .topbar-filename,
+  html[data-mode="senior"] #page-title {
+    font-size: 1.2rem !important;
+  }
+  html[data-mode="senior"] input,
+  html[data-mode="senior"] textarea,
+  html[data-mode="senior"] select {
+    font-size: 1rem !important;
+    padding: 12px 14px !important;
+    min-height: 46px !important;
+  }
+  html[data-mode="senior"] textarea {
+    min-height: 80px !important;
+  }
+  html[data-mode="senior"] button,
+  html[data-mode="senior"] .btn,
+  html[data-mode="senior"] .primary,
+  html[data-mode="senior"] .auth-submit {
+    font-size: 1.05rem !important;
+    padding: 12px 18px !important;
+    min-height: 48px !important;
+  }
+  html[data-mode="senior"] .nav-item {
+    font-size: 1.05rem !important;
+    min-height: 56px !important;
+    padding: 12px 18px !important;
+  }
+  html[data-mode="senior"] .sidebar-brand h1 {
+    font-size: 1.2rem !important;
+  }
+  html[data-mode="senior"] .sidebar-brand p {
+    font-size: 0.85rem !important;
+  }
+  html[data-mode="senior"] .topbar {
+    padding: 12px 14px !important;
+  }
+}
