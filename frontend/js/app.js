@@ -7052,6 +7052,77 @@ var DIET_BASELINE_TIPS = [
   '餐前 30 分鐘喝一杯水有助消化',
 ];
 
+// 基本營養素衛教（固定內容，與個人化資料無關）
+var DIET_BASIC_NUTRIENTS = [
+  {
+    name: '蛋白質',
+    icon: 'beef',
+    daily: '每公斤體重 1.0–1.2 g（運動者 1.4–1.7 g）',
+    role: '修復組織、製造酵素與抗體',
+    sources: '魚、雞胸、蛋、豆腐、無糖豆漿、希臘優格',
+    tip: '每餐都要有一份手掌大的蛋白質，分散吃比一次大量好吸收',
+  },
+  {
+    name: '碳水化合物',
+    icon: 'wheat',
+    daily: '佔每日總熱量 50–60%',
+    role: '主要能量來源，供給大腦與肌肉',
+    sources: '糙米、燕麥、地瓜、全麥麵包、水果',
+    tip: '選低 GI 全穀類，少吃精緻糖與含糖飲料',
+  },
+  {
+    name: '脂肪（好油）',
+    icon: 'droplet',
+    daily: '佔每日總熱量 20–30%',
+    role: '吸收脂溶性維生素、合成荷爾蒙',
+    sources: '橄欖油、酪梨、堅果、鯖魚、鮭魚',
+    tip: '多吃 Omega-3，避開油炸與反式脂肪（人造奶油、酥油）',
+  },
+  {
+    name: '膳食纖維',
+    icon: 'leaf',
+    daily: '每天 25–35 g',
+    role: '促進腸道蠕動、穩定血糖、餵養好菌',
+    sources: '蔬菜、水果、燕麥、糙米、豆類',
+    tip: '一天至少 3 份蔬菜（一份約一個拳頭大）+ 2 份水果',
+  },
+  {
+    name: '水分',
+    icon: 'glass-water',
+    daily: '每天 2000–2500 ml（依體重 30 ml/kg 估算）',
+    role: '代謝廢物、調節體溫、運送養分',
+    sources: '白開水、無糖茶、清湯',
+    tip: '看尿色：淡黃就夠，深黃要再多喝；別等口渴才喝',
+  },
+  {
+    name: '維生素 & 礦物質',
+    icon: 'sparkles',
+    daily: '從多色蔬果中自然攝取',
+    role: '維生素 D / B 群、鈣、鐵、鋅參與骨骼、造血、免疫',
+    sources: '深色蔬菜、彩色水果、海帶、堅果、紅肉、蛋黃',
+    tip: '彩虹飲食法：紅黃綠紫白每天都吃一點，比單吃保健品有效',
+  },
+];
+
+function renderBasicNutrients() {
+  var box = document.getElementById('diet-basic-nutrients');
+  if (!box) return;
+  box.innerHTML = DIET_BASIC_NUTRIENTS.map(function(n) {
+    return ''
+      + '<div class="diet-nutrient">'
+      +   '<div class="diet-nutrient-head">'
+      +     '<i data-lucide="' + n.icon + '" style="width:16px;height:16px"></i>'
+      +     '<strong>' + chatEscape(n.name) + '</strong>'
+      +     '<span class="diet-nutrient-daily">' + chatEscape(n.daily) + '</span>'
+      +   '</div>'
+      +   '<div class="diet-nutrient-role">' + chatEscape(n.role) + '</div>'
+      +   '<div class="diet-nutrient-sources"><span class="diet-nutrient-label">食物來源</span>' + chatEscape(n.sources) + '</div>'
+      +   '<div class="diet-nutrient-tip">' + chatEscape(n.tip) + '</div>'
+      + '</div>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function diet() {
   return ''
     + '<section class="diet-wrap">'
@@ -7059,6 +7130,12 @@ function diet() {
     +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
     +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
     +   '</header>'
+
+    +   '<div class="diet-card diet-basic-nutrients-card">'
+    +     '<h3><i data-lucide="apple" style="width:16px;height:16px"></i> 基本營養素衛教</h3>'
+    +     '<p class="diet-card-sub">每天身體都需要的六大基本營養素，照著吃就不會差太多。</p>'
+    +     '<div id="diet-basic-nutrients" class="diet-nutrient-grid"></div>'
+    +   '</div>'
 
     +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card">'
     +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
@@ -7479,6 +7556,7 @@ function loadDietPage() {
     if (drinkBox) drinkBox.innerHTML = '';
   }, 50);
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+  renderBasicNutrients();
   fetchDietGuide();
   fetchCaffeineGuide();
   fetchDietTodayRecords();
