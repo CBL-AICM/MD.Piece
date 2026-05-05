@@ -242,9 +242,15 @@
     scope.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
       const val = t(key, lang);
-      // allow simple <br> in tagline
+      // 支援字典裡用 <br> / <br/> 換行；不走 innerHTML（避免 XSS sink），
+      // 拆字串後用 text node + <br> element 組回去。
       if (val.indexOf('<br>') >= 0 || val.indexOf('<br/>') >= 0) {
-        el.innerHTML = val;
+        el.textContent = '';
+        const parts = val.split(/<br\s*\/?>/i);
+        parts.forEach((part, idx) => {
+          if (idx > 0) el.appendChild(document.createElement('br'));
+          if (part) el.appendChild(document.createTextNode(part));
+        });
       } else {
         el.textContent = val;
       }
