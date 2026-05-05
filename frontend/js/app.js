@@ -1041,7 +1041,7 @@ const pageSlugForTerminal = {
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', chat: 'med-chat', account: 'account',
-  settings: 'settings',
+  settings: 'settings', diet: 'diet',
   records: 'records', doctors: 'doctors'
 };
 
@@ -1050,7 +1050,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings
+    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet
   };
   // Page transition
   app.style.opacity = '0';
@@ -1070,6 +1070,7 @@ function showPage(page) {
     if (page === "chat") loadChatPage();
     if (page === "previsit") loadPrevisitPage();
     if (page === "emotions") loadEmotionsPage();
+    if (page === "diet") loadDietPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     // Render Lucide icons
@@ -5247,7 +5248,7 @@ function chatGreeting() {
   if (v === 'elderly') {
     return '你好啊，' + name + '。我是小禾，今天身體有沒有比較舒服？慢慢說，我都聽。';
   }
-  return '嗨～' + name + '！我是小禾 🌱 今天想聊什麼？身體、心情、或是寫一篇文章都可以。';
+  return '嗨，' + name + '，我是小禾。今天想聊什麼都可以，身體、心情、或是想寫點東西都行。';
 }
 
 function chat() {
@@ -6492,6 +6493,592 @@ function loadEmotionsPage() {
   _emotionSelected = null;
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
   renderEmotionTrend();
+}
+
+
+// ─── 飲食紀錄 ───────────────────────────────────────────
+// 三段式：基本衛教（蛋白質/水/纖維）+ 疾病禁忌 + 今日推薦食物 + 打卡
+
+var DIET_MEAL_LABEL = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心' };
+var _dietGuide = null;
+var _dietSelectedMeal = 'breakfast';
+
+function diet() {
+  return ''
+    + '<section class="diet-wrap">'
+    +   '<header class="diet-head">'
+    +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
+    +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
+    +   '</header>'
+
+    +   '<div class="diet-card diet-pick-card">'
+    +     '<h3><i data-lucide="dices" style="width:16px;height:16px"></i> 吃什麼神器</h3>'
+    +     '<p class="diet-pick-sub">選擇障礙嗎？讓 AI 依你的病史挑一道。</p>'
+    +     '<div class="diet-pick-meal-tabs" id="diet-pick-meal-tabs">'
+    +       [['any','隨便'],['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點心']].map(function(p) {
+              return '<button class="diet-pick-tab' + (p[0]==='any'?' active':'') + '" '
+                + 'data-pick-meal="' + p[0] + '" onclick="dietPickSetMeal(\'' + p[0] + '\')">'
+                + p[1] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<div class="diet-pick-price-tabs" id="diet-pick-price-tabs">'
+    +       [['any','不限預算'],['$','$（≤100）'],['$$','$$（100–200）'],['$$$','$$$（200+）']].map(function(p) {
+              return '<button class="diet-pick-tab diet-pick-price' + (p[0]==='any'?' active':'') + '" '
+                + 'data-pick-price="' + p[0] + '" onclick="dietPickSetPrice(\'' + p[0] + '\')">'
+                + p[1] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<div class="diet-pick-cal-tabs" id="diet-pick-cal-tabs">'
+    +       [['any','不限熱量'],['low','輕量（≤350）'],['mid','一般（350–650）'],['high','高熱量（650+）']].map(function(p) {
+              return '<button class="diet-pick-tab diet-pick-cal' + (p[0]==='any'?' active':'') + '" '
+                + 'data-pick-cal="' + p[0] + '" onclick="dietPickSetCal(\'' + p[0] + '\')">'
+                + p[1] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<div class="diet-pick-flags">'
+    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-nearby" onchange="dietPickToggleNearby(this.checked)" /> <span>只推附近能取得（超商/便當店/早餐店）</span></label>'
+    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-avoid-recent" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>避開本週吃過的</span></label>'
+    +     '</div>'
+    +     '<div class="diet-pick-dislike">'
+    +       '<div class="diet-pick-dislike-row" id="diet-pick-dislike-chips"></div>'
+    +       '<div class="diet-pick-dislike-input">'
+    +         '<input type="text" id="diet-pick-dislike-add" maxlength="20" placeholder="不吃什麼？例：香菜、辣椒" />'
+    +         '<button onclick="dietPickAddDislike()" type="button"><i data-lucide="plus" style="width:14px;height:14px"></i></button>'
+    +       '</div>'
+    +     '</div>'
+    +     '<div id="diet-pick-result" class="diet-pick-result diet-pick-empty">'
+    +       '<i data-lucide="utensils" style="width:28px;height:28px"></i>'
+    +       '<div>按下面的按鈕，幫你抽一道菜</div>'
+    +     '</div>'
+    +     '<div class="diet-pick-actions">'
+    +       '<button class="diet-pick-btn primary" onclick="dietPickMeal(false)">'
+    +         '<i data-lucide="dices" style="width:16px;height:16px"></i> 給我一道'
+    +       '</button>'
+    +       '<button class="diet-pick-btn primary diet-pick-btn-drink" onclick="dietPickDrink(false)">'
+    +         '<i data-lucide="coffee" style="width:16px;height:16px"></i> 配杯飲料'
+    +       '</button>'
+    +       '<button class="diet-pick-btn secondary" id="diet-pick-reroll" onclick="dietPickMeal(true)" disabled>'
+    +         '<i data-lucide="refresh-cw" style="width:16px;height:16px"></i> 換一道'
+    +       '</button>'
+    +       '<button class="diet-pick-btn quiet" id="diet-pick-log" onclick="dietPickLogIt()" disabled>'
+    +         '<i data-lucide="check" style="width:16px;height:16px"></i> 就吃這個'
+    +       '</button>'
+    +     '</div>'
+    +     '<div id="diet-drink-result" class="diet-drink-result"></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card" style="display:none">'
+    +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
+    +     '<div id="diet-caffeine-body"></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-targets">'
+    +     '<h3><i data-lucide="target" style="width:16px;height:16px"></i> 今日營養目標</h3>'
+    +     '<div class="diet-target-row" id="diet-target-row">'
+    +       '<div class="diet-target-skel">載入中…</div>'
+    +     '</div>'
+    +     '<ul class="diet-tips" id="diet-tips"></ul>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-warnings-card">'
+    +     '<h3><i data-lucide="alert-triangle" style="width:16px;height:16px"></i> 你要特別注意</h3>'
+    +     '<div id="diet-warnings"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-suggest-card">'
+    +     '<h3><i data-lucide="salad" style="width:16px;height:16px"></i> 今天吃什麼</h3>'
+    +     '<div class="diet-meal-tabs" id="diet-meal-tabs">'
+    +       ['breakfast','lunch','dinner'].map(function(m) {
+              return '<button class="diet-meal-tab' + (m===_dietSelectedMeal?' active':'') + '" '
+                + 'data-meal="' + m + '" onclick="dietSwitchMeal(\'' + m + '\')">'
+                + DIET_MEAL_LABEL[m] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<div id="diet-suggest-list" class="diet-suggest-list"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card diet-log-card">'
+    +     '<h3><i data-lucide="pencil" style="width:16px;height:16px"></i> 打卡今天吃了什麼</h3>'
+    +     '<div class="diet-log-form">'
+    +       '<div class="diet-log-meal-pick" id="diet-log-meal-pick">'
+    +         ['breakfast','lunch','dinner','snack'].map(function(m) {
+              return '<button class="diet-log-meal' + (m==='breakfast'?' active':'') + '" '
+                + 'data-log-meal="' + m + '" onclick="dietPickLogMeal(\'' + m + '\')">'
+                + DIET_MEAL_LABEL[m] + '</button>';
+            }).join('')
+    +       '</div>'
+    +       '<textarea id="diet-log-foods" rows="2" maxlength="200" placeholder="例：白飯、滷雞腿、燙青菜（最多 200 字）"></textarea>'
+    +       '<input type="text" id="diet-log-note" maxlength="80" placeholder="備註（選填，例：吃完有點脹）" />'
+    +       '<button class="diet-log-submit" onclick="dietSubmitLog()">'
+    +         '<i data-lucide="check" style="width:14px;height:14px"></i> 送出'
+    +       '</button>'
+    +       '<div id="diet-log-status" class="diet-log-status"></div>'
+    +     '</div>'
+    +   '</div>'
+
+    +   '<div class="diet-card">'
+    +     '<h3><i data-lucide="list" style="width:16px;height:16px"></i> 今日已記錄</h3>'
+    +     '<div id="diet-today-list"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
+    + '</section>';
+}
+
+// 吃什麼神器
+var _dietPickMealType    = 'any';   // any/breakfast/lunch/dinner/snack
+var _dietPickPrice       = 'any';   // any/$/$$/$$$
+var _dietPickCal         = 'any';   // any/low/mid/high
+var _dietPickNearby      = false;
+var _dietPickAvoidRecent = true;
+var _dietPickDislikes    = [];      // 個人黑名單，localStorage 持久化
+var _dietPickHistory     = [];      // 已被丟掉的菜名
+var _dietPickCurrent     = null;
+var _dietPickLoading     = false;
+
+var DIET_DISLIKE_KEY = 'mdpiece_diet_dislikes';
+
+function dietPickLoadDislikes() {
+  try {
+    var raw = localStorage.getItem(DIET_DISLIKE_KEY);
+    _dietPickDislikes = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(_dietPickDislikes)) _dietPickDislikes = [];
+  } catch (e) { _dietPickDislikes = []; }
+}
+function dietPickSaveDislikes() {
+  try { localStorage.setItem(DIET_DISLIKE_KEY, JSON.stringify(_dietPickDislikes)); } catch (e) {}
+}
+
+function dietPickSetMeal(m) {
+  _dietPickMealType = m;
+  _dietPickHistory = [];
+  document.querySelectorAll('#diet-pick-meal-tabs .diet-pick-tab').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-pick-meal') === m);
+  });
+}
+
+function dietPickSetPrice(p) {
+  _dietPickPrice = p;
+  _dietPickHistory = [];
+  document.querySelectorAll('#diet-pick-price-tabs .diet-pick-price').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-pick-price') === p);
+  });
+}
+
+function dietPickSetCal(c) {
+  _dietPickCal = c;
+  _dietPickHistory = [];
+  document.querySelectorAll('#diet-pick-cal-tabs .diet-pick-cal').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-pick-cal') === c);
+  });
+}
+
+function dietPickToggleNearby(on) {
+  _dietPickNearby = !!on;
+  _dietPickHistory = [];
+}
+
+function dietPickToggleAvoidRecent(on) {
+  _dietPickAvoidRecent = !!on;
+  _dietPickHistory = [];
+}
+
+function dietPickAddDislike() {
+  var input = document.getElementById('diet-pick-dislike-add');
+  if (!input) return;
+  var v = (input.value || '').trim();
+  if (!v) return;
+  if (_dietPickDislikes.indexOf(v) === -1) {
+    _dietPickDislikes.push(v);
+    dietPickSaveDislikes();
+    dietPickRenderDislikes();
+  }
+  input.value = '';
+  input.focus();
+}
+
+function dietPickRemoveDislike(idx) {
+  _dietPickDislikes.splice(idx, 1);
+  dietPickSaveDislikes();
+  dietPickRenderDislikes();
+}
+
+function dietPickRenderDislikes() {
+  var box = document.getElementById('diet-pick-dislike-chips');
+  if (!box) return;
+  if (!_dietPickDislikes.length) {
+    box.innerHTML = '<span class="diet-pick-dislike-empty">還沒設定不吃的食材</span>';
+    return;
+  }
+  box.innerHTML = _dietPickDislikes.map(function(d, i) {
+    return '<span class="diet-pick-dislike-chip">'
+      + chatEscape(d)
+      + '<button onclick="dietPickRemoveDislike(' + i + ')" type="button" aria-label="移除">×</button>'
+      + '</span>';
+  }).join('');
+}
+
+function dietPickMeal(isReroll) {
+  if (_dietPickLoading) return;
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  if (isReroll && _dietPickCurrent && _dietPickCurrent.name) {
+    _dietPickHistory.push(_dietPickCurrent.name);
+  }
+  _dietPickLoading = true;
+  var box = document.getElementById('diet-pick-result');
+  if (box) {
+    box.className = 'diet-pick-result diet-pick-loading';
+    box.innerHTML = '<i data-lucide="loader-2" style="width:24px;height:24px"></i><div>幫你想想…</div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  var qs = '?meal_type=' + encodeURIComponent(_dietPickMealType)
+         + '&price_tier=' + encodeURIComponent(_dietPickPrice)
+         + '&calorie_tier=' + encodeURIComponent(_dietPickCal)
+         + '&nearby=' + (_dietPickNearby ? 'true' : 'false')
+         + '&avoid_recent=' + (_dietPickAvoidRecent ? 'true' : 'false');
+  if (_dietPickHistory.length) qs += '&exclude=' + encodeURIComponent(_dietPickHistory.join(','));
+  if (_dietPickDislikes.length) qs += '&dislike=' + encodeURIComponent(_dietPickDislikes.join(','));
+  fetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs)
+    .then(function(r) { return r.json(); })
+    .then(function(g) {
+      _dietPickCurrent = g || {};
+      renderDietPick(g);
+    })
+    .catch(function() {
+      if (box) {
+        box.className = 'diet-pick-result diet-pick-empty';
+        box.innerHTML = '<i data-lucide="x" style="width:24px;height:24px"></i><div>抽不到，稍後再試</div>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    })
+    .finally(function() { _dietPickLoading = false; });
+}
+
+function renderDietPick(g) {
+  var box = document.getElementById('diet-pick-result');
+  if (!box) return;
+  if (!g || !g.name) {
+    box.className = 'diet-pick-result diet-pick-empty';
+    box.innerHTML = '<div>沒抽到，再按一次</div>';
+    return;
+  }
+  var components = (g.components || []).map(function(c) {
+    return '<span class="diet-pick-chip">' + chatEscape(c) + '</span>';
+  }).join('');
+  var mealLabelMap = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心' };
+  var mealBadge = (_dietPickMealType === 'any' && g.meal_type)
+    ? '<span class="diet-pick-meal-badge">幫你抽了個 ' + mealLabelMap[g.meal_type] + '</span>'
+    : '';
+  box.className = 'diet-pick-result diet-pick-show';
+  box.innerHTML = ''
+    + mealBadge
+    + '<div class="diet-pick-name">' + chatEscape(g.name) + '</div>'
+    + (g.cuisine || g.where_to_get || g.price_tier || g.price_twd
+        ? '<div class="diet-pick-meta">'
+          + (g.cuisine ? '<span>' + chatEscape(g.cuisine) + '</span>' : '')
+          + (g.where_to_get ? '<span class="diet-pick-where"><i data-lucide="map-pin" style="width:12px;height:12px"></i> ' + chatEscape(g.where_to_get) + '</span>' : '')
+          + ((g.price_tier || g.price_twd)
+              ? '<span class="diet-pick-price-tag">' + chatEscape(g.price_tier || '') + (g.price_twd ? ' · 約 NT$' + g.price_twd : '') + '</span>'
+              : '')
+          + ((g.calorie_kcal || g.calorie_tier)
+              ? '<span class="diet-pick-cal-tag">' + (g.calorie_kcal ? g.calorie_kcal + ' kcal' : chatEscape(g.calorie_tier || '')) + '</span>'
+              : '')
+        + '</div>'
+        : '')
+    + (components ? '<div class="diet-pick-chips">' + components + '</div>' : '')
+    + (g.reason ? '<div class="diet-pick-reason">' + chatEscape(g.reason) + '</div>' : '')
+    + (g.fallback ? '<div class="diet-pick-fallback">（AI 暫時不在線，先給你一個常見選擇）</div>' : '');
+  var rerollBtn = document.getElementById('diet-pick-reroll');
+  var logBtn = document.getElementById('diet-pick-log');
+  if (rerollBtn) rerollBtn.disabled = false;
+  if (logBtn) logBtn.disabled = false;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ── 喝什麼神器 ──
+var _dietDrinkHistory = [];
+var _dietDrinkCurrent = null;
+var _dietDrinkLoading = false;
+
+function dietPickDrink(isReroll) {
+  if (_dietDrinkLoading) return;
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  if (isReroll && _dietDrinkCurrent && _dietDrinkCurrent.name) {
+    _dietDrinkHistory.push(_dietDrinkCurrent.name);
+  }
+  _dietDrinkLoading = true;
+  var box = document.getElementById('diet-drink-result');
+  if (box) {
+    box.className = 'diet-drink-result diet-drink-loading';
+    box.innerHTML = '<i data-lucide="loader-2" style="width:18px;height:18px"></i> 想想要配什麼…';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  var qs = '?price_tier=' + encodeURIComponent(_dietPickPrice)
+         + '&nearby=' + (_dietPickNearby ? 'true' : 'false')
+         + '&avoid_recent=' + (_dietPickAvoidRecent ? 'true' : 'false');
+  if (_dietDrinkHistory.length) qs += '&exclude=' + encodeURIComponent(_dietDrinkHistory.join(','));
+  if (_dietPickDislikes.length) qs += '&dislike=' + encodeURIComponent(_dietPickDislikes.join(','));
+  fetch(API + '/diet/drink/' + encodeURIComponent(pid) + qs)
+    .then(function(r) { return r.json(); })
+    .then(function(g) {
+      _dietDrinkCurrent = g || {};
+      renderDietDrink(g);
+      // 如果這杯有咖啡因，自動拉出咖啡因衛教
+      if ((g.caffeine_mg || 0) > 0) fetchCaffeineGuide();
+    })
+    .catch(function() {
+      if (box) box.innerHTML = '<span class="diet-drink-empty">抽不到，稍後再試</span>';
+    })
+    .finally(function() { _dietDrinkLoading = false; });
+}
+
+function renderDietDrink(g) {
+  var box = document.getElementById('diet-drink-result');
+  if (!box) return;
+  if (!g || !g.name) {
+    box.className = 'diet-drink-result';
+    box.innerHTML = '';
+    return;
+  }
+  var caf = (g.caffeine_mg != null && g.caffeine_mg > 0) ? (g.caffeine_mg + ' mg 咖啡因') : '無咖啡因';
+  box.className = 'diet-drink-result diet-drink-show';
+  box.innerHTML = ''
+    + '<div class="diet-drink-head">'
+    +   '<span class="diet-drink-icon"><i data-lucide="coffee" style="width:16px;height:16px"></i></span>'
+    +   '<span class="diet-drink-name">' + chatEscape(g.name) + '</span>'
+    +   '<button class="diet-drink-reroll" onclick="dietPickDrink(true)" title="換一杯"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>'
+    + '</div>'
+    + '<div class="diet-drink-meta">'
+    +   (g.where_to_get ? '<span>' + chatEscape(g.where_to_get) + '</span>' : '')
+    +   (g.price_tier ? '<span class="diet-pick-price-tag">' + chatEscape(g.price_tier) + (g.price_twd ? ' · NT$' + g.price_twd : '') + '</span>' : '')
+    +   (g.calorie_kcal != null ? '<span class="diet-pick-cal-tag">' + g.calorie_kcal + ' kcal</span>' : '')
+    +   '<span class="diet-drink-caf' + (g.caffeine_mg > 100 ? ' high' : '') + '">' + caf + '</span>'
+    +   (g.sugar_level && g.sugar_level !== '不適用' ? '<span class="diet-drink-sugar">' + chatEscape(g.sugar_level) + '</span>' : '')
+    + '</div>'
+    + (g.reason ? '<div class="diet-drink-reason">' + chatEscape(g.reason) + '</div>' : '');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function fetchCaffeineGuide() {
+  var card = document.getElementById('diet-caffeine-card');
+  var body = document.getElementById('diet-caffeine-body');
+  if (!card || !body) return;
+  if (card.style.display === 'block') return;  // 已展開
+  fetch(API + '/diet/caffeine-guide')
+    .then(function(r) { return r.json(); })
+    .then(function(g) {
+      var sources = (g.common_sources || []).map(function(s) {
+        return '<tr><td>' + chatEscape(s.item) + '</td><td>' + s.mg + ' mg</td></tr>';
+      }).join('');
+      var warns = (g.warnings || []).map(function(w) {
+        return ''
+          + '<div class="diet-caf-warn">'
+          +   '<div class="diet-caf-warn-head"><strong>' + chatEscape(w.group) + '</strong>'
+          +     '<span class="diet-caf-warn-limit">' + chatEscape(w.limit) + '</span></div>'
+          +   '<div class="diet-caf-warn-note">' + chatEscape(w.note) + '</div>'
+          + '</div>';
+      }).join('');
+      body.innerHTML = ''
+        + '<p class="diet-caf-overview">一般成人每日建議 ≤ <strong>' + g.daily_safe_mg + ' mg</strong>，孕期 ≤ <strong>' + g.pregnancy_safe_mg + ' mg</strong>。</p>'
+        + '<div class="diet-caf-grid">'
+        +   '<div><div class="diet-caf-subtitle">常見飲料咖啡因</div>'
+        +     '<table class="diet-caf-table"><tbody>' + sources + '</tbody></table>'
+        +   '</div>'
+        +   '<div><div class="diet-caf-subtitle">這些族群要注意</div>' + warns + '</div>'
+        + '</div>';
+      card.style.display = 'block';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {});
+}
+
+
+function dietPickLogIt() {
+  if (!_dietPickCurrent || !_dietPickCurrent.name) return;
+  // meal_type 優先使用後端回傳的解析後餐別（'any' 已被自動轉成 breakfast/lunch/dinner/snack）
+  var meal = _dietPickCurrent.meal_type
+    || (_dietPickMealType !== 'any' ? _dietPickMealType : 'lunch');
+  dietPickLogMeal(meal);
+  var foodsField = document.getElementById('diet-log-foods');
+  if (foodsField) {
+    var parts = [_dietPickCurrent.name];
+    (_dietPickCurrent.components || []).forEach(function(c) { parts.push(c); });
+    foodsField.value = parts.join('、');
+    foodsField.focus();
+    foodsField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  showToast('幫你填好了，按送出就完成', 'success');
+}
+
+
+function loadDietPage() {
+  _dietSelectedMeal = 'breakfast';
+  _dietLogMeal = 'breakfast';
+  _dietPickMealType = 'any';
+  _dietPickPrice = 'any';
+  _dietPickCal = 'any';
+  _dietPickNearby = false;
+  _dietPickAvoidRecent = true;
+  _dietPickHistory = [];
+  _dietPickCurrent = null;
+  _dietDrinkHistory = [];
+  _dietDrinkCurrent = null;
+  dietPickLoadDislikes();
+  setTimeout(function() {
+    dietPickRenderDislikes();
+    var drinkBox = document.getElementById('diet-drink-result');
+    if (drinkBox) drinkBox.innerHTML = '';
+    var caf = document.getElementById('diet-caffeine-card');
+    if (caf) caf.style.display = 'none';
+  }, 50);
+  if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+  fetchDietGuide();
+  fetchDietTodayRecords();
+}
+
+function fetchDietGuide() {
+  var pid = getStablePatientId();
+  if (!pid) { renderDietWarnings([]); renderDietSuggestions({}); return; }
+  fetch(API + '/diet/guide/' + encodeURIComponent(pid))
+    .then(function(r) { return r.json(); })
+    .then(function(g) {
+      _dietGuide = g || {};
+      renderDietTargets(g.daily_targets || {}, g.general_tips || []);
+      renderDietWarnings(g.warnings || []);
+      renderDietSuggestions(g.meal_suggestions || {});
+    })
+    .catch(function(e) {
+      var box = document.getElementById('diet-target-row');
+      if (box) box.innerHTML = '<div class="diet-empty">載入失敗，稍後再試</div>';
+    });
+}
+
+function renderDietTargets(t, tips) {
+  var row = document.getElementById('diet-target-row');
+  if (row) {
+    row.innerHTML = ''
+      + '<div class="diet-target"><span class="diet-target-num">' + (t.protein_g || '—') + '</span><span class="diet-target-unit">g</span><span class="diet-target-label">蛋白質</span></div>'
+      + '<div class="diet-target"><span class="diet-target-num">' + (t.water_ml || '—') + '</span><span class="diet-target-unit">ml</span><span class="diet-target-label">水分</span></div>'
+      + '<div class="diet-target"><span class="diet-target-num">' + (t.fiber_g || '—') + '</span><span class="diet-target-unit">g</span><span class="diet-target-label">纖維</span></div>';
+  }
+  var tipsEl = document.getElementById('diet-tips');
+  if (tipsEl) {
+    tipsEl.innerHTML = (tips || []).map(function(x) { return '<li>' + chatEscape(x) + '</li>'; }).join('');
+  }
+}
+
+function renderDietWarnings(warnings) {
+  var box = document.getElementById('diet-warnings');
+  if (!box) return;
+  if (!warnings || !warnings.length) {
+    box.innerHTML = '<p class="diet-empty">目前沒有特別需要避開的食物。如果有新的診斷，記得更新病歷。</p>';
+    return;
+  }
+  box.innerHTML = warnings.map(function(w) {
+    var avoid = (w.avoid || []).map(function(f) { return '<span class="diet-chip-bad">' + chatEscape(f) + '</span>'; }).join('');
+    return ''
+      + '<div class="diet-warn">'
+      +   '<div class="diet-warn-head">' + chatEscape(w.disease || '') + '</div>'
+      +   '<div class="diet-warn-avoid">' + avoid + '</div>'
+      +   (w.reason ? '<div class="diet-warn-reason">' + chatEscape(w.reason) + '</div>' : '')
+      + '</div>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderDietSuggestions(s) {
+  var list = document.getElementById('diet-suggest-list');
+  if (!list) return;
+  var foods = (s && s[_dietSelectedMeal]) || [];
+  if (!foods.length) {
+    list.innerHTML = '<p class="diet-empty">尚無建議</p>';
+    return;
+  }
+  list.innerHTML = foods.map(function(f) {
+    return '<span class="diet-chip-good">' + chatEscape(f) + '</span>';
+  }).join('');
+}
+
+function dietSwitchMeal(m) {
+  _dietSelectedMeal = m;
+  document.querySelectorAll('#diet-meal-tabs .diet-meal-tab').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-meal') === m);
+  });
+  if (_dietGuide) renderDietSuggestions(_dietGuide.meal_suggestions || {});
+}
+
+var _dietLogMeal = 'breakfast';
+
+function dietPickLogMeal(m) {
+  _dietLogMeal = m;
+  document.querySelectorAll('#diet-log-meal-pick .diet-log-meal').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-log-meal') === m);
+  });
+}
+
+async function dietSubmitLog() {
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var foods = (document.getElementById('diet-log-foods').value || '').trim();
+  if (!foods) { showToast('請填吃了什麼', 'warning'); return; }
+  var note = (document.getElementById('diet-log-note').value || '').trim();
+  var statusEl = document.getElementById('diet-log-status');
+  statusEl.textContent = '送出中…';
+  statusEl.className = 'diet-log-status';
+  try {
+    var res = await fetch(API + '/diet/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
+      body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.detail || '送出失敗');
+    }
+    document.getElementById('diet-log-foods').value = '';
+    document.getElementById('diet-log-note').value = '';
+    statusEl.textContent = '已記錄 ' + DIET_MEAL_LABEL[_dietLogMeal];
+    statusEl.className = 'diet-log-status diet-log-status-ok';
+    showToast('飲食打卡完成', 'success');
+    fetchDietTodayRecords();
+  } catch (e) {
+    statusEl.textContent = '送出失敗：' + (e.message || '');
+    statusEl.className = 'diet-log-status diet-log-status-error';
+  }
+}
+
+function fetchDietTodayRecords() {
+  var pid = getStablePatientId();
+  if (!pid) return;
+  var today = new Date();
+  var d = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  fetch(API + '/diet/records/' + encodeURIComponent(pid) + '?date=' + d)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var box = document.getElementById('diet-today-list');
+      if (!box) return;
+      var rows = (data && data.records) || [];
+      if (!rows.length) {
+        box.innerHTML = '<p class="diet-empty">今天還沒有紀錄。</p>';
+        return;
+      }
+      box.innerHTML = rows.map(function(r) {
+        var t = new Date(r.eaten_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+        return ''
+          + '<div class="diet-record">'
+          +   '<span class="diet-record-meal">' + (DIET_MEAL_LABEL[r.meal_type] || r.meal_type) + '</span>'
+          +   '<div class="diet-record-body">'
+          +     '<div class="diet-record-foods">' + chatEscape(r.foods || '') + '</div>'
+          +     (r.note ? '<div class="diet-record-note">' + chatEscape(r.note) + '</div>' : '')
+          +   '</div>'
+          +   '<span class="diet-record-time">' + t + '</span>'
+          + '</div>';
+      }).join('');
+    })
+    .catch(function() {
+      var box = document.getElementById('diet-today-list');
+      if (box) box.innerHTML = '<p class="diet-empty">讀取失敗</p>';
+    });
 }
 
 

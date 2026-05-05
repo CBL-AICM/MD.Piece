@@ -8391,12 +8391,69 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   .puzzle-deco-1, .puzzle-deco-2 { display: none; }
 }
 
-/* Senior mode tweaks for mobile (bigger taps) */
+/* Senior mode tweaks for mobile (bigger taps + layout fixes) */
 @media (max-width: 768px) {
   html[data-mode="senior"] .mtab .mtab-label { font-size: 0.78rem; }
   html[data-mode="senior"] .mtab .mtab-icon { width: 32px; height: 32px; }
   html[data-mode="senior"] .mobile-tabbar { height: 72px; }
   html[data-mode="senior"] .nav-item { font-size: 1.02rem; min-height: 72px; }
+
+  /* Tabbar overlap：年長版 tabbar 高 72px，wrapper 底部 padding 要對應 (預設 76px 是給 64px tabbar 用的) */
+  html[data-mode="senior"] #app-wrapper.show {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0));
+  }
+
+  /* Sidebar：手機上原本就是底部抽屜 width:100%，但 senior 桌機規則寫死 260px 蓋掉了 → 還原 */
+  html[data-mode="senior"] .sidebar {
+    width: 100%;
+    max-width: 100%;
+  }
+  html[data-mode="senior"] .main-content {
+    margin-left: 0;
+  }
+
+  /* 字大撐破卡片：縮小 padding、收斂標題尺寸、允許長字斷行 */
+  html[data-mode="senior"] #app {
+    padding: 16px 12px 28px;
+  }
+  html[data-mode="senior"] .card,
+  html[data-mode="senior"] #app .home-section,
+  html[data-mode="senior"] #app .home-hero,
+  html[data-mode="senior"] #app .pzl-card {
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+  html[data-mode="senior"] #app h2 { font-size: 1.35rem; line-height: 1.4; }
+  html[data-mode="senior"] #app h3 { font-size: 1.12rem; line-height: 1.45; }
+  html[data-mode="senior"] #app p,
+  html[data-mode="senior"] #app li { font-size: 1rem; line-height: 1.7; }
+  html[data-mode="senior"] #app,
+  html[data-mode="senior"] #app * {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* 按鈕跑出螢幕：移除 min-width、改全寬、縮小 padding，避免左右捲 */
+  html[data-mode="senior"] button.primary,
+  html[data-mode="senior"] button.secondary {
+    padding: 14px 18px;
+    font-size: 1.05rem;
+    min-width: 0;
+    width: 100%;
+    min-height: 52px;
+  }
+  html[data-mode="senior"] #app button {
+    max-width: 100%;
+  }
+  html[data-mode="senior"] .sym-card button,
+  html[data-mode="senior"] #app .btn-row button {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Topbar 縮邊距，避免在窄螢幕擠爆 */
+  html[data-mode="senior"] .topbar { padding: 10px 12px; }
+  html[data-mode="senior"] .topbar h2 { font-size: 1.2rem; }
 }
 
 /* Light theme tweaks — softer shadows on the cream palette */
@@ -8678,6 +8735,488 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 }
 .bi-actions .primary i,
 .bi-actions .btn-quiet i { width: 16px; height: 16px; }
+
+
+/* ───────── 飲食紀錄頁 ───────── */
+.diet-wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.diet-head h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 1.4rem; }
+.diet-head p { margin: 0; color: var(--text-dim); font-size: 0.95rem; }
+
+.diet-card {
+  background: var(--app-panel, var(--panel));
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.diet-card h3 {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 0 12px; font-size: 1.05rem; font-weight: 600;
+}
+
+/* 今日營養目標 */
+.diet-target-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.diet-target {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 6px; border-radius: 10px;
+  background: rgba(91,159,232,0.08);
+  border: 1px solid rgba(91,159,232,0.18);
+}
+.diet-target-num { font-size: 1.5rem; font-weight: 700; color: var(--klein, #5b9fe8); line-height: 1.1; }
+.diet-target-unit { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+.diet-target-label { font-size: 0.85rem; color: var(--text); margin-top: 4px; }
+.diet-target-skel { color: var(--text-dim); font-size: 0.9rem; }
+.diet-tips { list-style: none; padding: 0; margin: 0; }
+.diet-tips li {
+  position: relative; padding: 4px 0 4px 16px;
+  font-size: 0.92rem; color: var(--text);
+}
+.diet-tips li::before {
+  content: ""; position: absolute; left: 4px; top: 13px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--klein, #5b9fe8);
+}
+
+/* 疾病警告 */
+.diet-warn {
+  padding: 10px 12px; border-radius: 10px;
+  background: rgba(217, 165, 74, 0.08);
+  border-left: 3px solid #D9A54A;
+  margin-bottom: 8px;
+}
+.diet-warn:last-child { margin-bottom: 0; }
+.diet-warn-head { font-weight: 600; margin-bottom: 6px; font-size: 0.95rem; }
+.diet-warn-avoid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.diet-warn-reason { font-size: 0.85rem; color: var(--text-dim); line-height: 1.5; }
+.diet-chip-bad {
+  display: inline-block; padding: 3px 9px;
+  background: rgba(201, 85, 75, 0.12);
+  color: #C9554B;
+  border-radius: 100px; font-size: 0.82rem;
+}
+.diet-chip-good {
+  display: inline-block; padding: 4px 10px;
+  background: rgba(93, 170, 114, 0.12);
+  color: #2E7A3F;
+  border-radius: 100px; font-size: 0.88rem;
+  margin: 3px 4px 3px 0;
+}
+#app-wrapper[data-theme="dark"] .diet-chip-good { color: #7ed4b8; }
+
+/* 餐別 tab */
+.diet-meal-tabs {
+  display: flex; gap: 4px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--app-border, var(--border));
+}
+.diet-meal-tab {
+  flex: 1; background: none; border: none;
+  padding: 8px 0; font-size: 0.95rem; cursor: pointer;
+  color: var(--text-dim);
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.diet-meal-tab:hover { color: var(--text); }
+.diet-meal-tab.active {
+  color: var(--klein, #5b9fe8);
+  border-bottom-color: var(--klein, #5b9fe8);
+  font-weight: 600;
+}
+.diet-suggest-list { display: flex; flex-wrap: wrap; gap: 4px; min-height: 32px; }
+
+/* 打卡表單 */
+.diet-log-form { display: flex; flex-direction: column; gap: 10px; }
+.diet-log-meal-pick {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+.diet-log-meal {
+  padding: 8px 0; background: var(--app-panel-soft, transparent);
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+  color: var(--text);
+}
+.diet-log-meal.active {
+  background: var(--klein, #5b9fe8);
+  color: #fff; border-color: var(--klein, #5b9fe8);
+  font-weight: 600;
+}
+.diet-log-form textarea,
+.diet-log-form input[type="text"] {
+  width: 100%; padding: 10px 12px;
+  background: var(--app-panel-soft, transparent);
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 8px; font-size: 0.95rem; color: var(--text);
+  font-family: inherit; resize: vertical;
+  box-sizing: border-box;
+}
+.diet-log-submit {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 18px; background: var(--klein, #5b9fe8); color: #fff;
+  border: none; border-radius: 8px; cursor: pointer; font-size: 0.95rem;
+  font-weight: 600; align-self: flex-start;
+}
+.diet-log-submit:hover { filter: brightness(1.05); }
+.diet-log-status { font-size: 0.85rem; color: var(--text-dim); min-height: 18px; }
+.diet-log-status-ok { color: #2E7A3F; }
+.diet-log-status-error { color: #C9554B; }
+
+/* 今日紀錄列表 */
+.diet-record {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 10px; padding: 8px 0;
+  border-bottom: 1px solid var(--app-border, var(--border));
+  align-items: center;
+}
+.diet-record:last-child { border-bottom: none; }
+.diet-record-meal {
+  background: var(--klein, #5b9fe8); color: #fff;
+  text-align: center; padding: 4px 0;
+  border-radius: 6px; font-size: 0.82rem; font-weight: 600;
+}
+.diet-record-foods { font-size: 0.95rem; color: var(--text); line-height: 1.4; }
+.diet-record-note { font-size: 0.82rem; color: var(--text-dim); margin-top: 2px; }
+.diet-record-time { font-size: 0.82rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+.diet-empty { color: var(--text-dim); font-size: 0.9rem; margin: 4px 0; }
+
+/* 吃什麼神器 */
+.diet-pick-card {
+  background: linear-gradient(135deg, rgba(91,159,232,0.10), rgba(91,159,232,0.04));
+  border: 1px solid rgba(91,159,232,0.25);
+}
+.diet-pick-sub { margin: 0 0 10px; font-size: 0.88rem; color: var(--text-dim); }
+.diet-pick-meal-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.diet-pick-price-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.diet-pick-price-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 8px;
+  background: rgba(217, 165, 74, 0.15);
+  color: #B27B1A;
+  border-radius: 100px; font-weight: 600;
+  font-size: 0.8rem;
+}
+#app-wrapper[data-theme="dark"] .diet-pick-price-tag { color: #E0B25E; }
+
+.diet-pick-cal-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.diet-pick-cal-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 8px;
+  background: rgba(93, 170, 114, 0.15);
+  color: #2E7A3F;
+  border-radius: 100px; font-weight: 600;
+  font-size: 0.8rem;
+}
+#app-wrapper[data-theme="dark"] .diet-pick-cal-tag { color: #7ed4b8; }
+
+.diet-pick-flags {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--app-border, var(--border));
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.diet-pick-toggle {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer;
+  color: var(--text);
+}
+.diet-pick-toggle input { width: 16px; height: 16px; cursor: pointer; }
+
+.diet-pick-dislike { margin-bottom: 12px; }
+.diet-pick-dislike-row {
+  display: flex; flex-wrap: wrap; gap: 4px; min-height: 24px;
+  margin-bottom: 6px;
+}
+.diet-pick-dislike-empty {
+  font-size: 0.82rem; color: var(--text-dim); font-style: italic;
+}
+.diet-pick-dislike-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 4px 3px 10px;
+  background: rgba(201, 85, 75, 0.12);
+  color: #C9554B;
+  border-radius: 100px; font-size: 0.82rem;
+}
+.diet-pick-dislike-chip button {
+  background: none; border: none; color: inherit;
+  width: 18px; height: 18px; line-height: 1;
+  border-radius: 50%; cursor: pointer; font-size: 1rem;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.diet-pick-dislike-chip button:hover { background: rgba(201, 85, 75, 0.2); }
+.diet-pick-dislike-input {
+  display: flex; gap: 6px;
+}
+.diet-pick-dislike-input input {
+  flex: 1; padding: 6px 10px;
+  background: var(--app-panel-soft, transparent);
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 6px; font-size: 0.88rem; color: var(--text);
+  font-family: inherit;
+}
+.diet-pick-dislike-input button {
+  width: 36px; padding: 0;
+  background: var(--app-panel-soft, transparent);
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 6px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text);
+}
+.diet-pick-dislike-input button:hover { background: var(--klein, #5b9fe8); color: #fff; border-color: var(--klein); }
+
+/* 飲料按鈕 + 結果 */
+.diet-pick-btn-drink {
+  background: #B27B1A; color: #fff;
+}
+.diet-drink-result {
+  margin-top: 12px;
+  display: none;
+}
+.diet-drink-result.diet-drink-show,
+.diet-drink-result.diet-drink-loading {
+  display: block;
+}
+.diet-drink-result.diet-drink-loading {
+  padding: 10px 12px;
+  color: var(--text-dim); font-size: 0.9rem;
+  text-align: center;
+}
+.diet-drink-result.diet-drink-loading svg { animation: diet-spin 1s linear infinite; }
+.diet-drink-show {
+  padding: 10px 12px;
+  background: rgba(178, 123, 26, 0.08);
+  border: 1px solid rgba(178, 123, 26, 0.25);
+  border-radius: 10px;
+}
+.diet-drink-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.diet-drink-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: #B27B1A; color: #fff;
+  border-radius: 50%; flex-shrink: 0;
+}
+.diet-drink-name {
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--text);
+  flex: 1; min-width: 0;
+}
+.diet-drink-reroll {
+  background: none; border: 1px solid rgba(178, 123, 26, 0.3);
+  color: #B27B1A; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.diet-drink-reroll:hover { background: rgba(178, 123, 26, 0.15); }
+.diet-drink-meta {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  font-size: 0.78rem;
+  margin-bottom: 6px;
+}
+.diet-drink-meta > span {
+  padding: 2px 8px; border-radius: 100px;
+  background: rgba(0,0,0,0.05);
+  color: var(--text-dim);
+}
+.diet-drink-caf {
+  background: rgba(91,159,232,0.15) !important; color: var(--klein, #5b9fe8) !important;
+  font-weight: 600;
+}
+.diet-drink-caf.high {
+  background: rgba(201, 85, 75, 0.15) !important; color: #C9554B !important;
+}
+.diet-drink-sugar {
+  background: rgba(217, 165, 74, 0.15) !important; color: #B27B1A !important;
+}
+.diet-drink-reason {
+  font-size: 0.85rem; color: var(--text);
+  border-top: 1px dashed rgba(178, 123, 26, 0.2);
+  padding-top: 6px;
+}
+
+/* 咖啡因衛教卡片 */
+.diet-caffeine-card { background: linear-gradient(135deg, rgba(178,123,26,0.08), rgba(178,123,26,0.02)); }
+.diet-caf-overview { margin: 0 0 12px; font-size: 0.92rem; color: var(--text); line-height: 1.5; }
+.diet-caf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.diet-caf-subtitle {
+  font-weight: 600; font-size: 0.92rem; margin-bottom: 6px;
+  color: var(--text);
+}
+.diet-caf-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.86rem;
+}
+.diet-caf-table td {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--app-border, var(--border));
+}
+.diet-caf-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+  color: #B27B1A;
+}
+.diet-caf-warn {
+  padding: 8px 10px;
+  background: rgba(178, 123, 26, 0.05);
+  border-left: 3px solid #B27B1A;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.diet-caf-warn-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.88rem; margin-bottom: 2px;
+}
+.diet-caf-warn-limit {
+  font-size: 0.78rem; color: #B27B1A; font-weight: 600;
+}
+.diet-caf-warn-note {
+  font-size: 0.8rem; color: var(--text-dim); line-height: 1.45;
+}
+
+@media (max-width: 600px) {
+  .diet-caf-grid { grid-template-columns: 1fr; gap: 14px; }
+}
+.diet-pick-tab {
+  padding: 6px 12px;
+  background: var(--app-panel-soft, transparent);
+  border: 1px solid var(--app-border, var(--border));
+  border-radius: 100px;
+  cursor: pointer; font-size: 0.86rem;
+  color: var(--text-dim);
+  transition: all .15s;
+}
+.diet-pick-tab:hover { color: var(--text); }
+.diet-pick-tab.active {
+  background: var(--klein, #5b9fe8);
+  color: #fff;
+  border-color: var(--klein, #5b9fe8);
+  font-weight: 600;
+}
+.diet-pick-result {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px;
+  min-height: 120px;
+  padding: 16px;
+  border-radius: 10px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.diet-pick-empty {
+  background: rgba(0,0,0,0.03);
+  color: var(--text-dim);
+  border: 2px dashed var(--app-border, var(--border));
+}
+#app-wrapper[data-theme="dark"] .diet-pick-empty { background: rgba(255,255,255,0.03); }
+.diet-pick-loading { color: var(--text-dim); }
+.diet-pick-loading svg { animation: diet-spin 1s linear infinite; }
+@keyframes diet-spin { to { transform: rotate(360deg); } }
+.diet-pick-show {
+  background: var(--app-panel-soft, var(--panel));
+  border: 1px solid rgba(91,159,232,0.3);
+  align-items: stretch; text-align: left;
+}
+.diet-pick-meal-badge {
+  display: inline-block; align-self: center;
+  padding: 3px 10px; margin-bottom: 6px;
+  background: rgba(91,159,232,0.15); color: var(--klein, #5b9fe8);
+  border-radius: 100px; font-size: 0.78rem; font-weight: 600;
+}
+.diet-pick-name {
+  font-size: 1.4rem; font-weight: 700; color: var(--klein, #5b9fe8);
+  text-align: center; margin-bottom: 6px; line-height: 1.3;
+}
+.diet-pick-meta {
+  display: flex; justify-content: center; gap: 10px;
+  font-size: 0.82rem; color: var(--text-dim);
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.diet-pick-where {
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.diet-pick-chips {
+  display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;
+  margin-bottom: 8px;
+}
+.diet-pick-chip {
+  display: inline-block;
+  padding: 3px 9px;
+  background: rgba(91,159,232,0.12);
+  color: var(--klein, #5b9fe8);
+  border-radius: 100px;
+  font-size: 0.82rem;
+}
+.diet-pick-reason {
+  font-size: 0.88rem; color: var(--text);
+  text-align: center;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(91,159,232,0.2);
+  line-height: 1.5;
+}
+.diet-pick-fallback {
+  font-size: 0.78rem; color: var(--text-dim);
+  text-align: center; margin-top: 4px; font-style: italic;
+}
+.diet-pick-actions {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.diet-pick-btn {
+  flex: 1 1 30%; min-width: 100px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.92rem; font-weight: 600;
+  cursor: pointer;
+  transition: filter .15s, opacity .15s;
+}
+.diet-pick-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.diet-pick-btn:not(:disabled):hover { filter: brightness(1.05); }
+.diet-pick-btn.primary {
+  background: var(--klein, #5b9fe8); color: #fff; border: none;
+}
+.diet-pick-btn.secondary {
+  background: var(--app-panel-soft, transparent);
+  color: var(--text);
+  border: 1px solid var(--app-border, var(--border));
+}
+.diet-pick-btn.quiet {
+  background: rgba(93, 170, 114, 0.12);
+  color: #2E7A3F;
+  border: 1px solid rgba(93, 170, 114, 0.3);
+}
+#app-wrapper[data-theme="dark"] .diet-pick-btn.quiet { color: #7ed4b8; }
+
+
+/* 手機 */
+@media (max-width: 480px) {
+  .diet-target-row { gap: 6px; }
+  .diet-target-num { font-size: 1.3rem; }
+  .diet-log-meal-pick { gap: 4px; }
+  .diet-pick-name { font-size: 1.2rem; }
+  .diet-pick-actions { flex-direction: column; }
+  .diet-pick-btn { flex: 1 1 100%; }
+}
 
 /* ═══════════════════════════════════════════════════════════
    SENIOR MODE — 全米色 / 大字 / 無裝飾
