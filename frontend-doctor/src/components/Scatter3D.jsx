@@ -53,10 +53,11 @@ export default function Scatter3D({ emotionTrend, medStats, symptoms }) {
   }, [emotionTrend, medStats, symptoms])
 
   useEffect(() => {
-    if (!ref.current) return
+    const node = ref.current
+    if (!node) return
     let cancelled = false
     loadPlotly().then((Plotly) => {
-      if (cancelled || !ref.current) return
+      if (cancelled || !node) return
       const data = [{
         type: 'scatter3d',
         mode: 'markers',
@@ -92,13 +93,13 @@ export default function Scatter3D({ emotionTrend, medStats, symptoms }) {
         },
         showlegend: false,
       }
-      Plotly.newPlot(ref.current, data, layout, { displayModeBar: false, responsive: true })
+      Plotly.newPlot(node, data, layout, { displayModeBar: false, responsive: true })
       setReady(true)
     }).catch((e) => setErr(e.message))
     return () => {
       cancelled = true
-      if (ref.current && window.Plotly) {
-        try { window.Plotly.purge(ref.current) } catch { /* ignore */ }
+      if (node && window.Plotly) {
+        try { window.Plotly.purge(node) } catch { /* ignore */ }
       }
     }
   }, [points])

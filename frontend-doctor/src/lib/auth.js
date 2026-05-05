@@ -1,6 +1,6 @@
 // 醫師端 auth — 走患者端共用的 /auth/login + /auth/register
 // role 強制為 'doctor'，需要通行碼 310530
-import { apiPost, apiGet, setActiveDoctorId } from './api.js'
+import { apiPost, setActiveDoctorId } from './api.js'
 
 const USER_KEY = 'mdp.doctorUser'
 const PROFILE_KEY = 'mdp.doctorProfile' // gender / birthday — 後端 users 表沒這兩欄，存本機

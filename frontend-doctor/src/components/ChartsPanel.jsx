@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ResponsiveContainer, LineChart, Line,
   ScatterChart, Scatter,
@@ -26,6 +26,7 @@ function severityColor(n) {
 }
 
 export default function ChartsPanel({ emotionTrend, medStats, symptoms, alerts, notes, medChanges }) {
+  const [nowRef] = useState(() => Date.now())
   // 1. 折線圖：情緒 × 服藥率
   const lineData = useMemo(() => {
     const byDay = new Map()
@@ -70,10 +71,9 @@ export default function ChartsPanel({ emotionTrend, medStats, symptoms, alerts, 
   const heatData = useMemo(() => {
     const types = ['情緒', '症狀', '備註', '警示', '調藥']
     const weeks = []
-    const now = Date.now()
     for (let w = 11; w >= 0; w--) {
-      const start = now - (w + 1) * 7 * 86400_000
-      const end = now - w * 86400_000 * 7
+      const start = nowRef - (w + 1) * 7 * 86400_000
+      const end = nowRef - w * 86400_000 * 7
       const weekLabel = new Date(start).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
       const counts = { 情緒: 0, 症狀: 0, 備註: 0, 警示: 0, 調藥: 0 }
       ;(emotionTrend ?? []).forEach((e) => {
@@ -99,7 +99,7 @@ export default function ChartsPanel({ emotionTrend, medStats, symptoms, alerts, 
       weeks.push({ week: weekLabel, ...counts })
     }
     return { weeks, types }
-  }, [emotionTrend, symptoms, notes, alerts, medChanges])
+  }, [emotionTrend, symptoms, notes, alerts, medChanges, nowRef])
 
   // 4. 二維散布：情緒 vs 服藥率（每天一點，相關性視覺化）
   const corrData = useMemo(() => {

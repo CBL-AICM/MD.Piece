@@ -55,60 +55,45 @@ export default function BodyHeatmap({ symptoms }) {
     return `rgba(${r},${g},${b},${0.45 + 0.5 * t})`
   }
   const stroke = 'rgba(255,255,255,0.18)'
-
-  const Region = ({ id, label, ...props }) => {
-    const v = counts[id] || 0
-    return (
-      <g>
-        <path {...props} fill={fill(id)} stroke={stroke} strokeWidth={1}>
-          <title>{label} · {v} 次</title>
-        </path>
-      </g>
-    )
-  }
-
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
+
+  const region = (id, label, d, extra) => (
+    <g key={id}>
+      <path d={d} fill={fill(id)} stroke={stroke} strokeWidth={1} style={extra?.style}>
+        <title>{label} · {counts[id] || 0} 次</title>
+      </path>
+    </g>
+  )
 
   return (
     <div className="body-heatmap">
       <div className="body-svg-wrap">
         <svg viewBox="0 0 200 460" className="body-svg" xmlns="http://www.w3.org/2000/svg">
           {/* 頭 */}
-          <Region id="head" label="頭部"
-            d="M 100 10 C 75 10 65 35 65 55 C 65 80 80 95 100 95 C 120 95 135 80 135 55 C 135 35 125 10 100 10 Z" />
+          {region('head', '頭部', 'M 100 10 C 75 10 65 35 65 55 C 65 80 80 95 100 95 C 120 95 135 80 135 55 C 135 35 125 10 100 10 Z')}
           {/* 眼睛 / 耳朵 / 鼻子 / 嘴 — 小圓 */}
-          <Region id="eye" label="眼" d="M 80 45 a 4 4 0 1 0 8 0 a 4 4 0 1 0 -8 0 Z M 112 45 a 4 4 0 1 0 8 0 a 4 4 0 1 0 -8 0 Z" />
-          <Region id="nose" label="鼻" d="M 96 60 L 100 72 L 104 60 Z" />
-          <Region id="ear" label="耳" d="M 60 50 q -8 5 -2 18 q 4 0 6 -2 Z M 140 50 q 8 5 2 18 q -4 0 -6 -2 Z" />
-          <Region id="mouth" label="口/喉" d="M 86 80 q 14 7 28 0 q -2 6 -14 6 q -12 0 -14 -6 Z" />
+          {region('eye', '眼', 'M 80 45 a 4 4 0 1 0 8 0 a 4 4 0 1 0 -8 0 Z M 112 45 a 4 4 0 1 0 8 0 a 4 4 0 1 0 -8 0 Z')}
+          {region('nose', '鼻', 'M 96 60 L 100 72 L 104 60 Z')}
+          {region('ear', '耳', 'M 60 50 q -8 5 -2 18 q 4 0 6 -2 Z M 140 50 q 8 5 2 18 q -4 0 -6 -2 Z')}
+          {region('mouth', '口/喉', 'M 86 80 q 14 7 28 0 q -2 6 -14 6 q -12 0 -14 -6 Z')}
           {/* 頸 */}
-          <Region id="neck" label="頸部"
-            d="M 86 95 L 86 110 L 114 110 L 114 95 Z" />
+          {region('neck', '頸部', 'M 86 95 L 86 110 L 114 110 L 114 95 Z')}
           {/* 胸 */}
-          <Region id="chest" label="胸（心臟附近）"
-            d="M 60 110 L 140 110 L 142 165 L 58 165 Z" />
+          {region('chest', '胸（心臟附近）', 'M 60 110 L 140 110 L 142 165 L 58 165 Z')}
           {/* 肺 — 重疊在胸的兩側半透明 */}
-          <Region id="lung" label="肺/呼吸"
-            d="M 64 115 L 96 115 L 96 158 L 60 158 Z M 104 115 L 136 115 L 140 158 L 104 158 Z" />
+          {region('lung', '肺/呼吸', 'M 64 115 L 96 115 L 96 158 L 60 158 Z M 104 115 L 136 115 L 140 158 L 104 158 Z')}
           {/* 腹 */}
-          <Region id="abdomen" label="腹/胃腸"
-            d="M 60 165 L 140 165 L 138 230 L 62 230 Z" />
+          {region('abdomen', '腹/胃腸', 'M 60 165 L 140 165 L 138 230 L 62 230 Z')}
           {/* 左右手臂 */}
-          <Region id="arm-r" label="右上肢"
-            d="M 140 110 L 165 115 L 175 200 L 168 250 L 158 250 L 152 200 L 140 165 Z" />
-          <Region id="arm-l" label="左上肢"
-            d="M 60 110 L 35 115 L 25 200 L 32 250 L 42 250 L 48 200 L 60 165 Z" />
+          {region('arm-r', '右上肢', 'M 140 110 L 165 115 L 175 200 L 168 250 L 158 250 L 152 200 L 140 165 Z')}
+          {region('arm-l', '左上肢', 'M 60 110 L 35 115 L 25 200 L 32 250 L 42 250 L 48 200 L 60 165 Z')}
           {/* 左右腿 */}
-          <Region id="leg-r" label="右下肢"
-            d="M 102 230 L 138 230 L 140 350 L 130 440 L 108 440 L 102 350 Z" />
-          <Region id="leg-l" label="左下肢"
-            d="M 62 230 L 98 230 L 98 350 L 92 440 L 70 440 L 60 350 Z" />
+          {region('leg-r', '右下肢', 'M 102 230 L 138 230 L 140 350 L 130 440 L 108 440 L 102 350 Z')}
+          {region('leg-l', '左下肢', 'M 62 230 L 98 230 L 98 350 L 92 440 L 70 440 L 60 350 Z')}
           {/* 背（顯示為環狀外框 — 概念性 fallback） */}
-          <Region id="back" label="背/腰"
-            d="M 62 175 L 138 175 L 138 215 L 62 215 Z" style={{ display: 'none' }} />
+          {region('back', '背/腰', 'M 62 175 L 138 175 L 138 215 L 62 215 Z', { style: { display: 'none' } })}
           {/* 皮膚 — 用全身淡色覆蓋 */}
-          <Region id="skin" label="皮膚（疹/癢）"
-            d="M 50 100 L 150 100 L 150 440 L 50 440 Z" style={{ display: 'none' }} />
+          {region('skin', '皮膚（疹/癢）', 'M 50 100 L 150 100 L 150 440 L 50 440 Z', { style: { display: 'none' } })}
         </svg>
       </div>
 
