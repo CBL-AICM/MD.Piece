@@ -8846,9 +8846,9 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   border: none;
   background: transparent;
   color: var(--text-muted);
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: background .15s, color .15s;
   font-family: inherit;
@@ -8860,6 +8860,21 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   font-weight: 600;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
+/* 桌機隱藏 7/30/90 切換 botton — 桌機上看月曆/總表已足夠 */
+@media (min-width: 769px) {
+  .mood-line-tabs { display: none; }
+}
+
+/* 情緒電力按鈕 — 加上百分比文字 */
+.emotions-pct {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--em-color, var(--accent));
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+.emotions-btn.selected .emotions-pct { color: var(--em-color); }
 .mood-line {
   width: 100%;
   min-height: 200px;
