@@ -492,6 +492,186 @@ def pick_meal(
     return parsed
 
 
+# ─── 喝什麼神器 + 咖啡因衛教 ────────────────────────────
+# 飲料推薦走另一條 prompt + pool；同樣依疾病過濾，並回傳咖啡因 mg。
+
+DRINK_SYSTEM_PROMPT = (
+    "你是台灣的飲料推薦達人。患者選擇障礙，需要你**只給一杯**具體飲料。\n"
+    "輸出純 JSON（不要 markdown）：\n"
+    "{\n"
+    '  "name":          "<飲料名，要具體：例「無糖綠茶」「拿鐵咖啡（中杯）」「無糖豆漿」>",\n'
+    '  "components":    [<2-4 個關鍵成分或描述：含糖度/溫度/特色>],\n'
+    '  "category":      "<茶/咖啡/豆漿/牛奶/果汁/水/氣泡水/手搖/酒/其他>",\n'
+    '  "where_to_get":  "<7-11/全家/手搖店/咖啡店/自製>",\n'
+    '  "price_tier":    "<$/$$/$$$>",\n'
+    '  "price_twd":     <整數>,\n'
+    '  "calorie_kcal":  <整數>,\n'
+    '  "caffeine_mg":   <整數，無咖啡因填 0>,\n'
+    '  "sugar_level":   "<無糖/微糖/半糖/全糖/不適用>",\n'
+    '  "reason":        "<為什麼適合這位患者，1-2 句口語>"\n'
+    "}\n"
+    "規則：\n"
+    "1. 完全避開疾病禁忌：糖尿病→無糖或微糖、痛風→不含啤酒/果糖含量高的飲料、"
+    "高血壓→低咖啡因、CKD→低鉀低磷（少柳橙汁/牛奶）、自體免疫→無酒精、"
+    "焦慮/失眠→低咖啡因、孕婦/哺乳→無酒精且咖啡因<200mg、心律不整→低咖啡因。\n"
+    "2. 不要給黑名單成分，一個都不行。\n"
+    "3. 一律繁體中文台灣用語。\n"
+    "4. 不要給 exclude 名單裡的飲料。\n"
+    "5. 寧可常見好取得（超商/手搖/咖啡店），不要瞎掰罕見品項。\n"
+    "6. 必須準確估計 caffeine_mg：無咖啡因飲料填 0。\n"
+)
+
+
+# 飲料 fallback pool；caffeine_mg 為粗估
+DRINK_FALLBACK_POOL = [
+    # 無咖啡因 / 安全選擇
+    {"name": "白開水",            "components": ["水"],                        "category": "水",     "where_to_get": "自取",   "price_tier": "$",  "price_twd": 0,   "calorie_kcal": 0,   "caffeine_mg": 0,   "sugar_level": "不適用", "reason": "永遠不會錯",
+     "_unfit": []},
+    {"name": "無糖氣泡水",        "components": ["氣泡水"],                    "category": "氣泡水", "where_to_get": "7-11",   "price_tier": "$",  "price_twd": 30,  "calorie_kcal": 0,   "caffeine_mg": 0,   "sugar_level": "無糖",   "reason": "想要點口感的選擇",
+     "_unfit": []},
+    {"name": "無糖綠茶",          "components": ["綠茶"],                      "category": "茶",     "where_to_get": "7-11",   "price_tier": "$",  "price_twd": 30,  "calorie_kcal": 0,   "caffeine_mg": 30,  "sugar_level": "無糖",   "reason": "解膩好搭配",
+     "_unfit": ["caffeine_sensitive"]},
+    {"name": "無糖紅茶",          "components": ["紅茶"],                      "category": "茶",     "where_to_get": "7-11",   "price_tier": "$",  "price_twd": 30,  "calorie_kcal": 0,   "caffeine_mg": 40,  "sugar_level": "無糖",   "reason": "經典款",
+     "_unfit": ["caffeine_sensitive"]},
+    {"name": "無糖豆漿",          "components": ["黃豆"],                      "category": "豆漿",   "where_to_get": "7-11",   "price_tier": "$",  "price_twd": 30,  "calorie_kcal": 90,  "caffeine_mg": 0,   "sugar_level": "無糖",   "reason": "蛋白質補充",
+     "_unfit": ["ckd"]},  # 豆製品蛋白磷
+    {"name": "無糖優酪乳",        "components": ["優酪乳", "活菌"],            "category": "牛奶",   "where_to_get": "全家",   "price_tier": "$$", "price_twd": 60,  "calorie_kcal": 130, "caffeine_mg": 0,   "sugar_level": "無糖",   "reason": "顧腸道",
+     "_unfit": ["ckd"]},  # 乳製品鉀磷
+
+    # 茶類
+    {"name": "微糖烏龍茶",        "components": ["烏龍茶"],                    "category": "茶",     "where_to_get": "手搖店", "price_tier": "$$", "price_twd": 50,  "calorie_kcal": 80,  "caffeine_mg": 35,  "sugar_level": "微糖",   "reason": "不太甜的茶款",
+     "_unfit": ["diabetes", "caffeine_sensitive"]},
+    {"name": "麥茶（無糖）",      "components": ["麥茶"],                      "category": "茶",     "where_to_get": "7-11",   "price_tier": "$",  "price_twd": 30,  "calorie_kcal": 0,   "caffeine_mg": 0,   "sugar_level": "無糖",   "reason": "完全無咖啡因",
+     "_unfit": []},
+    {"name": "黑咖啡",            "components": ["阿拉比卡豆"],                "category": "咖啡",   "where_to_get": "7-11",   "price_tier": "$",  "price_twd": 45,  "calorie_kcal": 5,   "caffeine_mg": 130, "sugar_level": "無糖",   "reason": "提神經典",
+     "_unfit": ["caffeine_sensitive", "pregnancy"]},
+    {"name": "拿鐵（中杯，少糖）", "components": ["濃縮咖啡", "鮮奶"],         "category": "咖啡",   "where_to_get": "咖啡店", "price_tier": "$$", "price_twd": 90,  "calorie_kcal": 150, "caffeine_mg": 90,  "sugar_level": "微糖",   "reason": "咖啡 + 蛋白質",
+     "_unfit": ["caffeine_sensitive", "pregnancy", "ckd"]},
+
+    # 手搖飲（注意疾病）
+    {"name": "無糖青茶",          "components": ["青茶"],                      "category": "手搖",   "where_to_get": "手搖店", "price_tier": "$$", "price_twd": 40,  "calorie_kcal": 0,   "caffeine_mg": 30,  "sugar_level": "無糖",   "reason": "手搖店無糖選擇",
+     "_unfit": ["caffeine_sensitive"]},
+    {"name": "微糖蜂蜜檸檬",      "components": ["檸檬", "蜂蜜"],              "category": "手搖",   "where_to_get": "手搖店", "price_tier": "$$", "price_twd": 50,  "calorie_kcal": 90,  "caffeine_mg": 0,   "sugar_level": "微糖",   "reason": "想喝點酸甜",
+     "_unfit": ["diabetes"]},
+
+    # 牛奶 / 替代奶
+    {"name": "鮮奶（小瓶）",      "components": ["鮮奶"],                      "category": "牛奶",   "where_to_get": "7-11",   "price_tier": "$$", "price_twd": 35,  "calorie_kcal": 130, "caffeine_mg": 0,   "sugar_level": "無糖",   "reason": "鈣質補充",
+     "_unfit": ["ckd"]},
+    {"name": "燕麥奶（無糖）",    "components": ["燕麥奶"],                    "category": "牛奶",   "where_to_get": "全家",   "price_tier": "$$", "price_twd": 60,  "calorie_kcal": 110, "caffeine_mg": 0,   "sugar_level": "無糖",   "reason": "乳糖不耐 / 純素友善",
+     "_unfit": []},
+
+    # 果汁類（多數疾病要小心）
+    {"name": "番茄汁（無鹽）",    "components": ["番茄"],                      "category": "果汁",   "where_to_get": "7-11",   "price_tier": "$$", "price_twd": 40,  "calorie_kcal": 60,  "caffeine_mg": 0,   "sugar_level": "無糖",   "reason": "茄紅素",
+     "_unfit": ["hypertension"]},
+    {"name": "椰子水",            "components": ["椰子水"],                    "category": "果汁",   "where_to_get": "7-11",   "price_tier": "$$", "price_twd": 45,  "calorie_kcal": 70,  "caffeine_mg": 0,   "sugar_level": "無糖",   "reason": "天然電解質",
+     "_unfit": ["ckd"]},  # 鉀偏高
+]
+
+
+# 咖啡因衛教資料（給 UI 顯示）
+CAFFEINE_GUIDE = {
+    "daily_safe_mg": 400,
+    "pregnancy_safe_mg": 200,
+    "common_sources": [
+        {"item": "黑咖啡（中杯）",        "mg": 130},
+        {"item": "拿鐵 / 美式",           "mg": 95},
+        {"item": "紅茶（一杯）",          "mg": 40},
+        {"item": "綠茶（一杯）",          "mg": 30},
+        {"item": "可樂（330ml）",         "mg": 35},
+        {"item": "巧克力（牛奶）",        "mg": 10},
+    ],
+    "warnings": [
+        {"group": "孕婦 / 哺乳期",   "limit": "≤ 200 mg/天", "note": "過量可能影響胎兒發育、新生兒睡眠"},
+        {"group": "兒童 / 青少年",  "limit": "≤ 100 mg/天", "note": "易影響睡眠與發育"},
+        {"group": "心律不整 / 心悸", "limit": "盡量避免",   "note": "咖啡因會加快心跳、誘發心悸"},
+        {"group": "高血壓",         "limit": "≤ 200 mg/天", "note": "短期可能升高血壓 5-10 mmHg"},
+        {"group": "焦慮 / 失眠",    "limit": "下午後不要喝", "note": "半衰期 5-6 小時，會干擾睡眠與焦慮"},
+        {"group": "胃食道逆流",     "limit": "盡量少喝",   "note": "咖啡會放鬆下食道括約肌"},
+        {"group": "服用某些藥物",   "limit": "問藥師",     "note": "某些抗憂鬱藥、避孕藥會延長咖啡因作用"},
+    ],
+}
+
+
+def _drink_unfit_flags(diagnoses: List[str]) -> dict:
+    """飲料用的擴充疾病旗標（除了通用六項，加上咖啡因敏感與孕期）。"""
+    flags = _diagnosis_flags(diagnoses)
+    text = " ".join(diagnoses)
+    flags["caffeine_sensitive"] = any(k in text for k in [
+        "心律不整", "心悸", "Arrhyth", "焦慮", "Anxiety", "anxiety", "失眠", "Insomnia", "胃食道逆流", "GERD",
+    ])
+    flags["pregnancy"] = any(k in text for k in ["懷孕", "妊娠", "Pregnan", "pregnan", "哺乳"])
+    return flags
+
+
+@router.get("/drink/{patient_id}")
+def pick_drink(
+    patient_id: str,
+    price_tier:  str  = Query("any", description="$ / $$ / $$$ / any"),
+    nearby:      bool = Query(False, description="是否只推附近能取得"),
+    avoid_recent: bool = Query(True, description="是否避開本週喝過的"),
+    exclude:     str  = Query("",    description="逗號分隔，已被丟掉的飲料"),
+    dislike:     str  = Query("",    description="逗號分隔，個人不喝的成分"),
+):
+    """喝什麼神器：依病史隨機推薦一杯具體飲料，含咖啡因 mg 與糖度。"""
+    diagnoses = _patient_diagnoses(patient_id)
+    excluded  = [x.strip() for x in exclude.split(",") if x.strip()]
+    dislikes  = [x.strip() for x in dislike.split(",") if x.strip()]
+
+    if price_tier not in VALID_PRICE_TIERS:
+        price_tier = "any"
+
+    recent_foods = _recent_eaten_foods(patient_id, days=7) if avoid_recent else []
+
+    price_zh_map = {"$": "50 元以內", "$$": "50-100 元", "$$$": "100 元以上", "any": "不限"}
+    user_msg = (
+        f"患者已知診斷：{', '.join(diagnoses) if diagnoses else '（無紀錄）'}\n"
+        f"預算價位：{price_tier}（{price_zh_map[price_tier]}）\n"
+        f"附近選項：{'是' if nearby else '否'}\n"
+        f"個人不喝成分：{', '.join(dislikes) if dislikes else '（無）'}\n"
+        f"本週已紀錄：{', '.join(recent_foods) if recent_foods else '（無）'}\n"
+        f"已 reroll 排除：{', '.join(excluded) if excluded else '（無）'}\n"
+        "請給一杯符合上面所有條件的具體飲料 JSON。"
+    )
+
+    try:
+        raw = call_claude(DRINK_SYSTEM_PROMPT, user_msg)
+        parsed = _parse_diet_json(raw)
+    except Exception as e:
+        logger.error(f"喝什麼神器 LLM 失敗：{e}")
+        parsed = {}
+
+    if not parsed or not parsed.get("name"):
+        import random
+        flags = _drink_unfit_flags(diagnoses)
+        active = {k for k, v in flags.items() if v}
+        safe = [m for m in DRINK_FALLBACK_POOL if not (set(m.get("_unfit") or []) & active)]
+        if nearby:
+            safe = [m for m in safe if (m.get("where_to_get") or "") in NEARBY_VENDORS]
+        if dislikes:
+            safe = _filter_pool_by_dislike(safe, dislikes)
+        priced = _filter_pool_by_price(safe, price_tier)
+        if recent_foods:
+            priced = [m for m in priced
+                      if not any(rf and (rf in m.get("name", "") or m.get("name", "") in rf) for rf in recent_foods)]
+        pool = [m for m in priced if m["name"] not in excluded]
+        if not pool:
+            pool = priced or safe or DRINK_FALLBACK_POOL
+        choice = dict(random.choice(pool))
+        choice.pop("_unfit", None)
+        choice.setdefault("reason", "先給你一杯常見的選擇")
+        choice["fallback"] = True
+        parsed = choice
+
+    parsed["diagnoses"] = diagnoses
+    return parsed
+
+
+@router.get("/caffeine-guide")
+def get_caffeine_guide():
+    """咖啡因衛教資料（靜態，無個人化）。"""
+    return CAFFEINE_GUIDE
+
+
 @router.get("/records/{patient_id}")
 def get_diet_records(
     patient_id: str,

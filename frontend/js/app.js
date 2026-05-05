@@ -6554,6 +6554,9 @@ function diet() {
     +       '<button class="diet-pick-btn primary" onclick="dietPickMeal(false)">'
     +         '<i data-lucide="dices" style="width:16px;height:16px"></i> 給我一道'
     +       '</button>'
+    +       '<button class="diet-pick-btn primary diet-pick-btn-drink" onclick="dietPickDrink(false)">'
+    +         '<i data-lucide="coffee" style="width:16px;height:16px"></i> 配杯飲料'
+    +       '</button>'
     +       '<button class="diet-pick-btn secondary" id="diet-pick-reroll" onclick="dietPickMeal(true)" disabled>'
     +         '<i data-lucide="refresh-cw" style="width:16px;height:16px"></i> 換一道'
     +       '</button>'
@@ -6561,6 +6564,12 @@ function diet() {
     +         '<i data-lucide="check" style="width:16px;height:16px"></i> 就吃這個'
     +       '</button>'
     +     '</div>'
+    +     '<div id="diet-drink-result" class="diet-drink-result"></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card" style="display:none">'
+    +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
+    +     '<div id="diet-caffeine-body"></div>'
     +   '</div>'
 
     +   '<div class="diet-card" id="diet-targets">'
@@ -6785,6 +6794,105 @@ function renderDietPick(g) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// ── 喝什麼神器 ──
+var _dietDrinkHistory = [];
+var _dietDrinkCurrent = null;
+var _dietDrinkLoading = false;
+
+function dietPickDrink(isReroll) {
+  if (_dietDrinkLoading) return;
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  if (isReroll && _dietDrinkCurrent && _dietDrinkCurrent.name) {
+    _dietDrinkHistory.push(_dietDrinkCurrent.name);
+  }
+  _dietDrinkLoading = true;
+  var box = document.getElementById('diet-drink-result');
+  if (box) {
+    box.className = 'diet-drink-result diet-drink-loading';
+    box.innerHTML = '<i data-lucide="loader-2" style="width:18px;height:18px"></i> 想想要配什麼…';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  var qs = '?price_tier=' + encodeURIComponent(_dietPickPrice)
+         + '&nearby=' + (_dietPickNearby ? 'true' : 'false')
+         + '&avoid_recent=' + (_dietPickAvoidRecent ? 'true' : 'false');
+  if (_dietDrinkHistory.length) qs += '&exclude=' + encodeURIComponent(_dietDrinkHistory.join(','));
+  if (_dietPickDislikes.length) qs += '&dislike=' + encodeURIComponent(_dietPickDislikes.join(','));
+  fetch(API + '/diet/drink/' + encodeURIComponent(pid) + qs)
+    .then(function(r) { return r.json(); })
+    .then(function(g) {
+      _dietDrinkCurrent = g || {};
+      renderDietDrink(g);
+      // 如果這杯有咖啡因，自動拉出咖啡因衛教
+      if ((g.caffeine_mg || 0) > 0) fetchCaffeineGuide();
+    })
+    .catch(function() {
+      if (box) box.innerHTML = '<span class="diet-drink-empty">抽不到，稍後再試</span>';
+    })
+    .finally(function() { _dietDrinkLoading = false; });
+}
+
+function renderDietDrink(g) {
+  var box = document.getElementById('diet-drink-result');
+  if (!box) return;
+  if (!g || !g.name) {
+    box.className = 'diet-drink-result';
+    box.innerHTML = '';
+    return;
+  }
+  var caf = (g.caffeine_mg != null && g.caffeine_mg > 0) ? (g.caffeine_mg + ' mg 咖啡因') : '無咖啡因';
+  box.className = 'diet-drink-result diet-drink-show';
+  box.innerHTML = ''
+    + '<div class="diet-drink-head">'
+    +   '<span class="diet-drink-icon"><i data-lucide="coffee" style="width:16px;height:16px"></i></span>'
+    +   '<span class="diet-drink-name">' + chatEscape(g.name) + '</span>'
+    +   '<button class="diet-drink-reroll" onclick="dietPickDrink(true)" title="換一杯"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>'
+    + '</div>'
+    + '<div class="diet-drink-meta">'
+    +   (g.where_to_get ? '<span>' + chatEscape(g.where_to_get) + '</span>' : '')
+    +   (g.price_tier ? '<span class="diet-pick-price-tag">' + chatEscape(g.price_tier) + (g.price_twd ? ' · NT$' + g.price_twd : '') + '</span>' : '')
+    +   (g.calorie_kcal != null ? '<span class="diet-pick-cal-tag">' + g.calorie_kcal + ' kcal</span>' : '')
+    +   '<span class="diet-drink-caf' + (g.caffeine_mg > 100 ? ' high' : '') + '">' + caf + '</span>'
+    +   (g.sugar_level && g.sugar_level !== '不適用' ? '<span class="diet-drink-sugar">' + chatEscape(g.sugar_level) + '</span>' : '')
+    + '</div>'
+    + (g.reason ? '<div class="diet-drink-reason">' + chatEscape(g.reason) + '</div>' : '');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function fetchCaffeineGuide() {
+  var card = document.getElementById('diet-caffeine-card');
+  var body = document.getElementById('diet-caffeine-body');
+  if (!card || !body) return;
+  if (card.style.display === 'block') return;  // 已展開
+  fetch(API + '/diet/caffeine-guide')
+    .then(function(r) { return r.json(); })
+    .then(function(g) {
+      var sources = (g.common_sources || []).map(function(s) {
+        return '<tr><td>' + chatEscape(s.item) + '</td><td>' + s.mg + ' mg</td></tr>';
+      }).join('');
+      var warns = (g.warnings || []).map(function(w) {
+        return ''
+          + '<div class="diet-caf-warn">'
+          +   '<div class="diet-caf-warn-head"><strong>' + chatEscape(w.group) + '</strong>'
+          +     '<span class="diet-caf-warn-limit">' + chatEscape(w.limit) + '</span></div>'
+          +   '<div class="diet-caf-warn-note">' + chatEscape(w.note) + '</div>'
+          + '</div>';
+      }).join('');
+      body.innerHTML = ''
+        + '<p class="diet-caf-overview">一般成人每日建議 ≤ <strong>' + g.daily_safe_mg + ' mg</strong>，孕期 ≤ <strong>' + g.pregnancy_safe_mg + ' mg</strong>。</p>'
+        + '<div class="diet-caf-grid">'
+        +   '<div><div class="diet-caf-subtitle">常見飲料咖啡因</div>'
+        +     '<table class="diet-caf-table"><tbody>' + sources + '</tbody></table>'
+        +   '</div>'
+        +   '<div><div class="diet-caf-subtitle">這些族群要注意</div>' + warns + '</div>'
+        + '</div>';
+      card.style.display = 'block';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {});
+}
+
+
 function dietPickLogIt() {
   if (!_dietPickCurrent || !_dietPickCurrent.name) return;
   // meal_type 優先使用後端回傳的解析後餐別（'any' 已被自動轉成 breakfast/lunch/dinner/snack）
@@ -6813,8 +6921,16 @@ function loadDietPage() {
   _dietPickAvoidRecent = true;
   _dietPickHistory = [];
   _dietPickCurrent = null;
+  _dietDrinkHistory = [];
+  _dietDrinkCurrent = null;
   dietPickLoadDislikes();
-  setTimeout(function() { dietPickRenderDislikes(); }, 50);
+  setTimeout(function() {
+    dietPickRenderDislikes();
+    var drinkBox = document.getElementById('diet-drink-result');
+    if (drinkBox) drinkBox.innerHTML = '';
+    var caf = document.getElementById('diet-caffeine-card');
+    if (caf) caf.style.display = 'none';
+  }, 50);
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
   fetchDietGuide();
   fetchDietTodayRecords();

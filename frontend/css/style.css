@@ -8977,6 +8977,126 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   color: var(--text);
 }
 .diet-pick-dislike-input button:hover { background: var(--klein, #5b9fe8); color: #fff; border-color: var(--klein); }
+
+/* 飲料按鈕 + 結果 */
+.diet-pick-btn-drink {
+  background: #B27B1A; color: #fff;
+}
+.diet-drink-result {
+  margin-top: 12px;
+  display: none;
+}
+.diet-drink-result.diet-drink-show,
+.diet-drink-result.diet-drink-loading {
+  display: block;
+}
+.diet-drink-result.diet-drink-loading {
+  padding: 10px 12px;
+  color: var(--text-dim); font-size: 0.9rem;
+  text-align: center;
+}
+.diet-drink-result.diet-drink-loading svg { animation: diet-spin 1s linear infinite; }
+.diet-drink-show {
+  padding: 10px 12px;
+  background: rgba(178, 123, 26, 0.08);
+  border: 1px solid rgba(178, 123, 26, 0.25);
+  border-radius: 10px;
+}
+.diet-drink-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.diet-drink-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: #B27B1A; color: #fff;
+  border-radius: 50%; flex-shrink: 0;
+}
+.diet-drink-name {
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--text);
+  flex: 1; min-width: 0;
+}
+.diet-drink-reroll {
+  background: none; border: 1px solid rgba(178, 123, 26, 0.3);
+  color: #B27B1A; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.diet-drink-reroll:hover { background: rgba(178, 123, 26, 0.15); }
+.diet-drink-meta {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  font-size: 0.78rem;
+  margin-bottom: 6px;
+}
+.diet-drink-meta > span {
+  padding: 2px 8px; border-radius: 100px;
+  background: rgba(0,0,0,0.05);
+  color: var(--text-dim);
+}
+.diet-drink-caf {
+  background: rgba(91,159,232,0.15) !important; color: var(--klein, #5b9fe8) !important;
+  font-weight: 600;
+}
+.diet-drink-caf.high {
+  background: rgba(201, 85, 75, 0.15) !important; color: #C9554B !important;
+}
+.diet-drink-sugar {
+  background: rgba(217, 165, 74, 0.15) !important; color: #B27B1A !important;
+}
+.diet-drink-reason {
+  font-size: 0.85rem; color: var(--text);
+  border-top: 1px dashed rgba(178, 123, 26, 0.2);
+  padding-top: 6px;
+}
+
+/* 咖啡因衛教卡片 */
+.diet-caffeine-card { background: linear-gradient(135deg, rgba(178,123,26,0.08), rgba(178,123,26,0.02)); }
+.diet-caf-overview { margin: 0 0 12px; font-size: 0.92rem; color: var(--text); line-height: 1.5; }
+.diet-caf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.diet-caf-subtitle {
+  font-weight: 600; font-size: 0.92rem; margin-bottom: 6px;
+  color: var(--text);
+}
+.diet-caf-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.86rem;
+}
+.diet-caf-table td {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--app-border, var(--border));
+}
+.diet-caf-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+  color: #B27B1A;
+}
+.diet-caf-warn {
+  padding: 8px 10px;
+  background: rgba(178, 123, 26, 0.05);
+  border-left: 3px solid #B27B1A;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.diet-caf-warn-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.88rem; margin-bottom: 2px;
+}
+.diet-caf-warn-limit {
+  font-size: 0.78rem; color: #B27B1A; font-weight: 600;
+}
+.diet-caf-warn-note {
+  font-size: 0.8rem; color: var(--text-dim); line-height: 1.45;
+}
+
+@media (max-width: 600px) {
+  .diet-caf-grid { grid-template-columns: 1fr; gap: 14px; }
+}
 .diet-pick-tab {
   padding: 6px 12px;
   background: var(--app-panel-soft, transparent);
