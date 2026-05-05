@@ -30,7 +30,9 @@ GROQ_VISION_MODEL = os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
-ANTHROPIC_VISION_MODEL = os.getenv("ANTHROPIC_VISION_MODEL", ANTHROPIC_MODEL)
+# 藥單 / 藥袋的中文小字 OCR：Haiku 4.5 力氣不夠（會回空陣列），預設改用 Sonnet 4.6
+# 文字任務（白話解讀、小禾對話、報告生成）仍用 Haiku 省成本
+ANTHROPIC_VISION_MODEL = os.getenv("ANTHROPIC_VISION_MODEL", "claude-sonnet-4-6")
 ANTHROPIC_MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS", "1024"))
 # 藥袋辨識需要更長的 token 額度（一張藥袋常有 3~6 包藥）
 ANTHROPIC_VISION_MAX_TOKENS = int(os.getenv("ANTHROPIC_VISION_MAX_TOKENS", "2048"))
@@ -333,6 +335,8 @@ def _vision_anthropic(image_base64: str, media_type: str) -> str:
     msg = _anthropic_client.messages.create(
         model=ANTHROPIC_VISION_MODEL,
         max_tokens=ANTHROPIC_VISION_MAX_TOKENS,
+        # OCR 需要穩定輸出（同一張藥單每次都要解到一樣的欄位），降低 temperature
+        temperature=0.2,
         system=_MED_BAG_SYSTEM_PROMPT,
         messages=[
             {

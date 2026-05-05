@@ -3432,9 +3432,10 @@ function tapMedTake(medId, slotKey) {
   logMedTaken(medId, true);
 }
 
-// 把過大的相片壓縮到 2400px 長邊以內、JPEG 0.88 — 多數手機相片直接傳會超過
+// 把過大的相片壓縮到 3000px 長邊以內、JPEG 0.9 — 多數手機相片直接傳會超過
 // Vercel 4.5MB 上傳上限，導致「藥袋一直拍攝失敗」。
-// 解析度需要夠高，否則藥單上的小字（藥名、劑量）會被縮到 LLM 看不清楚。
+// 解析度需要夠高，否則藥單上的小字（中文藥名、劑量）會被縮到 LLM 看不清楚。
+// 3000px JPEG 0.9 實測仍 < 2MB，base64 後仍遠低於 Vercel 4.5MB 上限。
 // 壓縮失敗時會 fallback 用原檔，不阻擋流程。
 function _compressMedPhoto(file) {
   return new Promise(function(resolve) {
@@ -3444,7 +3445,7 @@ function _compressMedPhoto(file) {
       var img = new Image();
       img.onload = function() {
         try {
-          var maxEdge = 2400;
+          var maxEdge = 3000;
           var w = img.width, h = img.height;
           if (Math.max(w, h) > maxEdge) {
             var scale = maxEdge / Math.max(w, h);
@@ -3457,7 +3458,7 @@ function _compressMedPhoto(file) {
           ctx.fillStyle = "#fff";  // 白底 — 處理透明 PNG，避免 JPEG 黑底
           ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
-          var compressed = canvas.toDataURL("image/jpeg", 0.88);
+          var compressed = canvas.toDataURL("image/jpeg", 0.9);
           resolve({ dataUrl: compressed, mediaType: "image/jpeg" });
         } catch (err) {
           resolve({ dataUrl: dataUrl, mediaType: file.type || "image/jpeg" });
