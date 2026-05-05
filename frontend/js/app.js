@@ -1041,7 +1041,7 @@ const pageSlugForTerminal = {
   vitals: 'vitals', memo: 'memo', previsit: 'previsit',
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', chat: 'med-chat', account: 'account',
-  settings: 'settings',
+  settings: 'settings', diet: 'diet',
   records: 'records', doctors: 'doctors'
 };
 
@@ -1050,7 +1050,7 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, doctors, records, medications, education,
-    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings
+    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet
   };
   // Page transition
   app.style.opacity = '0';
@@ -1070,6 +1070,7 @@ function showPage(page) {
     if (page === "chat") loadChatPage();
     if (page === "previsit") loadPrevisitPage();
     if (page === "emotions") loadEmotionsPage();
+    if (page === "diet") loadDietPage();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     // Render Lucide icons
@@ -6492,6 +6493,226 @@ function loadEmotionsPage() {
   _emotionSelected = null;
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
   renderEmotionTrend();
+}
+
+
+// ─── 飲食紀錄 ───────────────────────────────────────────
+// 三段式：基本衛教（蛋白質/水/纖維）+ 疾病禁忌 + 今日推薦食物 + 打卡
+
+var DIET_MEAL_LABEL = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心' };
+var _dietGuide = null;
+var _dietSelectedMeal = 'breakfast';
+
+function diet() {
+  return ''
+    + '<section class="diet-wrap">'
+    +   '<header class="diet-head">'
+    +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
+    +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
+    +   '</header>'
+
+    +   '<div class="diet-card" id="diet-targets">'
+    +     '<h3><i data-lucide="target" style="width:16px;height:16px"></i> 今日營養目標</h3>'
+    +     '<div class="diet-target-row" id="diet-target-row">'
+    +       '<div class="diet-target-skel">載入中…</div>'
+    +     '</div>'
+    +     '<ul class="diet-tips" id="diet-tips"></ul>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-warnings-card">'
+    +     '<h3><i data-lucide="alert-triangle" style="width:16px;height:16px"></i> 你要特別注意</h3>'
+    +     '<div id="diet-warnings"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card" id="diet-suggest-card">'
+    +     '<h3><i data-lucide="salad" style="width:16px;height:16px"></i> 今天吃什麼</h3>'
+    +     '<div class="diet-meal-tabs" id="diet-meal-tabs">'
+    +       ['breakfast','lunch','dinner'].map(function(m) {
+              return '<button class="diet-meal-tab' + (m===_dietSelectedMeal?' active':'') + '" '
+                + 'data-meal="' + m + '" onclick="dietSwitchMeal(\'' + m + '\')">'
+                + DIET_MEAL_LABEL[m] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<div id="diet-suggest-list" class="diet-suggest-list"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
+
+    +   '<div class="diet-card diet-log-card">'
+    +     '<h3><i data-lucide="pencil" style="width:16px;height:16px"></i> 打卡今天吃了什麼</h3>'
+    +     '<div class="diet-log-form">'
+    +       '<div class="diet-log-meal-pick" id="diet-log-meal-pick">'
+    +         ['breakfast','lunch','dinner','snack'].map(function(m) {
+              return '<button class="diet-log-meal' + (m==='breakfast'?' active':'') + '" '
+                + 'data-log-meal="' + m + '" onclick="dietPickLogMeal(\'' + m + '\')">'
+                + DIET_MEAL_LABEL[m] + '</button>';
+            }).join('')
+    +       '</div>'
+    +       '<textarea id="diet-log-foods" rows="2" maxlength="200" placeholder="例：白飯、滷雞腿、燙青菜（最多 200 字）"></textarea>'
+    +       '<input type="text" id="diet-log-note" maxlength="80" placeholder="備註（選填，例：吃完有點脹）" />'
+    +       '<button class="diet-log-submit" onclick="dietSubmitLog()">'
+    +         '<i data-lucide="check" style="width:14px;height:14px"></i> 送出'
+    +       '</button>'
+    +       '<div id="diet-log-status" class="diet-log-status"></div>'
+    +     '</div>'
+    +   '</div>'
+
+    +   '<div class="diet-card">'
+    +     '<h3><i data-lucide="list" style="width:16px;height:16px"></i> 今日已記錄</h3>'
+    +     '<div id="diet-today-list"><p class="diet-empty">載入中…</p></div>'
+    +   '</div>'
+    + '</section>';
+}
+
+function loadDietPage() {
+  _dietSelectedMeal = 'breakfast';
+  _dietLogMeal = 'breakfast';
+  if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+  fetchDietGuide();
+  fetchDietTodayRecords();
+}
+
+function fetchDietGuide() {
+  var pid = getStablePatientId();
+  if (!pid) { renderDietWarnings([]); renderDietSuggestions({}); return; }
+  fetch(API + '/diet/guide/' + encodeURIComponent(pid))
+    .then(function(r) { return r.json(); })
+    .then(function(g) {
+      _dietGuide = g || {};
+      renderDietTargets(g.daily_targets || {}, g.general_tips || []);
+      renderDietWarnings(g.warnings || []);
+      renderDietSuggestions(g.meal_suggestions || {});
+    })
+    .catch(function(e) {
+      var box = document.getElementById('diet-target-row');
+      if (box) box.innerHTML = '<div class="diet-empty">載入失敗，稍後再試</div>';
+    });
+}
+
+function renderDietTargets(t, tips) {
+  var row = document.getElementById('diet-target-row');
+  if (row) {
+    row.innerHTML = ''
+      + '<div class="diet-target"><span class="diet-target-num">' + (t.protein_g || '—') + '</span><span class="diet-target-unit">g</span><span class="diet-target-label">蛋白質</span></div>'
+      + '<div class="diet-target"><span class="diet-target-num">' + (t.water_ml || '—') + '</span><span class="diet-target-unit">ml</span><span class="diet-target-label">水分</span></div>'
+      + '<div class="diet-target"><span class="diet-target-num">' + (t.fiber_g || '—') + '</span><span class="diet-target-unit">g</span><span class="diet-target-label">纖維</span></div>';
+  }
+  var tipsEl = document.getElementById('diet-tips');
+  if (tipsEl) {
+    tipsEl.innerHTML = (tips || []).map(function(x) { return '<li>' + chatEscape(x) + '</li>'; }).join('');
+  }
+}
+
+function renderDietWarnings(warnings) {
+  var box = document.getElementById('diet-warnings');
+  if (!box) return;
+  if (!warnings || !warnings.length) {
+    box.innerHTML = '<p class="diet-empty">目前沒有特別需要避開的食物。如果有新的診斷，記得更新病歷。</p>';
+    return;
+  }
+  box.innerHTML = warnings.map(function(w) {
+    var avoid = (w.avoid || []).map(function(f) { return '<span class="diet-chip-bad">' + chatEscape(f) + '</span>'; }).join('');
+    return ''
+      + '<div class="diet-warn">'
+      +   '<div class="diet-warn-head">' + chatEscape(w.disease || '') + '</div>'
+      +   '<div class="diet-warn-avoid">' + avoid + '</div>'
+      +   (w.reason ? '<div class="diet-warn-reason">' + chatEscape(w.reason) + '</div>' : '')
+      + '</div>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderDietSuggestions(s) {
+  var list = document.getElementById('diet-suggest-list');
+  if (!list) return;
+  var foods = (s && s[_dietSelectedMeal]) || [];
+  if (!foods.length) {
+    list.innerHTML = '<p class="diet-empty">尚無建議</p>';
+    return;
+  }
+  list.innerHTML = foods.map(function(f) {
+    return '<span class="diet-chip-good">' + chatEscape(f) + '</span>';
+  }).join('');
+}
+
+function dietSwitchMeal(m) {
+  _dietSelectedMeal = m;
+  document.querySelectorAll('#diet-meal-tabs .diet-meal-tab').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-meal') === m);
+  });
+  if (_dietGuide) renderDietSuggestions(_dietGuide.meal_suggestions || {});
+}
+
+var _dietLogMeal = 'breakfast';
+
+function dietPickLogMeal(m) {
+  _dietLogMeal = m;
+  document.querySelectorAll('#diet-log-meal-pick .diet-log-meal').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-log-meal') === m);
+  });
+}
+
+async function dietSubmitLog() {
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var foods = (document.getElementById('diet-log-foods').value || '').trim();
+  if (!foods) { showToast('請填吃了什麼', 'warning'); return; }
+  var note = (document.getElementById('diet-log-note').value || '').trim();
+  var statusEl = document.getElementById('diet-log-status');
+  statusEl.textContent = '送出中…';
+  statusEl.className = 'diet-log-status';
+  try {
+    var res = await fetch(API + '/diet/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
+      body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.detail || '送出失敗');
+    }
+    document.getElementById('diet-log-foods').value = '';
+    document.getElementById('diet-log-note').value = '';
+    statusEl.textContent = '已記錄 ' + DIET_MEAL_LABEL[_dietLogMeal];
+    statusEl.className = 'diet-log-status diet-log-status-ok';
+    showToast('飲食打卡完成', 'success');
+    fetchDietTodayRecords();
+  } catch (e) {
+    statusEl.textContent = '送出失敗：' + (e.message || '');
+    statusEl.className = 'diet-log-status diet-log-status-error';
+  }
+}
+
+function fetchDietTodayRecords() {
+  var pid = getStablePatientId();
+  if (!pid) return;
+  var today = new Date();
+  var d = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  fetch(API + '/diet/records/' + encodeURIComponent(pid) + '?date=' + d)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var box = document.getElementById('diet-today-list');
+      if (!box) return;
+      var rows = (data && data.records) || [];
+      if (!rows.length) {
+        box.innerHTML = '<p class="diet-empty">今天還沒有紀錄。</p>';
+        return;
+      }
+      box.innerHTML = rows.map(function(r) {
+        var t = new Date(r.eaten_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+        return ''
+          + '<div class="diet-record">'
+          +   '<span class="diet-record-meal">' + (DIET_MEAL_LABEL[r.meal_type] || r.meal_type) + '</span>'
+          +   '<div class="diet-record-body">'
+          +     '<div class="diet-record-foods">' + chatEscape(r.foods || '') + '</div>'
+          +     (r.note ? '<div class="diet-record-note">' + chatEscape(r.note) + '</div>' : '')
+          +   '</div>'
+          +   '<span class="diet-record-time">' + t + '</span>'
+          + '</div>';
+      }).join('');
+    })
+    .catch(function() {
+      var box = document.getElementById('diet-today-list');
+      if (box) box.innerHTML = '<p class="diet-empty">讀取失敗</p>';
+    });
 }
 
 

@@ -8,7 +8,7 @@ from backend.routers import (
     patients, doctors, symptoms,
     education, emotions, medications,
     records, reports, research, triage, xiaohe, auth,
-    doctor_notes, medication_changes, alerts, labs,
+    doctor_notes, medication_changes, alerts, labs, diet,
 )
 from backend.services import llm_service
 
@@ -57,6 +57,7 @@ app.include_router(doctor_notes.router, prefix="/doctor-notes", tags=["doctor-no
 app.include_router(medication_changes.router, prefix="/medication-changes", tags=["medication-changes"])
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 app.include_router(labs.router, prefix="/labs", tags=["labs"])
+app.include_router(diet.router, prefix="/diet", tags=["diet"])
 
 @app.get("/health/llm")
 def health_llm():
