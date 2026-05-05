@@ -553,6 +553,12 @@
       setTimeout(() => {
         landing.style.display = 'none';
         const user = getCurrentUser();
+        if (user && user.role === 'doctor') {
+          try { localStorage.setItem('mdp.doctorUser', JSON.stringify(user)); } catch (e) {}
+          try { localStorage.removeItem('mdpiece_user'); } catch (e) {}
+          window.location.assign('/doctor/');
+          return;
+        }
         if (user) {
           document.getElementById('app-wrapper').classList.add('show');
           showPage('home');
