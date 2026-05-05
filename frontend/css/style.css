@@ -8535,6 +8535,8 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
       0 4px 0 var(--app-border),
       0 8px 18px rgba(92,58,50,0.10);
   }
+}
+
 /* ───────── 情緒紀錄頁 ───────── */
 .emotions-wrap {
   padding: 16px 4px 32px;
