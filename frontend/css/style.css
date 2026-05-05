@@ -9808,3 +9808,90 @@ html[data-mode="senior"] .mobile-tabbar {
 html[data-mode="senior"] .mtab.active {
   color: var(--sm-accent) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   .btn-pill — 通用 pill 按鈕（取自 .diet-pick-btn 設計）
+   primary  : 實心 klein 藍底白字
+   secondary: 米色 panel + 邊框
+   quiet    : 綠色淡底（成功/勾選用）
+   把幾個原本看起來小小的 botton 升級到這套統一樣式。
+   ═══════════════════════════════════════════════════════════ */
+
+.btn-pill,
+.mood-tab,
+.mood-table-toggle,
+.sym-link-btn,
+.mood-cal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  background: var(--bg-surface, #FFFAF0);
+  color: var(--text);
+  border: 1px solid var(--bg-glass-hover, var(--border-glass));
+  transition: filter .15s, background .15s, border-color .15s, color .15s;
+  line-height: 1.2;
+}
+.btn-pill:disabled,
+.mood-tab:disabled,
+.mood-table-toggle:disabled,
+.sym-link-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-pill:not(:disabled):hover,
+.mood-tab:not(:disabled):hover,
+.mood-table-toggle:not(:disabled):hover,
+.sym-link-btn:not(:disabled):hover,
+.mood-cal-btn:not(:disabled):hover {
+  filter: brightness(1.04);
+  background: var(--bg-mid, #F2E4D0);
+  border-color: var(--accent, var(--klein));
+}
+
+/* 變體 */
+.btn-pill-primary,
+.mood-tab.is-active {
+  background: var(--klein, #5C3A32);
+  color: #FFFAF0;
+  border-color: var(--klein, #5C3A32);
+}
+.btn-pill-primary:hover,
+.mood-tab.is-active:hover { background: var(--klein, #5C3A32); filter: brightness(1.08); color: #FFFAF0; }
+
+.btn-pill-secondary {
+  background: var(--bg-mid, #F2E4D0);
+  color: var(--accent, #C97F4B);
+  border-color: var(--bg-glass-hover);
+}
+
+.btn-pill-quiet {
+  background: rgba(143,166,138,0.18);
+  color: #4F7A52;
+  border-color: rgba(143,166,138,0.4);
+}
+
+/* 月曆 ‹ › 圓形小一點，但同款 */
+.mood-cal-btn {
+  padding: 6px 12px;
+  font-size: 1rem;
+}
+
+/* 7/30/90 切換 ─ 桌機已隱藏；手機保留並改成這套 pill */
+.mood-line-tabs { display: inline-flex; gap: 6px; padding: 0; background: transparent; }
+.mood-tab {
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  border-radius: 8px;
+}
+
+/* 桌機隱藏 7/30/90 切換不變（沿用前一版的決定） */
+@media (min-width: 769px) {
+  .mood-line-tabs { display: none; }
+}
