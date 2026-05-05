@@ -182,6 +182,126 @@ def log_diet_record(body: DietRecordIn):
         raise HTTPException(status_code=500, detail="紀錄寫入失敗")
 
 
+# ─── 吃什麼神器 ───────────────────────────────────────────
+# 給選擇障礙的患者用：依病史隨機推薦『一道具體菜色』，可以再 roll。
+
+PICK_SYSTEM_PROMPT = (
+    "你是台灣的飲食推薦達人。患者選擇障礙，需要你**只給一道**具體的菜色。\n"
+    "輸出必須是純 JSON（不要 markdown），結構：\n"
+    "{\n"
+    '  "name":         "<菜色名，要具體：例「滷肉飯配燙青菜」「味噌鮭魚定食」「麻油雞麵線」>",\n'
+    '  "components":   [<3-6 種主要食材或配菜>],\n'
+    '  "cuisine":      "<台/日/中/西/泰/韓/早餐...>",\n'
+    '  "reason":       "<為什麼適合這位患者，1-2 句口語>",\n'
+    '  "where_to_get": "<可以去哪買：自助餐/便當店/超商/早餐店/自煮>"\n'
+    "}\n"
+    "規則：\n"
+    "1. name 必須是具體可立刻買到/做到的菜色，不要寫『健康餐』『均衡飲食』這種模糊詞\n"
+    "2. 完全避開患者疾病禁忌（痛風→無海鮮/啤酒/內臟；糖尿病→無含糖飲料/精緻糖；高血壓→低鈉；自體免疫→無花生/酒精）\n"
+    "3. 一律繁體中文台灣用語\n"
+    "4. 不要給出 exclude 名單裡已經被丟掉的菜\n"
+    "5. 寧可常見好取得，不要瞎掰罕見料理\n"
+)
+
+
+def _diagnosis_flags(diagnoses: List[str]) -> dict:
+    """從診斷字串萃取常見疾病旗標，給 fallback pool 的安全過濾用。"""
+    text = " ".join(diagnoses)
+    return {
+        "gout":         any(k in text for k in ["痛風", "Gout", "gout"]),
+        "diabetes":     any(k in text for k in ["糖尿", "Diabetes", "diabetes", "DM"]),
+        "hypertension": any(k in text for k in ["高血壓", "Hypertension", "hypertension", "HTN"]),
+        "ckd":          any(k in text for k in ["腎", "Kidney", "kidney", "CKD"]),
+        "autoimmune":   any(k in text for k in ["紅斑", "狼瘡", "Lupus", "lupus", "自體免疫", "類風濕", "RA"]),
+        "ibs":          any(k in text for k in ["腸躁", "IBS", "胃潰瘍", "胃食道逆流", "GERD"]),
+    }
+
+
+# 每道菜標記哪些情況『不適合』（fallback 用；LLM 主路徑會自己處理）
+PICK_FALLBACK_POOL = [
+    {"name": "滷肉飯配燙青菜",     "components": ["滷肉", "白飯", "青菜", "滷蛋"],          "cuisine": "台", "where_to_get": "自助餐",     "reason": "便當店標配，澱粉蛋白蔬菜都有",
+     "_unfit": ["hypertension"]},  # 滷汁鈉偏高
+    {"name": "蒜泥白肉便當",       "components": ["白肉", "蒜泥醬", "白飯", "高麗菜"],       "cuisine": "台", "where_to_get": "便當店",     "reason": "蒸煮為主、油不重",
+     "_unfit": []},
+    {"name": "味噌鮭魚定食",       "components": ["鮭魚", "白飯", "味噌湯", "醃菜"],         "cuisine": "日", "where_to_get": "日式定食店", "reason": "鮭魚蛋白質好、好消化",
+     "_unfit": ["gout", "hypertension"]},  # 海魚普林、味噌湯鈉
+    {"name": "雞肉飯便當",         "components": ["雞絲", "雞汁飯", "燙青菜", "蛋"],         "cuisine": "台", "where_to_get": "便當店",     "reason": "嘉義雞肉飯經典款",
+     "_unfit": []},
+    {"name": "玉米蛋餅+無糖豆漿",  "components": ["蛋餅皮", "玉米", "蛋", "無糖豆漿"],       "cuisine": "台早", "where_to_get": "早餐店",   "reason": "早餐快速款",
+     "_unfit": []},
+    {"name": "番茄炒蛋蓋飯",       "components": ["番茄", "蛋", "白飯", "蔥"],               "cuisine": "中", "where_to_get": "自煮",       "reason": "30 秒能想到的家常",
+     "_unfit": []},
+    {"name": "雞胸肉沙拉",         "components": ["雞胸肉", "生菜", "番茄", "玉米"],         "cuisine": "西", "where_to_get": "輕食店",     "reason": "高蛋白低油",
+     "_unfit": []},
+    {"name": "牛肉麵（清燉）",     "components": ["牛肉", "麵條", "青菜", "蘿蔔"],           "cuisine": "台", "where_to_get": "麵店",       "reason": "清燉湯頭比紅燒少油鈉",
+     "_unfit": ["gout", "hypertension"]},  # 牛肉普林、湯鈉
+    {"name": "蒸蛋豆腐+地瓜飯",    "components": ["蒸蛋", "豆腐", "地瓜", "白飯"],           "cuisine": "中", "where_to_get": "自煮",       "reason": "好消化、植物蛋白",
+     "_unfit": ["ckd"]},  # 豆製品蛋白偏多
+    {"name": "鹹粥配蘿蔔糕",       "components": ["米", "瘦肉", "香菇", "蘿蔔糕"],           "cuisine": "台早", "where_to_get": "早餐店",   "reason": "溫熱好入口",
+     "_unfit": ["hypertension"]},
+    {"name": "雞絲涼麵（少醬）",   "components": ["雞絲", "麵條", "小黃瓜", "胡麻醬"],       "cuisine": "台", "where_to_get": "便利商店",   "reason": "夏天清爽選擇",
+     "_unfit": ["diabetes"]},  # 醬汁糖
+    {"name": "清蒸魚配糙米飯",     "components": ["白肉魚", "糙米飯", "燙青菜"],             "cuisine": "中", "where_to_get": "自煮",       "reason": "低油低鈉、高纖",
+     "_unfit": ["gout"]},
+    {"name": "豬肉水餃（10 顆）",  "components": ["豬肉水餃", "酸辣湯"],                     "cuisine": "中", "where_to_get": "水餃店",     "reason": "簡單一餐解決",
+     "_unfit": ["hypertension"]},
+    {"name": "雞肉三明治",         "components": ["全麥吐司", "雞胸肉", "生菜", "番茄"],     "cuisine": "西", "where_to_get": "早餐店",     "reason": "好攜帶、蛋白質充足",
+     "_unfit": []},
+]
+
+
+def _filter_pool_by_diagnoses(pool: list, flags: dict) -> list:
+    """濾掉 _unfit 命中目前任一旗標的選項。"""
+    active = {k for k, v in flags.items() if v}
+    if not active:
+        return pool
+    return [m for m in pool if not (set(m.get("_unfit") or []) & active)]
+
+
+@router.get("/pick/{patient_id}")
+def pick_meal(
+    patient_id: str,
+    meal_type: str = Query("any", description="breakfast/lunch/dinner/snack/any"),
+    exclude: str = Query("", description="逗號分隔，已被丟掉的菜色，避免重複推薦"),
+):
+    """吃什麼神器：依病史隨機推薦一道具體菜色，避開禁忌與已丟掉的選項。"""
+    diagnoses = _patient_diagnoses(patient_id)
+    excluded = [x.strip() for x in exclude.split(",") if x.strip()]
+
+    user_msg = (
+        f"患者已知診斷：{', '.join(diagnoses) if diagnoses else '（無紀錄）'}\n"
+        f"想吃的餐別：{meal_type}\n"
+        f"已經被丟掉的菜（不要再推）：{', '.join(excluded) if excluded else '（無）'}\n"
+        "請給一道具體菜色的推薦 JSON。"
+    )
+
+    try:
+        raw = call_claude(PICK_SYSTEM_PROMPT, user_msg)
+        parsed = _parse_diet_json(raw)
+    except Exception as e:
+        logger.error(f"吃什麼神器 LLM 失敗：{e}")
+        parsed = {}
+
+    if not parsed or not parsed.get("name"):
+        # Fallback：依疾病旗標過濾後隨機抽一個沒被排除的
+        import random
+        flags = _diagnosis_flags(diagnoses)
+        safe_pool = _filter_pool_by_diagnoses(PICK_FALLBACK_POOL, flags)
+        # 排除已被丟掉的
+        pool = [m for m in safe_pool if m["name"] not in excluded]
+        # 若全濾光，退回完整 safe_pool；再退回原 pool
+        if not pool:
+            pool = safe_pool or PICK_FALLBACK_POOL
+        choice = dict(random.choice(pool))
+        choice.pop("_unfit", None)
+        choice.setdefault("reason", "先給你一個常見的選擇")
+        choice["fallback"] = True
+        parsed = choice
+
+    parsed["diagnoses"] = diagnoses
+    return parsed
+
+
 @router.get("/records/{patient_id}")
 def get_diet_records(
     patient_id: str,
