@@ -3432,43 +3432,133 @@ function tapMedTake(medId, slotKey) {
   logMedTaken(medId, true);
 }
 
-// 把過大的相片壓縮到 3000px 長邊以內、JPEG 0.9 — 多數手機相片直接傳會超過
-// Vercel 4.5MB 上傳上限，導致「藥袋一直拍攝失敗」。
-// 解析度需要夠高，否則藥單上的小字（中文藥名、劑量）會被縮到 LLM 看不清楚。
-// 3000px JPEG 0.9 實測仍 < 2MB，base64 後仍遠低於 Vercel 4.5MB 上限。
-// 壓縮失敗時會 fallback 用原檔，不阻擋流程。
+// 把藥袋／藥單照片預處理成適合 LLM OCR 的形式：
+//   1) EXIF 自動轉正（手機直拍常帶 rotation flag，舊版瀏覽器不會自動轉）
+//   2) 自動裁掉照片四周的純黑邊框（拍照時藥單四周常是黑桌面 / 黑色 padding，
+//      裁掉後實際藥單佔的解析度提升 2-3 倍，OCR 大幅變準）
+//   3) 壓縮到 3000px 長邊、JPEG 0.9 — 仍 < Vercel 4.5MB 上傳上限
+// 任何步驟失敗都會 fallback 用原檔，不阻擋流程。
 function _compressMedPhoto(file) {
-  return new Promise(function(resolve) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var dataUrl = e.target.result;
+  function loadBitmap(blob) {
+    // createImageBitmap 加 imageOrientation: 'from-image' 會自動套 EXIF rotation
+    if (typeof createImageBitmap === "function") {
+      try {
+        return createImageBitmap(blob, { imageOrientation: "from-image" });
+      } catch (_) {
+        return createImageBitmap(blob);
+      }
+    }
+    return Promise.reject(new Error("createImageBitmap not supported"));
+  }
+
+  function bitmapFromImageElement(blob) {
+    return new Promise(function(resolve, reject) {
+      var url = URL.createObjectURL(blob);
       var img = new Image();
       img.onload = function() {
-        try {
-          var maxEdge = 3000;
-          var w = img.width, h = img.height;
-          if (Math.max(w, h) > maxEdge) {
-            var scale = maxEdge / Math.max(w, h);
-            w = Math.round(w * scale);
-            h = Math.round(h * scale);
-          }
-          var canvas = document.createElement("canvas");
-          canvas.width = w; canvas.height = h;
-          var ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#fff";  // 白底 — 處理透明 PNG，避免 JPEG 黑底
-          ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          var compressed = canvas.toDataURL("image/jpeg", 0.9);
-          resolve({ dataUrl: compressed, mediaType: "image/jpeg" });
-        } catch (err) {
-          resolve({ dataUrl: dataUrl, mediaType: file.type || "image/jpeg" });
-        }
+        URL.revokeObjectURL(url);
+        resolve({ width: img.width, height: img.height, source: img });
       };
-      img.onerror = function() { resolve({ dataUrl: dataUrl, mediaType: file.type || "image/jpeg" }); };
-      img.src = dataUrl;
-    };
-    reader.onerror = function() { resolve(null); };
-    reader.readAsDataURL(file);
+      img.onerror = function() {
+        URL.revokeObjectURL(url);
+        reject(new Error("Image load failed"));
+      };
+      img.src = url;
+    });
+  }
+
+  // 從畫好的 canvas 找出非黑色內容的 bounding box（容忍 5% 暗色閾值）
+  function findContentBounds(canvas) {
+    try {
+      var ctx = canvas.getContext("2d");
+      var w = canvas.width, h = canvas.height;
+      var sample = ctx.getImageData(0, 0, w, h).data;
+      var threshold = 30; // 0-255，低於此亮度視為「黑邊」
+      var top = 0, bottom = h - 1, left = 0, right = w - 1;
+
+      function rowIsBlack(y) {
+        for (var x = 0; x < w; x += 8) {  // step 8 px 加速
+          var i = (y * w + x) * 4;
+          if (sample[i] > threshold || sample[i+1] > threshold || sample[i+2] > threshold) return false;
+        }
+        return true;
+      }
+      function colIsBlack(x) {
+        for (var y = 0; y < h; y += 8) {
+          var i = (y * w + x) * 4;
+          if (sample[i] > threshold || sample[i+1] > threshold || sample[i+2] > threshold) return false;
+        }
+        return true;
+      }
+      while (top < bottom && rowIsBlack(top)) top++;
+      while (bottom > top && rowIsBlack(bottom)) bottom--;
+      while (left < right && colIsBlack(left)) left++;
+      while (right > left && colIsBlack(right)) right--;
+
+      // 安全範圍：裁掉的部分 < 5% 就不裁（沒邊框，避免裁到內容）
+      // 過度裁切（裁掉 > 70%）也視為偵測有問題，跳過
+      var cropW = right - left, cropH = bottom - top;
+      var ratio = (cropW * cropH) / (w * h);
+      if (ratio < 0.3 || ratio > 0.95) return null;
+      // 留 1% 的緩衝邊
+      var pad = Math.round(Math.min(w, h) * 0.01);
+      return {
+        x: Math.max(0, left - pad),
+        y: Math.max(0, top - pad),
+        w: Math.min(w, cropW + pad * 2),
+        h: Math.min(h, cropH + pad * 2),
+      };
+    } catch (_) {
+      return null;  // getImageData 在 cross-origin 會失敗；安全 fallback
+    }
+  }
+
+  return new Promise(function(resolve) {
+    var bitmapPromise = loadBitmap(file).catch(function() { return bitmapFromImageElement(file); });
+
+    bitmapPromise.then(function(bm) {
+      try {
+        var srcW = bm.width, srcH = bm.height;
+        // 第一張 canvas：原始尺寸貼上來，找黑邊
+        var raw = document.createElement("canvas");
+        raw.width = srcW; raw.height = srcH;
+        var rawCtx = raw.getContext("2d");
+        rawCtx.fillStyle = "#000";  // 暫時用黑底，方便後面的黑邊偵測
+        rawCtx.fillRect(0, 0, srcW, srcH);
+        rawCtx.drawImage(bm.source || bm, 0, 0);
+
+        var crop = findContentBounds(raw) || { x: 0, y: 0, w: srcW, h: srcH };
+
+        // 第二張 canvas：裁掉黑邊 + 縮到 maxEdge 內
+        var maxEdge = 3000;
+        var outW = crop.w, outH = crop.h;
+        if (Math.max(outW, outH) > maxEdge) {
+          var scale = maxEdge / Math.max(outW, outH);
+          outW = Math.round(outW * scale);
+          outH = Math.round(outH * scale);
+        }
+        var out = document.createElement("canvas");
+        out.width = outW; out.height = outH;
+        var outCtx = out.getContext("2d");
+        outCtx.fillStyle = "#fff";  // 白底 — 處理透明 PNG / JPEG 黑底
+        outCtx.fillRect(0, 0, outW, outH);
+        outCtx.drawImage(raw, crop.x, crop.y, crop.w, crop.h, 0, 0, outW, outH);
+
+        var compressed = out.toDataURL("image/jpeg", 0.9);
+        resolve({ dataUrl: compressed, mediaType: "image/jpeg" });
+      } catch (err) {
+        // 任何步驟壞掉都 fallback 直接送原檔
+        var reader = new FileReader();
+        reader.onload = function(e) { resolve({ dataUrl: e.target.result, mediaType: file.type || "image/jpeg" }); };
+        reader.onerror = function() { resolve(null); };
+        reader.readAsDataURL(file);
+      }
+    }).catch(function() {
+      var reader = new FileReader();
+      reader.onload = function(e) { resolve({ dataUrl: e.target.result, mediaType: file.type || "image/jpeg" }); };
+      reader.onerror = function() { resolve(null); };
+      reader.readAsDataURL(file);
+    });
   });
 }
 
