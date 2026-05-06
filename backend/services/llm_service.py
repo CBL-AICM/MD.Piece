@@ -302,6 +302,12 @@ _MED_BAG_SYSTEM_PROMPT = (
     "- 只有「整張完全沒有任何藥品資訊」（例如拍到風景、人臉、空白紙張）才回傳空 medications 陣列"
 )
 
+_MED_BAG_USER_PROMPT = (
+    "請辨識這張照片（可能是藥袋、藥單、處方箋或領藥明細）上的所有藥物資訊，"
+    "**逐筆**分開列出。即使只看得到藥名也請列出，不要回傳空陣列。"
+)
+
+
 def _vision_ollama(image_base64: str, media_type: str) -> str:
     resp = httpx.post(
         f"{OLLAMA_BASE}/api/chat",
