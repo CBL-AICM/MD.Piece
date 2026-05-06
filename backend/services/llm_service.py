@@ -483,6 +483,31 @@ _EXTRACT_FROM_OCR_PROMPT = (
 )
 
 
+def extract_medications_from_ocr_text(ocr_text: str) -> dict:
+    """從外部來源（前端 Tesseract.js / Google Vision …）拿到的 OCR 純文字
+    抽結構化 medications JSON。回傳格式同 recognize_medicine_bag，
+    這樣 router 可以共用後續處理邏輯。"""
+    errors: list[dict] = []
+    try:
+        raw = call_claude(_EXTRACT_FROM_OCR_PROMPT, ocr_text)
+    except Exception as e:
+        logger.error(f"extract_medications_from_ocr_text 失敗：{e}")
+        errors.append({"provider": "extract", "error": f"{type(e).__name__}: {e}"})
+        return {
+            "medications": [],
+            "raw_text": ocr_text,
+            "provider": None,
+            "errors": errors,
+        }
+    parsed = _parse_med_bag_json(raw)
+    parsed["raw_text"] = ocr_text  # 回 OCR 純文字（不是 JSON）給前端 debug
+    parsed["provider"] = "client_ocr"
+    if not parsed.get("medications"):
+        errors.append({"provider": "extract", "error": "no medications extracted"})
+    parsed["errors"] = errors
+    return parsed
+
+
 def _google_vision_ocr(image_base64: str) -> str:
     """Google Cloud Vision DOCUMENT_TEXT_DETECTION — 對中文小字 / 表格的 OCR 準度
     遠高於任何 LLM vision model。需設定 GOOGLE_VISION_API_KEY。
