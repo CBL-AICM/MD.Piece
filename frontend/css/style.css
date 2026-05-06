@@ -9212,21 +9212,62 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
   gap: 12px;
 }
 .bi-field { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
-.bi-field > span { font-weight: 600; color: var(--text, inherit); }
+.bi-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--app-text, var(--text, #5C3A32));
+}
+.bi-field > span::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--bi-accent, var(--app-term, var(--accent, #C97F4B)));
+  flex: none;
+}
 .bi-field input,
 .bi-field select,
 .bi-field textarea {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border, #d8c8b6);
+  padding: 10px 12px;
+  border: 1.5px solid var(--app-border, var(--border, #5C3A32));
   border-radius: 8px;
-  background: var(--input-bg, #fffaf2);
-  color: inherit;
+  background: var(--app-panel, var(--input-bg, #fffaf2));
+  color: var(--app-text, var(--text, #5C3A32));
   font: inherit;
   box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+.bi-field input::placeholder,
+.bi-field textarea::placeholder {
+  color: var(--app-text-dim, var(--text-dim, #8B7868));
+  opacity: 0.85;
+}
+.bi-field input:focus,
+.bi-field select:focus,
+.bi-field textarea:focus {
+  outline: none;
+  border-color: var(--bi-accent, var(--app-term, var(--accent, #C97F4B)));
+  box-shadow: 0 0 0 3px var(--app-glow, rgba(201,127,75,0.25));
+}
+.bi-field input[type="date"]::-webkit-datetime-edit,
+.bi-field input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: var(--app-text, var(--text, #5C3A32));
+}
+.bi-field input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+}
+.bi-grid > .bi-field:nth-child(5n+1) { --bi-accent: var(--app-pink, #E8B4A0); }
+.bi-grid > .bi-field:nth-child(5n+2) { --bi-accent: var(--app-aqua, #7E94A8); }
+.bi-grid > .bi-field:nth-child(5n+3) { --bi-accent: var(--app-blue, #5B7FA8); }
+.bi-grid > .bi-field:nth-child(5n+4) { --bi-accent: var(--app-mint, #9DAEC0); }
+.bi-grid > .bi-field:nth-child(5n+5) { --bi-accent: var(--app-term, #C97F4B); }
 .bi-field textarea { resize: vertical; min-height: 56px; }
-.bi-field .bi-hint { font-size: 0.78rem; color: var(--text-dim, #888); }
+.bi-field .bi-hint { font-size: 0.78rem; color: var(--app-text-dim, var(--text-dim, #8B7868)); }
 .bi-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 .bi-actions .primary,
 .bi-actions .btn-quiet {
