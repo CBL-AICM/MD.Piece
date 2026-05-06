@@ -43,7 +43,8 @@ def _find_existing_active_medication(
             or []
         )
     except Exception as e:
-        logger.warning(f"dedup lookup failed for {patient_id}: {e}")
+        # 不把 patient_id 寫進 log（屬於 PHI），只記錄錯誤類型
+        logger.warning("medication dedup lookup failed: %s", type(e).__name__)
         return None
     norm_dose = _norm(dosage)
     for r in rows:
