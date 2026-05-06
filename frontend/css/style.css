@@ -8601,9 +8601,13 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 
 /* ───────── 情緒紀錄頁 ───────── */
 .emotions-wrap {
-  padding: 16px 4px 32px;
+  padding: 24px 20px 32px;
   max-width: 720px;
-  margin: 0 auto;
+  margin: 16px auto;
+  background: var(--bg-mid);
+  border: 1px solid var(--border-glass);
+  border-radius: 18px;
+  box-shadow: 0 6px 22px rgba(92,58,50,0.10);
 }
 .emotions-head h2 {
   display: inline-flex;
@@ -8623,6 +8627,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   border-radius: 14px;
   padding: 20px;
   margin-bottom: 16px;
+  color: var(--text);
 }
 .emotions-card h3 {
   margin: 0 0 14px;
