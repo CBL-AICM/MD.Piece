@@ -1844,28 +1844,28 @@ function symptoms() {
         <div class="ts-body">
           <div class="ts-stat-grid">
             <div class="ts-stat">
-              <span class="ts-stat-label">// 累計天數</span>
+              <span class="ts-stat-label">// ${_T('sym.stat.days')}</span>
               <span class="ts-stat-num">${periodDays}</span>
               <span class="ts-stat-unit">days</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 已記錄</span>
+              <span class="ts-stat-label">// ${_T('sym.stat.logged')}</span>
               <span class="ts-stat-num">${totalCount}</span>
-              <span class="ts-stat-unit">次</span>
+              <span class="ts-stat-unit">${_T('sym.stat.times')}</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 最常出現</span>
-              <span class="ts-stat-num sm">${topCat ? topCat.zh : '—'}</span>
-              <span class="ts-stat-unit">${topCat ? topCount + ' 次' : '尚無紀錄'}</span>
+              <span class="ts-stat-label">// ${_T('sym.stat.top')}</span>
+              <span class="ts-stat-num sm">${topCat ? _symField(topCat, 'zh') : '—'}</span>
+              <span class="ts-stat-unit">${topCat ? topCount + ' ' + _T('sym.stat.times') : _T('sym.stat.empty')}</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 距下次回診</span>
+              <span class="ts-stat-label">// ${_T('sym.stat.nextVisit')}</span>
               <span class="ts-stat-num">${nextVisitDay !== null ? Math.max(0, nextVisitDay) : '—'}</span>
-              <span class="ts-stat-unit">${nextVisitDay !== null ? 'days' : '尚未設定'}</span>
+              <span class="ts-stat-unit">${nextVisitDay !== null ? 'days' : _T('sym.stat.notSet')}</span>
             </div>
           </div>
           <button class="sym-link-btn" onclick="openVisitDatePrompt()">
-            <i data-lucide="calendar-cog"></i><span>設定回診日期</span>
+            <i data-lucide="calendar-cog"></i><span>${_T('sym.btn.setVisit')}</span>
           </button>
         </div>
       </section>
@@ -1876,19 +1876,19 @@ function symptoms() {
           <span class="ts-tag">choose_category</span>
         </header>
         <div class="ts-body">
-          <p class="sym-instruct">選擇你現在感覺到的症狀（每張卡片都附上判斷說明），沒看到的點「其他症狀」自訂：</p>
+          <p class="sym-instruct">${_T('sym.choose.instruct')}</p>
           <div class="sym-category-grid">
             ${SYMPTOM_CATEGORIES.map(c => `
               <button class="sym-cat-card" onclick="openSymptomLog('${c.id}')" type="button">
                 <div class="scc-icon scc-${c.color}"><i data-lucide="${c.icon}"></i></div>
-                <div class="scc-name">${c.zh}</div>
-                <div class="scc-short">${c.short}</div>
+                <div class="scc-name">${_symField(c, 'zh')}</div>
+                <div class="scc-short">${_symField(c, 'short')}</div>
               </button>
             `).join('')}
             ${getCustomSymptomCats().map(c => `
               <button class="sym-cat-card sym-cat-card-custom" onclick="openSymptomLog('${c.id}')" type="button">
-                <span class="scc-badge">自訂</span>
-                <span class="scc-del" onclick="event.stopPropagation(); removeCustomSymptomCatAndRefresh('${c.id}')" title="刪除這個自訂症狀">×</span>
+                <span class="scc-badge">${_T('sym.card.custom.badge')}</span>
+                <span class="scc-del" onclick="event.stopPropagation(); removeCustomSymptomCatAndRefresh('${c.id}')" title="${_T('sym.card.custom.delTitle')}">×</span>
                 <div class="scc-icon scc-${c.color}"><i data-lucide="${c.icon}"></i></div>
                 <div class="scc-name">${escapeHtml(c.zh)}</div>
                 <div class="scc-short">${c.short}</div>
@@ -1896,8 +1896,8 @@ function symptoms() {
             `).join('')}
             <button class="sym-cat-card sym-cat-card-other" onclick="openOtherSymptomLog()" type="button">
               <div class="scc-icon scc-other"><i data-lucide="plus"></i></div>
-              <div class="scc-name">其他症狀</div>
-              <div class="scc-short">沒看到？自己打症狀名稱（會記住下次）</div>
+              <div class="scc-name">${_T('sym.card.other.name')}</div>
+              <div class="scc-short">${_T('sym.card.other.short')}</div>
             </button>
           </div>
         </div>
@@ -1914,11 +1914,11 @@ function symptoms() {
       <section class="term-section">
         <header class="ts-head">
           <span class="ts-prompt">$ tail -f today.log</span>
-          <span class="ts-tag">${todayEntries.length} entries</span>
+          <span class="ts-tag">${_Tf('sym.today.tag', { n: todayEntries.length })}</span>
         </header>
         <div class="ts-body">
           ${todayEntries.length === 0 ? `
-            <p class="sym-empty">// 今天還沒有紀錄。選一個症狀類別開始記錄吧。</p>
+            <p class="sym-empty">${_T('sym.today.empty')}</p>
           ` : `
             <ul class="sym-entry-list">
               ${todayEntries.slice().reverse().map(e => {
@@ -1927,10 +1927,10 @@ function symptoms() {
                 return `
                   <li class="sym-entry">
                     <span class="se-time">${time}</span>
-                    <span class="se-cat scc-${c?.color || 'mint'}">${c?.zh || e.categoryId}</span>
+                    <span class="se-cat scc-${c?.color || 'mint'}">${c ? _symField(c, 'zh') : e.categoryId}</span>
                     <span class="se-bar">${renderIntensityBar(e.intensity)}</span>
-                    <span class="se-meta">程度 ${e.intensity}/10 · ${e.frequency || 1} 次</span>
-                    <button class="se-del" onclick="deleteSymptomEntryAndRefresh('${e.id}')" title="刪除">×</button>
+                    <span class="se-meta">${_Tf('sym.entry.meta', { i: e.intensity, n: e.frequency || 1 })}</span>
+                    <button class="se-del" onclick="deleteSymptomEntryAndRefresh('${e.id}')" title="${_T('sym.entry.del')}">×</button>
                     ${e.notes ? `<span class="se-notes">${escapeHtml(e.notes)}</span>` : ''}
                   </li>
                 `;
@@ -1953,53 +1953,98 @@ function symptoms() {
 }
 
 // ── Symptom data & helpers ─────────────────────────────────
+// Each category carries both zh-TW and English fields (en, shortEn, detailEn,
+// contrastEn). Use _symField(c, 'zh' | 'short' | 'detail' | 'contrast') to
+// pull the localized version based on current language.
 const SYMPTOM_CATEGORIES = [
-  { id:'headache', zh:'頭痛', icon:'brain', color:'pink',
+  { id:'headache', zh:'頭痛', en:'Headache', icon:'brain', color:'pink',
     short:'頭部明顯的疼痛感',
+    shortEn:'Distinct pain in the head',
     detail:'可能集中在前額、太陽穴、後腦勺或整個頭部，鈍痛或抽痛皆有可能。',
-    contrast:'不同於「頭暈」（不穩）和「暈眩」（轉動）—— 頭痛是真的會「痛」。' },
-  { id:'dizziness', zh:'頭暈', icon:'wind', color:'aqua',
+    detailEn:'May focus on the forehead, temples, back of the head, or the whole head — dull ache or throbbing both possible.',
+    contrast:'不同於「頭暈」（不穩）和「暈眩」（轉動）—— 頭痛是真的會「痛」。',
+    contrastEn:'Different from "lightheadedness" (unsteady) or "vertigo" (spinning) — headache actually hurts.' },
+  { id:'dizziness', zh:'頭暈', en:'Lightheadedness', icon:'wind', color:'aqua',
     short:'輕飄飄、頭重腳輕、快暈倒',
+    shortEn:'Floating, heavy-headed, about to faint',
     detail:'比較像快要昏倒或站不穩。常見原因：低血糖、脫水、貧血、姿勢性低血壓。',
-    contrast:'不同於「暈眩」—— 頭暈不會看到周圍在轉。' },
-  { id:'vertigo', zh:'暈眩', icon:'rotate-cw', color:'mint',
+    detailEn:'Feels like nearly fainting or unsteady. Common causes: low blood sugar, dehydration, anemia, postural hypotension.',
+    contrast:'不同於「暈眩」—— 頭暈不會看到周圍在轉。',
+    contrastEn:'Different from "vertigo" — lightheadedness doesn\'t spin.' },
+  { id:'vertigo', zh:'暈眩', en:'Vertigo', icon:'rotate-cw', color:'mint',
     short:'天旋地轉，自己或周圍在轉動',
+    shortEn:'Spinning sensation — you or the room turning',
     detail:'常與內耳問題（梅尼爾氏症、耳石脫落 BPPV）或前庭神經有關。',
-    contrast:'不同於「頭暈」—— 暈眩有清楚的「轉動感」。' },
-  { id:'neuralgia', zh:'神經痛', icon:'zap', color:'pink',
+    detailEn:'Often linked to inner ear issues (Ménière\'s, BPPV) or the vestibular nerve.',
+    contrast:'不同於「頭暈」—— 暈眩有清楚的「轉動感」。',
+    contrastEn:'Different from "lightheadedness" — vertigo has a clear spinning feel.' },
+  { id:'neuralgia', zh:'神經痛', en:'Nerve Pain', icon:'zap', color:'pink',
     short:'像觸電、燒灼、針刺、刀割的痛',
+    shortEn:'Electric, burning, stabbing, or knife-like pain',
     detail:'沿神經分佈，發作性、尖銳。常見：坐骨神經痛、三叉神經痛、糖尿病神經病變。',
-    contrast:'不同於「肌肉痠痛」—— 神經痛更尖銳、有電擊感。' },
-  { id:'joint', zh:'關節痛', icon:'bone', color:'blue',
+    detailEn:'Follows a nerve path, episodic and sharp. Common: sciatica, trigeminal neuralgia, diabetic neuropathy.',
+    contrast:'不同於「肌肉痠痛」—— 神經痛更尖銳、有電擊感。',
+    contrastEn:'Different from "muscle ache" — nerve pain is sharper, with an electric quality.' },
+  { id:'joint', zh:'關節痛', en:'Joint Pain', icon:'bone', color:'blue',
     short:'關節（膝、肘、手指、肩）的疼痛、僵硬、紅腫',
+    shortEn:'Pain, stiffness, or swelling in joints (knee, elbow, fingers, shoulder)',
     detail:'可能伴隨活動受限、晨僵。常見：退化性關節炎、類風濕、痛風。',
-    contrast:'不同於「肌肉痠痛」—— 關節痛集中在關節處，活動時更明顯。' },
-  { id:'muscle', zh:'肌肉痠痛', icon:'dumbbell', color:'aqua',
+    detailEn:'May come with reduced range of motion or morning stiffness. Common: osteoarthritis, rheumatoid arthritis, gout.',
+    contrast:'不同於「肌肉痠痛」—— 關節痛集中在關節處，活動時更明顯。',
+    contrastEn:'Different from "muscle ache" — joint pain centers on the joint and worsens with movement.' },
+  { id:'muscle', zh:'肌肉痠痛', en:'Muscle Ache', icon:'dumbbell', color:'aqua',
     short:'肌肉的痠痛、僵硬、無力',
-    detail:'常見於運動後、姿勢不良、感冒、或纖維肌痛。' },
-  { id:'fever', zh:'發燒', icon:'thermometer', color:'pink',
+    shortEn:'Soreness, stiffness, or weakness in muscles',
+    detail:'常見於運動後、姿勢不良、感冒、或纖維肌痛。',
+    detailEn:'Common after exercise, from poor posture, with a cold, or in fibromyalgia.' },
+  { id:'fever', zh:'發燒', en:'Fever', icon:'thermometer', color:'pink',
     short:'體溫 ≥ 37.5°C，可能伴隨畏寒、出汗',
-    detail:'若 ≥ 38.5°C 或持續 3 天以上應就醫。記錄時可在備註寫下實測體溫。' },
-  { id:'fatigue', zh:'疲勞無力', icon:'battery-low', color:'aqua',
+    shortEn:'Body temp ≥ 37.5°C, possibly with chills or sweating',
+    detail:'若 ≥ 38.5°C 或持續 3 天以上應就醫。記錄時可在備註寫下實測體溫。',
+    detailEn:'If ≥ 38.5°C or lasting 3+ days, see a doctor. Note the measured temperature in the notes field.' },
+  { id:'fatigue', zh:'疲勞無力', en:'Fatigue', icon:'battery-low', color:'aqua',
     short:'極度倦怠、提不起勁，休息也難恢復',
-    detail:'與一般累不同，是持續性的，可能與貧血、甲狀腺、慢性病有關。' },
-  { id:'nausea', zh:'噁心嘔吐', icon:'cloud-rain', color:'mint',
+    shortEn:'Extreme tiredness, low energy, hard to recover with rest',
+    detail:'與一般累不同，是持續性的，可能與貧血、甲狀腺、慢性病有關。',
+    detailEn:'Different from regular tiredness — it\'s persistent. May relate to anemia, thyroid, or chronic conditions.' },
+  { id:'nausea', zh:'噁心嘔吐', en:'Nausea / Vomiting', icon:'cloud-rain', color:'mint',
     short:'想吐或實際嘔吐',
-    detail:'可能與腸胃問題、藥物副作用、暈眩或頭痛同時出現。' },
-  { id:'cough', zh:'咳嗽', icon:'megaphone', color:'blue',
+    shortEn:'Feeling sick or actually vomiting',
+    detail:'可能與腸胃問題、藥物副作用、暈眩或頭痛同時出現。',
+    detailEn:'May come with GI issues, medication side effects, vertigo, or headache.' },
+  { id:'cough', zh:'咳嗽', en:'Cough', icon:'megaphone', color:'blue',
     short:'反射性將氣道分泌物或刺激物排出',
-    detail:'可分為乾咳與有痰咳。超過 3 週為慢性咳嗽，建議就醫。' },
-  { id:'chest', zh:'胸痛胸悶', icon:'heart-pulse', color:'pink',
+    shortEn:'Reflex to clear secretions or irritants from the airway',
+    detail:'可分為乾咳與有痰咳。超過 3 週為慢性咳嗽，建議就醫。',
+    detailEn:'Dry or productive. Chronic cough lasts 3+ weeks — see a doctor.' },
+  { id:'chest', zh:'胸痛胸悶', en:'Chest Pain / Tightness', icon:'heart-pulse', color:'pink',
     short:'胸口悶、壓迫感、刺痛',
+    shortEn:'Tightness, pressure, or stabbing in the chest',
     detail:'若伴隨喘、冒冷汗、痛感放射到左肩或下巴，立即就醫。',
-    contrast:'⚠️ 警示症狀，記得儘快諮詢醫師。' },
-  { id:'breath', zh:'呼吸困難', icon:'activity', color:'aqua',
+    detailEn:'If accompanied by shortness of breath, cold sweats, or pain radiating to the left shoulder or jaw, seek care immediately.',
+    contrast:'⚠️ 警示症狀，記得儘快諮詢醫師。',
+    contrastEn:'⚠️ Red-flag symptom — consult a doctor as soon as possible.' },
+  { id:'breath', zh:'呼吸困難', en:'Shortness of Breath', icon:'activity', color:'aqua',
     short:'喘不過氣、呼吸費力',
-    detail:'可能與氣喘、心臟、肺部問題有關。記錄發生時的活動狀態（休息中？運動後？）。' },
-  { id:'insomnia', zh:'失眠', icon:'moon', color:'mint',
+    shortEn:'Trouble breathing, labored breath',
+    detail:'可能與氣喘、心臟、肺部問題有關。記錄發生時的活動狀態（休息中？運動後？）。',
+    detailEn:'May relate to asthma, heart, or lung conditions. Note what you were doing (resting? after exercise?).' },
+  { id:'insomnia', zh:'失眠', en:'Insomnia', icon:'moon', color:'mint',
     short:'睡不著、易醒、太早醒',
-    detail:'長期失眠影響身心，建議在備註記下入睡時間與睡眠品質。' },
+    shortEn:'Trouble falling asleep, waking up often, waking too early',
+    detail:'長期失眠影響身心，建議在備註記下入睡時間與睡眠品質。',
+    detailEn:'Long-term insomnia affects body and mind. Note your sleep time and quality.' },
 ];
+
+// Pull the localized field from a SYMPTOM_CATEGORIES entry. Falls back to the
+// Chinese version if the English field is missing.
+function _symField(c, key) {
+  if (!c) return '';
+  var lang = (window.MDPiece_i18n && window.MDPiece_i18n.getLang) ? window.MDPiece_i18n.getLang() : 'zh-TW';
+  if (lang !== 'en') return c[key] || '';
+  var enKey = key === 'zh' ? 'en' : key + 'En';
+  return c[enKey] || c[key] || '';
+}
 
 // ─── 自訂症狀（其他病症）──────────────────────────
 // 使用者第一次輸入後存到 localStorage，下次直接出現在卡片列。
@@ -2088,36 +2133,37 @@ function openSymptomLog(catId) {
   if (!c) return;
   const form = document.getElementById('sym-logform');
   document.getElementById('logform-cat-tag').textContent = c.id + '.entry';
+  const contrastText = _symField(c, 'contrast');
   document.getElementById('logform-body').innerHTML = `
     <div class="lf-explain">
       <div class="lf-icon scc-${c.color}"><i data-lucide="${c.icon}"></i></div>
       <div class="lf-info">
-        <h3>${c.zh}</h3>
-        <p class="lf-detail">${c.detail}</p>
-        ${c.contrast ? `<p class="lf-contrast"><strong>不確定？</strong>${c.contrast}</p>` : ''}
+        <h3>${_symField(c, 'zh')}</h3>
+        <p class="lf-detail">${_symField(c, 'detail')}</p>
+        ${contrastText ? `<p class="lf-contrast"><strong>${_T('sym.log.unsure')}</strong>${contrastText}</p>` : ''}
       </div>
     </div>
     <div class="lf-form">
-      <label class="lf-label">疼痛 / 不適程度（1 = 輕微，10 = 劇烈）</label>
+      <label class="lf-label">${_T('sym.log.label.intensity')}</label>
       <div class="lf-slider-wrap">
         <input type="range" id="lf-intensity" min="1" max="10" value="5" oninput="updateIntensityBar(this.value)" />
         <div class="lf-bar" id="lf-bar">${renderIntensityBar(5)}</div>
         <span class="lf-bar-value" id="lf-bar-value">5</span>
       </div>
-      <label class="lf-label">頻率（今天感覺到幾次）</label>
+      <label class="lf-label">${_T('sym.log.label.frequency')}</label>
       <div class="lf-freq-wrap">
         <button class="lf-freq-btn" onclick="adjustFreq(-1)" type="button">−</button>
         <span class="lf-freq-num" id="lf-freq">1</span>
         <button class="lf-freq-btn" onclick="adjustFreq(1)" type="button">+</button>
-        <span class="lf-freq-unit">次</span>
+        <span class="lf-freq-unit">${_T('sym.log.unit.times')}</span>
       </div>
-      <label class="lf-label">備註（選填）</label>
-      <textarea id="lf-notes" placeholder="例如：早上起床時、運動後、伴隨頭暈、體溫 38.2°C..." rows="2"></textarea>
+      <label class="lf-label">${_T('sym.log.label.notes')}</label>
+      <textarea id="lf-notes" placeholder="${_T('sym.log.placeholder.notes')}" rows="2"></textarea>
       <div class="lf-actions">
         <button class="primary-btn" onclick="submitSymptomLog('${catId}')" type="button">
-          <i data-lucide="check"></i><span>新增紀錄</span>
+          <i data-lucide="check"></i><span>${_T('sym.log.btn.add')}</span>
         </button>
-        <button class="secondary-btn" onclick="cancelSymptomLog()" type="button">取消</button>
+        <button class="secondary-btn" onclick="cancelSymptomLog()" type="button">${_T('sym.log.btn.cancel')}</button>
       </div>
     </div>
   `;
@@ -2138,34 +2184,34 @@ function openOtherSymptomLog() {
     <div class="lf-explain">
       <div class="lf-icon scc-other"><i data-lucide="plus"></i></div>
       <div class="lf-info">
-        <h3>其他症狀</h3>
-        <p class="lf-detail">寫下你想記錄的症狀名稱，例如「咽喉痛」「腹脹」「焦慮發作」。儲存後下次它就會出現在卡片列。</p>
+        <h3>${_T('sym.other.title')}</h3>
+        <p class="lf-detail">${_T('sym.other.detail')}</p>
       </div>
     </div>
     <div class="lf-form">
-      <label class="lf-label">症狀名稱</label>
+      <label class="lf-label">${_T('sym.other.label.name')}</label>
       <input id="lf-custom-name" type="text" class="lf-text-input" maxlength="20"
-        placeholder="例：咽喉痛 / 耳鳴 / 腹脹 / 皮膚癢" autocomplete="off" />
-      <label class="lf-label">嚴重程度（1 = 輕微，10 = 劇烈）</label>
+        placeholder="${_T('sym.other.placeholder.name')}" autocomplete="off" />
+      <label class="lf-label">${_T('sym.other.label.intensity')}</label>
       <div class="lf-slider-wrap">
         <input type="range" id="lf-intensity" min="1" max="10" value="5" oninput="updateIntensityBar(this.value)" />
         <div class="lf-bar" id="lf-bar">${renderIntensityBar(5)}</div>
         <span class="lf-bar-value" id="lf-bar-value">5</span>
       </div>
-      <label class="lf-label">頻率（今天感覺到幾次）</label>
+      <label class="lf-label">${_T('sym.log.label.frequency')}</label>
       <div class="lf-freq-wrap">
         <button class="lf-freq-btn" onclick="adjustFreq(-1)" type="button">−</button>
         <span class="lf-freq-num" id="lf-freq">1</span>
         <button class="lf-freq-btn" onclick="adjustFreq(1)" type="button">+</button>
-        <span class="lf-freq-unit">次</span>
+        <span class="lf-freq-unit">${_T('sym.log.unit.times')}</span>
       </div>
-      <label class="lf-label">備註（建議寫部位、誘因、持續時間）</label>
-      <textarea id="lf-notes" placeholder="例如：吞嚥時痛、左側、持續 2 天、伴隨輕微咳嗽..." rows="2"></textarea>
+      <label class="lf-label">${_T('sym.other.label.notesAdv')}</label>
+      <textarea id="lf-notes" placeholder="${_T('sym.other.placeholder.notes')}" rows="2"></textarea>
       <div class="lf-actions">
         <button class="primary-btn" onclick="submitOtherSymptomLog()" type="button">
-          <i data-lucide="check"></i><span>新增紀錄</span>
+          <i data-lucide="check"></i><span>${_T('sym.log.btn.add')}</span>
         </button>
-        <button class="secondary-btn" onclick="cancelSymptomLog()" type="button">取消</button>
+        <button class="secondary-btn" onclick="cancelSymptomLog()" type="button">${_T('sym.log.btn.cancel')}</button>
       </div>
     </div>
   `;
@@ -2178,7 +2224,7 @@ function openOtherSymptomLog() {
 function submitOtherSymptomLog() {
   const name = (document.getElementById('lf-custom-name').value || '').trim();
   if (!name) {
-    showToast && showToast('請先填症狀名稱', 'warning');
+    showToast && showToast(_T('sym.toast.needName'), 'warning');
     document.getElementById('lf-custom-name').focus();
     return;
   }
@@ -2192,12 +2238,12 @@ function submitOtherSymptomLog() {
     categoryId: cat.id, intensity, frequency, notes,
     recordedAt: new Date().toISOString()
   });
-  showToast && showToast('已記錄並加入卡片列', 'success');
+  showToast && showToast(_T('sym.toast.added'), 'success');
   showPage('symptoms');
 }
 
 function removeCustomSymptomCatAndRefresh(id) {
-  if (!confirm('刪除這個自訂症狀？已記錄的資料不會被刪除（仍會顯示症狀名稱）。')) return;
+  if (!confirm(_T('sym.confirm.delCustom'))) return;
   removeCustomSymptomCat(id);
   showPage('symptoms');
 }
@@ -2221,7 +2267,7 @@ function submitSymptomLog(catId) {
   showPage('symptoms');
 }
 function deleteSymptomEntryAndRefresh(id) {
-  if (!confirm('刪除這筆紀錄？')) return;
+  if (!confirm(_T('sym.confirm.delEntry'))) return;
   deleteSymptomEntry(id);
   showPage('symptoms');
 }
@@ -2243,10 +2289,10 @@ function escapeHtml(s) {
 function renderPeriodSummary(stats) {
   const sorted = Object.entries(stats.byCategory).sort((a, b) => b[1].count - a[1].count);
   if (sorted.length === 0) {
-    return '<p class="sym-empty">// 此期間還沒有紀錄 — 從上面選一個症狀開始。</p>';
+    return `<p class="sym-empty">${_T('sym.summary.empty')}</p>`;
   }
   return `
-    <p class="sym-instruct">// 自上次回診以來已自動累計，依出現頻率排序。</p>
+    <p class="sym-instruct">${_T('sym.summary.instruct')}</p>
     <ul class="sym-summary-list">
       ${sorted.map(([id, s]) => {
         const c = findSymptomCat(id);
@@ -2254,9 +2300,9 @@ function renderPeriodSummary(stats) {
         const color = c?.color || 'mint';
         return `
           <li class="sym-summary-row">
-            <span class="ssr-name scc-${color}">${c?.zh || id}</span>
-            <span class="ssr-count"><strong>${s.count}</strong> 次</span>
-            <span class="ssr-avg">平均強度 <strong>${avg}</strong>/10</span>
+            <span class="ssr-name scc-${color}">${c ? _symField(c, 'zh') : id}</span>
+            <span class="ssr-count">${_Tf('sym.summary.times', { n: s.count })}</span>
+            <span class="ssr-avg">${_Tf('sym.summary.avg', { v: avg })}</span>
           </li>
         `;
       }).join('')}
@@ -2279,25 +2325,25 @@ function openVisitDatePrompt() {
   overlay.innerHTML = `
     <div class="visit-modal" role="dialog" aria-labelledby="visit-modal-title">
       <header class="visit-modal-head">
-        <h3 id="visit-modal-title"><i data-lucide="calendar-cog"></i> 設定回診日期</h3>
-        <button class="visit-modal-close" type="button" aria-label="關閉">×</button>
+        <h3 id="visit-modal-title"><i data-lucide="calendar-cog"></i> ${_T('sym.visit.title')}</h3>
+        <button class="visit-modal-close" type="button" aria-label="${_T('sym.visit.close')}">×</button>
       </header>
       <div class="visit-modal-body">
         <label class="visit-modal-field">
-          <span>上次回診</span>
+          <span>${_T('sym.visit.label.last')}</span>
           <input type="date" id="vm-last" />
-          <button type="button" class="visit-modal-clear" data-clear="vm-last">清除</button>
+          <button type="button" class="visit-modal-clear" data-clear="vm-last">${_T('sym.visit.btn.clear')}</button>
         </label>
         <label class="visit-modal-field">
-          <span>下次回診</span>
+          <span>${_T('sym.visit.label.next')}</span>
           <input type="date" id="vm-next" />
-          <button type="button" class="visit-modal-clear" data-clear="vm-next">清除</button>
+          <button type="button" class="visit-modal-clear" data-clear="vm-next">${_T('sym.visit.btn.clear')}</button>
         </label>
-        <p class="visit-modal-hint">統整期間會以「上次回診」為起點。下次回診用來提醒倒數。</p>
+        <p class="visit-modal-hint">${_T('sym.visit.hint')}</p>
       </div>
       <footer class="visit-modal-foot">
-        <button type="button" class="visit-modal-cancel">取消</button>
-        <button type="button" class="visit-modal-save"><i data-lucide="check"></i> 儲存</button>
+        <button type="button" class="visit-modal-cancel">${_T('sym.visit.btn.cancel')}</button>
+        <button type="button" class="visit-modal-save"><i data-lucide="check"></i> ${_T('sym.visit.btn.save')}</button>
       </footer>
     </div>
   `;
