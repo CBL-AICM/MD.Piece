@@ -3605,6 +3605,109 @@ function _compressMedPhoto(file) {
   });
 }
 
+// 把照片轉指定角度（順時針 deg），回傳新的 dataUrl
+function _rotateMedPhoto(dataUrl, deg) {
+  return new Promise(function(resolve, reject) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var rad = (deg % 360) * Math.PI / 180;
+      var swap = (deg % 180) !== 0;
+      var canvas = document.createElement("canvas");
+      canvas.width = swap ? h : w;
+      canvas.height = swap ? w : h;
+      var ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(rad);
+      ctx.drawImage(img, -w / 2, -h / 2);
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = function() { reject(new Error("rotate load failed")); };
+    img.src = dataUrl;
+  });
+}
+
+// 拿目前預覽的 dataUrl 旋轉 90° 後重跑辨識
+window.rotateMedPreview = function() {
+  var img = document.querySelector("#med-photo-preview img");
+  if (!img || !img.src) return;
+  var src = img.src;
+  _rotateMedPhoto(src, 90).then(function(rotated) {
+    _renderMedPreviewAndRecognize(rotated, "image/jpeg");
+  }).catch(function() {
+    showToast("旋轉失敗，請重新上傳照片", "error");
+  });
+};
+
+function _renderMedPreviewAndRecognize(dataUrl, mediaType) {
+  var base64Data = dataUrl.split(",")[1];
+
+  document.getElementById("med-photo-preview").innerHTML =
+    '<img src="' + dataUrl + '" style="max-width:100%;max-height:240px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">' +
+    '<button type="button" class="secondary" onclick="rotateMedPreview()" style="padding:4px 10px;font-size:0.8rem">' +
+    '<i data-lucide="rotate-cw" style="width:12px;height:12px;vertical-align:middle"></i> 旋轉 90°</button>' +
+    '<span style="font-size:0.75rem;color:var(--text-muted)">' +
+    '已壓縮為 ' + (Math.round(base64Data.length * 0.75 / 1024)) + ' KB，' +
+    '若照片倒著，請按「旋轉」校正。</span>' +
+    '</div>';
+  if (window.lucide && lucide.createIcons) { try { lucide.createIcons(); } catch (_) {} }
+
+  document.getElementById("med-recognize-result").innerHTML =
+    '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
+    '<div class="loading-spinner"></div>' +
+    '<p style="margin-top:8px">AI 正在辨識藥袋／藥單...</p>' +
+    '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">第一次辨識較慢，最多約 30 秒</p>' +
+    '</div>';
+
+  return fetch(API + "/medications/recognize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType })
+  })
+    .then(function(r) {
+      return r.text().then(function(t) {
+        var parsed; try { parsed = JSON.parse(t); } catch (e) { parsed = { detail: t }; }
+        return { ok: r.ok, status: r.status, data: parsed };
+      });
+    })
+    .then(function(res) {
+      if (!res.ok) {
+        var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
+        if (typeof msg !== "string") msg = JSON.stringify(msg);
+        renderManualMedForm("", "辨識失敗：" + msg + "。你可以改用手動填寫下方資料。");
+        return;
+      }
+      var data = res.data || {};
+      var parsed = data.parsed || [];
+
+      if (parsed.length > 0) {
+        renderRecognizedEditable(parsed, [], data.raw_text || "", []);
+        return;
+      }
+
+      var providerNote = "";
+      if (data.errors && data.errors.length) {
+        var lines = data.errors.map(function(e) {
+          return "• " + (e.provider || "?") + "：" + (e.error || "未知錯誤");
+        }).join("\n");
+        providerNote = "\n\n（嘗試過的辨識服務）\n" + lines;
+      }
+      renderManualMedForm(
+        (data.raw_text || "") + providerNote,
+        "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。"
+      );
+    })
+    .catch(function(err) {
+      renderManualMedForm(
+        "",
+        "辨識服務連線失敗（" + (err && err.message || "網路錯誤") + "），你可以改用手動填寫下方資料。"
+      );
+    });
+}
+
 function handleMedPhoto(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
@@ -3618,67 +3721,7 @@ function handleMedPhoto(input) {
       renderManualMedForm("", "讀取照片失敗，請改用手動填寫下方資料。");
       return;
     }
-    var dataUrl = prepared.dataUrl;
-    var mediaType = prepared.mediaType;
-    var base64Data = dataUrl.split(",")[1];
-
-    document.getElementById("med-photo-preview").innerHTML =
-      '<img src="' + dataUrl + '" style="max-width:100%;max-height:240px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)" />' +
-      '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">' +
-      '已壓縮為 ' + (Math.round(base64Data.length * 0.75 / 1024)) + ' KB，' +
-      '若辨識仍失敗，可改用手動填寫。</div>';
-    document.getElementById("med-recognize-result").innerHTML =
-      '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
-      '<div class="loading-spinner"></div>' +
-      '<p style="margin-top:8px">AI 正在辨識藥袋／藥單...</p>' +
-      '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">第一次辨識較慢，最多約 30 秒</p>' +
-      '</div>';
-
-    fetch(API + "/medications/recognize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType })
-    })
-      .then(function(r) {
-        return r.text().then(function(t) {
-          var parsed; try { parsed = JSON.parse(t); } catch (e) { parsed = { detail: t }; }
-          return { ok: r.ok, status: r.status, data: parsed };
-        });
-      })
-      .then(function(res) {
-        if (!res.ok) {
-          var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
-          if (typeof msg !== "string") msg = JSON.stringify(msg);
-          renderManualMedForm("", "辨識失敗：" + msg + "。你可以改用手動填寫下方資料。");
-          return;
-        }
-        var data = res.data || {};
-        var parsed = data.parsed || [];
-
-        if (parsed.length > 0) {
-          renderRecognizedEditable(parsed, [], data.raw_text || "", []);
-          return;
-        }
-
-        // 沒辨識出任何藥；把每個 vision provider 的失敗訊息一併秀出，方便排查
-        var providerNote = "";
-        if (data.errors && data.errors.length) {
-          var lines = data.errors.map(function(e) {
-            return "• " + (e.provider || "?") + "：" + (e.error || "未知錯誤");
-          }).join("\n");
-          providerNote = "\n\n（嘗試過的辨識服務）\n" + lines;
-        }
-        renderManualMedForm(
-          (data.raw_text || "") + providerNote,
-          "無法辨識藥物，你可以直接手動填寫下方資料，按「加入我的藥物」即可寫入。"
-        );
-      })
-      .catch(function(err) {
-        renderManualMedForm(
-          "",
-          "辨識服務連線失敗（" + (err && err.message || "網路錯誤") + "），你可以改用手動填寫下方資料。"
-        );
-      });
+    _renderMedPreviewAndRecognize(prepared.dataUrl, prepared.mediaType);
   });
 
   input.value = "";
