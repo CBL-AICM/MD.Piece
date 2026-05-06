@@ -2986,7 +2986,7 @@ function calcAge(birthday) {
   let age = now.getFullYear() - b.getFullYear();
   const m = now.getMonth() - b.getMonth();
   if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
-  return age >= 0 ? age + ' 歲' : '';
+  return age >= 0 ? age + ' ' + _T('rec.unit.years') : '';
 }
 
 function calcBMI(h, w) {
@@ -3001,39 +3001,39 @@ function records() {
   const v = (k) => (info[k] || '').toString().replace(/"/g, '&quot;');
   return `
     <section class="card">
-      <h2><i data-lucide="id-card"></i> 我的基本資料</h2>
-      <p class="sub-hint">這些資料只存在這台裝置上，看診時可以快速複製給醫師。</p>
+      <h2><i data-lucide="id-card"></i> ${_T('rec.title')}</h2>
+      <p class="sub-hint">${_T('rec.subhint')}</p>
       <form class="basic-info-form" onsubmit="event.preventDefault(); saveBasicInfo();">
         <div class="bi-grid">
           <label class="bi-field">
-            <span>性別</span>
+            <span>${_T('rec.field.gender')}</span>
             <select id="bi-gender">
-              <option value="">— 不填 —</option>
-              <option value="male" ${info.gender === 'male' ? 'selected' : ''}>男</option>
-              <option value="female" ${info.gender === 'female' ? 'selected' : ''}>女</option>
-              <option value="other" ${info.gender === 'other' ? 'selected' : ''}>其他</option>
+              <option value="">${_T('rec.opt.skip')}</option>
+              <option value="male" ${info.gender === 'male' ? 'selected' : ''}>${_T('rec.opt.male')}</option>
+              <option value="female" ${info.gender === 'female' ? 'selected' : ''}>${_T('rec.opt.female')}</option>
+              <option value="other" ${info.gender === 'other' ? 'selected' : ''}>${_T('rec.opt.other')}</option>
             </select>
           </label>
           <label class="bi-field">
-            <span>生日</span>
+            <span>${_T('rec.field.birthday')}</span>
             <input id="bi-birthday" type="date" value="${v('birthday')}" onchange="document.getElementById('bi-age-display').textContent = (function(b){return calcAge(b);})(this.value)" />
             <small class="bi-hint" id="bi-age-display">${calcAge(info.birthday)}</small>
           </label>
           <label class="bi-field">
-            <span>血型</span>
+            <span>${_T('rec.field.blood')}</span>
             <select id="bi-blood">
-              <option value="">— 不填 —</option>
+              <option value="">${_T('rec.opt.skip')}</option>
               ${['A','B','O','AB','A+','A-','B+','B-','O+','O-','AB+','AB-'].map(t =>
                 `<option value="${t}" ${info.blood === t ? 'selected' : ''}>${t}</option>`).join('')}
             </select>
           </label>
           <label class="bi-field">
-            <span>身高（cm）</span>
+            <span>${_T('rec.field.height')}</span>
             <input id="bi-height" type="number" min="0" max="300" step="0.1" value="${v('height')}"
               oninput="document.getElementById('bi-bmi-display').textContent = calcBMI(this.value, document.getElementById('bi-weight').value) ? 'BMI ' + calcBMI(this.value, document.getElementById('bi-weight').value) : ''" />
           </label>
           <label class="bi-field">
-            <span>體重（kg）</span>
+            <span>${_T('rec.field.weight')}</span>
             <input id="bi-weight" type="number" min="0" max="500" step="0.1" value="${v('weight')}"
               oninput="document.getElementById('bi-bmi-display').textContent = calcBMI(document.getElementById('bi-height').value, this.value) ? 'BMI ' + calcBMI(document.getElementById('bi-height').value, this.value) : ''" />
             <small class="bi-hint" id="bi-bmi-display">${calcBMI(info.height, info.weight) ? 'BMI ' + calcBMI(info.height, info.weight) : ''}</small>
@@ -3041,48 +3041,48 @@ function records() {
         </div>
 
         <label class="bi-field">
-          <span>過敏史（藥物 / 食物 / 環境，沒有就留空）</span>
-          <textarea id="bi-allergies" rows="2" placeholder="例：青黴素過敏、海鮮過敏">${v('allergies')}</textarea>
+          <span>${_T('rec.field.allergies')}</span>
+          <textarea id="bi-allergies" rows="2" placeholder="${_T('rec.placeholder.allergies')}">${v('allergies')}</textarea>
         </label>
         <label class="bi-field">
-          <span>慢性疾病 / 重大病史</span>
-          <textarea id="bi-conditions" rows="2" placeholder="例：高血壓、第二型糖尿病、氣喘">${v('conditions')}</textarea>
+          <span>${_T('rec.field.conditions')}</span>
+          <textarea id="bi-conditions" rows="2" placeholder="${_T('rec.placeholder.conditions')}">${v('conditions')}</textarea>
         </label>
         <label class="bi-field">
-          <span>目前主要疾病 / 治療中</span>
-          <textarea id="bi-current-disease" rows="2" placeholder="例：乳癌第二期 化療中、腰椎間盤突出">${v('current_disease')}</textarea>
+          <span>${_T('rec.field.currentDisease')}</span>
+          <textarea id="bi-current-disease" rows="2" placeholder="${_T('rec.placeholder.currentDisease')}">${v('current_disease')}</textarea>
         </label>
         <label class="bi-field">
-          <span>長期服用藥物</span>
-          <textarea id="bi-meds" rows="2" placeholder="例：Metformin 500mg 每日 2 次">${v('meds')}</textarea>
+          <span>${_T('rec.field.meds')}</span>
+          <textarea id="bi-meds" rows="2" placeholder="${_T('rec.placeholder.meds')}">${v('meds')}</textarea>
         </label>
 
         <div class="bi-grid">
           <label class="bi-field">
-            <span>主治醫師</span>
-            <input id="bi-doctor-name" type="text" maxlength="30" placeholder="醫師姓名" value="${v('doctor_name')}" />
+            <span>${_T('rec.field.doctorName')}</span>
+            <input id="bi-doctor-name" type="text" maxlength="30" placeholder="${_T('rec.placeholder.doctorName')}" value="${v('doctor_name')}" />
           </label>
           <label class="bi-field">
-            <span>醫院 / 科別</span>
-            <input id="bi-hospital" type="text" maxlength="50" placeholder="例：台大醫院 腫瘤科" value="${v('hospital')}" />
+            <span>${_T('rec.field.hospital')}</span>
+            <input id="bi-hospital" type="text" maxlength="50" placeholder="${_T('rec.placeholder.hospital')}" value="${v('hospital')}" />
           </label>
         </div>
 
         <div class="bi-grid">
           <label class="bi-field">
-            <span>緊急聯絡人姓名</span>
+            <span>${_T('rec.field.emergencyName')}</span>
             <input id="bi-emergency-name" type="text" maxlength="30" value="${v('emergency_name')}" />
           </label>
           <label class="bi-field">
-            <span>緊急聯絡人電話</span>
+            <span>${_T('rec.field.emergencyPhone')}</span>
             <input id="bi-emergency-phone" type="tel" maxlength="20" value="${v('emergency_phone')}" />
           </label>
         </div>
 
         <p class="acct-msg" id="bi-msg" hidden></p>
         <div class="bi-actions">
-          <button type="submit" class="primary"><i data-lucide="save"></i> 儲存</button>
-          <button type="button" class="btn-quiet" onclick="copyBasicInfo()"><i data-lucide="clipboard-copy"></i> 複製給醫師</button>
+          <button type="submit" class="primary"><i data-lucide="save"></i> ${_T('rec.btn.save')}</button>
+          <button type="button" class="btn-quiet" onclick="copyBasicInfo()"><i data-lucide="clipboard-copy"></i> ${_T('rec.btn.copy')}</button>
         </div>
       </form>
     </section>`;
@@ -3111,56 +3111,56 @@ function saveBasicInfo() {
   setBasicInfo(info);
   const msg = document.getElementById('bi-msg');
   if (msg) {
-    msg.textContent = '已儲存到本機';
+    msg.textContent = _T('rec.msg.savedLocal');
     msg.hidden = false;
     setTimeout(() => { msg.hidden = true; }, 2000);
   }
-  showToast && showToast('基本資料已儲存', 'success');
+  showToast && showToast(_T('rec.toast.saved'), 'success');
 }
 
 function copyBasicInfo() {
   const info = getBasicInfo();
   const u = getCurrentUser() || {};
-  const lines = ['【基本資料】'];
-  if (u.nickname) lines.push('姓名：' + u.nickname);
-  const genderMap = { male: '男', female: '女', other: '其他' };
-  if (info.gender) lines.push('性別：' + (genderMap[info.gender] || info.gender));
+  const lines = [_T('rec.copy.header')];
+  if (u.nickname) lines.push(_T('rec.copy.name') + u.nickname);
+  const genderMap = { male: _T('rec.opt.male'), female: _T('rec.opt.female'), other: _T('rec.opt.other') };
+  if (info.gender) lines.push(_T('rec.copy.gender') + (genderMap[info.gender] || info.gender));
   if (info.birthday) {
     const age = calcAge(info.birthday);
-    lines.push('生日：' + info.birthday + (age ? '（' + age + '）' : ''));
+    lines.push(_T('rec.copy.birthday') + info.birthday + (age ? '（' + age + '）' : ''));
   }
-  if (info.blood) lines.push('血型：' + info.blood);
-  if (info.height) lines.push('身高：' + info.height + ' cm');
-  if (info.weight) lines.push('體重：' + info.weight + ' kg');
+  if (info.blood) lines.push(_T('rec.copy.blood') + info.blood);
+  if (info.height) lines.push(_T('rec.copy.height') + info.height + ' cm');
+  if (info.weight) lines.push(_T('rec.copy.weight') + info.weight + ' kg');
   const bmi = calcBMI(info.height, info.weight);
   if (bmi) lines.push('BMI：' + bmi);
-  if (info.allergies) lines.push('過敏史：' + info.allergies);
-  if (info.conditions) lines.push('慢性病史：' + info.conditions);
-  if (info.current_disease) lines.push('目前主要疾病：' + info.current_disease);
-  if (info.meds) lines.push('長期用藥：' + info.meds);
+  if (info.allergies) lines.push(_T('rec.copy.allergies') + info.allergies);
+  if (info.conditions) lines.push(_T('rec.copy.conditions') + info.conditions);
+  if (info.current_disease) lines.push(_T('rec.copy.currentDisease') + info.current_disease);
+  if (info.meds) lines.push(_T('rec.copy.meds') + info.meds);
   if (info.doctor_name || info.hospital) {
-    lines.push('主治醫師：' + [info.doctor_name, info.hospital].filter(Boolean).join('｜'));
+    lines.push(_T('rec.copy.doctorName') + [info.doctor_name, info.hospital].filter(Boolean).join('｜'));
   }
   if (info.emergency_name || info.emergency_phone) {
-    lines.push('緊急聯絡人：' + [info.emergency_name, info.emergency_phone].filter(Boolean).join(' '));
+    lines.push(_T('rec.copy.emergency') + [info.emergency_name, info.emergency_phone].filter(Boolean).join(' '));
   }
   if (lines.length === 1) {
-    showToast && showToast('還沒填任何資料', 'warning');
+    showToast && showToast(_T('rec.toast.empty'), 'warning');
     return;
   }
   const text = lines.join('\n');
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(
-      () => showToast && showToast('已複製到剪貼簿', 'success'),
-      () => showToast && showToast('複製失敗', 'warning')
+      () => showToast && showToast(_T('rec.toast.copied'), 'success'),
+      () => showToast && showToast(_T('rec.toast.copyFail'), 'warning')
     );
   } else {
     const ta = document.createElement('textarea');
     ta.value = text;
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); showToast && showToast('已複製到剪貼簿', 'success'); }
-    catch { showToast && showToast('複製失敗', 'warning'); }
+    try { document.execCommand('copy'); showToast && showToast(_T('rec.toast.copied'), 'success'); }
+    catch { showToast && showToast(_T('rec.toast.copyFail'), 'warning'); }
     document.body.removeChild(ta);
   }
 }
