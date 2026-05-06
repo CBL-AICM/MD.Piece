@@ -225,6 +225,23 @@ def get_featured_articles(limit: int = 5):
 
 DAILY_CATEGORIES = ("disease", "quick_tip", "news")
 
+# 沒標 category 的舊文章依 slug 前綴自動歸類，避免每日故事池子太小造成重複。
+_QUICK_TIP_PREFIXES = (
+    "symptoms-", "emergency-", "medications-", "labs-",
+    "hydration-", "nutrition-", "exercise-", "sleep-", "prevent-",
+)
+
+
+def _auto_category(article) -> str:
+    cat = (article.category or "").lower()
+    if cat in DAILY_CATEGORIES:
+        return cat
+    slug = (article.slug or "").lower()
+    for prefix in _QUICK_TIP_PREFIXES:
+        if slug.startswith(prefix):
+            return "quick_tip"
+    return "disease"
+
 
 @router.get("/articles/daily")
 def get_daily_article(days: int = 7):
@@ -246,12 +263,7 @@ def get_daily_article(days: int = 7):
 
     by_category: dict[str, list] = {c: [] for c in DAILY_CATEGORIES}
     for a in all_articles:
-        cat = (a.category or "").lower()
-        if cat in by_category:
-            by_category[cat].append(a)
-        elif a.featured:
-            # 沒標 category 的舊文章退到 disease 池，避免空欄位
-            by_category["disease"].append(a)
+        by_category[_auto_category(a)].append(a)
 
     for cat in by_category:
         by_category[cat].sort(key=lambda a: a.slug)
@@ -294,7 +306,7 @@ def get_daily_article(days: int = 7):
         if a is None:
             # news 分類沒有 markdown 文章時，退回今日 RSS 第一則
             if cat == "news":
-                today_picks[cat] = news_card_from_feed(today, 0)
+                today_picks[cat] = news_card_from_feed(today, today.toordinal())
             else:
                 today_picks[cat] = None
             continue
