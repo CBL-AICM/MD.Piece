@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import os
+import time
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -81,21 +82,40 @@ def _call_groq(system_prompt: str, user_message: str, history=None) -> str:
     if history:
         msgs.extend(history)
     msgs.append({"role": "user", "content": user_message})
-    resp = httpx.post(
-        f"{GROQ_BASE}/chat/completions",
-        headers={
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": GROQ_MODEL,
-            "messages": msgs,
-            "temperature": 0.4,
-        },
-        timeout=60.0,
-    )
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
+
+    # 遇到 429 (rate limit) 自動 retry：指數退避 1.5s → 3s → 6s
+    # Groq free tier 偶爾突發限流，等一下就會通；retry 後再失敗才丟給 fallback chain
+    delays = [1.5, 3.0]  # 兩次 retry 機會
+    for attempt in range(len(delays) + 1):
+        resp = httpx.post(
+            f"{GROQ_BASE}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": GROQ_MODEL,
+                "messages": msgs,
+                "temperature": 0.4,
+            },
+            timeout=60.0,
+        )
+        if resp.status_code == 429 and attempt < len(delays):
+            wait = delays[attempt]
+            # 優先用 server 給的 retry-after，沒有就 fallback 到 exponential backoff
+            ra = resp.headers.get("retry-after")
+            if ra:
+                try:
+                    wait = max(float(ra), wait)
+                except ValueError:
+                    pass
+            logger.warning(f"Groq 429 rate-limited，等 {wait}s 後第 {attempt + 1} 次 retry")
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    # 理論上走不到（最後一輪 raise_for_status 會 raise）
+    raise RuntimeError("Groq retry 全部用完仍 rate-limited")
 
 
 def _call_anthropic(system_prompt: str, user_message: str, history=None) -> str:
