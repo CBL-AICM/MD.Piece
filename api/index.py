@@ -13,7 +13,7 @@ from backend.routers import (
     education, emotions, medications,
     reports, triage, xiaohe,
     records, research, auth,
-    doctor_notes, medication_changes, alerts, labs,
+    doctor_notes, medication_changes, alerts, labs, diet,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,7 @@ app.include_router(doctor_notes.router, prefix="/doctor-notes", tags=["doctor-no
 app.include_router(medication_changes.router, prefix="/medication-changes", tags=["medication-changes"])
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 app.include_router(labs.router, prefix="/labs", tags=["labs"])
+app.include_router(diet.router, prefix="/diet", tags=["diet"])
 
 
 @app.get("/api")
