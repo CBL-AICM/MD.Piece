@@ -2005,6 +2005,10 @@ html[data-mode="senior"] .tc-desc {
   border: 2px solid rgba(201,127,75,0.35);
   filter: drop-shadow(0 2px 6px rgba(92,58,50,0.2));
 }
+.home-logo-avatar.home-logo-default {
+  object-fit: contain;
+  padding: 4px;
+}
 
 .home-hero-right {
   flex: 1;

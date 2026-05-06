@@ -1629,7 +1629,9 @@ function home() {
   const dayStr = _T('home.weekday.prefix') + _T('home.weekday.' + today.getDay());
   const name = user ? user.nickname : _T('home.greet.fallbackName');
   const ac = (user && user.avatar_color) ? user.avatar_color : '#5B9FE8';
-  const heroAvatarSrc = (user && user.avatar_url) ? user.avatar_url : 'icons/xiaohe.jpg';
+  const heroAvatarIsDefault = !(user && user.avatar_url);
+  const heroAvatarSrc = heroAvatarIsDefault ? 'icons/xiaohe.jpg' : user.avatar_url;
+  const heroAvatarClass = 'home-logo home-logo-avatar' + (heroAvatarIsDefault ? ' home-logo-default' : '');
   const avatarAlt = _Tf('home.avatarAlt', { name: name });
 
   // 年長版：簡化成「問候 + 全功能 tile 網格」一頁式
@@ -1675,7 +1677,7 @@ function home() {
       <!-- Hero: Logo + Greeting split -->
       <div class="home-hero">
         <div class="home-hero-left">
-          <img src="${heroAvatarSrc}" alt="${avatarAlt}" class="home-logo home-logo-avatar" />
+          <img src="${heroAvatarSrc}" alt="${avatarAlt}" class="${heroAvatarClass}" />
         </div>
         <div class="home-hero-right">
           <h2 class="home-title">${greeting}${greetSep}${name}</h2>
