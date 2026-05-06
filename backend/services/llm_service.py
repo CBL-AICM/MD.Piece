@@ -37,6 +37,12 @@ ANTHROPIC_MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS", "1024"))
 # 藥袋辨識需要更長的 token 額度（一張藥袋常有 3~6 包藥）
 ANTHROPIC_VISION_MAX_TOKENS = int(os.getenv("ANTHROPIC_VISION_MAX_TOKENS", "2048"))
 
+# Google Cloud Vision OCR — 中文小字辨識準度遠高於 LLM vision，月 1000 次免費
+# 申請流程：GCP Console → APIs & Services → 啟用 Cloud Vision API → 建立 API Key
+# 沒設定就略過，自動 fallback 到原本的 LLM vision chain
+GOOGLE_VISION_API_KEY = os.getenv("GOOGLE_VISION_API_KEY", "")
+GOOGLE_VISION_URL = "https://vision.googleapis.com/v1/images:annotate"
+
 try:
     import anthropic as _anthropic_sdk
     _anthropic_client = _anthropic_sdk.Anthropic() if ANTHROPIC_API_KEY else None
@@ -450,23 +456,115 @@ def _parse_med_bag_json(raw: str) -> dict:
     return result
 
 
+# 從 OCR 純文字抽結構化欄位的 prompt（給 text LLM 用，預設走 Haiku 4.5 省成本）
+_EXTRACT_FROM_OCR_PROMPT = (
+    "你是台灣處方資訊抽取助手。輸入是 OCR 從藥袋／藥單／處方箋讀出的原始文字"
+    "（可能有錯字、缺字、版面亂、夾雜雜訊）。請從這段文字抽取所有藥物，整理成 JSON：\n\n"
+    "標準欄位：\n"
+    "  - name        藥名（保留原文；中英並列時用「中文（English）」格式；只有英文就直接寫英文）\n"
+    "  - dosage      單次劑量（例：500mg、1 顆、5ml）\n"
+    "  - frequency   服用頻率（原文照抄；例：一天三次、每 8 小時、需要時、QD、BID、TID、Q8H、PRN）\n"
+    "  - usage       用法/服用時機（飯前、飯後、睡前、空腹、口服、外用）\n"
+    "  - duration    療程天數（7 天、長期；無資訊 null）\n"
+    "  - category    藥物類別（降血壓藥、降血糖藥、止痛藥、抗生素、胃藥…其他）\n"
+    "  - purpose     用途（無寫就 null，不要瞎猜）\n"
+    "  - instructions 注意事項\n"
+    "  - hospital    醫院/診所/藥局名稱（從抬頭判讀；無就 null）\n"
+    "  - prescribed_date 開立日期（YYYY-MM-DD；民國年要換算成西元年；無就 null）\n\n"
+    "回覆**必須是純 JSON**，不要 markdown code block、不要前後說明文字：\n"
+    '{"medications": [{"name": "...", "dosage": "...", "frequency": "...", '
+    '"usage": "...", "duration": "...", "category": "...", "purpose": "...", '
+    '"instructions": "...", "hospital": "...", "prescribed_date": "..."}]}\n\n'
+    "規則：\n"
+    "- 每個欄位都必須存在（無資料用 null）\n"
+    "- 一張藥單常有多筆藥，**逐筆分開列出，不要漏掉任何一行**\n"
+    "- 即使只能抽出藥名一個欄位也要列出（其他欄位 null）；**寧可不完整，不要回空陣列**\n"
+    "- 整段 OCR 完全沒有看起來像藥名的字眼才回空陣列"
+)
+
+
+def _google_vision_ocr(image_base64: str) -> str:
+    """Google Cloud Vision DOCUMENT_TEXT_DETECTION — 對中文小字 / 表格的 OCR 準度
+    遠高於任何 LLM vision model。需設定 GOOGLE_VISION_API_KEY。
+    回傳 OCR 純文字（按版面排序）。"""
+    if not GOOGLE_VISION_API_KEY:
+        raise RuntimeError("GOOGLE_VISION_API_KEY 未設定")
+    resp = httpx.post(
+        f"{GOOGLE_VISION_URL}?key={GOOGLE_VISION_API_KEY}",
+        json={
+            "requests": [
+                {
+                    "image": {"content": image_base64},
+                    # DOCUMENT_TEXT_DETECTION 對藥單這種密集表格文件比 TEXT_DETECTION 準
+                    "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
+                    # 提示語言：繁中 + 英文（藥名常英文）
+                    "imageContext": {"languageHints": ["zh-Hant", "en"]},
+                }
+            ]
+        },
+        timeout=30.0,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    responses = data.get("responses") or []
+    if not responses:
+        return ""
+    # 個別 request 的錯誤會包在 response 裡（HTTP 200 但邏輯錯誤）
+    err = responses[0].get("error")
+    if err:
+        raise RuntimeError(f"Google Vision API error: {err.get('message') or err}")
+    annotation = responses[0].get("fullTextAnnotation") or {}
+    return (annotation.get("text") or "").strip()
+
+
 def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") -> dict:
     """
-    辨識藥袋照片，提取藥物資訊。
+    辨識藥袋／藥單／處方箋照片，提取藥物資訊。
 
-    依序嘗試 Vision provider：以 LLM_PROVIDER 為主，雲端 provider 自動接力。
-    這樣本地開發用 Ollama，雲端部署（Vercel 等沒法跑 Ollama）會自動用 Anthropic
-    或 Groq 的 vision 模型，避免「藥袋一直拍攝失敗」的情境。
+    優先順序：
+      1. **Google Cloud Vision OCR + LLM 抽欄位**（中文小字準度最高，需 GOOGLE_VISION_API_KEY）
+      2. Fallback：原本的 LLM vision 一段式（anthropic / groq / ollama）
+
+    本地開發用 Ollama；雲端部署優先 Google Vision（OCR 準），
+    Anthropic / Groq 作為 LLM vision 備援。
 
     回傳: {
         "medications": [{"name": ..., "dosage": ..., "frequency": ..., ...}],
-        "raw_text": "<最後一個成功 provider 的原始輸出>",
-        "provider": "<實際成功的 provider 名稱>",  # 失敗時為 None
-        "errors":   [{"provider": "...", "error": "..."}],  # 各 provider 的失敗訊息
+        "raw_text": "<OCR / vision 的原始輸出>",
+        "provider": "<實際成功的 provider>",  # google_vision / anthropic / groq / ollama / None
+        "errors":   [{"provider": "...", "error": "..."}],
     }
     """
-    chain = _vision_fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _VISION_PROVIDERS else "ollama")
     errors: list[dict] = []
+
+    # Stage 1: Google Vision OCR → text LLM 抽欄位（最準的路徑）
+    if GOOGLE_VISION_API_KEY:
+        try:
+            ocr_text = _google_vision_ocr(image_base64)
+        except Exception as e:
+            errors.append({"provider": "google_vision", "error": f"{type(e).__name__}: {e}"})
+            logger.warning(f"Google Vision OCR 失敗：{e}")
+            ocr_text = ""
+
+        if ocr_text and len(ocr_text.strip()) >= 20:
+            try:
+                extract_raw = call_claude(_EXTRACT_FROM_OCR_PROMPT, ocr_text)
+                parsed = _parse_med_bag_json(extract_raw)
+                # 回傳 OCR 純文字當 raw_text（給前端 debug 看得懂）
+                parsed["raw_text"] = ocr_text
+                if parsed.get("medications"):
+                    parsed["provider"] = "google_vision"
+                    parsed["errors"] = errors
+                    return parsed
+                errors.append({"provider": "google_vision+extract", "error": "no medications extracted from ocr"})
+            except Exception as e:
+                errors.append({"provider": "google_vision+extract", "error": f"{type(e).__name__}: {e}"})
+                logger.warning(f"從 OCR 抽欄位失敗：{e}")
+        elif ocr_text is not None:
+            errors.append({"provider": "google_vision", "error": f"ocr too short ({len(ocr_text or '')} chars)"})
+
+    # Stage 2 (fallback): 原本的 LLM vision 一段式 chain
+    chain = _vision_fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _VISION_PROVIDERS else "ollama")
     last_raw = ""
 
     for name in chain:
