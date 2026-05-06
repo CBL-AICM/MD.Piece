@@ -375,6 +375,22 @@
       'set.about.author': '作者',
       'set.about.website': '網站',
       'set.about.source': '原始碼',
+
+      // education page
+      'edu.title': '衛教書房',
+      'edu.intro': '從書架上挑一本書翻開——每一本都是一個健康主題。翻開後左頁是章節清單，點任一章節，內容就會直接寫在右頁。',
+      'edu.crumb.shelf': '書架',
+      'edu.featured.title': '今日精選',
+      'edu.featured.desc': '人工審稿過的衛教文章——附文獻來源，看得安心。',
+      'edu.loading': '載入中…',
+      'edu.shelf.banner': '— 衛教書房・四層書架 —',
+      'edu.shelf.01': 'Shelf 01 ・ 免疫專區',
+      'edu.shelf.02': 'Shelf 02 ・ 認識與辨識',
+      'edu.shelf.03': 'Shelf 03 ・ 治療與管理',
+      'edu.shelf.04': 'Shelf 04 ・ 預防與支持',
+      'edu.shelf.05': 'Shelf 05 ・ 精神系列',
+      'edu.shelf.06': 'Shelf 06 ・ 小兒系列',
+      'edu.shelf.07': 'Shelf 07 ・ 神經系列',
     },
 
     'en': {
@@ -736,6 +752,22 @@
       'set.about.author': 'Author',
       'set.about.website': 'Website',
       'set.about.source': 'Source',
+
+      // education page
+      'edu.title': 'Health Library',
+      'edu.intro': 'Pick a book from the shelf — each one is a health topic. The left page lists chapters; tap one and its content appears on the right.',
+      'edu.crumb.shelf': 'Shelf',
+      'edu.featured.title': "Today's Picks",
+      'edu.featured.desc': 'Editor-reviewed articles with citations — read with confidence.',
+      'edu.loading': 'Loading…',
+      'edu.shelf.banner': '— Health Library · Four-Tier Shelf —',
+      'edu.shelf.01': 'Shelf 01 · Immunology',
+      'edu.shelf.02': 'Shelf 02 · Recognition & Identification',
+      'edu.shelf.03': 'Shelf 03 · Treatment & Management',
+      'edu.shelf.04': 'Shelf 04 · Prevention & Support',
+      'edu.shelf.05': 'Shelf 05 · Mental Health',
+      'edu.shelf.06': 'Shelf 06 · Pediatrics',
+      'edu.shelf.07': 'Shelf 07 · Neurology',
     },
   };
 

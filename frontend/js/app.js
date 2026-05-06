@@ -4535,14 +4535,13 @@ function education() {
   return `
     <div class="card" style="margin-bottom:14px">
       <h2 style="display:flex;align-items:center;gap:8px">
-        <i data-lucide="book-heart" style="width:22px;height:22px"></i> 衛教書房
+        <i data-lucide="book-heart" style="width:22px;height:22px"></i> ${_T('edu.title')}
       </h2>
       <p style="margin-top:6px;color:var(--text-dim)">
-        從書架上挑一本書翻開——每一本都是一個健康主題。
-        翻開後左頁是章節清單，點任一章節，內容就會直接寫在右頁。
+        ${_T('edu.intro')}
       </p>
       <div id="edu-breadcrumb" class="edu-breadcrumb" style="margin-top:12px">
-        <button class="crumb current" onclick="eduGoToShelf()"><i data-lucide="library" style="width:14px;height:14px;vertical-align:middle"></i> 書架</button>
+        <button class="crumb current" onclick="eduGoToShelf()"><i data-lucide="library" style="width:14px;height:14px;vertical-align:middle"></i> ${_T('edu.crumb.shelf')}</button>
       </div>
     </div>
 
@@ -4550,17 +4549,17 @@ function education() {
     <div id="edu-stage-shelf" class="edu-stage active">
       <div id="edu-featured" class="card" style="margin-bottom:14px">
         <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
-          <i data-lucide="sparkles" style="width:18px;height:18px"></i> 今日精選
+          <i data-lucide="sparkles" style="width:18px;height:18px"></i> ${_T('edu.featured.title')}
         </h3>
         <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
-          人工審稿過的衛教文章——附文獻來源，看得安心。
+          ${_T('edu.featured.desc')}
         </p>
         <div id="edu-featured-list" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
-          <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
+          <div style="color:var(--text-dim);font-size:.85rem">${_T('edu.loading')}</div>
         </div>
       </div>
       <div class="bookshelf-wrap">
-        <div class="bookshelf-title">— 衛教書房・四層書架 —</div>
+        <div class="bookshelf-title">${_T('edu.shelf.banner')}</div>
         ${renderBookshelf()}
       </div>
     </div>
@@ -4575,13 +4574,13 @@ function education() {
 
 function renderBookshelf() {
   var shelves = [
-    { label: "Shelf 01 ・ 免疫專區", books: [] },
-    { label: "Shelf 02 ・ 認識與辨識", books: [] },
-    { label: "Shelf 03 ・ 治療與管理", books: [] },
-    { label: "Shelf 04 ・ 預防與支持", books: [] },
-    { label: "Shelf 05 ・ 精神系列",   books: [] },
-    { label: "Shelf 06 ・ 小兒系列",   books: [] },
-    { label: "Shelf 07 ・ 神經系列",   books: [] }
+    { label: _T('edu.shelf.01'), books: [] },
+    { label: _T('edu.shelf.02'), books: [] },
+    { label: _T('edu.shelf.03'), books: [] },
+    { label: _T('edu.shelf.04'), books: [] },
+    { label: _T('edu.shelf.05'), books: [] },
+    { label: _T('edu.shelf.06'), books: [] },
+    { label: _T('edu.shelf.07'), books: [] }
   ];
   EDU_BOOKS.forEach(function(b) { shelves[b.shelf].books.push(b); });
 
