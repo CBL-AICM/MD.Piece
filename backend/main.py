@@ -7,7 +7,7 @@ import logging
 from backend.routers import (
     patients, doctors, symptoms,
     education, emotions, medications,
-    records, reports, research, triage, xiaohe, auth,
+    records, reports, research, triage, auth,
     doctor_notes, medication_changes, alerts, labs, diet,
 )
 from backend.services import llm_service
@@ -51,7 +51,6 @@ app.include_router(medications.router, prefix="/medications", tags=["medications
 app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(research.router, prefix="/research", tags=["research"])
 app.include_router(triage.router, prefix="/triage", tags=["triage"])
-app.include_router(xiaohe.router, prefix="/xiaohe", tags=["xiaohe"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(doctor_notes.router, prefix="/doctor-notes", tags=["doctor-notes"])
 app.include_router(medication_changes.router, prefix="/medication-changes", tags=["medication-changes"])
