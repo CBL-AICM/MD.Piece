@@ -9771,23 +9771,68 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
 }
 
 /* 深色模式：飲食頁配色改成薄荷清亮系
-   :root 的 --text / --text-dim 是暖棕字，深色背景下整片看不到。
-   在 .diet-wrap 範圍內重新定義變數，讓所有 var(--text) / var(--text-dim)
-   自動拿到亮色，不用逐條覆寫。 */
+   :root 的 --text / --text-dim / --klein 都是暖棕字，深色背景下看不到。
+   在 .diet-wrap 範圍內重新定義變數 + 把硬編色（紅 / 綠 / 咖 / 橘）一起改亮。 */
 #app-wrapper[data-theme="dark"] .diet-wrap {
   --text:       #F1F6FF;   /* 主字：近白 */
-  --text-dim:   #A8E6D6;   /* 次要字：薄荷青 */
-  --text-muted: #7FCEBE;   /* 更弱：較深薄荷 */
+  --text-dim:   #C8E8DD;   /* 次要字：薄荷白 */
+  --text-muted: #9CD4C2;
+  --klein:      #6CF0D8;   /* 強調色（數字 / bullets / active）：終端機薄荷青 */
 }
 #app-wrapper[data-theme="dark"] .diet-head h2,
-#app-wrapper[data-theme="dark"] .diet-card h3 {
-  color: #B0F4E5;          /* 標題：薄荷亮 */
+#app-wrapper[data-theme="dark"] .diet-card h3,
+#app-wrapper[data-theme="dark"] .diet-warn-head,
+#app-wrapper[data-theme="dark"] .diet-caf-subtitle,
+#app-wrapper[data-theme="dark"] .diet-nutrient-head strong {
+  color: #B0F4E5;
+}
+/* 強制亮色：上列變數覆寫到不了的硬編色 */
+#app-wrapper[data-theme="dark"] .diet-tips li,
+#app-wrapper[data-theme="dark"] .diet-target-label,
+#app-wrapper[data-theme="dark"] .diet-record-foods,
+#app-wrapper[data-theme="dark"] .diet-pick-toggle,
+#app-wrapper[data-theme="dark"] .diet-pick-btn.secondary,
+#app-wrapper[data-theme="dark"] .diet-pick-reason,
+#app-wrapper[data-theme="dark"] .diet-drink-name,
+#app-wrapper[data-theme="dark"] .diet-drink-reason,
+#app-wrapper[data-theme="dark"] .diet-caf-overview,
+#app-wrapper[data-theme="dark"] .diet-nutrient-role,
+#app-wrapper[data-theme="dark"] .diet-nutrient-tip,
+#app-wrapper[data-theme="dark"] .diet-log-meal,
+#app-wrapper[data-theme="dark"] .diet-log-form textarea,
+#app-wrapper[data-theme="dark"] .diet-log-form input[type="text"],
+#app-wrapper[data-theme="dark"] .diet-pick-dislike-input input,
+#app-wrapper[data-theme="dark"] .diet-pick-dislike-input button {
+  color: #F1F6FF;
+}
+#app-wrapper[data-theme="dark"] .diet-head p,
+#app-wrapper[data-theme="dark"] .diet-card-sub,
+#app-wrapper[data-theme="dark"] .diet-target-unit,
+#app-wrapper[data-theme="dark"] .diet-warn-reason,
+#app-wrapper[data-theme="dark"] .diet-record-note,
+#app-wrapper[data-theme="dark"] .diet-record-time,
+#app-wrapper[data-theme="dark"] .diet-empty,
+#app-wrapper[data-theme="dark"] .diet-pick-sub,
+#app-wrapper[data-theme="dark"] .diet-pick-meta,
+#app-wrapper[data-theme="dark"] .diet-pick-fallback,
+#app-wrapper[data-theme="dark"] .diet-pick-tab,
+#app-wrapper[data-theme="dark"] .diet-meal-tab,
+#app-wrapper[data-theme="dark"] .diet-log-status,
+#app-wrapper[data-theme="dark"] .diet-pick-dislike-empty,
+#app-wrapper[data-theme="dark"] .diet-drink-meta > span,
+#app-wrapper[data-theme="dark"] .diet-caf-warn-note,
+#app-wrapper[data-theme="dark"] .diet-nutrient-daily,
+#app-wrapper[data-theme="dark"] .diet-nutrient-sources,
+#app-wrapper[data-theme="dark"] .diet-nutrient-label {
+  color: #C8E8DD;
 }
 #app-wrapper[data-theme="dark"] .diet-target-num,
 #app-wrapper[data-theme="dark"] .diet-pick-name,
 #app-wrapper[data-theme="dark"] .diet-meal-tab.active,
-#app-wrapper[data-theme="dark"] .diet-pick-meal-badge {
-  color: #6CF0D8;          /* 強調：終端機薄荷青 */
+#app-wrapper[data-theme="dark"] .diet-pick-tab.active,
+#app-wrapper[data-theme="dark"] .diet-pick-meal-badge,
+#app-wrapper[data-theme="dark"] .diet-record-meal {
+  color: #6CF0D8;
 }
 #app-wrapper[data-theme="dark"] .diet-meal-tab.active {
   border-bottom-color: #6CF0D8;
@@ -9796,6 +9841,16 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
   background: rgba(108, 240, 216, 0.14);
   color: #B0F4E5;
 }
+/* 紅 / 綠 / 咖 / 橘的硬編 status 色 → 改亮版 */
+#app-wrapper[data-theme="dark"] .diet-log-status-ok { color: #7ED4B8; }
+#app-wrapper[data-theme="dark"] .diet-log-status-error,
+#app-wrapper[data-theme="dark"] .diet-chip-bad,
+#app-wrapper[data-theme="dark"] .diet-pick-dislike-chip,
+#app-wrapper[data-theme="dark"] .diet-drink-caf.high { color: #FF8E9C; }
+#app-wrapper[data-theme="dark"] .diet-drink-reroll,
+#app-wrapper[data-theme="dark"] .diet-caf-warn-limit,
+#app-wrapper[data-theme="dark"] .diet-caf-table td:last-child,
+#app-wrapper[data-theme="dark"] .diet-drink-sugar { color: #F2C77E; }
 
 /* ═══════════════════════════════════════════════════════════
    SENIOR MODE — 無印風 / 大字 / 無裝飾
