@@ -3397,12 +3397,16 @@ function renderMedImprovement(data) {
 }
 
 // 把藥分到 早 / 中 / 晚 / 其他 四個時段；同一顆早晚都吃的藥會出現在「早」與「晚」兩格
+// labels/hints come from i18n at render time so language toggle updates them
 var MED_SLOT_DEFS = [
-  { key: "morning", label: "早",   icon: "sunrise", hint: "起床後・早餐"   },
-  { key: "noon",    label: "中午", icon: "sun",     hint: "午餐前後"       },
-  { key: "evening", label: "晚",   icon: "moon",    hint: "晚餐・睡前"     },
-  { key: "other",   label: "其他", icon: "clock",   hint: "間隔型・需要時" },
+  { key: "morning", icon: "sunrise" },
+  { key: "noon",    icon: "sun"     },
+  { key: "evening", icon: "moon"    },
+  { key: "other",   icon: "clock"   },
 ];
+
+function _medSlotLabel(key) { return _T('meds.slot.' + key + '.label'); }
+function _medSlotHint(key)  { return _T('meds.slot.' + key + '.hint');  }
 
 function _bucketMeds(meds) {
   var buckets = { morning: [], noon: [], evening: [], other: [] };
@@ -3438,10 +3442,10 @@ function renderMedList() {
         '<section class="med-slot med-slot-empty">' +
           '<header class="med-slot-head">' +
             '<span class="med-slot-icon"><i data-lucide="' + def.icon + '"></i></span>' +
-            '<div><div class="med-slot-label">' + def.label + '</div>' +
-            '<div class="med-slot-hint">' + def.hint + '</div></div>' +
+            '<div><div class="med-slot-label">' + _medSlotLabel(def.key) + '</div>' +
+            '<div class="med-slot-hint">' + _medSlotHint(def.key) + '</div></div>' +
           '</header>' +
-          '<p class="med-slot-empty-msg">這個時段還沒有藥。</p>' +
+          '<p class="med-slot-empty-msg">' + _T('meds.slot.empty') + '</p>' +
         '</section>';
       return;
     }
@@ -3449,8 +3453,8 @@ function renderMedList() {
       '<section class="med-slot">' +
         '<header class="med-slot-head">' +
           '<span class="med-slot-icon"><i data-lucide="' + def.icon + '"></i></span>' +
-          '<div><div class="med-slot-label">' + def.label + ' <span class="med-slot-count">' + meds.length + '</span></div>' +
-          '<div class="med-slot-hint">' + def.hint + '</div></div>' +
+          '<div><div class="med-slot-label">' + _medSlotLabel(def.key) + ' <span class="med-slot-count">' + meds.length + '</span></div>' +
+          '<div class="med-slot-hint">' + _medSlotHint(def.key) + '</div></div>' +
         '</header>' +
         '<div class="med-slot-grid">';
     meds.forEach(function(med) {
@@ -3467,19 +3471,19 @@ function renderMedList() {
 }
 
 function _renderMedCard(med, slotKey, isOther) {
-  var name = escapeHtml(med.name || "未命名藥物");
+  var name = escapeHtml(med.name || _T('meds.card.unnamed'));
   var dosage = med.dosage ? '<span class="med-card-dosage">' + escapeHtml(med.dosage) + '</span>' : '';
   var freq = med.frequency ? '<div class="med-card-freq">' + escapeHtml(med.frequency) + '</div>' : '';
   var meta = "";
   if (isOther) {
     if (med.interval_hours) {
-      meta += '<span class="med-card-tag med-card-tag-interval">每 ' + med.interval_hours + ' 小時</span>';
+      meta += '<span class="med-card-tag med-card-tag-interval">' + _Tf('meds.card.tag.interval', { h: med.interval_hours }) + '</span>';
     }
     if (med.is_prn) {
-      meta += '<span class="med-card-tag med-card-tag-prn">需要時</span>';
+      meta += '<span class="med-card-tag med-card-tag-prn">' + _T('meds.card.tag.prn') + '</span>';
     }
     if (!meta) {
-      meta = '<span class="med-card-tag">間隔型</span>';
+      meta = '<span class="med-card-tag">' + _T('meds.card.tag.intervalType') + '</span>';
     }
   } else if (med.category) {
     meta = '<span class="med-card-tag">' + escapeHtml(med.category) + '</span>';
@@ -3497,9 +3501,9 @@ function _renderMedCard(med, slotKey, isOther) {
       '</div>' +
       freq +
       '<div class="med-card-actions" onclick="event.stopPropagation()">' +
-        '<span class="med-card-take">✓ 點一下打卡</span>' +
-        '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="跳過">✗</button>' +
-        '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="記錄療效">★</button>' +
+        '<span class="med-card-take">' + _T('meds.card.take') + '</span>' +
+        '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="' + _T('meds.card.skipTitle') + '">✗</button>' +
+        '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.effectTitle') + '">★</button>' +
       '</div>' +
     '</button>'
   );
@@ -4084,10 +4088,10 @@ function renderMedStats(data) {
   var s = data.summary;
   el.innerHTML =
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">' +
-    '<div class="stat-box"><div class="stat-num">' + s.total_medications + '</div><div class="stat-label">藥物種類</div></div>' +
-    '<div class="stat-box"><div class="stat-num">' + s.adherence_rate + '%</div><div class="stat-label">服藥率</div></div>' +
-    '<div class="stat-box"><div class="stat-num">' + s.total_logs + '</div><div class="stat-label">服藥紀錄</div></div>' +
-    '<div class="stat-box"><div class="stat-num">' + s.days + '天</div><div class="stat-label">統計期間</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + s.total_medications + '</div><div class="stat-label">' + _T('meds.stats.totalLabel') + '</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + s.adherence_rate + '%</div><div class="stat-label">' + _T('meds.stats.adherenceLabel') + '</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + s.total_logs + '</div><div class="stat-label">' + _T('meds.stats.logsLabel') + '</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + s.days + _T('meds.stats.daysUnit') + '</div><div class="stat-label">' + _T('meds.stats.daysLabel') + '</div></div>' +
     '</div>';
 
   // 畫服藥率折線圖
