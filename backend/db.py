@@ -217,6 +217,18 @@ _SCHEMAS = {
             FOREIGN KEY (medication_id) REFERENCES medications(id),
             FOREIGN KEY (doctor_id) REFERENCES doctors(id)
         )""",
+    "diet_records": """
+        CREATE TABLE IF NOT EXISTS diet_records (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            meal_type TEXT NOT NULL CHECK(meal_type IN
+                ('breakfast', 'lunch', 'dinner', 'snack')),
+            foods TEXT NOT NULL,
+            note TEXT DEFAULT '',
+            eaten_at TEXT DEFAULT (datetime('now')),
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
     "alerts": """
         CREATE TABLE IF NOT EXISTS alerts (
             id TEXT PRIMARY KEY,
