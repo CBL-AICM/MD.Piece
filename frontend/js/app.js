@@ -6004,7 +6004,7 @@ function settings() {
   var mo   = getSetting('motion', 'on');
   var so   = getSetting('sound', 'on');
   var de   = getSetting('density', 'cozy');
-  var name = user ? (user.nickname || '訪客') : '訪客';
+  var name = user ? (user.nickname || _T('set.guest')) : _T('set.guest');
   var idno = user && user.id_number ? user.id_number : '—';
   var ac   = (user && user.avatar_color) ? user.avatar_color : '#C97F4B';
 
@@ -6039,75 +6039,75 @@ function settings() {
     + '  <header class="set-hero">'
     + '    <div class="set-hero-icon" style="--ac:' + ac + '"><i data-lucide="settings-2"></i></div>'
     + '    <div class="set-hero-text">'
-    + '      <p class="set-eyebrow">// system &gt; preferences</p>'
-    + '      <h2>系統設定</h2>'
-    + '      <p class="set-sub">調整顯示、輔助功能與資料管理。所有設定僅儲存在此裝置。</p>'
+    + '      <p class="set-eyebrow">' + _T('set.eyebrow') + '</p>'
+    + '      <h2>' + _T('set.title') + '</h2>'
+    + '      <p class="set-sub">' + _T('set.sub') + '</p>'
     + '    </div>'
     + '    <div class="set-hero-user">'
-    + '      <span>當前使用者</span>'
+    + '      <span>' + _T('set.user.label') + '</span>'
     + '      <strong>' + name + '</strong>'
     + '      <code>' + idno + '</code>'
     + '    </div>'
     + '  </header>'
 
-    // 顯示
+    // Display
     + '  <div class="set-group">'
-    + '    <h3 class="set-group-title"><i data-lucide="monitor"></i> 顯示</h3>'
-    +      row('字體大小', '介面文字大小，立即生效。',
+    + '    <h3 class="set-group-title"><i data-lucide="monitor"></i> ' + _T('set.group.display') + '</h3>'
+    +      row(_T('set.row.fontSize.t'), _T('set.row.fontSize.d'),
             '<div class="set-seg">' + seg('fontSize', [
-              {value:'small',  label:'小'},
-              {value:'normal', label:'標準'},
-              {value:'large',  label:'大'},
-              {value:'xlarge', label:'特大'}
+              {value:'small',  label:_T('set.opt.font.small')},
+              {value:'normal', label:_T('set.opt.font.normal')},
+              {value:'large',  label:_T('set.opt.font.large')},
+              {value:'xlarge', label:_T('set.opt.font.xlarge')}
             ], fs) + '</div>')
-    +      row('主題', '深色／淺色／跟隨系統。',
+    +      row(_T('set.row.theme.t'), _T('set.row.theme.d'),
             '<div class="set-seg">' + seg('theme', [
-              {value:'light', label:'☀ 淺色'},
-              {value:'dark',  label:'☾ 深色'},
-              {value:'auto',  label:'⌬ 自動'}
+              {value:'light', label:_T('set.opt.theme.light')},
+              {value:'dark',  label:_T('set.opt.theme.dark')},
+              {value:'auto',  label:_T('set.opt.theme.auto')}
             ], th) + '</div>')
-    +      row('顯示模式', '年長版會放大字體與按鈕、強化對比。',
+    +      row(_T('set.row.mode.t'), _T('set.row.mode.d'),
             '<div class="set-seg">' + seg('mode', [
-              {value:'standard', label:'普通版'},
-              {value:'senior',   label:'年長版'}
+              {value:'standard', label:_T('set.opt.mode.standard')},
+              {value:'senior',   label:_T('set.opt.mode.senior')}
             ], md) + '</div>')
-    +      row('介面密度', '「緊湊」較省空間；「舒適」更易觸控。',
+    +      row(_T('set.row.density.t'), _T('set.row.density.d'),
             '<div class="set-seg">' + seg('density', [
-              {value:'cozy',    label:'舒適'},
-              {value:'compact', label:'緊湊'}
+              {value:'cozy',    label:_T('set.opt.density.cozy')},
+              {value:'compact', label:_T('set.opt.density.compact')}
             ], de) + '</div>')
     + '  </div>'
 
-    // 輔助
+    // Accessibility
     + '  <div class="set-group">'
-    + '    <h3 class="set-group-title"><i data-lucide="accessibility"></i> 輔助與互動</h3>'
-    +      row('動畫效果', '關閉可減少暈眩、省電。',
+    + '    <h3 class="set-group-title"><i data-lucide="accessibility"></i> ' + _T('set.group.access') + '</h3>'
+    +      row(_T('set.row.motion.t'), _T('set.row.motion.d'),
             sw('sw-motion', 'motion', mo === 'on', 'on', 'reduced'))
-    +      row('提示音效', '操作回饋與提醒。',
+    +      row(_T('set.row.sound.t'), _T('set.row.sound.d'),
             sw('sw-sound', 'sound', so === 'on', 'on', 'off'))
     + '  </div>'
 
-    // 帳號與資料
+    // Account & data
     + '  <div class="set-group">'
-    + '    <h3 class="set-group-title"><i data-lucide="database"></i> 帳號與資料</h3>'
-    +      row('重新整理 / 清除快取', '畫面卡舊版時可手動清除。',
-            '<button class="set-btn" onclick="settingsClearCache()"><i data-lucide="refresh-cw"></i> 立即重整</button>')
-    +      row('重新發卡', '清除 ID 卡，下次回到歡迎頁。',
-            '<button class="set-btn set-btn-warn" onclick="settingsResetCard()"><i data-lucide="id-card"></i> 重新發卡</button>')
-    +      row('登出', '結束本次工作階段。',
-            '<button class="set-btn set-btn-danger" onclick="logout()"><i data-lucide="log-out"></i> 登出</button>')
+    + '    <h3 class="set-group-title"><i data-lucide="database"></i> ' + _T('set.group.data') + '</h3>'
+    +      row(_T('set.row.cache.t'), _T('set.row.cache.d'),
+            '<button class="set-btn" onclick="settingsClearCache()"><i data-lucide="refresh-cw"></i> ' + _T('set.row.cache.btn') + '</button>')
+    +      row(_T('set.row.reset.t'), _T('set.row.reset.d'),
+            '<button class="set-btn set-btn-warn" onclick="settingsResetCard()"><i data-lucide="id-card"></i> ' + _T('set.row.reset.btn') + '</button>')
+    +      row(_T('set.row.logout.t'), _T('set.row.logout.d'),
+            '<button class="set-btn set-btn-danger" onclick="logout()"><i data-lucide="log-out"></i> ' + _T('set.row.logout.btn') + '</button>')
     + '  </div>'
 
-    // 關於
+    // About
     + '  <div class="set-group">'
-    + '    <h3 class="set-group-title"><i data-lucide="info"></i> 關於 MD.Piece</h3>'
+    + '    <h3 class="set-group-title"><i data-lucide="info"></i> ' + _T('set.group.about') + '</h3>'
     + '    <div class="set-about">'
-    + '      <p><strong>MD.Piece</strong> · 將日常碎片拼起，醫起走出治療的迷霧。</p>'
+    + '      <p>' + _T('set.about.tagline') + '</p>'
     + '      <dl class="set-about-grid">'
-    + '        <dt>版本</dt><dd><code>v2.0</code></dd>'
-    + '        <dt>作者</dt><dd>余家馨</dd>'
-    + '        <dt>網站</dt><dd><a href="https://www.mdpiece.life/" target="_blank" rel="noopener">www.mdpiece.life</a></dd>'
-    + '        <dt>原始碼</dt><dd><a href="https://github.com/' + GITHUB_REPO + '" target="_blank" rel="noopener">' + GITHUB_REPO + '</a></dd>'
+    + '        <dt>' + _T('set.about.version') + '</dt><dd><code>v2.0</code></dd>'
+    + '        <dt>' + _T('set.about.author') + '</dt><dd>余家馨</dd>'
+    + '        <dt>' + _T('set.about.website') + '</dt><dd><a href="https://www.mdpiece.life/" target="_blank" rel="noopener">www.mdpiece.life</a></dd>'
+    + '        <dt>' + _T('set.about.source') + '</dt><dd><a href="https://github.com/' + GITHUB_REPO + '" target="_blank" rel="noopener">' + GITHUB_REPO + '</a></dd>'
     + '      </dl>'
     + '    </div>'
     + '  </div>'
