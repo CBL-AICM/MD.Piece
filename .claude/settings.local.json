@@ -17,7 +17,10 @@
       "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__get_publishable_keys",
       "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__list_tables",
       "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__apply_migration",
-      "mcp__d8e8d98c-f4fa-4123-ad9c-2730c1d1f021__deploy_to_vercel"
+      "mcp__d8e8d98c-f4fa-4123-ad9c-2730c1d1f021__deploy_to_vercel",
+      "Bash(cp \"/root/.claude/uploads/f47a538d-d67f-4336-b706-6d5b32aae09e/fa95afcf-20260506_1541186359790890536185082.jpg\" /home/user/MD.Piece/frontend/icons/xiaohe.jpg && ls -la /home/user/MD.Piece/frontend/icons/xiaohe.jpg)",
+      "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__execute_sql",
+      "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__get_logs"
     ]
   }
 }

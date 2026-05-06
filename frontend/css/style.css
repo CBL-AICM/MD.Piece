@@ -8614,11 +8614,11 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   align-items: center;
   gap: 10px;
   margin: 0 0 8px;
-  color: var(--text);
+  color: #FBF6EC;
 }
 .emotions-head p {
   margin: 0 0 22px;
-  color: var(--text-dim);
+  color: #FBF6EC;
   font-size: 0.9rem;
 }
 .emotions-card {
@@ -8627,6 +8627,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   border-radius: 14px;
   padding: 20px;
   margin-bottom: 16px;
+  color: var(--text);
 }
 .emotions-card h3 {
   margin: 0 0 14px;
