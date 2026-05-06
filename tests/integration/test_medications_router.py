@@ -68,6 +68,56 @@ def _make_med(name: str, frequency: str) -> str:
     return r.json()["id"]
 
 
+def test_create_medication_dedupes_same_prescription():
+    """拍到同一張藥單時，同名同劑量的藥不該重複寫入。"""
+    r1 = client.post(
+        "/medications/",
+        json={
+            "patient_id": PATIENT_ID,
+            "name": "普拿疼",
+            "dosage": "500mg",
+            "frequency": "一天三次",
+        },
+    )
+    assert r1.status_code == 200
+    first_id = r1.json()["id"]
+    assert r1.json().get("_deduped") is not True
+
+    # 再丟一次（模擬重複拍同一張藥單）：name 大小寫/空白不同也要被當作同藥
+    r2 = client.post(
+        "/medications/",
+        json={
+            "patient_id": PATIENT_ID,
+            "name": "  普拿疼 ",
+            "dosage": "500mg",
+            "frequency": "一天三次",
+        },
+    )
+    assert r2.status_code == 200
+    assert r2.json()["id"] == first_id
+    assert r2.json().get("_deduped") is True
+
+    # 清單上只應出現一筆
+    r3 = client.get("/medications/", params={"patient_id": PATIENT_ID})
+    meds = r3.json()["medications"]
+    assert len([m for m in meds if m["name"].strip() == "普拿疼"]) == 1
+
+
+def test_create_medication_different_dosage_is_not_deduped():
+    """同名但不同劑量視為不同藥（醫師可能調整劑量），不能 dedupe。"""
+    r1 = client.post(
+        "/medications/",
+        json={"patient_id": PATIENT_ID, "name": "普拿疼", "dosage": "500mg"},
+    )
+    r2 = client.post(
+        "/medications/",
+        json={"patient_id": PATIENT_ID, "name": "普拿疼", "dosage": "1000mg"},
+    )
+    assert r1.status_code == 200 and r2.status_code == 200
+    assert r1.json()["id"] != r2.json()["id"]
+    assert r2.json().get("_deduped") is not True
+
+
 def test_get_medications_includes_schedule_slots():
     _make_med("普拿疼", "一天三次飯後")
     _make_med("安眠藥", "睡前")

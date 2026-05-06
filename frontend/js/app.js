@@ -3762,10 +3762,11 @@ function submitRecognizedOne(btn) {
         btn.disabled = false; btn.textContent = "重試加入";
         return;
       }
+      var deduped = res.data && res.data._deduped;
       card.style.background = "rgba(85,184,138,0.08)";
       card.style.borderColor = "var(--success)";
-      btn.outerHTML = '<div style="color:var(--success);font-size:0.85rem;text-align:center">已寫入 ✓</div>';
-      showToast("已加入「" + body.name + "」", "success");
+      btn.outerHTML = '<div style="color:var(--success);font-size:0.85rem;text-align:center">' + (deduped ? '已存在 ✓' : '已寫入 ✓') + '</div>';
+      showToast(deduped ? "「" + body.name + "」已在藥物清單中" : "已加入「" + body.name + "」", deduped ? "info" : "success");
       loadMedicationsPage();
     })
     .catch(function(err) {
@@ -3782,11 +3783,11 @@ function submitAllRecognized() {
     if (hasSaveBtn) pending.push(c);
   });
   if (!pending.length) { showToast("沒有需要加入的項目", "info"); return; }
-  var okCount = 0, failCount = 0, done = 0;
+  var okCount = 0, dupCount = 0, failCount = 0, done = 0;
   pending.forEach(function(card) {
     var btn = card.querySelector("button.primary");
     var body = _collectRecCard(card);
-    if (!body.name) { failCount++; done++; if (done === pending.length) _afterBulkAdd(okCount, failCount); return; }
+    if (!body.name) { failCount++; done++; if (done === pending.length) _afterBulkAdd(okCount, dupCount, failCount); return; }
     btn.disabled = true; btn.textContent = "加入中...";
     fetch(API + "/medications/", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -3795,10 +3796,11 @@ function submitAllRecognized() {
       .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: r.ok, data: {} }; }); })
       .then(function(res) {
         if (res.ok) {
-          okCount++;
+          var deduped = res.data && res.data._deduped;
+          if (deduped) dupCount++; else okCount++;
           card.style.background = "rgba(85,184,138,0.08)";
           card.style.borderColor = "var(--success)";
-          btn.outerHTML = '<div style="color:var(--success);font-size:0.85rem;text-align:center">已寫入 ✓</div>';
+          btn.outerHTML = '<div style="color:var(--success);font-size:0.85rem;text-align:center">' + (deduped ? '已存在 ✓' : '已寫入 ✓') + '</div>';
         } else {
           failCount++;
           btn.disabled = false; btn.textContent = "重試加入";
@@ -3807,16 +3809,20 @@ function submitAllRecognized() {
       .catch(function() { failCount++; btn.disabled = false; btn.textContent = "重試加入"; })
       .finally(function() {
         done++;
-        if (done === pending.length) _afterBulkAdd(okCount, failCount);
+        if (done === pending.length) _afterBulkAdd(okCount, dupCount, failCount);
       });
   });
 }
 
-function _afterBulkAdd(ok, fail) {
-  if (ok && !fail) showToast("已加入 " + ok + " 種藥物 ✓", "success");
-  else if (ok && fail) showToast("加入 " + ok + " 成功、" + fail + " 失敗", "warning");
-  else showToast("加入失敗，請檢查欄位", "error");
-  if (ok) loadMedicationsPage();
+function _afterBulkAdd(ok, dup, fail) {
+  dup = dup || 0;
+  var parts = [];
+  if (ok) parts.push("加入 " + ok + " 種");
+  if (dup) parts.push(dup + " 種已存在");
+  if (fail) parts.push(fail + " 種失敗");
+  var level = fail ? (ok || dup ? "warning" : "error") : (ok ? "success" : "info");
+  showToast(parts.length ? parts.join("、") + " ✓" : "沒有變更", level);
+  if (ok || dup) loadMedicationsPage();
 }
 
 function renderManualMedForm(rawText, hint) {

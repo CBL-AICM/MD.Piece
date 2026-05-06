@@ -17,6 +17,47 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _norm(s: str | None) -> str:
+    return (s or "").strip().lower()
+
+
+def _find_existing_active_medication(
+    sb, patient_id: str, name: str, dosage: str | None
+) -> dict | None:
+    """
+    回傳同一患者下已存在、且 name+dosage 相同的有效藥物。
+
+    用於避免拍到同一張藥單時，重複建立藥物紀錄。比對採大小寫不敏感、去頭尾空白；
+    name 為空白時不比對（交給呼叫者另外處理）。
+    """
+    norm_name = _norm(name)
+    if not norm_name:
+        return None
+    try:
+        rows = (
+            sb.table("medications")
+            .select("*")
+            .eq("patient_id", patient_id)
+            .execute()
+            .data
+            or []
+        )
+    except Exception as e:
+        # 不把 patient_id 寫進 log（屬於 PHI），只記錄錯誤類型
+        logger.warning("medication dedup lookup failed: %s", type(e).__name__)
+        return None
+    norm_dose = _norm(dosage)
+    for r in rows:
+        if r.get("active", 1) == 0:
+            continue
+        if _norm(r.get("name")) != norm_name:
+            continue
+        if _norm(r.get("dosage")) != norm_dose:
+            continue
+        return r
+    return None
+
+
 def _ensure_patient_exists(sb, patient_id: str) -> None:
     """
     確保 patients 表裡有對應的 row，避免 medications.patient_id FK 失敗。
@@ -100,9 +141,22 @@ def get_medications(patient_id: str = Query(...)):
 
 @router.post("/")
 def create_medication(body: MedicationCreate):
-    """手動新增藥物"""
+    """
+    手動新增藥物。
+
+    若已存在同患者、同名稱（大小寫不敏感）且同劑量的有效藥物，
+    視為「拍到同一張藥單」的情境，直接回傳既有紀錄並標記 _deduped=True，
+    避免清單裡塞滿同一顆藥。
+    """
     sb = get_supabase()
     _ensure_patient_exists(sb, body.patient_id)
+
+    existing = _find_existing_active_medication(sb, body.patient_id, body.name, body.dosage)
+    if existing:
+        out = dict(existing)
+        out["_deduped"] = True
+        return out
+
     data = body.model_dump(exclude_none=True)
     try:
         result = sb.table("medications").insert(data).execute()
