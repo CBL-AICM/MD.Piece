@@ -8601,50 +8601,20 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 
 /* ───────── 情緒紀錄頁 ───────── */
 .emotions-wrap {
-  /* 強制套用亮色主題 tokens，覆寫 app-wrapper 的深色 */
-  --app-bg:         #FBF6EC;
-  --app-grid:       rgba(92,58,50,0.08);
-  --app-text:       #5C3A32;
-  --app-text-dim:   #8B7868;
-  --app-mint:       #9DAEC0;
-  --app-aqua:       #7E94A8;
-  --app-pink:       #E8B4A0;
-  --app-blue:       #C8D5DD;
-  --app-term:       #C97F4B;
-  --app-panel:      #FFFAF0;
-  --app-panel-soft: #F5E1CB;
-  --app-chrome-1:   #E8C9A3;
-  --app-chrome-2:   #D8E3E5;
-  --app-border:     #5C3A32;
-  --app-shadow:     2px 2px 0 #5C3A32;
-  --app-glow:       rgba(201,127,75,0.35);
-  --app-chip-text:  #5C3A32;
-
-  padding: 24px 20px 40px;
-  margin: -16px -16px 0;
-  background-color: #FBF6EC;
-  background-image:
-    linear-gradient(rgba(92,58,50,0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(92,58,50,0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
-  color: var(--text);
-  min-height: 100vh;
-}
-.emotions-wrap > * {
+  padding: 16px 4px 32px;
   max-width: 720px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto;
 }
 .emotions-head h2 {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   margin: 0 0 8px;
-  color: var(--text);
+  color: #FBF6EC;
 }
 .emotions-head p {
   margin: 0 0 22px;
-  color: var(--text-dim);
+  color: #FBF6EC;
   font-size: 0.9rem;
 }
 .emotions-card {
