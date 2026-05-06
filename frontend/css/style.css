@@ -9841,6 +9841,23 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
   background: rgba(108, 240, 216, 0.14);
   color: #B0F4E5;
 }
+/* 按鈕底色壓暗 — 上面 --klein 改 #6CF0D8 後，吃 var(--klein) 當 background
+   的按鈕（送出 / 給我一道 / active meal pick / 餐別標籤）會太亮刺眼，
+   改用深一階的薄荷 + 白字。 */
+#app-wrapper[data-theme="dark"] .diet-log-submit,
+#app-wrapper[data-theme="dark"] .diet-log-meal.active,
+#app-wrapper[data-theme="dark"] .diet-pick-btn.primary,
+#app-wrapper[data-theme="dark"] .diet-pick-tab.active,
+#app-wrapper[data-theme="dark"] .diet-record-meal {
+  background: #2D7A6B;
+  border-color: #2D7A6B;
+  color: #F1F6FF;
+}
+#app-wrapper[data-theme="dark"] .diet-pick-dislike-input button:hover {
+  background: #2D7A6B;
+  border-color: #2D7A6B;
+  color: #F1F6FF;
+}
 /* 紅 / 綠 / 咖 / 橘的硬編 status 色 → 改亮版 */
 #app-wrapper[data-theme="dark"] .diet-log-status-ok { color: #7ED4B8; }
 #app-wrapper[data-theme="dark"] .diet-log-status-error,
