@@ -89,6 +89,8 @@
     { "src": "/labs", "dest": "api/index.py" },
     { "src": "/diet/(.*)", "dest": "api/index.py" },
     { "src": "/diet", "dest": "api/index.py" },
+    { "src": "/debug/(.*)", "dest": "api/index.py" },
+    { "src": "/debug", "dest": "api/index.py" },
     { "src": "/doctor/(.+\\..+)", "dest": "frontend-doctor/$1" },
     { "src": "/doctor", "dest": "frontend-doctor/index.html" },
     { "src": "/doctor/(.*)", "dest": "frontend-doctor/index.html" },
