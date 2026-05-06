@@ -9770,6 +9770,33 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
   .diet-pick-btn { flex: 1 1 100%; }
 }
 
+/* 深色模式：飲食頁配色改成薄荷清亮系
+   :root 的 --text / --text-dim 是暖棕字，深色背景下整片看不到。
+   在 .diet-wrap 範圍內重新定義變數，讓所有 var(--text) / var(--text-dim)
+   自動拿到亮色，不用逐條覆寫。 */
+#app-wrapper[data-theme="dark"] .diet-wrap {
+  --text:       #F1F6FF;   /* 主字：近白 */
+  --text-dim:   #A8E6D6;   /* 次要字：薄荷青 */
+  --text-muted: #7FCEBE;   /* 更弱：較深薄荷 */
+}
+#app-wrapper[data-theme="dark"] .diet-head h2,
+#app-wrapper[data-theme="dark"] .diet-card h3 {
+  color: #B0F4E5;          /* 標題：薄荷亮 */
+}
+#app-wrapper[data-theme="dark"] .diet-target-num,
+#app-wrapper[data-theme="dark"] .diet-pick-name,
+#app-wrapper[data-theme="dark"] .diet-meal-tab.active,
+#app-wrapper[data-theme="dark"] .diet-pick-meal-badge {
+  color: #6CF0D8;          /* 強調：終端機薄荷青 */
+}
+#app-wrapper[data-theme="dark"] .diet-meal-tab.active {
+  border-bottom-color: #6CF0D8;
+}
+#app-wrapper[data-theme="dark"] .diet-pick-chip {
+  background: rgba(108, 240, 216, 0.14);
+  color: #B0F4E5;
+}
+
 /* ═══════════════════════════════════════════════════════════
    SENIOR MODE — 無印風 / 大字 / 無裝飾
    壓制式覆寫：放在檔末以蓋過所有先前規則。
