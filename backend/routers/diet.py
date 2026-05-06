@@ -677,6 +677,9 @@ def get_diet_records(
     patient_id: str,
     date_str: Optional[str] = Query(None, alias="date", description="YYYY-MM-DD；不填回近 N 天"),
     days: int = Query(7, ge=1, le=90),
+    # JS Date.getTimezoneOffset() 規格：分鐘、UTC 西側為正。台灣 = -480。
+    # 前端不傳 → 預設台灣（-480），讓打卡當下立刻顯示在「今日」。
+    tz_offset: int = Query(-480, ge=-840, le=840, description="使用者時區（分鐘，JS 規格）"),
 ):
     sb = get_supabase()
     q = sb.table("diet_records").select("*").eq("patient_id", patient_id)
@@ -685,8 +688,11 @@ def get_diet_records(
             d = date.fromisoformat(date_str)
         except ValueError:
             raise HTTPException(status_code=400, detail="date 格式必須是 YYYY-MM-DD")
-        start = datetime.combine(d, datetime.min.time()).isoformat()
-        end   = datetime.combine(d + timedelta(days=1), datetime.min.time()).isoformat()
+        # 把「使用者本地的這一天」換成 UTC 範圍：local + tz_offset = UTC
+        local_start = datetime.combine(d, datetime.min.time())
+        local_end   = datetime.combine(d + timedelta(days=1), datetime.min.time())
+        start = (local_start + timedelta(minutes=tz_offset)).isoformat()
+        end   = (local_end   + timedelta(minutes=tz_offset)).isoformat()
         q = q.gte("eaten_at", start).lt("eaten_at", end)
     else:
         since = (datetime.utcnow() - timedelta(days=days)).isoformat()

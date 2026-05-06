@@ -7771,7 +7771,8 @@ function fetchDietTodayRecords() {
   if (!pid) return;
   var today = new Date();
   var d = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-  fetch(API + '/diet/records/' + encodeURIComponent(pid) + '?date=' + d)
+  var tz = today.getTimezoneOffset(); // 分鐘，UTC 西側為正
+  fetch(API + '/diet/records/' + encodeURIComponent(pid) + '?date=' + d + '&tz_offset=' + tz)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var box = document.getElementById('diet-today-list');
