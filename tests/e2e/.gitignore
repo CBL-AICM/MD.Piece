@@ -1,0 +1,6 @@
+node_modules/
+package-lock.json
+
+# Tesseract.js downloads language packs into cwd at runtime — don't commit
+*.traineddata
+*.traineddata.gz
