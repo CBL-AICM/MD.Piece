@@ -7400,6 +7400,10 @@ var _dietPickCurrent     = null;
 var _dietPickLoading     = false;
 
 var DIET_DISLIKE_KEY = 'mdpiece_diet_dislikes';
+var DIET_PICK_HISTORY_KEY  = 'mdpiece_diet_pick_history';
+var DIET_DRINK_HISTORY_KEY = 'mdpiece_diet_drink_history';
+var DIET_HISTORY_TTL_MS    = 24 * 60 * 60 * 1000; // 一天，避免永遠擋同一道菜
+var DIET_HISTORY_CAP       = 30;
 
 function dietPickLoadDislikes() {
   try {
@@ -7412,9 +7416,40 @@ function dietPickSaveDislikes() {
   try { localStorage.setItem(DIET_DISLIKE_KEY, JSON.stringify(_dietPickDislikes)); } catch (e) {}
 }
 
+function _dietLoadHistory(key) {
+  try {
+    var raw = localStorage.getItem(key);
+    if (!raw) return [];
+    var arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    var now = Date.now();
+    return arr.filter(function(x) {
+      return x && typeof x.name === 'string' && (now - (x.ts || 0)) < DIET_HISTORY_TTL_MS;
+    }).map(function(x) { return x.name; });
+  } catch (e) { return []; }
+}
+function _dietSaveHistory(key, names) {
+  try {
+    var now = Date.now();
+    var trimmed = names.slice(-DIET_HISTORY_CAP);
+    localStorage.setItem(key, JSON.stringify(trimmed.map(function(n) {
+      return { name: n, ts: now };
+    })));
+  } catch (e) {}
+}
+function dietPickPushHistory(name) {
+  if (!name) return;
+  if (_dietPickHistory.indexOf(name) === -1) _dietPickHistory.push(name);
+  _dietSaveHistory(DIET_PICK_HISTORY_KEY, _dietPickHistory);
+}
+function dietDrinkPushHistory(name) {
+  if (!name) return;
+  if (_dietDrinkHistory.indexOf(name) === -1) _dietDrinkHistory.push(name);
+  _dietSaveHistory(DIET_DRINK_HISTORY_KEY, _dietDrinkHistory);
+}
+
 function dietPickSetMeal(m) {
   _dietPickMealType = m;
-  _dietPickHistory = [];
   document.querySelectorAll('#diet-pick-meal-tabs .diet-pick-tab').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-pick-meal') === m);
   });
@@ -7422,7 +7457,6 @@ function dietPickSetMeal(m) {
 
 function dietPickSetPrice(p) {
   _dietPickPrice = p;
-  _dietPickHistory = [];
   document.querySelectorAll('#diet-pick-price-tabs .diet-pick-price').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-pick-price') === p);
   });
@@ -7430,7 +7464,6 @@ function dietPickSetPrice(p) {
 
 function dietPickSetCal(c) {
   _dietPickCal = c;
-  _dietPickHistory = [];
   document.querySelectorAll('#diet-pick-cal-tabs .diet-pick-cal').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-pick-cal') === c);
   });
@@ -7438,12 +7471,10 @@ function dietPickSetCal(c) {
 
 function dietPickToggleNearby(on) {
   _dietPickNearby = !!on;
-  _dietPickHistory = [];
 }
 
 function dietPickToggleAvoidRecent(on) {
   _dietPickAvoidRecent = !!on;
-  _dietPickHistory = [];
 }
 
 function dietPickAddDislike() {
@@ -7486,7 +7517,7 @@ function dietPickMeal(isReroll) {
   var pid = getStablePatientId();
   if (!pid) { showToast('請先登入', 'warning'); return; }
   if (isReroll && _dietPickCurrent && _dietPickCurrent.name) {
-    _dietPickHistory.push(_dietPickCurrent.name);
+    dietPickPushHistory(_dietPickCurrent.name);
   }
   _dietPickLoading = true;
   var box = document.getElementById('diet-pick-result');
@@ -7506,6 +7537,8 @@ function dietPickMeal(isReroll) {
     .then(function(r) { return r.json(); })
     .then(function(g) {
       _dietPickCurrent = g || {};
+      // 把這次抽到的也記下來，下一輪「給我一道」不會立刻同款
+      if (g && g.name) dietPickPushHistory(g.name);
       renderDietPick(g);
     })
     .catch(function() {
@@ -7569,7 +7602,7 @@ function dietPickDrink(isReroll) {
   var pid = getStablePatientId();
   if (!pid) { showToast('請先登入', 'warning'); return; }
   if (isReroll && _dietDrinkCurrent && _dietDrinkCurrent.name) {
-    _dietDrinkHistory.push(_dietDrinkCurrent.name);
+    dietDrinkPushHistory(_dietDrinkCurrent.name);
   }
   _dietDrinkLoading = true;
   var box = document.getElementById('diet-drink-result');
@@ -7587,6 +7620,7 @@ function dietPickDrink(isReroll) {
     .then(function(r) { return r.json(); })
     .then(function(g) {
       _dietDrinkCurrent = g || {};
+      if (g && g.name) dietDrinkPushHistory(g.name);
       renderDietDrink(g);
       // 如果這杯有咖啡因，自動拉出咖啡因衛教
       if ((g.caffeine_mg || 0) > 0) fetchCaffeineGuide();
@@ -7684,9 +7718,10 @@ function loadDietPage() {
   _dietPickCal = 'any';
   _dietPickNearby = false;
   _dietPickAvoidRecent = true;
-  _dietPickHistory = [];
-  _dietPickCurrent = null;
-  _dietDrinkHistory = [];
+  // 從 localStorage 讀回 24h 內已被抽過的菜，避免換頁回來又看到同一道
+  _dietPickHistory  = _dietLoadHistory(DIET_PICK_HISTORY_KEY);
+  _dietDrinkHistory = _dietLoadHistory(DIET_DRINK_HISTORY_KEY);
+  _dietPickCurrent  = null;
   _dietDrinkCurrent = null;
   dietPickLoadDislikes();
   setTimeout(function() {
@@ -7820,7 +7855,8 @@ function fetchDietTodayRecords() {
   if (!pid) return;
   var today = new Date();
   var d = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-  fetch(API + '/diet/records/' + encodeURIComponent(pid) + '?date=' + d)
+  var tz = today.getTimezoneOffset(); // 分鐘，UTC 西側為正
+  fetch(API + '/diet/records/' + encodeURIComponent(pid) + '?date=' + d + '&tz_offset=' + tz)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var box = document.getElementById('diet-today-list');
