@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v54-diet-tz-history";
+const CACHE_VERSION = "mdpiece-v55-rx-photo-redeploy";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=diet-tz-history",
-  "/js/i18n.js?v=diet-tz-history",
-  "/js/app.js?v=diet-tz-history",
+  "/css/style.css?v=rx-photo-redeploy",
+  "/js/i18n.js?v=rx-photo-redeploy",
+  "/js/app.js?v=rx-photo-redeploy",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
