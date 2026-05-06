@@ -5,7 +5,11 @@ from datetime import datetime, timedelta, timezone
 import logging
 
 from backend.db import get_supabase
-from backend.services.llm_service import recognize_medicine_bag, call_claude
+from backend.services.llm_service import (
+    recognize_medicine_bag,
+    extract_medications_from_ocr_text,
+    call_claude,
+)
 from backend.utils.medication_schedule import (
     DEFAULT_MIN_INTERVAL_HOURS,
     annotate_medication,
@@ -96,6 +100,10 @@ class MedicationPhotoUpload(BaseModel):
     patient_id: str
     image_base64: str
     media_type: str = "image/jpeg"
+    # 前端可選擇先在瀏覽器跑 Tesseract.js OCR，把純文字直接送上來，
+    # 後端就跳過影像辨識（省 LLM 成本 + 跳過不準的 vision OCR），
+    # 直接拿 ocr_text 餵 Haiku 抽結構化欄位。空字串視為沒提供。
+    ocr_text: str | None = None
 
 
 class MedicationLogCreate(BaseModel):
@@ -192,7 +200,11 @@ def recognize_from_photo(body: MedicationPhotoUpload):
       - errors: 若有寫入錯誤，逐筆回報
     """
     try:
-        recognition = recognize_medicine_bag(body.image_base64, body.media_type)
+        if body.ocr_text and len(body.ocr_text.strip()) >= 20:
+            # 前端已用 Tesseract.js 做完 OCR，直接抽結構化欄位（跳過影像 LLM）
+            recognition = extract_medications_from_ocr_text(body.ocr_text)
+        else:
+            recognition = recognize_medicine_bag(body.image_base64, body.media_type)
     except Exception as e:
         logger.error(f"recognize_medicine_bag failed: {e}")
         raise HTTPException(status_code=500, detail=f"影像辨識服務失敗：{e}")

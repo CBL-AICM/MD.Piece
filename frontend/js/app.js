@@ -3641,6 +3641,46 @@ window.rotateMedPreview = function() {
   });
 };
 
+// 在瀏覽器跑 Tesseract.js OCR — 中文（繁）+ 英文，支援藥單上的中英並列藥名
+// 失敗 / Tesseract 沒載入時 resolve("")，由 backend fallback 走原本 LLM vision
+// onProgress(msg) 會在每個階段呼叫，方便 UI 顯示進度
+function _runClientOcr(dataUrl, onProgress) {
+  return new Promise(function(resolve) {
+    function fail(reason) {
+      console.warn("Tesseract OCR skipped:", reason);
+      resolve("");
+    }
+    if (typeof Tesseract === "undefined" || !Tesseract.recognize) {
+      // tesseract.js 載入失敗（網路 / CDN 擋）— 直接退回 backend OCR
+      return fail("Tesseract not loaded");
+    }
+    if (onProgress) onProgress("下載中文辨識引擎...");
+    try {
+      Tesseract.recognize(dataUrl, "chi_tra+eng", {
+        logger: function(m) {
+          if (!onProgress) return;
+          if (m.status === "loading tesseract core") onProgress("載入辨識引擎...");
+          else if (m.status === "loading language traineddata") onProgress("下載中文語言包...");
+          else if (m.status === "initializing api" || m.status === "initialized api") onProgress("初始化辨識引擎...");
+          else if (m.status === "recognizing text") {
+            var pct = Math.round((m.progress || 0) * 100);
+            onProgress("正在辨識文字 " + pct + "%");
+          }
+        },
+      })
+        .then(function(result) {
+          var text = (result && result.data && result.data.text) || "";
+          // 若 OCR 出來太少字（< 20 char）視為失敗，讓 backend 用 vision LLM 救
+          resolve(text.trim().length >= 20 ? text.trim() : "");
+        })
+        .catch(function(e) { fail("Tesseract.recognize error: " + (e && e.message)); });
+    } catch (e) {
+      fail("Tesseract sync error: " + (e && e.message));
+    }
+  });
+}
+
+
 function _renderMedPreviewAndRecognize(dataUrl, mediaType) {
   var base64Data = dataUrl.split(",")[1];
 
@@ -3656,16 +3696,34 @@ function _renderMedPreviewAndRecognize(dataUrl, mediaType) {
   if (window.lucide && lucide.createIcons) { try { lucide.createIcons(); } catch (_) {} }
 
   document.getElementById("med-recognize-result").innerHTML =
-    '<div style="text-align:center;padding:16px;color:var(--text-muted)">' +
+    '<div style="text-align:center;padding:16px;color:var(--text-muted)" id="med-rec-status">' +
     '<div class="loading-spinner"></div>' +
-    '<p style="margin-top:8px">AI 正在辨識藥袋／藥單...</p>' +
+    '<p style="margin-top:8px">準備辨識藥袋／藥單...</p>' +
     '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">第一次辨識較慢，最多約 30 秒</p>' +
     '</div>';
 
-  return fetch(API + "/medications/recognize", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType })
+  return _runClientOcr(dataUrl, function(progressMsg) {
+    var s = document.getElementById("med-rec-status");
+    if (s) {
+      s.innerHTML =
+        '<div class="loading-spinner"></div>' +
+        '<p style="margin-top:8px">' + escapeHtml(progressMsg) + '</p>' +
+        '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">在手機上跑 OCR，第一次需下載辨識引擎，大約 15-30 秒</p>';
+    }
+  }).then(function(ocrText) {
+    var s2 = document.getElementById("med-rec-status");
+    if (s2) {
+      s2.innerHTML =
+        '<div class="loading-spinner"></div>' +
+        '<p style="margin-top:8px">AI 整理欄位中...</p>';
+    }
+    var body = { patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType };
+    if (ocrText && ocrText.length >= 20) body.ocr_text = ocrText;
+    return fetch(API + "/medications/recognize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
   })
     .then(function(r) {
       return r.text().then(function(t) {
