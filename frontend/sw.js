@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v58-symptom-analyze";
+const CACHE_VERSION = "mdpiece-v59-quickadd-sheet";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=symptom-analyze",
-  "/js/i18n.js?v=symptom-analyze",
-  "/js/app.js?v=symptom-analyze",
+  "/css/style.css?v=quickadd-sheet",
+  "/js/i18n.js?v=quickadd-sheet",
+  "/js/app.js?v=quickadd-sheet",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

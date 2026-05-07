@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=symptom-analyze" />
+  <link rel="stylesheet" href="css/style.css?v=quickadd-sheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -411,8 +411,8 @@
     <span class="mobile-home-indicator" aria-hidden="true"></span>
   </div>
 
-  <script src="js/i18n.js?v=symptom-analyze"></script>
-  <script src="js/app.js?v=symptom-analyze"></script>
+  <script src="js/i18n.js?v=quickadd-sheet"></script>
+  <script src="js/app.js?v=quickadd-sheet"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
@@ -701,9 +701,49 @@
         void btn.offsetWidth;
         btn.classList.add('pulse');
       }
-      // Default quick action: jump into 症狀紀錄 page (most common entry)
-      setActiveMobileTab('symptoms');
-      navigateTo('symptoms', null);
+      // 開選單，由使用者挑要紀錄什麼
+      openQuickAddSheet();
+    }
+
+    // 快速紀錄選單（FAB 按下開）
+    const QUICK_ADD_OPTIONS = [
+      { page: 'symptoms',    icon: 'scan-search',     labelZh: '症狀紀錄',  labelEn: 'Symptoms' },
+      { page: 'medications', icon: 'pill',            labelZh: '藥物打卡',  labelEn: 'Medication' },
+      { page: 'vitals',      icon: 'activity',        labelZh: '生理紀錄',  labelEn: 'Vitals' },
+      { page: 'emotions',    icon: 'heart-handshake', labelZh: '情緒紀錄',  labelEn: 'Emotion' },
+      { page: 'diet',        icon: 'utensils-crossed',labelZh: '飲食紀錄',  labelEn: 'Diet' },
+      { page: 'memo',        icon: 'sticky-note',     labelZh: 'Memo',      labelEn: 'Memo' },
+    ];
+    function openQuickAddSheet() {
+      let sheet = document.getElementById('quickadd-sheet');
+      if (sheet) { sheet.classList.add('open'); return; }
+      // 第一次打開才建 DOM
+      const lang = (window.MDPIECE_I18N && window.MDPIECE_I18N.getLang && window.MDPIECE_I18N.getLang()) || 'zh-TW';
+      const itemsHtml = QUICK_ADD_OPTIONS.map(o => `
+        <button class="quickadd-item" type="button" onclick="closeQuickAddSheet(); navigateTo('${o.page}', null); setActiveMobileTab('${o.page}');">
+          <span class="quickadd-item-icon"><i data-lucide="${o.icon}" style="width:22px;height:22px"></i></span>
+          <span class="quickadd-item-label">${lang === 'en' ? o.labelEn : o.labelZh}</span>
+        </button>
+      `).join('');
+      sheet = document.createElement('div');
+      sheet.id = 'quickadd-sheet';
+      sheet.className = 'quickadd-sheet';
+      sheet.innerHTML = `
+        <div class="quickadd-backdrop" onclick="closeQuickAddSheet()"></div>
+        <div class="quickadd-panel" role="dialog" aria-label="快速紀錄選單">
+          <div class="quickadd-handle"></div>
+          <div class="quickadd-title">${lang === 'en' ? 'Record' : '今天要紀錄什麼？'}</div>
+          <div class="quickadd-grid">${itemsHtml}</div>
+          <button class="quickadd-cancel" type="button" onclick="closeQuickAddSheet()">${lang === 'en' ? 'Cancel' : '取消'}</button>
+        </div>
+      `;
+      document.body.appendChild(sheet);
+      requestAnimationFrame(() => sheet.classList.add('open'));
+      if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+    }
+    function closeQuickAddSheet() {
+      const sheet = document.getElementById('quickadd-sheet');
+      if (sheet) sheet.classList.remove('open');
     }
 
     function openMobileMore(btn) {
