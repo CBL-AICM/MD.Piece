@@ -97,3 +97,19 @@ def get_symptom_history(patient_id: str):
     sb = get_supabase()
     result = sb.table("symptoms_log").select("*").eq("patient_id", patient_id).order("created_at", desc=True).execute()
     return {"history": result.data}
+
+
+@router.delete("/history/{patient_id}/{log_id}")
+def delete_symptom_history(patient_id: str, log_id: str):
+    """刪除單筆症狀分析紀錄；patient_id 對得上才刪。"""
+    sb = get_supabase()
+    result = (
+        sb.table("symptoms_log")
+        .delete()
+        .eq("id", log_id)
+        .eq("patient_id", patient_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="找不到這筆紀錄或不屬於該病患")
+    return {"deleted": log_id}

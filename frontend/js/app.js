@@ -3043,14 +3043,38 @@ function loadSymptomAnalysisHistory() {
                 <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">${escapeHtml(date)}・建議 ${escapeHtml(dept)}</div>
               </div>
               <span style="font-size:0.78rem;font-weight:600;color:${u.color}">${u.label}</span>
+              <button type="button"
+                onclick="deleteSymptomHistoryItem('${escapeHtml(it.id || "")}')"
+                aria-label="刪除這筆紀錄"
+                title="刪除這筆紀錄"
+                style="background:none;border:none;cursor:pointer;padding:4px;color:var(--text-muted);display:inline-flex;align-items:center">
+                <i data-lucide="trash-2" style="width:16px;height:16px"></i>
+              </button>
             </div>
           </div>
         `;
       }).join("");
+      if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
     })
     .catch(() => {
       el.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem">無法載入歷史紀錄。</p>';
     });
+}
+
+async function deleteSymptomHistoryItem(logId) {
+  if (!logId) return;
+  if (!confirm("確定要刪除這筆分析紀錄？")) return;
+  const pid = getStablePatientId();
+  try {
+    const res = await fetch(`${API}/symptoms/history/${pid}/${logId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error("HTTP " + res.status + ": " + txt.slice(0, 200));
+    }
+    loadSymptomAnalysisHistory();
+  } catch (e) {
+    showToast("刪除失敗：" + (e.message || "未知錯誤"), "error");
+  }
 }
 
 // 舊 inline 版（保留向後相容；新獨立頁是 symptomsAnalyze 上方）
