@@ -8141,15 +8141,35 @@ async function dietSubmitLog() {
 function fetchDietTodayRecords() {
   var pid = getStablePatientId();
   if (!pid) return;
+  var box = document.getElementById('diet-today-list');
+  if (!box) return;
   var today = new Date();
   var d = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   var tz = today.getTimezoneOffset(); // 分鐘，UTC 西側為正
-  fetch(API + '/diet/records/' + encodeURIComponent(pid) + '?date=' + d + '&tz_offset=' + tz)
-    .then(function(r) { return r.json(); })
+  var url = API + '/diet/records/' + encodeURIComponent(pid) + '?date=' + d + '&tz_offset=' + tz;
+  box.innerHTML = '<p class="diet-empty">載入中…</p>';
+  fetch(url)
+    .then(function(r) {
+      if (!r.ok) {
+        return r.text().then(function(body) {
+          var snippet = (body || '').replace(/\s+/g, ' ').slice(0, 120);
+          throw new Error('HTTP ' + r.status + (snippet ? '：' + snippet : ''));
+        });
+      }
+      return r.text().then(function(text) {
+        try { return JSON.parse(text); }
+        catch (e) {
+          throw new Error('回應非 JSON：' + (text || '').slice(0, 120));
+        }
+      });
+    })
     .then(function(data) {
-      var box = document.getElementById('diet-today-list');
-      if (!box) return;
       var rows = (data && data.records) || [];
+      if (data && data.error) {
+        box.innerHTML = '<p class="diet-empty">讀取失敗：' + chatEscape(data.error) +
+          ' <button class="diet-retry-btn" type="button" onclick="fetchDietTodayRecords()">重試</button></p>';
+        return;
+      }
       if (!rows.length) {
         box.innerHTML = '<p class="diet-empty">今天還沒有紀錄。</p>';
         return;
@@ -8167,9 +8187,11 @@ function fetchDietTodayRecords() {
           + '</div>';
       }).join('');
     })
-    .catch(function() {
-      var box = document.getElementById('diet-today-list');
-      if (box) box.innerHTML = '<p class="diet-empty">讀取失敗</p>';
+    .catch(function(e) {
+      console.error('[diet] fetch today records failed:', e);
+      var msg = (e && e.message) ? e.message : '網路錯誤';
+      box.innerHTML = '<p class="diet-empty">讀取失敗：' + chatEscape(msg) +
+        ' <button class="diet-retry-btn" type="button" onclick="fetchDietTodayRecords()">重試</button></p>';
     });
 }
 
