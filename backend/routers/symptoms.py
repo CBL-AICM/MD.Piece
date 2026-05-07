@@ -56,6 +56,13 @@ async def analyze(body: SymptomAnalysisRequest):
             result = sb.table("patients").select("name,age,gender").eq("id", body.patient_id).execute()
             if result.data:
                 patient_info = result.data[0]
+            else:
+                # 匿名 demo 用戶 — 補一筆最小 patients 列，避免 symptoms_log FK 違反
+                try:
+                    sb.table("patients").insert({"id": body.patient_id, "name": "匿名", "age": 0}).execute()
+                except Exception as e2:
+                    import logging
+                    logging.getLogger(__name__).warning(f"建立匿名 patient 失敗（不阻擋分析）：{e2}")
         except Exception as e:
             # patients 表查不到 / RLS / DB offline 都不阻擋分析；patient_info 就空著
             import logging
