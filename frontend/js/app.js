@@ -1056,7 +1056,7 @@ function showPage(page) {
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
-    home, symptoms, doctors, records, medications, education,
+    home, symptoms, symptomsAnalyze, doctors, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet
   };
   // Page transition
@@ -1078,6 +1078,7 @@ function showPage(page) {
     if (page === "previsit") loadPrevisitPage();
     if (page === "emotions") loadEmotionsPage();
     if (page === "diet") loadDietPage();
+    if (page === "symptomsAnalyze") loadSymptomAnalysisHistory();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     // Render Lucide icons
@@ -1750,6 +1751,7 @@ function home() {
       </div>
       <div class="home-grid">
         ${homeCard('symptoms','scan-search',_T('home.card.symptoms.title'),_T('home.card.symptoms.desc'),'blue')}
+        ${homeCard('symptomsAnalyze','sparkles',_T('home.card.symptomsAnalyze.title'),_T('home.card.symptomsAnalyze.desc'),'rose')}
         ${homeCard('records','id-card',_T('home.card.records.title'),_T('home.card.records.desc'),'purple')}
         ${homeCard('doctors','stethoscope',_T('home.card.doctors.title'),_T('home.card.doctors.desc'),'rose')}
         ${homeCard('medications','pill',_T('home.card.medications.title'),_T('home.card.medications.desc'),'amber')}
@@ -2857,6 +2859,190 @@ function interpretBMI(v) {
   return '重度肥胖';
 }
 
+// ─── 症狀分析（獨立頁） ────────────────────────────────────
+//
+// 把症狀清單丟給 AI，回緊急程度 / 可能病因 / 建議科別 / 處置建議。
+// 來源 1：使用者直接打字（comma 分隔）
+// 來源 2：「從最近紀錄帶入」按鈕 — 從 getPeriodStats() 取近期 top symptoms
+// 顯示：urgency badge、conditions list、recommended dept、advice、disclaimer
+// 並列出 GET /symptoms/history/{patient_id} 的歷史分析
+
+function symptomsAnalyze() {
+  return `
+    <div class="card">
+      <h2>症狀分析</h2>
+      <p style="margin-top:8px;color:var(--text-dim)">把現在的症狀寫下來，AI 會幫你分析可能病因、緊急程度與建議就診科別。</p>
+      <p style="margin-top:4px;font-size:0.85rem;color:var(--text-muted)">⚠️ 結果僅供參考，<strong>不取代醫師診斷</strong>。如有嚴重不適請立即就醫或撥 119。</p>
+    </div>
+
+    <div class="card">
+      <h3>輸入症狀</h3>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+        <textarea id="symptom-analyze-input"
+          rows="3"
+          placeholder="例：頭痛, 發燒 38.5度, 喉嚨痛, 全身痠痛"
+          style="width:100%;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);font-family:inherit;resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="primary" onclick="runSymptomAnalysis()">
+            <i data-lucide="sparkles" style="width:14px;height:14px;vertical-align:middle"></i> 開始分析
+          </button>
+          <button class="secondary" onclick="fillSymptomsFromRecent()">
+            <i data-lucide="history" style="width:14px;height:14px;vertical-align:middle"></i> 從最近紀錄帶入
+          </button>
+          <button class="secondary" onclick="document.getElementById('symptom-analyze-input').value=''">
+            清空
+          </button>
+        </div>
+      </div>
+      <div id="symptom-analyze-result" style="margin-top:16px"></div>
+    </div>
+
+    <div class="card">
+      <h3><i data-lucide="clock" style="width:18px;height:18px;vertical-align:middle"></i> 分析歷史</h3>
+      <div id="symptom-analyze-history" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
+    </div>
+  `;
+}
+
+function _symptomUrgency(level) {
+  const map = {
+    emergency: { label: "🚨 緊急", color: "#d6457e", bg: "rgba(214,69,126,0.12)" },
+    high:      { label: "⚠️ 高",   color: "#e8889c", bg: "rgba(232,136,156,0.12)" },
+    medium:    { label: "● 中",    color: "#d49a55", bg: "rgba(212,154,85,0.12)" },
+    low:       { label: "● 低",    color: "#5b9fe8", bg: "rgba(91,159,232,0.12)" },
+  };
+  return map[level] || map.low;
+}
+
+function fillSymptomsFromRecent() {
+  try {
+    const stats = getPeriodStats();
+    const top = [];
+    for (const cid in stats.byCategory) {
+      const cat = findSymptomCat(cid);
+      if (cat) top.push({ name: cat.label || cat.name || cid, count: stats.byCategory[cid].count });
+    }
+    top.sort((a, b) => b.count - a.count);
+    const names = top.slice(0, 5).map(t => t.name);
+    if (!names.length) {
+      showToast("最近沒有症狀紀錄可帶入", "info");
+      return;
+    }
+    document.getElementById("symptom-analyze-input").value = names.join(", ");
+  } catch (e) {
+    showToast("帶入失敗", "error");
+  }
+}
+
+async function runSymptomAnalysis() {
+  const input = document.getElementById("symptom-analyze-input").value;
+  if (!input.trim()) {
+    showToast("請先輸入症狀", "info");
+    return;
+  }
+  const symptoms = input.split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+  if (!symptoms.length) {
+    showToast("請輸入有效的症狀", "info");
+    return;
+  }
+  const el = document.getElementById("symptom-analyze-result");
+  el.innerHTML =
+    '<div style="text-align:center;padding:20px;color:var(--text-muted)">' +
+    '<div class="loading-spinner"></div>' +
+    '<p style="margin-top:8px">AI 分析中... 約 5-15 秒</p>' +
+    '</div>';
+
+  const pid = getStablePatientId();
+  try {
+    const res = await fetch(`${API}/symptoms/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symptoms, patient_id: pid }),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error("HTTP " + res.status + ": " + txt.slice(0, 200));
+    }
+    const data = await res.json();
+    el.innerHTML = renderSymptomAnalysis(data);
+    if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+    // 重新載入歷史
+    loadSymptomAnalysisHistory();
+  } catch (e) {
+    el.innerHTML =
+      '<div style="padding:14px;background:rgba(232,136,156,0.1);border-left:3px solid var(--danger);border-radius:var(--radius-sm)">' +
+      '<strong>分析失敗</strong><br>' +
+      '<span style="font-size:0.85rem;color:var(--text-muted)">' + escapeHtml(e.message || "未知錯誤") + '</span>' +
+      '</div>';
+  }
+}
+
+function renderSymptomAnalysis(data) {
+  const u = _symptomUrgency(data.urgency);
+  const conditions = (data.conditions || [])
+    .map(c => `<li><strong>${escapeHtml(c.name || "")}</strong>${c.likelihood ? ' — 可能性：' + escapeHtml(c.likelihood) : ''}</li>`)
+    .join("");
+
+  return `
+    <div style="padding:16px;background:${u.bg};border-left:4px solid ${u.color};border-radius:var(--radius-sm);margin-bottom:12px">
+      <div style="font-weight:600;font-size:1.05rem;color:${u.color}">緊急程度：${u.label}</div>
+    </div>
+    <div style="display:grid;gap:14px">
+      <div>
+        <h4 style="margin:0 0 6px;font-size:0.95rem">可能病因</h4>
+        <ul style="margin:0;padding-left:20px;line-height:1.7">${conditions || '<li>需要醫師進一步評估</li>'}</ul>
+      </div>
+      <div>
+        <h4 style="margin:0 0 6px;font-size:0.95rem">建議就診科別</h4>
+        <p style="margin:0;color:var(--text)">${escapeHtml(data.recommended_department || "家醫科")}</p>
+      </div>
+      <div>
+        <h4 style="margin:0 0 6px;font-size:0.95rem">建議</h4>
+        <p style="margin:0;line-height:1.7;color:var(--text)">${escapeHtml(data.advice || "")}</p>
+      </div>
+      <div style="padding:10px 12px;background:rgba(255,255,255,0.05);border:1px dashed var(--border-glass);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--text-muted)">
+        ${escapeHtml(data.disclaimer || "此分析僅供參考，不構成醫療診斷。如有不適請立即就醫。")}
+      </div>
+    </div>
+  `;
+}
+
+function loadSymptomAnalysisHistory() {
+  const pid = getStablePatientId();
+  const el = document.getElementById("symptom-analyze-history");
+  if (!el) return;
+  fetch(`${API}/symptoms/history/${pid}`)
+    .then(r => r.ok ? r.json() : { history: [] })
+    .then(data => {
+      const items = (data.history || []).slice(0, 5);
+      if (!items.length) {
+        el.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem">尚無分析紀錄。完成第一次分析後會出現在這裡。</p>';
+        return;
+      }
+      el.innerHTML = items.map(it => {
+        const sx = (it.symptoms || []).join("、");
+        const u = _symptomUrgency((it.ai_response || {}).urgency);
+        const dept = (it.ai_response || {}).recommended_department || "—";
+        const date = it.created_at ? new Date(it.created_at).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+        return `
+          <div style="padding:12px;background:var(--bg-glass);border-radius:var(--radius-sm);margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:0.9rem;color:var(--text)">${escapeHtml(sx)}</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">${escapeHtml(date)}・建議 ${escapeHtml(dept)}</div>
+              </div>
+              <span style="font-size:0.78rem;font-weight:600;color:${u.color}">${u.label}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    })
+    .catch(() => {
+      el.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem">無法載入歷史紀錄。</p>';
+    });
+}
+
+// 舊 inline 版（保留向後相容；新獨立頁是 symptomsAnalyze 上方）
 async function analyzeSymptoms() {
   const input = document.getElementById("symptom-input").value;
   if (!input.trim()) return;
