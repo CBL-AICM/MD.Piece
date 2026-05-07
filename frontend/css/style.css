@@ -516,7 +516,7 @@ body {
   --app-shadow:     0 4px 0 rgba(13,25,42,0.55);
   --app-glow:       rgba(108,240,216,0.5);
   --app-chip-text:  #0B1F25;   /* dark text on light chips */
-  --heading-fg:     #B0F4E5;   /* mint — bright heading accent on denim */
+  --heading-fg:     #B7C0AF;   /* 薄荷奶咖 #2 — sage heading accent */
 }
 #app-wrapper[data-theme="light"] {
   --app-bg:         #FBF6EC;   /* warm cream wall */
@@ -536,7 +536,7 @@ body {
   --app-shadow:     2px 2px 0 #5C3A32;
   --app-glow:       rgba(201,127,75,0.35);
   --app-chip-text:  #5C3A32;   /* warm brown text on light chips */
-  --heading-fg:     #2E5A7B;   /* deep slate blue — dark heading accent on cream, distinct from warm brown body */
+  --heading-fg:     #B7C0AF;   /* 薄荷奶咖 #2 — sage heading accent */
 }
 
 /* Body grid background — only when app is shown */
@@ -1414,14 +1414,14 @@ button.secondary:hover {
 .ai-result-card h4 {
   margin-top: 14px;
   margin-bottom: 6px;
-  color: var(--heading-fg, var(--text));
+  color: #B7C0AF;            /* 薄荷奶咖 #2 — sage heading */
   font-weight: 700;
 }
 
 .ai-result-card ul {
   padding-left: 20px;
   margin: 4px 0;
-  color: var(--app-text, var(--text));
+  color: #594842;            /* 薄荷奶咖 #1 — dark mocha body */
 }
 
 .ai-result-card li { margin: 4px 0; }
