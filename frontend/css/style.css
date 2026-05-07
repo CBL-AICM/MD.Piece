@@ -536,7 +536,7 @@ body {
   --app-shadow:     2px 2px 0 #5C3A32;
   --app-glow:       rgba(201,127,75,0.35);
   --app-chip-text:  #5C3A32;   /* warm brown text on light chips */
-  --heading-fg:     #7A3F1A;   /* deep caramel — dark heading accent on cream */
+  --heading-fg:     #2E5A7B;   /* deep slate blue — dark heading accent on cream, distinct from warm brown body */
 }
 
 /* Body grid background — only when app is shown */
