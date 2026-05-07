@@ -2934,6 +2934,7 @@ function fillSymptomsFromRecent() {
   }
 }
 
+var _saTypingTimer = null;
 async function runSymptomAnalysis() {
   const input = document.getElementById("symptom-analyze-input").value;
   if (!input.trim()) {
@@ -2948,9 +2949,17 @@ async function runSymptomAnalysis() {
   const el = document.getElementById("symptom-analyze-result");
   el.innerHTML =
     '<div style="text-align:center;padding:20px;color:var(--text-muted)">' +
-    '<div class="loading-spinner"></div>' +
-    '<p style="margin-top:8px">AI 分析中... 約 5-15 秒</p>' +
+    '<div id="sa-typing-mascot" style="display:flex;justify-content:center">' + chatMascotSvg('typing', 0) + '</div>' +
+    '<p style="margin-top:8px">小禾正在分析... 約 5-15 秒</p>' +
     '</div>';
+  if (_saTypingTimer) { clearInterval(_saTypingTimer); _saTypingTimer = null; }
+  let _saFrame = 0;
+  _saTypingTimer = setInterval(() => {
+    const w = document.getElementById('sa-typing-mascot');
+    if (!w) { clearInterval(_saTypingTimer); _saTypingTimer = null; return; }
+    _saFrame = (_saFrame + 1) % 2;
+    w.innerHTML = chatMascotSvg('typing', _saFrame);
+  }, 140);
 
   const pid = getStablePatientId();
   try {
@@ -2964,11 +2973,13 @@ async function runSymptomAnalysis() {
       throw new Error("HTTP " + res.status + ": " + txt.slice(0, 200));
     }
     const data = await res.json();
+    if (_saTypingTimer) { clearInterval(_saTypingTimer); _saTypingTimer = null; }
     el.innerHTML = renderSymptomAnalysis(data);
     if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
     // 重新載入歷史
     loadSymptomAnalysisHistory();
   } catch (e) {
+    if (_saTypingTimer) { clearInterval(_saTypingTimer); _saTypingTimer = null; }
     el.innerHTML =
       '<div style="padding:14px;background:rgba(232,136,156,0.1);border-left:3px solid var(--danger);border-radius:var(--radius-sm)">' +
       '<strong>分析失敗</strong><br>' +
