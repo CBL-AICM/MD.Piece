@@ -1412,14 +1412,14 @@ button.secondary:hover {
 .ai-result-card h4 {
   margin-top: 14px;
   margin-bottom: 6px;
-  color: var(--accent);
-  font-weight: 600;
+  color: var(--app-text, var(--text));
+  font-weight: 700;
 }
 
 .ai-result-card ul {
   padding-left: 20px;
   margin: 4px 0;
-  color: var(--text-dim);
+  color: var(--app-text, var(--text));
 }
 
 .ai-result-card li { margin: 4px 0; }
