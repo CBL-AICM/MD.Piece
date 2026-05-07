@@ -48,13 +48,18 @@ async def analyze(body: SymptomAnalysisRequest):
     if not body.symptoms:
         raise HTTPException(status_code=400, detail="請提供至少一個症狀")
 
-    # 如果有 patient_id，取得病患資料作為參考
+    # 如果有 patient_id，取得病患資料作為參考（DB 失敗就略過，不擋分析）
     patient_info = None
     if body.patient_id:
-        sb = get_supabase()
-        result = sb.table("patients").select("name,age,gender").eq("id", body.patient_id).execute()
-        if result.data:
-            patient_info = result.data[0]
+        try:
+            sb = get_supabase()
+            result = sb.table("patients").select("name,age,gender").eq("id", body.patient_id).execute()
+            if result.data:
+                patient_info = result.data[0]
+        except Exception as e:
+            # patients 表查不到 / RLS / DB offline 都不阻擋分析；patient_info 就空著
+            import logging
+            logging.getLogger(__name__).warning(f"取病患資料失敗（不阻擋分析）：{e}")
 
     # 呼叫 AI 分析
     ai_result = await analyze_symptoms(
@@ -63,14 +68,18 @@ async def analyze(body: SymptomAnalysisRequest):
         patient_gender=patient_info.get("gender") if patient_info else None,
     )
 
-    # 記錄到 symptoms_log
+    # 記錄到 symptoms_log（FK 缺失 / RLS / 表沒建都不該擋住分析回傳）
     if body.patient_id:
-        sb = get_supabase()
-        sb.table("symptoms_log").insert({
-            "patient_id": body.patient_id,
-            "symptoms": body.symptoms,
-            "ai_response": ai_result,
-        }).execute()
+        try:
+            sb = get_supabase()
+            sb.table("symptoms_log").insert({
+                "patient_id": body.patient_id,
+                "symptoms": body.symptoms,
+                "ai_response": ai_result,
+            }).execute()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"寫入 symptoms_log 失敗（不阻擋回傳）：{e}")
 
     return ai_result
 
