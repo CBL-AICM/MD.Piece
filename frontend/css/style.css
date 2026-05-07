@@ -9535,6 +9535,17 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
 .diet-record-time { font-size: 0.82rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 
 .diet-empty { color: var(--text-dim); font-size: 0.9rem; margin: 4px 0; }
+.diet-retry-btn {
+  margin-left: 8px;
+  padding: 2px 10px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border, rgba(0,0,0,.15));
+  background: transparent;
+  color: inherit;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.diet-retry-btn:hover { background: rgba(0,0,0,.05); }
 
 /* 吃什麼神器 */
 .diet-pick-card {
