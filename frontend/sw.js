@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v57-symptoms-label";
+const CACHE_VERSION = "mdpiece-v58-symptom-analyze";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=symptoms-label",
-  "/js/i18n.js?v=symptoms-label",
-  "/js/app.js?v=symptoms-label",
+  "/css/style.css?v=symptom-analyze",
+  "/js/i18n.js?v=symptom-analyze",
+  "/js/app.js?v=symptom-analyze",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

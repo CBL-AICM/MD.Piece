@@ -53,6 +53,7 @@
 
       // sidebar nav
       'nav.symptoms': '症狀紀錄',
+      'nav.symptomsAnalyze': '症狀分析',
       'nav.medications': '藥物紀錄',
       'nav.vitals': '生理紀錄',
       'nav.emotions': '情緒電力',
@@ -164,6 +165,8 @@
       'home.section.label': '功能拼圖',
       'home.card.symptoms.title': '症狀紀錄',
       'home.card.symptoms.desc': '今日症狀打卡與近期趨勢',
+      'home.card.symptomsAnalyze.title': '症狀分析',
+      'home.card.symptomsAnalyze.desc': 'AI 釐清可能病因與就診科別',
       'home.card.records.title': '我的基本資料',
       'home.card.records.desc': '性別、過敏、慢性病… 看診時帶著走',
       'home.card.doctors.title': '醫師列表',
@@ -457,6 +460,7 @@
       'auth.avatar.tooltip': 'Click to upload avatar',
 
       'nav.symptoms': 'Symptoms',
+      'nav.symptomsAnalyze': 'Symptom Analysis',
       'nav.medications': 'Medications',
       'nav.vitals': 'Vitals',
       'nav.emotions': 'Mood Battery',
@@ -564,6 +568,8 @@
       'home.section.label': 'Feature Pieces',
       'home.card.symptoms.title': 'Symptom Record',
       'home.card.symptoms.desc': "Today's check-in & recent trends",
+      'home.card.symptomsAnalyze.title': 'Symptom Analysis',
+      'home.card.symptomsAnalyze.desc': 'AI insights on possible causes & specialty',
       'home.card.records.title': 'My Profile',
       'home.card.records.desc': 'Gender, allergies, chronic conditions — bring them to your visit',
       'home.card.doctors.title': 'Doctor List',
