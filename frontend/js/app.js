@@ -2989,16 +2989,16 @@ function renderSymptomAnalysis(data) {
     </div>
     <div style="display:grid;gap:14px">
       <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem">可能病因</h4>
-        <ul style="margin:0;padding-left:20px;line-height:1.7">${conditions || '<li>需要醫師進一步評估</li>'}</ul>
+        <h4 style="margin:0 0 6px;font-size:0.95rem;color:var(--accent);font-weight:600">可能病因</h4>
+        <ul style="margin:0;padding-left:20px;line-height:1.7;color:var(--app-text,var(--text))">${conditions || '<li>需要醫師進一步評估</li>'}</ul>
       </div>
       <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem">建議就診科別</h4>
-        <p style="margin:0;color:var(--text)">${escapeHtml(data.recommended_department || "家醫科")}</p>
+        <h4 style="margin:0 0 6px;font-size:0.95rem;color:var(--accent);font-weight:600">建議就診科別</h4>
+        <p style="margin:0;color:var(--app-text,var(--text))">${escapeHtml(data.recommended_department || "家醫科")}</p>
       </div>
       <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem">建議</h4>
-        <p style="margin:0;line-height:1.7;color:var(--text)">${escapeHtml(data.advice || "")}</p>
+        <h4 style="margin:0 0 6px;font-size:0.95rem;color:var(--accent);font-weight:600">建議</h4>
+        <p style="margin:0;line-height:1.7;color:var(--app-text,var(--text))">${escapeHtml(data.advice || "")}</p>
       </div>
       <div style="padding:10px 12px;background:rgba(255,255,255,0.05);border:1px dashed var(--border-glass);border-radius:var(--radius-sm);font-size:0.8rem;color:var(--text-muted)">
         ${escapeHtml(data.disclaimer || "此分析僅供參考，不構成醫療診斷。如有不適請立即就醫。")}
