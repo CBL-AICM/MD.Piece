@@ -516,6 +516,7 @@ body {
   --app-shadow:     0 4px 0 rgba(13,25,42,0.55);
   --app-glow:       rgba(108,240,216,0.5);
   --app-chip-text:  #0B1F25;   /* dark text on light chips */
+  --heading-fg:     #B0F4E5;   /* mint — bright heading accent on denim */
 }
 #app-wrapper[data-theme="light"] {
   --app-bg:         #FBF6EC;   /* warm cream wall */
@@ -535,6 +536,7 @@ body {
   --app-shadow:     2px 2px 0 #5C3A32;
   --app-glow:       rgba(201,127,75,0.35);
   --app-chip-text:  #5C3A32;   /* warm brown text on light chips */
+  --heading-fg:     #7A3F1A;   /* deep caramel — dark heading accent on cream */
 }
 
 /* Body grid background — only when app is shown */
@@ -1412,7 +1414,7 @@ button.secondary:hover {
 .ai-result-card h4 {
   margin-top: 14px;
   margin-bottom: 6px;
-  color: var(--app-text, var(--text));
+  color: var(--heading-fg, var(--text));
   font-weight: 700;
 }
 
