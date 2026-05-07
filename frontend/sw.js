@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v56-tesseract-ocr";
+const CACHE_VERSION = "mdpiece-v57-symptoms-label";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=tesseract-ocr",
-  "/js/i18n.js?v=tesseract-ocr",
-  "/js/app.js?v=tesseract-ocr",
+  "/css/style.css?v=symptoms-label",
+  "/js/i18n.js?v=symptoms-label",
+  "/js/app.js?v=symptoms-label",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
