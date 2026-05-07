@@ -668,8 +668,7 @@ function previsit() {
     + '  </section>'
     + ''
     + '  <p class="pv-disclaimer"><i data-lucide="info"></i> 本報告由 AI 整理你輸入的紀錄，僅供與醫師溝通參考，不取代醫師診斷。</p>'
-    + '</section>'
-    + pushHubBlock();
+    + '</section>';
 }
 
 // ─── 診前報告 (Pre-consultation Report) ──────────────────────
@@ -702,9 +701,6 @@ function loadPrevisitPage() {
     .catch(function() {
       previsitRenderReportError();
     });
-
-  // 載入「推送給醫師」區塊（醫師清單 + 推送歷史）
-  if (typeof loadPushHubBlock === 'function') loadPushHubBlock();
 }
 
 function previsitRenderChecklist(data) {
@@ -1045,7 +1041,7 @@ const pageSlugForTerminal = {
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', chat: 'med-chat', account: 'account',
   settings: 'settings', diet: 'diet',
-  records: 'records', doctors: 'doctors'
+  records: 'records'
 };
 
 // Track the current page so we can re-render on language switch
@@ -1056,7 +1052,7 @@ function showPage(page) {
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
-    home, symptoms, symptomsAnalyze, doctors, records, medications, education,
+    home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet
   };
   // Page transition
@@ -1066,7 +1062,6 @@ function showPage(page) {
     app.innerHTML = pages[page]?.() || "";
     // 頁面載入後的初始化
     if (page === "home") loadHomePage();
-    if (page === "doctors") loadDoctors();
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
     if (page === "story") loadStoryPage();
@@ -1099,8 +1094,6 @@ window.addEventListener('mdpiece-lang-change', function () {
 
 // ─── 登入 / 註冊 ───────────────────────────────────────────
 
-let _authRole = 'patient';
-let _loginRole = 'patient';
 let _regAvatarDataUrl = '';
 
 function showIdCardRegister() {
@@ -1130,25 +1123,6 @@ function switchAuthTab(tab) {
   document.getElementById('login-error').hidden = true;
   document.getElementById('register-error').hidden = true;
   if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function selectAuthRole(role) {
-  _authRole = role;
-  document.querySelectorAll('.auth-role-btn[data-role]').forEach(b => {
-    b.classList.toggle('selected', b.dataset.role === role);
-  });
-  const field = document.getElementById('reg-doctor-key-field');
-  if (field) field.hidden = role !== 'doctor';
-}
-
-function selectLoginRole(role) {
-  _loginRole = role;
-  document.querySelectorAll('.auth-role-btn[data-login-role]').forEach(b => {
-    b.classList.toggle('selected', b.dataset.loginRole === role);
-  });
-  const field = document.getElementById('login-doctor-key-field');
-  if (field) field.hidden = role !== 'doctor';
-  document.getElementById('login-error').hidden = true;
 }
 
 function onRegAvatarPicked(e) {
@@ -1210,12 +1184,7 @@ function showAuthError(panel, msg) {
 async function submitLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
-  const doctor_key = document.getElementById('login-doctor-key').value.trim();
   if (!username || !password) return;
-  if (_loginRole === 'doctor' && !doctor_key) {
-    showAuthError('login', '請輸入醫師通行碼');
-    return;
-  }
   const btn = document.getElementById('login-submit');
   const original = btn.innerHTML;
   btn.disabled = true;
@@ -1226,28 +1195,14 @@ async function submitLogin() {
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username, password,
-        doctor_key: _loginRole === 'doctor' ? doctor_key : null,
-      })
+      body: JSON.stringify({ username, password })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      const detail = err.detail || '登入失敗';
-      if (detail.indexOf('醫師') >= 0 && detail.indexOf('通行碼') >= 0) {
-        if (_loginRole !== 'doctor') selectLoginRole('doctor');
-        showAuthError('login', '此帳號為醫師身份，請輸入醫師通行碼');
-        const keyInput = document.getElementById('login-doctor-key');
-        if (keyInput) { keyInput.focus(); keyInput.select(); }
-        btn.disabled = false;
-        btn.innerHTML = original;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        return;
-      }
-      throw new Error(detail);
+      throw new Error(err.detail || '登入失敗');
     }
     const user = await res.json();
-    finishAuth(user);
+    finishAuth(user, { fromRegister: false });
   } catch (e) {
     showAuthError('login', e.message || '登入失敗，請稍後再試');
     btn.disabled = false;
@@ -1271,12 +1226,6 @@ async function submitRegister() {
     return;
   }
 
-  const doctor_key = document.getElementById('reg-doctor-key').value.trim();
-  if (_authRole === 'doctor' && !doctor_key) {
-    showAuthError('register', '請輸入醫師通行碼');
-    return;
-  }
-
   const btn = document.getElementById('register-submit');
   const original = btn.innerHTML;
   btn.disabled = true;
@@ -1286,9 +1235,8 @@ async function submitRegister() {
 
   const payload = {
     username, password, nickname,
-    role: _authRole,
+    role: 'patient',
     avatar_url: _regAvatarDataUrl || null,
-    doctor_key: _authRole === 'doctor' ? doctor_key : null,
   };
 
   try {
@@ -1302,7 +1250,7 @@ async function submitRegister() {
       throw new Error(err.detail || '註冊失敗');
     }
     const user = await res.json();
-    finishAuth(user);
+    finishAuth(user, { fromRegister: true });
   } catch (e) {
     showAuthError('register', e.message || '註冊失敗，請稍後再試');
     btn.disabled = false;
@@ -1311,15 +1259,10 @@ async function submitRegister() {
   }
 }
 
-function finishAuth(user) {
+function finishAuth(user, opts) {
+  const fromRegister = !!(opts && opts.fromRegister);
   if (user.username) {
     try { localStorage.setItem('mdpiece_last_username', user.username); } catch {}
-  }
-  if (user.role === 'doctor') {
-    try { localStorage.setItem('mdp.doctorUser', JSON.stringify(user)); } catch {}
-    try { localStorage.removeItem('mdpiece_user'); } catch {}
-    window.location.assign('/doctor/');
-    return;
   }
   setCurrentUser(user);
   const overlay = document.getElementById('register-overlay');
@@ -1327,7 +1270,7 @@ function finishAuth(user) {
   setTimeout(() => {
     overlay.style.display = 'none';
     document.getElementById('app-wrapper').classList.add('show');
-    showPage('home');
+    showPage(fromRegister ? 'records' : 'home');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }, 250);
 }
@@ -1343,8 +1286,8 @@ function switchAccount() {
 
 function accountPage() {
   const u = getCurrentUser() || {};
-  const roleLabel = u.role === 'doctor' ? '醫師' : '患者';
-  const roleIcon = u.role === 'doctor' ? 'stethoscope' : 'heart-pulse';
+  const roleLabel = '患者';
+  const roleIcon = 'heart-pulse';
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
     : `<img src="icons/xiaohe.jpg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
@@ -1753,7 +1696,6 @@ function home() {
         ${homeCard('symptoms','scan-search',_T('home.card.symptoms.title'),_T('home.card.symptoms.desc'),'blue')}
         ${homeCard('symptomsAnalyze','sparkles',_T('home.card.symptomsAnalyze.title'),_T('home.card.symptomsAnalyze.desc'),'rose')}
         ${homeCard('records','id-card',_T('home.card.records.title'),_T('home.card.records.desc'),'purple')}
-        ${homeCard('doctors','stethoscope',_T('home.card.doctors.title'),_T('home.card.doctors.desc'),'rose')}
         ${homeCard('medications','pill',_T('home.card.medications.title'),_T('home.card.medications.desc'),'amber')}
         ${homeCard('education','book-heart',_T('home.card.education.title'),_T('home.card.education.desc'),'teal')}
         ${homeCard('chat','message-circle-heart',_T('home.card.chat.title'),_T('home.card.chat.desc'),'rose')}
@@ -3093,62 +3035,6 @@ async function quickAdvice() {
   const data = await res.json();
   document.getElementById("analysis-result").innerHTML =
     `<div class="advice-box"><strong>${data.symptom}</strong>：${data.advice}</div>`;
-}
-
-// ─── 醫師列表 ──────────────────────────────────────────────
-
-function doctors() {
-  return `
-    <div class="card">
-      <h2>${_T('doctors.add.title')}</h2>
-      <input id="d-name" placeholder="${_T('doctors.placeholder.name')}" />
-      <input id="d-specialty" placeholder="${_T('doctors.placeholder.specialty')}" />
-      <input id="d-phone" placeholder="${_T('doctors.placeholder.phone')}" />
-      <button class="primary" onclick="addDoctor()">${_T('doctors.add.submit')}</button>
-    </div>
-    <div class="card">
-      <h2>${_T('doctors.list.title')}</h2>
-      <div id="doctor-list"><p>${_T('doctors.list.loading')}</p></div>
-    </div>`;
-}
-
-async function loadDoctors() {
-  const res = await fetch(`${API}/doctors/`);
-  const data = await res.json();
-  const el = document.getElementById("doctor-list");
-  if (!data.doctors?.length) {
-    el.innerHTML = `<p>${_T('doctors.list.empty')}</p>`;
-    return;
-  }
-  el.innerHTML = data.doctors.map(d => `
-    <div class="record-card">
-      <strong>${d.name}</strong> — ${d.specialty}
-      ${d.phone ? `<span style="color:var(--text-dim)"> | ${d.phone}</span>` : ""}
-      <button class="btn-delete" onclick="deleteDoctor('${d.id}')">${_T('doctors.delete')}</button>
-    </div>
-  `).join("");
-}
-
-async function addDoctor() {
-  const name = document.getElementById("d-name").value;
-  const specialty = document.getElementById("d-specialty").value;
-  const phone = document.getElementById("d-phone").value || undefined;
-  if (!name || !specialty) return;
-  await fetch(`${API}/doctors/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, specialty, phone }),
-  });
-  loadDoctors();
-  document.getElementById("d-name").value = "";
-  document.getElementById("d-specialty").value = "";
-  document.getElementById("d-phone").value = "";
-}
-
-async function deleteDoctor(id) {
-  if (!confirm(_T('doctors.delete.confirm'))) return;
-  await fetch(`${API}/doctors/${id}`, { method: "DELETE" });
-  loadDoctors();
 }
 
 // ─── 我的基本資料 ──────────────────────────────────────────
@@ -6614,307 +6500,6 @@ function labsRenderResult(data, input) {
       : '') +
     '<p class="labs-result-disclaimer">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-
-// ─── 診前報告 / 推送給醫師 ─────────────────────────────────
-// 患者把近期紀錄推送給醫師端：使用既有 /doctor-notes/ 表，
-// tags = ["patient_push", <category>]，doctor_id 留空（任一醫師可看）
-
-var PUSH_CATS = [
-  { key: 'symptoms', label: '症狀記錄', icon: 'scan-search', desc: '近 7 天的症狀分析與打卡' },
-  { key: 'medications', label: '用藥情況', icon: 'pill', desc: '使用中的藥物 + 服藥率' },
-  { key: 'emotions', label: '情緒電力', icon: 'battery-charging', desc: '近 7 天每日情緒電量' },
-  { key: 'vitals', label: '生理紀錄', icon: 'activity', desc: '近期血壓、血糖、體重等' },
-  { key: 'labs', label: '檢驗報告', icon: 'trending-up', desc: '近期檢驗值與 AI 解讀' },
-];
-
-function getMyDoctor() {
-  try { return JSON.parse(localStorage.getItem('mdpiece_my_doctor')) || null; }
-  catch { return null; }
-}
-function setMyDoctor(d) {
-  if (d) localStorage.setItem('mdpiece_my_doctor', JSON.stringify(d));
-  else localStorage.removeItem('mdpiece_my_doctor');
-}
-
-// 推送給醫師區塊 — 注入在 main 的 previsit() 頁面尾巴
-function pushHubBlock() {
-  return (
-    '<section class="previsit-wrap" style="margin-top:24px">' +
-      '<header class="previsit-head">' +
-        '<h2><i data-lucide="send" style="width:22px;height:22px"></i> 推送給醫師</h2>' +
-        '<p>把近一週的紀錄推給主治醫師，他在醫師端就能看到你特別想他注意的事情。</p>' +
-      '</header>' +
-      '<div class="previsit-doctor-row" id="previsit-doctor-row">載入醫師清單中…</div>' +
-      '<div class="previsit-grid">' +
-        PUSH_CATS.map(function(c) {
-          return '<div class="previsit-card" id="push-card-' + c.key + '">' +
-            '<div class="previsit-card-head">' +
-              '<i data-lucide="' + c.icon + '" style="width:20px;height:20px"></i>' +
-              '<div>' +
-                '<h3>' + c.label + '</h3>' +
-                '<p>' + c.desc + '</p>' +
-              '</div>' +
-            '</div>' +
-            '<button class="previsit-push-btn" onclick="pushCategoryToDoctor(\'' + c.key + '\')">' +
-              '<i data-lucide="send" style="width:14px;height:14px"></i> 推送給醫師' +
-            '</button>' +
-            '<div class="previsit-status" id="push-status-' + c.key + '"></div>' +
-          '</div>';
-        }).join('') +
-      '</div>' +
-      '<div class="previsit-message">' +
-        '<h3><i data-lucide="message-square" style="width:18px;height:18px"></i> 想跟醫師說的話</h3>' +
-        '<textarea id="push-custom-text" rows="3" placeholder="例如：這週副作用比較明顯，希望可以調整劑量…"></textarea>' +
-        '<button class="previsit-push-btn" onclick="pushCustomMessageToDoctor()">' +
-          '<i data-lucide="send" style="width:14px;height:14px"></i> 送出留言' +
-        '</button>' +
-        '<div class="previsit-status" id="push-status-message"></div>' +
-      '</div>' +
-      '<div class="previsit-disclaimer">' +
-        '⚠ 推送的資料會出現在醫師端「患者推送」面板，僅供您的主治醫師臨床參考；' +
-        'MD.Piece 為 AI 輔助工具，不可作為診斷或醫療依據。' +
-      '</div>' +
-    '</section>'
-  );
-}
-
-function _pushSetStatus(key, text, type) {
-  var el = document.getElementById('push-status-' + key);
-  if (!el) return;
-  el.textContent = text;
-  el.className = 'previsit-status ' + (type ? 'previsit-status-' + type : '');
-}
-
-async function pushCategoryToDoctor(cat) {
-  var pid = getStablePatientId();
-  if (!pid) { showToast('請先登入', 'warning'); return; }
-  _pushSetStatus(cat, '收集資料中…', 'loading');
-  try {
-    var summary = await _buildCategorySummary(cat, pid);
-    if (!summary) {
-      _pushSetStatus(cat, '近 7 天沒有資料可推送', 'warning');
-      return;
-    }
-    var myDr = getMyDoctor();
-    var tags = ['patient_push', cat];
-    if (myDr && myDr.id) tags.push('dr_' + myDr.id);
-    await fetch(API + '/doctor-notes/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
-      body: JSON.stringify({
-        patient_id: pid,
-        doctor_id: myDr ? myDr.id : null,
-        content: summary,
-        tags: tags,
-      }),
-    }).then(function(r) {
-      if (!r.ok) throw new Error('推送失敗');
-    });
-    _pushSetStatus(cat, '✓ 已推送，剛剛 ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), 'ok');
-    showToast('已推送 ' + (PUSH_CATS.find(function(c) { return c.key === cat; }) || {}).label + ' 給醫師', 'success');
-  } catch (e) {
-    _pushSetStatus(cat, '推送失敗：' + (e.message || ''), 'error');
-  }
-}
-
-async function pushCustomMessageToDoctor() {
-  var pid = getStablePatientId();
-  if (!pid) { showToast('請先登入', 'warning'); return; }
-  var ta = document.getElementById('push-custom-text');
-  var text = (ta && ta.value || '').trim();
-  if (!text) { showToast('請先寫下想說的話', 'warning'); return; }
-  _pushSetStatus('message', '送出中…', 'loading');
-  try {
-    var myDr2 = getMyDoctor();
-    var tags2 = ['patient_push', 'message'];
-    if (myDr2 && myDr2.id) tags2.push('dr_' + myDr2.id);
-    await fetch(API + '/doctor-notes/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
-      body: JSON.stringify({
-        patient_id: pid,
-        doctor_id: myDr2 ? myDr2.id : null,
-        content: text,
-        tags: tags2,
-      }),
-    }).then(function(r) { if (!r.ok) throw new Error('送出失敗'); });
-    if (ta) ta.value = '';
-    _pushSetStatus('message', '✓ 已送出', 'ok');
-    showToast('留言已送給醫師', 'success');
-  } catch (e) {
-    _pushSetStatus('message', '送出失敗：' + (e.message || ''), 'error');
-  }
-}
-
-async function _buildCategorySummary(cat, pid) {
-  var pidQ = encodeURIComponent(pid);
-  if (cat === 'symptoms') {
-    var res = await fetch(API + '/symptoms/history/' + pidQ).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
-    var hist = res && res.history || [];
-    var since = Date.now() - 7 * 86400000;
-    var recent = hist.filter(function(x) { return new Date(x.created_at).getTime() >= since; });
-    if (!recent.length) return '';
-    var lines = ['【近 7 天症狀紀錄】共 ' + recent.length + ' 筆'];
-    recent.slice(0, 8).forEach(function(s) {
-      var d = (s.created_at || '').slice(0, 10);
-      var arr = Array.isArray(s.symptoms) ? s.symptoms.join('、') : (s.symptoms || '');
-      var ai = (s.ai_response && (s.ai_response.summary || s.ai_response.assessment)) || '';
-      lines.push('• ' + d + '：' + arr + (ai ? '（' + ai.slice(0, 60) + '）' : ''));
-    });
-    return lines.join('\n');
-  }
-  if (cat === 'medications') {
-    var meds = await fetch(API + '/medications/?patient_id=' + pidQ).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
-    var stats = await fetch(API + '/medications/stats?patient_id=' + pidQ + '&days=7').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
-    var active = ((meds && meds.medications) || []).filter(function(m) { return m.active !== 0; });
-    if (!active.length && !stats) return '';
-    var rate = stats && stats.summary && stats.summary.adherence_rate;
-    var lines = ['【近 7 天用藥情況】使用中藥物 ' + active.length + ' 種' + (rate != null ? '，服藥率 ' + rate + '%' : '')];
-    active.slice(0, 10).forEach(function(m) {
-      lines.push('• ' + m.name + (m.dosage ? '（' + m.dosage + '）' : '') + (m.frequency ? ' · ' + m.frequency : ''));
-    });
-    return lines.join('\n');
-  }
-  if (cat === 'emotions') {
-    var em = await fetch(API + '/emotions/trend?patient_id=' + pidQ + '&days=7').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
-    if (!em || !em.trend || !em.trend.length) return '';
-    var avg = em.average_score;
-    var avgPct = (avg != null) ? _moodPercent(avg) : null;
-    var lines = ['【近 7 天情緒電量】平均 ' + (avgPct != null ? avgPct + '%' : '—') + '，共 ' + em.total_records + ' 筆'];
-    em.trend.slice(-7).forEach(function(t) {
-      lines.push('• ' + t.date + '：' + t.score + ' 分');
-    });
-    return lines.join('\n');
-  }
-  if (cat === 'vitals') {
-    // vitals 端點不一定存在；用 localStorage 後備
-    try {
-      var raw = localStorage.getItem('mdpiece_vitals_v1');
-      var arr = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(arr) || !arr.length) return '';
-      var since = Date.now() - 7 * 86400000;
-      var recent = arr.filter(function(v) { return v.ts && new Date(v.ts).getTime() >= since; });
-      if (!recent.length) return '';
-      var lines = ['【近 7 天生理紀錄】共 ' + recent.length + ' 筆'];
-      recent.slice(0, 12).forEach(function(v) {
-        var d = (v.ts || '').slice(0, 10);
-        lines.push('• ' + d + '：' + (v.metric || '指標') + ' ' + (v.value || '') + (v.unit || ''));
-      });
-      return lines.join('\n');
-    } catch { return ''; }
-  }
-  if (cat === 'labs') {
-    var labs = await fetch(API + '/labs/?patient_id=' + pidQ).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
-    var arr = (labs && (labs.labs || labs.items)) || [];
-    if (!arr.length) return '';
-    var lines = ['【檢驗報告】共 ' + arr.length + ' 筆'];
-    arr.slice(0, 10).forEach(function(l) {
-      lines.push('• ' + (l.test_name || l.name || '檢驗') + '：' + (l.value || '') + ' ' + (l.unit || ''));
-    });
-    return lines.join('\n');
-  }
-  return '';
-}
-
-
-async function loadPushHubBlock() {
-  // 1. 醫師清單 + 當前綁定
-  var row = document.getElementById('previsit-doctor-row');
-  if (!row) return;
-  try {
-    var res = await fetch(API + '/auth/users');
-    var users = res.ok ? (await res.json()).users || [] : [];
-    var doctors = users.filter(function(u) { return u.role === 'doctor'; });
-    var current = getMyDoctor();
-    if (!doctors.length) {
-      row.innerHTML = '<p class="previsit-doctor-empty">系統中尚無醫師帳號，您仍可推送，所有醫師都會看得到。</p>';
-    } else {
-      var options = '<option value="">— 推送給所有醫師（公開）—</option>' +
-        doctors.map(function(d) {
-          var sel = current && current.id === d.id ? ' selected' : '';
-          return '<option value="' + d.id + '"' + sel + '>' +
-            escapeHtml(d.nickname || d.username) + '</option>';
-        }).join('');
-      row.innerHTML =
-        '<label class="previsit-doctor-label">' +
-          '<i data-lucide="stethoscope" style="width:16px;height:16px"></i>' +
-          '<span>主治醫師</span>' +
-        '</label>' +
-        '<select id="previsit-doctor-select" onchange="onMyDoctorChange(this)">' + options + '</select>' +
-        (current ? '<span class="previsit-doctor-bound">已綁定：' + escapeHtml(current.nickname || current.username) + '</span>' : '');
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-  } catch (e) {
-    row.innerHTML = '<p class="previsit-doctor-empty">無法載入醫師清單（' + escapeHtml(e.message || '') + '）</p>';
-  }
-  // 2. 推送歷史
-  loadPushHistory();
-}
-
-function onMyDoctorChange(sel) {
-  var id = sel.value;
-  if (!id) { setMyDoctor(null); showToast('已取消綁定', 'success'); return; }
-  // 查 user 物件
-  var name = sel.options[sel.selectedIndex].textContent;
-  setMyDoctor({ id: id, nickname: name });
-  showToast('已綁定主治醫師：' + name, 'success');
-  var bound = document.querySelector('.previsit-doctor-bound');
-  if (bound) bound.textContent = '已綁定：' + name;
-  else {
-    var row = document.getElementById('previsit-doctor-row');
-    if (row) {
-      var span = document.createElement('span');
-      span.className = 'previsit-doctor-bound';
-      span.textContent = '已綁定：' + name;
-      row.appendChild(span);
-    }
-  }
-}
-
-async function loadPushHistory() {
-  var pid = getStablePatientId();
-  if (!pid) return;
-  // 從 doctor_notes 抓含 patient_push 的紀錄
-  try {
-    var res = await fetch(API + '/doctor-notes/?patient_id=' + encodeURIComponent(pid));
-    var notes = res.ok ? (await res.json()).notes || [] : [];
-    var pushes = notes.filter(function(n) {
-      return Array.isArray(n.tags) && n.tags.indexOf('patient_push') >= 0;
-    });
-    var box = document.getElementById('push-history-list');
-    if (!box) {
-      // 動態插入容器
-      var wrap = document.querySelector('.previsit-wrap');
-      if (!wrap) return;
-      var div = document.createElement('div');
-      div.className = 'previsit-history';
-      div.innerHTML =
-        '<h3><i data-lucide="history" style="width:16px;height:16px"></i> 我推送過什麼</h3>' +
-        '<div id="push-history-list"></div>';
-      wrap.appendChild(div);
-      box = document.getElementById('push-history-list');
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-    if (!pushes.length) {
-      box.innerHTML = '<p class="previsit-empty">尚未推送過任何紀錄</p>';
-      return;
-    }
-    var labels = { symptoms: '症狀', medications: '用藥', emotions: '情緒', vitals: '生理', labs: '檢驗', message: '留言' };
-    box.innerHTML = pushes.slice(0, 20).map(function(n) {
-      var cat = (n.tags || []).find(function(t) { return t !== 'patient_push' && t.indexOf('dr_') !== 0; }) || 'message';
-      var when = (n.created_at || '').slice(0, 16).replace('T', ' ');
-      var preview = (n.content || '').slice(0, 80);
-      return '<div class="push-history-row">' +
-        '<span class="push-history-cat">' + (labels[cat] || cat) + '</span>' +
-        '<span class="push-history-when">' + when + '</span>' +
-        '<span class="push-history-preview">' + escapeHtml(preview) + (n.content && n.content.length > 80 ? '…' : '') + '</span>' +
-      '</div>';
-    }).join('');
-  } catch (e) {
-    /* ignore */
-  }
 }
 
 

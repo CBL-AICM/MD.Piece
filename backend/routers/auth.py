@@ -11,9 +11,6 @@ router = APIRouter()
 
 _USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,32}$")
 
-# 醫師通行碼：註冊／登入醫師帳號時必填
-_DOCTOR_VERIFICATION_KEY = os.getenv("DOCTOR_VERIFICATION_KEY", "310530")
-
 
 def _hash_password(password: str) -> str:
     salt = os.urandom(16)
@@ -49,17 +46,10 @@ def _public_user(row: dict) -> dict:
 
 @router.post("/register")
 def register(body: UserCreate):
-    if body.role not in ("doctor", "patient"):
-        raise HTTPException(status_code=400, detail="角色必須是 doctor 或 patient")
     if not _USERNAME_RE.match(body.username):
         raise HTTPException(status_code=400, detail="帳號格式不正確（3-32 字元，限英數字 _ . -）")
     if len(body.password) < 6:
         raise HTTPException(status_code=400, detail="密碼至少 6 個字元")
-    if body.role == "doctor":
-        if not body.doctor_key:
-            raise HTTPException(status_code=400, detail="醫師註冊需要通行碼")
-        if body.doctor_key != _DOCTOR_VERIFICATION_KEY:
-            raise HTTPException(status_code=403, detail="醫師通行碼錯誤")
 
     sb = get_supabase()
     existing = sb.table("users").select("id").eq("username", body.username).execute()
@@ -68,7 +58,7 @@ def register(body: UserCreate):
 
     payload = body.model_dump(exclude_none=True)
     payload.pop("password", None)
-    payload.pop("doctor_key", None)
+    payload["role"] = "patient"
     payload["password_hash"] = _hash_password(body.password)
 
     result = sb.table("users").insert(payload).execute()
@@ -84,11 +74,6 @@ def login(body: UserLogin):
     user = result.data[0]
     if not _verify_password(body.password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="密碼錯誤")
-    if user.get("role") == "doctor":
-        if not body.doctor_key:
-            raise HTTPException(status_code=403, detail="醫師登入需要通行碼")
-        if body.doctor_key != _DOCTOR_VERIFICATION_KEY:
-            raise HTTPException(status_code=403, detail="醫師通行碼錯誤")
     return _public_user(user)
 
 
