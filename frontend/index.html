@@ -143,18 +143,6 @@
 
         <!-- LOGIN PANEL -->
         <form class="auth-panel active" id="auth-panel-login" onsubmit="event.preventDefault(); submitLogin();">
-          <div class="auth-role-row">
-            <span class="auth-label" data-i18n="auth.label.role">身份</span>
-            <div class="auth-role-btns">
-              <button type="button" class="auth-role-btn selected" data-login-role="patient" onclick="selectLoginRole('patient')">
-                <i data-lucide="heart-pulse"></i> <span data-i18n="auth.role.patient">患者</span>
-              </button>
-              <button type="button" class="auth-role-btn" data-login-role="doctor" onclick="selectLoginRole('doctor')">
-                <i data-lucide="stethoscope"></i> <span data-i18n="auth.role.doctor">醫師</span>
-              </button>
-            </div>
-          </div>
-
           <label class="auth-field">
             <span class="auth-label" data-i18n="auth.label.username">帳號</span>
             <input id="login-username" type="text" autocomplete="username" placeholder="你的帳號" data-i18n-placeholder="auth.placeholder.username" maxlength="32" required />
@@ -162,10 +150,6 @@
           <label class="auth-field">
             <span class="auth-label" data-i18n="auth.label.password">密碼</span>
             <input id="login-password" type="password" autocomplete="current-password" placeholder="輸入密碼" data-i18n-placeholder="auth.placeholder.password" minlength="6" required />
-          </label>
-          <label class="auth-field" id="login-doctor-key-field" hidden>
-            <span class="auth-label" data-i18n="auth.label.doctorKey">醫師通行碼</span>
-            <input id="login-doctor-key" type="password" autocomplete="off" placeholder="輸入醫師通行碼" data-i18n-placeholder="auth.placeholder.doctorKey" />
           </label>
           <p class="auth-error" id="login-error" hidden></p>
           <button class="auth-submit" id="login-submit" type="submit">
@@ -191,23 +175,6 @@
               <button type="button" class="auth-avatar-clear" id="reg-avatar-clear" onclick="clearRegAvatar()" hidden data-i18n="auth.avatar.clear">移除</button>
             </div>
           </div>
-
-          <div class="auth-role-row">
-            <span class="auth-label" data-i18n="auth.label.role">身份</span>
-            <div class="auth-role-btns">
-              <button type="button" class="auth-role-btn selected" data-role="patient" onclick="selectAuthRole('patient')">
-                <i data-lucide="heart-pulse"></i> <span data-i18n="auth.role.patient">患者</span>
-              </button>
-              <button type="button" class="auth-role-btn" data-role="doctor" onclick="selectAuthRole('doctor')">
-                <i data-lucide="stethoscope"></i> <span data-i18n="auth.role.doctor">醫師</span>
-              </button>
-            </div>
-          </div>
-
-          <label class="auth-field" id="reg-doctor-key-field" hidden>
-            <span class="auth-label" data-i18n="auth.label.doctorKey">醫師通行碼</span>
-            <input id="reg-doctor-key" type="password" autocomplete="off" placeholder="輸入醫師通行碼" data-i18n-placeholder="auth.placeholder.doctorKey" />
-          </label>
 
           <label class="auth-field">
             <span class="auth-label" data-i18n="auth.label.nickname">暱稱</span>
@@ -572,12 +539,6 @@
       setTimeout(() => {
         landing.style.display = 'none';
         const user = getCurrentUser();
-        if (user && user.role === 'doctor') {
-          try { localStorage.setItem('mdp.doctorUser', JSON.stringify(user)); } catch (e) {}
-          try { localStorage.removeItem('mdpiece_user'); } catch (e) {}
-          window.location.assign('/doctor/');
-          return;
-        }
         if (user) {
           document.getElementById('app-wrapper').classList.add('show');
           setTopbarPageTitle('home');
@@ -611,7 +572,7 @@
       settings: 'settings',
       account: 'account',
       // legacy / fallback
-      records: 'records', doctors: 'doctors'
+      records: 'records'
     };
     // 年長版顯示用中文（CSS 在 senior 模式會把 prefix/ext 隱藏，只剩 page-title）
     const pageTitlesSenior = {
@@ -629,7 +590,7 @@
       chat: '醫起聊天',
       settings: '系統設定',
       account: '帳號設定',
-      records: '我的基本資料', doctors: '醫師列表'
+      records: '我的基本資料'
     };
 
     function setTopbarPageTitle(page) {

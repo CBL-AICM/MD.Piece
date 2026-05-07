@@ -107,41 +107,6 @@ async def delete_patient(patient_id: str) -> str:
     return data.get("message", "病患已刪除")
 
 
-# ─── 醫師工具 ──────────────────────────────────────────────
-
-@mcp.tool()
-async def get_doctors() -> str:
-    """取得所有醫師清單。"""
-    data = await api_get("/doctors/")
-    if data is None:
-        return "無法取得醫師資料，請確認 MD.Piece backend 是否已啟動。"
-    doctors = data.get("doctors", [])
-    if not doctors:
-        return "目前沒有任何醫師記錄。"
-    lines = []
-    for d in doctors:
-        lines.append(f"- {d['name']}（{d['specialty']}）ID: {d['id']}")
-    return "\n".join(lines)
-
-
-@mcp.tool()
-async def create_doctor(name: str, specialty: str, phone: str = "") -> str:
-    """建立新醫師。
-
-    Args:
-        name: 醫師姓名
-        specialty: 專科（例如：內科、外科、兒科）
-        phone: 電話（選填）
-    """
-    body = {"name": name, "specialty": specialty}
-    if phone:
-        body["phone"] = phone
-    data = await api_post("/doctors/", body)
-    if data is None:
-        return "建立醫師失敗，請確認 MD.Piece backend 是否已啟動。"
-    return f"醫師已建立：{data.get('name')}，專科：{data.get('specialty')}，ID: {data.get('id')}"
-
-
 # ─── 病歷工具 ──────────────────────────────────────────────
 
 @mcp.tool()
