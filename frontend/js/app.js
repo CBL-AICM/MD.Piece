@@ -5852,7 +5852,6 @@ function chat() {
     + '  </div>'
 
     + '  <div class="chat-suggest" id="chat-suggest">'
-    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我今天比較喘，要怎麼觀察？\')">今天比較喘</button>'
     + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'幫我把最近三天的不舒服整理成一段話\')">整理近況</button>'
     + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我有點焦慮，可以陪我說說話嗎？\')">陪我聊聊</button>'
     + '    <button type="button" class="chat-chip chat-chip-special" onclick="chatGenerateArticle()">'

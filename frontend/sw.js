@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v59-quickadd-sheet";
+const CACHE_VERSION = "mdpiece-v60-chat-chip";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=quickadd-sheet",
-  "/js/i18n.js?v=quickadd-sheet",
-  "/js/app.js?v=quickadd-sheet",
+  "/css/style.css?v=chat-chip",
+  "/js/i18n.js?v=chat-chip",
+  "/js/app.js?v=chat-chip",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
