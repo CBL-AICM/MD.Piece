@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v60-chat-chip";
+const CACHE_VERSION = "mdpiece-v61-mobile-disclaimer-wrap";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=chat-chip",
-  "/js/i18n.js?v=chat-chip",
-  "/js/app.js?v=chat-chip",
+  "/css/style.css?v=mobile-disclaimer-wrap",
+  "/js/i18n.js?v=mobile-disclaimer-wrap",
+  "/js/app.js?v=mobile-disclaimer-wrap",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
