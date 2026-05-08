@@ -397,6 +397,57 @@ function memoDelete(id) {
   memoRenderList();
 }
 
+function memoOpenLightbox(id) {
+  var memos = memoLoad();
+  var m = memos.find(function(x) { return x.id === id; });
+  if (!m) return;
+  // 已存在的 overlay 先關掉避免疊起來
+  var existing = document.getElementById("memo-lightbox");
+  if (existing) existing.remove();
+
+  var bodyHtml = "";
+  if (m.photo) {
+    bodyHtml += '<img class="memo-lb-photo" src="' + m.photo + '" alt="memo 照片" />';
+  }
+  if (m.text) {
+    bodyHtml += '<div class="memo-lb-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
+  }
+  var pill = m.forDoctor
+    ? '<span class="memo-pill memo-pill-doctor"><i data-lucide="stethoscope" style="width:12px;height:12px"></i> 給醫師</span>'
+    : '<span class="memo-pill memo-pill-self"><i data-lucide="user" style="width:12px;height:12px"></i> 自己</span>';
+
+  var overlay = document.createElement("div");
+  overlay.id = "memo-lightbox";
+  overlay.className = "memo-lightbox-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.innerHTML =
+    '<div class="memo-lightbox-card" onclick="event.stopPropagation()">' +
+      '<div class="memo-lightbox-meta">' +
+        pill +
+        '<span class="memo-time">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>' +
+        '<button class="memo-lightbox-close" onclick="memoCloseLightbox()" aria-label="關閉">' +
+          '<i data-lucide="x" style="width:18px;height:18px"></i>' +
+        '</button>' +
+      '</div>' +
+      '<div class="memo-lightbox-body">' + bodyHtml + '</div>' +
+    '</div>';
+  overlay.addEventListener("click", memoCloseLightbox);
+  document.body.appendChild(overlay);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.addEventListener("keydown", _memoLightboxEsc);
+}
+
+function memoCloseLightbox() {
+  var el = document.getElementById("memo-lightbox");
+  if (el) el.remove();
+  document.removeEventListener("keydown", _memoLightboxEsc);
+}
+
+function _memoLightboxEsc(e) {
+  if (e.key === "Escape") memoCloseLightbox();
+}
+
 function memoToggleDoctor(id) {
   var memos = memoLoad();
   var m = memos.find(function(x) { return x.id === id; });
@@ -479,7 +530,7 @@ function memoRenderList() {
             '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
           '</button>' +
         '</div>' +
-        '<div class="memo-item-body">' + bodyHtml + '</div>' +
+        '<div class="memo-item-body" onclick="memoOpenLightbox(\'' + m.id + '\')" role="button" tabindex="0" aria-label="點擊放大">' + bodyHtml + '</div>' +
       '</article>';
   }).join("");
 
