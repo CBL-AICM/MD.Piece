@@ -4157,7 +4157,7 @@ function _renderMedPreviewAndRecognize(dataUrl, mediaType) {
       s.innerHTML =
         '<div class="loading-spinner"></div>' +
         '<p style="margin-top:8px">' + escapeHtml(progressMsg) + '</p>' +
-        '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">兔子小禾打字中...</p>';
+        '<p style="margin-top:4px;font-size:0.75rem;opacity:0.7">md.piece 掃描中，大約 15-30 秒</p>';
     }
   }).then(function(ocrText) {
     var s2 = document.getElementById("med-rec-status");
