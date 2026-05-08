@@ -279,12 +279,17 @@ def list_articles(
 
 def get_article(slug: str, lang: Optional[str] = None) -> Optional[Article]:
     target_lang = _normalize_lang(lang)
-    fallback: Optional[Article] = None
+    default_match: Optional[Article] = None
+    any_match: Optional[Article] = None
     for article in _load_all_cached():
         if article.slug != slug:
             continue
         if article.lang == target_lang:
             return article
         if article.lang == DEFAULT_LANG:
-            fallback = article
-    return fallback
+            default_match = article
+        elif any_match is None:
+            any_match = article
+    # fallback 順序與 list_articles 一致：target → DEFAULT_LANG → 任一變體。
+    # 對只有非預設語言版本的 slug，避免列表能顯示卻點進去 404。
+    return default_match or any_match
