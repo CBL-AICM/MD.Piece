@@ -145,6 +145,13 @@ function memo() {
           <small>症狀、藥袋、傷口、皮疹…</small>
         </div>
       </button>
+      <button class="memo-quick-btn memo-quick-upload" onclick="memoStartUpload()">
+        <i data-lucide="image-up" style="width:24px;height:24px"></i>
+        <div>
+          <strong>從相簿上傳</strong>
+          <small>挑一張已經拍好的照片</small>
+        </div>
+      </button>
       <button class="memo-quick-btn memo-quick-text" onclick="memoStartText()">
         <i data-lucide="message-square-text" style="width:24px;height:24px"></i>
         <div>
@@ -155,6 +162,7 @@ function memo() {
     </div>
 
     <input type="file" id="memo-photo-input" accept="image/*" capture="environment" style="display:none" onchange="memoOnPhotoPicked(event)" />
+    <input type="file" id="memo-upload-input" accept="image/*" style="display:none" onchange="memoOnPhotoPicked(event)" />
 
     <div class="card memo-composer" id="memo-composer" style="display:none">
       <div class="memo-composer-head">
@@ -224,8 +232,15 @@ function loadMemoPage() {
 // ── 觸發新增 ──────────────────────────────────────────────
 function memoStartPhoto() {
   _memoComposeMode = "photo";
-  // 開啟系統相機 / 檔案選擇器
+  // 開啟系統相機（capture="environment"）
   var input = document.getElementById("memo-photo-input");
+  if (input) { input.value = ""; input.click(); }
+}
+
+function memoStartUpload() {
+  _memoComposeMode = "photo";
+  // 開啟相簿/檔案選擇器（無 capture，使用者可挑現有照片）
+  var input = document.getElementById("memo-upload-input");
   if (input) { input.value = ""; input.click(); }
 }
 
