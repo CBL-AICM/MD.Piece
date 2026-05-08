@@ -174,6 +174,89 @@ def test_search_drug_unknown_does_not_cache(_patch_llm):
     assert _patch_llm["n"] == 2
 
 
+def test_search_drug_empty_payload_treated_as_unmatched(monkeypatch):
+    """LLM 偶爾會回 matched=true 但所有欄位空 / null（小模型結構化失敗、被截斷）。
+    這時前端應看到「無法辨識」而不是「未命名」+ 全 (無資料) 的廢卡片，且不該寫進快取。
+    """
+    calls = {"n": 0}
+
+    def _empty(name):
+        calls["n"] += 1
+        return {
+            "matched": True,
+            "name_zh": None,
+            "name_en": None,
+            "aliases": [],
+            "category": None,
+            "indication": None,
+            "usage": None,
+            "side_effects": {"common": [], "serious": []},
+            "risks": {"contraindications": [], "warnings": [], "interactions": []},
+            "education": None,
+            "disclaimer": "x",
+        }
+
+    monkeypatch.setattr(drug_search_module, "lookup_drug_info", _empty)
+
+    r = client.get("/drug-search/?q=Celecoxib")
+    assert r.status_code == 200, r.text
+    data = r.json()
+    # 雖然 LLM 回 matched=true，但內容空 → router 應視為無法辨識
+    assert data["matched"] is False
+    # 不該寫進快取（下次同樣查詢會再呼叫 LLM）
+    r2 = client.get("/drug-search/?q=Celecoxib")
+    assert r2.status_code == 200
+    assert calls["n"] == 2
+
+
+def test_search_drug_skip_useless_cached_row(monkeypatch):
+    """資料庫裡若有早期 bug 留下的「matched=true 但無內容」殘骸，搜尋時應跳過、走 LLM 重整。"""
+    sb = db_mod.get_supabase()
+    sb.table("drug_reference").insert({
+        "id": "ghost-1",
+        "name_zh": "塞來昔布",
+        "name_en": "Celecoxib",
+        "aliases": "[]",
+        "category": None,
+        "indication": None,
+        "usage": None,
+        "side_effects": '{"common": [], "serious": []}',
+        "risks": '{"contraindications": [], "warnings": [], "interactions": []}',
+        "education": None,
+        "source": "claude",
+        "disclaimer": "x",
+        "query_count": 0,
+    }).execute()
+
+    calls = {"n": 0}
+
+    def _good(name):
+        calls["n"] += 1
+        return {
+            "matched": True,
+            "name_zh": "塞來昔布",
+            "name_en": "Celecoxib",
+            "aliases": ["希樂葆"],
+            "category": "止痛藥",
+            "indication": "緩解骨關節炎、類風濕關節炎疼痛",
+            "usage": "依醫師指示，常見每日 1~2 次",
+            "side_effects": {"common": ["腸胃不適"], "serious": ["腸胃出血"]},
+            "risks": {"contraindications": [], "warnings": [], "interactions": []},
+            "education": "服用期間若出現黑便請立即就醫。",
+            "disclaimer": "x",
+        }
+
+    monkeypatch.setattr(drug_search_module, "lookup_drug_info", _good)
+
+    r = client.get("/drug-search/?q=Celecoxib")
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["matched"] is True
+    assert data["indication"] and "關節" in data["indication"]
+    # 殘骸應被跳過 → 走 LLM
+    assert calls["n"] == 1
+
+
 def test_search_drug_refresh_skips_cache(_patch_llm):
     client.get("/drug-search/?q=普拿疼")
     assert _patch_llm["n"] == 1

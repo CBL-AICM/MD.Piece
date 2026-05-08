@@ -57,25 +57,28 @@ except Exception as e:  # ImportError 或 client 初始化失敗
 # Non-streaming providers
 # ==============================================================================
 
-def _call_ollama(system_prompt: str, user_message: str, history=None) -> str:
+def _call_ollama(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None) -> str:
     msgs = [{"role": "system", "content": system_prompt}]
     if history:
         msgs.extend(history)
     msgs.append({"role": "user", "content": user_message})
+    payload: dict = {
+        "model": TEXT_MODEL,
+        "stream": False,
+        "messages": msgs,
+    }
+    if max_tokens:
+        payload["options"] = {"num_predict": int(max_tokens)}
     resp = httpx.post(
         f"{OLLAMA_BASE}/api/chat",
-        json={
-            "model": TEXT_MODEL,
-            "stream": False,
-            "messages": msgs,
-        },
+        json=payload,
         timeout=120.0,
     )
     resp.raise_for_status()
     return resp.json()["message"]["content"]
 
 
-def _call_groq(system_prompt: str, user_message: str, history=None) -> str:
+def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None) -> str:
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY not set; cannot use Groq provider")
     msgs = [{"role": "system", "content": system_prompt}]
@@ -87,17 +90,20 @@ def _call_groq(system_prompt: str, user_message: str, history=None) -> str:
     # Groq free tier 偶爾突發限流，等一下就會通；retry 後再失敗才丟給 fallback chain
     delays = [1.5, 3.0]  # 兩次 retry 機會
     for attempt in range(len(delays) + 1):
+        body: dict = {
+            "model": GROQ_MODEL,
+            "messages": msgs,
+            "temperature": 0.4,
+        }
+        if max_tokens:
+            body["max_tokens"] = int(max_tokens)
         resp = httpx.post(
             f"{GROQ_BASE}/chat/completions",
             headers={
                 "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json",
             },
-            json={
-                "model": GROQ_MODEL,
-                "messages": msgs,
-                "temperature": 0.4,
-            },
+            json=body,
             timeout=60.0,
         )
         if resp.status_code == 429 and attempt < len(delays):
@@ -118,7 +124,7 @@ def _call_groq(system_prompt: str, user_message: str, history=None) -> str:
     raise RuntimeError("Groq retry 全部用完仍 rate-limited")
 
 
-def _call_anthropic(system_prompt: str, user_message: str, history=None) -> str:
+def _call_anthropic(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None) -> str:
     if _anthropic_client is None:
         raise RuntimeError(
             "ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝；無法使用 Anthropic provider"
@@ -127,7 +133,7 @@ def _call_anthropic(system_prompt: str, user_message: str, history=None) -> str:
     msgs.append({"role": "user", "content": user_message})
     msg = _anthropic_client.messages.create(
         model=ANTHROPIC_MODEL,
-        max_tokens=ANTHROPIC_MAX_TOKENS,
+        max_tokens=int(max_tokens) if max_tokens else ANTHROPIC_MAX_TOKENS,
         system=system_prompt,
         messages=msgs,
     )
@@ -153,11 +159,13 @@ def _fallback_chain(primary: str):
     return chain
 
 
-def call_claude(system_prompt: str, user_message: str, history=None) -> str:
+def call_claude(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None) -> str:
     """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider，
     主 provider 失敗時自動降級到下一個可用的（anthropic → groq → ollama）。
 
     history: 可選，[{role: 'user'|'assistant', content: str}, ...] 多輪歷史
+    max_tokens: 可選，覆寫該次呼叫的回應長度上限（避免結構化 JSON 被截斷）。
+                未指定時用 ANTHROPIC_MAX_TOKENS 預設值（1024）。
     """
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _PROVIDERS else "ollama")
     last_err = None
@@ -166,7 +174,7 @@ def call_claude(system_prompt: str, user_message: str, history=None) -> str:
         if fn is None:
             continue
         try:
-            return fn(system_prompt, user_message, history)
+            return fn(system_prompt, user_message, history, max_tokens=max_tokens)
         except Exception as e:
             last_err = e
             logger.warning(f"LLM provider {name} 失敗，嘗試下一個：{e}")
@@ -812,8 +820,10 @@ def lookup_drug_info(drug_name: str) -> dict:
     放在 raw_text 供 debug。
     """
     user_message = f"請查詢這個藥物：「{drug_name}」"
+    # 藥物百科 JSON 包含 6 個列表 + 150~300 字衛教，預設 1024 token 會被截斷
+    # （結果就是回到使用者眼前的「未命名」空卡片），這裡放寬到 2048 才夠裝完整結構
     try:
-        raw = call_claude(_DRUG_INFO_PROMPT, user_message)
+        raw = call_claude(_DRUG_INFO_PROMPT, user_message, max_tokens=2048)
     except Exception as e:
         # 例外細節只進 server log，不放進回傳 dict（避免 stack-trace 流到 client）
         logger.error("lookup_drug_info LLM 失敗：%s", type(e).__name__)
@@ -878,6 +888,36 @@ def lookup_drug_info(drug_name: str) -> dict:
         "disclaimer",
         "此資訊由 AI 整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。",
     )
+
+    # 防呆：LLM 偶爾會回 matched=true 但所有欄位都空（小模型對結構化輸出失敗、
+    # 或被截斷後勉強生成的殘骸）— 這時前端會看到「未命名」+ 全 (無資料) 的廢卡片。
+    # 寧可降為 matched=false 讓前端顯示明確的「無法辨識」，也不要把無用資料寫進快取。
+    if result.get("matched"):
+        has_name = bool(result.get("name_zh") or result.get("name_en"))
+        risks = result["risks"]
+        side = result["side_effects"]
+        has_content = any([
+            result.get("indication"),
+            result.get("usage"),
+            result.get("category"),
+            result.get("education"),
+            side.get("common"),
+            side.get("serious"),
+            risks.get("contraindications"),
+            risks.get("warnings"),
+            risks.get("interactions"),
+        ])
+        if not has_name or not has_content:
+            logger.warning(
+                "lookup_drug_info matched=true 但內容為空（query=%s, has_name=%s, has_content=%s）"
+                "— 視為無法辨識",
+                drug_name, has_name, has_content,
+            )
+            result["matched"] = False
+            result["disclaimer"] = (
+                "AI 整理藥物資訊時資料不完整，請改用更具體或正確拼寫的藥名再試一次。"
+            )
+
     return result
 
 
