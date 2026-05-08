@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from backend.db import get_supabase
 from backend.services.llm_service import call_claude
