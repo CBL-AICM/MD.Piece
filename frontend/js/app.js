@@ -5083,6 +5083,29 @@ function education() {
 
     <!-- Stage 1 : Bookshelf -->
     <div id="edu-stage-shelf" class="edu-stage active">
+      <div id="edu-my-shelf" class="card" style="margin-bottom:14px;display:none">
+        <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+          <i data-lucide="library" style="width:18px;height:18px"></i> 我的疾病書架
+        </h3>
+        <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
+          每登錄一個疾病就會多一本書，內含疾病介紹、用藥、副作用、長期風險、自我管理等六大面向。
+        </p>
+        <div id="edu-my-shelf-row" class="bookshelf-wrap" style="margin-top:10px">
+          <div class="shelf">
+            <div class="shelf-row" id="edu-my-shelf-books"></div>
+            <div class="shelf-plank"></div>
+          </div>
+        </div>
+      </div>
+      <div id="edu-my-articles" class="card" style="margin-bottom:14px;display:none">
+        <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+          <i data-lucide="book-marked" style="width:18px;height:18px"></i> 我的疾病衛教文章
+        </h3>
+        <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
+          專屬於您登錄疾病的衛教文，依疾病分區整理。
+        </p>
+        <div id="edu-my-articles-list" style="margin-top:10px"></div>
+      </div>
       <div id="edu-related" class="card" style="margin-bottom:14px;display:none">
         <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
           <i data-lucide="git-branch" style="width:18px;height:18px"></i> 為您推送的相關疾病
@@ -5161,10 +5184,121 @@ function loadEducationPage() {
     .catch(function() { /* 不擋整體 UI */ });
 
   loadFeaturedArticles();
+  loadMyDiseases();
   loadRelatedDiseases();
 
   // 確保 lucide icon 出現
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+}
+
+// ── 我的疾病書架 + 我的疾病衛教文章 ────────────────────────
+var _MY_DISEASE_COLORS = ['c-brown', 'c-blue', 'c-green', 'c-red', 'c-purple', 'c-yellow', 'c-teal'];
+var _MY_DISEASE_SIZES = ['tall', 'short', 'wide'];
+
+function loadMyDiseases() {
+  var shelfCard = document.getElementById('edu-my-shelf');
+  var articlesCard = document.getElementById('edu-my-articles');
+  if (!shelfCard && !articlesCard) return;
+
+  resolvePatientIcd10Codes(function(codes) {
+    if (!codes || !codes.length) {
+      if (shelfCard) shelfCard.style.display = 'none';
+      if (articlesCard) articlesCard.style.display = 'none';
+      return;
+    }
+    fetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        var items = (data && data.items) || [];
+        if (!items.length) {
+          if (shelfCard) shelfCard.style.display = 'none';
+          if (articlesCard) articlesCard.style.display = 'none';
+          return;
+        }
+        renderMyDiseaseShelf(items);
+        renderMyDiseaseArticles(items);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      })
+      .catch(function() {
+        if (shelfCard) shelfCard.style.display = 'none';
+        if (articlesCard) articlesCard.style.display = 'none';
+      });
+  });
+}
+
+function renderMyDiseaseShelf(items) {
+  var card = document.getElementById('edu-my-shelf');
+  var row = document.getElementById('edu-my-shelf-books');
+  if (!card || !row) return;
+  if (!items.length) { card.style.display = 'none'; return; }
+
+  row.innerHTML = items.map(function(it, idx) {
+    var color = _MY_DISEASE_COLORS[idx % _MY_DISEASE_COLORS.length];
+    var size  = _MY_DISEASE_SIZES[idx % _MY_DISEASE_SIZES.length];
+    var nameSafe = escapeHtml(it.name);
+    var icd10Safe = escapeHtml(it.icd10);
+    return '<button class="book ' + color + ' ' + size + '" ' +
+           'onclick="eduOpenMyDiseaseBook(\'' + icd10Safe + '\',\'' + nameSafe + '\')" ' +
+           'title="' + nameSafe + '（' + icd10Safe + '）">' +
+             '<i data-lucide="book-heart" class="book-icon" style="width:16px;height:16px"></i>' +
+             '<span class="book-spine">' +
+               '<span class="book-title">' + nameSafe + '</span>' +
+               '<span class="book-subtitle">' + icd10Safe + '</span>' +
+             '</span>' +
+             '<span class="book-tag">My</span>' +
+           '</button>';
+  }).join('');
+  card.style.display = '';
+}
+
+function eduOpenMyDiseaseBook(icd10, name) {
+  // 使用既有的疾病百科書本流程：開書 → 預選疾病 → 右頁列出六大維度
+  if (typeof eduOpenBook === 'function') eduOpenBook('diseases');
+  setTimeout(function() {
+    if (typeof eduPickDisease === 'function') eduPickDisease(icd10, name);
+  }, 50);
+}
+
+function renderMyDiseaseArticles(items) {
+  var card = document.getElementById('edu-my-articles');
+  var list = document.getElementById('edu-my-articles-list');
+  if (!card || !list) return;
+
+  // 只把有實際文章的疾病顯示在這裡；沒有文章的疾病在書架上仍可展開六大維度
+  var withArticles = items.filter(function(it) { return (it.articles || []).length > 0; });
+  if (!withArticles.length) { card.style.display = 'none'; return; }
+
+  list.innerHTML = withArticles.map(function(it) {
+    var arts = (it.articles || []).slice(0, 6).map(function(a) {
+      var tagHtml = (a.tags || []).slice(0, 2).map(function(t) {
+        return '<span style="display:inline-block;padding:1px 6px;border-radius:8px;background:var(--bg-soft);font-size:.7rem;color:var(--text-dim);margin-right:4px">' + escapeHtml(t) + '</span>';
+      }).join('');
+      return '<button class="article-card" onclick="eduOpenArticle(\'' + escapeHtml(a.slug) + '\')" ' +
+             'style="text-align:left;padding:10px;border-radius:8px;border:1px solid var(--border);' +
+             'background:var(--bg-card);cursor:pointer;display:flex;flex-direction:column;gap:4px">' +
+             '<div style="font-weight:600;font-size:.9rem;line-height:1.4">' + escapeHtml(a.title) + '</div>' +
+             (a.summary ? '<div style="font-size:.78rem;color:var(--text-dim);line-height:1.5">' + escapeHtml(a.summary) + '</div>' : '') +
+             (tagHtml ? '<div style="margin-top:2px">' + tagHtml + '</div>' : '') +
+             '</button>';
+    }).join('');
+
+    var more = (it.article_count > 6)
+      ? '<button onclick="eduOpenMyDiseaseBook(\'' + escapeHtml(it.icd10) + '\',\'' + escapeHtml(it.name) + '\')" ' +
+        'style="margin-top:6px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-soft);' +
+        'cursor:pointer;font-size:.78rem;color:var(--text-dim)">在書架展開更多 →</button>'
+      : '';
+
+    return '<section style="margin-top:10px;padding:10px;border-radius:10px;background:var(--bg-soft)">' +
+           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
+           '<strong style="font-size:.95rem">' + escapeHtml(it.name) + '</strong>' +
+           '<span style="font-size:.7rem;color:var(--text-dim)">ICD-10：' + escapeHtml(it.icd10) + '</span>' +
+           '<span style="margin-left:auto;font-size:.7rem;color:var(--text-dim)">共 ' + it.article_count + ' 篇</span>' +
+           '</div>' +
+           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">' + arts + '</div>' +
+           more +
+           '</section>';
+  }).join('');
+  card.style.display = '';
 }
 
 // ── 為登錄疾病的患者自動推送相關疾病衛教 ──────────────────

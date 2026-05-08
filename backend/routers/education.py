@@ -252,6 +252,52 @@ def _related_reason(related_prefix: str, source_codes: list[str]) -> str:
     return "建議一併了解的相關疾病"
 
 
+@router.get("/my-diseases")
+def list_my_diseases(
+    codes: str = Query("", description="病患已登錄的 ICD-10 代碼，逗號分隔"),
+    articles_per_disease: int = Query(6, ge=1, le=20),
+):
+    """為「我的疾病書架」與「我的疾病衛教文章」提供資料。
+
+    對病患已登錄的每個疾病各回傳：
+    - 疾病基本資料（icd10、名稱、分類）
+    - 該疾病在 content/education/ 下的所有衛教文章卡片（依精選 / 維度 / slug 排序）
+    - 六大維度的覆蓋情形（哪些維度已有審稿過的文章）
+
+    比 /related 直接很多——這個只看「自己的疾病」，不做共病推論。
+    """
+    own = [c.strip() for c in (codes or "").split(",") if c.strip()]
+    seen: set[str] = set()
+    items: list[dict[str, Any]] = []
+
+    for raw in own:
+        prefix = raw[:3].upper()
+        if not prefix or prefix in seen:
+            continue
+        seen.add(prefix)
+
+        articles = education_content.list_articles(icd10=prefix)
+        articles.sort(key=lambda a: (not a.featured, a.dimension or "z", a.slug))
+
+        covered_dims = sorted({a.dimension for a in articles if a.dimension})
+        items.append({
+            "icd10": prefix,
+            "name": ICD10_MAP.get(prefix, "未知疾病"),
+            "category": get_category_for_code(prefix),
+            "is_supported": prefix in ICD10_MAP,
+            "articles": [a.to_card() for a in articles[:articles_per_disease]],
+            "article_count": len(articles),
+            "covered_dimensions": covered_dims,
+            "all_dimensions": list(KNOWLEDGE_DIMENSIONS.keys()),
+        })
+
+    return {
+        "source_codes": [it["icd10"] for it in items],
+        "count": len(items),
+        "items": items,
+    }
+
+
 # ── 原有靜態衛教 ────────────────────────────────────────
 
 
