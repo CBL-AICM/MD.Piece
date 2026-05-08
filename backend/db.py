@@ -375,8 +375,18 @@ class _SqliteQuery:
         self._params.append(val)
         return self
 
+    def gt(self, col, val):
+        self._conditions.append(f'"{_safe_ident(col)}" > ?')
+        self._params.append(val)
+        return self
+
     def lte(self, col, val):
         self._conditions.append(f'"{_safe_ident(col)}" <= ?')
+        self._params.append(val)
+        return self
+
+    def lt(self, col, val):
+        self._conditions.append(f'"{_safe_ident(col)}" < ?')
         self._params.append(val)
         return self
 
@@ -583,7 +593,9 @@ class _HttpxQuery:
     def eq(self, col, val):     return self._add(col, "eq", val)
     def neq(self, col, val):    return self._add(col, "neq", val)
     def gte(self, col, val):    return self._add(col, "gte", val)
+    def gt(self, col, val):     return self._add(col, "gt", val)
     def lte(self, col, val):    return self._add(col, "lte", val)
+    def lt(self, col, val):     return self._add(col, "lt", val)
     def ilike(self, col, val):  return self._add(col, "ilike", val)
 
     def order(self, col, desc=False, **_):
