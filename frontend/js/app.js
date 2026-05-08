@@ -5357,7 +5357,7 @@ function renderArticleSpread(article, body) {
 
   var rightInner = (body == null)
     ? '<div class="nb-empty" style="padding:30px">內容載入中…</div>'
-    : '<div style="line-height:1.85">' + markdownToHtml(body) + '</div>';
+    : '<div class="edu-article-body" style="line-height:1.85">' + markdownToHtml(body) + '</div>';
 
   return '<div class="nb-page left">' + leftHtml + '</div>' +
          '<div class="nb-page right" id="edu-notebook-right">' + rightInner + '</div>';
@@ -5653,7 +5653,7 @@ function eduRenderCuratedArticleInRight(article, titleText) {
       '<button class="secondary" data-action="back-to-list" style="padding:4px 10px;font-size:.8rem">← 章節清單</button>' +
     '</div>' +
     summaryBlock +
-    '<div style="font-size:.94rem;line-height:1.85">' + markdownToHtml(article.body || "") + '</div>' +
+    '<div class="edu-article-body" style="font-size:.94rem;line-height:1.85">' + markdownToHtml(article.body || "") + '</div>' +
     sourcesBlock +
     reviewedBlock;
 
