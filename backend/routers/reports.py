@@ -233,18 +233,9 @@ def get_monthly_report(patient_id: str):
         sb.table("medical_records").select("*").eq("patient_id", patient_id)
         .gte("visit_date", since[:10]).order("visit_date").execute().data or []
     ), [])
-    # 患者主動推送（doctor_notes 中 tags 含 patient_push）
-    pushes_raw = _safe_query(lambda: (
-        sb.table("doctor_notes").select("*").eq("patient_id", patient_id)
-        .gte("created_at", since).order("created_at", desc=True).execute().data or []
-    ), [])
-    pushes_data = [
-        n for n in pushes_raw
-        if isinstance(n.get("tags"), list) and "patient_push" in n["tags"]
-    ]
 
     # 如果完全無資料
-    has_data = symptoms_data or emotions_data or med_logs_data or records_data or pushes_data
+    has_data = symptoms_data or emotions_data or med_logs_data or records_data
     if not has_data:
         return {
             "patient_id": patient_id,
@@ -324,20 +315,6 @@ def get_monthly_report(patient_id: str):
             parts.append(f"  - {date}：{diag}")
     else:
         parts.append("\n就診紀錄：無")
-
-    # 患者主動推送（最重要，因為這是患者本人在乎的事）
-    if pushes_data:
-        parts.append(f"\n患者主動推送（{len(pushes_data)} 則）— **這是患者本人特別想讓您注意的事項**：")
-        for p in pushes_data[:10]:
-            d = (p.get("created_at") or "?")[:10]
-            tags = p.get("tags", []) or []
-            cat = next((t for t in tags if t != "patient_push"), "其他")
-            content = (p.get("content") or "").strip()
-            if len(content) > 200:
-                content = content[:200] + "…"
-            parts.append(f"  - [{d}][{cat}] {content}")
-    else:
-        parts.append("\n患者主動推送：無")
 
     data_summary = "\n".join(parts)
 
