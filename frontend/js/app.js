@@ -742,13 +742,14 @@ function storyOpenArchive(slug, catKey) {
 }
 
 function previsit() {
+  var _pvDays = (typeof getReportDays === 'function') ? getReportDays() : 30;
   return ''
     + '<section class="pv-page">'
     + '  <header class="pv-header">'
     + '    <div>'
     + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
     + '      <h2 class="pv-title"><i data-lucide="clipboard-check"></i> 診前報告</h2>'
-    + '      <p class="pv-sub">看診前 30 秒讀完：MD.Piece 幫你整理近 30 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
+    + '      <p class="pv-sub">看診前 30 秒讀完：MD.Piece 幫你整理近 ' + _pvDays + ' 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
     + '    </div>'
     + '    <div class="pv-actions-top">'
     + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
@@ -775,7 +776,7 @@ function previsit() {
     + '  </section>'
     + ''
     + '  <section class="pv-section pv-report">'
-    + '    <h3 class="pv-section-title"><i data-lucide="file-text"></i> 30 天健康摘要</h3>'
+    + '    <h3 class="pv-section-title"><i data-lucide="file-text"></i> ' + _pvDays + ' 天健康摘要</h3>'
     + '    <div class="pv-stats" id="pv-stats"></div>'
     + '    <div id="pv-report-body" class="pv-report-body">'
     + '      <p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…</p>'
@@ -809,7 +810,8 @@ function loadPrevisitPage() {
       previsitRenderChecklistError();
     });
 
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
+  var days = (typeof getReportDays === 'function') ? getReportDays() : 30;
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly?days=' + days)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _previsitData.report = data;
@@ -915,6 +917,7 @@ function previsitReload() {
 
 function previsitCopy() {
   var d = _previsitData || {};
+  var days = (d.report && d.report.days) || ((typeof getReportDays === 'function') ? getReportDays() : 30);
   var lines = [];
   lines.push('【MD.Piece 診前報告】');
   lines.push('產出時間：' + new Date().toLocaleString());
@@ -927,7 +930,7 @@ function previsitCopy() {
     lines.push('（尚無資料）');
   }
   lines.push('');
-  lines.push('▍30 天健康摘要');
+  lines.push('▍' + days + ' 天健康摘要');
   if (d.report && d.report.raw_data) {
     var r = d.report.raw_data;
     lines.push('症狀 ' + (r.symptom_count || 0) + ' 筆 · 情緒 ' + (r.emotion_count || 0) + ' 次 · 用藥 ' + (r.medication_count || 0) + ' 種 · 就診 ' + (r.visit_count || 0) + ' 次');
@@ -969,13 +972,14 @@ function previsitDownload(format) {
   }
   if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
 
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
+  var pdays = (typeof getReportDays === 'function') ? getReportDays() : 30;
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary?days=' + pdays)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var summary = (data && data.summary) || '（暫無摘要）';
       var counts = (data && data.raw_data) || {};
       var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
-      var html = previsitBuildPrintableHTML(summary, counts, checklist);
+      var html = previsitBuildPrintableHTML(summary, counts, checklist, (data && data.days) || pdays);
       if (format === 'doc') {
         previsitDownloadDoc(html);
       } else {
@@ -987,8 +991,9 @@ function previsitDownload(format) {
     });
 }
 
-function previsitBuildPrintableHTML(summary, counts, checklist) {
+function previsitBuildPrintableHTML(summary, counts, checklist, days) {
   var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  var reportDays = days || ((typeof getReportDays === 'function') ? getReportDays() : 30);
   var paragraphs = String(summary).split(/\n\s*\n/).map(function(p) {
     return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
   }).join('');
@@ -1022,8 +1027,8 @@ function previsitBuildPrintableHTML(summary, counts, checklist) {
     + '  .footer { margin-top: 28px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 11px; color: #888; }'
     + '</style></head><body>'
     + '<h1>診前報告</h1>'
-    + '<div class="meta">產出日期：' + dateStr + ' · 由 MD.Piece 整理過去 30 天的紀錄</div>'
-    + '<h2>近 30 天紀錄概覽</h2>'
+    + '<div class="meta">產出日期：' + dateStr + ' · 由 MD.Piece 整理過去 ' + reportDays + ' 天的紀錄</div>'
+    + '<h2>近 ' + reportDays + ' 天紀錄概覽</h2>'
     + statsHtml
     + '<h2>給醫師的話（患者整理）</h2>'
     + paragraphs
@@ -2292,6 +2297,19 @@ function getPeriodStart() {
   }
   const fallback = new Date(); fallback.setDate(fallback.getDate() - 30);
   return fallback;
+}
+// 回診倒數：從上次回診日到今天，給後端報告 / 前端 UI 用。
+// 沒設過上次回診 → 退回預設 30 天。Clamp 到 [1, 365]。
+function getReportDays() {
+  const v = getVisitDates();
+  if (v.lastVisit) {
+    const d = new Date(v.lastVisit);
+    if (!isNaN(d.getTime())) {
+      const days = Math.ceil((Date.now() - d.getTime()) / 86400000);
+      return Math.max(1, Math.min(365, days));
+    }
+  }
+  return 30;
 }
 function getPeriodStats() {
   const start = getPeriodStart();
