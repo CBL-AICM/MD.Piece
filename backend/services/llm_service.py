@@ -757,6 +757,131 @@ def _parse_lab_items_json(raw: str) -> list[dict]:
     return items if isinstance(items, list) else []
 
 
+# ── 藥物百科查詢 ────────────────────────────────────────────
+# 給藥物搜尋功能用：給定藥名（中/英文/商品名），請 LLM 整理副作用、風險、用法、衛教。
+# 結果會被 backend/routers/drug_search.py 寫進 drug_reference 表做快取，
+# 之後同一個藥就不會再呼叫 LLM。
+
+_DRUG_INFO_PROMPT = (
+    "你是 MD.Piece 平台的藥物資訊衛教助手，協助一般民眾理解他/她正在服用或將要服用的藥物。\n\n"
+    "輸入：使用者查詢的藥名（可能是中文、英文、學名或商品名，可能拼字不完全正確）。\n"
+    "任務：辨識這個藥是什麼，整理出基礎衛教資訊。\n\n"
+    "回覆**必須是純 JSON**（不要 markdown code block、不要前後說明文字），結構如下：\n"
+    "{\n"
+    '  "matched": true | false,\n'
+    '  "name_zh": "中文通用名（學名為主，括號附常見商品名；找不到中文翻譯就 null）",\n'
+    '  "name_en": "英文學名（INN / generic name）",\n'
+    '  "aliases": ["商品名 1", "商品名 2", "別名…"],\n'
+    '  "category": "藥物分類（降血壓藥、降血糖藥、止痛藥、抗生素、胃藥、抗凝血藥、其他…）",\n'
+    '  "indication": "臨床適應症 — 一般用來治療什麼？用一兩句話說明",\n'
+    '  "usage": "用法用量 — 一般成人怎麼服用？飯前飯後？常見頻率？特殊提醒（嚼碎/整顆吞）",\n'
+    '  "side_effects": {\n'
+    '    "common": ["常見副作用 1（多數人會適應）", "常見副作用 2", "..."],\n'
+    '    "serious": ["嚴重但少見的副作用 1（出現要立刻就醫）", "..."]\n'
+    "  },\n"
+    '  "risks": {\n'
+    '    "contraindications": ["哪些人不可以用 / 禁忌症"],\n'
+    '    "warnings": ["重要警語"],\n'
+    '    "interactions": ["常見藥物或食物交互作用"]\n'
+    "  },\n"
+    '  "education": "基礎衛教 — 用親切的口吻提醒使用者怎麼安全、有效地使用這個藥；包括漏服怎麼辦、儲存方式、何時該回診。150~300 字",\n'
+    '  "disclaimer": "此資訊由 AI 整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。"\n'
+    "}\n\n"
+    "規則（醫療場景，安全優先）：\n"
+    "1. 若**完全不認識**這個藥（看起來不像任何已知藥物）：matched=false，其餘欄位填 null 或空陣列，"
+    '   並在 disclaimer 註明「無法辨識此藥名，請確認拼字或聯絡藥師」\n'
+    "2. 拼字接近但不完全相同：合理推測（例如 \"acetamenophen\" → acetaminophen），"
+    "   並在 aliases 把使用者輸入也列進去\n"
+    "3. **不要瞎猜劑量數字**；usage 用一般描述（「依醫師指示，常見每 6~8 小時一次」），"
+    "   不要寫死「500mg」這種具體數字\n"
+    "4. **嚴重副作用一定要列**：過敏反應、呼吸困難、嚴重皮疹、肝/腎指數異常、"
+    "   黑便或血便、心律不整 — 出現任一即需立刻就醫\n"
+    "5. 全部使用繁體中文（除了藥名英文部分）\n"
+    "6. 不下個人化處方建議；不取代醫師判斷"
+)
+
+
+def lookup_drug_info(drug_name: str) -> dict:
+    """查詢藥物的基礎衛教資訊（副作用、風險、用法、衛教）。
+
+    讓 LLM 從藥名（中/英文/商品名）整理出結構化的藥物百科欄位。
+    呼叫端應將結果存進 drug_reference 表做快取，避免重複呼叫。
+
+    回傳 dict 結構見 _DRUG_INFO_PROMPT。若 LLM 完全無法辨識，
+    matched=False；若 JSON 解析失敗，回傳 matched=False 並把原始輸出
+    放在 raw_text 供 debug。
+    """
+    user_message = f"請查詢這個藥物：「{drug_name}」"
+    try:
+        raw = call_claude(_DRUG_INFO_PROMPT, user_message)
+    except Exception as e:
+        logger.error(f"lookup_drug_info LLM 失敗：{e}")
+        return {
+            "matched": False,
+            "name_zh": None,
+            "name_en": None,
+            "aliases": [],
+            "category": None,
+            "indication": None,
+            "usage": None,
+            "side_effects": {"common": [], "serious": []},
+            "risks": {"contraindications": [], "warnings": [], "interactions": []},
+            "education": None,
+            "disclaimer": "藥物資訊查詢服務暫時無法使用，請稍後再試。",
+            "raw_text": "",
+            "error": f"{type(e).__name__}: {e}",
+        }
+
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    if not text.startswith("{"):
+        l = text.find("{")
+        r = text.rfind("}")
+        if l != -1 and r != -1 and r > l:
+            text = text[l : r + 1]
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning(f"lookup_drug_info 回傳非 JSON：{raw[:200]}")
+        return {
+            "matched": False,
+            "name_zh": None,
+            "name_en": None,
+            "aliases": [],
+            "category": None,
+            "indication": None,
+            "usage": None,
+            "side_effects": {"common": [], "serious": []},
+            "risks": {"contraindications": [], "warnings": [], "interactions": []},
+            "education": None,
+            "disclaimer": "AI 回覆解析失敗，請改用更具體的藥名重試。",
+            "raw_text": raw,
+        }
+
+    # 補齊欄位（LLM 偶爾會漏）
+    result.setdefault("matched", bool(result.get("name_zh") or result.get("name_en")))
+    result.setdefault("aliases", [])
+    if not isinstance(result.get("aliases"), list):
+        result["aliases"] = []
+    result.setdefault("side_effects", {})
+    if not isinstance(result["side_effects"], dict):
+        result["side_effects"] = {}
+    result["side_effects"].setdefault("common", [])
+    result["side_effects"].setdefault("serious", [])
+    result.setdefault("risks", {})
+    if not isinstance(result["risks"], dict):
+        result["risks"] = {}
+    result["risks"].setdefault("contraindications", [])
+    result["risks"].setdefault("warnings", [])
+    result["risks"].setdefault("interactions", [])
+    result.setdefault(
+        "disclaimer",
+        "此資訊由 AI 整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。",
+    )
+    return result
+
+
 def recognize_lab_report(image_base64: str, media_type: str = "image/jpeg") -> dict:
     """辨識檢驗報告照片，一次抽出所有項目並判讀。
 

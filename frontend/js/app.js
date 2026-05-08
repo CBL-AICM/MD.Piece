@@ -1239,7 +1239,8 @@ function showPage(page) {
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   const pages = {
     home, symptoms, symptomsAnalyze, doctors, records, medications, education,
-    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet
+    vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
+    drugSearch
   };
   // Page transition
   app.style.opacity = '0';
@@ -1263,6 +1264,7 @@ function showPage(page) {
     if (page === "symptomsAnalyze") loadSymptomAnalysisHistory();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
+    if (page === "drugSearch") loadDrugSearchPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -3955,6 +3957,7 @@ function _renderMedCard(med, slotKey, isOther) {
         '<span class="med-card-take">' + _T('meds.card.take') + '</span>' +
         '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="' + _T('meds.card.skipTitle') + '">✗</button>' +
         '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.effectTitle') + '">★</button>' +
+        '<button class="med-card-mini" onclick="openDrugSearchFor(\'' + safeName + '\')" title="查詢藥物百科（副作用 / 用法 / 衛教）">?</button>' +
       '</div>' +
     '</button>'
   );
@@ -9096,6 +9099,268 @@ function drawDietWeeklyMulti(week) {
     var x = padLeft + stepX * i;
     ctx.fillText(labels[i], x, h - pad + 14 * dpr);
   });
+}
+
+
+// ─── 藥物搜尋（藥物百科） ─────────────────────────────────
+// 走 backend /drug-search 端點：先查 drug_reference 快取，沒命中才呼叫 LLM。
+// 同時支援文字搜尋、拍照辨識、從個人用藥清單一鍵查詢。
+// 顯眼的免責聲明：所有 AI 整理的內容都不取代醫師判斷。
+
+function drugSearch() {
+  // 若是從個人用藥清單跳過來，預填查詢字串
+  var prefill = window._drugSearchPrefill || "";
+  window._drugSearchPrefill = "";
+  return (
+    '<div class="card">' +
+      '<h2><i data-lucide="search" style="width:20px;height:20px;vertical-align:middle"></i> 藥物百科查詢</h2>' +
+      '<p style="margin-top:8px;color:var(--text-dim)">輸入藥名（中文 / 英文 / 商品名）查詢副作用、風險、用法與基礎衛教。</p>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
+        '<input id="drug-search-input" type="text" placeholder="例如：普拿疼、Acetaminophen、Lipitor" value="' + escapeHtml(prefill) + '" ' +
+          'onkeydown="if(event.key===\'Enter\')runDrugSearch()" ' +
+          'style="flex:1;min-width:200px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-card)" />' +
+        '<button class="primary" onclick="runDrugSearch()">' +
+          '<i data-lucide="search" style="width:14px;height:14px;vertical-align:middle"></i> 查詢' +
+        '</button>' +
+        '<button class="secondary" onclick="document.getElementById(\'drug-photo-input\').click()" title="拍照辨識藥袋後查詢">' +
+          '<i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍照查詢' +
+        '</button>' +
+        '<input type="file" id="drug-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleDrugPhoto(this)" />' +
+      '</div>' +
+      '<div style="margin-top:10px;padding:8px 12px;background:rgba(220,170,80,0.1);border-radius:var(--radius-sm);border:1px solid rgba(220,170,80,0.3);font-size:0.82rem;color:var(--text-dim)">' +
+        '<i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle"></i> ' +
+        '此查詢結果由 AI 整理，<strong>僅供衛教參考</strong>。實際處方與劑量請以您的主治醫師與藥師說明為準。' +
+      '</div>' +
+    '</div>' +
+    '<div class="card" id="drug-search-result-card" style="display:none">' +
+      '<div id="drug-search-result"></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> 熱門查詢</h3>' +
+      '<p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">最常被查詢的藥物（從快取統計）</p>' +
+      '<div id="drug-trending" style="margin-top:8px"><p style="color:var(--text-muted)">載入中…</p></div>' +
+    '</div>'
+  );
+}
+
+function loadDrugSearchPage() {
+  // 若有預填字串，自動執行一次查詢
+  var input = document.getElementById('drug-search-input');
+  if (input && input.value.trim()) {
+    runDrugSearch();
+  }
+  // 載入熱門查詢列表
+  fetch(API + "/drug-search/trending/list?limit=8")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var el = document.getElementById('drug-trending');
+      if (!el) return;
+      var items = (data && data.items) || [];
+      if (!items.length) {
+        el.innerHTML = '<p style="color:var(--text-muted)">尚無熱門查詢。試著搜尋一個藥物吧！</p>';
+        return;
+      }
+      var html = '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+      items.forEach(function(it) {
+        var label = escapeHtml(it.name_zh || it.name_en || '未命名');
+        var safeQ = (it.name_zh || it.name_en || '').replace(/'/g, "\\'");
+        html += '<button class="secondary" style="padding:6px 12px;font-size:0.9rem" ' +
+          'onclick="quickDrugSearch(\'' + safeQ + '\')">' + label +
+          ' <span style="color:var(--text-muted);font-size:0.8em">(' + (it.query_count || 0) + ')</span>' +
+          '</button>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    })
+    .catch(function() {
+      var el = document.getElementById('drug-trending');
+      if (el) el.innerHTML = '<p style="color:var(--text-muted)">熱門列表載入失敗</p>';
+    });
+}
+
+function quickDrugSearch(name) {
+  var input = document.getElementById('drug-search-input');
+  if (input) input.value = name;
+  runDrugSearch();
+}
+
+function runDrugSearch() {
+  var input = document.getElementById('drug-search-input');
+  var q = (input && input.value || '').trim();
+  if (!q) {
+    showToast('請輸入要查詢的藥名', 'warn');
+    return;
+  }
+  var card = document.getElementById('drug-search-result-card');
+  var box = document.getElementById('drug-search-result');
+  if (card) card.style.display = '';
+  if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> 查詢中… 第一次查詢會稍久（AI 整理中）</p>';
+  if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
+
+  fetch(API + "/drug-search/?q=" + encodeURIComponent(q))
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderDrugSearchResult(data); })
+    .catch(function() {
+      if (box) box.innerHTML = '<p style="color:var(--danger)">查詢失敗，請稍後再試</p>';
+    });
+}
+
+function renderDrugSearchResult(data) {
+  var box = document.getElementById('drug-search-result');
+  if (!box) return;
+  if (!data || data.matched === false) {
+    box.innerHTML =
+      '<div style="padding:16px;text-align:center">' +
+        '<i data-lucide="search-x" style="width:32px;height:32px;color:var(--text-muted)"></i>' +
+        '<p style="margin-top:8px;color:var(--text-dim)">' + escapeHtml((data && data.disclaimer) || '無法辨識此藥名，請確認拼字或嘗試英文藥名。') + '</p>' +
+      '</div>';
+    if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
+    return;
+  }
+  box.innerHTML = _renderDrugCard(data);
+  if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
+}
+
+function _renderDrugCard(d) {
+  var nameZh = escapeHtml(d.name_zh || '');
+  var nameEn = escapeHtml(d.name_en || '');
+  var displayName = nameZh && nameEn ? nameZh + '（' + nameEn + '）' : (nameZh || nameEn || '未命名');
+  var aliases = Array.isArray(d.aliases) ? d.aliases : [];
+  var aliasHtml = aliases.length
+    ? '<div style="margin-top:6px;color:var(--text-dim);font-size:0.88rem">別名 / 商品名：' +
+        aliases.map(function(a) { return escapeHtml(a); }).join('、') + '</div>'
+    : '';
+  var cachedBadge = d.cached
+    ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:8px;background:rgba(80,160,120,0.15);color:#3a8c5e;margin-left:8px">快取</span>'
+    : '<span style="font-size:0.75rem;padding:2px 8px;border-radius:8px;background:rgba(100,140,200,0.15);color:#4a7bb6;margin-left:8px">AI 即時整理</span>';
+
+  var se = d.side_effects || {};
+  var common = Array.isArray(se.common) ? se.common : [];
+  var serious = Array.isArray(se.serious) ? se.serious : [];
+
+  var risks = d.risks || {};
+  var contra = Array.isArray(risks.contraindications) ? risks.contraindications : [];
+  var warns = Array.isArray(risks.warnings) ? risks.warnings : [];
+  var inter = Array.isArray(risks.interactions) ? risks.interactions : [];
+
+  function bulletList(items) {
+    if (!items.length) return '<p style="color:var(--text-muted);font-style:italic">（無資料）</p>';
+    return '<ul style="margin:6px 0 0 18px;padding:0;line-height:1.7">' +
+      items.map(function(x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') +
+      '</ul>';
+  }
+
+  return (
+    '<header style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">' +
+      '<div>' +
+        '<h2 style="margin:0">' + displayName + cachedBadge + '</h2>' +
+        (d.category ? '<div style="margin-top:4px"><span class="med-card-tag">' + escapeHtml(d.category) + '</span></div>' : '') +
+        aliasHtml +
+      '</div>' +
+    '</header>' +
+    (d.indication
+      ? '<section style="margin-top:14px"><h3 style="margin:0 0 4px"><i data-lucide="target" style="width:16px;height:16px;vertical-align:middle"></i> 適應症</h3>' +
+        '<p style="margin:0;color:var(--text-main)">' + escapeHtml(d.indication) + '</p></section>'
+      : '') +
+    (d.usage
+      ? '<section style="margin-top:14px"><h3 style="margin:0 0 4px"><i data-lucide="clock" style="width:16px;height:16px;vertical-align:middle"></i> 用法用量</h3>' +
+        '<p style="margin:0;color:var(--text-main);white-space:pre-wrap">' + escapeHtml(d.usage) + '</p></section>'
+      : '') +
+    '<section style="margin-top:14px"><h3 style="margin:0 0 4px"><i data-lucide="alert-circle" style="width:16px;height:16px;vertical-align:middle"></i> 副作用</h3>' +
+      '<div style="margin-top:6px"><strong style="color:var(--text-main);font-size:0.9rem">常見（多數人會慢慢適應）</strong>' +
+        bulletList(common) +
+      '</div>' +
+      '<div style="margin-top:10px;padding:10px 12px;background:rgba(220,80,80,0.08);border-radius:var(--radius-sm);border:1px solid rgba(220,80,80,0.25)">' +
+        '<strong style="color:#c43d3d;font-size:0.9rem"><i data-lucide="alert-octagon" style="width:14px;height:14px;vertical-align:middle"></i> 嚴重（出現請立刻就醫）</strong>' +
+        bulletList(serious) +
+      '</div>' +
+    '</section>' +
+    '<section style="margin-top:14px"><h3 style="margin:0 0 4px"><i data-lucide="shield-alert" style="width:16px;height:16px;vertical-align:middle"></i> 風險與警語</h3>' +
+      (contra.length ? '<div style="margin-top:6px"><strong style="font-size:0.9rem">禁忌</strong>' + bulletList(contra) + '</div>' : '') +
+      (warns.length ? '<div style="margin-top:6px"><strong style="font-size:0.9rem">警語</strong>' + bulletList(warns) + '</div>' : '') +
+      (inter.length ? '<div style="margin-top:6px"><strong style="font-size:0.9rem">交互作用</strong>' + bulletList(inter) + '</div>' : '') +
+      (!contra.length && !warns.length && !inter.length ? '<p style="color:var(--text-muted);font-style:italic">（無特別記載）</p>' : '') +
+    '</section>' +
+    (d.education
+      ? '<section style="margin-top:14px"><h3 style="margin:0 0 4px"><i data-lucide="book-heart" style="width:16px;height:16px;vertical-align:middle"></i> 基礎衛教</h3>' +
+        '<p style="margin:0;color:var(--text-main);white-space:pre-wrap;line-height:1.7">' + escapeHtml(d.education) + '</p></section>'
+      : '') +
+    '<footer style="margin-top:16px;padding:10px 12px;background:rgba(220,170,80,0.08);border-radius:var(--radius-sm);border:1px solid rgba(220,170,80,0.25);font-size:0.82rem;color:var(--text-dim)">' +
+      '<i data-lucide="info" style="width:14px;height:14px;vertical-align:middle"></i> ' +
+      escapeHtml(d.disclaimer || '此資訊由 AI 整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。') +
+    '</footer>'
+  );
+}
+
+function handleDrugPhoto(input) {
+  var file = input && input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var dataUrl = ev.target.result || '';
+    var commaIdx = dataUrl.indexOf(',');
+    if (commaIdx === -1) {
+      showToast('照片讀取失敗', 'error');
+      return;
+    }
+    var b64 = dataUrl.substring(commaIdx + 1);
+    var mediaType = (file.type || 'image/jpeg');
+    var card = document.getElementById('drug-search-result-card');
+    var box = document.getElementById('drug-search-result');
+    if (card) card.style.display = '';
+    if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">辨識中… 拍藥袋的話會逐筆查詢，可能需要 10~30 秒</p>';
+
+    fetch(API + "/drug-search/from-photo", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: b64, media_type: mediaType })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) { renderDrugPhotoResults(data); })
+      .catch(function() {
+        if (box) box.innerHTML = '<p style="color:var(--danger)">辨識失敗，請改用文字搜尋</p>';
+      });
+  };
+  reader.readAsDataURL(file);
+  // 重置以便連拍
+  input.value = '';
+}
+
+function renderDrugPhotoResults(data) {
+  var box = document.getElementById('drug-search-result');
+  if (!box) return;
+  var results = (data && data.results) || [];
+  if (!results.length) {
+    box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">沒有辨識到藥名，請改用文字搜尋。</p>';
+    return;
+  }
+  var html = '<h3 style="margin:0 0 8px">辨識結果（' + results.length + ' 筆）</h3>';
+  results.forEach(function(r, i) {
+    html += '<div style="margin-top:12px;padding:12px;border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
+      '<div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:8px">' +
+        '原始辨識：<strong>' + escapeHtml(r.recognized_name || '') + '</strong>' +
+        (r.recognized_dosage ? '・' + escapeHtml(r.recognized_dosage) : '') +
+        (r.recognized_frequency ? '・' + escapeHtml(r.recognized_frequency) : '') +
+      '</div>';
+    if (r.info && r.info.matched) {
+      html += _renderDrugCard(r.info);
+    } else {
+      html += '<p style="color:var(--text-muted);font-style:italic">無法查到此藥的衛教資訊。</p>';
+    }
+    html += '</div>';
+  });
+  box.innerHTML = html;
+  if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
+}
+
+// 從別處（個人用藥清單）跳過來查詢
+function openDrugSearchFor(name) {
+  window._drugSearchPrefill = name || '';
+  if (typeof navigateTo === 'function') {
+    navigateTo('drugSearch', null);
+  } else {
+    showPage('drugSearch');
+  }
 }
 
 

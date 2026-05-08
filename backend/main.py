@@ -9,6 +9,7 @@ from backend.routers import (
     education, emotions, medications,
     records, reports, research, triage, xiaohe, auth,
     doctor_notes, medication_changes, alerts, labs, diet,
+    drug_search,
 )
 from backend.services import llm_service
 
@@ -48,6 +49,7 @@ app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(education.router, prefix="/education", tags=["education"])
 app.include_router(emotions.router, prefix="/emotions", tags=["emotions"])
 app.include_router(medications.router, prefix="/medications", tags=["medications"])
+app.include_router(drug_search.router, prefix="/drug-search", tags=["drug-search"])
 app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(research.router, prefix="/research", tags=["research"])
 app.include_router(triage.router, prefix="/triage", tags=["triage"])
