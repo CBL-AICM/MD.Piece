@@ -45,10 +45,19 @@ PATIENT_ID = "test-patient-123"
 
 @pytest.fixture(autouse=True)
 def _reset_db():
-    """每個測試前清空 medications + medication_logs，避免互相影響。"""
-    sb = db_mod.get_supabase()
-    # SqliteSupabase 沒有 delete-all，用底層 sqlite3 清空
+    """每個測試前：把 db 指回本 module 的 SQLite 檔，再清空相關表。
+
+    多個測試檔同時跑時，後 import 的 test_*.py 會把 db_mod.DB_PATH 蓋成自己的暫存檔；
+    這個 fixture 在每個 medication 測試啟動時把 DB_PATH 拉回這裡，避免讀寫到別檔。
+    """
     import sqlite3
+
+    db_mod.DB_PATH = _TMP_DB.name
+    db_mod.SUPABASE_URL = ""
+    db_mod.SUPABASE_KEY = ""
+    db_mod._client = None  # type: ignore[attr-defined]
+    db_mod._init_db()  # 確保 schema 存在
+    sb = db_mod.get_supabase()  # noqa: F841 — 確保 client 重新建立
 
     conn = sqlite3.connect(_TMP_DB.name)
     conn.execute("DELETE FROM medication_logs")

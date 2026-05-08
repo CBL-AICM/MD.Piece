@@ -249,6 +249,24 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (patient_id) REFERENCES patients(id)
         )""",
+    "drug_reference": """
+        CREATE TABLE IF NOT EXISTS drug_reference (
+            id TEXT PRIMARY KEY,
+            name_zh TEXT,
+            name_en TEXT,
+            aliases TEXT,
+            category TEXT,
+            indication TEXT,
+            usage TEXT,
+            side_effects TEXT,
+            risks TEXT,
+            education TEXT,
+            source TEXT DEFAULT 'claude',
+            disclaimer TEXT,
+            query_count INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )""",
 }
 
 
