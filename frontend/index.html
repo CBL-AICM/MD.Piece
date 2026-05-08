@@ -582,6 +582,8 @@
           document.getElementById('app-wrapper').classList.add('show');
           setTopbarPageTitle('home');
           showPage('home');
+          // 把首頁註冊進 history，後續 navigateTo 會 pushState，Android 返回鍵就能在 app 內倒回上一頁
+          try { history.replaceState({ page: 'home', mdpiece: true }, '', '#home'); } catch (e) {}
           lucide.createIcons();
           setMode(getMode());
         } else {
@@ -656,6 +658,7 @@
       setTopbarPageTitle(page);
       showPage(page);
       closeSidebar();
+      _pushAppHistory(page);
     }
 
     function goHome() {
@@ -663,7 +666,30 @@
       setTopbarPageTitle('home');
       showPage('home');
       closeSidebar();
+      _pushAppHistory('home');
     }
+
+    // ─── App history stack（讓手機返回鍵在 app 內倒回上一頁） ─────
+    function _pushAppHistory(page) {
+      try {
+        if ((history.state || {}).page === page) return;
+        history.pushState({ page: page, mdpiece: true }, '', '#' + page);
+      } catch (e) {}
+    }
+    window.addEventListener('popstate', function (e) {
+      const st = e.state || {};
+      if (!st.mdpiece) return; // 不是我們 push 的就不處理
+      const page = st.page || 'home';
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      // 同步底部 nav active 狀態
+      document.querySelectorAll('.nav-item').forEach(b => {
+        const onc = b.getAttribute('onclick') || '';
+        if (onc.indexOf("'" + page + "'") !== -1) b.classList.add('active');
+      });
+      setTopbarPageTitle(page);
+      showPage(page);
+      closeSidebar();
+    });
 
     // Re-translate topbar page-title when language changes.
     window.addEventListener('mdpiece-lang-change', () => {
