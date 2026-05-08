@@ -44,8 +44,18 @@ PATIENT_ID = "drug-search-test-patient"
 
 @pytest.fixture(autouse=True)
 def _reset_db():
-    """每個測試前清空 drug_reference + medications。"""
+    """每個測試前：把 db 指回本 module 的 SQLite 檔，再清空相關表。
+
+    多個測試檔同時跑時，後 import 的 test_*.py 會把 db_mod.DB_PATH 蓋成自己的暫存檔，
+    這個 fixture 在每個 drug_search 測試啟動時把 DB_PATH 拉回這裡，避免讀寫到別檔。
+    """
     import sqlite3
+
+    db_mod.DB_PATH = _TMP_DB.name
+    db_mod.SUPABASE_URL = ""
+    db_mod.SUPABASE_KEY = ""
+    db_mod._client = None  # type: ignore[attr-defined]
+    db_mod._init_db()  # 確保 schema 存在
 
     conn = sqlite3.connect(_TMP_DB.name)
     conn.execute("DELETE FROM drug_reference")

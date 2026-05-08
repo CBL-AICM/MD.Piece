@@ -815,7 +815,8 @@ def lookup_drug_info(drug_name: str) -> dict:
     try:
         raw = call_claude(_DRUG_INFO_PROMPT, user_message)
     except Exception as e:
-        logger.error(f"lookup_drug_info LLM 失敗：{e}")
+        # 例外細節只進 server log，不放進回傳 dict（避免 stack-trace 流到 client）
+        logger.error("lookup_drug_info LLM 失敗：%s", type(e).__name__)
         return {
             "matched": False,
             "name_zh": None,
@@ -828,8 +829,6 @@ def lookup_drug_info(drug_name: str) -> dict:
             "risks": {"contraindications": [], "warnings": [], "interactions": []},
             "education": None,
             "disclaimer": "藥物資訊查詢服務暫時無法使用，請稍後再試。",
-            "raw_text": "",
-            "error": f"{type(e).__name__}: {e}",
         }
 
     text = (raw or "").strip()
@@ -843,7 +842,8 @@ def lookup_drug_info(drug_name: str) -> dict:
     try:
         result = json.loads(text)
     except json.JSONDecodeError:
-        logger.warning(f"lookup_drug_info 回傳非 JSON：{raw[:200]}")
+        # 只把原始輸出留在 log 給維運看；不回傳到 client
+        logger.warning("lookup_drug_info 回傳非 JSON：%s", (raw or "")[:200])
         return {
             "matched": False,
             "name_zh": None,
@@ -856,7 +856,6 @@ def lookup_drug_info(drug_name: str) -> dict:
             "risks": {"contraindications": [], "warnings": [], "interactions": []},
             "education": None,
             "disclaimer": "AI 回覆解析失敗，請改用更具體的藥名重試。",
-            "raw_text": raw,
         }
 
     # 補齊欄位（LLM 偶爾會漏）

@@ -3957,7 +3957,7 @@ function _renderMedCard(med, slotKey, isOther) {
         '<span class="med-card-take">' + _T('meds.card.take') + '</span>' +
         '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="' + _T('meds.card.skipTitle') + '">✗</button>' +
         '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.effectTitle') + '">★</button>' +
-        '<button class="med-card-mini" onclick="openDrugSearchFor(\'' + safeName + '\')" title="查詢藥物百科（副作用 / 用法 / 衛教）">?</button>' +
+        '<button class="med-card-mini" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)" title="查詢藥物百科（副作用 / 用法 / 衛教）">?</button>' +
       '</div>' +
     '</button>'
   );
@@ -9162,10 +9162,13 @@ function loadDrugSearchPage() {
       }
       var html = '<div style="display:flex;flex-wrap:wrap;gap:8px">';
       items.forEach(function(it) {
+        var rawQuery = it.name_zh || it.name_en || '';
         var label = escapeHtml(it.name_zh || it.name_en || '未命名');
-        var safeQ = (it.name_zh || it.name_en || '').replace(/'/g, "\\'");
-        html += '<button class="secondary" style="padding:6px 12px;font-size:0.9rem" ' +
-          'onclick="quickDrugSearch(\'' + safeQ + '\')">' + label +
+        // 用 data-q 屬性 + escapeHtml 安全傳遞查詢字串，避免靠 JS 字串轉義
+        // （未轉義反斜線會造成 XSS 風險）。事件 handler 從 dataset.q 拿值。
+        html += '<button class="secondary" type="button" style="padding:6px 12px;font-size:0.9rem" ' +
+          'data-q="' + escapeHtml(rawQuery) + '" ' +
+          'onclick="quickDrugSearch(this.dataset.q)">' + label +
           ' <span style="color:var(--text-muted);font-size:0.8em">(' + (it.query_count || 0) + ')</span>' +
           '</button>';
       });

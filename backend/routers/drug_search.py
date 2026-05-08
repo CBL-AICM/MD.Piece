@@ -342,9 +342,16 @@ def search_from_photo(body: DrugPhotoQuery):
             "info": entry,
         })
 
+    # 把辨識階段的錯誤清單脫敏（只留 provider 名 + 是否成功），
+    # 不洩漏例外訊息 / stack trace。
+    raw_errors = rec.get("errors") or []
+    sanitized_errors = [
+        {"provider": (e or {}).get("provider"), "failed": True}
+        for e in raw_errors if isinstance(e, dict)
+    ]
     return {
         "provider": rec.get("provider"),
-        "errors": rec.get("errors") or [],
+        "errors": sanitized_errors,
         "results": results,
     }
 
