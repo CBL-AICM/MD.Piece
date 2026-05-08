@@ -755,11 +755,11 @@ function previsit() {
     + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
     + '        <i data-lucide="refresh-cw"></i> 重新生成'
     + '      </button>'
-    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'pdf\')" title="下載 PDF（會開啟列印視窗，請選擇「另存為 PDF」）">'
-    + '        <i data-lucide="file-down"></i> 下載 PDF'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'patient\')" title="患者版：白話摘要 + 想問醫師的三件事，給自己帶進診間念給醫師聽">'
+    + '        <i data-lucide="file-down"></i> 患者版 PDF'
     + '      </button>'
-    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'doc\')" title="下載 Word（.doc）">'
-    + '        <i data-lucide="file-text"></i> 下載 Word'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'doctor\')" title="醫師版：專業臨床摘要 + 追蹤建議 + 風險提醒，可寄給醫師提前閱讀">'
+    + '        <i data-lucide="stethoscope"></i> 醫師版 PDF'
     + '      </button>'
     + '      <button class="pv-btn pv-btn-primary" onclick="previsitCopy()" title="複製為純文字帶去診間">'
     + '        <i data-lucide="clipboard-copy"></i> 複製給醫師'
@@ -962,9 +962,16 @@ function previsitFallbackCopy(text) {
   if (typeof showToast === 'function') showToast('已複製', 'success');
 }
 
-// 下載 PDF / Word：先抓 patient-summary（300–500 字白話摘要），
-// 再用 HTML 包成可列印的版面 → PDF 走 window.print()，Word 走 .doc Blob
-function previsitDownload(format) {
+// 固定免責聲明（兩版 PDF 結尾都印這段，不交給 LLM 生成）
+var PREVISIT_DISCLAIMER_HTML = ''
+  + '<p><strong>⚠ 本報告內容為患者自行記錄之主觀紀錄整理</strong>，由 MD.Piece AI 彙整患者於應用程式中自填的症狀、情緒、用藥、飲食、就診等紀錄產生，<strong>未經臨床檢查或醫療專業驗證</strong>。</p>'
+  + '<p>本報告僅供問診溝通參考，<strong>不構成醫療診斷、治療建議或處方依據</strong>。資料可能存在主觀偏差、記憶誤差或記錄遺漏，最終臨床判斷請以主治醫師親自評估為準。</p>';
+
+// 下載診前報告 PDF：
+//   audience='patient' → 患者版（白話摘要 + 三件事，自己念給醫師聽）
+//   audience='doctor'  → 醫師版（專業臨床摘要 + 追蹤建議 + 風險提醒）
+// 期間（days / period_label）由 backend 依「上次回診」自動推算。
+function previsitDownload(audience) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) {
     if (typeof showToast === 'function') showToast('找不到使用者，請先登入', 'warning');
@@ -972,28 +979,59 @@ function previsitDownload(format) {
   }
   if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
 
-  var pdays = (typeof getReportDays === 'function') ? getReportDays() : 30;
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary?days=' + pdays)
+  if (audience === 'doctor') {
+    fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var report = (data && data.report) || '（暫無報告）';
+        var counts = (data && data.raw_data) || {};
+        var periodLabel = (data && data.period_label) || '近 30 天';
+        var html = previsitBuildDoctorHTML(report, counts, periodLabel);
+        previsitOpenPrint(html);
+      })
+      .catch(function() {
+        if (typeof showToast === 'function') showToast('產生醫師版報告失敗，請稍後再試', 'error');
+      });
+    return;
+  }
+
+  // patient 版（預設）
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var summary = (data && data.summary) || '（暫無摘要）';
       var counts = (data && data.raw_data) || {};
+      var periodLabel = (data && data.period_label) || '近 30 天';
       var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
-      var html = previsitBuildPrintableHTML(summary, counts, checklist, (data && data.days) || pdays);
-      if (format === 'doc') {
-        previsitDownloadDoc(html);
-      } else {
-        previsitOpenPrint(html);
-      }
+      var html = previsitBuildPatientHTML(summary, counts, checklist, periodLabel);
+      previsitOpenPrint(html);
     })
     .catch(function() {
-      if (typeof showToast === 'function') showToast('產生報告失敗，請稍後再試', 'error');
+      if (typeof showToast === 'function') showToast('產生患者版報告失敗，請稍後再試', 'error');
     });
 }
 
-function previsitBuildPrintableHTML(summary, counts, checklist, days) {
+// 共用列印樣式（兩版共用）
+var _PV_PDF_STYLE = ''
+  + '  @page { size: A4; margin: 18mm 16mm; }'
+  + '  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color: #222; line-height: 1.75; font-size: 14px; }'
+  + '  h1 { font-size: 22px; margin: 0 0 4px; }'
+  + '  .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
+  + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
+  + '  h3 { font-size: 14px; margin: 16px 0 6px; color: #2a5d8f; }'
+  + '  p { margin: 0 0 10px; }'
+  + '  ul, ol { padding-left: 22px; margin: 0 0 10px; }'
+  + '  ul li, ol li { margin-bottom: 6px; }'
+  + '  table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }'
+  + '  table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
+  + '  table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
+  + '  table.stats td span { font-size: 11px; color: #666; }'
+  + '  .disclaimer { margin-top: 28px; padding: 12px 14px; border-top: 2px solid #d9d9d9; background: #fafafa; font-size: 11.5px; color: #555; line-height: 1.6; }'
+  + '  .disclaimer p { margin: 0 0 6px; }'
+  + '  .disclaimer p:last-child { margin: 0; }';
+
+function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
   var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
-  var reportDays = days || ((typeof getReportDays === 'function') ? getReportDays() : 30);
   var paragraphs = String(summary).split(/\n\s*\n/).map(function(p) {
     return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
   }).join('');
@@ -1010,31 +1048,44 @@ function previsitBuildPrintableHTML(summary, counts, checklist, days) {
 
   return ''
     + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
-    + '<title>MD.Piece 診前報告 ' + dateStr + '</title>'
-    + '<style>'
-    + '  @page { size: A4; margin: 18mm 16mm; }'
-    + '  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color: #222; line-height: 1.75; font-size: 14px; }'
-    + '  h1 { font-size: 22px; margin: 0 0 4px; }'
-    + '  .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
-    + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
-    + '  p { margin: 0 0 10px; }'
-    + '  ol { padding-left: 22px; margin: 0; }'
-    + '  ol li { margin-bottom: 6px; }'
-    + '  table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }'
-    + '  table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
-    + '  table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
-    + '  table.stats td span { font-size: 11px; color: #666; }'
-    + '  .footer { margin-top: 28px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 11px; color: #888; }'
-    + '</style></head><body>'
-    + '<h1>診前報告</h1>'
-    + '<div class="meta">產出日期：' + dateStr + ' · 由 MD.Piece 整理過去 ' + reportDays + ' 天的紀錄</div>'
-    + '<h2>近 ' + reportDays + ' 天紀錄概覽</h2>'
+    + '<title>MD.Piece 診前報告（患者版）' + dateStr + '</title>'
+    + '<style>' + _PV_PDF_STYLE + '</style></head><body>'
+    + '<h1>診前報告（患者版）</h1>'
+    + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：' + escapeHtml(periodLabel) + '</div>'
+    + '<h2>本期間紀錄概覽</h2>'
     + statsHtml
-    + '<h2>給醫師的話（患者整理）</h2>'
+    + '<h2>給醫師的話（我整理的）</h2>'
     + paragraphs
     + '<h2>這次想請醫師確認的事</h2>'
     + checklistHtml
-    + '<div class="footer">本報告由 MD.Piece 整理患者自行輸入的紀錄，僅供醫病溝通參考，不取代醫師診斷。</div>'
+    + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
+    + '</body></html>';
+}
+
+function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
+  var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  var bodyHtml = (typeof markdownToHtml === 'function')
+    ? markdownToHtml(String(reportMarkdown))
+    : '<pre>' + escapeHtml(String(reportMarkdown)) + '</pre>';
+  var statsHtml = ''
+    + '<table class="stats"><tr>'
+    +   '<td><strong>' + (counts.symptom_count || 0) + '</strong><span>症狀紀錄</span></td>'
+    +   '<td><strong>' + (counts.emotion_count || 0) + '</strong><span>情緒紀錄</span></td>'
+    +   '<td><strong>' + (counts.medication_count || 0) + '</strong><span>用藥</span></td>'
+    +   '<td><strong>' + (counts.visit_count || 0) + '</strong><span>就診</span></td>'
+    + '</tr></table>';
+
+  return ''
+    + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
+    + '<title>MD.Piece 診前報告（醫師版）' + dateStr + '</title>'
+    + '<style>' + _PV_PDF_STYLE + '</style></head><body>'
+    + '<h1>診前報告（醫師版）</h1>'
+    + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：' + escapeHtml(periodLabel) + '</div>'
+    + '<h2>本期間紀錄概覽</h2>'
+    + statsHtml
+    + '<h2>整合摘要</h2>'
+    + bodyHtml
+    + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
     + '</body></html>';
 }
 
@@ -1053,20 +1104,6 @@ function previsitOpenPrint(html) {
       try { w.focus(); w.print(); } catch (e) {}
     }, 250);
   };
-}
-
-function previsitDownloadDoc(html) {
-  // Word 可以直接讀 HTML，副檔名用 .doc + application/msword
-  var blob = new Blob(['﻿', html], { type: 'application/msword' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'MD.Piece-診前報告-' + new Date().toISOString().slice(0, 10) + '.doc';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-  if (typeof showToast === 'function') showToast('已開始下載 Word 檔', 'success');
 }
 
 function labs() {
