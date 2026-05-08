@@ -1010,7 +1010,7 @@ html[data-mode="standard"] #app::before {
 }
 /* Bottom status bar */
 html[data-mode="standard"] #app::after {
-  content: "─[ ready ]─[ tty1 ]─[ mode: standard ]─[ uptime: piecing... ]─";
+  content: "─[ 本系統為AI研究工具，不取代醫療建議，若有不適請盡快就醫。 ]─";
   position: absolute;
   left: 14px; right: 14px;
   bottom: 10px;
