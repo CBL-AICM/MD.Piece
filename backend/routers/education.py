@@ -18,6 +18,8 @@ from backend.utils.icd10 import (
     KNOWLEDGE_DIMENSIONS,
     COMPREHENSION_LEVELS,
     CHRONIC_DISEASE_CATEGORIES,
+    get_related_icd10_codes,
+    get_category_for_code,
 )
 
 logger = logging.getLogger(__name__)
@@ -194,6 +196,60 @@ def list_supported_diseases():
                 break
         diseases.append({"icd10": code, "name": name, "category": category or "未分類"})
     return {"diseases": diseases}
+
+
+@router.get("/related")
+def list_related_diseases(
+    codes: str = Query("", description="病患已登錄的 ICD-10 代碼，逗號分隔"),
+    limit: int = Query(6, ge=1, le=20, description="最多回傳幾個相關疾病"),
+):
+    """病患登錄主疾病後，自動推送臨床上常見的相關疾病與其衛教文章。
+
+    產生規則：
+    1. 從 COMORBIDITY_MAP 取共病（如糖尿病 → 高血壓、腎病變、心血管）
+    2. 從 CHRONIC_DISEASE_CATEGORIES 取同分類疾病
+    3. 排除病患已登錄的疾病、保留首次出現順序
+
+    每個相關疾病會附上 content/education/ 內已審稿的文章卡片，
+    讓前端可以直接顯示「為您推送的相關衛教」。
+    """
+    own = [c.strip() for c in (codes or "").split(",") if c.strip()]
+    related_prefixes = get_related_icd10_codes(own)[:limit]
+
+    own_prefixes = {c[:3].upper() for c in own}
+    items: list[dict[str, Any]] = []
+    for prefix in related_prefixes:
+        articles = education_content.list_articles(icd10=prefix)
+        articles.sort(key=lambda a: (not a.featured, a.dimension or "z", a.slug))
+        items.append({
+            "icd10": prefix,
+            "name": ICD10_MAP.get(prefix, "未知疾病"),
+            "category": get_category_for_code(prefix),
+            "reason": _related_reason(prefix, own),
+            "articles": [a.to_card() for a in articles[:3]],
+            "article_count": len(articles),
+        })
+
+    return {
+        "source_codes": sorted(own_prefixes),
+        "count": len(items),
+        "items": items,
+    }
+
+
+def _related_reason(related_prefix: str, source_codes: list[str]) -> str:
+    """簡短說明這個疾病為何被推送（共病 / 同分類）。"""
+    from backend.utils.icd10 import COMORBIDITY_MAP
+
+    for raw in source_codes:
+        src = raw[:3].upper()
+        if related_prefix in COMORBIDITY_MAP.get(src, []):
+            src_name = ICD10_MAP.get(src, src)
+            return f"與「{src_name}」常一起出現的共病"
+    related_cat = get_category_for_code(related_prefix)
+    if related_cat and related_cat != "未分類":
+        return f"同屬「{related_cat}」的相關疾病"
+    return "建議一併了解的相關疾病"
 
 
 # ── 原有靜態衛教 ────────────────────────────────────────

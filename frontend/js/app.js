@@ -5059,6 +5059,15 @@ function education() {
 
     <!-- Stage 1 : Bookshelf -->
     <div id="edu-stage-shelf" class="edu-stage active">
+      <div id="edu-related" class="card" style="margin-bottom:14px;display:none">
+        <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+          <i data-lucide="git-branch" style="width:18px;height:18px"></i> 為您推送的相關疾病
+        </h3>
+        <p id="edu-related-desc" style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
+          根據您登錄的疾病，自動整理臨床上常一起出現的共病，提早了解可以更安心。
+        </p>
+        <div id="edu-related-list" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px"></div>
+      </div>
       <div id="edu-featured" class="card" style="margin-bottom:14px">
         <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
           <i data-lucide="sparkles" style="width:18px;height:18px"></i> ${_T('edu.featured.title')}
@@ -5128,9 +5137,88 @@ function loadEducationPage() {
     .catch(function() { /* 不擋整體 UI */ });
 
   loadFeaturedArticles();
+  loadRelatedDiseases();
 
   // 確保 lucide icon 出現
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+}
+
+// ── 為登錄疾病的患者自動推送相關疾病衛教 ──────────────────
+function loadRelatedDiseases() {
+  var card = document.getElementById("edu-related");
+  var list = document.getElementById("edu-related-list");
+  if (!card || !list) return;
+
+  resolvePatientIcd10Codes(function(codes) {
+    if (!codes || !codes.length) {
+      card.style.display = "none";
+      return;
+    }
+    fetch(API + "/education/related?codes=" + encodeURIComponent(codes.join(",")) + "&limit=6")
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data || !data.items || !data.items.length) {
+          card.style.display = "none";
+          return;
+        }
+        list.innerHTML = data.items.map(renderRelatedDiseaseCard).join("");
+        card.style.display = "";
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      })
+      .catch(function() { card.style.display = "none"; });
+  });
+}
+
+// 取得登錄使用者的 icd10_codes：先看 localStorage user 物件，再退回 /patients/{id}
+function resolvePatientIcd10Codes(callback) {
+  var user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  if (user && Array.isArray(user.icd10_codes) && user.icd10_codes.length) {
+    callback(user.icd10_codes);
+    return;
+  }
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : (user && user.id);
+  if (!pid) { callback([]); return; }
+  fetch(API + "/patients/" + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(p) {
+      callback((p && Array.isArray(p.icd10_codes)) ? p.icd10_codes : []);
+    })
+    .catch(function() { callback([]); });
+}
+
+function renderRelatedDiseaseCard(item) {
+  var articles = item.articles || [];
+  var articleHtml = articles.length ? articles.map(function(a) {
+    return '<button class="article-mini" onclick="eduOpenArticle(\'' + escapeHtml(a.slug) + '\')" ' +
+           'style="text-align:left;padding:8px 10px;border-radius:8px;border:1px solid var(--border);' +
+           'background:var(--bg-card);cursor:pointer;display:block;width:100%;margin-top:6px;font-size:.82rem;line-height:1.4">' +
+           escapeHtml(a.title) +
+           '</button>';
+  }).join("") : '<div style="margin-top:6px;font-size:.78rem;color:var(--text-dim)">尚無精選文章，可從「疾病百科」直接打開生成衛教。</div>';
+
+  var moreBtn = (item.article_count > articles.length || !articles.length)
+    ? '<button onclick="eduJumpToDisease(\'' + escapeHtml(item.icd10) + '\',\'' + escapeHtml(item.name) + '\')" ' +
+      'style="margin-top:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-soft);' +
+      'cursor:pointer;font-size:.78rem;color:var(--text-dim)">展開六大維度 →</button>'
+    : '';
+
+  return '<div style="padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);display:flex;flex-direction:column">' +
+         '<div style="display:flex;align-items:center;gap:6px">' +
+         '<strong style="font-size:.95rem">' + escapeHtml(item.name) + '</strong>' +
+         '<span style="font-size:.7rem;color:var(--text-dim)">ICD-10：' + escapeHtml(item.icd10) + '</span>' +
+         '</div>' +
+         '<div style="margin-top:4px;font-size:.78rem;color:var(--text-dim)">' + escapeHtml(item.reason || '') + '</div>' +
+         articleHtml +
+         moreBtn +
+         '</div>';
+}
+
+// 從相關疾病卡片直接跳到「疾病百科」書本，並選好該疾病
+function eduJumpToDisease(icd10, name) {
+  if (typeof eduOpenBook === 'function') eduOpenBook('diseases');
+  setTimeout(function() {
+    if (typeof eduPickDisease === 'function') eduPickDisease(icd10, name);
+  }, 50);
 }
 
 // ── 精選文章（GitHub 審稿過的 Markdown 文章）──────────────
