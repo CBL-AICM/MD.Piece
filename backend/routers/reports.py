@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from backend.db import get_supabase
 from backend.services.llm_service import call_claude
@@ -30,10 +30,11 @@ CHECKLIST_SYSTEM_PROMPT = (
 # ── 月度報告 prompt ──────────────────────────────────────────
 
 MONTHLY_SYSTEM_PROMPT = (
-    "你是 MD.Piece 平台的臨床摘要助手，負責產出 30 天整合報告。\n"
-    "報告對象是主治醫師，用專業但清楚的語言。\n\n"
+    "你是 MD.Piece 平台的臨床摘要助手，負責產出整合報告。\n"
+    "報告對象是主治醫師，用專業但清楚的語言。\n"
+    "資料的「報告期間：近 N 天」會在 user message 開頭給出，請依該天數描述，不要假定 30 天。\n\n"
     "報告結構：\n"
-    "1. **整體概況** — 一段話總結患者近一個月的狀態變化\n"
+    "1. **整體概況** — 一段話總結患者本期間的狀態變化\n"
     "2. **症狀趨勢** — 頻率最高的症狀、新出現的症狀、已改善的症狀\n"
     "3. **情緒追蹤** — 平均分、趨勢方向、是否有連續低落\n"
     "4. **用藥順從性** — 服藥率、漏藥模式、療效回饋\n"
@@ -47,7 +48,8 @@ MONTHLY_SYSTEM_PROMPT = (
 # ── 患者帶去診間用的白話摘要 prompt ────────────────────────
 
 PATIENT_SUMMARY_SYSTEM_PROMPT = (
-    "你是 MD.Piece 平台的健康助理，幫患者把過去 30 天的紀錄整理成一段「帶去診間給醫師看的白話摘要」。\n\n"
+    "你是 MD.Piece 平台的健康助理，幫患者把這次回診前的紀錄整理成一段「帶去診間給醫師看的白話摘要」。\n"
+    "資料的「報告期間：近 N 天」會在 user message 開頭給出，請依該天數描述，不要假定 30 天或一個月。\n\n"
     "讀者：患者本人會帶著這份摘要去門診，也可能直接念給醫師聽。\n\n"
     "規則：\n"
     "1. 字數控制在 300–500 字（含空白），不可少於 300、不可超過 500\n"
@@ -57,7 +59,7 @@ PATIENT_SUMMARY_SYSTEM_PROMPT = (
     "   - 最近身體上比較困擾的症狀（什麼症狀、多常發生、有多嚴重）\n"
     "   - 心情狀態（最近覺得怎樣、有沒有特別低潮的日子）\n"
     "   - 目前在吃的藥、有沒有按時吃、有沒有副作用\n"
-    "   - 飲食情況（這個月吃得規律嗎？有沒有特別常吃或特別不吃的東西？\n"
+    "   - 飲食情況（這段期間吃得規律嗎？有沒有特別常吃或特別不吃的東西？\n"
     "     有沒有跟疾病飲食禁忌相關的訊號？吃完有特別不舒服的紀錄嗎？）\n"
     "   - 最想請醫師幫忙確認或調整的事\n"
     "5. 結構：用 2–4 個自然段落，不要用條列、不要用 markdown 標題\n"
@@ -67,13 +69,13 @@ PATIENT_SUMMARY_SYSTEM_PROMPT = (
 )
 
 
-# ── 共用：收集近 30 天資料 ───────────────────────────────────
+# ── 共用：收集近 N 天資料 ────────────────────────────────────
 
 
-def _empty_summary():
+def _empty_summary(days: int = 30):
     """DB 整體無法連線時的預設回傳：空 summary、零計數、has_data=False。"""
     return (
-        "報告期間：近 30 天\n症狀記錄：無\n情緒記錄：無\n用藥紀錄：無\n就診紀錄：無\n飲食記錄：無",
+        f"報告期間：近 {days} 天\n症狀記錄：無\n情緒記錄：無\n用藥紀錄：無\n就診紀錄：無\n飲食記錄：無",
         {"symptom_count": 0, "emotion_count": 0, "medication_count": 0,
          "visit_count": 0, "diet_count": 0},
         False,
@@ -90,16 +92,16 @@ def _safe_query(fn, default):
         return default
 
 
-def _collect_30d_summary(patient_id: str):
-    """收集近 30 天症狀／情緒／用藥／就診資料，回傳 (summary_text, raw_counts, has_data)。
+def _collect_period_summary(patient_id: str, days: int = 30):
+    """收集近 N 天症狀／情緒／用藥／就診資料，回傳 (summary_text, raw_counts, has_data)。
     任何 DB / 連線錯誤都會 swallow 成空資料，讓上層仍能產生「資料不足」版本的報告。"""
     try:
         sb = get_supabase()
     except Exception as e:
         logger.warning(f"無法連線資料庫，產生空摘要：{e}")
-        return _empty_summary()
+        return _empty_summary(days)
 
-    since = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     symptoms_data = _safe_query(lambda: (
         sb.table("symptoms_log").select("*").eq("patient_id", patient_id)
@@ -127,7 +129,7 @@ def _collect_30d_summary(patient_id: str):
     ), [])
 
     has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data or diet_data)
-    parts = ["報告期間：近 30 天\n"]
+    parts = [f"報告期間：近 {days} 天\n"]
 
     if symptoms_data:
         all_symptoms = []
@@ -193,7 +195,7 @@ def _collect_30d_summary(patient_id: str):
         parts.append("\n就診紀錄：無")
 
     if diet_data:
-        # 30 天飲食彙整：餐別分布 + 4 週完整度 + 常見食物 + 最近 raw 樣本
+        # 近 N 天飲食彙整：餐別分布 + 4 週完整度 + 常見食物 + 最近 raw 樣本
         meal_counts = {"breakfast": 0, "lunch": 0, "dinner": 0, "snack": 0}
         meal_label = {"breakfast": "早", "lunch": "午", "dinner": "晚", "snack": "點"}
         # 每日 meal set，用本地日期（台灣 +08:00）— 這裡簡化用 UTC date 即可，
@@ -245,9 +247,10 @@ def _collect_30d_summary(patient_id: str):
         days_with_record = len(day_meals)
         parts.append(f"\n飲食記錄（{len(diet_data)} 筆，記了 {days_with_record} 天）：")
         parts.append(
-            "  打卡分布：早 {b}、午 {l}、晚 {d}、點 {s}（30 天總次數）".format(
+            "  打卡分布：早 {b}、午 {l}、晚 {d}、點 {s}（{days} 天總次數）".format(
                 b=meal_counts["breakfast"], l=meal_counts["lunch"],
                 d=meal_counts["dinner"],   s=meal_counts["snack"],
+                days=days,
             )
         )
         parts.append(
@@ -292,24 +295,28 @@ def _collect_30d_summary(patient_id: str):
     return "\n".join(parts), counts, has_data
 
 
-# ── 30 天月度報告 ────────────────────────────────────────────
+# ── 近 N 天月度報告（預設 30，前端可依回診日倒數覆寫） ─────────
 
 
 @router.get("/{patient_id}/monthly")
-def get_monthly_report(patient_id: str):
-    """30 天整合月度報告：症狀 + 情緒 + 用藥 + 就診摘要"""
+def get_monthly_report(patient_id: str, days: int = Query(30, ge=1, le=365)):
+    """近 N 天整合報告：症狀 + 情緒 + 用藥 + 就診摘要。
+
+    `days` 由前端依「上次回診到今天的天數」傳入；無回診紀錄則用預設 30。
+    """
     try:
         sb = get_supabase()
     except Exception as e:
         logger.warning(f"monthly: 無法連線資料庫：{e}")
         return {
             "patient_id": patient_id,
-            "report": "目前資料庫尚未連線，無法產出 30 天健康摘要。請稍後再試。",
+            "report": f"目前資料庫尚未連線，無法產出 {days} 天健康摘要。請稍後再試。",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "source": "db_offline",
+            "days": days,
             "raw_data": {"symptom_count": 0, "emotion_count": 0, "medication_count": 0, "visit_count": 0},
         }
-    since = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     # 收集各面向資料（任一資料源失敗都不會炸整支 endpoint）
     symptoms_data = _safe_query(lambda: (
@@ -346,13 +353,14 @@ def get_monthly_report(patient_id: str):
     if not has_data:
         return {
             "patient_id": patient_id,
-            "report": "此患者近 30 天尚無足夠的健康數據可供產出報告。",
+            "report": f"此患者近 {days} 天尚無足夠的健康數據可供產出報告。",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "source": "no_data",
+            "days": days,
         }
 
     # 組裝資料摘要
-    parts = [f"報告期間：近 30 天\n"]
+    parts = [f"報告期間：近 {days} 天\n"]
 
     # 症狀
     if symptoms_data:
@@ -450,6 +458,7 @@ def get_monthly_report(patient_id: str):
         "report": report_text,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "ai",
+        "days": days,
         "raw_data": {
             "symptom_count": len(symptoms_data),
             "emotion_count": len(emotions_data),
@@ -561,13 +570,16 @@ def get_consultation_checklist(patient_id: str):
 
 
 @router.get("/{patient_id}/patient-summary")
-def get_patient_summary(patient_id: str):
-    """產出患者帶去診間用的 300–500 字白話摘要（PDF / Word 用）"""
-    data_summary, counts, has_data = _collect_30d_summary(patient_id)
+def get_patient_summary(patient_id: str, days: int = Query(30, ge=1, le=365)):
+    """產出患者帶去診間用的 300–500 字白話摘要（PDF / Word 用）。
+
+    `days` 由前端依「上次回診到今天的天數」傳入；無回診紀錄則用預設 30。
+    """
+    data_summary, counts, has_data = _collect_period_summary(patient_id, days=days)
 
     if not has_data:
         fallback = (
-            "醫師您好，這次回診前，我把過去一個月的紀錄整理了一下，但其實沒有特別記錄到什麼"
+            f"醫師您好，這次回診前，我把過去 {days} 天的紀錄整理了一下，但其實沒有特別記錄到什麼"
             "嚴重的症狀，整體狀況算是平穩。日常生活可以照常進行，吃飯、睡覺、心情都還算可以。\n\n"
             "想跟醫師確認的是：以我目前的狀況，下次回診大概多久後比較合適？平常有沒有什麼"
             "需要特別注意的地方，例如飲食、運動，或哪些症狀出現的時候應該趕快回診？\n\n"
@@ -579,6 +591,7 @@ def get_patient_summary(patient_id: str):
             "summary": fallback,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "source": "no_data",
+            "days": days,
             "raw_data": counts,
         }
 
@@ -590,7 +603,7 @@ def get_patient_summary(patient_id: str):
     except Exception as e:
         logger.error(f"Patient summary generation failed: {e}")
         summary = (
-            "醫師您好，過去一個月我有持續記錄身體狀況，但這次摘要暫時沒辦法自動產生，"
+            f"醫師您好，過去 {days} 天我有持續記錄身體狀況，但這次摘要暫時沒辦法自動產生，"
             "我把原始紀錄帶來，麻煩醫師看一下。謝謝！"
         )
         source = "error"
@@ -600,6 +613,7 @@ def get_patient_summary(patient_id: str):
         "summary": summary,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": source,
+        "days": days,
         "raw_data": counts,
     }
 
