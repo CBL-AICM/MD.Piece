@@ -206,9 +206,10 @@ def scan_lab_report(body: LabScanRequest):
 
     try:
         result = recognize_lab_report(body.image_base64, body.media_type or "image/jpeg")
-    except Exception as e:
-        logger.error(f"recognize_lab_report failed: {e}")
-        raise HTTPException(status_code=503, detail=f"報告辨識服務暫時無法使用：{type(e).__name__}: {e}")
+    except Exception:
+        # 把詳細錯誤留在 server log，不要回給使用者（避免洩漏內部資訊）
+        logger.exception("recognize_lab_report failed")
+        raise HTTPException(status_code=503, detail="報告辨識服務暫時無法使用，請稍後再試")
 
     raw_items = result.get("items") or []
     items = [_normalize_scanned_item(it) for it in raw_items if isinstance(it, dict)]
