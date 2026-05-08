@@ -4188,7 +4188,7 @@ html[data-mode="senior"] .vt-bmi-meta {
 .memo-pill-doctor { background: #DCEDF7; color: #2E5A7B; }
 .memo-pill-self   { background: #EBEBEC; color: #685D5A; }
 .memo-time { flex: 1; }
-.memo-toggle, .memo-del {
+.memo-toggle, .memo-edit, .memo-del {
   background: transparent; border: none; cursor: pointer;
   color: var(--text-muted);
   padding: 4px;
@@ -4198,6 +4198,7 @@ html[data-mode="senior"] .vt-bmi-meta {
   transition: var(--transition);
 }
 .memo-toggle:hover { color: var(--klein); background: var(--bg-glass-hover); }
+.memo-edit:hover   { color: var(--accent); background: var(--bg-glass-hover); }
 .memo-del:hover    { color: var(--danger); background: var(--bg-glass-hover); }
 
 .memo-item-body { display: flex; flex-direction: column; gap: 8px; }

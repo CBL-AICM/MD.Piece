@@ -198,6 +198,7 @@ var MEMO_STORE_KEY = "mdpiece_memos_v1";
 var _memoFilter = "all";          // all / doctor / self
 var _memoComposeMode = null;       // "photo" | "text" | null
 var _memoStagedPhoto = null;       // dataURL，等待儲存
+var _memoEditingId = null;         // 編輯中的 memo id（null 表示新增）
 
 function memoLoad() {
   try {
@@ -302,6 +303,7 @@ function memoOpenComposer(title, opts) {
 function memoCancelCompose() {
   _memoComposeMode = null;
   _memoStagedPhoto = null;
+  _memoEditingId = null;
   var box = document.getElementById("memo-composer");
   if (box) box.style.display = "none";
 }
@@ -314,18 +316,63 @@ function memoSave() {
     return;
   }
   var memos = memoLoad();
-  memos.unshift({
-    id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-    type: _memoStagedPhoto ? "photo" : "text",
-    photo: _memoStagedPhoto || null,
-    text: text,
-    forDoctor: !!forDoctor,
-    createdAt: new Date().toISOString()
-  });
+  var editingId = _memoEditingId;
+  if (editingId) {
+    var idx = memos.findIndex(function(x) { return x.id === editingId; });
+    if (idx >= 0) {
+      memos[idx] = Object.assign({}, memos[idx], {
+        type: _memoStagedPhoto ? "photo" : "text",
+        photo: _memoStagedPhoto || null,
+        text: text,
+        forDoctor: !!forDoctor,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  } else {
+    memos.unshift({
+      id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      type: _memoStagedPhoto ? "photo" : "text",
+      photo: _memoStagedPhoto || null,
+      text: text,
+      forDoctor: !!forDoctor,
+      createdAt: new Date().toISOString()
+    });
+  }
   memoSaveAll(memos);
   memoCancelCompose();
   memoRenderList();
-  showToast("已儲存", "success");
+  showToast(editingId ? "已更新" : "已儲存", "success");
+}
+
+function memoEdit(id) {
+  var memos = memoLoad();
+  var m = memos.find(function(x) { return x.id === id; });
+  if (!m) return;
+  _memoEditingId = id;
+  _memoComposeMode = m.photo ? "photo" : "text";
+  _memoStagedPhoto = m.photo || null;
+
+  var box = document.getElementById("memo-composer");
+  if (!box) return;
+  document.getElementById("memo-composer-title").textContent = "編輯 memo";
+  document.getElementById("memo-text").value = m.text || "";
+  document.getElementById("memo-for-doctor").checked = !!m.forDoctor;
+
+  var preview = document.getElementById("memo-photo-preview");
+  if (_memoStagedPhoto) {
+    preview.style.display = "block";
+    preview.innerHTML = '<img src="' + _memoStagedPhoto + '" alt="預覽" />';
+  } else {
+    preview.style.display = "none";
+    preview.innerHTML = "";
+  }
+  box.style.display = "block";
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  setTimeout(function() {
+    var ta = document.getElementById("memo-text");
+    if (ta) ta.focus();
+  }, 50);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function memoDelete(id) {
@@ -409,6 +456,9 @@ function memoRenderList() {
           '<span class="memo-time">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>' +
           '<button class="memo-toggle" onclick="memoToggleDoctor(\'' + m.id + '\')" title="切換給醫師／自己">' +
             '<i data-lucide="repeat" style="width:14px;height:14px"></i>' +
+          '</button>' +
+          '<button class="memo-edit" onclick="memoEdit(\'' + m.id + '\')" title="編輯">' +
+            '<i data-lucide="pencil" style="width:14px;height:14px"></i>' +
           '</button>' +
           '<button class="memo-del" onclick="memoDelete(\'' + m.id + '\')" title="刪除">' +
             '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
