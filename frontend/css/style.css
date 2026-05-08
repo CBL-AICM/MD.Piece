@@ -4048,7 +4048,7 @@ html[data-mode="senior"] .vt-bmi-meta {
 
 .memo-quick {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 .memo-quick-btn {
@@ -4074,8 +4074,9 @@ html[data-mode="senior"] .vt-bmi-meta {
 .memo-quick-btn i { color: var(--klein); flex-shrink: 0; }
 .memo-quick-btn strong { display: block; font-size: 1rem; }
 .memo-quick-btn small { display: block; color: var(--text-dim); font-size: .8rem; margin-top: 2px; }
-.memo-quick-photo i { color: #B5651D; }
-.memo-quick-text  i { color: #4A6B7B; }
+.memo-quick-photo  i { color: #B5651D; }
+.memo-quick-upload i { color: #6B8E5A; }
+.memo-quick-text   i { color: #4A6B7B; }
 
 .memo-composer {
   display: flex;
