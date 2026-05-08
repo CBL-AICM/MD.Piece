@@ -66,6 +66,8 @@
     { "src": "/reports", "dest": "api/index.py" },
     { "src": "/triage/(.*)", "dest": "api/index.py" },
     { "src": "/triage", "dest": "api/index.py" },
+    { "src": "/drug-search/(.*)", "dest": "api/index.py" },
+    { "src": "/drug-search", "dest": "api/index.py" },
     { "src": "/xiaohe/(.*)", "dest": "api/index.py" },
     { "src": "/xiaohe", "dest": "api/index.py" },
     { "src": "/records/(.*)", "dest": "api/index.py" },
