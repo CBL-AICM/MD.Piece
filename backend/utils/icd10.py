@@ -170,3 +170,95 @@ def get_category_for_code(icd10_code: str) -> str:
         if prefix in codes:
             return category
     return "未分類"
+
+
+# 共病關聯圖 — 臨床上常一起出現的慢性病
+# 用於患者登錄主疾病後，自動推送「容易合併出現」的相關疾病衛教
+# key 為主疾病 ICD-10 prefix，value 為臨床高度相關的疾病列表
+COMORBIDITY_MAP: dict[str, list[str]] = {
+    # 第二型糖尿病 — 三高、腎病變、心血管、視網膜病變
+    "E11": ["I10", "E78", "N18", "I25", "I63"],
+    "E10": ["I10", "E78", "N18", "I25"],
+    "E78": ["I10", "I25", "E11", "I63"],
+    "E03": ["E78", "F32"],
+    "E05": ["I48", "F41"],
+    # 高血壓 — 糖尿病、腎病變、心血管疾病、中風
+    "I10": ["E11", "E78", "I25", "I50", "I63", "N18"],
+    "I25": ["I10", "E11", "E78", "I50", "I48"],
+    "I50": ["I10", "I25", "I48", "N18", "E11"],
+    "I48": ["I10", "I50", "I25", "I63"],
+    "I63": ["I10", "I48", "E11", "E78", "I25"],
+    # 氣喘、COPD — 互相鑑別、合併情形多
+    "J45": ["J44", "F41"],
+    "J44": ["J45", "I50", "I25", "I10"],
+    # 發炎性腸道疾病、肝硬化
+    "K50": ["K51", "M06"],
+    "K51": ["K50", "M06"],
+    "K74": ["E11", "E78"],
+    # 類風濕、骨鬆 — 好發族群重疊、共用治療概念
+    "M06": ["M05", "M81", "F32"],
+    "M05": ["M06", "M81"],
+    "M81": ["M06", "E03", "F32"],
+    # 腎病變 — 糖尿病、高血壓、心衰
+    "N18": ["E11", "I10", "I50", "E78"],
+    # 神經退化 — 憂鬱、骨鬆、跌倒風險
+    "G20": ["F32", "M81"],
+    "G35": ["F32", "F41"],
+    "G30": ["F32", "I10"],
+    # 精神疾病 — 互相共病
+    "F32": ["F41", "G30"],
+    "F41": ["F32"],
+    # 腫瘤追蹤 — 治療後常見併發三高與心血管問題
+    "C50": ["F32", "M81"],
+    "C34": ["J44", "F32"],
+    "C18": ["F32", "E11"],
+}
+
+
+def get_related_icd10_codes(
+    icd10_codes: list[str],
+    *,
+    include_same_category: bool = True,
+    max_per_code: int = 5,
+) -> list[str]:
+    """根據病患已登錄的疾病列表，回傳臨床上相關的疾病 ICD-10 prefix。
+
+    取自兩個來源：
+    1. COMORBIDITY_MAP：每個主疾病各取前 ``max_per_code`` 個共病
+    2. 同分類疾病（``include_same_category=True`` 時）：補上同 CHRONIC_DISEASE_CATEGORIES 群組的其他疾病
+
+    結果會去除：
+    - 病患已登錄的疾病
+    - 不在 ICD10_MAP 內的代碼
+    - 重複的代碼（保留首次出現順序）
+    """
+    if not icd10_codes:
+        return []
+
+    own = {code[:3].upper() for code in icd10_codes if code}
+    seen: set[str] = set()
+    ordered: list[str] = []
+
+    def _add(code: str) -> None:
+        prefix = code[:3].upper()
+        if prefix in own or prefix in seen:
+            return
+        if prefix not in ICD10_MAP:
+            return
+        seen.add(prefix)
+        ordered.append(prefix)
+
+    for raw in icd10_codes:
+        prefix = raw[:3].upper() if raw else ""
+        if not prefix:
+            continue
+        for related in COMORBIDITY_MAP.get(prefix, [])[:max_per_code]:
+            _add(related)
+        if include_same_category:
+            for cat_codes in CHRONIC_DISEASE_CATEGORIES.values():
+                if prefix in cat_codes:
+                    for sibling in cat_codes:
+                        _add(sibling)
+                    break
+
+    return ordered

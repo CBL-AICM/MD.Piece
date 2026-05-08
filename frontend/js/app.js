@@ -1075,6 +1075,30 @@ function labs() {
       </p>
     </div>
 
+    <div class="card labs-scan">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="camera" style="width:18px;height:18px"></i> 拍攝報告自動讀取數值
+      </h3>
+      <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
+        拍張檢驗報告（或從相簿選），AI 會一次抽出所有項目，列出哪些正常、哪些異常。
+      </p>
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <label class="primary" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer">
+          <i data-lucide="camera" style="width:14px;height:14px"></i>
+          <span>拍攝報告</span>
+          <input type="file" accept="image/*" capture="environment" onchange="handleLabPhoto(this)" style="display:none" />
+        </label>
+        <label class="ghost" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer">
+          <i data-lucide="image" style="width:14px;height:14px"></i>
+          <span>從相簿選</span>
+          <input type="file" accept="image/*" onchange="handleLabPhoto(this)" style="display:none" />
+        </label>
+        <span id="lab-scan-hint" style="font-size:.78rem;color:var(--text-dim)"></span>
+      </div>
+      <div id="lab-scan-preview" style="margin-top:10px"></div>
+      <div id="lab-scan-result" style="margin-top:10px"></div>
+    </div>
+
     <div class="card labs-form">
       <div class="labs-form-row">
         <label class="labs-field labs-field-wide">
@@ -5059,6 +5083,15 @@ function education() {
 
     <!-- Stage 1 : Bookshelf -->
     <div id="edu-stage-shelf" class="edu-stage active">
+      <div id="edu-related" class="card" style="margin-bottom:14px;display:none">
+        <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+          <i data-lucide="git-branch" style="width:18px;height:18px"></i> 為您推送的相關疾病
+        </h3>
+        <p id="edu-related-desc" style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
+          根據您登錄的疾病，自動整理臨床上常一起出現的共病，提早了解可以更安心。
+        </p>
+        <div id="edu-related-list" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px"></div>
+      </div>
       <div id="edu-featured" class="card" style="margin-bottom:14px">
         <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
           <i data-lucide="sparkles" style="width:18px;height:18px"></i> ${_T('edu.featured.title')}
@@ -5128,9 +5161,88 @@ function loadEducationPage() {
     .catch(function() { /* 不擋整體 UI */ });
 
   loadFeaturedArticles();
+  loadRelatedDiseases();
 
   // 確保 lucide icon 出現
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+}
+
+// ── 為登錄疾病的患者自動推送相關疾病衛教 ──────────────────
+function loadRelatedDiseases() {
+  var card = document.getElementById("edu-related");
+  var list = document.getElementById("edu-related-list");
+  if (!card || !list) return;
+
+  resolvePatientIcd10Codes(function(codes) {
+    if (!codes || !codes.length) {
+      card.style.display = "none";
+      return;
+    }
+    fetch(API + "/education/related?codes=" + encodeURIComponent(codes.join(",")) + "&limit=6")
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data || !data.items || !data.items.length) {
+          card.style.display = "none";
+          return;
+        }
+        list.innerHTML = data.items.map(renderRelatedDiseaseCard).join("");
+        card.style.display = "";
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      })
+      .catch(function() { card.style.display = "none"; });
+  });
+}
+
+// 取得登錄使用者的 icd10_codes：先看 localStorage user 物件，再退回 /patients/{id}
+function resolvePatientIcd10Codes(callback) {
+  var user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  if (user && Array.isArray(user.icd10_codes) && user.icd10_codes.length) {
+    callback(user.icd10_codes);
+    return;
+  }
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : (user && user.id);
+  if (!pid) { callback([]); return; }
+  fetch(API + "/patients/" + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(p) {
+      callback((p && Array.isArray(p.icd10_codes)) ? p.icd10_codes : []);
+    })
+    .catch(function() { callback([]); });
+}
+
+function renderRelatedDiseaseCard(item) {
+  var articles = item.articles || [];
+  var articleHtml = articles.length ? articles.map(function(a) {
+    return '<button class="article-mini" onclick="eduOpenArticle(\'' + escapeHtml(a.slug) + '\')" ' +
+           'style="text-align:left;padding:8px 10px;border-radius:8px;border:1px solid var(--border);' +
+           'background:var(--bg-card);cursor:pointer;display:block;width:100%;margin-top:6px;font-size:.82rem;line-height:1.4">' +
+           escapeHtml(a.title) +
+           '</button>';
+  }).join("") : '<div style="margin-top:6px;font-size:.78rem;color:var(--text-dim)">尚無精選文章，可從「疾病百科」直接打開生成衛教。</div>';
+
+  var moreBtn = (item.article_count > articles.length || !articles.length)
+    ? '<button onclick="eduJumpToDisease(\'' + escapeHtml(item.icd10) + '\',\'' + escapeHtml(item.name) + '\')" ' +
+      'style="margin-top:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-soft);' +
+      'cursor:pointer;font-size:.78rem;color:var(--text-dim)">展開六大維度 →</button>'
+    : '';
+
+  return '<div style="padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);display:flex;flex-direction:column">' +
+         '<div style="display:flex;align-items:center;gap:6px">' +
+         '<strong style="font-size:.95rem">' + escapeHtml(item.name) + '</strong>' +
+         '<span style="font-size:.7rem;color:var(--text-dim)">ICD-10：' + escapeHtml(item.icd10) + '</span>' +
+         '</div>' +
+         '<div style="margin-top:4px;font-size:.78rem;color:var(--text-dim)">' + escapeHtml(item.reason || '') + '</div>' +
+         articleHtml +
+         moreBtn +
+         '</div>';
+}
+
+// 從相關疾病卡片直接跳到「疾病百科」書本，並選好該疾病
+function eduJumpToDisease(icd10, name) {
+  if (typeof eduOpenBook === 'function') eduOpenBook('diseases');
+  setTimeout(function() {
+    if (typeof eduPickDisease === 'function') eduPickDisease(icd10, name);
+  }, 50);
 }
 
 // ── 精選文章（GitHub 審稿過的 Markdown 文章）──────────────
@@ -6801,6 +6913,150 @@ async function labsCheck() {
   } catch (e) {
     resultEl.innerHTML = '<p class="labs-error">查詢失敗：' + escapeHtml(e.message || '未知錯誤') + '</p>';
   }
+}
+
+// ── 拍攝整份報告，一次列出所有項目正常/異常 ───────────────
+function handleLabPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var preview = document.getElementById('lab-scan-preview');
+  var result = document.getElementById('lab-scan-result');
+  var hint = document.getElementById('lab-scan-hint');
+  if (preview) preview.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem">壓縮並上傳照片…</div>';
+  if (result) result.innerHTML = '';
+  if (hint) hint.textContent = '';
+
+  _compressMedPhoto(file).then(function(prepared) {
+    if (!prepared) {
+      if (preview) preview.innerHTML = '<div class="labs-error">讀取照片失敗，請改用上方手動輸入。</div>';
+      input.value = '';
+      return;
+    }
+    var dataUrl = prepared.dataUrl;
+    var mediaType = prepared.mediaType || 'image/jpeg';
+    var base64 = (dataUrl.split(',')[1] || '');
+
+    if (preview) {
+      preview.innerHTML =
+        '<img src="' + dataUrl + '" alt="檢驗報告預覽" ' +
+        'style="max-width:100%;max-height:280px;border-radius:8px;border:1px solid var(--border)" />';
+    }
+    if (result) {
+      result.innerHTML = '<p class="labs-loading"><i data-lucide="loader" class="labs-spin"></i> AI 正在判讀整份報告…通常 10–30 秒</p>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    fetch(API + '/labs/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: base64, media_type: mediaType })
+    })
+      .then(function(r) {
+        return r.text().then(function(t) {
+          var parsed; try { parsed = JSON.parse(t); } catch (e) { parsed = { detail: t }; }
+          return { ok: r.ok, status: r.status, data: parsed };
+        });
+      })
+      .then(function(res) {
+        if (!res.ok) {
+          var msg = (res.data && (res.data.detail || res.data.message)) || ('HTTP ' + res.status);
+          if (typeof msg !== 'string') msg = JSON.stringify(msg);
+          if (result) result.innerHTML = '<p class="labs-error">辨識失敗：' + escapeHtml(msg) + '</p>';
+          return;
+        }
+        labsRenderScanResult(res.data || {});
+        labsAppendScannedToHistory((res.data && res.data.items) || []);
+      })
+      .catch(function(err) {
+        if (result) result.innerHTML = '<p class="labs-error">辨識服務連線失敗：' + escapeHtml((err && err.message) || '網路錯誤') + '</p>';
+      });
+  });
+  input.value = '';
+}
+
+function labsRenderScanResult(data) {
+  var resultEl = document.getElementById('lab-scan-result');
+  if (!resultEl) return;
+  var items = data.items || [];
+  if (!items.length) {
+    var note = '';
+    if (data.errors && data.errors.length) {
+      note = '<details style="margin-top:8px;font-size:.78rem;color:var(--text-dim)"><summary>查看 OCR 嘗試紀錄</summary>' +
+        '<ul style="margin-top:6px;padding-left:18px">' +
+        data.errors.map(function(e) { return '<li>' + escapeHtml((e.provider || '?') + '：' + (e.error || '')) + '</li>'; }).join('') +
+        '</ul></details>';
+    }
+    resultEl.innerHTML = '<p class="labs-error">沒有從這張照片讀到檢驗項目。可以再拍清楚一點，或改用上方手動查詢。</p>' + note;
+    return;
+  }
+  var summary = data.summary || {};
+  var headLines = [
+    '<strong>共讀到 ' + items.length + ' 項</strong>',
+  ];
+  if (summary.abnormal) headLines.push('<span class="labs-st-warn" style="padding:2px 8px;border-radius:10px">異常 ' + summary.abnormal + ' 項</span>');
+  if (summary.needs_doctor) headLines.push('<span class="labs-st-bad" style="padding:2px 8px;border-radius:10px">建議就醫</span>');
+
+  var sortRank = { critical: 0, high: 1, low: 2, unknown: 3, normal: 4 };
+  items = items.slice().sort(function(a, b) {
+    return (sortRank[a.status] || 9) - (sortRank[b.status] || 9);
+  });
+
+  var listHtml = items.map(function(it, idx) {
+    var meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
+    var unitTxt = it.unit ? ' ' + escapeHtml(it.unit) : '';
+    var seeDoc = it.see_doctor
+      ? '<span style="margin-left:6px;padding:1px 6px;border-radius:8px;background:#fee;color:#a30;font-size:.7rem">建議就醫</span>'
+      : '';
+    return '' +
+      '<details class="labs-scan-item ' + meta.cls + '"' + (idx < 3 ? ' open' : '') + ' ' +
+      'style="margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card)">' +
+        '<summary style="cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<span>' + meta.emoji + '</span>' +
+          '<strong>' + escapeHtml(it.name) + '</strong>' +
+          '<span style="color:var(--text-dim)">' + escapeHtml(it.value) + unitTxt + '</span>' +
+          '<span style="margin-left:auto;font-size:.78rem;color:var(--text-dim)">' + escapeHtml(meta.label) + '</span>' +
+          seeDoc +
+        '</summary>' +
+        '<div style="margin-top:8px;font-size:.85rem;line-height:1.6">' +
+          '<div><strong>參考範圍</strong>：' + escapeHtml(it.normal_range || '—') + '</div>' +
+          (it.meaning ? '<div style="margin-top:4px"><strong>代表意義</strong>：' + escapeHtml(it.meaning) + '</div>' : '') +
+          (it.advice  ? '<div style="margin-top:4px"><strong>建議</strong>：' + escapeHtml(it.advice) + '</div>' : '') +
+        '</div>' +
+      '</details>';
+  }).join('');
+
+  resultEl.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">' + headLines.join(' · ') + '</div>' +
+    '<div style="margin-top:8px">' + listHtml + '</div>' +
+    '<p class="labs-result-disclaimer" style="margin-top:8px">' + escapeHtml(data.disclaimer || '本判讀僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function labsAppendScannedToHistory(items) {
+  if (!items || !items.length) return;
+  var hist = labsLoadHistory();
+  items.forEach(function(it) {
+    hist.unshift({
+      name: it.name,
+      value: String(it.value || ''),
+      unit: it.unit || '',
+      status: it.status || 'unknown',
+      result: {
+        item: it.name,
+        normal_range: it.normal_range || '未知',
+        status: it.status || 'unknown',
+        meaning: it.meaning || '',
+        advice: it.advice || '',
+        see_doctor: !!it.see_doctor,
+        disclaimer: '本結果僅供參考，請以實際檢驗單位與醫師判讀為準',
+      },
+      at: Date.now(),
+      from_scan: true,
+    });
+  });
+  labsSaveHistory(hist);
+  labsRenderHistory();
 }
 
 function labsRenderResult(data, input) {
