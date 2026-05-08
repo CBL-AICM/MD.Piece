@@ -8402,6 +8402,7 @@ function renderDietDrink(g) {
     + '<div class="diet-drink-head">'
     +   '<span class="diet-drink-icon"><i data-lucide="coffee" style="width:16px;height:16px"></i></span>'
     +   '<span class="diet-drink-name">' + chatEscape(g.name) + '</span>'
+    +   '<button class="diet-drink-record" onclick="dietRecordDrink()" title="記錄到今天"><i data-lucide="check" style="width:14px;height:14px"></i></button>'
     +   '<button class="diet-drink-reroll" onclick="dietPickDrink(true)" title="換一杯"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>'
     + '</div>'
     + '<div class="diet-drink-meta">'
@@ -8413,6 +8414,48 @@ function renderDietDrink(g) {
     + '</div>'
     + (g.reason ? '<div class="diet-drink-reason">' + chatEscape(g.reason) + '</div>' : '');
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function dietRecordDrink() {
+  if (!_dietDrinkCurrent || !_dietDrinkCurrent.name) return;
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var btn = document.querySelector('.diet-drink-record');
+  if (btn && btn.disabled) return;
+  if (btn) btn.disabled = true;
+  var meal = (_dietPickMealType && _dietPickMealType !== 'any') ? _dietPickMealType : 'snack';
+  var noteParts = [];
+  if (_dietDrinkCurrent.caffeine_mg != null && _dietDrinkCurrent.caffeine_mg > 0) {
+    noteParts.push('咖啡因 ' + _dietDrinkCurrent.caffeine_mg + ' mg');
+  }
+  if (_dietDrinkCurrent.where_to_get) noteParts.push(_dietDrinkCurrent.where_to_get);
+  try {
+    var res = await fetch(API + '/diet/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
+      body: JSON.stringify({
+        patient_id: pid,
+        meal_type: meal,
+        foods: _dietDrinkCurrent.name,
+        note: noteParts.join('｜'),
+      }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.detail || '記錄失敗');
+    }
+    showToast('已記錄：' + _dietDrinkCurrent.name, 'success');
+    if (btn) {
+      btn.classList.add('diet-drink-record-done');
+      btn.innerHTML = '<i data-lucide="check-check" style="width:14px;height:14px"></i>';
+      btn.title = '已記錄';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    fetchDietTodayRecords();
+  } catch (e) {
+    if (btn) btn.disabled = false;
+    showToast('記錄失敗：' + (e.message || ''), 'error');
+  }
 }
 
 function fetchCaffeineGuide() {

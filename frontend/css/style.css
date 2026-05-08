@@ -9772,14 +9772,23 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
   color: var(--text);
   flex: 1; min-width: 0;
 }
-.diet-drink-reroll {
+.diet-drink-reroll,
+.diet-drink-record {
   background: none; border: 1px solid rgba(178, 123, 26, 0.3);
   color: #B27B1A; cursor: pointer;
   width: 28px; height: 28px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.diet-drink-reroll:hover { background: rgba(178, 123, 26, 0.15); }
+.diet-drink-reroll:hover,
+.diet-drink-record:hover:not(:disabled) { background: rgba(178, 123, 26, 0.15); }
+.diet-drink-record { border-color: rgba(0, 168, 132, 0.35); color: #00A884; }
+.diet-drink-record:hover:not(:disabled) { background: rgba(0, 168, 132, 0.12); }
+.diet-drink-record-done,
+.diet-drink-record:disabled {
+  background: rgba(0, 168, 132, 0.18); color: #00A884;
+  border-color: rgba(0, 168, 132, 0.45); cursor: default;
+}
 .diet-drink-meta {
   display: flex; flex-wrap: wrap; gap: 5px;
   font-size: 0.78rem;
@@ -10108,6 +10117,12 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
 #app-wrapper[data-theme="dark"] .diet-caf-warn-limit,
 #app-wrapper[data-theme="dark"] .diet-caf-table td:last-child,
 #app-wrapper[data-theme="dark"] .diet-drink-sugar { color: #F2C77E; }
+#app-wrapper[data-theme="dark"] .diet-drink-record { color: #7ED4B8; border-color: rgba(126, 212, 184, 0.45); }
+#app-wrapper[data-theme="dark"] .diet-drink-record:hover:not(:disabled) { background: rgba(126, 212, 184, 0.15); }
+#app-wrapper[data-theme="dark"] .diet-drink-record-done,
+#app-wrapper[data-theme="dark"] .diet-drink-record:disabled {
+  background: rgba(126, 212, 184, 0.2); color: #7ED4B8; border-color: rgba(126, 212, 184, 0.55);
+}
 
 /* ═══════════════════════════════════════════════════════════
    SENIOR MODE — 無印風 / 大字 / 無裝飾
