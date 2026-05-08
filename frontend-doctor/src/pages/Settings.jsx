@@ -119,9 +119,9 @@ export default function Settings() {
         <h3 className="section-h">關於本介面</h3>
         <ul className="bullet-list">
           <li>連動同一個 FastAPI 後端，與患者端 PWA 共用 Supabase 資料庫</li>
-          <li>患者每日情緒、服藥打卡、症狀分析、診前推送都會即時反映在患者詳情頁</li>
+          <li>患者每日情緒、服藥打卡、症狀分析都會即時反映在患者詳情頁</li>
           <li>警示自動觸發：連續低落情緒 ≥ 3 天 → low_mood；7 天服藥率 &lt; 50% → missed_medication</li>
-          <li>API 寫入 doctor_notes 已加 X-User-Id 角色檢查（醫師寫備註、患者寫 patient_push）</li>
+          <li>API 寫入 doctor_notes 已加 X-User-Id 角色檢查（僅醫師可寫備註）</li>
         </ul>
       </div>
     </>

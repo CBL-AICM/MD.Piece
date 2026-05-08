@@ -4,8 +4,6 @@ import {
   apiGet, apiPost, apiPut, apiDelete, getActiveDoctorId,
 } from '../lib/api.js'
 import { fetchPatientById } from '../lib/patients.js'
-import { getCurrentUser } from '../lib/auth.js'
-import { getReadSet, markRead } from '../lib/readState.js'
 import {
   ALERT_TYPE_LABEL, SEVERITY_LABEL, SEVERITY_TO_BADGE, patientPriority,
 } from '../lib/priority.js'
@@ -18,7 +16,6 @@ import VisitLineCompare from '../components/VisitLineCompare.jsx'
 
 const TABS = [
   { key: 'overview', label: '快速預覽' },
-  { key: 'pushes', label: '患者推送' },
   { key: 'charts', label: '圖表分析' },
   { key: 'treatment', label: '治療歷程' },
   { key: 'timeline', label: '時間軸' },
@@ -137,32 +134,15 @@ export default function PatientDetail() {
       </div>
 
       <div className="tabs">
-        {TABS.map((t) => {
-          let badge = null
-          if (t.key === 'pushes') {
-            const me = getCurrentUser()
-            const myDrTag = me?.id ? `dr_${me.id}` : null
-            const visible = (notes || []).filter((n) => {
-              if (!Array.isArray(n.tags) || !n.tags.includes('patient_push')) return false
-              const hasDrTag = n.tags.some((x) => typeof x === 'string' && x.startsWith('dr_'))
-              if (!hasDrTag) return true
-              return myDrTag ? n.tags.includes(myDrTag) : false
-            })
-            const readSet = getReadSet()
-            const u = visible.filter((n) => !readSet.has(n.id)).length
-            if (u > 0) badge = u
-          }
-          return (
-            <button
-              key={t.key}
-              className={`tab ${tab === t.key ? 'active' : ''}`}
-              onClick={() => setTab(t.key)}
-            >
-              {t.label}
-              {badge != null && <span className="tab-badge">{badge}</span>}
-            </button>
-          )
-        })}
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            className={`tab ${tab === t.key ? 'active' : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {err && <div className="error-bar">{err}</div>}
@@ -177,7 +157,6 @@ export default function PatientDetail() {
           medStats={medStats}
         />
       )}
-      {tab === 'pushes' && <PushesPanel notes={notes} />}
       {tab === 'charts' && (
         <ChartsPanel
           emotionTrend={emotionTrend}
@@ -440,85 +419,6 @@ function MedicationsPanel({ medStats, medChanges }) {
         )}
       </div>
     </>
-  )
-}
-
-// ─── 患者推送 ─────────────────────────────────────────────
-// 患者端「診前報告 → 推送給醫師」會 POST /doctor-notes/ 並標 tags=["patient_push", <cat>]
-// 這裡只展示有 patient_push tag 的紀錄
-
-const PUSH_CAT_LABEL = {
-  symptoms: '症狀記錄',
-  medications: '用藥情況',
-  emotions: '情緒打卡',
-  vitals: '生理紀錄',
-  labs: '檢驗報告',
-  message: '患者留言',
-}
-const PUSH_CAT_COLOR = {
-  symptoms: '#ff6b81',
-  medications: '#3ddc97',
-  emotions: '#9a7bff',
-  vitals: '#6ea8ff',
-  labs: '#ffb86b',
-  message: '#5a6572',
-}
-
-function PushesPanel({ notes }) {
-  const me = getCurrentUser()
-  const myDrTag = me?.id ? `dr_${me.id}` : null
-  // 患者推送：含 patient_push tag，且未指定醫師（公開）或指定到我
-  const pushes = (notes || []).filter((n) => {
-    if (!Array.isArray(n.tags) || !n.tags.includes('patient_push')) return false
-    const hasDrTag = n.tags.some((t) => typeof t === 'string' && t.startsWith('dr_'))
-    if (!hasDrTag) return true
-    return myDrTag ? n.tags.includes(myDrTag) : false
-  })
-  const readSet = getReadSet()
-
-  useEffect(() => {
-    // 進入 panel 後，把目前可見的推送標記為已讀
-    if (pushes.length > 0) markRead(pushes.map((p) => p.id))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pushes.length])
-
-  if (pushes.length === 0) {
-    return (
-      <div className="placeholder">
-        患者尚未從「診前報告」推送任何紀錄給您。
-        <p className="cell-dim" style={{ marginTop: 8, fontSize: 13 }}>
-          患者可在 PWA「診前報告」綁定主治醫師後一鍵推送，內容會出現在這裡。
-        </p>
-      </div>
-    )
-  }
-  const sorted = [...pushes].sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at),
-  )
-  return (
-    <div className="push-list">
-      {sorted.map((n) => {
-        const cat = (n.tags || []).find((t) =>
-          t !== 'patient_push' && !(typeof t === 'string' && t.startsWith('dr_'))
-        ) || 'message'
-        const color = PUSH_CAT_COLOR[cat] || '#5a6572'
-        const isUnread = !readSet.has(n.id)
-        return (
-          <div key={n.id} className={`push-card ${isUnread ? 'push-card-unread' : ''}`}>
-            <div className="push-card-head">
-              <span className="push-cat" style={{ color, borderColor: color + '55' }}>
-                {PUSH_CAT_LABEL[cat] || cat}
-              </span>
-              {isUnread && <span className="push-unread-dot" title="未讀" />}
-              <span className="cell-dim" style={{ marginLeft: 'auto' }}>
-                {fmtDate(n.created_at, true)} · {relativeTime(n.created_at)}
-              </span>
-            </div>
-            <pre className="push-content">{n.content}</pre>
-          </div>
-        )
-      })}
-    </div>
   )
 }
 

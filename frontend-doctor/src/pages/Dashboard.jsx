@@ -45,6 +45,7 @@ export default function Dashboard() {
     const critical = openAlerts.filter((a) => a.severity === 'critical' || a.severity === 'high').length
     const cutoff = nowRef - 7 * 24 * 3600 * 1000
     const recentNotes = notes.filter((n) => {
+      if (Array.isArray(n.tags) && n.tags.includes('patient_push')) return false
       const d = new Date(n.created_at)
       return d.getTime() >= cutoff
     }).length

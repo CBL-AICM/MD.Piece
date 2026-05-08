@@ -19,25 +19,22 @@ def _resolve_user(user_id: str | None):
     return None
 
 
-def _require_doctor_or_patient_push(user_id: str | None, body_tags: list | None):
+def _require_doctor(user_id: str | None, body_tags: list | None):
     """
     寫入規則：
-    - 如果 tags 含 patient_push：呼叫者必須是 patient 角色
-    - 否則：呼叫者必須是 doctor 角色
+    - 呼叫者必須是 doctor 角色
+    - 不接受 patient_push 標記（已停用「推送給醫師」功能）
     - 如果沒帶 X-User-Id（向後相容）：放行但不檢查（之後可逐步收緊）
     """
+    if isinstance(body_tags, list) and "patient_push" in body_tags:
+        raise HTTPException(status_code=410, detail="患者推送功能已停用")
     if not user_id:
         return
     user = _resolve_user(user_id)
     if not user:
         raise HTTPException(status_code=401, detail="X-User-Id 對應的使用者不存在")
-    is_patient_push = isinstance(body_tags, list) and "patient_push" in body_tags
-    if is_patient_push:
-        if user.get("role") != "patient":
-            raise HTTPException(status_code=403, detail="只有患者可以建立 patient_push 紀錄")
-    else:
-        if user.get("role") != "doctor":
-            raise HTTPException(status_code=403, detail="只有醫師可以建立／編輯醫師備註")
+    if user.get("role") != "doctor":
+        raise HTTPException(status_code=403, detail="只有醫師可以建立／編輯醫師備註")
 
 
 @router.get("/")
@@ -63,7 +60,7 @@ def get_note(note_id: str):
 
 @router.post("/")
 def create_note(body: DoctorNoteCreate, x_user_id: str | None = Header(default=None)):
-    _require_doctor_or_patient_push(x_user_id, body.tags)
+    _require_doctor(x_user_id, body.tags)
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
     result = sb.table("doctor_notes").insert(data).execute()
@@ -72,7 +69,7 @@ def create_note(body: DoctorNoteCreate, x_user_id: str | None = Header(default=N
 
 @router.put("/{note_id}")
 def update_note(note_id: str, body: DoctorNoteUpdate, x_user_id: str | None = Header(default=None)):
-    _require_doctor_or_patient_push(x_user_id, body.tags or [])
+    _require_doctor(x_user_id, body.tags or [])
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
     if not data:
@@ -87,8 +84,7 @@ def update_note(note_id: str, body: DoctorNoteUpdate, x_user_id: str | None = He
 
 @router.delete("/{note_id}")
 def delete_note(note_id: str, x_user_id: str | None = Header(default=None)):
-    # 刪除走 doctor 角色（patient_push 由患者本人刪可以另外設計）
-    _require_doctor_or_patient_push(x_user_id, [])
+    _require_doctor(x_user_id, [])
     sb = get_supabase()
     result = sb.table("doctor_notes").delete().eq("id", note_id).execute()
     if not result.data:
