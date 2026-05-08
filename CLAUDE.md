@@ -84,4 +84,8 @@ cd mcp_server && uv sync
 ## 部署規則
 
 - Production domain：`www.mdpiece.life/`（由 Vercel 綁定 `main` 分支）
-- 每次部署直接部署到 `www.mdpiece.life/`：當使用者說「部署」時，將 PR 合併到 `main`，由 Vercel 自動發布到 production domain
+- 每次部署直接部署到 `www.mdpiece.life/`：當使用者說「部署」時，依下列自動化流程進行：
+  1. **自動跑 e2e 實驗室測試**：執行 `cd tests/e2e && npm run test:rx`（以及其他 e2e 套件）
+  2. **自動修復 bug**：若測試失敗，分析失敗原因、修改程式碼、重新跑測試，**循環直到所有 e2e 測試通過為止**
+  3. **合併即部署**：所有 e2e 測試通過後，將 PR 合併到 `main`，由 Vercel 自動發布到 production domain
+- 過程中若遇到無法自動修復的問題（例如需要環境變數、外部服務權限、架構性決策），暫停並回報使用者，不要強行合併
