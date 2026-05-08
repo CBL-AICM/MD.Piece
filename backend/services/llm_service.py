@@ -638,3 +638,201 @@ def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") ->
         "provider": None,
         "errors": errors,
     }
+
+
+# ── 檢驗報告照片辨識 ────────────────────────────────────────
+# 從一張檢驗報告照片，一次抽出所有項目並判讀正常/異常。
+# 走法跟 medicine bag 一樣：Google Vision OCR（最準）→ LLM vision fallback。
+
+_LAB_REPORT_EXTRACT_PROMPT = (
+    "你是台灣檢驗報告判讀助手。輸入是一張檢驗報告（OCR 後的純文字）。\n"
+    "請從文字中抽出所有檢驗項目，並依台灣常見成人參考範圍判讀每個項目。\n\n"
+    "每個項目要包含：\n"
+    "  - name          項目名稱（中英並列；只有英文就直接寫英文）\n"
+    "  - value         數值（保留原樣字串，可含 < > ＋ 陽 陰）\n"
+    "  - unit          單位（沒有就 null）\n"
+    "  - normal_range  常見成人參考範圍文字（不確定的罕見項目寫「不確定」）\n"
+    "  - status        low | normal | high | critical | unknown\n"
+    "  - meaning       這個指標代表什麼（白話一兩句）\n"
+    "  - advice        生活面建議（飲食、運動、追蹤頻率），具體可行\n"
+    "  - see_doctor    true / false；數值嚴重異常或可能急症（例如鉀過高、血糖極低、肝指數爆高）就 true\n\n"
+    "規則：\n"
+    "1. 報告抬頭、患者基本資料、機構名稱不算項目，請忽略\n"
+    "2. 一份報告通常有 5～30 個項目，**請逐項列出，不要只挑幾個**\n"
+    "3. 數值跟參考範圍同一行就一起讀；報告若已標註 H/L 也納入判讀\n"
+    "4. 不下診斷、不開藥、不取代醫師判讀\n"
+    "5. 罕見項目寧可 status=unknown 也不要瞎掰\n\n"
+    "回覆**必須是純 JSON**，不要 markdown code block、不要前後說明：\n"
+    '{"items": [{"name":"...","value":"...","unit":"...","normal_range":"...",'
+    '"status":"...","meaning":"...","advice":"...","see_doctor":false}]}\n'
+    "全部使用繁體中文。"
+)
+
+_LAB_REPORT_VISION_USER_PROMPT = (
+    "這是一張檢驗報告。請按照系統提示，把所有項目逐一抽出並判讀，"
+    "回傳純 JSON。"
+)
+
+
+def _vision_lab_report_anthropic(image_base64: str, media_type: str) -> str:
+    if _anthropic_client is None:
+        raise RuntimeError("ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝")
+    msg = _anthropic_client.messages.create(
+        model=ANTHROPIC_VISION_MODEL,
+        max_tokens=ANTHROPIC_VISION_MAX_TOKENS,
+        temperature=0.2,
+        system=_LAB_REPORT_EXTRACT_PROMPT,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type or "image/jpeg",
+                            "data": image_base64,
+                        },
+                    },
+                    {"type": "text", "text": _LAB_REPORT_VISION_USER_PROMPT},
+                ],
+            }
+        ],
+    )
+    return (msg.content[0].text or "").strip()
+
+
+def _vision_lab_report_groq(image_base64: str, media_type: str) -> str:
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY 未設定")
+    data_url = f"data:{media_type or 'image/jpeg'};base64,{image_base64}"
+    resp = httpx.post(
+        f"{GROQ_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": GROQ_VISION_MODEL,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": _LAB_REPORT_EXTRACT_PROMPT + "\n\n" + _LAB_REPORT_VISION_USER_PROMPT},
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                    ],
+                }
+            ],
+            "temperature": 0.2,
+            "max_tokens": 4096,
+        },
+        timeout=120.0,
+    )
+    resp.raise_for_status()
+    return (resp.json()["choices"][0]["message"]["content"] or "").strip()
+
+
+_LAB_VISION_PROVIDERS = {
+    "anthropic": _vision_lab_report_anthropic,
+    "groq": _vision_lab_report_groq,
+}
+
+
+def _parse_lab_items_json(raw: str) -> list[dict]:
+    """容錯解析 LLM 回的檢驗報告 JSON。"""
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    if not text.startswith("{") and not text.startswith("["):
+        l = text.find("{")
+        r = text.rfind("}")
+        if l != -1 and r != -1 and r > l:
+            text = text[l : r + 1]
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning(f"Lab report parse non-JSON: {raw[:200]}")
+        return []
+    items = result.get("items") if isinstance(result, dict) else result
+    return items if isinstance(items, list) else []
+
+
+def recognize_lab_report(image_base64: str, media_type: str = "image/jpeg") -> dict:
+    """辨識檢驗報告照片，一次抽出所有項目並判讀。
+
+    優先順序：
+      1. Google Cloud Vision OCR + text LLM 抽欄位 + 判讀（中文小字最準）
+      2. Fallback：LLM vision 一段式（anthropic / groq）
+
+    回傳: {
+        "items": [{"name", "value", "unit", "normal_range",
+                   "status", "meaning", "advice", "see_doctor"}, ...],
+        "raw_text": "<OCR 純文字或 vision 原始輸出>",
+        "provider": "google_vision | anthropic | groq | None",
+        "errors":   [{"provider": "...", "error": "..."}],
+    }
+    """
+    errors: list[dict] = []
+
+    # Stage 1: Google Vision OCR → text LLM 抽欄位（最準的路徑）
+    if GOOGLE_VISION_API_KEY:
+        try:
+            ocr_text = _google_vision_ocr(image_base64)
+        except Exception as e:
+            errors.append({"provider": "google_vision", "error": f"{type(e).__name__}: {e}"})
+            logger.warning(f"Google Vision OCR 失敗：{e}")
+            ocr_text = ""
+
+        if ocr_text and len(ocr_text.strip()) >= 20:
+            try:
+                extract_raw = call_claude(_LAB_REPORT_EXTRACT_PROMPT, ocr_text)
+                items = _parse_lab_items_json(extract_raw)
+                if items:
+                    return {
+                        "items": items,
+                        "raw_text": ocr_text,
+                        "provider": "google_vision",
+                        "errors": errors,
+                    }
+                errors.append({"provider": "google_vision+extract", "error": "no items extracted from ocr"})
+            except Exception as e:
+                errors.append({"provider": "google_vision+extract", "error": f"{type(e).__name__}: {e}"})
+                logger.warning(f"從 OCR 抽檢驗項目失敗：{e}")
+        elif ocr_text is not None:
+            errors.append({"provider": "google_vision", "error": f"ocr too short ({len(ocr_text or '')} chars)"})
+
+    # Stage 2 (fallback): LLM vision 一段式
+    chain = []
+    if _anthropic_client is not None:
+        chain.append("anthropic")
+    if GROQ_API_KEY:
+        chain.append("groq")
+
+    last_raw = ""
+    for name in chain:
+        fn = _LAB_VISION_PROVIDERS.get(name)
+        if fn is None:
+            continue
+        try:
+            raw = fn(image_base64, media_type)
+        except Exception as e:
+            errors.append({"provider": name, "error": f"{type(e).__name__}: {e}"})
+            logger.warning(f"Lab vision provider {name} 失敗：{e}")
+            continue
+        last_raw = raw
+        items = _parse_lab_items_json(raw)
+        if items:
+            return {
+                "items": items,
+                "raw_text": raw,
+                "provider": name,
+                "errors": errors,
+            }
+        errors.append({"provider": name, "error": "no lab items recognized"})
+
+    return {
+        "items": [],
+        "raw_text": last_raw,
+        "provider": None,
+        "errors": errors,
+    }

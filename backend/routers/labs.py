@@ -4,7 +4,7 @@ from typing import Optional
 import json
 import logging
 
-from backend.services.llm_service import call_claude
+from backend.services.llm_service import call_claude, recognize_lab_report
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -132,3 +132,92 @@ def check_lab_value(body: LabCheckRequest):
         see_doctor=_coerce_bool(data.get("see_doctor"), default=False),
         disclaimer=data.get("disclaimer", "本結果僅供參考，請以實際檢驗單位與醫師判讀為準"),
     )
+
+
+# ── 從照片一次解讀整份檢驗報告 ─────────────────────────────
+
+
+_VALID_STATUSES = {"low", "normal", "high", "critical", "unknown"}
+
+
+class LabScanRequest(BaseModel):
+    image_base64: str
+    media_type: Optional[str] = "image/jpeg"
+
+
+def _normalize_scanned_item(raw: dict) -> dict:
+    """把 LLM 回的單筆項目正規化成前端可直接渲染的結構。"""
+    name = (raw.get("name") or "").strip() or "未命名項目"
+    value = raw.get("value")
+    if value is None:
+        value = ""
+    elif not isinstance(value, str):
+        value = str(value)
+    unit = raw.get("unit")
+    if isinstance(unit, str):
+        unit = unit.strip() or None
+    elif unit is not None:
+        unit = str(unit).strip() or None
+    status = (raw.get("status") or "unknown").strip().lower()
+    if status not in _VALID_STATUSES:
+        status = "unknown"
+    return {
+        "name": name,
+        "value": value.strip() if isinstance(value, str) else value,
+        "unit": unit,
+        "normal_range": (raw.get("normal_range") or "").strip() or "未知",
+        "status": status,
+        "meaning": (raw.get("meaning") or "").strip(),
+        "advice": (raw.get("advice") or "").strip(),
+        "see_doctor": _coerce_bool(raw.get("see_doctor"), default=False),
+    }
+
+
+def _summarize_status(items: list[dict]) -> dict:
+    summary = {s: 0 for s in _VALID_STATUSES}
+    for it in items:
+        summary[it.get("status", "unknown")] += 1
+    abnormal = summary["low"] + summary["high"] + summary["critical"]
+    return {
+        "total": len(items),
+        "abnormal": abnormal,
+        "by_status": summary,
+        "needs_doctor": any(it.get("see_doctor") for it in items),
+    }
+
+
+@router.post("/scan")
+def scan_lab_report(body: LabScanRequest):
+    """拍/上傳檢驗報告，一次抽出所有項目並判讀正常/異常。
+
+    回傳:
+    {
+      "items": [{"name", "value", "unit", "normal_range",
+                 "status", "meaning", "advice", "see_doctor"}],
+      "summary": {"total", "abnormal", "by_status", "needs_doctor"},
+      "raw_text": "OCR / vision 原始輸出，便於 debug",
+      "provider": "google_vision | anthropic | groq | None",
+      "errors":   [{"provider", "error"}, ...],
+      "disclaimer": "..."
+    }
+    """
+    if not body.image_base64:
+        raise HTTPException(status_code=400, detail="缺少 image_base64")
+
+    try:
+        result = recognize_lab_report(body.image_base64, body.media_type or "image/jpeg")
+    except Exception as e:
+        logger.error(f"recognize_lab_report failed: {e}")
+        raise HTTPException(status_code=503, detail=f"報告辨識服務暫時無法使用：{type(e).__name__}: {e}")
+
+    raw_items = result.get("items") or []
+    items = [_normalize_scanned_item(it) for it in raw_items if isinstance(it, dict)]
+
+    return {
+        "items": items,
+        "summary": _summarize_status(items),
+        "raw_text": result.get("raw_text", ""),
+        "provider": result.get("provider"),
+        "errors": result.get("errors", []),
+        "disclaimer": "本判讀僅供參考，請以實際檢驗單位與醫師判讀為準",
+    }
