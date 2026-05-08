@@ -8142,6 +8142,33 @@ function diet() {
     +     '<h3><i data-lucide="list" style="width:16px;height:16px"></i> 今日已記錄</h3>'
     +     '<div id="diet-today-list"><p class="diet-empty">載入中…</p></div>'
     +   '</div>'
+
+    +   '<div class="diet-card diet-weekly-card">'
+    +     '<h3><i data-lucide="trending-up" style="width:16px;height:16px"></i> 本週狀況</h3>'
+    +     '<p class="diet-card-sub">過去 7 天的飲食規律與分布。完整度＝早午晚各 30%＋點心 10%。</p>'
+    +     '<div class="diet-weekly-week-tabs" id="diet-weekly-week-tabs">'
+    +       [['0','本週'],['1','上週'],['2','前週'],['3','再前']].map(function(p) {
+              return '<button class="diet-weekly-week-tab' + (p[0]==='0'?' active':'') + '" '
+                + 'data-week-idx="' + p[0] + '" onclick="dietWeeklySwitchWeek(' + p[0] + ')">'
+                + p[1] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<div class="diet-weekly-stats" id="diet-weekly-stats">'
+    +       '<div class="diet-empty">載入中…</div>'
+    +     '</div>'
+    +     '<div class="diet-weekly-chart-tabs" id="diet-weekly-chart-tabs">'
+    +       [['line','完整度折線'],['stack','餐別堆疊'],['multi','早午晚點']].map(function(p) {
+              return '<button class="diet-weekly-chart-tab' + (p[0]==='line'?' active':'') + '" '
+                + 'data-chart-type="' + p[0] + '" onclick="dietWeeklySwitchChart(\'' + p[0] + '\')">'
+                + p[1] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<div class="diet-weekly-chart-wrap">'
+    +       '<canvas id="diet-weekly-canvas" style="width:100%;height:160px"></canvas>'
+    +     '</div>'
+    +     '<div id="diet-weekly-top-foods" class="diet-weekly-top-foods"></div>'
+    +     '<p class="diet-weekly-meta" id="diet-weekly-meta"></p>'
+    +   '</div>'
     + '</section>';
 }
 
@@ -8491,6 +8518,7 @@ function loadDietPage() {
   fetchDietGuide();
   fetchCaffeineGuide();
   fetchDietTodayRecords();
+  fetchDietWeekly();
 }
 
 function fetchDietGuide() {
@@ -8601,6 +8629,7 @@ async function dietSubmitLog() {
     statusEl.className = 'diet-log-status diet-log-status-ok';
     showToast('飲食打卡完成', 'success');
     fetchDietTodayRecords();
+    fetchDietWeekly();
   } catch (e) {
     statusEl.textContent = '送出失敗：' + (e.message || '');
     statusEl.className = 'diet-log-status diet-log-status-error';
@@ -8662,6 +8691,342 @@ function fetchDietTodayRecords() {
       box.innerHTML = '<p class="diet-empty">讀取失敗：' + chatEscape(msg) +
         ' <button class="diet-retry-btn" type="button" onclick="fetchDietTodayRecords()">重試</button></p>';
     });
+}
+
+// ─── 飲食週報 ────────────────────────────────────────────────
+var _dietWeeklyData     = null;   // { weeks: [...] } 快取 4 週
+var _dietWeeklyWeekIdx  = 0;      // 0 = 本週、1 = 上週、…
+var _dietWeeklyChartType = 'line'; // 'line' | 'stack' | 'multi'
+var _dietWeeklyMealColors = {
+  breakfast: '#f4b942',
+  lunch:     '#5b9fe8',
+  dinner:    '#7d6dc7',
+  snack:     '#4caf90',
+};
+
+function fetchDietWeekly() {
+  var pid = getStablePatientId();
+  if (!pid) return;
+  var stats = document.getElementById('diet-weekly-stats');
+  if (!stats) return;
+  stats.innerHTML = '<div class="diet-empty">載入中…</div>';
+  var tz = new Date().getTimezoneOffset();
+  fetch(API + '/diet/weekly/' + encodeURIComponent(pid) + '?weeks=4&tz_offset=' + tz)
+    .then(function(r) {
+      if (!r.ok) {
+        return r.text().then(function(body) {
+          throw new Error('HTTP ' + r.status + '：' + (body || '').slice(0, 120));
+        });
+      }
+      return r.json();
+    })
+    .then(function(data) {
+      _dietWeeklyData = data || { weeks: [] };
+      if (data && data.error) {
+        stats.innerHTML = '<div class="diet-empty">讀取失敗：' + chatEscape(data.error) +
+          ' <button class="diet-retry-btn" type="button" onclick="fetchDietWeekly()">重試</button></div>';
+        return;
+      }
+      renderDietWeekly();
+    })
+    .catch(function(e) {
+      console.error('[diet] weekly fetch failed:', e);
+      stats.innerHTML = '<div class="diet-empty">讀取失敗：' + chatEscape((e && e.message) || '網路錯誤') +
+        ' <button class="diet-retry-btn" type="button" onclick="fetchDietWeekly()">重試</button></div>';
+    });
+}
+
+function dietWeeklySwitchWeek(idx) {
+  _dietWeeklyWeekIdx = idx | 0;
+  // 更新 tab active
+  var tabs = document.querySelectorAll('#diet-weekly-week-tabs .diet-weekly-week-tab');
+  tabs.forEach(function(t) {
+    t.classList.toggle('active', String(idx) === t.getAttribute('data-week-idx'));
+  });
+  renderDietWeekly();
+}
+
+function dietWeeklySwitchChart(type) {
+  if (type !== 'line' && type !== 'stack' && type !== 'multi') return;
+  _dietWeeklyChartType = type;
+  var tabs = document.querySelectorAll('#diet-weekly-chart-tabs .diet-weekly-chart-tab');
+  tabs.forEach(function(t) {
+    t.classList.toggle('active', type === t.getAttribute('data-chart-type'));
+  });
+  renderDietWeekly();
+}
+
+function renderDietWeekly() {
+  if (!_dietWeeklyData || !_dietWeeklyData.weeks) return;
+  var week = _dietWeeklyData.weeks[_dietWeeklyWeekIdx] || null;
+  var stats = document.getElementById('diet-weekly-stats');
+  var meta  = document.getElementById('diet-weekly-meta');
+  var foods = document.getElementById('diet-weekly-top-foods');
+  var canvas = document.getElementById('diet-weekly-canvas');
+  if (!stats || !canvas) return;
+
+  if (!week || !week.by_day || !week.by_day.length) {
+    stats.innerHTML = '<div class="diet-empty">這 7 天還沒打卡。</div>';
+    if (meta) meta.textContent = '';
+    if (foods) foods.innerHTML = '';
+    var c0 = canvas.getContext('2d');
+    c0.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  // 4 個指標卡：早 X/7、午 X/7、晚 X/7、點 X/7
+  var t = week.totals || {};
+  var hits = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+  week.by_day.forEach(function(d) {
+    if (d.breakfast) hits.breakfast++;
+    if (d.lunch)     hits.lunch++;
+    if (d.dinner)    hits.dinner++;
+    if (d.snack)     hits.snack++;
+  });
+  stats.innerHTML =
+    [['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點']].map(function(p) {
+      return '<div class="diet-weekly-stat" style="border-color:' + _dietWeeklyMealColors[p[0]] + '">' +
+        '<div class="diet-weekly-stat-meal" style="color:' + _dietWeeklyMealColors[p[0]] + '">' + p[1] + '</div>' +
+        '<div class="diet-weekly-stat-frac">' + hits[p[0]] + '<span class="diet-weekly-stat-of">/7</span></div>' +
+        '<div class="diet-weekly-stat-total">共 ' + (t[p[0]] || 0) + ' 餐</div>' +
+      '</div>';
+    }).join('');
+
+  // 完整度說明
+  var pct = Math.round((week.completeness_avg || 0) * 100);
+  if (meta) {
+    meta.textContent = '本週完整度：' + pct + '%（' + week.week_start + ' ~ ' + week.week_end + '）';
+  }
+
+  // top foods chips
+  if (foods) {
+    var tf = week.top_foods || [];
+    if (tf.length) {
+      foods.innerHTML = '<span class="diet-weekly-top-foods-label">常見食物</span>' +
+        tf.slice(0, 6).map(function(p) {
+          return '<span class="diet-weekly-food-chip">' + chatEscape(p[0]) + ' <em>×' + p[1] + '</em></span>';
+        }).join('');
+    } else {
+      foods.innerHTML = '';
+    }
+  }
+
+  // 繪製圖表
+  if (_dietWeeklyChartType === 'stack') {
+    drawDietWeeklyStack(week);
+  } else if (_dietWeeklyChartType === 'multi') {
+    drawDietWeeklyMulti(week);
+  } else {
+    drawDietWeeklyLine(week);
+  }
+}
+
+function _dietWeeklyCanvasSetup() {
+  var canvas = document.getElementById('diet-weekly-canvas');
+  if (!canvas) return null;
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width = Math.max(2, rect.width * dpr);
+  var h = canvas.height = Math.max(2, rect.height * dpr);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx: ctx, w: w, h: h, dpr: dpr };
+}
+
+function _dietWeeklyDayLabels(week) {
+  // 顯示 月/日（mm/dd）
+  return week.by_day.map(function(d) {
+    var parts = d.date.split('-');
+    return parts[1] + '/' + parts[2];
+  });
+}
+
+function drawDietWeeklyLine(week) {
+  // 折線：每日完整度（0~1）
+  var s = _dietWeeklyCanvasSetup();
+  if (!s) return;
+  var ctx = s.ctx, w = s.w, h = s.h, dpr = s.dpr;
+  var pad = 22 * dpr;
+  var padLeft = 32 * dpr;
+
+  var days = week.by_day;
+  var color = '#4caf90';
+
+  // y 軸 baseline 50%
+  ctx.strokeStyle = 'rgba(120,140,170,0.18)';
+  ctx.lineWidth = 1 * dpr;
+  ctx.setLineDash([4 * dpr, 4 * dpr]);
+  var midY = h - pad - (h - 2 * pad) * 0.5;
+  ctx.beginPath();
+  ctx.moveTo(padLeft, midY); ctx.lineTo(w - pad, midY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  var pts = days.map(function(d, i) {
+    return {
+      x: padLeft + (w - pad - padLeft) * (days.length === 1 ? 0.5 : i / (days.length - 1)),
+      y: h - pad - (h - 2 * pad) * Math.max(0, Math.min(1, d.completeness)),
+    };
+  });
+
+  // 漸層
+  var grad = ctx.createLinearGradient(0, pad, 0, h - pad);
+  grad.addColorStop(0, 'rgba(76,175,144,0.30)');
+  grad.addColorStop(1, 'rgba(76,175,144,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, h - pad);
+  pts.forEach(function(p) { ctx.lineTo(p.x, p.y); });
+  ctx.lineTo(pts[pts.length - 1].x, h - pad);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2 * dpr;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+  ctx.stroke();
+
+  ctx.fillStyle = color;
+  pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, 3 * dpr, 0, 2 * Math.PI); ctx.fill(); });
+
+  // y 標籤
+  ctx.fillStyle = 'rgba(120,140,170,0.7)';
+  ctx.font = (10 * dpr) + 'px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText('100%', 2 * dpr, pad + 4 * dpr);
+  ctx.fillText('50%',  2 * dpr, midY + 4 * dpr);
+  ctx.fillText('0%',   2 * dpr, h - pad + 4 * dpr);
+
+  // x 標籤（日期）
+  var labels = _dietWeeklyDayLabels(week);
+  ctx.textAlign = 'center';
+  pts.forEach(function(p, i) {
+    ctx.fillText(labels[i], p.x, h - pad + 14 * dpr);
+  });
+}
+
+function drawDietWeeklyStack(week) {
+  // 堆疊長條：每天每餐打卡 = 1 unit；y 軸 0~4
+  var s = _dietWeeklyCanvasSetup();
+  if (!s) return;
+  var ctx = s.ctx, w = s.w, h = s.h, dpr = s.dpr;
+  var pad = 22 * dpr;
+  var padLeft = 32 * dpr;
+  var days = week.by_day;
+  var n = days.length;
+  var slot = (w - pad - padLeft) / n;
+  var barW = slot * 0.65;
+  var meals = ['breakfast','lunch','dinner','snack'];
+  var unitH = (h - 2 * pad) / 4;
+
+  // y 軸格線
+  ctx.strokeStyle = 'rgba(120,140,170,0.12)';
+  ctx.lineWidth = 1 * dpr;
+  for (var k = 1; k <= 4; k++) {
+    var yy = h - pad - unitH * k;
+    ctx.beginPath(); ctx.moveTo(padLeft, yy); ctx.lineTo(w - pad, yy); ctx.stroke();
+  }
+
+  days.forEach(function(d, i) {
+    var x = padLeft + slot * (i + 0.5) - barW / 2;
+    var stackY = h - pad;
+    meals.forEach(function(m) {
+      if (d[m]) {
+        ctx.fillStyle = _dietWeeklyMealColors[m];
+        ctx.fillRect(x, stackY - unitH + 1 * dpr, barW, unitH - 2 * dpr);
+        stackY -= unitH;
+      }
+    });
+  });
+
+  // 標籤
+  ctx.fillStyle = 'rgba(120,140,170,0.7)';
+  ctx.font = (10 * dpr) + 'px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText('4', 2 * dpr, pad + 4 * dpr);
+  ctx.fillText('2', 2 * dpr, h - pad - unitH * 2 + 4 * dpr);
+  ctx.fillText('0', 2 * dpr, h - pad + 4 * dpr);
+
+  var labels = _dietWeeklyDayLabels(week);
+  ctx.textAlign = 'center';
+  days.forEach(function(_, i) {
+    var cx = padLeft + slot * (i + 0.5);
+    ctx.fillText(labels[i], cx, h - pad + 14 * dpr);
+  });
+}
+
+function drawDietWeeklyMulti(week) {
+  // 4 條折線：早午晚點分別累積打卡（0/1 per day）
+  var s = _dietWeeklyCanvasSetup();
+  if (!s) return;
+  var ctx = s.ctx, w = s.w, h = s.h, dpr = s.dpr;
+  var pad = 22 * dpr;
+  var padLeft = 32 * dpr;
+  var days = week.by_day;
+  var n = days.length;
+  var meals = ['breakfast','lunch','dinner','snack'];
+
+  // y 軸：每條線在獨立帶（4 帶）— 讓 4 條線不重疊
+  // 改採累積線：每條線是「截至這天的總次數 / 7」 0~1
+  var bandH = (h - 2 * pad);
+  var stepX = (w - pad - padLeft) / Math.max(1, n - 1);
+
+  // 格線
+  ctx.strokeStyle = 'rgba(120,140,170,0.12)';
+  ctx.lineWidth = 1 * dpr;
+  ctx.setLineDash([3 * dpr, 3 * dpr]);
+  ctx.beginPath();
+  ctx.moveTo(padLeft, h - pad - bandH * 0.5); ctx.lineTo(w - pad, h - pad - bandH * 0.5);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  meals.forEach(function(m) {
+    var cum = 0;
+    var pts = days.map(function(d, i) {
+      if (d[m]) cum++;
+      return {
+        x: padLeft + stepX * i,
+        y: h - pad - bandH * (cum / 7),
+      };
+    });
+    ctx.strokeStyle = _dietWeeklyMealColors[m];
+    ctx.lineWidth = 2 * dpr;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+    ctx.stroke();
+    ctx.fillStyle = _dietWeeklyMealColors[m];
+    pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, 2.5 * dpr, 0, 2 * Math.PI); ctx.fill(); });
+  });
+
+  // y 標籤
+  ctx.fillStyle = 'rgba(120,140,170,0.7)';
+  ctx.font = (10 * dpr) + 'px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText('7', 2 * dpr, pad + 4 * dpr);
+  ctx.fillText('0', 2 * dpr, h - pad + 4 * dpr);
+
+  // 圖例
+  ctx.font = (9 * dpr) + 'px system-ui';
+  var legendX = padLeft;
+  var legendY = pad - 4 * dpr;
+  [['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點']].forEach(function(p) {
+    ctx.fillStyle = _dietWeeklyMealColors[p[0]];
+    ctx.fillRect(legendX, legendY - 6 * dpr, 8 * dpr, 8 * dpr);
+    ctx.fillStyle = 'rgba(120,140,170,0.9)';
+    ctx.fillText(p[1], legendX + 11 * dpr, legendY + 1 * dpr);
+    legendX += 28 * dpr;
+  });
+
+  var labels = _dietWeeklyDayLabels(week);
+  ctx.fillStyle = 'rgba(120,140,170,0.7)';
+  ctx.font = (10 * dpr) + 'px system-ui';
+  ctx.textAlign = 'center';
+  days.forEach(function(_, i) {
+    var x = padLeft + stepX * i;
+    ctx.fillText(labels[i], x, h - pad + 14 * dpr);
+  });
 }
 
 

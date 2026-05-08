@@ -57,6 +57,8 @@ PATIENT_SUMMARY_SYSTEM_PROMPT = (
     "   - 最近身體上比較困擾的症狀（什麼症狀、多常發生、有多嚴重）\n"
     "   - 心情狀態（最近覺得怎樣、有沒有特別低潮的日子）\n"
     "   - 目前在吃的藥、有沒有按時吃、有沒有副作用\n"
+    "   - 飲食情況（這個月吃得規律嗎？有沒有特別常吃或特別不吃的東西？\n"
+    "     有沒有跟疾病飲食禁忌相關的訊號？吃完有特別不舒服的紀錄嗎？）\n"
     "   - 最想請醫師幫忙確認或調整的事\n"
     "5. 結構：用 2–4 個自然段落，不要用條列、不要用 markdown 標題\n"
     "6. 結尾用一句感謝或請醫師協助的話收尾\n"
@@ -71,8 +73,9 @@ PATIENT_SUMMARY_SYSTEM_PROMPT = (
 def _empty_summary():
     """DB 整體無法連線時的預設回傳：空 summary、零計數、has_data=False。"""
     return (
-        "報告期間：近 30 天\n症狀記錄：無\n情緒記錄：無\n用藥紀錄：無\n就診紀錄：無",
-        {"symptom_count": 0, "emotion_count": 0, "medication_count": 0, "visit_count": 0},
+        "報告期間：近 30 天\n症狀記錄：無\n情緒記錄：無\n用藥紀錄：無\n就診紀錄：無\n飲食記錄：無",
+        {"symptom_count": 0, "emotion_count": 0, "medication_count": 0,
+         "visit_count": 0, "diet_count": 0},
         False,
     )
 
@@ -118,8 +121,12 @@ def _collect_30d_summary(patient_id: str):
         sb.table("medical_records").select("*").eq("patient_id", patient_id)
         .gte("visit_date", since[:10]).order("visit_date").execute().data or []
     ), [])
+    diet_data = _safe_query(lambda: (
+        sb.table("diet_records").select("*").eq("patient_id", patient_id)
+        .gte("eaten_at", since).order("eaten_at", desc=True).execute().data or []
+    ), [])
 
-    has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data)
+    has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data or diet_data)
     parts = ["報告期間：近 30 天\n"]
 
     if symptoms_data:
@@ -185,11 +192,102 @@ def _collect_30d_summary(patient_id: str):
     else:
         parts.append("\n就診紀錄：無")
 
+    if diet_data:
+        # 30 天飲食彙整：餐別分布 + 4 週完整度 + 常見食物 + 最近 raw 樣本
+        meal_counts = {"breakfast": 0, "lunch": 0, "dinner": 0, "snack": 0}
+        meal_label = {"breakfast": "早", "lunch": "午", "dinner": "晚", "snack": "點"}
+        # 每日 meal set，用本地日期（台灣 +08:00）— 這裡簡化用 UTC date 即可，
+        # 醫師看的是月度趨勢，不需要分鐘級的時區精度
+        from datetime import date as _date_cls
+        day_meals: dict = {}
+        food_count: dict = {}
+        for r in diet_data:
+            mt = r.get("meal_type")
+            if mt in meal_counts:
+                meal_counts[mt] += 1
+            eaten = r.get("eaten_at") or ""
+            try:
+                d_key = eaten[:10]  # YYYY-MM-DD
+                day_meals.setdefault(d_key, set()).add(mt)
+            except Exception:
+                pass
+            foods = (r.get("foods") or "").strip()
+            if foods:
+                # 簡單切詞 — 跟 diet.py 的 _FOOD_TOKEN_RE 邏輯一致
+                import re as _re
+                for tok in _re.split(r"[、,，;；]|\s+", foods):
+                    tok = tok.strip()
+                    if len(tok) >= 2 and tok not in {"和", "與", "或", "以及", "等"}:
+                        food_count[tok] = food_count.get(tok, 0) + 1
+
+        # 4 週完整度：以 7 天為 bucket
+        from datetime import datetime as _dt
+        try:
+            today_utc = _dt.now(timezone.utc).date()
+        except Exception:
+            today_utc = _dt.utcnow().date()
+        week_completeness = []
+        for w in range(4):
+            week_end = today_utc - timedelta(days=w * 7)
+            week_start = week_end - timedelta(days=6)
+            comp_sum = 0.0
+            for i in range(7):
+                d = (week_start + timedelta(days=i)).isoformat()
+                meals = day_meals.get(d, set())
+                comp_sum += (
+                    (0.30 if "breakfast" in meals else 0)
+                    + (0.30 if "lunch" in meals else 0)
+                    + (0.30 if "dinner" in meals else 0)
+                    + (0.10 if "snack" in meals else 0)
+                )
+            week_completeness.append(round(comp_sum / 7, 2))
+
+        days_with_record = len(day_meals)
+        parts.append(f"\n飲食記錄（{len(diet_data)} 筆，記了 {days_with_record} 天）：")
+        parts.append(
+            "  打卡分布：早 {b}、午 {l}、晚 {d}、點 {s}（30 天總次數）".format(
+                b=meal_counts["breakfast"], l=meal_counts["lunch"],
+                d=meal_counts["dinner"],   s=meal_counts["snack"],
+            )
+        )
+        parts.append(
+            "  4 週完整度：本週 {0}、上週 {1}、前週 {2}、再前 {3}（早午晚各權重 0.30、點心 0.10）".format(
+                *week_completeness
+            )
+        )
+        if food_count:
+            top = sorted(food_count.items(), key=lambda x: (-x[1], x[0]))[:8]
+            parts.append("  常見食物：" + "、".join(f"{name}({n})" for name, n in top))
+        # 備註關鍵字頻次
+        notes = [r.get("note") for r in diet_data if r.get("note")]
+        if notes:
+            note_count: dict = {}
+            for n in notes:
+                key = (n or "").strip()
+                if key:
+                    note_count[key] = note_count.get(key, 0) + 1
+            top_notes = sorted(note_count.items(), key=lambda x: -x[1])[:5]
+            parts.append("  備註頻次：" + "、".join(f"{k}({v})" for k, v in top_notes))
+        # 最近 15 筆 raw 樣本（給 LLM 看具體吃了什麼）
+        parts.append("  最近紀錄（最多 15 筆）：")
+        for r in diet_data[:15]:
+            mt = meal_label.get(r.get("meal_type"), "?")
+            d = (r.get("eaten_at") or "")[:10]
+            foods = (r.get("foods") or "").strip()
+            note = (r.get("note") or "").strip()
+            line = f"    - {d} {mt}：{foods}"
+            if note:
+                line += f"（{note}）"
+            parts.append(line)
+    else:
+        parts.append("\n飲食記錄：無")
+
     counts = {
         "symptom_count": len(symptoms_data),
         "emotion_count": len(emotions_data),
         "medication_count": len(active_meds),
         "visit_count": len(records_data),
+        "diet_count": len(diet_data),
     }
     return "\n".join(parts), counts, has_data
 
