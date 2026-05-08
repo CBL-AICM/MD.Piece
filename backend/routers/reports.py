@@ -371,7 +371,7 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
 
 @router.get("/{patient_id}/monthly")
 def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=365)):
-    """回診間整合報告（醫師版）：症狀 + 情緒 + 用藥 + 就診 + 飲食 + 患者主動推送。
+    """回診間整合報告：症狀 + 情緒 + 用藥 + 就診 + 飲食。
 
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     顯式帶 `days` 視為覆寫（測試／自訂區間用）。
@@ -380,40 +380,7 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
         patient_id, days=days
     )
 
-    # 加掛 patient_push（doctor_notes 中 tags 含 patient_push）— 醫師版特有，
-    # 因為「患者主動推送」是這份報告對醫師最關鍵的訊號之一
-    push_lines: list[str] = []
-    push_count = 0
-    try:
-        sb = get_supabase()
-        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-        pushes_raw = _safe_query(lambda: (
-            sb.table("doctor_notes").select("*").eq("patient_id", patient_id)
-            .gte("created_at", since).order("created_at", desc=True).execute().data or []
-        ), [])
-        pushes_data = [
-            n for n in pushes_raw
-            if isinstance(n.get("tags"), list) and "patient_push" in n["tags"]
-        ]
-        push_count = len(pushes_data)
-        if pushes_data:
-            push_lines.append(f"\n患者主動推送（{push_count} 則）— **這是患者本人特別想讓您注意的事項**：")
-            for p in pushes_data[:10]:
-                d = (p.get("created_at") or "?")[:10]
-                tags = p.get("tags", []) or []
-                cat = next((t for t in tags if t != "patient_push"), "其他")
-                content = (p.get("content") or "").strip()
-                if len(content) > 200:
-                    content = content[:200] + "…"
-                push_lines.append(f"  - [{d}][{cat}] {content}")
-            has_data = True
-        else:
-            push_lines.append("\n患者主動推送：無")
-    except Exception as e:
-        logger.warning(f"monthly: 抓 patient_push 失敗：{e}")
-        push_lines.append("\n患者主動推送：（資料源異常）")
-
-    full_summary = data_summary + "\n" + "\n".join(push_lines)
+    full_summary = data_summary
 
     if not has_data:
         return {
@@ -439,7 +406,7 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
         "source": "ai",
         "days": days,
         "period_label": period_label,
-        "raw_data": {**counts, "patient_push_count": push_count},
+        "raw_data": counts,
     }
 
 
