@@ -2102,6 +2102,27 @@ html[data-mode="senior"] .tc-desc {
 .home-visit-chip-past .home-visit-countdown {
   background: #8E8680;
 }
+.home-visit-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #6B8E5A, #5A7E4D);
+  border: 1.5px solid rgba(106,142,90,0.6);
+  color: #FFFFFF;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s, box-shadow 0.15s;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(106,142,90,0.35);
+}
+.home-visit-done:hover {
+  background: linear-gradient(135deg, #7BA068, #6B8E5A);
+  box-shadow: 0 3px 12px rgba(106,142,90,0.5);
+}
+.home-visit-done:active { transform: scale(0.97); }
 .home-visit-clear {
   appearance: none;
   background: transparent;

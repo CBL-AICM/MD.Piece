@@ -1690,12 +1690,19 @@ function renderNextVisitChip() {
   else if (d === 0){ label = _T('home.visit.today'); cls += ' home-visit-chip-today'; }
   else             { label = _Tf('home.visit.daysAgo', { n: (-d) }); cls += ' home-visit-chip-past'; }
   var pretty = iso.replace(/-/g, '/').slice(5); // MM/DD
+  var doneBtn = (d === 0 || d < 0)
+    ? '<button type="button" class="home-visit-done" onclick="markVisitCompleted()" title="標記為已回診">'
+      +   '<i data-lucide="check-circle-2" style="width:14px;height:14px"></i>'
+      +   '<span>已回診</span>'
+      + '</button>'
+    : '';
   return ''
     + '<button type="button" class="' + cls + '" onclick="openNextVisitEditor()" title="' + _T('home.visit.editTitle') + '">'
     +   '<i data-lucide="calendar-check-2" style="width:14px;height:14px"></i>'
     +   '<span>' + _T('home.visit.label') + ' ' + pretty + '</span>'
     +   '<span class="home-visit-countdown">' + label + '</span>'
     + '</button>'
+    + doneBtn
     + '<button type="button" class="home-visit-clear" onclick="clearNextVisit()" title="' + _T('home.visit.clearTitle') + '">'
     +   '<i data-lucide="x" style="width:12px;height:12px"></i>'
     + '</button>'
@@ -1724,6 +1731,61 @@ function refreshNextVisitChip() {
   if (!row) return;
   row.innerHTML = renderNextVisitChip();
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 已回診：把這段期間的紀錄整合進「我的碎片」，然後清除原始紀錄
+function markVisitCompleted() {
+  var msg =
+    '標記為「已回診」後：\n' +
+    '・這段期間的症狀、Memo、生理紀錄會被整合進「我的碎片」\n' +
+    '・原始紀錄會被清除，無法復原\n' +
+    '・上次回診日會更新為今天\n\n' +
+    '確定要繼續嗎？';
+  if (!confirm(msg)) return;
+
+  // 1. 計算並保存快照（保留為「我的碎片」歷史）
+  try {
+    if (typeof piecesComputeStats === 'function' && typeof piecesSaveSnapshot === 'function') {
+      var s = piecesComputeStats();
+      var snap = {
+        savedAt: new Date().toISOString(),
+        since: s.since instanceof Date ? s.since.toISOString() : s.since,
+        days: s.days,
+        symptomCount: s.symptomCount,
+        symptomEntries: s.symptomEntries,
+        avgIntensity: s.avgIntensity,
+        memoCount: s.memoCount,
+        memoForDoctor: s.memoForDoctor,
+        vitalCount: s.vitalCount,
+        topCats: s.topCats,
+        timeline: s.timeline,
+        completedVisit: true
+      };
+      piecesSaveSnapshot(snap);
+    }
+  } catch (e) { /* 失敗也繼續清資料，避免卡住流程 */ }
+
+  // 2. 清除原始紀錄（只清時間序列資料，保留設定/基本資料）
+  try { localStorage.removeItem('mdpiece_symptoms'); } catch (e) {}
+  try { localStorage.removeItem('mdpiece_memos_v1'); } catch (e) {}
+  try { localStorage.removeItem('mdpiece_vitals_entries'); } catch (e) {}
+
+  // 3. 更新回診日期：lastVisit = 今天、nextVisit = ''
+  try {
+    var todayIso = new Date().toISOString().slice(0, 10);
+    if (typeof saveVisitDates === 'function') {
+      saveVisitDates({ lastVisit: todayIso, nextVisit: '' });
+    }
+  } catch (e) {}
+  saveNextVisit('');
+  refreshNextVisitChip();
+
+  // 4. UI 反饋
+  if (typeof showToast === 'function') showToast('已標記為回診，紀錄已整合到我的碎片', 'success');
+  // 5. 直接帶到「我的碎片」頁讓使用者看到結果
+  setTimeout(function() {
+    if (typeof navigateTo === 'function') navigateTo('pieces', null);
+  }, 400);
 }
 
 function homeCard(page, icon, title, desc, color) {
