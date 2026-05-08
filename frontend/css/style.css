@@ -4202,6 +4202,72 @@ html[data-mode="senior"] .vt-bmi-meta {
 .memo-edit:hover   { color: var(--accent); background: var(--bg-glass-hover); }
 .memo-del:hover    { color: var(--danger); background: var(--bg-glass-hover); }
 
+/* ─── Memo lightbox（點擊放大） ───────────────────────── */
+.memo-item-body { cursor: zoom-in; }
+.memo-lightbox-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 20, 30, 0.78);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 16px;
+  animation: memo-lb-fade 0.18s ease-out;
+}
+@keyframes memo-lb-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.memo-lightbox-card {
+  background: var(--bg-surface, #FFFAF0);
+  border: 1px solid var(--border-glass, rgba(92,58,50,0.22));
+  border-radius: var(--radius, 14px);
+  max-width: 920px;
+  width: 100%;
+  max-height: calc(100vh - 48px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  animation: memo-lb-pop 0.22s cubic-bezier(.2,.9,.4,1.3);
+}
+@keyframes memo-lb-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.memo-lightbox-meta {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-glass, rgba(92,58,50,0.18));
+  flex-shrink: 0;
+}
+.memo-lightbox-meta .memo-time { flex: 1; color: var(--text-dim, #8B7868); font-size: 0.85rem; }
+.memo-lightbox-close {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-muted, #A89685);
+  padding: 6px; border-radius: 6px;
+  display: inline-flex; align-items: center;
+  transition: var(--transition);
+}
+.memo-lightbox-close:hover { color: var(--danger, #B8553F); background: var(--bg-glass-hover, #E8C9A3); }
+.memo-lightbox-body {
+  padding: 16px;
+  overflow: auto;
+  display: flex; flex-direction: column; gap: 12px;
+  align-items: center;
+}
+.memo-lb-photo {
+  max-width: 100%;
+  max-height: 70vh;
+  width: auto; height: auto;
+  border-radius: var(--radius-sm, 10px);
+  object-fit: contain;
+}
+.memo-lb-text {
+  width: 100%;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text, #5C3A32);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .memo-item-body { display: flex; flex-direction: column; gap: 8px; }
 .memo-photo {
   max-width: 100%;
