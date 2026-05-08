@@ -4850,6 +4850,22 @@ html[data-mode="senior"] .vt-bmi-meta {
   max-height: 720px;
   overflow-y: auto;
 }
+/* 文章正文限制行寬以便閱讀（純文字段落不要把整個 page 撐滿） */
+.edu-article-body,
+#edu-content-body {
+  max-width: 30em;
+  margin-left: auto;
+  margin-right: auto;
+}
+.edu-article-body img,
+.edu-article-body table,
+.edu-article-body pre,
+#edu-content-body img,
+#edu-content-body table,
+#edu-content-body pre {
+  max-width: 100%;
+  height: auto;
+}
 
 @media (max-width: 720px) {
   .notebook { grid-template-columns: 1fr; }
