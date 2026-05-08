@@ -164,7 +164,7 @@ export default function Reports() {
               )}
             </div>
             <div className="disclaimer">
-              ⚠ MD.Piece 為輔助工具，僅作為醫病溝通與資料整理用途。
+              ⚠ MD.Piece 為 AI 輔助工具，僅作為醫病溝通與資料整理用途。
               <strong> 本報告不可作為診斷或醫療依據</strong>，所有臨床判斷仍應由執業醫師依專業評估後決定。
             </div>
           </>

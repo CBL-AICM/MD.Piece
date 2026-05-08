@@ -7132,7 +7132,7 @@ function pushHubBlock() {
       '</div>' +
       '<div class="previsit-disclaimer">' +
         '⚠ 推送的資料會出現在醫師端「患者推送」面板，僅供您的主治醫師臨床參考；' +
-        'MD.Piece 為輔助工具，不可作為診斷或醫療依據。' +
+        'MD.Piece 為 AI 輔助工具，不可作為診斷或醫療依據。' +
       '</div>' +
     '</section>'
   );
