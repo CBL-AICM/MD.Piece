@@ -9317,7 +9317,7 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
   align-items: center;
   gap: 6px;
   font-weight: 600;
-  color: var(--app-text, var(--text, #5C3A32));
+  color: var(--text, #5C3A32);
 }
 .bi-field > span::before {
   content: "";
@@ -9333,29 +9333,29 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
 .bi-field textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1.5px solid var(--app-border, var(--border, #5C3A32));
+  border: 1.5px solid var(--border-glass, rgba(92,58,50,0.22));
   border-radius: 8px;
-  background: var(--app-panel, var(--input-bg, #fffaf2));
-  color: var(--app-text, var(--text, #5C3A32));
+  background: var(--bg-surface, #fffaf2);
+  color: var(--text, #5C3A32);
   font: inherit;
   box-sizing: border-box;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .bi-field input::placeholder,
 .bi-field textarea::placeholder {
-  color: var(--app-text-dim, var(--text-dim, #8B7868));
+  color: var(--text-muted, #A89685);
   opacity: 0.85;
 }
 .bi-field input:focus,
 .bi-field select:focus,
 .bi-field textarea:focus {
   outline: none;
-  border-color: var(--bi-accent, var(--app-term, var(--accent, #C97F4B)));
-  box-shadow: 0 0 0 3px var(--app-glow, rgba(201,127,75,0.25));
+  border-color: var(--bi-accent, var(--accent, #C97F4B));
+  box-shadow: 0 0 0 3px var(--accent-glow, rgba(201,127,75,0.25));
 }
 .bi-field input[type="date"]::-webkit-datetime-edit,
 .bi-field input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-  color: var(--app-text, var(--text, #5C3A32));
+  color: var(--text, #5C3A32);
 }
 .bi-field input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
@@ -9367,7 +9367,7 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
 .bi-grid > .bi-field:nth-child(5n+4) { --bi-accent: var(--app-mint, #9DAEC0); }
 .bi-grid > .bi-field:nth-child(5n+5) { --bi-accent: var(--app-term, #C97F4B); }
 .bi-field textarea { resize: vertical; min-height: 56px; }
-.bi-field .bi-hint { font-size: 0.78rem; color: var(--app-text-dim, var(--text-dim, #8B7868)); }
+.bi-field .bi-hint { font-size: 0.78rem; color: var(--text-dim, #8B7868); }
 .bi-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 .bi-actions .primary,
 .bi-actions .btn-quiet {
