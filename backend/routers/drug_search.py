@@ -108,8 +108,52 @@ def _row_to_response(row: dict) -> dict:
     }
 
 
+def _info_has_useful_content(info: dict) -> bool:
+    """LLM 回的 dict 是否有實質內容（避免 matched=true 但空殼的退化情況）。"""
+    if not (info.get("name_zh") or info.get("name_en")):
+        return False
+    side = info.get("side_effects") or {}
+    risks = info.get("risks") or {}
+    return any([
+        info.get("indication"),
+        info.get("usage"),
+        info.get("category"),
+        info.get("education"),
+        isinstance(side, dict) and (side.get("common") or side.get("serious")),
+        isinstance(risks, dict) and (
+            risks.get("contraindications") or risks.get("warnings") or risks.get("interactions")
+        ),
+    ])
+
+
+def _row_has_useful_content(row: dict) -> bool:
+    """快取 row 是否有實質內容（避免歷史殘留的「matched=true 但空白」資料一直被回傳）。
+
+    判定：必須至少有一個名字（name_zh 或 name_en），且至少有一段衛教文字
+    或一個結構化欄位（副作用 / 風險 / 適應症 / 用法 / 衛教）非空。
+    """
+    has_name = bool((row.get("name_zh") or "").strip() or (row.get("name_en") or "").strip())
+    if not has_name:
+        return False
+    side = _decode_jsonish(row.get("side_effects")) or {}
+    risks = _decode_jsonish(row.get("risks")) or {}
+    return any([
+        (row.get("indication") or "").strip(),
+        (row.get("usage") or "").strip(),
+        (row.get("category") or "").strip(),
+        (row.get("education") or "").strip(),
+        isinstance(side, dict) and (side.get("common") or side.get("serious")),
+        isinstance(risks, dict) and (
+            risks.get("contraindications") or risks.get("warnings") or risks.get("interactions")
+        ),
+    ])
+
+
 def _find_cached_by_query(sb, q: str) -> Optional[dict]:
-    """以 name_zh / name_en / aliases 找快取。命中即回傳 row。"""
+    """以 name_zh / name_en / aliases 找快取。命中即回傳 row。
+
+    跳過內容空白的 row（例如先前 LLM 截斷時寫入的殘骸），讓搜尋走 LLM 重新整理。
+    """
     qn = _norm(q)
     if not qn:
         return None
@@ -119,11 +163,16 @@ def _find_cached_by_query(sb, q: str) -> Optional[dict]:
         logger.warning("drug_reference cache lookup failed: %s", type(e).__name__)
         return None
     for r in rows:
-        if _norm(r.get("name_zh")) == qn or _norm(r.get("name_en")) == qn:
-            return r
-        # aliases 可能是 jsonb (list) 或 TEXT JSON 字串
-        aliases = _decode_jsonish(r.get("aliases")) or []
-        if isinstance(aliases, list) and any(_norm(a) == qn for a in aliases):
+        matched_row = (
+            _norm(r.get("name_zh")) == qn
+            or _norm(r.get("name_en")) == qn
+        )
+        if not matched_row:
+            # aliases 可能是 jsonb (list) 或 TEXT JSON 字串
+            aliases = _decode_jsonish(r.get("aliases")) or []
+            if isinstance(aliases, list) and any(_norm(a) == qn for a in aliases):
+                matched_row = True
+        if matched_row and _row_has_useful_content(r):
             return r
     return None
 
@@ -199,8 +248,9 @@ def search_drug(
             return _row_to_response(cached)
 
     info = lookup_drug_info(q)
-    if not info.get("matched"):
-        # LLM 表示無法辨識：不寫快取，但把訊息原樣回給前端
+
+    if not info.get("matched") or not _info_has_useful_content(info):
+        # LLM 表示無法辨識（或回了沒內容的殼）：不寫快取，把訊息原樣回給前端
         return {
             "matched": False,
             "query": q,
@@ -328,7 +378,7 @@ def search_from_photo(body: DrugPhotoQuery):
             entry["cached"] = True
         else:
             info = lookup_drug_info(name)
-            if info.get("matched"):
+            if info.get("matched") and _info_has_useful_content(info):
                 saved = _save_to_cache(sb, info, name)
                 entry = {
                     "id": saved.get("id"),
