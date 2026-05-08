@@ -3,6 +3,7 @@
 - GET  /diet/guide/{patient_id}    根據病史 AI 生成個人化飲食指南（3 段）
 - POST /diet/records               紀錄一餐
 - GET  /diet/records/{patient_id}  取得當日（或近 N 天）飲食紀錄
+- GET  /diet/weekly/{patient_id}   近 N 週滾動 7 天彙整（純統計、無 LLM）
 
 LLM 走 backend.services.llm_service.call_claude（預設 Ollama，雲端 fallback Anthropic/Groq）。
 
@@ -23,10 +24,11 @@ Supabase 需要的資料表（migration SQL）：
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from datetime import datetime, timedelta, date
 import json
 import logging
+import re
 
 from backend.db import get_supabase
 from backend.services.llm_service import call_claude
@@ -704,3 +706,135 @@ def get_diet_records(
     except Exception as e:
         logger.error(f"讀取飲食紀錄失敗：{e}")
         return {"records": [], "error": "讀取飲食紀錄失敗"}
+
+
+# ─── 週報（純統計、無 LLM） ──────────────────────────────────
+# 設計重點：
+# - 滾動 7 天（不是自然週）— 第 1 週 = 今天往前 6 天；第 2 週 = 7~13 天前
+# - completeness 加權：早午晚各 0.30、點心 0.10（早午晚才是規律進食的核心）
+# - top_foods 用簡單切詞（、,，;； 與多空白），長度 >= 2 中文字才計入
+# - 純 SQL 聚合，no LLM；raw diet_records 已永久保留，不需 cache 表
+
+MEAL_WEIGHTS = {"breakfast": 0.30, "lunch": 0.30, "dinner": 0.30, "snack": 0.10}
+_FOOD_TOKEN_RE = re.compile(r"[、,，;；]|\s+")
+_FOOD_STOPWORDS = {"和", "與", "或", "以及", "等", "一些", "一點", "之類"}
+
+
+def _utc_iso_to_local_date(eaten_iso: str, tz_offset: int) -> Optional[date]:
+    """eaten_at 是 UTC ISO；轉使用者本地日期。tz_offset 是 JS 規格（西側為正）。
+    本地時間 = UTC - tz_offset。"""
+    if not eaten_iso:
+        return None
+    try:
+        # 處理 'Z' 結尾或 +00:00 結尾
+        ed = datetime.fromisoformat(eaten_iso.replace("Z", "+00:00"))
+        # 轉本地：utc - tz_offset → 對台灣 (-480) 等於 utc + 8h
+        if ed.tzinfo is None:
+            ed = ed.replace(tzinfo=None)
+            local_dt = ed - timedelta(minutes=tz_offset)
+        else:
+            local_dt = ed.replace(tzinfo=None) - timedelta(minutes=tz_offset)
+        return local_dt.date()
+    except (ValueError, AttributeError):
+        return None
+
+
+def _summarize_week(records: list, week_start_local: date, tz_offset: int) -> dict:
+    """聚合一週的 records 成可視化資料。"""
+    # 7 天每日的 meal set
+    day_meals = {(week_start_local + timedelta(days=i)).isoformat(): set()
+                 for i in range(7)}
+    totals = {"breakfast": 0, "lunch": 0, "dinner": 0, "snack": 0}
+    food_count: dict = {}
+
+    for r in records:
+        local_d = _utc_iso_to_local_date(r.get("eaten_at") or "", tz_offset)
+        if not local_d:
+            continue
+        d_key = local_d.isoformat()
+        if d_key not in day_meals:
+            continue
+        mt = r.get("meal_type")
+        if mt in MEAL_WEIGHTS:
+            day_meals[d_key].add(mt)
+            totals[mt] += 1
+        # food token 詞頻
+        foods = (r.get("foods") or "").strip()
+        if foods:
+            for tok in _FOOD_TOKEN_RE.split(foods):
+                tok = tok.strip()
+                if len(tok) >= 2 and tok not in _FOOD_STOPWORDS:
+                    food_count[tok] = food_count.get(tok, 0) + 1
+
+    by_day = []
+    completeness_sum = 0.0
+    for d_key in sorted(day_meals.keys()):
+        meals = day_meals[d_key]
+        completeness = sum(MEAL_WEIGHTS[m] for m in meals)
+        by_day.append({
+            "date": d_key,
+            "breakfast": "breakfast" in meals,
+            "lunch":     "lunch" in meals,
+            "dinner":    "dinner" in meals,
+            "snack":     "snack" in meals,
+            "completeness": round(completeness, 2),
+        })
+        completeness_sum += completeness
+
+    top_foods: List[Tuple[str, int]] = sorted(
+        food_count.items(), key=lambda x: (-x[1], x[0])
+    )[:8]
+
+    return {
+        "week_start": week_start_local.isoformat(),
+        "week_end":   (week_start_local + timedelta(days=6)).isoformat(),
+        "by_day":     by_day,
+        "totals":     totals,
+        "top_foods":  top_foods,
+        "completeness_avg": round(completeness_sum / 7, 2),
+    }
+
+
+@router.get("/weekly/{patient_id}")
+def get_diet_weekly(
+    patient_id: str,
+    weeks: int = Query(4, ge=1, le=12, description="近 N 週（每週滾動 7 天）"),
+    tz_offset: int = Query(-480, ge=-840, le=840, description="JS Date.getTimezoneOffset()，台灣 = -480"),
+):
+    """近 N 週的飲食彙整（純統計，無 LLM）。
+
+    第 i 週（i=0 是本週）：今天往前 i*7 天作為 end，再往前 6 天作為 start。
+    回 weeks[] 由近到遠。
+    """
+    sb = get_supabase()
+    today_local = (datetime.utcnow() - timedelta(minutes=tz_offset)).date()
+    range_start_local = today_local - timedelta(days=weeks * 7 - 1)
+    # 本地起點轉 UTC：UTC = local + tz_offset
+    local_start_dt = datetime.combine(range_start_local, datetime.min.time())
+    utc_start = (local_start_dt + timedelta(minutes=tz_offset)).isoformat()
+
+    try:
+        rows = (sb.table("diet_records")
+                  .select("*")
+                  .eq("patient_id", patient_id)
+                  .gte("eaten_at", utc_start)
+                  .order("eaten_at", desc=True)
+                  .execute())
+        all_records = rows.data or []
+    except Exception as e:
+        logger.error(f"讀取週報資料失敗：{e}")
+        return {"weeks": [], "error": "讀取週報資料失敗"}
+
+    weeks_data = []
+    for i in range(weeks):
+        week_end_local = today_local - timedelta(days=i * 7)
+        week_start_local = week_end_local - timedelta(days=6)
+        # 從 all_records filter 出落在這週的
+        in_week = []
+        for r in all_records:
+            local_d = _utc_iso_to_local_date(r.get("eaten_at") or "", tz_offset)
+            if local_d and week_start_local <= local_d <= week_end_local:
+                in_week.append(r)
+        weeks_data.append(_summarize_week(in_week, week_start_local, tz_offset))
+
+    return {"weeks": weeks_data}

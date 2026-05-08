@@ -10837,3 +10837,115 @@ html[data-mode="senior"] .home-senior-tile .hst-label {
     padding: 12px 14px !important;
   }
 }
+
+/* ─── 飲食週報 ──────────────────────────────────────────── */
+.diet-weekly-card .diet-card-sub {
+  margin: 0 0 10px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+.diet-weekly-week-tabs,
+.diet-weekly-chart-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.diet-weekly-week-tab,
+.diet-weekly-chart-tab {
+  flex: 1;
+  min-width: 60px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  background: rgba(120, 140, 170, 0.08);
+  border: 1px solid rgba(120, 140, 170, 0.18);
+  color: var(--text-dim);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.diet-weekly-week-tab:hover,
+.diet-weekly-chart-tab:hover {
+  background: rgba(120, 140, 170, 0.14);
+}
+.diet-weekly-week-tab.active,
+.diet-weekly-chart-tab.active {
+  background: rgba(76, 175, 144, 0.18);
+  border-color: rgba(76, 175, 144, 0.5);
+  color: var(--text);
+  font-weight: 600;
+}
+.diet-weekly-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 10px 0;
+}
+.diet-weekly-stat {
+  padding: 8px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid;
+  border-radius: 8px;
+  text-align: center;
+}
+.diet-weekly-stat-meal {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.diet-weekly-stat-frac {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+  margin-top: 2px;
+}
+.diet-weekly-stat-of {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+.diet-weekly-stat-total {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.diet-weekly-chart-wrap {
+  height: 160px;
+  margin: 10px 0 8px;
+}
+.diet-weekly-top-foods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+.diet-weekly-top-foods-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-right: 4px;
+}
+.diet-weekly-food-chip {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+  background: rgba(91, 159, 232, 0.12);
+  border: 1px solid rgba(91, 159, 232, 0.28);
+  color: var(--text);
+  border-radius: 12px;
+}
+.diet-weekly-food-chip em {
+  font-style: normal;
+  color: var(--text-dim);
+  margin-left: 4px;
+  font-size: 0.78rem;
+}
+.diet-weekly-meta {
+  margin: 6px 0 0;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+@media (max-width: 480px) {
+  .diet-weekly-stats { gap: 6px; }
+  .diet-weekly-stat { padding: 6px 4px; }
+  .diet-weekly-stat-frac { font-size: 1.2rem; }
+}
