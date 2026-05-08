@@ -30,29 +30,40 @@ CHECKLIST_SYSTEM_PROMPT = (
 # ── 月度報告 prompt ──────────────────────────────────────────
 
 MONTHLY_SYSTEM_PROMPT = (
-    "你是 MD.Piece 平台的臨床摘要助手，負責產出整合報告。\n"
-    "報告對象是主治醫師，用專業但清楚的語言。\n"
-    "資料的「報告期間：近 N 天」會在 user message 開頭給出，請依該天數描述，不要假定 30 天。\n\n"
-    "報告結構：\n"
-    "1. **整體概況** — 一段話總結患者本期間的狀態變化\n"
-    "2. **症狀趨勢** — 頻率最高的症狀、新出現的症狀、已改善的症狀\n"
-    "3. **情緒追蹤** — 平均分、趨勢方向、是否有連續低落\n"
-    "4. **用藥順從性** — 服藥率、漏藥模式、療效回饋\n"
-    "5. **就診紀錄** — 期間內的就診次數與診斷摘要\n"
-    "6. **患者主動推送** — 把患者透過「診前報告」推送給您的事項整理出來，這是患者本人最在意的，請特別重視\n"
-    "7. **建議關注** — 需要醫師在下次門診特別留意的項目\n\n"
-    "使用 Markdown 格式，簡潔專業。如果某類數據不足，註明「資料不足」而非杜撰。\n"
-    "結尾務必加一行：「⚠ 本報告由 AI 整理，不可作為診斷或醫療依據。」"
+    "產出一份回診間整合報告供主治醫師閱讀。\n"
+    "語氣：專業、清晰，像同行之間的交班。\n"
+    "報告期間會在 user message 開頭以「報告期間：XXX」給出，請依該期間描述，不要假定 30 天。\n\n"
+    "報告結構（嚴格使用以下三大段，順序固定，不要新增其他段落，不要在結尾加任何免責聲明）：\n\n"
+    "## 1. 臨床觀察\n"
+    "用 3–6 個短條列描述本期間患者發生了什麼。涵蓋（資料不足者跳過、不要杜撰）：\n"
+    "- 整體狀態走向（穩定／惡化／改善）\n"
+    "- 症狀模式：頻率最高的症狀、新出現的症狀、已改善的症狀\n"
+    "- 情緒：平均分、趨勢方向、是否有連續低落\n"
+    "- 用藥順從性：服藥率、漏藥模式、療效回饋\n"
+    "- 飲食：規律度、與疾病飲食禁忌相關的訊號\n"
+    "- 患者主動推送：把患者透過「診前報告」推送的事項整理出來，這是患者本人最在意的\n\n"
+    "## 2. 追蹤建議\n"
+    "提出下次門診值得特別問或量的項目。\n"
+    "- 條列 2–4 點：哪些症狀／指標需要進一步追蹤、哪些主訴需要釐清\n"
+    "- **嚴禁**寫出具體治療方案、開藥建議、劑量調整、診斷推論\n\n"
+    "## 3. 風險提醒\n"
+    "需要醫師留意的訊號（連續低落、漏藥模式、新症狀、症狀加劇等）。\n"
+    "- 若無顯著風險訊號，請寫「本期間無顯著風險訊號」一句\n\n"
+    "規則：\n"
+    "- 使用繁體中文 + Markdown 標題與條列\n"
+    "- 簡潔專業，不堆砌、不重複資料摘要\n"
+    "- 資料不足的部分註明「資料不足」，不杜撰\n"
+    "- **不要在結尾加免責聲明**，系統會自動附上固定免責聲明文字"
 )
 
 # ── 患者帶去診間用的白話摘要 prompt ────────────────────────
 
 PATIENT_SUMMARY_SYSTEM_PROMPT = (
-    "你是 MD.Piece 平台的健康助理，幫患者把這次回診前的紀錄整理成一段「帶去診間給醫師看的白話摘要」。\n"
-    "資料的「報告期間：近 N 天」會在 user message 開頭給出，請依該天數描述，不要假定 30 天或一個月。\n\n"
+    "把患者本期間的紀錄整理成一段「帶去診間給醫師看的白話摘要」。\n"
+    "報告期間會在 user message 開頭以「報告期間：XXX」給出，請依該期間描述，不要假定 30 天或一個月。\n\n"
     "讀者：患者本人會帶著這份摘要去門診，也可能直接念給醫師聽。\n\n"
     "規則：\n"
-    "1. 字數控制在 300–500 字（含空白），不可少於 300、不可超過 500\n"
+    "1. 字數以 300–500 字（含空白）為原則，不可少於 300；若資料量大、內容真的有必要更詳盡，可彈性延伸但盡量不超出太多\n"
     "2. 用親切、好懂的口語，避免艱深醫學術語；必要時用括號簡單解釋\n"
     "3. 用第一人稱「我」的角度書寫，像患者自己在跟醫師描述\n"
     "4. 一定要涵蓋這幾塊（有資料才寫，沒資料就跳過、不要編造）：\n"
@@ -72,10 +83,10 @@ PATIENT_SUMMARY_SYSTEM_PROMPT = (
 # ── 共用：收集近 N 天資料 ────────────────────────────────────
 
 
-def _empty_summary(days: int = 30):
+def _empty_summary(period_label: str = "近 30 天"):
     """DB 整體無法連線時的預設回傳：空 summary、零計數、has_data=False。"""
     return (
-        f"報告期間：近 {days} 天\n症狀記錄：無\n情緒記錄：無\n用藥紀錄：無\n就診紀錄：無\n飲食記錄：無",
+        f"報告期間：{period_label}\n症狀記錄：無\n情緒記錄：無\n用藥紀錄：無\n就診紀錄：無\n飲食記錄：無",
         {"symptom_count": 0, "emotion_count": 0, "medication_count": 0,
          "visit_count": 0, "diet_count": 0},
         False,
@@ -92,14 +103,74 @@ def _safe_query(fn, default):
         return default
 
 
-def _collect_period_summary(patient_id: str, days: int = 30):
-    """收集近 N 天症狀／情緒／用藥／就診資料，回傳 (summary_text, raw_counts, has_data)。
-    任何 DB / 連線錯誤都會 swallow 成空資料，讓上層仍能產生「資料不足」版本的報告。"""
+_FALLBACK_DAYS = 30
+
+
+def _get_period(patient_id: str):
+    """依「上次回診」決定報告期間。
+    回傳 (days, period_label, last_visit_date)。
+    - 有 medical_records.visit_date：days = 今天 - 上次 visit_date
+    - 沒有 / 抓不到：fallback 為近 30 天
+    任何 DB 例外都 swallow 成 fallback，不讓上層炸。
+    """
+    fallback = (_FALLBACK_DAYS, f"近 {_FALLBACK_DAYS} 天（無上次回診紀錄，使用預設區間）", None)
+
+    try:
+        sb = get_supabase()
+    except Exception:
+        return fallback
+
+    try:
+        rows = (
+            sb.table("medical_records")
+            .select("visit_date")
+            .eq("patient_id", patient_id)
+            .order("visit_date", desc=True)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+    except Exception as e:
+        logger.warning(f"_get_period: 抓上次回診失敗，使用 fallback：{e}")
+        return fallback
+
+    if not rows:
+        return fallback
+
+    visit_date_str = (rows[0].get("visit_date") or "")[:10]
+    if not visit_date_str:
+        return fallback
+
+    try:
+        visit_dt = datetime.strptime(visit_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except Exception:
+        return fallback
+
+    days = max(1, (datetime.now(timezone.utc) - visit_dt).days)
+    label = f"上次回診（{visit_date_str}）以來，共 {days} 天"
+    return days, label, visit_date_str
+
+
+def _collect_period_summary(patient_id: str, days: int | None = None, period_label: str | None = None):
+    """收集本期間症狀／情緒／用藥／就診資料，回傳 (summary_text, raw_counts, has_data, days, period_label)。
+
+    `days` 沒帶（None）時會呼叫 `_get_period` 自動推算。
+    任何 DB / 連線錯誤都會 swallow 成空資料，讓上層仍能產生「資料不足」版本的報告。
+    """
+    if days is None:
+        days, auto_label, _ = _get_period(patient_id)
+        if period_label is None:
+            period_label = auto_label
+    if period_label is None:
+        period_label = f"近 {days} 天"
+
     try:
         sb = get_supabase()
     except Exception as e:
         logger.warning(f"無法連線資料庫，產生空摘要：{e}")
-        return _empty_summary(days)
+        text, counts, has_data = _empty_summary(period_label)
+        return text, counts, has_data, days, period_label
 
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
@@ -129,7 +200,7 @@ def _collect_period_summary(patient_id: str, days: int = 30):
     ), [])
 
     has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data or diet_data)
-    parts = [f"報告期間：近 {days} 天\n"]
+    parts = [f"報告期間：{period_label}\n"]
 
     if symptoms_data:
         all_symptoms = []
@@ -247,7 +318,7 @@ def _collect_period_summary(patient_id: str, days: int = 30):
         days_with_record = len(day_meals)
         parts.append(f"\n飲食記錄（{len(diet_data)} 筆，記了 {days_with_record} 天）：")
         parts.append(
-            "  打卡分布：早 {b}、午 {l}、晚 {d}、點 {s}（{days} 天總次數）".format(
+            "  打卡分布：早 {b}、午 {l}、晚 {d}、點 {s}（本期間 {days} 天總次數）".format(
                 b=meal_counts["breakfast"], l=meal_counts["lunch"],
                 d=meal_counts["dinner"],   s=meal_counts["snack"],
                 days=days,
@@ -292,166 +363,74 @@ def _collect_period_summary(patient_id: str, days: int = 30):
         "visit_count": len(records_data),
         "diet_count": len(diet_data),
     }
-    return "\n".join(parts), counts, has_data
+    return "\n".join(parts), counts, has_data, days, period_label
 
 
 # ── 近 N 天月度報告（預設 30，前端可依回診日倒數覆寫） ─────────
 
 
 @router.get("/{patient_id}/monthly")
-def get_monthly_report(patient_id: str, days: int = Query(30, ge=1, le=365)):
-    """近 N 天整合報告：症狀 + 情緒 + 用藥 + 就診摘要。
+def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=365)):
+    """回診間整合報告（醫師版）：症狀 + 情緒 + 用藥 + 就診 + 飲食 + 患者主動推送。
 
-    `days` 由前端依「上次回診到今天的天數」傳入；無回診紀錄則用預設 30。
+    `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
+    顯式帶 `days` 視為覆寫（測試／自訂區間用）。
     """
+    data_summary, counts, has_data, days, period_label = _collect_period_summary(
+        patient_id, days=days
+    )
+
+    # 加掛 patient_push（doctor_notes 中 tags 含 patient_push）— 醫師版特有，
+    # 因為「患者主動推送」是這份報告對醫師最關鍵的訊號之一
+    push_lines: list[str] = []
+    push_count = 0
     try:
         sb = get_supabase()
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        pushes_raw = _safe_query(lambda: (
+            sb.table("doctor_notes").select("*").eq("patient_id", patient_id)
+            .gte("created_at", since).order("created_at", desc=True).execute().data or []
+        ), [])
+        pushes_data = [
+            n for n in pushes_raw
+            if isinstance(n.get("tags"), list) and "patient_push" in n["tags"]
+        ]
+        push_count = len(pushes_data)
+        if pushes_data:
+            push_lines.append(f"\n患者主動推送（{push_count} 則）— **這是患者本人特別想讓您注意的事項**：")
+            for p in pushes_data[:10]:
+                d = (p.get("created_at") or "?")[:10]
+                tags = p.get("tags", []) or []
+                cat = next((t for t in tags if t != "patient_push"), "其他")
+                content = (p.get("content") or "").strip()
+                if len(content) > 200:
+                    content = content[:200] + "…"
+                push_lines.append(f"  - [{d}][{cat}] {content}")
+            has_data = True
+        else:
+            push_lines.append("\n患者主動推送：無")
     except Exception as e:
-        logger.warning(f"monthly: 無法連線資料庫：{e}")
-        return {
-            "patient_id": patient_id,
-            "report": f"目前資料庫尚未連線，無法產出 {days} 天健康摘要。請稍後再試。",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "source": "db_offline",
-            "days": days,
-            "raw_data": {"symptom_count": 0, "emotion_count": 0, "medication_count": 0, "visit_count": 0},
-        }
-    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        logger.warning(f"monthly: 抓 patient_push 失敗：{e}")
+        push_lines.append("\n患者主動推送：（資料源異常）")
 
-    # 收集各面向資料（任一資料源失敗都不會炸整支 endpoint）
-    symptoms_data = _safe_query(lambda: (
-        sb.table("symptoms_log").select("*").eq("patient_id", patient_id)
-        .gte("created_at", since).order("created_at").execute().data or []
-    ), [])
-    emotions_data = _safe_query(lambda: (
-        sb.table("emotions").select("*").eq("patient_id", patient_id)
-        .gte("created_at", since).order("created_at").execute().data or []
-    ), [])
-    meds_data = _safe_query(lambda: (
-        sb.table("medications").select("*").eq("patient_id", patient_id).execute().data or []
-    ), [])
-    med_logs_data = _safe_query(lambda: (
-        sb.table("medication_logs").select("*").eq("patient_id", patient_id)
-        .gte("taken_at", since).execute().data or []
-    ), [])
-    records_data = _safe_query(lambda: (
-        sb.table("medical_records").select("*").eq("patient_id", patient_id)
-        .gte("visit_date", since[:10]).order("visit_date").execute().data or []
-    ), [])
-    # 患者主動推送（doctor_notes 中 tags 含 patient_push）
-    pushes_raw = _safe_query(lambda: (
-        sb.table("doctor_notes").select("*").eq("patient_id", patient_id)
-        .gte("created_at", since).order("created_at", desc=True).execute().data or []
-    ), [])
-    pushes_data = [
-        n for n in pushes_raw
-        if isinstance(n.get("tags"), list) and "patient_push" in n["tags"]
-    ]
+    full_summary = data_summary + "\n" + "\n".join(push_lines)
 
-    # 如果完全無資料
-    has_data = symptoms_data or emotions_data or med_logs_data or records_data or pushes_data
     if not has_data:
         return {
             "patient_id": patient_id,
-            "report": f"此患者近 {days} 天尚無足夠的健康數據可供產出報告。",
+            "report": f"此患者於「{period_label}」期間尚無足夠的健康數據可供產出報告。",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "source": "no_data",
             "days": days,
+            "period_label": period_label,
+            "raw_data": counts,
         }
 
-    # 組裝資料摘要
-    parts = [f"報告期間：近 {days} 天\n"]
-
-    # 症狀
-    if symptoms_data:
-        all_symptoms = []
-        for s in symptoms_data:
-            syms = s.get("symptoms", [])
-            if isinstance(syms, list):
-                all_symptoms.extend(syms)
-            elif isinstance(syms, str):
-                all_symptoms.append(syms)
-        symptom_freq = {}
-        for sym in all_symptoms:
-            symptom_freq[sym] = symptom_freq.get(sym, 0) + 1
-        sorted_symptoms = sorted(symptom_freq.items(), key=lambda x: x[1], reverse=True)
-        parts.append(f"症狀記錄（{len(symptoms_data)} 筆）：")
-        for sym, count in sorted_symptoms[:10]:
-            parts.append(f"  - {sym}：{count} 次")
-    else:
-        parts.append("症狀記錄：無")
-
-    # 情緒
-    if emotions_data:
-        scores = [e.get("score", 3) for e in emotions_data]
-        import statistics
-        avg_score = statistics.mean(scores)
-        parts.append(f"\n情緒記錄（{len(emotions_data)} 筆）：")
-        parts.append(f"  - 平均：{avg_score:.1f}/5")
-        parts.append(f"  - 最低：{min(scores)}, 最高：{max(scores)}")
-        # 連續低落檢查
-        consecutive = 0
-        max_consecutive = 0
-        for s in scores:
-            if s <= 2:
-                consecutive += 1
-                max_consecutive = max(max_consecutive, consecutive)
-            else:
-                consecutive = 0
-        if max_consecutive >= 3:
-            parts.append(f"  - 曾連續 {max_consecutive} 次低落（<= 2 分）")
-        notes = [e.get("note", "") for e in emotions_data if e.get("note")]
-        if notes:
-            parts.append(f"  - 備註摘要：{'; '.join(notes[:5])}")
-    else:
-        parts.append("\n情緒記錄：無")
-
-    # 用藥
-    active_meds = [m for m in meds_data if m.get("active", 1)]
-    if active_meds:
-        parts.append(f"\n用藥（{len(active_meds)} 種）：")
-        for m in active_meds:
-            parts.append(f"  - {m['name']}" + (f"（{m.get('dosage', '')}）" if m.get("dosage") else ""))
-    if med_logs_data:
-        total_logs = len(med_logs_data)
-        taken = sum(1 for l in med_logs_data if l.get("taken"))
-        rate = taken / total_logs * 100 if total_logs else 0
-        parts.append(f"  服藥率：{rate:.0f}%（{taken}/{total_logs}）")
-    else:
-        if not active_meds:
-            parts.append("\n用藥紀錄：無")
-
-    # 就診
-    if records_data:
-        parts.append(f"\n就診紀錄（{len(records_data)} 次）：")
-        for r in records_data:
-            date = r.get("visit_date", "?")[:10]
-            diag = r.get("diagnosis", "未記錄")
-            parts.append(f"  - {date}：{diag}")
-    else:
-        parts.append("\n就診紀錄：無")
-
-    # 患者主動推送（最重要，因為這是患者本人在乎的事）
-    if pushes_data:
-        parts.append(f"\n患者主動推送（{len(pushes_data)} 則）— **這是患者本人特別想讓您注意的事項**：")
-        for p in pushes_data[:10]:
-            d = (p.get("created_at") or "?")[:10]
-            tags = p.get("tags", []) or []
-            cat = next((t for t in tags if t != "patient_push"), "其他")
-            content = (p.get("content") or "").strip()
-            if len(content) > 200:
-                content = content[:200] + "…"
-            parts.append(f"  - [{d}][{cat}] {content}")
-    else:
-        parts.append("\n患者主動推送：無")
-
-    data_summary = "\n".join(parts)
-
     try:
-        report_text = call_claude(MONTHLY_SYSTEM_PROMPT, data_summary)
+        report_text = call_claude(MONTHLY_SYSTEM_PROMPT, full_summary)
     except Exception as e:
         logger.error(f"Monthly report generation failed: {e}")
-        report_text = f"報告生成失敗，以下為原始數據摘要：\n\n{data_summary}"
+        report_text = f"報告生成失敗，以下為原始數據摘要：\n\n{full_summary}"
 
     return {
         "patient_id": patient_id,
@@ -459,12 +438,8 @@ def get_monthly_report(patient_id: str, days: int = Query(30, ge=1, le=365)):
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "ai",
         "days": days,
-        "raw_data": {
-            "symptom_count": len(symptoms_data),
-            "emotion_count": len(emotions_data),
-            "medication_count": len(active_meds),
-            "visit_count": len(records_data),
-        },
+        "period_label": period_label,
+        "raw_data": {**counts, "patient_push_count": push_count},
     }
 
 
@@ -472,30 +447,46 @@ def get_monthly_report(patient_id: str, days: int = Query(30, ge=1, le=365)):
 
 
 @router.get("/{patient_id}/checklist")
-def get_consultation_checklist(patient_id: str):
-    """建議問診清單：根據近期數據，生成這次最需要確認的三件事"""
+def get_consultation_checklist(patient_id: str, days: int | None = Query(None, ge=1, le=365)):
+    """建議問診清單：根據本期間數據，生成這次最需要確認的三件事。
+
+    `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
+    """
+    if days is None:
+        days, period_label, _ = _get_period(patient_id)
+    else:
+        period_label = f"近 {days} 天"
+
+    default_checklist = [
+        "目前身體整體感覺如何？有沒有新的不舒服？",
+        "目前的藥有沒有按時吃？有沒有什麼困難？",
+        "生活和心情上有沒有需要醫師幫忙的地方？",
+    ]
+
     try:
         sb = get_supabase()
     except Exception as e:
         logger.warning(f"checklist: 無法連線資料庫，回預設清單：{e}")
         return {
             "patient_id": patient_id,
-            "checklist": [
-                "目前身體整體感覺如何？有沒有新的不舒服？",
-                "目前的藥有沒有按時吃？有沒有什麼困難？",
-                "生活和心情上有沒有需要醫師幫忙的地方？",
-            ],
+            "checklist": default_checklist,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "source": "db_offline",
+            "days": days,
+            "period_label": period_label,
         }
 
-    # 收集患者近期資料（任一失敗都當空陣列處理）
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    # 本期間內的資料（任一失敗都當空陣列處理）
     symptoms_data = _safe_query(lambda: (
         sb.table("symptoms_log").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since)
         .order("created_at", desc=True).limit(10).execute().data or []
     ), [])
     emotions_data = _safe_query(lambda: (
         sb.table("emotions").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since)
         .order("created_at", desc=True).limit(10).execute().data or []
     ), [])
     medications_data = _safe_query(lambda: (
@@ -503,21 +494,17 @@ def get_consultation_checklist(patient_id: str):
         .eq("active", 1).execute().data or []
     ), [])
 
-    # 如果完全沒有資料，回傳預設清單
     if not symptoms_data and not emotions_data and not medications_data:
         return {
             "patient_id": patient_id,
-            "checklist": [
-                "目前身體整體感覺如何？有沒有新的不舒服？",
-                "目前的藥有沒有按時吃？有沒有什麼困難？",
-                "生活和心情上有沒有需要醫師幫忙的地方？",
-            ],
+            "checklist": default_checklist,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "source": "default",
+            "days": days,
+            "period_label": period_label,
         }
 
-    # 組裝 user prompt
-    parts = []
+    parts = [f"報告期間：{period_label}"]
     if symptoms_data:
         symptom_texts = []
         for s in symptoms_data:
@@ -540,7 +527,7 @@ def get_consultation_checklist(patient_id: str):
         med_names = [m.get("name", "未知藥物") for m in medications_data]
         parts.append(f"目前用藥：{', '.join(med_names)}")
 
-    user_message = "以下是這位患者的近期健康數據：\n" + "\n".join(parts)
+    user_message = "以下是這位患者的健康數據：\n" + "\n".join(parts)
 
     try:
         raw = call_claude(CHECKLIST_SYSTEM_PROMPT, user_message)
@@ -563,6 +550,8 @@ def get_consultation_checklist(patient_id: str):
         "checklist": checklist[:3],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "ai",
+        "days": days,
+        "period_label": period_label,
     }
 
 
@@ -570,16 +559,18 @@ def get_consultation_checklist(patient_id: str):
 
 
 @router.get("/{patient_id}/patient-summary")
-def get_patient_summary(patient_id: str, days: int = Query(30, ge=1, le=365)):
-    """產出患者帶去診間用的 300–500 字白話摘要（PDF / Word 用）。
+def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le=365)):
+    """產出患者帶去診間用的白話摘要（PDF / Word 用）。
 
-    `days` 由前端依「上次回診到今天的天數」傳入；無回診紀錄則用預設 30。
+    `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     """
-    data_summary, counts, has_data = _collect_period_summary(patient_id, days=days)
+    data_summary, counts, has_data, days, period_label = _collect_period_summary(
+        patient_id, days=days
+    )
 
     if not has_data:
         fallback = (
-            f"醫師您好，這次回診前，我把過去 {days} 天的紀錄整理了一下，但其實沒有特別記錄到什麼"
+            f"醫師您好，這次回診前，我把{period_label}的紀錄整理了一下，但其實沒有特別記錄到什麼"
             "嚴重的症狀，整體狀況算是平穩。日常生活可以照常進行，吃飯、睡覺、心情都還算可以。\n\n"
             "想跟醫師確認的是：以我目前的狀況，下次回診大概多久後比較合適？平常有沒有什麼"
             "需要特別注意的地方，例如飲食、運動，或哪些症狀出現的時候應該趕快回診？\n\n"
@@ -592,6 +583,7 @@ def get_patient_summary(patient_id: str, days: int = Query(30, ge=1, le=365)):
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "source": "no_data",
             "days": days,
+            "period_label": period_label,
             "raw_data": counts,
         }
 
@@ -603,7 +595,7 @@ def get_patient_summary(patient_id: str, days: int = Query(30, ge=1, le=365)):
     except Exception as e:
         logger.error(f"Patient summary generation failed: {e}")
         summary = (
-            f"醫師您好，過去 {days} 天我有持續記錄身體狀況，但這次摘要暫時沒辦法自動產生，"
+            f"醫師您好，{period_label}我有持續記錄身體狀況，但這次摘要暫時沒辦法自動產生，"
             "我把原始紀錄帶來，麻煩醫師看一下。謝謝！"
         )
         source = "error"
@@ -614,6 +606,7 @@ def get_patient_summary(patient_id: str, days: int = Query(30, ge=1, le=365)):
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": source,
         "days": days,
+        "period_label": period_label,
         "raw_data": counts,
     }
 
@@ -637,11 +630,17 @@ def _pearson(xs: list[float], ys: list[float]) -> float | None:
 
 
 @router.get("/{patient_id}/wellness-correlation")
-def wellness_correlation(patient_id: str, days: int = 30):
+def wellness_correlation(patient_id: str, days: int | None = None):
     """
     每日「心情」與「用藥改善程度」的相關性（Pearson）。
     回傳並排的每日序列與相關係數，前端可畫雙線圖。
+
+    `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     """
+    if days is None:
+        days, period_label, _ = _get_period(patient_id)
+    else:
+        period_label = f"近 {days} 天"
     if days < 2:
         raise HTTPException(status_code=400, detail="days 必須 >= 2")
     sb = get_supabase()
@@ -727,6 +726,7 @@ def wellness_correlation(patient_id: str, days: int = 30):
     return {
         "patient_id": patient_id,
         "days": days,
+        "period_label": period_label,
         "series": series,
         "paired_days": len(paired_x),
         "pearson_r": r,
