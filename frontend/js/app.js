@@ -1316,11 +1316,6 @@ function switchAuthTab(tab) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 患者 PWA 不再有身份選擇 — 一律以 patient 註冊／登入。
-// 保留下面兩個函式以便舊呼叫不炸，醫師走 /doctor/ 獨立入口。
-function selectAuthRole(_role) { /* no-op */ }
-function selectLoginRole(_role) { /* no-op */ }
-
 function onRegAvatarPicked(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
@@ -1391,20 +1386,11 @@ async function submitLogin() {
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, doctor_key: null }),
+      body: JSON.stringify({ username, password }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      const detail = err.detail || '登入失敗';
-      // 醫師誤用患者入口 — 引導去獨立的醫師端
-      if (detail.indexOf('醫師') >= 0 && detail.indexOf('通行碼') >= 0) {
-        showAuthError('login', '此帳號為醫師身份，請改用醫師端登入：/doctor/');
-        btn.disabled = false;
-        btn.innerHTML = original;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        return;
-      }
-      throw new Error(detail);
+      throw new Error(err.detail || '登入失敗');
     }
     const user = await res.json();
     finishAuth(user);
@@ -1438,12 +1424,10 @@ async function submitRegister() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('register-error').hidden = true;
 
-  // 患者 PWA 一律以 patient 註冊；醫師走 /doctor/ 獨立入口
   const payload = {
     username, password, nickname,
     role: 'patient',
     avatar_url: _regAvatarDataUrl || null,
-    doctor_key: null,
   };
 
   try {
@@ -1469,12 +1453,6 @@ async function submitRegister() {
 function finishAuth(user) {
   if (user.username) {
     try { localStorage.setItem('mdpiece_last_username', user.username); } catch {}
-  }
-  if (user.role === 'doctor') {
-    try { localStorage.setItem('mdp.doctorUser', JSON.stringify(user)); } catch {}
-    try { localStorage.removeItem('mdpiece_user'); } catch {}
-    window.location.assign('/doctor/');
-    return;
   }
   setCurrentUser(user);
   const overlay = document.getElementById('register-overlay');
