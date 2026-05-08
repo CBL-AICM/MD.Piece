@@ -132,11 +132,11 @@ export default function Reports() {
 
       {err && <div className="error-bar">{err}</div>}
 
-      {/* AI 回診報告 */}
+      {/* MD.Piece 回診報告 */}
       <div className="card report-card" style={{ marginBottom: 16 }}>
         <div className="report-head">
           <div>
-            <h2 className="section-h" style={{ margin: 0 }}>AI 回診報告（30 天）</h2>
+            <h2 className="section-h" style={{ margin: 0 }}>MD.Piece 回診報告（30 天）</h2>
             <p className="cell-dim" style={{ margin: '6px 0 0', fontSize: 13 }}>
               整合症狀／情緒／用藥／就診紀錄，由 Claude 產出專業摘要供醫師參考。
             </p>
@@ -158,13 +158,13 @@ export default function Reports() {
             />
             <div className="report-meta">
               <span>產生時間：{new Date(report.generated_at).toLocaleString('zh-TW')}</span>
-              <span>· 來源：{report.source === 'ai' ? 'Claude AI' : '原始摘要'}</span>
+              <span>· 來源：{report.source === 'ai' ? 'MD.Piece' : '原始摘要'}</span>
               {report.raw_data && (
                 <span>· 樣本：症狀 {report.raw_data.symptom_count} / 情緒 {report.raw_data.emotion_count} / 用藥 {report.raw_data.medication_count} / 就診 {report.raw_data.visit_count}</span>
               )}
             </div>
             <div className="disclaimer">
-              ⚠ MD.Piece 為 AI 輔助工具，僅作為醫病溝通與資料整理用途。
+              ⚠ MD.Piece 為輔助工具，僅作為醫病溝通與資料整理用途。
               <strong> 本報告不可作為診斷或醫療依據</strong>，所有臨床判斷仍應由執業醫師依專業評估後決定。
             </div>
           </>

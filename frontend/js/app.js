@@ -748,7 +748,7 @@ function previsit() {
     + '    <div>'
     + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
     + '      <h2 class="pv-title"><i data-lucide="clipboard-check"></i> 診前報告</h2>'
-    + '      <p class="pv-sub">看診前 30 秒讀完：AI 幫你整理近 30 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
+    + '      <p class="pv-sub">看診前 30 秒讀完：MD.Piece 幫你整理近 30 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
     + '    </div>'
     + '    <div class="pv-actions-top">'
     + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
@@ -769,7 +769,7 @@ function previsit() {
     + '  <section class="pv-section pv-checklist">'
     + '    <h3 class="pv-section-title"><i data-lucide="list-checks"></i> 這次最該問醫師的三件事</h3>'
     + '    <ol id="pv-checklist-list" class="pv-checklist-list">'
-    + '      <li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>'
+    + '      <li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 整理中…</li>'
     + '    </ol>'
     + '    <p class="pv-source" id="pv-checklist-source"></p>'
     + '  </section>'
@@ -778,12 +778,12 @@ function previsit() {
     + '    <h3 class="pv-section-title"><i data-lucide="file-text"></i> 30 天健康摘要</h3>'
     + '    <div class="pv-stats" id="pv-stats"></div>'
     + '    <div id="pv-report-body" class="pv-report-body">'
-    + '      <p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>'
+    + '      <p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…</p>'
     + '    </div>'
     + '    <p class="pv-source" id="pv-report-source"></p>'
     + '  </section>'
     + ''
-    + '  <p class="pv-disclaimer"><i data-lucide="info"></i> 本報告由 AI 整理你輸入的紀錄，僅供與醫師溝通參考，不取代醫師診斷。</p>'
+    + '  <p class="pv-disclaimer"><i data-lucide="info"></i> 本報告由 MD.Piece 整理你輸入的紀錄，僅供與醫師溝通參考，不取代醫師診斷。</p>'
     + '</section>'
     + pushHubBlock();
 }
@@ -897,7 +897,7 @@ function previsitSourceLabel(data) {
   if (!data) return '';
   var src = data.source || '';
   var when = data.generated_at ? new Date(data.generated_at).toLocaleString() : '';
-  var srcLabel = src === 'ai' ? 'AI 生成'
+  var srcLabel = src === 'ai' ? 'MD.Piece 生成'
     : src === 'default' ? '預設提示（紀錄不足）'
     : src === 'no_data' ? '紀錄不足'
     : src;
@@ -907,8 +907,8 @@ function previsitSourceLabel(data) {
 function previsitReload() {
   var listEl = document.getElementById('pv-checklist-list');
   var bodyEl = document.getElementById('pv-report-body');
-  if (listEl) listEl.innerHTML = '<li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 整理中…</li>';
-  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> AI 撰寫中…</p>';
+  if (listEl) listEl.innerHTML = '<li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 整理中…</li>';
+  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…</p>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
   loadPrevisitPage();
 }
@@ -967,7 +967,7 @@ function previsitDownload(format) {
     if (typeof showToast === 'function') showToast('找不到使用者，請先登入', 'warning');
     return;
   }
-  if (typeof showToast === 'function') showToast('AI 撰寫中，請稍候…', 'info');
+  if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
 
   fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
     .then(function(r) { return r.json(); })
@@ -1029,7 +1029,7 @@ function previsitBuildPrintableHTML(summary, counts, checklist) {
     + paragraphs
     + '<h2>這次想請醫師確認的事</h2>'
     + checklistHtml
-    + '<div class="footer">本報告由 AI 整理患者自行輸入的紀錄，僅供醫病溝通參考，不取代醫師診斷。</div>'
+    + '<div class="footer">本報告由 MD.Piece 整理患者自行輸入的紀錄，僅供醫病溝通參考，不取代醫師診斷。</div>'
     + '</body></html>';
 }
 
@@ -1071,7 +1071,7 @@ function labs() {
         <i data-lucide="trending-up" style="width:22px;height:22px"></i> 報告數值
       </h2>
       <p style="margin-top:6px;color:var(--text-dim)">
-        輸入任何檢驗項目（血液、肝腎、免疫、罕見值都可以），AI 會告訴你正常範圍、是否異常、生活建議。<strong>結果僅供參考，不取代醫師判讀。</strong>
+        輸入任何檢驗項目（血液、肝腎、免疫、罕見值都可以），MD.Piece 會告訴你正常範圍、是否異常、生活建議。<strong>結果僅供參考，不取代醫師判讀。</strong>
       </p>
     </div>
 
@@ -1080,7 +1080,7 @@ function labs() {
         <i data-lucide="camera" style="width:18px;height:18px"></i> 拍攝報告自動讀取數值
       </h3>
       <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
-        拍張檢驗報告（或從相簿選），AI 會一次抽出所有項目，列出哪些正常、哪些異常。
+        拍張檢驗報告（或從相簿選），MD.Piece 會一次抽出所有項目，列出哪些正常、哪些異常。
       </p>
       <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
         <label class="primary" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;cursor:pointer">
@@ -1272,24 +1272,10 @@ function switchAuthTab(tab) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function selectAuthRole(role) {
-  _authRole = role;
-  document.querySelectorAll('.auth-role-btn[data-role]').forEach(b => {
-    b.classList.toggle('selected', b.dataset.role === role);
-  });
-  const field = document.getElementById('reg-doctor-key-field');
-  if (field) field.hidden = role !== 'doctor';
-}
-
-function selectLoginRole(role) {
-  _loginRole = role;
-  document.querySelectorAll('.auth-role-btn[data-login-role]').forEach(b => {
-    b.classList.toggle('selected', b.dataset.loginRole === role);
-  });
-  const field = document.getElementById('login-doctor-key-field');
-  if (field) field.hidden = role !== 'doctor';
-  document.getElementById('login-error').hidden = true;
-}
+// 患者 PWA 不再有身份選擇 — 一律以 patient 註冊／登入。
+// 保留下面兩個函式以便舊呼叫不炸，醫師走 /doctor/ 獨立入口。
+function selectAuthRole(_role) { /* no-op */ }
+function selectLoginRole(_role) { /* no-op */ }
 
 function onRegAvatarPicked(e) {
   const file = e.target.files && e.target.files[0];
@@ -1350,12 +1336,7 @@ function showAuthError(panel, msg) {
 async function submitLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
-  const doctor_key = document.getElementById('login-doctor-key').value.trim();
   if (!username || !password) return;
-  if (_loginRole === 'doctor' && !doctor_key) {
-    showAuthError('login', '請輸入醫師通行碼');
-    return;
-  }
   const btn = document.getElementById('login-submit');
   const original = btn.innerHTML;
   btn.disabled = true;
@@ -1366,19 +1347,14 @@ async function submitLogin() {
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username, password,
-        doctor_key: _loginRole === 'doctor' ? doctor_key : null,
-      })
+      body: JSON.stringify({ username, password, doctor_key: null }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       const detail = err.detail || '登入失敗';
+      // 醫師誤用患者入口 — 引導去獨立的醫師端
       if (detail.indexOf('醫師') >= 0 && detail.indexOf('通行碼') >= 0) {
-        if (_loginRole !== 'doctor') selectLoginRole('doctor');
-        showAuthError('login', '此帳號為醫師身份，請輸入醫師通行碼');
-        const keyInput = document.getElementById('login-doctor-key');
-        if (keyInput) { keyInput.focus(); keyInput.select(); }
+        showAuthError('login', '此帳號為醫師身份，請改用醫師端登入：/doctor/');
         btn.disabled = false;
         btn.innerHTML = original;
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1411,12 +1387,6 @@ async function submitRegister() {
     return;
   }
 
-  const doctor_key = document.getElementById('reg-doctor-key').value.trim();
-  if (_authRole === 'doctor' && !doctor_key) {
-    showAuthError('register', '請輸入醫師通行碼');
-    return;
-  }
-
   const btn = document.getElementById('register-submit');
   const original = btn.innerHTML;
   btn.disabled = true;
@@ -1424,11 +1394,12 @@ async function submitRegister() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('register-error').hidden = true;
 
+  // 患者 PWA 一律以 patient 註冊；醫師走 /doctor/ 獨立入口
   const payload = {
     username, password, nickname,
-    role: _authRole,
+    role: 'patient',
     avatar_url: _regAvatarDataUrl || null,
-    doctor_key: _authRole === 'doctor' ? doctor_key : null,
+    doctor_key: null,
   };
 
   try {
@@ -3073,7 +3044,7 @@ function symptomsAnalyze() {
   return `
     <div class="card">
       <h2>症狀分析</h2>
-      <p style="margin-top:8px;color:var(--text-dim)">把現在的症狀寫下來，AI 會幫你分析可能病因、緊急程度與建議就診科別。</p>
+      <p style="margin-top:8px;color:var(--text-dim)">把現在的症狀寫下來，MD.Piece 會幫你分析可能病因、緊急程度與建議就診科別。</p>
       <p style="margin-top:4px;font-size:0.85rem;color:var(--text-muted)">⚠️ 結果僅供參考，<strong>不取代醫師診斷</strong>。如有嚴重不適請立即就醫或撥 119。</p>
     </div>
 
@@ -4138,7 +4109,7 @@ function _renderMedPreviewAndRecognize(dataUrl, mediaType) {
     if (s2) {
       s2.innerHTML =
         '<div class="loading-spinner"></div>' +
-        '<p style="margin-top:8px">AI 整理欄位中...</p>';
+        '<p style="margin-top:8px">MD.Piece 整理欄位中...</p>';
     }
     var body = { patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType };
     if (ocrText && ocrText.length >= 20) body.ocr_text = ocrText;
@@ -5663,11 +5634,11 @@ function eduRenderCuratedArticleInRight(article, titleText) {
 function eduFallbackContent(book, label) {
   return '' +
     '<h3>' + escapeHtml(book.title) + '：' + escapeHtml(label) + '</h3>' +
-    '<p>這一頁正在編寫中——之後會由 AI 根據最新文獻自動填上溫暖、易懂的內容。</p>' +
+    '<p>這一頁正在編寫中——之後會由 MD.Piece 根據最新文獻自動填上溫暖、易懂的內容。</p>' +
     '<p>在那之前，你可以：</p>' +
     '<ul>' +
       '<li>回到書架挑另一本書，先看看其他主題。</li>' +
-      '<li>把你想知道的細節寫進「醫療 Chat」，由 AI 直接回答。</li>' +
+      '<li>把你想知道的細節寫進「醫療 Chat」，由 MD.Piece 直接回答。</li>' +
     '</ul>' +
     '<p style="color:var(--text-dim);margin-top:14px">' + escapeHtml(book.intro || '') + '</p>';
 }
@@ -6884,7 +6855,7 @@ async function labsCheck() {
 
   const resultEl = document.getElementById('lab-result');
   resultEl.style.display = 'block';
-  resultEl.innerHTML = '<p class="labs-loading"><i data-lucide="loader" class="labs-spin"></i> AI 解讀中…</p>';
+  resultEl.innerHTML = '<p class="labs-loading"><i data-lucide="loader" class="labs-spin"></i> MD.Piece 解讀中…</p>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
   try {
@@ -6942,7 +6913,7 @@ function handleLabPhoto(input) {
         'style="max-width:100%;max-height:280px;border-radius:8px;border:1px solid var(--border)" />';
     }
     if (result) {
-      result.innerHTML = '<p class="labs-loading"><i data-lucide="loader" class="labs-spin"></i> AI 正在判讀整份報告…通常 10–30 秒</p>';
+      result.innerHTML = '<p class="labs-loading"><i data-lucide="loader" class="labs-spin"></i> MD.Piece 正在判讀整份報告…通常 10–30 秒</p>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
@@ -7095,7 +7066,7 @@ var PUSH_CATS = [
   { key: 'medications', label: '用藥情況', icon: 'pill', desc: '使用中的藥物 + 服藥率' },
   { key: 'emotions', label: '情緒電力', icon: 'battery-charging', desc: '近 7 天每日情緒電量' },
   { key: 'vitals', label: '生理紀錄', icon: 'activity', desc: '近期血壓、血糖、體重等' },
-  { key: 'labs', label: '檢驗報告', icon: 'trending-up', desc: '近期檢驗值與 AI 解讀' },
+  { key: 'labs', label: '檢驗報告', icon: 'trending-up', desc: '近期檢驗值與 MD.Piece 解讀' },
 ];
 
 function getMyDoctor() {
@@ -7143,7 +7114,7 @@ function pushHubBlock() {
       '</div>' +
       '<div class="previsit-disclaimer">' +
         '⚠ 推送的資料會出現在醫師端「患者推送」面板，僅供您的主治醫師臨床參考；' +
-        'MD.Piece 為 AI 輔助工具，不可作為診斷或醫療依據。' +
+        'MD.Piece 為輔助工具，不可作為診斷或醫療依據。' +
       '</div>' +
     '</section>'
   );
@@ -8053,7 +8024,7 @@ function diet() {
 
     +   '<div class="diet-card diet-pick-card">'
     +     '<h3><i data-lucide="dices" style="width:16px;height:16px"></i> 吃什麼神器</h3>'
-    +     '<p class="diet-pick-sub">選擇障礙嗎？讓 AI 依你的病史挑一道。</p>'
+    +     '<p class="diet-pick-sub">選擇障礙嗎？讓 MD.Piece 依你的病史挑一道。</p>'
     +     '<div class="diet-pick-meal-tabs" id="diet-pick-meal-tabs">'
     +       [['any','隨便'],['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點心']].map(function(p) {
               return '<button class="diet-pick-tab' + (p[0]==='any'?' active':'') + '" '
@@ -8368,7 +8339,7 @@ function renderDietPick(g) {
         : '')
     + (components ? '<div class="diet-pick-chips">' + components + '</div>' : '')
     + (g.reason ? '<div class="diet-pick-reason">' + chatEscape(g.reason) + '</div>' : '')
-    + (g.fallback ? '<div class="diet-pick-fallback">（AI 暫時不在線，先給你一個常見選擇）</div>' : '');
+    + (g.fallback ? '<div class="diet-pick-fallback">（MD.Piece 暫時不在線，先給你一個常見選擇）</div>' : '');
   var rerollBtn = document.getElementById('diet-pick-reroll');
   var logBtn = document.getElementById('diet-pick-log');
   if (rerollBtn) rerollBtn.disabled = false;
