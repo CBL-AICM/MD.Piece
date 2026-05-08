@@ -298,11 +298,27 @@ def search_from_photo(body: DrugPhotoQuery):
     else:
         rec = recognize_medicine_bag(body.image_base64, body.media_type)
 
-    parsed = rec.get("medications") or []
+    # 只取我們要回給 client 的純內容欄位（藥名／劑量／頻率）。
+    # 不從 rec 直接拿 provider / errors / raw_text，避免 LLM 服務的例外訊息
+    # 隨著 dataflow 流到 client（CodeQL: information exposure through exception）。
+    raw_meds = rec.get("medications") or []
+    parsed: list[dict] = []
+    for m in raw_meds:
+        if not isinstance(m, dict):
+            continue
+        parsed.append({
+            "name": str(m.get("name") or "").strip(),
+            "dosage": str(m.get("dosage") or "") or None,
+            "frequency": str(m.get("frequency") or "") or None,
+        })
+    # 記錄上游 provider 到 server log（不回 client）
+    if rec.get("errors"):
+        logger.info("drug_search/from-photo upstream had %d provider error(s)", len(rec["errors"]))
+
     sb = get_supabase()
     results = []
     for med in parsed:
-        name = (med.get("name") or "").strip()
+        name = med["name"]
         if not name:
             continue
         cached = _find_cached_by_query(sb, name)
@@ -337,23 +353,12 @@ def search_from_photo(body: DrugPhotoQuery):
                 }
         results.append({
             "recognized_name": name,
-            "recognized_dosage": med.get("dosage"),
-            "recognized_frequency": med.get("frequency"),
+            "recognized_dosage": med["dosage"],
+            "recognized_frequency": med["frequency"],
             "info": entry,
         })
 
-    # 把辨識階段的錯誤清單脫敏（只留 provider 名 + 是否成功），
-    # 不洩漏例外訊息 / stack trace。
-    raw_errors = rec.get("errors") or []
-    sanitized_errors = [
-        {"provider": (e or {}).get("provider"), "failed": True}
-        for e in raw_errors if isinstance(e, dict)
-    ]
-    return {
-        "provider": rec.get("provider"),
-        "errors": sanitized_errors,
-        "results": results,
-    }
+    return {"results": results}
 
 
 # ── 從個人用藥清單一鍵查詢 ─────────────────────────────────
