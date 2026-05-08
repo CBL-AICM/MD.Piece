@@ -1,5 +1,12 @@
 """讀取 content/education/*.md 衛教文章。
 
+檔名規則決定語言版本：
+- ``<slug>.md`` → 預設語言（zh-TW）
+- ``<slug>.<lang>.md`` → 該 lang 版本（如 ``foo.en.md``）
+
+兩種變體共用同一個 ``slug``（在 frontmatter 設定，或從檔名推導）。
+取卡片或全文時可帶 ``lang``，找不到指定語言會 fallback 到預設語言。
+
 文章用 YAML-style frontmatter 加 Markdown 本文。為了不引入額外套件，
 這裡只解析需要的 frontmatter 欄位（字串、布林、字串清單）。審稿在 GitHub PR 上做。
 """
@@ -16,9 +23,23 @@ logger = logging.getLogger(__name__)
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content" / "education"
 
+DEFAULT_LANG = "zh-TW"
+SUPPORTED_LANGS = ("zh-TW", "en")
+
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n(.*)$", re.DOTALL)
 _LIST_ITEM_RE = re.compile(r"^\s*-\s*(.*\S)\s*$")
 _KEY_VALUE_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$")
+
+
+def _detect_lang_from_stem(stem: str) -> tuple[str, str]:
+    """``<slug>.en`` → ``(slug, 'en')``；``slug`` → ``(slug, DEFAULT_LANG)``。"""
+    for lang in SUPPORTED_LANGS:
+        if lang == DEFAULT_LANG:
+            continue
+        suffix = "." + lang
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)], lang
+    return stem, DEFAULT_LANG
 
 
 @dataclass
@@ -33,6 +54,7 @@ class Article:
     sources: list[str] = field(default_factory=list)
     featured: bool = False
     reviewed_at: Optional[str] = None
+    lang: str = DEFAULT_LANG
     body: str = ""
 
     def to_card(self) -> dict:
@@ -165,7 +187,10 @@ def _load_article(path: Path) -> Optional[Article]:
         logger.warning("Missing title in %s, skipping", path.name)
         return None
 
-    slug = meta.get("slug") or path.stem
+    clean_stem, file_lang = _detect_lang_from_stem(path.stem)
+    # frontmatter 也可顯式覆寫 lang；否則由檔名推導
+    lang = str(meta.get("lang") or file_lang)
+    slug = meta.get("slug") or clean_stem
     return Article(
         slug=str(slug),
         title=str(title),
@@ -177,6 +202,7 @@ def _load_article(path: Path) -> Optional[Article]:
         sources=list(meta.get("sources") or []),
         featured=bool(meta.get("featured", False)),
         reviewed_at=meta.get("reviewed_at") or None,
+        lang=lang,
         body=body,
     )
 
@@ -200,27 +226,65 @@ def reload_articles() -> int:
     return len(_load_all_cached())
 
 
+def _normalize_lang(lang: Optional[str]) -> str:
+    if not lang:
+        return DEFAULT_LANG
+    if lang in SUPPORTED_LANGS:
+        return lang
+    # 接受常見變體：en-US → en，zh-Hant → zh-TW
+    base = lang.split("-")[0].lower()
+    if base == "en":
+        return "en"
+    if base == "zh":
+        return "zh-TW"
+    return DEFAULT_LANG
+
+
 def list_articles(
     icd10: Optional[str] = None,
     dimension: Optional[str] = None,
     tag: Optional[str] = None,
     featured_only: bool = False,
+    lang: Optional[str] = None,
 ) -> list[Article]:
+    """回傳指定語言的卡片清單；該 slug 沒有指定語言版本時 fallback 到預設語言。"""
     items = list(_load_all_cached())
+    target_lang = _normalize_lang(lang)
+
+    # 同 slug 多語言版本：先建索引，找不到目標語言的就回退到 DEFAULT_LANG。
+    by_slug: dict[str, dict[str, Article]] = {}
+    for a in items:
+        by_slug.setdefault(a.slug, {})[a.lang] = a
+
+    resolved: list[Article] = []
+    for slug, variants in by_slug.items():
+        article = variants.get(target_lang) or variants.get(DEFAULT_LANG)
+        if article is None:
+            # 萬一連 DEFAULT_LANG 都沒有（理論上不會），取任意一個
+            article = next(iter(variants.values()))
+        resolved.append(article)
+
     if icd10:
         prefix = icd10[:3].upper()
-        items = [a for a in items if (a.icd10 or "").upper().startswith(prefix)]
+        resolved = [a for a in resolved if (a.icd10 or "").upper().startswith(prefix)]
     if dimension:
-        items = [a for a in items if a.dimension == dimension]
+        resolved = [a for a in resolved if a.dimension == dimension]
     if tag:
-        items = [a for a in items if tag in a.tags]
+        resolved = [a for a in resolved if tag in a.tags]
     if featured_only:
-        items = [a for a in items if a.featured]
-    return items
+        resolved = [a for a in resolved if a.featured]
+    # 維持原本相對順序（按檔名字母序）
+    return sorted(resolved, key=lambda a: a.slug)
 
 
-def get_article(slug: str) -> Optional[Article]:
+def get_article(slug: str, lang: Optional[str] = None) -> Optional[Article]:
+    target_lang = _normalize_lang(lang)
+    fallback: Optional[Article] = None
     for article in _load_all_cached():
-        if article.slug == slug:
+        if article.slug != slug:
+            continue
+        if article.lang == target_lang:
             return article
-    return None
+        if article.lang == DEFAULT_LANG:
+            fallback = article
+    return fallback

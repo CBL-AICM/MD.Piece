@@ -1,6 +1,18 @@
 const API = window.location.hostname === "localhost" ? "http://localhost:8000" : "";
 const GITHUB_REPO = "CBL-AICM/MD.Piece";
 
+// 把當前語言（zh-TW / en）附到 URL 後端會用 ?lang= 取，讓衛教文章/錯誤訊息
+// 與 prompt 跟著切換。i18n.js 在切換語言時已 dispatch 'mdpiece-lang-change'，
+// 各頁載入函式會重新呼叫，所以這裡只負責把 lang 拼到 URL 上。
+function withLang(url) {
+  var lang = (window.MDPiece_i18n && window.MDPiece_i18n.getLang && window.MDPiece_i18n.getLang()) || 'zh-TW';
+  var sep = url.indexOf('?') >= 0 ? '&' : '?';
+  return url + sep + 'lang=' + encodeURIComponent(lang);
+}
+function currentLang() {
+  return (window.MDPiece_i18n && window.MDPiece_i18n.getLang && window.MDPiece_i18n.getLang()) || 'zh-TW';
+}
+
 // ─── 顯示模式（年長版 / 普通版）─────────────────────────────
 // 'senior' = 大字體、寬按鈕、高對比；'standard' = 原本的精緻 UI
 
@@ -601,7 +613,7 @@ function story() {
 }
 
 function loadStoryPage() {
-  fetch(API + "/education/articles/daily?days=7")
+  fetch(withLang(API + "/education/articles/daily?days=7"))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var today = (data && data.today) || {};
@@ -720,7 +732,7 @@ function storyOpenArchive(slug, catKey) {
     return;
   }
 
-  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+  fetch(withLang(API + "/education/articles/" + encodeURIComponent(slug)))
     .then(function(r) {
       if (!r.ok) throw new Error("not found");
       return r.json();
@@ -5155,7 +5167,7 @@ function renderBookshelf() {
 
 function loadEducationPage() {
   // 首次載入時抓疾病列表，給「疾病百科」這本書用
-  fetch(API + "/education/diseases")
+  fetch(withLang(API + "/education/diseases"))
     .then(function(r) { return r.json(); })
     .then(function(data) { _eduDiseases = data.diseases || []; })
     .catch(function() { /* 不擋整體 UI */ });
@@ -5178,7 +5190,7 @@ function loadRelatedDiseases() {
       card.style.display = "none";
       return;
     }
-    fetch(API + "/education/related?codes=" + encodeURIComponent(codes.join(",")) + "&limit=6")
+    fetch(withLang(API + "/education/related?codes=" + encodeURIComponent(codes.join(",")) + "&limit=6"))
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         if (!data || !data.items || !data.items.length) {
@@ -5252,7 +5264,7 @@ var _eduArticleByIcd10Dim = {};   // "I10:disease_awareness" -> slug
 function loadFeaturedArticles() {
   var el = document.getElementById("edu-featured-list");
   // 抓全部文章建索引（給書本章節對照用），再過濾出 featured 顯示在卡片區
-  fetch(API + "/education/articles")
+  fetch(withLang(API + "/education/articles"))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var arts = (data && data.articles) || [];
@@ -5320,7 +5332,7 @@ function eduOpenArticle(slug) {
   eduSwitchStage("edu-stage-notebook");
   eduRenderArticleBreadcrumb(card ? card.title : "文章");
 
-  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+  fetch(withLang(API + "/education/articles/" + encodeURIComponent(slug)))
     .then(function(r) {
       if (!r.ok) throw new Error("not found");
       return r.json();
@@ -5587,7 +5599,7 @@ function eduOpenContent(key, label) {
   // 1) 先看有沒有人工審稿過的文章可以對應到這個章節 → 直接出文章
   var curatedSlug = findCuratedArticleSlug(book, key);
   if (curatedSlug) {
-    fetch(API + "/education/articles/" + encodeURIComponent(curatedSlug))
+    fetch(withLang(API + "/education/articles/" + encodeURIComponent(curatedSlug)))
       .then(function(r) { if (!r.ok) throw new Error("not found"); return r.json(); })
       .then(function(article) {
         _eduArticles[article.slug] = article;
@@ -5605,10 +5617,11 @@ function eduOpenContent(key, label) {
 }
 
 function eduGenerateContent(fetchBody, book, label) {
+  var bodyWithLang = Object.assign({}, fetchBody, { lang: currentLang() });
   fetch(API + "/education/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(fetchBody)
+    body: JSON.stringify(bodyWithLang)
   })
     .then(function(r) {
       if (!r.ok) throw new Error("API error");
