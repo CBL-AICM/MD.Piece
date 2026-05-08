@@ -44,7 +44,7 @@ export default function Login({ onAuthed }) {
         {tab === 'login' ? <LoginForm onAuthed={onAuthed} /> : <RegisterForm onAuthed={onAuthed} />}
 
         <p className="auth-foot">
-          MD.Piece 為 AI 輔助工具，僅供醫病溝通與資料整理；不可作為診斷或醫療依據。
+          MD.Piece 為輔助工具，僅供醫病溝通與資料整理；不可作為診斷或醫療依據。
         </p>
       </div>
     </div>

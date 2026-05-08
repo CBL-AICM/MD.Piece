@@ -1,7 +1,7 @@
 {
   "name": "MD.Piece - 醫療輔助平台",
   "short_name": "MD.Piece",
-  "description": "PWA 醫療輔助平台，支援醫病溝通與 AI 症狀分析",
+  "description": "PWA 醫療輔助平台，支援醫病溝通與 MD.Piece 症狀分析",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
