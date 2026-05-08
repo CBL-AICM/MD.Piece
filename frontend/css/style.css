@@ -1027,6 +1027,25 @@ html[data-mode="standard"] #app::after {
   z-index: 3;
   opacity: 0.9;
 }
+/* Mobile: drop ASCII brackets and let the disclaimer wrap so the full
+   sentence stays visible instead of being cut off with an ellipsis. */
+@media (max-width: 768px) {
+  html[data-mode="standard"] #app {
+    padding-bottom: 56px;
+  }
+  html[data-mode="standard"] #app::after {
+    content: "本系統為AI研究工具，不取代醫療建議，若有不適請盡快就醫。";
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    text-align: center;
+    line-height: 1.5;
+    font-size: 0.62rem;
+    letter-spacing: 0.2px;
+    padding: 5px 8px;
+    bottom: 8px;
+  }
+}
 /* Subtle CRT scanlines on terminal pane */
 html[data-mode="standard"] #app {
   background-image:
