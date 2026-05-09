@@ -1704,11 +1704,14 @@ function renderNextVisitChip() {
   else             { label = _Tf('home.visit.daysAgo', { n: (-d) }); cls += ' home-visit-chip-past'; }
   var pretty = iso.replace(/-/g, '/').slice(5); // MM/DD
   var doneBtn = (d === 0 || d < 0)
-    ? '<button type="button" class="home-visit-done" onclick="markVisitCompleted()" title="標記為已回診">'
+    ? '<button type="button" class="home-visit-done" onclick="markVisitCompleted()" title="' + _T('home.visit.doneTitle') + '">'
       +   '<i data-lucide="check-circle-2" style="width:14px;height:14px"></i>'
-      +   '<span>已回診</span>'
+      +   '<span>' + _T('home.visit.done') + '</span>'
       + '</button>'
-    : '';
+    : '<button type="button" class="home-visit-early" onclick="markVisitEarly()" title="' + _T('home.visit.earlyTitle') + '">'
+      +   '<i data-lucide="calendar-x-2" style="width:14px;height:14px"></i>'
+      +   '<span>' + _T('home.visit.early') + '</span>'
+      + '</button>';
   return ''
     + '<button type="button" class="' + cls + '" onclick="openNextVisitEditor()" title="' + _T('home.visit.editTitle') + '">'
     +   '<i data-lucide="calendar-check-2" style="width:14px;height:14px"></i>'
@@ -1746,17 +1749,13 @@ function refreshNextVisitChip() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 已回診：把這段期間的紀錄整合進「我的碎片」，然後清除原始紀錄
-function markVisitCompleted() {
-  var msg =
-    '標記為「已回診」後：\n' +
-    '・這段期間的症狀、Memo、生理紀錄會被整合進「我的碎片」\n' +
-    '・原始紀錄會被清除，無法復原\n' +
-    '・上次回診日會更新為今天\n\n' +
-    '確定要繼續嗎？';
-  if (!confirm(msg)) return;
+// 結束本期回診週期：把這段期間的紀錄整合進「我的碎片」，產出報告快照，然後清除原始紀錄。
+// `early=true` 代表使用者在預定回診日之前主動結束週期（提前回診）。
+function _finalizeVisit(opts) {
+  opts = opts || {};
+  var early = !!opts.early;
 
-  // 1. 計算並保存快照（保留為「我的碎片」歷史）
+  // 1. 計算並保存快照（保留為「我的碎片」歷史，等同於提前產出 repo）
   try {
     if (typeof piecesComputeStats === 'function' && typeof piecesSaveSnapshot === 'function') {
       var s = piecesComputeStats();
@@ -1772,7 +1771,8 @@ function markVisitCompleted() {
         vitalCount: s.vitalCount,
         topCats: s.topCats,
         timeline: s.timeline,
-        completedVisit: true
+        completedVisit: true,
+        earlyVisit: early
       };
       piecesSaveSnapshot(snap);
     }
@@ -1794,11 +1794,41 @@ function markVisitCompleted() {
   refreshNextVisitChip();
 
   // 4. UI 反饋
-  if (typeof showToast === 'function') showToast('已標記為回診，紀錄已整合到我的碎片', 'success');
+  if (typeof showToast === 'function') {
+    showToast(early ? '已提前結束本期，紀錄與報告已整合到我的碎片' : '已標記為回診，紀錄已整合到我的碎片', 'success');
+  }
   // 5. 直接帶到「我的碎片」頁讓使用者看到結果
   setTimeout(function() {
     if (typeof navigateTo === 'function') navigateTo('pieces', null);
   }, 400);
+}
+
+// 已回診：到了或過了預定回診日才會出現的按鈕。
+function markVisitCompleted() {
+  var msg =
+    '標記為「已回診」後：\n' +
+    '・這段期間的症狀、Memo、生理紀錄會被整合進「我的碎片」\n' +
+    '・原始紀錄會被清除，無法復原\n' +
+    '・上次回診日會更新為今天\n\n' +
+    '確定要繼續嗎？';
+  if (!confirm(msg)) return;
+  _finalizeVisit({ early: false });
+}
+
+// 提前回診：在預定回診日之前主動結束本期週期、提前產出報告快照。
+function markVisitEarly() {
+  var iso = loadNextVisit();
+  var d = iso ? _daysBetween(iso) : null;
+  var lead = (d != null && d > 0) ? ('原訂下次回診還有 ' + d + ' 天，現在提前結束本期。\n\n') : '';
+  var msg =
+    '提前結束本期回診週期？\n\n' +
+    lead +
+    '・這段期間的症狀、Memo、生理紀錄會立即整合到「我的碎片」並產出報告\n' +
+    '・原始紀錄會被清除，無法復原\n' +
+    '・上次回診日會更新為今天，下次回診日將被清空\n\n' +
+    '確定要繼續嗎？';
+  if (!confirm(msg)) return;
+  _finalizeVisit({ early: true });
 }
 
 function homeCard(page, icon, title, desc, color) {

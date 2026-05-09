@@ -2142,6 +2142,28 @@ html[data-mode="senior"] .tc-desc {
   box-shadow: 0 3px 12px rgba(106,142,90,0.5);
 }
 .home-visit-done:active { transform: scale(0.97); }
+.home-visit-early {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #FFFFFF;
+  border: 1.5px dashed rgba(201,127,75,0.55);
+  color: var(--klein, #5C3A32);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s, box-shadow 0.15s;
+  font-family: inherit;
+}
+.home-visit-early:hover {
+  background: rgba(201,127,75,0.10);
+  border-color: rgba(201,127,75,0.75);
+  border-style: solid;
+  box-shadow: 0 2px 8px rgba(201,127,75,0.25);
+}
+.home-visit-early:active { transform: scale(0.97); }
 .home-visit-clear {
   appearance: none;
   background: transparent;
