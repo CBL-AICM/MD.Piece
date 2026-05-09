@@ -337,7 +337,7 @@ def trending_drugs(limit: int = Query(8, ge=1, le=30)):
 
 @router.post("/from-photo")
 def search_from_photo(body: DrugPhotoQuery):
-    """拍藥袋 / 藥單 → 自動把每筆藥名拿去查藥物百科。
+    """拍藥袋／藥盒／藥瓶／藥單 → 自動把每筆藥名拿去查藥物百科。
 
     - 先重用 recognize_medicine_bag 抽藥名（或前端送 ocr_text 直接抽）
     - 對每筆藥名呼叫 /drug-search/?q=<name> 同樣的快取邏輯
