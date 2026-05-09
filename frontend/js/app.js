@@ -8277,15 +8277,17 @@ function diet() {
     +       '<div class="diet-empty">載入中…</div>'
     +     '</div>'
     +     '<div class="diet-weekly-chart-tabs" id="diet-weekly-chart-tabs">'
-    +       [['line','完整度折線'],['stack','餐別堆疊'],['multi','早午晚點']].map(function(p) {
+    +       [['line','完整度+攝取'],['stack','餐別堆疊'],['multi','早午晚點']].map(function(p) {
               return '<button class="diet-weekly-chart-tab' + (p[0]==='line'?' active':'') + '" '
                 + 'data-chart-type="' + p[0] + '" onclick="dietWeeklySwitchChart(\'' + p[0] + '\')">'
                 + p[1] + '</button>';
             }).join('')
     +     '</div>'
+    +     '<div class="diet-weekly-chart-legend" id="diet-weekly-chart-legend"></div>'
     +     '<div class="diet-weekly-chart-wrap">'
     +       '<canvas id="diet-weekly-canvas" style="width:100%;height:160px"></canvas>'
     +     '</div>'
+    +     '<p class="diet-weekly-chart-hint" id="diet-weekly-chart-hint"></p>'
     +     '<div id="diet-weekly-top-foods" class="diet-weekly-top-foods"></div>'
     +     '<p class="diet-weekly-meta" id="diet-weekly-meta"></p>'
     +   '</div>'
@@ -8866,6 +8868,13 @@ var _dietWeeklyMealColors = {
   dinner:    '#7d6dc7',
   snack:     '#4caf90',
 };
+// 折線圖 4 條線的設定（key 對應 by_day.intake_pct.* 與 completeness）
+var _dietWeeklyLineSeries = [
+  { key: 'completeness', label: '完整度', color: '#4caf90', desc: '早午晚點打卡加權' },
+  { key: 'protein',      label: '蛋白質', color: '#e76f51', desc: '佔每日目標 %' },
+  { key: 'water',        label: '水分',   color: '#5b9fe8', desc: '佔每日目標 %' },
+  { key: 'fiber',        label: '纖維',   color: '#b07cd6', desc: '佔每日目標 %' },
+];
 
 function fetchDietWeekly() {
   var pid = getStablePatientId();
@@ -8974,6 +8983,9 @@ function renderDietWeekly() {
     }
   }
 
+  // legend / hint：只有折線圖會顯示營養素圖例與估算註記
+  _renderDietWeeklyLegend(_dietWeeklyChartType === 'line');
+
   // 繪製圖表
   if (_dietWeeklyChartType === 'stack') {
     drawDietWeeklyStack(week);
@@ -8981,6 +8993,29 @@ function renderDietWeekly() {
     drawDietWeeklyMulti(week);
   } else {
     drawDietWeeklyLine(week);
+  }
+}
+
+function _renderDietWeeklyLegend(show) {
+  var legend = document.getElementById('diet-weekly-chart-legend');
+  var hint   = document.getElementById('diet-weekly-chart-hint');
+  if (!legend) return;
+  if (!show) {
+    legend.innerHTML = '';
+    legend.style.display = 'none';
+    if (hint) { hint.textContent = ''; hint.style.display = 'none'; }
+    return;
+  }
+  legend.style.display = '';
+  legend.innerHTML = _dietWeeklyLineSeries.map(function(s) {
+    return '<span class="diet-weekly-legend-item" title="' + chatEscape(s.desc) + '">'
+      +   '<span class="diet-weekly-legend-dot" style="background:' + s.color + '"></span>'
+      +   '<span class="diet-weekly-legend-label">' + chatEscape(s.label) + '</span>'
+      + '</span>';
+  }).join('');
+  if (hint) {
+    hint.textContent = '蛋白質／水分／纖維為食物關鍵字粗估，僅供趨勢參考。';
+    hint.style.display = '';
   }
 }
 
@@ -9005,7 +9040,7 @@ function _dietWeeklyDayLabels(week) {
 }
 
 function drawDietWeeklyLine(week) {
-  // 折線：每日完整度（0~1）
+  // 折線：完整度 + 蛋白質/水分/纖維 攝取比例（皆 0~1，超過 100% 截到 1）
   var s = _dietWeeklyCanvasSetup();
   if (!s) return;
   var ctx = s.ctx, w = s.w, h = s.h, dpr = s.dpr;
@@ -9013,9 +9048,24 @@ function drawDietWeeklyLine(week) {
   var padLeft = 32 * dpr;
 
   var days = week.by_day;
-  var color = '#4caf90';
+  if (!days.length) return;
+  var targets = week.daily_targets || { protein_g: 60, water_ml: 2000, fiber_g: 25 };
 
-  // y 軸 baseline 50%
+  function clamp01(v) { return Math.max(0, Math.min(1, v || 0)); }
+  function pctFor(d, key) {
+    if (key === 'completeness') return clamp01(d.completeness);
+    // 後端有給 intake_pct 直接用，舊資料 fallback 從 nutrients 算
+    if (d.intake_pct && typeof d.intake_pct[key] === 'number') {
+      return clamp01(d.intake_pct[key]);
+    }
+    var n = d.nutrients || {};
+    if (key === 'protein') return clamp01((n.protein_g || 0) / (targets.protein_g || 60));
+    if (key === 'water')   return clamp01((n.water_ml  || 0) / (targets.water_ml  || 2000));
+    if (key === 'fiber')   return clamp01((n.fiber_g   || 0) / (targets.fiber_g   || 25));
+    return 0;
+  }
+
+  // 格線：50% 虛線 + 100% 細實線
   ctx.strokeStyle = 'rgba(120,140,170,0.18)';
   ctx.lineWidth = 1 * dpr;
   ctx.setLineDash([4 * dpr, 4 * dpr]);
@@ -9024,34 +9074,43 @@ function drawDietWeeklyLine(week) {
   ctx.moveTo(padLeft, midY); ctx.lineTo(w - pad, midY); ctx.stroke();
   ctx.setLineDash([]);
 
-  var pts = days.map(function(d, i) {
-    return {
-      x: padLeft + (w - pad - padLeft) * (days.length === 1 ? 0.5 : i / (days.length - 1)),
-      y: h - pad - (h - 2 * pad) * Math.max(0, Math.min(1, d.completeness)),
-    };
-  });
+  var stepX = function(i) {
+    return padLeft + (w - pad - padLeft) * (days.length === 1 ? 0.5 : i / (days.length - 1));
+  };
+  var yFrom = function(v) { return h - pad - (h - 2 * pad) * v; };
 
-  // 漸層
+  // 完整度先畫底部漸層
+  var compPts = days.map(function(d, i) {
+    return { x: stepX(i), y: yFrom(clamp01(d.completeness)) };
+  });
   var grad = ctx.createLinearGradient(0, pad, 0, h - pad);
-  grad.addColorStop(0, 'rgba(76,175,144,0.30)');
+  grad.addColorStop(0, 'rgba(76,175,144,0.22)');
   grad.addColorStop(1, 'rgba(76,175,144,0)');
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.moveTo(pts[0].x, h - pad);
-  pts.forEach(function(p) { ctx.lineTo(p.x, p.y); });
-  ctx.lineTo(pts[pts.length - 1].x, h - pad);
+  ctx.moveTo(compPts[0].x, h - pad);
+  compPts.forEach(function(p) { ctx.lineTo(p.x, p.y); });
+  ctx.lineTo(compPts[compPts.length - 1].x, h - pad);
   ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2 * dpr;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
-  ctx.stroke();
+  // 4 條線：完整度粗一點，營養素細一點
+  _dietWeeklyLineSeries.forEach(function(series, idx) {
+    var pts = days.map(function(d, i) {
+      return { x: stepX(i), y: yFrom(pctFor(d, series.key)) };
+    });
+    ctx.strokeStyle = series.color;
+    ctx.lineWidth = (idx === 0 ? 2.2 : 1.6) * dpr;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+    ctx.stroke();
 
-  ctx.fillStyle = color;
-  pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, 3 * dpr, 0, 2 * Math.PI); ctx.fill(); });
+    ctx.fillStyle = series.color;
+    var dotR = (idx === 0 ? 3 : 2.2) * dpr;
+    pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, dotR, 0, 2 * Math.PI); ctx.fill(); });
+  });
 
   // y 標籤
   ctx.fillStyle = 'rgba(120,140,170,0.7)';
@@ -9064,7 +9123,7 @@ function drawDietWeeklyLine(week) {
   // x 標籤（日期）
   var labels = _dietWeeklyDayLabels(week);
   ctx.textAlign = 'center';
-  pts.forEach(function(p, i) {
+  compPts.forEach(function(p, i) {
     ctx.fillText(labels[i], p.x, h - pad + 14 * dpr);
   });
 }

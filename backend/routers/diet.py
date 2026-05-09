@@ -719,6 +719,107 @@ MEAL_WEIGHTS = {"breakfast": 0.30, "lunch": 0.30, "dinner": 0.30, "snack": 0.10}
 _FOOD_TOKEN_RE = re.compile(r"[、,，;；]|\s+")
 _FOOD_STOPWORDS = {"和", "與", "或", "以及", "等", "一些", "一點", "之類"}
 
+# 食物 → (蛋白質 g, 水分 ml, 纖維 g) 粗估表，數值對應「一份常見份量」
+# 用關鍵字子字串比對，對長關鍵字優先（"糙米飯" 比 "飯" 先吃），避免重複計分
+NUTRIENT_TABLE: list[tuple[list[str], float, float, float]] = [
+    # 主食
+    (["糙米飯", "白飯", "米飯"], 4, 80, 1),
+    (["燕麥粥", "燕麥"], 5, 150, 4),
+    (["全麥吐司", "吐司", "麵包", "饅頭", "包子"], 4, 30, 1.5),
+    (["義大利麵", "拉麵", "麵條", "炒麵"], 8, 150, 2),
+    (["米粉", "粄條", "河粉"], 4, 120, 1),
+    (["地瓜", "番薯"], 2, 100, 3),
+    (["馬鈴薯"], 2, 100, 2),
+    (["麵"], 6, 120, 2),
+    (["飯"], 4, 80, 1),
+    # 蛋白質（動物）
+    (["雞胸", "雞腿", "雞肉", "炸雞", "雞排"], 25, 0, 0),
+    (["豬排", "排骨", "豬肉", "肉絲", "絞肉", "里肌"], 22, 0, 0),
+    (["牛肉", "牛排"], 25, 0, 0),
+    (["羊肉"], 23, 0, 0),
+    (["鮭魚", "鯖魚", "鱈魚", "虱目魚", "蒸魚", "煎魚"], 22, 0, 0),
+    (["鮪魚"], 22, 0, 0),
+    (["蝦仁", "蝦"], 18, 0, 0),
+    (["花枝", "魷魚", "章魚"], 16, 0, 0),
+    (["蛤蜊", "蛤", "牡蠣", "蚵"], 10, 30, 0),
+    (["魚"], 20, 0, 0),
+    (["水煮蛋", "荷包蛋", "炒蛋", "蒸蛋", "茶葉蛋", "雞蛋", "蛋"], 6, 30, 0),
+    # 蛋白質（植物）+ 乳製品
+    (["無糖豆漿", "豆漿"], 7, 240, 1),
+    (["豆腐", "豆乾", "豆皮", "毛豆"], 8, 50, 1),
+    (["希臘優格", "優格"], 6, 100, 0),
+    (["起司", "乳酪"], 6, 0, 0),
+    (["鮮奶", "牛奶"], 8, 240, 0),
+    (["羊奶"], 7, 240, 0),
+    # 蔬菜
+    (["燙青菜", "炒青菜", "青菜"], 2, 120, 3),
+    (["地瓜葉", "空心菜", "高麗菜", "菠菜", "白菜", "青江菜", "A菜"], 2, 120, 3),
+    (["綠花椰", "白花椰", "青花菜", "花椰菜"], 3, 100, 4),
+    (["小番茄", "番茄", "蕃茄"], 1, 100, 2),
+    (["胡蘿蔔", "紅蘿蔔", "蘿蔔"], 1, 80, 2),
+    (["香菇", "金針菇", "鴻喜菇", "杏鮑菇", "菇"], 3, 70, 2),
+    (["生菜", "沙拉"], 2, 100, 3),
+    (["海帶", "紫菜", "海藻"], 2, 50, 2),
+    (["筊白筍", "竹筍", "筍"], 2, 100, 3),
+    (["茄子"], 1, 90, 2),
+    (["蔬菜"], 2, 100, 3),
+    # 水果
+    (["蘋果"], 1, 150, 4),
+    (["香蕉"], 1, 80, 3),
+    (["橘子", "柳丁", "葡萄柚"], 1, 120, 2),
+    (["芭樂", "番石榴"], 2, 130, 5),
+    (["奇異果"], 1, 70, 3),
+    (["木瓜"], 1, 130, 2),
+    (["鳳梨"], 1, 130, 2),
+    (["芒果"], 1, 150, 2),
+    (["葡萄"], 1, 80, 1),
+    (["草莓"], 1, 80, 2),
+    (["藍莓"], 1, 70, 2),
+    (["西瓜"], 1, 200, 1),
+    (["水果"], 1, 120, 2),
+    # 飲品
+    (["白開水", "溫開水", "冷開水", "礦泉水"], 0, 250, 0),
+    (["綠茶", "紅茶", "烏龍茶", "茶"], 0, 250, 0),
+    (["拿鐵", "美式", "咖啡"], 1, 200, 0),
+    (["排骨湯", "雞湯", "蘿蔔湯", "味噌湯", "湯"], 5, 250, 1),
+    (["果汁"], 1, 200, 0),
+    (["水"], 0, 250, 0),
+    # 點心 / 加工
+    (["餅乾"], 2, 0, 0.5),
+    (["蛋糕", "甜點"], 3, 0, 0.5),
+    (["巧克力"], 2, 0, 1),
+    (["堅果", "杏仁", "腰果", "核桃", "花生"], 5, 0, 2),
+    (["薯條"], 3, 0, 2),
+    (["關東煮"], 5, 100, 1),
+]
+
+# 攤平並按關鍵字長度由長至短排序：先比對長關鍵字才不會被短關鍵字搶走
+_NUTRIENT_INDEX: list[tuple[str, float, float, float]] = sorted(
+    [(kw, p, w, f) for kws, p, w, f in NUTRIENT_TABLE for kw in kws],
+    key=lambda x: -len(x[0]),
+)
+
+
+def _estimate_nutrients(foods_str: str) -> tuple[float, float, float]:
+    """從一筆 record 的食物文字粗估 (蛋白質 g, 水分 ml, 纖維 g)。
+
+    用子字串比對：每比中一次就把該段替換成同長度的 `·` 標記，避免短關鍵字
+    重新吃到已被長關鍵字消耗過的字（例 "糙米飯" 不會再被 "飯" 重複計分）。
+    """
+    if not foods_str:
+        return 0.0, 0.0, 0.0
+    s = foods_str
+    p_sum = 0.0
+    w_sum = 0.0
+    f_sum = 0.0
+    for kw, p, w, f in _NUTRIENT_INDEX:
+        while kw in s:
+            p_sum += p
+            w_sum += w
+            f_sum += f
+            s = s.replace(kw, "·" * len(kw), 1)
+    return p_sum, w_sum, f_sum
+
 
 def _utc_iso_to_local_date(eaten_iso: str, tz_offset: int) -> Optional[date]:
     """eaten_at 是 UTC ISO；轉使用者本地日期。tz_offset 是 JS 規格（西側為正）。
@@ -744,6 +845,10 @@ def _summarize_week(records: list, week_start_local: date, tz_offset: int) -> di
     # 7 天每日的 meal set
     day_meals = {(week_start_local + timedelta(days=i)).isoformat(): set()
                  for i in range(7)}
+    # 7 天每日的營養素累加（從食物文字粗估）
+    day_nutrients = {(week_start_local + timedelta(days=i)).isoformat():
+                     {"protein_g": 0.0, "water_ml": 0.0, "fiber_g": 0.0}
+                     for i in range(7)}
     totals = {"breakfast": 0, "lunch": 0, "dinner": 0, "snack": 0}
     food_count: dict = {}
 
@@ -758,19 +863,26 @@ def _summarize_week(records: list, week_start_local: date, tz_offset: int) -> di
         if mt in MEAL_WEIGHTS:
             day_meals[d_key].add(mt)
             totals[mt] += 1
-        # food token 詞頻
+        # food token 詞頻 + 營養素粗估（兩者都要原始字串）
         foods = (r.get("foods") or "").strip()
         if foods:
             for tok in _FOOD_TOKEN_RE.split(foods):
                 tok = tok.strip()
                 if len(tok) >= 2 and tok not in _FOOD_STOPWORDS:
                     food_count[tok] = food_count.get(tok, 0) + 1
+            p, w, f = _estimate_nutrients(foods)
+            dn = day_nutrients[d_key]
+            dn["protein_g"] += p
+            dn["water_ml"] += w
+            dn["fiber_g"] += f
 
+    targets = DIET_FALLBACK["daily_targets"]
     by_day = []
     completeness_sum = 0.0
     for d_key in sorted(day_meals.keys()):
         meals = day_meals[d_key]
         completeness = sum(MEAL_WEIGHTS[m] for m in meals)
+        dn = day_nutrients[d_key]
         by_day.append({
             "date": d_key,
             "breakfast": "breakfast" in meals,
@@ -778,6 +890,16 @@ def _summarize_week(records: list, week_start_local: date, tz_offset: int) -> di
             "dinner":    "dinner" in meals,
             "snack":     "snack" in meals,
             "completeness": round(completeness, 2),
+            "nutrients": {
+                "protein_g": round(dn["protein_g"], 1),
+                "water_ml":  round(dn["water_ml"]),
+                "fiber_g":   round(dn["fiber_g"], 1),
+            },
+            "intake_pct": {
+                "protein": round(min(1.0, dn["protein_g"] / targets["protein_g"]) if targets["protein_g"] else 0.0, 3),
+                "water":   round(min(1.0, dn["water_ml"]  / targets["water_ml"])  if targets["water_ml"]  else 0.0, 3),
+                "fiber":   round(min(1.0, dn["fiber_g"]   / targets["fiber_g"])   if targets["fiber_g"]   else 0.0, 3),
+            },
         })
         completeness_sum += completeness
 
@@ -792,6 +914,7 @@ def _summarize_week(records: list, week_start_local: date, tz_offset: int) -> di
         "totals":     totals,
         "top_foods":  top_foods,
         "completeness_avg": round(completeness_sum / 7, 2),
+        "daily_targets": dict(targets),
     }
 
 
