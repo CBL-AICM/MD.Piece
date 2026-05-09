@@ -5243,10 +5243,23 @@ function loadMyDiseases() {
   var articlesCard = document.getElementById('edu-my-articles');
   if (!shelfCard && !articlesCard) return;
 
+  // 從基本資料的自由文字，抽出未被內建清單辨識到的疾病——這些走 AI 即時生成
+  var basicInfo = (typeof getBasicInfo === 'function') ? getBasicInfo() || {} : {};
+  var freeText = [basicInfo.current_disease, basicInfo.conditions, basicInfo.allergies].filter(Boolean).join('\n');
+  var extras = (typeof extractUnrecognizedDiseases === 'function') ? extractUnrecognizedDiseases(freeText) : [];
+
   resolvePatientIcd10Codes(function(codes) {
-    if (!codes || !codes.length) {
+    var hasCodes = codes && codes.length;
+    if (!hasCodes && !extras.length) {
       if (shelfCard) shelfCard.style.display = 'none';
       if (articlesCard) articlesCard.style.display = 'none';
+      return;
+    }
+    if (!hasCodes) {
+      // 純 extras：直接渲染 AI 生成書本，articles 卡隱藏
+      renderMyDiseaseShelf([], extras);
+      if (articlesCard) articlesCard.style.display = 'none';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
     fetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
@@ -5254,29 +5267,80 @@ function loadMyDiseases() {
       .then(function(data) {
         // 只渲染後端真的支援的疾病——不在 ICD10_MAP 的代碼點下去會跳 400
         var items = ((data && data.items) || []).filter(function(it) { return it && it.is_supported; });
-        if (!items.length) {
+        if (!items.length && !extras.length) {
           if (shelfCard) shelfCard.style.display = 'none';
           if (articlesCard) articlesCard.style.display = 'none';
           return;
         }
-        renderMyDiseaseShelf(items);
+        renderMyDiseaseShelf(items, extras);
         renderMyDiseaseArticles(items);
         if (typeof lucide !== 'undefined') lucide.createIcons();
       })
       .catch(function() {
-        if (shelfCard) shelfCard.style.display = 'none';
-        if (articlesCard) articlesCard.style.display = 'none';
+        if (extras.length) {
+          renderMyDiseaseShelf([], extras);
+          if (articlesCard) articlesCard.style.display = 'none';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+          if (shelfCard) shelfCard.style.display = 'none';
+          if (articlesCard) articlesCard.style.display = 'none';
+        }
       });
   });
 }
 
-function renderMyDiseaseShelf(items) {
+// 從基本資料自由文字裡撈出「沒被內建清單辨識到」的疾病字串
+// 流程：先把所有 DISEASE_KEYWORDS 命中的子字串挖掉，剩下的依中英文標點切塊，過濾雜訊。
+var _EXTRA_STOPWORDS = {
+  '有':1,'無':1,'沒有':1,'已經':1,'目前':1,'近期':1,'常常':1,'我有':1,'我':1,
+  '本人':1,'病人':1,'患者':1,'醫師':1,'吃':1,'吃藥':1,'服用':1,'使用':1,'治療':1,
+  '中':1,'了':1,'過':1,'過敏':1,'藥物':1,'食物':1,'青黴素':1,'盤尼西林':1,
+  '不明':1,'健康':1,'正常':1,'無特殊':1,'無病史':1,'未知':1,'其他':1,
+};
+function extractUnrecognizedDiseases(text) {
+  if (!text) return [];
+  var s = String(text);
+  // 先把所有已知關鍵字（含同義詞）從文字中挖掉，避免「糖尿病、龐貝氏症」誤把「糖尿病」當 extra
+  if (typeof DISEASE_KEYWORDS !== 'undefined') {
+    DISEASE_KEYWORDS.forEach(function(p) {
+      var kw = p[0];
+      if (!kw) return;
+      while (s.indexOf(kw) !== -1) s = s.split(kw).join('|');
+    });
+  }
+  // 中英文標點 + 空白 + 連接詞 切塊
+  var chunks = s.split(/[、，；。.,;:：\n\r\t（）()\[\]\|\s]+|和|與|跟|另外|還有|以及/);
+  var seen = {};
+  var out = [];
+  chunks.forEach(function(c) {
+    c = (c || '').trim();
+    if (!c) return;
+    if (c.length < 2 || c.length > 18) return;
+    if (!/[A-Za-z一-鿿㐀-䶿]/.test(c)) return;
+    if (_EXTRA_STOPWORDS[c]) return;
+    // 必須結尾像疾病字眼，避免「只有」「年了」「目前」等敘述被當成疾病
+    if (!/(病|症|炎|癌|瘤|症候群|不全|衰竭|病變|麻痺|結石|出血|梗塞|腫瘤|硬化|增生|過敏症|缺乏|缺乏症|阻塞|血栓|纖維化|畸形|失調|障礙|疝氣)$/.test(c)) return;
+    if (seen[c]) return;
+    seen[c] = true;
+    out.push(c);
+  });
+  // 最多 8 個，避免雜訊塞爆書架
+  return out.slice(0, 8);
+}
+
+// 全局：未列入內建清單的疾病（onclick 用 index 找回名稱，避免 escape 風險）
+var _eduExtraDiseases = [];
+
+function renderMyDiseaseShelf(items, extras) {
+  extras = extras || [];
   var card = document.getElementById('edu-my-shelf');
   var row = document.getElementById('edu-my-shelf-books');
   if (!card || !row) return;
-  if (!items.length) { card.style.display = 'none'; return; }
+  if (!items.length && !extras.length) { card.style.display = 'none'; return; }
 
-  row.innerHTML = items.map(function(it, idx) {
+  _eduExtraDiseases = extras.slice();
+
+  var html = items.map(function(it, idx) {
     var color = _MY_DISEASE_COLORS[idx % _MY_DISEASE_COLORS.length];
     var size  = _MY_DISEASE_SIZES[idx % _MY_DISEASE_SIZES.length];
     var nameSafe = escapeHtml(it.name);
@@ -5292,6 +5356,26 @@ function renderMyDiseaseShelf(items) {
              '<span class="book-tag">My</span>' +
            '</button>';
   }).join('');
+
+  // 未列入內建清單的疾病——用 sparkles 圖示 + AI tag 區別
+  html += extras.map(function(name, j) {
+    var i = items.length + j;
+    var color = _MY_DISEASE_COLORS[i % _MY_DISEASE_COLORS.length];
+    var size  = _MY_DISEASE_SIZES[i % _MY_DISEASE_SIZES.length];
+    var nameSafe = escapeHtml(name);
+    return '<button class="book ' + color + ' ' + size + '" ' +
+           'onclick="eduOpenExtraDisease(' + j + ')" ' +
+           'title="' + nameSafe + '（AI 即時生成衛教）">' +
+             '<i data-lucide="sparkles" class="book-icon" style="width:16px;height:16px"></i>' +
+             '<span class="book-spine">' +
+               '<span class="book-title">' + nameSafe + '</span>' +
+               '<span class="book-subtitle">AI 生成</span>' +
+             '</span>' +
+             '<span class="book-tag">AI</span>' +
+           '</button>';
+  }).join('');
+
+  row.innerHTML = html;
   card.style.display = '';
 }
 
@@ -5301,6 +5385,26 @@ function eduOpenMyDiseaseBook(icd10, name) {
   setTimeout(function() {
     if (typeof eduPickDisease === 'function') eduPickDisease(icd10, name);
   }, 50);
+}
+
+// 開啟「未列入內建清單」的疾病：合成一本書，6 個章節走 /education/generate 的 topic 模式
+function eduOpenExtraDisease(idx) {
+  var name = _eduExtraDiseases[idx];
+  if (!name) return;
+  _eduOpenBookObject({
+    key: 'extra:' + name,
+    title: name,
+    icon: 'sparkles',
+    intro: '「' + name + '」不在內建清單，內容由 AI 即時為您生成；請以實際醫師判讀為準。',
+    topics: [
+      { key: 'awareness',     label: '認識這個疾病',     desc: '是什麼、誰會得、治療概觀' },
+      { key: 'symptoms',      label: '症狀辨識',         desc: '常見症狀與身體訊號' },
+      { key: 'meds',          label: '用藥與副作用',     desc: '常用藥物作用、注意事項' },
+      { key: 'self',          label: '自我管理',         desc: '飲食、運動、生活調整' },
+      { key: 'emergency',     label: '緊急應變',         desc: '何時要立刻就醫' },
+      { key: 'complications', label: '長期風險與併發症', desc: '長期影響與追蹤建議' },
+    ],
+  });
 }
 
 function renderMyDiseaseArticles(items) {
@@ -5725,6 +5829,11 @@ function eduRenderBreadcrumb() {
 function eduOpenBook(key) {
   var book = EDU_BOOKS.find(function(b) { return b.key === key; });
   if (!book) return;
+  _eduOpenBookObject(book);
+}
+
+// 共用：把任何書本物件（含臨時建出來的「其他自填疾病」）攤開到 notebook
+function _eduOpenBookObject(book) {
   _eduSelectedBook = book;
   _eduSelectedDisease = null;
   _eduSelectedDimension = null;
