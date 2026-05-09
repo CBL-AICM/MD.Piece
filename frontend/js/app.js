@@ -8924,6 +8924,10 @@ function _renderDrugCard(d) {
   var cachedBadge = d.cached
     ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:8px;background:rgba(80,160,120,0.15);color:#3a8c5e;margin-left:8px">已收錄</span>'
     : '<span style="font-size:0.75rem;padding:2px 8px;border-radius:8px;background:rgba(100,140,200,0.15);color:#4a7bb6;margin-left:8px">AI 即時生成</span>';
+  // TFDA 命中 → 加一個官方背書的小徽章，讓使用者知道中文藥名與適應症是有官方來源的
+  var tfdaBadge = d.tfda_matched
+    ? '<span style="font-size:0.72rem;padding:2px 8px;border-radius:8px;background:rgba(80,140,200,0.12);color:#2e6dba;margin-left:6px" title="中文藥名與適應症依據衛福部食藥署西藥許可證">食藥署仿單</span>'
+    : '';
 
   var se = d.side_effects || {};
   var common = Array.isArray(se.common) ? se.common : [];
@@ -8956,7 +8960,7 @@ function _renderDrugCard(d) {
   return (
     '<header style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">' +
       '<div>' +
-        '<h2 style="margin:0">' + displayName + cachedBadge + '</h2>' +
+        '<h2 style="margin:0">' + displayName + cachedBadge + tfdaBadge + '</h2>' +
         (d.category ? '<div style="margin-top:4px"><span class="med-card-tag">' + escapeHtml(d.category) + '</span></div>' : '') +
         aliasHtml +
       '</div>' +

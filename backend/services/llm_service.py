@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import time
+from typing import Optional
+
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -830,21 +832,69 @@ _DRUG_INFO_PROMPT = (
 )
 
 
+def _build_tfda_context(tfda: dict) -> str:
+    """把 TFDA 命中的官方欄位塞成一段「official_data」給 LLM 當權威依據用。"""
+    lines = ["以下是衛福部食藥署西藥許可證的官方資料，請以此為準：", ""]
+    if tfda.get("name_zh"):
+        lines.append(f"- 中文品名：{tfda['name_zh']}")
+    if tfda.get("name_en"):
+        lines.append(f"- 英文品名：{tfda['name_en']}")
+    if tfda.get("ingredient"):
+        lines.append(f"- 主成分：{tfda['ingredient']}")
+    if tfda.get("indication"):
+        lines.append(f"- 適應症（仿單）：{tfda['indication']}")
+    if tfda.get("manufacturer"):
+        lines.append(f"- 製造廠：{tfda['manufacturer']}")
+    if tfda.get("license_no"):
+        lines.append(f"- 許可證字號：{tfda['license_no']}")
+    lines.extend([
+        "",
+        "請使用上面的 name_zh / name_en 當回覆裡的藥名（不要自己另翻），",
+        "indication 可以基於官方仿單再用白話改寫一次。",
+        "用法、副作用、警語、衛教 仿單沒收錄結構化欄位，請用你掌握的醫療衛教知識補齊。",
+    ])
+    return "\n".join(lines)
+
+
 def lookup_drug_info(drug_name: str) -> dict:
     """查詢藥物的基礎衛教資訊（副作用、風險、用法、衛教）。
 
     讓 LLM 從藥名（中/英文/商品名）整理出結構化的藥物百科欄位。
     呼叫端應將結果存進 drug_reference 表做快取，避免重複呼叫。
 
-    回傳 dict 結構見 _DRUG_INFO_PROMPT。若 LLM 完全無法辨識，
-    matched=False；若 JSON 解析失敗，回傳 matched=False 並把原始輸出
-    放在 raw_text 供 debug。
+    流程：
+      1. 先查 TFDA 西藥許可證（台灣官方來源）取得權威 name_zh / 適應症
+      2. 把官方欄位塞進 system prompt，請 LLM 以此為準產生衛教
+      3. TFDA 沒命中（OTC 藥盒、進口品牌、拼字錯）→ 走純 LLM fallback
+
+    回傳 dict 結構見 _DRUG_INFO_PROMPT；外加 `tfda_matched: bool` 標明
+    是否有 TFDA 官方資料背書。若 LLM 完全無法辨識，matched=False；
+    若 JSON 解析失敗，回傳 matched=False。
     """
+    # Step 1：嘗試 TFDA 官方查詢（失敗、不可用都會回 None）
+    tfda_hit: Optional[dict] = None
+    try:
+        from backend.services.tfda_service import lookup_drug_in_tfda
+        tfda_hit = lookup_drug_in_tfda(drug_name)
+    except Exception as e:
+        # TFDA 服務出錯不該擋住整個查詢
+        logger.warning("TFDA lookup raised: %s", type(e).__name__)
+        tfda_hit = None
+
+    system_prompt = _DRUG_INFO_PROMPT
+    if tfda_hit:
+        system_prompt = (
+            _DRUG_INFO_PROMPT
+            + "\n\n"
+            + "─── 官方資料補充（TFDA 仿單）───\n"
+            + _build_tfda_context(tfda_hit)
+        )
+
     user_message = f"請查詢這個藥物：「{drug_name}」"
     # 藥物百科 JSON 包含 6 個列表 + 150~300 字衛教，預設 1024 token 會被截斷
     # （結果就是回到使用者眼前的「未命名」空卡片），這裡放寬到 2048 才夠裝完整結構
     try:
-        raw = call_claude(_DRUG_INFO_PROMPT, user_message, max_tokens=2048)
+        raw = call_claude(system_prompt, user_message, max_tokens=2048)
     except Exception as e:
         # 例外細節只進 server log，不放進回傳 dict（避免 stack-trace 流到 client）
         logger.error("lookup_drug_info LLM 失敗：%s", type(e).__name__)
@@ -905,10 +955,20 @@ def lookup_drug_info(drug_name: str) -> dict:
     result["risks"].setdefault("contraindications", [])
     result["risks"].setdefault("warnings", [])
     result["risks"].setdefault("interactions", [])
-    result.setdefault(
-        "disclaimer",
-        "此資訊由 AI 整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。",
+    # TFDA 命中 → 用官方中文品名覆寫 LLM 自己翻的（避免 LLM 翻成簡中或非台灣譯名）
+    if tfda_hit:
+        if tfda_hit.get("name_zh"):
+            result["name_zh"] = tfda_hit["name_zh"]
+        if tfda_hit.get("name_en") and not result.get("name_en"):
+            result["name_en"] = tfda_hit["name_en"]
+    result["tfda_matched"] = bool(tfda_hit)
+
+    default_disclaimer = (
+        "此資訊由衛福部食藥署仿單與 AI 共同整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。"
+        if tfda_hit
+        else "此資訊由 AI 整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。"
     )
+    result.setdefault("disclaimer", default_disclaimer)
 
     # 防呆：LLM 偶爾會回 matched=true 但所有欄位都空（小模型對結構化輸出失敗、
     # 或被截斷後勉強生成的殘骸）— 這時前端會看到「未命名」+ 全 (無資料) 的廢卡片。
