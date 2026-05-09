@@ -328,7 +328,17 @@ _MED_BAG_SYSTEM_PROMPT = (
     "  請回傳空 medications 陣列，**不要硬湊一個藥名**（例如不要把模糊字補成 Prednisolone、Aspirin 等常見藥）\n"
     "- **抗幻覺自檢**：你給出的 name 必須是影像上實際出現的字串。"
     "  輸出前請反問自己「這個藥名我是真的看到，還是聯想出來的？」如果是後者，請改回空陣列\n"
-    "- 只有當影像上至少能讀到一個合理藥名才回傳；風景、人臉、空白紙張、或文字完全無法閱讀的情況都回空陣列"
+    "- 只有當影像上至少能讀到一個合理藥名才回傳；風景、人臉、空白紙張、或文字完全無法閱讀的情況都回空陣列\n\n"
+    "OCR / 視覺常見錯字校正提示（在英文藥名上特別常見）：\n"
+    "- 0/O、1/l/I/|、5/S、8/B、6/G、2/Z、9/g 容易互換，請用上下文判斷\n"
+    "- 「mg」常被讀成「mq」「rng」「ng」；「ml」常被讀成「rnl」「mI」；"
+    "  「IU」常被讀成「lU」「IV」（IV 是注射不是國際單位）——請優先以實體尺寸判斷正確單位\n"
+    "- 中英並列藥名常被空白切斷：例如「Metformin 二甲雙胍」會被讀成兩行，"
+    "  請合併成一個 name，而不是當作兩個藥\n"
+    "- 條碼下方的「處方碼」「健保碼」「藥碼」（例如 A1234567、AB12345678）**不是藥名**，請忽略\n"
+    "- 醫院抬頭、藥局地址、電話、條碼、科別、醫師簽章、領藥單編號、QR Code 區的字"
+    "  **不是藥**，請填到 hospital 或忽略\n"
+    "- 「健保」「自費」「處方」「服用方式」這類欄位標題本身不是藥名"
 )
 
 _MED_BAG_USER_PROMPT = (
@@ -448,6 +458,8 @@ def _parse_med_bag_json(raw: str) -> dict:
 
     處理：去掉 markdown code fence、抽出第一個 `{...}` 區塊、修剪後再 json.loads。
     若仍解析失敗，回傳空 medications 陣列但保留 raw_text 給前端 debug。
+    解析後對每筆藥物跑 ``normalize_medication`` 把 BID / Q8H / 1# / 5cc 等
+    寫法統一成中文與標準單位（原值保留在 ``*_raw``）。
     """
     text = (raw or "").strip()
     if text.startswith("```"):
@@ -471,6 +483,9 @@ def _parse_med_bag_json(raw: str) -> dict:
     meds = result.get("medications")
     if not isinstance(meds, list):
         meds = []
+    # 後處理：頻率 / 劑量 / 用法統一格式（local import 避免循環）
+    from backend.utils.medication_normalize import normalize_medication
+    meds = [normalize_medication(m) if isinstance(m, dict) else m for m in meds]
     result["medications"] = meds
     result["raw_text"] = raw
     return result
@@ -499,7 +514,15 @@ _EXTRACT_FROM_OCR_PROMPT = (
     "- 每個欄位都必須存在（無資料用 null）\n"
     "- 一張藥單常有多筆藥，**逐筆分開列出，不要漏掉任何一行**\n"
     "- 即使只能抽出藥名一個欄位也要列出（其他欄位 null）；**寧可不完整，不要回空陣列**\n"
-    "- 整段 OCR 完全沒有看起來像藥名的字眼才回空陣列"
+    "- 整段 OCR 完全沒有看起來像藥名的字眼才回空陣列\n\n"
+    "OCR 錯字校正提示（請在抽出 name 時用上下文判斷修正）：\n"
+    "- 0/O、1/l/I/|、5/S、8/B、6/G、2/Z 容易混；「mg」常變成「mq」「rng」、"
+    "  「ml」常變成「rnl」、「IU」常變成「lU」\n"
+    "- 中英並列的藥名（例：Metformin 二甲雙胍）OCR 常切成兩行，請合併成一個 name\n"
+    "- **忽略**抬頭、藥局名、地址、電話、處方碼（A1234567 / AB12345678）、健保碼、"
+    "  醫師簽章、QR / 條碼下的字串、欄位標題（「處方」「服用方式」）——這些都不是藥\n"
+    "- 抗幻覺：name 只能是 OCR 文字裡實際看得到的字串；找不到就回空陣列，"
+    "  不要從訓練記憶裡補上 Aspirin、Prednisolone 等常見藥名"
 )
 
 
