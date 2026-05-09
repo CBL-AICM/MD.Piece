@@ -92,9 +92,19 @@ SYSTEM_PROMPT = (
     "2. 淺顯易懂——用生活化的語言，避免專業術語；如果必須用，要立刻解釋\n"
     "3. 給予希望——每篇文章都要讓患者感受到「這是可以管理好的」\n"
     "4. 實用具體——給可以立刻行動的建議，不是空泛的「多注意」\n"
-    "5. 台灣情境——使用台灣的醫療體系、健保制度、飲食習慣作為背景\n\n"
+    "5. 台灣情境——使用台灣的醫療體系、健保制度、飲食習慣作為背景\n"
+    "6. 必附文獻來源——文末固定加一段「## 📚 參考來源」，列 3–6 條來源\n\n"
     "回覆格式：使用 Markdown，用標題分段，適當加入 emoji 讓文章更親切。"
-    "長度控制在 800-1200 字之間。"
+    "長度控制在 800–1200 字之間（不含參考來源）。\n\n"
+    "「參考來源」撰寫規則：\n"
+    "- 只引用真實存在的權威來源：例如「中華民國衛生福利部」「國民健康署」"
+    "「中央健康保險署」「中華民國風濕病醫學會」「台灣家醫醫學會」「臺灣內科醫學會」"
+    "「台灣兒科醫學會」「Mayo Clinic」「Cleveland Clinic」「UpToDate」「NIH MedlinePlus」"
+    "「WHO」「Cochrane Library」「美國 CDC」等。\n"
+    "- **不要編造具體 URL**——若不確定該指引的網址，只列「組織名稱 + 指引主題」即可，"
+    "例如「中華民國糖尿病學會：2024 年第二型糖尿病臨床照護指引」。\n"
+    "- 每條格式：`- 來源組織：指引或衛教主題（YYYY 年版本，若知道）`。\n"
+    "- 結尾加一行小字：「※ 詳細治療仍以主治醫師判斷為準，本文僅供衛教參考」。"
 )
 
 
@@ -116,8 +126,11 @@ GENERIC_TOPIC_PROMPT = (
     "4. 重點放在安心與實用——讓患者讀完覺得「我知道該做什麼了」\n"
     "5. 適當使用 emoji 讓文章更親切\n"
     "6. 用台灣的醫療制度、健保、飲食習慣作為背景\n"
-    "7. 文末提醒：詳細治療仍以主治醫師判斷為準\n\n"
-    "回覆格式：使用 Markdown，分段加標題，長度控制在 600–1000 字。"
+    "7. 文末提醒：詳細治療仍以主治醫師判斷為準\n"
+    "8. **必加** 一段「## 📚 參考來源」列 3–6 條真實存在的權威來源（衛福部、健保署、"
+    "相關醫學會、Mayo Clinic、UpToDate、NIH 等），格式 `- 組織：指引或衛教主題（年份）`，"
+    "**不要編造具體 URL**\n\n"
+    "回覆格式：使用 Markdown，分段加標題，長度控制在 600–1000 字（不含參考來源）。"
 )
 
 
@@ -250,6 +263,52 @@ def _related_reason(related_prefix: str, source_codes: list[str]) -> str:
     if related_cat and related_cat != "未分類":
         return f"同屬「{related_cat}」的相關疾病"
     return "建議一併了解的相關疾病"
+
+
+@router.get("/my-diseases")
+def list_my_diseases(
+    codes: str = Query("", description="病患已登錄的 ICD-10 代碼，逗號分隔"),
+    articles_per_disease: int = Query(6, ge=1, le=20),
+):
+    """為「我的疾病書架」與「我的疾病衛教文章」提供資料。
+
+    對病患已登錄的每個疾病各回傳：
+    - 疾病基本資料（icd10、名稱、分類）
+    - 該疾病在 content/education/ 下的所有衛教文章卡片（依精選 / 維度 / slug 排序）
+    - 六大維度的覆蓋情形（哪些維度已有審稿過的文章）
+
+    比 /related 直接很多——這個只看「自己的疾病」，不做共病推論。
+    """
+    own = [c.strip() for c in (codes or "").split(",") if c.strip()]
+    seen: set[str] = set()
+    items: list[dict[str, Any]] = []
+
+    for raw in own:
+        prefix = raw[:3].upper()
+        if not prefix or prefix in seen:
+            continue
+        seen.add(prefix)
+
+        articles = education_content.list_articles(icd10=prefix)
+        articles.sort(key=lambda a: (not a.featured, a.dimension or "z", a.slug))
+
+        covered_dims = sorted({a.dimension for a in articles if a.dimension})
+        items.append({
+            "icd10": prefix,
+            "name": ICD10_MAP.get(prefix, "未知疾病"),
+            "category": get_category_for_code(prefix),
+            "is_supported": prefix in ICD10_MAP,
+            "articles": [a.to_card() for a in articles[:articles_per_disease]],
+            "article_count": len(articles),
+            "covered_dimensions": covered_dims,
+            "all_dimensions": list(KNOWLEDGE_DIMENSIONS.keys()),
+        })
+
+    return {
+        "source_codes": [it["icd10"] for it in items],
+        "count": len(items),
+        "items": items,
+    }
 
 
 # ── 原有靜態衛教 ────────────────────────────────────────

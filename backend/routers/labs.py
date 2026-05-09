@@ -145,30 +145,32 @@ class LabScanRequest(BaseModel):
     media_type: Optional[str] = "image/jpeg"
 
 
+def _coerce_str(value, default: str = "") -> str:
+    """LLM 回傳的欄位有時是數字、None、dict——統一轉成可 strip 的 str。"""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value
+    return str(value)
+
+
 def _normalize_scanned_item(raw: dict) -> dict:
     """把 LLM 回的單筆項目正規化成前端可直接渲染的結構。"""
-    name = (raw.get("name") or "").strip() or "未命名項目"
-    value = raw.get("value")
-    if value is None:
-        value = ""
-    elif not isinstance(value, str):
-        value = str(value)
-    unit = raw.get("unit")
-    if isinstance(unit, str):
-        unit = unit.strip() or None
-    elif unit is not None:
-        unit = str(unit).strip() or None
-    status = (raw.get("status") or "unknown").strip().lower()
+    name = _coerce_str(raw.get("name")).strip() or "未命名項目"
+    value = _coerce_str(raw.get("value")).strip()
+    unit_s = _coerce_str(raw.get("unit")).strip()
+    unit = unit_s or None
+    status = _coerce_str(raw.get("status"), "unknown").strip().lower()
     if status not in _VALID_STATUSES:
         status = "unknown"
     return {
         "name": name,
-        "value": value.strip() if isinstance(value, str) else value,
+        "value": value,
         "unit": unit,
-        "normal_range": (raw.get("normal_range") or "").strip() or "未知",
+        "normal_range": _coerce_str(raw.get("normal_range")).strip() or "未知",
         "status": status,
-        "meaning": (raw.get("meaning") or "").strip(),
-        "advice": (raw.get("advice") or "").strip(),
+        "meaning": _coerce_str(raw.get("meaning")).strip(),
+        "advice": _coerce_str(raw.get("advice")).strip(),
         "see_doctor": _coerce_bool(raw.get("see_doctor"), default=False),
     }
 
