@@ -7,6 +7,12 @@ from typing import Optional
 
 import httpx
 
+from backend.utils.zh_tw import (
+    TAIWAN_CHINESE_RULE,
+    apply_to_strings,
+    to_taiwan_chinese,
+)
+
 logger = logging.getLogger(__name__)
 
 # 多 provider LLM 服務
@@ -169,6 +175,9 @@ def call_claude(system_prompt: str, user_message: str, history=None, max_tokens:
     max_tokens: 可選，覆寫該次呼叫的回應長度上限（避免結構化 JSON 被截斷）。
                 未指定時用 ANTHROPIC_MAX_TOKENS 預設值（1024）。
     """
+    # 自動把語言規則附在 system prompt 後面，確保所有 LLM 輸出走「台灣繁中」基準。
+    # 呼叫端不必每次手動寫；若 prompt 已包含規則，重複也無害。
+    augmented_system = system_prompt + TAIWAN_CHINESE_RULE
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _PROVIDERS else "ollama")
     last_err = None
     for name in chain:
@@ -176,7 +185,10 @@ def call_claude(system_prompt: str, user_message: str, history=None, max_tokens:
         if fn is None:
             continue
         try:
-            return fn(system_prompt, user_message, history, max_tokens=max_tokens)
+            raw = fn(augmented_system, user_message, history, max_tokens=max_tokens)
+            # 後處理：替換掉漏網的大陸用語 / 簡體字。即使輸出是 JSON 字串，
+            # 替換只動到 Chinese 字元 / 詞，不會破壞 JSON 語法。
+            return to_taiwan_chinese(raw) if isinstance(raw, str) else raw
         except Exception as e:
             last_err = e
             logger.warning(f"LLM provider {name} 失敗，嘗試下一個：{e}")
@@ -282,8 +294,41 @@ _STREAM_PROVIDERS = {
 }
 
 
+def _stream_with_tw_filter(stream, tail_size: int = 6):
+    """把串流 chunk 包一層 TW 後處理。
+
+    為了讓跨 chunk 的詞（例如「信息」「使用本品」剛好被 chunk 邊界切開）也能
+    被替換，緩衝最後 `tail_size` 個字元，每次拿（head + tail）整段去比對，
+    再把 head 吐出來、tail 留到下一輪。最後 stream 結束時把 tail 沖掉。
+
+    `tail_size = 6` 蓋得住所有對照表裡的最長詞（5 字「膽固醇水平」），多 1 字
+    當保險。對使用者感受幾乎無延遲（CJK 一個字 ≈ 一個 token）。
+    """
+    buffer = ""
+    for chunk in stream:
+        if not isinstance(chunk, str):
+            yield chunk
+            continue
+        buffer += chunk
+        if len(buffer) > tail_size:
+            converted = to_taiwan_chinese(buffer)
+            # 替換可能改變長度（例如「使用本品」→「使用這個藥」），就回頭用變長後的字串切
+            if len(converted) > tail_size:
+                yield converted[:-tail_size]
+                buffer = converted[-tail_size:]
+            else:
+                # 整段被替換變短了 → 直接丟尾巴等下一輪
+                buffer = converted
+    if buffer:
+        yield to_taiwan_chinese(buffer)
+
+
 def stream_claude(system_prompt: str, user_message: str, history=None):
-    """串流文字生成（產生純文字片段的 generator）；主 provider 失敗時自動降級。"""
+    """串流文字生成（產生純文字片段的 generator）；主 provider 失敗時自動降級。
+
+    輸出會經過 TW 後處理，把漏網的大陸用語 / 簡體字替換成台灣繁中。
+    """
+    augmented_system = system_prompt + TAIWAN_CHINESE_RULE
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _STREAM_PROVIDERS else "ollama")
     last_err = None
     for name in chain:
@@ -292,8 +337,8 @@ def stream_claude(system_prompt: str, user_message: str, history=None):
             continue
         try:
             # 用 list-iter 包裝以便偵測第一個 yield 之前的錯誤
-            gen = fn(system_prompt, user_message, history)
-            yield from gen
+            gen = fn(augmented_system, user_message, history)
+            yield from _stream_with_tw_filter(gen)
             return
         except Exception as e:
             last_err = e
@@ -344,6 +389,7 @@ _MED_BAG_SYSTEM_PROMPT = (
     "- **抗幻覺自檢**：你給出的 name 必須是影像上實際出現的字串。"
     "  輸出前請反問自己「這個藥名我是真的看到，還是聯想出來的？」如果是後者，請改回空陣列\n"
     "- 只有當影像上至少能讀到一個合理藥名才回傳；風景、人臉、空白紙張、或文字完全無法閱讀的情況都回空陣列"
+    + TAIWAN_CHINESE_RULE
 )
 
 _MED_BAG_USER_PROMPT = (
@@ -464,6 +510,8 @@ def _parse_med_bag_json(raw: str) -> dict:
 
     處理：去掉 markdown code fence、抽出第一個 `{...}` 區塊、修剪後再 json.loads。
     若仍解析失敗，回傳空 medications 陣列但保留 raw_text 給前端 debug。
+    解析後 medications 內所有字串欄位都會跑一次 TW 後處理，確保大陸用語 /
+    簡體字不會跑到使用者眼前（vision provider 經 system prompt 但不一定守規矩）。
     """
     text = (raw or "").strip()
     if text.startswith("```"):
@@ -487,8 +535,9 @@ def _parse_med_bag_json(raw: str) -> dict:
     meds = result.get("medications")
     if not isinstance(meds, list):
         meds = []
-    result["medications"] = meds
-    result["raw_text"] = raw
+    # TW 後處理：洗掉每筆 medication 裡所有字串欄位的簡體字 / 大陸用語
+    result["medications"] = apply_to_strings(meds)
+    result["raw_text"] = raw  # raw_text 留原樣給 debug
     return result
 
 
@@ -682,7 +731,7 @@ _LAB_REPORT_EXTRACT_PROMPT = (
     "回覆**必須是純 JSON**，不要 markdown code block、不要前後說明：\n"
     '{"items": [{"name":"...","value":"...","unit":"...","normal_range":"...",'
     '"status":"...","meaning":"...","advice":"...","see_doctor":false}]}\n'
-    "全部使用繁體中文。"
+    + TAIWAN_CHINESE_RULE
 )
 
 _LAB_REPORT_VISION_USER_PROMPT = (
@@ -756,7 +805,7 @@ _LAB_VISION_PROVIDERS = {
 
 
 def _parse_lab_items_json(raw: str) -> list[dict]:
-    """容錯解析 LLM 回的檢驗報告 JSON。"""
+    """容錯解析 LLM 回的檢驗報告 JSON。輸出每筆項目都會跑 TW 後處理。"""
     text = (raw or "").strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -771,7 +820,9 @@ def _parse_lab_items_json(raw: str) -> list[dict]:
         logger.warning(f"Lab report parse non-JSON: {raw[:200]}")
         return []
     items = result.get("items") if isinstance(result, dict) else result
-    return items if isinstance(items, list) else []
+    if not isinstance(items, list):
+        return []
+    return apply_to_strings(items)
 
 
 # ── 藥物百科查詢 ────────────────────────────────────────────
@@ -999,7 +1050,9 @@ def lookup_drug_info(drug_name: str) -> dict:
                 "AI 整理藥物資訊時資料不完整，請改用更具體或正確拼寫的藥名再試一次。"
             )
 
-    return result
+    # 二次保險：對所有字串欄位再跑一次 TW 後處理（call_claude 已處理過 raw 字串，
+    # 但 json.loads 之後再洗一次能抓到任何剛好被 JSON 結構切開的詞）
+    return apply_to_strings(result)
 
 
 def recognize_lab_report(image_base64: str, media_type: str = "image/jpeg") -> dict:
