@@ -5305,7 +5305,9 @@ function extractUnrecognizedDiseases(text) {
     DISEASE_KEYWORDS.forEach(function(p) {
       var kw = p[0];
       if (!kw) return;
-      while (s.indexOf(kw) !== -1) s = s.split(kw).join('|');
+      // 大小寫不敏感地挖掉所有命中（sle/SLE 都算）
+      var re = new RegExp(_escapeForRegex(kw), 'gi');
+      s = s.replace(re, '|');
     });
   }
   // 中英文標點 + 空白 + 連接詞 切塊
@@ -5580,6 +5582,10 @@ var DISEASE_KEYWORDS = [
   ['大腸癌','C18'], ['結腸癌','C18'],
 ];
 
+function _escapeForRegex(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function detectIcd10FromText(text) {
   if (!text) return [];
   var src = String(text);
@@ -5590,9 +5596,11 @@ function detectIcd10FromText(text) {
     var pair = sorted[i];
     var kw = pair[0];
     var icd = pair[1];
-    if (src.indexOf(kw) !== -1) {
+    // 大小寫不敏感（讓 sle / COPD / als / tia / itp / aps 都能命中）
+    var re = new RegExp(_escapeForRegex(kw), 'gi');
+    if (re.test(src)) {
       found[icd] = true;
-      src = src.split(kw).join('');
+      src = src.replace(new RegExp(_escapeForRegex(kw), 'gi'), '');
     }
   }
   return Object.keys(found);
