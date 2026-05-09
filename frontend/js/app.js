@@ -3467,15 +3467,16 @@ function records() {
 
         <label class="bi-field">
           <span>${_T('rec.field.allergies')}</span>
-          <textarea id="bi-allergies" rows="2" placeholder="${_T('rec.placeholder.allergies')}">${v('allergies')}</textarea>
+          <textarea id="bi-allergies" rows="2" placeholder="${_T('rec.placeholder.allergies')}" oninput="updateDetectedDiseases()">${v('allergies')}</textarea>
         </label>
         <label class="bi-field">
           <span>${_T('rec.field.conditions')}</span>
-          <textarea id="bi-conditions" rows="2" placeholder="${_T('rec.placeholder.conditions')}">${v('conditions')}</textarea>
+          <textarea id="bi-conditions" rows="2" placeholder="${_T('rec.placeholder.conditions')}" oninput="updateDetectedDiseases()">${v('conditions')}</textarea>
         </label>
         <label class="bi-field">
           <span>${_T('rec.field.currentDisease')}</span>
-          <textarea id="bi-current-disease" rows="2" placeholder="${_T('rec.placeholder.currentDisease')}">${v('current_disease')}</textarea>
+          <textarea id="bi-current-disease" rows="2" placeholder="${_T('rec.placeholder.currentDisease')}" oninput="updateDetectedDiseases()">${v('current_disease')}</textarea>
+          <div id="bi-detected-diseases" class="bi-hint" style="margin-top:6px;font-size:.78rem;line-height:1.6;color:var(--text-dim)"></div>
         </label>
         <label class="bi-field">
           <span>${_T('rec.field.meds')}</span>
@@ -3515,6 +3516,33 @@ function records() {
 
 function loadRecordsPage() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  if (typeof updateDetectedDiseases === 'function') updateDetectedDiseases();
+}
+
+// 從基本資料三個自由文字欄位即時辨識疾病，並把易讀名稱顯示成 pill
+function updateDetectedDiseases() {
+  var pillsEl = document.getElementById('bi-detected-diseases');
+  if (!pillsEl) return;
+  var current = document.getElementById('bi-current-disease');
+  var conditions = document.getElementById('bi-conditions');
+  var allergies = document.getElementById('bi-allergies');
+  var combined = [
+    current && current.value,
+    conditions && conditions.value,
+    allergies && allergies.value
+  ].filter(Boolean).join('\n');
+  var codes = (typeof detectIcd10FromText === 'function') ? detectIcd10FromText(combined) : [];
+  if (!codes.length) {
+    pillsEl.innerHTML = '<span style="color:var(--text-dim)">提示：寫日常用語就行（例：「糖尿病、高血壓、骨鬆」），系統會自動帶進「衛教」頁的我的疾病書架。</span>';
+    return;
+  }
+  pillsEl.innerHTML = '<i data-lucide="sparkles" style="width:12px;height:12px;vertical-align:middle"></i> 自動辨識：' +
+    codes.map(function(c) {
+      var name = (typeof bestNameForIcd10 === 'function') ? bestNameForIcd10(c) : c;
+      return '<span style="display:inline-block;margin:2px 4px 2px 0;padding:2px 10px;border-radius:10px;background:var(--bg-soft);color:var(--text);font-size:.78rem">' +
+             escapeHtml(name) + '</span>';
+    }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function saveBasicInfo() {
@@ -3534,6 +3562,16 @@ function saveBasicInfo() {
     emergency_phone: document.getElementById('bi-emergency-phone').value.trim(),
   };
   setBasicInfo(info);
+
+  // 自動辨識疾病 → user.icd10_codes，衛教頁的「我的疾病書架」就會出現
+  if (typeof detectIcd10FromText === 'function') {
+    var combined = [info.current_disease, info.conditions, info.allergies].filter(Boolean).join('\n');
+    var codes = detectIcd10FromText(combined);
+    var u = getCurrentUser() || {};
+    u.icd10_codes = codes;
+    setCurrentUser(u);
+  }
+
   const msg = document.getElementById('bi-msg');
   if (msg) {
     msg.textContent = _T('rec.msg.savedLocal');
@@ -5334,6 +5372,18 @@ function resolvePatientIcd10Codes(callback) {
     callback(user.icd10_codes);
     return;
   }
+  // 患者不需要懂 ICD-10——從「我的基本資料」自由文字自動辨識
+  if (typeof getBasicInfo === 'function' && typeof detectIcd10FromText === 'function') {
+    var info = getBasicInfo() || {};
+    var combined = [info.current_disease, info.conditions, info.allergies].filter(Boolean).join('\n');
+    var detected = detectIcd10FromText(combined);
+    if (detected.length) {
+      // 寫回 localStorage user，下次直接命中（也避免每次重新跑辨識）
+      if (user) { user.icd10_codes = detected; setCurrentUser(user); }
+      callback(detected);
+      return;
+    }
+  }
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : (user && user.id);
   if (!pid) { callback([]); return; }
   fetch(API + "/patients/" + encodeURIComponent(pid))
@@ -5342,6 +5392,76 @@ function resolvePatientIcd10Codes(callback) {
       callback((p && Array.isArray(p.icd10_codes)) ? p.icd10_codes : []);
     })
     .catch(function() { callback([]); });
+}
+
+// ── 從日常用語自動辨識疾病 → ICD-10 ─────────────────────
+// 患者寫「糖尿病、高血壓」就自動對應到 E11、I10，不必懂任何代碼。
+// 排序由長到短，避免「糖尿病」誤蓋「第二型糖尿病」。
+var DISEASE_KEYWORDS = [
+  ['第一型糖尿病','E10'], ['I型糖尿病','E10'], ['1型糖尿病','E10'],
+  ['第二型糖尿病','E11'], ['II型糖尿病','E11'], ['2型糖尿病','E11'],
+  ['糖尿病','E11'],
+  ['高血脂症','E78'], ['高血脂','E78'], ['膽固醇高','E78'], ['血脂高','E78'],
+  ['甲狀腺功能低下','E03'], ['甲狀腺低下','E03'], ['甲低','E03'],
+  ['甲狀腺功能亢進','E05'], ['甲狀腺亢進','E05'], ['甲亢','E05'],
+  ['原發性高血壓','I10'], ['高血壓','I10'],
+  ['慢性缺血性心臟病','I25'], ['缺血性心臟病','I25'], ['冠狀動脈心臟病','I25'], ['冠心病','I25'],
+  ['心臟衰竭','I50'], ['心衰竭','I50'], ['心衰','I50'],
+  ['心房顫動','I48'], ['心房纖顫','I48'],
+  ['腦中風','I63'], ['腦梗塞','I63'], ['中風','I63'],
+  ['氣喘','J45'],
+  ['慢性阻塞性肺病','J44'], ['肺氣腫','J44'], ['COPD','J44'],
+  ['克隆氏症','K50'], ['克隆症','K50'],
+  ['潰瘍性結腸炎','K51'],
+  ['肝纖維化','K74'], ['肝硬化','K74'],
+  ['血清陽性類風濕性關節炎','M05'],
+  ['類風濕性關節炎','M06'], ['類風濕','M06'],
+  ['骨質疏鬆症','M81'], ['骨質疏鬆','M81'], ['骨鬆','M81'],
+  ['慢性腎臟病','N18'], ['腎臟病','N18'], ['腎衰竭','N18'], ['腎病變','N18'], ['洗腎','N18'], ['腎病','N18'],
+  ['巴金森氏症','G20'], ['巴金森','G20'], ['帕金森','G20'],
+  ['多發性硬化症','G35'],
+  ['阿茲海默症','G30'], ['阿茲海默','G30'], ['失智症','G30'], ['失智','G30'],
+  ['重度憂鬱症','F32'], ['重鬱症','F32'], ['憂鬱症','F32'], ['憂鬱','F32'],
+  ['恐慌症','F41'], ['焦慮症','F41'], ['焦慮','F41'],
+  ['乳癌','C50'], ['乳房癌','C50'],
+  ['肺癌','C34'],
+  ['大腸癌','C18'], ['結腸癌','C18'],
+];
+
+function detectIcd10FromText(text) {
+  if (!text) return [];
+  var src = String(text);
+  var found = {};
+  // 由長到短排序，先比中精確的長詞，再從來源文字裡移掉，避免短詞重複命中
+  var sorted = DISEASE_KEYWORDS.slice().sort(function(a, b) { return b[0].length - a[0].length; });
+  for (var i = 0; i < sorted.length; i++) {
+    var pair = sorted[i];
+    var kw = pair[0];
+    var icd = pair[1];
+    if (src.indexOf(kw) !== -1) {
+      found[icd] = true;
+      src = src.split(kw).join('');
+    }
+  }
+  return Object.keys(found);
+}
+
+// 取代碼回去找最簡短易懂的中文名（給 UI 顯示用，「糖尿病」優於「第二型糖尿病」）
+function bestNameForIcd10(code) {
+  if (!code) return '';
+  var prefix = String(code).slice(0, 3).toUpperCase();
+  var candidates = [];
+  DISEASE_KEYWORDS.forEach(function(p) {
+    if (p[1] === prefix) candidates.push(p[0]);
+  });
+  if (!candidates.length) {
+    // 退回完整 ICD10_MAP 名稱（透過 _eduDiseases 緩存）
+    var hit = (typeof _eduDiseases !== 'undefined' ? _eduDiseases : []).find(function(d) { return d.icd10 === prefix; });
+    return hit ? hit.name : prefix;
+  }
+  // 偏好較短、最像日常用語的名稱
+  candidates.sort(function(a, b) { return a.length - b.length; });
+  return candidates[0];
 }
 
 function renderRelatedDiseaseCard(item) {
