@@ -3567,9 +3567,14 @@ function saveBasicInfo() {
   if (typeof detectIcd10FromText === 'function') {
     var combined = [info.current_disease, info.conditions, info.allergies].filter(Boolean).join('\n');
     var codes = detectIcd10FromText(combined);
-    var u = getCurrentUser() || {};
-    u.icd10_codes = codes;
-    setCurrentUser(u);
+    var u = getCurrentUser();
+    // 只在真的有登入帳號時才寫回 user 物件，避免造出 id-less 假 user
+    // 干擾 /auth/user/{id} 等帳號 API。Guest/demo 的書架還是會走
+    // resolvePatientIcd10Codes 的 basicInfo fallback，所以不會壞掉。
+    if (u && u.id) {
+      u.icd10_codes = codes;
+      setCurrentUser(u);
+    }
   }
 
   const msg = document.getElementById('bi-msg');
@@ -5247,7 +5252,8 @@ function loadMyDiseases() {
     fetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
-        var items = (data && data.items) || [];
+        // 只渲染後端真的支援的疾病——不在 ICD10_MAP 的代碼點下去會跳 400
+        var items = ((data && data.items) || []).filter(function(it) { return it && it.is_supported; });
         if (!items.length) {
           if (shelfCard) shelfCard.style.display = 'none';
           if (articlesCard) articlesCard.style.display = 'none';
@@ -5379,7 +5385,7 @@ function resolvePatientIcd10Codes(callback) {
     var detected = detectIcd10FromText(combined);
     if (detected.length) {
       // 寫回 localStorage user，下次直接命中（也避免每次重新跑辨識）
-      if (user) { user.icd10_codes = detected; setCurrentUser(user); }
+      if (user && user.id) { user.icd10_codes = detected; setCurrentUser(user); }
       callback(detected);
       return;
     }
@@ -7293,9 +7299,8 @@ function labsRenderScanResult(data) {
   if (summary.needs_doctor) headLines.push('<span class="labs-st-bad" style="padding:2px 8px;border-radius:10px">建議就醫</span>');
 
   var sortRank = { critical: 0, high: 1, low: 2, unknown: 3, normal: 4 };
-  items = items.slice().sort(function(a, b) {
-    return (sortRank[a.status] || 9) - (sortRank[b.status] || 9);
-  });
+  function rankOf(s) { var r = sortRank[s]; return (r === undefined) ? 9 : r; }
+  items = items.slice().sort(function(a, b) { return rankOf(a.status) - rankOf(b.status); });
 
   var listHtml = items.map(function(it, idx) {
     var meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
