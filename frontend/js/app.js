@@ -8863,25 +8863,37 @@ function quickDrugSearch(name) {
   runDrugSearch();
 }
 
-function runDrugSearch() {
+function runDrugSearch(opts) {
+  var refresh = !!(opts && opts.refresh);
+  var inputName = opts && opts.name;
   var input = document.getElementById('drug-search-input');
-  var q = (input && input.value || '').trim();
+  var q = (inputName || (input && input.value) || '').trim();
   if (!q) {
     showToast('請輸入要查詢的藥名', 'warn');
     return;
   }
+  if (input && inputName) input.value = inputName;
   var card = document.getElementById('drug-search-result-card');
   var box = document.getElementById('drug-search-result');
   if (card) card.style.display = '';
-  if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> 查詢中…首次查詢需要稍候（AI 正在整理）</p>';
+  var loadingMsg = refresh
+    ? '重新生成中…請 AI 重新整理這筆資料，需要 5~15 秒'
+    : '查詢中…首次查詢需要稍候（AI 正在整理）';
+  if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> ' + loadingMsg + '</p>';
   if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
 
-  fetch(API + "/drug-search/?q=" + encodeURIComponent(q))
+  var url = API + "/drug-search/?q=" + encodeURIComponent(q) + (refresh ? "&refresh=true" : "");
+  fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) { renderDrugSearchResult(data); })
     .catch(function() {
       if (box) box.innerHTML = '<p style="color:var(--danger)">查詢失敗，請稍後再試</p>';
     });
+}
+
+// 給「重新生成」按鈕用：用使用者目前在輸入框的藥名重新請 AI 整理一次（繞過快取）
+function refreshDrugSearch(name) {
+  runDrugSearch({ refresh: true, name: name });
 }
 
 function renderDrugSearchResult(data) {
@@ -8929,6 +8941,18 @@ function _renderDrugCard(d) {
       '</ul>';
   }
 
+  // 「重新生成」按鈕：使用者覺得內容怪（翻譯腔 / 簡體字 / 過時）時，可請 AI 用最新 prompt 重整一次
+  var rawNameForRefresh = d.name_zh || d.name_en || '';
+  var refreshBtn = rawNameForRefresh
+    ? '<button class="secondary" type="button" ' +
+        'data-name="' + escapeHtml(rawNameForRefresh) + '" ' +
+        'onclick="refreshDrugSearch(this.dataset.name)" ' +
+        'title="覺得內容怪？請 AI 重新整理這筆資料（會略過快取）" ' +
+        'style="font-size:0.8rem;padding:4px 10px">' +
+        '<i data-lucide="refresh-cw" style="width:12px;height:12px;vertical-align:middle"></i> 重新生成' +
+      '</button>'
+    : '';
+
   return (
     '<header style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">' +
       '<div>' +
@@ -8936,6 +8960,7 @@ function _renderDrugCard(d) {
         (d.category ? '<div style="margin-top:4px"><span class="med-card-tag">' + escapeHtml(d.category) + '</span></div>' : '') +
         aliasHtml +
       '</div>' +
+      (refreshBtn ? '<div style="flex-shrink:0">' + refreshBtn + '</div>' : '') +
     '</header>' +
     (d.indication
       ? '<section style="margin-top:14px"><h3 style="margin:0 0 4px"><i data-lucide="target" style="width:16px;height:16px;vertical-align:middle"></i> 適應症</h3>' +
