@@ -3,7 +3,15 @@ import json
 import logging
 import os
 import time
+from typing import Optional
+
 import httpx
+
+from backend.utils.zh_tw import (
+    TAIWAN_CHINESE_RULE,
+    apply_to_strings,
+    to_taiwan_chinese,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +175,9 @@ def call_claude(system_prompt: str, user_message: str, history=None, max_tokens:
     max_tokens: 可選，覆寫該次呼叫的回應長度上限（避免結構化 JSON 被截斷）。
                 未指定時用 ANTHROPIC_MAX_TOKENS 預設值（1024）。
     """
+    # 自動把語言規則附在 system prompt 後面，確保所有 LLM 輸出走「台灣繁中」基準。
+    # 呼叫端不必每次手動寫；若 prompt 已包含規則，重複也無害。
+    augmented_system = system_prompt + TAIWAN_CHINESE_RULE
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _PROVIDERS else "ollama")
     last_err = None
     for name in chain:
@@ -174,7 +185,10 @@ def call_claude(system_prompt: str, user_message: str, history=None, max_tokens:
         if fn is None:
             continue
         try:
-            return fn(system_prompt, user_message, history, max_tokens=max_tokens)
+            raw = fn(augmented_system, user_message, history, max_tokens=max_tokens)
+            # 後處理：替換掉漏網的大陸用語 / 簡體字。即使輸出是 JSON 字串，
+            # 替換只動到 Chinese 字元 / 詞，不會破壞 JSON 語法。
+            return to_taiwan_chinese(raw) if isinstance(raw, str) else raw
         except Exception as e:
             last_err = e
             logger.warning(f"LLM provider {name} 失敗，嘗試下一個：{e}")
@@ -280,8 +294,41 @@ _STREAM_PROVIDERS = {
 }
 
 
+def _stream_with_tw_filter(stream, tail_size: int = 6):
+    """把串流 chunk 包一層 TW 後處理。
+
+    為了讓跨 chunk 的詞（例如「信息」「使用本品」剛好被 chunk 邊界切開）也能
+    被替換，緩衝最後 `tail_size` 個字元，每次拿（head + tail）整段去比對，
+    再把 head 吐出來、tail 留到下一輪。最後 stream 結束時把 tail 沖掉。
+
+    `tail_size = 6` 蓋得住所有對照表裡的最長詞（5 字「膽固醇水平」），多 1 字
+    當保險。對使用者感受幾乎無延遲（CJK 一個字 ≈ 一個 token）。
+    """
+    buffer = ""
+    for chunk in stream:
+        if not isinstance(chunk, str):
+            yield chunk
+            continue
+        buffer += chunk
+        if len(buffer) > tail_size:
+            converted = to_taiwan_chinese(buffer)
+            # 替換可能改變長度（例如「使用本品」→「使用這個藥」），就回頭用變長後的字串切
+            if len(converted) > tail_size:
+                yield converted[:-tail_size]
+                buffer = converted[-tail_size:]
+            else:
+                # 整段被替換變短了 → 直接丟尾巴等下一輪
+                buffer = converted
+    if buffer:
+        yield to_taiwan_chinese(buffer)
+
+
 def stream_claude(system_prompt: str, user_message: str, history=None):
-    """串流文字生成（產生純文字片段的 generator）；主 provider 失敗時自動降級。"""
+    """串流文字生成（產生純文字片段的 generator）；主 provider 失敗時自動降級。
+
+    輸出會經過 TW 後處理，把漏網的大陸用語 / 簡體字替換成台灣繁中。
+    """
+    augmented_system = system_prompt + TAIWAN_CHINESE_RULE
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _STREAM_PROVIDERS else "ollama")
     last_err = None
     for name in chain:
@@ -290,8 +337,8 @@ def stream_claude(system_prompt: str, user_message: str, history=None):
             continue
         try:
             # 用 list-iter 包裝以便偵測第一個 yield 之前的錯誤
-            gen = fn(system_prompt, user_message, history)
-            yield from gen
+            gen = fn(augmented_system, user_message, history)
+            yield from _stream_with_tw_filter(gen)
             return
         except Exception as e:
             last_err = e
@@ -305,8 +352,13 @@ _MED_BAG_SYSTEM_PROMPT = (
     "  (a) 藥袋（單包藥的外袋）\n"
     "  (b) 藥單 / 處方箋 / 領藥明細（A4 或長條表格，常見於台大、榮總、長庚、亞東、"
     "      馬偕、各地區醫院、診所、社區藥局；典型欄位：藥品名稱 / 劑量 / 用法 / 數量 / 天數）\n"
-    "  (c) 出院帶藥清單、慢箋、回診指示單\n\n"
-    "**不管版型為何**、**不管是藥袋還是藥單**，請從照片裡所有可見文字萃取出以下「標準欄位」：\n\n"
+    "  (c) 出院帶藥清單、慢箋、回診指示單\n"
+    "  (d) **藥盒 / 藥品包裝外盒**（含 OTC 成藥外盒、處方藥紙盒、罐裝藥外貼標籤；"
+    "      常見可讀資訊：商品名、學名、規格／含量、廠商、效期、適應症、用法、警語；"
+    "      藥盒上常**沒有處方資訊**，能讀到的多半只有藥名與劑量規格——這完全可以接受，"
+    "      其他欄位請大方填 null，不要瞎猜頻率／天數）\n"
+    "  (e) 藥瓶、藥條、鋁箔片背板（PTP/blister）上的印字\n\n"
+    "**不管版型為何**、**不管是藥袋、藥盒還是藥單**，請從照片裡所有可見文字萃取出以下「標準欄位」：\n\n"
     "標準欄位：\n"
     "  - name        藥名（**完全照抄影像上看得到的字**；中英並列時可寫成「中文（English）」格式，"
     "                  例：布洛芬（Ibuprofen）；只有英文時直接寫英文，不要硬翻中文；"
@@ -337,11 +389,13 @@ _MED_BAG_SYSTEM_PROMPT = (
     "- **抗幻覺自檢**：你給出的 name 必須是影像上實際出現的字串。"
     "  輸出前請反問自己「這個藥名我是真的看到，還是聯想出來的？」如果是後者，請改回空陣列\n"
     "- 只有當影像上至少能讀到一個合理藥名才回傳；風景、人臉、空白紙張、或文字完全無法閱讀的情況都回空陣列"
+    + TAIWAN_CHINESE_RULE
 )
 
 _MED_BAG_USER_PROMPT = (
-    "請辨識這張照片（可能是藥袋、藥單、處方箋或領藥明細）上的所有藥物資訊，"
-    "**逐筆**分開列出。即使只看得到藥名也請列出，不要回傳空陣列。"
+    "請辨識這張照片（可能是藥袋、藥盒、藥瓶標籤、藥單、處方箋或領藥明細）上的所有藥物資訊，"
+    "**逐筆**分開列出。即使只看得到藥名（例如藥盒上只有商品名與學名）也請列出，"
+    "其他讀不到的欄位填 null，不要回傳空陣列。"
 )
 
 
@@ -456,6 +510,8 @@ def _parse_med_bag_json(raw: str) -> dict:
 
     處理：去掉 markdown code fence、抽出第一個 `{...}` 區塊、修剪後再 json.loads。
     若仍解析失敗，回傳空 medications 陣列但保留 raw_text 給前端 debug。
+    解析後 medications 內所有字串欄位都會跑一次 TW 後處理，確保大陸用語 /
+    簡體字不會跑到使用者眼前（vision provider 經 system prompt 但不一定守規矩）。
     """
     text = (raw or "").strip()
     if text.startswith("```"):
@@ -479,15 +535,17 @@ def _parse_med_bag_json(raw: str) -> dict:
     meds = result.get("medications")
     if not isinstance(meds, list):
         meds = []
-    result["medications"] = meds
-    result["raw_text"] = raw
+    # TW 後處理：洗掉每筆 medication 裡所有字串欄位的簡體字 / 大陸用語
+    result["medications"] = apply_to_strings(meds)
+    result["raw_text"] = raw  # raw_text 留原樣給 debug
     return result
 
 
 # 從 OCR 純文字抽結構化欄位的 prompt（給 text LLM 用，預設走 Haiku 4.5 省成本）
 _EXTRACT_FROM_OCR_PROMPT = (
-    "你是台灣處方資訊抽取助手。輸入是 OCR 從藥袋／藥單／處方箋讀出的原始文字"
-    "（可能有錯字、缺字、版面亂、夾雜雜訊）。請從這段文字抽取所有藥物，整理成 JSON：\n\n"
+    "你是台灣處方資訊抽取助手。輸入是 OCR 從藥袋／藥盒／藥瓶標籤／藥單／處方箋讀出的原始文字"
+    "（可能有錯字、缺字、版面亂、夾雜雜訊；藥盒文字常包含商品名、學名、規格與廠商，"
+    "但不一定有用法與頻率）。請從這段文字抽取所有藥物，整理成 JSON：\n\n"
     "標準欄位：\n"
     "  - name        藥名（保留原文；中英並列時用「中文（English）」格式；只有英文就直接寫英文）\n"
     "  - dosage      單次劑量（例：500mg、1 顆、5ml）\n"
@@ -572,7 +630,7 @@ def _google_vision_ocr(image_base64: str) -> str:
 
 def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") -> dict:
     """
-    辨識藥袋／藥單／處方箋照片，提取藥物資訊。
+    辨識藥袋／藥盒／藥瓶／藥單／處方箋照片，提取藥物資訊。
 
     優先順序：
       1. **Google Cloud Vision OCR + LLM 抽欄位**（中文小字準度最高，需 GOOGLE_VISION_API_KEY）
@@ -673,7 +731,7 @@ _LAB_REPORT_EXTRACT_PROMPT = (
     "回覆**必須是純 JSON**，不要 markdown code block、不要前後說明：\n"
     '{"items": [{"name":"...","value":"...","unit":"...","normal_range":"...",'
     '"status":"...","meaning":"...","advice":"...","see_doctor":false}]}\n'
-    "全部使用繁體中文。"
+    + TAIWAN_CHINESE_RULE
 )
 
 _LAB_REPORT_VISION_USER_PROMPT = (
@@ -747,7 +805,7 @@ _LAB_VISION_PROVIDERS = {
 
 
 def _parse_lab_items_json(raw: str) -> list[dict]:
-    """容錯解析 LLM 回的檢驗報告 JSON。"""
+    """容錯解析 LLM 回的檢驗報告 JSON。輸出每筆項目都會跑 TW 後處理。"""
     text = (raw or "").strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -762,7 +820,9 @@ def _parse_lab_items_json(raw: str) -> list[dict]:
         logger.warning(f"Lab report parse non-JSON: {raw[:200]}")
         return []
     items = result.get("items") if isinstance(result, dict) else result
-    return items if isinstance(items, list) else []
+    if not isinstance(items, list):
+        return []
+    return apply_to_strings(items)
 
 
 # ── 藥物百科查詢 ────────────────────────────────────────────
@@ -771,7 +831,8 @@ def _parse_lab_items_json(raw: str) -> list[dict]:
 # 之後同一個藥就不會再呼叫 LLM。
 
 _DRUG_INFO_PROMPT = (
-    "你是 MD.Piece 平台的藥物資訊衛教助手，協助一般民眾理解他/她正在服用或將要服用的藥物。\n\n"
+    "你是 MD.Piece 平台的藥物資訊衛教助手，協助**台灣**的一般民眾理解他/她正在服用或將要服用的藥物。"
+    "請用**台灣社區藥師對病人說話**的自然口吻，不要寫成翻譯腔或教科書腔。\n\n"
     "輸入：使用者查詢的藥名（可能是中文、英文、學名或商品名，可能拼字不完全正確）。\n"
     "任務：辨識這個藥是什麼，整理出基礎衛教資訊。\n\n"
     "回覆**必須是純 JSON**（不要 markdown code block、不要前後說明文字），結構如下：\n"
@@ -804,9 +865,46 @@ _DRUG_INFO_PROMPT = (
     "   不要寫死「500mg」這種具體數字\n"
     "4. **嚴重副作用一定要列**：過敏反應、呼吸困難、嚴重皮疹、肝/腎指數異常、"
     "   黑便或血便、心律不整 — 出現任一即需立刻就醫\n"
-    "5. 全部使用繁體中文（除了藥名英文部分）\n"
-    "6. 不下個人化處方建議；不取代醫師判斷"
+    "5. **語言：一律使用台灣繁體中文**（除了藥名英文部分）。\n"
+    "   - 嚴禁簡體字、嚴禁大陸用語。常見詞彙請用台灣寫法：\n"
+    "     資訊（不寫「信息」）、用藥（不寫「用药」）、軟體、程式、檔案、網路、滑鼠、品質、影片；\n"
+    "     處方箋（不寫「处方」）、服藥（不寫「吃药」）、醫師 / 藥師（不寫「医生 / 药剂师」）、\n"
+    "     回診（不寫「复诊」）、健保（不寫「医保」）、副作用（不寫「副反應」）、過敏（不寫「过敏」）、\n"
+    "     注射（不寫「打针」）、口服（不寫「口服」其實 OK，但避免「内服」）、按時（不寫「按时」）。\n"
+    "   - 句法請用台灣藥師日常說話的口氣，例如：\n"
+    "       ✅「這個藥主要是用來控制血壓的，吃了之後血壓會慢慢下降，不要自己停藥。」\n"
+    "       ❌「該藥物為一線抗高血壓藥物，主要用於降低血壓水平。」\n"
+    "       ✅「飯後吃比較不會傷胃，每天大概同一個時間吃。」\n"
+    "       ❌「建議於餐後服用以減少胃部不適，並維持每日固定服藥時間。」\n"
+    "   - 避免硬翻譯的字眼：「該藥物」「使用本品」「予以」「給予」「劑型」「水準 / 水平」「進行 X」"
+    "     都是大陸或翻譯腔，請改寫成自然中文。\n"
+    "   - 副作用、警語條目請用簡短直白的短語（10–25 字），不要寫成完整論文式句子。\n"
+    "6. 不下個人化處方建議；不取代醫師判斷。"
 )
+
+
+def _build_tfda_context(tfda: dict) -> str:
+    """把 TFDA 命中的官方欄位塞成一段「official_data」給 LLM 當權威依據用。"""
+    lines = ["以下是衛福部食藥署西藥許可證的官方資料，請以此為準：", ""]
+    if tfda.get("name_zh"):
+        lines.append(f"- 中文品名：{tfda['name_zh']}")
+    if tfda.get("name_en"):
+        lines.append(f"- 英文品名：{tfda['name_en']}")
+    if tfda.get("ingredient"):
+        lines.append(f"- 主成分：{tfda['ingredient']}")
+    if tfda.get("indication"):
+        lines.append(f"- 適應症（仿單）：{tfda['indication']}")
+    if tfda.get("manufacturer"):
+        lines.append(f"- 製造廠：{tfda['manufacturer']}")
+    if tfda.get("license_no"):
+        lines.append(f"- 許可證字號：{tfda['license_no']}")
+    lines.extend([
+        "",
+        "請使用上面的 name_zh / name_en 當回覆裡的藥名（不要自己另翻），",
+        "indication 可以基於官方仿單再用白話改寫一次。",
+        "用法、副作用、警語、衛教 仿單沒收錄結構化欄位，請用你掌握的醫療衛教知識補齊。",
+    ])
+    return "\n".join(lines)
 
 
 def lookup_drug_info(drug_name: str) -> dict:
@@ -815,15 +913,39 @@ def lookup_drug_info(drug_name: str) -> dict:
     讓 LLM 從藥名（中/英文/商品名）整理出結構化的藥物百科欄位。
     呼叫端應將結果存進 drug_reference 表做快取，避免重複呼叫。
 
-    回傳 dict 結構見 _DRUG_INFO_PROMPT。若 LLM 完全無法辨識，
-    matched=False；若 JSON 解析失敗，回傳 matched=False 並把原始輸出
-    放在 raw_text 供 debug。
+    流程：
+      1. 先查 TFDA 西藥許可證（台灣官方來源）取得權威 name_zh / 適應症
+      2. 把官方欄位塞進 system prompt，請 LLM 以此為準產生衛教
+      3. TFDA 沒命中（OTC 藥盒、進口品牌、拼字錯）→ 走純 LLM fallback
+
+    回傳 dict 結構見 _DRUG_INFO_PROMPT；外加 `tfda_matched: bool` 標明
+    是否有 TFDA 官方資料背書。若 LLM 完全無法辨識，matched=False；
+    若 JSON 解析失敗，回傳 matched=False。
     """
+    # Step 1：嘗試 TFDA 官方查詢（失敗、不可用都會回 None）
+    tfda_hit: Optional[dict] = None
+    try:
+        from backend.services.tfda_service import lookup_drug_in_tfda
+        tfda_hit = lookup_drug_in_tfda(drug_name)
+    except Exception as e:
+        # TFDA 服務出錯不該擋住整個查詢
+        logger.warning("TFDA lookup raised: %s", type(e).__name__)
+        tfda_hit = None
+
+    system_prompt = _DRUG_INFO_PROMPT
+    if tfda_hit:
+        system_prompt = (
+            _DRUG_INFO_PROMPT
+            + "\n\n"
+            + "─── 官方資料補充（TFDA 仿單）───\n"
+            + _build_tfda_context(tfda_hit)
+        )
+
     user_message = f"請查詢這個藥物：「{drug_name}」"
     # 藥物百科 JSON 包含 6 個列表 + 150~300 字衛教，預設 1024 token 會被截斷
     # （結果就是回到使用者眼前的「未命名」空卡片），這裡放寬到 2048 才夠裝完整結構
     try:
-        raw = call_claude(_DRUG_INFO_PROMPT, user_message, max_tokens=2048)
+        raw = call_claude(system_prompt, user_message, max_tokens=2048)
     except Exception as e:
         # 例外細節只進 server log，不放進回傳 dict（避免 stack-trace 流到 client）
         logger.error("lookup_drug_info LLM 失敗：%s", type(e).__name__)
@@ -884,10 +1006,20 @@ def lookup_drug_info(drug_name: str) -> dict:
     result["risks"].setdefault("contraindications", [])
     result["risks"].setdefault("warnings", [])
     result["risks"].setdefault("interactions", [])
-    result.setdefault(
-        "disclaimer",
-        "此資訊由 AI 整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。",
+    # TFDA 命中 → 用官方中文品名覆寫 LLM 自己翻的（避免 LLM 翻成簡中或非台灣譯名）
+    if tfda_hit:
+        if tfda_hit.get("name_zh"):
+            result["name_zh"] = tfda_hit["name_zh"]
+        if tfda_hit.get("name_en") and not result.get("name_en"):
+            result["name_en"] = tfda_hit["name_en"]
+    result["tfda_matched"] = bool(tfda_hit)
+
+    default_disclaimer = (
+        "此資訊由衛福部食藥署仿單與 AI 共同整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。"
+        if tfda_hit
+        else "此資訊由 AI 整理，僅供衛教參考，個別用藥請以醫師處方與藥師說明為準。"
     )
+    result.setdefault("disclaimer", default_disclaimer)
 
     # 防呆：LLM 偶爾會回 matched=true 但所有欄位都空（小模型對結構化輸出失敗、
     # 或被截斷後勉強生成的殘骸）— 這時前端會看到「未命名」+ 全 (無資料) 的廢卡片。
@@ -918,7 +1050,9 @@ def lookup_drug_info(drug_name: str) -> dict:
                 "AI 整理藥物資訊時資料不完整，請改用更具體或正確拼寫的藥名再試一次。"
             )
 
-    return result
+    # 二次保險：對所有字串欄位再跑一次 TW 後處理（call_claude 已處理過 raw 字串，
+    # 但 json.loads 之後再洗一次能抓到任何剛好被 JSON 結構切開的詞）
+    return apply_to_strings(result)
 
 
 def recognize_lab_report(image_base64: str, media_type: str = "image/jpeg") -> dict:

@@ -9294,7 +9294,7 @@ function drugSearch() {
   return (
     '<div class="card">' +
       '<h2><i data-lucide="search" style="width:20px;height:20px;vertical-align:middle"></i> 藥物百科查詢</h2>' +
-      '<p style="margin-top:8px;color:var(--text-dim)">輸入藥名（中文 / 英文 / 商品名）查詢副作用、風險、用法與基礎衛教。</p>' +
+      '<p style="margin-top:8px;color:var(--text-dim)">輸入藥名（中文 / 英文 / 商品名）即可查詢適應症、用法、副作用、風險與基礎衛教。</p>' +
       '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
         '<input id="drug-search-input" type="text" placeholder="例如：普拿疼、Acetaminophen、Lipitor" value="' + escapeHtml(prefill) + '" ' +
           'onkeydown="if(event.key===\'Enter\')runDrugSearch()" ' +
@@ -9302,10 +9302,13 @@ function drugSearch() {
         '<button class="primary" onclick="runDrugSearch()">' +
           '<i data-lucide="search" style="width:14px;height:14px;vertical-align:middle"></i> 查詢' +
         '</button>' +
-        '<button class="secondary" onclick="document.getElementById(\'drug-photo-input\').click()" title="拍照辨識藥袋後查詢">' +
+        '<button class="secondary" onclick="document.getElementById(\'drug-photo-input\').click()" title="拍照辨識藥袋、藥盒或藥單後自動查詢">' +
           '<i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍照查詢' +
         '</button>' +
         '<input type="file" id="drug-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleDrugPhoto(this)" />' +
+      '</div>' +
+      '<div style="margin-top:6px;color:var(--text-muted);font-size:0.8rem">' +
+        '支援拍攝：藥袋、藥盒（含 OTC 成藥外盒）、藥單／處方箋、領藥明細。' +
       '</div>' +
       '<div style="margin-top:10px;padding:8px 12px;background:rgba(220,170,80,0.1);border-radius:var(--radius-sm);border:1px solid rgba(220,170,80,0.3);font-size:0.82rem;color:var(--text-dim)">' +
         '<i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle"></i> ' +
@@ -9367,25 +9370,37 @@ function quickDrugSearch(name) {
   runDrugSearch();
 }
 
-function runDrugSearch() {
+function runDrugSearch(opts) {
+  var refresh = !!(opts && opts.refresh);
+  var inputName = opts && opts.name;
   var input = document.getElementById('drug-search-input');
-  var q = (input && input.value || '').trim();
+  var q = (inputName || (input && input.value) || '').trim();
   if (!q) {
     showToast('請輸入要查詢的藥名', 'warn');
     return;
   }
+  if (input && inputName) input.value = inputName;
   var card = document.getElementById('drug-search-result-card');
   var box = document.getElementById('drug-search-result');
   if (card) card.style.display = '';
-  if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> 查詢中… 第一次查詢會稍久（AI 整理中）</p>';
+  var loadingMsg = refresh
+    ? '重新生成中…請 AI 重新整理這筆資料，需要 5~15 秒'
+    : '查詢中…首次查詢需要稍候（AI 正在整理）';
+  if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> ' + loadingMsg + '</p>';
   if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
 
-  fetch(API + "/drug-search/?q=" + encodeURIComponent(q))
+  var url = API + "/drug-search/?q=" + encodeURIComponent(q) + (refresh ? "&refresh=true" : "");
+  fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) { renderDrugSearchResult(data); })
     .catch(function() {
       if (box) box.innerHTML = '<p style="color:var(--danger)">查詢失敗，請稍後再試</p>';
     });
+}
+
+// 給「重新生成」按鈕用：用使用者目前在輸入框的藥名重新請 AI 整理一次（繞過快取）
+function refreshDrugSearch(name) {
+  runDrugSearch({ refresh: true, name: name });
 }
 
 function renderDrugSearchResult(data) {
@@ -9414,8 +9429,12 @@ function _renderDrugCard(d) {
         aliases.map(function(a) { return escapeHtml(a); }).join('、') + '</div>'
     : '';
   var cachedBadge = d.cached
-    ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:8px;background:rgba(80,160,120,0.15);color:#3a8c5e;margin-left:8px">快取</span>'
-    : '<span style="font-size:0.75rem;padding:2px 8px;border-radius:8px;background:rgba(100,140,200,0.15);color:#4a7bb6;margin-left:8px">AI 即時整理</span>';
+    ? '<span style="font-size:0.75rem;padding:2px 8px;border-radius:8px;background:rgba(80,160,120,0.15);color:#3a8c5e;margin-left:8px">已收錄</span>'
+    : '<span style="font-size:0.75rem;padding:2px 8px;border-radius:8px;background:rgba(100,140,200,0.15);color:#4a7bb6;margin-left:8px">AI 即時生成</span>';
+  // TFDA 命中 → 加一個官方背書的小徽章，讓使用者知道中文藥名與適應症是有官方來源的
+  var tfdaBadge = d.tfda_matched
+    ? '<span style="font-size:0.72rem;padding:2px 8px;border-radius:8px;background:rgba(80,140,200,0.12);color:#2e6dba;margin-left:6px" title="中文藥名與適應症依據衛福部食藥署西藥許可證">食藥署仿單</span>'
+    : '';
 
   var se = d.side_effects || {};
   var common = Array.isArray(se.common) ? se.common : [];
@@ -9433,13 +9452,26 @@ function _renderDrugCard(d) {
       '</ul>';
   }
 
+  // 「重新生成」按鈕：使用者覺得內容怪（翻譯腔 / 簡體字 / 過時）時，可請 AI 用最新 prompt 重整一次
+  var rawNameForRefresh = d.name_zh || d.name_en || '';
+  var refreshBtn = rawNameForRefresh
+    ? '<button class="secondary" type="button" ' +
+        'data-name="' + escapeHtml(rawNameForRefresh) + '" ' +
+        'onclick="refreshDrugSearch(this.dataset.name)" ' +
+        'title="覺得內容怪？請 AI 重新整理這筆資料（會略過快取）" ' +
+        'style="font-size:0.8rem;padding:4px 10px">' +
+        '<i data-lucide="refresh-cw" style="width:12px;height:12px;vertical-align:middle"></i> 重新生成' +
+      '</button>'
+    : '';
+
   return (
     '<header style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">' +
       '<div>' +
-        '<h2 style="margin:0">' + displayName + cachedBadge + '</h2>' +
+        '<h2 style="margin:0">' + displayName + cachedBadge + tfdaBadge + '</h2>' +
         (d.category ? '<div style="margin-top:4px"><span class="med-card-tag">' + escapeHtml(d.category) + '</span></div>' : '') +
         aliasHtml +
       '</div>' +
+      (refreshBtn ? '<div style="flex-shrink:0">' + refreshBtn + '</div>' : '') +
     '</header>' +
     (d.indication
       ? '<section style="margin-top:14px"><h3 style="margin:0 0 4px"><i data-lucide="target" style="width:16px;height:16px;vertical-align:middle"></i> 適應症</h3>' +
@@ -9450,11 +9482,11 @@ function _renderDrugCard(d) {
         '<p style="margin:0;color:var(--text-main);white-space:pre-wrap">' + escapeHtml(d.usage) + '</p></section>'
       : '') +
     '<section style="margin-top:14px"><h3 style="margin:0 0 4px"><i data-lucide="alert-circle" style="width:16px;height:16px;vertical-align:middle"></i> 副作用</h3>' +
-      '<div style="margin-top:6px"><strong style="color:var(--text-main);font-size:0.9rem">常見（多數人會慢慢適應）</strong>' +
+      '<div style="margin-top:6px"><strong style="color:var(--text-main);font-size:0.9rem">常見副作用（多數人可逐漸適應）</strong>' +
         bulletList(common) +
       '</div>' +
       '<div style="margin-top:10px;padding:10px 12px;background:rgba(220,80,80,0.08);border-radius:var(--radius-sm);border:1px solid rgba(220,80,80,0.25)">' +
-        '<strong style="color:#c43d3d;font-size:0.9rem"><i data-lucide="alert-octagon" style="width:14px;height:14px;vertical-align:middle"></i> 嚴重（出現請立刻就醫）</strong>' +
+        '<strong style="color:#c43d3d;font-size:0.9rem"><i data-lucide="alert-octagon" style="width:14px;height:14px;vertical-align:middle"></i> 嚴重副作用（若出現請立即就醫）</strong>' +
         bulletList(serious) +
       '</div>' +
     '</section>' +
@@ -9491,7 +9523,7 @@ function handleDrugPhoto(input) {
     var card = document.getElementById('drug-search-result-card');
     var box = document.getElementById('drug-search-result');
     if (card) card.style.display = '';
-    if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">辨識中… 拍藥袋的話會逐筆查詢，可能需要 10~30 秒</p>';
+    if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">辨識中…若是藥袋或藥單會逐筆查詢，可能需要 10~30 秒</p>';
 
     fetch(API + "/drug-search/from-photo", {
       method: 'POST',

@@ -85,7 +85,12 @@ cd mcp_server && uv sync
 
 - Production domain：`www.mdpiece.life/`（由 Vercel 綁定 `main` 分支）
 - **全自動部署流程**：使用者回報 bug 或要求功能後，Claude 完成 commit + push + 建立 PR 後，**不需要等使用者再說「部署」**，直接依下列自動化流程跑到底：
-  1. **自動跑 e2e 實驗室測試**：執行 `cd tests/e2e && npm run test:rx`（以及其他 e2e 套件）
-  2. **自動修復 bug**：若測試失敗，分析失敗原因、修改程式碼、重新跑測試，**循環直到所有 e2e 測試通過為止**
-  3. **自動合併部署**：所有 e2e 測試通過後，把 draft PR 標 ready、squash 合併到 `main`，由 Vercel 自動發布到 production domain
-- 過程中若遇到無法自動修復的問題（例如需要環境變數、外部服務權限、架構性決策），暫停並回報使用者，不要強行合併
+  1. **自動跑「對應功能」的 e2e 單一測試**：依本次 PR 改的功能挑對應的 script，**只跑一支**就好（不要每次都跑全部，會超時且不一定相關）：
+     - 改處方／藥袋／藥盒 OCR pipeline → `cd tests/e2e && npm run test:rx`
+     - 改藥物百科 / `/drug-search` / TFDA / 中文後處理 → `cd tests/e2e && npm run test:drug`
+     - 其他功能 → 視需求新增 `tests/e2e/run_<feature>.mjs` + `package.json` 的 `test:<feature>` script，再跑單一 script
+     - PR 涉及多功能時，挑核心那一個跑即可
+     - 預設打 `https://www.mdpiece.life`；若 PR 還沒 merge 想打 preview，先確認沒被 SSO 擋（401 = Vercel preview protection 開著，得改打 production 或關保護）
+  2. **自動修復 bug**：若測試失敗，分析失敗原因、修改程式碼、重新跑測試，**循環直到該支 e2e 通過為止**
+  3. **自動合併部署**：e2e 通過後，把 draft PR 標 ready、squash 合併到 `main`，由 Vercel 自動發布到 production domain
+- 過程中若遇到無法自動修復的問題（例如需要環境變數、外部服務權限、架構性決策、preview 被 SSO 擋），暫停並回報使用者，不要強行合併

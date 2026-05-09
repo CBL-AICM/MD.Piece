@@ -2,9 +2,10 @@
   "private": true,
   "name": "mdpiece-e2e",
   "type": "module",
-  "description": "E2E tests for prescription photo recognition (kept separate from frontend deps)",
+  "description": "E2E regression tests (kept separate from frontend deps)",
   "scripts": {
-    "test:rx": "node run_rx_recognition.mjs"
+    "test:rx": "node run_rx_recognition.mjs",
+    "test:drug": "node run_drug_search.mjs"
   },
   "dependencies": {
     "tesseract.js": "^5.1.1"

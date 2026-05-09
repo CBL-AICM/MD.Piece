@@ -87,6 +87,7 @@ def _is_supabase_native() -> bool:
 
 def _row_to_response(row: dict) -> dict:
     """把 drug_reference 表的一筆 row 轉成前端友善的格式。"""
+    source = row.get("source") or "claude"
     return {
         "id": row.get("id"),
         "name_zh": row.get("name_zh"),
@@ -100,7 +101,8 @@ def _row_to_response(row: dict) -> dict:
             "contraindications": [], "warnings": [], "interactions": [],
         },
         "education": row.get("education"),
-        "source": row.get("source") or "claude",
+        "source": source,
+        "tfda_matched": "tfda" in source,
         "disclaimer": row.get("disclaimer") or DEFAULT_DISCLAIMER,
         "query_count": row.get("query_count") or 0,
         "cached": True,
@@ -189,6 +191,8 @@ def _save_to_cache(sb, info: dict, query_term: str) -> dict:
         # 把使用者輸入也加進 aliases，下一次同樣輸入就能命中快取
         aliases = list(aliases) + [query_term]
 
+    # 來源標記：TFDA 命中 → "tfda+claude"（官方藥名 + AI 衛教），否則 "claude"
+    source = "tfda+claude" if info.get("tfda_matched") else "claude"
     payload = {
         "id": drug_id,
         "name_zh": info.get("name_zh"),
@@ -200,7 +204,7 @@ def _save_to_cache(sb, info: dict, query_term: str) -> dict:
         "side_effects": _serialize_for_db(info.get("side_effects") or {}, native),
         "risks": _serialize_for_db(info.get("risks") or {}, native),
         "education": info.get("education"),
-        "source": "claude",
+        "source": source,
         "disclaimer": info.get("disclaimer") or DEFAULT_DISCLAIMER,
         "query_count": 1,
     }
@@ -281,7 +285,8 @@ def search_drug(
             "contraindications": [], "warnings": [], "interactions": [],
         },
         "education": saved.get("education"),
-        "source": "claude",
+        "source": saved.get("source") or "claude",
+        "tfda_matched": bool(info.get("tfda_matched")),
         "disclaimer": saved.get("disclaimer") or DEFAULT_DISCLAIMER,
         "query_count": 1,
         "cached": False,
@@ -337,7 +342,7 @@ def trending_drugs(limit: int = Query(8, ge=1, le=30)):
 
 @router.post("/from-photo")
 def search_from_photo(body: DrugPhotoQuery):
-    """拍藥袋 / 藥單 → 自動把每筆藥名拿去查藥物百科。
+    """拍藥袋／藥盒／藥瓶／藥單 → 自動把每筆藥名拿去查藥物百科。
 
     - 先重用 recognize_medicine_bag 抽藥名（或前端送 ocr_text 直接抽）
     - 對每筆藥名呼叫 /drug-search/?q=<name> 同樣的快取邏輯
@@ -391,7 +396,8 @@ def search_from_photo(body: DrugPhotoQuery):
                     "side_effects": saved.get("side_effects"),
                     "risks": saved.get("risks"),
                     "education": saved.get("education"),
-                    "source": "claude",
+                    "source": saved.get("source") or "claude",
+                    "tfda_matched": bool(info.get("tfda_matched")),
                     "disclaimer": saved.get("disclaimer"),
                     "matched": True,
                     "cached": False,
