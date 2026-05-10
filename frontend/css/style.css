@@ -7121,9 +7121,64 @@ html[data-mode="senior"] .visit-modal-save {
 }
 
 @media (max-width: 640px) {
-  .labs-form-row { flex-direction: column; align-items: stretch; }
-  .labs-field, .labs-field-small { flex: 1 1 auto; }
-  .labs-submit { width: 100%; }
+  .labs-form-row {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  /* 數值/單位、年齡/性別 → 兩欄並排，避免過度往下拉 */
+  .labs-field {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+  .labs-field-wide { flex: 1 1 100%; }
+  .labs-field-small { flex: 1 1 calc(50% - 6px); }
+  .labs-field input,
+  .labs-field select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* 查詢按鈕單獨一行、撐滿 */
+  .labs-submit {
+    flex: 1 1 100%;
+    width: 100%;
+    align-self: stretch;
+  }
+
+  /* 結果卡片 head：emoji + 標題 + 狀態徽章 在窄螢幕允許換行 */
+  .labs-result-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .labs-result-head > div { flex: 1 1 60%; min-width: 0; }
+  .labs-result-item { word-break: break-word; }
+  .labs-result-status { margin-left: 0; }
+
+  /* 參考範圍長文允許換行 */
+  .labs-result-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .labs-result-row span { word-break: break-word; }
+
+  /* 歷史紀錄：項目名稱與數值允許換行 */
+  .labs-history-top {
+    flex-wrap: wrap;
+  }
+  .labs-history-body { width: 100%; }
+
+  /* 拍攝報告卡片：兩個按鈕在窄螢幕各佔一半 */
+  .labs-scan label.primary,
+  .labs-scan label.ghost {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+  }
+  #lab-scan-hint { flex: 1 1 100%; }
+}
+
+@media (max-width: 380px) {
+  /* 超窄手機（iPhone SE 第一代等）：所有欄位回到單欄，避免擠壓 */
+  .labs-field,
+  .labs-field-small { flex: 1 1 100%; }
 }
 
 /* ─── 醫起聊天（chat with 小禾）── Claude Code 風格 ─────────────── */
@@ -8002,9 +8057,45 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 }
 
 @media (max-width: 640px) {
-  .pv-header { flex-direction: column; align-items: stretch; }
-  .pv-actions-top { width: 100%; }
-  .pv-actions-top .pv-btn { flex: 1; justify-content: center; }
+  .pv-page { gap: 12px; }
+  .pv-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .pv-title { font-size: 1.2rem; }
+  .pv-sub { font-size: 0.88rem; }
+  .pv-section { padding: 14px; }
+  .pv-section-title { font-size: 0.95rem; }
+
+  /* 4 顆按鈕：用 2x2 網格，避免被 flex:1 擠到字斷掉 */
+  .pv-actions-top {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .pv-actions-top .pv-btn {
+    flex: initial;
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  .pv-actions-top .pv-btn i { width: 13px; height: 13px; }
+
+  /* 統計卡片：2 欄網格 */
+  .pv-stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .pv-stat { padding: 8px 10px; }
+  .pv-stat-icon { width: 28px; height: 28px; }
+  .pv-stat-num { font-size: 1.05rem; }
+
+  /* 提問清單：減少 padding */
+  .pv-check-item { padding: 8px 10px; gap: 10px; }
+  .pv-check-num { width: 22px; height: 22px; font-size: 0.78rem; }
+
+  .pv-report-body { font-size: 0.9rem; line-height: 1.7; }
+}
+
+@media (max-width: 380px) {
+  /* 超窄螢幕：按鈕改回單欄全寬，文字才顯示得清楚 */
+  .pv-actions-top { grid-template-columns: 1fr; }
 }
 
 html[data-mode="senior"] .pv-title { font-size: 1.7rem; }
@@ -8012,6 +8103,40 @@ html[data-mode="senior"] .pv-sub,
 html[data-mode="senior"] .pv-check-text,
 html[data-mode="senior"] .pv-report-body { font-size: 1.05rem; }
 html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
+
+/* ─── 回診報告 (Meds report card) ──────────────────────────── */
+.meds-report-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.meds-report-days {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-surface, var(--bg-glass));
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  flex: 0 1 auto;
+  min-width: 130px;
+}
+.meds-report-submit { flex: 0 1 auto; }
+.meds-report-body { margin-top: 12px; }
+
+@media (max-width: 480px) {
+  .meds-report-controls { flex-wrap: wrap; }
+  .meds-report-days {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .meds-report-submit {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════
    MOBILE PWA SHELL — Phone-app feel (Y2K terminal × cozy)
