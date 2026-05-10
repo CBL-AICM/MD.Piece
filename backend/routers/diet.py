@@ -840,8 +840,18 @@ def _utc_iso_to_local_date(eaten_iso: str, tz_offset: int) -> Optional[date]:
         return None
 
 
-def _summarize_week(records: list, week_start_local: date, tz_offset: int) -> dict:
-    """聚合一週的 records 成可視化資料。"""
+def _summarize_week(
+    records: list,
+    week_start_local: date,
+    tz_offset: int,
+    water_by_date: Optional[dict] = None,
+) -> dict:
+    """聚合一週的 records 成可視化資料。
+
+    water_by_date: { 'YYYY-MM-DD': amount_ml }，主動記錄的飲水量；
+    與食物粗估水分相加進「水分總攝取」。
+    """
+    water_by_date = water_by_date or {}
     # 7 天每日的 meal set
     day_meals = {(week_start_local + timedelta(days=i)).isoformat(): set()
                  for i in range(7)}
@@ -883,6 +893,10 @@ def _summarize_week(records: list, week_start_local: date, tz_offset: int) -> di
         meals = day_meals[d_key]
         completeness = sum(MEAL_WEIGHTS[m] for m in meals)
         dn = day_nutrients[d_key]
+        # 主動記錄的飲水量 + 食物估算水分
+        water_logged_ml = float(water_by_date.get(d_key, 0) or 0)
+        water_food_ml = dn["water_ml"]
+        water_total_ml = water_logged_ml + water_food_ml
         by_day.append({
             "date": d_key,
             "breakfast": "breakfast" in meals,
@@ -892,13 +906,15 @@ def _summarize_week(records: list, week_start_local: date, tz_offset: int) -> di
             "completeness": round(completeness, 2),
             "nutrients": {
                 "protein_g": round(dn["protein_g"], 1),
-                "water_ml":  round(dn["water_ml"]),
+                "water_ml":  round(water_total_ml),
+                "water_logged_ml": round(water_logged_ml),
+                "water_food_ml":   round(water_food_ml),
                 "fiber_g":   round(dn["fiber_g"], 1),
             },
             "intake_pct": {
                 "protein": round(min(1.0, dn["protein_g"] / targets["protein_g"]) if targets["protein_g"] else 0.0, 3),
-                "water":   round(min(1.0, dn["water_ml"]  / targets["water_ml"])  if targets["water_ml"]  else 0.0, 3),
-                "fiber":   round(min(1.0, dn["fiber_g"]   / targets["fiber_g"])   if targets["fiber_g"]   else 0.0, 3),
+                "water":   round(min(1.0, water_total_ml / targets["water_ml"]) if targets["water_ml"] else 0.0, 3),
+                "fiber":   round(min(1.0, dn["fiber_g"]  / targets["fiber_g"])  if targets["fiber_g"]  else 0.0, 3),
             },
         })
         completeness_sum += completeness
@@ -927,7 +943,7 @@ def get_diet_weekly(
     """近 N 週的飲食彙整（純統計，無 LLM）。
 
     第 i 週（i=0 是本週）：今天往前 i*7 天作為 end，再往前 6 天作為 start。
-    回 weeks[] 由近到遠。
+    回 weeks[] 由近到遠。水分以 water_intake_daily（主動記錄）+ 食物粗估合計。
     """
     sb = get_supabase()
     today_local = (datetime.utcnow() - timedelta(minutes=tz_offset)).date()
@@ -948,6 +964,24 @@ def get_diet_weekly(
         logger.error(f"讀取週報資料失敗：{e}")
         return {"weeks": [], "error": "讀取週報資料失敗"}
 
+    # 主動記錄的飲水量（每日一條）
+    water_by_date: dict = {}
+    try:
+        wrows = (sb.table("water_intake_daily")
+                   .select("intake_date, amount_ml")
+                   .eq("patient_id", patient_id)
+                   .gte("intake_date", range_start_local.isoformat())
+                   .execute())
+        for w in (wrows.data or []):
+            key = w.get("intake_date")
+            # Supabase 可能回 'YYYY-MM-DD' 或 datetime 字串
+            if key and not isinstance(key, str):
+                key = str(key)
+            if key:
+                water_by_date[key[:10]] = int(w.get("amount_ml") or 0)
+    except Exception as e:
+        logger.warning(f"讀取飲水紀錄失敗（忽略，僅用食物估算）：{e}")
+
     weeks_data = []
     for i in range(weeks):
         week_end_local = today_local - timedelta(days=i * 7)
@@ -958,6 +992,97 @@ def get_diet_weekly(
             local_d = _utc_iso_to_local_date(r.get("eaten_at") or "", tz_offset)
             if local_d and week_start_local <= local_d <= week_end_local:
                 in_week.append(r)
-        weeks_data.append(_summarize_week(in_week, week_start_local, tz_offset))
+        weeks_data.append(_summarize_week(in_week, week_start_local, tz_offset, water_by_date))
 
     return {"weeks": weeks_data}
+
+
+# ─── 飲水紀錄（每人每日一條，UPSERT） ─────────────────────────
+
+class WaterIntakeIn(BaseModel):
+    patient_id: str
+    amount_ml: int
+    intake_date: Optional[str] = None  # 'YYYY-MM-DD'，預設今天（台灣本地）
+    tz_offset: int = -480
+
+
+def _local_today_iso(tz_offset: int) -> str:
+    return (datetime.utcnow() - timedelta(minutes=tz_offset)).date().isoformat()
+
+
+@router.post("/water")
+def upsert_water_intake(body: WaterIntakeIn):
+    """UPSERT 當日飲水量（同一天多次呼叫會覆蓋）。"""
+    if body.amount_ml < 0:
+        raise HTTPException(status_code=400, detail="amount_ml 不能為負")
+    intake_date = (body.intake_date or _local_today_iso(body.tz_offset))[:10]
+    sb = get_supabase()
+    try:
+        # 查當日有沒有 row
+        existing = (sb.table("water_intake_daily")
+                      .select("*")
+                      .eq("patient_id", body.patient_id)
+                      .eq("intake_date", intake_date)
+                      .execute())
+        rows = existing.data or []
+        now_iso = datetime.utcnow().isoformat()
+        if rows:
+            row_id = rows[0].get("id")
+            updated = (sb.table("water_intake_daily")
+                         .update({"amount_ml": body.amount_ml, "updated_at": now_iso})
+                         .eq("id", row_id)
+                         .execute())
+            return {"ok": True, "record": (updated.data or rows)[0]}
+        inserted = (sb.table("water_intake_daily")
+                      .insert({
+                          "patient_id":  body.patient_id,
+                          "intake_date": intake_date,
+                          "amount_ml":   body.amount_ml,
+                          "updated_at":  now_iso,
+                      })
+                      .execute())
+        return {"ok": True, "record": (inserted.data or [None])[0]}
+    except Exception as e:
+        logger.error(f"飲水紀錄寫入失敗：{e}")
+        raise HTTPException(status_code=500, detail="飲水紀錄寫入失敗")
+
+
+@router.get("/water/{patient_id}")
+def get_water_intake(
+    patient_id: str,
+    intake_date: Optional[str] = Query(None, description="'YYYY-MM-DD'，預設今天"),
+    tz_offset: int = Query(-480, ge=-840, le=840),
+):
+    """取得當日飲水量；若該日無紀錄回 amount_ml=0。"""
+    target_date = (intake_date or _local_today_iso(tz_offset))[:10]
+    sb = get_supabase()
+    fluid_restriction = False
+    fluid_limit_ml: Optional[int] = None
+    try:
+        prow = (sb.table("patients")
+                  .select("fluid_restriction, fluid_limit_ml")
+                  .eq("id", patient_id)
+                  .execute())
+        if prow.data:
+            fluid_restriction = bool(prow.data[0].get("fluid_restriction") or False)
+            fluid_limit_ml = prow.data[0].get("fluid_limit_ml")
+    except Exception as e:
+        logger.debug(f"讀取病患飲水限制設定失敗（忽略）：{e}")
+
+    try:
+        rows = (sb.table("water_intake_daily")
+                  .select("*")
+                  .eq("patient_id", patient_id)
+                  .eq("intake_date", target_date)
+                  .execute())
+        amount_ml = int((rows.data or [{}])[0].get("amount_ml") or 0) if rows.data else 0
+    except Exception as e:
+        logger.error(f"讀取飲水紀錄失敗：{e}")
+        amount_ml = 0
+    return {
+        "patient_id": patient_id,
+        "intake_date": target_date,
+        "amount_ml": amount_ml,
+        "fluid_restriction": fluid_restriction,
+        "fluid_limit_ml": fluid_limit_ml,
+    }
