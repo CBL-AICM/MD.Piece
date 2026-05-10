@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v62-mtab-text-contrast";
+const CACHE_VERSION = "mdpiece-v63-text-main-fix";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=mtab-text-contrast",
-  "/js/i18n.js?v=mtab-text-contrast",
-  "/js/app.js?v=mtab-text-contrast",
+  "/css/style.css?v=text-main-fix",
+  "/js/i18n.js?v=text-main-fix",
+  "/js/app.js?v=text-main-fix",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
