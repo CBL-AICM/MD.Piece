@@ -10,10 +10,14 @@ tags:
 featured: true
 summary: 「想開一點就好了」是最殘忍的安慰。這是小君花兩年才接受自己生病的故事——以及她終於得到的幫助。
 sources:
-  - 台灣憂鬱症防治協會《憂鬱症防治手冊》
-  - American Psychiatric Association, DSM-5-TR
-  - WHO, Depression Fact Sheet 2023
-reviewed_at: 2026-05-04
+  - "Cipriani A, et al. (2018). Comparative efficacy and acceptability of 21 antidepressant drugs for the acute treatment of adults with major depressive disorder: a systematic review and network meta-analysis. Lancet (IF=98.4). doi:10.1016/S0140-6736(17)32802-7"
+  - "Malhi GS, Mann JJ. (2018). Depression. Lancet (IF=98.4). doi:10.1016/S0140-6736(18)31948-2"
+  - "Otte C, et al. (2016). Major depressive disorder. Nature Reviews Disease Primers (IF=76.9). doi:10.1038/nrdp.2016.65"
+  - "Cuijpers P, et al. (2020). A network meta-analysis of the effects of psychotherapies, pharmacotherapies and their combination in the treatment of adult depression. World Psychiatry (IF=73.3). doi:10.1002/wps.20701"
+  - "GBD 2019 Mental Disorders Collaborators (2022). Global, regional, and national burden of 12 mental disorders. Lancet Psychiatry (IF=64.3). doi:10.1016/S2215-0366(21)00395-3"
+  - "台灣憂鬱症防治協會：憂鬱症防治手冊（補充指引）"
+  - "WHO Depression Fact Sheet 2023（補充指引）"
+reviewed_at: 2026-05-10
 ---
 
 # 憂鬱症不是想開一點

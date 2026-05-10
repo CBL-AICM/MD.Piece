@@ -9,10 +9,13 @@ tags:
 featured: true
 summary: 「一天要喝八杯水」這句話從哪裡來？其實沒人說得準。但你的尿液顏色，每天都在告訴你答案。
 sources:
-  - Institute of Medicine, Dietary Reference Intakes for Water (2005)
-  - 衛福部國健署《每日飲水建議》
-  - Mayo Clinic, Water: How much should you drink every day
-reviewed_at: 2026-05-04
+  - "Yamada Y, et al. (2022). Variation in human water turnover associated with environmental and lifestyle factors. Science (IF=56.9). doi:10.1126/science.abm8668"
+  - "Roussel R, et al. (2011). Low water intake and risk for new-onset hyperglycemia. Diabetes Care (IF=16.2). doi:10.2337/dc11-1631"
+  - "Chan J, et al. (2002). Water, other fluids, and fatal coronary heart disease: the Adventist Health Study. American Journal of Epidemiology (IF=5.0). doi:10.1093/aje/155.9.827"
+  - "Perrier ET, et al. (2020). Hydration for health hypothesis: a narrative review of supporting evidence. European Journal of Nutrition (IF=5.0). doi:10.1007/s00394-020-02296-z"
+  - "衛福部國健署：每日飲水建議（補充指引）"
+  - "Mayo Clinic: Water: How much should you drink every day（補充指引）"
+reviewed_at: 2026-05-10
 ---
 
 # 一天八杯水？真相是看顏色不看數字

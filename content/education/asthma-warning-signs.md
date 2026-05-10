@@ -10,9 +10,13 @@ tags:
 featured: true
 summary: 把氣喘的緊急訊號整理成一張清單——記住這幾個，就不會錯過黃金處理時間。
 sources:
-  - Global Initiative for Asthma (GINA) 2024 Strategy Report
-  - 台灣胸腔暨重症加護醫學會《氣喘診治指引》
-reviewed_at: 2026-05-03
+  - "Reddel HK, et al. (2022). Global Initiative for Asthma Strategy 2021: Executive Summary and Rationale for Key Changes. American Journal of Respiratory and Critical Care Medicine (IF=24.7). doi:10.1164/rccm.202109-2205PP"
+  - "O'Byrne PM, et al. (2018). Inhaled Combined Budesonide-Formoterol as Needed in Mild Asthma (SYGMA 1). New England Journal of Medicine (IF=158.5). doi:10.1056/NEJMoa1715274"
+  - "Bateman ED, et al. (2018). As-Needed Budesonide-Formoterol versus Maintenance Budesonide in Mild Asthma (SYGMA 2). New England Journal of Medicine (IF=158.5). doi:10.1056/NEJMoa1715275"
+  - "Pavord ID, et al. (2018). After asthma: redefining airways diseases. Lancet (IF=98.4). doi:10.1016/S0140-6736(17)30879-6"
+  - "Global Initiative for Asthma (GINA) 2024 Strategy Report（補充指引）"
+  - "台灣胸腔暨重症加護醫學會：氣喘診治指引（補充指引）"
+reviewed_at: 2026-05-10
 ---
 
 # 氣喘的警訊：什麼時候該衝急診？

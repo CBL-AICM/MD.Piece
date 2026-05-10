@@ -93,18 +93,37 @@ SYSTEM_PROMPT = (
     "3. 給予希望——每篇文章都要讓患者感受到「這是可以管理好的」\n"
     "4. 實用具體——給可以立刻行動的建議，不是空泛的「多注意」\n"
     "5. 台灣情境——使用台灣的醫療體系、健保制度、飲食習慣作為背景\n"
-    "6. 必附文獻來源——文末固定加一段「## 📚 參考來源」，列 3–6 條來源\n\n"
+    "6. **必附 IF > 5 同儕審查文獻**——文末固定加一段「## 📚 參考來源」，"
+    "其中至少 3 條為 Impact Factor > 5 的同儕審查期刊文章；可再附 2–3 條台灣或國際指引補充。\n\n"
     "回覆格式：使用 Markdown，用標題分段，適當加入 emoji 讓文章更親切。"
     "長度控制在 800–1200 字之間（不含參考來源）。\n\n"
-    "「參考來源」撰寫規則：\n"
-    "- 只引用真實存在的權威來源：例如「中華民國衛生福利部」「國民健康署」"
-    "「中央健康保險署」「中華民國風濕病醫學會」「台灣家醫醫學會」「臺灣內科醫學會」"
-    "「台灣兒科醫學會」「Mayo Clinic」「Cleveland Clinic」「UpToDate」「NIH MedlinePlus」"
-    "「WHO」「Cochrane Library」「美國 CDC」等。\n"
-    "- **不要編造具體 URL**——若不確定該指引的網址，只列「組織名稱 + 指引主題」即可，"
-    "例如「中華民國糖尿病學會：2024 年第二型糖尿病臨床照護指引」。\n"
-    "- 每條格式：`- 來源組織：指引或衛教主題（YYYY 年版本，若知道）`。\n"
-    "- 結尾加一行小字：「※ 詳細治療仍以主治醫師判斷為準，本文僅供衛教參考」。"
+    "## ⚠️ 文獻來源強制規範（極為重要）\n"
+    "MD.Piece 是醫療平台，所有衛教文必須有可驗證的高品質實證。請遵守：\n\n"
+    "**A. 強制門檻**：每篇文章至少 3 條 peer-reviewed 期刊文章，期刊 Impact Factor > 5。\n\n"
+    "**B. 可接受的高 IF 期刊（IF > 5，僅列常用）**：\n"
+    "- 一般醫學：NEJM (IF=158.5)、Lancet (IF=98.4)、JAMA (IF=63.1)、BMJ (IF=93.6)、"
+    "Annals of Internal Medicine (IF=19.6)、Nature Medicine (IF=58.7)\n"
+    "- 心血管：Circulation (IF=37.8)、European Heart Journal (IF=37.6)、JACC (IF=21.7)、"
+    "Hypertension (IF=7.7)、Stroke (IF=7.8)\n"
+    "- 內分泌：Lancet Diabetes Endocrinol (IF=44.0)、Diabetes Care (IF=16.2)、Diabetologia (IF=8.4)\n"
+    "- 呼吸：Lancet Respir Med (IF=76.2)、AJRCCM (IF=24.7)、Chest (IF=9.6)\n"
+    "- 神經：Lancet Neurology (IF=48.0)、JAMA Neurology (IF=20.4)、Neurology (IF=7.7)\n"
+    "- 腫瘤：Lancet Oncology (IF=51.1)、JAMA Oncology (IF=22.5)\n"
+    "- 腎臟/肝膽：Kidney International (IF=14.8)、JASN (IF=13.6)、Gut (IF=23.0)、Hepatology (IF=12.9)\n"
+    "- 系統性回顧：Cochrane Database of Systematic Reviews (IF=8.4)\n\n"
+    "**C. 每條格式（嚴格遵守，方便系統解析 IF）**：\n"
+    "`- 作者 et al. (YYYY). 文章標題. 期刊名 (IF=XX.X). doi:10.xxxx/yyyy`\n\n"
+    "範例：\n"
+    "`- Whelton PK, et al. (2018). 2017 ACC/AHA Hypertension Guideline. Hypertension (IF=7.7). doi:10.1161/HYP.0000000000000065`\n\n"
+    "**D. 補充指引（不取代 peer-reviewed 文獻，可額外列出）**：\n"
+    "可引用台灣衛福部、國健署、健保署、台灣各醫學會、WHO、CDC、Mayo Clinic、UpToDate、NIH MedlinePlus 的指引，"
+    "格式：`- 組織：指引主題（YYYY 年版本）`。\n\n"
+    "**E. 嚴格禁止**：\n"
+    "- ❌ 不要編造 DOI、PMID、不存在的期刊名\n"
+    "- ❌ 不要把指引當作 peer-reviewed 文獻計算 IF 門檻\n"
+    "- ❌ 不確定 IF 數值就只列你確定的高 IF 期刊（如 NEJM、Lancet 一定 > 5）\n"
+    "- ❌ 不要省略 IF 註記——前端會檢查 IF 徽章是否齊備\n\n"
+    "結尾加一行小字：「※ 詳細治療仍以主治醫師判斷為準，本文僅供衛教參考」。"
 )
 
 
@@ -127,9 +146,11 @@ GENERIC_TOPIC_PROMPT = (
     "5. 適當使用 emoji 讓文章更親切\n"
     "6. 用台灣的醫療制度、健保、飲食習慣作為背景\n"
     "7. 文末提醒：詳細治療仍以主治醫師判斷為準\n"
-    "8. **必加** 一段「## 📚 參考來源」列 3–6 條真實存在的權威來源（衛福部、健保署、"
-    "相關醫學會、Mayo Clinic、UpToDate、NIH 等），格式 `- 組織：指引或衛教主題（年份）`，"
-    "**不要編造具體 URL**\n\n"
+    "8. **必加** 一段「## 📚 參考來源」——遵守 SYSTEM_PROMPT 中的「文獻來源強制規範」：\n"
+    "   - 至少 3 條 Impact Factor > 5 的同儕審查期刊文章\n"
+    "   - 格式：`- 作者 et al. (YYYY). 標題. 期刊 (IF=XX.X). doi:...`\n"
+    "   - 可額外附 2–3 條台灣／國際指引補充\n"
+    "   - **嚴禁編造 DOI、期刊名或 IF 數值**\n\n"
     "回覆格式：使用 Markdown，分段加標題，長度控制在 600–1000 字（不含參考來源）。"
 )
 
@@ -332,10 +353,45 @@ def get_articles(
 
 
 @router.get("/articles/featured")
-def get_featured_articles(limit: int = 5):
-    """首頁推送：精選文章（標記 featured: true 的）"""
-    items = education_content.list_articles(featured_only=True)
-    return {"articles": [a.to_card() for a in items[:limit]]}
+def get_featured_articles(limit: int = 6):
+    """首頁今日精選：每天用日期 ordinal 在精選池子中輪播一輪，確保每天看到的文章組合都不同。
+
+    池子順序：
+    1. 標記 `featured: true` 的文章（人工挑選，最高優先）
+    2. 若精選池子小於 `limit`，用「有 reviewed_at 且有 sources」的高品質審稿文章補齊
+    3. 仍不足時才退回任意 markdown 文章
+    """
+    from datetime import date
+
+    primary = education_content.list_articles(featured_only=True)
+    primary.sort(key=lambda a: a.slug)
+
+    if len(primary) < max(limit * 2, 8):
+        # 精選池子不夠 → 拉「審稿過 + 有來源」的文章湊滿 rotation pool
+        fallback = [
+            a for a in education_content.list_articles()
+            if (not a.featured) and a.reviewed_at and a.sources
+        ]
+        fallback.sort(key=lambda a: a.slug)
+        seen = {a.slug for a in primary}
+        for a in fallback:
+            if a.slug not in seen:
+                primary.append(a)
+                seen.add(a.slug)
+
+    if not primary:
+        return {"articles": [], "rotation_date": date.today().isoformat(), "pool_size": 0}
+
+    today = date.today()
+    n = len(primary)
+    start = today.toordinal() % n
+    take = min(limit, n)
+    rotated = [primary[(start + i) % n] for i in range(take)]
+    return {
+        "articles": [a.to_card() for a in rotated],
+        "rotation_date": today.isoformat(),
+        "pool_size": n,
+    }
 
 
 DAILY_CATEGORIES = ("disease", "quick_tip", "news")
@@ -344,6 +400,12 @@ DAILY_CATEGORIES = ("disease", "quick_tip", "news")
 _QUICK_TIP_PREFIXES = (
     "symptoms-", "emergency-", "medications-", "labs-",
     "hydration-", "nutrition-", "exercise-", "sleep-", "prevent-",
+    "tips-", "diet-", "self-", "story-",
+)
+# slug 含這些關鍵字也歸入 quick_tip／衛教快訊
+_QUICK_TIP_KEYWORDS = (
+    "-tips", "-story", "-diet", "-myth", "-self", "-warning",
+    "-seven-hours", "burnout", "follow", "diary", "goal",
 )
 
 
@@ -354,6 +416,9 @@ def _auto_category(article) -> str:
     slug = (article.slug or "").lower()
     for prefix in _QUICK_TIP_PREFIXES:
         if slug.startswith(prefix):
+            return "quick_tip"
+    for kw in _QUICK_TIP_KEYWORDS:
+        if kw in slug:
             return "quick_tip"
     return "disease"
 
@@ -387,7 +452,13 @@ def get_daily_article(days: int = 7):
         pool = by_category.get(cat) or []
         if not pool:
             return None
-        return pool[d.toordinal() % len(pool)]
+        n = len(pool)
+        # 用一個跟池大小互質的步幅，加上 category 的 hash 偏移，
+        # 讓三個分類在連續幾天看起來不像「整齊向後位移」。
+        stride = 7 if n % 7 != 0 else 11 if n % 11 != 0 else 1
+        cat_offset = sum(ord(c) for c in cat) % n
+        idx = (d.toordinal() * stride + cat_offset) % n
+        return pool[idx]
 
     feed_items = news_feed.fetch_news(limit=6)
 

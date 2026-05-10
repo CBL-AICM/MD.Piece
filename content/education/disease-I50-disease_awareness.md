@@ -6,12 +6,16 @@ dimension: disease_awareness
 tags:
   - 心臟衰竭
 summary: 心衰是心臟泵血力減弱，不是「心臟停了」。新藥（ARNI、SGLT-2、GLP-1）大幅改變預後。
+reviewed_at: 2026-05-10
+featured: true
+category: disease
 sources:
-  - 2022 AHA/ACC Heart Failure Guidelines
-  - 中華民國心臟學會
-reviewed_at: 2026-05-04
+  - "McDonagh TA, et al. (2021). 2021 ESC Guidelines for the diagnosis and treatment of acute and chronic heart failure. European Heart Journal (IF=37.6). doi:10.1093/eurheartj/ehab368"
+  - "Heidenreich PA, et al. (2022). 2022 AHA/ACC/HFSA Guideline for the Management of Heart Failure. Circulation (IF=37.8). doi:10.1161/CIR.0000000000001063"
+  - "McMurray JJV, et al. (2014). Angiotensin-Neprilysin Inhibition versus Enalapril in Heart Failure (PARADIGM-HF). NEJM (IF=158.5). doi:10.1056/NEJMoa1409077"
+  - "McMurray JJV, et al. (2019). Dapagliflozin in Patients with Heart Failure and Reduced Ejection Fraction (DAPA-HF). NEJM (IF=158.5). doi:10.1056/NEJMoa1911303"
+  - "中華民國心臟學會：心臟衰竭臨床指引（補充指引）"
 ---
-
 # 心臟衰竭：心臟泵血力下降，可治療的慢性病
 
 ## 一句話懂

@@ -7,12 +7,16 @@ tags:
   - 慢性腎臟病
   - CKD
 summary: CKD 多源於糖尿、高血壓。早期無症狀靠抽血篩檢。SGLT-2 是新利器，洗腎不是必然。
+reviewed_at: 2026-05-10
+featured: true
+category: disease
 sources:
-  - KDIGO 2024 CKD Guidelines
-  - 台灣腎臟醫學會
-reviewed_at: 2026-05-04
+  - "Kidney Disease: Improving Global Outcomes (KDIGO) CKD Work Group (2024). KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease. Kidney International (IF=14.8). doi:10.1016/j.kint.2023.10.018"
+  - "Heerspink HJL, et al. (2020). Dapagliflozin in Patients with Chronic Kidney Disease (DAPA-CKD). NEJM (IF=158.5). doi:10.1056/NEJMoa2024816"
+  - "Perkovic V, et al. (2019). Canagliflozin and Renal Outcomes in Type 2 Diabetes and Nephropathy (CREDENCE). NEJM (IF=158.5). doi:10.1056/NEJMoa1811744"
+  - "GBD Chronic Kidney Disease Collaboration (2020). Global, regional, and national burden of chronic kidney disease. Lancet (IF=98.4). doi:10.1016/S0140-6736(20)30045-3"
+  - "台灣腎臟醫學會：慢性腎臟病臨床指引（補充指引）"
 ---
-
 # 慢性腎臟病：腎功能漸進下降，可延緩可預防
 
 ## 一句話懂

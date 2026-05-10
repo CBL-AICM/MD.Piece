@@ -6,12 +6,16 @@ dimension: disease_awareness
 tags:
   - 心房顫動
 summary: 心房顫動是最常見心律不整。心房快速亂跳容易形成血栓 → 中風。抗凝血藥是核心治療。
+reviewed_at: 2026-05-10
+featured: true
+category: disease
 sources:
-  - 2023 AHA/ACC AFib Guidelines
-  - 台灣心律醫學會
-reviewed_at: 2026-05-04
+  - "Hindricks G, et al. (2021). 2020 ESC Guidelines for the diagnosis and management of atrial fibrillation. European Heart Journal (IF=37.6). doi:10.1093/eurheartj/ehaa612"
+  - "Joglar JA, et al. (2024). 2023 ACC/AHA/ACCP/HRS Guideline for the Diagnosis and Management of Atrial Fibrillation. Circulation (IF=37.8). doi:10.1161/CIR.0000000000001193"
+  - "Connolly SJ, et al. (2009). Dabigatran versus Warfarin in Patients with Atrial Fibrillation (RE-LY). NEJM (IF=158.5). doi:10.1056/NEJMoa0905561"
+  - "Patel MR, et al. (2011). Rivaroxaban versus Warfarin in Nonvalvular Atrial Fibrillation (ROCKET-AF). NEJM (IF=158.5). doi:10.1056/NEJMoa1009638"
+  - "台灣心律醫學會：心房顫動治療指引（補充指引）"
 ---
-
 # 心房顫動：心房不規則跳動，最大風險是中風
 
 ## 一句話懂
