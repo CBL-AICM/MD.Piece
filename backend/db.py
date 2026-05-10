@@ -267,16 +267,6 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
         )""",
-    "water_intake_daily": """
-        CREATE TABLE IF NOT EXISTS water_intake_daily (
-            id TEXT PRIMARY KEY,
-            patient_id TEXT NOT NULL,
-            intake_date TEXT NOT NULL,
-            amount_ml INTEGER NOT NULL DEFAULT 0 CHECK (amount_ml >= 0),
-            updated_at TEXT DEFAULT (datetime('now')),
-            created_at TEXT DEFAULT (datetime('now')),
-            UNIQUE (patient_id, intake_date)
-        )""",
 }
 
 
