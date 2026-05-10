@@ -9400,7 +9400,7 @@ function drugSearch() {
         '<button class="primary" onclick="runDrugSearch()">' +
           '<i data-lucide="search" style="width:14px;height:14px;vertical-align:middle"></i> 查詢' +
         '</button>' +
-        '<button class="secondary" onclick="document.getElementById(\'drug-photo-input\').click()" title="拍照辨識藥袋後查詢">' +
+        '<button class="secondary" onclick="document.getElementById(\'drug-photo-input\').click()" title="拍藥盒、藥袋或藥單後自動查詢">' +
           '<i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍照查詢' +
         '</button>' +
         '<input type="file" id="drug-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleDrugPhoto(this)" />' +
@@ -9589,7 +9589,7 @@ function handleDrugPhoto(input) {
     var card = document.getElementById('drug-search-result-card');
     var box = document.getElementById('drug-search-result');
     if (card) card.style.display = '';
-    if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">辨識中… 拍藥袋的話會逐筆查詢，可能需要 10~30 秒</p>';
+    if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">辨識中… 拍藥盒/藥袋會逐筆查詢，可能需要 10~30 秒</p>';
 
     fetch(API + "/drug-search/from-photo", {
       method: 'POST',
@@ -9612,7 +9612,14 @@ function renderDrugPhotoResults(data) {
   if (!box) return;
   var results = (data && data.results) || [];
   if (!results.length) {
-    box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">沒有辨識到藥名，請改用文字搜尋。</p>';
+    box.innerHTML =
+      '<div style="text-align:center;padding:20px">' +
+        '<p style="color:var(--text-muted);margin:0">沒有辨識到藥名。</p>' +
+        '<p style="color:var(--text-dim);margin:8px 0 0;font-size:0.88rem">' +
+          '小提醒：藥盒請對準正面（含商品名／學名的那一面）、避免反光與模糊；藥袋請拍清楚藥名那一行。' +
+          '若仍無法辨識，請改用文字搜尋輸入藥名。' +
+        '</p>' +
+      '</div>';
     return;
   }
   var html = '<h3 style="margin:0 0 8px">辨識結果（' + results.length + ' 筆）</h3>';
