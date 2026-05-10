@@ -68,6 +68,8 @@
     { "src": "/triage", "dest": "api/index.py" },
     { "src": "/drug-search/(.*)", "dest": "api/index.py" },
     { "src": "/drug-search", "dest": "api/index.py" },
+    { "src": "/diseases/(.*)", "dest": "api/index.py" },
+    { "src": "/diseases", "dest": "api/index.py" },
     { "src": "/xiaohe/(.*)", "dest": "api/index.py" },
     { "src": "/xiaohe", "dest": "api/index.py" },
     { "src": "/records/(.*)", "dest": "api/index.py" },
