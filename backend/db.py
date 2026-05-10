@@ -267,6 +267,30 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
         )""",
+    "disease_reference": """
+        CREATE TABLE IF NOT EXISTS disease_reference (
+            id TEXT PRIMARY KEY,
+            name_zh TEXT,
+            name_en TEXT,
+            aliases TEXT,
+            icd10_code TEXT,
+            icd10_category TEXT,
+            overview TEXT,
+            causes TEXT,
+            symptoms TEXT,
+            common_medications TEXT,
+            treatments TEXT,
+            complications TEXT,
+            prognosis TEXT,
+            self_care TEXT,
+            red_flags TEXT,
+            references_data TEXT,
+            source TEXT DEFAULT 'claude',
+            disclaimer TEXT,
+            query_count INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )""",
 }
 
 
