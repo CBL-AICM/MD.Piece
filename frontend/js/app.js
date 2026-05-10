@@ -1459,6 +1459,7 @@ function finishAuth(user) {
     document.getElementById('app-wrapper').classList.add('show');
     showPage('home');
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
   }, 250);
 }
 
@@ -2002,7 +2003,9 @@ function loadHomePage() {
       if (!el) return;
       var meds = (data.medications || []).filter(function(m) { return m.active !== 0; });
       if (!meds.length) {
-        el.innerHTML = '<p class="home-ov-empty">' + _T('home.med.empty') + '</p>';
+        el.innerHTML =
+          '<p class="home-ov-empty">' + _T('home.med.empty') + '</p>' +
+          '<button class="home-med-go" onclick="navigateTo(\'medications\',null)">' + _T('home.med.add') + '</button>';
         return;
       }
       el.innerHTML =
@@ -2144,7 +2147,15 @@ function symptoms() {
         </header>
         <div class="ts-body">
           ${todayEntries.length === 0 ? `
-            <p class="sym-empty">${_T('sym.today.empty')}</p>
+            <div class="empty-state empty-state-cozy">
+              <div class="empty-state-icon"><i data-lucide="scan-search"></i></div>
+              <p class="empty-state-title">${_T('sym.today.empty.title')}</p>
+              <p class="empty-state-desc">${_T('sym.today.empty.desc')}</p>
+              <button type="button" class="empty-state-cta" onclick="document.querySelector('.sym-category-grid')?.scrollIntoView({behavior:'smooth', block:'center'})">
+                <i data-lucide="arrow-up" style="width:14px;height:14px"></i>
+                <span>${_T('sym.today.empty.cta')}</span>
+              </button>
+            </div>
           ` : `
             <ul class="sym-entry-list">
               ${todayEntries.slice().reverse().map(e => {
@@ -3938,7 +3949,17 @@ function _bucketMeds(meds) {
 function renderMedList() {
   var el = document.getElementById("med-list");
   if (!_medsList.length) {
-    el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">' + _T('meds.list.empty') + '</p>';
+    el.innerHTML =
+      '<div class="empty-state empty-state-cozy">' +
+        '<div class="empty-state-icon"><i data-lucide="pill"></i></div>' +
+        '<p class="empty-state-title">' + _T('meds.list.empty.title') + '</p>' +
+        '<p class="empty-state-desc">' + _T('meds.list.empty.desc') + '</p>' +
+        '<button type="button" class="empty-state-cta" onclick="document.getElementById(\'med-camera\')?.click()">' +
+          '<i data-lucide="camera" style="width:14px;height:14px"></i>' +
+          '<span>' + _T('meds.list.empty.cta') + '</span>' +
+        '</button>' +
+      '</div>';
+    if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
     return;
   }
 
