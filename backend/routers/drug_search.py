@@ -19,6 +19,7 @@ from typing import Optional
 from datetime import datetime, timezone
 import json
 import logging
+import re
 import uuid
 
 from backend.db import get_supabase
@@ -48,6 +49,65 @@ class DrugPhotoQuery(BaseModel):
 
 def _norm(s: Optional[str]) -> str:
     return (s or "").strip().lower()
+
+
+# 不是藥名的英文常見字（單位、劑型、雜訊）— 從候選裡剔除避免誤查
+_NON_DRUG_TOKENS = frozenset({
+    "mg", "mcg", "ug", "ml", "iu", "kg", "tablet", "tablets", "tab", "cap",
+    "caps", "capsule", "capsules", "oral", "oz", "fl", "lot", "exp", "ref",
+    "usp", "bp", "ep", "fda", "otc", "rx", "qty", "qd", "bid", "tid", "qid",
+    "prn", "po", "iv", "im", "sc", "and", "for", "with", "the", "use", "take",
+    "store", "keep", "dose", "dosage", "extra", "strength",
+})
+
+
+def _drug_name_candidates(name: str) -> list[str]:
+    """產生藥物百科查詢候選字串。
+
+    使用情境：藥盒上的中文常被 OCR 辨成亂碼（例：「蔡萊疫疫特徊 200欢克徊合汗 celecoxib」），
+    LLM 把亂碼跟乾淨英文一起塞進 name 後，原樣去查藥物百科會 miss。本函式把 name 拆成
+    多個候選字串依優先序回傳，呼叫端依序嘗試直到查到為止。
+
+    順序：
+      1. 原始 name（多數情況下這就是乾淨藥名）
+      2. 從 name 抽出的英文／拉丁藥名 token（>= 4 個字母、非單位／劑型雜訊）；
+         按長度由長到短，因為藥名通常比單位字長
+      3. 完整的英文片段（多 token 連起來，例：「Tylenol Extra Strength」）
+    重複 / 空字串會去除。
+    """
+    out: list[str] = []
+    seen: set[str] = set()
+
+    def add(s: str) -> None:
+        s = (s or "").strip()
+        if not s:
+            return
+        key = s.lower()
+        if key in seen:
+            return
+        seen.add(key)
+        out.append(s)
+
+    add(name)
+
+    # 抓所有連續英文 / 拉丁字段 (>= 4 chars，避免 "mg" "ml" 之類的單位)
+    eng_tokens = [
+        t for t in re.findall(r"[A-Za-z][A-Za-z\-]{2,}", name or "")
+        if len(t) >= 4 and t.lower() not in _NON_DRUG_TOKENS
+    ]
+    # 較長的 token 優先（藥名通常比較長）
+    for t in sorted(set(eng_tokens), key=lambda x: -len(x)):
+        add(t)
+
+    # 也試「整段英文 phrase」— 用於品牌名是多 token 的情況（例：Tylenol Extra Strength）
+    # 排除已知非藥名單位／劑型字，避免把 "mg" "tablet" 串進候選
+    eng_run = " ".join(
+        t for t in re.findall(r"[A-Za-z][A-Za-z\-]+", name or "")
+        if t.lower() not in _NON_DRUG_TOKENS
+    )
+    add(eng_run)
+
+    return out
 
 
 def _decode_jsonish(value):
@@ -371,15 +431,23 @@ def search_from_photo(body: DrugPhotoQuery):
         name = med["name"]
         if not name:
             continue
-        cached = _find_cached_by_query(sb, name)
-        if cached:
-            _bump_query_count(sb, cached.get("id"), cached.get("query_count") or 0)
-            entry = _row_to_response(cached)
-            entry["cached"] = True
-        else:
-            info = lookup_drug_info(name)
+        # 候選查詢字串：先用原始 name，若查不到再試從 name 抽出來的乾淨英文片段
+        # （藥盒上的中文常被 OCR 辨成「蔡萊疫疫特徊...celecoxib...」這種亂碼+英文混雜，
+        # 第一次查詢會因為亂碼而 miss）
+        entry = None
+        matched_query: Optional[str] = None
+        last_disclaimer = DEFAULT_DISCLAIMER
+        for cand in _drug_name_candidates(name):
+            cached = _find_cached_by_query(sb, cand)
+            if cached:
+                _bump_query_count(sb, cached.get("id"), cached.get("query_count") or 0)
+                entry = _row_to_response(cached)
+                entry["cached"] = True
+                matched_query = cand
+                break
+            info = lookup_drug_info(cand)
             if info.get("matched") and _info_has_useful_content(info):
-                saved = _save_to_cache(sb, info, name)
+                saved = _save_to_cache(sb, info, cand)
                 entry = {
                     "id": saved.get("id"),
                     "name_zh": saved.get("name_zh"),
@@ -396,13 +464,14 @@ def search_from_photo(body: DrugPhotoQuery):
                     "matched": True,
                     "cached": False,
                 }
-            else:
-                entry = {
-                    "matched": False,
-                    "disclaimer": info.get("disclaimer") or DEFAULT_DISCLAIMER,
-                }
+                matched_query = cand
+                break
+            last_disclaimer = info.get("disclaimer") or last_disclaimer
+        if entry is None:
+            entry = {"matched": False, "disclaimer": last_disclaimer}
         results.append({
             "recognized_name": name,
+            "matched_query": matched_query,
             "recognized_dosage": med["dosage"],
             "recognized_frequency": med["frequency"],
             "info": entry,
