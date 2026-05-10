@@ -9875,6 +9875,7 @@ function diseaseChatSend() {
       stream.insertAdjacentHTML(
         'beforeend',
         _diseaseChatBubble('assistant', '<span style="color:var(--danger)">追問失敗，請稍後再試。</span>'
+          + _diseaseRefBlock([])
           + _diseaseDisclaimerBlock('此回覆由 AI 整理，僅供衛教參考；實際診療請依您的主治醫師為準。'))
       );
     })
