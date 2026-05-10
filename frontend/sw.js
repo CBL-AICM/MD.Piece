@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v61-mobile-disclaimer-wrap";
+const CACHE_VERSION = "mdpiece-v63-text-main-fix";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=mobile-disclaimer-wrap",
-  "/js/i18n.js?v=mobile-disclaimer-wrap",
-  "/js/app.js?v=mobile-disclaimer-wrap",
+  "/css/style.css?v=text-main-fix",
+  "/js/i18n.js?v=text-main-fix",
+  "/js/app.js?v=text-main-fix",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
