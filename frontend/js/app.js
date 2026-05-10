@@ -9403,7 +9403,11 @@ function drugSearch() {
         '<button class="secondary" onclick="document.getElementById(\'drug-photo-input\').click()" title="拍藥盒、藥袋或藥單後自動查詢">' +
           '<i data-lucide="camera" style="width:14px;height:14px;vertical-align:middle"></i> 拍照查詢' +
         '</button>' +
+        '<button class="secondary" onclick="document.getElementById(\'drug-upload-input\').click()" title="從相簿選擇藥盒、藥袋或藥單照片查詢">' +
+          '<i data-lucide="image-up" style="width:14px;height:14px;vertical-align:middle"></i> 上傳照片' +
+        '</button>' +
         '<input type="file" id="drug-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleDrugPhoto(this)" />' +
+        '<input type="file" id="drug-upload-input" accept="image/*" style="display:none" onchange="handleDrugPhoto(this)" />' +
       '</div>' +
       '<div style="margin-top:10px;padding:8px 12px;background:rgba(220,170,80,0.1);border-radius:var(--radius-sm);border:1px solid rgba(220,170,80,0.3);font-size:0.82rem;color:var(--text-dim)">' +
         '<i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle"></i> ' +
