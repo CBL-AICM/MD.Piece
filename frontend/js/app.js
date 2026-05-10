@@ -9624,11 +9624,18 @@ function renderDrugPhotoResults(data) {
   }
   var html = '<h3 style="margin:0 0 8px">辨識結果（' + results.length + ' 筆）</h3>';
   results.forEach(function(r, i) {
+    // 優先顯示後端實際命中的查詢字（matched_query）— OCR 把藥盒中文辨成亂碼時，
+    // matched_query 會是後端從亂碼裡撈出來的乾淨英文藥名。沒命中才退回 recognized_name。
+    var shownName = r.matched_query || r.recognized_name || '';
+    var hadGarble = r.matched_query && r.recognized_name && r.matched_query !== r.recognized_name;
     html += '<div style="margin-top:12px;padding:12px;border:1px solid var(--border-glass);border-radius:var(--radius-sm)">' +
       '<div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:8px">' +
-        '原始辨識：<strong>' + escapeHtml(r.recognized_name || '') + '</strong>' +
+        '辨識藥名：<strong>' + escapeHtml(shownName) + '</strong>' +
         (r.recognized_dosage ? '・' + escapeHtml(r.recognized_dosage) : '') +
         (r.recognized_frequency ? '・' + escapeHtml(r.recognized_frequency) : '') +
+        (hadGarble
+          ? '<span style="margin-left:6px;font-size:0.78rem;color:var(--text-muted)">（已自動清理 OCR 雜訊）</span>'
+          : '') +
       '</div>';
     if (r.info && r.info.matched) {
       html += _renderDrugCard(r.info);
