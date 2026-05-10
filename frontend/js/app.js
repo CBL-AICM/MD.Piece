@@ -5735,18 +5735,26 @@ function loadFeaturedArticles() {
       el.innerHTML =
         (rotationDate
           ? '<div style="grid-column:1/-1;font-size:.72rem;color:var(--text-dim);margin-bottom:6px">' +
-            '🗓️ ' + escapeHtml(rotationDate) + ' 今日輪播（精選池共 ' + poolSize + ' 篇，明天會換另外幾篇）' +
+            escapeHtml(rotationDate) + ' 今日輪播（精選池共 ' + poolSize + ' 篇，明天會換另外幾篇）' +
             '</div>'
           : '') +
         featured.map(function(a) {
           var tagHtml = (a.tags || []).slice(0, 3).map(function(t) {
             return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:var(--bg-soft);font-size:.72rem;color:var(--text-dim);margin-right:4px">' + escapeHtml(t) + '</span>';
           }).join("");
+          var evidenceBadge = '';
+          if (a.meets_evidence_standard) {
+            evidenceBadge = '<span title="附 ≥2 條 Impact Factor>5 同儕審查文獻" ' +
+              'style="display:inline-block;padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1d4ed8;font-size:.7rem;font-weight:600;margin-right:4px">' +
+              'IF&gt;5 實證</span>';
+          } else if ((a.parsed_sources || []).some(function(s){ return s && s.impact_factor; })) {
+            evidenceBadge = '<span title="附文獻來源" style="display:inline-block;padding:2px 8px;border-radius:10px;background:#f1f5f9;color:#475569;font-size:.7rem;margin-right:4px">附文獻</span>';
+          }
           return '<button class="article-card" onclick="eduOpenArticle(\'' + escapeHtml(a.slug) + '\')" ' +
                  'style="text-align:left;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);cursor:pointer;display:flex;flex-direction:column;gap:6px">' +
                  '<div style="font-weight:600;line-height:1.4">' + escapeHtml(a.title) + '</div>' +
                  (a.summary ? '<div style="font-size:.82rem;color:var(--text-dim);line-height:1.5">' + escapeHtml(a.summary) + '</div>' : '') +
-                 (tagHtml ? '<div style="margin-top:4px">' + tagHtml + '</div>' : '') +
+                 (evidenceBadge || tagHtml ? '<div style="margin-top:4px">' + evidenceBadge + tagHtml + '</div>' : '') +
                  '</button>';
         }).join("");
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -5812,24 +5820,45 @@ function renderArticleSpread(article, body) {
 
   var sources = sourceItems.map(function(s) {
     var text = s.text || "";
-    var ifBadge = "";
+    var badges = [];
+    if (s.journal) {
+      badges.push('<span style="display:inline-block;padding:2px 8px;border-radius:8px;background:#0f172a;color:#fff;font-size:.72rem;font-weight:600">' + escapeHtml(s.journal) + '</span>');
+    }
     if (s.impact_factor) {
       var ifColor = s.impact_factor >= 30 ? '#7c2d12' : (s.impact_factor >= 10 ? '#b45309' : '#1d4ed8');
       var ifBg = s.impact_factor >= 30 ? '#fed7aa' : (s.impact_factor >= 10 ? '#fef3c7' : '#dbeafe');
-      ifBadge = '<span style="display:inline-block;padding:1px 7px;border-radius:8px;background:' + ifBg + ';color:' + ifColor + ';font-size:.7rem;font-weight:700;margin-right:6px">IF=' + s.impact_factor.toFixed(1) + '</span>';
+      badges.push('<span style="display:inline-block;padding:2px 8px;border-radius:8px;background:' + ifBg + ';color:' + ifColor + ';font-size:.72rem;font-weight:700">IF=' + s.impact_factor.toFixed(1) + '</span>');
     }
-    var journalBadge = s.journal ? '<span style="display:inline-block;padding:1px 7px;border-radius:8px;background:#e2e8f0;color:#334155;font-size:.7rem;margin-right:6px">' + escapeHtml(s.journal) + '</span>' : '';
-    var linkHtml = '';
+    if (s.year) {
+      badges.push('<span style="display:inline-block;padding:2px 8px;border-radius:8px;background:#e2e8f0;color:#334155;font-size:.72rem">' + escapeHtml(s.year) + '</span>');
+    }
+    var badgesRow = badges.length
+      ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' + badges.join("") + '</div>'
+      : '';
+
+    var linkLine = '';
     if (s.doi) {
-      linkHtml = ' <a href="https://doi.org/' + encodeURIComponent(s.doi) + '" target="_blank" rel="noopener" style="font-size:.72rem;color:#2563eb;text-decoration:none">DOI ↗</a>';
+      var doiUrl = 'https://doi.org/' + s.doi;
+      linkLine = '<div style="margin-top:4px;font-size:.78rem">' +
+                 '<span style="color:var(--text-dim)">DOI：</span>' +
+                 '<a href="' + escapeHtml(doiUrl) + '" target="_blank" rel="noopener" style="color:#2563eb;word-break:break-all">' + escapeHtml(s.doi) + '</a>' +
+                 '</div>';
     } else if (s.pmid) {
-      linkHtml = ' <a href="https://pubmed.ncbi.nlm.nih.gov/' + encodeURIComponent(s.pmid) + '/" target="_blank" rel="noopener" style="font-size:.72rem;color:#2563eb;text-decoration:none">PubMed ↗</a>';
+      linkLine = '<div style="margin-top:4px;font-size:.78rem">' +
+                 '<span style="color:var(--text-dim)">PubMed：</span>' +
+                 '<a href="https://pubmed.ncbi.nlm.nih.gov/' + encodeURIComponent(s.pmid) + '/" target="_blank" rel="noopener" style="color:#2563eb">' + escapeHtml(s.pmid) + '</a>' +
+                 '</div>';
     } else if (s.url) {
-      linkHtml = ' <a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener" style="font-size:.72rem;color:#2563eb;text-decoration:none">原文 ↗</a>';
+      linkLine = '<div style="margin-top:4px;font-size:.78rem">' +
+                 '<span style="color:var(--text-dim)">連結：</span>' +
+                 '<a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener" style="color:#2563eb;word-break:break-all">' + escapeHtml(s.url) + '</a>' +
+                 '</div>';
     }
-    return '<li style="margin-bottom:8px;line-height:1.55;font-size:.83rem">' +
-           ifBadge + journalBadge +
-           '<span>' + escapeHtml(text) + '</span>' + linkHtml +
+
+    return '<li style="margin-bottom:14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-soft);line-height:1.55;font-size:.85rem;list-style:none">' +
+           badgesRow +
+           '<div style="color:var(--text)">' + escapeHtml(text) + '</div>' +
+           linkLine +
            '</li>';
   }).join("");
 
@@ -5840,15 +5869,28 @@ function renderArticleSpread(article, body) {
     '<div class="nb-heading"><i data-lucide="bookmark" style="width:20px;height:20px"></i> 文章資訊</div>' +
     (article.summary ? '<div class="nb-subtle" style="line-height:1.6">' + escapeHtml(article.summary) + '</div>' : '') +
     (tags ? '<div style="margin-top:12px">' + tags + '</div>' : '') +
-    (sources ? '<div style="margin-top:18px">' +
-       '<div style="font-size:.85rem;font-weight:600;margin-bottom:8px;color:var(--text-dim)">參考來源</div>' +
-       '<ol style="padding-left:20px;color:var(--text-dim);margin:0">' + sources + '</ol>' +
-       '</div>' : '') +
     (article.reviewed_at ? '<div style="margin-top:16px;font-size:.75rem;color:var(--text-dim)">最後審稿：' + escapeHtml(article.reviewed_at) + '</div>' : '');
+
+  // 文章末尾：實證徽章 + 參考來源清單（放在 body 底下，不擠在左欄）
+  var qualifyingCount = parsed.filter(function(s){ return s.impact_factor && s.impact_factor > 5; }).length;
+  var evidenceLine = '';
+  if (qualifyingCount >= 2) {
+    evidenceLine = '<div style="margin-top:24px;padding:10px 12px;border-radius:8px;background:#ecfdf5;color:#065f46;font-size:.82rem;line-height:1.5">' +
+      '本文附 ' + qualifyingCount + ' 條 Impact Factor &gt; 5 的同儕審查文獻</div>';
+  } else if (rawSources.length) {
+    evidenceLine = '<div style="margin-top:24px;padding:10px 12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:.82rem;line-height:1.5">' +
+      '本文附權威指引，惟尚未補齊 IF&gt;5 期刊文獻</div>';
+  }
+  var sourcesBlock = sources
+    ? '<div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border)">' +
+        '<div style="font-size:1rem;font-weight:600;margin-bottom:12px">文獻出處</div>' +
+        '<ol style="padding:0;margin:0;list-style:none">' + sources + '</ol>' +
+      '</div>'
+    : '<div style="margin-top:24px;padding:10px 12px;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:.8rem">本文尚未補齊文獻來源</div>';
 
   var rightInner = (body == null)
     ? '<div class="nb-empty" style="padding:30px">內容載入中…</div>'
-    : '<div class="edu-article-body" style="line-height:1.85">' + markdownToHtml(body) + '</div>';
+    : '<div class="edu-article-body" style="line-height:1.85">' + markdownToHtml(body) + sourcesBlock + evidenceLine + '</div>';
 
   return '<div class="nb-page left">' + leftHtml + '</div>' +
          '<div class="nb-page right" id="edu-notebook-right">' + rightInner + '</div>';
