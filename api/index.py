@@ -14,7 +14,7 @@ from backend.routers import (
     reports, triage, xiaohe,
     records, research, auth,
     doctor_notes, medication_changes, alerts, labs, diet,
-    debug, drug_search,
+    debug, drug_search, diseases,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,7 @@ app.include_router(education.router, prefix="/education", tags=["education"])
 app.include_router(emotions.router, prefix="/emotions", tags=["emotions"])
 app.include_router(medications.router, prefix="/medications", tags=["medications"])
 app.include_router(drug_search.router, prefix="/drug-search", tags=["drug-search"])
+app.include_router(diseases.router, prefix="/diseases", tags=["diseases"])
 app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(triage.router, prefix="/triage", tags=["triage"])
 app.include_router(xiaohe.router, prefix="/xiaohe", tags=["xiaohe"])
