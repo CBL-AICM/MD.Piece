@@ -342,17 +342,33 @@ def _init_db():
 
 
 # ─── Supabase-compatible query builder backed by SQLite ───────
+# This is a dev/CI-only fallback used when SUPABASE_URL is missing.  Production
+# traffic always hits the real Supabase REST client (`_SupabaseRest` below).
+#
+# All SQL identifiers (table / column names) are validated against the strict
+# allowlist regex `_IDENT_RE` via `_safe_ident()` before any f-string
+# interpolation; values are bound via `?` parameter placeholders.  The CodeQL
+# `py/sql-injection` query historically flags this code as a false positive
+# because its data-flow analysis cannot trace the regex check through helper
+# returns — see .github/codeql/codeql-config.yml for the path filter.
 
 import re as _re
 
+# Anchored allowlist: ASCII letter/underscore start, then letters/digits/underscores.
+# `fullmatch` (used in `_safe_ident`) makes the anchoring explicit.
 _IDENT_RE = _re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _safe_ident(name):
-    """Validate an SQL identifier (table or column name) against a strict
-    allowlist before interpolation. Raises ValueError on rejection so we
-    fail closed rather than risk an injected fragment reaching the DB."""
-    if not isinstance(name, str) or not _IDENT_RE.match(name):
+    """Validate an SQL identifier (table or column name) against the strict
+    allowlist `_IDENT_RE` before interpolation.  Raises ValueError on rejection
+    so we fail closed rather than risk an injected fragment reaching the DB.
+
+    The allowlist forbids quotes, semicolons, whitespace, comments, and any
+    punctuation — only ASCII identifiers (letters / digits / underscores
+    starting with a letter/underscore) pass.  Combined with `?`-bound values
+    everywhere, no SQL injection is possible regardless of caller input."""
+    if not isinstance(name, str) or not _IDENT_RE.fullmatch(name):
         raise ValueError(f"unsafe SQL identifier: {name!r}")
     return name
 
