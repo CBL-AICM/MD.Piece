@@ -4079,7 +4079,50 @@ function _compressMedPhoto(file) {
     ctx.fillStyle = "#fff";  // 白底 — 處理透明 PNG / JPEG 黑底
     ctx.fillRect(0, 0, w, h);
     ctx.drawImage(source, 0, 0, w, h);
+
+    // 自適應預處理：採樣判斷亮度與對比，太暗就提亮、低對比就拉開，
+    // 強化邊緣讓 OCR / Vision LLM 更容易讀小字
+    try {
+      var stats = _samplePhotoBrightness(ctx, w, h);
+      var brightness = 1.0, contrast = 1.0, saturate = 1.0;
+      if (stats.mean < 110) brightness = 110 / Math.max(stats.mean, 60);     // 暗 → 提亮
+      if (stats.range < 140) contrast = 1 + (140 - stats.range) / 200;        // 平 → 拉對比
+      if (stats.colorCast > 18) saturate = 0.4;                               // 偏色嚴重就降彩度
+      var brStr = brightness.toFixed(2), ctStr = contrast.toFixed(2), saStr = saturate.toFixed(2);
+      if (brStr !== '1.00' || ctStr !== '1.00' || saStr !== '1.00') {
+        ctx.filter = 'brightness(' + brStr + ') contrast(' + ctStr + ') saturate(' + saStr + ')';
+        ctx.drawImage(canvas, 0, 0);
+        ctx.filter = 'none';
+      }
+    } catch (_) {
+      // canvas filter 不支援就略過，原圖照樣送出
+    }
+
     return canvas.toDataURL("image/jpeg", 0.9);
+  }
+
+  // 從 9x9 = 81 個取樣點推估亮度與色偏，避免 getImageData 拉整張影像太慢
+  function _samplePhotoBrightness(ctx, w, h) {
+    var n = 9, total = 0, mn = 255, mx = 0, sumR = 0, sumG = 0, sumB = 0, count = 0;
+    for (var iy = 0; iy < n; iy++) {
+      for (var ix = 0; ix < n; ix++) {
+        var x = Math.floor((ix + 0.5) * w / n);
+        var y = Math.floor((iy + 0.5) * h / n);
+        try {
+          var d = ctx.getImageData(x, y, 1, 1).data;
+          var r = d[0], g = d[1], b = d[2];
+          var lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          total += lum; sumR += r; sumG += g; sumB += b; count++;
+          if (lum < mn) mn = lum;
+          if (lum > mx) mx = lum;
+        } catch (_) { /* CORS-tainted canvas — skip */ }
+      }
+    }
+    if (!count) return { mean: 128, range: 255, colorCast: 0 };
+    var meanR = sumR / count, meanG = sumG / count, meanB = sumB / count;
+    var avg = (meanR + meanG + meanB) / 3;
+    var colorCast = Math.max(Math.abs(meanR - avg), Math.abs(meanG - avg), Math.abs(meanB - avg));
+    return { mean: total / count, range: mx - mn, colorCast: colorCast };
   }
 
   return new Promise(function(resolve) {
