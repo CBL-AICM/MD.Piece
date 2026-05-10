@@ -1236,7 +1236,7 @@ function showPage(page) {
   const pages = {
     home, symptoms, symptomsAnalyze, doctors, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
-    drugSearch
+    drugSearch, diseaseSearch
   };
   // Page transition
   app.style.opacity = '0';
@@ -1261,6 +1261,7 @@ function showPage(page) {
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
     if (page === "drugSearch") loadDrugSearchPage();
+    if (page === "diseaseSearch") loadDiseaseSearchPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -3225,7 +3226,18 @@ async function runSymptomAnalysis() {
 function renderSymptomAnalysis(data) {
   const u = _symptomUrgency(data.urgency);
   const conditions = (data.conditions || [])
-    .map(c => `<li><strong>${escapeHtml(c.name || "")}</strong>${c.likelihood ? ' — 可能性：' + escapeHtml(c.likelihood) : ''}</li>`)
+    .map(c => {
+      const name = escapeHtml(c.name || "");
+      const lookupBtn = c.name
+        ? ` <button type="button" class="secondary" style="margin-left:6px;padding:2px 8px;font-size:0.78rem"
+              data-disease="${escapeHtml(c.name)}"
+              onclick="navigateToDiseaseSearch(this.dataset.disease)"
+              title="到疾病百科查詢這個疾病的詳細資訊、用藥、風險與未來發展">
+              <i data-lucide="stethoscope" style="width:12px;height:12px;vertical-align:middle"></i> 查疾病
+            </button>`
+        : '';
+      return `<li><strong>${name}</strong>${c.likelihood ? ' — 可能性：' + escapeHtml(c.likelihood) : ''}${lookupBtn}</li>`;
+    })
     .join("");
 
   return `
@@ -9546,6 +9558,338 @@ function openDrugSearchFor(name) {
   }
 }
 
+
+// ─── 疾病百科（Disease Lookup）─────────────────────────────
+// 對話式 UI：搜尋一次拿到結構化的疾病卡片（資訊 / 症狀 / 用藥 / 風險 / 未來發展 / 自我照護），
+// 之後可以在同一個對話框繼續追問，後端會以已查到的疾病為脈絡回答。
+// 每則機器訊息結尾都會顯示「免責聲明 + 文獻來源 (PubMed)」。
+
+var _disease = {
+  current: null,        // 目前的疾病物件（從 GET /diseases/?q= 拿到的）
+  history: [],          // 對話歷史 [{role:'user'|'assistant', content}]
+  pendingMsg: false,
+};
+
+function diseaseSearch() {
+  var prefill = window._diseaseSearchPrefill || '';
+  window._diseaseSearchPrefill = '';
+  return ''
+    + '<div class="card">'
+    +   '<h2><i data-lucide="stethoscope" style="width:20px;height:20px;vertical-align:middle"></i> 疾病百科查詢</h2>'
+    +   '<p style="margin-top:8px;color:var(--text-dim)">輸入疾病名稱（中文 / 英文）查詢資訊、用藥、風險與未來發展。第一次查詢由 AI 整理，第二次直接從快取回。</p>'
+    +   '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
+    +     '<input id="disease-search-input" type="text" placeholder="例如：第二型糖尿病、Hypertension、痛風" value="' + escapeHtml(prefill) + '" '
+    +       'onkeydown="if(event.key===\'Enter\')runDiseaseSearch()" '
+    +       'style="flex:1;min-width:200px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-card)" />'
+    +     '<button class="primary" onclick="runDiseaseSearch()">'
+    +       '<i data-lucide="search" style="width:14px;height:14px;vertical-align:middle"></i> 查詢'
+    +     '</button>'
+    +   '</div>'
+    +   '<div style="margin-top:10px;padding:8px 12px;background:rgba(220,170,80,0.1);border-radius:var(--radius-sm);border:1px solid rgba(220,170,80,0.3);font-size:0.82rem;color:var(--text-dim)">'
+    +     '<i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle"></i> '
+    +     '此查詢結果由 AI 整理，<strong>僅供衛教參考</strong>。實際診斷與治療請以您的主治醫師為準。'
+    +   '</div>'
+    + '</div>'
+
+    + '<div class="card" id="disease-result-card" style="display:none">'
+    +   '<div id="disease-result"></div>'
+    + '</div>'
+
+    + '<div class="card" id="disease-chat-card" style="display:none">'
+    +   '<h3><i data-lucide="message-circle" style="width:18px;height:18px;vertical-align:middle"></i> 繼續追問這個疾病</h3>'
+    +   '<p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">針對上方查詢的疾病，可以追問細節（例如：「有什麼飲食要避免？」「我這個年紀該多久回診？」）</p>'
+    +   '<div id="disease-chat-stream" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto;padding:8px"></div>'
+    +   '<form id="disease-chat-form" style="display:flex;gap:8px;margin-top:12px" onsubmit="event.preventDefault();diseaseChatSend()">'
+    +     '<input id="disease-chat-input" type="text" autocomplete="off" placeholder="輸入追問的問題…" '
+    +       'style="flex:1;min-width:200px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-card)" />'
+    +     '<button type="submit" class="primary">'
+    +       '<i data-lucide="send" style="width:14px;height:14px;vertical-align:middle"></i> 送出'
+    +     '</button>'
+    +   '</form>'
+    + '</div>'
+
+    + '<div class="card">'
+    +   '<h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> 熱門查詢</h3>'
+    +   '<p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">最常被查詢的疾病</p>'
+    +   '<div id="disease-trending" style="margin-top:8px"><p style="color:var(--text-muted)">載入中…</p></div>'
+    + '</div>';
+}
+
+function loadDiseaseSearchPage() {
+  var input = document.getElementById('disease-search-input');
+  if (input && input.value.trim()) {
+    runDiseaseSearch();
+  }
+  fetch(API + '/diseases/trending/list?limit=8')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var el = document.getElementById('disease-trending');
+      if (!el) return;
+      var items = (data && data.items) || [];
+      if (!items.length) {
+        el.innerHTML = '<p style="color:var(--text-muted)">尚無熱門查詢，試著搜尋一個疾病吧！</p>';
+        return;
+      }
+      var html = '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+      items.forEach(function(it) {
+        var rawQuery = it.name_zh || it.name_en || '';
+        var label = escapeHtml(it.name_zh || it.name_en || '未命名');
+        html += '<button class="secondary" type="button" style="padding:6px 12px;font-size:0.9rem" '
+          + 'data-q="' + escapeHtml(rawQuery) + '" '
+          + 'onclick="quickDiseaseSearch(this.dataset.q)">' + label
+          + ' <span style="color:var(--text-muted);font-size:0.8em">(' + (it.query_count || 0) + ')</span>'
+          + '</button>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    })
+    .catch(function() {
+      var el = document.getElementById('disease-trending');
+      if (el) el.innerHTML = '<p style="color:var(--text-muted)">熱門列表載入失敗</p>';
+    });
+}
+
+function quickDiseaseSearch(name) {
+  var input = document.getElementById('disease-search-input');
+  if (input) input.value = name;
+  runDiseaseSearch();
+}
+
+function runDiseaseSearch() {
+  var input = document.getElementById('disease-search-input');
+  var q = (input && input.value || '').trim();
+  if (!q) {
+    showToast('請輸入要查詢的疾病名稱', 'warn');
+    return;
+  }
+  var card = document.getElementById('disease-result-card');
+  var box = document.getElementById('disease-result');
+  if (card) card.style.display = '';
+  if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> 查詢中… 第一次查詢會稍久（AI 整理 + 找文獻中）</p>';
+  if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
+
+  fetch(API + '/diseases/?q=' + encodeURIComponent(q))
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderDiseaseResult(data); })
+    .catch(function() {
+      if (box) box.innerHTML = '<p style="color:var(--danger)">查詢失敗，請稍後再試</p>';
+    });
+}
+
+function _diseaseListBlock(title, icon, items, color) {
+  if (!items || !items.length) return '';
+  var html = '<div style="margin-top:14px">'
+    + '<h4 style="display:flex;align-items:center;gap:6px;margin:0 0 6px 0;color:' + (color || 'var(--text)') + '">'
+    + '<i data-lucide="' + icon + '" style="width:16px;height:16px"></i> ' + escapeHtml(title)
+    + '</h4>'
+    + '<ul style="margin:0;padding-left:18px;line-height:1.7;color:var(--text-dim)">';
+  items.forEach(function(it) {
+    if (typeof it === 'string') {
+      html += '<li>' + escapeHtml(it) + '</li>';
+    } else if (it && typeof it === 'object') {
+      var line = escapeHtml(it.name || '');
+      if (it.drug_class) line += ' <span style="color:var(--text-muted);font-size:0.9em">(' + escapeHtml(it.drug_class) + ')</span>';
+      if (it.purpose) line += ' — ' + escapeHtml(it.purpose);
+      html += '<li>' + line + '</li>';
+    }
+  });
+  html += '</ul></div>';
+  return html;
+}
+
+function _diseaseRefBlock(refs) {
+  // 文獻來源 — 一律顯示這個 block；沒抓到就顯示「目前無近期 review，AI 回覆已附免責聲明」
+  var html = '<div style="margin-top:18px;padding-top:12px;border-top:1px dashed var(--border-glass)">'
+    + '<h4 style="display:flex;align-items:center;gap:6px;margin:0 0 8px 0;color:var(--text-dim);font-size:0.95rem">'
+    + '<i data-lucide="book-open" style="width:16px;height:16px"></i> 文獻來源（PubMed 近 5 年 review）'
+    + '</h4>';
+  if (!refs || !refs.length) {
+    html += '<p style="color:var(--text-muted);font-size:0.85rem;margin:0">目前 PubMed 沒抓到近期 review。本次回覆內容由 AI 從訓練資料整理，建議與您的醫師討論。</p>';
+  } else {
+    html += '<ol style="margin:0;padding-left:20px;color:var(--text-dim);font-size:0.88rem;line-height:1.6">';
+    refs.forEach(function(r) {
+      var line = '';
+      if (r.authors) line += escapeHtml(r.authors) + '. ';
+      line += '<strong>' + escapeHtml(r.title || '(no title)') + '</strong>';
+      if (r.journal) line += '. <em>' + escapeHtml(r.journal) + '</em>';
+      if (r.year) line += ', ' + escapeHtml(r.year);
+      if (r.url) line += '. <a href="' + r.url + '" target="_blank" rel="noopener" style="color:var(--accent)">PubMed</a>';
+      html += '<li style="margin-bottom:4px">' + line + '</li>';
+    });
+    html += '</ol>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function _diseaseDisclaimerBlock(text) {
+  return '<div style="margin-top:12px;padding:8px 12px;background:rgba(220,170,80,0.1);border-radius:var(--radius-sm);border:1px solid rgba(220,170,80,0.3);font-size:0.82rem;color:var(--text-dim)">'
+    + '<i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:middle"></i> '
+    + '<strong>免責聲明：</strong>' + escapeHtml(text || '此資訊由 AI 整理，僅供衛教參考，不能取代醫師診斷與個別處方。')
+    + '</div>';
+}
+
+function renderDiseaseResult(data) {
+  var box = document.getElementById('disease-result');
+  if (!box) return;
+
+  if (!data || data.matched === false) {
+    box.innerHTML =
+      '<div style="padding:16px;text-align:center">'
+      + '<i data-lucide="search-x" style="width:32px;height:32px;color:var(--text-muted)"></i>'
+      + '<p style="margin-top:8px;color:var(--text-dim)">' + escapeHtml((data && data.disclaimer) || '無法辨識此疾病名稱，請確認拼字或嘗試英文。') + '</p>'
+      + _diseaseRefBlock([])
+      + _diseaseDisclaimerBlock((data && data.disclaimer) || '此資訊由 AI 整理，僅供衛教參考。')
+      + '</div>';
+    var chatCard = document.getElementById('disease-chat-card');
+    if (chatCard) chatCard.style.display = 'none';
+    if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
+    return;
+  }
+
+  _disease.current = data;
+  _disease.history = [];
+
+  var name = data.name_zh || data.name_en || '未命名';
+  var subtitle = '';
+  if (data.name_zh && data.name_en) subtitle = data.name_en;
+  if (data.icd10_code) subtitle += (subtitle ? ' · ' : '') + 'ICD-10: ' + data.icd10_code;
+  if (data.icd10_category) subtitle += (subtitle ? ' · ' : '') + escapeHtml(data.icd10_category);
+
+  var html = ''
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">'
+    +   '<div>'
+    +     '<h3 style="margin:0">' + escapeHtml(name) + '</h3>'
+    +     (subtitle ? '<p style="margin:4px 0 0;color:var(--text-muted);font-size:0.9rem">' + subtitle + '</p>' : '')
+    +   '</div>'
+    +   '<span style="font-size:0.8rem;color:var(--text-muted)">' + (data.cached ? '快取命中' : 'AI 即時整理') + ' · 查詢 ' + (data.query_count || 1) + ' 次</span>'
+    + '</div>';
+
+  if (data.overview) {
+    html += '<div style="margin-top:14px"><h4 style="margin:0 0 6px 0">📖 是什麼病</h4>'
+      + '<p style="margin:0;line-height:1.7;color:var(--text-dim)">' + escapeHtml(data.overview) + '</p></div>';
+  }
+
+  html += _diseaseListBlock('病因 / 風險因子', 'alert-circle', data.causes);
+
+  if (data.symptoms) {
+    html += _diseaseListBlock('常見症狀', 'activity', data.symptoms.common);
+    html += _diseaseListBlock('警訊症狀（要立刻就醫）', 'alert-octagon', data.symptoms.warning, 'var(--danger)');
+  }
+
+  html += _diseaseListBlock('常用藥物（一般類別）', 'pill', data.common_medications);
+  html += _diseaseListBlock('治療方式', 'heart-pulse', data.treatments);
+  html += _diseaseListBlock('長期風險與併發症', 'shield-alert', data.complications);
+
+  if (data.prognosis) {
+    html += '<div style="margin-top:14px"><h4 style="margin:0 0 6px 0">🌱 未來發展與預後</h4>'
+      + '<p style="margin:0;line-height:1.7;color:var(--text-dim)">' + escapeHtml(data.prognosis) + '</p></div>';
+  }
+
+  html += _diseaseListBlock('自我照護建議', 'leaf', data.self_care);
+  html += _diseaseListBlock('立刻就醫的訊號', 'siren', data.red_flags, 'var(--danger)');
+
+  // 永遠在最後加：文獻來源 + 免責聲明
+  html += _diseaseRefBlock(data.references || []);
+  html += _diseaseDisclaimerBlock(data.disclaimer);
+
+  box.innerHTML = html;
+
+  // 顯示對話追問區，並重置串流
+  var chatCard = document.getElementById('disease-chat-card');
+  var stream = document.getElementById('disease-chat-stream');
+  if (chatCard) chatCard.style.display = '';
+  if (stream) {
+    stream.innerHTML = ''
+      + '<div style="background:var(--bg-card);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);color:var(--text-dim);font-size:0.92rem">'
+      + '👋 我整理好「<strong>' + escapeHtml(name) + '</strong>」的資訊了，有什麼想再問的嗎？例如「我該多久回診一次？」「有什麼食物要避開？」'
+      + '</div>';
+  }
+
+  if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
+}
+
+function _diseaseChatBubble(role, contentHtml) {
+  var align = role === 'user' ? 'flex-end' : 'flex-start';
+  var bg = role === 'user' ? 'var(--accent)' : 'var(--bg-card)';
+  var color = role === 'user' ? '#fff' : 'var(--text)';
+  return '<div style="display:flex;justify-content:' + align + '">'
+    + '<div style="max-width:88%;padding:10px 14px;border-radius:14px;background:' + bg + ';color:' + color + ';line-height:1.65;border:1px solid var(--border-glass);font-size:0.95rem">'
+    + contentHtml
+    + '</div></div>';
+}
+
+function diseaseChatSend() {
+  if (_disease.pendingMsg) return;
+  var input = document.getElementById('disease-chat-input');
+  var msg = (input && input.value || '').trim();
+  if (!msg) return;
+  if (!_disease.current || !_disease.current.id) {
+    showToast('請先搜尋一個疾病再追問', 'warn');
+    return;
+  }
+  var stream = document.getElementById('disease-chat-stream');
+  if (!stream) return;
+
+  // 顯示使用者訊息
+  stream.insertAdjacentHTML('beforeend', _diseaseChatBubble('user', escapeHtml(msg).replace(/\n/g, '<br>')));
+  stream.insertAdjacentHTML(
+    'beforeend',
+    '<div id="disease-chat-thinking" style="display:flex;justify-content:flex-start"><div style="padding:10px 14px;border-radius:14px;background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border-glass);font-size:0.95rem">疾病助手思考中…</div></div>'
+  );
+  stream.scrollTop = stream.scrollHeight;
+  if (input) input.value = '';
+
+  _disease.pendingMsg = true;
+  fetch(API + '/diseases/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      disease_id: _disease.current.id,
+      message: msg,
+      history: _disease.history.slice(-12),
+    }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var thinking = document.getElementById('disease-chat-thinking');
+      if (thinking) thinking.remove();
+      var reply = (data && data.reply) || '抱歉，疾病助手暫時忙線中，請稍後再試。';
+      var refs = (data && data.references) || [];
+      var disclaimer = (data && data.disclaimer) || '此回覆由 AI 整理，僅供衛教參考；實際診療請依您的主治醫師為準。';
+
+      var bubbleHtml = '<div style="white-space:pre-wrap">' + escapeHtml(reply) + '</div>'
+        + _diseaseRefBlock(refs)
+        + _diseaseDisclaimerBlock(disclaimer);
+      stream.insertAdjacentHTML('beforeend', _diseaseChatBubble('assistant', bubbleHtml));
+
+      _disease.history.push({ role: 'user', content: msg });
+      _disease.history.push({ role: 'assistant', content: reply });
+
+      if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
+      stream.scrollTop = stream.scrollHeight;
+    })
+    .catch(function() {
+      var thinking = document.getElementById('disease-chat-thinking');
+      if (thinking) thinking.remove();
+      stream.insertAdjacentHTML(
+        'beforeend',
+        _diseaseChatBubble('assistant', '<span style="color:var(--danger)">追問失敗，請稍後再試。</span>'
+          + _diseaseDisclaimerBlock('此回覆由 AI 整理，僅供衛教參考；實際診療請依您的主治醫師為準。'))
+      );
+    })
+    .then(function() { _disease.pendingMsg = false; });
+}
+
+// 從外部頁面（症狀分析）呼叫：預填疾病名稱並導向疾病百科
+function navigateToDiseaseSearch(name) {
+  window._diseaseSearchPrefill = name || '';
+  if (typeof navigateTo === 'function') {
+    navigateTo('diseaseSearch');
+  } else {
+    showPage('diseaseSearch');
+  }
+}
 
 // ─── Service Worker ───────────────────────────────────────
 

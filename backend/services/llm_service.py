@@ -1000,3 +1000,247 @@ def recognize_lab_report(image_base64: str, media_type: str = "image/jpeg") -> d
         "provider": None,
         "errors": errors,
     }
+
+
+# ── 疾病百科查詢 ────────────────────────────────────────────
+# 給疾病搜尋功能用：給定疾病名（中/英文），請 LLM 整理疾病資訊、用藥、風險、未來發展。
+# 結果會被 backend/routers/diseases.py 寫進 disease_reference 表做快取。
+# 文獻來源由 PubMed E-utilities REST API 即時取回（前 3 篇近期文獻），確保「文獻來源」非幻覺。
+
+_DISEASE_INFO_PROMPT = (
+    "你是 MD.Piece 平台的疾病衛教助手，協助一般民眾理解某個疾病。\n\n"
+    "輸入：使用者查詢的疾病名稱（可能是中文、英文，可能不完全精確）。\n"
+    "任務：辨識這是什麼疾病，整理出完整的衛教資訊。\n\n"
+    "回覆**必須是純 JSON**（不要 markdown code block、不要前後說明文字），結構如下：\n"
+    "{\n"
+    '  "matched": true | false,\n'
+    '  "name_zh": "中文通用名（找不到中文翻譯就 null）",\n'
+    '  "name_en": "英文名稱",\n'
+    '  "aliases": ["別名 1", "別名 2"],\n'
+    '  "icd10_code": "最相關的 ICD-10 代碼（找不到就 null）",\n'
+    '  "icd10_category": "ICD-10 分類（如：循環系統疾病、內分泌與代謝疾病）",\n'
+    '  "overview": "200~350 字 — 這是什麼病？用生活化的比喻讓一般民眾能理解；包含好發族群、盛行率粗略概念",\n'
+    '  "causes": ["主要病因或風險因子 1", "風險因子 2", "..."],\n'
+    '  "symptoms": {\n'
+    '    "common": ["常見症狀 1", "常見症狀 2"],\n'
+    '    "warning": ["警訊症狀 1（需立刻就醫）", "..."]\n'
+    "  },\n"
+    '  "common_medications": [\n'
+    '    {"name": "藥物學名（中/英）", "drug_class": "藥物分類", "purpose": "在這個病裡的角色（一句話）"}\n'
+    "  ],\n"
+    '  "treatments": ["非藥物治療 1（手術、復健、生活介入等）", "..."],\n'
+    '  "complications": ["長期未控制可能的併發症 1", "..."],\n'
+    '  "prognosis": "150~250 字 — 未來發展與預後：自然病程、是否可逆、好好治療的話通常結果如何、需要多久追蹤一次",\n'
+    '  "self_care": ["飲食建議", "運動建議", "追蹤頻率", "其他自我管理小技巧"],\n'
+    '  "red_flags": ["何時應立刻就醫的明確訊號 1", "..."],\n'
+    '  "disclaimer": "此資訊由 AI 整理，僅供衛教參考，不能取代醫師診斷與個別處方。實際治療請以您的主治醫師建議為準。"\n'
+    "}\n\n"
+    "規則（醫療場景，安全優先）：\n"
+    "1. 若**完全不認識**這個疾病：matched=false，其餘欄位填 null 或空陣列，"
+    '   disclaimer 註明「無法辨識此疾病名，請確認拼字或聯絡專業醫療人員」\n'
+    "2. 拼字接近但不完全相同：合理推測（例如「糖尿病第二型」→ 第二型糖尿病），把使用者輸入也列進 aliases\n"
+    "3. **絕對不要瞎猜具體數字**（例如：「30% 的人會中風」），用範圍或定性描述\n"
+    "4. **嚴重併發症與警訊一定要列**，但語氣要平實，不恐嚇\n"
+    "5. 用藥只列**藥物分類層級**或常見學名，不寫劑量、不寫個人化用法\n"
+    "6. 全部繁體中文（藥物學名英文可保留）\n"
+    "7. 不下個人化處方建議；不取代醫師判斷；最後一定要保留 disclaimer 欄位"
+)
+
+
+def _empty_disease_info(disclaimer: str) -> dict:
+    return {
+        "matched": False,
+        "name_zh": None,
+        "name_en": None,
+        "aliases": [],
+        "icd10_code": None,
+        "icd10_category": None,
+        "overview": None,
+        "causes": [],
+        "symptoms": {"common": [], "warning": []},
+        "common_medications": [],
+        "treatments": [],
+        "complications": [],
+        "prognosis": None,
+        "self_care": [],
+        "red_flags": [],
+        "disclaimer": disclaimer,
+    }
+
+
+def lookup_disease_info(disease_name: str) -> dict:
+    """查詢疾病的衛教資訊（資訊、用藥、風險、未來發展）。
+
+    讓 LLM 整理結構化的疾病百科欄位。
+    呼叫端應將結果存進 disease_reference 表做快取。
+
+    回傳 dict 結構見 _DISEASE_INFO_PROMPT。
+    """
+    user_message = f"請查詢這個疾病：「{disease_name}」"
+    try:
+        # 疾病百科 JSON 比藥物大（含 prognosis、self_care、treatments），給 2560 token 比較保險
+        raw = call_claude(_DISEASE_INFO_PROMPT, user_message, max_tokens=2560)
+    except Exception as e:
+        logger.error("lookup_disease_info LLM 失敗：%s", type(e).__name__)
+        return _empty_disease_info("疾病資訊查詢服務暫時無法使用，請稍後再試。")
+
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    if not text.startswith("{"):
+        l = text.find("{")
+        r = text.rfind("}")
+        if l != -1 and r != -1 and r > l:
+            text = text[l : r + 1]
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning("lookup_disease_info 回傳非 JSON：%s", (raw or "")[:200])
+        return _empty_disease_info("AI 回覆解析失敗，請改用更具體的疾病名稱重試。")
+
+    # 補齊欄位
+    result.setdefault("matched", bool(result.get("name_zh") or result.get("name_en")))
+    for k in ("aliases", "causes", "common_medications", "treatments",
+              "complications", "self_care", "red_flags"):
+        if not isinstance(result.get(k), list):
+            result[k] = []
+    if not isinstance(result.get("symptoms"), dict):
+        result["symptoms"] = {}
+    result["symptoms"].setdefault("common", [])
+    result["symptoms"].setdefault("warning", [])
+    if not isinstance(result["symptoms"]["common"], list):
+        result["symptoms"]["common"] = []
+    if not isinstance(result["symptoms"]["warning"], list):
+        result["symptoms"]["warning"] = []
+    result.setdefault(
+        "disclaimer",
+        "此資訊由 AI 整理，僅供衛教參考，不能取代醫師診斷與個別處方。實際治療請以您的主治醫師建議為準。",
+    )
+
+    # 防呆：matched=true 但實質欄位都空 → 視為無法辨識
+    if result.get("matched"):
+        has_name = bool(result.get("name_zh") or result.get("name_en"))
+        has_content = any([
+            result.get("overview"),
+            result.get("prognosis"),
+            result.get("causes"),
+            result["symptoms"].get("common") or result["symptoms"].get("warning"),
+            result.get("common_medications"),
+            result.get("treatments"),
+            result.get("complications"),
+            result.get("self_care"),
+            result.get("red_flags"),
+        ])
+        if not has_name or not has_content:
+            logger.warning(
+                "lookup_disease_info matched=true 但內容為空（query=%s）— 視為無法辨識",
+                disease_name,
+            )
+            result["matched"] = False
+            result["disclaimer"] = (
+                "AI 整理疾病資訊時資料不完整，請改用更具體或正確拼寫的疾病名稱再試一次。"
+            )
+
+    return result
+
+
+# ── PubMed 文獻檢索 ─────────────────────────────────────────
+# 給疾病百科用的「文獻來源」：呼叫 NCBI E-utilities，依疾病英文名找近年 review。
+# 失敗就回傳空 list，不影響主流程。
+
+PUBMED_ESEARCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+PUBMED_ESUMMARY = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+
+
+def pubmed_search(query: str, max_results: int = 3) -> list[dict]:
+    """從 PubMed 查近 5 年的 review，回傳 [{title, authors, year, pmid, url, journal}].
+
+    呼叫失敗（離線、限流、解析錯誤）時回傳空 list。
+    """
+    if not query or not query.strip():
+        return []
+    try:
+        # 步驟 1：esearch 拿 PMID 列表
+        params = {
+            "db": "pubmed",
+            "term": f"{query.strip()}[Title/Abstract] AND review[Publication Type]",
+            "retmax": str(max(1, min(max_results, 10))),
+            "retmode": "json",
+            "sort": "pub_date",
+            "datetype": "pdat",
+            "reldate": "1825",  # 近 5 年（365 * 5）
+        }
+        r = httpx.get(PUBMED_ESEARCH, params=params, timeout=8.0)
+        if r.status_code != 200:
+            return []
+        ids = (r.json().get("esearchresult") or {}).get("idlist") or []
+        if not ids:
+            return []
+
+        # 步驟 2：esummary 拿 metadata
+        sr = httpx.get(
+            PUBMED_ESUMMARY,
+            params={"db": "pubmed", "id": ",".join(ids), "retmode": "json"},
+            timeout=8.0,
+        )
+        if sr.status_code != 200:
+            return []
+        result = sr.json().get("result") or {}
+        out = []
+        for pmid in ids:
+            meta = result.get(pmid) or {}
+            if not meta:
+                continue
+            authors = meta.get("authors") or []
+            first_author = (authors[0].get("name") if authors else "") or ""
+            year = (meta.get("pubdate") or "")[:4]
+            out.append({
+                "pmid": pmid,
+                "title": meta.get("title") or "",
+                "authors": first_author + (" 等" if len(authors) > 1 else ""),
+                "year": year,
+                "journal": meta.get("source") or "",
+                "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+            })
+        return out
+    except Exception as e:
+        logger.warning("pubmed_search 失敗（%s），回傳空 list", type(e).__name__)
+        return []
+
+
+# ── 疾病問答（在已查詢的疾病脈絡下追問） ──────────────────────
+# 前端「對話式」UI 會在使用者點開某個疾病後，繼續問追加問題。
+# 把已快取的 disease 結構塞進 system prompt 當脈絡，回答更聚焦。
+
+_DISEASE_CHAT_SYSTEM = (
+    "你是 MD.Piece 平台的疾病衛教助手，正在跟一位民眾針對「{disease_name}」這個疾病做進一步討論。\n"
+    "目前你已經整理過這個疾病的基礎資料（下方 JSON 即為脈絡），請以這份資料為基礎回答使用者的追問。\n\n"
+    "【脈絡資料】\n{context_json}\n\n"
+    "回覆規則：\n"
+    "1. 用繁體中文，口吻溫暖、清楚，必要時分點\n"
+    "2. 回覆長度 80~250 字為主，過長要分段\n"
+    "3. 若使用者問的是脈絡資料**沒涵蓋**的細節（例如某個少見副作用、某個地區的盛行率）：\n"
+    "   - 可以根據常識補充，但要明確說「這是一般性說明，個案請問醫師」\n"
+    "4. 若涉及具體用藥劑量、檢驗數值判讀、是否該停藥 — 一律回「請與您的主治醫師確認」，不下決定\n"
+    "5. 若使用者描述的症狀符合 red_flags（緊急訊號）：第一句直接建議就醫或撥 119\n"
+    "6. **每則回覆最後都必須加一行免責聲明**："
+    "「此回覆由 AI 整理，僅供衛教參考；實際診療請依您的主治醫師為準。」\n"
+    "7. 不要捏造文獻；如果引用研究，只能說「相關研究顯示」這類概略陳述"
+)
+
+
+def disease_chat(disease_context: dict, user_message: str, history: list | None = None) -> str:
+    """在已知疾病脈絡下回答追問。disease_context 是 disease_reference 的 row（dict）。"""
+    name = disease_context.get("name_zh") or disease_context.get("name_en") or "該疾病"
+    # 只挑必要欄位塞進 prompt，避免 token 爆掉（references 不需要進對話脈絡）
+    slim = {k: disease_context.get(k) for k in (
+        "name_zh", "name_en", "icd10_code", "overview",
+        "causes", "symptoms", "common_medications", "treatments",
+        "complications", "prognosis", "self_care", "red_flags",
+    )}
+    system = _DISEASE_CHAT_SYSTEM.format(
+        disease_name=name,
+        context_json=json.dumps(slim, ensure_ascii=False),
+    )
+    return call_claude(system, user_message, history=history, max_tokens=900)
+
