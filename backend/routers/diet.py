@@ -999,6 +999,30 @@ def get_diet_weekly(
 
 # ─── 飲水紀錄（每人每日一條，UPSERT） ─────────────────────────
 
+# 嚴格驗證使用者輸入：避免奇怪字元在 query builder 串接時觸發 CodeQL，
+# 也是一道實質的 defense-in-depth。
+_PATIENT_ID_RE = re.compile(r"^[A-Za-z0-9_\-]{1,64}$")
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _validate_patient_id(pid: str) -> str:
+    if not pid or not _PATIENT_ID_RE.match(pid):
+        raise HTTPException(status_code=400, detail="patient_id 格式不正確")
+    return pid
+
+
+def _validate_intake_date(d: Optional[str], tz_offset: int) -> str:
+    if not d:
+        return _local_today_iso(tz_offset)
+    if not _ISO_DATE_RE.match(d):
+        raise HTTPException(status_code=400, detail="intake_date 必須是 YYYY-MM-DD")
+    try:
+        date.fromisoformat(d)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="intake_date 不是合法日期")
+    return d
+
+
 class WaterIntakeIn(BaseModel):
     patient_id: str
     amount_ml: int
@@ -1015,13 +1039,16 @@ def upsert_water_intake(body: WaterIntakeIn):
     """UPSERT 當日飲水量（同一天多次呼叫會覆蓋）。"""
     if body.amount_ml < 0:
         raise HTTPException(status_code=400, detail="amount_ml 不能為負")
-    intake_date = (body.intake_date or _local_today_iso(body.tz_offset))[:10]
+    if body.amount_ml > 20000:
+        raise HTTPException(status_code=400, detail="amount_ml 上限 20000")
+    pid = _validate_patient_id(body.patient_id)
+    intake_date = _validate_intake_date(body.intake_date, body.tz_offset)
     sb = get_supabase()
     try:
         # 查當日有沒有 row
         existing = (sb.table("water_intake_daily")
                       .select("*")
-                      .eq("patient_id", body.patient_id)
+                      .eq("patient_id", pid)
                       .eq("intake_date", intake_date)
                       .execute())
         rows = existing.data or []
@@ -1035,13 +1062,15 @@ def upsert_water_intake(body: WaterIntakeIn):
             return {"ok": True, "record": (updated.data or rows)[0]}
         inserted = (sb.table("water_intake_daily")
                       .insert({
-                          "patient_id":  body.patient_id,
+                          "patient_id":  pid,
                           "intake_date": intake_date,
                           "amount_ml":   body.amount_ml,
                           "updated_at":  now_iso,
                       })
                       .execute())
         return {"ok": True, "record": (inserted.data or [None])[0]}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"飲水紀錄寫入失敗：{e}")
         raise HTTPException(status_code=500, detail="飲水紀錄寫入失敗")
@@ -1054,14 +1083,15 @@ def get_water_intake(
     tz_offset: int = Query(-480, ge=-840, le=840),
 ):
     """取得當日飲水量；若該日無紀錄回 amount_ml=0。"""
-    target_date = (intake_date or _local_today_iso(tz_offset))[:10]
+    pid = _validate_patient_id(patient_id)
+    target_date = _validate_intake_date(intake_date, tz_offset)
     sb = get_supabase()
     fluid_restriction = False
     fluid_limit_ml: Optional[int] = None
     try:
         prow = (sb.table("patients")
                   .select("fluid_restriction, fluid_limit_ml")
-                  .eq("id", patient_id)
+                  .eq("id", pid)
                   .execute())
         if prow.data:
             fluid_restriction = bool(prow.data[0].get("fluid_restriction") or False)
@@ -1072,7 +1102,7 @@ def get_water_intake(
     try:
         rows = (sb.table("water_intake_daily")
                   .select("*")
-                  .eq("patient_id", patient_id)
+                  .eq("patient_id", pid)
                   .eq("intake_date", target_date)
                   .execute())
         amount_ml = int((rows.data or [{}])[0].get("amount_ml") or 0) if rows.data else 0
@@ -1080,7 +1110,7 @@ def get_water_intake(
         logger.error(f"讀取飲水紀錄失敗：{e}")
         amount_ml = 0
     return {
-        "patient_id": patient_id,
+        "patient_id": pid,
         "intake_date": target_date,
         "amount_ml": amount_ml,
         "fluid_restriction": fluid_restriction,
