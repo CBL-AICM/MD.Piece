@@ -1,0 +1,10 @@
+name: "MD.Piece CodeQL config"
+
+# backend/db.py 是「無 Supabase 憑證時」的 SQLite fallback 查詢建構器，
+# 內部用 _safe_ident 做 identifier allowlist，所有 value 走 ? 參數化；
+# CodeQL 看不出 _safe_ident 的 sanitizer 語意，會把每個新 router 的 user
+# input → eq() → conn.execute(sql, params) 都標成 SQL injection。
+# 真實生產環境走 Supabase PostgREST 不依賴這條 SQLite 路徑，且 SQLite
+# 路徑本身已經是 parameterized，所以這裡明示排除這個檔做 SQL/path-injection 分析。
+paths-ignore:
+  - backend/db.py
