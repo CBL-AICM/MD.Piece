@@ -7,12 +7,16 @@ tags:
   - 糖尿病
   - 第一型糖尿病
 summary: 免疫系統錯誤摧毀胰島β細胞 — 不是「吃糖造成」。需要終身胰島素，但科技讓控制越來越好。
+reviewed_at: 2026-05-10
+featured: true
+category: disease
 sources:
-  - 中華民國糖尿病學會臨床指引
-  - ADA Standards of Care 2024
-reviewed_at: 2026-05-04
+  - "DiMeglio LA, Evans-Molina C, Oram RA. (2018). Type 1 diabetes. Lancet (IF=98.4). doi:10.1016/S0140-6736(18)31320-5"
+  - "Diabetes Control and Complications Trial Research Group (1993). The effect of intensive treatment of diabetes on the development and progression of long-term complications in IDDM. NEJM (IF=158.5). doi:10.1056/NEJM199309303291401"
+  - "Beck RW, et al. (2017). Effect of Continuous Glucose Monitoring on Glycemic Control in Adults With Type 1 Diabetes Using Insulin Injections (DIAMOND). JAMA (IF=63.1). doi:10.1001/jama.2016.19975"
+  - "American Diabetes Association (2024). Standards of Care in Diabetes-2024. Diabetes Care (IF=16.2). doi:10.2337/dc24-S005"
+  - "中華民國糖尿病學會：第一型糖尿病臨床指引（補充指引）"
 ---
-
 # 第一型糖尿病：免疫攻擊胰島，要終身依賴胰島素
 
 ## 一句話懂

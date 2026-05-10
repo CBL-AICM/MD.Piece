@@ -7,12 +7,16 @@ tags:
   - COPD
   - 肺病
 summary: COPD 是支氣管慢性發炎 + 肺氣腫。抽菸是元兇。戒菸 + 吸入劑 + 復健可大幅改善。
+reviewed_at: 2026-05-10
+featured: true
+category: disease
 sources:
-  - GOLD 2024 Guidelines
-  - 台灣胸腔暨重症醫學會
-reviewed_at: 2026-05-04
+  - "Agustí A, et al. (2023). Global Initiative for Chronic Obstructive Lung Disease 2023 Report: GOLD Executive Summary. American Journal of Respiratory and Critical Care Medicine (IF=24.7). doi:10.1164/rccm.202301-0106PP"
+  - "Anthonisen NR, et al. (2005). The effects of a smoking cessation intervention on 14.5-year mortality (Lung Health Study). Annals of Internal Medicine (IF=19.6). doi:10.7326/0003-4819-142-4-200502150-00005"
+  - "Calverley PMA, et al. (2007). Salmeterol and Fluticasone Propionate and Survival in COPD (TORCH). NEJM (IF=158.5). doi:10.1056/NEJMoa063070"
+  - "McCarthy B, et al. (2015). Pulmonary rehabilitation for chronic obstructive pulmonary disease. Cochrane Database of Systematic Reviews (IF=8.4). doi:10.1002/14651858.CD003793.pub3"
+  - "台灣胸腔暨重症加護醫學會：COPD 診治指引（補充指引）"
 ---
-
 # 慢性阻塞性肺病 COPD：抽菸是頭號元兇
 
 ## 一句話懂

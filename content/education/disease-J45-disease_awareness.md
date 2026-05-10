@@ -6,12 +6,16 @@ dimension: disease_awareness
 tags:
   - 氣喘
 summary: 氣喘是氣管慢性發炎，遇刺激會收縮。控好可正常生活、運動。保養藥不能停是關鍵。
+reviewed_at: 2026-05-10
+featured: true
+category: disease
 sources:
-  - GINA 2024 Guidelines
-  - 台灣胸腔暨重症醫學會
-reviewed_at: 2026-05-04
+  - "Reddel HK, et al. (2022). Global Initiative for Asthma Strategy 2021. AJRCCM (IF=24.7). doi:10.1164/rccm.202109-2205PP"
+  - "O''Byrne PM, et al. (2018). Inhaled Combined Budesonide-Formoterol as Needed in Mild Asthma (SYGMA 1). NEJM (IF=158.5). doi:10.1056/NEJMoa1715274"
+  - "Pavord ID, et al. (2018). After asthma: redefining airways diseases. Lancet (IF=98.4). doi:10.1016/S0140-6736(17)30879-6"
+  - "Beasley R, et al. (2019). Controlled Trial of Budesonide-Formoterol as Needed for Mild Asthma (Novel START). NEJM (IF=158.5). doi:10.1056/NEJMoa1901963"
+  - "台灣胸腔暨重症加護醫學會：氣喘診治指引（補充指引）"
 ---
-
 # 氣喘：氣管慢性發炎，可控不可治
 
 ## 一句話懂

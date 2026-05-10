@@ -6,12 +6,16 @@ dimension: disease_awareness
 tags:
   - 第二型糖尿病
 summary: 多數源於肥胖造成的胰島素阻抗。早期積極控制可能逆轉，新藥讓控制變容易。
+reviewed_at: 2026-05-10
+featured: true
+category: disease
 sources:
-  - ADA Standards of Care 2024
-  - 中華民國糖尿病學會
-reviewed_at: 2026-05-04
+  - "American Diabetes Association (2024). Standards of Care in Diabetes-2024. Diabetes Care (IF=16.2). doi:10.2337/dc24-S005"
+  - "Davies MJ, et al. (2022). Management of hyperglycaemia in type 2 diabetes: A consensus report by the ADA and EASD. Diabetologia (IF=8.4). doi:10.1007/s00125-022-05787-2"
+  - "Lean MEJ, et al. (2018). Primary care-led weight management for remission of type 2 diabetes (DiRECT). Lancet (IF=98.4). doi:10.1016/S0140-6736(17)33102-1"
+  - "UKPDS Group (1998). Intensive blood-glucose control with sulphonylureas or insulin compared with conventional treatment (UKPDS 33). Lancet (IF=98.4). doi:10.1016/S0140-6736(98)07019-6"
+  - "中華民國糖尿病學會：2022 第二型糖尿病臨床照護指引（補充指引）"
 ---
-
 # 第二型糖尿病：胰島素阻抗，可逆轉的代謝病
 
 ## 一句話懂

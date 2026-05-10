@@ -10,10 +10,14 @@ tags:
 featured: true
 summary: 用水管、塞車、橡皮筋三個比喻，把血壓的原理一次說明白——並告訴你為什麼這是可以管理好的疾病。
 sources:
-  - 台灣高血壓學會《2022 年高血壓治療指引》
-  - WHO Global report on hypertension 2023
-  - 衛福部國健署《高血壓防治手冊》
-reviewed_at: 2026-05-03
+  - "Whelton PK, et al. (2018). 2017 ACC/AHA/AAPA/ABC/ACPM/AGS/APhA/ASH/ASPC/NMA/PCNA Guideline for the Prevention, Detection, Evaluation, and Management of High Blood Pressure in Adults. Hypertension (IF=7.7). doi:10.1161/HYP.0000000000000065"
+  - "Williams B, et al. (2018). 2018 ESC/ESH Guidelines for the management of arterial hypertension. European Heart Journal (IF=37.6). doi:10.1093/eurheartj/ehy339"
+  - "SPRINT Research Group (2015). A Randomized Trial of Intensive versus Standard Blood-Pressure Control. New England Journal of Medicine (IF=158.5). doi:10.1056/NEJMoa1511939"
+  - "Ettehad D, et al. (2016). Blood pressure lowering for prevention of cardiovascular disease and death: a systematic review and meta-analysis. Lancet (IF=98.4). doi:10.1016/S0140-6736(15)01225-8"
+  - "GBD 2019 Risk Factors Collaborators (2020). Global burden of 87 risk factors in 204 countries and territories, 1990-2019. Lancet (IF=98.4). doi:10.1016/S0140-6736(20)30752-2"
+  - "中華民國心臟學會：2022 年台灣高血壓治療指引（補充指引）"
+  - "WHO Global report on hypertension 2023（補充指引）"
+reviewed_at: 2026-05-10
 ---
 
 # 高血壓是什麼？三個生活比喻就懂

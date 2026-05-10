@@ -10,10 +10,14 @@ tags:
 featured: true
 summary: 把「不能吃什麼」換成「怎麼搭比較好」——一張餐盤，三個原則，今天就能用。
 sources:
-  - 中華民國糖尿病學會《2022 糖尿病臨床照護指引》
-  - American Diabetes Association Standards of Care 2024
-  - 衛福部國健署《糖尿病飲食指南》
-reviewed_at: 2026-05-03
+  - "American Diabetes Association (2024). Standards of Care in Diabetes—2024. Diabetes Care (IF=16.2). doi:10.2337/dc24-S005"
+  - "Lean MEJ, et al. (2018). Primary care-led weight management for remission of type 2 diabetes (DiRECT): an open-label, cluster-randomised trial. Lancet (IF=98.4). doi:10.1016/S0140-6736(17)33102-1"
+  - "Look AHEAD Research Group (2013). Cardiovascular Effects of Intensive Lifestyle Intervention in Type 2 Diabetes. New England Journal of Medicine (IF=158.5). doi:10.1056/NEJMoa1212914"
+  - "Evert AB, et al. (2019). Nutrition Therapy for Adults With Diabetes or Prediabetes: A Consensus Report. Diabetes Care (IF=16.2). doi:10.2337/dci19-0014"
+  - "Shukla AP, et al. (2015). Food Order Has a Significant Impact on Postprandial Glucose and Insulin Levels. Diabetes Care (IF=16.2). doi:10.2337/dc15-0429"
+  - "中華民國糖尿病學會：2022 糖尿病臨床照護指引（補充指引）"
+  - "衛福部國健署：糖尿病飲食指南（補充指引）"
+reviewed_at: 2026-05-10
 ---
 
 # 糖尿病飲食：不是不能吃，是要會搭

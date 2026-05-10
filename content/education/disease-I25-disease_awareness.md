@@ -7,12 +7,15 @@ tags:
   - 心臟病
   - 冠心病
 summary: 冠狀動脈漸進狹窄造成心肌缺氧。穩定型可藥物管理、必要時支架或繞道手術。
+reviewed_at: 2026-05-10
+featured: true
+category: disease
 sources:
-  - 台灣心臟學會冠心病指引
-  - ESC Chronic Coronary Syndromes 2024
-reviewed_at: 2026-05-04
+  - "Knuuti J, et al. (2020). 2019 ESC Guidelines for the diagnosis and management of chronic coronary syndromes. European Heart Journal (IF=37.6). doi:10.1093/eurheartj/ehz425"
+  - "Maron DJ, et al. (2020). Initial Invasive or Conservative Strategy for Stable Coronary Disease (ISCHEMIA). NEJM (IF=158.5). doi:10.1056/NEJMoa1915922"
+  - "Cannon CP, et al. (2015). Ezetimibe Added to Statin Therapy after Acute Coronary Syndromes (IMPROVE-IT). NEJM (IF=158.5). doi:10.1056/NEJMoa1410489"
+  - "中華民國心臟學會：冠心病臨床指引（補充指引）"
 ---
-
 # 慢性缺血性心臟病：冠狀動脈狹窄與長期管理
 
 ## 一句話懂

@@ -9,10 +9,14 @@ tags:
 featured: true
 summary: 一個工程師三年只睡四小時，直到某天他在會議室昏倒——醫生跟他說了一句話，把他的人生救回來。
 sources:
-  - 台灣睡眠醫學學會《成人睡眠指引 2023》
-  - American Academy of Sleep Medicine, Sleep Duration Recommendations
-  - 衛福部國健署《健康九九・睡得好專區》
-reviewed_at: 2026-05-04
+  - "Cappuccio FP, et al. (2011). Sleep duration predicts cardiovascular outcomes: a systematic review and meta-analysis of prospective studies. European Heart Journal (IF=37.6). doi:10.1093/eurheartj/ehr007"
+  - "Yin J, et al. (2017). Relationship of Sleep Duration With All-Cause Mortality and Cardiovascular Events: A Systematic Review and Dose-Response Meta-Analysis. Journal of the American Heart Association (IF=6.1). doi:10.1161/JAHA.117.005947"
+  - "Sabia S, et al. (2021). Association of sleep duration in middle and old age with incidence of dementia. Nature Communications (IF=16.6). doi:10.1038/s41467-021-22354-2"
+  - "Itani O, et al. (2017). Short sleep duration and health outcomes: a systematic review, meta-analysis, and meta-regression. Sleep Medicine (IF=5.8). doi:10.1016/j.sleep.2016.08.006"
+  - "Xie L, et al. (2013). Sleep drives metabolite clearance from the adult brain. Science (IF=56.9). doi:10.1126/science.1241224"
+  - "台灣睡眠醫學學會：成人睡眠指引 2023（補充指引）"
+  - "American Academy of Sleep Medicine: Sleep Duration Recommendations（補充指引）"
+reviewed_at: 2026-05-10
 ---
 
 # 睡眠七小時的故事
