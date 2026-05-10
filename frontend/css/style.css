@@ -11091,3 +11091,54 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   .onboarding-title { font-size: 1.05rem; }
   .onboarding-desc  { font-size: 0.88rem; }
 }
+
+/* ── Mobile sidebar: undo legacy 2-col tile grid for grouped nav ── */
+@media (max-width: 768px) {
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    grid-template-columns: none;
+    align-content: stretch;
+    padding: 10px 12px 16px;
+  }
+  .nav-search {
+    margin: 0 0 10px;
+    padding: 8px 12px;
+  }
+  .nav-search input { font-size: 0.95rem; }
+  .nav-group {
+    margin: 0 0 4px;
+    width: 100%;
+  }
+  .nav-group-head {
+    padding: 10px 6px;
+    font-size: 0.78rem;
+  }
+  .nav-group-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 0 8px;
+  }
+  /* Inside groups, keep nav items as horizontal row buttons (not the legacy tile look) */
+  .nav-group-body .nav-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    margin: 0;
+    border-radius: 10px;
+    background: var(--app-panel-soft);
+    border: 1px solid var(--app-border);
+    font-size: 0.95rem;
+    min-height: 48px;
+    width: 100%;
+  }
+  .nav-group-body .nav-item .nav-icon { width: 22px; }
+  .nav-group-body .nav-item .nav-icon svg { width: 20px; height: 20px; }
+}
+@media (max-width: 768px) {
+  html[data-mode="senior"] .nav-group-head { font-size: 1rem; padding: 12px 8px; }
+  html[data-mode="senior"] .nav-group-body .nav-item { font-size: 1.05rem; padding: 14px 16px; }
+}
