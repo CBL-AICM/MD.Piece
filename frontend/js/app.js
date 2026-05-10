@@ -5742,19 +5742,11 @@ function loadFeaturedArticles() {
           var tagHtml = (a.tags || []).slice(0, 3).map(function(t) {
             return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:var(--bg-soft);font-size:.72rem;color:var(--text-dim);margin-right:4px">' + escapeHtml(t) + '</span>';
           }).join("");
-          var evidenceBadge = '';
-          if (a.meets_evidence_standard) {
-            evidenceBadge = '<span title="附 ≥2 條 Impact Factor>5 同儕審查文獻" ' +
-              'style="display:inline-block;padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1d4ed8;font-size:.7rem;font-weight:600;margin-right:4px">' +
-              '📚 IF>5 實證</span>';
-          } else if ((a.parsed_sources || []).some(function(s){ return s && s.impact_factor; })) {
-            evidenceBadge = '<span title="附文獻來源" style="display:inline-block;padding:2px 8px;border-radius:10px;background:#f1f5f9;color:#475569;font-size:.7rem;margin-right:4px">📚 附文獻</span>';
-          }
           return '<button class="article-card" onclick="eduOpenArticle(\'' + escapeHtml(a.slug) + '\')" ' +
                  'style="text-align:left;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);cursor:pointer;display:flex;flex-direction:column;gap:6px">' +
                  '<div style="font-weight:600;line-height:1.4">' + escapeHtml(a.title) + '</div>' +
                  (a.summary ? '<div style="font-size:.82rem;color:var(--text-dim);line-height:1.5">' + escapeHtml(a.summary) + '</div>' : '') +
-                 (evidenceBadge || tagHtml ? '<div style="margin-top:4px">' + evidenceBadge + tagHtml + '</div>' : '') +
+                 (tagHtml ? '<div style="margin-top:4px">' + tagHtml + '</div>' : '') +
                  '</button>';
         }).join("");
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -5841,17 +5833,6 @@ function renderArticleSpread(article, body) {
            '</li>';
   }).join("");
 
-  var evidenceLine = "";
-  var hasEvidence = parsed.some(function(s){ return s.impact_factor && s.impact_factor > 5; });
-  var qualifyingCount = parsed.filter(function(s){ return s.impact_factor && s.impact_factor > 5; }).length;
-  if (hasEvidence) {
-    evidenceLine = '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#ecfdf5;color:#065f46;font-size:.78rem;line-height:1.5">' +
-      '✅ 本文附 ' + qualifyingCount + ' 條 Impact Factor &gt; 5 的同儕審查文獻</div>';
-  } else if (rawSources.length) {
-    evidenceLine = '<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:.78rem;line-height:1.5">' +
-      '⚠️ 本文附權威指引，惟尚未補齊 IF&gt;5 期刊文獻</div>';
-  }
-
   var tags = (article.tags || []).map(function(t) {
     return '<span style="display:inline-block;padding:3px 9px;border-radius:10px;background:var(--bg-soft);font-size:.75rem;color:var(--text-dim);margin:2px">' + escapeHtml(t) + '</span>';
   }).join("");
@@ -5860,11 +5841,9 @@ function renderArticleSpread(article, body) {
     (article.summary ? '<div class="nb-subtle" style="line-height:1.6">' + escapeHtml(article.summary) + '</div>' : '') +
     (tags ? '<div style="margin-top:12px">' + tags + '</div>' : '') +
     (sources ? '<div style="margin-top:18px">' +
-       '<div style="font-size:.85rem;font-weight:600;margin-bottom:8px;color:var(--text-dim)">📚 參考來源（IF=Impact Factor）</div>' +
+       '<div style="font-size:.85rem;font-weight:600;margin-bottom:8px;color:var(--text-dim)">參考來源</div>' +
        '<ol style="padding-left:20px;color:var(--text-dim);margin:0">' + sources + '</ol>' +
-       evidenceLine +
-       '</div>' :
-       '<div style="margin-top:18px;padding:10px;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:.8rem">⚠️ 本文尚未補齊文獻來源</div>') +
+       '</div>' : '') +
     (article.reviewed_at ? '<div style="margin-top:16px;font-size:.75rem;color:var(--text-dim)">最後審稿：' + escapeHtml(article.reviewed_at) + '</div>' : '');
 
   var rightInner = (body == null)
