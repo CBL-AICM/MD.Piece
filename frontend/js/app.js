@@ -3751,19 +3751,19 @@ function medications() {
         <canvas id="adherence-canvas" style="width:100%;height:100%"></canvas>
       </div>
     </div>
-    <div class="card">
+    <div class="card meds-report-card">
       <h3><i data-lucide="file-text" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.report.title')}</h3>
       <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">${_T('meds.report.desc')}</p>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <select id="report-days" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)">
+      <div class="meds-report-controls">
+        <select id="report-days" class="meds-report-days">
           <option value="7">${_T('meds.report.days7')}</option>
           <option value="14">${_T('meds.report.days14')}</option>
           <option value="30" selected>${_T('meds.report.days30')}</option>
           <option value="90">${_T('meds.report.days90')}</option>
         </select>
-        <button class="primary" onclick="generateMedReport()">${_T('meds.report.generate')}</button>
+        <button class="primary meds-report-submit" onclick="generateMedReport()">${_T('meds.report.generate')}</button>
       </div>
-      <div id="med-report" style="margin-top:12px"></div>
+      <div id="med-report" class="meds-report-body"></div>
     </div>`;
 }
 
