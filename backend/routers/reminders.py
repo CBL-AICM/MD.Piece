@@ -94,16 +94,20 @@ _SCHEMAS.setdefault(
 VALID_TYPES = {"medication", "appointment", "lab", "custom"}
 VALID_FREQUENCIES = {"once", "daily", "weekly", "monthly"}
 
-# 已知的 Web Push 供應商。endpoint 必須屬於其中之一才允許寫入，
-# 避免惡意 client 註冊任意 URL 把 backend 當 SSRF gadget。
-ALLOWED_PUSH_HOSTS = (
+# 已知的 Web Push 供應商。endpoint 的 hostname 必須完全等於下列其中之一
+# 才允許寫入或實際送出 — 用 frozenset + 精準 hostname 比對（不用 endswith
+# 子網域模糊匹配），確保 CodeQL SSRF data-flow 一定看得到 sanitizer。
+ALLOWED_PUSH_HOSTS = frozenset({
     "fcm.googleapis.com",                # Chrome / Edge / Android
-    "android.googleapis.com",            # Legacy GCM (fallback)
+    "android.googleapis.com",            # Legacy GCM
     "updates.push.services.mozilla.com", # Firefox
     "web.push.apple.com",                # Safari (iOS 16.4+ / macOS Ventura+)
     "notify.windows.com",                # Edge legacy / Windows
-    "wns2-by3p.notify.windows.com",
-)
+    "wns2-by3p.notify.windows.com",      # Windows WNS shard
+    "wns2-bn3p.notify.windows.com",
+    "wns2-sn3p.notify.windows.com",
+    "wns2-pn1p.notify.windows.com",
+})
 
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
@@ -313,12 +317,12 @@ def push_config():
 
 @router.post("/push/subscribe")
 def push_subscribe(body: PushSubscriptionCreate):
-    # 驗證 endpoint 必須是 HTTPS 且屬於已知的 Web Push 供應商（防 SSRF）。
+    # 驗證 endpoint 必須是 HTTPS 且 hostname 完全等於白名單裡的某個值。
     parsed = urlparse(body.endpoint)
     if parsed.scheme != "https" or not parsed.hostname:
         raise HTTPException(status_code=400, detail="endpoint 必須為 https URL")
     host = parsed.hostname.lower()
-    if not any(host == h or host.endswith("." + h) for h in ALLOWED_PUSH_HOSTS):
+    if host not in ALLOWED_PUSH_HOSTS:
         raise HTTPException(
             status_code=400,
             detail=f"endpoint host '{host}' 不在允許清單；目前僅接受標準 Web Push 供應商。",
@@ -392,30 +396,35 @@ def inbox_read_all(patient_id: str = Query(...)):
 
 # ─── Dispatch（cron 入口） ────────────────────────────────
 
-def _endpoint_is_safe(endpoint):
-    """檢查 endpoint 是否為 https 且屬於 ALLOWED_PUSH_HOSTS。
-    雖然 push_subscribe 已驗證過，但這裡作為 sink 級的二次防線：
-    避免 DB 直接被插入或 client 改 schema 後造成 SSRF。"""
+def _validated_endpoint(endpoint):
+    """回傳 endpoint（若 hostname 在 ALLOWED_PUSH_HOSTS 白名單裡），
+    否則回 None。CodeQL data-flow 友善寫法：用 urlparse + 精準集合比對
+    而非任何 startswith / endswith，避免被 py/incomplete-url-substring-sanitization
+    或 py/full-ssrf 誤抓。"""
     if not isinstance(endpoint, str) or not endpoint:
-        return False
+        return None
     parsed = urlparse(endpoint)
-    if parsed.scheme != "https" or not parsed.hostname:
-        return False
-    host = parsed.hostname.lower()
-    return any(host == h or host.endswith("." + h) for h in ALLOWED_PUSH_HOSTS)
+    if parsed.scheme != "https":
+        return None
+    host = parsed.hostname
+    if host is None:
+        return None
+    if host.lower() not in ALLOWED_PUSH_HOSTS:
+        return None
+    return endpoint
 
 
 def _send_webpush(subscription_row, payload):
     """送一封 Web Push；回傳 (ok, error_str)。"""
     if not (VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY and _webpush_available):
         return False, "vapid_not_configured"
-    endpoint = subscription_row.get("endpoint")
-    if not _endpoint_is_safe(endpoint):
+    safe_endpoint = _validated_endpoint(subscription_row.get("endpoint"))
+    if safe_endpoint is None:
         return False, "endpoint_rejected"
     try:
         webpush(
             subscription_info={
-                "endpoint": endpoint,
+                "endpoint": safe_endpoint,
                 "keys": {
                     "p256dh": subscription_row["p256dh"],
                     "auth": subscription_row["auth"],
