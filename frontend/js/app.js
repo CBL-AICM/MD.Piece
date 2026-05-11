@@ -741,10 +741,46 @@ function storyOpenArchive(slug, catKey) {
     });
 }
 
+function renderPvVisitHero() {
+  // 若使用者沒設下次回診日，回空字串（不顯示）
+  var iso = (typeof loadNextVisit === 'function') ? loadNextVisit() : '';
+  if (!iso) {
+    return ''
+      + '<div class="pv-visit-hero pv-visit-hero-empty">'
+      +   '<div class="pv-visit-hero-icon"><i data-lucide="calendar-plus"></i></div>'
+      +   '<div class="pv-visit-hero-body">'
+      +     '<div class="pv-visit-hero-eyebrow">// next_visit &gt; not_set</div>'
+      +     '<div class="pv-visit-hero-title">尚未設定下次回診日</div>'
+      +     '<div class="pv-visit-hero-sub">回首頁設定後，這裡會顯示倒數與本期紀錄區間。</div>'
+      +   '</div>'
+      +   '<button class="pv-btn pv-btn-ghost" onclick="navigateTo(\'home\',null)">'
+      +     '<i data-lucide="home"></i> 前往設定'
+      +   '</button>'
+      + '</div>';
+  }
+  var d = _daysBetween(iso);
+  var pretty = iso.replace(/-/g, '/');
+  var label, tone;
+  if (d > 0)       { label = '倒數 ' + d + ' 天'; tone = 'upcoming'; }
+  else if (d === 0){ label = '今天回診'; tone = 'today'; }
+  else             { label = '已超過 ' + (-d) + ' 天'; tone = 'past'; }
+  return ''
+    + '<div class="pv-visit-hero pv-visit-hero-' + tone + '">'
+    +   '<div class="pv-visit-hero-icon"><i data-lucide="calendar-check-2"></i></div>'
+    +   '<div class="pv-visit-hero-body">'
+    +     '<div class="pv-visit-hero-eyebrow">// next_visit &gt; ' + tone + '</div>'
+    +     '<div class="pv-visit-hero-title">' + label + '</div>'
+    +     '<div class="pv-visit-hero-sub">日期：' + pretty + '　·　建議出門前複習本頁清單</div>'
+    +   '</div>'
+    +   '<div class="pv-visit-hero-warn"><i data-lucide="info" style="width:12px;height:12px"></i> 以醫師預約單為準</div>'
+    + '</div>';
+}
+
 function previsit() {
   var _pvDays = (typeof getReportDays === 'function') ? getReportDays() : 30;
   return ''
     + '<section class="pv-page">'
+    + renderPvVisitHero()
     + '  <header class="pv-header">'
     + '    <div>'
     + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
