@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=v79-pzl-icons" />
+  <link rel="stylesheet" href="css/style.css?v=v80-ui-and-reminders" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -279,6 +279,12 @@
           <span class="nav-icon"><i data-lucide="sticky-note" style="width:18px;height:18px"></i></span>
           <span class="nav-text"><span class="nav-label" data-i18n="nav.memo">Memo</span><span class="nav-sub">想問醫師的事都丟這</span></span>
         </button>
+        <button class="nav-item" data-page="reminders" onclick="navigateTo('reminders', this)">
+          <span class="nav-icon" style="position:relative">
+            <i data-lucide="bell-ring" style="width:18px;height:18px"></i>
+            <span id="reminders-nav-badge" style="display:none;position:absolute;top:-4px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#e74c3c;color:#fff;font-size:10px;line-height:16px;text-align:center;font-weight:600">0</span>
+          </span> <span data-i18n="nav.reminders">提醒通知</span>
+        </button>
 
         <div class="nav-section-label" data-i18n="nav.group.search">查詢與分析</div>
         <button class="nav-item" data-page="symptomsAnalyze" onclick="navigateTo('symptomsAnalyze', this)">
@@ -477,8 +483,8 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=v79-pzl-icons"></script>
-  <script src="js/app.js?v=v79-pzl-icons"></script>
+  <script src="js/i18n.js?v=v80-ui-and-reminders"></script>
+  <script src="js/app.js?v=v80-ui-and-reminders"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
