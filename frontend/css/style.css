@@ -79,6 +79,8 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html { overflow-x: hidden; }
+
 body {
   font-family: "Noto Sans TC", sans-serif;
   background: var(--bg-deep);
@@ -86,7 +88,18 @@ body {
   color: var(--text);
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;     /* iOS Safari 旋轉時不自動放大字 */
+  text-size-adjust: 100%;
 }
+
+/* 圖片預設不要撐破容器 */
+img, svg, video { max-width: 100%; height: auto; }
+
+/* 長英文字串斷字防止 overflow（不影響中文） */
+.page-app-hero-title,
+.pv-visit-hero-title,
+.mdm-title,
+.todo-title { overflow-wrap: anywhere; }
 
 ::selection { background: var(--accent); color: #fff; }
 ::-webkit-scrollbar { width: 6px; }
@@ -2268,11 +2281,15 @@ html[data-mode="senior"] .tc-desc {
 /* Quick Actions */
 .home-quick {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 18px;
   position: relative;
   z-index: 1;
+}
+@media (max-width: 420px) {
+  /* 360px Android：4 個按鈕變 2×2，避免文字擠到看不清楚 */
+  .home-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .hq-btn {
@@ -2321,11 +2338,15 @@ html[data-mode="senior"] .tc-desc {
 /* Three-column Info Row */
 .home-info-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 24px;
   position: relative;
   z-index: 1;
+}
+@media (max-width: 600px) {
+  /* 手機：3 卡 → 1 卡堆疊（內容文字會被擠到只剩 ~100px 寬 */
+  .home-info-row { grid-template-columns: 1fr; gap: 10px; }
 }
 
 .home-ov {
@@ -8134,7 +8155,7 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 }
 .home-digest-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   position: relative;
   z-index: 1;
@@ -8355,8 +8376,15 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px dashed var(--border-glass);
+  flex-wrap: wrap;
 }
 .home-todo-composer[hidden] { display: none; }
+.home-todo-composer .home-todo-input { min-width: 0; }
+@media (max-width: 420px) {
+  /* 窄手機：input 獨佔一行，下面兩個按鈕並排 */
+  .home-todo-composer .home-todo-input { flex: 1 1 100%; }
+  .home-todo-composer .home-todo-submit { flex: 1; }
+}
 .home-todo-input {
   flex: 1;
   background: var(--bg-surface);
@@ -8613,7 +8641,7 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   color: var(--accent);
 }
 .mdm-hero-ring-num small { font-size: 0.8rem; color: var(--text-dim); font-weight: 500; margin-left: 1px; }
-.mdm-hero-side { flex: 1; min-width: 180px; }
+.mdm-hero-side { flex: 1; min-width: 0; }
 .mdm-hero-label {
   font-size: 0.76rem;
   color: var(--text-muted);
@@ -8622,8 +8650,17 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 }
 .mdm-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+}
+@media (max-width: 480px) {
+  /* 窄螢幕：ring 置中，4 個 stat 變 2×2，徹底避免擠成一行 */
+  .mdm-hero { flex-direction: column; align-items: stretch; gap: 14px; padding: 16px; }
+  .mdm-hero-ring { margin: 0 auto; width: 96px; height: 96px; }
+  .mdm-hero-ring-num { font-size: 1.4rem; }
+  .mdm-hero-side { min-width: 100%; }
+  .mdm-hero-label { text-align: center; }
+  .mdm-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 }
 .mdm-stat {
   display: flex; flex-direction: column; align-items: center;
@@ -8648,12 +8685,16 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 /* Calendar heatmap 30 天 */
 .mdm-cal {
   display: grid;
-  grid-template-columns: repeat(15, 1fr);
+  grid-template-columns: repeat(15, minmax(0, 1fr));
   gap: 4px;
   padding: 10px 12px;
   background: var(--bg-glass);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-glass);
+}
+@media (max-width: 480px) {
+  /* 30 格 ÷ 15 列 = 2 列；變成 ÷ 10 列 = 3 列，每格較大易讀 */
+  .mdm-cal { grid-template-columns: repeat(10, minmax(0, 1fr)); padding: 10px; }
 }
 .mdm-cal-cell {
   aspect-ratio: 1;
@@ -9124,7 +9165,7 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   padding: 10px 0 4px;
 }
 .sym-body-svg {
-  width: 200px;
+  width: min(200px, 60vw);
   height: auto;
   max-height: 380px;
   display: block;
@@ -9394,7 +9435,7 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 .pv-visit-hero-empty .pv-visit-hero-icon { background: var(--purple-glow); color: var(--purple); }
 .pv-visit-hero-icon i { width: 22px; height: 22px; }
 
-.pv-visit-hero-body { flex: 1; min-width: 200px; }
+.pv-visit-hero-body { flex: 1 1 200px; min-width: 0; }
 .pv-visit-hero-eyebrow {
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 0.7rem;
@@ -9865,7 +9906,8 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     color: var(--app-text-dim);
     cursor: pointer;
     position: relative;
-    padding: 4px 2px 6px;
+    padding: 8px 2px 10px;       /* 加大上下 padding 確保整體點擊高度 ≥ 44px */
+    min-height: 48px;
     font: inherit;
     transition: color .18s ease, transform .18s ease;
     -webkit-tap-highlight-color: transparent;
@@ -10186,10 +10228,14 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 /* 環形電量 hero（mock screen ⑥） */
 .mood-ring-hero {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: 18px;
   align-items: center;
   background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-soft) 100%);
+}
+@media (max-width: 600px) {
+  /* 窄手機（含 iPhone SE 375px）：環形置中堆疊，meta 在下方 */
+  .mood-ring-hero { grid-template-columns: 1fr; gap: 10px; padding: 18px; }
 }
 .mood-ring-wrap {
   position: relative;
@@ -10786,14 +10832,14 @@ html[data-mode="senior"] .mood-senior-picker.mood-senior-only { display: grid; }
   html, body { width: 100%; overflow-x: hidden; }
   #app-wrapper.show {
     width: 100%;
-    max-width: 100vw;
+    max-width: 100%;   /* 100vw 在有 scrollbar 時會比 viewport 寬 → 改 100% */
     margin: 0;
     padding-left: 0;
     padding-right: 0;
   }
   .main-content {
     width: 100%;
-    max-width: 100vw;
+    max-width: 100%;
     margin-left: 0 !important;
     margin-right: 0 !important;
     padding-left: 0 !important;
