@@ -30,6 +30,17 @@ router = APIRouter()
 VALID_TYPES = {"medication", "appointment", "lab", "custom"}
 VALID_FREQUENCIES = {"once", "daily", "weekly", "monthly"}
 
+# 已知的 Web Push 供應商。endpoint 必須屬於其中之一才允許寫入，
+# 避免惡意 client 註冊任意 URL 把 backend 當 SSRF gadget。
+ALLOWED_PUSH_HOSTS = (
+    "fcm.googleapis.com",                # Chrome / Edge / Android
+    "android.googleapis.com",            # Legacy GCM (fallback)
+    "updates.push.services.mozilla.com", # Firefox
+    "web.push.apple.com",                # Safari (iOS 16.4+ / macOS Ventura+)
+    "notify.windows.com",                # Edge legacy / Windows
+    "wns2-by3p.notify.windows.com",
+)
+
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
 VAPID_CONTACT_EMAIL = os.getenv("VAPID_CONTACT_EMAIL", "mailto:admin@mdpiece.life")
@@ -238,6 +249,18 @@ def push_config():
 
 @router.post("/push/subscribe")
 def push_subscribe(body: PushSubscriptionCreate):
+    # 驗證 endpoint 必須是 HTTPS 且屬於已知的 Web Push 供應商（防 SSRF）。
+    from urllib.parse import urlparse
+    parsed = urlparse(body.endpoint)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise HTTPException(status_code=400, detail="endpoint 必須為 https URL")
+    host = parsed.hostname.lower()
+    if not any(host == h or host.endswith("." + h) for h in ALLOWED_PUSH_HOSTS):
+        raise HTTPException(
+            status_code=400,
+            detail=f"endpoint host '{host}' 不在允許清單；目前僅接受標準 Web Push 供應商。",
+        )
+
     sb = get_supabase()
     # 同一 endpoint 已存在則覆寫綁定的 patient_id（同裝置換帳號的情境）
     existing = sb.table("push_subscriptions").select("id").eq("endpoint", body.endpoint).execute().data

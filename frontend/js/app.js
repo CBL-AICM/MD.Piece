@@ -10196,8 +10196,8 @@ function reminderRenderList() {
       + (r.body ? '    <div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">' + escapeHtml(r.body) + '</div>' : '')
       + '  </div>'
       + '  <div style="display:flex;flex-direction:column;gap:4px">'
-      + '    <button class="secondary" onclick="reminderToggleActive(\'' + r.id + '\',' + (active ? 'false' : 'true') + ')" style="padding:4px 8px;font-size:0.8rem">' + (active ? '停用' : '啟用') + '</button>'
-      + '    <button class="secondary" onclick="reminderDelete(\'' + r.id + '\')" style="padding:4px 8px;font-size:0.8rem;color:#c0392b">刪除</button>'
+      + '    <button class="secondary" onclick="reminderToggleActive(\'' + escapeHtml(r.id) + '\',' + (active ? 'false' : 'true') + ')" style="padding:4px 8px;font-size:0.8rem">' + (active ? '停用' : '啟用') + '</button>'
+      + '    <button class="secondary" onclick="reminderDelete(\'' + escapeHtml(r.id) + '\')" style="padding:4px 8px;font-size:0.8rem;color:#c0392b">刪除</button>'
       + '  </div>'
       + '</div>';
   }).join('');
@@ -10235,7 +10235,7 @@ function reminderRenderInbox(unread) {
         + '    <div style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap">' + escapeHtml(when) + '</div>'
         + '  </div>'
         + (n.body ? '  <div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">' + escapeHtml(n.body) + '</div>' : '')
-        + (isRead ? '' : '  <button class="secondary" onclick="reminderMarkRead(\'' + n.id + '\')" style="margin-top:6px;padding:2px 8px;font-size:0.75rem">標為已讀</button>')
+        + (isRead ? '' : '  <button class="secondary" onclick="reminderMarkRead(\'' + escapeHtml(n.id) + '\')" style="margin-top:6px;padding:2px 8px;font-size:0.75rem">標為已讀</button>')
         + '</div>';
     }).join('');
 }

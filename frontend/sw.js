@@ -128,6 +128,14 @@ function openPendingDB() {
   });
 }
 
+// 限制：notificationclick 只能跳到本站相對路徑，避免 open redirect。
+function _safeNotificationUrl(raw) {
+  if (typeof raw !== "string" || !raw) return "/";
+  // 只接受 "/path" 形式的相對路徑（不允許 protocol-relative "//evil.com"）
+  if (raw.length > 1 && raw[0] === "/" && raw[1] !== "/") return raw;
+  return "/";
+}
+
 // Push notifications
 self.addEventListener("push", (e) => {
   let data = { title: "MD.Piece", body: "新通知" };
@@ -136,7 +144,7 @@ self.addEventListener("push", (e) => {
   } catch {
     if (e.data) data.body = e.data.text();
   }
-  const url = data.url || "/";
+  const url = _safeNotificationUrl(data.url);
   const tag = data.tag || `mdpiece-${Date.now()}`;
   e.waitUntil(
     self.registration.showNotification(data.title, {
@@ -153,16 +161,17 @@ self.addEventListener("push", (e) => {
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  const targetUrl = (e.notification.data && e.notification.data.url) || "/";
+  const targetUrl = _safeNotificationUrl(e.notification.data && e.notification.data.url);
+  const sameOriginUrl = new URL(targetUrl, self.location.origin).href;
   e.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
       for (const w of wins) {
-        if ("focus" in w) {
-          w.postMessage({ type: "mdpiece-notification-click", url: targetUrl, data: e.notification.data });
+        if ("focus" in w && w.url && new URL(w.url).origin === self.location.origin) {
+          w.postMessage({ type: "mdpiece-notification-click", url: targetUrl });
           return w.focus();
         }
       }
-      return clients.openWindow(targetUrl);
+      return clients.openWindow(sameOriginUrl);
     })
   );
 });
