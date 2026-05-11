@@ -788,6 +788,7 @@ function previsit() {
   return ''
     + '<section class="pv-page">'
     + renderPvVisitHero()
+    + renderHowto('previsit')
     + '  <header class="pv-header">'
     + '    <div>'
     + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
@@ -1900,6 +1901,52 @@ function refreshNextVisitChip() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// === 共用「如何使用這頁？」摺疊面板 =====================================
+// 用法：在頁面 renderer 開頭呼叫 renderHowto('meds')
+//      → 自動讀 i18n 'howto.meds.title' + 'howto.meds.s1..sN' + 'howto.meds.warn'
+// 顯示為 <details> 預設摺疊；第一次造訪該頁時自動展開（localStorage 記住）
+function renderHowto(key) {
+  var seenKey = 'mdpiece_howto_seen_' + key;
+  var seen = false;
+  try { seen = localStorage.getItem(seenKey) === '1'; } catch (e) {}
+  // 動態收集 s1, s2, ... 到沒下一條為止
+  var steps = [];
+  for (var i = 1; i <= 10; i++) {
+    var t = _T('howto.' + key + '.s' + i);
+    if (!t || t === ('howto.' + key + '.s' + i)) break; // i18n 拿不到就停
+    steps.push(t);
+  }
+  if (!steps.length) return '';
+  var title = _T('howto.' + key + '.title') || '如何使用這頁？';
+  var warn  = _T('howto.' + key + '.warn');
+  var stepsHtml = steps.map(function(s, idx) {
+    return '<li class="page-howto-step">'
+      + '<span class="page-howto-step-n">' + (idx + 1) + '</span>'
+      + '<span class="page-howto-step-text">' + escapeHtml(s) + '</span>'
+      + '</li>';
+  }).join('');
+  return ''
+    + '<details class="page-howto" data-key="' + key + '"' + (seen ? '' : ' open') + ' ontoggle="_howtoOnToggle(this)">'
+    +   '<summary class="page-howto-summary">'
+    +     '<span class="page-howto-summary-icon"><i data-lucide="help-circle"></i></span>'
+    +     '<span class="page-howto-summary-text">' + escapeHtml(title) + '</span>'
+    +     '<span class="page-howto-summary-chev"><i data-lucide="chevron-down"></i></span>'
+    +   '</summary>'
+    +   '<div class="page-howto-body">'
+    +     '<ol class="page-howto-steps">' + stepsHtml + '</ol>'
+    +     (warn && warn !== ('howto.' + key + '.warn')
+        ? '<p class="page-howto-warn"><i data-lucide="info" style="width:13px;height:13px"></i> ' + escapeHtml(warn) + '</p>'
+        : '')
+    +   '</div>'
+    + '</details>';
+}
+function _howtoOnToggle(el) {
+  if (el && el.open) {
+    var k = el.getAttribute('data-key');
+    try { localStorage.setItem('mdpiece_howto_seen_' + k, '1'); } catch (e) {}
+  }
+}
+
 // === Nav 狀態 Badge ======================================================
 // 在 sidebar 各 nav-item 末端顯示「今日打卡狀態」小膠囊：
 //   - 已打卡：綠色 "+N"
@@ -2590,6 +2637,8 @@ function symptoms() {
 
   return `
     <div class="sym-page">
+
+      ${renderHowto('symptoms')}
 
       <section class="term-section">
         <header class="ts-head">
@@ -4588,6 +4637,7 @@ function medications() {
       <h2>${_T('meds.title')}</h2>
       <p style="margin-top:8px;color:var(--text-dim)">${_T('meds.intro.prefix')}<strong>${_T('meds.intro.bold')}</strong>${_T('meds.intro.suffix')}</p>
     </div>
+    ${renderHowto('meds')}
     <div class="card">
       <h3><i data-lucide="camera" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.recognize.title')}</h3>
       <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">${_T('meds.recognize.desc.prefix')}<strong>${_T('meds.recognize.desc.bold')}</strong>${_T('meds.recognize.desc.suffix')}</p>
@@ -8630,6 +8680,7 @@ function emotions() {
         '<h2><i data-lucide="battery-charging" style="width:22px;height:22px"></i> 情緒電力</h2>' +
         '<p>把今天的「心情電量」打卡留下，連續低電量會自動提醒你的醫師。</p>' +
       '</header>' +
+      renderHowto('emotions') +
 
       // ── 環形電量 hero（顯示最近一筆，可即時更新）──────
       '<div class="emotions-card mood-ring-hero">' +

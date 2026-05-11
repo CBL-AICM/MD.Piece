@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=v67-app-style" />
+  <link rel="stylesheet" href="css/style.css?v=v68-howto" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -422,22 +422,52 @@
         <div class="onboarding-step" data-step="1">
           <div class="onboarding-illust"><img src="icons/xiaohe.jpg" alt="" /></div>
           <h3 id="onb-title" class="onboarding-title" data-i18n="onb.s1.title">嗨，歡迎來到 MD.Piece</h3>
-          <p class="onboarding-desc" data-i18n="onb.s1.desc">把每天的小碎片（症狀、用藥、情緒）拼起來，讓看診時更有頭緒。三步帶你看完。</p>
+          <p class="onboarding-desc" data-i18n="onb.s1.desc">把每天的小碎片（症狀、用藥、情緒）拼起來，看診時可以直接給醫師看。八步帶你看完最常用的功能。</p>
         </div>
         <div class="onboarding-step" data-step="2" hidden>
           <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="layout-dashboard"></i></div>
-          <h3 class="onboarding-title" data-i18n="onb.s2.title">想記什麼，從這邊開始</h3>
-          <p class="onboarding-desc" data-i18n="onb.s2.desc">桌機在左側欄、手機在底部中間有「+ 紀錄」鍵。功能依「紀錄／查詢／報告」分組，找不到時可用上方搜尋。</p>
+          <h3 class="onboarding-title" data-i18n="onb.s2.title">首頁：今日拼圖 + 待辦</h3>
+          <p class="onboarding-desc" data-i18n="onb.s2.desc">最上面的橘色卡片會自動數你今天打了幾個碎片（目標 6 個）。底下「今日待辦」會列出系統提醒（如服藥、回診倒數）+ 你自己加的事，按 ✓ 完成、🗑 刪除。</p>
         </div>
         <div class="onboarding-step" data-step="3" hidden>
+          <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="scan-search"></i></div>
+          <h3 class="onboarding-title" data-i18n="onb.s3.title">症狀紀錄：點身體圖 + AI 分析</h3>
+          <p class="onboarding-desc" data-i18n="onb.s3.desc">滑鼠或手指在小人身上跟著跑紅點，點下去鎖定位置，按「AI 分析」會推估該部位的可能狀況、建議科別、緊急度。下方還有 6 大症狀分類可以詳細打卡。</p>
+        </div>
+        <div class="onboarding-step" data-step="4" hidden>
+          <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="pill"></i></div>
+          <h3 class="onboarding-title" data-i18n="onb.s4.title">藥物紀錄：拍藥單 + 時段打卡</h3>
+          <p class="onboarding-desc" data-i18n="onb.s4.desc">拿到藥袋直接拍照，OCR 自動讀名稱/劑量；藥會自動分早/午/晚/睡前時段。點卡片就打卡，✗ 跳過、★ 紀錄療效、? 查藥物百科。上方 hero 顯示今日進度（N / M 完成）。</p>
+        </div>
+        <div class="onboarding-step" data-step="5" hidden>
+          <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="battery-charging"></i></div>
+          <h3 class="onboarding-title" data-i18n="onb.s5.title">情緒電力：環形電量打卡</h3>
+          <p class="onboarding-desc" data-i18n="onb.s5.desc">頂端環形顯示你最近一筆電量。下方電池滑桿可選今天 1～5 格（年長版直接點 emoji），加 200 字內備註。電量日曆、趨勢線、表格往下都有，連續低電量會自動提醒醫師。</p>
+        </div>
+        <div class="onboarding-step" data-step="6" hidden>
+          <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="clipboard-check"></i></div>
+          <h3 class="onboarding-title" data-i18n="onb.s6.title">診前報告：回診前 30 秒帶走</h3>
+          <p class="onboarding-desc" data-i18n="onb.s6.desc">看診前打開：頂端「回診倒數」卡、本週 Timeline（時序合併症狀＋情緒＋服藥）、AI 整理「最該問醫師的三件事」、近 30 天健康摘要。可下載「患者版/醫師版」PDF 或一鍵複製給醫師。</p>
+        </div>
+        <div class="onboarding-step" data-step="7" hidden>
+          <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="message-circle-heart"></i></div>
+          <h3 class="onboarding-title" data-i18n="onb.s7.title">小禾陪聊：整理近況 + 寫文章</h3>
+          <p class="onboarding-desc" data-i18n="onb.s7.desc">不知道怎麼跟醫師說？跟小禾聊一聊，按「整理近況」自動彙整最近三天的不舒服。「生成文章」會把對話寫成一篇給自己留念。下方建議晶片可直接跳去打卡。</p>
+        </div>
+        <div class="onboarding-step" data-step="8" hidden>
           <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="settings"></i></div>
-          <h3 class="onboarding-title" data-i18n="onb.s3.title">不順手隨時可以調</h3>
-          <p class="onboarding-desc" data-i18n="onb.s3.desc">右上角的設定可以切換語言、深淺色、放大字體（年長版）。引導之後也能在「系統設定」重新看。</p>
+          <h3 class="onboarding-title" data-i18n="onb.s8.title">不順手隨時可以調</h3>
+          <p class="onboarding-desc" data-i18n="onb.s8.desc">右上角可切換語言（中/英）、深淺色、放大字體（年長版）。系統設定裡能重新看引導、調通知、匯出資料。任何頁面上方都有「如何使用？」摺疊說明。</p>
         </div>
         <div class="onboarding-dots" aria-hidden="true">
           <span class="onboarding-dot active" data-dot="1"></span>
           <span class="onboarding-dot" data-dot="2"></span>
           <span class="onboarding-dot" data-dot="3"></span>
+          <span class="onboarding-dot" data-dot="4"></span>
+          <span class="onboarding-dot" data-dot="5"></span>
+          <span class="onboarding-dot" data-dot="6"></span>
+          <span class="onboarding-dot" data-dot="7"></span>
+          <span class="onboarding-dot" data-dot="8"></span>
         </div>
         <div class="onboarding-actions">
           <button class="onboarding-back" id="onb-back" type="button" onclick="onboardingPrev()" data-i18n="onb.back" hidden>上一步</button>
@@ -447,8 +477,8 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=v67-app-style"></script>
-  <script src="js/app.js?v=v67-app-style"></script>
+  <script src="js/i18n.js?v=v68-howto"></script>
+  <script src="js/app.js?v=v68-howto"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
@@ -641,7 +671,7 @@
       if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
     }
     function setOnboardingStep(step) {
-      const total = 3;
+      const total = 8;
       const s = Math.max(1, Math.min(total, step));
       document.querySelectorAll('.onboarding-step').forEach(el => {
         el.hidden = Number(el.dataset.step) !== s;
@@ -665,7 +695,7 @@
     function onboardingNext() {
       const overlay = document.getElementById('onboarding-overlay');
       const cur = Number(overlay && overlay.dataset.step) || 1;
-      if (cur >= 3) { dismissOnboarding(true); return; }
+      if (cur >= 8) { dismissOnboarding(true); return; }
       setOnboardingStep(cur + 1);
     }
     function onboardingPrev() {
