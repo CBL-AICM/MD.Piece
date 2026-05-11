@@ -28,7 +28,8 @@
   --bg-surface: #FFFFFF;   /* 卡片表面 — 純白 */
   --bg-glass:   #F7F9FC;   /* glass card — 微藍 hint */
   --bg-glass-hover: #EFF3F8;
-  --border-glass: rgba(74,144,194,0.22);  /* 邊框帶藍 + 略加強，讓白卡片有層次 */
+  --border-glass: rgba(31,61,88,0.18);    /* navy 18% — 在白底上有清楚邊界感、不會太重 */
+  --border-strong: rgba(31,61,88,0.28);   /* 強調邊框：卡片可點擊 / hero / 重點區塊 */
 
   /* Primary — medical calm blue (trustworthy, Apple Health / Calm-style) */
   --accent:     #4A90C2;
@@ -71,9 +72,9 @@
   --radius:     14px;
   --radius-sm:  10px;
   --radius-pill:20px;
-  --shadow:     0 4px 14px rgba(31,61,88,0.08), 0 1px 3px rgba(31,61,88,0.06);
-  --shadow-sm:  0 2px 8px rgba(31,61,88,0.06);
-  --shadow-lift:0 8px 24px rgba(31,61,88,0.10), 0 2px 6px rgba(31,61,88,0.06);
+  --shadow:     0 4px 14px rgba(31,61,88,0.10), 0 1px 4px rgba(31,61,88,0.08);
+  --shadow-sm:  0 2px 8px rgba(31,61,88,0.08);
+  --shadow-lift:0 10px 28px rgba(31,61,88,0.14), 0 3px 8px rgba(31,61,88,0.09);
   --transition: .25s cubic-bezier(.4,0,.2,1);
 }
 
