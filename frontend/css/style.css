@@ -8486,6 +8486,16 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   max-height: 380px;
   display: block;
   margin: 0 auto;
+  cursor: crosshair;
+  touch-action: none;
+}
+.sym-body-svg #sym-body-cursor,
+.sym-body-svg #sym-body-marker {
+  transition: opacity 0.12s ease;
+}
+.sym-body-svg #sym-body-cursor circle,
+.sym-body-svg #sym-body-marker circle {
+  transition: cx 0.05s linear, cy 0.05s linear;
 }
 .sym-body-hotspot {
   cursor: pointer;
@@ -8527,6 +8537,182 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   transition: color var(--transition), border-color var(--transition);
 }
 .sym-body-clear:hover { color: var(--danger); border-color: var(--danger); }
+
+/* AI 分析這個位置 */
+.sym-body-ai {
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius);
+}
+.sym-body-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: linear-gradient(135deg, var(--accent), #E69B6B);
+  color: var(--cream);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 4px 12px rgba(201,127,75,0.25);
+}
+.sym-body-ai-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(201,127,75,0.35);
+}
+.sym-body-ai-btn:active { transform: translateY(0); }
+.sym-body-ai-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.sym-body-ai-result { margin-top: 12px; }
+.sbai-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.85rem;
+}
+.sbai-spin {
+  width: 16px; height: 16px;
+  animation: sbai-spin 1s linear infinite;
+}
+@keyframes sbai-spin { to { transform: rotate(360deg); } }
+
+.sbai-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+.sbai-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border-glass);
+  flex-wrap: wrap;
+}
+.sbai-region {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+}
+.sbai-urgency {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.sbai-urgency-low       { background: rgba(143,166,138,0.18); color: var(--success); }
+.sbai-urgency-medium    { background: rgba(216,153,104,0.20); color: var(--warning); }
+.sbai-urgency-high      { background: rgba(184,85,63,0.18);  color: var(--danger); }
+.sbai-urgency-emergency { background: var(--danger); color: var(--cream); animation: nav-badge-pulse 1.4s ease-in-out infinite; }
+
+.sbai-block { margin-bottom: 10px; }
+.sbai-block:last-of-type { margin-bottom: 0; }
+.sbai-block-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+  margin-bottom: 5px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+.sbai-conds {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sbai-conds li {
+  background: var(--bg-glass);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent);
+  font-size: 0.86rem;
+  color: var(--text);
+}
+.sbai-conds li strong { display: block; }
+.sbai-cond-desc {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-weight: 400;
+}
+.sbai-empty {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.sbai-dept {
+  display: inline-block;
+  padding: 5px 12px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.84rem;
+}
+.sbai-advice {
+  font-size: 0.84rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  margin: 0;
+}
+.sbai-disclaimer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-glass);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.sbai-err {
+  background: rgba(184,85,63,0.06);
+  border: 1px solid rgba(184,85,63,0.25);
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+.sbai-err-detail {
+  display: block;
+  margin-top: 4px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
 
 /* ═══════════════════════════════════════════════════════════
    診前報告：回診倒數 hero

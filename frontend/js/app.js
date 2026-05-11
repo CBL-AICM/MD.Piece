@@ -2624,12 +2624,23 @@ function symptoms() {
           <span class="ts-tag">locate_pain</span>
         </header>
         <div class="ts-body">
-          <p class="sym-instruct">點選身體部位來標記不舒服的地方 — 系統會把位置帶進下面的紀錄表單。</p>
+          <p class="sym-instruct">滑鼠移到身體上的位置會跟著跑紅點；點下去就鎖定，然後可以叫 AI 分析這個部位可能的狀況。</p>
           <div class="sym-body-map" id="sym-body-map">
             ${renderBodyMapSvg()}
             <div class="sym-body-legend">
               <span class="sym-body-current" id="sym-body-current">尚未選擇部位</span>
               <button type="button" class="sym-body-clear" onclick="symBodyClear()">清除</button>
+            </div>
+            <div class="sym-body-ai" id="sym-body-ai" style="display:none">
+              <button type="button" class="sym-body-ai-btn" onclick="symBodyAiAnalyze()">
+                <i data-lucide="sparkles" style="width:14px;height:14px"></i>
+                <span>用 AI 分析這個位置可能的狀況</span>
+              </button>
+              <p class="sym-body-ai-warn">
+                <i data-lucide="info" style="width:11px;height:11px"></i>
+                AI 推測僅供與醫師討論參考，不是診斷
+              </p>
+              <div class="sym-body-ai-result" id="sym-body-ai-result"></div>
             </div>
           </div>
         </div>
@@ -2938,7 +2949,13 @@ function renderBodyMapSvg() {
       + '</g>';
   }).join('');
   return ''
-    + '<svg viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg" class="sym-body-svg">'
+    + '<svg viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg" class="sym-body-svg"'
+    +    ' onmousemove="symBodyHover(event)"'
+    +    ' onmouseleave="symBodyHoverLeave()"'
+    +    ' onclick="symBodyClickAt(event)"'
+    +    ' ontouchmove="symBodyHover(event.touches[0]); event.preventDefault()"'
+    +    ' ontouchend="symBodyClickAt(event.changedTouches[0])"'
+    + '>'
     +   '<defs>'
     +     '<linearGradient id="symBodyGrad" x1="0" y1="0" x2="0" y2="1">'
     +       '<stop offset="0%" stop-color="#FFF6E6"/>'
@@ -2951,7 +2968,7 @@ function renderBodyMapSvg() {
     +     '</radialGradient>'
     +   '</defs>'
     // 身體輪廓
-    +   '<g fill="url(#symBodyGrad)" stroke="#5C3A32" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">'
+    +   '<g fill="url(#symBodyGrad)" stroke="#5C3A32" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" pointer-events="none">'
     +     '<ellipse cx="55" cy="22" rx="13" ry="15"/>'
     +     '<path d="M 49 35 Q 55 39 61 35 L 61 43 Q 55 45 49 43 Z"/>'
     +     '<path d="M 32 50 Q 32 45 38 44 Q 46 42 55 42 Q 64 42 72 44 Q 78 45 78 50 L 76 78 Q 74 92 73 100 L 72 122 Q 72 128 68 130 L 42 130 Q 38 128 38 122 L 37 100 Q 36 92 34 78 Z"/>'
@@ -2960,18 +2977,93 @@ function renderBodyMapSvg() {
     +     '<path d="M 42 130 Q 40 144 40 160 L 38 196 Q 38 198 41 198 L 51 198 Q 53 198 53 196 L 53 160 Q 53 144 53 132 Z"/>'
     +     '<path d="M 57 132 Q 57 144 57 160 L 57 196 Q 57 198 59 198 L 69 198 Q 72 198 72 196 L 70 160 Q 70 144 68 130 Z"/>'
     +   '</g>'
-    // 點擊熱區（覆蓋在輪廓上層，包含可見的小圈，hover 變亮）
+    // 點擊熱區（覆蓋在輪廓上層，hover 變亮 — 但整個 SVG 也接 click）
     +   hotspots
-    +   '<g id="sym-body-marker" style="display:none">'
-    +     '<circle id="sym-body-marker-glow" cx="0" cy="0" r="13" fill="url(#symBodyPain)"/>'
-    +     '<circle id="sym-body-marker-dot"  cx="0" cy="0" r="4.5" fill="#B8553F" stroke="#FFFAF0" stroke-width="1"/>'
+    +   '<g id="sym-body-cursor" pointer-events="none" style="display:none">'
+    +     '<circle id="sym-body-cursor-glow" cx="0" cy="0" r="10" fill="url(#symBodyPain)" opacity="0.7"/>'
+    +     '<circle id="sym-body-cursor-dot"  cx="0" cy="0" r="3" fill="#B8553F" stroke="#FFFAF0" stroke-width="0.6" opacity="0.85"/>'
+    +   '</g>'
+    +   '<g id="sym-body-marker" pointer-events="none" style="display:none">'
+    +     '<circle id="sym-body-marker-glow" cx="0" cy="0" r="14" fill="url(#symBodyPain)"/>'
+    +     '<circle id="sym-body-marker-dot"  cx="0" cy="0" r="5" fill="#B8553F" stroke="#FFFAF0" stroke-width="1.2"/>'
     +   '</g>'
     + '</svg>';
 }
+
+// 把 client (滑鼠/觸控) 座標換成 SVG viewBox 座標
+function _svgCoords(svg, ev) {
+  var pt = svg.createSVGPoint();
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  var ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  var p = pt.matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
+}
+function symBodyHover(ev) {
+  var svg = document.querySelector('.sym-body-svg');
+  if (!svg || !ev) return;
+  var c = _svgCoords(svg, ev);
+  if (!c) return;
+  var cur = document.getElementById('sym-body-cursor');
+  var glow = document.getElementById('sym-body-cursor-glow');
+  var dot  = document.getElementById('sym-body-cursor-dot');
+  if (!cur || !glow || !dot) return;
+  cur.style.display = '';
+  glow.setAttribute('cx', c.x); glow.setAttribute('cy', c.y);
+  dot.setAttribute('cx', c.x);  dot.setAttribute('cy', c.y);
+}
+function symBodyHoverLeave() {
+  var cur = document.getElementById('sym-body-cursor');
+  if (cur) cur.style.display = 'none';
+}
+// 點擊任意位置：算最近區域 + 鎖定 marker，並準備 AI 分析按鈕
+function symBodyClickAt(ev) {
+  if (!ev) return;
+  var svg = document.querySelector('.sym-body-svg');
+  if (!svg) return;
+  // 若 click 落在 hotspot 的 <g> 內，瀏覽器會先觸發那邊的 onclick；
+  // 為了避免雙觸發，這裡判斷如果 _symBodyPart 剛剛被 symBodyPick 設過（< 80ms 內）就略過。
+  if (_symBodyJustPicked && (Date.now() - _symBodyJustPicked) < 80) return;
+  var c = _svgCoords(svg, ev);
+  if (!c) return;
+  // 找最近的 _SYM_BODY_PARTS
+  var best = null, bestDist = Infinity;
+  _SYM_BODY_PARTS.forEach(function(p) {
+    var dx = p.cx - c.x, dy = p.cy - c.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d < bestDist) { bestDist = d; best = p; }
+  });
+  if (!best) return;
+  // 鎖定 marker 在「實際點擊位置」而非 hotspot 中心，讓使用者覺得精準
+  _symBodyPart = best.label;
+  _symBodyClickXY = { x: c.x, y: c.y };
+  var g = document.getElementById('sym-body-marker');
+  var glow = document.getElementById('sym-body-marker-glow');
+  var dot  = document.getElementById('sym-body-marker-dot');
+  if (g && glow && dot) {
+    glow.setAttribute('cx', c.x); glow.setAttribute('cy', c.y);
+    dot.setAttribute('cx', c.x);  dot.setAttribute('cy', c.y);
+    g.style.display = '';
+  }
+  document.querySelectorAll('.sym-body-hotspot').forEach(function(el) {
+    el.classList.toggle('is-active', el.getAttribute('data-part') === best.id);
+  });
+  var cur = document.getElementById('sym-body-current');
+  if (cur) cur.textContent = '已選：' + best.label + '（座標 ' + Math.round(c.x) + ',' + Math.round(c.y) + '）';
+  // 顯示 AI 分析按鈕區
+  var ai = document.getElementById('sym-body-ai');
+  if (ai) ai.style.display = '';
+  var aiResult = document.getElementById('sym-body-ai-result');
+  if (aiResult) aiResult.innerHTML = '';
+}
+var _symBodyJustPicked = 0;
+var _symBodyClickXY = null;
 function symBodyPick(partId, label) {
   _symBodyPart = label;
+  _symBodyJustPicked = Date.now();
   var p = _SYM_BODY_PARTS.find(function(x) { return x.id === partId; });
   if (!p) return;
+  _symBodyClickXY = { x: p.cx, y: p.cy };
   // 更新標記位置
   var g = document.getElementById('sym-body-marker');
   var glow = document.getElementById('sym-body-marker-glow');
@@ -2988,9 +3080,15 @@ function symBodyPick(partId, label) {
   document.querySelectorAll('.sym-body-hotspot').forEach(function(el) {
     el.classList.toggle('is-active', el.getAttribute('data-part') === partId);
   });
+  // 顯示 AI 分析按鈕
+  var ai = document.getElementById('sym-body-ai');
+  if (ai) ai.style.display = '';
+  var aiResult = document.getElementById('sym-body-ai-result');
+  if (aiResult) aiResult.innerHTML = '';
 }
 function symBodyClear() {
   _symBodyPart = '';
+  _symBodyClickXY = null;
   var g = document.getElementById('sym-body-marker');
   if (g) g.style.display = 'none';
   var cur = document.getElementById('sym-body-current');
@@ -2998,6 +3096,120 @@ function symBodyClear() {
   document.querySelectorAll('.sym-body-hotspot').forEach(function(el) {
     el.classList.remove('is-active');
   });
+  var ai = document.getElementById('sym-body-ai');
+  if (ai) ai.style.display = 'none';
+  var aiResult = document.getElementById('sym-body-ai-result');
+  if (aiResult) aiResult.innerHTML = '';
+}
+
+// AI 分析「點選位置」— 把 部位 + 細座標換算成 sub-region 名稱
+// 後送 POST /symptoms/analyze，符合既有 SymptomAnalysisRequest 介面
+async function symBodyAiAnalyze() {
+  if (!_symBodyPart) return;
+  var resultEl = document.getElementById('sym-body-ai-result');
+  if (!resultEl) return;
+
+  // 把點擊位置換算成「細部敘述」— 用簡單的相對位置規則，幫 AI 更聚焦
+  var subRegion = _symBodyPart;
+  if (_symBodyClickXY) {
+    var x = _symBodyClickXY.x, y = _symBodyClickXY.y;
+    // 頭部細分（y < 35）
+    if (y < 35) {
+      if (y < 18) subRegion = '額頭';
+      else if (y > 28) subRegion = '下巴';
+      else if (x < 50) subRegion = '左側太陽穴 / 左眼周圍';
+      else if (x > 60) subRegion = '右側太陽穴 / 右眼周圍';
+      else subRegion = '頭部中央';
+    }
+    // 頸部
+    else if (y < 50) {
+      subRegion = '頸部' + (x < 55 ? '左側' : (x > 55 ? '右側' : '中央'));
+    }
+    // 胸口（50 ≤ y < 78）
+    else if (y < 78) {
+      if (x < 48) subRegion = '左胸 / 心臟區域';
+      else if (x > 62) subRegion = '右胸';
+      else subRegion = '胸口中央 / 胸骨';
+    }
+    // 上腹/腰（78 ≤ y < 110）
+    else if (y < 110) {
+      if (x < 48) subRegion = '左上腹 / 左側肋下';
+      else if (x > 62) subRegion = '右上腹 / 右側肋下';
+      else subRegion = '上腹 / 胃部';
+    }
+    // 下腹（110 ≤ y < 132）
+    else if (y < 132) {
+      if (x < 48) subRegion = '下腹左側';
+      else if (x > 62) subRegion = '下腹右側';
+      else subRegion = '下腹 / 肚臍附近';
+    }
+    // 手臂 (x < 30 or x > 80)
+    else if (x < 30) subRegion = '左前臂 / 左手腕';
+    else if (x > 80) subRegion = '右前臂 / 右手腕';
+    // 腿
+    else if (y > 130 && y < 170) subRegion = (x < 55 ? '左大腿' : '右大腿');
+    else if (y >= 170) subRegion = (x < 55 ? '左小腿 / 左腳踝' : '右小腿 / 右腳踝');
+  }
+
+  resultEl.innerHTML = '<div class="sbai-loading"><i data-lucide="loader" class="sbai-spin"></i> AI 分析中…（' + subRegion + '）</div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  try {
+    var res = await fetch(API + '/symptoms/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symptoms: [subRegion + ' 不適 / 疼痛 / 需要評估'],
+        patient_id: pid,
+      }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    _renderBodyAiResult(resultEl, subRegion, data);
+  } catch (e) {
+    resultEl.innerHTML = '<div class="sbai-err">AI 分析暫時無法使用，可以先用下面的症狀分類紀錄。<br><span class="sbai-err-detail">' + escapeHtml(String(e.message || e)) + '</span></div>';
+  }
+}
+
+function _renderBodyAiResult(el, subRegion, data) {
+  var urgency = data.urgency || 'low';
+  var urgencyMap = {
+    emergency: { label: '緊急', tone: 'emergency', icon: 'alert-octagon' },
+    high:      { label: '較高',  tone: 'high',      icon: 'alert-triangle' },
+    medium:    { label: '中等',  tone: 'medium',    icon: 'alert-circle' },
+    low:       { label: '輕微',  tone: 'low',       icon: 'info' },
+  };
+  var u = urgencyMap[urgency] || urgencyMap.low;
+  var conditions = Array.isArray(data.conditions) ? data.conditions.slice(0, 4) : [];
+  var condHtml = conditions.length
+    ? '<ul class="sbai-conds">' + conditions.map(function(c) {
+        var name = typeof c === 'string' ? c : (c.name || c.condition || c.title || JSON.stringify(c));
+        var desc = (typeof c === 'object' && c.description) ? c.description : '';
+        return '<li><strong>' + escapeHtml(String(name)) + '</strong>' + (desc ? '<span class="sbai-cond-desc">' + escapeHtml(String(desc)) + '</span>' : '') + '</li>';
+      }).join('') + '</ul>'
+    : '<p class="sbai-empty">AI 沒有特別指向的可能，建議直接諮詢醫師。</p>';
+
+  el.innerHTML = ''
+    + '<div class="sbai-card">'
+    +   '<div class="sbai-head">'
+    +     '<span class="sbai-region">' + escapeHtml(subRegion) + '</span>'
+    +     '<span class="sbai-urgency sbai-urgency-' + u.tone + '">'
+    +       '<i data-lucide="' + u.icon + '" style="width:12px;height:12px"></i> 緊急度 · ' + u.label
+    +     '</span>'
+    +   '</div>'
+    +   '<div class="sbai-block">'
+    +     '<div class="sbai-block-label">可能狀況（僅供與醫師討論）</div>'
+    +     condHtml
+    +   '</div>'
+    +   '<div class="sbai-block">'
+    +     '<div class="sbai-block-label">建議科別</div>'
+    +     '<div class="sbai-dept">' + escapeHtml(data.recommended_department || '家醫科') + '</div>'
+    +   '</div>'
+    +   (data.advice ? '<div class="sbai-block"><div class="sbai-block-label">建議</div><p class="sbai-advice">' + escapeHtml(data.advice) + '</p></div>' : '')
+    +   '<p class="sbai-disclaimer"><i data-lucide="info" style="width:11px;height:11px"></i> ' + escapeHtml(data.disclaimer || '此分析僅供參考，不取代醫師診斷；如有不適請立即就醫。') + '</p>'
+    + '</div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 // 若有選擇身體部位，把它放在 notes 開頭（不覆蓋使用者後續輸入）
 function _prefillBodyPartNote() {
