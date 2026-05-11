@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v61-v78-final";
+const CACHE_VERSION = "mdpiece-v61-v79-pzl-icons";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v78-final",
-  "/js/i18n.js?v=v78-final",
-  "/js/app.js?v=v78-final",
+  "/css/style.css?v=v79-pzl-icons",
+  "/js/i18n.js?v=v79-pzl-icons",
+  "/js/app.js?v=v79-pzl-icons",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

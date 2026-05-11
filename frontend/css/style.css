@@ -2550,13 +2550,13 @@ html[data-mode="senior"] .tc-desc {
   line-height: 1.5;
 }
 
-/* Puzzle color variants */
-.pzl-blue     { --pzl-c: var(--accent);   --pzl-bg: rgba(43,92,230,0.15); }
-.pzl-purple   { --pzl-c: var(--purple);   --pzl-bg: rgba(124,107,196,0.15); }
-.pzl-rose     { --pzl-c: var(--cream);    --pzl-bg: rgba(232,220,200,0.12); }
-.pzl-mint     { --pzl-c: var(--teal);     --pzl-bg: rgba(0,212,170,0.12); }
-.pzl-amber    { --pzl-c: #E8A84B;         --pzl-bg: rgba(232,168,75,0.12); }
-.pzl-teal     { --pzl-c: #00BFA5;         --pzl-bg: rgba(0,191,165,0.12); }
+/* Puzzle color variants — 圖示 + 背景對應醫療配色，背景不透明度提高讓白底看得見 */
+.pzl-blue     { --pzl-c: #FFFFFF;       --pzl-bg: var(--accent); }              /* 醫療藍 — 圖示白、底深 */
+.pzl-purple   { --pzl-c: #FFFFFF;       --pzl-bg: var(--purple); }              /* 淡紫 */
+.pzl-rose     { --pzl-c: #B8553F;       --pzl-bg: rgba(232,168,168,0.55); }     /* 軟珊瑚 — 深字配淡底 */
+.pzl-mint     { --pzl-c: #FFFFFF;       --pzl-bg: var(--teal); }                /* 青草青 */
+.pzl-amber    { --pzl-c: #FFFFFF;       --pzl-bg: var(--warning); }             /* 暖琥珀 */
+.pzl-teal     { --pzl-c: #FFFFFF;       --pzl-bg: var(--success); }             /* 薄荷綠 */
 .pzl-gold     { --pzl-c: var(--cream-dim);--pzl-bg: rgba(196,184,165,0.12); }
 .pzl-lavender { --pzl-c: #8B7FD4;         --pzl-bg: rgba(139,127,212,0.12); }
 
