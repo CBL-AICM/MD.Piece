@@ -127,14 +127,21 @@ function placeholderPage(label, hint, iconName, slug, pct) {
 }
 // 生理紀錄使用獨立 vitals() 函式（見下方）
 function memo() {
+  var _memoList = (typeof memoLoad === 'function') ? memoLoad() : [];
+  var _todayKey = new Date().toISOString().slice(0, 10);
+  var _todayCount = _memoList.filter(function(m) {
+    var t = m.createdAt || m.created_at;
+    return t && String(new Date(t).toISOString()).slice(0, 10) === _todayKey;
+  }).length;
+  var _doctorCount = _memoList.filter(function(m) { return m.forDoctor; }).length;
   return `
-    <div class="card memo-hero">
-      <h2 style="display:flex;align-items:center;gap:8px">
-        <i data-lucide="sticky-note" style="width:22px;height:22px"></i> Memo
-      </h2>
-      <p style="margin-top:6px;color:var(--text-dim)">
-        隨手拍下症狀、藥袋、傷口；或寫下下次門診要跟醫師說的話。所有 memo 都存在這台裝置上。
-      </p>
+    <div class="page-app-hero page-app-hero-rose">
+      <div class="page-app-hero-head">
+        <span class="page-app-hero-eyebrow">TODAY · 今日 Memo</span>
+        <span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 僅存本裝置 · 醫療決策請以醫師為主</span>
+      </div>
+      <div class="page-app-hero-title">${_todayCount > 0 ? `今天記了 ${_todayCount} 筆 · 標記給醫師 ${_doctorCount} 筆` : '今天還沒記東西 — 想到就丟一筆吧'}</div>
+      <div class="page-app-hero-meta">隨手拍症狀／藥袋／傷口，或寫下下次門診要跟醫師說的事</div>
     </div>
 
     <div class="card memo-quick">
@@ -3049,7 +3056,7 @@ function symBodyClickAt(ev) {
     el.classList.toggle('is-active', el.getAttribute('data-part') === best.id);
   });
   var cur = document.getElementById('sym-body-current');
-  if (cur) cur.textContent = '已選：' + best.label + '（座標 ' + Math.round(c.x) + ',' + Math.round(c.y) + '）';
+  if (cur) cur.textContent = '已選：' + best.label;
   // 顯示 AI 分析按鈕區
   var ai = document.getElementById('sym-body-ai');
   if (ai) ai.style.display = '';
@@ -3547,12 +3554,31 @@ function vitals() {
   const allMetrics = getAllMetrics();
   const trackedMetrics = tracked.map(id => allMetrics.find(m => m.id === id)).filter(Boolean);
   const totalEntries = getVitalEntries().length;
-  const latestAcross = getVitalEntries().sort((a,b) => new Date(b.recordedAt) - new Date(a.recordedAt))[0];
+  const allEntries = getVitalEntries();
+  const latestAcross = allEntries.sort((a,b) => new Date(b.recordedAt) - new Date(a.recordedAt))[0];
   const lastUpdate = latestAcross ? new Date(latestAcross.recordedAt) : null;
   const lastUpdateStr = lastUpdate ? `${(lastUpdate.getMonth()+1)}/${lastUpdate.getDate()} ${lastUpdate.toTimeString().slice(0,5)}` : '—';
+  // 今日進度：追蹤項目中今日已記錄的 distinct metric 數
+  const todayKey = new Date().toISOString().slice(0,10);
+  const todayMetricIds = new Set(allEntries.filter(e => (e.recordedAt || '').slice(0,10) === todayKey).map(e => e.metricId));
+  const todayCovered = tracked.filter(id => todayMetricIds.has(id)).length;
+  const totalToday = tracked.length || 0;
+  const pctToday = totalToday ? Math.min(100, Math.round((todayCovered / totalToday) * 100)) : 0;
+  const todayStatus = totalToday === 0
+    ? '先到下方勾選你要追蹤的指標'
+    : (todayCovered === totalToday ? '今日追蹤全部完成 ✨' : `${todayCovered} / ${totalToday} 項已記錄 · 還剩 ${totalToday - todayCovered}`);
 
   return `
     <div class="sym-page">
+
+      <div class="page-app-hero page-app-hero-blue">
+        <div class="page-app-hero-head">
+          <span class="page-app-hero-eyebrow">TODAY · 今日生理紀錄</span>
+          <span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 異常數值請就醫確認</span>
+        </div>
+        <div class="page-app-hero-title">${todayStatus}</div>
+        <div class="page-app-hero-bar"><div class="page-app-hero-bar-fill" style="width:${pctToday}%"></div></div>
+      </div>
 
       <section class="term-section">
         <header class="ts-head">
@@ -9235,6 +9261,19 @@ var DIET_BASIC_NUTRIENTS = [
   },
 ];
 
+function renderDietTodayHero() {
+  // 飲食頁主要是教育 + 推薦，今日 hero 顯示「該吃什麼／避開什麼」入口提示。
+  return ''
+    + '<div class="page-app-hero page-app-hero-green">'
+    +   '<div class="page-app-hero-head">'
+    +     '<span class="page-app-hero-eyebrow">TODAY · 今日飲食指南</span>'
+    +     '<span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 飲食建議以醫師/營養師為主</span>'
+    +   '</div>'
+    +   '<div class="page-app-hero-title">看你的病史，今天該吃／避開什麼</div>'
+    +   '<div class="page-app-hero-meta">下方有「今日營養目標」與「你要特別注意」兩塊，會根據你登錄的疾病自動調整</div>'
+    + '</div>';
+}
+
 function renderBasicNutrients() {
   var box = document.getElementById('diet-basic-nutrients');
   if (!box) return;
@@ -9261,6 +9300,8 @@ function diet() {
     +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
     +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
     +   '</header>'
+
+    +   renderDietTodayHero()
 
     +   '<div class="diet-card diet-basic-nutrients-card">'
     +     '<h3><i data-lucide="apple" style="width:16px;height:16px"></i> 基本營養素衛教</h3>'
