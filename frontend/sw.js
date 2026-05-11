@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v61-mobile-disclaimer-wrap";
+const CACHE_VERSION = "mdpiece-v61-v62-todo-card";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=mobile-disclaimer-wrap",
-  "/js/i18n.js?v=mobile-disclaimer-wrap",
-  "/js/app.js?v=mobile-disclaimer-wrap",
+  "/css/style.css?v=v62-todo-card",
+  "/js/i18n.js?v=v62-todo-card",
+  "/js/app.js?v=v62-todo-card",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

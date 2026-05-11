@@ -1751,6 +1751,222 @@ function refreshNextVisitChip() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// === 今日待辦 ============================================================
+// 「待辦」由兩部分組成：
+//   1. 系統自動生成（auto）— 從現有資料推斷：回診倒數、活躍藥物、今天還沒打卡的事
+//   2. 使用者手動加（user）— 存 localStorage，per-user
+// 註：所有系統生成項目都附「以醫師說明為準」小字；既有 disclaimer 不動。
+var TODO_STORE_VERSION = 1;
+function _todoKey() {
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var pid = u.id_number || u.username || 'guest';
+  return 'mdpiece_todos_' + pid;
+}
+function _loadUserTodos() {
+  try {
+    var raw = localStorage.getItem(_todoKey());
+    if (!raw) return [];
+    var p = JSON.parse(raw);
+    return Array.isArray(p.items) ? p.items : [];
+  } catch (e) { return []; }
+}
+function _saveUserTodos(items) {
+  try {
+    localStorage.setItem(_todoKey(), JSON.stringify({ v: TODO_STORE_VERSION, items: items }));
+  } catch (e) {}
+}
+function addUserTodo(title, desc) {
+  title = String(title || '').trim().slice(0, 80);
+  if (!title) return false;
+  var items = _loadUserTodos();
+  items.unshift({
+    id: 'user-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    title: title,
+    desc: String(desc || '').trim().slice(0, 200),
+    done: false,
+    createdAt: Date.now(),
+    source: 'user',
+  });
+  _saveUserTodos(items);
+  return true;
+}
+function toggleUserTodo(id) {
+  var items = _loadUserTodos();
+  var i = items.findIndex(function(t) { return t.id === id; });
+  if (i < 0) return;
+  items[i].done = !items[i].done;
+  items[i].doneAt = items[i].done ? Date.now() : null;
+  _saveUserTodos(items);
+}
+function removeUserTodo(id) {
+  _saveUserTodos(_loadUserTodos().filter(function(t) { return t.id !== id; }));
+}
+async function _genAutoTodos() {
+  var out = [];
+  var todayISO = new Date().toISOString().slice(0, 10);
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return out;
+
+  // 回診倒數（7 天內）
+  try {
+    var visit = (typeof loadNextVisit === 'function') ? loadNextVisit() : '';
+    if (visit) {
+      var d = _daysBetween(visit);
+      if (d >= 0 && d <= 7) {
+        out.push({
+          id: 'auto-visit',
+          source: 'auto-visit', category: 'visit',
+          title: d === 0 ? '今天有回診' : '回診倒數 ' + d + ' 天',
+          desc: '日期：' + visit.replace(/-/g, '/'),
+          icon: 'calendar-check-2',
+          link: null,
+          warn: '請以醫師預約單為準',
+        });
+      }
+    }
+  } catch (e) {}
+
+  // 活躍藥物提醒（取前 3 個）
+  try {
+    var r = await fetch(API + '/medications/?patient_id=' + pid).then(function(x){return x.json();});
+    var meds = (r.medications || []).filter(function(m) { return m.active !== 0; });
+    meds.slice(0, 3).forEach(function(m) {
+      out.push({
+        id: 'auto-med-' + m.id,
+        source: 'auto-med', category: 'med',
+        title: '今日服藥：' + (m.name || ''),
+        desc: m.dosage || '',
+        icon: 'pill',
+        link: 'medications',
+        warn: '服用方式以醫師處方為準',
+      });
+    });
+  } catch (e) {}
+
+  // 情緒：今天還沒打卡
+  try {
+    var rr = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(x){return x.json();});
+    var daily = rr.daily || [];
+    var today = daily.find(function(d) { return d.date === todayISO && d.count > 0; });
+    if (!today) {
+      out.push({
+        id: 'auto-mood',
+        source: 'auto-mood', category: 'mood',
+        title: '今天還沒打卡情緒',
+        desc: '一分鐘紀錄今日電量',
+        icon: 'battery-charging',
+        link: 'emotions',
+        warn: null,
+      });
+    }
+  } catch (e) {}
+
+  return out;
+}
+function renderTodoCard() {
+  return ''
+    + '<section class="home-todo" aria-label="今日待辦">'
+    +   '<div class="home-todo-head">'
+    +     '<span class="home-todo-prefix">$ today.todo --list</span>'
+    +     '<button type="button" class="home-todo-add" onclick="openTodoComposer()" title="新增個人待辦">'
+    +       '<i data-lucide="plus" style="width:14px;height:14px"></i>'
+    +       '<span>新增</span>'
+    +     '</button>'
+    +   '</div>'
+    +   '<div class="home-todo-note">'
+    +     '<i data-lucide="info" style="width:12px;height:12px"></i>'
+    +     '<span>本區為輔助提醒，最終以醫師說明、藥單為準</span>'
+    +   '</div>'
+    +   '<div id="home-todo-list" class="home-todo-list">'
+    +     '<div class="home-todo-loading">// 載入中…</div>'
+    +   '</div>'
+    +   '<div class="home-todo-composer" id="home-todo-composer" hidden>'
+    +     '<input type="text" id="home-todo-input" class="home-todo-input" maxlength="80" placeholder="想記下什麼？例：問醫師血壓藥能不能換時段">'
+    +     '<button type="button" class="home-todo-submit" onclick="submitTodoComposer()">加入</button>'
+    +     '<button type="button" class="home-todo-cancel" onclick="closeTodoComposer()" aria-label="取消">✕</button>'
+    +   '</div>'
+    + '</section>';
+}
+async function refreshTodoList() {
+  var el = document.getElementById('home-todo-list');
+  if (!el) return;
+  var auto, user;
+  try {
+    auto = await _genAutoTodos();
+  } catch (e) { auto = []; }
+  user = _loadUserTodos();
+  // 完成 > 24h 的個人項目自動隱藏，避免堆積
+  var cutoff = Date.now() - 24 * 3600 * 1000;
+  user = user.filter(function(t) { return !t.done || (t.doneAt && t.doneAt > cutoff); });
+
+  var rows = '';
+  auto.forEach(function(t) {
+    rows += ''
+      + '<div class="todo-item todo-auto" data-cat="' + t.category + '">'
+      +   '<span class="todo-icon"><i data-lucide="' + (t.icon || 'circle') + '"></i></span>'
+      +   '<div class="todo-body">'
+      +     '<div class="todo-title">' + escapeHtml(t.title) + '</div>'
+      +     (t.desc ? '<div class="todo-desc">' + escapeHtml(t.desc) + '</div>' : '')
+      +     (t.warn ? '<div class="todo-warn"><i data-lucide="alert-triangle" style="width:11px;height:11px"></i> ' + escapeHtml(t.warn) + '</div>' : '')
+      +   '</div>'
+      +   (t.link
+          ? '<button type="button" class="todo-go" onclick="navigateTo(\'' + t.link + '\',null)" title="前往">→</button>'
+          : '<span class="todo-tag-auto">auto</span>')
+      + '</div>';
+  });
+
+  if (user.length) {
+    user.forEach(function(t) {
+      rows += ''
+        + '<div class="todo-item todo-user' + (t.done ? ' is-done' : '') + '" data-id="' + t.id + '">'
+        +   '<button type="button" class="todo-check" onclick="onTodoToggle(\'' + t.id + '\')" aria-label="' + (t.done ? '取消完成' : '標記完成') + '">'
+        +     (t.done ? '<i data-lucide="check-square" style="width:16px;height:16px"></i>' : '<i data-lucide="square" style="width:16px;height:16px"></i>')
+        +   '</button>'
+        +   '<div class="todo-body">'
+        +     '<div class="todo-title">' + escapeHtml(t.title) + '</div>'
+        +     (t.desc ? '<div class="todo-desc">' + escapeHtml(t.desc) + '</div>' : '')
+        +   '</div>'
+        +   '<button type="button" class="todo-del" onclick="onTodoRemove(\'' + t.id + '\')" title="刪除" aria-label="刪除這筆">'
+        +     '<i data-lucide="trash-2" style="width:13px;height:13px"></i>'
+        +   '</button>'
+        + '</div>';
+    });
+  }
+
+  if (!rows) {
+    rows = '<div class="todo-empty">// 今天沒有待辦事項，可以從上方「新增」加自己想記的事</div>';
+  }
+  el.innerHTML = rows;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function onTodoToggle(id) { toggleUserTodo(id); refreshTodoList(); }
+function onTodoRemove(id) { removeUserTodo(id); refreshTodoList(); }
+function openTodoComposer() {
+  var c = document.getElementById('home-todo-composer');
+  if (!c) return;
+  c.hidden = false;
+  var inp = document.getElementById('home-todo-input');
+  if (inp) { inp.value = ''; setTimeout(function(){ inp.focus(); }, 30); inp.onkeydown = function(e){
+    if (e.key === 'Enter') { e.preventDefault(); submitTodoComposer(); }
+    else if (e.key === 'Escape') { closeTodoComposer(); }
+  }; }
+}
+function closeTodoComposer() {
+  var c = document.getElementById('home-todo-composer');
+  if (c) c.hidden = true;
+}
+function submitTodoComposer() {
+  var inp = document.getElementById('home-todo-input');
+  if (!inp) return;
+  if (addUserTodo(inp.value, '')) {
+    closeTodoComposer();
+    refreshTodoList();
+    if (typeof showToast === 'function') showToast('已加入待辦', 'success');
+  } else {
+    inp.focus();
+  }
+}
+
 // 結束本期回診週期：把這段期間的紀錄整合進「我的碎片」，產出報告快照，然後清除原始紀錄。
 // `early=true` 代表使用者在預定回診日之前主動結束週期（提前回診）。
 function _finalizeVisit(opts) {
@@ -1936,6 +2152,9 @@ function home() {
         </button>
       </div>
 
+      <!-- Today's Todo (auto + user) -->
+      ${renderTodoCard()}
+
       <!-- Three-column info row -->
       <div class="home-info-row">
         <div class="home-ov">
@@ -1995,6 +2214,9 @@ function home() {
 function loadHomePage() {
   var user = getCurrentUser();
   var pid = getStablePatientId();
+
+  // 載入今日待辦（系統自動 + 使用者個人）
+  refreshTodoList();
 
   fetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
