@@ -2011,6 +2011,9 @@ async function refreshNavBadges() {
       } else {
         setBadge('previsit', '');
       }
+    } else {
+      // 沒設回診日 → 清掉舊 badge，避免 stale state
+      setBadge('previsit', '');
     }
   } catch (e) {}
 }
@@ -5098,13 +5101,22 @@ async function _loadMedDetail(medId, med) {
   var effects = (arr[1] && arr[1].effects) || [];
   var perMedStats = ((arr[2] && arr[2].medications) || []).find(function(m){ return String(m.id) === String(medId); }) || {};
 
-  // 統計（最近 30 天）
+  // 統計（最近 30 天 — 但只計算「藥物加入後」的活躍日數，避免新藥被
+  // 當成過去 30 天都沒吃而扣分；adherence 分母 = expectedPerDay * activeDays）
   var taken   = logs.filter(function(l){ return l && l.taken !== false; }).length;
   var skipped = logs.filter(function(l){ return l && l.taken === false; }).length;
   var expectedPerDay = (med.is_other ? 0 : (med.slots && med.slots.length ? med.slots.length : 1));
-  var expected30 = expectedPerDay * 30;
-  var missed = Math.max(0, expected30 - taken - skipped);
-  var rate = expected30 > 0 ? Math.round(taken / expected30 * 100) : 0;
+  var activeDays = 30;
+  if (med.created_at) {
+    var startMs = new Date(med.created_at).getTime();
+    if (!isNaN(startMs)) {
+      var elapsedDays = Math.floor((Date.now() - startMs) / 86400000) + 1; // 含今日
+      activeDays = Math.max(1, Math.min(30, elapsedDays));
+    }
+  }
+  var expectedTotal = expectedPerDay * activeDays;
+  var missed = Math.max(0, expectedTotal - taken - skipped);
+  var rate = expectedTotal > 0 ? Math.round(taken / expectedTotal * 100) : 0;
   var avgEffect = perMedStats.avg_effectiveness != null
     ? Number(perMedStats.avg_effectiveness).toFixed(1)
     : (effects.length
@@ -5175,7 +5187,7 @@ async function _loadMedDetail(medId, med) {
     +     '<div class="mdm-hero-ring-num"><span>' + rate + '</span><small>%</small></div>'
     +   '</div>'
     +   '<div class="mdm-hero-side">'
-    +     '<div class="mdm-hero-label">最近 30 天的服藥情形</div>'
+    +     '<div class="mdm-hero-label">最近 ' + activeDays + ' 天的服藥情形</div>'
     +     '<div class="mdm-stat-grid">'
     +       '<div class="mdm-stat"><span class="mdm-stat-num">' + taken + '</span><span class="mdm-stat-lbl">已服用</span></div>'
     +       '<div class="mdm-stat"><span class="mdm-stat-num">' + missed + '</span><span class="mdm-stat-lbl">漏掉</span></div>'
