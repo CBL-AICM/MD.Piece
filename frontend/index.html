@@ -14,8 +14,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=ui-intuitive-v3" />
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="css/style.css?v=ui-intuitive-v5" />
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
   <title>MD.Piece</title>
@@ -250,115 +250,66 @@
         <p>MEDICAL PLATFORM</p>
       </button>
       <nav class="sidebar-nav">
-        <!-- Search box: jump to a feature by typing -->
-        <div class="nav-search">
-          <i data-lucide="search" class="nav-search-icon" style="width:14px;height:14px"></i>
-          <input id="nav-search-input" type="search" placeholder="搜尋功能（症狀、藥…）" data-i18n-placeholder="nav.search.placeholder" autocomplete="off" />
-          <button type="button" class="nav-search-clear" id="nav-search-clear" onclick="clearNavSearch()" hidden aria-label="清除">×</button>
-        </div>
+        <div class="nav-section-label" data-i18n="nav.group.record">每日紀錄</div>
+        <button class="nav-item active" data-page="symptoms" onclick="navigateTo('symptoms', this)">
+          <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> <span data-i18n="nav.symptoms">症狀紀錄</span>
+        </button>
+        <button class="nav-item" data-page="medications" onclick="navigateTo('medications', this)">
+          <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span> <span data-i18n="nav.medications">藥物紀錄</span>
+        </button>
+        <button class="nav-item" data-page="vitals" onclick="navigateTo('vitals', this)">
+          <span class="nav-icon"><i data-lucide="activity" style="width:18px;height:18px"></i></span> <span data-i18n="nav.vitals">生理紀錄</span>
+        </button>
+        <button class="nav-item" data-page="emotions" onclick="navigateTo('emotions', this)">
+          <span class="nav-icon"><i data-lucide="battery-charging" style="width:18px;height:18px"></i></span> <span data-i18n="nav.emotions">情緒電力</span>
+        </button>
+        <button class="nav-item" data-page="diet" onclick="navigateTo('diet', this)">
+          <span class="nav-icon"><i data-lucide="utensils-crossed" style="width:18px;height:18px"></i></span> <span data-i18n="nav.diet">飲食紀錄</span>
+        </button>
+        <button class="nav-item" data-page="memo" onclick="navigateTo('memo', this)">
+          <span class="nav-icon"><i data-lucide="sticky-note" style="width:18px;height:18px"></i></span> <span data-i18n="nav.memo">Memo</span>
+        </button>
 
-        <details class="nav-group" open data-group="record">
-          <summary class="nav-group-head">
-            <span class="nav-group-icon"><i data-lucide="pencil-line" style="width:14px;height:14px"></i></span>
-            <span class="nav-group-label" data-i18n="nav.group.record">每日紀錄</span>
-            <span class="nav-group-chev"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></span>
-          </summary>
-          <div class="nav-group-body">
-            <button class="nav-item active" data-page="symptoms" onclick="navigateTo('symptoms', this)">
-              <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span> <span data-i18n="nav.symptoms">症狀紀錄</span>
-            </button>
-            <button class="nav-item" data-page="medications" onclick="navigateTo('medications', this)">
-              <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span> <span data-i18n="nav.medications">藥物紀錄</span>
-            </button>
-            <button class="nav-item" data-page="vitals" onclick="navigateTo('vitals', this)">
-              <span class="nav-icon"><i data-lucide="activity" style="width:18px;height:18px"></i></span> <span data-i18n="nav.vitals">生理紀錄</span>
-            </button>
-            <button class="nav-item" data-page="emotions" onclick="navigateTo('emotions', this)">
-              <span class="nav-icon"><i data-lucide="battery-charging" style="width:18px;height:18px"></i></span> <span data-i18n="nav.emotions">情緒電力</span>
-            </button>
-            <button class="nav-item" data-page="diet" onclick="navigateTo('diet', this)">
-              <span class="nav-icon"><i data-lucide="utensils-crossed" style="width:18px;height:18px"></i></span> <span data-i18n="nav.diet">飲食紀錄</span>
-            </button>
-            <button class="nav-item" data-page="memo" onclick="navigateTo('memo', this)">
-              <span class="nav-icon"><i data-lucide="sticky-note" style="width:18px;height:18px"></i></span> <span data-i18n="nav.memo">Memo</span>
-            </button>
-          </div>
-        </details>
+        <div class="nav-section-label" data-i18n="nav.group.search">查詢與分析</div>
+        <button class="nav-item" data-page="symptomsAnalyze" onclick="navigateTo('symptomsAnalyze', this)">
+          <span class="nav-icon"><i data-lucide="sparkles" style="width:18px;height:18px"></i></span> <span data-i18n="nav.symptomsAnalyze">症狀分析</span>
+        </button>
+        <button class="nav-item" data-page="drugSearch" onclick="navigateTo('drugSearch', this)">
+          <span class="nav-icon"><i data-lucide="search" style="width:18px;height:18px"></i></span> <span data-i18n="nav.drugSearch">藥物百科</span>
+        </button>
+        <button class="nav-item" data-page="diseaseSearch" onclick="navigateTo('diseaseSearch', this)">
+          <span class="nav-icon"><i data-lucide="stethoscope" style="width:18px;height:18px"></i></span> <span data-i18n="nav.diseaseSearch">疾病百科</span>
+        </button>
 
-        <details class="nav-group" open data-group="search">
-          <summary class="nav-group-head">
-            <span class="nav-group-icon"><i data-lucide="search" style="width:14px;height:14px"></i></span>
-            <span class="nav-group-label" data-i18n="nav.group.search">查詢與分析</span>
-            <span class="nav-group-chev"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></span>
-          </summary>
-          <div class="nav-group-body">
-            <button class="nav-item" data-page="symptomsAnalyze" onclick="navigateTo('symptomsAnalyze', this)">
-              <span class="nav-icon"><i data-lucide="sparkles" style="width:18px;height:18px"></i></span> <span data-i18n="nav.symptomsAnalyze">症狀分析</span>
-            </button>
-            <button class="nav-item" data-page="drugSearch" onclick="navigateTo('drugSearch', this)">
-              <span class="nav-icon"><i data-lucide="pill-bottle" style="width:18px;height:18px"></i></span> <span data-i18n="nav.drugSearch">藥物百科</span>
-            </button>
-            <button class="nav-item" data-page="diseaseSearch" onclick="navigateTo('diseaseSearch', this)">
-              <span class="nav-icon"><i data-lucide="stethoscope" style="width:18px;height:18px"></i></span> <span data-i18n="nav.diseaseSearch">疾病百科</span>
-            </button>
-          </div>
-        </details>
+        <div class="nav-section-label" data-i18n="nav.group.report">健康報告</div>
+        <button class="nav-item" data-page="previsit" onclick="navigateTo('previsit', this)">
+          <span class="nav-icon"><i data-lucide="clipboard-check" style="width:18px;height:18px"></i></span> <span data-i18n="nav.previsit">診前報告</span>
+        </button>
+        <button class="nav-item" data-page="labs" onclick="navigateTo('labs', this)">
+          <span class="nav-icon"><i data-lucide="trending-up" style="width:18px;height:18px"></i></span> <span data-i18n="nav.labs">報告數值</span>
+        </button>
+        <button class="nav-item" data-page="pieces" onclick="navigateTo('pieces', this)">
+          <span class="nav-icon"><i data-lucide="puzzle" style="width:18px;height:18px"></i></span> <span data-i18n="nav.pieces">你的碎片</span>
+        </button>
 
-        <details class="nav-group" open data-group="report">
-          <summary class="nav-group-head">
-            <span class="nav-group-icon"><i data-lucide="file-text" style="width:14px;height:14px"></i></span>
-            <span class="nav-group-label" data-i18n="nav.group.report">健康報告</span>
-            <span class="nav-group-chev"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></span>
-          </summary>
-          <div class="nav-group-body">
-            <button class="nav-item" data-page="previsit" onclick="navigateTo('previsit', this)">
-              <span class="nav-icon"><i data-lucide="clipboard-check" style="width:18px;height:18px"></i></span> <span data-i18n="nav.previsit">診前報告</span>
-            </button>
-            <button class="nav-item" data-page="labs" onclick="navigateTo('labs', this)">
-              <span class="nav-icon"><i data-lucide="trending-up" style="width:18px;height:18px"></i></span> <span data-i18n="nav.labs">報告數值</span>
-            </button>
-            <button class="nav-item" data-page="pieces" onclick="navigateTo('pieces', this)">
-              <span class="nav-icon"><i data-lucide="puzzle" style="width:18px;height:18px"></i></span> <span data-i18n="nav.pieces">你的碎片</span>
-            </button>
-          </div>
-        </details>
+        <div class="nav-section-label" data-i18n="nav.group.learn">學習與陪伴</div>
+        <button class="nav-item" data-page="education" onclick="navigateTo('education', this)">
+          <span class="nav-icon"><i data-lucide="book-heart" style="width:18px;height:18px"></i></span> <span data-i18n="nav.education">衛教專欄</span>
+        </button>
+        <button class="nav-item" data-page="story" onclick="navigateTo('story', this)">
+          <span class="nav-icon"><i data-lucide="book-open" style="width:18px;height:18px"></i></span> <span data-i18n="nav.story">每日故事</span>
+        </button>
+        <button class="nav-item" data-page="chat" onclick="navigateTo('chat', this)">
+          <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span> <span data-i18n="nav.chat">醫起聊天</span>
+        </button>
 
-        <details class="nav-group" open data-group="learn">
-          <summary class="nav-group-head">
-            <span class="nav-group-icon"><i data-lucide="heart-handshake" style="width:14px;height:14px"></i></span>
-            <span class="nav-group-label" data-i18n="nav.group.learn">學習與陪伴</span>
-            <span class="nav-group-chev"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></span>
-          </summary>
-          <div class="nav-group-body">
-            <button class="nav-item" data-page="education" onclick="navigateTo('education', this)">
-              <span class="nav-icon"><i data-lucide="book-heart" style="width:18px;height:18px"></i></span> <span data-i18n="nav.education">衛教專欄</span>
-            </button>
-            <button class="nav-item" data-page="story" onclick="navigateTo('story', this)">
-              <span class="nav-icon"><i data-lucide="book-open" style="width:18px;height:18px"></i></span> <span data-i18n="nav.story">每日故事</span>
-            </button>
-            <button class="nav-item" data-page="chat" onclick="navigateTo('chat', this)">
-              <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span> <span data-i18n="nav.chat">醫起聊天</span>
-            </button>
-          </div>
-        </details>
-
-        <details class="nav-group" open data-group="settings">
-          <summary class="nav-group-head">
-            <span class="nav-group-icon"><i data-lucide="settings-2" style="width:14px;height:14px"></i></span>
-            <span class="nav-group-label" data-i18n="nav.group.settings">設定</span>
-            <span class="nav-group-chev"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></span>
-          </summary>
-          <div class="nav-group-body">
-            <button class="nav-item" data-page="settings" onclick="navigateTo('settings', this)">
-              <span class="nav-icon"><i data-lucide="settings" style="width:18px;height:18px"></i></span> <span data-i18n="nav.settings">系統設定</span>
-            </button>
-            <button class="nav-item" data-page="account" onclick="navigateTo('account', this)">
-              <span class="nav-icon"><i data-lucide="user-cog" style="width:18px;height:18px"></i></span> <span data-i18n="nav.account">帳號設定</span>
-            </button>
-          </div>
-        </details>
-
-        <p class="nav-empty-hint" id="nav-empty-hint" hidden data-i18n="nav.search.empty">沒找到符合的功能，換個關鍵字試試。</p>
+        <div class="nav-section-label" data-i18n="nav.group.settings">設定</div>
+        <button class="nav-item" data-page="settings" onclick="navigateTo('settings', this)">
+          <span class="nav-icon"><i data-lucide="settings" style="width:18px;height:18px"></i></span> <span data-i18n="nav.settings">系統設定</span>
+        </button>
+        <button class="nav-item" data-page="account" onclick="navigateTo('account', this)">
+          <span class="nav-icon"><i data-lucide="user-cog" style="width:18px;height:18px"></i></span> <span data-i18n="nav.account">帳號設定</span>
+        </button>
       </nav>
       <div class="sidebar-foot">
         <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
@@ -474,8 +425,8 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=ui-intuitive-v3"></script>
-  <script src="js/app.js?v=ui-intuitive-v3"></script>
+  <script src="js/i18n.js?v=ui-intuitive-v5"></script>
+  <script src="js/app.js?v=ui-intuitive-v5"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
@@ -781,51 +732,14 @@
 
     function navigateTo(page, btn) {
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-      // Mark whichever sidebar item maps to this page (keeps active in sync even when triggered from non-sidebar buttons)
       const target = btn || document.querySelector('.nav-item[data-page="' + page + '"]');
-      if (target) {
-        target.classList.add('active');
-        // Also expand the parent group so the active item is visible
-        const grp = target.closest('details.nav-group');
-        if (grp && !grp.open) grp.open = true;
-      }
+      if (target) target.classList.add('active');
       setTopbarPageTitle(page);
       showPage(page);
       closeSidebar();
       _pushAppHistory(page);
     }
 
-    // ─── Sidebar quick search ────────────────────────────
-    function clearNavSearch() {
-      const input = document.getElementById('nav-search-input');
-      if (input) input.value = '';
-      filterNavBySearch('');
-    }
-    function filterNavBySearch(qRaw) {
-      const q = (qRaw || '').trim().toLowerCase();
-      const groups = document.querySelectorAll('.sidebar-nav .nav-group');
-      const clearBtn = document.getElementById('nav-search-clear');
-      const emptyHint = document.getElementById('nav-empty-hint');
-      if (clearBtn) clearBtn.hidden = !q;
-      let totalVisible = 0;
-      groups.forEach(grp => {
-        let groupVisible = 0;
-        grp.querySelectorAll('.nav-item').forEach(item => {
-          const text = (item.textContent || '').toLowerCase();
-          const hit = !q || text.indexOf(q) !== -1;
-          item.style.display = hit ? '' : 'none';
-          if (hit) groupVisible++;
-        });
-        grp.style.display = groupVisible ? '' : 'none';
-        if (q && groupVisible) grp.open = true;
-        totalVisible += groupVisible;
-      });
-      if (emptyHint) emptyHint.hidden = !q || totalVisible > 0;
-    }
-    document.addEventListener('DOMContentLoaded', () => {
-      const input = document.getElementById('nav-search-input');
-      if (input) input.addEventListener('input', e => filterNavBySearch(e.target.value));
-    });
 
     function goHome() {
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));

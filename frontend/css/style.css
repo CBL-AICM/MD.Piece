@@ -10800,115 +10800,36 @@ html[data-mode="senior"] .home-senior-tile .hst-label {
   .diet-weekly-stat-frac { font-size: 1.2rem; }
 }
 
-/* ── Sidebar quick search ───────────────────────────── */
-.nav-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  margin: 4px 4px 10px;
-  padding: 6px 10px;
-  border: 1px solid var(--app-border);
-  border-radius: 4px;
-  background: var(--app-panel-soft);
-  gap: 6px;
-}
-.nav-search-icon {
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-.nav-search input {
-  flex: 1;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--app-text);
-  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: 0.85rem;
-  min-width: 0;
-}
-.nav-search input::placeholder { color: var(--text-dim); }
-.nav-search-clear {
-  border: 0;
-  background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 0 2px;
-}
-.nav-search-clear:hover { color: var(--app-text); }
-.nav-empty-hint {
-  margin: 8px 12px;
-  color: var(--text-dim);
-  font-size: 0.8rem;
-  text-align: center;
-}
-html[data-mode="senior"] .nav-search input { font-size: 1rem; }
-
-/* ── Sidebar grouped navigation ─────────────────────── */
-.nav-group {
-  margin: 0 4px 6px;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.nav-group[open] { background: transparent; }
-.nav-group-head {
-  list-style: none;
-  cursor: pointer;
+/* ── Sidebar section labels (decorative dividers between nav items) ── */
+.nav-section-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 10px;
+  margin: 10px 6px 4px;
+  padding: 4px 6px;
   font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
+  font-weight: 700;
   color: var(--app-text);
-  opacity: 0.85;
-  border-radius: 4px;
-  border-bottom: 1px dashed transparent;
+  opacity: 0.55;
   user-select: none;
-  transition: opacity 0.15s ease, background-color 0.15s ease;
 }
-.nav-group-head::-webkit-details-marker { display: none; }
-.nav-group-head:hover {
-  opacity: 1;
-  background: var(--app-panel-soft);
+.nav-section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--app-border);
+  opacity: 0.6;
 }
-.nav-group[open] > .nav-group-head { opacity: 1; }
-.nav-group-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  color: var(--accent, #5B9FE8);
-  flex-shrink: 0;
-}
-.nav-group-label { flex: 1; font-weight: 600; }
-.nav-group-chev {
-  display: inline-flex;
-  align-items: center;
-  transition: transform 0.18s ease;
-  color: inherit;
-  opacity: 0.7;
-}
-.nav-group[open] .nav-group-chev { transform: rotate(180deg); }
-.nav-group-body {
-  padding: 4px 0 6px;
-}
-.nav-group-body .nav-item {
-  margin-bottom: 2px;
-  padding-left: 18px;
-}
-html[data-mode="senior"] .nav-group-head {
+.nav-section-label:first-child { margin-top: 0; }
+html[data-mode="senior"] .nav-section-label {
   font-size: 0.95rem;
   text-transform: none;
   letter-spacing: 0;
-  color: var(--app-text);
-  font-weight: 600;
-  padding: 9px 14px;
+  opacity: 0.75;
 }
-html[data-mode="senior"] .nav-group-body .nav-item { padding-left: 22px; }
 
 /* ── Empty state (cozy) ─────────────────────────────── */
 .empty-state {
@@ -11100,64 +11021,15 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   .onboarding-desc  { font-size: 0.88rem; }
 }
 
-/* ── Mobile sidebar: undo legacy 2-col tile grid for grouped nav ── */
+/* ── Mobile sidebar: section labels span both columns ── */
 @media (max-width: 768px) {
-  .sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    grid-template-columns: none;
-    align-content: stretch;
-    padding: 10px 12px 16px;
+  .nav-section-label {
+    grid-column: 1 / -1;
+    margin: 8px 2px 2px;
+    padding: 2px 4px;
+    font-size: 0.78rem;
+    opacity: 0.7;
   }
-  .nav-search {
-    margin: 0 0 10px;
-    padding: 8px 12px;
-  }
-  .nav-search input { font-size: 0.95rem; }
-  .nav-group {
-    margin: 0 0 10px;
-    width: 100%;
-    border-top: 1px solid var(--app-border);
-    padding-top: 6px;
-  }
-  .nav-group:first-of-type { border-top: 0; padding-top: 0; }
-  .nav-group-head {
-    padding: 12px 4px;
-    font-size: 0.92rem;
-    text-transform: none;
-    letter-spacing: 0;
-    opacity: 1;
-    color: var(--app-text);
-    font-weight: 700;
-  }
-  .nav-group-head .nav-group-icon { width: 18px; }
-  .nav-group-head .nav-group-icon svg { width: 16px; height: 16px; }
-  .nav-group-head .nav-group-chev svg { width: 16px; height: 16px; }
-  .nav-group-body {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 4px 0 4px;
-  }
-  /* Inside groups, keep nav items as horizontal row buttons (not the legacy tile look) */
-  .nav-group-body .nav-item {
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    margin: 0;
-    border-radius: 10px;
-    background: var(--app-panel-soft);
-    border: 1px solid var(--app-border);
-    font-size: 0.95rem;
-    min-height: 48px;
-    width: 100%;
-  }
-  .nav-group-body .nav-item .nav-icon { width: 22px; }
-  .nav-group-body .nav-item .nav-icon svg { width: 20px; height: 20px; }
-}
-@media (max-width: 768px) {
-  html[data-mode="senior"] .nav-group-head { font-size: 1rem; padding: 12px 8px; }
-  html[data-mode="senior"] .nav-group-body .nav-item { font-size: 1.05rem; padding: 14px 16px; }
+  .nav-section-label:first-child { margin-top: 0; }
+  html[data-mode="senior"] .nav-section-label { font-size: 0.98rem; opacity: 0.85; }
 }
