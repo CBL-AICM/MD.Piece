@@ -10114,21 +10114,32 @@ function reminderToggleSource() {
   var wrap = document.getElementById('rem-source-wrap');
   var sel = document.getElementById('rem-source');
   if (!wrap || !sel) return;
+  function _setOptions(opts) {
+    _remClear(sel);
+    opts.forEach(function(o) {
+      var opt = document.createElement('option');
+      opt.value = String(o.value || '');
+      opt.textContent = String(o.label || '');
+      sel.appendChild(opt);
+    });
+  }
   if (t === 'medication') {
     wrap.style.display = '';
+    _setOptions([{ value: '', label: '— 不關聯 —' }]);
     fetch(API + '/medications/?patient_id=' + _remindersPid)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var meds = (data.medications || []).filter(function(m) { return m.active !== 0; });
-        sel.innerHTML = '<option value="">— 不關聯 —</option>'
-          + meds.map(function(m) {
-              return '<option value="' + m.id + '">' + escapeHtml(m.name || '') + (m.dosage ? ' · ' + escapeHtml(m.dosage) : '') + '</option>';
-            }).join('');
+        var opts = [{ value: '', label: '— 不關聯 —' }].concat(meds.map(function(m) {
+          var label = String(m.name || '') + (m.dosage ? ' · ' + String(m.dosage) : '');
+          return { value: m.id, label: label };
+        }));
+        _setOptions(opts);
       })
-      .catch(function() { sel.innerHTML = '<option value="">（無法載入藥物清單）</option>'; });
+      .catch(function() { _setOptions([{ value: '', label: '（無法載入藥物清單）' }]); });
   } else {
     wrap.style.display = 'none';
-    sel.innerHTML = '<option value="">— 不關聯 —</option>';
+    _setOptions([{ value: '', label: '— 不關聯 —' }]);
   }
 }
 
@@ -10148,6 +10159,7 @@ function loadRemindersPage() {
     when.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
       + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
+  _remindersBindDelegated();
   reminderRefreshList();
   reminderRefreshInbox();
   reminderRefreshPushState();
@@ -10168,41 +10180,108 @@ function reminderRefreshList() {
     })
     .catch(function() {
       var el = document.getElementById('rem-list');
-      if (el) el.innerHTML = '<p style="color:var(--text-muted)">無法載入提醒清單。</p>';
+      if (el) {
+        _remClear(el);
+        el.appendChild(_remH('p', { style: 'color:var(--text-muted)' }, '無法載入提醒清單。'));
+      }
     });
+}
+
+// 小工具：DOM 建構（避免 innerHTML 與 user-controlled 資料混合）
+function _remH(tag, props, children) {
+  var el = document.createElement(tag);
+  if (props) {
+    for (var k in props) {
+      if (k === 'style') el.style.cssText = props[k];
+      else if (k === 'class') el.className = props[k];
+      else if (k.indexOf('data-') === 0) el.setAttribute(k, String(props[k]));
+      else el[k] = props[k];
+    }
+  }
+  if (children) {
+    (Array.isArray(children) ? children : [children]).forEach(function(c) {
+      if (c == null || c === false) return;
+      el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+  }
+  return el;
+}
+
+function _remClear(el) {
+  while (el.firstChild) el.removeChild(el.firstChild);
+}
+
+function _remindersBindDelegated() {
+  var listEl = document.getElementById('rem-list');
+  if (listEl && !listEl.dataset.bound) {
+    listEl.dataset.bound = '1';
+    listEl.addEventListener('click', function(e) {
+      var btn = e.target.closest && e.target.closest('[data-action]');
+      if (!btn || !listEl.contains(btn)) return;
+      var id = btn.getAttribute('data-id');
+      var action = btn.getAttribute('data-action');
+      if (action === 'toggle') reminderToggleActive(id, btn.getAttribute('data-active') !== '1');
+      else if (action === 'delete') reminderDelete(id);
+    });
+  }
+  var inboxEl = document.getElementById('rem-inbox-list');
+  if (inboxEl && !inboxEl.dataset.bound) {
+    inboxEl.dataset.bound = '1';
+    inboxEl.addEventListener('click', function(e) {
+      var btn = e.target.closest && e.target.closest('[data-action]');
+      if (!btn || !inboxEl.contains(btn)) return;
+      if (btn.getAttribute('data-action') === 'mark-read') {
+        reminderMarkRead(btn.getAttribute('data-id'));
+      }
+    });
+  }
 }
 
 function reminderRenderList() {
   var el = document.getElementById('rem-list');
   if (!el) return;
+  _remClear(el);
   if (!_remindersList.length) {
-    el.innerHTML = '<p style="color:var(--text-muted)">還沒有提醒，先在上面建立第一筆吧。</p>';
+    el.appendChild(_remH('p', { style: 'color:var(--text-muted)' }, '還沒有提醒，先在上面建立第一筆吧。'));
     return;
   }
   var typeLabel = { medication: '吃藥', appointment: '回診', lab: '檢查', custom: '自訂' };
   var freqLabel = { once: '單次', daily: '每天', weekly: '每週', monthly: '每月' };
-  el.innerHTML = _remindersList.map(function(r) {
+  _remindersList.forEach(function(r) {
     var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString() : '—';
     var active = (r.active === true || r.active === 1);
-    var typeText = typeLabel[r.reminder_type] || escapeHtml(String(r.reminder_type || ''));
-    var freqText = freqLabel[r.frequency] || escapeHtml(String(r.frequency || ''));
-    return ''
-      + '<div style="padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
-      + '  <div style="flex:1;min-width:0">'
-      + '    <div style="font-weight:600">' + escapeHtml(r.title || '') + '</div>'
-      + '    <div style="font-size:0.85rem;color:var(--text-dim);margin-top:2px">'
-      + typeText + ' · ' + freqText
-      + ' · 下次：' + escapeHtml(next)
-      + (active ? '' : ' · <span style="color:#999">已停用</span>')
-      + '    </div>'
-      + (r.body ? '    <div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">' + escapeHtml(r.body) + '</div>' : '')
-      + '  </div>'
-      + '  <div style="display:flex;flex-direction:column;gap:4px">'
-      + '    <button class="secondary" onclick="reminderToggleActive(\'' + escapeHtml(r.id) + '\',' + (active ? 'false' : 'true') + ')" style="padding:4px 8px;font-size:0.8rem">' + (active ? '停用' : '啟用') + '</button>'
-      + '    <button class="secondary" onclick="reminderDelete(\'' + escapeHtml(r.id) + '\')" style="padding:4px 8px;font-size:0.8rem;color:#c0392b">刪除</button>'
-      + '  </div>'
-      + '</div>';
-  }).join('');
+    var typeText = typeLabel[r.reminder_type] || String(r.reminder_type || '');
+    var freqText = freqLabel[r.frequency] || String(r.frequency || '');
+
+    var titleEl = _remH('div', { style: 'font-weight:600' }, String(r.title || ''));
+    var metaEl = _remH('div', { style: 'font-size:0.85rem;color:var(--text-dim);margin-top:2px' },
+      typeText + ' · ' + freqText + ' · 下次：' + next + (active ? '' : ' · 已停用'));
+    var leftChildren = [titleEl, metaEl];
+    if (r.body) {
+      leftChildren.push(_remH('div', { style: 'font-size:0.85rem;color:var(--text-dim);margin-top:4px' }, String(r.body)));
+    }
+    var left = _remH('div', { style: 'flex:1;min-width:0' }, leftChildren);
+
+    var toggleBtn = _remH('button', {
+      'class': 'secondary',
+      style: 'padding:4px 8px;font-size:0.8rem',
+      'data-action': 'toggle',
+      'data-id': String(r.id || ''),
+      'data-active': active ? '1' : '0',
+    }, active ? '停用' : '啟用');
+    var delBtn = _remH('button', {
+      'class': 'secondary',
+      style: 'padding:4px 8px;font-size:0.8rem;color:#c0392b',
+      'data-action': 'delete',
+      'data-id': String(r.id || ''),
+    }, '刪除');
+    var actions = _remH('div', { style: 'display:flex;flex-direction:column;gap:4px' }, [toggleBtn, delBtn]);
+
+    var card = _remH('div', {
+      style: 'padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px',
+    }, [left, actions]);
+    el.appendChild(card);
+  });
 }
 
 function reminderRefreshInbox() {
@@ -10215,31 +10294,53 @@ function reminderRefreshInbox() {
     })
     .catch(function() {
       var el = document.getElementById('rem-inbox-list');
-      if (el) el.innerHTML = '<p style="color:var(--text-muted)">無法載入通知。</p>';
+      if (el) {
+        _remClear(el);
+        el.appendChild(_remH('p', { style: 'color:var(--text-muted)' }, '無法載入通知。'));
+      }
     });
 }
 
 function reminderRenderInbox(unread) {
   var el = document.getElementById('rem-inbox-list');
   if (!el) return;
+  _remClear(el);
   if (!_remindersInbox.length) {
-    el.innerHTML = '<p style="color:var(--text-muted)">目前沒有通知。</p>';
+    el.appendChild(_remH('p', { style: 'color:var(--text-muted)' }, '目前沒有通知。'));
     return;
   }
-  el.innerHTML = '<div style="margin-bottom:8px;font-size:0.85rem;color:var(--text-dim)">未讀 <strong>' + Number(unread || 0) + '</strong> 則 / 共 ' + Number(_remindersInbox.length) + ' 則</div>'
-    + _remindersInbox.map(function(n) {
-      var isRead = (n.read === true || n.read === 1);
-      var when = n.created_at ? new Date(n.created_at).toLocaleString() : '';
-      return ''
-        + '<div style="padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:6px;background:' + (isRead ? 'transparent' : 'rgba(100,140,200,0.06)') + '">'
-        + '  <div style="display:flex;justify-content:space-between;gap:8px">'
-        + '    <div style="font-weight:' + (isRead ? '500' : '600') + '">' + escapeHtml(n.title || '') + '</div>'
-        + '    <div style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap">' + escapeHtml(when) + '</div>'
-        + '  </div>'
-        + (n.body ? '  <div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">' + escapeHtml(n.body) + '</div>' : '')
-        + (isRead ? '' : '  <button class="secondary" onclick="reminderMarkRead(\'' + escapeHtml(n.id) + '\')" style="margin-top:6px;padding:2px 8px;font-size:0.75rem">標為已讀</button>')
-        + '</div>';
-    }).join('');
+  var unreadNum = Number(unread || 0);
+  var totalNum = Number(_remindersInbox.length);
+  var summary = _remH('div', { style: 'margin-bottom:8px;font-size:0.85rem;color:var(--text-dim)' }, [
+    '未讀 ',
+    _remH('strong', null, String(unreadNum)),
+    ' 則 / 共 ' + totalNum + ' 則',
+  ]);
+  el.appendChild(summary);
+
+  _remindersInbox.forEach(function(n) {
+    var isRead = (n.read === true || n.read === 1);
+    var when = n.created_at ? new Date(n.created_at).toLocaleString() : '';
+    var headerLeft = _remH('div', { style: 'font-weight:' + (isRead ? '500' : '600') }, String(n.title || ''));
+    var headerRight = _remH('div', { style: 'font-size:0.75rem;color:var(--text-muted);white-space:nowrap' }, when);
+    var header = _remH('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [headerLeft, headerRight]);
+    var children = [header];
+    if (n.body) {
+      children.push(_remH('div', { style: 'font-size:0.85rem;color:var(--text-dim);margin-top:4px' }, String(n.body)));
+    }
+    if (!isRead) {
+      children.push(_remH('button', {
+        'class': 'secondary',
+        style: 'margin-top:6px;padding:2px 8px;font-size:0.75rem',
+        'data-action': 'mark-read',
+        'data-id': String(n.id || ''),
+      }, '標為已讀'));
+    }
+    var card = _remH('div', {
+      style: 'padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:6px;background:' + (isRead ? 'transparent' : 'rgba(100,140,200,0.06)'),
+    }, children);
+    el.appendChild(card);
+  });
 }
 
 function reminderUpdateNavBadge(unread) {
