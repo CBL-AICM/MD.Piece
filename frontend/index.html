@@ -207,7 +207,7 @@
   </div>
 
   <!-- ★ Main App (hidden until enter) -->
-  <div id="app-wrapper" data-theme="dark">
+  <div id="app-wrapper" data-theme="light">
     <!-- Puzzle decorations -->
     <div class="puzzle-deco puzzle-deco-1"></div>
     <div class="puzzle-deco puzzle-deco-2"></div>
@@ -598,7 +598,8 @@
     (function initLandingTheme() {
       let saved = null;
       try { saved = localStorage.getItem('mdpiece_landing_theme'); } catch (e) {}
-      const theme = saved === 'light' ? 'light' : 'dark';
+      // 預設淺色（醫療 app 標準）；使用者手動切過 dark 才記憶
+      const theme = saved === 'dark' ? 'dark' : 'light';
       const el = document.getElementById('landing');
       if (el) el.dataset.theme = theme;
       const app = document.getElementById('app-wrapper');

@@ -4,9 +4,13 @@
   "type": "module",
   "description": "E2E tests for prescription photo recognition (kept separate from frontend deps)",
   "scripts": {
-    "test:rx": "node run_rx_recognition.mjs"
+    "test:rx": "node run_rx_recognition.mjs",
+    "test:mobile": "node mobile_audit.mjs"
   },
   "dependencies": {
     "tesseract.js": "^5.1.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
   }
 }

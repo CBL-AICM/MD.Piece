@@ -791,7 +791,7 @@ function previsit() {
     + renderHowto('previsit')
     + '  <header class="pv-header">'
     + '    <div>'
-    + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
+    + '      <p class="pv-eyebrow">回診前用的健康摘要</p>'
     + '      <h2 class="pv-title"><i data-lucide="clipboard-check"></i> 診前報告</h2>'
     + '      <p class="pv-sub">看診前 30 秒讀完：MD.Piece 幫你整理近 ' + _pvDays + ' 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
     + '    </div>'
@@ -2648,22 +2648,22 @@ function symptoms() {
         <div class="ts-body">
           <div class="ts-stat-grid">
             <div class="ts-stat">
-              <span class="ts-stat-label">// ${_T('sym.stat.days')}</span>
+              <span class="ts-stat-label">${_T('sym.stat.days')}</span>
               <span class="ts-stat-num">${periodDays}</span>
               <span class="ts-stat-unit">days</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// ${_T('sym.stat.logged')}</span>
+              <span class="ts-stat-label">${_T('sym.stat.logged')}</span>
               <span class="ts-stat-num">${totalCount}</span>
               <span class="ts-stat-unit">${_T('sym.stat.times')}</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// ${_T('sym.stat.top')}</span>
+              <span class="ts-stat-label">${_T('sym.stat.top')}</span>
               <span class="ts-stat-num sm">${topCat ? _symField(topCat, 'zh') : '—'}</span>
               <span class="ts-stat-unit">${topCat ? topCount + ' ' + _T('sym.stat.times') : _T('sym.stat.empty')}</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// ${_T('sym.stat.nextVisit')}</span>
+              <span class="ts-stat-label">${_T('sym.stat.nextVisit')}</span>
               <span class="ts-stat-num">${nextVisitDay !== null ? Math.max(0, nextVisitDay) : '—'}</span>
               <span class="ts-stat-unit">${nextVisitDay !== null ? 'days' : _T('sym.stat.notSet')}</span>
             </div>
@@ -3637,22 +3637,22 @@ function vitals() {
         <div class="ts-body">
           <div class="ts-stat-grid">
             <div class="ts-stat">
-              <span class="ts-stat-label">// 追蹤中</span>
+              <span class="ts-stat-label">追蹤中</span>
               <span class="ts-stat-num">${trackedMetrics.length}</span>
               <span class="ts-stat-unit">項指標</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 總紀錄</span>
+              <span class="ts-stat-label">總紀錄</span>
               <span class="ts-stat-num">${totalEntries}</span>
               <span class="ts-stat-unit">筆</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 自訂指標</span>
+              <span class="ts-stat-label">自訂指標</span>
               <span class="ts-stat-num">${getCustomMetrics().length}</span>
               <span class="ts-stat-unit">項</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 上次更新</span>
+              <span class="ts-stat-label">上次更新</span>
               <span class="ts-stat-num sm">${lastUpdateStr}</span>
               <span class="ts-stat-unit">${lastUpdate ? '已記錄' : '尚無紀錄'}</span>
             </div>
@@ -8947,7 +8947,7 @@ function emotions() {
           '</div>' +
         '</div>' +
         '<div class="mood-ring-meta">' +
-          '<span class="mood-ring-eyebrow">// mood &gt; latest_battery</span>' +
+          '<span class="mood-ring-eyebrow">最近一次心情</span>' +
           '<p class="mood-ring-hint" id="mood-ring-hint">目前還沒有紀錄，往下打卡開始累積。</p>' +
         '</div>' +
       '</div>' +
