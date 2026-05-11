@@ -2515,7 +2515,7 @@ function home() {
         </div>
         <div class="home-ov">
           <div class="home-ov-head">
-            <i data-lucide="smile" style="width:16px;height:16px;color:var(--rose, #e8889c)"></i>
+            <i data-lucide="smile" style="width:16px;height:16px;color:var(--rose)"></i>
             <span>${_T('home.ov.mood')}</span>
           </div>
           <div id="home-mood-summary" class="home-ov-body">
@@ -2720,7 +2720,7 @@ function symptoms() {
             ${getCustomSymptomCats().map(c => `
               <button class="sym-cat-card sym-cat-card-custom" onclick="openSymptomLog('${c.id}')" type="button">
                 <span class="scc-badge">${_T('sym.card.custom.badge')}</span>
-                <span class="scc-del" onclick="event.stopPropagation(); removeCustomSymptomCatAndRefresh('${c.id}')" title="${_T('sym.card.custom.delTitle')}">×</span>
+                <button type="button" class="scc-del" onclick="event.stopPropagation(); removeCustomSymptomCatAndRefresh('${c.id}')" title="${_T('sym.card.custom.delTitle')}" aria-label="刪除自訂症狀「${escapeHtml(c.zh)}」">×</button>
                 <div class="scc-icon scc-${c.color}"><i data-lucide="${c.icon}"></i></div>
                 <div class="scc-name">${escapeHtml(c.zh)}</div>
                 <div class="scc-short">${c.short}</div>
@@ -3675,7 +3675,7 @@ function vitals() {
                   <span class="vt-toggle-icon scc-${m.color}"><i data-lucide="${m.icon}"></i></span>
                   <span class="vt-toggle-name">${m.zh}${m.unit ? ` <small>${m.unit}</small>` : ''}</span>
                   <span class="vt-toggle-check">${on ? '✓' : ''}</span>
-                  ${m.custom ? `<button class="vt-cm-del" onclick="deleteCustomMetricAndRefresh(event,'${m.id}')" title="刪除自訂">×</button>` : ''}
+                  ${m.custom ? `<button type="button" class="vt-cm-del" onclick="deleteCustomMetricAndRefresh(event,'${m.id}')" title="刪除自訂指標" aria-label="刪除自訂指標「${escapeHtml(m.zh || m.id)}」">×</button>` : ''}
                 </button>
               `;
             }).join('')}
@@ -3881,7 +3881,11 @@ function toggleVitalTracked(id) {
 function addCustomMetricUI() {
   const name = document.getElementById('vt-custom-name').value.trim();
   const unit = document.getElementById('vt-custom-unit').value.trim();
-  if (!name) { alert('請輸入指標名稱'); return; }
+  if (!name) {
+    if (typeof showToast === 'function') showToast('請先輸入指標名稱', 'warning');
+    document.getElementById('vt-custom-name').focus();
+    return;
+  }
   const id = 'custom-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
   const colors = ['blue','aqua','mint','pink'];
   saveCustomMetric({
@@ -3978,7 +3982,11 @@ function submitVitalEntry(metricId) {
   const m = findMetric(metricId);
   if (!m) return;
   const v1 = document.getElementById('vt-val1').value;
-  if (!v1) { alert('請輸入數值'); return; }
+  if (!v1) {
+    if (typeof showToast === 'function') showToast('請先輸入數值', 'warning');
+    document.getElementById('vt-val1').focus();
+    return;
+  }
   const entry = {
     id: 'vt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
     metricId,
@@ -3987,7 +3995,11 @@ function submitVitalEntry(metricId) {
   };
   if (m.dual) {
     const v2 = document.getElementById('vt-val2').value;
-    if (!v2) { alert('請完整輸入收縮 / 舒張壓'); return; }
+    if (!v2) {
+      if (typeof showToast === 'function') showToast('請完整輸入收縮 / 舒張壓', 'warning');
+      document.getElementById('vt-val2').focus();
+      return;
+    }
     entry.value2 = parseFloat(v2);
   }
   const notes = document.getElementById('vt-notes').value.trim();
@@ -6171,16 +6183,16 @@ function education() {
           <i data-lucide="book-marked" style="width:18px;height:18px"></i> 我的疾病衛教文章
         </h3>
         <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
-          專屬於您登錄疾病的衛教文，依疾病分區整理。
+          專屬於你登錄疾病的衛教文，依疾病分區整理。
         </p>
         <div id="edu-my-articles-list" style="margin-top:10px"></div>
       </div>
       <div id="edu-related" class="card" style="margin-bottom:14px;display:none">
         <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
-          <i data-lucide="git-branch" style="width:18px;height:18px"></i> 為您推送的相關疾病
+          <i data-lucide="git-branch" style="width:18px;height:18px"></i> 為你推送的相關疾病
         </h3>
         <p id="edu-related-desc" style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
-          根據您登錄的疾病，自動整理臨床上常一起出現的共病，提早了解可以更安心。
+          根據你登錄的疾病，自動整理臨床上常一起出現的共病，提早了解可以更安心。
         </p>
         <div id="edu-related-list" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px"></div>
       </div>
@@ -6423,7 +6435,7 @@ function eduOpenExtraDisease(idx) {
     key: 'extra:' + name,
     title: name,
     icon: 'sparkles',
-    intro: '「' + name + '」不在內建清單，內容由 AI 即時為您生成；請以實際醫師判讀為準。',
+    intro: '「' + name + '」不在內建清單，內容由 MD.Piece 即時為你生成；請以實際醫師判讀為準。',
     topics: [
       { key: 'awareness',     label: '認識這個疾病',     desc: '是什麼、誰會得、治療概觀' },
       { key: 'symptoms',      label: '症狀辨識',         desc: '常見症狀與身體訊號' },
@@ -7478,13 +7490,29 @@ function piecesExport() {
     navigator.clipboard.writeText(text).then(function() {
       if (typeof showToast === 'function') showToast('已複製到剪貼簿', 'success');
     }).catch(function() {
-      if (typeof showToast === 'function') showToast('複製失敗，請手動選取', 'error');
-      console.log(text);
+      _piecesShowCopyFallback(text);
     });
   } else {
-    console.log(text);
-    if (typeof showToast === 'function') showToast('已輸出到 console', 'success');
+    _piecesShowCopyFallback(text);
   }
+}
+// 瀏覽器不支援 Clipboard API 或被拒時，跳出可選取的 textarea 讓使用者手動複製
+function _piecesShowCopyFallback(text) {
+  var existing = document.getElementById('pieces-copy-fallback');
+  if (existing) existing.remove();
+  var wrap = document.createElement('div');
+  wrap.id = 'pieces-copy-fallback';
+  wrap.className = 'pieces-copy-fallback';
+  wrap.innerHTML = ''
+    + '<div class="pcf-backdrop" onclick="document.getElementById(\'pieces-copy-fallback\').remove()"></div>'
+    + '<div class="pcf-panel" role="dialog" aria-modal="true" aria-label="手動複製文字">'
+    +   '<h3 class="pcf-title">無法自動複製，請手動選取下方文字</h3>'
+    +   '<textarea class="pcf-text" readonly></textarea>'
+    +   '<button type="button" class="pcf-close" onclick="document.getElementById(\'pieces-copy-fallback\').remove()">關閉</button>'
+    + '</div>';
+  document.body.appendChild(wrap);
+  var ta = wrap.querySelector('.pcf-text');
+  if (ta) { ta.value = text; setTimeout(function(){ ta.focus(); ta.select(); }, 50); }
 }
 
 // ─── 系統設定（Settings）───────────────────────────────────
@@ -8174,7 +8202,7 @@ function settings() {
   var de   = getSetting('density', 'cozy');
   var name = user ? (user.nickname || _T('set.guest')) : _T('set.guest');
   var idno = user && user.id_number ? user.id_number : '—';
-  var ac   = (user && user.avatar_color) ? user.avatar_color : '#C97F4B';
+  var ac   = (user && user.avatar_color) ? user.avatar_color : '#4A90C2';
 
   function seg(group, opts, current) {
     return opts.map(function(o) {
@@ -8424,7 +8452,8 @@ async function labsCheck() {
   const sex   = document.getElementById('lab-sex').value;
 
   if (!name || !value) {
-    alert('請輸入檢驗項目與數值');
+    if (typeof showToast === 'function') showToast('請輸入檢驗項目與數值', 'warning');
+    document.getElementById(!name ? 'lab-name' : 'lab-value').focus();
     return;
   }
 
@@ -8688,8 +8717,8 @@ function emotions() {
           '<svg class="mood-ring" viewBox="0 0 200 200" width="180" height="180">' +
             '<defs>' +
               '<linearGradient id="mood-grad" x1="0" y1="0" x2="1" y2="1">' +
-                '<stop offset="0%" stop-color="#C97F4B"/>' +
-                '<stop offset="100%" stop-color="#E69B6B"/>' +
+                '<stop offset="0%" stop-color="#4A90C2"/>' +
+                '<stop offset="100%" stop-color="#6FB7DE"/>' +
               '</linearGradient>' +
             '</defs>' +
             '<circle cx="100" cy="100" r="80" fill="none" stroke="rgba(92,58,50,0.10)" stroke-width="14"/>' +
