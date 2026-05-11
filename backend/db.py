@@ -267,55 +267,6 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
         )""",
-    "reminders": """
-        CREATE TABLE IF NOT EXISTS reminders (
-            id TEXT PRIMARY KEY,
-            patient_id TEXT NOT NULL,
-            reminder_type TEXT NOT NULL CHECK(reminder_type IN
-                ('medication', 'appointment', 'lab', 'custom')),
-            title TEXT NOT NULL,
-            body TEXT,
-            source_id TEXT,
-            url TEXT,
-            frequency TEXT NOT NULL DEFAULT 'once' CHECK(frequency IN
-                ('once', 'daily', 'weekly', 'monthly')),
-            time_of_day TEXT,
-            days_of_week TEXT,
-            scheduled_at TEXT NOT NULL,
-            next_fire_at TEXT NOT NULL,
-            last_sent_at TEXT,
-            active INTEGER DEFAULT 1,
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (patient_id) REFERENCES patients(id)
-        )""",
-    "push_subscriptions": """
-        CREATE TABLE IF NOT EXISTS push_subscriptions (
-            id TEXT PRIMARY KEY,
-            patient_id TEXT NOT NULL,
-            endpoint TEXT NOT NULL UNIQUE,
-            p256dh TEXT NOT NULL,
-            auth TEXT NOT NULL,
-            user_agent TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (patient_id) REFERENCES patients(id)
-        )""",
-    "notification_inbox": """
-        CREATE TABLE IF NOT EXISTS notification_inbox (
-            id TEXT PRIMARY KEY,
-            patient_id TEXT NOT NULL,
-            reminder_id TEXT,
-            title TEXT NOT NULL,
-            body TEXT,
-            url TEXT,
-            reminder_type TEXT,
-            read INTEGER DEFAULT 0,
-            read_at TEXT,
-            delivered_via TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (patient_id) REFERENCES patients(id),
-            FOREIGN KEY (reminder_id) REFERENCES reminders(id)
-        )""",
     "disease_reference": """
         CREATE TABLE IF NOT EXISTS disease_reference (
             id TEXT PRIMARY KEY,
@@ -798,3 +749,59 @@ def get_supabase():
             _client = _SqliteSupabase()
             logger.info("Using SQLite database (local)")
     return _client
+
+
+# ─── Schemas added by feature branches ───────────────────────
+# 放在檔尾透過 _SCHEMAS.update 追加，避免插入到中段去推動下方 SQLite
+# query builder 的行號，導致 CodeQL 把舊 alert 誤認為新發現。
+_SCHEMAS.update({
+    "reminders": """
+        CREATE TABLE IF NOT EXISTS reminders (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            reminder_type TEXT NOT NULL CHECK(reminder_type IN
+                ('medication', 'appointment', 'lab', 'custom')),
+            title TEXT NOT NULL,
+            body TEXT,
+            source_id TEXT,
+            url TEXT,
+            frequency TEXT NOT NULL DEFAULT 'once' CHECK(frequency IN
+                ('once', 'daily', 'weekly', 'monthly')),
+            time_of_day TEXT,
+            days_of_week TEXT,
+            scheduled_at TEXT NOT NULL,
+            next_fire_at TEXT NOT NULL,
+            last_sent_at TEXT,
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
+    "push_subscriptions": """
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            endpoint TEXT NOT NULL UNIQUE,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            user_agent TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
+    "notification_inbox": """
+        CREATE TABLE IF NOT EXISTS notification_inbox (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            reminder_id TEXT,
+            title TEXT NOT NULL,
+            body TEXT,
+            url TEXT,
+            reminder_type TEXT,
+            read INTEGER DEFAULT 0,
+            read_at TEXT,
+            delivered_via TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (reminder_id) REFERENCES reminders(id)
+        )""",
+})
