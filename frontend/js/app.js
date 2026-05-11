@@ -10184,12 +10184,14 @@ function reminderRenderList() {
   el.innerHTML = _remindersList.map(function(r) {
     var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString() : '—';
     var active = (r.active === true || r.active === 1);
+    var typeText = typeLabel[r.reminder_type] || escapeHtml(String(r.reminder_type || ''));
+    var freqText = freqLabel[r.frequency] || escapeHtml(String(r.frequency || ''));
     return ''
       + '<div style="padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
       + '  <div style="flex:1;min-width:0">'
       + '    <div style="font-weight:600">' + escapeHtml(r.title || '') + '</div>'
       + '    <div style="font-size:0.85rem;color:var(--text-dim);margin-top:2px">'
-      + (typeLabel[r.reminder_type] || r.reminder_type) + ' · ' + (freqLabel[r.frequency] || r.frequency)
+      + typeText + ' · ' + freqText
       + ' · 下次：' + escapeHtml(next)
       + (active ? '' : ' · <span style="color:#999">已停用</span>')
       + '    </div>'
@@ -10224,7 +10226,7 @@ function reminderRenderInbox(unread) {
     el.innerHTML = '<p style="color:var(--text-muted)">目前沒有通知。</p>';
     return;
   }
-  el.innerHTML = '<div style="margin-bottom:8px;font-size:0.85rem;color:var(--text-dim)">未讀 <strong>' + unread + '</strong> 則 / 共 ' + _remindersInbox.length + ' 則</div>'
+  el.innerHTML = '<div style="margin-bottom:8px;font-size:0.85rem;color:var(--text-dim)">未讀 <strong>' + Number(unread || 0) + '</strong> 則 / 共 ' + Number(_remindersInbox.length) + ' 則</div>'
     + _remindersInbox.map(function(n) {
       var isRead = (n.read === true || n.read === 1);
       var when = n.created_at ? new Date(n.created_at).toLocaleString() : '';
@@ -10243,9 +10245,10 @@ function reminderRenderInbox(unread) {
 function reminderUpdateNavBadge(unread) {
   var badge = document.getElementById('reminders-nav-badge');
   if (!badge) return;
-  if (unread > 0) {
+  var n = Number(unread || 0);
+  if (n > 0) {
     badge.style.display = '';
-    badge.textContent = unread > 99 ? '99+' : String(unread);
+    badge.textContent = n > 99 ? '99+' : String(n);
   } else {
     badge.style.display = 'none';
   }

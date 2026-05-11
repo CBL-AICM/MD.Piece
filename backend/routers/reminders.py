@@ -13,6 +13,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
@@ -250,7 +251,6 @@ def push_config():
 @router.post("/push/subscribe")
 def push_subscribe(body: PushSubscriptionCreate):
     # 驗證 endpoint 必須是 HTTPS 且屬於已知的 Web Push 供應商（防 SSRF）。
-    from urllib.parse import urlparse
     parsed = urlparse(body.endpoint)
     if parsed.scheme != "https" or not parsed.hostname:
         raise HTTPException(status_code=400, detail="endpoint 必須為 https URL")
@@ -333,7 +333,6 @@ def _endpoint_is_safe(endpoint):
     """檢查 endpoint 是否為 https 且屬於 ALLOWED_PUSH_HOSTS。
     雖然 push_subscribe 已驗證過，但這裡作為 sink 級的二次防線：
     避免 DB 直接被插入或 client 改 schema 後造成 SSRF。"""
-    from urllib.parse import urlparse
     if not isinstance(endpoint, str) or not endpoint:
         return False
     parsed = urlparse(endpoint)
