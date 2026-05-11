@@ -923,11 +923,14 @@ async function refreshPvTimeline(pid) {
   } catch (e) {}
 
   // 3. 服藥（取最近一筆當代表，不要把每次打卡都列出來 — 太雜）
+  //    只統計「實際吃了」的（taken !== false），跳過 / 沒吃不算在 N 次內，
+  //    否則回診報告會把「只是漏掉」的日子當成「完成 N 次」呈現
   try {
     var ml = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
     var byDay = {};
     (ml.logs || []).forEach(function(l) {
       if (!l || !l.taken_at) return;
+      if (l.taken === false) return;
       var dayKey = String(l.taken_at).slice(0, 10);
       byDay[dayKey] = (byDay[dayKey] || 0) + 1;
     });
@@ -1989,14 +1992,13 @@ async function refreshNavBadges() {
     setBadge('emotions', nc > 0 ? ('+' + nc) : '!', nc > 0 ? 'done' : 'todo');
   } catch (e) {}
 
-  // 生理（暫無 API → 本地 vitals storage 或不顯示）
+  // 生理（本地 localStorage，由 getVitalEntries() 統一讀取）
   try {
-    var vRaw = localStorage.getItem('mdpiece_vitals_' + pid) || localStorage.getItem('mdpiece_vitals');
-    if (vRaw) {
-      var vList = JSON.parse(vRaw);
-      var nv = (Array.isArray(vList) ? vList : []).filter(function(v) { return v && String(v.date || v.recordedAt || '').slice(0,10) === todayISO; }).length;
-      setBadge('vitals', nv > 0 ? ('+' + nv) : '', nv > 0 ? 'done' : 'todo');
-    }
+    var vList = (typeof getVitalEntries === 'function') ? getVitalEntries() : [];
+    var nv = vList.filter(function(v) {
+      return v && String(v.recordedAt || v.date || '').slice(0, 10) === todayISO;
+    }).length;
+    setBadge('vitals', nv > 0 ? ('+' + nv) : '', nv > 0 ? 'done' : 'todo');
   } catch (e) {}
 
   // 回診倒數
@@ -2068,10 +2070,12 @@ async function refreshTodayDigest() {
     }).length;
   } catch (e) {}
 
-  // 用藥 log
+  // 用藥 log — 只算真的吃了的（taken !== false），跳過/沒吃不計入今日 KPI
   try {
     var m = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
-    medCount = _todayCountFromList(m.logs || [], 'taken_at');
+    medCount = (m.logs || []).filter(function(l) {
+      return l && l.taken !== false && String(l.taken_at || '').slice(0, 10) === todayISO;
+    }).length;
   } catch (e) {}
 
   // 情緒 daily 聚合
