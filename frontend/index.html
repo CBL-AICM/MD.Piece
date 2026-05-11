@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=v71-clean-copy" />
+  <link rel="stylesheet" href="css/style.css?v=v72-med-detail" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -253,12 +253,12 @@
         <div class="nav-section-label" data-i18n="nav.group.record">每日紀錄</div>
         <button class="nav-item active" data-page="symptoms" onclick="navigateTo('symptoms', this)">
           <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.symptoms">症狀紀錄</span><span class="nav-sub">人體圖 · 強度 · 標籤</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.symptoms">症狀紀錄</span><span class="nav-sub">點哪裡不舒服 · 強度 · 類型</span></span>
           <span class="nav-badge" data-nav-badge="symptoms"></span>
         </button>
         <button class="nav-item" data-page="medications" onclick="navigateTo('medications', this)">
           <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.medications">藥物紀錄</span><span class="nav-sub">時段分組 · 拍藥單 OCR</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.medications">藥物紀錄</span><span class="nav-sub">拍藥袋自動填好 · 時段提醒</span></span>
           <span class="nav-badge" data-nav-badge="medications"></span>
         </button>
         <button class="nav-item" data-page="vitals" onclick="navigateTo('vitals', this)">
@@ -268,7 +268,7 @@
         </button>
         <button class="nav-item" data-page="emotions" onclick="navigateTo('emotions', this)">
           <span class="nav-icon"><i data-lucide="battery-charging" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.emotions">情緒電力</span><span class="nav-sub">環形電量 · 趨勢追蹤</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.emotions">情緒電力</span><span class="nav-sub">心情電量 · 走勢</span></span>
           <span class="nav-badge" data-nav-badge="emotions"></span>
         </button>
         <button class="nav-item" data-page="diet" onclick="navigateTo('diet', this)">
@@ -283,7 +283,7 @@
         <div class="nav-section-label" data-i18n="nav.group.search">查詢與分析</div>
         <button class="nav-item" data-page="symptomsAnalyze" onclick="navigateTo('symptomsAnalyze', this)">
           <span class="nav-icon"><i data-lucide="sparkles" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.symptomsAnalyze">症狀分析</span><span class="nav-sub">AI 釐清可能病因 / 科別</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.symptomsAnalyze">症狀分析</span><span class="nav-sub">不舒服可能的原因和該看哪一科</span></span>
         </button>
         <button class="nav-item" data-page="drugSearch" onclick="navigateTo('drugSearch', this)">
           <span class="nav-icon"><i data-lucide="search" style="width:18px;height:18px"></i></span>
@@ -291,13 +291,13 @@
         </button>
         <button class="nav-item" data-page="diseaseSearch" onclick="navigateTo('diseaseSearch', this)">
           <span class="nav-icon"><i data-lucide="stethoscope" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.diseaseSearch">疾病百科</span><span class="nav-sub">ICD-10 / 症狀 / 治療</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.diseaseSearch">疾病百科</span><span class="nav-sub">查疾病 · 症狀 · 治療</span></span>
         </button>
 
         <div class="nav-section-label" data-i18n="nav.group.report">健康報告</div>
         <button class="nav-item" data-page="previsit" onclick="navigateTo('previsit', this)">
           <span class="nav-icon"><i data-lucide="clipboard-check" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.previsit">診前報告</span><span class="nav-sub">回診倒數 · Timeline · 提問</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.previsit">診前報告</span><span class="nav-sub">回診倒數 · 近期紀錄 · 想問醫師的事</span></span>
           <span class="nav-badge" data-nav-badge="previsit"></span>
         </button>
         <button class="nav-item" data-page="labs" onclick="navigateTo('labs', this)">
@@ -306,7 +306,7 @@
         </button>
         <button class="nav-item" data-page="pieces" onclick="navigateTo('pieces', this)">
           <span class="nav-icon"><i data-lucide="puzzle" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.pieces">你的碎片</span><span class="nav-sub">歷次回診週期快照</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.pieces">你的碎片</span><span class="nav-sub">每次回診之間的紀錄</span></span>
         </button>
 
         <div class="nav-section-label" data-i18n="nav.group.learn">學習與陪伴</div>
@@ -437,7 +437,7 @@
         <div class="onboarding-step" data-step="4" hidden>
           <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="pill"></i></div>
           <h3 class="onboarding-title" data-i18n="onb.s4.title">藥物紀錄：拍藥單 + 時段打卡</h3>
-          <p class="onboarding-desc" data-i18n="onb.s4.desc">拿到藥袋直接拍照，OCR 自動讀名稱/劑量；藥會自動分早/午/晚/睡前時段。點卡片就打卡，✗ 跳過、★ 紀錄療效、? 查藥物百科。上方 hero 顯示今日進度（N / M 完成）。</p>
+          <p class="onboarding-desc" data-i18n="onb.s4.desc">把藥袋拍下來，藥名和劑量會自動填好，並依時段分成早、午、晚、睡前。時間到點一下就完成打卡。</p>
         </div>
         <div class="onboarding-step" data-step="5" hidden>
           <div class="onboarding-illust onboarding-illust-icon"><i data-lucide="battery-charging"></i></div>
@@ -477,8 +477,8 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=v71-clean-copy"></script>
-  <script src="js/app.js?v=v71-clean-copy"></script>
+  <script src="js/i18n.js?v=v72-med-detail"></script>
+  <script src="js/app.js?v=v72-med-detail"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────

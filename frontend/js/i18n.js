@@ -567,7 +567,7 @@
       'onb.s3.title': 'Symptoms: body map + AI',
       'onb.s3.desc': "Move the cursor over the little body — a red dot follows. Tap to lock the spot, then 'AI Analyze' for possible conditions, department and urgency. Six symptom categories below let you log details (intensity, frequency, notes).",
       'onb.s4.title': 'Medications: scan + slot check-in',
-      'onb.s4.desc': "Snap a photo of the bag/prescription — OCR auto-extracts name & dose. Meds bucket into morning/noon/evening/bedtime/other. Tap a card to mark taken; ✗ skip, ★ log effect/side effect, ? open drug encyclopedia. The hero shows today's progress.",
+      'onb.s4.desc': "Snap your pill bottle — name and dose are filled in automatically, sorted into morning, noon, evening, and bedtime. Tap a med card when you take it.",
       'onb.s5.title': "Mood Battery: ring + check-in",
       'onb.s5.desc': "The top ring shows your latest battery level. Slide the battery to pick today's 1–5 bars (senior mode shows emoji), add a short note (≤200 chars), and submit. The calendar, trend line and table are all here. Persistent low battery flags it for your doctor.",
       'onb.s6.title': 'Pre-visit: 30 seconds before walking in',

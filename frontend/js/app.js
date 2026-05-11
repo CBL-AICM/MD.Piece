@@ -5009,12 +5009,226 @@ function _renderMedCard(med, slotKey, isOther) {
       freq +
       '<div class="med-card-actions" onclick="event.stopPropagation()">' +
         '<span class="med-card-take">' + _T('meds.card.take') + '</span>' +
+        '<button class="med-card-mini med-card-mini-info" onclick="openMedDetail(\'' + med.id + '\')" title="看這顆藥的使用狀況與療效" aria-label="查看詳情"><i data-lucide="bar-chart-3" style="width:13px;height:13px"></i></button>' +
         '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="' + _T('meds.card.skipTitle') + '">✗</button>' +
         '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.effectTitle') + '">★</button>' +
         '<button class="med-card-mini" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)" title="查詢藥物百科（副作用 / 用法 / 衛教）">?</button>' +
       '</div>' +
     '</button>'
   );
+}
+
+// === 單顆藥的「使用狀況 + 療效」詳情 modal ================================
+// 設計參考：Medisafe / MyTherapy / Mango Health 的 per-medication detail。
+// 五個區塊：①服藥率 hero ②4 個數字 stat ③ 30 天日曆 ④療效走勢 ⑤副作用 + 近期紀錄
+function openMedDetail(medId) {
+  var med = (_medsList || []).find(function(m){ return String(m.id) === String(medId); });
+  if (!med) { if (typeof showToast === 'function') showToast('找不到這顆藥的資料', 'error'); return; }
+
+  // 先 render 殼，再 fetch 細節
+  var existing = document.getElementById('med-detail-modal');
+  if (existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'med-detail-modal';
+  modal.className = 'med-detail-modal';
+  modal.innerHTML = ''
+    + '<div class="mdm-backdrop" onclick="closeMedDetail()"></div>'
+    + '<div class="mdm-panel" role="dialog" aria-modal="true" aria-label="藥物詳情">'
+    +   '<header class="mdm-head">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedDetail()" aria-label="關閉">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +     '<div class="mdm-title-wrap">'
+    +       '<div class="mdm-pill"><i data-lucide="pill" style="width:18px;height:18px"></i></div>'
+    +       '<div>'
+    +         '<h3 class="mdm-title">' + escapeHtml(med.name || '未命名藥物') + (med.dosage ? '<span class="mdm-dose"> · ' + escapeHtml(med.dosage) + '</span>' : '') + '</h3>'
+    +         '<p class="mdm-sub">' + escapeHtml((med.frequency || '') + (med.category ? '　·　' + med.category : '')) + '</p>'
+    +       '</div>'
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="mdm-body" id="mdm-body">'
+    +     '<div class="mdm-loading"><i data-lucide="loader" class="mdm-spin"></i> 整理這顆藥的紀錄中…</div>'
+    +   '</div>'
+    +   '<footer class="mdm-foot">'
+    +     '<button type="button" class="mdm-action mdm-action-primary" onclick="showEffectForm(\'' + medId + '\',\'' + (med.name || '').replace(/\'/g, "\\\\'") + '\'); closeMedDetail();">'
+    +       '<i data-lucide="star" style="width:14px;height:14px"></i> 紀錄這次的效果'
+    +     '</button>'
+    +     '<button type="button" class="mdm-action" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name); closeMedDetail();">'
+    +       '<i data-lucide="book-open" style="width:14px;height:14px"></i> 看藥的說明'
+    +     '</button>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(modal);
+  requestAnimationFrame(function(){ modal.classList.add('is-open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.addEventListener('keydown', _medDetailEsc);
+  _loadMedDetail(medId, med);
+}
+function _medDetailEsc(e) { if (e.key === 'Escape') closeMedDetail(); }
+function closeMedDetail() {
+  var modal = document.getElementById('med-detail-modal');
+  if (!modal) return;
+  modal.classList.remove('is-open');
+  document.removeEventListener('keydown', _medDetailEsc);
+  setTimeout(function(){ if (modal.parentNode) modal.parentNode.removeChild(modal); }, 200);
+}
+async function _loadMedDetail(medId, med) {
+  var pid = _medsPatientId || (typeof getStablePatientId === 'function' ? getStablePatientId() : null);
+  if (!pid) return;
+  // 三筆 fetch 同時起跑（30 天 logs / 全部 effects / 整體 stats）
+  var pLogs = fetch(API + '/medications/logs?patient_id=' + pid + '&medication_id=' + medId + '&days=30')
+    .then(function(r){return r.json();}).catch(function(){ return { logs: [] }; });
+  var pEffects = fetch(API + '/medications/effects?patient_id=' + pid + '&medication_id=' + medId)
+    .then(function(r){return r.json();}).catch(function(){ return { effects: [] }; });
+  var pStats = fetch(API + '/medications/stats?patient_id=' + pid + '&days=30')
+    .then(function(r){return r.json();}).catch(function(){ return { medications: [] }; });
+
+  var arr;
+  try { arr = await Promise.all([pLogs, pEffects, pStats]); }
+  catch (e) { arr = [{logs:[]}, {effects:[]}, {medications:[]}]; }
+
+  var logs    = (arr[0] && arr[0].logs)    || [];
+  var effects = (arr[1] && arr[1].effects) || [];
+  var perMedStats = ((arr[2] && arr[2].medications) || []).find(function(m){ return String(m.id) === String(medId); }) || {};
+
+  // 統計（最近 30 天）
+  var taken   = logs.filter(function(l){ return l && l.taken !== false; }).length;
+  var skipped = logs.filter(function(l){ return l && l.taken === false; }).length;
+  var expectedPerDay = (med.is_other ? 0 : (med.slots && med.slots.length ? med.slots.length : 1));
+  var expected30 = expectedPerDay * 30;
+  var missed = Math.max(0, expected30 - taken - skipped);
+  var rate = expected30 > 0 ? Math.round(taken / expected30 * 100) : 0;
+  var avgEffect = perMedStats.avg_effectiveness != null
+    ? Number(perMedStats.avg_effectiveness).toFixed(1)
+    : (effects.length
+        ? (effects.reduce(function(s,e){return s + (e.effectiveness || 0);}, 0) / effects.length).toFixed(1)
+        : '—');
+
+  // 日曆熱區（30 天）
+  var calCells = [];
+  var today = new Date(); today.setHours(0,0,0,0);
+  var byDay = {};
+  logs.forEach(function(l) {
+    var d = (l.taken_at || '').slice(0, 10);
+    if (!d) return;
+    if (!byDay[d]) byDay[d] = { taken: 0, skipped: 0 };
+    if (l.taken === false) byDay[d].skipped++; else byDay[d].taken++;
+  });
+  for (var i = 29; i >= 0; i--) {
+    var d = new Date(today); d.setDate(d.getDate() - i);
+    var key = d.toISOString().slice(0,10);
+    var st = byDay[key];
+    var label, tone;
+    if (!st) { tone = 'none'; label = '無紀錄'; }
+    else if (expectedPerDay && st.taken >= expectedPerDay) { tone = 'ok'; label = '完成'; }
+    else if (st.taken > 0) { tone = 'partial'; label = '部分'; }
+    else if (st.skipped > 0) { tone = 'miss'; label = '漏掉/跳過'; }
+    else { tone = 'none'; label = '無紀錄'; }
+    calCells.push('<div class="mdm-cal-cell mdm-cal-' + tone + '" title="' + (d.getMonth()+1) + '/' + d.getDate() + '：' + label + '"></div>');
+  }
+
+  // 副作用 tag cloud（彙整出現次數）
+  var sideMap = {};
+  effects.forEach(function(e) {
+    var raw = (e.side_effects || '').trim();
+    if (!raw) return;
+    raw.split(/[,，、;；\s]+/).forEach(function(t) {
+      t = t.trim(); if (!t) return;
+      sideMap[t] = (sideMap[t] || 0) + 1;
+    });
+  });
+  var sideEntries = Object.keys(sideMap).map(function(k){return [k, sideMap[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0, 8);
+  var sideHtml = sideEntries.length
+    ? sideEntries.map(function(p){ return '<span class="mdm-side-tag">' + escapeHtml(p[0]) + ' <small>×' + p[1] + '</small></span>'; }).join('')
+    : '<p class="mdm-empty">目前還沒有紀錄副作用。吃完藥按「紀錄這次的效果」就能留下感覺。</p>';
+
+  // 療效走勢（迷你折線）
+  var effectChart = _renderMedEffectChart(effects);
+
+  // 近期 8 筆紀錄
+  var recentMerged = logs.slice(0, 8).map(function(l) {
+    var t = new Date(l.taken_at || l.created_at);
+    var mm = (t.getMonth()+1) + '/' + t.getDate();
+    var hh = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    var status = l.taken === false ? '<span class="mdm-rec-skip">跳過</span>' : '<span class="mdm-rec-ok">已服用</span>';
+    return '<li class="mdm-rec-item"><span class="mdm-rec-when">' + mm + '　' + hh + '</span>' + status + '</li>';
+  }).join('');
+
+  var body = document.getElementById('mdm-body');
+  if (!body) return;
+  body.innerHTML = ''
+    // 頂端 hero — 大字服藥率 + 4 個 stat
+    + '<section class="mdm-section mdm-hero">'
+    +   '<div class="mdm-hero-ring">'
+    +     '<svg viewBox="0 0 100 100" width="110" height="110">'
+    +       '<circle cx="50" cy="50" r="42" fill="none" stroke="rgba(31,61,88,0.08)" stroke-width="9"/>'
+    +       '<circle cx="50" cy="50" r="42" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round" '
+    +         'stroke-dasharray="264" stroke-dashoffset="' + (264 - 264 * rate / 100) + '" transform="rotate(-90 50 50)"/>'
+    +     '</svg>'
+    +     '<div class="mdm-hero-ring-num"><span>' + rate + '</span><small>%</small></div>'
+    +   '</div>'
+    +   '<div class="mdm-hero-side">'
+    +     '<div class="mdm-hero-label">最近 30 天的服藥情形</div>'
+    +     '<div class="mdm-stat-grid">'
+    +       '<div class="mdm-stat"><span class="mdm-stat-num">' + taken + '</span><span class="mdm-stat-lbl">已服用</span></div>'
+    +       '<div class="mdm-stat"><span class="mdm-stat-num">' + missed + '</span><span class="mdm-stat-lbl">漏掉</span></div>'
+    +       '<div class="mdm-stat"><span class="mdm-stat-num">' + skipped + '</span><span class="mdm-stat-lbl">跳過</span></div>'
+    +       '<div class="mdm-stat"><span class="mdm-stat-num">' + avgEffect + '</span><span class="mdm-stat-lbl">平均療效</span></div>'
+    +     '</div>'
+    +   '</div>'
+    + '</section>'
+
+    + '<section class="mdm-section">'
+    +   '<h4 class="mdm-section-title">每日狀況</h4>'
+    +   '<div class="mdm-cal">' + calCells.join('') + '</div>'
+    +   '<div class="mdm-cal-legend">'
+    +     '<span><i class="mdm-dot mdm-cal-ok"></i> 完成</span>'
+    +     '<span><i class="mdm-dot mdm-cal-partial"></i> 部分</span>'
+    +     '<span><i class="mdm-dot mdm-cal-miss"></i> 漏掉/跳過</span>'
+    +     '<span><i class="mdm-dot mdm-cal-none"></i> 無紀錄</span>'
+    +   '</div>'
+    + '</section>'
+
+    + '<section class="mdm-section">'
+    +   '<h4 class="mdm-section-title">療效走勢</h4>'
+    +   effectChart
+    + '</section>'
+
+    + '<section class="mdm-section">'
+    +   '<h4 class="mdm-section-title">曾紀錄的副作用</h4>'
+    +   '<div class="mdm-side-cloud">' + sideHtml + '</div>'
+    + '</section>'
+
+    + '<section class="mdm-section">'
+    +   '<h4 class="mdm-section-title">最近的紀錄</h4>'
+    +   (recentMerged ? '<ul class="mdm-rec-list">' + recentMerged + '</ul>' : '<p class="mdm-empty">這 30 天還沒有紀錄。</p>')
+    + '</section>'
+    + '<p class="mdm-foot-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 數字來自你自己的打卡和評分，最終以醫師意見為主。</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 療效走勢迷你折線（最近 14 筆評分）
+function _renderMedEffectChart(effects) {
+  var pts = (effects || []).slice(0, 14).reverse();
+  if (!pts.length) return '<p class="mdm-empty">還沒紀錄過效果。吃完藥按「紀錄這次的效果」打 1~5 分就會出現走勢。</p>';
+  var W = 280, H = 90, PAD = 12;
+  var n = pts.length;
+  var xs = function(i) { return n === 1 ? W/2 : PAD + (W - 2*PAD) * (i / (n - 1)); };
+  var ys = function(v) { return H - PAD - (H - 2*PAD) * ((v - 1) / 4); };
+  var path = pts.map(function(p, i){ return (i === 0 ? 'M ' : 'L ') + xs(i).toFixed(1) + ' ' + ys(p.effectiveness || 1).toFixed(1); }).join(' ');
+  var dots = pts.map(function(p, i){
+    return '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(p.effectiveness || 1).toFixed(1) + '" r="3.2" fill="var(--accent)"/>';
+  }).join('');
+  return '<svg class="mdm-effect-chart" viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '">'
+    + '<line x1="' + PAD + '" y1="' + ys(1) + '" x2="' + (W-PAD) + '" y2="' + ys(1) + '" stroke="rgba(31,61,88,0.08)"/>'
+    + '<line x1="' + PAD + '" y1="' + ys(3) + '" x2="' + (W-PAD) + '" y2="' + ys(3) + '" stroke="rgba(31,61,88,0.06)" stroke-dasharray="2 3"/>'
+    + '<line x1="' + PAD + '" y1="' + ys(5) + '" x2="' + (W-PAD) + '" y2="' + ys(5) + '" stroke="rgba(31,61,88,0.08)"/>'
+    + '<text x="2" y="' + (ys(5)+3) + '" font-size="9" fill="var(--text-muted)">★5</text>'
+    + '<text x="2" y="' + (ys(1)+3) + '" font-size="9" fill="var(--text-muted)">★1</text>'
+    + '<path d="' + path + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    + dots
+    + '</svg>'
+    + '<p class="mdm-effect-hint">最近 ' + n + ' 次評分</p>';
 }
 
 // 點卡片即打卡：固定時段藥（早/中/晚）直接寫入；
@@ -8558,7 +8772,7 @@ function labsRenderScanResult(data) {
   if (!items.length) {
     var note = '';
     if (data.errors && data.errors.length) {
-      note = '<details style="margin-top:8px;font-size:.78rem;color:var(--text-dim)"><summary>查看 OCR 嘗試紀錄</summary>' +
+      note = '<details style="margin-top:8px;font-size:.78rem;color:var(--text-dim)"><summary>查看讀取失敗紀錄</summary>' +
         '<ul style="margin-top:6px;padding-left:18px">' +
         data.errors.map(function(e) { return '<li>' + escapeHtml((e.provider || '?') + '：' + (e.error || '')) + '</li>'; }).join('') +
         '</ul></details>';
@@ -10744,7 +10958,7 @@ function renderDrugPhotoResults(data) {
         (r.recognized_dosage ? '・' + escapeHtml(r.recognized_dosage) : '') +
         (r.recognized_frequency ? '・' + escapeHtml(r.recognized_frequency) : '') +
         (hadGarble
-          ? '<span style="margin-left:6px;font-size:0.78rem;color:var(--text-muted)">（已自動清理 OCR 雜訊）</span>'
+          ? '<span style="margin-left:6px;font-size:0.78rem;color:var(--text-muted)">（已自動清理讀錯的字）</span>'
           : '') +
       '</div>';
     if (r.info && r.info.matched) {
