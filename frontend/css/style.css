@@ -21,14 +21,14 @@
 }
 
 :root {
-  /* Medical Soft palette — 大眾醫療配色：calm blue + sage teal */
-  --bg-deep:    #F4F8FB;   /* body 主底 — soft cool cream */
-  --bg-mid:     #E5EFF6;   /* sidebar / 次底 — sky pane */
-  --bg-soft:    #D8E5EE;   /* 強調淺色 — paler sky */
-  --bg-surface: #FFFFFF;   /* 卡片表面 — clean white */
-  --bg-glass:   #EAF1F7;
-  --bg-glass-hover: #D2E1EC;
-  --border-glass: rgba(43,89,131,0.16);
+  /* Warm cream body × medical blue accent — Headspace-meets-Calm 風 */
+  --bg-deep:    #FAFAF6;   /* body 主底 — 暖奶白，不黃不灰 */
+  --bg-mid:     #F2EFE8;   /* sidebar / 次底 — 偏暖 cream */
+  --bg-soft:    #ECE6D8;   /* 強調淺色 — 深一階 cream wash */
+  --bg-surface: #FFFFFF;   /* 卡片表面 — 純白（在暖底上會 pop） */
+  --bg-glass:   #F5F2EC;   /* glass card — 微暖 cream */
+  --bg-glass-hover: #ECE6D8;
+  --border-glass: rgba(74,144,194,0.18);  /* 邊框帶藍 — 跟 hero accent 同調 */
 
   /* Primary — medical calm blue (trustworthy, Apple Health / Calm-style) */
   --accent:     #4A90C2;
@@ -43,7 +43,7 @@
 
   /* Surfaces */
   --cream:      #FFFFFF;
-  --cream-dim:  #F0F4F7;
+  --cream-dim:  #F5F2EC;
 
   /* Accents — palette-only */
   --purple:     #8B95C5;   /* lavender — mood */
@@ -80,7 +80,7 @@
 
 body {
   font-family: "Noto Sans TC", sans-serif;
-  background: #FBF6EC;
+  background: var(--bg-deep);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
@@ -529,8 +529,8 @@ body {
   --heading-fg:     #B7C0AF;   /* 薄荷奶咖 #2 — sage heading accent */
 }
 #app-wrapper[data-theme="light"] {
-  --app-bg:         #F4F8FB;   /* soft cool cream wall */
-  --app-grid:       rgba(31,61,88,0.06);
+  --app-bg:         #FAFAF6;   /* 暖奶白 body wall */
+  --app-grid:       rgba(74,144,194,0.05);  /* 隱約的藍格線 */
   --app-text:       #1F3D58;   /* navy text */
   --app-text-dim:   #5A7388;   /* muted slate */
   --app-mint:       #5BB5A8;   /* sage teal */
@@ -539,9 +539,9 @@ body {
   --app-blue:       #C8DCEC;   /* light sky panel */
   --app-term:       #4A90C2;   /* medical blue accent */
   --app-panel:      #FFFFFF;   /* clean white panel */
-  --app-panel-soft: #EAF1F7;   /* sky wash */
-  --app-chrome-1:   #DCE8F1;   /* pale blue chrome */
-  --app-chrome-2:   #C8DCEC;   /* slightly deeper */
+  --app-panel-soft: #F5F2EC;   /* 暖奶 wash */
+  --app-chrome-1:   #F2EFE8;   /* 暖 cream chrome */
+  --app-chrome-2:   #ECE6D8;   /* 深一階 cream */
   --app-border:     #1F3D58;
   --app-shadow:     2px 2px 0 #1F3D58;
   --app-glow:       rgba(74,144,194,0.35);
@@ -1131,7 +1131,7 @@ html[data-mode="standard"] #app p { font-size: 1.02rem; }
    ═══════════════════════════════════════════════════════════ */
 
 html[data-mode="senior"] #app-wrapper.show {
-  background: #FBF6EC;
+  background: var(--bg-deep);
   background-image: none;
   color: var(--text);
 }
@@ -6835,13 +6835,13 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
   animation: vm-fade .18s ease;
   /* 因為 overlay 直接掛在 body 上，#app-wrapper 內的 --app-* vars 不會繼承
      所以這裡顯式指定（淺色預設） */
-  --app-bg:         #FBF6EC;
-  --app-text:       #5C3A32;
-  --app-text-dim:   #8B7868;
-  --app-panel:      #FFFAF0;
-  --app-panel-soft: #F5E1CB;
-  --app-border:     #5C3A32;
-  --app-term:       #C97F4B;
+  --app-bg:         #FAFAF6;
+  --app-text:       #1F3D58;
+  --app-text-dim:   #5A7388;
+  --app-panel:      #FFFFFF;
+  --app-panel-soft: #F5F2EC;
+  --app-border:     #1F3D58;
+  --app-term:       #4A90C2;
   --app-glow:       rgba(74,144,194,0.35);
   --app-chip-text:  #5C3A32;
 }
