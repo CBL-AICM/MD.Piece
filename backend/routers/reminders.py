@@ -329,14 +329,31 @@ def inbox_read_all(patient_id: str = Query(...)):
 
 # ─── Dispatch（cron 入口） ────────────────────────────────
 
+def _endpoint_is_safe(endpoint):
+    """檢查 endpoint 是否為 https 且屬於 ALLOWED_PUSH_HOSTS。
+    雖然 push_subscribe 已驗證過，但這裡作為 sink 級的二次防線：
+    避免 DB 直接被插入或 client 改 schema 後造成 SSRF。"""
+    from urllib.parse import urlparse
+    if not isinstance(endpoint, str) or not endpoint:
+        return False
+    parsed = urlparse(endpoint)
+    if parsed.scheme != "https" or not parsed.hostname:
+        return False
+    host = parsed.hostname.lower()
+    return any(host == h or host.endswith("." + h) for h in ALLOWED_PUSH_HOSTS)
+
+
 def _send_webpush(subscription_row, payload):
     """送一封 Web Push；回傳 (ok, error_str)。"""
     if not (VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY and _webpush_available):
         return False, "vapid_not_configured"
+    endpoint = subscription_row.get("endpoint")
+    if not _endpoint_is_safe(endpoint):
+        return False, "endpoint_rejected"
     try:
         webpush(
             subscription_info={
-                "endpoint": subscription_row["endpoint"],
+                "endpoint": endpoint,
                 "keys": {
                     "p256dh": subscription_row["p256dh"],
                     "auth": subscription_row["auth"],
