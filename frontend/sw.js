@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v61-v77-bolder-borders";
+const CACHE_VERSION = "mdpiece-v61-v78-final";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v77-bolder-borders",
-  "/js/i18n.js?v=v77-bolder-borders",
-  "/js/app.js?v=v77-bolder-borders",
+  "/css/style.css?v=v78-final",
+  "/js/i18n.js?v=v78-final",
+  "/js/app.js?v=v78-final",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
