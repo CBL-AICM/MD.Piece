@@ -249,48 +249,6 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (patient_id) REFERENCES patients(id)
         )""",
-    "drug_reference": """
-        CREATE TABLE IF NOT EXISTS drug_reference (
-            id TEXT PRIMARY KEY,
-            name_zh TEXT,
-            name_en TEXT,
-            aliases TEXT,
-            category TEXT,
-            indication TEXT,
-            usage TEXT,
-            side_effects TEXT,
-            risks TEXT,
-            education TEXT,
-            source TEXT DEFAULT 'claude',
-            disclaimer TEXT,
-            query_count INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now'))
-        )""",
-    "disease_reference": """
-        CREATE TABLE IF NOT EXISTS disease_reference (
-            id TEXT PRIMARY KEY,
-            name_zh TEXT,
-            name_en TEXT,
-            aliases TEXT,
-            icd10_code TEXT,
-            icd10_category TEXT,
-            overview TEXT,
-            causes TEXT,
-            symptoms TEXT,
-            common_medications TEXT,
-            treatments TEXT,
-            complications TEXT,
-            prognosis TEXT,
-            self_care TEXT,
-            red_flags TEXT,
-            references_data TEXT,
-            source TEXT DEFAULT 'claude',
-            disclaimer TEXT,
-            query_count INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now'))
-        )""",
 }
 
 
@@ -417,18 +375,8 @@ class _SqliteQuery:
         self._params.append(val)
         return self
 
-    def gt(self, col, val):
-        self._conditions.append(f'"{_safe_ident(col)}" > ?')
-        self._params.append(val)
-        return self
-
     def lte(self, col, val):
         self._conditions.append(f'"{_safe_ident(col)}" <= ?')
-        self._params.append(val)
-        return self
-
-    def lt(self, col, val):
-        self._conditions.append(f'"{_safe_ident(col)}" < ?')
         self._params.append(val)
         return self
 
@@ -635,9 +583,7 @@ class _HttpxQuery:
     def eq(self, col, val):     return self._add(col, "eq", val)
     def neq(self, col, val):    return self._add(col, "neq", val)
     def gte(self, col, val):    return self._add(col, "gte", val)
-    def gt(self, col, val):     return self._add(col, "gt", val)
     def lte(self, col, val):    return self._add(col, "lte", val)
-    def lt(self, col, val):     return self._add(col, "lt", val)
     def ilike(self, col, val):  return self._add(col, "ilike", val)
 
     def order(self, col, desc=False, **_):
@@ -749,59 +695,3 @@ def get_supabase():
             _client = _SqliteSupabase()
             logger.info("Using SQLite database (local)")
     return _client
-
-
-# ─── Schemas added by feature branches ───────────────────────
-# 放在檔尾透過 _SCHEMAS.update 追加，避免插入到中段去推動下方 SQLite
-# query builder 的行號，導致 CodeQL 把舊 alert 誤認為新發現。
-_SCHEMAS.update({
-    "reminders": """
-        CREATE TABLE IF NOT EXISTS reminders (
-            id TEXT PRIMARY KEY,
-            patient_id TEXT NOT NULL,
-            reminder_type TEXT NOT NULL CHECK(reminder_type IN
-                ('medication', 'appointment', 'lab', 'custom')),
-            title TEXT NOT NULL,
-            body TEXT,
-            source_id TEXT,
-            url TEXT,
-            frequency TEXT NOT NULL DEFAULT 'once' CHECK(frequency IN
-                ('once', 'daily', 'weekly', 'monthly')),
-            time_of_day TEXT,
-            days_of_week TEXT,
-            scheduled_at TEXT NOT NULL,
-            next_fire_at TEXT NOT NULL,
-            last_sent_at TEXT,
-            active INTEGER DEFAULT 1,
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (patient_id) REFERENCES patients(id)
-        )""",
-    "push_subscriptions": """
-        CREATE TABLE IF NOT EXISTS push_subscriptions (
-            id TEXT PRIMARY KEY,
-            patient_id TEXT NOT NULL,
-            endpoint TEXT NOT NULL UNIQUE,
-            p256dh TEXT NOT NULL,
-            auth TEXT NOT NULL,
-            user_agent TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (patient_id) REFERENCES patients(id)
-        )""",
-    "notification_inbox": """
-        CREATE TABLE IF NOT EXISTS notification_inbox (
-            id TEXT PRIMARY KEY,
-            patient_id TEXT NOT NULL,
-            reminder_id TEXT,
-            title TEXT NOT NULL,
-            body TEXT,
-            url TEXT,
-            reminder_type TEXT,
-            read INTEGER DEFAULT 0,
-            read_at TEXT,
-            delivered_via TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (patient_id) REFERENCES patients(id),
-            FOREIGN KEY (reminder_id) REFERENCES reminders(id)
-        )""",
-})

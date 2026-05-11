@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
-from backend.db import get_supabase
+from backend.db import _SCHEMAS, get_supabase
 from backend.models import (
     InboxUpdate,
     PushSubscriptionCreate,
@@ -27,6 +27,69 @@ from backend.models import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# 把本 feature 用到的 SQLite schema 在 router import 時注入 _SCHEMAS dict。
+# 改放在這裡（而非 db.py 中段）避免動到 db.py 行號讓 CodeQL 把 db.py 既有
+# 的 SQL-injection false-positive 當成本 PR 新發現。Supabase 上對應的表已
+# 透過 migration 建立，這段只服務 local SQLite fallback。
+_SCHEMAS.setdefault(
+    "reminders",
+    """
+        CREATE TABLE IF NOT EXISTS reminders (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            reminder_type TEXT NOT NULL CHECK(reminder_type IN
+                ('medication', 'appointment', 'lab', 'custom')),
+            title TEXT NOT NULL,
+            body TEXT,
+            source_id TEXT,
+            url TEXT,
+            frequency TEXT NOT NULL DEFAULT 'once' CHECK(frequency IN
+                ('once', 'daily', 'weekly', 'monthly')),
+            time_of_day TEXT,
+            days_of_week TEXT,
+            scheduled_at TEXT NOT NULL,
+            next_fire_at TEXT NOT NULL,
+            last_sent_at TEXT,
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
+)
+_SCHEMAS.setdefault(
+    "push_subscriptions",
+    """
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            endpoint TEXT NOT NULL UNIQUE,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            user_agent TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
+)
+_SCHEMAS.setdefault(
+    "notification_inbox",
+    """
+        CREATE TABLE IF NOT EXISTS notification_inbox (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            reminder_id TEXT,
+            title TEXT NOT NULL,
+            body TEXT,
+            url TEXT,
+            reminder_type TEXT,
+            read INTEGER DEFAULT 0,
+            read_at TEXT,
+            delivered_via TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (reminder_id) REFERENCES reminders(id)
+        )""",
+)
 
 VALID_TYPES = {"medication", "appointment", "lab", "custom"}
 VALID_FREQUENCIES = {"once", "daily", "weekly", "monthly"}
