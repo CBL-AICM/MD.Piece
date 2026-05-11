@@ -10858,31 +10858,39 @@ html[data-mode="senior"] .nav-search input { font-size: 1rem; }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 10px;
+  padding: 9px 10px;
   font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: var(--text-dim);
+  color: var(--app-text);
+  opacity: 0.85;
+  border-radius: 4px;
   border-bottom: 1px dashed transparent;
   user-select: none;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
 }
 .nav-group-head::-webkit-details-marker { display: none; }
-.nav-group-head:hover { color: var(--app-text); }
+.nav-group-head:hover {
+  opacity: 1;
+  background: var(--app-panel-soft);
+}
+.nav-group[open] > .nav-group-head { opacity: 1; }
 .nav-group-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 14px;
-  color: inherit;
+  color: var(--accent, #5B9FE8);
   flex-shrink: 0;
 }
-.nav-group-label { flex: 1; }
+.nav-group-label { flex: 1; font-weight: 600; }
 .nav-group-chev {
   display: inline-flex;
   align-items: center;
   transition: transform 0.18s ease;
   color: inherit;
+  opacity: 0.7;
 }
 .nav-group[open] .nav-group-chev { transform: rotate(180deg); }
 .nav-group-body {
@@ -11108,18 +11116,29 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   }
   .nav-search input { font-size: 0.95rem; }
   .nav-group {
-    margin: 0 0 4px;
+    margin: 0 0 10px;
     width: 100%;
+    border-top: 1px solid var(--app-border);
+    padding-top: 6px;
   }
+  .nav-group:first-of-type { border-top: 0; padding-top: 0; }
   .nav-group-head {
-    padding: 10px 6px;
-    font-size: 0.78rem;
+    padding: 12px 4px;
+    font-size: 0.92rem;
+    text-transform: none;
+    letter-spacing: 0;
+    opacity: 1;
+    color: var(--app-text);
+    font-weight: 700;
   }
+  .nav-group-head .nav-group-icon { width: 18px; }
+  .nav-group-head .nav-group-icon svg { width: 16px; height: 16px; }
+  .nav-group-head .nav-group-chev svg { width: 16px; height: 16px; }
   .nav-group-body {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 6px 0 8px;
+    padding: 4px 0 4px;
   }
   /* Inside groups, keep nav items as horizontal row buttons (not the legacy tile look) */
   .nav-group-body .nav-item {
