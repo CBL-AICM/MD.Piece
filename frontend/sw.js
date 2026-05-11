@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v62-reminder-notifications";
+const CACHE_VERSION = "mdpiece-v80-ui-and-reminders";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=reminder-notifications",
-  "/js/i18n.js?v=reminder-notifications",
-  "/js/app.js?v=reminder-notifications",
+  "/css/style.css?v=v80-ui-and-reminders",
+  "/js/i18n.js?v=v80-ui-and-reminders",
+  "/js/app.js?v=v80-ui-and-reminders",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

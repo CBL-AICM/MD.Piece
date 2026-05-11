@@ -127,14 +127,21 @@ function placeholderPage(label, hint, iconName, slug, pct) {
 }
 // 生理紀錄使用獨立 vitals() 函式（見下方）
 function memo() {
+  var _memoList = (typeof memoLoad === 'function') ? memoLoad() : [];
+  var _todayKey = new Date().toISOString().slice(0, 10);
+  var _todayCount = _memoList.filter(function(m) {
+    var t = m.createdAt || m.created_at;
+    return t && String(new Date(t).toISOString()).slice(0, 10) === _todayKey;
+  }).length;
+  var _doctorCount = _memoList.filter(function(m) { return m.forDoctor; }).length;
   return `
-    <div class="card memo-hero">
-      <h2 style="display:flex;align-items:center;gap:8px">
-        <i data-lucide="sticky-note" style="width:22px;height:22px"></i> Memo
-      </h2>
-      <p style="margin-top:6px;color:var(--text-dim)">
-        隨手拍下症狀、藥袋、傷口；或寫下下次門診要跟醫師說的話。所有 memo 都存在這台裝置上。
-      </p>
+    <div class="page-app-hero page-app-hero-rose">
+      <div class="page-app-hero-head">
+        <span class="page-app-hero-eyebrow">TODAY · 今日 Memo</span>
+        <span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 僅存本裝置 · 醫療決策請以醫師為主</span>
+      </div>
+      <div class="page-app-hero-title">${_todayCount > 0 ? `今天記了 ${_todayCount} 筆 · 標記給醫師 ${_doctorCount} 筆` : '今天還沒記東西 — 想到就丟一筆吧'}</div>
+      <div class="page-app-hero-meta">隨手拍症狀／藥袋／傷口，或寫下下次門診要跟醫師說的事</div>
     </div>
 
     <div class="card memo-quick">
@@ -357,6 +364,7 @@ function memoSave() {
   memoCancelCompose();
   memoRenderList();
   showToast(editingId ? "已更新" : "已儲存", "success");
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
 }
 
 function memoEdit(id) {
@@ -741,13 +749,50 @@ function storyOpenArchive(slug, catKey) {
     });
 }
 
+function renderPvVisitHero() {
+  // 若使用者沒設下次回診日，回空字串（不顯示）
+  var iso = (typeof loadNextVisit === 'function') ? loadNextVisit() : '';
+  if (!iso) {
+    return ''
+      + '<div class="pv-visit-hero pv-visit-hero-empty">'
+      +   '<div class="pv-visit-hero-icon"><i data-lucide="calendar-plus"></i></div>'
+      +   '<div class="pv-visit-hero-body">'
+      +     '<div class="pv-visit-hero-eyebrow">下次回診</div>'
+      +     '<div class="pv-visit-hero-title">尚未設定回診日</div>'
+      +     '<div class="pv-visit-hero-sub">回首頁設好回診日期，這裡就會顯示倒數和本期紀錄範圍。</div>'
+      +   '</div>'
+      +   '<button class="pv-btn pv-btn-ghost" onclick="navigateTo(\'home\',null)">'
+      +     '<i data-lucide="home"></i> 前往設定'
+      +   '</button>'
+      + '</div>';
+  }
+  var d = _daysBetween(iso);
+  var pretty = iso.replace(/-/g, '/');
+  var label, tone, eyebrow;
+  if (d > 0)       { label = '倒數 ' + d + ' 天';        tone = 'upcoming'; eyebrow = '下次回診'; }
+  else if (d === 0){ label = '今天回診';                 tone = 'today';    eyebrow = '今天就是回診日'; }
+  else             { label = '已超過 ' + (-d) + ' 天';   tone = 'past';     eyebrow = '上次回診'; }
+  return ''
+    + '<div class="pv-visit-hero pv-visit-hero-' + tone + '">'
+    +   '<div class="pv-visit-hero-icon"><i data-lucide="calendar-check-2"></i></div>'
+    +   '<div class="pv-visit-hero-body">'
+    +     '<div class="pv-visit-hero-eyebrow">' + eyebrow + '</div>'
+    +     '<div class="pv-visit-hero-title">' + label + '</div>'
+    +     '<div class="pv-visit-hero-sub">日期：' + pretty + '　·　出門前可以先看一下這頁的提醒</div>'
+    +   '</div>'
+    +   '<div class="pv-visit-hero-warn"><i data-lucide="info" style="width:12px;height:12px"></i> 以醫師預約單為準</div>'
+    + '</div>';
+}
+
 function previsit() {
   var _pvDays = (typeof getReportDays === 'function') ? getReportDays() : 30;
   return ''
     + '<section class="pv-page">'
+    + renderPvVisitHero()
+    + renderHowto('previsit')
     + '  <header class="pv-header">'
     + '    <div>'
-    + '      <p class="pv-eyebrow">// previsit &gt; pre_consultation_report</p>'
+    + '      <p class="pv-eyebrow">回診前用的健康摘要</p>'
     + '      <h2 class="pv-title"><i data-lucide="clipboard-check"></i> 診前報告</h2>'
     + '      <p class="pv-sub">看診前 30 秒讀完：MD.Piece 幫你整理近 ' + _pvDays + ' 天的症狀、情緒、用藥與就診紀錄，並列出這次門診最該問的三件事。</p>'
     + '    </div>'
@@ -766,6 +811,14 @@ function previsit() {
     + '      </button>'
     + '    </div>'
     + '  </header>'
+    + ''
+    + '  <section class="pv-section pv-timeline-section">'
+    + '    <h3 class="pv-section-title"><i data-lucide="route"></i> 本週重點碎片</h3>'
+    + '    <div id="pv-timeline" class="pv-timeline">'
+    + '      <p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 整理中…</p>'
+    + '    </div>'
+    + '    <p class="pv-disclaimer"><i data-lucide="info"></i> 以下為你自填紀錄，僅供與醫師討論用，並非診斷依據。</p>'
+    + '  </section>'
     + ''
     + '  <section class="pv-section pv-checklist">'
     + '    <h3 class="pv-section-title"><i data-lucide="list-checks"></i> 這次最該問醫師的三件事</h3>'
@@ -799,6 +852,9 @@ function loadPrevisitPage() {
 
   _previsitData = { checklist: null, report: null };
 
+  // 載入 Timeline（本地症狀 + 雲端情緒，合併時序）
+  refreshPvTimeline(pid);
+
   fetch(API + '/reports/' + encodeURIComponent(pid) + '/checklist')
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -819,6 +875,104 @@ function loadPrevisitPage() {
     .catch(function() {
       previsitRenderReportError();
     });
+}
+
+// 合併本地症狀 + 雲端情緒 → 編年事件列。
+// 取最近 14 天、排序時間倒序、最多 6 筆，避免讓 previsit 頁面太長。
+async function refreshPvTimeline(pid) {
+  var el = document.getElementById('pv-timeline');
+  if (!el) return;
+  var events = [];
+  var now = Date.now();
+  var cutoff = now - 14 * 86400000;
+
+  // 1. 本地症狀
+  try {
+    var syms = (typeof getSymptomEntries === 'function') ? getSymptomEntries() : [];
+    syms.forEach(function(e) {
+      var t = new Date(e.recordedAt).getTime();
+      if (!t || t < cutoff) return;
+      var cat = (typeof findSymptomCat === 'function') ? findSymptomCat(e.categoryId) : null;
+      var catName = cat ? (cat.zh || cat.name || cat.id) : (e.categoryId || '症狀');
+      var intensity = e.intensity ? (' · ' + e.intensity + '/10') : '';
+      events.push({
+        when: t,
+        type: 'symptom',
+        title: catName + intensity,
+        desc: (e.notes || e.note || e.description || '').slice(0, 80) || '— 無附註',
+        icon: 'scan-search',
+      });
+    });
+  } catch (e) {}
+
+  // 2. 雲端情緒（每日聚合）
+  try {
+    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
+    (em.daily || []).forEach(function(d) {
+      if (!d || !d.date) return;
+      var t = new Date(d.date + 'T12:00:00').getTime();
+      if (t < cutoff) return;
+      var pct = (typeof _moodPercent === 'function') ? _moodPercent(d.average_score) : Math.round(d.average_score * 20);
+      events.push({
+        when: t,
+        type: 'mood',
+        title: '情緒電力 · ' + pct + '%',
+        desc: '當日紀錄 ' + (d.count || 1) + ' 次' + (d.note ? '：' + String(d.note).slice(0, 50) : ''),
+        icon: 'battery-charging',
+      });
+    });
+  } catch (e) {}
+
+  // 3. 服藥（取最近一筆當代表，不要把每次打卡都列出來 — 太雜）
+  //    只統計「實際吃了」的（taken !== false），跳過 / 沒吃不算在 N 次內，
+  //    否則回診報告會把「只是漏掉」的日子當成「完成 N 次」呈現
+  try {
+    var ml = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
+    var byDay = {};
+    (ml.logs || []).forEach(function(l) {
+      if (!l || !l.taken_at) return;
+      if (l.taken === false) return;
+      var dayKey = String(l.taken_at).slice(0, 10);
+      byDay[dayKey] = (byDay[dayKey] || 0) + 1;
+    });
+    Object.keys(byDay).forEach(function(day) {
+      var t = new Date(day + 'T08:00:00').getTime();
+      if (t < cutoff) return;
+      events.push({
+        when: t,
+        type: 'med',
+        title: '服藥紀錄 · ' + byDay[day] + ' 次',
+        desc: '當日依時段完成的打卡',
+        icon: 'pill',
+      });
+    });
+  } catch (e) {}
+
+  events.sort(function(a, b) { return b.when - a.when; });
+  events = events.slice(0, 8);
+
+  if (!events.length) {
+    el.innerHTML = '<p class="pv-empty">最近 14 天還沒有紀錄；先去症狀／藥物／情緒頁打個卡，這裡就會自動編年呈現。</p>';
+    return;
+  }
+
+  el.innerHTML = events.map(function(e) {
+    var d = new Date(e.when);
+    var pretty = (d.getMonth() + 1) + '/' + d.getDate();
+    var hh = String(d.getHours()).padStart(2, '0');
+    var mm = String(d.getMinutes()).padStart(2, '0');
+    var wd = ['日','一','二','三','四','五','六'][d.getDay()];
+    return ''
+      + '<article class="pv-tl-card" data-type="' + e.type + '">'
+      +   '<div class="pv-tl-dot"></div>'
+      +   '<div class="pv-tl-body">'
+      +     '<div class="pv-tl-time">' + pretty + '（' + wd + '）' + hh + ':' + mm + '</div>'
+      +     '<div class="pv-tl-title"><i data-lucide="' + e.icon + '" style="width:14px;height:14px"></i> ' + escapeHtml(e.title) + '</div>'
+      +     '<div class="pv-tl-desc">' + escapeHtml(e.desc) + '</div>'
+      +   '</div>'
+      + '</article>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function previsitRenderChecklist(data) {
@@ -1752,6 +1906,422 @@ function refreshNextVisitChip() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// === 共用「如何使用這頁？」摺疊面板 =====================================
+// 用法：在頁面 renderer 開頭呼叫 renderHowto('meds')
+//      → 自動讀 i18n 'howto.meds.title' + 'howto.meds.s1..sN' + 'howto.meds.warn'
+// 顯示為 <details> 預設摺疊；第一次造訪該頁時自動展開（localStorage 記住）
+function renderHowto(key) {
+  var seenKey = 'mdpiece_howto_seen_' + key;
+  var seen = false;
+  try { seen = localStorage.getItem(seenKey) === '1'; } catch (e) {}
+  // 動態收集 s1, s2, ... 到沒下一條為止
+  var steps = [];
+  for (var i = 1; i <= 10; i++) {
+    var t = _T('howto.' + key + '.s' + i);
+    if (!t || t === ('howto.' + key + '.s' + i)) break; // i18n 拿不到就停
+    steps.push(t);
+  }
+  if (!steps.length) return '';
+  var title = _T('howto.' + key + '.title') || '如何使用這頁？';
+  var warn  = _T('howto.' + key + '.warn');
+  var stepsHtml = steps.map(function(s, idx) {
+    return '<li class="page-howto-step">'
+      + '<span class="page-howto-step-n">' + (idx + 1) + '</span>'
+      + '<span class="page-howto-step-text">' + escapeHtml(s) + '</span>'
+      + '</li>';
+  }).join('');
+  return ''
+    + '<details class="page-howto" data-key="' + key + '"' + (seen ? '' : ' open') + ' ontoggle="_howtoOnToggle(this)">'
+    +   '<summary class="page-howto-summary">'
+    +     '<span class="page-howto-summary-icon"><i data-lucide="help-circle"></i></span>'
+    +     '<span class="page-howto-summary-text">' + escapeHtml(title) + '</span>'
+    +     '<span class="page-howto-summary-chev"><i data-lucide="chevron-down"></i></span>'
+    +   '</summary>'
+    +   '<div class="page-howto-body">'
+    +     '<ol class="page-howto-steps">' + stepsHtml + '</ol>'
+    +     (warn && warn !== ('howto.' + key + '.warn')
+        ? '<p class="page-howto-warn"><i data-lucide="info" style="width:13px;height:13px"></i> ' + escapeHtml(warn) + '</p>'
+        : '')
+    +   '</div>'
+    + '</details>';
+}
+function _howtoOnToggle(el) {
+  if (el && el.open) {
+    var k = el.getAttribute('data-key');
+    try { localStorage.setItem('mdpiece_howto_seen_' + k, '1'); } catch (e) {}
+  }
+}
+
+// === Nav 狀態 Badge ======================================================
+// 在 sidebar 各 nav-item 末端顯示「今日打卡狀態」小膠囊：
+//   - 已打卡：綠色 "+N"
+//   - 未打卡：橘色脈動 "!"
+//   - 回診倒數：橘色脈動 "DN" (N 天)
+// 來源都用既有 API / localStorage，不打額外端點。
+async function refreshNavBadges() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  var todayISO = new Date().toISOString().slice(0, 10);
+
+  function setBadge(key, text, tone) {
+    var el = document.querySelector('[data-nav-badge="' + key + '"]');
+    if (!el) return;
+    if (!text) { el.textContent = ''; el.removeAttribute('data-tone'); return; }
+    el.textContent = text;
+    el.setAttribute('data-tone', tone || 'todo');
+  }
+
+  // 症狀：今日筆數（本地）
+  try {
+    var syms = (typeof getSymptomEntries === 'function') ? getSymptomEntries() : [];
+    var n = syms.filter(function(e) { return String(e.recordedAt || '').slice(0, 10) === todayISO; }).length;
+    setBadge('symptoms', n > 0 ? ('+' + n) : '!', n > 0 ? 'done' : 'todo');
+  } catch (e) {}
+
+  // 藥物：今日 log 數
+  try {
+    var ml = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{logs:[]};});
+    var nm = (ml.logs || []).filter(function(l) { return l && l.taken_at && String(l.taken_at).slice(0,10) === todayISO && l.taken !== false; }).length;
+    setBadge('medications', nm > 0 ? ('+' + nm) : '!', nm > 0 ? 'done' : 'todo');
+  } catch (e) {}
+
+  // 情緒
+  try {
+    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
+    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
+    var nc = d ? (d.count || 0) : 0;
+    setBadge('emotions', nc > 0 ? ('+' + nc) : '!', nc > 0 ? 'done' : 'todo');
+  } catch (e) {}
+
+  // 生理（本地 localStorage，由 getVitalEntries() 統一讀取）
+  try {
+    var vList = (typeof getVitalEntries === 'function') ? getVitalEntries() : [];
+    var nv = vList.filter(function(v) {
+      return v && String(v.recordedAt || v.date || '').slice(0, 10) === todayISO;
+    }).length;
+    setBadge('vitals', nv > 0 ? ('+' + nv) : '', nv > 0 ? 'done' : 'todo');
+  } catch (e) {}
+
+  // 回診倒數
+  try {
+    var iso = (typeof loadNextVisit === 'function') ? loadNextVisit() : '';
+    if (iso) {
+      var d2 = _daysBetween(iso);
+      if (d2 >= 0 && d2 <= 7) {
+        setBadge('previsit', d2 === 0 ? 'TODAY' : ('D' + d2), 'todo');
+      } else {
+        setBadge('previsit', '');
+      }
+    } else {
+      // 沒設回診日 → 清掉舊 badge，避免 stale state
+      setBadge('previsit', '');
+    }
+  } catch (e) {}
+}
+
+// === 今日拼圖 Digest =====================================================
+// 顯示「今天打了多少卡」— 症狀 / 用藥 / 情緒 / 飲食。
+// 目標 = 6 個碎片（症狀＋藥＋情緒 三大類各算 1，再加 3 個彈性 slot 反映多筆紀錄）。
+function renderTodayDigestCard() {
+  return ''
+    + '<section class="home-digest" aria-label="今日拼圖">'
+    +   '<div class="home-digest-head">'
+    +     '<span class="home-digest-eyebrow">TODAY · 今日拼圖</span>'
+    +     '<span class="home-digest-progress" id="home-digest-progress">— / 6 個碎片</span>'
+    +   '</div>'
+    +   '<div class="home-digest-bar"><div class="home-digest-bar-fill" id="home-digest-bar-fill" style="width:0%"></div></div>'
+    +   '<div class="home-digest-stats">'
+    +     '<div class="home-digest-stat" data-cat="symptom">'
+    +       '<span class="home-digest-icon"><i data-lucide="scan-search"></i></span>'
+    +       '<span class="home-digest-num" id="hd-symptom">—</span>'
+    +       '<span class="home-digest-label">症狀</span>'
+    +     '</div>'
+    +     '<div class="home-digest-stat" data-cat="med">'
+    +       '<span class="home-digest-icon"><i data-lucide="pill"></i></span>'
+    +       '<span class="home-digest-num" id="hd-med">—</span>'
+    +       '<span class="home-digest-label">用藥</span>'
+    +     '</div>'
+    +     '<div class="home-digest-stat" data-cat="mood">'
+    +       '<span class="home-digest-icon"><i data-lucide="battery-charging"></i></span>'
+    +       '<span class="home-digest-num" id="hd-mood">—</span>'
+    +       '<span class="home-digest-label">情緒</span>'
+    +     '</div>'
+    +   '</div>'
+    + '</section>';
+}
+async function refreshTodayDigest() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  var todayISO = new Date().toISOString().slice(0, 10);
+
+  function _todayCountFromList(list, dateField) {
+    if (!Array.isArray(list)) return 0;
+    return list.filter(function(item) {
+      var v = item && item[dateField];
+      if (!v) return false;
+      return String(v).slice(0, 10) === todayISO;
+    }).length;
+  }
+
+  var symptomCount = 0, medCount = 0, moodCount = 0;
+
+  // 症狀：本地 localStorage（submitSymptomLog 寫 mdpiece_symptoms，
+  // 不是寫雲端 /symptoms — 後者目前是 stub，永遠回空陣列）
+  try {
+    var syms = (typeof getSymptomEntries === 'function') ? getSymptomEntries() : [];
+    symptomCount = syms.filter(function(e) {
+      return String(e.recordedAt || '').slice(0, 10) === todayISO;
+    }).length;
+  } catch (e) {}
+
+  // 用藥 log — 只算真的吃了的（taken !== false），跳過/沒吃不計入今日 KPI
+  try {
+    var m = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
+    medCount = (m.logs || []).filter(function(l) {
+      return l && l.taken !== false && String(l.taken_at || '').slice(0, 10) === todayISO;
+    }).length;
+  } catch (e) {}
+
+  // 情緒 daily 聚合
+  try {
+    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
+    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
+    moodCount = d ? (d.count || 0) : 0;
+  } catch (e) {}
+
+  // 寫入 DOM
+  var setText = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+  setText('hd-symptom', symptomCount);
+  setText('hd-med', medCount);
+  setText('hd-mood', moodCount);
+
+  // 進度：三大類各打過至少 1 次算 1 分（上限 3），再加實際筆數封頂 3 → 共 6 分
+  var hits = (symptomCount > 0 ? 1 : 0) + (medCount > 0 ? 1 : 0) + (moodCount > 0 ? 1 : 0);
+  var extras = Math.min(3, (symptomCount + medCount + moodCount) - hits);
+  if (extras < 0) extras = 0;
+  var score = hits + extras;
+  var pct = Math.min(100, Math.round((score / 6) * 100));
+  setText('home-digest-progress', score + ' / 6 個碎片');
+  var bar = document.getElementById('home-digest-bar-fill');
+  if (bar) bar.style.width = pct + '%';
+}
+
+// === 今日待辦 ============================================================
+// 「待辦」由兩部分組成：
+//   1. 系統自動生成（auto）— 從現有資料推斷：回診倒數、活躍藥物、今天還沒打卡的事
+//   2. 使用者手動加（user）— 存 localStorage，per-user
+// 註：所有系統生成項目都附「以醫師說明為準」小字；既有 disclaimer 不動。
+var TODO_STORE_VERSION = 1;
+function _todoKey() {
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var pid = u.id_number || u.username || 'guest';
+  return 'mdpiece_todos_' + pid;
+}
+function _loadUserTodos() {
+  try {
+    var raw = localStorage.getItem(_todoKey());
+    if (!raw) return [];
+    var p = JSON.parse(raw);
+    return Array.isArray(p.items) ? p.items : [];
+  } catch (e) { return []; }
+}
+function _saveUserTodos(items) {
+  try {
+    localStorage.setItem(_todoKey(), JSON.stringify({ v: TODO_STORE_VERSION, items: items }));
+  } catch (e) {}
+}
+function addUserTodo(title, desc) {
+  title = String(title || '').trim().slice(0, 80);
+  if (!title) return false;
+  var items = _loadUserTodos();
+  items.unshift({
+    id: 'user-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    title: title,
+    desc: String(desc || '').trim().slice(0, 200),
+    done: false,
+    createdAt: Date.now(),
+    source: 'user',
+  });
+  _saveUserTodos(items);
+  return true;
+}
+function toggleUserTodo(id) {
+  var items = _loadUserTodos();
+  var i = items.findIndex(function(t) { return t.id === id; });
+  if (i < 0) return;
+  items[i].done = !items[i].done;
+  items[i].doneAt = items[i].done ? Date.now() : null;
+  _saveUserTodos(items);
+}
+function removeUserTodo(id) {
+  _saveUserTodos(_loadUserTodos().filter(function(t) { return t.id !== id; }));
+}
+async function _genAutoTodos() {
+  var out = [];
+  var todayISO = new Date().toISOString().slice(0, 10);
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return out;
+
+  // 回診倒數（7 天內）
+  try {
+    var visit = (typeof loadNextVisit === 'function') ? loadNextVisit() : '';
+    if (visit) {
+      var d = _daysBetween(visit);
+      if (d >= 0 && d <= 7) {
+        out.push({
+          id: 'auto-visit',
+          source: 'auto-visit', category: 'visit',
+          title: d === 0 ? '今天有回診' : '回診倒數 ' + d + ' 天',
+          desc: '日期：' + visit.replace(/-/g, '/'),
+          icon: 'calendar-check-2',
+          link: null,
+          warn: '請以醫師預約單為準',
+        });
+      }
+    }
+  } catch (e) {}
+
+  // 活躍藥物提醒（取前 3 個）
+  try {
+    var r = await fetch(API + '/medications/?patient_id=' + pid).then(function(x){return x.json();});
+    var meds = (r.medications || []).filter(function(m) { return m.active !== 0; });
+    meds.slice(0, 3).forEach(function(m) {
+      out.push({
+        id: 'auto-med-' + m.id,
+        source: 'auto-med', category: 'med',
+        title: '今日服藥：' + (m.name || ''),
+        desc: m.dosage || '',
+        icon: 'pill',
+        link: 'medications',
+        warn: '服用方式以醫師處方為準',
+      });
+    });
+  } catch (e) {}
+
+  // 情緒：今天還沒打卡
+  try {
+    var rr = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(x){return x.json();});
+    var daily = rr.daily || [];
+    var today = daily.find(function(d) { return d.date === todayISO && d.count > 0; });
+    if (!today) {
+      out.push({
+        id: 'auto-mood',
+        source: 'auto-mood', category: 'mood',
+        title: '今天還沒打卡情緒',
+        desc: '一分鐘紀錄今日電量',
+        icon: 'battery-charging',
+        link: 'emotions',
+        warn: null,
+      });
+    }
+  } catch (e) {}
+
+  return out;
+}
+function renderTodoCard() {
+  return ''
+    + '<section class="home-todo" aria-label="今日待辦">'
+    +   '<div class="home-todo-head">'
+    +     '<span class="home-todo-prefix">今日待辦</span>'
+    +     '<button type="button" class="home-todo-add" onclick="openTodoComposer()" title="新增個人待辦">'
+    +       '<i data-lucide="plus" style="width:14px;height:14px"></i>'
+    +       '<span>新增</span>'
+    +     '</button>'
+    +   '</div>'
+    +   '<div class="home-todo-note">'
+    +     '<i data-lucide="info" style="width:12px;height:12px"></i>'
+    +     '<span>本區為輔助提醒，最終以醫師說明、藥單為準</span>'
+    +   '</div>'
+    +   '<div id="home-todo-list" class="home-todo-list">'
+    +     '<div class="home-todo-loading">// 載入中…</div>'
+    +   '</div>'
+    +   '<div class="home-todo-composer" id="home-todo-composer" hidden>'
+    +     '<input type="text" id="home-todo-input" class="home-todo-input" maxlength="80" placeholder="想記下什麼？例：問醫師血壓藥能不能換時段">'
+    +     '<button type="button" class="home-todo-submit" onclick="submitTodoComposer()">加入</button>'
+    +     '<button type="button" class="home-todo-cancel" onclick="closeTodoComposer()" aria-label="取消">✕</button>'
+    +   '</div>'
+    + '</section>';
+}
+async function refreshTodoList() {
+  var el = document.getElementById('home-todo-list');
+  if (!el) return;
+  var auto, user;
+  try {
+    auto = await _genAutoTodos();
+  } catch (e) { auto = []; }
+  user = _loadUserTodos();
+  // 完成 > 24h 的個人項目自動隱藏，避免堆積
+  var cutoff = Date.now() - 24 * 3600 * 1000;
+  user = user.filter(function(t) { return !t.done || (t.doneAt && t.doneAt > cutoff); });
+
+  var rows = '';
+  auto.forEach(function(t) {
+    rows += ''
+      + '<div class="todo-item todo-auto" data-cat="' + t.category + '">'
+      +   '<span class="todo-icon"><i data-lucide="' + (t.icon || 'circle') + '"></i></span>'
+      +   '<div class="todo-body">'
+      +     '<div class="todo-title">' + escapeHtml(t.title) + '</div>'
+      +     (t.desc ? '<div class="todo-desc">' + escapeHtml(t.desc) + '</div>' : '')
+      +     (t.warn ? '<div class="todo-warn"><i data-lucide="alert-triangle" style="width:11px;height:11px"></i> ' + escapeHtml(t.warn) + '</div>' : '')
+      +   '</div>'
+      +   (t.link
+          ? '<button type="button" class="todo-go" onclick="navigateTo(\'' + t.link + '\',null)" title="前往">→</button>'
+          : '<span class="todo-tag-auto">auto</span>')
+      + '</div>';
+  });
+
+  if (user.length) {
+    user.forEach(function(t) {
+      rows += ''
+        + '<div class="todo-item todo-user' + (t.done ? ' is-done' : '') + '" data-id="' + t.id + '">'
+        +   '<button type="button" class="todo-check" onclick="onTodoToggle(\'' + t.id + '\')" aria-label="' + (t.done ? '取消完成' : '標記完成') + '">'
+        +     (t.done ? '<i data-lucide="check-square" style="width:16px;height:16px"></i>' : '<i data-lucide="square" style="width:16px;height:16px"></i>')
+        +   '</button>'
+        +   '<div class="todo-body">'
+        +     '<div class="todo-title">' + escapeHtml(t.title) + '</div>'
+        +     (t.desc ? '<div class="todo-desc">' + escapeHtml(t.desc) + '</div>' : '')
+        +   '</div>'
+        +   '<button type="button" class="todo-del" onclick="onTodoRemove(\'' + t.id + '\')" title="刪除" aria-label="刪除這筆">'
+        +     '<i data-lucide="trash-2" style="width:13px;height:13px"></i>'
+        +   '</button>'
+        + '</div>';
+    });
+  }
+
+  if (!rows) {
+    rows = '<div class="todo-empty">// 今天沒有待辦事項，可以從上方「新增」加自己想記的事</div>';
+  }
+  el.innerHTML = rows;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function onTodoToggle(id) { toggleUserTodo(id); refreshTodoList(); }
+function onTodoRemove(id) { removeUserTodo(id); refreshTodoList(); }
+function openTodoComposer() {
+  var c = document.getElementById('home-todo-composer');
+  if (!c) return;
+  c.hidden = false;
+  var inp = document.getElementById('home-todo-input');
+  if (inp) { inp.value = ''; setTimeout(function(){ inp.focus(); }, 30); inp.onkeydown = function(e){
+    if (e.key === 'Enter') { e.preventDefault(); submitTodoComposer(); }
+    else if (e.key === 'Escape') { closeTodoComposer(); }
+  }; }
+}
+function closeTodoComposer() {
+  var c = document.getElementById('home-todo-composer');
+  if (c) c.hidden = true;
+}
+function submitTodoComposer() {
+  var inp = document.getElementById('home-todo-input');
+  if (!inp) return;
+  if (addUserTodo(inp.value, '')) {
+    closeTodoComposer();
+    refreshTodoList();
+    if (typeof showToast === 'function') showToast('已加入待辦', 'success');
+  } else {
+    inp.focus();
+  }
+}
+
 // 結束本期回診週期：把這段期間的紀錄整合進「我的碎片」，產出報告快照，然後清除原始紀錄。
 // `early=true` 代表使用者在預定回診日之前主動結束週期（提前回診）。
 function _finalizeVisit(opts) {
@@ -1937,6 +2507,12 @@ function home() {
         </button>
       </div>
 
+      <!-- Today Digest（今日拼圖統計） -->
+      ${renderTodayDigestCard()}
+
+      <!-- Today's Todo (auto + user) -->
+      ${renderTodoCard()}
+
       <!-- Three-column info row -->
       <div class="home-info-row">
         <div class="home-ov">
@@ -1950,7 +2526,7 @@ function home() {
         </div>
         <div class="home-ov">
           <div class="home-ov-head">
-            <i data-lucide="smile" style="width:16px;height:16px;color:var(--rose, #e8889c)"></i>
+            <i data-lucide="smile" style="width:16px;height:16px;color:var(--rose)"></i>
             <span>${_T('home.ov.mood')}</span>
           </div>
           <div id="home-mood-summary" class="home-ov-body">
@@ -1996,6 +2572,13 @@ function home() {
 function loadHomePage() {
   var user = getCurrentUser();
   var pid = getStablePatientId();
+
+  // 載入今日待辦（系統自動 + 使用者個人）
+  refreshTodoList();
+  // 載入今日拼圖統計
+  refreshTodayDigest();
+  // 更新 sidebar 各 nav-item 今日打卡 badge
+  refreshNavBadges();
 
   fetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
@@ -2066,30 +2649,32 @@ function symptoms() {
   return `
     <div class="sym-page">
 
+      ${renderHowto('symptoms')}
+
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ status</span>
-          <span class="ts-tag">period_summary</span>
+          <span class="ts-prompt">本期概況</span>
+          <span class="ts-tag">本期摘要</span>
         </header>
         <div class="ts-body">
           <div class="ts-stat-grid">
             <div class="ts-stat">
-              <span class="ts-stat-label">// ${_T('sym.stat.days')}</span>
+              <span class="ts-stat-label">${_T('sym.stat.days')}</span>
               <span class="ts-stat-num">${periodDays}</span>
               <span class="ts-stat-unit">days</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// ${_T('sym.stat.logged')}</span>
+              <span class="ts-stat-label">${_T('sym.stat.logged')}</span>
               <span class="ts-stat-num">${totalCount}</span>
               <span class="ts-stat-unit">${_T('sym.stat.times')}</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// ${_T('sym.stat.top')}</span>
+              <span class="ts-stat-label">${_T('sym.stat.top')}</span>
               <span class="ts-stat-num sm">${topCat ? _symField(topCat, 'zh') : '—'}</span>
               <span class="ts-stat-unit">${topCat ? topCount + ' ' + _T('sym.stat.times') : _T('sym.stat.empty')}</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// ${_T('sym.stat.nextVisit')}</span>
+              <span class="ts-stat-label">${_T('sym.stat.nextVisit')}</span>
               <span class="ts-stat-num">${nextVisitDay !== null ? Math.max(0, nextVisitDay) : '—'}</span>
               <span class="ts-stat-unit">${nextVisitDay !== null ? 'days' : _T('sym.stat.notSet')}</span>
             </div>
@@ -2102,8 +2687,36 @@ function symptoms() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./record-symptom</span>
-          <span class="ts-tag">choose_category</span>
+          <span class="ts-prompt">點位置</span>
+          <span class="ts-tag">點哪裡不舒服</span>
+        </header>
+        <div class="ts-body">
+          <p class="sym-instruct">滑鼠移到身體上的位置會跟著跑紅點；點下去就鎖定，然後可以叫 AI 分析這個部位可能的狀況。</p>
+          <div class="sym-body-map" id="sym-body-map">
+            ${renderBodyMapSvg()}
+            <div class="sym-body-legend">
+              <span class="sym-body-current" id="sym-body-current">尚未選擇部位</span>
+              <button type="button" class="sym-body-clear" onclick="symBodyClear()">清除</button>
+            </div>
+            <div class="sym-body-ai" id="sym-body-ai" style="display:none">
+              <button type="button" class="sym-body-ai-btn" onclick="symBodyAiAnalyze()">
+                <i data-lucide="sparkles" style="width:14px;height:14px"></i>
+                <span>用 AI 分析這個位置可能的狀況</span>
+              </button>
+              <p class="sym-body-ai-warn">
+                <i data-lucide="info" style="width:11px;height:11px"></i>
+                AI 推測僅供與醫師討論參考，不是診斷
+              </p>
+              <div class="sym-body-ai-result" id="sym-body-ai-result"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="term-section">
+        <header class="ts-head">
+          <span class="ts-prompt">紀錄症狀</span>
+          <span class="ts-tag">選分類</span>
         </header>
         <div class="ts-body">
           <p class="sym-instruct">${_T('sym.choose.instruct')}</p>
@@ -2118,7 +2731,7 @@ function symptoms() {
             ${getCustomSymptomCats().map(c => `
               <button class="sym-cat-card sym-cat-card-custom" onclick="openSymptomLog('${c.id}')" type="button">
                 <span class="scc-badge">${_T('sym.card.custom.badge')}</span>
-                <span class="scc-del" onclick="event.stopPropagation(); removeCustomSymptomCatAndRefresh('${c.id}')" title="${_T('sym.card.custom.delTitle')}">×</span>
+                <button type="button" class="scc-del" onclick="event.stopPropagation(); removeCustomSymptomCatAndRefresh('${c.id}')" title="${_T('sym.card.custom.delTitle')}" aria-label="刪除自訂症狀「${escapeHtml(c.zh)}」">×</button>
                 <div class="scc-icon scc-${c.color}"><i data-lucide="${c.icon}"></i></div>
                 <div class="scc-name">${escapeHtml(c.zh)}</div>
                 <div class="scc-short">${c.short}</div>
@@ -2135,7 +2748,7 @@ function symptoms() {
 
       <section class="term-section" id="sym-logform" style="display:none">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./log-entry</span>
+          <span class="ts-prompt">填寫紀錄</span>
           <span class="ts-tag" id="logform-cat-tag">—</span>
         </header>
         <div class="ts-body" id="logform-body"></div>
@@ -2143,7 +2756,7 @@ function symptoms() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ tail -f today.log</span>
+          <span class="ts-prompt">今日紀錄</span>
           <span class="ts-tag">${_Tf('sym.today.tag', { n: todayEntries.length })}</span>
         </header>
         <div class="ts-body">
@@ -2180,8 +2793,8 @@ function symptoms() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ summary --period last_${periodDays}_days</span>
-          <span class="ts-tag">accumulated</span>
+          <span class="ts-prompt">過去 ${periodDays} 天摘要</span>
+          <span class="ts-tag">累計</span>
         </header>
         <div class="ts-body">${renderPeriodSummary(stats)}</div>
       </section>
@@ -2379,6 +2992,299 @@ function getPeriodStats() {
   return { entries, byCategory, periodStart: start };
 }
 
+// ─── 身體圖：點擊定位疼痛部位 ───────────────────────────
+// 8 個主要區域。click → 寫進 _symBodyPart，並把 part 名稱帶進
+// 下方症狀紀錄表單的 notes 欄。
+var _symBodyPart = '';
+var _SYM_BODY_PARTS = [
+  { id: 'head',     label: '頭部',   cx: 55, cy: 22 },
+  { id: 'neck',     label: '頸部',   cx: 55, cy: 40 },
+  { id: 'chest',    label: '胸口',   cx: 55, cy: 60 },
+  { id: 'abdomen',  label: '腹部',   cx: 55, cy: 92 },
+  { id: 'l-arm',    label: '左手',   cx: 23, cy: 80 },
+  { id: 'r-arm',    label: '右手',   cx: 87, cy: 80 },
+  { id: 'l-leg',    label: '左腿',   cx: 46, cy: 165 },
+  { id: 'r-leg',    label: '右腿',   cx: 64, cy: 165 },
+];
+function renderBodyMapSvg() {
+  var hotspots = _SYM_BODY_PARTS.map(function(p) {
+    return ''
+      + '<g class="sym-body-hotspot" data-part="' + p.id + '" '
+      +    'onclick="symBodyPick(\'' + p.id + '\',\'' + p.label + '\')">'
+      +   '<circle cx="' + p.cx + '" cy="' + p.cy + '" r="11" fill="rgba(201,127,75,0.0)" stroke="rgba(201,127,75,0.0)" stroke-width="1.5" />'
+      +   '<title>' + p.label + '</title>'
+      + '</g>';
+  }).join('');
+  return ''
+    + '<svg viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg" class="sym-body-svg"'
+    +    ' onmousemove="symBodyHover(event)"'
+    +    ' onmouseleave="symBodyHoverLeave()"'
+    +    ' onclick="symBodyClickAt(event)"'
+    +    ' ontouchmove="symBodyHover(event.touches[0]); event.preventDefault()"'
+    +    ' ontouchend="symBodyClickAt(event.changedTouches[0])"'
+    + '>'
+    +   '<defs>'
+    +     '<linearGradient id="symBodyGrad" x1="0" y1="0" x2="0" y2="1">'
+    +       '<stop offset="0%" stop-color="#FFF6E6"/>'
+    +       '<stop offset="100%" stop-color="#F2D6B0"/>'
+    +     '</linearGradient>'
+    +     '<radialGradient id="symBodyPain" cx="50%" cy="50%" r="50%">'
+    +       '<stop offset="0%"   stop-color="#B8553F" stop-opacity="0.55"/>'
+    +       '<stop offset="60%"  stop-color="#B8553F" stop-opacity="0.18"/>'
+    +       '<stop offset="100%" stop-color="#B8553F" stop-opacity="0"/>'
+    +     '</radialGradient>'
+    +   '</defs>'
+    // 身體輪廓
+    +   '<g fill="url(#symBodyGrad)" stroke="#5C3A32" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" pointer-events="none">'
+    +     '<ellipse cx="55" cy="22" rx="13" ry="15"/>'
+    +     '<path d="M 49 35 Q 55 39 61 35 L 61 43 Q 55 45 49 43 Z"/>'
+    +     '<path d="M 32 50 Q 32 45 38 44 Q 46 42 55 42 Q 64 42 72 44 Q 78 45 78 50 L 76 78 Q 74 92 73 100 L 72 122 Q 72 128 68 130 L 42 130 Q 38 128 38 122 L 37 100 Q 36 92 34 78 Z"/>'
+    +     '<path d="M 32 50 Q 26 53 23 62 Q 19 80 17 102 Q 16 114 21 116 Q 26 116 28 111 Q 31 96 32 82 Q 33 68 33 54 Z"/>'
+    +     '<path d="M 78 50 Q 84 53 87 62 Q 91 80 93 102 Q 94 114 89 116 Q 84 116 82 111 Q 79 96 78 82 Q 77 68 77 54 Z"/>'
+    +     '<path d="M 42 130 Q 40 144 40 160 L 38 196 Q 38 198 41 198 L 51 198 Q 53 198 53 196 L 53 160 Q 53 144 53 132 Z"/>'
+    +     '<path d="M 57 132 Q 57 144 57 160 L 57 196 Q 57 198 59 198 L 69 198 Q 72 198 72 196 L 70 160 Q 70 144 68 130 Z"/>'
+    +   '</g>'
+    // 點擊熱區（覆蓋在輪廓上層，hover 變亮 — 但整個 SVG 也接 click）
+    +   hotspots
+    +   '<g id="sym-body-cursor" pointer-events="none" style="display:none">'
+    +     '<circle id="sym-body-cursor-glow" cx="0" cy="0" r="10" fill="url(#symBodyPain)" opacity="0.7"/>'
+    +     '<circle id="sym-body-cursor-dot"  cx="0" cy="0" r="3" fill="#B8553F" stroke="#FFFAF0" stroke-width="0.6" opacity="0.85"/>'
+    +   '</g>'
+    +   '<g id="sym-body-marker" pointer-events="none" style="display:none">'
+    +     '<circle id="sym-body-marker-glow" cx="0" cy="0" r="14" fill="url(#symBodyPain)"/>'
+    +     '<circle id="sym-body-marker-dot"  cx="0" cy="0" r="5" fill="#B8553F" stroke="#FFFAF0" stroke-width="1.2"/>'
+    +   '</g>'
+    + '</svg>';
+}
+
+// 把 client (滑鼠/觸控) 座標換成 SVG viewBox 座標
+function _svgCoords(svg, ev) {
+  var pt = svg.createSVGPoint();
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  var ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  var p = pt.matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
+}
+function symBodyHover(ev) {
+  var svg = document.querySelector('.sym-body-svg');
+  if (!svg || !ev) return;
+  var c = _svgCoords(svg, ev);
+  if (!c) return;
+  var cur = document.getElementById('sym-body-cursor');
+  var glow = document.getElementById('sym-body-cursor-glow');
+  var dot  = document.getElementById('sym-body-cursor-dot');
+  if (!cur || !glow || !dot) return;
+  cur.style.display = '';
+  glow.setAttribute('cx', c.x); glow.setAttribute('cy', c.y);
+  dot.setAttribute('cx', c.x);  dot.setAttribute('cy', c.y);
+}
+function symBodyHoverLeave() {
+  var cur = document.getElementById('sym-body-cursor');
+  if (cur) cur.style.display = 'none';
+}
+// 點擊任意位置：算最近區域 + 鎖定 marker，並準備 AI 分析按鈕
+function symBodyClickAt(ev) {
+  if (!ev) return;
+  var svg = document.querySelector('.sym-body-svg');
+  if (!svg) return;
+  // 若 click 落在 hotspot 的 <g> 內，瀏覽器會先觸發那邊的 onclick；
+  // 為了避免雙觸發，這裡判斷如果 _symBodyPart 剛剛被 symBodyPick 設過（< 80ms 內）就略過。
+  if (_symBodyJustPicked && (Date.now() - _symBodyJustPicked) < 80) return;
+  var c = _svgCoords(svg, ev);
+  if (!c) return;
+  // 找最近的 _SYM_BODY_PARTS
+  var best = null, bestDist = Infinity;
+  _SYM_BODY_PARTS.forEach(function(p) {
+    var dx = p.cx - c.x, dy = p.cy - c.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d < bestDist) { bestDist = d; best = p; }
+  });
+  if (!best) return;
+  // 鎖定 marker 在「實際點擊位置」而非 hotspot 中心，讓使用者覺得精準
+  _symBodyPart = best.label;
+  _symBodyClickXY = { x: c.x, y: c.y };
+  var g = document.getElementById('sym-body-marker');
+  var glow = document.getElementById('sym-body-marker-glow');
+  var dot  = document.getElementById('sym-body-marker-dot');
+  if (g && glow && dot) {
+    glow.setAttribute('cx', c.x); glow.setAttribute('cy', c.y);
+    dot.setAttribute('cx', c.x);  dot.setAttribute('cy', c.y);
+    g.style.display = '';
+  }
+  document.querySelectorAll('.sym-body-hotspot').forEach(function(el) {
+    el.classList.toggle('is-active', el.getAttribute('data-part') === best.id);
+  });
+  var cur = document.getElementById('sym-body-current');
+  if (cur) cur.textContent = '已選：' + best.label;
+  // 顯示 AI 分析按鈕區
+  var ai = document.getElementById('sym-body-ai');
+  if (ai) ai.style.display = '';
+  var aiResult = document.getElementById('sym-body-ai-result');
+  if (aiResult) aiResult.innerHTML = '';
+}
+var _symBodyJustPicked = 0;
+var _symBodyClickXY = null;
+function symBodyPick(partId, label) {
+  _symBodyPart = label;
+  _symBodyJustPicked = Date.now();
+  var p = _SYM_BODY_PARTS.find(function(x) { return x.id === partId; });
+  if (!p) return;
+  _symBodyClickXY = { x: p.cx, y: p.cy };
+  // 更新標記位置
+  var g = document.getElementById('sym-body-marker');
+  var glow = document.getElementById('sym-body-marker-glow');
+  var dot  = document.getElementById('sym-body-marker-dot');
+  if (g && glow && dot) {
+    glow.setAttribute('cx', p.cx); glow.setAttribute('cy', p.cy);
+    dot.setAttribute('cx', p.cx);  dot.setAttribute('cy', p.cy);
+    g.style.display = '';
+  }
+  // 更新 legend 文字
+  var cur = document.getElementById('sym-body-current');
+  if (cur) cur.textContent = '已選：' + label;
+  // 高亮熱區
+  document.querySelectorAll('.sym-body-hotspot').forEach(function(el) {
+    el.classList.toggle('is-active', el.getAttribute('data-part') === partId);
+  });
+  // 顯示 AI 分析按鈕
+  var ai = document.getElementById('sym-body-ai');
+  if (ai) ai.style.display = '';
+  var aiResult = document.getElementById('sym-body-ai-result');
+  if (aiResult) aiResult.innerHTML = '';
+}
+function symBodyClear() {
+  _symBodyPart = '';
+  _symBodyClickXY = null;
+  var g = document.getElementById('sym-body-marker');
+  if (g) g.style.display = 'none';
+  var cur = document.getElementById('sym-body-current');
+  if (cur) cur.textContent = '尚未選擇部位';
+  document.querySelectorAll('.sym-body-hotspot').forEach(function(el) {
+    el.classList.remove('is-active');
+  });
+  var ai = document.getElementById('sym-body-ai');
+  if (ai) ai.style.display = 'none';
+  var aiResult = document.getElementById('sym-body-ai-result');
+  if (aiResult) aiResult.innerHTML = '';
+}
+
+// AI 分析「點選位置」— 把 部位 + 細座標換算成 sub-region 名稱
+// 後送 POST /symptoms/analyze，符合既有 SymptomAnalysisRequest 介面
+async function symBodyAiAnalyze() {
+  if (!_symBodyPart) return;
+  var resultEl = document.getElementById('sym-body-ai-result');
+  if (!resultEl) return;
+
+  // 把點擊位置換算成「細部敘述」— 用簡單的相對位置規則，幫 AI 更聚焦
+  var subRegion = _symBodyPart;
+  if (_symBodyClickXY) {
+    var x = _symBodyClickXY.x, y = _symBodyClickXY.y;
+    // 頭部細分（y < 35）
+    if (y < 35) {
+      if (y < 18) subRegion = '額頭';
+      else if (y > 28) subRegion = '下巴';
+      else if (x < 50) subRegion = '左側太陽穴 / 左眼周圍';
+      else if (x > 60) subRegion = '右側太陽穴 / 右眼周圍';
+      else subRegion = '頭部中央';
+    }
+    // 頸部
+    else if (y < 50) {
+      subRegion = '頸部' + (x < 55 ? '左側' : (x > 55 ? '右側' : '中央'));
+    }
+    // 胸口（50 ≤ y < 78）
+    else if (y < 78) {
+      if (x < 48) subRegion = '左胸 / 心臟區域';
+      else if (x > 62) subRegion = '右胸';
+      else subRegion = '胸口中央 / 胸骨';
+    }
+    // 上腹/腰（78 ≤ y < 110）
+    else if (y < 110) {
+      if (x < 48) subRegion = '左上腹 / 左側肋下';
+      else if (x > 62) subRegion = '右上腹 / 右側肋下';
+      else subRegion = '上腹 / 胃部';
+    }
+    // 下腹（110 ≤ y < 132）
+    else if (y < 132) {
+      if (x < 48) subRegion = '下腹左側';
+      else if (x > 62) subRegion = '下腹右側';
+      else subRegion = '下腹 / 肚臍附近';
+    }
+    // 手臂 (x < 30 or x > 80)
+    else if (x < 30) subRegion = '左前臂 / 左手腕';
+    else if (x > 80) subRegion = '右前臂 / 右手腕';
+    // 腿
+    else if (y > 130 && y < 170) subRegion = (x < 55 ? '左大腿' : '右大腿');
+    else if (y >= 170) subRegion = (x < 55 ? '左小腿 / 左腳踝' : '右小腿 / 右腳踝');
+  }
+
+  resultEl.innerHTML = '<div class="sbai-loading"><i data-lucide="loader" class="sbai-spin"></i> AI 分析中…（' + subRegion + '）</div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  try {
+    var res = await fetch(API + '/symptoms/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symptoms: [subRegion + ' 不適 / 疼痛 / 需要評估'],
+        patient_id: pid,
+      }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    _renderBodyAiResult(resultEl, subRegion, data);
+  } catch (e) {
+    resultEl.innerHTML = '<div class="sbai-err">AI 分析暫時無法使用，可以先用下面的症狀分類紀錄。<br><span class="sbai-err-detail">' + escapeHtml(String(e.message || e)) + '</span></div>';
+  }
+}
+
+function _renderBodyAiResult(el, subRegion, data) {
+  var urgency = data.urgency || 'low';
+  var urgencyMap = {
+    emergency: { label: '緊急', tone: 'emergency', icon: 'alert-octagon' },
+    high:      { label: '較高',  tone: 'high',      icon: 'alert-triangle' },
+    medium:    { label: '中等',  tone: 'medium',    icon: 'alert-circle' },
+    low:       { label: '輕微',  tone: 'low',       icon: 'info' },
+  };
+  var u = urgencyMap[urgency] || urgencyMap.low;
+  var conditions = Array.isArray(data.conditions) ? data.conditions.slice(0, 4) : [];
+  var condHtml = conditions.length
+    ? '<ul class="sbai-conds">' + conditions.map(function(c) {
+        var name = typeof c === 'string' ? c : (c.name || c.condition || c.title || JSON.stringify(c));
+        var desc = (typeof c === 'object' && c.description) ? c.description : '';
+        return '<li><strong>' + escapeHtml(String(name)) + '</strong>' + (desc ? '<span class="sbai-cond-desc">' + escapeHtml(String(desc)) + '</span>' : '') + '</li>';
+      }).join('') + '</ul>'
+    : '<p class="sbai-empty">AI 沒有特別指向的可能，建議直接諮詢醫師。</p>';
+
+  el.innerHTML = ''
+    + '<div class="sbai-card">'
+    +   '<div class="sbai-head">'
+    +     '<span class="sbai-region">' + escapeHtml(subRegion) + '</span>'
+    +     '<span class="sbai-urgency sbai-urgency-' + u.tone + '">'
+    +       '<i data-lucide="' + u.icon + '" style="width:12px;height:12px"></i> 緊急度 · ' + u.label
+    +     '</span>'
+    +   '</div>'
+    +   '<div class="sbai-block">'
+    +     '<div class="sbai-block-label">可能狀況（僅供與醫師討論）</div>'
+    +     condHtml
+    +   '</div>'
+    +   '<div class="sbai-block">'
+    +     '<div class="sbai-block-label">建議科別</div>'
+    +     '<div class="sbai-dept">' + escapeHtml(data.recommended_department || '家醫科') + '</div>'
+    +   '</div>'
+    +   (data.advice ? '<div class="sbai-block"><div class="sbai-block-label">建議</div><p class="sbai-advice">' + escapeHtml(data.advice) + '</p></div>' : '')
+    +   '<p class="sbai-disclaimer"><i data-lucide="info" style="width:11px;height:11px"></i> ' + escapeHtml(data.disclaimer || '此分析僅供參考，不取代醫師診斷；如有不適請立即就醫。') + '</p>'
+    + '</div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+// 若有選擇身體部位，把它放在 notes 開頭（不覆蓋使用者後續輸入）
+function _prefillBodyPartNote() {
+  if (!_symBodyPart) return;
+  var t = document.getElementById('lf-notes');
+  if (t && !t.value) t.value = '[部位：' + _symBodyPart + '] ';
+}
+
 function openSymptomLog(catId) {
   const c = findSymptomCat(catId);
   if (!c) return;
@@ -2420,6 +3326,7 @@ function openSymptomLog(catId) {
   `;
   form.style.display = 'block';
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  _prefillBodyPartNote();
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function cancelSymptomLog() {
@@ -2468,6 +3375,7 @@ function openOtherSymptomLog() {
   `;
   form.style.display = 'block';
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  _prefillBodyPartNote();
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   setTimeout(() => { const i = document.getElementById('lf-custom-name'); if (i) i.focus(); }, 100);
 }
@@ -2490,6 +3398,7 @@ function submitOtherSymptomLog() {
     recordedAt: new Date().toISOString()
   });
   showToast && showToast(_T('sym.toast.added'), 'success');
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('symptoms');
 }
 
@@ -2515,11 +3424,13 @@ function submitSymptomLog(catId) {
     categoryId: catId, intensity, frequency, notes,
     recordedAt: new Date().toISOString()
   });
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('symptoms');
 }
 function deleteSymptomEntryAndRefresh(id) {
   if (!confirm(_T('sym.confirm.delEntry'))) return;
   deleteSymptomEntry(id);
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('symptoms');
 }
 function renderIntensityBar(v) {
@@ -2706,37 +3617,56 @@ function vitals() {
   const allMetrics = getAllMetrics();
   const trackedMetrics = tracked.map(id => allMetrics.find(m => m.id === id)).filter(Boolean);
   const totalEntries = getVitalEntries().length;
-  const latestAcross = getVitalEntries().sort((a,b) => new Date(b.recordedAt) - new Date(a.recordedAt))[0];
+  const allEntries = getVitalEntries();
+  const latestAcross = allEntries.sort((a,b) => new Date(b.recordedAt) - new Date(a.recordedAt))[0];
   const lastUpdate = latestAcross ? new Date(latestAcross.recordedAt) : null;
   const lastUpdateStr = lastUpdate ? `${(lastUpdate.getMonth()+1)}/${lastUpdate.getDate()} ${lastUpdate.toTimeString().slice(0,5)}` : '—';
+  // 今日進度：追蹤項目中今日已記錄的 distinct metric 數
+  const todayKey = new Date().toISOString().slice(0,10);
+  const todayMetricIds = new Set(allEntries.filter(e => (e.recordedAt || '').slice(0,10) === todayKey).map(e => e.metricId));
+  const todayCovered = tracked.filter(id => todayMetricIds.has(id)).length;
+  const totalToday = tracked.length || 0;
+  const pctToday = totalToday ? Math.min(100, Math.round((todayCovered / totalToday) * 100)) : 0;
+  const todayStatus = totalToday === 0
+    ? '先到下方勾選你要追蹤的指標'
+    : (todayCovered === totalToday ? '今日追蹤全部完成 ✨' : `${todayCovered} / ${totalToday} 項已記錄 · 還剩 ${totalToday - todayCovered}`);
 
   return `
     <div class="sym-page">
 
+      <div class="page-app-hero page-app-hero-blue">
+        <div class="page-app-hero-head">
+          <span class="page-app-hero-eyebrow">TODAY · 今日生理紀錄</span>
+          <span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 異常數值請就醫確認</span>
+        </div>
+        <div class="page-app-hero-title">${todayStatus}</div>
+        <div class="page-app-hero-bar"><div class="page-app-hero-bar-fill" style="width:${pctToday}%"></div></div>
+      </div>
+
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ status</span>
-          <span class="ts-tag">vitals_overview</span>
+          <span class="ts-prompt">本期概況</span>
+          <span class="ts-tag">生理紀錄總覽</span>
         </header>
         <div class="ts-body">
           <div class="ts-stat-grid">
             <div class="ts-stat">
-              <span class="ts-stat-label">// 追蹤中</span>
+              <span class="ts-stat-label">追蹤中</span>
               <span class="ts-stat-num">${trackedMetrics.length}</span>
               <span class="ts-stat-unit">項指標</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 總紀錄</span>
+              <span class="ts-stat-label">總紀錄</span>
               <span class="ts-stat-num">${totalEntries}</span>
               <span class="ts-stat-unit">筆</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 自訂指標</span>
+              <span class="ts-stat-label">自訂指標</span>
               <span class="ts-stat-num">${getCustomMetrics().length}</span>
               <span class="ts-stat-unit">項</span>
             </div>
             <div class="ts-stat">
-              <span class="ts-stat-label">// 上次更新</span>
+              <span class="ts-stat-label">上次更新</span>
               <span class="ts-stat-num sm">${lastUpdateStr}</span>
               <span class="ts-stat-unit">${lastUpdate ? '已記錄' : '尚無紀錄'}</span>
             </div>
@@ -2746,7 +3676,7 @@ function vitals() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./track --setup</span>
+          <span class="ts-prompt">選要追蹤的項目</span>
           <span class="ts-tag">${tracked.length} selected</span>
         </header>
         <div class="ts-body">
@@ -2759,7 +3689,7 @@ function vitals() {
                   <span class="vt-toggle-icon scc-${m.color}"><i data-lucide="${m.icon}"></i></span>
                   <span class="vt-toggle-name">${m.zh}${m.unit ? ` <small>${m.unit}</small>` : ''}</span>
                   <span class="vt-toggle-check">${on ? '✓' : ''}</span>
-                  ${m.custom ? `<button class="vt-cm-del" onclick="deleteCustomMetricAndRefresh(event,'${m.id}')" title="刪除自訂">×</button>` : ''}
+                  ${m.custom ? `<button type="button" class="vt-cm-del" onclick="deleteCustomMetricAndRefresh(event,'${m.id}')" title="刪除自訂指標" aria-label="刪除自訂指標「${escapeHtml(m.zh || m.id)}」">×</button>` : ''}
                 </button>
               `;
             }).join('')}
@@ -2830,7 +3760,7 @@ function vitals() {
 
       <section class="term-section" id="vt-logform" style="display:none">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./record</span>
+          <span class="ts-prompt">加一筆紀錄</span>
           <span class="ts-tag" id="vt-logform-tag">—</span>
         </header>
         <div class="ts-body" id="vt-logform-body"></div>
@@ -2838,8 +3768,8 @@ function vitals() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ snapshot</span>
-          <span class="ts-tag">latest_per_metric</span>
+          <span class="ts-prompt">最近一次紀錄</span>
+          <span class="ts-tag">各項最新值</span>
         </header>
         <div class="ts-body">
           ${trackedMetrics.length === 0 ? `
@@ -2854,8 +3784,8 @@ function vitals() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ tail -n 30 vitals.log</span>
-          <span class="ts-tag">history</span>
+          <span class="ts-prompt">近 30 筆紀錄</span>
+          <span class="ts-tag">歷史</span>
         </header>
         <div class="ts-body">
           ${renderVitalHistory()}
@@ -2965,7 +3895,11 @@ function toggleVitalTracked(id) {
 function addCustomMetricUI() {
   const name = document.getElementById('vt-custom-name').value.trim();
   const unit = document.getElementById('vt-custom-unit').value.trim();
-  if (!name) { alert('請輸入指標名稱'); return; }
+  if (!name) {
+    if (typeof showToast === 'function') showToast('請先輸入指標名稱', 'warning');
+    document.getElementById('vt-custom-name').focus();
+    return;
+  }
   const id = 'custom-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
   const colors = ['blue','aqua','mint','pink'];
   saveCustomMetric({
@@ -3062,7 +3996,11 @@ function submitVitalEntry(metricId) {
   const m = findMetric(metricId);
   if (!m) return;
   const v1 = document.getElementById('vt-val1').value;
-  if (!v1) { alert('請輸入數值'); return; }
+  if (!v1) {
+    if (typeof showToast === 'function') showToast('請先輸入數值', 'warning');
+    document.getElementById('vt-val1').focus();
+    return;
+  }
   const entry = {
     id: 'vt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
     metricId,
@@ -3071,12 +4009,17 @@ function submitVitalEntry(metricId) {
   };
   if (m.dual) {
     const v2 = document.getElementById('vt-val2').value;
-    if (!v2) { alert('請完整輸入收縮 / 舒張壓'); return; }
+    if (!v2) {
+      if (typeof showToast === 'function') showToast('請完整輸入收縮 / 舒張壓', 'warning');
+      document.getElementById('vt-val2').focus();
+      return;
+    }
     entry.value2 = parseFloat(v2);
   }
   const notes = document.getElementById('vt-notes').value.trim();
   if (notes) entry.notes = notes;
   saveVitalEntry(entry);
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('vitals');
 }
 
@@ -3240,38 +4183,40 @@ function renderSymptomAnalysis(data) {
   const conditions = (data.conditions || [])
     .map(c => {
       const name = escapeHtml(c.name || "");
+      const desc = c.description ? `<div class="sa-cond-desc">${escapeHtml(c.description)}</div>` : '';
+      const likelihood = c.likelihood ? `<span class="sa-cond-likelihood">可能性 ${escapeHtml(c.likelihood)}</span>` : '';
       const lookupBtn = c.name
-        ? ` <button type="button" class="secondary" style="margin-left:6px;padding:2px 8px;font-size:0.78rem"
+        ? ` <button type="button" class="sa-cond-lookup"
               data-disease="${escapeHtml(c.name)}"
               onclick="navigateToDiseaseSearch(this.dataset.disease)"
-              title="到疾病百科查詢這個疾病的詳細資訊、用藥、風險與未來發展">
-              <i data-lucide="stethoscope" style="width:12px;height:12px;vertical-align:middle"></i> 查疾病
+              title="到疾病百科查詢更詳細的說明、用藥、風險">
+              <i data-lucide="stethoscope" style="width:12px;height:12px"></i> 查更多
             </button>`
         : '';
-      return `<li><strong>${name}</strong>${c.likelihood ? ' — 可能性：' + escapeHtml(c.likelihood) : ''}${lookupBtn}</li>`;
+      return `<li class="sa-cond"><div class="sa-cond-head"><strong>${name}</strong>${likelihood}${lookupBtn}</div>${desc}</li>`;
     })
     .join("");
 
   return `
-    <div style="padding:16px;background:${u.bg};border-left:4px solid ${u.color};border-radius:var(--radius-sm);margin-bottom:12px">
-      <div style="font-weight:600;font-size:1.05rem;color:${u.color}">緊急程度：${u.label}</div>
+    <div class="sa-urgency" style="border-left-color:${u.color};background:${u.bg}">
+      <div class="sa-urgency-label" style="color:${u.color}">緊急程度：${u.label}</div>
     </div>
-    <div style="display:grid;gap:14px">
-      <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem;color:#B7C0AF;font-weight:700">可能病因</h4>
-        <ul style="margin:0;padding-left:20px;line-height:1.7;color:#594842">${conditions || '<li>需要醫師進一步評估</li>'}</ul>
-      </div>
-      <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem;color:#B7C0AF;font-weight:700">建議就診科別</h4>
-        <p style="margin:0;color:#594842">${escapeHtml(data.recommended_department || "家醫科")}</p>
-      </div>
-      <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem;color:#B7C0AF;font-weight:700">建議</h4>
-        <p style="margin:0;line-height:1.7;color:#594842">${escapeHtml(data.advice || "")}</p>
-      </div>
-      <div style="padding:10px 12px;background:rgba(255,255,255,0.05);border:1px dashed var(--border-glass);border-radius:var(--radius-sm);font-size:0.8rem;color:#594842">
-        ${escapeHtml(data.disclaimer || "此分析僅供參考，不構成醫療診斷。如有不適請立即就醫。")}
-      </div>
+    <div class="sa-grid">
+      <section class="sa-section">
+        <h4 class="sa-section-title">可能的原因</h4>
+        <ul class="sa-cond-list">${conditions || '<li class="sa-empty">需要醫師進一步評估</li>'}</ul>
+      </section>
+      <section class="sa-section">
+        <h4 class="sa-section-title">建議看哪一科</h4>
+        <p class="sa-text">${escapeHtml(data.recommended_department || "家醫科")}</p>
+      </section>
+      <section class="sa-section">
+        <h4 class="sa-section-title">建議怎麼做</h4>
+        <p class="sa-text">${escapeHtml(data.advice || "")}</p>
+      </section>
+      <p class="sa-disclaimer">
+        ${escapeHtml(data.disclaimer || "這份分析僅供參考，不是診斷。如果不舒服或不確定，請直接就醫。")}
+      </p>
     </div>
   `;
 }
@@ -3721,6 +4666,7 @@ function medications() {
       <h2>${_T('meds.title')}</h2>
       <p style="margin-top:8px;color:var(--text-dim)">${_T('meds.intro.prefix')}<strong>${_T('meds.intro.bold')}</strong>${_T('meds.intro.suffix')}</p>
     </div>
+    ${renderHowto('meds')}
     <div class="card">
       <h3><i data-lucide="camera" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.recognize.title')}</h3>
       <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">${_T('meds.recognize.desc.prefix')}<strong>${_T('meds.recognize.desc.bold')}</strong>${_T('meds.recognize.desc.suffix')}</p>
@@ -3792,10 +4738,22 @@ function medications() {
 }
 
 function loadMedicationsPage() {
-  fetch(API + "/medications/?patient_id=" + _medsPatientId)
+  // 平行抓取「藥物清單」與「今日服藥次數」，兩者都到了再 render，
+  // 避免 hero 顯示舊的 _medsTodayLogs 值。
+  var todayISO = new Date().toISOString().slice(0, 10);
+  var pList = fetch(API + "/medications/?patient_id=" + _medsPatientId)
+    .then(function(r) { return r.json(); });
+  var pLogs = fetch(API + "/medications/logs?patient_id=" + _medsPatientId + "&days=1")
     .then(function(r) { return r.json(); })
-    .then(function(data) {
+    .catch(function() { return { logs: [] }; });
+  Promise.all([pList, pLogs])
+    .then(function(arr) {
+      var data = arr[0] || {};
+      var logsData = arr[1] || { logs: [] };
       _medsList = (data.medications || []).filter(function(m) { return m.active !== 0; });
+      _medsTodayLogs = (logsData.logs || []).filter(function(l) {
+        return l && l.taken_at && String(l.taken_at).slice(0, 10) === todayISO && l.taken !== false;
+      }).length;
       renderMedList();
     })
     .catch(function() { showToast("載入藥物列表失敗", "error"); });
@@ -3929,6 +4887,36 @@ var MED_SLOT_DEFS = [
   { key: "other",   icon: "clock"   },
 ];
 
+// 今日服藥 hero（位於藥物清單最上方）
+// 計算邏輯：
+//   expected = 所有非 PRN 活躍藥物的「固定時段數」總和（today 預期該吃幾顆）
+//   taken    = 今日已標記服用的紀錄筆數（從 _medsTodayLogs 拿）
+//   進度條 = taken / max(1, expected)
+function _renderMedTodayHero(meds) {
+  var expected = 0;
+  meds.forEach(function(m) {
+    if (m.is_other) return; // PRN/間隔型不計入預期次數
+    var slots = (m.slots && m.slots.length) ? m.slots.length : 1;
+    expected += slots;
+  });
+  var taken = (typeof _medsTodayLogs === 'number') ? _medsTodayLogs : 0;
+  var remaining = Math.max(0, expected - taken);
+  var pct = expected > 0 ? Math.min(100, Math.round((taken / expected) * 100)) : 0;
+  var statusLine = expected > 0
+    ? (taken + ' / ' + expected + ' 完成' + (remaining > 0 ? ' · 還剩 ' + remaining + ' 顆' : ' · 今日已完成 ✨'))
+    : ('今日記錄 ' + taken + ' 次 · 你有 ' + meds.length + ' 種藥');
+  return ''
+    + '<div class="med-today-hero">'
+    +   '<div class="med-today-hero-head">'
+    +     '<span class="med-today-eyebrow">TODAY · 今日服藥</span>'
+    +     '<span class="med-today-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 以醫師處方為準</span>'
+    +   '</div>'
+    +   '<div class="med-today-title">' + statusLine + '</div>'
+    +   '<div class="med-today-bar"><div class="med-today-bar-fill" style="width:' + pct + '%"></div></div>'
+    + '</div>';
+}
+var _medsTodayLogs = 0;
+
 function _medSlotLabel(key) { return _T('meds.slot.' + key + '.label'); }
 function _medSlotHint(key)  { return _T('meds.slot.' + key + '.hint');  }
 
@@ -3965,7 +4953,7 @@ function renderMedList() {
   }
 
   var buckets = _bucketMeds(_medsList);
-  var html = '<div class="med-slots">';
+  var html = _renderMedTodayHero(_medsList) + '<div class="med-slots">';
 
   MED_SLOT_DEFS.forEach(function(def) {
     var meds = buckets[def.key];
@@ -4036,12 +5024,235 @@ function _renderMedCard(med, slotKey, isOther) {
       freq +
       '<div class="med-card-actions" onclick="event.stopPropagation()">' +
         '<span class="med-card-take">' + _T('meds.card.take') + '</span>' +
+        '<button class="med-card-mini med-card-mini-info" onclick="openMedDetail(\'' + med.id + '\')" title="看這顆藥的使用狀況與療效" aria-label="查看詳情"><i data-lucide="bar-chart-3" style="width:13px;height:13px"></i></button>' +
         '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="' + _T('meds.card.skipTitle') + '">✗</button>' +
         '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.effectTitle') + '">★</button>' +
         '<button class="med-card-mini" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)" title="查詢藥物百科（副作用 / 用法 / 衛教）">?</button>' +
       '</div>' +
     '</button>'
   );
+}
+
+// === 單顆藥的「使用狀況 + 療效」詳情 modal ================================
+// 設計參考：Medisafe / MyTherapy / Mango Health 的 per-medication detail。
+// 五個區塊：①服藥率 hero ②4 個數字 stat ③ 30 天日曆 ④療效走勢 ⑤副作用 + 近期紀錄
+function openMedDetail(medId) {
+  var med = (_medsList || []).find(function(m){ return String(m.id) === String(medId); });
+  if (!med) { if (typeof showToast === 'function') showToast('找不到這顆藥的資料', 'error'); return; }
+
+  // 先 render 殼，再 fetch 細節
+  var existing = document.getElementById('med-detail-modal');
+  if (existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'med-detail-modal';
+  modal.className = 'med-detail-modal';
+  modal.innerHTML = ''
+    + '<div class="mdm-backdrop" onclick="closeMedDetail()"></div>'
+    + '<div class="mdm-panel" role="dialog" aria-modal="true" aria-label="藥物詳情">'
+    +   '<header class="mdm-head">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedDetail()" aria-label="關閉">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +     '<div class="mdm-title-wrap">'
+    +       '<div class="mdm-pill"><i data-lucide="pill" style="width:18px;height:18px"></i></div>'
+    +       '<div>'
+    +         '<h3 class="mdm-title">' + escapeHtml(med.name || '未命名藥物') + (med.dosage ? '<span class="mdm-dose"> · ' + escapeHtml(med.dosage) + '</span>' : '') + '</h3>'
+    +         '<p class="mdm-sub">' + escapeHtml((med.frequency || '') + (med.category ? '　·　' + med.category : '')) + '</p>'
+    +       '</div>'
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="mdm-body" id="mdm-body">'
+    +     '<div class="mdm-loading"><i data-lucide="loader" class="mdm-spin"></i> 整理這顆藥的紀錄中…</div>'
+    +   '</div>'
+    +   '<footer class="mdm-foot">'
+    +     '<button type="button" class="mdm-action mdm-action-primary" onclick="showEffectForm(\'' + medId + '\',\'' + (med.name || '').replace(/\'/g, "\\\\'") + '\'); closeMedDetail();">'
+    +       '<i data-lucide="star" style="width:14px;height:14px"></i> 紀錄這次的效果'
+    +     '</button>'
+    +     '<button type="button" class="mdm-action" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name); closeMedDetail();">'
+    +       '<i data-lucide="book-open" style="width:14px;height:14px"></i> 看藥的說明'
+    +     '</button>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(modal);
+  requestAnimationFrame(function(){ modal.classList.add('is-open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.addEventListener('keydown', _medDetailEsc);
+  _loadMedDetail(medId, med);
+}
+function _medDetailEsc(e) { if (e.key === 'Escape') closeMedDetail(); }
+function closeMedDetail() {
+  var modal = document.getElementById('med-detail-modal');
+  if (!modal) return;
+  modal.classList.remove('is-open');
+  document.removeEventListener('keydown', _medDetailEsc);
+  setTimeout(function(){ if (modal.parentNode) modal.parentNode.removeChild(modal); }, 200);
+}
+async function _loadMedDetail(medId, med) {
+  var pid = _medsPatientId || (typeof getStablePatientId === 'function' ? getStablePatientId() : null);
+  if (!pid) return;
+  // 三筆 fetch 同時起跑（30 天 logs / 全部 effects / 整體 stats）
+  var pLogs = fetch(API + '/medications/logs?patient_id=' + pid + '&medication_id=' + medId + '&days=30')
+    .then(function(r){return r.json();}).catch(function(){ return { logs: [] }; });
+  var pEffects = fetch(API + '/medications/effects?patient_id=' + pid + '&medication_id=' + medId)
+    .then(function(r){return r.json();}).catch(function(){ return { effects: [] }; });
+  var pStats = fetch(API + '/medications/stats?patient_id=' + pid + '&days=30')
+    .then(function(r){return r.json();}).catch(function(){ return { medications: [] }; });
+
+  var arr;
+  try { arr = await Promise.all([pLogs, pEffects, pStats]); }
+  catch (e) { arr = [{logs:[]}, {effects:[]}, {medications:[]}]; }
+
+  var logs    = (arr[0] && arr[0].logs)    || [];
+  var effects = (arr[1] && arr[1].effects) || [];
+  var perMedStats = ((arr[2] && arr[2].medications) || []).find(function(m){ return String(m.id) === String(medId); }) || {};
+
+  // 統計（最近 30 天 — 但只計算「藥物加入後」的活躍日數，避免新藥被
+  // 當成過去 30 天都沒吃而扣分；adherence 分母 = expectedPerDay * activeDays）
+  var taken   = logs.filter(function(l){ return l && l.taken !== false; }).length;
+  var skipped = logs.filter(function(l){ return l && l.taken === false; }).length;
+  var expectedPerDay = (med.is_other ? 0 : (med.slots && med.slots.length ? med.slots.length : 1));
+  var activeDays = 30;
+  if (med.created_at) {
+    var startMs = new Date(med.created_at).getTime();
+    if (!isNaN(startMs)) {
+      var elapsedDays = Math.floor((Date.now() - startMs) / 86400000) + 1; // 含今日
+      activeDays = Math.max(1, Math.min(30, elapsedDays));
+    }
+  }
+  var expectedTotal = expectedPerDay * activeDays;
+  var missed = Math.max(0, expectedTotal - taken - skipped);
+  var rate = expectedTotal > 0 ? Math.round(taken / expectedTotal * 100) : 0;
+  var avgEffect = perMedStats.avg_effectiveness != null
+    ? Number(perMedStats.avg_effectiveness).toFixed(1)
+    : (effects.length
+        ? (effects.reduce(function(s,e){return s + (e.effectiveness || 0);}, 0) / effects.length).toFixed(1)
+        : '—');
+
+  // 日曆熱區（30 天）
+  var calCells = [];
+  var today = new Date(); today.setHours(0,0,0,0);
+  var byDay = {};
+  logs.forEach(function(l) {
+    var d = (l.taken_at || '').slice(0, 10);
+    if (!d) return;
+    if (!byDay[d]) byDay[d] = { taken: 0, skipped: 0 };
+    if (l.taken === false) byDay[d].skipped++; else byDay[d].taken++;
+  });
+  for (var i = 29; i >= 0; i--) {
+    var d = new Date(today); d.setDate(d.getDate() - i);
+    var key = d.toISOString().slice(0,10);
+    var st = byDay[key];
+    var label, tone;
+    if (!st) { tone = 'none'; label = '無紀錄'; }
+    else if (expectedPerDay && st.taken >= expectedPerDay) { tone = 'ok'; label = '完成'; }
+    else if (st.taken > 0) { tone = 'partial'; label = '部分'; }
+    else if (st.skipped > 0) { tone = 'miss'; label = '漏掉/跳過'; }
+    else { tone = 'none'; label = '無紀錄'; }
+    calCells.push('<div class="mdm-cal-cell mdm-cal-' + tone + '" title="' + (d.getMonth()+1) + '/' + d.getDate() + '：' + label + '"></div>');
+  }
+
+  // 副作用 tag cloud（彙整出現次數）
+  var sideMap = {};
+  effects.forEach(function(e) {
+    var raw = (e.side_effects || '').trim();
+    if (!raw) return;
+    raw.split(/[,，、;；\s]+/).forEach(function(t) {
+      t = t.trim(); if (!t) return;
+      sideMap[t] = (sideMap[t] || 0) + 1;
+    });
+  });
+  var sideEntries = Object.keys(sideMap).map(function(k){return [k, sideMap[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0, 8);
+  var sideHtml = sideEntries.length
+    ? sideEntries.map(function(p){ return '<span class="mdm-side-tag">' + escapeHtml(p[0]) + ' <small>×' + p[1] + '</small></span>'; }).join('')
+    : '<p class="mdm-empty">目前還沒有紀錄副作用。吃完藥按「紀錄這次的效果」就能留下感覺。</p>';
+
+  // 療效走勢（迷你折線）
+  var effectChart = _renderMedEffectChart(effects);
+
+  // 近期 8 筆紀錄
+  var recentMerged = logs.slice(0, 8).map(function(l) {
+    var t = new Date(l.taken_at || l.created_at);
+    var mm = (t.getMonth()+1) + '/' + t.getDate();
+    var hh = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    var status = l.taken === false ? '<span class="mdm-rec-skip">跳過</span>' : '<span class="mdm-rec-ok">已服用</span>';
+    return '<li class="mdm-rec-item"><span class="mdm-rec-when">' + mm + '　' + hh + '</span>' + status + '</li>';
+  }).join('');
+
+  var body = document.getElementById('mdm-body');
+  if (!body) return;
+  body.innerHTML = ''
+    // 頂端 hero — 大字服藥率 + 4 個 stat
+    + '<section class="mdm-section mdm-hero">'
+    +   '<div class="mdm-hero-ring">'
+    +     '<svg viewBox="0 0 100 100" width="110" height="110">'
+    +       '<circle cx="50" cy="50" r="42" fill="none" stroke="rgba(31,61,88,0.08)" stroke-width="9"/>'
+    +       '<circle cx="50" cy="50" r="42" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round" '
+    +         'stroke-dasharray="264" stroke-dashoffset="' + (264 - 264 * rate / 100) + '" transform="rotate(-90 50 50)"/>'
+    +     '</svg>'
+    +     '<div class="mdm-hero-ring-num"><span>' + rate + '</span><small>%</small></div>'
+    +   '</div>'
+    +   '<div class="mdm-hero-side">'
+    +     '<div class="mdm-hero-label">最近 ' + activeDays + ' 天的服藥情形</div>'
+    +     '<div class="mdm-stat-grid">'
+    +       '<div class="mdm-stat"><span class="mdm-stat-num">' + taken + '</span><span class="mdm-stat-lbl">已服用</span></div>'
+    +       '<div class="mdm-stat"><span class="mdm-stat-num">' + missed + '</span><span class="mdm-stat-lbl">漏掉</span></div>'
+    +       '<div class="mdm-stat"><span class="mdm-stat-num">' + skipped + '</span><span class="mdm-stat-lbl">跳過</span></div>'
+    +       '<div class="mdm-stat"><span class="mdm-stat-num">' + avgEffect + '</span><span class="mdm-stat-lbl">平均療效</span></div>'
+    +     '</div>'
+    +   '</div>'
+    + '</section>'
+
+    + '<section class="mdm-section">'
+    +   '<h4 class="mdm-section-title">每日狀況</h4>'
+    +   '<div class="mdm-cal">' + calCells.join('') + '</div>'
+    +   '<div class="mdm-cal-legend">'
+    +     '<span><i class="mdm-dot mdm-cal-ok"></i> 完成</span>'
+    +     '<span><i class="mdm-dot mdm-cal-partial"></i> 部分</span>'
+    +     '<span><i class="mdm-dot mdm-cal-miss"></i> 漏掉/跳過</span>'
+    +     '<span><i class="mdm-dot mdm-cal-none"></i> 無紀錄</span>'
+    +   '</div>'
+    + '</section>'
+
+    + '<section class="mdm-section">'
+    +   '<h4 class="mdm-section-title">療效走勢</h4>'
+    +   effectChart
+    + '</section>'
+
+    + '<section class="mdm-section">'
+    +   '<h4 class="mdm-section-title">曾紀錄的副作用</h4>'
+    +   '<div class="mdm-side-cloud">' + sideHtml + '</div>'
+    + '</section>'
+
+    + '<section class="mdm-section">'
+    +   '<h4 class="mdm-section-title">最近的紀錄</h4>'
+    +   (recentMerged ? '<ul class="mdm-rec-list">' + recentMerged + '</ul>' : '<p class="mdm-empty">這 30 天還沒有紀錄。</p>')
+    + '</section>'
+    + '<p class="mdm-foot-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 數字來自你自己的打卡和評分，最終以醫師意見為主。</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 療效走勢迷你折線（最近 14 筆評分）
+function _renderMedEffectChart(effects) {
+  var pts = (effects || []).slice(0, 14).reverse();
+  if (!pts.length) return '<p class="mdm-empty">還沒紀錄過效果。吃完藥按「紀錄這次的效果」打 1~5 分就會出現走勢。</p>';
+  var W = 280, H = 90, PAD = 12;
+  var n = pts.length;
+  var xs = function(i) { return n === 1 ? W/2 : PAD + (W - 2*PAD) * (i / (n - 1)); };
+  var ys = function(v) { return H - PAD - (H - 2*PAD) * ((v - 1) / 4); };
+  var path = pts.map(function(p, i){ return (i === 0 ? 'M ' : 'L ') + xs(i).toFixed(1) + ' ' + ys(p.effectiveness || 1).toFixed(1); }).join(' ');
+  var dots = pts.map(function(p, i){
+    return '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(p.effectiveness || 1).toFixed(1) + '" r="3.2" fill="var(--accent)"/>';
+  }).join('');
+  return '<svg class="mdm-effect-chart" viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '">'
+    + '<line x1="' + PAD + '" y1="' + ys(1) + '" x2="' + (W-PAD) + '" y2="' + ys(1) + '" stroke="rgba(31,61,88,0.08)"/>'
+    + '<line x1="' + PAD + '" y1="' + ys(3) + '" x2="' + (W-PAD) + '" y2="' + ys(3) + '" stroke="rgba(31,61,88,0.06)" stroke-dasharray="2 3"/>'
+    + '<line x1="' + PAD + '" y1="' + ys(5) + '" x2="' + (W-PAD) + '" y2="' + ys(5) + '" stroke="rgba(31,61,88,0.08)"/>'
+    + '<text x="2" y="' + (ys(5)+3) + '" font-size="9" fill="var(--text-muted)">★5</text>'
+    + '<text x="2" y="' + (ys(1)+3) + '" font-size="9" fill="var(--text-muted)">★1</text>'
+    + '<path d="' + path + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    + dots
+    + '</svg>'
+    + '<p class="mdm-effect-hint">最近 ' + n + ' 次評分</p>';
 }
 
 // 點卡片即打卡：固定時段藥（早/中/晚）直接寫入；
@@ -4651,6 +5862,7 @@ function logMedTaken(medId, taken, opts) {
         return;
       }
       showToast(taken ? "已記錄服藥 ✓" : "已記錄跳過", taken ? "success" : "info");
+      if (typeof refreshNavBadges === 'function') refreshNavBadges();
       loadMedicationsPage();
     })
     .catch(function() { showToast("記錄失敗", "error"); });
@@ -5212,16 +6424,16 @@ function education() {
           <i data-lucide="book-marked" style="width:18px;height:18px"></i> 我的疾病衛教文章
         </h3>
         <p style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
-          專屬於您登錄疾病的衛教文，依疾病分區整理。
+          專屬於你登錄疾病的衛教文，依疾病分區整理。
         </p>
         <div id="edu-my-articles-list" style="margin-top:10px"></div>
       </div>
       <div id="edu-related" class="card" style="margin-bottom:14px;display:none">
         <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
-          <i data-lucide="git-branch" style="width:18px;height:18px"></i> 為您推送的相關疾病
+          <i data-lucide="git-branch" style="width:18px;height:18px"></i> 為你推送的相關疾病
         </h3>
         <p id="edu-related-desc" style="margin-top:6px;color:var(--text-dim);font-size:.85rem">
-          根據您登錄的疾病，自動整理臨床上常一起出現的共病，提早了解可以更安心。
+          根據你登錄的疾病，自動整理臨床上常一起出現的共病，提早了解可以更安心。
         </p>
         <div id="edu-related-list" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px"></div>
       </div>
@@ -5464,7 +6676,7 @@ function eduOpenExtraDisease(idx) {
     key: 'extra:' + name,
     title: name,
     icon: 'sparkles',
-    intro: '「' + name + '」不在內建清單，內容由 AI 即時為您生成；請以實際醫師判讀為準。',
+    intro: '「' + name + '」不在內建清單，內容由 MD.Piece 即時為你生成；請以實際醫師判讀為準。',
     topics: [
       { key: 'awareness',     label: '認識這個疾病',     desc: '是什麼、誰會得、治療概觀' },
       { key: 'symptoms',      label: '症狀辨識',         desc: '常見症狀與身體訊號' },
@@ -6519,13 +7731,29 @@ function piecesExport() {
     navigator.clipboard.writeText(text).then(function() {
       if (typeof showToast === 'function') showToast('已複製到剪貼簿', 'success');
     }).catch(function() {
-      if (typeof showToast === 'function') showToast('複製失敗，請手動選取', 'error');
-      console.log(text);
+      _piecesShowCopyFallback(text);
     });
   } else {
-    console.log(text);
-    if (typeof showToast === 'function') showToast('已輸出到 console', 'success');
+    _piecesShowCopyFallback(text);
   }
+}
+// 瀏覽器不支援 Clipboard API 或被拒時，跳出可選取的 textarea 讓使用者手動複製
+function _piecesShowCopyFallback(text) {
+  var existing = document.getElementById('pieces-copy-fallback');
+  if (existing) existing.remove();
+  var wrap = document.createElement('div');
+  wrap.id = 'pieces-copy-fallback';
+  wrap.className = 'pieces-copy-fallback';
+  wrap.innerHTML = ''
+    + '<div class="pcf-backdrop" onclick="document.getElementById(\'pieces-copy-fallback\').remove()"></div>'
+    + '<div class="pcf-panel" role="dialog" aria-modal="true" aria-label="手動複製文字">'
+    +   '<h3 class="pcf-title">無法自動複製，請手動選取下方文字</h3>'
+    +   '<textarea class="pcf-text" readonly></textarea>'
+    +   '<button type="button" class="pcf-close" onclick="document.getElementById(\'pieces-copy-fallback\').remove()">關閉</button>'
+    + '</div>';
+  document.body.appendChild(wrap);
+  var ta = wrap.querySelector('.pcf-text');
+  if (ta) { ta.value = text; setTimeout(function(){ ta.focus(); ta.select(); }, 50); }
 }
 
 // ─── 系統設定（Settings）───────────────────────────────────
@@ -6749,10 +7977,25 @@ function chat() {
     + '  </div>'
 
     + '  <div class="chat-suggest" id="chat-suggest">'
+    + '    <span class="chat-suggest-label">聊聊：</span>'
     + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'幫我把最近三天的不舒服整理成一段話\')">整理近況</button>'
     + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'我有點焦慮，可以陪我說說話嗎？\')">陪我聊聊</button>'
     + '    <button type="button" class="chat-chip chat-chip-special" onclick="chatGenerateArticle()">'
     + '      <i data-lucide="sparkles" style="width:14px;height:14px"></i> 生成一篇文章'
+    + '    </button>'
+    + '    <span class="chat-suggest-sep">·</span>'
+    + '    <span class="chat-suggest-label">紀錄：</span>'
+    + '    <button type="button" class="chat-chip chat-chip-nav" onclick="navigateTo(\'symptoms\',null)">'
+    + '      <i data-lucide="plus" style="width:13px;height:13px"></i> 紀錄症狀'
+    + '    </button>'
+    + '    <button type="button" class="chat-chip chat-chip-nav" onclick="navigateTo(\'medications\',null)">'
+    + '      <i data-lucide="pill" style="width:13px;height:13px"></i> 打藥物卡'
+    + '    </button>'
+    + '    <button type="button" class="chat-chip chat-chip-nav" onclick="navigateTo(\'emotions\',null)">'
+    + '      <i data-lucide="battery-charging" style="width:13px;height:13px"></i> 情緒電量'
+    + '    </button>'
+    + '    <button type="button" class="chat-chip chat-chip-nav" onclick="navigateTo(\'drugSearch\',null)">'
+    + '      <i data-lucide="search" style="width:13px;height:13px"></i> 查藥物'
     + '    </button>'
     + '  </div>'
 
@@ -7200,7 +8443,7 @@ function settings() {
   var de   = getSetting('density', 'cozy');
   var name = user ? (user.nickname || _T('set.guest')) : _T('set.guest');
   var idno = user && user.id_number ? user.id_number : '—';
-  var ac   = (user && user.avatar_color) ? user.avatar_color : '#C97F4B';
+  var ac   = (user && user.avatar_color) ? user.avatar_color : '#4A90C2';
 
   function seg(group, opts, current) {
     return opts.map(function(o) {
@@ -7450,7 +8693,8 @@ async function labsCheck() {
   const sex   = document.getElementById('lab-sex').value;
 
   if (!name || !value) {
-    alert('請輸入檢驗項目與數值');
+    if (typeof showToast === 'function') showToast('請輸入檢驗項目與數值', 'warning');
+    document.getElementById(!name ? 'lab-name' : 'lab-value').focus();
     return;
   }
 
@@ -7553,7 +8797,7 @@ function labsRenderScanResult(data) {
   if (!items.length) {
     var note = '';
     if (data.errors && data.errors.length) {
-      note = '<details style="margin-top:8px;font-size:.78rem;color:var(--text-dim)"><summary>查看 OCR 嘗試紀錄</summary>' +
+      note = '<details style="margin-top:8px;font-size:.78rem;color:var(--text-dim)"><summary>查看讀取失敗紀錄</summary>' +
         '<ul style="margin-top:6px;padding-left:18px">' +
         data.errors.map(function(e) { return '<li>' + escapeHtml((e.provider || '?') + '：' + (e.error || '')) + '</li>'; }).join('') +
         '</ul></details>';
@@ -7706,6 +8950,32 @@ function emotions() {
         '<h2><i data-lucide="battery-charging" style="width:22px;height:22px"></i> 情緒電力</h2>' +
         '<p>把今天的「心情電量」打卡留下，連續低電量會自動提醒你的醫師。</p>' +
       '</header>' +
+      renderHowto('emotions') +
+
+      // ── 環形電量 hero（顯示最近一筆，可即時更新）──────
+      '<div class="emotions-card mood-ring-hero">' +
+        '<div class="mood-ring-wrap">' +
+          '<svg class="mood-ring" viewBox="0 0 200 200" width="180" height="180">' +
+            '<defs>' +
+              '<linearGradient id="mood-grad" x1="0" y1="0" x2="1" y2="1">' +
+                '<stop offset="0%" stop-color="#4A90C2"/>' +
+                '<stop offset="100%" stop-color="#6FB7DE"/>' +
+              '</linearGradient>' +
+            '</defs>' +
+            '<circle cx="100" cy="100" r="80" fill="none" stroke="rgba(92,58,50,0.10)" stroke-width="14"/>' +
+            '<circle id="mood-ring-arc" cx="100" cy="100" r="80" fill="none" stroke="url(#mood-grad)" stroke-width="14" stroke-linecap="round"' +
+              ' stroke-dasharray="502" stroke-dashoffset="502" transform="rotate(-90 100 100)" style="transition:stroke-dashoffset 0.7s cubic-bezier(.4,0,.2,1)"/>' +
+          '</svg>' +
+          '<div class="mood-ring-center">' +
+            '<div class="mood-ring-num"><span id="mood-ring-pct">—</span><span class="mood-ring-unit">%</span></div>' +
+            '<div class="mood-ring-label" id="mood-ring-label">— 載入中</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="mood-ring-meta">' +
+          '<span class="mood-ring-eyebrow">最近一次心情</span>' +
+          '<p class="mood-ring-hint" id="mood-ring-hint">目前還沒有紀錄，往下打卡開始累積。</p>' +
+        '</div>' +
+      '</div>' +
 
       '<div class="emotions-card mood-today">' +
         '<h3>今天剩多少電？</h3>' +
@@ -7936,6 +9206,7 @@ async function submitEmotion() {
     _resetBattery();
     showToast('情緒打卡完成', 'success');
     refreshMoodViews();
+    if (typeof refreshNavBadges === 'function') refreshNavBadges();
   } catch (e) {
     document.getElementById('emotion-status').textContent = '送出失敗：' + (e.message || '');
     document.getElementById('emotion-status').className = 'emotions-status emotions-status-error';
@@ -8187,9 +9458,51 @@ async function refreshMoodViews() {
   if (_moodCache.loadedDays < needDays) {
     await _moodFetch(needDays);
   }
+  renderMoodRing();
   renderMoodCalendar();
   renderMoodLine();
   renderMoodTable();
+}
+
+// 環形電量 hero：根據 _moodCache.daily 取最後一筆，更新 SVG arc + 文字。
+function renderMoodRing() {
+  var arc = document.getElementById('mood-ring-arc');
+  var pctEl = document.getElementById('mood-ring-pct');
+  var labelEl = document.getElementById('mood-ring-label');
+  var hintEl = document.getElementById('mood-ring-hint');
+  if (!arc || !pctEl) return;
+  var daily = _moodCache.daily || [];
+  if (!daily.length) {
+    arc.setAttribute('stroke-dashoffset', '502');
+    pctEl.textContent = '—';
+    if (labelEl) labelEl.textContent = '尚無紀錄';
+    if (hintEl) hintEl.textContent = '往下打卡，環形會即時填滿。';
+    return;
+  }
+  // 取最近一筆有打卡的
+  var latest = daily[daily.length - 1];
+  for (var i = daily.length - 1; i >= 0; i--) {
+    if ((daily[i].count || 0) > 0) { latest = daily[i]; break; }
+  }
+  var pct = (typeof _moodPercent === 'function') ? _moodPercent(latest.average_score) : Math.round(latest.average_score * 20);
+  if (!pct && pct !== 0) pct = 0;
+  var circumference = 502; // 2π × 80 ≈ 502
+  var offset = circumference - (circumference * pct / 100);
+  arc.setAttribute('stroke-dashoffset', String(offset));
+  pctEl.textContent = pct;
+  // 從 EMOTION_LEVELS 找最相近的等級拿 label
+  var levelLabel = '電力中等';
+  if (typeof EMOTION_LEVELS !== 'undefined') {
+    var match = EMOTION_LEVELS.slice().sort(function(a, b) {
+      return Math.abs(a.pct - pct) - Math.abs(b.pct - pct);
+    })[0];
+    if (match) levelLabel = match.label;
+  }
+  if (labelEl) labelEl.textContent = levelLabel;
+  if (hintEl) {
+    var when = latest.date ? latest.date.replace(/-/g, '/').slice(5) : '';
+    hintEl.textContent = '最近一筆 · ' + when + (latest.count > 1 ? '（當日 ' + latest.count + ' 次平均）' : '');
+  }
 }
 
 function loadEmotionsPage() {
@@ -8270,6 +9583,19 @@ var DIET_BASIC_NUTRIENTS = [
   },
 ];
 
+function renderDietTodayHero() {
+  // 飲食頁主要是教育 + 推薦，今日 hero 顯示「該吃什麼／避開什麼」入口提示。
+  return ''
+    + '<div class="page-app-hero page-app-hero-green">'
+    +   '<div class="page-app-hero-head">'
+    +     '<span class="page-app-hero-eyebrow">TODAY · 今日飲食指南</span>'
+    +     '<span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 飲食建議以醫師/營養師為主</span>'
+    +   '</div>'
+    +   '<div class="page-app-hero-title">看你的病史，今天該吃／避開什麼</div>'
+    +   '<div class="page-app-hero-meta">下方有「今日營養目標」與「你要特別注意」兩塊，會根據你登錄的疾病自動調整</div>'
+    + '</div>';
+}
+
 function renderBasicNutrients() {
   var box = document.getElementById('diet-basic-nutrients');
   if (!box) return;
@@ -8296,6 +9622,8 @@ function diet() {
     +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
     +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
     +   '</header>'
+
+    +   renderDietTodayHero()
 
     +   '<div class="diet-card diet-basic-nutrients-card">'
     +     '<h3><i data-lucide="apple" style="width:16px;height:16px"></i> 基本營養素衛教</h3>'
@@ -9656,7 +10984,7 @@ function renderDrugPhotoResults(data) {
         (r.recognized_dosage ? '・' + escapeHtml(r.recognized_dosage) : '') +
         (r.recognized_frequency ? '・' + escapeHtml(r.recognized_frequency) : '') +
         (hadGarble
-          ? '<span style="margin-left:6px;font-size:0.78rem;color:var(--text-muted)">（已自動清理 OCR 雜訊）</span>'
+          ? '<span style="margin-left:6px;font-size:0.78rem;color:var(--text-muted)">（已自動清理讀錯的字）</span>'
           : '') +
       '</div>';
     if (r.info && r.info.matched) {
