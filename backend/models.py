@@ -139,3 +139,42 @@ class AlertUpdate(BaseModel):
     acknowledged: bool | None = None
     acknowledged_by: str | None = None
     resolved: bool | None = None
+
+
+# ─── Reminders ────────────────────────────────────────────
+
+class ReminderCreate(BaseModel):
+    patient_id: str
+    reminder_type: str  # medication | appointment | lab | custom
+    title: str
+    body: str | None = None
+    source_id: str | None = None
+    url: str | None = None
+    frequency: str = "once"  # once | daily | weekly | monthly
+    time_of_day: str | None = None  # "HH:MM" 用於 daily / weekly / monthly
+    days_of_week: list[int] | None = None  # 0=Mon..6=Sun，weekly 用
+    scheduled_at: datetime  # 首次觸發時間（ISO 8601）
+    active: bool = True
+
+
+class ReminderUpdate(BaseModel):
+    title: str | None = None
+    body: str | None = None
+    url: str | None = None
+    frequency: str | None = None
+    time_of_day: str | None = None
+    days_of_week: list[int] | None = None
+    scheduled_at: datetime | None = None
+    active: bool | None = None
+
+
+class PushSubscriptionCreate(BaseModel):
+    patient_id: str
+    endpoint: str
+    p256dh: str
+    auth: str
+    user_agent: str | None = None
+
+
+class InboxUpdate(BaseModel):
+    read: bool = True

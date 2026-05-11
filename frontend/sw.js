@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v61-mobile-disclaimer-wrap";
+const CACHE_VERSION = "mdpiece-v62-reminder-notifications";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=mobile-disclaimer-wrap",
-  "/js/i18n.js?v=mobile-disclaimer-wrap",
-  "/js/app.js?v=mobile-disclaimer-wrap",
+  "/css/style.css?v=reminder-notifications",
+  "/js/i18n.js?v=reminder-notifications",
+  "/js/app.js?v=reminder-notifications",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -128,20 +128,50 @@ function openPendingDB() {
   });
 }
 
+// 限制：notificationclick 只能跳到本站相對路徑，避免 open redirect。
+function _safeNotificationUrl(raw) {
+  if (typeof raw !== "string" || !raw) return "/";
+  // 只接受 "/path" 形式的相對路徑（不允許 protocol-relative "//evil.com"）
+  if (raw.length > 1 && raw[0] === "/" && raw[1] !== "/") return raw;
+  return "/";
+}
+
 // Push notifications
 self.addEventListener("push", (e) => {
-  const data = e.data?.json() ?? { title: "MD.Piece", body: "新通知" };
+  let data = { title: "MD.Piece", body: "新通知" };
+  try {
+    if (e.data) data = { ...data, ...e.data.json() };
+  } catch {
+    if (e.data) data.body = e.data.text();
+  }
+  const url = _safeNotificationUrl(data.url);
+  const tag = data.tag || `mdpiece-${Date.now()}`;
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-72.png",
       vibrate: [200, 100, 200],
+      tag,
+      renotify: true,
+      data: { url, reminder_id: data.reminder_id, reminder_type: data.reminder_type },
     })
   );
 });
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  e.waitUntil(clients.openWindow("/"));
+  const targetUrl = _safeNotificationUrl(e.notification.data && e.notification.data.url);
+  const sameOriginUrl = new URL(targetUrl, self.location.origin).href;
+  e.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if ("focus" in w && w.url && new URL(w.url).origin === self.location.origin) {
+          w.postMessage({ type: "mdpiece-notification-click", url: targetUrl });
+          return w.focus();
+        }
+      }
+      return clients.openWindow(sameOriginUrl);
+    })
+  );
 });
