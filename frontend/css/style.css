@@ -21,14 +21,14 @@
 }
 
 :root {
-  /* Warm cream body × medical blue accent — Headspace-meets-Calm 風 */
-  --bg-deep:    #FAFAF6;   /* body 主底 — 暖奶白，不黃不灰 */
-  --bg-mid:     #F2EFE8;   /* sidebar / 次底 — 偏暖 cream */
-  --bg-soft:    #ECE6D8;   /* 強調淺色 — 深一階 cream wash */
-  --bg-surface: #FFFFFF;   /* 卡片表面 — 純白（在暖底上會 pop） */
-  --bg-glass:   #F5F2EC;   /* glass card — 微暖 cream */
-  --bg-glass-hover: #ECE6D8;
-  --border-glass: rgba(74,144,194,0.18);  /* 邊框帶藍 — 跟 hero accent 同調 */
+  /* Pure white body × medical blue accent — 乾淨醫療 app 標準作法 */
+  --bg-deep:    #FFFFFF;   /* body 主底 — 純白，最不容易看起來髒 */
+  --bg-mid:     #F7F9FC;   /* sidebar / 次底 — 幾乎白，極淡藍 */
+  --bg-soft:    #EFF3F8;   /* 強調淺色 — 淡藍 wash */
+  --bg-surface: #FFFFFF;   /* 卡片表面 — 純白 */
+  --bg-glass:   #F7F9FC;   /* glass card — 微藍 hint */
+  --bg-glass-hover: #EFF3F8;
+  --border-glass: rgba(74,144,194,0.22);  /* 邊框帶藍 + 略加強，讓白卡片有層次 */
 
   /* Primary — medical calm blue (trustworthy, Apple Health / Calm-style) */
   --accent:     #4A90C2;
@@ -43,7 +43,7 @@
 
   /* Surfaces */
   --cream:      #FFFFFF;
-  --cream-dim:  #F5F2EC;
+  --cream-dim:  #F7F9FC;
 
   /* Accents — palette-only */
   --purple:     #8B95C5;   /* lavender — mood */
@@ -71,8 +71,9 @@
   --radius:     14px;
   --radius-sm:  10px;
   --radius-pill:20px;
-  --shadow:     0 6px 22px rgba(31,61,88,0.12);
-  --shadow-sm:  0 3px 12px rgba(31,61,88,0.08);
+  --shadow:     0 4px 14px rgba(31,61,88,0.08), 0 1px 3px rgba(31,61,88,0.06);
+  --shadow-sm:  0 2px 8px rgba(31,61,88,0.06);
+  --shadow-lift:0 8px 24px rgba(31,61,88,0.10), 0 2px 6px rgba(31,61,88,0.06);
   --transition: .25s cubic-bezier(.4,0,.2,1);
 }
 
@@ -8402,6 +8403,101 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   .todo-title { font-size: 0.84rem; }
   .todo-desc { font-size: 0.72rem; }
   .todo-item { padding: 9px 10px; gap: 8px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   症狀分析結果（白話、給一般民眾看）
+   ═══════════════════════════════════════════════════════════ */
+.sa-urgency {
+  padding: 14px 18px;
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+  background: var(--bg-glass);
+}
+.sa-urgency-label { font-weight: 600; font-size: 1.05rem; }
+.sa-grid { display: grid; gap: 16px; }
+.sa-section { }
+.sa-section-title {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  color: var(--text);
+  font-weight: 700;
+}
+.sa-cond-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sa-cond {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+.sa-cond-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sa-cond-head strong {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.sa-cond-likelihood {
+  font-size: 0.74rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
+}
+.sa-cond-desc {
+  margin-top: 5px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+.sa-cond-lookup {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 9px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.74rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition), color var(--transition);
+}
+.sa-cond-lookup:hover { background: var(--accent); color: var(--cream); }
+.sa-text {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+.sa-empty {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.sa-disclaimer {
+  margin: 6px 0 0;
+  padding: 9px 12px;
+  background: var(--bg-glass);
+  border: 1px dashed var(--border-glass);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.5;
 }
 
 /* 手動複製 fallback 對話框（Clipboard API 不可用時） */

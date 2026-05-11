@@ -756,9 +756,9 @@ function renderPvVisitHero() {
       + '<div class="pv-visit-hero pv-visit-hero-empty">'
       +   '<div class="pv-visit-hero-icon"><i data-lucide="calendar-plus"></i></div>'
       +   '<div class="pv-visit-hero-body">'
-      +     '<div class="pv-visit-hero-eyebrow">// next_visit &gt; not_set</div>'
-      +     '<div class="pv-visit-hero-title">尚未設定下次回診日</div>'
-      +     '<div class="pv-visit-hero-sub">回首頁設定後，這裡會顯示倒數與本期紀錄區間。</div>'
+      +     '<div class="pv-visit-hero-eyebrow">下次回診</div>'
+      +     '<div class="pv-visit-hero-title">尚未設定回診日</div>'
+      +     '<div class="pv-visit-hero-sub">回首頁設好回診日期，這裡就會顯示倒數和本期紀錄範圍。</div>'
       +   '</div>'
       +   '<button class="pv-btn pv-btn-ghost" onclick="navigateTo(\'home\',null)">'
       +     '<i data-lucide="home"></i> 前往設定'
@@ -767,17 +767,17 @@ function renderPvVisitHero() {
   }
   var d = _daysBetween(iso);
   var pretty = iso.replace(/-/g, '/');
-  var label, tone;
-  if (d > 0)       { label = '倒數 ' + d + ' 天'; tone = 'upcoming'; }
-  else if (d === 0){ label = '今天回診'; tone = 'today'; }
-  else             { label = '已超過 ' + (-d) + ' 天'; tone = 'past'; }
+  var label, tone, eyebrow;
+  if (d > 0)       { label = '倒數 ' + d + ' 天';        tone = 'upcoming'; eyebrow = '下次回診'; }
+  else if (d === 0){ label = '今天回診';                 tone = 'today';    eyebrow = '今天就是回診日'; }
+  else             { label = '已超過 ' + (-d) + ' 天';   tone = 'past';     eyebrow = '上次回診'; }
   return ''
     + '<div class="pv-visit-hero pv-visit-hero-' + tone + '">'
     +   '<div class="pv-visit-hero-icon"><i data-lucide="calendar-check-2"></i></div>'
     +   '<div class="pv-visit-hero-body">'
-    +     '<div class="pv-visit-hero-eyebrow">// next_visit &gt; ' + tone + '</div>'
+    +     '<div class="pv-visit-hero-eyebrow">' + eyebrow + '</div>'
     +     '<div class="pv-visit-hero-title">' + label + '</div>'
-    +     '<div class="pv-visit-hero-sub">日期：' + pretty + '　·　建議出門前複習本頁清單</div>'
+    +     '<div class="pv-visit-hero-sub">日期：' + pretty + '　·　出門前可以先看一下這頁的提醒</div>'
     +   '</div>'
     +   '<div class="pv-visit-hero-warn"><i data-lucide="info" style="width:12px;height:12px"></i> 以醫師預約單為準</div>'
     + '</div>';
@@ -2211,7 +2211,7 @@ function renderTodoCard() {
   return ''
     + '<section class="home-todo" aria-label="今日待辦">'
     +   '<div class="home-todo-head">'
-    +     '<span class="home-todo-prefix">$ today.todo --list</span>'
+    +     '<span class="home-todo-prefix">今日待辦</span>'
     +     '<button type="button" class="home-todo-add" onclick="openTodoComposer()" title="新增個人待辦">'
     +       '<i data-lucide="plus" style="width:14px;height:14px"></i>'
     +       '<span>新增</span>'
@@ -2642,8 +2642,8 @@ function symptoms() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ status</span>
-          <span class="ts-tag">period_summary</span>
+          <span class="ts-prompt">本期概況</span>
+          <span class="ts-tag">本期摘要</span>
         </header>
         <div class="ts-body">
           <div class="ts-stat-grid">
@@ -2676,8 +2676,8 @@ function symptoms() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./body-map</span>
-          <span class="ts-tag">locate_pain</span>
+          <span class="ts-prompt">點位置</span>
+          <span class="ts-tag">點哪裡不舒服</span>
         </header>
         <div class="ts-body">
           <p class="sym-instruct">滑鼠移到身體上的位置會跟著跑紅點；點下去就鎖定，然後可以叫 AI 分析這個部位可能的狀況。</p>
@@ -2704,8 +2704,8 @@ function symptoms() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./record-symptom</span>
-          <span class="ts-tag">choose_category</span>
+          <span class="ts-prompt">紀錄症狀</span>
+          <span class="ts-tag">選分類</span>
         </header>
         <div class="ts-body">
           <p class="sym-instruct">${_T('sym.choose.instruct')}</p>
@@ -2737,7 +2737,7 @@ function symptoms() {
 
       <section class="term-section" id="sym-logform" style="display:none">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./log-entry</span>
+          <span class="ts-prompt">填寫紀錄</span>
           <span class="ts-tag" id="logform-cat-tag">—</span>
         </header>
         <div class="ts-body" id="logform-body"></div>
@@ -2745,7 +2745,7 @@ function symptoms() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ tail -f today.log</span>
+          <span class="ts-prompt">今日紀錄</span>
           <span class="ts-tag">${_Tf('sym.today.tag', { n: todayEntries.length })}</span>
         </header>
         <div class="ts-body">
@@ -2782,8 +2782,8 @@ function symptoms() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ summary --period last_${periodDays}_days</span>
-          <span class="ts-tag">accumulated</span>
+          <span class="ts-prompt">過去 ${periodDays} 天摘要</span>
+          <span class="ts-tag">累計</span>
         </header>
         <div class="ts-body">${renderPeriodSummary(stats)}</div>
       </section>
@@ -3631,8 +3631,8 @@ function vitals() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ status</span>
-          <span class="ts-tag">vitals_overview</span>
+          <span class="ts-prompt">本期概況</span>
+          <span class="ts-tag">生理紀錄總覽</span>
         </header>
         <div class="ts-body">
           <div class="ts-stat-grid">
@@ -3662,7 +3662,7 @@ function vitals() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./track --setup</span>
+          <span class="ts-prompt">選要追蹤的項目</span>
           <span class="ts-tag">${tracked.length} selected</span>
         </header>
         <div class="ts-body">
@@ -3746,7 +3746,7 @@ function vitals() {
 
       <section class="term-section" id="vt-logform" style="display:none">
         <header class="ts-head">
-          <span class="ts-prompt">$ ./record</span>
+          <span class="ts-prompt">加一筆紀錄</span>
           <span class="ts-tag" id="vt-logform-tag">—</span>
         </header>
         <div class="ts-body" id="vt-logform-body"></div>
@@ -3754,8 +3754,8 @@ function vitals() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ snapshot</span>
-          <span class="ts-tag">latest_per_metric</span>
+          <span class="ts-prompt">最近一次紀錄</span>
+          <span class="ts-tag">各項最新值</span>
         </header>
         <div class="ts-body">
           ${trackedMetrics.length === 0 ? `
@@ -3770,8 +3770,8 @@ function vitals() {
 
       <section class="term-section">
         <header class="ts-head">
-          <span class="ts-prompt">$ tail -n 30 vitals.log</span>
-          <span class="ts-tag">history</span>
+          <span class="ts-prompt">近 30 筆紀錄</span>
+          <span class="ts-tag">歷史</span>
         </header>
         <div class="ts-body">
           ${renderVitalHistory()}
@@ -4168,38 +4168,40 @@ function renderSymptomAnalysis(data) {
   const conditions = (data.conditions || [])
     .map(c => {
       const name = escapeHtml(c.name || "");
+      const desc = c.description ? `<div class="sa-cond-desc">${escapeHtml(c.description)}</div>` : '';
+      const likelihood = c.likelihood ? `<span class="sa-cond-likelihood">可能性 ${escapeHtml(c.likelihood)}</span>` : '';
       const lookupBtn = c.name
-        ? ` <button type="button" class="secondary" style="margin-left:6px;padding:2px 8px;font-size:0.78rem"
+        ? ` <button type="button" class="sa-cond-lookup"
               data-disease="${escapeHtml(c.name)}"
               onclick="navigateToDiseaseSearch(this.dataset.disease)"
-              title="到疾病百科查詢這個疾病的詳細資訊、用藥、風險與未來發展">
-              <i data-lucide="stethoscope" style="width:12px;height:12px;vertical-align:middle"></i> 查疾病
+              title="到疾病百科查詢更詳細的說明、用藥、風險">
+              <i data-lucide="stethoscope" style="width:12px;height:12px"></i> 查更多
             </button>`
         : '';
-      return `<li><strong>${name}</strong>${c.likelihood ? ' — 可能性：' + escapeHtml(c.likelihood) : ''}${lookupBtn}</li>`;
+      return `<li class="sa-cond"><div class="sa-cond-head"><strong>${name}</strong>${likelihood}${lookupBtn}</div>${desc}</li>`;
     })
     .join("");
 
   return `
-    <div style="padding:16px;background:${u.bg};border-left:4px solid ${u.color};border-radius:var(--radius-sm);margin-bottom:12px">
-      <div style="font-weight:600;font-size:1.05rem;color:${u.color}">緊急程度：${u.label}</div>
+    <div class="sa-urgency" style="border-left-color:${u.color};background:${u.bg}">
+      <div class="sa-urgency-label" style="color:${u.color}">緊急程度：${u.label}</div>
     </div>
-    <div style="display:grid;gap:14px">
-      <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem;color:#B7C0AF;font-weight:700">可能病因</h4>
-        <ul style="margin:0;padding-left:20px;line-height:1.7;color:#594842">${conditions || '<li>需要醫師進一步評估</li>'}</ul>
-      </div>
-      <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem;color:#B7C0AF;font-weight:700">建議就診科別</h4>
-        <p style="margin:0;color:#594842">${escapeHtml(data.recommended_department || "家醫科")}</p>
-      </div>
-      <div>
-        <h4 style="margin:0 0 6px;font-size:0.95rem;color:#B7C0AF;font-weight:700">建議</h4>
-        <p style="margin:0;line-height:1.7;color:#594842">${escapeHtml(data.advice || "")}</p>
-      </div>
-      <div style="padding:10px 12px;background:rgba(255,255,255,0.05);border:1px dashed var(--border-glass);border-radius:var(--radius-sm);font-size:0.8rem;color:#594842">
-        ${escapeHtml(data.disclaimer || "此分析僅供參考，不構成醫療診斷。如有不適請立即就醫。")}
-      </div>
+    <div class="sa-grid">
+      <section class="sa-section">
+        <h4 class="sa-section-title">可能的原因</h4>
+        <ul class="sa-cond-list">${conditions || '<li class="sa-empty">需要醫師進一步評估</li>'}</ul>
+      </section>
+      <section class="sa-section">
+        <h4 class="sa-section-title">建議看哪一科</h4>
+        <p class="sa-text">${escapeHtml(data.recommended_department || "家醫科")}</p>
+      </section>
+      <section class="sa-section">
+        <h4 class="sa-section-title">建議怎麼做</h4>
+        <p class="sa-text">${escapeHtml(data.advice || "")}</p>
+      </section>
+      <p class="sa-disclaimer">
+        ${escapeHtml(data.disclaimer || "這份分析僅供參考，不是診斷。如果不舒服或不確定，請直接就醫。")}
+      </p>
     </div>
   `;
 }
