@@ -1236,7 +1236,7 @@ function showPage(page) {
   const pages = {
     home, symptoms, symptomsAnalyze, doctors, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
-    drugSearch, diseaseSearch
+    drugSearch, diseaseSearch, reminders: reminders
   };
   // Page transition
   app.style.opacity = '0';
@@ -1262,6 +1262,7 @@ function showPage(page) {
     if (page === "settings") loadSettingsPage();
     if (page === "drugSearch") loadDrugSearchPage();
     if (page === "diseaseSearch") loadDiseaseSearchPage();
+    if (page === "reminders") loadRemindersPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -10012,6 +10013,435 @@ function navigateToDiseaseSearch(name) {
     showPage('diseaseSearch');
   }
 }
+
+// ─── 提醒通知（Reminders） ─────────────────────────────────
+
+var _remindersList = [];
+var _remindersInbox = [];
+var _remindersPid = null;
+var _pushVapidPublicKey = null;
+var _pushSubscribed = false;
+var _remindersInboxTimer = null;
+
+function reminders() {
+  _remindersPid = getStablePatientId();
+  var permState = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
+  var permLabel = ({ granted: '已允許', denied: '已封鎖', default: '尚未授權', unsupported: '此瀏覽器不支援' })[permState] || permState;
+  var permColor = permState === 'granted' ? '#2ecc71' : (permState === 'denied' ? '#e74c3c' : '#f39c12');
+  return ''
+    + '<div class="card">'
+    + '  <h2><i data-lucide="bell-ring" style="width:20px;height:20px;vertical-align:middle"></i> 提醒通知</h2>'
+    + '  <p style="margin-top:8px;color:var(--text-dim)">設定吃藥、回診、檢查等提醒，到時間會以站內通知或手機推播提醒你。</p>'
+    + '</div>'
+    + '<div class="card">'
+    + '  <h3><i data-lucide="shield-check" style="width:18px;height:18px;vertical-align:middle"></i> 推播設定</h3>'
+    + '  <div style="margin-top:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '    <span>通知權限：<strong style="color:' + permColor + '">' + permLabel + '</strong></span>'
+    + '    <span id="reminders-push-state" style="color:var(--text-dim);font-size:0.9rem">推播訂閱：載入中…</span>'
+    + '  </div>'
+    + '  <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
+    + '    <button class="primary" onclick="reminderEnablePush()"><i data-lucide="bell-plus" style="width:14px;height:14px;vertical-align:middle"></i> 啟用手機推播</button>'
+    + '    <button class="secondary" onclick="reminderDisablePush()"><i data-lucide="bell-off" style="width:14px;height:14px;vertical-align:middle"></i> 取消推播</button>'
+    + '    <button class="secondary" onclick="reminderTestDispatch()"><i data-lucide="send" style="width:14px;height:14px;vertical-align:middle"></i> 觸發目前到期提醒</button>'
+    + '  </div>'
+    + '  <p style="margin-top:8px;color:var(--text-muted);font-size:0.8rem">站內通知中心永遠都會收到提醒；手機推播需要瀏覽器授權與後端 VAPID 設定。</p>'
+    + '</div>'
+    + '<div class="card">'
+    + '  <h3><i data-lucide="plus-circle" style="width:18px;height:18px;vertical-align:middle"></i> 新增提醒</h3>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'
+    + '    <label style="font-size:0.85rem;color:var(--text-dim)">類型'
+    + '      <select id="rem-type" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);margin-top:4px" onchange="reminderToggleSource()">'
+    + '        <option value="medication">吃藥提醒</option>'
+    + '        <option value="appointment">回診/預約</option>'
+    + '        <option value="lab">檢查/檢驗</option>'
+    + '        <option value="custom" selected>自訂提醒</option>'
+    + '      </select>'
+    + '    </label>'
+    + '    <label style="font-size:0.85rem;color:var(--text-dim)">重複頻率'
+    + '      <select id="rem-freq" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);margin-top:4px" onchange="reminderToggleWeekly()">'
+    + '        <option value="once" selected>單次</option>'
+    + '        <option value="daily">每天</option>'
+    + '        <option value="weekly">每週</option>'
+    + '        <option value="monthly">每月</option>'
+    + '      </select>'
+    + '    </label>'
+    + '  </div>'
+    + '  <label style="font-size:0.85rem;color:var(--text-dim);display:block;margin-top:8px">標題（必填）'
+    + '    <input id="rem-title" type="text" placeholder="例如：早餐後吃血壓藥" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);margin-top:4px" />'
+    + '  </label>'
+    + '  <label style="font-size:0.85rem;color:var(--text-dim);display:block;margin-top:8px">說明（可選）'
+    + '    <textarea id="rem-body" rows="2" placeholder="例如：白色 5mg，一日一顆" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);margin-top:4px"></textarea>'
+    + '  </label>'
+    + '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'
+    + '    <label style="font-size:0.85rem;color:var(--text-dim)">首次觸發時間'
+    + '      <input id="rem-when" type="datetime-local" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);margin-top:4px" />'
+    + '    </label>'
+    + '    <label id="rem-source-wrap" style="font-size:0.85rem;color:var(--text-dim);display:none">關聯藥物（可選）'
+    + '      <select id="rem-source" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);margin-top:4px"><option value="">— 不關聯 —</option></select>'
+    + '    </label>'
+    + '  </div>'
+    + '  <div id="rem-weekly-wrap" style="display:none;margin-top:8px">'
+    + '    <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:4px">每週重複的星期</div>'
+    + '    <div style="display:flex;gap:6px;flex-wrap:wrap">'
+    + ['一','二','三','四','五','六','日'].map(function(label, idx) {
+        return '<label style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);cursor:pointer">'
+          + '<input type="checkbox" class="rem-dow" value="' + idx + '" /> ' + label + '</label>';
+      }).join('')
+    + '    </div>'
+    + '  </div>'
+    + '  <div style="margin-top:12px">'
+    + '    <button class="primary" onclick="reminderSubmitNew()"><i data-lucide="save" style="width:14px;height:14px;vertical-align:middle"></i> 建立提醒</button>'
+    + '  </div>'
+    + '</div>'
+    + '<div class="card">'
+    + '  <div style="display:flex;justify-content:space-between;align-items:center">'
+    + '    <h3><i data-lucide="inbox" style="width:18px;height:18px;vertical-align:middle"></i> 站內通知</h3>'
+    + '    <button class="secondary" onclick="reminderMarkAllRead()" style="padding:4px 12px;font-size:0.85rem">全部標為已讀</button>'
+    + '  </div>'
+    + '  <div id="rem-inbox-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中…</p></div>'
+    + '</div>'
+    + '<div class="card">'
+    + '  <div style="display:flex;justify-content:space-between;align-items:center">'
+    + '    <h3><i data-lucide="list-checks" style="width:18px;height:18px;vertical-align:middle"></i> 我的提醒</h3>'
+    + '    <button class="secondary" onclick="loadRemindersPage()" style="padding:4px 12px;font-size:0.85rem">重新整理</button>'
+    + '  </div>'
+    + '  <div id="rem-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中…</p></div>'
+    + '</div>';
+}
+
+function reminderToggleSource() {
+  var t = document.getElementById('rem-type').value;
+  var wrap = document.getElementById('rem-source-wrap');
+  var sel = document.getElementById('rem-source');
+  if (!wrap || !sel) return;
+  if (t === 'medication') {
+    wrap.style.display = '';
+    fetch(API + '/medications/?patient_id=' + _remindersPid)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var meds = (data.medications || []).filter(function(m) { return m.active !== 0; });
+        sel.innerHTML = '<option value="">— 不關聯 —</option>'
+          + meds.map(function(m) {
+              return '<option value="' + m.id + '">' + escapeHtml(m.name || '') + (m.dosage ? ' · ' + escapeHtml(m.dosage) : '') + '</option>';
+            }).join('');
+      })
+      .catch(function() { sel.innerHTML = '<option value="">（無法載入藥物清單）</option>'; });
+  } else {
+    wrap.style.display = 'none';
+    sel.innerHTML = '<option value="">— 不關聯 —</option>';
+  }
+}
+
+function reminderToggleWeekly() {
+  var f = document.getElementById('rem-freq').value;
+  var wrap = document.getElementById('rem-weekly-wrap');
+  if (wrap) wrap.style.display = (f === 'weekly') ? '' : 'none';
+}
+
+function loadRemindersPage() {
+  _remindersPid = getStablePatientId();
+  // 預設首次觸發時間 = 30 分鐘後
+  var when = document.getElementById('rem-when');
+  if (when && !when.value) {
+    var d = new Date(Date.now() + 30 * 60 * 1000);
+    var pad = function(n) { return ('0' + n).slice(-2); };
+    when.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  reminderRefreshList();
+  reminderRefreshInbox();
+  reminderRefreshPushState();
+  if (_remindersInboxTimer) clearInterval(_remindersInboxTimer);
+  _remindersInboxTimer = setInterval(reminderRefreshInbox, 30000);
+}
+
+window.addEventListener('beforeunload', function() {
+  if (_remindersInboxTimer) clearInterval(_remindersInboxTimer);
+});
+
+function reminderRefreshList() {
+  fetch(API + '/reminders/?patient_id=' + encodeURIComponent(_remindersPid))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _remindersList = data.reminders || [];
+      reminderRenderList();
+    })
+    .catch(function() {
+      var el = document.getElementById('rem-list');
+      if (el) el.innerHTML = '<p style="color:var(--text-muted)">無法載入提醒清單。</p>';
+    });
+}
+
+function reminderRenderList() {
+  var el = document.getElementById('rem-list');
+  if (!el) return;
+  if (!_remindersList.length) {
+    el.innerHTML = '<p style="color:var(--text-muted)">還沒有提醒，先在上面建立第一筆吧。</p>';
+    return;
+  }
+  var typeLabel = { medication: '吃藥', appointment: '回診', lab: '檢查', custom: '自訂' };
+  var freqLabel = { once: '單次', daily: '每天', weekly: '每週', monthly: '每月' };
+  el.innerHTML = _remindersList.map(function(r) {
+    var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString() : '—';
+    var active = (r.active === true || r.active === 1);
+    return ''
+      + '<div style="padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+      + '  <div style="flex:1;min-width:0">'
+      + '    <div style="font-weight:600">' + escapeHtml(r.title || '') + '</div>'
+      + '    <div style="font-size:0.85rem;color:var(--text-dim);margin-top:2px">'
+      + (typeLabel[r.reminder_type] || r.reminder_type) + ' · ' + (freqLabel[r.frequency] || r.frequency)
+      + ' · 下次：' + escapeHtml(next)
+      + (active ? '' : ' · <span style="color:#999">已停用</span>')
+      + '    </div>'
+      + (r.body ? '    <div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">' + escapeHtml(r.body) + '</div>' : '')
+      + '  </div>'
+      + '  <div style="display:flex;flex-direction:column;gap:4px">'
+      + '    <button class="secondary" onclick="reminderToggleActive(\'' + r.id + '\',' + (active ? 'false' : 'true') + ')" style="padding:4px 8px;font-size:0.8rem">' + (active ? '停用' : '啟用') + '</button>'
+      + '    <button class="secondary" onclick="reminderDelete(\'' + r.id + '\')" style="padding:4px 8px;font-size:0.8rem;color:#c0392b">刪除</button>'
+      + '  </div>'
+      + '</div>';
+  }).join('');
+}
+
+function reminderRefreshInbox() {
+  fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(_remindersPid) + '&limit=20')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _remindersInbox = data.items || [];
+      reminderRenderInbox(data.unread || 0);
+      reminderUpdateNavBadge(data.unread || 0);
+    })
+    .catch(function() {
+      var el = document.getElementById('rem-inbox-list');
+      if (el) el.innerHTML = '<p style="color:var(--text-muted)">無法載入通知。</p>';
+    });
+}
+
+function reminderRenderInbox(unread) {
+  var el = document.getElementById('rem-inbox-list');
+  if (!el) return;
+  if (!_remindersInbox.length) {
+    el.innerHTML = '<p style="color:var(--text-muted)">目前沒有通知。</p>';
+    return;
+  }
+  el.innerHTML = '<div style="margin-bottom:8px;font-size:0.85rem;color:var(--text-dim)">未讀 <strong>' + unread + '</strong> 則 / 共 ' + _remindersInbox.length + ' 則</div>'
+    + _remindersInbox.map(function(n) {
+      var isRead = (n.read === true || n.read === 1);
+      var when = n.created_at ? new Date(n.created_at).toLocaleString() : '';
+      return ''
+        + '<div style="padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:6px;background:' + (isRead ? 'transparent' : 'rgba(100,140,200,0.06)') + '">'
+        + '  <div style="display:flex;justify-content:space-between;gap:8px">'
+        + '    <div style="font-weight:' + (isRead ? '500' : '600') + '">' + escapeHtml(n.title || '') + '</div>'
+        + '    <div style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap">' + escapeHtml(when) + '</div>'
+        + '  </div>'
+        + (n.body ? '  <div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">' + escapeHtml(n.body) + '</div>' : '')
+        + (isRead ? '' : '  <button class="secondary" onclick="reminderMarkRead(\'' + n.id + '\')" style="margin-top:6px;padding:2px 8px;font-size:0.75rem">標為已讀</button>')
+        + '</div>';
+    }).join('');
+}
+
+function reminderUpdateNavBadge(unread) {
+  var badge = document.getElementById('reminders-nav-badge');
+  if (!badge) return;
+  if (unread > 0) {
+    badge.style.display = '';
+    badge.textContent = unread > 99 ? '99+' : String(unread);
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function reminderMarkRead(id) {
+  fetch(API + '/reminders/inbox/' + encodeURIComponent(id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ read: true }),
+  }).then(reminderRefreshInbox);
+}
+
+function reminderMarkAllRead() {
+  fetch(API + '/reminders/inbox/read-all?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
+    .then(reminderRefreshInbox);
+}
+
+function reminderToggleActive(id, active) {
+  fetch(API + '/reminders/' + encodeURIComponent(id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ active: !!active }),
+  }).then(reminderRefreshList);
+}
+
+function reminderDelete(id) {
+  if (!confirm('確定要刪除這筆提醒嗎？')) return;
+  fetch(API + '/reminders/' + encodeURIComponent(id), { method: 'DELETE' })
+    .then(reminderRefreshList);
+}
+
+function reminderSubmitNew() {
+  var type = document.getElementById('rem-type').value;
+  var freq = document.getElementById('rem-freq').value;
+  var title = (document.getElementById('rem-title').value || '').trim();
+  var bodyText = (document.getElementById('rem-body').value || '').trim();
+  var whenStr = document.getElementById('rem-when').value;
+  if (!title) { alert('請填寫提醒標題'); return; }
+  if (!whenStr) { alert('請選擇首次觸發時間'); return; }
+  var whenIso = new Date(whenStr).toISOString();
+  var dow = [];
+  if (freq === 'weekly') {
+    document.querySelectorAll('.rem-dow:checked').forEach(function(cb) { dow.push(parseInt(cb.value, 10)); });
+    if (!dow.length) { alert('每週重複請至少勾一個星期'); return; }
+  }
+  var sourceId = (type === 'medication') ? (document.getElementById('rem-source').value || null) : null;
+  var payload = {
+    patient_id: _remindersPid,
+    reminder_type: type,
+    title: title,
+    body: bodyText || null,
+    source_id: sourceId,
+    frequency: freq,
+    days_of_week: dow.length ? dow : null,
+    scheduled_at: whenIso,
+    active: true,
+  };
+  fetch(API + '/reminders/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+    .then(function(r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+    .then(function() {
+      document.getElementById('rem-title').value = '';
+      document.getElementById('rem-body').value = '';
+      reminderRefreshList();
+    })
+    .catch(function(e) { alert('建立失敗：' + e.message); });
+}
+
+function reminderTestDispatch() {
+  fetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      alert('已派發：' + (data.dispatched || 0) + ' 則（push 成功 ' + (data.push_ok || 0) + ' / 失敗 ' + (data.push_fail || 0) + '）');
+      reminderRefreshInbox();
+      reminderRefreshList();
+    })
+    .catch(function() { alert('派發失敗'); });
+}
+
+// ─── Push subscription ────────────────────────────────────
+
+function reminderRefreshPushState() {
+  var el = document.getElementById('reminders-push-state');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (el) el.textContent = '推播訂閱：此瀏覽器不支援 Web Push';
+    return;
+  }
+  navigator.serviceWorker.ready.then(function(reg) {
+    return reg.pushManager.getSubscription();
+  }).then(function(sub) {
+    _pushSubscribed = !!sub;
+    if (el) el.textContent = '推播訂閱：' + (_pushSubscribed ? '已啟用' : '未啟用');
+  });
+}
+
+function _urlBase64ToUint8Array(base64String) {
+  var padding = '='.repeat((4 - base64String.length % 4) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var raw = atob(base64);
+  var out = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function reminderEnablePush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    alert('此瀏覽器不支援 Web Push');
+    return;
+  }
+  Notification.requestPermission().then(function(perm) {
+    if (perm !== 'granted') { alert('需要允許通知才能啟用推播'); return; }
+    fetch(API + '/reminders/push/config')
+      .then(function(r) { return r.json(); })
+      .then(function(cfg) {
+        if (!cfg.vapid_public_key) {
+          alert('伺服器尚未設定 VAPID 公鑰；站內通知仍可正常使用。');
+          return;
+        }
+        _pushVapidPublicKey = cfg.vapid_public_key;
+        return navigator.serviceWorker.ready.then(function(reg) {
+          return reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: _urlBase64ToUint8Array(cfg.vapid_public_key),
+          });
+        }).then(function(sub) {
+          var json = sub.toJSON();
+          return fetch(API + '/reminders/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              patient_id: _remindersPid,
+              endpoint: json.endpoint,
+              p256dh: json.keys.p256dh,
+              auth: json.keys.auth,
+              user_agent: navigator.userAgent.slice(0, 200),
+            }),
+          });
+        }).then(function() {
+          _pushSubscribed = true;
+          reminderRefreshPushState();
+          alert('已啟用手機推播。');
+        });
+      })
+      .catch(function(e) { alert('啟用推播失敗：' + (e && e.message || e)); });
+  });
+}
+
+function reminderDisablePush() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(function(reg) {
+    return reg.pushManager.getSubscription();
+  }).then(function(sub) {
+    if (!sub) { alert('目前未啟用推播'); return; }
+    var endpoint = sub.endpoint;
+    return sub.unsubscribe().then(function() {
+      return fetch(API + '/reminders/push/subscribe?endpoint=' + encodeURIComponent(endpoint), { method: 'DELETE' });
+    });
+  }).then(function() {
+    _pushSubscribed = false;
+    reminderRefreshPushState();
+    alert('已取消推播。');
+  });
+}
+
+// 在 SW 收到推播點擊時，把使用者帶到提醒頁
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'mdpiece-notification-click') {
+      if (typeof navigateTo === 'function') navigateTo('reminders');
+    }
+  });
+}
+
+// 全域：登入後或 app 啟動時，背景同步未讀數
+function reminderBackgroundSync() {
+  try {
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    if (!pid) return;
+    // 同步前先觸發伺服器派發（命中本帳號的到期 reminder）
+    fetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(pid), { method: 'POST' })
+      .catch(function() {})
+      .finally(function() {
+        fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&unread_only=true&limit=1')
+          .then(function(r) { return r.json(); })
+          .then(function(data) { reminderUpdateNavBadge(data.unread || 0); })
+          .catch(function() {});
+      });
+  } catch {}
+}
+
+setTimeout(reminderBackgroundSync, 4000);
+setInterval(reminderBackgroundSync, 5 * 60 * 1000);
 
 // ─── Service Worker ───────────────────────────────────────
 

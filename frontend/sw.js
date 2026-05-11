@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v61-mobile-disclaimer-wrap";
+const CACHE_VERSION = "mdpiece-v62-reminder-notifications";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=mobile-disclaimer-wrap",
-  "/js/i18n.js?v=mobile-disclaimer-wrap",
-  "/js/app.js?v=mobile-disclaimer-wrap",
+  "/css/style.css?v=reminder-notifications",
+  "/js/i18n.js?v=reminder-notifications",
+  "/js/app.js?v=reminder-notifications",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -130,18 +130,39 @@ function openPendingDB() {
 
 // Push notifications
 self.addEventListener("push", (e) => {
-  const data = e.data?.json() ?? { title: "MD.Piece", body: "新通知" };
+  let data = { title: "MD.Piece", body: "新通知" };
+  try {
+    if (e.data) data = { ...data, ...e.data.json() };
+  } catch {
+    if (e.data) data.body = e.data.text();
+  }
+  const url = data.url || "/";
+  const tag = data.tag || `mdpiece-${Date.now()}`;
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-72.png",
       vibrate: [200, 100, 200],
+      tag,
+      renotify: true,
+      data: { url, reminder_id: data.reminder_id, reminder_type: data.reminder_type },
     })
   );
 });
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  e.waitUntil(clients.openWindow("/"));
+  const targetUrl = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if ("focus" in w) {
+          w.postMessage({ type: "mdpiece-notification-click", url: targetUrl, data: e.notification.data });
+          return w.focus();
+        }
+      }
+      return clients.openWindow(targetUrl);
+    })
+  );
 });

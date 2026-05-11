@@ -269,6 +269,12 @@
         <button class="nav-item" data-page="memo" onclick="navigateTo('memo', this)">
           <span class="nav-icon"><i data-lucide="sticky-note" style="width:18px;height:18px"></i></span> <span data-i18n="nav.memo">Memo</span>
         </button>
+        <button class="nav-item" data-page="reminders" onclick="navigateTo('reminders', this)">
+          <span class="nav-icon" style="position:relative">
+            <i data-lucide="bell-ring" style="width:18px;height:18px"></i>
+            <span id="reminders-nav-badge" style="display:none;position:absolute;top:-4px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#e74c3c;color:#fff;font-size:10px;line-height:16px;text-align:center;font-weight:600">0</span>
+          </span> <span data-i18n="nav.reminders">提醒通知</span>
+        </button>
 
         <div class="nav-section-label" data-i18n="nav.group.search">查詢與分析</div>
         <button class="nav-item" data-page="symptomsAnalyze" onclick="navigateTo('symptomsAnalyze', this)">
