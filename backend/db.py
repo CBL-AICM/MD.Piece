@@ -249,6 +249,48 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (patient_id) REFERENCES patients(id)
         )""",
+    "drug_reference": """
+        CREATE TABLE IF NOT EXISTS drug_reference (
+            id TEXT PRIMARY KEY,
+            name_zh TEXT,
+            name_en TEXT,
+            aliases TEXT,
+            category TEXT,
+            indication TEXT,
+            usage TEXT,
+            side_effects TEXT,
+            risks TEXT,
+            education TEXT,
+            source TEXT DEFAULT 'claude',
+            disclaimer TEXT,
+            query_count INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )""",
+    "disease_reference": """
+        CREATE TABLE IF NOT EXISTS disease_reference (
+            id TEXT PRIMARY KEY,
+            name_zh TEXT,
+            name_en TEXT,
+            aliases TEXT,
+            icd10_code TEXT,
+            icd10_category TEXT,
+            overview TEXT,
+            causes TEXT,
+            symptoms TEXT,
+            common_medications TEXT,
+            treatments TEXT,
+            complications TEXT,
+            prognosis TEXT,
+            self_care TEXT,
+            red_flags TEXT,
+            references_data TEXT,
+            source TEXT DEFAULT 'claude',
+            disclaimer TEXT,
+            query_count INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )""",
 }
 
 
@@ -375,8 +417,18 @@ class _SqliteQuery:
         self._params.append(val)
         return self
 
+    def gt(self, col, val):
+        self._conditions.append(f'"{_safe_ident(col)}" > ?')
+        self._params.append(val)
+        return self
+
     def lte(self, col, val):
         self._conditions.append(f'"{_safe_ident(col)}" <= ?')
+        self._params.append(val)
+        return self
+
+    def lt(self, col, val):
+        self._conditions.append(f'"{_safe_ident(col)}" < ?')
         self._params.append(val)
         return self
 
@@ -583,7 +635,9 @@ class _HttpxQuery:
     def eq(self, col, val):     return self._add(col, "eq", val)
     def neq(self, col, val):    return self._add(col, "neq", val)
     def gte(self, col, val):    return self._add(col, "gte", val)
+    def gt(self, col, val):     return self._add(col, "gt", val)
     def lte(self, col, val):    return self._add(col, "lte", val)
+    def lt(self, col, val):     return self._add(col, "lt", val)
     def ilike(self, col, val):  return self._add(col, "ilike", val)
 
     def order(self, col, desc=False, **_):
