@@ -10167,11 +10167,11 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   align-items: center;
   gap: 10px;
   margin: 0 0 8px;
-  color: #FBF6EC;
+  color: var(--text);
 }
 .emotions-head p {
   margin: 0 0 22px;
-  color: #FBF6EC;
+  color: var(--text-dim);
   font-size: 0.9rem;
 }
 .emotions-card {
@@ -10267,6 +10267,88 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   margin: 0 0 14px;
   font-size: 0.88rem;
   color: var(--text-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   喜怒哀樂四象限 — 先挑情緒類型再決定強度
+   ═══════════════════════════════════════════════════════════ */
+.mood-quad {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.mood-quad-btn {
+  --em-color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 10px 14px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border-glass);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition),
+              transform 0.08s ease, box-shadow var(--transition);
+  font-family: inherit;
+  color: var(--text);
+  position: relative;
+}
+.mood-quad-btn:hover {
+  border-color: var(--em-color);
+  background: color-mix(in srgb, var(--em-color) 12%, var(--bg-surface));
+}
+.mood-quad-btn:active { transform: scale(0.98); }
+.mood-quad-btn.is-active {
+  border-color: var(--em-color);
+  background: color-mix(in srgb, var(--em-color) 20%, var(--bg-surface));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--em-color) 35%, transparent);
+}
+.mood-quad-btn.is-active::after {
+  content: '✓';
+  position: absolute;
+  top: 6px; right: 8px;
+  width: 18px; height: 18px;
+  background: var(--em-color);
+  color: var(--cream);
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.mood-quad-emoji {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+.mood-quad-char {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--em-color);
+  margin-top: 2px;
+}
+.mood-quad-word {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+.mood-quad-btn.is-active .mood-quad-word {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* color hints per type (border tone when not active) */
+.mood-quad-joy      { --em-color: #E8A93A; }   /* warm yellow */
+.mood-quad-anger    { --em-color: #D86E5E; }   /* red */
+.mood-quad-sorrow   { --em-color: #5A7DB0; }   /* blue */
+.mood-quad-pleasure { --em-color: #6FA67B; }   /* green */
+
+@media (max-width: 380px) {
+  .mood-quad-btn { padding: 14px 8px 12px; }
+  .mood-quad-emoji { font-size: 1.5rem; }
+  .mood-quad-char { font-size: 1.1rem; }
+  .mood-quad-word { font-size: 0.74rem; }
 }
 .batt-picker {
   --batt-color: var(--text-dim);
