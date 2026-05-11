@@ -566,11 +566,7 @@ img, svg, video { max-width: 100%; height: auto; }
 /* Body grid background — only when app is shown */
 #app-wrapper.show {
   background-color: var(--app-bg);
-  background-image:
-    linear-gradient(var(--app-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--app-grid) 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-attachment: fixed;
+  /* 移除 grid pattern — 大色塊白底會把 1px 灰格放大成「髒」感 */
   color: var(--app-text);
   transition: background-color 0.4s ease, color 0.4s ease;
 }
@@ -1064,12 +1060,10 @@ html[data-mode="standard"] #app {
   font-size: 1.05rem;
   margin: 18px auto 30px;
   padding: 38px 32px 46px;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.18)),
-    var(--app-panel);
-  border: 1.5px solid var(--app-border);
-  border-radius: 6px;
-  box-shadow: var(--app-shadow), inset 0 0 80px rgba(94,234,212,0.06);
+  background: var(--app-panel);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
   font-family: "Noto Sans TC", sans-serif;
 }
 /* Top-left filepath label ▸ /md.piece/pages/xxx — bash */
@@ -1090,24 +1084,24 @@ html[data-mode="standard"] #app::before {
   white-space: nowrap;
   z-index: 3;
 }
-/* Bottom status bar */
+/* 頁尾常駐免責列 — 全頁底端固定，提醒這只是輔助工具 */
 html[data-mode="standard"] #app::after {
-  content: "─[ 本系統為AI研究工具，不取代醫療建議，若有不適請盡快就醫。 ]─";
+  content: "本系統為健康紀錄輔助工具，不取代醫療建議；如有不適請盡快就醫。";
   position: absolute;
   left: 14px; right: 14px;
   bottom: 10px;
-  padding: 4px 10px;
-  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-  color: var(--app-term);
-  border-top: 1px dashed var(--app-border);
-  background: linear-gradient(180deg, transparent, rgba(94,234,212,0.06));
+  padding: 6px 14px;
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.2px;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border-glass);
+  background: transparent;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
   z-index: 3;
-  opacity: 0.9;
 }
 /* Mobile: drop ASCII brackets and let the disclaimer wrap so the full
    sentence stays visible instead of being cut off with an ellipsis. */
@@ -1129,11 +1123,7 @@ html[data-mode="standard"] #app::after {
   }
 }
 /* Subtle CRT scanlines on terminal pane */
-html[data-mode="standard"] #app {
-  background-image:
-    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.18)),
-    repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(94,234,212,0.025) 3px, rgba(94,234,212,0.025) 4px);
-}
+/* Y2K CRT scanlines + 黑暗暈影在白底會直接把畫面變「髒灰」，移除 */
 
 html[data-mode="standard"] #app h2 { font-size: 1.5rem; }
 html[data-mode="standard"] #app h3 { font-size: 1.2rem; }
@@ -1710,31 +1700,7 @@ html[data-mode="standard"] .puzzle-deco-2 {
   animation: floatPiece 11s ease-in-out 2s infinite;
 }
 
-/* Extra pieces only in standard mode */
-html[data-mode="standard"] #app-wrapper.show::before,
-html[data-mode="standard"] #app-wrapper.show::after {
-  content: "";
-  position: fixed;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.28;
-}
-html[data-mode="standard"] #app-wrapper.show::before {
-  top: 38%; right: 3%;
-  width: 60px; height: 60px;
-  background: var(--app-aqua);
-  clip-path: polygon(30% 0%, 30% 15%, 15% 15%, 15% 30%, 0% 30%, 0% 100%, 100% 100%, 100% 0%);
-  filter: drop-shadow(0 0 10px var(--app-glow));
-  animation: floatPieceB 13s ease-in-out infinite;
-}
-html[data-mode="standard"] #app-wrapper.show::after {
-  bottom: 6%; right: 18%;
-  width: 55px; height: 55px;
-  background: var(--app-blue);
-  clip-path: polygon(0% 0%, 0% 70%, 15% 70%, 15% 85%, 30% 85%, 30% 100%, 100% 100%, 100% 0%);
-  filter: drop-shadow(0 0 10px rgba(184,222,255,0.5));
-  animation: floatPieceB 15s ease-in-out 4s infinite;
-}
+/* 浮動拼圖裝飾在白底會被當成「灰色雜訊」— 移除以保持乾淨 */
 
 @keyframes floatPieceB {
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -1794,12 +1760,10 @@ html[data-mode="senior"] .page-deco { display: none; }
 /* Body — the actual terminal output area */
 .term-card-body {
   padding: 22px 28px 26px;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.02)),
-    var(--app-panel-soft);
-  border: 1.5px solid var(--app-border);
-  border-radius: 4px;
-  box-shadow: inset 0 0 40px rgba(94,234,212,0.05), 0 4px 0 rgba(13,25,42,0.45);
+  background: var(--app-panel);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
 }
@@ -1808,13 +1772,8 @@ html[data-mode="senior"] .page-deco { display: none; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent 0,
-    transparent 3px,
-    rgba(94,234,212,0.03) 3px,
-    rgba(94,234,212,0.03) 4px
-  );
+  /* 移除 CRT scanlines — 白底會把這條條紋放大成髒灰 */
+  display: none;
 }
 .term-card-body > * { position: relative; }
 
@@ -2865,10 +2824,7 @@ html[data-mode="senior"] .tc-desc {
   overflow: hidden;
 }
 .term-section > .ts-body { position: relative; }
-.term-section::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(94,234,212,0.025) 3px, rgba(94,234,212,0.025) 4px);
-}
+/* term-section CRT scanlines 在白底會被當成髒灰 — 移除 */
 
 .ts-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;

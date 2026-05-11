@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v61-v74-light-default";
+const CACHE_VERSION = "mdpiece-v61-v75-strip-y2k-gray";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v74-light-default",
-  "/js/i18n.js?v=v74-light-default",
-  "/js/app.js?v=v74-light-default",
+  "/css/style.css?v=v75-strip-y2k-gray",
+  "/js/i18n.js?v=v75-strip-y2k-gray",
+  "/js/app.js?v=v75-strip-y2k-gray",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
