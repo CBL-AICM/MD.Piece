@@ -364,6 +364,7 @@ function memoSave() {
   memoCancelCompose();
   memoRenderList();
   showToast(editingId ? "已更新" : "已儲存", "success");
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
 }
 
 function memoEdit(id) {
@@ -3397,6 +3398,7 @@ function submitOtherSymptomLog() {
     recordedAt: new Date().toISOString()
   });
   showToast && showToast(_T('sym.toast.added'), 'success');
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('symptoms');
 }
 
@@ -3422,11 +3424,13 @@ function submitSymptomLog(catId) {
     categoryId: catId, intensity, frequency, notes,
     recordedAt: new Date().toISOString()
   });
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('symptoms');
 }
 function deleteSymptomEntryAndRefresh(id) {
   if (!confirm(_T('sym.confirm.delEntry'))) return;
   deleteSymptomEntry(id);
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('symptoms');
 }
 function renderIntensityBar(v) {
@@ -4015,6 +4019,7 @@ function submitVitalEntry(metricId) {
   const notes = document.getElementById('vt-notes').value.trim();
   if (notes) entry.notes = notes;
   saveVitalEntry(entry);
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('vitals');
 }
 
@@ -5857,6 +5862,7 @@ function logMedTaken(medId, taken, opts) {
         return;
       }
       showToast(taken ? "已記錄服藥 ✓" : "已記錄跳過", taken ? "success" : "info");
+      if (typeof refreshNavBadges === 'function') refreshNavBadges();
       loadMedicationsPage();
     })
     .catch(function() { showToast("記錄失敗", "error"); });
@@ -9200,6 +9206,7 @@ async function submitEmotion() {
     _resetBattery();
     showToast('情緒打卡完成', 'success');
     refreshMoodViews();
+    if (typeof refreshNavBadges === 'function') refreshNavBadges();
   } catch (e) {
     document.getElementById('emotion-status').textContent = '送出失敗：' + (e.message || '');
     document.getElementById('emotion-status').className = 'emotions-status emotions-status-error';
