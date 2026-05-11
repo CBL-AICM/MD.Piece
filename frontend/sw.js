@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v61-v63-todo-pv-hero";
+const CACHE_VERSION = "mdpiece-v61-v65-mock-features";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v63-todo-pv-hero",
-  "/js/i18n.js?v=v63-todo-pv-hero",
-  "/js/app.js?v=v63-todo-pv-hero",
+  "/css/style.css?v=v65-mock-features",
+  "/js/i18n.js?v=v65-mock-features",
+  "/js/app.js?v=v65-mock-features",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

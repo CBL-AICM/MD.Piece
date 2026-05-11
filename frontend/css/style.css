@@ -735,6 +735,64 @@ body {
   stroke-width: 2;
 }
 
+/* ── Nav 詳細模式：label + sub + badge ────────────── */
+.nav-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.2;
+}
+.nav-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-sub {
+  font-size: 0.66rem;
+  color: var(--app-text-dim, rgba(180,200,200,0.55));
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  opacity: 0.75;
+}
+.nav-item.active .nav-sub {
+  color: var(--app-chip-text);
+  opacity: 0.7;
+}
+.nav-item:hover .nav-sub { opacity: 0.95; }
+.nav-badge {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: var(--accent, #C97F4B);
+  color: #FFFAF0;
+  flex-shrink: 0;
+  letter-spacing: 0.4px;
+  min-width: 16px;
+  text-align: center;
+  display: none;
+}
+.nav-badge:not(:empty) { display: inline-block; }
+.nav-badge[data-tone="todo"] {
+  background: var(--warning, #D89968);
+  animation: nav-badge-pulse 1.8s ease-in-out infinite;
+}
+.nav-badge[data-tone="done"] {
+  background: var(--success, #8FA68A);
+}
+@keyframes nav-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(216,153,104,0.5); }
+  50%      { box-shadow: 0 0 0 4px rgba(216,153,104,0); }
+}
+
 /* ── Main content & topbar ──────────────────────────── */
 .main-content {
   flex: 1;
@@ -7422,6 +7480,31 @@ html[data-mode="senior"] .visit-modal-save {
   color: var(--text);
   border-color: rgba(201,127,75,0.45);
 }
+.chat-chip-nav {
+  background: var(--bg-glass);
+  border-style: dashed;
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.chat-chip-nav:hover {
+  background: var(--accent);
+  color: var(--cream);
+  border-style: solid;
+}
+.chat-suggest-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  align-self: center;
+  letter-spacing: 0.5px;
+}
+.chat-suggest-sep {
+  color: var(--text-muted);
+  align-self: center;
+  font-size: 0.85rem;
+  opacity: 0.5;
+}
 
 .chat-input-bar {
   display: flex; align-items: center; gap: 8px;
@@ -7978,6 +8061,115 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 .pv-disclaimer i { width: 14px; height: 14px; }
 
 /* ═══════════════════════════════════════════════════════════
+   今日拼圖 Digest（橘漸層 hero · 對照 mock screen ①）
+   ═══════════════════════════════════════════════════════════ */
+.home-digest {
+  margin: 18px 0 16px;
+  padding: 18px 22px 20px;
+  background: linear-gradient(135deg, var(--accent) 0%, #E69B6B 100%);
+  border-radius: var(--radius);
+  color: var(--cream);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(201,127,75,0.28);
+}
+.home-digest::before {
+  content: '';
+  position: absolute;
+  right: -30px;
+  top: -30px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.home-digest-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+.home-digest-eyebrow {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.74rem;
+  letter-spacing: 1.2px;
+  color: rgba(255,250,240,0.85);
+  font-weight: 500;
+}
+.home-digest-progress {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--cream);
+  letter-spacing: 0.3px;
+}
+.home-digest-bar {
+  height: 8px;
+  background: rgba(92,58,50,0.25);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+.home-digest-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cream) 0%, #FFE5C7 100%);
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 0 8px rgba(255,250,240,0.4);
+}
+.home-digest-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+.home-digest-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: rgba(255,250,240,0.18);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(4px);
+}
+.home-digest-icon {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(255,250,240,0.95);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+.home-digest-icon i { width: 16px; height: 16px; }
+.home-digest-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--cream);
+  line-height: 1.1;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+.home-digest-label {
+  font-size: 0.72rem;
+  color: rgba(255,250,240,0.85);
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 640px) {
+  .home-digest { padding: 14px 16px 16px; margin: 14px 0 12px; }
+  .home-digest-eyebrow { font-size: 0.68rem; }
+  .home-digest-progress { font-size: 0.92rem; }
+  .home-digest-num { font-size: 1.3rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════
    今日待辦（沿用 Cozy Storybook tokens · 不再硬編 rgba）
    ═══════════════════════════════════════════════════════════ */
 .home-todo {
@@ -8203,6 +8395,140 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 }
 
 /* ═══════════════════════════════════════════════════════════
+   藥物頁：今日服藥 hero（與首頁 digest 同調，藥物頁專屬）
+   ═══════════════════════════════════════════════════════════ */
+.med-today-hero {
+  margin: 4px 0 18px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, var(--accent) 0%, #E69B6B 100%);
+  border-radius: var(--radius);
+  color: var(--cream);
+  box-shadow: 0 6px 18px rgba(201,127,75,0.22);
+  position: relative;
+  overflow: hidden;
+}
+.med-today-hero::before {
+  content: '';
+  position: absolute;
+  right: -30px;
+  bottom: -30px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.med-today-hero-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+.med-today-eyebrow {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 1.2px;
+  color: rgba(255,250,240,0.85);
+  font-weight: 500;
+}
+.med-today-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.66rem;
+  color: rgba(255,250,240,0.75);
+  font-style: italic;
+}
+.med-today-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+.med-today-bar {
+  height: 8px;
+  background: rgba(92,58,50,0.25);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+.med-today-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cream) 0%, #FFE5C7 100%);
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 0 8px rgba(255,250,240,0.4);
+}
+@media (max-width: 640px) {
+  .med-today-hero { padding: 14px 16px; }
+  .med-today-title { font-size: 1rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   症狀頁 · 身體圖（mock screen ②）
+   ═══════════════════════════════════════════════════════════ */
+.sym-body-map {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0 4px;
+}
+.sym-body-svg {
+  width: 200px;
+  height: auto;
+  max-height: 380px;
+  display: block;
+  margin: 0 auto;
+}
+.sym-body-hotspot {
+  cursor: pointer;
+}
+.sym-body-hotspot circle:not([id]) {
+  transition: fill 0.18s, stroke 0.18s;
+}
+.sym-body-hotspot:hover circle:not([id]) {
+  fill: rgba(201,127,75,0.18);
+  stroke: rgba(201,127,75,0.55);
+}
+.sym-body-hotspot.is-active circle:not([id]) {
+  fill: rgba(184,85,63,0.20);
+  stroke: rgba(184,85,63,0.7);
+}
+.sym-body-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 999px;
+}
+.sym-body-current {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.sym-body-clear {
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+.sym-body-clear:hover { color: var(--danger); border-color: var(--danger); }
+
+/* ═══════════════════════════════════════════════════════════
    診前報告：回診倒數 hero
    ═══════════════════════════════════════════════════════════ */
 .pv-visit-hero {
@@ -8280,6 +8606,82 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   .pv-visit-hero-icon i { width: 18px; height: 18px; }
   .pv-visit-hero-title { font-size: 1.05rem; }
   .pv-visit-hero-sub { font-size: 0.78rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   診前報告 · Timeline（編年事件列，對照 mock screen ④）
+   ═══════════════════════════════════════════════════════════ */
+.pv-timeline-section { padding-top: 10px; }
+.pv-timeline {
+  position: relative;
+  padding-left: 22px;
+  margin: 12px 0 8px;
+}
+.pv-timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--rose) 50%, var(--purple) 100%);
+  border-radius: 1px;
+  opacity: 0.45;
+}
+.pv-tl-card {
+  position: relative;
+  padding: 12px 14px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  transition: transform var(--transition);
+}
+.pv-tl-card:hover { transform: translateX(2px); }
+.pv-tl-dot {
+  position: absolute;
+  left: -18px;
+  top: 16px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cream);
+  border: 2.5px solid var(--accent);
+  box-shadow: 0 0 0 3px rgba(201,127,75,0.10);
+}
+.pv-tl-card[data-type="mood"] .pv-tl-dot { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(157,174,192,0.18); }
+.pv-tl-card[data-type="med"]  .pv-tl-dot { border-color: var(--success); box-shadow: 0 0 0 3px rgba(143,166,138,0.18); }
+.pv-tl-time {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.pv-tl-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.4;
+}
+.pv-tl-card[data-type="mood"] .pv-tl-title i { color: var(--purple); }
+.pv-tl-card[data-type="med"]  .pv-tl-title i { color: var(--success); }
+.pv-tl-card[data-type="symptom"] .pv-tl-title i { color: var(--accent); }
+.pv-tl-desc {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .pv-timeline { padding-left: 18px; }
+  .pv-timeline::before { left: 6px; }
+  .pv-tl-dot { left: -16px; width: 10px; height: 10px; top: 14px; }
+  .pv-tl-title { font-size: 0.88rem; }
 }
 
 .pv-loading {
@@ -8950,6 +9352,77 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   padding: 20px;
   margin-bottom: 16px;
   color: var(--text);
+}
+
+/* 環形電量 hero（mock screen ⑥） */
+.mood-ring-hero {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 18px;
+  align-items: center;
+  background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-soft) 100%);
+}
+.mood-ring-wrap {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+}
+.mood-ring { display: block; }
+.mood-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+.mood-ring-num {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.mood-ring-unit {
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.mood-ring-label {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+.mood-ring-meta { padding-right: 6px; }
+.mood-ring-eyebrow {
+  display: block;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.72rem;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.mood-ring-hint {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .mood-ring-hero {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 18px;
+  }
+  .mood-ring-wrap { width: 160px; height: 160px; }
+  .mood-ring { width: 160px; height: 160px; }
+  .mood-ring-num { font-size: 2rem; }
 }
 .emotions-card h3 {
   margin: 0 0 14px;
