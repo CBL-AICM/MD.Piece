@@ -9124,10 +9124,11 @@ function selectEmotionCell(emotionId, score) {
   // 同步舊 _emotionSelected（submitEmotion 走的是這個）
   _emotionSelected = _selectedEmotionCell.score;
   _selectedEmotionType = (_selectedEmotionCell.emotion === 'center') ? 'joy' : _selectedEmotionCell.emotion;
-  // 更新 UI
-  document.querySelectorAll('.emo-cell').forEach(function(el) {
-    var on = el.dataset.emotion === _selectedEmotionCell.emotion && Number(el.dataset.score) === _selectedEmotionCell.score;
-    el.classList.toggle('is-active', on);
+  // 高亮 SVG markers
+  document.querySelectorAll('.emo-marker').forEach(function(el) {
+    var emo = el.getAttribute('data-emotion');
+    var s = Number(el.getAttribute('data-score'));
+    el.classList.toggle('is-active', emo === _selectedEmotionCell.emotion && s === _selectedEmotionCell.score);
   });
   var readEmoji = document.getElementById('emo-readout-emoji');
   var readWord = document.getElementById('emo-readout-word');
@@ -9147,61 +9148,145 @@ function selectEmotionType(typeId) {
 
 // 渲染情緒輪：中心圓 + 3 個強度 ring × 6 個方向，每個位置一顆 emoji
 function renderEmotionWheel() {
-  // CSS 變數帶各情緒色到對應 emo-cell 上
+  // SVG 拖曳版情緒輪：6 方向彩色扇形（中心淡→邊緣飽和）+ 18 顆 emoji marker
+  // + 中央「平靜」 + 一顆可拖曳 thumb，下方掛水平強度條（電池視覺化）
   var SIZE = 320, CX = SIZE / 2, CY = SIZE / 2;
-  var RING_R = [62, 100, 138]; // 內 / 中 / 外 三環半徑
-  var cellsHtml = '';
-  // 中心
-  cellsHtml += ''
-    + '<button type="button" class="emo-cell emo-cell-center" '
-    +   'data-emotion="center" data-score="1" '
-    +   'style="left:' + (CX - 30) + 'px;top:' + (CY - 30) + 'px;--em-color:' + EMOTION_CENTER.color + '" '
-    +   'onclick="selectEmotionCell(\'center\', 1)" '
-    +   'aria-label="' + EMOTION_CENTER.word + '">'
-    +   '<span class="emo-cell-emoji">' + EMOTION_CENTER.emoji + '</span>'
-    + '</button>';
-  // 6 方向 × 3 環
+  var RING_R = [62, 100, 138];
+  var defs = EMOTION_WHEEL.map(function(e) {
+    return '<radialGradient id="emo-grad-' + e.id + '" cx="50%" cy="50%" r="80%">'
+      + '<stop offset="20%" stop-color="' + e.color + '" stop-opacity="0.06"/>'
+      + '<stop offset="60%" stop-color="' + e.color + '" stop-opacity="0.22"/>'
+      + '<stop offset="100%" stop-color="' + e.color + '" stop-opacity="0.55"/>'
+      + '</radialGradient>';
+  }).join('');
+  var sectors = EMOTION_WHEEL.map(function(e) {
+    return '<path d="' + _emoSlicePath(CX, CY, 156, e.angle - 30, e.angle + 30)
+      + '" fill="url(#emo-grad-' + e.id + ')"/>';
+  }).join('');
+  var rings = RING_R.map(function(r) {
+    return '<circle cx="' + CX + '" cy="' + CY + '" r="' + r + '" fill="none" stroke="var(--border-glass)" stroke-width="1" stroke-dasharray="2 4"/>';
+  }).join('');
+  var dividers = EMOTION_WHEEL.map(function(e) {
+    var mid = (e.angle - 30) * Math.PI / 180;
+    var x1 = CX + 30 * Math.cos(mid), y1 = CY + 30 * Math.sin(mid);
+    var x2 = CX + 152 * Math.cos(mid), y2 = CY + 152 * Math.sin(mid);
+    return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="var(--border-glass)" stroke-width="1" stroke-dasharray="2 3"/>';
+  }).join('');
+  var markers = '';
   EMOTION_WHEEL.forEach(function(e) {
     e.rings.forEach(function(r, idx) {
       var rad = e.angle * Math.PI / 180;
       var x = CX + RING_R[idx] * Math.cos(rad);
       var y = CY + RING_R[idx] * Math.sin(rad);
-      cellsHtml += ''
-        + '<button type="button" class="emo-cell emo-cell-r' + (idx+1) + '" '
-        +   'data-emotion="' + e.id + '" data-score="' + r.score + '" '
-        +   'style="left:' + (x - 24) + 'px;top:' + (y - 24) + 'px;--em-color:' + e.color + '" '
-        +   'onclick="selectEmotionCell(\'' + e.id + '\', ' + r.score + ')" '
-        +   'aria-label="' + r.word + '">'
-        +   '<span class="emo-cell-emoji">' + r.emoji + '</span>'
-        + '</button>';
+      markers += '<g class="emo-marker" data-emotion="' + e.id + '" data-score="' + r.score + '" style="color:' + e.color + '">'
+        + '<circle cx="' + x + '" cy="' + y + '" r="20" fill="var(--bg-surface)" stroke="' + e.color + '" stroke-width="1.5"/>'
+        + '<text x="' + x + '" y="' + (y + 1) + '" font-size="20" text-anchor="middle" dominant-baseline="central">' + r.emoji + '</text>'
+        + '</g>';
     });
   });
-  // 6 方向標籤（喜/樂/焦/哀/緊/怒）在最外圈外側
-  var labelsHtml = '';
-  EMOTION_WHEEL.forEach(function(e) {
+  var centerMarker = '<g class="emo-marker" data-emotion="center" data-score="1">'
+    + '<circle cx="' + CX + '" cy="' + CY + '" r="26" fill="var(--bg-surface)" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/>'
+    + '<text x="' + CX + '" y="' + (CY + 1) + '" font-size="22" text-anchor="middle" dominant-baseline="central">' + EMOTION_CENTER.emoji + '</text>'
+    + '</g>';
+  var axisLabels = EMOTION_WHEEL.map(function(e) {
     var rad = e.angle * Math.PI / 180;
-    var lr = RING_R[2] + 22;
+    var lr = 162;
     var x = CX + lr * Math.cos(rad);
     var y = CY + lr * Math.sin(rad);
-    labelsHtml += '<span class="emo-axis-label" style="left:' + x + 'px;top:' + y + 'px;color:' + e.color + '">' + e.char + '</span>';
-  });
+    return '<text x="' + x + '" y="' + (y + 1) + '" font-size="15" font-weight="800" text-anchor="middle" dominant-baseline="central" fill="' + e.color + '">' + e.char + '</text>';
+  }).join('');
+  var thumb = '<g id="emo-thumb" pointer-events="none">'
+    + '<circle cx="' + CX + '" cy="' + CY + '" r="18" fill="#FFFFFF" stroke="var(--accent)" stroke-width="3"/>'
+    + '<circle cx="' + CX + '" cy="' + CY + '" r="7" fill="var(--accent)"/>'
+    + '</g>';
   return ''
-    + '<div class="emo-wheel" role="group" aria-label="情緒輪">'
-    +   '<svg class="emo-wheel-guide" viewBox="0 0 ' + SIZE + ' ' + SIZE + '" aria-hidden="true">'
-    +     '<circle cx="' + CX + '" cy="' + CY + '" r="' + RING_R[2] + '" fill="none" stroke="var(--border-glass)" stroke-width="1.5" stroke-dasharray="2 4"/>'
-    +     '<circle cx="' + CX + '" cy="' + CY + '" r="' + RING_R[1] + '" fill="none" stroke="var(--border-glass)" stroke-width="1.5" stroke-dasharray="2 4"/>'
-    +     '<circle cx="' + CX + '" cy="' + CY + '" r="' + RING_R[0] + '" fill="none" stroke="var(--border-glass)" stroke-width="1.5" stroke-dasharray="2 4"/>'
-    // 6 條方向分隔線
-    +     EMOTION_WHEEL.map(function(e) {
-            var mid = (e.angle - 30) * Math.PI / 180;
-            var x1 = CX + 30 * Math.cos(mid), y1 = CY + 30 * Math.sin(mid);
-            var x2 = CX + (RING_R[2] - 6) * Math.cos(mid), y2 = CY + (RING_R[2] - 6) * Math.sin(mid);
-            return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="var(--border-glass)" stroke-width="1" stroke-dasharray="2 3"/>';
-          }).join('')
+    + '<div class="emo-wheel" id="emo-wheel" '
+    +   'onpointerdown="emoWheelStart(event)" '
+    +   'onpointermove="emoWheelDrag(event)" '
+    +   'onpointerup="emoWheelEnd(event)" '
+    +   'onpointercancel="emoWheelEnd(event)" '
+    +   'role="slider" aria-label="拖曳選擇情緒與強度">'
+    +   '<svg class="emo-wheel-svg" viewBox="0 0 ' + SIZE + ' ' + SIZE + '">'
+    +     '<defs>' + defs + '</defs>'
+    +     sectors + rings + dividers + markers + centerMarker + axisLabels + thumb
     +   '</svg>'
-    +   cellsHtml
-    +   labelsHtml
+    + '</div>'
+    + '<div class="emo-strength" aria-hidden="true">'
+    +   '<span class="emo-strength-label">平靜</span>'
+    +   '<div class="emo-strength-track">'
+    +     '<div class="emo-strength-fill" id="emo-strength-fill" style="width:0%"></div>'
+    +   '</div>'
+    +   '<span class="emo-strength-label">非常強烈</span>'
     + '</div>';
+}
+
+function _emoSlicePath(cx, cy, r, startAngle, endAngle) {
+  var s = startAngle * Math.PI / 180;
+  var e = endAngle * Math.PI / 180;
+  var x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s);
+  var x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e);
+  var large = (endAngle - startAngle) > 180 ? 1 : 0;
+  return 'M ' + cx + ' ' + cy + ' L ' + x1.toFixed(1) + ' ' + y1.toFixed(1)
+    + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + ' Z';
+}
+
+var _emoDragging = false;
+function emoWheelStart(ev) {
+  _emoDragging = true;
+  try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch (e) {}
+  emoWheelDrag(ev);
+  ev.preventDefault();
+}
+function emoWheelDrag(ev) {
+  if (!_emoDragging) return;
+  var wheel = document.getElementById('emo-wheel');
+  if (!wheel) return;
+  var rect = wheel.getBoundingClientRect();
+  var px = (ev.clientX - rect.left) / rect.width * 320;
+  var py = (ev.clientY - rect.top) / rect.height * 320;
+  var dx = px - 160, dy = py - 160;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 38) {
+    _emoMoveThumb(160, 160);
+    selectEmotionCell('center', 1);
+    return;
+  }
+  var angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  var best = null, bestDiff = 999;
+  EMOTION_WHEEL.forEach(function(e) {
+    var diff = Math.abs(((angle - e.angle + 540) % 360) - 180);
+    if (diff < bestDiff) { bestDiff = diff; best = e; }
+  });
+  if (!best) return;
+  var ringIdx;
+  if (dist < 80) ringIdx = 0;
+  else if (dist < 120) ringIdx = 1;
+  else ringIdx = 2;
+  var ring = best.rings[ringIdx];
+  var rad = best.angle * Math.PI / 180;
+  var radius = [62, 100, 138][ringIdx];
+  var tx = 160 + radius * Math.cos(rad);
+  var ty = 160 + radius * Math.sin(rad);
+  _emoMoveThumb(tx, ty);
+  selectEmotionCell(best.id, ring.score);
+}
+function emoWheelEnd(ev) {
+  _emoDragging = false;
+  try { ev.currentTarget.releasePointerCapture(ev.pointerId); } catch (e) {}
+}
+function _emoMoveThumb(x, y) {
+  var thumb = document.getElementById('emo-thumb');
+  if (!thumb) return;
+  thumb.querySelectorAll('circle').forEach(function(c) {
+    c.setAttribute('cx', x);
+    c.setAttribute('cy', y);
+  });
+  thumb.classList.add('is-active');
+  var dx = x - 160, dy = y - 160;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  var pct = Math.max(0, Math.min(100, Math.round(dist / 138 * 100)));
+  var fill = document.getElementById('emo-strength-fill');
+  if (fill) fill.style.width = pct + '%';
 }
 
 function _moodPercent(score) {

@@ -10248,75 +10248,59 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   情緒輪 — 6 方向（喜/樂/焦/哀/緊/怒）× 3 強度環 + 中心「平靜」
+   情緒輪（SVG 拖曳版）— 6 方向 × 3 強度 + 中央平靜 + 程度條
    ═══════════════════════════════════════════════════════════ */
 .emo-wheel {
   position: relative;
   width: 320px; height: 320px;
-  margin: 0 auto 16px;
+  margin: 0 auto 14px;
   max-width: 100%;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  filter: drop-shadow(0 6px 18px rgba(31,61,88,0.12));
 }
-.emo-wheel-guide {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
+.emo-wheel:active { cursor: grabbing; }
+.emo-wheel-svg { width: 100%; height: 100%; display: block; }
+.emo-marker { transition: transform 0.18s ease; transform-box: fill-box; transform-origin: center; }
+.emo-marker > circle { transition: stroke-width 0.18s ease, fill 0.18s ease; }
+.emo-marker.is-active > circle:first-of-type { stroke-width: 3; }
+.emo-marker.is-active { transform: scale(1.18); }
+#emo-thumb { pointer-events: none; }
+#emo-thumb circle {
+  transition: cx 0.18s cubic-bezier(.34,.86,.2,1.05), cy 0.18s cubic-bezier(.34,.86,.2,1.05);
 }
-.emo-cell {
-  --em-color: var(--text-muted);
-  position: absolute;
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  border: 2px solid var(--border-glass);
-  background: var(--bg-surface);
-  display: inline-flex;
+
+.emo-strength {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  font-family: inherit;
-  transition: transform 0.12s ease, border-color var(--transition),
-              box-shadow var(--transition), background var(--transition);
-  z-index: 2;
+  gap: 10px;
+  margin: 0 auto 14px;
+  max-width: 320px;
 }
-.emo-cell-emoji { font-size: 1.4rem; line-height: 1; }
-.emo-cell:hover {
-  transform: scale(1.12);
-  border-color: var(--em-color);
-  background: color-mix(in srgb, var(--em-color) 14%, var(--bg-surface));
+.emo-strength-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
 }
-.emo-cell.is-active {
-  transform: scale(1.25);
-  border-color: var(--em-color);
-  background: color-mix(in srgb, var(--em-color) 24%, var(--bg-surface));
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--em-color) 30%, transparent),
-              0 6px 16px color-mix(in srgb, var(--em-color) 40%, transparent);
-  z-index: 3;
+.emo-strength-track {
+  flex: 1;
+  height: 10px;
+  background: var(--bg-glass);
+  border: 1.5px solid var(--border-glass);
+  border-radius: 999px;
+  overflow: hidden;
 }
-/* 外環的格子放大一點點，視覺上強度差異 */
-.emo-cell-r1 { width: 44px; height: 44px; }
-.emo-cell-r2 { width: 48px; height: 48px; }
-.emo-cell-r3 { width: 52px; height: 52px; }
-.emo-cell-r3 .emo-cell-emoji { font-size: 1.5rem; }
-/* 中心 — 平靜 */
-.emo-cell-center {
-  width: 60px; height: 60px;
-  border-style: dashed;
-}
-.emo-cell-center .emo-cell-emoji { font-size: 1.6rem; }
-
-/* 方向中文字標籤（喜/樂/焦/哀/緊/怒）— 在最外環外側 */
-.emo-axis-label {
-  position: absolute;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  opacity: 0.85;
+.emo-strength-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--teal));
+  border-radius: 999px;
+  transition: width 0.22s cubic-bezier(.34,.86,.2,1.05);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-/* 選好後下方讀出區（emoji + 詞） */
 .emo-readout {
   display: flex;
   align-items: center;
@@ -10329,22 +10313,14 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   border-radius: var(--radius);
   min-height: 56px;
 }
-.emo-readout-emoji {
-  font-size: 1.8rem;
-  line-height: 1;
-}
-.emo-readout-word {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
-}
+.emo-readout-emoji { font-size: 1.8rem; line-height: 1; }
+.emo-readout-word { font-size: 1.05rem; font-weight: 600; color: var(--text); }
 
-/* 窄手機：整個輪 scale down，內部 px 座標不用改 */
 @media (max-width: 380px) {
-  .emo-wheel { transform: scale(0.85); transform-origin: top center; height: 272px; }
+  .emo-wheel { width: 280px; height: 280px; }
 }
 @media (max-width: 340px) {
-  .emo-wheel { transform: scale(0.75); height: 240px; }
+  .emo-wheel { width: 248px; height: 248px; }
 }
 .batt-picker {
   --batt-color: var(--text-dim);
