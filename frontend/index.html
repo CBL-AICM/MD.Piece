@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="description" content="PWA 醫療輔助平台，支援醫病溝通與 MD.Piece 症狀分析" />
+  <meta name="description" content="MD.piece 醫療輔助平台，整合疾病管理、治療追蹤與醫病協作，協助患者與醫療團隊建立更流暢且連續的照護體驗。" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -56,8 +56,8 @@
         <p class="landing-tagline" data-i18n="landing.tagline">將日常碎片拼起<br>醫起走出治療的迷霧</p>
         <p class="landing-sub-tagline" data-i18n="landing.subTagline">Piece by Piece, Patient connects Doctor and Patient</p>
         <button class="landing-enter" id="landing-enter" onclick="enterApp()">
-          <span class="enter-sub" data-i18n="landing.enter.sub">醫患同行</span>
-          <span class="enter-main" data-i18n="landing.enter.main">開始守護</span>
+          <span class="enter-sub" data-i18n="landing.enter.sub">點擊進入 MD.piece</span>
+          <span class="enter-main" data-i18n="landing.enter.main">開始你的治療旅程</span>
         </button>
       </div>
     </div>
@@ -171,7 +171,7 @@
             </label>
             <div class="auth-avatar-meta">
               <p class="auth-avatar-title" data-i18n="auth.avatar.title">個人頭像</p>
-              <p class="auth-avatar-hint" data-i18n="auth.avatar.hint">沒上傳的話會自動用「小禾」當頭像</p>
+              <p class="auth-avatar-hint" data-i18n="auth.avatar.hint">無頭像，預設為兔子「小禾」作為頭像</p>
               <button type="button" class="auth-avatar-clear" id="reg-avatar-clear" onclick="clearRegAvatar()" hidden data-i18n="auth.avatar.clear">移除</button>
             </div>
           </div>
@@ -244,12 +244,12 @@
         <div class="nav-section-label" data-i18n="nav.group.record">每日紀錄</div>
         <button class="nav-item active" data-page="symptoms" onclick="navigateTo('symptoms', this)">
           <span class="nav-icon"><i data-lucide="scan-search" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.symptoms">症狀紀錄</span><span class="nav-sub">點哪裡不舒服 · 強度 · 類型</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.symptoms">症狀紀錄</span><span class="nav-sub">點哪裡不舒服 · 症狀強度 · 症狀類型</span></span>
           <span class="nav-badge" data-nav-badge="symptoms"></span>
         </button>
         <button class="nav-item" data-page="medications" onclick="navigateTo('medications', this)">
           <span class="nav-icon"><i data-lucide="pill" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.medications">藥物紀錄</span><span class="nav-sub">拍藥袋自動填好 · 時段提醒</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.medications">藥物紀錄</span><span class="nav-sub">拍攝藥袋自動填入 · 藥物管理</span></span>
           <span class="nav-badge" data-nav-badge="medications"></span>
         </button>
         <button class="nav-item" data-page="vitals" onclick="navigateTo('vitals', this)">
@@ -264,7 +264,7 @@
         </button>
         <button class="nav-item" data-page="diet" onclick="navigateTo('diet', this)">
           <span class="nav-icon"><i data-lucide="utensils-crossed" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.diet">飲食紀錄</span><span class="nav-sub">熱量 · 攝取追蹤</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.diet">飲食紀錄</span><span class="nav-sub">飲食管理 · 攝取追蹤</span></span>
         </button>
         <button class="nav-item" data-page="memo" onclick="navigateTo('memo', this)">
           <span class="nav-icon"><i data-lucide="sticky-note" style="width:18px;height:18px"></i></span>
@@ -306,7 +306,7 @@
           <span class="nav-text"><span class="nav-label" data-i18n="nav.pieces">你的碎片</span><span class="nav-sub">每次回診之間的紀錄</span></span>
         </button>
 
-        <div class="nav-section-label" data-i18n="nav.group.learn">學習與陪伴</div>
+        <div class="nav-section-label" data-i18n="nav.group.learn">疾病認識與學習</div>
         <button class="nav-item" data-page="education" onclick="navigateTo('education', this)">
           <span class="nav-icon"><i data-lucide="book-heart" style="width:18px;height:18px"></i></span>
           <span class="nav-text"><span class="nav-label" data-i18n="nav.education">衛教專欄</span><span class="nav-sub">疾病 / 用藥 / 自我照顧</span></span>
@@ -317,7 +317,7 @@
         </button>
         <button class="nav-item" data-page="chat" onclick="navigateTo('chat', this)">
           <span class="nav-icon"><i data-lucide="message-circle-heart" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.chat">醫起聊天</span><span class="nav-sub">小禾陪伴 · 整理近況</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.chat">醫起聊天</span><span class="nav-sub">整理近況 · AI CHAT</span></span>
         </button>
 
         <div class="nav-section-label" data-i18n="nav.group.settings">設定</div>
@@ -327,14 +327,14 @@
         </button>
         <button class="nav-item" data-page="account" onclick="navigateTo('account', this)">
           <span class="nav-icon"><i data-lucide="user-cog" style="width:18px;height:18px"></i></span>
-          <span class="nav-text"><span class="nav-label" data-i18n="nav.account">帳號設定</span><span class="nav-sub">個資 · 醫師 · 通知</span></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.account">帳號設定</span><span class="nav-sub">個資 · 通知</span></span>
         </button>
       </nav>
       <div class="sidebar-foot">
         <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
           切換為年長版
         </button>
-        <p class="mode-hint" data-i18n="mode.hint">年長版：放大字體與按鈕、提高對比</p>
+        <p class="mode-hint" data-i18n="mode.hint">年長版：放大字體與按鈕、方便老年患者使用</p>
         <button class="logout-btn" onclick="logout()" type="button">
           <span class="nav-icon"><i data-lucide="log-out" style="width:16px;height:16px"></i></span>
           <span class="logout-label" data-i18n="logout.label">登出</span>
@@ -348,7 +348,7 @@
         <button class="hamburger" onclick="toggleSidebar()">☰</button>
         <button class="topbar-back" onclick="goHome()" type="button" title="返回首頁" data-i18n-title="top.backTitle">
           <span class="tb-arrow">←</span>
-          <span class="tb-zh" data-i18n="top.back">返回首頁</span>
+          <span class="tb-zh" data-i18n="top.back">返回</span>
         </button>
         <span class="topbar-filename">
           <span id="page-title">首頁</span>
