@@ -9517,9 +9517,22 @@ function renderEmotionWheel() {
     var y = CY + lr * Math.sin(rad);
     return '<text x="' + x + '" y="' + (y + 1) + '" font-size="15" font-weight="800" text-anchor="middle" dominant-baseline="central" fill="' + e.color + '">' + e.char + '</text>';
   }).join('');
+  var thumbDefs = ''
+    + '<radialGradient id="emo-thumb-glow" cx="50%" cy="50%" r="50%">'
+    +   '<stop offset="0%" stop-color="var(--accent)" stop-opacity="0.55"/>'
+    +   '<stop offset="60%" stop-color="var(--accent)" stop-opacity="0.18"/>'
+    +   '<stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>'
+    + '</radialGradient>'
+    + '<filter id="emo-thumb-blur" x="-50%" y="-50%" width="200%" height="200%">'
+    +   '<feGaussianBlur stdDeviation="2.4"/>'
+    + '</filter>';
   var thumb = '<g id="emo-thumb" pointer-events="none">'
-    + '<circle cx="' + CX + '" cy="' + CY + '" r="18" fill="#FFFFFF" stroke="var(--accent)" stroke-width="3"/>'
-    + '<circle cx="' + CX + '" cy="' + CY + '" r="7" fill="var(--accent)"/>'
+    + '<circle class="emo-thumb-halo" cx="' + CX + '" cy="' + CY + '" r="34" fill="url(#emo-thumb-glow)"/>'
+    + '<circle class="emo-thumb-ring"  cx="' + CX + '" cy="' + CY + '" r="22" fill="none" stroke="var(--accent)" stroke-opacity="0.35" stroke-width="1.5"/>'
+    + '<circle class="emo-thumb-shell" cx="' + CX + '" cy="' + CY + '" r="16" fill="#FFFFFF" stroke="var(--accent)" stroke-width="3" filter="url(#emo-thumb-blur)" opacity="0.55"/>'
+    + '<circle class="emo-thumb-body"  cx="' + CX + '" cy="' + CY + '" r="16" fill="#FFFFFF" stroke="var(--accent)" stroke-width="3"/>'
+    + '<circle class="emo-thumb-core"  cx="' + CX + '" cy="' + CY + '" r="7"  fill="var(--accent)"/>'
+    + '<circle class="emo-thumb-spark" cx="' + (CX - 2) + '" cy="' + (CY - 2) + '" r="2" fill="#FFFFFF" opacity="0.85"/>'
     + '</g>';
   return ''
     + '<div class="emo-wheel" id="emo-wheel" '
@@ -9529,18 +9542,14 @@ function renderEmotionWheel() {
     +   'onpointercancel="emoWheelEnd(event)" '
     +   'role="slider" aria-label="拖曳選擇情緒與強度">'
     +   '<svg class="emo-wheel-svg" viewBox="0 0 ' + SIZE + ' ' + SIZE + '">'
-    +     '<defs>' + defs + '</defs>'
+    +     '<defs>' + defs + thumbDefs + '</defs>'
     +     sectors + rings + dividers + markers + centerMarker + axisLabels + thumb
     +   '</svg>'
     + '</div>'
     + '<div class="emo-strength" aria-hidden="true">'
     +   '<span class="emo-strength-label">平靜</span>'
-    +   '<div class="emo-batt" id="emo-strength-fill" data-lit="0">'
-    +     '<div class="emo-batt-cell"></div>'
-    +     '<div class="emo-batt-cell"></div>'
-    +     '<div class="emo-batt-cell"></div>'
-    +     '<div class="emo-batt-cell"></div>'
-    +     '<div class="emo-batt-cell"></div>'
+    +   '<div class="emo-strength-track">'
+    +     '<div class="emo-strength-fill" id="emo-strength-fill" style="width:0%"></div>'
     +   '</div>'
     +   '<span class="emo-strength-label">非常強烈</span>'
     + '</div>';
@@ -9573,7 +9582,7 @@ function emoWheelDrag(ev) {
   var dx = px - 160, dy = py - 160;
   var dist = Math.sqrt(dx * dx + dy * dy);
   if (dist < 38) {
-    _emoMoveThumb(160, 160);
+    _emoMoveThumb(160, 160, 'var(--text-muted)');
     selectEmotionCell('center', 1);
     return;
   }
@@ -9593,32 +9602,56 @@ function emoWheelDrag(ev) {
   var radius = [62, 100, 138][ringIdx];
   var tx = 160 + radius * Math.cos(rad);
   var ty = 160 + radius * Math.sin(rad);
-  _emoMoveThumb(tx, ty);
+  _emoMoveThumb(tx, ty, best.color);
   selectEmotionCell(best.id, ring.score);
 }
 function emoWheelEnd(ev) {
   _emoDragging = false;
   try { ev.currentTarget.releasePointerCapture(ev.pointerId); } catch (e) {}
 }
-function _emoMoveThumb(x, y) {
+function _emoMoveThumb(x, y, emotionColor) {
   var thumb = document.getElementById('emo-thumb');
   if (!thumb) return;
+  // spark 點位置略偏左上，跟主圓微錯位營造高光
   thumb.querySelectorAll('circle').forEach(function(c) {
-    c.setAttribute('cx', x);
-    c.setAttribute('cy', y);
+    if (c.classList && c.classList.contains('emo-thumb-spark')) {
+      c.setAttribute('cx', x - 2);
+      c.setAttribute('cy', y - 2);
+    } else {
+      c.setAttribute('cx', x);
+      c.setAttribute('cy', y);
+    }
   });
   thumb.classList.add('is-active');
+  if (emotionColor) {
+    thumb.style.setProperty('--emo-thumb-c', emotionColor);
+  }
+  // 留下淡淡軌跡的小圓點
+  _emoSpawnTrail(x, y, emotionColor);
   var dx = x - 160, dy = y - 160;
   var dist = Math.sqrt(dx * dx + dy * dy);
-  // 半徑 0~138 → 電池 1~5 格（中央 38px 內＝1 格平靜，外圈最強＝5 格）
-  var lit = dist < 38 ? 1 : Math.max(1, Math.min(5, Math.ceil(dist / 138 * 5)));
+  // 半徑 0~138 → 強度條 0~100%
+  var pct = dist < 38 ? 0 : Math.min(100, Math.round((dist - 38) / 100 * 100));
   var fill = document.getElementById('emo-strength-fill');
   if (fill) {
-    fill.setAttribute('data-lit', String(lit));
-    fill.querySelectorAll('.emo-batt-cell').forEach(function(cell, i) {
-      cell.classList.toggle('is-lit', i < lit);
-    });
+    fill.style.width = pct + '%';
+    if (emotionColor) {
+      fill.style.setProperty('--emo-fill-c', emotionColor);
+    }
   }
+}
+
+function _emoSpawnTrail(x, y, color) {
+  var wheel = document.getElementById('emo-wheel');
+  if (!wheel) return;
+  var rect = wheel.getBoundingClientRect();
+  var dot = document.createElement('span');
+  dot.className = 'emo-trail-dot';
+  dot.style.left = (x / 320 * rect.width)  + 'px';
+  dot.style.top  = (y / 320 * rect.height) + 'px';
+  if (color) dot.style.background = color;
+  wheel.appendChild(dot);
+  setTimeout(function() { if (dot.parentNode) dot.parentNode.removeChild(dot); }, 500);
 }
 
 function _moodPercent(score) {
@@ -9751,17 +9784,21 @@ function _resetEmotionWheel() {
   var thumb = document.getElementById('emo-thumb');
   if (thumb) {
     thumb.querySelectorAll('circle').forEach(function(c) {
-      c.setAttribute('cx', 160);
-      c.setAttribute('cy', 160);
+      if (c.classList && c.classList.contains('emo-thumb-spark')) {
+        c.setAttribute('cx', 158);
+        c.setAttribute('cy', 158);
+      } else {
+        c.setAttribute('cx', 160);
+        c.setAttribute('cy', 160);
+      }
     });
     thumb.classList.remove('is-active');
+    thumb.style.removeProperty('--emo-thumb-c');
   }
   var fill = document.getElementById('emo-strength-fill');
   if (fill) {
-    fill.setAttribute('data-lit', '0');
-    fill.querySelectorAll('.emo-batt-cell').forEach(function(cell) {
-      cell.classList.remove('is-lit');
-    });
+    fill.style.width = '0%';
+    fill.style.removeProperty('--emo-fill-c');
   }
   document.querySelectorAll('.emo-marker').forEach(function(el) {
     el.classList.remove('is-active');
