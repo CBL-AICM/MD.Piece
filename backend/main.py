@@ -61,8 +61,8 @@ app.include_router(medication_changes.router, prefix="/medication-changes", tags
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 app.include_router(labs.router, prefix="/labs", tags=["labs"])
 app.include_router(diet.router, prefix="/diet", tags=["diet"])
-app.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 app.include_router(bell_reminders.router, prefix="/reminders", tags=["reminders"])
+app.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 
 @app.get("/health/llm")
 def health_llm():

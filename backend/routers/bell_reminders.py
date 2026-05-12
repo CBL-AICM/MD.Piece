@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -23,6 +24,7 @@ from backend.db import _SCHEMAS, get_supabase
 from backend.models import (
     BellPrefUpsert,
     BellSoundCreate,
+    MeasurementPlanCreate,
     MeasurementRequestComplete,
     MeasurementRequestCreate,
 )
@@ -344,3 +346,228 @@ def cancel_measurement_request(req_id: str):
         "updated_at": _now_iso(),
     }).eq("id", req_id).execute()
     return {"ok": True, "id": req_id, "status": "cancelled"}
+
+
+# ─── Measurement reminder plans（病患自報「醫師要求 X 頻率量測」） ───
+
+VALID_PLAN_PRESETS = {"once_daily", "twice_daily", "thrice_daily", "weekly", "custom"}
+
+PRESET_LABELS = {
+    "once_daily": "一天一次",
+    "twice_daily": "一天兩次（早晚）",
+    "thrice_daily": "一天三次（早中晚）",
+    "weekly": "每週一次",
+    "custom": "自訂時間",
+}
+
+
+def _validate_hhmm(s: str) -> bool:
+    if not isinstance(s, str) or len(s) != 5 or s[2] != ":":
+        return False
+    try:
+        hh, mm = int(s[:2]), int(s[3:])
+    except ValueError:
+        return False
+    return 0 <= hh <= 23 and 0 <= mm <= 59
+
+
+def _parse_iso_utc(s: str):
+    try:
+        dt = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+@router.post("/measurement-plan")
+def create_measurement_plan(body: MeasurementPlanCreate):
+    """建立一個量測提醒計畫：依 frequency_preset / times 展開成多筆 reminders。
+
+    自訂指標（measure_type 不在 VALID_MEASURE_TYPES 中）也接受，但只建 reminders、
+    不建 measurement_requests（因為 measurement_requests 給醫師端用，醫師端只認標準項目）。
+    """
+    if body.frequency_preset not in VALID_PLAN_PRESETS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"frequency_preset 無效，需為 {sorted(VALID_PLAN_PRESETS)}",
+        )
+    if not body.times or not isinstance(body.times, list):
+        raise HTTPException(status_code=400, detail="times 不可為空")
+    if len(body.times) > 6:
+        raise HTTPException(status_code=400, detail="一個計畫最多 6 個時間點")
+    for t in body.times:
+        if not _validate_hhmm(t):
+            raise HTTPException(status_code=400, detail=f"時間格式錯誤：'{t}'，需為 HH:MM")
+
+    is_standard = body.measure_type in VALID_MEASURE_TYPES
+    label = (
+        MEASURE_TYPE_LABELS[body.measure_type] if is_standard
+        else (body.measure_label or body.measure_type)
+    )
+
+    # 推算每筆 reminder 的 frequency / days_of_week
+    if body.frequency_preset == "weekly":
+        rem_freq = "weekly"
+        days = body.days_of_week or []
+        if not days or not all(isinstance(d, int) and 0 <= d <= 6 for d in days):
+            raise HTTPException(
+                status_code=400,
+                detail="weekly 需提供 days_of_week（list[int], 0=Mon..6=Sun）",
+            )
+    else:
+        rem_freq = "daily"
+        days = None
+
+    # 對齊 times[] 與 scheduled_dates[]；缺少時，由後端用「明日該時間（UTC）」當保底
+    sched_iso_list: list[str] = []
+    fallback_now = datetime.now(timezone.utc) + timedelta(minutes=1)
+    for idx, t in enumerate(body.times):
+        provided = None
+        if body.scheduled_dates and idx < len(body.scheduled_dates):
+            provided = _parse_iso_utc(body.scheduled_dates[idx])
+        sched_iso_list.append((provided or fallback_now).isoformat())
+
+    plan_id = str(uuid.uuid4())
+    sb = get_supabase()
+
+    priority = "high" if body.doctor_requested else "normal"
+    preset_label = PRESET_LABELS.get(body.frequency_preset, body.frequency_preset)
+    source = "doctor" if body.doctor_requested else "manual"
+
+    title = f"量{label}（醫師要求）" if body.doctor_requested else f"量{label}"
+    body_lines = [f"記得量一下{label}並回填數值。"]
+    if body.doctor_requested:
+        body_lines.insert(0, "醫師有交代要定期量測。")
+    if body.note:
+        body_lines.append(body.note)
+    body_text = "\n".join(body_lines)
+
+    reminder_ids: list[str] = []
+    for t, sched_iso in zip(body.times, sched_iso_list):
+        payload = {
+            "patient_id": body.patient_id,
+            "reminder_type": "measurement",
+            "title": title,
+            "body": body_text,
+            "source_id": plan_id,
+            "url": f"/?page=vitals&metric={body.measure_type}",
+            "frequency": rem_freq,
+            "time_of_day": t,
+            "days_of_week": json.dumps(sorted(days)) if days else None,
+            "scheduled_at": sched_iso,
+            "next_fire_at": sched_iso,
+            "active": 1,
+            "priority": priority,
+            "source": source,
+        }
+        result = sb.table("reminders").insert(payload).execute()
+        if result.data:
+            reminder_ids.append(result.data[0].get("id"))
+
+    if not reminder_ids:
+        raise HTTPException(status_code=500, detail="建立提醒失敗")
+
+    measurement_request_id = None
+    if body.doctor_requested and is_standard:
+        try:
+            req_payload = {
+                "doctor_id": body.doctor_id or "self_reported",
+                "patient_id": body.patient_id,
+                "measure_type": body.measure_type,
+                "note": f"病患自報醫師要求：{preset_label}（{','.join(body.times)}）"
+                        + (f"\n備註：{body.note}" if body.note else ""),
+                "requested_at": _now_iso(),
+                "status": "pending",
+                "reminder_id": reminder_ids[0],
+            }
+            r = sb.table("measurement_requests").insert(req_payload).execute()
+            if r.data:
+                measurement_request_id = r.data[0].get("id")
+        except Exception as exc:
+            logger.warning("create paired measurement_request failed: %s", type(exc).__name__)
+
+    return {
+        "plan_id": plan_id,
+        "measure_type": body.measure_type,
+        "measure_label": label,
+        "frequency_preset": body.frequency_preset,
+        "times": body.times,
+        "days_of_week": days,
+        "doctor_requested": body.doctor_requested,
+        "reminder_ids": reminder_ids,
+        "measurement_request_id": measurement_request_id,
+    }
+
+
+@router.get("/measurement-plan")
+def list_measurement_plans(patient_id: str = Query(...)):
+    """回傳該病患目前所有 active 的量測計畫，按 source_id（plan_id）分組。"""
+    sb = get_supabase()
+    rows = (
+        sb.table("reminders")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .eq("reminder_type", "measurement")
+        .eq("active", 1)
+        .order("time_of_day", desc=False)
+        .execute()
+        .data
+    ) or []
+    # 依 source_id 分組；同 plan 的多筆 reminder 視為一個計畫
+    groups: dict[str, dict] = {}
+    for r in rows:
+        plan_id = r.get("source_id")
+        if not plan_id:
+            continue  # 沒掛 plan_id 的（舊資料 / 醫師端 one-shot）跳過
+        g = groups.setdefault(plan_id, {
+            "plan_id": plan_id,
+            "measure_type": None,
+            "times": [],
+            "days_of_week": None,
+            "frequency": r.get("frequency"),
+            "title": r.get("title"),
+            "priority": r.get("priority"),
+            "source": r.get("source"),
+            "reminder_ids": [],
+        })
+        # 從 url 解析 measure_type（POST 時寫入 `?metric=xxx`）
+        if not g["measure_type"]:
+            url = r.get("url") or ""
+            if "metric=" in url:
+                g["measure_type"] = url.split("metric=", 1)[1].split("&", 1)[0]
+        g["times"].append(r.get("time_of_day"))
+        g["reminder_ids"].append(r.get("id"))
+        if r.get("days_of_week") and not g["days_of_week"]:
+            try:
+                g["days_of_week"] = json.loads(r["days_of_week"]) if isinstance(r["days_of_week"], str) else r["days_of_week"]
+            except (json.JSONDecodeError, TypeError):
+                g["days_of_week"] = None
+    return {"plans": list(groups.values())}
+
+
+@router.delete("/measurement-plan/{plan_id}")
+def cancel_measurement_plan(plan_id: str, patient_id: str = Query(...)):
+    """停用該計畫下所有 reminders（active=0），並把連動的 measurement_request 標 cancelled。"""
+    sb = get_supabase()
+    rows = (
+        sb.table("reminders")
+        .select("id")
+        .eq("patient_id", patient_id)
+        .eq("source_id", plan_id)
+        .execute()
+        .data
+    ) or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="找不到此計畫")
+    sb.table("reminders").update({"active": 0}).eq("source_id", plan_id).eq("patient_id", patient_id).execute()
+    # 連動的 measurement_request（self_reported）也標 cancelled
+    try:
+        first_id = rows[0].get("id")
+        if first_id:
+            sb.table("measurement_requests").update({
+                "status": "cancelled",
+                "updated_at": _now_iso(),
+            }).eq("reminder_id", first_id).execute()
+    except Exception as exc:
+        logger.warning("cancel paired measurement_request failed: %s", type(exc).__name__)
+    return {"ok": True, "plan_id": plan_id, "cancelled": len(rows)}
