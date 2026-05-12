@@ -39,7 +39,7 @@ _SCHEMAS.setdefault(
             id TEXT PRIMARY KEY,
             patient_id TEXT NOT NULL,
             reminder_type TEXT NOT NULL CHECK(reminder_type IN
-                ('medication', 'appointment', 'lab', 'custom')),
+                ('medication', 'appointment', 'lab', 'measurement', 'custom')),
             title TEXT NOT NULL,
             body TEXT,
             source_id TEXT,
@@ -52,6 +52,9 @@ _SCHEMAS.setdefault(
             next_fire_at TEXT NOT NULL,
             last_sent_at TEXT,
             active INTEGER DEFAULT 1,
+            bell_sound_id TEXT,
+            priority TEXT DEFAULT 'normal',
+            source TEXT DEFAULT 'manual',
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (patient_id) REFERENCES patients(id)
@@ -91,8 +94,10 @@ _SCHEMAS.setdefault(
         )""",
 )
 
-VALID_TYPES = {"medication", "appointment", "lab", "custom"}
+VALID_TYPES = {"medication", "appointment", "lab", "measurement", "custom"}
 VALID_FREQUENCIES = {"once", "daily", "weekly", "monthly"}
+VALID_PRIORITIES = {"low", "normal", "high", "urgent"}
+VALID_SOURCES = {"manual", "auto", "doctor"}
 
 # 已知的 Web Push 供應商。endpoint 的 hostname 必須完全等於下列其中之一
 # 才允許寫入或實際送出 — 用 frozenset + 精準 hostname 比對（不用 endswith
@@ -208,6 +213,10 @@ def create_reminder(body: ReminderCreate):
         raise HTTPException(status_code=400, detail=f"reminder_type 無效，需為 {VALID_TYPES}")
     if body.frequency not in VALID_FREQUENCIES:
         raise HTTPException(status_code=400, detail=f"frequency 無效，需為 {VALID_FREQUENCIES}")
+    if body.priority not in VALID_PRIORITIES:
+        raise HTTPException(status_code=400, detail=f"priority 無效，需為 {VALID_PRIORITIES}")
+    if body.source not in VALID_SOURCES:
+        raise HTTPException(status_code=400, detail=f"source 無效，需為 {VALID_SOURCES}")
 
     scheduled = body.scheduled_at
     if scheduled.tzinfo is None:
@@ -226,6 +235,9 @@ def create_reminder(body: ReminderCreate):
         "scheduled_at": scheduled.isoformat(),
         "next_fire_at": scheduled.isoformat(),
         "active": 1 if body.active else 0,
+        "bell_sound_id": body.bell_sound_id,
+        "priority": body.priority,
+        "source": body.source,
     }
     sb = get_supabase()
     result = sb.table("reminders").insert(data).execute()
@@ -472,8 +484,31 @@ def dispatch_due_reminders(
     deactivated = 0
     stale_endpoints = []
 
+    # 預讀本批 reminders 涉及的病患鈴聲偏好（一次查、用 dict 緩存）
+    affected_patients = sorted({r["patient_id"] for r in due if r.get("patient_id")})
+    prefs_map = {}
+    if affected_patients:
+        try:
+            prefs_rows = (
+                sb.table("patient_bell_prefs")
+                .select("*")
+                .in_("patient_id", affected_patients)
+                .execute()
+                .data
+            ) or []
+            for pr in prefs_rows:
+                prefs_map[(pr["patient_id"], pr.get("kind"))] = pr
+        except Exception as exc:
+            logger.warning("bell prefs lookup failed: %s", type(exc).__name__)
+
     for r in due:
         r = _normalize_reminder_row(r)
+        kind = r.get("reminder_type") or "custom"
+        pref = prefs_map.get((r["patient_id"], kind)) or {}
+        bell_enabled = pref.get("enabled", True)
+        bell_sound = r.get("bell_sound_id") or pref.get("bell_sound") or "gentle"
+        bell_volume = int(pref.get("volume", 70))
+        priority = r.get("priority") or "normal"
         inbox_row = {
             "patient_id": r["patient_id"],
             "reminder_id": r["id"],
@@ -503,6 +538,9 @@ def dispatch_due_reminders(
                 "tag": f"reminder-{r['id']}",
                 "reminder_id": r["id"],
                 "reminder_type": r.get("reminder_type"),
+                "bell_sound": bell_sound if bell_enabled else None,
+                "bell_volume": bell_volume,
+                "priority": priority,
             })
             if ok:
                 push_ok += 1

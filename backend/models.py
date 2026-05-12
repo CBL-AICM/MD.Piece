@@ -145,7 +145,7 @@ class AlertUpdate(BaseModel):
 
 class ReminderCreate(BaseModel):
     patient_id: str
-    reminder_type: str  # medication | appointment | lab | custom
+    reminder_type: str  # medication | appointment | lab | measurement | custom
     title: str
     body: str | None = None
     source_id: str | None = None
@@ -155,6 +155,9 @@ class ReminderCreate(BaseModel):
     days_of_week: list[int] | None = None  # 0=Mon..6=Sun，weekly 用
     scheduled_at: datetime  # 首次觸發時間（ISO 8601）
     active: bool = True
+    bell_sound_id: str | None = None
+    priority: str = "normal"  # low | normal | high | urgent
+    source: str = "manual"  # manual | auto | doctor
 
 
 class ReminderUpdate(BaseModel):
@@ -166,6 +169,8 @@ class ReminderUpdate(BaseModel):
     days_of_week: list[int] | None = None
     scheduled_at: datetime | None = None
     active: bool | None = None
+    bell_sound_id: str | None = None
+    priority: str | None = None
 
 
 class PushSubscriptionCreate(BaseModel):
@@ -178,3 +183,38 @@ class PushSubscriptionCreate(BaseModel):
 
 class InboxUpdate(BaseModel):
     read: bool = True
+
+
+# ─── Bell sound preferences ───────────────────────────────
+
+class BellPrefUpsert(BaseModel):
+    patient_id: str
+    kind: str  # medication | appointment | lab | measurement | doctor_request | custom
+    bell_sound: str = "gentle"
+    volume: int = 70
+    enabled: bool = True
+
+
+# ─── Doctor → patient measurement requests ────────────────
+
+class MeasurementRequestCreate(BaseModel):
+    doctor_id: str
+    patient_id: str
+    measure_type: str  # bp | glucose | heart_rate | weight | temperature
+    note: str | None = None
+    due_in_minutes: int | None = None  # 多少分鐘後過期；None = 不過期
+
+
+class MeasurementRequestComplete(BaseModel):
+    result_value: str | None = None
+
+
+# ─── Custom bell sound metadata ───────────────────────────
+
+class BellSoundCreate(BaseModel):
+    owner_patient_id: str
+    name: str
+    file_url: str
+    duration_sec: float | None = None
+    file_size_bytes: int | None = None
+    mime_type: str | None = None

@@ -1417,6 +1417,7 @@ function showPage(page) {
     if (page === "drugSearch") loadDrugSearchPage();
     if (page === "diseaseSearch") loadDiseaseSearchPage();
     if (page === "reminders") loadRemindersPage();
+    if (page === "vitals") loadDoctorMeasurementRequests();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -3643,6 +3644,14 @@ function vitals() {
         <div class="page-app-hero-bar"><div class="page-app-hero-bar-fill" style="width:${pctToday}%"></div></div>
       </div>
 
+      <div id="vt-doctor-request-banner" style="margin:8px 0"></div>
+      <div style="margin:8px 0;display:flex;justify-content:flex-end">
+        <button class="secondary" onclick="loadDoctorMeasurementRequests(true)" style="padding:6px 12px;font-size:0.85rem">
+          <i data-lucide="stethoscope" style="width:14px;height:14px;vertical-align:middle"></i>
+          看醫師是否要我量
+        </button>
+      </div>
+
       <section class="term-section">
         <header class="ts-head">
           <span class="ts-prompt">本期概況</span>
@@ -3794,6 +3803,79 @@ function vitals() {
 
     </div>
   `;
+}
+
+// ─── 醫師「要件測」面板（vitals 頁頂部 banner） ───────────────
+//
+// 病患按「看醫師是否要我量」→ 抓 pending 的 measurement_requests，
+// 渲染卡片 + 「我量好了」回填鈕。
+
+const MEASURE_TYPE_LABELS = {
+  bp: '血壓', glucose: '血糖', heart_rate: '心率',
+  weight: '體重', temperature: '體溫',
+};
+
+function loadDoctorMeasurementRequests(announce) {
+  const banner = document.getElementById('vt-doctor-request-banner');
+  if (!banner) return;
+  const pid = getStablePatientId();
+  fetch(`${API}/reminders/measurement-requests?patient_id=${encodeURIComponent(pid)}&status=pending&limit=10`)
+    .then(r => r.ok ? r.json() : { items: [] })
+    .then(data => renderDoctorMeasurementRequests(data.items || [], !!announce))
+    .catch(() => {
+      if (announce) banner.innerHTML = '<div style="padding:10px;border:1px dashed var(--border-glass);border-radius:8px;color:var(--text-muted)">無法連線醫師端，請稍後再試。</div>';
+    });
+}
+
+function renderDoctorMeasurementRequests(items, announce) {
+  const banner = document.getElementById('vt-doctor-request-banner');
+  if (!banner) return;
+  if (!items.length) {
+    banner.innerHTML = announce
+      ? '<div style="padding:10px;border:1px dashed var(--border-glass);border-radius:8px;color:var(--text-muted);font-size:0.85rem">目前醫師沒有量測請求 ✅</div>'
+      : '';
+    return;
+  }
+  const cards = items.map(req => {
+    const label = MEASURE_TYPE_LABELS[req.measure_type] || req.measure_type;
+    const note = req.note ? `<div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">${escapeHtml(req.note)}</div>` : '';
+    const when = req.requested_at ? new Date(req.requested_at).toLocaleString() : '';
+    return `
+      <div style="padding:12px;border:1px solid #ffb3a7;background:rgba(255,179,167,0.12);border-radius:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+          <div>
+            <strong>📞 醫師請您量${label}</strong>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">${when}</div>
+            ${note}
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <input id="mr-val-${req.id}" placeholder="${label === '血壓' ? '例：145/92' : '數值'}" style="flex:1;min-width:120px;padding:6px;border-radius:6px;border:1px solid var(--border-glass)" />
+          <button class="primary" onclick="completeMeasurementRequest('${req.id}')" style="padding:6px 14px">我量好了 ✅</button>
+          <button class="secondary" onclick="cancelMeasurementRequest('${req.id}')" style="padding:6px 10px;font-size:0.8rem">忽略</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  banner.innerHTML = cards;
+}
+
+function completeMeasurementRequest(reqId) {
+  const input = document.getElementById(`mr-val-${reqId}`);
+  const val = (input && input.value || '').trim();
+  fetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}/complete`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ result_value: val || null }),
+  }).then(r => r.ok ? r.json() : Promise.reject())
+    .then(() => loadDoctorMeasurementRequests())
+    .catch(() => alert('回報失敗，請稍後再試。'));
+}
+
+function cancelMeasurementRequest(reqId) {
+  if (!confirm('忽略這次請求？醫師會在報告看到。')) return;
+  fetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}`, { method: 'DELETE' })
+    .then(() => loadDoctorMeasurementRequests());
 }
 
 function renderVitalSnapshotCard(m) {
@@ -4578,6 +4660,9 @@ function saveBasicInfo() {
     }
   }
 
+  // 慢病（高血壓 / 糖尿病）自動建立定時量測提醒
+  try { ensureChronicMeasurementReminders(info); } catch (e) {}
+
   const msg = document.getElementById('bi-msg');
   if (msg) {
     msg.textContent = _T('rec.msg.savedLocal');
@@ -4585,6 +4670,58 @@ function saveBasicInfo() {
     setTimeout(() => { msg.hidden = true; }, 2000);
   }
   showToast && showToast(_T('rec.toast.saved'), 'success');
+}
+
+// 根據疾病自動建立每日量測 reminder（高血壓 → 早晚量血壓；糖尿病 → 早餐前血糖）。
+// 用 localStorage 標記避免重複建立；移除疾病後不會刪除既有 reminder（使用者可手動關）。
+const _CHRONIC_RULES = [
+  { keywords: ['高血壓', 'hypertension'], slots: [
+    { kind: 'bp', time: '07:30', label: '早上量血壓' },
+    { kind: 'bp', time: '21:00', label: '晚上量血壓' },
+  ]},
+  { keywords: ['糖尿病', 'diabetes'], slots: [
+    { kind: 'glucose', time: '06:30', label: '空腹血糖' },
+  ]},
+];
+
+function ensureChronicMeasurementReminders(info) {
+  const text = [info.conditions || '', info.current_disease || ''].join(' ').toLowerCase();
+  const pid = getStablePatientId();
+  if (!pid) return;
+  const seenKey = 'mdpiece_chronic_rem_' + pid;
+  let seen;
+  try { seen = JSON.parse(localStorage.getItem(seenKey) || '{}'); } catch (e) { seen = {}; }
+
+  _CHRONIC_RULES.forEach(rule => {
+    const hit = rule.keywords.some(k => text.indexOf(k.toLowerCase()) >= 0);
+    if (!hit) return;
+    rule.slots.forEach(slot => {
+      const tag = rule.keywords[0] + '|' + slot.kind + '|' + slot.time;
+      if (seen[tag]) return;
+      const [hh, mm] = slot.time.split(':').map(Number);
+      const next = new Date();
+      next.setHours(hh, mm, 0, 0);
+      if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
+      const measureLabel = { bp: '血壓', glucose: '血糖' }[slot.kind] || slot.kind;
+      fetch(`${API}/reminders/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: pid,
+          reminder_type: 'measurement',
+          title: slot.label,
+          body: `每天記得量一下${measureLabel}，幫醫師掌握你的狀況。`,
+          frequency: 'daily',
+          time_of_day: slot.time,
+          scheduled_at: next.toISOString(),
+          source: 'auto',
+          priority: 'normal',
+        }),
+      }).then(r => {
+        if (r.ok) { seen[tag] = Date.now(); localStorage.setItem(seenKey, JSON.stringify(seen)); }
+      }).catch(() => {});
+    });
+  });
 }
 
 function copyBasicInfo() {
@@ -11412,6 +11549,15 @@ var _remindersPid = null;
 var _pushVapidPublicKey = null;
 var _pushSubscribed = false;
 var _remindersInboxTimer = null;
+var _remindersSeenInboxIds = null;  // null = 初次載入時不響鈴
+var _remBellKinds = [
+  { kind: 'medication',     label: '服藥提醒' },
+  { kind: 'appointment',    label: '回診/預約' },
+  { kind: 'lab',            label: '檢查/檢驗' },
+  { kind: 'measurement',    label: '量測提醒' },
+  { kind: 'doctor_request', label: '醫師要件測' },
+  { kind: 'custom',         label: '自訂提醒' },
+];
 
 function reminders() {
   _remindersPid = getStablePatientId();
@@ -11444,6 +11590,7 @@ function reminders() {
     + '        <option value="medication">吃藥提醒</option>'
     + '        <option value="appointment">回診/預約</option>'
     + '        <option value="lab">檢查/檢驗</option>'
+    + '        <option value="measurement">量測提醒（血壓/血糖）</option>'
     + '        <option value="custom" selected>自訂提醒</option>'
     + '      </select>'
     + '    </label>'
@@ -11482,6 +11629,14 @@ function reminders() {
     + '  <div style="margin-top:12px">'
     + '    <button class="primary" onclick="reminderSubmitNew()"><i data-lucide="save" style="width:14px;height:14px;vertical-align:middle"></i> 建立提醒</button>'
     + '  </div>'
+    + '</div>'
+    + '<div class="card">'
+    + '  <div style="display:flex;justify-content:space-between;align-items:center">'
+    + '    <h3><i data-lucide="music-4" style="width:18px;height:18px;vertical-align:middle"></i> 鈴聲設定</h3>'
+    + '    <span style="font-size:0.8rem;color:var(--text-muted)">每種提醒可以設定不同鈴聲</span>'
+    + '  </div>'
+    + '  <div id="rem-bell-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中…</p></div>'
+    + '  <p style="margin-top:8px;color:var(--text-muted);font-size:0.78rem">手機鎖屏時，系統會用震動提示；App 在前景時才會播放上方選擇的鈴聲。</p>'
     + '</div>'
     + '<div class="card">'
     + '  <div style="display:flex;justify-content:space-between;align-items:center">'
@@ -11551,8 +11706,12 @@ function loadRemindersPage() {
   }
   _remindersBindDelegated();
   reminderRefreshList();
+  _remindersSeenInboxIds = null;  // 初次載入不響鈴，只記住目前 inbox 狀態
   reminderRefreshInbox();
   reminderRefreshPushState();
+  if (window.MDBell) {
+    MDBell.loadPrefs(_remindersPid, API).then(reminderRenderBellSettings);
+  }
   if (_remindersInboxTimer) clearInterval(_remindersInboxTimer);
   _remindersInboxTimer = setInterval(reminderRefreshInbox, 30000);
 }
@@ -11679,6 +11838,7 @@ function reminderRefreshInbox() {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _remindersInbox = data.items || [];
+      _ringBellForNewInboxArrivals(_remindersInbox);
       reminderRenderInbox(data.unread || 0);
       reminderUpdateNavBadge(data.unread || 0);
     })
@@ -11756,6 +11916,99 @@ function reminderMarkRead(id) {
 function reminderMarkAllRead() {
   fetch(API + '/reminders/inbox/read-all?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
     .then(reminderRefreshInbox);
+}
+
+// 偵測 inbox 是否有新項目 → 觸發前景鈴聲。
+// 首次載入時 _remindersSeenInboxIds 仍為 null，只記住、不響鈴，避免每次進頁面都響。
+function _ringBellForNewInboxArrivals(items) {
+  if (!window.MDBell || !Array.isArray(items)) return;
+  var nowIds = items.map(function(n) { return String(n.id || ''); }).filter(Boolean);
+  if (_remindersSeenInboxIds === null) {
+    _remindersSeenInboxIds = nowIds;
+    return;
+  }
+  var seen = {};
+  _remindersSeenInboxIds.forEach(function(id) { seen[id] = true; });
+  var fresh = items.filter(function(n) { return n.id && !seen[String(n.id)]; });
+  if (fresh.length) {
+    // 取最近一筆未讀的 reminder_type 來決定鈴聲
+    var first = fresh[0];
+    var kind = first.reminder_type || 'custom';
+    try { MDBell.play(kind); } catch (e) {}
+  }
+  _remindersSeenInboxIds = nowIds;
+}
+
+function reminderRenderBellSettings() {
+  var el = document.getElementById('rem-bell-list');
+  if (!el || !window.MDBell) return;
+  _remClear(el);
+  var presets = MDBell.listPresets();
+  _remBellKinds.forEach(function(item) {
+    var pref = MDBell.getPref(item.kind);
+    var row = _remH('div', {
+      style: 'display:grid;grid-template-columns:1.2fr 1.4fr 1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-glass)',
+    });
+    row.appendChild(_remH('div', { style: 'font-weight:500' }, item.label));
+
+    // 鈴聲下拉
+    var sel = _remH('select', {
+      style: 'padding:6px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:transparent;color:inherit',
+      'data-action': 'bell-sound', 'data-kind': item.kind,
+    });
+    presets.forEach(function(p) {
+      var opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.label;
+      if (p.id === pref.bell_sound) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function() {
+      MDBell.savePref(item.kind, { bell_sound: sel.value, volume: pref.volume, enabled: pref.enabled }, API);
+      pref.bell_sound = sel.value;
+    });
+    row.appendChild(sel);
+
+    // 音量
+    var volWrap = _remH('div', { style: 'display:flex;align-items:center;gap:6px' });
+    var volInput = _remH('input', {
+      type: 'range', min: '0', max: '100', value: String(pref.volume || 70),
+      style: 'flex:1',
+    });
+    var volLabel = _remH('span', { style: 'font-size:0.75rem;color:var(--text-muted);min-width:30px;text-align:right' }, String(pref.volume || 70));
+    volInput.addEventListener('input', function() { volLabel.textContent = volInput.value; });
+    volInput.addEventListener('change', function() {
+      pref.volume = parseInt(volInput.value, 10);
+      MDBell.savePref(item.kind, pref, API);
+    });
+    volWrap.appendChild(volInput);
+    volWrap.appendChild(volLabel);
+    row.appendChild(volWrap);
+
+    // 預覽
+    var previewBtn = _remH('button', {
+      'class': 'secondary',
+      style: 'padding:4px 10px;font-size:0.8rem',
+    }, '🔊 試聽');
+    previewBtn.addEventListener('click', function() {
+      MDBell.preview(sel.value, parseInt(volInput.value, 10));
+    });
+    row.appendChild(previewBtn);
+
+    // 開關
+    var toggleLabel = _remH('label', { style: 'display:inline-flex;align-items:center;gap:4px;font-size:0.8rem' });
+    var toggle = _remH('input', { type: 'checkbox' });
+    toggle.checked = pref.enabled !== false;
+    toggle.addEventListener('change', function() {
+      pref.enabled = toggle.checked;
+      MDBell.savePref(item.kind, pref, API);
+    });
+    toggleLabel.appendChild(toggle);
+    toggleLabel.appendChild(document.createTextNode('啟用'));
+    row.appendChild(toggleLabel);
+
+    el.appendChild(row);
+  });
 }
 
 function reminderToggleActive(id, active) {
