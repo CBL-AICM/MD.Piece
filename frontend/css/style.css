@@ -10277,19 +10277,78 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   user-select: none;
   -webkit-user-select: none;
   filter: drop-shadow(0 6px 18px rgba(31,61,88,0.12));
+  overflow: visible;
 }
 .emo-wheel:active { cursor: grabbing; }
-.emo-wheel-svg { width: 100%; height: 100%; display: block; }
-.emo-marker { transition: transform 0.18s ease; transform-box: fill-box; transform-origin: center; }
+.emo-wheel-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.emo-marker { transition: transform 0.18s cubic-bezier(.34,.86,.2,1.05); transform-box: fill-box; transform-origin: center; }
 .emo-marker > circle { transition: stroke-width 0.18s ease, fill 0.18s ease; }
 .emo-marker.is-active > circle:first-of-type { stroke-width: 3; }
-.emo-marker.is-active { transform: scale(1.18); }
-#emo-thumb { pointer-events: none; }
-#emo-thumb circle {
-  transition: cx 0.18s cubic-bezier(.34,.86,.2,1.05), cy 0.18s cubic-bezier(.34,.86,.2,1.05);
+.emo-marker.is-active { transform: scale(1.22); animation: emo-marker-pulse 1.4s ease-in-out infinite; }
+@keyframes emo-marker-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0 currentColor); }
+  50%      { filter: drop-shadow(0 0 6px currentColor); }
 }
 
-/* 情緒電池：拖曳情緒輪 thumb 時，半徑對應到電池 1~5 格 */
+/* 情緒輪 thumb：多層光暈 + spring snap + 微微脈動 */
+#emo-thumb { pointer-events: none; }
+#emo-thumb circle {
+  transition:
+    cx 0.32s cubic-bezier(.22,.86,.18,1.18),
+    cy 0.32s cubic-bezier(.22,.86,.18,1.18),
+    stroke 0.25s ease, fill 0.25s ease;
+}
+#emo-thumb .emo-thumb-halo {
+  opacity: 0;
+  transition: opacity 0.3s ease, cx 0.32s cubic-bezier(.22,.86,.18,1.18), cy 0.32s cubic-bezier(.22,.86,.18,1.18);
+}
+#emo-thumb.is-active .emo-thumb-halo {
+  opacity: 1;
+  animation: emo-thumb-halo 1.6s ease-in-out infinite;
+}
+@keyframes emo-thumb-halo {
+  0%, 100% { transform-origin: center; r: 30px; opacity: 0.55; }
+  50%      { r: 38px; opacity: 0.9; }
+}
+#emo-thumb .emo-thumb-ring {
+  opacity: 0;
+  transition: opacity 0.3s ease, cx 0.32s cubic-bezier(.22,.86,.18,1.18), cy 0.32s cubic-bezier(.22,.86,.18,1.18);
+}
+#emo-thumb.is-active .emo-thumb-ring {
+  opacity: 1;
+  animation: emo-thumb-ring 2.4s linear infinite;
+}
+@keyframes emo-thumb-ring {
+  0%   { r: 20px; opacity: 0.5; }
+  100% { r: 30px; opacity: 0; }
+}
+#emo-thumb.is-active .emo-thumb-body,
+#emo-thumb.is-active .emo-thumb-shell { stroke: var(--emo-thumb-c, var(--accent)); }
+#emo-thumb.is-active .emo-thumb-core  { fill:   var(--emo-thumb-c, var(--accent)); }
+#emo-thumb .emo-thumb-spark { animation: emo-thumb-spark 2.2s ease-in-out infinite; }
+@keyframes emo-thumb-spark {
+  0%, 100% { opacity: 0.5; r: 1.6px; }
+  50%      { opacity: 0.95; r: 2.4px; }
+}
+
+/* 拖曳殘影：thumb 拖過時留下淡淡光點 */
+.emo-trail-dot {
+  position: absolute;
+  width: 14px; height: 14px;
+  margin-left: -7px; margin-top: -7px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: none;
+  opacity: 0.55;
+  animation: emo-trail-fade 480ms ease-out forwards;
+  filter: blur(1px);
+}
+@keyframes emo-trail-fade {
+  0%   { opacity: 0.55; transform: scale(1); }
+  100% { opacity: 0;    transform: scale(0.4); }
+}
+
+/* 情緒強度條：原本的水平漸層條（一開始的版本） */
 .emo-strength {
   display: flex;
   align-items: center;
@@ -10303,42 +10362,21 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   letter-spacing: 0.4px;
   flex-shrink: 0;
 }
-.emo-batt {
+.emo-strength-track {
   flex: 1;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-  height: 22px;
-  padding: 3px;
-  background: var(--bg-glass);
-  border: 2px solid var(--text);
-  border-radius: 6px;
-  position: relative;
-}
-.emo-batt::after {
-  content: '';
-  position: absolute;
-  right: -7px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 5px;
   height: 10px;
-  background: var(--text);
-  border-radius: 0 2px 2px 0;
+  background: var(--bg-glass);
+  border: 1.5px solid var(--border-glass);
+  border-radius: 999px;
+  overflow: hidden;
 }
-.emo-batt-cell {
-  background: transparent;
-  border-radius: 2px;
-  transition: background 180ms ease, transform 120ms ease;
-}
-.emo-batt-cell.is-lit {
-  background: linear-gradient(180deg, var(--accent), var(--teal));
-  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
-  animation: emo-batt-pop 220ms ease-out;
-}
-@keyframes emo-batt-pop {
-  0%   { transform: scaleY(0.4); opacity: 0.5; }
-  100% { transform: scaleY(1);   opacity: 1; }
+.emo-strength-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--emo-fill-c, var(--accent)), var(--teal));
+  border-radius: 999px;
+  transition: width 0.32s cubic-bezier(.22,.86,.18,1.18), background 0.25s ease;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--emo-fill-c, var(--accent)) 50%, transparent);
 }
 
 .emo-readout {
@@ -10364,7 +10402,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 }
 /* 手機適配 */
 @media (max-width: 480px) {
-  .emo-batt { height: 18px; }
+  .emo-strength-track { height: 8px; }
 }
 .emotions-card textarea {
   width: 100%;
