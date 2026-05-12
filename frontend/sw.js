@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v80-ui-and-reminders";
+const CACHE_VERSION = "mdpiece-v81-bell";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -7,7 +7,8 @@ const STATIC_ASSETS = [
   "/index.html",
   "/css/style.css?v=v80-ui-and-reminders",
   "/js/i18n.js?v=v80-ui-and-reminders",
-  "/js/app.js?v=v80-ui-and-reminders",
+  "/js/bell.js?v=v81-bell",
+  "/js/app.js?v=v81-bell",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -137,6 +138,13 @@ function _safeNotificationUrl(raw) {
 }
 
 // Push notifications
+const VIBRATE_BY_PRIORITY = {
+  low:     [120],
+  normal:  [200, 100, 200],
+  high:    [300, 100, 300, 100, 300],
+  urgent:  [400, 80, 400, 80, 400, 80, 400],
+};
+
 self.addEventListener("push", (e) => {
   let data = { title: "MD.Piece", body: "新通知" };
   try {
@@ -146,16 +154,45 @@ self.addEventListener("push", (e) => {
   }
   const url = _safeNotificationUrl(data.url);
   const tag = data.tag || `mdpiece-${Date.now()}`;
+  const priority = data.priority || "normal";
+  const vibrate = VIBRATE_BY_PRIORITY[priority] || VIBRATE_BY_PRIORITY.normal;
+
   e.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-72.png",
-      vibrate: [200, 100, 200],
-      tag,
-      renotify: true,
-      data: { url, reminder_id: data.reminder_id, reminder_type: data.reminder_type },
-    })
+    (async () => {
+      // 若有任何同源視窗活著，請前景頁面播自訂鈴聲（瀏覽器不允許 SW 直接放音）
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      let anyFocused = false;
+      for (const w of wins) {
+        try {
+          w.postMessage({
+            type: "mdpiece-play-bell",
+            reminder_type: data.reminder_type,
+            bell_sound: data.bell_sound,
+            bell_volume: data.bell_volume,
+            priority,
+          });
+          if (w.focused) anyFocused = true;
+        } catch {}
+      }
+
+      // 即使前景在播鈴聲，仍顯示通知，方便使用者點進對應頁
+      await self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-72.png",
+        vibrate,
+        tag,
+        renotify: true,
+        requireInteraction: priority === "urgent",
+        silent: anyFocused && !!data.bell_sound,  // 前景自播鈴聲時，避免 OS 再響一次
+        data: {
+          url,
+          reminder_id: data.reminder_id,
+          reminder_type: data.reminder_type,
+          priority,
+        },
+      });
+    })()
   );
 });
 
