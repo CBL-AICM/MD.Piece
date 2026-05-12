@@ -2277,7 +2277,7 @@ html[data-mode="senior"] .tc-desc {
 .hq-symptoms .hq-icon { background: rgba(43,92,230,0.15);  color: var(--accent); }
 .hq-meds .hq-icon     { background: rgba(0,212,170,0.15);   color: var(--teal); }
 .hq-records .hq-icon   { background: rgba(124,107,196,0.15); color: var(--purple); }
-.hq-edu .hq-icon       { background: rgba(232,220,200,0.15); color: var(--cream); }
+.hq-edu .hq-icon       { background: rgba(74,144,194,0.15);  color: var(--accent); }
 
 /* Three-column Info Row */
 .home-info-row {
