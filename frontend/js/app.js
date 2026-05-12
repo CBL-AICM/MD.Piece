@@ -5175,10 +5175,12 @@ function showToast(msg, type) {
 
 var _medsList = [];
 var _medsPatientId = null;
+var _medsDeleteMode = false;
 
 function medications() {
   var user = getCurrentUser();
   _medsPatientId = getStablePatientId();
+  _medsDeleteMode = false;
   return `
     <div class="card">
       <h2>${_T('meds.title')}</h2>
@@ -5216,8 +5218,9 @@ function medications() {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h3>${_T('meds.list.title')}</h3>
-        <button class="secondary" onclick="loadMedicationsPage()" style="padding:4px 12px;font-size:0.85rem">${_T('meds.list.refresh')}</button>
+        <button id="meds-refresh-btn" class="secondary" onclick="toggleMedsManageAndRefresh()" style="padding:4px 12px;font-size:0.85rem">${_T('meds.list.refresh')}</button>
       </div>
+      <div id="meds-manage-hint" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(232,136,156,0.08);border:1px solid rgba(232,136,156,0.28);border-radius:var(--radius-sm);color:var(--text-dim);font-size:0.82rem">${_T('meds.list.manageHint')}</div>
       <div id="med-list" style="margin-top:12px"><p style="color:var(--text-muted)">${_T('meds.list.loading')}</p></div>
     </div>
     <div class="card" id="med-checkin-card" style="display:none">
@@ -5536,9 +5539,17 @@ function _renderMedCard(med, slotKey, isOther) {
   }
 
   var safeName = (med.name || "").replace(/'/g, "\\'");
+  var deleteBadge = _medsDeleteMode
+    ? '<button type="button" class="med-card-delete" onclick="event.stopPropagation();deleteMedication(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.delete.title') + '" aria-label="' + _T('meds.card.delete.title') + '">✕</button>'
+    : '';
+  var cardOnClick = _medsDeleteMode
+    ? 'deleteMedication(\'' + med.id + '\',\'' + safeName + '\')'
+    : 'tapMedTake(\'' + med.id + '\',\'' + slotKey + '\')';
+  var cardClass = 'med-card' + (_medsDeleteMode ? ' med-card-deleting' : '');
   return (
-    '<button type="button" class="med-card" data-id="' + med.id + '" data-slot="' + slotKey + '"' +
-      ' onclick="tapMedTake(\'' + med.id + '\',\'' + slotKey + '\')">' +
+    '<button type="button" class="' + cardClass + '" data-id="' + med.id + '" data-slot="' + slotKey + '"' +
+      ' onclick="' + cardOnClick + '">' +
+      deleteBadge +
       '<div class="med-card-row">' +
         '<div class="med-card-title">' +
           '<strong>' + name + '</strong>' + dosage +
@@ -5555,6 +5566,33 @@ function _renderMedCard(med, slotKey, isOther) {
       '</div>' +
     '</button>'
   );
+}
+
+// 切換管理模式 + 重新整理：按下「重新整理」會同時刷新清單並進入／離開刪除模式。
+// 管理模式下每張藥卡會出現紅色 ✕，點下去確認後即可刪除藥物。
+function toggleMedsManageAndRefresh() {
+  _medsDeleteMode = !_medsDeleteMode;
+  var btn = document.getElementById('meds-refresh-btn');
+  if (btn) btn.textContent = _medsDeleteMode ? _T('meds.list.manageDone') : _T('meds.list.refresh');
+  var hint = document.getElementById('meds-manage-hint');
+  if (hint) hint.style.display = _medsDeleteMode ? 'block' : 'none';
+  loadMedicationsPage();
+}
+
+async function deleteMedication(id, name) {
+  if (!id) return;
+  var confirmMsg = _Tf('meds.card.delete.confirm', { name: name || _T('meds.card.unnamed') });
+  if (!confirm(confirmMsg)) return;
+  try {
+    var r = await fetch(API + '/medications/' + id, { method: 'DELETE' });
+    if (!r.ok) throw new Error('delete failed');
+    if (typeof showToast === 'function') {
+      showToast(_Tf('meds.card.delete.success', { name: name || _T('meds.card.unnamed') }), 'success');
+    }
+    loadMedicationsPage();
+  } catch (e) {
+    if (typeof showToast === 'function') showToast(_T('meds.card.delete.fail'), 'error');
+  }
 }
 
 // === 單顆藥的「使用狀況 + 療效」詳情 modal ================================

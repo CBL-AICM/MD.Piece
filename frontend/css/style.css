@@ -3998,6 +3998,34 @@ html[data-mode="senior"] .vt-bmi-meta {
 }
 .med-card-mini:hover { background: rgba(255,255,255,0.06); color: var(--text); }
 
+/* 管理模式：藥卡右上角紅色刪除按鈕 */
+.med-card-delete {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  border: 2px solid var(--bg, #fff);
+  background: #e8889c;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(232,136,156,0.45);
+  z-index: 2;
+}
+.med-card-delete:hover { background: #d96f87; transform: scale(1.06); }
+.med-card-deleting {
+  border-color: rgba(232,136,156,0.55);
+  background: rgba(232,136,156,0.06);
+}
+.med-card-deleting:hover {
+  background: rgba(232,136,156,0.14);
+  border-color: rgba(232,136,156,0.85);
+}
+
 /* 辨識結果卡片上的「預計分類」標籤 */
 .rec-slot-tags {
   font-size: 0.75rem;
