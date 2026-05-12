@@ -8913,43 +8913,158 @@ var EMOTION_LEVELS = [
 ];
 
 // 喜怒哀樂四象限 — 先選情緒類型，下方電池就變成「程度」
-var EMOTION_TYPES = [
-  { id: 'joy',      char: '喜', word: '開心', emoji: '😊', color: '#F4C95D' },
-  { id: 'anger',    char: '怒', word: '生氣', emoji: '😠', color: '#E08070' },
-  { id: 'sorrow',   char: '哀', word: '難過', emoji: '😢', color: '#7A95C2' },
-  { id: 'pleasure', char: '樂', word: '放鬆', emoji: '😌', color: '#90C19D' },
+// 情緒輪：6 個方向（喜怒哀樂 + 焦慮 緊張）× 3 強度環 + 中心「平靜」
+// 角度走 SVG 慣例：0°=右、90°=下、-90°=上。每 60° 一個情緒。
+// rings 由內到外 = 弱 → 中 → 強，分別給 score 2 / 3 / 5；中心 score = 1。
+var EMOTION_WHEEL = [
+  { id: 'joy',     angle: -90, char: '喜', color: '#E8A93A',
+    rings: [
+      { score: 2, emoji: '🙂', word: '有點開心' },
+      { score: 3, emoji: '😊', word: '開心' },
+      { score: 5, emoji: '😄', word: '非常開心' },
+    ] },
+  { id: 'relax',   angle: -30, char: '樂', color: '#6FA67B',
+    rings: [
+      { score: 2, emoji: '😌', word: '放鬆' },
+      { score: 3, emoji: '🥰', word: '愉快' },
+      { score: 5, emoji: '🤩', word: '幸福' },
+    ] },
+  { id: 'anxiety', angle:  30, char: '焦', color: '#C098DA',
+    rings: [
+      { score: 2, emoji: '😟', word: '有點焦慮' },
+      { score: 3, emoji: '😰', word: '焦慮' },
+      { score: 5, emoji: '😱', word: '非常焦慮' },
+    ] },
+  { id: 'sorrow',  angle:  90, char: '哀', color: '#5A7DB0',
+    rings: [
+      { score: 2, emoji: '🥹', word: '委屈' },
+      { score: 3, emoji: '😢', word: '難過' },
+      { score: 5, emoji: '😭', word: '非常難過' },
+    ] },
+  { id: 'tense',   angle: 150, char: '緊', color: '#D89968',
+    rings: [
+      { score: 2, emoji: '😬', word: '有點緊張' },
+      { score: 3, emoji: '😖', word: '緊張' },
+      { score: 5, emoji: '😣', word: '非常緊繃' },
+    ] },
+  { id: 'anger',   angle: 210, char: '怒', color: '#D86E5E',
+    rings: [
+      { score: 2, emoji: '😒', word: '有點不爽' },
+      { score: 3, emoji: '😠', word: '生氣' },
+      { score: 5, emoji: '🤬', word: '非常憤怒' },
+    ] },
 ];
-var _selectedEmotionType = 'joy';
+var EMOTION_CENTER = { score: 1, emoji: '😶', word: '平靜', char: '靜', color: '#9CA8B8' };
+var _selectedEmotionCell = null; // { emotion(或'center'), score, emoji, word, char }
+
+// 為了讓 mood-ring-hero + 月曆 + 表格繼續用 _moodColor / _moodEmoji
+// 同步把舊 EMOTION_TYPES 留著，但只當 fallback 用
+var EMOTION_TYPES = EMOTION_WHEEL.map(function(e) {
+  return { id: e.id, char: e.char, word: e.rings[1].word, emoji: e.rings[1].emoji, color: e.color };
+});
 function _getEmotionType(id) {
   return EMOTION_TYPES.find(function(t) { return t.id === id; }) || EMOTION_TYPES[0];
 }
-// 把 score (1~5) + 情緒類型 → 白話程度文字
-//   1=不感覺  2=普通  3={word}  4=很{word}  5=非常{word}
 function emotionIntensityText(score, typeId) {
   var s = Math.max(1, Math.min(5, Math.round(score || 0)));
-  if (s <= 1) return '不感覺';
-  if (s <= 2) return '普通';
-  var t = _getEmotionType(typeId || _selectedEmotionType);
-  if (s <= 3) return t.word;
-  if (s <= 4) return '很' + t.word;
-  return '非常' + t.word;
+  if (s <= 1) return '平靜';
+  var w = EMOTION_WHEEL.find(function(e) { return e.id === typeId; });
+  if (!w) return '普通';
+  if (s <= 2) return w.rings[0].word;
+  if (s <= 3) return w.rings[1].word;
+  return w.rings[2].word;
 }
-function selectEmotionType(typeId) {
-  _selectedEmotionType = typeId;
-  document.querySelectorAll('.mood-quad-btn').forEach(function(el) {
-    el.classList.toggle('is-active', el.getAttribute('data-type') === typeId);
-  });
-  // 重新更新 battery readout 文字（若已選 score）
-  if (_emotionSelected != null) {
-    var lbl = document.getElementById('batt-label');
-    if (lbl) lbl.textContent = emotionIntensityText(_emotionSelected, typeId);
+function selectEmotionCell(emotionId, score) {
+  if (emotionId === 'center') {
+    _selectedEmotionCell = { emotion: 'center', score: 1, emoji: EMOTION_CENTER.emoji, word: EMOTION_CENTER.word, char: EMOTION_CENTER.char };
+  } else {
+    var w = EMOTION_WHEEL.find(function(e) { return e.id === emotionId; });
+    if (!w) return;
+    var ring = w.rings.find(function(r) { return r.score === score; });
+    if (!ring) return;
+    _selectedEmotionCell = { emotion: w.id, score: ring.score, emoji: ring.emoji, word: ring.word, char: w.char };
   }
-  // 啟用送出鈕（選完情緒 + 程度才算完整打卡）
+  // 同步舊 _emotionSelected（submitEmotion 走的是這個）
+  _emotionSelected = _selectedEmotionCell.score;
+  _selectedEmotionType = (_selectedEmotionCell.emotion === 'center') ? 'joy' : _selectedEmotionCell.emotion;
+  // 更新 UI
+  document.querySelectorAll('.emo-cell').forEach(function(el) {
+    var on = el.dataset.emotion === _selectedEmotionCell.emotion && Number(el.dataset.score) === _selectedEmotionCell.score;
+    el.classList.toggle('is-active', on);
+  });
+  var readEmoji = document.getElementById('emo-readout-emoji');
+  var readWord = document.getElementById('emo-readout-word');
+  if (readEmoji) readEmoji.textContent = _selectedEmotionCell.emoji;
+  if (readWord) readWord.textContent = _selectedEmotionCell.word;
   _updateEmotionSubmitState();
 }
 function _updateEmotionSubmitState() {
   var btn = document.getElementById('emotion-submit');
   if (btn) btn.disabled = (_emotionSelected == null);
+}
+
+// 舊 selectEmotionType — 保留 stub 避免外部呼叫 crash
+function selectEmotionType(typeId) {
+  _selectedEmotionType = typeId;
+}
+
+// 渲染情緒輪：中心圓 + 3 個強度 ring × 6 個方向，每個位置一顆 emoji
+function renderEmotionWheel() {
+  // CSS 變數帶各情緒色到對應 emo-cell 上
+  var SIZE = 320, CX = SIZE / 2, CY = SIZE / 2;
+  var RING_R = [62, 100, 138]; // 內 / 中 / 外 三環半徑
+  var cellsHtml = '';
+  // 中心
+  cellsHtml += ''
+    + '<button type="button" class="emo-cell emo-cell-center" '
+    +   'data-emotion="center" data-score="1" '
+    +   'style="left:' + (CX - 30) + 'px;top:' + (CY - 30) + 'px;--em-color:' + EMOTION_CENTER.color + '" '
+    +   'onclick="selectEmotionCell(\'center\', 1)" '
+    +   'aria-label="' + EMOTION_CENTER.word + '">'
+    +   '<span class="emo-cell-emoji">' + EMOTION_CENTER.emoji + '</span>'
+    + '</button>';
+  // 6 方向 × 3 環
+  EMOTION_WHEEL.forEach(function(e) {
+    e.rings.forEach(function(r, idx) {
+      var rad = e.angle * Math.PI / 180;
+      var x = CX + RING_R[idx] * Math.cos(rad);
+      var y = CY + RING_R[idx] * Math.sin(rad);
+      cellsHtml += ''
+        + '<button type="button" class="emo-cell emo-cell-r' + (idx+1) + '" '
+        +   'data-emotion="' + e.id + '" data-score="' + r.score + '" '
+        +   'style="left:' + (x - 24) + 'px;top:' + (y - 24) + 'px;--em-color:' + e.color + '" '
+        +   'onclick="selectEmotionCell(\'' + e.id + '\', ' + r.score + ')" '
+        +   'aria-label="' + r.word + '">'
+        +   '<span class="emo-cell-emoji">' + r.emoji + '</span>'
+        + '</button>';
+    });
+  });
+  // 6 方向標籤（喜/樂/焦/哀/緊/怒）在最外圈外側
+  var labelsHtml = '';
+  EMOTION_WHEEL.forEach(function(e) {
+    var rad = e.angle * Math.PI / 180;
+    var lr = RING_R[2] + 22;
+    var x = CX + lr * Math.cos(rad);
+    var y = CY + lr * Math.sin(rad);
+    labelsHtml += '<span class="emo-axis-label" style="left:' + x + 'px;top:' + y + 'px;color:' + e.color + '">' + e.char + '</span>';
+  });
+  return ''
+    + '<div class="emo-wheel" role="group" aria-label="情緒輪">'
+    +   '<svg class="emo-wheel-guide" viewBox="0 0 ' + SIZE + ' ' + SIZE + '" aria-hidden="true">'
+    +     '<circle cx="' + CX + '" cy="' + CY + '" r="' + RING_R[2] + '" fill="none" stroke="var(--border-glass)" stroke-width="1.5" stroke-dasharray="2 4"/>'
+    +     '<circle cx="' + CX + '" cy="' + CY + '" r="' + RING_R[1] + '" fill="none" stroke="var(--border-glass)" stroke-width="1.5" stroke-dasharray="2 4"/>'
+    +     '<circle cx="' + CX + '" cy="' + CY + '" r="' + RING_R[0] + '" fill="none" stroke="var(--border-glass)" stroke-width="1.5" stroke-dasharray="2 4"/>'
+    // 6 條方向分隔線
+    +     EMOTION_WHEEL.map(function(e) {
+            var mid = (e.angle - 30) * Math.PI / 180;
+            var x1 = CX + 30 * Math.cos(mid), y1 = CY + 30 * Math.sin(mid);
+            var x2 = CX + (RING_R[2] - 6) * Math.cos(mid), y2 = CY + (RING_R[2] - 6) * Math.sin(mid);
+            return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="var(--border-glass)" stroke-width="1" stroke-dasharray="2 3"/>';
+          }).join('')
+    +   '</svg>'
+    +   cellsHtml
+    +   labelsHtml
+    + '</div>';
 }
 
 function _moodPercent(score) {
@@ -8988,7 +9103,7 @@ function emotions() {
     '<section class="emotions-wrap">' +
       '<header class="emotions-head">' +
         '<h2><i data-lucide="battery-charging" style="width:22px;height:22px"></i> 情緒電力</h2>' +
-        '<p>把今天的「心情電量」打卡留下，連續低電量會自動提醒你的醫師。</p>' +
+        '<p>在情緒輪上點下你現在的位置：中央＝平靜，越往外越強烈。連續紀錄會自動整理進診前報告。</p>' +
       '</header>' +
       renderHowto('emotions') +
 
@@ -9019,51 +9134,11 @@ function emotions() {
 
       '<div class="emotions-card mood-today">' +
         '<h3>今天的心情</h3>' +
-
-        // ── 喜怒哀樂四象限 ──
-        '<p class="batt-hint">第 1 步：今天哪一種感覺最強？</p>' +
-        '<div class="mood-quad" id="mood-quad">' +
-          EMOTION_TYPES.map(function(t) {
-            return '<button type="button" class="mood-quad-btn mood-quad-' + t.id + (t.id === _selectedEmotionType ? ' is-active' : '') + '"'
-              + ' data-type="' + t.id + '" style="--em-color:' + t.color + '"'
-              + ' onclick="selectEmotionType(\'' + t.id + '\')">'
-              + '<span class="mood-quad-emoji">' + t.emoji + '</span>'
-              + '<span class="mood-quad-char">' + t.char + '</span>'
-              + '<span class="mood-quad-word">' + t.word + '</span>'
-              + '</button>';
-          }).join('') +
-        '</div>' +
-
-        '<p class="batt-hint mood-default-only">第 2 步：滑動電池選擇程度</p>' +
-        '<p class="batt-hint mood-senior-only">第 2 步：點下你的程度</p>' +
-        '<div class="batt-picker mood-default-only" id="batt-picker">' +
-          '<div class="batt-shell">' +
-            '<div class="batt-body" id="batt-body" role="slider" aria-label="情緒電量" ' +
-              'aria-valuemin="1" aria-valuemax="5" aria-valuenow="0" tabindex="0">' +
-              EMOTION_LEVELS.slice().reverse().map(function(l) {
-                return '<div class="batt-cell" data-score="' + l.score + '" ' +
-                  'aria-label="' + l.label + ' ' + l.pct + '%"></div>';
-              }).join('') +
-            '</div>' +
-            '<div class="batt-tip"></div>' +
-          '</div>' +
-          '<div class="batt-readout">' +
-            '<span class="batt-emoji" id="batt-emoji">⚡</span>' +
-            '<div class="batt-readout-text">' +
-              '<span class="batt-pct" id="batt-pct">— %</span>' +
-              '<span class="batt-label" id="batt-label">點電池選電量</span>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="mood-senior-picker mood-senior-only" id="mood-senior-picker">' +
-          EMOTION_LEVELS.slice().reverse().map(function(l) {
-            return '<button type="button" class="mood-senior-btn" data-score="' + l.score + '" ' +
-              'onclick="selectEmotion(' + l.score + ')" ' +
-              'style="--em-color:' + l.color + '">' +
-              '<span class="mood-senior-emoji">' + l.emoji + '</span>' +
-              '<span class="mood-senior-label">' + l.label + '</span>' +
-            '</button>';
-          }).join('') +
+        '<p class="batt-hint">越靠近中間越平靜，越外圈越強烈；每個方向有不同情緒</p>' +
+        renderEmotionWheel() +
+        '<div class="emo-readout">' +
+          '<span class="emo-readout-emoji" id="emo-readout-emoji">·</span>' +
+          '<span class="emo-readout-word"  id="emo-readout-word">點一下選你現在的感覺</span>' +
         '</div>' +
         '<textarea id="emotion-note" rows="2" maxlength="200" placeholder="想多說一點？（選填，最多 200 字）"></textarea>' +
         '<button class="emotions-submit" id="emotion-submit" onclick="submitEmotion()" disabled>' +
@@ -9237,15 +9312,14 @@ function _initBatteryPicker() {
 }
 
 async function submitEmotion() {
-  if (_emotionSelected == null) { showToast('請先選程度', 'warning'); return; }
+  if (_selectedEmotionCell == null) { showToast('請先選一個情緒位置', 'warning'); return; }
   var pid = getStablePatientId();
   if (!pid) { showToast('請先登入', 'warning'); return; }
   var noteRaw = (document.getElementById('emotion-note').value || '').trim();
-  // 把選的情緒類型（喜/怒/哀/樂）+ 程度標籤一起塞進 note 開頭，後端
-  // 維持原本 schema（score 1~5 + note 字串），日曆／表格／報告渲染時
-  // 用 [喜][怒][哀][樂] 前綴解析
-  var t = _getEmotionType(_selectedEmotionType);
-  var prefix = '[' + t.char + '] ' + emotionIntensityText(_emotionSelected, _selectedEmotionType);
+  // 後端維持原本 schema（score 1~5 + note 字串）；
+  // 情緒輪選的位置用 [類型字] 詞語 前綴塞進 note，月曆/表格/報告解析。
+  var cell = _selectedEmotionCell;
+  var prefix = '[' + cell.char + '] ' + cell.word;
   var note = prefix + (noteRaw ? ' · ' + noteRaw : '');
   var btn = document.getElementById('emotion-submit');
   btn.disabled = true;

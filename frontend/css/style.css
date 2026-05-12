@@ -1068,24 +1068,7 @@ html[data-mode="standard"] #app {
   box-shadow: var(--shadow);
   font-family: "Noto Sans TC", sans-serif;
 }
-/* Top-left filepath label ▸ /md.piece/pages/xxx — bash */
-html[data-mode="standard"] #app::before {
-  content: "▸ /md.piece/pages/" attr(data-page) " — bash";
-  position: absolute;
-  top: -11px;
-  left: 22px;
-  padding: 3px 12px;
-  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  color: var(--app-term);
-  background: var(--app-bg);
-  border: 1.5px solid var(--app-border);
-  border-radius: 3px;
-  white-space: nowrap;
-  z-index: 3;
-}
+/* （已移除 dev bash 風 ▸ /md.piece/pages/xxx — bash 浮籤）*/
 /* 頁尾常駐免責列 — 全頁底端固定，提醒這只是輔助工具 */
 html[data-mode="standard"] #app::after {
   content: "本系統為健康紀錄輔助工具，不取代醫療建議；如有不適請盡快就醫。";
@@ -10265,85 +10248,103 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   喜怒哀樂四象限 — 先挑情緒類型再決定強度
+   情緒輪 — 6 方向（喜/樂/焦/哀/緊/怒）× 3 強度環 + 中心「平靜」
    ═══════════════════════════════════════════════════════════ */
-.mood-quad {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 0 0 18px;
-}
-.mood-quad-btn {
-  --em-color: var(--accent);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 18px 10px 14px;
-  background: var(--bg-surface);
-  border: 2px solid var(--border-glass);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background var(--transition), border-color var(--transition),
-              transform 0.08s ease, box-shadow var(--transition);
-  font-family: inherit;
-  color: var(--text);
+.emo-wheel {
   position: relative;
+  width: 320px; height: 320px;
+  margin: 0 auto 16px;
+  max-width: 100%;
 }
-.mood-quad-btn:hover {
-  border-color: var(--em-color);
-  background: color-mix(in srgb, var(--em-color) 12%, var(--bg-surface));
-}
-.mood-quad-btn:active { transform: scale(0.98); }
-.mood-quad-btn.is-active {
-  border-color: var(--em-color);
-  background: color-mix(in srgb, var(--em-color) 20%, var(--bg-surface));
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--em-color) 35%, transparent);
-}
-.mood-quad-btn.is-active::after {
-  content: '✓';
+.emo-wheel-guide {
   position: absolute;
-  top: 6px; right: 8px;
-  width: 18px; height: 18px;
-  background: var(--em-color);
-  color: var(--cream);
+  inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+.emo-cell {
+  --em-color: var(--text-muted);
+  position: absolute;
+  width: 48px; height: 48px;
   border-radius: 50%;
-  font-size: 0.72rem;
-  font-weight: 700;
+  border: 2px solid var(--border-glass);
+  background: var(--bg-surface);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: transform 0.12s ease, border-color var(--transition),
+              box-shadow var(--transition), background var(--transition);
+  z-index: 2;
 }
-.mood-quad-emoji {
-  font-size: 1.7rem;
+.emo-cell-emoji { font-size: 1.4rem; line-height: 1; }
+.emo-cell:hover {
+  transform: scale(1.12);
+  border-color: var(--em-color);
+  background: color-mix(in srgb, var(--em-color) 14%, var(--bg-surface));
+}
+.emo-cell.is-active {
+  transform: scale(1.25);
+  border-color: var(--em-color);
+  background: color-mix(in srgb, var(--em-color) 24%, var(--bg-surface));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--em-color) 30%, transparent),
+              0 6px 16px color-mix(in srgb, var(--em-color) 40%, transparent);
+  z-index: 3;
+}
+/* 外環的格子放大一點點，視覺上強度差異 */
+.emo-cell-r1 { width: 44px; height: 44px; }
+.emo-cell-r2 { width: 48px; height: 48px; }
+.emo-cell-r3 { width: 52px; height: 52px; }
+.emo-cell-r3 .emo-cell-emoji { font-size: 1.5rem; }
+/* 中心 — 平靜 */
+.emo-cell-center {
+  width: 60px; height: 60px;
+  border-style: dashed;
+}
+.emo-cell-center .emo-cell-emoji { font-size: 1.6rem; }
+
+/* 方向中文字標籤（喜/樂/焦/哀/緊/怒）— 在最外環外側 */
+.emo-axis-label {
+  position: absolute;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+/* 選好後下方讀出區（emoji + 詞） */
+.emo-readout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 18px;
+  margin: 4px 0 14px;
+  background: var(--bg-glass);
+  border: 1.5px solid var(--border-glass);
+  border-radius: var(--radius);
+  min-height: 56px;
+}
+.emo-readout-emoji {
+  font-size: 1.8rem;
   line-height: 1;
 }
-.mood-quad-char {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--em-color);
-  margin-top: 2px;
-}
-.mood-quad-word {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-}
-.mood-quad-btn.is-active .mood-quad-word {
+.emo-readout-word {
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--text);
-  font-weight: 500;
 }
 
-/* color hints per type (border tone when not active) */
-.mood-quad-joy      { --em-color: #E8A93A; }   /* warm yellow */
-.mood-quad-anger    { --em-color: #D86E5E; }   /* red */
-.mood-quad-sorrow   { --em-color: #5A7DB0; }   /* blue */
-.mood-quad-pleasure { --em-color: #6FA67B; }   /* green */
-
+/* 窄手機：整個輪 scale down，內部 px 座標不用改 */
 @media (max-width: 380px) {
-  .mood-quad-btn { padding: 14px 8px 12px; }
-  .mood-quad-emoji { font-size: 1.5rem; }
-  .mood-quad-char { font-size: 1.1rem; }
-  .mood-quad-word { font-size: 0.74rem; }
+  .emo-wheel { transform: scale(0.85); transform-origin: top center; height: 272px; }
+}
+@media (max-width: 340px) {
+  .emo-wheel { transform: scale(0.75); height: 240px; }
 }
 .batt-picker {
   --batt-color: var(--text-dim);
