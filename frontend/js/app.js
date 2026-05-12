@@ -1246,14 +1246,44 @@ function previsitOpenPrint(html, filename) {
   var name = filename || ('MD.Piece-診前報告-' + new Date().toISOString().slice(0, 10) + '.pdf');
 
   if (typeof window.html2pdf === 'function') {
+    // 用 DOMParser 拆解 full HTML：直接塞 innerHTML 會被瀏覽器剝掉 <html>/<head>/<body>，
+    // 連 <head> 裡的 <style> 都會掉，導致 html2canvas 截到沒套樣式（或空白）的內容。
+    var parsed;
+    try {
+      parsed = new DOMParser().parseFromString(html, 'text/html');
+    } catch (e) {
+      parsed = null;
+    }
+
     var holder = document.createElement('div');
+    // 不能用 left:-10000px 把 holder 放到視窗外，html2canvas 在某些情境會截到空白。
+    // 改成 opacity:0、pointer-events:none，元素仍在 layout 但人眼看不到。
     holder.style.position = 'fixed';
-    holder.style.left = '-10000px';
+    holder.style.left = '0';
     holder.style.top = '0';
-    holder.style.width = '794px'; // ~A4 @ 96dpi，避免行動裝置寬度太窄影響排版
-    holder.innerHTML = html;
+    holder.style.width = '794px'; // ~A4 @ 96dpi
+    holder.style.background = '#ffffff';
+    holder.style.opacity = '0';
+    holder.style.pointerEvents = 'none';
+    holder.style.zIndex = '-1';
+
+    var contentRoot;
+    if (parsed && parsed.body) {
+      // 把 <head> 裡的 style/link 搬進 holder
+      var heads = parsed.querySelectorAll('head > style, head > link[rel="stylesheet"]');
+      heads.forEach(function(node) { holder.appendChild(node.cloneNode(true)); });
+      // body 內容包一層 div，當作 html2pdf 的 from() 目標
+      contentRoot = document.createElement('div');
+      contentRoot.innerHTML = parsed.body.innerHTML;
+      holder.appendChild(contentRoot);
+    } else {
+      // DOMParser 失敗的保險路徑
+      holder.innerHTML = html;
+      contentRoot = holder;
+    }
+
     document.body.appendChild(holder);
-    var target = holder.querySelector('body') ? holder : holder;
+
     var opt = {
       margin:       [10, 10, 12, 10],
       filename:     name,
@@ -1262,7 +1292,7 @@ function previsitOpenPrint(html, filename) {
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak:    { mode: ['css', 'legacy'] }
     };
-    window.html2pdf().set(opt).from(target).save()
+    window.html2pdf().set(opt).from(contentRoot).save()
       .then(function() {
         document.body.removeChild(holder);
         if (typeof showToast === 'function') showToast('PDF 已下載', 'success');
