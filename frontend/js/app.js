@@ -1137,7 +1137,7 @@ function previsitDownload(audience) {
         var counts = (data && data.raw_data) || {};
         var periodLabel = (data && data.period_label) || '近 30 天';
         var html = previsitBuildDoctorHTML(report, counts, periodLabel);
-        previsitOpenPrint(html);
+        previsitOpenPrint(html, 'MD.Piece-診前報告-醫師版-' + new Date().toISOString().slice(0, 10) + '.pdf');
       })
       .catch(function() {
         if (typeof showToast === 'function') showToast('產生醫師版報告失敗，請稍後再試', 'error');
@@ -1154,7 +1154,7 @@ function previsitDownload(audience) {
       var periodLabel = (data && data.period_label) || '近 30 天';
       var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
       var html = previsitBuildPatientHTML(summary, counts, checklist, periodLabel);
-      previsitOpenPrint(html);
+      previsitOpenPrint(html, 'MD.Piece-診前報告-患者版-' + new Date().toISOString().slice(0, 10) + '.pdf');
     })
     .catch(function() {
       if (typeof showToast === 'function') showToast('產生患者版報告失敗，請稍後再試', 'error');
@@ -1239,21 +1239,80 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
     + '</body></html>';
 }
 
-function previsitOpenPrint(html) {
-  var w = window.open('', '_blank');
-  if (!w) {
-    if (typeof showToast === 'function') showToast('瀏覽器擋掉了新視窗，請允許彈出視窗', 'warning');
+// 把完整 HTML 字串（含 <style>）轉成 .pdf 並觸發下載。
+// 優先使用 html2pdf.js（PWA、手機 Safari 都能下載真正的 PDF 檔），
+// 若 CDN 沒載入到、或產生失敗，退回 iframe + window.print()（讓使用者用「另存為 PDF」）。
+function previsitOpenPrint(html, filename) {
+  var name = filename || ('MD.Piece-診前報告-' + new Date().toISOString().slice(0, 10) + '.pdf');
+
+  if (typeof window.html2pdf === 'function') {
+    var holder = document.createElement('div');
+    holder.style.position = 'fixed';
+    holder.style.left = '-10000px';
+    holder.style.top = '0';
+    holder.style.width = '794px'; // ~A4 @ 96dpi，避免行動裝置寬度太窄影響排版
+    holder.innerHTML = html;
+    document.body.appendChild(holder);
+    var target = holder.querySelector('body') ? holder : holder;
+    var opt = {
+      margin:       [10, 10, 12, 10],
+      filename:     name,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['css', 'legacy'] }
+    };
+    window.html2pdf().set(opt).from(target).save()
+      .then(function() {
+        document.body.removeChild(holder);
+        if (typeof showToast === 'function') showToast('PDF 已下載', 'success');
+      })
+      .catch(function(err) {
+        try { document.body.removeChild(holder); } catch (e) {}
+        console.error('html2pdf failed:', err);
+        previsitFallbackPrint(html);
+      });
     return;
   }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  // 等資源載入再開列印對話框
-  w.onload = function() {
+
+  previsitFallbackPrint(html);
+}
+
+// 備援：把 HTML 塞進隱藏 iframe，再呼叫 iframe 的 print()。
+// 比 window.open 更不容易被擋（PWA 獨立模式也可用），使用者再選「另存為 PDF」。
+function previsitFallbackPrint(html) {
+  var iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  var doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  var done = false;
+  function doPrint() {
+    if (done) return;
+    done = true;
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('列印失敗，請改用「複製給醫師」', 'error');
+    }
+    // 列印對話框關掉後再回收 iframe
     setTimeout(function() {
-      try { w.focus(); w.print(); } catch (e) {}
-    }, 250);
-  };
+      try { document.body.removeChild(iframe); } catch (e) {}
+    }, 1500);
+  }
+  iframe.onload = function() { setTimeout(doPrint, 250); };
+  // 保險：有些瀏覽器不會觸發 onload
+  setTimeout(doPrint, 800);
 }
 
 function labs() {
@@ -5183,7 +5242,7 @@ function medications() {
     <div class="card">
       <h3><i data-lucide="file-text" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.report.title')}</h3>
       <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">${_T('meds.report.desc')}</p>
-      <div style="display:flex;gap:8px;margin-top:8px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center">
         <select id="report-days" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-glass)">
           <option value="7">${_T('meds.report.days7')}</option>
           <option value="14">${_T('meds.report.days14')}</option>
@@ -5191,6 +5250,12 @@ function medications() {
           <option value="90">${_T('meds.report.days90')}</option>
         </select>
         <button class="primary" onclick="generateMedReport()">${_T('meds.report.generate')}</button>
+        <button id="med-report-word-btn" class="ghost" onclick="downloadMedReport('word')" disabled style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);opacity:.5;cursor:not-allowed">
+          <i data-lucide="file-text" style="width:14px;height:14px"></i> 下載 Word
+        </button>
+        <button id="med-report-pdf-btn" class="ghost" onclick="downloadMedReport('pdf')" disabled style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);opacity:.5;cursor:not-allowed">
+          <i data-lucide="file-down" style="width:14px;height:14px"></i> 下載 PDF
+        </button>
       </div>
       <div id="med-report" style="margin-top:12px"></div>
     </div>`;
@@ -6479,23 +6544,108 @@ function drawAdherenceChart(trend) {
   });
 }
 
+// 暫存最近一次的回診報告，給「下載 Word / PDF」用。
+var _medReportCache = null;
+
+function _medReportSetDownloadEnabled(enabled) {
+  ['med-report-word-btn', 'med-report-pdf-btn'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.style.opacity = enabled ? '1' : '.5';
+    btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+  });
+}
+
 function generateMedReport() {
   var days = document.getElementById("report-days").value;
   document.getElementById("med-report").innerHTML =
     '<div style="text-align:center;padding:30px;color:var(--text-muted)">' +
     '<div class="loading-spinner"></div><p style="margin-top:8px">正在產出回診報告...</p></div>';
+  _medReportCache = null;
+  _medReportSetDownloadEnabled(false);
 
   fetch(API + "/medications/report?patient_id=" + _medsPatientId + "&days=" + days)
     .then(function(r) { return r.json(); })
     .then(function(data) {
+      var md = (data && data.report) || '';
+      _medReportCache = { markdown: md, days: days, generatedAt: new Date() };
       document.getElementById("med-report").innerHTML =
         '<div style="padding:16px;background:var(--bg-glass);border-radius:var(--radius-sm);border:1px solid var(--border-glass)">' +
-        markdownToHtml(data.report) + '</div>';
+        markdownToHtml(md) + '</div>';
+      _medReportSetDownloadEnabled(true);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     })
     .catch(function() {
       document.getElementById("med-report").innerHTML =
         '<p style="color:var(--danger)">報告生成失敗，請稍後再試。</p>';
     });
+}
+
+// 把 cached 的回診報告匯出為 Word（.doc）或 PDF。
+// Word 採 application/msword + HTML 內容：Word/Pages/Google Docs 都能打開，不需額外 library。
+function downloadMedReport(format) {
+  if (!_medReportCache) {
+    if (typeof showToast === 'function') showToast('請先產出報告', 'warning');
+    return;
+  }
+  var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  var fileBase = 'MD.Piece-回診藥物報告-' + new Date().toISOString().slice(0, 10);
+  var bodyHtml = markdownToHtml(_medReportCache.markdown || '');
+  var disclaimer = (typeof PREVISIT_DISCLAIMER_HTML === 'string') ? PREVISIT_DISCLAIMER_HTML : '';
+  var style = ''
+    + '@page { size: A4; margin: 18mm 16mm; }'
+    + 'body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color:#222; line-height:1.75; font-size:14px; }'
+    + 'h1 { font-size:22px; margin:0 0 4px; }'
+    + 'h2 { font-size:16px; margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid #ddd; color:#2a5d8f; }'
+    + 'h3, h4 { font-size:14px; margin:14px 0 6px; color:#2a5d8f; }'
+    + 'p { margin:0 0 10px; }'
+    + 'ul, ol { padding-left:22px; margin:0 0 10px; }'
+    + '.meta { color:#666; font-size:12px; margin-bottom:18px; }'
+    + '.disclaimer { margin-top:24px; padding:12px 14px; border-top:2px solid #d9d9d9; background:#fafafa; font-size:11.5px; color:#555; line-height:1.6; }';
+  var html = ''
+    + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
+    + '<title>MD.Piece 回診藥物報告 ' + dateStr + '</title>'
+    + '<style>' + style + '</style></head><body>'
+    + '<h1>回診藥物報告</h1>'
+    + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：最近 ' + escapeHtml(String(_medReportCache.days)) + ' 天</div>'
+    + '<div>' + bodyHtml + '</div>'
+    + (disclaimer ? '<div class="disclaimer">' + disclaimer + '</div>' : '')
+    + '</body></html>';
+
+  if (format === 'pdf') {
+    if (typeof previsitOpenPrint === 'function') {
+      previsitOpenPrint(html, fileBase + '.pdf');
+    }
+    return;
+  }
+
+  // Word：建立 application/msword blob，副檔名 .doc
+  // 加 MS Office 命名空間 + xml header，Word 才會把它當成正式文件而不是純 HTML
+  var wordHtml = ''
+    + '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+    + 'xmlns:w="urn:schemas-microsoft-com:office:word" '
+    + 'xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"><title>MD.Piece 回診藥物報告</title>'
+    + '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View>'
+    + '<w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->'
+    + '<style>' + style + '</style></head><body>'
+    + '<h1>回診藥物報告</h1>'
+    + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：最近 ' + escapeHtml(String(_medReportCache.days)) + ' 天</div>'
+    + '<div>' + bodyHtml + '</div>'
+    + (disclaimer ? '<div class="disclaimer">' + disclaimer + '</div>' : '')
+    + '</body></html>';
+
+  var blob = new Blob(['﻿', wordHtml], { type: 'application/msword' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = fileBase + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  if (typeof showToast === 'function') showToast('Word 檔已下載', 'success');
 }
 
 // ─── 衛教專欄（書架 / 翻開筆記本 兩層 UI）─────────────────────
