@@ -576,10 +576,14 @@
       if (!el) return;
       const next = el.dataset.theme === 'dark' ? 'light' : 'dark';
       el.dataset.theme = next;
+      const app = document.getElementById('app-wrapper');
+      if (app) app.dataset.theme = next;
       const ico = document.getElementById('tt-icon');
       const lab = document.getElementById('tt-label');
       if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
       if (lab) lab.textContent = next.toUpperCase();
+      const aIco = document.getElementById('att-icon');
+      if (aIco) aIco.textContent = next === 'dark' ? '☾' : '☀';
       try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
       window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
     }
