@@ -3614,6 +3614,12 @@ function calculateBMI() {
 }
 
 function vitals() {
+  // 首次進入時非同步抓使用中的量測提醒計畫（refresh 自動觸發再次渲染）。
+  // 用 flag 避免迴圈：loadMeasurementPlans(true) → showPage('vitals') → 再進 vitals()。
+  if (!window.__vtPlansLoaded) {
+    window.__vtPlansLoaded = true;
+    setTimeout(() => loadMeasurementPlans(true), 0);
+  }
   const tracked = getTrackedMetricIds();
   const allMetrics = getAllMetrics();
   const trackedMetrics = tracked.map(id => allMetrics.find(m => m.id === id)).filter(Boolean);
@@ -3878,6 +3884,282 @@ function cancelMeasurementRequest(reqId) {
     .then(() => loadDoctorMeasurementRequests());
 }
 
+// ─── 量測提醒計畫（病患自報「醫師要求 X 頻率量測」） ──────────
+//
+// 流程：
+//   step 1 → 醫師有沒有請您測量 X？  [是] [否（只追蹤不設提醒）]
+//   step 2 → 選頻率（一天一次 / 兩次 / 三次 / 每週 / 自訂） + 時間
+//   送出 → POST /reminders/measurement-plan，後端展開成多筆 reminders + 一筆 measurement_request
+
+window.__vtPlans = window.__vtPlans || [];
+
+const VT_PLAN_PRESETS = [
+  { id: 'once_daily',   label: '一天一次',          slots: 1, defaults: ['08:00'] },
+  { id: 'twice_daily',  label: '一天兩次（早晚）',  slots: 2, defaults: ['08:00','20:00'] },
+  { id: 'thrice_daily', label: '一天三次（早中晚）',slots: 3, defaults: ['08:00','13:00','20:00'] },
+  { id: 'weekly',       label: '每週一次',          slots: 1, defaults: ['08:00'], weekly: true },
+  { id: 'custom',       label: '自訂時間',          slots: 0, defaults: [] },
+];
+
+function getPlanForMetric(metricId) {
+  return (window.__vtPlans || []).find(p => p.measure_type === metricId);
+}
+
+function loadMeasurementPlans(refresh) {
+  const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return Promise.resolve([]);
+  return fetch(`${API}/reminders/measurement-plan?patient_id=${encodeURIComponent(pid)}`)
+    .then(r => r.ok ? r.json() : { plans: [] })
+    .then(data => {
+      window.__vtPlans = data.plans || [];
+      if (refresh) showPage('vitals');
+      return window.__vtPlans;
+    })
+    .catch(() => { window.__vtPlans = []; return []; });
+}
+
+function openMeasurementPlanDialog(metricId, opts) {
+  const m = findMetric(metricId);
+  if (!m) return;
+  opts = opts || {};
+  const existing = getPlanForMetric(metricId);
+  const skipStep1 = !!opts.skipStep1 || !!existing;
+
+  // 移除舊的 dialog
+  const old = document.getElementById('vt-plan-dialog');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'vt-plan-dialog';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div role="dialog" aria-modal="true" style="background:var(--bg, #fff);color:var(--text, #111);border-radius:14px;max-width:420px;width:100%;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,0.25);max-height:90vh;overflow:auto">
+      <div id="vt-plan-step1" style="display:${skipStep1 ? 'none' : 'block'}">
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:6px">設定量測提醒</div>
+        <h3 style="margin:0 0 12px;font-size:1.1rem">醫師有請您定期測量 <strong>${escapeHtml(m.zh)}</strong> 嗎？</h3>
+        <p style="font-size:0.85rem;color:var(--text-dim);margin:0 0 16px;line-height:1.5">如果醫師有交代，我們可以幫您設定固定提醒並通知醫師端。</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="primary" onclick="vtPlanDialogYes()" style="flex:1;min-width:120px;padding:10px">是，請幫我設定 ✅</button>
+          <button class="secondary" onclick="vtPlanDialogNo('${metricId}')" style="flex:1;min-width:120px;padding:10px">否，只追蹤就好</button>
+        </div>
+        <button onclick="vtPlanDialogClose()" style="margin-top:10px;width:100%;padding:6px;background:transparent;border:none;color:var(--text-muted);font-size:0.85rem;cursor:pointer">取消</button>
+      </div>
+
+      <div id="vt-plan-step2" style="display:${skipStep1 ? 'block' : 'none'}">
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:6px">${existing ? '修改' : '設定'} ${escapeHtml(m.zh)} 提醒</div>
+        <h3 style="margin:0 0 12px;font-size:1.05rem">多久量一次？</h3>
+        <div id="vt-plan-presets" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+          ${VT_PLAN_PRESETS.map((p,i) => `
+            <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--border-glass);border-radius:8px;cursor:pointer">
+              <input type="radio" name="vt-plan-preset" value="${p.id}" ${i === 0 ? 'checked' : ''} onchange="vtPlanPresetChanged('${p.id}')" />
+              <span>${p.label}</span>
+            </label>
+          `).join('')}
+        </div>
+        <div id="vt-plan-times" style="margin-bottom:10px"></div>
+        <div id="vt-plan-weekly" style="display:none;margin-bottom:10px">
+          <div style="font-size:0.85rem;margin-bottom:6px">選擇星期：</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            ${['一','二','三','四','五','六','日'].map((d,i) => `
+              <label style="display:flex;align-items:center;gap:3px;padding:6px 10px;border:1px solid var(--border-glass);border-radius:6px;cursor:pointer;font-size:0.85rem">
+                <input type="checkbox" class="vt-plan-dow" value="${i}" ${i === 0 ? 'checked' : ''} /> ${d}
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="secondary" onclick="vtPlanDialogClose()" style="flex:1;padding:10px">取消</button>
+          <button class="primary" onclick="vtPlanDialogSave('${metricId}', ${existing ? 'true' : 'false'})" style="flex:2;padding:10px">確定 ${existing ? '更新' : '建立'}提醒 🔔</button>
+        </div>
+        ${existing ? `
+          <button onclick="vtPlanDialogCancelExisting('${existing.plan_id}')" style="margin-top:10px;width:100%;padding:6px;background:transparent;border:none;color:#c53030;font-size:0.85rem;cursor:pointer">移除現有提醒</button>
+        ` : ''}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) vtPlanDialogClose(); });
+
+  // 初始化 step2 時間欄
+  if (skipStep1) {
+    const initial = existing
+      ? (VT_PLAN_PRESETS.find(p => p.slots === existing.times.length && (existing.frequency === 'weekly') === !!p.weekly)?.id || 'custom')
+      : 'once_daily';
+    const radio = overlay.querySelector(`input[name="vt-plan-preset"][value="${initial}"]`);
+    if (radio) radio.checked = true;
+    vtPlanPresetChanged(initial, existing ? existing.times : null);
+    if (existing && existing.days_of_week) {
+      overlay.querySelectorAll('.vt-plan-dow').forEach(cb => {
+        cb.checked = existing.days_of_week.includes(parseInt(cb.value, 10));
+      });
+    }
+  }
+}
+
+function vtPlanDialogClose() {
+  const el = document.getElementById('vt-plan-dialog');
+  if (el) el.remove();
+}
+
+function vtPlanDialogYes() {
+  document.getElementById('vt-plan-step1').style.display = 'none';
+  document.getElementById('vt-plan-step2').style.display = 'block';
+  vtPlanPresetChanged('once_daily');
+}
+
+function vtPlanDialogNo(metricId) {
+  // 只追蹤，不設提醒
+  const cur = getTrackedMetricIds();
+  if (!cur.includes(metricId)) setTrackedMetricIds(cur.concat(metricId));
+  vtPlanDialogClose();
+  showPage('vitals');
+}
+
+function vtPlanPresetChanged(presetId, prefillTimes) {
+  const preset = VT_PLAN_PRESETS.find(p => p.id === presetId);
+  if (!preset) return;
+  const wkly = document.getElementById('vt-plan-weekly');
+  if (wkly) wkly.style.display = preset.weekly ? 'block' : 'none';
+  const timesEl = document.getElementById('vt-plan-times');
+  if (!timesEl) return;
+
+  let times = prefillTimes && prefillTimes.length ? prefillTimes.slice() : preset.defaults.slice();
+  if (presetId === 'custom' && times.length === 0) times = ['08:00'];
+
+  const renderTimes = () => {
+    timesEl.innerHTML = `
+      <div style="font-size:0.85rem;margin-bottom:6px">提醒時間：</div>
+      <div id="vt-plan-time-list" style="display:flex;flex-direction:column;gap:6px">
+        ${times.map((t, idx) => `
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="time" class="vt-plan-time" value="${t}" data-idx="${idx}" style="flex:1;padding:6px;border:1px solid var(--border-glass);border-radius:6px" />
+            ${presetId === 'custom' && times.length > 1 ? `<button type="button" onclick="vtPlanRemoveTime(${idx})" style="padding:4px 8px;background:transparent;border:1px solid var(--border-glass);border-radius:6px;cursor:pointer">×</button>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      ${presetId === 'custom' && times.length < 6 ? `
+        <button type="button" onclick="vtPlanAddTime()" style="margin-top:6px;padding:6px 10px;background:transparent;border:1px dashed var(--border-glass);border-radius:6px;cursor:pointer;font-size:0.85rem">+ 加一個時間</button>
+      ` : ''}
+    `;
+  };
+  // 暫存目前 preset，供 add/remove 用
+  window.__vtPlanCurrent = { presetId, times };
+  renderTimes();
+}
+
+function vtPlanAddTime() {
+  const cur = window.__vtPlanCurrent;
+  if (!cur || cur.presetId !== 'custom') return;
+  // 抓現有 input 值
+  document.querySelectorAll('.vt-plan-time').forEach((el, i) => {
+    cur.times[i] = el.value || cur.times[i];
+  });
+  cur.times.push('12:00');
+  vtPlanPresetChanged('custom', cur.times);
+}
+
+function vtPlanRemoveTime(idx) {
+  const cur = window.__vtPlanCurrent;
+  if (!cur || cur.presetId !== 'custom') return;
+  document.querySelectorAll('.vt-plan-time').forEach((el, i) => {
+    cur.times[i] = el.value || cur.times[i];
+  });
+  cur.times.splice(idx, 1);
+  if (cur.times.length === 0) cur.times = ['08:00'];
+  vtPlanPresetChanged('custom', cur.times);
+}
+
+function vtPlanDialogSave(metricId, isUpdate) {
+  const m = findMetric(metricId);
+  if (!m) return;
+  const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) { alert('找不到病患 ID，請重新登入'); return; }
+
+  const presetRadio = document.querySelector('input[name="vt-plan-preset"]:checked');
+  const presetId = presetRadio ? presetRadio.value : 'once_daily';
+  const preset = VT_PLAN_PRESETS.find(p => p.id === presetId);
+
+  const times = Array.from(document.querySelectorAll('.vt-plan-time'))
+    .map(el => el.value).filter(Boolean);
+  if (!times.length) { alert('請至少設定一個時間'); return; }
+
+  let days_of_week = null;
+  if (preset.weekly) {
+    days_of_week = Array.from(document.querySelectorAll('.vt-plan-dow:checked')).map(cb => parseInt(cb.value, 10));
+    if (!days_of_week.length) { alert('請至少選一個星期'); return; }
+  }
+
+  // 把每個時間換算成「下一次該觸發的 UTC ISO 字串」
+  const scheduled_dates = times.map(t => nextOccurrenceUtcIso(t, days_of_week));
+
+  const measure_type = m.id;
+  const measure_label = m.zh;
+
+  const body = {
+    patient_id: pid,
+    measure_type,
+    measure_label,
+    frequency_preset: presetId,
+    times,
+    scheduled_dates,
+    days_of_week,
+    doctor_requested: true,
+    note: null,
+  };
+
+  // 若是更新：先停用舊計畫
+  const existing = getPlanForMetric(metricId);
+  const promise = (isUpdate && existing)
+    ? fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(existing.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' }).catch(() => null)
+    : Promise.resolve();
+
+  promise.then(() => fetch(`${API}/reminders/measurement-plan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })).then(r => r.ok ? r.json() : Promise.reject(r))
+    .then(() => {
+      // 確保 metric 在追蹤清單
+      const cur = getTrackedMetricIds();
+      if (!cur.includes(metricId)) setTrackedMetricIds(cur.concat(metricId));
+      vtPlanDialogClose();
+      loadMeasurementPlans(true);
+      if (typeof showToast === 'function') showToast(`已設定 ${m.zh} 提醒 🔔`, 'success');
+    })
+    .catch(() => alert('建立提醒失敗，請稍後再試。'));
+}
+
+function vtPlanDialogCancelExisting(planId) {
+  if (!confirm('確定要移除這個提醒嗎？')) return;
+  const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(planId)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
+    .then(() => {
+      vtPlanDialogClose();
+      loadMeasurementPlans(true);
+      if (typeof showToast === 'function') showToast('已移除提醒', 'success');
+    });
+}
+
+/** 給定 HH:MM（使用者本地時區），算出最近一次未來觸發時間的 UTC ISO 字串。
+ *  weekly 模式還需考慮 days_of_week。 */
+function nextOccurrenceUtcIso(hhmm, days_of_week) {
+  const [h, m] = hhmm.split(':').map(n => parseInt(n, 10));
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(h, m, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  if (days_of_week && days_of_week.length) {
+    // JS: getDay() 0=Sun..6=Sat；我們的 days 0=Mon..6=Sun
+    const toOurs = (jsDay) => (jsDay + 6) % 7;
+    for (let i = 0; i < 8; i++) {
+      if (days_of_week.includes(toOurs(target.getDay()))) break;
+      target.setDate(target.getDate() + 1);
+    }
+  }
+  return target.toISOString();
+}
+
 function renderVitalSnapshotCard(m) {
   const latest = getLatestEntry(m.id);
   let valDisplay, timeStr = '尚無紀錄', isBmi = m.id === 'bmi';
@@ -3906,6 +4188,22 @@ function renderVitalSnapshotCard(m) {
   } else {
     valDisplay = `<span class="vt-val sm">—</span>`;
   }
+  const plan = getPlanForMetric(m.id);
+  let planBadge = '';
+  if (plan) {
+    const times = (plan.times || []).join(', ');
+    const freqText = plan.frequency === 'weekly' ? '每週' : '每日';
+    planBadge = `
+      <div style="margin-top:6px;padding:4px 8px;background:rgba(99,179,237,0.15);border-radius:6px;font-size:0.72rem;color:var(--text-muted);display:flex;align-items:center;gap:4px">
+        <span>🔔 ${freqText} ${times}</span>
+      </div>
+    `;
+  }
+  const planBtn = isBmi ? '' : `
+    <button class="vt-rec-btn" onclick="openMeasurementPlanDialog('${m.id}', { skipStep1: ${plan ? 'true' : 'false'} })" type="button" title="${plan ? '修改提醒' : '設定提醒'}" style="padding:6px 8px;margin-right:4px">
+      🔔
+    </button>
+  `;
   return `
     <div class="vt-snap scc-${m.color}-bd">
       <div class="vt-snap-head">
@@ -3915,11 +4213,15 @@ function renderVitalSnapshotCard(m) {
       <div class="vt-snap-body">
         ${valDisplay}
       </div>
+      ${planBadge}
       <div class="vt-snap-foot">
         <span class="vt-snap-time">${timeStr}</span>
-        <button class="vt-rec-btn" onclick="openVitalLog('${m.id}')" type="button">
-          ${isBmi ? '計算' : '記一筆'}
-        </button>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${planBtn}
+          <button class="vt-rec-btn" onclick="openVitalLog('${m.id}')" type="button">
+            ${isBmi ? '計算' : '記一筆'}
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -3969,8 +4271,28 @@ function setVitalFilter(v) {
 
 function toggleVitalTracked(id) {
   const cur = getTrackedMetricIds();
-  const next = cur.includes(id) ? cur.filter(x => x !== id) : cur.concat(id);
-  setTrackedMetricIds(next);
+  const turningOn = !cur.includes(id);
+  if (turningOn) {
+    // 開啟追蹤：跳出對話框讓使用者選擇「醫師有沒有要求 + 頻率」。
+    // 對話框內的 vtPlanDialogNo 會把指標加進 tracked 並關閉；
+    // vtPlanDialogSave 會建 plan 並加進 tracked。
+    openMeasurementPlanDialog(id);
+    return;
+  }
+  // 關閉追蹤：若有現存 plan，先確認是否一併取消
+  const plan = getPlanForMetric(id);
+  if (plan) {
+    if (!confirm('要同時移除這個指標的提醒嗎？\n（按取消會保留提醒，只從追蹤清單移除）')) {
+      // 不取消提醒，只移出追蹤清單
+    } else {
+      const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+      if (pid) {
+        fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(plan.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
+          .then(() => loadMeasurementPlans());
+      }
+    }
+  }
+  setTrackedMetricIds(cur.filter(x => x !== id));
   showPage('vitals');
 }
 

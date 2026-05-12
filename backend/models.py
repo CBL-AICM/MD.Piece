@@ -209,6 +209,27 @@ class MeasurementRequestComplete(BaseModel):
     result_value: str | None = None
 
 
+# ─── Patient-initiated measurement reminder plan ──────────
+
+class MeasurementPlanCreate(BaseModel):
+    """病患在 vitals 頁設定的「定期量測提醒」計畫。
+
+    一個 plan 會展開成多筆 reminders（每個時間點一筆，共用同一個 plan_id 當 source_id）。
+    若 doctor_requested=True 且 measure_type 為標準 5 種之一，會同時建一筆
+    measurement_requests 記錄，讓醫師端看到「病患自報醫師要求 X 頻率量測」。
+    """
+    patient_id: str
+    measure_type: str  # bp | glucose | heart_rate | weight | temperature | <custom-id>
+    measure_label: str | None = None  # 顯示用名稱（自訂指標必填，例：尿酸）
+    frequency_preset: str  # once_daily | twice_daily | thrice_daily | weekly | custom
+    times: list[str]  # ["HH:MM", ...] 該日要量測的時間（UTC offset 由前端事先換算為「目標 UTC ISO」）
+    scheduled_dates: list[str] | None = None  # 對應 times[] 的第一次觸發 UTC ISO；若未提供由後端推算
+    days_of_week: list[int] | None = None  # 0=Mon..6=Sun，weekly 才用
+    doctor_requested: bool = True
+    doctor_id: str | None = None
+    note: str | None = None
+
+
 # ─── Custom bell sound metadata ───────────────────────────
 
 class BellSoundCreate(BaseModel):
