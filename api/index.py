@@ -14,7 +14,7 @@ from backend.routers import (
     reports, triage, xiaohe,
     records, research, auth,
     doctor_notes, medication_changes, alerts, labs, diet,
-    debug, drug_search, diseases, reminders,
+    debug, drug_search, diseases, reminders, bell_reminders,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,6 +70,10 @@ app.include_router(medication_changes.router, prefix="/medication-changes", tags
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 app.include_router(labs.router, prefix="/labs", tags=["labs"])
 app.include_router(diet.router, prefix="/diet", tags=["diet"])
+# bell_reminders 註冊順序必須在 reminders 之前：reminders.router 有 /{reminder_id}
+# 這條 catch-all path，若 bell_reminders 排在後面，/reminders/bell-prefs、
+# /reminders/measurement-plan、/reminders/measurement-requests 等具體路徑會被它蓋掉。
+app.include_router(bell_reminders.router, prefix="/reminders", tags=["reminders"])
 app.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 app.include_router(debug.router, prefix="/debug", tags=["debug"])
 
