@@ -5376,15 +5376,10 @@ html[data-mode="standard"] .mode-toggle:hover {
   color: var(--app-chip-text);
 }
 html[data-mode="standard"] .mode-hint {
-  font-family: "JetBrains Mono", "Courier New", monospace;
-  color: var(--app-text-dim);
-  font-size: 0.68rem;
-  letter-spacing: 0.5px;
-}
-html[data-mode="standard"] .mode-hint::before {
-  content: "// ";
-  color: var(--app-term);
-  opacity: 0.7;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.2px;
+  line-height: 1.4;
 }
 
 /* ═══════════════════════════════════════════════════════════
