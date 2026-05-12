@@ -309,6 +309,8 @@
       'meds.report.days30': '最近 30 天',
       'meds.report.days90': '最近 90 天',
       'meds.report.generate': '產出報告',
+      'meds.report.downloadWord': '下載 Word',
+      'meds.report.downloadPdf': '下載 PDF',
 
       // symptoms page
       'sym.stat.days': '累計天數',
@@ -790,6 +792,8 @@
       'meds.report.days30': 'Last 30 days',
       'meds.report.days90': 'Last 90 days',
       'meds.report.generate': 'Generate Report',
+      'meds.report.downloadWord': 'Download Word',
+      'meds.report.downloadPdf': 'Download PDF',
 
       // symptoms page
       'sym.stat.days': 'Days tracked',

@@ -1162,23 +1162,25 @@ function previsitDownload(audience) {
 }
 
 // 共用列印樣式（兩版共用）
+// 全部 selector 都 prefix .pv-pdf-root，避免 html2pdf 產生 PDF 時把
+// <style> 搬到主 document 後污染到使用者正在看的頁面（h1/h2/p 等被覆蓋）。
 var _PV_PDF_STYLE = ''
   + '  @page { size: A4; margin: 18mm 16mm; }'
-  + '  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color: #222; line-height: 1.75; font-size: 14px; }'
-  + '  h1 { font-size: 22px; margin: 0 0 4px; }'
-  + '  .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
-  + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
-  + '  h3 { font-size: 14px; margin: 16px 0 6px; color: #2a5d8f; }'
-  + '  p { margin: 0 0 10px; }'
-  + '  ul, ol { padding-left: 22px; margin: 0 0 10px; }'
-  + '  ul li, ol li { margin-bottom: 6px; }'
-  + '  table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }'
-  + '  table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
-  + '  table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
-  + '  table.stats td span { font-size: 11px; color: #666; }'
-  + '  .disclaimer { margin-top: 28px; padding: 12px 14px; border-top: 2px solid #d9d9d9; background: #fafafa; font-size: 11.5px; color: #555; line-height: 1.6; }'
-  + '  .disclaimer p { margin: 0 0 6px; }'
-  + '  .disclaimer p:last-child { margin: 0; }';
+  + '  .pv-pdf-root { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color: #222; line-height: 1.75; font-size: 14px; background: #fff; }'
+  + '  .pv-pdf-root h1 { font-size: 22px; margin: 0 0 4px; color: #222; }'
+  + '  .pv-pdf-root .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
+  + '  .pv-pdf-root h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
+  + '  .pv-pdf-root h3 { font-size: 14px; margin: 16px 0 6px; color: #2a5d8f; }'
+  + '  .pv-pdf-root p { margin: 0 0 10px; }'
+  + '  .pv-pdf-root ul, .pv-pdf-root ol { padding-left: 22px; margin: 0 0 10px; }'
+  + '  .pv-pdf-root ul li, .pv-pdf-root ol li { margin-bottom: 6px; }'
+  + '  .pv-pdf-root table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }'
+  + '  .pv-pdf-root table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
+  + '  .pv-pdf-root table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
+  + '  .pv-pdf-root table.stats td span { font-size: 11px; color: #666; }'
+  + '  .pv-pdf-root .disclaimer { margin-top: 28px; padding: 12px 14px; border-top: 2px solid #d9d9d9; background: #fafafa; font-size: 11.5px; color: #555; line-height: 1.6; }'
+  + '  .pv-pdf-root .disclaimer p { margin: 0 0 6px; }'
+  + '  .pv-pdf-root .disclaimer p:last-child { margin: 0; }';
 
 function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
   var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -1200,6 +1202,7 @@ function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
     + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
     + '<title>MD.Piece 診前報告（患者版）' + dateStr + '</title>'
     + '<style>' + _PV_PDF_STYLE + '</style></head><body>'
+    + '<div class="pv-pdf-root">'
     + '<h1>診前報告（患者版）</h1>'
     + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：' + escapeHtml(periodLabel) + '</div>'
     + '<h2>本期間紀錄概覽</h2>'
@@ -1209,7 +1212,7 @@ function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
     + '<h2>這次想請醫師確認的事</h2>'
     + checklistHtml
     + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
-    + '</body></html>';
+    + '</div></body></html>';
 }
 
 function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
@@ -1229,6 +1232,7 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
     + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
     + '<title>MD.Piece 診前報告（醫師版）' + dateStr + '</title>'
     + '<style>' + _PV_PDF_STYLE + '</style></head><body>'
+    + '<div class="pv-pdf-root">'
     + '<h1>診前報告（醫師版）</h1>'
     + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：' + escapeHtml(periodLabel) + '</div>'
     + '<h2>本期間紀錄概覽</h2>'
@@ -1236,7 +1240,7 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
     + '<h2>整合摘要</h2>'
     + bodyHtml
     + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
-    + '</body></html>';
+    + '</div></body></html>';
 }
 
 // 把完整 HTML 字串（含 <style>）轉成 .pdf 並觸發下載。
@@ -5284,10 +5288,10 @@ function medications() {
         </select>
         <button class="primary" onclick="generateMedReport()">${_T('meds.report.generate')}</button>
         <button id="med-report-word-btn" class="ghost" onclick="downloadMedReport('word')" disabled style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);opacity:.5;cursor:not-allowed">
-          <i data-lucide="file-text" style="width:14px;height:14px"></i> 下載 Word
+          <i data-lucide="file-text" style="width:14px;height:14px"></i> ${_T('meds.report.downloadWord')}
         </button>
         <button id="med-report-pdf-btn" class="ghost" onclick="downloadMedReport('pdf')" disabled style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);opacity:.5;cursor:not-allowed">
-          <i data-lucide="file-down" style="width:14px;height:14px"></i> 下載 PDF
+          <i data-lucide="file-down" style="width:14px;height:14px"></i> ${_T('meds.report.downloadPdf')}
         </button>
       </div>
       <div id="med-report" style="margin-top:12px"></div>
@@ -6661,25 +6665,29 @@ function downloadMedReport(format) {
   var fileBase = 'MD.Piece-回診藥物報告-' + new Date().toISOString().slice(0, 10);
   var bodyHtml = markdownToHtml(_medReportCache.markdown || '');
   var disclaimer = (typeof PREVISIT_DISCLAIMER_HTML === 'string') ? PREVISIT_DISCLAIMER_HTML : '';
+  // 全部 selector 都 prefix .pv-pdf-root，避免 html2pdf 把 <style> 搬進主
+  // document 時污染到使用者正在看的頁面（同診前報告 PDF 的修法）。
+  // Word 開檔時 .doc 是獨立 document，prefix 無副作用。
   var style = ''
     + '@page { size: A4; margin: 18mm 16mm; }'
-    + 'body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color:#222; line-height:1.75; font-size:14px; }'
-    + 'h1 { font-size:22px; margin:0 0 4px; }'
-    + 'h2 { font-size:16px; margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid #ddd; color:#2a5d8f; }'
-    + 'h3, h4 { font-size:14px; margin:14px 0 6px; color:#2a5d8f; }'
-    + 'p { margin:0 0 10px; }'
-    + 'ul, ol { padding-left:22px; margin:0 0 10px; }'
-    + '.meta { color:#666; font-size:12px; margin-bottom:18px; }'
-    + '.disclaimer { margin-top:24px; padding:12px 14px; border-top:2px solid #d9d9d9; background:#fafafa; font-size:11.5px; color:#555; line-height:1.6; }';
+    + '.pv-pdf-root { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color:#222; line-height:1.75; font-size:14px; background:#fff; }'
+    + '.pv-pdf-root h1 { font-size:22px; margin:0 0 4px; color:#222; }'
+    + '.pv-pdf-root h2 { font-size:16px; margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid #ddd; color:#2a5d8f; }'
+    + '.pv-pdf-root h3, .pv-pdf-root h4 { font-size:14px; margin:14px 0 6px; color:#2a5d8f; }'
+    + '.pv-pdf-root p { margin:0 0 10px; }'
+    + '.pv-pdf-root ul, .pv-pdf-root ol { padding-left:22px; margin:0 0 10px; }'
+    + '.pv-pdf-root .meta { color:#666; font-size:12px; margin-bottom:18px; }'
+    + '.pv-pdf-root .disclaimer { margin-top:24px; padding:12px 14px; border-top:2px solid #d9d9d9; background:#fafafa; font-size:11.5px; color:#555; line-height:1.6; }';
   var html = ''
     + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
     + '<title>MD.Piece 回診藥物報告 ' + dateStr + '</title>'
     + '<style>' + style + '</style></head><body>'
+    + '<div class="pv-pdf-root">'
     + '<h1>回診藥物報告</h1>'
     + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：最近 ' + escapeHtml(String(_medReportCache.days)) + ' 天</div>'
     + '<div>' + bodyHtml + '</div>'
     + (disclaimer ? '<div class="disclaimer">' + disclaimer + '</div>' : '')
-    + '</body></html>';
+    + '</div></body></html>';
 
   if (format === 'pdf') {
     if (typeof previsitOpenPrint === 'function') {
@@ -6698,11 +6706,12 @@ function downloadMedReport(format) {
     + '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View>'
     + '<w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->'
     + '<style>' + style + '</style></head><body>'
+    + '<div class="pv-pdf-root">'
     + '<h1>回診藥物報告</h1>'
     + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：最近 ' + escapeHtml(String(_medReportCache.days)) + ' 天</div>'
     + '<div>' + bodyHtml + '</div>'
     + (disclaimer ? '<div class="disclaimer">' + disclaimer + '</div>' : '')
-    + '</body></html>';
+    + '</div></body></html>';
 
   var blob = new Blob(['﻿', wordHtml], { type: 'application/msword' });
   var url = URL.createObjectURL(blob);
