@@ -133,7 +133,7 @@
 
       'mode.toSenior': '切換為年長版',
       'mode.toNormal': '切換為普通版',
-      'mode.hint': '年長版：放大字體與按鈕、提高對比',
+      'mode.hint': '年長版：放大字體與按鈕、方便老年患者使用',
       'logout.label': '登出',
 
       // topbar

@@ -5281,11 +5281,13 @@ html[data-mode="senior"] .vt-bmi-meta {
   border-color: var(--klein);
 }
 .mode-hint {
-  font-size: 0.72rem;
-  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
   margin-top: 6px;
   line-height: 1.5;
   text-align: center;
+  letter-spacing: 0.2px;
 }
 
 /* ── Logout button ──────────────────────────────────── */
@@ -5359,10 +5361,15 @@ html[data-mode="standard"] .mode-toggle:hover {
   color: var(--app-chip-text);
 }
 html[data-mode="standard"] .mode-hint {
-  color: var(--text-dim);
-  font-size: 0.72rem;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
   letter-spacing: 0.2px;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+/* 深色模式：navy 底色用白字（accent 在深色上反差不夠） */
+#app-wrapper[data-theme="dark"] .mode-hint {
+  color: #FFFFFF;
 }
 
 /* ═══════════════════════════════════════════════════════════
