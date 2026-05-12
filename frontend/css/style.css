@@ -4198,6 +4198,17 @@ html[data-mode="senior"] .vt-bmi-meta {
 .memo-quick-photo  i { color: #B5651D; }
 .memo-quick-upload i { color: #6B8E5A; }
 .memo-quick-text   i { color: #4A6B7B; }
+/* 把檔案 input 藏到視覺外但保留可互動 — display:none 在 iOS standalone PWA
+   會讓 <label> 點擊無法觸發檔案選擇器 */
+.memo-hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
 
 .memo-composer {
   display: flex;

@@ -145,21 +145,23 @@ function memo() {
     </div>
 
     <div class="card memo-quick">
-      <button class="memo-quick-btn memo-quick-photo" onclick="memoStartPhoto()">
+      <label class="memo-quick-btn memo-quick-photo">
+        <input type="file" id="memo-photo-input" accept="image/*" capture="environment" class="memo-hidden-input" onchange="memoOnPhotoPicked(event)" />
         <i data-lucide="camera" style="width:24px;height:24px"></i>
         <div>
           <strong>拍張照片</strong>
           <small>症狀、藥袋、傷口、皮疹…</small>
         </div>
-      </button>
-      <button class="memo-quick-btn memo-quick-upload" onclick="memoStartUpload()">
+      </label>
+      <label class="memo-quick-btn memo-quick-upload">
+        <input type="file" id="memo-upload-input" accept="image/*" class="memo-hidden-input" onchange="memoOnPhotoPicked(event)" />
         <i data-lucide="image-up" style="width:24px;height:24px"></i>
         <div>
           <strong>從相簿上傳</strong>
           <small>挑一張已經拍好的照片</small>
         </div>
-      </button>
-      <button class="memo-quick-btn memo-quick-text" onclick="memoStartText()">
+      </label>
+      <button type="button" class="memo-quick-btn memo-quick-text" onclick="memoStartText()">
         <i data-lucide="message-square-text" style="width:24px;height:24px"></i>
         <div>
           <strong>寫下要說的話</strong>
@@ -167,9 +169,6 @@ function memo() {
         </div>
       </button>
     </div>
-
-    <input type="file" id="memo-photo-input" accept="image/*" capture="environment" style="display:none" onchange="memoOnPhotoPicked(event)" />
-    <input type="file" id="memo-upload-input" accept="image/*" style="display:none" onchange="memoOnPhotoPicked(event)" />
 
     <div class="card memo-composer" id="memo-composer" style="display:none">
       <div class="memo-composer-head">
@@ -236,21 +235,6 @@ function loadMemoPage() {
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
 }
 
-// ── 觸發新增 ──────────────────────────────────────────────
-function memoStartPhoto() {
-  _memoComposeMode = "photo";
-  // 開啟系統相機（capture="environment"）
-  var input = document.getElementById("memo-photo-input");
-  if (input) { input.value = ""; input.click(); }
-}
-
-function memoStartUpload() {
-  _memoComposeMode = "photo";
-  // 開啟相簿/檔案選擇器（無 capture，使用者可挑現有照片）
-  var input = document.getElementById("memo-upload-input");
-  if (input) { input.value = ""; input.click(); }
-}
-
 function memoStartText() {
   _memoComposeMode = "text";
   _memoStagedPhoto = null;
@@ -258,30 +242,50 @@ function memoStartText() {
 }
 
 function memoOnPhotoPicked(ev) {
-  var file = ev.target.files && ev.target.files[0];
+  var input = ev.target;
+  var file = input.files && input.files[0];
+  // 清掉 input.value 讓下次能選到同一檔；要在讀取 file 之後做
+  try { input.value = ""; } catch (e) { /* noop */ }
   if (!file) return;
-  if (!file.type || file.type.indexOf("image/") !== 0) {
+  // iOS HEIC 有時 file.type 是空字串；只在明確不是圖片時擋
+  if (file.type && file.type.indexOf("image/") !== 0) {
     showToast("請選擇圖片檔", "warning");
     return;
   }
+  _memoComposeMode = "photo";
   // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
   memoCompressImage(file, 1280, 0.85).then(function(dataUrl) {
     _memoStagedPhoto = dataUrl;
     memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
-  }).catch(function() {
-    showToast("照片讀取失敗", "error");
+  }).catch(function(err) {
+    console.warn("[memo] compress failed, falling back to raw dataURL", err);
+    // 壓縮失敗（例如 HEIC 無法解碼）：仍用原始 dataURL 存起來，至少不會卡關
+    memoReadAsDataURL(file).then(function(dataUrl) {
+      _memoStagedPhoto = dataUrl;
+      memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
+    }).catch(function() {
+      showToast("照片讀取失敗", "error");
+    });
+  });
+}
+
+function memoReadAsDataURL(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onerror = function() { reject(new Error("read failed")); };
+    reader.onload = function() { resolve(reader.result); };
+    reader.readAsDataURL(file);
   });
 }
 
 function memoCompressImage(file, maxDim, quality) {
   return new Promise(function(resolve, reject) {
-    var reader = new FileReader();
-    reader.onerror = function() { reject(new Error("read failed")); };
-    reader.onload = function() {
+    memoReadAsDataURL(file).then(function(dataUrl) {
       var img = new Image();
       img.onerror = function() { reject(new Error("decode failed")); };
       img.onload = function() {
         var w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { reject(new Error("zero dimensions")); return; }
         var scale = Math.min(1, maxDim / Math.max(w, h));
         var tw = Math.round(w * scale), th = Math.round(h * scale);
         var canvas = document.createElement("canvas");
@@ -291,9 +295,8 @@ function memoCompressImage(file, maxDim, quality) {
         try { resolve(canvas.toDataURL("image/jpeg", quality)); }
         catch (e) { reject(e); }
       };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
+      img.src = dataUrl;
+    }, reject);
   });
 }
 
