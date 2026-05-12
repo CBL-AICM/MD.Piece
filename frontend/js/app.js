@@ -8912,6 +8912,46 @@ var EMOTION_LEVELS = [
   { score: 1, pct:   0, emoji: '😢', label: '沒電',   color: '#C97B7B' },
 ];
 
+// 喜怒哀樂四象限 — 先選情緒類型，下方電池就變成「程度」
+var EMOTION_TYPES = [
+  { id: 'joy',      char: '喜', word: '開心', emoji: '😊', color: '#F4C95D' },
+  { id: 'anger',    char: '怒', word: '生氣', emoji: '😠', color: '#E08070' },
+  { id: 'sorrow',   char: '哀', word: '難過', emoji: '😢', color: '#7A95C2' },
+  { id: 'pleasure', char: '樂', word: '放鬆', emoji: '😌', color: '#90C19D' },
+];
+var _selectedEmotionType = 'joy';
+function _getEmotionType(id) {
+  return EMOTION_TYPES.find(function(t) { return t.id === id; }) || EMOTION_TYPES[0];
+}
+// 把 score (1~5) + 情緒類型 → 白話程度文字
+//   1=不感覺  2=普通  3={word}  4=很{word}  5=非常{word}
+function emotionIntensityText(score, typeId) {
+  var s = Math.max(1, Math.min(5, Math.round(score || 0)));
+  if (s <= 1) return '不感覺';
+  if (s <= 2) return '普通';
+  var t = _getEmotionType(typeId || _selectedEmotionType);
+  if (s <= 3) return t.word;
+  if (s <= 4) return '很' + t.word;
+  return '非常' + t.word;
+}
+function selectEmotionType(typeId) {
+  _selectedEmotionType = typeId;
+  document.querySelectorAll('.mood-quad-btn').forEach(function(el) {
+    el.classList.toggle('is-active', el.getAttribute('data-type') === typeId);
+  });
+  // 重新更新 battery readout 文字（若已選 score）
+  if (_emotionSelected != null) {
+    var lbl = document.getElementById('batt-label');
+    if (lbl) lbl.textContent = emotionIntensityText(_emotionSelected, typeId);
+  }
+  // 啟用送出鈕（選完情緒 + 程度才算完整打卡）
+  _updateEmotionSubmitState();
+}
+function _updateEmotionSubmitState() {
+  var btn = document.getElementById('emotion-submit');
+  if (btn) btn.disabled = (_emotionSelected == null);
+}
+
 function _moodPercent(score) {
   if (score == null) return null;
   // score 1~5 → 0%~100%（線性）
@@ -8978,9 +9018,24 @@ function emotions() {
       '</div>' +
 
       '<div class="emotions-card mood-today">' +
-        '<h3>今天剩多少電？</h3>' +
-        '<p class="batt-hint mood-default-only">手指在電池上滑動，到第幾格就是幾格電</p>' +
-        '<p class="batt-hint mood-senior-only">點下你今天的心情</p>' +
+        '<h3>今天的心情</h3>' +
+
+        // ── 喜怒哀樂四象限 ──
+        '<p class="batt-hint">第 1 步：今天哪一種感覺最強？</p>' +
+        '<div class="mood-quad" id="mood-quad">' +
+          EMOTION_TYPES.map(function(t) {
+            return '<button type="button" class="mood-quad-btn mood-quad-' + t.id + (t.id === _selectedEmotionType ? ' is-active' : '') + '"'
+              + ' data-type="' + t.id + '" style="--em-color:' + t.color + '"'
+              + ' onclick="selectEmotionType(\'' + t.id + '\')">'
+              + '<span class="mood-quad-emoji">' + t.emoji + '</span>'
+              + '<span class="mood-quad-char">' + t.char + '</span>'
+              + '<span class="mood-quad-word">' + t.word + '</span>'
+              + '</button>';
+          }).join('') +
+        '</div>' +
+
+        '<p class="batt-hint mood-default-only">第 2 步：滑動電池選擇程度</p>' +
+        '<p class="batt-hint mood-senior-only">第 2 步：點下你的程度</p>' +
         '<div class="batt-picker mood-default-only" id="batt-picker">' +
           '<div class="batt-shell">' +
             '<div class="batt-body" id="batt-body" role="slider" aria-label="情緒電量" ' +
@@ -9084,9 +9139,10 @@ function selectEmotion(score) {
   var emoji = document.getElementById('batt-emoji');
   var pct = document.getElementById('batt-pct');
   var label = document.getElementById('batt-label');
-  if (emoji) emoji.textContent = lvl.emoji;
+  var t = _getEmotionType(_selectedEmotionType);
+  if (emoji) emoji.textContent = t.emoji;
   if (pct) pct.textContent = lvl.pct + '%';
-  if (label) label.textContent = lvl.label;
+  if (label) label.textContent = emotionIntensityText(s, _selectedEmotionType);
 
   document.querySelectorAll('#mood-senior-picker .mood-senior-btn').forEach(function(b) {
     b.classList.toggle('selected', Number(b.getAttribute('data-score')) === s);
@@ -9181,10 +9237,16 @@ function _initBatteryPicker() {
 }
 
 async function submitEmotion() {
-  if (_emotionSelected == null) { showToast('請先選一個表情', 'warning'); return; }
+  if (_emotionSelected == null) { showToast('請先選程度', 'warning'); return; }
   var pid = getStablePatientId();
   if (!pid) { showToast('請先登入', 'warning'); return; }
-  var note = (document.getElementById('emotion-note').value || '').trim();
+  var noteRaw = (document.getElementById('emotion-note').value || '').trim();
+  // 把選的情緒類型（喜/怒/哀/樂）+ 程度標籤一起塞進 note 開頭，後端
+  // 維持原本 schema（score 1~5 + note 字串），日曆／表格／報告渲染時
+  // 用 [喜][怒][哀][樂] 前綴解析
+  var t = _getEmotionType(_selectedEmotionType);
+  var prefix = '[' + t.char + '] ' + emotionIntensityText(_emotionSelected, _selectedEmotionType);
+  var note = prefix + (noteRaw ? ' · ' + noteRaw : '');
   var btn = document.getElementById('emotion-submit');
   btn.disabled = true;
   btn.innerHTML = '<i data-lucide="loader"></i> 送出中…';

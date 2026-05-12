@@ -235,15 +235,6 @@
 
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
-      <!-- Retro window title bar -->
-      <div class="win-titlebar sidebar-titlebar">
-        <span class="win-titlebar-name">navigator.exe</span>
-        <span class="win-titlebar-controls">
-          <span class="win-btn">─</span>
-          <span class="win-btn">▢</span>
-          <span class="win-btn win-btn-close">✕</span>
-        </span>
-      </div>
       <button class="sidebar-brand" onclick="goHome()" type="button" title="返回首頁">
         <img src="icons/logo-core.jpg" alt="MD.Piece" class="sidebar-logo-img" />
         <h1>MD.Piece</h1>
@@ -347,23 +338,20 @@
         <button class="logout-btn" onclick="logout()" type="button">
           <span class="nav-icon"><i data-lucide="log-out" style="width:16px;height:16px"></i></span>
           <span class="logout-label" data-i18n="logout.label">登出</span>
-          <span class="logout-cmd">$ exit</span>
         </button>
       </div>
     </aside>
 
     <!-- Main content area -->
     <div class="main-content">
-      <div class="topbar win-titlebar">
+      <div class="topbar">
         <button class="hamburger" onclick="toggleSidebar()">☰</button>
         <button class="topbar-back" onclick="goHome()" type="button" title="返回首頁" data-i18n-title="top.backTitle">
           <span class="tb-arrow">←</span>
           <span class="tb-zh" data-i18n="top.back">返回首頁</span>
-          <span class="tb-cd">// cd ..</span>
         </button>
         <span class="topbar-filename">
-          <span class="topbar-prefix">C:\md.piece&gt;</span>
-          <span id="page-title">home</span><span class="topbar-ext">.html</span>
+          <span id="page-title">首頁</span>
         </span>
         <span class="topbar-spacer"></span>
         <button class="app-lang-toggle" id="app-lang-toggle" type="button" onclick="toggleLang()" title="切換語言" data-i18n-title="lang.toggleTitle" aria-label="切換語言" data-i18n-aria-label="lang.toggleTitle">
@@ -375,12 +363,6 @@
         <button class="app-settings-btn" id="app-settings-btn" type="button" onclick="navigateTo('settings', null)" title="系統設定" data-i18n-title="top.settingsTitle" aria-label="系統設定" data-i18n-aria-label="top.settingsTitle">
           <i data-lucide="settings" style="width:16px;height:16px"></i>
         </button>
-        <span class="topbar-version">v2.0</span>
-        <span class="win-titlebar-controls topbar-wincontrols">
-          <span class="win-btn">─</span>
-          <span class="win-btn">▢</span>
-          <span class="win-btn win-btn-close">✕</span>
-        </span>
       </div>
       <main id="app"></main>
     </div>
@@ -772,21 +754,13 @@
     };
 
     function setTopbarPageTitle(page) {
-      const isSenior = document.documentElement.getAttribute('data-mode') === 'senior';
-      const isEn = window.MDPiece_i18n && window.MDPiece_i18n.getLang() === 'en';
       const el = document.getElementById('page-title');
       if (!el) return;
       // Stash the page key so language toggle can re-translate.
       el.setAttribute('data-i18n-page', page);
-      if (isSenior || isEn) {
-        // 年長版 + 英文版都顯示「人類可讀」標題
-        el.textContent = window.MDPiece_i18n
-          ? window.MDPiece_i18n.t('page.' + page)
-          : (pageTitlesSenior[page] || page);
-      } else {
-        // Y2K 檔名風格（中文預設）
-        el.textContent = pageTitles[page] || page;
-      }
+      el.textContent = window.MDPiece_i18n
+        ? window.MDPiece_i18n.t('page.' + page)
+        : (pageTitlesSenior[page] || page);
     }
 
     function navigateTo(page, btn) {
