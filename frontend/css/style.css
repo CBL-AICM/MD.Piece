@@ -9803,6 +9803,24 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   }
   .nav-item .nav-icon { width: 22px; }
   .nav-item .nav-icon svg { width: 20px; height: 20px; }
+  /* 手機 2 欄 grid 下卡片較窄，允許 label/sub 換行避免被切到 */
+  .nav-item .nav-text { width: 100%; min-width: 0; }
+  .nav-item .nav-label {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.25;
+  }
+  .nav-item .nav-sub {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+    opacity: 0.85;
+  }
   .sidebar-foot {
     padding: 10px 14px calc(20px + env(safe-area-inset-bottom));
   }
