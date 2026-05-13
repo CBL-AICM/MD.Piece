@@ -212,6 +212,7 @@ var MEMO_STORE_KEY = "mdpiece_memos_v1";
 var _memoFilter = "all";          // all / doctor / self
 var _memoComposeMode = null;       // "photo" | "text" | null
 var _memoStagedPhoto = null;       // dataURL，等待儲存
+var _memoStagedPhotoObjectUrl = null; // 預覽用 blob: URL（Samsung Internet 對長 data: URL 不穩）
 var _memoEditingId = null;         // 編輯中的 memo id（null 表示新增）
 
 function memoLoad() {
@@ -231,6 +232,7 @@ function loadMemoPage() {
   _memoFilter = "all";
   _memoComposeMode = null;
   _memoStagedPhoto = null;
+  memoRevokeStagedObjectUrl();
   memoRenderList();
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
 }
@@ -283,6 +285,64 @@ function memoOnPhotoPicked(ev) {
 function memoIsValidDataUrl(s) {
   // data:<mime>;base64,<至少幾個 char>
   return typeof s === "string" && s.length > 32 && s.indexOf("data:image/") === 0 && s.indexOf(",") > 0;
+}
+
+// Samsung Internet 對長 data: URL 當 img.src 渲染常常失敗 — 改用 blob: URL 顯示預覽
+function memoDataUrlToBlob(dataUrl) {
+  var comma = dataUrl.indexOf(",");
+  if (comma < 0) throw new Error("invalid dataURL");
+  var header = dataUrl.slice(0, comma);
+  var payload = dataUrl.slice(comma + 1);
+  var mimeMatch = header.match(/data:([^;]+)/);
+  var mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  var bin = header.indexOf(";base64") >= 0 ? atob(payload) : decodeURIComponent(payload);
+  var len = bin.length;
+  var u8 = new Uint8Array(len);
+  for (var i = 0; i < len; i++) u8[i] = bin.charCodeAt(i);
+  return new Blob([u8], { type: mime });
+}
+
+function memoRevokeStagedObjectUrl() {
+  if (_memoStagedPhotoObjectUrl) {
+    try { URL.revokeObjectURL(_memoStagedPhotoObjectUrl); } catch (e) { /* noop */ }
+    _memoStagedPhotoObjectUrl = null;
+  }
+}
+
+function memoRenderStagedPreview() {
+  var preview = document.getElementById("memo-photo-preview");
+  if (!preview) return;
+  memoRevokeStagedObjectUrl();
+  if (!_memoStagedPhoto) {
+    preview.style.display = "none";
+    preview.innerHTML = "";
+    return;
+  }
+  preview.style.display = "block";
+  preview.innerHTML = "";
+  var src;
+  try {
+    var blob = memoDataUrlToBlob(_memoStagedPhoto);
+    _memoStagedPhotoObjectUrl = URL.createObjectURL(blob);
+    src = _memoStagedPhotoObjectUrl;
+  } catch (e) {
+    console.warn("[memo] dataURL→blob failed, fallback to dataURL", e);
+    src = _memoStagedPhoto;
+  }
+  var img = document.createElement("img");
+  img.alt = "預覽";
+  img.onerror = function() {
+    console.warn("[memo] preview img load failed; srcKind =",
+                 src && src.indexOf("blob:") === 0 ? "blob" : "data",
+                 "len =", String(src).length);
+    preview.innerHTML = "";
+    var errBox = document.createElement("div");
+    errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem";
+    errBox.textContent = "預覽載入失敗（仍可儲存）";
+    preview.appendChild(errBox);
+  };
+  img.src = src;
+  preview.appendChild(img);
 }
 
 function memoReadAsDataURL(file) {
@@ -351,29 +411,7 @@ function memoOpenComposer(title, opts) {
   document.getElementById("memo-text").value = "";
   document.getElementById("memo-for-doctor").checked = !!opts.forDoctor;
 
-  var preview = document.getElementById("memo-photo-preview");
-  if (_memoStagedPhoto) {
-    preview.style.display = "block";
-    // 用 DOM API 設 img.src，避免 innerHTML 對長 data: URL 設定 attribute 的潛在問題
-    preview.innerHTML = "";
-    var _previewImg = document.createElement("img");
-    _previewImg.alt = "預覽";
-    _previewImg.onerror = function() {
-      console.warn("[memo] preview img load failed; len =", _previewImg.src.length,
-                   "head =", String(_previewImg.src).slice(0, 60));
-      // 用 textContent 而非 innerHTML，避免把可能有 meta-char 的 src 字串注入 HTML
-      preview.innerHTML = "";
-      var errBox = document.createElement("div");
-      errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem";
-      errBox.textContent = "預覽載入失敗（仍可儲存）— len=" + _previewImg.src.length + " head=" + String(_previewImg.src).slice(0, 30);
-      preview.appendChild(errBox);
-    };
-    _previewImg.src = _memoStagedPhoto;
-    preview.appendChild(_previewImg);
-  } else {
-    preview.style.display = "none";
-    preview.innerHTML = "";
-  }
+  memoRenderStagedPreview();
   box.style.display = "block";
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   setTimeout(function() {
@@ -387,6 +425,7 @@ function memoCancelCompose() {
   _memoComposeMode = null;
   _memoStagedPhoto = null;
   _memoEditingId = null;
+  memoRevokeStagedObjectUrl();
   var box = document.getElementById("memo-composer");
   if (box) box.style.display = "none";
 }
@@ -442,29 +481,7 @@ function memoEdit(id) {
   document.getElementById("memo-text").value = m.text || "";
   document.getElementById("memo-for-doctor").checked = !!m.forDoctor;
 
-  var preview = document.getElementById("memo-photo-preview");
-  if (_memoStagedPhoto) {
-    preview.style.display = "block";
-    // 用 DOM API 設 img.src，避免 innerHTML 對長 data: URL 設定 attribute 的潛在問題
-    preview.innerHTML = "";
-    var _previewImg = document.createElement("img");
-    _previewImg.alt = "預覽";
-    _previewImg.onerror = function() {
-      console.warn("[memo] preview img load failed; len =", _previewImg.src.length,
-                   "head =", String(_previewImg.src).slice(0, 60));
-      // 用 textContent 而非 innerHTML，避免把可能有 meta-char 的 src 字串注入 HTML
-      preview.innerHTML = "";
-      var errBox = document.createElement("div");
-      errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem";
-      errBox.textContent = "預覽載入失敗（仍可儲存）— len=" + _previewImg.src.length + " head=" + String(_previewImg.src).slice(0, 30);
-      preview.appendChild(errBox);
-    };
-    _previewImg.src = _memoStagedPhoto;
-    preview.appendChild(_previewImg);
-  } else {
-    preview.style.display = "none";
-    preview.innerHTML = "";
-  }
+  memoRenderStagedPreview();
   box.style.display = "block";
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   setTimeout(function() {
