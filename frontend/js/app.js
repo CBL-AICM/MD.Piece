@@ -253,8 +253,12 @@ function memoOnPhotoPicked(ev) {
   }
   _memoComposeMode = "photo";
   function resetInput() { try { input.value = ""; } catch (e) { /* noop */ } }
-  // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
-  memoCompressImage(file, 1280, 0.85).then(function(dataUrl) {
+  // HEIC（iPhone 預設格式）多數行動瀏覽器無法解碼，先用 heic2any 轉成 JPEG blob
+  // 再進入既有的壓縮 pipeline。
+  memoMaybeConvertHeic(file).then(function(processedFile) {
+    // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
+    return memoCompressImage(processedFile, 1280, 0.85);
+  }).then(function(dataUrl) {
     if (!memoIsValidDataUrl(dataUrl)) throw new Error("compress produced invalid dataURL");
     _memoStagedPhoto = dataUrl;
     memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
@@ -277,6 +281,52 @@ function memoOnPhotoPicked(ev) {
       showToast("照片讀取失敗", "error");
       resetInput();
     });
+  });
+}
+
+function memoIsHeicFile(file) {
+  if (!file) return false;
+  var t = (file.type || "").toLowerCase();
+  if (t === "image/heic" || t === "image/heif" || t === "image/heic-sequence" || t === "image/heif-sequence") return true;
+  var n = (file.name || "").toLowerCase();
+  return /\.(heic|heif)$/.test(n);
+}
+
+// 延遲載入 heic2any（libheif 的 WASM wrapper），只在實際遇到 HEIC 才下載
+var _memoHeicLibPromise = null;
+function memoLoadHeicLib() {
+  if (typeof window === "undefined") return Promise.reject(new Error("no window"));
+  if (window.heic2any) return Promise.resolve(window.heic2any);
+  if (_memoHeicLibPromise) return _memoHeicLibPromise;
+  _memoHeicLibPromise = new Promise(function(resolve, reject) {
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    s.async = true;
+    s.onload = function() {
+      if (window.heic2any) resolve(window.heic2any);
+      else reject(new Error("heic2any global missing after load"));
+    };
+    s.onerror = function() { reject(new Error("heic2any script load failed")); };
+    document.head.appendChild(s);
+  });
+  return _memoHeicLibPromise;
+}
+
+// 若是 HEIC 就轉成 JPEG blob（包成 File），其餘格式原檔回傳
+function memoMaybeConvertHeic(file) {
+  if (!memoIsHeicFile(file)) return Promise.resolve(file);
+  return memoLoadHeicLib().then(function(heic2any) {
+    return heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+  }).then(function(out) {
+    // heic2any 多影格 HEIC 會回傳 Blob[]，取第一張即可
+    var blob = Array.isArray(out) ? out[0] : out;
+    var name = (file.name || "photo.heic").replace(/\.(heic|heif)$/i, ".jpg");
+    try {
+      return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
+    } catch (e) {
+      // Safari 較舊版本不支援 File constructor — 直接回 Blob 也能被 createImageBitmap 處理
+      return blob;
+    }
   });
 }
 
@@ -343,6 +393,42 @@ function memoCompressImage(file, maxDim, quality) {
     .then(draw);
 }
 
+// 共用：偵測 dataURL 是不是 HEIC（用來決定 placeholder 文案）
+function memoIsHeicDataUrl(s) {
+  if (typeof s !== "string") return false;
+  return /^data:image\/heif?(?:[+;-]|$)/i.test(s);
+}
+
+// 共用：建立預覽用的 <img>，失敗時 swap 成友善 placeholder（不再印 debug 訊息）
+function memoCreatePreviewImg(dataUrl, opts) {
+  opts = opts || {};
+  var className = opts.className || "";
+  var alt = opts.alt || "memo 照片";
+  var img = document.createElement("img");
+  if (className) img.className = className;
+  img.alt = alt;
+  img.onerror = function() {
+    console.warn("[memo] preview img load failed; head =", String(img.src).slice(0, 40));
+    var parent = img.parentNode;
+    if (!parent) return;
+    var ph = document.createElement("div");
+    ph.className = "memo-photo-fallback" + (className ? (" " + className + "-fallback") : "");
+    var icon = document.createElement("div");
+    icon.className = "memo-photo-fallback-icon";
+    icon.textContent = "📷";
+    var msg = document.createElement("div");
+    msg.className = "memo-photo-fallback-msg";
+    msg.textContent = memoIsHeicDataUrl(img.src)
+      ? "HEIC 照片已保存（此瀏覽器無法預覽）"
+      : "照片已保存（無法顯示預覽）";
+    ph.appendChild(icon);
+    ph.appendChild(msg);
+    parent.replaceChild(ph, img);
+  };
+  img.src = dataUrl;
+  return img;
+}
+
 function memoOpenComposer(title, opts) {
   opts = opts || {};
   var box = document.getElementById("memo-composer");
@@ -354,22 +440,8 @@ function memoOpenComposer(title, opts) {
   var preview = document.getElementById("memo-photo-preview");
   if (_memoStagedPhoto) {
     preview.style.display = "block";
-    // 用 DOM API 設 img.src，避免 innerHTML 對長 data: URL 設定 attribute 的潛在問題
     preview.innerHTML = "";
-    var _previewImg = document.createElement("img");
-    _previewImg.alt = "預覽";
-    _previewImg.onerror = function() {
-      console.warn("[memo] preview img load failed; len =", _previewImg.src.length,
-                   "head =", String(_previewImg.src).slice(0, 60));
-      // 用 textContent 而非 innerHTML，避免把可能有 meta-char 的 src 字串注入 HTML
-      preview.innerHTML = "";
-      var errBox = document.createElement("div");
-      errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem";
-      errBox.textContent = "預覽載入失敗（仍可儲存）— len=" + _previewImg.src.length + " head=" + String(_previewImg.src).slice(0, 30);
-      preview.appendChild(errBox);
-    };
-    _previewImg.src = _memoStagedPhoto;
-    preview.appendChild(_previewImg);
+    preview.appendChild(memoCreatePreviewImg(_memoStagedPhoto, { alt: "預覽" }));
   } else {
     preview.style.display = "none";
     preview.innerHTML = "";
@@ -445,22 +517,8 @@ function memoEdit(id) {
   var preview = document.getElementById("memo-photo-preview");
   if (_memoStagedPhoto) {
     preview.style.display = "block";
-    // 用 DOM API 設 img.src，避免 innerHTML 對長 data: URL 設定 attribute 的潛在問題
     preview.innerHTML = "";
-    var _previewImg = document.createElement("img");
-    _previewImg.alt = "預覽";
-    _previewImg.onerror = function() {
-      console.warn("[memo] preview img load failed; len =", _previewImg.src.length,
-                   "head =", String(_previewImg.src).slice(0, 60));
-      // 用 textContent 而非 innerHTML，避免把可能有 meta-char 的 src 字串注入 HTML
-      preview.innerHTML = "";
-      var errBox = document.createElement("div");
-      errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem";
-      errBox.textContent = "預覽載入失敗（仍可儲存）— len=" + _previewImg.src.length + " head=" + String(_previewImg.src).slice(0, 30);
-      preview.appendChild(errBox);
-    };
-    _previewImg.src = _memoStagedPhoto;
-    preview.appendChild(_previewImg);
+    preview.appendChild(memoCreatePreviewImg(_memoStagedPhoto, { alt: "預覽" }));
   } else {
     preview.style.display = "none";
     preview.innerHTML = "";
@@ -489,13 +547,6 @@ function memoOpenLightbox(id) {
   var existing = document.getElementById("memo-lightbox");
   if (existing) existing.remove();
 
-  var bodyHtml = "";
-  if (m.photo) {
-    bodyHtml += '<img class="memo-lb-photo" src="' + m.photo + '" alt="memo 照片" />';
-  }
-  if (m.text) {
-    bodyHtml += '<div class="memo-lb-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
-  }
   var pill = m.forDoctor
     ? '<span class="memo-pill memo-pill-doctor"><i data-lucide="stethoscope" style="width:12px;height:12px"></i> 給醫師</span>'
     : '<span class="memo-pill memo-pill-self"><i data-lucide="user" style="width:12px;height:12px"></i> 自己</span>';
@@ -505,6 +556,7 @@ function memoOpenLightbox(id) {
   overlay.className = "memo-lightbox-overlay";
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
+  // 先建立 shell，照片用 DOM API append（避免 innerHTML 解析長 data: URL）
   overlay.innerHTML =
     '<div class="memo-lightbox-card" onclick="event.stopPropagation()">' +
       '<div class="memo-lightbox-meta">' +
@@ -514,8 +566,18 @@ function memoOpenLightbox(id) {
           '<i data-lucide="x" style="width:18px;height:18px"></i>' +
         '</button>' +
       '</div>' +
-      '<div class="memo-lightbox-body">' + bodyHtml + '</div>' +
+      '<div class="memo-lightbox-body"></div>' +
     '</div>';
+  var lbBody = overlay.querySelector(".memo-lightbox-body");
+  if (m.photo && lbBody) {
+    lbBody.appendChild(memoCreatePreviewImg(m.photo, { className: "memo-lb-photo" }));
+  }
+  if (m.text && lbBody) {
+    var t = document.createElement("div");
+    t.className = "memo-lb-text";
+    t.innerHTML = escapeHtml(m.text).replace(/\n/g, "<br>");
+    lbBody.appendChild(t);
+  }
   overlay.addEventListener("click", memoCloseLightbox);
   document.body.appendChild(overlay);
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -619,6 +681,28 @@ function memoRenderList() {
   }).join("");
 
   listEl.innerHTML = html;
+  // 給每張 .memo-photo 補 onerror，無法解碼（多半是 HEIC）時 swap 成 placeholder
+  listEl.querySelectorAll(".memo-photo").forEach(function(img) {
+    img.onerror = function() {
+      var src = String(img.src || "");
+      console.warn("[memo] list img load failed; head =", src.slice(0, 40));
+      var parent = img.parentNode;
+      if (!parent) return;
+      var ph = document.createElement("div");
+      ph.className = "memo-photo-fallback memo-photo-fallback-inline";
+      var icon = document.createElement("div");
+      icon.className = "memo-photo-fallback-icon";
+      icon.textContent = "📷";
+      var msg = document.createElement("div");
+      msg.className = "memo-photo-fallback-msg";
+      msg.textContent = memoIsHeicDataUrl(src)
+        ? "HEIC 照片（此瀏覽器無法預覽）"
+        : "照片無法顯示";
+      ph.appendChild(icon);
+      ph.appendChild(msg);
+      parent.replaceChild(ph, img);
+    };
+  });
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
