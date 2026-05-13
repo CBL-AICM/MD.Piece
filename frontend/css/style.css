@@ -9147,6 +9147,17 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   position: relative;
   z-index: 1;
 }
+.memo-version-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-family: ui-monospace,Menlo,monospace;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,250,240,0.7);
+  letter-spacing: 0.5px;
+}
 .page-app-hero-bar {
   height: 8px;
   background: rgba(31,61,88,0.25);

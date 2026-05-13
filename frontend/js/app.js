@@ -141,7 +141,7 @@ function memo() {
         <span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 僅存本裝置 · 醫療決策請以醫師為主</span>
       </div>
       <div class="page-app-hero-title">${_todayCount > 0 ? `今天記了 ${_todayCount} 筆 · 標記給醫師 ${_doctorCount} 筆` : '今天還沒記東西 — 想到就丟一筆吧'}</div>
-      <div class="page-app-hero-meta">隨手拍症狀／藥袋／傷口，或寫下下次門診要跟醫師說的事</div>
+      <div class="page-app-hero-meta">隨手拍症狀／藥袋／傷口，或寫下下次門診要跟醫師說的事 <span class="memo-version-tag">${MEMO_VERSION_TAG}</span></div>
     </div>
 
     <div class="card memo-quick">
@@ -290,9 +290,14 @@ function memoIsValidDataUrl(s) {
   return typeof s === "string" && s.length > 32 && s.indexOf("data:image/") === 0 && s.indexOf(",") > 0;
 }
 
-// Samsung Internet PWA 上把長 data:/blob: URL 丟進 <img>（不管是 attribute 還是 .src）
-// 都會破圖。乾脆完全跳過 <img> 與 URL 載入：把 JPEG bytes 用 createImageBitmap 解碼，
-// 直接畫到 <canvas> 上插入 DOM。
+// Samsung Internet PWA 上把長 data:/blob: URL 丟進 <img> 都會破圖。多策略 fallback：
+// 1) 直接用 compose 階段已經畫好的 canvas（最穩，零 URL 載入）
+// 2) dataURL → Blob → createImageBitmap → drawImage 到新 canvas
+// 3) dataURL → Blob → Object URL → <img>
+// 4) dataURL → <img>
+// 任一條成功就停；全部掛掉時把每條路的結果 / 錯誤展示在 UI 上方便診斷。
+var MEMO_VERSION_TAG = "v88-multi-fallback";
+
 function memoDataUrlToBlob(dataUrl) {
   var comma = dataUrl.indexOf(",");
   if (comma < 0) throw new Error("invalid dataURL");
@@ -307,75 +312,151 @@ function memoDataUrlToBlob(dataUrl) {
   return new Blob([u8], { type: mime });
 }
 
-// 把 dataURL 解成 Blob，再用 createImageBitmap 解碼，最後 drawImage 到一張 canvas 上。
-// 找不到 createImageBitmap 時退回 Object URL → Image 載入後再畫。
-// 給 className 是為了沿用既有的 CSS（memo-photo / memo-lb-photo / memo-preview-canvas）。
-function memoBuildPhotoCanvas(dataUrl, className) {
-  return new Promise(function(resolve, reject) {
-    var blob;
-    try { blob = memoDataUrlToBlob(dataUrl); }
-    catch (e) { reject(e); return; }
-
-    function drawAndResolve(source, w, h) {
-      var canvas = document.createElement("canvas");
-      if (className) canvas.className = className;
-      canvas.width = w; canvas.height = h;
-      canvas.getContext("2d").drawImage(source, 0, 0);
-      resolve(canvas);
-    }
-
-    if (typeof createImageBitmap === "function") {
-      createImageBitmap(blob).then(function(bm) {
-        drawAndResolve(bm, bm.width, bm.height);
-      }).catch(function(e) {
-        // 退路：Object URL → <img>，但仍 draw 到 canvas（不把 <img> 留在 DOM）
-        memoLoadImageViaObjectUrl(blob).then(function(loaded) {
-          drawAndResolve(loaded.img, loaded.w, loaded.h);
-        }).catch(reject);
-      });
-    } else {
-      memoLoadImageViaObjectUrl(blob).then(function(loaded) {
-        drawAndResolve(loaded.img, loaded.w, loaded.h);
-      }).catch(reject);
-    }
-  });
-}
-
-function memoLoadImageViaObjectUrl(blob) {
-  return new Promise(function(resolve, reject) {
-    var url = URL.createObjectURL(blob);
-    var img = new Image();
-    img.onload = function() {
-      var w = img.naturalWidth, h = img.naturalHeight;
-      URL.revokeObjectURL(url);
-      if (!w || !h) { reject(new Error("zero dimensions")); return; }
-      resolve({ img: img, w: w, h: h });
-    };
-    img.onerror = function() {
-      URL.revokeObjectURL(url);
-      reject(new Error("image load failed"));
-    };
-    img.src = url;
-  });
-}
-
-// 把 photo（dataURL）非同步畫到 container 內。失敗顯示 fallback 文字。
-function memoMountPhoto(container, dataUrl, className) {
+// container: 目標 DOM；dataUrl: 圖片 dataURL；className: 套 CSS；preBuiltCanvas: 可選，已畫好的 canvas
+function memoMountPhoto(container, dataUrl, className, preBuiltCanvas) {
   if (!container) return;
-  // 先清空，避免重複插入
   while (container.firstChild) container.removeChild(container.firstChild);
-  memoBuildPhotoCanvas(dataUrl, className).then(function(canvas) {
+
+  var diag = { dataUrlLen: dataUrl ? dataUrl.length : 0, attempts: [] };
+  function record(name, ok, info, err) {
+    diag.attempts.push({ name: name, ok: !!ok, info: info || null, err: err == null ? null : String(err && err.message || err) });
+    try { console.log("[memo-diag]", MEMO_VERSION_TAG, name, ok ? "ok" : "FAIL", info || "", err || ""); } catch (_) {}
+  }
+  function done(method) {
+    // 在 container 上記一下哪條路成功了，方便外部查
+    container.setAttribute("data-memo-render-method", method);
+    container.setAttribute("data-memo-render-version", MEMO_VERSION_TAG);
+  }
+  function showDiag() {
     while (container.firstChild) container.removeChild(container.firstChild);
-    container.appendChild(canvas);
-  }).catch(function(e) {
-    console.warn("[memo] mount photo failed", e);
-    while (container.firstChild) container.removeChild(container.firstChild);
-    var errBox = document.createElement("div");
-    errBox.className = "memo-photo-fallback";
-    errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem;text-align:center";
-    errBox.textContent = "預覽載入失敗（資料仍存在）";
-    container.appendChild(errBox);
-  });
+    var box = document.createElement("div");
+    box.className = "memo-photo-fallback";
+    box.style.cssText =
+      "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;" +
+      "color:var(--text-dim);font-size:.72rem;line-height:1.5;text-align:left;" +
+      "font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all";
+    var lines = ["預覽載入失敗 — 試過 " + diag.attempts.length + " 種方法（資料仍存在）"];
+    lines.push("[" + MEMO_VERSION_TAG + "] dataURL len=" + diag.dataUrlLen);
+    diag.attempts.forEach(function(a) {
+      var line = "• " + a.name + ": " + (a.ok ? "ok" : "FAIL");
+      if (a.info) line += " " + JSON.stringify(a.info);
+      if (a.err) line += " — " + a.err;
+      lines.push(line);
+    });
+    box.textContent = lines.join("\n");
+    container.appendChild(box);
+    done("none");
+  }
+
+  // ── 1) pre-built canvas ──
+  if (preBuiltCanvas) {
+    try {
+      if (className) preBuiltCanvas.className = className;
+      container.appendChild(preBuiltCanvas);
+      record("preBuiltCanvas", true, { w: preBuiltCanvas.width, h: preBuiltCanvas.height });
+      done("preBuiltCanvas");
+      return;
+    } catch (e) {
+      record("preBuiltCanvas", false, null, e);
+    }
+  }
+
+  if (!dataUrl) {
+    record("noDataURL", false, null, "no dataURL");
+    showDiag();
+    return;
+  }
+
+  // 共用：把 dataURL 解成 Blob 供 strategy 2/3
+  var blob = null;
+  try {
+    blob = memoDataUrlToBlob(dataUrl);
+    record("dataUrlToBlob", true, { size: blob.size, type: blob.type });
+  } catch (e) {
+    record("dataUrlToBlob", false, null, e);
+  }
+
+  // ── 2) createImageBitmap → canvas ──
+  function tryCreateImageBitmap() {
+    if (!blob) { record("createImageBitmap+canvas", false, null, "no blob"); return tryObjectUrlImg(); }
+    if (typeof createImageBitmap !== "function") { record("createImageBitmap+canvas", false, null, "unsupported"); return tryObjectUrlImg(); }
+    return createImageBitmap(blob).then(function(bm) {
+      try {
+        var canvas = document.createElement("canvas");
+        if (className) canvas.className = className;
+        canvas.width = bm.width; canvas.height = bm.height;
+        canvas.getContext("2d").drawImage(bm, 0, 0);
+        container.appendChild(canvas);
+        record("createImageBitmap+canvas", true, { w: bm.width, h: bm.height });
+        done("createImageBitmap+canvas");
+      } catch (e) {
+        record("createImageBitmap+canvas", false, null, e);
+        return tryObjectUrlImg();
+      }
+    }).catch(function(e) {
+      record("createImageBitmap+canvas", false, null, e);
+      return tryObjectUrlImg();
+    });
+  }
+
+  // ── 3) Object URL → <img> ──
+  function tryObjectUrlImg() {
+    if (!blob) { record("ObjectURL+img", false, null, "no blob"); return tryDataUrlImg(); }
+    return new Promise(function(resolve) {
+      var url;
+      try { url = URL.createObjectURL(blob); }
+      catch (e) { record("ObjectURL+img", false, null, e); resolve(tryDataUrlImg()); return; }
+      var img = new Image();
+      img.onload = function() {
+        if (!img.naturalWidth || !img.naturalHeight) {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+          record("ObjectURL+img", false, null, "zero dimensions");
+          resolve(tryDataUrlImg());
+          return;
+        }
+        if (className) img.className = className;
+        container.appendChild(img);
+        record("ObjectURL+img", true, { w: img.naturalWidth, h: img.naturalHeight });
+        done("ObjectURL+img");
+        resolve();
+        // 不 revoke：img 還在 DOM 用著這個 URL；container 整個被清掉時 GC
+      };
+      img.onerror = function() {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        record("ObjectURL+img", false, null, "img.onerror");
+        resolve(tryDataUrlImg());
+      };
+      img.src = url;
+    });
+  }
+
+  // ── 4) dataURL → <img> ──
+  function tryDataUrlImg() {
+    return new Promise(function(resolve) {
+      var img = new Image();
+      img.onload = function() {
+        if (!img.naturalWidth || !img.naturalHeight) {
+          record("dataURL+img", false, null, "zero dimensions");
+          showDiag();
+          resolve();
+          return;
+        }
+        if (className) img.className = className;
+        container.appendChild(img);
+        record("dataURL+img", true, { w: img.naturalWidth, h: img.naturalHeight });
+        done("dataURL+img");
+        resolve();
+      };
+      img.onerror = function() {
+        record("dataURL+img", false, null, "img.onerror");
+        showDiag();
+        resolve();
+      };
+      img.src = dataUrl;
+    });
+  }
+
+  tryCreateImageBitmap();
 }
 
 function memoRenderStagedPreview() {
@@ -387,15 +468,8 @@ function memoRenderStagedPreview() {
     return;
   }
   preview.style.display = "block";
-  // 新拍照路徑：compress 出來的 canvas 已經畫好，直接放進 DOM（最穩、零等待）
-  if (_memoStagedPhotoCanvas) {
-    var c = _memoStagedPhotoCanvas;
-    c.className = "memo-preview-canvas";
-    preview.appendChild(c);
-    return;
-  }
-  // 編輯既有 memo 路徑：localStorage 只剩 dataURL，重新解碼到 canvas
-  memoMountPhoto(preview, _memoStagedPhoto, "memo-preview-canvas");
+  // 新拍照路徑帶著 pre-built canvas；編輯路徑只有 dataURL
+  memoMountPhoto(preview, _memoStagedPhoto, "memo-preview-canvas", _memoStagedPhotoCanvas);
 }
 
 function memoReadAsDataURL(file) {
