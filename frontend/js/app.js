@@ -814,17 +814,19 @@ function renderPvVisitHero() {
   }
   var d = _daysBetween(iso);
   var pretty = iso.replace(/-/g, '/');
+  var sessFull = (typeof sessionLabel === 'function') ? sessionLabel(loadNextVisitSession()) : '';
+  var sessSuffix = sessFull ? ('（' + sessFull + '）') : '';
   var label, tone, eyebrow;
-  if (d > 0)       { label = '倒數 ' + d + ' 天';        tone = 'upcoming'; eyebrow = '下次回診'; }
-  else if (d === 0){ label = '今天回診';                 tone = 'today';    eyebrow = '今天就是回診日'; }
-  else             { label = '已超過 ' + (-d) + ' 天';   tone = 'past';     eyebrow = '上次回診'; }
+  if (d > 0)       { label = '倒數 ' + d + ' 天' + sessSuffix; tone = 'upcoming'; eyebrow = '下次回診'; }
+  else if (d === 0){ label = '今天回診' + sessSuffix;          tone = 'today';    eyebrow = '今天就是回診日'; }
+  else             { label = '已超過 ' + (-d) + ' 天';         tone = 'past';     eyebrow = '上次回診'; }
   return ''
     + '<div class="pv-visit-hero pv-visit-hero-' + tone + '">'
     +   '<div class="pv-visit-hero-icon"><i data-lucide="calendar-check-2"></i></div>'
     +   '<div class="pv-visit-hero-body">'
     +     '<div class="pv-visit-hero-eyebrow">' + eyebrow + '</div>'
     +     '<div class="pv-visit-hero-title">' + label + '</div>'
-    +     '<div class="pv-visit-hero-sub">日期：' + pretty + '　·　出門前可以先看一下這頁的提醒</div>'
+    +     '<div class="pv-visit-hero-sub">日期：' + pretty + (sessFull ? ('　' + sessFull) : '') + '　·　出門前可以先看一下這頁的提醒</div>'
     +   '</div>'
     +   '<div class="pv-visit-hero-warn"><i data-lucide="info" style="width:12px;height:12px"></i> 以醫師預約單為準</div>'
     + '</div>';
@@ -1961,6 +1963,11 @@ function _nextVisitKey() {
   var pid = u.id_number || u.username || 'guest';
   return 'mdpiece_next_visit_' + pid;
 }
+function _nextVisitSessionKey() {
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var pid = u.id_number || u.username || 'guest';
+  return 'mdpiece_next_visit_session_' + pid;
+}
 function loadNextVisit() {
   try { return localStorage.getItem(_nextVisitKey()) || ''; } catch (e) { return ''; }
 }
@@ -1969,6 +1976,39 @@ function saveNextVisit(iso) {
     if (iso) localStorage.setItem(_nextVisitKey(), iso);
     else     localStorage.removeItem(_nextVisitKey());
   } catch (e) {}
+}
+// 上午診 / 下午診（'am' | 'pm' | ''）。空字串代表使用者未指定診時段。
+function loadNextVisitSession() {
+  try { return _normalizeSession(localStorage.getItem(_nextVisitSessionKey())); }
+  catch (e) { return ''; }
+}
+function saveNextVisitSession(s) {
+  try {
+    var n = _normalizeSession(s);
+    if (n) localStorage.setItem(_nextVisitSessionKey(), n);
+    else   localStorage.removeItem(_nextVisitSessionKey());
+  } catch (e) {}
+}
+function _normalizeSession(s) {
+  if (!s) return '';
+  var v = String(s).toLowerCase();
+  if (v === 'am' || v === 'morning' || v === '上午' || v === '上午診') return 'am';
+  if (v === 'pm' || v === 'afternoon' || v === '下午' || v === '下午診') return 'pm';
+  return '';
+}
+// 回傳完整中文／英文「上午診 / 下午診」標籤（沒設定回 ''）。
+function sessionLabel(s) {
+  var n = _normalizeSession(s);
+  if (n === 'am') return _T('visit.session.am');
+  if (n === 'pm') return _T('visit.session.pm');
+  return '';
+}
+// 短版（沒「診」字），用在 chip / inline 顯示
+function sessionShort(s) {
+  var n = _normalizeSession(s);
+  if (n === 'am') return _T('visit.session.amShort');
+  if (n === 'pm') return _T('visit.session.pmShort');
+  return '';
 }
 function _daysBetween(isoDate) {
   // 以「日」為單位差距，今日 0
@@ -1985,9 +2025,7 @@ function renderNextVisitChip() {
       +   'onclick="openNextVisitEditor()">'
       +   '<i data-lucide="calendar-plus" style="width:14px;height:14px"></i>'
       +   '<span>' + _T('home.visit.set') + '</span>'
-      + '</button>'
-      + '<input type="date" id="home-visit-input" class="home-visit-input" '
-      +   'onchange="onNextVisitChange(this.value)" hidden />';
+      + '</button>';
   }
   var d = _daysBetween(iso);
   var label;
@@ -1996,6 +2034,10 @@ function renderNextVisitChip() {
   else if (d === 0){ label = _T('home.visit.today'); cls += ' home-visit-chip-today'; }
   else             { label = _Tf('home.visit.daysAgo', { n: (-d) }); cls += ' home-visit-chip-past'; }
   var pretty = iso.replace(/-/g, '/').slice(5); // MM/DD
+  var sessShort = sessionShort(loadNextVisitSession());
+  var sessTag = sessShort
+    ? '<span class="home-visit-session" data-session="' + (loadNextVisitSession()) + '">' + escapeHtml(sessShort) + '</span>'
+    : '';
   var doneBtn = (d === 0 || d < 0)
     ? '<button type="button" class="home-visit-done" onclick="markVisitCompleted()" title="' + _T('home.visit.doneTitle') + '">'
       +   '<i data-lucide="check-circle-2" style="width:14px;height:14px"></i>'
@@ -2009,30 +2051,35 @@ function renderNextVisitChip() {
     + '<button type="button" class="' + cls + '" onclick="openNextVisitEditor()" title="' + _T('home.visit.editTitle') + '">'
     +   '<i data-lucide="calendar-check-2" style="width:14px;height:14px"></i>'
     +   '<span>' + _T('home.visit.label') + ' ' + pretty + '</span>'
+    +   sessTag
     +   '<span class="home-visit-countdown">' + label + '</span>'
     + '</button>'
     + doneBtn
     + '<button type="button" class="home-visit-clear" onclick="clearNextVisit()" title="' + _T('home.visit.clearTitle') + '">'
     +   '<i data-lucide="x" style="width:12px;height:12px"></i>'
-    + '</button>'
-    + '<input type="date" id="home-visit-input" class="home-visit-input" '
-    +   'value="' + iso + '" onchange="onNextVisitChange(this.value)" hidden />';
+    + '</button>';
 }
 function openNextVisitEditor() {
-  var inp = document.getElementById('home-visit-input');
-  if (!inp) return;
-  inp.hidden = false;
-  // 開啟原生日期 picker（Chrome 支援；其他瀏覽器至少會 focus）
-  try { inp.showPicker && inp.showPicker(); } catch (e) {}
-  inp.focus();
-}
-function onNextVisitChange(val) {
-  if (!val) return;
-  saveNextVisit(val);
-  refreshNextVisitChip();
+  // 改用自訂 modal（含上午診 / 下午診選擇），不再用原生 date input
+  if (typeof openVisitDatePrompt === 'function') {
+    openVisitDatePrompt({ focus: 'next' });
+  }
 }
 function clearNextVisit() {
   saveNextVisit('');
+  saveNextVisitSession('');
+  // 同步把 visitDates.nextVisit / nextVisitSession 清掉，避免狀態不一致
+  try {
+    if (typeof getVisitDates === 'function' && typeof saveVisitDates === 'function') {
+      var cur = getVisitDates() || {};
+      saveVisitDates({
+        lastVisit: cur.lastVisit || null,
+        lastVisitSession: cur.lastVisitSession || '',
+        nextVisit: '',
+        nextVisitSession: '',
+      });
+    }
+  } catch (e) {}
   refreshNextVisitChip();
 }
 function refreshNextVisitChip() {
@@ -2144,7 +2191,9 @@ async function refreshNavBadges() {
     if (iso) {
       var d2 = _daysBetween(iso);
       if (d2 >= 0 && d2 <= 7) {
-        setBadge('previsit', d2 === 0 ? 'TODAY' : ('D' + d2), 'todo');
+        var sess = (typeof loadNextVisitSession === 'function') ? loadNextVisitSession() : '';
+        var sessSuffix = sess === 'am' ? ' AM' : (sess === 'pm' ? ' PM' : '');
+        setBadge('previsit', (d2 === 0 ? 'TODAY' : ('D' + d2)) + sessSuffix, 'todo');
       } else {
         setBadge('previsit', '');
       }
@@ -2304,11 +2353,13 @@ async function _genAutoTodos() {
     if (visit) {
       var d = _daysBetween(visit);
       if (d >= 0 && d <= 7) {
+        var visitSess = (typeof loadNextVisitSession === 'function') ? loadNextVisitSession() : '';
+        var visitSessLbl = sessionLabel(visitSess);
         out.push({
           id: 'auto-visit',
           source: 'auto-visit', category: 'visit',
-          title: d === 0 ? '今天有回診' : '回診倒數 ' + d + ' 天',
-          desc: '日期：' + visit.replace(/-/g, '/'),
+          title: (d === 0 ? '今天有回診' : '回診倒數 ' + d + ' 天') + (visitSessLbl ? ('（' + visitSessLbl + '）') : ''),
+          desc: '日期：' + visit.replace(/-/g, '/') + (visitSessLbl ? ('　' + visitSessLbl) : ''),
           icon: 'calendar-check-2',
           link: null,
           warn: '請以醫師預約單為準',
@@ -2493,13 +2544,23 @@ function _finalizeVisit(opts) {
   try { localStorage.removeItem('mdpiece_vitals_entries'); } catch (e) {}
 
   // 3. 更新回診日期：lastVisit = 今天、nextVisit = ''
+  //    時段也轉移：原本「下次回診的上午/下午」變成「上次回診」的時段，下次清空
   try {
     var todayIso = new Date().toISOString().slice(0, 10);
+    var curr = (typeof getVisitDates === 'function') ? (getVisitDates() || {}) : {};
+    var perUserSess = (typeof loadNextVisitSession === 'function') ? loadNextVisitSession() : '';
+    var inheritedSession = _normalizeSession(perUserSess || curr.nextVisitSession || '');
     if (typeof saveVisitDates === 'function') {
-      saveVisitDates({ lastVisit: todayIso, nextVisit: '' });
+      saveVisitDates({
+        lastVisit: todayIso,
+        lastVisitSession: inheritedSession,
+        nextVisit: '',
+        nextVisitSession: '',
+      });
     }
   } catch (e) {}
   saveNextVisit('');
+  saveNextVisitSession('');
   refreshNextVisitChip();
 
   // 4. UI 反饋
@@ -2779,6 +2840,7 @@ function symptoms() {
   }
   const topCat = topId ? findSymptomCat(topId) : null;
   const nextVisitDay = v.nextVisit ? Math.ceil((new Date(v.nextVisit) - today) / 86400000) : null;
+  const nextVisitSessShort = v.nextVisit ? sessionShort(v.nextVisitSession) : '';
   const todayStr = today.toISOString().slice(0, 10);
   const todayEntries = stats.entries.filter(e => e.recordedAt.slice(0, 10) === todayStr);
 
@@ -2812,7 +2874,7 @@ function symptoms() {
             <div class="ts-stat">
               <span class="ts-stat-label">${_T('sym.stat.nextVisit')}</span>
               <span class="ts-stat-num">${nextVisitDay !== null ? Math.max(0, nextVisitDay) : '—'}</span>
-              <span class="ts-stat-unit">${nextVisitDay !== null ? 'days' : _T('sym.stat.notSet')}</span>
+              <span class="ts-stat-unit">${nextVisitDay !== null ? ('days' + (nextVisitSessShort ? (' · ' + nextVisitSessShort) : '')) : _T('sym.stat.notSet')}</span>
             </div>
           </div>
           <button class="sym-link-btn" onclick="openVisitDatePrompt()">
@@ -3607,8 +3669,39 @@ function renderPeriodSummary(stats) {
     </ul>
   `;
 }
-function openVisitDatePrompt() {
+function _visitSessionRadioGroup(name, current) {
+  // 三選一 segmented control：不指定 / 上午診 / 下午診
+  const cur = _normalizeSession(current);
+  const opts = [
+    { v: '',   label: _T('visit.session.pickNone') },
+    { v: 'am', label: _T('visit.session.pickAm') },
+    { v: 'pm', label: _T('visit.session.pickPm') },
+  ];
+  return `<div class="visit-modal-session" role="radiogroup" aria-label="${_T('sym.visit.label.session')}">`
+    + opts.map(o => {
+        const checked = (o.v === cur) ? 'checked' : '';
+        const id = name + '-' + (o.v || 'none');
+        return `<label class="visit-modal-session-opt">`
+          + `<input type="radio" name="${name}" id="${id}" value="${o.v}" ${checked} />`
+          + `<span>${o.label}</span>`
+          + `</label>`;
+      }).join('')
+    + `</div>`;
+}
+
+function openVisitDatePrompt(opts) {
+  opts = opts || {};
+  // focus: 'next' 代表只想設下次回診（從首頁 chip 開啟時用），focus: 'last' 反之
+  const focus = opts.focus || 'both';
   const v = getVisitDates();
+  // 同步讀取「per-user 下次回診」與其診時段，優先採用
+  const perUserNext = (typeof loadNextVisit === 'function') ? loadNextVisit() : '';
+  const perUserSession = (typeof loadNextVisitSession === 'function') ? loadNextVisitSession() : '';
+  const initialNext = perUserNext || v.nextVisit || '';
+  const initialNextSession = perUserSession || v.nextVisitSession || '';
+  const initialLast = v.lastVisit || '';
+  const initialLastSession = v.lastVisitSession || '';
+
   // 移除舊的（如果有）
   const old = document.getElementById('visit-date-modal');
   if (old) old.remove();
@@ -3620,6 +3713,8 @@ function openVisitDatePrompt() {
   const appTheme = document.getElementById('app-wrapper')?.dataset.theme || 'light';
   overlay.dataset.theme = appTheme;
   // 注意：日期值用 setAttribute 設定（避免 XSS），不要插值進 innerHTML
+  const showLast = (focus !== 'next');
+  const showNext = (focus !== 'last');
   overlay.innerHTML = `
     <div class="visit-modal" role="dialog" aria-labelledby="visit-modal-title">
       <header class="visit-modal-head">
@@ -3627,16 +3722,26 @@ function openVisitDatePrompt() {
         <button class="visit-modal-close" type="button" aria-label="${_T('sym.visit.close')}">×</button>
       </header>
       <div class="visit-modal-body">
+        ${showLast ? `
         <label class="visit-modal-field">
           <span>${_T('sym.visit.label.last')}</span>
           <input type="date" id="vm-last" />
           <button type="button" class="visit-modal-clear" data-clear="vm-last">${_T('sym.visit.btn.clear')}</button>
         </label>
+        <div class="visit-modal-subfield">
+          <span class="visit-modal-sublabel">${_T('sym.visit.label.session')}</span>
+          ${_visitSessionRadioGroup('vm-last-session', initialLastSession)}
+        </div>` : ''}
+        ${showNext ? `
         <label class="visit-modal-field">
           <span>${_T('sym.visit.label.next')}</span>
           <input type="date" id="vm-next" />
           <button type="button" class="visit-modal-clear" data-clear="vm-next">${_T('sym.visit.btn.clear')}</button>
         </label>
+        <div class="visit-modal-subfield">
+          <span class="visit-modal-sublabel">${_T('sym.visit.label.session')}</span>
+          ${_visitSessionRadioGroup('vm-next-session', initialNextSession)}
+        </div>` : ''}
         <p class="visit-modal-hint">${_T('sym.visit.hint')}</p>
       </div>
       <footer class="visit-modal-foot">
@@ -3647,8 +3752,8 @@ function openVisitDatePrompt() {
   `;
   document.body.appendChild(overlay);
   // 用 .value 賦值，瀏覽器會驗證日期字串、不會被當 HTML 處理
-  overlay.querySelector('#vm-last').value = v.lastVisit || '';
-  overlay.querySelector('#vm-next').value = v.nextVisit || '';
+  if (showLast) overlay.querySelector('#vm-last').value = initialLast;
+  if (showNext) overlay.querySelector('#vm-next').value = initialNext;
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
   const close = () => overlay.remove();
@@ -3656,17 +3761,42 @@ function openVisitDatePrompt() {
   overlay.querySelector('.visit-modal-cancel').onclick = close;
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelectorAll('.visit-modal-clear').forEach(btn => {
-    btn.onclick = () => { document.getElementById(btn.dataset.clear).value = ''; };
+    btn.onclick = () => {
+      document.getElementById(btn.dataset.clear).value = '';
+      // 清掉日期時，同步把該欄位的診時段重置為「不指定」
+      const sessName = btn.dataset.clear + '-session';
+      const noneRadio = overlay.querySelector('input[name="' + sessName + '"][value=""]');
+      if (noneRadio) noneRadio.checked = true;
+    };
   });
+  function readSession(name) {
+    const r = overlay.querySelector('input[name="' + name + '"]:checked');
+    return r ? _normalizeSession(r.value) : '';
+  }
   overlay.querySelector('.visit-modal-save').onclick = () => {
-    const lastVisit = document.getElementById('vm-last').value || null;
-    const nextVisit = document.getElementById('vm-next').value || null;
-    saveVisitDates({ lastVisit, nextVisit });
+    const prev = getVisitDates();
+    const lastVisit = showLast ? (document.getElementById('vm-last').value || null) : (prev.lastVisit || null);
+    const nextVisit = showNext ? (document.getElementById('vm-next').value || null) : (prev.nextVisit || null);
+    const lastVisitSession = showLast ? readSession('vm-last-session') : (prev.lastVisitSession || '');
+    const nextVisitSession = showNext ? readSession('vm-next-session') : (prev.nextVisitSession || '');
+    // 沒設日期就把對應的 session 清掉，避免「日期空但有時段」的怪資料
+    saveVisitDates({
+      lastVisit,
+      nextVisit,
+      lastVisitSession: lastVisit ? lastVisitSession : '',
+      nextVisitSession: nextVisit ? nextVisitSession : '',
+    });
+    // 同步 per-user 下次回診（首頁 chip 用）
+    if (showNext) {
+      saveNextVisit(nextVisit || '');
+      saveNextVisitSession(nextVisit ? nextVisitSession : '');
+    }
     close();
+    if (typeof refreshNextVisitChip === 'function') refreshNextVisitChip();
     // 留在原頁，重新渲染當前頁以反映新日期
     const currentPage = document.getElementById('app')?.getAttribute('data-page') || 'symptoms';
-    const slugToPage = { 'your-pieces': 'pieces', 'symptoms': 'symptoms' };
-    showPage(slugToPage[currentPage] || 'symptoms');
+    const slugToPage = { 'your-pieces': 'pieces', 'symptoms': 'symptoms', 'previsit': 'previsit', 'home': 'home' };
+    if (typeof showPage === 'function') showPage(slugToPage[currentPage] || currentPage);
   };
 }
 
@@ -8370,8 +8500,8 @@ function pieces() {
     + '    <section class="pz-block">\n'
     + '      <h3 class="pz-block-title"><i data-lucide="calendar-clock"></i> 回診日期</h3>\n'
     + '      <ul class="pz-visit">\n'
-    + '        <li><span>上次回診</span><strong>' + piecesFormatDate(s.visitDates.lastVisit) + '</strong></li>\n'
-    + '        <li><span>下次回診</span><strong>' + piecesFormatDate(s.visitDates.nextVisit) + '</strong></li>\n'
+    + '        <li><span>上次回診</span><strong>' + piecesFormatDate(s.visitDates.lastVisit) + (s.visitDates.lastVisitSession ? (' <em class="pz-visit-session">' + escapeHtml(sessionLabel(s.visitDates.lastVisitSession)) + '</em>') : '') + '</strong></li>\n'
+    + '        <li><span>下次回診</span><strong>' + piecesFormatDate(s.visitDates.nextVisit) + (s.visitDates.nextVisitSession ? (' <em class="pz-visit-session">' + escapeHtml(sessionLabel(s.visitDates.nextVisitSession)) + '</em>') : '') + '</strong></li>\n'
     + '      </ul>\n'
     + '      <button class="pz-link-btn" onclick="openVisitDatePrompt()"><i data-lucide="calendar-cog"></i> 設定回診日期</button>\n'
     + '    </section>\n'
@@ -8447,8 +8577,10 @@ function piecesExport() {
   }
   lines.push('Memo：' + s.memoCount + ' 則（' + s.memoForDoctor + ' 則給醫師）');
   lines.push('生理紀錄：' + s.vitalCount + ' 筆');
-  lines.push('上次回診：' + piecesFormatDate(s.visitDates.lastVisit));
-  lines.push('下次回診：' + piecesFormatDate(s.visitDates.nextVisit));
+  var _lastSess = sessionLabel(s.visitDates.lastVisitSession);
+  var _nextSess = sessionLabel(s.visitDates.nextVisitSession);
+  lines.push('上次回診：' + piecesFormatDate(s.visitDates.lastVisit) + (_lastSess ? ('（' + _lastSess + '）') : ''));
+  lines.push('下次回診：' + piecesFormatDate(s.visitDates.nextVisit) + (_nextSess ? ('（' + _nextSess + '）') : ''));
   var text = lines.join('\n');
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function() {
