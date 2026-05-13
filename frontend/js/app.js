@@ -5783,8 +5783,10 @@ function _renderMedCard(med, slotKey, isOther) {
     : 'tapMedTake(\'' + med.id + '\',\'' + slotKey + '\')';
   var cardClass = 'med-card' + (_medsDeleteMode ? ' med-card-deleting' : '');
   return (
-    '<button type="button" class="' + cardClass + '" data-id="' + med.id + '" data-slot="' + slotKey + '"' +
-      ' onclick="' + cardOnClick + '">' +
+    '<div class="' + cardClass + '" data-id="' + med.id + '" data-slot="' + slotKey + '"' +
+      ' role="button" tabindex="0"' +
+      ' onclick="' + cardOnClick + '"' +
+      ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();' + cardOnClick + ';}">' +
       deleteBadge +
       '<div class="med-card-row">' +
         '<div class="med-card-title">' +
@@ -5795,12 +5797,12 @@ function _renderMedCard(med, slotKey, isOther) {
       freq +
       '<div class="med-card-actions" onclick="event.stopPropagation()">' +
         '<span class="med-card-take">' + _T('meds.card.take') + '</span>' +
-        '<button class="med-card-mini med-card-mini-info" onclick="openMedDetail(\'' + med.id + '\')" title="看這顆藥的使用狀況與療效" aria-label="查看詳情"><i data-lucide="bar-chart-3" style="width:13px;height:13px"></i></button>' +
-        '<button class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="' + _T('meds.card.skipTitle') + '">✗</button>' +
-        '<button class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.effectTitle') + '">★</button>' +
-        '<button class="med-card-mini" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)" title="查詢藥物百科（副作用 / 用法 / 衛教）">?</button>' +
+        '<button type="button" class="med-card-mini med-card-mini-info" onclick="openMedDetail(\'' + med.id + '\')" title="看這顆藥的使用狀況與療效" aria-label="查看詳情"><i data-lucide="bar-chart-3" style="width:13px;height:13px"></i></button>' +
+        '<button type="button" class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="' + _T('meds.card.skipTitle') + '">✗</button>' +
+        '<button type="button" class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.effectTitle') + '">★</button>' +
+        '<button type="button" class="med-card-mini" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)" title="查詢藥物百科（副作用 / 用法 / 衛教）">?</button>' +
       '</div>' +
-    '</button>'
+    '</div>'
   );
 }
 
