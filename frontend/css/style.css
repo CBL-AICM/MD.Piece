@@ -3976,18 +3976,27 @@ html[data-mode="senior"] .vt-bmi-meta {
 }
 .med-card-actions {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
   margin-top: 4px;
+  width: 100%;
+  min-width: 0;
 }
 .med-card-take {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 0.85rem;
   color: var(--success);
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .med-card-mini {
   width: 28px; height: 28px;
+  flex: 0 0 28px;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--radius-sm);
   border: 2px solid var(--border-glass);
