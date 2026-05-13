@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v86-memo-preview-objecturl";
+const CACHE_VERSION = "mdpiece-v87-memo-preview-canvas";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -8,7 +8,7 @@ const STATIC_ASSETS = [
   "/css/style.css?v=v80-ui-and-reminders",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v86-memo-preview-objecturl",
+  "/js/app.js?v=v87-memo-preview-canvas",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -46,6 +46,13 @@ self.addEventListener("message", (e) => {
 // Fetch: network-first for API, cache-first for static
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
+
+  // 非 http(s) 請求（blob:、data:、chrome-extension: 等）讓瀏覽器自己處理 —
+  // 有些行動瀏覽器把 blob: 也送進 SW，再丟 fetch() 會出怪事（Samsung Internet PWA
+  // 預覽圖載入失敗就是這個 trap）。
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return;
+  }
 
   // API requests: network first, fallback to cache
   if (url.pathname.startsWith("/api") || url.origin.includes("localhost:8000")) {
