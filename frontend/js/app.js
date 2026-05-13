@@ -244,6 +244,44 @@ function memoStartText() {
   memoOpenComposer("寫下要說的話", { forDoctor: true });
 }
 
+function memoIsHeic(file) {
+  if (!file) return false;
+  var t = (file.type || "").toLowerCase();
+  if (t === "image/heic" || t === "image/heif" || t === "image/heic-sequence" || t === "image/heif-sequence") return true;
+  var name = (file.name || "").toLowerCase();
+  return /\.(heic|heif)$/.test(name);
+}
+
+// Samsung Internet 沒有 HEIC 解碼器 — 從 iPhone 同步來的照片進到這個 picker 會全部炸掉。
+// 解法：lazy-load heic2any（libheif-js wasm wrapper）轉成 JPEG 再走原本 pipeline。
+var _heic2anyLoading = null;
+function memoLoadHeic2Any() {
+  if (typeof window !== "undefined" && window.heic2any) return Promise.resolve(window.heic2any);
+  if (_heic2anyLoading) return _heic2anyLoading;
+  _heic2anyLoading = new Promise(function(resolve, reject) {
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    s.async = true;
+    s.onload = function() {
+      if (window.heic2any) resolve(window.heic2any);
+      else reject(new Error("heic2any loaded but not exposed on window"));
+    };
+    s.onerror = function() { _heic2anyLoading = null; reject(new Error("heic2any script load failed")); };
+    document.head.appendChild(s);
+  });
+  return _heic2anyLoading;
+}
+
+function memoConvertHeicToJpeg(file) {
+  return memoLoadHeic2Any().then(function(heic2any) {
+    return heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+  }).then(function(out) {
+    var blob = Array.isArray(out) ? out[0] : out;
+    var baseName = (file.name || "photo").replace(/\.(heic|heif)$/i, "");
+    return new File([blob], baseName + ".jpg", { type: "image/jpeg" });
+  });
+}
+
 function memoOnPhotoPicked(ev) {
   var input = ev.target;
   var file = input.files && input.files[0];
@@ -256,32 +294,47 @@ function memoOnPhotoPicked(ev) {
   }
   _memoComposeMode = "photo";
   function resetInput() { try { input.value = ""; } catch (e) { /* noop */ } }
-  // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
-  memoCompressImage(file, 1280, 0.85).then(function(result) {
-    if (!memoIsValidDataUrl(result.dataUrl)) throw new Error("compress produced invalid dataURL");
-    _memoStagedPhoto = result.dataUrl;
-    _memoStagedPhotoCanvas = result.canvas || null;
-    memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
-    resetInput();
-  }).catch(function(err) {
-    console.warn("[memo] compress failed, falling back to raw dataURL", err);
-    // 壓縮失敗（例如 HEIC 無法解碼）：仍用原始 dataURL 存起來，至少不會卡關
-    memoReadAsDataURL(file).then(function(dataUrl) {
-      if (!memoIsValidDataUrl(dataUrl)) {
-        console.warn("[memo] raw dataURL also invalid", dataUrl && dataUrl.slice(0, 40));
-        showToast("照片讀取失敗", "error");
-        resetInput();
-        return;
-      }
-      _memoStagedPhoto = dataUrl;
-      _memoStagedPhotoCanvas = null;
+
+  // HEIC（iPhone 預設格式）：Samsung / Chrome / Firefox 都不能直接解，先轉 JPEG
+  var prep;
+  if (memoIsHeic(file)) {
+    showToast("照片是 HEIC 格式，正在轉檔...", "info");
+    prep = memoConvertHeicToJpeg(file).catch(function(err) {
+      console.warn("[memo] HEIC convert failed", err);
+      showToast("HEIC 轉檔失敗 — 請改用 JPEG（iPhone 設定 → 相機 → 格式 → 相容）", "error");
+      throw err;
+    });
+  } else {
+    prep = Promise.resolve(file);
+  }
+
+  prep.then(function(usableFile) {
+    // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
+    return memoCompressImage(usableFile, 1280, 0.85).then(function(result) {
+      if (!memoIsValidDataUrl(result.dataUrl)) throw new Error("compress produced invalid dataURL");
+      _memoStagedPhoto = result.dataUrl;
+      _memoStagedPhotoCanvas = result.canvas || null;
       memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
       resetInput();
-    }).catch(function(e) {
-      console.warn("[memo] raw read failed", e);
-      showToast("照片讀取失敗", "error");
-      resetInput();
+    }).catch(function(err) {
+      console.warn("[memo] compress failed, falling back to raw dataURL", err);
+      // 壓縮失敗：仍用原始 dataURL 存起來，至少不會卡關
+      return memoReadAsDataURL(usableFile).then(function(dataUrl) {
+        if (!memoIsValidDataUrl(dataUrl)) {
+          console.warn("[memo] raw dataURL also invalid", dataUrl && dataUrl.slice(0, 40));
+          showToast("照片讀取失敗", "error");
+          resetInput();
+          return;
+        }
+        _memoStagedPhoto = dataUrl;
+        _memoStagedPhotoCanvas = null;
+        memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
+        resetInput();
+      });
     });
+  }).catch(function(e) {
+    console.warn("[memo] photo prep failed", e);
+    resetInput();
   });
 }
 
@@ -296,7 +349,7 @@ function memoIsValidDataUrl(s) {
 // 3) dataURL → Blob → Object URL → <img>
 // 4) dataURL → <img>
 // 任一條成功就停；全部掛掉時把每條路的結果 / 錯誤展示在 UI 上方便診斷。
-var MEMO_VERSION_TAG = "v88-multi-fallback";
+var MEMO_VERSION_TAG = "v89-heic-convert";
 
 function memoDataUrlToBlob(dataUrl) {
   var comma = dataUrl.indexOf(",");
@@ -374,6 +427,26 @@ function memoMountPhoto(container, dataUrl, className, preBuiltCanvas) {
     record("dataUrlToBlob", true, { size: blob.size, type: blob.type });
   } catch (e) {
     record("dataUrlToBlob", false, null, e);
+  }
+
+  // 既有 HEIC memo（v89 之前 Samsung 上存進去的）：用 heic2any 轉成 JPEG blob 再走後續策略
+  function ensureNonHeicBlobThenContinue() {
+    if (!blob || !/image\/(heic|heif)/i.test(blob.type)) {
+      tryCreateImageBitmap();
+      return;
+    }
+    memoLoadHeic2Any().then(function(heic2any) {
+      return heic2any({ blob: blob, toType: "image/jpeg", quality: 0.85 });
+    }).then(function(out) {
+      var jpegBlob = Array.isArray(out) ? out[0] : out;
+      record("heicConvert", true, { size: jpegBlob.size, type: jpegBlob.type });
+      blob = jpegBlob;
+      tryCreateImageBitmap();
+    }).catch(function(err) {
+      record("heicConvert", false, null, err);
+      // 轉檔失敗仍進入策略 2-4，雖然會掛但診斷面板會把細節秀出來
+      tryCreateImageBitmap();
+    });
   }
 
   // ── 2) createImageBitmap → canvas ──
@@ -456,7 +529,7 @@ function memoMountPhoto(container, dataUrl, className, preBuiltCanvas) {
     });
   }
 
-  tryCreateImageBitmap();
+  ensureNonHeicBlobThenContinue();
 }
 
 function memoRenderStagedPreview() {
