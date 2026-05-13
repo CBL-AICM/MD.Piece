@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v81-bell";
+const CACHE_VERSION = "mdpiece-v84-memo-preview-domapi";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -8,7 +8,7 @@ const STATIC_ASSETS = [
   "/css/style.css?v=v80-ui-and-reminders",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v81-bell",
+  "/js/app.js?v=v84-memo-preview-domapi",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

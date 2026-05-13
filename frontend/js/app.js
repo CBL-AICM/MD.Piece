@@ -354,7 +354,22 @@ function memoOpenComposer(title, opts) {
   var preview = document.getElementById("memo-photo-preview");
   if (_memoStagedPhoto) {
     preview.style.display = "block";
-    preview.innerHTML = '<img src="' + _memoStagedPhoto + '" alt="預覽" />';
+    // 用 DOM API 設 img.src，避免 innerHTML 對長 data: URL 設定 attribute 的潛在問題
+    preview.innerHTML = "";
+    var _previewImg = document.createElement("img");
+    _previewImg.alt = "預覽";
+    _previewImg.onerror = function() {
+      console.warn("[memo] preview img load failed; len =", _previewImg.src.length,
+                   "head =", String(_previewImg.src).slice(0, 60));
+      // 用 textContent 而非 innerHTML，避免把可能有 meta-char 的 src 字串注入 HTML
+      preview.innerHTML = "";
+      var errBox = document.createElement("div");
+      errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem";
+      errBox.textContent = "預覽載入失敗（仍可儲存）— len=" + _previewImg.src.length + " head=" + String(_previewImg.src).slice(0, 30);
+      preview.appendChild(errBox);
+    };
+    _previewImg.src = _memoStagedPhoto;
+    preview.appendChild(_previewImg);
   } else {
     preview.style.display = "none";
     preview.innerHTML = "";
@@ -430,7 +445,22 @@ function memoEdit(id) {
   var preview = document.getElementById("memo-photo-preview");
   if (_memoStagedPhoto) {
     preview.style.display = "block";
-    preview.innerHTML = '<img src="' + _memoStagedPhoto + '" alt="預覽" />';
+    // 用 DOM API 設 img.src，避免 innerHTML 對長 data: URL 設定 attribute 的潛在問題
+    preview.innerHTML = "";
+    var _previewImg = document.createElement("img");
+    _previewImg.alt = "預覽";
+    _previewImg.onerror = function() {
+      console.warn("[memo] preview img load failed; len =", _previewImg.src.length,
+                   "head =", String(_previewImg.src).slice(0, 60));
+      // 用 textContent 而非 innerHTML，避免把可能有 meta-char 的 src 字串注入 HTML
+      preview.innerHTML = "";
+      var errBox = document.createElement("div");
+      errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem";
+      errBox.textContent = "預覽載入失敗（仍可儲存）— len=" + _previewImg.src.length + " head=" + String(_previewImg.src).slice(0, 30);
+      preview.appendChild(errBox);
+    };
+    _previewImg.src = _memoStagedPhoto;
+    preview.appendChild(_previewImg);
   } else {
     preview.style.display = "none";
     preview.innerHTML = "";
