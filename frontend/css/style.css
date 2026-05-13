@@ -4431,6 +4431,31 @@ html[data-mode="senior"] .vt-bmi-meta {
   align-self: flex-start;
   cursor: zoom-in;
 }
+.memo-photo-fallback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 2px dashed var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  background: var(--bg-soft, transparent);
+  font-size: .9rem;
+}
+.memo-photo-fallback-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.memo-photo-fallback-msg {
+  flex: 1;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.memo-photo-fallback-inline {
+  align-self: flex-start;
+  max-width: 100%;
+}
 .memo-text {
   white-space: pre-wrap;
   word-break: break-word;
