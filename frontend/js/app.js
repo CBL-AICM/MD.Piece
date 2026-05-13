@@ -212,7 +212,7 @@ var MEMO_STORE_KEY = "mdpiece_memos_v1";
 var _memoFilter = "all";          // all / doctor / self
 var _memoComposeMode = null;       // "photo" | "text" | null
 var _memoStagedPhoto = null;       // dataURL，等待儲存
-var _memoStagedPhotoObjectUrl = null; // 預覽用 blob: URL（Samsung Internet 對長 data: URL 不穩）
+var _memoStagedPhotoCanvas = null; // 預覽用 canvas（從 compress 留下來；Samsung Internet 上 <img> 對 data:/blob: 都不穩，所以連 URL 載入都不要走）
 var _memoEditingId = null;         // 編輯中的 memo id（null 表示新增）
 
 function memoLoad() {
@@ -232,7 +232,7 @@ function loadMemoPage() {
   _memoFilter = "all";
   _memoComposeMode = null;
   _memoStagedPhoto = null;
-  memoRevokeStagedObjectUrl();
+  _memoStagedPhotoCanvas = null;
   memoRenderList();
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
 }
@@ -240,6 +240,7 @@ function loadMemoPage() {
 function memoStartText() {
   _memoComposeMode = "text";
   _memoStagedPhoto = null;
+  _memoStagedPhotoCanvas = null;
   memoOpenComposer("寫下要說的話", { forDoctor: true });
 }
 
@@ -256,9 +257,10 @@ function memoOnPhotoPicked(ev) {
   _memoComposeMode = "photo";
   function resetInput() { try { input.value = ""; } catch (e) { /* noop */ } }
   // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
-  memoCompressImage(file, 1280, 0.85).then(function(dataUrl) {
-    if (!memoIsValidDataUrl(dataUrl)) throw new Error("compress produced invalid dataURL");
-    _memoStagedPhoto = dataUrl;
+  memoCompressImage(file, 1280, 0.85).then(function(result) {
+    if (!memoIsValidDataUrl(result.dataUrl)) throw new Error("compress produced invalid dataURL");
+    _memoStagedPhoto = result.dataUrl;
+    _memoStagedPhotoCanvas = result.canvas || null;
     memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
     resetInput();
   }).catch(function(err) {
@@ -272,6 +274,7 @@ function memoOnPhotoPicked(ev) {
         return;
       }
       _memoStagedPhoto = dataUrl;
+      _memoStagedPhotoCanvas = null;
       memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
       resetInput();
     }).catch(function(e) {
@@ -287,7 +290,9 @@ function memoIsValidDataUrl(s) {
   return typeof s === "string" && s.length > 32 && s.indexOf("data:image/") === 0 && s.indexOf(",") > 0;
 }
 
-// Samsung Internet 對長 data: URL 當 img.src 渲染常常失敗 — 改用 blob: URL 顯示預覽
+// Samsung Internet PWA 上把長 data:/blob: URL 丟進 <img>（不管是 attribute 還是 .src）
+// 都會破圖。乾脆完全跳過 <img> 與 URL 載入：把 JPEG bytes 用 createImageBitmap 解碼，
+// 直接畫到 <canvas> 上插入 DOM。
 function memoDataUrlToBlob(dataUrl) {
   var comma = dataUrl.indexOf(",");
   if (comma < 0) throw new Error("invalid dataURL");
@@ -302,47 +307,95 @@ function memoDataUrlToBlob(dataUrl) {
   return new Blob([u8], { type: mime });
 }
 
-function memoRevokeStagedObjectUrl() {
-  if (_memoStagedPhotoObjectUrl) {
-    try { URL.revokeObjectURL(_memoStagedPhotoObjectUrl); } catch (e) { /* noop */ }
-    _memoStagedPhotoObjectUrl = null;
-  }
+// 把 dataURL 解成 Blob，再用 createImageBitmap 解碼，最後 drawImage 到一張 canvas 上。
+// 找不到 createImageBitmap 時退回 Object URL → Image 載入後再畫。
+// 給 className 是為了沿用既有的 CSS（memo-photo / memo-lb-photo / memo-preview-canvas）。
+function memoBuildPhotoCanvas(dataUrl, className) {
+  return new Promise(function(resolve, reject) {
+    var blob;
+    try { blob = memoDataUrlToBlob(dataUrl); }
+    catch (e) { reject(e); return; }
+
+    function drawAndResolve(source, w, h) {
+      var canvas = document.createElement("canvas");
+      if (className) canvas.className = className;
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(source, 0, 0);
+      resolve(canvas);
+    }
+
+    if (typeof createImageBitmap === "function") {
+      createImageBitmap(blob).then(function(bm) {
+        drawAndResolve(bm, bm.width, bm.height);
+      }).catch(function(e) {
+        // 退路：Object URL → <img>，但仍 draw 到 canvas（不把 <img> 留在 DOM）
+        memoLoadImageViaObjectUrl(blob).then(function(loaded) {
+          drawAndResolve(loaded.img, loaded.w, loaded.h);
+        }).catch(reject);
+      });
+    } else {
+      memoLoadImageViaObjectUrl(blob).then(function(loaded) {
+        drawAndResolve(loaded.img, loaded.w, loaded.h);
+      }).catch(reject);
+    }
+  });
+}
+
+function memoLoadImageViaObjectUrl(blob) {
+  return new Promise(function(resolve, reject) {
+    var url = URL.createObjectURL(blob);
+    var img = new Image();
+    img.onload = function() {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      URL.revokeObjectURL(url);
+      if (!w || !h) { reject(new Error("zero dimensions")); return; }
+      resolve({ img: img, w: w, h: h });
+    };
+    img.onerror = function() {
+      URL.revokeObjectURL(url);
+      reject(new Error("image load failed"));
+    };
+    img.src = url;
+  });
+}
+
+// 把 photo（dataURL）非同步畫到 container 內。失敗顯示 fallback 文字。
+function memoMountPhoto(container, dataUrl, className) {
+  if (!container) return;
+  // 先清空，避免重複插入
+  while (container.firstChild) container.removeChild(container.firstChild);
+  memoBuildPhotoCanvas(dataUrl, className).then(function(canvas) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+    container.appendChild(canvas);
+  }).catch(function(e) {
+    console.warn("[memo] mount photo failed", e);
+    while (container.firstChild) container.removeChild(container.firstChild);
+    var errBox = document.createElement("div");
+    errBox.className = "memo-photo-fallback";
+    errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem;text-align:center";
+    errBox.textContent = "預覽載入失敗（資料仍存在）";
+    container.appendChild(errBox);
+  });
 }
 
 function memoRenderStagedPreview() {
   var preview = document.getElementById("memo-photo-preview");
   if (!preview) return;
-  memoRevokeStagedObjectUrl();
+  while (preview.firstChild) preview.removeChild(preview.firstChild);
   if (!_memoStagedPhoto) {
     preview.style.display = "none";
-    preview.innerHTML = "";
     return;
   }
   preview.style.display = "block";
-  preview.innerHTML = "";
-  var src;
-  try {
-    var blob = memoDataUrlToBlob(_memoStagedPhoto);
-    _memoStagedPhotoObjectUrl = URL.createObjectURL(blob);
-    src = _memoStagedPhotoObjectUrl;
-  } catch (e) {
-    console.warn("[memo] dataURL→blob failed, fallback to dataURL", e);
-    src = _memoStagedPhoto;
+  // 新拍照路徑：compress 出來的 canvas 已經畫好，直接放進 DOM（最穩、零等待）
+  if (_memoStagedPhotoCanvas) {
+    var c = _memoStagedPhotoCanvas;
+    c.className = "memo-preview-canvas";
+    preview.appendChild(c);
+    return;
   }
-  var img = document.createElement("img");
-  img.alt = "預覽";
-  img.onerror = function() {
-    console.warn("[memo] preview img load failed; srcKind =",
-                 src && src.indexOf("blob:") === 0 ? "blob" : "data",
-                 "len =", String(src).length);
-    preview.innerHTML = "";
-    var errBox = document.createElement("div");
-    errBox.style.cssText = "padding:10px;border:1px dashed var(--border-glass);border-radius:6px;color:var(--text-dim);font-size:.85rem";
-    errBox.textContent = "預覽載入失敗（仍可儲存）";
-    preview.appendChild(errBox);
-  };
-  img.src = src;
-  preview.appendChild(img);
+  // 編輯既有 memo 路徑：localStorage 只剩 dataURL，重新解碼到 canvas
+  memoMountPhoto(preview, _memoStagedPhoto, "memo-preview-canvas");
 }
 
 function memoReadAsDataURL(file) {
@@ -396,7 +449,7 @@ function memoCompressImage(file, maxDim, quality) {
     ctx.fillStyle = "#fff";  // 白底，處理透明 PNG
     ctx.fillRect(0, 0, tw, th);
     ctx.drawImage(loaded.source, 0, 0, tw, th);
-    return canvas.toDataURL("image/jpeg", quality);
+    return { dataUrl: canvas.toDataURL("image/jpeg", quality), canvas: canvas };
   }
   return memoLoadImageBitmap(file)
     .catch(function() { return memoLoadImageFromBlob(file); })
@@ -424,8 +477,8 @@ function memoOpenComposer(title, opts) {
 function memoCancelCompose() {
   _memoComposeMode = null;
   _memoStagedPhoto = null;
+  _memoStagedPhotoCanvas = null;
   _memoEditingId = null;
-  memoRevokeStagedObjectUrl();
   var box = document.getElementById("memo-composer");
   if (box) box.style.display = "none";
 }
@@ -474,6 +527,7 @@ function memoEdit(id) {
   _memoEditingId = id;
   _memoComposeMode = m.photo ? "photo" : "text";
   _memoStagedPhoto = m.photo || null;
+  _memoStagedPhotoCanvas = null; // 編輯模式只有 dataURL，preview 走 createImageBitmap 異步路徑
 
   var box = document.getElementById("memo-composer");
   if (!box) return;
@@ -508,7 +562,7 @@ function memoOpenLightbox(id) {
 
   var bodyHtml = "";
   if (m.photo) {
-    bodyHtml += '<img class="memo-lb-photo" src="' + m.photo + '" alt="memo 照片" />';
+    bodyHtml += '<div class="memo-lb-photo-slot"></div>';
   }
   if (m.text) {
     bodyHtml += '<div class="memo-lb-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
@@ -535,6 +589,10 @@ function memoOpenLightbox(id) {
     '</div>';
   overlay.addEventListener("click", memoCloseLightbox);
   document.body.appendChild(overlay);
+  if (m.photo) {
+    var lbSlot = overlay.querySelector(".memo-lb-photo-slot");
+    if (lbSlot) memoMountPhoto(lbSlot, m.photo, "memo-lb-photo");
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.addEventListener("keydown", _memoLightboxEsc);
 }
@@ -608,7 +666,9 @@ function memoRenderList() {
   var html = filtered.map(function(m) {
     var bodyHtml = "";
     if (m.photo) {
-      bodyHtml += '<img class="memo-photo" src="' + m.photo + '" alt="memo 照片" />';
+      // Samsung Internet 上 <img src=dataURL> 會破圖 — 留空 div 佔位，渲染完 DOM 後再用
+      // memoMountPhoto 把圖畫到 <canvas> 上放進去。
+      bodyHtml += '<div class="memo-photo-slot" data-memo-photo="' + escapeHtml(m.id) + '"></div>';
     }
     if (m.text) {
       bodyHtml += '<div class="memo-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
@@ -636,6 +696,12 @@ function memoRenderList() {
   }).join("");
 
   listEl.innerHTML = html;
+  // DOM 渲染完後把每則 memo 的照片畫到對應 slot 上
+  filtered.forEach(function(m) {
+    if (!m.photo) return;
+    var slot = listEl.querySelector('[data-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
+    if (slot) memoMountPhoto(slot, m.photo, "memo-photo");
+  });
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
