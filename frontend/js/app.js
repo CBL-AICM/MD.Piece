@@ -244,29 +244,45 @@ function memoStartText() {
 function memoOnPhotoPicked(ev) {
   var input = ev.target;
   var file = input.files && input.files[0];
-  // 清掉 input.value 讓下次能選到同一檔；要在讀取 file 之後做
-  try { input.value = ""; } catch (e) { /* noop */ }
   if (!file) return;
   // iOS HEIC 有時 file.type 是空字串；只在明確不是圖片時擋
   if (file.type && file.type.indexOf("image/") !== 0) {
     showToast("請選擇圖片檔", "warning");
+    try { input.value = ""; } catch (e) { /* noop */ }
     return;
   }
   _memoComposeMode = "photo";
+  function resetInput() { try { input.value = ""; } catch (e) { /* noop */ } }
   // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
   memoCompressImage(file, 1280, 0.85).then(function(dataUrl) {
+    if (!memoIsValidDataUrl(dataUrl)) throw new Error("compress produced invalid dataURL");
     _memoStagedPhoto = dataUrl;
     memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
+    resetInput();
   }).catch(function(err) {
     console.warn("[memo] compress failed, falling back to raw dataURL", err);
     // 壓縮失敗（例如 HEIC 無法解碼）：仍用原始 dataURL 存起來，至少不會卡關
     memoReadAsDataURL(file).then(function(dataUrl) {
+      if (!memoIsValidDataUrl(dataUrl)) {
+        console.warn("[memo] raw dataURL also invalid", dataUrl && dataUrl.slice(0, 40));
+        showToast("照片讀取失敗", "error");
+        resetInput();
+        return;
+      }
       _memoStagedPhoto = dataUrl;
       memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
-    }).catch(function() {
+      resetInput();
+    }).catch(function(e) {
+      console.warn("[memo] raw read failed", e);
       showToast("照片讀取失敗", "error");
+      resetInput();
     });
   });
+}
+
+function memoIsValidDataUrl(s) {
+  // data:<mime>;base64,<至少幾個 char>
+  return typeof s === "string" && s.length > 32 && s.indexOf("data:image/") === 0 && s.indexOf(",") > 0;
 }
 
 function memoReadAsDataURL(file) {
@@ -278,26 +294,53 @@ function memoReadAsDataURL(file) {
   });
 }
 
-function memoCompressImage(file, maxDim, quality) {
+// 用 Object URL 載入而不是 FileReader→dataURL→img.src，避免 Samsung Internet
+// 對大型 data URL 處理不穩定造成預覽破圖
+function memoLoadImageFromBlob(file) {
   return new Promise(function(resolve, reject) {
-    memoReadAsDataURL(file).then(function(dataUrl) {
-      var img = new Image();
-      img.onerror = function() { reject(new Error("decode failed")); };
-      img.onload = function() {
-        var w = img.naturalWidth, h = img.naturalHeight;
-        if (!w || !h) { reject(new Error("zero dimensions")); return; }
-        var scale = Math.min(1, maxDim / Math.max(w, h));
-        var tw = Math.round(w * scale), th = Math.round(h * scale);
-        var canvas = document.createElement("canvas");
-        canvas.width = tw; canvas.height = th;
-        var ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, tw, th);
-        try { resolve(canvas.toDataURL("image/jpeg", quality)); }
-        catch (e) { reject(e); }
-      };
-      img.src = dataUrl;
-    }, reject);
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function() {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      URL.revokeObjectURL(url);
+      if (!w || !h) { reject(new Error("zero dimensions")); return; }
+      resolve({ source: img, width: w, height: h });
+    };
+    img.onerror = function() {
+      URL.revokeObjectURL(url);
+      reject(new Error("image load failed"));
+    };
+    img.src = url;
   });
+}
+
+function memoLoadImageBitmap(file) {
+  if (typeof createImageBitmap !== "function") {
+    return Promise.reject(new Error("createImageBitmap not supported"));
+  }
+  var opts;
+  try { opts = { imageOrientation: "from-image" }; } catch (_) { opts = undefined; }
+  return createImageBitmap(file, opts || undefined).then(function(bm) {
+    return { source: bm, width: bm.width, height: bm.height };
+  });
+}
+
+function memoCompressImage(file, maxDim, quality) {
+  function draw(loaded) {
+    var w = loaded.width, h = loaded.height;
+    var scale = Math.min(1, maxDim / Math.max(w, h));
+    var tw = Math.round(w * scale), th = Math.round(h * scale);
+    var canvas = document.createElement("canvas");
+    canvas.width = tw; canvas.height = th;
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";  // 白底，處理透明 PNG
+    ctx.fillRect(0, 0, tw, th);
+    ctx.drawImage(loaded.source, 0, 0, tw, th);
+    return canvas.toDataURL("image/jpeg", quality);
+  }
+  return memoLoadImageBitmap(file)
+    .catch(function() { return memoLoadImageFromBlob(file); })
+    .then(draw);
 }
 
 function memoOpenComposer(title, opts) {
