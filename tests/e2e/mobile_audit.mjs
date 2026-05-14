@@ -45,7 +45,7 @@ const PROFILES = [
   { name: '1366-ipad-pro13-land', width: 1366, height: 1024, ua: 'iPad' },
 ];
 
-const PAGES_TO_TEST = ['home', 'symptoms', 'medications', 'emotions', 'previsit', 'memo', 'vitals'];
+const PAGES_TO_TEST = ['home', 'symptoms', 'medications', 'emotions', 'previsit', 'memo', 'vitals', 'labs'];
 
 const USER_AGENTS = {
   iPhone:  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',

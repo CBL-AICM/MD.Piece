@@ -1,11 +1,11 @@
-const CACHE_VERSION = "mdpiece-v89-memo-heic-convert";
+const CACHE_VERSION = "mdpiece-v90-labs-form-mobile";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v80-ui-and-reminders",
+  "/css/style.css?v=v90-labs-form-mobile",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
   "/js/app.js?v=v89-memo-heic-convert",
