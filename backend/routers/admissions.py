@@ -120,7 +120,7 @@ def create_admission(body: AdmissionCreate):
         result = sb.table("admissions").insert(data).execute()
     except Exception as e:
         logger.error(f"Create admission failed: {e}")
-        raise HTTPException(status_code=400, detail=f"新增住院/療程失敗：{e}")
+        raise HTTPException(status_code=400, detail="新增住院/療程失敗")
     if not result.data:
         raise HTTPException(status_code=400, detail="新增失敗（資料庫未回傳資料）")
     return result.data[0]
@@ -172,7 +172,7 @@ def add_admission_medication(body: AdmissionMedicationCreate):
         result = sb.table("admission_medications").insert(data).execute()
     except Exception as e:
         logger.error(f"Add admission medication failed: {e}")
-        raise HTTPException(status_code=400, detail=f"新增療程藥物失敗：{e}")
+        raise HTTPException(status_code=400, detail="新增療程藥物失敗")
     return result.data[0]
 
 
@@ -253,7 +253,7 @@ def record_dose(admission_medication_id: str, body: DoseRecord):
         result = sb.table("admission_medication_doses").insert(dose_row).execute()
     except Exception as e:
         logger.error(f"Record dose failed: {e}")
-        raise HTTPException(status_code=400, detail=f"記錄施打失敗：{e}")
+        raise HTTPException(status_code=400, detail="記錄施打失敗")
 
     update = {"last_given_at": given_at}
     if body.next_due_date:
