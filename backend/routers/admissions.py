@@ -22,6 +22,28 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _ensure_patient_exists(sb, patient_id: str) -> None:
+    """
+    確保 patients 表裡有對應的 row，避免 admissions.patient_id FK 失敗。
+    與 medications.py 同 pattern：找不到就用 users.nickname 建 stub，
+    再不行就用 "訪客"。
+    """
+    try:
+        existing = sb.table("patients").select("id").eq("id", patient_id).limit(1).execute()
+        if existing.data:
+            return
+        name = "訪客"
+        try:
+            u = sb.table("users").select("nickname").eq("id", patient_id).limit(1).execute()
+            if u.data and u.data[0].get("nickname"):
+                name = u.data[0]["nickname"]
+        except Exception:
+            pass
+        sb.table("patients").insert({"id": patient_id, "name": name}).execute()
+    except Exception as e:
+        logger.warning(f"ensure_patient_exists skipped for {patient_id}: {e}")
+
+
 # ── Models ────────────────────────────────────────────────
 
 class AdmissionCreate(BaseModel):
@@ -113,6 +135,7 @@ def create_admission(body: AdmissionCreate):
     if body.type not in _ALLOWED_TYPES:
         raise HTTPException(status_code=400, detail=f"type 必須是 {_ALLOWED_TYPES} 之一")
     sb = get_supabase()
+    _ensure_patient_exists(sb, body.patient_id)
     data = body.model_dump(exclude_none=True)
     if not data.get("admit_date"):
         data["admit_date"] = datetime.utcnow().isoformat()
