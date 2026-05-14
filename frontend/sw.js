@@ -1,14 +1,14 @@
-const CACHE_VERSION = "mdpiece-v91-admissions-labs";
+const CACHE_VERSION = "mdpiece-v92-care-mode";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v90-labs-form-mobile",
+  "/css/style.css?v=v92-care-mode",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v90-admissions",
+  "/js/app.js?v=v92-care-mode",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

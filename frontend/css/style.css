@@ -12829,3 +12829,48 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
 .page-app-hero {
   border: 2px solid var(--border-strong);
 }
+
+/* ─── 照護模式 chip 卡（首頁置頂）────────────────────────────────────── */
+.care-mode-card {
+  margin: 12px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(91,159,232,.08), rgba(231,126,34,.06));
+}
+.care-mode-card-head {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-bottom: 10px;
+}
+.care-mode-card-title { font-size: .9rem; font-weight: 600; color: var(--text); }
+.care-mode-card-hint  { font-size: .78rem; color: var(--text-dim); }
+.care-mode-chips { display: flex; gap: 8px; }
+.care-mode-chip {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: .9rem; font-weight: 500;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.care-mode-chip:hover { border-color: var(--primary); }
+.care-mode-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(91,159,232,.25);
+}
+
+/* ─── 住院模式：sidebar 收成精簡項目 ─────────────────────────────────── */
+/* 只保留 home + INPATIENT_NAV_PAGES：admissions / medications / vitals /
+   memo / reminders / settings / account，其餘 nav-item 與 section label 隱藏。 */
+html[data-care-mode="inpatient"] .nav-item:not([data-page="admissions"]):not([data-page="medications"]):not([data-page="vitals"]):not([data-page="memo"]):not([data-page="reminders"]):not([data-page="settings"]):not([data-page="account"]) {
+  display: none !important;
+}
+html[data-care-mode="inpatient"] .nav-section-label {
+  display: none !important;
+}

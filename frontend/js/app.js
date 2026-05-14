@@ -26,6 +26,40 @@ function toggleMode() {
   setMode(getMode() === 'senior' ? 'standard' : 'senior');
 }
 
+// ─── 照護模式（門診 / 住院）─────────────────────────────────
+// 跟 'senior/standard' 是兩個正交的維度：
+//   senior/standard = UI 大小（年長版 vs 精緻版）
+//   outpatient/inpatient = 功能範圍（門診一般使用 vs 住院期間精簡）
+// 住院模式會把 sidebar 收成只剩住院期間真正會用到的項目。
+
+const INPATIENT_NAV_PAGES = [
+  'admissions', 'medications', 'vitals', 'memo', 'reminders',
+  'settings', 'account'
+];
+
+function getCareMode() {
+  return localStorage.getItem('mdpiece_care_mode') === 'inpatient' ? 'inpatient' : 'outpatient';
+}
+
+function setCareMode(mode) {
+  const m = mode === 'inpatient' ? 'inpatient' : 'outpatient';
+  localStorage.setItem('mdpiece_care_mode', m);
+  applyCareMode();
+  // 切到住院時若當前頁面在門診專屬清單裡，回首頁避免使用者卡在「看不到 nav 又出不來」
+  if (m === 'inpatient' && _currentPageKey
+      && _currentPageKey !== 'home'
+      && INPATIENT_NAV_PAGES.indexOf(_currentPageKey) === -1) {
+    if (typeof navigateTo === 'function') navigateTo('home', null);
+  }
+  // 重畫首頁好讓 chip 的 active 狀態跟著變
+  if (_currentPageKey === 'home' && typeof showPage === 'function') showPage('home');
+}
+
+function applyCareMode() {
+  document.documentElement.setAttribute('data-care-mode', getCareMode());
+}
+applyCareMode();
+
 // 在 DOMContentLoaded 之前先把屬性掛上，避免閃爍
 document.documentElement.setAttribute('data-mode', getMode());
 
@@ -2870,6 +2904,26 @@ function homeCard(page, icon, title, desc, color) {
     <p>${desc}</p></div>`;
 }
 
+function renderCareModeChips() {
+  const cur = getCareMode();
+  const isOut = cur === 'outpatient';
+  return ''
+    + '<section class="care-mode-card" aria-label="照護模式切換">'
+    +   '<div class="care-mode-card-head">'
+    +     '<span class="care-mode-card-title">你現在用的是</span>'
+    +     '<span class="care-mode-card-hint">' + (isOut ? '日常門診追蹤' : '住院期間精簡介面') + '</span>'
+    +   '</div>'
+    +   '<div class="care-mode-chips" role="tablist">'
+    +     '<button class="care-mode-chip' + (isOut ? ' active' : '') + '" role="tab" aria-selected="' + (isOut ? 'true' : 'false') + '" onclick="setCareMode(\'outpatient\')">'
+    +       '<i data-lucide="stethoscope" style="width:16px;height:16px"></i> 門診模式'
+    +     '</button>'
+    +     '<button class="care-mode-chip' + (!isOut ? ' active' : '') + '" role="tab" aria-selected="' + (!isOut ? 'true' : 'false') + '" onclick="setCareMode(\'inpatient\')">'
+    +       '<i data-lucide="hospital" style="width:16px;height:16px"></i> 住院模式'
+    +     '</button>'
+    +   '</div>'
+    + '</section>';
+}
+
 function home() {
   const user = getCurrentUser();
   const hour = new Date().getHours();
@@ -2913,6 +2967,7 @@ function home() {
     }).join('');
     return '' +
       '<div class="home-page home-senior">' +
+        renderCareModeChips() +
         '<div class="home-senior-hero">' +
           '<h2 class="home-senior-greet">' + greeting + greetSep + name + '</h2>' +
           '<p class="home-senior-date">' + dateStr + '　' + dayStr + '</p>' +
@@ -2923,6 +2978,7 @@ function home() {
 
   return `
     <div class="home-page">
+      ${renderCareModeChips()}
       <svg class="home-deco home-deco-1" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
       <svg class="home-deco home-deco-2" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
       <svg class="home-deco home-deco-3" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
