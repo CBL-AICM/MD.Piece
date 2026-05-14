@@ -267,6 +267,49 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
         )""",
+    "admissions": """
+        CREATE TABLE IF NOT EXISTS admissions (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            type TEXT NOT NULL DEFAULT 'acute' CHECK(type IN ('acute', 'chronic_infusion')),
+            admit_date TEXT,
+            discharge_date TEXT,
+            attending_doctor_id TEXT,
+            diagnosis TEXT,
+            diagnosis_icd10 TEXT,
+            ward TEXT,
+            status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'discharged', 'cancelled')),
+            notes TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (attending_doctor_id) REFERENCES doctors(id)
+        )""",
+    "admission_medications": """
+        CREATE TABLE IF NOT EXISTS admission_medications (
+            id TEXT PRIMARY KEY,
+            admission_id TEXT NOT NULL,
+            medication_id TEXT,
+            name TEXT NOT NULL,
+            dose TEXT,
+            frequency TEXT,
+            next_due_date TEXT,
+            last_given_at TEXT,
+            notes TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (admission_id) REFERENCES admissions(id),
+            FOREIGN KEY (medication_id) REFERENCES medications(id)
+        )""",
+    "admission_medication_doses": """
+        CREATE TABLE IF NOT EXISTS admission_medication_doses (
+            id TEXT PRIMARY KEY,
+            admission_medication_id TEXT NOT NULL,
+            given_at TEXT DEFAULT (datetime('now')),
+            actual_dose TEXT,
+            given_by TEXT,
+            notes TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (admission_medication_id) REFERENCES admission_medications(id)
+        )""",
     "disease_reference": """
         CREATE TABLE IF NOT EXISTS disease_reference (
             id TEXT PRIMARY KEY,
