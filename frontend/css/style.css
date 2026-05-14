@@ -7302,9 +7302,11 @@ html[data-mode="senior"] .visit-modal-save {
 }
 
 @media (max-width: 640px) {
-  .labs-form-row { flex-direction: column; align-items: stretch; }
-  .labs-field, .labs-field-small { flex: 1 1 auto; }
-  .labs-submit { width: 100%; }
+  .labs-form .labs-form-row { flex-direction: column; align-items: stretch; }
+  .labs-form .labs-field,
+  .labs-form .labs-field-small,
+  .labs-form .labs-field-wide { flex: 1 1 auto; width: 100%; }
+  .labs-form .labs-submit { width: 100%; }
 }
 
 /* ─── 醫起聊天（chat with 小禾）── Claude Code 風格 ─────────────── */
