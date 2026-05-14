@@ -1787,7 +1787,7 @@ function showPage(page) {
   const pages = {
     home, symptoms, symptomsAnalyze, doctors, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
-    drugSearch, diseaseSearch, reminders: reminders
+    drugSearch, diseaseSearch, reminders: reminders, admissions
   };
   // Page transition
   app.style.opacity = '0';
@@ -1815,6 +1815,7 @@ function showPage(page) {
     if (page === "diseaseSearch") loadDiseaseSearchPage();
     if (page === "reminders") loadRemindersPage();
     if (page === "vitals") loadDoctorMeasurementRequests();
+    if (page === "admissions") loadAdmissionsPage();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -13283,6 +13284,246 @@ function reminderBackgroundSync() {
 
 setTimeout(reminderBackgroundSync, 4000);
 setInterval(reminderBackgroundSync, 5 * 60 * 1000);
+
+// ─── 住院 / 長期療程 ──────────────────────────────────────
+//
+// 兩種情境共用一個 page：
+//   - acute (急性住院)：admit_date / discharge_date / ward 都會用到
+//   - chronic_infusion (長期週期性給藥)：discharge_date 通常 null，下次回診日跟著 admission_medications.next_due_date 走
+// 提醒不在這裡做（交給 reminders 模組讀 next_due_date）。
+
+function admissions() {
+  return ''
+    + '<section class="adm-wrap" style="max-width:880px;margin:0 auto;padding:16px">'
+    +   '<header style="margin-bottom:16px">'
+    +     '<h2 style="display:flex;align-items:center;gap:8px;margin:0 0 4px"><i data-lucide="hospital" style="width:22px;height:22px"></i> 住院 / 療程</h2>'
+    +     '<p style="margin:0;color:var(--text-dim);font-size:.9rem">急性住院、或慢性病長期週期打藥都在這邊管理。</p>'
+    +   '</header>'
+
+    +   '<div class="card" style="padding:16px;margin-bottom:16px">'
+    +     '<h3 style="margin:0 0 12px;font-size:1rem"><i data-lucide="plus-circle" style="width:16px;height:16px;vertical-align:middle"></i> 新增住院 / 療程</h3>'
+    +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem">類型'
+    +         '<select id="adm-form-type" style="padding:8px;border:1px solid var(--border);border-radius:6px">'
+    +           '<option value="acute">急性住院</option>'
+    +           '<option value="chronic_infusion">長期週期打藥</option>'
+    +         '</select>'
+    +       '</label>'
+    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem">入住 / 起始日'
+    +         '<input id="adm-form-admit" type="datetime-local" style="padding:8px;border:1px solid var(--border);border-radius:6px"/>'
+    +       '</label>'
+    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;grid-column:1/-1">診斷'
+    +         '<input id="adm-form-diagnosis" type="text" placeholder="例如：類風濕性關節炎、肺炎" style="padding:8px;border:1px solid var(--border);border-radius:6px"/>'
+    +       '</label>'
+    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem">病房（急性）'
+    +         '<input id="adm-form-ward" type="text" placeholder="如 8B-12" style="padding:8px;border:1px solid var(--border);border-radius:6px"/>'
+    +       '</label>'
+    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem">ICD-10'
+    +         '<input id="adm-form-icd10" type="text" placeholder="如 M06.9" style="padding:8px;border:1px solid var(--border);border-radius:6px"/>'
+    +       '</label>'
+    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;grid-column:1/-1">備註'
+    +         '<textarea id="adm-form-notes" rows="2" style="padding:8px;border:1px solid var(--border);border-radius:6px;resize:vertical"></textarea>'
+    +       '</label>'
+    +     '</div>'
+    +     '<div style="margin-top:12px;display:flex;justify-content:flex-end">'
+    +       '<button class="btn btn-primary" onclick="createAdmission()" style="padding:8px 16px;border-radius:6px;background:var(--primary);color:#fff;border:none;cursor:pointer">'
+    +         '<i data-lucide="check" style="width:14px;height:14px;vertical-align:middle"></i> 建立'
+    +       '</button>'
+    +     '</div>'
+    +   '</div>'
+
+    +   '<div class="card" style="padding:16px">'
+    +     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    +       '<h3 style="margin:0;font-size:1rem"><i data-lucide="list" style="width:16px;height:16px;vertical-align:middle"></i> 目前的住院 / 療程</h3>'
+    +       '<button onclick="loadAdmissionsPage()" style="background:none;border:1px solid var(--border);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.8rem">'
+    +         '<i data-lucide="refresh-cw" style="width:12px;height:12px;vertical-align:middle"></i> 重新整理'
+    +       '</button>'
+    +     '</div>'
+    +     '<div id="adm-list"><p style="color:var(--text-dim);font-size:.9rem">載入中…</p></div>'
+    +   '</div>'
+    + '</section>';
+}
+
+function loadAdmissionsPage() {
+  var pid = getStablePatientId();
+  var listEl = document.getElementById('adm-list');
+  if (!listEl) return;
+  fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var rows = (data && data.admissions) || [];
+      if (!rows.length) {
+        listEl.innerHTML = '<p style="color:var(--text-dim);font-size:.9rem">還沒有任何住院或療程紀錄。用上方表單新增第一筆。</p>';
+        return;
+      }
+      listEl.innerHTML = rows.map(renderAdmissionCard).join('');
+      rows.forEach(function(a) { loadAdmissionMedications(a.id); });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function(e) {
+      listEl.innerHTML = '<p style="color:#c0392b;font-size:.9rem">載入失敗：' + escapeHtml(String(e)) + '</p>';
+    });
+}
+
+function renderAdmissionCard(a) {
+  var typeLabel = a.type === 'chronic_infusion' ? '長期打藥' : '急性住院';
+  var typeColor = a.type === 'chronic_infusion' ? '#5B9FE8' : '#e67e22';
+  var statusLabel = a.status === 'discharged' ? '已結案' : a.status === 'cancelled' ? '已取消' : '進行中';
+  return ''
+    + '<div class="adm-item" data-adm-id="' + escapeHtml(a.id) + '" style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">'
+    +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+    +     '<div>'
+    +       '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:' + typeColor + ';color:#fff;font-size:.75rem">' + typeLabel + '</span> '
+    +       '<span style="font-size:.75rem;color:var(--text-dim)">' + escapeHtml(statusLabel) + '</span>'
+    +       '<h4 style="margin:6px 0 2px;font-size:.95rem">' + escapeHtml(a.diagnosis || '（未填診斷）') + '</h4>'
+    +       '<div style="font-size:.8rem;color:var(--text-dim)">起始：' + escapeHtml((a.admit_date || '').slice(0, 16).replace('T', ' ')) + (a.ward ? '　病房：' + escapeHtml(a.ward) : '') + '</div>'
+    +     '</div>'
+    +     (a.status === 'active'
+      ? '<button onclick="dischargeAdmission(\'' + a.id + '\')" style="background:none;border:1px solid var(--border);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.8rem">結案</button>'
+      : '')
+    +   '</div>'
+
+    +   '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">'
+    +     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +       '<strong style="font-size:.85rem">排定給藥</strong>'
+    +       '<button onclick="toggleAdmissionMedForm(\'' + a.id + '\')" style="background:none;border:1px solid var(--border);padding:2px 8px;border-radius:6px;cursor:pointer;font-size:.75rem"><i data-lucide="plus" style="width:12px;height:12px;vertical-align:middle"></i> 加一筆</button>'
+    +     '</div>'
+    +     '<div id="adm-med-form-' + a.id + '" style="display:none;background:var(--surface-2);padding:10px;border-radius:6px;margin-bottom:8px">'
+    +       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+    +         '<input id="adm-med-name-' + a.id + '" placeholder="藥名（例如：Humira）" style="padding:6px;border:1px solid var(--border);border-radius:4px;font-size:.85rem"/>'
+    +         '<input id="adm-med-dose-' + a.id + '" placeholder="劑量（例如：40 mg）" style="padding:6px;border:1px solid var(--border);border-radius:4px;font-size:.85rem"/>'
+    +         '<input id="adm-med-freq-' + a.id + '" placeholder="頻率（例如：每 14 天）" style="padding:6px;border:1px solid var(--border);border-radius:4px;font-size:.85rem"/>'
+    +         '<input id="adm-med-due-' + a.id + '" type="datetime-local" style="padding:6px;border:1px solid var(--border);border-radius:4px;font-size:.85rem"/>'
+    +       '</div>'
+    +       '<div style="margin-top:6px;text-align:right">'
+    +         '<button onclick="addAdmissionMedication(\'' + a.id + '\')" style="background:var(--primary);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:.8rem">儲存</button>'
+    +       '</div>'
+    +     '</div>'
+    +     '<div id="adm-meds-' + a.id + '"><p style="color:var(--text-dim);font-size:.8rem;margin:0">載入中…</p></div>'
+    +   '</div>'
+    + '</div>';
+}
+
+function loadAdmissionMedications(admissionId) {
+  fetch(API + '/admissions/' + encodeURIComponent(admissionId))
+    .then(function(r) { return r.json(); })
+    .then(function(adm) {
+      var box = document.getElementById('adm-meds-' + admissionId);
+      if (!box) return;
+      var meds = (adm && adm.medications) || [];
+      if (!meds.length) {
+        box.innerHTML = '<p style="color:var(--text-dim);font-size:.8rem;margin:0">尚未排定任何給藥。</p>';
+        return;
+      }
+      box.innerHTML = meds.map(function(m) {
+        var due = m.next_due_date ? m.next_due_date.slice(0, 16).replace('T', ' ') : '—';
+        var last = m.last_given_at ? m.last_given_at.slice(0, 16).replace('T', ' ') : '—';
+        return ''
+          + '<div style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;font-size:.85rem">'
+          +   '<div style="display:flex;justify-content:space-between;align-items:center">'
+          +     '<div><strong>' + escapeHtml(m.name) + '</strong>'
+          +       (m.dose ? '　<span style="color:var(--text-dim)">' + escapeHtml(m.dose) + '</span>' : '')
+          +       (m.frequency ? '　<span style="color:var(--text-dim)">' + escapeHtml(m.frequency) + '</span>' : '')
+          +     '</div>'
+          +     '<button onclick="recordAdmissionDose(\'' + m.id + '\', \'' + admissionId + '\')" style="background:#27ae60;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.75rem"><i data-lucide="check" style="width:12px;height:12px;vertical-align:middle"></i> 記錄這次施打</button>'
+          +   '</div>'
+          +   '<div style="margin-top:4px;font-size:.75rem;color:var(--text-dim)">下次：' + escapeHtml(due) + '　上次：' + escapeHtml(last) + '</div>'
+          + '</div>';
+      }).join('');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+}
+
+function toggleAdmissionMedForm(admissionId) {
+  var el = document.getElementById('adm-med-form-' + admissionId);
+  if (el) el.style.display = (el.style.display === 'none' ? 'block' : 'none');
+}
+
+function createAdmission() {
+  var pid = getStablePatientId();
+  var body = {
+    patient_id: pid,
+    type: document.getElementById('adm-form-type').value,
+    admit_date: (document.getElementById('adm-form-admit').value || '') || null,
+    diagnosis: document.getElementById('adm-form-diagnosis').value || null,
+    diagnosis_icd10: document.getElementById('adm-form-icd10').value || null,
+    ward: document.getElementById('adm-form-ward').value || null,
+    notes: document.getElementById('adm-form-notes').value || null,
+  };
+  Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
+  fetch(API + '/admissions/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+      showToast('已新增', 'success');
+      ['adm-form-diagnosis','adm-form-icd10','adm-form-ward','adm-form-notes','adm-form-admit'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      loadAdmissionsPage();
+    })
+    .catch(function(e) { showToast('新增失敗：' + e.message, 'error'); });
+}
+
+function addAdmissionMedication(admissionId) {
+  var body = {
+    admission_id: admissionId,
+    name: (document.getElementById('adm-med-name-' + admissionId) || {}).value || '',
+    dose: (document.getElementById('adm-med-dose-' + admissionId) || {}).value || null,
+    frequency: (document.getElementById('adm-med-freq-' + admissionId) || {}).value || null,
+    next_due_date: (document.getElementById('adm-med-due-' + admissionId) || {}).value || null,
+  };
+  if (!body.name) { showToast('請填藥名', 'error'); return; }
+  Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
+  fetch(API + '/admissions/medications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+      showToast('已新增給藥', 'success');
+      toggleAdmissionMedForm(admissionId);
+      loadAdmissionMedications(admissionId);
+    })
+    .catch(function(e) { showToast('新增失敗：' + e.message, 'error'); });
+}
+
+function recordAdmissionDose(admMedId, admissionId) {
+  // 不在這裡解析 frequency 算下次到期日（"每 14 天" 這種自由文字後端也不解析）。
+  // 由使用者在 prompt 裡手動指定，前端只負責送出去。
+  var next = prompt('下次施打日期（YYYY-MM-DD HH:mm，可留白）', '');
+  var body = { admission_medication_id: admMedId };
+  if (next && next.trim()) {
+    var iso = next.trim().replace(' ', 'T');
+    body.next_due_date = iso;
+  }
+  fetch(API + '/admissions/medications/' + encodeURIComponent(admMedId) + '/dose', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+      showToast('已記錄施打', 'success');
+      loadAdmissionMedications(admissionId);
+    })
+    .catch(function(e) { showToast('記錄失敗：' + e.message, 'error'); });
+}
+
+function dischargeAdmission(admissionId) {
+  if (!confirm('結案這次住院 / 療程？')) return;
+  fetch(API + '/admissions/' + encodeURIComponent(admissionId) + '/discharge', { method: 'POST' })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+      showToast('已結案', 'success');
+      loadAdmissionsPage();
+    })
+    .catch(function(e) { showToast('結案失敗：' + e.message, 'error'); });
+}
 
 // ─── Service Worker ───────────────────────────────────────
 
