@@ -2556,6 +2556,427 @@ html[data-mode="senior"] .tc-desc {
 .pzl-gold     { --pzl-c: var(--cream-dim);--pzl-bg: rgba(196,184,165,0.12); }
 .pzl-lavender { --pzl-c: #8B7FD4;         --pzl-bg: rgba(139,127,212,0.12); }
 
+/* ═══════════════════════════════════════════════════════════
+   HOME — 4 層階層式佈局 (Layer 1: 代辦 / Layer 2: 核心 / Layer 3: 次功能 / Layer 4: 拼圖迴廊)
+   ═══════════════════════════════════════════════════════════ */
+
+.home-layer {
+  position: relative;
+  z-index: 1;
+  margin: 28px 0;
+  padding: 18px 18px 22px;
+  background: var(--bg-glass);
+  border: 1.5px solid var(--border-glass);
+  border-radius: calc(var(--radius) + 4px);
+  backdrop-filter: blur(8px);
+}
+
+.home-layer-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border-glass);
+}
+
+.home-layer-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--accent-glow, rgba(91,159,232,0.15));
+  color: var(--accent);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 1px;
+  border: 1.5px solid rgba(91,159,232,0.25);
+}
+
+.home-layer-titles { flex: 1; min-width: 0; }
+.home-layer-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.4px;
+}
+.home-layer-sub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+/* Layer 風格細節：核心層加重一點，拼圖層底色淡 */
+.home-layer-core {
+  border-color: rgba(91,159,232,0.35);
+  box-shadow: 0 4px 18px rgba(91,159,232,0.08);
+}
+.home-layer-core .home-layer-num {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 10px rgba(91,159,232,0.35);
+}
+
+/* ── Layer 2: 核心功能大卡 ───────────────────────────── */
+.home-core-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.hcore-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 14px 16px 18px;
+  border: 2px solid var(--hcore-c, var(--accent));
+  border-radius: calc(var(--radius) - 2px);
+  background: linear-gradient(135deg, var(--hcore-bg, rgba(91,159,232,0.12)), var(--hcore-bg2, rgba(91,159,232,0.04)));
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  color: var(--text);
+  overflow: hidden;
+}
+
+.hcore-card::before {
+  /* 大色塊在右下，做拼圖塊的擬態暗示 */
+  content: '';
+  position: absolute;
+  right: -28px;
+  bottom: -28px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--hcore-c, var(--accent));
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+/* 拼圖凸塊 — 卡片頂端中央，視覺暗示 MD.Piece 拼圖意象 */
+.hcore-tab {
+  position: absolute;
+  top: -8px;
+  left: 28px;
+  width: 22px;
+  height: 14px;
+  border-radius: 11px 11px 4px 4px;
+  background: var(--hcore-c, var(--accent));
+  opacity: 0.55;
+  transition: transform .2s ease, opacity .2s ease;
+}
+.hcore-knob {
+  position: absolute;
+  top: 50%;
+  right: -7px;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 22px;
+  border-radius: 4px 11px 11px 4px;
+  background: var(--hcore-c, var(--accent));
+  opacity: 0.35;
+  transition: transform .2s ease, opacity .2s ease;
+}
+.hcore-card:hover .hcore-tab { transform: scaleY(1.18); opacity: 0.75; }
+.hcore-card:hover .hcore-knob { transform: translate(2px,-50%) scaleX(1.18); opacity: 0.55; }
+
+.hcore-tag {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 2px 8px;
+  font-size: 0.66rem;
+  letter-spacing: 1.2px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.55);
+  color: var(--hcore-c, var(--accent));
+  border: 1px solid var(--hcore-c, var(--accent));
+}
+
+.hcore-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--hcore-c, var(--accent));
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.hcore-icon svg { width: 26px; height: 26px; stroke-width: 1.8; }
+
+.hcore-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.hcore-title {
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.4px;
+}
+.hcore-desc {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.hcore-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  color: var(--hcore-c, var(--accent));
+  transition: transform .2s ease, background .2s ease;
+  flex-shrink: 0;
+}
+.hcore-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+}
+.hcore-card:hover .hcore-arrow {
+  transform: translateX(3px);
+  background: var(--hcore-c, var(--accent));
+  color: #fff;
+}
+.hcore-card:active { transform: translateY(-1px); }
+
+/* 核心卡顏色變體 */
+.hcore-blue   { --hcore-c: var(--accent);  --hcore-bg: rgba(91,159,232,0.18);  --hcore-bg2: rgba(91,159,232,0.04); }
+.hcore-purple { --hcore-c: var(--purple);  --hcore-bg: rgba(124,107,196,0.16); --hcore-bg2: rgba(124,107,196,0.04); }
+.hcore-teal   { --hcore-c: var(--teal);    --hcore-bg: rgba(0,212,170,0.15);   --hcore-bg2: rgba(0,212,170,0.03); }
+.hcore-rose   { --hcore-c: #C97F4B;        --hcore-bg: rgba(232,168,168,0.18); --hcore-bg2: rgba(232,168,168,0.05); }
+
+/* ── Layer 3: 次要功能網格 ───────────────────────────── */
+.home-second-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hsec-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 12px;
+  background: var(--bg-glass);
+  border: 1.5px solid var(--border-glass);
+  border-radius: var(--radius-sm, 12px);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.hsec-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--hsec-c, var(--accent)) 0%, transparent 60%);
+  opacity: 0.08;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.hsec-card:hover::after { opacity: 0.16; }
+
+.hsec-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--hsec-c, var(--accent));
+  color: #fff;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.hsec-icon svg { width: 18px; height: 18px; stroke-width: 1.8; }
+
+.hsec-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  width: 100%;
+}
+.hsec-title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.hsec-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.hsec-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--hsec-c, var(--accent));
+}
+
+.hsec-blue   { --hsec-c: var(--accent); }
+.hsec-purple { --hsec-c: var(--purple); }
+.hsec-teal   { --hsec-c: var(--teal); }
+.hsec-rose   { --hsec-c: #C97F4B; }
+.hsec-amber  { --hsec-c: var(--warning); }
+.hsec-mint   { --hsec-c: var(--success); }
+.hsec-gold   { --hsec-c: var(--cream-dim, #C4B8A5); }
+
+/* ── Layer 4: 拼圖迴廊 (jigsaw puzzle gallery) ───────── */
+.home-puzzle-frame {
+  position: relative;
+  margin: 0 auto;
+  max-width: 520px;
+  aspect-ratio: 1;
+  padding: 6px;
+  background: linear-gradient(135deg, rgba(91,159,232,0.05), rgba(124,107,196,0.05));
+  border-radius: calc(var(--radius) + 2px);
+  border: 1.5px dashed var(--border-glass);
+}
+
+.home-puzzle-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.08));
+}
+
+.hpz-piece { cursor: pointer; transition: transform .2s ease; transform-origin: center; transform-box: fill-box; }
+.hpz-piece .hpz-fill { transition: fill .2s ease, opacity .2s ease; }
+/* 細而暗的描邊 — 標示拼圖外型，但夠細不會在 tab/blank 接縫處形成白色雙圈 */
+.hpz-piece .hpz-stroke {
+  fill: none;
+  stroke: rgba(0,0,0,0.18);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.hpz-piece:hover { transform: scale(1.04); }
+.hpz-piece:hover .hpz-fill { opacity: 0.92; filter: brightness(1.05); }
+.hpz-piece:focus { outline: none; }
+.hpz-piece:focus-visible .hpz-stroke { stroke: var(--accent); stroke-width: 2.2; }
+
+/* 拼圖配色 */
+.hpz-blue     .hpz-fill { fill: var(--accent); }
+.hpz-purple   .hpz-fill { fill: var(--purple); }
+.hpz-teal     .hpz-fill { fill: var(--teal); }
+.hpz-rose     .hpz-fill { fill: #E8A8A8; }
+.hpz-amber    .hpz-fill { fill: var(--warning); }
+.hpz-mint     .hpz-fill { fill: var(--success); }
+.hpz-gold     .hpz-fill { fill: #C4B8A5; }
+.hpz-lavender .hpz-fill { fill: #B5A8E8; }
+
+/* 標籤層（HTML 覆蓋 SVG），對齊每塊本體中央 */
+.home-puzzle-labels {
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+}
+.hpz-label-cell {
+  position: absolute;
+  /* width / height / left / top set via inline style — 對應到 SVG 中各拼圖的本體 60x60 區 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  padding: 4px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+.hpz-label-cell .hpz-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hpz-label-cell .hpz-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+}
+.hpz-label-cell .hpz-label {
+  font-size: 0.7rem;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 響應式：手機 (≤ 600px) ─────────────────────────── */
+@media (max-width: 600px) {
+  .home-layer { margin: 20px 0; padding: 14px 12px 18px; }
+  .home-layer-head { gap: 10px; }
+  .home-layer-num { min-width: 34px; height: 34px; font-size: 0.84rem; }
+  .home-layer-title { font-size: 0.96rem; }
+  .home-layer-sub  { font-size: 0.72rem; }
+
+  .home-core-grid { grid-template-columns: 1fr; gap: 10px; }
+  .hcore-card { padding: 12px 12px 12px 14px; gap: 10px; }
+  .hcore-icon { width: 42px; height: 42px; }
+  .hcore-icon svg { width: 22px; height: 22px; }
+  .hcore-title { font-size: 0.95rem; }
+  .hcore-desc { font-size: 0.74rem; }
+
+  .home-second-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .hsec-card { padding: 12px 10px; }
+
+  .home-puzzle-frame { max-width: 100%; }
+  .hpz-label-cell { font-size: 0.6rem; padding: 2px; }
+  .hpz-label-cell .hpz-icon svg { width: 16px; height: 16px; }
+  .hpz-label-cell .hpz-label { font-size: 0.6rem; letter-spacing: 0.2px; }
+}
+
+/* 年長版：放大關鍵元素 */
+html[data-mode="senior"] .home-core-grid { grid-template-columns: 1fr; }
+html[data-mode="senior"] .hcore-card { padding: 18px; gap: 16px; }
+html[data-mode="senior"] .hcore-icon { width: 56px; height: 56px; }
+html[data-mode="senior"] .hcore-icon svg { width: 30px; height: 30px; }
+html[data-mode="senior"] .hcore-title { font-size: 1.15rem; }
+html[data-mode="senior"] .hcore-desc { font-size: 0.95rem; }
+html[data-mode="senior"] .home-second-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+html[data-mode="senior"] .hsec-icon { width: 40px; height: 40px; }
+html[data-mode="senior"] .hsec-title { font-size: 1rem; }
+html[data-mode="senior"] .hsec-desc { font-size: 0.82rem; }
+html[data-mode="senior"] .home-layer-title { font-size: 1.2rem; }
+html[data-mode="senior"] .home-layer-sub { font-size: 0.92rem; }
+html[data-mode="senior"] .hpz-label-cell .hpz-label { font-size: 0.74rem; }
+html[data-mode="senior"] .hpz-label-cell .hpz-icon svg { width: 24px; height: 24px; }
+
 /* Home Footer */
 .home-footer {
   text-align: center;
@@ -10035,10 +10456,23 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     transition: background .18s ease, color .18s ease, transform .18s ease;
   }
   .mtab .mtab-label {
-    font-size: 0.66rem;
-    letter-spacing: 0.6px;
+    font-size: 0.62rem;
+    letter-spacing: 0.4px;
     color: inherit;
+    white-space: nowrap;
   }
+  /* Home 標籤略放大、加重，作為主要入口的視覺強調 */
+  .mtab.mtab-home .mtab-label {
+    font-weight: 700;
+    letter-spacing: 0.6px;
+  }
+  .mtab.mtab-home .mtab-icon {
+    background: var(--app-mint, rgba(91,159,232,0.18));
+    color: var(--app-chip-text, var(--accent));
+  }
+  /* 6 顆 tab + FAB 時，每顆 padding 收緊以避免擠壓 */
+  .mobile-tabbar .mtab { padding: 6px 1px 8px; }
+  .mtab .mtab-icon { width: 26px; height: 26px; }
   .mtab .mtab-dot {
     position: absolute;
     bottom: 2px;
