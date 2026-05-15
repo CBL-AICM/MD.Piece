@@ -2904,6 +2904,118 @@ function homeCard(page, icon, title, desc, color) {
     <p>${desc}</p></div>`;
 }
 
+// === 主頁分層 — Layer 2/3/4 卡片元件 =====================================
+// Layer 2 核心卡片（大尺寸，代表 MD.Piece 理念的功能）
+function homeCoreCard(page, icon, title, desc, tag, color) {
+  return ''
+    + '<button type="button" class="hcore-card hcore-' + color + '" onclick="navigateTo(\'' + page + '\',null)">'
+    +   '<span class="hcore-tab"></span>'
+    +   '<span class="hcore-knob"></span>'
+    +   '<span class="hcore-tag">' + tag + '</span>'
+    +   '<span class="hcore-icon"><i data-lucide="' + icon + '"></i></span>'
+    +   '<span class="hcore-body">'
+    +     '<span class="hcore-title">' + title + '</span>'
+    +     '<span class="hcore-desc">' + desc + '</span>'
+    +   '</span>'
+    +   '<span class="hcore-arrow"><i data-lucide="arrow-right" style="width:14px;height:14px"></i></span>'
+    + '</button>';
+}
+
+// Layer 3 次要功能（中尺寸）
+function homeSecondCard(page, icon, title, desc, color) {
+  return ''
+    + '<button type="button" class="hsec-card hsec-' + color + '" onclick="navigateTo(\'' + page + '\',null)">'
+    +   '<span class="hsec-icon"><i data-lucide="' + icon + '"></i></span>'
+    +   '<span class="hsec-body">'
+    +     '<span class="hsec-title">' + title + '</span>'
+    +     '<span class="hsec-desc">' + desc + '</span>'
+    +   '</span>'
+    + '</button>';
+}
+
+// Layer 4 拼圖迴廊 — 單一 SVG 容納 3x3=9 片真實互鎖拼圖
+// 每片本體 60x60，相鄰格 offset = 60 (這樣 tab 才能塞進相鄰的 blank)。
+// 整體 puzzle 範圍 x:20..200 / y:20..200，viewBox 給 20 單位 padding → 0 0 220 220
+// items 為 9 筆 { page, icon, title, color }（依序 r0c0, r0c1, r0c2, r1c0, ...）
+var _HPZ_VBSIZE = 220;
+var _HPZ_OFFSET = 60;
+function homePuzzleGallery(items) {
+  var pieces = '';
+  var labels = '';
+  // 由外而內疊放：邊角先畫，中央後畫，避免 tab 被相鄰 piece 覆蓋
+  // 為了讓互鎖視覺更清楚，先繪「主體網格」(複數 z-order 由 DOM 順序決定)
+  for (var row = 0; row < 3; row++) {
+    for (var col = 0; col < 3; col++) {
+      var idx = row * 3 + col;
+      var it = items[idx];
+      if (!it) continue;
+      var ox = col * _HPZ_OFFSET;
+      var oy = row * _HPZ_OFFSET;
+      var path = _puzzlePiecePathAt(row, col, ox, oy);
+      var colorClass = 'hpz-' + (it.color || 'blue');
+      var safeTitle = (it.title || '').replace(/"/g, '&quot;');
+      pieces += ''
+        + '<g class="hpz-piece ' + colorClass + '" tabindex="0" role="button" aria-label="' + safeTitle + '" data-page="' + it.page + '" onclick="navigateTo(\'' + it.page + '\',null)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();navigateTo(\'' + it.page + '\',null);}">'
+        +   '<path class="hpz-fill" d="' + path + '" />'
+        +   '<path class="hpz-stroke" d="' + path + '" />'
+        + '</g>';
+      // HTML 圖示與標籤層 — 對應到拼圖本體 60x60 中央區
+      var leftPct = ((ox + 20) / _HPZ_VBSIZE) * 100;
+      var topPct = ((oy + 20) / _HPZ_VBSIZE) * 100;
+      var sizePct = (60 / _HPZ_VBSIZE) * 100;
+      labels += ''
+        + '<div class="hpz-label-cell" style="left:' + leftPct + '%;top:' + topPct + '%;width:' + sizePct + '%;height:' + sizePct + '%;" aria-hidden="true">'
+        +   '<span class="hpz-icon"><i data-lucide="' + it.icon + '"></i></span>'
+        +   '<span class="hpz-label">' + it.title + '</span>'
+        + '</div>';
+    }
+  }
+  return ''
+    + '<div class="home-puzzle-frame">'
+    +   '<svg class="home-puzzle-svg" viewBox="0 0 ' + _HPZ_VBSIZE + ' ' + _HPZ_VBSIZE + '" preserveAspectRatio="xMidYMid meet" aria-label="拼圖迴廊功能">'
+    +     pieces
+    +   '</svg>'
+    +   '<div class="home-puzzle-labels" aria-hidden="true">' + labels + '</div>'
+    + '</div>';
+}
+
+// 在偏移 (ox, oy) 上產生 (row, col) 位置的拼圖路徑。每片本體 60x60 (20..80 在自己的格子內)。
+// 邊：T/R/B/L — 'e' 平、't' 凸 (向外)、'b' 凹 (向內)
+// 棋盤式：相鄰邊互補；外圍邊強制為 'e'。
+function _puzzlePiecePathAt(row, col, ox, oy) {
+  // T 與 R 用同一棋盤式 parity；B 必須是上一行同欄 T 的反向，L 必須是同行左欄 R 的反向。
+  // 也就是 B(r,c) = !T(r+1,c)，L(r,c) = !R(r,c-1)。
+  // T(r,c) = (r+c)%2===0 ? 't':'b' → T(r+1,c) parity = (r+1+c)%2 → B(r,c) = (r+c+1)%2===0 ? 'b':'t'
+  // R(r,c) = 同 T 的 parity → R(r,c-1) parity = (r+c-1)%2 → L(r,c) = (r+c+1)%2===0 ? 'b':'t'
+  var T = row === 0 ? 'e' : ((row + col) % 2 === 0 ? 't' : 'b');
+  var R = col === 2 ? 'e' : ((row + col) % 2 === 0 ? 't' : 'b');
+  var B = row === 2 ? 'e' : ((row + col + 1) % 2 === 0 ? 'b' : 't');
+  var L = col === 0 ? 'e' : ((row + col + 1) % 2 === 0 ? 'b' : 't');
+
+  function pt(x, y) { return (ox + x) + ' ' + (oy + y); }
+  function topEdge(kind) {
+    if (kind === 'e') return 'L ' + pt(80, 20);
+    if (kind === 't') return 'L ' + pt(40, 20) + ' C ' + pt(40, 0) + ' ' + pt(60, 0) + ' ' + pt(60, 20) + ' L ' + pt(80, 20);
+    return 'L ' + pt(40, 20) + ' C ' + pt(40, 40) + ' ' + pt(60, 40) + ' ' + pt(60, 20) + ' L ' + pt(80, 20);
+  }
+  function rightEdge(kind) {
+    if (kind === 'e') return 'L ' + pt(80, 80);
+    if (kind === 't') return 'L ' + pt(80, 40) + ' C ' + pt(100, 40) + ' ' + pt(100, 60) + ' ' + pt(80, 60) + ' L ' + pt(80, 80);
+    return 'L ' + pt(80, 40) + ' C ' + pt(60, 40) + ' ' + pt(60, 60) + ' ' + pt(80, 60) + ' L ' + pt(80, 80);
+  }
+  function bottomEdge(kind) {
+    if (kind === 'e') return 'L ' + pt(20, 80);
+    if (kind === 't') return 'L ' + pt(60, 80) + ' C ' + pt(60, 100) + ' ' + pt(40, 100) + ' ' + pt(40, 80) + ' L ' + pt(20, 80);
+    return 'L ' + pt(60, 80) + ' C ' + pt(60, 60) + ' ' + pt(40, 60) + ' ' + pt(40, 80) + ' L ' + pt(20, 80);
+  }
+  function leftEdge(kind) {
+    if (kind === 'e') return 'L ' + pt(20, 20);
+    if (kind === 't') return 'L ' + pt(20, 60) + ' C ' + pt(0, 60) + ' ' + pt(0, 40) + ' ' + pt(20, 40) + ' L ' + pt(20, 20);
+    return 'L ' + pt(20, 60) + ' C ' + pt(40, 60) + ' ' + pt(40, 40) + ' ' + pt(20, 40) + ' L ' + pt(20, 20);
+  }
+  return 'M ' + pt(20, 20) + ' ' + topEdge(T) + ' ' + rightEdge(R) + ' ' + bottomEdge(B) + ' ' + leftEdge(L) + ' Z';
+}
+
 function renderCareModeChips() {
   const cur = getCareMode();
   const isOut = cur === 'outpatient';
@@ -2976,8 +3088,21 @@ function home() {
       '</div>';
   }
 
+  // 拼圖迴廊 (Layer 4) — 9 格放查詢、學習、設定相關功能
+  var puzzleItems = [
+    { page: 'symptomsAnalyze', icon: 'sparkles',         title: _T('home.card.symptomsAnalyze.title'), color: 'blue' },
+    { page: 'drugSearch',      icon: 'search',           title: _T('nav.drugSearch'),                  color: 'amber' },
+    { page: 'diseaseSearch',   icon: 'stethoscope',      title: _T('nav.diseaseSearch'),               color: 'rose' },
+    { page: 'education',       icon: 'book-heart',       title: _T('nav.education'),                   color: 'teal' },
+    { page: 'story',           icon: 'book-open',        title: _T('nav.story'),                       color: 'purple' },
+    { page: 'labs',            icon: 'trending-up',      title: _T('nav.labs'),                        color: 'mint' },
+    { page: 'records',         icon: 'id-card',          title: _T('home.card.records.title'),         color: 'lavender' },
+    { page: 'settings',        icon: 'settings',         title: _T('nav.settings'),                    color: 'amber' },
+    { page: 'account',         icon: 'user-cog',         title: _T('nav.account'),                     color: 'gold' },
+  ];
+
   return `
-    <div class="home-page">
+    <div class="home-page home-layered">
       ${renderCareModeChips()}
       <svg class="home-deco home-deco-1" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
       <svg class="home-deco home-deco-2" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
@@ -3001,78 +3126,108 @@ function home() {
         </div>
       </div>
 
-      <!-- Quick Actions — spread wider -->
-      <div class="home-quick">
-        <button class="hq-btn hq-symptoms" onclick="navigateTo('symptoms',null)">
-          <span class="hq-icon"><i data-lucide="scan-search"></i></span>
-          <span>${_T('home.quick.symptoms')}</span>
-        </button>
-        <button class="hq-btn hq-meds" onclick="navigateTo('medications',null)">
-          <span class="hq-icon"><i data-lucide="pill"></i></span>
-          <span>${_T('home.quick.meds')}</span>
-        </button>
-        <button class="hq-btn hq-records" onclick="navigateTo('records',null)">
-          <span class="hq-icon"><i data-lucide="id-card"></i></span>
-          <span>${_T('home.quick.records')}</span>
-        </button>
-        <button class="hq-btn hq-edu" onclick="navigateTo('education',null)">
-          <span class="hq-icon"><i data-lucide="book-heart"></i></span>
-          <span>${_T('home.quick.education')}</span>
-        </button>
-      </div>
-
-      <!-- Today Digest（今日拼圖統計） -->
-      ${renderTodayDigestCard()}
-
-      <!-- Today's Todo (auto + user) -->
-      ${renderTodoCard()}
-
-      <!-- Three-column info row -->
-      <div class="home-info-row">
-        <div class="home-ov">
-          <div class="home-ov-head">
-            <i data-lucide="calendar-check" style="width:16px;height:16px;color:var(--accent)"></i>
-            <span>${_T('home.ov.meds')}</span>
+      <!-- ════════════════════════════════════════════════════
+           Layer 1 — 今日代辦：今天藥物 + 系統提醒 + 你的待辦
+           ════════════════════════════════════════════════════ -->
+      <section class="home-layer home-layer-todo">
+        <header class="home-layer-head">
+          <span class="home-layer-num">01</span>
+          <div class="home-layer-titles">
+            <h3 class="home-layer-title">今日代辦</h3>
+            <p class="home-layer-sub">今天藥物 · 系統提醒 · 你的待辦</p>
           </div>
-          <div id="home-med-summary" class="home-ov-body">
-            <p class="home-ov-placeholder">${_T('home.ov.loading')}</p>
+        </header>
+
+        ${renderTodayDigestCard()}
+        ${renderTodoCard()}
+
+        <!-- 今日狀態三欄：藥物 / 心情 / 健康提醒 -->
+        <div class="home-info-row">
+          <div class="home-ov">
+            <div class="home-ov-head">
+              <i data-lucide="calendar-check" style="width:16px;height:16px;color:var(--accent)"></i>
+              <span>${_T('home.ov.meds')}</span>
+            </div>
+            <div id="home-med-summary" class="home-ov-body">
+              <p class="home-ov-placeholder">${_T('home.ov.loading')}</p>
+            </div>
+          </div>
+          <div class="home-ov">
+            <div class="home-ov-head">
+              <i data-lucide="smile" style="width:16px;height:16px;color:var(--rose)"></i>
+              <span>${_T('home.ov.mood')}</span>
+            </div>
+            <div id="home-mood-summary" class="home-ov-body">
+              <p class="home-ov-placeholder">${_T('home.ov.loading')}</p>
+            </div>
+          </div>
+          <div class="home-ov">
+            <div class="home-ov-head">
+              <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--purple)"></i>
+              <span>${_T('home.ov.tip')}</span>
+            </div>
+            <div class="home-ov-body">
+              <p class="home-tip-text">${getHealthTip()}</p>
+            </div>
           </div>
         </div>
-        <div class="home-ov">
-          <div class="home-ov-head">
-            <i data-lucide="smile" style="width:16px;height:16px;color:var(--rose)"></i>
-            <span>${_T('home.ov.mood')}</span>
-          </div>
-          <div id="home-mood-summary" class="home-ov-body">
-            <p class="home-ov-placeholder">${_T('home.ov.loading')}</p>
-          </div>
-        </div>
-        <div class="home-ov">
-          <div class="home-ov-head">
-            <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--purple)"></i>
-            <span>${_T('home.ov.tip')}</span>
-          </div>
-          <div class="home-ov-body">
-            <p class="home-tip-text">${getHealthTip()}</p>
-          </div>
-        </div>
-      </div>
+      </section>
 
-      <!-- Feature grid label -->
-      <div class="home-section-label">
-        <svg viewBox="0 0 48 48" width="16" height="16"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor" opacity="0.5"/></svg>
-        ${_T('home.section.label')}
-      </div>
-      <div class="home-grid">
-        ${homeCard('symptoms','scan-search',_T('home.card.symptoms.title'),_T('home.card.symptoms.desc'),'blue')}
-        ${homeCard('symptomsAnalyze','sparkles',_T('home.card.symptomsAnalyze.title'),_T('home.card.symptomsAnalyze.desc'),'rose')}
-        ${homeCard('records','id-card',_T('home.card.records.title'),_T('home.card.records.desc'),'purple')}
-        ${homeCard('doctors','stethoscope',_T('home.card.doctors.title'),_T('home.card.doctors.desc'),'rose')}
-        ${homeCard('medications','pill',_T('home.card.medications.title'),_T('home.card.medications.desc'),'amber')}
-        ${homeCard('education','book-heart',_T('home.card.education.title'),_T('home.card.education.desc'),'teal')}
-        ${homeCard('chat','message-circle-heart',_T('home.card.chat.title'),_T('home.card.chat.desc'),'rose')}
-        ${homeCard('settings','settings',_T('home.card.settings.title'),_T('home.card.settings.desc'),'amber')}
-      </div>
+      <!-- ════════════════════════════════════════════════════
+           Layer 2 — 核心功能：MD.Piece 理念的精神
+           ════════════════════════════════════════════════════ -->
+      <section class="home-layer home-layer-core">
+        <header class="home-layer-head">
+          <span class="home-layer-num">02</span>
+          <div class="home-layer-titles">
+            <h3 class="home-layer-title">核心功能</h3>
+            <p class="home-layer-sub">將日常碎片拼起，醫起走出治療的迷霧</p>
+          </div>
+        </header>
+        <div class="home-core-grid">
+          ${homeCoreCard('symptoms','scan-search',_T('home.card.symptoms.title'),'紀錄今天每一個不舒服的部位、強度、頻率。','記錄碎片','blue')}
+          ${homeCoreCard('pieces','puzzle','你的碎片','把這段期間的紀錄拼成一張完整的治療地圖。','拼起碎片','purple')}
+          ${homeCoreCard('previsit','clipboard-check',_T('nav.previsit'),'回診前 30 秒帶走：時序整理 + 想問醫師的事。','帶給醫師','teal')}
+          ${homeCoreCard('chat','message-circle-heart','醫起聊天','跟小禾聊一聊近況，幫你寫成跟醫師說的話。','陪你聊聊','rose')}
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════
+           Layer 3 — 次要功能：每日紀錄與管理
+           ════════════════════════════════════════════════════ -->
+      <section class="home-layer home-layer-second">
+        <header class="home-layer-head">
+          <span class="home-layer-num">03</span>
+          <div class="home-layer-titles">
+            <h3 class="home-layer-title">每日紀錄</h3>
+            <p class="home-layer-sub">把日常的細節都收進來</p>
+          </div>
+        </header>
+        <div class="home-second-grid">
+          ${homeSecondCard('medications','pill','藥物紀錄','藥袋拍照 · 時段打卡','amber')}
+          ${homeSecondCard('vitals','activity','生理紀錄','血壓 · 血糖 · 體重','blue')}
+          ${homeSecondCard('emotions','battery-charging','情緒電力','心情電量 · 走勢','rose')}
+          ${homeSecondCard('diet','utensils-crossed','飲食紀錄','三餐 · 飲水 · 攝取','teal')}
+          ${homeSecondCard('memo','sticky-note','Memo','想問醫師的事都丟這','purple')}
+          ${homeSecondCard('admissions','hospital','住院 / 療程','急性住院 · 打藥週期','mint')}
+          ${homeSecondCard('reminders','bell-ring','提醒通知','服藥 · 回診倒數','amber')}
+          ${homeSecondCard('doctors','stethoscope','我的醫師','跟著我的醫療團隊','blue')}
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════
+           Layer 4 — 拼圖迴廊：查詢、學習、設定
+           ════════════════════════════════════════════════════ -->
+      <section class="home-layer home-layer-puzzle">
+        <header class="home-layer-head">
+          <span class="home-layer-num">04</span>
+          <div class="home-layer-titles">
+            <h3 class="home-layer-title">拼圖迴廊</h3>
+            <p class="home-layer-sub">點任一塊拼圖，跳到對應功能</p>
+          </div>
+        </header>
+        ${homePuzzleGallery(puzzleItems)}
+      </section>
 
       <!-- Footer tagline -->
       <div class="home-footer">
