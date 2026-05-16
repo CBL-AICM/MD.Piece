@@ -13299,6 +13299,709 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   box-shadow: 0 2px 8px rgba(91,159,232,.25);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   住院模式首頁 — Hospital Survival System
+   ═══════════════════════════════════════════════════════════════════════════
+   設計理念：降低住院期間的混亂與焦慮感。Apple Health × 臨床病房感。
+   - 深色為主 / 亮色亦支援
+   - 大圓角、生成空白、輕度脈動 = 「我們在這裡」
+   - 配色：calm mint / warm coral / soft sky；不用紅色除非真急。 */
+
+.home-inpatient {
+  --ip-bg:        rgba(255,255,255,0.04);
+  --ip-surface:   rgba(255,255,255,0.06);
+  --ip-border:    rgba(255,255,255,0.10);
+  --ip-text:      var(--app-text, #F1F6FF);
+  --ip-dim:       var(--app-text-dim, #BFD2EC);
+  --ip-muted:     rgba(255,255,255,0.55);
+  --ip-mint:      #7FE7D9;
+  --ip-coral:     #E8A98A;
+  --ip-sky:       #8EC5F2;
+  --ip-sage:      #A8D8B9;
+  --ip-warn:      #F2C26D;
+  --ip-radius:    18px;
+  --ip-shadow:    0 6px 24px rgba(0,0,0,0.18);
+  position: relative;
+  padding-bottom: 20px;
+}
+/* 淺色模式校正：把半透明白換成半透明 navy */
+#app-wrapper[data-theme="light"] .home-inpatient {
+  --ip-bg:      rgba(31, 61, 88, 0.04);
+  --ip-surface: rgba(31, 61, 88, 0.05);
+  --ip-border:  rgba(31, 61, 88, 0.12);
+  --ip-muted:   rgba(31, 61, 88, 0.55);
+}
+
+/* Section header 共用 */
+.home-inpatient .ip-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.home-inpatient .ip-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 9px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  color: var(--ip-mint);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.6px;
+}
+.home-inpatient .ip-section-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ip-text);
+  letter-spacing: 0.3px;
+  flex: 1;
+}
+.home-inpatient .ip-section-sub {
+  font-size: 0.74rem;
+  color: var(--ip-muted);
+}
+
+/* 1. NowCard — Hero ──────────────────────────────────────── */
+.ip-now {
+  position: relative;
+  margin: 12px 0 18px;
+  padding: 22px 20px 18px;
+  border-radius: calc(var(--ip-radius) + 4px);
+  background: linear-gradient(150deg, rgba(127,231,217,0.10) 0%, rgba(142,197,242,0.06) 60%, transparent 100%);
+  border: 1.5px solid var(--ip-border);
+  box-shadow: var(--ip-shadow);
+  overflow: hidden;
+}
+.ip-now-pulse {
+  position: absolute;
+  top: 18px; right: 22px;
+  width: 28px; height: 28px;
+  pointer-events: none;
+}
+.ip-now-pulse span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--ip-mint);
+  opacity: 0;
+  animation: ipPulse 3.2s ease-out infinite;
+}
+.ip-now-pulse span:nth-child(2) { animation-delay: 1.6s; }
+@keyframes ipPulse {
+  0%   { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0;   }
+}
+.ip-now-eyebrow {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(127,231,217,0.18);
+  color: var(--ip-mint);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  margin-bottom: 8px;
+}
+.ip-now-greet {
+  margin: 0 0 4px;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--ip-text);
+  letter-spacing: 0.4px;
+}
+.ip-now-date {
+  margin: 0 0 16px;
+  font-size: 0.84rem;
+  color: var(--ip-dim);
+}
+.ip-now-body {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.ip-now-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(127,231,217,0.10);
+  border: 1px solid rgba(127,231,217,0.22);
+}
+.ip-now-day-num {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ip-mint);
+  font-family: "JetBrains Mono", "Cormorant Garamond", serif;
+}
+.ip-now-day-unit {
+  font-size: 0.75rem;
+  color: var(--ip-dim);
+  margin-top: 6px;
+}
+.ip-now-info {
+  flex: 1;
+  min-width: 0;
+}
+.ip-now-diag {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--ip-text);
+}
+.ip-now-ward {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ip-dim);
+}
+.ip-now-cta {
+  margin-top: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--ip-mint);
+  color: #0F1A2E;
+  border: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.ip-now-safe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ip-border);
+  font-size: 0.78rem;
+  color: var(--ip-muted);
+}
+.ip-now-safe svg { color: var(--ip-mint); }
+
+/* 2. NextStep — countdown card ───────────────────────────── */
+.ip-next { margin-bottom: 20px; }
+.ip-next-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 12px 16px;
+  padding: 18px 16px;
+  background: var(--ip-surface);
+  border: 1.5px solid var(--ip-border);
+  border-radius: var(--ip-radius);
+}
+.ip-next-icon {
+  grid-row: 1 / 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px; height: 54px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--ip-mint) 0%, var(--ip-sky) 100%);
+  color: #0F1A2E;
+}
+.ip-next-icon svg { width: 26px; height: 26px; }
+.ip-next-body { min-width: 0; }
+.ip-next-when {
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+  color: var(--ip-mint);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+.ip-next-name {
+  margin: 0 0 2px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ip-text);
+}
+.ip-next-sub {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--ip-muted);
+}
+.ip-next-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+.ip-next-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--ip-border);
+  background: var(--ip-bg);
+  color: var(--ip-text);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform .15s ease, background .2s ease;
+  min-height: 52px;
+}
+.ip-next-btn:active { transform: scale(0.98); }
+.ip-next-done {
+  background: rgba(127,231,217,0.16);
+  border-color: rgba(127,231,217,0.36);
+  color: var(--ip-mint);
+}
+.ip-next-done:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ip-next-uneasy {
+  background: rgba(232,169,138,0.14);
+  border-color: rgba(232,169,138,0.32);
+  color: var(--ip-coral);
+}
+
+/* 3. SOSBar — sticky big buttons ─────────────────────────── */
+.ip-sos {
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 56px);
+  z-index: 5;
+  margin-bottom: 22px;
+  padding: 16px 12px;
+  border-radius: var(--ip-radius);
+  background: linear-gradient(180deg, rgba(15,26,46,0.85) 0%, rgba(15,26,46,0.65) 100%);
+  border: 1.5px solid var(--ip-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+#app-wrapper[data-theme="light"] .ip-sos {
+  background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.78) 100%);
+}
+.ip-sos-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.ip-sos-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 6px 12px;
+  border: 1.5px solid var(--ip-sos-c, var(--ip-mint));
+  border-radius: 14px;
+  background: var(--ip-sos-bg, rgba(127,231,217,0.10));
+  color: var(--ip-sos-c, var(--ip-mint));
+  cursor: pointer;
+  transition: transform .15s ease, background .2s ease;
+  min-height: 76px;
+  -webkit-tap-highlight-color: transparent;
+}
+.ip-sos-btn:active,
+.ip-sos-btn.pressed {
+  transform: scale(0.94);
+  background: var(--ip-sos-c, var(--ip-mint));
+  color: #0F1A2E;
+}
+.ip-sos-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+}
+.ip-sos-icon svg { width: 22px; height: 22px; stroke-width: 2; }
+.ip-sos-label {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.ip-sos-sub {
+  font-size: 0.66rem;
+  opacity: 0.75;
+  letter-spacing: 0.2px;
+}
+.ip-sos-coral { --ip-sos-c: var(--ip-coral); --ip-sos-bg: rgba(232,169,138,0.12); }
+.ip-sos-sky   { --ip-sos-c: var(--ip-sky);   --ip-sos-bg: rgba(142,197,242,0.12); }
+.ip-sos-sage  { --ip-sos-c: var(--ip-sage);  --ip-sos-bg: rgba(168,216,185,0.14); }
+.ip-sos-mint  { --ip-sos-c: var(--ip-mint);  --ip-sos-bg: rgba(127,231,217,0.14); }
+
+/* 4. Timeline ───────────────────────────────────────────── */
+.ip-timeline { margin-bottom: 22px; }
+.ip-timeline-rail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 8px 4px 14px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.ip-timeline-rail::-webkit-scrollbar { height: 4px; }
+.ip-timeline-rail::-webkit-scrollbar-thumb { background: var(--ip-border); border-radius: 4px; }
+.ip-timeline-empty,
+.ip-timeline-loading {
+  color: var(--ip-muted);
+  font-size: 0.84rem;
+  padding: 16px 0;
+}
+.ip-tl-item {
+  flex: 0 0 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: 14px;
+  border: 1.5px solid var(--ip-border);
+  background: var(--ip-surface);
+  scroll-snap-align: start;
+  transition: transform .2s ease, border-color .2s ease;
+}
+.ip-tl-time {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.76rem;
+  color: var(--ip-dim);
+  letter-spacing: 0.3px;
+}
+.ip-tl-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--ip-bg);
+  border: 1.5px solid var(--ip-border);
+  color: var(--ip-dim);
+}
+.ip-tl-dot svg { width: 18px; height: 18px; }
+.ip-tl-label {
+  font-size: 0.75rem;
+  color: var(--ip-text);
+  text-align: center;
+  line-height: 1.25;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 過去 / 現在 / 未來 */
+.ip-tl-past .ip-tl-dot { background: rgba(168,216,185,0.18); border-color: var(--ip-sage); color: var(--ip-sage); }
+.ip-tl-past .ip-tl-time,
+.ip-tl-past .ip-tl-label { opacity: 0.65; }
+.ip-tl-now {
+  transform: translateY(-3px);
+  border-color: var(--ip-mint);
+  box-shadow: 0 6px 18px rgba(127,231,217,0.18);
+}
+.ip-tl-now .ip-tl-dot {
+  background: var(--ip-mint);
+  color: #0F1A2E;
+  border-color: var(--ip-mint);
+  animation: ipNowPulse 2.4s ease-in-out infinite;
+}
+@keyframes ipNowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(127,231,217,0.55); }
+  50%      { box-shadow: 0 0 0 8px rgba(127,231,217,0); }
+}
+.ip-tl-future .ip-tl-dot { color: var(--ip-muted); }
+
+/* 5+6 row container */
+.ip-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+/* 5. Progress ring ──────────────────────────────────────── */
+.ip-progress,
+.ip-rounds {
+  padding: 16px;
+  border-radius: var(--ip-radius);
+  background: var(--ip-surface);
+  border: 1.5px solid var(--ip-border);
+}
+.ip-progress-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ip-ring {
+  position: relative;
+  width: 80px; height: 80px;
+  flex-shrink: 0;
+}
+.ip-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ip-ring-bg { fill: none; stroke: var(--ip-border); stroke-width: 6; }
+.ip-ring-fg {
+  fill: none; stroke: var(--ip-mint); stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 213.6;
+  stroke-dashoffset: 213.6;
+  transition: stroke-dashoffset .6s cubic-bezier(.4,0,.2,1);
+}
+.ip-ring-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ip-text);
+}
+.ip-ring-num em { font-style: normal; color: var(--ip-muted); margin: 0 2px; font-size: 0.85rem; }
+.ip-progress-msg {
+  flex: 1;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ip-dim);
+}
+
+/* 6. Rounds card ───────────────────────────────────────── */
+.ip-rounds-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ip-muted);
+  line-height: 1.55;
+}
+.ip-rounds-when {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  color: var(--ip-dim);
+  letter-spacing: 0.3px;
+}
+.ip-rounds-text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ip-text);
+}
+
+/* 7. Trends ─────────────────────────────────────────────── */
+.ip-trends { margin-bottom: 22px; }
+.ip-trend-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.ip-trend-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-trend-c, var(--ip-mint));
+}
+.ip-trend-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+.ip-trend-head svg { width: 14px; height: 14px; }
+.ip-trend-label {
+  color: var(--ip-text);
+  font-weight: 600;
+  flex: 1;
+}
+.ip-trend-arrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--ip-bg);
+}
+.ip-trend-arrow[data-trend="good"] { color: var(--ip-sage); }
+.ip-trend-arrow[data-trend="bad"]  { color: var(--ip-coral); }
+.ip-trend-arrow[data-trend="flat"] { color: var(--ip-muted); }
+.ip-trend-spark {
+  width: 100%;
+  height: 32px;
+}
+.ip-trend-foot {
+  font-size: 0.7rem;
+  color: var(--ip-muted);
+}
+.ip-trend-coral { --ip-trend-c: var(--ip-coral); }
+.ip-trend-sky   { --ip-trend-c: var(--ip-sky);   }
+.ip-trend-mint  { --ip-trend-c: var(--ip-mint);  }
+
+/* 8. Discharge Stepper ──────────────────────────────────── */
+.ip-discharge {
+  margin-bottom: 22px;
+  padding: 16px;
+  border-radius: var(--ip-radius);
+  background: var(--ip-surface);
+  border: 1.5px solid var(--ip-border);
+}
+.ip-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  position: relative;
+}
+.ip-steps::before {
+  content: '';
+  position: absolute;
+  left: 12%; right: 12%;
+  top: 14px;
+  height: 2px;
+  background: var(--ip-border);
+  border-radius: 2px;
+  z-index: 0;
+}
+.ip-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 1;
+}
+.ip-step-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--ip-bg);
+  border: 2px solid var(--ip-border);
+  color: transparent;
+}
+.ip-step-label {
+  font-size: 0.78rem;
+  color: var(--ip-muted);
+}
+.ip-step.done .ip-step-dot {
+  background: var(--ip-sage);
+  border-color: var(--ip-sage);
+  color: #0F1A2E;
+}
+.ip-step.done .ip-step-label { color: var(--ip-dim); }
+.ip-step.active .ip-step-dot {
+  background: var(--ip-mint);
+  border-color: var(--ip-mint);
+  color: #0F1A2E;
+  box-shadow: 0 0 0 5px rgba(127,231,217,0.18);
+}
+.ip-step.active .ip-step-label { color: var(--ip-text); font-weight: 600; }
+
+/* 9. Inpatient Education ─────────────────────────────────── */
+.ip-edu { margin-bottom: 22px; }
+.ip-edu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ip-edu-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  border: 1.5px solid var(--ip-border);
+  border-radius: 14px;
+  background: var(--ip-surface);
+  cursor: pointer;
+  color: var(--ip-text);
+  text-align: left;
+  transition: transform .15s ease, border-color .2s ease;
+}
+.ip-edu-card:active { transform: scale(0.98); }
+.ip-edu-card:hover { border-color: rgba(127,231,217,0.35); }
+.ip-edu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(127,231,217,0.16) 0%, rgba(142,197,242,0.12) 100%);
+  color: var(--ip-mint);
+}
+.ip-edu-icon svg { width: 20px; height: 20px; }
+.ip-edu-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ip-edu-title { font-size: 0.92rem; font-weight: 600; color: var(--ip-text); }
+.ip-edu-desc  { font-size: 0.72rem; color: var(--ip-muted); line-height: 1.4; }
+.ip-edu-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-bg);
+  color: var(--ip-mint);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.ip-footer-note {
+  margin: 16px 8px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(232,169,138,0.08);
+  border: 1px dashed rgba(232,169,138,0.32);
+  color: var(--ip-coral);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* ── 響應式：手機 ────────────────────────────────────── */
+@media (max-width: 600px) {
+  .ip-now { padding: 18px 14px 14px; }
+  .ip-now-greet { font-size: 1.18rem; }
+  .ip-now-day { min-width: 72px; padding: 10px 12px; }
+  .ip-now-day-num { font-size: 2rem; }
+
+  .ip-next-card { padding: 14px 12px; gap: 10px 12px; }
+  .ip-next-icon { width: 48px; height: 48px; }
+  .ip-next-name { font-size: 1rem; }
+
+  .ip-sos { padding: 12px 8px; }
+  .ip-sos-grid { gap: 6px; }
+  .ip-sos-btn { padding: 12px 4px 10px; min-height: 70px; }
+  .ip-sos-label { font-size: 0.92rem; }
+  .ip-sos-sub { font-size: 0.6rem; }
+
+  .ip-row-2 { grid-template-columns: 1fr; }
+  .ip-trend-grid { grid-template-columns: 1fr; gap: 8px; }
+  .ip-edu-grid { grid-template-columns: 1fr; }
+  .ip-steps::before { left: 14%; right: 14%; }
+}
+
+/* 年長版：放大 + 加粗 */
+html[data-mode="senior"] .home-inpatient .ip-next-btn { min-height: 64px; font-size: 1.1rem; }
+html[data-mode="senior"] .home-inpatient .ip-sos-btn { min-height: 88px; }
+html[data-mode="senior"] .home-inpatient .ip-sos-label { font-size: 1.15rem; }
+html[data-mode="senior"] .home-inpatient .ip-now-greet { font-size: 1.5rem; }
+html[data-mode="senior"] .home-inpatient .ip-now-day-num { font-size: 2.8rem; }
+html[data-mode="senior"] .home-inpatient .ip-section-head h3 { font-size: 1.15rem; }
+html[data-mode="senior"] .home-inpatient .ip-edu-title { font-size: 1.05rem; }
+html[data-mode="senior"] .home-inpatient .ip-edu-desc  { font-size: 0.84rem; }
+
 /* ─── 住院模式：sidebar 收成精簡項目 ─────────────────────────────────── */
 /* 只保留 home + INPATIENT_NAV_PAGES：admissions / medications / vitals /
    memo / reminders / settings / account，其餘 nav-item 與 section label 隱藏。 */
