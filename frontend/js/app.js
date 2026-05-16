@@ -8489,12 +8489,41 @@ function showToast(msg, type) {
     existing.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px";
     document.body.appendChild(existing);
   }
+  // Dedupe：同訊息若還在畫面上，就更新計數而不疊新的。
+  var key = type + '|' + msg;
+  var dupe = existing.querySelector('[data-toast-key="' + CSS.escape(key) + '"]');
+  if (dupe) {
+    var count = (parseInt(dupe.dataset.count, 10) || 1) + 1;
+    dupe.dataset.count = count;
+    dupe.textContent = msg + ' ×' + count;
+    dupe.style.opacity = '1';
+    clearTimeout(dupe._fadeTimer);
+    dupe._fadeTimer = setTimeout(function() { dupe.style.opacity = "0"; setTimeout(function() { dupe.remove(); }, 300); }, 3000);
+    return;
+  }
   var colors = { success: "#00D4AA", error: "#D94D4D", info: "#2B5CE6", warning: "#E8A84B" };
   var toast = document.createElement("div");
+  toast.dataset.toastKey = key;
+  toast.dataset.count = '1';
   toast.style.cssText = "padding:12px 20px;border-radius:8px;color:white;font-size:0.9rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.3s;max-width:360px;background:" + (colors[type] || colors.info);
   toast.textContent = msg;
   existing.appendChild(toast);
-  setTimeout(function() { toast.style.opacity = "0"; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+  toast._fadeTimer = setTimeout(function() { toast.style.opacity = "0"; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+}
+
+// 把 fetch response 翻成人話：優先用 backend 的 JSON `detail`（中文），fallback 才用 HTTP code
+async function _parseApiError(r) {
+  var status = r.status;
+  try {
+    var data = await r.json();
+    if (data && data.detail) return String(data.detail);
+    if (data && data.error) return String(data.error);
+  } catch (_) { /* not JSON */ }
+  if (status === 404) return '找不到對應資料（HTTP 404）';
+  if (status === 401 || status === 403) return '沒有權限（HTTP ' + status + '）';
+  if (status === 503) return '伺服器忙線中，請稍後再試（HTTP 503）';
+  if (status >= 500) return '伺服器錯誤（HTTP ' + status + '）';
+  return '操作失敗（HTTP ' + status + '）';
 }
 
 // ─── 藥物管理 ─────────────────────────────────────────────
@@ -16393,21 +16422,27 @@ function createAdmission() {
     notes: document.getElementById('adm-form-notes').value || null,
   };
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
+  // 連按防抖：建立中 disable 按鈕並切「新增中⋯」label
+  var btn = document.querySelector('.adm-btn-primary[onclick="createAdmission()"]');
+  var origHTML = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader"></i> 新增中⋯'; if (typeof lucide !== 'undefined') lucide.createIcons(); }
+  var restore = function() { if (btn) { btn.disabled = false; btn.innerHTML = origHTML; if (typeof lucide !== 'undefined') lucide.createIcons(); } };
   fetch(API + '/admissions/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已新增', 'success');
       ['adm-form-diagnosis','adm-form-icd10','adm-form-ward','adm-form-notes','adm-form-admit'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.value = '';
       });
+      restore();
       loadAdmissionsPage();
     })
-    .catch(function(e) { showToast('新增失敗：' + e.message, 'error'); });
+    .catch(function(e) { restore(); showToast('新增失敗：' + e.message, 'error'); });
 }
 
 function addAdmissionMedication(admissionId) {
@@ -16425,7 +16460,7 @@ function addAdmissionMedication(admissionId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已新增給藥', 'success');
       toggleAdmissionMedForm(admissionId);
@@ -16448,7 +16483,7 @@ function recordAdmissionDose(admMedId, admissionId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已記錄施打', 'success');
       loadAdmissionMedications(admissionId);
@@ -16459,7 +16494,7 @@ function recordAdmissionDose(admMedId, admissionId) {
 function dischargeAdmission(admissionId) {
   if (!confirm('結案這次住院 / 療程？')) return;
   fetch(API + '/admissions/' + encodeURIComponent(admissionId) + '/discharge', { method: 'POST' })
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已結案', 'success');
       loadAdmissionsPage();

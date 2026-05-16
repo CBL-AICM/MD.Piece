@@ -78,7 +78,7 @@ def _ensure_patient_exists(sb, patient_id: str) -> None:
                 name = u.data[0]["nickname"]
         except Exception:
             pass
-        sb.table("patients").insert({"id": patient_id, "name": name}).execute()
+        sb.table("patients").insert({"id": patient_id, "name": name, "age": 0}).execute()
     except Exception as e:
         # 如果 patients 表 schema 或 RLS 不允許，這裡就不硬插；交給後續 insert 的錯誤回報
         logger.warning(f"ensure_patient_exists skipped for {patient_id}: {e}")

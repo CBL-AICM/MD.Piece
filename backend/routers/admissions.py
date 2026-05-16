@@ -39,7 +39,7 @@ def _ensure_patient_exists(sb, patient_id: str) -> None:
                 name = u.data[0]["nickname"]
         except Exception:
             pass
-        sb.table("patients").insert({"id": patient_id, "name": name}).execute()
+        sb.table("patients").insert({"id": patient_id, "name": name, "age": 0}).execute()
     except Exception as e:
         logger.warning(f"ensure_patient_exists skipped for {patient_id}: {e}")
 
