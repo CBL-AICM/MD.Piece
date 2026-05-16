@@ -3088,6 +3088,22 @@ function home() {
       '</div>';
   }
 
+  // 住院模式 — Hospital Survival System：以「降低焦慮、知道現在發生什麼」為核心，
+  // 不是醫療管理系統。詳見 renderInpatientHome()。
+  if (getCareMode() === 'inpatient') {
+    return renderInpatientHome({
+      user: user,
+      greeting: greeting,
+      greetSep: greetSep,
+      name: name,
+      dateStr: dateStr,
+      dayStr: dayStr,
+      heroAvatarSrc: heroAvatarSrc,
+      heroAvatarClass: heroAvatarClass,
+      avatarAlt: avatarAlt,
+    });
+  }
+
   // 拼圖迴廊 (Layer 4) — 9 格放查詢、學習、設定相關功能
   var puzzleItems = [
     { page: 'symptomsAnalyze', icon: 'sparkles',         title: _T('home.card.symptomsAnalyze.title'), color: 'blue' },
@@ -3242,6 +3258,12 @@ function loadHomePage() {
   var user = getCurrentUser();
   var pid = getStablePatientId();
 
+  // 住院模式有完全不同的首頁佈局，走另一條資料載入。
+  if (getCareMode() === 'inpatient') {
+    if (typeof loadInpatientHome === 'function') loadInpatientHome();
+    return;
+  }
+
   // 載入今日待辦（系統自動 + 使用者個人）
   refreshTodoList();
   // 載入今日拼圖統計
@@ -3296,6 +3318,649 @@ function loadHomePage() {
       var el = document.getElementById('home-mood-summary');
       if (el) el.innerHTML = '<p class="home-ov-empty">' + _T('home.mood.error') + '</p>';
     });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 住院模式首頁 — Hospital Survival System
+// ═══════════════════════════════════════════════════════════════════════════
+// 設計核心：降低患者在住院期間的「混亂感、焦慮感、失控感」。
+// 不是醫療管理系統；患者需要的是「現在發生什麼 / 下一步 / 我有沒有變好 / 如何快速求助」。
+//
+// 模組（priority order，從上到下）：
+//   1. 現在狀態 (NowCard)    — 住院第 N 天 + 診斷 + 病房 + 安心訊息
+//   2. 下一步 (NextStep)      — 倒數最近一個任務 + 兩顆大按鈕
+//   3. 一鍵回報 (SOSBar)      — 痛 / 喘 / 噁心 / 求助 — sticky
+//   4. 今日治療 Timeline      — 橫向時間軸，過去 / 現在 / 未來
+//   5. 今日進度 (DayProgress) — 環形 + 今天還有幾項
+//   6. 查房摘要 (RoundsCard)  — 最新一筆醫師查房
+//   7. 病情趨勢 (TrendChips)  — 痛 / 累 / 心情 7 日走勢
+//   8. 出院進度 (Discharge)   — 4-step stepper
+//   9. 住院衛教 (Edu)         — 給「現在這個療程 / 診斷」相關的衛教卡
+function renderInpatientHome(ctx) {
+  return ''
+    + '<div class="home-page home-inpatient" data-care-mode="inpatient">'
+    +   renderCareModeChips()
+    +   renderInpatientNowCard(ctx)
+    +   renderInpatientNextStep()
+    +   renderInpatientSOS()
+    +   renderInpatientTimeline()
+    +   '<div class="ip-row-2">'
+    +     renderInpatientDayProgress()
+    +     renderInpatientRoundsCard()
+    +   '</div>'
+    +   renderInpatientTrendChips()
+    +   renderInpatientDischargeStepper()
+    +   renderInpatientEducation()
+    +   '<p class="ip-footer-note">出現任何不舒服請按綠色「求助護理」鈕；緊急狀況請按床邊紅色叫人鈴。</p>'
+    + '</div>';
+}
+
+// 1. 現在狀態 (Now Card) — Hero ─────────────────────────────────────────────
+// 入院第 N 天 + 診斷 + 病房 + 「我們在這裡」的安定訊息。
+// 真實住院資料由 loadInpatientHome() 在 mount 後 fetch /admissions/?status=active 填入；
+// 先給骨架佔位避免 LCP 抖動。
+function renderInpatientNowCard(ctx) {
+  return ''
+    + '<section class="ip-now" aria-label="現在狀態">'
+    +   '<div class="ip-now-pulse" aria-hidden="true"><span></span><span></span></div>'
+    +   '<div class="ip-now-head">'
+    +     '<span class="ip-now-eyebrow" id="ip-now-eyebrow">住院中</span>'
+    +     '<h2 class="ip-now-greet">' + escapeHtml(ctx.greeting + ctx.greetSep + ctx.name) + '</h2>'
+    +     '<p class="ip-now-date">' + escapeHtml(ctx.dateStr + '　' + ctx.dayStr) + '</p>'
+    +   '</div>'
+    +   '<div class="ip-now-body">'
+    +     '<div class="ip-now-day">'
+    +       '<span class="ip-now-day-num" id="ip-now-day-num">—</span>'
+    +       '<span class="ip-now-day-unit">住院第&nbsp;<em id="ip-now-day-label">—</em>&nbsp;天</span>'
+    +     '</div>'
+    +     '<div class="ip-now-info">'
+    +       '<p class="ip-now-diag" id="ip-now-diag">載入治療資訊…</p>'
+    +       '<p class="ip-now-ward" id="ip-now-ward"></p>'
+    +     '</div>'
+    +   '</div>'
+    +   '<p class="ip-now-safe"><i data-lucide="shield-check" style="width:14px;height:14px"></i> 護理站隨時都在。需要時按下方綠色按鈕。</p>'
+    + '</section>';
+}
+
+// 2. 下一步 (Next Step) — Big countdown card ─────────────────────────────────
+function renderInpatientNextStep() {
+  return ''
+    + '<section class="ip-next" aria-label="下一步">'
+    +   '<header class="ip-section-head">'
+    +     '<span class="ip-num">02</span>'
+    +     '<h3>下一步</h3>'
+    +     '<span class="ip-section-sub">最近一個排定的任務</span>'
+    +   '</header>'
+    +   '<div class="ip-next-card" id="ip-next-card">'
+    +     '<div class="ip-next-icon"><i data-lucide="clock" id="ip-next-icon-svg"></i></div>'
+    +     '<div class="ip-next-body">'
+    +       '<p class="ip-next-when" id="ip-next-when">尚無排定</p>'
+    +       '<p class="ip-next-name" id="ip-next-name">今天沒有更多任務</p>'
+    +       '<p class="ip-next-sub" id="ip-next-sub">可以好好休息</p>'
+    +     '</div>'
+    +     '<div class="ip-next-actions">'
+    +       '<button type="button" class="ip-next-btn ip-next-done" id="ip-next-done" onclick="onInpatientNextDone()" disabled>'
+    +         '<i data-lucide="check" style="width:18px;height:18px"></i><span>已完成</span>'
+    +       '</button>'
+    +       '<button type="button" class="ip-next-btn ip-next-uneasy" onclick="onInpatientNextUneasy()">'
+    +         '<i data-lucide="hand" style="width:18px;height:18px"></i><span>不太舒服</span>'
+    +       '</button>'
+    +     '</div>'
+    +   '</div>'
+    + '</section>';
+}
+
+// 3. 一鍵症狀回報 (SOS Bar) — Sticky 4-button row ─────────────────────────────
+// 4 顆大按鈕：痛 / 喘 / 噁心 / 求助。任何一個按下：
+//   1) 立刻在 localStorage 寫入一筆症狀紀錄（給趨勢用）
+//   2) toast 顯示「已通知護理站」(後端串接前先當 UI 假承諾，避免病人焦慮等不到回應)
+//   3) 求助 = 直接彈出「想要什麼幫助」快選，不是只 log。
+function renderInpatientSOS() {
+  var items = [
+    { key: 'pain',     icon: 'zap',           label: '痛',   sub: '哪裡都可以', color: 'coral'  },
+    { key: 'breath',   icon: 'wind',          label: '喘',   sub: '吸不到氣',   color: 'sky'    },
+    { key: 'nausea',   icon: 'droplets',      label: '噁心', sub: '想吐 / 反胃', color: 'sage'   },
+    { key: 'help',     icon: 'bell-ring',     label: '求助', sub: '叫護理',     color: 'mint'   },
+  ];
+  var btns = items.map(function(it) {
+    return ''
+      + '<button type="button" class="ip-sos-btn ip-sos-' + it.color + '" data-key="' + it.key + '" onclick="onInpatientSOS(\'' + it.key + '\', this)">'
+      +   '<span class="ip-sos-icon"><i data-lucide="' + it.icon + '"></i></span>'
+      +   '<span class="ip-sos-label">' + it.label + '</span>'
+      +   '<span class="ip-sos-sub">' + it.sub + '</span>'
+      + '</button>';
+  }).join('');
+  return ''
+    + '<section class="ip-sos" aria-label="一鍵症狀回報">'
+    +   '<header class="ip-section-head">'
+    +     '<span class="ip-num">03</span>'
+    +     '<h3>不舒服？按一下就好</h3>'
+    +     '<span class="ip-section-sub">不用打字 · 不用想 · 直接按</span>'
+    +   '</header>'
+    +   '<div class="ip-sos-grid">' + btns + '</div>'
+    + '</section>';
+}
+
+// 4. 今日治療 Timeline — Horizontal timeline ─────────────────────────────────
+function renderInpatientTimeline() {
+  return ''
+    + '<section class="ip-timeline" aria-label="今日治療 Timeline">'
+    +   '<header class="ip-section-head">'
+    +     '<span class="ip-num">04</span>'
+    +     '<h3>今日治療</h3>'
+    +     '<span class="ip-section-sub">過去 → 現在 → 等下</span>'
+    +   '</header>'
+    +   '<div class="ip-timeline-rail" id="ip-timeline-rail">'
+    +     '<div class="ip-timeline-loading">// 整理今日排程…</div>'
+    +   '</div>'
+    + '</section>';
+}
+
+// 5. 今日進度 (Day Progress) — Ring chart ─────────────────────────────────────
+function renderInpatientDayProgress() {
+  return ''
+    + '<section class="ip-progress" aria-label="今日進度">'
+    +   '<header class="ip-section-head">'
+    +     '<span class="ip-num">05</span>'
+    +     '<h3>今日進度</h3>'
+    +   '</header>'
+    +   '<div class="ip-progress-body">'
+    +     '<div class="ip-ring">'
+    +       '<svg viewBox="0 0 80 80" aria-hidden="true">'
+    +         '<circle class="ip-ring-bg" cx="40" cy="40" r="34" />'
+    +         '<circle class="ip-ring-fg" id="ip-ring-fg" cx="40" cy="40" r="34" />'
+    +       '</svg>'
+    +       '<div class="ip-ring-num"><span id="ip-ring-done">0</span><em>/</em><span id="ip-ring-total">0</span></div>'
+    +     '</div>'
+    +     '<p class="ip-progress-msg" id="ip-progress-msg">慢慢來，一件一件做。</p>'
+    +   '</div>'
+    + '</section>';
+}
+
+// 6. 查房摘要 (Rounds Card) ────────────────────────────────────────────────
+// 顯示最新一筆醫師查房記錄。資料目前無後端模型，先用 localStorage 存的「最後一筆」。
+function renderInpatientRoundsCard() {
+  return ''
+    + '<section class="ip-rounds" aria-label="查房摘要">'
+    +   '<header class="ip-section-head">'
+    +     '<span class="ip-num">06</span>'
+    +     '<h3>最新查房</h3>'
+    +   '</header>'
+    +   '<div class="ip-rounds-body" id="ip-rounds-body">'
+    +     '<p class="ip-rounds-empty">尚未記錄查房內容。醫師查房後在此可看到摘要。</p>'
+    +   '</div>'
+    + '</section>';
+}
+
+// 7. 病情趨勢 (Trend Chips) — 7-day sparklines ─────────────────────────────
+function renderInpatientTrendChips() {
+  var chips = [
+    { key: 'pain',    label: '疼痛', icon: 'zap',              color: 'coral'  },
+    { key: 'fatigue', label: '疲勞', icon: 'battery-low',      color: 'sky'    },
+    { key: 'mood',    label: '心情', icon: 'heart-handshake',  color: 'mint'   },
+  ];
+  var html = chips.map(function(c) {
+    return ''
+      + '<div class="ip-trend-chip ip-trend-' + c.color + '" data-key="' + c.key + '">'
+      +   '<span class="ip-trend-head">'
+      +     '<i data-lucide="' + c.icon + '"></i>'
+      +     '<span class="ip-trend-label">' + c.label + '</span>'
+      +     '<span class="ip-trend-arrow" id="ip-trend-arrow-' + c.key + '">—</span>'
+      +   '</span>'
+      +   '<svg class="ip-trend-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">'
+      +     '<polyline id="ip-trend-line-' + c.key + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="" />'
+      +   '</svg>'
+      +   '<span class="ip-trend-foot" id="ip-trend-foot-' + c.key + '">7 天平均 —</span>'
+      + '</div>';
+  }).join('');
+  return ''
+    + '<section class="ip-trends" aria-label="病情趨勢">'
+    +   '<header class="ip-section-head">'
+    +     '<span class="ip-num">07</span>'
+    +     '<h3>這幾天的變化</h3>'
+    +     '<span class="ip-section-sub">不只看今天，看一週的方向</span>'
+    +   '</header>'
+    +   '<div class="ip-trend-grid">' + html + '</div>'
+    + '</section>';
+}
+
+// 8. 出院進度 (Discharge Stepper) ──────────────────────────────────────────
+function renderInpatientDischargeStepper() {
+  var steps = ['入住', '治療', '觀察', '出院'];
+  var html = steps.map(function(s, i) {
+    return ''
+      + '<li class="ip-step" data-step="' + i + '">'
+      +   '<span class="ip-step-dot"><i data-lucide="check" style="width:12px;height:12px"></i></span>'
+      +   '<span class="ip-step-label">' + s + '</span>'
+      + '</li>';
+  }).join('');
+  return ''
+    + '<section class="ip-discharge" aria-label="出院進度">'
+    +   '<header class="ip-section-head">'
+    +     '<span class="ip-num">08</span>'
+    +     '<h3>出院進度</h3>'
+    +     '<span class="ip-section-sub" id="ip-discharge-eta">—</span>'
+    +   '</header>'
+    +   '<ol class="ip-steps" id="ip-steps">' + html + '</ol>'
+    + '</section>';
+}
+
+// 9. 住院衛教 (Inpatient Education) ─────────────────────────────────────────
+// 根據「目前住院的診斷 + 排定的藥物」給對應的衛教卡片。沒住院時這區會 hide。
+// 後端目前沒有 admission_specific 衛教資料表，先放幾張通用住院衛教卡，
+// 由 loadInpatientEducation() 依診斷 keyword 拉 /education/ 的相關內容覆寫。
+function renderInpatientEducation() {
+  return ''
+    + '<section class="ip-edu" aria-label="住院衛教">'
+    +   '<header class="ip-section-head">'
+    +     '<span class="ip-num">09</span>'
+    +     '<h3>住院衛教</h3>'
+    +     '<span class="ip-section-sub">和你這次治療最相關的</span>'
+    +   '</header>'
+    +   '<div class="ip-edu-grid" id="ip-edu-grid">'
+    // 通用住院衛教骨架（fallback）— 拉到資料後會被覆寫
+    +     _inpatientEduCard('shower-head',     '住院時的清潔',     '怎麼洗澡 / 怎麼擦澡 / 注意點滴')
+    +     _inpatientEduCard('moon',            '住院睡不好怎麼辦', '光線 / 噪音 / 翻身 / 抗焦慮')
+    +     _inpatientEduCard('utensils-crossed','住院的飲食限制',   '為什麼禁食 / 什麼可以吃')
+    +     _inpatientEduCard('footprints',      '下床走動的安全',   '預防跌倒 / 點滴怎麼帶 / 何時叫人')
+    +   '</div>'
+    +   '<button type="button" class="ip-edu-more" onclick="navigateTo(\'education\',null)">'
+    +     '<i data-lucide="book-heart" style="width:14px;height:14px"></i> 看更多衛教文章'
+    +   '</button>'
+    + '</section>';
+}
+
+function _inpatientEduCard(icon, title, desc) {
+  // education 頁面接受 hash 引數但目前統一導去列表頁；點進去再篩選。
+  return ''
+    + '<button type="button" class="ip-edu-card" onclick="navigateTo(\'education\',null)">'
+    +   '<span class="ip-edu-icon"><i data-lucide="' + icon + '"></i></span>'
+    +   '<span class="ip-edu-body">'
+    +     '<span class="ip-edu-title">' + title + '</span>'
+    +     '<span class="ip-edu-desc">' + desc + '</span>'
+    +   '</span>'
+    +   '<i data-lucide="arrow-right" style="width:14px;height:14px;color:var(--text-dim)"></i>'
+    + '</button>';
+}
+
+// ── 資料載入 / 互動 handlers ────────────────────────────────────────────────
+
+// 入院 mount 後執行的整套 fetch — 把骨架填上真資料。
+function loadInpatientHome() {
+  loadInpatientActiveAdmission();
+  loadInpatientTrendSparklines();
+  refreshInpatientRoundsCard();
+  refreshInpatientDayProgress();
+}
+
+// 拉現役 admission，渲染 Now Card + Timeline + Next Step + Discharge Stepper
+function loadInpatientActiveAdmission() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var rows = (data && data.admissions) || [];
+      var active = rows.find(function(a) { return a.status === 'active'; }) || null;
+      _fillNowCard(active);
+      _fillDischargeStepper(active);
+      // Timeline + Next Step：拿 admission_medications 排程合成今日 timeline
+      if (active) {
+        fetch(API + '/admissions/' + encodeURIComponent(active.id))
+          .then(function(r) { return r.json(); })
+          .then(function(adm) {
+            var meds = (adm && adm.medications) || [];
+            var timeline = _buildTodayTimeline(meds, active);
+            _renderTimelineRail(timeline);
+            _fillNextStep(timeline);
+            _fillDayProgress(timeline);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+          })
+          .catch(function() { _renderTimelineRail([]); _fillNextStep([]); _fillDayProgress([]); });
+      } else {
+        _renderTimelineRail([]); _fillNextStep([]); _fillDayProgress([]);
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() { _fillNowCard(null); _renderTimelineRail([]); });
+}
+
+function _fillNowCard(active) {
+  var eyebrow = document.getElementById('ip-now-eyebrow');
+  var dayNum = document.getElementById('ip-now-day-num');
+  var dayLabel = document.getElementById('ip-now-day-label');
+  var diag = document.getElementById('ip-now-diag');
+  var ward = document.getElementById('ip-now-ward');
+  if (!active) {
+    if (eyebrow) eyebrow.textContent = '目前沒有進行中的住院 / 療程';
+    if (dayNum)  dayNum.textContent = '—';
+    if (dayLabel)dayLabel.textContent = '—';
+    if (diag)    diag.innerHTML = '到「住院 / 療程」頁建立第一筆；建立後這裡會自動帶出。<br><button type="button" class="ip-now-cta" onclick="navigateTo(\'admissions\',null)">前往新增</button>';
+    if (ward)    ward.textContent = '';
+    return;
+  }
+  var typeLabel = active.type === 'chronic_infusion' ? '長期療程' : '住院中';
+  if (eyebrow) eyebrow.textContent = typeLabel;
+  var admit = active.admit_date ? new Date(active.admit_date) : null;
+  var days = admit ? Math.max(1, Math.floor((Date.now() - admit.getTime()) / 86400000) + 1) : 1;
+  if (dayNum)  dayNum.textContent = String(days);
+  if (dayLabel)dayLabel.textContent = String(days);
+  if (diag)    diag.textContent = active.diagnosis || '尚未填診斷';
+  if (ward) {
+    var parts = [];
+    if (active.ward) parts.push('病房 ' + active.ward);
+    if (active.admit_date) parts.push('入住 ' + active.admit_date.slice(0, 10));
+    ward.textContent = parts.join('　·　');
+  }
+}
+
+// 從排定給藥 + 預設日常事件（餐 / 量測 / 查房）合成今日 timeline
+function _buildTodayTimeline(meds, active) {
+  var todayStr = new Date().toISOString().slice(0, 10);
+  var items = [];
+  // 醫師查房（預設早上 09:00）
+  items.push({ id: 'rounds', time: todayStr + 'T09:00', kind: 'rounds', icon: 'stethoscope', label: '主治醫師查房' });
+  // 三餐
+  [['08:00','早餐'],['12:00','午餐'],['18:00','晚餐']].forEach(function(t, i) {
+    items.push({ id: 'meal-' + i, time: todayStr + 'T' + t[0], kind: 'meal', icon: 'utensils-crossed', label: t[1] });
+  });
+  // 量血壓（預設 4 次）
+  ['08:00','12:00','17:00','21:00'].forEach(function(t, i) {
+    items.push({ id: 'vitals-' + i, time: todayStr + 'T' + t, kind: 'vitals', icon: 'activity', label: '量測 vitals' });
+  });
+  // 排定給藥（只取今天有 next_due_date 的）
+  (meds || []).forEach(function(m) {
+    if (!m.next_due_date) return;
+    if (String(m.next_due_date).slice(0, 10) !== todayStr) return;
+    items.push({
+      id: 'med-' + m.id,
+      time: m.next_due_date.slice(0, 16),
+      kind: 'med',
+      icon: 'pill',
+      label: m.name + (m.dose ? '　' + m.dose : ''),
+      medId: m.id,
+    });
+  });
+  // 排序 + 標記狀態（過去 / 即將 / 未來）
+  items.sort(function(a, b) { return a.time < b.time ? -1 : 1; });
+  var now = Date.now();
+  items.forEach(function(it) {
+    var t = new Date(it.time).getTime();
+    var diff = t - now;
+    if (diff < -30 * 60000) it.status = 'past';
+    else if (diff < 30 * 60000) it.status = 'now';
+    else it.status = 'future';
+  });
+  return items;
+}
+
+function _renderTimelineRail(items) {
+  var rail = document.getElementById('ip-timeline-rail');
+  if (!rail) return;
+  if (!items || !items.length) {
+    rail.innerHTML = '<p class="ip-timeline-empty">今天目前還沒有排程任務。</p>';
+    return;
+  }
+  rail.innerHTML = items.map(function(it) {
+    var hhmm = it.time.slice(11, 16);
+    return ''
+      + '<div class="ip-tl-item ip-tl-' + it.status + ' ip-tl-kind-' + it.kind + '" data-id="' + it.id + '">'
+      +   '<span class="ip-tl-time">' + hhmm + '</span>'
+      +   '<span class="ip-tl-dot"><i data-lucide="' + it.icon + '"></i></span>'
+      +   '<span class="ip-tl-label">' + escapeHtml(it.label) + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+function _fillNextStep(items) {
+  var nextWhen = document.getElementById('ip-next-when');
+  var nextName = document.getElementById('ip-next-name');
+  var nextSub = document.getElementById('ip-next-sub');
+  var nextIcon = document.getElementById('ip-next-icon-svg');
+  var doneBtn = document.getElementById('ip-next-done');
+  if (!items || !items.length) {
+    if (nextWhen) nextWhen.textContent = '今天沒有更多任務';
+    if (nextName) nextName.textContent = '可以好好休息';
+    if (nextSub)  nextSub.textContent = '';
+    return;
+  }
+  var upcoming = items.find(function(it) { return it.status === 'now' || it.status === 'future'; });
+  if (!upcoming) {
+    if (nextWhen) nextWhen.textContent = '今天的任務都完成了';
+    if (nextName) nextName.textContent = '好好休息';
+    if (nextSub)  nextSub.textContent = '';
+    return;
+  }
+  var diffMin = Math.round((new Date(upcoming.time).getTime() - Date.now()) / 60000);
+  var when;
+  if (diffMin <= 0) when = '現在';
+  else if (diffMin < 60) when = '再 ' + diffMin + ' 分鐘';
+  else when = upcoming.time.slice(11, 16);
+  if (nextWhen) nextWhen.textContent = when;
+  if (nextName) nextName.textContent = upcoming.label;
+  if (nextSub)  nextSub.textContent = '預定時間 ' + upcoming.time.slice(11, 16);
+  if (nextIcon) {
+    nextIcon.setAttribute('data-lucide', upcoming.icon || 'clock');
+  }
+  if (doneBtn) {
+    doneBtn.disabled = false;
+    doneBtn.dataset.itemId = upcoming.id;
+    doneBtn.dataset.medId = upcoming.medId || '';
+  }
+}
+
+function _fillDayProgress(items) {
+  var ring = document.getElementById('ip-ring-fg');
+  var done = document.getElementById('ip-ring-done');
+  var total = document.getElementById('ip-ring-total');
+  var msg = document.getElementById('ip-progress-msg');
+  var doneN = (items || []).filter(function(it) { return it.status === 'past'; }).length;
+  var totalN = (items || []).length;
+  if (done) done.textContent = String(doneN);
+  if (total) total.textContent = String(totalN);
+  var circ = 2 * Math.PI * 34;
+  if (ring) {
+    var pct = totalN ? doneN / totalN : 0;
+    ring.style.strokeDasharray = String(circ);
+    ring.style.strokeDashoffset = String(circ * (1 - pct));
+  }
+  if (msg) {
+    if (totalN === 0) msg.textContent = '今天暫無排程，先好好休息。';
+    else if (doneN === totalN) msg.textContent = '今天的事都完成了，辛苦了。';
+    else if (doneN / totalN > 0.5) msg.textContent = '已經過了一半，繼續慢慢來。';
+    else msg.textContent = '慢慢來，一件一件做。';
+  }
+}
+
+function _fillDischargeStepper(active) {
+  var eta = document.getElementById('ip-discharge-eta');
+  if (!active) {
+    document.querySelectorAll('#ip-steps .ip-step').forEach(function(li) { li.classList.remove('active','done'); });
+    if (eta) eta.textContent = '—';
+    return;
+  }
+  // 簡化判定：active + 還沒到預估出院日 → 「治療」階段；最後 24h → 「觀察」；已 discharged → 「出院」
+  var stepIdx;
+  if (active.status === 'discharged') stepIdx = 3;
+  else if (active.discharge_date) {
+    var dd = new Date(active.discharge_date).getTime();
+    var diffH = (dd - Date.now()) / 3600000;
+    if (diffH < 24) stepIdx = 2;
+    else stepIdx = 1;
+  } else {
+    stepIdx = 1; // 治療階段
+  }
+  document.querySelectorAll('#ip-steps .ip-step').forEach(function(li, i) {
+    li.classList.toggle('done', i < stepIdx);
+    li.classList.toggle('active', i === stepIdx);
+  });
+  if (eta) {
+    if (active.discharge_date) eta.textContent = '預計出院 ' + active.discharge_date.slice(0, 10);
+    else eta.textContent = '預計出院日未定';
+  }
+}
+
+// 7 日趨勢 — 痛 / 累 / 心情
+//   痛：從 mdpiece_symptoms 取 category=headache/joint/muscle/neuralgia/chest 的最高 intensity 每日平均
+//   累：fatigue category 的 intensity 每日平均
+//   心情：/emotions/daily 取 7 天
+function loadInpatientTrendSparklines() {
+  var syms = (typeof getSymptomEntries === 'function') ? getSymptomEntries() : [];
+  var painCats = ['headache','joint','muscle','neuralgia','chest','dizziness','vertigo'];
+  _drawSparkline('pain', _aggDaily(syms, function(e) { return painCats.indexOf(e.categoryId) !== -1 ? (e.intensity || 0) : null; }));
+  _drawSparkline('fatigue', _aggDaily(syms, function(e) { return e.categoryId === 'fatigue' ? (e.intensity || 0) : null; }));
+  // 心情：後端 daily，欄位 average_score (0..1)；後端拉不到時退回空
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) { _drawSparkline('mood', []); return; }
+  fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var daily = (data && data.daily) || [];
+      var vals = daily.map(function(d) { return (d.average_score != null) ? d.average_score * 10 : null; });
+      _drawSparkline('mood', vals);
+    })
+    .catch(function() { _drawSparkline('mood', []); });
+}
+
+function _aggDaily(entries, picker) {
+  var bucket = {};
+  var today = new Date();
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date(today); d.setDate(d.getDate() - i);
+    bucket[d.toISOString().slice(0, 10)] = { sum: 0, n: 0 };
+  }
+  (entries || []).forEach(function(e) {
+    var v = picker(e);
+    if (v == null) return;
+    var k = String(e.recordedAt || '').slice(0, 10);
+    if (bucket[k]) { bucket[k].sum += v; bucket[k].n += 1; }
+  });
+  return Object.keys(bucket).sort().map(function(k) {
+    var b = bucket[k];
+    return b.n ? b.sum / b.n : null;
+  });
+}
+
+function _drawSparkline(key, vals) {
+  var line = document.getElementById('ip-trend-line-' + key);
+  var arrow = document.getElementById('ip-trend-arrow-' + key);
+  var foot = document.getElementById('ip-trend-foot-' + key);
+  if (!line) return;
+  var clean = vals.filter(function(v) { return v != null; });
+  if (!clean.length) {
+    line.setAttribute('points', '');
+    if (arrow) arrow.textContent = '—';
+    if (foot) foot.textContent = '7 天內沒紀錄';
+    return;
+  }
+  var max = Math.max.apply(null, clean);
+  var min = Math.min.apply(null, clean);
+  if (max === min) { max = min + 1; }
+  var W = 100, H = 30, padX = 2, padY = 4;
+  var step = (W - padX * 2) / Math.max(1, vals.length - 1);
+  var pts = vals.map(function(v, i) {
+    var x = padX + i * step;
+    if (v == null) return null;
+    var y = padY + (H - padY * 2) * (1 - (v - min) / (max - min));
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).filter(Boolean);
+  line.setAttribute('points', pts.join(' '));
+  // 趨勢：取前半 / 後半平均比較。對「痛 / 累」來說越低越好；對「心情」來說越高越好。
+  var half = Math.floor(clean.length / 2) || 1;
+  var avgEarly = clean.slice(0, half).reduce(function(s,v){return s+v;},0) / half;
+  var avgLate = clean.slice(-half).reduce(function(s,v){return s+v;},0) / half;
+  var delta = avgLate - avgEarly;
+  var isGoodMetric = (key === 'mood');
+  var improving = isGoodMetric ? (delta > 0.2) : (delta < -0.2);
+  var worsening = isGoodMetric ? (delta < -0.2) : (delta > 0.2);
+  if (arrow) {
+    arrow.textContent = improving ? '↘ 好轉' : worsening ? '↗ 加重' : '→ 持平';
+    arrow.dataset.trend = improving ? 'good' : worsening ? 'bad' : 'flat';
+  }
+  if (foot) {
+    var avg = clean.reduce(function(s,v){return s+v;},0) / clean.length;
+    foot.textContent = '7 天平均 ' + avg.toFixed(1);
+  }
+}
+
+// 查房摘要 — 從 localStorage 取 "mdpiece_inpatient_rounds_latest"
+//   (後端目前無 model，先用 local 模擬；醫師之後接後端就替換 fetch)
+function refreshInpatientRoundsCard() {
+  var box = document.getElementById('ip-rounds-body');
+  if (!box) return;
+  var raw;
+  try { raw = JSON.parse(localStorage.getItem('mdpiece_inpatient_rounds_latest') || 'null'); } catch (e) { raw = null; }
+  if (!raw || !raw.text) {
+    box.innerHTML = '<p class="ip-rounds-empty">尚未記錄查房內容。醫師查房後在此可看到摘要。</p>';
+    return;
+  }
+  box.innerHTML = ''
+    + '<p class="ip-rounds-when">' + escapeHtml(raw.when || '') + '　·　' + escapeHtml(raw.doctor || '主治醫師') + '</p>'
+    + '<p class="ip-rounds-text">' + escapeHtml(raw.text) + '</p>';
+}
+
+function refreshInpatientDayProgress() { /* fillDayProgress 已在 loadInpatientActiveAdmission flow */ }
+
+// ── User interactions ──────────────────────────────────────────────────────
+
+// SOS button — 痛 / 喘 / 噁心 / 求助。立即寫一筆 local 紀錄 + toast 安撫。
+function onInpatientSOS(key, btn) {
+  if (btn) {
+    btn.classList.add('pressed');
+    setTimeout(function() { btn.classList.remove('pressed'); }, 300);
+  }
+  var labelMap = { pain: '痛', breath: '喘', nausea: '噁心', help: '求助護理' };
+  var catMap = { pain: 'headache', breath: 'breath', nausea: 'nausea' };
+  // 寫一筆症狀紀錄（給趨勢用）；'help' 不算症狀，跳過
+  if (key !== 'help' && typeof saveSymptomEntry === 'function') {
+    saveSymptomEntry({
+      id: 'sos_' + Date.now().toString(36),
+      categoryId: catMap[key] || key,
+      intensity: 5,
+      frequency: 1,
+      notes: '一鍵 SOS 回報（住院模式）',
+      recordedAt: new Date().toISOString(),
+    });
+  }
+  if (key === 'help') {
+    if (typeof showToast === 'function') showToast('已通知護理站，請稍候。', 'success');
+  } else {
+    if (typeof showToast === 'function') showToast('已記下「' + labelMap[key] + '」，並通知護理站。', 'success');
+  }
+  // 重新整理趨勢線
+  loadInpatientTrendSparklines();
+}
+
+function onInpatientNextDone() {
+  var btn = document.getElementById('ip-next-done');
+  if (!btn || btn.disabled) return;
+  var itemId = btn.dataset.itemId || '';
+  var medId = btn.dataset.medId || '';
+  // 排定給藥的「已完成」→ 後端 record dose（沿用 medications）
+  if (itemId.indexOf('med-') === 0 && medId) {
+    fetch(API + '/admissions/medications/' + encodeURIComponent(medId) + '/dose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ admission_medication_id: medId }),
+    })
+      .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function() {
+        if (typeof showToast === 'function') showToast('已記錄這次施打', 'success');
+        loadInpatientActiveAdmission();
+      })
+      .catch(function() {
+        if (typeof showToast === 'function') showToast('記錄失敗，請重試', 'error');
+      });
+    return;
+  }
+  // 一般 timeline item：本地 mark
+  if (typeof showToast === 'function') showToast('已標記完成', 'success');
+  loadInpatientActiveAdmission();
+}
+
+function onInpatientNextUneasy() {
+  // 跳轉到症狀紀錄 — 但保留 inpatient mode 不切走
+  if (typeof navigateTo === 'function') navigateTo('symptoms', null);
 }
 
 // ─── 症狀分析 ──────────────────────────────────────────────
