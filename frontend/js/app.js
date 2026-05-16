@@ -3521,7 +3521,53 @@ function renderInpatientSOS() {
     +     '<span class="ip-section-sub">不用打字 · 不用想 · 直接按</span>'
     +   '</header>'
     +   '<div class="ip-sos-grid">' + btns + '</div>'
+    +   '<div class="ip-sos-history" id="ip-sos-history" hidden>'
+    +     '<div class="ip-sos-history-head">'
+    +       '<span>今天已回報</span>'
+    +       '<button type="button" class="ip-sos-history-clear" onclick="onInpatientSOSClear()" aria-label="清除今日回報">清除</button>'
+    +     '</div>'
+    +     '<div class="ip-sos-history-list" id="ip-sos-history-list"></div>'
+    +   '</div>'
     + '</section>';
+}
+
+// SOS history — 每日獨立 key，午夜後自動「歸零」
+function _todaySosKey() {
+  return 'mdpiece_inpatient_sos_' + new Date().toISOString().slice(0, 10);
+}
+function _getInpatientSosToday() {
+  try { return JSON.parse(localStorage.getItem(_todaySosKey()) || '[]') || []; } catch (e) { return []; }
+}
+function _pushInpatientSosToday(key) {
+  var list = _getInpatientSosToday();
+  list.push({ key: key, time: new Date().toISOString() });
+  localStorage.setItem(_todaySosKey(), JSON.stringify(list));
+}
+function refreshInpatientSosHistory() {
+  var wrap = document.getElementById('ip-sos-history');
+  var listEl = document.getElementById('ip-sos-history-list');
+  if (!wrap || !listEl) return;
+  var list = _getInpatientSosToday();
+  if (!list.length) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  var labelMap = { pain: '痛', breath: '喘', nausea: '噁心', help: '求助' };
+  var iconMap = { pain: 'zap', breath: 'wind', nausea: 'droplets', help: 'bell-ring' };
+  // 倒序顯示，最近在前
+  listEl.innerHTML = list.slice().reverse().map(function(s) {
+    var hhmm = s.time.slice(11, 16);
+    return ''
+      + '<span class="ip-sos-chip ip-sos-chip-' + s.key + '">'
+      +   '<i data-lucide="' + (iconMap[s.key] || 'circle') + '"></i>'
+      +   '<span class="ip-sos-chip-time">' + hhmm + '</span>'
+      +   '<span class="ip-sos-chip-label">' + (labelMap[s.key] || s.key) + '</span>'
+      + '</span>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function onInpatientSOSClear() {
+  if (!confirm('清掉今天所有 SOS 回報紀錄？（已記錄到症狀的不會被刪）')) return;
+  localStorage.removeItem(_todaySosKey());
+  refreshInpatientSosHistory();
 }
 
 // 4. 今日治療 Timeline — Horizontal timeline ─────────────────────────────────
@@ -3561,17 +3607,35 @@ function renderInpatientDayProgress() {
 }
 
 // 6. 查房摘要 (Rounds Card) ────────────────────────────────────────────────
-// 顯示最新一筆醫師查房記錄。資料目前無後端模型，先用 localStorage 存的「最後一筆」。
+// 顯示醫師查房紀錄。資料先存 localStorage `mdpiece_inpatient_rounds`（陣列，
+// 依 time 倒序），後端 model 未來補上即可換 fetch。
+// UI：頁面預設顯示最新 1 筆 + 「+」按鈕；「+」彈出 inline composer 寫新筆。
+// 多筆時提供「看全部 (N)」展開。
 function renderInpatientRoundsCard() {
   return ''
     + '<section class="ip-rounds" aria-label="查房摘要">'
     +   '<header class="ip-section-head">'
     +     '<span class="ip-num">06</span>'
     +     '<h3>最新查房</h3>'
+    +     '<button type="button" class="ip-rounds-add" id="ip-rounds-add-btn" onclick="onInpatientRoundsAdd()" aria-label="新增查房紀錄">'
+    +       '<i data-lucide="plus" style="width:14px;height:14px"></i>'
+    +       '<span>加紀錄</span>'
+    +     '</button>'
     +   '</header>'
-    +   '<div class="ip-rounds-body" id="ip-rounds-body">'
-    +     '<p class="ip-rounds-empty">尚未記錄查房內容。醫師查房後在此可看到摘要。</p>'
+    +   '<div class="ip-rounds-composer" id="ip-rounds-composer" hidden>'
+    +     '<div class="ip-rounds-row">'
+    +       '<input type="text" class="ip-rounds-doctor" id="ip-rounds-doctor" maxlength="40" placeholder="醫師名稱（可空）" />'
+    +     '</div>'
+    +     '<textarea class="ip-rounds-input" id="ip-rounds-input" rows="3" maxlength="400" placeholder="今早醫師說了什麼？例：類風濕用藥計畫照原訂，下午抽血追蹤 CRP..."></textarea>'
+    +     '<div class="ip-rounds-actions">'
+    +       '<button type="button" class="ip-rounds-cancel" onclick="onInpatientRoundsCancel()">取消</button>'
+    +       '<button type="button" class="ip-rounds-save" onclick="onInpatientRoundsSave()">儲存</button>'
+    +     '</div>'
     +   '</div>'
+    +   '<div class="ip-rounds-body" id="ip-rounds-body">'
+    +     '<p class="ip-rounds-empty">尚未記錄查房內容。按右上「加紀錄」把今天醫師說的話寫下來。</p>'
+    +   '</div>'
+    +   '<button type="button" class="ip-rounds-more" id="ip-rounds-more" onclick="onInpatientRoundsToggleAll()" hidden>看全部 (<span id="ip-rounds-more-n">0</span>)</button>'
     + '</section>';
 }
 
@@ -3674,6 +3738,7 @@ function loadInpatientHome() {
   loadInpatientTrendSparklines();
   refreshInpatientRoundsCard();
   refreshInpatientDayProgress();
+  refreshInpatientSosHistory();
 }
 
 // 拉現役 admission，渲染 Now Card + Timeline + Next Step + Discharge Stepper
@@ -3764,20 +3829,41 @@ function _buildTodayTimeline(meds, active) {
       medId: m.id,
     });
   });
-  // 排序 + 標記狀態（過去 / 即將 / 未來）
+  // 排序 + 標記狀態（過去 / 即將 / 未來）。再套上「使用者手動勾選完成」flag。
   items.sort(function(a, b) { return a.time < b.time ? -1 : 1; });
   var now = Date.now();
+  var doneSet = _getTimelineDoneSet();
   items.forEach(function(it) {
     var t = new Date(it.time).getTime();
     var diff = t - now;
-    if (diff < -30 * 60000) it.status = 'past';
+    if (doneSet[it.id]) {
+      it.status = 'past';
+      it.userDone = true;
+    } else if (diff < -30 * 60000) it.status = 'past';
     else if (diff < 30 * 60000) it.status = 'now';
     else it.status = 'future';
   });
   return items;
 }
 
+// Timeline 完成標記 — 每日獨立 storage（一天結束自動失效）
+function _todayDoneKey() {
+  return 'mdpiece_inpatient_tl_done_' + new Date().toISOString().slice(0, 10);
+}
+function _getTimelineDoneSet() {
+  try { return JSON.parse(localStorage.getItem(_todayDoneKey()) || '{}') || {}; } catch (e) { return {}; }
+}
+function _setTimelineItemDone(id, done) {
+  var set = _getTimelineDoneSet();
+  if (done) set[id] = true; else delete set[id];
+  localStorage.setItem(_todayDoneKey(), JSON.stringify(set));
+}
+
+// timeline items 在 mount 後存一份 cache，給 modal 與 next-done 查
+var _ipTimelineCache = [];
+
 function _renderTimelineRail(items) {
+  _ipTimelineCache = items || [];
   var rail = document.getElementById('ip-timeline-rail');
   if (!rail) return;
   if (!items || !items.length) {
@@ -3786,13 +3872,101 @@ function _renderTimelineRail(items) {
   }
   rail.innerHTML = items.map(function(it) {
     var hhmm = it.time.slice(11, 16);
+    var doneCls = it.userDone ? ' ip-tl-userdone' : '';
     return ''
-      + '<div class="ip-tl-item ip-tl-' + it.status + ' ip-tl-kind-' + it.kind + '" data-id="' + it.id + '">'
+      + '<button type="button" class="ip-tl-item ip-tl-' + it.status + ' ip-tl-kind-' + it.kind + doneCls + '" data-id="' + it.id + '" onclick="onInpatientTimelineTap(\'' + it.id + '\')" aria-label="' + escapeHtml(it.label) + '">'
       +   '<span class="ip-tl-time">' + hhmm + '</span>'
-      +   '<span class="ip-tl-dot"><i data-lucide="' + it.icon + '"></i></span>'
+      +   '<span class="ip-tl-dot">'
+      +     (it.userDone ? '<i data-lucide="check" style="width:18px;height:18px"></i>' : '<i data-lucide="' + it.icon + '"></i>')
+      +   '</span>'
       +   '<span class="ip-tl-label">' + escapeHtml(it.label) + '</span>'
-      + '</div>';
+      + '</button>';
   }).join('');
+}
+
+// 點某個 timeline item — 開 bottom sheet 顯示細節 + 動作
+function onInpatientTimelineTap(itemId) {
+  var item = _ipTimelineCache.find(function(it) { return it.id === itemId; });
+  if (!item) return;
+  _openInpatientTimelineSheet(item);
+}
+
+function _openInpatientTimelineSheet(item) {
+  var existing = document.getElementById('ip-tl-sheet');
+  if (existing) existing.remove();
+
+  var statusLabel = item.userDone ? '已完成' : item.status === 'past' ? '已過' : item.status === 'now' ? '進行中' : '等下';
+  var statusColor = item.userDone || item.status === 'past' ? 'past' : item.status === 'now' ? 'now' : 'future';
+  var hhmm = item.time.slice(11, 16);
+
+  // 對應功能跳轉
+  var jumpMap = { meal: null, vitals: 'vitals', med: 'medications', rounds: null };
+  var jumpPage = jumpMap[item.kind] || null;
+
+  // 預先算好 inner HTML 片段，避免在巨大字串拼接中放入 ternary 造成語法歧義
+  var doneBtnInner = item.userDone
+    ? '<i data-lucide="undo-2" style="width:16px;height:16px"></i><span>取消完成標記</span>'
+    : '<i data-lucide="check" style="width:16px;height:16px"></i><span>標記完成</span>';
+  var doneBtnClass = item.userDone ? 'ip-tl-sheet-btn-undo' : 'ip-tl-sheet-btn-done';
+  var jumpHtml = '';
+  if (jumpPage) {
+    var jumpLabel = jumpPage === 'vitals' ? '量測' : jumpPage === 'medications' ? '藥物' : '功能';
+    jumpHtml = ''
+      + '<button type="button" class="ip-tl-sheet-btn ip-tl-sheet-btn-jump" onclick="onInpatientTimelineJump(\'' + jumpPage + '\')">'
+      +   '<i data-lucide="arrow-right" style="width:16px;height:16px"></i><span>前往' + jumpLabel + '</span>'
+      + '</button>';
+  } else {
+    jumpHtml = '<p class="ip-tl-sheet-hint">此項目由病房工作人員執行，你只需要等待。</p>';
+  }
+
+  var sheet = document.createElement('div');
+  sheet.id = 'ip-tl-sheet';
+  sheet.className = 'ip-tl-sheet';
+  sheet.innerHTML = ''
+    + '<div class="ip-tl-sheet-backdrop" onclick="_closeInpatientTimelineSheet()"></div>'
+    + '<div class="ip-tl-sheet-panel" role="dialog" aria-label="任務詳情">'
+    +   '<div class="ip-tl-sheet-handle"></div>'
+    +   '<div class="ip-tl-sheet-head">'
+    +     '<span class="ip-tl-sheet-icon"><i data-lucide="' + item.icon + '"></i></span>'
+    +     '<div class="ip-tl-sheet-titles">'
+    +       '<h4 class="ip-tl-sheet-title">' + escapeHtml(item.label) + '</h4>'
+    +       '<p class="ip-tl-sheet-meta">' + hhmm + ' · <span class="ip-tl-sheet-status ip-tl-sheet-status-' + statusColor + '">' + statusLabel + '</span></p>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="ip-tl-sheet-actions">'
+    +     '<button type="button" class="ip-tl-sheet-btn ' + doneBtnClass + '" onclick="onInpatientTimelineDone(\'' + item.id + '\')">' + doneBtnInner + '</button>'
+    +     jumpHtml
+    +   '</div>'
+    +   '<button type="button" class="ip-tl-sheet-close" onclick="_closeInpatientTimelineSheet()">關閉</button>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _closeInpatientTimelineSheet() {
+  var sheet = document.getElementById('ip-tl-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+
+function onInpatientTimelineDone(itemId) {
+  var item = _ipTimelineCache.find(function(it) { return it.id === itemId; });
+  if (!item) return;
+  var nowDone = !item.userDone;
+  _setTimelineItemDone(itemId, nowDone);
+  if (typeof showToast === 'function') {
+    showToast(nowDone ? '已標記完成' : '已取消完成標記', 'success');
+  }
+  _closeInpatientTimelineSheet();
+  // 重新拉資料以更新狀態 + day progress + next step
+  loadInpatientActiveAdmission();
+}
+
+function onInpatientTimelineJump(page) {
+  _closeInpatientTimelineSheet();
+  if (typeof navigateTo === 'function') navigateTo(page, null);
 }
 
 function _fillNextStep(items) {
@@ -3966,27 +4140,145 @@ function _drawSparkline(key, vals) {
   }
 }
 
-// 查房摘要 — 從 localStorage 取 "mdpiece_inpatient_rounds_latest"
-//   (後端目前無 model，先用 local 模擬；醫師之後接後端就替換 fetch)
+// 查房紀錄 storage — 陣列，每筆 { id, time(ISO), doctor, text }，依 time 倒序。
+// 向後相容：第一次讀進來時把舊的 `mdpiece_inpatient_rounds_latest` 也帶入。
+var _IP_ROUNDS_KEY = 'mdpiece_inpatient_rounds';
+function _getInpatientRounds() {
+  var list = [];
+  try { list = JSON.parse(localStorage.getItem(_IP_ROUNDS_KEY) || '[]') || []; } catch (e) { list = []; }
+  // 把舊版單筆 key 也合進來（讀完即升級）
+  try {
+    var legacy = JSON.parse(localStorage.getItem('mdpiece_inpatient_rounds_latest') || 'null');
+    if (legacy && legacy.text) {
+      var hasIt = list.some(function(r) { return r.legacy === true; });
+      if (!hasIt) {
+        list.push({
+          id: 'legacy-' + Date.now().toString(36),
+          time: new Date().toISOString(),
+          doctor: legacy.doctor || '主治醫師',
+          text: legacy.text,
+          when: legacy.when,
+          legacy: true,
+        });
+        list.sort(function(a, b) { return a.time < b.time ? 1 : -1; });
+        localStorage.setItem(_IP_ROUNDS_KEY, JSON.stringify(list));
+      }
+    }
+  } catch (e) {}
+  return list;
+}
+function _saveInpatientRounds(list) {
+  localStorage.setItem(_IP_ROUNDS_KEY, JSON.stringify(list));
+}
+
+var _IP_ROUNDS_EXPANDED = false;
+// 把 N 筆 round entry 渲染到 body
 function refreshInpatientRoundsCard() {
   var box = document.getElementById('ip-rounds-body');
+  var moreBtn = document.getElementById('ip-rounds-more');
+  var moreN = document.getElementById('ip-rounds-more-n');
   if (!box) return;
-  var raw;
-  try { raw = JSON.parse(localStorage.getItem('mdpiece_inpatient_rounds_latest') || 'null'); } catch (e) { raw = null; }
-  if (!raw || !raw.text) {
-    box.innerHTML = '<p class="ip-rounds-empty">尚未記錄查房內容。醫師查房後在此可看到摘要。</p>';
+  var list = _getInpatientRounds();
+  if (!list.length) {
+    box.innerHTML = '<p class="ip-rounds-empty">尚未記錄查房內容。按右上「加紀錄」把今天醫師說的話寫下來。</p>';
+    if (moreBtn) moreBtn.hidden = true;
     return;
   }
-  box.innerHTML = ''
-    + '<p class="ip-rounds-when">' + escapeHtml(raw.when || '') + '　·　' + escapeHtml(raw.doctor || '主治醫師') + '</p>'
-    + '<p class="ip-rounds-text">' + escapeHtml(raw.text) + '</p>';
+  var visible = _IP_ROUNDS_EXPANDED ? list : list.slice(0, 1);
+  box.innerHTML = visible.map(function(r) {
+    var when = r.when || _ipFormatRoundTime(r.time);
+    return ''
+      + '<article class="ip-rounds-entry" data-id="' + r.id + '">'
+      +   '<p class="ip-rounds-when">' + escapeHtml(when) + '　·　' + escapeHtml(r.doctor || '主治醫師') + '</p>'
+      +   '<p class="ip-rounds-text">' + escapeHtml(r.text) + '</p>'
+      +   '<button type="button" class="ip-rounds-del" onclick="onInpatientRoundsDelete(\'' + r.id + '\')" aria-label="刪除這筆">'
+      +     '<i data-lucide="trash-2" style="width:12px;height:12px"></i>'
+      +   '</button>'
+      + '</article>';
+  }).join('');
+  if (moreBtn) {
+    if (list.length > 1) {
+      moreBtn.hidden = false;
+      moreBtn.textContent = '';
+      moreBtn.innerHTML = _IP_ROUNDS_EXPANDED
+        ? '收合（剩餘 ' + (list.length - 1) + ' 筆）'
+        : '看全部 (' + list.length + ')';
+    } else {
+      moreBtn.hidden = true;
+    }
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function _ipFormatRoundTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  var today = new Date();
+  var yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  var hhmm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  if (d.toDateString() === today.toDateString()) return '今天 ' + hhmm;
+  if (d.toDateString() === yesterday.toDateString()) return '昨天 ' + hhmm;
+  return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hhmm;
+}
+
+function onInpatientRoundsAdd() {
+  var composer = document.getElementById('ip-rounds-composer');
+  if (!composer) return;
+  composer.hidden = false;
+  var input = document.getElementById('ip-rounds-input');
+  if (input) setTimeout(function() { input.focus(); }, 30);
+}
+function onInpatientRoundsCancel() {
+  var composer = document.getElementById('ip-rounds-composer');
+  if (!composer) return;
+  composer.hidden = true;
+  var input = document.getElementById('ip-rounds-input');
+  var doc = document.getElementById('ip-rounds-doctor');
+  if (input) input.value = '';
+  if (doc) doc.value = '';
+}
+function onInpatientRoundsSave() {
+  var input = document.getElementById('ip-rounds-input');
+  var doc = document.getElementById('ip-rounds-doctor');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) {
+    if (typeof showToast === 'function') showToast('請輸入查房內容', 'error');
+    input.focus();
+    return;
+  }
+  var list = _getInpatientRounds();
+  list.unshift({
+    id: 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    time: new Date().toISOString(),
+    doctor: (doc && doc.value || '').trim() || '主治醫師',
+    text: text,
+  });
+  _saveInpatientRounds(list);
+  onInpatientRoundsCancel();
+  refreshInpatientRoundsCard();
+  if (typeof showToast === 'function') showToast('已記下查房內容', 'success');
+}
+function onInpatientRoundsDelete(id) {
+  if (!confirm('刪除這筆查房紀錄？')) return;
+  var list = _getInpatientRounds().filter(function(r) { return r.id !== id; });
+  _saveInpatientRounds(list);
+  refreshInpatientRoundsCard();
+}
+function onInpatientRoundsToggleAll() {
+  _IP_ROUNDS_EXPANDED = !_IP_ROUNDS_EXPANDED;
+  refreshInpatientRoundsCard();
 }
 
 function refreshInpatientDayProgress() { /* fillDayProgress 已在 loadInpatientActiveAdmission flow */ }
 
 // ── User interactions ──────────────────────────────────────────────────────
 
-// SOS button — 痛 / 喘 / 噁心 / 求助。立即寫一筆 local 紀錄 + toast 安撫。
+// SOS button — 痛 / 喘 / 噁心 / 求助。
+//   1) 寫今日 SOS 歷史（給病人自己看「我今天已回報過 X 次」）
+//   2) 非 help 同時也寫一筆症狀紀錄（給趨勢用）
+//   3) toast 安撫
 function onInpatientSOS(key, btn) {
   if (btn) {
     btn.classList.add('pressed');
@@ -3994,7 +4286,9 @@ function onInpatientSOS(key, btn) {
   }
   var labelMap = { pain: '痛', breath: '喘', nausea: '噁心', help: '求助護理' };
   var catMap = { pain: 'headache', breath: 'breath', nausea: 'nausea' };
-  // 寫一筆症狀紀錄（給趨勢用）；'help' 不算症狀，跳過
+  // 1. 寫今日 SOS 歷史
+  _pushInpatientSosToday(key);
+  // 2. 寫症狀紀錄（給趨勢用）；'help' 不算症狀，跳過
   if (key !== 'help' && typeof saveSymptomEntry === 'function') {
     saveSymptomEntry({
       id: 'sos_' + Date.now().toString(36),
@@ -4010,8 +4304,9 @@ function onInpatientSOS(key, btn) {
   } else {
     if (typeof showToast === 'function') showToast('已記下「' + labelMap[key] + '」，並通知護理站。', 'success');
   }
-  // 重新整理趨勢線
+  // 重新整理趨勢線 + SOS 歷史
   loadInpatientTrendSparklines();
+  refreshInpatientSosHistory();
 }
 
 function onInpatientNextDone() {
