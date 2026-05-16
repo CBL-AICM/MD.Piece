@@ -13932,13 +13932,19 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   position: relative;
   padding-bottom: 20px;
 }
-/* 淺色模式校正：把半透明白換成不透明度更高的 navy（55% 在白底太淺，看不清楚）。 */
+/* 淺色模式校正：把半透明白換成不透明度更高的 navy（55% 在白底太淺，看不清楚），
+   並把 mint/coral/sky/sage accent 也換成飽和度夠的版本——原本那組是給深底用的淡彩，
+   放在白底上會變成「淺配淺」的低對比殘影。 */
 #app-wrapper[data-theme="light"] .home-inpatient {
   --ip-bg:      rgba(31, 61, 88, 0.05);
   --ip-surface: #FFFFFF;
   --ip-border:  rgba(31, 61, 88, 0.16);
   --ip-muted:   rgba(31, 61, 88, 0.72);
   --ip-dim:     #4A6478;
+  --ip-mint:    #1E8D80;
+  --ip-coral:   #B85A3C;
+  --ip-sky:     #2E7DB0;
+  --ip-sage:    #3F8B5C;
 }
 
 /* Section header 共用 */
