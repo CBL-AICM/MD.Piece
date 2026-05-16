@@ -4356,8 +4356,122 @@ function renderInpatientDischargeStepper() {
     +     '<span class="ip-section-sub" id="ip-discharge-eta">—</span>'
     +   '</header>'
     +   '<ol class="ip-steps" id="ip-steps">' + html + '</ol>'
+    +   '<div class="ip-discharge-feeling-explain" id="ip-discharge-feeling-explain"></div>'
     +   '<p class="ip-discharge-hint" id="ip-discharge-hint">點任一步看詳情或更新狀態。</p>'
     + '</section>';
+}
+
+// 由 Q07「這幾天的變化」評估「感覺好一點」— 設計憲法 #2 (可解釋 AI) + #5 (Decision Aid)
+// 把 pain / fatigue / mood 三條 7 天 series 丟進來，回傳 { verdict, metrics, why, confidence? }
+// verdict: 'better' | 'worse' | 'flat' | 'insufficient'
+//   better  = ≥2 指標好轉 且 0 指標惡化（門檻 ±0.2，同 _drawSparkline 邏輯）
+//   worse   = ≥2 指標惡化 且 0 指標好轉
+//   flat    = 其餘有資料的情況
+//   insufficient = 有資料的指標不足 2 個
+function _ipFeelingAssessment(painSeries, fatigueSeries, moodSeries) {
+  function evalOne(series, isGoodMetric) {
+    var clean = (series || []).filter(function(v) { return v != null; });
+    if (clean.length < 2) return { ok: false, n: clean.length };
+    var half = Math.floor(clean.length / 2) || 1;
+    var early = clean.slice(0, half).reduce(function(s,v){return s+v;},0) / half;
+    var late = clean.slice(-half).reduce(function(s,v){return s+v;},0) / half;
+    var delta = late - early;
+    var improving = isGoodMetric ? (delta > 0.2) : (delta < -0.2);
+    var worsening = isGoodMetric ? (delta < -0.2) : (delta > 0.2);
+    return { ok: true, n: clean.length, early: early, late: late, delta: delta, improving: improving, worsening: worsening };
+  }
+  var m = {
+    pain:    evalOne(painSeries,    false),
+    fatigue: evalOne(fatigueSeries, false),
+    mood:    evalOne(moodSeries,    true),
+  };
+  var labels = { pain: '疼痛', fatigue: '疲勞', mood: '心情' };
+  var have = ['pain','fatigue','mood'].filter(function(k){ return m[k].ok; });
+  if (have.length < 2) {
+    return { verdict: 'insufficient', metrics: m, have: have, why: ['至少要有 2 個指標、各 2 天以上的紀錄才能評估，先到上面 07 區塊點一下記今天'] };
+  }
+  var imp = have.filter(function(k){ return m[k].improving; }).length;
+  var wor = have.filter(function(k){ return m[k].worsening; }).length;
+  var totalN = have.reduce(function(s,k){ return s + m[k].n; }, 0);
+  var why = have.map(function(k) {
+    var x = m[k]; var dir = x.improving ? '↘ 好轉' : x.worsening ? '↗ 加重' : '→ 持平';
+    var goodHint = (k === 'mood') ? '（越高越好）' : '（越低越好）';
+    return labels[k] + goodHint + '：前半 ' + x.early.toFixed(1) + ' → 後半 ' + x.late.toFixed(1) + ' ' + dir;
+  });
+  why.push('7 天內共 ' + totalN + ' 筆紀錄參與評估；變化超過 ±0.2 才算明顯。');
+  why.push('「好一點」門檻：至少 2 / ' + have.length + ' 項好轉 且 0 項加重。');
+  if (imp >= 2 && wor === 0) {
+    return {
+      verdict: 'better',
+      metrics: m, have: have,
+      confidence: Math.min(0.9, 0.4 + totalN * 0.05),
+      why: why,
+    };
+  }
+  if (wor >= 2 && imp === 0) {
+    return { verdict: 'worse', metrics: m, have: have, why: why };
+  }
+  return { verdict: 'flat', metrics: m, have: have, why: why };
+}
+
+// 後端拉到的 mood daily series (0..10)，由 loadInpatientTrendSparklines 更新；沒拉到就維持 null
+var _ipMoodSeriesBackend = null;
+var _ipLatestFeelingAssessment = null;
+
+// 取得當下要餵給評估的 3 條 series（資料源與 loadInpatientTrendSparklines 一致）
+function _ipComputeTrendSeriesForAssessment() {
+  var syms = (typeof getSymptomEntries === 'function') ? getSymptomEntries() : [];
+  var painCats = ['headache','joint','muscle','neuralgia','chest','dizziness','vertigo'];
+  return {
+    pain:    _aggDaily(syms, function(e) { return painCats.indexOf(e.categoryId) !== -1 ? (e.intensity || 0) : null; }),
+    fatigue: _aggDaily(syms, function(e) { return e.categoryId === 'fatigue' ? (e.intensity || 0) : null; }),
+    mood:    (_ipMoodSeriesBackend && _ipMoodSeriesBackend.length) ? _ipMoodSeriesBackend : _ipLocalMoodDaily(),
+  };
+}
+
+// 重新計算評估、套到出院 step 的 feeling 區塊
+function _ipRefreshFeelingHint() {
+  var s = _ipComputeTrendSeriesForAssessment();
+  var assess = _ipFeelingAssessment(s.pain, s.fatigue, s.mood);
+  _ipLatestFeelingAssessment = assess;
+  _ipApplyFeelingHintToStep(assess);
+}
+
+// 只動 feeling step 的 sub-text 與 suggested 視覺、加上 aiExplain 卡。不影響其他 step 與點擊行為。
+function _ipApplyFeelingHintToStep(assess) {
+  var li = document.querySelector('.ip-step[data-step-id="feeling"]');
+  var hint = document.getElementById('ip-discharge-feeling-explain');
+  if (!li) return;
+  var sub = li.querySelector('.ip-step-sub');
+  // 已手動標 done：保留日期顯示，不畫 suggested，不放 explainer
+  if (li.classList.contains('done')) {
+    li.classList.remove('suggested');
+    if (hint) hint.innerHTML = '';
+    return;
+  }
+  if (!assess || assess.verdict === 'insufficient') {
+    li.classList.remove('suggested');
+    if (sub) sub.textContent = '我感覺好一點時點這';
+    if (hint) hint.innerHTML = '';
+    return;
+  }
+  if (assess.verdict === 'better') {
+    li.classList.add('suggested');
+    if (sub) sub.textContent = 'AI 評估：好一點了 · 點此確認';
+    if (hint) hint.innerHTML = aiExplain({
+      summary: '為什麼依 07 趨勢建議「好一點」？',
+      why: assess.why,
+      confidence: assess.confidence,
+    });
+  } else {
+    li.classList.remove('suggested');
+    if (sub) sub.textContent = assess.verdict === 'worse' ? 'AI：這幾天似乎更不舒服' : '我感覺好一點時點這';
+    if (hint) hint.innerHTML = aiExplain({
+      summary: '07 這幾天的趨勢說明',
+      why: assess.why,
+    });
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // 感覺好一點 — local 每個 admission 獨立
@@ -5502,6 +5616,8 @@ function _fillDischargeStepper(active) {
     else eta.textContent = '尚未排定出院日';
   }
   if (hint) hint.textContent = '點任一步看詳情或更新狀態。';
+  // 把 07「這幾天的變化」的趨勢拿來評估 feeling step（設計憲法 #2 + #5）
+  if (typeof _ipRefreshFeelingHint === 'function') _ipRefreshFeelingHint();
 }
 
 // 7 日趨勢 — 痛 / 累 / 心情
@@ -5517,6 +5633,8 @@ function loadInpatientTrendSparklines() {
   // 後端回應 average_score 0..1 → 乘 10 對齊 local 1-5*2 = 2-10 的 scale。
   var localMood = _ipLocalMoodDaily();
   _drawSparkline('mood', localMood);
+  // 三條 series 都有了 → 評估「好一點」並更新出院 step
+  _ipRefreshFeelingHint();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
   fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
@@ -5530,6 +5648,8 @@ function loadInpatientTrendSparklines() {
       if (!daily.length) return; // 後端沒資料就不蓋 local
       var vals = daily.map(function(d) { return (d.average_score != null) ? d.average_score * 10 : null; });
       _drawSparkline('mood', vals);
+      _ipMoodSeriesBackend = vals;
+      _ipRefreshFeelingHint();
     })
     .catch(function() { /* 保留 local 版 */ });
 }

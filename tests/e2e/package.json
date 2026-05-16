@@ -5,7 +5,8 @@
   "description": "E2E tests for prescription photo recognition (kept separate from frontend deps)",
   "scripts": {
     "test:rx": "node run_rx_recognition.mjs",
-    "test:mobile": "node mobile_audit.mjs"
+    "test:mobile": "node mobile_audit.mjs",
+    "test:dischargeFeeling": "node discharge_feeling_assess_check.mjs"
   },
   "dependencies": {
     "tesseract.js": "^5.1.1"

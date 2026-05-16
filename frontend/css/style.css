@@ -15006,6 +15006,18 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   50%      { box-shadow: 0 0 0 9px rgba(127,231,217,0.10); }
 }
 .ip-step.active .ip-step-label { color: var(--ip-text); font-weight: 700; }
+/* AI 由 07 趨勢推論「好一點」時的 nudge 狀態：mint 描邊 + 同 active 的 pulse，
+   但 dot 內仍保留原圖示（不切到 check），確保使用者知道這是「建議」而非「已完成」。 */
+.ip-step.suggested .ip-step-dot {
+  background: rgba(127,231,217,0.16);
+  border-color: var(--ip-mint);
+  color: var(--ip-mint);
+  animation: ipStepPulse 2.4s ease-in-out infinite;
+}
+.ip-step.suggested .ip-step-label { color: var(--ip-text); font-weight: 600; }
+.ip-step.suggested .ip-step-sub  { color: var(--ip-mint); font-weight: 600; }
+.ip-discharge-feeling-explain { margin: 10px 0 0; }
+.ip-discharge-feeling-explain:empty { display: none; }
 .ip-discharge-hint {
   margin: 12px 0 0;
   font-size: 0.72rem;
