@@ -13705,8 +13705,8 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   display: flex; align-items: baseline; gap: 8px;
   margin-bottom: 10px;
 }
-.care-mode-card-title { font-size: .9rem; font-weight: 600; color: var(--text); }
-.care-mode-card-hint  { font-size: .78rem; color: var(--text-dim); }
+.care-mode-card-title { font-size: .9rem; font-weight: 600; color: var(--app-text, var(--text)); }
+.care-mode-card-hint  { font-size: .78rem; color: var(--app-text-dim, var(--text-dim)); }
 .care-mode-chips { display: flex; gap: 8px; }
 .care-mode-chip {
   flex: 1;
@@ -13714,8 +13714,8 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   padding: 10px 14px;
   border: 1.5px solid var(--app-border, var(--border-glass));
   border-radius: 999px;
-  background: var(--bg-surface);
-  color: var(--text);
+  background: var(--app-panel, var(--bg-surface));
+  color: var(--app-text, var(--text));
   font-size: .9rem; font-weight: 500;
   cursor: pointer;
   transition: all .18s ease;
