@@ -2463,8 +2463,90 @@ function clearNextVisit() {
 function refreshNextVisitChip() {
   var row = document.getElementById('home-visit-row');
   if (!row) return;
-  row.innerHTML = renderNextVisitChip();
+  row.innerHTML = renderNextVisitChip() + renderNextInfusionChip();
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  // chip 拉真實資料覆寫
+  if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
+}
+
+// 長期療程「下次打藥」chip — 給 chronic_infusion 患者用，跟回診 chip 平行。
+// 初次只渲染 hidden 骨架；_loadNextInfusionInfo() 在 mount 後拉 admission_medications.next_due_date 覆寫。
+function renderNextInfusionChip() {
+  return '<button type="button" class="home-infusion-chip" id="home-infusion-chip" hidden onclick="navigateTo(\'admissions\',null)" title="點開長期療程詳情">'
+    + '<i data-lucide="syringe" style="width:14px;height:14px"></i>'
+    + '<span class="home-infusion-chip-label">下次打藥</span>'
+    + '<span class="home-infusion-chip-when" id="home-infusion-chip-when">—</span>'
+    + '<span class="home-infusion-chip-count" id="home-infusion-chip-count"></span>'
+    + '</button>';
+}
+
+// 拉現役 chronic_infusion + 找最早 next_due_date，寫到 hero chip 與 Layer 03 住院卡 badge。
+// 30 天內才顯示；過期 (negative days) 也顯示提醒。
+async function _loadNextInfusionInfo() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    var listRes = await fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid)).then(function(x){return x.json();});
+    var actives = ((listRes && listRes.admissions) || []).filter(function(a) {
+      return a.status === 'active' && a.type === 'chronic_infusion';
+    });
+    if (!actives.length) { _fillNextInfusionChip(null); _fillAdmissionsCardBadge(null); return; }
+    var earliest = null;
+    var earliestName = '';
+    // 平行抓所有 active chronic_infusion 的細節，挑出最早 next_due_date
+    var details = await Promise.all(actives.map(function(a) {
+      return fetch(API + '/admissions/' + encodeURIComponent(a.id)).then(function(x){return x.json();}).catch(function(){return null;});
+    }));
+    details.forEach(function(d) {
+      if (!d) return;
+      (d.medications || []).forEach(function(m) {
+        if (!m.next_due_date) return;
+        if (!earliest || m.next_due_date < earliest) {
+          earliest = m.next_due_date;
+          earliestName = m.name || '';
+        }
+      });
+    });
+    _fillNextInfusionChip(earliest, earliestName);
+    _fillAdmissionsCardBadge(earliest);
+  } catch (e) {
+    _fillNextInfusionChip(null);
+    _fillAdmissionsCardBadge(null);
+  }
+}
+
+function _fillNextInfusionChip(iso, name) {
+  var chip = document.getElementById('home-infusion-chip');
+  if (!chip) return;
+  if (!iso) { chip.hidden = true; return; }
+  var d = _daysBetween(iso.slice(0, 10));
+  // 超過 30 天才到就先不打擾使用者（卡 badge 也一樣判斷）
+  if (d > 30) { chip.hidden = true; return; }
+  chip.hidden = false;
+  var when = document.getElementById('home-infusion-chip-when');
+  var count = document.getElementById('home-infusion-chip-count');
+  var pretty = iso.replace(/-/g, '/').slice(5, 10); // MM/DD
+  if (when) when.textContent = pretty + (name ? '　' + name : '');
+  var label, urgency;
+  if (d > 0)       { label = d + ' 天後'; urgency = d <= 7 ? 'soon' : 'far'; }
+  else if (d === 0){ label = '就是今天'; urgency = 'today'; }
+  else             { label = '已過期 ' + (-d) + ' 天'; urgency = 'overdue'; }
+  if (count) count.textContent = label;
+  chip.dataset.urgency = urgency;
+}
+
+function _fillAdmissionsCardBadge(iso) {
+  var badge = document.querySelector('.hsec-card[data-page="admissions"] .hsec-badge');
+  if (!badge) return;
+  if (!iso) { badge.hidden = true; badge.textContent = ''; return; }
+  var d = _daysBetween(iso.slice(0, 10));
+  if (d > 30) { badge.hidden = true; return; }
+  badge.hidden = false;
+  var urgency;
+  if (d > 0)       { badge.textContent = d + ' 天後'; urgency = d <= 7 ? 'soon' : 'far'; }
+  else if (d === 0){ badge.textContent = '今天';     urgency = 'today'; }
+  else             { badge.textContent = '逾 ' + (-d) + ' 天'; urgency = 'overdue'; }
+  badge.dataset.urgency = urgency;
 }
 
 // === 共用「如何使用這頁？」摺疊面板 =====================================
@@ -3005,14 +3087,17 @@ function homeCoreCard(page, icon, title, desc, tag, color) {
 }
 
 // Layer 3 次要功能（中尺寸）
+// 可帶可選 badge slot（hidden 預設）— 由各 loader 填入文字後 unhide。
+// 例：住院 / 療程 卡會被 _fillAdmissionsCardBadge 填入「3 天後」等倒數。
 function homeSecondCard(page, icon, title, desc, color) {
   return ''
-    + '<button type="button" class="hsec-card hsec-' + color + '" onclick="navigateTo(\'' + page + '\',null)">'
+    + '<button type="button" class="hsec-card hsec-' + color + '" data-page="' + page + '" onclick="navigateTo(\'' + page + '\',null)">'
     +   '<span class="hsec-icon"><i data-lucide="' + icon + '"></i></span>'
     +   '<span class="hsec-body">'
     +     '<span class="hsec-title">' + title + '</span>'
     +     '<span class="hsec-desc">' + desc + '</span>'
     +   '</span>'
+    +   '<span class="hsec-badge" hidden></span>'
     + '</button>';
 }
 
@@ -3221,6 +3306,7 @@ function home() {
           </div>
           <div class="home-visit-row" id="home-visit-row">
             ${renderNextVisitChip()}
+            ${renderNextInfusionChip()}
           </div>
         </div>
       </div>
@@ -3353,6 +3439,8 @@ function loadHomePage() {
   refreshTodayDigest();
   // 更新 sidebar 各 nav-item 今日打卡 badge
   refreshNavBadges();
+  // 拉長期療程下次打藥 → 寫到 hero 「下次打藥」 chip + Layer 03 住院卡 badge
+  if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
 
   fetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })

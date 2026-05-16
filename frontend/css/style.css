@@ -2221,6 +2221,98 @@ html[data-mode="senior"] .tc-desc {
   background: rgba(0,0,0,0.06);
   color: var(--klein);
 }
+
+/* 「下次打藥」chip — 給 chronic_infusion 長期療程，跟回診 chip 並排 */
+.home-infusion-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(196,127,75,0.10);
+  border: 1.5px solid rgba(196,127,75,0.40);
+  color: #B86A3C;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.home-infusion-chip[hidden] { display: none; }
+.home-infusion-chip:hover {
+  background: rgba(196,127,75,0.18);
+  transform: translateY(-1px);
+}
+.home-infusion-chip:active { transform: scale(0.97); }
+.home-infusion-chip-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.6px;
+  color: rgba(184,106,60,0.7);
+  font-weight: 600;
+}
+.home-infusion-chip-when {
+  font-weight: 600;
+  color: #B86A3C;
+}
+.home-infusion-chip-count {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: rgba(196,127,75,0.18);
+  color: #B86A3C;
+}
+/* 緊急度配色 */
+.home-infusion-chip[data-urgency="today"] {
+  background: rgba(255,179,0,0.16);
+  border-color: rgba(255,179,0,0.55);
+  color: #C48000;
+  animation: visit-pulse 1.8s ease-in-out infinite;
+}
+.home-infusion-chip[data-urgency="today"] .home-infusion-chip-when,
+.home-infusion-chip[data-urgency="today"] .home-infusion-chip-label { color: #C48000; }
+.home-infusion-chip[data-urgency="today"] .home-infusion-chip-count {
+  background: #FFB300; color: #fff;
+}
+.home-infusion-chip[data-urgency="overdue"] {
+  background: rgba(232,168,168,0.18);
+  border-color: rgba(232,168,168,0.55);
+  color: #B8553F;
+}
+.home-infusion-chip[data-urgency="overdue"] .home-infusion-chip-when,
+.home-infusion-chip[data-urgency="overdue"] .home-infusion-chip-label { color: #B8553F; }
+.home-infusion-chip[data-urgency="overdue"] .home-infusion-chip-count {
+  background: #B8553F; color: #fff;
+}
+
+/* Layer 03 住院/療程 卡的倒數 badge */
+.hsec-card { position: relative; }
+.hsec-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  z-index: 2;
+  background: rgba(196,127,75,0.16);
+  color: #B86A3C;
+  border: 1px solid rgba(196,127,75,0.32);
+  box-shadow: 0 2px 6px rgba(196,127,75,0.18);
+}
+.hsec-badge[hidden] { display: none; }
+.hsec-badge[data-urgency="today"] {
+  background: #FFB300; color: #fff; border-color: #FFB300;
+  animation: visit-pulse 1.8s ease-in-out infinite;
+}
+.hsec-badge[data-urgency="overdue"] {
+  background: #B8553F; color: #fff; border-color: #B8553F;
+}
+
 .home-visit-input {
   font-family: inherit;
   font-size: 0.85rem;
