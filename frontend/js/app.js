@@ -3955,7 +3955,11 @@ function renderInpatientHome(ctx) {
 function renderInpatientNowCard(ctx) {
   return ''
     + '<section class="ip-now" aria-label="現在狀態">'
-    +   '<div class="ip-now-pulse" aria-hidden="true"><span></span><span></span></div>'
+    +   '<div class="ip-now-pulse" id="ip-now-pulse" data-state="idle" role="status" aria-label="住院狀態" title="尚未開始">'
+    +     '<span class="ip-now-pulse-ring"></span>'
+    +     '<span class="ip-now-pulse-ring"></span>'
+    +     '<span class="ip-now-pulse-dot"></span>'
+    +   '</div>'
     +   '<div class="ip-now-head">'
     +     '<span class="ip-now-eyebrow" id="ip-now-eyebrow">住院中</span>'
     +     '<h2 class="ip-now-greet">' + escapeHtml(ctx.greeting + ctx.greetSep + ctx.name) + '</h2>'
@@ -5022,16 +5026,27 @@ function _fillNowCard(active) {
   var dayLabel = document.getElementById('ip-now-day-label');
   var diag = document.getElementById('ip-now-diag');
   var ward = document.getElementById('ip-now-ward');
+  var pulse = document.getElementById('ip-now-pulse');
   if (!active) {
     if (eyebrow) eyebrow.textContent = '目前沒有進行中的住院 / 療程';
     if (dayNum)  dayNum.textContent = '—';
     if (dayLabel)dayLabel.textContent = '—';
     if (diag)    diag.innerHTML = '到「住院 / 療程」頁建立第一筆；建立後這裡會自動帶出。<br><button type="button" class="ip-now-cta" onclick="navigateTo(\'admissions\',null)">前往新增</button>';
     if (ward)    ward.textContent = '';
+    if (pulse) {
+      pulse.dataset.state = 'idle';
+      pulse.setAttribute('title', '尚未開始');
+      pulse.setAttribute('aria-label', '住院狀態：尚未開始');
+    }
     return;
   }
   var typeLabel = active.type === 'chronic_infusion' ? '長期療程' : '住院中';
   if (eyebrow) eyebrow.textContent = typeLabel;
+  if (pulse) {
+    pulse.dataset.state = 'active';
+    pulse.setAttribute('title', typeLabel + '．進行中');
+    pulse.setAttribute('aria-label', '住院狀態：' + typeLabel + '進行中');
+  }
   var admit = active.admit_date ? new Date(active.admit_date) : null;
   var days = admit ? Math.max(1, Math.floor((Date.now() - admit.getTime()) / 86400000) + 1) : 1;
   if (dayNum)  dayNum.textContent = String(days);
