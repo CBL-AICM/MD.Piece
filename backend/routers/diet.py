@@ -32,6 +32,7 @@ import re
 
 from backend.db import get_supabase
 from backend.services.llm_service import call_claude
+from backend.utils.diet_nutrient_llm import estimate_nutrients as _estimate_nutrients_llm
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -800,11 +801,11 @@ _NUTRIENT_INDEX: list[tuple[str, float, float, float]] = sorted(
 )
 
 
-def _estimate_nutrients(foods_str: str) -> tuple[float, float, float]:
-    """從一筆 record 的食物文字粗估 (蛋白質 g, 水分 ml, 纖維 g)。
+def _estimate_nutrients_keyword(foods_str: str) -> tuple[float, float, float]:
+    """Keyword fallback：用子字串比對 NUTRIENT_TABLE 粗估營養素。
 
-    用子字串比對：每比中一次就把該段替換成同長度的 `·` 標記，避免短關鍵字
-    重新吃到已被長關鍵字消耗過的字（例 "糙米飯" 不會再被 "飯" 重複計分）。
+    每比中一次就把該段替換成同長度的 `·` 標記，避免短關鍵字重新吃到已被長關鍵字
+    消耗過的字（例 "糙米飯" 不會再被 "飯" 重複計分）。
     """
     if not foods_str:
         return 0.0, 0.0, 0.0
@@ -819,6 +820,15 @@ def _estimate_nutrients(foods_str: str) -> tuple[float, float, float]:
             f_sum += f
             s = s.replace(kw, "·" * len(kw), 1)
     return p_sum, w_sum, f_sum
+
+
+def _estimate_nutrients(foods_str: str) -> tuple[float, float, float]:
+    """從一筆 record 的食物文字估算 (蛋白質 g, 水分 ml, 纖維 g)。
+
+    預設走 LLM 結構化分類（diet_nutrient_llm），LLM 不可用時降到 keyword 版。
+    由 env DIET_NUTRIENT_LLM=0 可強制 keyword-only。
+    """
+    return _estimate_nutrients_llm(foods_str, _estimate_nutrients_keyword)
 
 
 def _utc_iso_to_local_date(eaten_iso: str, tz_offset: int) -> Optional[date]:
