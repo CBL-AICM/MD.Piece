@@ -181,6 +181,33 @@ def discharge_admission(admission_id: str, discharge_date: Optional[str] = None)
 
 # ── 排定給藥（住院期間 / 療程內）─────────────────────────
 
+@router.delete("/medications/{admission_medication_id}")
+def delete_admission_medication(admission_medication_id: str):
+    """
+    刪除一筆排定給藥（連同已記錄的 doses 一起清掉）。
+    用途：使用者連按「儲存」加錯了重複的給藥行，需要可以取消。
+    """
+    sb = get_supabase()
+    parent = (
+        sb.table("admission_medications")
+        .select("id")
+        .eq("id", admission_medication_id)
+        .limit(1)
+        .execute()
+    )
+    if not parent.data:
+        raise HTTPException(status_code=404, detail="找不到對應的療程藥物")
+    try:
+        sb.table("admission_medication_doses").delete().eq(
+            "admission_medication_id", admission_medication_id
+        ).execute()
+        sb.table("admission_medications").delete().eq("id", admission_medication_id).execute()
+    except Exception as e:
+        logger.error(f"Delete admission medication failed: {e}")
+        raise HTTPException(status_code=400, detail="刪除療程藥物失敗")
+    return {"ok": True, "deleted_id": admission_medication_id}
+
+
 @router.post("/medications")
 def add_admission_medication(body: AdmissionMedicationCreate):
     """在某次住院 / 療程下排定一筆給藥節奏。"""

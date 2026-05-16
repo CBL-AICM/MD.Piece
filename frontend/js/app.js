@@ -16396,7 +16396,10 @@ function loadAdmissionMedications(admissionId) {
           +       (m.dose ? '　<span style="color:var(--text-dim)">' + escapeHtml(m.dose) + '</span>' : '')
           +       (m.frequency ? '　<span style="color:var(--text-dim)">' + escapeHtml(m.frequency) + '</span>' : '')
           +     '</div>'
-          +     '<button onclick="recordAdmissionDose(\'' + m.id + '\', \'' + admissionId + '\')" style="background:#27ae60;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.75rem"><i data-lucide="check" style="width:12px;height:12px;vertical-align:middle"></i> 記錄這次施打</button>'
+          +     '<div style="display:flex;gap:4px">'
+          +       '<button onclick="recordAdmissionDose(\'' + m.id + '\', \'' + admissionId + '\')" style="background:#27ae60;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.75rem"><i data-lucide="check" style="width:12px;height:12px;vertical-align:middle"></i> 記錄這次施打</button>'
+          +       '<button onclick="deleteAdmissionMedication(\'' + m.id + '\', \'' + admissionId + '\')" title="刪除這筆給藥" style="background:none;border:1px solid var(--border);color:var(--text-dim);padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.75rem"><i data-lucide="trash-2" style="width:12px;height:12px;vertical-align:middle"></i></button>'
+          +     '</div>'
           +   '</div>'
           +   '<div style="margin-top:4px;font-size:.75rem;color:var(--text-dim)">下次：' + escapeHtml(due) + '　上次：' + escapeHtml(last) + '</div>'
           + '</div>';
@@ -16455,6 +16458,11 @@ function addAdmissionMedication(admissionId) {
   };
   if (!body.name) { showToast('請填藥名', 'error'); return; }
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
+  // 連按防抖：找到對應的「儲存」按鈕，disable + 切「儲存中⋯」
+  var btn = document.querySelector('button[onclick="addAdmissionMedication(\'' + admissionId + '\')"]');
+  var origHTML = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '儲存中⋯'; }
+  var restore = function() { if (btn) { btn.disabled = false; btn.innerHTML = origHTML; } };
   fetch(API + '/admissions/medications', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -16463,10 +16471,24 @@ function addAdmissionMedication(admissionId) {
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已新增給藥', 'success');
+      restore();
       toggleAdmissionMedForm(admissionId);
       loadAdmissionMedications(admissionId);
     })
-    .catch(function(e) { showToast('新增失敗：' + e.message, 'error'); });
+    .catch(function(e) { restore(); showToast('新增失敗：' + e.message, 'error'); });
+}
+
+function deleteAdmissionMedication(admMedId, admissionId) {
+  if (!confirm('刪除這筆給藥？（連同已記錄的施打紀錄會一起移除）')) return;
+  fetch(API + '/admissions/medications/' + encodeURIComponent(admMedId), {
+    method: 'DELETE',
+  })
+    .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
+    .then(function() {
+      showToast('已刪除', 'success');
+      loadAdmissionMedications(admissionId);
+    })
+    .catch(function(e) { showToast('刪除失敗：' + e.message, 'error'); });
 }
 
 function recordAdmissionDose(admMedId, admissionId) {
