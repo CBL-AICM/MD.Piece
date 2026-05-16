@@ -62,6 +62,96 @@ function applyCareMode() {
 }
 applyCareMode();
 
+// ─── 設計憲法 條 3 (客製化提醒語氣) ──────────────────────────────────────
+// 「嚴肅」直白指令、「溫柔」鼓勵帶溫度、「極簡」省略所有修飾。
+// 任何給病人看的 system message (todo / SOS / reminder) 都該過 reminderToneify()。
+function getReminderTone() {
+  try { return localStorage.getItem('mdpiece_reminder_tone') || 'warm'; } catch (e) { return 'warm'; }
+}
+function setReminderTone(tone) {
+  if (['strict','warm','short'].indexOf(tone) === -1) tone = 'warm';
+  try { localStorage.setItem('mdpiece_reminder_tone', tone); } catch (e) {}
+  document.documentElement.setAttribute('data-reminder-tone', tone);
+}
+// 把短句依語氣改寫。傳入物件 { strict, warm, short }，分別是 3 種版本；
+// 也支援單一字串 (各語氣套對應規則)。
+function reminderToneify(input) {
+  var tone = getReminderTone();
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    return input[tone] || input.warm || input.strict || input.short || '';
+  }
+  var s = String(input || '');
+  if (tone === 'strict') return s; // 原句通常已是直白指令
+  if (tone === 'warm') {
+    // 暖色修飾 — 加結尾語
+    if (/[。！？]$/.test(s)) return s + ' ❤️';
+    return s + '，慢慢來。';
+  }
+  // short — 砍掉「請」「記得」這類客氣詞，留動詞 + 名詞
+  return s.replace(/^(請|記得|別忘了|趕快|麻煩|快點)/, '').replace(/[，。！]/g, '').trim();
+}
+// 啟動時就套用到 <html>，方便 CSS 依語氣調 chip 顏色等視覺
+setReminderTone(getReminderTone());
+
+// ─── 設計憲法 條 6 (家屬代理視角) ─────────────────────────────────────────
+// 切到「我幫家人」時，所有新紀錄帶 proxy_for 標籤 + 頁首 banner 提醒目前是代理模式。
+function getProxyFor() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_proxy_for') || 'null'); }
+  catch (e) { return null; }
+}
+function setProxyFor(p) {
+  if (!p) localStorage.removeItem('mdpiece_proxy_for');
+  else localStorage.setItem('mdpiece_proxy_for', JSON.stringify(p));
+  refreshProxyBanner();
+}
+function isProxyMode() { return !!getProxyFor(); }
+function renderProxyToggle() {
+  var p = getProxyFor();
+  if (p && p.name) {
+    return ''
+      + '<div class="set-proxy-active">'
+      +   '<span>正在幫 <strong>' + escapeHtml(p.name) + '</strong>' + (p.relation ? '（' + escapeHtml(p.relation) + '）' : '') + '紀錄</span>'
+      +   '<button type="button" class="set-btn" onclick="onProxySwitch()">換對象 / 取消</button>'
+      + '</div>';
+  }
+  return '<button type="button" class="set-btn" onclick="onProxySwitch()"><i data-lucide="user-plus" style="width:14px;height:14px"></i> 切到家人代理</button>';
+}
+function onProxySwitch() {
+  var cur = getProxyFor();
+  if (cur) {
+    if (confirm('取消家人代理，回到「我自己」模式？')) {
+      setProxyFor(null);
+      if (typeof showToast === 'function') showToast('已切回「我自己」', 'success');
+      if (typeof showPage === 'function') showPage('settings');
+    }
+    return;
+  }
+  var name = prompt('家人姓名（例：媽媽 / 王阿嬤）：', '');
+  if (!name || !name.trim()) return;
+  var relation = prompt('關係（例：母親 / 配偶 / 子女，可空）：', '');
+  setProxyFor({ name: name.trim(), relation: (relation || '').trim() });
+  if (typeof showToast === 'function') showToast('已切到「幫 ' + name.trim() + ' 紀錄」模式', 'success');
+  if (typeof showPage === 'function') showPage('settings');
+}
+function renderProxyBanner() {
+  // 全 app 共用 — 永遠掛在 #app 上方，由 refreshProxyBanner 寫入內容
+  return '<div class="proxy-banner" id="proxy-banner" hidden></div>';
+}
+function refreshProxyBanner() {
+  var el = document.getElementById('proxy-banner');
+  if (!el) return;
+  var p = getProxyFor();
+  if (!p) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = ''
+    + '<i data-lucide="users" style="width:14px;height:14px"></i>'
+    + '<span>正在幫 <strong>' + escapeHtml(p.name) + '</strong>' + (p.relation ? '（' + escapeHtml(p.relation) + '）' : '') + '紀錄。所有新紀錄都會打上代理標籤。</span>'
+    + '<button type="button" class="proxy-banner-switch" onclick="onProxySwitch()" aria-label="切換代理對象">'
+    +   '<i data-lucide="repeat" style="width:12px;height:12px"></i>'
+    + '</button>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 // ─── 底部 mobile tabbar — 依 care mode 動態渲染 ────────────────────────
 // 門診：首頁 / 碎片 / FAB / 診前 / 醫聊 / 更多 — MD.Piece 理念對齊
 // 住院：首頁 / 住院 / FAB / 量測 / Memo / 更多 — 住院期間實際會用的
@@ -1904,7 +1994,7 @@ function showPage(page) {
   const pages = {
     home, symptoms, symptomsAnalyze, doctors, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
-    drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu
+    drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline
   };
   // Page transition
   app.style.opacity = '0';
@@ -1933,6 +2023,9 @@ function showPage(page) {
     if (page === "reminders") loadRemindersPage();
     if (page === "vitals") loadDoctorMeasurementRequests();
     if (page === "admissions") loadAdmissionsPage();
+    if (page === "timeline") loadTimelinePage();
+    // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
+    if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -3473,6 +3566,40 @@ function _puzzlePiecePathAt(row, col, ox, oy) {
   return 'M ' + pt(20, 20) + ' ' + topEdge(T) + ' ' + rightEdge(R) + ' ' + bottomEdge(B) + ' ' + leftEdge(L) + ' Z';
 }
 
+// 門診模式快速回報 — 一鍵 SOS-style，4 顆大按鈕 + 今日歷史 chip。
+// 跟住院模式邏輯共用 (onInpatientSOS / refreshInpatientSosHistory) — 反正都寫到同一份 storage 與症狀紀錄。
+function renderHomeQuickReport() {
+  var items = [
+    { key: 'pain',     icon: 'zap',         label: '痛',   sub: '哪裡都可以', color: 'coral' },
+    { key: 'breath',   icon: 'wind',        label: '喘',   sub: '吸不到氣',   color: 'sky'   },
+    { key: 'nausea',   icon: 'droplets',    label: '噁心', sub: '想吐 / 反胃', color: 'sage'  },
+    { key: 'help',     icon: 'bell-ring',   label: '記下', sub: '存進今日紀錄',color: 'mint'  },
+  ];
+  var btns = items.map(function(it) {
+    return ''
+      + '<button type="button" class="ip-sos-btn ip-sos-' + it.color + '" data-key="' + it.key + '" onclick="onInpatientSOS(\'' + it.key + '\', this)">'
+      +   '<span class="ip-sos-icon"><i data-lucide="' + it.icon + '"></i></span>'
+      +   '<span class="ip-sos-label">' + it.label + '</span>'
+      +   '<span class="ip-sos-sub">' + it.sub + '</span>'
+      + '</button>';
+  }).join('');
+  return ''
+    + '<section class="home-quick-report home-inpatient" aria-label="一鍵回報">'
+    +   '<header class="home-qr-head">'
+    +     '<h3>不舒服？按一下就好</h3>'
+    +     '<span>不用打字 · 直接按 · 自動進症狀紀錄</span>'
+    +   '</header>'
+    +   '<div class="ip-sos-grid">' + btns + '</div>'
+    +   '<div class="ip-sos-history" id="ip-sos-history" hidden>'
+    +     '<div class="ip-sos-history-head">'
+    +       '<span>今天已回報</span>'
+    +       '<button type="button" class="ip-sos-history-clear" onclick="onInpatientSOSClear()">清除</button>'
+    +     '</div>'
+    +     '<div class="ip-sos-history-list" id="ip-sos-history-list"></div>'
+    +   '</div>'
+    + '</section>';
+}
+
 function renderCareModeChips() {
   const cur = getCareMode();
   const isOut = cur === 'outpatient';
@@ -3600,6 +3727,9 @@ function home() {
           </div>
         </div>
       </div>
+
+      <!-- 不舒服一鍵回報 — 跟住院模式同樣的 4 顆大按鈕，省下打字想分類的時間 -->
+      ${renderHomeQuickReport()}
 
       <!-- ════════════════════════════════════════════════════
            Layer 1 — 今日代辦：今天藥物 + 系統提醒 + 你的待辦
@@ -3731,6 +3861,8 @@ function loadHomePage() {
   refreshNavBadges();
   // 拉長期療程下次打藥 → 寫到 hero 「下次打藥」 chip + Layer 03 住院卡 badge
   if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
+  // 同步今日 SOS 歷史 chip（門診版快速回報 bar 共用住院的 storage）
+  if (typeof refreshInpatientSosHistory === 'function') refreshInpatientSosHistory();
 
   fetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
@@ -4048,6 +4180,7 @@ function renderInpatientRoundsCard() {
 }
 
 // 7. 病情趨勢 (Trend Chips) — 7-day sparklines ─────────────────────────────
+// 趨勢 chip 變成可點 — 沒紀錄時點下開「快速 log」sheet 讓使用者直接記今天的疲勞 / 心情 / 痛。
 function renderInpatientTrendChips() {
   var chips = [
     { key: 'pain',    label: '疼痛', icon: 'zap',              color: 'coral'  },
@@ -4056,7 +4189,7 @@ function renderInpatientTrendChips() {
   ];
   var html = chips.map(function(c) {
     return ''
-      + '<div class="ip-trend-chip ip-trend-' + c.color + '" data-key="' + c.key + '">'
+      + '<button type="button" class="ip-trend-chip ip-trend-' + c.color + '" data-key="' + c.key + '" onclick="openInpatientQuickLog(\'' + c.key + '\')" aria-label="記錄' + c.label + '">'
       +   '<span class="ip-trend-head">'
       +     '<i data-lucide="' + c.icon + '"></i>'
       +     '<span class="ip-trend-label">' + c.label + '</span>'
@@ -4065,28 +4198,150 @@ function renderInpatientTrendChips() {
       +   '<svg class="ip-trend-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">'
       +     '<polyline id="ip-trend-line-' + c.key + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="" />'
       +   '</svg>'
-      +   '<span class="ip-trend-foot" id="ip-trend-foot-' + c.key + '">7 天平均 —</span>'
-      + '</div>';
+      +   '<span class="ip-trend-foot" id="ip-trend-foot-' + c.key + '">點一下記今天</span>'
+      +   '<span class="ip-trend-explain" id="ip-trend-explain-' + c.key + '" onclick="event.stopPropagation()"></span>'
+      + '</button>';
   }).join('');
   return ''
     + '<section class="ip-trends" aria-label="病情趨勢">'
     +   '<header class="ip-section-head">'
     +     '<span class="ip-num">07</span>'
     +     '<h3>這幾天的變化</h3>'
-    +     '<span class="ip-section-sub">不只看今天，看一週的方向</span>'
+    +     '<span class="ip-section-sub">點任一張記今天</span>'
     +   '</header>'
     +   '<div class="ip-trend-grid">' + html + '</div>'
     + '</section>';
 }
 
+// 快速 log sheet — 給 pain/fatigue/mood 三類用。1-5 級或表情點一下就送。
+function openInpatientQuickLog(key) {
+  var existing = document.getElementById('ip-quicklog-sheet');
+  if (existing) existing.remove();
+  var cfg = {
+    pain:    { title: '今天疼痛多嚴重？', label: '疼痛強度',  emojis: ['😌','🙂','😣','😖','😫'], color: 'coral' },
+    fatigue: { title: '今天有多累？',     label: '疲勞強度',  emojis: ['🔋','⚡','😴','😵','😶'], color: 'sky'   },
+    mood:    { title: '今天心情如何？',   label: '心情分數',  emojis: ['😢','😟','😐','🙂','😊'], color: 'mint'  },
+  }[key];
+  if (!cfg) return;
+  // 按鈕：1~5 分 + emoji
+  var btns = '';
+  for (var i = 1; i <= 5; i++) {
+    btns += '<button type="button" class="ip-ql-num ip-ql-' + cfg.color + '" data-v="' + i + '" onclick="submitInpatientQuickLog(\'' + key + '\',' + i + ')">'
+         + '<span class="ip-ql-emoji">' + cfg.emojis[i-1] + '</span>'
+         + '<span class="ip-ql-n">' + i + '</span>'
+         + '</button>';
+  }
+  var sheet = document.createElement('div');
+  sheet.id = 'ip-quicklog-sheet';
+  sheet.className = 'ip-prep-sheet';
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeInpatientQuickLog()"></div>'
+    + '<div class="ip-prep-panel ip-ql-panel" role="dialog" aria-label="快速紀錄">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">' + cfg.title + '</span>'
+    +       '<span class="ip-prep-when-sub">' + cfg.label + ' · 1 = 最輕微 · 5 = 最嚴重</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeInpatientQuickLog()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div class="ip-ql-grid">' + btns + '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeInpatientQuickLog() {
+  var sheet = document.getElementById('ip-quicklog-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+function submitInpatientQuickLog(key, value) {
+  if (key === 'mood') {
+    // 心情送後端 /emotions/log；後端失敗時 fallback 存 local，趨勢線之後接後端就會帶到
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    if (pid) {
+      fetch(API + '/emotions/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: pid, score: value / 5, note: '住院模式快速紀錄' }),
+      }).catch(function() {});
+    }
+    // 同時寫 local 一筆讓 sparkline 立刻有反應
+    _ipLocalMoodPush(value);
+  } else {
+    // pain/fatigue 走 saveSymptomEntry (跟 SOS 同流)
+    if (typeof saveSymptomEntry === 'function') {
+      saveSymptomEntry({
+        id: 'ql_' + Date.now().toString(36),
+        categoryId: key === 'pain' ? 'headache' : 'fatigue',
+        intensity: value,
+        frequency: 1,
+        notes: '住院模式快速紀錄',
+        recordedAt: new Date().toISOString(),
+      });
+    }
+  }
+  if (typeof showToast === 'function') showToast('已記下今天的' + (key==='pain'?'疼痛':key==='fatigue'?'疲勞':'心情'), 'success');
+  closeInpatientQuickLog();
+  loadInpatientTrendSparklines();
+}
+
+// 本地心情快取（給 sparkline）— 後端來資料時會被覆蓋
+function _ipLocalMoodPush(value) {
+  try {
+    var key = 'mdpiece_inpatient_mood_local';
+    var list = JSON.parse(localStorage.getItem(key) || '[]') || [];
+    list.push({ value: value, at: new Date().toISOString() });
+    // 留 30 天
+    var cutoff = Date.now() - 30 * 86400000;
+    list = list.filter(function(x) { return new Date(x.at).getTime() > cutoff; });
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch (e) {}
+}
+function _ipLocalMoodDaily() {
+  try {
+    var list = JSON.parse(localStorage.getItem('mdpiece_inpatient_mood_local') || '[]') || [];
+    var bucket = {};
+    var today = new Date();
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(today); d.setDate(d.getDate() - i);
+      bucket[d.toISOString().slice(0,10)] = { sum: 0, n: 0 };
+    }
+    list.forEach(function(e) {
+      var k = String(e.at).slice(0,10);
+      if (bucket[k]) { bucket[k].sum += e.value; bucket[k].n += 1; }
+    });
+    return Object.keys(bucket).sort().map(function(k) {
+      var b = bucket[k];
+      return b.n ? b.sum / b.n * 2 : null; // value 1-5 → 0-10 scale to match emotions API
+    });
+  } catch (e) { return []; }
+}
+
 // 8. 出院進度 (Discharge Stepper) ──────────────────────────────────────────
+// 出院進度 — 4 步：入院日期 / 感覺好一點 / 排定出院 / 出院（已出院）。
+// step 0 (入院日期) ：由 admit_date 自動完成
+// step 1 (感覺好一點)：病人自己點「我感覺好一點了」推進；存 localStorage per admission
+// step 2 (排定出院)  ：由 discharge_date 出現自動完成（病人也可以點「排定出院」開 prompt 設日期）
+// step 3 (出院)      ：到了 discharge_date 或病人點「已出院」 → PUT status=discharged
 function renderInpatientDischargeStepper() {
-  var steps = ['入住', '治療', '觀察', '出院'];
+  var steps = [
+    { id: 'admit',    label: '入院日期', icon: 'log-in' },
+    { id: 'feeling',  label: '感覺好一點', icon: 'heart' },
+    { id: 'planned',  label: '排定出院', icon: 'calendar-check-2' },
+    { id: 'done',     label: '出院',     icon: 'log-out' },
+  ];
   var html = steps.map(function(s, i) {
     return ''
-      + '<li class="ip-step" data-step="' + i + '">'
-      +   '<span class="ip-step-dot"><i data-lucide="check" style="width:12px;height:12px"></i></span>'
-      +   '<span class="ip-step-label">' + s + '</span>'
+      + '<li class="ip-step" data-step="' + i + '" data-step-id="' + s.id + '">'
+      +   '<button type="button" class="ip-step-dot" onclick="onInpatientStepClick(\'' + s.id + '\')" aria-label="' + s.label + '">'
+      +     '<i data-lucide="' + s.icon + '" style="width:14px;height:14px"></i>'
+      +     '<i data-lucide="check" style="width:14px;height:14px" class="ip-step-check"></i>'
+      +   '</button>'
+      +   '<span class="ip-step-label">' + s.label + '</span>'
+      +   '<span class="ip-step-sub" id="ip-step-sub-' + s.id + '"></span>'
       + '</li>';
   }).join('');
   return ''
@@ -4097,7 +4352,76 @@ function renderInpatientDischargeStepper() {
     +     '<span class="ip-section-sub" id="ip-discharge-eta">—</span>'
     +   '</header>'
     +   '<ol class="ip-steps" id="ip-steps">' + html + '</ol>'
+    +   '<p class="ip-discharge-hint" id="ip-discharge-hint">點任一步看詳情或更新狀態。</p>'
     + '</section>';
+}
+
+// 感覺好一點 — local 每個 admission 獨立
+function _ipFeelingKey(admId) { return 'mdpiece_inpatient_feeling_' + (admId || 'default'); }
+function _ipGetFeelingState(admId) {
+  try { return JSON.parse(localStorage.getItem(_ipFeelingKey(admId)) || 'null'); }
+  catch (e) { return null; }
+}
+function _ipSetFeelingState(admId, state) {
+  if (state) localStorage.setItem(_ipFeelingKey(admId), JSON.stringify(state));
+  else localStorage.removeItem(_ipFeelingKey(admId));
+}
+
+// 推進入「感覺好一點」step
+function onInpatientStepClick(stepId) {
+  var admId = _ipActiveAdmissionId;
+  if (!admId) {
+    if (typeof showToast === 'function') showToast('沒有進行中的住院，無法更新進度', 'info');
+    return;
+  }
+  if (stepId === 'admit') {
+    if (typeof showToast === 'function') showToast('入院日期已自動帶入', 'info');
+    return;
+  }
+  if (stepId === 'feeling') {
+    var cur = _ipGetFeelingState(admId);
+    if (cur && cur.at) {
+      if (!confirm('已標記過「感覺好一點」於 ' + cur.at.slice(0, 10) + '\n要取消嗎？')) return;
+      _ipSetFeelingState(admId, null);
+      if (typeof showToast === 'function') showToast('已取消標記', 'success');
+    } else {
+      _ipSetFeelingState(admId, { at: new Date().toISOString() });
+      if (typeof showToast === 'function') showToast('已記下你的感受 — 醫師查房時可以提', 'success');
+    }
+    loadInpatientActiveAdmission();
+    return;
+  }
+  if (stepId === 'planned') {
+    var iso = prompt('排定出院日期（YYYY-MM-DD）：', new Date().toISOString().slice(0,10));
+    if (!iso) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso.trim())) { if (typeof showToast === 'function') showToast('格式不對', 'error'); return; }
+    fetch(API + '/admissions/' + encodeURIComponent(admId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discharge_date: iso.trim() + 'T10:00' }),
+    })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function() {
+        if (typeof showToast === 'function') showToast('已排定出院 ' + iso, 'success');
+        loadInpatientActiveAdmission();
+      })
+      .catch(function(e) { if (typeof showToast === 'function') showToast('更新失敗：' + e.message, 'error'); });
+    return;
+  }
+  if (stepId === 'done') {
+    if (!confirm('標記為「已出院」？\n會把這次住院關閉，住院模式相關區塊改成空狀態。')) return;
+    fetch(API + '/admissions/' + encodeURIComponent(admId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'discharged', discharge_date: new Date().toISOString().slice(0, 19) }),
+    })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function() {
+        if (typeof showToast === 'function') showToast('恭喜出院！記得到「我的碎片」看完整摘要', 'success');
+        loadInpatientActiveAdmission();
+      })
+      .catch(function(e) { if (typeof showToast === 'function') showToast('結案失敗：' + e.message, 'error'); });
+  }
 }
 
 // 9. 住院衛教 (Inpatient Education) ─────────────────────────────────────────
@@ -4199,12 +4523,66 @@ var _IP_EDU_TOPICS = [
     '【收據】住院收據 (申報保險用) 通常出院櫃台領；副本一份要的話現場說。',
     '【回診】下次回診日 / 拆線日 / 抽血追蹤日寫進 MD.Piece「下次回診」chip。',
     '【出院當天】通常 10:00-12:00 辦理；家屬幫忙打包 + 結清病房費。',
-  ]},
+  ],
+  // Decision Aid 範例 — 醫師說「明天可以出院或再觀察一天」時的選項對照
+  decision: {
+    question: '醫師說「明天可以出院、也可以再觀察一天」— 怎麼決定？',
+    personalNote: '參考你的紀錄：近 3 天疼痛趨勢、生命徵象、有無家人能接送。',
+    options: [
+      {
+        label: '選 A：明天出院',
+        pros: ['少 1 天住院費 / 部分負擔', '回家休息品質通常較好', '可避免院內感染風險'],
+        cons: ['若狀況變差需重新掛號 / 急診', '出院藥可能要等門診才能調整', '家屬要安排接送 + 在家照顧'],
+        risk: '若你有多重慢病 / 一個人住，建議再觀察至少 24 小時。',
+        nextSteps: ['告訴主治醫師你選擇出院', '完成準備清單 17 項', '排定下次回診（7-14 天內）'],
+      },
+      {
+        label: '選 B：再觀察一天',
+        pros: ['有醫護隨時可叫', '可再追一次抽血 / 監測', '家屬有更多時間準備'],
+        cons: ['多 1 天住院費 + 部分負擔', '院內感染風險稍高', '睡眠品質可能較差'],
+        risk: '若你昨晚 SOS 回報 > 3 次或趨勢圖標「↗加重」，這個選項通常更安全。',
+        nextSteps: ['告訴主治醫師你選擇觀察', '設定明天的「下一步」目標', '請社工確認保險日數'],
+      },
+    ],
+  }},
   { id: 'sos',      icon: 'bell-ring',       title: '什麼狀況要立刻叫人', tldr: '別忍。下面的狀況請立刻按床邊紅鈴或求助護理。', body: [
     '【立刻叫】突發胸痛 / 喘不過氣 / 大量出血 / 點滴流血 / 跌倒了',
     '【立刻叫】持續性嘔吐 / 高燒 (>38.5°C) / 意識模糊 / 半邊手腳沒力',
     '【可以晚一點】輕微痠痛 / 拉肚子一次 / 失眠想換床 — 等下次查房或下班護理過去時說',
     '【記住】沒人會嫌你叫太多。寧可叫了沒事，不要忍著出事。',
+  ]},
+  // ── 經濟支援 / 保險 ──────────────────────────────────────
+  { id: 'insurance', icon: 'shield-check',   title: '保險申請 — 重點清單',           tldr: '住院/手術通常 30 天內可申請；申請文件要正本+影本各一份。', body: [
+    '【哪些可申請】商業醫療險 (日額/實支實付)、防癌險、重大傷病險、意外險，視保單內容而定。',
+    '【期限】住院/手術理賠通常 30 天內提出最順，但實際依保單條款；超過 2 年才申請可能會被拒。',
+    '【需要文件】① 診斷證明書 (蓋章) ② 醫療收據正本 ③ 病歷摘要 ④ 健保收費明細 (申報用)',
+    '【關鍵字】請醫師在診斷證明上明確寫「主診斷」「手術名稱」「住院起訖日」「ICD-10 碼」— 之後申請理賠才不會被退件。',
+    '【建議】① 出院前把上述文件辦齊 ② 收據建議申請 2-3 份正本 (健保署/商業險公司各一)。',
+    '【小提醒】住院期間若有複雜手術或加護病房，事後申請可能涉及多家保險公司。先把保單列清單再開始辦。',
+  ]},
+  { id: 'studentIns', icon: 'school',        title: '學生平安保險 / 兒童學保',       tldr: '在校學生意外、住院皆可申請，給付不大但容易忽略。', body: [
+    '【誰適用】幼稚園 ~ 大學在學學生 (含夜校)，學校統一加保。',
+    '【可申請】① 意外住院 (每日定額) ② 意外醫療 (門診/手術 實支實付，上限不高) ③ 死殘給付',
+    '【申請流程】① 跟學校註冊組/輔導室拿申請書 ② 附診斷證明、收據影本 ③ 學校統一送承保公司',
+    '【期限】事故 2 年內。',
+    '【小提醒】學保不能單獨申請住院定額 — 必須是「意外」造成的住院。生病住院通常不適用。',
+    '【兒童保險】很多家長為孩子另保的「兒童保險」會包含醫療日額、燒燙傷、重大疾病、手術等，記得也一併申請。',
+  ]},
+  { id: 'illness14',  icon: 'calendar-clock',title: '14 天住院理賠 / 重要時間點',     tldr: '商業險常用門檻：住院 14 天、30 天、90 天 ...，每階段有不同給付。', body: [
+    '【為什麼是 14 天】很多商業保單會設「住院 14 天內」是基本給付、超過 14 天進入「長期住院加倍」等加成。',
+    '【常見階段】③ < 7 天：基本日額 ④ 8-14 天：加成日額 ⑤ 15-30 天：再加成 ⑥ > 30 天：可能觸發殘廢/重大傷病條款。',
+    '【建議追蹤】用「住院第 N 天」(NowCard 已自動算) 對應保單條款，避免錯過給付段。',
+    '【加護病房 ICU】通常另有獨立加成；要記下入住/轉出 ICU 的日期。',
+    '【慢性 / 長期】超過 30 天的住院，可申請「重大傷病卡」(健保署)，減免部分負擔。',
+  ]},
+  { id: 'social',     icon: 'heart-handshake', title: '社會資源 — 你可能不知道的補助', tldr: '健保 +縣市政府 + 民間基金會三層補助，住院期間可申請。', body: [
+    '【健保署】重大傷病卡、低收入戶醫療補助、健保部分負擔減免。',
+    '【縣市衛生局】依縣市不同：失能津貼、長照 2.0、輔具補助、罕見疾病補助。',
+    '【社福機構】① 中華民國紅十字會 (急難救助) ② 兒童福利聯盟 (兒童醫療) ③ 罕病基金會 ④ 創世基金會 (植物人/老人) ⑤ 各疾病協會 (癌症、慢性病等)',
+    '【醫院社工】最快的入口！住院期間請護理站轉介社工師，社工會幫你評估能申請的所有資源。',
+    '【就業 / 經濟】① 勞保傷病給付 (受僱者) ② 國保 ③ 子女教育補助 ④ 房租 / 水電費減免 ⑤ 工會急難救助',
+    '【容易忽略】① 看護費補助 (部分縣市) ② 交通車費 (洗腎/化療接送) ③ 慢性病連續處方箋 (省掛號費)',
+    '【建議做法】住院期間花 10 分鐘列「家庭收入/支出清單」交給社工，他們能評估你能領的補助組合。',
   ]},
 ];
 var _IP_EDU_EXPANDED = {}; // 主題 id → boolean
@@ -4217,6 +4595,8 @@ function inpatientEdu() {
     var bodyHtml = t.body.map(function(line) {
       return '<p class="ip-edu-body-line">' + escapeHtml(line) + '</p>';
     }).join('');
+    // 若 topic 帶 decision (IPDAS 樣板)，附加在 body 後
+    var decisionHtml = t.decision ? decisionAid(t.decision) : '';
     return ''
       + '<details class="ip-edu-section" id="ip-edu-sec-' + t.id + '"' + (expanded ? ' open' : '') + ' ontoggle="_ipEduOnToggle(\'' + t.id + '\', this.open)">'
       +   '<summary class="ip-edu-summary">'
@@ -4227,7 +4607,7 @@ function inpatientEdu() {
       +     '</span>'
       +     '<i data-lucide="chevron-down" class="ip-edu-summary-chev" style="width:18px;height:18px"></i>'
       +   '</summary>'
-      +   '<div class="ip-edu-section-body">' + bodyHtml + '</div>'
+      +   '<div class="ip-edu-section-body">' + bodyHtml + decisionHtml + '</div>'
       + '</details>';
   }).join('');
 
@@ -4280,6 +4660,315 @@ function _ipEduUpdateToggleAllLabel() {
     return el && !el.open;
   });
   lbl.textContent = anyClosed ? '全部展開' : '全部收合';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 設計憲法 條 2 — 可解釋 AI helper
+// ═══════════════════════════════════════════════════════════════════════════
+// 任何 AI 卡都該 wrap 在 aiExplain() 裡，給病人「為什麼」答案。
+// 結構：{ summary, why[], confidence, sources?[], inputs?{} }
+function aiExplain(opts) {
+  opts = opts || {};
+  var why = (opts.why || []).map(function(w) { return '<li>' + escapeHtml(w) + '</li>'; }).join('');
+  var confidence = opts.confidence;
+  var confLabel = '';
+  if (typeof confidence === 'number') {
+    var pct = Math.round(confidence * 100);
+    var level = pct >= 80 ? 'high' : pct >= 50 ? 'mid' : 'low';
+    var levelText = pct >= 80 ? '高' : pct >= 50 ? '中' : '低';
+    confLabel = '<span class="ai-explain-conf ai-explain-conf-' + level + '">信心 ' + levelText + ' · ' + pct + '%</span>';
+  }
+  var sources = (opts.sources || []).map(function(s) {
+    if (s && typeof s === 'object') {
+      if (s.url) return '<li><a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener">' + escapeHtml(s.title || s.url) + '</a></li>';
+      if (s.title) return '<li>' + escapeHtml(s.title) + '</li>';
+    }
+    return '<li>' + escapeHtml(String(s)) + '</li>';
+  }).join('');
+  var inputs = opts.inputs ? Object.keys(opts.inputs).map(function(k) {
+    return '<dt>' + escapeHtml(k) + '</dt><dd>' + escapeHtml(String(opts.inputs[k])) + '</dd>';
+  }).join('') : '';
+  return ''
+    + '<details class="ai-explain">'
+    +   '<summary>'
+    +     '<span class="ai-explain-summary-text">' + escapeHtml(opts.summary || '為什麼這樣判斷？') + '</span>'
+    +     confLabel
+    +     '<i data-lucide="chevron-down" class="ai-explain-chev" style="width:14px;height:14px"></i>'
+    +   '</summary>'
+    +   '<div class="ai-explain-body">'
+    +     (why ? '<div class="ai-explain-block"><strong>為什麼：</strong><ul>' + why + '</ul></div>' : '')
+    +     (inputs ? '<div class="ai-explain-block"><strong>用到的資料：</strong><dl class="ai-explain-inputs">' + inputs + '</dl></div>' : '')
+    +     (sources ? '<div class="ai-explain-block"><strong>來源：</strong><ul>' + sources + '</ul></div>' : '')
+    +     '<p class="ai-explain-disclaimer">這是電腦根據你的紀錄做的推論，不能取代醫師判斷。有疑慮請與醫師討論。</p>'
+    +   '</div>'
+    + '</details>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 設計憲法 條 5 — Decision Aid (IPDAS-style) helper
+// ═══════════════════════════════════════════════════════════════════════════
+// 結構：{ question, options[ {label, pros[], cons[], risk?, nextSteps[]} ], personalNote? }
+function decisionAid(opts) {
+  opts = opts || {};
+  var optionsHtml = (opts.options || []).map(function(o, i) {
+    var pros = (o.pros || []).map(function(p) { return '<li>' + escapeHtml(p) + '</li>'; }).join('');
+    var cons = (o.cons || []).map(function(c) { return '<li>' + escapeHtml(c) + '</li>'; }).join('');
+    var next = (o.nextSteps || []).map(function(n) { return '<li>' + escapeHtml(n) + '</li>'; }).join('');
+    return ''
+      + '<article class="da-option" data-i="' + i + '">'
+      +   '<header class="da-option-head">'
+      +     '<span class="da-option-num">選項 ' + (i+1) + '</span>'
+      +     '<h4 class="da-option-title">' + escapeHtml(o.label || '') + '</h4>'
+      +   '</header>'
+      +   '<div class="da-option-cols">'
+      +     '<div class="da-col da-col-pros"><h5>👍 利</h5><ul>' + pros + '</ul></div>'
+      +     '<div class="da-col da-col-cons"><h5>👎 弊</h5><ul>' + cons + '</ul></div>'
+      +   '</div>'
+      +   (o.risk ? '<p class="da-option-risk"><i data-lucide="alert-triangle" style="width:13px;height:13px"></i> <strong>個人化風險：</strong>' + escapeHtml(o.risk) + '</p>' : '')
+      +   (next ? '<div class="da-option-next"><strong>下一步：</strong><ul>' + next + '</ul></div>' : '')
+      + '</article>';
+  }).join('');
+  return ''
+    + '<aside class="decision-aid" aria-label="選擇輔助">'
+    +   '<header class="da-head">'
+    +     '<i data-lucide="git-fork" style="width:16px;height:16px"></i>'
+    +     '<div>'
+    +       '<h3 class="da-q">' + escapeHtml(opts.question || '') + '</h3>'
+    +       (opts.personalNote ? '<p class="da-personal">' + escapeHtml(opts.personalNote) + '</p>' : '')
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="da-options">' + optionsHtml + '</div>'
+    +   '<p class="da-footer">參考 IPDAS / Cochrane 2024 (DOI: 10.1002/14651858.CD001431.pub6) 共決架構。最後決定請與醫師討論。</p>'
+    + '</aside>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 場景 C — 我的健康時間軸 + OCR
+// ═══════════════════════════════════════════════════════════════════════════
+// 病人自己上傳檢驗報告 / 處方箋 / 影像 → Tesseract.js 在 client 端 OCR
+// 解出的文字 + 推論的日期、種類存進 localStorage。
+// 視覺化：時間軸卡片 (最新在前)，可篩選類型。
+var _TIMELINE_KEY = 'mdpiece_timeline_entries';
+var _TIMELINE_KINDS = [
+  { id: 'lab',    label: '檢驗報告', icon: 'flask-conical', color: 'blue'    },
+  { id: 'rx',     label: '處方箋',   icon: 'pill',          color: 'amber'   },
+  { id: 'image',  label: '影像報告', icon: 'scan-line',     color: 'purple'  },
+  { id: 'other',  label: '其他',     icon: 'file-text',     color: 'mint'    },
+];
+function _getTimelineEntries() {
+  try { return JSON.parse(localStorage.getItem(_TIMELINE_KEY) || '[]') || []; }
+  catch (e) { return []; }
+}
+function _saveTimelineEntries(list) {
+  localStorage.setItem(_TIMELINE_KEY, JSON.stringify(list));
+}
+
+function timeline() {
+  return ''
+    + '<div class="tl-page">'
+    +   '<header class="tl-head">'
+    +     '<div class="tl-titles">'
+    +       '<h2>我的健康時間軸</h2>'
+    +       '<p>上傳檢驗報告 / 處方箋 / 影像，系統會 OCR 抽出重點。下次看診直接帶這頁給醫師看。</p>'
+    +     '</div>'
+    +     '<button type="button" class="tl-add-btn" onclick="openTimelineUploader()">'
+    +       '<i data-lucide="upload" style="width:14px;height:14px"></i><span>上傳</span>'
+    +     '</button>'
+    +   '</header>'
+    +   '<div class="tl-filters" id="tl-filters">' + _renderTimelineFilters('all') + '</div>'
+    +   '<div class="tl-list" id="tl-list"><p class="tl-empty">// 載入中…</p></div>'
+    +   '<p class="tl-disclaimer">OCR 為輔助辨識，數值仍以原始文件為準。隱私敏感資料目前只存在你這台裝置。</p>'
+    + '</div>';
+}
+
+function _renderTimelineFilters(active) {
+  var all = '<button type="button" class="tl-filter ' + (active === 'all' ? 'is-active' : '') + '" onclick="filterTimeline(\'all\')">全部</button>';
+  var others = _TIMELINE_KINDS.map(function(k) {
+    var act = active === k.id ? ' is-active' : '';
+    return '<button type="button" class="tl-filter tl-filter-' + k.color + act + '" onclick="filterTimeline(\'' + k.id + '\')">'
+      + '<i data-lucide="' + k.icon + '" style="width:13px;height:13px"></i>'
+      + '<span>' + k.label + '</span>'
+      + '</button>';
+  }).join('');
+  return all + others;
+}
+
+var _tlFilter = 'all';
+function filterTimeline(kind) {
+  _tlFilter = kind;
+  var el = document.getElementById('tl-filters');
+  if (el) el.innerHTML = _renderTimelineFilters(kind);
+  loadTimelinePage();
+}
+
+function loadTimelinePage() {
+  var box = document.getElementById('tl-list');
+  if (!box) return;
+  var entries = _getTimelineEntries();
+  if (_tlFilter !== 'all') entries = entries.filter(function(e) { return e.kind === _tlFilter; });
+  entries.sort(function(a, b) { return a.date < b.date ? 1 : -1; });
+  if (!entries.length) {
+    box.innerHTML = '<p class="tl-empty">尚未有任何紀錄。點右上「上傳」加入第一份報告或處方箋。</p>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+  box.innerHTML = entries.map(function(e) {
+    var k = _TIMELINE_KINDS.find(function(x) { return x.id === e.kind; }) || _TIMELINE_KINDS[3];
+    return ''
+      + '<article class="tl-card tl-card-' + k.color + '" data-id="' + e.id + '">'
+      +   '<header class="tl-card-head">'
+      +     '<span class="tl-card-icon"><i data-lucide="' + k.icon + '"></i></span>'
+      +     '<div class="tl-card-meta">'
+      +       '<span class="tl-card-kind">' + k.label + '</span>'
+      +       '<span class="tl-card-date">' + escapeHtml(e.date) + '</span>'
+      +     '</div>'
+      +     '<button type="button" class="tl-card-del" onclick="onTimelineDelete(\'' + e.id + '\')" aria-label="刪除">'
+      +       '<i data-lucide="trash-2" style="width:13px;height:13px"></i>'
+      +     '</button>'
+      +   '</header>'
+      +   '<h3 class="tl-card-title">' + escapeHtml(e.title || '（未命名）') + '</h3>'
+      +   (e.summary ? '<p class="tl-card-summary">' + escapeHtml(e.summary) + '</p>' : '')
+      +   (e.ocr ? '<details class="tl-card-details"><summary>看完整 OCR 文字 (' + (e.ocr.length) + ' 字)</summary><pre class="tl-card-ocr">' + escapeHtml(e.ocr) + '</pre></details>' : '')
+      +   (e.thumb ? '<img class="tl-card-thumb" src="' + e.thumb + '" alt="附件縮圖" />' : '')
+      + '</article>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function openTimelineUploader() {
+  var existing = document.getElementById('tl-upload-sheet');
+  if (existing) existing.remove();
+  var sheet = document.createElement('div');
+  sheet.id = 'tl-upload-sheet';
+  sheet.className = 'ip-prep-sheet';
+  var kindOpts = _TIMELINE_KINDS.map(function(k) {
+    return '<option value="' + k.id + '">' + k.label + '</option>';
+  }).join('');
+  var todayStr = new Date().toISOString().slice(0, 10);
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeTimelineUploader()"></div>'
+    + '<div class="ip-prep-panel" role="dialog" aria-label="上傳到時間軸">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">加進時間軸</span>'
+    +       '<span class="ip-prep-when-sub">PDF / 圖片皆可。圖片會在你的裝置上 OCR，不會上傳到雲端。</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeTimelineUploader()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div class="ip-exam-form">'
+    +     '<label class="ip-exam-field"><span>類型</span><select id="tl-up-kind">' + kindOpts + '</select></label>'
+    +     '<label class="ip-exam-field"><span>日期</span><input type="date" id="tl-up-date" value="' + todayStr + '" /></label>'
+    +     '<label class="ip-exam-field"><span>標題（例：CRP 抽血 / Methotrexate 處方）</span><input type="text" id="tl-up-title" maxlength="40" /></label>'
+    +     '<label class="ip-exam-field"><span>檔案（圖片會 OCR；PDF 暫時只存路徑）</span><input type="file" id="tl-up-file" accept="image/*,application/pdf" onchange="_tlPickFile(this)" /></label>'
+    +     '<div class="tl-ocr-progress" id="tl-ocr-progress" hidden>'
+    +       '<div class="tl-ocr-progress-bar"><div class="tl-ocr-progress-fill" id="tl-ocr-progress-fill"></div></div>'
+    +       '<span class="tl-ocr-progress-text" id="tl-ocr-progress-text">準備 OCR…</span>'
+    +     '</div>'
+    +     '<label class="ip-exam-field"><span>摘要 / OCR 抽出的重點 (自動填，可改)</span><textarea id="tl-up-summary" rows="3" maxlength="400"></textarea></label>'
+    +     '<details class="tl-up-advanced"><summary>OCR 原文 (折疊)</summary><textarea id="tl-up-ocr" rows="5" maxlength="5000" placeholder="若 OCR 失敗可手動貼上"></textarea></details>'
+    +   '</div>'
+    +   '<div class="ip-prep-footer">'
+    +     '<button type="button" class="ip-prep-cta" onclick="submitTimelineUpload()">'
+    +       '<i data-lucide="check" style="width:16px;height:16px"></i><span>儲存到時間軸</span>'
+    +     '</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeTimelineUploader() {
+  var sheet = document.getElementById('tl-upload-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+
+var _tlOcrThumb = null;
+function _tlPickFile(input) {
+  var f = input.files && input.files[0];
+  if (!f) return;
+  // 只處理圖片做 OCR；PDF 先存檔名不 OCR
+  if (!/^image\//.test(f.type)) {
+    var sumEl = document.getElementById('tl-up-summary');
+    if (sumEl && !sumEl.value) sumEl.value = '(PDF) ' + f.name;
+    _tlOcrThumb = null;
+    return;
+  }
+  // 縮圖預覽 (壓 320px)
+  shrinkImageToDataUrl(f, 320, 0.7).then(function(dataUrl) {
+    _tlOcrThumb = dataUrl;
+  }).catch(function(){ _tlOcrThumb = null; });
+
+  // 跑 OCR
+  if (typeof Tesseract === 'undefined') {
+    if (typeof showToast === 'function') showToast('OCR 引擎未載入，請手動填內容', 'info');
+    return;
+  }
+  var prog = document.getElementById('tl-ocr-progress');
+  var fill = document.getElementById('tl-ocr-progress-fill');
+  var txt = document.getElementById('tl-ocr-progress-text');
+  if (prog) prog.hidden = false;
+  Tesseract.recognize(f, 'chi_tra+eng', {
+    logger: function(m) {
+      if (m.status === 'recognizing text' && fill) {
+        var pct = Math.round((m.progress || 0) * 100);
+        fill.style.width = pct + '%';
+        if (txt) txt.textContent = '辨識中… ' + pct + '%';
+      }
+    },
+  }).then(function(r) {
+    var text = ((r && r.data && r.data.text) || '').trim();
+    var ocrEl = document.getElementById('tl-up-ocr');
+    var sumEl = document.getElementById('tl-up-summary');
+    if (ocrEl) ocrEl.value = text;
+    // 自動摘要：取前 80 字 + 找疑似日期 / 數值
+    if (sumEl && !sumEl.value && text) {
+      var lines = text.split(/\n+/).filter(function(l) { return l.trim().length > 0; }).slice(0, 4);
+      sumEl.value = lines.join('  ').slice(0, 200);
+    }
+    if (txt) txt.textContent = '完成。如需修改可直接編輯下方欄位。';
+    if (fill) fill.style.width = '100%';
+  }).catch(function() {
+    if (txt) txt.textContent = 'OCR 失敗，請手動填內容。';
+  });
+}
+
+function submitTimelineUpload() {
+  var kind = document.getElementById('tl-up-kind').value;
+  var date = document.getElementById('tl-up-date').value;
+  var title = document.getElementById('tl-up-title').value.trim();
+  var summary = document.getElementById('tl-up-summary').value.trim();
+  var ocr = document.getElementById('tl-up-ocr').value.trim();
+  if (!date || !title) {
+    if (typeof showToast === 'function') showToast('請至少填日期 + 標題', 'error');
+    return;
+  }
+  var list = _getTimelineEntries();
+  var p = isProxyMode() ? getProxyFor() : null;
+  list.unshift({
+    id: 'tl_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+    kind: kind,
+    date: date,
+    title: title,
+    summary: summary,
+    ocr: ocr,
+    thumb: _tlOcrThumb,
+    proxy_for: p ? p.name : null,
+    createdAt: new Date().toISOString(),
+  });
+  _saveTimelineEntries(list);
+  _tlOcrThumb = null;
+  closeTimelineUploader();
+  if (typeof showToast === 'function') showToast('已加進時間軸', 'success');
+  loadTimelinePage();
+}
+function onTimelineDelete(id) {
+  if (!confirm('刪除這筆？無法復原。')) return;
+  _saveTimelineEntries(_getTimelineEntries().filter(function(e) { return e.id !== id; }));
+  if (typeof showToast === 'function') showToast('已刪除', 'success');
+  loadTimelinePage();
 }
 
 // ── 資料載入 / 互動 handlers ────────────────────────────────────────────────
@@ -4757,30 +5446,47 @@ function _fillDayProgress(items) {
 
 function _fillDischargeStepper(active) {
   var eta = document.getElementById('ip-discharge-eta');
+  var hint = document.getElementById('ip-discharge-hint');
   if (!active) {
     document.querySelectorAll('#ip-steps .ip-step').forEach(function(li) { li.classList.remove('active','done'); });
     if (eta) eta.textContent = '—';
+    if (hint) hint.textContent = '尚無進行中的住院。';
     return;
   }
-  // 簡化判定：active + 還沒到預估出院日 → 「治療」階段；最後 24h → 「觀察」；已 discharged → 「出院」
-  var stepIdx;
-  if (active.status === 'discharged') stepIdx = 3;
-  else if (active.discharge_date) {
-    var dd = new Date(active.discharge_date).getTime();
-    var diffH = (dd - Date.now()) / 3600000;
-    if (diffH < 24) stepIdx = 2;
-    else stepIdx = 1;
-  } else {
-    stepIdx = 1; // 治療階段
-  }
-  document.querySelectorAll('#ip-steps .ip-step').forEach(function(li, i) {
-    li.classList.toggle('done', i < stepIdx);
-    li.classList.toggle('active', i === stepIdx);
+  var feeling = _ipGetFeelingState(active.id);
+  // 4 個 step：admit / feeling / planned / done
+  // - admit: admit_date 有 → done
+  // - feeling: 病人標記 → done
+  // - planned: discharge_date 已設 → done；今天就是 discharge_date → active
+  // - done: status=discharged → done
+  var doneSet = {
+    admit:   !!active.admit_date,
+    feeling: !!feeling,
+    planned: !!active.discharge_date,
+    done:    active.status === 'discharged',
+  };
+  // active 階段：第一個沒 done 的；全 done → 最後一個 active
+  var stepOrder = ['admit','feeling','planned','done'];
+  var activeIdx = stepOrder.findIndex(function(s) { return !doneSet[s]; });
+  if (activeIdx === -1) activeIdx = stepOrder.length - 1;
+  document.querySelectorAll('#ip-steps .ip-step').forEach(function(li) {
+    var id = li.dataset.stepId;
+    li.classList.toggle('done',   doneSet[id]);
+    li.classList.toggle('active', stepOrder[activeIdx] === id && !doneSet[id]);
+    // 每步的 sub-text
+    var sub = li.querySelector('.ip-step-sub');
+    if (!sub) return;
+    if (id === 'admit')        sub.textContent = active.admit_date ? active.admit_date.slice(0,10) : '—';
+    else if (id === 'feeling') sub.textContent = feeling ? feeling.at.slice(5,10).replace('-','/') : '我感覺好一點時點這';
+    else if (id === 'planned') sub.textContent = active.discharge_date ? active.discharge_date.slice(0,10) : '排定出院日';
+    else if (id === 'done')    sub.textContent = active.status === 'discharged' ? '已出院' : '出院當天點這';
   });
   if (eta) {
-    if (active.discharge_date) eta.textContent = '預計出院 ' + active.discharge_date.slice(0, 10);
-    else eta.textContent = '預計出院日未定';
+    if (active.status === 'discharged') eta.textContent = '已結案';
+    else if (active.discharge_date) eta.textContent = '預計出院 ' + active.discharge_date.slice(0, 10);
+    else eta.textContent = '尚未排定出院日';
   }
+  if (hint) hint.textContent = '點任一步看詳情或更新狀態。';
 }
 
 // 7 日趨勢 — 痛 / 累 / 心情
@@ -4792,17 +5498,25 @@ function loadInpatientTrendSparklines() {
   var painCats = ['headache','joint','muscle','neuralgia','chest','dizziness','vertigo'];
   _drawSparkline('pain', _aggDaily(syms, function(e) { return painCats.indexOf(e.categoryId) !== -1 ? (e.intensity || 0) : null; }));
   _drawSparkline('fatigue', _aggDaily(syms, function(e) { return e.categoryId === 'fatigue' ? (e.intensity || 0) : null; }));
-  // 心情：後端 daily，欄位 average_score (0..1)；後端拉不到時退回空
+  // 心情：先用本地快速 log 暫填，再拉後端 daily 覆寫（後端拉不到時保留 local 版）。
+  // 後端回應 average_score 0..1 → 乘 10 對齊 local 1-5*2 = 2-10 的 scale。
+  var localMood = _ipLocalMoodDaily();
+  _drawSparkline('mood', localMood);
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-  if (!pid) { _drawSparkline('mood', []); return; }
+  if (!pid) return;
   fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      var ct = r.headers.get('content-type') || '';
+      if (!r.ok || ct.indexOf('json') === -1) throw new Error('non-json');
+      return r.json();
+    })
     .then(function(data) {
       var daily = (data && data.daily) || [];
+      if (!daily.length) return; // 後端沒資料就不蓋 local
       var vals = daily.map(function(d) { return (d.average_score != null) ? d.average_score * 10 : null; });
       _drawSparkline('mood', vals);
     })
-    .catch(function() { _drawSparkline('mood', []); });
+    .catch(function() { /* 保留 local 版 */ });
 }
 
 function _aggDaily(entries, picker) {
@@ -4832,8 +5546,8 @@ function _drawSparkline(key, vals) {
   var clean = vals.filter(function(v) { return v != null; });
   if (!clean.length) {
     line.setAttribute('points', '');
-    if (arrow) arrow.textContent = '—';
-    if (foot) foot.textContent = '7 天內沒紀錄';
+    if (arrow) { arrow.textContent = '＋'; arrow.dataset.trend = 'empty'; }
+    if (foot) foot.textContent = '點一下記今天';
     return;
   }
   var max = Math.max.apply(null, clean);
@@ -4863,6 +5577,31 @@ function _drawSparkline(key, vals) {
   if (foot) {
     var avg = clean.reduce(function(s,v){return s+v;},0) / clean.length;
     foot.textContent = '7 天平均 ' + avg.toFixed(1);
+  }
+  // 設計憲法 條 2 — 給「為什麼」這樣判斷。把 aiExplain 寫進 chip 旁邊一個 mount node。
+  var mount = document.getElementById('ip-trend-explain-' + key);
+  if (mount) {
+    var labelMap = { pain:'疼痛', fatigue:'疲勞', mood:'心情' };
+    var trendName = improving ? '好轉' : worsening ? '加重' : '持平';
+    var why = [];
+    why.push('比較前半 (前 3 天) 與後半 (近 3 天) 平均：' + avgEarly.toFixed(2) + ' → ' + avgLate.toFixed(2) + (delta >= 0 ? ' (+' + delta.toFixed(2) + ')' : ' (' + delta.toFixed(2) + ')'));
+    if (isGoodMetric) {
+      why.push('心情這指標「越高越好」(分數高 = 心情好)。');
+    } else {
+      why.push((labelMap[key] || key) + '這指標「越低越好」(分數高 = 不舒服)。');
+    }
+    why.push('變化超過 ±0.2 才算明顯，不然算「持平」避免過度解讀。');
+    why.push('資料來自你最近 7 天的紀錄 (' + clean.length + ' 筆)，沒紀錄的天不計入。');
+    // 信心：依資料筆數估
+    var conf = Math.min(0.95, 0.35 + clean.length * 0.08);
+    mount.innerHTML = aiExplain({
+      summary: '為什麼判斷為「' + trendName + '」？',
+      why: why,
+      confidence: conf,
+      inputs: { 指標: labelMap[key] || key, 天數: clean.length, 前期均: avgEarly.toFixed(2), 近期均: avgLate.toFixed(2) },
+      sources: [{ title: '判斷規則：前後半 7 日均值比對' }],
+    });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 }
 
@@ -5382,6 +6121,11 @@ function getSymptomEntries() {
   catch { return []; }
 }
 function saveSymptomEntry(entry) {
+  // 設計憲法 條 6 — 家屬代理模式時打標籤，醫師才知道這筆不是病人自己記的
+  if (typeof isProxyMode === 'function' && isProxyMode()) {
+    var p = getProxyFor();
+    if (p) entry.proxy_for = p.name;
+  }
   const all = getSymptomEntries();
   all.push(entry);
   localStorage.setItem('mdpiece_symptoms', JSON.stringify(all));
@@ -8927,25 +9671,84 @@ function confirmForceLog(medId) {
   logMedTaken(medId, true, { force: true });
 }
 
+// 用藥效果快速回報 — 4 顆大按鈕：無效 / 過敏 / 普通 / 有效。
+// 按下後直接送 /medications/effects；過敏多 prompt 一個 textarea 讓使用者寫症狀。
+// effectiveness 對應：無效=1 / 過敏=1 + side_effects 帶「過敏：xxx」/ 普通=3 / 有效=5
 function showEffectForm(medId, medName) {
-  var eff = prompt(medName + " 療效如何？（1=沒效果 ~ 5=非常有效）", "3");
-  if (!eff) return;
-  var effNum = parseInt(eff);
-  if (effNum < 1 || effNum > 5 || isNaN(effNum)) { showToast("請輸入 1-5 的數字", "warning"); return; }
-  var sideEffects = prompt("有任何副作用嗎？（沒有就留空）") || "";
-  var changes = prompt("症狀有什麼改善？（沒有就留空）") || "";
+  var existing = document.getElementById('med-effect-sheet');
+  if (existing) existing.remove();
 
-  fetch(API + "/medications/effects", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  var opts = [
+    { key: 'none',    label: '無效',  sub: '吃了沒感覺',   emoji: '😐', color: 'muted',  eff: 1 },
+    { key: 'allergy', label: '過敏',  sub: '寫出症狀',     emoji: '⚠️', color: 'danger', eff: 1 },
+    { key: 'avg',     label: '普通',  sub: '一點點',       emoji: '🙂', color: 'sky',    eff: 3 },
+    { key: 'good',    label: '有效',  sub: '比較舒服',     emoji: '😊', color: 'mint',   eff: 5 },
+  ];
+  var btns = opts.map(function(o) {
+    return ''
+      + '<button type="button" class="med-effect-btn med-effect-' + o.color + '" onclick="_submitMedEffect(\'' + medId + '\',\'' + o.key + '\',' + o.eff + ')">'
+      +   '<span class="med-effect-emoji">' + o.emoji + '</span>'
+      +   '<span class="med-effect-label">' + o.label + '</span>'
+      +   '<span class="med-effect-sub">' + o.sub + '</span>'
+      + '</button>';
+  }).join('');
+
+  var sheet = document.createElement('div');
+  sheet.id = 'med-effect-sheet';
+  sheet.className = 'ip-prep-sheet'; // 沿用 sheet 外殼 styling
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeMedEffectSheet()"></div>'
+    + '<div class="ip-prep-panel" role="dialog" aria-label="用藥效果">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">' + escapeHtml(medName) + '</span>'
+    +       '<span class="ip-prep-when-sub">吃完感覺如何？點一下就好。</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeMedEffectSheet()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div class="med-effect-grid">' + btns + '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeMedEffectSheet() {
+  var sheet = document.getElementById('med-effect-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+
+function _submitMedEffect(medId, kind, effNum) {
+  var sideEffects = '';
+  if (kind === 'allergy') {
+    var sym = prompt('過敏：請寫出症狀（例：起紅疹、嘴唇腫、呼吸困難）\n如有嚴重反應請立刻就醫。', '');
+    if (!sym || !sym.trim()) {
+      if (typeof showToast === 'function') showToast('已取消（過敏需要填寫症狀才能存）', 'info');
+      return;
+    }
+    sideEffects = '過敏：' + sym.trim();
+  }
+  fetch(API + '/medications/effects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      patient_id: _medsPatientId, medication_id: medId,
-      effectiveness: effNum, side_effects: sideEffects, symptom_changes: changes
-    })
+      patient_id: _medsPatientId,
+      medication_id: medId,
+      effectiveness: effNum,
+      side_effects: sideEffects,
+      symptom_changes: '',
+    }),
   })
-    .then(function(r) { return r.json(); })
-    .then(function() { showToast("療效紀錄已儲存", "success"); })
-    .catch(function() { showToast("紀錄失敗", "error"); });
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+      if (typeof showToast === 'function') showToast(kind === 'allergy' ? '已記錄過敏反應，建議盡快告知醫師' : '療效已記下', 'success');
+      closeMedEffectSheet();
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('紀錄失敗，請重試', 'error');
+    });
 }
 
 function renderMedStats(data) {
@@ -11622,6 +12425,19 @@ function settings() {
             sw('sw-sound', 'sound', so === 'on', 'on', 'off'))
     + '  </div>'
 
+    // ── 提醒語氣 + 家屬代理 (符合設計憲法 條 3 / 條 6) ────────────────
+    + '  <div class="set-group">'
+    + '    <h3 class="set-group-title"><i data-lucide="bell-ring"></i> 提醒與代理</h3>'
+    +      row('提醒語氣', '系統提醒、待辦訊息的口氣風格 (對應憲法條 3：可客製化提醒)',
+            seg('reminderTone', [
+              { value: 'strict',  label: '嚴肅' },
+              { value: 'warm',    label: '溫柔' },
+              { value: 'short',   label: '極簡' },
+            ], getReminderTone()))
+    +      row('我幫誰紀錄', '在「我自己」與「家人代理」之間切換；紀錄會打標籤，醫師看得到',
+            renderProxyToggle())
+    + '  </div>'
+
     // Account & data
     + '  <div class="set-group">'
     + '    <h3 class="set-group-title"><i data-lucide="database"></i> ' + _T('set.group.data') + '</h3>'
@@ -11666,6 +12482,10 @@ function onSettingChange(group, value) {
   } else if (group === 'density') {
     setSetting('density', value);
     applyDensity(value);
+  } else if (group === 'reminderTone') {
+    setReminderTone(value);
+    // 重新刷新 todo / SOS history，套上新口氣
+    if (typeof refreshTodoList === 'function') refreshTodoList();
   }
   // 更新該群組按鈕的 active 狀態
   document.querySelectorAll('.set-seg-btn[data-group="' + group + '"]').forEach(function(b) {
