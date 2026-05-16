@@ -14547,7 +14547,10 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   margin-right: 2px;
 }
 
-/* Timeline dot 配色：exam 用紫色強調（不同於 vitals 藍 / med 暖色） */
+/* Timeline dot 配色：依「處置分類」上色，讓使用者一眼分辨檢查 / 打藥 / 護理。
+ * exam（檢查）= 紫；treatment（注射 / 輸液）= 暖橘；nursing（護理處置）= sage 綠。
+ * 沒帶 data-category 的 exam 仍使用紫色當預設。
+ */
 .ip-tl-kind-exam .ip-tl-dot {
   border-color: rgba(124,107,196,0.45);
   color: #7C6BC4;
@@ -14557,6 +14560,107 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   background: #7C6BC4;
   color: #fff;
   border-color: #7C6BC4;
+}
+.ip-tl-kind-exam[data-category="treatment"] .ip-tl-dot {
+  border-color: rgba(232,138,89,0.55);
+  color: #C76A3A;
+  background: rgba(232,138,89,0.10);
+}
+.ip-tl-now.ip-tl-kind-exam[data-category="treatment"] .ip-tl-dot {
+  background: #E88A59;
+  color: #fff;
+  border-color: #E88A59;
+}
+.ip-tl-kind-exam[data-category="nursing"] .ip-tl-dot {
+  border-color: rgba(94,162,116,0.55);
+  color: #4E8A60;
+  background: rgba(94,162,116,0.10);
+}
+.ip-tl-now.ip-tl-kind-exam[data-category="nursing"] .ip-tl-dot {
+  background: #5EA274;
+  color: #fff;
+  border-color: #5EA274;
+}
+
+/* 生活作息（meal / vitals / rounds）— 視覺淡化，主角是醫療處置 */
+.ip-tl-item[data-group="life"] {
+  flex: 0 0 84px;
+  opacity: 0.78;
+}
+.ip-tl-item[data-group="life"] .ip-tl-dot {
+  width: 32px;
+  height: 32px;
+}
+.ip-tl-item[data-group="life"] .ip-tl-dot svg {
+  width: 15px;
+  height: 15px;
+}
+.ip-tl-item[data-group="life"] .ip-tl-label {
+  font-size: 0.72rem;
+  color: var(--ip-dim);
+}
+/* now 狀態的生活作息不要被淡化 — 病人需要知道現在該吃飯 / 量血壓了 */
+.ip-tl-item.ip-tl-now[data-group="life"] {
+  opacity: 1;
+}
+
+/* 分類 chip（顯示在 timeline 詳情標題下） */
+.ip-tl-sheet-cat {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.ip-tl-sheet-cat-exam {
+  background: rgba(124,107,196,0.14);
+  color: #7C6BC4;
+}
+.ip-tl-sheet-cat-treatment {
+  background: rgba(232,138,89,0.16);
+  color: #C76A3A;
+}
+.ip-tl-sheet-cat-nursing {
+  background: rgba(94,162,116,0.16);
+  color: #4E8A60;
+}
+
+/* 中文白話解釋 — 詳情 sheet 裡的特別段（給患者看的「這是什麼」） */
+.ip-tl-sheet-explain {
+  background: rgba(127,231,217,0.10);
+  border-left: 3px solid var(--ip-mint);
+  padding: 8px 10px !important;
+  border-radius: 8px;
+  margin: -4px 0 4px;
+}
+.ip-tl-sheet-explain strong {
+  color: var(--ip-mint) !important;
+}
+
+/* composer 內的中文解釋資訊框（選類型時即時顯示） */
+.ip-exam-desc-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(127,231,217,0.08);
+  border: 1px solid rgba(127,231,217,0.22);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ip-text);
+  margin-top: -6px; /* 緊貼上方類型 select */
+}
+.ip-exam-desc-box svg {
+  margin-top: 3px;
+  color: var(--ip-mint);
+  flex-shrink: 0;
+}
+#app-wrapper[data-theme="dark"] .ip-exam-desc-box {
+  background: rgba(127,231,217,0.10);
+  border-color: rgba(127,231,217,0.22);
+  color: #F1F6FF;
 }
 
 /* composer (inline) */

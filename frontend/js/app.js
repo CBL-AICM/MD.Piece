@@ -4091,9 +4091,10 @@ function renderInpatientTimeline() {
     +   '<header class="ip-section-head">'
     +     '<span class="ip-num">04</span>'
     +     '<h3>今日治療</h3>'
-    +     '<button type="button" class="ip-exam-add" id="ip-exam-add-btn" onclick="openInpatientExamComposer()" aria-label="新增排定檢查">'
+    +     '<span class="ip-section-sub">檢查 · 打藥 · 護理處置</span>'
+    +     '<button type="button" class="ip-exam-add" id="ip-exam-add-btn" onclick="openInpatientExamComposer()" aria-label="新增排定處置">'
     +       '<i data-lucide="plus" style="width:14px;height:14px"></i>'
-    +       '<span>排檢查</span>'
+    +       '<span>排處置</span>'
     +     '</button>'
     +   '</header>'
     +   '<div class="ip-timeline-rail" id="ip-timeline-rail">'
@@ -4102,19 +4103,95 @@ function renderInpatientTimeline() {
     + '</section>';
 }
 
-// 排定檢查 catalog — 常見住院檢查類型，每種帶建議的禁食/準備指示。
+// 醫療處置 catalog — 「今日治療」涵蓋：檢查 / 注射輸液 / 護理處置。
+// 每筆都附中文白話解釋（description），讓患者 / 家屬看得懂這個處置在幹嘛、會有什麼感覺。
+// category: 'exam'（檢查）| 'treatment'（注射 / 輸液）| 'nursing'（護理處置）
 var _IP_EXAM_TYPES = {
-  blood:      { label: '抽血',     icon: 'droplet',           defaultPrep: '依醫師指示，部分項目需禁食 8 小時' },
-  xray:       { label: 'X 光',     icon: 'scan',              defaultPrep: '穿不含金屬釦子的衣物' },
-  ct:         { label: 'CT',       icon: 'scan-line',         defaultPrep: '顯影劑：前 4 hr 禁食，有過敏先告知' },
-  mri:        { label: 'MRI',      icon: 'brain',             defaultPrep: '所有金屬物品（戒指、髮夾）拿掉' },
-  ultrasound: { label: '超音波',   icon: 'audio-waveform',    defaultPrep: '腹部超音波需禁食 6-8 hr' },
-  ecg:        { label: '心電圖',   icon: 'activity',          defaultPrep: '上身可能需露出胸口貼片' },
-  endoscopy:  { label: '內視鏡',   icon: 'tube',              defaultPrep: '禁食 8 hr，腸鏡需前一晚清腸' },
-  lungfn:     { label: '肺功能',   icon: 'wind',              defaultPrep: '檢查前 1 hr 別劇烈運動 / 抽菸' },
-  bonedensity:{ label: '骨密度',   icon: 'bone',              defaultPrep: '穿無金屬釦子的衣物' },
-  other:      { label: '其他檢查', icon: 'clipboard-list',    defaultPrep: '依醫師說明準備' },
+  // ── 檢查 ──
+  blood:      { label: '抽血',     icon: 'droplet',           category: 'exam',
+                defaultPrep: '依醫師指示，部分項目需禁食 8 小時',
+                description: '從手臂血管抽幾管血做檢驗，看身體的數值（發炎、肝腎、血糖等）。針扎一下，幾秒就好。' },
+  xray:       { label: 'X 光',     icon: 'scan',              category: 'exam',
+                defaultPrep: '穿不含金屬釦子的衣物',
+                description: '用 X 光照胸部或骨頭看裡面構造，沒感覺、幾分鐘就好。會被請出去病房到放射部。' },
+  ct:         { label: 'CT',       icon: 'scan-line',         category: 'exam',
+                defaultPrep: '顯影劑：前 4 hr 禁食，有過敏先告知',
+                description: '電腦斷層，躺進像甜甜圈的機器照斷面影像。打顯影劑時手會微熱、口會微鹹，是正常的。' },
+  mri:        { label: 'MRI',      icon: 'brain',             category: 'exam',
+                defaultPrep: '所有金屬物品（戒指、髮夾）拿掉',
+                description: '磁振造影，躺進長管子照影像。機器很大聲（會給耳塞），全程 20–40 分鐘要躺著別動。' },
+  ultrasound: { label: '超音波',   icon: 'audio-waveform',    category: 'exam',
+                defaultPrep: '腹部超音波需禁食 6-8 hr',
+                description: '在皮膚上塗一層涼涼的凝膠，用探頭滑來滑去看內臟。完全不痛、沒輻射。' },
+  ecg:        { label: '心電圖',   icon: 'activity',          category: 'exam',
+                defaultPrep: '上身可能需露出胸口貼片',
+                description: '在胸口和四肢貼 10 個小貼片量心臟電流，5 分鐘搞定。完全不痛、沒感覺。' },
+  endoscopy:  { label: '內視鏡',   icon: 'tube',              category: 'exam',
+                defaultPrep: '禁食 8 hr，腸鏡需前一晚清腸',
+                description: '從嘴巴（胃鏡）或肛門（腸鏡）伸一條軟管帶鏡頭進去看。會打鎮靜藥讓你睡著做。' },
+  lungfn:     { label: '肺功能',   icon: 'wind',              category: 'exam',
+                defaultPrep: '檢查前 1 hr 別劇烈運動 / 抽菸',
+                description: '對著一個管子用力吹氣，測肺活量和換氣能力。會請你用力吹好幾次。' },
+  bonedensity:{ label: '骨密度',   icon: 'bone',              category: 'exam',
+                defaultPrep: '穿無金屬釦子的衣物',
+                description: '躺在台子上掃描脊椎或髖部測骨頭密度，看有沒有骨質疏鬆。完全不痛、輻射很低。' },
+  other:      { label: '其他檢查', icon: 'clipboard-list',    category: 'exam',
+                defaultPrep: '依醫師說明準備',
+                description: '其他類型的檢查。詳細請聽醫師或護理師說明。' },
+
+  // ── 注射 / 輸液 ──
+  iv_infusion:    { label: '點滴',         icon: 'droplets',     category: 'treatment',
+                    defaultPrep: '手部留針，盡量別大幅活動讓針偏掉',
+                    description: '把營養液 / 電解質 / 水分慢慢從手背的針滴進血管裡，補充身體需要的東西。手可能會冰冰的，這是正常的。' },
+  iv_antibiotic:  { label: '抗生素點滴',   icon: 'syringe',      category: 'treatment',
+                    defaultPrep: '若曾過敏要先告知',
+                    description: '把抗生素加進點滴瓶裡慢慢滴進血管殺細菌，大約 30 分鐘到 1 小時跑完。覺得手癢 / 起疹子要立刻按鈴。' },
+  iv_chemo:       { label: '化療點滴',     icon: 'flask-conical', category: 'treatment',
+                    defaultPrep: '前後多喝水幫助代謝，事前可能會給止吐藥',
+                    description: '把化療藥從點滴滴進血管殺癌細胞。中間可能會想吐、覺得冷、嘴巴麻，有任何不舒服立刻按鈴。' },
+  injection_im:   { label: '肌肉注射',     icon: 'syringe',      category: 'treatment',
+                    defaultPrep: '通常打在上臂或屁股，露出該位置',
+                    description: '把藥用針扎進肌肉裡（上臂或屁股），藥效比口服快。打的當下會痛一下，之後幾小時可能會痠。' },
+  injection_sc:   { label: '皮下注射',     icon: 'syringe',      category: 'treatment',
+                    defaultPrep: '通常打在肚皮或大腿外側',
+                    description: '在皮膚下方淺淺打一針（例：胰島素、抗凝血劑）。針很細，幾乎不痛。' },
+  injection_push: { label: '靜脈推注',     icon: 'syringe',      category: 'treatment',
+                    defaultPrep: '從手部留置針推進，醫師 / 護理師會在旁監測',
+                    description: '把藥用針筒直接從手背的針推進血管裡，藥效最快。可能會覺得手臂熱熱的或有怪味，告訴護理師沒關係。' },
+  blood_trans:    { label: '輸血',         icon: 'droplet',      category: 'treatment',
+                    defaultPrep: '輸血前護理師會核對血袋資料兩次',
+                    description: '把捐血者的血從點滴滴進你的血管補充。中間護理師會固定來量血壓、體溫。覺得發冷 / 起疹子要立刻按鈴。' },
+
+  // ── 護理處置 ──
+  change_dressing:{ label: '換藥',         icon: 'bandage',      category: 'nursing',
+                    defaultPrep: '若傷口會痛可請護理師先給止痛',
+                    description: '撕掉舊紗布、清傷口、換上新紗布。撕的時候會有點刺刺的，清完會比較舒服。' },
+  catheter:       { label: '導尿 / 換尿管', icon: 'tube',         category: 'nursing',
+                    defaultPrep: '會拉上隔簾保護隱私',
+                    description: '從尿道伸一條軟管到膀胱把尿引出來。放進去時會有壓迫感、之後就習慣了。' },
+  suction:        { label: '抽痰',         icon: 'wind',         category: 'nursing',
+                    defaultPrep: '深呼吸幾下再做',
+                    description: '把細管伸進喉嚨把卡住的痰吸出來。會有想咳的反應、幾秒就好。做完會比較好呼吸。' },
+  physio:         { label: '物理治療',     icon: 'dumbbell',     category: 'nursing',
+                    defaultPrep: '穿好活動的衣服 / 鞋',
+                    description: '治療師帶你做動作、伸展或練習走路，幫助身體恢復力氣。累了可以隨時休息。' },
+  oxygen:         { label: '氧氣治療',     icon: 'cloud',        category: 'nursing',
+                    defaultPrep: '鼻管 / 面罩戴好別拔掉',
+                    description: '用鼻管或面罩給你高濃度氧氣，幫助呼吸輕鬆。耳朵 / 鼻子可能會被壓得不太舒服，可以請護理師調整。' },
+  nebulizer:      { label: '蒸氣吸入',     icon: 'cloud-drizzle', category: 'nursing',
+                    defaultPrep: '坐直比較容易吸進去',
+                    description: '把支氣管擴張藥變成霧氣，戴面罩慢慢吸進肺裡幫助呼吸。約 10–15 分鐘。' },
+  other_nursing:  { label: '其他護理處置', icon: 'heart-pulse',  category: 'nursing',
+                    defaultPrep: '依護理師說明準備',
+                    description: '其他護理項目。詳細請聽護理師說明。' },
 };
+
+// 處置分類顯示順序與標題（給 composer 的 optgroup 用）
+var _IP_PROCEDURE_GROUPS = [
+  { id: 'exam',      label: '檢查' },
+  { id: 'treatment', label: '注射 / 輸液' },
+  { id: 'nursing',   label: '護理處置' },
+];
 
 // 排定檢查 storage — 跟 admission 綁定（active admission id 之下），跨日保留。
 //   { id, type, time(ISO), location, prep, notes }
@@ -5175,20 +5252,23 @@ function _fillNowCard(active) {
 }
 
 // 從排定給藥 + 預設日常事件（餐 / 量測 / 查房）合成今日 timeline
+//
+// 視覺分組：醫療處置（exam / med / treatment / nursing）= 主角；生活作息（meal / vitals / rounds）= 淡化背景。
+// 透過 item.group ('procedure' | 'life') 給 CSS 用。
 function _buildTodayTimeline(meds, active) {
   var todayStr = new Date().toISOString().slice(0, 10);
   var items = [];
-  // 醫師查房（預設早上 09:00）
-  items.push({ id: 'rounds', time: todayStr + 'T09:00', kind: 'rounds', icon: 'stethoscope', label: '主治醫師查房' });
-  // 三餐
+  // 醫師查房（預設早上 09:00）— 生活作息
+  items.push({ id: 'rounds', time: todayStr + 'T09:00', kind: 'rounds', icon: 'stethoscope', label: '主治醫師查房', group: 'life' });
+  // 三餐 — 生活作息
   [['08:00','早餐'],['12:00','午餐'],['18:00','晚餐']].forEach(function(t, i) {
-    items.push({ id: 'meal-' + i, time: todayStr + 'T' + t[0], kind: 'meal', icon: 'utensils-crossed', label: t[1] });
+    items.push({ id: 'meal-' + i, time: todayStr + 'T' + t[0], kind: 'meal', icon: 'utensils-crossed', label: t[1], group: 'life' });
   });
-  // 量血壓（預設 4 次）
+  // 量血壓（預設 4 次）— 生活作息
   ['08:00','12:00','17:00','21:00'].forEach(function(t, i) {
-    items.push({ id: 'vitals-' + i, time: todayStr + 'T' + t, kind: 'vitals', icon: 'activity', label: '量測 vitals' });
+    items.push({ id: 'vitals-' + i, time: todayStr + 'T' + t, kind: 'vitals', icon: 'activity', label: '量測 vitals', group: 'life' });
   });
-  // 排定給藥（只取今天有 next_due_date 的）
+  // 排定給藥（只取今天有 next_due_date 的）— 醫療處置
   (meds || []).forEach(function(m) {
     if (!m.next_due_date) return;
     if (String(m.next_due_date).slice(0, 10) !== todayStr) return;
@@ -5199,9 +5279,12 @@ function _buildTodayTimeline(meds, active) {
       icon: 'pill',
       label: m.name + (m.dose ? '　' + m.dose : ''),
       medId: m.id,
+      group: 'procedure',
+      category: 'treatment',
+      description: '依醫囑服用的藥（口服或注射）。時間到請按提醒按時用，有副作用立刻告訴護理師。',
     });
   });
-  // 排定檢查（local storage）— 只取今天的
+  // 排定處置（local storage）— 涵蓋檢查 / 注射輸液 / 護理處置 — 醫療處置
   var admId = active && active.id ? active.id : null;
   if (admId) {
     _getInpatientExams(admId).forEach(function(e) {
@@ -5219,6 +5302,9 @@ function _buildTodayTimeline(meds, active) {
         notes: e.notes || '',
         location: e.location || '',
         examType: e.type,
+        group: 'procedure',
+        category: t.category || 'exam',
+        description: t.description || '',
       });
     });
   }
@@ -5266,8 +5352,10 @@ function _renderTimelineRail(items) {
   rail.innerHTML = items.map(function(it) {
     var hhmm = it.time.slice(11, 16);
     var doneCls = it.userDone ? ' ip-tl-userdone' : '';
+    var groupAttr = it.group ? ' data-group="' + it.group + '"' : '';
+    var catAttr = it.category ? ' data-category="' + it.category + '"' : '';
     return ''
-      + '<button type="button" class="ip-tl-item ip-tl-' + it.status + ' ip-tl-kind-' + it.kind + doneCls + '" data-id="' + it.id + '" onclick="onInpatientTimelineTap(\'' + it.id + '\')" aria-label="' + escapeHtml(it.label) + '">'
+      + '<button type="button" class="ip-tl-item ip-tl-' + it.status + ' ip-tl-kind-' + it.kind + doneCls + '"' + groupAttr + catAttr + ' data-id="' + it.id + '" onclick="onInpatientTimelineTap(\'' + it.id + '\')" aria-label="' + escapeHtml(it.label) + '">'
       +   '<span class="ip-tl-time">' + hhmm + '</span>'
       +   '<span class="ip-tl-dot">'
       +     (it.userDone ? '<i data-lucide="check" style="width:18px;height:18px"></i>' : '<i data-lucide="' + it.icon + '"></i>')
@@ -5312,20 +5400,30 @@ function _openInpatientTimelineSheet(item) {
     // 檢查不跳頁，多一顆「刪除」按鈕（讓使用者修正排錯的檢查）
     jumpHtml = ''
       + '<button type="button" class="ip-tl-sheet-btn ip-tl-sheet-btn-jump" onclick="onInpatientExamDelete(\'' + item.examId + '\')">'
-      +   '<i data-lucide="trash-2" style="width:16px;height:16px"></i><span>移除這筆檢查</span>'
+      +   '<i data-lucide="trash-2" style="width:16px;height:16px"></i><span>移除這筆處置</span>'
       + '</button>';
   } else {
     jumpHtml = '<p class="ip-tl-sheet-hint">此項目由病房工作人員執行，你只需要等待。</p>';
   }
 
-  // exam 多帶 prep notes + location 區
+  // 處置詳情：location / prep / notes / 中文白話解釋
   var examDetail = '';
-  if (item.kind === 'exam') {
+  if (item.kind === 'exam' || item.kind === 'med') {
     var bits = [];
+    if (item.description) {
+      bits.push('<div class="ip-tl-sheet-detail-row ip-tl-sheet-explain"><i data-lucide="message-circle-heart" style="width:14px;height:14px"></i><span><strong>這是什麼：</strong>' + escapeHtml(item.description) + '</span></div>');
+    }
     if (item.location) bits.push('<div class="ip-tl-sheet-detail-row"><i data-lucide="map-pin" style="width:14px;height:14px"></i><span>' + escapeHtml(item.location) + '</span></div>');
     if (item.prep)     bits.push('<div class="ip-tl-sheet-detail-row"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i><span><strong>準備：</strong>' + escapeHtml(item.prep) + '</span></div>');
     if (item.notes)    bits.push('<div class="ip-tl-sheet-detail-row"><i data-lucide="sticky-note" style="width:14px;height:14px"></i><span>' + escapeHtml(item.notes) + '</span></div>');
     if (bits.length) examDetail = '<div class="ip-tl-sheet-detail">' + bits.join('') + '</div>';
+  }
+
+  // 分類 chip（檢查 / 注射輸液 / 護理處置）— 顯示在標題下方
+  var catChip = '';
+  var catLabelMap = { exam: '檢查', treatment: '注射 / 輸液', nursing: '護理處置' };
+  if (item.category && catLabelMap[item.category]) {
+    catChip = '<span class="ip-tl-sheet-cat ip-tl-sheet-cat-' + item.category + '">' + catLabelMap[item.category] + '</span>';
   }
 
   var sheet = document.createElement('div');
@@ -5339,7 +5437,7 @@ function _openInpatientTimelineSheet(item) {
     +     '<span class="ip-tl-sheet-icon"><i data-lucide="' + item.icon + '"></i></span>'
     +     '<div class="ip-tl-sheet-titles">'
     +       '<h4 class="ip-tl-sheet-title">' + escapeHtml(item.label) + '</h4>'
-    +       '<p class="ip-tl-sheet-meta">' + hhmm + ' · <span class="ip-tl-sheet-status ip-tl-sheet-status-' + statusColor + '">' + statusLabel + '</span></p>'
+    +       '<p class="ip-tl-sheet-meta">' + hhmm + ' · <span class="ip-tl-sheet-status ip-tl-sheet-status-' + statusColor + '">' + statusLabel + '</span>' + (catChip ? ' · ' + catChip : '') + '</p>'
     +     '</div>'
     +   '</div>'
     +   examDetail
@@ -5392,10 +5490,16 @@ function openInpatientExamComposer(editId) {
   if (editId) {
     exam = _getInpatientExams(_ipActiveAdmissionId).find(function(e) { return e.id === editId; });
   }
-  var typeOptions = Object.keys(_IP_EXAM_TYPES).map(function(k) {
-    var t = _IP_EXAM_TYPES[k];
-    var sel = (exam && exam.type === k) ? ' selected' : '';
-    return '<option value="' + k + '"' + sel + '>' + t.label + '</option>';
+  // 按 category 分組成 <optgroup>，讓使用者一眼分辨檢查 / 注射 / 護理
+  var typeOptions = _IP_PROCEDURE_GROUPS.map(function(g) {
+    var inner = Object.keys(_IP_EXAM_TYPES).filter(function(k) {
+      return (_IP_EXAM_TYPES[k].category || 'exam') === g.id;
+    }).map(function(k) {
+      var t = _IP_EXAM_TYPES[k];
+      var sel = (exam && exam.type === k) ? ' selected' : '';
+      return '<option value="' + k + '"' + sel + '>' + t.label + '</option>';
+    }).join('');
+    return '<optgroup label="' + g.label + '">' + inner + '</optgroup>';
   }).join('');
   // datetime-local 預設：今天 14:00
   var defaultTime;
@@ -5415,15 +5519,19 @@ function openInpatientExamComposer(editId) {
     +   '<div class="ip-prep-handle"></div>'
     +   '<header class="ip-prep-head">'
     +     '<div class="ip-prep-when">'
-    +       '<span class="ip-prep-when-num">' + (exam ? '編輯檢查' : '排定檢查') + '</span>'
-    +       '<span class="ip-prep-when-sub">把醫師排定的檢查加進今日 Timeline</span>'
+    +       '<span class="ip-prep-when-num">' + (exam ? '編輯處置' : '排定治療處置') + '</span>'
+    +       '<span class="ip-prep-when-sub">檢查 · 打藥 · 護理處置 — 加進今日 Timeline</span>'
     +     '</div>'
     +     '<button type="button" class="ip-prep-close" onclick="closeInpatientExamComposer()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
     +   '</header>'
     +   '<div class="ip-exam-form">'
-    +     '<label class="ip-exam-field"><span>檢查類型</span>'
+    +     '<label class="ip-exam-field"><span>處置類型</span>'
     +       '<select id="ip-exam-type" onchange="_ipExamTypeChanged()">' + typeOptions + '</select>'
     +     '</label>'
+    +     '<div class="ip-exam-desc-box" id="ip-exam-desc-box" aria-live="polite">'
+    +       '<i data-lucide="message-circle-heart" style="width:14px;height:14px"></i>'
+    +       '<span id="ip-exam-desc-text">—</span>'
+    +     '</div>'
     +     '<label class="ip-exam-field"><span>時間</span>'
     +       '<input type="datetime-local" id="ip-exam-time" value="' + defaultTime + '" />'
     +     '</label>'
@@ -5450,21 +5558,26 @@ function openInpatientExamComposer(editId) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 切換檢查類型時：若 prep 欄位是空、或剛好等於任何類型的 defaultPrep
-// (代表使用者沒自己改過)，自動換成新類型的 defaultPrep。
-// 自己改過的內容不會被覆蓋。
+// 切換處置類型時：
+//   1) 若 prep 欄位是空、或剛好等於任何類型的 defaultPrep（代表使用者沒自己改過），自動換成新類型的 defaultPrep。
+//   2) 同步更新「中文白話解釋」資訊框，讓使用者邊選邊看懂。
+// 自己改過的 prep 不會被覆蓋。
 function _ipExamTypeChanged() {
   var sel = document.getElementById('ip-exam-type');
   var prep = document.getElementById('ip-exam-prep');
-  if (!sel || !prep) return;
-  var current = prep.value.trim();
-  var isDefaultValue = Object.keys(_IP_EXAM_TYPES).some(function(k) {
-    return _IP_EXAM_TYPES[k].defaultPrep === current;
-  });
-  if (!current || isDefaultValue) {
-    var t = _IP_EXAM_TYPES[sel.value];
-    if (t) prep.value = t.defaultPrep;
+  if (!sel) return;
+  var t = _IP_EXAM_TYPES[sel.value];
+  if (prep) {
+    var current = prep.value.trim();
+    var isDefaultValue = Object.keys(_IP_EXAM_TYPES).some(function(k) {
+      return _IP_EXAM_TYPES[k].defaultPrep === current;
+    });
+    if ((!current || isDefaultValue) && t) {
+      prep.value = t.defaultPrep || '';
+    }
   }
+  var descText = document.getElementById('ip-exam-desc-text');
+  if (descText) descText.textContent = (t && t.description) ? t.description : '—';
 }
 
 function closeInpatientExamComposer() {
@@ -5505,7 +5618,7 @@ function submitInpatientExam(editId) {
 }
 
 function onInpatientExamDelete(examId) {
-  if (!confirm('移除這筆檢查？')) return;
+  if (!confirm('移除這筆處置？')) return;
   var list = _getInpatientExams(_ipActiveAdmissionId).filter(function(e) { return e.id !== examId; });
   _saveInpatientExams(_ipActiveAdmissionId, list);
   _closeInpatientTimelineSheet();
