@@ -2463,8 +2463,379 @@ function clearNextVisit() {
 function refreshNextVisitChip() {
   var row = document.getElementById('home-visit-row');
   if (!row) return;
-  row.innerHTML = renderNextVisitChip();
+  row.innerHTML = renderNextVisitChip() + renderNextAdmissionChip() + renderNextInfusionChip();
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  // chip 拉真實資料覆寫
+  if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
+}
+
+// 長期療程「下次打藥」chip — 給 chronic_infusion 患者用，跟回診 chip 平行。
+// 初次只渲染 hidden 骨架；_loadNextInfusionInfo() 在 mount 後拉 admission_medications.next_due_date 覆寫。
+// 點下不直接跳轉，先開「療程準備清單」sheet（病人可以選擇看清單或前往詳情）。
+function renderNextInfusionChip() {
+  return '<button type="button" class="home-infusion-chip" id="home-infusion-chip" hidden onclick="openAdmissionPrepSheet(\'infusion\')" title="點開治療準備清單">'
+    + '<i data-lucide="syringe" style="width:14px;height:14px"></i>'
+    + '<span class="home-infusion-chip-label">下次打藥</span>'
+    + '<span class="home-infusion-chip-when" id="home-infusion-chip-when">—</span>'
+    + '<span class="home-infusion-chip-count" id="home-infusion-chip-count"></span>'
+    + '</button>';
+}
+
+// 即將住院（admit_date 在未來的 acute admission）chip。
+function renderNextAdmissionChip() {
+  return '<button type="button" class="home-admit-chip" id="home-admit-chip" hidden onclick="openAdmissionPrepSheet(\'admit\')" title="點開住院準備清單">'
+    + '<i data-lucide="hospital" style="width:14px;height:14px"></i>'
+    + '<span class="home-admit-chip-label">下次住院</span>'
+    + '<span class="home-admit-chip-when" id="home-admit-chip-when">—</span>'
+    + '<span class="home-admit-chip-count" id="home-admit-chip-count"></span>'
+    + '</button>';
+}
+
+// 拉所有 active admissions，計算兩件事：
+//   1. 最早的 next_due_date (chronic_infusion 用) → hero「下次打藥」chip + Layer 03 卡 badge
+//   2. 最早的 future admit_date (acute upcoming) → hero「下次住院」chip
+// 30 天內才顯示；過期也顯示提醒，並 cache 給 prep sheet 使用。
+var _ipUpcomingCache = { admit: null, infusion: null };
+async function _loadNextInfusionInfo() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    var listRes = await fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid)).then(function(x){return x.json();});
+    var actives = ((listRes && listRes.admissions) || []).filter(function(a) {
+      return a.status === 'active';
+    });
+    var nowMs = Date.now();
+    // 1. 未來 admit_date 的 acute admission（最早一筆）
+    var nearestAdmit = null;
+    actives.filter(function(a) { return a.type === 'acute' && a.admit_date; }).forEach(function(a) {
+      var t = new Date(a.admit_date).getTime();
+      if (isNaN(t)) return;
+      if (t <= nowMs) return; // 已開始或正在進行的，這 chip 不顯示
+      if (!nearestAdmit || t < new Date(nearestAdmit.admit_date).getTime()) {
+        nearestAdmit = a;
+      }
+    });
+    _ipUpcomingCache.admit = nearestAdmit;
+    _fillNextAdmissionChip(nearestAdmit);
+
+    // 2. chronic_infusion next_due_date（找最早）
+    var infusionActives = actives.filter(function(a) { return a.type === 'chronic_infusion'; });
+    if (!infusionActives.length) {
+      _ipUpcomingCache.infusion = null;
+      _fillNextInfusionChip(null);
+      _fillAdmissionsCardBadge(nearestAdmit ? nearestAdmit.admit_date : null);
+      return;
+    }
+    var details = await Promise.all(infusionActives.map(function(a) {
+      return fetch(API + '/admissions/' + encodeURIComponent(a.id)).then(function(x){return x.json();}).catch(function(){return null;});
+    }));
+    var earliest = null;
+    var earliestName = '';
+    var earliestAdmId = '';
+    var earliestMedId = '';
+    details.forEach(function(d) {
+      if (!d) return;
+      (d.medications || []).forEach(function(m) {
+        if (!m.next_due_date) return;
+        if (!earliest || m.next_due_date < earliest) {
+          earliest = m.next_due_date;
+          earliestName = m.name || '';
+          earliestAdmId = d.id;
+          earliestMedId = m.id;
+        }
+      });
+    });
+    _ipUpcomingCache.infusion = earliest ? {
+      next_due_date: earliest, name: earliestName, admission_id: earliestAdmId, medication_id: earliestMedId,
+    } : null;
+    _fillNextInfusionChip(earliest, earliestName);
+    // Badge 優先顯示「住院」(更急)，沒有的話顯示打藥
+    _fillAdmissionsCardBadge(nearestAdmit ? nearestAdmit.admit_date : earliest);
+  } catch (e) {
+    _ipUpcomingCache = { admit: null, infusion: null };
+    _fillNextInfusionChip(null);
+    _fillNextAdmissionChip(null);
+    _fillAdmissionsCardBadge(null);
+  }
+}
+
+function _fillNextAdmissionChip(adm) {
+  var chip = document.getElementById('home-admit-chip');
+  if (!chip) return;
+  if (!adm || !adm.admit_date) { chip.hidden = true; return; }
+  var d = _daysBetween(adm.admit_date.slice(0, 10));
+  if (d > 30 || d < 0) { chip.hidden = true; return; }
+  chip.hidden = false;
+  var when = document.getElementById('home-admit-chip-when');
+  var count = document.getElementById('home-admit-chip-count');
+  var pretty = adm.admit_date.replace(/-/g, '/').slice(5, 10);
+  var dx = adm.diagnosis || '';
+  if (when) when.textContent = pretty + (dx ? '　' + dx.slice(0, 12) : '');
+  var label, urgency;
+  if (d > 0)       { label = d + ' 天後'; urgency = d <= 3 ? 'soon' : 'far'; }
+  else             { label = '就是今天'; urgency = 'today'; }
+  if (count) count.textContent = label;
+  chip.dataset.urgency = urgency;
+}
+
+function _fillNextInfusionChip(iso, name) {
+  var chip = document.getElementById('home-infusion-chip');
+  if (!chip) return;
+  if (!iso) { chip.hidden = true; return; }
+  var d = _daysBetween(iso.slice(0, 10));
+  // 超過 30 天才到就先不打擾使用者（卡 badge 也一樣判斷）
+  if (d > 30) { chip.hidden = true; return; }
+  chip.hidden = false;
+  var when = document.getElementById('home-infusion-chip-when');
+  var count = document.getElementById('home-infusion-chip-count');
+  var pretty = iso.replace(/-/g, '/').slice(5, 10); // MM/DD
+  if (when) when.textContent = pretty + (name ? '　' + name : '');
+  var label, urgency;
+  if (d > 0)       { label = d + ' 天後'; urgency = d <= 7 ? 'soon' : 'far'; }
+  else if (d === 0){ label = '就是今天'; urgency = 'today'; }
+  else             { label = '已過期 ' + (-d) + ' 天'; urgency = 'overdue'; }
+  if (count) count.textContent = label;
+  chip.dataset.urgency = urgency;
+}
+
+function _fillAdmissionsCardBadge(iso) {
+  var badge = document.querySelector('.hsec-card[data-page="admissions"] .hsec-badge');
+  if (!badge) return;
+  if (!iso) { badge.hidden = true; badge.textContent = ''; return; }
+  var d = _daysBetween(iso.slice(0, 10));
+  if (d > 30) { badge.hidden = true; return; }
+  badge.hidden = false;
+  var urgency;
+  if (d > 0)       { badge.textContent = d + ' 天後'; urgency = d <= 7 ? 'soon' : 'far'; }
+  else if (d === 0){ badge.textContent = '今天';     urgency = 'today'; }
+  else             { badge.textContent = '逾 ' + (-d) + ' 天'; urgency = 'overdue'; }
+  badge.dataset.urgency = urgency;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 「住院 / 治療準備清單」bottom sheet
+// ════════════════════════════════════════════════════════════════════════════
+// 兩種情境共用同一個 sheet 殼，內容由 kind 決定：
+//   kind='admit'   → 即將住院（acute）— 5 區清單 + 「提前開始入院」CTA
+//   kind='infusion'→ 即將打藥（chronic）— 3 區清單 + 「今日提前施打」CTA
+// 勾選狀態存 localStorage 'mdpiece_prep_{kind}_{id}'，下次打開保留。
+var _PREP_CHECKLISTS = {
+  admit: [
+    { id: 'doc', title: '文件 / 證件', items: [
+      { id: 'd1', label: '健保卡 + 身分證' },
+      { id: 'd2', label: '住院通知單 / 預約單' },
+      { id: 'd3', label: '醫師證明、轉診單（若有）' },
+      { id: 'd4', label: '舊病歷 / 影像光碟（若帶過）' },
+    ]},
+    { id: 'pack', title: '個人物品', items: [
+      { id: 'p1', label: '換洗衣物 (3-5 套)' },
+      { id: 'p2', label: '盥洗 + 牙刷 + 拖鞋' },
+      { id: 'p3', label: '手機充電器 + 長線' },
+      { id: 'p4', label: '耳塞 / 眼罩（病房吵時用）' },
+      { id: 'p5', label: '小零錢 / 悠遊卡' },
+    ]},
+    { id: 'food', title: '飲食 / 禁食', items: [
+      { id: 'f1', label: '確認入院前要禁食幾小時' },
+      { id: 'f2', label: '入院當天輕食 / 補水（依醫囑）' },
+    ]},
+    { id: 'med', title: '用藥', items: [
+      { id: 'm1', label: '帶現在吃的所有藥（含保健品）' },
+      { id: 'm2', label: '帶完整藥單 / 用藥紀錄' },
+      { id: 'm3', label: '過敏紀錄（食物 / 藥物）' },
+    ]},
+    { id: 'mind', title: '心情 / 陪伴', items: [
+      { id: 'x1', label: '找家屬陪伴入住' },
+      { id: 'x2', label: '想問醫師的事先寫進 Memo' },
+      { id: 'x3', label: '請假 / 通知工作' },
+    ]},
+  ],
+  infusion: [
+    { id: 'doc', title: '文件 / 證件', items: [
+      { id: 'd1', label: '健保卡 + 身分證' },
+      { id: 'd2', label: '預約單 / 上次施打紀錄' },
+    ]},
+    { id: 'food', title: '飲食 / 用藥', items: [
+      { id: 'f1', label: '依醫囑禁食 / 補水' },
+      { id: 'f2', label: '帶所有現在吃的藥 / 保健品' },
+      { id: 'f3', label: '記錄最近 7 天的不適' },
+    ]},
+    { id: 'mind', title: '到院前', items: [
+      { id: 'x1', label: '抽空量一次血壓 / 體溫' },
+      { id: 'x2', label: '想問醫師的事寫進 Memo' },
+      { id: 'x3', label: '預留 1-3 小時的施打時間' },
+    ]},
+  ],
+};
+function _prepStorageKey(kind, id) { return 'mdpiece_prep_' + kind + '_' + (id || 'default'); }
+function _getPrepState(kind, id) {
+  try { return JSON.parse(localStorage.getItem(_prepStorageKey(kind, id)) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function _savePrepState(kind, id, state) {
+  localStorage.setItem(_prepStorageKey(kind, id), JSON.stringify(state));
+}
+
+function openAdmissionPrepSheet(kind) {
+  if (kind !== 'admit' && kind !== 'infusion') return;
+  // 沒上下文時不開（chip 已是 hidden 狀態下不會被點到，這只是 safety）
+  var ctx = kind === 'admit' ? _ipUpcomingCache.admit : _ipUpcomingCache.infusion;
+  if (!ctx) {
+    if (typeof showToast === 'function') showToast('尚未排定，先到「住院 / 療程」頁建立', 'info');
+    if (typeof navigateTo === 'function') navigateTo('admissions', null);
+    return;
+  }
+  var existing = document.getElementById('ip-prep-sheet');
+  if (existing) existing.remove();
+
+  var ctxId = kind === 'admit' ? ctx.id : ctx.admission_id;
+  var iso = kind === 'admit' ? ctx.admit_date : ctx.next_due_date;
+  var d = _daysBetween(iso.slice(0, 10));
+  var when;
+  if (d > 0) when = d + ' 天後';
+  else if (d === 0) when = '就是今天';
+  else when = '已過期 ' + (-d) + ' 天';
+  var prettyDate = iso.replace(/-/g, '/').slice(0, 10);
+
+  var headTitle = kind === 'admit' ? '即將住院 — 準備清單' : '下次打藥 — 治療準備';
+  var headSub = kind === 'admit'
+    ? (ctx.diagnosis || '住院') + '　·　預定 ' + prettyDate
+    : (ctx.name || '療程') + '　·　預定 ' + prettyDate;
+  var ctaIcon = kind === 'admit' ? 'log-in' : 'syringe';
+  var ctaLabel = kind === 'admit' ? '提前開始入院（把今天設為入住日）' : '提前 / 已完成這次施打';
+  var ctaHandler = kind === 'admit'
+    ? "onAdmissionPrepActivate('admit')"
+    : "onAdmissionPrepActivate('infusion')";
+
+  var state = _getPrepState(kind, ctxId);
+  var sections = _PREP_CHECKLISTS[kind];
+  var doneTotal = 0, total = 0;
+  sections.forEach(function(s) { s.items.forEach(function(it) { total++; if (state[it.id]) doneTotal++; }); });
+
+  var sectionsHtml = sections.map(function(s) {
+    var itemsHtml = s.items.map(function(it) {
+      var checked = !!state[it.id];
+      return ''
+        + '<li class="ip-prep-item ' + (checked ? 'is-done' : '') + '">'
+        +   '<label class="ip-prep-check">'
+        +     '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="onPrepItemToggle(\'' + kind + '\',\'' + ctxId + '\',\'' + it.id + '\', this.checked)" />'
+        +     '<span class="ip-prep-box"><i data-lucide="check" style="width:13px;height:13px"></i></span>'
+        +     '<span class="ip-prep-label">' + escapeHtml(it.label) + '</span>'
+        +   '</label>'
+        + '</li>';
+    }).join('');
+    return ''
+      + '<section class="ip-prep-section">'
+      +   '<h4 class="ip-prep-section-title">' + escapeHtml(s.title) + '</h4>'
+      +   '<ul class="ip-prep-list">' + itemsHtml + '</ul>'
+      + '</section>';
+  }).join('');
+
+  var sheet = document.createElement('div');
+  sheet.id = 'ip-prep-sheet';
+  sheet.className = 'ip-prep-sheet';
+  sheet.dataset.kind = kind;
+  sheet.dataset.ctxId = ctxId;
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeAdmissionPrepSheet()"></div>'
+    + '<div class="ip-prep-panel" role="dialog" aria-label="準備清單">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">' + when + '</span>'
+    +       '<span class="ip-prep-when-sub">' + escapeHtml(headSub) + '</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeAdmissionPrepSheet()" aria-label="關閉">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +   '</header>'
+    +   '<h3 class="ip-prep-title">' + escapeHtml(headTitle) + '</h3>'
+    +   '<div class="ip-prep-progress-row">'
+    +     '<div class="ip-prep-progress-bar"><div class="ip-prep-progress-fill" id="ip-prep-progress-fill" style="width:' + (total ? Math.round(doneTotal/total*100) : 0) + '%"></div></div>'
+    +     '<span class="ip-prep-progress-text" id="ip-prep-progress-text">' + doneTotal + ' / ' + total + ' 已備</span>'
+    +   '</div>'
+    +   '<div class="ip-prep-body">' + sectionsHtml + '</div>'
+    +   '<div class="ip-prep-footer">'
+    +     '<button type="button" class="ip-prep-cta" onclick="' + ctaHandler + '">'
+    +       '<i data-lucide="' + ctaIcon + '" style="width:16px;height:16px"></i><span>' + ctaLabel + '</span>'
+    +     '</button>'
+    +     '<button type="button" class="ip-prep-secondary" onclick="navigateTo(\'admissions\',null);closeAdmissionPrepSheet();">'
+    +       '<i data-lucide="external-link" style="width:14px;height:14px"></i><span>看療程詳情</span>'
+    +     '</button>'
+    +     '<button type="button" class="ip-prep-secondary" onclick="navigateTo(\'memo\',null);closeAdmissionPrepSheet();">'
+    +       '<i data-lucide="sticky-note" style="width:14px;height:14px"></i><span>寫 Memo 給醫師</span>'
+    +     '</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeAdmissionPrepSheet() {
+  var sheet = document.getElementById('ip-prep-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+function onPrepItemToggle(kind, ctxId, itemId, checked) {
+  var state = _getPrepState(kind, ctxId);
+  if (checked) state[itemId] = true; else delete state[itemId];
+  _savePrepState(kind, ctxId, state);
+  // 更新進度條
+  var sections = _PREP_CHECKLISTS[kind];
+  var done = 0, total = 0;
+  sections.forEach(function(s) { s.items.forEach(function(it) { total++; if (state[it.id]) done++; }); });
+  var fill = document.getElementById('ip-prep-progress-fill');
+  var text = document.getElementById('ip-prep-progress-text');
+  if (fill) fill.style.width = (total ? Math.round(done/total*100) : 0) + '%';
+  if (text) text.textContent = done + ' / ' + total + ' 已備';
+  // 切換 list item 的 done class
+  var li = document.querySelector('#ip-prep-sheet [onchange*="\'' + itemId + '\'"]');
+  if (li) {
+    var item = li.closest('.ip-prep-item');
+    if (item) item.classList.toggle('is-done', checked);
+  }
+}
+
+// 提前 activate — admit: PATCH admit_date = now；infusion: POST dose
+function onAdmissionPrepActivate(kind) {
+  if (kind === 'admit') {
+    var adm = _ipUpcomingCache.admit;
+    if (!adm) return;
+    if (!confirm('把入住日改成今天，並立刻啟動「住院模式」？')) return;
+    var nowIso = new Date().toISOString().slice(0, 19);
+    fetch(API + '/admissions/' + encodeURIComponent(adm.id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ admit_date: nowIso }),
+    })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function() {
+        if (typeof showToast === 'function') showToast('已開始入住，切換到住院模式', 'success');
+        closeAdmissionPrepSheet();
+        if (typeof setCareMode === 'function') setCareMode('inpatient');
+      })
+      .catch(function(e) {
+        if (typeof showToast === 'function') showToast('啟動失敗：' + e.message, 'error');
+      });
+  } else if (kind === 'infusion') {
+    var inf = _ipUpcomingCache.infusion;
+    if (!inf || !inf.medication_id) return;
+    if (!confirm('把這次施打記錄為「已完成」？')) return;
+    fetch(API + '/admissions/medications/' + encodeURIComponent(inf.medication_id) + '/dose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ admission_medication_id: inf.medication_id }),
+    })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function() {
+        if (typeof showToast === 'function') showToast('已記錄這次施打', 'success');
+        closeAdmissionPrepSheet();
+        if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
+      })
+      .catch(function(e) {
+        if (typeof showToast === 'function') showToast('記錄失敗：' + e.message, 'error');
+      });
+  }
 }
 
 // === 共用「如何使用這頁？」摺疊面板 =====================================
@@ -3005,14 +3376,17 @@ function homeCoreCard(page, icon, title, desc, tag, color) {
 }
 
 // Layer 3 次要功能（中尺寸）
+// 可帶可選 badge slot（hidden 預設）— 由各 loader 填入文字後 unhide。
+// 例：住院 / 療程 卡會被 _fillAdmissionsCardBadge 填入「3 天後」等倒數。
 function homeSecondCard(page, icon, title, desc, color) {
   return ''
-    + '<button type="button" class="hsec-card hsec-' + color + '" onclick="navigateTo(\'' + page + '\',null)">'
+    + '<button type="button" class="hsec-card hsec-' + color + '" data-page="' + page + '" onclick="navigateTo(\'' + page + '\',null)">'
     +   '<span class="hsec-icon"><i data-lucide="' + icon + '"></i></span>'
     +   '<span class="hsec-body">'
     +     '<span class="hsec-title">' + title + '</span>'
     +     '<span class="hsec-desc">' + desc + '</span>'
     +   '</span>'
+    +   '<span class="hsec-badge" hidden></span>'
     + '</button>';
 }
 
@@ -3221,6 +3595,8 @@ function home() {
           </div>
           <div class="home-visit-row" id="home-visit-row">
             ${renderNextVisitChip()}
+            ${renderNextAdmissionChip()}
+            ${renderNextInfusionChip()}
           </div>
         </div>
       </div>
@@ -3353,6 +3729,8 @@ function loadHomePage() {
   refreshTodayDigest();
   // 更新 sidebar 各 nav-item 今日打卡 badge
   refreshNavBadges();
+  // 拉長期療程下次打藥 → 寫到 hero 「下次打藥」 chip + Layer 03 住院卡 badge
+  if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
 
   fetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
@@ -3521,7 +3899,53 @@ function renderInpatientSOS() {
     +     '<span class="ip-section-sub">不用打字 · 不用想 · 直接按</span>'
     +   '</header>'
     +   '<div class="ip-sos-grid">' + btns + '</div>'
+    +   '<div class="ip-sos-history" id="ip-sos-history" hidden>'
+    +     '<div class="ip-sos-history-head">'
+    +       '<span>今天已回報</span>'
+    +       '<button type="button" class="ip-sos-history-clear" onclick="onInpatientSOSClear()" aria-label="清除今日回報">清除</button>'
+    +     '</div>'
+    +     '<div class="ip-sos-history-list" id="ip-sos-history-list"></div>'
+    +   '</div>'
     + '</section>';
+}
+
+// SOS history — 每日獨立 key，午夜後自動「歸零」
+function _todaySosKey() {
+  return 'mdpiece_inpatient_sos_' + new Date().toISOString().slice(0, 10);
+}
+function _getInpatientSosToday() {
+  try { return JSON.parse(localStorage.getItem(_todaySosKey()) || '[]') || []; } catch (e) { return []; }
+}
+function _pushInpatientSosToday(key) {
+  var list = _getInpatientSosToday();
+  list.push({ key: key, time: new Date().toISOString() });
+  localStorage.setItem(_todaySosKey(), JSON.stringify(list));
+}
+function refreshInpatientSosHistory() {
+  var wrap = document.getElementById('ip-sos-history');
+  var listEl = document.getElementById('ip-sos-history-list');
+  if (!wrap || !listEl) return;
+  var list = _getInpatientSosToday();
+  if (!list.length) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  var labelMap = { pain: '痛', breath: '喘', nausea: '噁心', help: '求助' };
+  var iconMap = { pain: 'zap', breath: 'wind', nausea: 'droplets', help: 'bell-ring' };
+  // 倒序顯示，最近在前
+  listEl.innerHTML = list.slice().reverse().map(function(s) {
+    var hhmm = s.time.slice(11, 16);
+    return ''
+      + '<span class="ip-sos-chip ip-sos-chip-' + s.key + '">'
+      +   '<i data-lucide="' + (iconMap[s.key] || 'circle') + '"></i>'
+      +   '<span class="ip-sos-chip-time">' + hhmm + '</span>'
+      +   '<span class="ip-sos-chip-label">' + (labelMap[s.key] || s.key) + '</span>'
+      + '</span>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function onInpatientSOSClear() {
+  if (!confirm('清掉今天所有 SOS 回報紀錄？（已記錄到症狀的不會被刪）')) return;
+  localStorage.removeItem(_todaySosKey());
+  refreshInpatientSosHistory();
 }
 
 // 4. 今日治療 Timeline — Horizontal timeline ─────────────────────────────────
@@ -3561,17 +3985,35 @@ function renderInpatientDayProgress() {
 }
 
 // 6. 查房摘要 (Rounds Card) ────────────────────────────────────────────────
-// 顯示最新一筆醫師查房記錄。資料目前無後端模型，先用 localStorage 存的「最後一筆」。
+// 顯示醫師查房紀錄。資料先存 localStorage `mdpiece_inpatient_rounds`（陣列，
+// 依 time 倒序），後端 model 未來補上即可換 fetch。
+// UI：頁面預設顯示最新 1 筆 + 「+」按鈕；「+」彈出 inline composer 寫新筆。
+// 多筆時提供「看全部 (N)」展開。
 function renderInpatientRoundsCard() {
   return ''
     + '<section class="ip-rounds" aria-label="查房摘要">'
     +   '<header class="ip-section-head">'
     +     '<span class="ip-num">06</span>'
     +     '<h3>最新查房</h3>'
+    +     '<button type="button" class="ip-rounds-add" id="ip-rounds-add-btn" onclick="onInpatientRoundsAdd()" aria-label="新增查房紀錄">'
+    +       '<i data-lucide="plus" style="width:14px;height:14px"></i>'
+    +       '<span>加紀錄</span>'
+    +     '</button>'
     +   '</header>'
-    +   '<div class="ip-rounds-body" id="ip-rounds-body">'
-    +     '<p class="ip-rounds-empty">尚未記錄查房內容。醫師查房後在此可看到摘要。</p>'
+    +   '<div class="ip-rounds-composer" id="ip-rounds-composer" hidden>'
+    +     '<div class="ip-rounds-row">'
+    +       '<input type="text" class="ip-rounds-doctor" id="ip-rounds-doctor" maxlength="40" placeholder="醫師名稱（可空）" />'
+    +     '</div>'
+    +     '<textarea class="ip-rounds-input" id="ip-rounds-input" rows="3" maxlength="400" placeholder="今早醫師說了什麼？例：類風濕用藥計畫照原訂，下午抽血追蹤 CRP..."></textarea>'
+    +     '<div class="ip-rounds-actions">'
+    +       '<button type="button" class="ip-rounds-cancel" onclick="onInpatientRoundsCancel()">取消</button>'
+    +       '<button type="button" class="ip-rounds-save" onclick="onInpatientRoundsSave()">儲存</button>'
+    +     '</div>'
     +   '</div>'
+    +   '<div class="ip-rounds-body" id="ip-rounds-body">'
+    +     '<p class="ip-rounds-empty">尚未記錄查房內容。按右上「加紀錄」把今天醫師說的話寫下來。</p>'
+    +   '</div>'
+    +   '<button type="button" class="ip-rounds-more" id="ip-rounds-more" onclick="onInpatientRoundsToggleAll()" hidden>看全部 (<span id="ip-rounds-more-n">0</span>)</button>'
     + '</section>';
 }
 
@@ -3674,6 +4116,7 @@ function loadInpatientHome() {
   loadInpatientTrendSparklines();
   refreshInpatientRoundsCard();
   refreshInpatientDayProgress();
+  refreshInpatientSosHistory();
 }
 
 // 拉現役 admission，渲染 Now Card + Timeline + Next Step + Discharge Stepper
@@ -3764,20 +4207,41 @@ function _buildTodayTimeline(meds, active) {
       medId: m.id,
     });
   });
-  // 排序 + 標記狀態（過去 / 即將 / 未來）
+  // 排序 + 標記狀態（過去 / 即將 / 未來）。再套上「使用者手動勾選完成」flag。
   items.sort(function(a, b) { return a.time < b.time ? -1 : 1; });
   var now = Date.now();
+  var doneSet = _getTimelineDoneSet();
   items.forEach(function(it) {
     var t = new Date(it.time).getTime();
     var diff = t - now;
-    if (diff < -30 * 60000) it.status = 'past';
+    if (doneSet[it.id]) {
+      it.status = 'past';
+      it.userDone = true;
+    } else if (diff < -30 * 60000) it.status = 'past';
     else if (diff < 30 * 60000) it.status = 'now';
     else it.status = 'future';
   });
   return items;
 }
 
+// Timeline 完成標記 — 每日獨立 storage（一天結束自動失效）
+function _todayDoneKey() {
+  return 'mdpiece_inpatient_tl_done_' + new Date().toISOString().slice(0, 10);
+}
+function _getTimelineDoneSet() {
+  try { return JSON.parse(localStorage.getItem(_todayDoneKey()) || '{}') || {}; } catch (e) { return {}; }
+}
+function _setTimelineItemDone(id, done) {
+  var set = _getTimelineDoneSet();
+  if (done) set[id] = true; else delete set[id];
+  localStorage.setItem(_todayDoneKey(), JSON.stringify(set));
+}
+
+// timeline items 在 mount 後存一份 cache，給 modal 與 next-done 查
+var _ipTimelineCache = [];
+
 function _renderTimelineRail(items) {
+  _ipTimelineCache = items || [];
   var rail = document.getElementById('ip-timeline-rail');
   if (!rail) return;
   if (!items || !items.length) {
@@ -3786,13 +4250,101 @@ function _renderTimelineRail(items) {
   }
   rail.innerHTML = items.map(function(it) {
     var hhmm = it.time.slice(11, 16);
+    var doneCls = it.userDone ? ' ip-tl-userdone' : '';
     return ''
-      + '<div class="ip-tl-item ip-tl-' + it.status + ' ip-tl-kind-' + it.kind + '" data-id="' + it.id + '">'
+      + '<button type="button" class="ip-tl-item ip-tl-' + it.status + ' ip-tl-kind-' + it.kind + doneCls + '" data-id="' + it.id + '" onclick="onInpatientTimelineTap(\'' + it.id + '\')" aria-label="' + escapeHtml(it.label) + '">'
       +   '<span class="ip-tl-time">' + hhmm + '</span>'
-      +   '<span class="ip-tl-dot"><i data-lucide="' + it.icon + '"></i></span>'
+      +   '<span class="ip-tl-dot">'
+      +     (it.userDone ? '<i data-lucide="check" style="width:18px;height:18px"></i>' : '<i data-lucide="' + it.icon + '"></i>')
+      +   '</span>'
       +   '<span class="ip-tl-label">' + escapeHtml(it.label) + '</span>'
-      + '</div>';
+      + '</button>';
   }).join('');
+}
+
+// 點某個 timeline item — 開 bottom sheet 顯示細節 + 動作
+function onInpatientTimelineTap(itemId) {
+  var item = _ipTimelineCache.find(function(it) { return it.id === itemId; });
+  if (!item) return;
+  _openInpatientTimelineSheet(item);
+}
+
+function _openInpatientTimelineSheet(item) {
+  var existing = document.getElementById('ip-tl-sheet');
+  if (existing) existing.remove();
+
+  var statusLabel = item.userDone ? '已完成' : item.status === 'past' ? '已過' : item.status === 'now' ? '進行中' : '等下';
+  var statusColor = item.userDone || item.status === 'past' ? 'past' : item.status === 'now' ? 'now' : 'future';
+  var hhmm = item.time.slice(11, 16);
+
+  // 對應功能跳轉
+  var jumpMap = { meal: null, vitals: 'vitals', med: 'medications', rounds: null };
+  var jumpPage = jumpMap[item.kind] || null;
+
+  // 預先算好 inner HTML 片段，避免在巨大字串拼接中放入 ternary 造成語法歧義
+  var doneBtnInner = item.userDone
+    ? '<i data-lucide="undo-2" style="width:16px;height:16px"></i><span>取消完成標記</span>'
+    : '<i data-lucide="check" style="width:16px;height:16px"></i><span>標記完成</span>';
+  var doneBtnClass = item.userDone ? 'ip-tl-sheet-btn-undo' : 'ip-tl-sheet-btn-done';
+  var jumpHtml = '';
+  if (jumpPage) {
+    var jumpLabel = jumpPage === 'vitals' ? '量測' : jumpPage === 'medications' ? '藥物' : '功能';
+    jumpHtml = ''
+      + '<button type="button" class="ip-tl-sheet-btn ip-tl-sheet-btn-jump" onclick="onInpatientTimelineJump(\'' + jumpPage + '\')">'
+      +   '<i data-lucide="arrow-right" style="width:16px;height:16px"></i><span>前往' + jumpLabel + '</span>'
+      + '</button>';
+  } else {
+    jumpHtml = '<p class="ip-tl-sheet-hint">此項目由病房工作人員執行，你只需要等待。</p>';
+  }
+
+  var sheet = document.createElement('div');
+  sheet.id = 'ip-tl-sheet';
+  sheet.className = 'ip-tl-sheet';
+  sheet.innerHTML = ''
+    + '<div class="ip-tl-sheet-backdrop" onclick="_closeInpatientTimelineSheet()"></div>'
+    + '<div class="ip-tl-sheet-panel" role="dialog" aria-label="任務詳情">'
+    +   '<div class="ip-tl-sheet-handle"></div>'
+    +   '<div class="ip-tl-sheet-head">'
+    +     '<span class="ip-tl-sheet-icon"><i data-lucide="' + item.icon + '"></i></span>'
+    +     '<div class="ip-tl-sheet-titles">'
+    +       '<h4 class="ip-tl-sheet-title">' + escapeHtml(item.label) + '</h4>'
+    +       '<p class="ip-tl-sheet-meta">' + hhmm + ' · <span class="ip-tl-sheet-status ip-tl-sheet-status-' + statusColor + '">' + statusLabel + '</span></p>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="ip-tl-sheet-actions">'
+    +     '<button type="button" class="ip-tl-sheet-btn ' + doneBtnClass + '" onclick="onInpatientTimelineDone(\'' + item.id + '\')">' + doneBtnInner + '</button>'
+    +     jumpHtml
+    +   '</div>'
+    +   '<button type="button" class="ip-tl-sheet-close" onclick="_closeInpatientTimelineSheet()">關閉</button>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _closeInpatientTimelineSheet() {
+  var sheet = document.getElementById('ip-tl-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+
+function onInpatientTimelineDone(itemId) {
+  var item = _ipTimelineCache.find(function(it) { return it.id === itemId; });
+  if (!item) return;
+  var nowDone = !item.userDone;
+  _setTimelineItemDone(itemId, nowDone);
+  if (typeof showToast === 'function') {
+    showToast(nowDone ? '已標記完成' : '已取消完成標記', 'success');
+  }
+  _closeInpatientTimelineSheet();
+  // 重新拉資料以更新狀態 + day progress + next step
+  loadInpatientActiveAdmission();
+}
+
+function onInpatientTimelineJump(page) {
+  _closeInpatientTimelineSheet();
+  if (typeof navigateTo === 'function') navigateTo(page, null);
 }
 
 function _fillNextStep(items) {
@@ -3966,27 +4518,145 @@ function _drawSparkline(key, vals) {
   }
 }
 
-// 查房摘要 — 從 localStorage 取 "mdpiece_inpatient_rounds_latest"
-//   (後端目前無 model，先用 local 模擬；醫師之後接後端就替換 fetch)
+// 查房紀錄 storage — 陣列，每筆 { id, time(ISO), doctor, text }，依 time 倒序。
+// 向後相容：第一次讀進來時把舊的 `mdpiece_inpatient_rounds_latest` 也帶入。
+var _IP_ROUNDS_KEY = 'mdpiece_inpatient_rounds';
+function _getInpatientRounds() {
+  var list = [];
+  try { list = JSON.parse(localStorage.getItem(_IP_ROUNDS_KEY) || '[]') || []; } catch (e) { list = []; }
+  // 把舊版單筆 key 也合進來（讀完即升級）
+  try {
+    var legacy = JSON.parse(localStorage.getItem('mdpiece_inpatient_rounds_latest') || 'null');
+    if (legacy && legacy.text) {
+      var hasIt = list.some(function(r) { return r.legacy === true; });
+      if (!hasIt) {
+        list.push({
+          id: 'legacy-' + Date.now().toString(36),
+          time: new Date().toISOString(),
+          doctor: legacy.doctor || '主治醫師',
+          text: legacy.text,
+          when: legacy.when,
+          legacy: true,
+        });
+        list.sort(function(a, b) { return a.time < b.time ? 1 : -1; });
+        localStorage.setItem(_IP_ROUNDS_KEY, JSON.stringify(list));
+      }
+    }
+  } catch (e) {}
+  return list;
+}
+function _saveInpatientRounds(list) {
+  localStorage.setItem(_IP_ROUNDS_KEY, JSON.stringify(list));
+}
+
+var _IP_ROUNDS_EXPANDED = false;
+// 把 N 筆 round entry 渲染到 body
 function refreshInpatientRoundsCard() {
   var box = document.getElementById('ip-rounds-body');
+  var moreBtn = document.getElementById('ip-rounds-more');
+  var moreN = document.getElementById('ip-rounds-more-n');
   if (!box) return;
-  var raw;
-  try { raw = JSON.parse(localStorage.getItem('mdpiece_inpatient_rounds_latest') || 'null'); } catch (e) { raw = null; }
-  if (!raw || !raw.text) {
-    box.innerHTML = '<p class="ip-rounds-empty">尚未記錄查房內容。醫師查房後在此可看到摘要。</p>';
+  var list = _getInpatientRounds();
+  if (!list.length) {
+    box.innerHTML = '<p class="ip-rounds-empty">尚未記錄查房內容。按右上「加紀錄」把今天醫師說的話寫下來。</p>';
+    if (moreBtn) moreBtn.hidden = true;
     return;
   }
-  box.innerHTML = ''
-    + '<p class="ip-rounds-when">' + escapeHtml(raw.when || '') + '　·　' + escapeHtml(raw.doctor || '主治醫師') + '</p>'
-    + '<p class="ip-rounds-text">' + escapeHtml(raw.text) + '</p>';
+  var visible = _IP_ROUNDS_EXPANDED ? list : list.slice(0, 1);
+  box.innerHTML = visible.map(function(r) {
+    var when = r.when || _ipFormatRoundTime(r.time);
+    return ''
+      + '<article class="ip-rounds-entry" data-id="' + r.id + '">'
+      +   '<p class="ip-rounds-when">' + escapeHtml(when) + '　·　' + escapeHtml(r.doctor || '主治醫師') + '</p>'
+      +   '<p class="ip-rounds-text">' + escapeHtml(r.text) + '</p>'
+      +   '<button type="button" class="ip-rounds-del" onclick="onInpatientRoundsDelete(\'' + r.id + '\')" aria-label="刪除這筆">'
+      +     '<i data-lucide="trash-2" style="width:12px;height:12px"></i>'
+      +   '</button>'
+      + '</article>';
+  }).join('');
+  if (moreBtn) {
+    if (list.length > 1) {
+      moreBtn.hidden = false;
+      moreBtn.textContent = '';
+      moreBtn.innerHTML = _IP_ROUNDS_EXPANDED
+        ? '收合（剩餘 ' + (list.length - 1) + ' 筆）'
+        : '看全部 (' + list.length + ')';
+    } else {
+      moreBtn.hidden = true;
+    }
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function _ipFormatRoundTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  var today = new Date();
+  var yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  var hhmm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  if (d.toDateString() === today.toDateString()) return '今天 ' + hhmm;
+  if (d.toDateString() === yesterday.toDateString()) return '昨天 ' + hhmm;
+  return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hhmm;
+}
+
+function onInpatientRoundsAdd() {
+  var composer = document.getElementById('ip-rounds-composer');
+  if (!composer) return;
+  composer.hidden = false;
+  var input = document.getElementById('ip-rounds-input');
+  if (input) setTimeout(function() { input.focus(); }, 30);
+}
+function onInpatientRoundsCancel() {
+  var composer = document.getElementById('ip-rounds-composer');
+  if (!composer) return;
+  composer.hidden = true;
+  var input = document.getElementById('ip-rounds-input');
+  var doc = document.getElementById('ip-rounds-doctor');
+  if (input) input.value = '';
+  if (doc) doc.value = '';
+}
+function onInpatientRoundsSave() {
+  var input = document.getElementById('ip-rounds-input');
+  var doc = document.getElementById('ip-rounds-doctor');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) {
+    if (typeof showToast === 'function') showToast('請輸入查房內容', 'error');
+    input.focus();
+    return;
+  }
+  var list = _getInpatientRounds();
+  list.unshift({
+    id: 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    time: new Date().toISOString(),
+    doctor: (doc && doc.value || '').trim() || '主治醫師',
+    text: text,
+  });
+  _saveInpatientRounds(list);
+  onInpatientRoundsCancel();
+  refreshInpatientRoundsCard();
+  if (typeof showToast === 'function') showToast('已記下查房內容', 'success');
+}
+function onInpatientRoundsDelete(id) {
+  if (!confirm('刪除這筆查房紀錄？')) return;
+  var list = _getInpatientRounds().filter(function(r) { return r.id !== id; });
+  _saveInpatientRounds(list);
+  refreshInpatientRoundsCard();
+}
+function onInpatientRoundsToggleAll() {
+  _IP_ROUNDS_EXPANDED = !_IP_ROUNDS_EXPANDED;
+  refreshInpatientRoundsCard();
 }
 
 function refreshInpatientDayProgress() { /* fillDayProgress 已在 loadInpatientActiveAdmission flow */ }
 
 // ── User interactions ──────────────────────────────────────────────────────
 
-// SOS button — 痛 / 喘 / 噁心 / 求助。立即寫一筆 local 紀錄 + toast 安撫。
+// SOS button — 痛 / 喘 / 噁心 / 求助。
+//   1) 寫今日 SOS 歷史（給病人自己看「我今天已回報過 X 次」）
+//   2) 非 help 同時也寫一筆症狀紀錄（給趨勢用）
+//   3) toast 安撫
 function onInpatientSOS(key, btn) {
   if (btn) {
     btn.classList.add('pressed');
@@ -3994,7 +4664,9 @@ function onInpatientSOS(key, btn) {
   }
   var labelMap = { pain: '痛', breath: '喘', nausea: '噁心', help: '求助護理' };
   var catMap = { pain: 'headache', breath: 'breath', nausea: 'nausea' };
-  // 寫一筆症狀紀錄（給趨勢用）；'help' 不算症狀，跳過
+  // 1. 寫今日 SOS 歷史
+  _pushInpatientSosToday(key);
+  // 2. 寫症狀紀錄（給趨勢用）；'help' 不算症狀，跳過
   if (key !== 'help' && typeof saveSymptomEntry === 'function') {
     saveSymptomEntry({
       id: 'sos_' + Date.now().toString(36),
@@ -4010,8 +4682,9 @@ function onInpatientSOS(key, btn) {
   } else {
     if (typeof showToast === 'function') showToast('已記下「' + labelMap[key] + '」，並通知護理站。', 'success');
   }
-  // 重新整理趨勢線
+  // 重新整理趨勢線 + SOS 歷史
   loadInpatientTrendSparklines();
+  refreshInpatientSosHistory();
 }
 
 function onInpatientNextDone() {
