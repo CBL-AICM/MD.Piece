@@ -62,6 +62,96 @@ function applyCareMode() {
 }
 applyCareMode();
 
+// ─── 設計憲法 條 3 (客製化提醒語氣) ──────────────────────────────────────
+// 「嚴肅」直白指令、「溫柔」鼓勵帶溫度、「極簡」省略所有修飾。
+// 任何給病人看的 system message (todo / SOS / reminder) 都該過 reminderToneify()。
+function getReminderTone() {
+  try { return localStorage.getItem('mdpiece_reminder_tone') || 'warm'; } catch (e) { return 'warm'; }
+}
+function setReminderTone(tone) {
+  if (['strict','warm','short'].indexOf(tone) === -1) tone = 'warm';
+  try { localStorage.setItem('mdpiece_reminder_tone', tone); } catch (e) {}
+  document.documentElement.setAttribute('data-reminder-tone', tone);
+}
+// 把短句依語氣改寫。傳入物件 { strict, warm, short }，分別是 3 種版本；
+// 也支援單一字串 (各語氣套對應規則)。
+function reminderToneify(input) {
+  var tone = getReminderTone();
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    return input[tone] || input.warm || input.strict || input.short || '';
+  }
+  var s = String(input || '');
+  if (tone === 'strict') return s; // 原句通常已是直白指令
+  if (tone === 'warm') {
+    // 暖色修飾 — 加結尾語
+    if (/[。！？]$/.test(s)) return s + ' ❤️';
+    return s + '，慢慢來。';
+  }
+  // short — 砍掉「請」「記得」這類客氣詞，留動詞 + 名詞
+  return s.replace(/^(請|記得|別忘了|趕快|麻煩|快點)/, '').replace(/[，。！]/g, '').trim();
+}
+// 啟動時就套用到 <html>，方便 CSS 依語氣調 chip 顏色等視覺
+setReminderTone(getReminderTone());
+
+// ─── 設計憲法 條 6 (家屬代理視角) ─────────────────────────────────────────
+// 切到「我幫家人」時，所有新紀錄帶 proxy_for 標籤 + 頁首 banner 提醒目前是代理模式。
+function getProxyFor() {
+  try { return JSON.parse(localStorage.getItem('mdpiece_proxy_for') || 'null'); }
+  catch (e) { return null; }
+}
+function setProxyFor(p) {
+  if (!p) localStorage.removeItem('mdpiece_proxy_for');
+  else localStorage.setItem('mdpiece_proxy_for', JSON.stringify(p));
+  refreshProxyBanner();
+}
+function isProxyMode() { return !!getProxyFor(); }
+function renderProxyToggle() {
+  var p = getProxyFor();
+  if (p && p.name) {
+    return ''
+      + '<div class="set-proxy-active">'
+      +   '<span>正在幫 <strong>' + escapeHtml(p.name) + '</strong>' + (p.relation ? '（' + escapeHtml(p.relation) + '）' : '') + '紀錄</span>'
+      +   '<button type="button" class="set-btn" onclick="onProxySwitch()">換對象 / 取消</button>'
+      + '</div>';
+  }
+  return '<button type="button" class="set-btn" onclick="onProxySwitch()"><i data-lucide="user-plus" style="width:14px;height:14px"></i> 切到家人代理</button>';
+}
+function onProxySwitch() {
+  var cur = getProxyFor();
+  if (cur) {
+    if (confirm('取消家人代理，回到「我自己」模式？')) {
+      setProxyFor(null);
+      if (typeof showToast === 'function') showToast('已切回「我自己」', 'success');
+      if (typeof showPage === 'function') showPage('settings');
+    }
+    return;
+  }
+  var name = prompt('家人姓名（例：媽媽 / 王阿嬤）：', '');
+  if (!name || !name.trim()) return;
+  var relation = prompt('關係（例：母親 / 配偶 / 子女，可空）：', '');
+  setProxyFor({ name: name.trim(), relation: (relation || '').trim() });
+  if (typeof showToast === 'function') showToast('已切到「幫 ' + name.trim() + ' 紀錄」模式', 'success');
+  if (typeof showPage === 'function') showPage('settings');
+}
+function renderProxyBanner() {
+  // 全 app 共用 — 永遠掛在 #app 上方，由 refreshProxyBanner 寫入內容
+  return '<div class="proxy-banner" id="proxy-banner" hidden></div>';
+}
+function refreshProxyBanner() {
+  var el = document.getElementById('proxy-banner');
+  if (!el) return;
+  var p = getProxyFor();
+  if (!p) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = ''
+    + '<i data-lucide="users" style="width:14px;height:14px"></i>'
+    + '<span>正在幫 <strong>' + escapeHtml(p.name) + '</strong>' + (p.relation ? '（' + escapeHtml(p.relation) + '）' : '') + '紀錄。所有新紀錄都會打上代理標籤。</span>'
+    + '<button type="button" class="proxy-banner-switch" onclick="onProxySwitch()" aria-label="切換代理對象">'
+    +   '<i data-lucide="repeat" style="width:12px;height:12px"></i>'
+    + '</button>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 // ─── 底部 mobile tabbar — 依 care mode 動態渲染 ────────────────────────
 // 門診：首頁 / 碎片 / FAB / 診前 / 醫聊 / 更多 — MD.Piece 理念對齊
 // 住院：首頁 / 住院 / FAB / 量測 / Memo / 更多 — 住院期間實際會用的
@@ -1904,7 +1994,7 @@ function showPage(page) {
   const pages = {
     home, symptoms, symptomsAnalyze, doctors, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
-    drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu
+    drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline
   };
   // Page transition
   app.style.opacity = '0';
@@ -1933,6 +2023,9 @@ function showPage(page) {
     if (page === "reminders") loadRemindersPage();
     if (page === "vitals") loadDoctorMeasurementRequests();
     if (page === "admissions") loadAdmissionsPage();
+    if (page === "timeline") loadTimelinePage();
+    // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
+    if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
     // Fade in
@@ -4106,6 +4199,7 @@ function renderInpatientTrendChips() {
       +     '<polyline id="ip-trend-line-' + c.key + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="" />'
       +   '</svg>'
       +   '<span class="ip-trend-foot" id="ip-trend-foot-' + c.key + '">點一下記今天</span>'
+      +   '<span class="ip-trend-explain" id="ip-trend-explain-' + c.key + '" onclick="event.stopPropagation()"></span>'
       + '</button>';
   }).join('');
   return ''
@@ -4429,7 +4523,28 @@ var _IP_EDU_TOPICS = [
     '【收據】住院收據 (申報保險用) 通常出院櫃台領；副本一份要的話現場說。',
     '【回診】下次回診日 / 拆線日 / 抽血追蹤日寫進 MD.Piece「下次回診」chip。',
     '【出院當天】通常 10:00-12:00 辦理；家屬幫忙打包 + 結清病房費。',
-  ]},
+  ],
+  // Decision Aid 範例 — 醫師說「明天可以出院或再觀察一天」時的選項對照
+  decision: {
+    question: '醫師說「明天可以出院、也可以再觀察一天」— 怎麼決定？',
+    personalNote: '參考你的紀錄：近 3 天疼痛趨勢、生命徵象、有無家人能接送。',
+    options: [
+      {
+        label: '選 A：明天出院',
+        pros: ['少 1 天住院費 / 部分負擔', '回家休息品質通常較好', '可避免院內感染風險'],
+        cons: ['若狀況變差需重新掛號 / 急診', '出院藥可能要等門診才能調整', '家屬要安排接送 + 在家照顧'],
+        risk: '若你有多重慢病 / 一個人住，建議再觀察至少 24 小時。',
+        nextSteps: ['告訴主治醫師你選擇出院', '完成準備清單 17 項', '排定下次回診（7-14 天內）'],
+      },
+      {
+        label: '選 B：再觀察一天',
+        pros: ['有醫護隨時可叫', '可再追一次抽血 / 監測', '家屬有更多時間準備'],
+        cons: ['多 1 天住院費 + 部分負擔', '院內感染風險稍高', '睡眠品質可能較差'],
+        risk: '若你昨晚 SOS 回報 > 3 次或趨勢圖標「↗加重」，這個選項通常更安全。',
+        nextSteps: ['告訴主治醫師你選擇觀察', '設定明天的「下一步」目標', '請社工確認保險日數'],
+      },
+    ],
+  }},
   { id: 'sos',      icon: 'bell-ring',       title: '什麼狀況要立刻叫人', tldr: '別忍。下面的狀況請立刻按床邊紅鈴或求助護理。', body: [
     '【立刻叫】突發胸痛 / 喘不過氣 / 大量出血 / 點滴流血 / 跌倒了',
     '【立刻叫】持續性嘔吐 / 高燒 (>38.5°C) / 意識模糊 / 半邊手腳沒力',
@@ -4480,6 +4595,8 @@ function inpatientEdu() {
     var bodyHtml = t.body.map(function(line) {
       return '<p class="ip-edu-body-line">' + escapeHtml(line) + '</p>';
     }).join('');
+    // 若 topic 帶 decision (IPDAS 樣板)，附加在 body 後
+    var decisionHtml = t.decision ? decisionAid(t.decision) : '';
     return ''
       + '<details class="ip-edu-section" id="ip-edu-sec-' + t.id + '"' + (expanded ? ' open' : '') + ' ontoggle="_ipEduOnToggle(\'' + t.id + '\', this.open)">'
       +   '<summary class="ip-edu-summary">'
@@ -4490,7 +4607,7 @@ function inpatientEdu() {
       +     '</span>'
       +     '<i data-lucide="chevron-down" class="ip-edu-summary-chev" style="width:18px;height:18px"></i>'
       +   '</summary>'
-      +   '<div class="ip-edu-section-body">' + bodyHtml + '</div>'
+      +   '<div class="ip-edu-section-body">' + bodyHtml + decisionHtml + '</div>'
       + '</details>';
   }).join('');
 
@@ -4543,6 +4660,315 @@ function _ipEduUpdateToggleAllLabel() {
     return el && !el.open;
   });
   lbl.textContent = anyClosed ? '全部展開' : '全部收合';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 設計憲法 條 2 — 可解釋 AI helper
+// ═══════════════════════════════════════════════════════════════════════════
+// 任何 AI 卡都該 wrap 在 aiExplain() 裡，給病人「為什麼」答案。
+// 結構：{ summary, why[], confidence, sources?[], inputs?{} }
+function aiExplain(opts) {
+  opts = opts || {};
+  var why = (opts.why || []).map(function(w) { return '<li>' + escapeHtml(w) + '</li>'; }).join('');
+  var confidence = opts.confidence;
+  var confLabel = '';
+  if (typeof confidence === 'number') {
+    var pct = Math.round(confidence * 100);
+    var level = pct >= 80 ? 'high' : pct >= 50 ? 'mid' : 'low';
+    var levelText = pct >= 80 ? '高' : pct >= 50 ? '中' : '低';
+    confLabel = '<span class="ai-explain-conf ai-explain-conf-' + level + '">信心 ' + levelText + ' · ' + pct + '%</span>';
+  }
+  var sources = (opts.sources || []).map(function(s) {
+    if (s && typeof s === 'object') {
+      if (s.url) return '<li><a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener">' + escapeHtml(s.title || s.url) + '</a></li>';
+      if (s.title) return '<li>' + escapeHtml(s.title) + '</li>';
+    }
+    return '<li>' + escapeHtml(String(s)) + '</li>';
+  }).join('');
+  var inputs = opts.inputs ? Object.keys(opts.inputs).map(function(k) {
+    return '<dt>' + escapeHtml(k) + '</dt><dd>' + escapeHtml(String(opts.inputs[k])) + '</dd>';
+  }).join('') : '';
+  return ''
+    + '<details class="ai-explain">'
+    +   '<summary>'
+    +     '<span class="ai-explain-summary-text">' + escapeHtml(opts.summary || '為什麼這樣判斷？') + '</span>'
+    +     confLabel
+    +     '<i data-lucide="chevron-down" class="ai-explain-chev" style="width:14px;height:14px"></i>'
+    +   '</summary>'
+    +   '<div class="ai-explain-body">'
+    +     (why ? '<div class="ai-explain-block"><strong>為什麼：</strong><ul>' + why + '</ul></div>' : '')
+    +     (inputs ? '<div class="ai-explain-block"><strong>用到的資料：</strong><dl class="ai-explain-inputs">' + inputs + '</dl></div>' : '')
+    +     (sources ? '<div class="ai-explain-block"><strong>來源：</strong><ul>' + sources + '</ul></div>' : '')
+    +     '<p class="ai-explain-disclaimer">這是電腦根據你的紀錄做的推論，不能取代醫師判斷。有疑慮請與醫師討論。</p>'
+    +   '</div>'
+    + '</details>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 設計憲法 條 5 — Decision Aid (IPDAS-style) helper
+// ═══════════════════════════════════════════════════════════════════════════
+// 結構：{ question, options[ {label, pros[], cons[], risk?, nextSteps[]} ], personalNote? }
+function decisionAid(opts) {
+  opts = opts || {};
+  var optionsHtml = (opts.options || []).map(function(o, i) {
+    var pros = (o.pros || []).map(function(p) { return '<li>' + escapeHtml(p) + '</li>'; }).join('');
+    var cons = (o.cons || []).map(function(c) { return '<li>' + escapeHtml(c) + '</li>'; }).join('');
+    var next = (o.nextSteps || []).map(function(n) { return '<li>' + escapeHtml(n) + '</li>'; }).join('');
+    return ''
+      + '<article class="da-option" data-i="' + i + '">'
+      +   '<header class="da-option-head">'
+      +     '<span class="da-option-num">選項 ' + (i+1) + '</span>'
+      +     '<h4 class="da-option-title">' + escapeHtml(o.label || '') + '</h4>'
+      +   '</header>'
+      +   '<div class="da-option-cols">'
+      +     '<div class="da-col da-col-pros"><h5>👍 利</h5><ul>' + pros + '</ul></div>'
+      +     '<div class="da-col da-col-cons"><h5>👎 弊</h5><ul>' + cons + '</ul></div>'
+      +   '</div>'
+      +   (o.risk ? '<p class="da-option-risk"><i data-lucide="alert-triangle" style="width:13px;height:13px"></i> <strong>個人化風險：</strong>' + escapeHtml(o.risk) + '</p>' : '')
+      +   (next ? '<div class="da-option-next"><strong>下一步：</strong><ul>' + next + '</ul></div>' : '')
+      + '</article>';
+  }).join('');
+  return ''
+    + '<aside class="decision-aid" aria-label="選擇輔助">'
+    +   '<header class="da-head">'
+    +     '<i data-lucide="git-fork" style="width:16px;height:16px"></i>'
+    +     '<div>'
+    +       '<h3 class="da-q">' + escapeHtml(opts.question || '') + '</h3>'
+    +       (opts.personalNote ? '<p class="da-personal">' + escapeHtml(opts.personalNote) + '</p>' : '')
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="da-options">' + optionsHtml + '</div>'
+    +   '<p class="da-footer">參考 IPDAS / Cochrane 2024 (DOI: 10.1002/14651858.CD001431.pub6) 共決架構。最後決定請與醫師討論。</p>'
+    + '</aside>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 場景 C — 我的健康時間軸 + OCR
+// ═══════════════════════════════════════════════════════════════════════════
+// 病人自己上傳檢驗報告 / 處方箋 / 影像 → Tesseract.js 在 client 端 OCR
+// 解出的文字 + 推論的日期、種類存進 localStorage。
+// 視覺化：時間軸卡片 (最新在前)，可篩選類型。
+var _TIMELINE_KEY = 'mdpiece_timeline_entries';
+var _TIMELINE_KINDS = [
+  { id: 'lab',    label: '檢驗報告', icon: 'flask-conical', color: 'blue'    },
+  { id: 'rx',     label: '處方箋',   icon: 'pill',          color: 'amber'   },
+  { id: 'image',  label: '影像報告', icon: 'scan-line',     color: 'purple'  },
+  { id: 'other',  label: '其他',     icon: 'file-text',     color: 'mint'    },
+];
+function _getTimelineEntries() {
+  try { return JSON.parse(localStorage.getItem(_TIMELINE_KEY) || '[]') || []; }
+  catch (e) { return []; }
+}
+function _saveTimelineEntries(list) {
+  localStorage.setItem(_TIMELINE_KEY, JSON.stringify(list));
+}
+
+function timeline() {
+  return ''
+    + '<div class="tl-page">'
+    +   '<header class="tl-head">'
+    +     '<div class="tl-titles">'
+    +       '<h2>我的健康時間軸</h2>'
+    +       '<p>上傳檢驗報告 / 處方箋 / 影像，系統會 OCR 抽出重點。下次看診直接帶這頁給醫師看。</p>'
+    +     '</div>'
+    +     '<button type="button" class="tl-add-btn" onclick="openTimelineUploader()">'
+    +       '<i data-lucide="upload" style="width:14px;height:14px"></i><span>上傳</span>'
+    +     '</button>'
+    +   '</header>'
+    +   '<div class="tl-filters" id="tl-filters">' + _renderTimelineFilters('all') + '</div>'
+    +   '<div class="tl-list" id="tl-list"><p class="tl-empty">// 載入中…</p></div>'
+    +   '<p class="tl-disclaimer">OCR 為輔助辨識，數值仍以原始文件為準。隱私敏感資料目前只存在你這台裝置。</p>'
+    + '</div>';
+}
+
+function _renderTimelineFilters(active) {
+  var all = '<button type="button" class="tl-filter ' + (active === 'all' ? 'is-active' : '') + '" onclick="filterTimeline(\'all\')">全部</button>';
+  var others = _TIMELINE_KINDS.map(function(k) {
+    var act = active === k.id ? ' is-active' : '';
+    return '<button type="button" class="tl-filter tl-filter-' + k.color + act + '" onclick="filterTimeline(\'' + k.id + '\')">'
+      + '<i data-lucide="' + k.icon + '" style="width:13px;height:13px"></i>'
+      + '<span>' + k.label + '</span>'
+      + '</button>';
+  }).join('');
+  return all + others;
+}
+
+var _tlFilter = 'all';
+function filterTimeline(kind) {
+  _tlFilter = kind;
+  var el = document.getElementById('tl-filters');
+  if (el) el.innerHTML = _renderTimelineFilters(kind);
+  loadTimelinePage();
+}
+
+function loadTimelinePage() {
+  var box = document.getElementById('tl-list');
+  if (!box) return;
+  var entries = _getTimelineEntries();
+  if (_tlFilter !== 'all') entries = entries.filter(function(e) { return e.kind === _tlFilter; });
+  entries.sort(function(a, b) { return a.date < b.date ? 1 : -1; });
+  if (!entries.length) {
+    box.innerHTML = '<p class="tl-empty">尚未有任何紀錄。點右上「上傳」加入第一份報告或處方箋。</p>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+  box.innerHTML = entries.map(function(e) {
+    var k = _TIMELINE_KINDS.find(function(x) { return x.id === e.kind; }) || _TIMELINE_KINDS[3];
+    return ''
+      + '<article class="tl-card tl-card-' + k.color + '" data-id="' + e.id + '">'
+      +   '<header class="tl-card-head">'
+      +     '<span class="tl-card-icon"><i data-lucide="' + k.icon + '"></i></span>'
+      +     '<div class="tl-card-meta">'
+      +       '<span class="tl-card-kind">' + k.label + '</span>'
+      +       '<span class="tl-card-date">' + escapeHtml(e.date) + '</span>'
+      +     '</div>'
+      +     '<button type="button" class="tl-card-del" onclick="onTimelineDelete(\'' + e.id + '\')" aria-label="刪除">'
+      +       '<i data-lucide="trash-2" style="width:13px;height:13px"></i>'
+      +     '</button>'
+      +   '</header>'
+      +   '<h3 class="tl-card-title">' + escapeHtml(e.title || '（未命名）') + '</h3>'
+      +   (e.summary ? '<p class="tl-card-summary">' + escapeHtml(e.summary) + '</p>' : '')
+      +   (e.ocr ? '<details class="tl-card-details"><summary>看完整 OCR 文字 (' + (e.ocr.length) + ' 字)</summary><pre class="tl-card-ocr">' + escapeHtml(e.ocr) + '</pre></details>' : '')
+      +   (e.thumb ? '<img class="tl-card-thumb" src="' + e.thumb + '" alt="附件縮圖" />' : '')
+      + '</article>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function openTimelineUploader() {
+  var existing = document.getElementById('tl-upload-sheet');
+  if (existing) existing.remove();
+  var sheet = document.createElement('div');
+  sheet.id = 'tl-upload-sheet';
+  sheet.className = 'ip-prep-sheet';
+  var kindOpts = _TIMELINE_KINDS.map(function(k) {
+    return '<option value="' + k.id + '">' + k.label + '</option>';
+  }).join('');
+  var todayStr = new Date().toISOString().slice(0, 10);
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeTimelineUploader()"></div>'
+    + '<div class="ip-prep-panel" role="dialog" aria-label="上傳到時間軸">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">加進時間軸</span>'
+    +       '<span class="ip-prep-when-sub">PDF / 圖片皆可。圖片會在你的裝置上 OCR，不會上傳到雲端。</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeTimelineUploader()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div class="ip-exam-form">'
+    +     '<label class="ip-exam-field"><span>類型</span><select id="tl-up-kind">' + kindOpts + '</select></label>'
+    +     '<label class="ip-exam-field"><span>日期</span><input type="date" id="tl-up-date" value="' + todayStr + '" /></label>'
+    +     '<label class="ip-exam-field"><span>標題（例：CRP 抽血 / Methotrexate 處方）</span><input type="text" id="tl-up-title" maxlength="40" /></label>'
+    +     '<label class="ip-exam-field"><span>檔案（圖片會 OCR；PDF 暫時只存路徑）</span><input type="file" id="tl-up-file" accept="image/*,application/pdf" onchange="_tlPickFile(this)" /></label>'
+    +     '<div class="tl-ocr-progress" id="tl-ocr-progress" hidden>'
+    +       '<div class="tl-ocr-progress-bar"><div class="tl-ocr-progress-fill" id="tl-ocr-progress-fill"></div></div>'
+    +       '<span class="tl-ocr-progress-text" id="tl-ocr-progress-text">準備 OCR…</span>'
+    +     '</div>'
+    +     '<label class="ip-exam-field"><span>摘要 / OCR 抽出的重點 (自動填，可改)</span><textarea id="tl-up-summary" rows="3" maxlength="400"></textarea></label>'
+    +     '<details class="tl-up-advanced"><summary>OCR 原文 (折疊)</summary><textarea id="tl-up-ocr" rows="5" maxlength="5000" placeholder="若 OCR 失敗可手動貼上"></textarea></details>'
+    +   '</div>'
+    +   '<div class="ip-prep-footer">'
+    +     '<button type="button" class="ip-prep-cta" onclick="submitTimelineUpload()">'
+    +       '<i data-lucide="check" style="width:16px;height:16px"></i><span>儲存到時間軸</span>'
+    +     '</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeTimelineUploader() {
+  var sheet = document.getElementById('tl-upload-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+
+var _tlOcrThumb = null;
+function _tlPickFile(input) {
+  var f = input.files && input.files[0];
+  if (!f) return;
+  // 只處理圖片做 OCR；PDF 先存檔名不 OCR
+  if (!/^image\//.test(f.type)) {
+    var sumEl = document.getElementById('tl-up-summary');
+    if (sumEl && !sumEl.value) sumEl.value = '(PDF) ' + f.name;
+    _tlOcrThumb = null;
+    return;
+  }
+  // 縮圖預覽 (壓 320px)
+  shrinkImageToDataUrl(f, 320, 0.7).then(function(dataUrl) {
+    _tlOcrThumb = dataUrl;
+  }).catch(function(){ _tlOcrThumb = null; });
+
+  // 跑 OCR
+  if (typeof Tesseract === 'undefined') {
+    if (typeof showToast === 'function') showToast('OCR 引擎未載入，請手動填內容', 'info');
+    return;
+  }
+  var prog = document.getElementById('tl-ocr-progress');
+  var fill = document.getElementById('tl-ocr-progress-fill');
+  var txt = document.getElementById('tl-ocr-progress-text');
+  if (prog) prog.hidden = false;
+  Tesseract.recognize(f, 'chi_tra+eng', {
+    logger: function(m) {
+      if (m.status === 'recognizing text' && fill) {
+        var pct = Math.round((m.progress || 0) * 100);
+        fill.style.width = pct + '%';
+        if (txt) txt.textContent = '辨識中… ' + pct + '%';
+      }
+    },
+  }).then(function(r) {
+    var text = ((r && r.data && r.data.text) || '').trim();
+    var ocrEl = document.getElementById('tl-up-ocr');
+    var sumEl = document.getElementById('tl-up-summary');
+    if (ocrEl) ocrEl.value = text;
+    // 自動摘要：取前 80 字 + 找疑似日期 / 數值
+    if (sumEl && !sumEl.value && text) {
+      var lines = text.split(/\n+/).filter(function(l) { return l.trim().length > 0; }).slice(0, 4);
+      sumEl.value = lines.join('  ').slice(0, 200);
+    }
+    if (txt) txt.textContent = '完成。如需修改可直接編輯下方欄位。';
+    if (fill) fill.style.width = '100%';
+  }).catch(function() {
+    if (txt) txt.textContent = 'OCR 失敗，請手動填內容。';
+  });
+}
+
+function submitTimelineUpload() {
+  var kind = document.getElementById('tl-up-kind').value;
+  var date = document.getElementById('tl-up-date').value;
+  var title = document.getElementById('tl-up-title').value.trim();
+  var summary = document.getElementById('tl-up-summary').value.trim();
+  var ocr = document.getElementById('tl-up-ocr').value.trim();
+  if (!date || !title) {
+    if (typeof showToast === 'function') showToast('請至少填日期 + 標題', 'error');
+    return;
+  }
+  var list = _getTimelineEntries();
+  var p = isProxyMode() ? getProxyFor() : null;
+  list.unshift({
+    id: 'tl_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+    kind: kind,
+    date: date,
+    title: title,
+    summary: summary,
+    ocr: ocr,
+    thumb: _tlOcrThumb,
+    proxy_for: p ? p.name : null,
+    createdAt: new Date().toISOString(),
+  });
+  _saveTimelineEntries(list);
+  _tlOcrThumb = null;
+  closeTimelineUploader();
+  if (typeof showToast === 'function') showToast('已加進時間軸', 'success');
+  loadTimelinePage();
+}
+function onTimelineDelete(id) {
+  if (!confirm('刪除這筆？無法復原。')) return;
+  _saveTimelineEntries(_getTimelineEntries().filter(function(e) { return e.id !== id; }));
+  if (typeof showToast === 'function') showToast('已刪除', 'success');
+  loadTimelinePage();
 }
 
 // ── 資料載入 / 互動 handlers ────────────────────────────────────────────────
@@ -5152,6 +5578,31 @@ function _drawSparkline(key, vals) {
     var avg = clean.reduce(function(s,v){return s+v;},0) / clean.length;
     foot.textContent = '7 天平均 ' + avg.toFixed(1);
   }
+  // 設計憲法 條 2 — 給「為什麼」這樣判斷。把 aiExplain 寫進 chip 旁邊一個 mount node。
+  var mount = document.getElementById('ip-trend-explain-' + key);
+  if (mount) {
+    var labelMap = { pain:'疼痛', fatigue:'疲勞', mood:'心情' };
+    var trendName = improving ? '好轉' : worsening ? '加重' : '持平';
+    var why = [];
+    why.push('比較前半 (前 3 天) 與後半 (近 3 天) 平均：' + avgEarly.toFixed(2) + ' → ' + avgLate.toFixed(2) + (delta >= 0 ? ' (+' + delta.toFixed(2) + ')' : ' (' + delta.toFixed(2) + ')'));
+    if (isGoodMetric) {
+      why.push('心情這指標「越高越好」(分數高 = 心情好)。');
+    } else {
+      why.push((labelMap[key] || key) + '這指標「越低越好」(分數高 = 不舒服)。');
+    }
+    why.push('變化超過 ±0.2 才算明顯，不然算「持平」避免過度解讀。');
+    why.push('資料來自你最近 7 天的紀錄 (' + clean.length + ' 筆)，沒紀錄的天不計入。');
+    // 信心：依資料筆數估
+    var conf = Math.min(0.95, 0.35 + clean.length * 0.08);
+    mount.innerHTML = aiExplain({
+      summary: '為什麼判斷為「' + trendName + '」？',
+      why: why,
+      confidence: conf,
+      inputs: { 指標: labelMap[key] || key, 天數: clean.length, 前期均: avgEarly.toFixed(2), 近期均: avgLate.toFixed(2) },
+      sources: [{ title: '判斷規則：前後半 7 日均值比對' }],
+    });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
 }
 
 // 查房紀錄 storage — 陣列，每筆 { id, time(ISO), doctor, text }，依 time 倒序。
@@ -5670,6 +6121,11 @@ function getSymptomEntries() {
   catch { return []; }
 }
 function saveSymptomEntry(entry) {
+  // 設計憲法 條 6 — 家屬代理模式時打標籤，醫師才知道這筆不是病人自己記的
+  if (typeof isProxyMode === 'function' && isProxyMode()) {
+    var p = getProxyFor();
+    if (p) entry.proxy_for = p.name;
+  }
   const all = getSymptomEntries();
   all.push(entry);
   localStorage.setItem('mdpiece_symptoms', JSON.stringify(all));
@@ -11969,6 +12425,19 @@ function settings() {
             sw('sw-sound', 'sound', so === 'on', 'on', 'off'))
     + '  </div>'
 
+    // ── 提醒語氣 + 家屬代理 (符合設計憲法 條 3 / 條 6) ────────────────
+    + '  <div class="set-group">'
+    + '    <h3 class="set-group-title"><i data-lucide="bell-ring"></i> 提醒與代理</h3>'
+    +      row('提醒語氣', '系統提醒、待辦訊息的口氣風格 (對應憲法條 3：可客製化提醒)',
+            seg('reminderTone', [
+              { value: 'strict',  label: '嚴肅' },
+              { value: 'warm',    label: '溫柔' },
+              { value: 'short',   label: '極簡' },
+            ], getReminderTone()))
+    +      row('我幫誰紀錄', '在「我自己」與「家人代理」之間切換；紀錄會打標籤，醫師看得到',
+            renderProxyToggle())
+    + '  </div>'
+
     // Account & data
     + '  <div class="set-group">'
     + '    <h3 class="set-group-title"><i data-lucide="database"></i> ' + _T('set.group.data') + '</h3>'
@@ -12013,6 +12482,10 @@ function onSettingChange(group, value) {
   } else if (group === 'density') {
     setSetting('density', value);
     applyDensity(value);
+  } else if (group === 'reminderTone') {
+    setReminderTone(value);
+    // 重新刷新 todo / SOS history，套上新口氣
+    if (typeof refreshTodoList === 'function') refreshTodoList();
   }
   // 更新該群組按鈕的 active 狀態
   document.querySelectorAll('.set-seg-btn[data-group="' + group + '"]').forEach(function(b) {

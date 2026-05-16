@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=v100-polish" />
+  <link rel="stylesheet" href="css/style.css?v=v101-constitution" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -311,11 +311,19 @@
           <span class="nav-icon"><i data-lucide="puzzle" style="width:18px;height:18px"></i></span>
           <span class="nav-text"><span class="nav-label" data-i18n="nav.pieces">你的碎片</span><span class="nav-sub">每次回診之間的紀錄</span></span>
         </button>
+        <button class="nav-item" data-page="timeline" onclick="navigateTo('timeline', this)">
+          <span class="nav-icon"><i data-lucide="layout-list" style="width:18px;height:18px"></i></span>
+          <span class="nav-text"><span class="nav-label">健康時間軸</span><span class="nav-sub">上傳檢驗 / 處方 / 影像 → OCR</span></span>
+        </button>
 
         <div class="nav-section-label" data-i18n="nav.group.learn">疾病認識與學習</div>
         <button class="nav-item" data-page="education" onclick="navigateTo('education', this)">
           <span class="nav-icon"><i data-lucide="book-heart" style="width:18px;height:18px"></i></span>
           <span class="nav-text"><span class="nav-label" data-i18n="nav.education">衛教專欄</span><span class="nav-sub">疾病 / 用藥 / 自我照顧</span></span>
+        </button>
+        <button class="nav-item" data-page="inpatientEdu" onclick="navigateTo('inpatientEdu', this)">
+          <span class="nav-icon"><i data-lucide="hospital" style="width:18px;height:18px"></i></span>
+          <span class="nav-text"><span class="nav-label">住院衛教</span><span class="nav-sub">住院期間的場景化建議 + 經濟資源</span></span>
         </button>
         <button class="nav-item" data-page="story" onclick="navigateTo('story', this)">
           <span class="nav-icon"><i data-lucide="book-open" style="width:18px;height:18px"></i></span>
@@ -370,6 +378,8 @@
           <i data-lucide="settings" style="width:16px;height:16px"></i>
         </button>
       </div>
+      <!-- 家屬代理 banner — 切到「幫家人」時自動顯示，所有頁面通用 -->
+      <div class="proxy-banner" id="proxy-banner" hidden></div>
       <main id="app"></main>
     </div>
 
@@ -448,7 +458,7 @@
 
   <script src="js/i18n.js?v=v80-ui-and-reminders"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v100-polish"></script>
+  <script src="js/app.js?v=v101-constitution"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
