@@ -27,3 +27,8 @@ Thumbs.db
 md_piece.db
 .vercel
 .env*.local
+
+# E2E test artifacts (screenshots regenerated on every run)
+tests/e2e/home_shots/
+tests/e2e/mobile_shots/
+tests/e2e/node_modules/
