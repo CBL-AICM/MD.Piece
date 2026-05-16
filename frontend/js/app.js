@@ -16094,52 +16094,59 @@ setInterval(reminderBackgroundSync, 5 * 60 * 1000);
 
 function admissions() {
   return ''
-    + '<section class="adm-wrap" style="max-width:880px;margin:0 auto;padding:16px">'
-    +   '<header style="margin-bottom:16px">'
-    +     '<h2 style="display:flex;align-items:center;gap:8px;margin:0 0 4px"><i data-lucide="hospital" style="width:22px;height:22px"></i> 住院 / 療程</h2>'
-    +     '<p style="margin:0;color:var(--text-dim);font-size:.9rem">急性住院、或慢性病長期週期打藥都在這邊管理。</p>'
+    + '<section class="adm-wrap">'
+    +   '<header class="adm-header">'
+    +     '<h2><i data-lucide="hospital"></i> 住院 / 療程</h2>'
+    +     '<p>急性住院、或慢性病長期週期打藥都在這邊管理。</p>'
     +   '</header>'
 
-    +   '<div class="card" style="padding:16px;margin-bottom:16px">'
-    +     '<h3 style="margin:0 0 12px;font-size:1rem"><i data-lucide="plus-circle" style="width:16px;height:16px;vertical-align:middle"></i> 新增住院 / 療程</h3>'
-    +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
-    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem">類型'
-    +         '<select id="adm-form-type" style="padding:8px;border:1px solid var(--border);border-radius:6px">'
+    +   '<div class="adm-card">'
+    +     '<h3 class="adm-card-title"><i data-lucide="plus-circle"></i> 新增住院 / 療程</h3>'
+    +     '<div class="adm-form-grid">'
+    +       '<label class="adm-field">'
+    +         '<span class="adm-field-label">類型</span>'
+    +         '<select id="adm-form-type" class="adm-select">'
     +           '<option value="acute">急性住院</option>'
     +           '<option value="chronic_infusion">長期週期打藥</option>'
     +         '</select>'
     +       '</label>'
-    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem">入住 / 起始日'
-    +         '<input id="adm-form-admit" type="datetime-local" style="padding:8px;border:1px solid var(--border);border-radius:6px"/>'
+    +       '<label class="adm-field">'
+    +         '<span class="adm-field-label">入住 / 起始日</span>'
+    +         '<input id="adm-form-admit" type="datetime-local" class="adm-input"/>'
     +       '</label>'
-    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;grid-column:1/-1">診斷'
-    +         '<input id="adm-form-diagnosis" type="text" placeholder="例如：類風濕性關節炎、肺炎" style="padding:8px;border:1px solid var(--border);border-radius:6px"/>'
+    +       '<label class="adm-field adm-field-full">'
+    +         '<span class="adm-field-label">診斷</span>'
+    +         '<input id="adm-form-diagnosis" type="text" class="adm-input" placeholder="例如：類風濕性關節炎、肺炎"/>'
     +       '</label>'
-    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem">病房（急性）'
-    +         '<input id="adm-form-ward" type="text" placeholder="如 8B-12" style="padding:8px;border:1px solid var(--border);border-radius:6px"/>'
+    +       '<label class="adm-field">'
+    +         '<span class="adm-field-label">病房 <span class="adm-field-hint">(急性)</span></span>'
+    +         '<input id="adm-form-ward" type="text" class="adm-input" placeholder="如 8B-12"/>'
     +       '</label>'
-    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem">ICD-10'
-    +         '<input id="adm-form-icd10" type="text" placeholder="如 M06.9" style="padding:8px;border:1px solid var(--border);border-radius:6px"/>'
+    +       '<label class="adm-field">'
+    +         '<span class="adm-field-label">ICD-10</span>'
+    +         '<input id="adm-form-icd10" type="text" class="adm-input" placeholder="如 M06.9"/>'
     +       '</label>'
-    +       '<label style="display:flex;flex-direction:column;gap:4px;font-size:.85rem;grid-column:1/-1">備註'
-    +         '<textarea id="adm-form-notes" rows="2" style="padding:8px;border:1px solid var(--border);border-radius:6px;resize:vertical"></textarea>'
+    +       '<label class="adm-field adm-field-full">'
+    +         '<span class="adm-field-label">備註</span>'
+    +         '<textarea id="adm-form-notes" rows="2" class="adm-textarea" placeholder="想記下的細節，例如治療反應、特殊提醒…"></textarea>'
     +       '</label>'
     +     '</div>'
-    +     '<div style="margin-top:12px;display:flex;justify-content:flex-end">'
-    +       '<button class="btn btn-primary" onclick="createAdmission()" style="padding:8px 16px;border-radius:6px;background:var(--primary);color:#fff;border:none;cursor:pointer">'
-    +         '<i data-lucide="check" style="width:14px;height:14px;vertical-align:middle"></i> 建立'
+    +     '<div class="adm-form-actions">'
+    +       '<button type="button" class="adm-btn-primary" onclick="createAdmission()">'
+    +         '<i data-lucide="check"></i> 建立'
     +       '</button>'
     +     '</div>'
     +   '</div>'
 
-    +   '<div class="card" style="padding:16px">'
-    +     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-    +       '<h3 style="margin:0;font-size:1rem"><i data-lucide="list" style="width:16px;height:16px;vertical-align:middle"></i> 目前的住院 / 療程</h3>'
-    +       '<button onclick="loadAdmissionsPage()" style="background:none;border:1px solid var(--border);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.8rem">'
-    +         '<i data-lucide="refresh-cw" style="width:12px;height:12px;vertical-align:middle"></i> 重新整理'
+    +   '<div class="adm-card">'
+    +     '<h3 class="adm-card-title">'
+    +       '<i data-lucide="list"></i> 目前的住院 / 療程'
+    +       '<span class="adm-spacer"></span>'
+    +       '<button type="button" class="adm-btn-ghost" onclick="loadAdmissionsPage()">'
+    +         '<i data-lucide="refresh-cw"></i> 重新整理'
     +       '</button>'
-    +     '</div>'
-    +     '<div id="adm-list"><p style="color:var(--text-dim);font-size:.9rem">載入中…</p></div>'
+    +     '</h3>'
+    +     '<div id="adm-list"><p class="adm-empty">載入中…</p></div>'
     +   '</div>'
     + '</section>';
 }
@@ -16153,7 +16160,7 @@ function loadAdmissionsPage() {
     .then(function(data) {
       var rows = (data && data.admissions) || [];
       if (!rows.length) {
-        listEl.innerHTML = '<p style="color:var(--text-dim);font-size:.9rem">還沒有任何住院或療程紀錄。用上方表單新增第一筆。</p>';
+        listEl.innerHTML = '<p class="adm-empty">還沒有任何住院或療程紀錄。用上方表單新增第一筆。</p>';
         return;
       }
       listEl.innerHTML = rows.map(renderAdmissionCard).join('');
@@ -16161,7 +16168,7 @@ function loadAdmissionsPage() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
     })
     .catch(function(e) {
-      listEl.innerHTML = '<p style="color:#c0392b;font-size:.9rem">載入失敗：' + escapeHtml(String(e)) + '</p>';
+      listEl.innerHTML = '<p class="adm-error">載入失敗：' + escapeHtml(String(e)) + '</p>';
     });
 }
 
