@@ -57,8 +57,91 @@ function setCareMode(mode) {
 
 function applyCareMode() {
   document.documentElement.setAttribute('data-care-mode', getCareMode());
+  // 底部 nav 隨 care mode 換一組 tabs（住院模式換成住院相關）
+  if (typeof renderMobileTabbar === 'function') renderMobileTabbar();
 }
 applyCareMode();
+
+// ─── 底部 mobile tabbar — 依 care mode 動態渲染 ────────────────────────
+// 門診：首頁 / 碎片 / FAB / 診前 / 醫聊 / 更多 — MD.Piece 理念對齊
+// 住院：首頁 / 住院 / FAB / 量測 / Memo / 更多 — 住院期間實際會用的
+// 兩組共用 .mtab styling，FAB 永遠在中間。
+function _mobileTabSets() {
+  return {
+    outpatient: [
+      { page: 'home',        icon: 'home',                  labelKey: 'tab.home',        zh: '首頁', en: 'Home',     home: true },
+      { page: 'pieces',      icon: 'puzzle',                labelKey: 'tab.pieces',      zh: '碎片', en: 'Pieces' },
+      { page: 'quickadd',    icon: 'plus',                  labelKey: 'tab.quickadd',    zh: '紀錄', en: 'Log',      fab: true },
+      { page: 'previsit',    icon: 'clipboard-check',       labelKey: 'tab.previsit',    zh: '診前', en: 'Visit' },
+      { page: 'chat',        icon: 'message-circle-heart',  labelKey: 'tab.chat',        zh: '醫聊', en: 'Chat' },
+      { page: 'more',        icon: 'layers',                labelKey: 'tab.more',        zh: '更多', en: 'More',     more: true },
+    ],
+    inpatient: [
+      { page: 'home',        icon: 'home',                  labelKey: 'tab.home',        zh: '首頁',   en: 'Home',    home: true },
+      { page: 'admissions',  icon: 'hospital',              labelKey: 'tab.admissions',  zh: '住院',   en: 'Stay' },
+      { page: 'quickadd',    icon: 'plus',                  labelKey: 'tab.quickadd',    zh: '紀錄',   en: 'Log',     fab: true },
+      { page: 'vitals',      icon: 'activity',              labelKey: 'tab.vitals',      zh: '量測',   en: 'Vitals' },
+      { page: 'memo',        icon: 'sticky-note',           labelKey: 'tab.memo',        zh: 'Memo',   en: 'Memo' },
+      { page: 'more',        icon: 'layers',                labelKey: 'tab.more',        zh: '更多',   en: 'More',    more: true },
+    ],
+  };
+}
+
+function renderMobileTabbar() {
+  var nav = document.getElementById('mobile-tabbar');
+  if (!nav) return;
+  var mode = (typeof getCareMode === 'function') ? getCareMode() : 'outpatient';
+  var tabs = _mobileTabSets()[mode] || _mobileTabSets().outpatient;
+  var lang = (window.MDPiece_i18n && window.MDPiece_i18n.getLang) ? window.MDPiece_i18n.getLang() : 'zh-TW';
+  var html = '<div class="mtab-rail"></div>';
+  tabs.forEach(function(t) {
+    var label = (lang === 'en' ? t.en : t.zh);
+    if (t.fab) {
+      html += ''
+        + '<button class="mtab mtab-fab" data-mtab="quickadd" onclick="mobileQuickAdd(this)" type="button" aria-label="快速紀錄" data-i18n-aria-label="tab.quickaddAria">'
+        +   '<span class="mtab-fab-ring"></span>'
+        +   '<span class="mtab-fab-core"><i data-lucide="' + t.icon + '" style="width:22px;height:22px"></i></span>'
+        +   '<span class="mtab-fab-label" data-i18n="' + t.labelKey + '">' + label + '</span>'
+        + '</button>';
+    } else if (t.more) {
+      html += ''
+        + '<button class="mtab" data-mtab="more" onclick="openMobileMore(this)" type="button">'
+        +   '<span class="mtab-icon"><i data-lucide="' + t.icon + '" style="width:20px;height:20px"></i></span>'
+        +   '<span class="mtab-label" data-i18n="' + t.labelKey + '">' + label + '</span>'
+        +   '<span class="mtab-dot"></span>'
+        + '</button>';
+    } else {
+      var cls = 'mtab' + (t.home ? ' mtab-home' : '');
+      html += ''
+        + '<button class="' + cls + '" data-mtab="' + t.page + '" onclick="mobileTabTo(\'' + t.page + '\', this)" type="button">'
+        +   '<span class="mtab-icon"><i data-lucide="' + t.icon + '" style="width:20px;height:20px"></i></span>'
+        +   '<span class="mtab-label" data-i18n="' + t.labelKey + '">' + label + '</span>'
+        +   '<span class="mtab-dot"></span>'
+        + '</button>';
+    }
+  });
+  nav.innerHTML = html;
+  if (typeof lucide !== 'undefined' && lucide.createIcons) try { lucide.createIcons(); } catch (e) {}
+  // 重畫後重新標記目前頁面對應的 tab
+  if (typeof _currentPageKey === 'string' && typeof _setActiveMobileTabForPage === 'function') {
+    _setActiveMobileTabForPage(_currentPageKey);
+  }
+}
+
+// 給 syncMobileTabs 用：依 page 找出該亮哪個 tab。
+// 如果 page 不在當前 tabset 裡，所有 tab 都消燈。
+function _setActiveMobileTabForPage(page) {
+  var nav = document.getElementById('mobile-tabbar');
+  if (!nav) return;
+  nav.querySelectorAll('.mtab').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mtab === page);
+  });
+}
+
+// 切換語言時 tabbar 文字也要跟著重畫（因為內含 i18n key）
+window.addEventListener('mdpiece-lang-change', function() {
+  if (typeof renderMobileTabbar === 'function') renderMobileTabbar();
+});
 
 // 在 DOMContentLoaded 之前先把屬性掛上，避免閃爍
 document.documentElement.setAttribute('data-mode', getMode());

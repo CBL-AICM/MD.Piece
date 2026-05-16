@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=v94-inpatient-home" />
+  <link rel="stylesheet" href="css/style.css?v=v95-inpatient-tabbar" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -373,43 +373,12 @@
       <main id="app"></main>
     </div>
 
-    <!-- Mobile bottom tab bar — Home 優先；其餘為 MD.Piece 理念對齊的捷徑（碎片 / 診前 / 醫起聊）。
-         所有功能皆已在「首頁」依 4 層階層列出，此處僅留少量直達入口。 -->
-    <nav class="mobile-tabbar" role="tablist" aria-label="主導覽" data-i18n-aria-label="tab.navAria">
-      <div class="mtab-rail"></div>
-      <button class="mtab mtab-home" data-mtab="home" onclick="mobileTabTo('home', this)" type="button">
-        <span class="mtab-icon"><i data-lucide="home" style="width:20px;height:20px"></i></span>
-        <span class="mtab-label" data-i18n="tab.home">首頁</span>
-        <span class="mtab-dot"></span>
-      </button>
-      <button class="mtab" data-mtab="pieces" onclick="mobileTabTo('pieces', this)" type="button">
-        <span class="mtab-icon"><i data-lucide="puzzle" style="width:20px;height:20px"></i></span>
-        <span class="mtab-label" data-i18n="tab.pieces">碎片</span>
-        <span class="mtab-dot"></span>
-      </button>
-      <button class="mtab mtab-fab" data-mtab="quickadd" onclick="mobileQuickAdd(this)" type="button" aria-label="快速紀錄" data-i18n-aria-label="tab.quickaddAria">
-        <span class="mtab-fab-ring"></span>
-        <span class="mtab-fab-core">
-          <i data-lucide="plus" style="width:22px;height:22px"></i>
-        </span>
-        <span class="mtab-fab-label" data-i18n="tab.quickadd">紀錄</span>
-      </button>
-      <button class="mtab" data-mtab="previsit" onclick="mobileTabTo('previsit', this)" type="button">
-        <span class="mtab-icon"><i data-lucide="clipboard-check" style="width:20px;height:20px"></i></span>
-        <span class="mtab-label" data-i18n="tab.previsit">診前</span>
-        <span class="mtab-dot"></span>
-      </button>
-      <button class="mtab" data-mtab="chat" onclick="mobileTabTo('chat', this)" type="button">
-        <span class="mtab-icon"><i data-lucide="message-circle-heart" style="width:20px;height:20px"></i></span>
-        <span class="mtab-label" data-i18n="tab.chat">醫聊</span>
-        <span class="mtab-dot"></span>
-      </button>
-      <button class="mtab" data-mtab="more" onclick="openMobileMore(this)" type="button">
-        <span class="mtab-icon"><i data-lucide="layers" style="width:20px;height:20px"></i></span>
-        <span class="mtab-label" data-i18n="tab.more">更多</span>
-        <span class="mtab-dot"></span>
-      </button>
-    </nav>
+    <!-- Mobile bottom tab bar — JS-rendered。
+         由 renderMobileTabbar() 依 care mode 動態組：
+           - 門診模式 (outpatient)：首頁 / 碎片 / FAB / 診前 / 醫聊 / 更多
+           - 住院模式 (inpatient)：首頁 / 住院 / FAB / 量測 / Memo / 更多
+         所有功能皆已在「首頁」依層級列出，此處只放最直達的入口。 -->
+    <nav class="mobile-tabbar" id="mobile-tabbar" role="tablist" aria-label="主導覽" data-i18n-aria-label="tab.navAria"></nav>
 
     <!-- Mobile home indicator (iOS-like stripe) -->
     <span class="mobile-home-indicator" aria-hidden="true"></span>
@@ -479,7 +448,7 @@
 
   <script src="js/i18n.js?v=v80-ui-and-reminders"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v94-inpatient-home"></script>
+  <script src="js/app.js?v=v95-inpatient-tabbar"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
@@ -909,19 +878,23 @@
       document.getElementById('sidebar-backdrop').classList.add('show');
     }
 
-    // Sync mobile tab highlight with page changes from anywhere
+    // Sync mobile tab highlight with page changes from anywhere.
+    // tabbar 由 renderMobileTabbar() 動態渲染（依 care mode 換 tabs），
+    // 哪些 page 對應哪顆 tab 不再寫死，直接掃 .mtab[data-mtab] 找匹配。
     (function syncMobileTabs() {
-      const map = { home:'home', pieces:'pieces', previsit:'previsit', chat:'chat' };
       const orig = window.showPage;
       if (typeof orig === 'function') {
         window.showPage = function(p) {
           orig.apply(this, arguments);
-          const tab = map[p] || null;
-          if (tab) setActiveMobileTab(tab);
-          else document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+          if (typeof _setActiveMobileTabForPage === 'function') _setActiveMobileTabForPage(p);
         };
       }
     })();
+
+    // 首次渲染 tabbar — 在 app.js 載完後 + DOM ready 後呼叫
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof renderMobileTabbar === 'function') renderMobileTabbar();
+    });
 
     // ─── Mobile status bar clock ─────────────────────────
     (function mobileClock() {
