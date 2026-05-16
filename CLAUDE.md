@@ -73,6 +73,27 @@ cd mcp_server && uv sync
 
 ---
 
+## 產品設計憲法（必讀）
+
+開發任何功能前，必須先讀 [`docs/product-principles.md`](docs/product-principles.md)，
+並在 PR 描述中對照「7 條設計憲法」與「3 個策略場景（A/B/C）」自我檢核。
+
+7 條設計憲法摘要：
+1. PWA 原生體驗
+2. 可信任、可解釋的 AI（必附「為什麼」）
+3. 可客製化的提醒（時段、頻率、語氣）
+4. 跨院整合視圖（患者自上傳 + OCR）
+5. 醫病共決（Decision Aid）等級的輸出
+6. 長者／家屬模式（大字、語音、代理）
+7. 本地化與文化敏感（繁中、台灣分級醫療、長照）
+
+3 個策略場景：
+- **A**：症狀分析 → Decision Aid 等級分診（`routers/symptoms.py` + `routers/triage.py` + `xiaohe.py`）
+- **B**：客製化提醒 + 家屬視角（`routers/medications.py` + `routers/emotions.py`）
+- **C**：「我的健康時間軸」跨次就診整合（新 `routers/timeline.py`）
+
+---
+
 ## Git 工作流程
 
 - 主分支：`main`
