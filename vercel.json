@@ -88,6 +88,10 @@
     { "src": "/labs", "dest": "api/index.py" },
     { "src": "/diet/(.*)", "dest": "api/index.py" },
     { "src": "/diet", "dest": "api/index.py" },
+    { "src": "/admissions/(.*)", "dest": "api/index.py" },
+    { "src": "/admissions", "dest": "api/index.py" },
+    { "src": "/reminders/(.*)", "dest": "api/index.py" },
+    { "src": "/reminders", "dest": "api/index.py" },
     { "src": "/debug/(.*)", "dest": "api/index.py" },
     { "src": "/debug", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "frontend/$1" }

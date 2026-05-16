@@ -2341,6 +2341,184 @@ html[data-mode="senior"] .tc-desc {
 .home-admit-chip[data-urgency="today"] .home-admit-chip-count { background: rgba(255,255,255,0.25); }
 
 /* ════════════════════════════════════════════════════════════════
+   住院 / 療程 頁面 — 主題感知，dark / light 都有正常對比度
+   ════════════════════════════════════════════════════════════════ */
+.adm-wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 16px;
+  color: var(--app-text);
+}
+.adm-header { margin-bottom: 18px; }
+.adm-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--app-text);
+  letter-spacing: 0.3px;
+}
+.adm-header h2 i { width: 24px; height: 24px; color: var(--app-mint-strong, var(--app-aqua)); }
+.adm-header p {
+  margin: 0;
+  color: var(--app-text-dim);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.adm-card {
+  background: var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--app-shadow);
+  color: var(--app-text);
+}
+.adm-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--app-text);
+}
+.adm-card-title i { width: 18px; height: 18px; color: var(--app-mint-strong, var(--app-aqua)); }
+.adm-card-title .adm-spacer { flex: 1; }
+
+.adm-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
+}
+.adm-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.adm-field.adm-field-full { grid-column: 1 / -1; }
+.adm-field-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--app-text);
+  letter-spacing: 0.2px;
+}
+.adm-field-hint { color: var(--app-text-dim); font-weight: 500; margin-left: 4px; }
+
+.adm-input,
+.adm-select,
+.adm-textarea {
+  width: 100%;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--app-text);
+  background: var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
+  border-radius: 10px;
+  box-sizing: border-box;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.adm-textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+.adm-input::placeholder,
+.adm-textarea::placeholder { color: var(--app-text-dim); opacity: 0.85; }
+.adm-input:focus,
+.adm-select:focus,
+.adm-textarea:focus {
+  outline: none;
+  border-color: var(--app-mint-strong, var(--app-aqua));
+  box-shadow: 0 0 0 3px var(--app-glow);
+  background: var(--app-panel);
+}
+.adm-select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 32px;
+  color: var(--app-text);
+}
+#app-wrapper[data-theme="dark"] .adm-input,
+#app-wrapper[data-theme="dark"] .adm-select,
+#app-wrapper[data-theme="dark"] .adm-textarea {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(195,225,255,0.32);
+}
+#app-wrapper[data-theme="dark"] .adm-input:focus,
+#app-wrapper[data-theme="dark"] .adm-select:focus,
+#app-wrapper[data-theme="dark"] .adm-textarea:focus {
+  background: rgba(255,255,255,0.10);
+  border-color: var(--app-mint-strong);
+}
+
+.adm-form-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.adm-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 22px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--app-mint-strong, var(--app-aqua));
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--app-glow);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.adm-btn-primary:hover { filter: brightness(1.05); box-shadow: 0 4px 14px var(--app-glow); }
+.adm-btn-primary:active { transform: translateY(1px); }
+.adm-btn-primary i { width: 16px; height: 16px; }
+
+.adm-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--app-text);
+  background: transparent;
+  border: 1.5px solid var(--app-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.adm-btn-ghost:hover { background: var(--app-panel-soft); }
+.adm-btn-ghost i { width: 13px; height: 13px; }
+
+.adm-empty {
+  margin: 0;
+  padding: 14px 4px;
+  color: var(--app-text-dim);
+  font-size: 0.9rem;
+}
+.adm-error {
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--danger, #D85F5F);
+  background: rgba(216,95,95,0.10);
+  border: 1px solid rgba(216,95,95,0.35);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .adm-form-grid { grid-template-columns: 1fr; }
+  .adm-field-full { grid-column: auto; }
+  .adm-wrap { padding: 12px; }
+  .adm-card { padding: 16px; border-radius: 14px; }
+}
+
+/* ════════════════════════════════════════════════════════════════
    準備清單 bottom sheet — 即將住院 / 即將打藥 共用
    ════════════════════════════════════════════════════════════════ */
 .ip-prep-sheet {
