@@ -14993,6 +14993,21 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
 
 /* Quick log sheet — 用 prep sheet 的殼 */
 .ip-ql-panel { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.ip-ql-panel .ip-prep-head {
+  position: relative;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.ip-ql-panel .ip-prep-when {
+  flex: 0 1 auto;
+  align-items: center;
+  text-align: center;
+}
+.ip-ql-panel .ip-prep-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
 .ip-ql-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
