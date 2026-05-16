@@ -2553,6 +2553,60 @@ html[data-mode="senior"] .tc-desc {
   box-shadow: 0 4px 14px rgba(127,231,217,0.30);
 }
 .ip-prep-cta:active { transform: scale(0.98); }
+
+/* 用藥效果快選 — 4 顆大按鈕，用於 #med-effect-sheet */
+.med-effect-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.med-effect-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 18px 8px 14px;
+  min-height: 110px;
+  border-radius: 16px;
+  border: 1.5px solid var(--me-c, rgba(31,61,88,0.16));
+  background: var(--me-bg, rgba(31,61,88,0.04));
+  cursor: pointer;
+  transition: transform .15s ease, border-color .2s ease, background .2s ease;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.med-effect-btn:active { transform: scale(0.96); }
+.med-effect-btn:hover {
+  border-color: var(--me-c);
+  background: var(--me-bg-hover, var(--me-bg));
+}
+.med-effect-emoji {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+.med-effect-label {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--me-c, var(--text));
+  letter-spacing: 0.4px;
+}
+.med-effect-sub {
+  font-size: 0.74rem;
+  color: var(--text-dim, #5A7388);
+}
+#app-wrapper[data-theme="dark"] .med-effect-sub { color: rgba(241,246,255,0.65); }
+
+.med-effect-muted  { --me-c: #5A7388;   --me-bg: rgba(90,115,136,0.08);  --me-bg-hover: rgba(90,115,136,0.14); }
+.med-effect-danger { --me-c: #B8553F;   --me-bg: rgba(232,168,168,0.10); --me-bg-hover: rgba(232,168,168,0.18); }
+.med-effect-sky    { --me-c: #4A90C2;   --me-bg: rgba(91,159,232,0.08);  --me-bg-hover: rgba(91,159,232,0.16); }
+.med-effect-mint   { --me-c: #2A8F7E;   --me-bg: rgba(127,231,217,0.10); --me-bg-hover: rgba(127,231,217,0.20); }
+#app-wrapper[data-theme="dark"] .med-effect-muted  { --me-c: #BFD2EC; --me-bg: rgba(255,255,255,0.04); }
+#app-wrapper[data-theme="dark"] .med-effect-danger { --me-c: #E8A8A8; }
+#app-wrapper[data-theme="dark"] .med-effect-sky    { --me-c: #8EC5F2; }
+#app-wrapper[data-theme="dark"] .med-effect-mint   { --me-c: #7FE7D9; }
+
 .ip-prep-secondary {
   display: inline-flex;
   align-items: center;
@@ -13959,6 +14013,47 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
 }
 #app-wrapper[data-theme="light"] .ip-sos {
   background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.78) 100%);
+}
+
+/* 門診版快速回報 — 沿用 .ip-sos 子元素的 styling，但容器走 home 卡片風格、不 sticky */
+.home-quick-report {
+  position: relative;
+  margin: 14px 0 22px;
+  padding: 18px 14px 14px;
+  border-radius: calc(var(--ip-radius) + 4px);
+  background: linear-gradient(150deg, rgba(232,168,168,0.10) 0%, rgba(142,197,242,0.06) 60%, transparent 100%);
+  border: 1.5px solid var(--border-glass, rgba(31,61,88,0.10));
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(0,0,0,0.06));
+}
+#app-wrapper[data-theme="dark"] .home-quick-report {
+  background: linear-gradient(150deg, rgba(232,168,168,0.10) 0%, rgba(142,197,242,0.08) 60%, transparent 100%);
+  border-color: rgba(255,255,255,0.10);
+}
+.home-qr-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border-glass, rgba(31,61,88,0.10));
+}
+.home-qr-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text, #1F3D58);
+  letter-spacing: 0.3px;
+}
+.home-qr-head span {
+  font-size: 0.74rem;
+  color: var(--text-muted, #8E8680);
+}
+#app-wrapper[data-theme="dark"] .home-qr-head h3 { color: #F1F6FF; }
+#app-wrapper[data-theme="dark"] .home-qr-head span { color: rgba(241,246,255,0.65); }
+.home-quick-report .ip-sos-history {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-glass, rgba(31,61,88,0.10));
 }
 .ip-sos-grid {
   display: grid;

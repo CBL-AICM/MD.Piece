@@ -3473,6 +3473,40 @@ function _puzzlePiecePathAt(row, col, ox, oy) {
   return 'M ' + pt(20, 20) + ' ' + topEdge(T) + ' ' + rightEdge(R) + ' ' + bottomEdge(B) + ' ' + leftEdge(L) + ' Z';
 }
 
+// 門診模式快速回報 — 一鍵 SOS-style，4 顆大按鈕 + 今日歷史 chip。
+// 跟住院模式邏輯共用 (onInpatientSOS / refreshInpatientSosHistory) — 反正都寫到同一份 storage 與症狀紀錄。
+function renderHomeQuickReport() {
+  var items = [
+    { key: 'pain',     icon: 'zap',         label: '痛',   sub: '哪裡都可以', color: 'coral' },
+    { key: 'breath',   icon: 'wind',        label: '喘',   sub: '吸不到氣',   color: 'sky'   },
+    { key: 'nausea',   icon: 'droplets',    label: '噁心', sub: '想吐 / 反胃', color: 'sage'  },
+    { key: 'help',     icon: 'bell-ring',   label: '記下', sub: '存進今日紀錄',color: 'mint'  },
+  ];
+  var btns = items.map(function(it) {
+    return ''
+      + '<button type="button" class="ip-sos-btn ip-sos-' + it.color + '" data-key="' + it.key + '" onclick="onInpatientSOS(\'' + it.key + '\', this)">'
+      +   '<span class="ip-sos-icon"><i data-lucide="' + it.icon + '"></i></span>'
+      +   '<span class="ip-sos-label">' + it.label + '</span>'
+      +   '<span class="ip-sos-sub">' + it.sub + '</span>'
+      + '</button>';
+  }).join('');
+  return ''
+    + '<section class="home-quick-report home-inpatient" aria-label="一鍵回報">'
+    +   '<header class="home-qr-head">'
+    +     '<h3>不舒服？按一下就好</h3>'
+    +     '<span>不用打字 · 直接按 · 自動進症狀紀錄</span>'
+    +   '</header>'
+    +   '<div class="ip-sos-grid">' + btns + '</div>'
+    +   '<div class="ip-sos-history" id="ip-sos-history" hidden>'
+    +     '<div class="ip-sos-history-head">'
+    +       '<span>今天已回報</span>'
+    +       '<button type="button" class="ip-sos-history-clear" onclick="onInpatientSOSClear()">清除</button>'
+    +     '</div>'
+    +     '<div class="ip-sos-history-list" id="ip-sos-history-list"></div>'
+    +   '</div>'
+    + '</section>';
+}
+
 function renderCareModeChips() {
   const cur = getCareMode();
   const isOut = cur === 'outpatient';
@@ -3600,6 +3634,9 @@ function home() {
           </div>
         </div>
       </div>
+
+      <!-- 不舒服一鍵回報 — 跟住院模式同樣的 4 顆大按鈕，省下打字想分類的時間 -->
+      ${renderHomeQuickReport()}
 
       <!-- ════════════════════════════════════════════════════
            Layer 1 — 今日代辦：今天藥物 + 系統提醒 + 你的待辦
@@ -3731,6 +3768,8 @@ function loadHomePage() {
   refreshNavBadges();
   // 拉長期療程下次打藥 → 寫到 hero 「下次打藥」 chip + Layer 03 住院卡 badge
   if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
+  // 同步今日 SOS 歷史 chip（門診版快速回報 bar 共用住院的 storage）
+  if (typeof refreshInpatientSosHistory === 'function') refreshInpatientSosHistory();
 
   fetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
@@ -9176,25 +9215,84 @@ function confirmForceLog(medId) {
   logMedTaken(medId, true, { force: true });
 }
 
+// 用藥效果快速回報 — 4 顆大按鈕：無效 / 過敏 / 普通 / 有效。
+// 按下後直接送 /medications/effects；過敏多 prompt 一個 textarea 讓使用者寫症狀。
+// effectiveness 對應：無效=1 / 過敏=1 + side_effects 帶「過敏：xxx」/ 普通=3 / 有效=5
 function showEffectForm(medId, medName) {
-  var eff = prompt(medName + " 療效如何？（1=沒效果 ~ 5=非常有效）", "3");
-  if (!eff) return;
-  var effNum = parseInt(eff);
-  if (effNum < 1 || effNum > 5 || isNaN(effNum)) { showToast("請輸入 1-5 的數字", "warning"); return; }
-  var sideEffects = prompt("有任何副作用嗎？（沒有就留空）") || "";
-  var changes = prompt("症狀有什麼改善？（沒有就留空）") || "";
+  var existing = document.getElementById('med-effect-sheet');
+  if (existing) existing.remove();
 
-  fetch(API + "/medications/effects", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  var opts = [
+    { key: 'none',    label: '無效',  sub: '吃了沒感覺',   emoji: '😐', color: 'muted',  eff: 1 },
+    { key: 'allergy', label: '過敏',  sub: '寫出症狀',     emoji: '⚠️', color: 'danger', eff: 1 },
+    { key: 'avg',     label: '普通',  sub: '一點點',       emoji: '🙂', color: 'sky',    eff: 3 },
+    { key: 'good',    label: '有效',  sub: '比較舒服',     emoji: '😊', color: 'mint',   eff: 5 },
+  ];
+  var btns = opts.map(function(o) {
+    return ''
+      + '<button type="button" class="med-effect-btn med-effect-' + o.color + '" onclick="_submitMedEffect(\'' + medId + '\',\'' + o.key + '\',' + o.eff + ')">'
+      +   '<span class="med-effect-emoji">' + o.emoji + '</span>'
+      +   '<span class="med-effect-label">' + o.label + '</span>'
+      +   '<span class="med-effect-sub">' + o.sub + '</span>'
+      + '</button>';
+  }).join('');
+
+  var sheet = document.createElement('div');
+  sheet.id = 'med-effect-sheet';
+  sheet.className = 'ip-prep-sheet'; // 沿用 sheet 外殼 styling
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeMedEffectSheet()"></div>'
+    + '<div class="ip-prep-panel" role="dialog" aria-label="用藥效果">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">' + escapeHtml(medName) + '</span>'
+    +       '<span class="ip-prep-when-sub">吃完感覺如何？點一下就好。</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeMedEffectSheet()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div class="med-effect-grid">' + btns + '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeMedEffectSheet() {
+  var sheet = document.getElementById('med-effect-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+
+function _submitMedEffect(medId, kind, effNum) {
+  var sideEffects = '';
+  if (kind === 'allergy') {
+    var sym = prompt('過敏：請寫出症狀（例：起紅疹、嘴唇腫、呼吸困難）\n如有嚴重反應請立刻就醫。', '');
+    if (!sym || !sym.trim()) {
+      if (typeof showToast === 'function') showToast('已取消（過敏需要填寫症狀才能存）', 'info');
+      return;
+    }
+    sideEffects = '過敏：' + sym.trim();
+  }
+  fetch(API + '/medications/effects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      patient_id: _medsPatientId, medication_id: medId,
-      effectiveness: effNum, side_effects: sideEffects, symptom_changes: changes
-    })
+      patient_id: _medsPatientId,
+      medication_id: medId,
+      effectiveness: effNum,
+      side_effects: sideEffects,
+      symptom_changes: '',
+    }),
   })
-    .then(function(r) { return r.json(); })
-    .then(function() { showToast("療效紀錄已儲存", "success"); })
-    .catch(function() { showToast("紀錄失敗", "error"); });
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+      if (typeof showToast === 'function') showToast(kind === 'allergy' ? '已記錄過敏反應，建議盡快告知醫師' : '療效已記下', 'success');
+      closeMedEffectSheet();
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('紀錄失敗，請重試', 'error');
+    });
 }
 
 function renderMedStats(data) {
