@@ -16367,7 +16367,7 @@ function renderAdmissionCard(a) {
     +         '<input id="adm-med-due-' + a.id + '" type="datetime-local" style="padding:6px;border:1px solid var(--border);border-radius:4px;font-size:.85rem"/>'
     +       '</div>'
     +       '<div style="margin-top:6px;text-align:right">'
-    +         '<button onclick="addAdmissionMedication(\'' + a.id + '\')" style="background:var(--primary);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:.8rem">儲存</button>'
+    +         '<button id="adm-med-save-' + a.id + '" onclick="addAdmissionMedication(\'' + a.id + '\')" style="background:var(--primary);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:.8rem">儲存</button>'
     +       '</div>'
     +     '</div>'
     +     '<div id="adm-meds-' + a.id + '"><p style="color:var(--text-dim);font-size:.8rem;margin:0">載入中…</p></div>'
@@ -16459,7 +16459,7 @@ function addAdmissionMedication(admissionId) {
   if (!body.name) { showToast('請填藥名', 'error'); return; }
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
   // 連按防抖：找到對應的「儲存」按鈕，disable + 切「儲存中⋯」
-  var btn = document.querySelector('button[onclick="addAdmissionMedication(\'' + admissionId + '\')"]');
+  var btn = document.getElementById('adm-med-save-' + admissionId);
   var origHTML = btn ? btn.innerHTML : null;
   if (btn) { btn.disabled = true; btn.innerHTML = '儲存中⋯'; }
   var restore = function() { if (btn) { btn.disabled = false; btn.innerHTML = origHTML; } };
