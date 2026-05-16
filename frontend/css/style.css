@@ -14143,9 +14143,11 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
 }
 
 /* 6. Rounds card ───────────────────────────────────────── */
-/* header 右側 +加紀錄 按鈕 */
-.ip-rounds .ip-section-head { position: relative; }
-.ip-rounds-add {
+/* header 右側 +加紀錄 按鈕 — 跟 ip-exam-add 共用樣式 */
+.ip-rounds .ip-section-head,
+.ip-timeline .ip-section-head { position: relative; }
+.ip-rounds-add,
+.ip-exam-add {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -14158,8 +14160,97 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   font-weight: 600;
   letter-spacing: 0.3px;
   cursor: pointer;
+  margin-left: auto;
 }
-.ip-rounds-add:active { transform: scale(0.96); }
+.ip-rounds-add:active,
+.ip-exam-add:active { transform: scale(0.96); }
+
+/* exam composer 表單 — 沿用 prep sheet 的外殼 */
+.ip-exam-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+.ip-exam-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-dim, #5A7388);
+}
+#app-wrapper[data-theme="dark"] .ip-exam-field { color: rgba(241,246,255,0.7); }
+.ip-exam-field > span { font-weight: 500; }
+.ip-exam-field input,
+.ip-exam-field select,
+.ip-exam-field textarea {
+  font-family: inherit;
+  font-size: 0.92rem;
+  padding: 10px 12px;
+  border: 1px solid var(--border, rgba(31,61,88,0.20));
+  border-radius: 10px;
+  background: var(--bg, #fff);
+  color: var(--text, #1F3D58);
+  outline: none;
+  resize: vertical;
+}
+#app-wrapper[data-theme="dark"] .ip-exam-field input,
+#app-wrapper[data-theme="dark"] .ip-exam-field select,
+#app-wrapper[data-theme="dark"] .ip-exam-field textarea {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.14);
+  color: #F1F6FF;
+}
+.ip-exam-field input:focus,
+.ip-exam-field select:focus,
+.ip-exam-field textarea:focus { border-color: var(--ip-mint); }
+
+/* Timeline sheet detail rows — exam 用 */
+.ip-tl-sheet-detail {
+  margin: 12px 0 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(127,231,217,0.06);
+  border: 1px solid rgba(127,231,217,0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#app-wrapper[data-theme="dark"] .ip-tl-sheet-detail {
+  background: rgba(127,231,217,0.08);
+  border-color: rgba(127,231,217,0.18);
+}
+.ip-tl-sheet-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--ip-text);
+}
+.ip-tl-sheet-detail-row svg {
+  margin-top: 2px;
+  color: var(--ip-mint);
+  flex-shrink: 0;
+}
+.ip-tl-sheet-detail-row strong {
+  color: var(--ip-coral);
+  margin-right: 2px;
+}
+
+/* Timeline dot 配色：exam 用紫色強調（不同於 vitals 藍 / med 暖色） */
+.ip-tl-kind-exam .ip-tl-dot {
+  border-color: rgba(124,107,196,0.45);
+  color: #7C6BC4;
+  background: rgba(124,107,196,0.08);
+}
+.ip-tl-now.ip-tl-kind-exam .ip-tl-dot {
+  background: #7C6BC4;
+  color: #fff;
+  border-color: #7C6BC4;
+}
 
 /* composer (inline) */
 .ip-rounds-composer {
@@ -14633,6 +14724,143 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   cursor: pointer;
   font-weight: 500;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   住院衛教獨立頁 — 不跟 /education 共用
+   ════════════════════════════════════════════════════════════════ */
+.ip-edu-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.ip-edu-page-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px dashed var(--border, rgba(31,61,88,0.12));
+}
+.ip-edu-page-titles { flex: 1; min-width: 0; }
+.ip-edu-page-titles h2 {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text, #1F3D58);
+  letter-spacing: 0.3px;
+}
+.ip-edu-page-titles p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text-dim, #5A7388);
+}
+.ip-edu-page-expand-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(127,231,217,0.14);
+  color: #2A8F7E;
+  border: 1px solid rgba(127,231,217,0.32);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+#app-wrapper[data-theme="dark"] .ip-edu-page-expand-all { color: #7FE7D9; }
+
+.ip-edu-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ip-edu-section {
+  background: var(--bg, #fff);
+  border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+#app-wrapper[data-theme="dark"] .ip-edu-section {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.10);
+}
+.ip-edu-section[open] {
+  border-color: rgba(127,231,217,0.36);
+  box-shadow: 0 4px 14px rgba(127,231,217,0.10);
+}
+.ip-edu-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ip-edu-summary::-webkit-details-marker { display: none; }
+.ip-edu-summary::marker { display: none; content: ''; }
+.ip-edu-summary-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(127,231,217,0.20) 0%, rgba(142,197,242,0.16) 100%);
+  color: #2A8F7E;
+  flex-shrink: 0;
+}
+#app-wrapper[data-theme="dark"] .ip-edu-summary-icon { color: #7FE7D9; }
+.ip-edu-summary-icon svg { width: 20px; height: 20px; }
+.ip-edu-summary-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ip-edu-summary-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text, #1F3D58);
+}
+#app-wrapper[data-theme="dark"] .ip-edu-summary-title { color: #F1F6FF; }
+.ip-edu-summary-tldr {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-dim, #5A7388);
+}
+#app-wrapper[data-theme="dark"] .ip-edu-summary-tldr { color: rgba(241,246,255,0.65); }
+.ip-edu-summary-chev {
+  color: var(--text-dim, #5A7388);
+  transition: transform .2s ease;
+  flex-shrink: 0;
+}
+.ip-edu-section[open] .ip-edu-summary-chev { transform: rotate(180deg); }
+.ip-edu-section-body {
+  padding: 0 16px 16px 64px;
+  border-top: 1px dashed rgba(127,231,217,0.20);
+}
+.ip-edu-body-line {
+  margin: 10px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--text, #1F3D58);
+}
+#app-wrapper[data-theme="dark"] .ip-edu-body-line { color: #F1F6FF; }
+.ip-edu-footer {
+  margin: 18px 4px 8px;
+  font-size: 0.74rem;
+  text-align: center;
+  color: var(--text-muted, #8E8680);
+}
+
+/* 手機 + 年長版 */
+@media (max-width: 600px) {
+  .ip-edu-page { padding: 12px; }
+  .ip-edu-page-titles h2 { font-size: 1.2rem; }
+  .ip-edu-section-body { padding: 0 14px 14px 56px; }
+}
+html[data-mode="senior"] .ip-edu-summary-title { font-size: 1.12rem; }
+html[data-mode="senior"] .ip-edu-summary-tldr { font-size: 0.9rem; }
+html[data-mode="senior"] .ip-edu-body-line { font-size: 1.04rem; line-height: 1.85; }
 
 .ip-footer-note {
   margin: 16px 8px 0;
