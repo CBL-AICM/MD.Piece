@@ -164,15 +164,15 @@ function _mobileTabSets() {
       { page: 'quickadd',    icon: 'plus',                  labelKey: 'tab.quickadd',    zh: '紀錄', en: 'Log',      fab: true },
       { page: 'previsit',    icon: 'clipboard-check',       labelKey: 'tab.previsit',    zh: '診前', en: 'Visit' },
       { page: 'chat',        icon: 'message-circle-heart',  labelKey: 'tab.chat',        zh: '醫聊', en: 'Chat' },
-      { page: 'more',        icon: 'layers',                labelKey: 'tab.more',        zh: '更多', en: 'More',     more: true },
+      { page: 'more',        icon: 'ellipsis',              labelKey: 'tab.more',        zh: '更多', en: 'More',     more: true },
     ],
     inpatient: [
       { page: 'home',        icon: 'home',                  labelKey: 'tab.home',        zh: '首頁',   en: 'Home',    home: true },
-      { page: 'admissions',  icon: 'hospital',              labelKey: 'tab.admissions',  zh: '住院',   en: 'Stay' },
+      { page: 'admissions',  icon: 'bed-double',            labelKey: 'tab.admissions',  zh: '住院',   en: 'Stay' },
       { page: 'quickadd',    icon: 'plus',                  labelKey: 'tab.quickadd',    zh: '紀錄',   en: 'Log',     fab: true },
-      { page: 'vitals',      icon: 'activity',              labelKey: 'tab.vitals',      zh: '量測',   en: 'Vitals' },
-      { page: 'memo',        icon: 'sticky-note',           labelKey: 'tab.memo',        zh: 'Memo',   en: 'Memo' },
-      { page: 'more',        icon: 'layers',                labelKey: 'tab.more',        zh: '更多',   en: 'More',    more: true },
+      { page: 'vitals',      icon: 'heart-pulse',           labelKey: 'tab.vitals',      zh: '量測',   en: 'Vitals' },
+      { page: 'memo',        icon: 'notebook-pen',          labelKey: 'tab.memo',        zh: 'Memo',   en: 'Memo' },
+      { page: 'more',        icon: 'ellipsis',              labelKey: 'tab.more',        zh: '更多',   en: 'More',    more: true },
     ],
   };
 }
