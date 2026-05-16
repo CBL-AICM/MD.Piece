@@ -3,28 +3,69 @@ const GITHUB_REPO = "CBL-AICM/MD.Piece";
 
 // ─── 顯示模式（年長版 / 普通版）─────────────────────────────
 // 'senior' = 大字體、寬按鈕、高對比；'standard' = 原本的精緻 UI
+//
+// 與 elder-mode.css 對齊：
+//   html[data-mode="senior"] === html.elder-mode
+//   localStorage 'mdpiece_mode' 與 'md.elderMode' 雙向同步
+//   ?elder=1 query 強制開啟一次（不會覆寫使用者偏好除非顯式設定）
+
+const ELDER_LS_KEY = 'md.elderMode';
+const LEGACY_MODE_KEY = 'mdpiece_mode';
+
+function _readElderPref() {
+  // 新 key 優先；舊 key 作為 fallback
+  const v = localStorage.getItem(ELDER_LS_KEY);
+  if (v === '1' || v === 'true') return true;
+  if (v === '0' || v === 'false') return false;
+  return localStorage.getItem(LEGACY_MODE_KEY) === 'senior';
+}
+
+function _detectInitialElderMode() {
+  // 啟動順序：?elder=1 > localStorage 偏好 > 預設 false
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get('elder') === '1') return true;
+    if (qs.get('elder') === '0') return false;
+  } catch (e) { /* ignore */ }
+  return _readElderPref();
+}
 
 function getMode() {
-  return localStorage.getItem('mdpiece_mode') || 'standard';
+  return _readElderPref() ? 'senior' : 'standard';
 }
 
 function setMode(mode) {
-  const m = mode === 'senior' ? 'senior' : 'standard';
-  localStorage.setItem('mdpiece_mode', m);
+  const isElder = mode === 'senior';
+  const m = isElder ? 'senior' : 'standard';
+  // 雙向同步：新 key 與舊 key 都寫，方便其他既有程式碼讀取
+  localStorage.setItem(ELDER_LS_KEY, isElder ? '1' : '0');
+  localStorage.setItem(LEGACY_MODE_KEY, m);
+  // 同時掛 data-mode（既有 CSS）與 .elder-mode（新 CSS）
   document.documentElement.setAttribute('data-mode', m);
+  document.documentElement.classList.toggle('elder-mode', isElder);
   // 同步切換按鈕顯示（i18n 化：透過字典決定中/英文標籤）
   const t = (window.MDPiece_i18n && window.MDPiece_i18n.t) || ((k) => k);
-  const labelKey = m === 'senior' ? 'mode.toNormal' : 'mode.toSenior';
-  const fallback = m === 'senior' ? '切換為普通版' : '切換為年長版';
+  const labelKey = isElder ? 'mode.toNormal' : 'mode.toSenior';
+  const fallback = isElder ? '切換為普通版' : '切換為年長版';
   document.querySelectorAll('[data-mode-toggle]').forEach(function (el) {
     el.textContent = window.MDPiece_i18n ? t(labelKey) : fallback;
-    el.setAttribute('aria-pressed', m === 'senior' ? 'true' : 'false');
+    el.setAttribute('aria-pressed', isElder ? 'true' : 'false');
   });
+  // 廣播事件給其他元件（例如時間軸 Bento 需依模式調整 grid）
+  try {
+    window.dispatchEvent(new CustomEvent('mdpiece-elder-mode-change', {
+      detail: { elder: isElder },
+    }));
+  } catch (e) { /* ignore on old browsers */ }
 }
 
 function toggleMode() {
   setMode(getMode() === 'senior' ? 'standard' : 'senior');
 }
+
+// alias — 比較直觀的英文名
+function isElderMode() { return getMode() === 'senior'; }
+function toggleElderMode() { toggleMode(); }
 
 // ─── 照護模式（門診 / 住院）─────────────────────────────────
 // 跟 'senior/standard' 是兩個正交的維度：
@@ -234,7 +275,8 @@ window.addEventListener('mdpiece-lang-change', function() {
 });
 
 // 在 DOMContentLoaded 之前先把屬性掛上，避免閃爍
-document.documentElement.setAttribute('data-mode', getMode());
+// 同時處理 ?elder=1 query string，讓無障礙連結可一鍵分享長者模式
+setMode(_detectInitialElderMode() ? 'senior' : 'standard');
 
 // ─── 使用者狀態 ─────────────────────────────────────────────
 
