@@ -1,0 +1,101 @@
+# Asthma — reversible dynamics (hours scale)
+# Reference: GINA 2024 Global Strategy
+disease:
+  id: asthma
+  name: Asthma
+  short: Asthma
+  icd10: J45.909
+  dynamics_type: reversible
+  time_unit: hour
+
+baseline:
+  activity: 0.8            # airway inflammation index (0-10)
+  range: [0.0, 10.0]
+
+decay:
+  k: 0.25                  # fast decay (per hour)
+
+circadian:
+  amplitude: 0.6           # nocturnal worsening
+  phase_hours: 4           # peak ~04:00
+
+noise:
+  sigma: 0.08
+
+triggers:
+  - id: pollen_exposure
+    prob_per_day: 0.30
+    effect_mean: 2.0
+    effect_sigma: 0.5
+    duration_days: [0.2, 0.5]
+  - id: cold_air
+    prob_per_day: 0.15
+    effect_mean: 1.5
+    effect_sigma: 0.4
+    duration_days: [0.1, 0.3]
+  - id: exercise
+    prob_per_day: 0.40
+    effect_mean: 1.2
+    effect_sigma: 0.3
+    duration_days: [0.05, 0.2]
+  - id: viral_uri
+    prob_per_day: 0.012
+    effect_mean: 3.5
+    effect_sigma: 0.6
+    duration_days: [3, 7]
+
+flare:
+  threshold: 4.0
+  refractory_days: 0.5
+
+treatments:
+  - id: ics
+    class: controller
+    assignment_prob: 0.70
+    onset_days: 7
+    effect_magnitude: 1.5
+    half_life_days: 1
+  - id: laba
+    class: controller
+    assignment_prob: 0.40
+    onset_days: 2
+    effect_magnitude: 1.2
+    half_life_days: 0.5
+  - id: saba_rescue
+    class: rescue
+    assignment_prob: 0.95
+    onset_days: 0.05
+    effect_magnitude: 2.0
+    half_life_days: 0.2
+
+biomarkers:
+  peak_flow_lpm:
+    range: [100, 700]
+    formula: "max(100, 500 - 35*activity + 20*noise)"
+  fev1_pct_pred:
+    range: [20, 120]
+    formula: "max(20, 95 - 6*activity + 4*noise)"
+  feno_ppb:
+    range: [5, 200]
+    formula: "max(5, 15 + 10*activity + 5*noise)"
+  symptom_score:
+    range: [0, 5]
+    formula: "clip(activity * 0.5, 0, 5)"
+  saba_uses_per_day:
+    range: [0, 12]
+    formula: "max(0, activity - 1 + noise)"
+
+comorbidity:
+  - id: allergic_rhinitis
+    conditional_prob: 0.60
+  - id: eczema
+    conditional_prob: 0.25
+  - id: gerd
+    conditional_prob: 0.30
+
+demographics:
+  age:
+    mean: 35
+    sd: 18
+    range: [5, 80]
+  female_ratio: 0.55

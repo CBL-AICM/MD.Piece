@@ -1,0 +1,107 @@
+# Rheumatoid Arthritis (RA) — chronic_relapsing dynamics
+# Reference: Aletaha & Smolen, JAMA 2018; ACR/EULAR 2010 criteria
+disease:
+  id: rheumatoid_arthritis
+  name: Rheumatoid Arthritis
+  short: RA
+  icd10: M06.9
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:
+  activity: 2.5            # baseline immune activity score (arbitrary, 0-10)
+  range: [0.0, 10.0]
+
+decay:
+  k: 0.18                  # exponential decay rate towards baseline (per day)
+
+circadian:
+  amplitude: 0.15          # morning stiffness pattern
+  phase_hours: 6           # peak ~06:00
+
+noise:
+  sigma: 0.12              # daily gaussian noise
+
+triggers:
+  - id: infection
+    prob_per_day: 0.020
+    effect_mean: 4.5
+    effect_sigma: 0.8
+    duration_days: [4, 12]
+  - id: stress
+    prob_per_day: 0.030
+    effect_mean: 1.5
+    effect_sigma: 0.4
+    duration_days: [2, 5]
+  - id: cold_weather
+    prob_per_day: 0.04
+    effect_mean: 0.8
+    effect_sigma: 0.2
+    duration_days: [1, 3]
+  - id: poor_sleep
+    prob_per_day: 0.10
+    effect_mean: 0.6
+    effect_sigma: 0.15
+    duration_days: [1, 2]
+
+flare:
+  threshold: 5.0           # activity > threshold counted as flare
+  refractory_days: 14
+
+treatments:
+  - id: methotrexate
+    class: csDMARD
+    assignment_prob: 0.75
+    onset_days: 28
+    effect_magnitude: 0.7
+    half_life_days: 30
+  - id: tnf_inhibitor
+    class: bDMARD
+    assignment_prob: 0.30
+    onset_days: 14
+    effect_magnitude: 1.1
+    half_life_days: 30
+  - id: nsaid
+    class: symptomatic
+    assignment_prob: 0.60
+    onset_days: 1
+    effect_magnitude: 0.3
+    half_life_days: 5
+  - id: prednisone
+    class: corticosteroid
+    assignment_prob: 0.20
+    onset_days: 1
+    effect_magnitude: 0.6
+    half_life_days: 5
+
+biomarkers:
+  das28:
+    range: [0.0, 10.0]
+    formula: "1.6 + 0.8*activity + 0.05*noise"
+  crp_mg_L:
+    range: [0.0, 100.0]
+    formula: "max(0.1, 0.5 + 4.5*activity + 2.0*noise)"
+  esr_mm_hr:
+    range: [0.0, 140.0]
+    formula: "max(1.0, 5 + 7*activity + 3*noise)"
+  pain_vas:
+    range: [0, 10]
+    formula: "clip(0.5 + activity, 0, 10)"
+  morning_stiffness_min:
+    range: [0, 240]
+    formula: "max(0, 10 + 18*activity + 5*noise)"
+
+comorbidity:
+  - id: sjogren
+    conditional_prob: 0.15
+  - id: depression
+    conditional_prob: 0.30
+  - id: cardiovascular
+    conditional_prob: 0.25
+
+demographics:
+  age:
+    mean: 55
+    sd: 12
+    range: [18, 85]
+  female_ratio: 0.75
