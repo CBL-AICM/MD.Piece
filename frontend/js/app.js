@@ -3971,7 +3971,7 @@ function renderInpatientNowCard(ctx) {
     +       '<p class="ip-now-ward" id="ip-now-ward"></p>'
     +     '</div>'
     +   '</div>'
-    +   '<p class="ip-now-safe"><i data-lucide="shield-check" style="width:14px;height:14px"></i> 護理站隨時都在。需要時按下方綠色按鈕。</p>'
+    +   '<p class="ip-now-safe"><i data-lucide="shield-check" style="width:14px;height:14px"></i> 護理站隨時都在。需要時用下方「紀錄」按鈕回報症狀。</p>'
     + '</section>';
 }
 
