@@ -159,22 +159,74 @@ function refreshProxyBanner() {
 function _mobileTabSets() {
   return {
     outpatient: [
-      { page: 'home',        icon: 'home',                  labelKey: 'tab.home',        zh: '首頁', en: 'Home',     home: true },
-      { page: 'pieces',      icon: 'puzzle',                labelKey: 'tab.pieces',      zh: '碎片', en: 'Pieces' },
-      { page: 'quickadd',    icon: 'plus',                  labelKey: 'tab.quickadd',    zh: '紀錄', en: 'Log',      fab: true },
-      { page: 'previsit',    icon: 'clipboard-check',       labelKey: 'tab.previsit',    zh: '診前', en: 'Visit' },
-      { page: 'chat',        icon: 'message-circle-heart',  labelKey: 'tab.chat',        zh: '醫聊', en: 'Chat' },
-      { page: 'more',        icon: 'ellipsis',              labelKey: 'tab.more',        zh: '更多', en: 'More',     more: true },
+      { page: 'home',        icon: 'mdp-home',      labelKey: 'tab.home',        zh: '首頁', en: 'Home',     home: true },
+      { page: 'pieces',      icon: 'mdp-puzzle',    labelKey: 'tab.pieces',      zh: '碎片', en: 'Pieces' },
+      { page: 'quickadd',    icon: 'plus',          labelKey: 'tab.quickadd',    zh: '紀錄', en: 'Log',      fab: true },
+      { page: 'previsit',    icon: 'mdp-clipboard', labelKey: 'tab.previsit',    zh: '診前', en: 'Visit' },
+      { page: 'chat',        icon: 'mdp-chat',      labelKey: 'tab.chat',        zh: '醫聊', en: 'Chat' },
+      { page: 'more',        icon: 'mdp-more',      labelKey: 'tab.more',        zh: '更多', en: 'More',     more: true },
     ],
     inpatient: [
-      { page: 'home',        icon: 'home',                  labelKey: 'tab.home',        zh: '首頁',   en: 'Home',    home: true },
-      { page: 'admissions',  icon: 'bed-double',            labelKey: 'tab.admissions',  zh: '住院',   en: 'Stay' },
-      { page: 'quickadd',    icon: 'plus',                  labelKey: 'tab.quickadd',    zh: '紀錄',   en: 'Log',     fab: true },
-      { page: 'vitals',      icon: 'heart-pulse',           labelKey: 'tab.vitals',      zh: '量測',   en: 'Vitals' },
-      { page: 'memo',        icon: 'notebook-pen',          labelKey: 'tab.memo',        zh: 'Memo',   en: 'Memo' },
-      { page: 'more',        icon: 'ellipsis',              labelKey: 'tab.more',        zh: '更多',   en: 'More',    more: true },
+      { page: 'home',        icon: 'mdp-home',      labelKey: 'tab.home',        zh: '首頁',   en: 'Home',    home: true },
+      { page: 'admissions',  icon: 'mdp-bed',       labelKey: 'tab.admissions',  zh: '住院',   en: 'Stay' },
+      { page: 'quickadd',    icon: 'plus',          labelKey: 'tab.quickadd',    zh: '紀錄',   en: 'Log',     fab: true },
+      { page: 'vitals',      icon: 'mdp-pulse',     labelKey: 'tab.vitals',      zh: '量測',   en: 'Vitals' },
+      { page: 'memo',        icon: 'mdp-memo',      labelKey: 'tab.memo',        zh: 'Memo',   en: 'Memo' },
+      { page: 'more',        icon: 'mdp-more',      labelKey: 'tab.more',        zh: '更多',   en: 'More',    more: true },
     ],
   };
+}
+
+// 自家品牌底部 tab icon — 24×24 viewBox，雙路徑：
+//   .ic-stroke 永遠顯示（線稿）；.ic-accent 預設透明，被選中時點亮（duotone 填色）
+// 每顆 icon 都在右下角埋一個 MD.Piece「碎片」缺口（class="ic-piece"），是品牌簽名。
+// 包在函式裡是因為 applyCareMode() 在 app.js 頂層就會被呼叫（line 63），那時 var 還沒指派；
+// function declaration 會被完全 hoist，所以放在函式裡才會在第一次 render 就有值。
+function _mdpNavIconSvg(name, size) {
+  var ICONS = {
+    'mdp-home':
+      '<path class="ic-stroke" d="M3.5 11.5 L12 4 L20.5 11.5 V20 a1 1 0 0 1-1 1 H4.5 a1 1 0 0 1-1-1 Z" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<path class="ic-accent" d="M4.2 11 L12 4.3 L19.8 11 V13.2 H4.2 Z"/>' +
+      '<path class="ic-piece" d="M14 16 h3.5 v3.5 a0.8 0.8 0 0 1-0.8 0.8 h-2.7 Z" fill="none" stroke-width="1.6" stroke-linejoin="round"/>',
+    'mdp-puzzle':
+      '<path class="ic-stroke" d="M9 4 h2 a1 1 0 0 1 1 1 v1.5 a1.5 1.5 0 0 0 3 0 V5 a1 1 0 0 1 1-1 h2.5 a1 1 0 0 1 1 1 v3.5 a1 1 0 0 0 1 1 h0 a1.5 1.5 0 0 1 0 3 h0 a1 1 0 0 0-1 1 V16 a1 1 0 0 1-1 1 h-3.5 a1 1 0 0 0-1 1 V20 a1 1 0 0 1-1 1 H5 a1 1 0 0 1-1-1 v-3.5 a1 1 0 0 1 1-1 h1.5 a1.5 1.5 0 0 0 0-3 H5 a1 1 0 0 1-1-1 V8 a1 1 0 0 1 1-1 h3 a1 1 0 0 1 1 -1 Z" fill="none" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<circle class="ic-accent" cx="12" cy="12" r="3.4"/>',
+    'mdp-bed':
+      // 側視床：headboard 左 / 床框 / 床面分隔 / 枕頭方塊；mattress 為 accent fill
+      '<path class="ic-stroke" d="M3 10 V19 H21 V14 H3" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<rect class="ic-stroke" x="4.8" y="11" width="5.4" height="3" rx="1.3" fill="none" stroke-width="1.6"/>' +
+      '<path class="ic-accent" d="M3.6 14.5 H20.4 V18.4 H3.6 Z"/>' +
+      '<path class="ic-piece" d="M16.4 16.2 h3 v2 a0.7 0.7 0 0 1-0.7 0.7 h-2.3 Z" fill="none" stroke-width="1.4" stroke-linejoin="round"/>',
+    'mdp-pulse':
+      '<path class="ic-stroke" d="M12 20 s-7-4.5-7-10 a4 4 0 0 1 7-2.6 a4 4 0 0 1 7 2.6 c0 1.2-0.35 2.3-0.9 3.3" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<polyline class="ic-stroke" points="3,13 7,13 9,10 11,16 13,12 16,14 21,14" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<path class="ic-accent" d="M12 18.4 c-3-1.7-5.5-4.3-5.5-7.7 a2.6 2.6 0 0 1 5.5-1.4 a2.6 2.6 0 0 1 4.6 0.9"/>',
+    'mdp-memo':
+      '<path class="ic-stroke" d="M5 4 h9 l4 4 V19 a1.5 1.5 0 0 1-1.5 1.5 H5 a1 1 0 0 1-1-1 V5 a1 1 0 0 1 1-1 Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>' +
+      '<path class="ic-stroke" d="M14 4 V8 h4" fill="none" stroke-width="1.8" stroke-linejoin="round"/>' +
+      '<path class="ic-accent" d="M5 5 h8.6 L17.6 9 V14 H5 Z"/>' +
+      '<line class="ic-stroke" x1="7.5" y1="16.5" x2="14" y2="16.5" stroke-width="1.6" stroke-linecap="round"/>' +
+      '<line class="ic-stroke" x1="7.5" y1="13" x2="11" y2="13" stroke-width="1.6" stroke-linecap="round"/>',
+    'mdp-clipboard':
+      '<rect class="ic-stroke" x="5" y="5" width="14" height="16" rx="1.5" fill="none" stroke-width="1.8"/>' +
+      '<rect class="ic-stroke" x="9" y="3" width="6" height="4" rx="1" fill="none" stroke-width="1.8"/>' +
+      '<path class="ic-accent" d="M6 7 h12 V12.5 H6 Z"/>' +
+      '<polyline class="ic-stroke" points="8.5,14.5 11,17 16,12" fill="none" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/>',
+    'mdp-chat':
+      '<path class="ic-stroke" d="M4 6 a2 2 0 0 1 2-2 h12 a2 2 0 0 1 2 2 v9 a2 2 0 0 1-2 2 h-7 l-4 3.5 V17 H6 a2 2 0 0 1-2-2 Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>' +
+      '<path class="ic-accent" d="M12 13.5 c-1.3-0.9-3-2.1-3-3.6 a1.6 1.6 0 0 1 3-0.8 a1.6 1.6 0 0 1 3 0.8 c0 1.5-1.7 2.7-3 3.6 Z"/>',
+    'mdp-more':
+      '<circle class="ic-stroke" cx="6"  cy="12" r="1.7" fill="none" stroke-width="1.8"/>' +
+      '<circle class="ic-stroke" cx="12" cy="12" r="1.7" fill="none" stroke-width="1.8"/>' +
+      '<circle class="ic-stroke" cx="18" cy="12" r="1.7" fill="none" stroke-width="1.8"/>' +
+      '<circle class="ic-accent" cx="6"  cy="12" r="1.4"/>' +
+      '<circle class="ic-accent" cx="12" cy="12" r="1.4"/>' +
+      '<circle class="ic-accent" cx="18" cy="12" r="1.4"/>',
+  };
+  var s = size || 24;
+  var body = ICONS[name];
+  if (!body) return '';
+  return '<svg class="mdp-nav-svg" viewBox="0 0 24 24" width="' + s + '" height="' + s + '" aria-hidden="true" focusable="false">' + body + '</svg>';
 }
 
 function renderMobileTabbar() {
@@ -193,20 +245,16 @@ function renderMobileTabbar() {
         +   '<span class="mtab-fab-core"><i data-lucide="' + t.icon + '" style="width:22px;height:22px"></i></span>'
         +   '<span class="mtab-fab-label" data-i18n="' + t.labelKey + '">' + label + '</span>'
         + '</button>';
-    } else if (t.more) {
-      html += ''
-        + '<button class="mtab" data-mtab="more" onclick="openMobileMore(this)" type="button">'
-        +   '<span class="mtab-icon"><i data-lucide="' + t.icon + '" style="width:20px;height:20px"></i></span>'
-        +   '<span class="mtab-label" data-i18n="' + t.labelKey + '">' + label + '</span>'
-        +   '<span class="mtab-dot"></span>'
-        + '</button>';
     } else {
-      var cls = 'mtab' + (t.home ? ' mtab-home' : '');
+      var cls = 'mtab' + (t.home ? ' mtab-home' : '') + (t.more ? ' mtab-more' : '');
+      var onclick = t.more ? 'openMobileMore(this)' : ('mobileTabTo(\'' + t.page + '\', this)');
+      var dataKey = t.more ? 'more' : t.page;
       html += ''
-        + '<button class="' + cls + '" data-mtab="' + t.page + '" onclick="mobileTabTo(\'' + t.page + '\', this)" type="button">'
-        +   '<span class="mtab-icon"><i data-lucide="' + t.icon + '" style="width:20px;height:20px"></i></span>'
-        +   '<span class="mtab-label" data-i18n="' + t.labelKey + '">' + label + '</span>'
-        +   '<span class="mtab-dot"></span>'
+        + '<button class="' + cls + '" data-mtab="' + dataKey + '" onclick="' + onclick + '" type="button">'
+        +   '<span class="mtab-pill">'
+        +     '<span class="mtab-icon">' + _mdpNavIconSvg(t.icon, 22) + '</span>'
+        +     '<span class="mtab-label" data-i18n="' + t.labelKey + '">' + label + '</span>'
+        +   '</span>'
         + '</button>';
     }
   });
