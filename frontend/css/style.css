@@ -13991,21 +13991,53 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
 .ip-now-pulse {
   position: absolute;
   top: 18px; right: 22px;
-  width: 28px; height: 28px;
-  pointer-events: none;
+  width: 32px; height: 32px;
+  pointer-events: auto;
+  cursor: help;
 }
-.ip-now-pulse span {
+.ip-now-pulse-ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   border: 2px solid var(--ip-mint);
   opacity: 0;
-  animation: ipPulse 3.2s ease-out infinite;
 }
-.ip-now-pulse span:nth-child(2) { animation-delay: 1.6s; }
+.ip-now-pulse-dot {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 10px; height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--ip-mint);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.04), 0 0 12px var(--ip-mint);
+}
+.ip-now-pulse[data-state="active"] .ip-now-pulse-ring {
+  animation: ipPulse 2.4s cubic-bezier(.2,.8,.4,1) infinite;
+}
+.ip-now-pulse[data-state="active"] .ip-now-pulse-ring:nth-child(2) {
+  animation-delay: 1.2s;
+}
+.ip-now-pulse[data-state="active"] .ip-now-pulse-dot {
+  animation: ipPulseDot 2.4s ease-in-out infinite;
+}
+.ip-now-pulse[data-state="idle"] .ip-now-pulse-dot {
+  background: rgba(127,150,170,0.55);
+  box-shadow: none;
+}
+.ip-now-pulse[data-state="idle"] .ip-now-pulse-ring {
+  border-color: rgba(127,150,170,0.35);
+  opacity: 0.45;
+  transform: scale(0.85);
+}
+.ip-now-pulse[data-state="idle"] .ip-now-pulse-ring:nth-child(2) { display: none; }
 @keyframes ipPulse {
-  0%   { transform: scale(0.6); opacity: 0.8; }
-  100% { transform: scale(1.8); opacity: 0;   }
+  0%   { transform: scale(0.55); opacity: 0.9; border-width: 2.5px; }
+  70%  { opacity: 0.15; }
+  100% { transform: scale(2.1);  opacity: 0;   border-width: 1px; }
+}
+@keyframes ipPulseDot {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 2px rgba(0,0,0,0.04), 0 0 10px var(--ip-mint); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 0 2px rgba(0,0,0,0.04), 0 0 16px var(--ip-mint); }
 }
 .ip-now-eyebrow {
   display: inline-block;
