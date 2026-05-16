@@ -4048,6 +4048,7 @@ function renderInpatientRoundsCard() {
 }
 
 // 7. 病情趨勢 (Trend Chips) — 7-day sparklines ─────────────────────────────
+// 趨勢 chip 變成可點 — 沒紀錄時點下開「快速 log」sheet 讓使用者直接記今天的疲勞 / 心情 / 痛。
 function renderInpatientTrendChips() {
   var chips = [
     { key: 'pain',    label: '疼痛', icon: 'zap',              color: 'coral'  },
@@ -4056,7 +4057,7 @@ function renderInpatientTrendChips() {
   ];
   var html = chips.map(function(c) {
     return ''
-      + '<div class="ip-trend-chip ip-trend-' + c.color + '" data-key="' + c.key + '">'
+      + '<button type="button" class="ip-trend-chip ip-trend-' + c.color + '" data-key="' + c.key + '" onclick="openInpatientQuickLog(\'' + c.key + '\')" aria-label="記錄' + c.label + '">'
       +   '<span class="ip-trend-head">'
       +     '<i data-lucide="' + c.icon + '"></i>'
       +     '<span class="ip-trend-label">' + c.label + '</span>'
@@ -4065,28 +4066,149 @@ function renderInpatientTrendChips() {
       +   '<svg class="ip-trend-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">'
       +     '<polyline id="ip-trend-line-' + c.key + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="" />'
       +   '</svg>'
-      +   '<span class="ip-trend-foot" id="ip-trend-foot-' + c.key + '">7 天平均 —</span>'
-      + '</div>';
+      +   '<span class="ip-trend-foot" id="ip-trend-foot-' + c.key + '">點一下記今天</span>'
+      + '</button>';
   }).join('');
   return ''
     + '<section class="ip-trends" aria-label="病情趨勢">'
     +   '<header class="ip-section-head">'
     +     '<span class="ip-num">07</span>'
     +     '<h3>這幾天的變化</h3>'
-    +     '<span class="ip-section-sub">不只看今天，看一週的方向</span>'
+    +     '<span class="ip-section-sub">點任一張記今天</span>'
     +   '</header>'
     +   '<div class="ip-trend-grid">' + html + '</div>'
     + '</section>';
 }
 
+// 快速 log sheet — 給 pain/fatigue/mood 三類用。1-5 級或表情點一下就送。
+function openInpatientQuickLog(key) {
+  var existing = document.getElementById('ip-quicklog-sheet');
+  if (existing) existing.remove();
+  var cfg = {
+    pain:    { title: '今天疼痛多嚴重？', label: '疼痛強度',  emojis: ['😌','🙂','😣','😖','😫'], color: 'coral' },
+    fatigue: { title: '今天有多累？',     label: '疲勞強度',  emojis: ['🔋','⚡','😴','😵','😶'], color: 'sky'   },
+    mood:    { title: '今天心情如何？',   label: '心情分數',  emojis: ['😢','😟','😐','🙂','😊'], color: 'mint'  },
+  }[key];
+  if (!cfg) return;
+  // 按鈕：1~5 分 + emoji
+  var btns = '';
+  for (var i = 1; i <= 5; i++) {
+    btns += '<button type="button" class="ip-ql-num ip-ql-' + cfg.color + '" data-v="' + i + '" onclick="submitInpatientQuickLog(\'' + key + '\',' + i + ')">'
+         + '<span class="ip-ql-emoji">' + cfg.emojis[i-1] + '</span>'
+         + '<span class="ip-ql-n">' + i + '</span>'
+         + '</button>';
+  }
+  var sheet = document.createElement('div');
+  sheet.id = 'ip-quicklog-sheet';
+  sheet.className = 'ip-prep-sheet';
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeInpatientQuickLog()"></div>'
+    + '<div class="ip-prep-panel ip-ql-panel" role="dialog" aria-label="快速紀錄">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">' + cfg.title + '</span>'
+    +       '<span class="ip-prep-when-sub">' + cfg.label + ' · 1 = 最輕微 · 5 = 最嚴重</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeInpatientQuickLog()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div class="ip-ql-grid">' + btns + '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeInpatientQuickLog() {
+  var sheet = document.getElementById('ip-quicklog-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+function submitInpatientQuickLog(key, value) {
+  if (key === 'mood') {
+    // 心情送後端 /emotions/log；後端失敗時 fallback 存 local，趨勢線之後接後端就會帶到
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    if (pid) {
+      fetch(API + '/emotions/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: pid, score: value / 5, note: '住院模式快速紀錄' }),
+      }).catch(function() {});
+    }
+    // 同時寫 local 一筆讓 sparkline 立刻有反應
+    _ipLocalMoodPush(value);
+  } else {
+    // pain/fatigue 走 saveSymptomEntry (跟 SOS 同流)
+    if (typeof saveSymptomEntry === 'function') {
+      saveSymptomEntry({
+        id: 'ql_' + Date.now().toString(36),
+        categoryId: key === 'pain' ? 'headache' : 'fatigue',
+        intensity: value,
+        frequency: 1,
+        notes: '住院模式快速紀錄',
+        recordedAt: new Date().toISOString(),
+      });
+    }
+  }
+  if (typeof showToast === 'function') showToast('已記下今天的' + (key==='pain'?'疼痛':key==='fatigue'?'疲勞':'心情'), 'success');
+  closeInpatientQuickLog();
+  loadInpatientTrendSparklines();
+}
+
+// 本地心情快取（給 sparkline）— 後端來資料時會被覆蓋
+function _ipLocalMoodPush(value) {
+  try {
+    var key = 'mdpiece_inpatient_mood_local';
+    var list = JSON.parse(localStorage.getItem(key) || '[]') || [];
+    list.push({ value: value, at: new Date().toISOString() });
+    // 留 30 天
+    var cutoff = Date.now() - 30 * 86400000;
+    list = list.filter(function(x) { return new Date(x.at).getTime() > cutoff; });
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch (e) {}
+}
+function _ipLocalMoodDaily() {
+  try {
+    var list = JSON.parse(localStorage.getItem('mdpiece_inpatient_mood_local') || '[]') || [];
+    var bucket = {};
+    var today = new Date();
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(today); d.setDate(d.getDate() - i);
+      bucket[d.toISOString().slice(0,10)] = { sum: 0, n: 0 };
+    }
+    list.forEach(function(e) {
+      var k = String(e.at).slice(0,10);
+      if (bucket[k]) { bucket[k].sum += e.value; bucket[k].n += 1; }
+    });
+    return Object.keys(bucket).sort().map(function(k) {
+      var b = bucket[k];
+      return b.n ? b.sum / b.n * 2 : null; // value 1-5 → 0-10 scale to match emotions API
+    });
+  } catch (e) { return []; }
+}
+
 // 8. 出院進度 (Discharge Stepper) ──────────────────────────────────────────
+// 出院進度 — 4 步：入院日期 / 感覺好一點 / 排定出院 / 出院（已出院）。
+// step 0 (入院日期) ：由 admit_date 自動完成
+// step 1 (感覺好一點)：病人自己點「我感覺好一點了」推進；存 localStorage per admission
+// step 2 (排定出院)  ：由 discharge_date 出現自動完成（病人也可以點「排定出院」開 prompt 設日期）
+// step 3 (出院)      ：到了 discharge_date 或病人點「已出院」 → PUT status=discharged
 function renderInpatientDischargeStepper() {
-  var steps = ['入住', '治療', '觀察', '出院'];
+  var steps = [
+    { id: 'admit',    label: '入院日期', icon: 'log-in' },
+    { id: 'feeling',  label: '感覺好一點', icon: 'heart' },
+    { id: 'planned',  label: '排定出院', icon: 'calendar-check-2' },
+    { id: 'done',     label: '出院',     icon: 'log-out' },
+  ];
   var html = steps.map(function(s, i) {
     return ''
-      + '<li class="ip-step" data-step="' + i + '">'
-      +   '<span class="ip-step-dot"><i data-lucide="check" style="width:12px;height:12px"></i></span>'
-      +   '<span class="ip-step-label">' + s + '</span>'
+      + '<li class="ip-step" data-step="' + i + '" data-step-id="' + s.id + '">'
+      +   '<button type="button" class="ip-step-dot" onclick="onInpatientStepClick(\'' + s.id + '\')" aria-label="' + s.label + '">'
+      +     '<i data-lucide="' + s.icon + '" style="width:14px;height:14px"></i>'
+      +     '<i data-lucide="check" style="width:14px;height:14px" class="ip-step-check"></i>'
+      +   '</button>'
+      +   '<span class="ip-step-label">' + s.label + '</span>'
+      +   '<span class="ip-step-sub" id="ip-step-sub-' + s.id + '"></span>'
       + '</li>';
   }).join('');
   return ''
@@ -4097,7 +4219,76 @@ function renderInpatientDischargeStepper() {
     +     '<span class="ip-section-sub" id="ip-discharge-eta">—</span>'
     +   '</header>'
     +   '<ol class="ip-steps" id="ip-steps">' + html + '</ol>'
+    +   '<p class="ip-discharge-hint" id="ip-discharge-hint">點任一步看詳情或更新狀態。</p>'
     + '</section>';
+}
+
+// 感覺好一點 — local 每個 admission 獨立
+function _ipFeelingKey(admId) { return 'mdpiece_inpatient_feeling_' + (admId || 'default'); }
+function _ipGetFeelingState(admId) {
+  try { return JSON.parse(localStorage.getItem(_ipFeelingKey(admId)) || 'null'); }
+  catch (e) { return null; }
+}
+function _ipSetFeelingState(admId, state) {
+  if (state) localStorage.setItem(_ipFeelingKey(admId), JSON.stringify(state));
+  else localStorage.removeItem(_ipFeelingKey(admId));
+}
+
+// 推進入「感覺好一點」step
+function onInpatientStepClick(stepId) {
+  var admId = _ipActiveAdmissionId;
+  if (!admId) {
+    if (typeof showToast === 'function') showToast('沒有進行中的住院，無法更新進度', 'info');
+    return;
+  }
+  if (stepId === 'admit') {
+    if (typeof showToast === 'function') showToast('入院日期已自動帶入', 'info');
+    return;
+  }
+  if (stepId === 'feeling') {
+    var cur = _ipGetFeelingState(admId);
+    if (cur && cur.at) {
+      if (!confirm('已標記過「感覺好一點」於 ' + cur.at.slice(0, 10) + '\n要取消嗎？')) return;
+      _ipSetFeelingState(admId, null);
+      if (typeof showToast === 'function') showToast('已取消標記', 'success');
+    } else {
+      _ipSetFeelingState(admId, { at: new Date().toISOString() });
+      if (typeof showToast === 'function') showToast('已記下你的感受 — 醫師查房時可以提', 'success');
+    }
+    loadInpatientActiveAdmission();
+    return;
+  }
+  if (stepId === 'planned') {
+    var iso = prompt('排定出院日期（YYYY-MM-DD）：', new Date().toISOString().slice(0,10));
+    if (!iso) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso.trim())) { if (typeof showToast === 'function') showToast('格式不對', 'error'); return; }
+    fetch(API + '/admissions/' + encodeURIComponent(admId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discharge_date: iso.trim() + 'T10:00' }),
+    })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function() {
+        if (typeof showToast === 'function') showToast('已排定出院 ' + iso, 'success');
+        loadInpatientActiveAdmission();
+      })
+      .catch(function(e) { if (typeof showToast === 'function') showToast('更新失敗：' + e.message, 'error'); });
+    return;
+  }
+  if (stepId === 'done') {
+    if (!confirm('標記為「已出院」？\n會把這次住院關閉，住院模式相關區塊改成空狀態。')) return;
+    fetch(API + '/admissions/' + encodeURIComponent(admId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'discharged', discharge_date: new Date().toISOString().slice(0, 19) }),
+    })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function() {
+        if (typeof showToast === 'function') showToast('恭喜出院！記得到「我的碎片」看完整摘要', 'success');
+        loadInpatientActiveAdmission();
+      })
+      .catch(function(e) { if (typeof showToast === 'function') showToast('結案失敗：' + e.message, 'error'); });
+  }
 }
 
 // 9. 住院衛教 (Inpatient Education) ─────────────────────────────────────────
@@ -4205,6 +4396,39 @@ var _IP_EDU_TOPICS = [
     '【立刻叫】持續性嘔吐 / 高燒 (>38.5°C) / 意識模糊 / 半邊手腳沒力',
     '【可以晚一點】輕微痠痛 / 拉肚子一次 / 失眠想換床 — 等下次查房或下班護理過去時說',
     '【記住】沒人會嫌你叫太多。寧可叫了沒事，不要忍著出事。',
+  ]},
+  // ── 經濟支援 / 保險 ──────────────────────────────────────
+  { id: 'insurance', icon: 'shield-check',   title: '保險申請 — 重點清單',           tldr: '住院/手術通常 30 天內可申請；申請文件要正本+影本各一份。', body: [
+    '【哪些可申請】商業醫療險 (日額/實支實付)、防癌險、重大傷病險、意外險，視保單內容而定。',
+    '【期限】住院/手術理賠通常 30 天內提出最順，但實際依保單條款；超過 2 年才申請可能會被拒。',
+    '【需要文件】① 診斷證明書 (蓋章) ② 醫療收據正本 ③ 病歷摘要 ④ 健保收費明細 (申報用)',
+    '【關鍵字】請醫師在診斷證明上明確寫「主診斷」「手術名稱」「住院起訖日」「ICD-10 碼」— 之後申請理賠才不會被退件。',
+    '【建議】① 出院前把上述文件辦齊 ② 收據建議申請 2-3 份正本 (健保署/商業險公司各一)。',
+    '【小提醒】住院期間若有複雜手術或加護病房，事後申請可能涉及多家保險公司。先把保單列清單再開始辦。',
+  ]},
+  { id: 'studentIns', icon: 'school',        title: '學生平安保險 / 兒童學保',       tldr: '在校學生意外、住院皆可申請，給付不大但容易忽略。', body: [
+    '【誰適用】幼稚園 ~ 大學在學學生 (含夜校)，學校統一加保。',
+    '【可申請】① 意外住院 (每日定額) ② 意外醫療 (門診/手術 實支實付，上限不高) ③ 死殘給付',
+    '【申請流程】① 跟學校註冊組/輔導室拿申請書 ② 附診斷證明、收據影本 ③ 學校統一送承保公司',
+    '【期限】事故 2 年內。',
+    '【小提醒】學保不能單獨申請住院定額 — 必須是「意外」造成的住院。生病住院通常不適用。',
+    '【兒童保險】很多家長為孩子另保的「兒童保險」會包含醫療日額、燒燙傷、重大疾病、手術等，記得也一併申請。',
+  ]},
+  { id: 'illness14',  icon: 'calendar-clock',title: '14 天住院理賠 / 重要時間點',     tldr: '商業險常用門檻：住院 14 天、30 天、90 天 ...，每階段有不同給付。', body: [
+    '【為什麼是 14 天】很多商業保單會設「住院 14 天內」是基本給付、超過 14 天進入「長期住院加倍」等加成。',
+    '【常見階段】③ < 7 天：基本日額 ④ 8-14 天：加成日額 ⑤ 15-30 天：再加成 ⑥ > 30 天：可能觸發殘廢/重大傷病條款。',
+    '【建議追蹤】用「住院第 N 天」(NowCard 已自動算) 對應保單條款，避免錯過給付段。',
+    '【加護病房 ICU】通常另有獨立加成；要記下入住/轉出 ICU 的日期。',
+    '【慢性 / 長期】超過 30 天的住院，可申請「重大傷病卡」(健保署)，減免部分負擔。',
+  ]},
+  { id: 'social',     icon: 'heart-handshake', title: '社會資源 — 你可能不知道的補助', tldr: '健保 +縣市政府 + 民間基金會三層補助，住院期間可申請。', body: [
+    '【健保署】重大傷病卡、低收入戶醫療補助、健保部分負擔減免。',
+    '【縣市衛生局】依縣市不同：失能津貼、長照 2.0、輔具補助、罕見疾病補助。',
+    '【社福機構】① 中華民國紅十字會 (急難救助) ② 兒童福利聯盟 (兒童醫療) ③ 罕病基金會 ④ 創世基金會 (植物人/老人) ⑤ 各疾病協會 (癌症、慢性病等)',
+    '【醫院社工】最快的入口！住院期間請護理站轉介社工師，社工會幫你評估能申請的所有資源。',
+    '【就業 / 經濟】① 勞保傷病給付 (受僱者) ② 國保 ③ 子女教育補助 ④ 房租 / 水電費減免 ⑤ 工會急難救助',
+    '【容易忽略】① 看護費補助 (部分縣市) ② 交通車費 (洗腎/化療接送) ③ 慢性病連續處方箋 (省掛號費)',
+    '【建議做法】住院期間花 10 分鐘列「家庭收入/支出清單」交給社工，他們能評估你能領的補助組合。',
   ]},
 ];
 var _IP_EDU_EXPANDED = {}; // 主題 id → boolean
@@ -4757,30 +4981,47 @@ function _fillDayProgress(items) {
 
 function _fillDischargeStepper(active) {
   var eta = document.getElementById('ip-discharge-eta');
+  var hint = document.getElementById('ip-discharge-hint');
   if (!active) {
     document.querySelectorAll('#ip-steps .ip-step').forEach(function(li) { li.classList.remove('active','done'); });
     if (eta) eta.textContent = '—';
+    if (hint) hint.textContent = '尚無進行中的住院。';
     return;
   }
-  // 簡化判定：active + 還沒到預估出院日 → 「治療」階段；最後 24h → 「觀察」；已 discharged → 「出院」
-  var stepIdx;
-  if (active.status === 'discharged') stepIdx = 3;
-  else if (active.discharge_date) {
-    var dd = new Date(active.discharge_date).getTime();
-    var diffH = (dd - Date.now()) / 3600000;
-    if (diffH < 24) stepIdx = 2;
-    else stepIdx = 1;
-  } else {
-    stepIdx = 1; // 治療階段
-  }
-  document.querySelectorAll('#ip-steps .ip-step').forEach(function(li, i) {
-    li.classList.toggle('done', i < stepIdx);
-    li.classList.toggle('active', i === stepIdx);
+  var feeling = _ipGetFeelingState(active.id);
+  // 4 個 step：admit / feeling / planned / done
+  // - admit: admit_date 有 → done
+  // - feeling: 病人標記 → done
+  // - planned: discharge_date 已設 → done；今天就是 discharge_date → active
+  // - done: status=discharged → done
+  var doneSet = {
+    admit:   !!active.admit_date,
+    feeling: !!feeling,
+    planned: !!active.discharge_date,
+    done:    active.status === 'discharged',
+  };
+  // active 階段：第一個沒 done 的；全 done → 最後一個 active
+  var stepOrder = ['admit','feeling','planned','done'];
+  var activeIdx = stepOrder.findIndex(function(s) { return !doneSet[s]; });
+  if (activeIdx === -1) activeIdx = stepOrder.length - 1;
+  document.querySelectorAll('#ip-steps .ip-step').forEach(function(li) {
+    var id = li.dataset.stepId;
+    li.classList.toggle('done',   doneSet[id]);
+    li.classList.toggle('active', stepOrder[activeIdx] === id && !doneSet[id]);
+    // 每步的 sub-text
+    var sub = li.querySelector('.ip-step-sub');
+    if (!sub) return;
+    if (id === 'admit')        sub.textContent = active.admit_date ? active.admit_date.slice(0,10) : '—';
+    else if (id === 'feeling') sub.textContent = feeling ? feeling.at.slice(5,10).replace('-','/') : '我感覺好一點時點這';
+    else if (id === 'planned') sub.textContent = active.discharge_date ? active.discharge_date.slice(0,10) : '排定出院日';
+    else if (id === 'done')    sub.textContent = active.status === 'discharged' ? '已出院' : '出院當天點這';
   });
   if (eta) {
-    if (active.discharge_date) eta.textContent = '預計出院 ' + active.discharge_date.slice(0, 10);
-    else eta.textContent = '預計出院日未定';
+    if (active.status === 'discharged') eta.textContent = '已結案';
+    else if (active.discharge_date) eta.textContent = '預計出院 ' + active.discharge_date.slice(0, 10);
+    else eta.textContent = '尚未排定出院日';
   }
+  if (hint) hint.textContent = '點任一步看詳情或更新狀態。';
 }
 
 // 7 日趨勢 — 痛 / 累 / 心情
@@ -4792,17 +5033,25 @@ function loadInpatientTrendSparklines() {
   var painCats = ['headache','joint','muscle','neuralgia','chest','dizziness','vertigo'];
   _drawSparkline('pain', _aggDaily(syms, function(e) { return painCats.indexOf(e.categoryId) !== -1 ? (e.intensity || 0) : null; }));
   _drawSparkline('fatigue', _aggDaily(syms, function(e) { return e.categoryId === 'fatigue' ? (e.intensity || 0) : null; }));
-  // 心情：後端 daily，欄位 average_score (0..1)；後端拉不到時退回空
+  // 心情：先用本地快速 log 暫填，再拉後端 daily 覆寫（後端拉不到時保留 local 版）。
+  // 後端回應 average_score 0..1 → 乘 10 對齊 local 1-5*2 = 2-10 的 scale。
+  var localMood = _ipLocalMoodDaily();
+  _drawSparkline('mood', localMood);
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-  if (!pid) { _drawSparkline('mood', []); return; }
+  if (!pid) return;
   fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      var ct = r.headers.get('content-type') || '';
+      if (!r.ok || ct.indexOf('json') === -1) throw new Error('non-json');
+      return r.json();
+    })
     .then(function(data) {
       var daily = (data && data.daily) || [];
+      if (!daily.length) return; // 後端沒資料就不蓋 local
       var vals = daily.map(function(d) { return (d.average_score != null) ? d.average_score * 10 : null; });
       _drawSparkline('mood', vals);
     })
-    .catch(function() { _drawSparkline('mood', []); });
+    .catch(function() { /* 保留 local 版 */ });
 }
 
 function _aggDaily(entries, picker) {
@@ -4832,8 +5081,8 @@ function _drawSparkline(key, vals) {
   var clean = vals.filter(function(v) { return v != null; });
   if (!clean.length) {
     line.setAttribute('points', '');
-    if (arrow) arrow.textContent = '—';
-    if (foot) foot.textContent = '7 天內沒紀錄';
+    if (arrow) { arrow.textContent = '＋'; arrow.dataset.trend = 'empty'; }
+    if (foot) foot.textContent = '點一下記今天';
     return;
   }
   var max = Math.max.apply(null, clean);

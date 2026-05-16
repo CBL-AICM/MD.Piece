@@ -13699,12 +13699,13 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   position: relative;
   padding-bottom: 20px;
 }
-/* 淺色模式校正：把半透明白換成半透明 navy */
+/* 淺色模式校正：把半透明白換成不透明度更高的 navy（55% 在白底太淺，看不清楚）。 */
 #app-wrapper[data-theme="light"] .home-inpatient {
-  --ip-bg:      rgba(31, 61, 88, 0.04);
-  --ip-surface: rgba(31, 61, 88, 0.05);
-  --ip-border:  rgba(31, 61, 88, 0.12);
-  --ip-muted:   rgba(31, 61, 88, 0.55);
+  --ip-bg:      rgba(31, 61, 88, 0.05);
+  --ip-surface: #FFFFFF;
+  --ip-border:  rgba(31, 61, 88, 0.16);
+  --ip-muted:   rgba(31, 61, 88, 0.72);
+  --ip-dim:     #4A6478;
 }
 
 /* Section header 共用 */
@@ -14649,25 +14650,115 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   border-radius: 50%;
   background: var(--ip-bg);
   border: 2px solid var(--ip-border);
-  color: transparent;
+  color: var(--ip-muted);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: transform .15s ease, box-shadow .2s ease;
 }
+.ip-step-dot:active { transform: scale(0.92); }
+.ip-step-dot:hover {
+  border-color: var(--ip-mint);
+  box-shadow: 0 0 0 3px rgba(127,231,217,0.16);
+}
+.ip-step-dot .ip-step-check { display: none; }
 .ip-step-label {
   font-size: 0.78rem;
+  color: var(--ip-text);
+  font-weight: 500;
+  text-align: center;
+}
+.ip-step-sub {
+  font-size: 0.66rem;
   color: var(--ip-muted);
+  letter-spacing: 0.2px;
+  text-align: center;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .ip-step.done .ip-step-dot {
   background: var(--ip-sage);
   border-color: var(--ip-sage);
   color: #0F1A2E;
 }
+/* lucide.createIcons 把 <i data-lucide> 換成 <svg>，class 會保留；用 :not(.ip-step-check) 對 svg 也有效。 */
+.ip-step.done .ip-step-dot > :not(.ip-step-check) { display: none; }
+.ip-step.done .ip-step-dot .ip-step-check { display: inline-flex; }
 .ip-step.done .ip-step-label { color: var(--ip-dim); }
 .ip-step.active .ip-step-dot {
   background: var(--ip-mint);
   border-color: var(--ip-mint);
   color: #0F1A2E;
   box-shadow: 0 0 0 5px rgba(127,231,217,0.18);
+  animation: ipStepPulse 2.4s ease-in-out infinite;
 }
-.ip-step.active .ip-step-label { color: var(--ip-text); font-weight: 600; }
+@keyframes ipStepPulse {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(127,231,217,0.18); }
+  50%      { box-shadow: 0 0 0 9px rgba(127,231,217,0.10); }
+}
+.ip-step.active .ip-step-label { color: var(--ip-text); font-weight: 700; }
+.ip-discharge-hint {
+  margin: 12px 0 0;
+  font-size: 0.72rem;
+  color: var(--ip-muted);
+  text-align: center;
+}
+
+/* Trend chip empty-state: + 字以 mint 圈起來；點下開 quicklog sheet */
+.ip-trend-chip[data-key] { font-family: inherit; cursor: pointer; }
+.ip-trend-arrow[data-trend="empty"] {
+  background: rgba(127,231,217,0.18);
+  color: var(--ip-mint);
+  font-weight: 700;
+  font-size: 0.84rem;
+  padding: 0 7px;
+}
+
+/* Quick log sheet — 用 prep sheet 的殼 */
+.ip-ql-panel { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.ip-ql-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+.ip-ql-num {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 4px;
+  min-height: 80px;
+  border-radius: 14px;
+  border: 1.5px solid var(--ip-border);
+  background: var(--ip-bg);
+  cursor: pointer;
+  transition: transform .15s ease, background .2s ease, border-color .2s ease;
+  font-family: inherit;
+}
+.ip-ql-num:active { transform: scale(0.94); }
+.ip-ql-num:hover {
+  border-color: var(--ip-ql-c, var(--ip-mint));
+  background: var(--ip-ql-bg, rgba(127,231,217,0.10));
+}
+.ip-ql-emoji { font-size: 1.8rem; line-height: 1; }
+.ip-ql-n {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--ip-ql-c, var(--ip-mint));
+}
+.ip-ql-coral { --ip-ql-c: var(--ip-coral); --ip-ql-bg: rgba(232,169,138,0.12); }
+.ip-ql-sky   { --ip-ql-c: var(--ip-sky);   --ip-ql-bg: rgba(142,197,242,0.12); }
+.ip-ql-mint  { --ip-ql-c: var(--ip-mint);  --ip-ql-bg: rgba(127,231,217,0.12); }
+@media (max-width: 380px) {
+  .ip-ql-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .ip-ql-num { padding: 10px 2px; min-height: 70px; }
+  .ip-ql-emoji { font-size: 1.5rem; }
+}
 
 /* 9. Inpatient Education ─────────────────────────────────── */
 .ip-edu { margin-bottom: 22px; }
