@@ -105,16 +105,16 @@ const URL_BASE = process.env.PREVIEW_URL || 'http://127.0.0.1:3000/';
   // sleep section 應該展開
   const sleepOpen = await page.$eval('#ip-edu-sec-sleep', el => el.open);
   if (!sleepOpen) issues.push('B: sleep section should auto-open');
-  // 總共 10 個 section
+  // 總共 14 個 section（10 基礎 + 4 經濟主題 insurance/studentIns/illness14/social）
   const totalSections = await page.$$eval('.ip-edu-section', els => els.length);
-  if (totalSections !== 10) issues.push(`B: expected 10 sections, got ${totalSections}`);
+  if (totalSections !== 14) issues.push(`B: expected 14 sections, got ${totalSections}`);
   await page.locator('.ip-edu-page').screenshot({ path: resolve(SHOT_DIR, 'inpatient-edu-page.png'), fullPage: false });
 
   // 全部展開
   await page.click('.ip-edu-page-expand-all');
   await page.waitForTimeout(300);
   const openCount = await page.$$eval('.ip-edu-section[open]', els => els.length);
-  if (openCount !== 10) issues.push(`B: after toggle-all, expected 10 open, got ${openCount}`);
+  if (openCount !== 14) issues.push(`B: after toggle-all, expected 14 open, got ${openCount}`);
   const lblExpanded = await page.$eval('#ip-edu-toggle-all-label', el => el.textContent);
   if (lblExpanded !== '全部收合') issues.push(`B: label should now be 全部收合, got "${lblExpanded}"`);
 

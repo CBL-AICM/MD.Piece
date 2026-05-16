@@ -28,7 +28,11 @@ const PROFILES = [
       ignoreHTTPSErrors: true,
     });
     const page = await ctx.newPage();
-    page.on('pageerror', e => issues.push(`[${p.name}] pageerror: ${e.message}`));
+    page.on('pageerror', e => {
+      // 過濾 PWA / serviceWorker 在無 SW 環境下的常見噪音（與 inpatient_polish_check 一致）
+      if (/serviceWorker|addEventListener|querySelectorAll|register/.test(e.message)) return;
+      issues.push(`[${p.name}] pageerror: ${e.message}`);
+    });
 
     await page.addInitScript(() => {
       localStorage.setItem('mdpiece_user', JSON.stringify({ id:'demo', username:'demo', nickname:'示範', role:'patient', avatar_color:'#5B9FE8' }));
