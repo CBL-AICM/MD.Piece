@@ -15935,3 +15935,51 @@ html[data-theme="dark"] {
     --border-strong: rgba(232,244,248,0.32);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Severity color encoding — data-severity → var(--sev-*)
+   ─────────────────────────────────────────────────────────────
+   後端 backend/routers/triage.py 會回傳 severity_color，前端
+   不再硬寫顏色：
+     <article data-severity="er">…</article>
+   詳見 docs/research/ui_color_research.md §4
+   原則：警示色用「點」不用「面」(左邊框 + chip)，避免「過年感」。
+   ═══════════════════════════════════════════════════════════ */
+
+[data-severity] {
+  --_sev-color: var(--sev-self);
+  border-left: 4px solid var(--_sev-color);
+  padding-left: var(--space-3);
+}
+[data-severity="self"]     { --_sev-color: var(--sev-self); }
+[data-severity="clinic"]   { --_sev-color: var(--sev-clinic); }
+[data-severity="regional"] { --_sev-color: var(--sev-regional); }
+[data-severity="medical"]  { --_sev-color: var(--sev-medical); }
+[data-severity="er"]       { --_sev-color: var(--sev-er); }
+
+/* 標籤式（chip）— 用「邊框 + icon 點」，不用「整個 chip 填色」 */
+.sev-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--_sev-color, var(--sev-self));
+  color: var(--_sev-color, var(--sev-self));
+  background: transparent;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+.sev-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--_sev-color, var(--sev-self));
+  flex-shrink: 0;
+}
+
+/* 急診特殊：邊框略粗，但 *不* 填整片紅。 */
+[data-severity="er"] { border-left-width: 5px; }
+[data-severity="er"].sev-chip { font-weight: 700; }
