@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v94-care-pill-theme";
+const CACHE_VERSION = "mdpiece-v95-ip-light-palette";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
