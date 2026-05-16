@@ -13697,35 +13697,80 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
 .care-mode-card {
   margin: 12px 0 16px;
   padding: 14px 16px;
-  border: 1px solid var(--border);
+  border: 1.5px solid rgba(31,61,88,0.12);
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(91,159,232,.08), rgba(231,126,34,.06));
+}
+#app-wrapper[data-theme="dark"] .care-mode-card {
+  border-color: rgba(255,255,255,0.12);
+  background: linear-gradient(135deg, rgba(91,159,232,0.14), rgba(231,126,34,0.10));
 }
 .care-mode-card-head {
   display: flex; align-items: baseline; gap: 8px;
   margin-bottom: 10px;
 }
-.care-mode-card-title { font-size: .9rem; font-weight: 600; color: var(--text); }
-.care-mode-card-hint  { font-size: .78rem; color: var(--text-dim); }
+.care-mode-card-title { font-size: .9rem; font-weight: 600; color: #1F3D58; }
+.care-mode-card-hint  { font-size: .78rem; color: #5A7388; }
+#app-wrapper[data-theme="dark"] .care-mode-card-title { color: #F1F6FF; }
+#app-wrapper[data-theme="dark"] .care-mode-card-hint  { color: rgba(241,246,255,0.7); }
+
 .care-mode-chips { display: flex; gap: 8px; }
 .care-mode-chip {
   flex: 1;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 10px 14px;
-  border: 1.5px solid var(--border);
+  border: 1.5px solid rgba(31,61,88,0.25);
   border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: .9rem; font-weight: 500;
+  background: #FFFFFF;
+  color: #1F3D58;
+  font-size: .9rem; font-weight: 600;
   cursor: pointer;
   transition: all .18s ease;
+  font-family: inherit;
 }
-.care-mode-chip:hover { border-color: var(--primary); }
+.care-mode-chip svg { color: #5A7388; }
+.care-mode-chip:hover {
+  border-color: #4A90C2;
+  background: rgba(91,159,232,0.06);
+}
+.care-mode-chip:hover svg { color: #4A90C2; }
 .care-mode-chip.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(91,159,232,.25);
+  background: linear-gradient(135deg, #4A90C2 0%, #5BA5D8 100%);
+  border-color: #4A90C2;
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 3px 10px rgba(74,144,194,0.35);
+}
+.care-mode-chip.active svg { color: #FFFFFF; }
+/* 住院模式 active 用暖色 (而不是門診的醫療藍)，視覺上區分兩種照護階段 */
+.care-mode-chip.active[onclick*="inpatient"] {
+  background: linear-gradient(135deg, #C97F4B 0%, #E8A98A 100%);
+  border-color: #C97F4B;
+  box-shadow: 0 3px 10px rgba(201,127,75,0.35);
+}
+
+/* Dark mode chip — 反白 */
+#app-wrapper[data-theme="dark"] .care-mode-chip {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.22);
+  color: #F1F6FF;
+}
+#app-wrapper[data-theme="dark"] .care-mode-chip svg { color: rgba(241,246,255,0.7); }
+#app-wrapper[data-theme="dark"] .care-mode-chip:hover {
+  background: rgba(91,159,232,0.18);
+  border-color: #8EC5F2;
+}
+#app-wrapper[data-theme="dark"] .care-mode-chip:hover svg { color: #8EC5F2; }
+#app-wrapper[data-theme="dark"] .care-mode-chip.active {
+  background: linear-gradient(135deg, #6BA9D8 0%, #8EC5F2 100%);
+  color: #0F1A2E;
+  border-color: #8EC5F2;
+}
+#app-wrapper[data-theme="dark"] .care-mode-chip.active svg { color: #0F1A2E; }
+#app-wrapper[data-theme="dark"] .care-mode-chip.active[onclick*="inpatient"] {
+  background: linear-gradient(135deg, #E8A98A 0%, #F2C26D 100%);
+  color: #0F1A2E;
+  border-color: #E8A98A;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
