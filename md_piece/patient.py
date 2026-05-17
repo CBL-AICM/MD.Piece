@@ -58,6 +58,8 @@ class Patient:
     timeseries: pd.DataFrame | None = None
     flare_count: int = 0
     seed: int = 0
+    intervention_active: bool = False
+    engagement: float = 0.0
 
 
 def _eval_biomarker(formula: str, activity: float, burden: float, noise: float) -> float:
@@ -96,8 +98,15 @@ def simulate_patient(
     seed: int,
     *,
     dt_days: float | None = None,
+    intervention: "Any | None" = None,
 ) -> Patient:
-    """Run a full v2 simulation (age + 8 unpredictability sources)."""
+    """Run a full v2 simulation (age + 8 unpredictability sources).
+
+    intervention: optional ml.intervention.AppIntervention instance. When
+    provided, the patient is simulated *as if they used MD.Piece*: adherence
+    is boosted, avoidable triggers are throttled, early warning dampens
+    triggers when activity approaches flare threshold.
+    """
     rng = np.random.default_rng(seed)
     if dt_days is None:
         dt_days = 1.0 / 24.0 if disease_cfg.time_unit == "hour" else 1.0
@@ -121,6 +130,12 @@ def simulate_patient(
 
     # ---- ⭐ social / personality / behavioural profile (9th unpredictability) ----
     social_profile = build_full_profile(age, sex, age_bin, rng)
+
+    # ---- 🟢 App intervention hook (counterfactual arm) ----
+    engagement = 0.0
+    if intervention is not None:
+        from ml.intervention import apply_intervention
+        social_profile, engagement = apply_intervention(social_profile, age, intervention)
 
     # ---- unpredictability bundle ----
     bundle = build_unpredictability(disease_cfg, rng, sim_days)
@@ -177,6 +192,8 @@ def simulate_patient(
         adherence_states=adherence_states,
         life_events=events,
         seed=seed,
+        intervention_active=intervention is not None,
+        engagement=engagement,
     )
 
     # ---- run integration loop ----
@@ -210,6 +227,16 @@ def simulate_patient(
             disease_cfg, dt_days, rng,
             trigger_amplification=social_profile.trigger_amplification,
         )
+
+        # 🟢 App early-warning: when activity approaches flare threshold,
+        # dampen new avoidable-trigger magnitudes (patient acts on warning)
+        if intervention is not None and new_triggers:
+            from ml.intervention import dampen_trigger_magnitude, early_warning_active
+            if early_warning_active(state.activity, flare_thr, intervention):
+                new_triggers = dampen_trigger_magnitude(
+                    new_triggers, intervention, engagement
+                )
+
         if new_triggers:
             state.active_triggers.extend(new_triggers)
 
