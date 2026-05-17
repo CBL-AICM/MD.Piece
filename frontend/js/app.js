@@ -5045,6 +5045,17 @@ function filterTimeline(kind) {
 function loadTimelinePage() {
   var box = document.getElementById('tl-list');
   if (!box) return;
+  // 先嘗試從後端拉 server 端時間軸（場景 C：跨次就診整合）。
+  // 失敗或 DB offline 時，沉著退回 localStorage 既有資料。
+  loadServerTimeline().then(function(serverOk) {
+    if (serverOk) return;       // 已成功渲染 Bento Grid，跳過 local
+    _renderLocalTimeline(box);   // 否則用既有 .tl-list 流程
+  }).catch(function() {
+    _renderLocalTimeline(box);
+  });
+}
+
+function _renderLocalTimeline(box) {
   var entries = _getTimelineEntries();
   if (_tlFilter !== 'all') entries = entries.filter(function(e) { return e.kind === _tlFilter; });
   entries.sort(function(a, b) { return a.date < b.date ? 1 : -1; });
@@ -5074,6 +5085,60 @@ function loadTimelinePage() {
       + '</article>';
   }).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 從後端拉時間軸並渲染成 Bento Grid。
+// 回傳 Promise<boolean>：true = 已渲染（含「沒資料」狀態），false = 拉不到或 DB offline，呼叫端應 fallback。
+async function loadServerTimeline() {
+  var box = document.getElementById('tl-list');
+  if (!box) return false;
+  try {
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    if (!pid) return false;
+    var res = await fetch(API + '/timeline?patient_id=' + encodeURIComponent(pid));
+    if (!res.ok) return false;
+    var data = await res.json();
+    if (data && data.meta && data.meta.db_offline) return false;
+    var entries = (data && data.entries) || [];
+    if (_tlFilter !== 'all') {
+      entries = entries.filter(function(e) {
+        // 將後端 type 對應到既有 filter id（lab/med/visit/admission/self_report）
+        return e.type === _tlFilter;
+      });
+    }
+    box.classList.add('tl-bento');
+    box.classList.remove('tl-list');
+    if (!entries.length) {
+      box.innerHTML = '<p class="tl-bento-empty">// 後端尚無事件。先上傳你的第一份檢驗報告或處方箋。</p>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      return true;
+    }
+    box.innerHTML = entries.map(_renderTimelineBentoCard).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function _renderTimelineBentoCard(entry) {
+  var sev = entry.severity_color || 'self';
+  var importance = entry.importance || 'normal';
+  var dateStr = entry.date ? escapeHtml(entry.date) : '—';
+  var titleStr = escapeHtml(entry.title || '（未命名事件）');
+  var summaryStr = entry.summary ? escapeHtml(entry.summary) : '';
+  var sourceStr = entry.source ? escapeHtml(entry.source) : '';
+  var icdChip = entry.icd10
+    ? '<span class="tl-bento-icd" title="ICD-10">' + escapeHtml(entry.icd10) + '</span>'
+    : '';
+  return ''
+    + '<article class="tl-bento-card" data-severity="' + sev + '" data-importance="' + importance + '" data-type="' + escapeHtml(entry.type || '') + '">'
+    +   '<span class="tl-bento-date">' + dateStr + '</span>'
+    +   icdChip
+    +   '<h3 class="tl-bento-title">' + titleStr + '</h3>'
+    +   (summaryStr ? '<p class="tl-bento-summary">' + summaryStr + '</p>' : '')
+    +   (sourceStr ? '<span class="tl-bento-source">' + sourceStr + '</span>' : '')
+    + '</article>';
 }
 
 function openTimelineUploader() {

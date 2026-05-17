@@ -15983,3 +15983,120 @@ html[data-theme="dark"] {
 /* 急診特殊：邊框略粗，但 *不* 填整片紅。 */
 [data-severity="er"] { border-left-width: 5px; }
 [data-severity="er"].sev-chip { font-weight: 700; }
+
+/* ═══════════════════════════════════════════════════════════
+   Timeline Bento Grid（場景 C：跨次就診整合視圖）
+   ─────────────────────────────────────────────────────────────
+   後端 backend/routers/timeline.py 回傳的 entries 用此 grid 呈現。
+   .tl-bento 與既有 .tl-list 並存，前端可依資料來源切換：
+     • server 資料  → .tl-bento（卡片大小依 importance 變化）
+     • local 資料   → .tl-list（保持現狀向後相容）
+   重要事件（importance="high"）span 2 column，視覺上自然強調。
+   詳見 docs/research/ui_color_research.md §5 與 product-principles 場景 C。
+   ═══════════════════════════════════════════════════════════ */
+
+.tl-bento {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.tl-bento-card {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-glass);
+  border-left: 4px solid var(--_sev-color, var(--sev-self));
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: var(--transition);
+  min-height: 120px;
+}
+
+.tl-bento-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+  border-color: var(--accent);
+}
+
+/* 重要事件：橫向跨 2 欄，內容區也放大 */
+.tl-bento-card[data-importance="high"] {
+  grid-column: span 2;
+}
+
+/* 螢幕較窄時退回單欄，避免 span 2 卡片溢出 */
+@media (max-width: 480px) {
+  .tl-bento { grid-template-columns: 1fr; }
+  .tl-bento-card[data-importance="high"] { grid-column: span 1; }
+}
+
+.tl-bento-date {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.3px;
+}
+
+.tl-bento-icd {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--klein);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.tl-bento-title {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--text);
+  line-height: var(--lh-tight);
+  margin: 0;
+}
+
+.tl-bento-card[data-importance="high"] .tl-bento-title {
+  font-size: var(--font-lg);
+}
+
+.tl-bento-summary {
+  font-size: var(--font-sm);
+  color: var(--text-dim);
+  line-height: var(--lh-base);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.tl-bento-source {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin-top: auto;
+}
+
+.tl-bento-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
+
+/* 長者模式：放大卡片內各層字級，並把 high 卡片改為 span 全寬以更清楚 */
+html.elder-mode .tl-bento-card,
+html[data-mode="senior"] .tl-bento-card {
+  min-height: 160px;
+  padding: var(--space-5);
+}
+html.elder-mode .tl-bento-card[data-importance="high"],
+html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
+  grid-column: 1 / -1;
+}
