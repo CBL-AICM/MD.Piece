@@ -199,11 +199,6 @@ html[data-mode="senior"] *:focus-visible {
   color: var(--accent);
 }
 
-.app-elder-toggle .ael-label {
-  letter-spacing: 0.5px;
-  white-space: nowrap;          /* 不要換行也不要被壓扁 */
-}
-
 .app-elder-toggle:hover {
   border-color: var(--accent);
   color: var(--accent);
@@ -232,10 +227,9 @@ html[data-mode="senior"] .app-elder-toggle .ael-icon {
   font-size: var(--font-xl);
 }
 
-/* 螢幕較窄時只縮 padding，標籤永遠顯示 */
+/* 螢幕較窄時 padding 收一點，純 icon 不用換行 */
 @media (max-width: 520px) {
   .app-elder-toggle { padding: 6px 10px; gap: 4px; }
-  .app-elder-toggle .ael-label { letter-spacing: 0.3px; }
 }
 
 /* 啟用後在 body 角落浮一個小提示（首次） */

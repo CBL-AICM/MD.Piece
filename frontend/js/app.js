@@ -48,9 +48,9 @@ function setMode(mode) {
   const labelKey = isElder ? 'mode.toNormal' : 'mode.toSenior';
   const fallback = isElder ? '切換為普通版' : '切換為年長版';
   document.querySelectorAll('[data-mode-toggle]').forEach(function (el) {
-    // 新版按鈕（topbar 那顆 A+ 字大一點）自己擁有 icon + label DOM，
-    // 不能把 textContent 整個寫掉，否則 icon 會消失；只更新 aria-pressed。
-    var ownsLabel = el.querySelector('.ael-label');
+    // 新版按鈕（topbar 那顆 A+）自帶 icon DOM，不能把 textContent 整個寫掉，
+    // 否則 icon 會消失；認 .ael-icon 來判定是不是自管 DOM 的按鈕。
+    var ownsLabel = el.querySelector('.ael-icon');
     if (!ownsLabel) {
       el.textContent = window.MDPiece_i18n ? t(labelKey) : fallback;
     }

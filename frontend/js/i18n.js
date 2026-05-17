@@ -1087,9 +1087,9 @@
     });
 
     // Mode toggle button text depends on current mode AND language.
-    // Skip buttons that own their own label structure (e.g. topbar 「字大一點」).
+    // Skip buttons that own their own icon DOM (e.g. topbar 那顆 A+).
     scope.querySelectorAll('[data-mode-toggle]').forEach(modeBtn => {
-      if (modeBtn.querySelector('.ael-label')) return;   // 自帶 DOM 結構，別動
+      if (modeBtn.querySelector('.ael-icon')) return;   // 自帶 DOM 結構，別動
       const isSenior = document.documentElement.getAttribute('data-mode') === 'senior';
       modeBtn.textContent = t(isSenior ? 'mode.toNormal' : 'mode.toSenior', lang);
     });
