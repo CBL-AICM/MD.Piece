@@ -310,6 +310,21 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (admission_medication_id) REFERENCES admission_medications(id)
         )""",
+    "custom_procedure_types": """
+        CREATE TABLE IF NOT EXISTS custom_procedure_types (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            key TEXT NOT NULL,
+            label TEXT NOT NULL,
+            icon TEXT NOT NULL DEFAULT 'clipboard-list',
+            category TEXT NOT NULL DEFAULT 'exam' CHECK(category IN ('exam', 'treatment', 'nursing')),
+            default_prep TEXT DEFAULT '',
+            description TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            UNIQUE (patient_id, key),
+            FOREIGN KEY (patient_id) REFERENCES patients(id)
+        )""",
     "disease_reference": """
         CREATE TABLE IF NOT EXISTS disease_reference (
             id TEXT PRIMARY KEY,
