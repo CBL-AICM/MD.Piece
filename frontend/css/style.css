@@ -15923,54 +15923,13 @@ html[data-care-mode="inpatient"] .nav-section-label {
 /* ═══════════════════════════════════════════════════════════
    Global Theme — html[data-theme]
    ─────────────────────────────────────────────────────────────
-   既有的 #app-wrapper[data-theme] 規則保留（向後相容），這層
-   只新增「未指定主題時跟隨系統」與全域 token 覆寫，避免大規模
-   重寫舊規則。詳細策略見 docs/research/ui_color_research.md §5。
+   PR #310 階段 3 原本想加「未指定主題時跟隨系統 prefers-color-scheme」，
+   但既有的 #app-wrapper[data-theme="light"] 規則更 specific，會把
+   卡片背景保持白色；root 的 --text 被改成淺色後，就變成「淺字 + 白底」
+   完全看不到（user screenshot 證實）。
+   解法：撤掉 root 層覆寫，讓主題完全交給既有 applyTheme() + #app-wrapper。
    ═══════════════════════════════════════════════════════════ */
 
-/* 預設 light token（與既有 :root 的值一致，宣告為了顯式契約） */
-html[data-theme="light"] {
-  --bg-deep:    #FFFFFF;
-  --bg-mid:     #F7F9FC;
-  --bg-soft:    #EFF3F8;
-  --bg-surface: #FFFFFF;
-  --text:       #1F3D58;
-  --text-dim:   #5A7388;
-  --text-muted: #8FA4B5;
-}
-
-/* 全 app 的 dark 模式 token（之前只在 #app-wrapper 上） */
-html[data-theme="dark"] {
-  --bg-deep:    #0F1A24;
-  --bg-mid:     #1A2A38;
-  --bg-soft:    #243648;
-  --bg-surface: #182634;
-  --text:       #E8F4F8;
-  --text-dim:   #A8BFD0;
-  --text-muted: #6F8597;
-  --border-glass:  rgba(232,244,248,0.18);
-  --border-strong: rgba(232,244,248,0.32);
-  /* 將陰影調為「光暈」而非黑色陰影 */
-  --shadow:      0 4px 14px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.22);
-  --shadow-sm:   0 2px 8px rgba(0,0,0,0.28);
-  --shadow-lift: 0 10px 28px rgba(0,0,0,0.42);
-}
-
-/* 系統偏好 → 沒有顯式 data-theme 時跟隨系統 */
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme]),
-  html[data-theme="auto"] {
-    --bg-deep:    #0F1A24;
-    --bg-mid:     #1A2A38;
-    --bg-soft:    #243648;
-    --bg-surface: #182634;
-    --text:       #E8F4F8;
-    --text-dim:   #A8BFD0;
-    --text-muted: #6F8597;
-    --border-glass:  rgba(232,244,248,0.18);
-    --border-strong: rgba(232,244,248,0.32);
-  }
-}
 
 /* ═══════════════════════════════════════════════════════════
    Severity color encoding — data-severity → var(--sev-*)
