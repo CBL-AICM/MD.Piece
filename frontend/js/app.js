@@ -14372,33 +14372,74 @@ function diet() {
     +     '<div id="diet-today-list"><p class="diet-empty">載入中…</p></div>'
     +   '</div>'
 
-    +   '<div class="diet-card diet-weekly-card">'
-    +     '<h3><i data-lucide="trending-up" style="width:16px;height:16px"></i> 本週狀況</h3>'
-    +     '<p class="diet-card-sub">過去 7 天的飲食規律與分布。完整度＝早午晚各 30%＋點心 10%。</p>'
-    +     '<div class="diet-weekly-week-tabs" id="diet-weekly-week-tabs">'
+    +   '<div class="diet-card diet-water-card" id="diet-water-card">'
+    +     '<div class="diet-water-head">'
+    +       '<h3><i data-lucide="glass-water" style="width:16px;height:16px"></i> 今日喝水</h3>'
+    +       '<span class="diet-water-target-label" id="diet-water-target-label">目標 — ml</span>'
+    +     '</div>'
+    +     '<div class="diet-water-display">'
+    +       '<span class="diet-water-amount" id="diet-water-amount">0</span>'
+    +       '<span class="diet-water-unit"> / <span id="diet-water-target-num">—</span> ml</span>'
+    +     '</div>'
+    +     '<div class="diet-water-progress"><div class="diet-water-progress-fill" id="diet-water-progress-fill"></div></div>'
+    +     '<div class="diet-water-warning" id="diet-water-warning" hidden></div>'
+    +     '<div class="diet-water-slider-wrap">'
+    +       '<input type="range" min="0" max="3000" step="100" value="0" id="diet-water-slider" class="diet-water-slider" oninput="dietWaterSliderInput(this.value)" onchange="dietWaterCommit()">'
+    +       '<div class="diet-water-slider-marks">'
+    +         '<span>0</span><span>1000</span><span>2000</span><span>3000</span>'
+    +       '</div>'
+    +     '</div>'
+    +     '<div class="diet-water-custom">'
+    +       '<label class="diet-water-custom-label">或直接輸入</label>'
+    +       '<input type="number" id="diet-water-custom-input" min="0" max="10000" step="50" placeholder="ml" inputmode="numeric">'
+    +       '<button type="button" class="diet-water-custom-btn" onclick="dietWaterCommitCustom()">儲存</button>'
+    +     '</div>'
+    +   '</div>'
+
+    +   '<div class="diet-card diet-regularity-card">'
+    +     '<div class="diet-regularity-head">'
+    +       '<h3><i data-lucide="calendar-check" style="width:16px;height:16px"></i> 本週飲食規律</h3>'
+    +       '<span class="diet-regularity-range" id="diet-regularity-range"></span>'
+    +     '</div>'
+    +     '<div class="diet-week-switch" id="diet-week-switch">'
     +       [['0','本週'],['1','上週'],['2','前週'],['3','再前']].map(function(p) {
-              return '<button class="diet-weekly-week-tab' + (p[0]==='0'?' active':'') + '" '
+              return '<button class="diet-week-switch-btn' + (p[0]==='0'?' active':'') + '" '
                 + 'data-week-idx="' + p[0] + '" onclick="dietWeeklySwitchWeek(' + p[0] + ')">'
                 + p[1] + '</button>';
             }).join('')
     +     '</div>'
-    +     '<div class="diet-weekly-stats" id="diet-weekly-stats">'
+    +     '<div class="diet-regularity-completeness" id="diet-regularity-completeness" title="早午晚各 30%＋點心 10%">完整度 —</div>'
+    +     '<div class="diet-regularity-rows" id="diet-regularity-rows">'
     +       '<div class="diet-empty">載入中…</div>'
     +     '</div>'
-    +     '<div class="diet-weekly-chart-tabs" id="diet-weekly-chart-tabs">'
-    +       [['line','完整度+攝取'],['stack','餐別堆疊'],['multi','早午晚點']].map(function(p) {
-              return '<button class="diet-weekly-chart-tab' + (p[0]==='line'?' active':'') + '" '
-                + 'data-chart-type="' + p[0] + '" onclick="dietWeeklySwitchChart(\'' + p[0] + '\')">'
+    +   '</div>'
+
+    +   '<div class="diet-card diet-intake-card">'
+    +     '<h3><i data-lucide="trending-up" style="width:16px;height:16px"></i> 本週攝取分析</h3>'
+    +     '<div class="diet-intake-tabs" id="diet-intake-tabs">'
+    +       [['protein','蛋白質'],['water','水分'],['fiber','纖維'],['all','全部']].map(function(p) {
+              return '<button class="diet-intake-tab' + (p[0]==='protein'?' active':'') + '" '
+                + 'data-intake-key="' + p[0] + '" onclick="dietIntakeSwitchNutrient(\'' + p[0] + '\')">'
                 + p[1] + '</button>';
             }).join('')
     +     '</div>'
-    +     '<div class="diet-weekly-chart-legend" id="diet-weekly-chart-legend"></div>'
-    +     '<div class="diet-weekly-chart-wrap">'
-    +       '<canvas id="diet-weekly-canvas" style="width:100%;height:160px"></canvas>'
+    +     '<div class="diet-intake-chart-wrap">'
+    +       '<canvas id="diet-intake-canvas" style="width:100%;height:180px"></canvas>'
     +     '</div>'
-    +     '<p class="diet-weekly-chart-hint" id="diet-weekly-chart-hint"></p>'
-    +     '<div id="diet-weekly-top-foods" class="diet-weekly-top-foods"></div>'
-    +     '<p class="diet-weekly-meta" id="diet-weekly-meta"></p>'
+    +     '<div class="diet-intake-today">'
+    +       '<div class="diet-intake-today-title">今日攝取 vs 目標</div>'
+    +       '<div class="diet-intake-today-rows" id="diet-intake-today-rows">'
+    +         '<div class="diet-empty">載入中…</div>'
+    +       '</div>'
+    +     '</div>'
+    +     '<p class="diet-intake-hint">蛋白質／纖維為食物關鍵字粗估；水分以「主動記錄飲水＋食物粗估」合計，僅供趨勢參考。</p>'
+    +   '</div>'
+
+    +   '<div class="diet-card diet-topfoods-card">'
+    +     '<h3><i data-lucide="utensils" style="width:16px;height:16px"></i> 本週常吃</h3>'
+    +     '<div id="diet-weekly-top-foods" class="diet-weekly-top-foods">'
+    +       '<div class="diet-empty">載入中…</div>'
+    +     '</div>'
     +   '</div>'
     + '</section>';
 }
@@ -14792,6 +14833,7 @@ function loadDietPage() {
   fetchDietGuide();
   fetchCaffeineGuide();
   fetchDietTodayRecords();
+  fetchWaterIntake();
   fetchDietWeekly();
 }
 
@@ -14970,27 +15012,29 @@ function fetchDietTodayRecords() {
 // ─── 飲食週報 ────────────────────────────────────────────────
 var _dietWeeklyData     = null;   // { weeks: [...] } 快取 4 週
 var _dietWeeklyWeekIdx  = 0;      // 0 = 本週、1 = 上週、…
-var _dietWeeklyChartType = 'line'; // 'line' | 'stack' | 'multi'
+var _dietIntakeNutrient = 'protein'; // 攝取卡折線：'protein' | 'water' | 'fiber' | 'all'
 var _dietWeeklyMealColors = {
   breakfast: '#f4b942',
   lunch:     '#5b9fe8',
   dinner:    '#7d6dc7',
   snack:     '#4caf90',
 };
-// 折線圖 4 條線的設定（key 對應 by_day.intake_pct.* 與 completeness）
-var _dietWeeklyLineSeries = [
-  { key: 'completeness', label: '完整度', color: '#4caf90', desc: '早午晚點打卡加權' },
-  { key: 'protein',      label: '蛋白質', color: '#e76f51', desc: '佔每日目標 %' },
-  { key: 'water',        label: '水分',   color: '#5b9fe8', desc: '佔每日目標 %' },
-  { key: 'fiber',        label: '纖維',   color: '#b07cd6', desc: '佔每日目標 %' },
-];
+var _dietIntakeColors = {
+  protein: '#e76f51',
+  water:   '#5b9fe8',
+  fiber:   '#b07cd6',
+};
+var _dietIntakeMeta = {
+  protein: { label: '蛋白質', unit: 'g',  field: 'protein_g', target: 'protein_g' },
+  water:   { label: '水分',   unit: 'ml', field: 'water_ml',  target: 'water_ml'  },
+  fiber:   { label: '纖維',   unit: 'g',  field: 'fiber_g',   target: 'fiber_g'   },
+};
 
 function fetchDietWeekly() {
   var pid = getStablePatientId();
   if (!pid) return;
-  var stats = document.getElementById('diet-weekly-stats');
-  if (!stats) return;
-  stats.innerHTML = '<div class="diet-empty">載入中…</div>';
+  var rows = document.getElementById('diet-regularity-rows');
+  if (rows) rows.innerHTML = '<div class="diet-empty">載入中…</div>';
   var tz = new Date().getTimezoneOffset();
   fetch(API + '/diet/weekly/' + encodeURIComponent(pid) + '?weeks=4&tz_offset=' + tz)
     .then(function(r) {
@@ -15004,7 +15048,7 @@ function fetchDietWeekly() {
     .then(function(data) {
       _dietWeeklyData = data || { weeks: [] };
       if (data && data.error) {
-        stats.innerHTML = '<div class="diet-empty">讀取失敗：' + chatEscape(data.error) +
+        if (rows) rows.innerHTML = '<div class="diet-empty">讀取失敗：' + chatEscape(data.error) +
           ' <button class="diet-retry-btn" type="button" onclick="fetchDietWeekly()">重試</button></div>';
         return;
       }
@@ -15012,51 +15056,53 @@ function fetchDietWeekly() {
     })
     .catch(function(e) {
       console.error('[diet] weekly fetch failed:', e);
-      stats.innerHTML = '<div class="diet-empty">讀取失敗：' + chatEscape((e && e.message) || '網路錯誤') +
+      if (rows) rows.innerHTML = '<div class="diet-empty">讀取失敗：' + chatEscape((e && e.message) || '網路錯誤') +
         ' <button class="diet-retry-btn" type="button" onclick="fetchDietWeekly()">重試</button></div>';
     });
 }
 
 function dietWeeklySwitchWeek(idx) {
   _dietWeeklyWeekIdx = idx | 0;
-  // 更新 tab active
-  var tabs = document.querySelectorAll('#diet-weekly-week-tabs .diet-weekly-week-tab');
-  tabs.forEach(function(t) {
+  document.querySelectorAll('#diet-week-switch .diet-week-switch-btn').forEach(function(t) {
     t.classList.toggle('active', String(idx) === t.getAttribute('data-week-idx'));
   });
   renderDietWeekly();
 }
 
-function dietWeeklySwitchChart(type) {
-  if (type !== 'line' && type !== 'stack' && type !== 'multi') return;
-  _dietWeeklyChartType = type;
-  var tabs = document.querySelectorAll('#diet-weekly-chart-tabs .diet-weekly-chart-tab');
-  tabs.forEach(function(t) {
-    t.classList.toggle('active', type === t.getAttribute('data-chart-type'));
+function dietIntakeSwitchNutrient(key) {
+  if (!_dietIntakeMeta[key] && key !== 'all') return;
+  _dietIntakeNutrient = key;
+  document.querySelectorAll('#diet-intake-tabs .diet-intake-tab').forEach(function(t) {
+    t.classList.toggle('active', key === t.getAttribute('data-intake-key'));
   });
-  renderDietWeekly();
+  if (_dietWeeklyData) renderDietWeekly();
 }
 
 function renderDietWeekly() {
   if (!_dietWeeklyData || !_dietWeeklyData.weeks) return;
   var week = _dietWeeklyData.weeks[_dietWeeklyWeekIdx] || null;
-  var stats = document.getElementById('diet-weekly-stats');
-  var meta  = document.getElementById('diet-weekly-meta');
-  var foods = document.getElementById('diet-weekly-top-foods');
-  var canvas = document.getElementById('diet-weekly-canvas');
-  if (!stats || !canvas) return;
+  _dietRenderRegularity(week);
+  _dietRenderIntake(week);
+  _dietRenderTopFoods(week);
+}
+
+function _dietRenderRegularity(week) {
+  var rows = document.getElementById('diet-regularity-rows');
+  var range = document.getElementById('diet-regularity-range');
+  var compEl = document.getElementById('diet-regularity-completeness');
+  if (!rows) return;
 
   if (!week || !week.by_day || !week.by_day.length) {
-    stats.innerHTML = '<div class="diet-empty">這 7 天還沒打卡。</div>';
-    if (meta) meta.textContent = '';
-    if (foods) foods.innerHTML = '';
-    var c0 = canvas.getContext('2d');
-    c0.clearRect(0, 0, canvas.width, canvas.height);
+    rows.innerHTML = '<div class="diet-empty">這 7 天還沒打卡。</div>';
+    if (range) range.textContent = '';
+    if (compEl) compEl.textContent = '完整度 —';
     return;
   }
 
-  // 4 個指標卡：早 X/7、午 X/7、晚 X/7、點 X/7
-  var t = week.totals || {};
+  if (range) range.textContent = week.week_start + ' ~ ' + week.week_end;
+  var pct = Math.round((week.completeness_avg || 0) * 100);
+  if (compEl) compEl.textContent = '完整度 ' + pct + '%';
+
   var hits = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
   week.by_day.forEach(function(d) {
     if (d.breakfast) hits.breakfast++;
@@ -15064,72 +15110,76 @@ function renderDietWeekly() {
     if (d.dinner)    hits.dinner++;
     if (d.snack)     hits.snack++;
   });
-  stats.innerHTML =
-    [['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點']].map(function(p) {
-      return '<div class="diet-weekly-stat" style="border-color:' + _dietWeeklyMealColors[p[0]] + '">' +
-        '<div class="diet-weekly-stat-meal" style="color:' + _dietWeeklyMealColors[p[0]] + '">' + p[1] + '</div>' +
-        '<div class="diet-weekly-stat-frac">' + hits[p[0]] + '<span class="diet-weekly-stat-of">/7</span></div>' +
-        '<div class="diet-weekly-stat-total">共 ' + (t[p[0]] || 0) + ' 餐</div>' +
-      '</div>';
+
+  rows.innerHTML = [['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點']]
+    .map(function(p) {
+      var dots = week.by_day.map(function(d) {
+        return '<span class="diet-reg-dot' + (d[p[0]] ? ' on' : '') + '" '
+          + 'style="' + (d[p[0]] ? 'background:' + _dietWeeklyMealColors[p[0]] : '') + '"></span>';
+      }).join('');
+      return ''
+        + '<div class="diet-reg-row">'
+        +   '<span class="diet-reg-meal" style="color:' + _dietWeeklyMealColors[p[0]] + '">' + p[1] + '</span>'
+        +   '<span class="diet-reg-frac">' + hits[p[0]] + '<span class="diet-reg-of">/7</span></span>'
+        +   '<span class="diet-reg-dots">' + dots + '</span>'
+        + '</div>';
     }).join('');
-
-  // 完整度說明
-  var pct = Math.round((week.completeness_avg || 0) * 100);
-  if (meta) {
-    meta.textContent = '本週完整度：' + pct + '%（' + week.week_start + ' ~ ' + week.week_end + '）';
-  }
-
-  // top foods chips
-  if (foods) {
-    var tf = week.top_foods || [];
-    if (tf.length) {
-      foods.innerHTML = '<span class="diet-weekly-top-foods-label">常見食物</span>' +
-        tf.slice(0, 6).map(function(p) {
-          return '<span class="diet-weekly-food-chip">' + chatEscape(p[0]) + ' <em>×' + p[1] + '</em></span>';
-        }).join('');
-    } else {
-      foods.innerHTML = '';
-    }
-  }
-
-  // legend / hint：只有折線圖會顯示營養素圖例與估算註記
-  _renderDietWeeklyLegend(_dietWeeklyChartType === 'line');
-
-  // 繪製圖表
-  if (_dietWeeklyChartType === 'stack') {
-    drawDietWeeklyStack(week);
-  } else if (_dietWeeklyChartType === 'multi') {
-    drawDietWeeklyMulti(week);
-  } else {
-    drawDietWeeklyLine(week);
-  }
 }
 
-function _renderDietWeeklyLegend(show) {
-  var legend = document.getElementById('diet-weekly-chart-legend');
-  var hint   = document.getElementById('diet-weekly-chart-hint');
-  if (!legend) return;
-  if (!show) {
-    legend.innerHTML = '';
-    legend.style.display = 'none';
-    if (hint) { hint.textContent = ''; hint.style.display = 'none'; }
+function _dietRenderIntake(week) {
+  var canvas = document.getElementById('diet-intake-canvas');
+  var todayBox = document.getElementById('diet-intake-today-rows');
+  if (!canvas) return;
+
+  if (!week || !week.by_day || !week.by_day.length) {
+    var c0 = canvas.getContext('2d');
+    c0.clearRect(0, 0, canvas.width, canvas.height);
+    if (todayBox) todayBox.innerHTML = '<div class="diet-empty">這 7 天還沒打卡。</div>';
     return;
   }
-  legend.style.display = '';
-  legend.innerHTML = _dietWeeklyLineSeries.map(function(s) {
-    return '<span class="diet-weekly-legend-item" title="' + chatEscape(s.desc) + '">'
-      +   '<span class="diet-weekly-legend-dot" style="background:' + s.color + '"></span>'
-      +   '<span class="diet-weekly-legend-label">' + chatEscape(s.label) + '</span>'
-      + '</span>';
-  }).join('');
-  if (hint) {
-    hint.textContent = '蛋白質／水分／纖維為食物關鍵字粗估，僅供趨勢參考。';
-    hint.style.display = '';
+
+  drawDietIntakeLine(week, _dietIntakeNutrient);
+
+  if (todayBox) {
+    var today = week.by_day[week.by_day.length - 1];
+    var n = (today && today.nutrients) || {};
+    var t = week.daily_targets || { protein_g: 60, water_ml: 2000, fiber_g: 25 };
+    var rows = ['protein','water','fiber'].map(function(k) {
+      var meta = _dietIntakeMeta[k];
+      var have = Number(n[meta.field] || 0);
+      var goal = Number(t[meta.target] || 0) || 1;
+      var ratio = Math.max(0, Math.min(1.5, have / goal));
+      var fillPct = Math.min(1, ratio) * 100;
+      var over = ratio > 1;
+      return ''
+        + '<div class="diet-intake-row">'
+        +   '<span class="diet-intake-row-label">' + meta.label + '</span>'
+        +   '<div class="diet-intake-row-bar">'
+        +     '<div class="diet-intake-row-fill' + (over ? ' over' : '') + '" '
+        +          'style="width:' + fillPct.toFixed(1) + '%;background:' + _dietIntakeColors[k] + '"></div>'
+        +   '</div>'
+        +   '<span class="diet-intake-row-num">' + Math.round(have) + ' / ' + Math.round(goal) + ' ' + meta.unit + '</span>'
+        + '</div>';
+    }).join('');
+    todayBox.innerHTML = rows;
   }
 }
 
-function _dietWeeklyCanvasSetup() {
-  var canvas = document.getElementById('diet-weekly-canvas');
+function _dietRenderTopFoods(week) {
+  var foods = document.getElementById('diet-weekly-top-foods');
+  if (!foods) return;
+  var tf = (week && week.top_foods) || [];
+  if (!tf.length) {
+    foods.innerHTML = '<div class="diet-empty">這 7 天還沒打卡。</div>';
+    return;
+  }
+  foods.innerHTML = tf.slice(0, 8).map(function(p) {
+    return '<span class="diet-weekly-food-chip">' + chatEscape(p[0]) + ' <em>×' + p[1] + '</em></span>';
+  }).join('');
+}
+
+function _dietIntakeCanvasSetup() {
+  var canvas = document.getElementById('diet-intake-canvas');
   if (!canvas) return null;
   var dpr = window.devicePixelRatio || 1;
   var rect = canvas.getBoundingClientRect();
@@ -15141,223 +15191,265 @@ function _dietWeeklyCanvasSetup() {
 }
 
 function _dietWeeklyDayLabels(week) {
-  // 顯示 月/日（mm/dd）
   return week.by_day.map(function(d) {
     var parts = d.date.split('-');
     return parts[1] + '/' + parts[2];
   });
 }
 
-function drawDietWeeklyLine(week) {
-  // 折線：完整度 + 蛋白質/水分/纖維 攝取比例（皆 0~1，超過 100% 截到 1）
-  var s = _dietWeeklyCanvasSetup();
+function drawDietIntakeLine(week, key) {
+  var s = _dietIntakeCanvasSetup();
   if (!s) return;
   var ctx = s.ctx, w = s.w, h = s.h, dpr = s.dpr;
-  var pad = 22 * dpr;
-  var padLeft = 32 * dpr;
+  var pad = 24 * dpr;
+  var padLeft = 36 * dpr;
 
   var days = week.by_day;
   if (!days.length) return;
   var targets = week.daily_targets || { protein_g: 60, water_ml: 2000, fiber_g: 25 };
 
-  function clamp01(v) { return Math.max(0, Math.min(1, v || 0)); }
-  function pctFor(d, key) {
-    if (key === 'completeness') return clamp01(d.completeness);
-    // 後端有給 intake_pct 直接用，舊資料 fallback 從 nutrients 算
-    if (d.intake_pct && typeof d.intake_pct[key] === 'number') {
-      return clamp01(d.intake_pct[key]);
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v || 0)); }
+  function pctFor(d, k) {
+    if (d.intake_pct && typeof d.intake_pct[k] === 'number') {
+      return clamp(d.intake_pct[k], 0, 1);
     }
     var n = d.nutrients || {};
-    if (key === 'protein') return clamp01((n.protein_g || 0) / (targets.protein_g || 60));
-    if (key === 'water')   return clamp01((n.water_ml  || 0) / (targets.water_ml  || 2000));
-    if (key === 'fiber')   return clamp01((n.fiber_g   || 0) / (targets.fiber_g   || 25));
+    if (k === 'protein') return clamp((n.protein_g || 0) / (targets.protein_g || 60), 0, 1);
+    if (k === 'water')   return clamp((n.water_ml  || 0) / (targets.water_ml  || 2000), 0, 1);
+    if (k === 'fiber')   return clamp((n.fiber_g   || 0) / (targets.fiber_g   || 25), 0, 1);
     return 0;
   }
-
-  // 格線：50% 虛線 + 100% 細實線
-  ctx.strokeStyle = 'rgba(120,140,170,0.18)';
-  ctx.lineWidth = 1 * dpr;
-  ctx.setLineDash([4 * dpr, 4 * dpr]);
-  var midY = h - pad - (h - 2 * pad) * 0.5;
-  ctx.beginPath();
-  ctx.moveTo(padLeft, midY); ctx.lineTo(w - pad, midY); ctx.stroke();
-  ctx.setLineDash([]);
 
   var stepX = function(i) {
     return padLeft + (w - pad - padLeft) * (days.length === 1 ? 0.5 : i / (days.length - 1));
   };
   var yFrom = function(v) { return h - pad - (h - 2 * pad) * v; };
 
-  // 完整度先畫底部漸層
-  var compPts = days.map(function(d, i) {
-    return { x: stepX(i), y: yFrom(clamp01(d.completeness)) };
-  });
-  var grad = ctx.createLinearGradient(0, pad, 0, h - pad);
-  grad.addColorStop(0, 'rgba(76,175,144,0.22)');
-  grad.addColorStop(1, 'rgba(76,175,144,0)');
-  ctx.fillStyle = grad;
+  ctx.strokeStyle = 'rgba(120,140,170,0.18)';
+  ctx.lineWidth = 1 * dpr;
+  ctx.setLineDash([4 * dpr, 4 * dpr]);
+  var midY = yFrom(0.5);
   ctx.beginPath();
-  ctx.moveTo(compPts[0].x, h - pad);
-  compPts.forEach(function(p) { ctx.lineTo(p.x, p.y); });
-  ctx.lineTo(compPts[compPts.length - 1].x, h - pad);
-  ctx.closePath();
-  ctx.fill();
+  ctx.moveTo(padLeft, midY); ctx.lineTo(w - pad, midY); ctx.stroke();
+  ctx.setLineDash([]);
 
-  // 4 條線：完整度粗一點，營養素細一點
-  _dietWeeklyLineSeries.forEach(function(series, idx) {
-    var pts = days.map(function(d, i) {
-      return { x: stepX(i), y: yFrom(pctFor(d, series.key)) };
-    });
-    ctx.strokeStyle = series.color;
-    ctx.lineWidth = (idx === 0 ? 2.2 : 1.6) * dpr;
+  // 100% 目標線：水平實線 + 標記
+  ctx.strokeStyle = 'rgba(120,140,170,0.32)';
+  ctx.lineWidth = 1.2 * dpr;
+  var topY = yFrom(1);
+  ctx.beginPath();
+  ctx.moveTo(padLeft, topY); ctx.lineTo(w - pad, topY); ctx.stroke();
+
+  function drawSeries(k, color, lineW) {
+    var pts = days.map(function(d, i) { return { x: stepX(i), y: yFrom(pctFor(d, k)) }; });
+
+    // 區間填色（只給單線時用）
+    if (lineW > 1.6) {
+      var grad = ctx.createLinearGradient(0, pad, 0, h - pad);
+      var rgb = _hexToRgb(color);
+      grad.addColorStop(0, 'rgba(' + rgb + ',0.22)');
+      grad.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, h - pad);
+      pts.forEach(function(p) { ctx.lineTo(p.x, p.y); });
+      ctx.lineTo(pts[pts.length - 1].x, h - pad);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineW * dpr;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.beginPath();
     pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
     ctx.stroke();
 
-    ctx.fillStyle = series.color;
-    var dotR = (idx === 0 ? 3 : 2.2) * dpr;
+    ctx.fillStyle = color;
+    var dotR = (lineW > 1.6 ? 3 : 2.2) * dpr;
     pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, dotR, 0, 2 * Math.PI); ctx.fill(); });
-  });
+  }
 
-  // y 標籤
-  ctx.fillStyle = 'rgba(120,140,170,0.7)';
+  if (key === 'all') {
+    drawSeries('protein', _dietIntakeColors.protein, 1.6);
+    drawSeries('water',   _dietIntakeColors.water,   1.6);
+    drawSeries('fiber',   _dietIntakeColors.fiber,   1.6);
+  } else {
+    drawSeries(key, _dietIntakeColors[key] || '#5b9fe8', 2.4);
+  }
+
+  ctx.fillStyle = 'rgba(120,140,170,0.78)';
   ctx.font = (10 * dpr) + 'px system-ui';
   ctx.textAlign = 'left';
-  ctx.fillText('100%', 2 * dpr, pad + 4 * dpr);
+  ctx.fillText('目標', 2 * dpr, topY - 4 * dpr);
+  ctx.fillText('100%', 2 * dpr, topY + 11 * dpr);
   ctx.fillText('50%',  2 * dpr, midY + 4 * dpr);
   ctx.fillText('0%',   2 * dpr, h - pad + 4 * dpr);
 
-  // x 標籤（日期）
   var labels = _dietWeeklyDayLabels(week);
   ctx.textAlign = 'center';
-  compPts.forEach(function(p, i) {
-    ctx.fillText(labels[i], p.x, h - pad + 14 * dpr);
+  days.forEach(function(_, i) {
+    ctx.fillText(labels[i], stepX(i), h - pad + 14 * dpr);
   });
+
+  // 全部模式：底部小圖例
+  if (key === 'all') {
+    ctx.font = (9 * dpr) + 'px system-ui';
+    var lx = padLeft;
+    var ly = pad - 6 * dpr;
+    ['protein','water','fiber'].forEach(function(k) {
+      ctx.fillStyle = _dietIntakeColors[k];
+      ctx.fillRect(lx, ly - 6 * dpr, 8 * dpr, 8 * dpr);
+      ctx.fillStyle = 'rgba(120,140,170,0.95)';
+      ctx.fillText(_dietIntakeMeta[k].label, lx + 11 * dpr, ly + 1 * dpr);
+      lx += 44 * dpr;
+    });
+  }
 }
 
-function drawDietWeeklyStack(week) {
-  // 堆疊長條：每天每餐打卡 = 1 unit；y 軸 0~4
-  var s = _dietWeeklyCanvasSetup();
-  if (!s) return;
-  var ctx = s.ctx, w = s.w, h = s.h, dpr = s.dpr;
-  var pad = 22 * dpr;
-  var padLeft = 32 * dpr;
-  var days = week.by_day;
-  var n = days.length;
-  var slot = (w - pad - padLeft) / n;
-  var barW = slot * 0.65;
-  var meals = ['breakfast','lunch','dinner','snack'];
-  var unitH = (h - 2 * pad) / 4;
+function _hexToRgb(hex) {
+  var s = (hex || '').replace('#', '');
+  if (s.length === 3) s = s.split('').map(function(c) { return c + c; }).join('');
+  var n = parseInt(s, 16);
+  return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+}
 
-  // y 軸格線
-  ctx.strokeStyle = 'rgba(120,140,170,0.12)';
-  ctx.lineWidth = 1 * dpr;
-  for (var k = 1; k <= 4; k++) {
-    var yy = h - pad - unitH * k;
-    ctx.beginPath(); ctx.moveTo(padLeft, yy); ctx.lineTo(w - pad, yy); ctx.stroke();
+// ─── 今日喝水（每人每日一條，UPSERT；slider 拖完才送出） ───────
+var _dietWaterAmount = 0;
+var _dietWaterTarget = 2000;
+var _dietWaterFluidRestriction = false;
+var _dietWaterFluidLimit = null;
+var _dietWaterCommitTimer = null;
+var _dietWaterPending = null;
+
+function fetchWaterIntake() {
+  var pid = getStablePatientId();
+  if (!pid) return;
+  var tz = new Date().getTimezoneOffset();
+  fetch(API + '/diet/water/' + encodeURIComponent(pid) + '?tz_offset=' + tz)
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      _dietWaterAmount = Number(data.amount_ml) || 0;
+      _dietWaterFluidRestriction = !!data.fluid_restriction;
+      _dietWaterFluidLimit = data.fluid_limit_ml || null;
+      // 目標：限水族群以 fluid_limit_ml 為上限；其他人以 daily_targets.water_ml 為下限
+      if (_dietWaterFluidRestriction) {
+        _dietWaterTarget = _dietWaterFluidLimit || 1500;
+      } else if (_dietGuide && _dietGuide.daily_targets && _dietGuide.daily_targets.water_ml) {
+        _dietWaterTarget = Number(_dietGuide.daily_targets.water_ml) || 2000;
+      } else {
+        _dietWaterTarget = (DIET_BASELINE_TARGETS && DIET_BASELINE_TARGETS.water_ml) || 2000;
+      }
+      _dietWaterRender();
+    })
+    .catch(function(e) {
+      console.warn('[diet] water fetch failed:', e);
+      _dietWaterAmount = 0;
+      _dietWaterRender();
+    });
+}
+
+function _dietWaterRender() {
+  var amountEl = document.getElementById('diet-water-amount');
+  var targetNumEl = document.getElementById('diet-water-target-num');
+  var targetLabelEl = document.getElementById('diet-water-target-label');
+  var fillEl = document.getElementById('diet-water-progress-fill');
+  var slider = document.getElementById('diet-water-slider');
+  var customInput = document.getElementById('diet-water-custom-input');
+  var warnEl = document.getElementById('diet-water-warning');
+  var card = document.getElementById('diet-water-card');
+  if (!amountEl) return;
+
+  var target = _dietWaterTarget || 2000;
+  var amount = _dietWaterAmount;
+  amountEl.textContent = String(amount);
+  if (targetNumEl) targetNumEl.textContent = String(target);
+  if (targetLabelEl) {
+    targetLabelEl.textContent = _dietWaterFluidRestriction
+      ? '上限 ' + target + ' ml'
+      : '目標 ' + target + ' ml';
+  }
+  // slider max 至少蓋過目標 + 500，且 100ml 為一格
+  if (slider) {
+    var maxV = Math.max(3000, Math.ceil((target + 500) / 100) * 100);
+    slider.max = String(maxV);
+    slider.value = String(Math.min(amount, maxV));
+  }
+  if (customInput && document.activeElement !== customInput) {
+    customInput.value = amount > 0 ? String(amount) : '';
   }
 
-  days.forEach(function(d, i) {
-    var x = padLeft + slot * (i + 0.5) - barW / 2;
-    var stackY = h - pad;
-    meals.forEach(function(m) {
-      if (d[m]) {
-        ctx.fillStyle = _dietWeeklyMealColors[m];
-        ctx.fillRect(x, stackY - unitH + 1 * dpr, barW, unitH - 2 * dpr);
-        stackY -= unitH;
-      }
-    });
-  });
-
-  // 標籤
-  ctx.fillStyle = 'rgba(120,140,170,0.7)';
-  ctx.font = (10 * dpr) + 'px system-ui';
-  ctx.textAlign = 'left';
-  ctx.fillText('4', 2 * dpr, pad + 4 * dpr);
-  ctx.fillText('2', 2 * dpr, h - pad - unitH * 2 + 4 * dpr);
-  ctx.fillText('0', 2 * dpr, h - pad + 4 * dpr);
-
-  var labels = _dietWeeklyDayLabels(week);
-  ctx.textAlign = 'center';
-  days.forEach(function(_, i) {
-    var cx = padLeft + slot * (i + 0.5);
-    ctx.fillText(labels[i], cx, h - pad + 14 * dpr);
-  });
+  var ratio = target ? amount / target : 0;
+  var fillPct = Math.min(1, ratio) * 100;
+  var over = _dietWaterFluidRestriction && amount > target;
+  if (fillEl) {
+    fillEl.style.width = fillPct.toFixed(1) + '%';
+    fillEl.classList.toggle('over', over);
+  }
+  if (card) card.classList.toggle('over-limit', over);
+  if (warnEl) {
+    if (over) {
+      warnEl.hidden = false;
+      warnEl.textContent = '⚠ 已超過建議上限 ' + target + ' ml（多 ' + (amount - target) + ' ml）';
+    } else {
+      warnEl.hidden = true;
+      warnEl.textContent = '';
+    }
+  }
 }
 
-function drawDietWeeklyMulti(week) {
-  // 4 條折線：早午晚點分別累積打卡（0/1 per day）
-  var s = _dietWeeklyCanvasSetup();
-  if (!s) return;
-  var ctx = s.ctx, w = s.w, h = s.h, dpr = s.dpr;
-  var pad = 22 * dpr;
-  var padLeft = 32 * dpr;
-  var days = week.by_day;
-  var n = days.length;
-  var meals = ['breakfast','lunch','dinner','snack'];
+function dietWaterSliderInput(v) {
+  var n = Math.max(0, parseInt(v, 10) || 0);
+  _dietWaterAmount = n;
+  _dietWaterRender();
+  // 拖動過程不立刻打 API；onchange 才送出
+}
 
-  // y 軸：每條線在獨立帶（4 帶）— 讓 4 條線不重疊
-  // 改採累積線：每條線是「截至這天的總次數 / 7」 0~1
-  var bandH = (h - 2 * pad);
-  var stepX = (w - pad - padLeft) / Math.max(1, n - 1);
+function dietWaterCommit() {
+  var slider = document.getElementById('diet-water-slider');
+  if (!slider) return;
+  var n = Math.max(0, parseInt(slider.value, 10) || 0);
+  _dietWaterAmount = n;
+  _dietWaterRender();
+  _dietWaterPersist(n);
+}
 
-  // 格線
-  ctx.strokeStyle = 'rgba(120,140,170,0.12)';
-  ctx.lineWidth = 1 * dpr;
-  ctx.setLineDash([3 * dpr, 3 * dpr]);
-  ctx.beginPath();
-  ctx.moveTo(padLeft, h - pad - bandH * 0.5); ctx.lineTo(w - pad, h - pad - bandH * 0.5);
-  ctx.stroke();
-  ctx.setLineDash([]);
+function dietWaterCommitCustom() {
+  var input = document.getElementById('diet-water-custom-input');
+  if (!input) return;
+  var n = Math.max(0, parseInt(input.value, 10) || 0);
+  if (!isFinite(n)) return;
+  _dietWaterAmount = n;
+  _dietWaterRender();
+  _dietWaterPersist(n);
+}
 
-  meals.forEach(function(m) {
-    var cum = 0;
-    var pts = days.map(function(d, i) {
-      if (d[m]) cum++;
-      return {
-        x: padLeft + stepX * i,
-        y: h - pad - bandH * (cum / 7),
-      };
+function _dietWaterPersist(amount) {
+  var pid = getStablePatientId();
+  if (!pid) return;
+  // debounce 連續調整：300ms 內最後一次值才送
+  _dietWaterPending = amount;
+  if (_dietWaterCommitTimer) clearTimeout(_dietWaterCommitTimer);
+  _dietWaterCommitTimer = setTimeout(function() {
+    var send = _dietWaterPending;
+    _dietWaterPending = null;
+    _dietWaterCommitTimer = null;
+    var tz = new Date().getTimezoneOffset();
+    fetch(API + '/diet/water', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_id: pid, amount_ml: send, tz_offset: tz }),
+    }).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function() {
+      // 飲水量會影響攝取卡的「水分」線與今日進度條 → 重抓週報
+      fetchDietWeekly();
+    }).catch(function(e) {
+      console.warn('[diet] water persist failed:', e);
     });
-    ctx.strokeStyle = _dietWeeklyMealColors[m];
-    ctx.lineWidth = 2 * dpr;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    pts.forEach(function(p, i) { i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
-    ctx.stroke();
-    ctx.fillStyle = _dietWeeklyMealColors[m];
-    pts.forEach(function(p) { ctx.beginPath(); ctx.arc(p.x, p.y, 2.5 * dpr, 0, 2 * Math.PI); ctx.fill(); });
-  });
-
-  // y 標籤
-  ctx.fillStyle = 'rgba(120,140,170,0.7)';
-  ctx.font = (10 * dpr) + 'px system-ui';
-  ctx.textAlign = 'left';
-  ctx.fillText('7', 2 * dpr, pad + 4 * dpr);
-  ctx.fillText('0', 2 * dpr, h - pad + 4 * dpr);
-
-  // 圖例
-  ctx.font = (9 * dpr) + 'px system-ui';
-  var legendX = padLeft;
-  var legendY = pad - 4 * dpr;
-  [['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點']].forEach(function(p) {
-    ctx.fillStyle = _dietWeeklyMealColors[p[0]];
-    ctx.fillRect(legendX, legendY - 6 * dpr, 8 * dpr, 8 * dpr);
-    ctx.fillStyle = 'rgba(120,140,170,0.9)';
-    ctx.fillText(p[1], legendX + 11 * dpr, legendY + 1 * dpr);
-    legendX += 28 * dpr;
-  });
-
-  var labels = _dietWeeklyDayLabels(week);
-  ctx.fillStyle = 'rgba(120,140,170,0.7)';
-  ctx.font = (10 * dpr) + 'px system-ui';
-  ctx.textAlign = 'center';
-  days.forEach(function(_, i) {
-    var x = padLeft + stepX * i;
-    ctx.fillText(labels[i], x, h - pad + 14 * dpr);
-  });
+  }, 300);
 }
 
 
