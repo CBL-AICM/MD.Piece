@@ -80,6 +80,14 @@ class AdmissionMedicationCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class AdmissionMedicationUpdate(BaseModel):
+    name: Optional[str] = None
+    dose: Optional[str] = None
+    frequency: Optional[str] = None
+    next_due_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class DoseRecord(BaseModel):
     admission_medication_id: str
     given_at: Optional[str] = None
@@ -165,6 +173,39 @@ def update_admission(admission_id: str, body: AdmissionUpdate):
     return result.data[0]
 
 
+@router.delete("/{admission_id}")
+def delete_admission(admission_id: str):
+    """整筆住院 / 療程砍掉。
+    順手把底下 admission_medications + admission_medication_doses 一起清掉，
+    避免 schema 沒設 FK cascade 時殘留孤兒列。"""
+    sb = get_supabase()
+    parent = sb.table("admissions").select("id").eq("id", admission_id).limit(1).execute()
+    if not parent.data:
+        raise HTTPException(status_code=404, detail="找不到該住院/療程紀錄")
+
+    med_rows = (
+        sb.table("admission_medications")
+        .select("id")
+        .eq("admission_id", admission_id)
+        .execute()
+        .data
+        or []
+    )
+    med_ids = [m["id"] for m in med_rows]
+    if med_ids:
+        try:
+            sb.table("admission_medication_doses").delete().in_("admission_medication_id", med_ids).execute()
+        except Exception as e:
+            logger.warning(f"Cleanup doses for {admission_id} skipped: {e}")
+        try:
+            sb.table("admission_medications").delete().eq("admission_id", admission_id).execute()
+        except Exception as e:
+            logger.warning(f"Cleanup admission_medications for {admission_id} skipped: {e}")
+
+    sb.table("admissions").delete().eq("id", admission_id).execute()
+    return {"deleted": admission_id, "medications_deleted": len(med_ids)}
+
+
 @router.post("/{admission_id}/discharge")
 def discharge_admission(admission_id: str, discharge_date: Optional[str] = None):
     """出院 / 結案：把 status 改成 discharged 並寫入 discharge_date。"""
@@ -197,6 +238,45 @@ def add_admission_medication(body: AdmissionMedicationCreate):
         logger.error(f"Add admission medication failed: {e}")
         raise HTTPException(status_code=400, detail="新增療程藥物失敗")
     return result.data[0]
+
+
+@router.put("/medications/{admission_medication_id}")
+def update_admission_medication(admission_medication_id: str, body: AdmissionMedicationUpdate):
+    """改一筆排定給藥（藥名 / 劑量 / 頻率 / 下次預定日）。"""
+    data = body.model_dump(exclude_none=True)
+    if not data:
+        raise HTTPException(status_code=400, detail="沒有提供更新資料")
+    sb = get_supabase()
+    result = (
+        sb.table("admission_medications")
+        .update(data)
+        .eq("id", admission_medication_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="找不到對應的療程藥物")
+    return result.data[0]
+
+
+@router.delete("/medications/{admission_medication_id}")
+def delete_admission_medication(admission_medication_id: str):
+    """刪掉一筆排定給藥，連同它的施打紀錄一起清掉。"""
+    sb = get_supabase()
+    parent = (
+        sb.table("admission_medications")
+        .select("id")
+        .eq("id", admission_medication_id)
+        .limit(1)
+        .execute()
+    )
+    if not parent.data:
+        raise HTTPException(status_code=404, detail="找不到對應的療程藥物")
+    try:
+        sb.table("admission_medication_doses").delete().eq("admission_medication_id", admission_medication_id).execute()
+    except Exception as e:
+        logger.warning(f"Cleanup doses for med {admission_medication_id} skipped: {e}")
+    sb.table("admission_medications").delete().eq("id", admission_medication_id).execute()
+    return {"deleted": admission_medication_id}
 
 
 @router.get("/medications/upcoming")
