@@ -3,27 +3,82 @@ const GITHUB_REPO = "CBL-AICM/MD.Piece";
 
 // ─── 顯示模式（年長版 / 普通版）─────────────────────────────
 // 'senior' = 大字體、寬按鈕、高對比；'standard' = 原本的精緻 UI
+//
+// 與 elder-mode.css 對齊：
+//   html[data-mode="senior"] === html.elder-mode
+//   localStorage 'mdpiece_mode' 與 'md.elderMode' 雙向同步
+//   ?elder=1 query 強制開啟一次（不會覆寫使用者偏好除非顯式設定）
+
+const ELDER_LS_KEY = 'md.elderMode';
+const LEGACY_MODE_KEY = 'mdpiece_mode';
+
+function _readElderPref() {
+  // 新 key 優先；舊 key 作為 fallback
+  const v = localStorage.getItem(ELDER_LS_KEY);
+  if (v === '1' || v === 'true') return true;
+  if (v === '0' || v === 'false') return false;
+  return localStorage.getItem(LEGACY_MODE_KEY) === 'senior';
+}
+
+function _detectInitialElderMode() {
+  // 啟動順序：?elder=1 > localStorage 偏好 > 預設 false
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get('elder') === '1') return true;
+    if (qs.get('elder') === '0') return false;
+  } catch (e) { /* ignore */ }
+  return _readElderPref();
+}
 
 function getMode() {
-  return localStorage.getItem('mdpiece_mode') || 'standard';
+  return _readElderPref() ? 'senior' : 'standard';
 }
 
 function setMode(mode) {
-  const m = mode === 'senior' ? 'senior' : 'standard';
-  localStorage.setItem('mdpiece_mode', m);
+  const isElder = mode === 'senior';
+  const m = isElder ? 'senior' : 'standard';
+  // 雙向同步：新 key 與舊 key 都寫，方便其他既有程式碼讀取
+  localStorage.setItem(ELDER_LS_KEY, isElder ? '1' : '0');
+  localStorage.setItem(LEGACY_MODE_KEY, m);
+  // 同時掛 data-mode（既有 CSS）與 .elder-mode（新 CSS）
   document.documentElement.setAttribute('data-mode', m);
+  document.documentElement.classList.toggle('elder-mode', isElder);
   // 同步切換按鈕顯示（i18n 化：透過字典決定中/英文標籤）
   const t = (window.MDPiece_i18n && window.MDPiece_i18n.t) || ((k) => k);
-  const labelKey = m === 'senior' ? 'mode.toNormal' : 'mode.toSenior';
-  const fallback = m === 'senior' ? '切換為普通版' : '切換為年長版';
+  const labelKey = isElder ? 'mode.toNormal' : 'mode.toSenior';
+  const fallback = isElder ? '切換為普通版' : '切換為年長版';
   document.querySelectorAll('[data-mode-toggle]').forEach(function (el) {
     el.textContent = window.MDPiece_i18n ? t(labelKey) : fallback;
-    el.setAttribute('aria-pressed', m === 'senior' ? 'true' : 'false');
+    el.setAttribute('aria-pressed', isElder ? 'true' : 'false');
   });
+  // 廣播事件給其他元件（例如時間軸 Bento 需依模式調整 grid）
+  try {
+    window.dispatchEvent(new CustomEvent('mdpiece-elder-mode-change', {
+      detail: { elder: isElder },
+    }));
+  } catch (e) { /* ignore on old browsers */ }
 }
 
 function toggleMode() {
   setMode(getMode() === 'senior' ? 'standard' : 'senior');
+}
+
+// alias — 比較直觀的英文名
+function isElderMode() { return getMode() === 'senior'; }
+function toggleElderMode() {
+  toggleMode();
+  // 第一次切換時顯示一個 toast，讓使用者知道「字真的變大了」
+  _showElderModeHint(isElderMode());
+}
+
+function _showElderModeHint(turnedOn) {
+  var prior = document.querySelector('.elder-mode-hint');
+  if (prior) prior.remove();
+  var hint = document.createElement('div');
+  hint.className = 'elder-mode-hint';
+  hint.textContent = turnedOn ? '已開啟長者模式：字大、按鈕大、對比高' : '已切回標準模式';
+  document.body.appendChild(hint);
+  setTimeout(function() { if (hint.parentNode) hint.remove(); }, 3000);
 }
 
 // ─── 照護模式（門診 / 住院）─────────────────────────────────
@@ -234,7 +289,8 @@ window.addEventListener('mdpiece-lang-change', function() {
 });
 
 // 在 DOMContentLoaded 之前先把屬性掛上，避免閃爍
-document.documentElement.setAttribute('data-mode', getMode());
+// 同時處理 ?elder=1 query string，讓無障礙連結可一鍵分享長者模式
+setMode(_detectInitialElderMode() ? 'senior' : 'standard');
 
 // ─── 使用者狀態 ─────────────────────────────────────────────
 
@@ -1991,6 +2047,10 @@ function showPage(page) {
   _currentPageKey = page;
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
+  // 頁面層級的主題強制覆寫（症狀分析 / 報告 → light；夜間提醒 → dark）
+  if (typeof _reapplyThemeForCurrentPage === 'function') {
+    try { _reapplyThemeForCurrentPage(); } catch (e) { /* boot order safety */ }
+  }
   const pages = {
     home, symptoms, symptomsAnalyze, doctors, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
@@ -4999,6 +5059,17 @@ function filterTimeline(kind) {
 function loadTimelinePage() {
   var box = document.getElementById('tl-list');
   if (!box) return;
+  // 先嘗試從後端拉 server 端時間軸（場景 C：跨次就診整合）。
+  // 失敗或 DB offline 時，沉著退回 localStorage 既有資料。
+  loadServerTimeline().then(function(serverOk) {
+    if (serverOk) return;       // 已成功渲染 Bento Grid，跳過 local
+    _renderLocalTimeline(box);   // 否則用既有 .tl-list 流程
+  }).catch(function() {
+    _renderLocalTimeline(box);
+  });
+}
+
+function _renderLocalTimeline(box) {
   var entries = _getTimelineEntries();
   if (_tlFilter !== 'all') entries = entries.filter(function(e) { return e.kind === _tlFilter; });
   entries.sort(function(a, b) { return a.date < b.date ? 1 : -1; });
@@ -5028,6 +5099,64 @@ function loadTimelinePage() {
       + '</article>';
   }).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 從後端拉時間軸並渲染成 Bento Grid。
+// 回傳 Promise<boolean>：true = 已渲染（含「沒資料」狀態），false = 拉不到或 DB offline，呼叫端應 fallback。
+async function loadServerTimeline() {
+  var box = document.getElementById('tl-list');
+  if (!box) return false;
+  try {
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    if (!pid) return false;
+    var res = await fetch(API + '/timeline?patient_id=' + encodeURIComponent(pid));
+    if (!res.ok) return false;
+    var data = await res.json();
+    if (data && data.meta && data.meta.db_offline) return false;
+    var entries = (data && data.entries) || [];
+    if (_tlFilter !== 'all') {
+      entries = entries.filter(function(e) {
+        // 將後端 type 對應到既有 filter id（lab/med/visit/admission/self_report）
+        return e.type === _tlFilter;
+      });
+    }
+    box.classList.add('tl-bento');
+    box.classList.remove('tl-list');
+    if (!entries.length) {
+      box.innerHTML = '<p class="tl-bento-empty">// 後端尚無事件。先上傳你的第一份檢驗報告或處方箋。</p>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      return true;
+    }
+    box.innerHTML = entries.map(_renderTimelineBentoCard).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function _renderTimelineBentoCard(entry) {
+  // 將 server 回傳值 narrow 到已知白名單，避免任意 attribute 注入
+  var SEV_WHITELIST = { self:1, clinic:1, regional:1, medical:1, er:1 };
+  var IMP_WHITELIST = { normal:1, high:1 };
+  var sev = SEV_WHITELIST[entry.severity_color] ? entry.severity_color : 'self';
+  var importance = IMP_WHITELIST[entry.importance] ? entry.importance : 'normal';
+  var dateStr = entry.date ? escapeHtml(entry.date) : '—';
+  var titleStr = escapeHtml(entry.title || '（未命名事件）');
+  var summaryStr = entry.summary ? escapeHtml(entry.summary) : '';
+  var sourceStr = entry.source ? escapeHtml(entry.source) : '';
+  var typeStr = escapeHtml(entry.type || '');
+  var icdChip = entry.icd10
+    ? '<span class="tl-bento-icd" title="ICD-10">' + escapeHtml(entry.icd10) + '</span>'
+    : '';
+  return ''
+    + '<article class="tl-bento-card" data-severity="' + sev + '" data-importance="' + importance + '" data-type="' + typeStr + '">'
+    +   '<span class="tl-bento-date">' + dateStr + '</span>'
+    +   icdChip
+    +   '<h3 class="tl-bento-title">' + titleStr + '</h3>'
+    +   (summaryStr ? '<p class="tl-bento-summary">' + summaryStr + '</p>' : '')
+    +   (sourceStr ? '<span class="tl-bento-source">' + sourceStr + '</span>' : '')
+    + '</article>';
 }
 
 function openTimelineUploader() {
@@ -7996,12 +8125,14 @@ function symptomsAnalyze() {
   `;
 }
 
+// 緊急度（從 /symptoms/analyze 回的 urgency）對應到 5 級 severity token
+// 對齊 docs/research/ui_color_research.md §4 與 backend/routers/triage.py
 function _symptomUrgency(level) {
   const map = {
-    emergency: { label: "🚨 緊急", color: "#d6457e", bg: "rgba(214,69,126,0.12)" },
-    high:      { label: "⚠️ 高",   color: "#e8889c", bg: "rgba(232,136,156,0.12)" },
-    medium:    { label: "● 中",    color: "#d49a55", bg: "rgba(212,154,85,0.12)" },
-    low:       { label: "● 低",    color: "#5b9fe8", bg: "rgba(91,159,232,0.12)" },
+    emergency: { label: "緊急",   severity: "er"       },  // → var(--sev-er)
+    high:      { label: "高",     severity: "medical"  },  // → var(--sev-medical)
+    medium:    { label: "中",     severity: "clinic"   },  // → var(--sev-clinic)
+    low:       { label: "低",     severity: "self"     },  // → var(--sev-self)
   };
   return map[level] || map.low;
 }
@@ -8070,6 +8201,8 @@ async function runSymptomAnalysis() {
     if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
     // 重新載入歷史
     loadSymptomAnalysisHistory();
+    // 再打 /triage/evaluate 拿後端的 severity_color（5 級分級醫療）並套上 data-severity
+    enrichSymptomAnalysisWithTriage(symptoms, pid).catch(function() { /* 安靜失敗，不擋主流程 */ });
   } catch (e) {
     if (_saTypingTimer) { clearInterval(_saTypingTimer); _saTypingTimer = null; }
     el.innerHTML =
@@ -8077,6 +8210,46 @@ async function runSymptomAnalysis() {
       '<strong>分析失敗</strong><br>' +
       '<span style="font-size:0.85rem;color:var(--text-muted)">' + escapeHtml(e.message || "未知錯誤") + '</span>' +
       '</div>';
+  }
+}
+
+// 在症狀分析成功後，再呼叫 /triage/evaluate 拿後端的 severity_color（er/regional/clinic/self）
+// 把分級醫療顏色補上去，並在結果區塊浮一條「建議去哪裡看」chip
+async function enrichSymptomAnalysisWithTriage(symptoms, pid) {
+  const TRIAGE_LABEL = {
+    emergency: { sev: 'er',       text: '建議立即就醫 / 急診' },
+    follow_up: { sev: 'regional', text: '近期回診追蹤' },
+    stable:    { sev: 'self',     text: '可先自我照護觀察' },
+  };
+  try {
+    const res = await fetch(`${API}/triage/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_id: pid, symptoms: symptoms || [] }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const result = data && data.result;
+    const meta = TRIAGE_LABEL[result];
+    if (!meta) return;
+    // 安全檢查 severity_color：只接受 5 個白名單值
+    const SEV = { self:1, clinic:1, regional:1, medical:1, er:1 };
+    const sev = SEV[data.severity_color] ? data.severity_color : meta.sev;
+    const host = document.getElementById('symptom-analyze-result');
+    if (!host) return;
+    // 把 result 區塊外層也掛上 data-severity（讓樣式統一）
+    host.setAttribute('data-severity', sev);
+    // 插入分級建議 chip
+    const banner = document.createElement('div');
+    banner.className = 'sa-triage-banner';
+    banner.innerHTML =
+      '<span class="sev-chip" data-severity="' + sev + '">分級建議</span>' +
+      '<span class="sa-triage-text">' + escapeHtml(meta.text) + '</span>' +
+      (data.message ? '<span class="sa-triage-msg">' + escapeHtml(data.message) + '</span>' : '');
+    // 放在結果第一行
+    host.insertBefore(banner, host.firstChild);
+  } catch (e) {
+    // 不擋主流程
   }
 }
 
@@ -8099,9 +8272,10 @@ function renderSymptomAnalysis(data) {
     })
     .join("");
 
+  // 用 data-severity attribute（CSS 套 var(--sev-*)），前端不再硬寫顏色
   return `
-    <div class="sa-urgency" style="border-left-color:${u.color};background:${u.bg}">
-      <div class="sa-urgency-label" style="color:${u.color}">緊急程度：${u.label}</div>
+    <div class="sa-urgency" data-severity="${u.severity}">
+      <span class="sev-chip" data-severity="${u.severity}">緊急程度：${u.label}</span>
     </div>
     <div class="sa-grid">
       <section class="sa-section">
@@ -11963,9 +12137,38 @@ function applyFontSize(size) {
   document.documentElement.setAttribute('data-font-size', size);
 }
 
+// 頁面層級的主題強制覆寫（依 docs/research/ui_color_research.md §5）
+// 某些頁面內容性質上需要強制 light 或 dark，而不跟隨系統偏好
+const PAGE_FORCED_THEME = {
+  // 症狀分析與報告需要高對比 → 強制 light
+  symptoms: 'light',
+  symptomsAnalyze: 'light',
+  reports: 'light',
+  story: 'light',
+  // 夜間提醒 / 服藥提醒 → 強制 dark（晚間 20:00–06:00 才生效，避開白天）
+  reminders: '_dark_at_night',
+  medications: '_dark_at_night',
+};
+
+function _resolveForcedTheme(pageKey, fallback) {
+  const rule = PAGE_FORCED_THEME[pageKey];
+  if (!rule) return fallback;
+  if (rule === '_dark_at_night') {
+    const hour = new Date().getHours();
+    return (hour >= 20 || hour < 6) ? 'dark' : fallback;
+  }
+  return rule;
+}
+
 function applyTheme(pref) {
   const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
+  let resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
+  // 頁面強制覆寫優先（不寫 storage，僅作為當下顯示）
+  if (typeof _currentPageKey === 'string') {
+    resolved = _resolveForcedTheme(_currentPageKey, resolved);
+  }
+  // 將最終解析結果寫到 <html data-theme>，新 CSS rules 用得到
+  document.documentElement.setAttribute('data-theme', resolved);
   const app = document.getElementById('app-wrapper');
   const lp  = document.getElementById('landing');
   if (app) app.dataset.theme = resolved;
@@ -11979,6 +12182,13 @@ function applyTheme(pref) {
   // 與既有 toggle 共用 storage key（保持向下相容）
   try { localStorage.setItem('mdpiece_landing_theme', resolved); } catch (e) {}
   window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: resolved }));
+}
+
+// 對外暴露給 showPage 呼叫：頁面切換後重新解析強制主題
+function _reapplyThemeForCurrentPage() {
+  let pref = null;
+  try { pref = localStorage.getItem('mdpiece_theme_pref'); } catch (e) {}
+  applyTheme(pref || 'auto');
 }
 
 function applyMotion(motion) {

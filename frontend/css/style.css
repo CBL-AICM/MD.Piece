@@ -76,6 +76,48 @@
   --shadow-sm:  0 2px 8px rgba(31,61,88,0.08);
   --shadow-lift:0 10px 28px rgba(31,61,88,0.14), 0 3px 8px rgba(31,61,88,0.09);
   --transition: .25s cubic-bezier(.4,0,.2,1);
+
+  /* ─── Design Tokens（集中化，避免散落的 hard-coded 值）──────
+     依 docs/research/ui_color_research.md 的建議：
+     繁中筆畫密集，比英文站 +1 階字級；長者模式再 +1 階。 */
+
+  /* Typography scale (mobile-first) */
+  --font-xs:    13px;
+  --font-sm:    14px;
+  --font-base:  16px;
+  --font-lg:    18px;
+  --font-xl:    20px;
+  --font-2xl:   24px;
+  --font-3xl:   32px;
+
+  /* Line height */
+  --lh-tight:   1.3;
+  --lh-base:    1.6;
+  --lh-loose:   1.8;
+
+  /* Spacing (4px grid) */
+  --space-1:    4px;
+  --space-2:    8px;
+  --space-3:    12px;
+  --space-4:    16px;
+  --space-5:    20px;
+  --space-6:    24px;
+  --space-8:    32px;
+  --space-10:   40px;
+  --space-12:   48px;
+
+  /* Touch targets — WCAG 2.5.5 minimum 44px；長者建議 56px */
+  --tap-min:    44px;
+  --tap-elder:  56px;
+
+  /* Severity colors（搭配 backend/routers/triage.py 回傳 severity_color）
+     5 級分級醫療：自我照護 → 基層 → 區域 → 醫學中心 → 急診
+     用語意 token 而非寫死顏色，方便 elder-mode / dark-mode 覆寫。 */
+  --sev-self:     var(--success);   /* 自我照護 */
+  --sev-clinic:   var(--accent);    /* 基層診所 */
+  --sev-regional: #1F3D58;          /* 區域醫院 */
+  --sev-medical:  #5C4B8A;          /* 醫學中心 */
+  --sev-er:       var(--danger);    /* 急診 */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,6 +126,8 @@ html { overflow-x: hidden; }
 
 body {
   font-family: "Noto Sans TC", sans-serif;
+  font-size: var(--font-base);
+  line-height: var(--lh-base);
   background: var(--bg-deep);
   background-attachment: fixed;
   color: var(--text);
@@ -1257,8 +1301,8 @@ html[data-mode="senior"] .topbar-version {
   backdrop-filter: blur(12px);
   border: 2px solid var(--border-glass);
   border-radius: var(--radius);
-  padding: 24px;
-  margin-bottom: 20px;
+  padding: var(--space-6);
+  margin-bottom: var(--space-5);
   transition: var(--transition);
   position: relative;
   overflow: hidden;
@@ -1279,22 +1323,25 @@ html[data-mode="senior"] .topbar-version {
 .card:hover::before { opacity: 1; }
 
 .card h2 {
-  font-size: 1.15rem;
+  font-size: var(--font-xl);
   font-weight: 600;
-  margin-bottom: 12px;
+  line-height: var(--lh-tight);
+  margin-bottom: var(--space-3);
   color: var(--text);
 }
 
 .card h3 {
-  font-size: 1rem;
+  font-size: var(--font-lg);
   font-weight: 500;
+  line-height: var(--lh-tight);
   color: var(--text-dim);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .card p {
+  font-size: var(--font-base);
   color: var(--text-dim);
-  line-height: 1.6;
+  line-height: var(--lh-base);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1343,13 +1390,15 @@ button.primary {
   background: linear-gradient(135deg, var(--accent), #3a7fd9);
   color: white;
   border: none;
-  padding: 10px 24px;
+  padding: var(--space-3) var(--space-6);
+  min-height: var(--tap-min);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: .95rem;
+  font-size: var(--font-base);
   font-family: inherit;
   font-weight: 500;
-  margin-top: 8px;
+  line-height: var(--lh-tight);
+  margin-top: var(--space-2);
   transition: var(--transition);
   box-shadow: 0 2px 12px var(--accent-glow);
 }
@@ -1363,13 +1412,15 @@ button.secondary {
   background: var(--bg-glass);
   color: var(--accent);
   border: 2px solid var(--border-glass);
-  padding: 10px 24px;
+  padding: var(--space-3) var(--space-6);
+  min-height: var(--tap-min);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: .95rem;
+  font-size: var(--font-base);
   font-family: inherit;
   font-weight: 500;
-  margin-top: 8px;
+  line-height: var(--lh-tight);
+  margin-top: var(--space-2);
   transition: var(--transition);
 }
 
@@ -9558,13 +9609,40 @@ a.story-news-title:hover { color: var(--story-text-dark); }
    症狀分析結果（白話、給一般民眾看）
    ═══════════════════════════════════════════════════════════ */
 .sa-urgency {
-  padding: 14px 18px;
-  border-left: 4px solid var(--accent);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
-  margin-bottom: 14px;
+  margin-bottom: var(--space-3);
   background: var(--bg-glass);
+  /* 警示「邊」不警示「面」：左邊框用 severity token */
+  border-left: 4px solid var(--_sev-color, var(--accent));
 }
-.sa-urgency-label { font-weight: 600; font-size: 1.05rem; }
+.sa-urgency[data-severity="er"] { border-left-width: 5px; }
+.sa-urgency-label { font-weight: 600; font-size: var(--font-base); }
+
+/* 分級醫療 chip — 對應 /triage/evaluate 的 severity_color */
+.sa-triage-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  background: var(--bg-soft);
+  border-radius: var(--radius-sm);
+}
+.sa-triage-text {
+  font-weight: 600;
+  color: var(--text);
+}
+.sa-triage-msg {
+  flex-basis: 100%;
+  font-size: var(--font-sm);
+  color: var(--text-dim);
+  line-height: var(--lh-base);
+}
 .sa-grid { display: grid; gap: 16px; }
 .sa-section { }
 .sa-section-title {
@@ -15837,4 +15915,222 @@ html[data-care-mode="inpatient"] .nav-item:not([data-page="admissions"]):not([da
 }
 html[data-care-mode="inpatient"] .nav-section-label {
   display: none !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   Global Theme — html[data-theme]
+   ─────────────────────────────────────────────────────────────
+   既有的 #app-wrapper[data-theme] 規則保留（向後相容），這層
+   只新增「未指定主題時跟隨系統」與全域 token 覆寫，避免大規模
+   重寫舊規則。詳細策略見 docs/research/ui_color_research.md §5。
+   ═══════════════════════════════════════════════════════════ */
+
+/* 預設 light token（與既有 :root 的值一致，宣告為了顯式契約） */
+html[data-theme="light"] {
+  --bg-deep:    #FFFFFF;
+  --bg-mid:     #F7F9FC;
+  --bg-soft:    #EFF3F8;
+  --bg-surface: #FFFFFF;
+  --text:       #1F3D58;
+  --text-dim:   #5A7388;
+  --text-muted: #8FA4B5;
+}
+
+/* 全 app 的 dark 模式 token（之前只在 #app-wrapper 上） */
+html[data-theme="dark"] {
+  --bg-deep:    #0F1A24;
+  --bg-mid:     #1A2A38;
+  --bg-soft:    #243648;
+  --bg-surface: #182634;
+  --text:       #E8F4F8;
+  --text-dim:   #A8BFD0;
+  --text-muted: #6F8597;
+  --border-glass:  rgba(232,244,248,0.18);
+  --border-strong: rgba(232,244,248,0.32);
+  /* 將陰影調為「光暈」而非黑色陰影 */
+  --shadow:      0 4px 14px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.22);
+  --shadow-sm:   0 2px 8px rgba(0,0,0,0.28);
+  --shadow-lift: 0 10px 28px rgba(0,0,0,0.42);
+}
+
+/* 系統偏好 → 沒有顯式 data-theme 時跟隨系統 */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]),
+  html[data-theme="auto"] {
+    --bg-deep:    #0F1A24;
+    --bg-mid:     #1A2A38;
+    --bg-soft:    #243648;
+    --bg-surface: #182634;
+    --text:       #E8F4F8;
+    --text-dim:   #A8BFD0;
+    --text-muted: #6F8597;
+    --border-glass:  rgba(232,244,248,0.18);
+    --border-strong: rgba(232,244,248,0.32);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Severity color encoding — data-severity → var(--sev-*)
+   ─────────────────────────────────────────────────────────────
+   後端 backend/routers/triage.py 會回傳 severity_color，前端
+   不再硬寫顏色：
+     <article data-severity="er">…</article>
+   詳見 docs/research/ui_color_research.md §4
+   原則：警示色用「點」不用「面」(左邊框 + chip)，避免「過年感」。
+   ═══════════════════════════════════════════════════════════ */
+
+[data-severity] {
+  --_sev-color: var(--sev-self);
+  border-left: 4px solid var(--_sev-color);
+  padding-left: var(--space-3);
+}
+[data-severity="self"]     { --_sev-color: var(--sev-self); }
+[data-severity="clinic"]   { --_sev-color: var(--sev-clinic); }
+[data-severity="regional"] { --_sev-color: var(--sev-regional); }
+[data-severity="medical"]  { --_sev-color: var(--sev-medical); }
+[data-severity="er"]       { --_sev-color: var(--sev-er); }
+
+/* 標籤式（chip）— 用「邊框 + icon 點」，不用「整個 chip 填色」 */
+.sev-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--_sev-color, var(--sev-self));
+  color: var(--_sev-color, var(--sev-self));
+  background: transparent;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+.sev-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--_sev-color, var(--sev-self));
+  flex-shrink: 0;
+}
+
+/* 急診特殊：邊框略粗，但 *不* 填整片紅。 */
+[data-severity="er"] { border-left-width: 5px; }
+[data-severity="er"].sev-chip { font-weight: 700; }
+
+/* ═══════════════════════════════════════════════════════════
+   Timeline Bento Grid（場景 C：跨次就診整合視圖）
+   ─────────────────────────────────────────────────────────────
+   後端 backend/routers/timeline.py 回傳的 entries 用此 grid 呈現。
+   .tl-bento 與既有 .tl-list 並存，前端可依資料來源切換：
+     • server 資料  → .tl-bento（卡片大小依 importance 變化）
+     • local 資料   → .tl-list（保持現狀向後相容）
+   重要事件（importance="high"）span 2 column，視覺上自然強調。
+   詳見 docs/research/ui_color_research.md §5 與 product-principles 場景 C。
+   ═══════════════════════════════════════════════════════════ */
+
+.tl-bento {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.tl-bento-card {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-glass);
+  border-left: 4px solid var(--_sev-color, var(--sev-self));
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: var(--transition);
+  min-height: 120px;
+}
+
+.tl-bento-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+  border-color: var(--accent);
+}
+
+/* 重要事件：橫向跨 2 欄，內容區也放大 */
+.tl-bento-card[data-importance="high"] {
+  grid-column: span 2;
+}
+
+/* 螢幕較窄時退回單欄，避免 span 2 卡片溢出 */
+@media (max-width: 480px) {
+  .tl-bento { grid-template-columns: 1fr; }
+  .tl-bento-card[data-importance="high"] { grid-column: span 1; }
+}
+
+.tl-bento-date {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.3px;
+}
+
+.tl-bento-icd {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--klein);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.tl-bento-title {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--text);
+  line-height: var(--lh-tight);
+  margin: 0;
+}
+
+.tl-bento-card[data-importance="high"] .tl-bento-title {
+  font-size: var(--font-lg);
+}
+
+.tl-bento-summary {
+  font-size: var(--font-sm);
+  color: var(--text-dim);
+  line-height: var(--lh-base);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.tl-bento-source {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin-top: auto;
+}
+
+.tl-bento-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
+
+/* 長者模式：放大卡片內各層字級，並把 high 卡片改為 span 全寬以更清楚 */
+html.elder-mode .tl-bento-card,
+html[data-mode="senior"] .tl-bento-card {
+  min-height: 160px;
+  padding: var(--space-5);
+}
+html.elder-mode .tl-bento-card[data-importance="high"],
+html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
+  grid-column: 1 / -1;
 }

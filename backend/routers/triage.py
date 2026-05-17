@@ -11,6 +11,23 @@ from backend.services.llm_service import call_claude
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# ─── Severity color mapping ──────────────────────────────────
+# 對應台灣分級醫療 5 級，前端用 data-severity attribute + CSS var(--sev-*)
+# 詳見 docs/research/ui_color_research.md §4
+SEVERITY_COLOR_MAP = {
+    "emergency": "er",         # 急診（紅，用點不用面）
+    "follow_up": "regional",   # 區域醫院（深海軍）
+    "stable":    "self",       # 自我照護（綠）
+}
+
+
+def severity_color_for(result_tag: str) -> str:
+    """把 triage 結果對應到 severity token 名稱。
+    回傳值前端會掛到 data-severity，CSS 解析為 var(--sev-<name>)。
+    """
+    return SEVERITY_COLOR_MAP.get(result_tag, "self")
+
+
 # 雙層 AI 分流 - 規則引擎 + LLM 個人化基準線判斷
 
 
@@ -43,6 +60,7 @@ def evaluate_triage(body: TriageRequest):
         triggered = [s for s in body.symptoms if s in EMERGENCY_SYMPTOMS]
         return {
             "result": "emergency",
+            "severity_color": severity_color_for("emergency"),
             "layer": 1,
             "message": "偵測到緊急症狀，請立即就醫或撥打 119！",
             "triggered_symptoms": triggered,
@@ -108,6 +126,7 @@ def evaluate_triage(body: TriageRequest):
 
     return {
         "result": result_tag,
+        "severity_color": severity_color_for(result_tag),
         "layer": 2,
         "message": message,
         "today_data": today_data,

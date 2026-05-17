@@ -1,0 +1,262 @@
+/* ═══════════════════════════════════════════════════════════
+   MD.Piece — Elder Mode（長者模式）
+   ─────────────────────────────────────────────────────────────
+   依 docs/research/ui_color_research.md §7。
+
+   啟用方式（任一即可）：
+     • <html class="elder-mode">       — 新加入的明確開關
+     • <html data-mode="senior">        — 既有的「年長版」設定（向後相容）
+     • URL query string ?elder=1        — 由 app.js 在啟動時轉成 .elder-mode
+   ═══════════════════════════════════════════════════════════ */
+
+html.elder-mode,
+html[data-mode="senior"] {
+  /* 暖白底取代純白，HSL L≈97%，降低眩光、對老花/白內障更友善 */
+  --bg-deep:    #FFFBF5;
+  --bg-mid:     #FAF3E8;
+  --bg-soft:    #F3E9D6;
+  --bg-surface: #FFFCF7;
+
+  /* 加深 accent 1 階以維持對比，避免淡藍底 + 淡藍字 */
+  --accent:     #3B7AAA;
+  --accent-light:#5BA1CC;
+
+  /* danger 暗一階，避免飽和紅刺激敏感族群 */
+  --danger:     #B84444;
+
+  /* 字級 / 行高 +1 階 */
+  --font-xs:    14px;
+  --font-sm:    16px;
+  --font-base:  20px;
+  --font-lg:    22px;
+  --font-xl:    26px;
+  --font-2xl:   30px;
+  --font-3xl:   36px;
+  --lh-base:    1.75;
+  --lh-loose:   2.0;
+
+  /* 觸控目標 ≥ 56px */
+  --tap-min:    var(--tap-elder);
+}
+
+/* 基底字級 — 連動 body，讓使用既有 rem 的元件也跟著放大 */
+html.elder-mode,
+html[data-mode="senior"] {
+  font-size: 18px;            /* 1rem = 18px，整體放大 12.5% */
+}
+
+html.elder-mode body,
+html[data-mode="senior"] body {
+  font-size: var(--font-base);
+  line-height: var(--lh-base);
+}
+
+/* ─── Buttons：所有 button / .btn / [role="button"] ──────────────
+   只在 elder-mode 下強制大命中區，避免影響原本精緻 UI。 */
+html.elder-mode button,
+html.elder-mode .btn,
+html.elder-mode [role="button"],
+html.elder-mode a.btn,
+html[data-mode="senior"] button,
+html[data-mode="senior"] .btn,
+html[data-mode="senior"] [role="button"],
+html[data-mode="senior"] a.btn {
+  min-height: var(--tap-elder);
+  min-width:  var(--tap-elder);
+  font-size:  var(--font-lg);
+  padding:    var(--space-3) var(--space-6);
+  line-height: var(--lh-tight);
+}
+
+/* 例外：純圖示的小工具列按鈕（landing 的 theme-toggle / lang-toggle）
+   這些在 landing 上不希望被放大破壞排版 */
+html.elder-mode .theme-toggle,
+html.elder-mode .lang-toggle,
+html[data-mode="senior"] .theme-toggle,
+html[data-mode="senior"] .lang-toggle {
+  min-height: auto;
+  min-width:  auto;
+  font-size:  var(--font-sm);
+  padding:    var(--space-1) var(--space-2);
+}
+
+/* ─── Icons：用較粗的線條接近 filled 感，提高辨識度 ─────────── */
+html.elder-mode .icon,
+html.elder-mode svg.icon,
+html.elder-mode [data-lucide],
+html[data-mode="senior"] .icon,
+html[data-mode="senior"] svg.icon,
+html[data-mode="senior"] [data-lucide] {
+  stroke-width: 2.5;
+}
+
+/* ─── Headings / 內文：放大且行高放鬆 ────────────────────────── */
+html.elder-mode h1,
+html[data-mode="senior"] h1 { font-size: var(--font-3xl); line-height: var(--lh-tight); }
+html.elder-mode h2,
+html[data-mode="senior"] h2 { font-size: var(--font-2xl); line-height: var(--lh-tight); }
+html.elder-mode h3,
+html[data-mode="senior"] h3 { font-size: var(--font-xl);  line-height: var(--lh-base); }
+html.elder-mode p,
+html[data-mode="senior"] p,
+html.elder-mode li,
+html[data-mode="senior"] li {
+  font-size: var(--font-base);
+  line-height: var(--lh-base);
+}
+
+/* ─── 表單元件：避免 mobile zoom，並符合 tap target ──────────── */
+html.elder-mode input,
+html.elder-mode textarea,
+html.elder-mode select,
+html[data-mode="senior"] input,
+html[data-mode="senior"] textarea,
+html[data-mode="senior"] select {
+  min-height: var(--tap-elder);
+  font-size:  var(--font-base);   /* iOS 不會 auto-zoom 的最低值 = 16px */
+  line-height: var(--lh-base);
+  padding: var(--space-3) var(--space-4);
+}
+
+/* ─── 開關按鈕本體（在 topbar / settings）──────────────────── */
+.elder-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border-glass);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: var(--tap-min);
+}
+.elder-toggle-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.elder-toggle-btn[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+html.elder-mode .elder-toggle-btn,
+html[data-mode="senior"] .elder-toggle-btn {
+  font-size: var(--font-base);
+  min-height: var(--tap-elder);
+}
+
+/* ─── 可見焦點環（鍵盤導覽 + 視力不佳族群必備）──────────────── */
+html.elder-mode *:focus-visible,
+html[data-mode="senior"] *:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Topbar elder-mode toggle button
+   ─────────────────────────────────────────────────────────────
+   位置：index.html 的 .topbar 內，緊鄰 theme toggle 與 settings。
+   設計：用「A+」icon + 中文 label，老人家家屬一眼看懂。
+   啟用狀態（aria-pressed="true"）邊框 + 底色 + 中性藍。
+   ═══════════════════════════════════════════════════════════ */
+
+.app-elder-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  margin-left: 4px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border-glass);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-elder-toggle .ael-icon {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: "Cormorant Garamond", "Noto Serif TC", serif;
+  font-weight: 700;
+  font-size: var(--font-lg);
+  line-height: 1;
+  color: var(--accent);
+}
+.app-elder-toggle .ael-icon sup {
+  font-size: var(--font-xs);
+  margin-left: 1px;
+  color: var(--accent);
+}
+
+.app-elder-toggle .ael-label {
+  letter-spacing: 0.3px;
+}
+
+.app-elder-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 啟用態 — 反白填 accent，讓使用者知道現在已開 */
+.app-elder-toggle[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.app-elder-toggle[aria-pressed="true"] .ael-icon,
+.app-elder-toggle[aria-pressed="true"] .ael-icon sup {
+  color: #fff;
+}
+
+/* 已在 elder-mode 下，自己也要放大、命中區補足 56px */
+html.elder-mode .app-elder-toggle,
+html[data-mode="senior"] .app-elder-toggle {
+  font-size: var(--font-base);
+  padding: var(--space-2) var(--space-4);
+  min-height: var(--tap-elder);
+}
+html.elder-mode .app-elder-toggle .ael-icon,
+html[data-mode="senior"] .app-elder-toggle .ael-icon {
+  font-size: var(--font-xl);
+}
+
+/* 螢幕較窄時只顯示 icon，省空間 */
+@media (max-width: 520px) {
+  .app-elder-toggle .ael-label { display: none; }
+  .app-elder-toggle { padding: 6px 10px; }
+}
+
+/* 啟用後在 body 角落浮一個小提示（首次） */
+.elder-mode-hint {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  background: var(--accent);
+  color: #fff;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-sm);
+  box-shadow: var(--shadow-lift);
+  animation: elderHintIn 0.3s ease-out, elderHintOut 0.4s ease-in 2.6s forwards;
+  pointer-events: none;
+}
+@keyframes elderHintIn {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes elderHintOut {
+  to { opacity: 0; transform: translate(-50%, 20px); }
+}
