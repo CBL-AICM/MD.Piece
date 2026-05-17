@@ -1,0 +1,76 @@
+# IgG4-Related Disease (IgG4-RD) — chronic_relapsing
+# Reference: Stone et al., NEJM 2012; ACR/EULAR 2019 criteria.
+disease:
+  id: igg4_related_disease
+  name: IgG4-Related Disease
+  short: IgG4RD
+  icd10: M35.4
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:    {activity: 1.7, range: [0.0, 10.0]}
+decay:       {k: 0.08}
+circadian:   {amplitude: 0.05, phase_hours: 12}
+noise:       {sigma: 0.10}
+
+age_distribution: {"20-35": 0.05, "35-55": 0.20, "55-70": 0.45, "70-90": 0.30}
+sex_ratio_by_age: {"20-35": 0.5, "35-55": 0.4, "55-70": 0.4, "70-90": 0.4}  # male-dominant
+
+responder_classes:
+  typical:       {probability: 0.55, effect_multiplier: 1.0}
+  super:         {probability: 0.15, effect_multiplier: 1.5}
+  partial:       {probability: 0.20, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.15}
+
+subtypes:
+  pancreatobiliary: {probability: 0.35, flare_threshold_offset:  0.0, treatment_response_multiplier: 1.0}
+  head_neck:        {probability: 0.30, flare_threshold_offset:  0.2, treatment_response_multiplier: 1.1}
+  retroperitoneal:  {probability: 0.20, flare_threshold_offset: -0.3, treatment_response_multiplier: 0.8}
+  systemic:         {probability: 0.15, flare_threshold_offset: -0.5, treatment_response_multiplier: 0.7}
+
+adherence: {daily_miss_probability: 0.08, discontinuation_probability_per_year: 0.12, dose_self_adjustment_probability: 0.03}
+placebo:   {probabilities: [0.80, 0.15, 0.05], effects: [0.0, 0.10, -0.03]}
+
+life_events:
+  - {id: infection,        prob_per_year: 1.2, activity_bump: 1.5, duration_days: [5, 14]}
+  - {id: imaging_finding,  prob_per_year: 1.0, activity_bump: 0.8, duration_days: [14, 60]}
+  - {id: surgery,          prob_per_year: 0.04, activity_bump: 1.5, duration_days: [14, 30]}
+
+triggers:
+  - {id: infection,        prob_per_day: 0.008, effect_mean: 2.0, effect_sigma: 0.5, duration_days: [5, 14]}
+  - {id: stress,           prob_per_day: 0.03, effect_mean: 0.6, effect_sigma: 0.2, duration_days: [2, 5]}
+
+flare: {threshold: 4.5, refractory_days: 60}
+
+treatments:
+  - id: prednisone
+    class: corticosteroid
+    assignment_prob: 0.90
+    onset_days: 1
+    effect_magnitude: {mean: 1.5, std: 0.4, min: 0.2, max: 2.8}
+    half_life_days: 5
+  - id: rituximab
+    class: anti_cd20
+    assignment_prob: 0.25
+    onset_days: {mean: 30, std: 10, min: 14, max: 90}
+    effect_magnitude: {mean: 1.4, std: 0.4, min: 0.1, max: 2.5}
+    half_life_days: 90
+  - id: azathioprine
+    class: immunosuppressant
+    assignment_prob: 0.25
+    onset_days: {mean: 60, std: 14, min: 30, max: 120}
+    effect_magnitude: {mean: 0.7, std: 0.25, min: 0.1, max: 1.5}
+    half_life_days: 30
+
+biomarkers:
+  igg4_mg_dL:        {range: [0, 3000], formula: "max(0, 200 + 200*activity + 50*noise)"}
+  rid_score:         {range: [0, 25], formula: "min(25, 2 + 2*activity)"}
+  ca19_9:            {range: [0, 1000], formula: "max(0, 30 + 50*activity + 20*noise)"}
+  organ_count:       {range: [0, 10], formula: "max(0, 1 + activity*0.4)"}
+
+comorbidity:
+  - {id: diabetes_t2,     conditional_prob: 0.30}
+  - {id: pancreatitis,    conditional_prob: 0.25}
+  - {id: ckd,             conditional_prob: 0.15}
+
+demographics: {age: {mean: 62, sd: 12, range: [25, 85]}, female_ratio: 0.30}

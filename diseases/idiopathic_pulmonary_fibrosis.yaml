@@ -1,0 +1,89 @@
+# Idiopathic Pulmonary Fibrosis (IPF) — progressive (irreversible lung scarring)
+# Reference: Raghu et al., ATS/ERS/JRS/ALAT 2018 guideline.
+disease:
+  id: idiopathic_pulmonary_fibrosis
+  name: Idiopathic Pulmonary Fibrosis
+  short: IPF
+  icd10: J84.112
+  dynamics_type: progressive
+  time_unit: day
+
+baseline:    {activity: 1.2, range: [0.0, 10.0]}
+decay:       {k: 0.03}                          # very slow
+circadian:   {amplitude: 0.05, phase_hours: 12}
+noise:       {sigma: 0.07}
+
+accumulation:
+  rate_per_unit_activity: 0.015                 # faster than SSc
+  saturation: 10.0
+
+age_distribution: {"20-35": 0.01, "35-55": 0.05, "55-70": 0.40, "70-90": 0.54}
+sex_ratio_by_age: {"20-35": 0.5, "35-55": 0.5, "55-70": 0.4, "70-90": 0.4}  # male-dominant elderly
+
+responder_classes:
+  typical:       {probability: 0.55, effect_multiplier: 1.0}
+  super:         {probability: 0.05, effect_multiplier: 1.3}
+  partial:       {probability: 0.30, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.15}
+
+subtypes:
+  slow_progressor:  {probability: 0.65, flare_threshold_offset:  0.0, treatment_response_multiplier: 1.0, accumulation_rate_multiplier: 0.7}
+  rapid_progressor: {probability: 0.35, flare_threshold_offset: -0.5, treatment_response_multiplier: 0.7, accumulation_rate_multiplier: 1.5}
+
+adherence: {daily_miss_probability: 0.08, discontinuation_probability_per_year: 0.20, dose_self_adjustment_probability: 0.04}
+placebo:   {probabilities: [0.85, 0.10, 0.05], effects: [0.0, 0.05, -0.02]}
+
+life_events:
+  - {id: acute_exacerbation, prob_per_year: 0.6, activity_bump: 4.0, duration_days: [14, 30]}
+  - {id: infection,          prob_per_year: 2.0, activity_bump: 2.5, duration_days: [5, 14]}
+  - {id: hospitalization,    prob_per_year: 0.3, activity_bump: 2.0, duration_days: [10, 30]}
+
+triggers:
+  - {id: infection,        prob_per_day: 0.012, effect_mean: 3.0, effect_sigma: 0.7, duration_days: [5, 14]}
+  - {id: air_pollution,    prob_per_day: 0.15, effect_mean: 0.4, effect_sigma: 0.15, duration_days: [1, 3]}
+  - {id: aspiration,       prob_per_day: 0.05, effect_mean: 0.6, effect_sigma: 0.2, duration_days: [2, 5]}
+
+flare: {threshold: 4.5, refractory_days: 30}
+
+treatments:
+  - id: nintedanib
+    class: antifibrotic
+    assignment_prob: 0.45
+    onset_days: {mean: 90, std: 20, min: 30, max: 180}
+    effect_magnitude: {mean: 0.7, std: 0.25, min: 0.05, max: 1.5}
+    half_life_days: 30
+    accumulation_slowdown: 0.5
+  - id: pirfenidone
+    class: antifibrotic
+    assignment_prob: 0.35
+    onset_days: {mean: 90, std: 20, min: 30, max: 180}
+    effect_magnitude: {mean: 0.6, std: 0.2, min: 0.05, max: 1.3}
+    half_life_days: 30
+    accumulation_slowdown: 0.4
+  - id: oxygen_therapy
+    class: supportive
+    assignment_prob: 0.40
+    onset_days: 0.5
+    effect_magnitude: {mean: 0.3, std: 0.1, min: 0.05, max: 0.8}
+    half_life_days: 1
+  - id: prednisone_pulse
+    class: corticosteroid
+    assignment_prob: 0.10
+    onset_days: 1
+    effect_magnitude: {mean: 0.5, std: 0.2, min: 0.05, max: 1.5}
+    half_life_days: 5
+
+biomarkers:
+  fvc_pct_pred:        {range: [30, 130], formula: "max(30, 80 - 1.5*activity - 6*burden + 3*noise)"}
+  dlco_pct_pred:       {range: [20, 120], formula: "max(20, 70 - 1.0*activity - 5*burden + 3*noise)"}
+  six_min_walk_m:      {range: [50, 700], formula: "max(50, 450 - 20*activity - 40*burden + 20*noise)"}
+  spo2_pct:            {range: [70, 100], formula: "max(70, 96 - 0.5*activity - 2*burden + 0.5*noise)"}
+  dyspnea_mmrc:        {range: [0, 4], formula: "clip(0.5*activity + 0.4*burden, 0, 4)", subjective: true}
+
+comorbidity:
+  - {id: pulmonary_hypertension,  conditional_prob: 0.30}
+  - {id: gerd,                    conditional_prob: 0.65}
+  - {id: cardiovascular,          conditional_prob: 0.45}
+  - {id: lung_cancer,             conditional_prob: 0.10}
+
+demographics: {age: {mean: 70, sd: 9, range: [40, 90]}, female_ratio: 0.30}

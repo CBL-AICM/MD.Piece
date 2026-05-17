@@ -1,0 +1,84 @@
+# Gout — chronic_relapsing (acute attacks)
+# Reference: Dalbeth et al., Lancet 2016.
+disease:
+  id: gout
+  name: Gout
+  short: Gout
+  icd10: M10.9
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:    {activity: 0.8, range: [0.0, 10.0]}
+decay:       {k: 0.30}                          # acute attacks resolve in days
+circadian:   {amplitude: 0.20, phase_hours: 3}  # nocturnal onset
+noise:       {sigma: 0.10}
+
+age_distribution: {"20-35": 0.10, "35-55": 0.35, "55-70": 0.35, "70-90": 0.20}
+sex_ratio_by_age: {"20-35": 0.1, "35-55": 0.2, "55-70": 0.4, "70-90": 0.6}  # male-dominant
+
+responder_classes:
+  typical:       {probability: 0.55, effect_multiplier: 1.0}
+  super:         {probability: 0.15, effect_multiplier: 1.4}
+  partial:       {probability: 0.20, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.15}
+
+subtypes:
+  intermittent:  {probability: 0.65, flare_threshold_offset:  0.0, treatment_response_multiplier: 1.0}
+  chronic_tophaceous: {probability: 0.35, flare_threshold_offset: -0.5, treatment_response_multiplier: 0.7}
+
+adherence: {daily_miss_probability: 0.20, discontinuation_probability_per_year: 0.25, dose_self_adjustment_probability: 0.08}
+placebo:   {probabilities: [0.70, 0.20, 0.10], effects: [0.0, 0.10, -0.03]}
+
+life_events:
+  - {id: alcohol_binge, prob_per_year: 8, activity_bump: 3.0, duration_days: [1, 3]}
+  - {id: purine_meal,   prob_per_year: 24, activity_bump: 1.5, duration_days: [0.5, 1.5]}
+  - {id: dehydration,   prob_per_year: 4, activity_bump: 2.0, duration_days: [1, 3]}
+  - {id: surgery,       prob_per_year: 0.04, activity_bump: 2.5, duration_days: [3, 7]}
+
+triggers:
+  - {id: alcohol,    prob_per_day: 0.15, effect_mean: 1.5, effect_sigma: 0.4, duration_days: [1, 2]}
+  - {id: purine,     prob_per_day: 0.25, effect_mean: 0.8, effect_sigma: 0.3, duration_days: [0.5, 1.5]}
+  - {id: cold_stress, prob_per_day: 0.05, effect_mean: 0.7, effect_sigma: 0.2, duration_days: [1, 2]}
+  - {id: trauma_minor, prob_per_day: 0.03, effect_mean: 1.0, effect_sigma: 0.3, duration_days: [2, 4]}
+
+flare: {threshold: 4.0, refractory_days: 7}
+
+treatments:
+  - id: allopurinol
+    class: ult                                    # urate-lowering therapy
+    assignment_prob: 0.65
+    onset_days: {mean: 30, std: 7, min: 14, max: 60}
+    effect_magnitude: {mean: 1.0, std: 0.3, min: 0.1, max: 2.0}
+    half_life_days: 30
+  - id: febuxostat
+    class: ult
+    assignment_prob: 0.15
+    onset_days: {mean: 30, std: 7, min: 14, max: 60}
+    effect_magnitude: {mean: 1.1, std: 0.3, min: 0.1, max: 2.0}
+    half_life_days: 30
+  - id: colchicine
+    class: anti_inflammatory
+    assignment_prob: 0.50
+    onset_days: 0.5
+    effect_magnitude: {mean: 1.5, std: 0.4, min: 0.2, max: 2.8}
+    half_life_days: 1
+  - id: nsaid
+    class: symptomatic
+    assignment_prob: 0.60
+    onset_days: 1
+    effect_magnitude: {mean: 1.0, std: 0.3, min: 0.1, max: 2.0}
+    half_life_days: 1
+
+biomarkers:
+  serum_urate_mg_dL: {range: [3, 15], formula: "max(3, 7 + 0.5*activity + 0.5*noise)"}
+  pain_vas:          {range: [0, 10], formula: "clip(0.3 + activity, 0, 10)", subjective: true}
+  joint_swelling:    {range: [0, 5], formula: "clip(activity * 0.5, 0, 5)"}
+  tophi_count:       {range: [0, 20], formula: "max(0, 0.3*burden + 0.2*activity)"}
+
+comorbidity:
+  - {id: hypertension,    conditional_prob: 0.55}
+  - {id: ckd,             conditional_prob: 0.35}
+  - {id: diabetes_t2,     conditional_prob: 0.30}
+  - {id: obesity,         conditional_prob: 0.50}
+
+demographics: {age: {mean: 55, sd: 14, range: [25, 85]}, female_ratio: 0.20}

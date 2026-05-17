@@ -1,0 +1,83 @@
+# Sjögren's Syndrome — chronic_relapsing
+# Reference: 2016 ACR/EULAR classification criteria.
+disease:
+  id: sjogren_syndrome
+  name: Sjögren's Syndrome
+  short: Sjogren
+  icd10: M35.0
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:    {activity: 1.8, range: [0.0, 10.0]}
+decay:       {k: 0.10}
+circadian:   {amplitude: 0.10, phase_hours: 6}
+noise:       {sigma: 0.11}
+
+age_distribution: {"20-35": 0.10, "35-55": 0.45, "55-70": 0.35, "70-90": 0.10}
+sex_ratio_by_age: {"20-35": 9.0, "35-55": 9.0, "55-70": 7.0, "70-90": 5.0}
+
+responder_classes:
+  typical:       {probability: 0.55, effect_multiplier: 1.0}
+  super:         {probability: 0.08, effect_multiplier: 1.4}
+  partial:       {probability: 0.27, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.15}
+
+subtypes:
+  primary:    {probability: 0.65, flare_threshold_offset:  0.0, treatment_response_multiplier: 1.0}
+  secondary:  {probability: 0.35, flare_threshold_offset: -0.2, treatment_response_multiplier: 0.85}
+
+adherence: {daily_miss_probability: 0.10, discontinuation_probability_per_year: 0.14, dose_self_adjustment_probability: 0.04}
+placebo:   {probabilities: [0.70, 0.20, 0.10], effects: [0.0, 0.18, -0.05]}
+
+life_events:
+  - {id: viral_infection,  prob_per_year: 1.5, activity_bump: 2.0, duration_days: [3, 10]}
+  - {id: dry_environment,  prob_per_year: 12, activity_bump: 0.5, duration_days: [1, 3]}
+  - {id: stress_major,     prob_per_year: 1.0, activity_bump: 1.3, duration_days: [14, 60]}
+  - {id: menopause,        prob_per_year: 0.20, activity_bump: 0.8, duration_days: [120, 360], age_range: [45, 60], sex_filter: "F"}
+
+triggers:
+  - {id: infection,        prob_per_day: 0.010, effect_mean: 2.5, effect_sigma: 0.5, duration_days: [3, 7]}
+  - {id: dry_air,          prob_per_day: 0.20, effect_mean: 0.3, effect_sigma: 0.1, duration_days: [1, 1]}
+  - {id: emotional_stress, prob_per_day: 0.03, effect_mean: 1.0, effect_sigma: 0.3, duration_days: [2, 5]}
+
+flare: {threshold: 4.5, refractory_days: 14}
+
+treatments:
+  - id: pilocarpine
+    class: secretagogue
+    assignment_prob: 0.40
+    onset_days: 1
+    effect_magnitude: {mean: 0.5, std: 0.2, min: 0.05, max: 1.2}
+    half_life_days: 1
+  - id: artificial_tears
+    class: symptomatic
+    assignment_prob: 0.85
+    onset_days: 0.1
+    effect_magnitude: {mean: 0.3, std: 0.1, min: 0.05, max: 0.8}
+    half_life_days: 0.5
+  - id: hydroxychloroquine
+    class: amDMARD
+    assignment_prob: 0.50
+    onset_days: {mean: 30, std: 8, min: 14, max: 60}
+    effect_magnitude: {mean: 0.6, std: 0.2, min: 0.05, max: 1.4}
+    half_life_days: 30
+  - id: rituximab
+    class: biologic
+    assignment_prob: 0.10
+    onset_days: {mean: 60, std: 14, min: 30, max: 120}
+    effect_magnitude: {mean: 1.0, std: 0.3, min: 0.1, max: 2.0}
+    half_life_days: 60
+
+biomarkers:
+  essdai:                {range: [0, 123], formula: "min(123, 1 + 3*activity)"}
+  schirmer_mm_5min:      {range: [0, 25], formula: "max(0, 10 - 1.2*activity + 0.5*noise)"}
+  ssa_titer:             {range: [0, 500], formula: "max(0, 50 + 30*activity + 15*noise)"}
+  dry_mouth_vas:         {range: [0, 10], formula: "clip(2 + activity*0.6, 0, 10)", subjective: true}
+  fatigue_score:         {range: [0, 10], formula: "clip(2 + activity*0.5, 0, 10)", subjective: true}
+
+comorbidity:
+  - {id: ra,             conditional_prob: 0.30}
+  - {id: lymphoma_risk,  conditional_prob: 0.05}
+  - {id: thyroid_disease,conditional_prob: 0.20}
+
+demographics: {age: {mean: 55, sd: 12, range: [25, 85]}, female_ratio: 0.90}

@@ -1,0 +1,86 @@
+# Psoriatic Arthritis (PsA) — chronic_relapsing
+# Reference: CASPAR criteria 2006.
+disease:
+  id: psoriatic_arthritis
+  name: Psoriatic Arthritis
+  short: PsA
+  icd10: L40.50
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:    {activity: 2.3, range: [0.0, 10.0]}
+decay:       {k: 0.15}
+circadian:   {amplitude: 0.18, phase_hours: 6}
+noise:       {sigma: 0.12}
+
+age_distribution: {"20-35": 0.25, "35-55": 0.50, "55-70": 0.20, "70-90": 0.05}
+sex_ratio_by_age: {"20-35": 1.0, "35-55": 1.0, "55-70": 1.0, "70-90": 1.0}
+
+responder_classes:
+  typical:       {probability: 0.50, effect_multiplier: 1.0}
+  super:         {probability: 0.12, effect_multiplier: 1.5}
+  partial:       {probability: 0.28, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.1}
+
+subtypes:
+  oligo:    {probability: 0.40, flare_threshold_offset:  0.3, treatment_response_multiplier: 1.0}
+  poly:     {probability: 0.40, flare_threshold_offset: -0.3, treatment_response_multiplier: 0.9}
+  axial:    {probability: 0.20, flare_threshold_offset:  0.0, treatment_response_multiplier: 0.8}
+
+adherence: {daily_miss_probability: 0.12, discontinuation_probability_per_year: 0.16, dose_self_adjustment_probability: 0.05}
+placebo:   {probabilities: [0.70, 0.20, 0.10], effects: [0.0, 0.15, -0.05]}
+
+life_events:
+  - {id: infection,        prob_per_year: 1.4, activity_bump: 2.0, duration_days: [3, 10]}
+  - {id: stress_major,     prob_per_year: 1.0, activity_bump: 1.5, duration_days: [14, 60]}
+  - {id: skin_flare,       prob_per_year: 4, activity_bump: 1.0, duration_days: [7, 30]}
+  - {id: trauma_koebner,   prob_per_year: 2, activity_bump: 1.2, duration_days: [7, 21]}
+
+triggers:
+  - {id: infection,         prob_per_day: 0.010, effect_mean: 3.0, effect_sigma: 0.6, duration_days: [3, 10]}
+  - {id: stress,            prob_per_day: 0.03, effect_mean: 1.2, effect_sigma: 0.3, duration_days: [2, 5]}
+  - {id: cold_weather,      prob_per_day: 0.04, effect_mean: 0.6, effect_sigma: 0.2, duration_days: [1, 3]}
+  - {id: poor_sleep,        prob_per_day: 0.10, effect_mean: 0.5, effect_sigma: 0.15, duration_days: [1, 2]}
+
+flare: {threshold: 5.0, refractory_days: 14}
+
+treatments:
+  - id: methotrexate
+    class: csDMARD
+    assignment_prob: 0.70
+    onset_days: {mean: 28, std: 6, min: 14, max: 60}
+    effect_magnitude: {mean: 0.7, std: 0.25, min: 0.05, max: 1.5}
+    half_life_days: 30
+  - id: tnf_inhibitor
+    class: bDMARD
+    assignment_prob: 0.30
+    onset_days: {mean: 14, std: 4, min: 7, max: 30}
+    effect_magnitude: {mean: 1.3, std: 0.4, min: 0.1, max: 2.5}
+    half_life_days: 30
+  - id: il17_inhibitor
+    class: bDMARD
+    assignment_prob: 0.15
+    onset_days: {mean: 21, std: 6, min: 7, max: 60}
+    effect_magnitude: {mean: 1.4, std: 0.4, min: 0.1, max: 2.5}
+    half_life_days: 30
+  - id: nsaid
+    class: symptomatic
+    assignment_prob: 0.55
+    onset_days: 1
+    effect_magnitude: {mean: 0.3, std: 0.1, min: 0.05, max: 0.8}
+    half_life_days: 1
+
+biomarkers:
+  pasi:               {range: [0, 72], formula: "max(0, 3 + 5*activity)", subjective: true}
+  daspsa:             {range: [0, 10], formula: "clip(activity, 0, 10)"}
+  crp_mg_L:           {range: [0, 100], formula: "max(0.1, 1 + 3*activity + 1.5*noise)"}
+  joint_count_tender: {range: [0, 68], formula: "max(0, activity*4 + noise)", subjective: true}
+  joint_count_swollen: {range: [0, 66], formula: "max(0, activity*3 + noise)"}
+
+comorbidity:
+  - {id: psoriasis,       conditional_prob: 0.95}
+  - {id: uveitis,         conditional_prob: 0.10}
+  - {id: cardiovascular,  conditional_prob: 0.25}
+  - {id: metabolic_syndrome, conditional_prob: 0.40}
+
+demographics: {age: {mean: 45, sd: 13, range: [18, 80]}, female_ratio: 0.50}

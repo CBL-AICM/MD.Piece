@@ -1,0 +1,87 @@
+# Systemic Lupus Erythematosus (SLE) — chronic_relapsing
+# Reference: Petri et al., A&R 2012 SLICC criteria.
+disease:
+  id: systemic_lupus_erythematosus
+  name: Systemic Lupus Erythematosus
+  short: SLE
+  icd10: M32.9
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:    {activity: 2.2, range: [0.0, 10.0]}
+decay:       {k: 0.16}
+circadian:   {amplitude: 0.12, phase_hours: 6}
+noise:       {sigma: 0.14}
+
+age_distribution: {"20-35": 0.55, "35-55": 0.30, "55-70": 0.12, "70-90": 0.03}
+sex_ratio_by_age: {"20-35": 9.0, "35-55": 8.0, "55-70": 5.0, "70-90": 2.0}
+
+responder_classes:
+  typical:       {probability: 0.50, effect_multiplier: 1.0}
+  super:         {probability: 0.10, effect_multiplier: 1.5}
+  partial:       {probability: 0.30, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.1}
+
+subtypes:
+  cutaneous:    {probability: 0.30, flare_threshold_offset:  0.3, treatment_response_multiplier: 1.1}
+  renal:        {probability: 0.30, flare_threshold_offset: -0.5, treatment_response_multiplier: 0.8}
+  neuro:        {probability: 0.15, flare_threshold_offset: -0.3, treatment_response_multiplier: 0.7}
+  hematologic:  {probability: 0.25, flare_threshold_offset:  0.0, treatment_response_multiplier: 0.9}
+
+adherence: {daily_miss_probability: 0.12, discontinuation_probability_per_year: 0.18, dose_self_adjustment_probability: 0.06}
+placebo:   {probabilities: [0.70, 0.20, 0.10], effects: [0.0, 0.15, -0.05]}
+
+life_events:
+  - {id: viral_infection, prob_per_year: 1.8, activity_bump: 2.5, duration_days: [3, 10]}
+  - {id: uv_exposure, prob_per_year: 6, activity_bump: 1.5, duration_days: [3, 7]}
+  - {id: stress_major, prob_per_year: 1.0, activity_bump: 1.8, duration_days: [14, 60]}
+  - {id: pregnancy, prob_per_year: 0.10, activity_bump: 1.2, duration_days: [270, 270], age_range: [20, 40], sex_filter: "F"}
+  - {id: menstruation, prob_per_year: 12, activity_bump: 0.5, duration_days: [2, 5], age_range: [20, 50], sex_filter: "F"}
+
+triggers:
+  - {id: uv_sun,      prob_per_day: 0.08, effect_mean: 1.6, effect_sigma: 0.3, duration_days: [1, 3]}
+  - {id: infection,   prob_per_day: 0.012, effect_mean: 4.0, effect_sigma: 0.7, duration_days: [4, 10]}
+  - {id: emotional_stress, prob_per_day: 0.04, effect_mean: 1.4, effect_sigma: 0.4, duration_days: [2, 5]}
+  - {id: poor_sleep,  prob_per_day: 0.12, effect_mean: 0.6, effect_sigma: 0.15, duration_days: [1, 2]}
+
+flare: {threshold: 5.0, refractory_days: 14}
+
+treatments:
+  - id: hydroxychloroquine
+    class: amDMARD
+    assignment_prob: 0.85
+    onset_days: {mean: 30, std: 7, min: 14, max: 60}
+    effect_magnitude: {mean: 0.8, std: 0.25, min: 0.1, max: 1.6}
+    half_life_days: 30
+  - id: mycophenolate
+    class: immunosuppressant
+    assignment_prob: 0.30
+    onset_days: {mean: 45, std: 10, min: 21, max: 90}
+    effect_magnitude: {mean: 1.0, std: 0.3, min: 0.1, max: 2.0}
+    half_life_days: 14
+  - id: prednisone
+    class: corticosteroid
+    assignment_prob: 0.45
+    onset_days: 1
+    effect_magnitude: {mean: 0.8, std: 0.25, min: 0.1, max: 1.6}
+    half_life_days: 5
+  - id: belimumab
+    class: biologic
+    assignment_prob: 0.10
+    onset_days: {mean: 30, std: 8, min: 14, max: 60}
+    effect_magnitude: {mean: 0.9, std: 0.3, min: 0.1, max: 1.8}
+    half_life_days: 30
+
+biomarkers:
+  sledai:           {range: [0, 105], formula: "min(105, 1 + 3*activity)", subjective: true}
+  anti_dsdna:       {range: [0, 1000], formula: "max(0, 30 + 80*activity + 20*noise)"}
+  c3_complement:    {range: [10, 180], formula: "max(10, 110 - 8*activity + 5*noise)"}
+  c4_complement:    {range: [4, 40], formula: "max(4, 25 - 2*activity + 2*noise)"}
+  fatigue_vas:      {range: [0, 10], formula: "clip(0.5 + activity, 0, 10)", subjective: true}
+
+comorbidity:
+  - {id: nephritis,        conditional_prob: 0.30}
+  - {id: cardiovascular,   conditional_prob: 0.20}
+  - {id: depression,       conditional_prob: 0.35}
+
+demographics: {age: {mean: 32, sd: 12, range: [18, 80]}, female_ratio: 0.90}

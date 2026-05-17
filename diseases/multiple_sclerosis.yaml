@@ -1,0 +1,84 @@
+# Multiple Sclerosis (relapsing-remitting MS) — chronic_relapsing
+# Reference: McDonald 2017 criteria.
+disease:
+  id: multiple_sclerosis
+  name: Multiple Sclerosis
+  short: MS
+  icd10: G35
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:    {activity: 1.8, range: [0.0, 10.0]}
+decay:       {k: 0.08}                       # slow recovery between relapses
+circadian:   {amplitude: 0.05, phase_hours: 18}
+noise:       {sigma: 0.10}
+
+age_distribution: {"20-35": 0.45, "35-55": 0.40, "55-70": 0.13, "70-90": 0.02}
+sex_ratio_by_age: {"20-35": 3.0, "35-55": 2.5, "55-70": 2.0, "70-90": 1.5}
+
+responder_classes:
+  typical:       {probability: 0.50, effect_multiplier: 1.0}
+  super:         {probability: 0.10, effect_multiplier: 1.5}
+  partial:       {probability: 0.30, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.1}
+
+subtypes:
+  rrms:   {probability: 0.85, flare_threshold_offset:  0.0, treatment_response_multiplier: 1.0}
+  spms:   {probability: 0.15, flare_threshold_offset: -0.5, treatment_response_multiplier: 0.5}
+
+adherence: {daily_miss_probability: 0.10, discontinuation_probability_per_year: 0.18, dose_self_adjustment_probability: 0.04}
+placebo:   {probabilities: [0.65, 0.25, 0.10], effects: [0.0, 0.18, -0.05]}
+
+life_events:
+  - {id: viral_infection, prob_per_year: 1.5, activity_bump: 2.5, duration_days: [3, 10]}
+  - {id: heat_exposure,   prob_per_year: 6, activity_bump: 1.0, duration_days: [1, 3]}
+  - {id: stress_major,    prob_per_year: 1.0, activity_bump: 1.4, duration_days: [14, 60]}
+  - {id: pregnancy,       prob_per_year: 0.08, activity_bump: -0.6, duration_days: [270, 270], age_range: [20, 40], sex_filter: "F"}
+  - {id: postpartum,      prob_per_year: 0.06, activity_bump: 1.5, duration_days: [30, 90], age_range: [20, 40], sex_filter: "F"}
+
+triggers:
+  - {id: viral_uri,         prob_per_day: 0.008, effect_mean: 4.0, effect_sigma: 0.8, duration_days: [3, 10]}
+  - {id: heat,              prob_per_day: 0.05, effect_mean: 1.0, effect_sigma: 0.3, duration_days: [1, 2]}
+  - {id: emotional_stress,  prob_per_day: 0.04, effect_mean: 1.2, effect_sigma: 0.3, duration_days: [2, 5]}
+  - {id: poor_sleep,        prob_per_day: 0.10, effect_mean: 0.5, effect_sigma: 0.15, duration_days: [1, 2]}
+
+flare: {threshold: 4.5, refractory_days: 30}
+
+treatments:
+  - id: interferon_beta
+    class: dmt
+    assignment_prob: 0.40
+    onset_days: {mean: 90, std: 20, min: 30, max: 180}
+    effect_magnitude: {mean: 0.7, std: 0.25, min: 0.05, max: 1.5}
+    half_life_days: 14
+  - id: glatiramer
+    class: dmt
+    assignment_prob: 0.20
+    onset_days: {mean: 90, std: 20, min: 30, max: 180}
+    effect_magnitude: {mean: 0.6, std: 0.2, min: 0.05, max: 1.3}
+    half_life_days: 14
+  - id: ocrelizumab
+    class: anti_cd20
+    assignment_prob: 0.20
+    onset_days: {mean: 30, std: 10, min: 14, max: 90}
+    effect_magnitude: {mean: 1.4, std: 0.4, min: 0.1, max: 2.5}
+    half_life_days: 90
+  - id: methylprednisolone_pulse
+    class: corticosteroid
+    assignment_prob: 0.30
+    onset_days: 1
+    effect_magnitude: {mean: 1.2, std: 0.3, min: 0.2, max: 2.0}
+    half_life_days: 3
+
+biomarkers:
+  edss:              {range: [0, 10], formula: "clip(activity * 0.6, 0, 10)", subjective: true}
+  brain_lesion_count: {range: [0, 30], formula: "max(0, 2 + activity + 0.3*noise)"}
+  walking_25ft_sec:  {range: [3, 60], formula: "max(3, 5 + activity*2 + noise)", subjective: true}
+  fatigue_score:     {range: [0, 7], formula: "clip(2 + activity*0.5, 0, 7)", subjective: true}
+
+comorbidity:
+  - {id: depression,        conditional_prob: 0.40}
+  - {id: bladder_dysfunction, conditional_prob: 0.50}
+  - {id: spasticity,        conditional_prob: 0.30}
+
+demographics: {age: {mean: 35, sd: 12, range: [18, 75]}, female_ratio: 0.70}

@@ -1,0 +1,57 @@
+# Layer-3 training configuration
+data:
+  diseases:
+    - rheumatoid_arthritis
+    - asthma
+    - systemic_sclerosis
+    - systemic_lupus_erythematosus
+    - inflammatory_bowel_disease
+    - multiple_sclerosis
+    - gout
+    - ankylosing_spondylitis
+    - psoriatic_arthritis
+    - sjogren_syndrome
+    - behcet_disease
+    - anca_vasculitis
+    - igg4_related_disease
+    - chronic_urticaria
+    - osteoarthritis
+    - idiopathic_pulmonary_fibrosis
+  n_patients_per_disease: 200
+  sim_days: 180
+  base_seed: 2024
+  window_size: 7              # sliding window: past 7 days
+  horizon_days: 1             # predict 1 day ahead (activity)
+  flare_horizon_days: 7       # predict any-flare in next 7 days
+
+split:
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  split_by: patient           # NEVER split within a patient (data leakage)
+  split_seed: 7
+
+model:
+  type: lstm_attention
+  hidden: 64
+  n_layers: 2
+  dropout: 0.2
+
+train:
+  batch_size: 128
+  lr: 1.0e-3
+  epochs: 60
+  early_stop_patience: 10
+  weight_decay: 1.0e-5
+  loss_weights:
+    activity_mse: 1.0
+    flare_bce: 0.5
+  num_workers: 0
+  device: auto                # auto -> cuda if available else cpu
+  seed: 2024
+
+paths:
+  data_cache: output/mdpiece/ml_data
+  ckpt_dir: output/mdpiece/checkpoints
+  log_dir: output/mdpiece/logs
+  model_card: docs/mdpiece/model_card.md

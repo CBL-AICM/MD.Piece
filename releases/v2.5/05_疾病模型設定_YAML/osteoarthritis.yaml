@@ -1,0 +1,94 @@
+# Osteoarthritis (OA) — progressive (cartilage loss + flare overlays)
+# Reference: OARSI guidelines 2019.
+disease:
+  id: osteoarthritis
+  name: Osteoarthritis
+  short: OA
+  icd10: M19.90
+  dynamics_type: progressive
+  time_unit: day
+
+baseline:    {activity: 2.0, range: [0.0, 10.0]}
+decay:       {k: 0.06}
+circadian:   {amplitude: 0.10, phase_hours: 18}   # evening worsening
+noise:       {sigma: 0.08}
+
+accumulation:
+  rate_per_unit_activity: 0.008
+  saturation: 10.0
+
+age_distribution: {"20-35": 0.05, "35-55": 0.20, "55-70": 0.40, "70-90": 0.35}
+sex_ratio_by_age: {"20-35": 1.0, "35-55": 1.3, "55-70": 1.8, "70-90": 2.0}  # female-leaning with age
+
+responder_classes:
+  typical:       {probability: 0.50, effect_multiplier: 1.0}
+  super:         {probability: 0.10, effect_multiplier: 1.3}
+  partial:       {probability: 0.30, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.15}
+
+subtypes:
+  knee:  {probability: 0.50, flare_threshold_offset:  0.0, treatment_response_multiplier: 1.0, accumulation_rate_multiplier: 1.0}
+  hip:   {probability: 0.25, flare_threshold_offset: -0.2, treatment_response_multiplier: 0.9, accumulation_rate_multiplier: 1.2}
+  hand:  {probability: 0.25, flare_threshold_offset:  0.3, treatment_response_multiplier: 1.1, accumulation_rate_multiplier: 0.7}
+
+adherence: {daily_miss_probability: 0.15, discontinuation_probability_per_year: 0.20, dose_self_adjustment_probability: 0.08}
+placebo:   {probabilities: [0.55, 0.35, 0.10], effects: [0.0, 0.25, -0.05]}    # placebo strong in OA pain
+
+life_events:
+  - {id: physical_overuse,   prob_per_year: 8, activity_bump: 1.0, duration_days: [3, 14]}
+  - {id: cold_winter,        prob_per_year: 1.0, activity_bump: 0.6, duration_days: [60, 90]}
+  - {id: injury_minor,       prob_per_year: 1.0, activity_bump: 2.0, duration_days: [7, 30]}
+  - {id: surgery,            prob_per_year: 0.05, activity_bump: 2.5, duration_days: [30, 90]}
+
+triggers:
+  - {id: overuse,        prob_per_day: 0.15, effect_mean: 0.8, effect_sigma: 0.25, duration_days: [2, 5]}
+  - {id: cold,           prob_per_day: 0.06, effect_mean: 0.6, effect_sigma: 0.2, duration_days: [1, 3]}
+  - {id: prolonged_sitting, prob_per_day: 0.20, effect_mean: 0.4, effect_sigma: 0.1, duration_days: [0.5, 1]}
+
+flare: {threshold: 4.0, refractory_days: 14}
+
+treatments:
+  - id: acetaminophen
+    class: analgesic
+    assignment_prob: 0.60
+    onset_days: 0.5
+    effect_magnitude: {mean: 0.4, std: 0.15, min: 0.05, max: 1.0}
+    half_life_days: 0.5
+  - id: nsaid_topical
+    class: nsaid_topical
+    assignment_prob: 0.50
+    onset_days: 1
+    effect_magnitude: {mean: 0.5, std: 0.2, min: 0.05, max: 1.2}
+    half_life_days: 1
+  - id: nsaid_oral
+    class: nsaid
+    assignment_prob: 0.40
+    onset_days: 1
+    effect_magnitude: {mean: 0.7, std: 0.25, min: 0.1, max: 1.5}
+    half_life_days: 1
+  - id: physiotherapy
+    class: non_pharm
+    assignment_prob: 0.55
+    onset_days: {mean: 30, std: 10, min: 14, max: 90}
+    effect_magnitude: {mean: 0.5, std: 0.2, min: 0.05, max: 1.2}
+    half_life_days: 30
+    accumulation_slowdown: 0.3
+  - id: intra_articular_steroid
+    class: corticosteroid
+    assignment_prob: 0.15
+    onset_days: 2
+    effect_magnitude: {mean: 1.2, std: 0.3, min: 0.2, max: 2.0}
+    half_life_days: 30
+
+biomarkers:
+  womac:                 {range: [0, 96], formula: "min(96, 5 + 5*activity + 3*burden)", subjective: true}
+  pain_vas:              {range: [0, 10], formula: "clip(activity*0.6 + burden*0.3, 0, 10)", subjective: true}
+  kl_grade:              {range: [0, 4], formula: "min(4, 0.5 + burden*0.3)"}
+  walking_speed_m_s:     {range: [0.3, 1.6], formula: "max(0.3, 1.3 - 0.05*activity - 0.05*burden)"}
+
+comorbidity:
+  - {id: obesity,           conditional_prob: 0.45}
+  - {id: cardiovascular,    conditional_prob: 0.30}
+  - {id: depression,        conditional_prob: 0.20}
+
+demographics: {age: {mean: 63, sd: 13, range: [30, 88]}, female_ratio: 0.60}
