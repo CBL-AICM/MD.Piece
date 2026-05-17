@@ -1,8 +1,14 @@
-"""Trigger sampling and treatment assignment."""
+"""Trigger sampling, treatment assignment, comorbidity sampling.
+
+v2: treatment parameters can be scalars or {mean, std, min, max} distributions,
+and responder class + subtype + age modulate the realised effect_magnitude.
+"""
 
 from __future__ import annotations
 
 import numpy as np
+
+from md_piece.unpredictability import sample_param
 
 
 def sample_triggers(
@@ -12,17 +18,9 @@ def sample_triggers(
 ) -> list[tuple[str, float, float]]:
     """Sample which trigger events fire in this timestep.
 
-    Parameters
-    ----------
-    disease_cfg : DiseaseConfig
-    dt_days : float
-        Step size in days. Probabilities in YAML are per day, so we scale.
-    rng : np.random.Generator
-
     Returns
     -------
     list of (trigger_id, duration_days, magnitude)
-        Newly fired triggers to append to active list.
     """
     fired = []
     for trig in disease_cfg.triggers:
@@ -40,26 +38,31 @@ def assign_treatments(
     disease_cfg,
     sim_days: int,
     rng: np.random.Generator,
+    *,
+    effect_multiplier: float = 1.0,
+    treatment_response_modifier: float = 1.0,
 ) -> list[dict]:
-    """Decide which treatments this patient receives and when they start.
+    """Decide which treatments a patient receives and realise distribution params.
 
     Parameters
     ----------
-    disease_cfg : DiseaseConfig
-    sim_days : int
-        Total simulation horizon — treatments start in first 20%.
-    rng : np.random.Generator
-
-    Returns
-    -------
-    list of dict
-        Each treatment record with start_day and inherited YAML fields.
+    effect_multiplier : float
+        Responder-class multiplier on `effect_magnitude`.
+    treatment_response_modifier : float
+        Subtype × age modifier (multiplicative).
     """
-    assigned = []
+    assigned: list[dict] = []
     max_start = max(1, int(sim_days * 0.2))
     for tx in disease_cfg.treatments:
         if rng.random() < tx["assignment_prob"]:
             record = dict(tx)
+            # realise distribution-based params
+            record["onset_days"] = sample_param(tx["onset_days"], rng)
+            record["half_life_days"] = sample_param(tx["half_life_days"], rng)
+            base_mag = sample_param(tx["effect_magnitude"], rng)
+            record["effect_magnitude"] = max(
+                0.0, base_mag * effect_multiplier * treatment_response_modifier
+            )
             record["start_day"] = float(rng.uniform(0, max_start))
             assigned.append(record)
     return assigned

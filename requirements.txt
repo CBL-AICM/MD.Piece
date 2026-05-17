@@ -4,3 +4,11 @@ python-dotenv
 httpx
 python-multipart
 aiofiles
+
+# MD. Piece v2 simulator + Layer-3 model (needed for `pytest tests/test_mdpiece` in CI)
+numpy
+pandas
+pyyaml
+scipy
+matplotlib
+scikit-learn

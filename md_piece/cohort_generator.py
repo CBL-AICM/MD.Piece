@@ -25,15 +25,22 @@ class Cohort:
         return pd.concat([p.timeseries for p in self.patients], ignore_index=True)
 
     def metadata_dataframe(self) -> pd.DataFrame:
-        """Per-patient metadata (age, sex, treatments, flares)."""
+        """Per-patient metadata (age, sex, treatments, flares, v2 fields)."""
         return pd.DataFrame([
             {
                 "patient_id": p.patient_id,
                 "disease_id": p.disease_id,
                 "age": p.age,
                 "sex": p.sex,
+                "age_bin": p.age_profile.age_bin if p.age_profile else "",
+                "is_elderly": bool(p.age_profile.is_elderly) if p.age_profile else False,
+                "subtype": p.subtype,
+                "responder_class": p.responder_class,
+                "placebo_shift": p.placebo_shift,
                 "comorbidities": ",".join(p.comorbidities) if p.comorbidities else "",
                 "treatments": ",".join(t["id"] for t in p.treatments),
+                "n_life_events": len(p.life_events),
+                "long_tail_event": p.long_tail_event is not None,
                 "flare_count": p.flare_count,
                 "seed": p.seed,
             }

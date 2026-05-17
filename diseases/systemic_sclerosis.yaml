@@ -1,5 +1,6 @@
 # Systemic Sclerosis (SSc) — progressive dynamics (irreversible accumulation)
-# Reference: van den Hoogen et al., ACR/EULAR 2013
+# v2 schema with 8 unpredictability sources.
+# Reference: van den Hoogen et al., ACR/EULAR 2013.
 disease:
   id: systemic_sclerosis
   name: Systemic Sclerosis
@@ -13,7 +14,7 @@ baseline:
   range: [0.0, 10.0]
 
 decay:
-  k: 0.04                  # slow recovery
+  k: 0.04
 
 circadian:
   amplitude: 0.05
@@ -22,10 +23,68 @@ circadian:
 noise:
   sigma: 0.08
 
-# progressive-specific: irreversible fibrosis accumulation
 accumulation:
-  rate_per_unit_activity: 0.012     # burden units per day per activity unit
-  saturation: 10.0                  # max irreversible burden
+  rate_per_unit_activity: 0.012
+  saturation: 10.0
+
+age_distribution:
+  "20-35": 0.15
+  "35-55": 0.55
+  "55-70": 0.25
+  "70-90": 0.05
+
+sex_ratio_by_age:
+  "20-35": 4.0
+  "35-55": 4.0
+  "55-70": 3.0
+  "70-90": 2.0
+
+responder_classes:
+  typical:        {probability: 0.50, effect_multiplier: 1.0}
+  super:          {probability: 0.08, effect_multiplier: 1.3}
+  partial:        {probability: 0.32, effect_multiplier: 0.5}
+  non_responder:  {probability: 0.10, effect_multiplier: 0.15}
+
+subtypes:
+  limited:
+    probability: 0.65                       # lcSSc — slower, better prognosis
+    flare_threshold_offset:  0.5
+    treatment_response_multiplier: 1.1
+    accumulation_rate_multiplier: 0.6
+  diffuse:
+    probability: 0.35                       # dcSSc — aggressive
+    flare_threshold_offset: -0.5
+    treatment_response_multiplier: 0.7
+    accumulation_rate_multiplier: 1.6
+
+adherence:
+  daily_miss_probability: 0.08
+  discontinuation_probability_per_year: 0.12
+  dose_self_adjustment_probability: 0.04
+
+placebo:
+  probabilities: [0.75, 0.18, 0.07]
+  effects:       [0.00, 0.10, -0.03]
+
+life_events:
+  - id: cold_winter
+    prob_per_year: 1.0
+    activity_bump: 0.8
+    duration_days: [60, 120]
+  - id: infection
+    prob_per_year: 1.0
+    activity_bump: 1.5
+    duration_days: [5, 14]
+  - id: surgery
+    prob_per_year: 0.04
+    activity_bump: 2.0
+    duration_days: [14, 30]
+  - id: pregnancy
+    prob_per_year: 0.03
+    activity_bump: 0.8
+    duration_days: [270, 270]
+    age_range: [20, 40]
+    sex_filter: "F"
 
 triggers:
   - id: cold_exposure
@@ -52,26 +111,25 @@ treatments:
   - id: mycophenolate
     class: immunosuppressant
     assignment_prob: 0.50
-    onset_days: 60
-    effect_magnitude: 1.2
+    onset_days: {mean: 60, std: 15, min: 30, max: 120}
+    effect_magnitude: {mean: 1.2, std: 0.4, min: 0.1, max: 2.5}
     half_life_days: 14
   - id: nintedanib
     class: antifibrotic
     assignment_prob: 0.20
-    onset_days: 90
-    effect_magnitude: 0.8
+    onset_days: {mean: 90, std: 20, min: 30, max: 180}
+    effect_magnitude: {mean: 0.8, std: 0.3, min: 0.1, max: 2.0}
     half_life_days: 30
-    # antifibrotic also slows accumulation
     accumulation_slowdown: 0.5
   - id: ccb_vasodilator
     class: vasodilator
     assignment_prob: 0.65
-    onset_days: 3
-    effect_magnitude: 0.4
+    onset_days: {mean: 3, std: 1, min: 1, max: 7}
+    effect_magnitude: {mean: 0.4, std: 0.15, min: 0.05, max: 0.9}
     half_life_days: 1
 
 biomarkers:
-  mrss:                              # modified Rodnan skin score
+  mrss:
     range: [0, 51]
     formula: "min(51, 2 + 1.5*activity + 4*burden)"
   fvc_pct_pred:
@@ -83,6 +141,7 @@ biomarkers:
   raynaud_attacks_per_day:
     range: [0, 20]
     formula: "max(0, activity*1.5 + noise)"
+    subjective: true
   digital_ulcer_count:
     range: [0, 10]
     formula: "max(0, 0.2*burden + 0.3*activity)"
@@ -96,8 +155,5 @@ comorbidity:
     conditional_prob: 0.15
 
 demographics:
-  age:
-    mean: 50
-    sd: 14
-    range: [20, 80]
+  age: {mean: 50, sd: 14, range: [20, 80]}
   female_ratio: 0.80

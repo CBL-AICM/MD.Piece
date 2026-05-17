@@ -1,5 +1,6 @@
 # Asthma — reversible dynamics (hours scale)
-# Reference: GINA 2024 Global Strategy
+# v2 schema with 8 unpredictability sources.
+# Reference: GINA 2024 Global Strategy.
 disease:
   id: asthma
   name: Asthma
@@ -9,18 +10,90 @@ disease:
   time_unit: hour
 
 baseline:
-  activity: 0.8            # airway inflammation index (0-10)
+  activity: 0.8
   range: [0.0, 10.0]
 
 decay:
   k: 0.25                  # fast decay (per hour)
 
 circadian:
-  amplitude: 0.6           # nocturnal worsening
-  phase_hours: 4           # peak ~04:00
+  amplitude: 0.6
+  phase_hours: 4
 
 noise:
   sigma: 0.08
+
+# bimodal age distribution (childhood + late-onset)
+age_distribution:
+  "20-35": 0.30
+  "35-55": 0.20
+  "55-70": 0.25
+  "70-90": 0.25
+
+sex_ratio_by_age:
+  "20-35": 1.3
+  "35-55": 1.5
+  "55-70": 1.2
+  "70-90": 1.0
+
+responder_classes:
+  typical:        {probability: 0.50, effect_multiplier: 1.0}
+  super:          {probability: 0.15, effect_multiplier: 1.4}
+  partial:        {probability: 0.25, effect_multiplier: 0.5}
+  non_responder:  {probability: 0.10, effect_multiplier: 0.15}
+
+subtypes:
+  eosinophilic:
+    probability: 0.50
+    flare_threshold_offset: -0.3
+    treatment_response_multiplier: 1.2     # ICS very effective
+  neutrophilic:
+    probability: 0.30
+    flare_threshold_offset:  0.3
+    treatment_response_multiplier: 0.6     # less ICS responsive
+  mixed:
+    probability: 0.20
+    flare_threshold_offset:  0.0
+    treatment_response_multiplier: 0.9
+
+adherence:
+  daily_miss_probability: 0.18                # asthma adherence notoriously poor
+  discontinuation_probability_per_year: 0.20
+  dose_self_adjustment_probability: 0.10
+
+placebo:
+  probabilities: [0.70, 0.20, 0.10]
+  effects:       [0.00, 0.20, -0.05]
+
+life_events:
+  - id: viral_uri
+    prob_per_year: 3.0
+    activity_bump: 3.5
+    duration_days: [3, 7]
+  - id: smoke_exposure
+    prob_per_year: 2.0
+    activity_bump: 1.5
+    duration_days: [0.5, 2]
+  - id: travel_pollution
+    prob_per_year: 1.0
+    activity_bump: 1.2
+    duration_days: [3, 10]
+  - id: pregnancy
+    prob_per_year: 0.06
+    activity_bump: 0.5
+    duration_days: [270, 270]
+    age_range: [20, 40]
+    sex_filter: "F"
+  - id: menstruation
+    prob_per_year: 12
+    activity_bump: 0.3
+    duration_days: [2, 5]
+    age_range: [20, 50]
+    sex_filter: "F"
+  - id: thunderstorm
+    prob_per_year: 0.5
+    activity_bump: 2.0
+    duration_days: [0.1, 0.5]
 
 triggers:
   - id: pollen_exposure
@@ -38,7 +111,7 @@ triggers:
     effect_mean: 1.2
     effect_sigma: 0.3
     duration_days: [0.05, 0.2]
-  - id: viral_uri
+  - id: viral_uri_minor
     prob_per_day: 0.012
     effect_mean: 3.5
     effect_sigma: 0.6
@@ -52,20 +125,20 @@ treatments:
   - id: ics
     class: controller
     assignment_prob: 0.70
-    onset_days: 7
-    effect_magnitude: 1.5
+    onset_days: {mean: 7, std: 2, min: 3, max: 21}
+    effect_magnitude: {mean: 1.5, std: 0.5, min: 0.1, max: 3.0}
     half_life_days: 1
   - id: laba
     class: controller
     assignment_prob: 0.40
-    onset_days: 2
-    effect_magnitude: 1.2
+    onset_days: {mean: 2, std: 1, min: 1, max: 7}
+    effect_magnitude: {mean: 1.2, std: 0.4, min: 0.1, max: 2.5}
     half_life_days: 0.5
   - id: saba_rescue
     class: rescue
     assignment_prob: 0.95
     onset_days: 0.05
-    effect_magnitude: 2.0
+    effect_magnitude: {mean: 2.0, std: 0.5, min: 0.5, max: 3.5}
     half_life_days: 0.2
 
 biomarkers:
@@ -81,9 +154,11 @@ biomarkers:
   symptom_score:
     range: [0, 5]
     formula: "clip(activity * 0.5, 0, 5)"
+    subjective: true
   saba_uses_per_day:
     range: [0, 12]
     formula: "max(0, activity - 1 + noise)"
+    subjective: true
 
 comorbidity:
   - id: allergic_rhinitis
@@ -94,8 +169,5 @@ comorbidity:
     conditional_prob: 0.30
 
 demographics:
-  age:
-    mean: 35
-    sd: 18
-    range: [5, 80]
+  age: {mean: 35, sd: 18, range: [5, 80]}
   female_ratio: 0.55

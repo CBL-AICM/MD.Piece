@@ -1,5 +1,6 @@
 # Rheumatoid Arthritis (RA) — chronic_relapsing dynamics
-# Reference: Aletaha & Smolen, JAMA 2018; ACR/EULAR 2010 criteria
+# v2 schema: includes 8 unpredictability sources + age stratification.
+# Reference: Aletaha & Smolen, JAMA 2018; ACR/EULAR 2010.
 disease:
   id: rheumatoid_arthritis
   name: Rheumatoid Arthritis
@@ -9,18 +10,104 @@ disease:
   time_unit: day
 
 baseline:
-  activity: 2.5            # baseline immune activity score (arbitrary, 0-10)
+  activity: 2.5
   range: [0.0, 10.0]
 
 decay:
-  k: 0.18                  # exponential decay rate towards baseline (per day)
+  k: 0.18
 
 circadian:
-  amplitude: 0.15          # morning stiffness pattern
-  phase_hours: 6           # peak ~06:00
+  amplitude: 0.15
+  phase_hours: 6
 
 noise:
-  sigma: 0.12              # daily gaussian noise
+  sigma: 0.12
+
+# ============================================================
+# v2 additions — unpredictability + age
+# ============================================================
+
+# (8) age stratification — Fulop et al., Front Immunol 2018
+age_distribution:
+  "20-35": 0.15
+  "35-55": 0.45
+  "55-70": 0.30
+  "70-90": 0.10
+
+# female-to-male ratio per age bin
+sex_ratio_by_age:
+  "20-35": 3.0
+  "35-55": 3.0
+  "55-70": 2.0
+  "70-90": 1.5
+
+# (2) responder classes — Senn, Stat Methods Med Res 2016
+responder_classes:
+  typical:        {probability: 0.55, effect_multiplier: 1.0}
+  super:          {probability: 0.10, effect_multiplier: 1.5}
+  partial:        {probability: 0.25, effect_multiplier: 0.5}
+  non_responder:  {probability: 0.10, effect_multiplier: 0.1}
+
+# (3) hidden disease subtypes
+subtypes:
+  seropositive:
+    probability: 0.70
+    flare_threshold_offset: -0.5         # easier to flare
+    treatment_response_multiplier: 1.0
+  seronegative:
+    probability: 0.30
+    flare_threshold_offset:  0.5
+    treatment_response_multiplier: 0.7
+
+# (4) medication adherence
+adherence:
+  daily_miss_probability: 0.10
+  discontinuation_probability_per_year: 0.15
+  dose_self_adjustment_probability: 0.05
+
+# (6) placebo / nocebo on subjective biomarkers
+placebo:
+  probabilities: [0.70, 0.20, 0.10]      # [none, positive, nocebo]
+  effects:       [0.00, 0.15, -0.05]     # multiplier on subjective bm
+
+# (5) stochastic life events — annualised rates
+life_events:
+  - id: viral_infection
+    prob_per_year: 1.5
+    activity_bump: 2.5
+    duration_days: [3, 10]
+  - id: surgery
+    prob_per_year: 0.05
+    activity_bump: 3.0
+    duration_days: [14, 30]
+  - id: bereavement
+    prob_per_year: 0.05
+    activity_bump: 1.5
+    duration_days: [30, 90]
+  - id: job_loss
+    prob_per_year: 0.04
+    activity_bump: 1.2
+    duration_days: [30, 120]
+  - id: pregnancy
+    prob_per_year: 0.06
+    activity_bump: -0.8                  # RA often improves
+    duration_days: [270, 270]
+    age_range: [20, 40]
+    sex_filter: "F"
+  - id: menstruation
+    prob_per_year: 12
+    activity_bump: 0.3
+    duration_days: [2, 5]
+    age_range: [20, 50]
+    sex_filter: "F"
+  - id: travel_jetlag
+    prob_per_year: 0.8
+    activity_bump: 0.4
+    duration_days: [2, 5]
+  - id: seasonal_change
+    prob_per_year: 4
+    activity_bump: 0.5
+    duration_days: [7, 14]
 
 triggers:
   - id: infection
@@ -45,39 +132,41 @@ triggers:
     duration_days: [1, 2]
 
 flare:
-  threshold: 5.0           # activity > threshold counted as flare
+  threshold: 5.0
   refractory_days: 14
 
+# (1) individual variability — treatment params can be dict with mean/std/min/max
 treatments:
   - id: methotrexate
     class: csDMARD
     assignment_prob: 0.75
-    onset_days: 28
-    effect_magnitude: 0.7
+    onset_days: {mean: 28, std: 6, min: 14, max: 60}
+    effect_magnitude: {mean: 0.7, std: 0.25, min: 0.05, max: 1.5}
     half_life_days: 30
   - id: tnf_inhibitor
     class: bDMARD
     assignment_prob: 0.30
-    onset_days: 14
-    effect_magnitude: 1.1
+    onset_days: {mean: 14, std: 4, min: 7, max: 30}
+    effect_magnitude: {mean: 1.1, std: 0.35, min: 0.10, max: 2.0}
     half_life_days: 30
   - id: nsaid
     class: symptomatic
     assignment_prob: 0.60
     onset_days: 1
-    effect_magnitude: 0.3
+    effect_magnitude: {mean: 0.3, std: 0.10, min: 0.05, max: 0.7}
     half_life_days: 5
   - id: prednisone
     class: corticosteroid
     assignment_prob: 0.20
     onset_days: 1
-    effect_magnitude: 0.6
+    effect_magnitude: {mean: 0.6, std: 0.20, min: 0.10, max: 1.2}
     half_life_days: 5
 
 biomarkers:
   das28:
     range: [0.0, 10.0]
     formula: "1.6 + 0.8*activity + 0.05*noise"
+    subjective: true                       # placebo applies here
   crp_mg_L:
     range: [0.0, 100.0]
     formula: "max(0.1, 0.5 + 4.5*activity + 2.0*noise)"
@@ -87,9 +176,11 @@ biomarkers:
   pain_vas:
     range: [0, 10]
     formula: "clip(0.5 + activity, 0, 10)"
+    subjective: true
   morning_stiffness_min:
     range: [0, 240]
     formula: "max(0, 10 + 18*activity + 5*noise)"
+    subjective: true
 
 comorbidity:
   - id: sjogren
@@ -99,6 +190,7 @@ comorbidity:
   - id: cardiovascular
     conditional_prob: 0.25
 
+# legacy block kept for backward compat (used only as a fallback)
 demographics:
   age:
     mean: 55

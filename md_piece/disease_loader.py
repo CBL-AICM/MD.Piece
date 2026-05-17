@@ -53,6 +53,27 @@ def _validate(cfg: dict[str, Any]) -> None:
     if dyn == "progressive" and "accumulation" not in cfg:
         raise ValueError("progressive dynamics requires 'accumulation' block")
 
+    # v2 soft validations — warn-style checks for the eight unpredictability blocks.
+    # Missing blocks are OK (legacy YAMLs continue to work) but malformed blocks fail.
+    if "age_distribution" in cfg:
+        total = sum(cfg["age_distribution"].values())
+        if not 0.95 <= total <= 1.05:
+            raise ValueError(
+                f"age_distribution probabilities sum to {total:.3f} (must ≈ 1.0)"
+            )
+    if "responder_classes" in cfg:
+        total = sum(c["probability"] for c in cfg["responder_classes"].values())
+        if not 0.95 <= total <= 1.05:
+            raise ValueError(
+                f"responder_classes probabilities sum to {total:.3f} (must ≈ 1.0)"
+            )
+    if "subtypes" in cfg:
+        total = sum(s["probability"] for s in cfg["subtypes"].values())
+        if not 0.95 <= total <= 1.05:
+            raise ValueError(
+                f"subtypes probabilities sum to {total:.3f} (must ≈ 1.0)"
+            )
+
 
 def load_disease(disease_id: str, diseases_dir: Path | None = None) -> DiseaseConfig:
     """Load and validate a disease YAML by id (filename without extension).

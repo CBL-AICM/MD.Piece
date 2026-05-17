@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6feb">
+<title>MD. Piece — Virtual Patient Explorer</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">MD<span class="brand-dot">.</span>Piece</div>
+  <nav class="tabs">
+    <button data-tab="dashboard" class="active">🏠 Dashboard</button>
+    <button data-tab="browser">👥 Patients</button>
+    <button data-tab="training">🎓 Training</button>
+    <button data-tab="experiment">🔬 Experiment</button>
+    <button data-tab="nof1">📊 N-of-1</button>
+  </nav>
+</header>
+
+<main id="app">
+  <div id="loader" class="centerbox">
+    <p>載入合成 cohort 中…</p>
+    <progress></progress>
+  </div>
+
+  <section id="tab-dashboard" class="tab hidden">
+    <h1>Dashboard</h1>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-label">虛擬患者</div><div class="kpi-value" id="kpi-n">—</div></div>
+      <div class="kpi"><div class="kpi-label">疾病數</div><div class="kpi-value" id="kpi-d">—</div></div>
+      <div class="kpi"><div class="kpi-label">老年比例</div><div class="kpi-value" id="kpi-elderly">—</div></div>
+      <div class="kpi"><div class="kpi-label">不可預測性指標</div><div class="kpi-value" id="kpi-cv">—</div></div>
+    </div>
+    <div class="grid">
+      <div class="card"><h2>疾病分布</h2><canvas id="chart-disease"></canvas></div>
+      <div class="card"><h2>年齡金字塔</h2><canvas id="chart-age"></canvas></div>
+      <div class="card"><h2>反應者分群</h2><canvas id="chart-responder"></canvas></div>
+      <div class="card"><h2>性別 × 年齡</h2><canvas id="chart-sex-age"></canvas></div>
+    </div>
+  </section>
+
+  <section id="tab-browser" class="tab hidden">
+    <h1>Patient Browser</h1>
+    <div class="filters">
+      <label>疾病 <select id="f-disease"><option value="">（全部）</option></select></label>
+      <label>年齡 <select id="f-age"><option value="">（全部）</option><option>20-35</option><option>35-55</option><option>55-70</option><option>70-90</option></select></label>
+      <label>性別 <select id="f-sex"><option value="">（全部）</option><option>F</option><option>M</option></select></label>
+      <label>反應者 <select id="f-resp"><option value="">（全部）</option><option>typical</option><option>super</option><option>partial</option><option>non_responder</option></select></label>
+    </div>
+    <div class="layout">
+      <div class="list-pane">
+        <div id="patient-list"></div>
+      </div>
+      <div class="detail-pane card">
+        <h2 id="detail-title">選一位患者</h2>
+        <div id="detail-meta" class="meta"></div>
+        <canvas id="detail-activity"></canvas>
+        <canvas id="detail-biomarkers"></canvas>
+        <div id="detail-events" class="events"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-training" class="tab hidden">
+    <h1>Training Mode</h1>
+    <p class="muted">系統顯示 60 天資料，你預測 61–90 天會 flare 嗎？</p>
+    <div class="card">
+      <canvas id="train-chart"></canvas>
+      <div class="train-controls">
+        <button id="t-flare">會 flare</button>
+        <button id="t-noflare">不會 flare</button>
+        <button id="t-next" class="primary hidden">下一位 ➡</button>
+      </div>
+      <div id="train-result"></div>
+      <div class="score">你的正確率：<span id="t-score">—</span></div>
+    </div>
+  </section>
+
+  <section id="tab-experiment" class="tab hidden">
+    <h1>Experiment Mode</h1>
+    <p class="muted">選一個治療策略，看整個 cohort 對它的反應分布。</p>
+    <div class="card">
+      <label>疾病 <select id="e-disease"></select></label>
+      <label>治療 <select id="e-treatment"></select></label>
+      <button id="e-run" class="primary">執行虛擬試驗</button>
+      <canvas id="experiment-chart"></canvas>
+      <div id="experiment-summary" class="summary"></div>
+    </div>
+  </section>
+
+  <section id="tab-nof1" class="tab hidden">
+    <h1>N-of-1 Mode</h1>
+    <p class="muted">輸入你的資料，系統找最相似的虛擬患者並提供建議區間。</p>
+    <div class="card">
+      <div class="form">
+        <label>疾病 <select id="n-disease"></select></label>
+        <label>年齡 <input id="n-age" type="number" min="20" max="90" value="45"></label>
+        <label>性別 <select id="n-sex"><option>F</option><option>M</option></select></label>
+        <label>近期活動度（0-10）<input id="n-activity" type="number" min="0" max="10" step="0.1" value="3.0"></label>
+        <button id="n-run" class="primary">尋找相似患者</button>
+      </div>
+      <canvas id="nof1-chart"></canvas>
+      <div id="nof1-summary" class="summary"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footnote">
+  ⚠️ 本系統為科展研究用途，所有資料為<strong>合成資料</strong>，不構成醫療建議。
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/patient-browser.js"></script>
+<script src="js/training.js"></script>
+<script src="js/experiment.js"></script>
+<script src="js/n-of-1.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
