@@ -14,8 +14,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=v103-care-pill-theme" />
-  <link rel="stylesheet" href="css/elder-mode.css?v=v1-elder-tokens" />
+  <link rel="stylesheet" href="css/style.css?v=v104-tokens-severity" />
+  <link rel="stylesheet" href="css/elder-mode.css?v=v2-topbar-toggle" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -374,6 +374,10 @@
         </button>
         <button class="app-theme-toggle" id="app-theme-toggle" type="button" onclick="toggleAppTheme()" title="切換主題" data-i18n-title="top.themeTitle">
           <span class="att-icon" id="att-icon">☾</span>
+        </button>
+        <button class="app-elder-toggle" id="app-elder-toggle" type="button" onclick="toggleElderMode()" title="切換長者模式：字更大、按鈕更大、對比更高" aria-pressed="false" data-mode-toggle>
+          <span class="ael-icon" aria-hidden="true">A<sup>+</sup></span>
+          <span class="ael-label">字大一點</span>
         </button>
         <button class="app-settings-btn" id="app-settings-btn" type="button" onclick="navigateTo('settings', null)" title="系統設定" data-i18n-title="top.settingsTitle" aria-label="系統設定" data-i18n-aria-label="top.settingsTitle">
           <i data-lucide="settings" style="width:16px;height:16px"></i>

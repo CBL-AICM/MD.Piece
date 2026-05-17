@@ -156,3 +156,107 @@ html[data-mode="senior"] *:focus-visible {
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Topbar elder-mode toggle button
+   ─────────────────────────────────────────────────────────────
+   位置：index.html 的 .topbar 內，緊鄰 theme toggle 與 settings。
+   設計：用「A+」icon + 中文 label，老人家家屬一眼看懂。
+   啟用狀態（aria-pressed="true"）邊框 + 底色 + 中性藍。
+   ═══════════════════════════════════════════════════════════ */
+
+.app-elder-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  margin-left: 4px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border-glass);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-elder-toggle .ael-icon {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: "Cormorant Garamond", "Noto Serif TC", serif;
+  font-weight: 700;
+  font-size: var(--font-lg);
+  line-height: 1;
+  color: var(--accent);
+}
+.app-elder-toggle .ael-icon sup {
+  font-size: var(--font-xs);
+  margin-left: 1px;
+  color: var(--accent);
+}
+
+.app-elder-toggle .ael-label {
+  letter-spacing: 0.3px;
+}
+
+.app-elder-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 啟用態 — 反白填 accent，讓使用者知道現在已開 */
+.app-elder-toggle[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.app-elder-toggle[aria-pressed="true"] .ael-icon,
+.app-elder-toggle[aria-pressed="true"] .ael-icon sup {
+  color: #fff;
+}
+
+/* 已在 elder-mode 下，自己也要放大、命中區補足 56px */
+html.elder-mode .app-elder-toggle,
+html[data-mode="senior"] .app-elder-toggle {
+  font-size: var(--font-base);
+  padding: var(--space-2) var(--space-4);
+  min-height: var(--tap-elder);
+}
+html.elder-mode .app-elder-toggle .ael-icon,
+html[data-mode="senior"] .app-elder-toggle .ael-icon {
+  font-size: var(--font-xl);
+}
+
+/* 螢幕較窄時只顯示 icon，省空間 */
+@media (max-width: 520px) {
+  .app-elder-toggle .ael-label { display: none; }
+  .app-elder-toggle { padding: 6px 10px; }
+}
+
+/* 啟用後在 body 角落浮一個小提示（首次） */
+.elder-mode-hint {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  background: var(--accent);
+  color: #fff;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-sm);
+  box-shadow: var(--shadow-lift);
+  animation: elderHintIn 0.3s ease-out, elderHintOut 0.4s ease-in 2.6s forwards;
+  pointer-events: none;
+}
+@keyframes elderHintIn {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes elderHintOut {
+  to { opacity: 0; transform: translate(-50%, 20px); }
+}

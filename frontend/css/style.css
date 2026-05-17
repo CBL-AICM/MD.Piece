@@ -1301,8 +1301,8 @@ html[data-mode="senior"] .topbar-version {
   backdrop-filter: blur(12px);
   border: 2px solid var(--border-glass);
   border-radius: var(--radius);
-  padding: 24px;
-  margin-bottom: 20px;
+  padding: var(--space-6);
+  margin-bottom: var(--space-5);
   transition: var(--transition);
   position: relative;
   overflow: hidden;
@@ -1323,22 +1323,25 @@ html[data-mode="senior"] .topbar-version {
 .card:hover::before { opacity: 1; }
 
 .card h2 {
-  font-size: 1.15rem;
+  font-size: var(--font-xl);
   font-weight: 600;
-  margin-bottom: 12px;
+  line-height: var(--lh-tight);
+  margin-bottom: var(--space-3);
   color: var(--text);
 }
 
 .card h3 {
-  font-size: 1rem;
+  font-size: var(--font-lg);
   font-weight: 500;
+  line-height: var(--lh-tight);
   color: var(--text-dim);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .card p {
+  font-size: var(--font-base);
   color: var(--text-dim);
-  line-height: 1.6;
+  line-height: var(--lh-base);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1387,13 +1390,15 @@ button.primary {
   background: linear-gradient(135deg, var(--accent), #3a7fd9);
   color: white;
   border: none;
-  padding: 10px 24px;
+  padding: var(--space-3) var(--space-6);
+  min-height: var(--tap-min);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: .95rem;
+  font-size: var(--font-base);
   font-family: inherit;
   font-weight: 500;
-  margin-top: 8px;
+  line-height: var(--lh-tight);
+  margin-top: var(--space-2);
   transition: var(--transition);
   box-shadow: 0 2px 12px var(--accent-glow);
 }
@@ -1407,13 +1412,15 @@ button.secondary {
   background: var(--bg-glass);
   color: var(--accent);
   border: 2px solid var(--border-glass);
-  padding: 10px 24px;
+  padding: var(--space-3) var(--space-6);
+  min-height: var(--tap-min);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: .95rem;
+  font-size: var(--font-base);
   font-family: inherit;
   font-weight: 500;
-  margin-top: 8px;
+  line-height: var(--lh-tight);
+  margin-top: var(--space-2);
   transition: var(--transition);
 }
 
@@ -9602,13 +9609,40 @@ a.story-news-title:hover { color: var(--story-text-dark); }
    症狀分析結果（白話、給一般民眾看）
    ═══════════════════════════════════════════════════════════ */
 .sa-urgency {
-  padding: 14px 18px;
-  border-left: 4px solid var(--accent);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
-  margin-bottom: 14px;
+  margin-bottom: var(--space-3);
   background: var(--bg-glass);
+  /* 警示「邊」不警示「面」：左邊框用 severity token */
+  border-left: 4px solid var(--_sev-color, var(--accent));
 }
-.sa-urgency-label { font-weight: 600; font-size: 1.05rem; }
+.sa-urgency[data-severity="er"] { border-left-width: 5px; }
+.sa-urgency-label { font-weight: 600; font-size: var(--font-base); }
+
+/* 分級醫療 chip — 對應 /triage/evaluate 的 severity_color */
+.sa-triage-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  background: var(--bg-soft);
+  border-radius: var(--radius-sm);
+}
+.sa-triage-text {
+  font-weight: 600;
+  color: var(--text);
+}
+.sa-triage-msg {
+  flex-basis: 100%;
+  font-size: var(--font-sm);
+  color: var(--text-dim);
+  line-height: var(--lh-base);
+}
 .sa-grid { display: grid; gap: 16px; }
 .sa-section { }
 .sa-section-title {

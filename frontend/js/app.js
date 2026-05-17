@@ -65,7 +65,21 @@ function toggleMode() {
 
 // alias — 比較直觀的英文名
 function isElderMode() { return getMode() === 'senior'; }
-function toggleElderMode() { toggleMode(); }
+function toggleElderMode() {
+  toggleMode();
+  // 第一次切換時顯示一個 toast，讓使用者知道「字真的變大了」
+  _showElderModeHint(isElderMode());
+}
+
+function _showElderModeHint(turnedOn) {
+  var prior = document.querySelector('.elder-mode-hint');
+  if (prior) prior.remove();
+  var hint = document.createElement('div');
+  hint.className = 'elder-mode-hint';
+  hint.textContent = turnedOn ? '已開啟長者模式：字大、按鈕大、對比高' : '已切回標準模式';
+  document.body.appendChild(hint);
+  setTimeout(function() { if (hint.parentNode) hint.remove(); }, 3000);
+}
 
 // ─── 照護模式（門診 / 住院）─────────────────────────────────
 // 跟 'senior/standard' 是兩個正交的維度：
@@ -8111,12 +8125,14 @@ function symptomsAnalyze() {
   `;
 }
 
+// 緊急度（從 /symptoms/analyze 回的 urgency）對應到 5 級 severity token
+// 對齊 docs/research/ui_color_research.md §4 與 backend/routers/triage.py
 function _symptomUrgency(level) {
   const map = {
-    emergency: { label: "🚨 緊急", color: "#d6457e", bg: "rgba(214,69,126,0.12)" },
-    high:      { label: "⚠️ 高",   color: "#e8889c", bg: "rgba(232,136,156,0.12)" },
-    medium:    { label: "● 中",    color: "#d49a55", bg: "rgba(212,154,85,0.12)" },
-    low:       { label: "● 低",    color: "#5b9fe8", bg: "rgba(91,159,232,0.12)" },
+    emergency: { label: "緊急",   severity: "er"       },  // → var(--sev-er)
+    high:      { label: "高",     severity: "medical"  },  // → var(--sev-medical)
+    medium:    { label: "中",     severity: "clinic"   },  // → var(--sev-clinic)
+    low:       { label: "低",     severity: "self"     },  // → var(--sev-self)
   };
   return map[level] || map.low;
 }
@@ -8185,6 +8201,8 @@ async function runSymptomAnalysis() {
     if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
     // 重新載入歷史
     loadSymptomAnalysisHistory();
+    // 再打 /triage/evaluate 拿後端的 severity_color（5 級分級醫療）並套上 data-severity
+    enrichSymptomAnalysisWithTriage(symptoms, pid).catch(function() { /* 安靜失敗，不擋主流程 */ });
   } catch (e) {
     if (_saTypingTimer) { clearInterval(_saTypingTimer); _saTypingTimer = null; }
     el.innerHTML =
@@ -8192,6 +8210,46 @@ async function runSymptomAnalysis() {
       '<strong>分析失敗</strong><br>' +
       '<span style="font-size:0.85rem;color:var(--text-muted)">' + escapeHtml(e.message || "未知錯誤") + '</span>' +
       '</div>';
+  }
+}
+
+// 在症狀分析成功後，再呼叫 /triage/evaluate 拿後端的 severity_color（er/regional/clinic/self）
+// 把分級醫療顏色補上去，並在結果區塊浮一條「建議去哪裡看」chip
+async function enrichSymptomAnalysisWithTriage(symptoms, pid) {
+  const TRIAGE_LABEL = {
+    emergency: { sev: 'er',       text: '建議立即就醫 / 急診' },
+    follow_up: { sev: 'regional', text: '近期回診追蹤' },
+    stable:    { sev: 'self',     text: '可先自我照護觀察' },
+  };
+  try {
+    const res = await fetch(`${API}/triage/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_id: pid, symptoms: symptoms || [] }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const result = data && data.result;
+    const meta = TRIAGE_LABEL[result];
+    if (!meta) return;
+    // 安全檢查 severity_color：只接受 5 個白名單值
+    const SEV = { self:1, clinic:1, regional:1, medical:1, er:1 };
+    const sev = SEV[data.severity_color] ? data.severity_color : meta.sev;
+    const host = document.getElementById('symptom-analyze-result');
+    if (!host) return;
+    // 把 result 區塊外層也掛上 data-severity（讓樣式統一）
+    host.setAttribute('data-severity', sev);
+    // 插入分級建議 chip
+    const banner = document.createElement('div');
+    banner.className = 'sa-triage-banner';
+    banner.innerHTML =
+      '<span class="sev-chip" data-severity="' + sev + '">分級建議</span>' +
+      '<span class="sa-triage-text">' + escapeHtml(meta.text) + '</span>' +
+      (data.message ? '<span class="sa-triage-msg">' + escapeHtml(data.message) + '</span>' : '');
+    // 放在結果第一行
+    host.insertBefore(banner, host.firstChild);
+  } catch (e) {
+    // 不擋主流程
   }
 }
 
@@ -8214,9 +8272,10 @@ function renderSymptomAnalysis(data) {
     })
     .join("");
 
+  // 用 data-severity attribute（CSS 套 var(--sev-*)），前端不再硬寫顏色
   return `
-    <div class="sa-urgency" style="border-left-color:${u.color};background:${u.bg}">
-      <div class="sa-urgency-label" style="color:${u.color}">緊急程度：${u.label}</div>
+    <div class="sa-urgency" data-severity="${u.severity}">
+      <span class="sev-chip" data-severity="${u.severity}">緊急程度：${u.label}</span>
     </div>
     <div class="sa-grid">
       <section class="sa-section">
