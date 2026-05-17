@@ -34,6 +34,7 @@ if ('serviceWorker' in navigator) {
 function renderAll() {
   Dashboard.render();
   PatientBrowser.render();
+  WhatIf.init();
   Training.init();
   Experiment.init();
   NOf1.init();

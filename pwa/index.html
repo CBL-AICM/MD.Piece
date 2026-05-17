@@ -15,6 +15,7 @@
   <nav class="tabs">
     <button data-tab="dashboard" class="active">🏠 Dashboard</button>
     <button data-tab="browser">👥 Patients</button>
+    <button data-tab="whatif">🧪 What-If</button>
     <button data-tab="training">🎓 Training</button>
     <button data-tab="experiment">🔬 Experiment</button>
     <button data-tab="nof1">📊 N-of-1</button>
@@ -67,6 +68,33 @@
     </div>
   </section>
 
+  <section id="tab-whatif" class="tab hidden">
+    <h1>What-If Lab</h1>
+    <p class="muted">
+      模型已用 <strong>ONNX Runtime Web</strong> 載入到你的瀏覽器（純前端推論，無需後端）。
+      改動下方輸入，按「重新預測」即時看模型反應。
+    </p>
+    <div class="card">
+      <div id="onnx-status" class="muted" style="margin-bottom:10px">⏳ 模型載入中…</div>
+      <div class="form">
+        <label>疾病 <select id="w-disease"></select></label>
+        <label>患者 <select id="w-patient"></select></label>
+        <label>預測時點（day） <input id="w-day" type="number" min="14" value="60" step="1"></label>
+      </div>
+      <div class="whatif-knobs">
+        <label class="toggle"><input type="checkbox" id="w-no-skips"> 假設完全配合服藥（清掉漏吃日）</label>
+        <label class="toggle"><input type="checkbox" id="w-no-events"> 假設無生活事件（清掉 life event flag）</label>
+        <label class="slider">過去 7 天活動度整體位移：
+          <input type="range" id="w-shift" min="-2" max="2" step="0.1" value="0">
+          <span id="w-shift-val">0.0</span>
+        </label>
+      </div>
+      <button id="w-run" class="primary">🤖 重新預測</button>
+      <div id="w-output" class="summary"></div>
+      <canvas id="w-chart"></canvas>
+    </div>
+  </section>
+
   <section id="tab-training" class="tab hidden">
     <h1>Training Mode</h1>
     <p class="muted">系統顯示 60 天資料，你預測 61–90 天會 flare 嗎？</p>
@@ -116,9 +144,12 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
 <script src="js/data.js"></script>
+<script src="js/inference.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/patient-browser.js"></script>
+<script src="js/whatif.js"></script>
 <script src="js/training.js"></script>
 <script src="js/experiment.js"></script>
 <script src="js/n-of-1.js"></script>

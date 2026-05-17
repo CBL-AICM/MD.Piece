@@ -1,13 +1,14 @@
 // MD. Piece PWA service worker — cache-first for app shell, network-first for data.
 
-const APP_VERSION = 'mdp-v2.1-insights';
+const APP_VERSION = 'mdp-v2.2-onnx';
 const APP_SHELL = [
   './', './index.html', './manifest.json',
   './css/style.css',
-  './js/main.js', './js/data.js', './js/dashboard.js',
-  './js/patient-browser.js', './js/training.js',
+  './js/main.js', './js/data.js', './js/inference.js', './js/dashboard.js',
+  './js/patient-browser.js', './js/whatif.js', './js/training.js',
   './js/experiment.js', './js/n-of-1.js',
   './icons/icon-192.svg', './icons/icon-512.svg',
+  './model/model.onnx', './model/scaler.json',
 ];
 
 self.addEventListener('install', e => {
@@ -24,6 +25,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  // skip cross-origin (onnxruntime-web CDN + WASM blobs)
+  if (url.origin !== location.origin) return;
   if (url.pathname.endsWith('/cohort.json') || url.pathname.includes('/data/')) {
     // network-first for cohort data
     e.respondWith(
@@ -37,7 +40,7 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // cache-first for shell
+  // cache-first for shell (incl. model.onnx)
   e.respondWith(
     caches.match(e.request).then(c => c || fetch(e.request))
   );

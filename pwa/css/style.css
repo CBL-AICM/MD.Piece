@@ -124,6 +124,17 @@ select, input[type="number"] {
 }
 .insight .chip.good { color: var(--good); border: 1px solid var(--good); }
 .insight .chip.bad  { color: var(--bad);  border: 1px solid var(--bad); }
+.whatif-knobs {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg-soft); border-radius: 8px;
+  padding: 12px; margin: 12px 0;
+}
+.whatif-knobs label.toggle, .whatif-knobs label.slider {
+  display: flex; gap: 10px; align-items: center; font-size: 13px;
+}
+.whatif-knobs input[type=range] { flex: 1; }
+#onnx-status.good { color: var(--good); }
+#onnx-status.bad { color: var(--bad); }
 button {
   background: var(--bg-soft); color: var(--fg); border: 1px solid var(--border);
   border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 14px;
