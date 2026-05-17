@@ -4303,6 +4303,49 @@ var _IP_PROCEDURE_GROUPS = [
   { id: 'nursing',   label: '護理處置' },
 ];
 
+// ── 自訂處置類型（per-patient，存 Supabase via /procedure-types）─────────────
+// 由 loadInpatientCustomTypes() 在 mount 後拉一次，存到記憶體 map，
+// 後續 composer 顯示、timeline 解析都從這裡查。
+// 表單 schema 對齊 _IP_EXAM_TYPES：{ label, icon, category, defaultPrep, description }
+//   後端欄位是 default_prep（snake_case）— 在 loader / submitter 兩端做欄位轉換。
+var _ipCustomTypes = {};       // key → type definition（同 _IP_EXAM_TYPES 結構 + id）
+var _ipCustomTypesLoaded = false;
+
+// 內建 + 自訂合併查 type 定義；找不到 fallback 到 'other'。
+function _resolveProcedureType(key) {
+  if (!key) return _IP_EXAM_TYPES.other;
+  return _IP_EXAM_TYPES[key] || _ipCustomTypes[key] || _IP_EXAM_TYPES.other;
+}
+
+function loadInpatientCustomTypes(cb) {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) { if (cb) cb([]); return; }
+  fetch(API + '/procedure-types/?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var types = (data && data.types) || [];
+      var map = {};
+      types.forEach(function(t) {
+        map[t.key] = {
+          id: t.id,
+          label: t.label,
+          icon: t.icon || 'clipboard-list',
+          category: t.category || 'exam',
+          defaultPrep: t.default_prep || '',
+          description: t.description || '',
+          custom: true,
+        };
+      });
+      _ipCustomTypes = map;
+      _ipCustomTypesLoaded = true;
+      if (cb) cb(types);
+    })
+    .catch(function() {
+      _ipCustomTypesLoaded = true; // 不重試風暴；下次 mount 再試
+      if (cb) cb([]);
+    });
+}
+
 // 排定檢查 storage — 跟 admission 綁定（active admission id 之下），跨日保留。
 //   { id, type, time(ISO), location, prep, notes }
 function _ipExamsKey(admId) { return 'mdpiece_inpatient_exams_' + (admId || 'default'); }
@@ -5349,6 +5392,7 @@ function onTimelineDelete(id) {
 
 // 入院 mount 後執行的整套 fetch — 把骨架填上真資料。
 function loadInpatientHome() {
+  loadInpatientCustomTypes();
   loadInpatientActiveAdmission();
   loadInpatientTrendSparklines();
   refreshInpatientRoundsCard();
@@ -5469,7 +5513,7 @@ function _buildTodayTimeline(meds, active) {
     _getInpatientExams(admId).forEach(function(e) {
       if (!e.time) return;
       if (String(e.time).slice(0, 10) !== todayStr) return;
-      var t = _IP_EXAM_TYPES[e.type] || _IP_EXAM_TYPES.other;
+      var t = _resolveProcedureType(e.type);
       items.push({
         id: 'exam-' + e.id,
         time: e.time.slice(0, 16),
@@ -5669,17 +5713,32 @@ function openInpatientExamComposer(editId) {
   if (editId) {
     exam = _getInpatientExams(_ipActiveAdmissionId).find(function(e) { return e.id === editId; });
   }
-  // 按 category 分組成 <optgroup>，讓使用者一眼分辨檢查 / 注射 / 護理
+  // 按 category 分組成 <optgroup>，讓使用者一眼分辨檢查 / 注射 / 護理；
+  // 自訂類型混進對應 category，label 加「（我的）」尾綴以區分。
   var typeOptions = _IP_PROCEDURE_GROUPS.map(function(g) {
-    var inner = Object.keys(_IP_EXAM_TYPES).filter(function(k) {
+    var builtIn = Object.keys(_IP_EXAM_TYPES).filter(function(k) {
       return (_IP_EXAM_TYPES[k].category || 'exam') === g.id;
     }).map(function(k) {
       var t = _IP_EXAM_TYPES[k];
       var sel = (exam && exam.type === k) ? ' selected' : '';
-      return '<option value="' + k + '"' + sel + '>' + t.label + '</option>';
+      return '<option value="' + k + '"' + sel + '>' + escapeHtml(t.label) + '</option>';
     }).join('');
-    return '<optgroup label="' + g.label + '">' + inner + '</optgroup>';
+    var custom = Object.keys(_ipCustomTypes).filter(function(k) {
+      return (_ipCustomTypes[k].category || 'exam') === g.id;
+    }).map(function(k) {
+      var t = _ipCustomTypes[k];
+      var sel = (exam && exam.type === k) ? ' selected' : '';
+      return '<option value="' + k + '"' + sel + '>' + escapeHtml(t.label) + '（我的）</option>';
+    }).join('');
+    return '<optgroup label="' + g.label + '">' + builtIn + custom + '</optgroup>';
   }).join('');
+  var customCount = Object.keys(_ipCustomTypes).length;
+  var customManageBtn = customCount
+    ? '<button type="button" class="ip-exam-custom-manage" onclick="openCustomTypeManager()">'
+        + '<i data-lucide="settings-2" style="width:14px;height:14px"></i>'
+        + '<span>管理我的（' + customCount + '）</span>'
+      + '</button>'
+    : '';
   // datetime-local 預設：今天 14:00
   var defaultTime;
   if (exam && exam.time) {
@@ -5707,6 +5766,12 @@ function openInpatientExamComposer(editId) {
     +     '<label class="ip-exam-field"><span>處置類型</span>'
     +       '<select id="ip-exam-type" onchange="_ipExamTypeChanged()">' + typeOptions + '</select>'
     +     '</label>'
+    +     '<div class="ip-exam-custom-row">'
+    +       '<button type="button" class="ip-exam-custom-add" onclick="openCustomTypeComposer()">'
+    +         '<i data-lucide="plus" style="width:14px;height:14px"></i><span>自訂新類型</span>'
+    +       '</button>'
+    +       customManageBtn
+    +     '</div>'
     +     '<div class="ip-exam-desc-box" id="ip-exam-desc-box" aria-live="polite">'
     +       '<i data-lucide="message-circle-heart" style="width:14px;height:14px"></i>'
     +       '<span id="ip-exam-desc-text">—</span>'
@@ -5745,12 +5810,12 @@ function _ipExamTypeChanged() {
   var sel = document.getElementById('ip-exam-type');
   var prep = document.getElementById('ip-exam-prep');
   if (!sel) return;
-  var t = _IP_EXAM_TYPES[sel.value];
+  var t = _resolveProcedureType(sel.value);
   if (prep) {
     var current = prep.value.trim();
-    var isDefaultValue = Object.keys(_IP_EXAM_TYPES).some(function(k) {
-      return _IP_EXAM_TYPES[k].defaultPrep === current;
-    });
+    var allDefaults = Object.keys(_IP_EXAM_TYPES).map(function(k) { return _IP_EXAM_TYPES[k].defaultPrep; })
+      .concat(Object.keys(_ipCustomTypes).map(function(k) { return _ipCustomTypes[k].defaultPrep; }));
+    var isDefaultValue = allDefaults.indexOf(current) >= 0;
     if ((!current || isDefaultValue) && t) {
       prep.value = t.defaultPrep || '';
     }
@@ -5776,7 +5841,7 @@ function submitInpatientExam(editId) {
     if (typeof showToast === 'function') showToast('請選時間', 'error');
     return;
   }
-  if (!_IP_EXAM_TYPES[type]) type = 'other';
+  if (!_IP_EXAM_TYPES[type] && !_ipCustomTypes[type]) type = 'other';
   var list = _getInpatientExams(_ipActiveAdmissionId);
   if (editId) {
     var idx = list.findIndex(function(e) { return e.id === editId; });
@@ -5803,6 +5868,268 @@ function onInpatientExamDelete(examId) {
   _closeInpatientTimelineSheet();
   if (typeof showToast === 'function') showToast('已移除', 'success');
   loadInpatientActiveAdmission();
+}
+
+// ── 自訂處置類型 composer / 管理器 ─────────────────────────────────────────
+// 疊在 exam composer 上層，背景變暗的浮層。建立完自動 reload 自訂類型清單，
+// 並重新 render exam composer 讓新類型出現在 dropdown。
+
+var _IP_CUSTOM_ICON_CHOICES = [
+  // 常見的醫療相關 lucide icon — 給使用者選不到時的預設足夠涵蓋
+  'clipboard-list', 'syringe', 'pill', 'stethoscope', 'heart-pulse',
+  'bandage', 'thermometer', 'activity', 'scan', 'tube',
+  'droplet', 'droplets', 'wind', 'flask-conical', 'cloud',
+];
+
+function openCustomTypeComposer(editId) {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) {
+    if (typeof showToast === 'function') showToast('找不到目前的使用者 ID', 'error');
+    return;
+  }
+  // 移除舊的（如果有）
+  var existing = document.getElementById('ip-custom-type-sheet');
+  if (existing) existing.remove();
+
+  // 編輯模式：從快取拿
+  var initial = null;
+  if (editId) {
+    Object.keys(_ipCustomTypes).forEach(function(k) {
+      if (_ipCustomTypes[k].id === editId) initial = _ipCustomTypes[k];
+    });
+  }
+  // 預設 category 跟著目前 exam composer 選的類型走（讓「新增」更貼近使用情境）
+  var defaultCategory = (initial && initial.category) || 'exam';
+  if (!initial) {
+    var sel = document.getElementById('ip-exam-type');
+    if (sel) {
+      var current = _resolveProcedureType(sel.value);
+      if (current && current.category) defaultCategory = current.category;
+    }
+  }
+
+  var iconOptions = _IP_CUSTOM_ICON_CHOICES.map(function(ic) {
+    var sel = (initial && initial.icon === ic) ? ' selected' : '';
+    return '<option value="' + ic + '"' + sel + '>' + ic + '</option>';
+  }).join('');
+
+  var categoryOptions = _IP_PROCEDURE_GROUPS.map(function(g) {
+    var s = (g.id === defaultCategory) ? ' selected' : '';
+    return '<option value="' + g.id + '"' + s + '>' + g.label + '</option>';
+  }).join('');
+
+  var sheet = document.createElement('div');
+  sheet.id = 'ip-custom-type-sheet';
+  sheet.className = 'ip-prep-sheet ip-custom-type-sheet';
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeCustomTypeComposer()"></div>'
+    + '<div class="ip-prep-panel" role="dialog" aria-label="自訂處置類型">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">' + (initial ? '編輯自訂類型' : '新增自訂類型') + '</span>'
+    +       '<span class="ip-prep-when-sub">建立屬於自己的處置選項（會出現在處置類型下拉）</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeCustomTypeComposer()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div class="ip-exam-form">'
+    +     '<label class="ip-exam-field"><span>名稱（會顯示在 timeline）</span>'
+    +       '<input type="text" id="ip-ct-label" maxlength="40" value="' + (initial ? escapeHtml(initial.label) : '') + '" placeholder="例：標靶治療" />'
+    +     '</label>'
+    +     '<label class="ip-exam-field"><span>識別字串（英數小寫，建後不可改）</span>'
+    +       '<input type="text" id="ip-ct-key" maxlength="32" value="' + (initial ? escapeHtml(_findCustomTypeKey(initial.id) || '') : '') + '" placeholder="例：target_therapy"' + (initial ? ' disabled' : '') + ' />'
+    +     '</label>'
+    +     '<label class="ip-exam-field"><span>分類</span>'
+    +       '<select id="ip-ct-category">' + categoryOptions + '</select>'
+    +     '</label>'
+    +     '<label class="ip-exam-field"><span>圖示（lucide icon name）</span>'
+    +       '<select id="ip-ct-icon">' + iconOptions + '</select>'
+    +     '</label>'
+    +     '<label class="ip-exam-field"><span>預設準備事項</span>'
+    +       '<textarea id="ip-ct-prep" rows="2" maxlength="200" placeholder="例：施打前 1 hr 多喝水">' + (initial ? escapeHtml(initial.defaultPrep || '') : '') + '</textarea>'
+    +     '</label>'
+    +     '<label class="ip-exam-field"><span>白話說明（在 timeline 詳情顯示給家屬看）</span>'
+    +       '<textarea id="ip-ct-desc" rows="3" maxlength="300" placeholder="例：用一種專門攻擊癌細胞的藥從點滴打進去…">' + (initial ? escapeHtml(initial.description || '') : '') + '</textarea>'
+    +     '</label>'
+    +   '</div>'
+    +   '<div class="ip-prep-footer">'
+    +     '<button type="button" class="ip-prep-cta" onclick="submitCustomType(' + (initial ? '\'' + initial.id + '\'' : 'null') + ')">'
+    +       '<i data-lucide="check" style="width:16px;height:16px"></i><span>' + (initial ? '儲存修改' : '建立') + '</span>'
+    +     '</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _findCustomTypeKey(typeId) {
+  var keys = Object.keys(_ipCustomTypes);
+  for (var i = 0; i < keys.length; i++) {
+    if (_ipCustomTypes[keys[i]].id === typeId) return keys[i];
+  }
+  return null;
+}
+
+function closeCustomTypeComposer() {
+  var sheet = document.getElementById('ip-custom-type-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+
+function submitCustomType(editId) {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) {
+    if (typeof showToast === 'function') showToast('找不到目前的使用者 ID', 'error');
+    return;
+  }
+  var labelEl = document.getElementById('ip-ct-label');
+  var keyEl = document.getElementById('ip-ct-key');
+  var catEl = document.getElementById('ip-ct-category');
+  var iconEl = document.getElementById('ip-ct-icon');
+  var prepEl = document.getElementById('ip-ct-prep');
+  var descEl = document.getElementById('ip-ct-desc');
+  if (!labelEl || !keyEl || !catEl || !iconEl) return;
+
+  var label = labelEl.value.trim();
+  var key = keyEl.value.trim().toLowerCase();
+  var category = catEl.value;
+  var icon = iconEl.value;
+  var defaultPrep = prepEl ? prepEl.value.trim() : '';
+  var description = descEl ? descEl.value.trim() : '';
+
+  if (!label) { if (typeof showToast === 'function') showToast('請填名稱', 'error'); return; }
+  if (!editId && !/^[a-z][a-z0-9_]{0,31}$/.test(key)) {
+    if (typeof showToast === 'function') showToast('識別字串：小寫英文開頭 + 字母 / 數字 / 底線', 'error');
+    return;
+  }
+  // 識別字串不可跟內建衝突
+  if (!editId && _IP_EXAM_TYPES[key]) {
+    if (typeof showToast === 'function') showToast('這個識別字串已是內建類型，請換一個', 'error');
+    return;
+  }
+
+  var url = API + '/procedure-types/' + (editId ? encodeURIComponent(editId) : '');
+  var method = editId ? 'PUT' : 'POST';
+  var body = editId
+    ? { label: label, category: category, icon: icon, default_prep: defaultPrep, description: description }
+    : { patient_id: pid, key: key, label: label, category: category, icon: icon, default_prep: defaultPrep, description: description };
+
+  fetch(url, {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(j) { throw new Error((j && j.detail) || ('HTTP ' + r.status)); });
+      return r.json();
+    })
+    .then(function() {
+      closeCustomTypeComposer();
+      if (typeof showToast === 'function') showToast(editId ? '已更新' : '已建立', 'success');
+      // 重新載入自訂類型，然後重 render exam composer 讓新類型出現
+      loadInpatientCustomTypes(function() {
+        var examSheet = document.getElementById('ip-exam-sheet');
+        if (examSheet) {
+          examSheet.remove();
+          openInpatientExamComposer();
+          // 自動選到剛建立 / 編輯的這筆
+          var sel = document.getElementById('ip-exam-type');
+          if (sel) {
+            var targetKey = editId ? (_findCustomTypeKey(editId) || sel.value) : key;
+            sel.value = targetKey;
+            _ipExamTypeChanged();
+          }
+        }
+      });
+    })
+    .catch(function(err) {
+      if (typeof showToast === 'function') showToast(err.message || '建立失敗', 'error');
+    });
+}
+
+function openCustomTypeManager() {
+  var existing = document.getElementById('ip-custom-type-manager');
+  if (existing) existing.remove();
+
+  var keys = Object.keys(_ipCustomTypes);
+  var rows = keys.length
+    ? keys.map(function(k) {
+        var t = _ipCustomTypes[k];
+        var catLabel = ({ exam: '檢查', treatment: '注射 / 輸液', nursing: '護理處置' })[t.category] || t.category;
+        return ''
+          + '<div class="ip-ctm-row" data-id="' + t.id + '">'
+          +   '<div class="ip-ctm-icon"><i data-lucide="' + escapeHtml(t.icon || 'clipboard-list') + '"></i></div>'
+          +   '<div class="ip-ctm-main">'
+          +     '<p class="ip-ctm-label">' + escapeHtml(t.label) + '</p>'
+          +     '<p class="ip-ctm-meta">' + escapeHtml(catLabel) + ' · <code>' + escapeHtml(k) + '</code></p>'
+          +   '</div>'
+          +   '<div class="ip-ctm-actions">'
+          +     '<button type="button" class="ip-ctm-btn ip-ctm-edit" onclick="openCustomTypeComposer(\'' + t.id + '\')" aria-label="編輯">'
+          +       '<i data-lucide="pencil" style="width:14px;height:14px"></i>'
+          +     '</button>'
+          +     '<button type="button" class="ip-ctm-btn ip-ctm-del" onclick="deleteCustomType(\'' + t.id + '\')" aria-label="刪除">'
+          +       '<i data-lucide="trash-2" style="width:14px;height:14px"></i>'
+          +     '</button>'
+          +   '</div>'
+          + '</div>';
+      }).join('')
+    : '<p class="ip-ctm-empty">還沒有自訂類型。</p>';
+
+  var sheet = document.createElement('div');
+  sheet.id = 'ip-custom-type-manager';
+  sheet.className = 'ip-prep-sheet ip-custom-type-manager';
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="closeCustomTypeManager()"></div>'
+    + '<div class="ip-prep-panel" role="dialog" aria-label="管理自訂處置類型">'
+    +   '<div class="ip-prep-handle"></div>'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">管理我的處置類型</span>'
+    +       '<span class="ip-prep-when-sub">編輯名稱 / 圖示 / 說明，或刪除不再使用的</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="closeCustomTypeManager()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div class="ip-ctm-list">' + rows + '</div>'
+    +   '<div class="ip-prep-footer">'
+    +     '<button type="button" class="ip-prep-cta" onclick="closeCustomTypeManager(); openCustomTypeComposer()">'
+    +       '<i data-lucide="plus" style="width:16px;height:16px"></i><span>再新增一個</span>'
+    +     '</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeCustomTypeManager() {
+  var sheet = document.getElementById('ip-custom-type-manager');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function() { sheet.remove(); }, 220);
+}
+
+function deleteCustomType(typeId) {
+  if (!confirm('刪除這個自訂類型？已用過的歷史紀錄不會被改動，但下拉選單會看不到。')) return;
+  fetch(API + '/procedure-types/' + encodeURIComponent(typeId), { method: 'DELETE' })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(j) { throw new Error((j && j.detail) || ('HTTP ' + r.status)); });
+      return r.json();
+    })
+    .then(function() {
+      if (typeof showToast === 'function') showToast('已刪除', 'success');
+      loadInpatientCustomTypes(function() {
+        // 同步刷新管理器與 exam composer
+        var mgr = document.getElementById('ip-custom-type-manager');
+        if (mgr) { mgr.remove(); openCustomTypeManager(); }
+        var examSheet = document.getElementById('ip-exam-sheet');
+        if (examSheet) { examSheet.remove(); openInpatientExamComposer(); }
+      });
+    })
+    .catch(function(err) {
+      if (typeof showToast === 'function') showToast(err.message || '刪除失敗', 'error');
+    });
 }
 
 function _fillNextStep(items) {

@@ -14674,6 +14674,123 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
 .ip-exam-field input:focus,
 .ip-exam-field select:focus,
 .ip-exam-field textarea:focus { border-color: var(--ip-mint); }
+.ip-exam-field input:disabled {
+  background: rgba(31,61,88,0.06);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* 自訂處置類型 — composer 內的「自訂新類型 / 管理」橫排按鈕 */
+.ip-exam-custom-row {
+  display: flex;
+  gap: 8px;
+  margin-top: -4px;
+}
+.ip-exam-custom-add,
+.ip-exam-custom-manage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  border: 1px dashed rgba(127,231,217,0.45);
+  background: rgba(127,231,217,0.08);
+  color: var(--ip-mint);
+}
+.ip-exam-custom-manage {
+  border-style: solid;
+  border-color: rgba(31,61,88,0.18);
+  background: transparent;
+  color: var(--text-dim, #5A7388);
+}
+#app-wrapper[data-theme="dark"] .ip-exam-custom-manage {
+  border-color: rgba(255,255,255,0.14);
+  color: rgba(241,246,255,0.7);
+}
+.ip-exam-custom-add:active,
+.ip-exam-custom-manage:active { transform: scale(0.96); }
+
+/* 自訂類型管理器 — 列表 */
+.ip-ctm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+.ip-ctm-empty {
+  text-align: center;
+  color: var(--text-dim, #5A7388);
+  padding: 24px 0;
+  font-size: 0.85rem;
+}
+.ip-ctm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(127,231,217,0.06);
+  border: 1px solid rgba(127,231,217,0.18);
+}
+#app-wrapper[data-theme="dark"] .ip-ctm-row {
+  background: rgba(127,231,217,0.08);
+}
+.ip-ctm-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(127,231,217,0.14);
+  color: var(--ip-mint);
+}
+.ip-ctm-icon svg { width: 18px; height: 18px; }
+.ip-ctm-main { flex: 1; min-width: 0; }
+.ip-ctm-label {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text, #1F3D58);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#app-wrapper[data-theme="dark"] .ip-ctm-label { color: #F1F6FF; }
+.ip-ctm-meta {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: var(--text-dim, #5A7388);
+}
+.ip-ctm-meta code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(31,61,88,0.06);
+}
+.ip-ctm-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.ip-ctm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(31,61,88,0.20));
+  background: transparent;
+  color: var(--text-dim, #5A7388);
+  cursor: pointer;
+}
+.ip-ctm-btn:active { transform: scale(0.94); }
+.ip-ctm-del { color: var(--ip-coral, #E26D6D); border-color: rgba(226,109,109,0.35); }
 
 /* Timeline sheet detail rows — exam 用 */
 .ip-tl-sheet-detail {
