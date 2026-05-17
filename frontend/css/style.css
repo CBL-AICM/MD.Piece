@@ -11238,7 +11238,86 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     100% { box-shadow: 0 0 18px var(--app-glow), inset 1px 1px 0 rgba(255,255,255,0.5); }
   }
 
-  /* ── 7. Quick Add bottom sheet (FAB 按下開的選單) ── */
+  /* ── 6.b 重新設計的 tab pill / duotone icon ──
+     - inactive：icon 置中、無 label，更乾淨更大顆
+     - active：mint pill 包住 icon + label，icon 內 accent path 點亮成 duotone
+     - 每顆 icon 右下角的 .ic-piece 是 MD.Piece「碎片」品牌簽名（被選中時亮起） */
+  .mtab .mtab-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 6px;
+    border-radius: 12px;
+    background: transparent;
+    transition: background .22s ease, padding .22s ease, transform .22s ease;
+  }
+  .mtab .mtab-icon {
+    background: none;
+    box-shadow: none;
+    width: auto; height: auto;
+    color: var(--app-text-dim);
+    transition: color .2s ease, transform .2s ease;
+  }
+  .mtab .mtab-label {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height .22s ease, opacity .16s ease;
+  }
+  .mtab.mtab-home .mtab-pill { background: rgba(188, 227, 218, 0.35); }
+  /* 取消舊版 home icon 上的小 mint 方塊（被 pill 取代） */
+  .mtab.mtab-home .mtab-icon { background: none; box-shadow: none; color: var(--app-mint-strong, #5BB5A8); }
+  /* 取消舊版 active 在 .mtab-icon 上塗的小方塊背景（避免雙重背景） */
+  .mtab.active .mtab-icon { background: none; box-shadow: none; }
+  .mtab .mdp-nav-svg .ic-stroke {
+    stroke: currentColor;
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .mtab .mdp-nav-svg .ic-accent {
+    fill: currentColor;
+    opacity: 0;
+    transform-origin: center;
+    transform: scale(0.8);
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .mtab .mdp-nav-svg .ic-piece {
+    stroke: currentColor;
+    fill: none;
+    opacity: 0.4;
+    stroke-dasharray: 14;
+    stroke-dashoffset: 0;
+    transition: opacity .25s ease, stroke .25s ease;
+  }
+
+  /* active：pill 點亮，label 從 0 高度展開，icon accent path 浮出 */
+  .mtab.active .mtab-pill {
+    background: var(--app-mint, #BCE3DA);
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.55), 0 2px 0 rgba(31,61,88,0.18);
+    padding: 4px 8px 5px;
+  }
+  .mtab.active .mtab-icon { color: var(--app-mint-strong, #5BB5A8); transform: translateY(-1px); }
+  .mtab.active .mtab-label {
+    max-height: 14px;
+    opacity: 1;
+    color: var(--app-chip-text, var(--app-text));
+    font-weight: 600;
+  }
+  .mtab.active .mdp-nav-svg .ic-accent {
+    opacity: 0.32;
+    transform: scale(1);
+    color: var(--app-mint-strong, #5BB5A8);
+  }
+  .mtab.active .mdp-nav-svg .ic-piece {
+    opacity: 1;
+    stroke: var(--app-mint-strong, #5BB5A8);
+  }
+
+  /* 把舊的小光點關掉（被 pill 取代）；保留 DOM 不破壞舊的選擇器 */
+  .mtab .mtab-dot { display: none; }
   .quickadd-sheet {
     position: fixed;
     inset: 0;
