@@ -1,6 +1,6 @@
 // MD. Piece PWA service worker — cache-first for app shell, network-first for data.
 
-const APP_VERSION = 'mdp-v2.0';
+const APP_VERSION = 'mdp-v2.1-insights';
 const APP_SHELL = [
   './', './index.html', './manifest.json',
   './css/style.css',

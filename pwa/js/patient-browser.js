@@ -53,14 +53,30 @@ window.PatientBrowser = {
 
     const labels = p.timeseries.map(r => r.day);
     const acts = p.timeseries.map(r => r.activity);
+
+    // model predictions (aligned to days >= window_size)
+    const predByDay = new Map();
+    if (p.model_predictions) {
+      p.model_predictions.forEach(x => predByDay.set(x.day, x));
+    }
+    const actPred = labels.map(d => {
+      const r = predByDay.get(d);
+      return r ? r.activity_pred : null;
+    });
+
     if (this.charts.activity) this.charts.activity.destroy();
     this.charts.activity = new Chart(document.getElementById('detail-activity'), {
       type: 'line',
       data: { labels, datasets: [
-        { label: 'activity', data: acts, borderColor: '#58a6ff',
-          tension: 0.2, pointRadius: 0, fill: false },
+        { label: '真實 activity', data: acts, borderColor: '#58a6ff',
+          tension: 0.2, pointRadius: 0, fill: false, borderWidth: 2 },
+        ...(p.model_predictions ? [{
+          label: '🤖 AI 預測', data: actPred, borderColor: '#7ee787',
+          tension: 0.2, pointRadius: 0, fill: false, borderWidth: 2,
+          borderDash: [5, 4],
+        }] : []),
         { label: 'burden', data: p.timeseries.map(r => r.irreversible_burden),
-          borderColor: '#ff7b72', borderDash: [4,4], tension: 0.2, pointRadius: 0,
+          borderColor: '#ff7b72', borderDash: [2,2], tension: 0.2, pointRadius: 0,
           fill: false, yAxisID: 'y1' },
       ]},
       options: { ...chartOpts(),
@@ -68,6 +84,43 @@ window.PatientBrowser = {
           y1: { position: 'right', ticks: { color: '#ff7b72' }, grid: { display: false } }}
       },
     });
+
+    // flare probability sparkline (if model predictions available)
+    const flareCanvas = document.getElementById('detail-flare');
+    if (this.charts.flare) this.charts.flare.destroy();
+    if (p.model_predictions) {
+      flareCanvas.style.display = '';
+      const fp = labels.map(d => {
+        const r = predByDay.get(d);
+        return r ? r.flare_prob : null;
+      });
+      const ft = labels.map(d => {
+        const r = predByDay.get(d);
+        return r ? r.flare_true : null;
+      });
+      this.charts.flare = new Chart(flareCanvas, {
+        type: 'line',
+        data: { labels, datasets: [
+          { label: '🤖 flare 機率', data: fp, borderColor: '#f0c674',
+            backgroundColor: 'rgba(240, 198, 116, 0.2)',
+            tension: 0.2, pointRadius: 0, fill: 'origin' },
+          { label: '實際 flare', data: ft.map(v => v === null ? null : v * 1.0),
+            borderColor: '#ff7b72', tension: 0, pointRadius: 0,
+            fill: false, borderWidth: 1.5, stepped: true },
+        ]},
+        options: {
+          ...chartOpts(),
+          plugins: { ...chartOpts().plugins,
+            title: { display: true, text: 'Flare 風險：AI 預測 vs 實際', color: '#e6edf3' }},
+          scales: {
+            ...chartOpts().scales,
+            y: { min: 0, max: 1, ticks: { color: '#8b949e' }, grid: { color: '#30363d' } },
+          },
+        },
+      });
+    } else {
+      flareCanvas.style.display = 'none';
+    }
 
     // biomarkers — pick up to 3 non-core numeric columns
     const drop = new Set(['patient_id','day','activity','irreversible_burden',
@@ -88,5 +141,32 @@ window.PatientBrowser = {
       '<strong>事件：</strong>' + (p.life_events.map(e =>
         `<span class="ev">${e.id} · day ${Math.round(e.onset_day)} (${Math.round(e.duration_days)}d)</span>`).join('') || '<span class="ev">無</span>') +
       (p.long_tail_event ? `<br><strong>罕見事件：</strong><span class="ev" style="background:#ff7b7222">long-tail flare</span>` : '');
+
+    // AI insight panel
+    const insightEl = document.getElementById('detail-insight');
+    if (p.ai_insight_lines && p.ai_insight_lines.length) {
+      const maeChip = p.model_mae != null
+        ? `<span class="chip ${p.model_mae < 0.26 ? 'good' : 'bad'}">MAE ${p.model_mae.toFixed(2)}</span>`
+        : '';
+      const rChip = p.model_flare_recall != null
+        ? `<span class="chip ${p.model_flare_recall >= 0.5 ? 'good' : 'bad'}">召回 ${(p.model_flare_recall*100).toFixed(0)}%</span>`
+        : '';
+      const pChip = p.model_flare_precision != null
+        ? `<span class="chip ${p.model_flare_precision >= 0.5 ? 'good' : 'bad'}">準確 ${(p.model_flare_precision*100).toFixed(0)}%</span>`
+        : '';
+      insightEl.innerHTML = `
+        <h3>AI 心得</h3>
+        <div class="metric-chips">${maeChip}${rChip}${pChip}</div>
+        ${p.ai_insight_lines.map(l => `<div class="insight-line">${escapeHtml(l)}</div>`).join('')}
+      `;
+    } else {
+      insightEl.innerHTML = '<p class="muted" style="margin:0">（此 cohort 未啟用 AI 預測 — 請以 <code>--with-model</code> 重跑 main.py）</p>';
+    }
   },
 };
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
