@@ -566,27 +566,43 @@ img, svg, video { max-width: 100%; height: auto; }
 #app-wrapper.show { display: flex; }
 
 /* ── App theme tokens ─────────────────────────────────── */
-/* Dark = 星霧のメヌエット（Starry Mist Minuet）— 深淵黑底 + 霧銀字 + 天際藍強調
-   Abyss #04345a / Skyline #06588c / Steel Mist #626979 / Misty Silver #c8c6c6 */
+/* Dark = 星霧のメヌエット 撞色版 — 極黑底 × Skyline Blue 主卡 × Misty Silver 高光 */
 #app-wrapper[data-theme="dark"] {
   --app-bg:         #050606;   /* 深淵黑 — 銀河夜空最深層 */
-  --app-grid:       rgba(200,198,198,0.06);
-  --app-text:       #c8c6c6;   /* Misty Silver — 霧銀主文字 */
-  --app-text-dim:   #8a93a3;   /* Steel Mist 提亮 — 深底上的次文字 */
-  --app-mint:       #c8c6c6;   /* 霧銀 — 柔和高光 */
-  --app-aqua:       #06588c;   /* Skyline Blue — 中性藍 */
-  --app-pink:       #626979;   /* Steel Mist — 中性 callout（不刺眼的暖色替代） */
-  --app-blue:       #06588c;   /* Skyline Blue */
-  --app-term:       #06588c;   /* Skyline Blue — 終端強調色 */
-  --app-panel:      #04345a;   /* Abyss Blue — 卡片表面 */
-  --app-panel-soft: #06588c;   /* Skyline Blue — hover / 次表面 */
-  --app-chrome-1:   #04345a;   /* titlebar 上層 */
-  --app-chrome-2:   #06588c;   /* titlebar 下層 */
-  --app-border:     rgba(200,198,198,0.35);
-  --app-shadow:     0 4px 0 rgba(0,0,0,0.7);
-  --app-glow:       rgba(6,88,140,0.5);   /* 天際藍光暈 */
-  --app-chip-text:  #050606;   /* 深淵黑 on light chips */
-  --heading-fg:     #06588c;   /* Skyline Blue heading accent */
+  --app-grid:       rgba(200,198,198,0.10);
+  --app-text:       #ffffff;   /* 純白主文字 — 與深淵黑最強撞色 */
+  --app-text-dim:   #c8c6c6;   /* Misty Silver — 次文字也要亮 */
+  --app-mint:       #c8c6c6;   /* 霧銀 — active 高光 */
+  --app-aqua:       #06588c;   /* Skyline Blue */
+  --app-pink:       #c8c6c6;   /* Misty Silver — 暖色位改高光銀，避免灰糊 */
+  --app-blue:       #06588c;
+  --app-term:       #c8c6c6;   /* Misty Silver — 終端字亮一階 */
+  --app-panel:      #06588c;   /* Skyline Blue — 主卡片直接 pop */
+  --app-panel-soft: #04345a;   /* Abyss Blue — hover / 次表面下沉 */
+  --app-chrome-1:   #06588c;   /* titlebar 上層 — 亮藍 */
+  --app-chrome-2:   #04345a;   /* titlebar 下層 — 深藍 */
+  --app-border:     rgba(200,198,198,0.7);   /* 邊緣大幅提亮，卡片邊清晰 */
+  --app-shadow:     0 4px 0 rgba(0,0,0,0.8);
+  --app-glow:       rgba(200,198,198,0.6);   /* 銀色光暈 — 與藍卡撞色 */
+  --app-chip-text:  #050606;   /* 深淵黑 on 銀 chip — 最強反白 */
+  --heading-fg:     #c8c6c6;   /* Misty Silver heading — 在藍卡上閃亮 */
+
+  /* Legacy :root tokens 重映射 — 讓舊元件（用 --bg-glass / --text 等）
+     在 dark 模式自動套主題，不再透出白底／藏青字。 */
+  --bg-deep:        var(--app-bg);
+  --bg-mid:         var(--app-panel-soft);
+  --bg-soft:        var(--app-panel-soft);
+  --bg-surface:     var(--app-panel);
+  --bg-glass:       var(--app-panel);
+  --bg-glass-hover: var(--app-panel-soft);
+  --border-glass:   var(--app-border);
+  --border-strong:  var(--app-border);
+  --text:           var(--app-text);
+  --text-dim:       var(--app-text-dim);
+  --text-muted:     var(--app-text-dim);
+  --cream:          var(--app-panel);
+  --cream-dim:      var(--app-panel-soft);
+  --klein:          #c8c6c6;
 }
 
 /* Light = 晨光米（Lunar Beige）— 暖米底 + 藏青字 + 星芒金強調 */
@@ -9388,7 +9404,8 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   backdrop-filter: blur(8px);
 }
 #app-wrapper[data-theme="dark"] .home-todo {
-  background: rgba(28,22,20,0.55);
+  background: var(--app-panel);
+  border-color: var(--app-border);
 }
 .home-todo-head {
   display: flex;
@@ -9451,7 +9468,8 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   transition: border-color var(--transition), background var(--transition);
 }
 #app-wrapper[data-theme="dark"] .todo-item {
-  background: rgba(255,255,255,0.05);
+  background: var(--app-panel-soft);
+  border-color: var(--app-border);
 }
 .todo-item.is-done { opacity: 0.55; }
 .todo-item.is-done .todo-title { text-decoration: line-through; }
