@@ -26,6 +26,7 @@ from md_piece.life_events import (
     active_events_at,
     schedule_life_events,
 )
+from md_piece.social_profile import FullPersonProfile, build_full_profile
 from md_piece.triggers import (
     assign_comorbidities,
     assign_treatments,
@@ -39,12 +40,13 @@ from md_piece.unpredictability import (
 
 @dataclass
 class Patient:
-    """Virtual patient — full v2 record."""
+    """Virtual patient — full v2 record + social/personality profile (v2.5)."""
     patient_id: str
     disease_id: str
     age: int
     sex: str
     age_profile: AgeProfile | None = None
+    social_profile: FullPersonProfile | None = None    # ⭐ 9th source
     comorbidities: list[str] = field(default_factory=list)
     treatments: list[dict] = field(default_factory=list)
     subtype: str = "unspecified"
@@ -71,15 +73,17 @@ def _eval_biomarker(formula: str, activity: float, burden: float, noise: float) 
 def _compute_biomarkers(
     activity: float, burden: float, disease_cfg: DiseaseConfig,
     placebo_shift: float, rng: np.random.Generator,
+    *,
+    subjective_amplification: float = 1.0,
 ) -> dict[str, float]:
-    """v2: subjective biomarkers get the placebo multiplier."""
+    """Compute biomarkers; subjective ones get placebo + personality amplification."""
     out = {}
     for name, spec in disease_cfg.biomarkers.items():
         noise = rng.normal(0.0, 1.0)
         val = _eval_biomarker(spec["formula"], activity, burden, noise)
         if spec.get("subjective"):
-            # placebo_shift in [-0.05, 0.15]; multiplicative against value
-            val = val * (1.0 - placebo_shift)
+            val = val * (1.0 - placebo_shift)        # placebo / nocebo
+            val = val * subjective_amplification     # neuroticism, depression, catastrophizing
         lo, hi = spec["range"]
         out[name] = float(np.clip(val, lo, hi))
     return out
@@ -100,20 +104,23 @@ def simulate_patient(
 
     # ---- age + sex ----
     if disease_cfg.raw.get("age_distribution"):
-        age, sex, _bin = sample_age_and_sex(
+        age, sex, age_bin = sample_age_and_sex(
             disease_cfg.raw["age_distribution"],
             disease_cfg.raw.get("sex_ratio_by_age", {}),
             rng,
         )
     else:
-        # legacy fallback
         demo = disease_cfg.demographics
         age_lo, age_hi = demo["age"]["range"]
         age = int(np.clip(
             rng.normal(demo["age"]["mean"], demo["age"]["sd"]), age_lo, age_hi
         ))
         sex = "F" if rng.random() < demo.get("female_ratio", 0.5) else "M"
+        age_bin = "55-70" if 55 <= age < 70 else "70-90" if age >= 70 else "35-55" if age >= 35 else "20-35"
     age_profile = build_age_profile(age, sex, rng)
+
+    # ---- ⭐ social / personality / behavioural profile (9th unpredictability) ----
+    social_profile = build_full_profile(age, sex, age_bin, rng)
 
     # ---- unpredictability bundle ----
     bundle = build_unpredictability(disease_cfg, rng, sim_days)
@@ -124,13 +131,19 @@ def simulate_patient(
         * age_profile.treatment_response_modifier
     )
 
-    # ---- treatments + adherence ----
+    # ---- treatments + adherence (social profile applies) ----
     treatments = assign_treatments(
         disease_cfg, sim_days, rng,
         effect_multiplier=bundle.effect_multiplier,
         treatment_response_modifier=tx_response_mod,
+        treatment_access=social_profile.treatment_access_multiplier,
     )
-    adherence_cfg = disease_cfg.raw.get("adherence", {})
+    adherence_cfg = dict(disease_cfg.raw.get("adherence", {}))
+    if "daily_miss_probability" in adherence_cfg:
+        adherence_cfg["daily_miss_probability"] = float(
+            np.clip(adherence_cfg["daily_miss_probability"]
+                    * social_profile.adherence_multiplier, 0.0, 0.95)
+        )
     adherence_states = build_adherence_states(treatments, adherence_cfg, sim_days, rng)
 
     # ---- comorbidities (regular + elderly auto-add) ----
@@ -145,17 +158,21 @@ def simulate_patient(
         sim_days, age, sex, rng,
     )
 
+    # apply placebo amplification from personality (optimism + trust)
+    effective_placebo = bundle.placebo_shift * social_profile.placebo_amplification
+
     patient = Patient(
         patient_id=patient_id,
         disease_id=disease_cfg.id,
         age=age,
         sex=sex,
         age_profile=age_profile,
+        social_profile=social_profile,
         comorbidities=comorbidities,
         treatments=treatments,
         subtype=bundle.subtype.name,
         responder_class=bundle.responder_class,
-        placebo_shift=bundle.placebo_shift,
+        placebo_shift=effective_placebo,
         long_tail_event=bundle.long_tail_event,
         adherence_states=adherence_states,
         life_events=events,
@@ -188,8 +205,11 @@ def simulate_patient(
                     st, t, adherence_cfg, rng
                 )
 
-        # new triggers
-        new_triggers = sample_triggers(disease_cfg, dt_days, rng)
+        # new triggers (social profile amplifies stress / sleep / smoking / alcohol)
+        new_triggers = sample_triggers(
+            disease_cfg, dt_days, rng,
+            trigger_amplification=social_profile.trigger_amplification,
+        )
         if new_triggers:
             state.active_triggers.extend(new_triggers)
 
@@ -220,7 +240,8 @@ def simulate_patient(
         if record_now:
             bms = _compute_biomarkers(
                 state.activity, state.irreversible_burden,
-                disease_cfg, bundle.placebo_shift, rng,
+                disease_cfg, effective_placebo, rng,
+                subjective_amplification=social_profile.subjective_amplification,
             )
             row = {
                 "patient_id": patient_id,

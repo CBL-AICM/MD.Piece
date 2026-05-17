@@ -103,6 +103,37 @@ def generate_insight(
         f"，被分類為 {RESPONDER_NAME.get(patient.responder_class, patient.responder_class)}。"
     )
 
+    # 1b) ⭐ social / personality / behavioural snapshot
+    sp = getattr(patient, "social_profile", None)
+    if sp is not None:
+        lines.append(
+            f"🏠 家庭/社經：{sp.social.marital_status}、子女 {sp.social.children_count} 位、"
+            f"家庭支持{sp.social.family_support}、居住{sp.social.living_arrangement}；"
+            f"學歷{sp.socioeconomic.education}、{sp.socioeconomic.income_tier}收入、"
+            f"保險{sp.socioeconomic.insurance_type}、{sp.socioeconomic.employment_status}、"
+            f"{sp.socioeconomic.urban_rural}地區。"
+        )
+        lines.append(
+            f"🧠 人格/心理：盡責性 {sp.personality.conscientiousness:.2f}、"
+            f"神經質 {sp.personality.neuroticism:.2f}、樂觀 {sp.personality.optimism:.2f}；"
+            f"PHQ-9={sp.mental_health.phq9_score}、GAD-7={sp.mental_health.gad7_score}。"
+        )
+        bv = sp.behavioral
+        lines.append(
+            f"💼 行為：抽菸 {bv.smoking_status}、酒 {bv.alcohol_units_per_week:.1f}u/週、"
+            f"運動 {bv.exercise_sessions_per_week}/週、睡眠 {bv.sleep_hours_avg:.1f}h ({bv.sleep_quality})、"
+            f"健康識讀={sp.health_behavior.health_literacy}、"
+            f"使用中醫={'是' if sp.health_behavior.uses_tcm else '否'}。"
+        )
+        # explicit modifier note
+        if sp.subjective_amplification > 1.4 or sp.adherence_multiplier > 1.3:
+            notes = []
+            if sp.subjective_amplification > 1.4:
+                notes.append(f"主觀症狀放大 ×{sp.subjective_amplification:.2f}（神經質/憂鬱影響）")
+            if sp.adherence_multiplier > 1.3:
+                notes.append(f"漏吃藥風險 ×{sp.adherence_multiplier:.2f}")
+            lines.append("⚖️ 模型考量：" + "、".join(notes) + "。")
+
     # 2) age / elderly
     if patient.age_profile and patient.age_profile.is_elderly:
         comorb = ", ".join(patient.age_profile.elderly_comorbidities) or "無自動加註的共病"

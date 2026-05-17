@@ -194,6 +194,7 @@ def step_serialize_cohort(cohort_json: dict, insights: dict, out_dir: Path) -> P
 
 def _patient_to_dict(p, insight) -> dict:
     df = p.timeseries
+    sp = p.social_profile
     d = {
         "patient_id": p.patient_id,
         "disease_id": p.disease_id,
@@ -219,6 +220,56 @@ def _patient_to_dict(p, insight) -> dict:
         "flare_count": p.flare_count,
         "timeseries": df.to_dict(orient="records"),
     }
+    # ⭐ social profile (9th unpredictability source)
+    if sp is not None:
+        d["social_profile"] = {
+            "personality": {
+                "conscientiousness": round(sp.personality.conscientiousness, 2),
+                "neuroticism":       round(sp.personality.neuroticism, 2),
+                "optimism":          round(sp.personality.optimism, 2),
+                "self_efficacy":     round(sp.personality.self_efficacy, 2),
+                "pain_catastrophizing": round(sp.personality.pain_catastrophizing, 2),
+            },
+            "behavioral": {
+                "smoking_status": sp.behavioral.smoking_status,
+                "pack_years":     round(sp.behavioral.pack_years, 1),
+                "alcohol_units_per_week": round(sp.behavioral.alcohol_units_per_week, 1),
+                "exercise_sessions_per_week": sp.behavioral.exercise_sessions_per_week,
+                "sleep_hours_avg": round(sp.behavioral.sleep_hours_avg, 1),
+                "sleep_quality":   sp.behavioral.sleep_quality,
+                "diet_type":       sp.behavioral.diet_type,
+            },
+            "social": {
+                "marital_status":   sp.social.marital_status,
+                "children_count":   sp.social.children_count,
+                "family_support":   sp.social.family_support,
+                "social_isolation": round(sp.social.social_isolation, 2),
+                "living_arrangement": sp.social.living_arrangement,
+            },
+            "socioeconomic": {
+                "education":       sp.socioeconomic.education,
+                "income_tier":     sp.socioeconomic.income_tier,
+                "insurance_type":  sp.socioeconomic.insurance_type,
+                "employment_status": sp.socioeconomic.employment_status,
+                "urban_rural":     sp.socioeconomic.urban_rural,
+            },
+            "health_behavior": {
+                "health_literacy": sp.health_behavior.health_literacy,
+                "trust_in_medicine": round(sp.health_behavior.trust_in_medicine, 2),
+                "uses_tcm":        sp.health_behavior.uses_tcm,
+                "appointment_adherence": round(sp.health_behavior.appointment_adherence, 2),
+            },
+            "mental_health": {
+                "phq9_score": sp.mental_health.phq9_score,
+                "gad7_score": sp.mental_health.gad7_score,
+                "perceived_stress": round(sp.mental_health.perceived_stress, 2),
+            },
+            "modifiers": {
+                "adherence":  round(sp.adherence_multiplier, 2),
+                "subjective": round(sp.subjective_amplification, 2),
+                "placebo":    round(sp.placebo_amplification, 2),
+            },
+        }
     if insight is not None:
         d["model_predictions"] = insight.predictions
         d["model_mae"] = round(insight.mae, 4)

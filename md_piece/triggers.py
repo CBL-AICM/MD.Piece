@@ -1,7 +1,10 @@
 """Trigger sampling, treatment assignment, comorbidity sampling.
 
-v2: treatment parameters can be scalars or {mean, std, min, max} distributions,
-and responder class + subtype + age modulate the realised effect_magnitude.
+v2.5 — supports per-patient social-profile modifiers:
+  - trigger_amplification:  multiplies a trigger's prob_per_day
+  - treatment_access:       multiplies assignment_prob by drug class
+  - effect_multiplier:      from responder class
+  - treatment_response_modifier: subtype × age
 """
 
 from __future__ import annotations
@@ -15,16 +18,18 @@ def sample_triggers(
     disease_cfg,
     dt_days: float,
     rng: np.random.Generator,
+    *,
+    trigger_amplification: dict | None = None,
 ) -> list[tuple[str, float, float]]:
-    """Sample which trigger events fire in this timestep.
+    """Sample which trigger events fire this step.
 
-    Returns
-    -------
-    list of (trigger_id, duration_days, magnitude)
+    trigger_amplification: dict of {trigger_id: multiplier} from social profile.
     """
     fired = []
+    amp_map = trigger_amplification or {}
     for trig in disease_cfg.triggers:
-        p_step = trig["prob_per_day"] * dt_days
+        amp = float(amp_map.get(trig["id"], 1.0))
+        p_step = trig["prob_per_day"] * amp * dt_days
         if rng.random() < p_step:
             mag = float(rng.normal(trig["effect_mean"], trig["effect_sigma"]))
             mag = max(mag, 0.0)
@@ -41,22 +46,21 @@ def assign_treatments(
     *,
     effect_multiplier: float = 1.0,
     treatment_response_modifier: float = 1.0,
+    treatment_access: dict | None = None,
 ) -> list[dict]:
-    """Decide which treatments a patient receives and realise distribution params.
+    """Assign treatments, applying responder + subtype + social access modifiers.
 
-    Parameters
-    ----------
-    effect_multiplier : float
-        Responder-class multiplier on `effect_magnitude`.
-    treatment_response_modifier : float
-        Subtype × age modifier (multiplicative).
+    treatment_access: dict of {drug_class: multiplier} to throttle expensive
+    or hard-to-access therapies for low-income / rural / low-literacy patients.
     """
     assigned: list[dict] = []
+    access_map = treatment_access or {}
     max_start = max(1, int(sim_days * 0.2))
     for tx in disease_cfg.treatments:
-        if rng.random() < tx["assignment_prob"]:
+        access_mult = float(access_map.get(tx.get("class", ""), 1.0))
+        eff_p = tx["assignment_prob"] * access_mult
+        if rng.random() < eff_p:
             record = dict(tx)
-            # realise distribution-based params
             record["onset_days"] = sample_param(tx["onset_days"], rng)
             record["half_life_days"] = sample_param(tx["half_life_days"], rng)
             base_mag = sample_param(tx["effect_magnitude"], rng)
