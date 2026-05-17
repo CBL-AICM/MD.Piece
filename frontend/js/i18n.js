@@ -1087,11 +1087,12 @@
     });
 
     // Mode toggle button text depends on current mode AND language.
-    const modeBtn = scope.querySelector('[data-mode-toggle]');
-    if (modeBtn) {
+    // Skip buttons that own their own label structure (e.g. topbar 「字大一點」).
+    scope.querySelectorAll('[data-mode-toggle]').forEach(modeBtn => {
+      if (modeBtn.querySelector('.ael-label')) return;   // 自帶 DOM 結構，別動
       const isSenior = document.documentElement.getAttribute('data-mode') === 'senior';
       modeBtn.textContent = t(isSenior ? 'mode.toNormal' : 'mode.toSenior', lang);
-    }
+    });
 
     // Update every language toggle button label (may be multiple instances).
     document.querySelectorAll('.lang-toggle-label').forEach(lbl => {

@@ -48,7 +48,12 @@ function setMode(mode) {
   const labelKey = isElder ? 'mode.toNormal' : 'mode.toSenior';
   const fallback = isElder ? '切換為普通版' : '切換為年長版';
   document.querySelectorAll('[data-mode-toggle]').forEach(function (el) {
-    el.textContent = window.MDPiece_i18n ? t(labelKey) : fallback;
+    // 新版按鈕（topbar 那顆 A+ 字大一點）自己擁有 icon + label DOM，
+    // 不能把 textContent 整個寫掉，否則 icon 會消失；只更新 aria-pressed。
+    var ownsLabel = el.querySelector('.ael-label');
+    if (!ownsLabel) {
+      el.textContent = window.MDPiece_i18n ? t(labelKey) : fallback;
+    }
     el.setAttribute('aria-pressed', isElder ? 'true' : 'false');
   });
   // 廣播事件給其他元件（例如時間軸 Bento 需依模式調整 grid）
@@ -83,8 +88,8 @@ function _showElderModeHint(turnedOn) {
 
 // ─── 照護模式（門診 / 住院）─────────────────────────────────
 // 跟 'senior/standard' 是兩個正交的維度：
-//   senior/standard = UI 大小（年長版 vs 精緻版）
-//   outpatient/inpatient = 功能範圍（門診一般使用 vs 住院期間精簡）
+//   senior/standard = UI 大小（字級、按鈕）
+//   outpatient/inpatient = 功能範圍（門診相關 / 住院相關）
 // 住院模式會把 sidebar 收成只剩住院期間真正會用到的項目。
 
 const INPATIENT_NAV_PAGES = [
@@ -3667,7 +3672,6 @@ function renderCareModeChips() {
     + '<section class="care-mode-card" aria-label="照護模式切換">'
     +   '<div class="care-mode-card-head">'
     +     '<span class="care-mode-card-title">你現在用的是</span>'
-    +     '<span class="care-mode-card-hint">' + (isOut ? '日常門診追蹤' : '住院期間精簡介面') + '</span>'
     +   '</div>'
     +   '<div class="care-mode-chips" role="tablist">'
     +     '<button class="care-mode-chip' + (isOut ? ' active' : '') + '" role="tab" aria-selected="' + (isOut ? 'true' : 'false') + '" onclick="setCareMode(\'outpatient\')">'
