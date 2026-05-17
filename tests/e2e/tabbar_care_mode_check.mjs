@@ -1,7 +1,8 @@
 // Care-mode-aware mobile tabbar test:
-//   1. Outpatient mode → tabs = 首頁 / 碎片 / FAB / 診前 / 醫聊 / 更多
-//   2. Inpatient mode → tabs = 首頁 / 住院 / FAB / 量測 / Memo / 更多
+//   1. Outpatient mode → tabs = 首頁 / 碎片 / FAB / 醫聊 / 更多
+//   2. Inpatient mode → tabs = 首頁 / 住院 / FAB / 量測 / 更多
 //   3. Toggling care mode at runtime swaps the tabbar (no reload)
+// 5 tabs（2 + FAB + 2）讓綠色加號正中央；診前 / Memo 移到「更多」面板。
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -44,7 +45,7 @@ const VIEW = { width: 390, height: 844 };
 
   // 1. Outpatient tabs
   const out = await page.$$eval('.mobile-tabbar .mtab', els => els.map(b => b.dataset.mtab));
-  const expectedOut = ['home','pieces','quickadd','previsit','chat','more'];
+  const expectedOut = ['home','pieces','quickadd','chat','more'];
   if (JSON.stringify(out) !== JSON.stringify(expectedOut)) {
     issues.push(`outpatient tabs: expected ${expectedOut} got ${out}`);
   }
@@ -57,14 +58,14 @@ const VIEW = { width: 390, height: 844 };
   });
   await page.waitForTimeout(600);
   const inp = await page.$$eval('.mobile-tabbar .mtab', els => els.map(b => b.dataset.mtab));
-  const expectedIn = ['home','admissions','quickadd','vitals','memo','more'];
+  const expectedIn = ['home','admissions','quickadd','vitals','more'];
   if (JSON.stringify(inp) !== JSON.stringify(expectedIn)) {
     issues.push(`inpatient tabs: expected ${expectedIn} got ${inp}`);
   }
 
   // Verify labels rendered as Chinese
   const inpLabels = await page.$$eval('.mobile-tabbar .mtab .mtab-label, .mobile-tabbar .mtab .mtab-fab-label', els => els.map(e => e.textContent.trim()));
-  const expectedLabels = ['首頁','住院','紀錄','量測','Memo','更多'];
+  const expectedLabels = ['首頁','住院','紀錄','量測','更多'];
   if (JSON.stringify(inpLabels) !== JSON.stringify(expectedLabels)) {
     issues.push(`inpatient labels: expected ${expectedLabels} got ${inpLabels}`);
   }

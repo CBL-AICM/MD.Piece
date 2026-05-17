@@ -85,7 +85,7 @@ const PROFILES = [
     const puzzleCount = await page.$$eval('.hpz-piece', els => els.length);
     if (puzzleCount !== 9) issues.push(`[${p.name}] expected 9 puzzle pieces, got ${puzzleCount}`);
 
-    // Check bottom nav has 6 buttons
+    // Bottom nav — 5 tabs（2 + FAB + 2，加號正中央）
     const tabCount = await page.$$eval('.mobile-tabbar .mtab', els => els.length);
 
     // Horizontal overflow check

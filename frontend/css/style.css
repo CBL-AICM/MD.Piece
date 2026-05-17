@@ -10815,7 +10815,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     position: relative;
     min-height: 100vh;
     padding-top: env(safe-area-inset-top, 0);
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0));
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0));
     /* keep grid bg from desktop, but darker corners feel like a phone */
   }
   #app-wrapper.show::before {
@@ -11097,14 +11097,14 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     position: fixed;
     left: 8px; right: 8px;
     bottom: calc(8px + env(safe-area-inset-bottom));
-    height: 64px;
+    height: 72px;
     z-index: 100;
     align-items: stretch;
     justify-content: space-between;
-    padding: 6px 6px;
+    padding: 8px 6px;
     background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
     border: 1.5px solid var(--app-border);
-    border-radius: 18px;
+    border-radius: 20px;
     box-shadow: 0 6px 0 rgba(0,0,0,0.3), 0 14px 30px rgba(0,0,0,0.25);
     font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
   }
@@ -11143,7 +11143,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     transition: background .18s ease, color .18s ease, transform .18s ease;
   }
   .mtab .mtab-label {
-    font-size: 0.62rem;
+    font-size: 0.78rem;
     letter-spacing: 0.4px;
     color: inherit;
     white-space: nowrap;
@@ -11157,9 +11157,9 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     background: var(--app-mint, rgba(91,159,232,0.18));
     color: var(--app-chip-text, var(--accent));
   }
-  /* 6 顆 tab + FAB 時，每顆 padding 收緊以避免擠壓 */
-  .mobile-tabbar .mtab { padding: 6px 1px 8px; }
-  .mtab .mtab-icon { width: 26px; height: 26px; }
+  /* 5 顆 tab + 中央 FAB 結構，每顆 padding 寬一點讓 label 與 icon 都看得清 */
+  .mobile-tabbar .mtab { padding: 6px 2px 8px; }
+  .mtab .mtab-icon { width: 28px; height: 28px; }
   .mtab .mtab-dot {
     position: absolute;
     bottom: 2px;
@@ -11222,7 +11222,8 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     position: absolute;
     bottom: 6px; left: 50%;
     transform: translateX(-50%);
-    font-size: 0.66rem;
+    font-size: 0.8rem;
+    font-weight: 600;
     letter-spacing: 1px;
     color: var(--app-text);
   }
@@ -11261,10 +11262,13 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     transition: color .2s ease, transform .2s ease;
   }
   .mtab .mtab-label {
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: max-height .22s ease, opacity .16s ease;
+    max-height: none;
+    opacity: 1;
+    overflow: visible;
+    font-size: 0.78rem;
+    line-height: 1.1;
+    margin-top: 2px;
+    transition: color .2s ease, font-weight .2s ease;
   }
   .mtab.mtab-home .mtab-pill { background: rgba(188, 227, 218, 0.35); }
   /* 取消舊版 home icon 上的小 mint 方塊（被 pill 取代） */
@@ -11301,10 +11305,8 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   }
   .mtab.active .mtab-icon { color: var(--app-mint-strong, #5BB5A8); transform: translateY(-1px); }
   .mtab.active .mtab-label {
-    max-height: 14px;
-    opacity: 1;
     color: var(--app-chip-text, var(--app-text));
-    font-weight: 600;
+    font-weight: 700;
   }
   .mtab.active .mdp-nav-svg .ic-accent {
     opacity: 0.32;
@@ -11432,14 +11434,14 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 
 /* Senior mode tweaks for mobile (bigger taps + layout fixes) */
 @media (max-width: 768px) {
-  html[data-mode="senior"] .mtab .mtab-label { font-size: 0.78rem; }
-  html[data-mode="senior"] .mtab .mtab-icon { width: 32px; height: 32px; }
-  html[data-mode="senior"] .mobile-tabbar { height: 72px; }
+  html[data-mode="senior"] .mtab .mtab-label { font-size: 0.95rem; }
+  html[data-mode="senior"] .mtab .mtab-icon { width: 34px; height: 34px; }
+  html[data-mode="senior"] .mobile-tabbar { height: 82px; }
   html[data-mode="senior"] .nav-item { font-size: 1.02rem; min-height: 72px; }
 
   /* Tabbar overlap：年長版 tabbar 高 72px，wrapper 底部 padding 要對應 (預設 76px 是給 64px tabbar 用的) */
   html[data-mode="senior"] #app-wrapper.show {
-    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0));
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0));
   }
 
   /* Sidebar：手機上原本就是底部抽屜 width:100%，但 senior 桌機規則寫死 260px 蓋掉了 → 還原 */

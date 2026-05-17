@@ -213,16 +213,15 @@ function refreshProxyBanner() {
 }
 
 // ─── 底部 mobile tabbar — 依 care mode 動態渲染 ────────────────────────
-// 門診：首頁 / 碎片 / FAB / 診前 / 醫聊 / 更多 — MD.Piece 理念對齊
-// 住院：首頁 / 住院 / FAB / 量測 / Memo / 更多 — 住院期間實際會用的
-// 兩組共用 .mtab styling，FAB 永遠在中間。
+// 門診：首頁 / 碎片 / FAB / 醫聊 / 更多 — 2 + FAB + 2，加號正中央
+// 住院：首頁 / 住院 / FAB / 量測 / 更多 — 同上對稱結構
+// 診前 / Memo / 其他次要頁面收到「更多」面板裡。兩組共用 .mtab styling。
 function _mobileTabSets() {
   return {
     outpatient: [
       { page: 'home',        icon: 'mdp-home',      labelKey: 'tab.home',        zh: '首頁', en: 'Home',     home: true },
       { page: 'pieces',      icon: 'mdp-puzzle',    labelKey: 'tab.pieces',      zh: '碎片', en: 'Pieces' },
       { page: 'quickadd',    icon: 'plus',          labelKey: 'tab.quickadd',    zh: '紀錄', en: 'Log',      fab: true },
-      { page: 'previsit',    icon: 'mdp-clipboard', labelKey: 'tab.previsit',    zh: '診前', en: 'Visit' },
       { page: 'chat',        icon: 'mdp-chat',      labelKey: 'tab.chat',        zh: '醫聊', en: 'Chat' },
       { page: 'more',        icon: 'mdp-more',      labelKey: 'tab.more',        zh: '更多', en: 'More',     more: true },
     ],
@@ -231,7 +230,6 @@ function _mobileTabSets() {
       { page: 'admissions',  icon: 'mdp-bed',       labelKey: 'tab.admissions',  zh: '住院',   en: 'Stay' },
       { page: 'quickadd',    icon: 'plus',          labelKey: 'tab.quickadd',    zh: '紀錄',   en: 'Log',     fab: true },
       { page: 'vitals',      icon: 'mdp-pulse',     labelKey: 'tab.vitals',      zh: '量測',   en: 'Vitals' },
-      { page: 'memo',        icon: 'mdp-memo',      labelKey: 'tab.memo',        zh: 'Memo',   en: 'Memo' },
       { page: 'more',        icon: 'mdp-more',      labelKey: 'tab.more',        zh: '更多',   en: 'More',    more: true },
     ],
   };
