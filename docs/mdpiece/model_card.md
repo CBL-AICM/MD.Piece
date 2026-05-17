@@ -1,6 +1,6 @@
 # MD. Piece — Layer-3 Model Card
 
-**Generated**: 2026-05-17T00:04:38.375616Z
+**Generated**: 2026-05-17T01:22:03.708255Z
 **Checkpoint**: `output/mdpiece/checkpoints/best.pt`
 
 ## Intended use
@@ -13,41 +13,41 @@ MD. Piece Layer-2 simulator. Intended for science-fair research,
 methodological demonstration, and educational discussion only.
 
 ## Training data
-- Diseases: ['rheumatoid_arthritis', 'asthma', 'systemic_sclerosis']
+- Diseases: ['rheumatoid_arthritis', 'asthma', 'systemic_sclerosis', 'systemic_lupus_erythematosus', 'inflammatory_bowel_disease', 'multiple_sclerosis', 'gout', 'ankylosing_spondylitis', 'psoriatic_arthritis', 'sjogren_syndrome', 'behcet_disease', 'anca_vasculitis', 'igg4_related_disease', 'chronic_urticaria', 'osteoarthritis', 'idiopathic_pulmonary_fibrosis']
 - Cohort size per disease: 200 virtual patients
 - Simulated horizon: 180 days
 - Window size (input): 7 days
 - Prediction horizon: 1 day (activity), 7 days (flare)
 - Split: 0.8/0.1/0.1 **by patient** (no leakage)
-- Final sample counts: train=79680, val=9960, test=9960
+- Final sample counts: train=424960, val=53120, test=53120
 
 ## Architecture
 - Type: lstm_attention
 - Hidden: 64, Layers: 2, Dropout: 0.2
-- Parameters: 59,587
-- Input features (36): see JSON log
+- Parameters: 82,371
+- Input features (125): see JSON log
 
 ## Training
 - Optimizer: AdamW (lr=0.001, weight_decay=1e-05)
 - Batch size: 128
 - Loss weights: activity MSE=1.0, flare BCE=0.5
 - Early stopping patience: 10 epochs
-- Best epoch: 11 (val loss 0.3600)
+- Best epoch: 6 (val loss 0.1560)
 - Random seed: 2024
 
 ## Test-set performance (95% CI from bootstrap)
 
 ### Activity regression (immune activity score)
-- MAE  = 0.259  CI95=[0.250, 0.268]
-- RMSE = 0.517 CI95=[0.486, 0.552]
-- R^2  = 0.893   CI95=[0.880, 0.907]
-- Baseline (mean predictor) MAE: 1.167
+- MAE  = 0.164  CI95=[0.162, 0.166]
+- RMSE = 0.307 CI95=[0.297, 0.317]
+- R^2  = 0.927   CI95=[0.922, 0.932]
+- Baseline (mean predictor) MAE: 0.853
 
 ### Flare classification (any flare in next 7 days)
-- AUROC = 0.910 CI95=[0.901, 0.919]
-- AUPRC = 0.776 CI95=[0.755, 0.793]
-- F1@0.5 = 0.694 CI95=[0.672, 0.714]
-- Positive class rate: 0.147
+- AUROC = 0.933 CI95=[0.929, 0.937]
+- AUPRC = 0.693 CI95=[0.680, 0.707]
+- F1@0.5 = 0.630 CI95=[0.617, 0.646]
+- Positive class rate: 0.065
 
 ## Known limitations
 1. **Synthetic data only** — no real patient signals; biomarker formulas are
