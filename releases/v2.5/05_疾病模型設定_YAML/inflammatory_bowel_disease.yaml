@@ -1,0 +1,85 @@
+# Inflammatory Bowel Disease (Crohn / UC composite) — chronic_relapsing
+# Reference: Torres et al., Lancet 2017; Ungaro et al., Lancet 2017.
+disease:
+  id: inflammatory_bowel_disease
+  name: Inflammatory Bowel Disease
+  short: IBD
+  icd10: K50.90
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:    {activity: 2.0, range: [0.0, 10.0]}
+decay:       {k: 0.15}
+circadian:   {amplitude: 0.10, phase_hours: 8}
+noise:       {sigma: 0.13}
+
+age_distribution: {"20-35": 0.40, "35-55": 0.35, "55-70": 0.20, "70-90": 0.05}
+sex_ratio_by_age: {"20-35": 1.2, "35-55": 1.0, "55-70": 1.0, "70-90": 1.0}
+
+responder_classes:
+  typical:       {probability: 0.50, effect_multiplier: 1.0}
+  super:         {probability: 0.10, effect_multiplier: 1.5}
+  partial:       {probability: 0.30, effect_multiplier: 0.5}
+  non_responder: {probability: 0.10, effect_multiplier: 0.1}
+
+subtypes:
+  crohn:   {probability: 0.45, flare_threshold_offset: -0.3, treatment_response_multiplier: 0.9}
+  uc:      {probability: 0.55, flare_threshold_offset:  0.0, treatment_response_multiplier: 1.0}
+
+adherence: {daily_miss_probability: 0.13, discontinuation_probability_per_year: 0.15, dose_self_adjustment_probability: 0.05}
+placebo:   {probabilities: [0.70, 0.20, 0.10], effects: [0.0, 0.12, -0.04]}
+
+life_events:
+  - {id: infection, prob_per_year: 1.5, activity_bump: 2.0, duration_days: [3, 10]}
+  - {id: dietary_indiscretion, prob_per_year: 10, activity_bump: 0.8, duration_days: [1, 3]}
+  - {id: nsaid_use, prob_per_year: 4, activity_bump: 1.2, duration_days: [3, 14]}
+  - {id: stress_major, prob_per_year: 1.0, activity_bump: 1.5, duration_days: [14, 60]}
+  - {id: pregnancy, prob_per_year: 0.08, activity_bump: -0.3, duration_days: [270, 270], age_range: [20, 40], sex_filter: "F"}
+
+triggers:
+  - {id: gi_infection, prob_per_day: 0.015, effect_mean: 3.0, effect_sigma: 0.6, duration_days: [3, 7]}
+  - {id: smoking,      prob_per_day: 0.10, effect_mean: 0.5, effect_sigma: 0.2, duration_days: [1, 1]}
+  - {id: emotional_stress, prob_per_day: 0.03, effect_mean: 1.2, effect_sigma: 0.3, duration_days: [2, 5]}
+  - {id: trigger_food, prob_per_day: 0.08, effect_mean: 0.7, effect_sigma: 0.2, duration_days: [1, 2]}
+
+flare: {threshold: 5.0, refractory_days: 14}
+
+treatments:
+  - id: mesalazine
+    class: 5_asa
+    assignment_prob: 0.70
+    onset_days: {mean: 14, std: 4, min: 7, max: 30}
+    effect_magnitude: {mean: 0.5, std: 0.2, min: 0.05, max: 1.2}
+    half_life_days: 30
+  - id: azathioprine
+    class: immunosuppressant
+    assignment_prob: 0.40
+    onset_days: {mean: 60, std: 15, min: 30, max: 120}
+    effect_magnitude: {mean: 0.9, std: 0.3, min: 0.1, max: 1.8}
+    half_life_days: 30
+  - id: anti_tnf
+    class: biologic
+    assignment_prob: 0.25
+    onset_days: {mean: 14, std: 4, min: 7, max: 30}
+    effect_magnitude: {mean: 1.3, std: 0.4, min: 0.1, max: 2.5}
+    half_life_days: 30
+  - id: prednisone
+    class: corticosteroid
+    assignment_prob: 0.25
+    onset_days: 1
+    effect_magnitude: {mean: 0.8, std: 0.25, min: 0.1, max: 1.5}
+    half_life_days: 5
+
+biomarkers:
+  cdai:             {range: [0, 600], formula: "min(600, 50 + 60*activity)", subjective: true}
+  fecal_calprot:    {range: [10, 2000], formula: "max(10, 100 + 200*activity + 80*noise)"}
+  crp_mg_L:         {range: [0, 100], formula: "max(0.1, 1 + 4*activity + 2*noise)"}
+  hemoglobin_g_dL:  {range: [6, 18], formula: "max(6, 14 - 0.4*activity + 0.3*noise)"}
+  stools_per_day:   {range: [0, 25], formula: "max(0, 2 + activity + 0.5*noise)", subjective: true}
+
+comorbidity:
+  - {id: anemia,         conditional_prob: 0.30}
+  - {id: arthritis,      conditional_prob: 0.20}
+  - {id: depression,     conditional_prob: 0.25}
+
+demographics: {age: {mean: 38, sd: 15, range: [16, 80]}, female_ratio: 0.50}

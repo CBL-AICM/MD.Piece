@@ -1,0 +1,353 @@
+{
+  "config": {
+    "n_per_disease": 200,
+    "sim_days": 180,
+    "base_seed": 42,
+    "intervention": {
+      "adherence_boost": 0.55,
+      "avoidable_trigger_reduction": 0.55,
+      "early_warning_threshold_ratio": 0.85,
+      "early_warning_trigger_dampening": 0.5,
+      "placebo_boost": 1.2,
+      "base_engagement": 0.8
+    },
+    "generated_at": "2026-05-17T07:22:36.448959"
+  },
+  "overall": {
+    "ctrl": {
+      "flare_count_mean": 3.6565625,
+      "activity_mean": 2.3135234375,
+      "skip_days_mean": 31.8390625,
+      "in_flare_days_mean": 7.0975
+    },
+    "app": {
+      "flare_count_mean": 3.3359375,
+      "activity_mean": 2.1696740625,
+      "skip_days_mean": 25.0609375,
+      "in_flare_days_mean": 5.2603125
+    },
+    "mean_engagement": 0.843
+  },
+  "by_disease": {
+    "anca_vasculitis": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.645,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.438879743528292,
+        "skip_days_mean": "31",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "5"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.615,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.3791817663194075,
+        "skip_days_mean": "25",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "4"
+      }
+    },
+    "ankylosing_spondylitis": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 1.01,
+        "flare_count_median": 1.0,
+        "activity_mean": 3.1411981554404176,
+        "skip_days_mean": "31",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "6"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.505,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.842924067840022,
+        "skip_days_mean": "24",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "2"
+      }
+    },
+    "asthma": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 30.845,
+        "flare_count_median": 30.0,
+        "activity_mean": 1.0885899629974949,
+        "skip_days_mean": "51",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "9"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 30.045,
+        "flare_count_median": 28.0,
+        "activity_mean": 1.0707636569579302,
+        "skip_days_mean": "39",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "9"
+      }
+    },
+    "behcet_disease": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.745,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.2783232799047433,
+        "skip_days_mean": "32",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "4"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.535,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.1267044132225696,
+        "skip_days_mean": "27",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "3"
+      }
+    },
+    "chronic_urticaria": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 14.505,
+        "flare_count_median": 12.0,
+        "activity_mean": 0.990135748465301,
+        "skip_days_mean": "42",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "5"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 13.65,
+        "flare_count_median": 11.0,
+        "activity_mean": 0.9656064095619596,
+        "skip_days_mean": "33",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "5"
+      }
+    },
+    "gout": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.95,
+        "flare_count_median": 0.0,
+        "activity_mean": 1.6377333119372433,
+        "skip_days_mean": "59",
+        "pain_vas_mean": 2.8187308037046703,
+        "in_flare_days_mean": "2"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.395,
+        "flare_count_median": 0.0,
+        "activity_mean": 1.3166084463192609,
+        "skip_days_mean": "47",
+        "pain_vas_mean": 2.1463395505762057,
+        "in_flare_days_mean": "0"
+      }
+    },
+    "idiopathic_pulmonary_fibrosis": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.01,
+        "flare_count_median": 0.0,
+        "activity_mean": 1.728115995648067,
+        "skip_days_mean": "17",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "0"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.01,
+        "flare_count_median": 0.0,
+        "activity_mean": 1.7406380206469876,
+        "skip_days_mean": "14",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "0"
+      }
+    },
+    "igg4_related_disease": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.03,
+        "flare_count_median": 0.0,
+        "activity_mean": 1.859169048503348,
+        "skip_days_mean": "17",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "0"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.03,
+        "flare_count_median": 0.0,
+        "activity_mean": 1.830863905520367,
+        "skip_days_mean": "14",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "0"
+      }
+    },
+    "inflammatory_bowel_disease": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.8,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.6019600991974485,
+        "skip_days_mean": "27",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "4"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.665,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.4651213838537895,
+        "skip_days_mean": "20",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "3"
+      }
+    },
+    "multiple_sclerosis": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.685,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.572280914640353,
+        "skip_days_mean": "15",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "6"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.51,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.3861372480562406,
+        "skip_days_mean": "11",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "4"
+      }
+    },
+    "osteoarthritis": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.615,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.821579782654329,
+        "skip_days_mean": "53",
+        "pain_vas_mean": 2.454806599462406,
+        "in_flare_days_mean": "5"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.325,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.6200233936696975,
+        "skip_days_mean": "42",
+        "pain_vas_mean": 2.03229658770962,
+        "in_flare_days_mean": "2"
+      }
+    },
+    "psoriatic_arthritis": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 1.05,
+        "flare_count_median": 1.0,
+        "activity_mean": 2.945504814084233,
+        "skip_days_mean": "27",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "7"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.8,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.782004382082829,
+        "skip_days_mean": "21",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "5"
+      }
+    },
+    "rheumatoid_arthritis": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 3.37,
+        "flare_count_median": 3.0,
+        "activity_mean": 3.494893615631387,
+        "skip_days_mean": "28",
+        "pain_vas_mean": 5.610237766802263,
+        "in_flare_days_mean": "29"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 2.995,
+        "flare_count_median": 3.0,
+        "activity_mean": 3.2913151875869513,
+        "skip_days_mean": "22",
+        "pain_vas_mean": 4.902469324034152,
+        "in_flare_days_mean": "25"
+      }
+    },
+    "sjogren_syndrome": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.11,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.1538588644785355,
+        "skip_days_mean": "27",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "0"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.08,
+        "flare_count_median": 0.0,
+        "activity_mean": 2.0570581667049894,
+        "skip_days_mean": "21",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "0"
+      }
+    },
+    "systemic_lupus_erythematosus": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 3.12,
+        "flare_count_median": 3.0,
+        "activity_mean": 3.4710780603464015,
+        "skip_days_mean": "29",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "25"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 2.2,
+        "flare_count_median": 2.0,
+        "activity_mean": 3.1031617397505142,
+        "skip_days_mean": "22",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "15"
+      }
+    },
+    "systemic_sclerosis": {
+      "ctrl": {
+        "n": 200,
+        "flare_count_mean": 0.015,
+        "flare_count_median": 0.0,
+        "activity_mean": 1.7930129556556884,
+        "skip_days_mean": "15",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "0"
+      },
+      "app": {
+        "n": 200,
+        "flare_count_mean": 0.015,
+        "flare_count_median": 0.0,
+        "activity_mean": 1.736801795244191,
+        "skip_days_mean": "12",
+        "pain_vas_mean": null,
+        "in_flare_days_mean": "0"
+      }
+    }
+  }
+}

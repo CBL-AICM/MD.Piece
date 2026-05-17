@@ -1,0 +1,83 @@
+# ANCA-associated Vasculitis (GPA / MPA composite) — chronic_relapsing
+# Reference: Chapel Hill Consensus 2012; KDIGO 2021.
+disease:
+  id: anca_vasculitis
+  name: ANCA-associated Vasculitis
+  short: AAV
+  icd10: M31.30
+  dynamics_type: chronic_relapsing
+  time_unit: day
+
+baseline:    {activity: 2.0, range: [0.0, 10.0]}
+decay:       {k: 0.12}
+circadian:   {amplitude: 0.08, phase_hours: 6}
+noise:       {sigma: 0.13}
+
+age_distribution: {"20-35": 0.10, "35-55": 0.30, "55-70": 0.40, "70-90": 0.20}
+sex_ratio_by_age: {"20-35": 1.0, "35-55": 1.0, "55-70": 1.0, "70-90": 1.0}
+
+responder_classes:
+  typical:       {probability: 0.45, effect_multiplier: 1.0}
+  super:         {probability: 0.10, effect_multiplier: 1.4}
+  partial:       {probability: 0.30, effect_multiplier: 0.5}
+  non_responder: {probability: 0.15, effect_multiplier: 0.15}
+
+subtypes:
+  gpa:   {probability: 0.55, flare_threshold_offset: -0.3, treatment_response_multiplier: 1.0}
+  mpa:   {probability: 0.45, flare_threshold_offset:  0.0, treatment_response_multiplier: 0.9}
+
+adherence: {daily_miss_probability: 0.10, discontinuation_probability_per_year: 0.15, dose_self_adjustment_probability: 0.04}
+placebo:   {probabilities: [0.75, 0.18, 0.07], effects: [0.0, 0.10, -0.03]}
+
+life_events:
+  - {id: infection,        prob_per_year: 1.8, activity_bump: 2.5, duration_days: [3, 14]}
+  - {id: surgery,          prob_per_year: 0.06, activity_bump: 2.5, duration_days: [7, 21]}
+  - {id: cancer_screening_positive, prob_per_year: 0.05, activity_bump: 1.0, duration_days: [30, 90]}
+  - {id: stress_major,     prob_per_year: 1.0, activity_bump: 1.3, duration_days: [14, 60]}
+
+triggers:
+  - {id: infection,        prob_per_day: 0.014, effect_mean: 3.5, effect_sigma: 0.7, duration_days: [4, 12]}
+  - {id: medication_change, prob_per_day: 0.02, effect_mean: 1.5, effect_sigma: 0.4, duration_days: [3, 7]}
+  - {id: emotional_stress, prob_per_day: 0.03, effect_mean: 1.0, effect_sigma: 0.3, duration_days: [2, 5]}
+
+flare: {threshold: 5.0, refractory_days: 30}
+
+treatments:
+  - id: rituximab
+    class: anti_cd20
+    assignment_prob: 0.60
+    onset_days: {mean: 30, std: 10, min: 14, max: 90}
+    effect_magnitude: {mean: 1.5, std: 0.4, min: 0.1, max: 2.8}
+    half_life_days: 90
+  - id: cyclophosphamide
+    class: alkylating
+    assignment_prob: 0.25
+    onset_days: {mean: 14, std: 5, min: 7, max: 30}
+    effect_magnitude: {mean: 1.4, std: 0.4, min: 0.1, max: 2.5}
+    half_life_days: 30
+  - id: azathioprine
+    class: immunosuppressant
+    assignment_prob: 0.40
+    onset_days: {mean: 60, std: 14, min: 30, max: 120}
+    effect_magnitude: {mean: 0.9, std: 0.3, min: 0.1, max: 1.8}
+    half_life_days: 30
+  - id: prednisone
+    class: corticosteroid
+    assignment_prob: 0.70
+    onset_days: 1
+    effect_magnitude: {mean: 1.0, std: 0.3, min: 0.1, max: 2.0}
+    half_life_days: 5
+
+biomarkers:
+  bvas:              {range: [0, 63], formula: "min(63, 2 + 4*activity)"}
+  anca_titer:        {range: [0, 1000], formula: "max(0, 30 + 80*activity + 20*noise)"}
+  crp_mg_L:          {range: [0, 200], formula: "max(0.1, 2 + 6*activity + 3*noise)"}
+  creatinine_mg_dL:  {range: [0.5, 8], formula: "max(0.5, 1.0 + 0.3*activity + 0.1*noise)"}
+  hemoglobin_g_dL:   {range: [6, 18], formula: "max(6, 13 - 0.5*activity + 0.3*noise)"}
+
+comorbidity:
+  - {id: ckd,                 conditional_prob: 0.45}
+  - {id: pulmonary_disease,   conditional_prob: 0.40}
+  - {id: ent_disease,         conditional_prob: 0.30}
+
+demographics: {age: {mean: 58, sd: 14, range: [20, 88]}, female_ratio: 0.50}
