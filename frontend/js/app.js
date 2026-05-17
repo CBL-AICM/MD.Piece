@@ -76,7 +76,7 @@ function _showElderModeHint(turnedOn) {
   if (prior) prior.remove();
   var hint = document.createElement('div');
   hint.className = 'elder-mode-hint';
-  hint.textContent = turnedOn ? '已開啟長者模式：字大、按鈕大、對比高' : '已切回標準模式';
+  hint.textContent = turnedOn ? '字級已放大、按鈕變大、對比加強' : '字級已恢復';
   document.body.appendChild(hint);
   setTimeout(function() { if (hint.parentNode) hint.remove(); }, 3000);
 }
