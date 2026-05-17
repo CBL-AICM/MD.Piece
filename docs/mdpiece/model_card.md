@@ -1,6 +1,6 @@
 # MD. Piece — Layer-3 Model Card
 
-**Generated**: 2026-05-16T23:18:34.572094Z
+**Generated**: 2026-05-17T00:04:38.375616Z
 **Checkpoint**: `output/mdpiece/checkpoints/best.pt`
 
 ## Intended use
@@ -24,30 +24,30 @@ methodological demonstration, and educational discussion only.
 ## Architecture
 - Type: lstm_attention
 - Hidden: 64, Layers: 2, Dropout: 0.2
-- Parameters: 58,819
-- Input features (33): see JSON log
+- Parameters: 59,587
+- Input features (36): see JSON log
 
 ## Training
 - Optimizer: AdamW (lr=0.001, weight_decay=1e-05)
 - Batch size: 128
 - Loss weights: activity MSE=1.0, flare BCE=0.5
 - Early stopping patience: 10 epochs
-- Best epoch: 16 (val loss 0.2942)
+- Best epoch: 11 (val loss 0.3600)
 - Random seed: 2024
 
 ## Test-set performance (95% CI from bootstrap)
 
 ### Activity regression (immune activity score)
-- MAE  = 0.231  CI95=[0.224, 0.239]
-- RMSE = 0.451 CI95=[0.428, 0.474]
-- R^2  = 0.905   CI95=[0.895, 0.915]
-- Baseline (mean predictor) MAE: 1.075
+- MAE  = 0.259  CI95=[0.250, 0.268]
+- RMSE = 0.517 CI95=[0.486, 0.552]
+- R^2  = 0.893   CI95=[0.880, 0.907]
+- Baseline (mean predictor) MAE: 1.167
 
 ### Flare classification (any flare in next 7 days)
-- AUROC = 0.882 CI95=[0.872, 0.893]
-- AUPRC = 0.731 CI95=[0.707, 0.753]
-- F1@0.5 = 0.720 CI95=[0.696, 0.741]
-- Positive class rate: 0.108
+- AUROC = 0.910 CI95=[0.901, 0.919]
+- AUPRC = 0.776 CI95=[0.755, 0.793]
+- F1@0.5 = 0.694 CI95=[0.672, 0.714]
+- Positive class rate: 0.147
 
 ## Known limitations
 1. **Synthetic data only** — no real patient signals; biomarker formulas are
