@@ -566,47 +566,53 @@ img, svg, video { max-width: 100%; height: auto; }
 #app-wrapper.show { display: flex; }
 
 /* ── App theme tokens ─────────────────────────────────── */
-/* Dark = 單寧藍（denim） + 薄荷／粉螢光點綴（cyan-on-denim 經典終端機） */
+/* 銀河のポラロイド 配色：
+   Royal Night #132442 / Navy #1a3a63 / Foggy Blue #637d92
+   Starburst Gold #bc8909 / Lunar Beige #e8d1b6 */
+
+/* Dark = 銀河夜（Royal Night）— 深藍夜空 + 月光米字 + 星芒金強調 */
 #app-wrapper[data-theme="dark"] {
-  --app-bg:         #1F3553;   /* denim navy */
-  --app-grid:       rgba(180,210,255,0.12);
-  --app-text:       #F1F6FF;   /* near-white blue-cream */
-  --app-text-dim:   #BFD2EC;   /* 提亮 — 不要藕色 */
-  --app-mint:       #B0F4E5;
-  --app-aqua:       #8AEDDD;
-  --app-pink:       #FFB3D1;   /* 提亮 — 不再是藕色／粉灰 */
-  --app-blue:       #C9E4FF;
-  --app-term:       #6CF0D8;
-  --app-panel:      #2E4F7C;   /* 提亮一階 */
-  --app-panel-soft: #3D6499;
-  --app-chrome-1:   #34568A;
-  --app-chrome-2:   #4A7BBE;
-  --app-border:     rgba(195,225,255,0.5);
-  --app-shadow:     0 4px 0 rgba(13,25,42,0.55);
-  --app-glow:       rgba(108,240,216,0.5);
-  --app-chip-text:  #0B1F25;   /* dark text on light chips */
-  --heading-fg:     #B7C0AF;   /* 薄荷奶咖 #2 — sage heading accent */
+  --app-bg:         #132442;   /* Royal Night — 銀河深空 */
+  --app-grid:       rgba(232,209,182,0.08);
+  --app-text:       #e8d1b6;   /* Lunar Beige — 月光米字 */
+  --app-text-dim:   #a8b8c8;   /* foggy blue 提亮：在深底上保留對比 */
+  --app-mint:       #e8d1b6;   /* 月光米 — 柔和高光 */
+  --app-aqua:       #637d92;   /* Foggy Blue — 中性藍 */
+  --app-pink:       #d9b87a;   /* 星芒金提亮 — 暖色 callout */
+  --app-blue:       #637d92;   /* Foggy Blue */
+  --app-term:       #bc8909;   /* Starburst Gold — 終端強調色 */
+  --app-panel:      #1a3a63;   /* 銀河中層 — 卡片表面 */
+  --app-panel-soft: #2a4d7a;   /* hover / 次表面 */
+  --app-chrome-1:   #1a3a63;   /* titlebar 上層 */
+  --app-chrome-2:   #2a4d7a;   /* titlebar 下層 */
+  --app-border:     rgba(232,209,182,0.35);
+  --app-shadow:     0 4px 0 rgba(7,15,30,0.6);
+  --app-glow:       rgba(188,137,9,0.5);    /* 金色星芒光暈 */
+  --app-chip-text:  #132442;   /* dark navy text on light chips */
+  --heading-fg:     #bc8909;   /* Starburst Gold heading accent */
 }
+
+/* Light = 晨光米（Lunar Beige）— 暖米底 + 藏青字 + 星芒金強調 */
 #app-wrapper[data-theme="light"] {
-  --app-bg:         #FFFFFF;   /* 純白 body wall */
-  --app-grid:       rgba(74,144,194,0.04);  /* 幾乎隱形的藍格線 */
-  --app-text:       #1F3D58;   /* navy text */
-  --app-text-dim:   #5A7388;   /* muted slate */
-  --app-mint:       #BCE3DA;   /* 淡薄荷 — active 背景柔和、不會壓字 */
-  --app-mint-strong:#5BB5A8;   /* 強調 sage — FAB / 圓點 / 邊條 用 */
-  --app-aqua:       #4A90C2;   /* medical blue */
-  --app-pink:       #E8A8A8;   /* soft coral */
-  --app-blue:       #C8DCEC;   /* light sky panel */
-  --app-term:       #4A90C2;   /* medical blue accent */
-  --app-panel:      #FFFFFF;   /* 卡片表面 */
-  --app-panel-soft: #F7F9FC;   /* hover / 次表面 — 跟主底差一點點 */
-  --app-chrome-1:   #F7F9FC;   /* titlebar 漸層上層 */
-  --app-chrome-2:   #EFF3F8;   /* titlebar 漸層下層 */
-  --app-border:     #1F3D58;
-  --app-shadow:     2px 2px 0 rgba(31,61,88,0.12);
-  --app-glow:       rgba(74,144,194,0.35);
-  --app-chip-text:  #1F3D58;   /* navy text on light chips */
-  --heading-fg:     #5BB5A8;   /* sage teal heading accent */
+  --app-bg:         #f5ead4;   /* 淡化月光米 — body wall 不刺眼 */
+  --app-grid:       rgba(19,36,66,0.04);
+  --app-text:       #132442;   /* Royal Night — 主文字 */
+  --app-text-dim:   #637d92;   /* Foggy Blue — 次文字 */
+  --app-mint:       #e8d1b6;   /* Lunar Beige — active 背景 */
+  --app-mint-strong:#bc8909;   /* Starburst Gold — FAB / 圓點 / 邊條 */
+  --app-aqua:       #1a3a63;   /* 銀河藏青 — 強調藍 */
+  --app-pink:       #bc8909;   /* 星芒金 — 暖色 callout */
+  --app-blue:       #637d92;   /* Foggy Blue 面板 */
+  --app-term:       #bc8909;   /* Starburst Gold accent */
+  --app-panel:      #fffaf0;   /* 暖白 — 卡片表面 */
+  --app-panel-soft: #ece0c8;   /* hover / 次表面 */
+  --app-chrome-1:   #fffaf0;   /* titlebar 漸層上層 */
+  --app-chrome-2:   #e8d1b6;   /* titlebar 漸層下層 */
+  --app-border:     #132442;   /* Royal Night 邊框 */
+  --app-shadow:     2px 2px 0 rgba(19,36,66,0.12);
+  --app-glow:       rgba(188,137,9,0.35);
+  --app-chip-text:  #132442;   /* navy text on light chips */
+  --heading-fg:     #bc8909;   /* Starburst Gold heading accent */
 }
 
 /* Body grid background — only when app is shown */
