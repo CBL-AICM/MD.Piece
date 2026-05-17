@@ -2,30 +2,30 @@
 
 - 動力學類型：`chronic_relapsing`
 - 患者數：**200**，平均年齡 39.6 歲，老年 6 位
-- 90 天 flare 平均：**0.95**
-- 模型 MAE 平均：**0.138**，flare 召回平均 41%，準確率平均 71%
+- 90 天 flare 平均：**1.01**
+- 模型 MAE 平均：**0.134**，flare 召回平均 43%，準確率平均 64%
 
 ## 亞型分布
 | Subtype | n |
 |---|---|
-| axial_only | 112 |
-| axial_peripheral | 88 |
+| axial_only | 119 |
+| axial_peripheral | 81 |
 
 ## 反應者分布
 | Class | n |
 |---|---|
-| typical | 95 |
-| partial | 59 |
-| super | 28 |
+| typical | 109 |
+| partial | 49 |
+| super | 24 |
 | non_responder | 18 |
 
 ## 處方治療頻率
 | Treatment | n |
 |---|---|
-| nsaid | 173 |
-| physiotherapy | 113 |
-| tnf_inhibitor | 51 |
-| il17_inhibitor | 25 |
+| nsaid | 165 |
+| physiotherapy | 125 |
+| tnf_inhibitor | 42 |
+| il17_inhibitor | 18 |
 
 ## 圖
 - [活動度軌跡 (cohort)](../figures/ankylosing_spondylitis_cohort.png)

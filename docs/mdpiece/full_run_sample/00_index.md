@@ -1,6 +1,6 @@
 # MD. Piece — Full Demo Report
 
-**Generated**: 2026-05-17T01:08:04Z
+**Generated**: 2026-05-17T03:41:39Z
 **Config**: {'n_patients_per_disease': 200, 'sim_days': 180, 'seed': 42, 'n_diseases': 16}
 **Total patients**: 3200 across 16 diseases
 **Model used**: ✅ retrained Layer-3 (LSTM + attention)

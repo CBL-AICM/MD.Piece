@@ -2,30 +2,30 @@
 
 - 動力學類型：`progressive`
 - 患者數：**200**，平均年齡 71.0 歲，老年 113 位
-- 90 天 flare 平均：**0.03**
-- 模型 MAE 平均：**0.068**，flare 召回平均 25%，準確率平均 97%
+- 90 天 flare 平均：**0.01**
+- 模型 MAE 平均：**0.253**，flare 召回平均 76%，準確率平均 28%
 
 ## 亞型分布
 | Subtype | n |
 |---|---|
-| slow_progressor | 116 |
-| rapid_progressor | 84 |
+| slow_progressor | 132 |
+| rapid_progressor | 68 |
 
 ## 反應者分布
 | Class | n |
 |---|---|
-| typical | 114 |
-| partial | 52 |
-| non_responder | 19 |
-| super | 15 |
+| typical | 116 |
+| partial | 55 |
+| non_responder | 20 |
+| super | 9 |
 
 ## 處方治療頻率
 | Treatment | n |
 |---|---|
-| nintedanib | 92 |
-| pirfenidone | 79 |
-| oxygen_therapy | 73 |
-| prednisone_pulse | 19 |
+| oxygen_therapy | 85 |
+| nintedanib | 71 |
+| pirfenidone | 50 |
+| prednisone_pulse | 13 |
 
 ## 圖
 - [活動度軌跡 (cohort)](../figures/idiopathic_pulmonary_fibrosis_cohort.png)

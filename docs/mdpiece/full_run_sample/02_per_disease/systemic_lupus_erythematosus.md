@@ -2,32 +2,32 @@
 
 - 動力學類型：`chronic_relapsing`
 - 患者數：**200**，平均年齡 39.6 歲，老年 6 位
-- 90 天 flare 平均：**2.73**
-- 模型 MAE 平均：**0.176**，flare 召回平均 64%，準確率平均 77%
+- 90 天 flare 平均：**3.12**
+- 模型 MAE 平均：**0.205**，flare 召回平均 65%，準確率平均 74%
 
 ## 亞型分布
 | Subtype | n |
 |---|---|
-| renal | 60 |
-| cutaneous | 54 |
-| hematologic | 51 |
-| neuro | 35 |
+| renal | 68 |
+| cutaneous | 62 |
+| hematologic | 45 |
+| neuro | 25 |
 
 ## 反應者分布
 | Class | n |
 |---|---|
-| typical | 95 |
-| partial | 62 |
-| super | 25 |
+| typical | 107 |
+| partial | 55 |
+| super | 20 |
 | non_responder | 18 |
 
 ## 處方治療頻率
 | Treatment | n |
 |---|---|
-| hydroxychloroquine | 173 |
-| prednisone | 76 |
-| mycophenolate | 58 |
-| belimumab | 22 |
+| hydroxychloroquine | 167 |
+| prednisone | 85 |
+| mycophenolate | 59 |
+| belimumab | 13 |
 
 ## 圖
 - [活動度軌跡 (cohort)](../figures/systemic_lupus_erythematosus_cohort.png)

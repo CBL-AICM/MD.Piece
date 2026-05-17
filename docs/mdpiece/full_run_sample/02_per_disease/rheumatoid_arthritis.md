@@ -3,29 +3,29 @@
 - 動力學類型：`chronic_relapsing`
 - 患者數：**200**，平均年齡 52.0 歲，老年 19 位
 - 90 天 flare 平均：**3.37**
-- 模型 MAE 平均：**0.153**，flare 召回平均 67%，準確率平均 89%
+- 模型 MAE 平均：**0.160**，flare 召回平均 67%，準確率平均 88%
 
 ## 亞型分布
 | Subtype | n |
 |---|---|
-| seropositive | 142 |
-| seronegative | 58 |
+| seropositive | 145 |
+| seronegative | 55 |
 
 ## 反應者分布
 | Class | n |
 |---|---|
-| typical | 112 |
-| partial | 48 |
-| super | 22 |
+| typical | 119 |
+| partial | 47 |
 | non_responder | 18 |
+| super | 16 |
 
 ## 處方治療頻率
 | Treatment | n |
 |---|---|
-| methotrexate | 154 |
-| nsaid | 110 |
-| tnf_inhibitor | 61 |
-| prednisone | 43 |
+| methotrexate | 146 |
+| nsaid | 122 |
+| tnf_inhibitor | 46 |
+| prednisone | 30 |
 
 ## 圖
 - [活動度軌跡 (cohort)](../figures/rheumatoid_arthritis_cohort.png)

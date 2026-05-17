@@ -7,25 +7,25 @@
 ### → 點 🏠 Dashboard
 - 共 **3200** 位虛擬患者，跨 16 種疾病：{'anca_vasculitis': 200, 'ankylosing_spondylitis': 200, 'asthma': 200, 'behcet_disease': 200, 'chronic_urticaria': 200, 'gout': 200, 'idiopathic_pulmonary_fibrosis': 200, 'igg4_related_disease': 200, 'inflammatory_bowel_disease': 200, 'multiple_sclerosis': 200, 'osteoarthritis': 200, 'psoriatic_arthritis': 200, 'rheumatoid_arthritis': 200, 'sjogren_syndrome': 200, 'systemic_lupus_erythematosus': 200, 'systemic_sclerosis': 200}
 - 平均年齡 51.0 歲，老年（≥70）佔 **15.4%**
-- 反應者分布：{'partial': 844, 'non_responder': 303, 'typical': 1624, 'super': 429}
-- 罕見 long-tail 事件出現率 **3.2%**（合 ~3% 預期）
+- 反應者分布：{'non_responder': 311, 'partial': 786, 'typical': 1770, 'super': 333}
+- 罕見 long-tail 事件出現率 **1.9%**（合 ~3% 預期）
 
 ### → 點 👥 Patient Browser (RA 患者列表)
 - 篩選條件：RA 患者列表 → 找到 **200** 位
-- 點開第一位：`RA_0000`（65 歲 M，seronegative 亞型，partial，治療：methotrexate）
-- 看 AI 心得卡：MAE = 0.15、flare 召回 = 79%
-- 注意到生活事件：viral_infection, seasonal_change, seasonal_change…
+- 點開第一位：`RA_0000`（65 歲 M，seronegative 亞型，non_responder，治療：prednisone）
+- 看 AI 心得卡：MAE = 0.19、flare 召回 = 89%
+- 注意到生活事件：seasonal_change, seasonal_change, viral_infection…
 
 ### → 點 🔬 Experiment (RA, methotrexate)
 - 試驗條件：對 rheumatoid_arthritis 患者投予 **methotrexate**
-- on=154 位（平均活動度 3.42）；off=46 位（平均活動度 3.52）
-  · super: n=19, 平均活動度 3.32
-  · typical: n=90, 平均活動度 3.38
-  · partial: n=33, 平均活動度 3.46
-  · non_responder: n=12, 平均活動度 3.72
+- on=146 位（平均活動度 3.44）；off=54 位（平均活動度 3.65）
+  · super: n=12, 平均活動度 3.58
+  · typical: n=84, 平均活動度 3.39
+  · partial: n=35, 平均活動度 3.44
+  · non_responder: n=15, 平均活動度 3.55
 
 #### 💭 心得
-1. **flare 預警有幫助但要看精準度**：模型平均 MAE 約 0.17。如果在門診用，我會要求至少 80% 精準度才會發警報，避免造成不必要焦慮。
+1. **flare 預警有幫助但要看精準度**：模型平均 MAE 約 0.19。如果在門診用，我會要求至少 80% 精準度才會發警報，避免造成不必要焦慮。
 2. **可解釋性是關鍵**：每個 AI 心得都會列出可能觸發因子（如 viral_infection、menstruation），這比黑盒模型好說服病人。
 3. **老年患者的特殊機制很到位**：CRP 鈍化、polypharmacy、自動疊加共病——這些細節在真實 RA 老年病人很常見，作為決策輔助比一般 calculator 強。但我會擔心系統把 atypical presentation 過度標籤。
 4. **缺什麼**：應該加入『跟主治醫師討論』的提示，避免病人自行根據 AI 結果改藥。
@@ -39,20 +39,20 @@
 ### → 點 🏠 Dashboard
 - 共 **3200** 位虛擬患者，跨 16 種疾病：{'anca_vasculitis': 200, 'ankylosing_spondylitis': 200, 'asthma': 200, 'behcet_disease': 200, 'chronic_urticaria': 200, 'gout': 200, 'idiopathic_pulmonary_fibrosis': 200, 'igg4_related_disease': 200, 'inflammatory_bowel_disease': 200, 'multiple_sclerosis': 200, 'osteoarthritis': 200, 'psoriatic_arthritis': 200, 'rheumatoid_arthritis': 200, 'sjogren_syndrome': 200, 'systemic_lupus_erythematosus': 200, 'systemic_sclerosis': 200}
 - 平均年齡 51.0 歲，老年（≥70）佔 **15.4%**
-- 反應者分布：{'partial': 844, 'non_responder': 303, 'typical': 1624, 'super': 429}
-- 罕見 long-tail 事件出現率 **3.2%**（合 ~3% 預期）
+- 反應者分布：{'non_responder': 311, 'partial': 786, 'typical': 1770, 'super': 333}
+- 罕見 long-tail 事件出現率 **1.9%**（合 ~3% 預期）
 
 ### → 點 👥 Patient Browser (老年（≥70）篩選)
 - 篩選條件：老年（≥70）篩選 → 找到 **492** 位
-- 點開第一位：`AAV_0016`（80 歲 F，mpa 亞型，super，治療：無）
-- 看 AI 心得卡：MAE = 0.11、flare 召回 = —
-- 注意到生活事件：stress_major…
+- 點開第一位：`AAV_0016`（80 歲 F，mpa 亞型，typical，治療：rituximab, cyclophosphamide, azathioprine, prednisone）
+- 看 AI 心得卡：MAE = 0.12、flare 召回 = —
+- 注意到生活事件：infection…
 
 ### → 點 👥 Patient Browser (non-responder 篩選)
-- 篩選條件：non-responder 篩選 → 找到 **303** 位
-- 點開第一位：`AAV_0001`（40 歲 M，gpa 亞型，non_responder，治療：rituximab, prednisone）
-- 看 AI 心得卡：MAE = 0.11、flare 召回 = —
-- 注意到生活事件：infection…
+- 篩選條件：non-responder 篩選 → 找到 **311** 位
+- 點開第一位：`AAV_0000`（65 歲 M，mpa 亞型，non_responder，治療：prednisone）
+- 看 AI 心得卡：MAE = 0.14、flare 召回 = 81%
+- 注意到生活事件：infection, stress_major, surgery…
 
 #### 💭 心得
 1. **老年比例 15.4% 對個管很有用**：我可以快速 filter 出高風險病人，看誰有 polypharmacy、誰漏吃藥。
@@ -69,23 +69,23 @@
 ### → 點 📊 N-of-1 (我的個人推論)
 - 輸入：rheumatoid_arthritis, 35y F, 近期活動度 3.5
 - 找到 **20** 位相似虛擬患者
-- 他們的平均活動度（90 天）= **3.41**
-- 反應者分布：{'typical': 12, 'non_responder': 3, 'partial': 5}
-- 亞型分布：{'seropositive': 13, 'seronegative': 7}
+- 他們的平均活動度（90 天）= **3.53**
+- 反應者分布：{'typical': 14, 'partial': 5, 'super': 1}
+- 亞型分布：{'seropositive': 14, 'seronegative': 6}
 
 ### → 點 🎓 Training Mode
-- 跑了 5 題：正確 **5/5** (100%)
-  · Behcet_0187: 我猜 不會, 實際 無 ✅
+- 跑了 5 題：正確 **3/5** (60%)
+  · Behcet_0187: 我猜 會 flare, 實際 無 ❌
   · AAV_0066: 我猜 不會, 實際 無 ✅
-  · CSU_0130: 我猜 不會, 實際 無 ✅
+  · CSU_0130: 我猜 會 flare, 實際 flare ✅
   · RA_0055: 我猜 不會, 實際 無 ✅
-  · Gout_0178: 我猜 不會, 實際 無 ✅
+  · Gout_0178: 我猜 會 flare, 實際 無 ❌
 
 ### → 點 👥 Patient Browser (與我類似的人（30-45 歲女性 RA）)
 - 篩選條件：與我類似的人（30-45 歲女性 RA） → 找到 **50** 位
-- 點開第一位：`RA_0001`（40 歲 F，seropositive 亞型，non_responder，治療：methotrexate）
-- 看 AI 心得卡：MAE = 0.13、flare 召回 = 62%
-- 注意到生活事件：menstruation, seasonal_change, menstruation…
+- 點開第一位：`RA_0001`（40 歲 F，seropositive 亞型，partial，治療：nsaid）
+- 看 AI 心得卡：MAE = 0.16、flare 召回 = 60%
+- 注意到生活事件：menstruation, viral_infection, menstruation…
 
 #### 💭 心得
 1. **看到跟我類似的人讓我安心**：原來 30-45 歲女性 RA 平均活動度差不多，我沒有比較糟。
@@ -102,25 +102,25 @@
 ### → 點 🏠 Dashboard
 - 共 **3200** 位虛擬患者，跨 16 種疾病：{'anca_vasculitis': 200, 'ankylosing_spondylitis': 200, 'asthma': 200, 'behcet_disease': 200, 'chronic_urticaria': 200, 'gout': 200, 'idiopathic_pulmonary_fibrosis': 200, 'igg4_related_disease': 200, 'inflammatory_bowel_disease': 200, 'multiple_sclerosis': 200, 'osteoarthritis': 200, 'psoriatic_arthritis': 200, 'rheumatoid_arthritis': 200, 'sjogren_syndrome': 200, 'systemic_lupus_erythematosus': 200, 'systemic_sclerosis': 200}
 - 平均年齡 51.0 歲，老年（≥70）佔 **15.4%**
-- 反應者分布：{'partial': 844, 'non_responder': 303, 'typical': 1624, 'super': 429}
-- 罕見 long-tail 事件出現率 **3.2%**（合 ~3% 預期）
+- 反應者分布：{'non_responder': 311, 'partial': 786, 'typical': 1770, 'super': 333}
+- 罕見 long-tail 事件出現率 **1.9%**（合 ~3% 預期）
 - 異質性 KPI（同疾病+同治療的 mean activity CV）= **0.15**
 
 ### → 點 🔬 Experiment (asthma, saba_rescue)
 - 試驗條件：對 asthma 患者投予 **saba_rescue**
-- on=187 位（平均活動度 1.07）；off=13 位（平均活動度 1.07）
-  · super: n=32, 平均活動度 1.08
-  · typical: n=93, 平均活動度 1.08
-  · partial: n=43, 平均活動度 1.07
-  · non_responder: n=19, 平均活動度 1.05
+- on=191 位（平均活動度 1.09）；off=9 位（平均活動度 0.97）
+  · super: n=25, 平均活動度 1.00
+  · typical: n=99, 平均活動度 1.09
+  · partial: n=48, 平均活動度 1.15
+  · non_responder: n=19, 平均活動度 1.09
 
 ### → 點 🔬 Experiment (SSc, ccb_vasodilator)
 - 試驗條件：對 systemic_sclerosis 患者投予 **ccb_vasodilator**
-- on=123 位（平均活動度 1.79）；off=77 位（平均活動度 1.77）
-  · super: n=15, 平均活動度 1.68
-  · typical: n=57, 平均活動度 1.73
-  · partial: n=40, 平均活動度 1.89
-  · non_responder: n=11, 平均活動度 1.81
+- on=130 位（平均活動度 1.80）；off=70 位（平均活動度 1.77）
+  · super: n=8, 平均活動度 1.78
+  · typical: n=75, 平均活動度 1.74
+  · partial: n=35, 平均活動度 1.90
+  · non_responder: n=12, 平均活動度 1.93
 
 #### 💭 心得
 1. **不可預測性 CV 偏中等**：~0.15 算合理，但要驗證跟真實 cohort（如 BIORA、CARRA）相當。
@@ -136,23 +136,23 @@
 **為什麼打開 MD. Piece**：我做的這個系統，我自己親自當使用者玩一輪，看哪裡好玩哪裡奇怪。
 
 ### → 點 🎓 Training Mode
-- 跑了 5 題：正確 **5/5** (100%)
-  · Behcet_0187: 我猜 不會, 實際 無 ✅
+- 跑了 5 題：正確 **3/5** (60%)
+  · Behcet_0187: 我猜 會 flare, 實際 無 ❌
   · AAV_0066: 我猜 不會, 實際 無 ✅
-  · CSU_0130: 我猜 不會, 實際 無 ✅
+  · CSU_0130: 我猜 會 flare, 實際 flare ✅
   · RA_0055: 我猜 不會, 實際 無 ✅
-  · Gout_0178: 我猜 不會, 實際 無 ✅
+  · Gout_0178: 我猜 會 flare, 實際 無 ❌
 
 ### → 點 🧪 What-If Lab (RA)
 - 選 `RA_0000` 在第 60 天做反事實
-- baseline 模型輸入：activity_pred = 2.50, flare_prob = 6%
+- baseline 模型輸入：activity_pred = 6.56, flare_prob = 100%
 - 勾「完美服藥」後（ONNX 在瀏覽器即時推論），通常會看到 activity_pred 下降 0.1-0.3、flare_prob 下降 5-15pp
 
 ### → 點 🏠 Dashboard
 - 共 **3200** 位虛擬患者，跨 16 種疾病：{'anca_vasculitis': 200, 'ankylosing_spondylitis': 200, 'asthma': 200, 'behcet_disease': 200, 'chronic_urticaria': 200, 'gout': 200, 'idiopathic_pulmonary_fibrosis': 200, 'igg4_related_disease': 200, 'inflammatory_bowel_disease': 200, 'multiple_sclerosis': 200, 'osteoarthritis': 200, 'psoriatic_arthritis': 200, 'rheumatoid_arthritis': 200, 'sjogren_syndrome': 200, 'systemic_lupus_erythematosus': 200, 'systemic_sclerosis': 200}
 - 平均年齡 51.0 歲，老年（≥70）佔 **15.4%**
-- 反應者分布：{'partial': 844, 'non_responder': 303, 'typical': 1624, 'super': 429}
-- 罕見 long-tail 事件出現率 **3.2%**（合 ~3% 預期）
+- 反應者分布：{'non_responder': 311, 'partial': 786, 'typical': 1770, 'super': 333}
+- 罕見 long-tail 事件出現率 **1.9%**（合 ~3% 預期）
 
 #### 💭 心得
 1. **What-If 玩起來最有成就感**：我隨便調一下『完美服藥』，活動度真的會降，這就是我科展想 demo 的點。
