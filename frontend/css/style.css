@@ -872,14 +872,16 @@ img, svg, video { max-width: 100%; height: auto; }
   position: sticky;
   top: 14px;
   z-index: 50;
-  padding: 0;
+  padding: var(--space-1) var(--space-2);
   border-radius: 4px;
   box-shadow: var(--app-shadow);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-3);                /* 8 → 12px：每個元件之間留更明顯空隙 */
   background: linear-gradient(180deg, var(--app-chrome-1), var(--app-chrome-2));
   backdrop-filter: none;
+  flex-wrap: wrap;                    /* 真的塞不下就換行而不是擠在一起 */
+  row-gap: var(--space-2);
 }
 
 .topbar .hamburger {
@@ -1003,7 +1005,6 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
   justify-content: center;
   width: 32px;
   height: 26px;
-  margin-right: 6px;
   font-size: 1rem;
   line-height: 1;
   background: var(--app-panel);
@@ -1027,7 +1028,6 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
   min-width: 32px;
   height: 26px;
   padding: 0 6px;
-  margin-right: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -1051,7 +1051,6 @@ html[data-mode="senior"] .topbar-back:hover .tb-zh { color: var(--text); }
   justify-content: center;
   width: 32px;
   height: 26px;
-  margin-right: 6px;
   background: var(--app-panel);
   color: var(--app-text);
   border: 1px solid var(--app-border);
@@ -10945,7 +10944,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    max-width: 38vw;
+    max-width: 50vw;                  /* 38vw → 50vw：標題不要被截成「首」 */
   }
   .topbar-prefix { display: none; }
   .topbar-ext { opacity: 0.5; }
@@ -10954,8 +10953,11 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   .app-theme-toggle, .app-settings-btn, .app-lang-toggle {
     width: 32px; height: 30px;
     border-radius: 6px;
+    margin-right: 0;                  /* 用 .topbar 的 gap 統一處理間距 */
   }
   .app-lang-toggle { font-size: 0.7rem; }
+  /* 新增的 A+「字大一點」按鈕 — mobile 上不要被擠扁，給足空間 */
+  .app-elder-toggle { margin-left: 0; }
 
   /* ── 3. Page transition — phone-app slide ─────────────── */
   #app {
@@ -15907,7 +15909,7 @@ html[data-mode="senior"] .home-inpatient .ip-section-head h3 { font-size: 1.15re
 html[data-mode="senior"] .home-inpatient .ip-edu-title { font-size: 1.05rem; }
 html[data-mode="senior"] .home-inpatient .ip-edu-desc  { font-size: 0.84rem; }
 
-/* ─── 住院模式：sidebar 收成精簡項目 ─────────────────────────────────── */
+/* ─── 住院模式：sidebar 只保留住院相關項目 ─────────────────────────────── */
 /* 只保留 home + INPATIENT_NAV_PAGES：admissions / medications / vitals /
    memo / reminders / settings / account，其餘 nav-item 與 section label 隱藏。 */
 html[data-care-mode="inpatient"] .nav-item:not([data-page="admissions"]):not([data-page="medications"]):not([data-page="vitals"]):not([data-page="memo"]):not([data-page="reminders"]):not([data-page="settings"]):not([data-page="account"]) {

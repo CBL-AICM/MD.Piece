@@ -88,8 +88,8 @@ function _showElderModeHint(turnedOn) {
 
 // ─── 照護模式（門診 / 住院）─────────────────────────────────
 // 跟 'senior/standard' 是兩個正交的維度：
-//   senior/standard = UI 大小（年長版 vs 精緻版）
-//   outpatient/inpatient = 功能範圍（門診一般使用 vs 住院期間精簡）
+//   senior/standard = UI 大小（字級、按鈕）
+//   outpatient/inpatient = 功能範圍（門診相關 / 住院相關）
 // 住院模式會把 sidebar 收成只剩住院期間真正會用到的項目。
 
 const INPATIENT_NAV_PAGES = [
