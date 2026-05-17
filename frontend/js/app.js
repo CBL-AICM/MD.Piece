@@ -3672,7 +3672,6 @@ function renderCareModeChips() {
     + '<section class="care-mode-card" aria-label="照護模式切換">'
     +   '<div class="care-mode-card-head">'
     +     '<span class="care-mode-card-title">你現在用的是</span>'
-    +     '<span class="care-mode-card-hint">' + (isOut ? '日常門診追蹤' : '住院期間使用') + '</span>'
     +   '</div>'
     +   '<div class="care-mode-chips" role="tablist">'
     +     '<button class="care-mode-chip' + (isOut ? ' active' : '') + '" role="tab" aria-selected="' + (isOut ? 'true' : 'false') + '" onclick="setCareMode(\'outpatient\')">'
