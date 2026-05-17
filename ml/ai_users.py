@@ -279,9 +279,10 @@ def takeaways(persona, cohort):
     avg_mae = mean(p["model_mae"] for p in ps if "model_mae" in p) if has_model else None
 
     out = ["#### 💭 心得"]
+    mae_phrase = f"模型平均 MAE 約 {avg_mae:.2f}" if avg_mae is not None else "（此 cohort 未跑模型推論）"
     if voice == "clinical":
         out += [
-            f"1. **flare 預警有幫助但要看精準度**：模型平均 MAE 約 {avg_mae:.2f}（如果有開模型）。如果在門診用，我會要求至少 80% 精準度才會發警報，避免造成不必要焦慮。",
+            f"1. **flare 預警有幫助但要看精準度**：{mae_phrase}。如果在門診用，我會要求至少 80% 精準度才會發警報，避免造成不必要焦慮。",
             "2. **可解釋性是關鍵**：每個 AI 心得都會列出可能觸發因子（如 viral_infection、menstruation），這比黑盒模型好說服病人。",
             f"3. **老年患者的特殊機制很到位**：CRP 鈍化、polypharmacy、自動疊加共病——這些細節在真實 RA 老年病人很常見，作為決策輔助比一般 calculator 強。但我會擔心系統把 atypical presentation 過度標籤。",
             "4. **缺什麼**：應該加入『跟主治醫師討論』的提示，避免病人自行根據 AI 結果改藥。",

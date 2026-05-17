@@ -1,6 +1,22 @@
 # Layer-3 training configuration
 data:
-  diseases: [rheumatoid_arthritis, asthma, systemic_sclerosis]
+  diseases:
+    - rheumatoid_arthritis
+    - asthma
+    - systemic_sclerosis
+    - systemic_lupus_erythematosus
+    - inflammatory_bowel_disease
+    - multiple_sclerosis
+    - gout
+    - ankylosing_spondylitis
+    - psoriatic_arthritis
+    - sjogren_syndrome
+    - behcet_disease
+    - anca_vasculitis
+    - igg4_related_disease
+    - chronic_urticaria
+    - osteoarthritis
+    - idiopathic_pulmonary_fibrosis
   n_patients_per_disease: 200
   sim_days: 180
   base_seed: 2024
