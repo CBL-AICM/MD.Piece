@@ -5122,17 +5122,21 @@ async function loadServerTimeline() {
 }
 
 function _renderTimelineBentoCard(entry) {
-  var sev = entry.severity_color || 'self';
-  var importance = entry.importance || 'normal';
+  // 將 server 回傳值 narrow 到已知白名單，避免任意 attribute 注入
+  var SEV_WHITELIST = { self:1, clinic:1, regional:1, medical:1, er:1 };
+  var IMP_WHITELIST = { normal:1, high:1 };
+  var sev = SEV_WHITELIST[entry.severity_color] ? entry.severity_color : 'self';
+  var importance = IMP_WHITELIST[entry.importance] ? entry.importance : 'normal';
   var dateStr = entry.date ? escapeHtml(entry.date) : '—';
   var titleStr = escapeHtml(entry.title || '（未命名事件）');
   var summaryStr = entry.summary ? escapeHtml(entry.summary) : '';
   var sourceStr = entry.source ? escapeHtml(entry.source) : '';
+  var typeStr = escapeHtml(entry.type || '');
   var icdChip = entry.icd10
     ? '<span class="tl-bento-icd" title="ICD-10">' + escapeHtml(entry.icd10) + '</span>'
     : '';
   return ''
-    + '<article class="tl-bento-card" data-severity="' + sev + '" data-importance="' + importance + '" data-type="' + escapeHtml(entry.type || '') + '">'
+    + '<article class="tl-bento-card" data-severity="' + sev + '" data-importance="' + importance + '" data-type="' + typeStr + '">'
     +   '<span class="tl-bento-date">' + dateStr + '</span>'
     +   icdChip
     +   '<h3 class="tl-bento-title">' + titleStr + '</h3>'
