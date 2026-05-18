@@ -67,7 +67,7 @@ MD.Piece **不**模仿 Epic MyChart / Athenahealth，而是聚焦三個現有大
 ## 三、工程紀律
 
 - 使用 `backend.xxx` 絕對 import
-- 所有 AI 呼叫走 `backend/services/claude_service.py`，集中加上 prompt cache、
+- 所有 AI 呼叫走 `backend/services/llm_service.py`，集中加上 prompt cache、
   信心區間輸出、來源追蹤
 - 新路由必須在 `backend/main.py` 註冊
 - PWA 需確保 Service Worker 快取病歷時加密

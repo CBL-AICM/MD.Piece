@@ -100,8 +100,7 @@ md.piece/
 │   │   ├── reports.py        # 報告生成
 │   │   └── research.py       # AutoResearch 實驗
 │   └── services/             # 業務邏輯
-│       ├── claude_service.py # Claude AI 整合
-│       └── supabase_service.py
+│       └── llm_service.py    # 多 provider LLM 整合（Claude/Ollama/Groq）
 ├── frontend/                 # PWA 前端
 │   ├── index.html
 │   ├── manifest.json
