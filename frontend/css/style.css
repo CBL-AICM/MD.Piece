@@ -5828,6 +5828,12 @@ html[data-mode="senior"] .vt-bmi-meta {
 .notebook-wrap {
   perspective: 1800px;
   padding: 12px 0;
+  /* 紙張底色是寫死的米色，文字色必須鎖死成深藏青；
+     否則 dark theme 會把 --text 轉成白色，白字配米紙會看不到（issue: 字淺到看不到了） */
+  --text:       #1F3D58;
+  --text-dim:   #5A7388;
+  --text-muted: #8FA4B5;
+  --klein:      #1F3D58;
 }
 .notebook {
   position: relative;
