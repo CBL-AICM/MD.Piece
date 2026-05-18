@@ -5026,8 +5026,8 @@ function decisionAid(opts) {
       +     '<h4 class="da-option-title">' + escapeHtml(o.label || '') + '</h4>'
       +   '</header>'
       +   '<div class="da-option-cols">'
-      +     '<div class="da-col da-col-pros"><h5>👍 利</h5><ul>' + pros + '</ul></div>'
-      +     '<div class="da-col da-col-cons"><h5>👎 弊</h5><ul>' + cons + '</ul></div>'
+      +     '<div class="da-col da-col-pros"><h5>利</h5><ul>' + pros + '</ul></div>'
+      +     '<div class="da-col da-col-cons"><h5>弊</h5><ul>' + cons + '</ul></div>'
       +   '</div>'
       +   (o.risk ? '<p class="da-option-risk"><i data-lucide="alert-triangle" style="width:13px;height:13px"></i> <strong>個人化風險：</strong>' + escapeHtml(o.risk) + '</p>' : '')
       +   (next ? '<div class="da-option-next"><strong>下一步：</strong><ul>' + next + '</ul></div>' : '')
@@ -11822,7 +11822,7 @@ function eduRenderCuratedArticleInRight(article, titleText) {
   rightEl.innerHTML =
     '<div class="nb-content-head">' +
       '<div class="nb-content-title">' + escapeHtml(titleText) +
-        ' <span style="margin-left:6px;display:inline-block;padding:2px 8px;border-radius:10px;background:#e8f5e9;color:#2e7d32;font-size:.7rem;font-weight:600;vertical-align:middle">✓ 已審稿</span>' +
+        ' <span style="margin-left:6px;display:inline-block;padding:2px 8px;border-radius:10px;background:#e8f5e9;color:#2e7d32;font-size:.7rem;font-weight:600;vertical-align:middle">已審稿</span>' +
       '</div>' +
       '<button class="secondary" data-action="back-to-list" style="padding:4px 10px;font-size:.8rem">← 章節清單</button>' +
     '</div>' +
@@ -15837,7 +15837,7 @@ function renderDiseaseResult(data) {
     + '</div>';
 
   if (data.overview) {
-    html += '<div style="margin-top:14px"><h4 style="margin:0 0 6px 0">📖 是什麼病</h4>'
+    html += '<div style="margin-top:14px"><h4 style="margin:0 0 6px 0">是什麼病</h4>'
       + '<p style="margin:0;line-height:1.7;color:var(--text-dim)">' + escapeHtml(data.overview) + '</p></div>';
   }
 
@@ -15853,7 +15853,7 @@ function renderDiseaseResult(data) {
   html += _diseaseListBlock('長期風險與併發症', 'shield-alert', data.complications);
 
   if (data.prognosis) {
-    html += '<div style="margin-top:14px"><h4 style="margin:0 0 6px 0">🌱 未來發展與預後</h4>'
+    html += '<div style="margin-top:14px"><h4 style="margin:0 0 6px 0">未來發展與預後</h4>'
       + '<p style="margin:0;line-height:1.7;color:var(--text-dim)">' + escapeHtml(data.prognosis) + '</p></div>';
   }
 
@@ -15873,7 +15873,7 @@ function renderDiseaseResult(data) {
   if (stream) {
     stream.innerHTML = ''
       + '<div style="background:var(--bg-card);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);color:var(--text-dim);font-size:0.92rem">'
-      + '👋 我整理好「<strong>' + escapeHtml(name) + '</strong>」的資訊了，有什麼想再問的嗎？例如「我該多久回診一次？」「有什麼食物要避開？」'
+      + '我整理好「<strong>' + escapeHtml(name) + '</strong>」的資訊了，有什麼想再問的嗎？例如「我該多久回診一次？」「有什麼食物要避開？」'
       + '</div>';
   }
 
