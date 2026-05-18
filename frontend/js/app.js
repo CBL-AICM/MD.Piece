@@ -5418,7 +5418,14 @@ function _fillNowCard(active) {
     pulse.setAttribute('aria-label', '住院狀態：' + typeLabel + '進行中');
   }
   var admit = active.admit_date ? new Date(active.admit_date) : null;
-  var days = admit ? Math.max(1, Math.floor((Date.now() - admit.getTime()) / 86400000) + 1) : 1;
+  // 行事曆日數差（不看時分秒），入院當天 = 第 1 天
+  var days = 1;
+  if (admit) {
+    var admitMid = new Date(admit.getFullYear(), admit.getMonth(), admit.getDate());
+    var now = new Date();
+    var nowMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    days = Math.max(1, Math.round((nowMid - admitMid) / 86400000) + 1);
+  }
   if (dayNum)  dayNum.textContent = String(days);
   if (dayLabel)dayLabel.textContent = String(days);
   if (diag)    diag.textContent = active.diagnosis || '尚未填診斷';
