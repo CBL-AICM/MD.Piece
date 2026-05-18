@@ -5437,16 +5437,6 @@ function _fillNowCard(active) {
 function _buildTodayTimeline(meds, active) {
   var todayStr = new Date().toISOString().slice(0, 10);
   var items = [];
-  // 醫師查房（預設早上 09:00）— 生活作息
-  items.push({ id: 'rounds', time: todayStr + 'T09:00', kind: 'rounds', icon: 'stethoscope', label: '主治醫師查房', group: 'life' });
-  // 三餐 — 生活作息
-  [['08:00','早餐'],['12:00','午餐'],['18:00','晚餐']].forEach(function(t, i) {
-    items.push({ id: 'meal-' + i, time: todayStr + 'T' + t[0], kind: 'meal', icon: 'utensils-crossed', label: t[1], group: 'life' });
-  });
-  // 量血壓（預設 4 次）— 生活作息
-  ['08:00','12:00','17:00','21:00'].forEach(function(t, i) {
-    items.push({ id: 'vitals-' + i, time: todayStr + 'T' + t, kind: 'vitals', icon: 'activity', label: '量測 vitals', group: 'life' });
-  });
   // 排定給藥（只取今天有 next_due_date 的）— 醫療處置
   (meds || []).forEach(function(m) {
     if (!m.next_due_date) return;
@@ -5525,7 +5515,7 @@ function _renderTimelineRail(items) {
   var rail = document.getElementById('ip-timeline-rail');
   if (!rail) return;
   if (!items || !items.length) {
-    rail.innerHTML = '<p class="ip-timeline-empty">今天目前還沒有排程任務。</p>';
+    rail.innerHTML = '<p class="ip-timeline-empty">今天還沒有排程。按右上 +排處置 加進自訂處置 / 檢查 / 給藥時程。</p>';
     return;
   }
   rail.innerHTML = items.map(function(it) {

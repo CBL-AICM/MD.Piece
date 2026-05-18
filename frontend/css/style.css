@@ -37,10 +37,10 @@
   --accent-glow:#4A90C233;
   --klein:      #1F3D58;   /* 深色強調 — deep navy text/border */
 
-  /* Secondary — sage teal (healing, calm) */
-  --teal:       #5BB5A8;
-  --teal-light: #7DC9BD;
-  --teal-glow:  #5BB5A833;
+  /* Secondary — sage teal (healing, calm) — deepened for stronger contrast */
+  --teal:       #2F8378;
+  --teal-light: #4FA095;
+  --teal-glow:  #2F837833;
 
   /* Surfaces */
   --cream:      #FFFFFF;
@@ -51,8 +51,8 @@
   --purple-glow:#8B95C555;
   --rose:       #E8A8A8;   /* soft coral — care alerts */
   --rose-glow:  #E8A8A855;
-  --success:    #6FBF8B;   /* mint green */
-  --success-glow:#6FBF8B33;
+  --success:    #3F8E5C;   /* forest green — deeper, stronger contrast */
+  --success-glow:#3F8E5C33;
   --warning:    #E8B568;   /* warm amber */
   --danger:     #D85F5F;   /* clear red */
 
@@ -607,23 +607,23 @@ img, svg, video { max-width: 100%; height: auto; }
 
 /* Light = 晨光米（Lunar Beige）— 暖米底 + 藏青字 + 星芒金強調 */
 #app-wrapper[data-theme="light"] {
-  --app-bg:         #f5ead4;   /* 淡化月光米 — body wall 不刺眼 */
-  --app-grid:       rgba(19,36,66,0.04);
+  --app-bg:         #e8d1b6;   /* Lunar Beige — 飽和暖米底，與白卡撞色 */
+  --app-grid:       rgba(19,36,66,0.05);
   --app-text:       #132442;   /* Royal Night — 主文字 */
-  --app-text-dim:   #637d92;   /* Foggy Blue — 次文字 */
-  --app-mint:       #e8d1b6;   /* Lunar Beige — active 背景 */
+  --app-text-dim:   #4a5a72;   /* Foggy Blue 加深 — 次文字撐住對比 */
+  --app-mint:       #ece0c8;   /* 米色 active 背景 */
   --app-mint-strong:#bc8909;   /* Starburst Gold — FAB / 圓點 / 邊條 */
   --app-aqua:       #1a3a63;   /* 銀河藏青 — 強調藍 */
   --app-pink:       #bc8909;   /* 星芒金 — 暖色 callout */
   --app-blue:       #637d92;   /* Foggy Blue 面板 */
   --app-term:       #bc8909;   /* Starburst Gold accent */
   --app-panel:      #fffaf0;   /* 暖白 — 卡片表面 */
-  --app-panel-soft: #ece0c8;   /* hover / 次表面 */
+  --app-panel-soft: #f3e3c5;   /* 比 bg 略深的米色 hover */
   --app-chrome-1:   #fffaf0;   /* titlebar 漸層上層 */
   --app-chrome-2:   #e8d1b6;   /* titlebar 漸層下層 */
   --app-border:     #132442;   /* Royal Night 邊框 */
-  --app-shadow:     2px 2px 0 rgba(19,36,66,0.12);
-  --app-glow:       rgba(188,137,9,0.35);
+  --app-shadow:     2px 2px 0 rgba(19,36,66,0.18);
+  --app-glow:       rgba(188,137,9,0.5);
   --app-chip-text:  #132442;   /* navy text on light chips */
   --heading-fg:     #bc8909;   /* Starburst Gold heading accent */
 }
@@ -5815,7 +5815,7 @@ html[data-mode="senior"] .vt-bmi-meta {
 .book.c-rust   { --book-color: #E2A892; }  /* 杏桃 */
 .book.c-blue   { --book-color: #B6CBDB; }  /* 霧藍 */
 .book.c-rose   { --book-color: #E1B6BF; }  /* 藕粉 */
-.book.c-green  { --book-color: #B5CCAE; }  /* 鼠尾草 */
+.book.c-green  { --book-color: #6F9C68; }  /* 鼠尾草加深 */
 .book.c-lime   { --book-color: #D2D5A8; }  /* 苔黃 */
 .book.c-purple { --book-color: #C2B6D2; }  /* 薰衣草 */
 .book.c-red    { --book-color: #DA9C9C; }  /* 玫瑰紅 */
@@ -12366,7 +12366,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   border-radius: 100px; font-size: 0.88rem;
   margin: 3px 4px 3px 0;
 }
-#app-wrapper[data-theme="dark"] .diet-chip-good { color: #7ed4b8; }
+#app-wrapper[data-theme="dark"] .diet-chip-good { color: #3fa685; }
 
 /* 餐別 tab */
 .diet-meal-tabs {
@@ -12491,7 +12491,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   border-radius: 100px; font-weight: 600;
   font-size: 0.8rem;
 }
-#app-wrapper[data-theme="dark"] .diet-pick-cal-tag { color: #7ed4b8; }
+#app-wrapper[data-theme="dark"] .diet-pick-cal-tag { color: #3fa685; }
 
 .diet-pick-flags {
   display: flex; flex-direction: column; gap: 4px;
@@ -12823,7 +12823,7 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   color: #2E7A3F;
   border: 1px solid rgba(93, 170, 114, 0.3);
 }
-#app-wrapper[data-theme="dark"] .diet-pick-btn.quiet { color: #7ed4b8; }
+#app-wrapper[data-theme="dark"] .diet-pick-btn.quiet { color: #3fa685; }
 
 
 /* 手機 */
