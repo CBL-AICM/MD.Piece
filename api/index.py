@@ -14,7 +14,7 @@ from backend.routers import (
     reports, triage, xiaohe,
     records, research, auth,
     doctor_notes, medication_changes, alerts, labs, diet,
-    debug, drug_search, diseases, reminders, bell_reminders,
+    drug_search, diseases, reminders, bell_reminders,
     admissions, timeline,
 )
 
@@ -78,7 +78,6 @@ app.include_router(bell_reminders.router, prefix="/reminders", tags=["reminders"
 app.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 app.include_router(admissions.router, prefix="/admissions", tags=["admissions"])
 app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
-app.include_router(debug.router, prefix="/debug", tags=["debug"])
 
 
 @app.get("/api")
