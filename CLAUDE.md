@@ -7,7 +7,7 @@ MD.Piece 是一個 PWA 醫療輔助平台，支援醫病溝通與症狀分析。
 - **後端**：FastAPI（Python），port 8000
 - **前端**：Vanilla JS PWA，port 3000（`python -m http.server`）
 - **資料庫**：Supabase（PostgreSQL）
-- **AI 服務**：Claude API（透過 `backend/services/claude_service.py`）
+- **AI 服務**：Claude / Ollama / Groq 多 provider（透過 `backend/services/llm_service.py`）
 - **MCP Server**：`mcp_server/server.py`，連接 backend API
 
 ---
@@ -29,8 +29,7 @@ md.piece/
 │   │   ├── education.py         # 衛教資訊
 │   │   └── xiaohe.py            # 小核功能
 │   ├── services/
-│   │   ├── claude_service.py    # Claude AI 整合
-│   │   └── supabase_service.py  # Supabase 整合
+│   │   └── llm_service.py       # 多 provider LLM 整合（Claude/Ollama/Groq）
 │   └── utils/
 │       ├── triage_rules.py      # 分診規則
 │       ├── baseline.py          # 基準值
