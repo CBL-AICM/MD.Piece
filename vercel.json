@@ -92,8 +92,8 @@
     { "src": "/admissions", "dest": "api/index.py" },
     { "src": "/reminders/(.*)", "dest": "api/index.py" },
     { "src": "/reminders", "dest": "api/index.py" },
-    { "src": "/debug/(.*)", "dest": "api/index.py" },
-    { "src": "/debug", "dest": "api/index.py" },
+    { "src": "/timeline/(.*)", "dest": "api/index.py" },
+    { "src": "/timeline", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
 }
