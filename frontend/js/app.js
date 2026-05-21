@@ -2191,16 +2191,28 @@ function switchAuthTab(tab) {
 function onRegAvatarPicked(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  shrinkImageToDataUrl(file, 320, 0.85).then(dataUrl => {
+  const input = e.target;
+  // iOS HEIC 有時 file.type 是空字串；只在明確不是圖片時擋
+  if (file.type && file.type.indexOf('image/') !== 0) {
+    if (typeof showToast === 'function') showToast('請選擇圖片檔', 'warning');
+    try { input.value = ''; } catch (_) {}
+    return;
+  }
+  prepareAvatarDataUrl(file).then(dataUrl => {
     _regAvatarDataUrl = dataUrl;
     const img = document.getElementById('reg-avatar-img');
     const ph = document.getElementById('reg-avatar-placeholder');
     const clr = document.getElementById('reg-avatar-clear');
-    img.src = dataUrl;
-    img.hidden = false;
+    if (img) { img.src = dataUrl; img.hidden = false; }
     if (ph) ph.hidden = true;
     if (clr) clr.hidden = false;
-  }).catch(() => showAuthError('register', '圖片讀取失敗'));
+    if (typeof showToast === 'function') showToast('頭像已準備好，記得按「建立帳號」儲存', 'success');
+  }).catch(err => {
+    console.warn('[avatar] register pick failed', err);
+    try { input.value = ''; } catch (_) {}
+    if (typeof showToast === 'function') showToast(err && err.message ? err.message : '頭像讀取失敗', 'error');
+    showAuthError('register', err && err.message ? err.message : '頭像讀取失敗');
+  });
 }
 
 function clearRegAvatar() {
@@ -2234,6 +2246,37 @@ function shrinkImageToDataUrl(file, maxSize, quality) {
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+// 共用的「相機/相簿照片 → 適合當頭像的 dataURL」管線：
+// - 偵測 HEIC（iPhone 預設）並先轉成 JPEG，避免 Android Chrome / Samsung 直接掛掉
+// - 透過 memoCompressImage 走 createImageBitmap → Object URL 兩段 fallback，比單純
+//   FileReader→<img> 在大型 / 旋轉過的相簿照片上穩很多
+// - 失敗時拋出帶人話訊息的 Error，呼叫端可以直接顯示給使用者
+function prepareAvatarDataUrl(file) {
+  const maxDim = 320;
+  const quality = 0.85;
+  let pipeline;
+  if (typeof memoIsHeic === 'function' && memoIsHeic(file)) {
+    if (typeof showToast === 'function') showToast('照片是 HEIC 格式，正在轉檔…', 'info');
+    pipeline = memoConvertHeicToJpeg(file).catch(err => {
+      console.warn('[avatar] HEIC convert failed', err);
+      throw new Error('HEIC 轉檔失敗 — 請改用 JPEG（iPhone 設定 → 相機 → 格式 → 相容）');
+    });
+  } else {
+    pipeline = Promise.resolve(file);
+  }
+  return pipeline.then(usable => {
+    if (typeof memoCompressImage === 'function') {
+      return memoCompressImage(usable, maxDim, quality).then(r => r.dataUrl);
+    }
+    return shrinkImageToDataUrl(usable, maxDim, quality);
+  }).then(dataUrl => {
+    if (typeof memoIsValidDataUrl === 'function' && !memoIsValidDataUrl(dataUrl)) {
+      throw new Error('頭像讀取失敗，請換一張');
+    }
+    return dataUrl;
   });
 }
 
@@ -2439,21 +2482,38 @@ function loadAccountPage() {
 async function onAccountAvatarPicked(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
+  const input = e.target;
   const u = getCurrentUser();
   if (!u) return;
+  if (file.type && file.type.indexOf('image/') !== 0) {
+    if (typeof showToast === 'function') showToast('請選擇圖片檔', 'warning');
+    try { input.value = ''; } catch (_) {}
+    return;
+  }
   try {
-    const dataUrl = await shrinkImageToDataUrl(file, 320, 0.85);
+    if (typeof showToast === 'function') showToast('正在處理頭像…', 'info');
+    const dataUrl = await prepareAvatarDataUrl(file);
     const res = await fetch(`${API}/auth/user/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ avatar_url: dataUrl })
     });
-    if (!res.ok) throw new Error('更新頭像失敗');
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).detail || ''; } catch (_) {}
+      if (res.status === 413) throw new Error('頭像檔案過大，請換一張小一點的照片');
+      throw new Error(detail || `更新頭像失敗（HTTP ${res.status}）`);
+    }
     const updated = await res.json();
     setCurrentUser({ ...u, ...updated });
+    if (typeof showToast === 'function') showToast('頭像已更新', 'success');
     showPage('account');
   } catch (err) {
-    showAccountMsg('acct-profile-msg', err.message || '更新頭像失敗', true);
+    console.warn('[avatar] account update failed', err);
+    try { input.value = ''; } catch (_) {}
+    const msg = err && err.message ? err.message : '更新頭像失敗';
+    if (typeof showToast === 'function') showToast(msg, 'error');
+    showAccountMsg('acct-profile-msg', msg, true);
   }
 }
 
