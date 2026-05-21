@@ -5118,6 +5118,7 @@ function decisionAid(opts) {
 // 解出的文字 + 推論的日期、種類存進 localStorage。
 // 視覺化：時間軸卡片 (最新在前)，可篩選類型。
 var _TIMELINE_KEY = 'mdpiece_timeline_entries';
+var _TIMELINE_TIP_DISMISSED_KEY = 'mdpiece_timeline_first_tip_dismissed';
 var _TIMELINE_KINDS = [
   { id: 'lab',    label: '檢驗報告', icon: 'flask-conical', color: 'blue'    },
   { id: 'rx',     label: '處方箋',   icon: 'pill',          color: 'amber'   },
@@ -5130,6 +5131,20 @@ function _getTimelineEntries() {
 }
 function _saveTimelineEntries(list) {
   localStorage.setItem(_TIMELINE_KEY, JSON.stringify(list));
+}
+function _hasDismissedTimelineTip() {
+  try { return localStorage.getItem(_TIMELINE_TIP_DISMISSED_KEY) === '1'; }
+  catch (e) { return false; }
+}
+function dismissTimelineFirstTip() {
+  try { localStorage.setItem(_TIMELINE_TIP_DISMISSED_KEY, '1'); } catch (e) {}
+  var tip = document.getElementById('tl-first-tip');
+  if (tip) tip.remove();
+}
+// 把 box 切到單一模式：list / bento / onboard
+function _setTimelineBoxMode(box, mode) {
+  ['tl-list', 'tl-bento', 'tl-onboard-wrap'].forEach(function(c) { box.classList.remove(c); });
+  box.classList.add(mode);
 }
 
 function timeline() {
@@ -5188,10 +5203,16 @@ function _renderLocalTimeline(box) {
   if (_tlFilter !== 'all') entries = entries.filter(function(e) { return e.kind === _tlFilter; });
   entries.sort(function(a, b) { return a.date < b.date ? 1 : -1; });
   if (!entries.length) {
-    box.innerHTML = '<p class="tl-empty">尚未有任何紀錄。點右上「上傳」加入第一份報告或處方箋。</p>';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (_tlFilter === 'all') {
+      _renderTimelineOnboarding(box);
+    } else {
+      _setTimelineBoxMode(box, 'tl-list');
+      box.innerHTML = '<p class="tl-empty">這個分類目前沒有紀錄。點上方「全部」看其他項目，或點右上「上傳」新增一筆。</p>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
     return;
   }
+  _setTimelineBoxMode(box, 'tl-list');
   box.innerHTML = entries.map(function(e) {
     var k = _TIMELINE_KINDS.find(function(x) { return x.id === e.kind; }) || _TIMELINE_KINDS[3];
     return ''
@@ -5215,6 +5236,84 @@ function _renderLocalTimeline(box) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// 第一次使用引導：完全沒卡片時的空狀態（含示範卡片 + 箭頭指向上傳鈕）
+function _renderTimelineOnboarding(box) {
+  _setTimelineBoxMode(box, 'tl-onboard-wrap');
+  // 進入引導畫面前移除舊提示橫幅
+  var oldTip = document.getElementById('tl-first-tip');
+  if (oldTip) oldTip.remove();
+  box.innerHTML = ''
+    + '<section class="tl-onboard" aria-label="第一次使用引導">'
+    +   '<div class="tl-onboard-hero">'
+    +     '<div class="tl-onboard-icon"><i data-lucide="upload-cloud"></i></div>'
+    +     '<div class="tl-onboard-arrow" aria-hidden="true">'
+    +       '<i data-lucide="corner-right-up"></i>'
+    +       '<span>點右上「↑ 上傳」</span>'
+    +     '</div>'
+    +   '</div>'
+    +   '<h3 class="tl-onboard-title">把散在各家醫院的紀錄，收進一條時間軸</h3>'
+    +   '<p class="tl-onboard-sub">拍張藥袋、檢驗單或報告，OCR 在你手機上跑、不上傳雲端。下次看診一頁拿給醫師。</p>'
+    +   '<ul class="tl-onboard-kinds">'
+    +     '<li class="tl-onboard-kind tl-onboard-kind-blue">'
+    +       '<span class="tl-onboard-kind-ic"><i data-lucide="flask-conical"></i></span>'
+    +       '<strong>檢驗報告</strong>'
+    +       '<em>抽血 / 尿液 / 生化</em>'
+    +     '</li>'
+    +     '<li class="tl-onboard-kind tl-onboard-kind-amber">'
+    +       '<span class="tl-onboard-kind-ic"><i data-lucide="pill"></i></span>'
+    +       '<strong>處方箋</strong>'
+    +       '<em>領藥單 / 藥袋拍照</em>'
+    +     '</li>'
+    +     '<li class="tl-onboard-kind tl-onboard-kind-purple">'
+    +       '<span class="tl-onboard-kind-ic"><i data-lucide="scan-line"></i></span>'
+    +       '<strong>影像報告</strong>'
+    +       '<em>X 光 / CT / MRI 文字</em>'
+    +     '</li>'
+    +   '</ul>'
+    +   '<div class="tl-onboard-demo">'
+    +     '<span class="tl-onboard-demo-label">看起來會像這樣</span>'
+    +     '<article class="tl-card tl-card-blue tl-onboard-demo-card" aria-hidden="true">'
+    +       '<header class="tl-card-head">'
+    +         '<span class="tl-card-icon"><i data-lucide="flask-conical"></i></span>'
+    +         '<div class="tl-card-meta">'
+    +           '<span class="tl-card-kind">檢驗報告</span>'
+    +           '<span class="tl-card-date">2026-05-14</span>'
+    +         '</div>'
+    +       '</header>'
+    +       '<h3 class="tl-card-title">CRP 抽血追蹤</h3>'
+    +       '<p class="tl-card-summary">CRP 12.4 mg/L（偏高）、WBC 7.8、Hb 13.1。建議 2 週後複檢。</p>'
+    +     '</article>'
+    +   '</div>'
+    +   '<button type="button" class="tl-onboard-cta" onclick="openTimelineUploader()">'
+    +     '<i data-lucide="upload"></i><span>上傳第一筆</span>'
+    +   '</button>'
+    + '</section>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 有後端資料、但使用者還沒自己上傳過 → 在卡片列表上方顯示一行可關閉的提示
+function _maybeRenderTimelineFirstTip() {
+  var existing = document.getElementById('tl-first-tip');
+  if (existing) existing.remove();   // 重新渲染前先移除舊的
+  if (_tlFilter !== 'all') return;
+  if (_hasDismissedTimelineTip()) return;
+  if (_getTimelineEntries().length > 0) return;   // 已上傳過，不再提示
+  var list = document.getElementById('tl-list');
+  if (!list || !list.parentNode) return;
+  var tip = document.createElement('aside');
+  tip.id = 'tl-first-tip';
+  tip.className = 'tl-first-tip';
+  tip.innerHTML = ''
+    + '<span class="tl-first-tip-ic"><i data-lucide="lightbulb"></i></span>'
+    + '<div class="tl-first-tip-body">'
+    +   '<strong>還可以加你自己拍的紀錄</strong>'
+    +   '<span>檢驗單、藥袋、影像報告都行，OCR 抽出重點後留在這台手機。</span>'
+    + '</div>'
+    + '<button type="button" class="tl-first-tip-go" onclick="openTimelineUploader()">試一次</button>'
+    + '<button type="button" class="tl-first-tip-x" onclick="dismissTimelineFirstTip()" aria-label="關閉提示"><i data-lucide="x" style="width:14px;height:14px"></i></button>';
+  list.parentNode.insertBefore(tip, list);
+}
+
 // 從後端拉時間軸並渲染成 Bento Grid。
 // 回傳 Promise<boolean>：true = 已渲染（含「沒資料」狀態），false = 拉不到或 DB offline，呼叫端應 fallback。
 async function loadServerTimeline() {
@@ -5234,14 +5333,21 @@ async function loadServerTimeline() {
         return e.type === _tlFilter;
       });
     }
-    box.classList.add('tl-bento');
-    box.classList.remove('tl-list');
     if (!entries.length) {
-      box.innerHTML = '<p class="tl-bento-empty">// 後端尚無事件。先上傳你的第一份檢驗報告或處方箋。</p>';
-      if (typeof lucide !== 'undefined') lucide.createIcons();
+      // 後端 0 筆、但本機有自上傳 → 讓 caller fallback 到本機渲染，避免使用者上傳的卡片被空狀態蓋掉
+      if (_getTimelineEntries().length > 0) return false;
+      if (_tlFilter === 'all') {
+        _renderTimelineOnboarding(box);
+      } else {
+        _setTimelineBoxMode(box, 'tl-bento');
+        box.innerHTML = '<p class="tl-bento-empty">這個分類目前沒有紀錄。點上方「全部」看其他項目，或點右上「上傳」新增一筆。</p>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
       return true;
     }
+    _setTimelineBoxMode(box, 'tl-bento');
     box.innerHTML = entries.map(_renderTimelineBentoCard).join('');
+    _maybeRenderTimelineFirstTip();
     if (typeof lucide !== 'undefined') lucide.createIcons();
     return true;
   } catch (e) {
