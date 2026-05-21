@@ -16203,3 +16203,353 @@ html.elder-mode .tl-bento-card[data-importance="high"],
 html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
   grid-column: 1 / -1;
 }
+
+/* ─── Follow-ups 回診排程頁 ───────────────────────────────── */
+.fu-page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-10);
+  color: var(--app-text);
+}
+.fu-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+.fu-eyebrow {
+  margin: 0 0 4px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem;
+  color: var(--app-term);
+  opacity: 0.85;
+}
+.fu-title {
+  margin: 0 0 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.4rem;
+  color: var(--app-text);
+}
+.fu-title i { width: 20px; height: 20px; color: var(--app-term); }
+.fu-sub {
+  margin: 0;
+  color: var(--app-text-dim);
+  font-size: 0.92rem;
+  max-width: 540px;
+}
+.fu-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--app-term);
+  color: var(--app-chip-text);
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+.fu-add-btn:hover { filter: brightness(0.93); }
+.fu-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+.fu-filter {
+  padding: 6px 14px;
+  background: var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-text-dim);
+  cursor: pointer;
+  font-family: inherit;
+}
+.fu-filter:hover { background: var(--app-chrome-1); color: var(--app-text); }
+.fu-filter.is-active {
+  background: var(--app-term);
+  color: var(--app-chip-text);
+  border-color: var(--app-term);
+}
+.fu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fu-empty {
+  text-align: center;
+  color: var(--app-text-dim);
+  padding: 32px 16px;
+  font-size: 0.92rem;
+}
+.fu-card {
+  background: var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--app-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 4px solid var(--app-term);
+}
+.fu-card.fu-status-completed { border-left-color: #22c55e; opacity: 0.85; }
+.fu-card.fu-status-missed { border-left-color: #f97316; }
+.fu-card.fu-status-cancelled { border-left-color: #94a3b8; opacity: 0.7; }
+.fu-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fu-card-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+}
+.fu-card-date i { width: 16px; height: 16px; color: var(--app-term); }
+.fu-card-date strong {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.08rem;
+  color: var(--app-text);
+}
+.fu-card-session {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--app-term);
+  color: var(--app-chip-text);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+.fu-card-status {
+  font-size: 0.85rem;
+  color: var(--app-text-dim);
+  font-weight: 600;
+}
+.fu-status-completed .fu-card-status { color: #16a34a; }
+.fu-status-missed .fu-card-status { color: #ea580c; }
+.fu-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--app-text-dim);
+  font-size: 0.9rem;
+}
+.fu-card-meta i { width: 14px; height: 14px; }
+.fu-card-notes {
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  background: var(--app-panel-soft);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: var(--app-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.fu-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.fu-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--app-text);
+  cursor: pointer;
+  font-family: inherit;
+}
+.fu-card-action:hover { background: var(--app-chrome-1); }
+.fu-card-action i { width: 13px; height: 13px; }
+.fu-action-done { background: #16a34a; color: #fff; border-color: #16a34a; }
+.fu-action-done:hover { filter: brightness(0.95); background: #15803d; }
+.fu-action-miss { color: #ea580c; }
+.fu-action-del { color: #dc2626; }
+.fu-disclaimer {
+  margin-top: var(--space-5);
+  font-size: 0.82rem;
+  color: var(--app-text-dim);
+  text-align: center;
+}
+
+/* Follow-up editor modal */
+.fu-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+.fu-modal {
+  background: var(--app-panel);
+  border: 1.5px solid var(--app-border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
+  color: var(--app-text);
+}
+.fu-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--app-border);
+}
+.fu-modal-head h3 {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+}
+.fu-modal-head h3 i { width: 18px; height: 18px; color: var(--app-term); }
+.fu-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--app-text-dim);
+  line-height: 1;
+  padding: 0 4px;
+}
+.fu-modal-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fu-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--app-text-dim);
+}
+.fu-modal-field span { font-weight: 600; color: var(--app-text); }
+.fu-modal-field input[type="text"],
+.fu-modal-field input[type="date"],
+.fu-modal-field textarea {
+  padding: 9px 12px;
+  border: 1.5px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-panel-soft);
+  color: var(--app-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+.fu-modal-field textarea { resize: vertical; }
+.fu-modal-field input:focus,
+.fu-modal-field textarea:focus {
+  outline: none;
+  border-color: var(--app-term);
+}
+.fu-modal-session {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fu-modal-session label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+.fu-modal-session label:has(input:checked) {
+  background: var(--app-term);
+  color: var(--app-chip-text);
+  border-color: var(--app-term);
+}
+.fu-modal-session input { margin: 0; }
+.fu-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--app-border);
+}
+.fu-modal-cancel,
+.fu-modal-save {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-family: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.fu-modal-cancel {
+  background: var(--app-panel-soft);
+  border: 1.5px solid var(--app-border);
+  color: var(--app-text);
+}
+.fu-modal-save {
+  background: var(--app-term);
+  color: var(--app-chip-text);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fu-modal-save i { width: 14px; height: 14px; }
+
+/* Pieces 頁「最近回診」mini-card */
+.pz-nearest-wrap { min-height: 56px; }
+.pz-nearest {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 4px;
+}
+.pz-nearest-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.1rem;
+  color: var(--app-text);
+}
+.pz-nearest-countdown {
+  font-size: 0.88rem;
+  color: var(--app-term);
+  font-weight: 600;
+}
+.pz-nearest-meta {
+  font-size: 0.85rem;
+  color: var(--app-text-dim);
+}
+.pz-nearest-empty {
+  padding: 8px 4px;
+  color: var(--app-text-dim);
+  font-size: 0.9rem;
+}
+.pz-nearest-empty p { margin: 0 0 8px; }

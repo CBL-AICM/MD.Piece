@@ -239,3 +239,26 @@ class BellSoundCreate(BaseModel):
     duration_sec: float | None = None
     file_size_bytes: int | None = None
     mime_type: str | None = None
+
+
+# ─── Follow-up appointments (多筆回診排程) ────────────────
+
+class FollowUpCreate(BaseModel):
+    patient_id: str
+    scheduled_date: str  # 'YYYY-MM-DD'
+    session: str | None = None  # 'am' | 'pm' | None
+    department: str | None = None  # 科別，例如「心臟內科」
+    hospital: str | None = None  # 醫院，例如「台大醫院」
+    doctor_name: str | None = None
+    status: str = "scheduled"  # scheduled | completed | missed | cancelled
+    notes: str | None = None
+
+
+class FollowUpUpdate(BaseModel):
+    scheduled_date: str | None = None
+    session: str | None = None
+    department: str | None = None
+    hospital: str | None = None
+    doctor_name: str | None = None
+    status: str | None = None
+    notes: str | None = None
