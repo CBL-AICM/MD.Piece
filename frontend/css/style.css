@@ -16394,12 +16394,39 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
 .fu-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(8, 14, 26, 0.78);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
   padding: 16px;
+  animation: vm-fade .18s ease;
+  /* overlay 直接掛在 body 上，不會繼承 #app-wrapper 的 --app-* vars，
+     所以這裡顯式重宣告（淺色預設）— 跟 .visit-modal-overlay 一致 */
+  --app-bg:         #FFFFFF;
+  --app-text:       #1F3D58;
+  --app-text-dim:   #5A7388;
+  --app-panel:      #FFFFFF;
+  --app-panel-soft: #F7F9FC;
+  --app-border:     #1F3D58;
+  --app-term:       #4A90C2;
+  --app-glow:       rgba(74,144,194,0.35);
+  --app-chip-text:  #5C3A32;
+}
+.fu-modal-overlay[data-theme="dark"] {
+  --app-bg:         #1F3553;
+  --app-text:       #F1F6FF;
+  --app-text-dim:   #BFD2EC;
+  --app-panel:      #2E4F7C;
+  --app-panel-soft: #3D6499;
+  --app-border:     rgba(195,225,255,0.5);
+  --app-term:       #6CF0D8;
+  --app-glow:       rgba(108,240,216,0.5);
+  --app-chip-text:  #0B1F25;
+}
+.fu-modal-overlay[data-theme="dark"] .fu-modal-field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
 }
 .fu-modal {
   background: var(--app-panel);
