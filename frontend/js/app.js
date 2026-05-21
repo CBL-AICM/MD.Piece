@@ -2088,7 +2088,8 @@ const pageSlugForTerminal = {
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', chat: 'med-chat', account: 'account',
   settings: 'settings', diet: 'diet',
-  records: 'records', doctors: 'doctors'
+  records: 'records', doctors: 'doctors',
+  followUps: 'follow-ups'
 };
 
 // Track the current page so we can re-render on language switch
@@ -2105,7 +2106,8 @@ function showPage(page) {
   const pages = {
     home, symptoms, symptomsAnalyze, doctors, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
-    drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline
+    drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
+    followUps
   };
   // Page transition
   app.style.opacity = '0';
@@ -2135,6 +2137,7 @@ function showPage(page) {
     if (page === "vitals") loadDoctorMeasurementRequests();
     if (page === "admissions") loadAdmissionsPage();
     if (page === "timeline") loadTimelinePage();
+    if (page === "followUps") loadFollowUpsPage();
     // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
     if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
@@ -3926,6 +3929,7 @@ function home() {
           ${homeSecondCard('memo','sticky-note','Memo','想問醫師的事都丟這','purple')}
           ${homeSecondCard('admissions','hospital','住院 / 療程','急性住院 · 打藥週期','mint')}
           ${homeSecondCard('reminders','bell-ring','提醒通知','服藥 · 回診倒數','amber')}
+          ${homeSecondCard('followUps','calendar-clock','回診排程','多筆回診 · 科別醫院','teal')}
           ${homeSecondCard('doctors','stethoscope','我的醫師','跟著我的醫療團隊','blue')}
         </div>
       </section>
@@ -12035,12 +12039,9 @@ function pieces() {
     + '      <ul class="pz-cat-list">' + topCatsHtml + '</ul>\n'
     + '    </section>\n'
     + '    <section class="pz-block">\n'
-    + '      <h3 class="pz-block-title"><i data-lucide="calendar-clock"></i> 回診日期</h3>\n'
-    + '      <ul class="pz-visit">\n'
-    + '        <li><span>上次回診</span><strong>' + piecesFormatDate(s.visitDates.lastVisit) + (s.visitDates.lastVisitSession ? (' <em class="pz-visit-session">' + escapeHtml(sessionLabel(s.visitDates.lastVisitSession)) + '</em>') : '') + '</strong></li>\n'
-    + '        <li><span>下次回診</span><strong>' + piecesFormatDate(s.visitDates.nextVisit) + (s.visitDates.nextVisitSession ? (' <em class="pz-visit-session">' + escapeHtml(sessionLabel(s.visitDates.nextVisitSession)) + '</em>') : '') + '</strong></li>\n'
-    + '      </ul>\n'
-    + '      <button class="pz-link-btn" onclick="openVisitDatePrompt()"><i data-lucide="calendar-cog"></i> 設定回診日期</button>\n'
+    + '      <h3 class="pz-block-title"><i data-lucide="calendar-clock"></i> 最近回診</h3>\n'
+    + '      <div id="pz-nearest-followup" class="pz-nearest-wrap"><p class="pz-empty">// 載入中…</p></div>\n'
+    + '      <button class="pz-link-btn" onclick="navigateTo(\'followUps\',null)"><i data-lucide="calendar-clock"></i> 查看所有回診排程</button>\n'
     + '    </section>\n'
     + '  </div>\n'
     + '\n'
@@ -12060,6 +12061,8 @@ function pieces() {
 
 function loadPiecesPage() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  // 拉「最近回診」（多筆回診排程中最近一筆 scheduled）
+  if (typeof refreshNearestFollowUpCard === 'function') refreshNearestFollowUpCard();
   // 抓藥物統計
   try {
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
@@ -16979,6 +16982,366 @@ function deleteAdmissionMedication(medId, admissionId) {
     })
     .catch(function(e) { showToast('刪除失敗：' + e.message, 'error'); });
 }
+
+// ─── 回診排程（多筆 follow-up appointments） ─────────────────
+// 一個病患可以同時有多筆未來回診（不同科別／醫院／時段），與舊的
+// 單筆 nextVisit / lastVisit localStorage 並存：localStorage 還是
+// 給首頁 chip 與 Pieces 頁「最近回診」的快速顯示用，這頁才是完整 CRUD。
+var _followUpsCache = null;
+
+function _foDateOnly(d) {
+  if (!d) return '';
+  var s = String(d).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+}
+function _foFormatDate(iso) {
+  var s = _foDateOnly(iso);
+  if (!s) return '—';
+  return s.replace(/-/g, '/');
+}
+function _foDaysFrom(iso) {
+  var s = _foDateOnly(iso);
+  if (!s) return null;
+  var t = new Date(s + 'T00:00:00').getTime();
+  var n = new Date(); n.setHours(0, 0, 0, 0);
+  return Math.round((t - n.getTime()) / 86400000);
+}
+function _foStatusLabel(st) {
+  if (st === 'completed') return '已完成';
+  if (st === 'missed') return '未到';
+  if (st === 'cancelled') return '取消';
+  return '已排定';
+}
+function _foSessionLabel(s) {
+  if (s === 'am') return '上午診';
+  if (s === 'pm') return '下午診';
+  return '';
+}
+
+function fetchFollowUps() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return Promise.resolve([]);
+  return fetch(API + '/follow-ups/?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : { follow_ups: [] }; })
+    .then(function(d) { return (d && d.follow_ups) || []; })
+    .catch(function() { return []; });
+}
+
+function fetchNearestFollowUp() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return Promise.resolve(null);
+  return fetch(API + '/follow-ups/nearest?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : { follow_up: null }; })
+    .then(function(d) { return d && d.follow_up; })
+    .catch(function() { return null; });
+}
+
+function followUps() {
+  return ''
+    + '<section class="fu-page">'
+    +   '<header class="fu-head">'
+    +     '<div>'
+    +       '<p class="fu-eyebrow">// follow_ups &gt; scheduled</p>'
+    +       '<h2 class="fu-title"><i data-lucide="calendar-clock"></i> 回診排程</h2>'
+    +       '<p class="fu-sub">把所有預定的回診（不同科別、不同醫院都可以）放在這裡，方便一次掌握。</p>'
+    +     '</div>'
+    +     '<button type="button" class="fu-add-btn" onclick="openFollowUpEditor()">'
+    +       '<i data-lucide="plus" style="width:14px;height:14px"></i><span>新增回診</span>'
+    +     '</button>'
+    +   '</header>'
+    +   '<div class="fu-filters" id="fu-filters">'
+    +     '<button type="button" class="fu-filter is-active" data-filter="upcoming" onclick="filterFollowUps(\'upcoming\')">即將到來</button>'
+    +     '<button type="button" class="fu-filter" data-filter="all" onclick="filterFollowUps(\'all\')">全部</button>'
+    +     '<button type="button" class="fu-filter" data-filter="completed" onclick="filterFollowUps(\'completed\')">已完成</button>'
+    +   '</div>'
+    +   '<div class="fu-list" id="fu-list"><p class="fu-empty">// 載入中…</p></div>'
+    +   '<p class="fu-disclaimer">這裡的回診排程只供你個人提醒使用，並不會自動掛號。請依照各醫院掛號流程確認時段。</p>'
+    + '</section>';
+}
+
+var _fuFilter = 'upcoming';
+function filterFollowUps(kind) {
+  _fuFilter = kind;
+  document.querySelectorAll('#fu-filters .fu-filter').forEach(function(btn) {
+    btn.classList.toggle('is-active', btn.dataset.filter === kind);
+  });
+  renderFollowUpList();
+}
+
+function loadFollowUpsPage() {
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  fetchFollowUps().then(function(rows) {
+    _followUpsCache = rows;
+    renderFollowUpList();
+  });
+}
+
+function renderFollowUpList() {
+  var box = document.getElementById('fu-list');
+  if (!box) return;
+  var rows = _followUpsCache || [];
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  var filtered = rows.slice();
+  if (_fuFilter === 'upcoming') {
+    filtered = filtered.filter(function(r) {
+      return r.status === 'scheduled' && _foDateOnly(r.scheduled_date) >= todayStr;
+    });
+    filtered.sort(function(a, b) { return _foDateOnly(a.scheduled_date) < _foDateOnly(b.scheduled_date) ? -1 : 1; });
+  } else if (_fuFilter === 'completed') {
+    filtered = filtered.filter(function(r) { return r.status === 'completed'; });
+    filtered.sort(function(a, b) { return _foDateOnly(a.scheduled_date) > _foDateOnly(b.scheduled_date) ? -1 : 1; });
+  } else {
+    filtered.sort(function(a, b) { return _foDateOnly(a.scheduled_date) > _foDateOnly(b.scheduled_date) ? -1 : 1; });
+  }
+  if (!filtered.length) {
+    var msg = _fuFilter === 'upcoming'
+      ? '尚未排定任何回診。點右上「新增回診」加入第一筆。'
+      : (_fuFilter === 'completed' ? '還沒有已完成的回診紀錄。' : '尚未有任何回診紀錄。');
+    box.innerHTML = '<p class="fu-empty">' + msg + '</p>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+  box.innerHTML = filtered.map(_renderFollowUpCard).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _renderFollowUpCard(row) {
+  var status = row.status || 'scheduled';
+  var days = _foDaysFrom(row.scheduled_date);
+  var countdown = '';
+  if (status === 'scheduled' && days !== null) {
+    if (days > 0) countdown = '還有 ' + days + ' 天';
+    else if (days === 0) countdown = '就是今天';
+    else countdown = '已過期 ' + (-days) + ' 天';
+  }
+  var sess = _foSessionLabel(row.session);
+  var dept = row.department ? escapeHtml(row.department) : '';
+  var hosp = row.hospital ? escapeHtml(row.hospital) : '';
+  var doctor = row.doctor_name ? escapeHtml(row.doctor_name) : '';
+  var notes = row.notes ? escapeHtml(row.notes) : '';
+  var meta = [dept, hosp].filter(Boolean).join(' · ');
+  var safeId = escapeHtml(row.id);
+  var doneBtn = status === 'scheduled'
+    ? '<button type="button" class="fu-card-action fu-action-done" onclick="markFollowUpStatus(\'' + safeId + '\',\'completed\')"><i data-lucide="check"></i>已回診</button>'
+    : '';
+  var missBtn = (status === 'scheduled' && days !== null && days < 0)
+    ? '<button type="button" class="fu-card-action fu-action-miss" onclick="markFollowUpStatus(\'' + safeId + '\',\'missed\')"><i data-lucide="calendar-x-2"></i>未到</button>'
+    : '';
+  var reopenBtn = (status !== 'scheduled')
+    ? '<button type="button" class="fu-card-action fu-action-reopen" onclick="markFollowUpStatus(\'' + safeId + '\',\'scheduled\')"><i data-lucide="rotate-ccw"></i>恢復為已排定</button>'
+    : '';
+  return ''
+    + '<article class="fu-card fu-status-' + status + '">'
+    +   '<div class="fu-card-head">'
+    +     '<div class="fu-card-date">'
+    +       '<i data-lucide="calendar"></i>'
+    +       '<strong>' + _foFormatDate(row.scheduled_date) + '</strong>'
+    +       (sess ? '<span class="fu-card-session" data-session="' + escapeHtml(row.session) + '">' + escapeHtml(sess) + '</span>' : '')
+    +     '</div>'
+    +     '<span class="fu-card-status">' + _foStatusLabel(status) + (countdown ? '（' + countdown + '）' : '') + '</span>'
+    +   '</div>'
+    +   (meta ? '<div class="fu-card-meta"><i data-lucide="building-2"></i><span>' + meta + '</span></div>' : '')
+    +   (doctor ? '<div class="fu-card-meta"><i data-lucide="stethoscope"></i><span>' + doctor + '</span></div>' : '')
+    +   (notes ? '<p class="fu-card-notes">' + notes + '</p>' : '')
+    +   '<div class="fu-card-actions">'
+    +     doneBtn
+    +     missBtn
+    +     reopenBtn
+    +     '<button type="button" class="fu-card-action" onclick="openFollowUpEditor(\'' + safeId + '\')"><i data-lucide="pencil"></i>編輯</button>'
+    +     '<button type="button" class="fu-card-action fu-action-del" onclick="deleteFollowUp(\'' + safeId + '\')"><i data-lucide="trash-2"></i>刪除</button>'
+    +   '</div>'
+    + '</article>';
+}
+
+function openFollowUpEditor(id) {
+  var existing = null;
+  if (id && _followUpsCache) {
+    existing = _followUpsCache.find(function(r) { return r.id === id; }) || null;
+  }
+  var old = document.getElementById('fu-editor-overlay');
+  if (old) old.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'fu-editor-overlay';
+  overlay.className = 'fu-modal-overlay';
+  var appTheme = document.getElementById('app-wrapper') && document.getElementById('app-wrapper').dataset.theme || 'light';
+  overlay.dataset.theme = appTheme;
+  var titleText = existing ? '編輯回診' : '新增回診';
+  overlay.innerHTML = ''
+    + '<div class="fu-modal" role="dialog" aria-labelledby="fu-modal-title">'
+    +   '<header class="fu-modal-head">'
+    +     '<h3 id="fu-modal-title"><i data-lucide="calendar-cog"></i> ' + titleText + '</h3>'
+    +     '<button class="fu-modal-close" type="button" aria-label="關閉">×</button>'
+    +   '</header>'
+    +   '<div class="fu-modal-body">'
+    +     '<label class="fu-modal-field"><span>回診日期</span><input type="date" id="fu-input-date" required /></label>'
+    +     '<div class="fu-modal-field">'
+    +       '<span>時段</span>'
+    +       '<div class="fu-modal-session">'
+    +         '<label><input type="radio" name="fu-session" value="" /><span>不指定</span></label>'
+    +         '<label><input type="radio" name="fu-session" value="am" /><span>上午診</span></label>'
+    +         '<label><input type="radio" name="fu-session" value="pm" /><span>下午診</span></label>'
+    +       '</div>'
+    +     '</div>'
+    +     '<label class="fu-modal-field"><span>科別</span><input type="text" id="fu-input-dept" placeholder="例如 心臟內科" /></label>'
+    +     '<label class="fu-modal-field"><span>醫院</span><input type="text" id="fu-input-hosp" placeholder="例如 台大醫院" /></label>'
+    +     '<label class="fu-modal-field"><span>醫師（選填）</span><input type="text" id="fu-input-doctor" placeholder="例如 王大明醫師" /></label>'
+    +     '<label class="fu-modal-field"><span>備註（選填）</span><textarea id="fu-input-notes" rows="3" placeholder="這次想跟醫師討論的事、要帶的檢驗報告…"></textarea></label>'
+    +     '<div class="fu-modal-field">'
+    +       '<span>狀態</span>'
+    +       '<div class="fu-modal-session">'
+    +         '<label><input type="radio" name="fu-status" value="scheduled" /><span>已排定</span></label>'
+    +         '<label><input type="radio" name="fu-status" value="completed" /><span>已完成</span></label>'
+    +         '<label><input type="radio" name="fu-status" value="missed" /><span>未到</span></label>'
+    +         '<label><input type="radio" name="fu-status" value="cancelled" /><span>取消</span></label>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<footer class="fu-modal-foot">'
+    +     '<button type="button" class="fu-modal-cancel">取消</button>'
+    +     '<button type="button" class="fu-modal-save"><i data-lucide="check"></i> 儲存</button>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(overlay);
+
+  // 用 .value / checked 賦值（避免 XSS）
+  var initDate = existing ? _foDateOnly(existing.scheduled_date) : '';
+  if (!initDate && !existing) {
+    var t = new Date();
+    initDate = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  }
+  overlay.querySelector('#fu-input-date').value = initDate;
+  if (existing) {
+    if (existing.department) overlay.querySelector('#fu-input-dept').value = existing.department;
+    if (existing.hospital) overlay.querySelector('#fu-input-hosp').value = existing.hospital;
+    if (existing.doctor_name) overlay.querySelector('#fu-input-doctor').value = existing.doctor_name;
+    if (existing.notes) overlay.querySelector('#fu-input-notes').value = existing.notes;
+  }
+  var sess = existing && existing.session ? existing.session : '';
+  var sessRadio = overlay.querySelector('input[name="fu-session"][value="' + sess + '"]');
+  if (sessRadio) sessRadio.checked = true;
+  else overlay.querySelector('input[name="fu-session"][value=""]').checked = true;
+  var st = (existing && existing.status) || 'scheduled';
+  var stRadio = overlay.querySelector('input[name="fu-status"][value="' + st + '"]');
+  if (stRadio) stRadio.checked = true;
+  else overlay.querySelector('input[name="fu-status"][value="scheduled"]').checked = true;
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  var close = function() { overlay.remove(); };
+  overlay.querySelector('.fu-modal-close').onclick = close;
+  overlay.querySelector('.fu-modal-cancel').onclick = close;
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
+
+  overlay.querySelector('.fu-modal-save').onclick = function() {
+    var date = overlay.querySelector('#fu-input-date').value;
+    if (!date) { showToast('請填寫回診日期', 'error'); return; }
+    var sessChecked = overlay.querySelector('input[name="fu-session"]:checked');
+    var stChecked = overlay.querySelector('input[name="fu-status"]:checked');
+    var payload = {
+      scheduled_date: date,
+      session: sessChecked && sessChecked.value ? sessChecked.value : null,
+      department: overlay.querySelector('#fu-input-dept').value.trim() || null,
+      hospital: overlay.querySelector('#fu-input-hosp').value.trim() || null,
+      doctor_name: overlay.querySelector('#fu-input-doctor').value.trim() || null,
+      notes: overlay.querySelector('#fu-input-notes').value.trim() || null,
+      status: stChecked ? stChecked.value : 'scheduled'
+    };
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    if (!pid) { showToast('找不到 patient_id', 'error'); return; }
+    var url, method;
+    if (existing) {
+      url = API + '/follow-ups/' + encodeURIComponent(existing.id);
+      method = 'PUT';
+    } else {
+      url = API + '/follow-ups/';
+      method = 'POST';
+      payload.patient_id = pid;
+    }
+    fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
+      .then(function() {
+        showToast(existing ? '已更新' : '已新增', 'success');
+        close();
+        loadFollowUpsPage();
+        // 同步刷新可能受影響的「最近回診」顯示
+        if (typeof refreshNearestFollowUpCard === 'function') refreshNearestFollowUpCard();
+      })
+      .catch(function(e) { showToast('儲存失敗：' + e.message, 'error'); });
+  };
+}
+
+function markFollowUpStatus(id, status) {
+  fetch(API + '/follow-ups/' + encodeURIComponent(id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: status })
+  })
+    .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
+    .then(function() {
+      showToast('已更新', 'success');
+      loadFollowUpsPage();
+      if (typeof refreshNearestFollowUpCard === 'function') refreshNearestFollowUpCard();
+    })
+    .catch(function(e) { showToast('更新失敗：' + e.message, 'error'); });
+}
+
+function deleteFollowUp(id) {
+  if (!confirm('確定刪除這筆回診排程？')) return;
+  fetch(API + '/follow-ups/' + encodeURIComponent(id), { method: 'DELETE' })
+    .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
+    .then(function() {
+      showToast('已刪除', 'success');
+      loadFollowUpsPage();
+      if (typeof refreshNearestFollowUpCard === 'function') refreshNearestFollowUpCard();
+    })
+    .catch(function(e) { showToast('刪除失敗：' + e.message, 'error'); });
+}
+
+// Pieces 頁「最近回診」mini-card 用：拉最近一筆 scheduled follow-up
+function refreshNearestFollowUpCard() {
+  var box = document.getElementById('pz-nearest-followup');
+  if (!box) return;
+  fetchNearestFollowUp().then(function(fu) {
+    box.innerHTML = _renderPiecesNearestFollowUp(fu);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+}
+
+function _renderPiecesNearestFollowUp(fu) {
+  if (!fu) {
+    return ''
+      + '<div class="pz-nearest-empty">'
+      +   '<p>尚未排定任何回診。</p>'
+      +   '<button type="button" class="pz-link-btn" onclick="navigateTo(\'followUps\',null)">'
+      +     '<i data-lucide="calendar-plus"></i> 前往新增'
+      +   '</button>'
+      + '</div>';
+  }
+  var days = _foDaysFrom(fu.scheduled_date);
+  var countdown = '';
+  if (days !== null) {
+    if (days > 0) countdown = '還有 ' + days + ' 天';
+    else if (days === 0) countdown = '就是今天';
+    else countdown = '已過期 ' + (-days) + ' 天';
+  }
+  var sess = _foSessionLabel(fu.session);
+  var meta = [fu.department, fu.hospital].filter(Boolean).map(escapeHtml).join(' · ');
+  return ''
+    + '<div class="pz-nearest">'
+    +   '<div class="pz-nearest-date">'
+    +     '<strong>' + _foFormatDate(fu.scheduled_date) + '</strong>'
+    +     (sess ? '<span class="pz-visit-session">' + escapeHtml(sess) + '</span>' : '')
+    +   '</div>'
+    +   (countdown ? '<div class="pz-nearest-countdown">' + countdown + '</div>' : '')
+    +   (meta ? '<div class="pz-nearest-meta">' + meta + '</div>' : '')
+    + '</div>';
+}
+
 
 // ─── Service Worker ───────────────────────────────────────
 
