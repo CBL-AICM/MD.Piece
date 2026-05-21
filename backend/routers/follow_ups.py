@@ -6,6 +6,7 @@
 chip 只顯示「最近一筆未完成的回診」。
 """
 
+import re
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query
@@ -17,6 +18,18 @@ router = APIRouter()
 
 VALID_SESSIONS = {"am", "pm"}
 VALID_STATUSES = {"scheduled", "completed", "missed", "cancelled"}
+
+# Anchored allowlist for path / query string IDs — UUID 與 legacy demo-pid
+# 都落在這個字元集內。明確 fullmatch 是給 CodeQL 看的 sanitizer barrier：
+# db.py 的查詢都用 parameterized placeholder（?），值不會拼進 SQL，但
+# 靜態分析難以追過那層 indirection，所以這裡 fail-closed 把不合格 id 擋掉。
+_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _safe_id(value: str, label: str = "id") -> str:
+    if not isinstance(value, str) or not _ID_RE.fullmatch(value):
+        raise HTTPException(status_code=400, detail=f"{label} 格式不合法")
+    return value
 
 # SQLite fallback schema（Supabase 由 docs/migration_follow_ups.sql 建立）
 _SCHEMAS.setdefault(
@@ -64,8 +77,9 @@ def _validate_date(s):
 
 @router.post("/")
 def create_follow_up(body: FollowUpCreate):
+    pid = _safe_id(body.patient_id, "patient_id")
     data = {
-        "patient_id": body.patient_id,
+        "patient_id": pid,
         "scheduled_date": _validate_date(body.scheduled_date),
         "session": _validate_session(body.session),
         "department": body.department,
@@ -87,8 +101,9 @@ def list_follow_ups(
     status: str | None = None,
     upcoming_only: bool = False,
 ):
+    pid = _safe_id(patient_id, "patient_id")
     sb = get_supabase()
-    q = sb.table("follow_ups").select("*").eq("patient_id", patient_id)
+    q = sb.table("follow_ups").select("*").eq("patient_id", pid)
     if status:
         q = q.eq("status", _validate_status(status))
     if upcoming_only:
@@ -101,12 +116,13 @@ def list_follow_ups(
 @router.get("/nearest")
 def get_nearest_follow_up(patient_id: str = Query(...)):
     """回傳最近一筆未來且狀態為 scheduled 的回診；沒有則 follow_up=None。"""
+    pid = _safe_id(patient_id, "patient_id")
     sb = get_supabase()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     result = (
         sb.table("follow_ups")
         .select("*")
-        .eq("patient_id", patient_id)
+        .eq("patient_id", pid)
         .eq("status", "scheduled")
         .gte("scheduled_date", today)
         .order("scheduled_date", desc=False)
@@ -118,8 +134,9 @@ def get_nearest_follow_up(patient_id: str = Query(...)):
 
 @router.get("/{follow_up_id}")
 def get_follow_up(follow_up_id: str):
+    fid = _safe_id(follow_up_id, "follow_up_id")
     sb = get_supabase()
-    result = sb.table("follow_ups").select("*").eq("id", follow_up_id).execute()
+    result = sb.table("follow_ups").select("*").eq("id", fid).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到回診")
     return result.data[0]
@@ -127,6 +144,7 @@ def get_follow_up(follow_up_id: str):
 
 @router.put("/{follow_up_id}")
 def update_follow_up(follow_up_id: str, body: FollowUpUpdate):
+    fid = _safe_id(follow_up_id, "follow_up_id")
     updates = body.model_dump(exclude_none=True)
     if "scheduled_date" in updates:
         updates["scheduled_date"] = _validate_date(updates["scheduled_date"])
@@ -139,7 +157,7 @@ def update_follow_up(follow_up_id: str, body: FollowUpUpdate):
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     sb = get_supabase()
-    result = sb.table("follow_ups").update(updates).eq("id", follow_up_id).execute()
+    result = sb.table("follow_ups").update(updates).eq("id", fid).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到回診")
     return result.data[0]
@@ -147,8 +165,9 @@ def update_follow_up(follow_up_id: str, body: FollowUpUpdate):
 
 @router.delete("/{follow_up_id}")
 def delete_follow_up(follow_up_id: str):
+    fid = _safe_id(follow_up_id, "follow_up_id")
     sb = get_supabase()
-    result = sb.table("follow_ups").delete().eq("id", follow_up_id).execute()
+    result = sb.table("follow_ups").delete().eq("id", fid).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到回診")
-    return {"message": "已刪除", "id": follow_up_id}
+    return {"message": "已刪除", "id": fid}
