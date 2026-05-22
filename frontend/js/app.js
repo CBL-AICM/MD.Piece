@@ -17836,7 +17836,54 @@ var _disease = {
 function diseaseSearch() {
   var prefill = window._diseaseSearchPrefill || '';
   window._diseaseSearchPrefill = '';
-  return ''
+
+  var _mobileDisBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div class="pv-hero-eye">疾病百科</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">查疾病 — 資訊、用藥、風險、未來</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">查完還能追問細節；結果由 AI 整理僅供衛教參考</div>'
+    +   '</div>'
+
+    +   '<div class="card" style="padding:10px 12px;display:flex;gap:6px;align-items:center;margin-bottom:10px">'
+    +     '<i data-lucide="search" style="width:16px;height:16px;color:var(--text-muted)"></i>'
+    +     '<input id="mobile-disease-search-input" type="text" placeholder="例：第二型糖尿病、痛風" value="' + escapeHtml(prefill) + '" onkeydown="if(event.key===\'Enter\')_mobileDisSearch()" style="flex:1;border:none;outline:none;font-size:13px;padding:6px;background:transparent" />'
+    +     '<button onclick="_mobileDisSearch()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">查詢</button>'
+    +   '</div>'
+
+    +   '<div id="mobile-disease-result" style="margin-bottom:12px"></div>'
+
+    // 追問區（mirror 桌機 disease-chat-stream）
+    +   '<div id="mobile-disease-chat-wrap" style="display:none;margin-bottom:12px">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="message-circle"></i> 繼續追問</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-disease-chat-stream" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px;max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>'
+    +     '<form onsubmit="event.preventDefault();_mobileDisChatSend()" style="display:flex;gap:5px;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:6px 8px;align-items:center">'
+    +       '<input id="mobile-disease-chat-input" type="text" placeholder="追問細節…" style="flex:1;border:none;outline:none;font-size:13px;padding:6px;background:transparent" />'
+    +       '<button type="submit" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer"><i data-lucide="send" style="width:13px;height:13px"></i></button>'
+    +     '</form>'
+    +   '</div>'
+
+    // 熱門查詢
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="trending-up"></i> 熱門查詢</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-disease-trending" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'
+    +     '<span style="color:var(--text-muted);font-size:11px">載入中…</span>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>實際診斷與治療請以您的主治醫師為準。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileDisBlock + ''
+    + '<div class="desktop-only">'
     + '<div class="card">'
     +   '<h2><i data-lucide="stethoscope" style="width:20px;height:20px;vertical-align:middle"></i> 疾病百科查詢</h2>'
     +   '<p style="margin-top:8px;color:var(--text-dim)">輸入疾病名稱（中文 / 英文）查詢資訊、用藥、風險與未來發展。第一次查詢由 AI 整理，第二次直接從快取回。</p>'
@@ -17875,7 +17922,21 @@ function diseaseSearch() {
     +   '<h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> 熱門查詢</h3>'
     +   '<p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">最常被查詢的疾病</p>'
     +   '<div id="disease-trending" style="margin-top:8px"><p style="color:var(--text-muted)">載入中…</p></div>'
+    + '</div>'
     + '</div>';
+}
+
+function _mobileDisSearch() {
+  var n = document.getElementById('mobile-disease-search-input');
+  var dn = document.getElementById('disease-search-input');
+  if (dn && n) dn.value = n.value;
+  if (typeof runDiseaseSearch === 'function') runDiseaseSearch();
+}
+function _mobileDisChatSend() {
+  var n = document.getElementById('mobile-disease-chat-input');
+  var dn = document.getElementById('disease-chat-input');
+  if (dn && n) { dn.value = n.value; n.value = ''; }
+  if (typeof diseaseChatSend === 'function') diseaseChatSend();
 }
 
 function loadDiseaseSearchPage() {
@@ -17905,6 +17966,16 @@ function loadDiseaseSearchPage() {
       });
       html += '</div>';
       el.innerHTML = html;
+      // mobile mirror
+      var mEl = document.getElementById('mobile-disease-trending');
+      if (mEl) {
+        mEl.innerHTML = items.map(function(it) {
+          var rawQuery = it.name_zh || it.name_en || '';
+          var label = escapeHtml(it.name_zh || it.name_en || '未命名');
+          return '<button class="chip" data-q="' + escapeHtml(rawQuery) + '" onclick="quickDiseaseSearch(this.dataset.q)">'
+            + label + '<span style="color:var(--text-muted);margin-left:3px;font-size:9.5px">(' + (it.query_count || 0) + ')</span></button>';
+        }).join('');
+      }
     })
     .catch(function() {
       var el = document.getElementById('disease-trending');
@@ -17994,16 +18065,20 @@ function _diseaseDisclaimerBlock(text) {
 
 function renderDiseaseResult(data) {
   var box = document.getElementById('disease-result');
-  if (!box) return;
+  var mBox = document.getElementById('mobile-disease-result');
+  var mChatWrap = document.getElementById('mobile-disease-chat-wrap');
 
   if (!data || data.matched === false) {
-    box.innerHTML =
-      '<div style="padding:16px;text-align:center">'
+    var emptyHtml = ''
+      + '<div style="padding:16px;text-align:center">'
       + '<i data-lucide="search-x" style="width:32px;height:32px;color:var(--text-muted)"></i>'
       + '<p style="margin-top:8px;color:var(--text-dim)">' + escapeHtml((data && data.disclaimer) || '無法辨識此疾病名稱，請確認拼字或嘗試英文。') + '</p>'
       + _diseaseRefBlock([])
       + _diseaseDisclaimerBlock((data && data.disclaimer) || '此資訊由 AI 整理，僅供衛教參考。')
       + '</div>';
+    if (box) box.innerHTML = emptyHtml;
+    if (mBox) mBox.innerHTML = '<div class="card" style="padding:16px;text-align:center"><i data-lucide="search-x" style="width:24px;height:24px;color:var(--text-muted)"></i><p style="margin-top:6px;color:var(--text-dim);font-size:11.5px">' + escapeHtml((data && data.disclaimer) || '無法辨識此疾病') + '</p></div>';
+    if (mChatWrap) mChatWrap.style.display = 'none';
     var chatCard = document.getElementById('disease-chat-card');
     if (chatCard) chatCard.style.display = 'none';
     if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
@@ -18056,7 +18131,40 @@ function renderDiseaseResult(data) {
   html += _diseaseRefBlock(data.references || []);
   html += _diseaseDisclaimerBlock(data.disclaimer);
 
-  box.innerHTML = html;
+  if (box) box.innerHTML = html;
+
+  // mobile mirror — v11 puzzle card
+  if (mBox) {
+    var mHtml = ''
+      + '<div class="card" style="padding:14px;position:relative;overflow:hidden">'
+      +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.16"><use href="#puzzle-bg-rose-amber"/></svg>'
+      +   '<div style="position:relative;z-index:1">'
+      +     '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+      +       '<div style="width:34px;height:34px;border-radius:9px;background:var(--rose-tint);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="stethoscope" style="width:17px;height:17px"></i></div>'
+      +       '<div style="flex:1"><div style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.3">' + escapeHtml(name) + '</div>'
+      +         (subtitle ? '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">' + subtitle + '</div>' : '')
+      +       '</div>'
+      +       (data.cached ? '<span class="pill pill-mute">快取</span>' : '<span class="pill pill-info">AI</span>')
+      +     '</div>'
+      +     (data.overview ? '<div style="font-size:11.5px;line-height:1.6;margin-top:8px"><strong style="color:var(--navy)">是什麼病</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.overview) + '</div></div>' : '')
+      +     (data.symptoms && data.symptoms.common && data.symptoms.common.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">常見症狀</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + data.symptoms.common.slice(0, 6).map(function(s){return '<span class="pill pill-info">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+      +     (data.symptoms && data.symptoms.warning && data.symptoms.warning.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--rose-deep)">警訊症狀（立刻就醫）</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + data.symptoms.warning.slice(0, 6).map(function(s){return '<span class="pill pill-rose">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+      +     (data.common_medications && data.common_medications.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">常用藥物</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + data.common_medications.slice(0, 6).map(function(s){return '<span class="pill pill-teal">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+      +     (data.complications && data.complications.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">長期風險</strong><ul style="margin:4px 0 0;padding-left:18px;color:var(--text-dim);font-size:11px">' + data.complications.slice(0, 4).map(function(s){return '<li>' + escapeHtml(s) + '</li>';}).join('') + '</ul></div>' : '')
+      +     (data.self_care && data.self_care.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">自我照護</strong><ul style="margin:4px 0 0;padding-left:18px;color:var(--text-dim);font-size:11px">' + data.self_care.slice(0, 4).map(function(s){return '<li>' + escapeHtml(s) + '</li>';}).join('') + '</ul></div>' : '')
+      +     (data.prognosis ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">未來發展</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.prognosis) + '</div></div>' : '')
+      +     '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.5">' + escapeHtml(data.disclaimer || '此資訊由 AI 整理，僅供衛教參考。') + '</div>'
+      +   '</div>'
+      + '</div>';
+    mBox.innerHTML = mHtml;
+  }
+  if (mChatWrap) {
+    mChatWrap.style.display = '';
+    var mStream = document.getElementById('mobile-disease-chat-stream');
+    if (mStream) {
+      mStream.innerHTML = '<div style="background:var(--bg-soft);padding:8px 12px;border-radius:10px 10px 10px 4px;color:var(--text-dim);font-size:12px;line-height:1.55">👋 整理好「<strong>' + escapeHtml(name) + '</strong>」了，有什麼想再問的嗎？</div>';
+    }
+  }
 
   // 顯示對話追問區，並重置串流
   var chatCard = document.getElementById('disease-chat-card');
@@ -18101,6 +18209,13 @@ function diseaseChatSend() {
     '<div id="disease-chat-thinking" style="display:flex;justify-content:flex-start"><div style="padding:10px 14px;border-radius:14px;background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border-glass);font-size:0.95rem">疾病助手思考中…</div></div>'
   );
   stream.scrollTop = stream.scrollHeight;
+  // mobile mirror
+  var mStream = document.getElementById('mobile-disease-chat-stream');
+  if (mStream) {
+    mStream.insertAdjacentHTML('beforeend', '<div style="display:flex;justify-content:flex-end"><div style="max-width:75%;background:var(--accent);color:#fff;padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:12.5px;line-height:1.5;white-space:pre-wrap">' + escapeHtml(msg) + '</div></div>');
+    mStream.insertAdjacentHTML('beforeend', '<div id="mobile-disease-chat-thinking" style="display:flex;justify-content:flex-start"><div style="padding:8px 12px;border-radius:14px 14px 14px 4px;background:var(--bg-soft);color:var(--text-muted);font-size:12px">思考中…</div></div>');
+    mStream.scrollTop = mStream.scrollHeight;
+  }
   if (input) input.value = '';
 
   _disease.pendingMsg = true;
@@ -18125,6 +18240,15 @@ function diseaseChatSend() {
         + _diseaseRefBlock(refs)
         + _diseaseDisclaimerBlock(disclaimer);
       stream.insertAdjacentHTML('beforeend', _diseaseChatBubble('assistant', bubbleHtml));
+
+      // mobile mirror
+      var mStream2 = document.getElementById('mobile-disease-chat-stream');
+      if (mStream2) {
+        var mThinking = document.getElementById('mobile-disease-chat-thinking');
+        if (mThinking) mThinking.remove();
+        mStream2.insertAdjacentHTML('beforeend', '<div style="display:flex;justify-content:flex-start"><div style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55;white-space:pre-wrap">' + escapeHtml(reply) + '</div></div>');
+        mStream2.scrollTop = mStream2.scrollHeight;
+      }
 
       _disease.history.push({ role: 'user', content: msg });
       _disease.history.push({ role: 'assistant', content: reply });
