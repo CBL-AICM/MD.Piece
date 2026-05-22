@@ -588,9 +588,9 @@
           <div class="home-greet-text">
             <div class="home-greet-title">早安，郭先生</div>
             <div class="home-greet-date">
-              <span>2026/05/22 五</span>
+              <span>5/22 週五</span>
               <span style="opacity:.4">·</span>
-              <span>回診 <strong>D-4</strong></span>
+              <span>還有 <strong>4 天</strong>看醫師</span>
             </div>
           </div>
         </div>
@@ -601,12 +601,12 @@
           <button class="care-chip"><i data-lucide="hospital"></i> 住院模式</button>
         </div>
 
-        <!-- KPI 3 卡 mini -->
+        <!-- KPI 3 卡 mini — 數字 + 一句白話 -->
         <div class="kpi-row">
           <div class="kpi-mini t-rose">
             <div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>
             <div class="kpi-mini-val">128/82</div>
-            <div class="kpi-mini-meta">略高</div>
+            <div class="kpi-mini-meta">有點高一點</div>
             <svg class="kpi-mini-spark" viewBox="0 0 100 20" preserveAspectRatio="none">
               <polygon fill="#C97A7A" fill-opacity="0.16" points="0,20 0,10 16,11 32,7 48,12 64,8 80,13 100,10 100,20"/>
               <polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,10 16,11 32,7 48,12 64,8 80,13 100,10"/>
@@ -614,9 +614,9 @@
             </svg>
           </div>
           <div class="kpi-mini t-blue">
-            <div class="kpi-mini-label"><i data-lucide="droplet"></i> 血糖</div>
+            <div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>
             <div class="kpi-mini-val">112</div>
-            <div class="kpi-mini-meta">mg/dL</div>
+            <div class="kpi-mini-meta">略高 2 點</div>
             <svg class="kpi-mini-spark" viewBox="0 0 100 20" preserveAspectRatio="none">
               <polygon fill="#4A90C2" fill-opacity="0.16" points="0,20 0,13 16,11 32,15 48,9 64,12 80,7 100,5 100,20"/>
               <polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,13 16,11 32,15 48,9 64,12 80,7 100,5"/>
@@ -624,9 +624,9 @@
             </svg>
           </div>
           <div class="kpi-mini t-teal">
-            <div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 電量</div>
+            <div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>
             <div class="kpi-mini-val">3<span style="font-size:11px;color:var(--text-muted)">/5</span></div>
-            <div class="kpi-mini-meta">2 天偏低</div>
+            <div class="kpi-mini-meta">這 2 天有點累</div>
             <svg class="kpi-mini-spark" viewBox="0 0 100 20" preserveAspectRatio="none">
               <polygon fill="#2F8378" fill-opacity="0.16" points="0,20 0,7 16,8 32,11 48,16 64,13 80,17 100,12 100,20"/>
               <polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,7 16,8 32,11 48,16 64,13 80,17 100,12"/>
@@ -775,15 +775,30 @@
         </div>
 
         <div class="sec-head">
-          <h3 class="sec-title"><i data-lucide="sparkles"></i> AI 分析</h3>
-          <span class="sec-spacer"></span>
-          <span class="pill pill-mute mono">conf 0.78</span>
+          <h3 class="sec-title"><i data-lucide="sparkles"></i> AI 幫你看一下</h3>
         </div>
         <div class="ai-card">
           <div class="ai-num">2</div>
           <div class="ai-text">
-            <div class="ai-title">建議：基層診所評估</div>
-            <div class="ai-desc">上腹悶痛中等強度 · 3 天內 2 次同部位 · 無發燒</div>
+            <div class="ai-title">建議去附近診所看一下</div>
+            <div class="ai-desc">上腹悶痛、中等強度，可能是胃發炎或胃食道逆流</div>
+          </div>
+        </div>
+
+        <!-- 為什麼這樣建議 — 病人懂 + 醫師信 -->
+        <div class="card" style="margin-top:8px;padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:8px;letter-spacing:0.04em">
+            <i data-lucide="help-circle" style="width:12px;height:12px;color:var(--accent)"></i>
+            為什麼這樣建議？
+          </div>
+          <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px">
+            <li style="display:flex;gap:7px;font-size:11.5px;color:var(--text);line-height:1.55"><span style="color:var(--green);font-weight:600;font-family:var(--font-mono);font-size:11px;flex-shrink:0">✓</span><span><strong>沒發燒、沒嘔吐</strong> — 不像急性感染，不用跑急診</span></li>
+            <li style="display:flex;gap:7px;font-size:11.5px;color:var(--text);line-height:1.55"><span style="color:var(--amber-deep);font-weight:600;font-family:var(--font-mono);font-size:11px;flex-shrink:0">!</span><span><strong>3 天內同部位痛 2 次</strong> — 不像一次性，建議排門診</span></li>
+            <li style="display:flex;gap:7px;font-size:11.5px;color:var(--text);line-height:1.55"><span style="color:var(--accent);font-weight:600;font-family:var(--font-mono);font-size:11px;flex-shrink:0">i</span><span><strong>你在吃 Metformin</strong> — 有時會引起腸胃不適，可以問林醫師</span></li>
+          </ul>
+          <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);font-size:10.5px;color:var(--text-muted);display:flex;align-items:center;gap:5px">
+            <i data-lucide="shield-check" style="width:11px;height:11px"></i>
+            這只是參考 · 不能取代醫師判斷
           </div>
         </div>
 
@@ -917,7 +932,7 @@
             <div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="vital-card-head"><i data-lucide="heart-pulse"></i><span class="lbl">血壓</span></div>
             <div class="vital-card-val">132/85<span class="vital-card-unit">mmHg</span></div>
-            <div class="vital-card-meta">↓ 4 vs 上週</div>
+            <div class="vital-card-meta">比上週低 4 點 · 在進步</div>
             <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;margin-top:6px">
               <polygon fill="#C97A7A" fill-opacity="0.16" points="0,24 0,12 16,14 32,9 48,16 64,11 80,17 100,13 100,24"/>
               <polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,12 16,14 32,9 48,16 64,11 80,17 100,13"/>
@@ -928,7 +943,7 @@
             <div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="vital-card-head"><i data-lucide="droplet"></i><span class="lbl">飯前血糖</span></div>
             <div class="vital-card-val">112<span class="vital-card-unit">mg/dL</span></div>
-            <div class="vital-card-meta">target &lt;110</div>
+            <div class="vital-card-meta">比目標高一點點（目標 &lt;110）</div>
             <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;margin-top:6px">
               <polygon fill="#4A90C2" fill-opacity="0.16" points="0,24 0,17 16,15 32,18 48,12 64,15 80,9 100,7 100,24"/>
               <polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,17 16,15 32,18 48,12 64,15 80,9 100,7"/>
@@ -995,44 +1010,127 @@
           <div class="pv-hero-eye">下次回診</div>
           <div class="pv-hero-num">4<span class="unit">天後 · 5/26 週一 10:30</span></div>
           <div class="pv-hero-doc">內分泌科 · 林志明 醫師</div>
-          <div class="pv-hero-meta">台大新竹分院 · 3F-A12</div>
+          <div class="pv-hero-meta">台大新竹分院</div>
           <button class="pv-btn"><i data-lucide="clipboard-check"></i> 立即產生診前報告</button>
         </div>
 
-        <div class="sec-head">
-          <h3 class="sec-title"><i data-lucide="message-circle"></i> 最該問醫師的 3 件事</h3>
-          <span class="sec-spacer"></span>
-          <span class="pill pill-info mono">AI 整理</span>
+        <!-- 雙視角切換 — 給自己看 / 給醫師看 -->
+        <div style="display:flex;gap:4px;padding:3px;background:var(--bg-mid);border-radius:10px;margin-bottom:14px">
+          <button class="audience-btn active" data-aud="patient" onclick="switchAud('patient')" style="flex:1;padding:7px 10px;border-radius:8px;font-size:11.5px;font-weight:600;background:#fff;color:var(--navy);box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;gap:5px">
+            <i data-lucide="user" style="width:12px;height:12px"></i> 給自己看（口語）
+          </button>
+          <button class="audience-btn" data-aud="doctor" onclick="switchAud('doctor')" style="flex:1;padding:7px 10px;border-radius:8px;font-size:11.5px;font-weight:500;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:5px">
+            <i data-lucide="stethoscope" style="width:12px;height:12px"></i> 給醫師看（精簡）
+          </button>
         </div>
-        <div class="list-card">
-          <div class="list-row" style="grid-template-columns:24px 1fr">
-            <div style="width:22px;height:22px;border-radius:50%;background:var(--rose-soft);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600">1</div>
-            <div class="name">服藥後容易疲倦，是否要調整 Metformin 劑量？</div>
+
+        <!-- 給自己看 — 口語故事 -->
+        <div class="aud-view aud-patient">
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="message-circle"></i> 這次去診間要說的 3 件事</h3>
           </div>
-          <div class="list-row" style="grid-template-columns:24px 1fr">
-            <div style="width:22px;height:22px;border-radius:50%;background:var(--amber-soft);color:var(--amber-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600">2</div>
-            <div class="name">飯前血糖連續 2 次 &gt; 110，是否需要進一步檢查？</div>
+          <div class="list-card">
+            <div class="list-row" style="grid-template-columns:24px 1fr;align-items:flex-start;padding:11px 12px">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--rose-soft);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600;margin-top:1px">1</div>
+              <div>
+                <div class="name" style="margin-bottom:3px">「最近吃藥之後，常常會覺得累」</div>
+                <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5">最近 3 天電量都打 3 分以下，可能跟 Metformin 有關</div>
+              </div>
+            </div>
+            <div class="list-row" style="grid-template-columns:24px 1fr;align-items:flex-start;padding:11px 12px">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--amber-soft);color:var(--amber-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600;margin-top:1px">2</div>
+              <div>
+                <div class="name" style="margin-bottom:3px">「早上飯前血糖比目標高一點」</div>
+                <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5">這週連續 2 次超過 110，平均 112</div>
+              </div>
+            </div>
+            <div class="list-row" style="grid-template-columns:24px 1fr;align-items:flex-start;padding:11px 12px">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600;margin-top:1px">3</div>
+              <div>
+                <div class="name" style="margin-bottom:3px">「肚子上面這 3 天悶痛 2 次」</div>
+                <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5">想問是不是要安排胃鏡，還是先吃藥試試</div>
+              </div>
+            </div>
           </div>
-          <div class="list-row" style="grid-template-columns:24px 1fr">
-            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600">3</div>
-            <div class="name">上腹悶痛 3 天，要不要做胃鏡？</div>
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="sun"></i> 你最近的狀況（一句話）</h3>
+          </div>
+          <div class="card tint-blue" style="padding:14px 16px">
+            <div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>
+            <p style="font-size:13px;color:var(--navy);line-height:1.7;margin:0">
+              這個月 <strong>血壓有比上個月降一點</strong>，用藥也都有按時吃（92%）。<br>
+              比較需要注意的是 <strong>飯前血糖最近偏高</strong>，跟 <strong>連續 2 天比較沒精神</strong>。
+            </p>
           </div>
         </div>
 
-        <div class="sec-head">
-          <h3 class="sec-title"><i data-lucide="bar-chart-3"></i> 近 30 天摘要</h3>
-        </div>
-        <div class="vital-snap">
-          <div class="vital-card t-rose">
-            <div class="vital-card-head"><i data-lucide="heart-pulse"></i><span class="lbl">血壓 avg</span></div>
-            <div class="vital-card-val">132/85</div>
-            <div class="vital-card-meta">28 筆 · ↓ 4 vs 前月</div>
+        <!-- 給醫師看 — 精簡資料 -->
+        <div class="aud-view aud-doctor" style="display:none">
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="clipboard-list"></i> 主訴 / 重點</h3>
           </div>
-          <div class="vital-card t-blue">
-            <div class="vital-card-head"><i data-lucide="pill"></i><span class="lbl">用藥依從</span></div>
-            <div class="vital-card-val">92<span class="vital-card-unit">%</span></div>
-            <div class="vital-card-meta">1 次漏 · 5/18</div>
+          <div class="card" style="padding:14px;font-family:var(--font);font-size:12.5px;line-height:1.6">
+            <div style="display:flex;gap:6px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+              <span class="pill pill-rose mono">CC</span>
+              <div style="flex:1">
+                <strong>Epigastric discomfort × 3d</strong>，dull pain，無 N/V，無發燒
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:10px">
+              <span class="pill pill-warn mono">Sx</span>
+              <div style="flex:1">
+                <strong>Fatigue × 3d</strong>（電量 ≤3），疑似與服藥相關 (Metformin)
+              </div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <span class="pill pill-info mono">Lab</span>
+              <div style="flex:1">
+                <strong>FBS 112 mg/dL</strong>（5/22, 5/21）· 連 2 次 &gt; target &lt;110
+              </div>
+            </div>
           </div>
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="bar-chart-3"></i> 30 天 vital trend</h3>
+          </div>
+          <div class="vital-snap">
+            <div class="vital-card t-rose">
+              <div class="vital-card-head"><i data-lucide="heart-pulse"></i><span class="lbl">BP avg</span></div>
+              <div class="vital-card-val">132/85</div>
+              <div class="vital-card-meta">n=28 · −4 vs prev</div>
+            </div>
+            <div class="vital-card t-blue">
+              <div class="vital-card-head"><i data-lucide="droplet"></i><span class="lbl">FBS avg</span></div>
+              <div class="vital-card-val">108</div>
+              <div class="vital-card-meta">n=14 · +6 vs prev</div>
+            </div>
+          </div>
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="pill"></i> Current meds + adherence</h3>
+          </div>
+          <div class="list-card">
+            <div class="list-row" style="grid-template-columns:1fr auto">
+              <div class="name">Metformin 500mg BID po pc</div>
+              <span><span class="pill pill-ok mono">95%</span></span>
+            </div>
+            <div class="list-row" style="grid-template-columns:1fr auto">
+              <div class="name">Lisinopril 10mg QD</div>
+              <span><span class="pill pill-ok mono">98%</span></span>
+            </div>
+            <div class="list-row" style="grid-template-columns:1fr auto">
+              <div class="name">Amlodipine 5mg QD</div>
+              <span><span class="pill pill-ok mono">96%</span></span>
+            </div>
+            <div class="list-row" style="grid-template-columns:1fr auto">
+              <div class="name">Atorvastatin 10mg QHS</div>
+              <span><span class="pill pill-warn mono">85% · missed 5/18</span></span>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -1060,7 +1158,7 @@
           <div class="home-avatar" style="width:44px;height:44px;font-size:16px">郭</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:600;color:var(--navy)">郭先生</div>
-            <div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono)">MRN 8472-2613 · 64 歲</div>
+            <div style="font-size:11px;color:var(--text-muted)">64 歲 · 內分泌科追蹤中</div>
           </div>
           <button class="pill pill-info" style="font-size:11px;padding:4px 10px">編輯</button>
         </div>
@@ -1164,8 +1262,8 @@
           </div>
         </div>
 
-        <div style="text-align:center;padding:20px 0 4px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono)">
-          build 2026.05.22+v95 · rule v2.4
+        <div style="text-align:center;padding:20px 0 4px;font-size:10.5px;color:var(--text-muted)">
+          MD.Piece · 2026 春版
         </div>
 
       </div>
@@ -1192,6 +1290,16 @@
   }
   function getLabelFor(name) {
     return { home:'首頁', symptoms:'症狀', meds:'用藥', vitals:'生理', previsit:'診前', settings:'設定' }[name];
+  }
+  function switchAud(which) {
+    document.querySelectorAll('.aud-view').forEach(v => v.style.display = v.classList.contains('aud-' + which) ? 'block' : 'none');
+    document.querySelectorAll('.audience-btn').forEach(b => {
+      const isActive = b.dataset.aud === which;
+      b.style.background = isActive ? '#fff' : 'transparent';
+      b.style.color = isActive ? 'var(--navy)' : 'var(--text-dim)';
+      b.style.boxShadow = isActive ? 'var(--shadow-sm)' : 'none';
+      b.style.fontWeight = isActive ? '600' : '500';
+    });
   }
   if (window.lucide && lucide.createIcons) lucide.createIcons({ attrs: { 'stroke-width': 1.6 } });
 </script>
