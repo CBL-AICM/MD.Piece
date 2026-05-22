@@ -131,8 +131,8 @@
     :root.dark [style*="background:#FFFFFF"],
     :root.dark [style*="background: #fff"],
     :root.dark [style*="background:#fff"] { background: var(--bg-mid) !important; }
-    /* 拼圖塊 dark mode — 用 screen blend 讓 pastel 在深底上發光 */
-    :root.dark .puzzle-bg-layer { mix-blend-mode: screen; opacity: 0.55; }
+    /* 拼圖塊 dark mode — 用 screen blend 讓 pastel 在深底上發光，淡一點 */
+    :root.dark .puzzle-bg-layer { mix-blend-mode: screen; opacity: 0.40; }
     /* 暖陰影 dark 改成深陰影 */
     :root.dark .home-greet,
     :root.dark .bodymap-wrap,
@@ -514,10 +514,11 @@
       margin-bottom: 12px;
       position: relative; overflow: hidden;
     }
-    /* 拼圖漸層背景 — 鋪滿整個卡片 */
+    /* 拼圖漸層背景 — 鋪滿整個卡片（淡：opacity 0.55 不搶戲）*/
     .puzzle-bg-layer {
       position: absolute; inset: 0; width: 100%; height: 100%;
       pointer-events: none; z-index: 0;
+      opacity: 0.55;
     }
     .bodymap-wrap > svg.body-figure { width: 140px; height: auto; position: relative; z-index: 1; }
     .bodymap-wrap > .bodymap-caption { position: relative; z-index: 1; }
@@ -719,9 +720,9 @@
             fill="url(#puzzle-shade)"/>
       <!-- 4. 細邊（深色描邊，讓拼圖塊間有界線） -->
       <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
-            fill="none" stroke="#1F3D58" stroke-opacity="0.18" stroke-width="0.6" stroke-linejoin="round"/>
-      <!-- 5. 中心小圓點（識別感）-->
-      <circle cx="50" cy="50" r="2.5" fill="#1F3D58" fill-opacity="0.18"/>
+            fill="none" stroke="#1F3D58" stroke-opacity="0.08" stroke-width="0.4" stroke-linejoin="round"/>
+      <!-- 5. 中心小圓點（識別感，淡）-->
+      <circle cx="50" cy="50" r="2" fill="#1F3D58" fill-opacity="0.08"/>
     </symbol>
   </defs>
 </svg>
