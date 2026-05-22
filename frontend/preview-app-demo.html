@@ -64,6 +64,101 @@
       --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
     }
 
+    /* ─────────── DARK MODE ─────────── */
+    :root.dark {
+      --bg:           #1C232C;
+      --bg-soft:      #232B36;
+      --bg-mid:       #2D3744;
+      --border:       rgba(255,255,255,0.10);
+      --border-mid:   rgba(255,255,255,0.16);
+      --border-strong:rgba(255,255,255,0.26);
+
+      --accent:       #6BAEDC;
+      --accent-deep:  #94C8E8;
+      --accent-soft:  #2A3A48;
+      --accent-tint:  #1F2A35;
+
+      --teal:         #5BA89E;
+      --teal-deep:    #82C2BA;
+      --teal-soft:    #243835;
+      --teal-tint:    #1E2A28;
+
+      --navy:         #ECEEF1;
+      --text:         #ECEEF1;
+      --text-dim:     #B0BCC8;
+      --text-muted:   #7F8C9A;
+
+      --rose:         #E8A8A8;
+      --rose-deep:    #F0B5B5;
+      --rose-soft:    #3D2A2A;
+      --rose-tint:    #2E2424;
+
+      --green:        #5FA875;
+      --green-deep:   #86C19A;
+      --green-soft:   #243A2D;
+      --green-tint:   #1E2A22;
+
+      --amber:        #D9A961;
+      --amber-deep:   #E8C088;
+      --amber-soft:   #3A2E1A;
+    }
+    /* dark mode 下的特例：頁面框 + tabbar + bodymap white fill 等 */
+    :root.dark body {
+      background: linear-gradient(180deg, #14181E 0%, #0E1116 100%) !important;
+    }
+    :root.dark .demo-shell { background: var(--bg) !important; }
+    :root.dark .ph-tabbar { background: var(--bg-soft) !important; border-top-color: var(--border); }
+    :root.dark .disclaimer-footer { background: var(--bg-soft); border-top-color: var(--border); }
+    :root.dark .disclaimer-footer { color: var(--text-dim); }
+    :root.dark .disclaimer-footer strong { color: var(--text); }
+    :root.dark .ph-topbar { background: var(--bg-soft); border-bottom-color: var(--border); }
+    :root.dark .card,
+    :root.dark .home-greet,
+    :root.dark .home-ov,
+    :root.dark .bodymap-wrap,
+    :root.dark .pv-hero,
+    :root.dark .kpi-mini,
+    :root.dark .sos-btn,
+    :root.dark .qr-tile,
+    :root.dark .vital-card,
+    :root.dark .care-mode-card,
+    :root.dark .settings-list,
+    :root.dark .med-list-row { background: var(--bg-mid) !important; border-color: var(--border) !important; color: var(--text); }
+    /* 身體圖小人在 dark 模式 */
+    :root.dark .body-figure { fill: var(--bg-mid); stroke: var(--text-dim); }
+    /* 行內 inline white 強制換深色 */
+    :root.dark [style*="background:#FBFCFD"],
+    :root.dark [style*="background:#FFFFFF"],
+    :root.dark [style*="background: #fff"],
+    :root.dark [style*="background:#fff"] { background: var(--bg-mid) !important; }
+    /* 拼圖塊 dark mode — 用 screen blend 讓 pastel 在深底上發光 */
+    :root.dark .puzzle-bg-layer { mix-blend-mode: screen; opacity: 0.55; }
+    /* 暖陰影 dark 改成深陰影 */
+    :root.dark .home-greet,
+    :root.dark .bodymap-wrap,
+    :root.dark .pv-hero,
+    :root.dark .care-mode-card,
+    :root.dark .home-ov,
+    :root.dark .kpi-mini,
+    :root.dark .sos-btn,
+    :root.dark .qr-tile { box-shadow: 0 4px 14px -8px rgba(0,0,0,0.40) !important; }
+
+    /* 主題切換按鈕 */
+    .theme-toggle {
+      position: fixed; top: 12px; right: 12px; z-index: 999;
+      background: var(--bg-mid); color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px -3px rgba(31,61,88,0.20);
+      transition: all 0.2s;
+    }
+    .theme-toggle:hover { transform: scale(1.05); }
+    .theme-toggle .lucide { width: 20px; height: 20px; }
+    :root.dark .theme-toggle { box-shadow: 0 4px 12px -3px rgba(0,0,0,0.50); }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       background: linear-gradient(180deg, #EDE5D8 0%, #E8DDCB 100%);
@@ -654,6 +749,11 @@
     </symbol>
   </defs>
 </svg>
+
+<!-- Dark mode toggle -->
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="切換深色模式" title="切換深色模式">
+  <i data-lucide="moon" id="themeIcon"></i>
+</button>
 
 <div class="demo-shell">
 
@@ -1537,7 +1637,28 @@
       b.style.fontWeight = isActive ? '600' : '500';
     });
   }
-  if (window.lucide && lucide.createIcons) lucide.createIcons({ attrs: { 'stroke-width': 1.6 } });
+  // 深色模式切換
+  function toggleTheme() {
+    const root = document.documentElement;
+    root.classList.toggle('dark');
+    const isDark = root.classList.contains('dark');
+    try { localStorage.setItem('md-demo-theme', isDark ? 'dark' : 'light'); } catch(e) {}
+    const icon = document.getElementById('themeIcon');
+    if (icon) icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+    if (window.lucide && lucide.createIcons) lucide.createIcons({ attrs: { 'stroke-width': 2.4 } });
+  }
+  // 啟動時讀取偏好
+  (function() {
+    try {
+      const saved = localStorage.getItem('md-demo-theme');
+      if (saved === 'dark') {
+        document.documentElement.classList.add('dark');
+        const icon = document.getElementById('themeIcon');
+        if (icon) icon.setAttribute('data-lucide', 'sun');
+      }
+    } catch(e) {}
+  })();
+  if (window.lucide && lucide.createIcons) lucide.createIcons({ attrs: { 'stroke-width': 2.4 } });
 </script>
 
 </body>
