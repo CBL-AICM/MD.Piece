@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v109-polish";
+const CACHE_VERSION = "mdpiece-v110-kpi-first";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
