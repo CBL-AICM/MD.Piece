@@ -6,7 +6,8 @@
   "scripts": {
     "test:rx": "node run_rx_recognition.mjs",
     "test:mobile": "node mobile_audit.mjs",
-    "test:dischargeFeeling": "node discharge_feeling_assess_check.mjs"
+    "test:dischargeFeeling": "node discharge_feeling_assess_check.mjs",
+    "test:celebrityCard": "node celebrity_card_check.mjs"
   },
   "dependencies": {
     "tesseract.js": "^5.1.1"
