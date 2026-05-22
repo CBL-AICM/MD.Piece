@@ -11504,7 +11504,7 @@ function _renderMedEffectChart(effects) {
 
 // 點卡片即打卡：固定時段藥（早/中/晚）直接寫入；
 // 「其他」型藥（每 X 小時 / PRN）也走同一條 POST /log，
-// 後端會在 < 4 小時內回 409 dose_too_soon，由 logMedTaken 攔下並彈警告。
+// 後端會在劑量間隔未到時回 409 dose_too_soon，由 logMedTaken 攔下並彈警告。
 function tapMedTake(medId, slotKey) {
   logMedTaken(medId, true);
 }
@@ -12099,7 +12099,7 @@ function logMedTaken(medId, taken, opts) {
     })
     .then(function(res) {
       if (res.status === 409 && res.data && res.data.detail && res.data.detail.code === "dose_too_soon") {
-        // 4 小時內重複服「其他」型藥 → 跳警告，由患者決定要不要強制記錄
+        // 同一顆藥太快又服 → 跳警告，由患者決定要不要強制記錄
         showDoseSafetyDialog(medId, res.data.detail);
         return;
       }
@@ -12115,7 +12115,7 @@ function logMedTaken(medId, taken, opts) {
     .catch(function() { showToast("記錄失敗", "error"); });
 }
 
-// 4 小時間隔警告 modal：超過閾值時，攔下 logMedTaken，
+// 劑量間隔警告 modal：未到安全間隔時攔下 logMedTaken，
 // 解釋短時間重複服藥的風險，再給「我了解風險，仍要記錄」的退路。
 function showDoseSafetyDialog(medId, detail) {
   closeDoseSafetyDialog();

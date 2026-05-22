@@ -2,7 +2,8 @@
 
 把藥袋常見的「一天三次／早晚／睡前／每 8 小時／PRN」等寫法
 轉成標準的時段標籤（早 / 中 / 晚 / 其他），
-並提供「是否可立即服用」的安全檢查（預設最少間隔 4 小時）。
+並提供「是否可立即服用」的安全檢查：預設最少間隔 6 小時，硬底線 4 小時，
+PRN 且醫師有明確指示的可低於 4 小時。
 """
 
 from __future__ import annotations
@@ -26,8 +27,13 @@ SLOT_LABELS_ZH = {
     SLOT_OTHER: "其他",
 }
 
-# 預設「每 X 小時」型藥物的最少安全間隔（小時）
-DEFAULT_MIN_INTERVAL_HOURS = 4
+# 一般情況的預設最少安全間隔（小時）。沒有特別指定 interval 的藥（如早/中/晚、
+# 或單純 PRN 沒指定間隔）都用這個值。
+DEFAULT_MIN_INTERVAL_HOURS = 6
+
+# 絕對底線：任何狀況都不能低於這個時數，**除非** 是 PRN 且醫師有明確指示 interval。
+# 例：interval_hours=3 的「每 3 小時」非 PRN 藥，仍會以 4 小時為底線。
+ABSOLUTE_FLOOR_HOURS = 4
 
 _ORDER = {SLOT_MORNING: 0, SLOT_NOON: 1, SLOT_EVENING: 2, SLOT_OTHER: 3}
 
@@ -200,37 +206,47 @@ def check_dose_safety(
     is_prn: bool = False,
     now: datetime | None = None,
     min_hours: int = DEFAULT_MIN_INTERVAL_HOURS,
+    floor_hours: int = ABSOLUTE_FLOOR_HOURS,
 ) -> dict:
     """
     判斷此刻是否可以再服一次藥。
 
+    規則（從寬到緊）：
+      1. PRN + 醫師明確指示 interval_hours → 用醫師指示（可低於 floor_hours，
+         例：止痛藥 q2h prn）
+      2. 非 PRN 但有明確 interval_hours → max(floor_hours, interval_hours)，
+         即使醫師寫每 3 小時也要守住 4 小時底線
+      3. 沒指定 interval_hours（早/中/晚、單純 PRN 沒間隔）→ min_hours（預設 6）
+
     參數：
       logs:           最近的服藥紀錄（要包含 taken_at；taken=False 的會自動忽略）
       interval_hours: 藥物本身的間隔小時數（從 parse_time_slots 得到）
-      is_prn:         是否為「需要時服用」(PRN)；PRN 且有明確 interval_hours
-                      時可低於 min_hours（醫師有指定）
-      min_hours:      最少安全間隔（預設 4 小時）
+      is_prn:         是否為「需要時服用」(PRN)；PRN + interval_hours 可低於 floor
+      min_hours:      一般情況的預設間隔（小時，預設 6）
+      floor_hours:    絕對底線（小時，預設 4）；非 PRN 不會低於它
 
     回傳：
       - allowed:           是否建議現在服用
       - last_taken_at:     上次有效服用時間（ISO，沒有就 None）
       - hours_since_last:  距離上次幾小時（float，沒有上次就 None）
-      - required_hours:    本次該等多久（PRN 帶 interval_hours 就用 interval_hours；
-                                          其他取 interval_hours 與 min_hours 較大者）
+      - required_hours:    本次該等多久
       - hours_remaining:   還差多久才安全（>0 代表太早；None 代表沒上一筆）
       - level:             "safe" | "warn" | "block"
                            safe = 可以服用
-                           warn = 只到 min_hours 但還沒到藥物本身的 interval（少見）
-                           block = 連最低 4 小時都還沒到
+                           warn = 過了 floor 但還沒到 required（介於 4~6 間的灰區）
+                           block = 連 floor 都還沒到（或 PRN 沒到醫師指定的 interval）
       - message:           給患者看的中文訊息
     """
     now = now or datetime.now(timezone.utc)
-    # PRN 醫師有指定間隔 → 信醫師指示（可能 < 4 小時，例如止痛藥 q2h prn）
-    # 其他狀況都至少守住 min_hours 這道底線
     if is_prn and interval_hours:
+        # PRN + 醫師指示 → 完全信醫師
         required = interval_hours
+    elif interval_hours:
+        # 非 PRN 有 interval → 用 interval 但守 floor
+        required = max(floor_hours, interval_hours)
     else:
-        required = max(min_hours, interval_hours or 0)
+        # 沒 interval → 用一般預設
+        required = min_hours
 
     # 找最近一筆有效服藥
     last_dt: datetime | None = None
@@ -267,10 +283,11 @@ def check_dose_safety(
             "message": f"距離上次服藥已 {delta_hours:.1f} 小時，可以服用。",
         }
 
-    # 還沒滿安全間隔
-    # PRN 帶 interval_hours：required 就是醫師指定的最低界，沒到就 block，無 warn 區
-    # 其他：< min_hours 是 block 區，min_hours ~ interval_hours 之間是 warn 區
-    block_threshold = required if (is_prn and interval_hours) else min_hours
+    # 還沒滿安全間隔。決定 block vs warn：
+    #   - PRN + 醫師指示：required 就是底線，沒到就 block（沒 warn 區）
+    #   - 其他：< floor_hours 是硬 block 區；floor ~ required 之間是 warn 區
+    #     例：required=6, floor=4，delta=5 → 過 floor 但沒到 6 → warn
+    block_threshold = required if (is_prn and interval_hours) else floor_hours
     if delta_hours < block_threshold:
         msg = (
             f"距離上次服藥只有 {delta_hours:.1f} 小時，"

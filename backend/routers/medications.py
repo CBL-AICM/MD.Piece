@@ -314,9 +314,9 @@ def log_medication(body: MedicationLogCreate):
     記錄服藥（打卡）。
 
     所有藥都會檢查「同一顆藥距離上次服藥時間」：
-      - 預設安全間隔 4 小時（DEFAULT_MIN_INTERVAL_HOURS）
-      - PRN 藥且醫師指定 interval_hours：依醫師指示（可低於 4，例如止痛藥 q2h prn）
-      - 其他間隔藥（每 X 小時）：interval_hours 與 4 取較大者
+      - 一般預設安全間隔 6 小時（DEFAULT_MIN_INTERVAL_HOURS）
+      - 絕對底線 4 小時（ABSOLUTE_FLOOR_HOURS）：即使醫師寫「每 3 小時」也守住
+      - PRN + 醫師明確指定 interval：信醫師（可低於 4，例：止痛藥 q2h prn）
     若 body.force == False 且未達安全間隔，回 409 dose_too_soon，
     前端 showDoseSafetyDialog 讓使用者按「我了解風險仍要記錄」才強制送出。
 
@@ -332,8 +332,8 @@ def log_medication(body: MedicationLogCreate):
             raise HTTPException(status_code=404, detail="找不到該藥物")
         schedule = annotate_medication(med)
         # 所有藥（早/中/晚 + 其他 + PRN）都做同一顆藥的劑量間隔檢查：
-        #   - 早/中/晚（沒有 interval_hours）：用 4 小時 default
-        #   - 其他間隔藥：max(4, interval_hours)
+        #   - 早/中/晚（沒有 interval_hours）：用 6 小時一般預設
+        #   - 其他間隔藥：max(4, interval_hours)，守住 4 小時底線
         #   - PRN 有醫師指定 interval：用醫師指示（可 < 4）
         logs = _recent_logs(sb, body.patient_id, body.medication_id)
         safety = check_dose_safety(

@@ -145,8 +145,8 @@ def test_get_medications_includes_schedule_slots():
     assert by_name["止痛藥"]["bucket"] == "other"
 
 
-def test_log_fixed_slot_also_blocks_within_4_hours():
-    """早 / 中 / 晚 的固定時段藥同樣受 4 小時規則保護：
+def test_log_fixed_slot_also_blocks_when_too_soon():
+    """早 / 中 / 晚 的固定時段藥同樣受劑量間隔保護：
     避免使用者誤觸打卡或同一時段重複按造成連續服藥。
     第一次打卡 OK，立刻再按一次應該被擋下並回 409。
     """
@@ -164,7 +164,8 @@ def test_log_fixed_slot_also_blocks_within_4_hours():
     assert r2.status_code == 409, r2.text
     detail = r2.json()["detail"]
     assert detail["code"] == "dose_too_soon"
-    assert detail["safety"]["required_hours"] == 4
+    # 一天三次 沒指定 interval_hours → 用 6 小時一般預設
+    assert detail["safety"]["required_hours"] == 6
     # force=True 仍可覆寫（病患/家屬「我了解風險仍要記錄」）
     r3 = client.post(
         "/medications/log",

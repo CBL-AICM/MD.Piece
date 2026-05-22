@@ -116,7 +116,8 @@ def test_no_logs_returns_safe():
     assert res["last_taken_at"] is None
 
 
-def test_within_4_hours_blocks():
+def test_within_floor_blocks():
+    # interval=6, 上次 1.5 小時前 → 連 4 小時 floor 都沒到 → block
     logs = [_log_taken(1.5)]
     res = check_dose_safety(logs, interval_hours=6, now=_now())
     assert res["allowed"] is False
@@ -125,8 +126,8 @@ def test_within_4_hours_blocks():
     assert "風險" in res["message"]
 
 
-def test_after_min_but_before_interval_warns():
-    # min=4, interval=6, 上次 5 小時前 → 過了 4 小時但沒到 6 → warn
+def test_between_floor_and_default_warns():
+    # interval=6, 上次 5 小時前 → 過 4 小時 floor 但沒到 6 → warn（灰區）
     logs = [_log_taken(5)]
     res = check_dose_safety(logs, interval_hours=6, now=_now())
     assert res["allowed"] is False
@@ -141,16 +142,32 @@ def test_after_interval_allows():
     assert res["level"] == "safe"
 
 
-def test_default_min_interval_when_no_interval_hours():
-    # 沒填 interval_hours → 用 4 小時當門檻
-    logs = [_log_taken(3)]
-    res = check_dose_safety(logs, interval_hours=None, now=_now())
-    assert res["allowed"] is False
-    assert res["required_hours"] == DEFAULT_MIN_INTERVAL_HOURS
+def test_no_interval_uses_6_hour_default():
+    # 早/中/晚（沒填 interval_hours）→ 一般預設 6 小時
+    # 5 小時前 → 過 floor 但沒到 6 → warn
+    res_warn = check_dose_safety([_log_taken(5)], interval_hours=None, now=_now())
+    assert res_warn["allowed"] is False
+    assert res_warn["level"] == "warn"
+    assert res_warn["required_hours"] == DEFAULT_MIN_INTERVAL_HOURS  # 6
+
+    # 2 小時前 → 連 4 小時 floor 都沒到 → block
+    res_block = check_dose_safety([_log_taken(2)], interval_hours=None, now=_now())
+    assert res_block["allowed"] is False
+    assert res_block["level"] == "block"
+
+
+def test_non_prn_interval_below_floor_uses_floor():
+    # 非 PRN 但 interval=3（罕見）→ 不能低於 4 小時底線
+    res = check_dose_safety(
+        [_log_taken(3.5)], interval_hours=3, is_prn=False, now=_now()
+    )
+    # required = max(4, 3) = 4；delta=3.5 < 4 → block
+    assert res["required_hours"] == 4
+    assert res["level"] == "block"
 
 
 def test_prn_with_short_interval_uses_doctor_setting():
-    # PRN q2h（止痛藥常見指示）：required 用 2 小時，不被 4 小時 default 抬高
+    # PRN q2h（止痛藥常見指示）：required 用 2 小時，連 4 小時 floor 都可破
     res_block = check_dose_safety(
         [_log_taken(1.5)], interval_hours=2, is_prn=True, now=_now()
     )
@@ -158,7 +175,7 @@ def test_prn_with_short_interval_uses_doctor_setting():
     assert res_block["level"] == "block"
     assert res_block["required_hours"] == 2
 
-    # 過了 PRN 的 2 小時 → 放行（即使還沒到 4 小時 default）
+    # 過了 PRN 的 2 小時 → 放行（即使還沒到 4 小時 floor）
     res_safe = check_dose_safety(
         [_log_taken(2.5)], interval_hours=2, is_prn=True, now=_now()
     )
@@ -166,8 +183,8 @@ def test_prn_with_short_interval_uses_doctor_setting():
     assert res_safe["level"] == "safe"
 
 
-def test_prn_without_interval_still_uses_default():
-    # PRN 但沒明確 interval（醫師只寫「需要時」）→ 仍以 4 小時為底線
+def test_prn_without_interval_uses_default():
+    # PRN 但沒明確 interval（醫師只寫「需要時」）→ 走一般預設 6
     res = check_dose_safety(
         [_log_taken(3)], interval_hours=None, is_prn=True, now=_now()
     )
