@@ -637,4 +637,114 @@ body.theme-modern #landing .intro-lab {
 body.theme-modern #landing-canvas,
 body.theme-modern #star-canvas { display: none !important; }
 
+/* ═════════════════════════════════════════════════════════════════
+   滾動式 feed — Tier 3「快速跳轉」grid
+   設計目標：兩排大按鈕，每顆按鈕有 icon、label、(option) 副標。
+   主排 3×2，迷你排 3×2 但更扁。配色沿用 t-blue/rose/teal/amber/green/purple/mint。
+   ═════════════════════════════════════════════════════════════════ */
+body.theme-modern .quick-jump-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+body.theme-modern .quick-jump-btn {
+  padding: 14px 8px 12px;
+  background: #fff;
+  border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  min-height: 78px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+body.theme-modern .quick-jump-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(31,61,88,0.06) inset;
+}
+body.theme-modern .quick-jump-btn .qj-icon {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff;
+  border: 1px solid var(--border, rgba(31,61,88,0.10));
+  margin-bottom: 2px;
+}
+body.theme-modern .quick-jump-btn .qj-icon .lucide { width: 16px; height: 16px; }
+body.theme-modern .quick-jump-btn .qj-label {
+  font-size: 12px; font-weight: 600; color: var(--navy, #0F2A45);
+  line-height: 1.25;
+}
+body.theme-modern .quick-jump-btn .qj-sub {
+  font-size: 9.5px; color: var(--text-muted, #6B7F92);
+  font-family: var(--font-mono, monospace); line-height: 1.3;
+}
+
+/* tint variants（同 .sos-btn / .kpi-mini 配色，保持一致） */
+body.theme-modern .quick-jump-btn.t-blue   { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-blue   .qj-icon .lucide { color: var(--accent-deep, #2F6B96); }
+body.theme-modern .quick-jump-btn.t-rose   { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-rose   .qj-icon .lucide { color: var(--rose-deep, #C97A7A); }
+body.theme-modern .quick-jump-btn.t-teal   { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-teal   .qj-icon .lucide { color: var(--teal-deep, #1F5F56); }
+body.theme-modern .quick-jump-btn.t-amber  { background: linear-gradient(135deg, rgba(201,139,47,0.06) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-amber  .qj-icon .lucide { color: var(--amber-deep, #9A6A1F); }
+body.theme-modern .quick-jump-btn.t-green  { background: linear-gradient(135deg, var(--green-tint, #F1F8F4) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-green  .qj-icon .lucide { color: var(--green-deep, #2F6F47); }
+body.theme-modern .quick-jump-btn.t-purple { background: linear-gradient(135deg, rgba(139,107,196,0.06) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-purple .qj-icon .lucide { color: #6F4FA8; }
+body.theme-modern .quick-jump-btn.t-mint   { background: linear-gradient(135deg, rgba(96,180,160,0.07) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-mint   .qj-icon .lucide { color: #2F8378; }
+
+/* 迷你版（次要功能：診前、醫師、提醒、趨勢、聊、碎片） */
+body.theme-modern .quick-jump-grid--mini .quick-jump-btn {
+  min-height: 64px;
+  padding: 10px 6px 8px;
+}
+body.theme-modern .quick-jump-grid--mini .qj-icon {
+  width: 28px; height: 28px;
+}
+body.theme-modern .quick-jump-grid--mini .qj-icon .lucide { width: 14px; height: 14px; }
+body.theme-modern .quick-jump-grid--mini .qj-label { font-size: 11px; }
+
+/* ═════════════════════════════════════════════════════════════════
+   滾動式 feed — Tier 4「衛教專欄」拼圖卡
+   ═════════════════════════════════════════════════════════════════ */
+body.theme-modern .edu-feed {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+body.theme-modern .edu-feed .edu-card-mini {
+  padding: 12px 14px;
+  border-radius: 12px;
+  position: relative; overflow: hidden;
+  display: block;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   滾動式 feed — Tier 5「管理工具」清單
+   ═════════════════════════════════════════════════════════════════ */
+body.theme-modern .manage-list .manage-row {
+  padding: 12px 14px;
+  gap: 10px;
+  align-items: center;
+}
+body.theme-modern .manage-list .manage-row:last-child { border-bottom: none !important; }
+body.theme-modern .manage-list .manage-row:active {
+  background: var(--bg-mid, #ECF0F4);
+}
+
+/* tablet — 大一點的螢幕可以把快速跳轉做成 6 顆一排 */
+@media (min-width: 600px) {
+  body.theme-modern .quick-jump-grid { grid-template-columns: repeat(6, 1fr) !important; }
+}
+
+
 /* ─── 結束 ─── */
