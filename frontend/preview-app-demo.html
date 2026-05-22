@@ -72,6 +72,26 @@
     }
     button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 
+    /* 全站線條加粗 + 暖陰影 — 不再冰冷 */
+    .lucide { stroke-width: 2.4 !important; stroke-linecap: round; stroke-linejoin: round; }
+    .card, .home-greet, .home-ov, .bodymap-wrap, .pv-hero,
+    .kpi-mini, .sos-btn, .qr-tile, .vital-card, .settings-row,
+    .care-mode-card, .care-mode-mini, .chip, .pill, .qr-tile-toolbar {
+      border-width: 1.5px !important;
+    }
+    /* 主要卡片加暖色陰影，比純白看起來有溫度 */
+    .home-greet, .bodymap-wrap, .pv-hero, .care-mode-card,
+    .home-ov, .kpi-mini, .sos-btn, .qr-tile {
+      box-shadow: 0 1px 0 rgba(31,61,88,0.02), 0 4px 14px -8px rgba(74,57,40,0.10) !important;
+    }
+    /* radius 也圓一點 */
+    .card, .home-greet, .home-ov, .bodymap-wrap, .pv-hero,
+    .kpi-mini, .qr-tile, .vital-card, .care-mode-card {
+      border-radius: 14px !important;
+    }
+    .sos-btn { border-radius: 14px !important; }
+    .chip { border-radius: 999px !important; font-weight: 600 !important; }
+
     .demo-shell {
       max-width: 100%;
       padding: 20px 12px 60px;
@@ -827,7 +847,7 @@
           <!-- 拼圖塊組成的漸層背景（4 塊 pastel 拼圖互疊） -->
           <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-blue"/></svg>
           <svg class="body-figure" viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg"
-               fill="#FFFFFF" stroke="#1F3D58" stroke-width="1.4"
+               fill="#FFFFFF" stroke="#1F3D58" stroke-width="2.2"
                stroke-linejoin="round" stroke-linecap="round">
             <!-- 頭 -->
             <ellipse cx="55" cy="22" rx="13" ry="15"/>
@@ -934,14 +954,33 @@
           <div style="padding:10px 14px;background:var(--accent-tint);border-bottom:1px solid var(--border);font-size:11px;color:var(--accent-deep);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
             <i data-lucide="sun" style="width:12px;height:12px"></i> 早晨 07:00 <span style="margin-left:auto"><span class="pill pill-ok mono">已完成</span></span>
           </div>
-          <div class="med-list-row">
+          <!-- Metformin — 含「藥袋 vs 我的實際用法」客製化區塊 -->
+          <div class="med-list-row" style="border-bottom:1px solid var(--border)">
             <div class="ico"><i data-lucide="pill"></i></div>
             <div>
               <div class="name">Metformin</div>
-              <div class="dose">500mg · 飯後</div>
+              <div class="dose">500mg</div>
             </div>
             <div class="time">07:00</div>
             <span class="pill pill-ok mono">已服</span>
+          </div>
+          <!-- 客製化欄位 — 藥袋 vs 醫師私下交代 -->
+          <div style="padding:10px 14px 12px;background:#FBFCFD;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:11.5px;line-height:1.5">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:var(--bg-mid);border-radius:10px;font-size:10px;color:var(--text-dim);font-weight:600;flex-shrink:0;margin-top:1px">
+                <i data-lucide="package" style="width:10px;height:10px"></i>藥袋
+              </span>
+              <span style="color:var(--text-dim);text-decoration:line-through">飯後 30 分鐘，1 顆，1 日 2 次</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.5">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:var(--teal-soft);border-radius:10px;font-size:10px;color:var(--teal-deep);font-weight:600;flex-shrink:0;margin-top:1px">
+                <i data-lucide="user-check" style="width:10px;height:10px"></i>我的
+              </span>
+              <span style="color:var(--text);flex:1"><strong>飯後 1 小時</strong>吃 1 顆，避開咖啡（林醫師 5/12 交代）</span>
+              <button style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px;cursor:pointer;flex-shrink:0">
+                <i data-lucide="pencil" style="width:11px;height:11px"></i>編輯
+              </button>
+            </div>
           </div>
           <div class="med-list-row">
             <div class="ico"><i data-lucide="pill"></i></div>
@@ -995,13 +1034,22 @@
 
         <div class="card tint-blue" style="margin-top:14px;display:flex;align-items:center;gap:12px">
           <div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>
-          <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i data-lucide="camera" style="width:15px;height:15px"></i>
+          <div style="width:36px;height:36px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i data-lucide="camera" style="width:17px;height:17px"></i>
           </div>
           <div style="flex:1">
-            <div style="font-size:12px;font-weight:600;color:var(--accent-deep)">新藥袋？拍照 OCR 自動填入</div>
-            <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px">藥名 + 劑量 + 頻次自動辨識</div>
+            <div style="font-size:13px;font-weight:600;color:var(--accent-deep)">拍藥袋 → 自動填入 → 你可以覆寫</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.45">醫師私下交代的用法可加上「我的」標示</div>
           </div>
+        </div>
+
+        <!-- 客製化說明卡 -->
+        <div style="margin-top:10px;padding:11px 13px;background:var(--teal-soft);border:1.5px solid rgba(47,131,120,0.30);border-radius:10px;font-size:11.5px;color:var(--teal-deep);line-height:1.55">
+          <div style="display:flex;align-items:center;gap:6px;font-weight:700;margin-bottom:4px">
+            <i data-lucide="user-check" style="width:13px;height:13px"></i>
+            為什麼要分「藥袋」和「我的」？
+          </div>
+          <p>醫師常會私下交代和藥袋不一樣的吃法（例：藥袋寫飯後，醫師說飯後 1 小時、避開咖啡）。你可以保留藥袋原文，另外加上「我的實際用法」，提醒功能會依「我的」為準。</p>
         </div>
 
       </div>
