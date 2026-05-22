@@ -787,4 +787,145 @@
   margin-top: 1px !important;
 }
 
-/* ─── 結束 v9.1 ─── */
+/* ════════════════════════════════════════════════════════════════
+   v10 推廣：拼圖漸層卡 pattern 套到所有主要區塊
+   來源：.qr-tile（user 表明喜歡）
+   套用：.home-hero / .todo-card / .home-todo / .home-ov /
+        .ip-sos-btn / .sos-btn / .care-mode-card / .med-today-hero
+   ════════════════════════════════════════════════════════════════ */
+
+/* 共用：所有 puzzle-tint 卡片 — relative + overflow + 拼圖 motif */
+.home-hero,
+.home-todo,
+.todo-card,
+.home-ov,
+.care-mode-card,
+.med-today-hero {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* 拼圖 motif 背景 — 共用 SVG data URI */
+.home-hero::after,
+.home-todo::after,
+.todo-card::after,
+.home-ov::after,
+.care-mode-card::after {
+  content: "" !important;
+  position: absolute !important;
+  pointer-events: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z' fill='none' stroke='%231F3D58' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  z-index: 0 !important;
+}
+
+/* home-hero（早安卡）— rose→aqua 漸層 + 角落拼圖 */
+.home-hero {
+  background: linear-gradient(135deg, var(--rose-soft, #FBEEEE) 0%, #FFFFFF 50%, var(--accent-soft, #E8F1F8) 100%) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.home-hero::after {
+  right: -14px !important;
+  bottom: -14px !important;
+  width: 90px !important;
+  height: 90px !important;
+  opacity: 0.06 !important;
+}
+
+/* todo-card / home-todo — teal tint + 拼圖 */
+.home-todo,
+.todo-card {
+  background: linear-gradient(135deg, rgba(47,131,120,0.06) 0%, #FFFFFF 60%) !important;
+  border: 1px solid var(--border-glass) !important;
+  backdrop-filter: none !important;
+}
+.home-todo::after,
+.todo-card::after {
+  right: -12px !important;
+  top: -12px !important;
+  width: 70px !important;
+  height: 70px !important;
+  opacity: 0.05 !important;
+}
+
+/* home-ov（3 欄藥物 / 心情 / 提醒）— 各色 tint */
+.home-info-row .home-ov:nth-child(1) {
+  background: linear-gradient(135deg, rgba(74,144,194,0.05) 0%, #fff 70%) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.home-info-row .home-ov:nth-child(2) {
+  background: linear-gradient(135deg, rgba(232,168,168,0.06) 0%, #fff 70%) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.home-info-row .home-ov:nth-child(3) {
+  background: linear-gradient(135deg, rgba(139,149,197,0.05) 0%, #fff 70%) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.home-ov::after {
+  right: -10px !important;
+  bottom: -10px !important;
+  width: 50px !important;
+  height: 50px !important;
+  opacity: 0.05 !important;
+}
+
+/* care-mode-card（你現在用的是）— 加拼圖 */
+.care-mode-card::after {
+  right: -10px !important;
+  top: -10px !important;
+  width: 60px !important;
+  height: 60px !important;
+  opacity: 0.05 !important;
+}
+
+/* ip-sos-btn / 4 顆 SOS 按鈕 — 每顆有自己的 tint + 拼圖角 */
+.ip-sos-btn,
+.sos-btn {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.ip-sos-btn::after,
+.sos-btn::after {
+  content: "" !important;
+  position: absolute !important;
+  right: -8px !important; top: -8px !important;
+  width: 40px !important; height: 40px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z' fill='none' stroke='%231F3D58' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  opacity: 0.08 !important;
+  pointer-events: none !important;
+}
+/* SOS 4 顆各自漸層 */
+.ip-sos-btn:nth-child(1),
+.sos-btn.t-rose {
+  background: linear-gradient(135deg, var(--rose-soft, rgba(232,168,168,0.10)) 0%, #fff 65%) !important;
+}
+.ip-sos-btn:nth-child(2),
+.sos-btn.t-blue {
+  background: linear-gradient(135deg, rgba(74,144,194,0.08) 0%, #fff 65%) !important;
+}
+.ip-sos-btn:nth-child(3),
+.sos-btn.t-teal {
+  background: linear-gradient(135deg, rgba(47,131,120,0.07) 0%, #fff 65%) !important;
+}
+.ip-sos-btn:nth-child(4),
+.sos-btn.t-amber {
+  background: linear-gradient(135deg, rgba(201,139,47,0.08) 0%, #fff 65%) !important;
+}
+
+/* 確保所有 hero/卡片的內部內容浮在拼圖背景之上 */
+.home-hero > *,
+.home-todo > *,
+.todo-card > *,
+.home-ov > *,
+.care-mode-card > *,
+.ip-sos-btn > *,
+.sos-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── 結束 v10 推廣 ─── */
