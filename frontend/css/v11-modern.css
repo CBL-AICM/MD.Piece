@@ -6,15 +6,24 @@
    範圍：**全螢幕統一 v11**（手機 + 桌機都套，拿掉 Y2K 雙軌）
    ═════════════════════════════════════════════════════════════════ */
 
-/* 全域：拿掉雙軌 — desktop-only 藏起來，mobile-only 永遠顯示，桌機置中 */
+/* 全域：拿掉雙軌 — desktop-only 藏起來，mobile-only 永遠顯示 */
 body.theme-modern .desktop-only { display: none !important; }
 body.theme-modern .mobile-only { display: block !important; }
+/* 桌機不再 480px 置中 — 用滿可用空間（sidebar 已佔左邊），加 padding 留呼吸 */
 @media (min-width: 1024px) {
   body.theme-modern .mobile-only {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 24px 16px 80px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 28px 32px 80px;
   }
+  /* 卡片 / KPI / SOS 在寬螢幕展開更多欄位 */
+  body.theme-modern .mobile-only .kpi-row { grid-template-columns: repeat(4, 1fr) !important; }
+  body.theme-modern .mobile-only .sos-grid { grid-template-columns: repeat(4, 1fr) !important; }
+}
+@media (min-width: 1440px) {
+  body.theme-modern .mobile-only .kpi-row { grid-template-columns: repeat(5, 1fr) !important; }
+  body.theme-modern .mobile-only .sos-grid { grid-template-columns: repeat(6, 1fr) !important; }
 }
 
 /* ─── 隱藏所有 Y2K 視覺殘留（星空背景、CRT 掃描線、霓虹光暈）─── */
@@ -359,6 +368,12 @@ html body.theme-modern #app-elder-toggle,
 html body.theme-modern #app-settings-btn,
 body.theme-modern .app-elder-toggle,
 body.theme-modern .app-settings-btn { display: none !important; }
+
+/* 在首頁時隱藏「返回」按鈕（已經在首頁不需要返回）— page-title 是「首頁」時 hide */
+html body.theme-modern .topbar .topbar-back { display: inline-flex !important; }
+/* 透過 JS 動態加 class 控制 */
+html body.theme-modern.is-home .topbar .topbar-back,
+html body.theme-modern[data-page="home"] .topbar .topbar-back { display: none !important; }
 
 /* topbar 整體：白底淡邊 + 圓角 icon button（demo .ph-topbar 風格）*/
 body.theme-modern .topbar {
