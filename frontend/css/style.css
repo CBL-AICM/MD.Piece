@@ -5026,16 +5026,16 @@ html[data-mode="senior"] .vt-bmi-meta {
 }
 .med-slot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
 }
 
 /* 點擊卡片即打卡 */
 .med-card {
   position: relative;
   display: grid;
-  gap: 6px;
-  padding: 12px;
+  gap: 8px;
+  padding: 16px;
   text-align: left;
   background: var(--bg-glass);
   border: 2px solid var(--border-glass);
@@ -5057,14 +5057,14 @@ html[data-mode="senior"] .vt-bmi-meta {
   gap: 8px;
   flex-wrap: wrap;
 }
-.med-card-title strong { font-size: 1rem; }
+.med-card-title strong { font-size: 1.1rem; }
 .med-card-dosage {
   margin-left: 6px;
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 .med-card-freq {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--text-dim);
 }
 .med-card-tag {
@@ -5085,34 +5085,57 @@ html[data-mode="senior"] .vt-bmi-meta {
   color: var(--warning);
 }
 .med-card-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.med-card-actions-row {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
+  justify-content: flex-end;
+  gap: 8px;
   width: 100%;
   min-width: 0;
 }
 .med-card-take {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 0.85rem;
-  color: var(--success);
-  font-weight: 600;
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--cream, #fff);
+  background: var(--success);
+  border: 2px solid var(--success);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  min-height: 48px;
+  cursor: pointer;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: var(--transition);
+  box-shadow: 0 2px 8px rgba(85,184,138,0.25);
 }
+.med-card-take:hover {
+  filter: brightness(0.95);
+  box-shadow: 0 4px 12px rgba(85,184,138,0.35);
+}
+.med-card-take:active { transform: scale(0.98); }
 .med-card-mini {
-  width: 28px; height: 28px;
-  flex: 0 0 28px;
+  width: 40px; height: 40px;
+  flex: 0 0 40px;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--radius-sm);
   border: 2px solid var(--border-glass);
   background: var(--bg-glass);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--text-dim);
 }
 .med-card-mini:hover { background: rgba(255,255,255,0.06); color: var(--text); }
