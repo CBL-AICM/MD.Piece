@@ -10610,9 +10610,10 @@ function loadMedicationsPage() {
       var data = arr[0] || {};
       var logsData = arr[1] || { logs: [] };
       _medsList = (data.medications || []).filter(function(m) { return m.active !== 0; });
-      _medsTodayLogs = (logsData.logs || []).filter(function(l) {
+      _medsTodayLogsRaw = (logsData.logs || []).filter(function(l) {
         return l && l.taken_at && String(l.taken_at).slice(0, 10) === todayISO && l.taken !== false;
-      }).length;
+      });
+      _medsTodayLogs = _medsTodayLogsRaw.length;
       renderMedList();
     })
     .catch(function() { showToast("載入藥物列表失敗", "error"); });
@@ -10775,6 +10776,28 @@ function _renderMedTodayHero(meds) {
     + '</div>';
 }
 var _medsTodayLogs = 0;
+var _medsTodayLogsRaw = [];
+
+// 時段視窗（分鐘）：判定一筆 log 算進哪個時段。bedtime 跨午夜。
+var _MED_SLOT_WINDOW = {
+  morning: [ 4*60, 12*60],
+  noon:    [12*60, 17*60],
+  evening: [17*60, 21*60],
+  bedtime: [21*60, 24*60 + 4*60],
+};
+function _isMedTakenForSlot(medId, slotKey) {
+  var win = _MED_SLOT_WINDOW[slotKey];
+  if (!win) return false;
+  return (_medsTodayLogsRaw || []).some(function(l) {
+    if (!l || l.medication_id !== medId || !l.taken_at) return false;
+    var d = new Date(l.taken_at);
+    var m = d.getHours() * 60 + d.getMinutes();
+    if (win[1] > 24*60) {
+      return m >= win[0] || m < (win[1] - 24*60);
+    }
+    return m >= win[0] && m < win[1];
+  });
+}
 
 function _medSlotLabel(key) { return _T('meds.slot.' + key + '.label'); }
 function _medSlotHint(key)  { return _T('meds.slot.' + key + '.hint');  }
@@ -10906,42 +10929,47 @@ function _renderMobileMedList(meds) {
     mob.innerHTML = rows;
   }
 
-  // 今日服藥（簡化版 — 依 time_of_day 分桶，狀態用「時間是否已過」推算）
+  // 今日服藥：每筆 row 都是真正可點的打卡按鈕，狀態依今日 medication_logs 判定。
+  // 之前舊版「狀態用時間推算」誤導使用者以為已打卡，但其實 row 沒掛 onclick。
   if (todayEl) {
     var buckets = (typeof _bucketMeds === 'function') ? _bucketMeds(meds) : { morning: meds, noon: [], evening: [], bedtime: [], other: [] };
-    var now = new Date();
-    var curMin = now.getHours() * 60 + now.getMinutes();
     var SLOTS = [
-      { key: 'morning', label: '早晨', icon: 'sun',        time: '07:00', mins:  7*60 },
-      { key: 'noon',    label: '中午', icon: 'sun',        time: '13:00', mins: 13*60 },
-      { key: 'evening', label: '傍晚', icon: 'sun-dim',    time: '18:00', mins: 18*60 },
-      { key: 'bedtime', label: '睡前', icon: 'moon',       time: '22:00', mins: 22*60 },
+      { key: 'morning', label: '早晨', icon: 'sun',        time: '07:00' },
+      { key: 'noon',    label: '中午', icon: 'sun',        time: '13:00' },
+      { key: 'evening', label: '傍晚', icon: 'sun-dim',    time: '18:00' },
+      { key: 'bedtime', label: '睡前', icon: 'moon',       time: '22:00' },
     ];
     var totalCnt = 0, doneCnt = 0;
     var thtml = '';
     SLOTS.forEach(function(s) {
       var arr = buckets[s.key] || [];
       if (!arr.length) return;
-      var passed = curMin >= s.mins;
-      var headPill = passed
+      var slotTaken = arr.filter(function(m) { return _isMedTakenForSlot(m.id, s.key); }).length;
+      var allDone = slotTaken === arr.length;
+      var headPill = allDone
         ? '<span class="pill pill-ok mono">已完成</span>'
-        : '<span class="pill pill-mute mono">尚未到</span>';
+        : '<span class="pill pill-mute mono">' + slotTaken + ' / ' + arr.length + ' 已服</span>';
       totalCnt += arr.length;
-      if (passed) doneCnt += arr.length;
+      doneCnt += slotTaken;
       thtml += ''
         + '<div class="card" style="padding:0;margin-bottom:10px">'
-        +   '<div style="padding:10px 14px;background:' + (passed ? 'var(--accent-tint)' : 'var(--bg-soft)') + ';border-bottom:1px solid var(--border);font-size:11px;color:' + (passed ? 'var(--accent-deep)' : 'var(--text-dim)') + ';font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
+        +   '<div style="padding:10px 14px;background:' + (allDone ? 'var(--accent-tint)' : 'var(--bg-soft)') + ';border-bottom:1px solid var(--border);font-size:11px;color:' + (allDone ? 'var(--accent-deep)' : 'var(--text-dim)') + ';font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
         +     '<i data-lucide="' + s.icon + '" style="width:12px;height:12px"></i> ' + s.label + ' ' + s.time
         +     '<span style="margin-left:auto">' + headPill + '</span>'
         +   '</div>'
         +   arr.map(function(m, idx) {
-            var rowPill = passed
-              ? '<span class="pill pill-ok mono">已服</span>'
-              : '<div class="check"></div>';
+            var taken = _isMedTakenForSlot(m.id, s.key);
+            var rowPill = taken
+              ? '<span class="pill pill-ok mono">已服 ✓</span>'
+              : '<span class="pill pill-mute mono" style="background:var(--success-tint,#e6f4ec);color:var(--success,#3a8a5e);border-color:var(--success,#3a8a5e)">點一下打卡</span>';
             var sep = (idx < arr.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
             var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
+            var safeId = String(m.id || '').replace(/'/g, "\\'");
             return ''
-              + '<div class="med-list-row" style="padding:10px 14px' + sep + '">'
+              + '<div class="med-list-row" role="button" tabindex="0"'
+              +   ' style="padding:10px 14px;cursor:pointer' + sep + '"'
+              +   ' onclick="tapMedTake(\'' + safeId + '\',\'' + s.key + '\')"'
+              +   ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();tapMedTake(\'' + safeId + '\',\'' + s.key + '\');}">'
               +   '<div class="ico"><i data-lucide="pill"></i></div>'
               +   '<div>'
               +     '<div class="name">' + escapeHtml(m.name || '') + '</div>'
