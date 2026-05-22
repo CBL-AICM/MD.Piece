@@ -1297,7 +1297,51 @@ function story() {
       '</div>';
   }).join("");
 
-  return `
+  // ─── Mobile v11 block ───
+  var _catColor = { disease: { bg: 'puzzle-bg-rose-amber', pill: 'pill-rose', icon: 'stethoscope', tint: 'var(--rose-tint)', text: 'var(--rose-deep)' },
+                    quick_tip: { bg: 'puzzle-bg-blue-teal', pill: 'pill-warn', icon: 'zap', tint: 'var(--amber-soft)', text: 'var(--amber-deep)' },
+                    news: { bg: 'puzzle-bg-rose-amber', pill: 'pill-info', icon: 'newspaper', tint: 'var(--accent-tint)', text: 'var(--accent-deep)' } };
+  var mobileSectionsHtml = STORY_CATEGORIES.map(function(c) {
+    var conf = _catColor[c.key] || {};
+    return ''
+      + '<div class="sec-head">'
+      +   '<h3 class="sec-title"><i data-lucide="' + c.icon + '"></i> ' + c.label + '</h3>'
+      +   '<span id="mobile-story-date-' + c.key + '" class="sec-count">—</span>'
+      +   '<span class="sec-spacer"></span>'
+      + '</div>'
+      + '<div id="mobile-story-body-' + c.key + '" data-story-conf="' + c.key + '" style="margin-bottom:12px">'
+      +   '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">載入中…</div>'
+      + '</div>';
+  }).join('');
+
+  var _mobileStoryBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">每日故事</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">每天三則 — 慢慢讀懂自己的身體</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">一篇疾病故事 · 一則健康快訊 · 一份最新資訊</div>'
+    +   '</div>'
+    +   mobileSectionsHtml
+    // 最新公告 + 過去幾天 mobile
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="rss"></i> 衛福部最新公告</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-story-newsfeed" class="list-card" style="margin-bottom:12px"></div>'
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="history"></i> 過去幾天</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-story-archive" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>'
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>內容來自精選衛教文章，僅供參考。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileStoryBlock + `
+    <div class="desktop-only">
     <div class="card story-hero">
       <h2 style="display:flex;align-items:center;gap:8px">
         <i data-lucide="book-open" style="width:22px;height:22px"></i> 每日故事
@@ -1332,6 +1376,7 @@ function story() {
         <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
       </div>
     </div>
+    </div>
   `;
 }
 
@@ -1359,7 +1404,41 @@ function loadStoryPage() {
     });
 }
 
+function _mobileStorySync(catKey, article) {
+  var mDate = document.getElementById('mobile-story-date-' + catKey);
+  var mBody = document.getElementById('mobile-story-body-' + catKey);
+  if (!mBody) return;
+  if (!article) {
+    if (mDate) mDate.textContent = '';
+    mBody.innerHTML = '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">這個分類今天還沒有故事</div>';
+    return;
+  }
+  if (mDate) mDate.textContent = article.pushed_on || '';
+  var conf = { disease: { bg: 'puzzle-bg-rose-amber', icon: 'stethoscope' },
+               quick_tip: { bg: 'puzzle-bg-blue-teal', icon: 'zap' },
+               news: { bg: 'puzzle-bg-rose-amber', icon: 'newspaper' } }[catKey] || { bg: 'puzzle-bg-blue-teal', icon: 'book-open' };
+  var tags = (article.tags || []).slice(0, 3).map(function(t) {
+    return '<span class="pill pill-mute">' + escapeHtml(t) + '</span>';
+  }).join('');
+  var bodyShort = article.summary || (article.body ? String(article.body).slice(0, 120) + '…' : '');
+  mBody.innerHTML = ''
+    + '<button class="card" style="text-align:left;padding:13px;cursor:pointer;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;width:100%" onclick="eduOpenArticle(\'' + escapeHtml(article.slug || '') + '\')">'
+    +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.22"><use href="#' + conf.bg + '"/></svg>'
+    +   '<div style="position:relative;z-index:1;display:flex;align-items:flex-start;gap:8px">'
+    +     '<i data-lucide="' + conf.icon + '" style="width:15px;height:15px;color:var(--accent-deep);margin-top:1px;flex-shrink:0"></i>'
+    +     '<div style="flex:1">'
+    +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.35">' + escapeHtml(article.title || '') + '</div>'
+    +       (bodyShort ? '<div style="font-size:11px;color:var(--text-dim);margin-top:4px;line-height:1.55">' + escapeHtml(bodyShort) + '</div>' : '')
+    +       (tags ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">' + tags + '</div>' : '')
+    +     '</div>'
+    +   '</div>'
+    + '</button>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function renderStorySection(catKey, article) {
+  // mobile mirror
+  _mobileStorySync(catKey, article);
   var dateEl = document.getElementById("story-date-" + catKey);
   var body = document.getElementById("story-body-" + catKey);
   if (!body) return;
@@ -1396,47 +1475,109 @@ function renderStorySection(catKey, article) {
 
 function renderStoryNewsFeed(items) {
   var list = document.getElementById("story-newsfeed-list");
-  if (!list) return;
-  if (!items.length) {
-    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">目前沒有可顯示的公告。</div>';
-    return;
+  if (list) {
+    if (!items.length) {
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">目前沒有可顯示的公告。</div>';
+    } else {
+      list.innerHTML = items.map(function(n) {
+        var link = n.link ? escapeHtml(n.link) : "";
+        var title = escapeHtml(n.title || "（無標題）");
+        var summary = n.summary ? '<p class="story-news-summary">' + escapeHtml(n.summary) + '</p>' : "";
+        var pub = n.published ? '<span class="story-news-date">' + escapeHtml(n.published) + '</span>' : "";
+        var titleHtml = link
+          ? '<a class="story-news-title" href="' + link + '" target="_blank" rel="noopener noreferrer">' + title + '</a>'
+          : '<span class="story-news-title">' + title + '</span>';
+        return '<article class="story-news-item">' + titleHtml + pub + summary + '</article>';
+      }).join("");
+    }
   }
-  list.innerHTML = items.map(function(n) {
-    var link = n.link ? escapeHtml(n.link) : "";
-    var title = escapeHtml(n.title || "（無標題）");
-    var summary = n.summary ? '<p class="story-news-summary">' + escapeHtml(n.summary) + '</p>' : "";
-    var pub = n.published ? '<span class="story-news-date">' + escapeHtml(n.published) + '</span>' : "";
-    var titleHtml = link
-      ? '<a class="story-news-title" href="' + link + '" target="_blank" rel="noopener noreferrer">' + title + '</a>'
-      : '<span class="story-news-title">' + title + '</span>';
-    return '<article class="story-news-item">' + titleHtml + pub + summary + '</article>';
-  }).join("");
+  // mobile mirror
+  var mList = document.getElementById('mobile-story-newsfeed');
+  if (mList) {
+    if (!items.length) {
+      mList.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">目前沒有公告</div>';
+    } else {
+      mList.innerHTML = items.slice(0, 8).map(function(n) {
+        var link = n.link ? escapeHtml(n.link) : "";
+        var rowOpen = link ? '<a href="' + link + '" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:inherit">' : '';
+        var rowClose = link ? '</a>' : '';
+        return ''
+          + rowOpen
+          + '<div class="list-row" style="grid-template-columns:14px 1fr;padding:11px 13px;align-items:flex-start">'
+          +   '<i data-lucide="rss" style="width:13px;height:13px;color:var(--accent-deep);margin-top:2px"></i>'
+          +   '<div>'
+          +     '<div class="name">' + escapeHtml(n.title || '（無標題）') + '</div>'
+          +     (n.published ? '<div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">' + escapeHtml(n.published) + '</div>' : '')
+          +     (n.summary ? '<div style="font-size:11px;color:var(--text-dim);margin-top:3px;line-height:1.5">' + escapeHtml(n.summary).slice(0, 100) + (n.summary.length > 100 ? '…' : '') + '</div>' : '')
+          +   '</div>'
+          + '</div>'
+          + rowClose;
+      }).join('');
+    }
+  }
 }
 
 function renderStoryArchive(days) {
   var list = document.getElementById("story-archive-list");
-  if (!list) return;
-  if (!days.length) {
-    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">還沒有歷史紀錄。</div>';
-    return;
-  }
   if (!window._eduArticles) window._eduArticles = {};
-  list.innerHTML = days.map(function(day) {
-    var rows = STORY_CATEGORIES.map(function(c) {
-      var a = day.items && day.items[c.key];
-      if (!a) return '';
-      window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
-      return '<button class="story-archive-item" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">' +
-               '<span class="story-archive-cat story-cat-' + c.key + '">' + escapeHtml(c.label) + '</span>' +
-               '<span class="story-archive-title">' + escapeHtml(a.title) + '</span>' +
-               (a.summary ? '<span class="story-archive-summary">' + escapeHtml(a.summary) + '</span>' : '') +
-             '</button>';
-    }).join("");
-    return '<div class="story-archive-day">' +
-             '<div class="story-archive-day-head">' + escapeHtml(day.date) + '</div>' +
-             '<div class="story-archive-day-grid">' + rows + '</div>' +
-           '</div>';
-  }).join("");
+  if (list) {
+    if (!days.length) {
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">還沒有歷史紀錄。</div>';
+    } else {
+      list.innerHTML = days.map(function(day) {
+        var rows = STORY_CATEGORIES.map(function(c) {
+          var a = day.items && day.items[c.key];
+          if (!a) return '';
+          window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
+          return '<button class="story-archive-item" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">' +
+                   '<span class="story-archive-cat story-cat-' + c.key + '">' + escapeHtml(c.label) + '</span>' +
+                   '<span class="story-archive-title">' + escapeHtml(a.title) + '</span>' +
+                   (a.summary ? '<span class="story-archive-summary">' + escapeHtml(a.summary) + '</span>' : '') +
+                 '</button>';
+        }).join("");
+        return '<div class="story-archive-day">' +
+                 '<div class="story-archive-day-head">' + escapeHtml(day.date) + '</div>' +
+                 '<div class="story-archive-day-grid">' + rows + '</div>' +
+               '</div>';
+      }).join("");
+    }
+  }
+  // mobile mirror — timeline 風格（垂直線 + 圓點 + 卡片）
+  var mList = document.getElementById('mobile-story-archive');
+  if (mList) {
+    if (!days || !days.length) {
+      mList.innerHTML = '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">尚無歷史紀錄</div>';
+    } else {
+      mList.innerHTML = days.slice(0, 7).map(function(day) {
+        var rows = STORY_CATEGORIES.map(function(c) {
+          var a = day.items && day.items[c.key];
+          if (!a) return '';
+          window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
+          var conf = { disease: { pill: 'pill-rose', icon: 'stethoscope' },
+                       quick_tip: { pill: 'pill-warn', icon: 'zap' },
+                       news: { pill: 'pill-info', icon: 'newspaper' } }[c.key] || {};
+          return ''
+            + '<button class="card" style="text-align:left;padding:10px 12px;cursor:pointer;width:100%;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">'
+            +   '<i data-lucide="' + (conf.icon || 'book-open') + '" style="width:13px;height:13px;color:var(--accent-deep);margin-top:2px;flex-shrink:0"></i>'
+            +   '<div style="flex:1">'
+            +     '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px"><span class="pill ' + (conf.pill || 'pill-mute') + '">' + escapeHtml(c.label) + '</span></div>'
+            +     '<div style="font-size:12px;font-weight:600;color:var(--navy);line-height:1.4">' + escapeHtml(a.title) + '</div>'
+            +     (a.summary ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;line-height:1.5">' + escapeHtml(a.summary).slice(0, 70) + (a.summary.length > 70 ? '…' : '') + '</div>' : '')
+            +   '</div>'
+            + '</button>';
+        }).join('');
+        // 時間軸日期 header
+        return ''
+          + '<div style="position:relative;padding-left:18px;margin-bottom:8px">'
+          +   '<span style="position:absolute;left:0;top:5px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg-mid,#fff)"></span>'
+          +   '<span style="position:absolute;left:3px;top:13px;bottom:-8px;width:2px;background:var(--border)"></span>'
+          +   '<div style="font-size:11px;font-weight:600;color:var(--text-dim);font-family:var(--font-mono,monospace);margin-bottom:5px">' + escapeHtml(day.date) + '</div>'
+          +   '<div>' + rows + '</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function storyOpenArchive(slug, catKey) {
