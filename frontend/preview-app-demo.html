@@ -243,13 +243,14 @@
     /* HOME — 早安卡 */
     .home-greet {
       display: flex; align-items: center; gap: 12px;
-      padding: 12px 14px;
-      background: linear-gradient(135deg, var(--accent-tint) 0%, var(--rose-tint) 100%);
+      padding: 14px 16px;
+      background: #FFFFFF;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       margin-bottom: 12px;
       position: relative; overflow: hidden;
     }
+    .home-greet > *:not(.puzzle-bg-layer) { position: relative; z-index: 1; }
     .home-avatar {
       width: 48px; height: 48px; border-radius: 50%;
       background: var(--teal); color: #fff;
@@ -379,16 +380,19 @@
     .bodymap-wrap {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 20px 16px 18px;
-      background: linear-gradient(135deg, var(--rose-soft) 0%, #FFFFFF 45%, var(--accent-soft) 100%);
+      background: #FFFFFF;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       margin-bottom: 12px;
       position: relative; overflow: hidden;
     }
-    .bodymap-wrap .puzzle-motif.tl { left: -14px; top: -14px; width: 70px; height: 70px; opacity: 0.10; color: var(--rose-deep); }
-    .bodymap-wrap .puzzle-motif.tr { right: -14px; top: -14px; width: 70px; height: 70px; opacity: 0.10; color: var(--accent); }
-    .bodymap-wrap .puzzle-motif.bl { left: -10px; bottom: -10px; width: 50px; height: 50px; opacity: 0.08; color: var(--teal); }
+    /* 拼圖漸層背景 — 鋪滿整個卡片 */
+    .puzzle-bg-layer {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+    }
     .bodymap-wrap > svg.body-figure { width: 140px; height: auto; position: relative; z-index: 1; }
+    .bodymap-wrap > .bodymap-caption { position: relative; z-index: 1; }
     .bodymap-caption { font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 8px; font-family: var(--font-mono); }
     .bodymap-caption strong { color: var(--navy); font-weight: 600; }
 
@@ -478,13 +482,14 @@
 
     /* Pre-visit card */
     .pv-hero {
-      padding: 14px 16px;
-      background: linear-gradient(135deg, var(--accent-tint), var(--teal-tint));
+      padding: 16px 18px;
+      background: #FFFFFF;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       margin-bottom: 12px;
       position: relative; overflow: hidden;
     }
+    .pv-hero > *:not(.puzzle-bg-layer) { position: relative; z-index: 1; }
     .pv-hero-eye { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--accent-deep); text-transform: uppercase; }
     .pv-hero-num {
       font-family: var(--font-brand); font-style: italic; font-weight: 500;
@@ -560,6 +565,35 @@
       <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
             fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
     </symbol>
+    <!-- 填色版拼圖塊 — 用來組合成漸層背景 -->
+    <symbol id="puzzle-fill" viewBox="0 0 100 100">
+      <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+            fill="currentColor"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- 共用：拼圖漸層背景 SVG（4 塊 pastel 拼圖互疊 = 形成 gradient） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="puzzle-bg-rose-blue" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+      <use href="#puzzle-fill" x="-40" y="-40" width="180" height="180" style="color:rgba(232,168,168,0.22)"/>
+      <use href="#puzzle-fill" x="80" y="-60" width="200" height="200" style="color:rgba(74,144,194,0.18)"/>
+      <use href="#puzzle-fill" x="180" y="60" width="180" height="180" style="color:rgba(47,131,120,0.16)"/>
+      <use href="#puzzle-fill" x="-30" y="80" width="160" height="160" style="color:rgba(139,149,197,0.14)"/>
+    </symbol>
+    <symbol id="puzzle-bg-blue-teal" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+      <use href="#puzzle-fill" x="-40" y="-40" width="180" height="180" style="color:rgba(74,144,194,0.18)"/>
+      <use href="#puzzle-fill" x="90" y="-50" width="180" height="180" style="color:rgba(47,131,120,0.20)"/>
+      <use href="#puzzle-fill" x="180" y="60" width="180" height="180" style="color:rgba(168,242,224,0.20)"/>
+      <use href="#puzzle-fill" x="-20" y="100" width="140" height="140" style="color:rgba(74,144,194,0.12)"/>
+    </symbol>
+    <symbol id="puzzle-bg-rose-amber" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+      <use href="#puzzle-fill" x="-30" y="-40" width="170" height="170" style="color:rgba(232,168,168,0.22)"/>
+      <use href="#puzzle-fill" x="90" y="-50" width="180" height="180" style="color:rgba(201,139,47,0.16)"/>
+      <use href="#puzzle-fill" x="170" y="70" width="170" height="170" style="color:rgba(232,168,168,0.18)"/>
+      <use href="#puzzle-fill" x="-20" y="90" width="160" height="160" style="color:rgba(201,139,47,0.10)"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -603,9 +637,9 @@
       </div>
       <div class="ph-body">
 
-        <!-- 早安卡 縮小版 -->
+        <!-- 早安卡 — 拼圖漸層背景 -->
         <div class="home-greet">
-          <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
+          <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>
           <div class="home-avatar">郭</div>
           <div class="home-greet-text">
             <div class="home-greet-title">早安，郭先生</div>
@@ -774,9 +808,8 @@
           <span class="sec-spacer"></span>
         </div>
         <div class="bodymap-wrap">
-          <div class="puzzle-motif tl"><svg><use href="#puzzle-piece"/></svg></div>
-          <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
-          <div class="puzzle-motif bl"><svg><use href="#puzzle-piece"/></svg></div>
+          <!-- 拼圖塊組成的漸層背景（4 塊 pastel 拼圖互疊） -->
+          <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-blue"/></svg>
           <svg class="body-figure" viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg"
                fill="#FFFFFF" stroke="#1F3D58" stroke-width="1.4"
                stroke-linejoin="round" stroke-linecap="round">
@@ -1054,9 +1087,9 @@
       </div>
       <div class="ph-body">
 
-        <!-- 回診倒數 hero -->
+        <!-- 回診倒數 hero — 拼圖漸層背景 -->
         <div class="pv-hero">
-          <div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>
+          <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>
           <div class="pv-hero-eye">下次回診</div>
           <div class="pv-hero-num">4<span class="unit">天後 · 5/26 週一 10:30</span></div>
           <div class="pv-hero-doc">內分泌科 · 林志明 醫師</div>
