@@ -9530,7 +9530,27 @@ function calcBMI(h, w) {
 function records() {
   const info = getBasicInfo();
   const v = (k) => (info[k] || '').toString().replace(/"/g, '&quot;');
-  return `
+
+  // ─── Mobile v11 hero header（form 自身共用 id，所以只加 hero/disclaimer 包圍 ）───
+  var _mobileRecHero = ''
+    + '<div class="mobile-only" style="margin-bottom:12px">'
+    +   '<div class="pv-hero">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">基本資料</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">' + (info.name || '我的健康紀錄') + '</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">填寫一次，所有頁面都會自動帶入。最關鍵：當前疾病 / 過敏 / 用藥</div>'
+    +   '</div>'
+    + '</div>';
+
+  var _mobileRecFooter = ''
+    + '<div class="mobile-only">'
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>資料僅存本帳號</strong>，不會分享給第三方。可隨時編輯。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileRecHero + `
     <section class="card">
       <h2><i data-lucide="id-card"></i> ${_T('rec.title')}</h2>
       <p class="sub-hint">${_T('rec.subhint')}</p>
@@ -9617,7 +9637,7 @@ function records() {
           <button type="button" class="btn-quiet" onclick="copyBasicInfo()"><i data-lucide="clipboard-copy"></i> ${_T('rec.btn.copy')}</button>
         </div>
       </form>
-    </section>`;
+    </section>` + _mobileRecFooter;
 }
 
 function loadRecordsPage() {
