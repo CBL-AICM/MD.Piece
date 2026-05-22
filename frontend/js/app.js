@@ -18900,8 +18900,40 @@ function fetchNearestFollowUp() {
 }
 
 function followUps() {
-  return ''
-    + '<section class="fu-page">'
+  // ─── Mobile v11 block ───
+  var _mobileFuBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">下次回診</div>'
+    +     '<div class="pv-hero-num" id="mobile-fu-next-num">—<span class="unit" id="mobile-fu-next-unit">尚未排定</span></div>'
+    +     '<div class="pv-hero-doc" id="mobile-fu-next-doc" style="margin-top:6px">點下方「新增回診」加入第一筆</div>'
+    +     '<button class="pv-btn" onclick="openFollowUpEditor()"><i data-lucide="plus"></i> 新增回診</button>'
+    +   '</div>'
+
+    // 篩選 chip
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="calendar-clock"></i> 回診排程</h3>'
+    +     '<span id="mobile-fu-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="chip-group" style="margin-bottom:10px">'
+    +     '<button class="chip active" data-mobile-fu-filter="upcoming" onclick="filterFollowUps(\'upcoming\')">即將到來</button>'
+    +     '<button class="chip" data-mobile-fu-filter="all" onclick="filterFollowUps(\'all\')">全部</button>'
+    +     '<button class="chip" data-mobile-fu-filter="completed" onclick="filterFollowUps(\'completed\')">已完成</button>'
+    +   '</div>'
+
+    // 列表 — 由 renderFollowUpList mirror 進來
+    +   '<div id="mobile-fu-list" style="display:flex;flex-direction:column;gap:8px"></div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>回診排程僅供個人提醒，不會自動掛號。請依各醫院掛號流程確認時段。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileFuBlock + ''
+    + '<section class="fu-page desktop-only">'
     +   '<header class="fu-head">'
     +     '<div>'
     +       '<p class="fu-eyebrow">// follow_ups &gt; scheduled</p>'
@@ -18941,7 +18973,6 @@ function loadFollowUpsPage() {
 
 function renderFollowUpList() {
   var box = document.getElementById('fu-list');
-  if (!box) return;
   var rows = _followUpsCache || [];
   var today = new Date(); today.setHours(0, 0, 0, 0);
   var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
@@ -18957,16 +18988,113 @@ function renderFollowUpList() {
   } else {
     filtered.sort(function(a, b) { return _foDateOnly(a.scheduled_date) > _foDateOnly(b.scheduled_date) ? -1 : 1; });
   }
-  if (!filtered.length) {
-    var msg = _fuFilter === 'upcoming'
-      ? '尚未排定任何回診。點右上「新增回診」加入第一筆。'
-      : (_fuFilter === 'completed' ? '還沒有已完成的回診紀錄。' : '尚未有任何回診紀錄。');
-    box.innerHTML = '<p class="fu-empty">' + msg + '</p>';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  if (box) {
+    if (!filtered.length) {
+      var msg = _fuFilter === 'upcoming'
+        ? '尚未排定任何回診。點右上「新增回診」加入第一筆。'
+        : (_fuFilter === 'completed' ? '還沒有已完成的回診紀錄。' : '尚未有任何回診紀錄。');
+      box.innerHTML = '<p class="fu-empty">' + msg + '</p>';
+    } else {
+      box.innerHTML = filtered.map(_renderFollowUpCard).join('');
+    }
+  }
+
+  // mobile mirror
+  _mobileSyncFollowUpHero(rows);
+  _mobileSyncFollowUpList(filtered);
+
+  // 同步 mobile filter chip
+  document.querySelectorAll('[data-mobile-fu-filter]').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-mobile-fu-filter') === _fuFilter);
+  });
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileSyncFollowUpHero(allRows) {
+  var numEl = document.getElementById('mobile-fu-next-num');
+  var unitEl = document.getElementById('mobile-fu-next-unit');
+  var docEl = document.getElementById('mobile-fu-next-doc');
+  if (!numEl) return;
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  var upcoming = (allRows || []).filter(function(r) {
+    return r.status === 'scheduled' && _foDateOnly(r.scheduled_date) >= todayStr;
+  }).sort(function(a, b) { return _foDateOnly(a.scheduled_date) < _foDateOnly(b.scheduled_date) ? -1 : 1; });
+  if (!upcoming.length) {
+    numEl.textContent = '—';
+    if (unitEl) unitEl.textContent = '尚未排定回診';
+    if (docEl) docEl.textContent = '點下方「新增回診」加入第一筆';
     return;
   }
-  box.innerHTML = filtered.map(_renderFollowUpCard).join('');
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+  var next = upcoming[0];
+  var days = _foDaysFrom(next.scheduled_date);
+  if (days === 0) { numEl.innerHTML = '今天<span class="unit"></span>'; }
+  else { numEl.innerHTML = (days > 0 ? days : '—') + '<span class="unit">天後 · ' + _foDateOnly(next.scheduled_date).replace(/-/g, '/') + '</span>'; }
+  if (docEl) {
+    var parts = [];
+    if (next.department) parts.push(next.department);
+    if (next.hospital) parts.push(next.hospital);
+    if (next.doctor_name) parts.push(next.doctor_name);
+    docEl.textContent = parts.join(' · ') || '記得帶健保卡與藥袋';
+  }
+}
+
+function _mobileSyncFollowUpList(filtered) {
+  var box = document.getElementById('mobile-fu-list');
+  var cntEl = document.getElementById('mobile-fu-count');
+  if (cntEl) cntEl.textContent = filtered.length + ' 筆';
+  if (!box) return;
+  if (!filtered.length) {
+    var msg = _fuFilter === 'upcoming'
+      ? '尚未排定任何回診'
+      : (_fuFilter === 'completed' ? '還沒有已完成的回診' : '尚未有任何回診');
+    box.innerHTML = '<div class="card" style="padding:14px;color:var(--text-muted);font-size:11.5px;text-align:center">' + msg + '</div>';
+    return;
+  }
+  box.innerHTML = filtered.map(function(row) {
+    var status = row.status || 'scheduled';
+    var days = _foDaysFrom(row.scheduled_date);
+    var pillCls = 'pill-info';
+    var countdownText = '';
+    if (status === 'completed') { pillCls = 'pill-ok'; countdownText = '已完成'; }
+    else if (status === 'missed') { pillCls = 'pill-rose'; countdownText = '未到'; }
+    else if (status === 'cancelled') { pillCls = 'pill-mute'; countdownText = '已取消'; }
+    else if (days !== null) {
+      if (days > 0) { countdownText = '還有 ' + days + ' 天'; pillCls = days <= 3 ? 'pill-warn' : 'pill-info'; }
+      else if (days === 0) { countdownText = '就是今天'; pillCls = 'pill-warn'; }
+      else { countdownText = '已過期 ' + (-days) + ' 天'; pillCls = 'pill-rose'; }
+    }
+    var sess = _foSessionLabel(row.session);
+    var meta = [row.department, row.hospital].filter(Boolean).map(escapeHtml).join(' · ');
+    var safeId = escapeHtml(row.id);
+    var doneBtn = status === 'scheduled'
+      ? '<button onclick="markFollowUpStatus(\'' + safeId + '\',\'completed\')" style="border:1px solid var(--green,#3F8E5C);background:var(--green-soft);color:var(--green-deep);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i data-lucide="check" style="width:11px;height:11px"></i>已回診</button>'
+      : '';
+    var reopenBtn = status !== 'scheduled'
+      ? '<button onclick="markFollowUpStatus(\'' + safeId + '\',\'scheduled\')" style="border:1px solid var(--border);background:#fff;color:var(--text-dim);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i data-lucide="rotate-ccw" style="width:11px;height:11px"></i>恢復</button>'
+      : '';
+    return ''
+      + '<div class="card" style="padding:12px 14px;position:relative;overflow:hidden">'
+      +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+      +   '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+      +     '<i data-lucide="calendar" style="width:14px;height:14px;color:var(--accent-deep);margin-top:1px;flex-shrink:0"></i>'
+      +     '<div style="flex:1;min-width:0">'
+      +       '<div style="font-size:13px;font-weight:600;color:var(--navy);font-family:var(--font-mono,monospace)">' + escapeHtml(_foFormatDate(row.scheduled_date)) + (sess ? ' · ' + escapeHtml(sess) : '') + '</div>'
+      +       (countdownText ? '<div style="margin-top:3px"><span class="pill ' + pillCls + '">' + countdownText + '</span></div>' : '')
+      +     '</div>'
+      +   '</div>'
+      +   (meta ? '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;display:flex;align-items:center;gap:4px"><i data-lucide="building-2" style="width:11px;height:11px"></i>' + meta + '</div>' : '')
+      +   (row.doctor_name ? '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;display:flex;align-items:center;gap:4px"><i data-lucide="stethoscope" style="width:11px;height:11px"></i>' + escapeHtml(row.doctor_name) + '</div>' : '')
+      +   (row.notes ? '<div style="font-size:11px;color:var(--text-dim);line-height:1.5;margin-top:4px;padding:6px 8px;background:var(--bg-soft);border-radius:6px">' + escapeHtml(row.notes) + '</div>' : '')
+      +   '<div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap">'
+      +     doneBtn + reopenBtn
+      +     '<button onclick="openFollowUpEditor(\'' + safeId + '\')" style="border:1px solid var(--border);background:#fff;color:var(--text-dim);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i data-lucide="pencil" style="width:11px;height:11px"></i>編輯</button>'
+      +     '<button onclick="deleteFollowUp(\'' + safeId + '\')" style="border:1px solid var(--border);background:#fff;color:var(--rose-deep);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i data-lucide="trash-2" style="width:11px;height:11px"></i>刪除</button>'
+      +   '</div>'
+      + '</div>';
+  }).join('');
 }
 
 function _renderFollowUpCard(row) {
