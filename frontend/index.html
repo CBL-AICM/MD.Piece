@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/elder-mode.css?v=v4-fix-clobber" />
   <link rel="stylesheet" href="css/medical-warm.css?v=v5-puzzle-pattern" />
   <link rel="stylesheet" href="css/v11-modern.css?v=v2-mobile-only" />
+  <link rel="stylesheet" href="css/v11-components.css?v=v1-demo-port" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -115,6 +116,50 @@
       <symbol id="md-puzzle-piece-2" viewBox="0 0 100 100">
         <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 95 40 95 40 80 L 20 80 L 20 60 C 5 60 5 40 20 40 Z"
               fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+      </symbol>
+
+      <!-- v11 demo puzzle defs (來自 preview-app-demo.html) -->
+      <radialGradient id="puzzle-hl" cx="35%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+        <stop offset="55%" stop-color="#ffffff" stop-opacity="0.10"/>
+        <stop offset="100%" stop-color="#000000" stop-opacity="0.08"/>
+      </radialGradient>
+      <linearGradient id="puzzle-shade" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#1F3D58" stop-opacity="0.10"/>
+      </linearGradient>
+      <symbol id="puzzle-piece" viewBox="0 0 100 100">
+        <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+              fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="puzzle-fill" viewBox="0 0 100 100">
+        <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+              fill="currentColor"/>
+        <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+              fill="url(#puzzle-hl)"/>
+        <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+              fill="url(#puzzle-shade)"/>
+        <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+              fill="none" stroke="#1F3D58" stroke-opacity="0.08" stroke-width="0.4" stroke-linejoin="round"/>
+        <circle cx="50" cy="50" r="2" fill="#1F3D58" fill-opacity="0.08"/>
+      </symbol>
+      <symbol id="puzzle-bg-rose-blue" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+        <use href="#puzzle-fill" x="-40" y="-40" width="180" height="180" style="color:rgba(232,168,168,0.22)"/>
+        <use href="#puzzle-fill" x="80" y="-60" width="200" height="200" style="color:rgba(74,144,194,0.18)"/>
+        <use href="#puzzle-fill" x="180" y="60" width="180" height="180" style="color:rgba(47,131,120,0.16)"/>
+        <use href="#puzzle-fill" x="-30" y="80" width="160" height="160" style="color:rgba(139,149,197,0.14)"/>
+      </symbol>
+      <symbol id="puzzle-bg-blue-teal" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+        <use href="#puzzle-fill" x="-40" y="-40" width="180" height="180" style="color:rgba(74,144,194,0.18)"/>
+        <use href="#puzzle-fill" x="90" y="-50" width="180" height="180" style="color:rgba(47,131,120,0.20)"/>
+        <use href="#puzzle-fill" x="180" y="60" width="180" height="180" style="color:rgba(168,242,224,0.20)"/>
+        <use href="#puzzle-fill" x="-20" y="100" width="140" height="140" style="color:rgba(74,144,194,0.12)"/>
+      </symbol>
+      <symbol id="puzzle-bg-rose-amber" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+        <use href="#puzzle-fill" x="-30" y="-40" width="170" height="170" style="color:rgba(232,168,168,0.22)"/>
+        <use href="#puzzle-fill" x="90" y="-50" width="180" height="180" style="color:rgba(201,139,47,0.16)"/>
+        <use href="#puzzle-fill" x="170" y="70" width="170" height="170" style="color:rgba(232,168,168,0.18)"/>
+        <use href="#puzzle-fill" x="-20" y="90" width="160" height="160" style="color:rgba(201,139,47,0.10)"/>
       </symbol>
     </defs>
   </svg>
