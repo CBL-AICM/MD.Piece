@@ -4016,63 +4016,83 @@ function home() {
     +     '<button class="care-chip ' + (getCareMode() === 'inpatient' ? 'active' : '') + '" onclick="setCareMode && setCareMode(\'inpatient\')"><i data-lucide="hospital"></i> 住院模式</button>'
     +   '</div>'
 
-    // KPI 3 卡 mini（先給佔位，loadHomePage 之後從 #home-med-summary 等資料注入）
+    // KPI 3 卡 mini（含 sparkline + 白話解釋，資料注入見 _updateMobileHomeKPIs）
     +   '<div class="kpi-row" id="mobile-home-kpi">'
     +     '<div class="kpi-mini t-rose">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-bp-val">—</div>'
     +       '<div class="kpi-mini-meta" id="mobile-kpi-bp-meta">尚無紀錄</div>'
+    +       '<svg class="kpi-mini-spark" id="mobile-kpi-bp-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
+    +         '<polygon fill="#C97A7A" fill-opacity="0.16" points="0,22 0,11 16,12 32,8 48,13 64,9 80,14 100,11 100,22"/>'
+    +         '<polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,11 16,12 32,8 48,13 64,9 80,14 100,11"/>'
+    +         '<circle cx="100" cy="11" r="2.6" fill="#C97A7A"/>'
+    +       '</svg>'
+    +       '<div class="kpi-mini-explain">線往上 = 升高</div>'
     +     '</div>'
     +     '<div class="kpi-mini t-blue">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="kpi-mini-label"><i data-lucide="droplet"></i> 血糖</div>'
+    +       '<div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-glu-val">—</div>'
     +       '<div class="kpi-mini-meta" id="mobile-kpi-glu-meta">尚無紀錄</div>'
+    +       '<svg class="kpi-mini-spark" id="mobile-kpi-glu-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
+    +         '<polygon fill="#4A90C2" fill-opacity="0.16" points="0,22 0,14 16,12 32,16 48,10 64,13 80,8 100,6 100,22"/>'
+    +         '<polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,14 16,12 32,16 48,10 64,13 80,8 100,6"/>'
+    +         '<circle cx="100" cy="6" r="2.6" fill="#4A90C2"/>'
+    +       '</svg>'
+    +       '<div class="kpi-mini-explain">線往上 = 偏高</div>'
     +     '</div>'
     +     '<div class="kpi-mini t-teal">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-mood-val">—</div>'
     +       '<div class="kpi-mini-meta" id="mobile-kpi-mood-meta">尚無紀錄</div>'
+    +       '<svg class="kpi-mini-spark" id="mobile-kpi-mood-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
+    +         '<polygon fill="#2F8378" fill-opacity="0.16" points="0,22 0,8 16,9 32,12 48,17 64,14 80,18 100,13 100,22"/>'
+    +         '<polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,8 16,9 32,12 48,17 64,14 80,18 100,13"/>'
+    +         '<circle cx="100" cy="13" r="2.6" fill="#2F8378"/>'
+    +       '</svg>'
+    +       '<div class="kpi-mini-explain">線往上 = 越累</div>'
     +     '</div>'
     +   '</div>'
 
-    // 不舒服一鍵 — 4 顆 SOS
+    // 不舒服一鍵 — 4 顆常見症狀（按下後跳到症狀頁讓使用者記錄）
     +   '<div class="sec-head">'
     +     '<h3 class="sec-title"><i data-lucide="zap"></i> 不舒服？按一下就好</h3>'
     +     '<span class="sec-spacer"></span>'
+    +     '<span class="sec-count" id="mobile-sos-count">今日 — 筆</span>'
     +   '</div>'
     +   '<div class="sos-grid">'
-    +     '<button class="sos-btn t-rose" onclick="onInpatientSOS && onInpatientSOS(\'pain\', this)">'
+    +     '<button class="sos-btn t-rose" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="brain"></i></div>'
+    +       '<div class="sos-label">頭痛</div>'
+    +       '<div class="sos-sub" id="mobile-sos-headache-sub">—</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-blue" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="activity"></i></div>'
+    +       '<div class="sos-label">心悸</div>'
+    +       '<div class="sos-sub" id="mobile-sos-palpitation-sub">—</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-teal" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="thermometer"></i></div>'
+    +       '<div class="sos-label">發燒</div>'
+    +       '<div class="sos-sub" id="mobile-sos-fever-sub">—</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-amber" onclick="navigateTo(\'symptoms\',null)">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="sos-icon"><i data-lucide="zap"></i></div>'
-    +       '<div class="sos-label">痛</div>'
-    +       '<div class="sos-sub">哪裡都可以</div>'
-    +     '</button>'
-    +     '<button class="sos-btn t-blue" onclick="onInpatientSOS && onInpatientSOS(\'breath\', this)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="sos-icon"><i data-lucide="wind"></i></div>'
-    +       '<div class="sos-label">喘</div>'
-    +       '<div class="sos-sub">吸不到氣</div>'
-    +     '</button>'
-    +     '<button class="sos-btn t-teal" onclick="onInpatientSOS && onInpatientSOS(\'nausea\', this)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="sos-icon"><i data-lucide="droplets"></i></div>'
-    +       '<div class="sos-label">噁心</div>'
-    +       '<div class="sos-sub">想吐 / 反胃</div>'
-    +     '</button>'
-    +     '<button class="sos-btn t-amber" onclick="onInpatientSOS && onInpatientSOS(\'help\', this)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="sos-icon"><i data-lucide="bell-ring"></i></div>'
-    +       '<div class="sos-label">記下</div>'
-    +       '<div class="sos-sub">存進今日紀錄</div>'
+    +       '<div class="sos-label">疲倦</div>'
+    +       '<div class="sos-sub" id="mobile-sos-fatigue-sub">—</div>'
     +     '</button>'
     +   '</div>'
 
-    // 今日待辦（複用原本資料注入點）
+    // 今日待辦（複用原本資料注入點 + tag/狀態 pill）
     +   '<div class="sec-head">'
     +     '<h3 class="sec-title"><i data-lucide="list-checks"></i> 今日待辦</h3>'
+    +     '<span class="sec-count" id="mobile-todo-count">— / —</span>'
     +     '<span class="sec-spacer"></span>'
     +     '<button class="sec-action" onclick="navigateTo(\'reminders\',null)">全部 <i data-lucide="arrow-right"></i></button>'
     +   '</div>'
@@ -4080,7 +4100,7 @@ function home() {
     +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無待辦</div>'
     +   '</div>'
 
-    // 下次回診卡
+    // 下次回診卡（醫師 / 醫院 / 樓層，由 _updateMobileNextVisitMeta 注入）
     + (_mobileVisitIso
       ? '<div class="sec-head"><h3 class="sec-title"><i data-lucide="calendar-clock"></i> 下次回診</h3><span class="sec-spacer"></span>'
         + (_mobileVisitDays !== null && _mobileVisitDays > 0 ? '<span class="pill pill-info mono">D-' + _mobileVisitDays + '</span>' : '')
@@ -4091,7 +4111,8 @@ function home() {
         +     '<span style="font-family:var(--font-brand,\'Cormorant Garamond\',serif);font-style:italic;font-weight:500;font-size:24px;color:var(--navy);letter-spacing:-0.01em">' + _mobileVisitIso.replace(/-/g,'/').slice(5) + '</span>'
         +     '<span style="font-size:11.5px;color:var(--text-dim)">' + _T('home.weekday.prefix') + _T('home.weekday.' + (new Date(_mobileVisitIso)).getDay()) + '</span>'
         +   '</div>'
-        +   '<div style="font-size:12.5px;color:var(--navy);font-weight:500">回診當天記得帶健保卡與藥袋</div>'
+        +   '<div id="mobile-next-visit-dept" style="font-size:12.5px;color:var(--navy);font-weight:500">回診當天記得帶健保卡與藥袋</div>'
+        +   '<div id="mobile-next-visit-loc" style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">—</div>'
         + '</div>'
       : '')
 
@@ -4314,6 +4335,251 @@ function loadHomePage() {
       var el = document.getElementById('home-mood-summary');
       if (el) el.innerHTML = '<p class="home-ov-empty">' + _T('home.mood.error') + '</p>';
     });
+
+  // === 行動版首頁額外注入（KPI sparkline / 待辦進度 / 回診科別 / SOS 計數）=====
+  // 桌機版完全不受影響，因為這些 id 只存在於 .mobile-only 區塊。
+  if (typeof _updateMobileHomeKPIs === 'function') _updateMobileHomeKPIs();
+  if (typeof _updateMobileTodoCount === 'function') _updateMobileTodoCount();
+  if (typeof _updateMobileSosCount === 'function') _updateMobileSosCount();
+  if (typeof _updateMobileNextVisitMeta === 'function') _updateMobileNextVisitMeta();
+  if (typeof _renderMobileTodoList === 'function') _renderMobileTodoList();
+}
+
+// 行動版首頁 KPI 注入：血壓 / 飯前血糖 / 心情電量
+// 資料源：localStorage `mdpiece_vitals_entries` + /emotions/daily
+// 找不到資料時保留「—」+「尚無紀錄」，不硬塞假值（避免誤導）。
+function _updateMobileHomeKPIs() {
+  try {
+    var bpVal = document.getElementById('mobile-kpi-bp-val');
+    var bpMeta = document.getElementById('mobile-kpi-bp-meta');
+    if (bpVal && typeof getLatestEntry === 'function') {
+      var bp = getLatestEntry('bp');
+      if (bp && bp.value) {
+        // bp 可能是 "120/80" 或物件
+        var disp = (typeof bp.value === 'string') ? bp.value
+          : (bp.systolic && bp.diastolic) ? (bp.systolic + '/' + bp.diastolic)
+          : '—';
+        bpVal.textContent = disp;
+        if (bpMeta) {
+          // 判讀：以收縮壓 130 / 舒張壓 85 為界（提醒參考，非診斷）
+          var sys = parseInt(String(disp).split('/')[0], 10);
+          if (!isNaN(sys)) {
+            if (sys >= 140) bpMeta.textContent = '偏高，留意';
+            else if (sys >= 130) bpMeta.textContent = '有點高一點';
+            else if (sys < 100) bpMeta.textContent = '偏低';
+            else bpMeta.textContent = '範圍內';
+          } else {
+            bpMeta.textContent = '已紀錄';
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  try {
+    var gluVal = document.getElementById('mobile-kpi-glu-val');
+    var gluMeta = document.getElementById('mobile-kpi-glu-meta');
+    if (gluVal && typeof getLatestEntry === 'function') {
+      var glu = getLatestEntry('glucose');
+      if (glu && glu.value) {
+        gluVal.textContent = String(glu.value);
+        if (gluMeta) {
+          var g = parseFloat(glu.value);
+          if (!isNaN(g)) {
+            if (g >= 126) gluMeta.textContent = '偏高';
+            else if (g >= 110) gluMeta.textContent = '略高 ' + (g - 100).toFixed(0) + ' 點';
+            else if (g < 70) gluMeta.textContent = '偏低';
+            else gluMeta.textContent = '範圍內';
+          } else {
+            gluMeta.textContent = '已紀錄';
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  // 心情電量：用最近一天的 emotions/daily.average_score（0~1 → 1~5 顯示）
+  try {
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    var moodVal = document.getElementById('mobile-kpi-mood-val');
+    var moodMeta = document.getElementById('mobile-kpi-mood-meta');
+    if (pid && moodVal) {
+      fetch(API + '/emotions/daily?patient_id=' + pid + '&days=3')
+        .then(function(r) { return r.ok ? r.json() : { daily: [] }; })
+        .then(function(d) {
+          var daily = (d && d.daily) || [];
+          if (!daily.length) return;
+          var last = daily[daily.length - 1];
+          if (!last || last.average_score == null) return;
+          // average_score 假設 0~1（與 _moodPercent 一致）→ 換算 1~5
+          var score = Math.max(1, Math.min(5, Math.round(last.average_score * 5)));
+          moodVal.innerHTML = score + '<span style="font-size:12px;color:var(--text-muted)">/5</span>';
+          if (moodMeta) {
+            if (score >= 4) moodMeta.textContent = '狀態不錯';
+            else if (score === 3) moodMeta.textContent = '還可以';
+            else moodMeta.textContent = '這幾天有點累';
+          }
+        })
+        .catch(function() {});
+    }
+  } catch (e) {}
+}
+
+// 行動版待辦進度 sec-count（X 完成 / Y 總數）
+function _updateMobileTodoCount() {
+  try {
+    var el = document.getElementById('mobile-todo-count');
+    if (!el) return;
+    var auto = (typeof _genAutoTodos === 'function') ? null : [];
+    var user = (typeof _loadUserTodos === 'function') ? _loadUserTodos() : [];
+    var cutoff = Date.now() - 24 * 3600 * 1000;
+    user = user.filter(function(t) { return !t.done || (t.doneAt && t.doneAt > cutoff); });
+    var done = user.filter(function(t) { return t.done; }).length;
+    // 自動待辦無法簡單判斷完成狀態，先以個人待辦為主分母
+    if (typeof _genAutoTodos === 'function') {
+      _genAutoTodos().then(function(a) {
+        var total = (a || []).length + user.length;
+        el.textContent = done + ' / ' + total;
+      }).catch(function() {
+        el.textContent = done + ' / ' + user.length;
+      });
+    } else {
+      el.textContent = done + ' / ' + user.length;
+    }
+  } catch (e) {}
+}
+
+// 行動版 SOS 今日筆數 + 各症狀最近發生日期
+// 來源：localStorage `mdpiece_ip_sos_history`（住院 SOS）+ symptom 歷史 API（門診）
+function _updateMobileSosCount() {
+  try {
+    var todayCount = document.getElementById('mobile-sos-count');
+    if (todayCount) {
+      // 從住院 SOS storage 推估今日筆數（門診版預設沒有獨立 SOS 紀錄）
+      var stored = [];
+      try {
+        stored = JSON.parse(localStorage.getItem('mdpiece_ip_sos_history') || '[]');
+      } catch (e) { stored = []; }
+      var todayISO = new Date().toISOString().slice(0, 10);
+      var today = stored.filter(function(s) {
+        return s && s.ts && (new Date(s.ts)).toISOString().slice(0, 10) === todayISO;
+      });
+      todayCount.textContent = '今日 ' + today.length + ' 筆';
+    }
+
+    // 各症狀「最近 X/X」：由 /symptoms/history/{pid} 推估
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    if (!pid) return;
+    fetch(API + '/symptoms/history/' + encodeURIComponent(pid))
+      .then(function(r) { return r.ok ? r.json() : { history: [] }; })
+      .then(function(d) {
+        var hist = (d && d.history) || [];
+        var map = { headache: 'mobile-sos-headache-sub', palpitation: 'mobile-sos-palpitation-sub', fever: 'mobile-sos-fever-sub', fatigue: 'mobile-sos-fatigue-sub' };
+        // 對應關鍵字（中文 + 英文 token）
+        var kw = {
+          headache: ['頭痛', 'headache'],
+          palpitation: ['心悸', '心跳', 'palpitation'],
+          fever: ['發燒', '發熱', 'fever'],
+          fatigue: ['疲倦', '疲憊', '累', 'fatigue'],
+        };
+        Object.keys(map).forEach(function(k) {
+          var elx = document.getElementById(map[k]);
+          if (!elx) return;
+          var matched = hist.find(function(h) {
+            var sx = ((h.symptoms || []).join(',') + ' ' + (h.input || '')).toLowerCase();
+            return kw[k].some(function(w) { return sx.indexOf(w.toLowerCase()) >= 0; });
+          });
+          if (matched && matched.created_at) {
+            var dt = new Date(matched.created_at);
+            elx.textContent = '最近 ' + (dt.getMonth() + 1) + '/' + dt.getDate();
+          } else {
+            elx.textContent = '尚無紀錄';
+          }
+        });
+      })
+      .catch(function() {});
+  } catch (e) {}
+}
+
+// 行動版下次回診卡：注入醫師 / 醫院 / 樓層
+function _updateMobileNextVisitMeta() {
+  try {
+    var deptEl = document.getElementById('mobile-next-visit-dept');
+    var locEl = document.getElementById('mobile-next-visit-loc');
+    if (!deptEl && !locEl) return;
+    if (typeof fetchNearestFollowUp !== 'function') return;
+    fetchNearestFollowUp().then(function(fu) {
+      if (!fu) return;
+      var parts = [];
+      if (fu.department) parts.push(fu.department);
+      if (fu.doctor_name) parts.push(fu.doctor_name + ' 醫師');
+      if (deptEl && parts.length) {
+        deptEl.textContent = parts.join(' · ');
+      }
+      var loc = [];
+      if (fu.hospital) loc.push(fu.hospital);
+      if (fu.notes) {
+        // notes 裡若含「3F-A12」這類樓層門牌，順便拉出來
+        var m = String(fu.notes).match(/\d+\s*[FfＦ樓][^\s,。]*/);
+        if (m) loc.push(m[0]);
+      }
+      if (locEl && loc.length) {
+        locEl.textContent = loc.join(' · ');
+      }
+    }).catch(function() {});
+  } catch (e) {}
+}
+
+// 行動版待辦清單：用 demo 的 list-row 結構（tag pill + 時間 + 狀態 pill）渲染
+function _renderMobileTodoList() {
+  var el = document.getElementById('mobile-home-todo-list');
+  if (!el) return;
+  // 先給 loading；資料拿到後 replace
+  Promise.resolve(typeof _genAutoTodos === 'function' ? _genAutoTodos() : [])
+    .then(function(auto) {
+      var user = (typeof _loadUserTodos === 'function') ? _loadUserTodos() : [];
+      var cutoff = Date.now() - 24 * 3600 * 1000;
+      user = user.filter(function(t) { return !t.done || (t.doneAt && t.doneAt > cutoff); });
+
+      var rows = '';
+      (auto || []).forEach(function(t) {
+        // 從 category 推 tag 樣式 / 文案
+        var tagPill = '';
+        if (t.category === 'med') tagPill = '<span class="pill pill-teal tag">服藥</span>';
+        else if (t.category === 'mood') tagPill = '<span class="pill pill-rose tag">情緒</span>';
+        else if (t.category === 'visit') tagPill = '<span class="pill pill-info tag">回診</span>';
+        else tagPill = '<span class="pill pill-mute tag">提醒</span>';
+        // auto 待辦沒帶時間欄位，先留空
+        rows += ''
+          + '<div class="list-row">'
+          +   '<div class="check"></div>'
+          +   '<span class="time">—</span>'
+          +   '<div class="name">' + tagPill + escapeHtml(t.title || '') + '</div>'
+          +   '<span><span class="pill pill-mute mono">未到</span></span>'
+          + '</div>';
+      });
+      (user || []).forEach(function(t) {
+        var statusPill = t.done
+          ? '<span class="pill pill-ok mono">已完成</span>'
+          : '<span class="pill pill-mute mono">未到</span>';
+        var checkClass = t.done ? 'check done' : 'check';
+        var checkIcon = t.done ? '<i data-lucide="check"></i>' : '';
+        rows += ''
+          + '<div class="list-row" data-id="' + escapeHtml(t.id) + '">'
+          +   '<div class="' + checkClass + '" onclick="onTodoToggle(\'' + escapeHtml(t.id) + '\');_renderMobileTodoList && _renderMobileTodoList();_updateMobileTodoCount && _updateMobileTodoCount();">' + checkIcon + '</div>'
+          +   '<span class="time">—</span>'
+          +   '<div class="name"><span class="pill pill-mute tag">個人</span>' + escapeHtml(t.title || '') + '</div>'
+          +   '<span>' + statusPill + '</span>'
+          + '</div>';
+      });
+
+      if (!rows) {
+        rows = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無待辦</div>';
+      }
+      el.innerHTML = rows;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
