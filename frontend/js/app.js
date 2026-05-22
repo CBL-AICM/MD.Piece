@@ -7677,8 +7677,83 @@ function vitals() {
     ? '先到下方勾選你要追蹤的指標'
     : (todayCovered === totalToday ? '今日追蹤全部完成 ✨' : `${todayCovered} / ${totalToday} 項已記錄 · 還剩 ${totalToday - todayCovered}`);
 
+  // ─── 手機 v11 demo 版面 — 本週數值 + 最近紀錄 ────────────── //
+  var _mobileVitalsCards = trackedMetrics.slice(0, 2).map(function(m, idx) {
+    var latest = getLatestEntry(m.id);
+    var tint = idx === 0 ? 't-rose' : 't-blue';
+    var color = idx === 0 ? '#C97A7A' : '#4A90C2';
+    var val = latest ? (latest.value != null ? latest.value : (latest.systolic ? (latest.systolic + '/' + latest.diastolic) : '—')) : '—';
+    var unit = m.unit || '';
+    var lastTime = latest ? ((new Date(latest.recordedAt)).getMonth()+1) + '/' + (new Date(latest.recordedAt)).getDate() : '';
+    return ''
+      + '<div class="vital-card ' + tint + '">'
+      +   '<div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>'
+      +   '<div class="vital-card-head"><i data-lucide="activity"></i><span class="lbl">' + escapeHtml(m.label || m.id) + '</span></div>'
+      +   '<div class="vital-card-val">' + escapeHtml(String(val)) + '<span class="vital-card-unit">' + escapeHtml(unit) + '</span></div>'
+      +   '<div class="vital-card-meta">' + (lastTime ? '最後紀錄 ' + lastTime : '尚無紀錄') + '</div>'
+      +   (latest
+          ? '<svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;margin-top:6px">'
+            + '<polygon fill="' + color + '" fill-opacity="0.16" points="0,24 0,12 16,14 32,9 48,16 64,11 80,17 100,13 100,24"/>'
+            + '<polyline fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,12 16,14 32,9 48,16 64,11 80,17 100,13"/>'
+            + '<circle cx="100" cy="13" r="2.4" fill="' + color + '"/>'
+            + '</svg>'
+          : '')
+      + '</div>';
+  }).join('');
+  if (!_mobileVitalsCards) {
+    _mobileVitalsCards = '<div class="vital-card" style="grid-column:1/-1;padding:16px;text-align:center;color:var(--text-muted);font-size:11px">尚未選擇追蹤項目 — 到下方勾選</div>';
+  }
+
+  // 最近紀錄（前 4 筆）
+  var _mobileRecentRows = allEntries.slice(0, 4).map(function(e) {
+    var m = findMetric(e.metricId);
+    var val = e.value != null ? e.value : (e.systolic ? (e.systolic + '/' + e.diastolic) : '—');
+    var d = new Date(e.recordedAt);
+    var hhmm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    return ''
+      + '<div class="list-row">'
+      +   '<span></span>'
+      +   '<span class="time">' + hhmm + '</span>'
+      +   '<div class="name">' + escapeHtml((m && m.label) || e.metricId) + ' <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-mono);font-size:11px;margin-left:6px">' + escapeHtml(String(val)) + ((m && m.unit) ? (' ' + m.unit) : '') + '</span></div>'
+      +   '<span><span class="pill pill-mute mono">' + ((d.getMonth()+1) + '/' + d.getDate()) + '</span></span>'
+      + '</div>';
+  }).join('');
+  if (!_mobileRecentRows) {
+    _mobileRecentRows = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無紀錄</div>';
+  }
+
+  var _mobileVitalsBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="activity"></i> 本週數值</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<span class="sec-count">7 天</span>'
+    +   '</div>'
+    +   '<div class="vital-snap">' + _mobileVitalsCards + '</div>'
+
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="list"></i> 最近紀錄</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<span class="sec-count">' + totalEntries + ' 筆</span>'
+    +   '</div>'
+    +   '<div class="list-card">' + _mobileRecentRows + '</div>'
+
+    // 圖表說明（demo 的 kpi-mini-explain — 在圖底下加 1 行說明）
+    +   '<div class="med-tip-card" style="margin-top:12px">'
+    +     '<i data-lucide="trending-up"></i>'
+    +     '<span><strong>怎麼看圖</strong>：線往上代表數值升高。請與醫師討論個人目標值。</span>'
+    +   '</div>'
+
+    // 免責 footer
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
   return `
-    <div class="sym-page">
+    ${_mobileVitalsBlock}
+    <div class="sym-page desktop-only">
 
       <div class="page-app-hero page-app-hero-blue">
         <div class="page-app-hero-head">
