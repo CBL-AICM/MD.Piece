@@ -13906,6 +13906,60 @@ function chat() {
   var mode = chatGetMode();
   var ver  = chatGetVersion();
 
+  // mobile v11 mirror of chat messages
+  var mobileMsgs = hist.length
+    ? hist.map(_mobileChatRenderMessage).join('')
+    : '<div class="chat-msg-mob chat-msg-mob-bot"><div class="chat-bubble-mob">' + chatGreeting() + '</div></div>';
+
+  var _mobileChatBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:10px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div style="display:flex;align-items:center;gap:10px;position:relative;z-index:1">'
+    +       '<div style="width:48px;height:48px;border-radius:50%;background:var(--rose-tint);border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:var(--rose-deep);font-size:22px">🌿</div>'
+    +       '<div>'
+    +         '<div style="font-size:15px;font-weight:600;color:var(--navy)">醫起聊天 · 小禾</div>'
+    +         '<div style="font-size:11px;color:var(--text-dim);margin-top:2px">陪你聊聊、把感受拼成一段話</div>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 語氣 / 對象切換
+    +   '<div class="aud-toggle" style="margin-bottom:10px">'
+    +     '<button class="audience-btn' + (mode === 'patient' ? ' active' : '') + '" onclick="chatSwitchMode(\'patient\')"><i data-lucide="user"></i> 我是患者</button>'
+    +     '<button class="audience-btn' + (mode === 'family' ? ' active' : '') + '" onclick="chatSwitchMode(\'family\')"><i data-lucide="heart"></i> 我是家屬</button>'
+    +   '</div>'
+    +   '<div class="aud-toggle" style="margin-bottom:12px">'
+    +     '<button class="audience-btn' + (ver === 'normal' ? ' active' : '') + '" onclick="chatSwitchVersion(\'normal\')"><i data-lucide="message-circle"></i> 一般</button>'
+    +     '<button class="audience-btn' + (ver === 'elderly' ? ' active' : '') + '" onclick="chatSwitchVersion(\'elderly\')"><i data-lucide="ear"></i> 年長版</button>'
+    +   '</div>'
+
+    // 對話泡泡
+    +   '<div id="mobile-chat-stream" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px">'
+    +     mobileMsgs
+    +   '</div>'
+
+    // 快速提問 chip
+    +   '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">'
+    +     '<button class="chip" onclick="chatQuickAsk(\'幫我把最近三天的不舒服整理成一段話\')">整理近況</button>'
+    +     '<button class="chip" onclick="chatQuickAsk(\'我有點焦慮，可以陪我說說話嗎？\')">陪我聊聊</button>'
+    +     '<button class="chip" style="background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep)" onclick="chatGenerateArticle()"><i data-lucide="sparkles" style="width:10px;height:10px"></i> 生成一篇文章</button>'
+    +   '</div>'
+
+    // 輸入框
+    +   '<form id="mobile-chat-form" onsubmit="event.preventDefault();_mobileChatSend()" style="display:flex;gap:6px;align-items:center;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:6px 8px;margin-bottom:10px">'
+    +     '<input id="mobile-chat-input" type="text" autocomplete="off" placeholder="跟小禾說說話…" style="flex:1;border:none;outline:none;font-size:13px;padding:6px;background:transparent" />'
+    +     '<button type="button" onclick="chatToggleMic()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px"><i data-lucide="mic" style="width:16px;height:16px"></i></button>'
+    +     '<button type="submit" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><i data-lucide="send" style="width:13px;height:13px"></i></button>'
+    +     '<button type="button" onclick="chatClear()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>'
+    +   '</form>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>小禾不是醫師，僅作為陪伴與資訊參考；身體不適請務必就醫。</span>'
+    +   '</div>'
+    + '</div>';
+
   var msgsHtml = hist.length
     ? hist.map(chatRenderMessage).join('')
     : ''
@@ -13915,8 +13969,8 @@ function chat() {
       +   '</div>'
       + '</div>';
 
-  return ''
-    + '<section class="chat-page">'
+  return _mobileChatBlock
+    + '<section class="chat-page desktop-only">'
     + '  <header class="chat-header">'
     + '    <div class="chat-mascot-wrap chat-mascot-wrap-lg" id="chat-mascot">'
     +        chatMascotSvg('idle')
@@ -13981,6 +14035,48 @@ function chat() {
     + '  </form>'
     + '  <p class="chat-disclaimer">小禾不是醫師，僅作為陪伴與資訊參考；身體不適請務必就醫。</p>'
     + '</section>';
+}
+
+// mobile v11 chat bubble helpers
+function _mobileChatRenderMessage(m) {
+  if (m.role === 'user') {
+    return ''
+      + '<div style="display:flex;justify-content:flex-end">'
+      +   '<div style="max-width:75%;background:var(--accent);color:#fff;padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+      + '</div>';
+  }
+  if (m.role === 'article') {
+    return ''
+      + '<div style="display:flex;justify-content:flex-start">'
+      +   '<div style="max-width:85%;background:var(--accent-tint);border:1.5px solid var(--accent);color:var(--navy);padding:10px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55">'
+      +     '<div style="font-size:11px;font-weight:600;color:var(--accent-deep);margin-bottom:5px;display:flex;align-items:center;gap:4px"><i data-lucide="file-text" style="width:12px;height:12px"></i> 小禾為你寫的一篇</div>'
+      +     '<div style="white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  return ''
+    + '<div style="display:flex;justify-content:flex-start;gap:6px;align-items:flex-end">'
+    +   '<div style="width:24px;height:24px;border-radius:50%;background:var(--rose-tint);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🌿</div>'
+    +   '<div style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+    + '</div>';
+}
+
+function _mobileChatSend() {
+  var input = document.getElementById('mobile-chat-input');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  // 寫進 desktop input 並走原本 chatSend
+  var dInput = document.getElementById('chat-input');
+  if (dInput) dInput.value = text;
+  else {
+    // 沒有 desktop input 時直接呼叫
+    var hist = chatLoadHistory();
+    hist.push({ role: 'user', text: text, ts: Date.now() });
+    chatSaveHistory(hist);
+  }
+  if (typeof chatSend === 'function') chatSend();
 }
 
 function chatRenderMessage(m) {
@@ -14077,16 +14173,30 @@ function chatClear() {
       +   '</div>'
       + '</div>';
   }
+  var mStream = document.getElementById('mobile-chat-stream');
+  if (mStream) {
+    mStream.innerHTML = '<div style="display:flex;justify-content:flex-start;gap:6px;align-items:flex-end"><div style="width:24px;height:24px;border-radius:50%;background:var(--rose-tint);display:flex;align-items:center;justify-content:center;font-size:13px">🌿</div><div style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55">' + chatGreeting() + '</div></div>';
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function chatAppendMessage(role, text) {
   var stream = document.getElementById('chat-stream');
-  if (!stream) return null;
-  var wrap = document.createElement('div');
-  wrap.innerHTML = chatRenderMessage({ role: role, text: text });
-  var node = wrap.firstChild;
-  stream.appendChild(node);
+  var mStream = document.getElementById('mobile-chat-stream');
+  var node = null;
+  if (stream) {
+    var wrap = document.createElement('div');
+    wrap.innerHTML = chatRenderMessage({ role: role, text: text });
+    node = wrap.firstChild;
+    stream.appendChild(node);
+  }
+  if (mStream) {
+    var mWrap = document.createElement('div');
+    mWrap.innerHTML = _mobileChatRenderMessage({ role: role, text: text });
+    var mNode = mWrap.firstChild;
+    if (mNode) mStream.appendChild(mNode);
+    mStream.scrollTop = mStream.scrollHeight;
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
   chatScrollToBottom();
   return node;
