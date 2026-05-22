@@ -145,16 +145,37 @@ def test_get_medications_includes_schedule_slots():
     assert by_name["止痛藥"]["bucket"] == "other"
 
 
-def test_log_fixed_slot_is_never_blocked():
-    """早 / 中 / 晚 的固定時段藥不該被 4 小時規則擋住。"""
+def test_log_fixed_slot_also_blocks_within_4_hours():
+    """早 / 中 / 晚 的固定時段藥同樣受 4 小時規則保護：
+    避免使用者誤觸打卡或同一時段重複按造成連續服藥。
+    第一次打卡 OK，立刻再按一次應該被擋下並回 409。
+    """
     med_id = _make_med("普拿疼", "一天三次")
-    # 連續打卡兩次，第二次也要成功
-    for _ in range(2):
-        r = client.post(
-            "/medications/log",
-            json={"patient_id": PATIENT_ID, "medication_id": med_id, "taken": True},
-        )
-        assert r.status_code == 200, r.text
+    r1 = client.post(
+        "/medications/log",
+        json={"patient_id": PATIENT_ID, "medication_id": med_id, "taken": True},
+    )
+    assert r1.status_code == 200, r1.text
+
+    r2 = client.post(
+        "/medications/log",
+        json={"patient_id": PATIENT_ID, "medication_id": med_id, "taken": True},
+    )
+    assert r2.status_code == 409, r2.text
+    detail = r2.json()["detail"]
+    assert detail["code"] == "dose_too_soon"
+    assert detail["safety"]["required_hours"] == 4
+    # force=True 仍可覆寫（病患/家屬「我了解風險仍要記錄」）
+    r3 = client.post(
+        "/medications/log",
+        json={
+            "patient_id": PATIENT_ID,
+            "medication_id": med_id,
+            "taken": True,
+            "force": True,
+        },
+    )
+    assert r3.status_code == 200, r3.text
 
 
 def test_log_interval_med_blocks_within_4_hours():
