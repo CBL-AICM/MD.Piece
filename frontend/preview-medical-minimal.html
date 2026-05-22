@@ -431,7 +431,7 @@
       font-size: 10.5px; color: var(--text-muted);
       font-family: var(--font-mono);
     }
-    .kpi-spark { width: 100%; height: 22px; margin-top: 8px; position: relative; }
+    .kpi-spark, .sparkline { width: 100%; height: 28px; margin-top: 10px; position: relative; }
 
     /* List card — 取代 panel，更輕 */
     .list-card {
@@ -739,9 +739,10 @@
                         <span class="kpi-unit">mmHg</span>
                       </div>
                       <div class="kpi-meta">↓ 4 vs 上週</div>
-                      <svg class="sparkline" viewBox="0 0 200 22" preserveAspectRatio="none">
-                        <polyline fill="none" stroke="#C97A7A" stroke-width="1.4" points="0,11 25,12 50,8 75,14 100,9 125,15 150,11 175,13 200,11"/>
-                        <circle cx="200" cy="11" r="2" fill="#C97A7A"/>
+                      <svg class="sparkline" viewBox="0 0 200 24" preserveAspectRatio="none">
+                        <polygon fill="#C97A7A" fill-opacity="0.14" points="0,24 0,11 25,12 50,8 75,14 100,9 125,15 150,11 175,13 200,11 200,24"/>
+                        <polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,11 25,12 50,8 75,14 100,9 125,15 150,11 175,13 200,11"/>
+                        <circle cx="200" cy="11" r="2.6" fill="#C97A7A"/>
                       </svg>
                     </div>
                     <div class="kpi t-teal">
@@ -756,9 +757,10 @@
                         <span class="kpi-unit">%</span>
                       </div>
                       <div class="kpi-meta">1 次漏 · 5/18</div>
-                      <svg class="sparkline" viewBox="0 0 200 22" preserveAspectRatio="none">
-                        <polyline fill="none" stroke="#2F8378" stroke-width="1.4" points="0,7 25,4 50,6 75,3 100,7 125,11 150,5 175,4 200,3"/>
-                        <circle cx="200" cy="3" r="2" fill="#2F8378"/>
+                      <svg class="sparkline" viewBox="0 0 200 24" preserveAspectRatio="none">
+                        <polygon fill="#2F8378" fill-opacity="0.14" points="0,24 0,7 25,4 50,6 75,3 100,7 125,11 150,5 175,4 200,3 200,24"/>
+                        <polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,7 25,4 50,6 75,3 100,7 125,11 150,5 175,4 200,3"/>
+                        <circle cx="200" cy="3" r="2.6" fill="#2F8378"/>
                       </svg>
                     </div>
                     <div class="kpi t-blue">
@@ -773,9 +775,10 @@
                         <span class="kpi-unit">/ 5</span>
                       </div>
                       <div class="kpi-meta">建議告訴林醫師</div>
-                      <svg class="sparkline" viewBox="0 0 200 22" preserveAspectRatio="none">
-                        <polyline fill="none" stroke="#4A90C2" stroke-width="1.4" points="0,7 25,9 50,12 75,18 100,15 125,19 150,11 175,9 200,13"/>
-                        <circle cx="200" cy="13" r="2" fill="#4A90C2"/>
+                      <svg class="sparkline" viewBox="0 0 200 24" preserveAspectRatio="none">
+                        <polygon fill="#4A90C2" fill-opacity="0.14" points="0,24 0,7 25,9 50,12 75,18 100,15 125,19 150,11 175,9 200,13 200,24"/>
+                        <polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,7 25,9 50,12 75,18 100,15 125,19 150,11 175,9 200,13"/>
+                        <circle cx="200" cy="13" r="2.6" fill="#4A90C2"/>
                       </svg>
                     </div>
                   </div>

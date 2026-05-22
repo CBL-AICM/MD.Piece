@@ -392,4 +392,220 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── 結束 ──────────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════
+   v9 簡約風加層 — 元素縮小、區塊間距加大（Linear / Notion 概念）
+   ════════════════════════════════════════════════════════════════ */
+
+/* 主內容區的 page padding 加大留白 */
+.main-content > #app,
+#app {
+  --mw-section-gap: 28px;
+}
+
+/* ─── 今日拼圖 hero（home-digest）縮小 ─── */
+.home-digest {
+  padding: 14px 16px 16px !important;
+  margin: 14px 0 24px !important;
+  border-radius: 10px !important;
+}
+.home-digest::after {
+  width: 80px !important;
+  height: 80px !important;
+  opacity: 0.04 !important;
+}
+.home-digest-eyebrow {
+  font-size: 0.66rem !important;
+}
+.home-digest-progress {
+  font-size: 0.85rem !important;
+}
+.home-digest-progress strong {
+  font-size: 1rem !important;
+}
+.home-digest-bar {
+  height: 5px !important;
+  margin-bottom: 12px !important;
+}
+.home-digest-stats {
+  gap: 6px !important;
+}
+.home-digest-stat {
+  padding: 8px 10px !important;
+  border-radius: 7px !important;
+}
+.home-digest-icon {
+  width: 26px !important;
+  height: 26px !important;
+}
+.home-digest-icon i { width: 13px !important; height: 13px !important; }
+.home-digest-num {
+  font-size: 1.15rem !important;
+}
+.home-digest-label {
+  font-size: 0.66rem !important;
+}
+
+/* ─── 各頁 hero（page-app-hero）縮小 ─── */
+.page-app-hero {
+  padding: 14px 18px 16px !important;
+  margin: 4px 0 24px !important;
+  border-radius: 10px !important;
+}
+.page-app-hero::after {
+  width: 80px !important;
+  height: 80px !important;
+  opacity: 0.04 !important;
+}
+.page-app-hero-eyebrow {
+  font-size: 0.65rem !important;
+}
+.page-app-hero-warn {
+  font-size: 0.6rem !important;
+}
+.page-app-hero-title {
+  font-size: 0.98rem !important;
+  margin-bottom: 6px !important;
+}
+.page-app-hero-meta {
+  font-size: 0.74rem !important;
+}
+.page-app-hero-bar { height: 5px !important; }
+
+/* ─── Sidebar nav 列縮小（更緊但 hover/active 仍清楚） ─── */
+.nav-item {
+  padding: 7px 11px !important;
+  margin-bottom: 1px !important;
+  font-size: 0.85rem !important;
+  border-radius: 6px !important;
+}
+.nav-icon {
+  width: 22px !important;
+  height: 22px !important;
+}
+.nav-icon i {
+  width: 13px !important;
+  height: 13px !important;
+}
+.nav-label { font-size: 0.85rem !important; }
+.nav-sub {
+  font-size: 0.66rem !important;
+  margin-top: 1px !important;
+}
+.nav-section-label {
+  font-size: 0.62rem !important;
+  padding: 12px 10px 4px !important;
+  letter-spacing: 0.14em !important;
+}
+
+/* Sidebar brand 縮小 */
+.sidebar-brand {
+  padding: 12px 14px !important;
+  gap: 9px !important;
+}
+.sidebar-logo-img {
+  width: 28px !important;
+  height: 28px !important;
+}
+.sidebar-brand h1 {
+  font-size: 1.1rem !important;
+}
+.sidebar-brand p {
+  font-size: 0.6rem !important;
+  margin-top: 2px !important;
+}
+
+/* ─── Todo card 縮小 ─── */
+.home-todo,
+.todo-card {
+  padding: 12px 14px !important;
+  margin: 0 0 24px !important;
+  border-radius: 10px !important;
+}
+.todo-title {
+  font-size: 0.85rem !important;
+}
+.todo-count {
+  font-size: 0.7rem !important;
+  padding: 1px 8px !important;
+}
+.todo-item {
+  padding: 8px 10px !important;
+}
+.todo-text {
+  font-size: 0.82rem !important;
+}
+.todo-time {
+  font-size: 0.7rem !important;
+}
+
+/* ─── Quick report 4 卡縮小 ─── */
+.quick-report {
+  padding: 12px 14px !important;
+  margin: 0 0 24px !important;
+  border-radius: 10px !important;
+}
+.quick-report-grid {
+  gap: 8px !important;
+}
+.qr-tile {
+  padding: 12px 12px !important;
+  border-radius: 8px !important;
+}
+.qr-icon {
+  width: 28px !important;
+  height: 28px !important;
+  margin-bottom: 8px !important;
+  border-radius: 7px !important;
+}
+.qr-icon i {
+  width: 14px !important;
+  height: 14px !important;
+}
+.qr-name {
+  font-size: 0.82rem !important;
+}
+.qr-desc {
+  font-size: 0.72rem !important;
+  margin-top: 2px !important;
+}
+.qr-meta {
+  font-size: 0.66rem !important;
+  margin-top: 8px !important;
+}
+
+/* ─── Topbar slim ─── */
+.topbar {
+  padding: 8px 16px !important;
+  gap: 8px !important;
+}
+.topbar-filename {
+  font-size: 0.78rem !important;
+}
+.topbar-back {
+  font-size: 0.78rem !important;
+}
+.app-lang-toggle,
+.app-theme-toggle,
+.app-elder-toggle,
+.app-settings-btn {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* ─── Care mode chips 縮小 ─── */
+.care-mode {
+  gap: 3px !important;
+  padding: 3px !important;
+}
+.care-chip {
+  padding: 5px 12px !important;
+  font-size: 0.75rem !important;
+}
+
+/* ─── 區塊間距加大 — section 之間 24px ─── */
+#app section,
+#app > div > section {
+  margin-bottom: 24px !important;
+}
+
+/* ─── 結束 v9 簡約 ─── */
