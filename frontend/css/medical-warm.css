@@ -1,0 +1,931 @@
+/* ═══════════════════════════════════════════════════════════════
+   MD.Piece — Medical Warm Theme (v3)
+
+   Overlay CSS：載在 style.css + elder-mode.css 之後，覆寫關鍵視覺。
+   原 style.css 完全不動。要還原把 index.html 的 link 拿掉即可。
+
+   覆寫範圍：
+   ① 隱藏星空 canvas + 浮動拼圖裝飾
+   ② 5 種 hero gradient → pastel tint + 內部文字改海軍藍
+   ③ Cormorant Garamond italic 用於品牌字 MD.Piece
+   ④ Sidebar active 改藍漸層 + 左側細條
+   ⑤ home-digest / page-app-hero 改溫柔色 + 拼圖背景 motif
+   ⑥ Auth 卡片浮動裝飾收斂
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── ① 隱藏視覺雜訊 ─────────────────────────────────────────── */
+#star-canvas,
+#landing-canvas {
+  display: none !important;
+}
+
+.landing-deco,
+.landing-deco-1,
+.landing-deco-2,
+.landing-deco-3 {
+  display: none !important;
+}
+
+.auth-deco-layer {
+  opacity: 0.35 !important;
+  filter: saturate(0.6);
+}
+.auth-deco-puzzle,
+.auth-deco-icon {
+  opacity: 0.5 !important;
+}
+
+/* Landing 用兩道極淡 radial gradient 取代星空 */
+#landing {
+  background:
+    radial-gradient(ellipse 600px 400px at 18% 28%, rgba(184,242,234,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 800px 600px at 82% 72%, rgba(74,144,194,0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
+}
+#landing[data-theme="dark"] {
+  background:
+    radial-gradient(ellipse 600px 400px at 18% 28%, rgba(127,231,217,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 800px 600px at 82% 72%, rgba(74,144,194,0.15) 0%, transparent 55%),
+    linear-gradient(180deg, #0B1426 0%, #15293D 100%) !important;
+}
+
+/* ─── ② 5 種 hero gradient → pastel tint ─────────────────────── */
+:root {
+  /* 重新定義 gradient token 為 pastel — 所有舊 var(--gradient-hero-*) 用到的地方自動更新 */
+  --gradient-hero:         linear-gradient(135deg, #F2F8FC 0%, #FFFFFF 70%) !important;
+  --gradient-hero-teal:    linear-gradient(135deg, #F1F8F6 0%, #FFFFFF 70%) !important;
+  --gradient-hero-mint:    linear-gradient(135deg, #F1F8F4 0%, #FFFFFF 70%) !important;
+  --gradient-hero-coral:   linear-gradient(135deg, #FDF6F6 0%, #FFFFFF 70%) !important;
+  --gradient-hero-lavender:linear-gradient(135deg, #F4F5FA 0%, #FFFFFF 70%) !important;
+
+  /* 額外的 medical-warm token */
+  --mw-aqua-tint:    rgba(184,242,234,0.10);
+  --mw-border:       rgba(31,61,88,0.12);
+  --mw-border-mid:   rgba(31,61,88,0.20);
+  --mw-shadow:       0 2px 8px rgba(31,61,88,0.06);
+}
+
+/* Hero 卡片：原本是飽和 gradient + 白字 → pastel + 海軍藍字 */
+.page-app-hero,
+.home-digest,
+.med-today-hero {
+  color: var(--klein) !important;
+  box-shadow: var(--mw-shadow) !important;
+  border: 1px solid var(--mw-border) !important;
+  position: relative;
+}
+
+/* 拼圖背景 motif — 用 SVG data URI 嵌進 ::after */
+.page-app-hero::after,
+.home-digest::after {
+  content: "";
+  position: absolute;
+  right: -20px; bottom: -20px;
+  width: 120px; height: 120px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z' fill='none' stroke='%231F3D58' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 把原本的圓形高光 ::before 透明掉，避免兩個裝飾打架 */
+.page-app-hero::before,
+.home-digest::before {
+  opacity: 0 !important;
+}
+
+/* Hero 內部文字色 — 原 cream 白 → 海軍藍系 */
+.page-app-hero-eyebrow,
+.home-digest-eyebrow {
+  color: var(--accent) !important;
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase;
+}
+.page-app-hero-warn {
+  color: var(--text-dim) !important;
+}
+.page-app-hero-title {
+  color: var(--klein) !important;
+  font-weight: 600 !important;
+}
+.page-app-hero-meta {
+  color: var(--text-dim) !important;
+}
+.home-digest-progress {
+  color: var(--klein) !important;
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
+}
+.home-digest-num {
+  color: var(--klein) !important;
+  /* 保留原本的 JetBrains Mono — v5 數字用等寬字 */
+}
+.home-digest-label {
+  color: var(--text-dim) !important;
+}
+.home-digest-stat {
+  background: rgba(255,255,255,0.85) !important;
+  border: 1px solid var(--mw-border) !important;
+  backdrop-filter: none !important;
+}
+.home-digest-icon {
+  background: #FFFFFF !important;
+  border: 1px solid var(--mw-border) !important;
+  color: var(--accent) !important;
+}
+.home-digest-bar {
+  background: rgba(255,255,255,0.75) !important;
+  border: 1px solid var(--mw-border) !important;
+}
+.home-digest-bar-fill {
+  background: linear-gradient(90deg, var(--rose-deep, #C97A7A), var(--accent), var(--teal)) !important;
+  box-shadow: none !important;
+}
+.page-app-hero-bar {
+  background: rgba(255,255,255,0.75) !important;
+  border: 1px solid var(--mw-border) !important;
+}
+.page-app-hero-bar-fill {
+  background: linear-gradient(90deg, var(--accent), var(--teal)) !important;
+  box-shadow: none !important;
+}
+.memo-version-tag {
+  background: rgba(31,61,88,0.06) !important;
+  color: var(--text-dim) !important;
+}
+
+/* 確保 hero 內部子元素 z-index 在背景拼圖之上 */
+.home-digest-head,
+.home-digest-bar,
+.home-digest-stats,
+.page-app-hero-head,
+.page-app-hero-title,
+.page-app-hero-meta,
+.page-app-hero-bar {
+  position: relative;
+  z-index: 1;
+}
+
+/* Med today hero（藥物頁）也跟著走 */
+.med-today-hero {
+  background: linear-gradient(135deg, #F1F8F6 0%, #FFFFFF 70%) !important;
+}
+.med-today-hero::before { opacity: 0.04 !important; }
+
+/* ─── ③ Cormorant Garamond italic 品牌字 ──────────────────── */
+.sidebar-brand h1 {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 1.4rem !important;
+  letter-spacing: -0.005em !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--klein) !important;
+  color: var(--klein) !important;
+}
+.sidebar-brand h1::before {
+  content: "" !important;
+}
+.sidebar-brand p {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-size: 0.62rem !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  color: var(--text-muted) !important;
+  font-weight: 500 !important;
+}
+
+/* Landing logo 字也用 Cormorant */
+.landing-logo {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  text-shadow: none !important;
+}
+
+/* Landing terminal prompt 隱藏（> INIT MD.PIECE） */
+.landing-prompt {
+  display: none !important;
+}
+
+/* Landing sub-tagline — 去掉終端 mono 風 */
+.landing-sub-tagline {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  border-left: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.06em !important;
+  color: var(--text-muted) !important;
+}
+
+/* Landing enter button — 從終端風 → 醫療藍實心按鈕 */
+.landing-enter {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  background: linear-gradient(135deg, var(--accent) 0%, #2F6B96 100%) !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(74,144,194,0.30) !important;
+  backdrop-filter: none !important;
+}
+.landing-enter::before,
+.landing-enter::after {
+  display: none !important;
+}
+.landing-enter:hover {
+  box-shadow: 0 6px 18px rgba(74,144,194,0.40) !important;
+  transform: translateY(-2px) !important;
+  color: #FFFFFF !important;
+}
+.enter-sub { color: rgba(255,255,255,0.85) !important; letter-spacing: 0.18em !important; }
+.enter-main { letter-spacing: 0.04em !important; font-weight: 500 !important; }
+.enter-main::before { content: "" !important; }
+
+/* Landing theme / lang toggle — 去終端字、去發光 */
+.theme-toggle,
+.lang-toggle,
+.app-lang-toggle,
+.app-theme-toggle {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  letter-spacing: 0.06em !important;
+  box-shadow: none !important;
+}
+
+/* ─── ④ Sidebar：active 狀態 → 藍漸層 + 左側細條 ────────────── */
+.nav-item {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-size: 0.92rem !important;
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  position: relative;
+}
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(74,144,194,0.12) 0%, rgba(74,144,194,0.04) 100%) !important;
+  border-color: transparent !important;
+  color: var(--klein) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+.nav-item.active::before {
+  content: "" !important;
+  position: absolute;
+  left: -8px; top: 8px; bottom: 8px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.nav-label {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-weight: 500 !important;
+}
+.nav-item.active .nav-label {
+  color: var(--accent-deep, #2F6B96) !important;
+  font-weight: 600 !important;
+}
+.nav-sub {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* Nav badge */
+.nav-badge {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+.nav-badge[data-tone="done"] {
+  background: var(--success) !important;
+  color: #FFFFFF !important;
+}
+.nav-badge[data-tone="todo"] {
+  background: var(--rose, #E8A8A8) !important;
+  color: #FFFFFF !important;
+}
+
+/* ─── ⑤ Topbar 微調（去終端 mono） ──────────────────────────── */
+.topbar-filename,
+.topbar-back,
+.page-howto-summary-text {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* ─── ⑥ Auth motif：品牌字也用 Cormorant ───────────────────── */
+.auth-brand-line1,
+.auth-brand-line2 {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  -webkit-text-fill-color: var(--klein) !important;
+  color: var(--klein) !important;
+  background: none !important;
+}
+.auth-subtitle {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  letter-spacing: 0.14em !important;
+}
+
+/* Auth card 內部按鈕 / tab / submit 也統一字體 */
+.auth-tab,
+.auth-submit,
+.auth-label,
+.auth-switch-hint,
+.auth-error,
+.auth-field input {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+.auth-submit {
+  background: linear-gradient(135deg, var(--accent) 0%, #2F6B96 100%) !important;
+  box-shadow: 0 4px 12px rgba(74,144,194,0.25) !important;
+}
+
+/* ─── ⑦ Howto 摺疊框 — 去終端字 ─────────────────────────────── */
+.page-howto-summary,
+.page-howto-step-n,
+.page-howto-step-text,
+.page-howto-warn {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* ─── ⑧ Mobile tabbar 字 ────────────────────────────────────── */
+.mobile-tabbar,
+.mobile-tab,
+.mobile-tab-label {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* ─── ⑨ v5 加：Status pill 系統（5 種） ──────────────────────
+   給未來的 component 用。也覆寫 nav-badge 讓視覺一致。 */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 11px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  font-family: "Noto Sans TC", system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.pill .lucide,
+.pill i[data-lucide] { width: 10px; height: 10px; }
+.pill-ok    { background: rgba(63,142,92,0.12);  color: #2F6F47; }
+.pill-warn  { background: rgba(201,139,47,0.12); color: #9A6A1F; }
+.pill-info  { background: rgba(74,144,194,0.12); color: #2F6B96; }
+.pill-rose  { background: rgba(201,122,122,0.14); color: #C97A7A; }
+.pill-mute  { background: rgba(31,61,88,0.08);   color: var(--text-dim); }
+
+/* ─── ⑩ v5 加：數字 / 時間 / 倒數用 JetBrains Mono ──────────
+   只在資料元素，不在文案。 */
+.todo-time,
+.todo-count,
+.todo-card .todo-meta,
+.qr-meta,
+.page-app-hero-meta-num,
+.nav-badge,
+.kpi-value,
+.vital-value,
+.tabular {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   v9 簡約風加層 — 元素縮小、區塊間距加大（Linear / Notion 概念）
+   ════════════════════════════════════════════════════════════════ */
+
+/* 主內容區的 page padding 加大留白 */
+.main-content > #app,
+#app {
+  --mw-section-gap: 28px;
+}
+
+/* ─── 今日拼圖 hero（home-digest）縮小 ─── */
+.home-digest {
+  padding: 14px 16px 16px !important;
+  margin: 14px 0 24px !important;
+  border-radius: 10px !important;
+}
+.home-digest::after {
+  width: 80px !important;
+  height: 80px !important;
+  opacity: 0.04 !important;
+}
+.home-digest-eyebrow {
+  font-size: 0.66rem !important;
+}
+.home-digest-progress {
+  font-size: 0.85rem !important;
+}
+.home-digest-progress strong {
+  font-size: 1rem !important;
+}
+.home-digest-bar {
+  height: 5px !important;
+  margin-bottom: 12px !important;
+}
+.home-digest-stats {
+  gap: 6px !important;
+}
+.home-digest-stat {
+  padding: 8px 10px !important;
+  border-radius: 7px !important;
+}
+.home-digest-icon {
+  width: 26px !important;
+  height: 26px !important;
+}
+.home-digest-icon i { width: 13px !important; height: 13px !important; }
+.home-digest-num {
+  font-size: 1.15rem !important;
+}
+.home-digest-label {
+  font-size: 0.66rem !important;
+}
+
+/* ─── 各頁 hero（page-app-hero）縮小 ─── */
+.page-app-hero {
+  padding: 14px 18px 16px !important;
+  margin: 4px 0 24px !important;
+  border-radius: 10px !important;
+}
+.page-app-hero::after {
+  width: 80px !important;
+  height: 80px !important;
+  opacity: 0.04 !important;
+}
+.page-app-hero-eyebrow {
+  font-size: 0.65rem !important;
+}
+.page-app-hero-warn {
+  font-size: 0.6rem !important;
+}
+.page-app-hero-title {
+  font-size: 0.98rem !important;
+  margin-bottom: 6px !important;
+}
+.page-app-hero-meta {
+  font-size: 0.74rem !important;
+}
+.page-app-hero-bar { height: 5px !important; }
+
+/* ─── Sidebar nav 列縮小（更緊但 hover/active 仍清楚） ─── */
+.nav-item {
+  padding: 7px 11px !important;
+  margin-bottom: 1px !important;
+  font-size: 0.85rem !important;
+  border-radius: 6px !important;
+}
+.nav-icon {
+  width: 22px !important;
+  height: 22px !important;
+}
+.nav-icon i {
+  width: 13px !important;
+  height: 13px !important;
+}
+.nav-label { font-size: 0.85rem !important; }
+.nav-sub {
+  font-size: 0.66rem !important;
+  margin-top: 1px !important;
+}
+.nav-section-label {
+  font-size: 0.62rem !important;
+  padding: 12px 10px 4px !important;
+  letter-spacing: 0.14em !important;
+}
+
+/* Sidebar brand 縮小 */
+.sidebar-brand {
+  padding: 12px 14px !important;
+  gap: 9px !important;
+}
+.sidebar-logo-img {
+  width: 28px !important;
+  height: 28px !important;
+}
+.sidebar-brand h1 {
+  font-size: 1.1rem !important;
+}
+.sidebar-brand p {
+  font-size: 0.6rem !important;
+  margin-top: 2px !important;
+}
+
+/* ─── Todo card 縮小 ─── */
+.home-todo,
+.todo-card {
+  padding: 12px 14px !important;
+  margin: 0 0 24px !important;
+  border-radius: 10px !important;
+}
+.todo-title {
+  font-size: 0.85rem !important;
+}
+.todo-count {
+  font-size: 0.7rem !important;
+  padding: 1px 8px !important;
+}
+.todo-item {
+  padding: 8px 10px !important;
+}
+.todo-text {
+  font-size: 0.82rem !important;
+}
+.todo-time {
+  font-size: 0.7rem !important;
+}
+
+/* ─── Quick report 4 卡縮小 ─── */
+.quick-report {
+  padding: 12px 14px !important;
+  margin: 0 0 24px !important;
+  border-radius: 10px !important;
+}
+.quick-report-grid {
+  gap: 8px !important;
+}
+.qr-tile {
+  padding: 12px 12px !important;
+  border-radius: 8px !important;
+}
+.qr-icon {
+  width: 28px !important;
+  height: 28px !important;
+  margin-bottom: 8px !important;
+  border-radius: 7px !important;
+}
+.qr-icon i {
+  width: 14px !important;
+  height: 14px !important;
+}
+.qr-name {
+  font-size: 0.82rem !important;
+}
+.qr-desc {
+  font-size: 0.72rem !important;
+  margin-top: 2px !important;
+}
+.qr-meta {
+  font-size: 0.66rem !important;
+  margin-top: 8px !important;
+}
+
+/* ─── Topbar slim ─── */
+.topbar {
+  padding: 8px 16px !important;
+  gap: 8px !important;
+}
+.topbar-filename {
+  font-size: 0.78rem !important;
+}
+.topbar-back {
+  font-size: 0.78rem !important;
+}
+.app-lang-toggle,
+.app-theme-toggle,
+.app-elder-toggle,
+.app-settings-btn {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* ─── Care mode chips 縮小 ─── */
+.care-mode {
+  gap: 3px !important;
+  padding: 3px !important;
+}
+.care-chip {
+  padding: 5px 12px !important;
+  font-size: 0.75rem !important;
+}
+
+/* ─── 區塊間距加大 — section 之間 24px ─── */
+#app section,
+#app > div > section {
+  margin-bottom: 24px !important;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   v9.1 補：把實際首頁有的元素也縮小
+   （screenshot 反饋：home-hero / care-mode-card / home-quick-report
+    / home-layer 之前 v9 漏掉）
+   ════════════════════════════════════════════════════════════════ */
+
+/* ─── care-mode-card「你現在用的是」── */
+.care-mode-card {
+  margin: 10px 0 16px !important;
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, rgba(74,144,194,0.06), rgba(91,181,168,0.05)) !important;
+}
+.care-mode-card-head {
+  margin-bottom: 8px !important;
+  gap: 6px !important;
+}
+.care-mode-card-title {
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  color: var(--text-dim) !important;
+}
+.care-mode-chips {
+  gap: 6px !important;
+}
+.care-mode-chip {
+  padding: 7px 12px !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  border-width: 1px !important;
+  border-radius: 8px !important;
+}
+.care-mode-chip.active {
+  box-shadow: 0 1px 4px rgba(74,144,194,0.20) !important;
+}
+.care-mode-chip i {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+/* ─── home-hero（早安 LISA 大卡）大幅縮小 ─── */
+.home-hero {
+  padding: 14px 16px !important;
+  margin-bottom: 16px !important;
+  gap: 14px !important;
+  border-width: 1px !important;
+  border-radius: 12px !important;
+  backdrop-filter: none !important;
+  background: linear-gradient(135deg, rgba(74,144,194,0.04) 0%, rgba(232,168,168,0.04) 100%) !important;
+}
+.home-hero::before,
+.home-hero::after {
+  display: none !important;
+}
+.home-logo,
+.home-hero-left .home-logo,
+.home-logo-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  animation: none !important;
+}
+.home-title {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 2px !important;
+}
+.home-calm {
+  font-size: 0.72rem !important;
+  margin-bottom: 6px !important;
+  color: var(--text-muted) !important;
+  letter-spacing: 0.04em !important;
+}
+.home-date-row {
+  gap: 8px !important;
+}
+.home-datestr {
+  font-size: 0.72rem !important;
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
+}
+.home-day {
+  font-size: 0.7rem !important;
+  letter-spacing: 0.06em !important;
+}
+.home-visit-row {
+  margin-top: 6px !important;
+  gap: 4px !important;
+}
+.home-visit-chip {
+  font-size: 0.7rem !important;
+  padding: 3px 8px !important;
+}
+
+/* ─── home-quick-report（不舒服？按一下就好）─── */
+.home-quick-report {
+  margin: 12px 0 20px !important;
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
+  border-width: 1px !important;
+  box-shadow: none !important;
+}
+.home-qr-head {
+  margin-bottom: 10px !important;
+  padding-bottom: 8px !important;
+}
+.home-qr-head h3 {
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+}
+.home-qr-head span {
+  font-size: 0.68rem !important;
+}
+
+/* ─── home-layer 區塊 head 縮小 ─── */
+.home-layer {
+  padding: 14px !important;
+  border-radius: 10px !important;
+  margin-bottom: 20px !important;
+}
+.home-layer-head {
+  margin-bottom: 12px !important;
+  gap: 10px !important;
+}
+.home-layer-num {
+  font-size: 0.95rem !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
+}
+.home-layer-title {
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+}
+.home-layer-sub {
+  font-size: 0.7rem !important;
+  margin-top: 1px !important;
+}
+
+/* ─── home-info-row（藥物 / 心情 / 健康提醒 3 欄）─── */
+.home-info-row {
+  gap: 8px !important;
+  margin-top: 10px !important;
+}
+.home-ov {
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+}
+.home-ov-head {
+  font-size: 0.72rem !important;
+  gap: 5px !important;
+  margin-bottom: 6px !important;
+}
+.home-ov-body {
+  font-size: 0.78rem !important;
+}
+
+/* ─── ip-sos-grid（4 大顆症狀按鈕）縮小 ─── */
+.ip-sos-grid {
+  gap: 6px !important;
+}
+.ip-sos-btn {
+  padding: 14px 10px !important;
+  border-radius: 10px !important;
+}
+.ip-sos-icon,
+.ip-sos-btn .ip-sos-icon {
+  width: 30px !important;
+  height: 30px !important;
+  margin-bottom: 4px !important;
+}
+.ip-sos-label {
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+}
+.ip-sos-sub {
+  font-size: 0.66rem !important;
+  margin-top: 1px !important;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   v10 推廣：拼圖漸層卡 pattern 套到所有主要區塊
+   來源：.qr-tile（user 表明喜歡）
+   套用：.home-hero / .todo-card / .home-todo / .home-ov /
+        .ip-sos-btn / .sos-btn / .care-mode-card / .med-today-hero
+   ════════════════════════════════════════════════════════════════ */
+
+/* 共用：所有 puzzle-tint 卡片 — relative + overflow + 拼圖 motif */
+.home-hero,
+.home-todo,
+.todo-card,
+.home-ov,
+.care-mode-card,
+.med-today-hero {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* 拼圖 motif 背景 — 共用 SVG data URI */
+.home-hero::after,
+.home-todo::after,
+.todo-card::after,
+.home-ov::after,
+.care-mode-card::after {
+  content: "" !important;
+  position: absolute !important;
+  pointer-events: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z' fill='none' stroke='%231F3D58' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  z-index: 0 !important;
+}
+
+/* home-hero（早安卡）— rose→aqua 漸層 + 角落拼圖 */
+.home-hero {
+  background: linear-gradient(135deg, var(--rose-soft, #FBEEEE) 0%, #FFFFFF 50%, var(--accent-soft, #E8F1F8) 100%) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.home-hero::after {
+  right: -14px !important;
+  bottom: -14px !important;
+  width: 90px !important;
+  height: 90px !important;
+  opacity: 0.06 !important;
+}
+
+/* todo-card / home-todo — teal tint + 拼圖 */
+.home-todo,
+.todo-card {
+  background: linear-gradient(135deg, rgba(47,131,120,0.06) 0%, #FFFFFF 60%) !important;
+  border: 1px solid var(--border-glass) !important;
+  backdrop-filter: none !important;
+}
+.home-todo::after,
+.todo-card::after {
+  right: -12px !important;
+  top: -12px !important;
+  width: 70px !important;
+  height: 70px !important;
+  opacity: 0.05 !important;
+}
+
+/* home-ov（3 欄藥物 / 心情 / 提醒）— 各色 tint */
+.home-info-row .home-ov:nth-child(1) {
+  background: linear-gradient(135deg, rgba(74,144,194,0.05) 0%, #fff 70%) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.home-info-row .home-ov:nth-child(2) {
+  background: linear-gradient(135deg, rgba(232,168,168,0.06) 0%, #fff 70%) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.home-info-row .home-ov:nth-child(3) {
+  background: linear-gradient(135deg, rgba(139,149,197,0.05) 0%, #fff 70%) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.home-ov::after {
+  right: -10px !important;
+  bottom: -10px !important;
+  width: 50px !important;
+  height: 50px !important;
+  opacity: 0.05 !important;
+}
+
+/* care-mode-card（你現在用的是）— 加拼圖 */
+.care-mode-card::after {
+  right: -10px !important;
+  top: -10px !important;
+  width: 60px !important;
+  height: 60px !important;
+  opacity: 0.05 !important;
+}
+
+/* ip-sos-btn / 4 顆 SOS 按鈕 — 每顆有自己的 tint + 拼圖角 */
+.ip-sos-btn,
+.sos-btn {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border-glass) !important;
+}
+.ip-sos-btn::after,
+.sos-btn::after {
+  content: "" !important;
+  position: absolute !important;
+  right: -8px !important; top: -8px !important;
+  width: 40px !important; height: 40px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z' fill='none' stroke='%231F3D58' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  opacity: 0.08 !important;
+  pointer-events: none !important;
+}
+/* SOS 4 顆各自漸層 */
+.ip-sos-btn:nth-child(1),
+.sos-btn.t-rose {
+  background: linear-gradient(135deg, var(--rose-soft, rgba(232,168,168,0.10)) 0%, #fff 65%) !important;
+}
+.ip-sos-btn:nth-child(2),
+.sos-btn.t-blue {
+  background: linear-gradient(135deg, rgba(74,144,194,0.08) 0%, #fff 65%) !important;
+}
+.ip-sos-btn:nth-child(3),
+.sos-btn.t-teal {
+  background: linear-gradient(135deg, rgba(47,131,120,0.07) 0%, #fff 65%) !important;
+}
+.ip-sos-btn:nth-child(4),
+.sos-btn.t-amber {
+  background: linear-gradient(135deg, rgba(201,139,47,0.08) 0%, #fff 65%) !important;
+}
+
+/* 確保所有 hero/卡片的內部內容浮在拼圖背景之上 */
+.home-hero > *,
+.home-todo > *,
+.todo-card > *,
+.home-ov > *,
+.care-mode-card > *,
+.ip-sos-btn > *,
+.sos-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── 結束 v10 推廣 ─── */

@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MD.Piece — 醫療皮膚預覽（保留原架構）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    /* ════════════════════════════════════════════════════════
+       MD.Piece — Medical Skin (保留原本介面架構)
+
+       規則：
+       1. Sidebar 5 組分類、20+ 項目、icon、副標 — 全部跟現況一致
+       2. Topbar 排版 / hamburger / 返回 / filename / 工具按鈕 — 全部不動
+       3. 首頁今日拼圖 hero / 6 碎片進度 / 4 卡 quick report — 全部不動
+       4. 只換：移除星空、移除拼圖 floating deco、移除 Cormorant serif、
+                色票收斂、卡片邊框微醫療化（+ 微 cross 浮水印）
+       ════════════════════════════════════════════════════════ */
+    :root {
+      --bg:           #FFFFFF;
+      --bg-soft:      #F7F9FC;
+      --bg-mid:       #EFF3F8;
+      --border:       rgba(31,61,88,0.12);
+      --border-mid:   rgba(31,61,88,0.20);
+      --border-strong:rgba(31,61,88,0.35);
+
+      --accent:       #4A90C2;
+      --accent-deep:  #2F6B96;
+      --accent-soft:  #E8F1F8;
+
+      --teal:         #2F8378;
+      --teal-soft:    #E5F0EE;
+
+      --rose:         #E8A8A8;
+      --rose-deep:    #C97A7A;
+      --rose-soft:    #FBEEEE;
+
+      --green:        #3F8E5C;
+      --green-soft:   #E6F2EB;
+
+      --amber:        #C98B2F;
+      --amber-soft:   #FAF1DF;
+
+      --navy:         #1F3D58;
+      --text:         #1F3D58;
+      --text-dim:     #5A7388;
+      --text-muted:   #8FA4B5;
+
+      --radius:       12px;
+      --radius-sm:    8px;
+
+      --shadow-sm:    0 1px 2px rgba(31,61,88,0.04);
+      --shadow:       0 2px 8px rgba(31,61,88,0.06);
+
+      --font:         "Noto Sans TC", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg-soft); color: var(--text); font-family: var(--font); line-height: 1.55; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+    a { color: var(--accent-deep); text-decoration: none; }
+    img, svg { display: block; max-width: 100%; }
+
+    .preview-shell { max-width: 1320px; margin: 0 auto; padding: 24px 16px 80px; }
+    .preview-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 8px 4px 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+    }
+    .preview-title { font-size: 20px; font-weight: 600; color: var(--navy); }
+    .preview-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; max-width: 720px; }
+    .preview-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; background: var(--accent-soft); color: var(--accent-deep);
+      border-radius: 12px; font-size: 11px; font-weight: 600;
+    }
+    .preview-tag .lucide { width: 12px; height: 12px; }
+
+    /* Mock window chrome */
+    .mock {
+      background: #FFFFFF; border: 1px solid var(--border-mid);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .mock-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 14px; background: var(--bg-soft);
+      border-bottom: 1px solid var(--border);
+    }
+    .mock-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); }
+    .mock-url { margin-left: 12px; font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-muted); }
+    .mock-body { padding: 0; }
+
+    /* ─────────────────────────────────────────────────────
+       App shell — 對映現有 grid: sidebar 240px + main
+       ───────────────────────────────────────────────────── */
+    .app {
+      display: grid; grid-template-columns: 240px 1fr;
+      min-height: 880px;
+      background: var(--bg-soft);
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────
+       對應現有 .sidebar — 與原 index.html 完全一樣的結構
+       ──────────────────────────────────────────────────── */
+    .sidebar {
+      background: #FFFFFF;
+      border-right: 1px solid var(--border);
+      padding: 0;
+      display: flex; flex-direction: column;
+      max-height: 880px;
+      overflow: hidden;
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      cursor: pointer;
+      position: relative;
+    }
+    .sidebar-brand::after {
+      /* 醫療十字 浮水印 — 取代原拼圖角落 SVG */
+      content: ""; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      width: 14px; height: 14px;
+      background:
+        linear-gradient(var(--accent) 0 0) center/100% 2px no-repeat,
+        linear-gradient(var(--accent) 0 0) center/2px 100% no-repeat;
+      opacity: 0.18;
+    }
+    .sidebar-logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      flex-shrink: 0;
+      position: relative;
+    }
+    .sidebar-logo::before,
+    .sidebar-logo::after {
+      content: ""; position: absolute; left: 50%; top: 50%; background: #fff;
+      transform: translate(-50%, -50%);
+    }
+    .sidebar-logo::before { width: 14px; height: 2.5px; border-radius: 1px; }
+    .sidebar-logo::after  { width: 2.5px; height: 14px; border-radius: 1px; }
+    .sidebar-brand h1 {
+      font-size: 15px; font-weight: 600; color: var(--navy); letter-spacing: -0.01em;
+    }
+    .sidebar-brand p {
+      font-size: 9.5px; color: var(--text-muted);
+      letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px 16px;
+    }
+    .nav-section-label {
+      padding: 12px 10px 6px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+      color: var(--text-muted); text-transform: uppercase;
+    }
+    .nav-section-label:first-child { padding-top: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      text-align: left;
+      transition: all 0.12s ease;
+      margin-bottom: 1px;
+    }
+    .nav-item:hover { background: var(--bg-soft); }
+    .nav-item.active {
+      background: var(--accent-soft);
+    }
+    .nav-item.active::before {
+      content: ""; width: 3px; align-self: stretch;
+      background: var(--accent); border-radius: 2px;
+      margin: 2px 0 2px -6px;
+    }
+    .nav-icon {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--bg-soft);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .nav-item.active .nav-icon { background: #fff; color: var(--accent-deep); }
+    .nav-icon .lucide { width: 15px; height: 15px; }
+    .nav-text { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .nav-label {
+      font-size: 13px; font-weight: 500; color: var(--text);
+    }
+    .nav-item.active .nav-label { color: var(--accent-deep); font-weight: 600; }
+    .nav-sub {
+      font-size: 10.5px; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .nav-badge {
+      margin-left: auto;
+      min-width: 18px; height: 18px; padding: 0 5px;
+      background: var(--accent); color: #fff;
+      border-radius: 9px;
+      font-size: 10px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-badge.todo { background: var(--rose-deep); }
+    .nav-badge.done { background: var(--green); }
+
+    .sidebar-foot {
+      padding: 12px 12px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .mode-toggle {
+      width: 100%; padding: 8px;
+      background: var(--bg-soft); border: 1px dashed var(--border-mid);
+      border-radius: var(--radius-sm);
+      font-size: 11.5px; color: var(--text-dim);
+      transition: all 0.12s ease;
+    }
+    .mode-toggle:hover { border-color: var(--accent); color: var(--accent-deep); }
+    .mode-hint { font-size: 10px; color: var(--text-muted); margin-top: 6px; padding: 0 4px; text-align: center; }
+    .logout-btn {
+      width: 100%; margin-top: 10px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px;
+      background: #fff; border: 1px solid var(--border-mid);
+      border-radius: var(--radius-sm);
+      font-size: 12px; color: var(--text-dim);
+      transition: all 0.12s ease;
+    }
+    .logout-btn:hover { border-color: var(--rose-deep); color: var(--rose-deep); }
+    .logout-btn .lucide { width: 13px; height: 13px; }
+
+    /* ── Main ────────────────────────────────────────── */
+    .main { background: var(--bg-soft); display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 18px;
+      background: #FFFFFF; border-bottom: 1px solid var(--border);
+    }
+    .hamburger { display: none; }
+    .topbar-back {
+      display: flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 6px;
+      font-size: 12.5px; color: var(--text-dim);
+      transition: all 0.12s ease;
+    }
+    .topbar-back:hover { background: var(--bg-soft); color: var(--navy); }
+    .topbar-filename {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 10px;
+      background: var(--bg-soft); border-radius: 6px;
+      font-size: 12.5px; color: var(--navy); font-weight: 500;
+      border: 1px solid var(--border);
+    }
+    .topbar-filename::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    }
+    .topbar-spacer { flex: 1; }
+    .topbar-icon-btn {
+      width: 30px; height: 30px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-dim); transition: all 0.12s ease;
+    }
+    .topbar-icon-btn:hover { background: var(--bg-soft); color: var(--navy); }
+    .topbar-icon-btn .lucide { width: 15px; height: 15px; }
+    .topbar-icon-btn .label-mini {
+      font-size: 10px; font-weight: 600;
+    }
+
+    /* Proxy banner (家屬代理) — 保留位置 */
+    .proxy-banner {
+      padding: 6px 18px; background: var(--amber-soft);
+      border-bottom: 1px solid rgba(201,139,47,0.25);
+      font-size: 12px; color: var(--amber); display: flex; align-items: center; gap: 6px;
+    }
+    .proxy-banner .lucide { width: 13px; height: 13px; }
+
+    .page { padding: 20px 24px 40px; }
+
+    /* ─────────────────────────────────────────────────────
+       Home digest — 對應現有 .home-digest（今日拼圖 6 碎片）
+       原是漸層 hero rose，現在改素白卡 + 細邊框 + 進度條保留
+       ───────────────────────────────────────────────────── */
+    .home-digest {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .home-digest::before {
+      /* 微醫療十字浮水印（取代原 puzzle decoration） */
+      content: ""; position: absolute; right: -30px; bottom: -30px;
+      width: 140px; height: 140px;
+      background:
+        linear-gradient(var(--accent) 0 0) center/100% 14px no-repeat,
+        linear-gradient(var(--accent) 0 0) center/14px 100% no-repeat;
+      opacity: 0.04;
+      border-radius: 28px;
+    }
+    .home-digest-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .home-digest-eyebrow {
+      font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em;
+      color: var(--accent-deep); text-transform: uppercase;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .home-digest-eyebrow::before {
+      content: ""; width: 4px; height: 4px; border-radius: 50%;
+      background: var(--accent);
+    }
+    .home-digest-progress {
+      font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums;
+    }
+    .home-digest-progress strong { color: var(--navy); font-weight: 600; }
+    .home-digest-bar {
+      height: 6px; background: var(--bg-mid); border-radius: 3px;
+      overflow: hidden; margin-bottom: 16px;
+      position: relative;
+    }
+    .home-digest-bar-fill {
+      height: 100%; background: linear-gradient(90deg, var(--accent), var(--teal));
+      border-radius: 3px;
+    }
+    .home-digest-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      position: relative;
+    }
+    .home-digest-stat {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .home-digest-icon {
+      width: 32px; height: 32px;
+      background: #FFFFFF; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent-deep);
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+    .home-digest-icon .lucide { width: 15px; height: 15px; }
+    .home-digest-stat[data-cat="med"] .home-digest-icon { color: var(--teal); }
+    .home-digest-stat[data-cat="mood"] .home-digest-icon { color: var(--rose-deep); }
+    .home-digest-num {
+      font-size: 20px; font-weight: 600; color: var(--navy);
+      font-variant-numeric: tabular-nums; line-height: 1;
+    }
+    .home-digest-label {
+      font-size: 11px; color: var(--text-dim); margin-left: auto;
+    }
+
+    /* ─────────────────────────────────────────────────────
+       Todo 卡 — 對應 renderTodoCard
+       ───────────────────────────────────────────────────── */
+    .todo-card {
+      background: #FFFFFF; border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .todo-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .todo-title {
+      font-size: 14px; font-weight: 600; color: var(--navy);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .todo-title .lucide { width: 16px; height: 16px; color: var(--accent); }
+    .todo-count {
+      font-size: 11px; color: var(--text-dim);
+      padding: 2px 10px; background: var(--bg-soft);
+      border: 1px solid var(--border); border-radius: 10px;
+    }
+    .todo-list {
+      display: flex; flex-direction: column;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .todo-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border);
+    }
+    .todo-item:last-child { border-bottom: none; }
+    .todo-item.done { background: var(--bg-soft); }
+    .todo-check {
+      width: 18px; height: 18px; border-radius: 5px;
+      border: 1.5px solid var(--border-mid); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #fff;
+    }
+    .todo-check.done { background: var(--green); border-color: var(--green); color: #fff; }
+    .todo-check.done .lucide { width: 12px; height: 12px; }
+    .todo-tag {
+      padding: 2px 8px; border-radius: 10px;
+      font-size: 10.5px; font-weight: 500;
+      background: var(--accent-soft); color: var(--accent-deep);
+    }
+    .todo-tag.med { background: var(--teal-soft); color: var(--teal); }
+    .todo-tag.mood { background: var(--rose-soft); color: var(--rose-deep); }
+    .todo-tag.user { background: var(--bg-mid); color: var(--text-dim); }
+    .todo-text { flex: 1; font-size: 13px; color: var(--navy); }
+    .todo-item.done .todo-text { color: var(--text-muted); text-decoration: line-through; }
+    .todo-time { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .todo-del {
+      width: 22px; height: 22px; border-radius: 5px;
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .todo-del:hover { background: var(--rose-soft); color: var(--rose-deep); }
+    .todo-del .lucide { width: 13px; height: 13px; }
+    .todo-add-row {
+      display: flex; gap: 8px; margin-top: 12px;
+    }
+    .todo-add-row input {
+      flex: 1; padding: 8px 12px;
+      background: #FFFFFF; border: 1px solid var(--border-mid);
+      border-radius: 7px; font-size: 13px; font-family: inherit; color: var(--text);
+    }
+    .todo-add-row input:focus { outline: none; border-color: var(--accent); }
+    .todo-add-btn {
+      padding: 8px 14px; background: var(--navy); color: #fff;
+      border-radius: 7px; font-size: 12.5px; font-weight: 500;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .todo-add-btn .lucide { width: 13px; height: 13px; }
+
+    /* ─────────────────────────────────────────────────────
+       Quick Report 4 卡 — 對應 renderHomeQuickReport
+       原是 4 種漸層 hero，現在改成 4 種素色細邊框卡 + 微色頭
+       ───────────────────────────────────────────────────── */
+    .quick-report {
+      background: #FFFFFF; border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .quick-report-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .quick-report-title {
+      font-size: 14px; font-weight: 600; color: var(--navy);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .quick-report-title .lucide { width: 16px; height: 16px; color: var(--teal); }
+    .quick-report-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    .qr-tile {
+      padding: 16px 14px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      text-align: left;
+      transition: all 0.15s ease;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .qr-tile::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--accent);
+    }
+    .qr-tile.t-rose::before { background: var(--rose-deep); }
+    .qr-tile.t-green::before { background: var(--green); }
+    .qr-tile.t-teal::before { background: var(--teal); }
+    .qr-tile:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px); box-shadow: var(--shadow);
+    }
+    .qr-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+      background: var(--accent-soft); color: var(--accent-deep);
+    }
+    .qr-tile.t-rose .qr-icon { background: var(--rose-soft); color: var(--rose-deep); }
+    .qr-tile.t-green .qr-icon { background: var(--green-soft); color: var(--green); }
+    .qr-tile.t-teal .qr-icon { background: var(--teal-soft); color: var(--teal); }
+    .qr-icon .lucide { width: 16px; height: 16px; }
+    .qr-name { font-size: 13.5px; font-weight: 600; color: var(--navy); }
+    .qr-desc { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+    .qr-meta {
+      margin-top: 10px;
+      font-size: 10.5px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .qr-meta .lucide { width: 11px; height: 11px; }
+
+    /* ─────────────────────────────────────────────────────
+       Care mode chips — 對應 renderCareModeChips
+       ───────────────────────────────────────────────────── */
+    .care-mode {
+      display: flex; gap: 8px; margin-bottom: 16px;
+      padding: 4px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      width: fit-content;
+    }
+    .care-chip {
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 12.5px; font-weight: 500;
+      color: var(--text-dim);
+      display: inline-flex; align-items: center; gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .care-chip .lucide { width: 13px; height: 13px; }
+    .care-chip.active {
+      background: var(--navy); color: #fff;
+    }
+    .care-chip:not(.active):hover { background: var(--bg-soft); color: var(--navy); }
+
+    /* Page hero — small */
+    .page-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .page-title {
+      font-size: 22px; font-weight: 600; color: var(--navy); letter-spacing: -0.01em;
+    }
+    .page-sub {
+      font-size: 12.5px; color: var(--text-dim);
+    }
+
+    /* ─────────────────────────────────────────────────────
+       Mobile preview
+       ───────────────────────────────────────────────────── */
+    .phone {
+      width: 360px; margin: 0 auto;
+      background: #FFFFFF;
+      border: 1px solid var(--border-mid);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .phone-status {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 24px 4px;
+      font-size: 12px; color: var(--navy); font-weight: 500;
+    }
+    .phone-top {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+    }
+    .phone-top .topbar-filename { font-size: 12px; padding: 4px 8px; }
+    .phone-body { padding: 14px; background: var(--bg-soft); min-height: 520px; }
+    .phone-body .home-digest { padding: 14px; }
+    .phone-body .home-digest-stats { gap: 6px; }
+    .phone-body .home-digest-num { font-size: 17px; }
+    .phone-tabbar {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      padding: 8px 8px 14px;
+      background: #FFFFFF; border-top: 1px solid var(--border);
+    }
+    .phone-tab {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 6px 0; font-size: 10px; color: var(--text-muted);
+    }
+    .phone-tab.active { color: var(--accent); }
+    .phone-tab .lucide { width: 18px; height: 18px; }
+    .phone-tab.fab .fab-btn {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: -4px;
+      box-shadow: 0 4px 12px rgba(74,144,194,0.4);
+    }
+    .phone-tab.fab .fab-btn .lucide { width: 20px; height: 20px; }
+    .phone-tab.fab .phone-tab-label { color: var(--accent); font-weight: 500; }
+
+    /* Before / After 對照表 */
+    .delta-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .delta-table th, .delta-table td {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 12.5px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .delta-table th {
+      background: var(--bg-soft);
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .delta-table td:first-child { font-weight: 500; color: var(--navy); width: 18%; }
+    .delta-table td:nth-child(2) { color: var(--text-dim); width: 41%; }
+    .delta-table td:nth-child(3) { color: var(--navy); width: 41%; }
+    .delta-table tr:last-child td { border-bottom: none; }
+    .delta-mark {
+      display: inline-block; width: 14px; text-align: center;
+      font-weight: 700; margin-right: 4px;
+    }
+    .delta-mark.x { color: var(--rose-deep); }
+    .delta-mark.k { color: var(--green); }
+
+    .preview-section { margin-bottom: 48px; }
+    .preview-section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .preview-section-tag {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 6px;
+      background: var(--navy); color: #fff; font-size: 12.5px; font-weight: 600;
+    }
+    .preview-section-title { font-size: 17px; font-weight: 600; color: var(--navy); }
+    .preview-section-desc { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+
+    @media (max-width: 1100px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .quick-report-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="preview-shell">
+
+  <div class="preview-header">
+    <div>
+      <div class="preview-title">MD.Piece — 醫療皮膚預覽（保留原架構）</div>
+      <div class="preview-sub">
+        Sidebar 5 組分類 / 20+ 項 / 副標 / Badge、Topbar 工具列、首頁「今日拼圖 6 碎片」「今日待辦」「快速報告 4 卡」「門/住院切換」<strong style="color:var(--navy)">完全照原版排版</strong>，只換視覺語言：去星空、去拼圖飄浮、去 Cormorant serif、去 Glass，色彩往醫療收斂。
+      </div>
+    </div>
+    <div class="preview-tag"><i data-lucide="palette"></i> 介面架構 = 原版 · 視覺 = 醫療化</div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       Desktop preview
+       ════════════════════════════════════════════════ -->
+  <section class="preview-section">
+    <div class="preview-section-head">
+      <span class="preview-section-tag">1</span>
+      <div>
+        <div class="preview-section-title">Desktop · 首頁</div>
+        <div class="preview-section-desc">每個區塊（home-digest / todo-card / quick-report / care-mode）的 DOM 結構、ID、class、文案，全部對應現有 <code>renderTodayDigestCard / renderTodoCard / renderHomeQuickReport / renderCareModeChips</code>。</div>
+      </div>
+    </div>
+
+    <div class="mock">
+      <div class="mock-bar">
+        <span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span>
+        <span class="mock-url">www.mdpiece.life/</span>
+      </div>
+      <div class="mock-body">
+        <div class="app">
+
+          <!-- ── Sidebar：與原 index.html 1:1 對應 ── -->
+          <aside class="sidebar">
+            <button class="sidebar-brand" type="button" title="返回首頁">
+              <div class="sidebar-logo"></div>
+              <div>
+                <h1>MD.Piece</h1>
+                <p>MEDICAL PLATFORM</p>
+              </div>
+            </button>
+
+            <nav class="sidebar-nav">
+              <div class="nav-section-label">每日紀錄</div>
+              <button class="nav-item active">
+                <span class="nav-icon"><i data-lucide="scan-search"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">症狀紀錄</span>
+                  <span class="nav-sub">症狀強度及類型與位置</span>
+                </span>
+                <span class="nav-badge done">3</span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="pill"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">藥物紀錄</span>
+                  <span class="nav-sub">藥物管理</span>
+                </span>
+                <span class="nav-badge todo">2</span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="hospital"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">住院 / 療程</span>
+                  <span class="nav-sub">急性住院 · 長期打藥週期</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="activity"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">生理紀錄</span>
+                  <span class="nav-sub">血壓 · 血糖 · 體重</span>
+                </span>
+                <span class="nav-badge done">1</span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="battery-charging"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">情緒電力</span>
+                  <span class="nav-sub">心情電量 · 走勢</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="utensils-crossed"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">飲食紀錄</span>
+                  <span class="nav-sub">飲食管理 · 攝取追蹤</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="sticky-note"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">Memo</span>
+                  <span class="nav-sub">想問醫師的事都丟這</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="bell-ring"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">提醒通知</span>
+                  <span class="nav-sub">服藥 / 回診 / 量測提醒</span>
+                </span>
+                <span class="nav-badge">5</span>
+              </button>
+
+              <div class="nav-section-label">查詢與分析</div>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="sparkles"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">症狀分析</span>
+                  <span class="nav-sub">不舒服可能的原因和該看哪一科</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="search"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">藥物百科</span>
+                  <span class="nav-sub">副作用 / 用法 / 衛教</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="stethoscope"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">疾病百科</span>
+                  <span class="nav-sub">查疾病 · 症狀 · 治療</span>
+                </span>
+              </button>
+
+              <div class="nav-section-label">健康報告</div>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="calendar-clock"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">回診排程</span>
+                  <span class="nav-sub">多筆回診 · 科別 / 醫院 / 時段</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="clipboard-check"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">診前報告</span>
+                  <span class="nav-sub">回診倒數 · 近期紀錄 · 想問醫師的事</span>
+                </span>
+                <span class="nav-badge">1</span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="trending-up"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">報告數值</span>
+                  <span class="nav-sub">抽血 / 影像 / 異常追蹤</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="puzzle"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">你的碎片</span>
+                  <span class="nav-sub">每次回診之間的紀錄</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="layout-list"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">健康時間軸</span>
+                  <span class="nav-sub">上傳檢驗 / 處方 / 影像 → OCR</span>
+                </span>
+              </button>
+
+              <div class="nav-section-label">疾病認識與學習</div>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="book-heart"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">衛教專欄</span>
+                  <span class="nav-sub">疾病 / 用藥 / 自我照顧</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="hospital"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">住院衛教</span>
+                  <span class="nav-sub">住院期間的場景化建議 + 經濟資源</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="book-open"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">每日故事</span>
+                  <span class="nav-sub">把今天的心情寫成一篇</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="message-circle-heart"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">醫起聊天</span>
+                  <span class="nav-sub">整理近況 · AI CHAT</span>
+                </span>
+              </button>
+
+              <div class="nav-section-label">設定</div>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="settings"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">系統設定</span>
+                  <span class="nav-sub">語言 · 主題 · 字級</span>
+                </span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="user-cog"></i></span>
+                <span class="nav-text">
+                  <span class="nav-label">帳號設定</span>
+                  <span class="nav-sub">個資 · 通知</span>
+                </span>
+              </button>
+            </nav>
+
+            <div class="sidebar-foot">
+              <button class="mode-toggle">切換為年長版</button>
+              <p class="mode-hint">年長版：放大字體與按鈕、方便老年患者使用</p>
+              <button class="logout-btn"><i data-lucide="log-out"></i> 登出</button>
+            </div>
+          </aside>
+
+          <!-- ── Main ── -->
+          <div class="main">
+
+            <div class="topbar">
+              <button class="topbar-back"><span>←</span><span>返回</span></button>
+              <span class="topbar-filename">首頁</span>
+              <span class="topbar-spacer"></span>
+              <button class="topbar-icon-btn" title="切換語言"><span class="label-mini">中</span></button>
+              <button class="topbar-icon-btn" title="切換主題"><i data-lucide="moon"></i></button>
+              <button class="topbar-icon-btn" title="切換字級"><span class="label-mini">A+</span></button>
+              <button class="topbar-icon-btn" title="系統設定"><i data-lucide="settings"></i></button>
+            </div>
+
+            <div class="proxy-banner" style="display:none">
+              <i data-lucide="users"></i> 代理操作中：你正在幫「媽媽」紀錄
+            </div>
+
+            <div class="page">
+              <div class="page-head">
+                <div>
+                  <div class="page-title">早安，郭先生</div>
+                  <div class="page-sub">5 月 21 日 · 週三 · 距離下次回診 <strong style="color:var(--navy)">5 天</strong></div>
+                </div>
+                <div class="care-mode">
+                  <button class="care-chip active"><i data-lucide="home"></i> 門診模式</button>
+                  <button class="care-chip"><i data-lucide="hospital"></i> 住院模式</button>
+                </div>
+              </div>
+
+              <!-- ① 今日拼圖 (home-digest) -->
+              <section class="home-digest" aria-label="今日拼圖">
+                <div class="home-digest-head">
+                  <span class="home-digest-eyebrow">TODAY · 今日拼圖</span>
+                  <span class="home-digest-progress"><strong>4</strong> / 6 個碎片</span>
+                </div>
+                <div class="home-digest-bar">
+                  <div class="home-digest-bar-fill" style="width:66%"></div>
+                </div>
+                <div class="home-digest-stats">
+                  <div class="home-digest-stat" data-cat="symptom">
+                    <span class="home-digest-icon"><i data-lucide="scan-search"></i></span>
+                    <span class="home-digest-num">3</span>
+                    <span class="home-digest-label">症狀</span>
+                  </div>
+                  <div class="home-digest-stat" data-cat="med">
+                    <span class="home-digest-icon"><i data-lucide="pill"></i></span>
+                    <span class="home-digest-num">5</span>
+                    <span class="home-digest-label">用藥</span>
+                  </div>
+                  <div class="home-digest-stat" data-cat="mood">
+                    <span class="home-digest-icon"><i data-lucide="battery-charging"></i></span>
+                    <span class="home-digest-num">1</span>
+                    <span class="home-digest-label">情緒</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- ② 今日待辦 (todo-card) -->
+              <section class="todo-card">
+                <div class="todo-head">
+                  <div class="todo-title"><i data-lucide="list-checks"></i> 今日待辦</div>
+                  <div class="todo-count">完成 3 / 6</div>
+                </div>
+                <div class="todo-list">
+                  <div class="todo-item done">
+                    <div class="todo-check done"><i data-lucide="check"></i></div>
+                    <span class="todo-tag med">服藥</span>
+                    <div class="todo-text">早餐前服藥（Metformin 500mg）</div>
+                    <span class="todo-time">07:00</span>
+                    <button class="todo-del"><i data-lucide="trash-2"></i></button>
+                  </div>
+                  <div class="todo-item done">
+                    <div class="todo-check done"><i data-lucide="check"></i></div>
+                    <span class="todo-tag">量測</span>
+                    <div class="todo-text">量血壓 + 飯前血糖</div>
+                    <span class="todo-time">07:15</span>
+                    <button class="todo-del"><i data-lucide="trash-2"></i></button>
+                  </div>
+                  <div class="todo-item done">
+                    <div class="todo-check done"><i data-lucide="check"></i></div>
+                    <span class="todo-tag mood">情緒</span>
+                    <div class="todo-text">電量打卡（3 / 5）</div>
+                    <span class="todo-time">09:00</span>
+                    <button class="todo-del"><i data-lucide="trash-2"></i></button>
+                  </div>
+                  <div class="todo-item">
+                    <div class="todo-check"></div>
+                    <span class="todo-tag med">服藥</span>
+                    <div class="todo-text">午餐後服藥</div>
+                    <span class="todo-time">13:00</span>
+                    <button class="todo-del"><i data-lucide="trash-2"></i></button>
+                  </div>
+                  <div class="todo-item">
+                    <div class="todo-check"></div>
+                    <span class="todo-tag user">自訂</span>
+                    <div class="todo-text">問林醫師「服藥後容易疲倦」</div>
+                    <span class="todo-time">→ 5/26</span>
+                    <button class="todo-del"><i data-lucide="trash-2"></i></button>
+                  </div>
+                  <div class="todo-item">
+                    <div class="todo-check"></div>
+                    <span class="todo-tag med">服藥</span>
+                    <div class="todo-text">睡前藥 + 血壓量測</div>
+                    <span class="todo-time">22:00</span>
+                    <button class="todo-del"><i data-lucide="trash-2"></i></button>
+                  </div>
+                </div>
+                <div class="todo-add-row">
+                  <input type="text" placeholder="加一條待辦事項 …" />
+                  <button class="todo-add-btn"><i data-lucide="plus"></i> 加入</button>
+                </div>
+              </section>
+
+              <!-- ③ 快速報告 4 卡 (quick-report) -->
+              <section class="quick-report">
+                <div class="quick-report-head">
+                  <div class="quick-report-title"><i data-lucide="clipboard-check"></i> 快速報告</div>
+                  <span class="todo-count">看完整資料 →</span>
+                </div>
+                <div class="quick-report-grid">
+                  <button class="qr-tile">
+                    <div class="qr-icon"><i data-lucide="clipboard-check"></i></div>
+                    <div class="qr-name">診前報告</div>
+                    <div class="qr-desc">回診倒數 5 天 · 已彙整 12 筆</div>
+                    <div class="qr-meta"><i data-lucide="arrow-right"></i> 5/26 · 內分泌科</div>
+                  </button>
+                  <button class="qr-tile t-teal">
+                    <div class="qr-icon"><i data-lucide="activity"></i></div>
+                    <div class="qr-name">本週生理趨勢</div>
+                    <div class="qr-desc">血壓平均 130/84 · 血糖偏高 1 次</div>
+                    <div class="qr-meta"><i data-lucide="trending-up"></i> 7 天 · 5/15 – 5/21</div>
+                  </button>
+                  <button class="qr-tile t-rose">
+                    <div class="qr-icon"><i data-lucide="battery-charging"></i></div>
+                    <div class="qr-name">情緒電量摘要</div>
+                    <div class="qr-desc">平均 3.2 / 5 · 2 天連續偏低</div>
+                    <div class="qr-meta"><i data-lucide="info"></i> 建議告訴醫師</div>
+                  </button>
+                  <button class="qr-tile t-green">
+                    <div class="qr-icon"><i data-lucide="pill"></i></div>
+                    <div class="qr-name">服藥依從率</div>
+                    <div class="qr-desc">本週 92% · 1 次漏藥（5/18 晚）</div>
+                    <div class="qr-meta"><i data-lucide="check-circle"></i> 良好</div>
+                  </button>
+                </div>
+              </section>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════
+       Mobile preview
+       ════════════════════════════════════════════════ -->
+  <section class="preview-section">
+    <div class="preview-section-head">
+      <span class="preview-section-tag">2</span>
+      <div>
+        <div class="preview-section-title">Mobile · PWA 首頁</div>
+        <div class="preview-section-desc">底部 5 格 tabbar（含中央 FAB）跟現有 <code>renderMobileTabbar</code> 完全一致：門診模式為 首頁 / 碎片 / + / 診前 / 醫聊 / 更多。</div>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="phone-status">
+        <span>9:41</span>
+        <span style="display:flex; gap:6px"><i data-lucide="signal" style="width:12px;height:12px"></i><i data-lucide="wifi" style="width:12px;height:12px"></i><i data-lucide="battery" style="width:14px;height:14px"></i></span>
+      </div>
+      <div class="phone-top">
+        <button class="topbar-icon-btn"><i data-lucide="menu"></i></button>
+        <span class="topbar-filename">首頁</span>
+        <span class="topbar-spacer"></span>
+        <button class="topbar-icon-btn"><i data-lucide="bell"></i></button>
+      </div>
+      <div class="phone-body">
+        <section class="home-digest" style="margin-bottom:10px">
+          <div class="home-digest-head">
+            <span class="home-digest-eyebrow">TODAY · 今日拼圖</span>
+            <span class="home-digest-progress"><strong>4</strong>/6</span>
+          </div>
+          <div class="home-digest-bar"><div class="home-digest-bar-fill" style="width:66%"></div></div>
+          <div class="home-digest-stats">
+            <div class="home-digest-stat" data-cat="symptom"><span class="home-digest-icon"><i data-lucide="scan-search"></i></span><span class="home-digest-num">3</span></div>
+            <div class="home-digest-stat" data-cat="med"><span class="home-digest-icon"><i data-lucide="pill"></i></span><span class="home-digest-num">5</span></div>
+            <div class="home-digest-stat" data-cat="mood"><span class="home-digest-icon"><i data-lucide="battery-charging"></i></span><span class="home-digest-num">1</span></div>
+          </div>
+        </section>
+
+        <section class="todo-card" style="padding:14px">
+          <div class="todo-head">
+            <div class="todo-title" style="font-size:13px"><i data-lucide="list-checks"></i> 今日待辦</div>
+            <div class="todo-count">3 / 6</div>
+          </div>
+          <div class="todo-list">
+            <div class="todo-item done">
+              <div class="todo-check done"><i data-lucide="check"></i></div>
+              <div class="todo-text" style="font-size:12.5px">早餐前服藥</div>
+              <span class="todo-time">07:00</span>
+            </div>
+            <div class="todo-item">
+              <div class="todo-check"></div>
+              <div class="todo-text" style="font-size:12.5px">午餐後服藥</div>
+              <span class="todo-time">13:00</span>
+            </div>
+            <div class="todo-item">
+              <div class="todo-check"></div>
+              <div class="todo-text" style="font-size:12.5px">睡前服藥</div>
+              <span class="todo-time">22:00</span>
+            </div>
+          </div>
+        </section>
+      </div>
+      <div class="phone-tabbar">
+        <button class="phone-tab active"><i data-lucide="home"></i><span>首頁</span></button>
+        <button class="phone-tab"><i data-lucide="puzzle"></i><span>碎片</span></button>
+        <button class="phone-tab fab">
+          <div class="fab-btn"><i data-lucide="plus"></i></div>
+          <span>記一筆</span>
+        </button>
+        <button class="phone-tab"><i data-lucide="clipboard-check"></i><span>診前</span></button>
+        <button class="phone-tab"><i data-lucide="message-circle-heart"></i><span>醫聊</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════
+       對照表
+       ════════════════════════════════════════════════ -->
+  <section class="preview-section">
+    <div class="preview-section-head">
+      <span class="preview-section-tag">3</span>
+      <div>
+        <div class="preview-section-title">改了什麼 / 沒改什麼</div>
+        <div class="preview-section-desc">同樣的 DOM、同樣的功能、同樣的 sidebar 順序，只換視覺。</div>
+      </div>
+    </div>
+
+    <table class="delta-table">
+      <thead>
+        <tr><th>區塊</th><th>現況</th><th>醫療皮膚版</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>背景 / 全域</td>
+          <td><span class="delta-mark x">−</span> 星空 canvas（200 顆星 + 流星）<br><span class="delta-mark x">−</span> 拼圖 SVG 浮動裝飾 8 個</td>
+          <td><span class="delta-mark k">＋</span> 純白底（#FFFFFF）<br><span class="delta-mark k">＋</span> 內容卡片用 1px 細邊框 + 微醫療十字浮水印</td>
+        </tr>
+        <tr>
+          <td>字體</td>
+          <td><span class="delta-mark x">−</span> Noto + Cormorant Garamond serif + JetBrains Mono + Rigelstar + Netron</td>
+          <td><span class="delta-mark k">＋</span> 單一字體：Noto Sans TC（500/600 加重做標題）</td>
+        </tr>
+        <tr>
+          <td>色票</td>
+          <td><span class="delta-mark x">−</span> rose / blue / green / teal / lavender 5 種漸層 hero</td>
+          <td><span class="delta-mark k">＋</span> 保留原 #4A90C2 / #2F8378 / #1F3D58 + green/rose/amber 4 色作為「分類左邊條」（不再撐滿整張卡）</td>
+        </tr>
+        <tr>
+          <td>Sidebar 結構</td>
+          <td>5 組分類 / 22 項目 / 副標 / Badge</td>
+          <td><strong style="color:var(--navy)">完全照舊</strong>（順序、icon、文字、副標一字未動）</td>
+        </tr>
+        <tr>
+          <td>Topbar</td>
+          <td>hamburger / 返回 / filename / 中 / 主題 / A+ / 設定</td>
+          <td><strong style="color:var(--navy)">完全照舊</strong>，只把 filename 改成有綠點的乾淨 chip</td>
+        </tr>
+        <tr>
+          <td>今日拼圖 hero</td>
+          <td>rose 漸層大色塊 + 白字</td>
+          <td>白底卡 + 細邊框 + 醫療藍進度條 + 3 stats 灰底小卡</td>
+        </tr>
+        <tr>
+          <td>今日待辦</td>
+          <td>結構照舊</td>
+          <td>結構照舊 + 加 todo-tag 顏色分類（服藥/量測/情緒/自訂）</td>
+        </tr>
+        <tr>
+          <td>快速報告 4 卡</td>
+          <td>4 種漸層 hero 撐滿（rose/blue/green/teal）</td>
+          <td>白底卡 + 左 3px 彩色標籤條 + 小色標 icon（保留顏色語意但收斂強度）</td>
+        </tr>
+        <tr>
+          <td>門/住院切換</td>
+          <td>care-chip 結構</td>
+          <td><strong style="color:var(--navy)">完全照舊</strong>，只統一邊框與深藍 active 狀態</td>
+        </tr>
+        <tr>
+          <td>Mobile tabbar</td>
+          <td>5 格 + 中央 FAB</td>
+          <td><strong style="color:var(--navy)">完全照舊</strong>，只統一 icon stroke 與字級</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script>
+  if (window.lucide && lucide.createIcons) {
+    lucide.createIcons({ attrs: { 'stroke-width': 1.6 } });
+  }
+</script>
+
+</body>
+</html>

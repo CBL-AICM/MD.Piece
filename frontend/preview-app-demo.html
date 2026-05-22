@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1F3D58" />
+  <title>MD.Piece — 完整 Demo（手機版 6 頁）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    /* ════════════════════════════════════════════════════════
+       Full Demo — 手機尺寸實機模擬
+       v9 簡約風套到 6 個主要頁面：
+       首頁 / 症狀 / 用藥 / 生理 / 診前 / 設定
+       ════════════════════════════════════════════════════════ */
+    :root {
+      --bg:           #FAFBFC;
+      --bg-soft:      #F4F6F8;
+      --bg-mid:       #ECF0F4;
+      --border:       rgba(31,61,88,0.10);
+      --border-mid:   rgba(31,61,88,0.16);
+      --border-strong:rgba(31,61,88,0.26);
+
+      --accent:       #4A90C2;
+      --accent-deep:  #2F6B96;
+      --accent-soft:  #E8F1F8;
+      --accent-tint:  #F2F8FC;
+
+      --teal:         #2F8378;
+      --teal-deep:    #1F5F56;
+      --teal-soft:    #E5F0EE;
+      --teal-tint:    #F1F8F6;
+
+      --navy:         #1F3D58;
+      /* 原則①：對比拉高（給年長者）—— text-muted 從 #98ADBD 加深到 #7E92A4 */
+      --text:         #1F3D58;
+      --text-dim:     #4A6580;
+      --text-muted:   #7E92A4;
+
+      --rose:         #E8A8A8;
+      --rose-deep:    #C97A7A;
+      --rose-soft:    #FBEEEE;
+      --rose-tint:    #FDF6F6;
+
+      --green:        #3F8E5C;
+      --green-deep:   #2F6F47;
+      --green-soft:   #E6F2EB;
+      --green-tint:   #F1F8F4;
+
+      --amber:        #C98B2F;
+      --amber-deep:   #9A6A1F;
+      --amber-soft:   #FAF1DF;
+
+      --radius:       10px;
+      --radius-sm:    7px;
+
+      --shadow-sm:    0 1px 2px rgba(31,61,88,0.04);
+      --shadow:       0 2px 6px rgba(31,61,88,0.06);
+
+      --font:         "Noto Sans TC", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --font-brand:   "Cormorant Garamond", "Noto Serif TC", Georgia, serif;
+      --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: #E5E9EE; color: var(--text); font-family: var(--font);
+      line-height: 1.6; -webkit-font-smoothing: antialiased; font-size: 15px;
+      min-height: 100vh;
+    }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+    /* 全站線條加粗 + 暖陰影 — 不再冰冷 */
+    .lucide { stroke-width: 2.4 !important; stroke-linecap: round; stroke-linejoin: round; }
+    .card, .home-greet, .home-ov, .bodymap-wrap, .pv-hero,
+    .kpi-mini, .sos-btn, .qr-tile, .vital-card, .settings-row,
+    .care-mode-card, .care-mode-mini, .chip, .pill, .qr-tile-toolbar {
+      border-width: 1.5px !important;
+    }
+    /* 主要卡片加暖色陰影，比純白看起來有溫度 */
+    .home-greet, .bodymap-wrap, .pv-hero, .care-mode-card,
+    .home-ov, .kpi-mini, .sos-btn, .qr-tile {
+      box-shadow: 0 1px 0 rgba(31,61,88,0.02), 0 4px 14px -8px rgba(74,57,40,0.10) !important;
+    }
+    /* radius 也圓一點 */
+    .card, .home-greet, .home-ov, .bodymap-wrap, .pv-hero,
+    .kpi-mini, .qr-tile, .vital-card, .care-mode-card {
+      border-radius: 14px !important;
+    }
+    .sos-btn { border-radius: 14px !important; }
+    .chip { border-radius: 999px !important; font-weight: 600 !important; }
+
+    .demo-shell {
+      max-width: 100%;
+      padding: 20px 12px 60px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .demo-head {
+      width: 100%; max-width: 420px; margin-bottom: 16px;
+      text-align: center;
+    }
+    .demo-title {
+      font-family: var(--font-brand); font-style: italic; font-weight: 500;
+      font-size: 24px; color: var(--navy); letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .demo-sub {
+      font-size: 12px; color: var(--text-dim); margin-bottom: 14px;
+    }
+
+    /* Page picker */
+    .page-picker {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      width: 100%; max-width: 420px; margin-bottom: 16px;
+    }
+    .pp-btn {
+      padding: 8px 6px;
+      background: #fff; border: 1px solid var(--border-mid);
+      border-radius: 8px;
+      font-size: 11.5px; font-weight: 500; color: var(--text-dim);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .pp-btn .lucide { width: 14px; height: 14px; }
+    .pp-btn.active {
+      background: var(--navy); color: #fff; border-color: var(--navy);
+    }
+    .pp-btn.active .lucide { color: #fff; }
+
+    /* Phone frame */
+    .phone {
+      width: 100%; max-width: 420px;
+      background: #FFFFFF;
+      border: 6px solid #1A2436; border-radius: 28px;
+      overflow: hidden; position: relative;
+      box-shadow: 0 8px 24px rgba(31,61,88,0.20);
+    }
+    .phone-status {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 22px 4px;
+      font-size: 12px; color: var(--navy); font-weight: 500;
+    }
+    .phone-status .signal { display: flex; gap: 5px; }
+    .phone-status .signal .lucide { width: 13px; height: 13px; }
+
+    /* Page topbar */
+    .ph-topbar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 12px;
+      background: #FFFFFF; border-bottom: 1px solid var(--border);
+    }
+    .ph-icon-btn {
+      width: 30px; height: 30px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-dim);
+    }
+    .ph-icon-btn .lucide { width: 14px; height: 14px; }
+    .ph-icon-btn .lbl { font-size: 10px; font-weight: 600; }
+    .ph-filename {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 9px;
+      background: var(--bg-soft); border-radius: 5px;
+      font-size: 11.5px; color: var(--navy); font-weight: 500;
+      border: 1px solid var(--border);
+    }
+    .ph-filename::before {
+      content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--green);
+    }
+    .ph-back {
+      display: flex; align-items: center; gap: 3px;
+      padding: 4px 8px; border-radius: 5px;
+      font-size: 11.5px; color: var(--text-dim);
+    }
+    .ph-spacer { flex: 1; }
+
+    /* Body */
+    .ph-body {
+      background: var(--bg-soft);
+      min-height: 580px;
+      padding: 12px;
+      overflow-y: auto;
+    }
+
+    /* Tabbar */
+    /* 免責聲明 footer — 常駐每頁底部，小字但清楚 */
+    .disclaimer-footer {
+      padding: 8px 14px;
+      background: var(--bg-soft);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 7px;
+      font-size: 10.5px; color: var(--text-dim); line-height: 1.45;
+    }
+    .disclaimer-footer .lucide { width: 12px; height: 12px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+    .disclaimer-footer strong { color: var(--navy); font-weight: 600; }
+    .disclaimer-footer .emergency { color: var(--rose-deep); font-weight: 600; }
+
+    .ph-tabbar {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      padding: 8px 6px 14px;
+      background: #FFFFFF; border-top: 1px solid var(--border);
+    }
+    .ph-tab {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 5px 0; font-size: 10px; color: var(--text-muted);
+    }
+    .ph-tab.active { color: var(--accent); }
+    .ph-tab .lucide { width: 18px; height: 18px; }
+    .ph-tab.fab .fab-btn {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: -4px;
+      box-shadow: 0 4px 10px rgba(74,144,194,0.40);
+    }
+    .ph-tab.fab .fab-btn .lucide { width: 20px; height: 20px; }
+    .ph-tab.fab .ph-tab-label { color: var(--accent); font-weight: 500; }
+
+    /* ─────────────────────────────────────────────────────
+       共用元件
+       ───────────────────────────────────────────────────── */
+    .pill {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 7px; border-radius: 10px;
+      font-size: 10px; font-weight: 500;
+      line-height: 1.5; white-space: nowrap;
+    }
+    .pill.mono { font-family: var(--font-mono); font-weight: 600; font-size: 9.5px; }
+    .pill .lucide { width: 9px; height: 9px; }
+    .pill-ok     { background: var(--green-soft); color: var(--green-deep); }
+    .pill-warn   { background: var(--amber-soft); color: var(--amber-deep); }
+    .pill-info   { background: var(--accent-soft); color: var(--accent-deep); }
+    .pill-teal   { background: var(--teal-soft); color: var(--teal-deep); }
+    .pill-mute   { background: var(--bg-mid); color: var(--text-dim); }
+    .pill-rose   { background: var(--rose-soft); color: var(--rose-deep); }
+
+    .card {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      position: relative; overflow: hidden;
+    }
+    .card.tint-blue { background: linear-gradient(135deg, var(--accent-tint) 0%, #fff 60%); }
+    .card.tint-rose { background: linear-gradient(135deg, var(--rose-tint) 0%, #fff 60%); }
+    .card.tint-teal { background: linear-gradient(135deg, var(--teal-tint) 0%, #fff 60%); }
+    .card.tint-green { background: linear-gradient(135deg, var(--green-tint) 0%, #fff 60%); }
+
+    .puzzle-motif { position: absolute; opacity: 0.05; pointer-events: none; color: var(--accent); }
+    .puzzle-motif.tl { left: -10px; top: -10px; width: 50px; height: 50px; }
+    .puzzle-motif.tr { right: -10px; top: -10px; width: 50px; height: 50px; }
+    .puzzle-motif.br { right: -10px; bottom: -10px; width: 60px; height: 60px; }
+
+    .sec-head {
+      display: flex; align-items: baseline; gap: 8px;
+      margin: 16px 4px 8px;
+    }
+    .sec-title {
+      font-size: 12.5px; font-weight: 600; color: var(--navy);
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .sec-title .lucide { width: 13px; height: 13px; color: var(--text-muted); }
+    .sec-count { font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono); }
+    .sec-spacer { flex: 1; }
+    .sec-action {
+      font-size: 11px; color: var(--accent-deep); font-weight: 500;
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    .sec-action .lucide { width: 11px; height: 11px; }
+
+    /* ─── Page-specific ─── */
+
+    /* HOME — 早安卡 */
+    .home-greet {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      position: relative; overflow: hidden;
+    }
+    .home-greet > *:not(.puzzle-bg-layer) { position: relative; z-index: 1; }
+    .home-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--teal); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 600;
+      flex-shrink: 0;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(31,61,88,0.10);
+    }
+    .home-greet-text { flex: 1; min-width: 0; }
+    .home-greet-title { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 2px; }
+    .home-greet-date {
+      font-size: 11px; color: var(--text-dim);
+      font-family: var(--font-mono);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .home-greet-date strong { color: var(--accent-deep); font-weight: 600; }
+
+    /* Care mode */
+    .care-mode-mini {
+      display: flex; gap: 4px;
+      padding: 3px; background: var(--bg-mid);
+      border-radius: 18px;
+      width: 100%;
+      margin-bottom: 14px;
+    }
+    .care-chip {
+      flex: 1; padding: 6px 8px;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      border-radius: 14px;
+      font-size: 11.5px; font-weight: 500; color: var(--text-dim);
+    }
+    .care-chip.active { background: var(--navy); color: #fff; }
+    .care-chip .lucide { width: 12px; height: 12px; }
+
+    /* KPI 3 卡 */
+    .kpi-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      margin-bottom: 4px;
+    }
+    .kpi-mini {
+      padding: 9px 10px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 8px;
+      position: relative; overflow: hidden;
+    }
+    .kpi-mini.t-rose { background: linear-gradient(135deg, var(--rose-tint), #fff 70%); }
+    .kpi-mini.t-blue { background: linear-gradient(135deg, var(--accent-tint), #fff 70%); }
+    .kpi-mini.t-teal { background: linear-gradient(135deg, var(--teal-tint), #fff 70%); }
+    .kpi-mini-label {
+      font-size: 9.5px; color: var(--text-muted); font-weight: 600;
+      letter-spacing: 0.04em; margin-bottom: 3px;
+      display: flex; align-items: center; gap: 3px;
+    }
+    .kpi-mini-label .lucide { width: 10px; height: 10px; }
+    .kpi-mini.t-rose .lucide { color: var(--rose-deep); }
+    .kpi-mini.t-blue .lucide { color: var(--accent); }
+    .kpi-mini.t-teal .lucide { color: var(--teal); }
+    .kpi-mini-val {
+      font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: var(--navy);
+      line-height: 1;
+    }
+    /* 原則 ② 分層：plain sentence 更大、更明顯（不是 mono 小字）*/
+    .kpi-mini-meta { font-size: 11.5px; color: var(--text-dim); font-weight: 500; margin-top: 4px; }
+    .kpi-mini-spark { width: 100%; height: 22px; margin-top: 6px; }
+    /* 原則 ③：每張圖底下 1 行說明，告訴使用者怎麼看 */
+    .kpi-mini-explain { font-size: 9.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
+    /* Sos 4 顆按鈕 */
+    .sos-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
+    }
+    /* 原則 ① 觸控大 + ④ 輸入步驟少：SOS 大顆按鈕，一按就記 */
+    .sos-btn {
+      padding: 18px 10px;
+      min-height: 92px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      position: relative; overflow: hidden;
+    }
+    .sos-btn .puzzle-motif { opacity: 0.08; }
+    .sos-btn > *:not(.puzzle-motif) { position: relative; z-index: 1; }
+    .sos-btn.t-rose { background: linear-gradient(135deg, var(--rose-tint) 0%, #fff 65%); }
+    .sos-btn.t-blue { background: linear-gradient(135deg, var(--accent-tint) 0%, #fff 65%); }
+    .sos-btn.t-teal { background: linear-gradient(135deg, var(--teal-tint) 0%, #fff 65%); }
+    .sos-btn.t-amber { background: linear-gradient(135deg, rgba(201,139,47,0.06) 0%, #fff 65%); }
+    .sos-btn .sos-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sos-btn .sos-icon .lucide { width: 17px; height: 17px; }
+    .sos-btn .sos-label { font-size: 13.5px; font-weight: 600; color: var(--navy); }
+    .sos-btn .sos-sub { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+    .sos-btn.t-rose .sos-icon { background: #fff; color: var(--rose-deep); border: 1px solid var(--border); }
+    .sos-btn.t-blue .sos-icon { background: #fff; color: var(--accent-deep); border: 1px solid var(--border); }
+    .sos-btn.t-teal .sos-icon { background: #fff; color: var(--teal-deep); border: 1px solid var(--border); }
+    .sos-btn.t-amber .sos-icon { background: #fff; color: var(--amber-deep); border: 1px solid var(--border); }
+    .sos-btn.t-rose .puzzle-motif { color: var(--rose-deep); }
+    .sos-btn.t-blue .puzzle-motif { color: var(--accent); }
+    .sos-btn.t-teal .puzzle-motif { color: var(--teal); }
+    .sos-btn.t-amber .puzzle-motif { color: var(--amber-deep); }
+    .sos-btn .sos-label { font-size: 11.5px; font-weight: 600; color: var(--navy); }
+    .sos-btn .sos-sub { font-size: 9.5px; color: var(--text-muted); font-family: var(--font-mono); }
+
+    /* Todo list */
+    .list-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .list-row {
+      display: grid; grid-template-columns: 18px 56px 1fr auto;
+      gap: 8px; align-items: center;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .list-row:last-child { border-bottom: none; }
+    .list-row .check {
+      width: 16px; height: 16px; border: 1.5px solid var(--border-mid);
+      border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;
+      background: #fff;
+    }
+    .list-row .check.done { background: var(--green); border-color: var(--green); color: #fff; }
+    .list-row .check.done .lucide { width: 10px; height: 10px; }
+    .list-row .time { font-family: var(--font-mono); color: var(--text-muted); font-size: 11px; }
+    .list-row .name { font-size: 12px; color: var(--navy); font-weight: 500; line-height: 1.4; }
+    .list-row .name .tag { display: inline-block; vertical-align: middle; margin-right: 5px; }
+
+    /* Body map (症狀頁) */
+    .bodymap-wrap {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 20px 16px 18px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      position: relative; overflow: hidden;
+    }
+    /* 拼圖漸層背景 — 鋪滿整個卡片 */
+    .puzzle-bg-layer {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+    }
+    .bodymap-wrap > svg.body-figure { width: 140px; height: auto; position: relative; z-index: 1; }
+    .bodymap-wrap > .bodymap-caption { position: relative; z-index: 1; }
+    .bodymap-caption { font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 8px; font-family: var(--font-mono); }
+    .bodymap-caption strong { color: var(--navy); font-weight: 600; }
+
+    /* Intensity */
+    .intensity {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+    }
+    .int-cell {
+      padding: 8px 4px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 7px;
+      text-align: center;
+      font-size: 10px; color: var(--text-dim);
+    }
+    .int-cell strong {
+      display: block; font-family: var(--font-mono);
+      font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 1px;
+    }
+    .int-cell.sel { background: var(--accent-soft); border-color: var(--accent); }
+    .int-cell.sel strong { color: var(--accent-deep); }
+
+    /* Chip group */
+    .chip-group { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip {
+      padding: 5px 11px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 14px;
+      font-size: 11px; color: var(--text-dim); font-weight: 500;
+    }
+    .chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-deep); }
+
+    /* AI 摘要 */
+    .ai-card {
+      padding: 12px 14px;
+      background: var(--accent-tint);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .ai-card .ai-num {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #fff; color: var(--accent-deep);
+      border: 1.5px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-brand); font-style: italic; font-size: 17px; font-weight: 500;
+      flex-shrink: 0;
+    }
+    .ai-card .ai-text { flex: 1; }
+    .ai-card .ai-title { font-size: 12px; font-weight: 600; color: var(--accent-deep); margin-bottom: 1px; }
+    .ai-card .ai-desc { font-size: 10.5px; color: var(--text-dim); line-height: 1.5; }
+
+    /* Vital snapshot */
+    .vital-snap {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .vital-card {
+      padding: 12px;
+      background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      position: relative; overflow: hidden;
+    }
+    .vital-card .puzzle-motif { right: -8px; top: -8px; width: 36px; height: 36px; opacity: 0.04; }
+    .vital-card.t-rose .puzzle-motif { color: var(--rose-deep); }
+    .vital-card.t-blue { background: linear-gradient(135deg, var(--accent-tint), #fff 70%); }
+    .vital-card.t-blue .puzzle-motif { color: var(--accent); }
+    .vital-card.t-rose { background: linear-gradient(135deg, var(--rose-tint), #fff 70%); }
+    .vital-card-head { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+    .vital-card-head .lucide { width: 12px; height: 12px; }
+    .vital-card-head .lbl { font-size: 10.5px; color: var(--text-dim); font-weight: 600; }
+    .vital-card-val { font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--navy); line-height: 1; }
+    .vital-card-unit { font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono); margin-left: 3px; }
+    .vital-card-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono); }
+
+    /* Med list */
+    .med-list-row {
+      display: grid; grid-template-columns: 30px 1fr auto 24px;
+      gap: 10px; align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .med-list-row:last-child { border-bottom: none; }
+    .med-list-row .ico { width: 30px; height: 30px; border-radius: 7px; background: var(--teal-soft); color: var(--teal-deep); display: flex; align-items: center; justify-content: center; }
+    .med-list-row .ico .lucide { width: 14px; height: 14px; }
+    .med-list-row .name { font-size: 12.5px; color: var(--navy); font-weight: 500; }
+    .med-list-row .dose { font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 1px; }
+    .med-list-row .time { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); text-align: right; }
+
+    /* Pre-visit card */
+    .pv-hero {
+      padding: 16px 18px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      position: relative; overflow: hidden;
+    }
+    .pv-hero > *:not(.puzzle-bg-layer) { position: relative; z-index: 1; }
+    .pv-hero-eye { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--accent-deep); text-transform: uppercase; }
+    .pv-hero-num {
+      font-family: var(--font-brand); font-style: italic; font-weight: 500;
+      font-size: 36px; color: var(--navy); letter-spacing: -0.01em; line-height: 1;
+      margin-top: 4px;
+    }
+    .pv-hero-num .unit { font-family: var(--font); font-style: normal; font-size: 13px; color: var(--text-dim); margin-left: 4px; }
+    .pv-hero-meta {
+      font-size: 11.5px; color: var(--text-dim); margin-top: 6px;
+    }
+    .pv-hero-doc { font-size: 12.5px; color: var(--navy); font-weight: 500; margin-top: 2px; }
+    .pv-btn {
+      margin-top: 12px;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px;
+      background: var(--navy); color: #fff;
+      border-radius: 7px;
+      font-size: 11.5px; font-weight: 500;
+    }
+    .pv-btn .lucide { width: 12px; height: 12px; }
+
+    /* Settings list */
+    .settings-list {
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    }
+    .settings-row {
+      display: grid; grid-template-columns: 28px 1fr auto 10px;
+      gap: 10px; align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row .ico {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: var(--bg-soft); color: var(--text-dim);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .settings-row .ico .lucide { width: 13px; height: 13px; }
+    .settings-row .name { font-size: 12.5px; color: var(--navy); font-weight: 500; }
+    .settings-row .sub { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+    .settings-row .val { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+    .settings-row .chev { color: var(--text-muted); }
+    .settings-row .chev .lucide { width: 11px; height: 11px; }
+
+    /* Page transitions */
+    .page-view { display: none; }
+    .page-view.active { display: block; }
+
+    /* Brand row */
+    .brand-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px 8px;
+    }
+    .brand-mark {
+      width: 24px; height: 24px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      position: relative;
+    }
+    .brand-mark::before, .brand-mark::after {
+      content: ""; position: absolute; left: 50%; top: 50%; background: #fff;
+      transform: translate(-50%, -50%);
+    }
+    .brand-mark::before { width: 11px; height: 1.5px; }
+    .brand-mark::after { width: 1.5px; height: 11px; }
+    .brand-name { font-family: var(--font-brand); font-style: italic; font-weight: 500; font-size: 17px; color: var(--navy); }
+  </style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="puzzle-piece" viewBox="0 0 100 100">
+      <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+            fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+    </symbol>
+    <!-- 填色版拼圖塊 — 用來組合成漸層背景 -->
+    <symbol id="puzzle-fill" viewBox="0 0 100 100">
+      <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+            fill="currentColor"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- 共用：拼圖漸層背景 SVG（4 塊 pastel 拼圖互疊 = 形成 gradient） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="puzzle-bg-rose-blue" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+      <use href="#puzzle-fill" x="-40" y="-40" width="180" height="180" style="color:rgba(232,168,168,0.22)"/>
+      <use href="#puzzle-fill" x="80" y="-60" width="200" height="200" style="color:rgba(74,144,194,0.18)"/>
+      <use href="#puzzle-fill" x="180" y="60" width="180" height="180" style="color:rgba(47,131,120,0.16)"/>
+      <use href="#puzzle-fill" x="-30" y="80" width="160" height="160" style="color:rgba(139,149,197,0.14)"/>
+    </symbol>
+    <symbol id="puzzle-bg-blue-teal" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+      <use href="#puzzle-fill" x="-40" y="-40" width="180" height="180" style="color:rgba(74,144,194,0.18)"/>
+      <use href="#puzzle-fill" x="90" y="-50" width="180" height="180" style="color:rgba(47,131,120,0.20)"/>
+      <use href="#puzzle-fill" x="180" y="60" width="180" height="180" style="color:rgba(168,242,224,0.20)"/>
+      <use href="#puzzle-fill" x="-20" y="100" width="140" height="140" style="color:rgba(74,144,194,0.12)"/>
+    </symbol>
+    <symbol id="puzzle-bg-rose-amber" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">
+      <use href="#puzzle-fill" x="-30" y="-40" width="170" height="170" style="color:rgba(232,168,168,0.22)"/>
+      <use href="#puzzle-fill" x="90" y="-50" width="180" height="180" style="color:rgba(201,139,47,0.16)"/>
+      <use href="#puzzle-fill" x="170" y="70" width="170" height="170" style="color:rgba(232,168,168,0.18)"/>
+      <use href="#puzzle-fill" x="-20" y="90" width="160" height="160" style="color:rgba(201,139,47,0.10)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="demo-shell">
+
+  <div class="demo-head">
+    <div class="demo-title">MD.Piece — 完整 Demo</div>
+    <div class="demo-sub">手機 6 頁實機模擬 · 點下面切換頁面</div>
+  </div>
+
+  <!-- Page picker -->
+  <div class="page-picker">
+    <button class="pp-btn active" onclick="showPage('home')"><i data-lucide="home"></i> 首頁</button>
+    <button class="pp-btn" onclick="showPage('symptoms')"><i data-lucide="scan-search"></i> 症狀</button>
+    <button class="pp-btn" onclick="showPage('meds')"><i data-lucide="pill"></i> 用藥</button>
+    <button class="pp-btn" onclick="showPage('vitals')"><i data-lucide="activity"></i> 生理</button>
+    <button class="pp-btn" onclick="showPage('previsit')"><i data-lucide="clipboard-check"></i> 診前</button>
+    <button class="pp-btn" onclick="showPage('settings')"><i data-lucide="settings"></i> 設定</button>
+  </div>
+
+  <!-- Phone frame -->
+  <div class="phone">
+    <div class="phone-status">
+      <span>10:30</span>
+      <div class="signal">
+        <i data-lucide="signal"></i>
+        <i data-lucide="wifi"></i>
+        <i data-lucide="battery"></i>
+      </div>
+    </div>
+
+    <!-- HOME -->
+    <div class="page-view active" data-page="home">
+      <div class="ph-topbar">
+        <button class="ph-icon-btn"><i data-lucide="menu"></i></button>
+        <span class="ph-filename">首頁</span>
+        <span class="ph-spacer"></span>
+        <button class="ph-icon-btn"><span class="lbl">中</span></button>
+        <button class="ph-icon-btn"><i data-lucide="moon"></i></button>
+        <button class="ph-icon-btn"><i data-lucide="bell"></i></button>
+      </div>
+      <div class="ph-body">
+
+        <!-- 早安卡 — 拼圖漸層背景 -->
+        <div class="home-greet">
+          <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>
+          <div class="home-avatar">郭</div>
+          <div class="home-greet-text">
+            <div class="home-greet-title">早安，郭先生</div>
+            <div class="home-greet-date">
+              <span>5/22 週五</span>
+              <span style="opacity:.4">·</span>
+              <span>還有 <strong>4 天</strong>看醫師</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 門/住院 -->
+        <div class="care-mode-mini">
+          <button class="care-chip active"><i data-lucide="stethoscope"></i> 門診模式</button>
+          <button class="care-chip"><i data-lucide="hospital"></i> 住院模式</button>
+        </div>
+
+        <!-- KPI 3 卡 mini — 數字 + 一句白話 -->
+        <div class="kpi-row">
+          <div class="kpi-mini t-rose">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>
+            <div class="kpi-mini-val">128/82</div>
+            <div class="kpi-mini-meta">有點高一點</div>
+            <svg class="kpi-mini-spark" viewBox="0 0 100 22" preserveAspectRatio="none">
+              <polygon fill="#C97A7A" fill-opacity="0.16" points="0,22 0,11 16,12 32,8 48,13 64,9 80,14 100,11 100,22"/>
+              <polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,11 16,12 32,8 48,13 64,9 80,14 100,11"/>
+              <circle cx="100" cy="11" r="2.6" fill="#C97A7A"/>
+            </svg>
+            <div class="kpi-mini-explain">線往上 = 升高</div>
+          </div>
+          <div class="kpi-mini t-blue">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>
+            <div class="kpi-mini-val">112</div>
+            <div class="kpi-mini-meta">略高 2 點</div>
+            <svg class="kpi-mini-spark" viewBox="0 0 100 22" preserveAspectRatio="none">
+              <polygon fill="#4A90C2" fill-opacity="0.16" points="0,22 0,14 16,12 32,16 48,10 64,13 80,8 100,6 100,22"/>
+              <polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,14 16,12 32,16 48,10 64,13 80,8 100,6"/>
+              <circle cx="100" cy="6" r="2.6" fill="#4A90C2"/>
+            </svg>
+            <div class="kpi-mini-explain">線往上 = 偏高</div>
+          </div>
+          <div class="kpi-mini t-teal">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>
+            <div class="kpi-mini-val">3<span style="font-size:12px;color:var(--text-muted)">/5</span></div>
+            <div class="kpi-mini-meta">這 2 天有點累</div>
+            <svg class="kpi-mini-spark" viewBox="0 0 100 22" preserveAspectRatio="none">
+              <polygon fill="#2F8378" fill-opacity="0.16" points="0,22 0,8 16,9 32,12 48,17 64,14 80,18 100,13 100,22"/>
+              <polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,8 16,9 32,12 48,17 64,14 80,18 100,13"/>
+              <circle cx="100" cy="13" r="2.6" fill="#2F8378"/>
+            </svg>
+            <div class="kpi-mini-explain">線往上 = 越累</div>
+          </div>
+        </div>
+
+        <!-- 不舒服一鍵 -->
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="zap"></i> 不舒服？按一下就好</h3>
+          <span class="sec-spacer"></span>
+          <span class="sec-count">今日 3 筆</span>
+        </div>
+        <div class="sos-grid">
+          <button class="sos-btn t-rose">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="sos-icon"><i data-lucide="brain"></i></div>
+            <div class="sos-label">頭痛</div>
+            <div class="sos-sub">最近 5/19</div>
+          </button>
+          <button class="sos-btn t-blue">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="sos-icon"><i data-lucide="activity"></i></div>
+            <div class="sos-label">心悸</div>
+            <div class="sos-sub">最近 5/18</div>
+          </button>
+          <button class="sos-btn t-teal">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="sos-icon"><i data-lucide="thermometer"></i></div>
+            <div class="sos-label">發燒</div>
+            <div class="sos-sub">最近 5/10</div>
+          </button>
+          <button class="sos-btn t-amber">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="sos-icon"><i data-lucide="zap"></i></div>
+            <div class="sos-label">疲倦</div>
+            <div class="sos-sub">最近 5/22</div>
+          </button>
+        </div>
+
+        <!-- 今日待辦 -->
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="list-checks"></i> 今日待辦</h3>
+          <span class="sec-count">3 / 6</span>
+          <span class="sec-spacer"></span>
+          <a class="sec-action">全部 <i data-lucide="arrow-right"></i></a>
+        </div>
+        <div class="list-card">
+          <div class="list-row">
+            <div class="check done"><i data-lucide="check"></i></div>
+            <span class="time">07:00</span>
+            <div class="name"><span class="pill pill-teal tag">服藥</span>Metformin 500mg</div>
+            <span><span class="pill pill-ok mono">準時</span></span>
+          </div>
+          <div class="list-row">
+            <div class="check done"><i data-lucide="check"></i></div>
+            <span class="time">09:00</span>
+            <div class="name"><span class="pill pill-rose tag">情緒</span>電量打卡 3/5</div>
+            <span><span class="pill pill-warn mono">第 2 天</span></span>
+          </div>
+          <div class="list-row">
+            <div class="check"></div>
+            <span class="time">13:00</span>
+            <div class="name"><span class="pill pill-teal tag">服藥</span>午餐後服藥</div>
+            <span><span class="pill pill-mute mono">未到</span></span>
+          </div>
+          <div class="list-row">
+            <div class="check"></div>
+            <span class="time">22:00</span>
+            <div class="name"><span class="pill pill-teal tag">服藥</span>睡前藥 + 血壓</div>
+            <span><span class="pill pill-mute mono">未到</span></span>
+          </div>
+        </div>
+
+        <!-- 下次回診 -->
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="calendar-clock"></i> 下次回診</h3>
+          <span class="sec-spacer"></span>
+          <span class="pill pill-info mono">D-4</span>
+        </div>
+        <div class="card tint-blue">
+          <div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+            <span style="font-family:var(--font-brand);font-style:italic;font-weight:500;font-size:24px;color:var(--navy);letter-spacing:-0.01em">5/26</span>
+            <span style="font-size:11.5px;color:var(--text-dim)">週一 10:30</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--navy);font-weight:500">內分泌科 · 林志明 醫師</div>
+          <div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px">台大新竹分院 · 3F-A12</div>
+        </div>
+
+      </div>
+      <div class="disclaimer-footer">
+        <i data-lucide="info"></i>
+        <span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>
+      </div>
+      <div class="ph-tabbar">
+        <button class="ph-tab active"><i data-lucide="home"></i><span>首頁</span></button>
+        <button class="ph-tab"><i data-lucide="puzzle"></i><span>碎片</span></button>
+        <button class="ph-tab fab">
+          <div class="fab-btn"><i data-lucide="plus"></i></div>
+          <span class="ph-tab-label">記一筆</span>
+        </button>
+        <button class="ph-tab"><i data-lucide="clipboard-check"></i><span>診前</span></button>
+        <button class="ph-tab"><i data-lucide="message-circle-heart"></i><span>醫聊</span></button>
+      </div>
+    </div>
+
+    <!-- SYMPTOMS -->
+    <div class="page-view" data-page="symptoms">
+      <div class="ph-topbar">
+        <button class="ph-back"><span>←</span><span>返回</span></button>
+        <span class="ph-filename">症狀紀錄</span>
+        <span class="ph-spacer"></span>
+        <button class="ph-icon-btn"><i data-lucide="more-horizontal"></i></button>
+      </div>
+      <div class="ph-body">
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="map-pin"></i> 點選不舒服的位置</h3>
+          <span class="sec-spacer"></span>
+        </div>
+        <div class="bodymap-wrap">
+          <!-- 拼圖塊組成的漸層背景（4 塊 pastel 拼圖互疊） -->
+          <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-blue"/></svg>
+          <svg class="body-figure" viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg"
+               fill="#FFFFFF" stroke="#1F3D58" stroke-width="2.2"
+               stroke-linejoin="round" stroke-linecap="round">
+            <!-- 頭 -->
+            <ellipse cx="55" cy="22" rx="13" ry="15"/>
+            <!-- 脖子 -->
+            <path d="M 49 35 Q 55 39 61 35 L 61 43 Q 55 45 49 43 Z"/>
+            <!-- 軀幹（含肩膀曲線到腰） -->
+            <path d="M 32 50 Q 32 45 38 44 Q 46 42 55 42 Q 64 42 72 44 Q 78 45 78 50 L 76 78 Q 74 92 73 100 L 72 122 Q 72 128 68 130 L 42 130 Q 38 128 38 122 L 37 100 Q 36 92 34 78 Z"/>
+            <!-- 左手臂 -->
+            <path d="M 32 50 Q 26 53 23 62 Q 19 80 17 102 Q 16 114 21 116 Q 26 116 28 111 Q 31 96 32 82 Q 33 68 33 54 Z"/>
+            <!-- 右手臂 -->
+            <path d="M 78 50 Q 84 53 87 62 Q 91 80 93 102 Q 94 114 89 116 Q 84 116 82 111 Q 79 96 78 82 Q 77 68 77 54 Z"/>
+            <!-- 左腿 -->
+            <path d="M 42 130 Q 40 144 40 160 L 38 196 Q 38 198 41 198 L 51 198 Q 53 198 53 196 L 53 160 Q 53 144 53 132 Z"/>
+            <!-- 右腿 -->
+            <path d="M 57 132 Q 57 144 57 160 L 57 196 Q 57 198 59 198 L 69 198 Q 72 198 72 196 L 70 160 Q 70 144 68 130 Z"/>
+            <!-- 不舒服標記（上腹中段）— 用暖琥珀色，不用刺眼紅 -->
+            <circle cx="55" cy="108" r="11" fill="#C98B2F" fill-opacity="0.25" stroke="none"/>
+            <circle cx="55" cy="108" r="6" fill="#C98B2F" stroke="#FFFFFF" stroke-width="1.5"/>
+          </svg>
+          <div class="bodymap-caption">已選：<strong>上腹部（中段）</strong></div>
+        </div>
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="tag"></i> 類型</h3>
+        </div>
+        <div class="chip-group" style="margin-bottom:14px">
+          <button class="chip active">悶痛</button>
+          <button class="chip">刺痛</button>
+          <button class="chip">灼熱</button>
+          <button class="chip">脹氣</button>
+          <button class="chip">噁心</button>
+          <button class="chip">+</button>
+        </div>
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="thermometer"></i> 強度</h3>
+        </div>
+        <div class="intensity" style="margin-bottom:14px">
+          <div class="int-cell"><strong>1</strong>幾乎不</div>
+          <div class="int-cell"><strong>2</strong>輕微</div>
+          <div class="int-cell sel"><strong>3</strong>中等</div>
+          <div class="int-cell"><strong>4</strong>劇烈</div>
+          <div class="int-cell"><strong>5</strong>受不了</div>
+        </div>
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="sparkles"></i> AI 幫你看一下</h3>
+        </div>
+        <div class="ai-card">
+          <div class="ai-num">2</div>
+          <div class="ai-text">
+            <div class="ai-title">建議去附近診所看一下</div>
+            <div class="ai-desc">上腹悶痛、中等強度，可能是胃發炎或胃食道逆流</div>
+          </div>
+        </div>
+
+        <!-- 為什麼這樣建議 — 病人懂 + 醫師信 -->
+        <div class="card" style="margin-top:8px;padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:8px;letter-spacing:0.04em">
+            <i data-lucide="help-circle" style="width:12px;height:12px;color:var(--accent)"></i>
+            為什麼這樣建議？
+          </div>
+          <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px">
+            <li style="display:flex;gap:7px;font-size:11.5px;color:var(--text);line-height:1.55"><span style="color:var(--green);font-weight:600;font-family:var(--font-mono);font-size:11px;flex-shrink:0">✓</span><span><strong>沒發燒、沒嘔吐</strong> — 不像急性感染，不用跑急診</span></li>
+            <li style="display:flex;gap:7px;font-size:11.5px;color:var(--text);line-height:1.55"><span style="color:var(--amber-deep);font-weight:600;font-family:var(--font-mono);font-size:11px;flex-shrink:0">!</span><span><strong>3 天內同部位痛 2 次</strong> — 不像一次性，建議排門診</span></li>
+            <li style="display:flex;gap:7px;font-size:11.5px;color:var(--text);line-height:1.55"><span style="color:var(--accent);font-weight:600;font-family:var(--font-mono);font-size:11px;flex-shrink:0">i</span><span><strong>你在吃 Metformin</strong> — 有時會引起腸胃不適，可以問林醫師</span></li>
+          </ul>
+          <div style="margin-top:10px;padding:9px 11px;background:var(--amber-soft);border:1px solid rgba(201,139,47,0.30);border-radius:7px;font-size:11px;color:var(--amber-deep);display:flex;align-items:flex-start;gap:6px;line-height:1.5">
+            <i data-lucide="alert-circle" style="width:13px;height:13px;flex-shrink:0;margin-top:1px"></i>
+            <span><strong>提醒</strong>：AI 分析只是依你輸入的資料推估，<strong>不是醫師診斷</strong>，也不能取代專業判斷。<br>如果越來越嚴重、發燒、嘔吐、呼吸困難，請<strong style="color:var(--rose-deep)">立即就醫或撥 119</strong>。</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="disclaimer-footer">
+        <i data-lucide="info"></i>
+        <span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>
+      </div>
+      <div class="ph-tabbar">
+        <button class="ph-tab"><i data-lucide="home"></i><span>首頁</span></button>
+        <button class="ph-tab"><i data-lucide="puzzle"></i><span>碎片</span></button>
+        <button class="ph-tab fab"><div class="fab-btn"><i data-lucide="plus"></i></div><span class="ph-tab-label">記一筆</span></button>
+        <button class="ph-tab"><i data-lucide="clipboard-check"></i><span>診前</span></button>
+        <button class="ph-tab"><i data-lucide="message-circle-heart"></i><span>醫聊</span></button>
+      </div>
+    </div>
+
+    <!-- MEDS -->
+    <div class="page-view" data-page="meds">
+      <div class="ph-topbar">
+        <button class="ph-back"><span>←</span><span>返回</span></button>
+        <span class="ph-filename">藥物紀錄</span>
+        <span class="ph-spacer"></span>
+        <button class="ph-icon-btn"><i data-lucide="camera"></i></button>
+      </div>
+      <div class="ph-body">
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="sun"></i> 今日服藥</h3>
+          <span class="sec-count">5 / 8</span>
+        </div>
+
+        <div class="card" style="padding:0">
+          <div style="padding:10px 14px;background:var(--accent-tint);border-bottom:1px solid var(--border);font-size:11px;color:var(--accent-deep);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
+            <i data-lucide="sun" style="width:12px;height:12px"></i> 早晨 07:00 <span style="margin-left:auto"><span class="pill pill-ok mono">已完成</span></span>
+          </div>
+          <!-- Metformin — 含「藥袋 vs 我的實際用法」客製化區塊 -->
+          <div class="med-list-row" style="border-bottom:1px solid var(--border)">
+            <div class="ico"><i data-lucide="pill"></i></div>
+            <div>
+              <div class="name">Metformin</div>
+              <div class="dose">500mg</div>
+            </div>
+            <div class="time">07:00</div>
+            <span class="pill pill-ok mono">已服</span>
+          </div>
+          <!-- 客製化欄位 — 藥袋 vs 醫師私下交代 -->
+          <div style="padding:10px 14px 12px;background:#FBFCFD;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:11.5px;line-height:1.5">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:var(--bg-mid);border-radius:10px;font-size:10px;color:var(--text-dim);font-weight:600;flex-shrink:0;margin-top:1px">
+                <i data-lucide="package" style="width:10px;height:10px"></i>藥袋
+              </span>
+              <span style="color:var(--text-dim);text-decoration:line-through">飯後 30 分鐘，1 顆，1 日 2 次</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.5">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:var(--teal-soft);border-radius:10px;font-size:10px;color:var(--teal-deep);font-weight:600;flex-shrink:0;margin-top:1px">
+                <i data-lucide="user-check" style="width:10px;height:10px"></i>我的
+              </span>
+              <span style="color:var(--text);flex:1"><strong>飯後 1 小時</strong>吃 1 顆，避開咖啡（林醫師 5/12 交代）</span>
+              <button style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px;cursor:pointer;flex-shrink:0">
+                <i data-lucide="pencil" style="width:11px;height:11px"></i>編輯
+              </button>
+            </div>
+          </div>
+          <div class="med-list-row">
+            <div class="ico"><i data-lucide="pill"></i></div>
+            <div>
+              <div class="name">Lisinopril</div>
+              <div class="dose">10mg · 任意</div>
+            </div>
+            <div class="time">07:00</div>
+            <span class="pill pill-ok mono">已服</span>
+          </div>
+        </div>
+
+        <div class="card" style="padding:0;margin-top:10px">
+          <div style="padding:10px 14px;background:var(--bg-soft);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
+            <i data-lucide="sun-medium" style="width:12px;height:12px"></i> 中午 13:00 <span style="margin-left:auto"><span class="pill pill-mute mono">尚未到</span></span>
+          </div>
+          <div class="med-list-row">
+            <div class="ico"><i data-lucide="pill"></i></div>
+            <div>
+              <div class="name">Metformin</div>
+              <div class="dose">500mg · 飯後</div>
+            </div>
+            <div class="time">13:00</div>
+            <div class="check"></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:0;margin-top:10px">
+          <div style="padding:10px 14px;background:var(--bg-soft);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
+            <i data-lucide="moon" style="width:12px;height:12px"></i> 睡前 22:00 <span style="margin-left:auto"><span class="pill pill-mute mono">尚未到</span></span>
+          </div>
+          <div class="med-list-row">
+            <div class="ico"><i data-lucide="pill"></i></div>
+            <div>
+              <div class="name">Amlodipine</div>
+              <div class="dose">5mg · 任意</div>
+            </div>
+            <div class="time">22:00</div>
+            <div class="check"></div>
+          </div>
+          <div class="med-list-row">
+            <div class="ico"><i data-lucide="pill"></i></div>
+            <div>
+              <div class="name">Atorvastatin</div>
+              <div class="dose">10mg · 睡前</div>
+            </div>
+            <div class="time">22:00</div>
+            <div class="check"></div>
+          </div>
+        </div>
+
+        <div class="card tint-blue" style="margin-top:14px;display:flex;align-items:center;gap:12px">
+          <div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>
+          <div style="width:36px;height:36px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i data-lucide="camera" style="width:17px;height:17px"></i>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--accent-deep)">拍藥袋 → 自動填入 → 你可以覆寫</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.45">醫師私下交代的用法可加上「我的」標示</div>
+          </div>
+        </div>
+
+        <!-- 客製化說明卡 -->
+        <div style="margin-top:10px;padding:11px 13px;background:var(--teal-soft);border:1.5px solid rgba(47,131,120,0.30);border-radius:10px;font-size:11.5px;color:var(--teal-deep);line-height:1.55">
+          <div style="display:flex;align-items:center;gap:6px;font-weight:700;margin-bottom:4px">
+            <i data-lucide="user-check" style="width:13px;height:13px"></i>
+            為什麼要分「藥袋」和「我的」？
+          </div>
+          <p>醫師常會私下交代和藥袋不一樣的吃法（例：藥袋寫飯後，醫師說飯後 1 小時、避開咖啡）。你可以保留藥袋原文，另外加上「我的實際用法」，提醒功能會依「我的」為準。</p>
+        </div>
+
+      </div>
+      <div class="disclaimer-footer">
+        <i data-lucide="info"></i>
+        <span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>
+      </div>
+      <div class="ph-tabbar">
+        <button class="ph-tab"><i data-lucide="home"></i><span>首頁</span></button>
+        <button class="ph-tab"><i data-lucide="puzzle"></i><span>碎片</span></button>
+        <button class="ph-tab fab"><div class="fab-btn"><i data-lucide="plus"></i></div><span class="ph-tab-label">記一筆</span></button>
+        <button class="ph-tab"><i data-lucide="clipboard-check"></i><span>診前</span></button>
+        <button class="ph-tab"><i data-lucide="message-circle-heart"></i><span>醫聊</span></button>
+      </div>
+    </div>
+
+    <!-- VITALS -->
+    <div class="page-view" data-page="vitals">
+      <div class="ph-topbar">
+        <button class="ph-back"><span>←</span><span>返回</span></button>
+        <span class="ph-filename">生理紀錄</span>
+        <span class="ph-spacer"></span>
+        <button class="ph-icon-btn"><i data-lucide="plus"></i></button>
+      </div>
+      <div class="ph-body">
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="activity"></i> 本週數值</h3>
+          <span class="sec-spacer"></span>
+          <span class="sec-count">7 天 avg</span>
+        </div>
+
+        <div class="vital-snap">
+          <div class="vital-card t-rose">
+            <div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="vital-card-head"><i data-lucide="heart-pulse"></i><span class="lbl">血壓</span></div>
+            <div class="vital-card-val">132/85<span class="vital-card-unit">mmHg</span></div>
+            <div class="vital-card-meta">比上週低 4 點 · 在進步</div>
+            <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;margin-top:6px">
+              <polygon fill="#C97A7A" fill-opacity="0.16" points="0,24 0,12 16,14 32,9 48,16 64,11 80,17 100,13 100,24"/>
+              <polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,12 16,14 32,9 48,16 64,11 80,17 100,13"/>
+              <circle cx="100" cy="13" r="2.4" fill="#C97A7A"/>
+            </svg>
+          </div>
+          <div class="vital-card t-blue">
+            <div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>
+            <div class="vital-card-head"><i data-lucide="droplet"></i><span class="lbl">飯前血糖</span></div>
+            <div class="vital-card-val">112<span class="vital-card-unit">mg/dL</span></div>
+            <div class="vital-card-meta">比目標高一點點（目標 &lt;110）</div>
+            <svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;margin-top:6px">
+              <polygon fill="#4A90C2" fill-opacity="0.16" points="0,24 0,17 16,15 32,18 48,12 64,15 80,9 100,7 100,24"/>
+              <polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,17 16,15 32,18 48,12 64,15 80,9 100,7"/>
+              <circle cx="100" cy="7" r="2.4" fill="#4A90C2"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="list"></i> 最近紀錄</h3>
+          <span class="sec-spacer"></span>
+          <a class="sec-action">全部 <i data-lucide="arrow-right"></i></a>
+        </div>
+        <div class="list-card">
+          <div class="list-row">
+            <span></span>
+            <span class="time">22:14</span>
+            <div class="name">血壓 <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-mono);font-size:11px;margin-left:6px">128/82</span></div>
+            <span><span class="pill pill-warn mono">略高</span></span>
+          </div>
+          <div class="list-row">
+            <span></span>
+            <span class="time">07:08</span>
+            <div class="name">血糖 <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-mono);font-size:11px;margin-left:6px">112 mg/dL</span></div>
+            <span><span class="pill pill-warn mono">+6 avg</span></span>
+          </div>
+          <div class="list-row">
+            <span></span>
+            <span class="time">22:00</span>
+            <div class="name">體溫 <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-mono);font-size:11px;margin-left:6px">36.8°C</span></div>
+            <span><span class="pill pill-ok mono">正常</span></span>
+          </div>
+          <div class="list-row">
+            <span></span>
+            <span class="time">06:30</span>
+            <div class="name">體重 <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-mono);font-size:11px;margin-left:6px">72.4 kg</span></div>
+            <span><span class="pill pill-mute mono">−0.2</span></span>
+          </div>
+        </div>
+
+      </div>
+      <div class="disclaimer-footer">
+        <i data-lucide="info"></i>
+        <span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>
+      </div>
+      <div class="ph-tabbar">
+        <button class="ph-tab"><i data-lucide="home"></i><span>首頁</span></button>
+        <button class="ph-tab"><i data-lucide="puzzle"></i><span>碎片</span></button>
+        <button class="ph-tab fab"><div class="fab-btn"><i data-lucide="plus"></i></div><span class="ph-tab-label">記一筆</span></button>
+        <button class="ph-tab"><i data-lucide="clipboard-check"></i><span>診前</span></button>
+        <button class="ph-tab"><i data-lucide="message-circle-heart"></i><span>醫聊</span></button>
+      </div>
+    </div>
+
+    <!-- PRE-VISIT -->
+    <div class="page-view" data-page="previsit">
+      <div class="ph-topbar">
+        <button class="ph-back"><span>←</span><span>返回</span></button>
+        <span class="ph-filename">診前報告</span>
+        <span class="ph-spacer"></span>
+        <button class="ph-icon-btn"><i data-lucide="download"></i></button>
+      </div>
+      <div class="ph-body">
+
+        <!-- 回診倒數 hero — 拼圖漸層背景 -->
+        <div class="pv-hero">
+          <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>
+          <div class="pv-hero-eye">下次回診</div>
+          <div class="pv-hero-num">4<span class="unit">天後 · 5/26 週一 10:30</span></div>
+          <div class="pv-hero-doc">內分泌科 · 林志明 醫師</div>
+          <div class="pv-hero-meta">台大新竹分院</div>
+          <button class="pv-btn"><i data-lucide="clipboard-check"></i> 立即產生診前報告</button>
+        </div>
+
+        <!-- 雙視角切換 — 給自己看 / 給醫師看 -->
+        <div style="display:flex;gap:4px;padding:3px;background:var(--bg-mid);border-radius:10px;margin-bottom:14px">
+          <button class="audience-btn active" data-aud="patient" onclick="switchAud('patient')" style="flex:1;padding:7px 10px;border-radius:8px;font-size:11.5px;font-weight:600;background:#fff;color:var(--navy);box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;gap:5px">
+            <i data-lucide="user" style="width:12px;height:12px"></i> 給自己看（口語）
+          </button>
+          <button class="audience-btn" data-aud="doctor" onclick="switchAud('doctor')" style="flex:1;padding:7px 10px;border-radius:8px;font-size:11.5px;font-weight:500;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:5px">
+            <i data-lucide="stethoscope" style="width:12px;height:12px"></i> 給醫師看（精簡）
+          </button>
+        </div>
+
+        <!-- 給自己看 — 口語故事 -->
+        <div class="aud-view aud-patient">
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="message-circle"></i> 這次去診間要說的 3 件事</h3>
+          </div>
+          <div class="list-card">
+            <div class="list-row" style="grid-template-columns:24px 1fr;align-items:flex-start;padding:11px 12px">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--rose-soft);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600;margin-top:1px">1</div>
+              <div>
+                <div class="name" style="margin-bottom:3px">「最近吃藥之後，常常會覺得累」</div>
+                <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5">最近 3 天電量都打 3 分以下，可能跟 Metformin 有關</div>
+              </div>
+            </div>
+            <div class="list-row" style="grid-template-columns:24px 1fr;align-items:flex-start;padding:11px 12px">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--amber-soft);color:var(--amber-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600;margin-top:1px">2</div>
+              <div>
+                <div class="name" style="margin-bottom:3px">「早上飯前血糖比目標高一點」</div>
+                <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5">這週連續 2 次超過 110，平均 112</div>
+              </div>
+            </div>
+            <div class="list-row" style="grid-template-columns:24px 1fr;align-items:flex-start;padding:11px 12px">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600;margin-top:1px">3</div>
+              <div>
+                <div class="name" style="margin-bottom:3px">「肚子上面這 3 天悶痛 2 次」</div>
+                <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5">想問是不是要安排胃鏡，還是先吃藥試試</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="sun"></i> 你最近的狀況（一句話）</h3>
+          </div>
+          <div class="card tint-blue" style="padding:14px 16px">
+            <div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>
+            <p style="font-size:13px;color:var(--navy);line-height:1.7;margin:0">
+              這個月 <strong>血壓有比上個月降一點</strong>，用藥也都有按時吃（92%）。<br>
+              比較需要注意的是 <strong>飯前血糖最近偏高</strong>，跟 <strong>連續 2 天比較沒精神</strong>。
+            </p>
+          </div>
+        </div>
+
+        <!-- 給醫師看 — 精簡資料 -->
+        <div class="aud-view aud-doctor" style="display:none">
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="clipboard-list"></i> 主訴 / 重點</h3>
+          </div>
+          <div class="card" style="padding:14px;font-family:var(--font);font-size:12.5px;line-height:1.6">
+            <div style="display:flex;gap:6px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+              <span class="pill pill-rose mono">CC</span>
+              <div style="flex:1">
+                <strong>Epigastric discomfort × 3d</strong>，dull pain，無 N/V，無發燒
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:10px">
+              <span class="pill pill-warn mono">Sx</span>
+              <div style="flex:1">
+                <strong>Fatigue × 3d</strong>（電量 ≤3），疑似與服藥相關 (Metformin)
+              </div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <span class="pill pill-info mono">Lab</span>
+              <div style="flex:1">
+                <strong>FBS 112 mg/dL</strong>（5/22, 5/21）· 連 2 次 &gt; target &lt;110
+              </div>
+            </div>
+          </div>
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="bar-chart-3"></i> 30 天 vital trend</h3>
+          </div>
+          <div class="vital-snap">
+            <div class="vital-card t-rose">
+              <div class="vital-card-head"><i data-lucide="heart-pulse"></i><span class="lbl">BP avg</span></div>
+              <div class="vital-card-val">132/85</div>
+              <div class="vital-card-meta">n=28 · −4 vs prev</div>
+            </div>
+            <div class="vital-card t-blue">
+              <div class="vital-card-head"><i data-lucide="droplet"></i><span class="lbl">FBS avg</span></div>
+              <div class="vital-card-val">108</div>
+              <div class="vital-card-meta">n=14 · +6 vs prev</div>
+            </div>
+          </div>
+
+          <div class="sec-head">
+            <h3 class="sec-title"><i data-lucide="pill"></i> Current meds + adherence</h3>
+          </div>
+          <div class="list-card">
+            <div class="list-row" style="grid-template-columns:1fr auto">
+              <div class="name">Metformin 500mg BID po pc</div>
+              <span><span class="pill pill-ok mono">95%</span></span>
+            </div>
+            <div class="list-row" style="grid-template-columns:1fr auto">
+              <div class="name">Lisinopril 10mg QD</div>
+              <span><span class="pill pill-ok mono">98%</span></span>
+            </div>
+            <div class="list-row" style="grid-template-columns:1fr auto">
+              <div class="name">Amlodipine 5mg QD</div>
+              <span><span class="pill pill-ok mono">96%</span></span>
+            </div>
+            <div class="list-row" style="grid-template-columns:1fr auto">
+              <div class="name">Atorvastatin 10mg QHS</div>
+              <span><span class="pill pill-warn mono">85% · missed 5/18</span></span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+      <div class="disclaimer-footer">
+        <i data-lucide="info"></i>
+        <span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>
+      </div>
+      <div class="ph-tabbar">
+        <button class="ph-tab"><i data-lucide="home"></i><span>首頁</span></button>
+        <button class="ph-tab"><i data-lucide="puzzle"></i><span>碎片</span></button>
+        <button class="ph-tab fab"><div class="fab-btn"><i data-lucide="plus"></i></div><span class="ph-tab-label">記一筆</span></button>
+        <button class="ph-tab active"><i data-lucide="clipboard-check"></i><span>診前</span></button>
+        <button class="ph-tab"><i data-lucide="message-circle-heart"></i><span>醫聊</span></button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page-view" data-page="settings">
+      <div class="ph-topbar">
+        <button class="ph-back"><span>←</span><span>返回</span></button>
+        <span class="ph-filename">系統設定</span>
+        <span class="ph-spacer"></span>
+      </div>
+      <div class="ph-body">
+
+        <!-- 帳號 -->
+        <div class="card" style="display:flex;align-items:center;gap:12px;padding:14px">
+          <div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>
+          <div class="home-avatar" style="width:44px;height:44px;font-size:16px">郭</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600;color:var(--navy)">郭先生</div>
+            <div style="font-size:11px;color:var(--text-muted)">64 歲 · 內分泌科追蹤中</div>
+          </div>
+          <button class="pill pill-info" style="font-size:11px;padding:4px 10px">編輯</button>
+        </div>
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="palette"></i> 顯示</h3>
+        </div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="languages"></i></div>
+            <div>
+              <div class="name">語言</div>
+              <div class="sub">Language</div>
+            </div>
+            <div class="val">繁體中文</div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="moon"></i></div>
+            <div>
+              <div class="name">主題</div>
+              <div class="sub">深 / 淺色</div>
+            </div>
+            <div class="val">淺色</div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="type"></i></div>
+            <div>
+              <div class="name">字級</div>
+              <div class="sub">標準 / 大字 / 年長版</div>
+            </div>
+            <div class="val">標準</div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+        </div>
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="bell"></i> 提醒</h3>
+        </div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="pill"></i></div>
+            <div>
+              <div class="name">服藥提醒</div>
+              <div class="sub">早 7 · 中 13 · 晚 22</div>
+            </div>
+            <span class="pill pill-ok mono">開啟</span>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="calendar-clock"></i></div>
+            <div>
+              <div class="name">回診倒數</div>
+              <div class="sub">3 / 1 天前提醒</div>
+            </div>
+            <span class="pill pill-ok mono">開啟</span>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="message-circle"></i></div>
+            <div>
+              <div class="name">提醒語氣</div>
+              <div class="sub">溫柔 / 簡短 / 嚴厲</div>
+            </div>
+            <div class="val">溫柔</div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+        </div>
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="shield"></i> 資料</h3>
+        </div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="cloud-upload"></i></div>
+            <div>
+              <div class="name">雲端同步</div>
+              <div class="sub">最後同步 2 秒前</div>
+            </div>
+            <span class="pill pill-ok mono">已同步</span>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="download"></i></div>
+            <div>
+              <div class="name">匯出資料</div>
+              <div class="sub">PDF / CSV / JSON</div>
+            </div>
+            <div class="val"></div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="trash-2"></i></div>
+            <div>
+              <div class="name" style="color:var(--rose-deep)">刪除帳號</div>
+              <div class="sub">需重新註冊</div>
+            </div>
+            <div class="val"></div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+        </div>
+
+        <div class="sec-head">
+          <h3 class="sec-title"><i data-lucide="file-text"></i> 法律與隱私</h3>
+        </div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="shield-check"></i></div>
+            <div>
+              <div class="name">隱私政策</div>
+              <div class="sub">資料儲存與使用方式</div>
+            </div>
+            <div class="val"></div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="scroll-text"></i></div>
+            <div>
+              <div class="name">使用條款</div>
+              <div class="sub">服務條款與責任範圍</div>
+            </div>
+            <div class="val"></div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+          <div class="settings-row">
+            <div class="ico"><i data-lucide="alert-circle"></i></div>
+            <div>
+              <div class="name">醫療免責聲明</div>
+              <div class="sub">本 App 提供的內容並非醫療建議</div>
+            </div>
+            <div class="val"></div>
+            <div class="chev"><i data-lucide="chevron-right"></i></div>
+          </div>
+        </div>
+
+        <!-- 完整免責聲明區塊 — 設定頁底部展開 -->
+        <div style="margin-top:16px;padding:14px 16px;background:var(--amber-soft);border:1px solid rgba(201,139,47,0.25);border-radius:10px;font-size:11.5px;color:var(--amber-deep);line-height:1.65">
+          <div style="display:flex;align-items:center;gap:6px;font-weight:700;margin-bottom:6px">
+            <i data-lucide="alert-circle" style="width:14px;height:14px"></i>
+            醫療免責聲明
+          </div>
+          <p style="margin-bottom:6px"><strong>本 App（MD.Piece）僅作為健康紀錄與資訊輔助工具</strong>，所有內容（包含 AI 分析、症狀分類、用藥提醒、健康報告等）<strong>不構成醫療診斷、處方或治療建議</strong>。</p>
+          <p style="margin-bottom:6px">任何醫療決策請務必諮詢合格醫師或醫療人員。本 App 不負擔因使用本服務造成的任何醫療結果責任。</p>
+          <p>緊急狀況請<strong style="color:var(--rose-deep)">立即就醫或撥 119</strong>。</p>
+        </div>
+
+        <div style="text-align:center;padding:18px 0 4px;font-size:10.5px;color:var(--text-muted)">
+          MD.Piece · 2026 春版
+        </div>
+
+      </div>
+      <div class="disclaimer-footer">
+        <i data-lucide="info"></i>
+        <span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>
+      </div>
+      <div class="ph-tabbar">
+        <button class="ph-tab"><i data-lucide="home"></i><span>首頁</span></button>
+        <button class="ph-tab"><i data-lucide="puzzle"></i><span>碎片</span></button>
+        <button class="ph-tab fab"><div class="fab-btn"><i data-lucide="plus"></i></div><span class="ph-tab-label">記一筆</span></button>
+        <button class="ph-tab"><i data-lucide="clipboard-check"></i><span>診前</span></button>
+        <button class="ph-tab"><i data-lucide="message-circle-heart"></i><span>醫聊</span></button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  function showPage(name) {
+    document.querySelectorAll('.page-view').forEach(p => p.classList.toggle('active', p.dataset.page === name));
+    document.querySelectorAll('.pp-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.trim().includes(getLabelFor(name)));
+    });
+    if (window.lucide && lucide.createIcons) lucide.createIcons({ attrs: { 'stroke-width': 1.6 } });
+  }
+  function getLabelFor(name) {
+    return { home:'首頁', symptoms:'症狀', meds:'用藥', vitals:'生理', previsit:'診前', settings:'設定' }[name];
+  }
+  function switchAud(which) {
+    document.querySelectorAll('.aud-view').forEach(v => v.style.display = v.classList.contains('aud-' + which) ? 'block' : 'none');
+    document.querySelectorAll('.audience-btn').forEach(b => {
+      const isActive = b.dataset.aud === which;
+      b.style.background = isActive ? '#fff' : 'transparent';
+      b.style.color = isActive ? 'var(--navy)' : 'var(--text-dim)';
+      b.style.boxShadow = isActive ? 'var(--shadow-sm)' : 'none';
+      b.style.fontWeight = isActive ? '600' : '500';
+    });
+  }
+  if (window.lucide && lucide.createIcons) lucide.createIcons({ attrs: { 'stroke-width': 1.6 } });
+</script>
+
+</body>
+</html>
