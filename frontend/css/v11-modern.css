@@ -459,6 +459,11 @@ html body.theme-modern nav#mobile-tabbar .mtab.mtab-fab .mtab-fab-label,
 body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-label,
 body.theme-modern .mtab.mtab-fab .mtab-fab-label {
   color: #2F6B96 !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap !important;
+  width: max-content !important;
+  min-width: 56px !important;
 }
 
 /* ─── 字體層次：不要全 Noto Sans TC 死板，三套字交叉用 ─────────────── */
