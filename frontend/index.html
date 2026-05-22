@@ -51,6 +51,27 @@
       try { localStorage.removeItem('md-theme-dark'); } catch(e) {}
       try { document.documentElement.classList.remove('dark'); } catch(e) {}
     })();
+
+    // ─── 一次性 PWA cache 強制清除 ─────────────────────────
+    // 把 V 改高一級 → 每個使用者下次開站會清光 SW + caches + reload，
+    // 各種 stale cache 全部失效。每個版本每個使用者只清一次。
+    (async function() {
+      var APP_BUST = 'v11-deploy-2026-05-22-a';
+      try {
+        if (localStorage.getItem('mdp-cache-bust') === APP_BUST) return;
+        localStorage.setItem('mdp-cache-bust', APP_BUST);
+        if ('serviceWorker' in navigator) {
+          var regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(function(r) { return r.unregister(); }));
+        }
+        if ('caches' in window) {
+          var keys = await caches.keys();
+          await Promise.all(keys.map(function(k) { return caches.delete(k); }));
+        }
+        // 真正硬重整：location.reload(true) 已被瀏覽器廢棄但仍會繞過 cache
+        window.location.reload();
+      } catch(e) { /* 忽略 — 不阻擋頁面 load */ }
+    })();
   </script>
 
   <!-- ★ Landing Page — Split Layout -->
