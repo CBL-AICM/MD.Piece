@@ -608,4 +608,183 @@
   margin-bottom: 24px !important;
 }
 
-/* ─── 結束 v9 簡約 ─── */
+/* ════════════════════════════════════════════════════════════════
+   v9.1 補：把實際首頁有的元素也縮小
+   （screenshot 反饋：home-hero / care-mode-card / home-quick-report
+    / home-layer 之前 v9 漏掉）
+   ════════════════════════════════════════════════════════════════ */
+
+/* ─── care-mode-card「你現在用的是」── */
+.care-mode-card {
+  margin: 10px 0 16px !important;
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, rgba(74,144,194,0.06), rgba(91,181,168,0.05)) !important;
+}
+.care-mode-card-head {
+  margin-bottom: 8px !important;
+  gap: 6px !important;
+}
+.care-mode-card-title {
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  color: var(--text-dim) !important;
+}
+.care-mode-chips {
+  gap: 6px !important;
+}
+.care-mode-chip {
+  padding: 7px 12px !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  border-width: 1px !important;
+  border-radius: 8px !important;
+}
+.care-mode-chip.active {
+  box-shadow: 0 1px 4px rgba(74,144,194,0.20) !important;
+}
+.care-mode-chip i {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+/* ─── home-hero（早安 LISA 大卡）大幅縮小 ─── */
+.home-hero {
+  padding: 14px 16px !important;
+  margin-bottom: 16px !important;
+  gap: 14px !important;
+  border-width: 1px !important;
+  border-radius: 12px !important;
+  backdrop-filter: none !important;
+  background: linear-gradient(135deg, rgba(74,144,194,0.04) 0%, rgba(232,168,168,0.04) 100%) !important;
+}
+.home-hero::before,
+.home-hero::after {
+  display: none !important;
+}
+.home-logo,
+.home-hero-left .home-logo,
+.home-logo-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  animation: none !important;
+}
+.home-title {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 2px !important;
+}
+.home-calm {
+  font-size: 0.72rem !important;
+  margin-bottom: 6px !important;
+  color: var(--text-muted) !important;
+  letter-spacing: 0.04em !important;
+}
+.home-date-row {
+  gap: 8px !important;
+}
+.home-datestr {
+  font-size: 0.72rem !important;
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
+}
+.home-day {
+  font-size: 0.7rem !important;
+  letter-spacing: 0.06em !important;
+}
+.home-visit-row {
+  margin-top: 6px !important;
+  gap: 4px !important;
+}
+.home-visit-chip {
+  font-size: 0.7rem !important;
+  padding: 3px 8px !important;
+}
+
+/* ─── home-quick-report（不舒服？按一下就好）─── */
+.home-quick-report {
+  margin: 12px 0 20px !important;
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
+  border-width: 1px !important;
+  box-shadow: none !important;
+}
+.home-qr-head {
+  margin-bottom: 10px !important;
+  padding-bottom: 8px !important;
+}
+.home-qr-head h3 {
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+}
+.home-qr-head span {
+  font-size: 0.68rem !important;
+}
+
+/* ─── home-layer 區塊 head 縮小 ─── */
+.home-layer {
+  padding: 14px !important;
+  border-radius: 10px !important;
+  margin-bottom: 20px !important;
+}
+.home-layer-head {
+  margin-bottom: 12px !important;
+  gap: 10px !important;
+}
+.home-layer-num {
+  font-size: 0.95rem !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
+}
+.home-layer-title {
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+}
+.home-layer-sub {
+  font-size: 0.7rem !important;
+  margin-top: 1px !important;
+}
+
+/* ─── home-info-row（藥物 / 心情 / 健康提醒 3 欄）─── */
+.home-info-row {
+  gap: 8px !important;
+  margin-top: 10px !important;
+}
+.home-ov {
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+}
+.home-ov-head {
+  font-size: 0.72rem !important;
+  gap: 5px !important;
+  margin-bottom: 6px !important;
+}
+.home-ov-body {
+  font-size: 0.78rem !important;
+}
+
+/* ─── ip-sos-grid（4 大顆症狀按鈕）縮小 ─── */
+.ip-sos-grid {
+  gap: 6px !important;
+}
+.ip-sos-btn {
+  padding: 14px 10px !important;
+  border-radius: 10px !important;
+}
+.ip-sos-icon,
+.ip-sos-btn .ip-sos-icon {
+  width: 30px !important;
+  height: 30px !important;
+  margin-bottom: 4px !important;
+}
+.ip-sos-label {
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+}
+.ip-sos-sub {
+  font-size: 0.66rem !important;
+  margin-top: 1px !important;
+}
+
+/* ─── 結束 v9.1 ─── */
