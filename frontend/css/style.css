@@ -2,23 +2,9 @@
    MD.Piece — Space Digital Medical Theme
    ═══════════════════════════════════════════════════════════ */
 
-/* Fonts loaded via <link> in HTML head for faster rendering */
-
-@font-face {
-  font-family: "Rigelstar";
-  src: url("../fonts/Rigelstar.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Netron";
-  src: url("../fonts/Netron.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+/* Fonts loaded via <link> in HTML head for faster rendering.
+   Decorative fonts (Rigelstar / Netron / Cormorant / JetBrains Mono) removed
+   to follow the simplified medical-style direction — Noto Sans TC only. */
 
 :root {
   /* Pure white body × medical blue accent — 乾淨醫療 app 標準作法 */
@@ -68,13 +54,13 @@
   --gradient-hero-coral:  linear-gradient(135deg, #C97A7A 0%, var(--rose) 100%);
   --gradient-hero-lavender:linear-gradient(135deg, #6B73A8 0%, var(--purple) 100%);
 
-  /* UI tokens */
-  --radius:     14px;
-  --radius-sm:  10px;
-  --radius-pill:20px;
-  --shadow:     0 4px 14px rgba(31,61,88,0.10), 0 1px 4px rgba(31,61,88,0.08);
-  --shadow-sm:  0 2px 8px rgba(31,61,88,0.08);
-  --shadow-lift:0 10px 28px rgba(31,61,88,0.14), 0 3px 8px rgba(31,61,88,0.09);
+  /* UI tokens — simplified medical (tighter radius, lighter shadow) */
+  --radius:     10px;
+  --radius-sm:  6px;
+  --radius-pill:14px;
+  --shadow:     0 2px 8px rgba(31,61,88,0.06);
+  --shadow-sm:  0 1px 2px rgba(31,61,88,0.04);
+  --shadow-lift:0 4px 14px rgba(31,61,88,0.10), 0 1px 4px rgba(31,61,88,0.06);
   --transition: .25s cubic-bezier(.4,0,.2,1);
 
   /* ─── Design Tokens（集中化，避免散落的 hard-coded 值）──────
@@ -17130,3 +17116,92 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
   font-size: 0.9rem;
 }
 .pz-nearest-empty p { margin: 0 0 8px; }
+
+/* ═══════════════════════════════════════════════════════════
+   Simplified Medical Style — overrides applied at the END so
+   they win the cascade without touching the 17K lines above.
+   Goal: drop visual noise, keep all features intact.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Font aliases — the 127 rules referencing decorative families
+   (Rigelstar / Netron / Cormorant Garamond / JetBrains Mono /
+   Fira Code) now silently fall back to the system stack so the
+   whole UI reads in Noto Sans TC. Monospaced rules keep mono
+   shape via the trailing system fallback. */
+@font-face {
+  font-family: "Rigelstar";
+  src: local("Noto Sans TC"), local("Noto Sans CJK TC"), local("-apple-system"), local("system-ui");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Netron";
+  src: local("Noto Sans TC"), local("Noto Sans CJK TC"), local("-apple-system"), local("system-ui");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cormorant Garamond";
+  src: local("Noto Sans TC"), local("Noto Sans CJK TC"), local("-apple-system"), local("system-ui");
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: local("ui-monospace"), local("SFMono-Regular"), local("Menlo"), local("Consolas");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fira Code";
+  src: local("ui-monospace"), local("SFMono-Regular"), local("Menlo"), local("Consolas");
+  font-display: swap;
+}
+
+/* Landing — strip canvas, floating decorations, prompt line, gradient.
+   Keep all DOM nodes so landing.js & i18n bindings don't error. */
+#star-canvas,
+#landing-canvas,
+#landing .landing-deco,
+#landing .landing-deco-1,
+#landing .landing-deco-2,
+#landing .landing-deco-3,
+#landing .landing-prompt {
+  display: none !important;
+}
+#landing,
+#landing[data-theme="dark"],
+#landing[data-theme="light"] {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
+}
+#landing::after { opacity: 0 !important; }
+
+/* Landing typography — single weight, no serif drama */
+.landing-logo {
+  font-family: "Noto Sans TC", -apple-system, system-ui, sans-serif !important;
+  font-weight: 300 !important;
+  letter-spacing: -0.02em !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--navy, #1F3D58) !important;
+  color: var(--klein, #1F3D58) !important;
+}
+.landing-tagline,
+.landing-sub-tagline { color: var(--text-dim, #5A7388) !important; }
+.landing-divider { background: rgba(31,61,88,0.10) !important; }
+.intro-lab { color: var(--text-muted, #8FA4B5) !important; }
+.intro-lab::before { background: rgba(31,61,88,0.18) !important; }
+
+/* Enter button — solid medical-blue, no gradient sparkle */
+.landing-enter {
+  background: var(--accent) !important;
+  color: #FFFFFF !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.landing-enter::before,
+.landing-enter::after { display: none !important; }
+.landing-enter:hover {
+  background: var(--accent-deep, #2F6B96) !important;
+  transform: none !important;
+}
+
+/* Theme / lang toggle — drop the [terminal brackets] visual weight */
+.theme-toggle .tt-bracket,
+.lang-toggle .tt-bracket { opacity: 0.4; }
+
