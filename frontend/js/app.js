@@ -12013,7 +12013,71 @@ var EDU_DISEASE_DIMENSIONS = [
 ];
 
 function education() {
-  return `
+  // ─── Mobile v11 block ───
+  var _mobileEduBlock = ''
+    + '<div class="mobile-only">'
+    // hero card with puzzle bg
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">衛教 · 知識庫</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">為你登錄的疾病量身整理</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">六大面向：疾病介紹／用藥／副作用／長期風險／自我管理／生活</div>'
+    +   '</div>'
+
+    // 我的疾病書架（mobile）
+    +   '<div id="mobile-edu-my-shelf" style="display:none">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="library"></i> 我的疾病書架</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-edu-my-shelf-list" class="card" style="padding:12px;display:flex;flex-direction:column;gap:8px"></div>'
+    +   '</div>'
+
+    // 我的疾病衛教文章
+    +   '<div id="mobile-edu-my-articles" style="display:none">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="book-marked"></i> 我的疾病衛教文章</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-edu-my-articles-list" class="list-card"></div>'
+    +   '</div>'
+
+    // 推送 · 相關疾病
+    +   '<div id="mobile-edu-related" style="display:none">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="git-branch"></i> 為你推送的相關疾病</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-edu-related-list" style="display:flex;flex-direction:column;gap:8px"></div>'
+    +   '</div>'
+
+    // 今日精選
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="sparkles"></i> 今日精選</h3>'
+    +     '<span id="mobile-edu-featured-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-edu-featured-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">'
+    +     '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 名人健康新聞（reuse 桌機 #edu-news-feed 容器 id 也行；mobile 用獨立容器）
+    +   '<div id="mobile-edu-news" style="display:none">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="newspaper"></i> 健康新聞</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-edu-news-list" style="display:flex;flex-direction:column;gap:8px"></div>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>衛教文章僅供參考，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileEduBlock + `
+    <div class="desktop-only">
     <div class="card" style="margin-bottom:14px">
       <h2 style="display:flex;align-items:center;gap:8px">
         <i data-lucide="book-heart" style="width:22px;height:22px"></i> ${_T('edu.title')}
@@ -12082,7 +12146,135 @@ function education() {
       <div class="notebook-wrap">
         <div id="edu-notebook" class="notebook"></div>
       </div>
+    </div>
     </div>`;
+}
+
+// ─── Mobile v11 — 鏡像注入到 mobile-only 容器 ───
+function _mobileEduSyncFeatured(featured, rotationDate, poolSize) {
+  var el = document.getElementById('mobile-edu-featured-list');
+  var cnt = document.getElementById('mobile-edu-featured-count');
+  if (!el) return;
+  if (cnt) cnt.textContent = (featured && featured.length ? featured.length : 0) + ' 篇';
+  if (!featured || !featured.length) {
+    el.innerHTML = '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">尚無精選文章</div>';
+    return;
+  }
+  var dateLine = rotationDate
+    ? '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-bottom:4px">'
+      + escapeHtml(rotationDate) + ' 今日輪播（精選池 ' + (poolSize || featured.length) + ' 篇）</div>'
+    : '';
+  el.innerHTML = dateLine + featured.map(function(a) {
+    var bg = (a.icd10 || '').toLowerCase().charCodeAt(0) % 2 === 0 ? 'puzzle-bg-blue-teal' : 'puzzle-bg-rose-amber';
+    var evidenceBadge = '';
+    if (a.meets_evidence_standard) {
+      evidenceBadge = '<span class="pill pill-info"><i data-lucide="award"></i>IF&gt;5 實證</span>';
+    } else if ((a.parsed_sources || []).some(function(s){ return s && s.impact_factor; })) {
+      evidenceBadge = '<span class="pill pill-mute">附文獻</span>';
+    }
+    var tagHtml = (a.tags || []).slice(0, 2).map(function(t) {
+      return '<span class="pill pill-mute">' + escapeHtml(t) + '</span>';
+    }).join('');
+    return ''
+      + '<button class="card" style="text-align:left;padding:12px 14px;cursor:pointer;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;width:100%" onclick="eduOpenArticle(\'' + escapeHtml(a.slug) + '\')">'
+      +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.28"><use href="#' + bg + '"/></svg>'
+      +   '<div style="position:relative;z-index:1;display:flex;align-items:center;gap:6px">'
+      +     '<i data-lucide="book-open" style="width:14px;height:14px;color:var(--accent-deep)"></i>'
+      +     '<span style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.35;flex:1">' + escapeHtml(a.title) + '</span>'
+      +   '</div>'
+      +   (a.summary ? '<div style="position:relative;z-index:1;font-size:11px;color:var(--text-dim);line-height:1.5">' + escapeHtml(a.summary).slice(0, 80) + (a.summary.length > 80 ? '…' : '') + '</div>' : '')
+      +   (evidenceBadge || tagHtml ? '<div style="position:relative;z-index:1;display:flex;gap:4px;flex-wrap:wrap">' + evidenceBadge + tagHtml + '</div>' : '')
+      + '</button>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileEduSyncMyDiseases(items, extras) {
+  var wrap = document.getElementById('mobile-edu-my-shelf');
+  var list = document.getElementById('mobile-edu-my-shelf-list');
+  if (!wrap || !list) return;
+  var all = (items || []).concat((extras || []).map(function(x) {
+    return typeof x === 'string' ? { name: x, ai_generated: true } : x;
+  }));
+  if (!all.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = all.map(function(it) {
+    var name = it.name || it.label || '未命名疾病';
+    var icd10 = it.icd10 || '';
+    var ai = it.ai_generated || it.is_supported === false;
+    var iconColor = ai ? 'var(--amber-deep)' : 'var(--accent-deep)';
+    var icon = ai ? 'sparkles' : 'book';
+    var onclick = it.slug
+      ? 'eduOpenDiseaseShelf(\'' + escapeHtml(it.slug || '') + '\')'
+      : (it.code || it.icd10
+        ? 'eduOpenDiseaseByIcd10(\'' + escapeHtml(it.code || it.icd10) + '\')'
+        : '');
+    return ''
+      + '<button style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left;width:100%" onclick="' + onclick + '">'
+      +   '<div style="width:32px;height:32px;border-radius:8px;background:var(--accent-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + iconColor + '">'
+      +     '<i data-lucide="' + icon + '" style="width:15px;height:15px"></i>'
+      +   '</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:12.5px;font-weight:600;color:var(--navy);line-height:1.3">' + escapeHtml(name) + '</div>'
+      +     (icd10 ? '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">ICD-10 · ' + escapeHtml(icd10) + '</div>' : '')
+      +   '</div>'
+      +   '<i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted)"></i>'
+      + '</button>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileEduSyncMyArticles(items) {
+  var wrap = document.getElementById('mobile-edu-my-articles');
+  var list = document.getElementById('mobile-edu-my-articles-list');
+  if (!wrap || !list) return;
+  if (!items || !items.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  var rows = [];
+  items.forEach(function(it) {
+    (it.articles || []).slice(0, 6).forEach(function(a) {
+      rows.push({ disease: it.name || it.label || '', article: a });
+    });
+  });
+  if (!rows.length) { wrap.style.display = 'none'; return; }
+  list.innerHTML = rows.map(function(r) {
+    var slug = r.article.slug || '';
+    return ''
+      + '<div class="list-row" style="grid-template-columns:24px 1fr auto;cursor:pointer" onclick="eduOpenArticle(\'' + escapeHtml(slug) + '\')">'
+      +   '<i data-lucide="file-text" style="width:14px;height:14px;color:var(--accent-deep)"></i>'
+      +   '<div>'
+      +     '<div class="name">' + escapeHtml(r.article.title || '') + '</div>'
+      +     '<div class="time" style="text-align:left;margin-top:2px">' + escapeHtml(r.disease) + '</div>'
+      +   '</div>'
+      +   '<i data-lucide="chevron-right" style="width:12px;height:12px;color:var(--text-muted)"></i>'
+      + '</div>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileEduSyncRelated(items) {
+  var wrap = document.getElementById('mobile-edu-related');
+  var list = document.getElementById('mobile-edu-related-list');
+  if (!wrap || !list) return;
+  if (!items || !items.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = items.slice(0, 6).map(function(it) {
+    var name = it.name || it.label || it.title || '';
+    var reason = it.reason || it.summary || '';
+    var icd10 = it.icd10 || it.code || '';
+    return ''
+      + '<button style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;text-align:left;width:100%;position:relative;overflow:hidden" onclick="' + (icd10 ? 'eduOpenDiseaseByIcd10(\'' + escapeHtml(icd10) + '\')' : '') + '">'
+      +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+      +   '<div style="width:30px;height:30px;border-radius:8px;background:var(--rose-tint);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+      +     '<i data-lucide="git-branch" style="width:14px;height:14px"></i>'
+      +   '</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:12.5px;font-weight:600;color:var(--navy);line-height:1.3">' + escapeHtml(name) + '</div>'
+      +     (reason ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:3px;line-height:1.45">' + escapeHtml(reason) + '</div>' : '')
+      +   '</div>'
+      + '</button>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderBookshelf() {
@@ -12281,6 +12473,7 @@ function renderMyDiseaseShelf(items, extras) {
 
   row.innerHTML = html;
   card.style.display = '';
+  if (typeof _mobileEduSyncMyDiseases === 'function') _mobileEduSyncMyDiseases(items, extras);
 }
 
 function eduOpenMyDiseaseBook(icd10, name) {
@@ -12351,6 +12544,7 @@ function renderMyDiseaseArticles(items) {
            '</section>';
   }).join('');
   card.style.display = '';
+  if (typeof _mobileEduSyncMyArticles === 'function') _mobileEduSyncMyArticles(withArticles);
 }
 
 // ── 為登錄疾病的患者自動推送相關疾病衛教 ──────────────────
@@ -12373,6 +12567,7 @@ function loadRelatedDiseases() {
         }
         list.innerHTML = data.items.map(renderRelatedDiseaseCard).join("");
         card.style.display = "";
+        if (typeof _mobileEduSyncRelated === 'function') _mobileEduSyncRelated(data.items);
         if (typeof lucide !== 'undefined') lucide.createIcons();
       })
       .catch(function() { card.style.display = "none"; });
@@ -12586,7 +12781,7 @@ function loadFeaturedArticles() {
     })
     .catch(function() { /* 索引建構失敗不阻擋顯示 */ });
 
-  if (!el) return;
+  // 不限 desktop el — mobile sync 也要跑
   fetch(API + "/education/articles/featured?limit=6")
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -12595,6 +12790,10 @@ function loadFeaturedArticles() {
       featured.forEach(function(a) {
         _eduArticles[a.slug] = _eduArticles[a.slug] || a;
       });
+      if (typeof _mobileEduSyncFeatured === 'function') {
+        _mobileEduSyncFeatured(featured, (data && data.rotation_date) || '', (data && data.pool_size) || featured.length);
+      }
+      if (!el) return;
       if (!featured.length) {
         el.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">尚無精選文章。</div>';
         return;
