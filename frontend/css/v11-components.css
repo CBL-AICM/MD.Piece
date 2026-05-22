@@ -37,14 +37,16 @@ body.theme-modern .puzzle-motif svg { width: 100%; height: 100%; }
 /* ─── sec-head ─── */
 body.theme-modern .sec-head {
   display: flex; align-items: baseline; gap: 8px;
-  margin: 16px 4px 8px;
+  margin: 28px 4px 12px;
 }
+body.theme-modern .sec-head:first-of-type { margin-top: 18px; }
 body.theme-modern .sec-title {
-  font-size: 12.5px; font-weight: 600; color: var(--navy, #0F2A45);
-  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 15px; font-weight: 700; color: var(--navy, #0F2A45);
+  display: inline-flex; align-items: center; gap: 6px;
+  letter-spacing: -0.01em;
 }
-body.theme-modern .sec-title .lucide { width: 13px; height: 13px; color: var(--text-muted, #6B7F92); }
-body.theme-modern .sec-count { font-size: 10.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); }
+body.theme-modern .sec-title .lucide { width: 15px; height: 15px; color: var(--accent, #4A90C2); }
+body.theme-modern .sec-count { font-size: 12px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); font-weight: 600; }
 body.theme-modern .sec-spacer { flex: 1; }
 body.theme-modern .sec-action {
   font-size: 11px; color: var(--accent-deep, #2F6B96); font-weight: 500;
@@ -110,42 +112,44 @@ body.theme-modern .care-chip .lucide { width: 12px; height: 12px; }
 
 /* kpi-row */
 body.theme-modern .kpi-row {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
-  margin-bottom: 4px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-bottom: 6px;
 }
 body.theme-modern .kpi-mini {
-  padding: 9px 10px;
+  padding: 14px 14px;
   background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10));
-  border-radius: 8px;
+  border-radius: 14px;
   position: relative; overflow: hidden;
+  box-shadow: 0 1px 0 rgba(31,61,88,0.02), 0 4px 14px -8px rgba(74,57,40,0.10);
 }
 body.theme-modern .kpi-mini.t-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6), #fff 70%); }
 body.theme-modern .kpi-mini.t-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC), #fff 70%); }
 body.theme-modern .kpi-mini.t-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6), #fff 70%); }
 body.theme-modern .kpi-mini-label {
-  font-size: 9.5px; color: var(--text-muted, #6B7F92); font-weight: 600;
-  letter-spacing: 0.04em; margin-bottom: 3px;
-  display: flex; align-items: center; gap: 3px;
+  font-size: 11px; color: var(--text-muted, #6B7F92); font-weight: 600;
+  letter-spacing: 0.03em; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 4px;
 }
-body.theme-modern .kpi-mini-label .lucide { width: 10px; height: 10px; }
+body.theme-modern .kpi-mini-label .lucide { width: 12px; height: 12px; }
 body.theme-modern .kpi-mini.t-rose .lucide { color: var(--rose-deep, #C97A7A); }
 body.theme-modern .kpi-mini.t-blue .lucide { color: var(--accent, #4A90C2); }
 body.theme-modern .kpi-mini.t-teal .lucide { color: var(--teal, #2F8378); }
 body.theme-modern .kpi-mini-val {
-  font-family: var(--font-mono, monospace); font-size: 17px; font-weight: 600; color: var(--navy, #0F2A45);
+  font-size: 26px; font-weight: 600; color: var(--navy, #0F2A45);
   line-height: 1;
+  letter-spacing: -0.02em;
 }
-body.theme-modern .kpi-mini-meta { font-size: 11.5px; color: var(--text-dim, #3A5060); font-weight: 500; margin-top: 4px; }
-body.theme-modern .kpi-mini-spark { width: 100%; height: 22px; margin-top: 6px; }
-body.theme-modern .kpi-mini-explain { font-size: 9.5px; color: var(--text-muted, #6B7F92); margin-top: 2px; line-height: 1.4; }
+body.theme-modern .kpi-mini-meta { font-size: 12.5px; color: var(--text-dim, #3A5060); font-weight: 500; margin-top: 6px; }
+body.theme-modern .kpi-mini-spark { width: 100%; height: 28px; margin-top: 10px; }
+body.theme-modern .kpi-mini-explain { font-size: 10.5px; color: var(--text-muted, #6B7F92); margin-top: 4px; line-height: 1.4; }
 
-/* SOS 4 顆 */
+/* SOS 4 顆 — 加大讓視覺重 */
 body.theme-modern .sos-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
 }
 body.theme-modern .sos-btn {
-  padding: 18px 10px;
-  min-height: 92px;
+  padding: 20px 12px;
+  min-height: 112px;
   background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10));
   border-radius: 14px;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -159,12 +163,13 @@ body.theme-modern .sos-btn.t-blue { background: linear-gradient(135deg, var(--ac
 body.theme-modern .sos-btn.t-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6) 0%, #fff 65%); }
 body.theme-modern .sos-btn.t-amber { background: linear-gradient(135deg, rgba(201,139,47,0.06) 0%, #fff 65%); }
 body.theme-modern .sos-btn .sos-icon {
-  width: 36px; height: 36px; border-radius: 10px;
+  width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
+  margin-bottom: 4px;
 }
-body.theme-modern .sos-btn .sos-icon .lucide { width: 17px; height: 17px; }
-body.theme-modern .sos-btn .sos-label { font-size: 11.5px; font-weight: 600; color: var(--navy, #0F2A45); }
-body.theme-modern .sos-btn .sos-sub { font-size: 9.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); }
+body.theme-modern .sos-btn .sos-icon .lucide { width: 20px; height: 20px; }
+body.theme-modern .sos-btn .sos-label { font-size: 14px; font-weight: 600; color: var(--navy, #0F2A45); margin-top: 4px; }
+body.theme-modern .sos-btn .sos-sub { font-size: 10.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, "JetBrains Mono", monospace); margin-top: 2px; }
 body.theme-modern .sos-btn.t-rose .sos-icon { background: #fff; color: var(--rose-deep, #C97A7A); border: 1px solid var(--border, rgba(31,61,88,0.10)); }
 body.theme-modern .sos-btn.t-blue .sos-icon { background: #fff; color: var(--accent-deep, #2F6B96); border: 1px solid var(--border, rgba(31,61,88,0.10)); }
 body.theme-modern .sos-btn.t-teal .sos-icon { background: #fff; color: var(--teal-deep, #1F5F56); border: 1px solid var(--border, rgba(31,61,88,0.10)); }
