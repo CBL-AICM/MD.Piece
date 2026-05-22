@@ -9298,7 +9298,25 @@ function interpretBMI(v) {
 // 並列出 GET /symptoms/history/{patient_id} 的歷史分析
 
 function symptomsAnalyze() {
-  return `
+  // ─── Mobile v11 hero ───
+  var _mobileSaHero = ''
+    + '<div class="mobile-only" style="margin-bottom:12px">'
+    +   '<div class="pv-hero">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div class="pv-hero-eye">症狀分析</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">把症狀寫下來 — AI 幫你分析緊急程度</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">列出可能病因、建議科別、處置建議；<strong>不取代醫師診斷</strong></div>'
+    +   '</div>'
+    + '</div>';
+  var _mobileSaFooter = ''
+    + '<div class="mobile-only">'
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>結果僅供參考</strong>，嚴重不適請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileSaHero + `
     <div class="card">
       <h2>症狀分析</h2>
       <p style="margin-top:8px;color:var(--text-dim)">把現在的症狀寫下來，MD.Piece 會幫你分析可能病因、緊急程度與建議就診科別。</p>
@@ -9331,7 +9349,7 @@ function symptomsAnalyze() {
       <h3><i data-lucide="clock" style="width:18px;height:18px;vertical-align:middle"></i> 分析歷史</h3>
       <div id="symptom-analyze-history" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
     </div>
-  `;
+  ` + _mobileSaFooter;
 }
 
 // 緊急度（從 /symptoms/analyze 回的 urgency）對應到 5 級 severity token
