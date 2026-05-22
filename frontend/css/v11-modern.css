@@ -549,4 +549,107 @@ body.theme-modern .sec-count {
   font-weight: 600;
 }
 
+/* ─── 字體層次：不要全 Noto Sans TC 死板，三套字交叉用 ─────────────── */
+
+/* 1. 早安卡名字用 Cormorant italic — 有手寫筆觸感 */
+body.theme-modern .home-greet-title {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 22px !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.25 !important;
+}
+/* 名字部分（最後一段）可以更大膽 */
+body.theme-modern .home-greet-title strong,
+body.theme-modern .home-greet-name {
+  font-weight: 600 !important;
+  color: var(--navy, #1F3D58) !important;
+}
+
+/* 2. KPI 大數值 — Cormorant italic（不要全部冷冰冰的等寬字）*/
+body.theme-modern .kpi-mini-val,
+body.theme-modern .vital-kpi-val,
+body.theme-modern .home-kpi-val {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 600 !important;
+  font-size: 28px !important;
+  letter-spacing: -0.02em !important;
+  color: var(--navy, #1F3D58) !important;
+  line-height: 1.05 !important;
+}
+/* 心情電量 "/5" 那種子單位回到 sans 小一級 */
+body.theme-modern .kpi-mini-val span {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-style: normal !important;
+  font-weight: 500 !important;
+}
+
+/* 3. 時間 / 倒數 / D-X — JetBrains Mono（科技感）*/
+body.theme-modern .time,
+body.theme-modern .med-list-row .time,
+body.theme-modern .list-row .time,
+body.theme-modern .pill.mono,
+body.theme-modern .sec-count {
+  font-family: "JetBrains Mono", "Roboto Mono", monospace !important;
+  font-feature-settings: "tnum";
+  letter-spacing: 0 !important;
+}
+
+/* 4. sec-title 標題 — 字距收緊 + 加重 */
+body.theme-modern .sec-title,
+body.theme-modern .ph-sec-title {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  letter-spacing: -0.01em !important;
+  color: var(--navy, #1F3D58) !important;
+}
+
+/* 5. 回診卡的日期 5/26 — Cormorant italic 28px（demo 風格）*/
+body.theme-modern .card.tint-blue [style*="font-family"][style*="Cormorant"],
+body.theme-modern .home-visit-date {
+  font-family: "Cormorant Garamond", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* 6. 頁面 chip（topbar）— 不用全大寫 */
+body.theme-modern .topbar .topbar-filename,
+body.theme-modern .ph-filename {
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+/* 7. pv-hero / page hero 標題 — Cormorant italic，有報紙頭版感 */
+body.theme-modern .pv-hero h1,
+body.theme-modern .pv-hero h2,
+body.theme-modern .pv-hero-title {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* 8. 內文 body / 描述用 Noto Sans TC，但 line-height 放鬆讓中文呼吸 */
+body.theme-modern p,
+body.theme-modern .home-greet-date,
+body.theme-modern .kpi-mini-meta,
+body.theme-modern .kpi-mini-explain,
+body.theme-modern .sos-sub,
+body.theme-modern .dose,
+body.theme-modern .med-tip-card {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  line-height: 1.55 !important;
+}
+
+/* 9. 數字進度 X / Y — sec-count 內部已是 mono 但加一點顏色 */
+body.theme-modern .sec-count {
+  color: var(--text-dim, #5B6F80);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
 /* ─── 結束 ─── */
