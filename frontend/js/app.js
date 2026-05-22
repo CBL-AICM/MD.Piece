@@ -2626,6 +2626,11 @@ function showPage(page) {
   app.style.transform = 'translateY(12px)';
   setTimeout(() => {
     app.innerHTML = pages[page]?.() || "";
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    } catch (e) {}
     // 頁面載入後的初始化
     if (page === "home") loadHomePage();
     if (page === "doctors") loadDoctors();
