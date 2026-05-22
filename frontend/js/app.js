@@ -9436,7 +9436,8 @@ function medications() {
 
     // 今日服藥區（mobile）— 從 #med-list 拉資料注入這個容器
     +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="pill"></i> 今日服藥</h3>'
+    +     '<h3 class="sec-title"><i data-lucide="sun"></i> 今日服藥</h3>'
+    +     '<span id="mobile-meds-count" class="sec-count">— / —</span>'
     +     '<span class="sec-spacer"></span>'
     +     '<button class="sec-action" onclick="navigateTo(\'reminders\',null)">提醒 <i data-lucide="arrow-right"></i></button>'
     +   '</div>'
@@ -9858,35 +9859,49 @@ function _renderMobileMedList(meds) {
     mob.innerHTML = rows;
   }
 
-  // 今日服藥（簡化版 — 依 time_of_day 分桶）
+  // 今日服藥（簡化版 — 依 time_of_day 分桶，狀態用「時間是否已過」推算）
   if (todayEl) {
     var buckets = (typeof _bucketMeds === 'function') ? _bucketMeds(meds) : { morning: meds, noon: [], evening: [], bedtime: [], other: [] };
+    var now = new Date();
+    var curMin = now.getHours() * 60 + now.getMinutes();
     var SLOTS = [
-      { key: 'morning', label: '早晨', icon: 'sun', time: '07:00' },
-      { key: 'noon',    label: '中午', icon: 'sun-medium', time: '13:00' },
-      { key: 'evening', label: '傍晚', icon: 'sun-dim',    time: '18:00' },
-      { key: 'bedtime', label: '睡前', icon: 'moon',       time: '22:00' },
+      { key: 'morning', label: '早晨', icon: 'sun',        time: '07:00', mins:  7*60 },
+      { key: 'noon',    label: '中午', icon: 'sun',        time: '13:00', mins: 13*60 },
+      { key: 'evening', label: '傍晚', icon: 'sun-dim',    time: '18:00', mins: 18*60 },
+      { key: 'bedtime', label: '睡前', icon: 'moon',       time: '22:00', mins: 22*60 },
     ];
+    var totalCnt = 0, doneCnt = 0;
     var thtml = '';
     SLOTS.forEach(function(s) {
       var arr = buckets[s.key] || [];
       if (!arr.length) return;
+      var passed = curMin >= s.mins;
+      var headPill = passed
+        ? '<span class="pill pill-ok mono">已完成</span>'
+        : '<span class="pill pill-mute mono">尚未到</span>';
+      totalCnt += arr.length;
+      if (passed) doneCnt += arr.length;
       thtml += ''
-        + '<div class="meds-period-card">'
-        +   '<div class="meds-period-head ' + (s.key === 'morning' ? 'morning' : '') + '">'
-        +     '<i data-lucide="' + s.icon + '"></i> ' + s.label + ' ' + s.time
-        +     '<span class="pill pill-mute mono">' + arr.length + ' 顆</span>'
+        + '<div class="card" style="padding:0;margin-bottom:10px">'
+        +   '<div style="padding:10px 14px;background:' + (passed ? 'var(--accent-tint)' : 'var(--bg-soft)') + ';border-bottom:1px solid var(--border);font-size:11px;color:' + (passed ? 'var(--accent-deep)' : 'var(--text-dim)') + ';font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
+        +     '<i data-lucide="' + s.icon + '" style="width:12px;height:12px"></i> ' + s.label + ' ' + s.time
+        +     '<span style="margin-left:auto">' + headPill + '</span>'
         +   '</div>'
-        +   arr.map(function(m) {
+        +   arr.map(function(m, idx) {
+            var rowPill = passed
+              ? '<span class="pill pill-ok mono">已服</span>'
+              : '<div class="check"></div>';
+            var sep = (idx < arr.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
+            var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
             return ''
-              + '<div class="med-list-row">'
+              + '<div class="med-list-row" style="padding:10px 14px' + sep + '">'
               +   '<div class="ico"><i data-lucide="pill"></i></div>'
               +   '<div>'
               +     '<div class="name">' + escapeHtml(m.name || '') + '</div>'
-              +     '<div class="dose">' + escapeHtml(m.dose || '') + '</div>'
+              +     '<div class="dose">' + escapeHtml(doseTxt) + '</div>'
               +   '</div>'
               +   '<div class="time">' + escapeHtml(s.time) + '</div>'
-              +   '<div class="check"></div>'
+              +   rowPill
               + '</div>';
           }).join('')
         + '</div>';
@@ -9895,6 +9910,12 @@ function _renderMobileMedList(meds) {
       thtml = '<div class="med-tip-card" style="background:var(--bg-soft);border-color:var(--border);color:var(--text-dim)"><i data-lucide="info"></i><span>沒有依時段排程的藥物</span></div>';
     }
     todayEl.innerHTML = thtml;
+
+    // 更新 5 / 8 進度
+    var cntEl = document.getElementById('mobile-meds-count');
+    if (cntEl) {
+      cntEl.textContent = totalCnt ? (doneCnt + ' / ' + totalCnt) : '— / —';
+    }
   }
 
   if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
