@@ -352,7 +352,11 @@ body.theme-modern .med-customize-row .actual strong { color: var(--navy); }
 
 /* ─── topbar / tabbar 對齊 v11 demo 視覺 ─────────────────────────── */
 
-/* 隱藏不在 demo 的元素：A+ 字級切換、⚙️ 設定按鈕 */
+/* 隱藏不在 demo 的元素：A+ 字級切換、⚙️ 設定按鈕（多層 selector 確保贏所有 specificity 戰）*/
+html body.theme-modern .topbar .app-elder-toggle,
+html body.theme-modern .topbar .app-settings-btn,
+html body.theme-modern #app-elder-toggle,
+html body.theme-modern #app-settings-btn,
 body.theme-modern .app-elder-toggle,
 body.theme-modern .app-settings-btn { display: none !important; }
 
@@ -420,18 +424,26 @@ body.theme-modern .mobile-tabbar .mtab[data-active="true"],
 body.theme-modern .mobile-tabbar .mtab.active {
   color: var(--accent-deep, #2F6B96) !important;
 }
-/* FAB 藍色，不再是金色 */
-body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-core {
-  background: var(--accent, #4A90C2) !important;
+/* FAB 藍色，不再是金色（多層 selector 確保贏 #11622 .mtab.mtab-fab .mtab-fab-core 規則）*/
+html body.theme-modern nav#mobile-tabbar .mtab.mtab-fab .mtab-fab-core,
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-core,
+body.theme-modern .mtab.mtab-fab .mtab-fab-core {
+  background: #4A90C2 !important;
   color: #fff !important;
-  box-shadow: 0 6px 18px -6px rgba(74,144,194,0.55) !important;
+  border-color: #4A90C2 !important;
+  box-shadow: 0 6px 18px -6px rgba(74,144,194,0.55), inset 1px 1px 0 rgba(255,255,255,0.5) !important;
 }
-body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-ring {
-  background: rgba(74,144,194,0.15) !important;
+html body.theme-modern nav#mobile-tabbar .mtab.mtab-fab .mtab-fab-ring,
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-ring,
+body.theme-modern .mtab.mtab-fab .mtab-fab-ring {
+  background: rgba(74,144,194,0.12) !important;
   border-color: rgba(74,144,194,0.30) !important;
+  box-shadow: 0 0 0 6px #F7F1E5 !important;
 }
-body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-label {
-  color: var(--accent-deep, #2F6B96) !important;
+html body.theme-modern nav#mobile-tabbar .mtab.mtab-fab .mtab-fab-label,
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-label,
+body.theme-modern .mtab.mtab-fab .mtab-fab-label {
+  color: #2F6B96 !important;
 }
 
 /* ─── 字體層次：不要全 Noto Sans TC 死板，三套字交叉用 ─────────────── */
