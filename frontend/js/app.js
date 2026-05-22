@@ -3874,8 +3874,140 @@ function home() {
     { page: 'account',         icon: 'user-cog',         title: _T('nav.account'),                     color: 'gold' },
   ];
 
+  // ─── 手機 v11 demo 版面（同一份資料，不同呈現）────────────────
+  var _mobileGreetCh = (name && name.length) ? name.charAt(0) : '我';
+  var _mobileToday = new Date();
+  var _mobileMD = (_mobileToday.getMonth()+1) + '/' + _mobileToday.getDate();
+  var _mobileWeek = _T('home.weekday.' + _mobileToday.getDay());
+  // 下次回診倒數（天）
+  var _mobileVisitIso = (typeof loadNextVisit === 'function') ? loadNextVisit() : '';
+  var _mobileVisitDays = null;
+  if (_mobileVisitIso && typeof _daysBetween === 'function') {
+    _mobileVisitDays = _daysBetween(_mobileVisitIso);
+  }
+  var _mobileVisitText = '';
+  if (_mobileVisitDays === null) {
+    _mobileVisitText = '<span style="opacity:.6">尚未排定回診</span>';
+  } else if (_mobileVisitDays > 0) {
+    _mobileVisitText = '還有 <strong>' + _mobileVisitDays + ' 天</strong>看醫師';
+  } else if (_mobileVisitDays === 0) {
+    _mobileVisitText = '<strong>今天</strong>看醫師';
+  } else {
+    _mobileVisitText = '上次回診已過 <strong>' + (-_mobileVisitDays) + ' 天</strong>';
+  }
+
+  var _mobileBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="home-greet">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div class="home-avatar">'
+    +       ((user && user.avatar_url) ? '<img src="' + escapeHtml(user.avatar_url) + '" alt="' + escapeHtml(avatarAlt) + '" />' : escapeHtml(_mobileGreetCh))
+    +     '</div>'
+    +     '<div class="home-greet-text">'
+    +       '<div class="home-greet-title">' + escapeHtml(greeting) + escapeHtml(greetSep) + escapeHtml(name) + '</div>'
+    +       '<div class="home-greet-date">'
+    +         '<span>' + _mobileMD + ' ' + _mobileWeek + '</span>'
+    +         '<span style="opacity:.4">·</span>'
+    +         '<span>' + _mobileVisitText + '</span>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 門/住院 mode mini
+    +   '<div class="care-mode-mini">'
+    +     '<button class="care-chip ' + (getCareMode() === 'outpatient' ? 'active' : '') + '" onclick="setCareMode && setCareMode(\'outpatient\')"><i data-lucide="stethoscope"></i> 門診模式</button>'
+    +     '<button class="care-chip ' + (getCareMode() === 'inpatient' ? 'active' : '') + '" onclick="setCareMode && setCareMode(\'inpatient\')"><i data-lucide="hospital"></i> 住院模式</button>'
+    +   '</div>'
+
+    // KPI 3 卡 mini（先給佔位，loadHomePage 之後從 #home-med-summary 等資料注入）
+    +   '<div class="kpi-row" id="mobile-home-kpi">'
+    +     '<div class="kpi-mini t-rose">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>'
+    +       '<div class="kpi-mini-val" id="mobile-kpi-bp-val">—</div>'
+    +       '<div class="kpi-mini-meta" id="mobile-kpi-bp-meta">尚無紀錄</div>'
+    +     '</div>'
+    +     '<div class="kpi-mini t-blue">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="kpi-mini-label"><i data-lucide="droplet"></i> 血糖</div>'
+    +       '<div class="kpi-mini-val" id="mobile-kpi-glu-val">—</div>'
+    +       '<div class="kpi-mini-meta" id="mobile-kpi-glu-meta">尚無紀錄</div>'
+    +     '</div>'
+    +     '<div class="kpi-mini t-teal">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>'
+    +       '<div class="kpi-mini-val" id="mobile-kpi-mood-val">—</div>'
+    +       '<div class="kpi-mini-meta" id="mobile-kpi-mood-meta">尚無紀錄</div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 不舒服一鍵 — 4 顆 SOS
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="zap"></i> 不舒服？按一下就好</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="sos-grid">'
+    +     '<button class="sos-btn t-rose" onclick="onInpatientSOS && onInpatientSOS(\'pain\', this)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="zap"></i></div>'
+    +       '<div class="sos-label">痛</div>'
+    +       '<div class="sos-sub">哪裡都可以</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-blue" onclick="onInpatientSOS && onInpatientSOS(\'breath\', this)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="wind"></i></div>'
+    +       '<div class="sos-label">喘</div>'
+    +       '<div class="sos-sub">吸不到氣</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-teal" onclick="onInpatientSOS && onInpatientSOS(\'nausea\', this)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="droplets"></i></div>'
+    +       '<div class="sos-label">噁心</div>'
+    +       '<div class="sos-sub">想吐 / 反胃</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-amber" onclick="onInpatientSOS && onInpatientSOS(\'help\', this)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="bell-ring"></i></div>'
+    +       '<div class="sos-label">記下</div>'
+    +       '<div class="sos-sub">存進今日紀錄</div>'
+    +     '</button>'
+    +   '</div>'
+
+    // 今日待辦（複用原本資料注入點）
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="list-checks"></i> 今日待辦</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="navigateTo(\'reminders\',null)">全部 <i data-lucide="arrow-right"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-home-todo-list" class="list-card">'
+    +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無待辦</div>'
+    +   '</div>'
+
+    // 下次回診卡
+    + (_mobileVisitIso
+      ? '<div class="sec-head"><h3 class="sec-title"><i data-lucide="calendar-clock"></i> 下次回診</h3><span class="sec-spacer"></span>'
+        + (_mobileVisitDays !== null && _mobileVisitDays > 0 ? '<span class="pill pill-info mono">D-' + _mobileVisitDays + '</span>' : '')
+        + '</div>'
+        + '<div class="card tint-blue" onclick="navigateTo(\'followUps\',null)" style="cursor:pointer">'
+        +   '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
+        +   '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">'
+        +     '<span style="font-family:var(--font-brand,\'Cormorant Garamond\',serif);font-style:italic;font-weight:500;font-size:24px;color:var(--navy);letter-spacing:-0.01em">' + _mobileVisitIso.replace(/-/g,'/').slice(5) + '</span>'
+        +     '<span style="font-size:11.5px;color:var(--text-dim)">' + _T('home.weekday.prefix') + _T('home.weekday.' + (new Date(_mobileVisitIso)).getDay()) + '</span>'
+        +   '</div>'
+        +   '<div style="font-size:12.5px;color:var(--navy);font-weight:500">回診當天記得帶健保卡與藥袋</div>'
+        + '</div>'
+      : '')
+
+    // 免責 footer
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
   return `
-    <div class="home-page home-layered">
+    ${_mobileBlock}
+    <div class="home-page home-layered desktop-only">
       ${renderCareModeChips()}
       <svg class="home-deco home-deco-1" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
       <svg class="home-deco home-deco-2" viewBox="0 0 48 48"><path d="M12 0h24v12c-4 0-6 3-6 6s2 6 6 6v12h-12c0-4-3-6-6-6s-6 2-6 6H0V24c4 0 6-3 6-6s-2-6-6-6V0h12z" fill="currentColor"/></svg>
