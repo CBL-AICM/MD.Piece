@@ -33,11 +33,11 @@
       --teal-soft:    #E5F0EE;
       --teal-tint:    #F1F8F6;
 
-      --navy:         #1F3D58;
-      /* 原則①：對比拉高（給年長者）—— text-muted 從 #98ADBD 加深到 #7E92A4 */
-      --text:         #1F3D58;
-      --text-dim:     #4A6580;
-      --text-muted:   #7E92A4;
+      --navy:         #0F2A45;
+      /* 高對比 — text 改更深 navy 黑色感，老人也看得清 */
+      --text:         #0F1F2E;
+      --text-dim:     #3A5060;
+      --text-muted:   #6B7F92;
 
       --rose:         #E8A8A8;
       --rose-deep:    #C97A7A;
@@ -64,47 +64,47 @@
       --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
     }
 
-    /* ─────────── DARK MODE ─────────── */
+    /* ─────────── DARK MODE — 高級藍（premium navy） ─────────── */
     :root.dark {
-      --bg:           #1C232C;
-      --bg-soft:      #232B36;
-      --bg-mid:       #2D3744;
-      --border:       rgba(255,255,255,0.10);
-      --border-mid:   rgba(255,255,255,0.16);
-      --border-strong:rgba(255,255,255,0.26);
+      --bg:           #0B1A2C;       /* 高級深藍底 */
+      --bg-soft:      #102338;       /* 框 / topbar */
+      --bg-mid:       #17324F;       /* 卡片提升面 */
+      --border:       rgba(140, 180, 220, 0.16);
+      --border-mid:   rgba(140, 180, 220, 0.24);
+      --border-strong:rgba(140, 180, 220, 0.38);
 
-      --accent:       #6BAEDC;
-      --accent-deep:  #94C8E8;
-      --accent-soft:  #2A3A48;
-      --accent-tint:  #1F2A35;
+      --accent:       #7BC3F0;       /* 提亮藍 */
+      --accent-deep:  #B8DEF5;
+      --accent-soft:  #1F3854;
+      --accent-tint:  #142940;
 
-      --teal:         #5BA89E;
-      --teal-deep:    #82C2BA;
-      --teal-soft:    #243835;
-      --teal-tint:    #1E2A28;
+      --teal:         #6BC4B8;
+      --teal-deep:    #95D9CF;
+      --teal-soft:    #1B3F3A;
+      --teal-tint:    #143230;
 
-      --navy:         #ECEEF1;
-      --text:         #ECEEF1;
-      --text-dim:     #B0BCC8;
-      --text-muted:   #7F8C9A;
+      --navy:         #FFFFFF;       /* 高對比白 */
+      --text:         #FFFFFF;       /* 純白 — 最大對比 */
+      --text-dim:     #DCE7F2;       /* 副字 — 帶藍調的亮 */
+      --text-muted:   #9DB2C8;       /* 三級字 */
 
-      --rose:         #E8A8A8;
-      --rose-deep:    #F0B5B5;
-      --rose-soft:    #3D2A2A;
-      --rose-tint:    #2E2424;
+      --rose:         #F0B5B5;
+      --rose-deep:    #F8C8C8;
+      --rose-soft:    #3D2828;
+      --rose-tint:    #2E2222;
 
-      --green:        #5FA875;
-      --green-deep:   #86C19A;
-      --green-soft:   #243A2D;
-      --green-tint:   #1E2A22;
+      --green:        #7BC891;
+      --green-deep:   #A2DBB4;
+      --green-soft:   #1F3D2C;
+      --green-tint:   #1A2E22;
 
-      --amber:        #D9A961;
-      --amber-deep:   #E8C088;
-      --amber-soft:   #3A2E1A;
+      --amber:        #E5BC7C;
+      --amber-deep:   #F4D196;
+      --amber-soft:   #3D2E18;
     }
-    /* dark mode 下的特例：頁面框 + tabbar + bodymap white fill 等 */
+    /* dark mode 高級藍底 — 深邃漸層 */
     :root.dark body {
-      background: linear-gradient(180deg, #14181E 0%, #0E1116 100%) !important;
+      background: linear-gradient(180deg, #050E1B 0%, #081628 50%, #0A1B30 100%) !important;
     }
     :root.dark .demo-shell { background: var(--bg) !important; }
     :root.dark .ph-tabbar { background: var(--bg-soft) !important; border-top-color: var(--border); }
