@@ -448,7 +448,70 @@ function memo() {
     return t && String(new Date(t).toISOString()).slice(0, 10) === _todayKey;
   }).length;
   var _doctorCount = _memoList.filter(function(m) { return m.forDoctor; }).length;
-  return `
+
+  // ─── Mobile v11 block ───
+  var _mobileMemoBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div class="pv-hero-eye">TODAY · 今日 Memo</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">'
+    +       (_todayCount > 0 ? '今天記了 ' + _todayCount + ' 筆 · 給醫師 ' + _doctorCount : '今天還沒記東西')
+    +     '</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">隨手拍症狀／藥袋／傷口，或寫下下次門診要說的事</div>'
+    +   '</div>'
+
+    // 三顆 SOS 風格快速按鈕
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="plus-circle"></i> 快速新增</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="sos-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">'
+    +     '<label class="sos-btn t-rose" style="min-height:78px;cursor:pointer">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="memoOnPhotoPicked(event)" />'
+    +       '<div class="sos-icon"><i data-lucide="camera"></i></div>'
+    +       '<div class="sos-label">拍照片</div>'
+    +       '<div class="sos-sub">症狀/藥袋</div>'
+    +     '</label>'
+    +     '<label class="sos-btn t-blue" style="min-height:78px;cursor:pointer">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<input type="file" accept="image/*" style="display:none" onchange="memoOnPhotoPicked(event)" />'
+    +       '<div class="sos-icon"><i data-lucide="image-up"></i></div>'
+    +       '<div class="sos-label">從相簿</div>'
+    +       '<div class="sos-sub">上傳照片</div>'
+    +     '</label>'
+    +     '<button type="button" class="sos-btn t-teal" style="min-height:78px" onclick="memoStartText()">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="message-square-text"></i></div>'
+    +       '<div class="sos-label">寫下來</div>'
+    +       '<div class="sos-sub">給醫師說</div>'
+    +     '</button>'
+    +   '</div>'
+
+    // 篩選 chip
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="archive"></i> 所有 memo</h3>'
+    +     '<span id="mobile-memo-count" class="sec-count">' + _memoList.length + '</span>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="chip-group" style="margin-bottom:10px">'
+    +     '<button class="chip active" data-mobile-memo-filter="all" onclick="memoSetFilter(\'all\')">全部</button>'
+    +     '<button class="chip" data-mobile-memo-filter="doctor" onclick="memoSetFilter(\'doctor\')">給醫師</button>'
+    +     '<button class="chip" data-mobile-memo-filter="self" onclick="memoSetFilter(\'self\')">自己</button>'
+    +   '</div>'
+
+    // 列表 — render 後會用既有 memoRenderList 邏輯 mirror 到這
+    +   '<div id="mobile-memo-list" class="list-card"></div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>memo 僅存本裝置</strong>，醫療決策請以醫師為主。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileMemoBlock + `
+    <div class="desktop-only">
     <div class="page-app-hero page-app-hero-rose">
       <div class="page-app-hero-head">
         <span class="page-app-hero-eyebrow">TODAY · 今日 Memo</span>
@@ -518,6 +581,7 @@ function memo() {
         </div>
       </div>
       <div id="memo-list" class="memo-list"></div>
+    </div>
     </div>
   `;
 }
@@ -1163,6 +1227,49 @@ function memoRenderList() {
     var slot = listEl.querySelector('[data-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
     if (slot) memoMountPhoto(slot, m.photo, "memo-photo");
   });
+
+  // mobile mirror — v11 list-row style
+  var mListEl = document.getElementById('mobile-memo-list');
+  var mCountEl = document.getElementById('mobile-memo-count');
+  if (mCountEl) mCountEl.textContent = filtered.length;
+  if (mListEl) {
+    if (!filtered.length) {
+      mListEl.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">' +
+        (all.length ? '這個分類下還沒有 memo' : '還沒有 memo — 從上方按鈕開始記') + '</div>';
+    } else {
+      mListEl.innerHTML = filtered.map(function(m) {
+        var pillCls = m.forDoctor ? 'pill pill-rose' : 'pill pill-mute';
+        var pillTxt = m.forDoctor ? '給醫師' : '自己';
+        var pillIcon = m.forDoctor ? 'stethoscope' : 'user';
+        var photoHtml = m.photo ? '<div class="mobile-memo-photo-slot" data-mobile-memo-photo="' + escapeHtml(m.id) + '" style="margin-top:4px;border-radius:8px;overflow:hidden;max-width:100%"></div>' : '';
+        var textHtml = m.text ? '<div style="font-size:12px;color:var(--navy);line-height:1.5;margin-top:4px">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' : '';
+        return ''
+          + '<div class="list-row" style="grid-template-columns:1fr;padding:11px 13px;align-items:flex-start;cursor:pointer" onclick="memoOpenLightbox(\'' + m.id + '\')">'
+          +   '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+          +     '<span class="' + pillCls + '"><i data-lucide="' + pillIcon + '"></i>' + pillTxt + '</span>'
+          +     '<span class="time" style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace)">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>'
+          +     '<span style="flex:1"></span>'
+          +     '<button onclick="event.stopPropagation();memoToggleDoctor(\'' + m.id + '\')" title="切換給醫師/自己" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="repeat" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoEdit(\'' + m.id + '\')" title="編輯" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="pencil" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoDelete(\'' + m.id + '\')" title="刪除" style="border:none;background:none;cursor:pointer;color:var(--rose-deep);padding:2px"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>'
+          +   '</div>'
+          +   textHtml
+          +   photoHtml
+          + '</div>';
+      }).join('');
+      // 把照片畫到 slot
+      filtered.forEach(function(m) {
+        if (!m.photo) return;
+        var slot = mListEl.querySelector('[data-mobile-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
+        if (slot) memoMountPhoto(slot, m.photo, 'memo-photo');
+      });
+    }
+  }
+  // 同步 mobile filter chip 高亮
+  document.querySelectorAll('[data-mobile-memo-filter]').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-mobile-memo-filter') === _memoFilter);
+  });
+
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -1190,7 +1297,51 @@ function story() {
       '</div>';
   }).join("");
 
-  return `
+  // ─── Mobile v11 block ───
+  var _catColor = { disease: { bg: 'puzzle-bg-rose-amber', pill: 'pill-rose', icon: 'stethoscope', tint: 'var(--rose-tint)', text: 'var(--rose-deep)' },
+                    quick_tip: { bg: 'puzzle-bg-blue-teal', pill: 'pill-warn', icon: 'zap', tint: 'var(--amber-soft)', text: 'var(--amber-deep)' },
+                    news: { bg: 'puzzle-bg-rose-amber', pill: 'pill-info', icon: 'newspaper', tint: 'var(--accent-tint)', text: 'var(--accent-deep)' } };
+  var mobileSectionsHtml = STORY_CATEGORIES.map(function(c) {
+    var conf = _catColor[c.key] || {};
+    return ''
+      + '<div class="sec-head">'
+      +   '<h3 class="sec-title"><i data-lucide="' + c.icon + '"></i> ' + c.label + '</h3>'
+      +   '<span id="mobile-story-date-' + c.key + '" class="sec-count">—</span>'
+      +   '<span class="sec-spacer"></span>'
+      + '</div>'
+      + '<div id="mobile-story-body-' + c.key + '" data-story-conf="' + c.key + '" style="margin-bottom:12px">'
+      +   '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">載入中…</div>'
+      + '</div>';
+  }).join('');
+
+  var _mobileStoryBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">每日故事</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">每天三則 — 慢慢讀懂自己的身體</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">一篇疾病故事 · 一則健康快訊 · 一份最新資訊</div>'
+    +   '</div>'
+    +   mobileSectionsHtml
+    // 最新公告 + 過去幾天 mobile
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="rss"></i> 衛福部最新公告</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-story-newsfeed" class="list-card" style="margin-bottom:12px"></div>'
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="history"></i> 過去幾天</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-story-archive" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>'
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>內容來自精選衛教文章，僅供參考。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileStoryBlock + `
+    <div class="desktop-only">
     <div class="card story-hero">
       <h2 style="display:flex;align-items:center;gap:8px">
         <i data-lucide="book-open" style="width:22px;height:22px"></i> 每日故事
@@ -1239,6 +1390,7 @@ function story() {
         <div style="color:var(--text-dim);font-size:.85rem">載入中…</div>
       </div>
     </div>
+    </div>
   `;
 }
 
@@ -1267,7 +1419,41 @@ function loadStoryPage() {
     });
 }
 
+function _mobileStorySync(catKey, article) {
+  var mDate = document.getElementById('mobile-story-date-' + catKey);
+  var mBody = document.getElementById('mobile-story-body-' + catKey);
+  if (!mBody) return;
+  if (!article) {
+    if (mDate) mDate.textContent = '';
+    mBody.innerHTML = '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">這個分類今天還沒有故事</div>';
+    return;
+  }
+  if (mDate) mDate.textContent = article.pushed_on || '';
+  var conf = { disease: { bg: 'puzzle-bg-rose-amber', icon: 'stethoscope' },
+               quick_tip: { bg: 'puzzle-bg-blue-teal', icon: 'zap' },
+               news: { bg: 'puzzle-bg-rose-amber', icon: 'newspaper' } }[catKey] || { bg: 'puzzle-bg-blue-teal', icon: 'book-open' };
+  var tags = (article.tags || []).slice(0, 3).map(function(t) {
+    return '<span class="pill pill-mute">' + escapeHtml(t) + '</span>';
+  }).join('');
+  var bodyShort = article.summary || (article.body ? String(article.body).slice(0, 120) + '…' : '');
+  mBody.innerHTML = ''
+    + '<button class="card" style="text-align:left;padding:13px;cursor:pointer;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;width:100%" onclick="eduOpenArticle(\'' + escapeHtml(article.slug || '') + '\')">'
+    +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.22"><use href="#' + conf.bg + '"/></svg>'
+    +   '<div style="position:relative;z-index:1;display:flex;align-items:flex-start;gap:8px">'
+    +     '<i data-lucide="' + conf.icon + '" style="width:15px;height:15px;color:var(--accent-deep);margin-top:1px;flex-shrink:0"></i>'
+    +     '<div style="flex:1">'
+    +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.35">' + escapeHtml(article.title || '') + '</div>'
+    +       (bodyShort ? '<div style="font-size:11px;color:var(--text-dim);margin-top:4px;line-height:1.55">' + escapeHtml(bodyShort) + '</div>' : '')
+    +       (tags ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">' + tags + '</div>' : '')
+    +     '</div>'
+    +   '</div>'
+    + '</button>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function renderStorySection(catKey, article) {
+  // mobile mirror
+  _mobileStorySync(catKey, article);
   var dateEl = document.getElementById("story-date-" + catKey);
   var body = document.getElementById("story-body-" + catKey);
   if (!body) return;
@@ -1304,21 +1490,46 @@ function renderStorySection(catKey, article) {
 
 function renderStoryNewsFeed(items) {
   var list = document.getElementById("story-newsfeed-list");
-  if (!list) return;
-  if (!items.length) {
-    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">目前沒有可顯示的公告。</div>';
-    return;
+  if (list) {
+    if (!items.length) {
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">目前沒有可顯示的公告。</div>';
+    } else {
+      list.innerHTML = items.map(function(n) {
+        var link = n.link ? escapeHtml(n.link) : "";
+        var title = escapeHtml(n.title || "（無標題）");
+        var summary = n.summary ? '<p class="story-news-summary">' + escapeHtml(n.summary) + '</p>' : "";
+        var pub = n.published ? '<span class="story-news-date">' + escapeHtml(n.published) + '</span>' : "";
+        var titleHtml = link
+          ? '<a class="story-news-title" href="' + link + '" target="_blank" rel="noopener noreferrer">' + title + '</a>'
+          : '<span class="story-news-title">' + title + '</span>';
+        return '<article class="story-news-item">' + titleHtml + pub + summary + '</article>';
+      }).join("");
+    }
   }
-  list.innerHTML = items.map(function(n) {
-    var link = n.link ? escapeHtml(n.link) : "";
-    var title = escapeHtml(n.title || "（無標題）");
-    var summary = n.summary ? '<p class="story-news-summary">' + escapeHtml(n.summary) + '</p>' : "";
-    var pub = n.published ? '<span class="story-news-date">' + escapeHtml(n.published) + '</span>' : "";
-    var titleHtml = link
-      ? '<a class="story-news-title" href="' + link + '" target="_blank" rel="noopener noreferrer">' + title + '</a>'
-      : '<span class="story-news-title">' + title + '</span>';
-    return '<article class="story-news-item">' + titleHtml + pub + summary + '</article>';
-  }).join("");
+  // mobile mirror
+  var mList = document.getElementById('mobile-story-newsfeed');
+  if (mList) {
+    if (!items.length) {
+      mList.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">目前沒有公告</div>';
+    } else {
+      mList.innerHTML = items.slice(0, 8).map(function(n) {
+        var link = n.link ? escapeHtml(n.link) : "";
+        var rowOpen = link ? '<a href="' + link + '" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:inherit">' : '';
+        var rowClose = link ? '</a>' : '';
+        return ''
+          + rowOpen
+          + '<div class="list-row" style="grid-template-columns:14px 1fr;padding:11px 13px;align-items:flex-start">'
+          +   '<i data-lucide="rss" style="width:13px;height:13px;color:var(--accent-deep);margin-top:2px"></i>'
+          +   '<div>'
+          +     '<div class="name">' + escapeHtml(n.title || '（無標題）') + '</div>'
+          +     (n.published ? '<div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">' + escapeHtml(n.published) + '</div>' : '')
+          +     (n.summary ? '<div style="font-size:11px;color:var(--text-dim);margin-top:3px;line-height:1.5">' + escapeHtml(n.summary).slice(0, 100) + (n.summary.length > 100 ? '…' : '') + '</div>' : '')
+          +   '</div>'
+          + '</div>'
+          + rowClose;
+      }).join('');
+    }
+  }
 }
 
 // 事件性質 → pill 樣式 class（顏色：確診=橘、治療中=藍、康復=綠、倡議推廣=紫）
@@ -1398,28 +1609,65 @@ function renderStoryCelebrities(stories) {
 
 function renderStoryArchive(days) {
   var list = document.getElementById("story-archive-list");
-  if (!list) return;
-  if (!days.length) {
-    list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">還沒有歷史紀錄。</div>';
-    return;
-  }
   if (!window._eduArticles) window._eduArticles = {};
-  list.innerHTML = days.map(function(day) {
-    var rows = STORY_CATEGORIES.map(function(c) {
-      var a = day.items && day.items[c.key];
-      if (!a) return '';
-      window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
-      return '<button class="story-archive-item" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">' +
-               '<span class="story-archive-cat story-cat-' + c.key + '">' + escapeHtml(c.label) + '</span>' +
-               '<span class="story-archive-title">' + escapeHtml(a.title) + '</span>' +
-               (a.summary ? '<span class="story-archive-summary">' + escapeHtml(a.summary) + '</span>' : '') +
-             '</button>';
-    }).join("");
-    return '<div class="story-archive-day">' +
-             '<div class="story-archive-day-head">' + escapeHtml(day.date) + '</div>' +
-             '<div class="story-archive-day-grid">' + rows + '</div>' +
-           '</div>';
-  }).join("");
+  if (list) {
+    if (!days.length) {
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">還沒有歷史紀錄。</div>';
+    } else {
+      list.innerHTML = days.map(function(day) {
+        var rows = STORY_CATEGORIES.map(function(c) {
+          var a = day.items && day.items[c.key];
+          if (!a) return '';
+          window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
+          return '<button class="story-archive-item" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">' +
+                   '<span class="story-archive-cat story-cat-' + c.key + '">' + escapeHtml(c.label) + '</span>' +
+                   '<span class="story-archive-title">' + escapeHtml(a.title) + '</span>' +
+                   (a.summary ? '<span class="story-archive-summary">' + escapeHtml(a.summary) + '</span>' : '') +
+                 '</button>';
+        }).join("");
+        return '<div class="story-archive-day">' +
+                 '<div class="story-archive-day-head">' + escapeHtml(day.date) + '</div>' +
+                 '<div class="story-archive-day-grid">' + rows + '</div>' +
+               '</div>';
+      }).join("");
+    }
+  }
+  // mobile mirror — timeline 風格（垂直線 + 圓點 + 卡片）
+  var mList = document.getElementById('mobile-story-archive');
+  if (mList) {
+    if (!days || !days.length) {
+      mList.innerHTML = '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">尚無歷史紀錄</div>';
+    } else {
+      mList.innerHTML = days.slice(0, 7).map(function(day) {
+        var rows = STORY_CATEGORIES.map(function(c) {
+          var a = day.items && day.items[c.key];
+          if (!a) return '';
+          window._eduArticles[a.slug] = Object.assign({}, window._eduArticles[a.slug] || {}, a);
+          var conf = { disease: { pill: 'pill-rose', icon: 'stethoscope' },
+                       quick_tip: { pill: 'pill-warn', icon: 'zap' },
+                       news: { pill: 'pill-info', icon: 'newspaper' } }[c.key] || {};
+          return ''
+            + '<button class="card" style="text-align:left;padding:10px 12px;cursor:pointer;width:100%;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px" onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'' + c.key + '\')">'
+            +   '<i data-lucide="' + (conf.icon || 'book-open') + '" style="width:13px;height:13px;color:var(--accent-deep);margin-top:2px;flex-shrink:0"></i>'
+            +   '<div style="flex:1">'
+            +     '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px"><span class="pill ' + (conf.pill || 'pill-mute') + '">' + escapeHtml(c.label) + '</span></div>'
+            +     '<div style="font-size:12px;font-weight:600;color:var(--navy);line-height:1.4">' + escapeHtml(a.title) + '</div>'
+            +     (a.summary ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;line-height:1.5">' + escapeHtml(a.summary).slice(0, 70) + (a.summary.length > 70 ? '…' : '') + '</div>' : '')
+            +   '</div>'
+            + '</button>';
+        }).join('');
+        // 時間軸日期 header
+        return ''
+          + '<div style="position:relative;padding-left:18px;margin-bottom:8px">'
+          +   '<span style="position:absolute;left:0;top:5px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg-mid,#fff)"></span>'
+          +   '<span style="position:absolute;left:3px;top:13px;bottom:-8px;width:2px;background:var(--border)"></span>'
+          +   '<div style="font-size:11px;font-weight:600;color:var(--text-dim);font-family:var(--font-mono,monospace);margin-bottom:5px">' + escapeHtml(day.date) + '</div>'
+          +   '<div>' + rows + '</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function storyOpenArchive(slug, catKey) {
@@ -2155,7 +2403,63 @@ function previsitFallbackPrint(html) {
 }
 
 function labs() {
-  return `
+  // ─── Mobile v11 block ───
+  var _mobileLabsBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">檢驗報告</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">查任何檢驗值 — 正常範圍 / 異常解讀</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">血液、肝腎、免疫、罕見值都可以；結果僅供參考，不取代醫師判讀</div>'
+    +   '</div>'
+
+    // 拍報告 hero CTA
+    +   '<label class="ocr-hero-btn" style="margin-bottom:10px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<input type="file" accept="image/*" capture="environment" onchange="handleLabPhoto(this)" style="display:none" />'
+    +     '<div style="width:44px;height:44px;border-radius:11px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1">'
+    +       '<i data-lucide="camera" style="width:22px;height:22px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1;position:relative;z-index:1">'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--accent-deep);display:flex;align-items:center;gap:5px">拍報告 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.45">一張就能抽出全部項目，自動標註異常</div>'
+    +     '</div>'
+    +   '</label>'
+
+    // 文字輸入查單一項
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="search"></i> 查單一檢驗項目</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">'
+    +     '<input type="text" id="mobile-lab-name" placeholder="例：血紅素、ANA、IgE、CRP" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+    +       '<input type="text" id="mobile-lab-value" placeholder="數值（例：12.3）" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +       '<input type="text" id="mobile-lab-unit" placeholder="單位（選填）" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +     '</div>'
+    +     '<button onclick="_mobileLabsCheck()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="search" style="width:13px;height:13px"></i> 查詢</button>'
+    +   '</div>'
+
+    // 結果區（mirror 桌機 #lab-result）
+    +   '<div id="mobile-lab-result" style="margin-bottom:12px"></div>'
+
+    // 查詢紀錄
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="history"></i> 查詢紀錄</h3>'
+    +     '<span id="mobile-labs-history-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="labsClearHistory()">清除 <i data-lucide="trash-2"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-labs-history" class="list-card"></div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>檢驗判讀僅供參考，請以醫師判讀為主。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileLabsBlock + `
+    <div class="desktop-only">
     <div class="card labs-hero">
       <h2 style="display:flex;align-items:center;gap:8px">
         <i data-lucide="trending-up" style="width:22px;height:22px"></i> 報告數值
@@ -2263,7 +2567,23 @@ function labs() {
       </div>
       <div id="labs-history-list" class="labs-history-list"></div>
     </div>
+    </div>
   `;
+}
+
+// mobile labs helpers
+function _mobileLabsCheck() {
+  // copy to desktop inputs and trigger existing fn
+  var n = document.getElementById('mobile-lab-name');
+  var v = document.getElementById('mobile-lab-value');
+  var u = document.getElementById('mobile-lab-unit');
+  var dn = document.getElementById('lab-name');
+  var dv = document.getElementById('lab-value');
+  var du = document.getElementById('lab-unit');
+  if (dn && n) dn.value = n.value;
+  if (dv && v) dv.value = v.value;
+  if (du && u) du.value = u.value;
+  if (typeof labsCheck === 'function') labsCheck();
 }
 const account  = () => accountPage();
 // pieces() 為實作頁面（位於下方）— 將上次回診後的紀錄做統整保留。
@@ -2587,7 +2907,31 @@ function accountPage() {
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
     : `<img src="icons/xiaohe.jpg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
-  return `
+
+  // ─── Mobile v11 hero ───
+  const _mobileAccHero = `
+    <div class="mobile-only" style="margin-bottom:12px">
+      <div class="home-greet" style="position:relative;overflow:hidden">
+        <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.25"><use href="#puzzle-bg-blue-teal"/></svg>
+        <div class="home-avatar" style="position:relative;z-index:1">${avatarHtml}</div>
+        <div class="home-greet-text" style="position:relative;z-index:1">
+          <div class="home-greet-title">${(u.nickname || u.username || '未命名').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>
+          <div class="home-greet-date"><i data-lucide="${roleIcon}" style="width:11px;height:11px"></i> ${roleLabel} · ${u.username || ''}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const _mobileAccFooter = `
+    <div class="mobile-only">
+      <div class="disclaimer-footer">
+        <i data-lucide="info"></i>
+        <span>變更密碼後請重新登入，並通知共用裝置上的家人。</span>
+      </div>
+    </div>
+  `;
+
+  return _mobileAccHero + `
     <section class="acct-wrap">
       <header class="acct-head">
         <h2><i data-lucide="user-cog"></i> 帳號設定</h2>
@@ -2650,7 +2994,7 @@ function accountPage() {
         </div>
       </div>
     </section>
-  `;
+  ` + _mobileAccFooter;
 }
 
 function loadAccountPage() {
@@ -5733,9 +6077,20 @@ function _setTimelineBoxMode(box, mode) {
 }
 
 function timeline() {
-  return ''
+  var _mobileTlBlock = ''
+    + '<div class="mobile-only" style="margin-bottom:8px">'
+    +   '<div class="pv-hero">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">我的健康時間軸</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">跨次就診整合 — 一頁帶給醫師</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">上傳檢驗 / 處方 / 影像，OCR 抽出重點</div>'
+    +     '<button class="pv-btn" onclick="openTimelineUploader()"><i data-lucide="upload"></i> 上傳新文件</button>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileTlBlock + ''
     + '<div class="tl-page">'
-    +   '<header class="tl-head">'
+    +   '<header class="tl-head desktop-only">'
     +     '<div class="tl-titles">'
     +       '<h2>我的健康時間軸</h2>'
     +       '<p>上傳檢驗報告 / 處方箋 / 影像，系統會 OCR 抽出重點。下次看診直接帶這頁給醫師看。</p>'
@@ -5746,7 +6101,11 @@ function timeline() {
     +   '</header>'
     +   '<div class="tl-filters" id="tl-filters">' + _renderTimelineFilters('all') + '</div>'
     +   '<div class="tl-list" id="tl-list"><p class="tl-empty">// 載入中…</p></div>'
-    +   '<p class="tl-disclaimer">OCR 為輔助辨識，數值仍以原始文件為準。隱私敏感資料目前只存在你這台裝置。</p>'
+    +   '<div class="mobile-only"><div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>OCR 為輔助辨識，數值仍以原始文件為準。資料只存在這台裝置。</span>'
+    +   '</div></div>'
+    +   '<p class="tl-disclaimer desktop-only">OCR 為輔助辨識，數值仍以原始文件為準。隱私敏感資料目前只存在你這台裝置。</p>'
     + '</div>';
 }
 
@@ -9029,7 +9388,25 @@ function interpretBMI(v) {
 // 並列出 GET /symptoms/history/{patient_id} 的歷史分析
 
 function symptomsAnalyze() {
-  return `
+  // ─── Mobile v11 hero ───
+  var _mobileSaHero = ''
+    + '<div class="mobile-only" style="margin-bottom:12px">'
+    +   '<div class="pv-hero">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div class="pv-hero-eye">症狀分析</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">把症狀寫下來 — AI 幫你分析緊急程度</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">列出可能病因、建議科別、處置建議；<strong>不取代醫師診斷</strong></div>'
+    +   '</div>'
+    + '</div>';
+  var _mobileSaFooter = ''
+    + '<div class="mobile-only">'
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>結果僅供參考</strong>，嚴重不適請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileSaHero + `
     <div class="card">
       <h2>症狀分析</h2>
       <p style="margin-top:8px;color:var(--text-dim)">把現在的症狀寫下來，MD.Piece 會幫你分析可能病因、緊急程度與建議就診科別。</p>
@@ -9062,7 +9439,7 @@ function symptomsAnalyze() {
       <h3><i data-lucide="clock" style="width:18px;height:18px;vertical-align:middle"></i> 分析歷史</h3>
       <div id="symptom-analyze-history" style="margin-top:12px"><p style="color:var(--text-muted)">載入中...</p></div>
     </div>
-  `;
+  ` + _mobileSaFooter;
 }
 
 // 緊急度（從 /symptoms/analyze 回的 urgency）對應到 5 級 severity token
@@ -9441,7 +9818,27 @@ function calcBMI(h, w) {
 function records() {
   const info = getBasicInfo();
   const v = (k) => (info[k] || '').toString().replace(/"/g, '&quot;');
-  return `
+
+  // ─── Mobile v11 hero header（form 自身共用 id，所以只加 hero/disclaimer 包圍 ）───
+  var _mobileRecHero = ''
+    + '<div class="mobile-only" style="margin-bottom:12px">'
+    +   '<div class="pv-hero">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">基本資料</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">' + (info.name || '我的健康紀錄') + '</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">填寫一次，所有頁面都會自動帶入。最關鍵：當前疾病 / 過敏 / 用藥</div>'
+    +   '</div>'
+    + '</div>';
+
+  var _mobileRecFooter = ''
+    + '<div class="mobile-only">'
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>資料僅存本帳號</strong>，不會分享給第三方。可隨時編輯。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileRecHero + `
     <section class="card">
       <h2><i data-lucide="id-card"></i> ${_T('rec.title')}</h2>
       <p class="sub-hint">${_T('rec.subhint')}</p>
@@ -9528,7 +9925,7 @@ function records() {
           <button type="button" class="btn-quiet" onclick="copyBasicInfo()"><i data-lucide="clipboard-copy"></i> ${_T('rec.btn.copy')}</button>
         </div>
       </form>
-    </section>`;
+    </section>` + _mobileRecFooter;
 }
 
 function loadRecordsPage() {
@@ -12103,7 +12500,71 @@ var EDU_DISEASE_DIMENSIONS = [
 ];
 
 function education() {
-  return `
+  // ─── Mobile v11 block ───
+  var _mobileEduBlock = ''
+    + '<div class="mobile-only">'
+    // hero card with puzzle bg
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">衛教 · 知識庫</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">為你登錄的疾病量身整理</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">六大面向：疾病介紹／用藥／副作用／長期風險／自我管理／生活</div>'
+    +   '</div>'
+
+    // 我的疾病書架（mobile）
+    +   '<div id="mobile-edu-my-shelf" style="display:none">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="library"></i> 我的疾病書架</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-edu-my-shelf-list" class="card" style="padding:12px;display:flex;flex-direction:column;gap:8px"></div>'
+    +   '</div>'
+
+    // 我的疾病衛教文章
+    +   '<div id="mobile-edu-my-articles" style="display:none">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="book-marked"></i> 我的疾病衛教文章</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-edu-my-articles-list" class="list-card"></div>'
+    +   '</div>'
+
+    // 推送 · 相關疾病
+    +   '<div id="mobile-edu-related" style="display:none">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="git-branch"></i> 為你推送的相關疾病</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-edu-related-list" style="display:flex;flex-direction:column;gap:8px"></div>'
+    +   '</div>'
+
+    // 今日精選
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="sparkles"></i> 今日精選</h3>'
+    +     '<span id="mobile-edu-featured-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-edu-featured-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">'
+    +     '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 名人健康新聞（reuse 桌機 #edu-news-feed 容器 id 也行；mobile 用獨立容器）
+    +   '<div id="mobile-edu-news" style="display:none">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="newspaper"></i> 健康新聞</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-edu-news-list" style="display:flex;flex-direction:column;gap:8px"></div>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>衛教文章僅供參考，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileEduBlock + `
+    <div class="desktop-only">
     <div class="card" style="margin-bottom:14px">
       <h2 style="display:flex;align-items:center;gap:8px">
         <i data-lucide="book-heart" style="width:22px;height:22px"></i> ${_T('edu.title')}
@@ -12172,7 +12633,135 @@ function education() {
       <div class="notebook-wrap">
         <div id="edu-notebook" class="notebook"></div>
       </div>
+    </div>
     </div>`;
+}
+
+// ─── Mobile v11 — 鏡像注入到 mobile-only 容器 ───
+function _mobileEduSyncFeatured(featured, rotationDate, poolSize) {
+  var el = document.getElementById('mobile-edu-featured-list');
+  var cnt = document.getElementById('mobile-edu-featured-count');
+  if (!el) return;
+  if (cnt) cnt.textContent = (featured && featured.length ? featured.length : 0) + ' 篇';
+  if (!featured || !featured.length) {
+    el.innerHTML = '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">尚無精選文章</div>';
+    return;
+  }
+  var dateLine = rotationDate
+    ? '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-bottom:4px">'
+      + escapeHtml(rotationDate) + ' 今日輪播（精選池 ' + (poolSize || featured.length) + ' 篇）</div>'
+    : '';
+  el.innerHTML = dateLine + featured.map(function(a) {
+    var bg = (a.icd10 || '').toLowerCase().charCodeAt(0) % 2 === 0 ? 'puzzle-bg-blue-teal' : 'puzzle-bg-rose-amber';
+    var evidenceBadge = '';
+    if (a.meets_evidence_standard) {
+      evidenceBadge = '<span class="pill pill-info"><i data-lucide="award"></i>IF&gt;5 實證</span>';
+    } else if ((a.parsed_sources || []).some(function(s){ return s && s.impact_factor; })) {
+      evidenceBadge = '<span class="pill pill-mute">附文獻</span>';
+    }
+    var tagHtml = (a.tags || []).slice(0, 2).map(function(t) {
+      return '<span class="pill pill-mute">' + escapeHtml(t) + '</span>';
+    }).join('');
+    return ''
+      + '<button class="card" style="text-align:left;padding:12px 14px;cursor:pointer;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;width:100%" onclick="eduOpenArticle(\'' + escapeHtml(a.slug) + '\')">'
+      +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.28"><use href="#' + bg + '"/></svg>'
+      +   '<div style="position:relative;z-index:1;display:flex;align-items:center;gap:6px">'
+      +     '<i data-lucide="book-open" style="width:14px;height:14px;color:var(--accent-deep)"></i>'
+      +     '<span style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.35;flex:1">' + escapeHtml(a.title) + '</span>'
+      +   '</div>'
+      +   (a.summary ? '<div style="position:relative;z-index:1;font-size:11px;color:var(--text-dim);line-height:1.5">' + escapeHtml(a.summary).slice(0, 80) + (a.summary.length > 80 ? '…' : '') + '</div>' : '')
+      +   (evidenceBadge || tagHtml ? '<div style="position:relative;z-index:1;display:flex;gap:4px;flex-wrap:wrap">' + evidenceBadge + tagHtml + '</div>' : '')
+      + '</button>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileEduSyncMyDiseases(items, extras) {
+  var wrap = document.getElementById('mobile-edu-my-shelf');
+  var list = document.getElementById('mobile-edu-my-shelf-list');
+  if (!wrap || !list) return;
+  var all = (items || []).concat((extras || []).map(function(x) {
+    return typeof x === 'string' ? { name: x, ai_generated: true } : x;
+  }));
+  if (!all.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = all.map(function(it) {
+    var name = it.name || it.label || '未命名疾病';
+    var icd10 = it.icd10 || '';
+    var ai = it.ai_generated || it.is_supported === false;
+    var iconColor = ai ? 'var(--amber-deep)' : 'var(--accent-deep)';
+    var icon = ai ? 'sparkles' : 'book';
+    var onclick = it.slug
+      ? 'eduOpenDiseaseShelf(\'' + escapeHtml(it.slug || '') + '\')'
+      : (it.code || it.icd10
+        ? 'eduOpenDiseaseByIcd10(\'' + escapeHtml(it.code || it.icd10) + '\')'
+        : '');
+    return ''
+      + '<button style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left;width:100%" onclick="' + onclick + '">'
+      +   '<div style="width:32px;height:32px;border-radius:8px;background:var(--accent-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + iconColor + '">'
+      +     '<i data-lucide="' + icon + '" style="width:15px;height:15px"></i>'
+      +   '</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:12.5px;font-weight:600;color:var(--navy);line-height:1.3">' + escapeHtml(name) + '</div>'
+      +     (icd10 ? '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">ICD-10 · ' + escapeHtml(icd10) + '</div>' : '')
+      +   '</div>'
+      +   '<i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted)"></i>'
+      + '</button>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileEduSyncMyArticles(items) {
+  var wrap = document.getElementById('mobile-edu-my-articles');
+  var list = document.getElementById('mobile-edu-my-articles-list');
+  if (!wrap || !list) return;
+  if (!items || !items.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  var rows = [];
+  items.forEach(function(it) {
+    (it.articles || []).slice(0, 6).forEach(function(a) {
+      rows.push({ disease: it.name || it.label || '', article: a });
+    });
+  });
+  if (!rows.length) { wrap.style.display = 'none'; return; }
+  list.innerHTML = rows.map(function(r) {
+    var slug = r.article.slug || '';
+    return ''
+      + '<div class="list-row" style="grid-template-columns:24px 1fr auto;cursor:pointer" onclick="eduOpenArticle(\'' + escapeHtml(slug) + '\')">'
+      +   '<i data-lucide="file-text" style="width:14px;height:14px;color:var(--accent-deep)"></i>'
+      +   '<div>'
+      +     '<div class="name">' + escapeHtml(r.article.title || '') + '</div>'
+      +     '<div class="time" style="text-align:left;margin-top:2px">' + escapeHtml(r.disease) + '</div>'
+      +   '</div>'
+      +   '<i data-lucide="chevron-right" style="width:12px;height:12px;color:var(--text-muted)"></i>'
+      + '</div>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileEduSyncRelated(items) {
+  var wrap = document.getElementById('mobile-edu-related');
+  var list = document.getElementById('mobile-edu-related-list');
+  if (!wrap || !list) return;
+  if (!items || !items.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = items.slice(0, 6).map(function(it) {
+    var name = it.name || it.label || it.title || '';
+    var reason = it.reason || it.summary || '';
+    var icd10 = it.icd10 || it.code || '';
+    return ''
+      + '<button style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;text-align:left;width:100%;position:relative;overflow:hidden" onclick="' + (icd10 ? 'eduOpenDiseaseByIcd10(\'' + escapeHtml(icd10) + '\')' : '') + '">'
+      +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+      +   '<div style="width:30px;height:30px;border-radius:8px;background:var(--rose-tint);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+      +     '<i data-lucide="git-branch" style="width:14px;height:14px"></i>'
+      +   '</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:12.5px;font-weight:600;color:var(--navy);line-height:1.3">' + escapeHtml(name) + '</div>'
+      +     (reason ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:3px;line-height:1.45">' + escapeHtml(reason) + '</div>' : '')
+      +   '</div>'
+      + '</button>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderBookshelf() {
@@ -12371,6 +12960,7 @@ function renderMyDiseaseShelf(items, extras) {
 
   row.innerHTML = html;
   card.style.display = '';
+  if (typeof _mobileEduSyncMyDiseases === 'function') _mobileEduSyncMyDiseases(items, extras);
 }
 
 function eduOpenMyDiseaseBook(icd10, name) {
@@ -12441,6 +13031,7 @@ function renderMyDiseaseArticles(items) {
            '</section>';
   }).join('');
   card.style.display = '';
+  if (typeof _mobileEduSyncMyArticles === 'function') _mobileEduSyncMyArticles(withArticles);
 }
 
 // ── 為登錄疾病的患者自動推送相關疾病衛教 ──────────────────
@@ -12463,6 +13054,7 @@ function loadRelatedDiseases() {
         }
         list.innerHTML = data.items.map(renderRelatedDiseaseCard).join("");
         card.style.display = "";
+        if (typeof _mobileEduSyncRelated === 'function') _mobileEduSyncRelated(data.items);
         if (typeof lucide !== 'undefined') lucide.createIcons();
       })
       .catch(function() { card.style.display = "none"; });
@@ -12676,7 +13268,7 @@ function loadFeaturedArticles() {
     })
     .catch(function() { /* 索引建構失敗不阻擋顯示 */ });
 
-  if (!el) return;
+  // 不限 desktop el — mobile sync 也要跑
   fetch(API + "/education/articles/featured?limit=6")
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -12685,6 +13277,10 @@ function loadFeaturedArticles() {
       featured.forEach(function(a) {
         _eduArticles[a.slug] = _eduArticles[a.slug] || a;
       });
+      if (typeof _mobileEduSyncFeatured === 'function') {
+        _mobileEduSyncFeatured(featured, (data && data.rotation_date) || '', (data && data.pool_size) || featured.length);
+      }
+      if (!el) return;
       if (!featured.length) {
         el.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">尚無精選文章。</div>';
         return;
@@ -13310,8 +13906,83 @@ function pieces() {
       + '</div>'
     : '<div class="pz-prev pz-prev-empty"><i data-lucide="bookmark-plus"></i>尚未保存過快照。下次回診前按「保存為這次的拼圖」可以建立第一份。</div>';
 
-  return '\n'
-    + '<section class="pieces-page">\n'
+  // ─── Mobile v11 block ───
+  var mobileTopCats = s.topCats.slice(0, 4).map(function(c) {
+    return '<span class="pill pill-info" style="padding:5px 10px;font-size:11px"><i data-lucide="' + c.icon + '" style="width:11px;height:11px"></i> ' + escapeHtml(c.zh) + ' · ' + c.count + '</span>';
+  }).join('');
+  var mobileTimeline = s.timeline.slice(0, 6).map(function(t) {
+    var ico = t.kind === 'symptom' ? 'scan-search' : (t.kind === 'memo' ? 'sticky-note' : 'activity');
+    var pillCls = t.kind === 'symptom' ? 'pill-info' : (t.kind === 'memo' ? 'pill-rose' : 'pill-teal');
+    var kindLabel = t.kind === 'symptom' ? '症狀' : (t.kind === 'memo' ? 'Memo' : '生理');
+    return ''
+      + '<div style="position:relative;padding-left:18px;margin-bottom:8px">'
+      +   '<span style="position:absolute;left:0;top:6px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg-mid,#fff)"></span>'
+      +   '<span style="position:absolute;left:3px;top:14px;bottom:-6px;width:2px;background:var(--border)"></span>'
+      +   '<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px"><span class="pill ' + pillCls + '"><i data-lucide="' + ico + '"></i>' + kindLabel + '</span><span class="time" style="font-size:10px">' + piecesFormatTime(t.t) + '</span></div>'
+      +   '<div style="font-size:12px;font-weight:600;color:var(--navy)">' + escapeHtml(t.label || '—') + '</div>'
+      +   (t.meta ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:1px">' + escapeHtml(t.meta) + '</div>' : '')
+      + '</div>';
+  }).join('');
+  var _mobilePzBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +     '<div class="pv-hero-eye">你的碎片</div>'
+    +     '<div class="pv-hero-num">' + s.days + '<span class="unit">天 · ' + piecesFormatDate(s.since) + ' 起</span></div>'
+    +     '<div class="pv-hero-doc" style="margin-top:6px">把上次回診以來的紀錄拼起來</div>'
+    +   '</div>'
+
+    // 4 顆 KPI 卡（症狀 / Memo / 生理 / 藥物）
+    +   '<div class="sos-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:12px">'
+    +     '<button type="button" class="sos-btn t-blue" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="scan-search"></i></div>'
+    +       '<div class="sos-label">症狀 ' + s.symptomCount + '</div>'
+    +       '<div class="sos-sub">' + s.symptomEntries + ' 筆 · 強度 ' + s.avgIntensity.toFixed(1) + '</div>'
+    +     '</button>'
+    +     '<button type="button" class="sos-btn t-rose" onclick="navigateTo(\'memo\',null)">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="sticky-note"></i></div>'
+    +       '<div class="sos-label">Memo ' + s.memoCount + '</div>'
+    +       '<div class="sos-sub">' + s.memoForDoctor + ' 給醫師</div>'
+    +     '</button>'
+    +     '<button type="button" class="sos-btn t-teal" onclick="navigateTo(\'vitals\',null)">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="activity"></i></div>'
+    +       '<div class="sos-label">生理 ' + s.vitalCount + '</div>'
+    +       '<div class="sos-sub">' + (s.lastVital ? (s.lastVital.metricLabel || '紀錄') : '尚無紀錄') + '</div>'
+    +     '</button>'
+    +     '<button type="button" class="sos-btn t-amber" onclick="navigateTo(\'medications\',null)">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="pill"></i></div>'
+    +       '<div class="sos-label" id="mobile-pz-meds-num">藥物 …</div>'
+    +       '<div class="sos-sub" id="mobile-pz-meds-sub">載入中</div>'
+    +     '</button>'
+    +   '</div>'
+
+    // 症狀分佈 Top 4
+    + (mobileTopCats ? '<div class="sec-head"><h3 class="sec-title"><i data-lucide="bar-chart-3"></i> 症狀分佈 Top 4</h3><span class="sec-spacer"></span></div>'
+      + '<div class="card" style="padding:12px;display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">' + mobileTopCats + '</div>' : '')
+
+    // 最近的碎片時間軸
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="history"></i> 最近的碎片</h3><span class="sec-count">' + s.timeline.length + '</span><span class="sec-spacer"></span></div>'
+    +   '<div class="card" style="padding:14px;margin-bottom:12px">' + (mobileTimeline || '<div style="color:var(--text-muted);font-size:11.5px;text-align:center;padding:8px">尚無紀錄，從症狀／Memo 開始拼起</div>') + '</div>'
+
+    // 動作按鈕
+    +   '<div style="display:flex;gap:8px;margin-bottom:12px">'
+    +     '<button onclick="piecesSaveCurrent()" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="save" style="width:13px;height:13px"></i> 保存這次拼圖</button>'
+    +     '<button onclick="piecesExport()" style="flex:1;background:#fff;color:var(--text-dim);border:1.5px solid var(--border);border-radius:10px;padding:11px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="clipboard-copy" style="width:13px;height:13px"></i> 複製摘要</button>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>「拼圖」是把回診之間的小事拼起來，方便下次跟醫師說。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobilePzBlock + '\n'
+    + '<section class="pieces-page desktop-only">\n'
     + '  <header class="pz-header">\n'
     + '    <div>\n'
     + '      <p class="pz-eyebrow">// pieces &gt; aggregated_records</p>\n'
@@ -13394,6 +14065,10 @@ function loadPiecesPage() {
         var sub = document.getElementById('pz-meds-sub');
         if (num) num.textContent = meds.length;
         if (sub) sub.textContent = meds.length ? '種藥物正在追蹤' : '尚未建立藥物紀錄';
+        var mNum = document.getElementById('mobile-pz-meds-num');
+        var mSub = document.getElementById('mobile-pz-meds-sub');
+        if (mNum) mNum.textContent = '藥物 ' + meds.length;
+        if (mSub) mSub.textContent = meds.length ? '種追蹤中' : '尚未建立';
       })
       .catch(function() {
         var num = document.getElementById('pz-meds-num');
@@ -13690,6 +14365,60 @@ function chat() {
   var mode = chatGetMode();
   var ver  = chatGetVersion();
 
+  // mobile v11 mirror of chat messages
+  var mobileMsgs = hist.length
+    ? hist.map(_mobileChatRenderMessage).join('')
+    : '<div class="chat-msg-mob chat-msg-mob-bot"><div class="chat-bubble-mob">' + chatGreeting() + '</div></div>';
+
+  var _mobileChatBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:10px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div style="display:flex;align-items:center;gap:10px;position:relative;z-index:1">'
+    +       '<div style="width:48px;height:48px;border-radius:50%;background:var(--rose-tint);border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:var(--rose-deep);font-size:22px">🌿</div>'
+    +       '<div>'
+    +         '<div style="font-size:15px;font-weight:600;color:var(--navy)">醫起聊天 · 小禾</div>'
+    +         '<div style="font-size:11px;color:var(--text-dim);margin-top:2px">陪你聊聊、把感受拼成一段話</div>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 語氣 / 對象切換
+    +   '<div class="aud-toggle" style="margin-bottom:10px">'
+    +     '<button class="audience-btn' + (mode === 'patient' ? ' active' : '') + '" onclick="chatSwitchMode(\'patient\')"><i data-lucide="user"></i> 我是患者</button>'
+    +     '<button class="audience-btn' + (mode === 'family' ? ' active' : '') + '" onclick="chatSwitchMode(\'family\')"><i data-lucide="heart"></i> 我是家屬</button>'
+    +   '</div>'
+    +   '<div class="aud-toggle" style="margin-bottom:12px">'
+    +     '<button class="audience-btn' + (ver === 'normal' ? ' active' : '') + '" onclick="chatSwitchVersion(\'normal\')"><i data-lucide="message-circle"></i> 一般</button>'
+    +     '<button class="audience-btn' + (ver === 'elderly' ? ' active' : '') + '" onclick="chatSwitchVersion(\'elderly\')"><i data-lucide="ear"></i> 年長版</button>'
+    +   '</div>'
+
+    // 對話泡泡
+    +   '<div id="mobile-chat-stream" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px">'
+    +     mobileMsgs
+    +   '</div>'
+
+    // 快速提問 chip
+    +   '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">'
+    +     '<button class="chip" onclick="chatQuickAsk(\'幫我把最近三天的不舒服整理成一段話\')">整理近況</button>'
+    +     '<button class="chip" onclick="chatQuickAsk(\'我有點焦慮，可以陪我說說話嗎？\')">陪我聊聊</button>'
+    +     '<button class="chip" style="background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep)" onclick="chatGenerateArticle()"><i data-lucide="sparkles" style="width:10px;height:10px"></i> 生成一篇文章</button>'
+    +   '</div>'
+
+    // 輸入框
+    +   '<form id="mobile-chat-form" onsubmit="event.preventDefault();_mobileChatSend()" style="display:flex;gap:6px;align-items:center;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:6px 8px;margin-bottom:10px">'
+    +     '<input id="mobile-chat-input" type="text" autocomplete="off" placeholder="跟小禾說說話…" style="flex:1;border:none;outline:none;font-size:13px;padding:6px;background:transparent" />'
+    +     '<button type="button" onclick="chatToggleMic()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px"><i data-lucide="mic" style="width:16px;height:16px"></i></button>'
+    +     '<button type="submit" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><i data-lucide="send" style="width:13px;height:13px"></i></button>'
+    +     '<button type="button" onclick="chatClear()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:6px"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>'
+    +   '</form>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>小禾不是醫師，僅作為陪伴與資訊參考；身體不適請務必就醫。</span>'
+    +   '</div>'
+    + '</div>';
+
   var msgsHtml = hist.length
     ? hist.map(chatRenderMessage).join('')
     : ''
@@ -13699,8 +14428,8 @@ function chat() {
       +   '</div>'
       + '</div>';
 
-  return ''
-    + '<section class="chat-page">'
+  return _mobileChatBlock
+    + '<section class="chat-page desktop-only">'
     + '  <header class="chat-header">'
     + '    <div class="chat-mascot-wrap chat-mascot-wrap-lg" id="chat-mascot">'
     +        chatMascotSvg('idle')
@@ -13765,6 +14494,48 @@ function chat() {
     + '  </form>'
     + '  <p class="chat-disclaimer">小禾不是醫師，僅作為陪伴與資訊參考；身體不適請務必就醫。</p>'
     + '</section>';
+}
+
+// mobile v11 chat bubble helpers
+function _mobileChatRenderMessage(m) {
+  if (m.role === 'user') {
+    return ''
+      + '<div style="display:flex;justify-content:flex-end">'
+      +   '<div style="max-width:75%;background:var(--accent);color:#fff;padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+      + '</div>';
+  }
+  if (m.role === 'article') {
+    return ''
+      + '<div style="display:flex;justify-content:flex-start">'
+      +   '<div style="max-width:85%;background:var(--accent-tint);border:1.5px solid var(--accent);color:var(--navy);padding:10px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55">'
+      +     '<div style="font-size:11px;font-weight:600;color:var(--accent-deep);margin-bottom:5px;display:flex;align-items:center;gap:4px"><i data-lucide="file-text" style="width:12px;height:12px"></i> 小禾為你寫的一篇</div>'
+      +     '<div style="white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+  return ''
+    + '<div style="display:flex;justify-content:flex-start;gap:6px;align-items:flex-end">'
+    +   '<div style="width:24px;height:24px;border-radius:50%;background:var(--rose-tint);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🌿</div>'
+    +   '<div style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+    + '</div>';
+}
+
+function _mobileChatSend() {
+  var input = document.getElementById('mobile-chat-input');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  // 寫進 desktop input 並走原本 chatSend
+  var dInput = document.getElementById('chat-input');
+  if (dInput) dInput.value = text;
+  else {
+    // 沒有 desktop input 時直接呼叫
+    var hist = chatLoadHistory();
+    hist.push({ role: 'user', text: text, ts: Date.now() });
+    chatSaveHistory(hist);
+  }
+  if (typeof chatSend === 'function') chatSend();
 }
 
 function chatRenderMessage(m) {
@@ -13861,16 +14632,30 @@ function chatClear() {
       +   '</div>'
       + '</div>';
   }
+  var mStream = document.getElementById('mobile-chat-stream');
+  if (mStream) {
+    mStream.innerHTML = '<div style="display:flex;justify-content:flex-start;gap:6px;align-items:flex-end"><div style="width:24px;height:24px;border-radius:50%;background:var(--rose-tint);display:flex;align-items:center;justify-content:center;font-size:13px">🌿</div><div style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55">' + chatGreeting() + '</div></div>';
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function chatAppendMessage(role, text) {
   var stream = document.getElementById('chat-stream');
-  if (!stream) return null;
-  var wrap = document.createElement('div');
-  wrap.innerHTML = chatRenderMessage({ role: role, text: text });
-  var node = wrap.firstChild;
-  stream.appendChild(node);
+  var mStream = document.getElementById('mobile-chat-stream');
+  var node = null;
+  if (stream) {
+    var wrap = document.createElement('div');
+    wrap.innerHTML = chatRenderMessage({ role: role, text: text });
+    node = wrap.firstChild;
+    stream.appendChild(node);
+  }
+  if (mStream) {
+    var mWrap = document.createElement('div');
+    mWrap.innerHTML = _mobileChatRenderMessage({ role: role, text: text });
+    var mNode = mWrap.firstChild;
+    if (mNode) mStream.appendChild(mNode);
+    mStream.scrollTop = mStream.scrollHeight;
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
   chatScrollToBottom();
   return node;
@@ -14536,29 +15321,54 @@ function loadLabsPage() {
 }
 
 function labsRenderHistory() {
-  const listEl = document.getElementById('labs-history-list');
-  if (!listEl) return;
   const items = labsLoadHistory();
-  if (!items.length) {
-    listEl.innerHTML = '<p class="labs-empty">尚無查詢紀錄。紀錄僅存於此分頁，關閉後即清除。</p>';
-    return;
+  const listEl = document.getElementById('labs-history-list');
+  if (listEl) {
+    if (!items.length) {
+      listEl.innerHTML = '<p class="labs-empty">尚無查詢紀錄。紀錄僅存於此分頁，關閉後即清除。</p>';
+    } else {
+      listEl.innerHTML = items.map((it, idx) => {
+        const meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
+        const time = new Date(it.at).toLocaleString('zh-TW', { hour12: false });
+        return '' +
+          '<article class="labs-history-item ' + meta.cls + '" onclick="labsShowFromHistory(' + idx + ')">' +
+            '<span class="labs-history-emoji">' + meta.emoji + '</span>' +
+            '<div class="labs-history-body">' +
+              '<div class="labs-history-top">' +
+                '<strong>' + escapeHtml(it.name) + '</strong>' +
+                '<span class="labs-history-value">' + escapeHtml(it.value) +
+                  (it.unit ? ' ' + escapeHtml(it.unit) : '') + '</span>' +
+              '</div>' +
+              '<div class="labs-history-meta">' + meta.label + ' · ' + time + '</div>' +
+            '</div>' +
+          '</article>';
+      }).join('');
+    }
   }
-  listEl.innerHTML = items.map((it, idx) => {
-    const meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
-    const time = new Date(it.at).toLocaleString('zh-TW', { hour12: false });
-    return '' +
-      '<article class="labs-history-item ' + meta.cls + '" onclick="labsShowFromHistory(' + idx + ')">' +
-        '<span class="labs-history-emoji">' + meta.emoji + '</span>' +
-        '<div class="labs-history-body">' +
-          '<div class="labs-history-top">' +
-            '<strong>' + escapeHtml(it.name) + '</strong>' +
-            '<span class="labs-history-value">' + escapeHtml(it.value) +
-              (it.unit ? ' ' + escapeHtml(it.unit) : '') + '</span>' +
-          '</div>' +
-          '<div class="labs-history-meta">' + meta.label + ' · ' + time + '</div>' +
-        '</div>' +
-      '</article>';
-  }).join('');
+  // mobile mirror
+  const mList = document.getElementById('mobile-labs-history');
+  const mCnt = document.getElementById('mobile-labs-history-count');
+  if (mCnt) mCnt.textContent = items.length + ' 筆';
+  if (mList) {
+    if (!items.length) {
+      mList.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">尚無紀錄</div>';
+    } else {
+      mList.innerHTML = items.map((it, idx) => {
+        const meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
+        const time = new Date(it.at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        var pillCls = it.status === 'normal' ? 'pill-ok' : (it.status === 'abnormal' || it.status === 'critical' ? 'pill-rose' : 'pill-mute');
+        return ''
+          + '<div class="list-row" style="grid-template-columns:24px 1fr auto;padding:10px 12px;cursor:pointer" onclick="labsShowFromHistory(' + idx + ')">'
+          +   '<span style="font-size:16px">' + (meta.emoji || '📊') + '</span>'
+          +   '<div>'
+          +     '<div class="name">' + escapeHtml(it.name) + ' <span style="color:var(--text-dim);font-weight:500;font-family:var(--font-mono,monospace);font-size:11px">' + escapeHtml(it.value) + (it.unit ? ' ' + escapeHtml(it.unit) : '') + '</span></div>'
+          +     '<div style="margin-top:2px"><span class="pill ' + pillCls + '">' + meta.label + '</span> <span class="time" style="text-align:left">' + escapeHtml(time) + '</span></div>'
+          +   '</div>'
+          +   '<i data-lucide="chevron-right" style="width:12px;height:12px;color:var(--text-muted)"></i>'
+          + '</div>';
+      }).join('');
+    }
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -14769,26 +15579,53 @@ function labsAppendScannedToHistory(items) {
 function labsRenderResult(data, input) {
   const meta = LABS_STATUS_META[data.status] || LABS_STATUS_META.unknown;
   const resultEl = document.getElementById('lab-result');
-  resultEl.style.display = 'block';
-  resultEl.className = 'card labs-result ' + meta.cls;
-  resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  resultEl.innerHTML = '' +
-    '<div class="labs-result-head">' +
-      '<span class="labs-result-emoji">' + meta.emoji + '</span>' +
-      '<div>' +
-        '<div class="labs-result-item">' + escapeHtml(data.item || input.name) + '</div>' +
-        '<div class="labs-result-input">你輸入：' + escapeHtml(input.value) +
-          (input.unit ? ' ' + escapeHtml(input.unit) : '') + '</div>' +
+  if (resultEl) {
+    resultEl.style.display = 'block';
+    resultEl.className = 'card labs-result ' + meta.cls;
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    resultEl.innerHTML = '' +
+      '<div class="labs-result-head">' +
+        '<span class="labs-result-emoji">' + meta.emoji + '</span>' +
+        '<div>' +
+          '<div class="labs-result-item">' + escapeHtml(data.item || input.name) + '</div>' +
+          '<div class="labs-result-input">你輸入：' + escapeHtml(input.value) +
+            (input.unit ? ' ' + escapeHtml(input.unit) : '') + '</div>' +
+        '</div>' +
+        '<span class="labs-result-status">' + meta.label + '</span>' +
       '</div>' +
-      '<span class="labs-result-status">' + meta.label + '</span>' +
-    '</div>' +
-    '<div class="labs-result-row"><strong>參考範圍</strong><span>' + escapeHtml(data.normal_range || '—') + '</span></div>' +
-    '<div class="labs-result-block"><strong>這個指標代表</strong><p>' + escapeHtml(data.meaning || '—') + '</p></div>' +
-    '<div class="labs-result-block"><strong>建議</strong><p>' + escapeHtml(data.advice || '—') + '</p></div>' +
-    (data.see_doctor
-      ? '<div class="labs-result-warn"><i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle"></i> 建議盡快就醫評估</div>'
-      : '') +
-    '<p class="labs-result-disclaimer">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
+      '<div class="labs-result-row"><strong>參考範圍</strong><span>' + escapeHtml(data.normal_range || '—') + '</span></div>' +
+      '<div class="labs-result-block"><strong>這個指標代表</strong><p>' + escapeHtml(data.meaning || '—') + '</p></div>' +
+      '<div class="labs-result-block"><strong>建議</strong><p>' + escapeHtml(data.advice || '—') + '</p></div>' +
+      (data.see_doctor
+        ? '<div class="labs-result-warn"><i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle"></i> 建議盡快就醫評估</div>'
+        : '') +
+      '<p class="labs-result-disclaimer">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
+  }
+  // mobile mirror
+  const mResult = document.getElementById('mobile-lab-result');
+  if (mResult) {
+    var pillCls = data.status === 'normal' ? 'pill-ok' : (data.status === 'abnormal' || data.status === 'critical' ? 'pill-rose' : 'pill-mute');
+    var bg = data.status === 'normal' ? 'puzzle-bg-blue-teal' : 'puzzle-bg-rose-amber';
+    mResult.innerHTML = ''
+      + '<div class="card" style="padding:14px;position:relative;overflow:hidden">'
+      +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.18"><use href="#' + bg + '"/></svg>'
+      +   '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;position:relative;z-index:1">'
+      +     '<span style="font-size:22px">' + (meta.emoji || '📊') + '</span>'
+      +     '<div style="flex:1">'
+      +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy)">' + escapeHtml(data.item || input.name) + '</div>'
+      +       '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">你輸入：' + escapeHtml(input.value) + (input.unit ? ' ' + escapeHtml(input.unit) : '') + '</div>'
+      +     '</div>'
+      +     '<span class="pill ' + pillCls + '">' + meta.label + '</span>'
+      +   '</div>'
+      +   '<div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:6px;position:relative;z-index:1"><strong style="color:var(--navy)">參考範圍：</strong>' + escapeHtml(data.normal_range || '—') + '</div>'
+      +   '<div style="font-size:11.5px;color:var(--text);line-height:1.6;margin-top:6px;position:relative;z-index:1"><strong>這個指標代表</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.meaning || '—') + '</div></div>'
+      +   '<div style="font-size:11.5px;color:var(--text);line-height:1.6;margin-top:6px;position:relative;z-index:1"><strong>建議</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.advice || '—') + '</div></div>'
+      +   (data.see_doctor
+        ? '<div style="margin-top:8px;padding:8px 10px;background:var(--rose-soft);color:var(--rose-deep);border-radius:8px;font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:5px;position:relative;z-index:1"><i data-lucide="alert-triangle" style="width:13px;height:13px"></i>建議盡快就醫評估</div>'
+        : '')
+      +   '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.5;position:relative;z-index:1">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</div>'
+      + '</div>';
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -15684,8 +16521,100 @@ function renderBasicNutrients() {
 }
 
 function diet() {
-  return ''
-    + '<section class="diet-wrap">'
+  // ─── Mobile v11 block ───
+  var _mobileDietBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">飲食 · 三餐打卡</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">今天該吃什麼，避開什麼？</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">看你的病史，自動列出今日營養目標 + 特別注意</div>'
+    +   '</div>'
+
+    // 今日營養目標 — 3 顆 KPI 卡
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="target"></i> 今日營養目標</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="kpi-row" id="mobile-diet-targets" style="margin-bottom:10px">'
+    +     '<div class="kpi-mini t-rose"><div class="kpi-mini-label"><i data-lucide="beef"></i>蛋白質</div><div class="kpi-mini-val" id="mobile-diet-protein">—</div><div class="kpi-mini-meta">g / 日</div></div>'
+    +     '<div class="kpi-mini t-blue"><div class="kpi-mini-label"><i data-lucide="glass-water"></i>水分</div><div class="kpi-mini-val" id="mobile-diet-water">—</div><div class="kpi-mini-meta">ml / 日</div></div>'
+    +     '<div class="kpi-mini t-teal"><div class="kpi-mini-label"><i data-lucide="leaf"></i>纖維</div><div class="kpi-mini-val" id="mobile-diet-fiber">—</div><div class="kpi-mini-meta">g / 日</div></div>'
+    +   '</div>'
+    +   '<div class="card" style="padding:10px 14px;margin-bottom:14px">'
+    +     '<ul id="mobile-diet-tips" style="margin:0;padding-left:18px;font-size:11.5px;color:var(--text-dim);line-height:1.7"></ul>'
+    +   '</div>'
+
+    // 你要特別注意 — warning card
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="alert-triangle"></i> 你要特別注意</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-diet-warnings" style="margin-bottom:12px">'
+    +     '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 吃什麼神器 quick action
+    +   '<button class="ocr-hero-btn" onclick="dietPickMeal(false)" style="margin-bottom:10px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div style="width:44px;height:44px;border-radius:11px;background:var(--amber-deep,#9A6A1F);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1">'
+    +       '<i data-lucide="dices" style="width:20px;height:20px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1;position:relative;z-index:1">'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">幫我抽一道 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">依你的病史和偏好挑一道菜（下方可細調篩選）</div>'
+    +     '</div>'
+    +   '</button>'
+
+    // 餐次推薦
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="salad"></i> 今天吃什麼</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="meds-period-card" style="margin-bottom:12px">'
+    +     '<div class="meds-period-head morning"><i data-lucide="sun"></i> 餐次推薦</div>'
+    +     '<div id="mobile-diet-suggestions" style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;min-height:32px">'
+    +       '<span style="color:var(--text-muted);font-size:11px">載入中…</span>'
+    +     '</div>'
+    +   '</div>'
+
+    // 打卡今天吃了什麼 — 用 card form 樣式
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="pencil"></i> 打卡今天吃了什麼</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">'
+    +     '<div style="display:flex;gap:5px">'
+    +       ['breakfast','lunch','dinner','snack'].map(function(m, i) {
+              return '<button class="chip' + (m==='breakfast'?' active':'') + '" data-mobile-log-meal="' + m + '" onclick="_mobileDietLogMeal(\'' + m + '\')" style="flex:1">'
+                + DIET_MEAL_LABEL[m] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<textarea id="mobile-diet-log-foods" rows="2" maxlength="200" placeholder="例：白飯、滷雞腿、燙青菜" style="border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;resize:vertical"></textarea>'
+    +     '<input type="text" id="mobile-diet-log-note" maxlength="80" placeholder="備註（選填）" style="border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:12px" />'
+    +     '<button onclick="_mobileDietSubmit()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px">'
+    +       '<i data-lucide="check" style="width:13px;height:13px"></i> 送出打卡'
+    +     '</button>'
+    +     '<div id="mobile-diet-log-status" style="font-size:11px;color:var(--text-muted)"></div>'
+    +   '</div>'
+
+    // 今日已記錄
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="list"></i> 今日已記錄</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-diet-today" class="list-card">'
+    +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">尚無紀錄</div>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>飲食建議僅供參考，特殊疾病請依醫師／營養師指示為主。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileDietBlock
+    + '<section class="diet-wrap desktop-only">'
     +   '<header class="diet-head">'
     +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
     +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
@@ -16264,38 +17193,90 @@ function renderDietTargets(t, tips) {
   if (tipsEl) {
     tipsEl.innerHTML = (tips || []).map(function(x) { return '<li>' + chatEscape(x) + '</li>'; }).join('');
   }
+  // mobile sync
+  var mp = document.getElementById('mobile-diet-protein');
+  var mw = document.getElementById('mobile-diet-water');
+  var mf = document.getElementById('mobile-diet-fiber');
+  if (mp) mp.textContent = t.protein_g || '—';
+  if (mw) mw.textContent = t.water_ml || '—';
+  if (mf) mf.textContent = t.fiber_g || '—';
+  var mtips = document.getElementById('mobile-diet-tips');
+  if (mtips) {
+    mtips.innerHTML = (tips || []).slice(0, 4).map(function(x) { return '<li>' + chatEscape(x) + '</li>'; }).join('');
+  }
 }
 
 function renderDietWarnings(warnings) {
   var box = document.getElementById('diet-warnings');
-  if (!box) return;
-  if (!warnings || !warnings.length) {
-    box.innerHTML = '<p class="diet-empty">目前沒有特別需要避開的食物。如果有新的診斷，記得更新病歷。</p>';
-    return;
+  if (box) {
+    if (!warnings || !warnings.length) {
+      box.innerHTML = '<p class="diet-empty">目前沒有特別需要避開的食物。如果有新的診斷，記得更新病歷。</p>';
+    } else {
+      box.innerHTML = warnings.map(function(w) {
+        var avoid = (w.avoid || []).map(function(f) { return '<span class="diet-chip-bad">' + chatEscape(f) + '</span>'; }).join('');
+        return ''
+          + '<div class="diet-warn">'
+          +   '<div class="diet-warn-head">' + chatEscape(w.disease || '') + '</div>'
+          +   '<div class="diet-warn-avoid">' + avoid + '</div>'
+          +   (w.reason ? '<div class="diet-warn-reason">' + chatEscape(w.reason) + '</div>' : '')
+          + '</div>';
+      }).join('');
+    }
   }
-  box.innerHTML = warnings.map(function(w) {
-    var avoid = (w.avoid || []).map(function(f) { return '<span class="diet-chip-bad">' + chatEscape(f) + '</span>'; }).join('');
-    return ''
-      + '<div class="diet-warn">'
-      +   '<div class="diet-warn-head">' + chatEscape(w.disease || '') + '</div>'
-      +   '<div class="diet-warn-avoid">' + avoid + '</div>'
-      +   (w.reason ? '<div class="diet-warn-reason">' + chatEscape(w.reason) + '</div>' : '')
-      + '</div>';
-  }).join('');
+  // mobile sync
+  var mbox = document.getElementById('mobile-diet-warnings');
+  if (mbox) {
+    if (!warnings || !warnings.length) {
+      mbox.innerHTML = '<div class="card" style="padding:12px 14px;color:var(--teal-deep);font-size:11.5px;background:var(--teal-soft);border-color:rgba(47,131,120,0.28)">'
+        + '<i data-lucide="check-circle" style="width:13px;height:13px;vertical-align:middle"></i> 沒有特別需要避開的食物</div>';
+    } else {
+      mbox.innerHTML = warnings.map(function(w) {
+        var avoid = (w.avoid || []).slice(0, 8).map(function(f) {
+          return '<span class="pill pill-rose">' + chatEscape(f) + '</span>';
+        }).join('');
+        return ''
+          + '<div class="card" style="padding:11px 13px;margin-bottom:8px;position:relative;overflow:hidden">'
+          +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+          +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+          +     '<i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--rose-deep)"></i>'
+          +     '<strong style="font-size:12.5px;color:var(--navy)">' + chatEscape(w.disease || '') + '</strong>'
+          +   '</div>'
+          +   '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' + avoid + '</div>'
+          +   (w.reason ? '<div style="font-size:10.5px;color:var(--text-dim);line-height:1.5">' + chatEscape(w.reason) + '</div>' : '')
+          + '</div>';
+      }).join('');
+    }
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderDietSuggestions(s) {
   var list = document.getElementById('diet-suggest-list');
-  if (!list) return;
   var foods = (s && s[_dietSelectedMeal]) || [];
-  if (!foods.length) {
-    list.innerHTML = '<p class="diet-empty">尚無建議</p>';
-    return;
+  if (list) {
+    if (!foods.length) {
+      list.innerHTML = '<p class="diet-empty">尚無建議</p>';
+    } else {
+      list.innerHTML = foods.map(function(f) {
+        return '<span class="diet-chip-good">' + chatEscape(f) + '</span>';
+      }).join('');
+    }
   }
-  list.innerHTML = foods.map(function(f) {
-    return '<span class="diet-chip-good">' + chatEscape(f) + '</span>';
-  }).join('');
+  // mobile sync — 顯示所有餐次
+  var mlist = document.getElementById('mobile-diet-suggestions');
+  if (mlist) {
+    var all = [];
+    ['breakfast','lunch','dinner','snack'].forEach(function(m) {
+      ((s && s[m]) || []).slice(0, 3).forEach(function(f) { all.push(f); });
+    });
+    if (!all.length) {
+      mlist.innerHTML = '<span style="color:var(--text-muted);font-size:11px">尚無建議</span>';
+    } else {
+      mlist.innerHTML = all.map(function(f) {
+        return '<span class="pill pill-teal">' + chatEscape(f) + '</span>';
+      }).join('');
+    }
+  }
 }
 
 function dietSwitchMeal(m) {
@@ -16313,6 +17294,44 @@ function dietPickLogMeal(m) {
   document.querySelectorAll('#diet-log-meal-pick .diet-log-meal').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-log-meal') === m);
   });
+}
+
+// mobile-only helpers
+function _mobileDietLogMeal(m) {
+  _dietLogMeal = m;
+  document.querySelectorAll('[data-mobile-log-meal]').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-mobile-log-meal') === m);
+  });
+}
+async function _mobileDietSubmit() {
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var foodsEl = document.getElementById('mobile-diet-log-foods');
+  var noteEl = document.getElementById('mobile-diet-log-note');
+  var statusEl = document.getElementById('mobile-diet-log-status');
+  var foods = (foodsEl && foodsEl.value || '').trim();
+  if (!foods) { showToast('請填吃了什麼', 'warning'); return; }
+  var note = (noteEl && noteEl.value || '').trim();
+  if (statusEl) { statusEl.textContent = '送出中…'; statusEl.style.color = 'var(--text-muted)'; }
+  try {
+    var res = await fetch(API + '/diet/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
+      body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.detail || '送出失敗');
+    }
+    if (foodsEl) foodsEl.value = '';
+    if (noteEl) noteEl.value = '';
+    if (statusEl) { statusEl.textContent = '已記錄 ' + DIET_MEAL_LABEL[_dietLogMeal]; statusEl.style.color = 'var(--teal-deep)'; }
+    showToast('飲食打卡完成', 'success');
+    fetchDietTodayRecords();
+    fetchDietWeekly();
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = '送出失敗：' + (e.message || ''); statusEl.style.color = 'var(--rose-deep)'; }
+  }
 }
 
 async function dietSubmitLog() {
@@ -16395,6 +17414,27 @@ function fetchDietTodayRecords() {
           +   '<span class="diet-record-time">' + t + '</span>'
           + '</div>';
       }).join('');
+      // mobile sync
+      var mbox = document.getElementById('mobile-diet-today');
+      if (mbox) {
+        if (!rows.length) {
+          mbox.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">今天還沒有紀錄</div>';
+        } else {
+          var mealEmoji = { breakfast: '🌅', lunch: '🌞', dinner: '🌙', snack: '🍪' };
+          mbox.innerHTML = rows.map(function(r) {
+            var t = new Date(r.eaten_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+            return ''
+              + '<div class="list-row" style="grid-template-columns:30px 1fr auto">'
+              +   '<span style="font-size:16px">' + (mealEmoji[r.meal_type] || '🍽') + '</span>'
+              +   '<div>'
+              +     '<div class="name">' + chatEscape(r.foods || '') + '</div>'
+              +     (r.note ? '<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">' + chatEscape(r.note) + '</div>' : '')
+              +   '</div>'
+              +   '<span class="time">' + t + '</span>'
+              + '</div>';
+          }).join('');
+        }
+      }
     })
     .catch(function(e) {
       console.error('[diet] fetch today records failed:', e);
@@ -16807,7 +17847,54 @@ function drugSearch() {
   // 若是從個人用藥清單跳過來，預填查詢字串
   var prefill = window._drugSearchPrefill || "";
   window._drugSearchPrefill = "";
-  return (
+
+  var _mobileDrugBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">藥物百科</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">查藥名 — 副作用、風險、用法</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">中文 / 英文 / 商品名都可以；結果由 AI 整理僅供衛教參考</div>'
+    +   '</div>'
+
+    // 搜尋列
+    +   '<div class="card" style="padding:10px 12px;display:flex;gap:6px;align-items:center;margin-bottom:10px">'
+    +     '<i data-lucide="search" style="width:16px;height:16px;color:var(--text-muted)"></i>'
+    +     '<input id="mobile-drug-search-input" type="text" placeholder="例：普拿疼、Lipitor" value="' + escapeHtml(prefill) + '" onkeydown="if(event.key===\'Enter\')_mobileDrugSearch()" style="flex:1;border:none;outline:none;font-size:13px;padding:6px;background:transparent" />'
+    +     '<button onclick="_mobileDrugSearch()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">查詢</button>'
+    +   '</div>'
+
+    +   '<label class="ocr-hero-btn" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleDrugPhoto(this)" />'
+    +     '<div style="width:40px;height:40px;border-radius:10px;background:var(--amber-deep,#9A6A1F);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1">'
+    +       '<i data-lucide="camera" style="width:18px;height:18px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1;position:relative;z-index:1">'
+    +       '<div style="font-size:13.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">拍藥盒 / 藥袋 <i data-lucide="arrow-right" style="width:12px;height:12px"></i></div>'
+    +       '<div style="font-size:11px;color:var(--text-dim);margin-top:1px">自動辨識藥名並一筆筆查</div>'
+    +     '</div>'
+    +   '</label>'
+
+    +   '<div id="mobile-drug-result" style="margin-bottom:12px"></div>'
+
+    // 熱門查詢
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="trending-up"></i> 熱門查詢</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-drug-trending" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'
+    +     '<span style="color:var(--text-muted);font-size:11px">載入中…</span>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>實際處方與劑量請以醫師、藥師說明為準。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileDrugBlock + (
+    '<div class="desktop-only">' +
     '<div class="card">' +
       '<h2><i data-lucide="search" style="width:20px;height:20px;vertical-align:middle"></i> 藥物百科查詢</h2>' +
       '<p style="margin-top:8px;color:var(--text-dim)">輸入藥名（中文 / 英文 / 商品名）查詢副作用、風險、用法與基礎衛教。</p>' +
@@ -16835,8 +17922,17 @@ function drugSearch() {
       '<h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> 熱門查詢</h3>' +
       '<p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">最常被查詢的藥物（從快取統計）</p>' +
       '<div id="drug-trending" style="margin-top:8px"><p style="color:var(--text-muted)">載入中…</p></div>' +
+    '</div>' +
     '</div>'
   );
+}
+
+// mobile drug search helpers
+function _mobileDrugSearch() {
+  var n = document.getElementById('mobile-drug-search-input');
+  var dn = document.getElementById('drug-search-input');
+  if (dn && n) dn.value = n.value;
+  if (typeof runDrugSearch === 'function') runDrugSearch();
 }
 
 function loadDrugSearchPage() {
@@ -16870,6 +17966,16 @@ function loadDrugSearchPage() {
       });
       html += '</div>';
       el.innerHTML = html;
+      // mobile mirror
+      var mEl = document.getElementById('mobile-drug-trending');
+      if (mEl) {
+        mEl.innerHTML = items.map(function(it) {
+          var rawQuery = it.name_zh || it.name_en || '';
+          var label = escapeHtml(it.name_zh || it.name_en || '未命名');
+          return '<button class="chip" data-q="' + escapeHtml(rawQuery) + '" onclick="quickDrugSearch(this.dataset.q)">'
+            + label + '<span style="color:var(--text-muted);margin-left:3px;font-size:9.5px">(' + (it.query_count || 0) + ')</span></button>';
+        }).join('');
+      }
     })
     .catch(function() {
       var el = document.getElementById('drug-trending');
@@ -16906,17 +18012,43 @@ function runDrugSearch() {
 
 function renderDrugSearchResult(data) {
   var box = document.getElementById('drug-search-result');
-  if (!box) return;
-  if (!data || data.matched === false) {
-    box.innerHTML =
-      '<div style="padding:16px;text-align:center">' +
-        '<i data-lucide="search-x" style="width:32px;height:32px;color:var(--text-muted)"></i>' +
-        '<p style="margin-top:8px;color:var(--text-dim)">' + escapeHtml((data && data.disclaimer) || '無法辨識此藥名，請確認拼字或嘗試英文藥名。') + '</p>' +
-      '</div>';
-    if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
-    return;
+  var mBox = document.getElementById('mobile-drug-result');
+  var notMatched = !data || data.matched === false;
+  if (notMatched) {
+    var emptyHtml = ''
+      + '<div style="padding:16px;text-align:center">'
+      +   '<i data-lucide="search-x" style="width:32px;height:32px;color:var(--text-muted)"></i>'
+      +   '<p style="margin-top:8px;color:var(--text-dim)">' + escapeHtml((data && data.disclaimer) || '無法辨識此藥名，請確認拼字或嘗試英文藥名。') + '</p>'
+      + '</div>';
+    if (box) box.innerHTML = emptyHtml;
+    if (mBox) mBox.innerHTML = '<div class="card" style="padding:16px;text-align:center"><i data-lucide="search-x" style="width:24px;height:24px;color:var(--text-muted)"></i><p style="margin-top:6px;color:var(--text-dim);font-size:11.5px">' + escapeHtml((data && data.disclaimer) || '無法辨識此藥名') + '</p></div>';
+  } else {
+    if (box) box.innerHTML = _renderDrugCard(data);
+    if (mBox) {
+      var displayName = (data.name_zh && data.name_en) ? data.name_zh + ' (' + data.name_en + ')' : (data.name_zh || data.name_en || '未命名');
+      var aliases = Array.isArray(data.aliases) ? data.aliases : [];
+      var se = data.side_effects || {};
+      mBox.innerHTML = ''
+        + '<div class="card" style="padding:14px;position:relative;overflow:hidden">'
+        +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.16"><use href="#puzzle-bg-blue-teal"/></svg>'
+        +   '<div style="position:relative;z-index:1">'
+        +     '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        +       '<div style="width:34px;height:34px;border-radius:9px;background:var(--accent-tint);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="pill" style="width:17px;height:17px"></i></div>'
+        +       '<div style="flex:1"><div style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.3">' + escapeHtml(displayName) + '</div>'
+        +         (data.cached ? '<span class="pill pill-mute">快取</span>' : '<span class="pill pill-info">AI 即時</span>')
+        +       '</div>'
+        +     '</div>'
+        +     (aliases.length ? '<div style="font-size:10.5px;color:var(--text-dim);margin-bottom:6px">別名：' + aliases.slice(0, 4).map(escapeHtml).join('、') + '</div>' : '')
+        +     (data.use_for ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">用於</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.use_for) + '</div></div>' : '')
+        +     (se.common && se.common.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">常見副作用</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + se.common.slice(0, 6).map(function(s){return '<span class="pill pill-warn">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+        +     (se.serious && se.serious.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--rose-deep)">嚴重副作用 — 立即就醫</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + se.serious.slice(0, 6).map(function(s){return '<span class="pill pill-rose">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+        +     (data.dosage ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">用法</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.dosage) + '</div></div>' : '')
+        +     (data.precautions ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">注意事項</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.precautions) + '</div></div>' : '')
+        +     (data.disclaimer ? '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.5">' + escapeHtml(data.disclaimer) + '</div>' : '')
+        +   '</div>'
+        + '</div>';
+    }
   }
-  box.innerHTML = _renderDrugCard(data);
   if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
 }
 
@@ -17091,7 +18223,54 @@ var _disease = {
 function diseaseSearch() {
   var prefill = window._diseaseSearchPrefill || '';
   window._diseaseSearchPrefill = '';
-  return ''
+
+  var _mobileDisBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div class="pv-hero-eye">疾病百科</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">查疾病 — 資訊、用藥、風險、未來</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">查完還能追問細節；結果由 AI 整理僅供衛教參考</div>'
+    +   '</div>'
+
+    +   '<div class="card" style="padding:10px 12px;display:flex;gap:6px;align-items:center;margin-bottom:10px">'
+    +     '<i data-lucide="search" style="width:16px;height:16px;color:var(--text-muted)"></i>'
+    +     '<input id="mobile-disease-search-input" type="text" placeholder="例：第二型糖尿病、痛風" value="' + escapeHtml(prefill) + '" onkeydown="if(event.key===\'Enter\')_mobileDisSearch()" style="flex:1;border:none;outline:none;font-size:13px;padding:6px;background:transparent" />'
+    +     '<button onclick="_mobileDisSearch()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">查詢</button>'
+    +   '</div>'
+
+    +   '<div id="mobile-disease-result" style="margin-bottom:12px"></div>'
+
+    // 追問區（mirror 桌機 disease-chat-stream）
+    +   '<div id="mobile-disease-chat-wrap" style="display:none;margin-bottom:12px">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="message-circle"></i> 繼續追問</h3>'
+    +       '<span class="sec-spacer"></span>'
+    +     '</div>'
+    +     '<div id="mobile-disease-chat-stream" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px;max-height:45vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>'
+    +     '<form onsubmit="event.preventDefault();_mobileDisChatSend()" style="display:flex;gap:5px;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:6px 8px;align-items:center">'
+    +       '<input id="mobile-disease-chat-input" type="text" placeholder="追問細節…" style="flex:1;border:none;outline:none;font-size:13px;padding:6px;background:transparent" />'
+    +       '<button type="submit" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer"><i data-lucide="send" style="width:13px;height:13px"></i></button>'
+    +     '</form>'
+    +   '</div>'
+
+    // 熱門查詢
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="trending-up"></i> 熱門查詢</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-disease-trending" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'
+    +     '<span style="color:var(--text-muted);font-size:11px">載入中…</span>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>實際診斷與治療請以您的主治醫師為準。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileDisBlock + ''
+    + '<div class="desktop-only">'
     + '<div class="card">'
     +   '<h2><i data-lucide="stethoscope" style="width:20px;height:20px;vertical-align:middle"></i> 疾病百科查詢</h2>'
     +   '<p style="margin-top:8px;color:var(--text-dim)">輸入疾病名稱（中文 / 英文）查詢資訊、用藥、風險與未來發展。第一次查詢由 AI 整理，第二次直接從快取回。</p>'
@@ -17130,7 +18309,21 @@ function diseaseSearch() {
     +   '<h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> 熱門查詢</h3>'
     +   '<p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">最常被查詢的疾病</p>'
     +   '<div id="disease-trending" style="margin-top:8px"><p style="color:var(--text-muted)">載入中…</p></div>'
+    + '</div>'
     + '</div>';
+}
+
+function _mobileDisSearch() {
+  var n = document.getElementById('mobile-disease-search-input');
+  var dn = document.getElementById('disease-search-input');
+  if (dn && n) dn.value = n.value;
+  if (typeof runDiseaseSearch === 'function') runDiseaseSearch();
+}
+function _mobileDisChatSend() {
+  var n = document.getElementById('mobile-disease-chat-input');
+  var dn = document.getElementById('disease-chat-input');
+  if (dn && n) { dn.value = n.value; n.value = ''; }
+  if (typeof diseaseChatSend === 'function') diseaseChatSend();
 }
 
 function loadDiseaseSearchPage() {
@@ -17160,6 +18353,16 @@ function loadDiseaseSearchPage() {
       });
       html += '</div>';
       el.innerHTML = html;
+      // mobile mirror
+      var mEl = document.getElementById('mobile-disease-trending');
+      if (mEl) {
+        mEl.innerHTML = items.map(function(it) {
+          var rawQuery = it.name_zh || it.name_en || '';
+          var label = escapeHtml(it.name_zh || it.name_en || '未命名');
+          return '<button class="chip" data-q="' + escapeHtml(rawQuery) + '" onclick="quickDiseaseSearch(this.dataset.q)">'
+            + label + '<span style="color:var(--text-muted);margin-left:3px;font-size:9.5px">(' + (it.query_count || 0) + ')</span></button>';
+        }).join('');
+      }
     })
     .catch(function() {
       var el = document.getElementById('disease-trending');
@@ -17249,16 +18452,20 @@ function _diseaseDisclaimerBlock(text) {
 
 function renderDiseaseResult(data) {
   var box = document.getElementById('disease-result');
-  if (!box) return;
+  var mBox = document.getElementById('mobile-disease-result');
+  var mChatWrap = document.getElementById('mobile-disease-chat-wrap');
 
   if (!data || data.matched === false) {
-    box.innerHTML =
-      '<div style="padding:16px;text-align:center">'
+    var emptyHtml = ''
+      + '<div style="padding:16px;text-align:center">'
       + '<i data-lucide="search-x" style="width:32px;height:32px;color:var(--text-muted)"></i>'
       + '<p style="margin-top:8px;color:var(--text-dim)">' + escapeHtml((data && data.disclaimer) || '無法辨識此疾病名稱，請確認拼字或嘗試英文。') + '</p>'
       + _diseaseRefBlock([])
       + _diseaseDisclaimerBlock((data && data.disclaimer) || '此資訊由 AI 整理，僅供衛教參考。')
       + '</div>';
+    if (box) box.innerHTML = emptyHtml;
+    if (mBox) mBox.innerHTML = '<div class="card" style="padding:16px;text-align:center"><i data-lucide="search-x" style="width:24px;height:24px;color:var(--text-muted)"></i><p style="margin-top:6px;color:var(--text-dim);font-size:11.5px">' + escapeHtml((data && data.disclaimer) || '無法辨識此疾病') + '</p></div>';
+    if (mChatWrap) mChatWrap.style.display = 'none';
     var chatCard = document.getElementById('disease-chat-card');
     if (chatCard) chatCard.style.display = 'none';
     if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
@@ -17311,7 +18518,40 @@ function renderDiseaseResult(data) {
   html += _diseaseRefBlock(data.references || []);
   html += _diseaseDisclaimerBlock(data.disclaimer);
 
-  box.innerHTML = html;
+  if (box) box.innerHTML = html;
+
+  // mobile mirror — v11 puzzle card
+  if (mBox) {
+    var mHtml = ''
+      + '<div class="card" style="padding:14px;position:relative;overflow:hidden">'
+      +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.16"><use href="#puzzle-bg-rose-amber"/></svg>'
+      +   '<div style="position:relative;z-index:1">'
+      +     '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+      +       '<div style="width:34px;height:34px;border-radius:9px;background:var(--rose-tint);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="stethoscope" style="width:17px;height:17px"></i></div>'
+      +       '<div style="flex:1"><div style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.3">' + escapeHtml(name) + '</div>'
+      +         (subtitle ? '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">' + subtitle + '</div>' : '')
+      +       '</div>'
+      +       (data.cached ? '<span class="pill pill-mute">快取</span>' : '<span class="pill pill-info">AI</span>')
+      +     '</div>'
+      +     (data.overview ? '<div style="font-size:11.5px;line-height:1.6;margin-top:8px"><strong style="color:var(--navy)">是什麼病</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.overview) + '</div></div>' : '')
+      +     (data.symptoms && data.symptoms.common && data.symptoms.common.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">常見症狀</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + data.symptoms.common.slice(0, 6).map(function(s){return '<span class="pill pill-info">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+      +     (data.symptoms && data.symptoms.warning && data.symptoms.warning.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--rose-deep)">警訊症狀（立刻就醫）</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + data.symptoms.warning.slice(0, 6).map(function(s){return '<span class="pill pill-rose">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+      +     (data.common_medications && data.common_medications.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">常用藥物</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + data.common_medications.slice(0, 6).map(function(s){return '<span class="pill pill-teal">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+      +     (data.complications && data.complications.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">長期風險</strong><ul style="margin:4px 0 0;padding-left:18px;color:var(--text-dim);font-size:11px">' + data.complications.slice(0, 4).map(function(s){return '<li>' + escapeHtml(s) + '</li>';}).join('') + '</ul></div>' : '')
+      +     (data.self_care && data.self_care.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">自我照護</strong><ul style="margin:4px 0 0;padding-left:18px;color:var(--text-dim);font-size:11px">' + data.self_care.slice(0, 4).map(function(s){return '<li>' + escapeHtml(s) + '</li>';}).join('') + '</ul></div>' : '')
+      +     (data.prognosis ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">未來發展</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.prognosis) + '</div></div>' : '')
+      +     '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.5">' + escapeHtml(data.disclaimer || '此資訊由 AI 整理，僅供衛教參考。') + '</div>'
+      +   '</div>'
+      + '</div>';
+    mBox.innerHTML = mHtml;
+  }
+  if (mChatWrap) {
+    mChatWrap.style.display = '';
+    var mStream = document.getElementById('mobile-disease-chat-stream');
+    if (mStream) {
+      mStream.innerHTML = '<div style="background:var(--bg-soft);padding:8px 12px;border-radius:10px 10px 10px 4px;color:var(--text-dim);font-size:12px;line-height:1.55">👋 整理好「<strong>' + escapeHtml(name) + '</strong>」了，有什麼想再問的嗎？</div>';
+    }
+  }
 
   // 顯示對話追問區，並重置串流
   var chatCard = document.getElementById('disease-chat-card');
@@ -17356,6 +18596,13 @@ function diseaseChatSend() {
     '<div id="disease-chat-thinking" style="display:flex;justify-content:flex-start"><div style="padding:10px 14px;border-radius:14px;background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border-glass);font-size:0.95rem">疾病助手思考中…</div></div>'
   );
   stream.scrollTop = stream.scrollHeight;
+  // mobile mirror
+  var mStream = document.getElementById('mobile-disease-chat-stream');
+  if (mStream) {
+    mStream.insertAdjacentHTML('beforeend', '<div style="display:flex;justify-content:flex-end"><div style="max-width:75%;background:var(--accent);color:#fff;padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:12.5px;line-height:1.5;white-space:pre-wrap">' + escapeHtml(msg) + '</div></div>');
+    mStream.insertAdjacentHTML('beforeend', '<div id="mobile-disease-chat-thinking" style="display:flex;justify-content:flex-start"><div style="padding:8px 12px;border-radius:14px 14px 14px 4px;background:var(--bg-soft);color:var(--text-muted);font-size:12px">思考中…</div></div>');
+    mStream.scrollTop = mStream.scrollHeight;
+  }
   if (input) input.value = '';
 
   _disease.pendingMsg = true;
@@ -17380,6 +18627,15 @@ function diseaseChatSend() {
         + _diseaseRefBlock(refs)
         + _diseaseDisclaimerBlock(disclaimer);
       stream.insertAdjacentHTML('beforeend', _diseaseChatBubble('assistant', bubbleHtml));
+
+      // mobile mirror
+      var mStream2 = document.getElementById('mobile-disease-chat-stream');
+      if (mStream2) {
+        var mThinking = document.getElementById('mobile-disease-chat-thinking');
+        if (mThinking) mThinking.remove();
+        mStream2.insertAdjacentHTML('beforeend', '<div style="display:flex;justify-content:flex-start"><div style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55;white-space:pre-wrap">' + escapeHtml(reply) + '</div></div>');
+        mStream2.scrollTop = mStream2.scrollHeight;
+      }
 
       _disease.history.push({ role: 'user', content: msg });
       _disease.history.push({ role: 'assistant', content: reply });
@@ -17433,7 +18689,72 @@ function reminders() {
   var permState = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
   var permLabel = ({ granted: '已允許', denied: '已封鎖', default: '尚未授權', unsupported: '此瀏覽器不支援' })[permState] || permState;
   var permColor = permState === 'granted' ? '#2ecc71' : (permState === 'denied' ? '#e74c3c' : '#f39c12');
-  return ''
+  var permPillCls = permState === 'granted' ? 'pill-ok' : (permState === 'denied' ? 'pill-rose' : 'pill-warn');
+
+  // ─── Mobile v11 block ───
+  var _mobileRemBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">提醒中心</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">吃藥／回診／檢查　到時間提醒你</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">站內通知一定收到；手機推播要先授權</div>'
+    +     '<div style="display:flex;gap:5px;margin-top:8px;position:relative;z-index:1;align-items:center">'
+    +       '<span class="pill ' + permPillCls + '"><i data-lucide="shield-check"></i>' + permLabel + '</span>'
+    +       '<button class="pv-btn" onclick="reminderEnablePush()" style="margin-top:0"><i data-lucide="bell-plus"></i> 啟用推播</button>'
+    +     '</div>'
+    +   '</div>'
+
+    // 通知中心 — 站內通知
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="inbox"></i> 站內通知</h3>'
+    +     '<span id="mobile-rem-inbox-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="reminderMarkAllRead()">全部已讀 <i data-lucide="check-check"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-rem-inbox" class="list-card" style="margin-bottom:12px">'
+    +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 我的提醒
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="list-checks"></i> 我的提醒</h3>'
+    +     '<span id="mobile-rem-list-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="loadRemindersPage()">重新整理 <i data-lucide="refresh-cw"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-rem-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'
+    +     '<div class="card" style="padding:14px;color:var(--text-muted);font-size:11px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 新增提醒卡（mobile 簡化版）
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="plus-circle"></i> 新增提醒</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">'
+    +     '<input type="text" id="mobile-rem-title" placeholder="標題（必填）例如：早餐後血壓藥" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +     '<textarea id="mobile-rem-body" rows="2" placeholder="說明（可選）例如：白色 5mg" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical"></textarea>'
+    +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+    +       '<select id="mobile-rem-type" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;background:#fff">'
+    +         '<option value="medication">吃藥</option><option value="appointment">回診</option><option value="lab">檢查</option><option value="measurement">量測</option><option value="custom" selected>自訂</option>'
+    +       '</select>'
+    +       '<select id="mobile-rem-freq" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;background:#fff">'
+    +         '<option value="once" selected>單次</option><option value="daily">每天</option><option value="weekly">每週</option><option value="monthly">每月</option>'
+    +       '</select>'
+    +     '</div>'
+    +     '<input id="mobile-rem-when" type="datetime-local" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +     '<button onclick="_mobileRemSubmit()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="save" style="width:13px;height:13px"></i> 建立提醒</button>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>提醒僅供協助記憶，不取代醫囑。請以醫師指示為主。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileRemBlock
+    + '<div class="desktop-only">'
     + '<div class="card">'
     + '  <h2><i data-lucide="bell-ring" style="width:20px;height:20px;vertical-align:middle"></i> 提醒通知</h2>'
     + '  <p style="margin-top:8px;color:var(--text-dim)">設定吃藥、回診、檢查等提醒，到時間會以站內通知或手機推播提醒你。</p>'
@@ -17520,7 +18841,98 @@ function reminders() {
     + '    <button class="secondary" onclick="loadRemindersPage()" style="padding:4px 12px;font-size:0.85rem">重新整理</button>'
     + '  </div>'
     + '  <div id="rem-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中…</p></div>'
-    + '</div>';
+    + '</div>'
+    + '</div>'; // close .desktop-only
+}
+
+// ─── mobile reminders helpers ───
+async function _mobileRemSubmit() {
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var title = (document.getElementById('mobile-rem-title') || {}).value || '';
+  if (!title.trim()) { showToast('請填提醒標題', 'warning'); return; }
+  var body = {
+    patient_id: pid,
+    reminder_type: (document.getElementById('mobile-rem-type') || {}).value || 'custom',
+    frequency: (document.getElementById('mobile-rem-freq') || {}).value || 'once',
+    title: title.trim(),
+    body: (document.getElementById('mobile-rem-body') || {}).value || '',
+    first_fire_at: (document.getElementById('mobile-rem-when') || {}).value || null,
+  };
+  try {
+    var res = await fetch(API + '/reminders/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(await _parseApiError(res));
+    showToast('已建立提醒', 'success');
+    document.getElementById('mobile-rem-title').value = '';
+    document.getElementById('mobile-rem-body').value = '';
+    reminderRefreshList();
+  } catch (e) {
+    showToast('建立失敗：' + (e.message || ''), 'error');
+  }
+}
+
+function _mobileRemSyncList() {
+  var box = document.getElementById('mobile-rem-list');
+  var cnt = document.getElementById('mobile-rem-list-count');
+  if (cnt) cnt.textContent = (_remindersList || []).length + ' 筆';
+  if (!box) return;
+  if (!_remindersList || !_remindersList.length) {
+    box.innerHTML = '<div class="card" style="padding:14px;color:var(--text-muted);font-size:11px;text-align:center">還沒有提醒，先在下方建立第一筆</div>';
+    return;
+  }
+  var typeLabel = { medication: '吃藥', appointment: '回診', lab: '檢查', measurement: '量測', custom: '自訂' };
+  var typePillCls = { medication: 'pill-teal', appointment: 'pill-info', lab: 'pill-warn', measurement: 'pill-info', custom: 'pill-mute' };
+  var freqLabel = { once: '單次', daily: '每天', weekly: '每週', monthly: '每月' };
+  box.innerHTML = _remindersList.map(function(r) {
+    var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+    var active = (r.active === true || r.active === 1);
+    var sid = String(r.id || '');
+    return ''
+      + '<div class="card" style="padding:11px 13px;position:relative;overflow:hidden' + (active ? '' : ';opacity:0.55') + '">'
+      +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+      +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'
+      +     '<span class="pill ' + (typePillCls[r.reminder_type] || 'pill-mute') + '">' + (typeLabel[r.reminder_type] || r.reminder_type) + '</span>'
+      +     '<span class="pill pill-mute">' + (freqLabel[r.frequency] || r.frequency) + '</span>'
+      +     (active ? '' : '<span class="pill pill-mute">已停用</span>')
+      +   '</div>'
+      +   '<div style="font-size:12.5px;font-weight:600;color:var(--navy);line-height:1.4">' + escapeHtml(r.title || '') + '</div>'
+      +   '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:3px">下次 · ' + escapeHtml(next) + '</div>'
+      +   (r.body ? '<div style="font-size:11px;color:var(--text-dim);margin-top:5px;line-height:1.5">' + escapeHtml(r.body) + '</div>' : '')
+      +   '<div style="display:flex;gap:5px;margin-top:8px">'
+      +     '<button data-action="toggle" data-id="' + sid + '" data-active="' + (active?'1':'0') + '" style="border:1px solid var(--border);background:#fff;color:var(--text-dim);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer">' + (active ? '停用' : '啟用') + '</button>'
+      +     '<button data-action="delete" data-id="' + sid + '" style="border:1px solid var(--border);background:#fff;color:var(--rose-deep);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer">刪除</button>'
+      +   '</div>'
+      + '</div>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileRemSyncInbox() {
+  var box = document.getElementById('mobile-rem-inbox');
+  var cnt = document.getElementById('mobile-rem-inbox-count');
+  if (cnt) cnt.textContent = ((_remindersInbox || []).filter(function(i) { return !i.read_at; }).length) + ' 未讀';
+  if (!box) return;
+  if (!_remindersInbox || !_remindersInbox.length) {
+    box.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">沒有通知</div>';
+    return;
+  }
+  box.innerHTML = _remindersInbox.slice(0, 8).map(function(i) {
+    var t = i.created_at ? new Date(i.created_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    var unread = !i.read_at;
+    return ''
+      + '<div class="list-row" style="grid-template-columns:14px 1fr auto;padding:10px 12px;align-items:flex-start" data-action="read" data-id="' + escapeHtml(String(i.id || '')) + '">'
+      +   '<span style="width:8px;height:8px;border-radius:50%;background:' + (unread ? 'var(--accent)' : 'transparent') + ';margin-top:5px"></span>'
+      +   '<div>'
+      +     '<div class="name" style="font-weight:' + (unread ? '600' : '500') + '">' + escapeHtml(i.title || '') + '</div>'
+      +     (i.body ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;line-height:1.5">' + escapeHtml(i.body) + '</div>' : '')
+      +   '</div>'
+      +   '<span class="time">' + escapeHtml(t) + '</span>'
+      + '</div>';
+  }).join('');
 }
 
 function reminderToggleSource() {
@@ -17653,9 +19065,35 @@ function _remindersBindDelegated() {
       }
     });
   }
+  // mobile-only mirrors
+  var mListEl = document.getElementById('mobile-rem-list');
+  if (mListEl && !mListEl.dataset.bound) {
+    mListEl.dataset.bound = '1';
+    mListEl.addEventListener('click', function(e) {
+      var btn = e.target.closest && e.target.closest('[data-action]');
+      if (!btn || !mListEl.contains(btn)) return;
+      var id = btn.getAttribute('data-id');
+      var action = btn.getAttribute('data-action');
+      if (action === 'toggle') reminderToggleActive(id, btn.getAttribute('data-active') !== '1');
+      else if (action === 'delete') reminderDelete(id);
+    });
+  }
+  var mInboxEl = document.getElementById('mobile-rem-inbox');
+  if (mInboxEl && !mInboxEl.dataset.bound) {
+    mInboxEl.dataset.bound = '1';
+    mInboxEl.addEventListener('click', function(e) {
+      var btn = e.target.closest && e.target.closest('[data-action]');
+      if (!btn || !mInboxEl.contains(btn)) return;
+      if (btn.getAttribute('data-action') === 'read') {
+        reminderMarkRead(btn.getAttribute('data-id'));
+      }
+    });
+  }
 }
 
 function reminderRenderList() {
+  // mobile mirror first
+  if (typeof _mobileRemSyncList === 'function') _mobileRemSyncList();
   var el = document.getElementById('rem-list');
   if (!el) return;
   _remClear(el);
@@ -17721,6 +19159,7 @@ function reminderRefreshInbox() {
 }
 
 function reminderRenderInbox(unread) {
+  if (typeof _mobileRemSyncInbox === 'function') _mobileRemSyncInbox();
   var el = document.getElementById('rem-inbox-list');
   if (!el) return;
   _remClear(el);
@@ -18481,8 +19920,40 @@ function fetchNearestFollowUp() {
 }
 
 function followUps() {
-  return ''
-    + '<section class="fu-page">'
+  // ─── Mobile v11 block ───
+  var _mobileFuBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">下次回診</div>'
+    +     '<div class="pv-hero-num" id="mobile-fu-next-num">—<span class="unit" id="mobile-fu-next-unit">尚未排定</span></div>'
+    +     '<div class="pv-hero-doc" id="mobile-fu-next-doc" style="margin-top:6px">點下方「新增回診」加入第一筆</div>'
+    +     '<button class="pv-btn" onclick="openFollowUpEditor()"><i data-lucide="plus"></i> 新增回診</button>'
+    +   '</div>'
+
+    // 篩選 chip
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="calendar-clock"></i> 回診排程</h3>'
+    +     '<span id="mobile-fu-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="chip-group" style="margin-bottom:10px">'
+    +     '<button class="chip active" data-mobile-fu-filter="upcoming" onclick="filterFollowUps(\'upcoming\')">即將到來</button>'
+    +     '<button class="chip" data-mobile-fu-filter="all" onclick="filterFollowUps(\'all\')">全部</button>'
+    +     '<button class="chip" data-mobile-fu-filter="completed" onclick="filterFollowUps(\'completed\')">已完成</button>'
+    +   '</div>'
+
+    // 列表 — 由 renderFollowUpList mirror 進來
+    +   '<div id="mobile-fu-list" style="display:flex;flex-direction:column;gap:8px"></div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>回診排程僅供個人提醒，不會自動掛號。請依各醫院掛號流程確認時段。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileFuBlock + ''
+    + '<section class="fu-page desktop-only">'
     +   '<header class="fu-head">'
     +     '<div>'
     +       '<p class="fu-eyebrow">// follow_ups &gt; scheduled</p>'
@@ -18522,7 +19993,6 @@ function loadFollowUpsPage() {
 
 function renderFollowUpList() {
   var box = document.getElementById('fu-list');
-  if (!box) return;
   var rows = _followUpsCache || [];
   var today = new Date(); today.setHours(0, 0, 0, 0);
   var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
@@ -18538,16 +20008,113 @@ function renderFollowUpList() {
   } else {
     filtered.sort(function(a, b) { return _foDateOnly(a.scheduled_date) > _foDateOnly(b.scheduled_date) ? -1 : 1; });
   }
-  if (!filtered.length) {
-    var msg = _fuFilter === 'upcoming'
-      ? '尚未排定任何回診。點右上「新增回診」加入第一筆。'
-      : (_fuFilter === 'completed' ? '還沒有已完成的回診紀錄。' : '尚未有任何回診紀錄。');
-    box.innerHTML = '<p class="fu-empty">' + msg + '</p>';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  if (box) {
+    if (!filtered.length) {
+      var msg = _fuFilter === 'upcoming'
+        ? '尚未排定任何回診。點右上「新增回診」加入第一筆。'
+        : (_fuFilter === 'completed' ? '還沒有已完成的回診紀錄。' : '尚未有任何回診紀錄。');
+      box.innerHTML = '<p class="fu-empty">' + msg + '</p>';
+    } else {
+      box.innerHTML = filtered.map(_renderFollowUpCard).join('');
+    }
+  }
+
+  // mobile mirror
+  _mobileSyncFollowUpHero(rows);
+  _mobileSyncFollowUpList(filtered);
+
+  // 同步 mobile filter chip
+  document.querySelectorAll('[data-mobile-fu-filter]').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-mobile-fu-filter') === _fuFilter);
+  });
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileSyncFollowUpHero(allRows) {
+  var numEl = document.getElementById('mobile-fu-next-num');
+  var unitEl = document.getElementById('mobile-fu-next-unit');
+  var docEl = document.getElementById('mobile-fu-next-doc');
+  if (!numEl) return;
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  var upcoming = (allRows || []).filter(function(r) {
+    return r.status === 'scheduled' && _foDateOnly(r.scheduled_date) >= todayStr;
+  }).sort(function(a, b) { return _foDateOnly(a.scheduled_date) < _foDateOnly(b.scheduled_date) ? -1 : 1; });
+  if (!upcoming.length) {
+    numEl.textContent = '—';
+    if (unitEl) unitEl.textContent = '尚未排定回診';
+    if (docEl) docEl.textContent = '點下方「新增回診」加入第一筆';
     return;
   }
-  box.innerHTML = filtered.map(_renderFollowUpCard).join('');
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+  var next = upcoming[0];
+  var days = _foDaysFrom(next.scheduled_date);
+  if (days === 0) { numEl.innerHTML = '今天<span class="unit"></span>'; }
+  else { numEl.innerHTML = (days > 0 ? days : '—') + '<span class="unit">天後 · ' + _foDateOnly(next.scheduled_date).replace(/-/g, '/') + '</span>'; }
+  if (docEl) {
+    var parts = [];
+    if (next.department) parts.push(next.department);
+    if (next.hospital) parts.push(next.hospital);
+    if (next.doctor_name) parts.push(next.doctor_name);
+    docEl.textContent = parts.join(' · ') || '記得帶健保卡與藥袋';
+  }
+}
+
+function _mobileSyncFollowUpList(filtered) {
+  var box = document.getElementById('mobile-fu-list');
+  var cntEl = document.getElementById('mobile-fu-count');
+  if (cntEl) cntEl.textContent = filtered.length + ' 筆';
+  if (!box) return;
+  if (!filtered.length) {
+    var msg = _fuFilter === 'upcoming'
+      ? '尚未排定任何回診'
+      : (_fuFilter === 'completed' ? '還沒有已完成的回診' : '尚未有任何回診');
+    box.innerHTML = '<div class="card" style="padding:14px;color:var(--text-muted);font-size:11.5px;text-align:center">' + msg + '</div>';
+    return;
+  }
+  box.innerHTML = filtered.map(function(row) {
+    var status = row.status || 'scheduled';
+    var days = _foDaysFrom(row.scheduled_date);
+    var pillCls = 'pill-info';
+    var countdownText = '';
+    if (status === 'completed') { pillCls = 'pill-ok'; countdownText = '已完成'; }
+    else if (status === 'missed') { pillCls = 'pill-rose'; countdownText = '未到'; }
+    else if (status === 'cancelled') { pillCls = 'pill-mute'; countdownText = '已取消'; }
+    else if (days !== null) {
+      if (days > 0) { countdownText = '還有 ' + days + ' 天'; pillCls = days <= 3 ? 'pill-warn' : 'pill-info'; }
+      else if (days === 0) { countdownText = '就是今天'; pillCls = 'pill-warn'; }
+      else { countdownText = '已過期 ' + (-days) + ' 天'; pillCls = 'pill-rose'; }
+    }
+    var sess = _foSessionLabel(row.session);
+    var meta = [row.department, row.hospital].filter(Boolean).map(escapeHtml).join(' · ');
+    var safeId = escapeHtml(row.id);
+    var doneBtn = status === 'scheduled'
+      ? '<button onclick="markFollowUpStatus(\'' + safeId + '\',\'completed\')" style="border:1px solid var(--green,#3F8E5C);background:var(--green-soft);color:var(--green-deep);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i data-lucide="check" style="width:11px;height:11px"></i>已回診</button>'
+      : '';
+    var reopenBtn = status !== 'scheduled'
+      ? '<button onclick="markFollowUpStatus(\'' + safeId + '\',\'scheduled\')" style="border:1px solid var(--border);background:#fff;color:var(--text-dim);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i data-lucide="rotate-ccw" style="width:11px;height:11px"></i>恢復</button>'
+      : '';
+    return ''
+      + '<div class="card" style="padding:12px 14px;position:relative;overflow:hidden">'
+      +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+      +   '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+      +     '<i data-lucide="calendar" style="width:14px;height:14px;color:var(--accent-deep);margin-top:1px;flex-shrink:0"></i>'
+      +     '<div style="flex:1;min-width:0">'
+      +       '<div style="font-size:13px;font-weight:600;color:var(--navy);font-family:var(--font-mono,monospace)">' + escapeHtml(_foFormatDate(row.scheduled_date)) + (sess ? ' · ' + escapeHtml(sess) : '') + '</div>'
+      +       (countdownText ? '<div style="margin-top:3px"><span class="pill ' + pillCls + '">' + countdownText + '</span></div>' : '')
+      +     '</div>'
+      +   '</div>'
+      +   (meta ? '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;display:flex;align-items:center;gap:4px"><i data-lucide="building-2" style="width:11px;height:11px"></i>' + meta + '</div>' : '')
+      +   (row.doctor_name ? '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;display:flex;align-items:center;gap:4px"><i data-lucide="stethoscope" style="width:11px;height:11px"></i>' + escapeHtml(row.doctor_name) + '</div>' : '')
+      +   (row.notes ? '<div style="font-size:11px;color:var(--text-dim);line-height:1.5;margin-top:4px;padding:6px 8px;background:var(--bg-soft);border-radius:6px">' + escapeHtml(row.notes) + '</div>' : '')
+      +   '<div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap">'
+      +     doneBtn + reopenBtn
+      +     '<button onclick="openFollowUpEditor(\'' + safeId + '\')" style="border:1px solid var(--border);background:#fff;color:var(--text-dim);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i data-lucide="pencil" style="width:11px;height:11px"></i>編輯</button>'
+      +     '<button onclick="deleteFollowUp(\'' + safeId + '\')" style="border:1px solid var(--border);background:#fff;color:var(--rose-deep);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i data-lucide="trash-2" style="width:11px;height:11px"></i>刪除</button>'
+      +   '</div>'
+      + '</div>';
+  }).join('');
 }
 
 function _renderFollowUpCard(row) {
