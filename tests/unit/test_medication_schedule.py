@@ -149,6 +149,32 @@ def test_default_min_interval_when_no_interval_hours():
     assert res["required_hours"] == DEFAULT_MIN_INTERVAL_HOURS
 
 
+def test_prn_with_short_interval_uses_doctor_setting():
+    # PRN q2h（止痛藥常見指示）：required 用 2 小時，不被 4 小時 default 抬高
+    res_block = check_dose_safety(
+        [_log_taken(1.5)], interval_hours=2, is_prn=True, now=_now()
+    )
+    assert res_block["allowed"] is False
+    assert res_block["level"] == "block"
+    assert res_block["required_hours"] == 2
+
+    # 過了 PRN 的 2 小時 → 放行（即使還沒到 4 小時 default）
+    res_safe = check_dose_safety(
+        [_log_taken(2.5)], interval_hours=2, is_prn=True, now=_now()
+    )
+    assert res_safe["allowed"] is True
+    assert res_safe["level"] == "safe"
+
+
+def test_prn_without_interval_still_uses_default():
+    # PRN 但沒明確 interval（醫師只寫「需要時」）→ 仍以 4 小時為底線
+    res = check_dose_safety(
+        [_log_taken(3)], interval_hours=None, is_prn=True, now=_now()
+    )
+    assert res["allowed"] is False
+    assert res["required_hours"] == DEFAULT_MIN_INTERVAL_HOURS
+
+
 def test_skipped_logs_are_ignored():
     logs = [
         {"taken": False, "taken_at": (_now() - timedelta(hours=0.5)).isoformat()},

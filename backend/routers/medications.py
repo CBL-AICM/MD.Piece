@@ -295,7 +295,11 @@ def can_take(patient_id: str = Query(...), medication_id: str = Query(...)):
         raise HTTPException(status_code=404, detail="找不到該藥物")
     schedule = annotate_medication(med)
     logs = _recent_logs(sb, patient_id, medication_id)
-    safety = check_dose_safety(logs, interval_hours=schedule.get("interval_hours"))
+    safety = check_dose_safety(
+        logs,
+        interval_hours=schedule.get("interval_hours"),
+        is_prn=schedule.get("is_prn", False),
+    )
     return {
         "medication_id": medication_id,
         "name": med.get("name"),
@@ -309,12 +313,14 @@ def log_medication(body: MedicationLogCreate):
     """
     記錄服藥（打卡）。
 
-    對「其他」分類（每 X 小時 / PRN）的藥：服藥前會檢查最近一次打卡時間，
-    若距離 < 安全間隔（預設 4 小時，或藥物標示的間隔較長者），
-    且 body.force == False，會回 409 並附帶風險訊息，前端再決定要不要強制送出。
+    所有藥都會檢查「同一顆藥距離上次服藥時間」：
+      - 預設安全間隔 4 小時（DEFAULT_MIN_INTERVAL_HOURS）
+      - PRN 藥且醫師指定 interval_hours：依醫師指示（可低於 4，例如止痛藥 q2h prn）
+      - 其他間隔藥（每 X 小時）：interval_hours 與 4 取較大者
+    若 body.force == False 且未達安全間隔，回 409 dose_too_soon，
+    前端 showDoseSafetyDialog 讓使用者按「我了解風險仍要記錄」才強制送出。
 
-    跳過服藥（taken == False）或固定時段藥（早 / 中 / 晚）不會被擋。
-
+    跳過服藥（taken == False）不會被擋。
     寫入後若近 7 天服藥率 < 50% 自動建立 missed_medication 警示。
     """
     sb = get_supabase()
@@ -325,23 +331,28 @@ def log_medication(body: MedicationLogCreate):
         if not med:
             raise HTTPException(status_code=404, detail="找不到該藥物")
         schedule = annotate_medication(med)
-        # 只對「其他」分類強制安全檢查（每 X 小時 / PRN 才會有過量風險）；
-        # 早 / 中 / 晚 是固定時段，醫師指定怎麼吃就怎麼吃，不要擋。
-        if schedule.get("is_other"):
-            logs = _recent_logs(sb, body.patient_id, body.medication_id)
-            safety = check_dose_safety(logs, interval_hours=schedule.get("interval_hours"))
-            safety_payload = safety
-            if not safety["allowed"] and not body.force:
-                raise HTTPException(
-                    status_code=409,
-                    detail={
-                        "code": "dose_too_soon",
-                        "message": safety["message"],
-                        "safety": safety,
-                        "schedule": schedule,
-                        "min_hours": DEFAULT_MIN_INTERVAL_HOURS,
-                    },
-                )
+        # 所有藥（早/中/晚 + 其他 + PRN）都做同一顆藥的劑量間隔檢查：
+        #   - 早/中/晚（沒有 interval_hours）：用 4 小時 default
+        #   - 其他間隔藥：max(4, interval_hours)
+        #   - PRN 有醫師指定 interval：用醫師指示（可 < 4）
+        logs = _recent_logs(sb, body.patient_id, body.medication_id)
+        safety = check_dose_safety(
+            logs,
+            interval_hours=schedule.get("interval_hours"),
+            is_prn=schedule.get("is_prn", False),
+        )
+        safety_payload = safety
+        if not safety["allowed"] and not body.force:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "dose_too_soon",
+                    "message": safety["message"],
+                    "safety": safety,
+                    "schedule": schedule,
+                    "min_hours": DEFAULT_MIN_INTERVAL_HOURS,
+                },
+            )
 
     data = {
         "patient_id": body.patient_id,

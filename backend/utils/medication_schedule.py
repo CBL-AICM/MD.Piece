@@ -197,6 +197,7 @@ def check_dose_safety(
     logs: Iterable[dict],
     *,
     interval_hours: int | None,
+    is_prn: bool = False,
     now: datetime | None = None,
     min_hours: int = DEFAULT_MIN_INTERVAL_HOURS,
 ) -> dict:
@@ -206,13 +207,16 @@ def check_dose_safety(
     參數：
       logs:           最近的服藥紀錄（要包含 taken_at；taken=False 的會自動忽略）
       interval_hours: 藥物本身的間隔小時數（從 parse_time_slots 得到）
+      is_prn:         是否為「需要時服用」(PRN)；PRN 且有明確 interval_hours
+                      時可低於 min_hours（醫師有指定）
       min_hours:      最少安全間隔（預設 4 小時）
 
     回傳：
       - allowed:           是否建議現在服用
       - last_taken_at:     上次有效服用時間（ISO，沒有就 None）
       - hours_since_last:  距離上次幾小時（float，沒有上次就 None）
-      - required_hours:    本次該等多久（取 interval_hours 與 min_hours 較大者）
+      - required_hours:    本次該等多久（PRN 帶 interval_hours 就用 interval_hours；
+                                          其他取 interval_hours 與 min_hours 較大者）
       - hours_remaining:   還差多久才安全（>0 代表太早；None 代表沒上一筆）
       - level:             "safe" | "warn" | "block"
                            safe = 可以服用
@@ -221,7 +225,12 @@ def check_dose_safety(
       - message:           給患者看的中文訊息
     """
     now = now or datetime.now(timezone.utc)
-    required = max(min_hours, interval_hours or 0)
+    # PRN 醫師有指定間隔 → 信醫師指示（可能 < 4 小時，例如止痛藥 q2h prn）
+    # 其他狀況都至少守住 min_hours 這道底線
+    if is_prn and interval_hours:
+        required = interval_hours
+    else:
+        required = max(min_hours, interval_hours or 0)
 
     # 找最近一筆有效服藥
     last_dt: datetime | None = None
@@ -259,7 +268,10 @@ def check_dose_safety(
         }
 
     # 還沒滿安全間隔
-    if delta_hours < min_hours:
+    # PRN 帶 interval_hours：required 就是醫師指定的最低界，沒到就 block，無 warn 區
+    # 其他：< min_hours 是 block 區，min_hours ~ interval_hours 之間是 warn 區
+    block_threshold = required if (is_prn and interval_hours) else min_hours
+    if delta_hours < block_threshold:
         msg = (
             f"距離上次服藥只有 {delta_hours:.1f} 小時，"
             f"短時間內重複服藥可能造成肝腎負擔、藥效過量、低血壓或腸胃出血等風險。"
