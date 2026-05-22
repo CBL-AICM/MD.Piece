@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v98-modern-mobile-only";
+const CACHE_VERSION = "mdpiece-v99-mobile-redirect";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 

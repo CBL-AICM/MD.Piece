@@ -26,6 +26,21 @@
   <title>MD.Piece</title>
 </head>
 <body class="theme-modern">
+  <script>
+    // 手機 ≤1023px 自動跳到 v11 新設計（preview-app-demo.html）
+    // 桌機維持 Y2K 原版。可在網址加 ?y2k 強制留在 Y2K
+    (function() {
+      try {
+        var p = window.location.pathname;
+        var q = window.location.search;
+        if ((p === '/' || p === '/index.html') &&
+            q.indexOf('y2k') === -1 &&
+            window.innerWidth <= 1023) {
+          window.location.replace('/preview-app-demo.html' + (q || ''));
+        }
+      } catch(e) {}
+    })();
+  </script>
   <!-- ★ Star canvas (always behind everything) -->
   <canvas id="star-canvas"></canvas>
 
