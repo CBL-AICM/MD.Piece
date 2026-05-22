@@ -2172,7 +2172,63 @@ function previsitFallbackPrint(html) {
 }
 
 function labs() {
-  return `
+  // ─── Mobile v11 block ───
+  var _mobileLabsBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">檢驗報告</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">查任何檢驗值 — 正常範圍 / 異常解讀</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">血液、肝腎、免疫、罕見值都可以；結果僅供參考，不取代醫師判讀</div>'
+    +   '</div>'
+
+    // 拍報告 hero CTA
+    +   '<label class="ocr-hero-btn" style="margin-bottom:10px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<input type="file" accept="image/*" capture="environment" onchange="handleLabPhoto(this)" style="display:none" />'
+    +     '<div style="width:44px;height:44px;border-radius:11px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1">'
+    +       '<i data-lucide="camera" style="width:22px;height:22px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1;position:relative;z-index:1">'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--accent-deep);display:flex;align-items:center;gap:5px">拍報告 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.45">一張就能抽出全部項目，自動標註異常</div>'
+    +     '</div>'
+    +   '</label>'
+
+    // 文字輸入查單一項
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="search"></i> 查單一檢驗項目</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">'
+    +     '<input type="text" id="mobile-lab-name" placeholder="例：血紅素、ANA、IgE、CRP" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+    +       '<input type="text" id="mobile-lab-value" placeholder="數值（例：12.3）" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +       '<input type="text" id="mobile-lab-unit" placeholder="單位（選填）" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +     '</div>'
+    +     '<button onclick="_mobileLabsCheck()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="search" style="width:13px;height:13px"></i> 查詢</button>'
+    +   '</div>'
+
+    // 結果區（mirror 桌機 #lab-result）
+    +   '<div id="mobile-lab-result" style="margin-bottom:12px"></div>'
+
+    // 查詢紀錄
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="history"></i> 查詢紀錄</h3>'
+    +     '<span id="mobile-labs-history-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="labsClearHistory()">清除 <i data-lucide="trash-2"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-labs-history" class="list-card"></div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>檢驗判讀僅供參考，請以醫師判讀為主。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileLabsBlock + `
+    <div class="desktop-only">
     <div class="card labs-hero">
       <h2 style="display:flex;align-items:center;gap:8px">
         <i data-lucide="trending-up" style="width:22px;height:22px"></i> 報告數值
@@ -2280,7 +2336,23 @@ function labs() {
       </div>
       <div id="labs-history-list" class="labs-history-list"></div>
     </div>
+    </div>
   `;
+}
+
+// mobile labs helpers
+function _mobileLabsCheck() {
+  // copy to desktop inputs and trigger existing fn
+  var n = document.getElementById('mobile-lab-name');
+  var v = document.getElementById('mobile-lab-value');
+  var u = document.getElementById('mobile-lab-unit');
+  var dn = document.getElementById('lab-name');
+  var dv = document.getElementById('lab-value');
+  var du = document.getElementById('lab-unit');
+  if (dn && n) dn.value = n.value;
+  if (dv && v) dv.value = v.value;
+  if (du && u) du.value = u.value;
+  if (typeof labsCheck === 'function') labsCheck();
 }
 const account  = () => accountPage();
 // pieces() 為實作頁面（位於下方）— 將上次回診後的紀錄做統整保留。
@@ -14862,29 +14934,54 @@ function loadLabsPage() {
 }
 
 function labsRenderHistory() {
-  const listEl = document.getElementById('labs-history-list');
-  if (!listEl) return;
   const items = labsLoadHistory();
-  if (!items.length) {
-    listEl.innerHTML = '<p class="labs-empty">尚無查詢紀錄。紀錄僅存於此分頁，關閉後即清除。</p>';
-    return;
+  const listEl = document.getElementById('labs-history-list');
+  if (listEl) {
+    if (!items.length) {
+      listEl.innerHTML = '<p class="labs-empty">尚無查詢紀錄。紀錄僅存於此分頁，關閉後即清除。</p>';
+    } else {
+      listEl.innerHTML = items.map((it, idx) => {
+        const meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
+        const time = new Date(it.at).toLocaleString('zh-TW', { hour12: false });
+        return '' +
+          '<article class="labs-history-item ' + meta.cls + '" onclick="labsShowFromHistory(' + idx + ')">' +
+            '<span class="labs-history-emoji">' + meta.emoji + '</span>' +
+            '<div class="labs-history-body">' +
+              '<div class="labs-history-top">' +
+                '<strong>' + escapeHtml(it.name) + '</strong>' +
+                '<span class="labs-history-value">' + escapeHtml(it.value) +
+                  (it.unit ? ' ' + escapeHtml(it.unit) : '') + '</span>' +
+              '</div>' +
+              '<div class="labs-history-meta">' + meta.label + ' · ' + time + '</div>' +
+            '</div>' +
+          '</article>';
+      }).join('');
+    }
   }
-  listEl.innerHTML = items.map((it, idx) => {
-    const meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
-    const time = new Date(it.at).toLocaleString('zh-TW', { hour12: false });
-    return '' +
-      '<article class="labs-history-item ' + meta.cls + '" onclick="labsShowFromHistory(' + idx + ')">' +
-        '<span class="labs-history-emoji">' + meta.emoji + '</span>' +
-        '<div class="labs-history-body">' +
-          '<div class="labs-history-top">' +
-            '<strong>' + escapeHtml(it.name) + '</strong>' +
-            '<span class="labs-history-value">' + escapeHtml(it.value) +
-              (it.unit ? ' ' + escapeHtml(it.unit) : '') + '</span>' +
-          '</div>' +
-          '<div class="labs-history-meta">' + meta.label + ' · ' + time + '</div>' +
-        '</div>' +
-      '</article>';
-  }).join('');
+  // mobile mirror
+  const mList = document.getElementById('mobile-labs-history');
+  const mCnt = document.getElementById('mobile-labs-history-count');
+  if (mCnt) mCnt.textContent = items.length + ' 筆';
+  if (mList) {
+    if (!items.length) {
+      mList.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">尚無紀錄</div>';
+    } else {
+      mList.innerHTML = items.map((it, idx) => {
+        const meta = LABS_STATUS_META[it.status] || LABS_STATUS_META.unknown;
+        const time = new Date(it.at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        var pillCls = it.status === 'normal' ? 'pill-ok' : (it.status === 'abnormal' || it.status === 'critical' ? 'pill-rose' : 'pill-mute');
+        return ''
+          + '<div class="list-row" style="grid-template-columns:24px 1fr auto;padding:10px 12px;cursor:pointer" onclick="labsShowFromHistory(' + idx + ')">'
+          +   '<span style="font-size:16px">' + (meta.emoji || '📊') + '</span>'
+          +   '<div>'
+          +     '<div class="name">' + escapeHtml(it.name) + ' <span style="color:var(--text-dim);font-weight:500;font-family:var(--font-mono,monospace);font-size:11px">' + escapeHtml(it.value) + (it.unit ? ' ' + escapeHtml(it.unit) : '') + '</span></div>'
+          +     '<div style="margin-top:2px"><span class="pill ' + pillCls + '">' + meta.label + '</span> <span class="time" style="text-align:left">' + escapeHtml(time) + '</span></div>'
+          +   '</div>'
+          +   '<i data-lucide="chevron-right" style="width:12px;height:12px;color:var(--text-muted)"></i>'
+          + '</div>';
+      }).join('');
+    }
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -15095,26 +15192,53 @@ function labsAppendScannedToHistory(items) {
 function labsRenderResult(data, input) {
   const meta = LABS_STATUS_META[data.status] || LABS_STATUS_META.unknown;
   const resultEl = document.getElementById('lab-result');
-  resultEl.style.display = 'block';
-  resultEl.className = 'card labs-result ' + meta.cls;
-  resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  resultEl.innerHTML = '' +
-    '<div class="labs-result-head">' +
-      '<span class="labs-result-emoji">' + meta.emoji + '</span>' +
-      '<div>' +
-        '<div class="labs-result-item">' + escapeHtml(data.item || input.name) + '</div>' +
-        '<div class="labs-result-input">你輸入：' + escapeHtml(input.value) +
-          (input.unit ? ' ' + escapeHtml(input.unit) : '') + '</div>' +
+  if (resultEl) {
+    resultEl.style.display = 'block';
+    resultEl.className = 'card labs-result ' + meta.cls;
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    resultEl.innerHTML = '' +
+      '<div class="labs-result-head">' +
+        '<span class="labs-result-emoji">' + meta.emoji + '</span>' +
+        '<div>' +
+          '<div class="labs-result-item">' + escapeHtml(data.item || input.name) + '</div>' +
+          '<div class="labs-result-input">你輸入：' + escapeHtml(input.value) +
+            (input.unit ? ' ' + escapeHtml(input.unit) : '') + '</div>' +
+        '</div>' +
+        '<span class="labs-result-status">' + meta.label + '</span>' +
       '</div>' +
-      '<span class="labs-result-status">' + meta.label + '</span>' +
-    '</div>' +
-    '<div class="labs-result-row"><strong>參考範圍</strong><span>' + escapeHtml(data.normal_range || '—') + '</span></div>' +
-    '<div class="labs-result-block"><strong>這個指標代表</strong><p>' + escapeHtml(data.meaning || '—') + '</p></div>' +
-    '<div class="labs-result-block"><strong>建議</strong><p>' + escapeHtml(data.advice || '—') + '</p></div>' +
-    (data.see_doctor
-      ? '<div class="labs-result-warn"><i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle"></i> 建議盡快就醫評估</div>'
-      : '') +
-    '<p class="labs-result-disclaimer">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
+      '<div class="labs-result-row"><strong>參考範圍</strong><span>' + escapeHtml(data.normal_range || '—') + '</span></div>' +
+      '<div class="labs-result-block"><strong>這個指標代表</strong><p>' + escapeHtml(data.meaning || '—') + '</p></div>' +
+      '<div class="labs-result-block"><strong>建議</strong><p>' + escapeHtml(data.advice || '—') + '</p></div>' +
+      (data.see_doctor
+        ? '<div class="labs-result-warn"><i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle"></i> 建議盡快就醫評估</div>'
+        : '') +
+      '<p class="labs-result-disclaimer">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</p>';
+  }
+  // mobile mirror
+  const mResult = document.getElementById('mobile-lab-result');
+  if (mResult) {
+    var pillCls = data.status === 'normal' ? 'pill-ok' : (data.status === 'abnormal' || data.status === 'critical' ? 'pill-rose' : 'pill-mute');
+    var bg = data.status === 'normal' ? 'puzzle-bg-blue-teal' : 'puzzle-bg-rose-amber';
+    mResult.innerHTML = ''
+      + '<div class="card" style="padding:14px;position:relative;overflow:hidden">'
+      +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.18"><use href="#' + bg + '"/></svg>'
+      +   '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;position:relative;z-index:1">'
+      +     '<span style="font-size:22px">' + (meta.emoji || '📊') + '</span>'
+      +     '<div style="flex:1">'
+      +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy)">' + escapeHtml(data.item || input.name) + '</div>'
+      +       '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">你輸入：' + escapeHtml(input.value) + (input.unit ? ' ' + escapeHtml(input.unit) : '') + '</div>'
+      +     '</div>'
+      +     '<span class="pill ' + pillCls + '">' + meta.label + '</span>'
+      +   '</div>'
+      +   '<div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:6px;position:relative;z-index:1"><strong style="color:var(--navy)">參考範圍：</strong>' + escapeHtml(data.normal_range || '—') + '</div>'
+      +   '<div style="font-size:11.5px;color:var(--text);line-height:1.6;margin-top:6px;position:relative;z-index:1"><strong>這個指標代表</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.meaning || '—') + '</div></div>'
+      +   '<div style="font-size:11.5px;color:var(--text);line-height:1.6;margin-top:6px;position:relative;z-index:1"><strong>建議</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.advice || '—') + '</div></div>'
+      +   (data.see_doctor
+        ? '<div style="margin-top:8px;padding:8px 10px;background:var(--rose-soft);color:var(--rose-deep);border-radius:8px;font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:5px;position:relative;z-index:1"><i data-lucide="alert-triangle" style="width:13px;height:13px"></i>建議盡快就醫評估</div>'
+        : '')
+      +   '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.5;position:relative;z-index:1">' + escapeHtml(data.disclaimer || '本結果僅供參考，請以實際檢驗單位與醫師判讀為準') + '</div>'
+      + '</div>';
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
