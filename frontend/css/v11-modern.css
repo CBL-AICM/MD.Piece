@@ -160,8 +160,8 @@ html.dark body.theme-modern {
   --klein:         #5DAEEC !important;
   --navy:          #FFFFFF !important;
   --text:          #FFFFFF !important;
-  --text-dim:      #DCE7F2 !important;
-  --text-muted:    #B5C5D6 !important;
+  --text-dim:      #E4ECF6 !important;
+  --text-muted:    #CCDAEC !important;
 
   --cream:         #1D436D !important;
   --cream-dim:     #133258 !important;
@@ -272,10 +272,16 @@ html.dark body.theme-modern [style*="#fff 70%"] {
   background: var(--bg-mid) !important;
 }
 
-/* dark 拼圖塊用 screen blend 在深底發光 */
+/* dark 拼圖塊用 soft-light 在深底淡淡浮現（screen 0.40 會炸出乳白霧把卡片糊掉）*/
 html.dark body.theme-modern .puzzle-bg-layer {
-  mix-blend-mode: screen;
-  opacity: 0.40;
+  mix-blend-mode: soft-light;
+  opacity: 0.30;
+}
+/* 卡片內的拼圖裝飾 motif 在 dark mode 進一步收斂 */
+html.dark body.theme-modern .sos-btn .puzzle-motif,
+html.dark body.theme-modern .kpi-mini .puzzle-motif,
+html.dark body.theme-modern .vital-card .puzzle-motif {
+  opacity: 0.18 !important;
 }
 
 /* ═══════════════════════════════════════════════════════

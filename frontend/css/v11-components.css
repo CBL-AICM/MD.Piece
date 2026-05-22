@@ -589,6 +589,94 @@ html.dark body.theme-modern .care-chip.active {
   color: #fff !important;
 }
 
+/* ═══════════════════════════════════════════════════════
+   DARK MODE — 把分類色找回來
+   先前 .kpi-mini / .sos-btn / .vital-card 在 dark mode 被強制鎖
+   死成 --bg-mid，整頁 KPI 與 SOS 卡片都同一塊深藍，丟失了
+   t-rose / t-blue / t-teal / t-amber 的視覺語意。
+   下面用各色 tint 的「暗色版」做漸層，讓血壓 / 血糖 / 心情 /
+   發燒等卡片在 dark mode 還能各自帶一點顏色傾向。
+   specificity 比上面 .kpi-mini / .sos-btn 集合選擇器高 1 個 class，
+   所以即使對方用 !important 也會贏。
+   ═══════════════════════════════════════════════════════ */
+
+/* KPI 三卡 — 血壓 / 飯前血糖 / 心情電量 */
+html.dark body.theme-modern .kpi-mini.t-rose {
+  background: linear-gradient(135deg, var(--rose-tint, #2E2222) 0%, var(--bg-mid, #1D436D) 80%) !important;
+  border-color: rgba(240, 181, 181, 0.22) !important;
+}
+html.dark body.theme-modern .kpi-mini.t-blue {
+  background: linear-gradient(135deg, var(--accent-tint, #163A60) 0%, var(--bg-mid, #1D436D) 80%) !important;
+  border-color: rgba(93, 174, 236, 0.22) !important;
+}
+html.dark body.theme-modern .kpi-mini.t-teal {
+  background: linear-gradient(135deg, var(--teal-tint, #143230) 0%, var(--bg-mid, #1D436D) 80%) !important;
+  border-color: rgba(107, 196, 184, 0.22) !important;
+}
+
+/* SOS 四顆症狀大按鈕 — 頭痛 / 心悸 / 發燒 / 疲倦 */
+html.dark body.theme-modern .sos-btn.t-rose {
+  background: linear-gradient(135deg, var(--rose-tint, #2E2222) 0%, var(--bg-mid, #1D436D) 75%) !important;
+  border-color: rgba(240, 181, 181, 0.22) !important;
+}
+html.dark body.theme-modern .sos-btn.t-blue {
+  background: linear-gradient(135deg, var(--accent-tint, #163A60) 0%, var(--bg-mid, #1D436D) 75%) !important;
+  border-color: rgba(93, 174, 236, 0.22) !important;
+}
+html.dark body.theme-modern .sos-btn.t-teal {
+  background: linear-gradient(135deg, var(--teal-tint, #143230) 0%, var(--bg-mid, #1D436D) 75%) !important;
+  border-color: rgba(107, 196, 184, 0.22) !important;
+}
+html.dark body.theme-modern .sos-btn.t-amber {
+  background: linear-gradient(135deg, var(--amber-tint, #2E2418) 0%, var(--bg-mid, #1D436D) 75%) !important;
+  border-color: rgba(229, 188, 124, 0.22) !important;
+}
+
+/* vital-card 同樣處理（量測詳細頁也會用到）*/
+html.dark body.theme-modern .vital-card.t-rose {
+  background: linear-gradient(135deg, var(--rose-tint, #2E2222) 0%, var(--bg-mid, #1D436D) 80%) !important;
+  border-color: rgba(240, 181, 181, 0.22) !important;
+}
+html.dark body.theme-modern .vital-card.t-blue {
+  background: linear-gradient(135deg, var(--accent-tint, #163A60) 0%, var(--bg-mid, #1D436D) 80%) !important;
+  border-color: rgba(93, 174, 236, 0.22) !important;
+}
+html.dark body.theme-modern .vital-card.t-teal {
+  background: linear-gradient(135deg, var(--teal-tint, #143230) 0%, var(--bg-mid, #1D436D) 80%) !important;
+  border-color: rgba(107, 196, 184, 0.22) !important;
+}
+
+/* dark mode 下 sos-icon 容器用半透深底而不是純白
+   （純白圓圈打在深底卡片上會炸出 spotlight，搶走 label 注意）*/
+html.dark body.theme-modern .sos-btn .sos-icon {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+html.dark body.theme-modern .sos-btn.t-rose .sos-icon { color: var(--rose-deep, #F8C8C8) !important; }
+html.dark body.theme-modern .sos-btn.t-blue .sos-icon { color: var(--accent-light, #9DCEF5) !important; }
+html.dark body.theme-modern .sos-btn.t-teal .sos-icon { color: var(--teal-deep, #95D9CF) !important; }
+html.dark body.theme-modern .sos-btn.t-amber .sos-icon { color: var(--amber-deep, #F4D196) !important; }
+
+/* dark mode 下卡片小字（"尚無紀錄" / "線往上 = 升高" / "最近 5/17"）
+   原本 var(--text-muted) 用 #B5C5D6 對小字略嫌霧化 */
+html.dark body.theme-modern .kpi-mini-meta,
+html.dark body.theme-modern .kpi-mini-explain,
+html.dark body.theme-modern .sos-btn .sos-sub {
+  color: var(--text-dim, #E4ECF6) !important;
+}
+
+/* dark mode 卡片淺色標籤（血壓 / 飯前血糖 / 心情電量）
+   原本 var(--text-muted) 配 9.5px 太弱 */
+html.dark body.theme-modern .kpi-mini-label {
+  color: var(--text-dim, #E4ECF6) !important;
+  font-weight: 600 !important;
+}
+
+/* dark mode 「不舒服？按一下就好」這種 sec-title 旁的 lucide icon */
+html.dark body.theme-modern .sec-title .lucide {
+  color: var(--accent-light, #9DCEF5) !important;
+}
+
 /* ─── 手機：隱藏終端機 / Y2K 殘留元素 ─── */
 /* 1. dark mode toggle（右上）— 跟早晨/睡前太陽月亮 icon 衝突，且 v11 走 light-only */
 body.theme-modern .theme-toggle-btn { display: none !important; }
