@@ -5,7 +5,7 @@
    範圍：**僅手機/平板（≤1023px）**；桌機 ≥1024px 維持原本 Y2K
    ═════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 1023px) {
+/* 全螢幕統一 v11，不再有手機/桌機分軌 */
 
 /* mobile/desktop helpers — 同一份 render 函數同時放兩種 markup，用 css toggle */
 body.theme-modern .desktop-only { display: none !important; }
@@ -637,10 +637,4 @@ body.theme-modern #landing .intro-lab {
 body.theme-modern #landing-canvas,
 body.theme-modern #star-canvas { display: none !important; }
 
-} /* end @media (max-width: 1023px) */
-
-/* ─── 桌機：mobile-only 隱藏 ─── */
-@media (min-width: 1024px) {
-  body.theme-modern .mobile-only { display: none !important; }
-  body.theme-modern .desktop-only { display: block; }
-}
+/* ─── 結束 ─── */
