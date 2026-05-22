@@ -2606,6 +2606,11 @@ function showPage(page) {
   _currentPageKey = page;
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
+  // 同步在 body 設 .is-home / data-page，給 CSS 選擇器用（topbar 返回按鈕需要）
+  try {
+    document.body.classList.toggle('is-home', page === 'home');
+    document.body.setAttribute('data-page', page);
+  } catch (e) {}
   // 頁面層級的主題強制覆寫（症狀分析 / 報告 → light；夜間提醒 → dark）
   if (typeof _reapplyThemeForCurrentPage === 'function') {
     try { _reapplyThemeForCurrentPage(); } catch (e) { /* boot order safety */ }
