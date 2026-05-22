@@ -11,8 +11,7 @@ from backend.services.knowledge_analysis import (
     get_comprehension_distribution,
 )
 from backend.services.llm_service import build_patient_facing_system, call_claude
-from backend.services import education_content
-from backend.services import news_feed
+from backend.services import celebrity_health, education_content, news_feed
 from backend.utils.icd10 import (
     ICD10_MAP,
     KNOWLEDGE_DIMENSIONS,
@@ -445,10 +444,12 @@ def get_daily_article(days: int = 7):
 
     all_articles = education_content.list_articles()
     if not all_articles:
+        feed_items = news_feed.fetch_news(limit=6)
         return {
             "today": {c: None for c in DAILY_CATEGORIES},
             "archive": [],
-            "news_feed": news_feed.fetch_news(limit=6),
+            "news_feed": feed_items,
+            "celebrity_stories": celebrity_health.extract_celebrity_stories(feed_items),
         }
 
     by_category: dict[str, list] = {c: [] for c in DAILY_CATEGORIES}
@@ -533,6 +534,7 @@ def get_daily_article(days: int = 7):
         "today": today_picks,
         "archive": archive,
         "news_feed": feed_items,
+        "celebrity_stories": celebrity_health.extract_celebrity_stories(feed_items),
     }
 
 

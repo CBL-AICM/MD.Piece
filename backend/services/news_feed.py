@@ -3,7 +3,10 @@
 設計原則：
 - 只用 stdlib（urllib、xml.etree、html、re），不引入新依賴
 - 一小時 TTL，失敗或逾時直接回 [] 並記 log，不擋整個頁面
-- feed URL 可用環境變數 ``NEWS_FEED_URL`` 切換來源
+- 來源設定：
+  - 多來源：``NEWS_FEED_URLS``（逗號分隔），各來源 round-robin merge
+  - 單一來源：``NEWS_FEED_URL``（舊版相容）
+  - 都沒設則用衛福部
 """
 from __future__ import annotations
 
@@ -18,15 +21,28 @@ from xml.etree import ElementTree as ET
 
 logger = logging.getLogger(__name__)
 
-# 衛福部新聞 RSS（中文官方來源）。可由環境變數覆寫成國健署/疾管署/CDC 等。
-DEFAULT_FEED_URL = "https://www.mohw.gov.tw/rss-16-1.html"
+# 衛福部新聞 RSS（中文官方來源）。可由環境變數加 NEWS_FEED_URLS 補上元氣網、健康 2.0 等。
+DEFAULT_FEED_URLS = ("https://www.mohw.gov.tw/rss-16-1.html",)
 USER_AGENT = "MD.Piece/1.0 (+https://www.mdpiece.life)"
 TTL_SECONDS = 3600
 FETCH_TIMEOUT = 4.0
 
 _TAG_RE = re.compile(r"<[^>]+>")
 
-_cache: dict[str, Any] = {"items": [], "fetched_at": 0.0, "url": None}
+_cache: dict[str, Any] = {"items": [], "fetched_at": 0.0, "key": None}
+
+
+def _configured_urls() -> tuple[str, ...]:
+    """讀環境設定的 RSS 來源清單。NEWS_FEED_URLS 優先，否則退 NEWS_FEED_URL，再退預設。"""
+    multi = os.getenv("NEWS_FEED_URLS", "").strip()
+    if multi:
+        urls = tuple(u.strip() for u in multi.split(",") if u.strip())
+        if urls:
+            return urls
+    single = os.getenv("NEWS_FEED_URL", "").strip()
+    if single:
+        return (single,)
+    return DEFAULT_FEED_URLS
 
 
 def _strip_html(raw: str) -> str:
@@ -97,17 +113,8 @@ def _parse_feed(xml_text: str) -> list[dict]:
     return items
 
 
-def fetch_news(limit: int = 6) -> list[dict]:
-    """回傳近期新聞 list（最多 ``limit`` 則）。失敗時回 []。"""
-    url = os.getenv("NEWS_FEED_URL", DEFAULT_FEED_URL)
-    now = time.time()
-    if (
-        _cache["items"]
-        and _cache["url"] == url
-        and (now - _cache["fetched_at"]) < TTL_SECONDS
-    ):
-        return _cache["items"][:limit]
-
+def _fetch_single(url: str) -> list[dict]:
+    """單一 RSS 來源抓取 + 解析；失敗回 []。"""
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as resp:
@@ -124,15 +131,47 @@ def fetch_news(limit: int = 6) -> list[dict]:
         items = _parse_feed(xml_text)
     except Exception as exc:  # 網路/timeout/HTTP 錯誤一律記 log 但不擋頁面
         logger.warning("news_feed: fetch failed (%s): %s", url, exc)
-        items = []
+        return []
+    for item in items:
+        item["source"] = url
+    return items
 
-    _cache["items"] = items
+
+def _interleave(feeds: list[list[dict]]) -> list[dict]:
+    """round-robin 合併多個 feed，確保 top N 不會被單一來源壟斷。"""
+    merged: list[dict] = []
+    if not feeds:
+        return merged
+    max_len = max(len(f) for f in feeds)
+    for i in range(max_len):
+        for f in feeds:
+            if i < len(f):
+                merged.append(f[i])
+    return merged
+
+
+def fetch_news(limit: int = 6) -> list[dict]:
+    """回傳近期新聞 list（最多 ``limit`` 則）。失敗時回 []。"""
+    urls = _configured_urls()
+    cache_key = "|".join(urls)
+    now = time.time()
+    if (
+        _cache["items"]
+        and _cache["key"] == cache_key
+        and (now - _cache["fetched_at"]) < TTL_SECONDS
+    ):
+        return _cache["items"][:limit]
+
+    per_feed = [_fetch_single(u) for u in urls]
+    merged = _interleave(per_feed)
+
+    _cache["items"] = merged
     _cache["fetched_at"] = now
-    _cache["url"] = url
-    return items[:limit]
+    _cache["key"] = cache_key
+    return merged[:limit]
 
 
 def reset_cache() -> None:
     _cache["items"] = []
     _cache["fetched_at"] = 0.0
-    _cache["url"] = None
+    _cache["key"] = None
