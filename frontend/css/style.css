@@ -10098,6 +10098,286 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 }
 
 /* ═══════════════════════════════════════════════════════════
+   服藥統計 — 可點擊的「藥物種類」統計卡 + 藥物清單 Sheet
+   點藥物種類數字會打開 Sheet，列出每種藥的功能 / 用處 / 服法。
+   ═══════════════════════════════════════════════════════════ */
+.stat-box-clickable {
+  position: relative;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), background var(--transition);
+}
+.stat-box-clickable:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  transform: translateY(-1px);
+}
+.stat-box-clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.stat-box-chev {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--text-muted);
+  display: inline-flex;
+}
+.stat-box-clickable:hover .stat-box-chev { color: var(--accent); }
+
+.mtl-panel { max-width: 720px; }
+.mtl-filterbar {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 10px 22px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mtl-filterbar::-webkit-scrollbar { display: none; }
+.mtl-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-glass);
+  background: var(--bg-surface);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.mtl-chip:hover { border-color: var(--accent); color: var(--text); }
+.mtl-chip-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--cream);
+}
+.mtl-chip-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.mtl-chip-active .mtl-chip-num { background: rgba(255, 255, 255, 0.22); }
+
+.mtl-body {
+  padding: 14px 22px 14px;
+  gap: 12px;
+}
+.mtl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 0;
+  color: var(--text-muted);
+}
+.mtl-empty p { margin: 0; font-size: 0.9rem; }
+
+.mtl-card {
+  background: var(--bg-surface);
+  border: 2px solid var(--border-glass);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.mtl-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 6px 18px rgba(31, 61, 88, 0.08);
+}
+.mtl-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-glass);
+  border-bottom: 1.5px solid var(--border-glass);
+}
+.mtl-card-idx {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.mtl-card-title-wrap { flex: 1; min-width: 0; }
+.mtl-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.mtl-card-dose {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+.mtl-card-meta { margin-top: 3px; }
+.mtl-card-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-glass);
+  color: var(--text-dim);
+}
+
+.mtl-card-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mtl-row {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  align-items: flex-start;
+}
+.mtl-row-ico {
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+}
+.mtl-row-lbl {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+.mtl-row-val {
+  font-size: 0.92rem;
+  color: var(--text);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.mtl-row-fn .mtl-row-val { font-weight: 600; }
+.mtl-row-muted .mtl-row-val {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.mtl-metrics {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  background: var(--bg-glass);
+  border-radius: 10px;
+  border: 1.5px solid var(--border-glass);
+}
+.mtl-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.mtl-metric-lbl {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.mtl-metric-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(120, 140, 170, 0.18);
+  overflow: hidden;
+}
+.mtl-metric-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.mtl-metric-fill-ok { background: #4caf90; }
+.mtl-metric-fill-warn { background: #f0b674; }
+.mtl-metric-fill-low { background: #e8889c; }
+.mtl-metric-fill-na { background: rgba(120, 140, 170, 0.4); }
+.mtl-metric-val {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.mtl-metric-val-ok { color: #2f8e72; }
+.mtl-metric-val-warn { color: #b67a35; }
+.mtl-metric-val-low { color: #b94e6a; }
+.mtl-metric-val-na { color: var(--text-muted); }
+.mtl-metric-sm .mtl-metric-val { font-size: 0.86rem; }
+
+.mtl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mtl-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-glass);
+  background: var(--bg-surface);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.mtl-action:hover { border-color: var(--accent); color: var(--text); }
+.mtl-action-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--cream);
+}
+.mtl-action-primary:hover { color: var(--cream); filter: brightness(1.05); }
+
+.mtl-foot {
+  padding: 10px 22px 14px;
+  border-top: 1.5px solid var(--border-glass);
+  background: var(--bg-surface);
+}
+.mtl-foot-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+@media (max-width: 480px) {
+  .mtl-metrics { grid-template-columns: 1fr 1fr; }
+  .mtl-metric:first-child { grid-column: 1 / -1; }
+}
+
+/* 長者模式：放大字級 + 加粗，與其他元件一致 */
+html[data-mode="senior"] .mtl-card-title { font-size: 1.15rem; }
+html[data-mode="senior"] .mtl-row-val { font-size: 1.05rem; }
+html[data-mode="senior"] .mtl-row-lbl { font-size: 0.85rem; }
+html[data-mode="senior"] .mtl-action { font-size: 0.92rem; padding: 8px 14px; }
+html[data-mode="senior"] .mtl-chip { font-size: 0.95rem; padding: 8px 14px; }
+
+/* ═══════════════════════════════════════════════════════════
    共用「如何使用這頁？」摺疊面板（page howto）
    首次造訪自動展開，之後折疊；localStorage 記住狀態。
    ═══════════════════════════════════════════════════════════ */

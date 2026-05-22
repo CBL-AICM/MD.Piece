@@ -9028,6 +9028,8 @@ async function _parseApiError(r) {
 var _medsList = [];
 var _medsPatientId = null;
 var _medsDeleteMode = false;
+var _medsLastStats = null;
+var _medTypesFilter = '__all__';
 
 function medications() {
   var user = getCurrentUser();
@@ -9502,6 +9504,244 @@ function closeMedDetail() {
   modal.classList.remove('is-open');
   document.removeEventListener('keydown', _medDetailEsc);
   setTimeout(function(){ if (modal.parentNode) modal.parentNode.removeChild(modal); }, 200);
+}
+
+// ─── 「藥物種類」清單 Sheet ────────────────────────────────
+// 點「藥物種類 N」統計卡會打開，列出全部 N 種藥；
+// 每張卡片顯示功能 / 用處 / 服法 / 個別服藥率 / 平均療效，
+// 並可篩選分類、跳轉到單顆藥的詳細紀錄。
+function openMedTypesSheet() {
+  var meds = (_medsList || []).filter(function(m){ return m.active !== 0; });
+  if (!meds.length) {
+    if (typeof showToast === 'function') showToast(_T('meds.types.empty'), 'info');
+    return;
+  }
+  var existing = document.getElementById('med-types-sheet');
+  if (existing) existing.remove();
+  _medTypesFilter = '__all__';
+
+  var sheet = document.createElement('div');
+  sheet.id = 'med-types-sheet';
+  sheet.className = 'med-detail-modal med-types-sheet';
+  sheet.innerHTML = ''
+    + '<div class="mdm-backdrop" onclick="closeMedTypesSheet()"></div>'
+    + '<div class="mdm-panel mtl-panel" role="dialog" aria-modal="true" aria-label="' + _T('meds.types.title') + '">'
+    +   '<header class="mdm-head">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedTypesSheet()" aria-label="' + _T('meds.types.close') + '">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +     '<div class="mdm-title-wrap">'
+    +       '<div class="mdm-pill"><i data-lucide="pills" style="width:18px;height:18px"></i></div>'
+    +       '<div>'
+    +         '<h3 class="mdm-title">' + _T('meds.types.title') + '</h3>'
+    +         '<p class="mdm-sub">' + _Tf('meds.types.subtitle', { n: meds.length }) + '</p>'
+    +       '</div>'
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="mtl-filterbar" id="mtl-filterbar"></div>'
+    +   '<div class="mdm-body mtl-body" id="mtl-body"></div>'
+    +   '<footer class="mdm-foot mtl-foot">'
+    +     '<span class="mtl-foot-hint"><i data-lucide="info" style="width:13px;height:13px;vertical-align:-2px"></i> ' + _T('meds.types.footHint') + '</span>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function(){ sheet.classList.add('is-open'); });
+  document.addEventListener('keydown', _medTypesEsc);
+
+  _renderMedTypesFilterBar(meds);
+  _renderMedTypesList(meds);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _medTypesEsc(e) { if (e.key === 'Escape') closeMedTypesSheet(); }
+function closeMedTypesSheet() {
+  var sheet = document.getElementById('med-types-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('is-open');
+  document.removeEventListener('keydown', _medTypesEsc);
+  setTimeout(function(){ if (sheet.parentNode) sheet.parentNode.removeChild(sheet); }, 200);
+}
+
+// 把醫療分類映射成淺顯的「功能」說明 — 患者不一定看得懂藥袋上的英文分類，
+// 所以提供一個保底文案；若藥物本身有 purpose，仍以 purpose 為主。
+var MED_CATEGORY_FUNCTION = {
+  '降血壓': '放鬆血管、降低血壓，保護心臟與腎臟',
+  '高血壓': '放鬆血管、降低血壓，保護心臟與腎臟',
+  '降血糖': '幫助身體運用葡萄糖，控制血糖',
+  '糖尿病': '幫助身體運用葡萄糖，控制血糖',
+  '降血脂': '降低壞膽固醇與三酸甘油酯，預防動脈硬化',
+  '高血脂': '降低壞膽固醇與三酸甘油酯，預防動脈硬化',
+  '心血管': '改善心臟與血管功能，預防中風與心肌梗塞',
+  '抗凝血': '降低血液凝結傾向，預防血栓',
+  '利尿劑': '幫助身體排出多餘水分與鈉',
+  '止痛': '阻斷疼痛訊號，減輕疼痛與發炎',
+  '消炎': '降低發炎反應，緩解紅腫熱痛',
+  '抗生素': '殺死或抑制細菌，治療細菌感染',
+  '抗組織胺': '減緩過敏反應，緩解癢、流鼻水、打噴嚏',
+  '腸胃': '緩解胃酸、脹氣或調節腸胃蠕動',
+  '制酸劑': '中和或減少胃酸，保護胃黏膜',
+  '助眠': '幫助入睡、改善睡眠品質',
+  '安眠': '幫助入睡、改善睡眠品質',
+  '抗焦慮': '緩解焦慮、放鬆神經',
+  '抗憂鬱': '調節神經傳導物質，改善情緒低落',
+  '甲狀腺': '補充或調節甲狀腺荷爾蒙',
+  '骨質疏鬆': '減緩骨質流失、強化骨骼',
+  '氣喘': '舒緩支氣管，改善呼吸',
+  '止咳': '緩解咳嗽',
+  '化痰': '稀釋痰液、幫助排痰',
+};
+
+function _medCategoryFunction(med) {
+  if (med && med.purpose) return String(med.purpose).trim();
+  var cat = (med && med.category) ? String(med.category).trim() : '';
+  if (!cat) return '';
+  if (MED_CATEGORY_FUNCTION[cat]) return MED_CATEGORY_FUNCTION[cat];
+  var keys = Object.keys(MED_CATEGORY_FUNCTION);
+  for (var i = 0; i < keys.length; i++) {
+    if (cat.indexOf(keys[i]) !== -1) return MED_CATEGORY_FUNCTION[keys[i]];
+  }
+  return '';
+}
+
+function _medUseCase(med) {
+  if (med && med.instructions) {
+    var ins = String(med.instructions).trim();
+    if (ins) return ins;
+  }
+  if (med && med.category) return String(med.category).trim();
+  return '';
+}
+
+function _renderMedTypesFilterBar(meds) {
+  var bar = document.getElementById('mtl-filterbar');
+  if (!bar) return;
+  var counts = { __all__: meds.length };
+  meds.forEach(function(m) {
+    var c = (m.category || _T('meds.types.uncategorized')).trim();
+    counts[c] = (counts[c] || 0) + 1;
+  });
+  var cats = Object.keys(counts).filter(function(k){ return k !== '__all__'; }).sort(function(a, b){
+    return counts[b] - counts[a];
+  });
+  var chips = [{ key: '__all__', label: _T('meds.types.filter.all'), count: counts.__all__ }];
+  cats.forEach(function(c) { chips.push({ key: c, label: c, count: counts[c] }); });
+
+  bar.innerHTML = chips.map(function(c) {
+    var active = c.key === _medTypesFilter ? ' mtl-chip-active' : '';
+    var key = c.key.replace(/'/g, "\\'");
+    return '<button type="button" class="mtl-chip' + active + '"'
+      + ' onclick="_setMedTypesFilter(\'' + key + '\')"'
+      + ' aria-pressed="' + (c.key === _medTypesFilter) + '">'
+      + escapeHtml(c.label) + '<span class="mtl-chip-num">' + c.count + '</span>'
+      + '</button>';
+  }).join('');
+}
+
+function _setMedTypesFilter(key) {
+  _medTypesFilter = key || '__all__';
+  var meds = (_medsList || []).filter(function(m){ return m.active !== 0; });
+  _renderMedTypesFilterBar(meds);
+  _renderMedTypesList(meds);
+}
+
+function _renderMedTypesList(meds) {
+  var body = document.getElementById('mtl-body');
+  if (!body) return;
+
+  var perMedStats = {};
+  if (_medsLastStats && Array.isArray(_medsLastStats.medications)) {
+    _medsLastStats.medications.forEach(function(m) {
+      perMedStats[String(m.id)] = m;
+    });
+  }
+
+  var filtered = _medTypesFilter === '__all__'
+    ? meds.slice()
+    : meds.filter(function(m) {
+        var c = (m.category || _T('meds.types.uncategorized')).trim();
+        return c === _medTypesFilter;
+      });
+
+  if (!filtered.length) {
+    body.innerHTML = '<div class="mtl-empty"><i data-lucide="inbox" style="width:22px;height:22px"></i>'
+      + '<p>' + _T('meds.types.filterEmpty') + '</p></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  var cardsHtml = filtered.map(function(med, idx) {
+    var stats = perMedStats[String(med.id)] || {};
+    var name = escapeHtml(med.name || _T('meds.card.unnamed'));
+    var dosage = med.dosage ? ' <span class="mtl-card-dose">' + escapeHtml(med.dosage) + '</span>' : '';
+    var category = med.category ? '<span class="mtl-card-tag">' + escapeHtml(med.category) + '</span>' : '';
+
+    var fn = _medCategoryFunction(med);
+    var fnRow = fn
+      ? '<div class="mtl-row mtl-row-fn"><span class="mtl-row-ico">🎯</span><div><div class="mtl-row-lbl">' + _T('meds.types.row.fn') + '</div><div class="mtl-row-val">' + escapeHtml(fn) + '</div></div></div>'
+      : '<div class="mtl-row mtl-row-fn mtl-row-muted"><span class="mtl-row-ico">🎯</span><div><div class="mtl-row-lbl">' + _T('meds.types.row.fn') + '</div><div class="mtl-row-val">' + _T('meds.types.row.fnMissing') + '</div></div></div>';
+
+    var use = _medUseCase(med);
+    var useRow = use
+      ? '<div class="mtl-row"><span class="mtl-row-ico">📌</span><div><div class="mtl-row-lbl">' + _T('meds.types.row.use') + '</div><div class="mtl-row-val">' + escapeHtml(use) + '</div></div></div>'
+      : '';
+
+    var freqText = '';
+    if (med.frequency) freqText += med.frequency;
+    if (med.usage) freqText += (freqText ? '　·　' : '') + med.usage;
+    if (med.duration) freqText += (freqText ? '　·　' : '') + med.duration;
+    var freqRow = freqText
+      ? '<div class="mtl-row"><span class="mtl-row-ico">⏱</span><div><div class="mtl-row-lbl">' + _T('meds.types.row.freq') + '</div><div class="mtl-row-val">' + escapeHtml(freqText) + '</div></div></div>'
+      : '';
+
+    var rate = stats.adherence_rate != null ? Number(stats.adherence_rate) : null;
+    var rateClass = rate == null ? 'na' : (rate >= 80 ? 'ok' : (rate >= 50 ? 'warn' : 'low'));
+    var rateText = rate == null ? '—' : rate + '%';
+    var eff = stats.avg_effectiveness != null ? Number(stats.avg_effectiveness).toFixed(1) + ' / 5' : '—';
+    var doses = stats.total_logs != null ? stats.total_logs : 0;
+
+    var metrics = ''
+      + '<div class="mtl-metrics">'
+      +   '<div class="mtl-metric"><div class="mtl-metric-lbl">' + _T('meds.types.metric.adherence') + '</div>'
+      +     '<div class="mtl-metric-bar"><div class="mtl-metric-fill mtl-metric-fill-' + rateClass + '" style="width:' + (rate == null ? 0 : Math.max(2, Math.min(100, rate))) + '%"></div></div>'
+      +     '<div class="mtl-metric-val mtl-metric-val-' + rateClass + '">' + rateText + '</div>'
+      +   '</div>'
+      +   '<div class="mtl-metric mtl-metric-sm"><div class="mtl-metric-lbl">' + _T('meds.types.metric.eff') + '</div><div class="mtl-metric-val">' + eff + '</div></div>'
+      +   '<div class="mtl-metric mtl-metric-sm"><div class="mtl-metric-lbl">' + _T('meds.types.metric.logs') + '</div><div class="mtl-metric-val">' + doses + '</div></div>'
+      + '</div>';
+
+    var safeName = String(med.name || '').replace(/'/g, "\\'");
+    var actions = ''
+      + '<div class="mtl-actions">'
+      +   '<button type="button" class="mtl-action mtl-action-primary" onclick="closeMedTypesSheet(); openMedDetail(\'' + med.id + '\')">'
+      +     '<i data-lucide="bar-chart-3" style="width:13px;height:13px"></i> ' + _T('meds.types.action.detail')
+      +   '</button>'
+      +   '<button type="button" class="mtl-action" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)">'
+      +     '<i data-lucide="book-open" style="width:13px;height:13px"></i> ' + _T('meds.types.action.encyclopedia')
+      +   '</button>'
+      +   '<button type="button" class="mtl-action" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\'); closeMedTypesSheet();">'
+      +     '<i data-lucide="star" style="width:13px;height:13px"></i> ' + _T('meds.types.action.effect')
+      +   '</button>'
+      + '</div>';
+
+    return ''
+      + '<article class="mtl-card">'
+      +   '<header class="mtl-card-head">'
+      +     '<span class="mtl-card-idx">' + (idx + 1) + '</span>'
+      +     '<div class="mtl-card-title-wrap">'
+      +       '<div class="mtl-card-title">' + name + dosage + '</div>'
+      +       (category ? '<div class="mtl-card-meta">' + category + '</div>' : '')
+      +     '</div>'
+      +   '</header>'
+      +   '<div class="mtl-card-body">'
+      +     fnRow + useRow + freqRow
+      +     metrics
+      +     actions
+      +   '</div>'
+      + '</article>';
+  }).join('');
+
+  body.innerHTML = cardsHtml;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 async function _loadMedDetail(medId, med) {
   var pid = _medsPatientId || (typeof getStablePatientId === 'function' ? getStablePatientId() : null);
@@ -10413,15 +10653,25 @@ function _submitMedEffect(medId, kind, effNum) {
 }
 
 function renderMedStats(data) {
+  _medsLastStats = data || null;
   var el = document.getElementById("med-stats");
   var s = data.summary;
+  var totalHint = _T('meds.stats.totalHint');
   el.innerHTML =
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">' +
-    '<div class="stat-box"><div class="stat-num">' + s.total_medications + '</div><div class="stat-label">' + _T('meds.stats.totalLabel') + '</div></div>' +
+    '<div class="stat-box stat-box-clickable" role="button" tabindex="0"' +
+      ' onclick="openMedTypesSheet()"' +
+      ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openMedTypesSheet();}"' +
+      ' title="' + totalHint + '" aria-label="' + totalHint + '">' +
+      '<div class="stat-num">' + s.total_medications + '</div>' +
+      '<div class="stat-label">' + _T('meds.stats.totalLabel') + '</div>' +
+      '<span class="stat-box-chev" aria-hidden="true"><i data-lucide="chevron-right" style="width:14px;height:14px"></i></span>' +
+    '</div>' +
     '<div class="stat-box"><div class="stat-num">' + s.adherence_rate + '%</div><div class="stat-label">' + _T('meds.stats.adherenceLabel') + '</div></div>' +
     '<div class="stat-box"><div class="stat-num">' + s.total_logs + '</div><div class="stat-label">' + _T('meds.stats.logsLabel') + '</div></div>' +
     '<div class="stat-box"><div class="stat-num">' + s.days + _T('meds.stats.daysUnit') + '</div><div class="stat-label">' + _T('meds.stats.daysLabel') + '</div></div>' +
     '</div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   // 畫服藥率折線圖
   if (data.adherence_trend && data.adherence_trend.length > 1) {
