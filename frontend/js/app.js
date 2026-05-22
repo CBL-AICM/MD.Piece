@@ -5118,6 +5118,7 @@ function decisionAid(opts) {
 // 解出的文字 + 推論的日期、種類存進 localStorage。
 // 視覺化：時間軸卡片 (最新在前)，可篩選類型。
 var _TIMELINE_KEY = 'mdpiece_timeline_entries';
+var _TIMELINE_TIP_DISMISSED_KEY = 'mdpiece_timeline_first_tip_dismissed';
 var _TIMELINE_KINDS = [
   { id: 'lab',    label: '檢驗報告', icon: 'flask-conical', color: 'blue'    },
   { id: 'rx',     label: '處方箋',   icon: 'pill',          color: 'amber'   },
@@ -5130,6 +5131,20 @@ function _getTimelineEntries() {
 }
 function _saveTimelineEntries(list) {
   localStorage.setItem(_TIMELINE_KEY, JSON.stringify(list));
+}
+function _hasDismissedTimelineTip() {
+  try { return localStorage.getItem(_TIMELINE_TIP_DISMISSED_KEY) === '1'; }
+  catch (e) { return false; }
+}
+function dismissTimelineFirstTip() {
+  try { localStorage.setItem(_TIMELINE_TIP_DISMISSED_KEY, '1'); } catch (e) {}
+  var tip = document.getElementById('tl-first-tip');
+  if (tip) tip.remove();
+}
+// 把 box 切到單一模式：list / bento / onboard
+function _setTimelineBoxMode(box, mode) {
+  ['tl-list', 'tl-bento', 'tl-onboard-wrap'].forEach(function(c) { box.classList.remove(c); });
+  box.classList.add(mode);
 }
 
 function timeline() {
@@ -5188,10 +5203,16 @@ function _renderLocalTimeline(box) {
   if (_tlFilter !== 'all') entries = entries.filter(function(e) { return e.kind === _tlFilter; });
   entries.sort(function(a, b) { return a.date < b.date ? 1 : -1; });
   if (!entries.length) {
-    box.innerHTML = '<p class="tl-empty">尚未有任何紀錄。點右上「上傳」加入第一份報告或處方箋。</p>';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (_tlFilter === 'all') {
+      _renderTimelineOnboarding(box);
+    } else {
+      _setTimelineBoxMode(box, 'tl-list');
+      box.innerHTML = '<p class="tl-empty">這個分類目前沒有紀錄。點上方「全部」看其他項目，或點右上「上傳」新增一筆。</p>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
     return;
   }
+  _setTimelineBoxMode(box, 'tl-list');
   box.innerHTML = entries.map(function(e) {
     var k = _TIMELINE_KINDS.find(function(x) { return x.id === e.kind; }) || _TIMELINE_KINDS[3];
     return ''
@@ -5215,6 +5236,84 @@ function _renderLocalTimeline(box) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// 第一次使用引導：完全沒卡片時的空狀態（含示範卡片 + 箭頭指向上傳鈕）
+function _renderTimelineOnboarding(box) {
+  _setTimelineBoxMode(box, 'tl-onboard-wrap');
+  // 進入引導畫面前移除舊提示橫幅
+  var oldTip = document.getElementById('tl-first-tip');
+  if (oldTip) oldTip.remove();
+  box.innerHTML = ''
+    + '<section class="tl-onboard" aria-label="第一次使用引導">'
+    +   '<div class="tl-onboard-hero">'
+    +     '<div class="tl-onboard-icon"><i data-lucide="upload-cloud"></i></div>'
+    +     '<div class="tl-onboard-arrow" aria-hidden="true">'
+    +       '<i data-lucide="corner-right-up"></i>'
+    +       '<span>點右上「↑ 上傳」</span>'
+    +     '</div>'
+    +   '</div>'
+    +   '<h3 class="tl-onboard-title">把散在各家醫院的紀錄，收進一條時間軸</h3>'
+    +   '<p class="tl-onboard-sub">拍張藥袋、檢驗單或報告，OCR 在你手機上跑、不上傳雲端。下次看診一頁拿給醫師。</p>'
+    +   '<ul class="tl-onboard-kinds">'
+    +     '<li class="tl-onboard-kind tl-onboard-kind-blue">'
+    +       '<span class="tl-onboard-kind-ic"><i data-lucide="flask-conical"></i></span>'
+    +       '<strong>檢驗報告</strong>'
+    +       '<em>抽血 / 尿液 / 生化</em>'
+    +     '</li>'
+    +     '<li class="tl-onboard-kind tl-onboard-kind-amber">'
+    +       '<span class="tl-onboard-kind-ic"><i data-lucide="pill"></i></span>'
+    +       '<strong>處方箋</strong>'
+    +       '<em>領藥單 / 藥袋拍照</em>'
+    +     '</li>'
+    +     '<li class="tl-onboard-kind tl-onboard-kind-purple">'
+    +       '<span class="tl-onboard-kind-ic"><i data-lucide="scan-line"></i></span>'
+    +       '<strong>影像報告</strong>'
+    +       '<em>X 光 / CT / MRI 文字</em>'
+    +     '</li>'
+    +   '</ul>'
+    +   '<div class="tl-onboard-demo">'
+    +     '<span class="tl-onboard-demo-label">看起來會像這樣</span>'
+    +     '<article class="tl-card tl-card-blue tl-onboard-demo-card" aria-hidden="true">'
+    +       '<header class="tl-card-head">'
+    +         '<span class="tl-card-icon"><i data-lucide="flask-conical"></i></span>'
+    +         '<div class="tl-card-meta">'
+    +           '<span class="tl-card-kind">檢驗報告</span>'
+    +           '<span class="tl-card-date">2026-05-14</span>'
+    +         '</div>'
+    +       '</header>'
+    +       '<h3 class="tl-card-title">CRP 抽血追蹤</h3>'
+    +       '<p class="tl-card-summary">CRP 12.4 mg/L（偏高）、WBC 7.8、Hb 13.1。建議 2 週後複檢。</p>'
+    +     '</article>'
+    +   '</div>'
+    +   '<button type="button" class="tl-onboard-cta" onclick="openTimelineUploader()">'
+    +     '<i data-lucide="upload"></i><span>上傳第一筆</span>'
+    +   '</button>'
+    + '</section>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 有後端資料、但使用者還沒自己上傳過 → 在卡片列表上方顯示一行可關閉的提示
+function _maybeRenderTimelineFirstTip() {
+  var existing = document.getElementById('tl-first-tip');
+  if (existing) existing.remove();   // 重新渲染前先移除舊的
+  if (_tlFilter !== 'all') return;
+  if (_hasDismissedTimelineTip()) return;
+  if (_getTimelineEntries().length > 0) return;   // 已上傳過，不再提示
+  var list = document.getElementById('tl-list');
+  if (!list || !list.parentNode) return;
+  var tip = document.createElement('aside');
+  tip.id = 'tl-first-tip';
+  tip.className = 'tl-first-tip';
+  tip.innerHTML = ''
+    + '<span class="tl-first-tip-ic"><i data-lucide="lightbulb"></i></span>'
+    + '<div class="tl-first-tip-body">'
+    +   '<strong>還可以加你自己拍的紀錄</strong>'
+    +   '<span>檢驗單、藥袋、影像報告都行，OCR 抽出重點後留在這台手機。</span>'
+    + '</div>'
+    + '<button type="button" class="tl-first-tip-go" onclick="openTimelineUploader()">試一次</button>'
+    + '<button type="button" class="tl-first-tip-x" onclick="dismissTimelineFirstTip()" aria-label="關閉提示"><i data-lucide="x" style="width:14px;height:14px"></i></button>';
+  list.parentNode.insertBefore(tip, list);
+}
+
 // 從後端拉時間軸並渲染成 Bento Grid。
 // 回傳 Promise<boolean>：true = 已渲染（含「沒資料」狀態），false = 拉不到或 DB offline，呼叫端應 fallback。
 async function loadServerTimeline() {
@@ -5234,14 +5333,21 @@ async function loadServerTimeline() {
         return e.type === _tlFilter;
       });
     }
-    box.classList.add('tl-bento');
-    box.classList.remove('tl-list');
     if (!entries.length) {
-      box.innerHTML = '<p class="tl-bento-empty">// 後端尚無事件。先上傳你的第一份檢驗報告或處方箋。</p>';
-      if (typeof lucide !== 'undefined') lucide.createIcons();
+      // 後端 0 筆、但本機有自上傳 → 讓 caller fallback 到本機渲染，避免使用者上傳的卡片被空狀態蓋掉
+      if (_getTimelineEntries().length > 0) return false;
+      if (_tlFilter === 'all') {
+        _renderTimelineOnboarding(box);
+      } else {
+        _setTimelineBoxMode(box, 'tl-bento');
+        box.innerHTML = '<p class="tl-bento-empty">這個分類目前沒有紀錄。點上方「全部」看其他項目，或點右上「上傳」新增一筆。</p>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
       return true;
     }
+    _setTimelineBoxMode(box, 'tl-bento');
     box.innerHTML = entries.map(_renderTimelineBentoCard).join('');
+    _maybeRenderTimelineFirstTip();
     if (typeof lucide !== 'undefined') lucide.createIcons();
     return true;
   } catch (e) {
@@ -8922,6 +9028,8 @@ async function _parseApiError(r) {
 var _medsList = [];
 var _medsPatientId = null;
 var _medsDeleteMode = false;
+var _medsLastStats = null;
+var _medTypesFilter = '__all__';
 
 function medications() {
   var user = getCurrentUser();
@@ -9396,6 +9504,243 @@ function closeMedDetail() {
   modal.classList.remove('is-open');
   document.removeEventListener('keydown', _medDetailEsc);
   setTimeout(function(){ if (modal.parentNode) modal.parentNode.removeChild(modal); }, 200);
+}
+
+// ─── 「藥物種類」清單 Sheet ────────────────────────────────
+// 點「藥物種類 N」統計卡會打開，列出全部 N 種藥；
+// 每張卡片顯示功能 / 用處 / 服法 / 個別服藥率 / 平均療效，
+// 並可篩選分類、跳轉到單顆藥的詳細紀錄。
+function openMedTypesSheet() {
+  var meds = (_medsList || []).filter(function(m){ return m.active !== 0; });
+  if (!meds.length) {
+    if (typeof showToast === 'function') showToast(_T('meds.types.empty'), 'info');
+    return;
+  }
+  var existing = document.getElementById('med-types-sheet');
+  if (existing) existing.remove();
+  _medTypesFilter = '__all__';
+
+  var sheet = document.createElement('div');
+  sheet.id = 'med-types-sheet';
+  sheet.className = 'med-detail-modal med-types-sheet';
+  sheet.innerHTML = ''
+    + '<div class="mdm-backdrop" onclick="closeMedTypesSheet()"></div>'
+    + '<div class="mdm-panel mtl-panel" role="dialog" aria-modal="true" aria-label="' + _T('meds.types.title') + '">'
+    +   '<header class="mdm-head">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedTypesSheet()" aria-label="' + _T('meds.types.close') + '">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +     '<div class="mdm-title-wrap">'
+    +       '<div class="mdm-pill"><i data-lucide="pills" style="width:18px;height:18px"></i></div>'
+    +       '<div>'
+    +         '<h3 class="mdm-title">' + _T('meds.types.title') + '</h3>'
+    +         '<p class="mdm-sub">' + _Tf('meds.types.subtitle', { n: meds.length }) + '</p>'
+    +       '</div>'
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="mtl-filterbar" id="mtl-filterbar"></div>'
+    +   '<div class="mdm-body mtl-body" id="mtl-body"></div>'
+    +   '<footer class="mdm-foot mtl-foot">'
+    +     '<span class="mtl-foot-hint"><i data-lucide="info" style="width:13px;height:13px;vertical-align:-2px"></i> ' + _T('meds.types.footHint') + '</span>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function(){ sheet.classList.add('is-open'); });
+  document.addEventListener('keydown', _medTypesEsc);
+
+  _renderMedTypesFilterBar(meds);
+  _renderMedTypesList(meds);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _medTypesEsc(e) { if (e.key === 'Escape') closeMedTypesSheet(); }
+function closeMedTypesSheet() {
+  var sheet = document.getElementById('med-types-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('is-open');
+  document.removeEventListener('keydown', _medTypesEsc);
+  setTimeout(function(){ if (sheet.parentNode) sheet.parentNode.removeChild(sheet); }, 200);
+}
+
+// 把醫療分類映射成淺顯的「功能」說明 — 患者不一定看得懂藥袋上的英文分類，
+// 所以提供一個保底文案；若藥物本身有 purpose，仍以 purpose 為主。
+var MED_CATEGORY_FUNCTION = {
+  '降血壓': '放鬆血管、降低血壓，保護心臟與腎臟',
+  '高血壓': '放鬆血管、降低血壓，保護心臟與腎臟',
+  '降血糖': '幫助身體運用葡萄糖，控制血糖',
+  '糖尿病': '幫助身體運用葡萄糖，控制血糖',
+  '降血脂': '降低壞膽固醇與三酸甘油酯，預防動脈硬化',
+  '高血脂': '降低壞膽固醇與三酸甘油酯，預防動脈硬化',
+  '心血管': '改善心臟與血管功能，預防中風與心肌梗塞',
+  '抗凝血': '降低血液凝結傾向，預防血栓',
+  '利尿劑': '幫助身體排出多餘水分與鈉',
+  '止痛': '阻斷疼痛訊號，減輕疼痛與發炎',
+  '消炎': '降低發炎反應，緩解紅腫熱痛',
+  '抗生素': '殺死或抑制細菌，治療細菌感染',
+  '抗組織胺': '減緩過敏反應，緩解癢、流鼻水、打噴嚏',
+  '腸胃': '緩解胃酸、脹氣或調節腸胃蠕動',
+  '制酸劑': '中和或減少胃酸，保護胃黏膜',
+  '助眠': '幫助入睡、改善睡眠品質',
+  '安眠': '幫助入睡、改善睡眠品質',
+  '抗焦慮': '緩解焦慮、放鬆神經',
+  '抗憂鬱': '調節神經傳導物質，改善情緒低落',
+  '甲狀腺': '補充或調節甲狀腺荷爾蒙',
+  '骨質疏鬆': '減緩骨質流失、強化骨骼',
+  '氣喘': '舒緩支氣管，改善呼吸',
+  '止咳': '緩解咳嗽',
+  '化痰': '稀釋痰液、幫助排痰',
+};
+
+function _medCategoryFunction(med) {
+  if (med && med.purpose) return String(med.purpose).trim();
+  var cat = (med && med.category) ? String(med.category).trim() : '';
+  if (!cat) return '';
+  if (MED_CATEGORY_FUNCTION[cat]) return MED_CATEGORY_FUNCTION[cat];
+  var keys = Object.keys(MED_CATEGORY_FUNCTION);
+  for (var i = 0; i < keys.length; i++) {
+    if (cat.indexOf(keys[i]) !== -1) return MED_CATEGORY_FUNCTION[keys[i]];
+  }
+  return '';
+}
+
+function _medUseCase(med) {
+  if (med && med.instructions) {
+    var ins = String(med.instructions).trim();
+    if (ins) return ins;
+  }
+  if (med && med.category) return String(med.category).trim();
+  return '';
+}
+
+function _renderMedTypesFilterBar(meds) {
+  var bar = document.getElementById('mtl-filterbar');
+  if (!bar) return;
+  var counts = { __all__: meds.length };
+  meds.forEach(function(m) {
+    var c = (m.category || _T('meds.types.uncategorized')).trim();
+    counts[c] = (counts[c] || 0) + 1;
+  });
+  var cats = Object.keys(counts).filter(function(k){ return k !== '__all__'; }).sort(function(a, b){
+    return counts[b] - counts[a];
+  });
+  var chips = [{ key: '__all__', label: _T('meds.types.filter.all'), count: counts.__all__ }];
+  cats.forEach(function(c) { chips.push({ key: c, label: c, count: counts[c] }); });
+
+  bar.innerHTML = chips.map(function(c) {
+    var active = c.key === _medTypesFilter ? ' mtl-chip-active' : '';
+    return '<button type="button" class="mtl-chip' + active + '"'
+      + ' data-key="' + escapeHtml(c.key) + '"'
+      + ' onclick="_setMedTypesFilter(this.dataset.key)"'
+      + ' aria-pressed="' + (c.key === _medTypesFilter) + '">'
+      + escapeHtml(c.label) + '<span class="mtl-chip-num">' + c.count + '</span>'
+      + '</button>';
+  }).join('');
+}
+
+function _setMedTypesFilter(key) {
+  _medTypesFilter = key || '__all__';
+  var meds = (_medsList || []).filter(function(m){ return m.active !== 0; });
+  _renderMedTypesFilterBar(meds);
+  _renderMedTypesList(meds);
+}
+
+function _renderMedTypesList(meds) {
+  var body = document.getElementById('mtl-body');
+  if (!body) return;
+
+  var perMedStats = {};
+  if (_medsLastStats && Array.isArray(_medsLastStats.medications)) {
+    _medsLastStats.medications.forEach(function(m) {
+      perMedStats[String(m.id)] = m;
+    });
+  }
+
+  var filtered = _medTypesFilter === '__all__'
+    ? meds.slice()
+    : meds.filter(function(m) {
+        var c = (m.category || _T('meds.types.uncategorized')).trim();
+        return c === _medTypesFilter;
+      });
+
+  if (!filtered.length) {
+    body.innerHTML = '<div class="mtl-empty"><i data-lucide="inbox" style="width:22px;height:22px"></i>'
+      + '<p>' + _T('meds.types.filterEmpty') + '</p></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  var cardsHtml = filtered.map(function(med, idx) {
+    var stats = perMedStats[String(med.id)] || {};
+    var name = escapeHtml(med.name || _T('meds.card.unnamed'));
+    var dosage = med.dosage ? ' <span class="mtl-card-dose">' + escapeHtml(med.dosage) + '</span>' : '';
+    var category = med.category ? '<span class="mtl-card-tag">' + escapeHtml(med.category) + '</span>' : '';
+
+    var fn = _medCategoryFunction(med);
+    var fnRow = fn
+      ? '<div class="mtl-row mtl-row-fn"><span class="mtl-row-ico">🎯</span><div><div class="mtl-row-lbl">' + _T('meds.types.row.fn') + '</div><div class="mtl-row-val">' + escapeHtml(fn) + '</div></div></div>'
+      : '<div class="mtl-row mtl-row-fn mtl-row-muted"><span class="mtl-row-ico">🎯</span><div><div class="mtl-row-lbl">' + _T('meds.types.row.fn') + '</div><div class="mtl-row-val">' + _T('meds.types.row.fnMissing') + '</div></div></div>';
+
+    var use = _medUseCase(med);
+    var useRow = use
+      ? '<div class="mtl-row"><span class="mtl-row-ico">📌</span><div><div class="mtl-row-lbl">' + _T('meds.types.row.use') + '</div><div class="mtl-row-val">' + escapeHtml(use) + '</div></div></div>'
+      : '';
+
+    var freqText = '';
+    if (med.frequency) freqText += med.frequency;
+    if (med.usage) freqText += (freqText ? '　·　' : '') + med.usage;
+    if (med.duration) freqText += (freqText ? '　·　' : '') + med.duration;
+    var freqRow = freqText
+      ? '<div class="mtl-row"><span class="mtl-row-ico">⏱</span><div><div class="mtl-row-lbl">' + _T('meds.types.row.freq') + '</div><div class="mtl-row-val">' + escapeHtml(freqText) + '</div></div></div>'
+      : '';
+
+    var rate = stats.adherence_rate != null ? Number(stats.adherence_rate) : null;
+    var rateClass = rate == null ? 'na' : (rate >= 80 ? 'ok' : (rate >= 50 ? 'warn' : 'low'));
+    var rateText = rate == null ? '—' : rate + '%';
+    var eff = stats.avg_effectiveness != null ? Number(stats.avg_effectiveness).toFixed(1) + ' / 5' : '—';
+    var doses = stats.total_logs != null ? stats.total_logs : 0;
+
+    var metrics = ''
+      + '<div class="mtl-metrics">'
+      +   '<div class="mtl-metric"><div class="mtl-metric-lbl">' + _T('meds.types.metric.adherence') + '</div>'
+      +     '<div class="mtl-metric-bar"><div class="mtl-metric-fill mtl-metric-fill-' + rateClass + '" style="width:' + (rate == null ? 0 : Math.max(2, Math.min(100, rate))) + '%"></div></div>'
+      +     '<div class="mtl-metric-val mtl-metric-val-' + rateClass + '">' + rateText + '</div>'
+      +   '</div>'
+      +   '<div class="mtl-metric mtl-metric-sm"><div class="mtl-metric-lbl">' + _T('meds.types.metric.eff') + '</div><div class="mtl-metric-val">' + eff + '</div></div>'
+      +   '<div class="mtl-metric mtl-metric-sm"><div class="mtl-metric-lbl">' + _T('meds.types.metric.logs') + '</div><div class="mtl-metric-val">' + doses + '</div></div>'
+      + '</div>';
+
+    var actions = ''
+      + '<div class="mtl-actions">'
+      +   '<button type="button" class="mtl-action mtl-action-primary" data-id="' + escapeHtml(med.id) + '" onclick="closeMedTypesSheet(); openMedDetail(this.dataset.id)">'
+      +     '<i data-lucide="bar-chart-3" style="width:13px;height:13px"></i> ' + _T('meds.types.action.detail')
+      +   '</button>'
+      +   '<button type="button" class="mtl-action" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)">'
+      +     '<i data-lucide="book-open" style="width:13px;height:13px"></i> ' + _T('meds.types.action.encyclopedia')
+      +   '</button>'
+      +   '<button type="button" class="mtl-action" data-id="' + escapeHtml(med.id) + '" data-name="' + escapeHtml(med.name || '') + '" onclick="showEffectForm(this.dataset.id, this.dataset.name); closeMedTypesSheet();">'
+      +     '<i data-lucide="star" style="width:13px;height:13px"></i> ' + _T('meds.types.action.effect')
+      +   '</button>'
+      + '</div>';
+
+    return ''
+      + '<article class="mtl-card">'
+      +   '<header class="mtl-card-head">'
+      +     '<span class="mtl-card-idx">' + (idx + 1) + '</span>'
+      +     '<div class="mtl-card-title-wrap">'
+      +       '<div class="mtl-card-title">' + name + dosage + '</div>'
+      +       (category ? '<div class="mtl-card-meta">' + category + '</div>' : '')
+      +     '</div>'
+      +   '</header>'
+      +   '<div class="mtl-card-body">'
+      +     fnRow + useRow + freqRow
+      +     metrics
+      +     actions
+      +   '</div>'
+      + '</article>';
+  }).join('');
+
+  body.innerHTML = cardsHtml;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 async function _loadMedDetail(medId, med) {
   var pid = _medsPatientId || (typeof getStablePatientId === 'function' ? getStablePatientId() : null);
@@ -10307,15 +10652,25 @@ function _submitMedEffect(medId, kind, effNum) {
 }
 
 function renderMedStats(data) {
+  _medsLastStats = data || null;
   var el = document.getElementById("med-stats");
   var s = data.summary;
+  var totalHint = _T('meds.stats.totalHint');
   el.innerHTML =
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">' +
-    '<div class="stat-box"><div class="stat-num">' + s.total_medications + '</div><div class="stat-label">' + _T('meds.stats.totalLabel') + '</div></div>' +
+    '<div class="stat-box stat-box-clickable" role="button" tabindex="0"' +
+      ' onclick="openMedTypesSheet()"' +
+      ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openMedTypesSheet();}"' +
+      ' title="' + totalHint + '" aria-label="' + totalHint + '">' +
+      '<div class="stat-num">' + s.total_medications + '</div>' +
+      '<div class="stat-label">' + _T('meds.stats.totalLabel') + '</div>' +
+      '<span class="stat-box-chev" aria-hidden="true"><i data-lucide="chevron-right" style="width:14px;height:14px"></i></span>' +
+    '</div>' +
     '<div class="stat-box"><div class="stat-num">' + s.adherence_rate + '%</div><div class="stat-label">' + _T('meds.stats.adherenceLabel') + '</div></div>' +
     '<div class="stat-box"><div class="stat-num">' + s.total_logs + '</div><div class="stat-label">' + _T('meds.stats.logsLabel') + '</div></div>' +
     '<div class="stat-box"><div class="stat-num">' + s.days + _T('meds.stats.daysUnit') + '</div><div class="stat-label">' + _T('meds.stats.daysLabel') + '</div></div>' +
     '</div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   // 畫服藥率折線圖
   if (data.adherence_trend && data.adherence_trend.length > 1) {
