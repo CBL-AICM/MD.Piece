@@ -2817,7 +2817,31 @@ function accountPage() {
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
     : `<img src="icons/xiaohe.jpg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
-  return `
+
+  // ─── Mobile v11 hero ───
+  const _mobileAccHero = `
+    <div class="mobile-only" style="margin-bottom:12px">
+      <div class="home-greet" style="position:relative;overflow:hidden">
+        <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.25"><use href="#puzzle-bg-blue-teal"/></svg>
+        <div class="home-avatar" style="position:relative;z-index:1">${avatarHtml}</div>
+        <div class="home-greet-text" style="position:relative;z-index:1">
+          <div class="home-greet-title">${(u.nickname || u.username || '未命名').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>
+          <div class="home-greet-date"><i data-lucide="${roleIcon}" style="width:11px;height:11px"></i> ${roleLabel} · ${u.username || ''}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const _mobileAccFooter = `
+    <div class="mobile-only">
+      <div class="disclaimer-footer">
+        <i data-lucide="info"></i>
+        <span>變更密碼後請重新登入，並通知共用裝置上的家人。</span>
+      </div>
+    </div>
+  `;
+
+  return _mobileAccHero + `
     <section class="acct-wrap">
       <header class="acct-head">
         <h2><i data-lucide="user-cog"></i> 帳號設定</h2>
@@ -2880,7 +2904,7 @@ function accountPage() {
         </div>
       </div>
     </section>
-  `;
+  ` + _mobileAccFooter;
 }
 
 function loadAccountPage() {
