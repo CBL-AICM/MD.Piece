@@ -4492,50 +4492,13 @@ function home() {
     +     '</button>'
     +   '</div>'
 
-    // KPI 3 卡 mini（含 sparkline + 白話解釋，資料注入見 _updateMobileHomeKPIs）
+    // KPI 3 卡 mini — 由 _updateMobileHomeKPIs 依「使用者最常紀錄前三項」動態渲染
     +   '<div class="sec-head">'
     +     '<h3 class="sec-title"><i data-lucide="line-chart"></i> 今日數值</h3>'
     +     '<span class="sec-spacer"></span>'
     +     '<button class="sec-action" onclick="navigateTo(\'vitals\',null)">紀錄 <i data-lucide="arrow-right"></i></button>'
     +   '</div>'
-    +   '<div class="kpi-row" id="mobile-home-kpi">'
-    +     '<div class="kpi-mini t-rose">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>'
-    +       '<div class="kpi-mini-val" id="mobile-kpi-bp-val">—</div>'
-    +       '<div class="kpi-mini-meta" id="mobile-kpi-bp-meta">尚無紀錄</div>'
-    +       '<svg class="kpi-mini-spark" id="mobile-kpi-bp-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
-    +         '<polygon fill="#C97A7A" fill-opacity="0.16" points="0,22 0,11 16,12 32,8 48,13 64,9 80,14 100,11 100,22"/>'
-    +         '<polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,11 16,12 32,8 48,13 64,9 80,14 100,11"/>'
-    +         '<circle cx="100" cy="11" r="2.6" fill="#C97A7A"/>'
-    +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 升高</div>'
-    +     '</div>'
-    +     '<div class="kpi-mini t-blue">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>'
-    +       '<div class="kpi-mini-val" id="mobile-kpi-glu-val">—</div>'
-    +       '<div class="kpi-mini-meta" id="mobile-kpi-glu-meta">尚無紀錄</div>'
-    +       '<svg class="kpi-mini-spark" id="mobile-kpi-glu-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
-    +         '<polygon fill="#4A90C2" fill-opacity="0.16" points="0,22 0,14 16,12 32,16 48,10 64,13 80,8 100,6 100,22"/>'
-    +         '<polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,14 16,12 32,16 48,10 64,13 80,8 100,6"/>'
-    +         '<circle cx="100" cy="6" r="2.6" fill="#4A90C2"/>'
-    +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 偏高</div>'
-    +     '</div>'
-    +     '<div class="kpi-mini t-teal">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>'
-    +       '<div class="kpi-mini-val" id="mobile-kpi-mood-val">—</div>'
-    +       '<div class="kpi-mini-meta" id="mobile-kpi-mood-meta">尚無紀錄</div>'
-    +       '<svg class="kpi-mini-spark" id="mobile-kpi-mood-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
-    +         '<polygon fill="#2F8378" fill-opacity="0.16" points="0,22 0,8 16,9 32,12 48,17 64,14 80,18 100,13 100,22"/>'
-    +         '<polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,8 16,9 32,12 48,17 64,14 80,18 100,13"/>'
-    +         '<circle cx="100" cy="13" r="2.6" fill="#2F8378"/>'
-    +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 越累</div>'
-    +     '</div>'
-    +   '</div>'
+    +   '<div class="kpi-row" id="mobile-home-kpi"></div>'
 
     // 今日待辦（複用原本資料注入點 + tag/狀態 pill）
     +   '<div class="sec-head">'
@@ -5084,84 +5047,340 @@ function _renderMobileRecentRecords() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 行動版首頁 KPI 注入：血壓 / 飯前血糖 / 心情電量
-// 資料源：localStorage `mdpiece_vitals_entries` + /emotions/daily
-// 找不到資料時保留「—」+「尚無紀錄」，不硬塞假值（避免誤導）。
+// ─── 行動版首頁 KPI 動態渲染 ─────────────────────────────────────
+// 候選池：生理量測 (localStorage) + 心情電量 (/emotions/daily) + 症狀 (/symptoms/history)
+// 排名分數 = 近 30 天總筆數 × (1 + 近 7 天筆數)  ← 長期紀錄 × 最近活躍度
+// 取分數最高前 3 名；不足 3 項時，剩餘格用「開始紀錄」CTA 卡補位。
+
+var _KPI_THEMES = [
+  { theme: 't-rose', color: '#C97A7A' },
+  { theme: 't-blue', color: '#4A90C2' },
+  { theme: 't-teal', color: '#2F8378' },
+];
+
+// 症狀關鍵字字典：把 free-text 歸到典型 buckets（順序大致依常見度，影響同分時的穩定排序）
+var _SYMPTOM_BUCKETS = [
+  { key:'headache',   label:'頭痛',   icon:'brain',       keywords:['頭痛','偏頭痛','headache'] },
+  { key:'neuralgia',  label:'神經痛', icon:'zap',         keywords:['神經痛','神經','neuralgia'] },
+  { key:'palpitation',label:'心悸',   icon:'activity',    keywords:['心悸','心跳','palpitation'] },
+  { key:'fever',      label:'發燒',   icon:'thermometer', keywords:['發燒','發熱','fever'] },
+  { key:'fatigue',    label:'疲倦',   icon:'battery-low', keywords:['疲倦','疲憊','倦怠','累','fatigue'] },
+  { key:'dizziness',  label:'頭暈',   icon:'wind',        keywords:['頭暈','暈眩','dizziness','vertigo'] },
+  { key:'nausea',     label:'噁心',   icon:'circle-slash',keywords:['噁心','想吐','nausea'] },
+  { key:'cough',      label:'咳嗽',   icon:'megaphone',   keywords:['咳嗽','cough'] },
+  { key:'stomach',    label:'胃痛',   icon:'circle',      keywords:['胃痛','胃不舒服','stomach'] },
+  { key:'backpain',   label:'腰背痛', icon:'move',        keywords:['腰痛','背痛','back pain'] },
+  { key:'insomnia',   label:'失眠',   icon:'moon',        keywords:['失眠','睡不著','insomnia'] },
+  { key:'sorethroat', label:'喉嚨痛', icon:'mic-off',     keywords:['喉嚨痛','咽喉','sore throat'] },
+  { key:'jointpain',  label:'關節痛', icon:'bone',        keywords:['關節痛','膝蓋痛','joint pain'] },
+  { key:'chestpain',  label:'胸痛',   icon:'heart',       keywords:['胸痛','胸悶','chest pain'] },
+  { key:'breathless', label:'喘',     icon:'wind',        keywords:['喘','呼吸困難','dyspnea'] },
+];
+
+// 生理量測 → 卡片 label/icon/解讀
+function _vitalKpiMeta(id) {
+  var map = {
+    bp:      { label:'血壓',     icon:'heart-pulse', explain:'線往上 = 升高',
+               interpret: function(v) { var s = parseInt(String(v).split('/')[0],10);
+                 if (isNaN(s)) return '已紀錄';
+                 if (s >= 140) return '偏高，留意';
+                 if (s >= 130) return '稍微偏高';
+                 if (s < 100)  return '偏低';
+                 return '範圍內'; } },
+    glucose: { label:'飯前血糖', icon:'droplet',     explain:'線往上 = 偏高',
+               interpret: function(v) { var g = parseFloat(v);
+                 if (isNaN(g)) return '已紀錄';
+                 if (g >= 126) return '偏高';
+                 if (g >= 110) return '略高';
+                 if (g < 70)   return '偏低';
+                 return '範圍內'; } },
+    weight:  { label:'體重',     icon:'weight',      explain:'線往上 = 增加',
+               interpret: function(v) { return v ? (v + ' kg') : '已紀錄'; } },
+    heart:   { label:'心率',     icon:'activity',    explain:'線往上 = 加快',
+               interpret: function(v) { var h = parseInt(v,10);
+                 if (isNaN(h)) return '已紀錄';
+                 if (h > 100) return '偏快';
+                 if (h < 60)  return '偏慢';
+                 return '範圍內'; } },
+    temp:    { label:'體溫',     icon:'thermometer', explain:'線往上 = 升高',
+               interpret: function(v) { var t = parseFloat(v);
+                 if (isNaN(t)) return '已紀錄';
+                 if (t >= 38)   return '發燒';
+                 if (t >= 37.5) return '微燒';
+                 return '範圍內'; } },
+    spo2:    { label:'血氧',     icon:'wind',        explain:'線往上 = 較高',
+               interpret: function(v) { var s = parseInt(v,10);
+                 if (isNaN(s)) return '已紀錄';
+                 if (s < 92) return '偏低，留意';
+                 if (s < 95) return '略低';
+                 return '範圍內'; } },
+    waist:   { label:'腰圍',     icon:'circle',      explain:'線往上 = 增加',
+               interpret: function(v) { return v ? (v + ' cm') : '已紀錄'; } },
+    height:  { label:'身高',     icon:'ruler',       explain:'',
+               interpret: function(v) { return v ? (v + ' cm') : '已紀錄'; } },
+    bmi:     { label:'BMI',      icon:'gauge',       explain:'線往上 = 上升',
+               interpret: function() { return '已紀錄'; } },
+  };
+  return map[id] || { label: id, icon:'activity', explain:'', interpret: function(){ return '已紀錄'; } };
+}
+
+// 把症狀歷史依關鍵字歸到 buckets（一筆只算進命中的第一桶，避免重複加分）
+function _bucketizeSymptoms(history) {
+  var out = {};
+  _SYMPTOM_BUCKETS.forEach(function(b) { out[b.key] = { def: b, entries: [] }; });
+  (history || []).forEach(function(h) {
+    if (!h || !h.created_at) return;
+    var text = ((h.symptoms || []).join(',') + ' ' + (h.input || '')).toLowerCase();
+    for (var i = 0; i < _SYMPTOM_BUCKETS.length; i++) {
+      var b = _SYMPTOM_BUCKETS[i];
+      var hit = b.keywords.some(function(w) { return text.indexOf(w.toLowerCase()) >= 0; });
+      if (hit) { out[b.key].entries.push(h); break; }
+    }
+  });
+  return out;
+}
+
+function _countSince(timesISO, sinceTs) {
+  var n = 0;
+  for (var i = 0; i < timesISO.length; i++) {
+    if ((new Date(timesISO[i])).getTime() >= sinceTs) n++;
+  }
+  return n;
+}
+
+// 7 點 sparkline → SVG（純線 + 末端圓點，省略 polygon 以維持輕量）
+function _kpiSparkSvg(values, color) {
+  if (!values || !values.length) return '';
+  var arr = values.slice(-7);
+  if (arr.length < 2) arr = [arr[0] || 0, arr[0] || 0];
+  var maxV = Math.max.apply(null, arr), minV = Math.min.apply(null, arr);
+  var span = (maxV - minV) || 1;
+  var stepX = 100 / (arr.length - 1);
+  var pts = arr.map(function(v, i) {
+    var y = 18 - ((v - minV) / span) * 14;  // 倒置：數值大 → y 小（在上方）
+    return (i * stepX).toFixed(1) + ',' + y.toFixed(1);
+  });
+  var last = pts[pts.length - 1].split(',');
+  return ''
+    + '<svg class="kpi-mini-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
+    +   '<polyline fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="' + pts.join(' ') + '"/>'
+    +   '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="2.6" fill="' + color + '"/>'
+    + '</svg>';
+}
+
+// 收集生理量測候選（同步）
+function _collectVitalCandidates(now) {
+  var weekAgo = now - 7 * 86400000;
+  var monthAgo = now - 30 * 86400000;
+  var entries = [];
+  try { entries = (typeof getVitalEntries === 'function') ? getVitalEntries() : []; }
+  catch (e) { entries = []; }
+
+  var byMetric = {};
+  entries.forEach(function(e) {
+    if (!e || !e.metricId || !e.recordedAt) return;
+    if (!byMetric[e.metricId]) byMetric[e.metricId] = [];
+    byMetric[e.metricId].push(e);
+  });
+
+  var out = [];
+  Object.keys(byMetric).forEach(function(mid) {
+    var arr = byMetric[mid].slice().sort(function(a,b){
+      return new Date(a.recordedAt) - new Date(b.recordedAt);
+    });
+    var times = arr.map(function(e){ return e.recordedAt; });
+    var total = _countSince(times, monthAgo);
+    var recent = _countSince(times, weekAgo);
+    if (total === 0 && recent === 0) return;
+    var meta = _vitalKpiMeta(mid);
+    var latest = arr[arr.length - 1];
+    var disp = (latest.value != null) ? String(latest.value)
+             : (latest.systolic != null) ? (latest.systolic + '/' + latest.diastolic)
+             : '—';
+    var sparkVals = arr.slice(-7).map(function(e) {
+      if (e.value != null) { var n = parseFloat(e.value); return isNaN(n) ? 0 : n; }
+      if (e.systolic != null) return parseFloat(e.systolic) || 0;
+      return 0;
+    });
+    out.push({
+      key: 'vital:' + mid, navTarget: 'vitals',
+      label: meta.label, icon: meta.icon, explainText: meta.explain,
+      valueDisp: disp, valueHtml: false,
+      metaText: meta.interpret(disp),
+      sparkValues: sparkVals,
+      totalCount: total, recentCount: recent,
+      score: total * (1 + recent),
+    });
+  });
+  return out;
+}
+
+// 收集心情電量候選（async）
+function _collectEmotionCandidate(pid, now) {
+  var weekAgo = now - 7 * 86400000;
+  return fetch(API + '/emotions/daily?patient_id=' + pid + '&days=30')
+    .then(function(r){ return r.ok ? r.json() : { daily: [] }; })
+    .then(function(d) {
+      var daily = (d && d.daily) || [];
+      if (!daily.length) return [];
+      var sevenIso = (new Date(weekAgo)).toISOString().slice(0,10);
+      var total = daily.length;
+      var recent = daily.filter(function(x){ return (x.date || '') >= sevenIso; }).length;
+      var last = daily[daily.length - 1];
+      var score = (last && last.average_score != null)
+        ? Math.max(1, Math.min(5, Math.round(last.average_score * 5))) : null;
+      var disp = score
+        ? (score + '<span style="font-size:12px;color:var(--text-muted)">/5</span>')
+        : '—';
+      var metaText = score == null ? '已紀錄'
+        : (score >= 4 ? '狀態不錯' : score === 3 ? '還可以' : '這幾天有點累');
+      return [{
+        key: 'emotion:mood', navTarget: 'emotions',
+        label: '心情電量', icon: 'battery-charging',
+        explainText: '線往上 = 較好',
+        valueDisp: disp, valueHtml: true,
+        metaText: metaText,
+        sparkValues: daily.slice(-7).map(function(x){ return (x.average_score || 0) * 5; }),
+        totalCount: total, recentCount: recent,
+        score: total * (1 + recent),
+      }];
+    })
+    .catch(function(){ return []; });
+}
+
+// 收集症狀候選（async）
+function _collectSymptomCandidates(pid, now) {
+  var weekAgo = now - 7 * 86400000;
+  var monthAgo = now - 30 * 86400000;
+  return fetch(API + '/symptoms/history/' + encodeURIComponent(pid))
+    .then(function(r){ return r.ok ? r.json() : { history: [] }; })
+    .then(function(d) {
+      var hist = (d && d.history) || [];
+      var buckets = _bucketizeSymptoms(hist);
+      var out = [];
+      Object.keys(buckets).forEach(function(k) {
+        var b = buckets[k];
+        if (!b.entries.length) return;
+        var times = b.entries.map(function(h){ return h.created_at; });
+        var total = _countSince(times, monthAgo);
+        var recent = _countSince(times, weekAgo);
+        if (total === 0 && recent === 0) return;
+        // sparkline：最近 7 天每日筆數
+        var dayKeys = [];
+        for (var i = 6; i >= 0; i--) {
+          dayKeys.push(new Date(now - i * 86400000).toISOString().slice(0,10));
+        }
+        var dayCount = {};
+        dayKeys.forEach(function(k){ dayCount[k] = 0; });
+        b.entries.forEach(function(h) {
+          var dk = (h.created_at || '').slice(0,10);
+          if (dayCount[dk] != null) dayCount[dk]++;
+        });
+        var sparkVals = dayKeys.map(function(k){ return dayCount[k]; });
+        var lastEntry = b.entries.slice().sort(function(a,b){
+          return new Date(b.created_at) - new Date(a.created_at);
+        })[0];
+        var ld = new Date(lastEntry.created_at);
+        var lastStr = (ld.getMonth()+1) + '/' + ld.getDate();
+        out.push({
+          key: 'symptom:' + b.def.key, navTarget: 'symptoms',
+          label: b.def.label, icon: b.def.icon,
+          explainText: '近 7 天紀錄趨勢',
+          valueDisp: total + '<span style="font-size:12px;color:var(--text-muted)"> 次</span>',
+          valueHtml: true,
+          metaText: '上次 ' + lastStr,
+          sparkValues: sparkVals,
+          totalCount: total, recentCount: recent,
+          score: total * (1 + recent),
+        });
+      });
+      return out;
+    })
+    .catch(function(){ return []; });
+}
+
+function _kpiCardHTML(c, idx) {
+  var theme = _KPI_THEMES[idx % _KPI_THEMES.length];
+  var val = c.valueHtml ? c.valueDisp : escapeHtml(String(c.valueDisp));
+  var nav = c.navTarget ? (' onclick="navigateTo(\'' + c.navTarget + '\',null)"') : '';
+  return ''
+    + '<div class="kpi-mini ' + theme.theme + '"' + nav + ' style="cursor:pointer">'
+    +   '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +   '<div class="kpi-mini-label"><i data-lucide="' + c.icon + '"></i> ' + escapeHtml(c.label) + '</div>'
+    +   '<div class="kpi-mini-val">' + val + '</div>'
+    +   '<div class="kpi-mini-meta">' + escapeHtml(c.metaText || '') + '</div>'
+    +   _kpiSparkSvg(c.sparkValues, theme.color)
+    +   (c.explainText ? '<div class="kpi-mini-explain">' + escapeHtml(c.explainText) + '</div>' : '')
+    + '</div>';
+}
+
+// 紀錄不滿 3 項時的引導 CTA 卡（依序輪替推薦常用入口）
+var _KPI_CTA_DEFAULTS = [
+  { label:'血壓',     icon:'heart-pulse',      hint:'量一下開始追蹤', target:'vitals' },
+  { label:'心情電量', icon:'battery-charging', hint:'今天感覺如何？', target:'emotions' },
+  { label:'症狀',     icon:'zap',              hint:'有不舒服就記',   target:'symptoms' },
+];
+
+function _kpiCtaCardHTML(startIdx, count, usedTargets) {
+  if (count <= 0) return '';
+  var ctas = _KPI_CTA_DEFAULTS.filter(function(c){ return usedTargets.indexOf(c.target) < 0; });
+  while (ctas.length < count) ctas = ctas.concat(_KPI_CTA_DEFAULTS);
+  var html = '';
+  for (var i = 0; i < count; i++) {
+    var theme = _KPI_THEMES[(startIdx + i) % _KPI_THEMES.length];
+    var cta = ctas[i];
+    html += ''
+      + '<div class="kpi-mini ' + theme.theme + '" onclick="navigateTo(\'' + cta.target + '\',null)" style="cursor:pointer;opacity:.82">'
+      +   '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+      +   '<div class="kpi-mini-label"><i data-lucide="' + cta.icon + '"></i> ' + cta.label + '</div>'
+      +   '<div class="kpi-mini-val" style="font-weight:400;color:var(--text-muted)">+</div>'
+      +   '<div class="kpi-mini-meta">' + cta.hint + '</div>'
+      +   '<div class="kpi-mini-explain">點此開始紀錄</div>'
+      + '</div>';
+  }
+  return html;
+}
+
 function _updateMobileHomeKPIs() {
-  try {
-    var bpVal = document.getElementById('mobile-kpi-bp-val');
-    var bpMeta = document.getElementById('mobile-kpi-bp-meta');
-    if (bpVal && typeof getLatestEntry === 'function') {
-      var bp = getLatestEntry('bp');
-      if (bp && bp.value) {
-        // bp 可能是 "120/80" 或物件
-        var disp = (typeof bp.value === 'string') ? bp.value
-          : (bp.systolic && bp.diastolic) ? (bp.systolic + '/' + bp.diastolic)
-          : '—';
-        bpVal.textContent = disp;
-        if (bpMeta) {
-          // 判讀：以收縮壓 130 / 舒張壓 85 為界（提醒參考，非診斷）
-          var sys = parseInt(String(disp).split('/')[0], 10);
-          if (!isNaN(sys)) {
-            if (sys >= 140) bpMeta.textContent = '偏高，留意';
-            else if (sys >= 130) bpMeta.textContent = '有點高一點';
-            else if (sys < 100) bpMeta.textContent = '偏低';
-            else bpMeta.textContent = '範圍內';
-          } else {
-            bpMeta.textContent = '已紀錄';
-          }
-        }
-      }
-    }
-  } catch (e) {}
+  var container = document.getElementById('mobile-home-kpi');
+  if (!container) return;
 
-  try {
-    var gluVal = document.getElementById('mobile-kpi-glu-val');
-    var gluMeta = document.getElementById('mobile-kpi-glu-meta');
-    if (gluVal && typeof getLatestEntry === 'function') {
-      var glu = getLatestEntry('glucose');
-      if (glu && glu.value) {
-        gluVal.textContent = String(glu.value);
-        if (gluMeta) {
-          var g = parseFloat(glu.value);
-          if (!isNaN(g)) {
-            if (g >= 126) gluMeta.textContent = '偏高';
-            else if (g >= 110) gluMeta.textContent = '略高 ' + (g - 100).toFixed(0) + ' 點';
-            else if (g < 70) gluMeta.textContent = '偏低';
-            else gluMeta.textContent = '範圍內';
-          } else {
-            gluMeta.textContent = '已紀錄';
-          }
-        }
-      }
-    }
-  } catch (e) {}
+  var now = Date.now();
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
 
-  // 心情電量：用最近一天的 emotions/daily.average_score（0~1 → 1~5 顯示）
-  try {
-    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-    var moodVal = document.getElementById('mobile-kpi-mood-val');
-    var moodMeta = document.getElementById('mobile-kpi-mood-meta');
-    if (pid && moodVal) {
-      fetch(API + '/emotions/daily?patient_id=' + pid + '&days=3')
-        .then(function(r) { return r.ok ? r.json() : { daily: [] }; })
-        .then(function(d) {
-          var daily = (d && d.daily) || [];
-          if (!daily.length) return;
-          var last = daily[daily.length - 1];
-          if (!last || last.average_score == null) return;
-          // average_score 假設 0~1（與 _moodPercent 一致）→ 換算 1~5
-          var score = Math.max(1, Math.min(5, Math.round(last.average_score * 5)));
-          moodVal.innerHTML = score + '<span style="font-size:12px;color:var(--text-muted)">/5</span>';
-          if (moodMeta) {
-            if (score >= 4) moodMeta.textContent = '狀態不錯';
-            else if (score === 3) moodMeta.textContent = '還可以';
-            else moodMeta.textContent = '這幾天有點累';
-          }
-        })
-        .catch(function() {});
+  var jobs = [
+    Promise.resolve(_collectVitalCandidates(now)),
+    pid ? _collectEmotionCandidate(pid, now) : Promise.resolve([]),
+    pid ? _collectSymptomCandidates(pid, now) : Promise.resolve([]),
+  ];
+
+  Promise.all(jobs).then(function(results) {
+    var all = [].concat.apply([], results);
+    all.sort(function(a,b){
+      if (b.score !== a.score) return b.score - a.score;
+      return a.label.localeCompare(b.label);
+    });
+    var top = all.slice(0, 3);
+    var used = top.map(function(c){ return c.navTarget; });
+    container.innerHTML = top.map(function(c, i){ return _kpiCardHTML(c, i); }).join('')
+                       + _kpiCtaCardHTML(top.length, 3 - top.length, used);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+      try { lucide.createIcons(); } catch (e) {}
     }
-  } catch (e) {}
+  }).catch(function(){
+    // 全部 fetch 都失敗：用 vitals + CTA fallback 保底
+    try {
+      var vitals = _collectVitalCandidates(now);
+      vitals.sort(function(a,b){ return b.score - a.score; });
+      var top = vitals.slice(0, 3);
+      var used = top.map(function(c){ return c.navTarget; });
+      container.innerHTML = top.map(function(c, i){ return _kpiCardHTML(c, i); }).join('')
+                         + _kpiCtaCardHTML(top.length, 3 - top.length, used);
+      if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
+    } catch (e) {}
+  });
 }
 
 // 行動版待辦進度 sec-count（X 完成 / Y 總數）
