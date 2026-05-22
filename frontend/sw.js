@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v103-tabbar-v11";
+const CACHE_VERSION = "mdpiece-v104-typography";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
