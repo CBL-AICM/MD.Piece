@@ -3,7 +3,10 @@
    來源：preview-app-demo.html 的設計濃縮
    作用：套在 style.css + medical-warm.css 之後
    啟用：body.theme-modern（預設）
+   範圍：**僅手機/平板（≤1023px）**；桌機 ≥1024px 維持 Y2K 原版
    ═════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1023px) {
 
 /* ─── 隱藏所有 Y2K 視覺殘留（星空背景、CRT 掃描線、霓虹光暈）─── */
 body.theme-modern #star-canvas,
@@ -337,5 +340,14 @@ body.theme-modern .med-customize-row .actual {
   color: var(--text); flex: 1;
 }
 body.theme-modern .med-customize-row .actual strong { color: var(--navy); }
+
+} /* end @media (max-width: 1023px) */
+
+/* ═════════════════════════════════════════════════════════════════
+   桌機 ≥1024px：dark mode toggle 按鈕也隱藏（電腦版回 Y2K 原版）
+   ═════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .theme-toggle-btn { display: none !important; }
+}
 
 /* ─── 結束 ─── */
