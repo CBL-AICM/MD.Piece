@@ -13774,8 +13774,83 @@ function pieces() {
       + '</div>'
     : '<div class="pz-prev pz-prev-empty"><i data-lucide="bookmark-plus"></i>尚未保存過快照。下次回診前按「保存為這次的拼圖」可以建立第一份。</div>';
 
-  return '\n'
-    + '<section class="pieces-page">\n'
+  // ─── Mobile v11 block ───
+  var mobileTopCats = s.topCats.slice(0, 4).map(function(c) {
+    return '<span class="pill pill-info" style="padding:5px 10px;font-size:11px"><i data-lucide="' + c.icon + '" style="width:11px;height:11px"></i> ' + escapeHtml(c.zh) + ' · ' + c.count + '</span>';
+  }).join('');
+  var mobileTimeline = s.timeline.slice(0, 6).map(function(t) {
+    var ico = t.kind === 'symptom' ? 'scan-search' : (t.kind === 'memo' ? 'sticky-note' : 'activity');
+    var pillCls = t.kind === 'symptom' ? 'pill-info' : (t.kind === 'memo' ? 'pill-rose' : 'pill-teal');
+    var kindLabel = t.kind === 'symptom' ? '症狀' : (t.kind === 'memo' ? 'Memo' : '生理');
+    return ''
+      + '<div style="position:relative;padding-left:18px;margin-bottom:8px">'
+      +   '<span style="position:absolute;left:0;top:6px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg-mid,#fff)"></span>'
+      +   '<span style="position:absolute;left:3px;top:14px;bottom:-6px;width:2px;background:var(--border)"></span>'
+      +   '<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px"><span class="pill ' + pillCls + '"><i data-lucide="' + ico + '"></i>' + kindLabel + '</span><span class="time" style="font-size:10px">' + piecesFormatTime(t.t) + '</span></div>'
+      +   '<div style="font-size:12px;font-weight:600;color:var(--navy)">' + escapeHtml(t.label || '—') + '</div>'
+      +   (t.meta ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:1px">' + escapeHtml(t.meta) + '</div>' : '')
+      + '</div>';
+  }).join('');
+  var _mobilePzBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +     '<div class="pv-hero-eye">你的碎片</div>'
+    +     '<div class="pv-hero-num">' + s.days + '<span class="unit">天 · ' + piecesFormatDate(s.since) + ' 起</span></div>'
+    +     '<div class="pv-hero-doc" style="margin-top:6px">把上次回診以來的紀錄拼起來</div>'
+    +   '</div>'
+
+    // 4 顆 KPI 卡（症狀 / Memo / 生理 / 藥物）
+    +   '<div class="sos-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:12px">'
+    +     '<button type="button" class="sos-btn t-blue" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="scan-search"></i></div>'
+    +       '<div class="sos-label">症狀 ' + s.symptomCount + '</div>'
+    +       '<div class="sos-sub">' + s.symptomEntries + ' 筆 · 強度 ' + s.avgIntensity.toFixed(1) + '</div>'
+    +     '</button>'
+    +     '<button type="button" class="sos-btn t-rose" onclick="navigateTo(\'memo\',null)">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="sticky-note"></i></div>'
+    +       '<div class="sos-label">Memo ' + s.memoCount + '</div>'
+    +       '<div class="sos-sub">' + s.memoForDoctor + ' 給醫師</div>'
+    +     '</button>'
+    +     '<button type="button" class="sos-btn t-teal" onclick="navigateTo(\'vitals\',null)">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="activity"></i></div>'
+    +       '<div class="sos-label">生理 ' + s.vitalCount + '</div>'
+    +       '<div class="sos-sub">' + (s.lastVital ? (s.lastVital.metricLabel || '紀錄') : '尚無紀錄') + '</div>'
+    +     '</button>'
+    +     '<button type="button" class="sos-btn t-amber" onclick="navigateTo(\'medications\',null)">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="pill"></i></div>'
+    +       '<div class="sos-label" id="mobile-pz-meds-num">藥物 …</div>'
+    +       '<div class="sos-sub" id="mobile-pz-meds-sub">載入中</div>'
+    +     '</button>'
+    +   '</div>'
+
+    // 症狀分佈 Top 4
+    + (mobileTopCats ? '<div class="sec-head"><h3 class="sec-title"><i data-lucide="bar-chart-3"></i> 症狀分佈 Top 4</h3><span class="sec-spacer"></span></div>'
+      + '<div class="card" style="padding:12px;display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">' + mobileTopCats + '</div>' : '')
+
+    // 最近的碎片時間軸
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="history"></i> 最近的碎片</h3><span class="sec-count">' + s.timeline.length + '</span><span class="sec-spacer"></span></div>'
+    +   '<div class="card" style="padding:14px;margin-bottom:12px">' + (mobileTimeline || '<div style="color:var(--text-muted);font-size:11.5px;text-align:center;padding:8px">尚無紀錄，從症狀／Memo 開始拼起</div>') + '</div>'
+
+    // 動作按鈕
+    +   '<div style="display:flex;gap:8px;margin-bottom:12px">'
+    +     '<button onclick="piecesSaveCurrent()" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="save" style="width:13px;height:13px"></i> 保存這次拼圖</button>'
+    +     '<button onclick="piecesExport()" style="flex:1;background:#fff;color:var(--text-dim);border:1.5px solid var(--border);border-radius:10px;padding:11px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="clipboard-copy" style="width:13px;height:13px"></i> 複製摘要</button>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>「拼圖」是把回診之間的小事拼起來，方便下次跟醫師說。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobilePzBlock + '\n'
+    + '<section class="pieces-page desktop-only">\n'
     + '  <header class="pz-header">\n'
     + '    <div>\n'
     + '      <p class="pz-eyebrow">// pieces &gt; aggregated_records</p>\n'
@@ -13858,6 +13933,10 @@ function loadPiecesPage() {
         var sub = document.getElementById('pz-meds-sub');
         if (num) num.textContent = meds.length;
         if (sub) sub.textContent = meds.length ? '種藥物正在追蹤' : '尚未建立藥物紀錄';
+        var mNum = document.getElementById('mobile-pz-meds-num');
+        var mSub = document.getElementById('mobile-pz-meds-sub');
+        if (mNum) mNum.textContent = '藥物 ' + meds.length;
+        if (mSub) mSub.textContent = meds.length ? '種追蹤中' : '尚未建立';
       })
       .catch(function() {
         var num = document.getElementById('pz-meds-num');
