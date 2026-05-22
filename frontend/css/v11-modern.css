@@ -350,4 +350,88 @@ body.theme-modern .med-customize-row .actual {
 }
 body.theme-modern .med-customize-row .actual strong { color: var(--navy); }
 
+/* ─── topbar / tabbar 對齊 v11 demo 視覺 ─────────────────────────── */
+
+/* 隱藏不在 demo 的元素：A+ 字級切換、⚙️ 設定按鈕 */
+body.theme-modern .app-elder-toggle,
+body.theme-modern .app-settings-btn { display: none !important; }
+
+/* topbar 整體：白底淡邊 + 圓角 icon button（demo .ph-topbar 風格）*/
+body.theme-modern .topbar {
+  background: #fff !important;
+  border-bottom: 1px solid var(--border, #E4D9C8) !important;
+  padding: 10px 12px !important;
+  gap: 6px !important;
+}
+body.theme-modern .topbar .hamburger,
+body.theme-modern .topbar .app-lang-toggle,
+body.theme-modern .topbar .app-theme-toggle {
+  background: var(--bg-soft, #F7F1E5) !important;
+  border: 1px solid var(--border, #E4D9C8) !important;
+  border-radius: 10px !important;
+  width: 36px !important; height: 36px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--navy, #1F3D58) !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+}
+body.theme-modern .topbar .topbar-back {
+  background: #fff !important;
+  border: 1px solid var(--border, #E4D9C8) !important;
+  border-radius: 12px !important;
+  padding: 6px 12px !important;
+  color: var(--navy, #1F3D58) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}
+body.theme-modern .topbar .topbar-filename {
+  background: var(--accent-tint, #EAF2F8) !important;
+  border-radius: 14px !important;
+  padding: 5px 11px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--accent-deep, #2F6B96) !important;
+  font-family: inherit !important;
+}
+body.theme-modern .topbar .topbar-filename::before {
+  content: "●";
+  color: var(--green-deep, #2F6F47);
+  margin-right: 5px;
+  font-size: 9px;
+  vertical-align: middle;
+}
+
+/* tabbar 對齊 demo .ph-tabbar：白底 + 圓角 FAB 藍色 */
+body.theme-modern .mobile-tabbar {
+  background: #fff !important;
+  border-top: 1px solid var(--border, #E4D9C8) !important;
+  box-shadow: 0 -4px 16px -8px rgba(31,61,88,0.08) !important;
+}
+body.theme-modern .mobile-tabbar .mtab {
+  color: var(--text-dim, #5B6F80) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+body.theme-modern .mobile-tabbar .mtab[data-active="true"],
+body.theme-modern .mobile-tabbar .mtab.active {
+  color: var(--accent-deep, #2F6B96) !important;
+}
+/* FAB 藍色，不再是金色 */
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-core {
+  background: var(--accent, #4A90C2) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 18px -6px rgba(74,144,194,0.55) !important;
+}
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-ring {
+  background: rgba(74,144,194,0.15) !important;
+  border-color: rgba(74,144,194,0.30) !important;
+}
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-label {
+  color: var(--accent-deep, #2F6B96) !important;
+}
+
 /* ─── 結束 ─── */
