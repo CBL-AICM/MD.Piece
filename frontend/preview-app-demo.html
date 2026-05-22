@@ -208,6 +208,61 @@
     :root.dark .pill-rose { background: var(--rose-soft); color: var(--rose-deep); }
     :root.dark .pill-mute { background: var(--bg-soft); color: var(--text-dim); }
     :root.dark .pill-info { background: var(--accent-soft); color: var(--accent-deep); }
+
+    /* 補充：所有遺漏的白底元素 dark 覆寫（全面性） */
+    :root.dark .int-cell,
+    :root.dark .chip,
+    :root.dark .list-row .check,
+    :root.dark .ph-tab,
+    :root.dark .ph-icon-btn,
+    :root.dark .ph-back,
+    :root.dark .audience-btn,
+    :root.dark .care-mode-mini button,
+    :root.dark .qr-tile-toolbar button,
+    :root.dark .demo-aud button,
+    :root.dark .sym-suggest-pill,
+    :root.dark .list-card,
+    :root.dark .home-todo,
+    :root.dark .todo-card {
+      background: var(--bg-mid) !important;
+      color: var(--text-dim) !important;
+      border-color: var(--border) !important;
+    }
+    :root.dark .int-cell strong { color: var(--text) !important; }
+    :root.dark .int-cell.sel,
+    :root.dark .chip.active {
+      background: var(--accent-soft) !important;
+      border-color: var(--accent) !important;
+      color: var(--accent-deep) !important;
+    }
+    :root.dark .int-cell.sel strong { color: var(--accent-deep) !important; }
+    /* audience-btn active 高亮 */
+    :root.dark .audience-btn.active,
+    :root.dark .audience-btn[style*="background:#fff"] {
+      background: var(--accent) !important;
+      color: #FFFFFF !important;
+    }
+    /* 時間欄字色不要太淡 */
+    :root.dark .med-list-row .time,
+    :root.dark .list-row .time { color: var(--text) !important; opacity: 0.9; }
+    :root.dark .med-list-row .dose { color: var(--text-dim) !important; }
+
+    /* 任何 inline style 寫 background: #FFF 都強制覆寫（更廣的 selector） */
+    :root.dark [style*="background:#FFFFFF"],
+    :root.dark [style*="background: #FFFFFF"],
+    :root.dark [style*="background:#fff"],
+    :root.dark [style*="background: #fff"],
+    :root.dark [style*="background:#FBFCFD"],
+    :root.dark [style*="background:#FAFBFC"],
+    :root.dark [style*="background:#F7F9FC"],
+    :root.dark [style*="background:#F4F6F8"] { background: var(--bg-mid) !important; }
+
+    /* SVG inline fill="#FFFFFF" 在 dark mode 強制換深 */
+    :root.dark svg[fill="#FFFFFF"],
+    :root.dark svg[fill="#fff"] { fill: var(--bg-mid); }
+
+    /* 不要 text-muted 太淡 — bump 對比 */
+    :root.dark { --text-muted: #B5C5D6; }
     /* 拼圖塊 dark mode — 用 screen blend 讓 pastel 在深底上發光，淡一點 */
     :root.dark .puzzle-bg-layer { mix-blend-mode: screen; opacity: 0.40; }
     /* 暖陰影 dark 改成深陰影 */
