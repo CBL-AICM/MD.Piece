@@ -6,7 +6,11 @@ import logging
 from backend.db import get_supabase
 from backend.utils.triage_rules import check_emergency, EMERGENCY_SYMPTOMS
 from backend.utils.baseline import calculate_baseline
-from backend.services.llm_service import call_claude
+from backend.services.llm_service import (
+    build_patient_facing_system,
+    call_claude,
+    compute_patient_context,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -84,14 +88,27 @@ def evaluate_triage(body: TriageRequest):
         "notes": body.notes,
     }
 
-    system_prompt = (
-        "你是 MD.Piece 的分流判斷助手。根據病患今日回報的數據，判斷其健康狀態。\n"
-        "回覆格式必須是以下三種之一：\n"
-        "- stable：今天狀況穩定，繼續按時服藥\n"
-        "- follow_up：建議近期回診追蹤\n"
-        "- emergency：建議立即就醫\n\n"
-        "回覆格式：先寫判斷結果（stable/follow_up/emergency），換行後寫一句簡短說明。\n"
-        "語氣溫暖、不恐嚇，用繁體中文。"
+    # 風格層管「對病人講話的口吻」；這裡只描述「這次任務要產出什麼結構」。
+    triage_role = (
+        "【本次任務：分流判斷】\n"
+        "根據病患今日回報的數據，判斷分流結果，輸出固定格式。\n\n"
+        "輸出格式（嚴格遵守）：\n"
+        "  第 1 行：判斷標籤，只能是以下三種之一（小寫、不含其他字）：\n"
+        "    - stable      ：跟平常差不多，照原本方式繼續\n"
+        "    - follow_up   ：這幾天的訊號比較需要醫師看一下，建議近期回診\n"
+        "    - emergency   ：請現在就到急診 / 撥 119\n"
+        "  第 2 行起：一段給病人看的白話說明（1~2 句）。\n\n"
+        "說明文字一律遵守風格層 [A][B][C] 的所有規則，特別是：\n"
+        "  - 不要丟百分比 / 分數 / 風險指數\n"
+        "  - 不要說「你今天又…」「你沒有…」這種審判口吻\n"
+        "  - 不要說「沒事啦放心」這類假保證\n"
+        "  - follow_up / emergency 時要明確「請醫師看」，不要替醫師判斷可以不用看"
+    )
+    patient_ctx = compute_patient_context(body.patient_id)
+    system_prompt = build_patient_facing_system(
+        triage_role,
+        patient_context=patient_ctx,
+        include_examples=False,  # 輸出格式很固定，example 反而會誤導
     )
 
     parts = [

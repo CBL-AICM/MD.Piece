@@ -4,7 +4,11 @@ from typing import Optional
 import json
 import logging
 
-from backend.services.llm_service import call_claude, recognize_lab_report
+from backend.services.llm_service import (
+    build_patient_facing_system,
+    call_claude,
+    recognize_lab_report,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -14,30 +18,40 @@ router = APIRouter()
 # LLM 回傳：參考範圍、是否異常、白話解釋、生活建議、是否需就醫。
 # 不下診斷、不開藥；異常時提醒就醫。
 
-LAB_SYSTEM_PROMPT = (
-    "你是檢驗報告解讀助手，協助一般民眾看懂自己的檢驗數值。\n"
+_LAB_ROLE_PROMPT = (
+    "【本次任務：單一檢驗值的白話解讀】\n"
     "使用者會輸入：檢驗項目名稱、數值、單位、年齡、性別。\n\n"
-    "請依以下原則回覆：\n"
-    "1. 給出該項目的常見成人參考範圍（如有性別/年齡差異請說明）\n"
+    "情境專屬規則：\n"
+    "1. 給出該項目的常見成人參考範圍（如有性別／年齡差異請說明）\n"
     "2. 判斷使用者數值屬於：偏低 / 正常 / 偏高 / 嚴重異常\n"
-    "3. 用白話一兩句解釋這個指標代表什麼\n"
-    "4. 給生活面建議（飲食、運動、追蹤頻率），具體可行\n"
-    "5. 若數值嚴重異常或可能急症（例如鉀過高、血糖極低、肝指數爆高等），\n"
-    "   `see_doctor` 設為 true 並在 advice 中強烈建議就醫\n"
-    "6. 不確定的罕見項目可以說「此項目較少見，建議洽原檢驗單位確認」，\n"
-    "   normal_range 給「不確定」即可，不要瞎掰數字\n"
-    "7. 絕對不下診斷、不開藥、不取代醫師判斷\n\n"
-    "輸出必須是純 JSON（不要 markdown code block），結構：\n"
+    "3. `meaning` 跟 `advice` 是病人會直接看到的白話 → 嚴格遵守風格層 [A][B][C]：\n"
+    "   - 不丟百分比；用分級語言（穩定 / 需注意 / 建議盡快回診 / 緊急）\n"
+    "   - 不審判（不要說「您的數值不合格」「您的肝功能太差」）\n"
+    "   - 不下診斷、不替醫師決定；異常時建議「請醫師看一下」\n"
+    "   - 不給假保證（不要說「沒事啦放心」）\n"
+    "4. `advice` 給生活面建議（飲食、運動、追蹤頻率），具體可行\n"
+    "5. 數值嚴重異常或可能急症（鉀過高、血糖極低、肝指數爆高等）：\n"
+    "   `see_doctor` 設為 true，並在 advice 直接、明確建議就醫\n"
+    "6. 不確定的罕見項目：normal_range 給「不確定」，並在 meaning / advice 建議\n"
+    "   洽原檢驗單位確認 — **不要瞎掰數字**\n\n"
+    "輸出必須是**純 JSON**（不要 markdown code block、不要前後說明文字），結構：\n"
     "{\n"
     '  "item": "項目正式名稱（含中英文）",\n'
     '  "normal_range": "參考範圍文字",\n'
     '  "status": "low | normal | high | critical | unknown",\n'
-    '  "meaning": "這個指標代表什麼（白話一兩句）",\n'
-    '  "advice": "生活建議與後續觀察",\n'
+    '  "meaning": "這個指標代表什麼（白話一兩句，遵守風格層）",\n'
+    '  "advice": "生活建議與後續觀察（遵守風格層）",\n'
     '  "see_doctor": true | false,\n'
-    '  "disclaimer": "本結果僅供參考，請以實際檢驗單位與醫師判讀為準"\n'
+    '  "disclaimer": "此結果由 AI 整理，僅供參考；實際診療請依您的主治醫師為準。"\n'
     "}\n"
-    "全部使用繁體中文。"
+)
+
+
+# 風格層 + role；JSON 輸出固定，include_examples=False 避免污染結構
+LAB_SYSTEM_PROMPT = build_patient_facing_system(
+    _LAB_ROLE_PROMPT,
+    patient_context=None,
+    include_examples=False,
 )
 
 
