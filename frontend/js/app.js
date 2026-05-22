@@ -11505,8 +11505,19 @@ function _renderMedEffectChart(effects) {
 // 點卡片即打卡：固定時段藥（早/中/晚）直接寫入；
 // 「其他」型藥（每 X 小時 / PRN）也走同一條 POST /log，
 // 後端會在 < 4 小時內回 409 dose_too_soon，由 logMedTaken 攔下並彈警告。
+// MED_SLOT_TIME 跟 _renderMobileMedList 的 SLOTS 對齊：早 07:00 / 中 13:00 / 晚 18:00。
+// 'other'（PRN / 間隔藥）沒有預定時段，不算「提前」。
+var MED_SLOT_TIME = { morning: 7 * 60, noon: 13 * 60, evening: 18 * 60 };
 function tapMedTake(medId, slotKey) {
-  logMedTaken(medId, true);
+  var earlyHours = 0;
+  var slotMins = MED_SLOT_TIME[slotKey];
+  if (slotMins != null) {
+    var now = new Date();
+    var curMin = now.getHours() * 60 + now.getMinutes();
+    var earlyMin = slotMins - curMin;
+    if (earlyMin > 0) earlyHours = earlyMin / 60;
+  }
+  logMedTaken(medId, true, { earlyHours: earlyHours });
 }
 
 // 把藥袋／藥單照片預處理：
@@ -12108,7 +12119,11 @@ function logMedTaken(medId, taken, opts) {
         showToast("記錄失敗：" + (typeof msg === "string" ? msg : JSON.stringify(msg)), "error");
         return;
       }
-      showToast(taken ? "已記錄服藥 ✓" : "已記錄跳過", taken ? "success" : "info");
+      var takenMsg = "已記錄服藥 ✓";
+      if (taken && opts.earlyHours && opts.earlyHours >= 0.5) {
+        takenMsg += "（提前 " + opts.earlyHours.toFixed(1) + " 小時）";
+      }
+      showToast(taken ? takenMsg : "已記錄跳過", taken ? "success" : "info");
       if (typeof refreshNavBadges === 'function') refreshNavBadges();
       loadMedicationsPage();
     })
