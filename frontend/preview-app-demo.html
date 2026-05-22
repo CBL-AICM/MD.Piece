@@ -323,16 +323,27 @@
       background: #fff; border: 1px solid var(--border);
       border-radius: 10px;
       display: flex; flex-direction: column; align-items: center; gap: 4px;
+      position: relative; overflow: hidden;
     }
+    .sos-btn .puzzle-motif { opacity: 0.08; }
+    .sos-btn > *:not(.puzzle-motif) { position: relative; z-index: 1; }
+    .sos-btn.t-rose { background: linear-gradient(135deg, var(--rose-tint) 0%, #fff 65%); }
+    .sos-btn.t-blue { background: linear-gradient(135deg, var(--accent-tint) 0%, #fff 65%); }
+    .sos-btn.t-teal { background: linear-gradient(135deg, var(--teal-tint) 0%, #fff 65%); }
+    .sos-btn.t-amber { background: linear-gradient(135deg, rgba(201,139,47,0.06) 0%, #fff 65%); }
     .sos-btn .sos-icon {
       width: 30px; height: 30px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
     }
     .sos-btn .sos-icon .lucide { width: 14px; height: 14px; }
-    .sos-btn.t-rose .sos-icon { background: var(--rose-soft); color: var(--rose-deep); }
-    .sos-btn.t-blue .sos-icon { background: var(--accent-soft); color: var(--accent-deep); }
-    .sos-btn.t-teal .sos-icon { background: var(--teal-soft); color: var(--teal-deep); }
-    .sos-btn.t-amber .sos-icon { background: var(--amber-soft); color: var(--amber-deep); }
+    .sos-btn.t-rose .sos-icon { background: #fff; color: var(--rose-deep); border: 1px solid var(--border); }
+    .sos-btn.t-blue .sos-icon { background: #fff; color: var(--accent-deep); border: 1px solid var(--border); }
+    .sos-btn.t-teal .sos-icon { background: #fff; color: var(--teal-deep); border: 1px solid var(--border); }
+    .sos-btn.t-amber .sos-icon { background: #fff; color: var(--amber-deep); border: 1px solid var(--border); }
+    .sos-btn.t-rose .puzzle-motif { color: var(--rose-deep); }
+    .sos-btn.t-blue .puzzle-motif { color: var(--accent); }
+    .sos-btn.t-teal .puzzle-motif { color: var(--teal); }
+    .sos-btn.t-amber .puzzle-motif { color: var(--amber-deep); }
     .sos-btn .sos-label { font-size: 11.5px; font-weight: 600; color: var(--navy); }
     .sos-btn .sos-sub { font-size: 9.5px; color: var(--text-muted); font-family: var(--font-mono); }
 
@@ -604,6 +615,7 @@
         <!-- KPI 3 卡 mini — 數字 + 一句白話 -->
         <div class="kpi-row">
           <div class="kpi-mini t-rose">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>
             <div class="kpi-mini-val">128/82</div>
             <div class="kpi-mini-meta">有點高一點</div>
@@ -614,6 +626,7 @@
             </svg>
           </div>
           <div class="kpi-mini t-blue">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>
             <div class="kpi-mini-val">112</div>
             <div class="kpi-mini-meta">略高 2 點</div>
@@ -624,6 +637,7 @@
             </svg>
           </div>
           <div class="kpi-mini t-teal">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>
             <div class="kpi-mini-val">3<span style="font-size:11px;color:var(--text-muted)">/5</span></div>
             <div class="kpi-mini-meta">這 2 天有點累</div>
@@ -643,21 +657,25 @@
         </div>
         <div class="sos-grid">
           <button class="sos-btn t-rose">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="sos-icon"><i data-lucide="brain"></i></div>
             <div class="sos-label">頭痛</div>
             <div class="sos-sub">最近 5/19</div>
           </button>
           <button class="sos-btn t-blue">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="sos-icon"><i data-lucide="activity"></i></div>
             <div class="sos-label">心悸</div>
             <div class="sos-sub">最近 5/18</div>
           </button>
           <button class="sos-btn t-teal">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="sos-icon"><i data-lucide="thermometer"></i></div>
             <div class="sos-label">發燒</div>
             <div class="sos-sub">最近 5/10</div>
           </button>
           <button class="sos-btn t-amber">
+            <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="sos-icon"><i data-lucide="zap"></i></div>
             <div class="sos-label">疲倦</div>
             <div class="sos-sub">最近 5/22</div>
