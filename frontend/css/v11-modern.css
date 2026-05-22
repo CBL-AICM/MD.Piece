@@ -1,0 +1,341 @@
+/* ═════════════════════════════════════════════════════════════════
+   MD.Piece v11 — Modern Overlay
+   來源：preview-app-demo.html 的設計濃縮
+   作用：套在 style.css + medical-warm.css 之後
+   啟用：body.theme-modern（預設）
+   ═════════════════════════════════════════════════════════════════ */
+
+/* ─── 隱藏所有 Y2K 視覺殘留（星空背景、CRT 掃描線、霓虹光暈）─── */
+body.theme-modern #star-canvas,
+body.theme-modern #starfield,
+body.theme-modern .crt-vignette,
+body.theme-modern .crt-scanlines,
+body.theme-modern .y2k-grain,
+body.theme-modern .scanline,
+body.theme-modern .noise-overlay {
+  display: none !important;
+}
+
+/* 中和復古字（Rigelstar / Netron）— 改用 Cormorant Garamond / Noto Sans */
+body.theme-modern,
+body.theme-modern h1, body.theme-modern h2, body.theme-modern h3,
+body.theme-modern h4, body.theme-modern h5, body.theme-modern h6,
+body.theme-modern .brand, body.theme-modern .logo,
+body.theme-modern [class*="rigelstar"], body.theme-modern [class*="netron"] {
+  font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+}
+body.theme-modern .font-brand,
+body.theme-modern [class*="brand-title"] {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* 移除霓虹光暈和強烈 box-shadow（Y2K 風格） */
+body.theme-modern [style*="box-shadow:0 0"][style*="--accent-glow"],
+body.theme-modern [style*="--klein"],
+body.theme-modern [class*="neon"],
+body.theme-modern [class*="glow-"] {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+
+body.theme-modern {
+  /* === 字體高對比 token 覆蓋 === */
+  --text:         #0F1F2E !important;
+  --text-dim:     #3A5060 !important;
+  --text-muted:   #6B7F92 !important;
+  --navy:         #0F2A45 !important;
+
+  /* === 暖色背景（不再冰冷灰）=== */
+  background: linear-gradient(180deg, #EDE5D8 0%, #E8DDCB 100%) !important;
+}
+
+/* ─── 全站 icon 線條加粗（不再冰冷）─── */
+body.theme-modern .lucide,
+body.theme-modern svg.lucide {
+  stroke-width: 2.4 !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ─── 卡片邊框加粗 + radius 圓潤 ─── */
+body.theme-modern .card,
+body.theme-modern .glass-card,
+body.theme-modern .home-greet,
+body.theme-modern .home-hero,
+body.theme-modern .home-digest,
+body.theme-modern .home-ov,
+body.theme-modern .home-todo,
+body.theme-modern .home-info-row > *,
+body.theme-modern .qr-tile,
+body.theme-modern .pv-hero,
+body.theme-modern .vital-card,
+body.theme-modern .kpi,
+body.theme-modern .ip-sos-btn,
+body.theme-modern .sos-btn,
+body.theme-modern .care-mode-card,
+body.theme-modern .med-today-hero,
+body.theme-modern .todo-card {
+  border-width: 1.5px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 1px 0 rgba(31,61,88,0.02), 0 4px 14px -8px rgba(74,57,40,0.10) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   拼圖塊 symbols — 5 層設計（底色 + 高光 + 陰影 + 細邊 + 中心點）
+   ═══════════════════════════════════════════════════════ */
+body.theme-modern .puzzle-bg-layer {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  opacity: 0.55;
+}
+
+/* 卡片內文要在拼圖背景之上 */
+body.theme-modern .home-hero > *,
+body.theme-modern .home-greet > *,
+body.theme-modern .pv-hero > *,
+body.theme-modern .care-mode-card > *,
+body.theme-modern .qr-tile > *,
+body.theme-modern .ip-sos-btn > *,
+body.theme-modern .sos-btn > * {
+  position: relative;
+  z-index: 1;
+}
+body.theme-modern .home-hero,
+body.theme-modern .home-greet,
+body.theme-modern .pv-hero,
+body.theme-modern .care-mode-card,
+body.theme-modern .qr-tile,
+body.theme-modern .ip-sos-btn,
+body.theme-modern .sos-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DARK MODE — 高級藍（premium navy）
+   觸發：<html class="dark"> + body.theme-modern
+   ═══════════════════════════════════════════════════════ */
+html.dark body.theme-modern {
+  --bg:            #0D2845 !important;
+  --bg-soft:       #133258 !important;
+  --bg-mid:        #1D436D !important;
+  --bg-deep:       #051A35 !important;
+  --bg-surface:    #1D436D !important;
+  --bg-glass:      #133258 !important;
+
+  --border:        rgba(160, 200, 240, 0.20) !important;
+  --border-glass:  rgba(160, 200, 240, 0.20) !important;
+  --border-mid:    rgba(160, 200, 240, 0.30) !important;
+  --border-strong: rgba(160, 200, 240, 0.45) !important;
+
+  --accent:        #5DAEEC !important;
+  --accent-light:  #9DCEF5 !important;
+  --accent-deep:   #9DCEF5 !important;
+  --accent-soft:   #1E4570 !important;
+  --accent-tint:   #163A60 !important;
+  --accent-glow:   #5DAEEC55 !important;
+
+  --teal:          #6BC4B8 !important;
+  --teal-deep:     #95D9CF !important;
+  --teal-light:    #95D9CF !important;
+  --teal-soft:     #1B3F3A !important;
+  --teal-tint:     #143230 !important;
+  --teal-glow:     #6BC4B855 !important;
+
+  --klein:         #5DAEEC !important;
+  --navy:          #FFFFFF !important;
+  --text:          #FFFFFF !important;
+  --text-dim:      #DCE7F2 !important;
+  --text-muted:    #B5C5D6 !important;
+
+  --cream:         #1D436D !important;
+  --cream-dim:     #133258 !important;
+
+  --rose:          #F0B5B5 !important;
+  --rose-deep:     #F8C8C8 !important;
+  --rose-soft:     #3D2828 !important;
+  --rose-tint:     #2E2222 !important;
+
+  --green:         #7BC891 !important;
+  --green-deep:    #A2DBB4 !important;
+  --green-soft:    #1F3D2C !important;
+  --green-tint:    #1A2E22 !important;
+
+  --amber:         #E5BC7C !important;
+  --amber-deep:    #F4D196 !important;
+  --amber-soft:    #3D2E18 !important;
+  --amber-tint:    #2E2418 !important;
+
+  --purple:        #B0B8DC !important;
+}
+
+/* dark body bg — 深邃藍漸層 */
+html.dark body.theme-modern {
+  background: linear-gradient(180deg, #051A35 0%, #0A2548 50%, #0F2D54 100%) !important;
+}
+
+/* dark 卡片全面換深底 */
+html.dark body.theme-modern .card,
+html.dark body.theme-modern .glass-card,
+html.dark body.theme-modern .home-greet,
+html.dark body.theme-modern .home-hero,
+html.dark body.theme-modern .home-digest,
+html.dark body.theme-modern .home-ov,
+html.dark body.theme-modern .home-todo,
+html.dark body.theme-modern .home-info-row > *,
+html.dark body.theme-modern .qr-tile,
+html.dark body.theme-modern .pv-hero,
+html.dark body.theme-modern .vital-card,
+html.dark body.theme-modern .kpi,
+html.dark body.theme-modern .ip-sos-btn,
+html.dark body.theme-modern .sos-btn,
+html.dark body.theme-modern .care-mode-card,
+html.dark body.theme-modern .med-today-hero,
+html.dark body.theme-modern .todo-card,
+html.dark body.theme-modern .modal,
+html.dark body.theme-modern .modal-content,
+html.dark body.theme-modern .topbar,
+html.dark body.theme-modern .sidebar,
+html.dark body.theme-modern .tabbar,
+html.dark body.theme-modern .ph-tabbar,
+html.dark body.theme-modern .settings-list,
+html.dark body.theme-modern .settings-row,
+html.dark body.theme-modern input,
+html.dark body.theme-modern textarea,
+html.dark body.theme-modern select,
+html.dark body.theme-modern button {
+  background-color: var(--bg-mid) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+/* dark 透明 / 玻璃元素 */
+html.dark body.theme-modern .glass {
+  background-color: rgba(29, 67, 109, 0.6) !important;
+  backdrop-filter: blur(20px);
+}
+
+/* dark CTA 主按鈕（避免 var(--navy) 變白白看不見） */
+html.dark body.theme-modern .btn-primary,
+html.dark body.theme-modern .pv-btn,
+html.dark body.theme-modern .care-chip.active,
+html.dark body.theme-modern .pp-btn.active,
+html.dark body.theme-modern .care-mode-card.active,
+html.dark body.theme-modern .care-mode-mini button.active {
+  background: var(--accent) !important;
+  color: #FFFFFF !important;
+  border-color: var(--accent) !important;
+}
+
+/* dark 文字硬色號覆寫 */
+html.dark body.theme-modern [style*="color:#1F3D58"],
+html.dark body.theme-modern [style*="color: #1F3D58"],
+html.dark body.theme-modern [style*="color:#0F2A45"],
+html.dark body.theme-modern [style*="color:#0F1F2E"] {
+  color: var(--text) !important;
+}
+html.dark body.theme-modern [style*="color:#4A6580"],
+html.dark body.theme-modern [style*="color:#5A7388"],
+html.dark body.theme-modern [style*="color:#3A5060"] {
+  color: var(--text-dim) !important;
+}
+
+/* dark 任何 inline white 背景強制換深 */
+html.dark body.theme-modern [style*="background:#FFFFFF"],
+html.dark body.theme-modern [style*="background: #FFFFFF"],
+html.dark body.theme-modern [style*="background:#fff"],
+html.dark body.theme-modern [style*="background: #fff"],
+html.dark body.theme-modern [style*="background:#FAFBFC"],
+html.dark body.theme-modern [style*="background:#FBFCFD"],
+html.dark body.theme-modern [style*="background:#F7F9FC"],
+html.dark body.theme-modern [style*="background:#F4F6F8"] {
+  background: var(--bg-mid) !important;
+}
+html.dark body.theme-modern [style*="#fff 60%"],
+html.dark body.theme-modern [style*="#fff 65%"],
+html.dark body.theme-modern [style*="#fff 70%"] {
+  background: var(--bg-mid) !important;
+}
+
+/* dark 拼圖塊用 screen blend 在深底發光 */
+html.dark body.theme-modern .puzzle-bg-layer {
+  mix-blend-mode: screen;
+  opacity: 0.40;
+}
+
+/* ═══════════════════════════════════════════════════════
+   主題切換按鈕（fixed top-right）
+   ═══════════════════════════════════════════════════════ */
+.theme-toggle-btn {
+  position: fixed; top: 12px; right: 12px; z-index: 9999;
+  width: 44px; height: 44px;
+  border-radius: 999px;
+  background: var(--bg-mid, #fff);
+  border: 1.5px solid var(--border, rgba(31,61,88,0.16));
+  color: var(--navy, #1F3D58);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px -3px rgba(31,61,88,0.20);
+  transition: transform 0.15s;
+}
+.theme-toggle-btn:hover { transform: scale(1.05); }
+.theme-toggle-btn .lucide { width: 20px; height: 20px; }
+html.dark .theme-toggle-btn { box-shadow: 0 4px 12px -3px rgba(0,0,0,0.50); }
+
+/* ═══════════════════════════════════════════════════════
+   免責聲明 footer — 每頁底部固定
+   ═══════════════════════════════════════════════════════ */
+body.theme-modern .disclaimer-footer {
+  padding: 8px 14px;
+  background: var(--bg-soft, #F7F9FC);
+  border-top: 1px solid var(--border, rgba(31,61,88,0.10));
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 10.5px; color: var(--text-dim); line-height: 1.45;
+}
+body.theme-modern .disclaimer-footer .lucide {
+  width: 12px; height: 12px;
+  color: var(--accent); flex-shrink: 0; margin-top: 1px;
+}
+body.theme-modern .disclaimer-footer strong { color: var(--navy); font-weight: 600; }
+body.theme-modern .disclaimer-footer .emergency { color: var(--rose-deep, #C97A7A); font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════
+   藥袋 vs 我的 — 客製化欄位
+   ═══════════════════════════════════════════════════════ */
+body.theme-modern .med-customize {
+  padding: 10px 14px 12px;
+  background: var(--bg-soft, #FBFCFD);
+  display: flex; flex-direction: column; gap: 6px;
+}
+body.theme-modern .med-customize-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 11.5px; line-height: 1.5;
+}
+body.theme-modern .med-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px; font-weight: 600;
+  flex-shrink: 0; margin-top: 1px;
+}
+body.theme-modern .med-tag.tag-bag {
+  background: var(--bg-mid, #ECF0F4);
+  color: var(--text-dim);
+}
+body.theme-modern .med-tag.tag-mine {
+  background: var(--teal-soft, #E5F0EE);
+  color: var(--teal-deep, #1F5F56);
+}
+body.theme-modern .med-customize-row .strikethrough {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+body.theme-modern .med-customize-row .actual {
+  color: var(--text); flex: 1;
+}
+body.theme-modern .med-customize-row .actual strong { color: var(--navy); }
+
+/* ─── 結束 ─── */
