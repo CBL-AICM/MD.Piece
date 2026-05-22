@@ -1408,8 +1408,74 @@ function renderPvVisitHero() {
 
 function previsit() {
   var _pvDays = (typeof getReportDays === 'function') ? getReportDays() : 30;
+
+  // ─── 手機 v11 demo 版面 — pv-hero + audience toggle + 3 件事 ───
+  var _mobileVisitIsoP = (typeof loadNextVisit === 'function') ? loadNextVisit() : '';
+  var _mobileVisitDaysP = null;
+  if (_mobileVisitIsoP && typeof _daysBetween === 'function') {
+    _mobileVisitDaysP = _daysBetween(_mobileVisitIsoP);
+  }
+
+  var _mobilePvBlock = ''
+    + '<div class="mobile-only">'
+    // pv-hero — 拼圖漸層背景
+    +   '<div class="pv-hero">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">下次回診</div>'
+    +     '<div class="pv-hero-num">'
+    +       (_mobileVisitDaysP !== null && _mobileVisitDaysP > 0 ? _mobileVisitDaysP : (_mobileVisitDaysP === 0 ? '今天' : '—'))
+    +       '<span class="unit">' + (_mobileVisitIsoP ? (_mobileVisitDaysP > 0 ? '天後 · ' : '') + _mobileVisitIsoP.replace(/-/g,'/') : '尚未排定回診') + '</span>'
+    +     '</div>'
+    +     '<div class="pv-hero-doc">' + (_mobileVisitIsoP ? '記得帶健保卡與藥袋' : '到「回診排程」頁設定') + '</div>'
+    +     '<button class="pv-btn" onclick="previsitReload()"><i data-lucide="clipboard-check"></i> 立即產生診前報告</button>'
+    +   '</div>'
+
+    // 雙視角切換
+    +   '<div class="aud-toggle">'
+    +     '<button class="audience-btn active" data-aud="patient" onclick="_mobilePvSwitchAud(\'patient\')">'
+    +       '<i data-lucide="user"></i> 給自己看（口語）'
+    +     '</button>'
+    +     '<button class="audience-btn" data-aud="doctor" onclick="_mobilePvSwitchAud(\'doctor\')">'
+    +       '<i data-lucide="stethoscope"></i> 給醫師看（精簡）'
+    +     '</button>'
+    +   '</div>'
+
+    // 給自己看 — 口語故事
+    +   '<div class="aud-view aud-patient active">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="message-circle"></i> 這次去診間要說的 3 件事</h3>'
+    +     '</div>'
+    +     '<div id="mobile-pv-talk-3" class="list-card">'
+    +       '<div class="pv-talk-row">'
+    +         '<div class="pv-talk-num n1">1</div>'
+    +         '<div>'
+    +           '<div class="name">點下「重新生成」會用你近 ' + _pvDays + ' 天紀錄列出 3 件事</div>'
+    +           '<div class="sub">小禾整理症狀、用藥、情緒，幫你寫成口語</div>'
+    +         '</div>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 給醫師看 — checklist (拉 pv-checklist 結果)
+    +   '<div class="aud-view aud-doctor">'
+    +     '<div class="sec-head">'
+    +       '<h3 class="sec-title"><i data-lucide="clipboard-list"></i> 主訴 / 重點（醫師版）</h3>'
+    +     '</div>'
+    +     '<div id="mobile-pv-doctor" class="card" style="padding:14px;font-size:12.5px;line-height:1.6">'
+    +       '<div style="color:var(--text-dim)">點上方「立即產生診前報告」生成醫師版精簡資訊</div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 免責 footer
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
   return ''
-    + '<section class="pv-page">'
+    + _mobilePvBlock
+    + '<section class="pv-page desktop-only">'
     + renderPvVisitHero()
     + renderHowto('previsit')
     + '  <header class="pv-header">'
@@ -1461,6 +1527,16 @@ function previsit() {
     + ''
     + '  <p class="pv-disclaimer"><i data-lucide="info"></i> 本報告由 MD.Piece 整理你輸入的紀錄，僅供與醫師溝通參考，不取代醫師診斷。</p>'
     + '</section>';
+}
+
+// 手機版 demo 雙視角切換（給自己看 / 給醫師看）
+function _mobilePvSwitchAud(which) {
+  document.querySelectorAll('.aud-view').forEach(function(v) {
+    v.classList.toggle('active', v.classList.contains('aud-' + which));
+  });
+  document.querySelectorAll('.audience-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.aud === which);
+  });
 }
 
 // ─── 診前報告 (Pre-consultation Report) ──────────────────────
@@ -1613,6 +1689,27 @@ function previsitRenderChecklist(data) {
     }).join('');
   }
   if (srcEl) srcEl.textContent = previsitSourceLabel(data);
+
+  // 同步注入手機版 demo 3 件事
+  var mob = document.getElementById('mobile-pv-talk-3');
+  if (mob) {
+    if (!items.length) {
+      mob.innerHTML = '<div class="pv-talk-row"><div class="pv-talk-num n1">·</div><div><div class="name">目前沒有足夠紀錄</div><div class="sub">先到症狀／情緒／用藥頁面留下紀錄</div></div></div>';
+    } else {
+      mob.innerHTML = items.slice(0, 3).map(function(text, i) {
+        var nCls = ['n1','n2','n3'][i] || 'n1';
+        var short = (text || '').slice(0, 40);
+        var rest = (text || '').slice(40);
+        return '<div class="pv-talk-row">'
+          + '<div class="pv-talk-num ' + nCls + '">' + (i+1) + '</div>'
+          + '<div>'
+          +   '<div class="name">「' + escapeHtml(short) + (rest ? '…' : '') + '」</div>'
+          +   (rest ? '<div class="sub">' + escapeHtml(rest) + '</div>' : '')
+          + '</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
