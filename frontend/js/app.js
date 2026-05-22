@@ -13844,8 +13844,133 @@ function settings() {
       + '</label>';
   }
 
+  // ─── 手機 v11 demo 版面（帳號卡 + settings-list + 法律與隱私 + 完整免責）──
+  var _mobileSetAvatar = (user && user.avatar_url)
+    ? '<img src="' + escapeHtml(user.avatar_url) + '" alt="' + escapeHtml(name) + '" />'
+    : escapeHtml((name && name.length) ? name.charAt(0) : '我');
+  var _themeLabel = th === 'dark' ? '深色' : th === 'light' ? '淺色' : '跟系統';
+  var _fontLabel = fs === 'small' ? '小' : fs === 'large' ? '大字' : fs === 'xlarge' ? '年長版' : '標準';
+  var _modeLabel = md === 'senior' ? '長者版' : '標準版';
+
+  var _mobileSetBlock = ''
+    + '<div class="mobile-only">'
+
+    // 帳號卡（拼圖背景）
+    +   '<div class="card" style="display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer" onclick="navigateTo(\'account\',null)">'
+    +     '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
+    +     '<div class="home-avatar" style="width:44px;height:44px;font-size:16px">' + _mobileSetAvatar + '</div>'
+    +     '<div style="flex:1">'
+    +       '<div style="font-size:14px;font-weight:600;color:var(--navy)">' + escapeHtml(name) + '</div>'
+    +       '<div style="font-size:11px;color:var(--text-muted)">' + escapeHtml(idno) + '</div>'
+    +     '</div>'
+    +     '<span class="pill pill-info" style="font-size:11px;padding:4px 10px">編輯</span>'
+    +   '</div>'
+
+    // 顯示
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="palette"></i> 顯示</h3></div>'
+    +   '<div class="settings-list">'
+    +     '<div class="settings-row" onclick="onSettingChange(\'theme\',\'' + (th === 'dark' ? 'light' : 'dark') + '\')">'
+    +       '<div class="ico"><i data-lucide="moon"></i></div>'
+    +       '<div><div class="name">主題</div><div class="sub">深 / 淺色 / 跟系統</div></div>'
+    +       '<div class="val">' + _themeLabel + '</div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +     '<div class="settings-row" onclick="alert(\'到下方「字級」捲動切換\')">'
+    +       '<div class="ico"><i data-lucide="type"></i></div>'
+    +       '<div><div class="name">字級</div><div class="sub">小 / 標準 / 大字 / 年長版</div></div>'
+    +       '<div class="val">' + _fontLabel + '</div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +     '<div class="settings-row" onclick="onSettingChange(\'mode\',\'' + (md === 'senior' ? 'standard' : 'senior') + '\')">'
+    +       '<div class="ico"><i data-lucide="user"></i></div>'
+    +       '<div><div class="name">模式</div><div class="sub">標準版 / 長者版</div></div>'
+    +       '<div class="val">' + _modeLabel + '</div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 提醒
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="bell"></i> 提醒</h3></div>'
+    +   '<div class="settings-list">'
+    +     '<div class="settings-row" onclick="navigateTo(\'reminders\',null)">'
+    +       '<div class="ico"><i data-lucide="pill"></i></div>'
+    +       '<div><div class="name">服藥提醒</div><div class="sub">時段 · 頻率 · 語氣</div></div>'
+    +       '<span class="pill pill-ok mono">設定</span>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +     '<div class="settings-row" onclick="navigateTo(\'followUps\',null)">'
+    +       '<div class="ico"><i data-lucide="calendar-clock"></i></div>'
+    +       '<div><div class="name">回診倒數</div><div class="sub">幾天前提醒</div></div>'
+    +       '<span class="pill pill-ok mono">開啟</span>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 資料
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="shield"></i> 資料</h3></div>'
+    +   '<div class="settings-list">'
+    +     '<div class="settings-row" onclick="navigateTo(\'pieces\',null)">'
+    +       '<div class="ico"><i data-lucide="cloud-upload"></i></div>'
+    +       '<div><div class="name">雲端同步</div><div class="sub">查看我的碎片</div></div>'
+    +       '<span class="pill pill-ok mono">已連線</span>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +     '<div class="settings-row" onclick="navigateTo(\'previsit\',null)">'
+    +       '<div class="ico"><i data-lucide="download"></i></div>'
+    +       '<div><div class="name">匯出資料</div><div class="sub">診前報告 PDF</div></div>'
+    +       '<div class="val"></div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +     '<div class="settings-row" onclick="navigateTo(\'account\',null)">'
+    +       '<div class="ico"><i data-lucide="trash-2"></i></div>'
+    +       '<div><div class="name" style="color:var(--rose-deep)">帳號管理</div><div class="sub">登出 · 刪除帳號</div></div>'
+    +       '<div class="val"></div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 法律與隱私
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="file-text"></i> 法律與隱私</h3></div>'
+    +   '<div class="settings-list">'
+    +     '<div class="settings-row" onclick="alert(\'隱私政策：MD.Piece 不會將你的資料用於非醫療用途，所有紀錄僅儲存在你的帳號下。\')">'
+    +       '<div class="ico"><i data-lucide="shield-check"></i></div>'
+    +       '<div><div class="name">隱私政策</div><div class="sub">資料儲存與使用方式</div></div>'
+    +       '<div class="val"></div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +     '<div class="settings-row" onclick="alert(\'使用條款：MD.Piece 是健康紀錄輔助工具，不取代醫師診斷或處方。\')">'
+    +       '<div class="ico"><i data-lucide="scroll-text"></i></div>'
+    +       '<div><div class="name">使用條款</div><div class="sub">服務條款與責任範圍</div></div>'
+    +       '<div class="val"></div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +     '<div class="settings-row" onclick="document.getElementById(\'mobile-disclaimer-anchor\') && document.getElementById(\'mobile-disclaimer-anchor\').scrollIntoView({behavior:\'smooth\'})">'
+    +       '<div class="ico"><i data-lucide="alert-circle"></i></div>'
+    +       '<div><div class="name">醫療免責聲明</div><div class="sub">本 App 提供的內容並非醫療建議</div></div>'
+    +       '<div class="val"></div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 完整免責聲明
+    +   '<div id="mobile-disclaimer-anchor" class="legal-disclaimer-block">'
+    +     '<div class="legal-title"><i data-lucide="alert-circle"></i> 醫療免責聲明</div>'
+    +     '<p><strong>本 App（MD.Piece）僅作為健康紀錄與資訊輔助工具</strong>，所有內容（包含 AI 分析、症狀分類、用藥提醒、健康報告等）<strong>不構成醫療診斷、處方或治療建議</strong>。</p>'
+    +     '<p>任何醫療決策請務必諮詢合格醫師或醫療人員。本 App 不負擔因使用本服務造成的任何醫療結果責任。</p>'
+    +     '<p>緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</p>'
+    +   '</div>'
+
+    +   '<div class="app-version-footer">MD.Piece · 2026 春版</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
   return ''
-    + '<section class="set-page">'
+    + _mobileSetBlock
+    + '<section class="set-page desktop-only">'
     + '  <header class="set-hero">'
     + '    <div class="set-hero-icon" style="--ac:' + ac + '"><i data-lucide="settings-2"></i></div>'
     + '    <div class="set-hero-text">'
