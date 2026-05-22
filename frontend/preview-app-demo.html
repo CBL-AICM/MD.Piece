@@ -34,9 +34,10 @@
       --teal-tint:    #F1F8F6;
 
       --navy:         #1F3D58;
+      /* 原則①：對比拉高（給年長者）—— text-muted 從 #98ADBD 加深到 #7E92A4 */
       --text:         #1F3D58;
-      --text-dim:     #5A7388;
-      --text-muted:   #98ADBD;
+      --text-dim:     #4A6580;
+      --text-muted:   #7E92A4;
 
       --rose:         #E8A8A8;
       --rose-deep:    #C97A7A;
@@ -66,7 +67,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       background: #E5E9EE; color: var(--text); font-family: var(--font);
-      line-height: 1.55; -webkit-font-smoothing: antialiased; font-size: 14px;
+      line-height: 1.6; -webkit-font-smoothing: antialiased; font-size: 15px;
       min-height: 100vh;
     }
     button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
@@ -308,21 +309,26 @@
     .kpi-mini.t-blue .lucide { color: var(--accent); }
     .kpi-mini.t-teal .lucide { color: var(--teal); }
     .kpi-mini-val {
-      font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--navy);
+      font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: var(--navy);
       line-height: 1;
     }
-    .kpi-mini-meta { font-size: 9.5px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 3px; }
-    .kpi-mini-spark { width: 100%; height: 20px; margin-top: 5px; }
+    /* 原則 ② 分層：plain sentence 更大、更明顯（不是 mono 小字）*/
+    .kpi-mini-meta { font-size: 11.5px; color: var(--text-dim); font-weight: 500; margin-top: 4px; }
+    .kpi-mini-spark { width: 100%; height: 22px; margin-top: 6px; }
+    /* 原則 ③：每張圖底下 1 行說明，告訴使用者怎麼看 */
+    .kpi-mini-explain { font-size: 9.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
 
     /* Sos 4 顆按鈕 */
     .sos-grid {
       display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
     }
+    /* 原則 ① 觸控大 + ④ 輸入步驟少：SOS 大顆按鈕，一按就記 */
     .sos-btn {
-      padding: 12px 8px;
+      padding: 18px 10px;
+      min-height: 92px;
       background: #fff; border: 1px solid var(--border);
-      border-radius: 10px;
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
       position: relative; overflow: hidden;
     }
     .sos-btn .puzzle-motif { opacity: 0.08; }
@@ -332,10 +338,12 @@
     .sos-btn.t-teal { background: linear-gradient(135deg, var(--teal-tint) 0%, #fff 65%); }
     .sos-btn.t-amber { background: linear-gradient(135deg, rgba(201,139,47,0.06) 0%, #fff 65%); }
     .sos-btn .sos-icon {
-      width: 30px; height: 30px; border-radius: 8px;
+      width: 36px; height: 36px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
     }
-    .sos-btn .sos-icon .lucide { width: 14px; height: 14px; }
+    .sos-btn .sos-icon .lucide { width: 17px; height: 17px; }
+    .sos-btn .sos-label { font-size: 13.5px; font-weight: 600; color: var(--navy); }
+    .sos-btn .sos-sub { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
     .sos-btn.t-rose .sos-icon { background: #fff; color: var(--rose-deep); border: 1px solid var(--border); }
     .sos-btn.t-blue .sos-icon { background: #fff; color: var(--accent-deep); border: 1px solid var(--border); }
     .sos-btn.t-teal .sos-icon { background: #fff; color: var(--teal-deep); border: 1px solid var(--border); }
@@ -369,15 +377,18 @@
 
     /* Body map (症狀頁) */
     .bodymap-wrap {
-      display: flex; align-items: center; justify-content: center;
-      padding: 18px;
-      background: linear-gradient(135deg, var(--accent-tint), #fff 70%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 20px 16px 18px;
+      background: linear-gradient(135deg, var(--rose-soft) 0%, #FFFFFF 45%, var(--accent-soft) 100%);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       margin-bottom: 12px;
       position: relative; overflow: hidden;
     }
-    .bodymap-wrap svg { width: 130px; height: auto; }
+    .bodymap-wrap .puzzle-motif.tl { left: -14px; top: -14px; width: 70px; height: 70px; opacity: 0.10; color: var(--rose-deep); }
+    .bodymap-wrap .puzzle-motif.tr { right: -14px; top: -14px; width: 70px; height: 70px; opacity: 0.10; color: var(--accent); }
+    .bodymap-wrap .puzzle-motif.bl { left: -10px; bottom: -10px; width: 50px; height: 50px; opacity: 0.08; color: var(--teal); }
+    .bodymap-wrap > svg.body-figure { width: 140px; height: auto; position: relative; z-index: 1; }
     .bodymap-caption { font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 8px; font-family: var(--font-mono); }
     .bodymap-caption strong { color: var(--navy); font-weight: 600; }
 
@@ -619,33 +630,36 @@
             <div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>
             <div class="kpi-mini-val">128/82</div>
             <div class="kpi-mini-meta">有點高一點</div>
-            <svg class="kpi-mini-spark" viewBox="0 0 100 20" preserveAspectRatio="none">
-              <polygon fill="#C97A7A" fill-opacity="0.16" points="0,20 0,10 16,11 32,7 48,12 64,8 80,13 100,10 100,20"/>
-              <polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,10 16,11 32,7 48,12 64,8 80,13 100,10"/>
-              <circle cx="100" cy="10" r="2.4" fill="#C97A7A"/>
+            <svg class="kpi-mini-spark" viewBox="0 0 100 22" preserveAspectRatio="none">
+              <polygon fill="#C97A7A" fill-opacity="0.16" points="0,22 0,11 16,12 32,8 48,13 64,9 80,14 100,11 100,22"/>
+              <polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,11 16,12 32,8 48,13 64,9 80,14 100,11"/>
+              <circle cx="100" cy="11" r="2.6" fill="#C97A7A"/>
             </svg>
+            <div class="kpi-mini-explain">線往上 = 升高</div>
           </div>
           <div class="kpi-mini t-blue">
             <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>
             <div class="kpi-mini-val">112</div>
             <div class="kpi-mini-meta">略高 2 點</div>
-            <svg class="kpi-mini-spark" viewBox="0 0 100 20" preserveAspectRatio="none">
-              <polygon fill="#4A90C2" fill-opacity="0.16" points="0,20 0,13 16,11 32,15 48,9 64,12 80,7 100,5 100,20"/>
-              <polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,13 16,11 32,15 48,9 64,12 80,7 100,5"/>
-              <circle cx="100" cy="5" r="2.4" fill="#4A90C2"/>
+            <svg class="kpi-mini-spark" viewBox="0 0 100 22" preserveAspectRatio="none">
+              <polygon fill="#4A90C2" fill-opacity="0.16" points="0,22 0,14 16,12 32,16 48,10 64,13 80,8 100,6 100,22"/>
+              <polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,14 16,12 32,16 48,10 64,13 80,8 100,6"/>
+              <circle cx="100" cy="6" r="2.6" fill="#4A90C2"/>
             </svg>
+            <div class="kpi-mini-explain">線往上 = 偏高</div>
           </div>
           <div class="kpi-mini t-teal">
             <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
             <div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>
-            <div class="kpi-mini-val">3<span style="font-size:11px;color:var(--text-muted)">/5</span></div>
+            <div class="kpi-mini-val">3<span style="font-size:12px;color:var(--text-muted)">/5</span></div>
             <div class="kpi-mini-meta">這 2 天有點累</div>
-            <svg class="kpi-mini-spark" viewBox="0 0 100 20" preserveAspectRatio="none">
-              <polygon fill="#2F8378" fill-opacity="0.16" points="0,20 0,7 16,8 32,11 48,16 64,13 80,17 100,12 100,20"/>
-              <polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,7 16,8 32,11 48,16 64,13 80,17 100,12"/>
-              <circle cx="100" cy="12" r="2.4" fill="#2F8378"/>
+            <svg class="kpi-mini-spark" viewBox="0 0 100 22" preserveAspectRatio="none">
+              <polygon fill="#2F8378" fill-opacity="0.16" points="0,22 0,8 16,9 32,12 48,17 64,14 80,18 100,13 100,22"/>
+              <polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,8 16,9 32,12 48,17 64,14 80,18 100,13"/>
+              <circle cx="100" cy="13" r="2.6" fill="#2F8378"/>
             </svg>
+            <div class="kpi-mini-explain">線往上 = 越累</div>
           </div>
         </div>
 
@@ -756,17 +770,35 @@
       <div class="ph-body">
 
         <div class="sec-head">
-          <h3 class="sec-title"><i data-lucide="map-pin"></i> 點選位置</h3>
+          <h3 class="sec-title"><i data-lucide="map-pin"></i> 點選不舒服的位置</h3>
           <span class="sec-spacer"></span>
-          <span class="sec-count">已選：上腹（中段）</span>
         </div>
         <div class="bodymap-wrap">
+          <div class="puzzle-motif tl"><svg><use href="#puzzle-piece"/></svg></div>
           <div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>
-          <svg viewBox="0 0 100 220" fill="none" stroke="#1F3D58" stroke-width="1.2">
-            <circle cx="50" cy="20" r="14" fill="#fff"/>
-            <path d="M30 38 L70 38 L78 90 L72 130 L78 200 L62 200 L56 140 L50 200 L44 140 L38 200 L22 200 L28 130 L22 90 Z" fill="#fff"/>
-            <circle cx="50" cy="105" r="9" fill="#4A90C2" stroke="#2F6B96" stroke-width="1.5"/>
+          <div class="puzzle-motif bl"><svg><use href="#puzzle-piece"/></svg></div>
+          <svg class="body-figure" viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg"
+               fill="#FFFFFF" stroke="#1F3D58" stroke-width="1.4"
+               stroke-linejoin="round" stroke-linecap="round">
+            <!-- 頭 -->
+            <ellipse cx="55" cy="22" rx="13" ry="15"/>
+            <!-- 脖子 -->
+            <path d="M 49 35 Q 55 39 61 35 L 61 43 Q 55 45 49 43 Z"/>
+            <!-- 軀幹（含肩膀曲線到腰） -->
+            <path d="M 32 50 Q 32 45 38 44 Q 46 42 55 42 Q 64 42 72 44 Q 78 45 78 50 L 76 78 Q 74 92 73 100 L 72 122 Q 72 128 68 130 L 42 130 Q 38 128 38 122 L 37 100 Q 36 92 34 78 Z"/>
+            <!-- 左手臂 -->
+            <path d="M 32 50 Q 26 53 23 62 Q 19 80 17 102 Q 16 114 21 116 Q 26 116 28 111 Q 31 96 32 82 Q 33 68 33 54 Z"/>
+            <!-- 右手臂 -->
+            <path d="M 78 50 Q 84 53 87 62 Q 91 80 93 102 Q 94 114 89 116 Q 84 116 82 111 Q 79 96 78 82 Q 77 68 77 54 Z"/>
+            <!-- 左腿 -->
+            <path d="M 42 130 Q 40 144 40 160 L 38 196 Q 38 198 41 198 L 51 198 Q 53 198 53 196 L 53 160 Q 53 144 53 132 Z"/>
+            <!-- 右腿 -->
+            <path d="M 57 132 Q 57 144 57 160 L 57 196 Q 57 198 59 198 L 69 198 Q 72 198 72 196 L 70 160 Q 70 144 68 130 Z"/>
+            <!-- 不舒服標記（上腹中段）— 用暖琥珀色，不用刺眼紅 -->
+            <circle cx="55" cy="108" r="11" fill="#C98B2F" fill-opacity="0.25" stroke="none"/>
+            <circle cx="55" cy="108" r="6" fill="#C98B2F" stroke="#FFFFFF" stroke-width="1.5"/>
           </svg>
+          <div class="bodymap-caption">已選：<strong>上腹部（中段）</strong></div>
         </div>
 
         <div class="sec-head">
