@@ -6543,8 +6543,78 @@ function symptoms() {
   const todayStr = today.toISOString().slice(0, 10);
   const todayEntries = stats.entries.filter(e => e.recordedAt.slice(0, 10) === todayStr);
 
+  // ─── 手機 v11 demo 版面（body map + intensity + chips + AI 卡）─── //
+  var _mobileSymBlock = ''
+    + '<div class="mobile-only">'
+    // 點位置 — body map
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="map-pin"></i> 點選不舒服的位置</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="bodymap-wrap" onclick="window.scrollTo({top:document.querySelector(\'.sym-page\').offsetTop,behavior:\'smooth\'})">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-blue"/></svg>'
+    +     '<svg class="body-figure" viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg" fill="#FFFFFF" stroke="#1F3D58" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">'
+    +       '<ellipse cx="55" cy="22" rx="13" ry="15"/>'
+    +       '<path d="M 49 35 Q 55 39 61 35 L 61 43 Q 55 45 49 43 Z"/>'
+    +       '<path d="M 32 50 Q 32 45 38 44 Q 46 42 55 42 Q 64 42 72 44 Q 78 45 78 50 L 76 78 Q 74 92 73 100 L 72 122 Q 72 128 68 130 L 42 130 Q 38 128 38 122 L 37 100 Q 36 92 34 78 Z"/>'
+    +       '<path d="M 32 50 Q 26 53 23 62 Q 19 80 17 102 Q 16 114 21 116 Q 26 116 28 111 Q 31 96 32 82 Q 33 68 33 54 Z"/>'
+    +       '<path d="M 78 50 Q 84 53 87 62 Q 91 80 93 102 Q 94 114 89 116 Q 84 116 82 111 Q 79 96 78 82 Q 77 68 77 54 Z"/>'
+    +       '<path d="M 42 130 Q 40 144 40 160 L 38 196 Q 38 198 41 198 L 51 198 Q 53 198 53 196 L 53 160 Q 53 144 53 132 Z"/>'
+    +       '<path d="M 57 132 Q 57 144 57 160 L 57 196 Q 57 198 59 198 L 69 198 Q 72 198 72 196 L 70 160 Q 70 144 68 130 Z"/>'
+    +     '</svg>'
+    +     '<div class="bodymap-caption">提示：點選下方症狀類別開始記錄</div>'
+    +   '</div>'
+
+    // 類型 chip group — 用既有的 symptom categories
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="tag"></i> 類型</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<span class="sec-count">' + totalCount + ' 筆</span>'
+    +   '</div>'
+    +   '<div class="chip-group" id="mobile-sym-chips" style="margin-bottom:14px">'
+    +     (function() {
+        var cats = (typeof SYMPTOM_CATEGORIES !== 'undefined' && SYMPTOM_CATEGORIES) ? SYMPTOM_CATEGORIES : [];
+        if (!cats.length) return '<button class="chip">點開下方類別開始</button>';
+        return cats.slice(0, 8).map(function(c) {
+          var label = (typeof _symField === 'function') ? _symField(c, 'zh') : (c.zh || c.id || '');
+          return '<button class="chip" onclick="openSymptomLog(\'' + c.id + '\')">' + escapeHtml(label) + '</button>';
+        }).join('');
+      })()
+    +   '</div>'
+
+    // 強度 1-5
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="thermometer"></i> 強度（選一個快速感受）</h3>'
+    +   '</div>'
+    +   '<div class="intensity" id="mobile-sym-intensity" style="margin-bottom:14px">'
+    +     [1,2,3,4,5].map(function(n) {
+        var label = ['幾乎不','輕微','中等','劇烈','受不了'][n-1];
+        return '<div class="int-cell" data-val="' + n + '" onclick="window._mobileSymIntensity=' + n + ';document.querySelectorAll(\'#mobile-sym-intensity .int-cell\').forEach(function(e){e.classList.remove(\'sel\')});this.classList.add(\'sel\')"><strong>' + n + '</strong>' + label + '</div>';
+      }).join('')
+    +   '</div>'
+
+    // AI 摘要
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="sparkles"></i> AI 幫你看一下</h3>'
+    +   '</div>'
+    +   '<div class="ai-card" onclick="navigateTo(\'symptomsAnalyze\',null)" style="cursor:pointer">'
+    +     '<div class="ai-num">' + (totalCount > 0 ? Math.min(5, Math.ceil(totalCount/3)) : '·') + '</div>'
+    +     '<div class="ai-text">'
+    +       '<div class="ai-title">' + (totalCount > 0 ? '看看你最近的症狀分析' : '記一筆症狀後，AI 會幫你看') + '</div>'
+    +       '<div class="ai-desc">' + (topCat ? ('最近最常發生：' + escapeHtml(_symField(topCat,'zh')) + ' · ' + topCount + ' 次') : '點開上方類型開始記錄') + '</div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 免責 footer
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
   return `
-    <div class="sym-page">
+    ${_mobileSymBlock}
+    <div class="sym-page desktop-only">
 
       ${renderHowto('symptoms')}
 
