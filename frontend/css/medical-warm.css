@@ -117,10 +117,11 @@
 }
 .home-digest-progress {
   color: var(--klein) !important;
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
 }
 .home-digest-num {
   color: var(--klein) !important;
-  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  /* 保留原本的 JetBrains Mono — v5 數字用等寬字 */
 }
 .home-digest-label {
   color: var(--text-dim) !important;
@@ -350,6 +351,45 @@
 .mobile-tab,
 .mobile-tab-label {
   font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* ─── ⑨ v5 加：Status pill 系統（5 種） ──────────────────────
+   給未來的 component 用。也覆寫 nav-badge 讓視覺一致。 */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 11px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  font-family: "Noto Sans TC", system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.pill .lucide,
+.pill i[data-lucide] { width: 10px; height: 10px; }
+.pill-ok    { background: rgba(63,142,92,0.12);  color: #2F6F47; }
+.pill-warn  { background: rgba(201,139,47,0.12); color: #9A6A1F; }
+.pill-info  { background: rgba(74,144,194,0.12); color: #2F6B96; }
+.pill-rose  { background: rgba(201,122,122,0.14); color: #C97A7A; }
+.pill-mute  { background: rgba(31,61,88,0.08);   color: var(--text-dim); }
+
+/* ─── ⑩ v5 加：數字 / 時間 / 倒數用 JetBrains Mono ──────────
+   只在資料元素，不在文案。 */
+.todo-time,
+.todo-count,
+.todo-card .todo-meta,
+.qr-meta,
+.page-app-hero-meta-num,
+.nav-badge,
+.kpi-value,
+.vital-value,
+.tabular {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace !important;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── 結束 ──────────────────────────────────────────────────── */
