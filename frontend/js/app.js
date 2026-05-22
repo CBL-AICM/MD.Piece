@@ -5963,9 +5963,20 @@ function _setTimelineBoxMode(box, mode) {
 }
 
 function timeline() {
-  return ''
+  var _mobileTlBlock = ''
+    + '<div class="mobile-only" style="margin-bottom:8px">'
+    +   '<div class="pv-hero">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">我的健康時間軸</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">跨次就診整合 — 一頁帶給醫師</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">上傳檢驗 / 處方 / 影像，OCR 抽出重點</div>'
+    +     '<button class="pv-btn" onclick="openTimelineUploader()"><i data-lucide="upload"></i> 上傳新文件</button>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileTlBlock + ''
     + '<div class="tl-page">'
-    +   '<header class="tl-head">'
+    +   '<header class="tl-head desktop-only">'
     +     '<div class="tl-titles">'
     +       '<h2>我的健康時間軸</h2>'
     +       '<p>上傳檢驗報告 / 處方箋 / 影像，系統會 OCR 抽出重點。下次看診直接帶這頁給醫師看。</p>'
@@ -5976,7 +5987,11 @@ function timeline() {
     +   '</header>'
     +   '<div class="tl-filters" id="tl-filters">' + _renderTimelineFilters('all') + '</div>'
     +   '<div class="tl-list" id="tl-list"><p class="tl-empty">// 載入中…</p></div>'
-    +   '<p class="tl-disclaimer">OCR 為輔助辨識，數值仍以原始文件為準。隱私敏感資料目前只存在你這台裝置。</p>'
+    +   '<div class="mobile-only"><div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>OCR 為輔助辨識，數值仍以原始文件為準。資料只存在這台裝置。</span>'
+    +   '</div></div>'
+    +   '<p class="tl-disclaimer desktop-only">OCR 為輔助辨識，數值仍以原始文件為準。隱私敏感資料目前只存在你這台裝置。</p>'
     + '</div>';
 }
 
