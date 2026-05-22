@@ -64,19 +64,19 @@
       --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
     }
 
-    /* ─────────── DARK MODE — 高級藍（premium navy） ─────────── */
+    /* ─────────── DARK MODE — 高級藍（premium navy）— 飽和度拉高 ─────────── */
     :root.dark {
-      --bg:           #0B1A2C;       /* 高級深藍底 */
-      --bg-soft:      #102338;       /* 框 / topbar */
-      --bg-mid:       #17324F;       /* 卡片提升面 */
-      --border:       rgba(140, 180, 220, 0.16);
-      --border-mid:   rgba(140, 180, 220, 0.24);
-      --border-strong:rgba(140, 180, 220, 0.38);
+      --bg:           #0D2845;       /* 飽和高級藍底 */
+      --bg-soft:      #133258;       /* 框 / topbar — 較淺藍 */
+      --bg-mid:       #1D436D;       /* 卡片藍色提升面 */
+      --border:       rgba(160, 200, 240, 0.20);
+      --border-mid:   rgba(160, 200, 240, 0.30);
+      --border-strong:rgba(160, 200, 240, 0.45);
 
-      --accent:       #7BC3F0;       /* 提亮藍 */
-      --accent-deep:  #B8DEF5;
-      --accent-soft:  #1F3854;
-      --accent-tint:  #142940;
+      --accent:       #5DAEEC;       /* 鮮明亮藍 */
+      --accent-deep:  #9DCEF5;
+      --accent-soft:  #1E4570;
+      --accent-tint:  #163A60;
 
       --teal:         #6BC4B8;
       --teal-deep:    #95D9CF;
@@ -102,9 +102,9 @@
       --amber-deep:   #F4D196;
       --amber-soft:   #3D2E18;
     }
-    /* dark mode 高級藍底 — 深邃漸層 */
+    /* dark mode 高級藍底 — 深邃藍漸層（明顯藍調） */
     :root.dark body {
-      background: linear-gradient(180deg, #050E1B 0%, #081628 50%, #0A1B30 100%) !important;
+      background: linear-gradient(180deg, #051A35 0%, #0A2548 50%, #0F2D54 100%) !important;
     }
     :root.dark .demo-shell { background: var(--bg) !important; }
     :root.dark .ph-tabbar { background: var(--bg-soft) !important; border-top-color: var(--border); }
@@ -166,7 +166,20 @@
     :root.dark .home-ov-val,
     :root.dark .home-greet-msg,
     :root.dark .chip,
-    :root.dark .pp-btn { color: var(--text) !important; }
+    /* pp-btn — dark mode：深藍底 + 白字 + 鮮藍 active */
+    :root.dark .pp-btn {
+      background: var(--bg-mid) !important;
+      color: var(--text-dim) !important;
+      border-color: var(--border-mid) !important;
+    }
+    :root.dark .pp-btn .lucide { color: var(--text-dim) !important; }
+    :root.dark .pp-btn.active {
+      background: var(--accent) !important;
+      color: #FFFFFF !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 1px rgba(93,174,236,0.4), 0 4px 14px -4px rgba(93,174,236,0.5);
+    }
+    :root.dark .pp-btn.active .lucide { color: #FFFFFF !important; }
 
     :root.dark .sec-count,
     :root.dark .kpi-mini-meta,
