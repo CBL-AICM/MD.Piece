@@ -448,7 +448,70 @@ function memo() {
     return t && String(new Date(t).toISOString()).slice(0, 10) === _todayKey;
   }).length;
   var _doctorCount = _memoList.filter(function(m) { return m.forDoctor; }).length;
-  return `
+
+  // ─── Mobile v11 block ───
+  var _mobileMemoBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div class="pv-hero-eye">TODAY · 今日 Memo</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">'
+    +       (_todayCount > 0 ? '今天記了 ' + _todayCount + ' 筆 · 給醫師 ' + _doctorCount : '今天還沒記東西')
+    +     '</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">隨手拍症狀／藥袋／傷口，或寫下下次門診要說的事</div>'
+    +   '</div>'
+
+    // 三顆 SOS 風格快速按鈕
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="plus-circle"></i> 快速新增</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="sos-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">'
+    +     '<label class="sos-btn t-rose" style="min-height:78px;cursor:pointer">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="memoOnPhotoPicked(event)" />'
+    +       '<div class="sos-icon"><i data-lucide="camera"></i></div>'
+    +       '<div class="sos-label">拍照片</div>'
+    +       '<div class="sos-sub">症狀/藥袋</div>'
+    +     '</label>'
+    +     '<label class="sos-btn t-blue" style="min-height:78px;cursor:pointer">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<input type="file" accept="image/*" style="display:none" onchange="memoOnPhotoPicked(event)" />'
+    +       '<div class="sos-icon"><i data-lucide="image-up"></i></div>'
+    +       '<div class="sos-label">從相簿</div>'
+    +       '<div class="sos-sub">上傳照片</div>'
+    +     '</label>'
+    +     '<button type="button" class="sos-btn t-teal" style="min-height:78px" onclick="memoStartText()">'
+    +       '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+    +       '<div class="sos-icon"><i data-lucide="message-square-text"></i></div>'
+    +       '<div class="sos-label">寫下來</div>'
+    +       '<div class="sos-sub">給醫師說</div>'
+    +     '</button>'
+    +   '</div>'
+
+    // 篩選 chip
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="archive"></i> 所有 memo</h3>'
+    +     '<span id="mobile-memo-count" class="sec-count">' + _memoList.length + '</span>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="chip-group" style="margin-bottom:10px">'
+    +     '<button class="chip active" data-mobile-memo-filter="all" onclick="memoSetFilter(\'all\')">全部</button>'
+    +     '<button class="chip" data-mobile-memo-filter="doctor" onclick="memoSetFilter(\'doctor\')">給醫師</button>'
+    +     '<button class="chip" data-mobile-memo-filter="self" onclick="memoSetFilter(\'self\')">自己</button>'
+    +   '</div>'
+
+    // 列表 — render 後會用既有 memoRenderList 邏輯 mirror 到這
+    +   '<div id="mobile-memo-list" class="list-card"></div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>memo 僅存本裝置</strong>，醫療決策請以醫師為主。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileMemoBlock + `
+    <div class="desktop-only">
     <div class="page-app-hero page-app-hero-rose">
       <div class="page-app-hero-head">
         <span class="page-app-hero-eyebrow">TODAY · 今日 Memo</span>
@@ -518,6 +581,7 @@ function memo() {
         </div>
       </div>
       <div id="memo-list" class="memo-list"></div>
+    </div>
     </div>
   `;
 }
@@ -1163,6 +1227,49 @@ function memoRenderList() {
     var slot = listEl.querySelector('[data-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
     if (slot) memoMountPhoto(slot, m.photo, "memo-photo");
   });
+
+  // mobile mirror — v11 list-row style
+  var mListEl = document.getElementById('mobile-memo-list');
+  var mCountEl = document.getElementById('mobile-memo-count');
+  if (mCountEl) mCountEl.textContent = filtered.length;
+  if (mListEl) {
+    if (!filtered.length) {
+      mListEl.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">' +
+        (all.length ? '這個分類下還沒有 memo' : '還沒有 memo — 從上方按鈕開始記') + '</div>';
+    } else {
+      mListEl.innerHTML = filtered.map(function(m) {
+        var pillCls = m.forDoctor ? 'pill pill-rose' : 'pill pill-mute';
+        var pillTxt = m.forDoctor ? '給醫師' : '自己';
+        var pillIcon = m.forDoctor ? 'stethoscope' : 'user';
+        var photoHtml = m.photo ? '<div class="mobile-memo-photo-slot" data-mobile-memo-photo="' + escapeHtml(m.id) + '" style="margin-top:4px;border-radius:8px;overflow:hidden;max-width:100%"></div>' : '';
+        var textHtml = m.text ? '<div style="font-size:12px;color:var(--navy);line-height:1.5;margin-top:4px">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' : '';
+        return ''
+          + '<div class="list-row" style="grid-template-columns:1fr;padding:11px 13px;align-items:flex-start;cursor:pointer" onclick="memoOpenLightbox(\'' + m.id + '\')">'
+          +   '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+          +     '<span class="' + pillCls + '"><i data-lucide="' + pillIcon + '"></i>' + pillTxt + '</span>'
+          +     '<span class="time" style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace)">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>'
+          +     '<span style="flex:1"></span>'
+          +     '<button onclick="event.stopPropagation();memoToggleDoctor(\'' + m.id + '\')" title="切換給醫師/自己" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="repeat" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoEdit(\'' + m.id + '\')" title="編輯" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="pencil" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoDelete(\'' + m.id + '\')" title="刪除" style="border:none;background:none;cursor:pointer;color:var(--rose-deep);padding:2px"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>'
+          +   '</div>'
+          +   textHtml
+          +   photoHtml
+          + '</div>';
+      }).join('');
+      // 把照片畫到 slot
+      filtered.forEach(function(m) {
+        if (!m.photo) return;
+        var slot = mListEl.querySelector('[data-mobile-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
+        if (slot) memoMountPhoto(slot, m.photo, 'memo-photo');
+      });
+    }
+  }
+  // 同步 mobile filter chip 高亮
+  document.querySelectorAll('[data-mobile-memo-filter]').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-mobile-memo-filter') === _memoFilter);
+  });
+
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
