@@ -1,0 +1,598 @@
+/* ═════════════════════════════════════════════════════════════════
+   MD.Piece v11 — Component Styles
+   來源：preview-app-demo.html <style> 區塊的結構性 CSS
+   作用：補足 v11-modern.css 沒有的 demo 結構 class 定義
+   範圍：**僅手機/平板（≤1023px）**；桌機 ≥1024px 維持原本 Y2K
+   ═════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1023px) {
+
+/* mobile/desktop helpers — 同一份 render 函數同時放兩種 markup，用 css toggle */
+body.theme-modern .desktop-only { display: none !important; }
+body.theme-modern .mobile-only  { display: block; }
+
+/* ─── 共用 pill ─── */
+body.theme-modern .pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 500;
+  line-height: 1.5; white-space: nowrap;
+}
+body.theme-modern .pill.mono { font-family: var(--font-mono, "JetBrains Mono", monospace); font-weight: 600; font-size: 9.5px; }
+body.theme-modern .pill .lucide { width: 9px; height: 9px; }
+body.theme-modern .pill-ok     { background: var(--green-soft, #E6F2EB); color: var(--green-deep, #2F6F47); }
+body.theme-modern .pill-warn   { background: var(--amber-soft, #FAF1DF); color: var(--amber-deep, #9A6A1F); }
+body.theme-modern .pill-info   { background: var(--accent-soft, #E8F1F8); color: var(--accent-deep, #2F6B96); }
+body.theme-modern .pill-teal   { background: var(--teal-soft, #E5F0EE); color: var(--teal-deep, #1F5F56); }
+body.theme-modern .pill-mute   { background: var(--bg-mid, #ECF0F4); color: var(--text-dim, #3A5060); }
+body.theme-modern .pill-rose   { background: var(--rose-soft, #FBEEEE); color: var(--rose-deep, #C97A7A); }
+
+/* ─── 拼圖塊 / 拼圖背景 ─── */
+body.theme-modern .puzzle-motif { position: absolute; opacity: 0.05; pointer-events: none; color: var(--accent, #4A90C2); }
+body.theme-modern .puzzle-motif.tl { left: -10px; top: -10px; width: 50px; height: 50px; }
+body.theme-modern .puzzle-motif.tr { right: -10px; top: -10px; width: 50px; height: 50px; }
+body.theme-modern .puzzle-motif.br { right: -10px; bottom: -10px; width: 60px; height: 60px; }
+body.theme-modern .puzzle-motif svg { width: 100%; height: 100%; }
+
+/* ─── sec-head ─── */
+body.theme-modern .sec-head {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 16px 4px 8px;
+}
+body.theme-modern .sec-title {
+  font-size: 12.5px; font-weight: 600; color: var(--navy, #0F2A45);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+body.theme-modern .sec-title .lucide { width: 13px; height: 13px; color: var(--text-muted, #6B7F92); }
+body.theme-modern .sec-count { font-size: 10.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); }
+body.theme-modern .sec-spacer { flex: 1; }
+body.theme-modern .sec-action {
+  font-size: 11px; color: var(--accent-deep, #2F6B96); font-weight: 500;
+  display: inline-flex; align-items: center; gap: 3px;
+  cursor: pointer; background: none; border: none;
+}
+body.theme-modern .sec-action .lucide { width: 11px; height: 11px; }
+
+/* card tint */
+body.theme-modern .card.tint-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC) 0%, #fff 60%); }
+body.theme-modern .card.tint-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6) 0%, #fff 60%); }
+body.theme-modern .card.tint-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6) 0%, #fff 60%); }
+body.theme-modern .card.tint-green { background: linear-gradient(135deg, var(--green-tint, #F1F8F4) 0%, #fff 60%); }
+
+/* ─── HOME — 早安卡 ─── */
+body.theme-modern .home-greet {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 14px;
+  margin-bottom: 12px;
+  position: relative; overflow: hidden;
+}
+body.theme-modern .home-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--teal, #2F8378); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 600;
+  flex-shrink: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(31,61,88,0.10);
+  overflow: hidden;
+}
+body.theme-modern .home-avatar img { width: 100%; height: 100%; object-fit: cover; }
+body.theme-modern .home-greet-text { flex: 1; min-width: 0; }
+body.theme-modern .home-greet-title { font-size: 15px; font-weight: 600; color: var(--navy, #0F2A45); margin-bottom: 2px; }
+body.theme-modern .home-greet-date {
+  font-size: 11px; color: var(--text-dim, #3A5060);
+  font-family: var(--font-mono, monospace);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+body.theme-modern .home-greet-date strong { color: var(--accent-deep, #2F6B96); font-weight: 600; }
+
+/* care-mode-mini */
+body.theme-modern .care-mode-mini {
+  display: flex; gap: 4px;
+  padding: 3px; background: var(--bg-mid, #ECF0F4);
+  border-radius: 18px;
+  width: 100%;
+  margin-bottom: 14px;
+}
+body.theme-modern .care-chip {
+  flex: 1; padding: 6px 8px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  border-radius: 14px;
+  font-size: 11.5px; font-weight: 500; color: var(--text-dim, #3A5060);
+  background: transparent; border: none;
+  cursor: pointer;
+}
+body.theme-modern .care-chip.active { background: var(--navy, #0F2A45); color: #fff; }
+body.theme-modern .care-chip .lucide { width: 12px; height: 12px; }
+
+/* kpi-row */
+body.theme-modern .kpi-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  margin-bottom: 4px;
+}
+body.theme-modern .kpi-mini {
+  padding: 9px 10px;
+  background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 8px;
+  position: relative; overflow: hidden;
+}
+body.theme-modern .kpi-mini.t-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6), #fff 70%); }
+body.theme-modern .kpi-mini.t-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC), #fff 70%); }
+body.theme-modern .kpi-mini.t-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6), #fff 70%); }
+body.theme-modern .kpi-mini-label {
+  font-size: 9.5px; color: var(--text-muted, #6B7F92); font-weight: 600;
+  letter-spacing: 0.04em; margin-bottom: 3px;
+  display: flex; align-items: center; gap: 3px;
+}
+body.theme-modern .kpi-mini-label .lucide { width: 10px; height: 10px; }
+body.theme-modern .kpi-mini.t-rose .lucide { color: var(--rose-deep, #C97A7A); }
+body.theme-modern .kpi-mini.t-blue .lucide { color: var(--accent, #4A90C2); }
+body.theme-modern .kpi-mini.t-teal .lucide { color: var(--teal, #2F8378); }
+body.theme-modern .kpi-mini-val {
+  font-family: var(--font-mono, monospace); font-size: 17px; font-weight: 600; color: var(--navy, #0F2A45);
+  line-height: 1;
+}
+body.theme-modern .kpi-mini-meta { font-size: 11.5px; color: var(--text-dim, #3A5060); font-weight: 500; margin-top: 4px; }
+body.theme-modern .kpi-mini-spark { width: 100%; height: 22px; margin-top: 6px; }
+body.theme-modern .kpi-mini-explain { font-size: 9.5px; color: var(--text-muted, #6B7F92); margin-top: 2px; line-height: 1.4; }
+
+/* SOS 4 顆 */
+body.theme-modern .sos-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
+}
+body.theme-modern .sos-btn {
+  padding: 18px 10px;
+  min-height: 92px;
+  background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  position: relative; overflow: hidden;
+  cursor: pointer;
+  text-align: center;
+}
+body.theme-modern .sos-btn .puzzle-motif { opacity: 0.08; }
+body.theme-modern .sos-btn.t-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6) 0%, #fff 65%); }
+body.theme-modern .sos-btn.t-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC) 0%, #fff 65%); }
+body.theme-modern .sos-btn.t-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6) 0%, #fff 65%); }
+body.theme-modern .sos-btn.t-amber { background: linear-gradient(135deg, rgba(201,139,47,0.06) 0%, #fff 65%); }
+body.theme-modern .sos-btn .sos-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+body.theme-modern .sos-btn .sos-icon .lucide { width: 17px; height: 17px; }
+body.theme-modern .sos-btn .sos-label { font-size: 11.5px; font-weight: 600; color: var(--navy, #0F2A45); }
+body.theme-modern .sos-btn .sos-sub { font-size: 9.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); }
+body.theme-modern .sos-btn.t-rose .sos-icon { background: #fff; color: var(--rose-deep, #C97A7A); border: 1px solid var(--border, rgba(31,61,88,0.10)); }
+body.theme-modern .sos-btn.t-blue .sos-icon { background: #fff; color: var(--accent-deep, #2F6B96); border: 1px solid var(--border, rgba(31,61,88,0.10)); }
+body.theme-modern .sos-btn.t-teal .sos-icon { background: #fff; color: var(--teal-deep, #1F5F56); border: 1px solid var(--border, rgba(31,61,88,0.10)); }
+body.theme-modern .sos-btn.t-amber .sos-icon { background: #fff; color: var(--amber-deep, #9A6A1F); border: 1px solid var(--border, rgba(31,61,88,0.10)); }
+body.theme-modern .sos-btn.t-rose .puzzle-motif { color: var(--rose-deep, #C97A7A); }
+body.theme-modern .sos-btn.t-blue .puzzle-motif { color: var(--accent, #4A90C2); }
+body.theme-modern .sos-btn.t-teal .puzzle-motif { color: var(--teal, #2F8378); }
+body.theme-modern .sos-btn.t-amber .puzzle-motif { color: var(--amber-deep, #9A6A1F); }
+
+/* todo list */
+body.theme-modern .list-card { background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10)); border-radius: 14px; overflow: hidden; margin-bottom: 12px; }
+body.theme-modern .list-row {
+  display: grid; grid-template-columns: 18px 56px 1fr auto;
+  gap: 8px; align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border, rgba(31,61,88,0.10));
+}
+body.theme-modern .list-row:last-child { border-bottom: none; }
+body.theme-modern .list-row .check {
+  width: 16px; height: 16px; border: 1.5px solid var(--border-mid, rgba(31,61,88,0.16));
+  border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff;
+}
+body.theme-modern .list-row .check.done { background: var(--green, #3F8E5C); border-color: var(--green, #3F8E5C); color: #fff; }
+body.theme-modern .list-row .check.done .lucide { width: 10px; height: 10px; }
+body.theme-modern .list-row .time { font-family: var(--font-mono, monospace); color: var(--text-muted, #6B7F92); font-size: 11px; }
+body.theme-modern .list-row .name { font-size: 12px; color: var(--navy, #0F2A45); font-weight: 500; line-height: 1.4; }
+body.theme-modern .list-row .name .tag { display: inline-block; vertical-align: middle; margin-right: 5px; }
+
+/* SYMPTOMS bodymap */
+body.theme-modern .bodymap-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 20px 16px 18px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 14px;
+  margin-bottom: 12px;
+  position: relative; overflow: hidden;
+}
+body.theme-modern .puzzle-bg-layer {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  opacity: 0.55;
+}
+body.theme-modern .bodymap-wrap > svg.body-figure { width: 140px; height: auto; position: relative; z-index: 1; }
+body.theme-modern .bodymap-wrap > .bodymap-caption { position: relative; z-index: 1; }
+body.theme-modern .bodymap-caption { font-size: 11px; color: var(--text-dim, #3A5060); text-align: center; margin-top: 8px; font-family: var(--font-mono, monospace); }
+body.theme-modern .bodymap-caption strong { color: var(--navy, #0F2A45); font-weight: 600; }
+
+/* Intensity */
+body.theme-modern .intensity {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+}
+body.theme-modern .int-cell {
+  padding: 8px 4px;
+  background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 7px;
+  text-align: center;
+  font-size: 10px; color: var(--text-dim, #3A5060);
+  cursor: pointer;
+}
+body.theme-modern .int-cell strong {
+  display: block; font-family: var(--font-mono, monospace);
+  font-size: 13px; font-weight: 600; color: var(--navy, #0F2A45); margin-bottom: 1px;
+}
+body.theme-modern .int-cell.sel { background: var(--accent-soft, #E8F1F8); border-color: var(--accent, #4A90C2); }
+body.theme-modern .int-cell.sel strong { color: var(--accent-deep, #2F6B96); }
+
+/* Chip group */
+body.theme-modern .chip-group { display: flex; flex-wrap: wrap; gap: 5px; }
+body.theme-modern .chip {
+  padding: 5px 11px;
+  background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 999px;
+  font-size: 11px; color: var(--text-dim, #3A5060); font-weight: 600;
+  cursor: pointer;
+}
+body.theme-modern .chip.active { background: var(--accent-soft, #E8F1F8); border-color: var(--accent, #4A90C2); color: var(--accent-deep, #2F6B96); }
+
+/* AI 摘要 */
+body.theme-modern .ai-card {
+  padding: 12px 14px;
+  background: var(--accent-tint, #F2F8FC);
+  border: 1.5px solid var(--accent, #4A90C2);
+  border-radius: 14px;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 8px;
+}
+body.theme-modern .ai-card .ai-num {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: #fff; color: var(--accent-deep, #2F6B96);
+  border: 1.5px solid var(--accent, #4A90C2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-brand, "Cormorant Garamond", serif); font-style: italic; font-size: 17px; font-weight: 500;
+  flex-shrink: 0;
+}
+body.theme-modern .ai-card .ai-text { flex: 1; }
+body.theme-modern .ai-card .ai-title { font-size: 12px; font-weight: 600; color: var(--accent-deep, #2F6B96); margin-bottom: 1px; }
+body.theme-modern .ai-card .ai-desc { font-size: 10.5px; color: var(--text-dim, #3A5060); line-height: 1.5; }
+
+/* Vital snapshot */
+body.theme-modern .vital-snap {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+body.theme-modern .vital-card {
+  padding: 12px;
+  background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10)); border-radius: 14px;
+  position: relative; overflow: hidden;
+}
+body.theme-modern .vital-card .puzzle-motif { right: -8px; top: -8px; width: 36px; height: 36px; opacity: 0.04; }
+body.theme-modern .vital-card.t-rose .puzzle-motif { color: var(--rose-deep, #C97A7A); }
+body.theme-modern .vital-card.t-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC), #fff 70%); }
+body.theme-modern .vital-card.t-blue .puzzle-motif { color: var(--accent, #4A90C2); }
+body.theme-modern .vital-card.t-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6), #fff 70%); }
+body.theme-modern .vital-card.t-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6), #fff 70%); }
+body.theme-modern .vital-card.t-teal .puzzle-motif { color: var(--teal, #2F8378); }
+body.theme-modern .vital-card-head { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+body.theme-modern .vital-card-head .lucide { width: 12px; height: 12px; }
+body.theme-modern .vital-card-head .lbl { font-size: 10.5px; color: var(--text-dim, #3A5060); font-weight: 600; }
+body.theme-modern .vital-card-val { font-family: var(--font-mono, monospace); font-size: 22px; font-weight: 600; color: var(--navy, #0F2A45); line-height: 1; }
+body.theme-modern .vital-card-unit { font-size: 10.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); margin-left: 3px; }
+body.theme-modern .vital-card-meta { font-size: 10px; color: var(--text-muted, #6B7F92); margin-top: 4px; font-family: var(--font-mono, monospace); }
+
+/* Med list */
+body.theme-modern .med-list-row {
+  display: grid; grid-template-columns: 30px 1fr auto 24px;
+  gap: 10px; align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border, rgba(31,61,88,0.10));
+}
+body.theme-modern .med-list-row:last-child { border-bottom: none; }
+body.theme-modern .med-list-row .ico { width: 30px; height: 30px; border-radius: 7px; background: var(--teal-soft, #E5F0EE); color: var(--teal-deep, #1F5F56); display: flex; align-items: center; justify-content: center; }
+body.theme-modern .med-list-row .ico .lucide { width: 14px; height: 14px; }
+body.theme-modern .med-list-row .name { font-size: 12.5px; color: var(--navy, #0F2A45); font-weight: 500; }
+body.theme-modern .med-list-row .dose { font-size: 10.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); margin-top: 1px; }
+body.theme-modern .med-list-row .time { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--text-dim, #3A5060); text-align: right; }
+
+/* OCR hero btn */
+body.theme-modern .ocr-hero-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 14px;
+  border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 14px;
+  margin-bottom: 10px;
+  text-align: left;
+  position: relative; overflow: hidden;
+  box-shadow: 0 4px 14px -8px rgba(74,57,40,0.12);
+  background: #fff;
+  cursor: pointer;
+}
+
+/* Pre-visit hero */
+body.theme-modern .pv-hero {
+  padding: 16px 18px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 14px;
+  margin-bottom: 12px;
+  position: relative; overflow: hidden;
+}
+body.theme-modern .pv-hero-eye { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--accent-deep, #2F6B96); text-transform: uppercase; }
+body.theme-modern .pv-hero-num {
+  font-family: var(--font-brand, "Cormorant Garamond", serif); font-style: italic; font-weight: 500;
+  font-size: 36px; color: var(--navy, #0F2A45); letter-spacing: -0.01em; line-height: 1;
+  margin-top: 4px;
+}
+body.theme-modern .pv-hero-num .unit { font-family: var(--font, "Noto Sans TC", sans-serif); font-style: normal; font-size: 13px; color: var(--text-dim, #3A5060); margin-left: 4px; }
+body.theme-modern .pv-hero-meta {
+  font-size: 11.5px; color: var(--text-dim, #3A5060); margin-top: 6px;
+}
+body.theme-modern .pv-hero-doc { font-size: 12.5px; color: var(--navy, #0F2A45); font-weight: 500; margin-top: 2px; }
+body.theme-modern .pv-btn {
+  margin-top: 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px;
+  background: var(--navy, #0F2A45); color: #fff;
+  border-radius: 7px;
+  font-size: 11.5px; font-weight: 500;
+  border: none; cursor: pointer;
+}
+body.theme-modern .pv-btn .lucide { width: 12px; height: 12px; }
+
+/* audience toggle */
+body.theme-modern .aud-toggle {
+  display: flex; gap: 4px; padding: 3px;
+  background: var(--bg-mid, #ECF0F4);
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+body.theme-modern .audience-btn {
+  flex: 1; padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 11.5px; font-weight: 500;
+  color: var(--text-dim, #3A5060);
+  background: transparent; border: none;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  cursor: pointer;
+}
+body.theme-modern .audience-btn .lucide { width: 12px; height: 12px; }
+body.theme-modern .audience-btn.active {
+  background: #fff; color: var(--navy, #0F2A45); font-weight: 600;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(31,61,88,0.04));
+}
+body.theme-modern .aud-view { display: none; }
+body.theme-modern .aud-view.active { display: block; }
+
+/* Pre-visit 3 件事 numbered rows */
+body.theme-modern .pv-talk-row {
+  display: grid; grid-template-columns: 24px 1fr;
+  gap: 8px; align-items: flex-start;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border, rgba(31,61,88,0.10));
+}
+body.theme-modern .pv-talk-row:last-child { border-bottom: none; }
+body.theme-modern .pv-talk-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono, monospace); font-size: 11px; font-weight: 600;
+  margin-top: 1px; flex-shrink: 0;
+}
+body.theme-modern .pv-talk-num.n1 { background: var(--rose-soft, #FBEEEE); color: var(--rose-deep, #C97A7A); }
+body.theme-modern .pv-talk-num.n2 { background: var(--amber-soft, #FAF1DF); color: var(--amber-deep, #9A6A1F); }
+body.theme-modern .pv-talk-num.n3 { background: var(--accent-soft, #E8F1F8); color: var(--accent-deep, #2F6B96); }
+body.theme-modern .pv-talk-row .name { font-size: 12.5px; color: var(--navy, #0F2A45); font-weight: 500; line-height: 1.4; margin-bottom: 3px; }
+body.theme-modern .pv-talk-row .sub { font-size: 10.5px; color: var(--text-muted, #6B7F92); line-height: 1.5; }
+
+/* Settings list */
+body.theme-modern .settings-list {
+  background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10)); border-radius: 14px; overflow: hidden;
+  margin-bottom: 12px;
+}
+body.theme-modern .settings-row {
+  display: grid; grid-template-columns: 28px 1fr auto 10px;
+  gap: 10px; align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border, rgba(31,61,88,0.10));
+  cursor: pointer;
+  background: #fff;
+}
+body.theme-modern .settings-row:last-child { border-bottom: none; }
+body.theme-modern .settings-row .ico {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--bg-soft, #F4F6F8); color: var(--text-dim, #3A5060);
+  display: flex; align-items: center; justify-content: center;
+}
+body.theme-modern .settings-row .ico .lucide { width: 13px; height: 13px; }
+body.theme-modern .settings-row .name { font-size: 12.5px; color: var(--navy, #0F2A45); font-weight: 500; }
+body.theme-modern .settings-row .sub { font-size: 10.5px; color: var(--text-muted, #6B7F92); margin-top: 1px; }
+body.theme-modern .settings-row .val { font-size: 11px; color: var(--text-dim, #3A5060); font-family: var(--font-mono, monospace); }
+body.theme-modern .settings-row .chev { color: var(--text-muted, #6B7F92); }
+body.theme-modern .settings-row .chev .lucide { width: 11px; height: 11px; }
+
+/* ─── 完整免責聲明區塊（settings 頁底部） ─── */
+body.theme-modern .legal-disclaimer-block {
+  margin-top: 16px; padding: 14px 16px;
+  background: var(--amber-soft, #FAF1DF);
+  border: 1px solid rgba(201,139,47,0.25);
+  border-radius: 10px;
+  font-size: 11.5px; color: var(--amber-deep, #9A6A1F); line-height: 1.65;
+}
+body.theme-modern .legal-disclaimer-block .legal-title {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 700; margin-bottom: 6px;
+}
+body.theme-modern .legal-disclaimer-block .legal-title .lucide { width: 14px; height: 14px; }
+body.theme-modern .legal-disclaimer-block p { margin-bottom: 6px; }
+body.theme-modern .legal-disclaimer-block p:last-child { margin-bottom: 0; }
+body.theme-modern .legal-disclaimer-block .emergency { color: var(--rose-deep, #C97A7A); font-weight: 600; }
+
+body.theme-modern .app-version-footer {
+  text-align: center; padding: 18px 0 4px;
+  font-size: 10.5px; color: var(--text-muted, #6B7F92);
+}
+
+/* ─── 客製化欄位（藥袋 vs 我的）─── */
+body.theme-modern .med-customize {
+  padding: 10px 14px 12px;
+  background: var(--bg-soft, #FBFCFD);
+  display: flex; flex-direction: column; gap: 6px;
+  border-bottom: 1px solid var(--border, rgba(31,61,88,0.10));
+}
+body.theme-modern .med-customize-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 11.5px; line-height: 1.5;
+}
+body.theme-modern .med-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px; font-weight: 600;
+  flex-shrink: 0; margin-top: 1px;
+}
+body.theme-modern .med-tag .lucide { width: 10px; height: 10px; }
+body.theme-modern .med-tag.tag-bag {
+  background: var(--bg-mid, #ECF0F4);
+  color: var(--text-dim, #3A5060);
+}
+body.theme-modern .med-tag.tag-mine {
+  background: var(--teal-soft, #E5F0EE);
+  color: var(--teal-deep, #1F5F56);
+}
+body.theme-modern .med-customize-row .strikethrough {
+  color: var(--text-dim, #3A5060);
+  text-decoration: line-through;
+}
+body.theme-modern .med-customize-row .actual {
+  color: var(--text, #0F1F2E); flex: 1;
+}
+body.theme-modern .med-customize-row .actual strong { color: var(--navy, #0F2A45); }
+body.theme-modern .med-customize-edit-btn {
+  background: none; border: none;
+  color: var(--accent, #4A90C2); font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 3px;
+  cursor: pointer; flex-shrink: 0;
+}
+body.theme-modern .med-customize-edit-btn .lucide { width: 11px; height: 11px; }
+
+/* ─── disclaimer-footer ─── */
+body.theme-modern .disclaimer-footer {
+  padding: 10px 14px;
+  background: var(--bg-soft, #F4F6F8);
+  border-top: 1px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 10px;
+  margin-top: 12px;
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 10.5px; color: var(--text-dim, #3A5060); line-height: 1.45;
+}
+body.theme-modern .disclaimer-footer .lucide {
+  width: 12px; height: 12px;
+  color: var(--accent, #4A90C2); flex-shrink: 0; margin-top: 1px;
+}
+body.theme-modern .disclaimer-footer strong { color: var(--navy, #0F2A45); font-weight: 600; }
+body.theme-modern .disclaimer-footer .emergency { color: var(--rose-deep, #C97A7A); font-weight: 600; }
+
+/* meds 時段 group */
+body.theme-modern .meds-period-card {
+  background: #fff; border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  border-radius: 14px; overflow: hidden;
+  margin-bottom: 10px;
+}
+body.theme-modern .meds-period-head {
+  padding: 10px 14px;
+  background: var(--bg-soft, #F4F6F8);
+  border-bottom: 1px solid var(--border, rgba(31,61,88,0.10));
+  font-size: 11px; color: var(--text-dim, #3A5060); font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px;
+}
+body.theme-modern .meds-period-head.morning { background: var(--accent-tint, #F2F8FC); color: var(--accent-deep, #2F6B96); }
+body.theme-modern .meds-period-head .lucide { width: 12px; height: 12px; }
+body.theme-modern .meds-period-head .pill { margin-left: auto; }
+
+/* meds 客製化提示卡 */
+body.theme-modern .med-tip-card {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: var(--teal-soft, #E5F0EE);
+  border: 1.5px solid rgba(47,131,120,0.28);
+  border-radius: 10px;
+  font-size: 11px; color: var(--teal-deep, #1F5F56);
+  line-height: 1.5;
+  display: flex; align-items: flex-start; gap: 7px;
+}
+body.theme-modern .med-tip-card .lucide { width: 13px; height: 13px; flex-shrink: 0; margin-top: 1px; }
+
+/* mobile page wrapper — 接收 demo style */
+body.theme-modern .mobile-page-view {
+  display: block;
+  padding: 12px;
+}
+
+/* dark mode 補強 — kpi/sos/med-list bg */
+html.dark body.theme-modern .home-greet,
+html.dark body.theme-modern .bodymap-wrap,
+html.dark body.theme-modern .pv-hero,
+html.dark body.theme-modern .kpi-mini,
+html.dark body.theme-modern .sos-btn,
+html.dark body.theme-modern .vital-card,
+html.dark body.theme-modern .list-card,
+html.dark body.theme-modern .settings-list,
+html.dark body.theme-modern .settings-row,
+html.dark body.theme-modern .med-list-row,
+html.dark body.theme-modern .meds-period-card,
+html.dark body.theme-modern .ai-card,
+html.dark body.theme-modern .ocr-hero-btn {
+  background: var(--bg-mid) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+html.dark body.theme-modern .meds-period-head { background: var(--bg-soft) !important; color: var(--text-dim) !important; }
+html.dark body.theme-modern .med-customize { background: var(--bg-soft) !important; }
+html.dark body.theme-modern .home-greet-title,
+html.dark body.theme-modern .sec-title,
+html.dark body.theme-modern .pv-hero-num,
+html.dark body.theme-modern .pv-hero-doc,
+html.dark body.theme-modern .kpi-mini-val,
+html.dark body.theme-modern .vital-card-val,
+html.dark body.theme-modern .med-list-row .name,
+html.dark body.theme-modern .settings-row .name,
+html.dark body.theme-modern .list-row .name,
+html.dark body.theme-modern .pv-talk-row .name {
+  color: var(--text) !important;
+}
+html.dark body.theme-modern .int-cell,
+html.dark body.theme-modern .chip,
+html.dark body.theme-modern .care-mode-mini,
+html.dark body.theme-modern .care-chip {
+  background-color: var(--bg-mid) !important;
+  color: var(--text-dim) !important;
+  border-color: var(--border) !important;
+}
+html.dark body.theme-modern .int-cell.sel,
+html.dark body.theme-modern .chip.active {
+  background-color: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-deep) !important;
+}
+html.dark body.theme-modern .care-chip.active {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+} /* end @media (max-width: 1023px) */
+
+/* ─── 桌機：mobile-only 隱藏 ─── */
+@media (min-width: 1024px) {
+  body.theme-modern .mobile-only { display: none !important; }
+  body.theme-modern .desktop-only { display: block; }
+}
