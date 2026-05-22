@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v96-puzzle-pattern";
+const CACHE_VERSION = "mdpiece-v97-modern";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   "/index.html",
   "/css/style.css?v=v92-care-mode",
   "/css/medical-warm.css?v=v5-puzzle-pattern",
+  "/css/v11-modern.css?v=v1",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",

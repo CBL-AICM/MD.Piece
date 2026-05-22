@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/style.css?v=v108-fix-pale-text" />
   <link rel="stylesheet" href="css/elder-mode.css?v=v4-fix-clobber" />
   <link rel="stylesheet" href="css/medical-warm.css?v=v5-puzzle-pattern" />
+  <link rel="stylesheet" href="css/v11-modern.css?v=v1" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
@@ -24,9 +25,37 @@
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js" defer></script>
   <title>MD.Piece</title>
 </head>
-<body>
+<body class="theme-modern">
   <!-- ★ Star canvas (always behind everything) -->
   <canvas id="star-canvas"></canvas>
+
+  <!-- Dark mode toggle (固定右上) -->
+  <button class="theme-toggle-btn" id="darkModeToggle" onclick="toggleDarkMode()" aria-label="切換深淺色" title="切換深淺色">
+    <i data-lucide="moon" id="darkModeIcon"></i>
+  </button>
+  <script>
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      try { localStorage.setItem('md-theme-dark', isDark ? '1' : '0'); } catch(e) {}
+      const icon = document.getElementById('darkModeIcon');
+      if (icon) {
+        icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        if (window.lucide && lucide.createIcons) lucide.createIcons();
+      }
+    }
+    (function() {
+      try {
+        if (localStorage.getItem('md-theme-dark') === '1') {
+          document.documentElement.classList.add('dark');
+          document.addEventListener('DOMContentLoaded', function() {
+            const icon = document.getElementById('darkModeIcon');
+            if (icon) icon.setAttribute('data-lucide', 'sun');
+          });
+        }
+      } catch(e) {}
+    })();
+  </script>
 
   <!-- ★ Landing Page — Split Layout -->
   <div id="landing" data-theme="dark">
