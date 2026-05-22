@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MD.Piece — v4 醫療皮膚 + Dashboard 化</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    /* ════════════════════════════════════════════════════════
+       MD.Piece — v4: v3 為底 + Dashboard 化（資訊密集）
+
+       新增：
+       ✓ KPI 4 卡（vital signs + sparkline + delta）置頂
+       ✓ 頁面內 sub-tab（今天 / 本週 / 本月 / 全部）
+       ✓ 表格化清單（sortable header / filter chip / metadata 欄）
+       ✓ 數字 / 時間 / ID → JetBrains Mono（只在資料、不裝飾）
+       ✓ 右側 Activity feed panel
+       ✓ Last-updated / source / confidence metadata 出現在卡片
+       ✓ 緊湊密度（padding 縮小、行距 1.45）
+
+       沿用 v3：pastel hero / Cormorant 品牌字 / 拼圖 motif / 5 色都能用
+       ════════════════════════════════════════════════════════ */
+    :root {
+      --bg:           #FFFFFF;
+      --bg-soft:      #F7F9FC;
+      --bg-mid:       #EFF3F8;
+      --border:       rgba(31,61,88,0.12);
+      --border-mid:   rgba(31,61,88,0.20);
+      --border-strong:rgba(31,61,88,0.35);
+
+      --accent:       #4A90C2;
+      --accent-deep:  #2F6B96;
+      --accent-soft:  #E8F1F8;
+      --accent-tint:  #F2F8FC;
+
+      --teal:         #2F8378;
+      --teal-deep:    #1F5F56;
+      --teal-soft:    #E5F0EE;
+      --teal-tint:    #F1F8F6;
+
+      --navy:         #1F3D58;
+      --text:         #1F3D58;
+      --text-dim:     #5A7388;
+      --text-muted:   #8FA4B5;
+
+      --rose:         #E8A8A8;
+      --rose-deep:    #C97A7A;
+      --rose-soft:    #FBEEEE;
+      --rose-tint:    #FDF6F6;
+
+      --green:        #3F8E5C;
+      --green-deep:   #2F6F47;
+      --green-soft:   #E6F2EB;
+      --green-tint:   #F1F8F4;
+
+      --amber:        #C98B2F;
+      --amber-deep:   #9A6A1F;
+      --amber-soft:   #FAF1DF;
+      --amber-tint:   #FDF8EE;
+
+      --danger:       #C24D4D;
+      --danger-soft:  #F8E5E5;
+
+      --radius:       10px;
+      --radius-sm:    6px;
+
+      --shadow-sm:    0 1px 2px rgba(31,61,88,0.04);
+      --shadow:       0 2px 8px rgba(31,61,88,0.06);
+
+      --font:         "Noto Sans TC", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --font-brand:   "Cormorant Garamond", "Noto Serif TC", Georgia, serif;
+      --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg-soft); color: var(--text); font-family: var(--font); line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+    a { color: var(--accent-deep); text-decoration: none; }
+    img, svg { display: block; max-width: 100%; }
+
+    .preview-shell { max-width: 1400px; margin: 0 auto; padding: 24px 16px 80px; }
+    .preview-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 8px 4px 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+    }
+    .preview-title { font-size: 20px; font-weight: 600; color: var(--navy); }
+    .preview-title em { font-family: var(--font-brand); font-style: italic; font-weight: 500; color: var(--accent-deep); }
+    .preview-sub { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; max-width: 720px; line-height: 1.55; }
+    .preview-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; background: var(--navy); color: #fff;
+      border-radius: 12px; font-size: 11px; font-weight: 600;
+    }
+    .preview-tag .lucide { width: 12px; height: 12px; }
+
+    .puzzle-motif {
+      position: absolute; opacity: 0.07; pointer-events: none;
+      color: var(--navy);
+    }
+    .puzzle-motif svg { width: 100%; height: 100%; }
+
+    /* Mock */
+    .mock {
+      background: #FFFFFF; border: 1px solid var(--border-mid);
+      border-radius: 12px; overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .mock-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 14px; background: var(--bg-soft);
+      border-bottom: 1px solid var(--border);
+    }
+    .mock-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); }
+    .mock-url { margin-left: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+
+    .preview-section { margin-bottom: 40px; }
+    .preview-section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .preview-section-tag {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 6px;
+      background: var(--navy); color: #fff; font-size: 12.5px; font-weight: 600;
+    }
+    .preview-section-title { font-size: 17px; font-weight: 600; color: var(--navy); }
+    .preview-section-desc { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+
+    /* ─────────────────────────────────────────────────────
+       App shell — sidebar 240 + main + 右側 activity 320
+       ───────────────────────────────────────────────────── */
+    .app {
+      display: grid; grid-template-columns: 220px 1fr 300px;
+      min-height: 900px;
+    }
+    .sidebar {
+      background: #FFFFFF;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      max-height: 900px;
+      overflow: hidden;
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      cursor: pointer;
+      position: relative;
+    }
+    .sidebar-brand .puzzle-motif {
+      top: 50%; right: 12px; transform: translateY(-50%);
+      width: 16px; height: 16px; opacity: 0.20; color: var(--accent);
+    }
+    .sidebar-logo {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      flex-shrink: 0;
+      position: relative;
+      box-shadow: 0 2px 6px rgba(74,144,194,0.30);
+    }
+    .sidebar-logo::before,
+    .sidebar-logo::after {
+      content: ""; position: absolute; left: 50%; top: 50%; background: #fff;
+      transform: translate(-50%, -50%);
+    }
+    .sidebar-logo::before { width: 14px; height: 2px; border-radius: 1px; }
+    .sidebar-logo::after  { width: 2px; height: 14px; border-radius: 1px; }
+    .sidebar-brand h1 {
+      font-family: var(--font-brand); font-weight: 500;
+      font-size: 20px; color: var(--navy); letter-spacing: -0.01em;
+      line-height: 1; font-style: italic;
+    }
+    .sidebar-brand p {
+      font-size: 9px; color: var(--text-muted);
+      letter-spacing: 0.16em; text-transform: uppercase; margin-top: 3px;
+      font-weight: 500;
+    }
+
+    .sidebar-search {
+      padding: 10px 12px 4px;
+    }
+    .sidebar-search-box {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 10px;
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .sidebar-search-box .lucide { width: 13px; height: 13px; }
+    .sidebar-search-box kbd {
+      margin-left: auto; padding: 1px 5px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 4px; font-family: var(--font-mono);
+      font-size: 10px; color: var(--text-dim);
+    }
+
+    .sidebar-nav {
+      flex: 1; overflow-y: auto;
+      padding: 8px 10px 16px;
+    }
+    .nav-section-label {
+      padding: 12px 10px 5px;
+      font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em;
+      color: var(--text-muted); text-transform: uppercase;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .nav-section-label::after {
+      content: ""; flex: 1; height: 1px; background: var(--border);
+    }
+    .nav-section-label:first-child { padding-top: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px; width: 100%;
+      padding: 6px 10px;
+      border-radius: 6px;
+      text-align: left;
+      transition: all 0.10s ease;
+      margin-bottom: 1px;
+      position: relative;
+    }
+    .nav-item:hover { background: var(--bg-soft); }
+    .nav-item.active {
+      background: linear-gradient(90deg, var(--accent-soft) 0%, var(--accent-tint) 100%);
+    }
+    .nav-item.active::before {
+      content: ""; position: absolute; left: -10px; top: 5px; bottom: 5px;
+      width: 3px;
+      background: var(--accent); border-radius: 0 2px 2px 0;
+    }
+    .nav-icon {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: var(--bg-soft);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .nav-item.active .nav-icon { background: #fff; color: var(--accent-deep); box-shadow: var(--shadow-sm); }
+    .nav-icon .lucide { width: 13px; height: 13px; }
+    .nav-text { flex: 1; min-width: 0; }
+    .nav-label {
+      font-size: 12.5px; font-weight: 500; color: var(--text);
+      display: block;
+    }
+    .nav-item.active .nav-label { color: var(--accent-deep); font-weight: 600; }
+    .nav-badge {
+      margin-left: auto;
+      min-width: 16px; height: 16px; padding: 0 5px;
+      background: var(--accent); color: #fff;
+      border-radius: 8px;
+      font-size: 9.5px; font-weight: 600;
+      font-family: var(--font-mono);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-badge.todo { background: var(--rose-deep); }
+    .nav-badge.done { background: var(--green); }
+
+    .sidebar-foot {
+      padding: 10px 12px 14px;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-user {
+      display: flex; align-items: center; gap: 9px;
+      padding: 6px 8px; border-radius: 7px;
+    }
+    .sidebar-user-avatar { width: 30px; height: 30px; border-radius: 7px; background: var(--teal); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+    .sidebar-user-info { flex: 1; min-width: 0; }
+    .sidebar-user-name { font-size: 12.5px; color: var(--navy); font-weight: 600; }
+    .sidebar-user-role { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+
+    /* ─── Main ─── */
+    .main { background: var(--bg-soft); display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 18px;
+      background: #FFFFFF; border-bottom: 1px solid var(--border);
+    }
+    .topbar-crumb {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12.5px; color: var(--text-dim);
+    }
+    .topbar-crumb .lucide { width: 13px; height: 13px; }
+    .topbar-crumb strong { color: var(--navy); font-weight: 500; }
+    .topbar-spacer { flex: 1; }
+    .topbar-status {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 8px;
+      background: var(--green-soft);
+      border-radius: 10px;
+      font-size: 10.5px; color: var(--green-deep); font-weight: 500;
+    }
+    .topbar-status::before {
+      content: ""; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease infinite;
+    }
+    @keyframes pulse { 50% { opacity: 0.5; } }
+    .topbar-icon-btn {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-dim); transition: all 0.10s ease;
+    }
+    .topbar-icon-btn:hover { background: var(--bg-soft); color: var(--navy); }
+    .topbar-icon-btn .lucide { width: 14px; height: 14px; }
+
+    .page { padding: 16px 20px 32px; }
+
+    /* Page head — 含 sub-tab */
+    .page-head {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      margin-bottom: 16px; gap: 16px;
+    }
+    .page-title-block { display: flex; align-items: baseline; gap: 12px; }
+    .page-title { font-size: 22px; font-weight: 600; color: var(--navy); letter-spacing: -0.01em; }
+    .page-sub { font-size: 12px; color: var(--text-dim); font-family: var(--font-mono); }
+    .page-actions { display: flex; gap: 6px; align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 11px;
+      background: #fff; border: 1px solid var(--border-mid); border-radius: 6px;
+      font-size: 12px; color: var(--text-dim); font-weight: 500;
+      transition: all 0.12s ease;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent-deep); }
+    .btn .lucide { width: 13px; height: 13px; }
+    .btn.primary { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .btn.primary:hover { background: #15293D; color: #fff; }
+
+    /* Sub-tabs */
+    .sub-tabs {
+      display: flex; gap: 2px; padding: 3px;
+      background: var(--bg-mid); border-radius: 7px;
+      font-size: 11.5px; margin-bottom: 16px;
+      width: fit-content;
+    }
+    .sub-tab {
+      padding: 5px 14px; border-radius: 5px;
+      color: var(--text-dim); font-weight: 500;
+      display: inline-flex; align-items: center; gap: 5px;
+      transition: all 0.10s ease;
+    }
+    .sub-tab .lucide { width: 12px; height: 12px; }
+    .sub-tab.active { background: #fff; color: var(--navy); box-shadow: var(--shadow-sm); }
+    .sub-tab-count {
+      padding: 1px 6px; background: var(--bg-mid); color: var(--text-dim);
+      border-radius: 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    }
+    .sub-tab.active .sub-tab-count { background: var(--accent-soft); color: var(--accent-deep); }
+
+    /* ───────── KPI 4 卡（資訊密集） ───────── */
+    .kpi-row {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+      margin-bottom: 16px;
+    }
+    .kpi {
+      padding: 14px 16px;
+      background: #FFFFFF;
+      border: 1px solid var(--border); border-radius: 10px;
+      position: relative; overflow: hidden;
+    }
+    .kpi .puzzle-motif { right: -10px; top: -10px; width: 50px; height: 50px; opacity: 0.05; }
+    .kpi.t-blue { background: linear-gradient(135deg, var(--accent-tint) 0%, #fff 50%); }
+    .kpi.t-blue .puzzle-motif { color: var(--accent); }
+    .kpi.t-teal { background: linear-gradient(135deg, var(--teal-tint) 0%, #fff 50%); }
+    .kpi.t-teal .puzzle-motif { color: var(--teal); }
+    .kpi.t-rose { background: linear-gradient(135deg, var(--rose-tint) 0%, #fff 50%); }
+    .kpi.t-rose .puzzle-motif { color: var(--rose-deep); }
+    .kpi.t-green { background: linear-gradient(135deg, var(--green-tint) 0%, #fff 50%); }
+    .kpi.t-green .puzzle-motif { color: var(--green); }
+
+    .kpi-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; position: relative; }
+    .kpi-icon {
+      width: 22px; height: 22px; border-radius: 5px;
+      background: #fff; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent-deep);
+    }
+    .kpi.t-teal .kpi-icon { color: var(--teal-deep); }
+    .kpi.t-rose .kpi-icon { color: var(--rose-deep); }
+    .kpi.t-green .kpi-icon { color: var(--green-deep); }
+    .kpi-icon .lucide { width: 12px; height: 12px; }
+    .kpi-label { font-size: 11px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.04em; }
+    .kpi-status { margin-left: auto; }
+
+    .kpi-value-row {
+      display: flex; align-items: baseline; gap: 6px;
+      margin-bottom: 4px; position: relative;
+    }
+    .kpi-value {
+      font-family: var(--font-mono);
+      font-size: 26px; font-weight: 500; color: var(--navy);
+      letter-spacing: -0.02em; line-height: 1;
+    }
+    .kpi-unit { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+    .kpi-delta {
+      margin-left: auto;
+      font-size: 10.5px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 2px;
+      padding: 2px 6px; border-radius: 8px;
+      font-family: var(--font-mono);
+    }
+    .kpi-delta .lucide { width: 10px; height: 10px; }
+    .kpi-delta.up   { background: var(--rose-soft);  color: var(--rose-deep); }
+    .kpi-delta.down { background: var(--green-soft); color: var(--green-deep); }
+    .kpi-delta.flat { background: var(--bg-mid); color: var(--text-dim); }
+
+    .kpi-meta {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10px; color: var(--text-muted);
+      font-family: var(--font-mono); position: relative;
+    }
+    .kpi-spark { width: 100%; height: 28px; margin-top: 8px; position: relative; }
+
+    /* Pills / semantic status — 統一系統 */
+    .pill {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 10px; font-weight: 600;
+      font-family: var(--font-mono);
+      letter-spacing: 0.04em;
+    }
+    .pill .lucide { width: 9px; height: 9px; }
+    .pill-ok      { background: var(--green-soft); color: var(--green-deep); }
+    .pill-warn    { background: var(--amber-soft); color: var(--amber-deep); }
+    .pill-danger  { background: var(--danger-soft); color: var(--danger); }
+    .pill-info    { background: var(--accent-soft); color: var(--accent-deep); }
+    .pill-teal    { background: var(--teal-soft); color: var(--teal-deep); }
+    .pill-mute    { background: var(--bg-mid); color: var(--text-dim); }
+    .pill-rose    { background: var(--rose-soft); color: var(--rose-deep); }
+
+    /* ───────── 主內容區 2 欄 ───────── */
+    .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+
+    .panel {
+      background: #FFFFFF; border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      font-size: 13px; font-weight: 600; color: var(--navy);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .panel-title .lucide { width: 14px; height: 14px; color: var(--accent); }
+    .panel-meta {
+      margin-left: auto;
+      font-size: 10.5px; color: var(--text-muted);
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono);
+    }
+    .panel-action {
+      padding: 4px 9px; border-radius: 5px;
+      font-size: 11px; color: var(--text-dim);
+      background: var(--bg-soft); border: 1px solid var(--border);
+    }
+    .panel-action:hover { color: var(--accent-deep); border-color: var(--accent); }
+
+    /* Filter chip row */
+    .filter-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: var(--bg-soft);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .filter-chip {
+      padding: 3px 10px;
+      background: #fff; border: 1px solid var(--border-mid);
+      border-radius: 10px;
+      color: var(--text-dim); font-weight: 500;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .filter-chip:hover { border-color: var(--accent); color: var(--accent-deep); }
+    .filter-chip.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .filter-chip .lucide { width: 10px; height: 10px; }
+    .filter-spacer { flex: 1; }
+    .filter-meta { color: var(--text-muted); font-family: var(--font-mono); font-size: 10.5px; }
+
+    /* ───────── 表格 ───────── */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      padding: 8px 14px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .data-table th .sort-icon {
+      width: 10px; height: 10px; display: inline-block; vertical-align: middle; margin-left: 2px; color: var(--text-muted);
+    }
+    .data-table th.sort-active { color: var(--navy); }
+    .data-table th.sort-active .sort-icon { color: var(--accent); }
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12.5px;
+      vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover { background: var(--bg-soft); }
+    .td-time, .td-id, .td-num { font-family: var(--font-mono); color: var(--text-dim); }
+    .td-time { font-size: 11.5px; }
+    .td-primary { color: var(--navy); font-weight: 500; }
+    .td-icon-cell { display: inline-flex; align-items: center; gap: 8px; }
+    .td-icon-cell .ico {
+      width: 22px; height: 22px; border-radius: 5px;
+      background: var(--accent-soft); color: var(--accent-deep);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .td-icon-cell .ico.med { background: var(--teal-soft); color: var(--teal-deep); }
+    .td-icon-cell .ico.symp { background: var(--rose-soft); color: var(--rose-deep); }
+    .td-icon-cell .ico.mood { background: var(--amber-soft); color: var(--amber-deep); }
+    .td-icon-cell .ico .lucide { width: 12px; height: 12px; }
+    .td-actions { display: flex; gap: 4px; justify-content: flex-end; }
+    .td-action-btn { width: 22px; height: 22px; border-radius: 4px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+    .td-action-btn:hover { background: var(--bg-mid); color: var(--navy); }
+    .td-action-btn .lucide { width: 12px; height: 12px; }
+
+    /* ───────── Mini chart / sparkline ───────── */
+    .sparkline { width: 100%; height: 28px; }
+
+    /* ───────── Right activity panel ───────── */
+    .activity { background: #FFFFFF; border-left: 1px solid var(--border); display: flex; flex-direction: column; max-height: 900px; }
+    .activity-head {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .activity-title { font-size: 12.5px; font-weight: 600; color: var(--navy); display: inline-flex; align-items: center; gap: 6px; }
+    .activity-title .lucide { width: 13px; height: 13px; color: var(--accent); }
+    .activity-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+    .activity-item {
+      display: grid; grid-template-columns: 28px 1fr;
+      gap: 10px; padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: var(--accent-soft); color: var(--accent-deep);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .activity-icon.teal { background: var(--teal-soft); color: var(--teal-deep); }
+    .activity-icon.rose { background: var(--rose-soft); color: var(--rose-deep); }
+    .activity-icon.amber { background: var(--amber-soft); color: var(--amber-deep); }
+    .activity-icon.green { background: var(--green-soft); color: var(--green-deep); }
+    .activity-icon .lucide { width: 13px; height: 13px; }
+    .activity-content {}
+    .activity-title-row {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--navy); font-weight: 500; margin-bottom: 1px;
+    }
+    .activity-meta { font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono); }
+    .activity-desc { font-size: 11.5px; color: var(--text-dim); margin-top: 3px; line-height: 1.45; }
+
+    /* ───────── 已記今日 hero（精簡 + KPI 視覺取代） ───────── */
+    .digest-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, var(--rose-tint) 0%, #fff 40%, var(--accent-tint) 100%);
+      border-bottom: 1px solid var(--border);
+      position: relative; overflow: hidden;
+    }
+    .digest-row .puzzle-motif { right: -10px; bottom: -20px; width: 80px; height: 80px; opacity: 0.06; color: var(--accent); }
+    .digest-item {
+      display: flex; align-items: center; gap: 10px;
+      padding-right: 16px;
+      border-right: 1px solid var(--border);
+    }
+    .digest-item:last-child { border-right: none; }
+    .digest-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #fff; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent-deep);
+    }
+    .digest-icon.teal { color: var(--teal); }
+    .digest-icon.rose { color: var(--rose-deep); }
+    .digest-icon .lucide { width: 15px; height: 15px; }
+    .digest-num {
+      font-family: var(--font-mono);
+      font-size: 22px; font-weight: 500; color: var(--navy);
+      line-height: 1;
+    }
+    .digest-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; }
+    .digest-meta { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px; }
+
+    /* Section card */
+    .section-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+    .section-card .panel-head { padding: 11px 14px; }
+
+    /* Severity grid (5 級分級醫療) */
+    .severity-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 6px; padding: 12px 14px;
+    }
+    .sev-cell {
+      padding: 8px 6px; border-radius: 6px;
+      text-align: center; font-size: 11px;
+      background: var(--bg-soft); border: 1px solid var(--border);
+      color: var(--text-dim);
+      position: relative;
+    }
+    .sev-cell strong { display: block; font-family: var(--font-mono); font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 2px; }
+    .sev-cell.sel { border-color: var(--accent); background: var(--accent-soft); }
+    .sev-cell.sel strong { color: var(--accent-deep); }
+    .sev-cell .pip {
+      position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--border-mid);
+    }
+    .sev-cell.s1 .pip { background: var(--green); }
+    .sev-cell.s2 .pip { background: var(--accent); }
+    .sev-cell.s3 .pip { background: var(--navy); }
+    .sev-cell.s4 .pip { background: #5C4B8A; }
+    .sev-cell.s5 .pip { background: var(--danger); }
+
+    /* Compact list / med checkin */
+    .compact-list { display: flex; flex-direction: column; }
+    .compact-row {
+      display: grid; grid-template-columns: 24px 1fr 80px 60px 28px;
+      gap: 10px; align-items: center;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .compact-row:last-child { border-bottom: none; }
+    .compact-row:hover { background: var(--bg-soft); }
+    .compact-icon { width: 24px; height: 24px; border-radius: 5px; background: var(--teal-soft); color: var(--teal-deep); display: flex; align-items: center; justify-content: center; }
+    .compact-icon .lucide { width: 12px; height: 12px; }
+    .compact-name { font-size: 12.5px; color: var(--navy); font-weight: 500; }
+    .compact-sub { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+    .compact-time { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); text-align: right; }
+    .compact-check { width: 22px; height: 22px; border-radius: 5px; border: 1.5px solid var(--border-mid); display: flex; align-items: center; justify-content: center; }
+    .compact-check.done { background: var(--green); border-color: var(--green); color: #fff; }
+    .compact-check.done .lucide { width: 12px; height: 12px; }
+    .compact-act { width: 22px; height: 22px; border-radius: 5px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+    .compact-act:hover { background: var(--bg-mid); color: var(--navy); }
+    .compact-act .lucide { width: 12px; height: 12px; }
+
+    /* Triage card */
+    .triage-card {
+      padding: 12px 14px;
+      background: linear-gradient(135deg, var(--accent-tint), #fff);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .triage-num {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: var(--navy); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 18px; font-weight: 600;
+      flex-shrink: 0;
+    }
+    .triage-text { flex: 1; font-size: 12.5px; color: var(--navy); }
+    .triage-text strong { color: var(--accent-deep); font-weight: 600; }
+    .triage-text .desc { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+
+    /* Footnote / source / confidence */
+    .source-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px;
+      background: var(--bg-soft); border-top: 1px solid var(--border);
+      font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono);
+    }
+    .source-row .lucide { width: 11px; height: 11px; }
+    .source-tag {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 1px 6px; background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-dim);
+    }
+
+    @media (max-width: 1280px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar, .activity { display: none; }
+    }
+    @media (max-width: 900px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .main-grid { grid-template-columns: 1fr; }
+      .digest-row { grid-template-columns: 1fr; gap: 8px; }
+      .digest-item { border-right: none; border-bottom: 1px solid var(--border); padding-bottom: 8px; padding-right: 0; }
+      .digest-item:last-child { border-bottom: none; }
+    }
+  </style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="puzzle-piece" viewBox="0 0 100 100">
+      <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z"
+            fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="puzzle-piece-2" viewBox="0 0 100 100">
+      <path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 95 40 95 40 80 L 20 80 L 20 60 C 5 60 5 40 20 40 Z"
+            fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="preview-shell">
+
+  <div class="preview-header">
+    <div>
+      <div class="preview-title"><em>MD.Piece</em> — v4 醫療皮膚 + Dashboard 化</div>
+      <div class="preview-sub">
+        v3 為底（pastel hero / Cormorant 品牌字 / 拼圖 motif / 5 色都能用），<strong>加上資訊密集 dashboard 元素</strong>：頂部 KPI 4 卡 + sparkline + delta、頁面內 sub-tab、表格化清單（sortable header + filter chip + metadata 欄）、右側 Activity feed、數字 / 時間用 JetBrains Mono 等寬、可見的 last-updated / 資料來源 / Confidence。
+      </div>
+    </div>
+    <div class="preview-tag"><i data-lucide="layout-dashboard"></i> v4 · Dashboard</div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       App
+       ════════════════════════════════════════════════ -->
+  <section class="preview-section">
+    <div class="preview-section-head">
+      <span class="preview-section-tag">1</span>
+      <div>
+        <div class="preview-section-title">Dashboard 首頁 · 資訊密集版</div>
+        <div class="preview-section-desc">3 欄佈局：左 sidebar（壓縮 nav）/ 中 dashboard / 右 activity feed。KPI 4 卡置頂 + sparkline + 比較上週 delta + last-updated 時間戳。</div>
+      </div>
+    </div>
+
+    <div class="mock">
+      <div class="mock-bar">
+        <span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span>
+        <span class="mock-url">www.mdpiece.life/app/dashboard</span>
+      </div>
+      <div>
+        <div class="app">
+
+          <!-- ───────── Sidebar ───────── -->
+          <aside class="sidebar">
+            <button class="sidebar-brand" type="button">
+              <div class="sidebar-logo"></div>
+              <div>
+                <h1>MD.Piece</h1>
+                <p>Medical Platform</p>
+              </div>
+              <div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>
+            </button>
+
+            <div class="sidebar-search">
+              <div class="sidebar-search-box">
+                <i data-lucide="search"></i>
+                <span>搜尋頁面 / 紀錄</span>
+                <kbd>⌘K</kbd>
+              </div>
+            </div>
+
+            <nav class="sidebar-nav">
+              <div class="nav-section-label">每日紀錄</div>
+              <button class="nav-item active">
+                <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span>
+                <span class="nav-text"><span class="nav-label">Dashboard</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="scan-search"></i></span>
+                <span class="nav-text"><span class="nav-label">症狀紀錄</span></span>
+                <span class="nav-badge done">3</span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="pill"></i></span>
+                <span class="nav-text"><span class="nav-label">藥物紀錄</span></span>
+                <span class="nav-badge todo">2</span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="hospital"></i></span>
+                <span class="nav-text"><span class="nav-label">住院 / 療程</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="activity"></i></span>
+                <span class="nav-text"><span class="nav-label">生理紀錄</span></span>
+                <span class="nav-badge done">1</span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="battery-charging"></i></span>
+                <span class="nav-text"><span class="nav-label">情緒電力</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="utensils-crossed"></i></span>
+                <span class="nav-text"><span class="nav-label">飲食紀錄</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="sticky-note"></i></span>
+                <span class="nav-text"><span class="nav-label">Memo</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="bell-ring"></i></span>
+                <span class="nav-text"><span class="nav-label">提醒通知</span></span>
+                <span class="nav-badge">5</span>
+              </button>
+
+              <div class="nav-section-label">查詢與分析</div>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="sparkles"></i></span>
+                <span class="nav-text"><span class="nav-label">症狀分析</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="search"></i></span>
+                <span class="nav-text"><span class="nav-label">藥物百科</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="stethoscope"></i></span>
+                <span class="nav-text"><span class="nav-label">疾病百科</span></span>
+              </button>
+
+              <div class="nav-section-label">健康報告</div>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="calendar-clock"></i></span>
+                <span class="nav-text"><span class="nav-label">回診排程</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="clipboard-check"></i></span>
+                <span class="nav-text"><span class="nav-label">診前報告</span></span>
+                <span class="nav-badge">1</span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="trending-up"></i></span>
+                <span class="nav-text"><span class="nav-label">報告數值</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="puzzle"></i></span>
+                <span class="nav-text"><span class="nav-label">你的碎片</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="layout-list"></i></span>
+                <span class="nav-text"><span class="nav-label">健康時間軸</span></span>
+              </button>
+
+              <div class="nav-section-label">疾病認識與學習</div>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="book-heart"></i></span>
+                <span class="nav-text"><span class="nav-label">衛教專欄</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="hospital"></i></span>
+                <span class="nav-text"><span class="nav-label">住院衛教</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="book-open"></i></span>
+                <span class="nav-text"><span class="nav-label">每日故事</span></span>
+              </button>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="message-circle-heart"></i></span>
+                <span class="nav-text"><span class="nav-label">醫起聊天</span></span>
+              </button>
+
+              <div class="nav-section-label">設定</div>
+              <button class="nav-item">
+                <span class="nav-icon"><i data-lucide="settings"></i></span>
+                <span class="nav-text"><span class="nav-label">系統設定</span></span>
+              </button>
+            </nav>
+
+            <div class="sidebar-foot">
+              <div class="sidebar-user">
+                <div class="sidebar-user-avatar">郭</div>
+                <div class="sidebar-user-info">
+                  <div class="sidebar-user-name">郭先生</div>
+                  <div class="sidebar-user-role">PID · 8472</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- ───────── Main ───────── -->
+          <div class="main">
+
+            <div class="topbar">
+              <div class="topbar-crumb">
+                <i data-lucide="home"></i>
+                <span>首頁</span>
+                <span style="color:var(--text-muted)">/</span>
+                <strong>Dashboard</strong>
+              </div>
+              <span class="topbar-spacer"></span>
+              <span class="topbar-status">已同步 · 2 秒前</span>
+              <button class="topbar-icon-btn" title="搜尋"><i data-lucide="search"></i></button>
+              <button class="topbar-icon-btn" title="通知"><i data-lucide="bell"></i></button>
+              <button class="topbar-icon-btn" title="字級"><span style="font-size:10px;font-weight:600">A+</span></button>
+              <button class="topbar-icon-btn" title="設定"><i data-lucide="settings"></i></button>
+            </div>
+
+            <div class="page">
+
+              <!-- Page head + sub-tabs -->
+              <div class="page-head">
+                <div class="page-title-block">
+                  <div>
+                    <div class="page-title">早安，郭先生</div>
+                    <div class="page-sub">2026-05-21 · WED · D+5 NEXT_VISIT</div>
+                  </div>
+                </div>
+                <div class="page-actions">
+                  <button class="btn"><i data-lucide="filter"></i> 篩選</button>
+                  <button class="btn"><i data-lucide="download"></i> 匯出</button>
+                  <button class="btn primary"><i data-lucide="plus"></i> 記一筆</button>
+                </div>
+              </div>
+
+              <div class="sub-tabs">
+                <button class="sub-tab active">今天 <span class="sub-tab-count">4</span></button>
+                <button class="sub-tab">本週 <span class="sub-tab-count">28</span></button>
+                <button class="sub-tab">本月 <span class="sub-tab-count">112</span></button>
+                <button class="sub-tab">全部</button>
+              </div>
+
+              <!-- KPI 4 卡 -->
+              <div class="kpi-row">
+                <div class="kpi t-rose">
+                  <div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>
+                  <div class="kpi-head">
+                    <div class="kpi-icon"><i data-lucide="heart-pulse"></i></div>
+                    <div class="kpi-label">血壓</div>
+                    <span class="pill pill-warn kpi-status">略高</span>
+                  </div>
+                  <div class="kpi-value-row">
+                    <span class="kpi-value">128/82</span>
+                    <span class="kpi-unit">mmHg</span>
+                    <span class="kpi-delta down"><i data-lucide="arrow-down"></i> -4</span>
+                  </div>
+                  <div class="kpi-meta"><i data-lucide="clock"></i> 22:14 · 7 天 avg 132/85</div>
+                  <svg class="sparkline" viewBox="0 0 200 28" preserveAspectRatio="none">
+                    <polyline fill="none" stroke="#C97A7A" stroke-width="1.5" points="0,10 25,12 50,8 75,14 100,9 125,16 150,11 175,14 200,12"/>
+                    <circle cx="200" cy="12" r="2.2" fill="#C97A7A"/>
+                  </svg>
+                </div>
+                <div class="kpi t-blue">
+                  <div class="puzzle-motif"><svg><use href="#puzzle-piece-2"/></svg></div>
+                  <div class="kpi-head">
+                    <div class="kpi-icon"><i data-lucide="droplet"></i></div>
+                    <div class="kpi-label">飯前血糖</div>
+                    <span class="pill pill-warn kpi-status">略高</span>
+                  </div>
+                  <div class="kpi-value-row">
+                    <span class="kpi-value">112</span>
+                    <span class="kpi-unit">mg/dL</span>
+                    <span class="kpi-delta up"><i data-lucide="arrow-up"></i> +6</span>
+                  </div>
+                  <div class="kpi-meta"><i data-lucide="clock"></i> 07:08 · target &lt;110</div>
+                  <svg class="sparkline" viewBox="0 0 200 28" preserveAspectRatio="none">
+                    <polyline fill="none" stroke="#4A90C2" stroke-width="1.5" points="0,16 25,14 50,18 75,12 100,16 125,10 150,14 175,8 200,7"/>
+                    <circle cx="200" cy="7" r="2.2" fill="#4A90C2"/>
+                  </svg>
+                </div>
+                <div class="kpi t-teal">
+                  <div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>
+                  <div class="kpi-head">
+                    <div class="kpi-icon"><i data-lucide="pill"></i></div>
+                    <div class="kpi-label">用藥依從率</div>
+                    <span class="pill pill-ok kpi-status">良好</span>
+                  </div>
+                  <div class="kpi-value-row">
+                    <span class="kpi-value">92</span>
+                    <span class="kpi-unit">%</span>
+                    <span class="kpi-delta flat"><i data-lucide="minus"></i> 0</span>
+                  </div>
+                  <div class="kpi-meta"><i data-lucide="check-circle"></i> 本週 1 次漏藥 · 5/18 晚</div>
+                  <svg class="sparkline" viewBox="0 0 200 28" preserveAspectRatio="none">
+                    <polyline fill="none" stroke="#2F8378" stroke-width="1.5" points="0,8 25,5 50,7 75,4 100,8 125,12 150,6 175,5 200,5"/>
+                    <circle cx="200" cy="5" r="2.2" fill="#2F8378"/>
+                  </svg>
+                </div>
+                <div class="kpi t-green">
+                  <div class="puzzle-motif"><svg><use href="#puzzle-piece-2"/></svg></div>
+                  <div class="kpi-head">
+                    <div class="kpi-icon"><i data-lucide="battery-charging"></i></div>
+                    <div class="kpi-label">情緒電量</div>
+                    <span class="pill pill-rose kpi-status">2 天偏低</span>
+                  </div>
+                  <div class="kpi-value-row">
+                    <span class="kpi-value">3.2</span>
+                    <span class="kpi-unit">/ 5 avg</span>
+                    <span class="kpi-delta up"><i data-lucide="arrow-down"></i> -0.4</span>
+                  </div>
+                  <div class="kpi-meta"><i data-lucide="info"></i> 建議告訴醫師</div>
+                  <svg class="sparkline" viewBox="0 0 200 28" preserveAspectRatio="none">
+                    <polyline fill="none" stroke="#3F8E5C" stroke-width="1.5" points="0,8 25,10 50,12 75,18 100,16 125,20 150,14 175,12 200,14"/>
+                    <circle cx="200" cy="14" r="2.2" fill="#3F8E5C"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- 已記今日 digest 3 卡（v3 hero 收成水平條） -->
+              <div class="section-card">
+                <div class="digest-row">
+                  <div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>
+                  <div class="digest-item">
+                    <div class="digest-icon"><i data-lucide="scan-search"></i></div>
+                    <div>
+                      <div class="digest-label">症狀</div>
+                      <div style="display:flex;align-items:baseline;gap:5px"><span class="digest-num">3</span><span class="pill pill-info">+2 today</span></div>
+                      <div class="digest-meta">上次 09:32 上腹悶痛</div>
+                    </div>
+                  </div>
+                  <div class="digest-item">
+                    <div class="digest-icon teal"><i data-lucide="pill"></i></div>
+                    <div>
+                      <div class="digest-label">用藥打卡</div>
+                      <div style="display:flex;align-items:baseline;gap:5px"><span class="digest-num">5</span><span class="pill pill-mute">/ 8</span></div>
+                      <div class="digest-meta">下一筆 22:00 · 3 顆</div>
+                    </div>
+                  </div>
+                  <div class="digest-item">
+                    <div class="digest-icon rose"><i data-lucide="battery-charging"></i></div>
+                    <div>
+                      <div class="digest-label">情緒電量</div>
+                      <div style="display:flex;align-items:baseline;gap:5px"><span class="digest-num">3</span><span class="pill pill-warn">第 2 天</span></div>
+                      <div class="digest-meta">09:00 · &quot;有點累&quot;</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 主內容區 2 欄 -->
+              <div class="main-grid">
+
+                <!-- 左：今日待辦表格 -->
+                <div class="panel">
+                  <div class="panel-head">
+                    <div class="panel-title"><i data-lucide="list-checks"></i> 今日待辦</div>
+                    <span class="panel-meta"><i data-lucide="check-circle" style="width:11px;height:11px"></i> 3 / 6 done</span>
+                    <button class="panel-action">看完整 →</button>
+                  </div>
+                  <div class="filter-row">
+                    <button class="filter-chip active">全部 <span style="font-family:var(--font-mono);font-size:10px">6</span></button>
+                    <button class="filter-chip">未完成 <span style="font-family:var(--font-mono);font-size:10px">3</span></button>
+                    <button class="filter-chip">服藥 <span style="font-family:var(--font-mono);font-size:10px">3</span></button>
+                    <button class="filter-chip">量測 <span style="font-family:var(--font-mono);font-size:10px">1</span></button>
+                    <button class="filter-chip">自訂 <span style="font-family:var(--font-mono);font-size:10px">1</span></button>
+                    <span class="filter-spacer"></span>
+                    <span class="filter-meta">SORT BY · 時間 ↑</span>
+                  </div>
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="width:34px"></th>
+                        <th class="sort-active">時間 <i data-lucide="arrow-up" class="sort-icon"></i></th>
+                        <th>類型</th>
+                        <th>項目</th>
+                        <th>狀態</th>
+                        <th style="text-align:right">動作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="compact-check done"><i data-lucide="check"></i></div></td>
+                        <td class="td-time">07:00</td>
+                        <td><span class="pill pill-teal">服藥</span></td>
+                        <td class="td-primary">早餐前 Metformin 500mg</td>
+                        <td><span class="pill pill-ok"><i data-lucide="check"></i> 準時 +5'</span></td>
+                        <td><div class="td-actions"><button class="td-action-btn"><i data-lucide="more-horizontal"></i></button></div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="compact-check done"><i data-lucide="check"></i></div></td>
+                        <td class="td-time">07:15</td>
+                        <td><span class="pill pill-info">量測</span></td>
+                        <td class="td-primary">血壓 + 飯前血糖</td>
+                        <td><span class="pill pill-ok"><i data-lucide="check"></i> 已記</span></td>
+                        <td><div class="td-actions"><button class="td-action-btn"><i data-lucide="more-horizontal"></i></button></div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="compact-check done"><i data-lucide="check"></i></div></td>
+                        <td class="td-time">09:00</td>
+                        <td><span class="pill pill-rose">情緒</span></td>
+                        <td class="td-primary">電量打卡（3 / 5）</td>
+                        <td><span class="pill pill-warn">第 2 天偏低</span></td>
+                        <td><div class="td-actions"><button class="td-action-btn"><i data-lucide="more-horizontal"></i></button></div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="compact-check"></div></td>
+                        <td class="td-time">13:00</td>
+                        <td><span class="pill pill-teal">服藥</span></td>
+                        <td class="td-primary">午餐後服藥</td>
+                        <td><span class="pill pill-mute">尚未到</span></td>
+                        <td><div class="td-actions"><button class="td-action-btn"><i data-lucide="more-horizontal"></i></button></div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="compact-check"></div></td>
+                        <td class="td-time">→ 5/26</td>
+                        <td><span class="pill pill-mute">自訂</span></td>
+                        <td class="td-primary">問林醫師「服藥後容易疲倦」</td>
+                        <td><span class="pill pill-info">5 天後</span></td>
+                        <td><div class="td-actions"><button class="td-action-btn"><i data-lucide="more-horizontal"></i></button></div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="compact-check"></div></td>
+                        <td class="td-time">22:00</td>
+                        <td><span class="pill pill-teal">服藥</span></td>
+                        <td class="td-primary">睡前藥 + 血壓量測</td>
+                        <td><span class="pill pill-mute">尚未到</span></td>
+                        <td><div class="td-actions"><button class="td-action-btn"><i data-lucide="more-horizontal"></i></button></div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="source-row">
+                    <i data-lucide="info"></i>
+                    <span>提醒由規則引擎自動生成 · 可手動覆寫</span>
+                    <span class="filter-spacer"></span>
+                    <span class="source-tag"><i data-lucide="cpu" style="width:9px;height:9px"></i> rule-engine v2.4</span>
+                    <span class="source-tag"><i data-lucide="clock" style="width:9px;height:9px"></i> updated 2s ago</span>
+                  </div>
+                </div>
+
+                <!-- 右：分診 / 診前報告快卡 -->
+                <div>
+                  <div class="panel" style="margin-bottom:12px">
+                    <div class="panel-head">
+                      <div class="panel-title"><i data-lucide="sparkles"></i> AI 分析摘要</div>
+                      <span class="panel-meta">2 條建議</span>
+                    </div>
+                    <div class="severity-grid">
+                      <div class="sev-cell s1"><span class="pip"></span><strong>1</strong>自我照護</div>
+                      <div class="sev-cell s2 sel"><span class="pip"></span><strong>2</strong>診所</div>
+                      <div class="sev-cell s3"><span class="pip"></span><strong>3</strong>區域</div>
+                      <div class="sev-cell s4"><span class="pip"></span><strong>4</strong>醫學中心</div>
+                      <div class="sev-cell s5"><span class="pip"></span><strong>5</strong>急診</div>
+                    </div>
+                    <div class="triage-card">
+                      <div class="triage-num">2</div>
+                      <div class="triage-text">
+                        <strong>建議：基層診所評估</strong>
+                        <div class="desc">上腹悶痛中等強度 · 3 天內 2 次同部位紀錄 · 無發燒</div>
+                      </div>
+                    </div>
+                    <div class="source-row">
+                      <i data-lucide="cpu"></i>
+                      <span>分析模型 · ICD-10 規則庫</span>
+                      <span class="filter-spacer"></span>
+                      <span class="source-tag">conf 0.78</span>
+                      <span class="source-tag">v2.4</span>
+                    </div>
+                  </div>
+
+                  <div class="panel" style="margin-bottom:12px">
+                    <div class="panel-head">
+                      <div class="panel-title"><i data-lucide="calendar-clock"></i> 下次回診</div>
+                      <span class="panel-meta">D+5</span>
+                    </div>
+                    <div style="padding:12px 14px">
+                      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+                        <span style="font-family:var(--font-mono);font-size:22px;font-weight:500;color:var(--navy)">5/26</span>
+                        <span style="font-size:12px;color:var(--text-dim)">週一 10:30</span>
+                      </div>
+                      <div style="font-size:13px;color:var(--navy);font-weight:500;margin-bottom:2px">內分泌科 · 林醫師</div>
+                      <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">台大新竹分院 · 3F-A12</div>
+                      <div style="display:flex;gap:6px;margin-top:10px">
+                        <button class="btn primary" style="padding:5px 10px;font-size:11px"><i data-lucide="clipboard-check"></i> 產生診前報告</button>
+                        <button class="btn" style="padding:5px 10px;font-size:11px">改期</button>
+                      </div>
+                    </div>
+                    <div class="source-row">
+                      <i data-lucide="link"></i>
+                      <span>同步自 HIS · 林志明醫師</span>
+                      <span class="filter-spacer"></span>
+                      <span class="source-tag">verified</span>
+                    </div>
+                  </div>
+
+                  <!-- 服藥時段 mini -->
+                  <div class="panel">
+                    <div class="panel-head">
+                      <div class="panel-title"><i data-lucide="pill"></i> 今日服藥</div>
+                      <span class="panel-meta">5 / 8</span>
+                    </div>
+                    <div class="compact-list">
+                      <div class="compact-row">
+                        <div class="compact-icon"><i data-lucide="pill"></i></div>
+                        <div>
+                          <div class="compact-name">Metformin</div>
+                          <div class="compact-sub">500mg · 飯後</div>
+                        </div>
+                        <div class="compact-time">07:00</div>
+                        <span class="pill pill-ok">已服</span>
+                        <button class="compact-act"><i data-lucide="more-horizontal"></i></button>
+                      </div>
+                      <div class="compact-row">
+                        <div class="compact-icon"><i data-lucide="pill"></i></div>
+                        <div>
+                          <div class="compact-name">Amlodipine</div>
+                          <div class="compact-sub">5mg · 任意</div>
+                        </div>
+                        <div class="compact-time">22:00</div>
+                        <span class="pill pill-mute">未到</span>
+                        <button class="compact-act"><i data-lucide="more-horizontal"></i></button>
+                      </div>
+                      <div class="compact-row">
+                        <div class="compact-icon"><i data-lucide="pill"></i></div>
+                        <div>
+                          <div class="compact-name">Atorvastatin</div>
+                          <div class="compact-sub">10mg · 睡前</div>
+                        </div>
+                        <div class="compact-time">22:00</div>
+                        <span class="pill pill-mute">未到</span>
+                        <button class="compact-act"><i data-lucide="more-horizontal"></i></button>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ───────── Right Activity Panel ───────── -->
+          <aside class="activity">
+            <div class="activity-head">
+              <div class="activity-title"><i data-lucide="rss"></i> 即時活動</div>
+              <span style="margin-left:auto;font-size:10px;color:var(--text-muted);font-family:var(--font-mono)">LIVE</span>
+            </div>
+            <div class="activity-list">
+              <div class="activity-item">
+                <div class="activity-icon teal"><i data-lucide="pill"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">服藥已打卡 · Metformin</div>
+                  <div class="activity-desc">500mg · 早餐前 · 準時 +5 分鐘</div>
+                  <div class="activity-meta">07:05 · MANUAL</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon"><i data-lucide="heart-pulse"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">血壓量測 128/82</div>
+                  <div class="activity-desc">vs 上週 −4 mmHg · 落入正常範圍</div>
+                  <div class="activity-meta">07:14 · BT_DEVICE · OMRON-X3</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon amber"><i data-lucide="droplet"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">飯前血糖 112 mg/dL</div>
+                  <div class="activity-desc">高於目標 110 · 連續第 2 次</div>
+                  <div class="activity-meta">07:08 · MANUAL</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon rose"><i data-lucide="battery-charging"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">情緒電量打卡 · 3 / 5</div>
+                  <div class="activity-desc">備註：「服藥後有點累」</div>
+                  <div class="activity-meta">09:00 · MANUAL</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon"><i data-lucide="scan-search"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">症狀紀錄 · 上腹悶痛</div>
+                  <div class="activity-desc">強度 3 / 5 · AI 分析 → 基層診所</div>
+                  <div class="activity-meta">09:32 · BODY_MAP</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon green"><i data-lucide="check-circle"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">同步到雲端</div>
+                  <div class="activity-desc">5 筆紀錄已備份 · Supabase OK</div>
+                  <div class="activity-meta">10:00 · SYS</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon"><i data-lucide="bell"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">回診倒數提醒</div>
+                  <div class="activity-desc">距離 5/26 內分泌科還有 5 天 · 開始彙整診前報告</div>
+                  <div class="activity-meta">10:15 · REMINDER</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon amber"><i data-lucide="alert-triangle"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">電量連續偏低提醒</div>
+                  <div class="activity-desc">2 天 ≤3，建議告訴林醫師「服藥後容易疲倦」</div>
+                  <div class="activity-meta">11:30 · AI</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon"><i data-lucide="message-circle-heart"></i></div>
+                <div class="activity-content">
+                  <div class="activity-title-row">小禾陪聊 · 整理近況</div>
+                  <div class="activity-desc">最近 3 天電量平均 3.0 · 主要不適：上腹悶痛、疲倦</div>
+                  <div class="activity-meta">12:00 · AI</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════
+       對照
+       ════════════════════════════════════════════════ -->
+  <section class="preview-section">
+    <div class="preview-section-head">
+      <span class="preview-section-tag">2</span>
+      <div>
+        <div class="preview-section-title">v3 vs v4 · 加了什麼 dashboard 系統元素</div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:12.5px">
+      <thead>
+        <tr>
+          <th style="padding:10px 14px;background:var(--bg-soft);font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;text-align:left">系統元素</th>
+          <th style="padding:10px 14px;background:var(--bg-soft);font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;text-align:left;width:45%">v4 新加 / 用法</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy);width:25%">KPI 數據條</td><td style="padding:10px 14px;color:var(--text-dim)">頂部 4 卡：血壓 / 血糖 / 用藥依從 / 電量，每張有 sparkline + delta + last-time + 狀態 pill</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">Sub-tab</td><td style="padding:10px 14px;color:var(--text-dim)">頁面內：今天 / 本週 / 本月 / 全部 — 每個 tab 有計數 badge</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">表格化清單</td><td style="padding:10px 14px;color:var(--text-dim)">Sortable header（時間 ↑）+ filter chip row + metadata footer（規則引擎版本 / 更新時間）</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">Pill / Badge system</td><td style="padding:10px 14px;color:var(--text-dim)">統一 7 種：ok / warn / danger / info / teal / mute / rose — 顯示準時 / 略高 / 未到 / 已記 等狀態</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">右側 Activity feed</td><td style="padding:10px 14px;color:var(--text-dim)">即時時間軸 · 9 筆活動 · 每筆含 source 標籤（MANUAL / BT_DEVICE / AI / SYS / REMINDER）</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">Severity grid（5 級分級醫療）</td><td style="padding:10px 14px;color:var(--text-dim)">水平 5 格：自我照護 / 診所 / 區域 / 醫學中心 / 急診，每格有色點 pip + selected highlight</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">Source / Metadata footer</td><td style="padding:10px 14px;color:var(--text-dim)">卡片底部 source-row：規則版本、conf 分數、verified 標、更新時間 — 「為什麼」可追溯</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">Monospace 用法</td><td style="padding:10px 14px;color:var(--text-dim)">只用於：數字 / 時間戳 / ID / 版本 / 計數 — 跟內文 sans-serif 分開</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">⌘K 搜尋</td><td style="padding:10px 14px;color:var(--text-dim)">Sidebar 頂部全站搜尋 + 鍵盤捷徑提示</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:10px 14px;font-weight:500;color:var(--navy)">Topbar status pill</td><td style="padding:10px 14px;color:var(--text-dim)">「已同步 · 2 秒前」帶綠脈衝點，告訴使用者系統健康</td></tr>
+        <tr><td style="padding:10px 14px;font-weight:500;color:var(--navy)">沿用 v3</td><td style="padding:10px 14px;color:var(--text-dim)">Cormorant 品牌字、拼圖背景 motif、pastel hero 漸層、Sidebar 5 組分類、5 色都能用</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script>
+  if (window.lucide && lucide.createIcons) {
+    lucide.createIcons({ attrs: { 'stroke-width': 1.6 } });
+  }
+</script>
+
+</body>
+</html>
