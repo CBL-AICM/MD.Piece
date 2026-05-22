@@ -10,7 +10,7 @@ from backend.services.knowledge_analysis import (
     get_education_priorities,
     get_comprehension_distribution,
 )
-from backend.services.llm_service import call_claude
+from backend.services.llm_service import build_patient_facing_system, call_claude
 from backend.services import education_content
 from backend.services import news_feed
 from backend.utils.icd10 import (
@@ -85,17 +85,18 @@ DIMENSION_PROMPTS = {
     ),
 }
 
-SYSTEM_PROMPT = (
-    "你是 MD.Piece 平台的衛教助手，專門為慢性病患者提供溫暖、易懂的健康教育。\n"
-    "你的核心原則：\n"
-    "1. 安撫為先——患者已經夠擔心了，你的任務是讓他們安心\n"
-    "2. 淺顯易懂——用生活化的語言，避免專業術語；如果必須用，要立刻解釋\n"
-    "3. 給予希望——每篇文章都要讓患者感受到「這是可以管理好的」\n"
-    "4. 實用具體——給可以立刻行動的建議，不是空泛的「多注意」\n"
-    "5. 台灣情境——使用台灣的醫療體系、健保制度、飲食習慣作為背景\n"
-    "6. **必附 IF > 5 同儕審查文獻**——文末固定加一段「## 📚 參考來源」，"
-    "其中至少 3 條為 Impact Factor > 5 的同儕審查期刊文章；可再附 2–3 條台灣或國際指引補充。\n\n"
-    "回覆格式：使用 Markdown，用標題分段，適當加入 emoji 讓文章更親切。"
+EDUCATION_ROLE_PROMPT = (
+    "【本次任務：撰寫衛教文章】\n"
+    "你正在為慢性病患者撰寫一篇衛教文章。讀者是病人本人或家屬。\n\n"
+    "情境專屬原則（憲法之外）：\n"
+    "1. 給予希望 — 每篇都要讓病人感受到「這是可以管理好的」；\n"
+    "   但仍受風格層 [B.6] 約束：不要說「絕對沒事」「保證不會復發」這類假保證\n"
+    "2. 實用具體 — 給可以立刻行動的建議，不是空泛的「多注意」\n"
+    "3. 台灣情境 — 用台灣的醫療體系、健保制度、飲食習慣作為背景\n"
+    "4. **必附 IF > 5 同儕審查文獻** — 文末固定加一段「## 📚 參考來源」，\n"
+    "   其中至少 3 條為 Impact Factor > 5 的同儕審查期刊文章；\n"
+    "   可再附 2–3 條台灣或國際指引補充\n\n"
+    "回覆格式：使用 Markdown，用標題分段，適當加入 emoji 讓文章更親切。\n"
     "長度控制在 800–1200 字之間（不含參考來源）。\n\n"
     "## ⚠️ 文獻來源強制規範（極為重要）\n"
     "MD.Piece 是醫療平台，所有衛教文必須有可驗證的高品質實證。請遵守：\n\n"
@@ -123,7 +124,16 @@ SYSTEM_PROMPT = (
     "- ❌ 不要把指引當作 peer-reviewed 文獻計算 IF 門檻\n"
     "- ❌ 不確定 IF 數值就只列你確定的高 IF 期刊（如 NEJM、Lancet 一定 > 5）\n"
     "- ❌ 不要省略 IF 註記——前端會檢查 IF 徽章是否齊備\n\n"
-    "結尾加一行小字：「※ 詳細治療仍以主治醫師判斷為準，本文僅供衛教參考」。"
+    "本文末尾加一行小字：「※ 詳細治療仍以主治醫師判斷為準，本文僅供衛教參考」。"
+)
+
+
+# 風格層 + 上面的 role prompt 組成 system；不接 patient_context（衛教文章是內容
+# 生成，不是個別病人的對話回應），also 跳過 few-shot（example 是「對話式」的）。
+SYSTEM_PROMPT = build_patient_facing_system(
+    EDUCATION_ROLE_PROMPT,
+    patient_context=None,
+    include_examples=False,
 )
 
 
@@ -137,16 +147,16 @@ class EducationRequest(BaseModel):
 
 
 GENERIC_TOPIC_PROMPT = (
-    "請以 MD.Piece 衛教助手的身分，為一位患者撰寫主題為「{topic}」的衛教文章。\n\n"
+    "請以 MD.Piece 衛教助手的身分，為一位病人撰寫主題為「{topic}」的衛教文章。\n\n"
     "撰稿要求：\n"
-    "1. 用最溫暖、最淺顯易懂的語氣，像朋友在跟你聊天\n"
+    "1. 用溫暖、淺顯易懂的語氣（語氣 / 用詞 / 假保證等規則遵照系統前置的風格層）\n"
     "2. 必要的醫學名詞要立刻用括號或比喻解釋\n"
     "3. 結構清楚：先講「這是什麼」，再講「為什麼重要」，最後給「可以怎麼做」\n"
-    "4. 重點放在安心與實用——讓患者讀完覺得「我知道該做什麼了」\n"
+    "4. 重點放在安心與實用 — 讓病人讀完覺得「我知道該做什麼了」\n"
     "5. 適當使用 emoji 讓文章更親切\n"
     "6. 用台灣的醫療制度、健保、飲食習慣作為背景\n"
     "7. 文末提醒：詳細治療仍以主治醫師判斷為準\n"
-    "8. **必加** 一段「## 📚 參考來源」——遵守 SYSTEM_PROMPT 中的「文獻來源強制規範」：\n"
+    "8. **必加** 一段「## 📚 參考來源」 — 遵守系統 prompt 中的「文獻來源強制規範」：\n"
     "   - 至少 3 條 Impact Factor > 5 的同儕審查期刊文章\n"
     "   - 格式：`- 作者 et al. (YYYY). 標題. 期刊 (IF=XX.X). doi:...`\n"
     "   - 可額外附 2–3 條台灣／國際指引補充\n"

@@ -5,26 +5,31 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Query
 
 from backend.db import get_supabase
-from backend.services.llm_service import call_claude
+from backend.services.llm_service import (
+    build_patient_facing_system,
+    call_claude,
+    compute_patient_context,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# ── 問診清單 prompt ──────────────────────────────────────────
+# ── 問診清單 prompt（病人會直接看到 → 套用風格層） ───────────
 
-CHECKLIST_SYSTEM_PROMPT = (
-    "你是 MD.Piece 平台的問診準備助手。\n"
-    "根據患者近期的症狀記錄、情緒狀態和用藥情形，\n"
-    "列出這次回診時最需要跟醫師確認的三件事。\n\n"
-    "規則：\n"
+CHECKLIST_ROLE_PROMPT = (
+    "【本次任務：問診清單】\n"
+    "根據病人近期的症狀紀錄、情緒、用藥情形，列出這次回診時最需要跟醫師確認的三件事。\n\n"
+    "情境專屬規則：\n"
     "1. 只列三件，依重要性排序\n"
-    "2. 每件事用一句話描述，讓患者可以直接照著問\n"
-    "3. 語氣親切，像朋友提醒你看醫生前要問什麼\n"
-    "4. 使用繁體中文\n"
-    "5. 回覆格式：純 JSON 陣列，每個元素是一個字串，不要 markdown\n"
-    '範例：["最近頭痛頻率增加，需要調整止痛藥嗎？",'
-    '"情緒持續低落，是否需要心理支持？",'
-    '"新藥的副作用（胃不舒服）正常嗎？"]'
+    "2. 每件事用一句話描述，讓病人可以照著問醫師\n"
+    "3. 用「想問醫師」的口吻，不要用「我覺得你應該…」這種命令句\n"
+    "4. 不要塞百分比、不要丟風險分數（遵守風格層 [A.2]）\n"
+    "5. 回覆格式：**純 JSON 陣列**，每個元素是一個字串，**不要 markdown、不要前後說明**\n"
+    "   （這個輸出會被機器解析，所以這次例外：不需要在末尾加免責聲明文字 — 系統會另外處理）\n\n"
+    "範例輸出：\n"
+    '["最近頭痛比以前頻繁，想問醫師要不要調整止痛藥？",'
+    '"情緒持續比較低落，想請醫師看要不要轉介心理支持？",'
+    '"新藥吃完會胃不舒服，這是正常的嗎？要怎麼處理？"]'
 )
 
 # ── 月度報告 prompt ──────────────────────────────────────────
@@ -56,27 +61,27 @@ MONTHLY_SYSTEM_PROMPT = (
     "- **不要在結尾加免責聲明**，系統會自動附上固定免責聲明文字"
 )
 
-# ── 患者帶去診間用的白話摘要 prompt ────────────────────────
+# ── 患者帶去診間用的白話摘要 prompt（病人會看 → 套用風格層） ──
 
-PATIENT_SUMMARY_SYSTEM_PROMPT = (
-    "把患者本期間的紀錄整理成一段「帶去診間給醫師看的白話摘要」。\n"
+PATIENT_SUMMARY_ROLE_PROMPT = (
+    "【本次任務：帶去診間給醫師看的白話摘要（病人視角）】\n"
+    "把病人本期間的紀錄整理成一段摘要 — 病人會帶著這份摘要去門診，也可能直接念給醫師聽。\n"
     "報告期間會在 user message 開頭以「報告期間：XXX」給出，請依該期間描述，不要假定 30 天或一個月。\n\n"
-    "讀者：患者本人會帶著這份摘要去門診，也可能直接念給醫師聽。\n\n"
-    "規則：\n"
-    "1. 字數以 300–500 字（含空白）為原則，不可少於 300；若資料量大、內容真的有必要更詳盡，可彈性延伸但盡量不超出太多\n"
-    "2. 用親切、好懂的口語，避免艱深醫學術語；必要時用括號簡單解釋\n"
-    "3. 用第一人稱「我」的角度書寫，像患者自己在跟醫師描述\n"
-    "4. 一定要涵蓋這幾塊（有資料才寫，沒資料就跳過、不要編造）：\n"
-    "   - 最近身體上比較困擾的症狀（什麼症狀、多常發生、有多嚴重）\n"
+    "情境專屬規則：\n"
+    "1. 字數以 300–500 字（含空白）為原則，不可少於 300；資料量大可彈性延伸但盡量不超出太多\n"
+    "2. 用第一人稱「我」書寫，像病人自己在跟醫師描述\n"
+    "3. 一定要涵蓋這幾塊（有資料才寫，沒資料就跳過、不要編造）：\n"
+    "   - 最近身體上比較困擾的不舒服（什麼症狀、多常發生、有多嚴重）\n"
     "   - 心情狀態（最近覺得怎樣、有沒有特別低潮的日子）\n"
     "   - 目前在吃的藥、有沒有按時吃、有沒有副作用\n"
     "   - 飲食情況（這段期間吃得規律嗎？有沒有特別常吃或特別不吃的東西？\n"
     "     有沒有跟疾病飲食禁忌相關的訊號？吃完有特別不舒服的紀錄嗎？）\n"
     "   - 最想請醫師幫忙確認或調整的事\n"
-    "5. 結構：用 2–4 個自然段落，不要用條列、不要用 markdown 標題\n"
-    "6. 結尾用一句感謝或請醫師協助的話收尾\n"
-    "7. 使用繁體中文\n"
-    "8. 只輸出摘要本文，不要前言、不要說明、不要在開頭加標題"
+    "4. 結構：用 2–4 個自然段落，不要用條列、不要用 markdown 標題\n"
+    "5. 結尾用一句感謝或請醫師協助的話收尾\n"
+    "6. 只輸出摘要本文，不要前言、不要說明、不要在開頭加標題\n"
+    "7. 因為這份是「病人講給醫師聽的描述」、不是病人收到的 AI 回覆，所以**不要**\n"
+    "   在結尾加風格層 [D] 的 AI 免責聲明文字（前端會另外渲染）"
 )
 
 
@@ -496,8 +501,14 @@ def get_consultation_checklist(patient_id: str, days: int | None = Query(None, g
 
     user_message = "以下是這位患者的健康數據：\n" + "\n".join(parts)
 
+    checklist_system = build_patient_facing_system(
+        CHECKLIST_ROLE_PROMPT,
+        patient_context=compute_patient_context(patient_id),
+        include_examples=False,  # 純 JSON 陣列輸出，example 反而干擾結構
+    )
+
     try:
-        raw = call_claude(CHECKLIST_SYSTEM_PROMPT, user_message)
+        raw = call_claude(checklist_system, user_message)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -554,8 +565,14 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
             "raw_data": counts,
         }
 
+    patient_summary_system = build_patient_facing_system(
+        PATIENT_SUMMARY_ROLE_PROMPT,
+        patient_context=compute_patient_context(patient_id),
+        include_examples=True,  # 一整段散文，example 對穩定語氣有幫助
+    )
+
     try:
-        summary = call_claude(PATIENT_SUMMARY_SYSTEM_PROMPT, data_summary).strip()
+        summary = call_claude(patient_summary_system, data_summary).strip()
         if summary.startswith("```"):
             summary = summary.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
         source = "ai"

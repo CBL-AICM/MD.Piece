@@ -31,15 +31,20 @@ import logging
 import re
 
 from backend.db import get_supabase
-from backend.services.llm_service import call_claude
+from backend.services.llm_service import build_patient_facing_system, call_claude
 from backend.utils.diet_nutrient_llm import estimate_nutrients as _estimate_nutrients_llm
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-DIET_SYSTEM_PROMPT = (
-    "你是一位專業的臨床營養師。根據患者目前已知的診斷，給出『個人化』飲食建議。\n"
+_DIET_GUIDE_ROLE = (
+    "【本次任務：個人化飲食指南】\n"
+    "根據病人目前已知的診斷，給出個人化飲食建議。general_tips / warnings.reason\n"
+    "都是病人會直接讀到的文字 — 嚴格遵守風格層 [A][B][C]，特別是：\n"
+    "  - 不審判（不要說「您不能吃…」這種命令口吻；改用「這個盡量少一點比較好」）\n"
+    "  - 不下診斷（reason 只能描述「為什麼這種疾病會建議少吃」）\n"
+    "  - warnings 是「建議避開」，不是「禁止」 — 留決定權給醫師 / 病人\n\n"
     "輸出必須是純 JSON（不要 markdown code block），結構如下：\n"
     "{\n"
     '  "daily_targets": {\n'
@@ -47,9 +52,9 @@ DIET_SYSTEM_PROMPT = (
     '    "water_ml":  <整數>,    // 每日水分 ml（一般 1500-2500）\n'
     '    "fiber_g":   <整數>     // 每日膳食纖維克數（一般 20-30）\n'
     "  },\n"
-    '  "general_tips": [<字串>], // 3-5 條通用飲食衛教\n'
+    '  "general_tips": [<字串>], // 3-5 條通用飲食衛教（遵守風格層）\n'
     '  "warnings": [             // 依患者每個疾病分別列\n'
-    '    {"disease": "<疾病名稱>", "avoid": [<食物>...], "reason": "<簡短說明>"}\n'
+    '    {"disease": "<疾病名稱>", "avoid": [<食物>...], "reason": "<簡短說明，遵守風格層>"}\n'
     "  ],\n"
     '  "meal_suggestions": {     // 三餐建議食物（已避開所有 warnings.avoid）\n'
     '    "breakfast": [<食物>...],   // 5-8 樣\n'
@@ -57,12 +62,19 @@ DIET_SYSTEM_PROMPT = (
     '    "dinner":    [<食物>...]\n'
     "  }\n"
     "}\n"
-    "規則：\n"
+    "情境專屬規則：\n"
     "1. 一律繁體中文台灣用語\n"
-    "2. warnings 只列患者『實際有的疾病』；無病史就回空陣列\n"
+    "2. warnings 只列患者「實際有的疾病」；無病史就回空陣列\n"
     "3. meal_suggestions 的食物必須完全避開 warnings 列出的禁忌\n"
-    "4. 不下診斷、不開藥；若涉及警訊請在 reason 提醒就醫\n"
+    "4. 不下診斷、不開藥；若涉及警訊請在 reason 提醒「請與醫師確認」\n"
     "5. 寧可保守給日常常見食物，不要瞎掰罕見食材\n"
+)
+
+
+DIET_SYSTEM_PROMPT = build_patient_facing_system(
+    _DIET_GUIDE_ROLE,
+    patient_context=None,
+    include_examples=False,
 )
 
 
@@ -188,8 +200,10 @@ def log_diet_record(body: DietRecordIn):
 # ─── 吃什麼神器 ───────────────────────────────────────────
 # 給選擇障礙的患者用：依病史隨機推薦『一道具體菜色』，可以再 roll。
 
-PICK_SYSTEM_PROMPT = (
-    "你是台灣的飲食推薦達人。患者選擇障礙，需要你**只給一道**具體的菜色。\n"
+_PICK_ROLE = (
+    "【本次任務：吃什麼神器（推薦一道具體菜色）】\n"
+    "病人選擇障礙，需要你**只給一道**具體的菜色。reason 是病人會直接讀到的文字 —\n"
+    "嚴格遵守風格層 [A][B][C]，特別是「不下診斷」「不審判」「用陪伴口吻」。\n\n"
     "輸出必須是純 JSON（不要 markdown），結構：\n"
     "{\n"
     '  "name":         "<菜色名，要具體：例「滷肉飯配燙青菜」「味噌鮭魚定食」「麻油雞麵線」>",\n'
@@ -228,6 +242,13 @@ PICK_SYSTEM_PROMPT = (
     "11. **附近選項**（nearby=true）：請只推薦『便利商店、便當店、早餐店、麵店、自助餐』"
     "等台灣街頭隨便走都能找到的選項，不要推日式定食店、輕食店、需要訂位的餐廳。\n"
     "12. **本週已吃過**（recently_eaten）：避免推薦相似的菜色或關鍵食材，給點變化。\n"
+)
+
+
+PICK_SYSTEM_PROMPT = build_patient_facing_system(
+    _PICK_ROLE,
+    patient_context=None,
+    include_examples=False,
 )
 
 
@@ -498,8 +519,10 @@ def pick_meal(
 # ─── 喝什麼神器 + 咖啡因衛教 ────────────────────────────
 # 飲料推薦走另一條 prompt + pool；同樣依疾病過濾，並回傳咖啡因 mg。
 
-DRINK_SYSTEM_PROMPT = (
-    "你是台灣的飲料推薦達人。患者選擇障礙，需要你**只給一杯**具體飲料。\n"
+_DRINK_ROLE = (
+    "【本次任務：喝什麼神器（推薦一杯飲料）】\n"
+    "病人選擇障礙，需要你**只給一杯**具體飲料。reason 是病人會直接讀到的文字 —\n"
+    "嚴格遵守風格層 [A][B][C]，特別是「不下診斷」「不審判」「用陪伴口吻」。\n\n"
     "輸出純 JSON（不要 markdown）：\n"
     "{\n"
     '  "name":          "<飲料名，要具體：例「無糖綠茶」「拿鐵咖啡（中杯）」「無糖豆漿」>",\n'
@@ -522,6 +545,13 @@ DRINK_SYSTEM_PROMPT = (
     "4. 不要給 exclude 名單裡的飲料。\n"
     "5. 寧可常見好取得（超商/手搖/咖啡店），不要瞎掰罕見品項。\n"
     "6. 必須準確估計 caffeine_mg：無咖啡因飲料填 0。\n"
+)
+
+
+DRINK_SYSTEM_PROMPT = build_patient_facing_system(
+    _DRINK_ROLE,
+    patient_context=None,
+    include_examples=False,
 )
 
 
