@@ -9109,6 +9109,117 @@ a.story-news-title:hover { color: var(--story-text-dark); }
   overflow: hidden;
 }
 
+/* ─── 名人健康時刻 ─────────────────────────────────── */
+.story-celebrity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.story-celeb-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--story-text-mid);
+  background: #F4EBD8;
+  color: var(--story-text-dark);
+}
+.story-celeb-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.story-celeb-person {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--story-accent-dark);
+}
+.story-celeb-event {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: .74rem;
+  font-weight: 700;
+  border: 1px solid currentColor;
+}
+.story-celeb-event-diag     { background: #FBE4C2; color: #7A4A0A; }
+.story-celeb-event-treat    { background: #D5E2F1; color: #1A3F66; }
+.story-celeb-event-recover  { background: #D4E8D4; color: #1F5C2A; }
+.story-celeb-event-advocate { background: #E4D5F1; color: #4A1A66; }
+
+.story-celeb-framing {
+  margin: 0;
+  font-size: .92rem;
+  line-height: 1.65;
+  color: var(--story-text-dark);
+  font-weight: 500;
+}
+.story-celeb-related {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #E8DCC4;
+  border: 1px dashed var(--story-text-mid);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.story-celeb-related-head {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--story-accent-dark);
+}
+.story-celeb-related-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--story-accent-dark);
+  font-size: .88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  width: 100%;
+}
+.story-celeb-related-item:hover { background: #F4EBD8; }
+.story-celeb-related-item:focus-visible {
+  outline: 2px solid var(--story-accent-dark);
+  outline-offset: 1px;
+}
+
+.story-celeb-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .82rem;
+  color: var(--story-text-mid);
+  text-decoration: underline;
+  align-self: flex-start;
+}
+.story-celeb-source:hover { color: var(--story-accent-dark); }
+
+.story-celebrity-disclaimer {
+  margin-top: 12px;
+  padding: 8px 12px;
+  font-size: .76rem;
+  line-height: 1.5;
+  color: var(--story-text-mid);
+  background: #E8DCC4;
+  border-left: 3px solid var(--story-text-mid);
+  border-radius: 4px;
+}
+
+[data-mode="senior"] .story-celeb-person { font-size: 1.2rem; }
+[data-mode="senior"] .story-celeb-framing { font-size: 1.05rem; }
+[data-mode="senior"] .story-celeb-related-item { font-size: 1rem; padding: 8px 10px; }
+[data-mode="senior"] .story-celebrity-disclaimer { font-size: .9rem; }
+
 /* ─── 診前報告 (Pre-consultation Report) ─────────────────── */
 .pv-page {
   display: flex;

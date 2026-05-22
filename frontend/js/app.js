@@ -1365,6 +1365,20 @@ function story() {
       </div>
     </div>
 
+    <div class="card" id="story-celebrity-card" style="display:none">
+      <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
+        <i data-lucide="users" style="width:16px;height:16px"></i> 名人健康時刻
+      </h3>
+      <p class="story-section-desc" style="margin-top:6px">
+        從公開報導整理：公眾人物分享的健康故事，連到相關衛教文章。
+      </p>
+      <div id="story-celebrity-list" class="story-celebrity-list"></div>
+      <div class="story-celebrity-disclaimer">
+        <i data-lucide="info" style="width:12px;height:12px;vertical-align:middle"></i>
+        本區內容僅整理自公開報導，不代表醫療判斷。詳細治療仍以主治醫師為準。
+      </div>
+    </div>
+
     <div class="card" id="story-archive-card">
       <h3 style="display:flex;align-items:center;gap:8px;font-size:1rem;margin:0">
         <i data-lucide="history" style="width:16px;height:16px"></i> 過去幾天
@@ -1389,6 +1403,7 @@ function loadStoryPage() {
         renderStorySection(c.key, today[c.key]);
       });
       renderStoryNewsFeed((data && data.news_feed) || []);
+      renderStoryCelebrities((data && data.celebrity_stories) || []);
       renderStoryArchive((data && data.archive) || []);
       if (typeof lucide !== 'undefined') lucide.createIcons();
     })
@@ -1515,6 +1530,81 @@ function renderStoryNewsFeed(items) {
       }).join('');
     }
   }
+}
+
+// 事件性質 → pill 樣式 class（顏色：確診=橘、治療中=藍、康復=綠、倡議推廣=紫）
+var CELEB_EVENT_CLASSES = {
+  "確診":     "story-celeb-event-diag",
+  "治療中":   "story-celeb-event-treat",
+  "康復":     "story-celeb-event-recover",
+  "倡議推廣": "story-celeb-event-advocate"
+};
+
+function renderStoryCelebrities(stories) {
+  var card = document.getElementById("story-celebrity-card");
+  var list = document.getElementById("story-celebrity-list");
+  if (!card || !list) return;
+  if (!stories.length) {
+    // 沒設 NEWS_FEED_URLS 或 LLM 沒抽到任何名人故事 — 整張卡藏起來
+    card.style.display = "none";
+    return;
+  }
+  card.style.display = "";
+
+  list.innerHTML = stories.map(function(s, idx) {
+    var person = escapeHtml(s.person || "");
+    var diseaseName = escapeHtml(s.disease_name || s.disease_keyword || "");
+    var eventType = s.event_type || "";
+    var eventClass = CELEB_EVENT_CLASSES[eventType] || "story-celeb-event-advocate";
+    var framing = escapeHtml(s.soft_framing || "");
+    var link = s.source_link ? escapeHtml(s.source_link) : "";
+    var sourceTitle = escapeHtml(s.source_title || "原始報導");
+
+    var relatedHtml = "";
+    if (s.related_articles && s.related_articles.length) {
+      var articleId = "story-celeb-related-" + idx;
+      // 順便 prime _eduArticles 快取，讓 storyOpenArchive 能直接命中
+      if (!window._eduArticles) window._eduArticles = {};
+      s.related_articles.forEach(function(a) {
+        window._eduArticles[a.slug] = Object.assign(window._eduArticles[a.slug] || {}, a);
+      });
+      relatedHtml =
+        '<div class="story-celeb-related" id="' + articleId + '">' +
+          '<div class="story-celeb-related-head">' +
+            '<i data-lucide="book-open" style="width:12px;height:12px;vertical-align:middle"></i> ' +
+            '相關衛教' + (diseaseName ? '：' + diseaseName : '') +
+          '</div>' +
+          s.related_articles.map(function(a) {
+            return '<button class="story-celeb-related-item" ' +
+                     'onclick="storyOpenArchive(\'' + escapeHtml(a.slug) + '\',\'disease\')">' +
+                     '<i data-lucide="arrow-right" style="width:12px;height:12px"></i> ' +
+                     escapeHtml(a.title || a.slug) +
+                   '</button>';
+          }).join("") +
+        '</div>';
+    }
+
+    var sourceHtml = link
+      ? '<a class="story-celeb-source" href="' + link + '" target="_blank" rel="noopener noreferrer" title="' + sourceTitle + '">' +
+          '<i data-lucide="external-link" style="width:12px;height:12px;vertical-align:middle"></i> 看新聞原文' +
+        '</a>'
+      : '';
+
+    var eventPill = eventType
+      ? '<span class="story-celeb-event ' + eventClass + '">' + escapeHtml(eventType) + '</span>'
+      : '';
+
+    return '' +
+      '<article class="story-celeb-item">' +
+        '<div class="story-celeb-head">' +
+          '<span class="story-celeb-person">' + person + '</span>' +
+          eventPill +
+        '</div>' +
+        (framing ? '<p class="story-celeb-framing">' + framing + '</p>' : '') +
+        relatedHtml +
+        sourceHtml +
+      '</article>';
+  }).join("");
 }
 
 function renderStoryArchive(days) {
