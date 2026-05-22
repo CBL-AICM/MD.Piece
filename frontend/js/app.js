@@ -9167,7 +9167,62 @@ function medications() {
   var user = getCurrentUser();
   _medsPatientId = getStablePatientId();
   _medsDeleteMode = false;
+
+  // ─── 手機 v11 demo 版面（藥袋拍照 hero + 客製化欄位 + 時段列表 skeleton）─── //
+  var _mobileMedsBlock = ''
+    + '<div class="mobile-only">'
+    // 拍藥袋 hero CTA
+    +   '<button class="ocr-hero-btn" onclick="document.getElementById(\'med-camera\').click()">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div style="width:44px;height:44px;border-radius:11px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;box-shadow:0 3px 10px -3px rgba(74,144,194,0.40)">'
+    +       '<i data-lucide="camera" style="width:22px;height:22px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1;position:relative;z-index:1">'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--accent-deep);display:flex;align-items:center;gap:5px">拍藥袋 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.45">自動辨識藥名劑量，你可再加「我的實際用法」</div>'
+    +     '</div>'
+    +     '<i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--accent);position:relative;z-index:1"></i>'
+    +   '</button>'
+
+    // 客製化說明卡（細）
+    +   '<div class="med-tip-card">'
+    +     '<i data-lucide="user-check"></i>'
+    +     '<span><strong>提示</strong>：醫師私下交代和藥袋不一樣是常見的。每筆藥可加「我的實際用法」覆寫，提醒會依「我的」為準。</span>'
+    +   '</div>'
+
+    // 注意：input#med-camera 由 desktop-only 區塊渲染（display:none），mobile 也共用同一個 id
+
+    // 今日服藥區（mobile）— 從 #med-list 拉資料注入這個容器
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="pill"></i> 今日服藥</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="navigateTo(\'reminders\',null)">提醒 <i data-lucide="arrow-right"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-meds-today">'
+    +     '<div class="med-tip-card" style="background:var(--bg-soft);border-color:var(--border);color:var(--text-dim)">'
+    +       '<i data-lucide="loader"></i><span>載入今日服藥…</span>'
+    +     '</div>'
+    +   '</div>'
+
+    // 提示 — 完整清單在桌機 / 進階模式
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="list"></i> 我的所有藥物</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-meds-list" class="list-card">'
+    +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 免責 footer
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span><strong>本 App 僅供記錄與參考</strong>，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
+    +   '</div>'
+    + '</div>';
+
   return `
+    ${_mobileMedsBlock}
+    <div class="desktop-only">
     <div class="card">
       <h2>${_T('meds.title')}</h2>
       <p style="margin-top:8px;color:var(--text-dim)">${_T('meds.intro.prefix')}<strong>${_T('meds.intro.bold')}</strong>${_T('meds.intro.suffix')}</p>
@@ -9247,6 +9302,7 @@ function medications() {
         </button>
       </div>
       <div id="med-report" style="margin-top:12px"></div>
+    </div>
     </div>`;
 }
 
@@ -9503,6 +9559,103 @@ function renderMedList() {
   if (window.lucide && window.lucide.createIcons) {
     try { window.lucide.createIcons(); } catch (e) {}
   }
+
+  // ─── 同步注入手機版 demo 樣式（mobile-only 容器）─── //
+  try { _renderMobileMedList(_medsList); } catch (e) {}
+}
+
+function _renderMobileMedList(meds) {
+  var mob = document.getElementById('mobile-meds-list');
+  var todayEl = document.getElementById('mobile-meds-today');
+  if (!mob && !todayEl) return;
+
+  if (!meds || !meds.length) {
+    if (mob) {
+      mob.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無藥物 — 試試上方「拍藥袋」</div>';
+    }
+    if (todayEl) {
+      todayEl.innerHTML = '<div class="med-tip-card" style="background:var(--bg-soft);border-color:var(--border);color:var(--text-dim)"><i data-lucide="info"></i><span>還沒有任何藥物紀錄</span></div>';
+    }
+    if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+    return;
+  }
+
+  // 我的所有藥物 list-card
+  if (mob) {
+    var rows = meds.map(function(m) {
+      var note = (m.custom_note && String(m.custom_note).trim()) || '';
+      var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
+      var inner = ''
+        + '<div class="med-list-row" style="border-bottom:1px solid var(--border)">'
+        +   '<div class="ico"><i data-lucide="pill"></i></div>'
+        +   '<div>'
+        +     '<div class="name">' + escapeHtml(m.name || '未命名') + '</div>'
+        +     '<div class="dose">' + escapeHtml(doseTxt) + '</div>'
+        +   '</div>'
+        +   '<div class="time">' + escapeHtml(m.time_of_day || '') + '</div>'
+        +   '<span class="pill pill-mute mono">' + (m.active === 0 ? '停用' : '使用中') + '</span>'
+        + '</div>'
+        // 藥袋 vs 我的 客製化欄位
+        + '<div class="med-customize">'
+        +   '<div class="med-customize-row">'
+        +     '<span class="med-tag tag-bag"><i data-lucide="package"></i>藥袋</span>'
+        +     '<span class="' + (note ? 'strikethrough' : '') + '">' + escapeHtml(m.instruction || ((m.dose || '') + ' ' + (m.frequency || ''))) + '</span>'
+        +   '</div>'
+        +   '<div class="med-customize-row">'
+        +     '<span class="med-tag tag-mine"><i data-lucide="user-check"></i>我的</span>'
+        +     (note
+              ? '<span class="actual">' + escapeHtml(note) + '</span>'
+              : '<span class="actual" style="color:var(--text-muted);font-style:italic">(尚未自訂用法)</span>')
+        +     '<button class="med-customize-edit-btn" onclick="alert(\'此功能開發中：將可以在這裡加上醫師私下交代的用法，覆寫藥袋預設\')">'
+        +       '<i data-lucide="pencil"></i>' + (note ? '編輯' : '加上')
+        +     '</button>'
+        +   '</div>'
+        + '</div>';
+      return inner;
+    }).join('');
+    mob.innerHTML = rows;
+  }
+
+  // 今日服藥（簡化版 — 依 time_of_day 分桶）
+  if (todayEl) {
+    var buckets = (typeof _bucketMeds === 'function') ? _bucketMeds(meds) : { morning: meds, noon: [], evening: [], bedtime: [], other: [] };
+    var SLOTS = [
+      { key: 'morning', label: '早晨', icon: 'sun', time: '07:00' },
+      { key: 'noon',    label: '中午', icon: 'sun-medium', time: '13:00' },
+      { key: 'evening', label: '傍晚', icon: 'sun-dim',    time: '18:00' },
+      { key: 'bedtime', label: '睡前', icon: 'moon',       time: '22:00' },
+    ];
+    var thtml = '';
+    SLOTS.forEach(function(s) {
+      var arr = buckets[s.key] || [];
+      if (!arr.length) return;
+      thtml += ''
+        + '<div class="meds-period-card">'
+        +   '<div class="meds-period-head ' + (s.key === 'morning' ? 'morning' : '') + '">'
+        +     '<i data-lucide="' + s.icon + '"></i> ' + s.label + ' ' + s.time
+        +     '<span class="pill pill-mute mono">' + arr.length + ' 顆</span>'
+        +   '</div>'
+        +   arr.map(function(m) {
+            return ''
+              + '<div class="med-list-row">'
+              +   '<div class="ico"><i data-lucide="pill"></i></div>'
+              +   '<div>'
+              +     '<div class="name">' + escapeHtml(m.name || '') + '</div>'
+              +     '<div class="dose">' + escapeHtml(m.dose || '') + '</div>'
+              +   '</div>'
+              +   '<div class="time">' + escapeHtml(s.time) + '</div>'
+              +   '<div class="check"></div>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    });
+    if (!thtml) {
+      thtml = '<div class="med-tip-card" style="background:var(--bg-soft);border-color:var(--border);color:var(--text-dim)"><i data-lucide="info"></i><span>沒有依時段排程的藥物</span></div>';
+    }
+    todayEl.innerHTML = thtml;
+  }
+
+  if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
 }
 
 function _renderMedCard(med, slotKey, isOther) {
