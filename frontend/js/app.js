@@ -4427,8 +4427,16 @@ function home() {
     _mobileVisitText = '上次回診已過 <strong>' + (-_mobileVisitDays) + ' 天</strong>';
   }
 
+  // 是否為年長模式 → 提供切換到普通版的 link 文字
+  var _modeIsSenior = (typeof getMode === 'function' && getMode() === 'senior');
+
   var _mobileBlock = ''
     + '<div class="mobile-only">'
+
+    // ╔════════════════════════════════════════════════════════
+    // ║ Tier 1 — 每日核心狀態：早安卡 / SOS / KPI / 今日待辦
+    // ║ （always visible 區，使用者打開 App 就要看到）
+    // ╚════════════════════════════════════════════════════════
     +   '<div class="home-greet">'
     +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
     +     '<div class="home-avatar">'
@@ -4450,7 +4458,46 @@ function home() {
     +     '<button class="care-chip ' + (getCareMode() === 'inpatient' ? 'active' : '') + '" onclick="setCareMode && setCareMode(\'inpatient\')"><i data-lucide="hospital"></i> 住院模式</button>'
     +   '</div>'
 
+    // 不舒服一鍵 — 4 顆常見症狀（按下後跳到症狀頁讓使用者記錄）
+    // ↑ 上移到 Tier 1 開頭：使用者最常用的入口（SOS），永遠在 above-the-fold
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="zap"></i> 不舒服？按一下就好</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<span class="sec-count" id="mobile-sos-count">今日 — 筆</span>'
+    +   '</div>'
+    +   '<div class="sos-grid">'
+    +     '<button class="sos-btn t-rose" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="brain"></i></div>'
+    +       '<div class="sos-label">頭痛</div>'
+    +       '<div class="sos-sub" id="mobile-sos-headache-sub">—</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-blue" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="activity"></i></div>'
+    +       '<div class="sos-label">心悸</div>'
+    +       '<div class="sos-sub" id="mobile-sos-palpitation-sub">—</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-teal" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="thermometer"></i></div>'
+    +       '<div class="sos-label">發燒</div>'
+    +       '<div class="sos-sub" id="mobile-sos-fever-sub">—</div>'
+    +     '</button>'
+    +     '<button class="sos-btn t-amber" onclick="navigateTo(\'symptoms\',null)">'
+    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div class="sos-icon"><i data-lucide="zap"></i></div>'
+    +       '<div class="sos-label">疲倦</div>'
+    +       '<div class="sos-sub" id="mobile-sos-fatigue-sub">—</div>'
+    +     '</button>'
+    +   '</div>'
+
     // KPI 3 卡 mini（含 sparkline + 白話解釋，資料注入見 _updateMobileHomeKPIs）
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="line-chart"></i> 今日數值</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="navigateTo(\'vitals\',null)">紀錄 <i data-lucide="arrow-right"></i></button>'
+    +   '</div>'
     +   '<div class="kpi-row" id="mobile-home-kpi">'
     +     '<div class="kpi-mini t-rose">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
@@ -4490,39 +4537,6 @@ function home() {
     +     '</div>'
     +   '</div>'
 
-    // 不舒服一鍵 — 4 顆常見症狀（按下後跳到症狀頁讓使用者記錄）
-    +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="zap"></i> 不舒服？按一下就好</h3>'
-    +     '<span class="sec-spacer"></span>'
-    +     '<span class="sec-count" id="mobile-sos-count">今日 — 筆</span>'
-    +   '</div>'
-    +   '<div class="sos-grid">'
-    +     '<button class="sos-btn t-rose" onclick="navigateTo(\'symptoms\',null)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="sos-icon"><i data-lucide="brain"></i></div>'
-    +       '<div class="sos-label">頭痛</div>'
-    +       '<div class="sos-sub" id="mobile-sos-headache-sub">—</div>'
-    +     '</button>'
-    +     '<button class="sos-btn t-blue" onclick="navigateTo(\'symptoms\',null)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="sos-icon"><i data-lucide="activity"></i></div>'
-    +       '<div class="sos-label">心悸</div>'
-    +       '<div class="sos-sub" id="mobile-sos-palpitation-sub">—</div>'
-    +     '</button>'
-    +     '<button class="sos-btn t-teal" onclick="navigateTo(\'symptoms\',null)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="sos-icon"><i data-lucide="thermometer"></i></div>'
-    +       '<div class="sos-label">發燒</div>'
-    +       '<div class="sos-sub" id="mobile-sos-fever-sub">—</div>'
-    +     '</button>'
-    +     '<button class="sos-btn t-amber" onclick="navigateTo(\'symptoms\',null)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="sos-icon"><i data-lucide="zap"></i></div>'
-    +       '<div class="sos-label">疲倦</div>'
-    +       '<div class="sos-sub" id="mobile-sos-fatigue-sub">—</div>'
-    +     '</button>'
-    +   '</div>'
-
     // 今日待辦（複用原本資料注入點 + tag/狀態 pill）
     +   '<div class="sec-head">'
     +     '<h3 class="sec-title"><i data-lucide="list-checks"></i> 今日待辦</h3>'
@@ -4533,6 +4547,10 @@ function home() {
     +   '<div id="mobile-home-todo-list" class="list-card">'
     +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無待辦</div>'
     +   '</div>'
+
+    // ╔════════════════════════════════════════════════════════
+    // ║ Tier 2 — 今日相關：下次回診 / 今日服藥 / 最近紀錄摘要
+    // ╚════════════════════════════════════════════════════════
 
     // 下次回診卡（醫師 / 醫院 / 樓層，由 _updateMobileNextVisitMeta 注入）
     + (_mobileVisitIso
@@ -4548,7 +4566,167 @@ function home() {
         +   '<div id="mobile-next-visit-dept" style="font-size:12.5px;color:var(--navy);font-weight:500">回診當天記得帶健保卡與藥袋</div>'
         +   '<div id="mobile-next-visit-loc" style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:2px">—</div>'
         + '</div>'
-      : '')
+      : '<div class="sec-head"><h3 class="sec-title"><i data-lucide="calendar-clock"></i> 下次回診</h3><span class="sec-spacer"></span></div>'
+        + '<div class="card tint-blue" onclick="navigateTo(\'followUps\',null)" style="cursor:pointer">'
+        +   '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
+        +   '<div style="font-size:13px;color:var(--navy);font-weight:500;margin-bottom:2px">尚未排定下次回診</div>'
+        +   '<div style="font-size:11px;color:var(--text-muted)">點此設定回診排程，App 會幫你倒數提醒</div>'
+        + '</div>')
+
+    // 今日服藥概覽（mini 版，連到 medications 頁）
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="pill"></i> 今日服藥</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="navigateTo(\'medications\',null)">管理 <i data-lucide="arrow-right"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-home-meds" class="card tint-teal" onclick="navigateTo(\'medications\',null)" style="cursor:pointer">'
+    +     '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
+    +     '<div style="display:flex;align-items:center;gap:10px">'
+    +       '<div style="flex:1">'
+    +         '<div style="font-size:12px;color:var(--text-dim);margin-bottom:2px">追蹤中藥物</div>'
+    +         '<div id="mobile-home-meds-count" style="font-family:var(--font-brand,\'Cormorant Garamond\',serif);font-style:italic;font-size:26px;font-weight:500;color:var(--navy);line-height:1">—</div>'
+    +       '</div>'
+    +       '<div id="mobile-home-meds-hint" style="font-size:11px;color:var(--text-muted);text-align:right;max-width:55%;line-height:1.4">點此查看服藥提醒與時段打卡</div>'
+    +     '</div>'
+    +   '</div>'
+
+    // 今日紀錄摘要（最近 3 筆症狀/紀錄 — 由 _renderMobileRecentRecords 注入）
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="history"></i> 最近紀錄</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="navigateTo(\'pieces\',null)">我的碎片 <i data-lucide="arrow-right"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-home-recent" class="list-card">'
+    +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無紀錄，開始記一筆吧</div>'
+    +   '</div>'
+
+    // ╔════════════════════════════════════════════════════════
+    // ║ Tier 3 — 常用功能快捷：6 顆大按鈕，一鍵跳到對應頁
+    // ╚════════════════════════════════════════════════════════
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="layout-grid"></i> 快速跳轉</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<span class="sec-count">所有功能</span>'
+    +   '</div>'
+    +   '<div class="quick-jump-grid">'
+    +     '<button class="quick-jump-btn t-blue" onclick="navigateTo(\'symptomsAnalyze\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="sparkles"></i></span>'
+    +       '<span class="qj-label">症狀分析</span>'
+    +       '<span class="qj-sub">AI 幫你看</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-amber" onclick="navigateTo(\'medications\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="pill"></i></span>'
+    +       '<span class="qj-label">用藥</span>'
+    +       '<span class="qj-sub">藥袋 · 打卡</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-rose" onclick="navigateTo(\'vitals\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="activity"></i></span>'
+    +       '<span class="qj-label">生理紀錄</span>'
+    +       '<span class="qj-sub">血壓 · 血糖</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-teal" onclick="navigateTo(\'emotions\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="battery-charging"></i></span>'
+    +       '<span class="qj-label">心情情緒</span>'
+    +       '<span class="qj-sub">電量 · 走勢</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-green" onclick="navigateTo(\'diet\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="utensils-crossed"></i></span>'
+    +       '<span class="qj-label">飲食</span>'
+    +       '<span class="qj-sub">三餐 · 飲水</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-purple" onclick="navigateTo(\'memo\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="sticky-note"></i></span>'
+    +       '<span class="qj-label">備忘</span>'
+    +       '<span class="qj-sub">想問醫師</span>'
+    +     '</button>'
+    +   '</div>'
+
+    // 進階：診前準備 / 我的醫師 / 提醒 / 檢驗趨勢（次要常用）
+    +   '<div class="quick-jump-grid quick-jump-grid--mini">'
+    +     '<button class="quick-jump-btn t-blue" onclick="navigateTo(\'previsit\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="clipboard-check"></i></span>'
+    +       '<span class="qj-label">診前準備</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-teal" onclick="navigateTo(\'doctors\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="stethoscope"></i></span>'
+    +       '<span class="qj-label">我的醫師</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-amber" onclick="navigateTo(\'reminders\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="bell-ring"></i></span>'
+    +       '<span class="qj-label">提醒通知</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-mint" onclick="navigateTo(\'labs\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="trending-up"></i></span>'
+    +       '<span class="qj-label">檢驗趨勢</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-rose" onclick="navigateTo(\'chat\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="message-circle-heart"></i></span>'
+    +       '<span class="qj-label">醫起聊天</span>'
+    +     '</button>'
+    +     '<button class="quick-jump-btn t-purple" onclick="navigateTo(\'pieces\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="puzzle"></i></span>'
+    +       '<span class="qj-label">我的碎片</span>'
+    +     '</button>'
+    +   '</div>'
+
+    // ╔════════════════════════════════════════════════════════
+    // ║ Tier 4 — 學習與參考：衛教專欄 / 每日故事
+    // ╚════════════════════════════════════════════════════════
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="book-heart"></i> 衛教專欄</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="navigateTo(\'education\',null)">全部 <i data-lucide="arrow-right"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-home-edu" class="edu-feed">'
+    +     '<button class="card tint-teal edu-card-mini" onclick="navigateTo(\'education\',null)" style="cursor:pointer;text-align:left;width:100%;border:1.5px solid var(--border,rgba(31,61,88,0.10))">'
+    +       '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div style="font-size:10.5px;color:var(--teal-deep,#1F5F56);font-weight:600;letter-spacing:0.04em;margin-bottom:4px">// 高血壓</div>'
+    +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy,#0F2A45);line-height:1.4;margin-bottom:3px">每天量血壓的最佳時機</div>'
+    +       '<div style="font-size:11px;color:var(--text-muted,#6B7F92);line-height:1.5">起床後一小時內、坐穩 5 分鐘再量，數值最準確。連續記錄 7 天比單次值更有意義。</div>'
+    +     '</button>'
+    +     '<button class="card tint-rose edu-card-mini" onclick="navigateTo(\'education\',null)" style="cursor:pointer;text-align:left;width:100%;border:1.5px solid var(--border,rgba(31,61,88,0.10))">'
+    +       '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div style="font-size:10.5px;color:var(--rose-deep,#C97A7A);font-weight:600;letter-spacing:0.04em;margin-bottom:4px">// 用藥</div>'
+    +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy,#0F2A45);line-height:1.4;margin-bottom:3px">忘記吃藥怎麼補？</div>'
+    +       '<div style="font-size:11px;color:var(--text-muted,#6B7F92);line-height:1.5">距離下次服藥時間少於一半 → 跳過。多數慢性病藥物不需要追補，雙倍劑量風險更高。</div>'
+    +     '</button>'
+    +     '<button class="card tint-blue edu-card-mini" onclick="navigateTo(\'story\',null)" style="cursor:pointer;text-align:left;width:100%;border:1.5px solid var(--border,rgba(31,61,88,0.10))">'
+    +       '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
+    +       '<div style="font-size:10.5px;color:var(--accent-deep,#2F6B96);font-weight:600;letter-spacing:0.04em;margin-bottom:4px">// 病史故事</div>'
+    +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy,#0F2A45);line-height:1.4;margin-bottom:3px">每日一則 · 跟著故事走</div>'
+    +       '<div style="font-size:11px;color:var(--text-muted,#6B7F92);line-height:1.5">病友的真實經歷，幫助你理解自己正在經歷的階段，知道下一步可以做什麼。</div>'
+    +     '</button>'
+    +   '</div>'
+
+    // ╔════════════════════════════════════════════════════════
+    // ║ Tier 5 — 管理工具：帳號 / 設定 / 切換模式 / 登出
+    // ╚════════════════════════════════════════════════════════
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="settings-2"></i> 帳號與設定</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="list-card manage-list">'
+    +     '<button class="list-row manage-row" onclick="navigateTo(\'account\',null)" style="grid-template-columns:24px 1fr auto;width:100%;background:none;border:none;border-bottom:1px solid var(--border,rgba(31,61,88,0.10));cursor:pointer;text-align:left">'
+    +       '<i data-lucide="user-cog" style="width:16px;height:16px;color:var(--text-muted)"></i>'
+    +       '<span style="font-size:13px;color:var(--navy);font-weight:500">帳號資料</span>'
+    +       '<i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted)"></i>'
+    +     '</button>'
+    +     '<button class="list-row manage-row" onclick="navigateTo(\'settings\',null)" style="grid-template-columns:24px 1fr auto;width:100%;background:none;border:none;border-bottom:1px solid var(--border,rgba(31,61,88,0.10));cursor:pointer;text-align:left">'
+    +       '<i data-lucide="settings" style="width:16px;height:16px;color:var(--text-muted)"></i>'
+    +       '<span style="font-size:13px;color:var(--navy);font-weight:500">系統設定</span>'
+    +       '<i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted)"></i>'
+    +     '</button>'
+    +     '<button class="list-row manage-row" onclick="setMode(\'' + (_modeIsSenior ? 'standard' : 'senior') + '\')" style="grid-template-columns:24px 1fr auto;width:100%;background:none;border:none;border-bottom:1px solid var(--border,rgba(31,61,88,0.10));cursor:pointer;text-align:left">'
+    +       '<i data-lucide="' + (_modeIsSenior ? 'type' : 'a-large-small') + '" style="width:16px;height:16px;color:var(--text-muted)"></i>'
+    +       '<span style="font-size:13px;color:var(--navy);font-weight:500">' + (_modeIsSenior ? '切換為普通版' : '切換為年長版') + '</span>'
+    +       '<span class="pill pill-mute mono">' + (_modeIsSenior ? 'senior' : 'standard') + '</span>'
+    +     '</button>'
+    +     '<button class="list-row manage-row" onclick="if(confirm(\'確定要登出嗎？\')) logout()" style="grid-template-columns:24px 1fr auto;width:100%;background:none;border:none;cursor:pointer;text-align:left">'
+    +       '<i data-lucide="log-out" style="width:16px;height:16px;color:var(--rose-deep,#C97A7A)"></i>'
+    +       '<span style="font-size:13px;color:var(--rose-deep,#C97A7A);font-weight:500">登出</span>'
+    +       '<i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted)"></i>'
+    +     '</button>'
+    +   '</div>'
 
     // 免責 footer
     +   '<div class="disclaimer-footer">'
@@ -4777,6 +4955,133 @@ function loadHomePage() {
   if (typeof _updateMobileSosCount === 'function') _updateMobileSosCount();
   if (typeof _updateMobileNextVisitMeta === 'function') _updateMobileNextVisitMeta();
   if (typeof _renderMobileTodoList === 'function') _renderMobileTodoList();
+  // 滾動式 feed 新增的 Tier 2 區塊
+  if (typeof _updateMobileHomeMedsMini === 'function') _updateMobileHomeMedsMini();
+  if (typeof _renderMobileRecentRecords === 'function') _renderMobileRecentRecords();
+}
+
+// 滾動式 feed - Tier 2「今日服藥」mini 卡：顯示追蹤中藥物筆數
+// 資料源：fetch /medications/?patient_id=xxx，沿用 home-med-summary 同一 endpoint。
+function _updateMobileHomeMedsMini() {
+  var elCount = document.getElementById('mobile-home-meds-count');
+  var elHint = document.getElementById('mobile-home-meds-hint');
+  if (!elCount) return;
+  try {
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+    if (!pid) return;
+    fetch(API + '/medications/?patient_id=' + pid)
+      .then(function(r) { return r.ok ? r.json() : { medications: [] }; })
+      .then(function(data) {
+        var meds = ((data && data.medications) || []).filter(function(m) { return m.active !== 0; });
+        if (!meds.length) {
+          elCount.textContent = '0';
+          if (elHint) elHint.textContent = '尚未新增藥物，點此拍藥袋';
+          return;
+        }
+        elCount.textContent = String(meds.length);
+        if (elHint) elHint.textContent = '點此查看服藥提醒與時段打卡';
+      })
+      .catch(function() {
+        if (elHint) elHint.textContent = '點此查看用藥列表';
+      });
+  } catch (e) {}
+}
+
+// 滾動式 feed - Tier 2「最近紀錄」摘要：最近 3 筆（症狀 / Memo / 生理）
+// 純 localStorage 讀取，不打 API，避免額外延遲。
+function _renderMobileRecentRecords() {
+  var el = document.getElementById('mobile-home-recent');
+  if (!el) return;
+  var items = [];
+  // 症狀
+  try {
+    var sym = JSON.parse(localStorage.getItem('mdpiece_symptoms') || '[]');
+    sym.forEach(function(s) {
+      var ts = s.timestamp || s.recorded_at || s.created_at || s.date || '';
+      items.push({
+        kind: 'symptom',
+        ts: ts,
+        title: (s.category || s.symptom || s.title || '症狀') + (s.intensity ? ' · 強度 ' + s.intensity : ''),
+        desc: s.note || s.description || '',
+      });
+    });
+  } catch (e) {}
+  // Memo
+  try {
+    var memos = JSON.parse(localStorage.getItem('mdpiece_memos_v1') || '[]');
+    memos.forEach(function(m) {
+      items.push({
+        kind: 'memo',
+        ts: m.timestamp || m.created_at || m.date || '',
+        title: 'Memo · ' + (m.title || m.summary || m.text || '備忘'),
+        desc: m.text || m.summary || '',
+      });
+    });
+  } catch (e) {}
+  // 生理紀錄
+  try {
+    var vitals = JSON.parse(localStorage.getItem('mdpiece_vitals_entries') || '[]');
+    vitals.forEach(function(v) {
+      var label = v.type === 'bp' ? '血壓' : v.type === 'glucose' ? '血糖' : v.type === 'weight' ? '體重' : (v.type || '生理');
+      var val = (typeof v.value === 'string') ? v.value
+        : (v.systolic && v.diastolic) ? (v.systolic + '/' + v.diastolic)
+        : (v.value != null ? String(v.value) : '');
+      items.push({
+        kind: 'vital',
+        ts: v.timestamp || v.recorded_at || v.created_at || v.date || '',
+        title: label + (val ? ' ' + val : ''),
+        desc: v.note || '',
+      });
+    });
+  } catch (e) {}
+
+  // 依時間排序，取前 3
+  items.sort(function(a, b) { return (b.ts || '').localeCompare(a.ts || ''); });
+  items = items.slice(0, 3);
+
+  if (!items.length) {
+    el.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無紀錄，開始記一筆吧</div>';
+    return;
+  }
+
+  function _fmtTs(ts) {
+    if (!ts) return '—';
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return ts.slice(5, 10).replace('-', '/');
+    var now = new Date();
+    var diffMin = Math.floor((now - d) / 60000);
+    if (diffMin < 1) return '剛剛';
+    if (diffMin < 60) return diffMin + ' 分鐘前';
+    var diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return diffH + ' 小時前';
+    var diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return diffD + ' 天前';
+    return (d.getMonth() + 1) + '/' + d.getDate();
+  }
+  function _tagPill(kind) {
+    if (kind === 'symptom') return '<span class="pill pill-rose tag">症狀</span>';
+    if (kind === 'vital')   return '<span class="pill pill-info tag">數值</span>';
+    if (kind === 'memo')    return '<span class="pill pill-teal tag">備忘</span>';
+    return '<span class="pill pill-mute tag">紀錄</span>';
+  }
+  function _targetPage(kind) {
+    if (kind === 'symptom') return 'symptoms';
+    if (kind === 'vital')   return 'vitals';
+    if (kind === 'memo')    return 'memo';
+    return 'pieces';
+  }
+
+  var html = '';
+  items.forEach(function(it) {
+    html += '<button class="list-row" style="grid-template-columns:18px 56px 1fr auto;width:100%;background:none;border:none;text-align:left;cursor:pointer" onclick="navigateTo(\'' + _targetPage(it.kind) + '\',null)">'
+      + '<span></span>'
+      + '<span class="time">' + escapeHtml(_fmtTs(it.ts)) + '</span>'
+      + '<div class="name">' + _tagPill(it.kind) + escapeHtml(it.title) + '</div>'
+      + '<i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted)"></i>'
+      + '</button>';
+  });
+  el.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // 行動版首頁 KPI 注入：血壓 / 飯前血糖 / 心情電量
