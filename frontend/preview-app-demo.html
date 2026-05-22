@@ -131,6 +131,70 @@
     :root.dark [style*="background:#FFFFFF"],
     :root.dark [style*="background: #fff"],
     :root.dark [style*="background:#fff"] { background: var(--bg-mid) !important; }
+
+    /* CSS-defined 白底/淺底卡片 — dark mode 強制換深 */
+    :root.dark .card.tint-blue,
+    :root.dark .card.tint-rose,
+    :root.dark .card.tint-teal,
+    :root.dark .card.tint-green,
+    :root.dark .kpi-mini.t-rose,
+    :root.dark .kpi-mini.t-blue,
+    :root.dark .kpi-mini.t-teal,
+    :root.dark .sos-btn.t-rose,
+    :root.dark .sos-btn.t-blue,
+    :root.dark .sos-btn.t-teal,
+    :root.dark .sos-btn.t-amber,
+    :root.dark .vital-card { background: var(--bg-mid) !important; }
+    :root.dark .phone-screen,
+    :root.dark .ph-body { background: var(--bg) !important; }
+    :root.dark .demo-phone { background: var(--bg-soft) !important; }
+    :root.dark .ph-topbar { background: var(--bg) !important; border-bottom: 1px solid var(--border); }
+
+    /* 文字 — dark mode 強制換亮 */
+    :root.dark .sec-title,
+    :root.dark .pv-hero-num,
+    :root.dark .pv-hero-when,
+    :root.dark .pv-hero-doc,
+    :root.dark .pv-hero-clinic,
+    :root.dark .kpi-mini-val,
+    :root.dark .kpi-mini-label,
+    :root.dark .med-list-row .name,
+    :root.dark .med-list-row .time,
+    :root.dark .name,
+    :root.dark .ph-filename,
+    :root.dark .home-greet-name,
+    :root.dark .home-ov-val,
+    :root.dark .home-greet-msg,
+    :root.dark .chip,
+    :root.dark .pp-btn { color: var(--text) !important; }
+
+    :root.dark .sec-count,
+    :root.dark .kpi-mini-meta,
+    :root.dark .kpi-mini-explain,
+    :root.dark .dose,
+    :root.dark .sub,
+    :root.dark .pv-hero-eye,
+    :root.dark .home-greet-time,
+    :root.dark .home-ov-label,
+    :root.dark .home-ov-meta { color: var(--text-dim) !important; }
+
+    /* 內嵌 style 用 color:var(--navy) 等變數自己就會切，但硬色號要 override */
+    :root.dark [style*="color:#1F3D58"],
+    :root.dark [style*="color: #1F3D58"] { color: var(--text) !important; }
+    :root.dark [style*="color:#4A6580"] { color: var(--text-dim) !important; }
+    :root.dark [style*="color:#5A7388"] { color: var(--text-dim) !important; }
+    :root.dark [style*="color:#7E92A4"] { color: var(--text-muted) !important; }
+
+    /* 邊框 dashed/solid 在 dark 也要可見 */
+    :root.dark [style*="border-top:1px dashed"],
+    :root.dark [style*="border-bottom:1px dashed"],
+    :root.dark [style*="border:1px dashed"] { border-color: var(--border) !important; }
+    /* pill 顏色 — dark 模式下背景要可見 */
+    :root.dark .pill-ok { background: var(--green-soft); color: var(--green-deep); }
+    :root.dark .pill-warn { background: var(--amber-soft); color: var(--amber-deep); }
+    :root.dark .pill-rose { background: var(--rose-soft); color: var(--rose-deep); }
+    :root.dark .pill-mute { background: var(--bg-soft); color: var(--text-dim); }
+    :root.dark .pill-info { background: var(--accent-soft); color: var(--accent-deep); }
     /* 拼圖塊 dark mode — 用 screen blend 讓 pastel 在深底上發光，淡一點 */
     :root.dark .puzzle-bg-layer { mix-blend-mode: screen; opacity: 0.40; }
     /* 暖陰影 dark 改成深陰影 */
