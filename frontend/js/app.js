@@ -10964,12 +10964,11 @@ function _renderMobileMedList(meds) {
               : '<span class="pill pill-mute mono" style="background:var(--success-tint,#e6f4ec);color:var(--success,#3a8a5e);border-color:var(--success,#3a8a5e)">點一下打卡</span>';
             var sep = (idx < arr.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
             var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
-            var safeId = String(m.id || '').replace(/'/g, "\\'");
             return ''
-              + '<div class="med-list-row" role="button" tabindex="0"'
-              +   ' style="padding:10px 14px;cursor:pointer' + sep + '"'
-              +   ' onclick="tapMedTake(\'' + safeId + '\',\'' + s.key + '\')"'
-              +   ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();tapMedTake(\'' + safeId + '\',\'' + s.key + '\');}">'
+              + '<div class="med-list-row med-tap-row" role="button" tabindex="0"'
+              +   ' data-medid="' + escapeHtml(String(m.id || '')) + '"'
+              +   ' data-slot="' + escapeHtml(s.key) + '"'
+              +   ' style="padding:10px 14px;cursor:pointer' + sep + '">'
               +   '<div class="ico"><i data-lucide="pill"></i></div>'
               +   '<div>'
               +     '<div class="name">' + escapeHtml(m.name || '') + '</div>'
@@ -10985,6 +10984,24 @@ function _renderMobileMedList(meds) {
       thtml = '<div class="med-tip-card" style="background:var(--bg-soft);border-color:var(--border);color:var(--text-dim)"><i data-lucide="info"></i><span>沒有依時段排程的藥物</span></div>';
     }
     todayEl.innerHTML = thtml;
+
+    // 事件委派：所有 .med-tap-row 共用一個 handler，掛在容器上只掛一次。
+    // 避免在 HTML attribute 內嵌 inline JS（CodeQL js/html-constructed-from-input
+    // 會把那種寫法視為潛在 XSS sink）。data-* 屬性已被 escapeHtml 過。
+    if (!todayEl.dataset.tapWired) {
+      var onRowActivate = function(ev) {
+        var row = ev.target.closest && ev.target.closest('.med-tap-row');
+        if (!row || !todayEl.contains(row)) return;
+        if (ev.type === 'keydown' && ev.key !== 'Enter' && ev.key !== ' ') return;
+        if (ev.type === 'keydown') ev.preventDefault();
+        var medId = row.getAttribute('data-medid');
+        var slotKey = row.getAttribute('data-slot');
+        if (medId) tapMedTake(medId, slotKey || '');
+      };
+      todayEl.addEventListener('click', onRowActivate);
+      todayEl.addEventListener('keydown', onRowActivate);
+      todayEl.dataset.tapWired = '1';
+    }
 
     // 更新 5 / 8 進度
     var cntEl = document.getElementById('mobile-meds-count');
