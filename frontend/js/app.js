@@ -17852,7 +17852,72 @@ function reminders() {
   var permState = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
   var permLabel = ({ granted: '已允許', denied: '已封鎖', default: '尚未授權', unsupported: '此瀏覽器不支援' })[permState] || permState;
   var permColor = permState === 'granted' ? '#2ecc71' : (permState === 'denied' ? '#e74c3c' : '#f39c12');
-  return ''
+  var permPillCls = permState === 'granted' ? 'pill-ok' : (permState === 'denied' ? 'pill-rose' : 'pill-warn');
+
+  // ─── Mobile v11 block ───
+  var _mobileRemBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">提醒中心</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">吃藥／回診／檢查　到時間提醒你</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">站內通知一定收到；手機推播要先授權</div>'
+    +     '<div style="display:flex;gap:5px;margin-top:8px;position:relative;z-index:1;align-items:center">'
+    +       '<span class="pill ' + permPillCls + '"><i data-lucide="shield-check"></i>' + permLabel + '</span>'
+    +       '<button class="pv-btn" onclick="reminderEnablePush()" style="margin-top:0"><i data-lucide="bell-plus"></i> 啟用推播</button>'
+    +     '</div>'
+    +   '</div>'
+
+    // 通知中心 — 站內通知
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="inbox"></i> 站內通知</h3>'
+    +     '<span id="mobile-rem-inbox-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="reminderMarkAllRead()">全部已讀 <i data-lucide="check-check"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-rem-inbox" class="list-card" style="margin-bottom:12px">'
+    +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 我的提醒
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="list-checks"></i> 我的提醒</h3>'
+    +     '<span id="mobile-rem-list-count" class="sec-count">—</span>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="loadRemindersPage()">重新整理 <i data-lucide="refresh-cw"></i></button>'
+    +   '</div>'
+    +   '<div id="mobile-rem-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'
+    +     '<div class="card" style="padding:14px;color:var(--text-muted);font-size:11px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 新增提醒卡（mobile 簡化版）
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="plus-circle"></i> 新增提醒</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">'
+    +     '<input type="text" id="mobile-rem-title" placeholder="標題（必填）例如：早餐後血壓藥" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +     '<textarea id="mobile-rem-body" rows="2" placeholder="說明（可選）例如：白色 5mg" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical"></textarea>'
+    +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+    +       '<select id="mobile-rem-type" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;background:#fff">'
+    +         '<option value="medication">吃藥</option><option value="appointment">回診</option><option value="lab">檢查</option><option value="measurement">量測</option><option value="custom" selected>自訂</option>'
+    +       '</select>'
+    +       '<select id="mobile-rem-freq" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;background:#fff">'
+    +         '<option value="once" selected>單次</option><option value="daily">每天</option><option value="weekly">每週</option><option value="monthly">每月</option>'
+    +       '</select>'
+    +     '</div>'
+    +     '<input id="mobile-rem-when" type="datetime-local" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px" />'
+    +     '<button onclick="_mobileRemSubmit()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="save" style="width:13px;height:13px"></i> 建立提醒</button>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>提醒僅供協助記憶，不取代醫囑。請以醫師指示為主。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileRemBlock
+    + '<div class="desktop-only">'
     + '<div class="card">'
     + '  <h2><i data-lucide="bell-ring" style="width:20px;height:20px;vertical-align:middle"></i> 提醒通知</h2>'
     + '  <p style="margin-top:8px;color:var(--text-dim)">設定吃藥、回診、檢查等提醒，到時間會以站內通知或手機推播提醒你。</p>'
@@ -17939,7 +18004,98 @@ function reminders() {
     + '    <button class="secondary" onclick="loadRemindersPage()" style="padding:4px 12px;font-size:0.85rem">重新整理</button>'
     + '  </div>'
     + '  <div id="rem-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中…</p></div>'
-    + '</div>';
+    + '</div>'
+    + '</div>'; // close .desktop-only
+}
+
+// ─── mobile reminders helpers ───
+async function _mobileRemSubmit() {
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var title = (document.getElementById('mobile-rem-title') || {}).value || '';
+  if (!title.trim()) { showToast('請填提醒標題', 'warning'); return; }
+  var body = {
+    patient_id: pid,
+    reminder_type: (document.getElementById('mobile-rem-type') || {}).value || 'custom',
+    frequency: (document.getElementById('mobile-rem-freq') || {}).value || 'once',
+    title: title.trim(),
+    body: (document.getElementById('mobile-rem-body') || {}).value || '',
+    first_fire_at: (document.getElementById('mobile-rem-when') || {}).value || null,
+  };
+  try {
+    var res = await fetch(API + '/reminders/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(await _parseApiError(res));
+    showToast('已建立提醒', 'success');
+    document.getElementById('mobile-rem-title').value = '';
+    document.getElementById('mobile-rem-body').value = '';
+    reminderRefreshList();
+  } catch (e) {
+    showToast('建立失敗：' + (e.message || ''), 'error');
+  }
+}
+
+function _mobileRemSyncList() {
+  var box = document.getElementById('mobile-rem-list');
+  var cnt = document.getElementById('mobile-rem-list-count');
+  if (cnt) cnt.textContent = (_remindersList || []).length + ' 筆';
+  if (!box) return;
+  if (!_remindersList || !_remindersList.length) {
+    box.innerHTML = '<div class="card" style="padding:14px;color:var(--text-muted);font-size:11px;text-align:center">還沒有提醒，先在下方建立第一筆</div>';
+    return;
+  }
+  var typeLabel = { medication: '吃藥', appointment: '回診', lab: '檢查', measurement: '量測', custom: '自訂' };
+  var typePillCls = { medication: 'pill-teal', appointment: 'pill-info', lab: 'pill-warn', measurement: 'pill-info', custom: 'pill-mute' };
+  var freqLabel = { once: '單次', daily: '每天', weekly: '每週', monthly: '每月' };
+  box.innerHTML = _remindersList.map(function(r) {
+    var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+    var active = (r.active === true || r.active === 1);
+    var sid = String(r.id || '');
+    return ''
+      + '<div class="card" style="padding:11px 13px;position:relative;overflow:hidden' + (active ? '' : ';opacity:0.55') + '">'
+      +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+      +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'
+      +     '<span class="pill ' + (typePillCls[r.reminder_type] || 'pill-mute') + '">' + (typeLabel[r.reminder_type] || r.reminder_type) + '</span>'
+      +     '<span class="pill pill-mute">' + (freqLabel[r.frequency] || r.frequency) + '</span>'
+      +     (active ? '' : '<span class="pill pill-mute">已停用</span>')
+      +   '</div>'
+      +   '<div style="font-size:12.5px;font-weight:600;color:var(--navy);line-height:1.4">' + escapeHtml(r.title || '') + '</div>'
+      +   '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:3px">下次 · ' + escapeHtml(next) + '</div>'
+      +   (r.body ? '<div style="font-size:11px;color:var(--text-dim);margin-top:5px;line-height:1.5">' + escapeHtml(r.body) + '</div>' : '')
+      +   '<div style="display:flex;gap:5px;margin-top:8px">'
+      +     '<button data-action="toggle" data-id="' + sid + '" data-active="' + (active?'1':'0') + '" style="border:1px solid var(--border);background:#fff;color:var(--text-dim);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer">' + (active ? '停用' : '啟用') + '</button>'
+      +     '<button data-action="delete" data-id="' + sid + '" style="border:1px solid var(--border);background:#fff;color:var(--rose-deep);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer">刪除</button>'
+      +   '</div>'
+      + '</div>';
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _mobileRemSyncInbox() {
+  var box = document.getElementById('mobile-rem-inbox');
+  var cnt = document.getElementById('mobile-rem-inbox-count');
+  if (cnt) cnt.textContent = ((_remindersInbox || []).filter(function(i) { return !i.read_at; }).length) + ' 未讀';
+  if (!box) return;
+  if (!_remindersInbox || !_remindersInbox.length) {
+    box.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">沒有通知</div>';
+    return;
+  }
+  box.innerHTML = _remindersInbox.slice(0, 8).map(function(i) {
+    var t = i.created_at ? new Date(i.created_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    var unread = !i.read_at;
+    return ''
+      + '<div class="list-row" style="grid-template-columns:14px 1fr auto;padding:10px 12px;align-items:flex-start" data-action="read" data-id="' + escapeHtml(String(i.id || '')) + '">'
+      +   '<span style="width:8px;height:8px;border-radius:50%;background:' + (unread ? 'var(--accent)' : 'transparent') + ';margin-top:5px"></span>'
+      +   '<div>'
+      +     '<div class="name" style="font-weight:' + (unread ? '600' : '500') + '">' + escapeHtml(i.title || '') + '</div>'
+      +     (i.body ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;line-height:1.5">' + escapeHtml(i.body) + '</div>' : '')
+      +   '</div>'
+      +   '<span class="time">' + escapeHtml(t) + '</span>'
+      + '</div>';
+  }).join('');
 }
 
 function reminderToggleSource() {
@@ -18072,9 +18228,35 @@ function _remindersBindDelegated() {
       }
     });
   }
+  // mobile-only mirrors
+  var mListEl = document.getElementById('mobile-rem-list');
+  if (mListEl && !mListEl.dataset.bound) {
+    mListEl.dataset.bound = '1';
+    mListEl.addEventListener('click', function(e) {
+      var btn = e.target.closest && e.target.closest('[data-action]');
+      if (!btn || !mListEl.contains(btn)) return;
+      var id = btn.getAttribute('data-id');
+      var action = btn.getAttribute('data-action');
+      if (action === 'toggle') reminderToggleActive(id, btn.getAttribute('data-active') !== '1');
+      else if (action === 'delete') reminderDelete(id);
+    });
+  }
+  var mInboxEl = document.getElementById('mobile-rem-inbox');
+  if (mInboxEl && !mInboxEl.dataset.bound) {
+    mInboxEl.dataset.bound = '1';
+    mInboxEl.addEventListener('click', function(e) {
+      var btn = e.target.closest && e.target.closest('[data-action]');
+      if (!btn || !mInboxEl.contains(btn)) return;
+      if (btn.getAttribute('data-action') === 'read') {
+        reminderMarkRead(btn.getAttribute('data-id'));
+      }
+    });
+  }
 }
 
 function reminderRenderList() {
+  // mobile mirror first
+  if (typeof _mobileRemSyncList === 'function') _mobileRemSyncList();
   var el = document.getElementById('rem-list');
   if (!el) return;
   _remClear(el);
@@ -18140,6 +18322,7 @@ function reminderRefreshInbox() {
 }
 
 function reminderRenderInbox(unread) {
+  if (typeof _mobileRemSyncInbox === 'function') _mobileRemSyncInbox();
   var el = document.getElementById('rem-inbox-list');
   if (!el) return;
   _remClear(el);
