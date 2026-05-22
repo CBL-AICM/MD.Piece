@@ -9628,9 +9628,9 @@ function _renderMedTypesFilterBar(meds) {
 
   bar.innerHTML = chips.map(function(c) {
     var active = c.key === _medTypesFilter ? ' mtl-chip-active' : '';
-    var key = c.key.replace(/'/g, "\\'");
     return '<button type="button" class="mtl-chip' + active + '"'
-      + ' onclick="_setMedTypesFilter(\'' + key + '\')"'
+      + ' data-key="' + escapeHtml(c.key) + '"'
+      + ' onclick="_setMedTypesFilter(this.dataset.key)"'
       + ' aria-pressed="' + (c.key === _medTypesFilter) + '">'
       + escapeHtml(c.label) + '<span class="mtl-chip-num">' + c.count + '</span>'
       + '</button>';
@@ -9709,16 +9709,15 @@ function _renderMedTypesList(meds) {
       +   '<div class="mtl-metric mtl-metric-sm"><div class="mtl-metric-lbl">' + _T('meds.types.metric.logs') + '</div><div class="mtl-metric-val">' + doses + '</div></div>'
       + '</div>';
 
-    var safeName = String(med.name || '').replace(/'/g, "\\'");
     var actions = ''
       + '<div class="mtl-actions">'
-      +   '<button type="button" class="mtl-action mtl-action-primary" onclick="closeMedTypesSheet(); openMedDetail(\'' + med.id + '\')">'
+      +   '<button type="button" class="mtl-action mtl-action-primary" data-id="' + escapeHtml(med.id) + '" onclick="closeMedTypesSheet(); openMedDetail(this.dataset.id)">'
       +     '<i data-lucide="bar-chart-3" style="width:13px;height:13px"></i> ' + _T('meds.types.action.detail')
       +   '</button>'
       +   '<button type="button" class="mtl-action" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)">'
       +     '<i data-lucide="book-open" style="width:13px;height:13px"></i> ' + _T('meds.types.action.encyclopedia')
       +   '</button>'
-      +   '<button type="button" class="mtl-action" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\'); closeMedTypesSheet();">'
+      +   '<button type="button" class="mtl-action" data-id="' + escapeHtml(med.id) + '" data-name="' + escapeHtml(med.name || '') + '" onclick="showEffectForm(this.dataset.id, this.dataset.name); closeMedTypesSheet();">'
       +     '<i data-lucide="star" style="width:13px;height:13px"></i> ' + _T('meds.types.action.effect')
       +   '</button>'
       + '</div>';
