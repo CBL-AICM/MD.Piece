@@ -445,11 +445,12 @@ def get_daily_article(days: int = 7):
     all_articles = education_content.list_articles()
     if not all_articles:
         feed_items = news_feed.fetch_news(limit=6)
+        celebrity_pool = news_feed.fetch_news(limit=50)
         return {
             "today": {c: None for c in DAILY_CATEGORIES},
             "archive": [],
             "news_feed": feed_items,
-            "celebrity_stories": celebrity_health.extract_celebrity_stories(feed_items),
+            "celebrity_stories": celebrity_health.extract_celebrity_stories(celebrity_pool),
         }
 
     by_category: dict[str, list] = {c: [] for c in DAILY_CATEGORIES}
@@ -472,6 +473,9 @@ def get_daily_article(days: int = 7):
         return pool[idx]
 
     feed_items = news_feed.fetch_news(limit=6)
+    # 給名人健康抽取一個比較大的池子（共用快取，不會多 fetch）；
+    # 顯示用的 news_feed 還是用 6 則，避免畫面被新聞塞爆。
+    celebrity_pool = news_feed.fetch_news(limit=50)
 
     def news_card_from_feed(d: "date", offset: int = 0) -> Optional[dict]:
         """把 RSS item 包成 article-shaped dict，當作那天的 news 故事。"""
@@ -534,7 +538,7 @@ def get_daily_article(days: int = 7):
         "today": today_picks,
         "archive": archive,
         "news_feed": feed_items,
-        "celebrity_stories": celebrity_health.extract_celebrity_stories(feed_items),
+        "celebrity_stories": celebrity_health.extract_celebrity_stories(celebrity_pool),
     }
 
 
