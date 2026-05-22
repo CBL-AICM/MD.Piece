@@ -17460,7 +17460,54 @@ function drugSearch() {
   // 若是從個人用藥清單跳過來，預填查詢字串
   var prefill = window._drugSearchPrefill || "";
   window._drugSearchPrefill = "";
-  return (
+
+  var _mobileDrugBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">藥物百科</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">查藥名 — 副作用、風險、用法</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">中文 / 英文 / 商品名都可以；結果由 AI 整理僅供衛教參考</div>'
+    +   '</div>'
+
+    // 搜尋列
+    +   '<div class="card" style="padding:10px 12px;display:flex;gap:6px;align-items:center;margin-bottom:10px">'
+    +     '<i data-lucide="search" style="width:16px;height:16px;color:var(--text-muted)"></i>'
+    +     '<input id="mobile-drug-search-input" type="text" placeholder="例：普拿疼、Lipitor" value="' + escapeHtml(prefill) + '" onkeydown="if(event.key===\'Enter\')_mobileDrugSearch()" style="flex:1;border:none;outline:none;font-size:13px;padding:6px;background:transparent" />'
+    +     '<button onclick="_mobileDrugSearch()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">查詢</button>'
+    +   '</div>'
+
+    +   '<label class="ocr-hero-btn" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleDrugPhoto(this)" />'
+    +     '<div style="width:40px;height:40px;border-radius:10px;background:var(--amber-deep,#9A6A1F);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1">'
+    +       '<i data-lucide="camera" style="width:18px;height:18px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1;position:relative;z-index:1">'
+    +       '<div style="font-size:13.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">拍藥盒 / 藥袋 <i data-lucide="arrow-right" style="width:12px;height:12px"></i></div>'
+    +       '<div style="font-size:11px;color:var(--text-dim);margin-top:1px">自動辨識藥名並一筆筆查</div>'
+    +     '</div>'
+    +   '</label>'
+
+    +   '<div id="mobile-drug-result" style="margin-bottom:12px"></div>'
+
+    // 熱門查詢
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="trending-up"></i> 熱門查詢</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-drug-trending" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'
+    +     '<span style="color:var(--text-muted);font-size:11px">載入中…</span>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>實際處方與劑量請以醫師、藥師說明為準。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileDrugBlock + (
+    '<div class="desktop-only">' +
     '<div class="card">' +
       '<h2><i data-lucide="search" style="width:20px;height:20px;vertical-align:middle"></i> 藥物百科查詢</h2>' +
       '<p style="margin-top:8px;color:var(--text-dim)">輸入藥名（中文 / 英文 / 商品名）查詢副作用、風險、用法與基礎衛教。</p>' +
@@ -17488,8 +17535,17 @@ function drugSearch() {
       '<h3><i data-lucide="trending-up" style="width:18px;height:18px;vertical-align:middle"></i> 熱門查詢</h3>' +
       '<p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">最常被查詢的藥物（從快取統計）</p>' +
       '<div id="drug-trending" style="margin-top:8px"><p style="color:var(--text-muted)">載入中…</p></div>' +
+    '</div>' +
     '</div>'
   );
+}
+
+// mobile drug search helpers
+function _mobileDrugSearch() {
+  var n = document.getElementById('mobile-drug-search-input');
+  var dn = document.getElementById('drug-search-input');
+  if (dn && n) dn.value = n.value;
+  if (typeof runDrugSearch === 'function') runDrugSearch();
 }
 
 function loadDrugSearchPage() {
@@ -17523,6 +17579,16 @@ function loadDrugSearchPage() {
       });
       html += '</div>';
       el.innerHTML = html;
+      // mobile mirror
+      var mEl = document.getElementById('mobile-drug-trending');
+      if (mEl) {
+        mEl.innerHTML = items.map(function(it) {
+          var rawQuery = it.name_zh || it.name_en || '';
+          var label = escapeHtml(it.name_zh || it.name_en || '未命名');
+          return '<button class="chip" data-q="' + escapeHtml(rawQuery) + '" onclick="quickDrugSearch(this.dataset.q)">'
+            + label + '<span style="color:var(--text-muted);margin-left:3px;font-size:9.5px">(' + (it.query_count || 0) + ')</span></button>';
+        }).join('');
+      }
     })
     .catch(function() {
       var el = document.getElementById('drug-trending');
@@ -17559,17 +17625,43 @@ function runDrugSearch() {
 
 function renderDrugSearchResult(data) {
   var box = document.getElementById('drug-search-result');
-  if (!box) return;
-  if (!data || data.matched === false) {
-    box.innerHTML =
-      '<div style="padding:16px;text-align:center">' +
-        '<i data-lucide="search-x" style="width:32px;height:32px;color:var(--text-muted)"></i>' +
-        '<p style="margin-top:8px;color:var(--text-dim)">' + escapeHtml((data && data.disclaimer) || '無法辨識此藥名，請確認拼字或嘗試英文藥名。') + '</p>' +
-      '</div>';
-    if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
-    return;
+  var mBox = document.getElementById('mobile-drug-result');
+  var notMatched = !data || data.matched === false;
+  if (notMatched) {
+    var emptyHtml = ''
+      + '<div style="padding:16px;text-align:center">'
+      +   '<i data-lucide="search-x" style="width:32px;height:32px;color:var(--text-muted)"></i>'
+      +   '<p style="margin-top:8px;color:var(--text-dim)">' + escapeHtml((data && data.disclaimer) || '無法辨識此藥名，請確認拼字或嘗試英文藥名。') + '</p>'
+      + '</div>';
+    if (box) box.innerHTML = emptyHtml;
+    if (mBox) mBox.innerHTML = '<div class="card" style="padding:16px;text-align:center"><i data-lucide="search-x" style="width:24px;height:24px;color:var(--text-muted)"></i><p style="margin-top:6px;color:var(--text-dim);font-size:11.5px">' + escapeHtml((data && data.disclaimer) || '無法辨識此藥名') + '</p></div>';
+  } else {
+    if (box) box.innerHTML = _renderDrugCard(data);
+    if (mBox) {
+      var displayName = (data.name_zh && data.name_en) ? data.name_zh + ' (' + data.name_en + ')' : (data.name_zh || data.name_en || '未命名');
+      var aliases = Array.isArray(data.aliases) ? data.aliases : [];
+      var se = data.side_effects || {};
+      mBox.innerHTML = ''
+        + '<div class="card" style="padding:14px;position:relative;overflow:hidden">'
+        +   '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.16"><use href="#puzzle-bg-blue-teal"/></svg>'
+        +   '<div style="position:relative;z-index:1">'
+        +     '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        +       '<div style="width:34px;height:34px;border-radius:9px;background:var(--accent-tint);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="pill" style="width:17px;height:17px"></i></div>'
+        +       '<div style="flex:1"><div style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.3">' + escapeHtml(displayName) + '</div>'
+        +         (data.cached ? '<span class="pill pill-mute">快取</span>' : '<span class="pill pill-info">AI 即時</span>')
+        +       '</div>'
+        +     '</div>'
+        +     (aliases.length ? '<div style="font-size:10.5px;color:var(--text-dim);margin-bottom:6px">別名：' + aliases.slice(0, 4).map(escapeHtml).join('、') + '</div>' : '')
+        +     (data.use_for ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">用於</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.use_for) + '</div></div>' : '')
+        +     (se.common && se.common.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">常見副作用</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + se.common.slice(0, 6).map(function(s){return '<span class="pill pill-warn">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+        +     (se.serious && se.serious.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--rose-deep)">嚴重副作用 — 立即就醫</strong><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + se.serious.slice(0, 6).map(function(s){return '<span class="pill pill-rose">' + escapeHtml(s) + '</span>';}).join('') + '</div></div>' : '')
+        +     (data.dosage ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">用法</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.dosage) + '</div></div>' : '')
+        +     (data.precautions ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">注意事項</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.precautions) + '</div></div>' : '')
+        +     (data.disclaimer ? '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.5">' + escapeHtml(data.disclaimer) + '</div>' : '')
+        +   '</div>'
+        + '</div>';
+    }
   }
-  box.innerHTML = _renderDrugCard(data);
   if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
 }
 
