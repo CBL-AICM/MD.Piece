@@ -15793,8 +15793,100 @@ function renderBasicNutrients() {
 }
 
 function diet() {
-  return ''
-    + '<section class="diet-wrap">'
+  // ─── Mobile v11 block ───
+  var _mobileDietBlock = ''
+    + '<div class="mobile-only">'
+    +   '<div class="pv-hero" style="margin-bottom:12px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
+    +     '<div class="pv-hero-eye">飲食 · 三餐打卡</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">今天該吃什麼，避開什麼？</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">看你的病史，自動列出今日營養目標 + 特別注意</div>'
+    +   '</div>'
+
+    // 今日營養目標 — 3 顆 KPI 卡
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="target"></i> 今日營養目標</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="kpi-row" id="mobile-diet-targets" style="margin-bottom:10px">'
+    +     '<div class="kpi-mini t-rose"><div class="kpi-mini-label"><i data-lucide="beef"></i>蛋白質</div><div class="kpi-mini-val" id="mobile-diet-protein">—</div><div class="kpi-mini-meta">g / 日</div></div>'
+    +     '<div class="kpi-mini t-blue"><div class="kpi-mini-label"><i data-lucide="glass-water"></i>水分</div><div class="kpi-mini-val" id="mobile-diet-water">—</div><div class="kpi-mini-meta">ml / 日</div></div>'
+    +     '<div class="kpi-mini t-teal"><div class="kpi-mini-label"><i data-lucide="leaf"></i>纖維</div><div class="kpi-mini-val" id="mobile-diet-fiber">—</div><div class="kpi-mini-meta">g / 日</div></div>'
+    +   '</div>'
+    +   '<div class="card" style="padding:10px 14px;margin-bottom:14px">'
+    +     '<ul id="mobile-diet-tips" style="margin:0;padding-left:18px;font-size:11.5px;color:var(--text-dim);line-height:1.7"></ul>'
+    +   '</div>'
+
+    // 你要特別注意 — warning card
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="alert-triangle"></i> 你要特別注意</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-diet-warnings" style="margin-bottom:12px">'
+    +     '<div class="card" style="padding:12px;color:var(--text-muted);font-size:11px;text-align:center">載入中…</div>'
+    +   '</div>'
+
+    // 吃什麼神器 quick action
+    +   '<button class="ocr-hero-btn" onclick="dietPickMeal(false)" style="margin-bottom:10px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div style="width:44px;height:44px;border-radius:11px;background:var(--amber-deep,#9A6A1F);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1">'
+    +       '<i data-lucide="dices" style="width:20px;height:20px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1;position:relative;z-index:1">'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">幫我抽一道 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">依你的病史和偏好挑一道菜（下方可細調篩選）</div>'
+    +     '</div>'
+    +   '</button>'
+
+    // 餐次推薦
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="salad"></i> 今天吃什麼</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="meds-period-card" style="margin-bottom:12px">'
+    +     '<div class="meds-period-head morning"><i data-lucide="sun"></i> 餐次推薦</div>'
+    +     '<div id="mobile-diet-suggestions" style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;min-height:32px">'
+    +       '<span style="color:var(--text-muted);font-size:11px">載入中…</span>'
+    +     '</div>'
+    +   '</div>'
+
+    // 打卡今天吃了什麼 — 用 card form 樣式
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="pencil"></i> 打卡今天吃了什麼</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">'
+    +     '<div style="display:flex;gap:5px">'
+    +       ['breakfast','lunch','dinner','snack'].map(function(m, i) {
+              return '<button class="chip' + (m==='breakfast'?' active':'') + '" data-mobile-log-meal="' + m + '" onclick="_mobileDietLogMeal(\'' + m + '\')" style="flex:1">'
+                + DIET_MEAL_LABEL[m] + '</button>';
+            }).join('')
+    +     '</div>'
+    +     '<textarea id="mobile-diet-log-foods" rows="2" maxlength="200" placeholder="例：白飯、滷雞腿、燙青菜" style="border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;resize:vertical"></textarea>'
+    +     '<input type="text" id="mobile-diet-log-note" maxlength="80" placeholder="備註（選填）" style="border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:12px" />'
+    +     '<button onclick="_mobileDietSubmit()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px">'
+    +       '<i data-lucide="check" style="width:13px;height:13px"></i> 送出打卡'
+    +     '</button>'
+    +     '<div id="mobile-diet-log-status" style="font-size:11px;color:var(--text-muted)"></div>'
+    +   '</div>'
+
+    // 今日已記錄
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="list"></i> 今日已記錄</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-diet-today" class="list-card">'
+    +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">尚無紀錄</div>'
+    +   '</div>'
+
+    +   '<div class="disclaimer-footer">'
+    +     '<i data-lucide="info"></i>'
+    +     '<span>飲食建議僅供參考，特殊疾病請依醫師／營養師指示為主。</span>'
+    +   '</div>'
+    + '</div>';
+
+  return _mobileDietBlock
+    + '<section class="diet-wrap desktop-only">'
     +   '<header class="diet-head">'
     +     '<h2><i data-lucide="utensils-crossed" style="width:22px;height:22px"></i> 飲食紀錄</h2>'
     +     '<p>看今天該吃什麼、避開什麼，順便打卡記下三餐。</p>'
@@ -16373,38 +16465,90 @@ function renderDietTargets(t, tips) {
   if (tipsEl) {
     tipsEl.innerHTML = (tips || []).map(function(x) { return '<li>' + chatEscape(x) + '</li>'; }).join('');
   }
+  // mobile sync
+  var mp = document.getElementById('mobile-diet-protein');
+  var mw = document.getElementById('mobile-diet-water');
+  var mf = document.getElementById('mobile-diet-fiber');
+  if (mp) mp.textContent = t.protein_g || '—';
+  if (mw) mw.textContent = t.water_ml || '—';
+  if (mf) mf.textContent = t.fiber_g || '—';
+  var mtips = document.getElementById('mobile-diet-tips');
+  if (mtips) {
+    mtips.innerHTML = (tips || []).slice(0, 4).map(function(x) { return '<li>' + chatEscape(x) + '</li>'; }).join('');
+  }
 }
 
 function renderDietWarnings(warnings) {
   var box = document.getElementById('diet-warnings');
-  if (!box) return;
-  if (!warnings || !warnings.length) {
-    box.innerHTML = '<p class="diet-empty">目前沒有特別需要避開的食物。如果有新的診斷，記得更新病歷。</p>';
-    return;
+  if (box) {
+    if (!warnings || !warnings.length) {
+      box.innerHTML = '<p class="diet-empty">目前沒有特別需要避開的食物。如果有新的診斷，記得更新病歷。</p>';
+    } else {
+      box.innerHTML = warnings.map(function(w) {
+        var avoid = (w.avoid || []).map(function(f) { return '<span class="diet-chip-bad">' + chatEscape(f) + '</span>'; }).join('');
+        return ''
+          + '<div class="diet-warn">'
+          +   '<div class="diet-warn-head">' + chatEscape(w.disease || '') + '</div>'
+          +   '<div class="diet-warn-avoid">' + avoid + '</div>'
+          +   (w.reason ? '<div class="diet-warn-reason">' + chatEscape(w.reason) + '</div>' : '')
+          + '</div>';
+      }).join('');
+    }
   }
-  box.innerHTML = warnings.map(function(w) {
-    var avoid = (w.avoid || []).map(function(f) { return '<span class="diet-chip-bad">' + chatEscape(f) + '</span>'; }).join('');
-    return ''
-      + '<div class="diet-warn">'
-      +   '<div class="diet-warn-head">' + chatEscape(w.disease || '') + '</div>'
-      +   '<div class="diet-warn-avoid">' + avoid + '</div>'
-      +   (w.reason ? '<div class="diet-warn-reason">' + chatEscape(w.reason) + '</div>' : '')
-      + '</div>';
-  }).join('');
+  // mobile sync
+  var mbox = document.getElementById('mobile-diet-warnings');
+  if (mbox) {
+    if (!warnings || !warnings.length) {
+      mbox.innerHTML = '<div class="card" style="padding:12px 14px;color:var(--teal-deep);font-size:11.5px;background:var(--teal-soft);border-color:rgba(47,131,120,0.28)">'
+        + '<i data-lucide="check-circle" style="width:13px;height:13px;vertical-align:middle"></i> 沒有特別需要避開的食物</div>';
+    } else {
+      mbox.innerHTML = warnings.map(function(w) {
+        var avoid = (w.avoid || []).slice(0, 8).map(function(f) {
+          return '<span class="pill pill-rose">' + chatEscape(f) + '</span>';
+        }).join('');
+        return ''
+          + '<div class="card" style="padding:11px 13px;margin-bottom:8px;position:relative;overflow:hidden">'
+          +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
+          +   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+          +     '<i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--rose-deep)"></i>'
+          +     '<strong style="font-size:12.5px;color:var(--navy)">' + chatEscape(w.disease || '') + '</strong>'
+          +   '</div>'
+          +   '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' + avoid + '</div>'
+          +   (w.reason ? '<div style="font-size:10.5px;color:var(--text-dim);line-height:1.5">' + chatEscape(w.reason) + '</div>' : '')
+          + '</div>';
+      }).join('');
+    }
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderDietSuggestions(s) {
   var list = document.getElementById('diet-suggest-list');
-  if (!list) return;
   var foods = (s && s[_dietSelectedMeal]) || [];
-  if (!foods.length) {
-    list.innerHTML = '<p class="diet-empty">尚無建議</p>';
-    return;
+  if (list) {
+    if (!foods.length) {
+      list.innerHTML = '<p class="diet-empty">尚無建議</p>';
+    } else {
+      list.innerHTML = foods.map(function(f) {
+        return '<span class="diet-chip-good">' + chatEscape(f) + '</span>';
+      }).join('');
+    }
   }
-  list.innerHTML = foods.map(function(f) {
-    return '<span class="diet-chip-good">' + chatEscape(f) + '</span>';
-  }).join('');
+  // mobile sync — 顯示所有餐次
+  var mlist = document.getElementById('mobile-diet-suggestions');
+  if (mlist) {
+    var all = [];
+    ['breakfast','lunch','dinner','snack'].forEach(function(m) {
+      ((s && s[m]) || []).slice(0, 3).forEach(function(f) { all.push(f); });
+    });
+    if (!all.length) {
+      mlist.innerHTML = '<span style="color:var(--text-muted);font-size:11px">尚無建議</span>';
+    } else {
+      mlist.innerHTML = all.map(function(f) {
+        return '<span class="pill pill-teal">' + chatEscape(f) + '</span>';
+      }).join('');
+    }
+  }
 }
 
 function dietSwitchMeal(m) {
@@ -16422,6 +16566,44 @@ function dietPickLogMeal(m) {
   document.querySelectorAll('#diet-log-meal-pick .diet-log-meal').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-log-meal') === m);
   });
+}
+
+// mobile-only helpers
+function _mobileDietLogMeal(m) {
+  _dietLogMeal = m;
+  document.querySelectorAll('[data-mobile-log-meal]').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-mobile-log-meal') === m);
+  });
+}
+async function _mobileDietSubmit() {
+  var pid = getStablePatientId();
+  if (!pid) { showToast('請先登入', 'warning'); return; }
+  var foodsEl = document.getElementById('mobile-diet-log-foods');
+  var noteEl = document.getElementById('mobile-diet-log-note');
+  var statusEl = document.getElementById('mobile-diet-log-status');
+  var foods = (foodsEl && foodsEl.value || '').trim();
+  if (!foods) { showToast('請填吃了什麼', 'warning'); return; }
+  var note = (noteEl && noteEl.value || '').trim();
+  if (statusEl) { statusEl.textContent = '送出中…'; statusEl.style.color = 'var(--text-muted)'; }
+  try {
+    var res = await fetch(API + '/diet/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
+      body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.detail || '送出失敗');
+    }
+    if (foodsEl) foodsEl.value = '';
+    if (noteEl) noteEl.value = '';
+    if (statusEl) { statusEl.textContent = '已記錄 ' + DIET_MEAL_LABEL[_dietLogMeal]; statusEl.style.color = 'var(--teal-deep)'; }
+    showToast('飲食打卡完成', 'success');
+    fetchDietTodayRecords();
+    fetchDietWeekly();
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = '送出失敗：' + (e.message || ''); statusEl.style.color = 'var(--rose-deep)'; }
+  }
 }
 
 async function dietSubmitLog() {
@@ -16504,6 +16686,27 @@ function fetchDietTodayRecords() {
           +   '<span class="diet-record-time">' + t + '</span>'
           + '</div>';
       }).join('');
+      // mobile sync
+      var mbox = document.getElementById('mobile-diet-today');
+      if (mbox) {
+        if (!rows.length) {
+          mbox.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">今天還沒有紀錄</div>';
+        } else {
+          var mealEmoji = { breakfast: '🌅', lunch: '🌞', dinner: '🌙', snack: '🍪' };
+          mbox.innerHTML = rows.map(function(r) {
+            var t = new Date(r.eaten_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+            return ''
+              + '<div class="list-row" style="grid-template-columns:30px 1fr auto">'
+              +   '<span style="font-size:16px">' + (mealEmoji[r.meal_type] || '🍽') + '</span>'
+              +   '<div>'
+              +     '<div class="name">' + chatEscape(r.foods || '') + '</div>'
+              +     (r.note ? '<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">' + chatEscape(r.note) + '</div>' : '')
+              +   '</div>'
+              +   '<span class="time">' + t + '</span>'
+              + '</div>';
+          }).join('');
+        }
+      }
     })
     .catch(function(e) {
       console.error('[diet] fetch today records failed:', e);
