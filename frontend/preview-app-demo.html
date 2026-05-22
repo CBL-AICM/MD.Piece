@@ -263,6 +263,50 @@
 
     /* 不要 text-muted 太淡 — bump 對比 */
     :root.dark { --text-muted: #B5C5D6; }
+
+    /* ===== 修白底白字 CTA 按鈕 =====
+       問題：CTA 用 background: var(--navy)，但 dark 我把 navy 設成 white
+       → 變成白底白字。所有用 var(--navy) 當底色的 button 改用 accent 鮮藍 */
+    :root.dark .pv-btn,
+    :root.dark .care-chip.active {
+      background: var(--accent) !important;
+      color: #FFFFFF !important;
+      border-color: var(--accent) !important;
+    }
+    :root.dark .pp-btn.active {
+      background: var(--accent) !important;
+      color: #FFFFFF !important;
+      border-color: var(--accent) !important;
+    }
+
+    /* 拍藥袋 hero CTA 漸層 — light 和 dark 各自的 gradient */
+    .ocr-hero-btn {
+      background: linear-gradient(135deg, var(--accent-tint) 0%, #fff 60%, var(--teal-tint) 100%);
+    }
+    :root.dark .ocr-hero-btn {
+      background: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-mid) 50%, var(--teal-soft) 100%) !important;
+    }
+
+    /* 同類：任何 inline linear-gradient 含 #fff 在中間的 都壓深 */
+    :root.dark [style*="#fff 60%"],
+    :root.dark [style*="#fff 65%"],
+    :root.dark [style*="#fff 70%"] {
+      background: var(--bg-mid) !important;
+    }
+
+    /* ===== phone-status 跟 phone-screen 強制深底 =====
+       (10:30 status bar 區域不要白) */
+    :root.dark .phone-status,
+    :root.dark .phone-screen,
+    :root.dark .phone { background: var(--bg) !important; color: var(--text); }
+    :root.dark .phone-status { color: var(--text-dim) !important; }
+    :root.dark .phone-status .lucide { color: var(--text-dim) !important; }
+
+    /* ===== home-avatar 圓形頭像背景白？ — 改 accent ===== */
+    :root.dark .home-avatar {
+      background: var(--accent) !important;
+      color: #FFFFFF !important;
+    }
     /* 拼圖塊 dark mode — 用 screen blend 讓 pastel 在深底上發光，淡一點 */
     :root.dark .puzzle-bg-layer { mix-blend-mode: screen; opacity: 0.40; }
     /* 暖陰影 dark 改成深陰影 */
@@ -1205,7 +1249,7 @@
       <div class="ph-body">
 
         <!-- 拍藥袋 — 大顆 CTA 放最上面 -->
-        <button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 14px;background:linear-gradient(135deg,var(--accent-tint) 0%,#fff 60%,var(--teal-tint) 100%);border:1.5px solid var(--border);border-radius:14px;margin-bottom:10px;text-align:left;position:relative;overflow:hidden;box-shadow:0 4px 14px -8px rgba(74,57,40,0.12)">
+        <button class="ocr-hero-btn" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 14px;border:1.5px solid var(--border);border-radius:14px;margin-bottom:10px;text-align:left;position:relative;overflow:hidden;box-shadow:0 4px 14px -8px rgba(74,57,40,0.12)">
           <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>
           <div style="width:44px;height:44px;border-radius:11px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;box-shadow:0 3px 10px -3px rgba(74,144,194,0.40)">
             <i data-lucide="camera" style="width:22px;height:22px"></i>
