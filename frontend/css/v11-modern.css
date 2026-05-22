@@ -352,7 +352,11 @@ body.theme-modern .med-customize-row .actual strong { color: var(--navy); }
 
 /* ─── topbar / tabbar 對齊 v11 demo 視覺 ─────────────────────────── */
 
-/* 隱藏不在 demo 的元素：A+ 字級切換、⚙️ 設定按鈕 */
+/* 隱藏不在 demo 的元素：A+ 字級切換、⚙️ 設定按鈕（多層 selector 確保贏所有 specificity 戰）*/
+html body.theme-modern .topbar .app-elder-toggle,
+html body.theme-modern .topbar .app-settings-btn,
+html body.theme-modern #app-elder-toggle,
+html body.theme-modern #app-settings-btn,
 body.theme-modern .app-elder-toggle,
 body.theme-modern .app-settings-btn { display: none !important; }
 
@@ -420,18 +424,129 @@ body.theme-modern .mobile-tabbar .mtab[data-active="true"],
 body.theme-modern .mobile-tabbar .mtab.active {
   color: var(--accent-deep, #2F6B96) !important;
 }
-/* FAB 藍色，不再是金色 */
-body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-core {
-  background: var(--accent, #4A90C2) !important;
+/* FAB 藍色，不再是金色（多層 selector 確保贏 #11622 .mtab.mtab-fab .mtab-fab-core 規則）*/
+html body.theme-modern nav#mobile-tabbar .mtab.mtab-fab .mtab-fab-core,
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-core,
+body.theme-modern .mtab.mtab-fab .mtab-fab-core {
+  background: #4A90C2 !important;
   color: #fff !important;
-  box-shadow: 0 6px 18px -6px rgba(74,144,194,0.55) !important;
+  border-color: #4A90C2 !important;
+  box-shadow: 0 6px 18px -6px rgba(74,144,194,0.55), inset 1px 1px 0 rgba(255,255,255,0.5) !important;
 }
-body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-ring {
-  background: rgba(74,144,194,0.15) !important;
+html body.theme-modern nav#mobile-tabbar .mtab.mtab-fab .mtab-fab-ring,
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-ring,
+body.theme-modern .mtab.mtab-fab .mtab-fab-ring {
+  background: rgba(74,144,194,0.12) !important;
   border-color: rgba(74,144,194,0.30) !important;
+  box-shadow: 0 0 0 6px #F7F1E5 !important;
 }
-body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-label {
-  color: var(--accent-deep, #2F6B96) !important;
+html body.theme-modern nav#mobile-tabbar .mtab.mtab-fab .mtab-fab-label,
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-label,
+body.theme-modern .mtab.mtab-fab .mtab-fab-label {
+  color: #2F6B96 !important;
+}
+
+/* ─── 字體層次：不要全 Noto Sans TC 死板，三套字交叉用 ─────────────── */
+
+/* 1. 早安卡名字用 Cormorant italic — 有手寫筆觸感 */
+body.theme-modern .home-greet-title {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 22px !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.25 !important;
+}
+/* 名字部分（最後一段）可以更大膽 */
+body.theme-modern .home-greet-title strong,
+body.theme-modern .home-greet-name {
+  font-weight: 600 !important;
+  color: var(--navy, #1F3D58) !important;
+}
+
+/* 2. KPI 大數值 — Cormorant italic（不要全部冷冰冰的等寬字）*/
+body.theme-modern .kpi-mini-val,
+body.theme-modern .vital-kpi-val,
+body.theme-modern .home-kpi-val {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 600 !important;
+  font-size: 28px !important;
+  letter-spacing: -0.02em !important;
+  color: var(--navy, #1F3D58) !important;
+  line-height: 1.05 !important;
+}
+/* 心情電量 "/5" 那種子單位回到 sans 小一級 */
+body.theme-modern .kpi-mini-val span {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-style: normal !important;
+  font-weight: 500 !important;
+}
+
+/* 3. 時間 / 倒數 / D-X — JetBrains Mono（科技感）*/
+body.theme-modern .time,
+body.theme-modern .med-list-row .time,
+body.theme-modern .list-row .time,
+body.theme-modern .pill.mono,
+body.theme-modern .sec-count {
+  font-family: "JetBrains Mono", "Roboto Mono", monospace !important;
+  font-feature-settings: "tnum";
+  letter-spacing: 0 !important;
+}
+
+/* 4. sec-title 標題 — 字距收緊 + 加重 */
+body.theme-modern .sec-title,
+body.theme-modern .ph-sec-title {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  letter-spacing: -0.01em !important;
+  color: var(--navy, #1F3D58) !important;
+}
+
+/* 5. 回診卡的日期 5/26 — Cormorant italic 28px（demo 風格）*/
+body.theme-modern .card.tint-blue [style*="font-family"][style*="Cormorant"],
+body.theme-modern .home-visit-date {
+  font-family: "Cormorant Garamond", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* 6. 頁面 chip（topbar）— 不用全大寫 */
+body.theme-modern .topbar .topbar-filename,
+body.theme-modern .ph-filename {
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+/* 7. pv-hero / page hero 標題 — Cormorant italic，有報紙頭版感 */
+body.theme-modern .pv-hero h1,
+body.theme-modern .pv-hero h2,
+body.theme-modern .pv-hero-title {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* 8. 內文 body / 描述用 Noto Sans TC，但 line-height 放鬆讓中文呼吸 */
+body.theme-modern p,
+body.theme-modern .home-greet-date,
+body.theme-modern .kpi-mini-meta,
+body.theme-modern .kpi-mini-explain,
+body.theme-modern .sos-sub,
+body.theme-modern .dose,
+body.theme-modern .med-tip-card {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  line-height: 1.55 !important;
+}
+
+/* 9. 數字進度 X / Y — sec-count 內部已是 mono 但加一點顏色 */
+body.theme-modern .sec-count {
+  color: var(--text-dim, #5B6F80);
+  font-size: 11.5px;
+  font-weight: 600;
 }
 
 /* ─── 字體層次：不要全 Noto Sans TC 死板，三套字交叉用 ─────────────── */
