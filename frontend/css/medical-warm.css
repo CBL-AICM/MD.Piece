@@ -1,0 +1,355 @@
+/* ═══════════════════════════════════════════════════════════════
+   MD.Piece — Medical Warm Theme (v3)
+
+   Overlay CSS：載在 style.css + elder-mode.css 之後，覆寫關鍵視覺。
+   原 style.css 完全不動。要還原把 index.html 的 link 拿掉即可。
+
+   覆寫範圍：
+   ① 隱藏星空 canvas + 浮動拼圖裝飾
+   ② 5 種 hero gradient → pastel tint + 內部文字改海軍藍
+   ③ Cormorant Garamond italic 用於品牌字 MD.Piece
+   ④ Sidebar active 改藍漸層 + 左側細條
+   ⑤ home-digest / page-app-hero 改溫柔色 + 拼圖背景 motif
+   ⑥ Auth 卡片浮動裝飾收斂
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── ① 隱藏視覺雜訊 ─────────────────────────────────────────── */
+#star-canvas,
+#landing-canvas {
+  display: none !important;
+}
+
+.landing-deco,
+.landing-deco-1,
+.landing-deco-2,
+.landing-deco-3 {
+  display: none !important;
+}
+
+.auth-deco-layer {
+  opacity: 0.35 !important;
+  filter: saturate(0.6);
+}
+.auth-deco-puzzle,
+.auth-deco-icon {
+  opacity: 0.5 !important;
+}
+
+/* Landing 用兩道極淡 radial gradient 取代星空 */
+#landing {
+  background:
+    radial-gradient(ellipse 600px 400px at 18% 28%, rgba(184,242,234,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 800px 600px at 82% 72%, rgba(74,144,194,0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
+}
+#landing[data-theme="dark"] {
+  background:
+    radial-gradient(ellipse 600px 400px at 18% 28%, rgba(127,231,217,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 800px 600px at 82% 72%, rgba(74,144,194,0.15) 0%, transparent 55%),
+    linear-gradient(180deg, #0B1426 0%, #15293D 100%) !important;
+}
+
+/* ─── ② 5 種 hero gradient → pastel tint ─────────────────────── */
+:root {
+  /* 重新定義 gradient token 為 pastel — 所有舊 var(--gradient-hero-*) 用到的地方自動更新 */
+  --gradient-hero:         linear-gradient(135deg, #F2F8FC 0%, #FFFFFF 70%) !important;
+  --gradient-hero-teal:    linear-gradient(135deg, #F1F8F6 0%, #FFFFFF 70%) !important;
+  --gradient-hero-mint:    linear-gradient(135deg, #F1F8F4 0%, #FFFFFF 70%) !important;
+  --gradient-hero-coral:   linear-gradient(135deg, #FDF6F6 0%, #FFFFFF 70%) !important;
+  --gradient-hero-lavender:linear-gradient(135deg, #F4F5FA 0%, #FFFFFF 70%) !important;
+
+  /* 額外的 medical-warm token */
+  --mw-aqua-tint:    rgba(184,242,234,0.10);
+  --mw-border:       rgba(31,61,88,0.12);
+  --mw-border-mid:   rgba(31,61,88,0.20);
+  --mw-shadow:       0 2px 8px rgba(31,61,88,0.06);
+}
+
+/* Hero 卡片：原本是飽和 gradient + 白字 → pastel + 海軍藍字 */
+.page-app-hero,
+.home-digest,
+.med-today-hero {
+  color: var(--klein) !important;
+  box-shadow: var(--mw-shadow) !important;
+  border: 1px solid var(--mw-border) !important;
+  position: relative;
+}
+
+/* 拼圖背景 motif — 用 SVG data URI 嵌進 ::after */
+.page-app-hero::after,
+.home-digest::after {
+  content: "";
+  position: absolute;
+  right: -20px; bottom: -20px;
+  width: 120px; height: 120px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z' fill='none' stroke='%231F3D58' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 把原本的圓形高光 ::before 透明掉，避免兩個裝飾打架 */
+.page-app-hero::before,
+.home-digest::before {
+  opacity: 0 !important;
+}
+
+/* Hero 內部文字色 — 原 cream 白 → 海軍藍系 */
+.page-app-hero-eyebrow,
+.home-digest-eyebrow {
+  color: var(--accent) !important;
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase;
+}
+.page-app-hero-warn {
+  color: var(--text-dim) !important;
+}
+.page-app-hero-title {
+  color: var(--klein) !important;
+  font-weight: 600 !important;
+}
+.page-app-hero-meta {
+  color: var(--text-dim) !important;
+}
+.home-digest-progress {
+  color: var(--klein) !important;
+}
+.home-digest-num {
+  color: var(--klein) !important;
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+.home-digest-label {
+  color: var(--text-dim) !important;
+}
+.home-digest-stat {
+  background: rgba(255,255,255,0.85) !important;
+  border: 1px solid var(--mw-border) !important;
+  backdrop-filter: none !important;
+}
+.home-digest-icon {
+  background: #FFFFFF !important;
+  border: 1px solid var(--mw-border) !important;
+  color: var(--accent) !important;
+}
+.home-digest-bar {
+  background: rgba(255,255,255,0.75) !important;
+  border: 1px solid var(--mw-border) !important;
+}
+.home-digest-bar-fill {
+  background: linear-gradient(90deg, var(--rose-deep, #C97A7A), var(--accent), var(--teal)) !important;
+  box-shadow: none !important;
+}
+.page-app-hero-bar {
+  background: rgba(255,255,255,0.75) !important;
+  border: 1px solid var(--mw-border) !important;
+}
+.page-app-hero-bar-fill {
+  background: linear-gradient(90deg, var(--accent), var(--teal)) !important;
+  box-shadow: none !important;
+}
+.memo-version-tag {
+  background: rgba(31,61,88,0.06) !important;
+  color: var(--text-dim) !important;
+}
+
+/* 確保 hero 內部子元素 z-index 在背景拼圖之上 */
+.home-digest-head,
+.home-digest-bar,
+.home-digest-stats,
+.page-app-hero-head,
+.page-app-hero-title,
+.page-app-hero-meta,
+.page-app-hero-bar {
+  position: relative;
+  z-index: 1;
+}
+
+/* Med today hero（藥物頁）也跟著走 */
+.med-today-hero {
+  background: linear-gradient(135deg, #F1F8F6 0%, #FFFFFF 70%) !important;
+}
+.med-today-hero::before { opacity: 0.04 !important; }
+
+/* ─── ③ Cormorant Garamond italic 品牌字 ──────────────────── */
+.sidebar-brand h1 {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 1.4rem !important;
+  letter-spacing: -0.005em !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--klein) !important;
+  color: var(--klein) !important;
+}
+.sidebar-brand h1::before {
+  content: "" !important;
+}
+.sidebar-brand p {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-size: 0.62rem !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  color: var(--text-muted) !important;
+  font-weight: 500 !important;
+}
+
+/* Landing logo 字也用 Cormorant */
+.landing-logo {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  text-shadow: none !important;
+}
+
+/* Landing terminal prompt 隱藏（> INIT MD.PIECE） */
+.landing-prompt {
+  display: none !important;
+}
+
+/* Landing sub-tagline — 去掉終端 mono 風 */
+.landing-sub-tagline {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  border-left: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.06em !important;
+  color: var(--text-muted) !important;
+}
+
+/* Landing enter button — 從終端風 → 醫療藍實心按鈕 */
+.landing-enter {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  background: linear-gradient(135deg, var(--accent) 0%, #2F6B96 100%) !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(74,144,194,0.30) !important;
+  backdrop-filter: none !important;
+}
+.landing-enter::before,
+.landing-enter::after {
+  display: none !important;
+}
+.landing-enter:hover {
+  box-shadow: 0 6px 18px rgba(74,144,194,0.40) !important;
+  transform: translateY(-2px) !important;
+  color: #FFFFFF !important;
+}
+.enter-sub { color: rgba(255,255,255,0.85) !important; letter-spacing: 0.18em !important; }
+.enter-main { letter-spacing: 0.04em !important; font-weight: 500 !important; }
+.enter-main::before { content: "" !important; }
+
+/* Landing theme / lang toggle — 去終端字、去發光 */
+.theme-toggle,
+.lang-toggle,
+.app-lang-toggle,
+.app-theme-toggle {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  letter-spacing: 0.06em !important;
+  box-shadow: none !important;
+}
+
+/* ─── ④ Sidebar：active 狀態 → 藍漸層 + 左側細條 ────────────── */
+.nav-item {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-size: 0.92rem !important;
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  position: relative;
+}
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(74,144,194,0.12) 0%, rgba(74,144,194,0.04) 100%) !important;
+  border-color: transparent !important;
+  color: var(--klein) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+.nav-item.active::before {
+  content: "" !important;
+  position: absolute;
+  left: -8px; top: 8px; bottom: 8px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.nav-label {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  font-weight: 500 !important;
+}
+.nav-item.active .nav-label {
+  color: var(--accent-deep, #2F6B96) !important;
+  font-weight: 600 !important;
+}
+.nav-sub {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* Nav badge */
+.nav-badge {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+.nav-badge[data-tone="done"] {
+  background: var(--success) !important;
+  color: #FFFFFF !important;
+}
+.nav-badge[data-tone="todo"] {
+  background: var(--rose, #E8A8A8) !important;
+  color: #FFFFFF !important;
+}
+
+/* ─── ⑤ Topbar 微調（去終端 mono） ──────────────────────────── */
+.topbar-filename,
+.topbar-back,
+.page-howto-summary-text {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* ─── ⑥ Auth motif：品牌字也用 Cormorant ───────────────────── */
+.auth-brand-line1,
+.auth-brand-line2 {
+  font-family: "Cormorant Garamond", "Noto Serif TC", Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  -webkit-text-fill-color: var(--klein) !important;
+  color: var(--klein) !important;
+  background: none !important;
+}
+.auth-subtitle {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+  letter-spacing: 0.14em !important;
+}
+
+/* Auth card 內部按鈕 / tab / submit 也統一字體 */
+.auth-tab,
+.auth-submit,
+.auth-label,
+.auth-switch-hint,
+.auth-error,
+.auth-field input {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+.auth-submit {
+  background: linear-gradient(135deg, var(--accent) 0%, #2F6B96 100%) !important;
+  box-shadow: 0 4px 12px rgba(74,144,194,0.25) !important;
+}
+
+/* ─── ⑦ Howto 摺疊框 — 去終端字 ─────────────────────────────── */
+.page-howto-summary,
+.page-howto-step-n,
+.page-howto-step-text,
+.page-howto-warn {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* ─── ⑧ Mobile tabbar 字 ────────────────────────────────────── */
+.mobile-tabbar,
+.mobile-tab,
+.mobile-tab-label {
+  font-family: "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* ─── 結束 ──────────────────────────────────────────────────── */
