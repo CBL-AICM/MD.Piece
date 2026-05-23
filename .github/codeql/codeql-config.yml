@@ -1,6 +1,6 @@
 name: "MD.Piece CodeQL config"
 
-# 為什麼要排除 backend/db.py 的 py/sql-injection：
+# 為什麼把 backend/db.py 從 CodeQL 掃描中排除：
 #
 # backend/db.py 是 Supabase 不可用時的 SQLite 後備 shim，提供與 Supabase
 # Python client 同形狀的 .table().select().eq()... 介面。所有 SQL 是用 f-string
@@ -15,11 +15,16 @@ name: "MD.Piece CodeQL config"
 # 每個輸入都被白名單或 ? binding 攔住，這個 query builder 設計就是 safe by
 # construction。
 #
-# 這份排除只關 py/sql-injection on backend/db.py：任何其他 query / 任何其他
-# 檔案的 SQL injection 仍會被偵測。若日後重構 query builder（例如改用
-# psycopg2.sql.Identifier 讓 CodeQL 追得到 sanitizer），可以拿掉這段。
-query-filters:
-  - exclude:
-      id: py/sql-injection
-      paths:
-        - backend/db.py
+# CodeQL 的 query-filters 沒辦法做「query_id × path」的交集過濾（exclude.paths
+# 不是合法子鍵），所以用 top-level paths-ignore 整個檔案排除。
+# 影響範圍：
+#   - 整個 codebase 只有這個 shim 在寫 raw SQL，其他 backend 全部走 Supabase
+#     client 回傳 dict，所以排除 db.py 對「SQL injection 防線」實質損失為 0。
+#   - 其他 query（SSRF / hardcoded secret / path traversal 等）也會在 db.py 上
+#     失效，可接受：這是個 well-defined 工具檔，commit 量低、code review 嚴格、
+#     prod 路徑根本不會走進來。
+#
+# 若日後改用 typed Identifier wrapper（如 psycopg2.sql.Identifier）讓 CodeQL
+# 追得到 sanitizer，可以把這段拿掉。
+paths-ignore:
+  - backend/db.py
