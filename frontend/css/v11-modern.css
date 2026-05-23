@@ -369,11 +369,12 @@ html body.theme-modern #app-settings-btn,
 body.theme-modern .app-elder-toggle,
 body.theme-modern .app-settings-btn { display: none !important; }
 
-/* 在首頁時隱藏「返回」按鈕（已經在首頁不需要返回）— page-title 是「首頁」時 hide */
-html body.theme-modern .topbar .topbar-back { display: inline-flex !important; }
-/* 透過 JS 動態加 class 控制 */
-html body.theme-modern.is-home .topbar .topbar-back,
-html body.theme-modern[data-page="home"] .topbar .topbar-back { display: none !important; }
+/* 簡化 top header：返回鈕全部頁面都隱藏。使用者可以：
+ *   - 用底部 5-tab nav（首頁 / 碎片 / 記一筆 / 診前 / 醫聊）切頁
+ *   - 用 ☰ hamburger 選單裡的「返回首頁」回主頁
+ *   - Android 系統返回鍵（main.js 已把每個 navigateTo 推進 history stack）
+ * top bar 留 ☰ / 頁名 / 中 / 月亮 / A+ 5 個 element 就好，跟首頁一致。 */
+html body.theme-modern .topbar .topbar-back { display: none !important; }
 
 /* topbar 整體：白底淡邊 + 圓角 icon button（demo .ph-topbar 風格）*/
 body.theme-modern .topbar {
