@@ -350,7 +350,6 @@ def _get_conn():
         for sql in _SCHEMAS.values():
             conn.execute(sql)
         _migrate_users_table(conn)
-        _migrate_medications_table(conn)
         conn.commit()
         _db_initialized = True
     return conn
@@ -375,16 +374,6 @@ def _migrate_users_table(conn):
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL")
     except sqlite3.OperationalError:
         pass
-
-
-def _migrate_medications_table(conn):
-    """Add custom_schedule column to existing medications tables (JSON text)."""
-    cols = {row[1] for row in conn.execute("PRAGMA table_info(medications)")}
-    if "custom_schedule" not in cols:
-        try:
-            conn.execute("ALTER TABLE medications ADD COLUMN custom_schedule TEXT")
-        except sqlite3.OperationalError:
-            pass
 
 
 def _init_db():
