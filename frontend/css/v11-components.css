@@ -296,7 +296,7 @@ body.theme-modern .vital-card-meta { font-size: 10px; color: var(--text-muted, #
 
 /* Med list */
 body.theme-modern .med-list-row {
-  display: grid; grid-template-columns: 30px 1fr auto 24px;
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto;
   gap: 10px; align-items: center;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border, rgba(31,61,88,0.10));
@@ -304,9 +304,12 @@ body.theme-modern .med-list-row {
 body.theme-modern .med-list-row:last-child { border-bottom: none; }
 body.theme-modern .med-list-row .ico { width: 30px; height: 30px; border-radius: 7px; background: var(--teal-soft, #E5F0EE); color: var(--teal-deep, #1F5F56); display: flex; align-items: center; justify-content: center; }
 body.theme-modern .med-list-row .ico .lucide { width: 14px; height: 14px; }
-body.theme-modern .med-list-row .name { font-size: 12.5px; color: var(--navy, #0F2A45); font-weight: 500; }
-body.theme-modern .med-list-row .dose { font-size: 10.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); margin-top: 1px; }
-body.theme-modern .med-list-row .time { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--text-dim, #3A5060); text-align: right; }
+body.theme-modern .med-list-row .name { font-size: 12.5px; color: var(--navy, #0F2A45); font-weight: 500; word-break: break-word; }
+body.theme-modern .med-list-row .dose { font-size: 10.5px; color: var(--text-muted, #6B7F92); font-family: var(--font-mono, monospace); margin-top: 1px; word-break: break-word; }
+body.theme-modern .med-list-row .time { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--text-dim, #3A5060); text-align: right; white-space: nowrap; }
+/* 行末 pill / 補打按鈕：固定不換行、保證留得到完整 「已服 HH:MM」/「未打卡 · 補打」 */
+body.theme-modern .med-list-row .pill,
+body.theme-modern .med-list-row > button.pill { white-space: nowrap; }
 
 /* OCR hero btn */
 body.theme-modern .ocr-hero-btn {
