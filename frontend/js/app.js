@@ -11188,7 +11188,10 @@ function _renderMobileMedList(meds) {
     var rows = meds.map(function(m) {
       var note = (m.custom_note && String(m.custom_note).trim()) || '';
       var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
-      var safeMedId = String(m.id).replace(/'/g, "\\'");
+      // 先 escape backslash 再 escape 單引號（順序重要，否則第二步產生的 \\' 會被
+      // 第一步當成「\ + '」二次處理）。雖然 m.id 是 UUID 不會含這些字元，
+      // 但補上完整 escape 通過 CodeQL incomplete-string-escape 檢查、縱深防禦。
+      var safeMedId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
       var scheduleSummary = _customScheduleSummary(m.custom_schedule);
       var hasCustomSchedule = !!scheduleSummary;
       var inner = ''
@@ -11277,7 +11280,8 @@ function _renderMobileMedList(meds) {
         +   '</div>'
         +   arr.map(function(m, idx) {
             var status = slotStatuses[idx];
-            var safeId = String(m.id).replace(/'/g, "\\'");
+            // backslash 先於單引號（同 safeMedId）；完整 escape 滿足 CodeQL。
+            var safeId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
             var rowPill;
             if (status.state === 'taken') {
               rowPill = '<span class="pill pill-ok mono" title="實際打卡時間">已服 ' + status.loggedAt + '</span>';
