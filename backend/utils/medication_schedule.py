@@ -8,6 +8,7 @@ PRN 且醫師有明確指示的可低於 4 小時。
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
@@ -161,21 +162,128 @@ def parse_time_slots(frequency: str | None, usage: str | None = None) -> dict:
     }
 
 
+_TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})$")
+
+
+def parse_custom_schedule(raw) -> dict | None:
+    """
+    把使用者自訂的非統一排程正規化成 {"entries": [{"weekdays": [...], "time": "HH:MM"}]}。
+
+    輸入可以是 dict / JSON 字串 / None；不合法的 entry 會被丟掉。
+    weekdays 用 0=Mon..6=Sun（與 datetime.weekday() / reminders.days_of_week 一致）。
+    回傳 None 代表「沒有有效的自訂排程」，呼叫端應 fallback 到 frequency 文字解析。
+
+    為什麼集中在這裡：藥物表的 custom_schedule 欄位無論存到 Supabase（jsonb）或
+    SQLite（TEXT 存 JSON），讀回來後都用這個函式做一次「修整 + 去蕪存菁」，
+    避免 router、annotate、UI 各自重複驗證導致格式漂移。
+    """
+    if raw is None or raw == "":
+        return None
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (ValueError, TypeError):
+            return None
+    if not isinstance(raw, dict):
+        return None
+    entries_in = raw.get("entries")
+    if not isinstance(entries_in, list) or not entries_in:
+        return None
+    valid: list[dict] = []
+    seen: set[tuple] = set()
+    for e in entries_in:
+        if not isinstance(e, dict):
+            continue
+        wd_raw = e.get("weekdays")
+        t_raw = e.get("time")
+        if not isinstance(wd_raw, list) or not isinstance(t_raw, str):
+            continue
+        wd_norm: list[int] = []
+        for d in wd_raw:
+            try:
+                di = int(d)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= di <= 6 and di not in wd_norm:
+                wd_norm.append(di)
+        if not wd_norm:
+            continue
+        wd_norm.sort()
+        m = _TIME_RE.match(t_raw.strip())
+        if not m:
+            continue
+        h, mi = int(m.group(1)), int(m.group(2))
+        if not (0 <= h <= 23 and 0 <= mi <= 59):
+            continue
+        time_str = f"{h:02d}:{mi:02d}"
+        key = (tuple(wd_norm), time_str)
+        if key in seen:
+            continue
+        seen.add(key)
+        valid.append({"weekdays": wd_norm, "time": time_str})
+    if not valid:
+        return None
+    valid.sort(key=lambda e: (e["time"], e["weekdays"]))
+    return {"entries": valid}
+
+
+def custom_schedule_times_for_weekday(custom_schedule: dict | None, weekday: int) -> list[str]:
+    """從 normalized custom_schedule 取出今天該排程的所有時刻（HH:MM 字串、排序、去重）。"""
+    if not custom_schedule:
+        return []
+    times: set[str] = set()
+    for e in custom_schedule.get("entries", []):
+        if weekday in e.get("weekdays", []):
+            times.add(e["time"])
+    return sorted(times)
+
+
 def annotate_medication(med: dict) -> dict:
     """在 medication dict 上掛載 schedule 欄位（不修改原本 row）。
 
     使用方式：
         med = dict(row)
         med.update(annotate_medication(med))
+
+    custom_schedule（若存在且合法）會 override frequency 文字解析的 slots：
+      - 把 custom 時刻轉成早/中/晚 bucket（≤10:30 → morning、10:30–15:30 → noon、
+        15:30–20:30 → evening、否則 evening）以維持舊版分桶 UI 相容
+      - 把原本的 slots / bucket / is_other 覆寫成 custom 推得的值
     """
     info = parse_time_slots(med.get("frequency"), med.get("instructions"))
-    return {
+    custom = parse_custom_schedule(med.get("custom_schedule"))
+    out = {
         "slots": info["slots"],
         "interval_hours": info["interval_hours"],
         "is_prn": info["is_prn"],
         "bucket": info["bucket"],
         "is_other": info["is_other"],
+        "custom_schedule": custom,
     }
+    if custom:
+        # 自訂排程優先：把所有 entries 涵蓋到的時刻分桶，覆寫 slots/bucket。
+        slots_set: set[str] = set()
+        for e in custom["entries"]:
+            slots_set.add(_time_to_bucket(e["time"]))
+        ordered = sorted(slots_set, key=lambda s: _ORDER.get(s, 99))
+        if ordered:
+            out["slots"] = ordered
+            out["bucket"] = ordered[0]
+            out["is_other"] = False
+    return out
+
+
+def _time_to_bucket(hhmm: str) -> str:
+    """HH:MM → 早/中/晚 bucket，用於把自訂時刻 fallback 對應到舊版分桶 UI。"""
+    m = _TIME_RE.match(hhmm)
+    if not m:
+        return SLOT_OTHER
+    minutes = int(m.group(1)) * 60 + int(m.group(2))
+    if minutes < 10 * 60 + 30:
+        return SLOT_MORNING
+    if minutes < 15 * 60 + 30:
+        return SLOT_NOON
+    return SLOT_EVENING
 
 
 # ---------------------------------------------------------------------------

@@ -10610,8 +10610,13 @@ function loadMedicationsPage() {
       var data = arr[0] || {};
       var logsData = arr[1] || { logs: [] };
       _medsList = (data.medications || []).filter(function(m) { return m.active !== 0; });
-      _medsTodayLogs = (logsData.logs || []).filter(function(l) {
-        return l && l.taken_at && String(l.taken_at).slice(0, 10) === todayISO && l.taken !== false;
+      // 保留今日的原始 log（不只是 count）— 讓 _renderMobileMedList 能按真實 taken_at
+      // 判斷每筆排程是「已服 / 已跳過 / 未打卡 / 尚未到」，而不是用「時間是否已過」推算。
+      _medsTodayLogList = (logsData.logs || []).filter(function(l) {
+        return l && l.taken_at && String(l.taken_at).slice(0, 10) === todayISO;
+      });
+      _medsTodayLogs = _medsTodayLogList.filter(function(l) {
+        return l.taken !== false && l.taken !== 0;
       }).length;
       renderMedList();
     })
@@ -10775,6 +10780,7 @@ function _renderMedTodayHero(meds) {
     + '</div>';
 }
 var _medsTodayLogs = 0;
+var _medsTodayLogList = [];
 
 function _medSlotLabel(key) { return _T('meds.slot.' + key + '.label'); }
 function _medSlotHint(key)  { return _T('meds.slot.' + key + '.hint');  }
@@ -10854,6 +10860,313 @@ function renderMedList() {
   try { _renderMobileMedList(_medsList); } catch (e) {}
 }
 
+// 把 normalized custom_schedule.entries 轉成短摘要字串，給藥物清單列顯示。
+// 例：[{weekdays:[0,2,4], time:'08:00'}, {weekdays:[1], time:'14:00'}]
+//     → "週一三五 08:00 · 週二 14:00"
+// 用「每天 HH:MM」當作所有 weekday 都選時的特例縮寫。
+function _customScheduleSummary(custom) {
+  if (!custom || !Array.isArray(custom.entries) || !custom.entries.length) return '';
+  var WD = ['一','二','三','四','五','六','日'];
+  return custom.entries.map(function(e) {
+    var wd = (e.weekdays || []).slice().sort();
+    var label;
+    if (wd.length === 7) {
+      label = '每天';
+    } else {
+      label = '週' + wd.map(function(d){ return WD[d] || '?'; }).join('');
+    }
+    return label + ' ' + e.time;
+  }).join(' · ');
+}
+
+// 「編輯打卡排程」modal — 讓使用者為單一藥物設定非統一時刻的提醒。
+// 一個 entry = {weekdays:[0..6], time:'HH:MM'}，可加多筆，例如：
+//   週一三五 08:00 + 週二 14:00 + 週日 22:00
+// 儲存時 PUT /medications/{id}/schedule body={custom_schedule:{entries:[...]}}；
+// 按「清除·回藥袋預設」會 PUT body={custom_schedule:null}。
+function openMedScheduleEditor(medId) {
+  var med = (_medsList || []).find(function(m){ return String(m.id) === String(medId); });
+  if (!med) { if (typeof showToast === 'function') showToast('找不到這顆藥', 'error'); return; }
+  closeMedScheduleEditor();
+
+  // 初始化 entries：若已有 custom_schedule 就用它，否則給一個空白 entry 讓使用者填。
+  var initialEntries = (med.custom_schedule && Array.isArray(med.custom_schedule.entries))
+    ? med.custom_schedule.entries.map(function(e){
+        return { weekdays: (e.weekdays || []).slice(), time: e.time || '08:00' };
+      })
+    : [];
+  if (!initialEntries.length) {
+    initialEntries.push({ weekdays: [0,1,2,3,4,5,6], time: '08:00' });
+  }
+  // 把 working 狀態存在 window scope，方便 inline onclick 取用。
+  window._medScheduleEditing = { medId: medId, entries: initialEntries };
+
+  var modal = document.createElement('div');
+  modal.id = 'med-schedule-modal';
+  modal.className = 'med-detail-modal';
+  modal.innerHTML = ''
+    + '<div class="mdm-backdrop" onclick="closeMedScheduleEditor()"></div>'
+    + '<div class="mdm-panel" role="dialog" aria-modal="true" aria-label="編輯打卡排程" style="max-width:520px">'
+    +   '<header class="mdm-head">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedScheduleEditor()" aria-label="關閉">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +     '<div class="mdm-title-wrap">'
+    +       '<div class="mdm-pill"><i data-lucide="calendar-clock" style="width:18px;height:18px"></i></div>'
+    +       '<div>'
+    +         '<h3 class="mdm-title">編輯打卡排程</h3>'
+    +         '<p class="mdm-sub">' + escapeHtml(med.name || '未命名藥物') + '　·　可加多筆，每筆可選不同日子＋時刻</p>'
+    +       '</div>'
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="mdm-body" id="med-schedule-body" style="padding:14px 18px"></div>'
+    +   '<footer style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +     '<button type="button" class="secondary" onclick="clearMedSchedule()" style="margin-right:auto">清除·回藥袋預設</button>'
+    +     '<button type="button" class="secondary" onclick="closeMedScheduleEditor()">取消</button>'
+    +     '<button type="button" class="primary" onclick="saveMedSchedule()">儲存排程</button>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(modal);
+  renderMedScheduleEditor();
+}
+
+function closeMedScheduleEditor() {
+  var el = document.getElementById('med-schedule-modal');
+  if (el) el.remove();
+  window._medScheduleEditing = null;
+}
+
+function renderMedScheduleEditor() {
+  var body = document.getElementById('med-schedule-body');
+  var st = window._medScheduleEditing;
+  if (!body || !st) return;
+  var WD_LABELS = ['一','二','三','四','五','六','日']; // 0=Mon..6=Sun
+  var html = '';
+  st.entries.forEach(function(e, i) {
+    html += '<div class="med-sched-entry" style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--bg-soft)">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +   '<strong style="font-size:12px;color:var(--text-dim)">第 ' + (i+1) + ' 筆</strong>'
+      +   '<button type="button" onclick="removeMedScheduleEntry(' + i + ')" '
+      +     'style="margin-left:auto;background:transparent;border:0;color:var(--danger,#d33);cursor:pointer;font-size:12px" '
+      +     'aria-label="刪除這筆">✕ 刪除</button>'
+      + '</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
+    WD_LABELS.forEach(function(lab, d) {
+      var checked = e.weekdays.indexOf(d) >= 0;
+      html += '<label style="display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;cursor:pointer;'
+        + (checked ? 'background:var(--accent);color:#fff;border:1px solid var(--accent)' : 'background:var(--bg);border:1px solid var(--border)')
+        + ';font-size:13px;user-select:none">'
+        + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' '
+        + 'onchange="toggleMedScheduleWeekday(' + i + ',' + d + ')" '
+        + 'style="display:none">'
+        + '週' + lab
+        + '</label>';
+    });
+    html += '</div>'
+      + '<label style="display:flex;align-items:center;gap:8px;font-size:13px">'
+      +   '<span style="color:var(--text-dim)">時刻</span>'
+      +   '<input type="time" value="' + escapeHtml(e.time) + '" '
+      +     'onchange="setMedScheduleTime(' + i + ', this.value)" '
+      +     'style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-variant-numeric:tabular-nums">'
+      + '</label>'
+      + '</div>';
+  });
+  html += '<button type="button" onclick="addMedScheduleEntry()" '
+    + 'style="width:100%;padding:10px;border:1px dashed var(--border);background:transparent;border-radius:8px;cursor:pointer;color:var(--text-dim);font:inherit">'
+    + '+ 新增一個時刻'
+    + '</button>'
+    + '<p style="margin-top:12px;font-size:11px;color:var(--text-muted);line-height:1.5">'
+    + '例：週一三五 08:00 + 週二 14:00。設好後今日服藥區會自動顯示對應時段；'
+    + '清空可回到藥袋預設（早/中/晚）。'
+    + '</p>';
+  body.innerHTML = html;
+  if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+}
+
+function addMedScheduleEntry() {
+  var st = window._medScheduleEditing;
+  if (!st) return;
+  st.entries.push({ weekdays: [0,1,2,3,4,5,6], time: '08:00' });
+  renderMedScheduleEditor();
+}
+
+function removeMedScheduleEntry(idx) {
+  var st = window._medScheduleEditing;
+  if (!st) return;
+  st.entries.splice(idx, 1);
+  if (!st.entries.length) {
+    // 至少保留一筆空白，避免按一下「刪除」就什麼都沒了。
+    st.entries.push({ weekdays: [0,1,2,3,4,5,6], time: '08:00' });
+  }
+  renderMedScheduleEditor();
+}
+
+function toggleMedScheduleWeekday(entryIdx, day) {
+  var st = window._medScheduleEditing;
+  if (!st || !st.entries[entryIdx]) return;
+  var arr = st.entries[entryIdx].weekdays;
+  var p = arr.indexOf(day);
+  if (p >= 0) arr.splice(p, 1); else { arr.push(day); arr.sort(); }
+  renderMedScheduleEditor();
+}
+
+function setMedScheduleTime(entryIdx, value) {
+  var st = window._medScheduleEditing;
+  if (!st || !st.entries[entryIdx]) return;
+  // 接受 HH:MM 或 H:MM；不合法就忽略
+  if (!/^\d{1,2}:\d{2}$/.test(value)) return;
+  st.entries[entryIdx].time = value;
+}
+
+function saveMedSchedule() {
+  var st = window._medScheduleEditing;
+  if (!st) return;
+  var entries = st.entries.filter(function(e){
+    return Array.isArray(e.weekdays) && e.weekdays.length && /^\d{1,2}:\d{2}$/.test(e.time);
+  });
+  if (!entries.length) {
+    if (typeof showToast === 'function') showToast('每一筆都要至少選一天並有時刻', 'error');
+    return;
+  }
+  var payload = { custom_schedule: { entries: entries } };
+  fetch(API + '/medications/' + encodeURIComponent(st.medId) + '/schedule', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function() {
+      if (typeof showToast === 'function') showToast('已更新排程 ✓', 'success');
+      closeMedScheduleEditor();
+      loadMedicationsPage();
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('儲存失敗，請再試一次', 'error');
+    });
+}
+
+function clearMedSchedule() {
+  var st = window._medScheduleEditing;
+  if (!st) return;
+  if (!confirm('確定要清除自訂排程，回到藥袋預設（早/中/晚）嗎？')) return;
+  fetch(API + '/medications/' + encodeURIComponent(st.medId) + '/schedule', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ custom_schedule: null })
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function() {
+      if (typeof showToast === 'function') showToast('已回到藥袋預設', 'info');
+      closeMedScheduleEditor();
+      loadMedicationsPage();
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('清除失敗，請再試一次', 'error');
+    });
+}
+
+// 把每顆藥「今天應該服用的時刻」蒐集起來，依時間排序成動態 slot 清單。
+// 若有 custom_schedule 且今天的 weekday 在 entries 內 → 用自訂的 HH:MM；
+// 否則 fallback 到 bucket 預設時間（morning=07:00 / noon=13:00 / evening=18:00 / bedtime=22:00）。
+// PRN / 間隔型（is_other）不出現在固定時段。
+function _buildTodayMedSlots(meds) {
+  var BUCKET_TIME = { morning: '07:00', noon: '13:00', evening: '18:00', bedtime: '22:00' };
+  // JS 的 getDay() 是 0=Sun..6=Sat；後端 weekday 是 0=Mon..6=Sun，要轉。
+  var jsDay = new Date().getDay();
+  var weekday = (jsDay + 6) % 7;
+  var slotMap = Object.create(null);
+  function _addRow(med, time, isCustom) {
+    if (!time || !/^\d{1,2}:\d{2}$/.test(time)) return;
+    var parts = time.split(':');
+    var hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10);
+    if (isNaN(hh) || isNaN(mm)) return;
+    var normTime = (hh < 10 ? '0' + hh : '' + hh) + ':' + (mm < 10 ? '0' + mm : '' + mm);
+    if (!slotMap[normTime]) {
+      slotMap[normTime] = { time: normTime, mins: hh * 60 + mm, meds: [], hasCustom: false };
+    }
+    if (isCustom) slotMap[normTime].hasCustom = true;
+    slotMap[normTime].meds.push(med);
+  }
+  (meds || []).forEach(function(m) {
+    var custom = m && m.custom_schedule;
+    if (custom && Array.isArray(custom.entries) && custom.entries.length) {
+      var times = [];
+      custom.entries.forEach(function(e) {
+        if (Array.isArray(e.weekdays) && e.weekdays.indexOf(weekday) >= 0 && e.time) {
+          if (times.indexOf(e.time) < 0) times.push(e.time);
+        }
+      });
+      if (!times.length) return; // 今天這顆藥沒排
+      times.forEach(function(t) { _addRow(m, t, true); });
+      return;
+    }
+    if (m && m.is_other) return;
+    var slots = (m && m.slots && m.slots.length) ? m.slots : ['morning'];
+    slots.forEach(function(s) {
+      var t = BUCKET_TIME[s];
+      if (t) _addRow(m, t, false);
+    });
+  });
+  var out = [];
+  Object.keys(slotMap).forEach(function(k) { out.push(slotMap[k]); });
+  out.sort(function(a, b) { return a.mins - b.mins; });
+  // 用時刻分配一個粗略的 icon/label 給 UI（純呈現用，不影響資料）
+  out.forEach(function(s) {
+    if (s.mins < 10 * 60 + 30) { s.label = '早晨'; s.icon = 'sun'; }
+    else if (s.mins < 15 * 60 + 30) { s.label = '中午'; s.icon = 'sun'; }
+    else if (s.mins < 20 * 60 + 30) { s.label = '傍晚'; s.icon = 'sun-dim'; }
+    else { s.label = '睡前'; s.icon = 'moon'; }
+  });
+  return out;
+}
+
+// 把今日 medication_logs 對應到「早/中/晚/睡前」其中一個排程槽位。
+// 規則：同藥物、taken_at 在 slot 時間 ±3 小時內，取距離最近那筆。
+// 找不到對應 log 時：時間還沒到（含 30 分鐘 grace）→ upcoming；已過 → missed。
+// 為什麼用 ±3h 視窗：早/中/晚 slot 互相至少差 5h，3h 視窗不會跨槽位誤判，
+// 同時容忍使用者提早 / 拖延 30 分鐘到 2 小時左右才補打卡。
+function _medSlotStatus(medId, slotMins, logs, nowMin) {
+  var GRACE_AFTER_MIN = 30;
+  var MATCH_WINDOW_MIN = 180;
+  var best = null;
+  var medIdStr = String(medId);
+  for (var i = 0; i < logs.length; i++) {
+    var l = logs[i];
+    if (!l || String(l.medication_id) !== medIdStr) continue;
+    var ts = l.taken_at;
+    if (!ts) continue;
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) continue;
+    var lm = d.getHours() * 60 + d.getMinutes();
+    var dist = Math.abs(lm - slotMins);
+    if (dist <= MATCH_WINDOW_MIN && (!best || dist < best.dist)) {
+      best = { log: l, lm: lm, dist: dist };
+    }
+  }
+  if (best) {
+    var hh = String(Math.floor(best.lm / 60));
+    var mm = String(best.lm % 60);
+    if (hh.length < 2) hh = '0' + hh;
+    if (mm.length < 2) mm = '0' + mm;
+    var loggedAt = hh + ':' + mm;
+    var takenFlag = best.log.taken;
+    if (takenFlag === false || takenFlag === 0) {
+      return { state: 'skipped', loggedAt: loggedAt };
+    }
+    return { state: 'taken', loggedAt: loggedAt };
+  }
+  if (nowMin > slotMins + GRACE_AFTER_MIN) {
+    return { state: 'missed' };
+  }
+  return { state: 'upcoming' };
+}
+
 function _renderMobileMedList(meds) {
   var mob = document.getElementById('mobile-meds-list');
   var todayEl = document.getElementById('mobile-meds-today');
@@ -10875,6 +11188,12 @@ function _renderMobileMedList(meds) {
     var rows = meds.map(function(m) {
       var note = (m.custom_note && String(m.custom_note).trim()) || '';
       var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
+      // 先 escape backslash 再 escape 單引號（順序重要，否則第二步產生的 \\' 會被
+      // 第一步當成「\ + '」二次處理）。雖然 m.id 是 UUID 不會含這些字元，
+      // 但補上完整 escape 通過 CodeQL incomplete-string-escape 檢查、縱深防禦。
+      var safeMedId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      var scheduleSummary = _customScheduleSummary(m.custom_schedule);
+      var hasCustomSchedule = !!scheduleSummary;
       var inner = ''
         + '<div class="med-list-row" style="border-bottom:1px solid var(--border)">'
         +   '<div class="ico"><i data-lucide="pill"></i></div>'
@@ -10900,44 +11219,88 @@ function _renderMobileMedList(meds) {
         +       '<i data-lucide="pencil"></i>' + (note ? '編輯' : '加上')
         +     '</button>'
         +   '</div>'
+        // 排程列：顯示自訂排程摘要（或「依藥袋預設」），點「編輯」開排程編輯器。
+        +   '<div class="med-customize-row">'
+        +     '<span class="med-tag" style="background:var(--accent-tint);color:var(--accent-deep)"><i data-lucide="calendar-clock"></i>排程</span>'
+        +     (hasCustomSchedule
+              ? '<span class="actual" style="font-variant-numeric:tabular-nums">' + escapeHtml(scheduleSummary) + '</span>'
+              : '<span class="actual" style="color:var(--text-muted);font-style:italic">依藥袋預設（' + escapeHtml(m.frequency || '一天一次') + '）</span>')
+        +     '<button class="med-customize-edit-btn" onclick="openMedScheduleEditor(\'' + safeMedId + '\')" title="設定哪天的什麼時刻提醒打卡">'
+        +       '<i data-lucide="pencil"></i>' + (hasCustomSchedule ? '編輯' : '自訂時刻')
+        +     '</button>'
+        +   '</div>'
         + '</div>';
       return inner;
     }).join('');
     mob.innerHTML = rows;
   }
 
-  // 今日服藥（簡化版 — 依 time_of_day 分桶，狀態用「時間是否已過」推算）
+  // 今日服藥 — 用真實 medication_logs 判定每筆狀態（不再用「時間過了就當已服」）。
+  // 四種狀態：taken（已服，顯示真實時戳）/ skipped（已跳過）/ missed（時間到卻沒打卡，可補打）/ upcoming（尚未到）。
+  // 行末按鈕可點擊：upcoming / missed → 觸發 tapMedTake 寫一筆真實 taken_at。
+  // slots 由 _buildTodayMedSlots 動態產生：有 custom_schedule 用自訂 HH:MM，否則用 bucket 預設時間。
   if (todayEl) {
-    var buckets = (typeof _bucketMeds === 'function') ? _bucketMeds(meds) : { morning: meds, noon: [], evening: [], bedtime: [], other: [] };
     var now = new Date();
     var curMin = now.getHours() * 60 + now.getMinutes();
-    var SLOTS = [
-      { key: 'morning', label: '早晨', icon: 'sun',        time: '07:00', mins:  7*60 },
-      { key: 'noon',    label: '中午', icon: 'sun',        time: '13:00', mins: 13*60 },
-      { key: 'evening', label: '傍晚', icon: 'sun-dim',    time: '18:00', mins: 18*60 },
-      { key: 'bedtime', label: '睡前', icon: 'moon',       time: '22:00', mins: 22*60 },
-    ];
-    var totalCnt = 0, doneCnt = 0;
+    var todayLogs = Array.isArray(_medsTodayLogList) ? _medsTodayLogList : [];
+    var dynSlots = _buildTodayMedSlots(meds);
+    var totalCnt = 0, doneCnt = 0, missedCnt = 0;
     var thtml = '';
-    SLOTS.forEach(function(s) {
-      var arr = buckets[s.key] || [];
+    dynSlots.forEach(function(s) {
+      var arr = s.meds;
       if (!arr.length) return;
-      var passed = curMin >= s.mins;
-      var headPill = passed
-        ? '<span class="pill pill-ok mono">已完成</span>'
-        : '<span class="pill pill-mute mono">尚未到</span>';
+      var slotStatuses = arr.map(function(m) {
+        return _medSlotStatus(m.id, s.mins, todayLogs, curMin);
+      });
+      var slotTaken = slotStatuses.filter(function(st) { return st.state === 'taken'; }).length;
+      var slotMissed = slotStatuses.filter(function(st) { return st.state === 'missed'; }).length;
+      var slotSkipped = slotStatuses.filter(function(st) { return st.state === 'skipped'; }).length;
       totalCnt += arr.length;
-      if (passed) doneCnt += arr.length;
+      doneCnt += slotTaken;
+      missedCnt += slotMissed;
+
+      var headPill;
+      if (slotTaken === arr.length) {
+        headPill = '<span class="pill pill-ok mono">已完成</span>';
+      } else if (slotMissed > 0) {
+        headPill = '<span class="pill pill-warn mono">未打卡 ' + slotMissed + '</span>';
+      } else if (slotTaken > 0 || slotSkipped > 0) {
+        headPill = '<span class="pill pill-info mono">進行中 ' + (slotTaken + slotSkipped) + '/' + arr.length + '</span>';
+      } else {
+        headPill = '<span class="pill pill-mute mono">尚未到</span>';
+      }
+      var headDone = slotTaken === arr.length;
+      var customTag = s.hasCustom ? '<span class="pill pill-info mono" style="font-size:10px;margin-left:6px" title="此時刻含自訂排程">自訂</span>' : '';
+
       thtml += ''
         + '<div class="card" style="padding:0;margin-bottom:10px">'
-        +   '<div style="padding:10px 14px;background:' + (passed ? 'var(--accent-tint)' : 'var(--bg-soft)') + ';border-bottom:1px solid var(--border);font-size:11px;color:' + (passed ? 'var(--accent-deep)' : 'var(--text-dim)') + ';font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
-        +     '<i data-lucide="' + s.icon + '" style="width:12px;height:12px"></i> ' + s.label + ' ' + s.time
+        +   '<div style="padding:10px 14px;background:' + (headDone ? 'var(--accent-tint)' : 'var(--bg-soft)') + ';border-bottom:1px solid var(--border);font-size:11px;color:' + (headDone ? 'var(--accent-deep)' : 'var(--text-dim)') + ';font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
+        +     '<i data-lucide="' + s.icon + '" style="width:12px;height:12px"></i> ' + s.label + ' ' + s.time + customTag
         +     '<span style="margin-left:auto">' + headPill + '</span>'
         +   '</div>'
         +   arr.map(function(m, idx) {
-            var rowPill = passed
-              ? '<span class="pill pill-ok mono">已服</span>'
-              : '<div class="check"></div>';
+            var status = slotStatuses[idx];
+            // backslash 先於單引號（同 safeMedId）；完整 escape 滿足 CodeQL。
+            var safeId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            var rowPill;
+            if (status.state === 'taken') {
+              rowPill = '<span class="pill pill-ok mono" title="實際打卡時間">已服 ' + status.loggedAt + '</span>';
+            } else if (status.state === 'skipped') {
+              rowPill = '<span class="pill pill-mute mono" title="本次跳過">已跳過 ' + status.loggedAt + '</span>';
+            } else if (status.state === 'missed') {
+              rowPill = '<button type="button" class="pill pill-warn mono" '
+                + 'style="border:0;cursor:pointer;font:inherit" '
+                + 'title="時間過了還沒打卡，點一下補登錄真實時間" '
+                + 'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\')">'
+                + '未打卡 · 補打'
+                + '</button>';
+            } else {
+              rowPill = '<button type="button" class="check" '
+                + 'style="cursor:pointer;background:transparent" '
+                + 'title="尚未到時間，點一下立刻打卡" '
+                + 'aria-label="打卡" '
+                + 'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\')"></button>';
+            }
             var sep = (idx < arr.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
             var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
             return ''
@@ -10958,10 +11321,16 @@ function _renderMobileMedList(meds) {
     }
     todayEl.innerHTML = thtml;
 
-    // 更新 5 / 8 進度
+    // 進度：實際打卡 / 預期，並在有漏打卡時加註
     var cntEl = document.getElementById('mobile-meds-count');
     if (cntEl) {
-      cntEl.textContent = totalCnt ? (doneCnt + ' / ' + totalCnt) : '— / —';
+      if (!totalCnt) {
+        cntEl.textContent = '— / —';
+      } else if (missedCnt > 0) {
+        cntEl.textContent = doneCnt + ' / ' + totalCnt + ' · 漏 ' + missedCnt;
+      } else {
+        cntEl.textContent = doneCnt + ' / ' + totalCnt;
+      }
     }
   }
 

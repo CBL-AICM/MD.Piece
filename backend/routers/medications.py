@@ -14,6 +14,7 @@ from backend.utils.medication_schedule import (
     DEFAULT_MIN_INTERVAL_HOURS,
     annotate_medication,
     check_dose_safety,
+    parse_custom_schedule,
     parse_time_slots,
 )
 
@@ -94,6 +95,14 @@ class MedicationCreate(BaseModel):
     category: str | None = None
     purpose: str | None = None
     instructions: str | None = None
+    # 非統一時刻自訂排程。格式：{"entries":[{"weekdays":[0..6],"time":"HH:MM"}, ...]}
+    # 0=Mon..6=Sun（與 datetime.weekday() 一致）。傳 None 代表沿用 frequency 文字解析。
+    custom_schedule: dict | None = None
+
+
+class MedicationScheduleUpdate(BaseModel):
+    # 顯式 None = 清空自訂排程、回到 frequency 文字解析；非 None 會被 parse_custom_schedule 正規化。
+    custom_schedule: dict | None = None
 
 
 class MedicationPhotoUpload(BaseModel):
@@ -166,6 +175,13 @@ def create_medication(body: MedicationCreate):
         return out
 
     data = body.model_dump(exclude_none=True)
+    if "custom_schedule" in data:
+        # 把使用者送進來的物件正規化；不合法就當沒設（避免污染 DB）。
+        normalized = parse_custom_schedule(data["custom_schedule"])
+        if normalized is None:
+            data.pop("custom_schedule", None)
+        else:
+            data["custom_schedule"] = normalized
     try:
         result = sb.table("medications").insert(data).execute()
     except Exception as e:
@@ -174,6 +190,34 @@ def create_medication(body: MedicationCreate):
     if not result.data:
         raise HTTPException(status_code=400, detail="新增失敗（資料庫未回傳資料）")
     return result.data[0]
+
+
+@router.put("/{medication_id}/schedule")
+def update_medication_schedule(medication_id: str, body: MedicationScheduleUpdate):
+    """
+    設定／清空單一藥物的非統一時刻自訂排程。
+
+    傳 body.custom_schedule = {"entries":[{"weekdays":[0..6],"time":"HH:MM"}, ...]} 設定排程。
+    傳 None / 空 dict / 不合法格式都會清空（custom_schedule 設為 NULL），
+    讓 annotate_medication 退回去用 frequency 文字解析。
+    """
+    sb = get_supabase()
+    normalized = parse_custom_schedule(body.custom_schedule)
+    try:
+        result = (
+            sb.table("medications")
+            .update({"custom_schedule": normalized})
+            .eq("id", medication_id)
+            .execute()
+        )
+    except Exception as e:
+        logger.error(f"Update medication schedule failed: {e}")
+        raise HTTPException(status_code=400, detail=f"更新排程失敗：{e}")
+    if not result.data:
+        raise HTTPException(status_code=404, detail="找不到該藥物")
+    row = dict(result.data[0])
+    row.update(annotate_medication(row))
+    return row
 
 
 @router.delete("/{medication_id}")

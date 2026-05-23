@@ -16,6 +16,8 @@ from backend.utils.medication_schedule import (
     SLOT_OTHER,
     annotate_medication,
     check_dose_safety,
+    custom_schedule_times_for_weekday,
+    parse_custom_schedule,
     parse_time_slots,
 )
 
@@ -96,6 +98,93 @@ def test_annotate_medication_returns_extra_fields():
     assert extra["slots"] == [SLOT_MORNING, SLOT_NOON, SLOT_EVENING]
     assert extra["bucket"] == SLOT_MORNING
     assert extra["is_other"] is False
+    assert extra["custom_schedule"] is None
+
+
+# ── parse_custom_schedule（非統一時刻自訂排程） ──────────────
+
+
+def test_parse_custom_schedule_none_and_empty():
+    assert parse_custom_schedule(None) is None
+    assert parse_custom_schedule("") is None
+    assert parse_custom_schedule({}) is None
+    assert parse_custom_schedule({"entries": []}) is None
+
+
+def test_parse_custom_schedule_normalizes_time_and_dedups_weekdays():
+    raw = {"entries": [{"weekdays": [1, 3, 5, 1, 3], "time": "8:00"}]}
+    out = parse_custom_schedule(raw)
+    assert out == {"entries": [{"weekdays": [1, 3, 5], "time": "08:00"}]}
+
+
+def test_parse_custom_schedule_accepts_json_string():
+    raw = '{"entries":[{"weekdays":[0],"time":"22:30"}]}'
+    out = parse_custom_schedule(raw)
+    assert out == {"entries": [{"weekdays": [0], "time": "22:30"}]}
+
+
+def test_parse_custom_schedule_drops_invalid_entries():
+    raw = {"entries": [
+        {"weekdays": [9], "time": "12:00"},  # weekday 超範圍 → 整筆丟掉
+        {"weekdays": [], "time": "12:00"},   # 空 weekdays → 丟掉
+        {"weekdays": [0], "time": "25:99"},  # 時間不合法 → 丟掉
+        {"weekdays": [0], "time": "noon"},   # 非 HH:MM → 丟掉
+        {"weekdays": [0], "time": "09:15"},  # ✓ 保留
+    ]}
+    out = parse_custom_schedule(raw)
+    assert out == {"entries": [{"weekdays": [0], "time": "09:15"}]}
+
+
+def test_parse_custom_schedule_dedups_identical_entries_and_sorts():
+    raw = {"entries": [
+        {"weekdays": [2], "time": "14:00"},
+        {"weekdays": [2], "time": "14:00"},  # 完全重複 → 去重
+        {"weekdays": [1], "time": "08:00"},
+    ]}
+    out = parse_custom_schedule(raw)
+    assert out == {"entries": [
+        {"weekdays": [1], "time": "08:00"},
+        {"weekdays": [2], "time": "14:00"},
+    ]}
+
+
+def test_custom_schedule_times_for_weekday():
+    sched = {"entries": [
+        {"weekdays": [0, 2, 4], "time": "08:00"},
+        {"weekdays": [1], "time": "14:00"},
+        {"weekdays": [0], "time": "20:00"},
+    ]}
+    assert custom_schedule_times_for_weekday(sched, 0) == ["08:00", "20:00"]
+    assert custom_schedule_times_for_weekday(sched, 1) == ["14:00"]
+    assert custom_schedule_times_for_weekday(sched, 3) == []
+    assert custom_schedule_times_for_weekday(None, 0) == []
+
+
+def test_annotate_medication_custom_schedule_overrides_slots():
+    # frequency 文字寫「一天一次」（會解析成 morning），但自訂排程是「週二 14:00 + 週四 20:00」
+    # → slots 應該以自訂排程的時刻分桶為主（noon + evening），不再用 frequency 推算。
+    med = {
+        "frequency": "一天一次",
+        "custom_schedule": {"entries": [
+            {"weekdays": [1], "time": "14:00"},
+            {"weekdays": [3], "time": "20:00"},
+        ]},
+    }
+    extra = annotate_medication(med)
+    assert SLOT_NOON in extra["slots"]
+    assert SLOT_EVENING in extra["slots"]
+    assert SLOT_MORNING not in extra["slots"]
+    assert extra["bucket"] == SLOT_NOON
+    assert extra["is_other"] is False
+    assert extra["custom_schedule"] is not None
+
+
+def test_annotate_medication_invalid_custom_schedule_falls_back():
+    # 自訂排程全部不合法 → 退回 frequency 文字解析。
+    med = {"frequency": "一天三次", "custom_schedule": {"entries": [{"weekdays": [9], "time": "bad"}]}}
+    extra = annotate_medication(med)
+    assert extra["slots"] == [SLOT_MORNING, SLOT_NOON, SLOT_EVENING]
+    assert extra["custom_schedule"] is None
 
 
 # ── check_dose_safety ────────────────────────────────────────

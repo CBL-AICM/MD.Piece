@@ -118,6 +118,7 @@ _SCHEMAS = {
             photo_data TEXT,
             recognized_from_photo INTEGER DEFAULT 0,
             active INTEGER DEFAULT 1,
+            custom_schedule TEXT,
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (patient_id) REFERENCES patients(id)
         )""",
