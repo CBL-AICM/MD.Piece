@@ -376,10 +376,10 @@ body.theme-modern .app-settings-btn { display: none !important; }
  * top bar 留 ☰ / 頁名 / 中 / 月亮 / A+ 5 個 element 就好，跟首頁一致。 */
 html body.theme-modern .topbar .topbar-back { display: none !important; }
 
-/* topbar 整體：白底淡邊 + 圓角 icon button（demo .ph-topbar 風格）*/
+/* topbar 整體：透明融入頁面背景，不再用白底+底邊把自己框成一條獨立 header bar */
 body.theme-modern .topbar {
-  background: #fff !important;
-  border-bottom: 1px solid var(--border, #E4D9C8) !important;
+  background: transparent !important;
+  border-bottom: 0 !important;
   padding: 10px 12px !important;
   gap: 6px !important;
 }
