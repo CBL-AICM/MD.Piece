@@ -10610,8 +10610,13 @@ function loadMedicationsPage() {
       var data = arr[0] || {};
       var logsData = arr[1] || { logs: [] };
       _medsList = (data.medications || []).filter(function(m) { return m.active !== 0; });
-      _medsTodayLogs = (logsData.logs || []).filter(function(l) {
-        return l && l.taken_at && String(l.taken_at).slice(0, 10) === todayISO && l.taken !== false;
+      // 保留今日的原始 log（不只是 count）— 讓 _renderMobileMedList 能按真實 taken_at
+      // 判斷每筆排程是「已服 / 已跳過 / 未打卡 / 尚未到」，而不是用「時間是否已過」推算。
+      _medsTodayLogList = (logsData.logs || []).filter(function(l) {
+        return l && l.taken_at && String(l.taken_at).slice(0, 10) === todayISO;
+      });
+      _medsTodayLogs = _medsTodayLogList.filter(function(l) {
+        return l.taken !== false && l.taken !== 0;
       }).length;
       renderMedList();
     })
@@ -10775,6 +10780,7 @@ function _renderMedTodayHero(meds) {
     + '</div>';
 }
 var _medsTodayLogs = 0;
+var _medsTodayLogList = [];
 
 function _medSlotLabel(key) { return _T('meds.slot.' + key + '.label'); }
 function _medSlotHint(key)  { return _T('meds.slot.' + key + '.hint');  }
@@ -10854,6 +10860,47 @@ function renderMedList() {
   try { _renderMobileMedList(_medsList); } catch (e) {}
 }
 
+// 把今日 medication_logs 對應到「早/中/晚/睡前」其中一個排程槽位。
+// 規則：同藥物、taken_at 在 slot 時間 ±3 小時內，取距離最近那筆。
+// 找不到對應 log 時：時間還沒到（含 30 分鐘 grace）→ upcoming；已過 → missed。
+// 為什麼用 ±3h 視窗：早/中/晚 slot 互相至少差 5h，3h 視窗不會跨槽位誤判，
+// 同時容忍使用者提早 / 拖延 30 分鐘到 2 小時左右才補打卡。
+function _medSlotStatus(medId, slotMins, logs, nowMin) {
+  var GRACE_AFTER_MIN = 30;
+  var MATCH_WINDOW_MIN = 180;
+  var best = null;
+  var medIdStr = String(medId);
+  for (var i = 0; i < logs.length; i++) {
+    var l = logs[i];
+    if (!l || String(l.medication_id) !== medIdStr) continue;
+    var ts = l.taken_at;
+    if (!ts) continue;
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) continue;
+    var lm = d.getHours() * 60 + d.getMinutes();
+    var dist = Math.abs(lm - slotMins);
+    if (dist <= MATCH_WINDOW_MIN && (!best || dist < best.dist)) {
+      best = { log: l, lm: lm, dist: dist };
+    }
+  }
+  if (best) {
+    var hh = String(Math.floor(best.lm / 60));
+    var mm = String(best.lm % 60);
+    if (hh.length < 2) hh = '0' + hh;
+    if (mm.length < 2) mm = '0' + mm;
+    var loggedAt = hh + ':' + mm;
+    var takenFlag = best.log.taken;
+    if (takenFlag === false || takenFlag === 0) {
+      return { state: 'skipped', loggedAt: loggedAt };
+    }
+    return { state: 'taken', loggedAt: loggedAt };
+  }
+  if (nowMin > slotMins + GRACE_AFTER_MIN) {
+    return { state: 'missed' };
+  }
+  return { state: 'upcoming' };
+}
+
 function _renderMobileMedList(meds) {
   var mob = document.getElementById('mobile-meds-list');
   var todayEl = document.getElementById('mobile-meds-today');
@@ -10906,38 +10953,77 @@ function _renderMobileMedList(meds) {
     mob.innerHTML = rows;
   }
 
-  // 今日服藥（簡化版 — 依 time_of_day 分桶，狀態用「時間是否已過」推算）
+  // 今日服藥 — 用真實 medication_logs 判定每筆狀態（不再用「時間過了就當已服」）。
+  // 四種狀態：taken（已服，顯示真實時戳）/ skipped（已跳過）/ missed（時間到卻沒打卡，可補打）/ upcoming（尚未到）。
+  // 行末按鈕可點擊：upcoming / missed → 觸發 tapMedTake 寫一筆真實 taken_at。
   if (todayEl) {
     var buckets = (typeof _bucketMeds === 'function') ? _bucketMeds(meds) : { morning: meds, noon: [], evening: [], bedtime: [], other: [] };
     var now = new Date();
     var curMin = now.getHours() * 60 + now.getMinutes();
+    var todayLogs = Array.isArray(_medsTodayLogList) ? _medsTodayLogList : [];
     var SLOTS = [
       { key: 'morning', label: '早晨', icon: 'sun',        time: '07:00', mins:  7*60 },
       { key: 'noon',    label: '中午', icon: 'sun',        time: '13:00', mins: 13*60 },
       { key: 'evening', label: '傍晚', icon: 'sun-dim',    time: '18:00', mins: 18*60 },
       { key: 'bedtime', label: '睡前', icon: 'moon',       time: '22:00', mins: 22*60 },
     ];
-    var totalCnt = 0, doneCnt = 0;
+    var totalCnt = 0, doneCnt = 0, missedCnt = 0;
     var thtml = '';
     SLOTS.forEach(function(s) {
       var arr = buckets[s.key] || [];
       if (!arr.length) return;
-      var passed = curMin >= s.mins;
-      var headPill = passed
-        ? '<span class="pill pill-ok mono">已完成</span>'
-        : '<span class="pill pill-mute mono">尚未到</span>';
+      // 逐顆藥查當日 logs，狀態 = 真實打卡紀錄
+      var slotStatuses = arr.map(function(m) {
+        return _medSlotStatus(m.id, s.mins, todayLogs, curMin);
+      });
+      var slotTaken = slotStatuses.filter(function(st) { return st.state === 'taken'; }).length;
+      var slotMissed = slotStatuses.filter(function(st) { return st.state === 'missed'; }).length;
+      var slotSkipped = slotStatuses.filter(function(st) { return st.state === 'skipped'; }).length;
       totalCnt += arr.length;
-      if (passed) doneCnt += arr.length;
+      doneCnt += slotTaken;
+      missedCnt += slotMissed;
+
+      var headPill;
+      if (slotTaken === arr.length) {
+        headPill = '<span class="pill pill-ok mono">已完成</span>';
+      } else if (slotMissed > 0) {
+        headPill = '<span class="pill pill-warn mono">未打卡 ' + slotMissed + '</span>';
+      } else if (slotTaken > 0 || slotSkipped > 0) {
+        headPill = '<span class="pill pill-info mono">進行中 ' + (slotTaken + slotSkipped) + '/' + arr.length + '</span>';
+      } else {
+        headPill = '<span class="pill pill-mute mono">尚未到</span>';
+      }
+      var headDone = slotTaken === arr.length;
+
       thtml += ''
         + '<div class="card" style="padding:0;margin-bottom:10px">'
-        +   '<div style="padding:10px 14px;background:' + (passed ? 'var(--accent-tint)' : 'var(--bg-soft)') + ';border-bottom:1px solid var(--border);font-size:11px;color:' + (passed ? 'var(--accent-deep)' : 'var(--text-dim)') + ';font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
+        +   '<div style="padding:10px 14px;background:' + (headDone ? 'var(--accent-tint)' : 'var(--bg-soft)') + ';border-bottom:1px solid var(--border);font-size:11px;color:' + (headDone ? 'var(--accent-deep)' : 'var(--text-dim)') + ';font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
         +     '<i data-lucide="' + s.icon + '" style="width:12px;height:12px"></i> ' + s.label + ' ' + s.time
         +     '<span style="margin-left:auto">' + headPill + '</span>'
         +   '</div>'
         +   arr.map(function(m, idx) {
-            var rowPill = passed
-              ? '<span class="pill pill-ok mono">已服</span>'
-              : '<div class="check"></div>';
+            var status = slotStatuses[idx];
+            var safeId = String(m.id).replace(/'/g, "\\'");
+            var rowPill;
+            if (status.state === 'taken') {
+              rowPill = '<span class="pill pill-ok mono" title="實際打卡時間">已服 ' + status.loggedAt + '</span>';
+            } else if (status.state === 'skipped') {
+              rowPill = '<span class="pill pill-mute mono" title="本次跳過">已跳過 ' + status.loggedAt + '</span>';
+            } else if (status.state === 'missed') {
+              rowPill = '<button type="button" class="pill pill-warn mono" '
+                + 'style="border:0;cursor:pointer;font:inherit" '
+                + 'title="時間過了還沒打卡，點一下補登錄真實時間" '
+                + 'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\',\'' + s.key + '\')">'
+                + '未打卡 · 補打'
+                + '</button>';
+            } else {
+              // upcoming：尚未到時間，仍允許「提前服用」打卡（會記錄當下真實時間）
+              rowPill = '<button type="button" class="check" '
+                + 'style="cursor:pointer;background:transparent" '
+                + 'title="尚未到時間，點一下立刻打卡" '
+                + 'aria-label="打卡" '
+                + 'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\',\'' + s.key + '\')"></button>';
+            }
             var sep = (idx < arr.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
             var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
             return ''
@@ -10958,10 +11044,16 @@ function _renderMobileMedList(meds) {
     }
     todayEl.innerHTML = thtml;
 
-    // 更新 5 / 8 進度
+    // 進度：實際打卡 / 預期，並在有漏打卡時加註
     var cntEl = document.getElementById('mobile-meds-count');
     if (cntEl) {
-      cntEl.textContent = totalCnt ? (doneCnt + ' / ' + totalCnt) : '— / —';
+      if (!totalCnt) {
+        cntEl.textContent = '— / —';
+      } else if (missedCnt > 0) {
+        cntEl.textContent = doneCnt + ' / ' + totalCnt + ' · 漏 ' + missedCnt;
+      } else {
+        cntEl.textContent = doneCnt + ' / ' + totalCnt;
+      }
     }
   }
 
