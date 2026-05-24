@@ -674,30 +674,38 @@ body.theme-modern .sec-count {
 }
 
 /* ─── 暗色模式 dark contrast 修正 ─────────────────────────────────
- * 使用者回報「即使是深色每個字都要清晰可見」：
- *   - mobile-tabbar 在 v11-modern.css line 430 寫死 #fff 白底，在暗色模式下
- *     變成白底浮在深藍背景上、整個視覺撞色，且 inactive 灰字（--text-dim 在
- *     暗模式 #DCE7F2）在白底上反而看不到。
- *   - topbar 個別按鈕（☰ / 中 / 月亮）背景用 --bg-soft，dark mode 已換深藍，
- *     但實機看仍對比不足 → 強化 border 與文字色。
- *   - 頁名 pill .topbar-filename 用 --accent-tint 在暗模式變 #163A60，跟頁面
- *     背景接近，pill 邊界看不出來 → 加亮 + 加邊。
+ * 使用者回報：暗色模式下底部 nav 標籤跟 topbar 按鈕看不清楚 +
+ * 切頁過程瞬間閃淺色。
+ *
+ * 重點 1（dark mode 系統有兩套）：
+ *   - html.dark + body.theme-modern  ← v11-modern.css 大部分規則用這個
+ *   - #app-wrapper[data-theme="dark"]  ← topbar 月亮按鈕 toggleAppTheme() 切的是這個
+ * 為了實機都生效，selector 兩套都列。
+ *
+ * 重點 2（切頁閃淺色）：
+ *   #app 有 animation: fadeIn .3s（每次 navigateTo 重渲都會跑），漸入時是
+ *   opacity:0 → 1 透明，會透出底下色層。把 #app 跟 main-content 在暗模式
+ *   都設明確深底，透明階段也只透出深色、不會閃白。
  */
+#app-wrapper[data-theme="dark"] .mobile-tabbar,
 html.dark body.theme-modern .mobile-tabbar {
   background: #133258 !important;
   border-top: 1px solid rgba(160,200,240,0.25) !important;
   box-shadow: 0 -2px 12px rgba(0,0,0,0.40) !important;
 }
+#app-wrapper[data-theme="dark"] .mobile-tabbar .mtab,
 html.dark body.theme-modern .mobile-tabbar .mtab {
   color: #C8D8EA !important;
 }
+#app-wrapper[data-theme="dark"] .mobile-tabbar .mtab.active,
+#app-wrapper[data-theme="dark"] .mobile-tabbar .mtab[data-active="true"],
 html.dark body.theme-modern .mobile-tabbar .mtab.active,
 html.dark body.theme-modern .mobile-tabbar .mtab[data-active="true"] {
   color: #9DCEF5 !important;
 }
-html.dark body.theme-modern .mobile-tabbar .mtab .mtab-icon {
-  color: inherit !important;
-}
+#app-wrapper[data-theme="dark"] .topbar .hamburger,
+#app-wrapper[data-theme="dark"] .topbar .app-lang-toggle,
+#app-wrapper[data-theme="dark"] .topbar .app-theme-toggle,
 html.dark body.theme-modern .topbar .hamburger,
 html.dark body.theme-modern .topbar .app-lang-toggle,
 html.dark body.theme-modern .topbar .app-theme-toggle {
@@ -705,17 +713,30 @@ html.dark body.theme-modern .topbar .app-theme-toggle {
   border: 1px solid rgba(160,200,240,0.40) !important;
   color: #FFFFFF !important;
 }
+#app-wrapper[data-theme="dark"] .topbar .app-theme-toggle .att-icon,
+#app-wrapper[data-theme="dark"] .topbar .lang-toggle-label,
 html.dark body.theme-modern .topbar .app-theme-toggle .att-icon,
 html.dark body.theme-modern .topbar .lang-toggle-label {
   color: #FFFFFF !important;
 }
+#app-wrapper[data-theme="dark"] .topbar .topbar-filename,
 html.dark body.theme-modern .topbar .topbar-filename {
   background: #1D436D !important;
   border: 1px solid rgba(160,200,240,0.30) !important;
   color: #FFFFFF !important;
 }
+#app-wrapper[data-theme="dark"] .topbar .topbar-filename::before,
 html.dark body.theme-modern .topbar .topbar-filename::before {
-  color: #7BC891 !important; /* 綠色狀態點，暗色背景下亮一點 */
+  color: #7BC891 !important;
+}
+
+/* 切頁不再閃淺色：#app 跟 main-content 在暗模式給明確深底，
+ * fadeIn opacity 0→1 過程中透出來的也是深色不是白。 */
+#app-wrapper[data-theme="dark"] .main-content,
+#app-wrapper[data-theme="dark"] #app,
+html.dark body.theme-modern .main-content,
+html.dark body.theme-modern #app {
+  background: #051A35 !important;
 }
 
 /* ─── 行動裝置（≤760px）：topbar / bottom tabbar 拉滿版貼邊，不再做浮動圓角卡 ───
