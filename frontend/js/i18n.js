@@ -253,8 +253,6 @@
       'home.card.symptomsAnalyze.desc': 'MD.Piece 釐清可能病因與就診科別',
       'home.card.records.title': '我的基本資料',
       'home.card.records.desc': '性別、過敏、慢性病… 看診時帶著走',
-      'home.card.doctors.title': '醫師列表',
-      'home.card.doctors.desc': '管理你的醫療團隊',
       'home.card.medications.title': '藥物管理',
       'home.card.medications.desc': '拍藥袋、記服藥、追療效',
       'home.card.education.title': '衛教專欄',
@@ -266,18 +264,6 @@
       'home.footer.tagline': '將日常碎片拼起，醫起走出治療的迷霧',
       'home.footer.credit': 'CBL-AICM Lab · Piece by Piece',
       'home.avatarAlt': '{name} 頭像',
-
-      // doctors page
-      'doctors.add.title': '新增醫師',
-      'doctors.placeholder.name': '醫師姓名',
-      'doctors.placeholder.specialty': '專科（例如：內科、外科）',
-      'doctors.placeholder.phone': '電話（選填）',
-      'doctors.add.submit': '新增',
-      'doctors.list.title': '醫師列表',
-      'doctors.list.loading': '載入中...',
-      'doctors.list.empty': '尚無醫師資料',
-      'doctors.delete': '刪除',
-      'doctors.delete.confirm': '確定刪除此醫師？',
 
       // medications page
       'meds.title': '藥物管理',
@@ -770,8 +756,6 @@
       'home.card.symptomsAnalyze.desc': 'MD.Piece insights on possible causes & specialty',
       'home.card.records.title': 'My Profile',
       'home.card.records.desc': 'Gender, allergies, chronic conditions — bring them to your visit',
-      'home.card.doctors.title': 'Doctor List',
-      'home.card.doctors.desc': 'Manage your care team',
       'home.card.medications.title': 'Medication Manager',
       'home.card.medications.desc': 'Snap your pill bag, log doses, track effect',
       'home.card.education.title': 'Health Education',
@@ -783,18 +767,6 @@
       'home.footer.tagline': "Piece together everyday fragments, walk out of the treatment fog together",
       'home.footer.credit': 'CBL-AICM Lab · Piece by Piece',
       'home.avatarAlt': "{name}'s avatar",
-
-      // doctors page
-      'doctors.add.title': 'Add Doctor',
-      'doctors.placeholder.name': 'Doctor name',
-      'doctors.placeholder.specialty': 'Specialty (e.g. Internal Medicine, Surgery)',
-      'doctors.placeholder.phone': 'Phone (optional)',
-      'doctors.add.submit': 'Add',
-      'doctors.list.title': 'Doctor List',
-      'doctors.list.loading': 'Loading...',
-      'doctors.list.empty': 'No doctors yet',
-      'doctors.delete': 'Delete',
-      'doctors.delete.confirm': 'Delete this doctor?',
 
       // medications page
       'meds.title': 'Medication Manager',
