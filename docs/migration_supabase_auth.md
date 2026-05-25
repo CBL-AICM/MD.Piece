@@ -96,20 +96,37 @@ PR #386 merge 時 Supabase MCP 觸發 **critical advisory：22 / 27 tables RLS d
 
 ### 問題 #1：`users.id` vs `patients.id` 是否一致？
 
-新發現的關鍵風險：
-- `users.id` (UUID) — auth 表
-- `patients.id` (UUID) — 臨床資料 FK 目標
-- 大部分業務表 `patient_id` FK 到 `patients.id`，**不是** `users.id`
-- 前端 `getStablePatientId()` 回的是哪一個？需要核對
+**已確認（執行 SQL 於 2026-05-25）：**
 
-**需要在 Phase 1 開始前先驗證：**
-```sql
-SELECT u.id, u.username, p.id, p.name
-FROM users u
-LEFT JOIN patients p ON ??  -- 沒有 FK！怎麼配對？
+```
+users    : 14 rows
+patients :  5 rows
+users.id ∩ patients.id = 3
 ```
 
-如果兩邊根本沒有關聯欄位 → Phase 1 第一步要先補資料：給每個 user 建對應 patient（或直接合併兩表）。
+5 個 patients 的細節：
+| patients.id | name | 對應 user? |
+|---|---|---|
+| `51910fcd-d549-4a6f-ab6e-5e42f1a009c9` | 匿名 | ❌（孤兒，2026-05-07 建） |
+| `35c88834-8674-44b8-beff-2cae0e3c80f8` | 匿名 | ✅ |
+| `11111111-2222-3333-4444-555555555555` | 訪客 | ❌（hardcoded demo sentinel） |
+| `37a4cbad-7152-4d17-980c-1d3d9e4fdd0e` | lisa | ✅ |
+| `067cbba3-cd82-4d1d-9e3a-acadfd6c465a` | 匿名 | ✅ |
+
+clinical data 分布：
+- `medications` 33 rows，全部 patient_id 都在 `patients.id`、只有 1 個 patient_id 也在 `users.id`
+- 其他 11 users 沒有對應 patient → 應該是測試帳號、沒打過卡片
+- 2 個 orphan patients：1 個是 hardcoded demo（`11111111-...`）、1 個是早期未綁定的匿名測試資料
+
+**Phase 1 遷移策略（基於此資料）：**
+
+1. **3 users.id == patients.id 的（lisa + 2 匿名）**：什麼都不用做，本身就一致
+2. **11 沒有 patient 的 users**：第一次寫 clinical data 時，由 backend 自動 `INSERT INTO patients (id, name) VALUES (user.id, user.nickname)`，行為對前端 transparent
+3. **2 個 orphan patients**（51910fcd、11111111）：
+   - `11111111-...` 是 demo sentinel → 維持、視為「公用 demo 帳號」
+   - `51910fcd` 是 2026-05-07 建的早期匿名測試 → 可直接 `DELETE`（無真實使用者），或保留以維持 FK 完整性
+
+→ 結論：**users 跟 patients 的對應問題**比想像簡單，**Phase 1 可以動了**。
 
 ### 問題 #2：型別不一致（UUID vs TEXT）
 
@@ -141,7 +158,7 @@ CREATE POLICY p ON reminders FOR ALL TO authenticated
 ### Phase 0 — Design freeze（本 PR）
 - [x] 寫本文件
 - [x] 把問題 #1-3 列出來
-- [ ] **用 SQL 確認 users / patients 的對應關係**（決定後動 Phase 1）
+- [x] **用 SQL 確認 users / patients 的對應關係**（已釐清，見 §5 問題 #1）
 
 ### Phase 1 — Backend 中間層加固（封住越權漏洞）
 
