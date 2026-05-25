@@ -7694,6 +7694,30 @@ function symptoms() {
       }).join('')
     +   '</div>'
 
+    // 今日紀錄（手機）— 桌機版的「今日紀錄」section 在 .sym-page.desktop-only
+    // 區裡藏掉，手機看不到。這邊 mirror 一份簡化版（時間 + 類型 chip + 強度 / 頻率）。
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="history"></i> 今日紀錄</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<span class="sec-count">' + todayEntries.length + ' 筆</span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:0;margin-bottom:14px;background:#fff;border:1.5px solid var(--border);border-radius:14px;overflow:hidden">'
+    +     (todayEntries.length === 0
+        ? '<div style="padding:18px 14px;text-align:center;color:var(--text-muted);font-size:11.5px"><i data-lucide="scan-search" style="width:18px;height:18px;color:var(--text-muted);margin-bottom:6px"></i><div>今天還沒紀錄任何症狀</div><div style="margin-top:2px;color:var(--text-dim);font-size:10.5px">點上面的類型 chip 開始記錄</div></div>'
+        : todayEntries.slice().reverse().map(function(e, idx) {
+            var c = findSymptomCat(e.categoryId);
+            var time = new Date(e.recordedAt).toTimeString().slice(0, 5);
+            var catLabel = c ? _symField(c, 'zh') : e.categoryId;
+            var sep = (idx < todayEntries.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
+            return ''
+              + '<div style="padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12px' + sep + '">'
+              +   '<span style="font-family:var(--font-mono,monospace);font-size:11px;color:var(--text-dim);min-width:34px">' + escapeHtml(time) + '</span>'
+              +   '<span class="pill pill-info mono" style="font-size:10px">' + escapeHtml(catLabel) + '</span>'
+              +   '<span style="flex:1;color:var(--text);font-size:11.5px">強度 ' + e.intensity + (e.frequency ? ' · ' + e.frequency + ' 次' : '') + '</span>'
+              + '</div>';
+          }).join(''))
+    +   '</div>'
+
     // AI 摘要
     +   '<div class="sec-head">'
     +     '<h3 class="sec-title"><i data-lucide="sparkles"></i> AI 幫你看一下</h3>'

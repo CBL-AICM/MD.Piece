@@ -790,9 +790,16 @@ html.dark body.theme-modern #app {
     background: var(--bg, #fff) !important;
     overflow-y: auto !important;
     padding: 16px !important;
+    pointer-events: auto !important;
   }
   body.theme-modern.is-sym-logging .sym-page.desktop-only > *:not(#sym-logform) {
     display: none !important;
+  }
+  /* 保險：強制讓 modal 內所有 interactive element 可點，避免上層繼承
+   * pointer-events:none 蓋掉（之前使用者實機回報「無法點選」即使 modal 出現）。 */
+  body.theme-modern.is-sym-logging #sym-logform,
+  body.theme-modern.is-sym-logging #sym-logform * {
+    pointer-events: auto !important;
   }
 }
 
