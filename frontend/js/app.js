@@ -1,6 +1,31 @@
 const API = window.location.hostname === "localhost" ? "http://localhost:8000" : "";
 const GITHUB_REPO = "CBL-AICM/MD.Piece";
 
+// 本地時區的 YYYY-MM-DD — 解所有「今日比對」用 UTC slice 造成台灣早上 8 點前
+// 打的卡會被歸到前一天 UTC、導致 UI 看不到的 bug（藥物 / KPI / sidebar 今日 badge）。
+// timestamp 寫入 DB 仍走 toISOString()，UTC 才是正確的儲存格式。
+// 純 'YYYY-MM-DD' 字串（後端純日期欄位、自選日期）原樣返回，不做時區轉換。
+function _localDay(input) {
+  var d;
+  if (arguments.length === 0) {
+    d = new Date();
+  } else {
+    if (input == null || input === "") return "";
+    if (typeof input === "string") {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return input;
+      d = new Date(input);
+    } else if (input instanceof Date) {
+      d = input;
+    } else {
+      return "";
+    }
+  }
+  if (!d || isNaN(d.getTime())) return "";
+  return d.getFullYear() + "-"
+    + String(d.getMonth() + 1).padStart(2, "0") + "-"
+    + String(d.getDate()).padStart(2, "0");
+}
+
 // ─── 顯示模式（年長版 / 普通版）─────────────────────────────
 // 'senior' = 大字體、寬按鈕、高對比；'standard' = 原本的精緻 UI
 //
@@ -442,10 +467,10 @@ function placeholderPage(label, hint, iconName, slug, pct) {
 // 生理紀錄使用獨立 vitals() 函式（見下方）
 function memo() {
   var _memoList = (typeof memoLoad === 'function') ? memoLoad() : [];
-  var _todayKey = new Date().toISOString().slice(0, 10);
+  var _todayKey = _localDay();
   var _todayCount = _memoList.filter(function(m) {
     var t = m.createdAt || m.created_at;
-    return t && String(new Date(t).toISOString()).slice(0, 10) === _todayKey;
+    return t && _localDay(t) === _todayKey;
   }).length;
   var _doctorCount = _memoList.filter(function(m) { return m.forDoctor; }).length;
 
@@ -1157,7 +1182,7 @@ function memoFormatTime(iso) {
   if (diff < 3600) return Math.floor(diff / 60) + " 分鐘前";
   if (diff < 86400) return Math.floor(diff / 3600) + " 小時前";
   if (diff < 604800) return Math.floor(diff / 86400) + " 天前";
-  return d.toISOString().slice(0, 10);
+  return _localDay(d);
 }
 
 function memoRenderList() {
@@ -3804,7 +3829,7 @@ function _howtoOnToggle(el) {
 async function refreshNavBadges() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  var todayISO = new Date().toISOString().slice(0, 10);
+  var todayISO = _localDay();
 
   function setBadge(key, text, tone) {
     var el = document.querySelector('[data-nav-badge="' + key + '"]');
@@ -3817,21 +3842,23 @@ async function refreshNavBadges() {
   // 症狀：今日筆數（本地）
   try {
     var syms = (typeof getSymptomEntries === 'function') ? getSymptomEntries() : [];
-    var n = syms.filter(function(e) { return String(e.recordedAt || '').slice(0, 10) === todayISO; }).length;
+    var n = syms.filter(function(e) { return _localDay(e.recordedAt) === todayISO; }).length;
     setBadge('symptoms', n > 0 ? ('+' + n) : '!', n > 0 ? 'done' : 'todo');
   } catch (e) {}
 
   // 藥物：今日 log 數
   try {
     var ml = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{logs:[]};});
-    var nm = (ml.logs || []).filter(function(l) { return l && l.taken_at && String(l.taken_at).slice(0,10) === todayISO && l.taken !== false; }).length;
+    var nm = (ml.logs || []).filter(function(l) { return l && l.taken_at && _localDay(l.taken_at) === todayISO && l.taken !== false; }).length;
     setBadge('medications', nm > 0 ? ('+' + nm) : '!', nm > 0 ? 'done' : 'todo');
   } catch (e) {}
 
-  // 情緒
+  // 情緒：後端 emotions/daily 的 date 用 UTC 切日，這裡保留 UTC todayKey 對齊；
+  // 待後端切到本地時區後可改用 todayISO（_localDay()）。
   try {
     var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
-    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
+    var todayUTC = new Date().toISOString().slice(0, 10);
+    var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
     var nc = d ? (d.count || 0) : 0;
     setBadge('emotions', nc > 0 ? ('+' + nc) : '!', nc > 0 ? 'done' : 'todo');
   } catch (e) {}
@@ -3840,7 +3867,7 @@ async function refreshNavBadges() {
   try {
     var vList = (typeof getVitalEntries === 'function') ? getVitalEntries() : [];
     var nv = vList.filter(function(v) {
-      return v && String(v.recordedAt || v.date || '').slice(0, 10) === todayISO;
+      return v && _localDay(v.recordedAt || v.date) === todayISO;
     }).length;
     setBadge('vitals', nv > 0 ? ('+' + nv) : '', nv > 0 ? 'done' : 'todo');
   } catch (e) {}
@@ -3897,14 +3924,14 @@ function renderTodayDigestCard() {
 async function refreshTodayDigest() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  var todayISO = new Date().toISOString().slice(0, 10);
+  var todayISO = _localDay();
 
   function _todayCountFromList(list, dateField) {
     if (!Array.isArray(list)) return 0;
     return list.filter(function(item) {
       var v = item && item[dateField];
       if (!v) return false;
-      return String(v).slice(0, 10) === todayISO;
+      return _localDay(v) === todayISO;
     }).length;
   }
 
@@ -3915,7 +3942,7 @@ async function refreshTodayDigest() {
   try {
     var syms = (typeof getSymptomEntries === 'function') ? getSymptomEntries() : [];
     symptomCount = syms.filter(function(e) {
-      return String(e.recordedAt || '').slice(0, 10) === todayISO;
+      return _localDay(e.recordedAt) === todayISO;
     }).length;
   } catch (e) {}
 
@@ -3923,14 +3950,15 @@ async function refreshTodayDigest() {
   try {
     var m = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
     medCount = (m.logs || []).filter(function(l) {
-      return l && l.taken !== false && String(l.taken_at || '').slice(0, 10) === todayISO;
+      return l && l.taken !== false && _localDay(l.taken_at) === todayISO;
     }).length;
   } catch (e) {}
 
-  // 情緒 daily 聚合
+  // 情緒 daily 聚合 — 後端 emotions/daily 用 UTC 切日，這裡 fallback 用 UTC todayKey
   try {
     var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
-    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
+    var todayUTC = new Date().toISOString().slice(0, 10);
+    var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
     moodCount = d ? (d.count || 0) : 0;
   } catch (e) {}
 
@@ -4003,6 +4031,7 @@ function removeUserTodo(id) {
 }
 async function _genAutoTodos() {
   var out = [];
+  // 此函數只用 todayISO 跟後端 emotions/daily 的 date 對比；後端用 UTC 切日所以這裡保留 UTC。
   var todayISO = new Date().toISOString().slice(0, 10);
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return out;
@@ -4206,7 +4235,7 @@ function _finalizeVisit(opts) {
   // 3. 更新回診日期：lastVisit = 今天、nextVisit = ''
   //    時段也轉移：原本「下次回診的上午/下午」變成「上次回診」的時段，下次清空
   try {
-    var todayIso = new Date().toISOString().slice(0, 10);
+    var todayIso = _localDay();
     var curr = (typeof getVisitDates === 'function') ? (getVisitDates() || {}) : {};
     var perUserSess = (typeof loadNextVisitSession === 'function') ? loadNextVisitSession() : '';
     var inheritedSession = _normalizeSession(perUserSess || curr.nextVisitSession || '');
@@ -5287,9 +5316,9 @@ function _updateMobileSosCount() {
       try {
         stored = JSON.parse(localStorage.getItem('mdpiece_ip_sos_history') || '[]');
       } catch (e) { stored = []; }
-      var todayISO = new Date().toISOString().slice(0, 10);
+      var todayISO = _localDay();
       var today = stored.filter(function(s) {
-        return s && s.ts && (new Date(s.ts)).toISOString().slice(0, 10) === todayISO;
+        return s && s.ts && _localDay(s.ts) === todayISO;
       });
       todayCount.textContent = '今日 ' + today.length + ' 筆';
     }
@@ -6083,7 +6112,7 @@ function onInpatientStepClick(stepId) {
     return;
   }
   if (stepId === 'planned') {
-    var iso = prompt('排定出院日期（YYYY-MM-DD）：', new Date().toISOString().slice(0,10));
+    var iso = prompt('排定出院日期（YYYY-MM-DD）：', _localDay());
     if (!iso) return;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso.trim())) { if (typeof showToast === 'function') showToast('格式不對', 'error'); return; }
     fetch(API + '/admissions/' + encodeURIComponent(admId), {
@@ -6725,7 +6754,7 @@ function openTimelineUploader() {
   var kindOpts = _TIMELINE_KINDS.map(function(k) {
     return '<option value="' + k.id + '">' + k.label + '</option>';
   }).join('');
-  var todayStr = new Date().toISOString().slice(0, 10);
+  var todayStr = _localDay();
   sheet.innerHTML = ''
     + '<div class="ip-prep-backdrop" onclick="closeTimelineUploader()"></div>'
     + '<div class="ip-prep-panel" role="dialog" aria-label="上傳到時間軸">'
@@ -6942,12 +6971,12 @@ function _fillNowCard(active) {
 // 視覺分組：醫療處置（exam / med / treatment / nursing）= 主角；生活作息（meal / vitals / rounds）= 淡化背景。
 // 透過 item.group ('procedure' | 'life') 給 CSS 用。
 function _buildTodayTimeline(meds, active) {
-  var todayStr = new Date().toISOString().slice(0, 10);
+  var todayStr = _localDay();
   var items = [];
   // 排定給藥（只取今天有 next_due_date 的）— 醫療處置
   (meds || []).forEach(function(m) {
     if (!m.next_due_date) return;
-    if (String(m.next_due_date).slice(0, 10) !== todayStr) return;
+    if (_localDay(m.next_due_date) !== todayStr) return;
     items.push({
       id: 'med-' + m.id,
       time: m.next_due_date.slice(0, 16),
@@ -7745,8 +7774,8 @@ function symptoms() {
   const topCat = topId ? findSymptomCat(topId) : null;
   const nextVisitDay = v.nextVisit ? Math.ceil((new Date(v.nextVisit) - today) / 86400000) : null;
   const nextVisitSessShort = v.nextVisit ? sessionShort(v.nextVisitSession) : '';
-  const todayStr = today.toISOString().slice(0, 10);
-  const todayEntries = stats.entries.filter(e => e.recordedAt.slice(0, 10) === todayStr);
+  const todayStr = _localDay(today);
+  const todayEntries = stats.entries.filter(e => _localDay(e.recordedAt) === todayStr);
 
   // ─── 手機 v11 demo 版面（body map + intensity + chips + AI 卡）─── //
   var _mobileSymBlock = ''
@@ -9073,8 +9102,8 @@ function vitals() {
   const lastUpdate = latestAcross ? new Date(latestAcross.recordedAt) : null;
   const lastUpdateStr = lastUpdate ? `${(lastUpdate.getMonth()+1)}/${lastUpdate.getDate()} ${lastUpdate.toTimeString().slice(0,5)}` : '—';
   // 今日進度：追蹤項目中今日已記錄的 distinct metric 數
-  const todayKey = new Date().toISOString().slice(0,10);
-  const todayMetricIds = new Set(allEntries.filter(e => (e.recordedAt || '').slice(0,10) === todayKey).map(e => e.metricId));
+  const todayKey = _localDay();
+  const todayMetricIds = new Set(allEntries.filter(e => _localDay(e.recordedAt) === todayKey).map(e => e.metricId));
   const todayCovered = tracked.filter(id => todayMetricIds.has(id)).length;
   const totalToday = tracked.length || 0;
   const pctToday = totalToday ? Math.min(100, Math.round((todayCovered / totalToday) * 100)) : 0;
@@ -10991,7 +11020,7 @@ function medications() {
 function loadMedicationsPage() {
   // 平行抓取「藥物清單」與「今日服藥次數」，兩者都到了再 render，
   // 避免 hero 顯示舊的 _medsTodayLogs 值。
-  var todayISO = new Date().toISOString().slice(0, 10);
+  var todayISO = _localDay();
   var pList = fetch(API + "/medications/?patient_id=" + _medsPatientId)
     .then(function(r) { return r.json(); });
   var pLogs = fetch(API + "/medications/logs?patient_id=" + _medsPatientId + "&days=1")
@@ -11005,7 +11034,7 @@ function loadMedicationsPage() {
       // 保留今日的原始 log（不只是 count）— 讓 _renderMobileMedList 能按真實 taken_at
       // 判斷每筆排程是「已服 / 已跳過 / 未打卡 / 尚未到」，而不是用「時間是否已過」推算。
       _medsTodayLogList = (logsData.logs || []).filter(function(l) {
-        return l && l.taken_at && String(l.taken_at).slice(0, 10) === todayISO;
+        return l && l.taken_at && _localDay(l.taken_at) === todayISO;
       });
       _medsTodayLogs = _medsTodayLogList.filter(function(l) {
         return l.taken !== false && l.taken !== 0;
