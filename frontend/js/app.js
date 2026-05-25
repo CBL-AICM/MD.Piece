@@ -19611,6 +19611,7 @@ var _remindersInbox = [];
 var _remindersPid = null;
 var _pushVapidPublicKey = null;
 var _pushSubscribed = false;
+var _webpushEnabled = null;  // null=未探測, true=後端已啟用, false=未啟用
 var _remindersInboxTimer = null;
 var _remindersSeenInboxIds = null;  // null = 初次載入時不響鈴
 var _remBellKinds = [
@@ -19639,7 +19640,7 @@ function reminders() {
     +     '<div class="pv-hero-meta" style="position:relative;z-index:1">站內通知一定收到；手機推播要先授權</div>'
     +     '<div style="display:flex;gap:5px;margin-top:8px;position:relative;z-index:1;align-items:center">'
     +       '<span class="pill ' + permPillCls + '"><i data-lucide="shield-check"></i>' + permLabel + '</span>'
-    +       '<button class="pv-btn" onclick="reminderEnablePush()" style="margin-top:0"><i data-lucide="bell-plus"></i> 啟用推播</button>'
+    +       '<button class="pv-btn rem-push-enable-btn" onclick="reminderEnablePush()" style="margin-top:0"><i data-lucide="bell-plus"></i> 啟用推播</button>'
     +     '</div>'
     +   '</div>'
 
@@ -19704,7 +19705,7 @@ function reminders() {
     + '    <span id="reminders-push-state" style="color:var(--text-dim);font-size:0.9rem">推播訂閱：載入中…</span>'
     + '  </div>'
     + '  <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
-    + '    <button class="primary" onclick="reminderEnablePush()"><i data-lucide="bell-plus" style="width:14px;height:14px;vertical-align:middle"></i> 啟用手機推播</button>'
+    + '    <button class="primary rem-push-enable-btn" onclick="reminderEnablePush()"><i data-lucide="bell-plus" style="width:14px;height:14px;vertical-align:middle"></i> 啟用手機推播</button>'
     + '    <button class="secondary" onclick="reminderDisablePush()"><i data-lucide="bell-off" style="width:14px;height:14px;vertical-align:middle"></i> 取消推播</button>'
     + '    <button class="secondary" onclick="reminderTestDispatch()"><i data-lucide="send" style="width:14px;height:14px;vertical-align:middle"></i> 觸發目前到期提醒</button>'
     + '  </div>'
@@ -20328,14 +20329,49 @@ function reminderRefreshPushState() {
   var el = document.getElementById('reminders-push-state');
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     if (el) el.textContent = '推播訂閱：此瀏覽器不支援 Web Push';
+    _webpushEnabled = false;
+    _applyPushEnabledUi();
     return;
   }
+  fetch(API + '/reminders/push/config')
+    .then(function(r) { return r.json(); })
+    .then(function(cfg) {
+      _webpushEnabled = !!cfg.webpush_enabled;
+      _applyPushEnabledUi();
+    })
+    .catch(function() {
+      _webpushEnabled = false;
+      _applyPushEnabledUi();
+    });
   navigator.serviceWorker.ready.then(function(reg) {
     return reg.pushManager.getSubscription();
   }).then(function(sub) {
     _pushSubscribed = !!sub;
-    if (el) el.textContent = '推播訂閱：' + (_pushSubscribed ? '已啟用' : '未啟用');
+    if (el && _webpushEnabled !== false) {
+      el.textContent = '推播訂閱：' + (_pushSubscribed ? '已啟用' : '未啟用');
+    }
   });
+}
+
+function _applyPushEnabledUi() {
+  var btns = document.querySelectorAll('.rem-push-enable-btn');
+  var el = document.getElementById('reminders-push-state');
+  if (_webpushEnabled === false) {
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].disabled = true;
+      btns[i].style.opacity = '0.5';
+      btns[i].style.cursor = 'not-allowed';
+      btns[i].title = '伺服器尚未開放手機推播，僅支援站內通知';
+    }
+    if (el) el.textContent = '推播訂閱：伺服器尚未開放手機推播';
+  } else {
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].disabled = false;
+      btns[j].style.opacity = '';
+      btns[j].style.cursor = '';
+      btns[j].title = '';
+    }
+  }
 }
 
 function _urlBase64ToUint8Array(base64String) {
@@ -20357,8 +20393,10 @@ function reminderEnablePush() {
     fetch(API + '/reminders/push/config')
       .then(function(r) { return r.json(); })
       .then(function(cfg) {
-        if (!cfg.vapid_public_key) {
-          alert('伺服器尚未設定 VAPID 公鑰；站內通知仍可正常使用。');
+        if (!cfg.webpush_enabled || !cfg.vapid_public_key) {
+          _webpushEnabled = false;
+          _applyPushEnabledUi();
+          alert('目前僅支援站內通知，手機推播尚未開放。');
           return;
         }
         _pushVapidPublicKey = cfg.vapid_public_key;
