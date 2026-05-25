@@ -14529,6 +14529,10 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   --ip-sky:       #8EC5F2;
   --ip-sage:      #A8D8B9;
   --ip-warn:      #F2C26D;
+  --ip-mint-rgb:  127,231,217;
+  --ip-coral-rgb: 232,169,138;
+  --ip-sky-rgb:   142,197,242;
+  --ip-sage-rgb:  168,216,185;
   --ip-radius:    18px;
   --ip-shadow:    0 6px 24px rgba(0,0,0,0.18);
   position: relative;
@@ -14827,6 +14831,41 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
 #app-wrapper[data-theme="light"] .ip-sos {
   background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.78) 100%);
 }
+
+/* ── Light-mode 加深：inpatient pastel 在米色底會糊，全部換深色版本 ── */
+#app-wrapper[data-theme="light"] .home-inpatient {
+  --ip-mint:      #1E8E80;   /* deep teal — 取代 #7FE7D9 */
+  --ip-coral:     #C25A38;   /* deep coral — 取代 #E8A98A */
+  --ip-sky:       #2B6FB0;   /* deep ocean — 取代 #8EC5F2 */
+  --ip-sage:      #3F8E5C;   /* forest green — 取代 #A8D8B9 */
+  --ip-warn:      #B07A1F;   /* deep amber — 取代 #F2C26D */
+  --ip-mint-rgb:  30,142,128;
+  --ip-coral-rgb: 194,90,56;
+  --ip-sky-rgb:   43,111,176;
+  --ip-sage-rgb:  63,142,92;
+  --ip-border:    rgba(19,36,66,0.16);
+  --ip-muted:     rgba(19,36,66,0.62);
+}
+
+/* day badge / next-step / SOS chip bg 用 rgb token 重算 alpha — 提高到 0.18-0.24 */
+#app-wrapper[data-theme="light"] .ip-now-day {
+  background: rgba(var(--ip-mint-rgb), 0.18);
+  border-color: rgba(var(--ip-mint-rgb), 0.42);
+}
+#app-wrapper[data-theme="light"] .ip-next-done {
+  background: rgba(var(--ip-mint-rgb), 0.18);
+  border-color: rgba(var(--ip-mint-rgb), 0.42);
+}
+#app-wrapper[data-theme="light"] .ip-next-uneasy {
+  background: rgba(var(--ip-coral-rgb), 0.18);
+  border-color: rgba(var(--ip-coral-rgb), 0.42);
+}
+#app-wrapper[data-theme="light"] .ip-sos-coral { --ip-sos-bg: rgba(var(--ip-coral-rgb), 0.18); }
+#app-wrapper[data-theme="light"] .ip-sos-sky   { --ip-sos-bg: rgba(var(--ip-sky-rgb),   0.18); }
+#app-wrapper[data-theme="light"] .ip-sos-sage  { --ip-sos-bg: rgba(var(--ip-sage-rgb),  0.20); }
+#app-wrapper[data-theme="light"] .ip-sos-mint  { --ip-sos-bg: rgba(var(--ip-mint-rgb),  0.18); }
+#app-wrapper[data-theme="light"] .ip-sos-btn { border-width: 2px; }
+#app-wrapper[data-theme="light"] .ip-sos-btn .ip-sos-sub { opacity: 0.9; }
 
 /* 門診版快速回報 — 沿用 .ip-sos 子元素的 styling，但容器走 home 卡片風格、不 sticky */
 .home-quick-report {
