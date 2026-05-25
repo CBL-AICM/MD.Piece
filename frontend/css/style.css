@@ -12486,10 +12486,10 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   display: block;
 }
 @media (max-width: 768px) {
-  .mood-line, .mood-line-svg { min-height: 340px; height: 340px; }
+  .mood-line, .mood-line-svg { min-height: 420px; height: 420px; }
 }
 @media (max-width: 480px) {
-  .mood-line, .mood-line-svg { min-height: 260px; height: 260px; }
+  .mood-line, .mood-line-svg { min-height: 380px; height: 380px; }
 }
 .mood-line-summary {
   margin: 10px 0 0;

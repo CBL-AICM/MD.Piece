@@ -1,17 +1,17 @@
-const CACHE_VERSION = "mdpiece-v117-mood-chart-bigger";
+const CACHE_VERSION = "mdpiece-v118-mood-chart-mobile";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v112-mood-chart-bigger",
+  "/css/style.css?v=v113-mood-chart-mobile",
   "/css/medical-warm.css?v=v5-puzzle-pattern",
   "/css/v11-modern.css?v=v2-mobile-only",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v129-mood-chart-bigger",
+  "/js/app.js?v=v130-mood-chart-mobile",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
