@@ -369,16 +369,17 @@ html body.theme-modern #app-settings-btn,
 body.theme-modern .app-elder-toggle,
 body.theme-modern .app-settings-btn { display: none !important; }
 
-/* 在首頁時隱藏「返回」按鈕（已經在首頁不需要返回）— page-title 是「首頁」時 hide */
-html body.theme-modern .topbar .topbar-back { display: inline-flex !important; }
-/* 透過 JS 動態加 class 控制 */
-html body.theme-modern.is-home .topbar .topbar-back,
-html body.theme-modern[data-page="home"] .topbar .topbar-back { display: none !important; }
+/* 簡化 top header：返回鈕全部頁面都隱藏。使用者可以：
+ *   - 用底部 5-tab nav（首頁 / 碎片 / 記一筆 / 診前 / 醫聊）切頁
+ *   - 用 ☰ hamburger 選單裡的「返回首頁」回主頁
+ *   - Android 系統返回鍵（main.js 已把每個 navigateTo 推進 history stack）
+ * top bar 留 ☰ / 頁名 / 中 / 月亮 / A+ 5 個 element 就好，跟首頁一致。 */
+html body.theme-modern .topbar .topbar-back { display: none !important; }
 
-/* topbar 整體：白底淡邊 + 圓角 icon button（demo .ph-topbar 風格）*/
+/* topbar 整體：透明融入頁面背景，不再用白底+底邊把自己框成一條獨立 header bar */
 body.theme-modern .topbar {
-  background: #fff !important;
-  border-bottom: 1px solid var(--border, #E4D9C8) !important;
+  background: transparent !important;
+  border-bottom: 0 !important;
   padding: 10px 12px !important;
   gap: 6px !important;
 }
@@ -670,6 +671,104 @@ body.theme-modern .sec-count {
   color: var(--text-dim, #5B6F80);
   font-size: 11.5px;
   font-weight: 600;
+}
+
+/* ─── 暗色模式 dark contrast 修正 ─────────────────────────────────
+ * 使用者回報：暗色模式下底部 nav 標籤跟 topbar 按鈕看不清楚 +
+ * 切頁過程瞬間閃淺色。
+ *
+ * 重點 1（dark mode 系統有兩套）：
+ *   - html.dark + body.theme-modern  ← v11-modern.css 大部分規則用這個
+ *   - #app-wrapper[data-theme="dark"]  ← topbar 月亮按鈕 toggleAppTheme() 切的是這個
+ * 為了實機都生效，selector 兩套都列。
+ *
+ * 重點 2（切頁閃淺色）：
+ *   #app 有 animation: fadeIn .3s（每次 navigateTo 重渲都會跑），漸入時是
+ *   opacity:0 → 1 透明，會透出底下色層。把 #app 跟 main-content 在暗模式
+ *   都設明確深底，透明階段也只透出深色、不會閃白。
+ */
+#app-wrapper[data-theme="dark"] .mobile-tabbar,
+html.dark body.theme-modern .mobile-tabbar {
+  background: #133258 !important;
+  border-top: 1px solid rgba(160,200,240,0.25) !important;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.40) !important;
+}
+#app-wrapper[data-theme="dark"] .mobile-tabbar .mtab,
+html.dark body.theme-modern .mobile-tabbar .mtab {
+  color: #C8D8EA !important;
+}
+#app-wrapper[data-theme="dark"] .mobile-tabbar .mtab.active,
+#app-wrapper[data-theme="dark"] .mobile-tabbar .mtab[data-active="true"],
+html.dark body.theme-modern .mobile-tabbar .mtab.active,
+html.dark body.theme-modern .mobile-tabbar .mtab[data-active="true"] {
+  color: #9DCEF5 !important;
+}
+#app-wrapper[data-theme="dark"] .topbar .hamburger,
+#app-wrapper[data-theme="dark"] .topbar .app-lang-toggle,
+#app-wrapper[data-theme="dark"] .topbar .app-theme-toggle,
+html.dark body.theme-modern .topbar .hamburger,
+html.dark body.theme-modern .topbar .app-lang-toggle,
+html.dark body.theme-modern .topbar .app-theme-toggle {
+  background: #1D436D !important;
+  border: 1px solid rgba(160,200,240,0.40) !important;
+  color: #FFFFFF !important;
+}
+#app-wrapper[data-theme="dark"] .topbar .app-theme-toggle .att-icon,
+#app-wrapper[data-theme="dark"] .topbar .lang-toggle-label,
+html.dark body.theme-modern .topbar .app-theme-toggle .att-icon,
+html.dark body.theme-modern .topbar .lang-toggle-label {
+  color: #FFFFFF !important;
+}
+#app-wrapper[data-theme="dark"] .topbar .topbar-filename,
+html.dark body.theme-modern .topbar .topbar-filename {
+  background: #1D436D !important;
+  border: 1px solid rgba(160,200,240,0.30) !important;
+  color: #FFFFFF !important;
+}
+#app-wrapper[data-theme="dark"] .topbar .topbar-filename::before,
+html.dark body.theme-modern .topbar .topbar-filename::before {
+  color: #7BC891 !important;
+}
+
+/* 切頁不再閃淺色：#app 跟 main-content 在暗模式給明確深底，
+ * fadeIn opacity 0→1 過程中透出來的也是深色不是白。 */
+#app-wrapper[data-theme="dark"] .main-content,
+#app-wrapper[data-theme="dark"] #app,
+html.dark body.theme-modern .main-content,
+html.dark body.theme-modern #app {
+  background: #051A35 !important;
+}
+
+/* ─── 行動裝置（≤760px）：topbar / bottom tabbar 拉滿版貼邊，不再做浮動圓角卡 ───
+ * 原本 style.css line 11357 / 11536 把兩條 bar 都做成桌機展示用的「mock phone」
+ * 浮動圓角＋ border ＋drop shadow，在真實手機上看起來會像被多套一層框。
+ * 在實機上應該直接貼住螢幕上下邊：寬度 100%、無圓角、無 box-shadow。
+ * （桌機寬度的 mock 預覽則保留原樣，不在這層覆蓋。）
+ */
+@media (max-width: 760px) {
+  body.theme-modern .topbar {
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    top: 0 !important;
+  }
+  body.theme-modern .mobile-tabbar {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-radius: 18px 18px 0 0 !important;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05) !important;
+  }
+  /* 內容區去除左右 padding/margin，搭配滿版 bar 視覺一致 */
+  body.theme-modern .main-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
 }
 
 /* ─── 結束 ─── */
