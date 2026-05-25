@@ -14810,6 +14810,11 @@ function applyTheme(pref) {
   }
   // 將最終解析結果寫到 <html data-theme>，新 CSS rules 用得到
   document.documentElement.setAttribute('data-theme', resolved);
+  // 同步 html.dark class — v11-modern.css 的 sidebar / tabbar / topbar 等深色
+  // CSS 是用 `html.dark body.theme-modern .xxx` 選擇器寫的，沒這個 class
+  // 那些區塊就永遠是淺色，造成「sidebar 留淺主內容變深」的視覺裂開。
+  if (resolved === 'dark') document.documentElement.classList.add('dark');
+  else document.documentElement.classList.remove('dark');
   const app = document.getElementById('app-wrapper');
   const lp  = document.getElementById('landing');
   if (app) app.dataset.theme = resolved;
@@ -14844,9 +14849,14 @@ function initUserSettings() {
   applyFontSize(getSetting('fontSize', 'normal'));
   applyMotion(getSetting('motion', 'on'));
   applyDensity(getSetting('density', 'cozy'));
-  // 主題：若使用者尚未選擇，沿用既有 mdpiece_landing_theme，否則 auto
+  // 主題：若使用者尚未選擇，沿用既有 mdpiece_landing_theme（舊 toggleAppTheme
+  // 寫的 key），否則才退回 auto。原本這段註解寫了但程式碼沒實作，導致使用者
+  // 按過月亮鈕仍會被 applyTheme('auto') 重置成跟隨系統 OS 色偏好。
   let themePref = null;
-  try { themePref = localStorage.getItem(SETTINGS_KEYS.theme); } catch (e) {}
+  try {
+    themePref = localStorage.getItem(SETTINGS_KEYS.theme)
+             || localStorage.getItem('mdpiece_landing_theme');
+  } catch (e) {}
   if (themePref) applyTheme(themePref);
   // 監聽系統主題變化（auto 模式才生效）
   if (window.matchMedia) {

@@ -557,7 +557,7 @@
 
   <script src="js/i18n.js?v=v80-ui-and-reminders"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v112-no-doctor-portal"></script>
+  <script src="js/app.js?v=v113-theme-sync"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
@@ -675,6 +675,8 @@
       const aIco = document.getElementById('att-icon');
       if (aIco) aIco.textContent = next === 'dark' ? '☾' : '☀';
       try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      // 同步寫到新系統的 key，否則 applyTheme() 切頁時跑 'auto' 會跟著 OS 系統色亂跳。
+      try { localStorage.setItem('mdpiece_theme_pref', next); } catch (e) {}
       window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
     }
 
@@ -696,20 +698,26 @@
     })();
 
     // ─── App Theme Toggle (in topbar) ──────────────────────
+    // 完整委派給 applyTheme()：那邊會一次處理 data-theme attr、html.dark class
+    // （給 v11-modern.css sidebar/tabbar 等用 html.dark 選擇器寫的 dark CSS）、
+    // landing/app-wrapper dataset、icon、兩個 storage key。
+    // 之前這邊只手動切 data-theme + 寫舊 key，造成 sidebar 永遠不變深色。
     function toggleAppTheme() {
       const app = document.getElementById('app-wrapper');
       if (!app) return;
       const next = app.dataset.theme === 'dark' ? 'light' : 'dark';
-      app.dataset.theme = next;
-      const lp = document.getElementById('landing');
-      if (lp) lp.dataset.theme = next;
-      const aIco = document.getElementById('att-icon');
-      if (aIco) aIco.textContent = next === 'dark' ? '☾' : '☀';
-      const ico = document.getElementById('tt-icon');
-      const lab = document.getElementById('tt-label');
-      if (ico) ico.textContent = next === 'dark' ? '☾' : '☀';
-      if (lab) lab.textContent = next.toUpperCase();
-      try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      try { localStorage.setItem('mdpiece_theme_pref', next); } catch (e) {}
+      if (typeof applyTheme === 'function') {
+        applyTheme(next);
+      } else {
+        // applyTheme 未載入時的 fallback（極早期 boot 才會走到）
+        app.dataset.theme = next;
+        const lp = document.getElementById('landing');
+        if (lp) lp.dataset.theme = next;
+        if (next === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+        try { localStorage.setItem('mdpiece_landing_theme', next); } catch (e) {}
+      }
       window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: next }));
     }
 
