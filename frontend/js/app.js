@@ -10572,18 +10572,35 @@ function showToast(msg, type) {
 }
 
 // 把 fetch response 翻成人話：優先用 backend 的 JSON `detail`（中文），fallback 才用 HTTP code
+// FastAPI 422 的 detail 是 [{loc, msg, type}, ...] 陣列，要展開成可讀文字，不能 String() 變 [object Object]
 async function _parseApiError(r) {
   var status = r.status;
   try {
     var data = await r.json();
-    if (data && data.detail) return String(data.detail);
-    if (data && data.error) return String(data.error);
+    if (data && data.detail) return _formatErrorDetail(data.detail);
+    if (data && data.error) return _formatErrorDetail(data.error);
   } catch (_) { /* not JSON */ }
   if (status === 404) return '找不到對應資料（HTTP 404）';
   if (status === 401 || status === 403) return '沒有權限（HTTP ' + status + '）';
   if (status === 503) return '伺服器忙線中，請稍後再試（HTTP 503）';
   if (status >= 500) return '伺服器錯誤（HTTP ' + status + '）';
   return '操作失敗（HTTP ' + status + '）';
+}
+
+function _formatErrorDetail(detail) {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(_formatErrorDetail).filter(Boolean).join('；');
+  }
+  if (detail && typeof detail === 'object') {
+    // FastAPI 422: {loc:[...], msg:"...", type:"..."}
+    if (detail.msg) {
+      var loc = Array.isArray(detail.loc) ? detail.loc.slice(1).join('.') : '';
+      return loc ? (loc + '：' + detail.msg) : detail.msg;
+    }
+    return JSON.stringify(detail);
+  }
+  return String(detail);
 }
 
 // ─── 藥物管理 ─────────────────────────────────────────────
@@ -19970,13 +19987,19 @@ async function _mobileRemSubmit() {
   if (!pid) { showToast('請先登入', 'warning'); return; }
   var title = (document.getElementById('mobile-rem-title') || {}).value || '';
   if (!title.trim()) { showToast('請填提醒標題', 'warning'); return; }
+  var whenStr = (document.getElementById('mobile-rem-when') || {}).value || '';
+  if (!whenStr) { showToast('請選擇首次觸發時間', 'warning'); return; }
+  // datetime-local 是 local-time string，後端要 ISO 8601 with TZ
+  var whenIso;
+  try { whenIso = new Date(whenStr).toISOString(); }
+  catch (_) { showToast('時間格式錯誤', 'error'); return; }
   var body = {
     patient_id: pid,
     reminder_type: (document.getElementById('mobile-rem-type') || {}).value || 'custom',
     frequency: (document.getElementById('mobile-rem-freq') || {}).value || 'once',
     title: title.trim(),
     body: (document.getElementById('mobile-rem-body') || {}).value || '',
-    first_fire_at: (document.getElementById('mobile-rem-when') || {}).value || null,
+    scheduled_at: whenIso,
   };
   try {
     var res = await fetch(API + '/reminders/', {
