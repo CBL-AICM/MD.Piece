@@ -94,6 +94,8 @@
     { "src": "/reminders", "dest": "api/index.py" },
     { "src": "/timeline/(.*)", "dest": "api/index.py" },
     { "src": "/timeline", "dest": "api/index.py" },
+    { "src": "/follow-ups/(.*)", "dest": "api/index.py" },
+    { "src": "/follow-ups", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
 }
