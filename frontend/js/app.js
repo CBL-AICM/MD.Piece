@@ -17397,6 +17397,21 @@ function diet() {
     +     '<div>按上面的按鈕，幫你抽一道菜</div>'
     +   '</div>'
 
+    // 配杯飲料（同 pattern）— 共用同一份 _dietDrink* state + dietPickDrink /
+    // dietRecordDrink 函式（已 refactor 同步雙 element）。
+    +   '<button class="ocr-hero-btn" onclick="dietPickDrink(false)" style="margin-bottom:10px">'
+    +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
+    +     '<div style="width:44px;height:44px;border-radius:11px;background:var(--teal-deep,#1F5F56);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1">'
+    +       '<i data-lucide="coffee" style="width:20px;height:20px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1;position:relative;z-index:1">'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">配杯飲料 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">依你的病史 + 上面選的價位 / 不吃食材建議</div>'
+    +     '</div>'
+    +   '</button>'
+
+    +   '<div id="mobile-diet-drink-result" class="diet-drink-result" style="margin-bottom:12px;display:none"></div>'
+
     // 餐次推薦
     +   '<div class="sec-head">'
     +     '<h3 class="sec-title"><i data-lucide="salad"></i> 今天吃什麼</h3>'
@@ -17866,11 +17881,18 @@ function dietPickDrink(isReroll) {
   }
   _dietDrinkLoading = true;
   var box = document.getElementById('diet-drink-result');
+  var mbox = document.getElementById('mobile-diet-drink-result');
+  var loadingHtml = '<i data-lucide="loader-2" style="width:18px;height:18px"></i> 想想要配什麼…';
   if (box) {
     box.className = 'diet-drink-result diet-drink-loading';
-    box.innerHTML = '<i data-lucide="loader-2" style="width:18px;height:18px"></i> 想想要配什麼…';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    box.innerHTML = loadingHtml;
   }
+  if (mbox) {
+    mbox.className = 'diet-drink-result diet-drink-loading';
+    mbox.innerHTML = loadingHtml;
+    mbox.style.display = '';
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   var qs = '?price_tier=' + encodeURIComponent(_dietPickPrice)
          + '&nearby=' + (_dietPickNearby ? 'true' : 'false')
          + '&avoid_recent=' + (_dietPickAvoidRecent ? 'true' : 'false');
@@ -17886,22 +17908,26 @@ function dietPickDrink(isReroll) {
       if ((g.caffeine_mg || 0) > 0) fetchCaffeineGuide();
     })
     .catch(function() {
-      if (box) box.innerHTML = '<span class="diet-drink-empty">抽不到，稍後再試</span>';
+      var errorHtml = '<span class="diet-drink-empty">抽不到，稍後再試</span>';
+      if (box) box.innerHTML = errorHtml;
+      var embox = document.getElementById('mobile-diet-drink-result');
+      if (embox) embox.innerHTML = errorHtml;
     })
     .finally(function() { _dietDrinkLoading = false; });
 }
 
 function renderDietDrink(g) {
+  // 同 renderDietPick — 桌機 #diet-drink-result + 手機 #mobile-diet-drink-result 同步
   var box = document.getElementById('diet-drink-result');
-  if (!box) return;
+  var mbox = document.getElementById('mobile-diet-drink-result');
+  if (!box && !mbox) return;
   if (!g || !g.name) {
-    box.className = 'diet-drink-result';
-    box.innerHTML = '';
+    if (box) { box.className = 'diet-drink-result'; box.innerHTML = ''; }
+    if (mbox) { mbox.className = 'diet-drink-result'; mbox.innerHTML = ''; mbox.style.display = 'none'; }
     return;
   }
   var caf = (g.caffeine_mg != null && g.caffeine_mg > 0) ? (g.caffeine_mg + ' mg 咖啡因') : '無咖啡因';
-  box.className = 'diet-drink-result diet-drink-show';
-  box.innerHTML = ''
+  var html = ''
     + '<div class="diet-drink-head">'
     +   '<span class="diet-drink-icon"><i data-lucide="coffee" style="width:16px;height:16px"></i></span>'
     +   '<span class="diet-drink-name">' + chatEscape(g.name) + '</span>'
@@ -17916,6 +17942,8 @@ function renderDietDrink(g) {
     +   (g.sugar_level && g.sugar_level !== '不適用' ? '<span class="diet-drink-sugar">' + chatEscape(g.sugar_level) + '</span>' : '')
     + '</div>'
     + (g.reason ? '<div class="diet-drink-reason">' + chatEscape(g.reason) + '</div>' : '');
+  if (box) { box.className = 'diet-drink-result diet-drink-show'; box.innerHTML = html; }
+  if (mbox) { mbox.className = 'diet-drink-result diet-drink-show'; mbox.innerHTML = html; mbox.style.display = ''; }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
