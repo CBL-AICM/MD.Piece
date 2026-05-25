@@ -12478,11 +12478,11 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 .emotions-btn.selected .emotions-pct { color: var(--em-color); }
 .mood-line {
   width: 100%;
-  min-height: 200px;
+  min-height: 280px;
 }
 .mood-line-svg {
   width: 100%;
-  height: auto;
+  height: 280px;
   display: block;
 }
 .mood-line-summary {
