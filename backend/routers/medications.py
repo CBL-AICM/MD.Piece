@@ -98,6 +98,13 @@ class MedicationCreate(BaseModel):
     # 非統一時刻自訂排程。格式：{"entries":[{"weekdays":[0..6],"time":"HH:MM"}, ...]}
     # 0=Mon..6=Sun（與 datetime.weekday() 一致）。傳 None 代表沿用 frequency 文字解析。
     custom_schedule: dict | None = None
+    # 病人自寫的「我的用法」note，覆寫藥袋預設文字。例：醫師口頭交代「飯前 30 分鐘吃」。
+    custom_note: str | None = None
+
+
+class MedicationNoteUpdate(BaseModel):
+    # 顯式 None / 空字串 = 清空自訂用法（回到藥袋預設顯示）；其他字串會 strip 前後空白後存。
+    custom_note: str | None = None
 
 
 class MedicationScheduleUpdate(BaseModel):
@@ -213,6 +220,45 @@ def update_medication_schedule(medication_id: str, body: MedicationScheduleUpdat
     except Exception as e:
         logger.error(f"Update medication schedule failed: {e}")
         raise HTTPException(status_code=400, detail=f"更新排程失敗：{e}")
+    if not result.data:
+        raise HTTPException(status_code=404, detail="找不到該藥物")
+    row = dict(result.data[0])
+    row.update(annotate_medication(row))
+    return row
+
+
+# 自訂用法上限。Rationale：給病人寫一句覆寫藥袋預設（例：「飯前 30 分鐘」、
+# 「跟著食物配溫水、不要躺著吃」），不是長篇病歷描述。超過會在 router 端截斷
+# 而非 raise — 避免使用者一句話打到上限被踢掉、輸入很挫。
+MAX_CUSTOM_NOTE_LEN = 200
+
+
+@router.put("/{medication_id}/note")
+def update_medication_note(medication_id: str, body: MedicationNoteUpdate):
+    """
+    設定／清空單一藥物的「我的用法」note（覆寫藥袋預設）。
+
+    傳 body.custom_note = "我的私下用法描述" → 寫入（最多 MAX_CUSTOM_NOTE_LEN
+    字、超過會截斷）。傳 None 或 strip 後空字串 → 設成 NULL，前端顯示退回到
+    藥袋預設文字。
+    """
+    sb = get_supabase()
+    raw = body.custom_note
+    if raw is None:
+        normalized = None
+    else:
+        s = raw.strip()
+        normalized = s[:MAX_CUSTOM_NOTE_LEN] if s else None
+    try:
+        result = (
+            sb.table("medications")
+            .update({"custom_note": normalized})
+            .eq("id", medication_id)
+            .execute()
+        )
+    except Exception as e:
+        logger.error(f"Update medication note failed: {e}")
+        raise HTTPException(status_code=400, detail=f"更新用法失敗：{e}")
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該藥物")
     row = dict(result.data[0])
