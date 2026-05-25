@@ -771,35 +771,39 @@ html.dark body.theme-modern #app {
   }
 }
 
-/* ─── 症狀紀錄 mobile log dialog ─────────────────────────────
+/* ─── 症狀紀錄 log dialog（全螢幕適用）─────────────────────
  * 問題：sym-logform 元件原本只放在 .sym-page.desktop-only 包裝裡（給桌機顯示）。
- *   桌機看得到、手機因為 .desktop-only 規則被 display:none 整個藏掉，
- *   點症狀類型 chip 觸發 openSymptomLog() 試圖把 form 設成 block 也沒用（父被藏）→
- *   使用者實機看到「點 chip 沒反應、紀錄不下去」。
- * 修法：JS 在 open 時加 body.is-sym-logging class，這段 CSS 在手機（≤760px）
+ *   v11 改成 .desktop-only 全寬度 display:none、.mobile-only 全寬度 display:block
+ *   後，桌機 / 平板 點症狀類型 chip 觸發 openSymptomLog() 設 form 為 block 也沒用
+ *   （父被藏）→ 使用者實機看到「點 chip 沒反應」。
+ * 修法：JS 在 open 時加 body.is-sym-logging class，這段 CSS（**全寬度生效**）
  *   把 .sym-page 父容器 unhide 並 modal 化（fixed inset 0、白底、滾動），
  *   同層其他兄弟（stats / history / etc）全部藏掉，只露 form 本體。
  * 取消 / 提交時 JS 移除 class → CSS 恢復原本「desktop-only 整片藏掉」狀態。
  */
-@media (max-width: 760px) {
+body.theme-modern.is-sym-logging .sym-page.desktop-only {
+  display: block !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 100 !important;
+  background: var(--bg, #fff) !important;
+  overflow-y: auto !important;
+  padding: 16px !important;
+  pointer-events: auto !important;
+}
+body.theme-modern.is-sym-logging .sym-page.desktop-only > *:not(#sym-logform) {
+  display: none !important;
+}
+/* 保險：強制讓 modal 內所有 interactive element 可點，避免上層繼承
+ * pointer-events:none 蓋掉（之前使用者實機回報「無法點選」即使 modal 出現）。 */
+body.theme-modern.is-sym-logging #sym-logform,
+body.theme-modern.is-sym-logging #sym-logform * {
+  pointer-events: auto !important;
+}
+/* 桌機 / 平板（>760px）：modal 限寬置中，看起來像 dialog 而不是真 fullscreen */
+@media (min-width: 761px) {
   body.theme-modern.is-sym-logging .sym-page.desktop-only {
-    display: block !important;
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 100 !important;
-    background: var(--bg, #fff) !important;
-    overflow-y: auto !important;
-    padding: 16px !important;
-    pointer-events: auto !important;
-  }
-  body.theme-modern.is-sym-logging .sym-page.desktop-only > *:not(#sym-logform) {
-    display: none !important;
-  }
-  /* 保險：強制讓 modal 內所有 interactive element 可點，避免上層繼承
-   * pointer-events:none 蓋掉（之前使用者實機回報「無法點選」即使 modal 出現）。 */
-  body.theme-modern.is-sym-logging #sym-logform,
-  body.theme-modern.is-sym-logging #sym-logform * {
-    pointer-events: auto !important;
+    padding: 32px max(32px, calc((100vw - 720px) / 2)) !important;
   }
 }
 
