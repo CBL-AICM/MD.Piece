@@ -223,6 +223,29 @@ body.theme-modern .m-bodymap-hotspot > circle { transition: fill 120ms, stroke 1
 body.theme-modern .m-bodymap-hotspot:hover > circle { fill: rgba(201,127,75,0.18) !important; stroke: rgba(201,127,75,0.45) !important; }
 body.theme-modern .m-bodymap-hotspot.is-active > circle { fill: rgba(201,127,75,0.28) !important; stroke: rgba(201,127,75,0.7) !important; }
 
+/* 正面 + 背面雙圖並排 */
+body.theme-modern .bodymap-wrap-dual {
+  flex-direction: row; flex-wrap: wrap;
+  gap: 16px; padding: 20px 12px 18px;
+}
+body.theme-modern .bodymap-side {
+  display: flex; flex-direction: column; align-items: center;
+  position: relative; z-index: 1;
+}
+body.theme-modern .bodymap-side > svg.body-figure { width: 130px; height: auto; touch-action: manipulation; cursor: pointer; }
+body.theme-modern .bodymap-side-label {
+  font-size: 11px; color: var(--text-dim, #3A5060);
+  font-family: var(--font-mono, monospace); font-weight: 600;
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+body.theme-modern .bodymap-wrap-dual > .bodymap-caption {
+  flex-basis: 100%; margin-top: 4px;
+}
+@media (max-width: 339px) {
+  body.theme-modern .bodymap-side > svg.body-figure { width: 110px; }
+}
+
 /* Intensity */
 body.theme-modern .intensity {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;

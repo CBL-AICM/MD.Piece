@@ -52,45 +52,66 @@ for (const vp of VIEWPORTS) {
     });
     await page.waitForTimeout(800);
 
-    // ── 人體圖部分 ──
-    const figureExists = await page.locator('.mobile-only .bodymap-wrap svg.body-figure').count();
-    if (figureExists === 0) fail(scope, 'body-figure svg not rendered');
-    else pass(scope, 'body-figure svg exists');
+    // ── 人體圖部分（正面 + 背面雙圖）──
+    const sideCount = await page.locator('.mobile-only .bodymap-wrap .bodymap-side').count();
+    if (sideCount !== 2) fail(scope, `expected 2 sides, got ${sideCount}`);
+    else pass(scope, '2 sides (正面 + 背面) rendered');
 
-    const hotspotCount = await page.locator('.mobile-only .bodymap-wrap .m-bodymap-hotspot').count();
-    if (hotspotCount !== 19) fail(scope, `expected 19 hotspots, got ${hotspotCount}`);
-    else pass(scope, '19 細部位 hotspots rendered');
+    const labels = await page.locator('.bodymap-side-label').allInnerTexts();
+    if (labels[0] !== '正面' || labels[1] !== '背面') fail(scope, `expected labels ['正面','背面'], got ${JSON.stringify(labels)}`);
+    else pass(scope, 'side labels OK');
 
-    // 點前額（新增的細部位）
-    await page.locator('.m-bodymap-hotspot[data-part="forehead"]').click();
+    const frontHotspots = await page.locator('svg.body-figure[data-side="front"] .m-bodymap-hotspot').count();
+    const backHotspots  = await page.locator('svg.body-figure[data-side="back"] .m-bodymap-hotspot').count();
+    if (frontHotspots !== 19) fail(scope, `expected 19 front hotspots, got ${frontHotspots}`);
+    else pass(scope, '19 front 細部位');
+    if (backHotspots !== 19) fail(scope, `expected 19 back hotspots, got ${backHotspots}`);
+    else pass(scope, '19 back 細部位');
+
+    // 點正面前額
+    await page.locator('svg.body-figure[data-side="front"] .m-bodymap-hotspot[data-part="forehead"]').click();
     await page.waitForTimeout(150);
-    const afterForehead = await page.evaluate(() => window._symBodyPart);
-    if (afterForehead !== '前額') fail(scope, `forehead click: _symBodyPart should be '前額', got: ${JSON.stringify(afterForehead)}`);
-    else pass(scope, 'clicking 前額 hotspot sets _symBodyPart=前額');
+    const r1 = await page.evaluate(() => ({
+      part: window._symBodyPart,
+      front: document.getElementById('m-bodymap-marker-front').style.display !== 'none',
+      back: document.getElementById('m-bodymap-marker-back').style.display !== 'none',
+    }));
+    if (r1.part !== '前額' || !r1.front || r1.back) fail(scope, `clicking 正面前額: ${JSON.stringify(r1)}`);
+    else pass(scope, 'click 正面前額 → marker on front only');
 
-    // 點手肘（新增的細部位）
-    await page.locator('.m-bodymap-hotspot[data-part="l-elbow"]').click();
+    // 點背面後腦 → front marker 應自動消失
+    await page.locator('svg.body-figure[data-side="back"] .m-bodymap-hotspot[data-part="back-head"]').click();
     await page.waitForTimeout(150);
-    const afterElbow = await page.evaluate(() => window._symBodyPart);
-    if (afterElbow !== '左手肘') fail(scope, `l-elbow click: _symBodyPart should be '左手肘', got: ${JSON.stringify(afterElbow)}`);
-    else pass(scope, 'clicking 左手肘 hotspot sets _symBodyPart=左手肘');
+    const r2 = await page.evaluate(() => ({
+      part: window._symBodyPart,
+      front: document.getElementById('m-bodymap-marker-front').style.display !== 'none',
+      back: document.getElementById('m-bodymap-marker-back').style.display !== 'none',
+    }));
+    if (r2.part !== '後腦' || r2.front || !r2.back) fail(scope, `clicking 後腦: ${JSON.stringify(r2)}`);
+    else pass(scope, 'click 背面後腦 → front marker cleared, back marker shown');
 
-    // 點膝蓋
-    await page.locator('.m-bodymap-hotspot[data-part="r-knee"]').click();
+    // 背面新部位驗證
+    await page.locator('svg.body-figure[data-side="back"] .m-bodymap-hotspot[data-part="waist"]').click();
     await page.waitForTimeout(150);
-    const afterKnee = await page.evaluate(() => window._symBodyPart);
-    if (afterKnee !== '右膝') fail(scope, `r-knee click: _symBodyPart should be '右膝', got: ${JSON.stringify(afterKnee)}`);
-    else pass(scope, 'clicking 右膝 hotspot sets _symBodyPart=右膝');
+    const waist = await page.evaluate(() => window._symBodyPart);
+    if (waist !== '腰部') fail(scope, `waist click: ${waist}`);
+    else pass(scope, 'click 腰部 sets _symBodyPart=腰部');
 
-    // SVG-wide click 找最近部位
-    const svgBox = await page.locator('.mobile-only svg.body-figure').boundingBox();
-    if (svgBox) {
-      // 點圖中心區域（應該找到軀幹相關部位）
-      await page.mouse.click(svgBox.x + svgBox.width * 0.5, svgBox.y + svgBox.height * 0.5);
+    await page.locator('svg.body-figure[data-side="back"] .m-bodymap-hotspot[data-part="l-popliteal"]').click();
+    await page.waitForTimeout(150);
+    const popliteal = await page.evaluate(() => window._symBodyPart);
+    if (popliteal !== '左膕窩') fail(scope, `popliteal click: ${popliteal}`);
+    else pass(scope, 'click 左膕窩 sets _symBodyPart=左膕窩');
+
+    // SVG-wide click 在背面找最近背面部位（非正面部位）
+    const backSvgBox = await page.locator('svg.body-figure[data-side="back"]').boundingBox();
+    if (backSvgBox) {
+      await page.mouse.click(backSvgBox.x + backSvgBox.width * 0.5, backSvgBox.y + backSvgBox.height * 0.55);
       await page.waitForTimeout(150);
       const nearest = await page.evaluate(() => window._symBodyPart);
-      if (!nearest) fail(scope, 'clicking center should pick nearest part');
-      else pass(scope, `nearest-part fallback works: ${nearest}`);
+      // 應該命中背面部位（含「背」、「腰」、「臀」或「後」字）
+      if (!nearest || !(/背|腰|臀|後|膕窩/.test(nearest))) fail(scope, `背面 SVG click nearest should be back part, got: ${nearest}`);
+      else pass(scope, `背面 nearest-part fallback: ${nearest}`);
     }
 
     // ── chip 開表單部分（之前在 >760px 被鎖死）──
