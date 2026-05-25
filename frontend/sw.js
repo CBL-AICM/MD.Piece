@@ -5,7 +5,7 @@ const API_CACHE = `${CACHE_VERSION}-api`;
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v92-care-mode",
+  "/css/style.css?v=v109-handwriting-brand",
   "/css/medical-warm.css?v=v5-puzzle-pattern",
   "/css/v11-modern.css?v=v2-mobile-only",
   "/css/elder-mode.css?v=v4-fix-clobber",
