@@ -13401,6 +13401,15 @@ function education() {
     +     '<div id="mobile-edu-news-list" style="display:flex;flex-direction:column;gap:8px"></div>'
     +   '</div>'
 
+    // 衛教書房・通用書架（不依賴個人疾病登錄，永遠看得到）
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="library"></i> ' + _T('edu.shelf.banner') + '</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div class="bookshelf-wrap" style="margin-bottom:8px">'
+    +     renderBookshelf()
+    +   '</div>'
+
     +   '<div class="disclaimer-footer">'
     +     '<i data-lucide="info"></i>'
     +     '<span>衛教文章僅供參考，不取代醫師診斷與處方。緊急狀況請<span class="emergency">立即就醫或撥 119</span>。</span>'
