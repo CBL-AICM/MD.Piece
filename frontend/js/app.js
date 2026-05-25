@@ -7652,34 +7652,52 @@ function symptoms() {
     +     '<h3 class="sec-title"><i data-lucide="map-pin"></i> 點選不舒服的位置</h3>'
     +     '<span class="sec-spacer"></span>'
     +   '</div>'
-    +   '<div class="bodymap-wrap">'
+    +   '<div class="bodymap-wrap bodymap-wrap-dual">'
     +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-blue"/></svg>'
-    +     '<svg class="body-figure" viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg" stroke-linejoin="round" stroke-linecap="round" onclick="mobileSymBodyClickAt(event)">'
-    +       '<g fill="#FFFFFF" stroke="#1F3D58" stroke-width="2.2" pointer-events="none">'
-    +         '<ellipse cx="55" cy="22" rx="13" ry="15"/>'
-    +         '<path d="M 49 35 Q 55 39 61 35 L 61 43 Q 55 45 49 43 Z"/>'
-    +         '<path d="M 32 50 Q 32 45 38 44 Q 46 42 55 42 Q 64 42 72 44 Q 78 45 78 50 L 76 78 Q 74 92 73 100 L 72 122 Q 72 128 68 130 L 42 130 Q 38 128 38 122 L 37 100 Q 36 92 34 78 Z"/>'
-    +         '<path d="M 32 50 Q 26 53 23 62 Q 19 80 17 102 Q 16 114 21 116 Q 26 116 28 111 Q 31 96 32 82 Q 33 68 33 54 Z"/>'
-    +         '<path d="M 78 50 Q 84 53 87 62 Q 91 80 93 102 Q 94 114 89 116 Q 84 116 82 111 Q 79 96 78 82 Q 77 68 77 54 Z"/>'
-    +         '<path d="M 42 130 Q 40 144 40 160 L 38 196 Q 38 198 41 198 L 51 198 Q 53 198 53 196 L 53 160 Q 53 144 53 132 Z"/>'
-    +         '<path d="M 57 132 Q 57 144 57 160 L 57 196 Q 57 198 59 198 L 69 198 Q 72 198 72 196 L 70 160 Q 70 144 68 130 Z"/>'
-    +       '</g>'
-    +       (function() {
-        if (typeof _SYM_BODY_PARTS === 'undefined') return '';
-        return _SYM_BODY_PARTS.map(function(p) {
-          return '<g class="m-bodymap-hotspot" data-part="' + p.id + '" '
-               +   'onclick="event.stopPropagation();mobileSymBodyPick(\'' + p.id + '\',\'' + p.label + '\')">'
-               +   '<circle cx="' + p.cx + '" cy="' + p.cy + '" r="8" fill="rgba(201,127,75,0)" stroke="rgba(201,127,75,0)" stroke-width="1.2"/>'
-               +   '<title>' + p.label + '</title>'
+    +     (function() {
+        // 共用的身體輪廓（正背都同一張 SVG paths — 沒臉部細節）
+        var outline = ''
+          + '<g fill="#FFFFFF" stroke="#1F3D58" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" pointer-events="none">'
+          +   '<ellipse cx="55" cy="22" rx="13" ry="15"/>'
+          +   '<path d="M 49 35 Q 55 39 61 35 L 61 43 Q 55 45 49 43 Z"/>'
+          +   '<path d="M 32 50 Q 32 45 38 44 Q 46 42 55 42 Q 64 42 72 44 Q 78 45 78 50 L 76 78 Q 74 92 73 100 L 72 122 Q 72 128 68 130 L 42 130 Q 38 128 38 122 L 37 100 Q 36 92 34 78 Z"/>'
+          +   '<path d="M 32 50 Q 26 53 23 62 Q 19 80 17 102 Q 16 114 21 116 Q 26 116 28 111 Q 31 96 32 82 Q 33 68 33 54 Z"/>'
+          +   '<path d="M 78 50 Q 84 53 87 62 Q 91 80 93 102 Q 94 114 89 116 Q 84 116 82 111 Q 79 96 78 82 Q 77 68 77 54 Z"/>'
+          +   '<path d="M 42 130 Q 40 144 40 160 L 38 196 Q 38 198 41 198 L 51 198 Q 53 198 53 196 L 53 160 Q 53 144 53 132 Z"/>'
+          +   '<path d="M 57 132 Q 57 144 57 160 L 57 196 Q 57 198 59 198 L 69 198 Q 72 198 72 196 L 70 160 Q 70 144 68 130 Z"/>'
+          + '</g>';
+        function hotspots(parts) {
+          return parts.map(function(p) {
+            return '<g class="m-bodymap-hotspot" data-part="' + p.id + '" '
+                 +   'onclick="event.stopPropagation();mobileSymBodyPick(\'' + p.id + '\',\'' + p.label + '\')">'
+                 +   '<circle cx="' + p.cx + '" cy="' + p.cy + '" r="8" fill="rgba(201,127,75,0)" stroke="rgba(201,127,75,0)" stroke-width="1.2"/>'
+                 +   '<title>' + p.label + '</title>'
+                 + '</g>';
+          }).join('');
+        }
+        function marker(side) {
+          return '<g id="m-bodymap-marker-' + side + '" pointer-events="none" style="display:none">'
+               +   '<circle id="m-bodymap-marker-glow-' + side + '" cx="0" cy="0" r="13" fill="rgba(184,85,63,0.35)"/>'
+               +   '<circle id="m-bodymap-marker-dot-' + side + '"  cx="0" cy="0" r="5" fill="#B8553F" stroke="#FFFAF0" stroke-width="1.2"/>'
                + '</g>';
-        }).join('');
+        }
+        var frontParts = (typeof _SYM_BODY_PARTS !== 'undefined') ? _SYM_BODY_PARTS : [];
+        var backParts  = (typeof _SYM_BODY_PARTS_BACK !== 'undefined') ? _SYM_BODY_PARTS_BACK : [];
+        return ''
+          + '<div class="bodymap-side" data-side="front">'
+          +   '<div class="bodymap-side-label">正面</div>'
+          +   '<svg class="body-figure" data-side="front" viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg" onclick="mobileSymBodyClickAt(event)">'
+          +     outline + hotspots(frontParts) + marker('front')
+          +   '</svg>'
+          + '</div>'
+          + '<div class="bodymap-side" data-side="back">'
+          +   '<div class="bodymap-side-label">背面</div>'
+          +   '<svg class="body-figure" data-side="back" viewBox="0 0 110 210" xmlns="http://www.w3.org/2000/svg" onclick="mobileSymBodyClickAt(event)">'
+          +     outline + hotspots(backParts) + marker('back')
+          +   '</svg>'
+          + '</div>';
       })()
-    +       '<g id="m-bodymap-marker" pointer-events="none" style="display:none">'
-    +         '<circle id="m-bodymap-marker-glow" cx="0" cy="0" r="13" fill="rgba(184,85,63,0.35)"/>'
-    +         '<circle id="m-bodymap-marker-dot"  cx="0" cy="0" r="5" fill="#B8553F" stroke="#FFFAF0" stroke-width="1.2"/>'
-    +       '</g>'
-    +     '</svg>'
-    +     '<div class="bodymap-caption" id="m-bodymap-caption">提示：點選身體部位</div>'
+    +     '<div class="bodymap-caption" id="m-bodymap-caption">提示：點選身體部位（正面或背面）</div>'
     +   '</div>'
 
     // 類型 chip group — 用既有的 symptom categories
@@ -8105,10 +8123,11 @@ function getPeriodStats() {
   return { entries, byCategory, periodStart: start };
 }
 
-// ─── 身體圖：點擊定位疼痛部位（正面視圖細部位）─────────────
-// 19 個細部位。click → 寫進 _symBodyPart，並把 part 名稱帶進
-// 下方症狀紀錄表單的 notes 欄。
-// 注意：小人是正面視圖，後腦 / 背 / 腰 無法標。如要背面需另開背面圖。
+// ─── 身體圖：點擊定位疼痛部位（正面 + 背面 雙視圖）─────────
+// 正面 19 + 背面 19 = 38 個細部位。click → 寫進 _symBodyPart，
+// 並把 part 名稱帶進下方症狀紀錄表單的 notes 欄。
+// 兩個身體 SVG 在 .bodymap-wrap 內並排，user 透過上方「正面/背面」
+// 標籤識別；同一時間只能選一個部位（marker 自動切換）。
 var _symBodyPart = '';
 var _SYM_BODY_PARTS = [
   // 頭
@@ -8137,6 +8156,36 @@ var _SYM_BODY_PARTS = [
   { id: 'r-thigh', label: '右大腿', cx: 64, cy: 145 },
   { id: 'r-knee',  label: '右膝',   cx: 64, cy: 165 },
   { id: 'r-calf',  label: '右小腿', cx: 64, cy: 188 },
+];
+// 背面視圖：相同 SVG 輪廓（無臉部細節），對應背面解剖區域。
+// 注意：背面圖鏡像時左右視角會反轉，但我們維持「使用者主觀左右」=
+// 「畫面左右」，跟正面圖一致；不做鏡像。
+var _SYM_BODY_PARTS_BACK = [
+  // 後腦 / 後頸
+  { id: 'back-head', label: '後腦',   cx: 55, cy: 20 },
+  { id: 'back-neck', label: '後頸',   cx: 55, cy: 40 },
+  // 背 / 腰 / 臀
+  { id: 'upper-back', label: '上背', cx: 55, cy: 55 },
+  { id: 'mid-back',   label: '中背', cx: 55, cy: 78 },
+  { id: 'lower-back', label: '下背', cx: 55, cy: 98 },
+  { id: 'waist',      label: '腰部', cx: 55, cy: 118 },
+  { id: 'buttock',    label: '臀部', cx: 55, cy: 128 },
+  // 左手後側
+  { id: 'l-back-upper-arm', label: '後左上臂', cx: 27, cy: 62 },
+  { id: 'l-back-elbow',     label: '左肘後',   cx: 22, cy: 85 },
+  { id: 'l-back-forearm',   label: '後左前臂', cx: 19, cy: 108 },
+  // 右手後側
+  { id: 'r-back-upper-arm', label: '後右上臂', cx: 83, cy: 62 },
+  { id: 'r-back-elbow',     label: '右肘後',   cx: 88, cy: 85 },
+  { id: 'r-back-forearm',   label: '後右前臂', cx: 91, cy: 108 },
+  // 左腿後側
+  { id: 'l-back-thigh', label: '後左大腿', cx: 46, cy: 145 },
+  { id: 'l-popliteal',  label: '左膕窩',   cx: 46, cy: 165 },
+  { id: 'l-back-calf',  label: '後左小腿', cx: 46, cy: 188 },
+  // 右腿後側
+  { id: 'r-back-thigh', label: '後右大腿', cx: 64, cy: 145 },
+  { id: 'r-popliteal',  label: '右膕窩',   cx: 64, cy: 165 },
+  { id: 'r-back-calf',  label: '後右小腿', cx: 64, cy: 188 },
 ];
 function renderBodyMapSvg() {
   var hotspots = _SYM_BODY_PARTS.map(function(p) {
@@ -8303,16 +8352,30 @@ function symBodyClear() {
 
 // 手機版人體圖：點 hotspot 或 SVG 任意位置 → 標記 + 寫進 _symBodyPart，
 // 之後點下方類型 chip 開 symptom log，notes 會自動帶入「[部位：xxx]」。
+// 雙視圖：partId 在 _SYM_BODY_PARTS（正面）或 _SYM_BODY_PARTS_BACK（背面）
+// 找到後，把對應那一面的 marker 顯示出來，另一面的 marker 隱藏。
+function _findSymBodyPart(partId) {
+  var front = (typeof _SYM_BODY_PARTS !== 'undefined') ? _SYM_BODY_PARTS : [];
+  var back  = (typeof _SYM_BODY_PARTS_BACK !== 'undefined') ? _SYM_BODY_PARTS_BACK : [];
+  for (var i = 0; i < front.length; i++) if (front[i].id === partId) return { p: front[i], side: 'front' };
+  for (var j = 0; j < back.length; j++)  if (back[j].id  === partId) return { p: back[j],  side: 'back'  };
+  return null;
+}
 function mobileSymBodyPick(partId, label) {
-  var p = (typeof _SYM_BODY_PARTS !== 'undefined') ? _SYM_BODY_PARTS.find(function(x) { return x.id === partId; }) : null;
-  if (!p) return;
+  var hit = _findSymBodyPart(partId);
+  if (!hit) return;
   _symBodyPart = label;
-  var g = document.getElementById('m-bodymap-marker');
-  var glow = document.getElementById('m-bodymap-marker-glow');
-  var dot  = document.getElementById('m-bodymap-marker-dot');
+  // 把兩面的 marker 都先藏掉，再開選中那面
+  ['front', 'back'].forEach(function(side) {
+    var g = document.getElementById('m-bodymap-marker-' + side);
+    if (g) g.style.display = 'none';
+  });
+  var g = document.getElementById('m-bodymap-marker-' + hit.side);
+  var glow = document.getElementById('m-bodymap-marker-glow-' + hit.side);
+  var dot  = document.getElementById('m-bodymap-marker-dot-' + hit.side);
   if (g && glow && dot) {
-    glow.setAttribute('cx', p.cx); glow.setAttribute('cy', p.cy);
-    dot.setAttribute('cx', p.cx);  dot.setAttribute('cy', p.cy);
+    glow.setAttribute('cx', hit.p.cx); glow.setAttribute('cy', hit.p.cy);
+    dot.setAttribute('cx', hit.p.cx);  dot.setAttribute('cy', hit.p.cy);
     g.style.display = '';
   }
   document.querySelectorAll('.m-bodymap-hotspot').forEach(function(el) {
@@ -8326,25 +8389,33 @@ function mobileSymBodyPick(partId, label) {
 }
 function mobileSymBodyClear() {
   _symBodyPart = '';
-  var g = document.getElementById('m-bodymap-marker');
-  if (g) g.style.display = 'none';
+  ['front', 'back'].forEach(function(side) {
+    var g = document.getElementById('m-bodymap-marker-' + side);
+    if (g) g.style.display = 'none';
+  });
   document.querySelectorAll('.m-bodymap-hotspot').forEach(function(el) {
     el.classList.remove('is-active');
   });
   var cap = document.getElementById('m-bodymap-caption');
-  if (cap) cap.textContent = '提示：點選身體部位';
+  if (cap) cap.textContent = '提示：點選身體部位（正面或背面）';
 }
 function mobileSymBodyClickAt(ev) {
   if (!ev) return;
   var svg = ev.currentTarget;
-  if (!svg || typeof _SYM_BODY_PARTS === 'undefined') return;
+  if (!svg) return;
+  // 判斷是正面或背面 SVG，用對應的 parts 陣列找最近
+  var side = svg.getAttribute('data-side') || 'front';
+  var parts = (side === 'back')
+    ? ((typeof _SYM_BODY_PARTS_BACK !== 'undefined') ? _SYM_BODY_PARTS_BACK : [])
+    : ((typeof _SYM_BODY_PARTS !== 'undefined') ? _SYM_BODY_PARTS : []);
+  if (!parts.length) return;
   var pt = svg.createSVGPoint();
   pt.x = ev.clientX; pt.y = ev.clientY;
   var ctm = svg.getScreenCTM();
   if (!ctm) return;
   var c = pt.matrixTransform(ctm.inverse());
   var best = null, bestDist = Infinity;
-  _SYM_BODY_PARTS.forEach(function(p) {
+  parts.forEach(function(p) {
     var dx = p.cx - c.x, dy = p.cy - c.y;
     var d = Math.sqrt(dx * dx + dy * dy);
     if (d < bestDist) { bestDist = d; best = p; }
