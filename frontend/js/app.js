@@ -8398,6 +8398,10 @@ function openSymptomLog(catId) {
     </div>
   `;
   form.style.display = 'block';
+  // 手機版：sym-logform 是 .sym-page.desktop-only 子元件、平常被 CSS hide。
+  // 在 body 加 is-sym-logging class，配合 style.css 的 mobile 規則把 .sym-page
+  // 解鎖成 fullscreen modal、只露 form、藏其他兄弟（stats / history）。
+  document.body.classList.add('is-sym-logging');
   if (typeof lucide !== 'undefined') lucide.createIcons();
   _prefillBodyPartNote();
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -8405,6 +8409,7 @@ function openSymptomLog(catId) {
 function cancelSymptomLog() {
   const f = document.getElementById('sym-logform');
   if (f) f.style.display = 'none';
+  document.body.classList.remove('is-sym-logging');
 }
 
 // ─── 其他症狀（自訂）的兩段式表單 ──────────────────
@@ -8447,6 +8452,7 @@ function openOtherSymptomLog() {
     </div>
   `;
   form.style.display = 'block';
+  document.body.classList.add('is-sym-logging');
   if (typeof lucide !== 'undefined') lucide.createIcons();
   _prefillBodyPartNote();
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -8470,6 +8476,7 @@ function submitOtherSymptomLog() {
     categoryId: cat.id, intensity, frequency, notes,
     recordedAt: new Date().toISOString()
   });
+  document.body.classList.remove('is-sym-logging');
   showToast && showToast(_T('sym.toast.added'), 'success');
   if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('symptoms');
@@ -8497,6 +8504,7 @@ function submitSymptomLog(catId) {
     categoryId: catId, intensity, frequency, notes,
     recordedAt: new Date().toISOString()
   });
+  document.body.classList.remove('is-sym-logging');
   if (typeof refreshNavBadges === 'function') refreshNavBadges();
   showPage('symptoms');
 }
