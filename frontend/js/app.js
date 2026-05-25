@@ -15113,7 +15113,9 @@ function chat() {
     +   '<div class="pv-hero" style="margin-bottom:10px">'
     +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
     +     '<div style="display:flex;align-items:center;gap:10px;position:relative;z-index:1">'
-    +       '<div style="width:48px;height:48px;border-radius:50%;background:var(--rose-tint);border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:var(--rose-deep);font-size:22px">🌿</div>'
+    +       '<div id="mobile-chat-mascot" class="chat-mascot-wrap" style="width:74px;height:74px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--rose-tint);border:2px solid #fff;border-radius:16px;color:var(--rose-deep);overflow:hidden;font-size:10.5px;line-height:1.05">'
+    +         chatMascotSvg('idle')
+    +       '</div>'
     +       '<div>'
     +         '<div style="font-size:15px;font-weight:600;color:var(--navy)">醫起聊天 · 小禾</div>'
     +         '<div style="font-size:11px;color:var(--text-dim);margin-top:2px">陪你聊聊、把感受拼成一段話</div>'
@@ -15329,6 +15331,7 @@ function chatScrollToBottom() {
 
 function chatSwitchMode(m) {
   chatSetMode(m);
+  // 桌機 chat-seg
   document.querySelectorAll('.chat-toggles .chat-seg').forEach(function(seg, i) {
     if (i !== 0) return;
     seg.querySelectorAll('.chat-seg-btn').forEach(function(b, j) {
@@ -15336,11 +15339,19 @@ function chatSwitchMode(m) {
       b.classList.toggle('active', want === m);
     });
   });
+  // 手機 audience-btn — 第一組 aud-toggle 是 patient/family
+  var firstToggle = document.querySelector('.mobile-only .aud-toggle');
+  if (firstToggle) {
+    var btns = firstToggle.querySelectorAll('.audience-btn');
+    if (btns[0]) btns[0].classList.toggle('active', m === 'patient');
+    if (btns[1]) btns[1].classList.toggle('active', m === 'family');
+  }
   showToast(m === 'family' ? '切換為家屬模式' : '切換為患者模式', 'info');
 }
 
 function chatSwitchVersion(v) {
   chatSetVersion(v);
+  // 桌機 chat-seg
   document.querySelectorAll('.chat-toggles .chat-seg').forEach(function(seg, i) {
     if (i !== 1) return;
     seg.querySelectorAll('.chat-seg-btn').forEach(function(b, j) {
@@ -15348,6 +15359,13 @@ function chatSwitchVersion(v) {
       b.classList.toggle('active', want === v);
     });
   });
+  // 手機 audience-btn — 第二組 aud-toggle 是 normal/elderly
+  var toggles = document.querySelectorAll('.mobile-only .aud-toggle');
+  if (toggles[1]) {
+    var btns = toggles[1].querySelectorAll('.audience-btn');
+    if (btns[0]) btns[0].classList.toggle('active', v === 'normal');
+    if (btns[1]) btns[1].classList.toggle('active', v === 'elderly');
+  }
   showToast(v === 'elderly' ? '切換為年長版語氣' : '切換為一般語氣', 'info');
 }
 
@@ -15422,8 +15440,12 @@ function chatRemoveThinking() {
 
 var _chatMascotTypingTimer = null;
 function chatSetMascotState(state) {
-  var wrap = document.getElementById('chat-mascot');
-  if (!wrap) return;
+  // 桌機 #chat-mascot 跟手機 #mobile-chat-mascot 同步切換
+  var wraps = [
+    document.getElementById('chat-mascot'),
+    document.getElementById('mobile-chat-mascot'),
+  ].filter(Boolean);
+  if (!wraps.length) return;
   // 停掉之前可能在跑的 typing 動畫
   if (_chatMascotTypingTimer) {
     clearInterval(_chatMascotTypingTimer);
@@ -15431,16 +15453,22 @@ function chatSetMascotState(state) {
   }
   if (state === 'typing') {
     var frame = 0;
-    wrap.innerHTML = chatMascotSvg('typing', frame);
+    var html0 = chatMascotSvg('typing', frame);
+    wraps.forEach(function(w) { w.innerHTML = html0; });
     _chatMascotTypingTimer = setInterval(function () {
       frame = (frame + 1) % 2;
-      var w = document.getElementById('chat-mascot');
-      if (!w) { clearInterval(_chatMascotTypingTimer); _chatMascotTypingTimer = null; return; }
-      w.innerHTML = chatMascotSvg('typing', frame);
+      var ws = [
+        document.getElementById('chat-mascot'),
+        document.getElementById('mobile-chat-mascot'),
+      ].filter(Boolean);
+      if (!ws.length) { clearInterval(_chatMascotTypingTimer); _chatMascotTypingTimer = null; return; }
+      var html = chatMascotSvg('typing', frame);
+      ws.forEach(function(w) { w.innerHTML = html; });
     }, 140);
     return;
   }
-  wrap.innerHTML = chatMascotSvg(state);
+  var html = chatMascotSvg(state);
+  wraps.forEach(function(w) { w.innerHTML = html; });
 }
 
 // 打字機效果：把文字一個個塞進 element
