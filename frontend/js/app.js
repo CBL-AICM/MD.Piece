@@ -2617,6 +2617,10 @@ var _currentPageKey = null;
 
 function showPage(page) {
   _currentPageKey = page;
+  // 清掉 is-sym-logging modal 狀態 — 若上一頁開了症狀 log form 沒提交就切走，
+  // class 殘留會讓任何有 .sym-page.desktop-only 的頁面（如 vitals）被當 modal
+  // 鎖全螢幕並隱藏內容（規則 9：CSS selector 不該誤傷其他頁面）
+  document.body.classList.remove('is-sym-logging');
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   // 同步在 body 設 .is-home / data-page，給 CSS 選擇器用（topbar 返回按鈕需要）

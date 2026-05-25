@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v113-mobile-fixes-batch";
+const CACHE_VERSION = "mdpiece-v114-vitals-blank-fix";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -11,7 +11,7 @@ const STATIC_ASSETS = [
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v125-mobile-fixes-batch",
+  "/js/app.js?v=v126-vitals-blank-fix",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
