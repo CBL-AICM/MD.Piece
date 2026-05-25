@@ -121,6 +121,12 @@ body.theme-modern .kpi-mini {
   border-radius: 14px;
   position: relative; overflow: hidden;
   box-shadow: 0 1px 0 rgba(31,61,88,0.02), 0 4px 14px -8px rgba(74,57,40,0.10);
+  cursor: pointer;
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+body.theme-modern .kpi-mini:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 0 rgba(31,61,88,0.02), 0 2px 8px -4px rgba(74,57,40,0.18);
 }
 body.theme-modern .kpi-mini.t-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6), #fff 70%); }
 body.theme-modern .kpi-mini.t-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC), #fff 70%); }

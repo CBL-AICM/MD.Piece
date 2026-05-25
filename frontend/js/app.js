@@ -4485,8 +4485,9 @@ function home() {
     +   '</div>'
 
     // KPI 3 卡 mini — 數字 + 一句白話（資料注入見 _updateMobileHomeKPIs）
+    // 點卡片跳到對應頁可記錄／查看趨勢
     +   '<div class="kpi-row">'
-    +     '<div class="kpi-mini t-rose">'
+    +     '<div class="kpi-mini t-rose" role="button" tabindex="0" onclick="navigateTo(\'vitals\',null)">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-bp-val">—</div>'
@@ -4496,9 +4497,9 @@ function home() {
     +         '<polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,11 16,12 32,8 48,13 64,9 80,14 100,11"/>'
     +         '<circle cx="100" cy="11" r="2.6" fill="#C97A7A"/>'
     +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 升高</div>'
+    +       '<div class="kpi-mini-explain">線往上 = 升高　·　點開記錄</div>'
     +     '</div>'
-    +     '<div class="kpi-mini t-blue">'
+    +     '<div class="kpi-mini t-blue" role="button" tabindex="0" onclick="navigateTo(\'vitals\',null)">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-glu-val">—</div>'
@@ -4508,9 +4509,9 @@ function home() {
     +         '<polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,14 16,12 32,16 48,10 64,13 80,8 100,6"/>'
     +         '<circle cx="100" cy="6" r="2.6" fill="#4A90C2"/>'
     +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 偏高</div>'
+    +       '<div class="kpi-mini-explain">線往上 = 偏高　·　點開記錄</div>'
     +     '</div>'
-    +     '<div class="kpi-mini t-teal">'
+    +     '<div class="kpi-mini t-teal" role="button" tabindex="0" onclick="navigateTo(\'emotions\',null)">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-mood-val">—</div>'
@@ -4520,7 +4521,7 @@ function home() {
     +         '<polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,8 16,9 32,12 48,17 64,14 80,18 100,13"/>'
     +         '<circle cx="100" cy="13" r="2.6" fill="#2F8378"/>'
     +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 越累</div>'
+    +       '<div class="kpi-mini-explain">線往上 = 越累　·　點開記錄</div>'
     +     '</div>'
     +   '</div>'
 
