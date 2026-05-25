@@ -384,6 +384,18 @@ body.theme-modern .pv-btn {
 }
 body.theme-modern .pv-btn .lucide { width: 12px; height: 12px; }
 
+/* 手機版 previsit 動作列 — PDF 下載 + 複製 */
+body.theme-modern .pv-mobile-actions {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px;
+}
+body.theme-modern .pv-mobile-actions .pv-btn-mini {
+  margin-top: 0; flex: 1; min-width: 0;
+  justify-content: center;
+  background: #FFFFFF; color: var(--navy, #0F2A45);
+  border: 1.5px solid var(--border, rgba(31,61,88,0.10));
+  font-size: 11px; padding: 7px 8px;
+}
+
 /* audience toggle */
 body.theme-modern .aud-toggle {
   display: flex; gap: 4px; padding: 3px;

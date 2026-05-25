@@ -1768,6 +1768,19 @@ function previsit() {
     +     '<button class="pv-btn" onclick="previsitReload()"><i data-lucide="clipboard-check"></i> 立即產生診前報告</button>'
     +   '</div>'
 
+    // 報告動作 — PDF 下載 + 複製（手機版漏掉了，desktop 有）
+    +   '<div class="pv-mobile-actions">'
+    +     '<button class="pv-btn pv-btn-mini" onclick="previsitDownload(\'patient\')">'
+    +       '<i data-lucide="file-down"></i> 患者版 PDF'
+    +     '</button>'
+    +     '<button class="pv-btn pv-btn-mini" onclick="previsitDownload(\'doctor\')">'
+    +       '<i data-lucide="stethoscope"></i> 醫師版 PDF'
+    +     '</button>'
+    +     '<button class="pv-btn pv-btn-mini" onclick="previsitCopy()">'
+    +       '<i data-lucide="clipboard-copy"></i> 複製'
+    +     '</button>'
+    +   '</div>'
+
     // 雙視角切換
     +   '<div class="aud-toggle">'
     +     '<button class="audience-btn active" data-aud="patient" onclick="_mobilePvSwitchAud(\'patient\')">'
