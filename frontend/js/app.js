@@ -1768,6 +1768,19 @@ function previsit() {
     +     '<button class="pv-btn" onclick="previsitReload()"><i data-lucide="clipboard-check"></i> 立即產生診前報告</button>'
     +   '</div>'
 
+    // 報告動作 — PDF 下載 + 複製（手機版漏掉了，desktop 有）
+    +   '<div class="pv-mobile-actions">'
+    +     '<button class="pv-btn pv-btn-mini" onclick="previsitDownload(\'patient\')">'
+    +       '<i data-lucide="file-down"></i> 患者版 PDF'
+    +     '</button>'
+    +     '<button class="pv-btn pv-btn-mini" onclick="previsitDownload(\'doctor\')">'
+    +       '<i data-lucide="stethoscope"></i> 醫師版 PDF'
+    +     '</button>'
+    +     '<button class="pv-btn pv-btn-mini" onclick="previsitCopy()">'
+    +       '<i data-lucide="clipboard-copy"></i> 複製'
+    +     '</button>'
+    +   '</div>'
+
     // 雙視角切換
     +   '<div class="aud-toggle">'
     +     '<button class="audience-btn active" data-aud="patient" onclick="_mobilePvSwitchAud(\'patient\')">'
@@ -4472,8 +4485,9 @@ function home() {
     +   '</div>'
 
     // KPI 3 卡 mini — 數字 + 一句白話（資料注入見 _updateMobileHomeKPIs）
+    // 點卡片跳到對應頁可記錄／查看趨勢
     +   '<div class="kpi-row">'
-    +     '<div class="kpi-mini t-rose">'
+    +     '<div class="kpi-mini t-rose" role="button" tabindex="0" onclick="navigateTo(\'vitals\',null)">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-bp-val">—</div>'
@@ -4483,9 +4497,9 @@ function home() {
     +         '<polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,11 16,12 32,8 48,13 64,9 80,14 100,11"/>'
     +         '<circle cx="100" cy="11" r="2.6" fill="#C97A7A"/>'
     +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 升高</div>'
+    +       '<div class="kpi-mini-explain">線往上 = 升高　·　點開記錄</div>'
     +     '</div>'
-    +     '<div class="kpi-mini t-blue">'
+    +     '<div class="kpi-mini t-blue" role="button" tabindex="0" onclick="navigateTo(\'vitals\',null)">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-glu-val">—</div>'
@@ -4495,9 +4509,9 @@ function home() {
     +         '<polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,14 16,12 32,16 48,10 64,13 80,8 100,6"/>'
     +         '<circle cx="100" cy="6" r="2.6" fill="#4A90C2"/>'
     +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 偏高</div>'
+    +       '<div class="kpi-mini-explain">線往上 = 偏高　·　點開記錄</div>'
     +     '</div>'
-    +     '<div class="kpi-mini t-teal">'
+    +     '<div class="kpi-mini t-teal" role="button" tabindex="0" onclick="navigateTo(\'emotions\',null)">'
     +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
     +       '<div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>'
     +       '<div class="kpi-mini-val" id="mobile-kpi-mood-val">—</div>'
@@ -4507,7 +4521,7 @@ function home() {
     +         '<polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,8 16,9 32,12 48,17 64,14 80,18 100,13"/>'
     +         '<circle cx="100" cy="13" r="2.6" fill="#2F8378"/>'
     +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 越累</div>'
+    +       '<div class="kpi-mini-explain">線往上 = 越累　·　點開記錄</div>'
     +     '</div>'
     +   '</div>'
 
@@ -7709,11 +7723,22 @@ function symptoms() {
     +   '<div class="chip-group" id="mobile-sym-chips" style="margin-bottom:14px">'
     +     (function() {
         var cats = (typeof SYMPTOM_CATEGORIES !== 'undefined' && SYMPTOM_CATEGORIES) ? SYMPTOM_CATEGORIES : [];
-        if (!cats.length) return '<button class="chip">點開下方類別開始</button>';
-        return cats.slice(0, 8).map(function(c) {
+        var custom = (typeof getCustomSymptomCats === 'function') ? getCustomSymptomCats() : [];
+        if (!cats.length && !custom.length) return '<button class="chip">點開下方類別開始</button>';
+        var html = cats.slice(0, 8).map(function(c) {
           var label = (typeof _symField === 'function') ? _symField(c, 'zh') : (c.zh || c.id || '');
           return '<button class="chip" onclick="openSymptomLog(\'' + c.id + '\')">' + escapeHtml(label) + '</button>';
         }).join('');
+        // 自訂症狀 chip（已建立的）— 右上小 × 刪除
+        html += custom.map(function(c) {
+          return '<button class="chip chip-custom" onclick="openSymptomLog(\'' + c.id + '\')">'
+            + escapeHtml(c.zh)
+            + '<span class="chip-del" onclick="event.stopPropagation();removeCustomSymptomCatAndRefresh(\'' + c.id + '\')" aria-label="刪除">×</span>'
+            + '</button>';
+        }).join('');
+        // 「+ 自訂」入口 — 開啟既有 openOtherSymptomLog 表單（手機共用 sym-logform modal）
+        html += '<button class="chip chip-add" onclick="openOtherSymptomLog()">+ 自訂</button>';
+        return html;
       })()
     +   '</div>'
 
@@ -10558,18 +10583,35 @@ function showToast(msg, type) {
 }
 
 // 把 fetch response 翻成人話：優先用 backend 的 JSON `detail`（中文），fallback 才用 HTTP code
+// FastAPI 422 的 detail 是 [{loc, msg, type}, ...] 陣列，要展開成可讀文字，不能 String() 變 [object Object]
 async function _parseApiError(r) {
   var status = r.status;
   try {
     var data = await r.json();
-    if (data && data.detail) return String(data.detail);
-    if (data && data.error) return String(data.error);
+    if (data && data.detail) return _formatErrorDetail(data.detail);
+    if (data && data.error) return _formatErrorDetail(data.error);
   } catch (_) { /* not JSON */ }
   if (status === 404) return '找不到對應資料（HTTP 404）';
   if (status === 401 || status === 403) return '沒有權限（HTTP ' + status + '）';
   if (status === 503) return '伺服器忙線中，請稍後再試（HTTP 503）';
   if (status >= 500) return '伺服器錯誤（HTTP ' + status + '）';
   return '操作失敗（HTTP ' + status + '）';
+}
+
+function _formatErrorDetail(detail) {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(_formatErrorDetail).filter(Boolean).join('；');
+  }
+  if (detail && typeof detail === 'object') {
+    // FastAPI 422: {loc:[...], msg:"...", type:"..."}
+    if (detail.msg) {
+      var loc = Array.isArray(detail.loc) ? detail.loc.slice(1).join('.') : '';
+      return loc ? (loc + '：' + detail.msg) : detail.msg;
+    }
+    return JSON.stringify(detail);
+  }
+  return String(detail);
 }
 
 // ─── 藥物管理 ─────────────────────────────────────────────
@@ -19956,13 +19998,19 @@ async function _mobileRemSubmit() {
   if (!pid) { showToast('請先登入', 'warning'); return; }
   var title = (document.getElementById('mobile-rem-title') || {}).value || '';
   if (!title.trim()) { showToast('請填提醒標題', 'warning'); return; }
+  var whenStr = (document.getElementById('mobile-rem-when') || {}).value || '';
+  if (!whenStr) { showToast('請選擇首次觸發時間', 'warning'); return; }
+  // datetime-local 是 local-time string，後端要 ISO 8601 with TZ
+  var whenIso;
+  try { whenIso = new Date(whenStr).toISOString(); }
+  catch (_) { showToast('時間格式錯誤', 'error'); return; }
   var body = {
     patient_id: pid,
     reminder_type: (document.getElementById('mobile-rem-type') || {}).value || 'custom',
     frequency: (document.getElementById('mobile-rem-freq') || {}).value || 'once',
     title: title.trim(),
     body: (document.getElementById('mobile-rem-body') || {}).value || '',
-    first_fire_at: (document.getElementById('mobile-rem-when') || {}).value || null,
+    scheduled_at: whenIso,
   };
   try {
     var res = await fetch(API + '/reminders/', {

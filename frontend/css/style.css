@@ -379,12 +379,12 @@ img, svg, video { max-width: 100%; height: auto; }
 }
 
 .landing-logo {
-  font-family: "Netron", "Rigelstar", "Cormorant Garamond", "Noto Serif TC", serif;
+  font-family: "ZCOOL KuaiLe", "Noto Sans TC", sans-serif;
   font-style: normal;
   font-size: 3.8rem;
   font-weight: 400;
   color: var(--landing-text);
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   line-height: 1.1;
   text-shadow: 0 0 28px var(--landing-glow);
 }
@@ -743,10 +743,10 @@ img, svg, video { max-width: 100%; height: auto; }
 }
 
 .sidebar-brand h1 {
-  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-family: "ZCOOL KuaiLe", "Noto Sans TC", sans-serif;
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: 1.5px;
   background: none;
   -webkit-text-fill-color: var(--app-text);
   color: var(--app-text);

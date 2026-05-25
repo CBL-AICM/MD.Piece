@@ -1,17 +1,17 @@
-const CACHE_VERSION = "mdpiece-v111-realcheckin";
+const CACHE_VERSION = "mdpiece-v113-mobile-fixes-batch";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v92-care-mode",
+  "/css/style.css?v=v109-handwriting-brand",
   "/css/medical-warm.css?v=v5-puzzle-pattern",
   "/css/v11-modern.css?v=v2-mobile-only",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v111-realcheckin",
+  "/js/app.js?v=v125-mobile-fixes-batch",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
