@@ -11010,6 +11010,122 @@ function clearMedSchedule() {
     });
 }
 
+// 「我的用法」note editor — 病人寫一句覆寫藥袋預設文字（例：「飯前 30 分鐘」、
+// 「跟著食物配溫水、不要躺著吃」）。最多 200 字（跟後端 MAX_CUSTOM_NOTE_LEN 對齊）。
+// 清空 = PUT /medications/{id}/note body={custom_note:null} → DB 設 NULL → 前端顯示退回藥袋預設。
+var MED_NOTE_MAX = 200;
+function openMedNoteEditor(medId) {
+  var med = (_medsList || []).find(function(m){ return String(m.id) === String(medId); });
+  if (!med) { if (typeof showToast === 'function') showToast('找不到這顆藥', 'error'); return; }
+  closeMedNoteEditor();
+  var current = (med.custom_note && String(med.custom_note).trim()) || '';
+  var bagText = med.instruction || ((med.dose || '') + ' ' + (med.frequency || ''));
+  var modal = document.createElement('div');
+  modal.id = 'med-note-modal';
+  modal.className = 'med-detail-modal';
+  modal.innerHTML = ''
+    + '<div class="mdm-backdrop" onclick="closeMedNoteEditor()"></div>'
+    + '<div class="mdm-panel" role="dialog" aria-modal="true" aria-label="加上我的用法" style="max-width:520px">'
+    +   '<header class="mdm-head">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedNoteEditor()" aria-label="關閉">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +     '<div class="mdm-title-wrap">'
+    +       '<div class="mdm-pill"><i data-lucide="user-check" style="width:18px;height:18px"></i></div>'
+    +       '<div>'
+    +         '<h3 class="mdm-title">加上我的用法</h3>'
+    +         '<p class="mdm-sub">' + escapeHtml(med.name || '未命名藥物') + '　·　覆寫藥袋預設文字</p>'
+    +       '</div>'
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="mdm-body" style="padding:14px 18px">'
+    +     '<div style="background:var(--bg-soft);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px">'
+    +       '<div style="font-size:10px;color:var(--text-muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px">藥袋預設</div>'
+    +       '<div style="color:var(--text-dim)">' + escapeHtml(bagText) + '</div>'
+    +     '</div>'
+    +     '<label style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px">我的用法（最多 ' + MED_NOTE_MAX + ' 字）</label>'
+    +     '<textarea id="med-note-input" maxlength="' + MED_NOTE_MAX + '" rows="4" '
+    +       'style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font:inherit;line-height:1.5;resize:vertical;box-sizing:border-box" '
+    +       'placeholder="例：飯前 30 分鐘吃、跟著食物配溫水、不要躺著吃…">' + escapeHtml(current) + '</textarea>'
+    +     '<div id="med-note-counter" style="font-size:10.5px;color:var(--text-muted);text-align:right;margin-top:4px;font-variant-numeric:tabular-nums">' + current.length + ' / ' + MED_NOTE_MAX + '</div>'
+    +     '<p style="margin-top:12px;font-size:11px;color:var(--text-muted);line-height:1.5">設好後藥物清單會顯示這段、藥袋預設文字會被劃掉（仍然看得到原始用法、只是不再是預設）。</p>'
+    +   '</div>'
+    +   '<footer style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +     (current
+        ? '<button type="button" class="secondary" onclick="clearMedNote()" style="margin-right:auto">清除·回藥袋預設</button>'
+        : '<span style="margin-right:auto"></span>')
+    +     '<button type="button" class="secondary" onclick="closeMedNoteEditor()">取消</button>'
+    +     '<button type="button" class="primary" onclick="saveMedNote()">儲存</button>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(modal);
+  // 即時字數計數器
+  var input = document.getElementById('med-note-input');
+  var counter = document.getElementById('med-note-counter');
+  if (input && counter) {
+    input.addEventListener('input', function() {
+      counter.textContent = input.value.length + ' / ' + MED_NOTE_MAX;
+    });
+    setTimeout(function(){ input.focus(); }, 0);
+  }
+  window._medNoteEditingId = medId;
+  if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+}
+
+function closeMedNoteEditor() {
+  var el = document.getElementById('med-note-modal');
+  if (el) el.remove();
+  window._medNoteEditingId = null;
+}
+
+function saveMedNote() {
+  var medId = window._medNoteEditingId;
+  if (!medId) return;
+  var input = document.getElementById('med-note-input');
+  if (!input) return;
+  var value = String(input.value || '').trim();
+  fetch(API + '/medications/' + encodeURIComponent(medId) + '/note', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ custom_note: value || null })
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function() {
+      if (typeof showToast === 'function') showToast(value ? '已儲存我的用法 ✓' : '已清除自訂用法', value ? 'success' : 'info');
+      closeMedNoteEditor();
+      loadMedicationsPage();
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('儲存失敗，請再試一次', 'error');
+    });
+}
+
+function clearMedNote() {
+  var medId = window._medNoteEditingId;
+  if (!medId) return;
+  if (!confirm('確定要清除自訂用法、回到藥袋預設？')) return;
+  fetch(API + '/medications/' + encodeURIComponent(medId) + '/note', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ custom_note: null })
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function() {
+      if (typeof showToast === 'function') showToast('已回到藥袋預設', 'info');
+      closeMedNoteEditor();
+      loadMedicationsPage();
+    })
+    .catch(function() {
+      if (typeof showToast === 'function') showToast('清除失敗，請再試一次', 'error');
+    });
+}
+
 // 把每顆藥「今天應該服用的時刻」蒐集起來，依時間排序成動態 slot 清單。
 // 若有 custom_schedule 且今天的 weekday 在 entries 內 → 用自訂的 HH:MM；
 // 否則 fallback 到 bucket 預設時間（morning=07:00 / noon=13:00 / evening=18:00 / bedtime=22:00）。
@@ -11154,7 +11270,7 @@ function _renderMobileMedList(meds) {
         +     (note
               ? '<span class="actual">' + escapeHtml(note) + '</span>'
               : '<span class="actual" style="color:var(--text-muted);font-style:italic">(尚未自訂用法)</span>')
-        +     '<button class="med-customize-edit-btn" onclick="alert(\'此功能開發中：將可以在這裡加上醫師私下交代的用法，覆寫藥袋預設\')">'
+        +     '<button class="med-customize-edit-btn" onclick="openMedNoteEditor(\'' + safeMedId + '\')" title="加上醫師私下交代的用法，覆寫藥袋預設">'
         +       '<i data-lucide="pencil"></i>' + (note ? '編輯' : '加上')
         +     '</button>'
         +   '</div>'
