@@ -12478,12 +12478,18 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 .emotions-btn.selected .emotions-pct { color: var(--em-color); }
 .mood-line {
   width: 100%;
-  min-height: 280px;
+  min-height: 460px;
 }
 .mood-line-svg {
   width: 100%;
-  height: 280px;
+  height: 460px;
   display: block;
+}
+@media (max-width: 768px) {
+  .mood-line, .mood-line-svg { min-height: 340px; height: 340px; }
+}
+@media (max-width: 480px) {
+  .mood-line, .mood-line-svg { min-height: 260px; height: 260px; }
 }
 .mood-line-summary {
   margin: 10px 0 0;

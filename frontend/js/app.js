@@ -17468,7 +17468,7 @@ function renderMoodLine() {
     return;
   }
 
-  var W = 640, H = 200, PAD_L = 32, PAD_R = 12, PAD_T = 14, PAD_B = 28;
+  var W = 640, H = 320, PAD_L = 44, PAD_R = 16, PAD_T = 18, PAD_B = 40;
   var innerW = W - PAD_L - PAD_R;
   var innerH = H - PAD_T - PAD_B;
 
@@ -17499,9 +17499,9 @@ function renderMoodLine() {
     if (rec.min_score !== rec.max_score) {
       var yTop = yFor(rec.max_score);
       var yBot = yFor(rec.min_score);
-      rangeRects += '<rect x="' + (x - 4) + '" y="' + yTop + '" width="8" height="' + (yBot - yTop) + '" fill="#86C7B8" opacity="0.22" rx="2"/>';
+      rangeRects += '<rect x="' + (x - 6) + '" y="' + yTop + '" width="12" height="' + (yBot - yTop) + '" fill="#86C7B8" opacity="0.22" rx="3"/>';
     }
-    pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="5.5" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="1.8"><title>' + k + ' 電量 ' + _moodPercent(rec.average_score) + '%</title></circle>';
+    pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="8" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="2.5"><title>' + k + ' 電量 ' + _moodPercent(rec.average_score) + '%</title></circle>';
   });
 
   // 橫向格線（0% / 25% / 50% / 75% / 100%）
@@ -17510,7 +17510,7 @@ function renderMoodLine() {
     var y = yFor(s);
     var pctLabel = (s - 1) * 25;
     grid += '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="rgba(160,160,180,0.18)" stroke-dasharray="2 4"/>';
-    grid += '<text x="' + (PAD_L - 6) + '" y="' + (y + 4) + '" text-anchor="end" font-size="13" fill="rgba(120,120,140,0.85)" font-family="JetBrains Mono, monospace">' + pctLabel + '%</text>';
+    grid += '<text x="' + (PAD_L - 8) + '" y="' + (y + 6) + '" text-anchor="end" font-size="18" fill="rgba(120,120,140,0.92)" font-family="JetBrains Mono, monospace">' + pctLabel + '%</text>';
   }
 
   // X 軸日期 label（每隔幾天標一次）
@@ -17519,14 +17519,14 @@ function renderMoodLine() {
   allDates.forEach(function(k, idx) {
     if (idx % labelEvery !== 0 && idx !== allDates.length - 1) return;
     var x = PAD_L + idx * xStep;
-    xLabels += '<text x="' + x + '" y="' + (H - 6) + '" text-anchor="middle" font-size="13" fill="rgba(120,120,140,0.9)" font-family="JetBrains Mono, monospace">' + k.slice(5) + '</text>';
+    xLabels += '<text x="' + x + '" y="' + (H - 10) + '" text-anchor="middle" font-size="18" fill="rgba(120,120,140,0.92)" font-family="JetBrains Mono, monospace">' + k.slice(5) + '</text>';
   });
 
   box.innerHTML =
     '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" class="mood-line-svg">' +
       grid +
       rangeRects +
-      '<path d="' + path + '" fill="none" stroke="#86C7B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="' + path + '" fill="none" stroke="#86C7B8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>' +
       pointCircles +
       xLabels +
     '</svg>';
