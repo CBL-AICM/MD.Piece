@@ -12478,12 +12478,18 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 .emotions-btn.selected .emotions-pct { color: var(--em-color); }
 .mood-line {
   width: 100%;
-  min-height: 200px;
+  min-height: 460px;
 }
 .mood-line-svg {
   width: 100%;
-  height: auto;
+  height: 460px;
   display: block;
+}
+@media (max-width: 768px) {
+  .mood-line, .mood-line-svg { min-height: 420px; height: 420px; }
+}
+@media (max-width: 480px) {
+  .mood-line, .mood-line-svg { min-height: 380px; height: 380px; }
 }
 .mood-line-summary {
   margin: 10px 0 0;
@@ -14423,6 +14429,46 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   .onboarding-title { font-size: 1.05rem; }
   .onboarding-desc  { font-size: 0.88rem; }
 }
+
+/* Profile onboarding — 慢性病採集 modal（Issue #131） */
+.profile-onb-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 14px 0 12px;
+}
+.profile-onb-chip {
+  padding: 6px 12px;
+  background: var(--app-panel-soft, #f3f3f3);
+  border: 1.5px solid var(--app-border, rgba(0,0,0,0.1));
+  border-radius: 999px;
+  font-size: 0.85rem; font-weight: 500;
+  color: var(--app-text, #222);
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms;
+}
+.profile-onb-chip:hover { background: var(--app-panel, #eee); }
+.profile-onb-chip.active {
+  background: var(--accent-soft, #E8F1F8);
+  border-color: var(--accent, #4A90C2);
+  color: var(--accent-deep, #2F6B96);
+  font-weight: 600;
+}
+.profile-onb-label {
+  display: block; margin: 8px 0 4px;
+  font-size: 0.85rem; color: var(--app-text-dim, #666);
+}
+#profile-onb-extra {
+  width: 100%; box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1.5px solid var(--app-border, rgba(0,0,0,0.1));
+  border-radius: 8px;
+  font-size: 0.88rem; font-family: inherit;
+  resize: vertical;
+}
+.profile-onb-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 14px;
+}
+.profile-onb-actions .onboarding-skip { position: static; }
 
 /* ── Mobile sidebar: section labels span both columns ── */
 @media (max-width: 768px) {

@@ -2913,8 +2913,94 @@ function finishAuth(user) {
     document.getElementById('app-wrapper').classList.add('show');
     showPage('home');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
+    // Profile onboarding 先跳（強制問慢性病），完成後再進原本的 tutorial onboarding
+    if (typeof maybeShowProfileOnboarding === 'function') {
+      maybeShowProfileOnboarding(function() {
+        if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
+      });
+    } else if (typeof maybeShowOnboarding === 'function') {
+      maybeShowOnboarding();
+    }
   }, 250);
+}
+
+// ─── Profile onboarding（Issue #131 follow-up）──────────
+// 註冊／首次登入後若 backend profile.conditions 空就跳，強制收集慢性病。
+// 「先跳過」會記在 localStorage（per-uid），下次登入不會再跳，但 records 頁仍可填。
+const PROFILE_ONB_COMMON = [
+  '高血壓', '糖尿病', '高血脂', '心臟病',
+  '中風後', '氣喘', '慢性腎臟病', '甲狀腺',
+  '失智症', '癌症', '肝病', '關節炎',
+];
+const PROFILE_ONB_SKIP_KEY = 'mdpiece_profile_onb_skip';
+
+function maybeShowProfileOnboarding(onDone) {
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  var skipKey = PROFILE_ONB_SKIP_KEY + ':' + uid;
+  if (uid && localStorage.getItem(skipKey) === '1') { if (onDone) onDone(); return; }
+  // 拉一次後端 profile：有 conditions 就視為已填過，不跳
+  fetchBasicInfoFromServer().then(function(remote) {
+    var hasCond = remote && (remote.conditions || '').trim();
+    if (hasCond) { if (onDone) onDone(); return; }
+    _renderProfileOnboarding(onDone);
+  }).catch(function() { _renderProfileOnboarding(onDone); });
+}
+
+function _renderProfileOnboarding(onDone) {
+  var overlay = document.getElementById('profile-onb-overlay');
+  if (!overlay) { if (onDone) onDone(); return; }
+  var chipsBox = document.getElementById('profile-onb-chips');
+  chipsBox.innerHTML = PROFILE_ONB_COMMON.map(function(name) {
+    return '<button type="button" class="profile-onb-chip" data-cond="' + escapeHtml(name) + '">' + escapeHtml(name) + '</button>';
+  }).join('');
+  chipsBox.querySelectorAll('.profile-onb-chip').forEach(function(btn) {
+    btn.addEventListener('click', function() { btn.classList.toggle('active'); });
+  });
+  // 預填 textarea：若 localStorage 已有舊資料，帶進來讓使用者直接編
+  var existing = getBasicInfo();
+  if (existing && existing.conditions) {
+    document.getElementById('profile-onb-extra').value = existing.conditions;
+  }
+  overlay.hidden = false;
+  requestAnimationFrame(function() { overlay.classList.add('show'); });
+  // 把 onDone 暫存到 overlay，submit/skip 時取出
+  overlay._onDone = onDone;
+}
+
+function profileOnboardingSubmit() {
+  var overlay = document.getElementById('profile-onb-overlay');
+  var chipsActive = Array.from(document.querySelectorAll('#profile-onb-chips .profile-onb-chip.active'))
+    .map(function(b) { return b.dataset.cond; });
+  var extra = (document.getElementById('profile-onb-extra').value || '').trim();
+  var combined = chipsActive.join('、');
+  if (extra) combined = combined ? (combined + '、' + extra) : extra;
+  if (!combined) { showToast && showToast('請至少選一項或填寫', 'warning'); return; }
+  // Merge 進現有 basicInfo（保留其他欄位），同步後端
+  var info = getBasicInfo() || {};
+  info.conditions = combined;
+  setBasicInfo(info);
+  syncBasicInfoToServer(info).then(function(ok) {
+    if (!ok) showToast && showToast('已存本機，後端同步失敗（之後會自動重試）', 'warning');
+    _closeProfileOnboarding(overlay);
+  });
+}
+
+function profileOnboardingSkip() {
+  var overlay = document.getElementById('profile-onb-overlay');
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (uid) localStorage.setItem(PROFILE_ONB_SKIP_KEY + ':' + uid, '1');
+  _closeProfileOnboarding(overlay);
+}
+
+function _closeProfileOnboarding(overlay) {
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  setTimeout(function() {
+    overlay.hidden = true;
+    var cb = overlay._onDone;
+    overlay._onDone = null;
+    if (cb) cb();
+  }, 200);
 }
 
 // 切換帳號 — 不二次確認，直接回到登入頁
@@ -10234,18 +10320,109 @@ async function quickAdvice() {
 }
 
 // ─── 我的基本資料 ──────────────────────────────────────────
-// 存 localStorage：性別 / 生日 / 身高 / 體重 / 血型 / 過敏 / 慢性病 / 緊急聯絡人
-// 看診時可一鍵複製給醫師，不取代帳號的暱稱頭像（那放在 /account）。
+// 個人檔案 — 後端同步 + localStorage 快取（Issue #131）
+//
+// 原本只存 localStorage（BASIC_INFO_KEY），清快取 / 換瀏覽器就遺失。
+// 現在：登入後從 /profile/{user_id} 拉、儲存時 PUT 同步、本地快取做離線顯示。
+// 一次性 migration：若 backend 沒有 + localStorage 有 → 推上去，之後就以 backend 為真。
 
 const BASIC_INFO_KEY = 'mdpiece_basic_info';
+const BASIC_INFO_MIGRATED_KEY = 'mdpiece_basic_info_migrated';
 
+// 同步版（保留 sig，給渲染用）— 讀本地快取，後端是非同步預載的真值來源。
 function getBasicInfo() {
   try { return JSON.parse(localStorage.getItem(BASIC_INFO_KEY)) || {}; }
   catch { return {}; }
 }
 
+// 寫快取（本地立即生效，UI 不卡）。後端同步由 saveBasicInfo 觸發。
 function setBasicInfo(info) {
   localStorage.setItem(BASIC_INFO_KEY, JSON.stringify(info));
+}
+
+// 從後端拉個人檔案，成功就覆寫 localStorage 快取，並回 promise resolve(info)。
+// 失敗（404 = 從沒填過、或網路問題）就 resolve(null)，UI 仍能用 getBasicInfo() 本地快取。
+function fetchBasicInfoFromServer() {
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!uid) return Promise.resolve(null);
+  return fetch(API + '/profile/' + encodeURIComponent(uid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(remote) {
+      if (!remote) return null;
+      // 後端欄位 → 前端欄位（保留原本 form id 一致）
+      var info = {
+        gender: remote.gender || '',
+        birthday: remote.birthday || '',
+        blood: remote.blood || '',
+        height: remote.height_cm != null ? String(remote.height_cm) : '',
+        weight: remote.weight_kg != null ? String(remote.weight_kg) : '',
+        allergies: remote.allergies || '',
+        conditions: remote.conditions || '',
+        current_disease: remote.current_disease || '',
+        meds: remote.meds || '',
+        doctor_name: remote.doctor_name || '',
+        hospital: remote.hospital || '',
+        emergency_name: remote.emergency_name || '',
+        emergency_phone: remote.emergency_phone || '',
+      };
+      setBasicInfo(info);
+      return info;
+    })
+    .catch(function() { return null; });
+}
+
+// 把本地 info 推到後端。回 promise resolve(true|false)。
+function syncBasicInfoToServer(info) {
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!uid) return Promise.resolve(false);
+  var payload = {
+    gender: info.gender || null,
+    birthday: info.birthday || null,
+    blood: info.blood || null,
+    height_cm: info.height ? parseFloat(info.height) : null,
+    weight_kg: info.weight ? parseFloat(info.weight) : null,
+    allergies: info.allergies || null,
+    conditions: info.conditions || null,
+    current_disease: info.current_disease || null,
+    meds: info.meds || null,
+    doctor_name: info.doctor_name || null,
+    hospital: info.hospital || null,
+    emergency_name: info.emergency_name || null,
+    emergency_phone: info.emergency_phone || null,
+  };
+  return fetch(API + '/profile/' + encodeURIComponent(uid), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+    .then(function(r) { return r.ok; })
+    .catch(function() { return false; });
+}
+
+// 一次性 migration：若 backend 沒資料但本地有舊資料 → 推上去。每個帳號只跑一次。
+// 由 boot / 進入 records 頁時觸發。
+function migrateBasicInfoIfNeeded() {
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!uid) return Promise.resolve();
+  var migKey = BASIC_INFO_MIGRATED_KEY + ':' + uid;
+  if (localStorage.getItem(migKey) === '1') return Promise.resolve();
+  // 先拉一次 backend；有就標記已 migrated 就走人
+  return fetchBasicInfoFromServer().then(function(remote) {
+    if (remote && Object.values(remote).some(Boolean)) {
+      localStorage.setItem(migKey, '1');
+      return;
+    }
+    // backend 空、檢查本地有沒有舊資料
+    var local = getBasicInfo();
+    if (!local || !Object.values(local).some(Boolean)) {
+      localStorage.setItem(migKey, '1');
+      return;
+    }
+    // backfill 上去
+    return syncBasicInfoToServer(local).then(function(ok) {
+      if (ok) localStorage.setItem(migKey, '1');
+    });
+  });
 }
 
 function calcAge(birthday) {
@@ -10382,6 +10559,43 @@ function records() {
 function loadRecordsPage() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   if (typeof updateDetectedDiseases === 'function') updateDetectedDiseases();
+  // Issue #131：拉後端最新個人檔案、必要時做一次性 migration。
+  // 拉完直接寫到欄位（避免 showPage 重渲整頁造成迴圈）。
+  if (typeof migrateBasicInfoIfNeeded === 'function') {
+    var before = JSON.stringify(getBasicInfo());
+    migrateBasicInfoIfNeeded().then(function() {
+      return fetchBasicInfoFromServer();
+    }).then(function(remote) {
+      if (!remote) return;
+      if (JSON.stringify(getBasicInfo()) === before) return; // 沒變化
+      _applyBasicInfoToForm(remote);
+      if (typeof updateDetectedDiseases === 'function') updateDetectedDiseases();
+    });
+  }
+}
+
+// 把 info 物件套到 records 頁面上的表單欄位（不重渲整頁）
+function _applyBasicInfoToForm(info) {
+  var map = {
+    'bi-gender': 'gender', 'bi-birthday': 'birthday', 'bi-blood': 'blood',
+    'bi-height': 'height', 'bi-weight': 'weight',
+    'bi-allergies': 'allergies', 'bi-conditions': 'conditions',
+    'bi-current-disease': 'current_disease', 'bi-meds': 'meds',
+    'bi-doctor-name': 'doctor_name', 'bi-hospital': 'hospital',
+    'bi-emergency-name': 'emergency_name', 'bi-emergency-phone': 'emergency_phone',
+  };
+  Object.keys(map).forEach(function(elId) {
+    var el = document.getElementById(elId);
+    if (el) el.value = info[map[elId]] || '';
+  });
+  // 觸發顯示「年齡」與「BMI」這類派生欄位
+  var ageDisp = document.getElementById('bi-age-display');
+  if (ageDisp && info.birthday) ageDisp.textContent = calcAge(info.birthday);
+  var bmiDisp = document.getElementById('bi-bmi-display');
+  if (bmiDisp && info.height && info.weight) {
+    var bmi = calcBMI(info.height, info.weight);
+    bmiDisp.textContent = bmi ? 'BMI ' + bmi : '';
+  }
 }
 
 // 從基本資料三個自由文字欄位即時辨識疾病，並把易讀名稱顯示成 pill
@@ -10427,6 +10641,10 @@ function saveBasicInfo() {
     emergency_phone: document.getElementById('bi-emergency-phone').value.trim(),
   };
   setBasicInfo(info);
+  // 同步到後端 — Issue #131：不再只存 localStorage。失敗不擋 UI（本地已存）。
+  syncBasicInfoToServer(info).then(function(ok) {
+    if (!ok) showToast && showToast('已存本機，後端同步失敗（之後會自動重試）', 'warning');
+  });
 
   // 自動辨識疾病 → user.icd10_codes，衛教頁的「我的疾病書架」就會出現
   if (typeof detectIcd10FromText === 'function') {
@@ -17250,7 +17468,7 @@ function renderMoodLine() {
     return;
   }
 
-  var W = 640, H = 200, PAD_L = 32, PAD_R = 12, PAD_T = 14, PAD_B = 28;
+  var W = 640, H = 360, PAD_L = 56, PAD_R = 20, PAD_T = 22, PAD_B = 52;
   var innerW = W - PAD_L - PAD_R;
   var innerH = H - PAD_T - PAD_B;
 
@@ -17281,9 +17499,9 @@ function renderMoodLine() {
     if (rec.min_score !== rec.max_score) {
       var yTop = yFor(rec.max_score);
       var yBot = yFor(rec.min_score);
-      rangeRects += '<rect x="' + (x - 3) + '" y="' + yTop + '" width="6" height="' + (yBot - yTop) + '" fill="#86C7B8" opacity="0.18" rx="2"/>';
+      rangeRects += '<rect x="' + (x - 9) + '" y="' + yTop + '" width="18" height="' + (yBot - yTop) + '" fill="#86C7B8" opacity="0.22" rx="4"/>';
     }
-    pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="3.5" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="1.2"><title>' + k + ' 電量 ' + _moodPercent(rec.average_score) + '%</title></circle>';
+    pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="13" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="3.5"><title>' + k + ' 電量 ' + _moodPercent(rec.average_score) + '%</title></circle>';
   });
 
   // 橫向格線（0% / 25% / 50% / 75% / 100%）
@@ -17292,7 +17510,7 @@ function renderMoodLine() {
     var y = yFor(s);
     var pctLabel = (s - 1) * 25;
     grid += '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="rgba(160,160,180,0.18)" stroke-dasharray="2 4"/>';
-    grid += '<text x="' + (PAD_L - 6) + '" y="' + (y + 3) + '" text-anchor="end" font-size="10" fill="rgba(160,160,180,0.7)" font-family="JetBrains Mono, monospace">' + pctLabel + '%</text>';
+    grid += '<text x="' + (PAD_L - 10) + '" y="' + (y + 9) + '" text-anchor="end" font-size="26" fill="rgba(120,120,140,0.92)" font-family="JetBrains Mono, monospace">' + pctLabel + '%</text>';
   }
 
   // X 軸日期 label（每隔幾天標一次）
@@ -17301,14 +17519,14 @@ function renderMoodLine() {
   allDates.forEach(function(k, idx) {
     if (idx % labelEvery !== 0 && idx !== allDates.length - 1) return;
     var x = PAD_L + idx * xStep;
-    xLabels += '<text x="' + x + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="rgba(160,160,180,0.8)" font-family="JetBrains Mono, monospace">' + k.slice(5) + '</text>';
+    xLabels += '<text x="' + x + '" y="' + (H - 14) + '" text-anchor="middle" font-size="26" fill="rgba(120,120,140,0.92)" font-family="JetBrains Mono, monospace">' + k.slice(5) + '</text>';
   });
 
   box.innerHTML =
     '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" class="mood-line-svg">' +
       grid +
       rangeRects +
-      '<path d="' + path + '" fill="none" stroke="#86C7B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="' + path + '" fill="none" stroke="#86C7B8" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>' +
       pointCircles +
       xLabels +
     '</svg>';

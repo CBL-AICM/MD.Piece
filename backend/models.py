@@ -91,6 +91,26 @@ class PasswordChange(BaseModel):
     new_password: str
 
 
+# ─── Patient Profile（個人檔案 / 慢性病 / 緊急聯絡人）─────
+# Issue #131：原本只存 localStorage，清快取 / 換瀏覽器就遺失。
+# Upsert 模式：一個 user 對應一筆 profile，全欄位皆可選（先儲一半再補另一半）。
+
+class PatientProfileUpsert(BaseModel):
+    gender: str | None = None
+    birthday: str | None = None  # YYYY-MM-DD
+    blood: str | None = None
+    height_cm: float | None = None
+    weight_kg: float | None = None
+    allergies: str | None = None
+    conditions: str | None = None
+    current_disease: str | None = None
+    meds: str | None = None
+    doctor_name: str | None = None
+    hospital: str | None = None
+    emergency_name: str | None = None
+    emergency_phone: str | None = None
+
+
 # ─── Doctor Notes ─────────────────────────────────────────
 
 class DoctorNoteCreate(BaseModel):
