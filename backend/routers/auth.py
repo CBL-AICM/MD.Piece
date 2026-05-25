@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 
 from backend.db import get_supabase
 from backend.models import PasswordChange, UserCreate, UserLogin, UserUpdate
+from backend.security import create_access_token
 
 router = APIRouter()
 
@@ -62,7 +63,9 @@ def register(body: UserCreate):
     payload["password_hash"] = _hash_password(body.password)
 
     result = sb.table("users").insert(payload).execute()
-    return _public_user(result.data[0])
+    user = _public_user(result.data[0])
+    # Phase 1a：附 access_token，前端存起來打後續 API
+    return {**user, "access_token": create_access_token(user)}
 
 
 @router.post("/login")
@@ -71,10 +74,11 @@ def login(body: UserLogin):
     result = sb.table("users").select("*").eq("username", body.username).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="此帳號尚未註冊")
-    user = result.data[0]
-    if not _verify_password(body.password, user.get("password_hash", "")):
+    user_row = result.data[0]
+    if not _verify_password(body.password, user_row.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="密碼錯誤")
-    return _public_user(user)
+    user = _public_user(user_row)
+    return {**user, "access_token": create_access_token(user)}
 
 
 @router.get("/user/{user_id}")

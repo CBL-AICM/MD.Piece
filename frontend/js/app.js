@@ -377,7 +377,38 @@ function getCurrentUser() {
 }
 
 function setCurrentUser(user) {
+  // Phase 1a：把 access_token 拆出來單獨存（避免每次序列化 user 都帶著）
+  if (user && user.access_token) {
+    try { localStorage.setItem('mdpiece_access_token', user.access_token); } catch {}
+    user = Object.assign({}, user);
+    delete user.access_token;
+  }
   localStorage.setItem('mdpiece_user', JSON.stringify(user));
+}
+
+function getAccessToken() {
+  try { return localStorage.getItem('mdpiece_access_token'); } catch { return null; }
+}
+
+// Phase 1a：fetch wrapper，把 Authorization: Bearer 自動帶上、處理 401。
+// 後續 router 漸進改成 Depends(current_user) 時，前端不用再各自改。
+async function apiFetch(input, init) {
+  init = init || {};
+  var headers = new Headers(init.headers || {});
+  var tok = getAccessToken();
+  if (tok && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + tok);
+  init.headers = headers;
+  var res = await fetch(input, init);
+  if (res.status === 401) {
+    // token 過期 / 無效 — 清掉並回到登入頁。不彈 confirm，避免長者反覆按。
+    try {
+      localStorage.removeItem('mdpiece_access_token');
+      localStorage.removeItem('mdpiece_user');
+    } catch (e) {}
+    if (typeof showToast === 'function') showToast('登入已過期，請重新登入', 'warning');
+    setTimeout(function() { window.location.reload(); }, 800);
+  }
+  return res;
 }
 
 // 登出 — 清除使用者資料並回到 landing
@@ -385,6 +416,7 @@ function logout() {
   if (!confirm('確定要登出嗎？\n\n$ exit\n\n下次回來會回到歡迎頁。')) return;
   try {
     localStorage.removeItem('mdpiece_user');
+    localStorage.removeItem('mdpiece_access_token');
     localStorage.removeItem('mdpiece_demo_pid');
   } catch (e) {}
   window.location.reload();
@@ -10374,7 +10406,7 @@ function setBasicInfo(info) {
 function fetchBasicInfoFromServer() {
   var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!uid) return Promise.resolve(null);
-  return fetch(API + '/profile/' + encodeURIComponent(uid))
+  return apiFetch(API + '/profile/' + encodeURIComponent(uid))
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(remote) {
       if (!remote) return null;
@@ -10419,7 +10451,7 @@ function syncBasicInfoToServer(info) {
     emergency_name: info.emergency_name || null,
     emergency_phone: info.emergency_phone || null,
   };
-  return fetch(API + '/profile/' + encodeURIComponent(uid), {
+  return apiFetch(API + '/profile/' + encodeURIComponent(uid), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
