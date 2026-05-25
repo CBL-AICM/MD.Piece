@@ -214,10 +214,14 @@ body.theme-modern .puzzle-bg-layer {
   pointer-events: none; z-index: 0;
   opacity: 0.55;
 }
-body.theme-modern .bodymap-wrap > svg.body-figure { width: 140px; height: auto; position: relative; z-index: 1; }
+body.theme-modern .bodymap-wrap > svg.body-figure { width: 140px; height: auto; position: relative; z-index: 1; touch-action: manipulation; cursor: pointer; }
 body.theme-modern .bodymap-wrap > .bodymap-caption { position: relative; z-index: 1; }
 body.theme-modern .bodymap-caption { font-size: 11px; color: var(--text-dim, #3A5060); text-align: center; margin-top: 8px; font-family: var(--font-mono, monospace); }
-body.theme-modern .bodymap-caption strong { color: var(--navy, #0F2A45); font-weight: 600; }
+body.theme-modern .bodymap-caption strong { color: var(--brown, #7F4A2E); font-weight: 600; }
+body.theme-modern .m-bodymap-hotspot { cursor: pointer; }
+body.theme-modern .m-bodymap-hotspot > circle { transition: fill 120ms, stroke 120ms; }
+body.theme-modern .m-bodymap-hotspot:hover > circle { fill: rgba(201,127,75,0.18) !important; stroke: rgba(201,127,75,0.45) !important; }
+body.theme-modern .m-bodymap-hotspot.is-active > circle { fill: rgba(201,127,75,0.28) !important; stroke: rgba(201,127,75,0.7) !important; }
 
 /* Intensity */
 body.theme-modern .intensity {
