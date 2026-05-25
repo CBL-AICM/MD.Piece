@@ -3837,13 +3837,14 @@ async function refreshTodayDigest() {
   setText('hd-med', medCount);
   setText('hd-mood', moodCount);
 
-  // 進度：三大類各打過至少 1 次算 1 分（上限 3），再加實際筆數封頂 3 → 共 6 分
-  var hits = (symptomCount > 0 ? 1 : 0) + (medCount > 0 ? 1 : 0) + (moodCount > 0 ? 1 : 0);
-  var extras = Math.min(3, (symptomCount + medCount + moodCount) - hits);
-  if (extras < 0) extras = 0;
-  var score = hits + extras;
+  // 進度：1 筆紀錄 = 1 碎片。目標 6，超過 6 顯示「達標」+ 額外加分數，不再卡 6。
+  var realTotal = symptomCount + medCount + moodCount;
+  var score = Math.min(realTotal, 6);
   var pct = Math.min(100, Math.round((score / 6) * 100));
-  setText('home-digest-progress', score + ' / 6 個碎片');
+  var label = realTotal >= 6
+    ? '✓ 6/6 達標' + (realTotal > 6 ? '（+' + (realTotal - 6) + '）' : '')
+    : score + ' / 6 個碎片';
+  setText('home-digest-progress', label);
   var bar = document.getElementById('home-digest-bar-fill');
   if (bar) bar.style.width = pct + '%';
 }
@@ -14686,6 +14687,223 @@ function eduFallbackContent(book, label) {
 
 const PIECES_SNAPSHOT_KEY = 'mdpiece_pieces_snapshot';
 
+// === 統一「碎片」資料模型 + 按時間範圍歸類 ====================================
+// 一筆紀錄 = 一個碎片。把 4 個 localStorage 來源（症狀 / Memo / 生理 / 上傳）
+// 統一成 { id, ts(Date), kind, title, summary, meta, deeplink } 格式，
+// 再依時間範圍分成 4 段：今天 / 本週 / 上次回診以來 / 更早。
+// 任何要做「時間軸」的頁面都該呼叫這層，不要再各自拼。
+function _piecesGetTimeBounds() {
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var weekAgo = new Date(today.getTime() - 7 * 86400000);
+
+  var visitDates = (typeof getVisitDates === 'function') ? getVisitDates() : {};
+  var hasVisit = false;
+  var lastVisit = null;
+  if (visitDates && visitDates.lastVisit) {
+    var d = new Date(visitDates.lastVisit);
+    if (!isNaN(d.getTime())) { lastVisit = d; hasVisit = true; }
+  }
+  // 沒回診紀錄就用 30 天作為「上次回診以來」代用值
+  var sinceVisit = lastVisit || new Date(today.getTime() - 30 * 86400000);
+  // 上次回診若比 7 天前還近，把分界推到更早，避免「本週」與「上次回診以來」重疊
+  if (sinceVisit.getTime() >= weekAgo.getTime()) {
+    sinceVisit = new Date(weekAgo.getTime() - 1);
+  }
+  return { now: now, today: today, weekAgo: weekAgo, sinceVisit: sinceVisit, hasVisit: hasVisit };
+}
+
+function _piecesLoadAllSources() {
+  var out = [];
+
+  // 1. 症狀
+  try {
+    var syms = (typeof getSymptomEntries === 'function') ? getSymptomEntries() : [];
+    syms.forEach(function(s) {
+      var raw = s.recordedAt || s.timestamp || s.created_at || s.date || null;
+      if (!raw) return;
+      var d = new Date(raw);
+      if (isNaN(d.getTime())) return;
+      var catName = (typeof getCategoryName === 'function') ? getCategoryName(s.categoryId) : (s.categoryId || '');
+      var parts = [];
+      if (s.intensity) parts.push('強度 ' + s.intensity);
+      if (s.frequency && s.frequency > 1) parts.push('×' + s.frequency);
+      out.push({
+        id: 'sym-' + (s.id || raw),
+        ts: d,
+        kind: 'symptom',
+        title: catName || s.symptom || '症狀',
+        summary: s.note || s.description || '',
+        meta: parts.join(' · '),
+        deeplink: 'symptoms',
+      });
+    });
+  } catch (e) {}
+
+  // 2. Memo
+  try {
+    var memos = (typeof memoLoad === 'function') ? memoLoad() : [];
+    memos.forEach(function(m) {
+      var raw = m.createdAt || m.created_at || m.time || null;
+      if (!raw) return;
+      var d = new Date(raw);
+      if (isNaN(d.getTime())) return;
+      var titleText = m.text ? String(m.text).slice(0, 30) : '照片留言';
+      out.push({
+        id: 'memo-' + (m.id || raw),
+        ts: d,
+        kind: 'memo',
+        title: titleText,
+        summary: '',
+        meta: (m.toDoctor || m.forDoctor) ? '給醫師' : '給自己',
+        deeplink: 'memo',
+      });
+    });
+  } catch (e) {}
+
+  // 3. 生理
+  try {
+    var vitals = (typeof getVitalEntries === 'function') ? getVitalEntries() : [];
+    vitals.forEach(function(v) {
+      var raw = v.recordedAt || v.timestamp || v.created_at || v.date || null;
+      if (!raw) return;
+      var d = new Date(raw);
+      if (isNaN(d.getTime())) return;
+      var label = v.metricLabel || v.metricId || v.type || '生理';
+      var val = (v.value !== undefined && v.value !== null) ? String(v.value) : '';
+      out.push({
+        id: 'vital-' + (v.id || raw),
+        ts: d,
+        kind: 'vital',
+        title: label + (val ? ' ' + val + (v.unit || '') : ''),
+        summary: v.note || '',
+        meta: '',
+        deeplink: 'vitals',
+      });
+    });
+  } catch (e) {}
+
+  // 4. OCR 上傳（timeline 頁本地紀錄）
+  try {
+    var raw = localStorage.getItem('mdpiece_timeline_entries');
+    var uploads = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(uploads)) {
+      var kindLabelMap = { lab: '檢驗報告', rx: '處方箋', image: '影像報告', other: '其他' };
+      uploads.forEach(function(u) {
+        var t = u.date || u.createdAt || null;
+        if (!t) return;
+        var d = new Date(t);
+        if (isNaN(d.getTime())) return;
+        out.push({
+          id: 'up-' + (u.id || t),
+          ts: d,
+          kind: 'upload',
+          title: u.title || kindLabelMap[u.kind] || '上傳文件',
+          summary: u.summary || '',
+          meta: kindLabelMap[u.kind] || '',
+          deeplink: 'timeline',
+        });
+      });
+    }
+  } catch (e) {}
+
+  out.sort(function(a, b) { return b.ts.getTime() - a.ts.getTime(); });
+  return out;
+}
+
+function _piecesGroupByTimeRange(pieces) {
+  var b = _piecesGetTimeBounds();
+  var groups = [
+    { id: 'today',      label: '今天',                                       since: b.today,      items: [] },
+    { id: 'week',       label: '本週（近 7 天）',                            since: b.weekAgo,    items: [] },
+    { id: 'sinceVisit', label: b.hasVisit ? '上次回診以來' : '近一個月',     since: b.sinceVisit, items: [] },
+    { id: 'older',      label: '更早',                                       since: null,         items: [] },
+  ];
+  pieces.forEach(function(p) {
+    var t = p.ts.getTime();
+    if (t >= b.today.getTime()) groups[0].items.push(p);
+    else if (t >= b.weekAgo.getTime()) groups[1].items.push(p);
+    else if (t >= b.sinceVisit.getTime()) groups[2].items.push(p);
+    else groups[3].items.push(p);
+  });
+  groups.forEach(function(g) { g.count = g.items.length; });
+  return groups;
+}
+
+function _piecesFormatRelative(ts) {
+  if (!ts) return '—';
+  var d = ts instanceof Date ? ts : new Date(ts);
+  if (isNaN(d.getTime())) return '—';
+  var now = new Date();
+  var diffMin = Math.floor((now.getTime() - d.getTime()) / 60000);
+  if (diffMin < 1) return '剛剛';
+  if (diffMin < 60) return diffMin + ' 分鐘前';
+  var hh = String(d.getHours()).padStart(2, '0');
+  var mm = String(d.getMinutes()).padStart(2, '0');
+  var today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (d.getTime() >= today0.getTime()) return '今天 ' + hh + ':' + mm;
+  var yesterday0 = new Date(today0.getTime() - 86400000);
+  if (d.getTime() >= yesterday0.getTime()) return '昨天 ' + hh + ':' + mm;
+  var MM = String(d.getMonth() + 1).padStart(2, '0');
+  var DD = String(d.getDate()).padStart(2, '0');
+  return MM + '/' + DD + ' ' + hh + ':' + mm;
+}
+
+function _piecesKindMeta(kind) {
+  var map = {
+    symptom: { label: '症狀', icon: 'scan-search', cls: 'pz-tl-symptom' },
+    memo:    { label: 'Memo', icon: 'sticky-note', cls: 'pz-tl-memo' },
+    vital:   { label: '生理', icon: 'activity',    cls: 'pz-tl-vital' },
+    upload:  { label: '文件', icon: 'file-text',   cls: 'pz-tl-upload' },
+  };
+  return map[kind] || { label: '紀錄', icon: 'circle', cls: '' };
+}
+
+// 渲染整個「按時間範圍歸類」block（桌機 + 手機共用）
+// opts: { perGroupLimit: number, emptyText: string }
+function _piecesRenderGroupedTimeline(opts) {
+  opts = opts || {};
+  var limit = opts.perGroupLimit || 8;
+  var all = _piecesLoadAllSources();
+  var groups = _piecesGroupByTimeRange(all);
+
+  var nonEmpty = groups.filter(function(g) { return g.count > 0; });
+  if (!nonEmpty.length) {
+    return '<div class="pz-tl-empty">' + (opts.emptyText || '這段期間還沒有紀錄。從症狀、Memo、生理或上傳文件開始拼起你的碎片。') + '</div>';
+  }
+  return nonEmpty.map(function(g) {
+    var itemsHtml = g.items.slice(0, limit).map(function(p) {
+      var km = _piecesKindMeta(p.kind);
+      var summaryLine = p.summary
+        ? '<div class="pz-tl-summary">' + escapeHtml(String(p.summary).slice(0, 80)) + '</div>'
+        : '';
+      var metaText = (p.meta ? escapeHtml(p.meta) + ' · ' : '') + escapeHtml(_piecesFormatRelative(p.ts));
+      return ''
+        + '<li class="pz-tl-item ' + km.cls + '" onclick="navigateTo(\'' + p.deeplink + '\',null)" role="button" tabindex="0">'
+        +   '<span class="pz-tl-dot"><i data-lucide="' + km.icon + '"></i></span>'
+        +   '<div class="pz-tl-body">'
+        +     '<div class="pz-tl-head"><strong>' + escapeHtml(p.title) + '</strong>'
+        +       '<span class="pz-tl-kind">' + km.label + '</span></div>'
+        +     '<div class="pz-tl-meta">' + metaText + '</div>'
+        +     summaryLine
+        +   '</div>'
+        + '</li>';
+    }).join('');
+    var moreLink = g.items.length > limit
+      ? '<div class="pz-tl-more">還有 ' + (g.items.length - limit) + ' 筆，點任一條進入該頁查看完整</div>'
+      : '';
+    return ''
+      + '<div class="pz-tl-group" data-group="' + g.id + '">'
+      +   '<div class="pz-tl-group-head">'
+      +     '<span class="pz-tl-group-label">' + escapeHtml(g.label) + '</span>'
+      +     '<span class="pz-tl-group-count">' + g.count + ' 筆</span>'
+      +   '</div>'
+      +   '<ul class="pz-timeline">' + itemsHtml + '</ul>'
+      +   moreLink
+      + '</div>';
+  }).join('');
+}
+
 function piecesLoadSnapshot() {
   try {
     var raw = localStorage.getItem(PIECES_SNAPSHOT_KEY);
@@ -14795,18 +15013,9 @@ function pieces() {
       }).join('')
     : '<li class="pz-empty">尚無症狀紀錄</li>';
 
-  var timelineHtml = s.timeline.length
-    ? s.timeline.map(function(t) {
-        var ico = t.kind === 'symptom' ? 'scan-search' : (t.kind === 'memo' ? 'sticky-note' : 'activity');
-        var kindLabel = t.kind === 'symptom' ? '症狀' : (t.kind === 'memo' ? 'Memo' : '生理');
-        return '<li class="pz-tl-item pz-tl-' + t.kind + '">'
-          + '<span class="pz-tl-dot"><i data-lucide="' + ico + '"></i></span>'
-          + '<div class="pz-tl-body">'
-          +   '<div class="pz-tl-head"><strong>' + (t.label || '—') + '</strong><span class="pz-tl-kind">' + kindLabel + '</span></div>'
-          +   '<div class="pz-tl-meta">' + (t.meta || '') + ' · ' + piecesFormatTime(t.t) + '</div>'
-          + '</div></li>';
-      }).join('')
-    : '<li class="pz-empty">這段期間還沒有紀錄。從症狀紀錄、Memo 或生理紀錄開始拼起你的碎片吧。</li>';
+  // 「按時間範圍歸類」由 _piecesRenderGroupedTimeline() 統一渲染，桌機 / 手機各呼叫一次（差別在 perGroupLimit）
+  var groupedTimelineDesktop = _piecesRenderGroupedTimeline({ perGroupLimit: 8 });
+  var groupedTimelineMobile  = _piecesRenderGroupedTimeline({ perGroupLimit: 5 });
 
   var prevHtml = prev
     ? '<div class="pz-prev">'
@@ -14824,19 +15033,6 @@ function pieces() {
   // ─── Mobile v11 block ───
   var mobileTopCats = s.topCats.slice(0, 4).map(function(c) {
     return '<span class="pill pill-info" style="padding:5px 10px;font-size:11px"><i data-lucide="' + c.icon + '" style="width:11px;height:11px"></i> ' + escapeHtml(c.zh) + ' · ' + c.count + '</span>';
-  }).join('');
-  var mobileTimeline = s.timeline.slice(0, 6).map(function(t) {
-    var ico = t.kind === 'symptom' ? 'scan-search' : (t.kind === 'memo' ? 'sticky-note' : 'activity');
-    var pillCls = t.kind === 'symptom' ? 'pill-info' : (t.kind === 'memo' ? 'pill-rose' : 'pill-teal');
-    var kindLabel = t.kind === 'symptom' ? '症狀' : (t.kind === 'memo' ? 'Memo' : '生理');
-    return ''
-      + '<div style="position:relative;padding-left:18px;margin-bottom:8px">'
-      +   '<span style="position:absolute;left:0;top:6px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg-mid,#fff)"></span>'
-      +   '<span style="position:absolute;left:3px;top:14px;bottom:-6px;width:2px;background:var(--border)"></span>'
-      +   '<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px"><span class="pill ' + pillCls + '"><i data-lucide="' + ico + '"></i>' + kindLabel + '</span><span class="time" style="font-size:10px">' + piecesFormatTime(t.t) + '</span></div>'
-      +   '<div style="font-size:12px;font-weight:600;color:var(--navy)">' + escapeHtml(t.label || '—') + '</div>'
-      +   (t.meta ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:1px">' + escapeHtml(t.meta) + '</div>' : '')
-      + '</div>';
   }).join('');
   var _mobilePzBlock = ''
     + '<div class="mobile-only">'
@@ -14880,9 +15076,9 @@ function pieces() {
     + (mobileTopCats ? '<div class="sec-head"><h3 class="sec-title"><i data-lucide="bar-chart-3"></i> 症狀分佈 Top 4</h3><span class="sec-spacer"></span></div>'
       + '<div class="card" style="padding:12px;display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">' + mobileTopCats + '</div>' : '')
 
-    // 最近的碎片時間軸
-    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="history"></i> 最近的碎片</h3><span class="sec-count">' + s.timeline.length + '</span><span class="sec-spacer"></span></div>'
-    +   '<div class="card" style="padding:14px;margin-bottom:12px">' + (mobileTimeline || '<div style="color:var(--text-muted);font-size:11.5px;text-align:center;padding:8px">尚無紀錄，從症狀／Memo 開始拼起</div>') + '</div>'
+    // 按時間範圍歸類（今天 / 本週 / 上次回診以來 / 更早）
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="history"></i> 按時間範圍歸類</h3><span class="sec-spacer"></span></div>'
+    +   '<div class="card pz-tl-mobile-wrap" style="padding:12px;margin-bottom:12px">' + groupedTimelineMobile + '</div>'
 
     // 動作按鈕
     +   '<div style="display:flex;gap:8px;margin-bottom:12px">'
@@ -14951,8 +15147,8 @@ function pieces() {
     + '  </div>\n'
     + '\n'
     + '  <section class="pz-block">\n'
-    + '    <h3 class="pz-block-title"><i data-lucide="history"></i> 最近的碎片</h3>\n'
-    + '    <ul class="pz-timeline">' + timelineHtml + '</ul>\n'
+    + '    <h3 class="pz-block-title"><i data-lucide="history"></i> 按時間範圍歸類</h3>\n'
+    + '    <div class="pz-tl-desktop-wrap">' + groupedTimelineDesktop + '</div>\n'
     + '  </section>\n'
     + '\n'
     + '  ' + prevHtml + '\n'
