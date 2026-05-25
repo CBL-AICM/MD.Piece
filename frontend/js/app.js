@@ -2913,8 +2913,94 @@ function finishAuth(user) {
     document.getElementById('app-wrapper').classList.add('show');
     showPage('home');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
+    // Profile onboarding 先跳（強制問慢性病），完成後再進原本的 tutorial onboarding
+    if (typeof maybeShowProfileOnboarding === 'function') {
+      maybeShowProfileOnboarding(function() {
+        if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
+      });
+    } else if (typeof maybeShowOnboarding === 'function') {
+      maybeShowOnboarding();
+    }
   }, 250);
+}
+
+// ─── Profile onboarding（Issue #131 follow-up）──────────
+// 註冊／首次登入後若 backend profile.conditions 空就跳，強制收集慢性病。
+// 「先跳過」會記在 localStorage（per-uid），下次登入不會再跳，但 records 頁仍可填。
+const PROFILE_ONB_COMMON = [
+  '高血壓', '糖尿病', '高血脂', '心臟病',
+  '中風後', '氣喘', '慢性腎臟病', '甲狀腺',
+  '失智症', '癌症', '肝病', '關節炎',
+];
+const PROFILE_ONB_SKIP_KEY = 'mdpiece_profile_onb_skip';
+
+function maybeShowProfileOnboarding(onDone) {
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  var skipKey = PROFILE_ONB_SKIP_KEY + ':' + uid;
+  if (uid && localStorage.getItem(skipKey) === '1') { if (onDone) onDone(); return; }
+  // 拉一次後端 profile：有 conditions 就視為已填過，不跳
+  fetchBasicInfoFromServer().then(function(remote) {
+    var hasCond = remote && (remote.conditions || '').trim();
+    if (hasCond) { if (onDone) onDone(); return; }
+    _renderProfileOnboarding(onDone);
+  }).catch(function() { _renderProfileOnboarding(onDone); });
+}
+
+function _renderProfileOnboarding(onDone) {
+  var overlay = document.getElementById('profile-onb-overlay');
+  if (!overlay) { if (onDone) onDone(); return; }
+  var chipsBox = document.getElementById('profile-onb-chips');
+  chipsBox.innerHTML = PROFILE_ONB_COMMON.map(function(name) {
+    return '<button type="button" class="profile-onb-chip" data-cond="' + escapeHtml(name) + '">' + escapeHtml(name) + '</button>';
+  }).join('');
+  chipsBox.querySelectorAll('.profile-onb-chip').forEach(function(btn) {
+    btn.addEventListener('click', function() { btn.classList.toggle('active'); });
+  });
+  // 預填 textarea：若 localStorage 已有舊資料，帶進來讓使用者直接編
+  var existing = getBasicInfo();
+  if (existing && existing.conditions) {
+    document.getElementById('profile-onb-extra').value = existing.conditions;
+  }
+  overlay.hidden = false;
+  requestAnimationFrame(function() { overlay.classList.add('show'); });
+  // 把 onDone 暫存到 overlay，submit/skip 時取出
+  overlay._onDone = onDone;
+}
+
+function profileOnboardingSubmit() {
+  var overlay = document.getElementById('profile-onb-overlay');
+  var chipsActive = Array.from(document.querySelectorAll('#profile-onb-chips .profile-onb-chip.active'))
+    .map(function(b) { return b.dataset.cond; });
+  var extra = (document.getElementById('profile-onb-extra').value || '').trim();
+  var combined = chipsActive.join('、');
+  if (extra) combined = combined ? (combined + '、' + extra) : extra;
+  if (!combined) { showToast && showToast('請至少選一項或填寫', 'warning'); return; }
+  // Merge 進現有 basicInfo（保留其他欄位），同步後端
+  var info = getBasicInfo() || {};
+  info.conditions = combined;
+  setBasicInfo(info);
+  syncBasicInfoToServer(info).then(function(ok) {
+    if (!ok) showToast && showToast('已存本機，後端同步失敗（之後會自動重試）', 'warning');
+    _closeProfileOnboarding(overlay);
+  });
+}
+
+function profileOnboardingSkip() {
+  var overlay = document.getElementById('profile-onb-overlay');
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (uid) localStorage.setItem(PROFILE_ONB_SKIP_KEY + ':' + uid, '1');
+  _closeProfileOnboarding(overlay);
+}
+
+function _closeProfileOnboarding(overlay) {
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  setTimeout(function() {
+    overlay.hidden = true;
+    var cb = overlay._onDone;
+    overlay._onDone = null;
+    if (cb) cb();
+  }, 200);
 }
 
 // 切換帳號 — 不二次確認，直接回到登入頁

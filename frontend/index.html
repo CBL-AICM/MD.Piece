@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=v110-mood-chart-larger" />
+  <link rel="stylesheet" href="css/style.css?v=v111-profile-onboarding" />
   <link rel="stylesheet" href="css/elder-mode.css?v=v4-fix-clobber" />
   <link rel="stylesheet" href="css/medical-warm.css?v=v5-puzzle-pattern" />
   <link rel="stylesheet" href="css/v11-modern.css?v=v16-sym-pointer-events" />
@@ -492,6 +492,25 @@
     <!-- Mobile home indicator (iOS-like stripe) -->
     <span class="mobile-home-indicator" aria-hidden="true"></span>
 
+    <!-- Profile onboarding overlay — 註冊／首次登入後填基本疾病資料（Issue #131 follow-up） -->
+    <div class="onboarding-overlay" id="profile-onb-overlay" hidden>
+      <div class="onboarding-backdrop"></div>
+      <div class="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="profile-onb-title" style="max-width:480px">
+        <h3 id="profile-onb-title" class="onboarding-title">還剩最後一步</h3>
+        <p class="onboarding-desc">告訴我們你目前的慢性病或長期關注的健康問題 — MD.Piece 才能精準提醒和分析。資料會同步到雲端，換手機也不會不見。</p>
+
+        <div class="profile-onb-chips" id="profile-onb-chips"></div>
+
+        <label class="profile-onb-label" for="profile-onb-extra">其他疾病或備註（可選）</label>
+        <textarea id="profile-onb-extra" rows="2" placeholder="例：氣喘、痛風、家族病史…"></textarea>
+
+        <div class="profile-onb-actions">
+          <button type="button" class="onboarding-skip" onclick="profileOnboardingSkip()">先跳過</button>
+          <button type="button" class="onboarding-next" onclick="profileOnboardingSubmit()">繼續</button>
+        </div>
+      </div>
+    </div>
+
     <!-- First-time onboarding overlay -->
     <div class="onboarding-overlay" id="onboarding-overlay" hidden>
       <div class="onboarding-backdrop" onclick="dismissOnboarding(false)"></div>
@@ -557,7 +576,7 @@
 
   <script src="js/i18n.js?v=v81-edu-shelf-banner"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v127-profile-supabase"></script>
+  <script src="js/app.js?v=v128-profile-onboarding"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────

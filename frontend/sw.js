@@ -1,17 +1,17 @@
-const CACHE_VERSION = "mdpiece-v115-profile-supabase";
+const CACHE_VERSION = "mdpiece-v116-profile-onboarding";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v110-mood-chart-larger",
+  "/css/style.css?v=v111-profile-onboarding",
   "/css/medical-warm.css?v=v5-puzzle-pattern",
   "/css/v11-modern.css?v=v2-mobile-only",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v127-profile-supabase",
+  "/js/app.js?v=v128-profile-onboarding",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
