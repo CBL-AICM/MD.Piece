@@ -17240,9 +17240,10 @@ function renderDietTodayHero() {
 }
 
 function renderBasicNutrients() {
-  var box = document.getElementById('diet-basic-nutrients');
-  if (!box) return;
-  box.innerHTML = DIET_BASIC_NUTRIENTS.map(function(n) {
+  // 用 class 而不是 ID，這樣手機 + 桌機 grid 都同步填入。
+  var boxes = document.querySelectorAll('.diet-basic-nutrients');
+  if (!boxes.length) return;
+  var html = DIET_BASIC_NUTRIENTS.map(function(n) {
     return ''
       + '<div class="diet-nutrient">'
       +   '<div class="diet-nutrient-head">'
@@ -17255,6 +17256,7 @@ function renderBasicNutrients() {
       +   '<div class="diet-nutrient-tip">' + chatEscape(n.tip) + '</div>'
       + '</div>';
   }).join('');
+  boxes.forEach(function(box) { box.innerHTML = html; });
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -17303,6 +17305,61 @@ function diet() {
     +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">依你的病史和偏好挑一道菜</div>'
     +     '</div>'
     +   '</button>'
+
+    // 進階篩選（手機版）— 桌機版的 controls 在 .desktop-only 區藏掉，這邊 port
+    // 相同功能（meal/price/cal tabs + nearby/avoid-recent toggle + 不吃食材 chips）。
+    // 共用同一份 _dietPick* 狀態變數 + dietPickSet*/Toggle*/AddDislike 函式，這些
+    // 函式已 refactor 成 attribute / class selector（不再用容器 id），自動同步雙 block。
+    // 用 <details> 折疊讓預設精簡、想細調時點開。
+    +   '<details class="card" style="padding:10px 14px;margin-bottom:10px;background:#fff;border:1.5px solid var(--border);border-radius:14px">'
+    +     '<summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:6px;list-style:none">'
+    +       '<i data-lucide="sliders-horizontal" style="width:14px;height:14px"></i> 進階篩選（價位、不吃的東西…）'
+    +     '</summary>'
+    +     '<div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">'
+    +       '<div>'
+    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">餐次</div>'
+    +         '<div class="diet-pick-meal-tabs" style="display:flex;flex-wrap:wrap;gap:4px">'
+    +           [['any','隨便'],['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點心']].map(function(p) {
+                  return '<button class="diet-pick-tab' + (p[0]==='any'?' active':'') + '" '
+                    + 'data-pick-meal="' + p[0] + '" onclick="dietPickSetMeal(\'' + p[0] + '\')">'
+                    + p[1] + '</button>';
+                }).join('')
+    +         '</div>'
+    +       '</div>'
+    +       '<div>'
+    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">價位</div>'
+    +         '<div class="diet-pick-price-tabs" style="display:flex;flex-wrap:wrap;gap:4px">'
+    +           [['any','不限'],['$','$ ≤100'],['$$','$$ 100–200'],['$$$','$$$ 200+']].map(function(p) {
+                  return '<button class="diet-pick-tab diet-pick-price' + (p[0]==='any'?' active':'') + '" '
+                    + 'data-pick-price="' + p[0] + '" onclick="dietPickSetPrice(\'' + p[0] + '\')">'
+                    + p[1] + '</button>';
+                }).join('')
+    +         '</div>'
+    +       '</div>'
+    +       '<div>'
+    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">熱量</div>'
+    +         '<div class="diet-pick-cal-tabs" style="display:flex;flex-wrap:wrap;gap:4px">'
+    +           [['any','不限'],['low','輕 ≤350'],['mid','一般 350–650'],['high','高 650+']].map(function(p) {
+                  return '<button class="diet-pick-tab diet-pick-cal' + (p[0]==='any'?' active':'') + '" '
+                    + 'data-pick-cal="' + p[0] + '" onclick="dietPickSetCal(\'' + p[0] + '\')">'
+                    + p[1] + '</button>';
+                }).join('')
+    +         '</div>'
+    +       '</div>'
+    +       '<div class="diet-pick-flags" style="display:flex;flex-direction:column;gap:6px;font-size:12px">'
+    +         '<label class="diet-pick-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" class="diet-pick-nearby-input" onchange="dietPickToggleNearby(this.checked)" /> <span>只推附近能取得（超商/便當店/早餐店）</span></label>'
+    +         '<label class="diet-pick-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" class="diet-pick-avoid-recent-input" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>避開本週吃過的</span></label>'
+    +       '</div>'
+    +       '<div>'
+    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">不吃的東西</div>'
+    +         '<div class="diet-pick-dislike-row diet-pick-dislike-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;min-height:24px"></div>'
+    +         '<div class="diet-pick-dislike-input" style="display:flex;gap:6px">'
+    +           '<input type="text" class="diet-pick-dislike-add" maxlength="20" placeholder="例：香菜、辣椒" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:12px" />'
+    +           '<button onclick="dietPickAddDislike()" type="button" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer"><i data-lucide="plus" style="width:13px;height:13px"></i></button>'
+    +         '</div>'
+    +       '</div>'
+    +     '</div>'
+    +   '</details>'
 
     // 幫我抽一道結果（mobile）— 桌機版的 #diet-pick-result 在 .desktop-only 區藏掉，
     // 手機需要自己一個 element 顯示結果，否則使用者按了 button 結果看不到。
@@ -17353,6 +17410,24 @@ function diet() {
     +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">尚無紀錄</div>'
     +   '</div>'
 
+    // 飲食衛教（手機版）— 基本營養素 + 咖啡因。沒有用 ID（避免跟桌機 block 衝突），
+    // 用 class diet-basic-nutrients / diet-caffeine-body 讓 renderBasicNutrients /
+    // fetchCaffeineGuide 透過 querySelectorAll 同步填入。
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="apple"></i> 基本營養素衛教</h3>'
+    +   '</div>'
+    +   '<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#fff;border:1.5px solid var(--border);border-radius:14px">'
+    +     '<p style="font-size:11px;color:var(--text-muted);margin:0 0 10px">每天身體都需要的六大基本營養素，照著吃就不會差太多。</p>'
+    +     '<div class="diet-nutrient-grid diet-basic-nutrients"></div>'
+    +   '</div>'
+
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="coffee"></i> 咖啡因衛教</h3>'
+    +   '</div>'
+    +   '<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#fff;border:1.5px solid var(--border);border-radius:14px">'
+    +     '<div class="diet-caffeine-body"><p class="diet-empty" style="font-size:11px;color:var(--text-muted);text-align:center">載入中…</p></div>'
+    +   '</div>'
+
     +   '<div class="disclaimer-footer">'
     +     '<i data-lucide="info"></i>'
     +     '<span>飲食建議僅供參考，特殊疾病請依醫師／營養師指示為主。</span>'
@@ -17371,12 +17446,12 @@ function diet() {
     +   '<div class="diet-card diet-basic-nutrients-card">'
     +     '<h3><i data-lucide="apple" style="width:16px;height:16px"></i> 基本營養素衛教</h3>'
     +     '<p class="diet-card-sub">每天身體都需要的六大基本營養素，照著吃就不會差太多。</p>'
-    +     '<div id="diet-basic-nutrients" class="diet-nutrient-grid"></div>'
+    +     '<div id="diet-basic-nutrients" class="diet-nutrient-grid diet-basic-nutrients"></div>'
     +   '</div>'
 
     +   '<div class="diet-card diet-caffeine-card" id="diet-caffeine-card">'
     +     '<h3><i data-lucide="coffee" style="width:16px;height:16px"></i> 咖啡因衛教</h3>'
-    +     '<div id="diet-caffeine-body"><p class="diet-empty">載入中…</p></div>'
+    +     '<div id="diet-caffeine-body" class="diet-caffeine-body"><p class="diet-empty">載入中…</p></div>'
     +   '</div>'
 
     +   '<div class="diet-card" id="diet-targets">'
@@ -17417,13 +17492,13 @@ function diet() {
             }).join('')
     +     '</div>'
     +     '<div class="diet-pick-flags">'
-    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-nearby" onchange="dietPickToggleNearby(this.checked)" /> <span>只推附近能取得（超商/便當店/早餐店）</span></label>'
-    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-avoid-recent" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>避開本週吃過的</span></label>'
+    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-nearby" class="diet-pick-nearby-input" onchange="dietPickToggleNearby(this.checked)" /> <span>只推附近能取得（超商/便當店/早餐店）</span></label>'
+    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-avoid-recent" class="diet-pick-avoid-recent-input" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>避開本週吃過的</span></label>'
     +     '</div>'
     +     '<div class="diet-pick-dislike">'
-    +       '<div class="diet-pick-dislike-row" id="diet-pick-dislike-chips"></div>'
+    +       '<div class="diet-pick-dislike-row diet-pick-dislike-chips" id="diet-pick-dislike-chips"></div>'
     +       '<div class="diet-pick-dislike-input">'
-    +         '<input type="text" id="diet-pick-dislike-add" maxlength="20" placeholder="不吃什麼？例：香菜、辣椒" />'
+    +         '<input type="text" id="diet-pick-dislike-add" class="diet-pick-dislike-add" maxlength="20" placeholder="不吃什麼？例：香菜、辣椒" />'
     +         '<button onclick="dietPickAddDislike()" type="button"><i data-lucide="plus" style="width:14px;height:14px"></i></button>'
     +       '</div>'
     +     '</div>'
@@ -17577,45 +17652,56 @@ function dietDrinkPushHistory(name) {
 
 function dietPickSetMeal(m) {
   _dietPickMealType = m;
-  document.querySelectorAll('#diet-pick-meal-tabs .diet-pick-tab').forEach(function(b) {
+  // 用 attribute selector 而不是固定容器 ID，這樣手機跟桌機 block 都會同步
+  // active class、不用各自 push 切換邏輯。dietPickSetPrice / dietPickSetCal 同。
+  document.querySelectorAll('[data-pick-meal]').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-pick-meal') === m);
   });
 }
 
 function dietPickSetPrice(p) {
   _dietPickPrice = p;
-  document.querySelectorAll('#diet-pick-price-tabs .diet-pick-price').forEach(function(b) {
+  document.querySelectorAll('[data-pick-price]').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-pick-price') === p);
   });
 }
 
 function dietPickSetCal(c) {
   _dietPickCal = c;
-  document.querySelectorAll('#diet-pick-cal-tabs .diet-pick-cal').forEach(function(b) {
+  document.querySelectorAll('[data-pick-cal]').forEach(function(b) {
     b.classList.toggle('active', b.getAttribute('data-pick-cal') === c);
   });
 }
 
 function dietPickToggleNearby(on) {
   _dietPickNearby = !!on;
+  // 同步桌機 + 手機 checkbox 視覺狀態（兩個 element 同 class）
+  document.querySelectorAll('.diet-pick-nearby-input').forEach(function(c) { c.checked = !!on; });
 }
 
 function dietPickToggleAvoidRecent(on) {
   _dietPickAvoidRecent = !!on;
+  document.querySelectorAll('.diet-pick-avoid-recent-input').forEach(function(c) { c.checked = !!on; });
 }
 
 function dietPickAddDislike() {
-  var input = document.getElementById('diet-pick-dislike-add');
-  if (!input) return;
-  var v = (input.value || '').trim();
-  if (!v) return;
-  if (_dietPickDislikes.indexOf(v) === -1) {
-    _dietPickDislikes.push(v);
+  // 桌機跟手機各自的 input 都讀一遍（typing 只會在一個 input 上、其他空字串 skip）
+  var inputs = document.querySelectorAll('.diet-pick-dislike-add');
+  var added = false;
+  inputs.forEach(function(input) {
+    var v = (input.value || '').trim();
+    if (v && _dietPickDislikes.indexOf(v) === -1) {
+      _dietPickDislikes.push(v);
+      added = true;
+    }
+    input.value = '';
+  });
+  if (added) {
     dietPickSaveDislikes();
     dietPickRenderDislikes();
   }
-  input.value = '';
-  input.focus();
+  // 把焦點丟回剛剛打字那個 input — 取第一個就好
+  if (inputs.length) inputs[0].focus();
 }
 
 function dietPickRemoveDislike(idx) {
@@ -17625,18 +17711,21 @@ function dietPickRemoveDislike(idx) {
 }
 
 function dietPickRenderDislikes() {
-  var box = document.getElementById('diet-pick-dislike-chips');
-  if (!box) return;
+  // 用 class 而不是 id，桌機 + 手機兩個 chips container 都同步 render
+  var boxes = document.querySelectorAll('.diet-pick-dislike-chips');
+  if (!boxes.length) return;
+  var html;
   if (!_dietPickDislikes.length) {
-    box.innerHTML = '<span class="diet-pick-dislike-empty">還沒設定不吃的食材</span>';
-    return;
+    html = '<span class="diet-pick-dislike-empty">還沒設定不吃的食材</span>';
+  } else {
+    html = _dietPickDislikes.map(function(d, i) {
+      return '<span class="diet-pick-dislike-chip">'
+        + chatEscape(d)
+        + '<button onclick="dietPickRemoveDislike(' + i + ')" type="button" aria-label="移除">×</button>'
+        + '</span>';
+    }).join('');
   }
-  box.innerHTML = _dietPickDislikes.map(function(d, i) {
-    return '<span class="diet-pick-dislike-chip">'
-      + chatEscape(d)
-      + '<button onclick="dietPickRemoveDislike(' + i + ')" type="button" aria-label="移除">×</button>'
-      + '</span>';
-  }).join('');
+  boxes.forEach(function(box) { box.innerHTML = html; });
 }
 
 function dietPickMeal(isReroll) {
@@ -17845,9 +17934,9 @@ async function dietRecordDrink() {
 }
 
 function fetchCaffeineGuide() {
-  var card = document.getElementById('diet-caffeine-card');
-  var body = document.getElementById('diet-caffeine-body');
-  if (!card || !body) return;
+  // 用 class 而不是 ID，手機 + 桌機 body 都同步填入。
+  var bodies = document.querySelectorAll('.diet-caffeine-body');
+  if (!bodies.length) return;
   fetch(API + '/diet/caffeine-guide')
     .then(function(r) { return r.json(); })
     .then(function(g) {
@@ -17862,7 +17951,7 @@ function fetchCaffeineGuide() {
           +   '<div class="diet-caf-warn-note">' + chatEscape(w.note) + '</div>'
           + '</div>';
       }).join('');
-      body.innerHTML = ''
+      var html = ''
         + '<p class="diet-caf-overview">一般成人每日建議 ≤ <strong>' + g.daily_safe_mg + ' mg</strong>，孕期 ≤ <strong>' + g.pregnancy_safe_mg + ' mg</strong>。</p>'
         + '<div class="diet-caf-grid">'
         +   '<div><div class="diet-caf-subtitle">常見飲料咖啡因</div>'
@@ -17870,10 +17959,11 @@ function fetchCaffeineGuide() {
         +   '</div>'
         +   '<div><div class="diet-caf-subtitle">這些族群要注意</div>' + warns + '</div>'
         + '</div>';
+      bodies.forEach(function(body) { body.innerHTML = html; });
       if (typeof lucide !== 'undefined') lucide.createIcons();
     })
     .catch(function() {
-      body.innerHTML = '<p class="diet-empty">載入失敗，稍後再試</p>';
+      bodies.forEach(function(body) { body.innerHTML = '<p class="diet-empty">載入失敗，稍後再試</p>'; });
     });
 }
 
