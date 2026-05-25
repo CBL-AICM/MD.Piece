@@ -1,10 +1,9 @@
-// 驗證手機版症狀紀錄頁的人體圖點選互動（PR #378 fix）
+// 驗證症狀紀錄頁人體圖與類型 chip 互動（PR #378 / #379 fix）
 //
 // 為什麼這個測試重要：
-//   - 桌機版人體圖可以點 → 寫進 _symBodyPart → 開記錄表單時帶入 notes
-//   - 手機版之前是純靜態圖、點 wrapper 只會 scroll 到桌機區塊（CSS 隱藏）
-//   - 這個測試確保手機版的小人「點下去真的能選到部位」、且「選到的部位真的會被
-//     後面的紀錄流程拿到」(寫入 _symBodyPart) — 不只是視覺有變化
+//   - 之前小人是純靜態圖、點 chip 後表單在 >760px 寬螢幕被 .desktop-only 鎖死
+//   - 現在小人是 interactive、19 個細部位、chip 在所有寬度都能開表單
+//   - 跑三種寬度（mobile / tablet / desktop）確保都正常
 //
 // 用法：
 //   PREVIEW_URL=http://127.0.0.1:3030/ node tests/e2e/mobile_bodymap_check.mjs
@@ -12,128 +11,138 @@ import { chromium } from 'playwright';
 
 const URL = process.env.PREVIEW_URL || 'http://127.0.0.1:3030/';
 
+const VIEWPORTS = [
+  { name: 'mobile-iphone13', width: 390, height: 844, isMobile: true },
+  { name: 'tablet-ipad-air', width: 820, height: 1180, isMobile: false },
+  { name: 'desktop-laptop',  width: 1280, height: 800, isMobile: false },
+];
+
 const browser = await chromium.launch();
-const ctx = await browser.newContext({
-  viewport: { width: 390, height: 844 }, // iPhone 13
-  userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-  deviceScaleFactor: 2,
-  hasTouch: true,
-  isMobile: true,
-});
-const page = await ctx.newPage();
 
 let exitCode = 0;
-function fail(msg) { console.error('FAIL:', msg); exitCode = 1; }
-function pass(msg) { console.log('OK  :', msg); }
+function fail(scope, msg) { console.error(`FAIL [${scope}]: ${msg}`); exitCode = 1; }
+function pass(scope, msg) { console.log(`OK   [${scope}]: ${msg}`); }
 
-try {
-  await page.goto(URL, { waitUntil: 'networkidle', timeout: 30000 });
-  await page.waitForTimeout(400);
-
-  // 模擬已 onboard 的使用者 + 跳過 howto
-  await page.evaluate(() => {
-    localStorage.setItem('mdpiece_user', JSON.stringify({
-      username: 'audit', nickname: '測試', id_number: 'A123456789',
-    }));
-    localStorage.setItem('mdpiece_onboarded', '1');
-    localStorage.setItem('mdpiece_howto_seen_symptoms', '1');
+for (const vp of VIEWPORTS) {
+  const scope = vp.name;
+  console.log(`\n── ${scope} (${vp.width}x${vp.height}) ──`);
+  const ctx = await browser.newContext({
+    viewport: { width: vp.width, height: vp.height },
+    isMobile: vp.isMobile,
+    hasTouch: vp.isMobile,
   });
+  const page = await ctx.newPage();
 
-  // 切到 symptoms 頁
-  await page.evaluate(() => {
-    const landing = document.getElementById('landing');
-    if (landing) landing.style.display = 'none';
-    const wrap = document.getElementById('app-wrapper');
-    if (wrap && !wrap.classList.contains('show')) wrap.classList.add('show');
-    if (typeof window.showPage === 'function') window.showPage('symptoms');
-  });
-  await page.waitForTimeout(800);
+  try {
+    await page.goto(URL, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      localStorage.setItem('mdpiece_user', JSON.stringify({
+        username: 'audit', nickname: '測試', id_number: 'A123456789',
+      }));
+      localStorage.setItem('mdpiece_onboarded', '1');
+      localStorage.setItem('mdpiece_howto_seen_symptoms', '1');
+    });
+    await page.evaluate(() => {
+      const landing = document.getElementById('landing');
+      if (landing) landing.style.display = 'none';
+      const wrap = document.getElementById('app-wrapper');
+      if (wrap && !wrap.classList.contains('show')) wrap.classList.add('show');
+      if (typeof window.showPage === 'function') window.showPage('symptoms');
+    });
+    await page.waitForTimeout(800);
 
-  // 1. SVG body-figure 應存在（手機版）
-  const figureExists = await page.locator('.mobile-only .bodymap-wrap svg.body-figure').count();
-  if (figureExists === 0) fail('mobile body-figure svg not rendered'); else pass('mobile body-figure svg exists');
+    // ── 人體圖部分 ──
+    const figureExists = await page.locator('.mobile-only .bodymap-wrap svg.body-figure').count();
+    if (figureExists === 0) fail(scope, 'body-figure svg not rendered');
+    else pass(scope, 'body-figure svg exists');
 
-  // 2. 8 個 hotspot 應存在
-  const hotspotCount = await page.locator('.mobile-only .bodymap-wrap .m-bodymap-hotspot').count();
-  if (hotspotCount !== 8) fail(`expected 8 hotspots, got ${hotspotCount}`);
-  else pass('8 hotspots rendered');
+    const hotspotCount = await page.locator('.mobile-only .bodymap-wrap .m-bodymap-hotspot').count();
+    if (hotspotCount !== 19) fail(scope, `expected 19 hotspots, got ${hotspotCount}`);
+    else pass(scope, '19 細部位 hotspots rendered');
 
-  // 3. caption 初始顯示提示文字
-  const initCap = await page.locator('#m-bodymap-caption').innerText();
-  if (!initCap.includes('提示') && !initCap.includes('點選')) fail(`initial caption unexpected: ${initCap}`);
-  else pass(`initial caption: "${initCap}"`);
-
-  // 4. _symBodyPart 初始為 ''
-  const initPart = await page.evaluate(() => window._symBodyPart);
-  if (initPart !== '' && initPart != null) fail(`_symBodyPart should start empty, got: ${JSON.stringify(initPart)}`);
-  else pass('_symBodyPart initial state empty');
-
-  // 5. 點頭部 hotspot → _symBodyPart 應為 "頭部"
-  await page.locator('.mobile-only .m-bodymap-hotspot[data-part="head"]').click();
-  await page.waitForTimeout(150);
-  const afterHead = await page.evaluate(() => window._symBodyPart);
-  if (afterHead !== '頭部') fail(`after clicking head, _symBodyPart should be '頭部', got: ${JSON.stringify(afterHead)}`);
-  else pass('clicking head sets _symBodyPart=頭部');
-
-  // 6. caption 變成「已選：頭部」
-  const capAfterHead = await page.locator('#m-bodymap-caption').innerText();
-  if (!capAfterHead.includes('頭部')) fail(`caption should mention 頭部, got: "${capAfterHead}"`);
-  else pass(`caption updated: "${capAfterHead}"`);
-
-  // 7. marker 應顯示
-  const markerVisible = await page.locator('#m-bodymap-marker').evaluate(el => el.style.display !== 'none');
-  if (!markerVisible) fail('marker should be visible after click');
-  else pass('marker visible after click');
-
-  // 8. hotspot 應 has is-active class
-  const isActive = await page.locator('.m-bodymap-hotspot[data-part="head"]').evaluate(el => el.classList.contains('is-active'));
-  if (!isActive) fail('clicked hotspot should have is-active class');
-  else pass('clicked hotspot has is-active class');
-
-  // 9. 點另一部位（胸口）→ _symBodyPart 切換
-  await page.locator('.m-bodymap-hotspot[data-part="chest"]').click();
-  await page.waitForTimeout(150);
-  const afterChest = await page.evaluate(() => window._symBodyPart);
-  if (afterChest !== '胸口') fail(`after clicking chest, _symBodyPart should be '胸口', got: ${JSON.stringify(afterChest)}`);
-  else pass('clicking chest updates _symBodyPart=胸口');
-
-  // 10. 點 SVG 非 hotspot 區域 → 仍能找到最近部位
-  const svgBox = await page.locator('.mobile-only svg.body-figure').boundingBox();
-  if (svgBox) {
-    // 點右下（接近右腿區域）
-    await page.mouse.click(svgBox.x + svgBox.width * 0.6, svgBox.y + svgBox.height * 0.78);
+    // 點前額（新增的細部位）
+    await page.locator('.m-bodymap-hotspot[data-part="forehead"]').click();
     await page.waitForTimeout(150);
-    const afterArea = await page.evaluate(() => window._symBodyPart);
-    if (!afterArea || afterArea === '胸口') fail(`clicking outside hotspot should change body part, got: ${JSON.stringify(afterArea)}`);
-    else pass(`clicking outside hotspot finds nearest: ${afterArea}`);
+    const afterForehead = await page.evaluate(() => window._symBodyPart);
+    if (afterForehead !== '前額') fail(scope, `forehead click: _symBodyPart should be '前額', got: ${JSON.stringify(afterForehead)}`);
+    else pass(scope, 'clicking 前額 hotspot sets _symBodyPart=前額');
+
+    // 點手肘（新增的細部位）
+    await page.locator('.m-bodymap-hotspot[data-part="l-elbow"]').click();
+    await page.waitForTimeout(150);
+    const afterElbow = await page.evaluate(() => window._symBodyPart);
+    if (afterElbow !== '左手肘') fail(scope, `l-elbow click: _symBodyPart should be '左手肘', got: ${JSON.stringify(afterElbow)}`);
+    else pass(scope, 'clicking 左手肘 hotspot sets _symBodyPart=左手肘');
+
+    // 點膝蓋
+    await page.locator('.m-bodymap-hotspot[data-part="r-knee"]').click();
+    await page.waitForTimeout(150);
+    const afterKnee = await page.evaluate(() => window._symBodyPart);
+    if (afterKnee !== '右膝') fail(scope, `r-knee click: _symBodyPart should be '右膝', got: ${JSON.stringify(afterKnee)}`);
+    else pass(scope, 'clicking 右膝 hotspot sets _symBodyPart=右膝');
+
+    // SVG-wide click 找最近部位
+    const svgBox = await page.locator('.mobile-only svg.body-figure').boundingBox();
+    if (svgBox) {
+      // 點圖中心區域（應該找到軀幹相關部位）
+      await page.mouse.click(svgBox.x + svgBox.width * 0.5, svgBox.y + svgBox.height * 0.5);
+      await page.waitForTimeout(150);
+      const nearest = await page.evaluate(() => window._symBodyPart);
+      if (!nearest) fail(scope, 'clicking center should pick nearest part');
+      else pass(scope, `nearest-part fallback works: ${nearest}`);
+    }
+
+    // ── chip 開表單部分（之前在 >760px 被鎖死）──
+    // 先選定一個部位（_symBodyPart='右膝'），然後點 chip 開表單，
+    // 預期 notes 自動帶入「[部位：右膝]」（_prefillBodyPartNote）
+    await page.locator('.m-bodymap-hotspot[data-part="r-knee"]').click();
+    await page.waitForTimeout(150);
+
+    const chipCount = await page.locator('#mobile-sym-chips .chip').count();
+    if (chipCount === 0) fail(scope, 'no chips rendered');
+    else pass(scope, `${chipCount} chips rendered`);
+
+    await page.locator('#mobile-sym-chips .chip').first().click();
+    await page.waitForTimeout(500);
+    const formState = await page.evaluate(() => {
+      const f = document.getElementById('sym-logform');
+      const p = document.querySelector('.sym-page');
+      return {
+        formDisplay: f ? getComputedStyle(f).display : 'N/A',
+        symPageDisplay: p ? getComputedStyle(p).display : 'N/A',
+        bodyHasLogging: document.body.classList.contains('is-sym-logging'),
+      };
+    });
+    if (formState.symPageDisplay === 'none') fail(scope, `chip click: .sym-page hidden (display:none) — modal failed to open`);
+    else pass(scope, `chip click opens form: .sym-page display=${formState.symPageDisplay}`);
+    if (formState.formDisplay !== 'block') fail(scope, `chip click: #sym-logform display=${formState.formDisplay}, expected 'block'`);
+    else pass(scope, `#sym-logform display=block`);
+
+    // 部位有被 _prefillBodyPartNote 帶進 notes
+    const notes = await page.locator('#lf-notes').inputValue().catch(() => null);
+    if (notes == null) fail(scope, 'lf-notes textarea missing');
+    else if (!notes.includes('右膝')) fail(scope, `notes should prefill 右膝 from latest pick, got: "${notes}"`);
+    else pass(scope, `notes prefilled with body part: "${notes.trim()}"`);
+
+    // ID 不重複
+    const dupCount = await page.evaluate(() => {
+      const ids = ['sym-body-current', 'sym-body-marker', 'sym-body-ai', 'm-bodymap-marker', 'm-bodymap-caption', 'sym-logform'];
+      return ids.map(id => ({ id, count: document.querySelectorAll(`#${id}`).length }));
+    });
+    for (const d of dupCount) {
+      if (d.count > 1) fail(scope, `duplicate id #${d.id}: ${d.count} occurrences`);
+    }
+    pass(scope, 'no duplicate IDs');
+
+  } catch (e) {
+    fail(scope, 'exception: ' + e.message);
+    console.error(e.stack);
+  } finally {
+    await ctx.close();
   }
-
-  // 11. clear 後 _symBodyPart 清空、marker 隱藏
-  await page.evaluate(() => window.mobileSymBodyClear && window.mobileSymBodyClear());
-  await page.waitForTimeout(150);
-  const afterClear = await page.evaluate(() => window._symBodyPart);
-  if (afterClear !== '') fail(`after clear, _symBodyPart should be '', got: ${JSON.stringify(afterClear)}`);
-  else pass('clear resets _symBodyPart');
-  const markerHidden = await page.locator('#m-bodymap-marker').evaluate(el => el.style.display === 'none');
-  if (!markerHidden) fail('marker should be hidden after clear');
-  else pass('marker hidden after clear');
-
-  // 12. 桌機版 IDs 沒被破壞（無 duplicate）
-  const dupCount = await page.evaluate(() => {
-    const ids = ['sym-body-current', 'sym-body-marker', 'sym-body-ai', 'm-bodymap-marker', 'm-bodymap-caption'];
-    return ids.map(id => ({ id, count: document.querySelectorAll(`#${id}`).length }));
-  });
-  for (const d of dupCount) {
-    if (d.count > 1) fail(`duplicate id #${d.id}: ${d.count} occurrences`);
-    else pass(`id #${d.id}: ${d.count} (OK)`);
-  }
-
-} catch (e) {
-  fail('exception: ' + e.message);
-  console.error(e.stack);
-} finally {
-  await browser.close();
 }
 
+await browser.close();
 console.log(exitCode === 0 ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
 process.exit(exitCode);

@@ -7669,7 +7669,7 @@ function symptoms() {
         return _SYM_BODY_PARTS.map(function(p) {
           return '<g class="m-bodymap-hotspot" data-part="' + p.id + '" '
                +   'onclick="event.stopPropagation();mobileSymBodyPick(\'' + p.id + '\',\'' + p.label + '\')">'
-               +   '<circle cx="' + p.cx + '" cy="' + p.cy + '" r="11" fill="rgba(201,127,75,0)" stroke="rgba(201,127,75,0)" stroke-width="1.5"/>'
+               +   '<circle cx="' + p.cx + '" cy="' + p.cy + '" r="8" fill="rgba(201,127,75,0)" stroke="rgba(201,127,75,0)" stroke-width="1.2"/>'
                +   '<title>' + p.label + '</title>'
                + '</g>';
         }).join('');
@@ -8105,19 +8105,38 @@ function getPeriodStats() {
   return { entries, byCategory, periodStart: start };
 }
 
-// ─── 身體圖：點擊定位疼痛部位 ───────────────────────────
-// 8 個主要區域。click → 寫進 _symBodyPart，並把 part 名稱帶進
+// ─── 身體圖：點擊定位疼痛部位（正面視圖細部位）─────────────
+// 19 個細部位。click → 寫進 _symBodyPart，並把 part 名稱帶進
 // 下方症狀紀錄表單的 notes 欄。
+// 注意：小人是正面視圖，後腦 / 背 / 腰 無法標。如要背面需另開背面圖。
 var _symBodyPart = '';
 var _SYM_BODY_PARTS = [
-  { id: 'head',     label: '頭部',   cx: 55, cy: 22 },
-  { id: 'neck',     label: '頸部',   cx: 55, cy: 40 },
-  { id: 'chest',    label: '胸口',   cx: 55, cy: 60 },
-  { id: 'abdomen',  label: '腹部',   cx: 55, cy: 92 },
-  { id: 'l-arm',    label: '左手',   cx: 23, cy: 80 },
-  { id: 'r-arm',    label: '右手',   cx: 87, cy: 80 },
-  { id: 'l-leg',    label: '左腿',   cx: 46, cy: 165 },
-  { id: 'r-leg',    label: '右腿',   cx: 64, cy: 165 },
+  // 頭
+  { id: 'forehead',  label: '前額',   cx: 55, cy: 14 },
+  { id: 'face',      label: '臉部',   cx: 55, cy: 25 },
+  // 頸
+  { id: 'neck',      label: '頸部',   cx: 55, cy: 40 },
+  // 軀幹
+  { id: 'chest',     label: '胸口',   cx: 55, cy: 55 },
+  { id: 'upper-abd', label: '上腹',   cx: 55, cy: 78 },
+  { id: 'mid-abd',   label: '中腹',   cx: 55, cy: 98 },
+  { id: 'lower-abd', label: '下腹',   cx: 55, cy: 118 },
+  // 左手（畫面左 = 對方右手；用「左手」順著使用者主觀視角）
+  { id: 'l-upper-arm', label: '左上臂', cx: 27, cy: 62 },
+  { id: 'l-elbow',     label: '左手肘', cx: 22, cy: 85 },
+  { id: 'l-forearm',   label: '左前臂', cx: 19, cy: 108 },
+  // 右手
+  { id: 'r-upper-arm', label: '右上臂', cx: 83, cy: 62 },
+  { id: 'r-elbow',     label: '右手肘', cx: 88, cy: 85 },
+  { id: 'r-forearm',   label: '右前臂', cx: 91, cy: 108 },
+  // 左腿
+  { id: 'l-thigh', label: '左大腿', cx: 46, cy: 145 },
+  { id: 'l-knee',  label: '左膝',   cx: 46, cy: 165 },
+  { id: 'l-calf',  label: '左小腿', cx: 46, cy: 188 },
+  // 右腿
+  { id: 'r-thigh', label: '右大腿', cx: 64, cy: 145 },
+  { id: 'r-knee',  label: '右膝',   cx: 64, cy: 165 },
+  { id: 'r-calf',  label: '右小腿', cx: 64, cy: 188 },
 ];
 function renderBodyMapSvg() {
   var hotspots = _SYM_BODY_PARTS.map(function(p) {
