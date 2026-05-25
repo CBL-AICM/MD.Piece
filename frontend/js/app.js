@@ -2595,7 +2595,7 @@ const pageSlugForTerminal = {
   education: 'education', story: 'daily-story', labs: 'lab-values',
   pieces: 'your-pieces', chat: 'med-chat', account: 'account',
   settings: 'settings', diet: 'diet',
-  records: 'records', doctors: 'doctors',
+  records: 'records',
   followUps: 'follow-ups'
 };
 
@@ -2616,7 +2616,7 @@ function showPage(page) {
     try { _reapplyThemeForCurrentPage(); } catch (e) { /* boot order safety */ }
   }
   const pages = {
-    home, symptoms, symptomsAnalyze, doctors, records, medications, education,
+    home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
     followUps
@@ -2633,7 +2633,6 @@ function showPage(page) {
     } catch (e) {}
     // 頁面載入後的初始化
     if (page === "home") loadHomePage();
-    if (page === "doctors") loadDoctors();
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
     if (page === "story") loadStoryPage();
@@ -2912,8 +2911,9 @@ function switchAccount() {
 
 function accountPage() {
   const u = getCurrentUser() || {};
-  const roleLabel = u.role === 'doctor' ? '醫師' : '患者';
-  const roleIcon = u.role === 'doctor' ? 'stethoscope' : 'heart-pulse';
+  // 不做醫師端：所有使用者都是患者。若資料庫有 role='doctor' 的舊資料也只顯示「患者」。
+  const roleLabel = '患者';
+  const roleIcon = 'heart-pulse';
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
     : `<img src="icons/xiaohe.jpg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
@@ -4630,15 +4630,11 @@ function home() {
     +     '</button>'
     +   '</div>'
 
-    // 進階：診前準備 / 我的醫師 / 提醒 / 檢驗趨勢（次要常用）
+    // 進階：診前準備 / 提醒 / 檢驗趨勢（次要常用）
     +   '<div class="quick-jump-grid quick-jump-grid--mini">'
     +     '<button class="quick-jump-btn t-blue" onclick="navigateTo(\'previsit\',null)">'
     +       '<span class="qj-icon"><i data-lucide="clipboard-check"></i></span>'
     +       '<span class="qj-label">診前準備</span>'
-    +     '</button>'
-    +     '<button class="quick-jump-btn t-teal" onclick="navigateTo(\'doctors\',null)">'
-    +       '<span class="qj-icon"><i data-lucide="stethoscope"></i></span>'
-    +       '<span class="qj-label">我的醫師</span>'
     +     '</button>'
     +     '<button class="quick-jump-btn t-amber" onclick="navigateTo(\'reminders\',null)">'
     +       '<span class="qj-icon"><i data-lucide="bell-ring"></i></span>'
@@ -4841,7 +4837,6 @@ function home() {
           ${homeSecondCard('admissions','hospital','住院 / 療程','急性住院 · 打藥週期','mint')}
           ${homeSecondCard('reminders','bell-ring','提醒通知','服藥 · 回診倒數','amber')}
           ${homeSecondCard('followUps','calendar-clock','回診排程','多筆回診 · 科別醫院','teal')}
-          ${homeSecondCard('doctors','stethoscope','我的醫師','跟著我的醫療團隊','blue')}
         </div>
       </section>
 
@@ -10018,62 +10013,6 @@ async function quickAdvice() {
   const data = await res.json();
   document.getElementById("analysis-result").innerHTML =
     `<div class="advice-box"><strong>${data.symptom}</strong>：${data.advice}</div>`;
-}
-
-// ─── 醫師列表 ──────────────────────────────────────────────
-
-function doctors() {
-  return `
-    <div class="card">
-      <h2>${_T('doctors.add.title')}</h2>
-      <input id="d-name" placeholder="${_T('doctors.placeholder.name')}" />
-      <input id="d-specialty" placeholder="${_T('doctors.placeholder.specialty')}" />
-      <input id="d-phone" placeholder="${_T('doctors.placeholder.phone')}" />
-      <button class="primary" onclick="addDoctor()">${_T('doctors.add.submit')}</button>
-    </div>
-    <div class="card">
-      <h2>${_T('doctors.list.title')}</h2>
-      <div id="doctor-list"><p>${_T('doctors.list.loading')}</p></div>
-    </div>`;
-}
-
-async function loadDoctors() {
-  const res = await fetch(`${API}/doctors/`);
-  const data = await res.json();
-  const el = document.getElementById("doctor-list");
-  if (!data.doctors?.length) {
-    el.innerHTML = `<p>${_T('doctors.list.empty')}</p>`;
-    return;
-  }
-  el.innerHTML = data.doctors.map(d => `
-    <div class="record-card">
-      <strong>${d.name}</strong> — ${d.specialty}
-      ${d.phone ? `<span style="color:var(--text-dim)"> | ${d.phone}</span>` : ""}
-      <button class="btn-delete" onclick="deleteDoctor('${d.id}')">${_T('doctors.delete')}</button>
-    </div>
-  `).join("");
-}
-
-async function addDoctor() {
-  const name = document.getElementById("d-name").value;
-  const specialty = document.getElementById("d-specialty").value;
-  const phone = document.getElementById("d-phone").value || undefined;
-  if (!name || !specialty) return;
-  await fetch(`${API}/doctors/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, specialty, phone }),
-  });
-  loadDoctors();
-  document.getElementById("d-name").value = "";
-  document.getElementById("d-specialty").value = "";
-  document.getElementById("d-phone").value = "";
-}
-
-async function deleteDoctor(id) {
-  if (!confirm(_T('doctors.delete.confirm'))) return;
-  await fetch(`${API}/doctors/${id}`, { method: "DELETE" });
-  loadDoctors();
 }
 
 // ─── 我的基本資料 ──────────────────────────────────────────

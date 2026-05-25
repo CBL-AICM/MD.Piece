@@ -557,7 +557,7 @@
 
   <script src="js/i18n.js?v=v80-ui-and-reminders"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v111-realcheckin"></script>
+  <script src="js/app.js?v=v112-no-doctor-portal"></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────
@@ -826,7 +826,7 @@
       settings: 'settings',
       account: 'account',
       // legacy / fallback
-      records: 'records', doctors: 'doctors'
+      records: 'records'
     };
     // 年長版顯示用中文（CSS 在 senior 模式會把 prefix/ext 隱藏，只剩 page-title）
     const pageTitlesSenior = {
@@ -847,7 +847,7 @@
       chat: '醫起聊天',
       settings: '系統設定',
       account: '帳號設定',
-      records: '我的基本資料', doctors: '醫師列表'
+      records: '我的基本資料'
     };
 
     function setTopbarPageTitle(page) {

@@ -8,19 +8,16 @@ router = APIRouter()
 @router.get("/")
 def get_records(
     patient_id: str | None = Query(None),
-    doctor_id: str | None = Query(None),
     date_from: str | None = Query(None),
     date_to: str | None = Query(None),
     diagnosis: str | None = Query(None),
 ):
     """列出病歷，支援篩選。"""
     sb = get_supabase()
-    query = sb.table("medical_records").select("*, patients(name), doctors(name)")
+    query = sb.table("medical_records").select("*, patients(name)")
 
     if patient_id:
         query = query.eq("patient_id", patient_id)
-    if doctor_id:
-        query = query.eq("doctor_id", doctor_id)
     if date_from:
         query = query.gte("visit_date", date_from)
     if date_to:
@@ -35,7 +32,7 @@ def get_records(
 @router.get("/{record_id}")
 def get_record(record_id: str):
     sb = get_supabase()
-    result = sb.table("medical_records").select("*, patients(name, age, gender), doctors(name, specialty)").eq("id", record_id).execute()
+    result = sb.table("medical_records").select("*, patients(name, age, gender)").eq("id", record_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該病歷")
     return result.data[0]
@@ -78,5 +75,5 @@ def delete_record(record_id: str):
 def get_patient_records(patient_id: str):
     """取得某位病患的所有就診紀錄。"""
     sb = get_supabase()
-    result = sb.table("medical_records").select("*, doctors(name, specialty)").eq("patient_id", patient_id).order("visit_date", desc=True).execute()
+    result = sb.table("medical_records").select("*").eq("patient_id", patient_id).order("visit_date", desc=True).execute()
     return {"records": result.data}
