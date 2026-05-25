@@ -7263,6 +7263,80 @@ html[data-mode="senior"] .set-btn { padding: 14px 22px; font-size: 1rem; min-hei
   color: var(--app-text-dim);
   font-family: "JetBrains Mono", monospace;
 }
+.pz-tl-upload .pz-tl-dot { background: color-mix(in srgb, var(--app-aqua) 22%, transparent); color: var(--app-aqua); }
+.pz-tl-summary {
+  font-size: 0.82rem;
+  color: var(--app-text-dim);
+  margin-top: 4px;
+  line-height: 1.45;
+}
+.pz-tl-item {
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.pz-tl-item:hover {
+  transform: translateX(2px);
+  border-color: color-mix(in srgb, var(--app-term) 40%, var(--app-border));
+}
+
+/* 時間範圍分組（今天 / 本週 / 上次回診以來 / 更早） */
+.pz-tl-group {
+  margin-bottom: 18px;
+}
+.pz-tl-group:last-child { margin-bottom: 0; }
+.pz-tl-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-left: 4px;
+  border-bottom: 1px dashed var(--app-border);
+  padding-bottom: 6px;
+}
+.pz-tl-group-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--app-text);
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.02em;
+}
+.pz-tl-group-count {
+  font-size: 0.72rem;
+  color: var(--app-term);
+  font-family: "JetBrains Mono", monospace;
+  padding: 1px 7px;
+  border: 1px solid var(--app-term);
+  border-radius: 999px;
+}
+.pz-tl-more {
+  font-size: 0.74rem;
+  color: var(--app-text-dim);
+  font-family: "JetBrains Mono", monospace;
+  margin-top: 6px;
+  padding-left: 4px;
+  font-style: italic;
+}
+.pz-tl-empty {
+  font-size: 0.88rem;
+  color: var(--app-text-dim);
+  padding: 18px 12px;
+  text-align: center;
+  background: var(--app-panel-soft);
+  border: 1px dashed var(--app-border);
+  border-radius: 10px;
+}
+
+/* 手機版分組微調：縮間距 + 縮字 */
+.pz-tl-mobile-wrap .pz-tl-group { margin-bottom: 14px; }
+.pz-tl-mobile-wrap .pz-tl-group-label { font-size: 0.78rem; }
+.pz-tl-mobile-wrap .pz-tl-group-count { font-size: 0.66rem; padding: 0 6px; }
+.pz-tl-mobile-wrap .pz-tl-item { padding: 8px 10px; gap: 9px; }
+.pz-tl-mobile-wrap .pz-tl-dot { width: 24px; height: 24px; }
+.pz-tl-mobile-wrap .pz-tl-dot i { width: 12px; height: 12px; }
+.pz-tl-mobile-wrap .pz-tl-head strong { font-size: 0.86rem; }
+.pz-tl-mobile-wrap .pz-tl-kind { font-size: 0.62rem; }
+.pz-tl-mobile-wrap .pz-tl-meta { font-size: 0.7rem; }
+.pz-tl-mobile-wrap .pz-tl-summary { font-size: 0.74rem; }
 
 /* Snapshot panel */
 .pz-prev {
