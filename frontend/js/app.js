@@ -10874,6 +10874,10 @@ function openMedScheduleEditor(medId) {
     +   '</footer>'
     + '</div>';
   document.body.appendChild(modal);
+  // CSS .med-detail-modal 預設 opacity:0 + pointer-events:none，需要 .is-open
+  // class 才解鎖視覺 + 點擊。原始 openMedDetail 有做，我這個漏了 → 之前使用者
+  // 回報「按按鈕完全沒反應」。用 requestAnimationFrame 確保 transition 觸發。
+  requestAnimationFrame(function(){ modal.classList.add('is-open'); });
   renderMedScheduleEditor();
 }
 
@@ -11067,6 +11071,8 @@ function openMedNoteEditor(medId) {
     +   '</footer>'
     + '</div>';
   document.body.appendChild(modal);
+  // 同 openMedScheduleEditor — .is-open class 解鎖 modal pointer-events
+  requestAnimationFrame(function(){ modal.classList.add('is-open'); });
   // 即時字數計數器
   var input = document.getElementById('med-note-input');
   var counter = document.getElementById('med-note-counter');
