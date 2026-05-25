@@ -282,6 +282,30 @@ body.theme-modern .chip {
 }
 body.theme-modern .chip.active { background: var(--accent-soft, #E8F1F8); border-color: var(--accent, #4A90C2); color: var(--accent-deep, #2F6B96); }
 
+/* 自訂症狀 chip — 紫底 + 右上 × 刪除 */
+body.theme-modern .chip-custom {
+  background: var(--purple-tint, #F1ECFA);
+  border-color: var(--purple, #8B6FBC);
+  color: var(--purple-deep, #5D3F8E);
+  padding-right: 22px;
+  position: relative;
+}
+body.theme-modern .chip-del {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; line-height: 12px;
+  border-radius: 50%; background: rgba(141, 99, 188, 0.18);
+  color: var(--purple-deep, #5D3F8E);
+  font-size: 11px; font-weight: 700; text-align: center;
+  cursor: pointer;
+}
+body.theme-modern .chip-del:hover { background: rgba(141, 99, 188, 0.35); }
+/* 「+ 自訂」按鈕 chip — 虛線邊框暗示「新增」 */
+body.theme-modern .chip-add {
+  background: transparent;
+  border-style: dashed;
+  color: var(--accent-deep, #2F6B96);
+}
+
 /* AI 摘要 */
 body.theme-modern .ai-card {
   padding: 12px 14px;

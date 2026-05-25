@@ -7723,11 +7723,22 @@ function symptoms() {
     +   '<div class="chip-group" id="mobile-sym-chips" style="margin-bottom:14px">'
     +     (function() {
         var cats = (typeof SYMPTOM_CATEGORIES !== 'undefined' && SYMPTOM_CATEGORIES) ? SYMPTOM_CATEGORIES : [];
-        if (!cats.length) return '<button class="chip">點開下方類別開始</button>';
-        return cats.slice(0, 8).map(function(c) {
+        var custom = (typeof getCustomSymptomCats === 'function') ? getCustomSymptomCats() : [];
+        if (!cats.length && !custom.length) return '<button class="chip">點開下方類別開始</button>';
+        var html = cats.slice(0, 8).map(function(c) {
           var label = (typeof _symField === 'function') ? _symField(c, 'zh') : (c.zh || c.id || '');
           return '<button class="chip" onclick="openSymptomLog(\'' + c.id + '\')">' + escapeHtml(label) + '</button>';
         }).join('');
+        // 自訂症狀 chip（已建立的）— 右上小 × 刪除
+        html += custom.map(function(c) {
+          return '<button class="chip chip-custom" onclick="openSymptomLog(\'' + c.id + '\')">'
+            + escapeHtml(c.zh)
+            + '<span class="chip-del" onclick="event.stopPropagation();removeCustomSymptomCatAndRefresh(\'' + c.id + '\')" aria-label="刪除">×</span>'
+            + '</button>';
+        }).join('');
+        // 「+ 自訂」入口 — 開啟既有 openOtherSymptomLog 表單（手機共用 sym-logform modal）
+        html += '<button class="chip chip-add" onclick="openOtherSymptomLog()">+ 自訂</button>';
+        return html;
       })()
     +   '</div>'
 
