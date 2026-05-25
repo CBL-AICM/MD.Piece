@@ -17300,9 +17300,17 @@ function diet() {
     +     '</div>'
     +     '<div style="flex:1;position:relative;z-index:1">'
     +       '<div style="font-size:14.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">幫我抽一道 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
-    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">依你的病史和偏好挑一道菜（下方可細調篩選）</div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">依你的病史和偏好挑一道菜</div>'
     +     '</div>'
     +   '</button>'
+
+    // 幫我抽一道結果（mobile）— 桌機版的 #diet-pick-result 在 .desktop-only 區藏掉，
+    // 手機需要自己一個 element 顯示結果，否則使用者按了 button 結果看不到。
+    // renderDietPick / dietPickMeal 的 loading / empty / error 狀態都會 sync 到這個 box。
+    +   '<div id="mobile-diet-pick-result" class="diet-pick-result diet-pick-empty" style="margin-bottom:12px;display:none">'
+    +     '<i data-lucide="utensils" style="width:24px;height:24px"></i>'
+    +     '<div>按上面的按鈕，幫你抽一道菜</div>'
+    +   '</div>'
 
     // 餐次推薦
     +   '<div class="sec-head">'
@@ -17640,11 +17648,18 @@ function dietPickMeal(isReroll) {
   }
   _dietPickLoading = true;
   var box = document.getElementById('diet-pick-result');
+  var mbox = document.getElementById('mobile-diet-pick-result');
+  var loadingHtml = '<i data-lucide="loader-2" style="width:24px;height:24px"></i><div>幫你想想…</div>';
   if (box) {
     box.className = 'diet-pick-result diet-pick-loading';
-    box.innerHTML = '<i data-lucide="loader-2" style="width:24px;height:24px"></i><div>幫你想想…</div>';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    box.innerHTML = loadingHtml;
   }
+  if (mbox) {
+    mbox.className = 'diet-pick-result diet-pick-loading';
+    mbox.innerHTML = loadingHtml;
+    mbox.style.display = '';
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   var qs = '?meal_type=' + encodeURIComponent(_dietPickMealType)
          + '&price_tier=' + encodeURIComponent(_dietPickPrice)
          + '&calorie_tier=' + encodeURIComponent(_dietPickCal)
@@ -17661,21 +17676,29 @@ function dietPickMeal(isReroll) {
       renderDietPick(g);
     })
     .catch(function() {
+      var errorHtml = '<i data-lucide="x" style="width:24px;height:24px"></i><div>抽不到，稍後再試</div>';
       if (box) {
         box.className = 'diet-pick-result diet-pick-empty';
-        box.innerHTML = '<i data-lucide="x" style="width:24px;height:24px"></i><div>抽不到，稍後再試</div>';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        box.innerHTML = errorHtml;
       }
+      var emb = document.getElementById('mobile-diet-pick-result');
+      if (emb) {
+        emb.className = 'diet-pick-result diet-pick-empty';
+        emb.innerHTML = errorHtml;
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     })
     .finally(function() { _dietPickLoading = false; });
 }
 
 function renderDietPick(g) {
   var box = document.getElementById('diet-pick-result');
-  if (!box) return;
+  var mbox = document.getElementById('mobile-diet-pick-result');
+  if (!box && !mbox) return;
   if (!g || !g.name) {
-    box.className = 'diet-pick-result diet-pick-empty';
-    box.innerHTML = '<div>沒抽到，再按一次</div>';
+    var emptyHtml = '<div>沒抽到，再按一次</div>';
+    if (box) { box.className = 'diet-pick-result diet-pick-empty'; box.innerHTML = emptyHtml; }
+    if (mbox) { mbox.className = 'diet-pick-result diet-pick-empty'; mbox.innerHTML = emptyHtml; mbox.style.display = ''; }
     return;
   }
   var components = (g.components || []).map(function(c) {
@@ -17685,8 +17708,7 @@ function renderDietPick(g) {
   var mealBadge = (_dietPickMealType === 'any' && g.meal_type)
     ? '<span class="diet-pick-meal-badge">幫你抽了個 ' + mealLabelMap[g.meal_type] + '</span>'
     : '';
-  box.className = 'diet-pick-result diet-pick-show';
-  box.innerHTML = ''
+  var resultHtml = ''
     + mealBadge
     + '<div class="diet-pick-name">' + chatEscape(g.name) + '</div>'
     + (g.cuisine || g.where_to_get || g.price_tier || g.price_twd
@@ -17704,6 +17726,8 @@ function renderDietPick(g) {
     + (components ? '<div class="diet-pick-chips">' + components + '</div>' : '')
     + (g.reason ? '<div class="diet-pick-reason">' + chatEscape(g.reason) + '</div>' : '')
     + (g.fallback ? '<div class="diet-pick-fallback">（MD.Piece 暫時不在線，先給你一個常見選擇）</div>' : '');
+  if (box) { box.className = 'diet-pick-result diet-pick-show'; box.innerHTML = resultHtml; }
+  if (mbox) { mbox.className = 'diet-pick-result diet-pick-show'; mbox.innerHTML = resultHtml; mbox.style.display = ''; }
   var rerollBtn = document.getElementById('diet-pick-reroll');
   var logBtn = document.getElementById('diet-pick-log');
   if (rerollBtn) rerollBtn.disabled = false;
