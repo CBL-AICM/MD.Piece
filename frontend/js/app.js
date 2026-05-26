@@ -17583,7 +17583,11 @@ function settingsResetCard() {
 
 function markdownToHtml(md) {
   if (!md) return "";
-  return md
+  // 安全：先把所有原文當作純文字 escape（&, <, >, ", '），再做 markdown → HTML 替換。
+  // 來源（AI 報告、衛教文章）理論上是 pure markdown，不會含合法 raw HTML，
+  // 但 LLM 可能把用戶輸入的備註原樣帶出，或反芻含 <script> 的字串 → XSS。
+  // 在這一處集中防護，所有 callers（previsit 報告、教材、藥物報告等）一併受益。
+  return escapeHtml(String(md))
     .replace(/^### (.+)$/gm, '<h4 style="margin-top:16px;margin-bottom:8px;color:var(--accent)">$1</h4>')
     .replace(/^## (.+)$/gm, '<h3 style="margin-top:20px;margin-bottom:8px">$1</h3>')
     .replace(/^# (.+)$/gm, '<h2 style="margin-top:24px;margin-bottom:12px">$1</h2>')
