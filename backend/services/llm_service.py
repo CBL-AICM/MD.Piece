@@ -48,6 +48,15 @@ ANTHROPIC_VISION_MAX_TOKENS = int(os.getenv("ANTHROPIC_VISION_MAX_TOKENS", "2048
 GOOGLE_VISION_API_KEY = os.getenv("GOOGLE_VISION_API_KEY", "")
 GOOGLE_VISION_URL = "https://vision.googleapis.com/v1/images:annotate"
 
+# Gemini 免費 tier — Google AI Studio 提供 gemini-2.0-flash 免費 GA，
+# 1500 req/day + 15 RPM，繁中品質遠優於 Llama，是 Groq rate-limit 後最便宜
+# 的高品質 fallback。注意：免費 tier 的請求可能被 Google 用於模型訓練
+# （付費 tier 不會），醫療資料敏感者請接受這個 ToS 後再啟用。
+# 申請：https://aistudio.google.com/apikey
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
 # Anthropic SDK 預設 timeout 是 600s + 2 retries — 在 Vercel 60s lambda 下，
 # 一次小卡頓就會吃掉整個 lambda 額度。改成差化化 timeout：
 #   - client-level 預設 25s：給「短文字」任務（分診、小禾、教育、checklist…
@@ -180,16 +189,99 @@ def _call_anthropic(system_prompt: str, user_message: str, history=None, max_tok
     return msg.content[0].text
 
 
+def _gemini_history_to_contents(history, user_message: str) -> list:
+    """把 OpenAI 風格的 history（role: user|assistant）轉成 Gemini 的 contents 格式
+    （role: user|model + parts: [{text}]）。"""
+    contents = []
+    for turn in (history or []):
+        role = "model" if turn.get("role") == "assistant" else "user"
+        contents.append({"role": role, "parts": [{"text": turn.get("content", "")}]})
+    contents.append({"role": "user", "parts": [{"text": user_message}]})
+    return contents
+
+
+def _call_gemini(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY not set; cannot use Gemini provider")
+
+    # Gemini 的 429 跟 Groq 同樣處理：Retry-After ≤ 3s 才 sleep+retry，
+    # 超過直接 raise 走 fallback chain（不讓 lambda 被 sleep 卡死）。
+    MAX_RETRY_WAIT_S = 3.0
+    delays = [1.5]  # 一次 retry 機會
+    effective_timeout = timeout if timeout is not None else 25.0
+
+    body: dict = {
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": _gemini_history_to_contents(history, user_message),
+        "generationConfig": {
+            "temperature": 0.4,
+        },
+    }
+    if max_tokens:
+        body["generationConfig"]["maxOutputTokens"] = int(max_tokens)
+
+    url = f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    for attempt in range(len(delays) + 1):
+        resp = httpx.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            json=body,
+            timeout=effective_timeout,
+        )
+        if resp.status_code == 429 and attempt < len(delays):
+            wait = delays[attempt]
+            ra = resp.headers.get("retry-after")
+            if ra:
+                try:
+                    ra_val = float(ra)
+                    if ra_val > MAX_RETRY_WAIT_S:
+                        logger.warning(
+                            f"Gemini 429 rate-limited，Retry-After={ra_val}s 超過 cap "
+                            f"{MAX_RETRY_WAIT_S}s — 放棄 retry 走 fallback"
+                        )
+                        resp.raise_for_status()
+                    wait = max(ra_val, wait)
+                except ValueError:
+                    pass
+            logger.warning(f"Gemini 429 rate-limited，等 {wait}s 後第 {attempt + 1} 次 retry")
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        data = resp.json()
+        # 回傳結構：{"candidates":[{"content":{"parts":[{"text":"..."}]}}]}
+        candidates = data.get("candidates") or []
+        if not candidates:
+            raise RuntimeError(f"Gemini 回傳沒有 candidates：{data}")
+        parts = (candidates[0].get("content") or {}).get("parts") or []
+        # 拼接所有 text part（通常只有一個）；忽略沒有 text 的 part（safety block 等）
+        text = "".join(p.get("text") or "" for p in parts)
+        if not text:
+            # 可能被 safety filter 擋掉
+            finish = candidates[0].get("finishReason") or "?"
+            raise RuntimeError(f"Gemini 回傳空 text（finishReason={finish}）")
+        return text
+    raise RuntimeError("Gemini retry 全部用完仍 rate-limited")
+
+
 _PROVIDERS = {
     "ollama": _call_ollama,
     "groq": _call_groq,
     "anthropic": _call_anthropic,
+    "gemini": _call_gemini,
 }
 
 
 def _fallback_chain(primary: str):
-    """主 provider 之後可用的備援順序（依 API key 是否存在過濾）。"""
+    """主 provider 之後可用的備援順序（依 API key 是否存在過濾）。
+
+    順序設計：primary → gemini（0 成本高品質）→ anthropic（付費高品質）
+    → groq（0 成本中品質）→ ollama（本地）。
+    Gemini 排在 anthropic 之前，是因為 anthropic 付費；若主 provider 掛了
+    優先用免費高品質的 Gemini，Gemini 也掛才走付費。
+    """
     chain = [primary]
+    if GEMINI_API_KEY and "gemini" not in chain:
+        chain.append("gemini")
     if _anthropic_client is not None and "anthropic" not in chain:
         chain.append("anthropic")
     if GROQ_API_KEY and "groq" not in chain:
@@ -316,10 +408,50 @@ def _stream_anthropic(system_prompt: str, user_message: str, history=None):
                 yield text
 
 
+def _stream_gemini(system_prompt: str, user_message: str, history=None):
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY not set; cannot use Gemini provider")
+    body = {
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": _gemini_history_to_contents(history, user_message),
+        "generationConfig": {"temperature": 0.4},
+    }
+    # Gemini 串流走 SSE：?alt=sse 才會回 "data: {...}" 一行一個 chunk；
+    # 不加 alt=sse 預設是回一個完整的 JSON 陣列，不適合 streaming。
+    url = f"{GEMINI_BASE}/models/{GEMINI_MODEL}:streamGenerateContent?alt=sse&key={GEMINI_API_KEY}"
+    with httpx.stream(
+        "POST",
+        url,
+        headers={"Content-Type": "application/json"},
+        json=body,
+        timeout=60.0,
+    ) as resp:
+        resp.raise_for_status()
+        for line in resp.iter_lines():
+            if not line or not line.startswith("data: "):
+                continue
+            payload = line[len("data: "):].strip()
+            if not payload or payload == "[DONE]":
+                continue
+            try:
+                obj = json.loads(payload)
+            except json.JSONDecodeError:
+                continue
+            candidates = obj.get("candidates") or []
+            if not candidates:
+                continue
+            parts = (candidates[0].get("content") or {}).get("parts") or []
+            for p in parts:
+                text = p.get("text") or ""
+                if text:
+                    yield text
+
+
 _STREAM_PROVIDERS = {
     "ollama": _stream_ollama,
     "groq": _stream_groq,
     "anthropic": _stream_anthropic,
+    "gemini": _stream_gemini,
 }
 
 
