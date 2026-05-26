@@ -140,6 +140,18 @@ class MedicationScheduleUpdate(BaseModel):
     custom_schedule: dict | None = None
 
 
+class MedicationUpdate(BaseModel):
+    # 編輯藥袋上的基本資料（藥名/劑量/頻率/分類/用途/備註）。
+    # 全部 Optional：傳什麼欄位就更新什麼，沒傳的欄位維持原值。
+    # 空字串會被當成「清空」（存 NULL）；name 例外，空字串視為未更新避免誤刪藥名。
+    name: str | None = None
+    dosage: str | None = None
+    frequency: str | None = None
+    category: str | None = None
+    purpose: str | None = None
+    instructions: str | None = None
+
+
 class MedicationPhotoUpload(BaseModel):
     patient_id: str
     image_base64: str
@@ -291,6 +303,48 @@ def update_medication_note(medication_id: str, body: MedicationNoteUpdate, me: d
     except Exception as e:
         logger.error(f"Update medication note failed: {e}")
         raise HTTPException(status_code=400, detail=f"更新用法失敗：{e}")
+    if not result.data:
+        raise HTTPException(status_code=404, detail="找不到該藥物")
+    row = dict(result.data[0])
+    row.update(annotate_medication(row))
+    return row
+
+
+@router.put("/{medication_id}")
+def update_medication(medication_id: str, body: MedicationUpdate, me: dict = Depends(current_user)):
+    """
+    編輯藥物基本資料（藥名/劑量/頻率/分類/用途/備註）。
+
+    只更新 body 內非 None 的欄位。空字串 = 清空成 NULL（name 例外，避免誤刪藥名）。
+    """
+    sb = get_supabase()
+    _assert_owns_medication(sb, medication_id, me)
+    raw = body.model_dump(exclude_none=True)
+    patch: dict = {}
+    for key in ("name", "dosage", "frequency", "category", "purpose", "instructions"):
+        if key not in raw:
+            continue
+        val = raw[key]
+        if isinstance(val, str):
+            val = val.strip()
+        if key == "name":
+            if not val:
+                continue
+            patch[key] = val
+        else:
+            patch[key] = val or None
+    if not patch:
+        raise HTTPException(status_code=400, detail="沒有可更新的欄位")
+    try:
+        result = (
+            sb.table("medications")
+            .update(patch)
+            .eq("id", medication_id)
+            .execute()
+        )
+    except Exception as e:
+        logger.error(f"Update medication failed: {e}")
+        raise HTTPException(status_code=400, detail=f"更新失敗：{e}")
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該藥物")
     row = dict(result.data[0])
