@@ -3197,7 +3197,7 @@ async function onAccountAvatarPicked(e) {
   try {
     if (typeof showToast === 'function') showToast('正在處理頭像…', 'info');
     const dataUrl = await prepareAvatarDataUrl(file);
-    const res = await fetch(`${API}/auth/user/${u.id}`, {
+    const res = await apiFetch(`${API}/auth/user/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ avatar_url: dataUrl })
@@ -3228,7 +3228,7 @@ async function saveProfile() {
   const avatar_color = document.getElementById('acct-color').value;
   if (!nickname) return;
   try {
-    const res = await fetch(`${API}/auth/user/${u.id}`, {
+    const res = await apiFetch(`${API}/auth/user/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nickname, avatar_color })
@@ -3260,7 +3260,7 @@ async function savePassword() {
     return;
   }
   try {
-    const res = await fetch(`${API}/auth/user/${u.id}/password`, {
+    const res = await apiFetch(`${API}/auth/user/${u.id}/password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ current_password: cur, new_password: next })
