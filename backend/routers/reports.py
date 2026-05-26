@@ -1144,13 +1144,88 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
 # ── 近 N 天月度報告（預設 30，前端可依回診日倒數覆寫） ─────────
 
 
+# ── /monthly + /patient-summary 共用的 TTL cache ──
+#
+# 為什麼要 cache：兩個 endpoint 都會打 LLM 整合摘要，Groq free tier 在
+# 高峰時 429。LLM call 失敗就 fallback 成「報告生成失敗，以下為原始數據摘要」，
+# 病人帶去診間的 PDF 就是純 raw data dump、沒有 §〇 §七 跟 badge。
+# 加 TTL cache 後：第一次 LLM 成功的結果被快取，後續同 patient+days 的請求
+# （含 PDF 下載再打 endpoint）直接命中、避開 Groq 突發限流。
+#
+# 跟 /education/generate 的 cache 不同 — reports 內容會隨病人新紀錄改變，
+# 所以用 TTL（預設 1 小時）而非永久 cache。資料量大時可能 1 小時內出現
+# 新症狀 / 用藥變化，但這是「PDF 短時間內不刷新內容」的可接受取捨。
+
+_REPORTS_CACHE_TTL_SECONDS = 3600  # 1 hour
+
+
+def _reports_cache_key(patient_id: str, days: int, audience: str) -> str:
+    return f"{audience}:{patient_id}:{days}"
+
+
+def _reports_get_cache(cache_key: str) -> dict | None:
+    """命中且未過期回 payload dict；miss / 過期 / DB 失敗 回 None。"""
+    try:
+        sb = get_supabase()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        rows = (
+            sb.table("reports_cache").select("payload, expires_at")
+            .eq("cache_key", cache_key).gt("expires_at", now_iso)
+            .limit(1).execute().data or []
+        )
+        if rows:
+            return rows[0].get("payload")
+        return None
+    except Exception as e:
+        logger.warning(f"reports_cache lookup 失敗，視為 miss：{type(e).__name__}: {e}")
+        return None
+
+
+def _reports_save_cache(cache_key: str, patient_id: str, days: int,
+                        audience: str, payload: dict) -> None:
+    """寫 cache。失敗只 log，不影響回傳。
+    報告內容明顯失敗（含 fallback 文字）不寫快取，下次仍會重試 LLM。"""
+    report_text = payload.get("report") or payload.get("summary") or ""
+    if "報告生成失敗" in report_text or "報告生成超時" in report_text:
+        return
+    if len(report_text.strip()) < 100:
+        return
+    try:
+        sb = get_supabase()
+        expires_at = (datetime.now(timezone.utc) + timedelta(seconds=_REPORTS_CACHE_TTL_SECONDS)).isoformat()
+        sb.table("reports_cache").upsert({
+            "cache_key": cache_key,
+            "patient_id": patient_id,
+            "days": days,
+            "audience": audience,
+            "payload": payload,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": expires_at,
+        }, on_conflict="cache_key").execute()
+    except Exception as e:
+        logger.warning(f"reports_cache 寫入失敗（不阻塞回傳）：{type(e).__name__}: {e}")
+
+
 @router.get("/{patient_id}/monthly")
 def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=365)):
     """回診間整合報告：症狀 + 情緒 + 用藥 + 就診 + 飲食。
 
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     顯式帶 `days` 視為覆寫（測試／自訂區間用）。
+
+    流程：
+    1. 先查 reports_cache(audience='monthly')，TTL 內命中直接回
+    2. 沒命中才 _collect_period_summary + 打 LLM
+    3. LLM 成功 → 寫 cache + 回傳；LLM 失敗 → 回 fallback 文字但不寫 cache
     """
+    # 先試 cache（用 effective days）— 還沒推算 days 時用提示性 key
+    effective_days, _, _ = _get_period(patient_id) if days is None else (days, None, None)
+    cache_key = _reports_cache_key(patient_id, effective_days or 30, "monthly")
+    cached = _reports_get_cache(cache_key)
+    if cached:
+        cached["source"] = "cache"
+        return cached
+
     data_summary, counts, has_data, days, period_label, raw_records = _collect_period_summary(
         patient_id, days=days
     )
@@ -1158,7 +1233,7 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
     full_summary = data_summary
 
     if not has_data:
-        return {
+        payload = {
             "patient_id": patient_id,
             "report": f"此患者於「{period_label}」期間尚無足夠的健康數據可供產出報告。",
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -1168,28 +1243,36 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
             "raw_data": counts,
             "raw_records": raw_records,
         }
+        return payload
 
     try:
         report_text = _call_claude_bounded(INTEGRATED_SUMMARY_PROMPT, full_summary)
+        source = "ai"
     except concurrent.futures.TimeoutError:
         logger.error(f"Monthly report timeout (>{_LLM_HARD_TIMEOUT_S}s)，回 raw fallback")
         report_text = (
             f"報告生成超時（AI 服務忙線中），以下為原始數據摘要：\n\n{full_summary}"
         )
+        source = "timeout"
     except Exception as e:
         logger.error(f"Monthly report generation failed: {e}")
         report_text = f"報告生成失敗，以下為原始數據摘要：\n\n{full_summary}"
+        source = "error"
 
-    return {
+    payload = {
         "patient_id": patient_id,
         "report": report_text,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "source": "ai",
+        "source": source,
         "days": days,
         "period_label": period_label,
         "raw_data": counts,
         "raw_records": raw_records,
     }
+    # 只有 ai 成功才寫 cache（timeout/error 不寫，下次重試）
+    if source == "ai":
+        _reports_save_cache(cache_key, patient_id, days, "monthly", payload)
+    return payload
 
 
 # ── 問診清單 ─────────────────────────────────────────────────
@@ -1321,7 +1404,18 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
     """產出患者帶去診間用的白話摘要（PDF / Word 用）。
 
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
+
+    流程同 /monthly：先試 reports_cache(audience='patient_summary')，TTL 內命中
+    直接回；沒命中才打 LLM、成功才寫 cache。
     """
+    # 先試 cache
+    effective_days, _, _ = _get_period(patient_id) if days is None else (days, None, None)
+    cache_key = _reports_cache_key(patient_id, effective_days or 30, "patient_summary")
+    cached = _reports_get_cache(cache_key)
+    if cached:
+        cached["source"] = "cache"
+        return cached
+
     data_summary, counts, has_data, days, period_label, raw_records = _collect_period_summary(
         patient_id, days=days
     )
@@ -1369,7 +1463,7 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
         )
         source = "error"
 
-    return {
+    payload = {
         "patient_id": patient_id,
         "summary": summary,
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -1379,6 +1473,9 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
         "raw_data": counts,
         "raw_records": raw_records,
     }
+    if source == "ai":
+        _reports_save_cache(cache_key, patient_id, days, "patient_summary", payload)
+    return payload
 
 
 # ── 整合摘要串流端點（SSE，給 in-page live preview） ──────────
@@ -1458,6 +1555,34 @@ def stream_integrated_summary(
             },
         )
 
+    # SSE 也共用 reports_cache（key 用 'monthly' — SSE 跟 PDF/monthly 是同一份摘要）
+    # 命中時就不打 LLM，直接 stream cached 文字
+    sse_cache_key = _reports_cache_key(patient_id, days, "monthly")
+    cached_payload = _reports_get_cache(sse_cache_key)
+    if cached_payload and cached_payload.get("report"):
+        cached_text = cached_payload["report"]
+
+        def cached_gen():
+            yield _sse({
+                "type": "meta",
+                "raw_data": counts,
+                "raw_records": raw_records,
+                "days": days,
+                "period_label": period_label,
+                "has_data": True,
+            })
+            yield _sse({"type": "chunk", "text": cached_text})
+            yield _sse({"type": "done", "source": "cache"})
+
+        return StreamingResponse(
+            cached_gen(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
     def event_gen():
         # 先把 meta 推出去（前端立刻可以顯示「症狀 N 筆、情緒 N 次…」骨架）
         # raw_records 包進 meta 給 PDF「本期間紀錄一覽」用，避免 PDF 下載再打一次後端
@@ -1469,11 +1594,29 @@ def stream_integrated_summary(
             "period_label": period_label,
             "has_data": True,
         })
+        accumulated_chunks: list[str] = []
         try:
             for chunk in stream_claude(INTEGRATED_SUMMARY_PROMPT, data_summary):
                 if chunk:
+                    accumulated_chunks.append(chunk)
                     yield _sse({"type": "chunk", "text": chunk})
             yield _sse({"type": "done", "source": "ai"})
+            # 串流完整段寫 cache，讓後續 /monthly + PDF 下載命中
+            full_text = "".join(accumulated_chunks).strip()
+            if full_text:
+                _reports_save_cache(
+                    sse_cache_key, patient_id, days, "monthly",
+                    {
+                        "patient_id": patient_id,
+                        "report": full_text,
+                        "generated_at": datetime.now(timezone.utc).isoformat(),
+                        "source": "ai",
+                        "days": days,
+                        "period_label": period_label,
+                        "raw_data": counts,
+                        "raw_records": raw_records,
+                    },
+                )
         except Exception as e:
             logger.error(f"Integrated summary stream failed: {e}")
             yield _sse({"type": "error", "detail": str(e), "source": "error"})
