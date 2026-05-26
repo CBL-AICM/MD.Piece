@@ -13,13 +13,18 @@ admission_medications.next_due_date，這邊不重做一套。
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 import logging
+import math
 
 from backend.db import get_supabase
+from backend.data.taiwan_hospitals import TAIWAN_HOSPITALS
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# 地理圍欄半徑（公尺）— 涵蓋一般院區 + GPS 抖動容差。
+GEOFENCE_RADIUS_M = 300
 
 
 def _ensure_patient_exists(sb, patient_id: str) -> None:
@@ -56,6 +61,9 @@ class AdmissionCreate(BaseModel):
     diagnosis_icd10: Optional[str] = None
     ward: Optional[str] = None
     notes: Optional[str] = None
+    hospital_name: Optional[str] = None
+    hospital_lat: Optional[float] = None
+    hospital_lng: Optional[float] = None
 
 
 class AdmissionUpdate(BaseModel):
@@ -68,6 +76,14 @@ class AdmissionUpdate(BaseModel):
     ward: Optional[str] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    hospital_name: Optional[str] = None
+    hospital_lat: Optional[float] = None
+    hospital_lng: Optional[float] = None
+
+
+class LocationCheck(BaseModel):
+    lat: float
+    lng: float
 
 
 class AdmissionMedicationCreate(BaseModel):
@@ -101,6 +117,34 @@ class DoseRecord(BaseModel):
 
 _ALLOWED_TYPES = {"acute", "chronic_infusion"}
 _ALLOWED_STATUS = {"active", "discharged", "cancelled"}
+
+
+def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """兩點間球面距離（公尺）。地球半徑取 6_371_000m。"""
+    r = 6_371_000.0
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlmb = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+# ── 醫院清單（前端 picker 用）─────────────────────────────
+
+@router.get("/hospitals")
+def list_hospitals(q: Optional[str] = Query(None, description="醫院名稱關鍵字（模糊比對）")):
+    """
+    回傳預建的台灣醫院清單供前端 picker 使用。
+    不存在 DB，每次直接從 backend/data/taiwan_hospitals.py 讀；
+    維護方便，未來增刪不必跑 migration。
+    """
+    items = TAIWAN_HOSPITALS
+    if q:
+        key = q.strip()
+        if key:
+            items = [h for h in items if key in h["name"]]
+    return {"hospitals": items, "geofence_radius_m": GEOFENCE_RADIUS_M}
 
 
 # ── 住院 / 療程 CRUD ──────────────────────────────────────
@@ -218,6 +262,107 @@ def discharge_admission(admission_id: str, discharge_date: Optional[str] = None)
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該住院/療程紀錄")
     return result.data[0]
+
+
+@router.post("/{admission_id}/check-location")
+def check_location(admission_id: str, body: LocationCheck):
+    """
+    依使用者目前 GPS 位置自動判定是否該結案。
+
+    觸發時機由前端負責：建議在 discharge_date 當天 App 開啟時呼叫一次。
+    後端只負責「距離 + 日期」邏輯（規則 5：確定性任務用程式碼，不丟 LLM）。
+
+    回傳：
+      in_hospital   : 是否仍在醫院 GEOFENCE_RADIUS_M 內
+      distance_m    : 到醫院的距離（公尺，None 表沒登記醫院座標）
+      discharge_due : discharge_date 是否已到（含當日）
+      action        : auto_discharged | prompt_delay | none
+      admission     : 若 action=auto_discharged 則回傳更新後 row
+    """
+    sb = get_supabase()
+    row = sb.table("admissions").select("*").eq("id", admission_id).limit(1).execute()
+    if not row.data:
+        raise HTTPException(status_code=404, detail="找不到該住院/療程紀錄")
+    adm = row.data[0]
+
+    # 非 active 的住院不參與自動判定。
+    if adm.get("status") != "active":
+        return {
+            "in_hospital": None,
+            "distance_m": None,
+            "discharge_due": False,
+            "action": "none",
+            "reason": "admission_not_active",
+        }
+
+    hlat = adm.get("hospital_lat")
+    hlng = adm.get("hospital_lng")
+    distance_m: Optional[float] = None
+    in_hospital: Optional[bool] = None
+    if hlat is not None and hlng is not None:
+        distance_m = _haversine_m(float(hlat), float(hlng), body.lat, body.lng)
+        in_hospital = distance_m <= GEOFENCE_RADIUS_M
+
+    discharge_due = False
+    dd = adm.get("discharge_date")
+    if dd:
+        # discharge_date 可能是 'YYYY-MM-DDTHH:MM:SS' 或 'YYYY-MM-DD'；只比日期。
+        try:
+            planned = date.fromisoformat(str(dd)[:10])
+            discharge_due = date.today() >= planned
+        except ValueError:
+            discharge_due = False
+
+    # 沒登記醫院座標 → 沒辦法做地理判定，直接返回（前端可選擇 fallback 行為）。
+    if in_hospital is None:
+        return {
+            "in_hospital": None,
+            "distance_m": None,
+            "discharge_due": discharge_due,
+            "action": "none",
+            "reason": "no_hospital_coords",
+        }
+
+    # 主邏輯：到了預定出院日 + 已離開醫院 → 自動結案。
+    if discharge_due and not in_hospital:
+        now_iso = datetime.utcnow().isoformat()
+        update = {
+            "status": "discharged",
+            "auto_discharged_at": now_iso,
+        }
+        # 若使用者沒手動填過 discharge_date 的時段，補上實際結案時間，
+        # 方便日後在「我的健康時間軸」（場景 C）顯示真正離院時間。
+        if len(str(dd)) <= 10:
+            update["discharge_date"] = now_iso
+        updated = (
+            sb.table("admissions")
+            .update(update)
+            .eq("id", admission_id)
+            .execute()
+        )
+        return {
+            "in_hospital": False,
+            "distance_m": distance_m,
+            "discharge_due": True,
+            "action": "auto_discharged",
+            "admission": updated.data[0] if updated.data else None,
+        }
+
+    # 到了預定出院日但人還在 → 提示使用者，不自動改 status（規則 12：不暗改）。
+    if discharge_due and in_hospital:
+        return {
+            "in_hospital": True,
+            "distance_m": distance_m,
+            "discharge_due": True,
+            "action": "prompt_delay",
+        }
+
+    return {
+        "in_hospital": in_hospital,
+        "distance_m": distance_m,
+        "discharge_due": False,
+        "action": "none",
+    }
 
 
 # ── 排定給藥（住院期間 / 療程內）─────────────────────────
