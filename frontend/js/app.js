@@ -14509,7 +14509,7 @@ var EDU_DISEASE_DIMENSIONS = [
 function education() {
   // ─── Mobile v11 block ───
   var _mobileEduBlock = ''
-    + '<div class="mobile-only">'
+    + '<div class="mobile-only mobile-edu-cards">'
     // hero card with puzzle bg
     +   '<div class="pv-hero" style="margin-bottom:12px">'
     +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
@@ -14643,13 +14643,19 @@ function education() {
         ${renderBookshelf()}
       </div>
     </div>
+    </div>
 
-    <!-- Stage 2 : Open notebook（左頁 = 章節清單，右頁 = 內容） -->
+    <!-- Stage 2 : Open notebook（左頁 = 章節清單，右頁 = 內容）
+         拉到 .desktop-only 外面 — 手機點「我的疾病書架」也要看得到內容 -->
     <div id="edu-stage-notebook" class="edu-stage">
+      <div class="edu-mobile-back mobile-only" style="margin-bottom:10px">
+        <button onclick="eduGoToShelf()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:13px;color:var(--navy);cursor:pointer">
+          <i data-lucide="arrow-left" style="width:14px;height:14px"></i> 回書架
+        </button>
+      </div>
       <div class="notebook-wrap">
         <div id="edu-notebook" class="notebook"></div>
       </div>
-    </div>
     </div>`;
 }
 
@@ -14696,22 +14702,14 @@ function _mobileEduSyncMyDiseases(items, extras) {
   var wrap = document.getElementById('mobile-edu-my-shelf');
   var list = document.getElementById('mobile-edu-my-shelf-list');
   if (!wrap || !list) return;
-  var all = (items || []).concat((extras || []).map(function(x) {
-    return typeof x === 'string' ? { name: x, ai_generated: true } : x;
-  }));
-  if (!all.length) { wrap.style.display = 'none'; return; }
+  var supported = items || [];
+  var extraList = extras || [];
+  if (!supported.length && !extraList.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
-  list.innerHTML = all.map(function(it) {
-    var name = it.name || it.label || '未命名疾病';
-    var icd10 = it.icd10 || '';
-    var ai = it.ai_generated || it.is_supported === false;
+
+  function rowHtml(name, icd10, ai, onclick) {
     var iconColor = ai ? 'var(--amber-deep)' : 'var(--accent-deep)';
     var icon = ai ? 'sparkles' : 'book';
-    var onclick = it.slug
-      ? 'eduOpenDiseaseShelf(\'' + escapeHtml(it.slug || '') + '\')'
-      : (it.code || it.icd10
-        ? 'eduOpenDiseaseByIcd10(\'' + escapeHtml(it.code || it.icd10) + '\')'
-        : '');
     return ''
       + '<button style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left;width:100%" onclick="' + onclick + '">'
       +   '<div style="width:32px;height:32px;border-radius:8px;background:var(--accent-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + iconColor + '">'
@@ -14723,7 +14721,24 @@ function _mobileEduSyncMyDiseases(items, extras) {
       +   '</div>'
       +   '<i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted)"></i>'
       + '</button>';
+  }
+
+  var html = supported.map(function(it) {
+    var name = it.name || it.label || '未命名疾病';
+    var icd10 = it.icd10 || '';
+    var onclick = icd10
+      ? 'eduOpenMyDiseaseBook(\'' + escapeHtml(icd10) + '\',\'' + escapeHtml(name) + '\')'
+      : '';
+    return rowHtml(name, icd10, false, onclick);
   }).join('');
+
+  // extras 索引必須對齊 _eduExtraDiseases（由 renderMyDiseaseShelf 設定）
+  html += extraList.map(function(x, j) {
+    var name = (typeof x === 'string') ? x : (x.name || x.label || '未命名疾病');
+    return rowHtml(name, '', true, 'eduOpenExtraDisease(' + j + ')');
+  }).join('');
+
+  list.innerHTML = html;
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -14766,7 +14781,7 @@ function _mobileEduSyncRelated(items) {
     var reason = it.reason || it.summary || '';
     var icd10 = it.icd10 || it.code || '';
     return ''
-      + '<button style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;text-align:left;width:100%;position:relative;overflow:hidden" onclick="' + (icd10 ? 'eduOpenDiseaseByIcd10(\'' + escapeHtml(icd10) + '\')' : '') + '">'
+      + '<button style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;text-align:left;width:100%;position:relative;overflow:hidden" onclick="' + (icd10 ? 'eduJumpToDisease(\'' + escapeHtml(icd10) + '\',\'' + escapeHtml(name) + '\')' : '') + '">'
       +   '<span class="puzzle-motif tr"><svg viewBox="0 0 100 100" fill="currentColor"><use href="#puzzle-piece"/></svg></span>'
       +   '<div style="width:30px;height:30px;border-radius:8px;background:var(--rose-tint);color:var(--rose-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
       +     '<i data-lucide="git-branch" style="width:14px;height:14px"></i>'
@@ -14817,6 +14832,8 @@ function renderBookshelf() {
 }
 
 function loadEducationPage() {
+  // 進頁面預設停在書架階段，清掉殘留的 edu-notebook-open（避免從別頁回來時誤把卡片藏起來）
+  document.body.classList.remove("edu-notebook-open");
   // 首次載入時抓疾病列表，給「疾病百科」這本書用
   fetch(API + "/education/diseases")
     .then(function(r) { return r.json(); })
@@ -15487,6 +15504,9 @@ function eduSwitchStage(stageId) {
     var el = document.getElementById(id);
     if (el) el.classList.toggle("active", id === stageId);
   });
+  // 手機版 notebook 拉出 .desktop-only 後，開筆記本時要把 mobile-only 衛教卡片蓋掉，
+  // 不然會跟筆記本同畫面打架（CSS：body.edu-notebook-open .mobile-edu-cards { display:none }）
+  document.body.classList.toggle("edu-notebook-open", stageId === "edu-stage-notebook");
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
 }
 

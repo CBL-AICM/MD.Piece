@@ -5599,6 +5599,8 @@ html[data-mode="senior"] .vt-bmi-meta {
 
 .edu-stage { display: none; }
 .edu-stage.active { display: block; animation: eduFadeIn .35s ease both; }
+/* 打開筆記本時，蓋掉手機版的衛教卡片區，避免與 notebook 同畫面打架 */
+body.edu-notebook-open .mobile-edu-cards { display: none !important; }
 @keyframes eduFadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
