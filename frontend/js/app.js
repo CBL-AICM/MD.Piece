@@ -11783,6 +11783,122 @@ function clearMedNote() {
     });
 }
 
+// 編輯藥物基本資料（藥名 / 劑量 / 頻率 / 用途 / 醫囑）— 跟「我的用法」「自訂時刻」分開。
+// 後端 PUT /medications/{id} 接 partial update；只有填了的欄位會送出去。
+// 排程列已經有專屬編輯入口（openMedScheduleEditor），所以這裡只負責「藥袋」原始資料。
+function openMedEditModal(medId) {
+  var med = (_medsList || []).find(function(m){ return String(m.id) === String(medId); });
+  if (!med) { if (typeof showToast === 'function') showToast('找不到這顆藥', 'error'); return; }
+  closeMedEditModal();
+  var inputStyle = 'width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;box-sizing:border-box';
+  var labelStyle = 'display:block;font-size:11.5px;color:var(--text-dim);margin-bottom:4px;margin-top:10px';
+  var modal = document.createElement('div');
+  modal.id = 'med-edit-modal';
+  modal.className = 'med-detail-modal';
+  modal.innerHTML = ''
+    + '<div class="mdm-backdrop" onclick="closeMedEditModal()"></div>'
+    + '<div class="mdm-panel" role="dialog" aria-modal="true" aria-label="編輯藥物資料" style="max-width:520px">'
+    +   '<header class="mdm-head">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedEditModal()" aria-label="關閉">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +     '<div class="mdm-title-wrap">'
+    +       '<div class="mdm-pill"><i data-lucide="edit-3" style="width:18px;height:18px"></i></div>'
+    +       '<div>'
+    +         '<h3 class="mdm-title">編輯藥物資料</h3>'
+    +         '<p class="mdm-sub">藥袋原始資料（藥名 / 劑量 / 頻率 / 用途）</p>'
+    +       '</div>'
+    +     '</div>'
+    +   '</header>'
+    +   '<div class="mdm-body" style="padding:14px 18px">'
+    +     '<label style="' + labelStyle + ';margin-top:0">藥名 <span style="color:var(--rose-deep)">*</span></label>'
+    +     '<input id="med-edit-name" type="text" placeholder="例：Panadol 普拿疼" style="' + inputStyle + '" />'
+    +     '<label style="' + labelStyle + '">劑量</label>'
+    +     '<input id="med-edit-dosage" type="text" placeholder="例：500mg / 1顆" style="' + inputStyle + '" />'
+    +     '<label style="' + labelStyle + '">頻率</label>'
+    +     '<input id="med-edit-frequency" type="text" placeholder="例：一天三次 / 必要時 / 每 8 小時" style="' + inputStyle + '" />'
+    +     '<p style="font-size:10.5px;color:var(--text-muted);margin-top:4px;line-height:1.4">改頻率會自動重新分早/中/晚/其他時段</p>'
+    +     '<label style="' + labelStyle + '">分類</label>'
+    +     '<input id="med-edit-category" type="text" placeholder="例：止痛藥 / 抗生素" style="' + inputStyle + '" />'
+    +     '<label style="' + labelStyle + '">用途</label>'
+    +     '<input id="med-edit-purpose" type="text" placeholder="例：緩解頭痛" style="' + inputStyle + '" />'
+    +     '<label style="' + labelStyle + '">醫囑 / 注意事項</label>'
+    +     '<textarea id="med-edit-instructions" rows="2" placeholder="例：飯後 30 分服用、避免與葡萄柚汁併用" style="' + inputStyle + ';resize:vertical"></textarea>'
+    +   '</div>'
+    +   '<footer style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +     '<span style="margin-right:auto"></span>'
+    +     '<button type="button" class="secondary" onclick="closeMedEditModal()">取消</button>'
+    +     '<button type="button" class="primary" onclick="saveMedEdit()">儲存</button>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(modal);
+  requestAnimationFrame(function(){ modal.classList.add('is-open'); });
+  // 用 .value 賦值避免 XSS
+  document.getElementById('med-edit-name').value = med.name || '';
+  document.getElementById('med-edit-dosage').value = med.dosage || med.dose || '';
+  document.getElementById('med-edit-frequency').value = med.frequency || '';
+  document.getElementById('med-edit-category').value = med.category || '';
+  document.getElementById('med-edit-purpose').value = med.purpose || '';
+  document.getElementById('med-edit-instructions').value = med.instructions || med.instruction || '';
+  setTimeout(function(){ document.getElementById('med-edit-name').focus(); }, 0);
+  window._medEditingId = medId;
+  if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+}
+
+function closeMedEditModal() {
+  var el = document.getElementById('med-edit-modal');
+  if (el) el.remove();
+  window._medEditingId = null;
+}
+
+function saveMedEdit() {
+  var medId = window._medEditingId;
+  if (!medId) return;
+  var g = function(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  var name = g('med-edit-name');
+  if (!name) { if (typeof showToast === 'function') showToast('藥名不能空白', 'error'); return; }
+  // 只送有改的欄位 — 跟原本 med 對照，相同就不傳，避免覆蓋成 null。
+  var med = (_medsList || []).find(function(m){ return String(m.id) === String(medId); }) || {};
+  var fields = {
+    name: name,
+    dosage: g('med-edit-dosage'),
+    frequency: g('med-edit-frequency'),
+    category: g('med-edit-category'),
+    purpose: g('med-edit-purpose'),
+    instructions: g('med-edit-instructions'),
+  };
+  var payload = {};
+  Object.keys(fields).forEach(function(k) {
+    var cur = (med[k] || (k === 'dosage' ? med.dose : '') || (k === 'instructions' ? med.instruction : '') || '').trim();
+    if (fields[k] !== cur) payload[k] = fields[k];
+  });
+  if (Object.keys(payload).length === 0) {
+    if (typeof showToast === 'function') showToast('沒有變更', 'info');
+    closeMedEditModal();
+    return;
+  }
+  apiFetch(API + '/medications/' + encodeURIComponent(medId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(async function(r) {
+      if (!r.ok) {
+        var detail = await _parseApiError(r).catch(function(){ return 'HTTP ' + r.status; });
+        throw new Error(detail);
+      }
+      return r.json();
+    })
+    .then(function() {
+      if (typeof showToast === 'function') showToast('藥物資料已更新 ✓', 'success');
+      closeMedEditModal();
+      loadMedicationsPage();
+    })
+    .catch(function(e) {
+      if (typeof showToast === 'function') showToast('儲存失敗：' + (e && e.message ? e.message : '未知錯誤'), 'error');
+    });
+}
+
 // 把每顆藥「今天應該服用的時刻」蒐集起來，依時間排序成動態 slot 清單。
 // 若有 custom_schedule 且今天的 weekday 在 entries 內 → 用自訂的 HH:MM；
 // 否則 fallback 到 bucket 預設時間（morning=07:00 / noon=13:00 / evening=18:00 / bedtime=22:00）。
@@ -11904,6 +12020,7 @@ function _renderMobileMedList(meds) {
       // 第一步當成「\ + '」二次處理）。雖然 m.id 是 UUID 不會含這些字元，
       // 但補上完整 escape 通過 CodeQL incomplete-string-escape 檢查、縱深防禦。
       var safeMedId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      var safeMedName = String(m.name || '').replace(/\\/g, "\\\\").replace(/'/g, "\\'");
       var scheduleSummary = _customScheduleSummary(m.custom_schedule);
       var hasCustomSchedule = !!scheduleSummary;
       var inner = ''
@@ -11939,6 +12056,16 @@ function _renderMobileMedList(meds) {
               : '<span class="actual" style="color:var(--text-muted);font-style:italic">依藥袋預設（' + escapeHtml(m.frequency || '一天一次') + '）</span>')
         +     '<button class="med-customize-edit-btn" onclick="openMedScheduleEditor(\'' + safeMedId + '\')" title="設定哪天的什麼時刻提醒打卡">'
         +       '<i data-lucide="pencil"></i>' + (hasCustomSchedule ? '編輯' : '自訂時刻')
+        +     '</button>'
+        +   '</div>'
+        // 動作列：編輯藥物基本資料（藥名 / 劑量 / 頻率 / 用途）+ 刪除。
+        // 跟「我的用法」「自訂時刻」分開，因為改的是藥袋原始資料、不是病人客製。
+        +   '<div class="med-customize-row" style="justify-content:flex-end;gap:6px;padding-top:6px;border-top:1px dashed var(--border)">'
+        +     '<button class="med-customize-edit-btn" onclick="openMedEditModal(\'' + safeMedId + '\')" title="修改藥名 / 劑量 / 頻率 / 用途">'
+        +       '<i data-lucide="edit-3"></i>編輯資料'
+        +     '</button>'
+        +     '<button class="med-customize-edit-btn" style="color:var(--rose-deep, #C97A7A)" onclick="deleteMedication(\'' + safeMedId + '\',\'' + safeMedName + '\')" title="從清單中移除這顆藥">'
+        +       '<i data-lucide="trash-2"></i>刪除'
         +     '</button>'
         +   '</div>'
         + '</div>';

@@ -140,6 +140,20 @@ class MedicationScheduleUpdate(BaseModel):
     custom_schedule: dict | None = None
 
 
+class MedicationUpdate(BaseModel):
+    """部分欄位更新藥物基本資料（藥名 / 劑量 / 頻率 / 用途 / 醫囑等）。
+
+    所有欄位皆 optional；只有出現在 body 的欄位會被寫入，沒帶就不動。
+    name 顯式空字串視為非法（藥物不能無名），會 reject。
+    """
+    name: str | None = None
+    dosage: str | None = None
+    frequency: str | None = None
+    category: str | None = None
+    purpose: str | None = None
+    instructions: str | None = None
+
+
 class MedicationPhotoUpload(BaseModel):
     patient_id: str
     image_base64: str
@@ -307,6 +321,42 @@ def delete_medication(medication_id: str, me: dict = Depends(current_user)):
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該藥物")
     return {"message": "藥物已停用", "id": medication_id}
+
+
+@router.put("/{medication_id}")
+def update_medication(medication_id: str, body: MedicationUpdate, me: dict = Depends(current_user)):
+    """更新藥物基本資料（藥名 / 劑量 / 頻率 / 用途 / 醫囑等）。
+
+    Partial update：只更新 body 帶到的欄位。name 若顯式給空字串會 400。
+    更新後重新跑 annotate_medication（slots/interval/is_other 可能跟著 frequency 改變）。
+    """
+    sb = get_supabase()
+    _assert_owns_medication(sb, medication_id, me)
+    updates = body.model_dump(exclude_none=True)
+    # 空字串 strip 後也視為「不更動」，避免使用者誤清空關鍵欄位
+    cleaned: dict = {}
+    for k, v in updates.items():
+        s = (v or "").strip() if isinstance(v, str) else v
+        if k == "name":
+            if not s:
+                raise HTTPException(status_code=400, detail="藥名不能為空")
+            cleaned[k] = s
+        elif isinstance(s, str):
+            cleaned[k] = s or None
+        else:
+            cleaned[k] = v
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="沒有提供要更新的欄位")
+    try:
+        result = sb.table("medications").update(cleaned).eq("id", medication_id).execute()
+    except Exception as e:
+        logger.error(f"Update medication failed: {e}")
+        raise HTTPException(status_code=400, detail=f"更新藥物失敗：{e}")
+    if not result.data:
+        raise HTTPException(status_code=404, detail="找不到該藥物")
+    row = dict(result.data[0])
+    row.update(annotate_medication(row))
+    return row
 
 
 # ── 藥袋拍照辨識 ──────────────────────────────────────────
