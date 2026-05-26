@@ -2757,7 +2757,7 @@ function previsitBuildPatientHTML(summary, counts, checklist, periodLabel, rawRe
     + bodyHtml
     + '<h2>這次想請醫師確認的事</h2>'
     + checklistHtml
-    + '<h2>本期間紀錄一覽（給醫師參考）</h2>'
+    + '<h2>本期間紀錄一覽</h2>'
     + recHtml
     + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
     + '</body></html>';
