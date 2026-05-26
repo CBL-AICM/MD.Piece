@@ -10,7 +10,7 @@ from backend.routers import (
     records, reports, research, triage, xiaohe, auth,
     medication_changes, alerts, labs, diet,
     drug_search, diseases, reminders, bell_reminders,
-    admissions, timeline, follow_ups, profile,
+    admissions, timeline, follow_ups, profile, recurrence,
 )
 from backend.services import llm_service
 
@@ -66,6 +66,7 @@ app.include_router(admissions.router, prefix="/admissions", tags=["admissions"])
 app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
 app.include_router(follow_ups.router, prefix="/follow-ups", tags=["follow-ups"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
+app.include_router(recurrence.router, prefix="/recurrence", tags=["recurrence"])
 
 @app.get("/health/llm")
 def health_llm():
