@@ -12043,7 +12043,7 @@ function _renderMobileMedList(meds) {
           +     '<div style="margin-top:4px">' + takenTxt + '</div>'
           +   '</div>'
           +   '<button type="button" class="pill pill-info mono" '
-          +     'style="border:0;cursor:pointer;font:inherit;padding:6px 10px" '
+          +     'style="border:0;cursor:pointer;padding:3px 9px" '
           +     'title="現在服用，立刻打卡（PRN / 不分時段藥可重複打卡）" '
           +     'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\',\'other\')">'
           +     '打卡（現在服用）'
