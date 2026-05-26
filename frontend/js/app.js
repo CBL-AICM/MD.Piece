@@ -9212,6 +9212,51 @@ function getLatestEntry(metricId) {
   arr.sort((a, b) => new Date(b.recordedAt) - new Date(a.recordedAt));
   return arr[0];
 }
+/** 用實際紀錄畫迷你折線圖。
+ *  - 取該指標最近 N 天的紀錄，依時間升冪排序
+ *  - 雙欄（血壓）用 systolic = value
+ *  - <2 筆：只畫一個點（或空字串）
+ *  - 全部相同值：平直線
+ *  回傳 SVG 字串；無資料回傳 ''。
+ */
+function buildVitalSparklineSvg(metricId, color, days) {
+  var since = Date.now() - (days || 7) * 86400000;
+  var entries = getVitalEntries()
+    .filter(function(e) { return e.metricId === metricId && new Date(e.recordedAt).getTime() >= since; })
+    .map(function(e) {
+      return { t: new Date(e.recordedAt).getTime(), v: parseFloat(e.value) };
+    })
+    .filter(function(e) { return !isNaN(e.v); })
+    .sort(function(a, b) { return a.t - b.t; });
+  if (entries.length === 0) return '';
+
+  var W = 100, H = 24, padY = 4;
+  var minT = entries[0].t;
+  var maxT = entries[entries.length - 1].t;
+  var spanT = maxT - minT || 1;
+  var vals = entries.map(function(e) { return e.v; });
+  var minV = Math.min.apply(null, vals);
+  var maxV = Math.max.apply(null, vals);
+  var spanV = (maxV - minV) || 1;
+  function xOf(t) { return entries.length === 1 ? W / 2 : (t - minT) / spanT * W; }
+  function yOf(v) { return H - padY - (v - minV) / spanV * (H - padY * 2); }
+
+  if (entries.length === 1) {
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="width:100%;height:24px;margin-top:6px">'
+      + '<circle cx="' + (W / 2) + '" cy="' + (H / 2) + '" r="2.8" fill="' + color + '"/>'
+      + '</svg>';
+  }
+  var linePts = entries.map(function(e) { return xOf(e.t).toFixed(1) + ',' + yOf(e.v).toFixed(1); }).join(' ');
+  var areaPts = '0,' + H + ' ' + linePts + ' ' + W + ',' + H;
+  var lastX = xOf(entries[entries.length - 1].t).toFixed(1);
+  var lastY = yOf(entries[entries.length - 1].v).toFixed(1);
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="width:100%;height:24px;margin-top:6px">'
+    + '<polygon fill="' + color + '" fill-opacity="0.16" points="' + areaPts + '"/>'
+    + '<polyline fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="' + linePts + '"/>'
+    + '<circle cx="' + lastX + '" cy="' + lastY + '" r="2.4" fill="' + color + '"/>'
+    + '</svg>';
+}
+
 function calculateBMI() {
   const w = getLatestEntry('weight'), h = getLatestEntry('height');
   if (!w || !h) return null;
@@ -9260,13 +9305,7 @@ function vitals() {
       +   '<div class="vital-card-head"><i data-lucide="activity"></i><span class="lbl">' + escapeHtml(m.label || m.id) + '</span></div>'
       +   '<div class="vital-card-val">' + escapeHtml(String(val)) + '<span class="vital-card-unit">' + escapeHtml(unit) + '</span></div>'
       +   '<div class="vital-card-meta">' + (lastTime ? '最後紀錄 ' + lastTime : '尚無紀錄') + '</div>'
-      +   (latest
-          ? '<svg viewBox="0 0 100 24" preserveAspectRatio="none" style="width:100%;height:24px;margin-top:6px">'
-            + '<polygon fill="' + color + '" fill-opacity="0.16" points="0,24 0,12 16,14 32,9 48,16 64,11 80,17 100,13 100,24"/>'
-            + '<polyline fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,12 16,14 32,9 48,16 64,11 80,17 100,13"/>'
-            + '<circle cx="100" cy="13" r="2.4" fill="' + color + '"/>'
-            + '</svg>'
-          : '')
+      +   (latest ? buildVitalSparklineSvg(m.id, color, 7) : '')
       + '</div>';
   }).join('');
   if (!_mobileVitalsCards) {
