@@ -4,12 +4,14 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from backend.db import get_supabase
 from backend.services.llm_service import (
     build_patient_facing_system,
     call_claude,
     compute_patient_context,
+    stream_claude,
 )
 
 # Vercel lambda 上限 60s — LLM provider 全卡死的最壞情況可能逼近這個額度，
@@ -722,6 +724,102 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
         "period_label": period_label,
         "raw_data": counts,
     }
+
+
+# ── 整合摘要串流端點（SSE，給 in-page live preview） ──────────
+#
+# 跟 /monthly 與 /patient-summary 拿到的是「同一份」整合摘要（共用
+# INTEGRATED_SUMMARY_PROMPT），差別只在這個端點是邊產邊送 token，前端可以
+# 看著文字一個字一個字長出來，不用乾等 30–45 秒。
+# PDF 下載仍走原本的非串流端點，這條只服務 in-page 即時預覽。
+
+
+def _sse(payload: dict) -> str:
+    """把 dict 包成 SSE event 一行。ensure_ascii=False 才能讓中文直接走在 wire 上。"""
+    return "data: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
+
+
+@router.get("/{patient_id}/integrated-summary/stream")
+def stream_integrated_summary(
+    patient_id: str,
+    days: int | None = Query(None, ge=1, le=365),
+):
+    """整合摘要 SSE 串流。事件型別：
+      - meta   ：第一個事件，含 raw_data / days / period_label
+      - chunk  ：每個 LLM 文字片段（含 text 欄位）
+      - done   ：最後一個事件（source: ai / no_data）
+      - error  ：串流中失敗（含 detail）
+    """
+    data_summary, counts, has_data, days, period_label = _collect_period_summary(
+        patient_id, days=days
+    )
+
+    # 沒資料就直接送 meta + fallback chunk + done，不打 LLM
+    if not has_data:
+        fallback_text = (
+            f"## 一、主訴（病人視角）\n\n"
+            f"醫師您好，{period_label}我有開始用 MD.Piece 記錄，"
+            f"但這段期間其實沒有特別嚴重的不舒服，整體還算平穩。\n\n"
+            f"## 二、整合判讀（資料彙整）\n\n"
+            f"- 本期間無顯著紀錄，缺乏足以做整合判讀的資料\n\n"
+            f"## 三、趨勢與預測\n\n"
+            f"- 目前資料還不足以判斷走向，需要更多每日紀錄\n\n"
+            f"## 四、風險訊號與鑑別參考\n\n"
+            f"- 本期間無顯著風險訊號\n\n"
+            f"## 五、想請醫師確認與建議追蹤\n\n"
+            f"**想請醫師確認的事：**\n"
+            f"- 我想請教醫師目前的狀況下，下次回診大概多久比較合適？\n"
+            f"- 有沒有什麼日常需要特別注意的，例如哪些症狀出現要立刻就醫？\n\n"
+            f"**建議追蹤項目：**\n"
+            f"- 建議建立每日紀錄習慣（症狀、情緒、用藥），讓下次回診有更完整的資料\n"
+        )
+
+        def empty_gen():
+            yield _sse({
+                "type": "meta",
+                "raw_data": counts,
+                "days": days,
+                "period_label": period_label,
+                "has_data": False,
+            })
+            yield _sse({"type": "chunk", "text": fallback_text})
+            yield _sse({"type": "done", "source": "no_data"})
+
+        return StreamingResponse(
+            empty_gen(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    def event_gen():
+        # 先把 meta 推出去（前端立刻可以顯示「症狀 N 筆、情緒 N 次…」骨架）
+        yield _sse({
+            "type": "meta",
+            "raw_data": counts,
+            "days": days,
+            "period_label": period_label,
+            "has_data": True,
+        })
+        try:
+            for chunk in stream_claude(INTEGRATED_SUMMARY_PROMPT, data_summary):
+                if chunk:
+                    yield _sse({"type": "chunk", "text": chunk})
+            yield _sse({"type": "done", "source": "ai"})
+        except Exception as e:
+            logger.error(f"Integrated summary stream failed: {e}")
+            yield _sse({"type": "error", "detail": str(e), "source": "error"})
+
+    return StreamingResponse(
+        event_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── 心情 × 用藥改善 相關性 ──────────────────────────────────

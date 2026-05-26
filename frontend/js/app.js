@@ -2053,6 +2053,120 @@ function loadPrevisitPage() {
     });
 
   var days = (typeof getReportDays === 'function') ? getReportDays() : 30;
+  previsitStreamReport(pid, days);
+}
+
+// 用 SSE 串流接整合摘要 — 一個字一個字長出來，回答「到底有沒有內容」的疑問。
+// 串流接不通（HTTP 錯誤、瀏覽器不支援 ReadableStream）就退回 /monthly 非串流端點。
+function previsitStreamReport(pid, days) {
+  var bodyEl = document.getElementById('pv-report-body');
+  var statsEl = document.getElementById('pv-stats');
+  var srcEl = document.getElementById('pv-report-source');
+
+  var url = API + '/reports/' + encodeURIComponent(pid) + '/integrated-summary/stream?days=' + days;
+
+  // 初始 loading 文字 — 等收到第一個 chunk 才換成實際內容
+  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…（資料整合與 AI 撰寫，會邊寫邊顯示）</p>';
+  if (srcEl) srcEl.textContent = '連線中…';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  // 串流期間累積的內容 — 也同時寫進 _previsitData.report，PDF 下載走另一條路不受影響
+  var buffer = '';
+  var meta = null;
+  var gotAny = false;
+
+  if (!window.fetch || !window.ReadableStream) {
+    previsitFallbackToMonthly(pid, days);
+    return;
+  }
+
+  fetch(url, { headers: { 'Accept': 'text/event-stream' } })
+    .then(function(resp) {
+      if (!resp.ok || !resp.body) throw new Error('stream not available: HTTP ' + resp.status);
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder('utf-8');
+      var sseBuffer = '';
+
+      function handleEvent(line) {
+        if (!line.startsWith('data:')) return;
+        var payload;
+        try { payload = JSON.parse(line.slice(line.indexOf(':') + 1).trim()); }
+        catch (e) { return; }
+
+        if (payload.type === 'meta') {
+          meta = payload;
+          _previsitData.report = {
+            patient_id: pid,
+            report: '',
+            raw_data: payload.raw_data || {},
+            period_label: payload.period_label || '',
+            days: payload.days || days,
+            source: 'streaming',
+            generated_at: new Date().toISOString(),
+          };
+          previsitRenderStats(statsEl, payload.raw_data || {});
+          if (srcEl) srcEl.textContent = 'MD.Piece 撰寫中…';
+        } else if (payload.type === 'chunk') {
+          gotAny = true;
+          buffer += String(payload.text || '');
+          if (_previsitData.report) _previsitData.report.report = buffer;
+          if (bodyEl) bodyEl.innerHTML = markdownToHtml(buffer);
+        } else if (payload.type === 'done') {
+          if (_previsitData.report) {
+            _previsitData.report.source = payload.source || 'ai';
+            _previsitData.report.generated_at = new Date().toISOString();
+          }
+          if (srcEl) srcEl.textContent = previsitSourceLabel(_previsitData.report);
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else if (payload.type === 'error') {
+          if (bodyEl) {
+            var prefix = gotAny ? markdownToHtml(buffer) + '<hr>' : '';
+            bodyEl.innerHTML = prefix +
+              '<p class="pv-error"><i data-lucide="alert-triangle"></i> 撰寫中發生錯誤：' +
+              escapeHtml(String(payload.detail || '請稍後再試')) + '</p>';
+          }
+          if (srcEl) srcEl.textContent = '撰寫失敗';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+      }
+
+      function pump() {
+        return reader.read().then(function(result) {
+          if (result.done) {
+            // 串到結尾還沒收到任何 chunk → 視為失敗，退回非串流
+            if (!gotAny) previsitFallbackToMonthly(pid, days);
+            return;
+          }
+          sseBuffer += decoder.decode(result.value, { stream: true });
+          // SSE 用空行分隔事件；可能跨 chunk，保留最後不完整那段在 buffer 中
+          var parts = sseBuffer.split('\n\n');
+          sseBuffer = parts.pop() || '';
+          parts.forEach(function(ev) {
+            // 一個 event 可能含多行（例如 event: name + data: …）— 這支 backend 只送 data:
+            ev.split('\n').forEach(handleEvent);
+          });
+          return pump();
+        });
+      }
+      return pump();
+    })
+    .catch(function(err) {
+      console.warn('previsit stream failed, falling back to /monthly:', err);
+      previsitFallbackToMonthly(pid, days);
+    });
+}
+
+function previsitRenderStats(statsEl, raw) {
+  if (!statsEl) return;
+  statsEl.innerHTML = ''
+    + previsitStatCard('scan-search', '症狀', raw.symptom_count, '筆')
+    + previsitStatCard('smile', '情緒', raw.emotion_count, '次')
+    + previsitStatCard('pill', '用藥', raw.medication_count, '種')
+    + previsitStatCard('stethoscope', '就診', raw.visit_count, '次');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function previsitFallbackToMonthly(pid, days) {
   fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly?days=' + days)
     .then(function(r) { return r.json(); })
     .then(function(data) {
