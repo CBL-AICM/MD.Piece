@@ -10926,6 +10926,21 @@ function medications() {
     +     '<i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--accent);position:relative;z-index:1"></i>'
     +   '</button>'
 
+    // 手動新增藥物（次要 CTA — 給臨時加藥、沒有藥袋的情境）
+    +   '<button class="ocr-hero-btn med-manual-btn" onclick="renderManualMedForm(\'\', \'請填寫藥物資訊（至少藥名必填）\', \'mobile-med-form-container\')">'
+    +     '<div style="width:44px;height:44px;border-radius:11px;background:var(--bg-soft);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border)">'
+    +       '<i data-lucide="pencil" style="width:20px;height:20px"></i>'
+    +     '</div>'
+    +     '<div style="flex:1">'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:5px">手動新增藥物 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.45">沒有藥袋？臨時加藥？直接輸入藥名與劑量</div>'
+    +     '</div>'
+    +     '<i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--text-dim)"></i>'
+    +   '</button>'
+
+    // 手動表單渲染目標（mobile）
+    +   '<div id="mobile-med-form-container"></div>'
+
     // 客製化說明卡（細）
     +   '<div class="med-tip-card">'
     +     '<i data-lucide="user-check"></i>'
@@ -12918,9 +12933,18 @@ function _afterBulkAdd(ok, dup, fail) {
   if (ok || dup) loadMedicationsPage();
 }
 
-function renderManualMedForm(rawText, hint) {
+function renderManualMedForm(rawText, hint, targetId) {
+  targetId = targetId || 'med-recognize-result';
+  var target = document.getElementById(targetId);
+  if (!target) return;
+  ['med-recognize-result', 'mobile-med-form-container'].forEach(function(id) {
+    if (id !== targetId) {
+      var other = document.getElementById(id);
+      if (other) other.innerHTML = '';
+    }
+  });
   var html =
-    '<div style="padding:12px;background:rgba(230,180,80,0.08);border-radius:var(--radius-sm);border:1px solid var(--warning)">' +
+    '<div data-med-form-target="' + targetId + '" style="padding:12px;background:rgba(230,180,80,0.08);border-radius:var(--radius-sm);border:1px solid var(--warning)">' +
       '<p style="color:var(--warning);margin:0 0 8px">' + escapeHtml(hint) + '</p>' +
       (rawText ? '<details style="margin-bottom:8px"><summary style="font-size:0.85rem;color:var(--text-muted);cursor:pointer">原始辨識文字（可複製參考）</summary><pre style="font-size:0.8rem;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow:auto">' + escapeHtml(rawText) + '</pre></details>' : '') +
       '<div style="display:grid;gap:8px">' +
@@ -12954,14 +12978,19 @@ function renderManualMedForm(rawText, hint) {
           '<textarea id="manual-med-instructions" rows="2" placeholder="例：避免與葡萄柚汁併用" style="width:100%;padding:8px;margin-top:4px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text);resize:vertical"></textarea></label>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
-        '<button class="primary" onclick="submitManualMed()">加入我的藥物</button>' +
-        '<button class="secondary" onclick="document.getElementById(\'med-recognize-result\').innerHTML=\'\'">取消</button>' +
+        '<button class="primary" onclick="submitManualMed(\'' + targetId + '\')">加入我的藥物</button>' +
+        '<button class="secondary" onclick="document.getElementById(\'' + targetId + '\').innerHTML=\'\'">取消</button>' +
       '</div>' +
     '</div>';
-  document.getElementById("med-recognize-result").innerHTML = html;
+  target.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  var firstInput = document.getElementById('manual-med-name');
+  if (firstInput) setTimeout(function() { firstInput.focus(); }, 200);
 }
 
-function submitManualMed() {
+function submitManualMed(targetId) {
+  targetId = targetId || 'med-recognize-result';
   var g = function(id) { var el = document.getElementById(id); return el ? (el.value || "").trim() : ""; };
   var name = g("manual-med-name");
   if (!name) { showToast("請至少填寫藥物名稱", "warning"); return; }
@@ -13004,15 +13033,17 @@ function submitManualMed() {
       if (!res.ok) {
         var msg = (res.data && (res.data.detail || res.data.message)) || ("HTTP " + res.status);
         showToast("加入失敗：" + msg, "error");
-        var box = document.getElementById("med-recognize-result");
-        box.insertAdjacentHTML("beforeend",
+        var box = document.getElementById(targetId);
+        if (box) box.insertAdjacentHTML("beforeend",
           '<p style="color:var(--danger);margin-top:8px;font-size:0.85rem">伺服器回應：' + msg + '</p>');
         return;
       }
       showToast("已加入藥物 ✓", "success");
-      document.getElementById("med-recognize-result").innerHTML =
-        '<p style="color:var(--success)">已成功加入「' + name + '」到我的藥物。</p>';
-      document.getElementById("med-photo-preview").innerHTML = "";
+      var resultBox = document.getElementById(targetId);
+      if (resultBox) resultBox.innerHTML =
+        '<p style="color:var(--success);padding:10px 12px;background:rgba(120,180,120,0.08);border-radius:var(--radius-sm);border:1px solid rgba(120,180,120,0.3)">已成功加入「' + escapeHtml(name) + '」到我的藥物。</p>';
+      var preview = document.getElementById("med-photo-preview");
+      if (preview) preview.innerHTML = "";
       loadMedicationsPage();
     })
     .catch(function(err) { showToast("加入失敗：" + (err && err.message || "網路錯誤"), "error"); });
