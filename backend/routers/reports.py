@@ -243,6 +243,16 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
         sb.table("medication_effects").select("*").eq("patient_id", patient_id)
         .gte("recorded_at", since).order("recorded_at", desc=True).execute().data or []
     ), [])
+    # Memo（病人寫給醫師看的話 / 自己的備忘）— for_doctor=true 的會放進報告
+    memos_data = _safe_query(lambda: (
+        sb.table("memos").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since).order("created_at", desc=True).execute().data or []
+    ), [])
+    # Labs（檢驗紀錄）
+    labs_data = _safe_query(lambda: (
+        sb.table("labs").select("*").eq("patient_id", patient_id)
+        .gte("recorded_at", since).order("recorded_at", desc=True).execute().data or []
+    ), [])
     # 個人檔案 — 慢性病、過敏、基本資料；給 LLM 做風險偵測的 context（不算「期間紀錄」所以不影響 has_data）
     profile_data = _safe_query(lambda: (
         sb.table("patient_profiles").select("*").eq("user_id", patient_id).limit(1).execute().data or []
@@ -255,7 +265,7 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
         .order("scheduled_date").limit(3).execute().data or []
     ), [])
 
-    has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data or diet_data or effects_data)
+    has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data or diet_data or effects_data or memos_data or labs_data)
     parts = [f"報告期間：{period_label}\n"]
 
     # 個人背景 — 給 LLM 做風險偵測（慢性病 + 過敏 + 年齡 + 性別）
@@ -465,6 +475,34 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
             if changes:
                 parts.append(f"    症狀變化：{changes[0]}")
 
+    # 病人 memo（特別是 for_doctor=true 的，是病人特別想跟醫師說的話）
+    doctor_memos = [m for m in memos_data if m.get("for_doctor")]
+    if doctor_memos:
+        parts.append(f"\n病人想跟醫師說的話（{len(doctor_memos)} 則 memo）：")
+        for m in doctor_memos[:10]:
+            d = (m.get("created_at") or "")[:10]
+            content = (m.get("content") or "").strip()
+            kind = m.get("kind") or "text"
+            if content:
+                parts.append(f"  - {d}：{content}")
+            elif kind == "photo":
+                parts.append(f"  - {d}：（照片，無文字說明）")
+
+    # 檢驗紀錄
+    if labs_data:
+        abnormal = [l for l in labs_data if l.get("status") in ("low", "high", "critical")]
+        parts.append(f"\n檢驗紀錄（{len(labs_data)} 筆，其中異常 {len(abnormal)} 筆）：")
+        status_label = {"low": "偏低", "high": "偏高", "critical": "嚴重異常",
+                        "normal": "正常", "unknown": "無法判讀"}
+        for l in labs_data[:10]:
+            d = (l.get("recorded_at") or "")[:10]
+            name = l.get("name") or ""
+            value = l.get("value") or ""
+            unit = l.get("unit") or ""
+            st = status_label.get(l.get("status") or "unknown", "未知")
+            unit_s = f" {unit}" if unit else ""
+            parts.append(f"  - {d} {name} {value}{unit_s}（{st}）")
+
     # 即將回診排程 — 給 LLM 知道病人下一步看哪一科
     if upcoming_fu:
         parts.append(f"\n即將回診（最近 {len(upcoming_fu)} 筆）：")
@@ -486,6 +524,8 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
         "visit_count": len(records_data),
         "diet_count": len(diet_data),
         "effect_count": len(effects_data),
+        "memo_count": len(memos_data),
+        "lab_count": len(labs_data),
     }
     return "\n".join(parts), counts, has_data, days, period_label
 
@@ -942,5 +982,134 @@ def wellness_correlation(patient_id: str, days: int | None = None):
         "paired_days": len(paired_x),
         "pearson_r": r,
         "interpretation": interpretation,
+    }
+
+
+# ── 歷史紀錄：每日所有紀錄整合，供「歷史紀錄」頁顯示 ────────────
+
+
+def _utc_to_local_day(utc_iso: str, tz_offset: int) -> str:
+    """UTC ISO → 使用者本地日 YYYY-MM-DD（tz_offset 是 JS 規格，台灣 = -480）。"""
+    if not utc_iso:
+        return ""
+    try:
+        s = utc_iso[:-1] + "+00:00" if utc_iso.endswith("Z") else utc_iso
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return (dt - timedelta(minutes=tz_offset)).date().isoformat()
+    except Exception:
+        return utc_iso[:10]
+
+
+@router.get("/{patient_id}/daily-log")
+def get_daily_log(
+    patient_id: str,
+    days: int = Query(14, ge=1, le=90, description="回看幾天（含今天）"),
+    tz_offset: int = Query(-480, ge=-840, le=840, description="JS Date.getTimezoneOffset()，台灣 = -480"),
+):
+    """歷史紀錄：每日所有紀錄合併（症狀／情緒／藥／飲食／memo／檢驗）。
+
+    每天回一張卡：counts 是該日各類型筆數，items 是 raw（前端要展開細節用）。
+    日期以使用者本地時區（tz_offset）為準。缺漏的日期不會出現在結果裡。
+    """
+    try:
+        sb = get_supabase()
+    except Exception as e:
+        logger.warning(f"daily-log DB offline: {e}")
+        return {"patient_id": patient_id, "days": days, "tz_offset": tz_offset,
+                "entries": [], "db_offline": True}
+
+    # 多查 1 天 buffer 避免本地切日後第 N 天最早紀錄被切掉
+    since = (datetime.now(timezone.utc) - timedelta(days=days + 1)).isoformat()
+    today_local = (datetime.utcnow() - timedelta(minutes=tz_offset)).date()
+    earliest_local = today_local - timedelta(days=days - 1)
+
+    symptoms = _safe_query(lambda: (
+        sb.table("symptoms_log").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since).order("created_at", desc=True).execute().data or []
+    ), [])
+    emotions = _safe_query(lambda: (
+        sb.table("emotions").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since).order("created_at", desc=True).execute().data or []
+    ), [])
+    med_logs = _safe_query(lambda: (
+        sb.table("medication_logs").select("*").eq("patient_id", patient_id)
+        .gte("taken_at", since).order("taken_at", desc=True).execute().data or []
+    ), [])
+    diet = _safe_query(lambda: (
+        sb.table("diet_records").select("*").eq("patient_id", patient_id)
+        .gte("eaten_at", since).order("eaten_at", desc=True).execute().data or []
+    ), [])
+    memos_data = _safe_query(lambda: (
+        sb.table("memos").select("*").eq("patient_id", patient_id)
+        .gte("created_at", since).order("created_at", desc=True).execute().data or []
+    ), [])
+    labs_data = _safe_query(lambda: (
+        sb.table("labs").select("*").eq("patient_id", patient_id)
+        .gte("recorded_at", since).order("recorded_at", desc=True).execute().data or []
+    ), [])
+
+    def _bucket(rows: list, ts_field: str, kind: str):
+        for r in rows:
+            day = _utc_to_local_day(r.get(ts_field) or "", tz_offset)
+            if not day:
+                continue
+            try:
+                d = datetime.fromisoformat(day).date()
+                if d < earliest_local or d > today_local:
+                    continue
+            except Exception:
+                continue
+            by_day.setdefault(day, {
+                "symptoms": [], "emotions": [], "medications": [],
+                "diet": [], "memos": [], "labs": [],
+            })[kind].append(r)
+
+    by_day: dict[str, dict] = {}
+    _bucket(symptoms, "created_at", "symptoms")
+    _bucket(emotions, "created_at", "emotions")
+    _bucket(med_logs, "taken_at", "medications")
+    _bucket(diet, "eaten_at", "diet")
+    _bucket(memos_data, "created_at", "memos")
+    _bucket(labs_data, "recorded_at", "labs")
+
+    entries = []
+    for day in sorted(by_day.keys(), reverse=True):
+        d = by_day[day]
+        # 服藥率
+        med_total = len(d["medications"])
+        med_taken = sum(1 for m in d["medications"] if m.get("taken"))
+        # 情緒平均
+        emo_scores = [e.get("score") for e in d["emotions"] if e.get("score") is not None]
+        emo_avg = round(sum(emo_scores) / len(emo_scores), 1) if emo_scores else None
+        # 異常檢驗數
+        lab_abnormal = sum(1 for l in d["labs"]
+                           if l.get("status") in ("low", "high", "critical"))
+        entries.append({
+            "date": day,
+            "counts": {
+                "symptoms": len(d["symptoms"]),
+                "emotions": len(d["emotions"]),
+                "medications_total": med_total,
+                "medications_taken": med_taken,
+                "diet": len(d["diet"]),
+                "memos": len(d["memos"]),
+                "labs": len(d["labs"]),
+                "lab_abnormal": lab_abnormal,
+            },
+            "summary": {
+                "emotion_avg": emo_avg,
+                "adherence_pct": round(med_taken / med_total * 100) if med_total else None,
+            },
+            "items": d,
+        })
+
+    return {
+        "patient_id": patient_id,
+        "days": days,
+        "tz_offset": tz_offset,
+        "entries": entries,
+        "total_days_with_records": len(entries),
     }
 

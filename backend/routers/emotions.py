@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, timezone
 
 from backend.db import get_supabase
 
@@ -10,6 +10,23 @@ SCORE_EMOJI = {1: "😢", 2: "😟", 3: "😐", 4: "🙂", 5: "😄"}
 router = APIRouter()
 
 # 情緒記錄 - 每日評分、靜默守護機制、心理危機偵測
+
+
+def _local_day_key(utc_iso: str, tz_offset: int) -> str:
+    """把 UTC ISO 轉成使用者本地日 YYYY-MM-DD。
+    tz_offset 是 JS Date.getTimezoneOffset() 規格（西側為正，台灣 = -480）。
+    本地 = UTC - tz_offset → 台灣等於 UTC + 8h。"""
+    if not utc_iso:
+        return ""
+    try:
+        s = utc_iso[:-1] + "+00:00" if utc_iso.endswith("Z") else utc_iso
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        local_dt = dt - timedelta(minutes=tz_offset)
+        return local_dt.date().isoformat()
+    except Exception:
+        return utc_iso[:10]
 
 
 class EmotionLog(BaseModel):
@@ -107,15 +124,19 @@ def check_silent_guardian(patient_id: str = Query(...)):
 def get_daily_mood(
     patient_id: str = Query(...),
     days: int = Query(30, ge=1, le=365, description="查詢最近幾天"),
+    tz_offset: int = Query(0, ge=-840, le=840, description="JS Date.getTimezoneOffset()，台灣 = -480。0 = UTC 切日（向後相容）"),
 ):
     """
     每日心情彙整：將同一天的多筆紀錄聚合為一筆，便於日曆/時間軸顯示。
 
     每日回傳：日期、平均分數（四捨五入）、最高/最低分數、表情符號、
     當日最後一則 note、紀錄筆數。缺漏的日期不會補零。
+
+    日期 key 用本地時區（依 tz_offset），避免台灣午夜後的紀錄被算到隔天。
     """
     sb = get_supabase()
-    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    # 多查 1 天 buffer，避免本地切日後第 N 天最早紀錄被切掉
+    since = (datetime.utcnow() - timedelta(days=days + 1)).isoformat()
     result = (
         sb.table("emotions")
         .select("*")
@@ -126,11 +147,21 @@ def get_daily_mood(
     )
     records = result.data or []
 
+    # 本地日的「期間下限」：今天往前推 days-1 天（含今天）
+    today_local = (datetime.utcnow() - timedelta(minutes=tz_offset)).date()
+    earliest_local = today_local - timedelta(days=days - 1)
+
     by_day: dict[str, list[dict]] = {}
     for r in records:
-        day = (r.get("created_at") or "")[:10]
+        day = _local_day_key(r.get("created_at") or "", tz_offset)
         if not day:
             continue
+        # 超出本地期間（buffer 帶到的舊資料）跳過
+        try:
+            if datetime.fromisoformat(day).date() < earliest_local:
+                continue
+        except Exception:
+            pass
         by_day.setdefault(day, []).append(r)
 
     daily = []
@@ -169,16 +200,17 @@ def get_daily_mood(
 def get_emotion_trend(
     patient_id: str = Query(...),
     days: int = Query(30),
+    tz_offset: int = Query(0, ge=-840, le=840, description="本地時區，0 = UTC（向後相容）"),
 ):
     """取得情緒趨勢資料（用於圖表）"""
     sb = get_supabase()
-    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    since = (datetime.utcnow() - timedelta(days=days + 1)).isoformat()
     result = sb.table("emotions").select("*").eq("patient_id", patient_id).gte("created_at", since).order("created_at").execute()
     records = result.data or []
 
     trend = [
         {
-            "date": r.get("created_at", "")[:10],
+            "date": _local_day_key(r.get("created_at", ""), tz_offset),
             "score": r.get("score"),
         }
         for r in records
