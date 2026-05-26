@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime, timedelta
 import json
 import logging
 
+from backend.db import get_supabase
 from backend.services.llm_service import (
     build_patient_facing_system,
     call_claude,
@@ -12,6 +14,30 @@ from backend.services.llm_service import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _persist_lab(patient_id: Optional[str], name: str, value: str,
+                 unit: Optional[str], status: str, normal_range: str,
+                 meaning: str, advice: str, see_doctor: bool, source: str) -> None:
+    """寫一筆檢驗紀錄到 Supabase。失敗不影響主流程（純記日誌）。"""
+    if not patient_id:
+        return
+    try:
+        sb = get_supabase()
+        sb.table("labs").insert({
+            "patient_id": patient_id,
+            "name": name,
+            "value": value,
+            "unit": unit,
+            "status": status,
+            "normal_range": normal_range,
+            "meaning": meaning,
+            "advice": advice,
+            "see_doctor": bool(see_doctor),
+            "source": source,
+        }).execute()
+    except Exception as e:
+        logger.warning(f"labs 寫入失敗（不影響回應）: {e}")
 
 # 報告數值解讀
 # 患者輸入任意檢驗項目（含罕見/免疫項目）+ 數值，
@@ -61,6 +87,7 @@ class LabCheckRequest(BaseModel):
     unit: Optional[str] = None
     age: Optional[int] = None
     sex: Optional[str] = None  # male | female | other
+    patient_id: Optional[str] = None  # 有帶 → 寫進 labs 表供歷史與診前報告使用
 
 
 class LabCheckResponse(BaseModel):
@@ -127,7 +154,7 @@ def check_lab_value(body: LabCheckRequest):
         data = json.loads(raw)
     except json.JSONDecodeError:
         logger.warning(f"Lab check returned non-JSON: {raw[:200]}")
-        return LabCheckResponse(
+        resp = LabCheckResponse(
             item=body.name,
             normal_range="無法解析",
             status="unknown",
@@ -136,8 +163,12 @@ def check_lab_value(body: LabCheckRequest):
             see_doctor=False,
             disclaimer="本結果僅供參考，請以實際檢驗單位與醫師判讀為準",
         )
+        _persist_lab(body.patient_id, body.name, body.value, body.unit,
+                     resp.status, resp.normal_range, resp.meaning,
+                     resp.advice, resp.see_doctor, "manual")
+        return resp
 
-    return LabCheckResponse(
+    resp = LabCheckResponse(
         item=data.get("item", body.name),
         normal_range=data.get("normal_range", "未知"),
         status=data.get("status", "unknown"),
@@ -146,6 +177,10 @@ def check_lab_value(body: LabCheckRequest):
         see_doctor=_coerce_bool(data.get("see_doctor"), default=False),
         disclaimer=data.get("disclaimer", "本結果僅供參考，請以實際檢驗單位與醫師判讀為準"),
     )
+    _persist_lab(body.patient_id, body.name, body.value, body.unit,
+                 resp.status, resp.normal_range, resp.meaning,
+                 resp.advice, resp.see_doctor, "manual")
+    return resp
 
 
 # ── 從照片一次解讀整份檢驗報告 ─────────────────────────────
@@ -157,6 +192,7 @@ _VALID_STATUSES = {"low", "normal", "high", "critical", "unknown"}
 class LabScanRequest(BaseModel):
     image_base64: str
     media_type: Optional[str] = "image/jpeg"
+    patient_id: Optional[str] = None  # 有帶 → 掃描出的每個項目都寫進 labs 表
 
 
 def _coerce_str(value, default: str = "") -> str:
@@ -230,6 +266,13 @@ def scan_lab_report(body: LabScanRequest):
     raw_items = result.get("items") or []
     items = [_normalize_scanned_item(it) for it in raw_items if isinstance(it, dict)]
 
+    # 持久化每個項目（若有帶 patient_id）
+    for it in items:
+        _persist_lab(body.patient_id, it.get("name", ""), it.get("value", ""),
+                     it.get("unit"), it.get("status", "unknown"),
+                     it.get("normal_range", ""), it.get("meaning", ""),
+                     it.get("advice", ""), it.get("see_doctor", False), "scan")
+
     return {
         "items": items,
         "summary": _summarize_status(items),
@@ -238,3 +281,31 @@ def scan_lab_report(body: LabScanRequest):
         "errors": result.get("errors", []),
         "disclaimer": "本判讀僅供參考，請以實際檢驗單位與醫師判讀為準",
     }
+
+
+# ── 歷史與摘要：歷史紀錄頁與診前報告會用 ─────────────────────
+
+
+@router.get("/list")
+def list_labs(
+    patient_id: str = Query(..., description="病患 ID"),
+    days: int = Query(90, ge=1, le=365, description="最近幾天"),
+    limit: int = Query(200, ge=1, le=1000),
+):
+    """列出病患的檢驗紀錄（最新優先）。"""
+    try:
+        sb = get_supabase()
+    except Exception as e:
+        logger.warning(f"labs/list DB offline: {e}")
+        return {"labs": [], "count": 0, "db_offline": True}
+
+    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    result = (
+        sb.table("labs").select("*")
+        .eq("patient_id", patient_id)
+        .gte("recorded_at", since)
+        .order("recorded_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return {"labs": result.data or [], "count": len(result.data or [])}

@@ -665,6 +665,76 @@ function memoSaveAll(arr) {
   catch (e) { showToast("儲存失敗，可能空間不足", "error"); }
 }
 
+// 後端同步：把 localStorage 既有 memo 推到 Supabase（用 client_id 去重），
+// 再把後端的 memo 拉回來 merge 進 local。診前報告才看得到病人寫的內容。
+// 失敗時靜默 fallback（純 local 模式），不卡使用者。
+var _memoSyncedOnce = false;
+
+function memoServerPayload(m) {
+  return {
+    patient_id: getStablePatientId(),
+    kind: m.photo ? "photo" : "text",
+    content: m.text || "",
+    photo_data: m.photo || null,
+    for_doctor: !!m.forDoctor,
+    client_id: m.id,
+  };
+}
+
+function memoFromServer(row) {
+  // 後端 _serialize() 已轉成扁平 shape；統一加 type/photo/text 對齊 local schema
+  return {
+    id: row.client_id || row.id,
+    serverId: row.id,
+    type: row.type || (row.photo ? "photo" : "text"),
+    photo: row.photo || null,
+    text: row.text || "",
+    forDoctor: !!row.forDoctor,
+    createdAt: row.createdAt || new Date().toISOString(),
+    updatedAt: row.updatedAt || null,
+  };
+}
+
+function memoSyncToServer() {
+  if (_memoSyncedOnce) return Promise.resolve();
+  var pid = getStablePatientId();
+  if (!pid) return Promise.resolve();
+  var local = memoLoad();
+  // Phase 1: push local → server (idempotent via client_id)
+  var push = local.length
+    ? fetch(API + '/memos/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: pid, memos: local.map(memoServerPayload) }),
+      }).catch(function(e) { console.warn('[memo] sync push failed', e); })
+    : Promise.resolve();
+
+  // Phase 2: pull server → merge into local（server 為主，但保留 local 還沒同步的新項）
+  return push.then(function() {
+    return fetch(API + '/memos/?patient_id=' + encodeURIComponent(pid)).then(function(r) {
+      if (!r.ok) throw new Error('pull HTTP ' + r.status);
+      return r.json();
+    });
+  }).then(function(data) {
+    var serverRows = (data && data.memos) || [];
+    var serverByCid = {};
+    serverRows.forEach(function(s) { if (s.client_id) serverByCid[s.client_id] = s; });
+    // local 端尚未存在於 server 的（純 local 加的）保留
+    var localOnly = local.filter(function(m) { return !serverByCid[m.id]; });
+    var merged = serverRows.map(memoFromServer).concat(localOnly);
+    // 依 createdAt 倒序
+    merged.sort(function(a, b) {
+      var ta = new Date(a.createdAt || 0).getTime();
+      var tb = new Date(b.createdAt || 0).getTime();
+      return tb - ta;
+    });
+    memoSaveAll(merged);
+    _memoSyncedOnce = true;
+  }).catch(function(e) {
+    console.warn('[memo] sync pull failed, staying in local-only mode', e);
+  });
+}
+
 function loadMemoPage() {
   _memoFilter = "all";
   _memoComposeMode = null;
@@ -672,6 +742,8 @@ function loadMemoPage() {
   _memoStagedPhotoCanvas = null;
   memoRenderList();
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+  // 第一次進 memo 頁面才同步（避免每次切頁都打後端）
+  memoSyncToServer().then(function() { memoRenderList(); });
 }
 
 function memoStartText() {
@@ -1098,6 +1170,28 @@ function memoSave() {
     });
   }
   memoSaveAll(memos);
+  // 同步到後端 — 失敗不影響 local，下次 loadMemoPage 還會 retry
+  var savedIdx = editingId
+    ? memos.findIndex(function(x) { return x.id === editingId; })
+    : 0;
+  if (savedIdx >= 0) {
+    var saved = memos[savedIdx];
+    fetch(API + '/memos/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(memoServerPayload(saved)),
+    }).then(function(r) { return r.json(); }).then(function(row) {
+      // 後端回傳的 server id 寫回 local，方便後續 patch/delete 直接打 server endpoint
+      if (row && row.id) {
+        var all = memoLoad();
+        var idx = all.findIndex(function(x) { return x.id === saved.id; });
+        if (idx >= 0) {
+          all[idx].serverId = row.id;
+          memoSaveAll(all);
+        }
+      }
+    }).catch(function(e) { console.warn('[memo] save sync failed', e); });
+  }
   memoCancelCompose();
   memoRenderList();
   showToast(editingId ? "已更新" : "已儲存", "success");
@@ -1131,9 +1225,16 @@ function memoEdit(id) {
 
 function memoDelete(id) {
   if (!confirm("確定要刪除這則 memo？")) return;
-  var memos = memoLoad().filter(function(m) { return m.id !== id; });
+  var all = memoLoad();
+  var target = all.find(function(m) { return m.id === id; });
+  var memos = all.filter(function(m) { return m.id !== id; });
   memoSaveAll(memos);
   memoRenderList();
+  // 同步刪後端（用 serverId 走 DELETE 端點）
+  if (target && target.serverId) {
+    fetch(API + '/memos/' + encodeURIComponent(target.serverId), { method: 'DELETE' })
+      .catch(function(e) { console.warn('[memo] delete sync failed', e); });
+  }
 }
 
 function memoOpenLightbox(id) {
@@ -1198,6 +1299,21 @@ function memoToggleDoctor(id) {
   m.forDoctor = !m.forDoctor;
   memoSaveAll(memos);
   memoRenderList();
+  // 同步 for_doctor 旗標到後端
+  if (m.serverId) {
+    fetch(API + '/memos/' + encodeURIComponent(m.serverId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ for_doctor: !!m.forDoctor }),
+    }).catch(function(e) { console.warn('[memo] toggle sync failed', e); });
+  } else {
+    // 還沒有 serverId（剛存還沒同步成功）→ 走 upsert
+    fetch(API + '/memos/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(memoServerPayload(m)),
+    }).catch(function(e) { console.warn('[memo] toggle upsert failed', e); });
+  }
 }
 
 function memoSetFilter(f) {
@@ -2208,7 +2324,7 @@ async function refreshPvTimeline(pid) {
 
   // 2. 雲端情緒（每日聚合）
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
+    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=14&tz_offset=' + new Date().getTimezoneOffset()).then(function(r){return r.json();});
     (em.daily || []).forEach(function(d) {
       if (!d || !d.date) return;
       var t = new Date(d.date + 'T12:00:00').getTime();
@@ -2953,7 +3069,7 @@ function showPage(page) {
     home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
-    followUps
+    followUps, history
   };
   // Page transition
   app.style.opacity = '0';
@@ -2991,6 +3107,7 @@ function showPage(page) {
     if (page === "admissions") loadAdmissionsPage();
     if (page === "timeline") loadTimelinePage();
     if (page === "followUps") loadFollowUpsPage();
+    if (page === "history") loadHistoryPage();
     // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
     if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
@@ -4148,12 +4265,11 @@ async function refreshNavBadges() {
     setBadge('medications', nm > 0 ? ('+' + nm) : '!', nm > 0 ? 'done' : 'todo');
   } catch (e) {}
 
-  // 情緒：後端 emotions/daily 的 date 用 UTC 切日，這裡保留 UTC todayKey 對齊；
-  // 待後端切到本地時區後可改用 todayISO（_localDay()）。
+  // 情緒：後端 emotions/daily 帶 tz_offset 後也用本地日切，跟其他紀錄一致
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
-    var todayUTC = new Date().toISOString().slice(0, 10);
-    var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
+    var tzo = new Date().getTimezoneOffset();
+    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1&tz_offset=' + tzo).then(function(r){return r.json();}).catch(function(){return{daily:[]};});
+    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
     var nc = d ? (d.count || 0) : 0;
     setBadge('emotions', nc > 0 ? ('+' + nc) : '!', nc > 0 ? 'done' : 'todo');
   } catch (e) {}
@@ -4249,11 +4365,11 @@ async function refreshTodayDigest() {
     }).length;
   } catch (e) {}
 
-  // 情緒 daily 聚合 — 後端 emotions/daily 用 UTC 切日，這裡 fallback 用 UTC todayKey
+  // 情緒 daily 聚合 — 後端用 tz_offset 切本地日，跟其他紀錄一致
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
-    var todayUTC = new Date().toISOString().slice(0, 10);
-    var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
+    var tzo2 = new Date().getTimezoneOffset();
+    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1&tz_offset=' + tzo2).then(function(r){return r.json();});
+    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
     moodCount = d ? (d.count || 0) : 0;
   } catch (e) {}
 
@@ -4326,8 +4442,8 @@ function removeUserTodo(id) {
 }
 async function _genAutoTodos() {
   var out = [];
-  // 此函數只用 todayISO 跟後端 emotions/daily 的 date 對比；後端用 UTC 切日所以這裡保留 UTC。
-  var todayISO = new Date().toISOString().slice(0, 10);
+  // todayISO 用本地日；後端 emotions/daily 也會帶 tz_offset 用本地日切，兩邊對齊
+  var todayISO = _localDay();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return out;
 
@@ -4371,7 +4487,8 @@ async function _genAutoTodos() {
 
   // 情緒：今天還沒打卡
   try {
-    var rr = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(x){return x.json();});
+    var tzo3 = new Date().getTimezoneOffset();
+    var rr = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1&tz_offset=' + tzo3).then(function(x){return x.json();});
     var daily = rr.daily || [];
     var today = daily.find(function(d) { return d.date === todayISO && d.count > 0; });
     if (!today) {
@@ -4787,6 +4904,7 @@ function home() {
       ['emotions',    'battery-charging',      'nav.emotions'],
       ['diet',        'utensils-crossed',      'nav.diet'],
       ['memo',        'sticky-note',           'nav.memo'],
+      ['history',     'calendar-clock',        'nav.history'],
       ['previsit',    'clipboard-check',       'nav.previsit'],
       ['education',   'book-heart',            'nav.education'],
       ['story',       'book-open',             'nav.story'],
@@ -4835,7 +4953,7 @@ function home() {
     { page: 'drugSearch',      icon: 'search',           title: _T('nav.drugSearch'),                  color: 'amber' },
     { page: 'diseaseSearch',   icon: 'stethoscope',      title: _T('nav.diseaseSearch'),               color: 'rose' },
     { page: 'education',       icon: 'book-heart',       title: _T('nav.education'),                   color: 'teal' },
-    { page: 'story',           icon: 'book-open',        title: _T('nav.story'),                       color: 'purple' },
+    { page: 'history',         icon: 'calendar-clock',   title: '歷史紀錄',                            color: 'mint' },
     { page: 'labs',            icon: 'trending-up',      title: _T('nav.labs'),                        color: 'mint' },
     { page: 'records',         icon: 'id-card',          title: _T('home.card.records.title'),         color: 'lavender' },
     { page: 'settings',        icon: 'settings',         title: _T('nav.settings'),                    color: 'amber' },
@@ -5308,7 +5426,7 @@ function loadHomePage() {
       if (el) el.innerHTML = '<p class="home-ov-empty">' + _T('home.med.error') + '</p>';
     });
 
-  fetch(API + '/emotions/daily?patient_id=' + pid + '&days=7')
+  fetch(API + '/emotions/daily?patient_id=' + pid + '&days=7&tz_offset=' + new Date().getTimezoneOffset())
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var el = document.getElementById('home-mood-summary');
@@ -7940,7 +8058,7 @@ function loadInpatientTrendSparklines() {
   _ipRefreshFeelingHint();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
+  fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7&tz_offset=' + new Date().getTimezoneOffset())
     .then(function(r) {
       var ct = r.headers.get('content-type') || '';
       if (!r.ok || ct.indexOf('json') === -1) throw new Error('non-json');
@@ -17793,6 +17911,8 @@ async function labsCheck() {
     if (unit) body.unit = unit;
     if (ageS) body.age = parseInt(ageS, 10);
     if (sex)  body.sex = sex;
+    // 帶 patient_id → 後端會 insert 到 labs 表，供「歷史紀錄」與診前報告使用
+    try { body.patient_id = getStablePatientId(); } catch (e) {}
 
     const res = await fetch(`${API}/labs/check`, {
       method: 'POST',
@@ -17847,10 +17967,12 @@ function handleLabPhoto(input) {
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
+    var scanBody = { image_base64: base64, media_type: mediaType };
+    try { scanBody.patient_id = getStablePatientId(); } catch (e) {}
     fetch(API + '/labs/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_base64: base64, media_type: mediaType })
+      body: JSON.stringify(scanBody)
     })
       .then(function(r) {
         return r.text().then(function(t) {
@@ -18515,7 +18637,7 @@ async function _moodFetch(days) {
   var pid = getStablePatientId();
   if (!pid) return null;
   try {
-    var res = await fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=' + days);
+    var res = await fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=' + days + '&tz_offset=' + new Date().getTimezoneOffset());
     if (!res.ok) return null;
     var data = await res.json();
     var daily = data.daily || [];
@@ -22982,6 +23104,204 @@ function _renderPiecesNearestFollowUp(fu) {
     + '</div>';
 }
 
+
+// ─── 歷史紀錄頁（每日所有紀錄合併卡） ─────────────────────
+// 跟「今日歸 0」是一體兩面：今日 UI 每天從 0 開始，過去的資料則統一在這裡看。
+// 資料來源：GET /reports/{pid}/daily-log?days=14&tz_offset=...
+// 後端用本地時區（tz_offset）切日，所以台灣晚上 11:30 打卡也會在「今天」這張卡，不會跑到明天。
+
+function history() {
+  return ''
+    + '<section class="page-app-hero">'
+    + '  <div class="page-app-hero-head">'
+    + '    <div>'
+    + '      <span class="page-app-hero-eyebrow">HISTORY · 歷史紀錄</span>'
+    + '      <h2 class="page-app-hero-title"><i data-lucide="calendar-clock"></i> 每日紀錄回顧</h2>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div class="page-app-hero-meta">每張卡是一天，數字是當日紀錄筆數；點開看細節。回溯區間預設 14 天。</div>'
+    + '</section>'
+    + '<div class="card" id="history-controls" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 14px">'
+    + '  <span style="color:var(--text-dim);font-size:.85rem">回看：</span>'
+    + '  <button class="chip active" data-history-range="7" onclick="historySetRange(7)">7 天</button>'
+    + '  <button class="chip" data-history-range="14" onclick="historySetRange(14)">14 天</button>'
+    + '  <button class="chip" data-history-range="30" onclick="historySetRange(30)">30 天</button>'
+    + '  <button class="chip" data-history-range="90" onclick="historySetRange(90)">90 天</button>'
+    + '</div>'
+    + '<div id="history-list" class="list-card" style="display:flex;flex-direction:column;gap:10px;margin-top:10px">'
+    + '  <div style="padding:20px;text-align:center;color:var(--text-muted)">載入中…</div>'
+    + '</div>';
+}
+
+var _historyRange = 14;
+
+function historySetRange(days) {
+  _historyRange = days;
+  document.querySelectorAll('[data-history-range]').forEach(function(b) {
+    b.classList.toggle('active', String(b.getAttribute('data-history-range')) === String(days));
+  });
+  loadHistoryPage();
+}
+
+function loadHistoryPage() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  var listEl = document.getElementById('history-list');
+  if (!listEl) return;
+  if (!pid) {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">尚未登入，無法載入歷史紀錄</div>';
+    return;
+  }
+  var tzo = new Date().getTimezoneOffset();
+  var url = API + '/reports/' + encodeURIComponent(pid)
+          + '/daily-log?days=' + _historyRange + '&tz_offset=' + tzo;
+  fetch(url).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(data) {
+    var entries = (data && data.entries) || [];
+    if (!entries.length) {
+      listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">'
+        + '近 ' + _historyRange + ' 天內沒有任何紀錄。打開首頁開始記錄今天吧！</div>';
+      return;
+    }
+    listEl.innerHTML = entries.map(historyRenderDayCard).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }).catch(function(e) {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--rose-deep)">'
+      + '載入失敗：' + escapeHtml(e.message || '未知錯誤') + '</div>';
+  });
+}
+
+function historyRenderDayCard(entry) {
+  var c = entry.counts || {};
+  var s = entry.summary || {};
+  var pills = [];
+  if (c.symptoms)    pills.push('<span class="pill pill-mute"><i data-lucide="activity" style="width:12px;height:12px"></i> 症狀 ' + c.symptoms + '</span>');
+  if (c.emotions)    pills.push('<span class="pill pill-mute"><i data-lucide="smile" style="width:12px;height:12px"></i> 情緒 ' + c.emotions + (s.emotion_avg ? '（平均 ' + s.emotion_avg + '）' : '') + '</span>');
+  if (c.medications_total) {
+    var mtxt = '藥物 ' + c.medications_taken + '/' + c.medications_total
+             + (s.adherence_pct != null ? '（' + s.adherence_pct + '%）' : '');
+    pills.push('<span class="pill pill-mute"><i data-lucide="pill" style="width:12px;height:12px"></i> ' + mtxt + '</span>');
+  }
+  if (c.diet)        pills.push('<span class="pill pill-mute"><i data-lucide="utensils" style="width:12px;height:12px"></i> 飲食 ' + c.diet + '</span>');
+  if (c.memos)       pills.push('<span class="pill pill-mute"><i data-lucide="sticky-note" style="width:12px;height:12px"></i> Memo ' + c.memos + '</span>');
+  if (c.labs)        pills.push('<span class="pill ' + (c.lab_abnormal ? 'pill-rose' : 'pill-mute') + '"><i data-lucide="flask-conical" style="width:12px;height:12px"></i> 檢驗 ' + c.labs + (c.lab_abnormal ? '（異常 ' + c.lab_abnormal + '）' : '') + '</span>');
+
+  if (!pills.length) {
+    pills.push('<span class="pill pill-mute">無紀錄</span>');
+  }
+
+  var dateLabel = historyFormatDate(entry.date);
+  var safeDate = escapeHtml(entry.date);
+  return ''
+    + '<details class="card history-day" style="padding:0">'
+    + '  <summary style="padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;list-style:none">'
+    + '    <div>'
+    + '      <strong style="font-size:1rem">' + escapeHtml(dateLabel) + '</strong>'
+    + '      <div style="color:var(--text-muted);font-size:.78rem;margin-top:2px">' + safeDate + '</div>'
+    + '    </div>'
+    + '    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + pills.join('') + '</div>'
+    + '  </summary>'
+    + '  <div style="padding:8px 16px 16px;border-top:1px solid var(--border-glass)">' + historyRenderDayDetail(entry) + '</div>'
+    + '</details>';
+}
+
+function historyFormatDate(iso) {
+  if (!iso) return '';
+  var todayISO = _localDay();
+  if (iso === todayISO) return '今天';
+  try {
+    var t = new Date(todayISO);
+    var d = new Date(iso);
+    var diff = Math.round((t - d) / 86400000);
+    if (diff === 1) return '昨天';
+    if (diff === 2) return '前天';
+    if (diff <= 7) return diff + ' 天前';
+  } catch (e) {}
+  return iso.replace(/^\d{4}-/, '');
+}
+
+function historyRenderDayDetail(entry) {
+  var items = entry.items || {};
+  var parts = [];
+
+  function section(title, icon, content) {
+    if (!content) return;
+    parts.push(''
+      + '<div style="margin-top:8px">'
+      + '  <div style="display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--text-dim);margin-bottom:4px">'
+      + '    <i data-lucide="' + icon + '" style="width:13px;height:13px"></i>' + escapeHtml(title)
+      + '  </div>'
+      + '  <div style="font-size:.88rem;color:var(--text)">' + content + '</div>'
+      + '</div>');
+  }
+
+  // 症狀
+  if (items.symptoms && items.symptoms.length) {
+    var symHtml = items.symptoms.map(function(s) {
+      var syms = s.symptoms || [];
+      var symText = Array.isArray(syms) ? syms.join('、') : String(syms);
+      return '<div>· ' + escapeHtml(symText) + '</div>';
+    }).join('');
+    section('症狀', 'activity', symHtml);
+  }
+
+  // 情緒
+  if (items.emotions && items.emotions.length) {
+    var emoHtml = items.emotions.map(function(e) {
+      var sc = e.score != null ? String(e.score) + ' 分' : '';
+      var note = e.note ? '：' + e.note : '';
+      return '<div>· ' + escapeHtml(sc + note) + '</div>';
+    }).join('');
+    section('情緒', 'smile', emoHtml);
+  }
+
+  // 藥物（taken vs missed）
+  if (items.medications && items.medications.length) {
+    var medHtml = items.medications.map(function(m) {
+      var taken = m.taken ? '✓ 已服' : '✗ 漏服';
+      var when = (m.taken_at || '').slice(11, 16);
+      return '<div>· ' + escapeHtml(taken) + ' ' + escapeHtml(when) + (m.notes ? '：' + escapeHtml(m.notes) : '') + '</div>';
+    }).join('');
+    section('藥物', 'pill', medHtml);
+  }
+
+  // 飲食
+  if (items.diet && items.diet.length) {
+    var mealLabel = { breakfast: '早', lunch: '午', dinner: '晚', snack: '點' };
+    var dietHtml = items.diet.map(function(d) {
+      var mt = mealLabel[d.meal_type] || d.meal_type || '?';
+      var when = (d.eaten_at || '').slice(11, 16);
+      return '<div>· ' + escapeHtml(mt) + '（' + escapeHtml(when) + '）：' + escapeHtml(d.foods || '') + '</div>';
+    }).join('');
+    section('飲食', 'utensils', dietHtml);
+  }
+
+  // Memo
+  if (items.memos && items.memos.length) {
+    var memoHtml = items.memos.map(function(m) {
+      var content = (m.content || '').slice(0, 80);
+      var tag = m.for_doctor ? '【給醫師】' : '【自己】';
+      var photo = m.kind === 'photo' && !content ? '（照片）' : '';
+      return '<div>· ' + escapeHtml(tag) + escapeHtml(content || photo) + '</div>';
+    }).join('');
+    section('Memo', 'sticky-note', memoHtml);
+  }
+
+  // 檢驗
+  if (items.labs && items.labs.length) {
+    var statusLabel = { low: '偏低', high: '偏高', critical: '嚴重異常', normal: '正常', unknown: '無法判讀' };
+    var labHtml = items.labs.map(function(l) {
+      var stCls = (l.status === 'low' || l.status === 'high' || l.status === 'critical') ? 'color:var(--rose-deep)' : '';
+      var st = statusLabel[l.status] || l.status || '';
+      var unit = l.unit ? ' ' + l.unit : '';
+      return '<div style="' + stCls + '">· ' + escapeHtml(l.name) + ' ' + escapeHtml(l.value + unit) + '（' + escapeHtml(st) + '）</div>';
+    }).join('');
+    section('檢驗', 'flask-conical', labHtml);
+  }
+
+  return parts.join('') || '<div style="color:var(--text-muted);font-size:.85rem">沒有更多細節</div>';
+}
 
 // ─── Service Worker ───────────────────────────────────────
 
