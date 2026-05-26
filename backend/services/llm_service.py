@@ -110,6 +110,13 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
     # Vercel lambda 上限 60s，所以 long-text 走 50s + 1 retry 的最壞案例
     # 需要呼叫端自己評估（藥/病百科沒有外層 bound，可以吃滿；reports
     # 則用 _call_claude_bounded 鎖 45s 不會放長 timeout）。
+    #
+    # 重要：Retry-After header 必須 cap 在小範圍內。Groq free tier 在重度
+    # rate-limit 時會回 Retry-After: 30~120s，若我們照睡，整個 lambda 60s
+    # 額度直接被 time.sleep 吃光 → 前端看 HTTP 000 + spinner 轉到死。
+    # 規則：Retry-After > 3s 視為「不值得在這個 lambda 內重試」，直接
+    # raise 走 fallback chain，由上層決定怎麼處理（fallback / 友善錯誤訊息）。
+    MAX_RETRY_WAIT_S = 3.0
     delays = [1.5]  # 一次 retry 機會
     effective_timeout = timeout if timeout is not None else 25.0
     for attempt in range(len(delays) + 1):
@@ -131,11 +138,19 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
         )
         if resp.status_code == 429 and attempt < len(delays):
             wait = delays[attempt]
-            # 優先用 server 給的 retry-after，沒有就 fallback 到 exponential backoff
             ra = resp.headers.get("retry-after")
             if ra:
                 try:
-                    wait = max(float(ra), wait)
+                    ra_val = float(ra)
+                    # 若 server 要求等更久且還在合理範圍內就照辦；
+                    # 超過 cap 就直接放棄，不浪費 lambda 額度。
+                    if ra_val > MAX_RETRY_WAIT_S:
+                        logger.warning(
+                            f"Groq 429 rate-limited，Retry-After={ra_val}s 超過 cap "
+                            f"{MAX_RETRY_WAIT_S}s — 放棄 retry 走 fallback"
+                        )
+                        resp.raise_for_status()  # 一定會 raise 429
+                    wait = max(ra_val, wait)
                 except ValueError:
                     pass
             logger.warning(f"Groq 429 rate-limited，等 {wait}s 後第 {attempt + 1} 次 retry")
