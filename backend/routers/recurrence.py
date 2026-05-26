@@ -135,7 +135,7 @@ def snapshot_recurrence(patient_id: str, min_level: str = Query("high")):
         "patient_id": patient_id,
         "alert_type": ALERT_TYPE,
         "severity": assessment["level"],
-        "title": f"{disease_name} 復發風險：{assessment['level']}",
+        "title": f"{disease_name} 風險評估：{assessment['level']}",
         "detail": "；".join(top["reasons"]) if top else "依過去紀錄評估為高風險",
         "metadata": {
             "score": assessment["score"],

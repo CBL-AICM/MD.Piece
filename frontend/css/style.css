@@ -3311,6 +3311,17 @@ html[data-mode="senior"] .tc-desc {
   width: 22px; height: 22px;
 }
 .home-recurrence-banner .rrb-body { flex: 1 1 auto; min-width: 0; }
+.home-recurrence-banner .rrb-tag {
+  display: inline-block;
+  margin: 0 0 4px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: rgba(0,0,0,0.08);
+}
 .home-recurrence-banner .rrb-head {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   font-size: 0.95rem; font-weight: 600;

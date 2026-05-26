@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>復發風險橫幅 — 預覽</title>
+<title>風險評估卡 — 預覽</title>
 <script src="https://unpkg.com/lucide@latest"></script>
 <style>
   :root { --text-muted: #6b7280; }
@@ -22,7 +22,7 @@
     background: #fff; font-size: 0.8rem; color: var(--text-muted);
   }
 
-  /* ─── 復發風險橫幅樣式（與 style.css 同步） ─── */
+  /* ─── 風險評估卡樣式（與 style.css 同步） ─── */
   .home-recurrence-banner {
     display: flex; gap: 12px; align-items: flex-start;
     padding: 14px 16px; border-radius: 12px; margin: 0 0 14px;
@@ -40,6 +40,17 @@
     width: 22px; height: 22px;
   }
   .home-recurrence-banner .rrb-body { flex: 1 1 auto; min-width: 0; }
+  .home-recurrence-banner .rrb-tag {
+    display: inline-block;
+    margin: 0 0 4px;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: rgba(0,0,0,0.08);
+  }
   .home-recurrence-banner .rrb-head {
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
     font-size: 0.95rem; font-weight: 600;
@@ -77,10 +88,10 @@
 </head>
 <body>
 
-<h1>復發風險橫幅 — 依登入疾病 + 日常紀錄</h1>
+<h1>風險評估卡 — 依登入疾病 + 日常紀錄</h1>
 <p class="note">
   讀患者 <code>patient_profiles.current_disease</code> / <code>conditions</code> 對到內建疾病字典，
-  搭配 <code>symptoms_log</code> + <code>medication_logs</code> + <code>emotions</code> 計算復發風險。<br>
+  搭配 <code>symptoms_log</code> + <code>medication_logs</code> + <code>emotions</code> 計算復發風險分數，呈現為「風險評估卡」。<br>
   發作型疾病（氣喘 / 偏頭痛 / 腸躁症 / 痛風 / 過敏性鼻炎）看症狀頻率與加速；
   精神型疾病（憂鬱症 / 焦慮症）看情緒連續低落天數。
   對不到字典的疾病 → fallback 到通用症狀聚類。<br>
@@ -95,9 +106,10 @@
 <div class="home-recurrence-banner rrb-medium">
   <div class="rrb-icon"><i data-lucide="alert-circle"></i></div>
   <div class="rrb-body">
+    <div class="rrb-tag">風險評估卡</div>
     <div class="rrb-head">
       <span class="rrb-level">注意</span>
-      <span class="rrb-title">「過敏性鼻炎」復發風險</span>
+      <span class="rrb-title">「過敏性鼻炎」風險評估</span>
       <span class="rrb-score">分數 20</span>
     </div>
     <ul class="rrb-reasons">
@@ -115,9 +127,10 @@
 <div class="home-recurrence-banner rrb-high">
   <div class="rrb-icon"><i data-lucide="alert-triangle"></i></div>
   <div class="rrb-body">
+    <div class="rrb-tag">風險評估卡</div>
     <div class="rrb-head">
       <span class="rrb-level">高風險</span>
-      <span class="rrb-title">「氣喘」復發風險</span>
+      <span class="rrb-title">「氣喘」風險評估</span>
       <span class="rrb-score">分數 60</span>
     </div>
     <ul class="rrb-reasons">
@@ -137,9 +150,10 @@
 <div class="home-recurrence-banner rrb-critical">
   <div class="rrb-icon"><i data-lucide="siren"></i></div>
   <div class="rrb-body">
+    <div class="rrb-tag">風險評估卡</div>
     <div class="rrb-head">
       <span class="rrb-level">緊急</span>
-      <span class="rrb-title">「憂鬱症」復發風險</span>
+      <span class="rrb-title">「憂鬱症」風險評估</span>
       <span class="rrb-score">分數 75</span>
     </div>
     <ul class="rrb-reasons">

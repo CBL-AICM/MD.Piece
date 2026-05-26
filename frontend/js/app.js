@@ -5571,13 +5571,15 @@ function renderRecurrenceBanner(pid) {
         ? '<span class="rrb-other">另 ' + otherCount + ' 項待留意</span>'
         : '';
       el.className = 'home-recurrence-banner rrb-' + lvl;
+      el.setAttribute('aria-label', '風險評估卡');
       el.hidden = false;
       el.innerHTML =
         '<div class="rrb-icon"><i data-lucide="' + icons[lvl] + '"></i></div>' +
         '<div class="rrb-body">' +
+        '  <div class="rrb-tag">風險評估卡</div>' +
         '  <div class="rrb-head">' +
         '    <span class="rrb-level">' + labels[lvl] + '</span>' +
-        '    <span class="rrb-title">' + escapeHtml(titlePrefix) + '復發風險</span>' +
+        '    <span class="rrb-title">' + escapeHtml(titlePrefix) + '風險評估</span>' +
         '    <span class="rrb-score">分數 ' + (data.score || 0) + '</span>' +
         '  </div>' +
         reasonHtml +
