@@ -95,9 +95,117 @@ DIET_FALLBACK = {
 }
 
 
+# 疾病 → 該避開的食物 + 原因。確定性對應表，避免把這種教科書級的查表丟給 LLM
+# 還可能漏掉或瞎掰。比對採子字串：list 內 key（例：「高血壓」）若出現在患者任一
+# diagnosis 字串中（例：「高血壓 stage 1」、「Hypertension（高血壓）」）即命中。
+# 用 list-of-tuple 而非 dict 是為了保持插入順序、避免每次回應順序跳動。
+DISEASE_FOOD_WARNINGS: List[tuple] = [
+    ("高血壓", {
+        "avoid": ["醃漬醬瓜 / 鹹蛋 / 鹹魚", "加工肉品（培根、香腸、火腿）", "泡麵與調理包湯底", "鹹味零食、洋芋片", "高湯包 / 雞精"],
+        "reason": "減少鈉攝取（每日 < 2300 mg），避免血壓升高、降低心臟與腎臟負擔",
+    }),
+    ("糖尿病", {
+        "avoid": ["含糖飲料（手搖、汽水、果汁）", "蛋糕 / 甜點 / 餅乾", "精製白米飯（建議換糙米或地瓜）", "蜜餞 / 果乾", "酒精"],
+        "reason": "避免血糖快速升高；含糖飲料是台灣糖友最常見的失控來源",
+    }),
+    ("高血脂", {
+        "avoid": ["內臟（豬肝、雞胗、腦）", "蛋黃過量（每日 > 1 顆）", "肥肉與油炸物", "椰子油 / 棕櫚油", "奶油酥皮類點心"],
+        "reason": "減少飽和脂肪與膽固醇，降低動脈硬化與心血管事件風險",
+    }),
+    ("痛風", {
+        "avoid": ["內臟（肝、腎、腦）", "海鮮（沙丁魚、蝦蟹、貝類）", "啤酒 / 烈酒", "濃肉湯與火鍋湯底", "含糖飲料（果糖會升尿酸）"],
+        "reason": "高普林與高果糖食物會讓血中尿酸升高、誘發痛風發作",
+    }),
+    ("洗腎", {
+        "avoid": ["楊桃（神經毒素禁忌）", "高鉀食物（香蕉、深綠葉菜、堅果）", "加工肉品 / 火鍋料（高磷）", "可樂等深色汽水", "過量水分（請遵醫囑限水）"],
+        "reason": "透析患者對鉀、磷、水分極敏感；楊桃對腎友是絕對禁忌",
+    }),
+    ("腎", {
+        "avoid": ["楊桃（神經毒素禁忌）", "高鉀食物（香蕉、深綠葉菜、果汁）", "加工食品（高磷）", "可樂等深色汽水", "湯與火鍋湯底（高鈉）"],
+        "reason": "減少鉀、磷、鈉與蛋白負擔，避免電解質失衡與惡化腎功能",
+    }),
+    ("胃食道逆流", {
+        "avoid": ["咖啡 / 濃茶", "巧克力", "辛辣 / 麻辣鍋", "油炸物", "酒精", "薄荷"],
+        "reason": "這些食物會讓下食道括約肌鬆弛或胃酸增加，加重火燒心",
+    }),
+    ("胃潰瘍", {
+        "avoid": ["辛辣食物", "酒精", "咖啡 / 濃茶", "碳酸飲料", "急性期避免粗硬高纖蔬菜"],
+        "reason": "避免刺激胃黏膜、減緩潰瘍癒合",
+    }),
+    ("肝", {
+        "avoid": ["酒精（一律避免）", "生海鮮（生蠔、生魚片）", "發霉食物 / 過期堅果", "加工肉品", "過量保健品 / 草藥"],
+        "reason": "酒精與黴菌毒素直接傷肝；肝功能不佳要避免生食感染風險",
+    }),
+    ("心臟", {
+        "avoid": ["高鈉食物（醃漬、加工肉）", "反式脂肪（酥皮、奶精）", "油炸物", "酒精過量", "含糖飲料"],
+        "reason": "減少血壓與血脂負擔，降低心血管事件風險",
+    }),
+    ("中風", {
+        "avoid": ["高鈉食物", "肥肉與內臟", "酒精", "含糖飲料"],
+        "reason": "控制血壓與血脂，預防二次中風",
+    }),
+    ("甲狀腺亢進", {
+        "avoid": ["海帶 / 紫菜 / 海藻", "高碘食鹽", "咖啡因（咖啡、濃茶）", "酒精"],
+        "reason": "高碘會加重亢進；咖啡因會加劇心悸與失眠",
+    }),
+    ("甲狀腺低下", {
+        "avoid": ["大量生十字花科蔬菜（生花椰菜、生高麗菜）", "過量大豆製品", "服藥前後 1 小時的咖啡 / 牛奶"],
+        "reason": "這些食物可能干擾甲狀腺荷爾蒙合成或影響藥物吸收",
+    }),
+    ("骨質疏鬆", {
+        "avoid": ["過量咖啡因（> 3 杯/天）", "高鈉食物", "酒精", "碳酸飲料"],
+        "reason": "這些會加速鈣質流失；補鈣同時要少這些",
+    }),
+    ("貧血", {
+        "avoid": ["飯後立刻喝茶 / 咖啡", "鈣片與鐵劑同時服用", "全麥麩皮（含植酸）大量併餐"],
+        "reason": "鞣酸、鈣與植酸會干擾鐵吸收，建議與鐵質食物分開 1-2 小時",
+    }),
+    ("失眠", {
+        "avoid": ["午後咖啡 / 茶", "晚餐後酒精", "辛辣或過油晚餐", "睡前大餐"],
+        "reason": "咖啡因半衰期長達 5-6 小時；酒精會打斷深層睡眠",
+    }),
+]
+
+
+def _build_warnings_from_diseases(diseases: List[str]) -> List[dict]:
+    """把患者登記的疾病字串對應到該避開的食物清單。
+
+    比對採子字串：DISEASE_FOOD_WARNINGS 的 key（例：「高血壓」）若出現在患者任一
+    diagnosis 字串中即命中。用 dict 去重 + 維持命中順序，避免同一規則因不同
+    diagnosis 字面（「高血壓」、「Hypertension（高血壓）第二期」）重複出現。
+    """
+    if not diseases:
+        return []
+    hits: dict = {}
+    for dx in diseases:
+        for key, payload in DISEASE_FOOD_WARNINGS:
+            if key in dx and key not in hits:
+                hits[key] = {
+                    "disease": key,
+                    "avoid": list(payload["avoid"]),
+                    "reason": payload["reason"],
+                }
+    return list(hits.values())
+
+
 def _patient_diagnoses(patient_id: str) -> List[str]:
-    """從 medical_records 撈該患者所有診斷字串（去重、保留順序）。"""
+    """彙整患者所有「登記過的疾病」字串（去重、保留發現順序）。
+
+    來源：
+      1. medical_records.diagnosis — 看診後寫入的正式診斷
+      2. patient_profiles.conditions / current_disease — 使用者在個人檔案
+         自行登記的慢性病與目前疾病（自由填、可能逗號 / 頓號 / 換行分隔）
+    """
     sb = get_supabase()
+    seen: set = set()
+    result: List[str] = []
+
+    def _add(s):
+        s = (s or "").strip()
+        if s and s not in seen:
+            seen.add(s)
+            result.append(s)
+
     try:
         rows = (
             sb.table("medical_records")
@@ -105,16 +213,28 @@ def _patient_diagnoses(patient_id: str) -> List[str]:
               .eq("patient_id", patient_id)
               .execute()
         )
-        seen, result = set(), []
         for r in (rows.data or []):
-            d = (r.get("diagnosis") or "").strip()
-            if d and d not in seen:
-                seen.add(d)
-                result.append(d)
-        return result
+            _add(r.get("diagnosis") or "")
     except Exception as e:
-        logger.warning(f"讀取病史失敗：{e}")
-        return []
+        logger.warning(f"讀取 medical_records 失敗：{e}")
+
+    try:
+        profile = (
+            sb.table("patient_profiles")
+              .select("conditions,current_disease")
+              .eq("user_id", patient_id)
+              .execute()
+        )
+        for r in (profile.data or []):
+            for field in ("conditions", "current_disease"):
+                raw = r.get(field) or ""
+                # 自由欄位可能用逗號、頓號、分號、換行分隔多項
+                for piece in re.split(r"[,，;；、\n\r]+", raw):
+                    _add(piece)
+    except Exception as e:
+        logger.warning(f"讀取 patient_profiles 疾病欄位失敗：{e}")
+
+    return result
 
 
 def _parse_diet_json(raw: str) -> dict:
@@ -134,8 +254,16 @@ def _parse_diet_json(raw: str) -> dict:
 
 @router.get("/guide/{patient_id}")
 def get_diet_guide(patient_id: str):
-    """根據患者病史 AI 生成個人化飲食指南。"""
+    """根據患者登記疾病生成飲食指南。
+
+    warnings（要避開的食物）走確定性查表 DISEASE_FOOD_WARNINGS — 食物禁忌
+    對應疾病是教科書級的查表問題，不該交給 LLM 還可能漏掉或瞎掰（Rule 5）；
+    確定性查表也讓沒連線 / 沒 API key 的環境照樣能正確顯示警告。
+    general_tips 與 meal_suggestions 仍透過 LLM 做個人化，失敗時退回 DIET_FALLBACK。
+    """
     diagnoses = _patient_diagnoses(patient_id)
+    warnings = _build_warnings_from_diseases(diagnoses)
+
     user_msg = (
         f"患者已知診斷：{', '.join(diagnoses) if diagnoses else '（尚無病史紀錄）'}\n"
         "請依規格產出飲食建議 JSON。"
@@ -158,6 +286,8 @@ def get_diet_guide(patient_id: str):
         for k, v in DIET_FALLBACK["daily_targets"].items():
             dt.setdefault(k, v)
         parsed["daily_targets"] = dt
+    # warnings 一律覆蓋成確定性版本（不採用 LLM 的回答）
+    parsed["warnings"] = warnings
     parsed["diagnoses"] = diagnoses
     return parsed
 
