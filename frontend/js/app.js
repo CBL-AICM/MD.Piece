@@ -2530,7 +2530,52 @@ var _PV_PDF_STYLE = ''
   + '  .rec-count { color: #6B7F92; font-size: 11.5px; font-weight: 400; margin-left: 6px; }'
   + '  .disclaimer { margin-top: 28px; padding: 12px 14px; border-top: 2px solid #d9d9d9; background: #fafafa; font-size: 11.5px; color: #555; line-height: 1.6; }'
   + '  .disclaimer p { margin: 0 0 6px; }'
-  + '  .disclaimer p:last-child { margin: 0; }';
+  + '  .disclaimer p:last-child { margin: 0; }'
+  // v6 整合摘要視覺：§〇 三大重點橘色醒目方塊 / 【紀錄】【AI 摘要】tag 化為 badge / §七 紫色「可參考方向」框
+  + '  .highlights { background: #fef3c7; border-left: 4px solid #d97706; padding: 10px 14px; margin: 10px 0; border-radius: 4px; }'
+  + '  .highlights h2 { border: none; margin: 0 0 6px; color: #92400e; font-size: 14px; padding: 0; }'
+  + '  .highlights ul { margin: 0; padding-left: 20px; }'
+  + '  .highlights li { font-size: 13px; color: #451a03; margin-bottom: 3px; }'
+  + '  .badge-record { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }'
+  + '  .badge-ai { display: inline-block; background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }'
+  + '  .referral-section { background: #f5f3ff; border-left: 3px solid #8b5cf6; padding: 12px 16px; border-radius: 4px; margin-top: 8px; }'
+  + '  .referral-section p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.7; }'
+  + '  .referral-section p:last-child { margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed #d4d4d8; color: #6b21a8; font-size: 12.5px; font-style: italic; }'
+  + '  .referral-section strong { color: #6b21a8; }';
+
+// ── v6 整合摘要 markdown 後處理 ────────────────────────────
+//
+// LLM 輸出的 markdown 已含七段（§〇 ~ §六 + §七）與 inline tag 【紀錄】/【AI 摘要】，
+// 但 markdownToHtml 預設只渲染成普通 h2 + 文字。這個函式把：
+//   1. 【紀錄】/【AI 摘要】 inline 文字 → 有色 badge
+//   2. §〇 本次三大重點段（h2 + 緊接 ul）→ 橘色醒目方塊 .highlights
+//   3. §七 可參考方向段（h2 之後直到下一個 h2）→ 紫色 .referral-section
+// 失敗時（pattern 沒命中）原樣回傳，不阻塞 PDF 產出。
+
+function previsitProcessIntegratedSummaryHTML(html) {
+  if (!html || typeof html !== 'string') return html;
+
+  // 1) 把【紀錄】/【AI 摘要】tag 轉成 badge
+  html = html.replace(/【(紀錄|AI 摘要)】/g, function(_m, tag) {
+    var cls = tag === '紀錄' ? 'badge-record' : 'badge-ai';
+    return '<span class="' + cls + '">【' + tag + '】</span>';
+  });
+
+  // 2) §〇 三大重點 — 找「<h2>〇、本次三大重點 ...</h2><ul>...</ul>」整段，包進 .highlights
+  html = html.replace(
+    /(<h2>〇、本次三大重點[\s\S]*?<\/h2>\s*<ul>[\s\S]*?<\/ul>)/,
+    '<div class="highlights">$1</div>'
+  );
+
+  // 3) §七 可參考方向 — 從「<h2>七、可參考方向...</h2>」開始，吃到下一個 h2 或文件結尾
+  html = html.replace(
+    /(<h2>七、可參考方向[\s\S]*?<\/h2>)([\s\S]*?)(?=<h2|$)/,
+    '$1<div class="referral-section">$2</div>'
+  );
+
+  return html;
+}
+
 
 // ── 本期間紀錄一覽 ────────────────────────────────────────────
 // 從 backend raw_records（雲端紀錄）+ localStorage vitals 組出
@@ -2724,13 +2769,15 @@ function previsitRawRecordsHTML(rawRecords, days) {
 
 function previsitBuildPatientHTML(summary, counts, checklist, periodLabel, rawRecords, days) {
   var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
-  // 整合摘要回傳的是 markdown（## 一、主訴…等六段），用 markdownToHtml 渲染；
-  // 退而求其次（轉換器不在）才回到段落切分。
+  // 整合摘要回傳的是 markdown（v6: §〇 + §一~§七 共七段），用 markdownToHtml 渲染後
+  // 用 previsitProcessIntegratedSummaryHTML 把 §〇 highlight 方塊 / 【紀錄】【AI 摘要】
+  // badge / §七 紫色框做最後的視覺修飾。
   var bodyHtml = (typeof markdownToHtml === 'function')
     ? markdownToHtml(String(summary))
     : String(summary).split(/\n\s*\n/).map(function(p) {
         return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
       }).join('');
+  bodyHtml = previsitProcessIntegratedSummaryHTML(bodyHtml);
   var checklistHtml = checklist.length
     ? '<ol>' + checklist.map(function(t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ol>'
     : '<p style="color:#888">（暫無）</p>';
@@ -2768,6 +2815,7 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel, rawRecords
   var bodyHtml = (typeof markdownToHtml === 'function')
     ? markdownToHtml(String(reportMarkdown))
     : '<pre>' + escapeHtml(String(reportMarkdown)) + '</pre>';
+  bodyHtml = previsitProcessIntegratedSummaryHTML(bodyHtml);
   var statsHtml = ''
     + '<table class="stats"><tr>'
     +   '<td><strong>' + (counts.symptom_count || 0) + '</strong><span>症狀紀錄</span></td>'
