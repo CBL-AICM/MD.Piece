@@ -5538,8 +5538,8 @@ function home() {
     </div>`;
 }
 
-// 復發風險橫幅：拉 /recurrence/{pid}，依 level 上色 + 顯示主要原因。
-// low 隱藏，medium 黃、high 橘、critical 紅。點擊跳到症狀分析歷史。
+// 復發風險橫幅：讀 /recurrence/{pid}（依登入疾病 + 日常紀錄評估）
+// low 隱藏；medium 黃、high 橘、critical 紅。顯示首位疾病 + 前 2 條原因。
 function renderRecurrenceBanner(pid) {
   var el = document.getElementById('home-recurrence-banner');
   if (!el) return;
@@ -5554,13 +5554,21 @@ function renderRecurrenceBanner(pid) {
       var labels = { medium: '注意', high: '高風險', critical: '緊急' };
       var icons = { medium: 'alert-circle', high: 'alert-triangle', critical: 'siren' };
       var lvl = data.level;
-      var top = (data.clusters && data.clusters[0]) || {};
-      var cluster = top.cluster || '症狀';
-      var reasons = (data.reasons || []).slice(0, 2);
+      var diseases = data.diseases || [];
+      var top = diseases[0] || { name: '症狀', reasons: [] };
+      var titlePrefix = (top.source === 'fallback_symptom') ? '「' + top.name + '」症狀' : '「' + top.name + '」';
+      var reasons = (top.reasons || []).slice(0, 2);
       var reasonHtml = reasons.length
         ? '<ul class="rrb-reasons">' +
             reasons.map(function(r) { return '<li>' + escapeHtml(r) + '</li>'; }).join('') +
           '</ul>'
+        : '';
+      // 多疾病：附加「另 N 項待留意」chip
+      var otherCount = diseases.filter(function(d) {
+        return d !== top && d.level !== 'low';
+      }).length;
+      var otherChip = otherCount > 0
+        ? '<span class="rrb-other">另 ' + otherCount + ' 項待留意</span>'
         : '';
       el.className = 'home-recurrence-banner rrb-' + lvl;
       el.hidden = false;
@@ -5569,10 +5577,11 @@ function renderRecurrenceBanner(pid) {
         '<div class="rrb-body">' +
         '  <div class="rrb-head">' +
         '    <span class="rrb-level">' + labels[lvl] + '</span>' +
-        '    <span class="rrb-title">「' + escapeHtml(cluster) + '」復發風險</span>' +
+        '    <span class="rrb-title">' + escapeHtml(titlePrefix) + '復發風險</span>' +
         '    <span class="rrb-score">分數 ' + (data.score || 0) + '</span>' +
         '  </div>' +
         reasonHtml +
+        otherChip +
         '  <button class="rrb-cta" onclick="navigateTo(\'symptomsAnalyze\',null)">查看症狀紀錄</button>' +
         '</div>';
       if (window.lucide && typeof window.lucide.createIcons === 'function') {

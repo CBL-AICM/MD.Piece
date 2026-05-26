@@ -1,12 +1,8 @@
-"""復發風險 API
+"""復發風險 API（疾病導向）
 
-讀取患者歷史 → 規則引擎評估 → 回傳 JSON（給前端卡片）
-+ 可選把 high/critical 結果寫進 alerts 表（沿用既有 alerts pipeline，
-  自動觸發家屬通知 / 列表卡片，不另建通知系統）。
-
-對應 CLAUDE.md：
-- Rule 5（純規則）：分數計算交給 utils/recurrence_rules.py
-- Rule 7（不混用 pattern）：寫入動作直接用 alerts 表，與 alerts.py 同管線
+讀患者 patient_profiles 的「登入疾病」+ 日常 symptoms_log / medication_logs /
+emotions → 規則引擎評估 → 回 JSON 給前端；可選把高風險寫進既有 alerts 表
+（不另建通知系統，Rule 7）。
 """
 
 import logging
@@ -20,25 +16,28 @@ from backend.utils.recurrence_rules import assess_recurrence
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# 寫入 alerts 表時用的型別字串（同步於 alerts.py 的 VALID_TYPES）
 ALERT_TYPE = "recurrence_risk"
-# 同一患者在這個時間窗內若已有未 resolve 的 recurrence_risk alert，不重複寫
 DEDUPE_HOURS = 24
 
 
-def _load_patient_history(patient_id: str) -> tuple[list[dict], list[dict], list[dict]]:
-    """從 Supabase 拉患者的 symptoms_log / medication_logs / emotions。
+def _safe(fetch, name: str):
+    try:
+        return fetch() or []
+    except Exception as e:
+        logger.warning(f"讀 {name} 失敗（不阻擋評估）: {e}")
+        return []
 
-    任一表讀取失敗都不擋整體流程，回空 list（讓引擎照樣可算其他面向）。
+
+def _load_patient_history(patient_id: str) -> dict:
+    """從 Supabase 一次拉齊評估所需的所有資料。
+
+    Returns: {
+      symptoms: [...], medications: [...], emotions: [...],
+      current_disease: str | None, conditions: str | None,
+    }
+    任一表錯不擋整體流程。
     """
     sb = get_supabase()
-
-    def _safe(fetch, name):
-        try:
-            return fetch() or []
-        except Exception as e:
-            logger.warning(f"讀 {name} 失敗（不阻擋評估）: {e}")
-            return []
 
     symptoms = _safe(
         lambda: sb.table("symptoms_log").select("*").eq("patient_id", patient_id).execute().data,
@@ -52,17 +51,34 @@ def _load_patient_history(patient_id: str) -> tuple[list[dict], list[dict], list
         lambda: sb.table("emotions").select("*").eq("patient_id", patient_id).execute().data,
         "emotions",
     )
-    return symptoms, meds, emotions
+    # patient_profiles 的 PK 是 user_id（= patient_id 對於登入用戶；demo 模式下也共用）
+    profile_rows = _safe(
+        lambda: sb.table("patient_profiles").select("current_disease, conditions")
+        .eq("user_id", patient_id).execute().data,
+        "patient_profiles",
+    )
+    profile = profile_rows[0] if profile_rows else {}
+
+    return {
+        "symptoms": symptoms,
+        "medications": meds,
+        "emotions": emotions,
+        "current_disease": profile.get("current_disease"),
+        "conditions": profile.get("conditions"),
+    }
 
 
 @router.get("/{patient_id}")
 def get_recurrence_assessment(patient_id: str):
-    """讀取單一患者的復發風險評估（不寫入任何狀態）。
-
-    前端可直接拿來顯示「復發風險卡片」。
-    """
-    symptoms, meds, emotions = _load_patient_history(patient_id)
-    result = assess_recurrence(symptoms, meds, emotions)
+    """讀取單一患者的復發風險評估（不寫入任何狀態）。"""
+    h = _load_patient_history(patient_id)
+    result = assess_recurrence(
+        symptom_logs=h["symptoms"],
+        medication_logs=h["medications"],
+        emotion_logs=h["emotions"],
+        current_disease=h["current_disease"],
+        conditions=h["conditions"],
+    )
     result["patient_id"] = patient_id
     return result
 
@@ -71,15 +87,20 @@ def get_recurrence_assessment(patient_id: str):
 def snapshot_recurrence(patient_id: str, min_level: str = Query("high")):
     """評估並把 level >= min_level 的結果寫進 alerts 表。
 
-    - 預設 min_level=high：只有高風險才產生 alert，避免噪音。
-    - 24h 內已有未 resolve 的同型別 alert 則跳過（dedupe）。
-    - 回傳 {"assessment": {...}, "alert": {...} | None, "skipped_reason": str | None}
+    - 24h 內已有未 resolve 的同型別 alert 則跳過（dedupe）
+    - 回 {"assessment": ..., "alert": ... | None, "skipped_reason": ... | None}
     """
     if min_level not in ("medium", "high", "critical"):
         raise HTTPException(status_code=400, detail="min_level 必須是 medium|high|critical")
 
-    symptoms, meds, emotions = _load_patient_history(patient_id)
-    assessment = assess_recurrence(symptoms, meds, emotions)
+    h = _load_patient_history(patient_id)
+    assessment = assess_recurrence(
+        symptom_logs=h["symptoms"],
+        medication_logs=h["medications"],
+        emotion_logs=h["emotions"],
+        current_disease=h["current_disease"],
+        conditions=h["conditions"],
+    )
     assessment["patient_id"] = patient_id
 
     level_order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
@@ -108,17 +129,18 @@ def snapshot_recurrence(patient_id: str, min_level: str = Query("high")):
             "skipped_reason": f"{DEDUPE_HOURS}h 內已有未處理的同型別 alert",
         }
 
-    top = assessment["clusters"][0] if assessment["clusters"] else None
-    cluster_name = top["cluster"] if top else "症狀"
+    top = assessment["diseases"][0] if assessment["diseases"] else None
+    disease_name = top["name"] if top else "症狀"
     alert_row = {
         "patient_id": patient_id,
         "alert_type": ALERT_TYPE,
         "severity": assessment["level"],
-        "title": f"{cluster_name} 復發風險：{assessment['level']}",
-        "detail": "；".join(assessment["reasons"]) or "依過去症狀紀錄評估為高風險",
+        "title": f"{disease_name} 復發風險：{assessment['level']}",
+        "detail": "；".join(top["reasons"]) if top else "依過去紀錄評估為高風險",
         "metadata": {
             "score": assessment["score"],
-            "cluster": cluster_name,
+            "top_disease": disease_name,
+            "source": top["source"] if top else None,
             "data_summary": assessment["data_summary"],
         },
         "source": "recurrence_engine",

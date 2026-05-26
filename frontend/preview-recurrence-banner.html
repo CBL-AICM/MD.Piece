@@ -77,27 +77,31 @@
 </head>
 <body>
 
-<h1>復發風險橫幅 — 三種等級預覽</h1>
+<h1>復發風險橫幅 — 依登入疾病 + 日常紀錄</h1>
 <p class="note">
-  這個橫幅會自動掛在首頁 Layer 2（核心功能）正上方。<br>
-  level=<code>low</code> 時整個 hidden（不打擾使用者）；以下展示 medium / high / critical 三色實際呈現。
+  讀患者 <code>patient_profiles.current_disease</code> / <code>conditions</code> 對到內建疾病字典，
+  搭配 <code>symptoms_log</code> + <code>medication_logs</code> + <code>emotions</code> 計算復發風險。<br>
+  發作型疾病（氣喘 / 偏頭痛 / 腸躁症 / 痛風 / 過敏性鼻炎）看症狀頻率與加速；
+  精神型疾病（憂鬱症 / 焦慮症）看情緒連續低落天數。
+  對不到字典的疾病 → fallback 到通用症狀聚類。<br>
+  level=<code>low</code> 整個 hidden 不打擾。以下展示 medium / high / critical：
 </p>
 
 <!-- ─── medium ─────────────────────────────────────────── -->
 <h2>1. medium（注意） — score 20-44</h2>
 <div class="mock-context">
-  情境：過去 90 天「頭痛」發作 3 次，間隔尚未顯著縮短。
+  患者登入疾病：<b>過敏性鼻炎</b>。過去 30 天鼻塞／流鼻水 3 次。
 </div>
 <div class="home-recurrence-banner rrb-medium">
   <div class="rrb-icon"><i data-lucide="alert-circle"></i></div>
   <div class="rrb-body">
     <div class="rrb-head">
       <span class="rrb-level">注意</span>
-      <span class="rrb-title">「頭痛」復發風險</span>
+      <span class="rrb-title">「過敏性鼻炎」復發風險</span>
       <span class="rrb-score">分數 20</span>
     </div>
     <ul class="rrb-reasons">
-      <li>過去 90 天「頭痛」發作 3 次</li>
+      <li>過去 30 天「過敏性鼻炎」相關症狀發作 3 次</li>
     </ul>
     <button class="rrb-cta">查看症狀紀錄</button>
   </div>
@@ -106,20 +110,21 @@
 <!-- ─── high ───────────────────────────────────────────── -->
 <h2>2. high（高風險） — score 45-69</h2>
 <div class="mock-context">
-  情境：頭痛 4 次，最後一次間隔只剩 2 天（平均 15 天） → 即將復發訊號。
+  患者登入疾病：<b>氣喘</b>。過去 30 天咳嗽／呼吸困難 4 次，發作間隔縮短中。
 </div>
 <div class="home-recurrence-banner rrb-high">
   <div class="rrb-icon"><i data-lucide="alert-triangle"></i></div>
   <div class="rrb-body">
     <div class="rrb-head">
       <span class="rrb-level">高風險</span>
-      <span class="rrb-title">「頭痛」復發風險</span>
+      <span class="rrb-title">「氣喘」復發風險</span>
       <span class="rrb-score">分數 60</span>
     </div>
     <ul class="rrb-reasons">
-      <li>過去 90 天「頭痛」發作 4 次</li>
-      <li>間隔縮短（上次 2.0 天 vs 平均 15.0 天）</li>
+      <li>過去 30 天「氣喘」相關症狀發作 4 次（高頻）</li>
+      <li>發作間隔縮短（上次 2.5 天 vs 平均 9.0 天）</li>
     </ul>
+    <span class="rrb-other">另 1 項待留意</span>
     <button class="rrb-cta">查看症狀紀錄</button>
   </div>
 </div>
@@ -127,19 +132,19 @@
 <!-- ─── critical ───────────────────────────────────────── -->
 <h2>3. critical（緊急） — score ≥ 70</h2>
 <div class="mock-context">
-  情境：咳嗽 3 次嚴重度逐次上升（2→5→8）+ 14 天無服藥紀錄。
+  患者登入疾病：<b>憂鬱症</b>。情緒分數連續 12 天偏低 + 30 天內失眠 4 次。
 </div>
 <div class="home-recurrence-banner rrb-critical">
   <div class="rrb-icon"><i data-lucide="siren"></i></div>
   <div class="rrb-body">
     <div class="rrb-head">
       <span class="rrb-level">緊急</span>
-      <span class="rrb-title">「咳嗽」復發風險</span>
-      <span class="rrb-score">分數 80</span>
+      <span class="rrb-title">「憂鬱症」復發風險</span>
+      <span class="rrb-score">分數 75</span>
     </div>
     <ul class="rrb-reasons">
-      <li>過去 90 天「咳嗽」發作 3 次</li>
-      <li>嚴重度逐次上升（2→5→8）</li>
+      <li>情緒分數已連續 12 天偏低（≤2）</li>
+      <li>30 天內相關身體症狀（失眠／疲倦等）回報 4 次</li>
     </ul>
     <button class="rrb-cta">查看症狀紀錄</button>
   </div>

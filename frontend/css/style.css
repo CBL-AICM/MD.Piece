@@ -3336,6 +3336,14 @@ html[data-mode="senior"] .tc-desc {
   background: rgba(0,0,0,0.08); color: inherit;
 }
 .home-recurrence-banner .rrb-cta:hover { background: rgba(0,0,0,0.14); }
+.home-recurrence-banner .rrb-other {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: rgba(0,0,0,0.07);
+}
 
 .home-recurrence-banner.rrb-medium {
   background: #fef3c7; color: #78350f; border-color: #fcd34d;
