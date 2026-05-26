@@ -4,3 +4,4 @@ python-dotenv
 httpx
 python-multipart
 aiofiles
+PyJWT>=2.8.0
