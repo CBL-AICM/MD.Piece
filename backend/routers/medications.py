@@ -1,10 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query
+import re
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 import logging
 
 from backend.db import get_supabase
+from backend.security import current_user
 from backend.services.llm_service import (
     recognize_medicine_bag,
     extract_medications_from_ocr_text,
@@ -20,6 +23,31 @@ from backend.utils.medication_schedule import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _enforce_self_patient(patient_id: str, me: dict) -> str:
+    """Query/body 的 patient_id 必須等於 token.sub。"""
+    if not isinstance(patient_id, str) or not _ID_RE.fullmatch(patient_id):
+        raise HTTPException(status_code=400, detail="patient_id 格式不合法")
+    if me.get("id") != patient_id:
+        raise HTTPException(status_code=403, detail="不可存取他人藥物資料")
+    return patient_id
+
+
+def _assert_owns_medication(sb, medication_id: str, me: dict) -> dict:
+    """確認 medication_id 屬於 caller。回傳 med row。"""
+    if not isinstance(medication_id, str) or not _ID_RE.fullmatch(medication_id):
+        raise HTTPException(status_code=400, detail="medication_id 格式不合法")
+    res = sb.table("medications").select("*").eq("id", medication_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="找不到該藥物")
+    med = res.data[0]
+    if med.get("patient_id") != me.get("id"):
+        raise HTTPException(status_code=403, detail="不可存取他人藥物")
+    return med
 
 
 def _norm(s: str | None) -> str:
@@ -156,15 +184,16 @@ def _augment_with_schedule(meds: list[dict]) -> list[dict]:
 
 
 @router.get("/")
-def get_medications(patient_id: str = Query(...)):
+def get_medications(patient_id: str = Query(...), me: dict = Depends(current_user)):
     """取得患者的所有藥物，附加服藥時段標籤（早 / 中 / 晚 / 其他）。"""
+    pid = _enforce_self_patient(patient_id, me)
     sb = get_supabase()
-    result = sb.table("medications").select("*").eq("patient_id", patient_id).order("created_at", desc=True).execute()
+    result = sb.table("medications").select("*").eq("patient_id", pid).order("created_at", desc=True).execute()
     return {"medications": _augment_with_schedule(result.data or [])}
 
 
 @router.post("/")
-def create_medication(body: MedicationCreate):
+def create_medication(body: MedicationCreate, me: dict = Depends(current_user)):
     """
     手動新增藥物。
 
@@ -172,6 +201,7 @@ def create_medication(body: MedicationCreate):
     視為「拍到同一張藥單」的情境，直接回傳既有紀錄並標記 _deduped=True，
     避免清單裡塞滿同一顆藥。
     """
+    _enforce_self_patient(body.patient_id, me)
     sb = get_supabase()
     _ensure_patient_exists(sb, body.patient_id)
 
@@ -200,7 +230,7 @@ def create_medication(body: MedicationCreate):
 
 
 @router.put("/{medication_id}/schedule")
-def update_medication_schedule(medication_id: str, body: MedicationScheduleUpdate):
+def update_medication_schedule(medication_id: str, body: MedicationScheduleUpdate, me: dict = Depends(current_user)):
     """
     設定／清空單一藥物的非統一時刻自訂排程。
 
@@ -209,6 +239,7 @@ def update_medication_schedule(medication_id: str, body: MedicationScheduleUpdat
     讓 annotate_medication 退回去用 frequency 文字解析。
     """
     sb = get_supabase()
+    _assert_owns_medication(sb, medication_id, me)
     normalized = parse_custom_schedule(body.custom_schedule)
     try:
         result = (
@@ -234,7 +265,7 @@ MAX_CUSTOM_NOTE_LEN = 200
 
 
 @router.put("/{medication_id}/note")
-def update_medication_note(medication_id: str, body: MedicationNoteUpdate):
+def update_medication_note(medication_id: str, body: MedicationNoteUpdate, me: dict = Depends(current_user)):
     """
     設定／清空單一藥物的「我的用法」note（覆寫藥袋預設）。
 
@@ -243,6 +274,7 @@ def update_medication_note(medication_id: str, body: MedicationNoteUpdate):
     藥袋預設文字。
     """
     sb = get_supabase()
+    _assert_owns_medication(sb, medication_id, me)
     raw = body.custom_note
     if raw is None:
         normalized = None
@@ -267,9 +299,10 @@ def update_medication_note(medication_id: str, body: MedicationNoteUpdate):
 
 
 @router.delete("/{medication_id}")
-def delete_medication(medication_id: str):
+def delete_medication(medication_id: str, me: dict = Depends(current_user)):
     """刪除藥物（標記停用）"""
     sb = get_supabase()
+    _assert_owns_medication(sb, medication_id, me)
     result = sb.table("medications").update({"active": 0}).eq("id", medication_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該藥物")
@@ -279,7 +312,7 @@ def delete_medication(medication_id: str):
 # ── 藥袋拍照辨識 ──────────────────────────────────────────
 
 @router.post("/recognize")
-def recognize_from_photo(body: MedicationPhotoUpload):
+def recognize_from_photo(body: MedicationPhotoUpload, me: dict = Depends(current_user)):
     """
     上傳藥袋照片 → Claude Vision 辨識 → 自動建立藥物紀錄。
     回傳：
@@ -289,6 +322,7 @@ def recognize_from_photo(body: MedicationPhotoUpload):
       - raw_text: LLM 原始文字（方便 debug）
       - errors: 若有寫入錯誤，逐筆回報
     """
+    _enforce_self_patient(body.patient_id, me)
     try:
         if body.ocr_text and len(body.ocr_text.strip()) >= 20:
             # 前端已用 Tesseract.js 做完 OCR，直接抽結構化欄位（跳過影像 LLM）
@@ -371,7 +405,7 @@ def _load_med(sb, medication_id: str) -> dict | None:
 
 
 @router.get("/can-take")
-def can_take(patient_id: str = Query(...), medication_id: str = Query(...)):
+def can_take(patient_id: str = Query(...), medication_id: str = Query(...), me: dict = Depends(current_user)):
     """
     檢查現在是否能服這顆藥（前端在打卡前 call，可預覽風險）。
 
@@ -379,12 +413,11 @@ def can_take(patient_id: str = Query(...), medication_id: str = Query(...)):
     以及該藥物目前的 schedule（slots / interval_hours / is_other），
     讓前端決定要不要彈跳安全警告。
     """
+    pid = _enforce_self_patient(patient_id, me)
     sb = get_supabase()
-    med = _load_med(sb, medication_id)
-    if not med:
-        raise HTTPException(status_code=404, detail="找不到該藥物")
+    med = _assert_owns_medication(sb, medication_id, me)
     schedule = annotate_medication(med)
-    logs = _recent_logs(sb, patient_id, medication_id)
+    logs = _recent_logs(sb, pid, medication_id)
     safety = check_dose_safety(
         logs,
         interval_hours=schedule.get("interval_hours"),
@@ -399,7 +432,7 @@ def can_take(patient_id: str = Query(...), medication_id: str = Query(...)):
 
 
 @router.post("/log")
-def log_medication(body: MedicationLogCreate):
+def log_medication(body: MedicationLogCreate, me: dict = Depends(current_user)):
     """
     記錄服藥（打卡）。
 
@@ -413,13 +446,12 @@ def log_medication(body: MedicationLogCreate):
     跳過服藥（taken == False）不會被擋。
     寫入後若近 7 天服藥率 < 50% 自動建立 missed_medication 警示。
     """
+    _enforce_self_patient(body.patient_id, me)
     sb = get_supabase()
+    med = _assert_owns_medication(sb, body.medication_id, me)
     safety_payload: dict | None = None
 
     if body.taken:
-        med = _load_med(sb, body.medication_id)
-        if not med:
-            raise HTTPException(status_code=404, detail="找不到該藥物")
         schedule = annotate_medication(med)
         # 所有藥（早/中/晚 + 其他 + PRN）都做同一顆藥的劑量間隔檢查：
         #   - 早/中/晚（沒有 interval_hours）：用 6 小時一般預設
@@ -499,11 +531,13 @@ def get_medication_logs(
     patient_id: str = Query(...),
     medication_id: Optional[str] = Query(None),
     days: int = Query(30, description="查詢最近幾天"),
+    me: dict = Depends(current_user),
 ):
     """取得服藥日誌"""
+    pid = _enforce_self_patient(patient_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
-    query = sb.table("medication_logs").select("*").eq("patient_id", patient_id).gte("taken_at", since).order("taken_at", desc=True)
+    query = sb.table("medication_logs").select("*").eq("patient_id", pid).gte("taken_at", since).order("taken_at", desc=True)
     if medication_id:
         query = query.eq("medication_id", medication_id)
     result = query.execute()
@@ -513,11 +547,13 @@ def get_medication_logs(
 # ── 療效追蹤 ──────────────────────────────────────────────
 
 @router.post("/effects")
-def record_effect(body: EffectRecord):
+def record_effect(body: EffectRecord, me: dict = Depends(current_user)):
     """記錄藥物療效與副作用"""
+    _enforce_self_patient(body.patient_id, me)
     if body.effectiveness < 1 or body.effectiveness > 5:
         raise HTTPException(status_code=400, detail="effectiveness 必須在 1-5 之間")
     sb = get_supabase()
+    _assert_owns_medication(sb, body.medication_id, me)
     data = {
         "patient_id": body.patient_id,
         "medication_id": body.medication_id,
@@ -535,10 +571,12 @@ def record_effect(body: EffectRecord):
 def get_effects(
     patient_id: str = Query(...),
     medication_id: Optional[str] = Query(None),
+    me: dict = Depends(current_user),
 ):
     """取得療效紀錄"""
+    pid = _enforce_self_patient(patient_id, me)
     sb = get_supabase()
-    query = sb.table("medication_effects").select("*").eq("patient_id", patient_id).order("recorded_at", desc=True)
+    query = sb.table("medication_effects").select("*").eq("patient_id", pid).order("recorded_at", desc=True)
     if medication_id:
         query = query.eq("medication_id", medication_id)
     result = query.execute()
@@ -547,16 +585,8 @@ def get_effects(
 
 # ── 統計與圖表資料 ────────────────────────────────────────
 
-@router.get("/stats")
-def medication_stats(
-    patient_id: str = Query(...),
-    days: int = Query(30),
-):
-    """
-    取得藥物管理統計：服藥率、療效趨勢、各藥物狀態
-    用於前端折線圖與圖表
-    """
-    sb = get_supabase()
+def _compute_stats_data(sb, patient_id: str, days: int) -> dict:
+    """純資料計算，已由呼叫者完成 auth check。"""
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
 
     # 所有藥物
@@ -637,6 +667,18 @@ def medication_stats(
     }
 
 
+@router.get("/stats")
+def medication_stats(
+    patient_id: str = Query(...),
+    days: int = Query(30),
+    me: dict = Depends(current_user),
+):
+    """取得藥物管理統計：服藥率、療效趨勢、各藥物狀態。"""
+    pid = _enforce_self_patient(patient_id, me)
+    sb = get_supabase()
+    return _compute_stats_data(sb, pid, days)
+
+
 CHECK_IN_INTERVAL_DAYS = 3
 
 
@@ -644,6 +686,7 @@ CHECK_IN_INTERVAL_DAYS = 3
 def check_in_due(
     patient_id: str = Query(...),
     interval_days: int = Query(CHECK_IN_INTERVAL_DAYS, ge=1, le=30),
+    me: dict = Depends(current_user),
 ):
     """
     服藥追蹤提醒：每 interval_days（預設 3 天）至少問一次。
@@ -652,6 +695,7 @@ def check_in_due(
     判斷依據：medication_logs 的 taken_at 與 medication_effects 的 recorded_at 取最新者。
     若該病患有開立藥物但從未紀錄，視為立即到期。
     """
+    patient_id = _enforce_self_patient(patient_id, me)
     sb = get_supabase()
 
     meds = (
@@ -742,6 +786,7 @@ def check_in_due(
 def daily_improvement(
     patient_id: str = Query(...),
     days: int = Query(30, ge=1, le=365),
+    me: dict = Depends(current_user),
 ):
     """
     每日用藥改善：把每天的服藥率與療效平均值合成 improvement_score，
@@ -751,6 +796,7 @@ def daily_improvement(
     - 沒有任何資料的日期不會出現。
     - summary.trend：improving / declining / stable / insufficient_data。
     """
+    patient_id = _enforce_self_patient(patient_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
 
@@ -860,12 +906,15 @@ def daily_improvement(
 def generate_report(
     patient_id: str = Query(...),
     days: int = Query(30, description="報告涵蓋天數"),
+    me: dict = Depends(current_user),
 ):
     """
     產出回診藥物報告：統計數據 + AI 摘要
     供醫師參考藥物反應
     """
-    stats = medication_stats(patient_id=patient_id, days=days)
+    pid = _enforce_self_patient(patient_id, me)
+    sb = get_supabase()
+    stats = _compute_stats_data(sb, pid, days)
 
     if not stats["medications"]:
         return {"report": "此患者尚無藥物紀錄", "stats": stats}

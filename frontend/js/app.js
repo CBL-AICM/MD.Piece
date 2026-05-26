@@ -2033,7 +2033,7 @@ async function refreshPvTimeline(pid) {
   //    只統計「實際吃了」的（taken !== false），跳過 / 沒吃不算在 N 次內，
   //    否則回診報告會把「只是漏掉」的日子當成「完成 N 次」呈現
   try {
-    var ml = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
+    var ml = await apiFetch(API + '/medications/logs?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
     var byDay = {};
     (ml.logs || []).forEach(function(l) {
       if (!l || !l.taken_at) return;
@@ -3880,7 +3880,7 @@ async function refreshNavBadges() {
 
   // 藥物：今日 log 數
   try {
-    var ml = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{logs:[]};});
+    var ml = await apiFetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{logs:[]};});
     var nm = (ml.logs || []).filter(function(l) { return l && l.taken_at && _localDay(l.taken_at) === todayISO && l.taken !== false; }).length;
     setBadge('medications', nm > 0 ? ('+' + nm) : '!', nm > 0 ? 'done' : 'todo');
   } catch (e) {}
@@ -3980,7 +3980,7 @@ async function refreshTodayDigest() {
 
   // 用藥 log — 只算真的吃了的（taken !== false），跳過/沒吃不計入今日 KPI
   try {
-    var m = await fetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
+    var m = await apiFetch(API + '/medications/logs?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
     medCount = (m.logs || []).filter(function(l) {
       return l && l.taken !== false && _localDay(l.taken_at) === todayISO;
     }).length;
@@ -4091,7 +4091,7 @@ async function _genAutoTodos() {
 
   // 活躍藥物提醒（取前 3 個）
   try {
-    var r = await fetch(API + '/medications/?patient_id=' + pid).then(function(x){return x.json();});
+    var r = await apiFetch(API + '/medications/?patient_id=' + pid).then(function(x){return x.json();});
     var meds = (r.medications || []).filter(function(m) { return m.active !== 0; });
     meds.slice(0, 3).forEach(function(m) {
       out.push({
@@ -5049,7 +5049,7 @@ function loadHomePage() {
   // 同步今日 SOS 歷史 chip（門診版快速回報 bar 共用住院的 storage）
   if (typeof refreshInpatientSosHistory === 'function') refreshInpatientSosHistory();
 
-  fetch(API + '/medications/?patient_id=' + pid)
+  apiFetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var el = document.getElementById('home-med-summary');
@@ -5118,7 +5118,7 @@ function _updateMobileHomeMedsMini() {
   try {
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return;
-    fetch(API + '/medications/?patient_id=' + pid)
+    apiFetch(API + '/medications/?patient_id=' + pid)
       .then(function(r) { return r.ok ? r.json() : { medications: [] }; })
       .then(function(data) {
         var meds = ((data && data.medications) || []).filter(function(m) { return m.active !== 0; });
@@ -11068,9 +11068,9 @@ function loadMedicationsPage() {
   // 平行抓取「藥物清單」與「今日服藥次數」，兩者都到了再 render，
   // 避免 hero 顯示舊的 _medsTodayLogs 值。
   var todayISO = _localDay();
-  var pList = fetch(API + "/medications/?patient_id=" + _medsPatientId)
+  var pList = apiFetch(API + "/medications/?patient_id=" + _medsPatientId)
     .then(function(r) { return r.json(); });
-  var pLogs = fetch(API + "/medications/logs?patient_id=" + _medsPatientId + "&days=1")
+  var pLogs = apiFetch(API + "/medications/logs?patient_id=" + _medsPatientId + "&days=1")
     .then(function(r) { return r.json(); })
     .catch(function() { return { logs: [] }; });
   Promise.all([pList, pLogs])
@@ -11090,17 +11090,17 @@ function loadMedicationsPage() {
     })
     .catch(function() { showToast("載入藥物列表失敗", "error"); });
 
-  fetch(API + "/medications/stats?patient_id=" + _medsPatientId + "&days=30")
+  apiFetch(API + "/medications/stats?patient_id=" + _medsPatientId + "&days=30")
     .then(function(r) { return r.json(); })
     .then(function(data) { renderMedStats(data); })
     .catch(function() {});
 
-  fetch(API + "/medications/check-in/due?patient_id=" + _medsPatientId)
+  apiFetch(API + "/medications/check-in/due?patient_id=" + _medsPatientId)
     .then(function(r) { return r.json(); })
     .then(function(data) { renderMedCheckIn(data); })
     .catch(function() {});
 
-  fetch(API + "/medications/daily-improvement?patient_id=" + _medsPatientId + "&days=30")
+  apiFetch(API + "/medications/daily-improvement?patient_id=" + _medsPatientId + "&days=30")
     .then(function(r) { return r.json(); })
     .then(function(data) { renderMedImprovement(data); })
     .catch(function() {});
@@ -11501,7 +11501,7 @@ function saveMedSchedule() {
     return;
   }
   var payload = { custom_schedule: { entries: entries } };
-  fetch(API + '/medications/' + encodeURIComponent(st.medId) + '/schedule', {
+  apiFetch(API + '/medications/' + encodeURIComponent(st.medId) + '/schedule', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -11524,7 +11524,7 @@ function clearMedSchedule() {
   var st = window._medScheduleEditing;
   if (!st) return;
   if (!confirm('確定要清除自訂排程，回到藥袋預設（早/中/晚）嗎？')) return;
-  fetch(API + '/medications/' + encodeURIComponent(st.medId) + '/schedule', {
+  apiFetch(API + '/medications/' + encodeURIComponent(st.medId) + '/schedule', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ custom_schedule: null })
@@ -11619,7 +11619,7 @@ function saveMedNote() {
   var input = document.getElementById('med-note-input');
   if (!input) return;
   var value = String(input.value || '').trim();
-  fetch(API + '/medications/' + encodeURIComponent(medId) + '/note', {
+  apiFetch(API + '/medications/' + encodeURIComponent(medId) + '/note', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ custom_note: value || null })
@@ -11642,7 +11642,7 @@ function clearMedNote() {
   var medId = window._medNoteEditingId;
   if (!medId) return;
   if (!confirm('確定要清除自訂用法、回到藥袋預設？')) return;
-  fetch(API + '/medications/' + encodeURIComponent(medId) + '/note', {
+  apiFetch(API + '/medications/' + encodeURIComponent(medId) + '/note', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ custom_note: null })
@@ -11996,7 +11996,7 @@ async function deleteMedication(id, name) {
   var confirmMsg = _Tf('meds.card.delete.confirm', { name: name || _T('meds.card.unnamed') });
   if (!confirm(confirmMsg)) return;
   try {
-    var r = await fetch(API + '/medications/' + id, { method: 'DELETE' });
+    var r = await apiFetch(API + '/medications/' + id, { method: 'DELETE' });
     if (!r.ok) throw new Error('delete failed');
     if (typeof showToast === 'function') {
       showToast(_Tf('meds.card.delete.success', { name: name || _T('meds.card.unnamed') }), 'success');
@@ -12302,11 +12302,11 @@ async function _loadMedDetail(medId, med) {
   var pid = _medsPatientId || (typeof getStablePatientId === 'function' ? getStablePatientId() : null);
   if (!pid) return;
   // 三筆 fetch 同時起跑（30 天 logs / 全部 effects / 整體 stats）
-  var pLogs = fetch(API + '/medications/logs?patient_id=' + pid + '&medication_id=' + medId + '&days=30')
+  var pLogs = apiFetch(API + '/medications/logs?patient_id=' + pid + '&medication_id=' + medId + '&days=30')
     .then(function(r){return r.json();}).catch(function(){ return { logs: [] }; });
-  var pEffects = fetch(API + '/medications/effects?patient_id=' + pid + '&medication_id=' + medId)
+  var pEffects = apiFetch(API + '/medications/effects?patient_id=' + pid + '&medication_id=' + medId)
     .then(function(r){return r.json();}).catch(function(){ return { effects: [] }; });
-  var pStats = fetch(API + '/medications/stats?patient_id=' + pid + '&days=30')
+  var pStats = apiFetch(API + '/medications/stats?patient_id=' + pid + '&days=30')
     .then(function(r){return r.json();}).catch(function(){ return { medications: [] }; });
 
   var arr;
@@ -12674,7 +12674,7 @@ function _renderMedPreviewAndRecognize(dataUrl, mediaType) {
     }
     var body = { patient_id: _medsPatientId, image_base64: base64Data, media_type: mediaType };
     if (ocrText && ocrText.length >= 20) body.ocr_text = ocrText;
-    return fetch(API + "/medications/recognize", {
+    return apiFetch(API + "/medications/recognize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
@@ -12852,7 +12852,7 @@ function submitRecognizedOne(btn) {
   var body = _collectRecCard(card);
   if (!body.name) { showToast("藥物名稱不能空白", "warning"); return; }
   btn.disabled = true; btn.textContent = "加入中...";
-  fetch(API + "/medications/", {
+  apiFetch(API + "/medications/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
@@ -12897,7 +12897,7 @@ function submitAllRecognized() {
     var body = _collectRecCard(card);
     if (!body.name) { failCount++; done++; if (done === pending.length) _afterBulkAdd(okCount, dupCount, failCount); return; }
     btn.disabled = true; btn.textContent = "加入中...";
-    fetch(API + "/medications/", {
+    apiFetch(API + "/medications/", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
     })
@@ -13018,7 +13018,7 @@ function submitManualMed(targetId) {
     purpose: g("manual-med-purpose") || null,
     instructions: instCombined || null,
   };
-  fetch(API + "/medications/", {
+  apiFetch(API + "/medications/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
@@ -13066,7 +13066,7 @@ function logMedTaken(medId, taken, opts) {
     force: !!opts.force
   };
 
-  fetch(API + "/medications/log", {
+  apiFetch(API + "/medications/log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
@@ -13202,7 +13202,7 @@ function _submitMedEffect(medId, kind, effNum) {
     }
     sideEffects = '過敏：' + sym.trim();
   }
-  fetch(API + '/medications/effects', {
+  apiFetch(API + '/medications/effects', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -13337,7 +13337,7 @@ function generateMedReport() {
   _medReportCache = null;
   _medReportSetDownloadEnabled(false);
 
-  fetch(API + "/medications/report?patient_id=" + _medsPatientId + "&days=" + days)
+  apiFetch(API + "/medications/report?patient_id=" + _medsPatientId + "&days=" + days)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var md = (data && data.report) || '';
@@ -15337,7 +15337,7 @@ function loadPiecesPage() {
   try {
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return;
-    fetch(API + '/medications/?patient_id=' + pid)
+    apiFetch(API + '/medications/?patient_id=' + pid)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var meds = (data.medications || []).filter(function(m) { return m.active !== 0; });
@@ -20419,7 +20419,7 @@ function reminderToggleSource() {
   if (t === 'medication') {
     wrap.style.display = '';
     _setOptions([{ value: '', label: '— 不關聯 —' }]);
-    fetch(API + '/medications/?patient_id=' + _remindersPid)
+    apiFetch(API + '/medications/?patient_id=' + _remindersPid)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var meds = (data.medications || []).filter(function(m) { return m.active !== 0; });
