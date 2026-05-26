@@ -131,14 +131,29 @@ INTEGRATED_SUMMARY_PROMPT = (
     "  §三 本期觀察到的變化 →【AI 摘要】\n"
     "  §四 風險訊號 →【AI 摘要】\n"
     "  §五 想請醫師確認與建議追蹤 →【紀錄】\n"
-    "  §六 綜合判斷 →【AI 摘要】\n\n"
+    "  §六 綜合判斷 →【AI 摘要】\n"
+    "  §七 可參考方向 →【AI 摘要】\n\n"
+    "【規則 H — §七 可參考方向（輔助診斷，但非診斷）】\n"
+    "在【已計算統計】最末會給出「可考慮的鑑別方向」表，由 backend 規則觸發。\n"
+    "§七 只能引用該表內容，**不得自行加方向、不得自行新增疾病名**。\n"
+    "規則：\n"
+    "- 若 backend 沒列出方向（無明顯模式）→ §七 寫一句：\n"
+    "    「依本期資料尚未識別出特定鑑別重點，建議醫師於回診時做整體評估」\n"
+    "- 若 backend 列出 ≥ 1 個方向 hint：每個 hint 列「資料模式 + 可考慮方向（複數）」\n"
+    "- **§〇 三大重點完全禁止點名任何疾病或方向**（§〇 只能講數字事實）\n"
+    "- §七 末尾必須加一句：\n"
+    "    「以上僅供醫師問診切入參考，**不代表診斷**，最終判斷以醫師親自評估為準」\n"
+    "- 措辭限定（**完全照抄**）：「可考慮的方向：A、B、C」、「（尚未排除）」\n"
+    "- **嚴格禁止**：「病人是 X」「應該是 X」「特徵符合 X」「典型 X 表現」\n"
+    "- **嚴格禁止**：只列單一方向（看起來像下單一診斷）\n\n"
     "═══ 段落輸出規格 ═══\n\n"
     "輸出格式：繁體中文 Markdown，嚴格使用以下七段、順序固定、不新增段落、結尾不加免責聲明。\n"
     "**段落標題只能用下方提供的格式**，標題後**只能**加上【規則 G】指定的標籤，"
     "不要再加任何括號註記（『（病人視角）』『（給醫師交班用）』等都是內部提示，禁止寫進輸出）。\n\n"
     "## 〇、本次三大重點【AI 摘要】\n"
     "最多 3 條條列，每條一句、依嚴重度排序（從【已計算統計】風險旗標由上往下挑）。\n"
-    "語氣中性事實陳述（用數字 + 走向），不含建議或診斷。範例：\n"
+    "語氣**純數字 + 走向 + 事實**，**完全禁止**點名任何疾病或鑑別方向\n"
+    "（鑑別方向只能寫進 §七，§〇 不出現任何病名／方向關鍵字）。範例：\n"
     "- 止痛藥療效評分由 3.5 降到 2.1，同期本期使用 14 天（月度推算 14 天）\n"
     "- 情緒評分連續 4 次低於 2\n"
     "- 血壓家庭量測本期間 3 次達 ≥140/90\n\n"
@@ -206,14 +221,26 @@ INTEGRATED_SUMMARY_PROMPT = (
     "  ✓「現有資料尚不足以支持後續決策，建議醫師判斷是否需要追加 ___ 檢查」\n"
     "  ✓「跨指標訊號方向一致，但尚無法判斷因果，建議醫師整體評估」\n"
     "  ✗「治療失敗」「應加藥」「應換藥」「明顯失效」「應立即停藥」\n"
-    "  ✗ 不點特定病名、不下診斷、不給未來預測\n\n"
+    "  ✗ §六**不點特定病名**（病名／鑑別方向只能寫進 §七）、不下診斷、不給未來預測\n\n"
+    "## 七、可參考方向【AI 摘要】\n"
+    "**這段是「輔助診斷」性質的方向 hint — 給醫師問診切入用，非診斷**。\n"
+    "依【規則 H】產出（措辭限定、必須複數方向、結尾必有 disclaimer 一句）。\n"
+    "格式範本：\n"
+    "  「**資料模式**：__（從 backend hint 抄）\n"
+    "   **可考慮的方向**：__、__、__（從 backend hint 抄）」\n"
+    "（每個 backend hint 各列一組「資料模式 + 可考慮的方向」）\n"
+    "段末必加一句免責：\n"
+    "  「以上僅供醫師問診切入參考，**不代表診斷**，最終判斷以醫師親自評估為準」\n"
+    "若 backend 沒列方向：只寫一句\n"
+    "  「依本期資料尚未識別出特定鑑別重點，建議醫師於回診時做整體評估」\n"
+    "（搭配規則 H 的禁用列表）\n\n"
     "═══ 全文規則 ═══\n"
     "- 繁體中文 + Markdown 二級標題（##）+ 條列\n"
-    "- 七段都要寫；有資料就寫得詳細、沒資料就誠實註明「本期間無相關紀錄」\n"
-    "- 不要在結尾加 AI 免責聲明，系統會另外渲染\n"
+    "- 八段（§〇 + §一 ~ §七）都要寫；有資料就寫得詳細、沒資料就誠實註明「本期間無相關紀錄」\n"
+    "- 不要在結尾加 AI 免責聲明（§七 disclaimer 除外，那是規則 H 內建），系統會另外渲染\n"
     "- 不要在開頭加前言或標題，第一行直接是「## 〇、本次三大重點【AI 摘要】」\n"
-    "- 全文字數約 1000–1500 字\n"
-    "- **全文禁止**：自行重算【已計算統計】內的數字、任何特定病名、未來預測句、開藥/停藥/改劑量指示、"
+    "- 全文字數約 1100–1700 字\n"
+    "- **全文禁止**：自行重算【已計算統計】內的數字、§〇 ~ §六 任何特定病名、未來預測句、開藥/停藥/改劑量指示、"
     "病人替自己歸因的因果推論、把跨指標關聯講成已驗證的因果"
 )
 
@@ -528,7 +555,131 @@ def _build_precomputed_stats(
         parts.append("### 風險旗標：本期間無顯著風險旗標")
     parts.append("")
 
+    # ── 可考慮的鑑別方向（§七 用；保守規則表 gate，謹慎使用）──
+    diff_hints = _compute_differential_hints(
+        symptoms_data=symptoms_data,
+        emotions_data=emotions_data,
+        active_meds=active_meds,
+        med_logs_data=med_logs_data,
+        days=days,
+    )
+    if diff_hints:
+        parts.append("### 可考慮的鑑別方向（§七 用 — 僅作問診切入參考，**非診斷**）")
+        for i, h in enumerate(diff_hints, 1):
+            parts.append(f"{i}. **資料模式**：{h['trigger']}")
+            parts.append(f"   **可考慮的方向**：{'、'.join(h['directions'])}")
+    else:
+        parts.append("### 可考慮的鑑別方向：本期資料無明顯模式組合，§七 寫「依本期資料尚未識別出特定鑑別重點，建議醫師於回診時做整體評估」")
+    parts.append("")
+
     return "\n".join(parts), risk_flags
+
+
+# ── 鑑別方向規則表（規則 H：保守、複數方向、有閾值才觸發）──
+#
+# 設計原則（給未來修改者）：
+#   1. 只在明確模式 + threshold 同時滿足才產出一條
+#   2. 每條至少給 2 個方向，避免單一指向感（看起來像下診斷）
+#   3. 方向措辭盡量寫「篩檢／鑑別／尚未排除」，不寫已成立的疾病名
+#   4. 規則表變更需有臨床判斷依據；不要為了 LLM「看起來聰明」加規則
+
+def _has_symptom(symptoms_data: list, keyword: str) -> bool:
+    """檢查症狀紀錄是否含特定關鍵字。"""
+    for s in symptoms_data:
+        syms = s.get("symptoms") or []
+        if isinstance(syms, str):
+            if keyword in syms:
+                return True
+        elif isinstance(syms, list):
+            for sym in syms:
+                if isinstance(sym, str) and keyword in sym:
+                    return True
+    return False
+
+
+def _compute_differential_hints(
+    *, symptoms_data: list, emotions_data: list,
+    active_meds: list, med_logs_data: list, days: int,
+) -> list[dict]:
+    """從資料模式組合產生鑑別方向 hint（§七 用）。
+
+    回傳 list of {trigger: str, directions: list[str]}。
+    保守規則表 — 只在明顯 pattern + threshold 同時滿足才返回 hint。
+    """
+    hints: list[dict] = []
+
+    # 預先算每藥的「服藥日」set
+    log_days_by_med: dict = {}
+    for l in med_logs_data:
+        if not l.get("taken"):
+            continue
+        mid = l.get("medication_id")
+        d = (l.get("taken_at") or "")[:10]
+        if mid and d:
+            log_days_by_med.setdefault(mid, set()).add(d)
+
+    # ── H1: 頭痛 + PRN 止痛藥月度 ≥ 15 天（MOH 高風險 + 慢性化）──
+    if _has_symptom(symptoms_data, "頭痛"):
+        for m in active_meds:
+            if _classify_medication(m) != "prn" or not _is_analgesic(m):
+                continue
+            use_days = len(log_days_by_med.get(m.get("id"), set()))
+            monthly = use_days / days * 30 if days else float(use_days)
+            if monthly >= 15:
+                hints.append({
+                    "trigger": (
+                        f"頭痛紀錄高頻 + {m.get('name', '?')}（PRN 止痛藥）"
+                        f"月度推算使用 {monthly:.0f} 天"
+                    ),
+                    "directions": [
+                        "藥物過度使用性頭痛（MOH，尚未排除）",
+                        "慢性偏頭痛",
+                        "緊張型頭痛",
+                    ],
+                })
+                break  # 一藥觸發就夠了
+
+    # ── H2: 情緒連續 ≥ 4 次 ≤ 2（情緒障礙篩檢需求）──
+    if emotions_data:
+        scores = [e.get("score") for e in emotions_data if e.get("score") is not None]
+        consec = max_consec = 0
+        for sc in scores:
+            if sc is not None and sc <= 2:
+                consec += 1
+                max_consec = max(max_consec, consec)
+            else:
+                consec = 0
+        if max_consec >= 4:
+            hints.append({
+                "trigger": f"情緒評分連續 {max_consec} 次 ≤ 2",
+                "directions": [
+                    "情緒障礙篩檢（建議使用 PHQ-9 / GAD-7 量表）",
+                    "適應障礙",
+                    "其他內科病因引發之情緒變化（例如甲狀腺、藥物副作用）",
+                ],
+            })
+
+    # ── H3: scheduled 藥服藥率多項 < 70%（服藥順從性問題）──
+    low_adh_meds = []
+    for m in active_meds:
+        if _classify_medication(m) != "scheduled":
+            continue
+        mid = m.get("id")
+        total = sum(1 for l in med_logs_data if l.get("medication_id") == mid)
+        taken = sum(1 for l in med_logs_data if l.get("medication_id") == mid and l.get("taken"))
+        if total >= 10 and taken / total < 0.7:
+            low_adh_meds.append(m.get("name", "?"))
+    if len(low_adh_meds) >= 2:
+        hints.append({
+            "trigger": f"多項固定每日藥物服藥率 < 70%（{'、'.join(low_adh_meds[:3])}）",
+            "directions": [
+                "服藥順從性評估（建議了解漏藥原因：副作用、生活作息、認知、自費等）",
+                "藥物副作用反應評估",
+                "用藥指導／衛教需求評估",
+            ],
+        })
+
+    return hints
 
 
 # ── 共用：收集近 N 天資料 ────────────────────────────────────
@@ -1280,7 +1431,10 @@ def stream_integrated_summary(
             f"- 建議建立每日紀錄習慣（症狀、情緒、用藥），讓下次回診有更完整的資料\n\n"
             f"## 六、綜合判斷【AI 摘要】\n\n"
             f"- 本期間紀錄不足以做整體治療方向的綜合判斷，建議醫師於回診時詢問近期狀況，"
-            f"並請病人開始每日記錄症狀、情緒、用藥，下次回診才有可決策的資料\n"
+            f"並請病人開始每日記錄症狀、情緒、用藥，下次回診才有可決策的資料\n\n"
+            f"## 七、可參考方向【AI 摘要】\n\n"
+            f"依本期資料尚未識別出特定鑑別重點，建議醫師於回診時做整體評估。\n\n"
+            f"以上僅供醫師問診切入參考，**不代表診斷**，最終判斷以醫師親自評估為準。\n"
         )
 
         def empty_gen():
