@@ -19416,7 +19416,14 @@ function dietPickMeal(isReroll) {
          + '&avoid_recent=' + (_dietPickAvoidRecent ? 'true' : 'false');
   if (_dietPickHistory.length) qs += '&exclude=' + encodeURIComponent(_dietPickHistory.join(','));
   if (_dietPickDislikes.length) qs += '&dislike=' + encodeURIComponent(_dietPickDislikes.join(','));
-  fetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs)
+  // Vercel lambda 上限 60s。後端 _call_claude_bounded 設 45s，留 ~10s 給網路/cold start。
+  // 前端 55s AbortController：若 lambda 完全 hang 死（HTTP 000），確保 spinner 不會
+  // 永遠轉，會走 .catch 顯示「抽不到，稍後再試」。
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
+  fetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs, {
+    signal: ctrl ? ctrl.signal : undefined,
+  })
     .then(function(r) { return r.json(); })
     .then(function(g) {
       _dietPickCurrent = g || {};
@@ -19437,7 +19444,10 @@ function dietPickMeal(isReroll) {
       }
       if (typeof lucide !== 'undefined') lucide.createIcons();
     })
-    .finally(function() { _dietPickLoading = false; });
+    .finally(function() {
+      if (timer) clearTimeout(timer);
+      _dietPickLoading = false;
+    });
 }
 
 function renderDietPick(g) {
@@ -19515,7 +19525,12 @@ function dietPickDrink(isReroll) {
          + '&avoid_recent=' + (_dietPickAvoidRecent ? 'true' : 'false');
   if (_dietDrinkHistory.length) qs += '&exclude=' + encodeURIComponent(_dietDrinkHistory.join(','));
   if (_dietPickDislikes.length) qs += '&dislike=' + encodeURIComponent(_dietPickDislikes.join(','));
-  fetch(API + '/diet/drink/' + encodeURIComponent(pid) + qs)
+  // 同 dietPickMeal：55s AbortController 防 lambda hang 死讓 spinner 永遠轉。
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
+  fetch(API + '/diet/drink/' + encodeURIComponent(pid) + qs, {
+    signal: ctrl ? ctrl.signal : undefined,
+  })
     .then(function(r) { return r.json(); })
     .then(function(g) {
       _dietDrinkCurrent = g || {};
@@ -19530,7 +19545,10 @@ function dietPickDrink(isReroll) {
       var embox = document.getElementById('mobile-diet-drink-result');
       if (embox) embox.innerHTML = errorHtml;
     })
-    .finally(function() { _dietDrinkLoading = false; });
+    .finally(function() {
+      if (timer) clearTimeout(timer);
+      _dietDrinkLoading = false;
+    });
 }
 
 function renderDietDrink(g) {

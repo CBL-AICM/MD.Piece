@@ -26,6 +26,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, List, Tuple
 from datetime import datetime, timedelta, date
+import concurrent.futures
 import json
 import logging
 import re
@@ -36,6 +37,18 @@ from backend.utils.diet_nutrient_llm import estimate_nutrients as _estimate_nutr
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+# 同 reports.py / education.py：Vercel lambda 60s 上限，LLM provider fallback chain
+# 最壞 ~75s 會把 lambda 砍掉，前端 fetch 永遠不 resolve → 「幫你想想…」spinner
+# 轉到天荒地老。包一層硬超時 45s，超時就 raise 讓上層 except 走 fallback pool。
+_LLM_HARD_TIMEOUT_S = 45
+_LLM_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+
+def _call_claude_bounded(system_prompt: str, user_message: str) -> str:
+    fut = _LLM_EXECUTOR.submit(call_claude, system_prompt, user_message)
+    return fut.result(timeout=_LLM_HARD_TIMEOUT_S)
 
 
 _DIET_GUIDE_ROLE = (
@@ -604,8 +617,11 @@ def pick_meal(
     )
 
     try:
-        raw = call_claude(PICK_SYSTEM_PROMPT, user_msg)
+        raw = _call_claude_bounded(PICK_SYSTEM_PROMPT, user_msg)
         parsed = _parse_diet_json(raw)
+    except concurrent.futures.TimeoutError:
+        logger.warning(f"吃什麼神器 LLM timeout (>{_LLM_HARD_TIMEOUT_S}s)，走 fallback pool")
+        parsed = {}
     except Exception as e:
         logger.error(f"吃什麼神器 LLM 失敗：{e}")
         parsed = {}
@@ -797,8 +813,11 @@ def pick_drink(
     )
 
     try:
-        raw = call_claude(DRINK_SYSTEM_PROMPT, user_msg)
+        raw = _call_claude_bounded(DRINK_SYSTEM_PROMPT, user_msg)
         parsed = _parse_diet_json(raw)
+    except concurrent.futures.TimeoutError:
+        logger.warning(f"喝什麼神器 LLM timeout (>{_LLM_HARD_TIMEOUT_S}s)，走 fallback pool")
+        parsed = {}
     except Exception as e:
         logger.error(f"喝什麼神器 LLM 失敗：{e}")
         parsed = {}
