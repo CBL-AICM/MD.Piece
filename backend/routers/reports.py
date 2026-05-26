@@ -51,23 +51,35 @@ CHECKLIST_ROLE_PROMPT = (
 MONTHLY_SYSTEM_PROMPT = (
     "產出一份回診間整合報告供主治醫師閱讀。\n"
     "語氣：專業、清晰，像同行之間的交班。\n"
-    "報告期間會在 user message 開頭以「報告期間：XXX」給出，請依該期間描述，不要假定 30 天。\n\n"
+    "報告期間會在 user message 開頭以「報告期間：XXX」給出，請依該期間描述，不要假定 30 天。\n"
+    "user message 會包含「患者背景」「慢性病登記」「過敏史」「症狀」「情緒」「用藥」「服藥率」"
+    "「藥物療效評分」「就診」「飲食」「即將回診」等區塊；務必把每一塊有資料的都納入分析、"
+    "資料不足者跳過、不要杜撰、不要漏掉任何有資料的區塊。\n\n"
     "報告結構（嚴格使用以下三大段，順序固定，不要新增其他段落，不要在結尾加任何免責聲明）：\n\n"
     "## 1. 臨床觀察\n"
-    "用 3–6 個短條列描述本期間患者發生了什麼。涵蓋（資料不足者跳過、不要杜撰）：\n"
+    "用 4–8 個短條列描述本期間患者發生了什麼。涵蓋（資料不足者跳過、不要杜撰）：\n"
     "- 整體狀態走向（穩定／惡化／改善）\n"
     "- 症狀模式：頻率最高的症狀、新出現的症狀、已改善的症狀\n"
     "- 情緒：平均分、趨勢方向、是否有連續低落\n"
-    "- 用藥順從性：服藥率、漏藥模式、療效回饋\n"
-    "- 飲食：規律度、與疾病飲食禁忌相關的訊號\n"
+    "- 用藥順從性：服藥率、漏藥模式、療效評分（病人★分數與副作用回報）\n"
+    "- 飲食：規律度、與【慢性病登記】的飲食禁忌是否一致\n"
+    "- 即將回診：若 user message 有「即將回診」資料，提到下次回診時間／科別當作銜接\n"
     "- 患者主動推送：把患者透過「診前報告」推送的事項整理出來，這是患者本人最在意的\n\n"
     "## 2. 追蹤建議\n"
     "提出下次門診值得特別問或量的項目。\n"
     "- 條列 2–4 點：哪些症狀／指標需要進一步追蹤、哪些主訴需要釐清\n"
+    "- 若療效評分低或副作用回報，列為「需與病人討論的藥物項目」\n"
     "- **嚴禁**寫出具體治療方案、開藥建議、劑量調整、診斷推論\n\n"
-    "## 3. 風險提醒\n"
-    "需要醫師留意的訊號（連續低落、漏藥模式、新症狀、症狀加劇等）。\n"
-    "- 若無顯著風險訊號，請寫「本期間無顯著風險訊號」一句\n\n"
+    "## 3. 潛在問題與風險提醒\n"
+    "這一段是本報告的重點 — 主動偵測病人可能還沒意識到的問題：\n"
+    "- 比對【慢性病登記】與本期症狀／飲食：例如登記高血壓但飲食常見高鹽食物 → 標註；\n"
+    "  登記糖尿病但情緒連續低落 → 標註血糖控制壓力等\n"
+    "- 服藥率 < 70% → 標註順從性問題\n"
+    "- 同一顆藥療效評分多次 ≤ 2 分 → 標註療效不佳\n"
+    "- 副作用回報 → 整理出來提醒醫師\n"
+    "- 情緒連續 3 次以上 ≤ 2 分 → 標註情緒風險\n"
+    "- 過敏史與本期用藥／飲食是否有衝突 → 標註\n"
+    "- 若真的無顯著風險訊號，才寫「本期間無顯著風險訊號」一句；不可隨便用這句敷衍\n\n"
     "規則：\n"
     "- 使用繁體中文 + Markdown 標題與條列\n"
     "- 簡潔專業，不堆砌、不重複資料摘要\n"
@@ -80,18 +92,21 @@ MONTHLY_SYSTEM_PROMPT = (
 PATIENT_SUMMARY_ROLE_PROMPT = (
     "【本次任務：帶去診間給醫師看的白話摘要（病人視角）】\n"
     "把病人本期間的紀錄整理成一段摘要 — 病人會帶著這份摘要去門診，也可能直接念給醫師聽。\n"
-    "報告期間會在 user message 開頭以「報告期間：XXX」給出，請依該期間描述，不要假定 30 天或一個月。\n\n"
+    "報告期間會在 user message 開頭以「報告期間：XXX」給出，請依該期間描述，不要假定 30 天或一個月。\n"
+    "user message 可能包含「患者背景」「慢性病登記」「過敏史」「症狀」「情緒」「用藥」「服藥率」"
+    "「藥物療效評分」「飲食」「就診」「即將回診」等區塊；務必把每一塊有資料的都納入摘要。\n\n"
     "情境專屬規則：\n"
-    "1. 字數以 300–500 字（含空白）為原則，不可少於 300；資料量大可彈性延伸但盡量不超出太多\n"
+    "1. 字數以 350–550 字（含空白）為原則，不可少於 350；資料量大可彈性延伸但盡量不超出太多\n"
     "2. 用第一人稱「我」書寫，像病人自己在跟醫師描述\n"
     "3. 一定要涵蓋這幾塊（有資料才寫，沒資料就跳過、不要編造）：\n"
     "   - 最近身體上比較困擾的不舒服（什麼症狀、多常發生、有多嚴重）\n"
     "   - 心情狀態（最近覺得怎樣、有沒有特別低潮的日子）\n"
-    "   - 目前在吃的藥、有沒有按時吃、有沒有副作用\n"
+    "   - 目前在吃的藥、有沒有按時吃、自己給的療效評分與副作用感受\n"
     "   - 飲食情況（這段期間吃得規律嗎？有沒有特別常吃或特別不吃的東西？\n"
-    "     有沒有跟疾病飲食禁忌相關的訊號？吃完有特別不舒服的紀錄嗎？）\n"
+    "     有沒有跟登記的慢性病飲食禁忌相關的訊號？吃完有特別不舒服的紀錄嗎？）\n"
+    "   - 自己注意到可能跟慢性病有關的變化（依【慢性病登記】思考）\n"
     "   - 最想請醫師幫忙確認或調整的事\n"
-    "4. 結構：用 2–4 個自然段落，不要用條列、不要用 markdown 標題\n"
+    "4. 結構：用 3–5 個自然段落，不要用條列、不要用 markdown 標題\n"
     "5. 結尾用一句感謝或請醫師協助的話收尾\n"
     "6. 只輸出摘要本文，不要前言、不要說明、不要在開頭加標題\n"
     "7. 因為這份是「病人講給醫師聽的描述」、不是病人收到的 AI 回覆，所以**不要**\n"
@@ -217,9 +232,53 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
         sb.table("diet_records").select("*").eq("patient_id", patient_id)
         .gte("eaten_at", since).order("eaten_at", desc=True).execute().data or []
     ), [])
+    # 藥物療效評分 + 副作用（病人★評分，主觀但臨床很重要）
+    effects_data = _safe_query(lambda: (
+        sb.table("medication_effects").select("*").eq("patient_id", patient_id)
+        .gte("recorded_at", since).order("recorded_at", desc=True).execute().data or []
+    ), [])
+    # 個人檔案 — 慢性病、過敏、基本資料；給 LLM 做風險偵測的 context（不算「期間紀錄」所以不影響 has_data）
+    profile_data = _safe_query(lambda: (
+        sb.table("patient_profiles").select("*").eq("user_id", patient_id).limit(1).execute().data or []
+    ), [])
+    profile = profile_data[0] if profile_data else None
+    # 即將回診排程（upcoming follow-ups）— 讓 LLM 知道下次回診情境
+    upcoming_fu = _safe_query(lambda: (
+        sb.table("follow_ups").select("*").eq("patient_id", patient_id)
+        .eq("status", "scheduled").gte("scheduled_date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+        .order("scheduled_date").limit(3).execute().data or []
+    ), [])
 
-    has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data or diet_data)
+    has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data or diet_data or effects_data)
     parts = [f"報告期間：{period_label}\n"]
+
+    # 個人背景 — 給 LLM 做風險偵測（慢性病 + 過敏 + 年齡 + 性別）
+    if profile:
+        bg = []
+        # 年齡：從 birthday 算
+        bday = profile.get("birthday")
+        if bday:
+            try:
+                from datetime import date as _d
+                y, m, d = bday[:10].split("-")
+                today = datetime.now(timezone.utc).date()
+                age = today.year - int(y) - ((today.month, today.day) < (int(m), int(d)))
+                if 0 < age < 150:
+                    bg.append(f"{age} 歲")
+            except (ValueError, IndexError):
+                pass
+        if profile.get("gender"):
+            gmap = {"male": "男", "female": "女", "other": "其他"}
+            bg.append(gmap.get(profile["gender"], profile["gender"]))
+        if bg:
+            parts.append("患者背景：" + "、".join(bg))
+        if profile.get("conditions"):
+            parts.append(f"慢性病登記：{profile['conditions']}")
+        if profile.get("current_disease"):
+            parts.append(f"目前主要關注：{profile['current_disease']}")
+        if profile.get("allergies"):
+            parts.append(f"過敏史：{profile['allergies']}")
+        parts.append("")  # 空行區隔
 
     if symptoms_data:
         all_symptoms = []
@@ -375,12 +434,52 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
     else:
         parts.append("\n飲食記錄：無")
 
+    # 藥物療效評分 + 副作用 — 病人主觀但臨床重要
+    if effects_data:
+        # 對齊 med 名稱（從 active_meds 抓）
+        med_by_id = {m.get("id"): m.get("name") for m in active_meds}
+        parts.append(f"\n藥物療效評分（{len(effects_data)} 筆，1=很差 5=很好）：")
+        # 按藥分組
+        by_med: dict = {}
+        for e in effects_data:
+            mid = e.get("medication_id")
+            by_med.setdefault(mid, []).append(e)
+        for mid, evs in list(by_med.items())[:8]:
+            name = med_by_id.get(mid) or "未知藥物"
+            scores = [e.get("effectiveness") for e in evs if e.get("effectiveness") is not None]
+            if scores:
+                avg = sum(scores) / len(scores)
+                parts.append(f"  - {name}：平均 {avg:.1f} 分（{len(scores)} 次評分）")
+            # 副作用聚合
+            sides = [str(e.get("side_effects") or "").strip() for e in evs if e.get("side_effects")]
+            if sides:
+                parts.append(f"    副作用回報：{'; '.join(sides[:3])}")
+            # 症狀變化聚合（最近一筆）
+            changes = [str(e.get("symptom_changes") or "").strip() for e in evs if e.get("symptom_changes")]
+            if changes:
+                parts.append(f"    症狀變化：{changes[0]}")
+
+    # 即將回診排程 — 給 LLM 知道病人下一步看哪一科
+    if upcoming_fu:
+        parts.append(f"\n即將回診（最近 {len(upcoming_fu)} 筆）：")
+        for f in upcoming_fu:
+            d = (f.get("scheduled_date") or "")[:10]
+            dept = f.get("department") or ""
+            hosp = f.get("hospital") or ""
+            sess = {"am": "上午診", "pm": "下午診"}.get(f.get("session"), "")
+            line = f"  - {d}"
+            extras = [x for x in (sess, dept, hosp) if x]
+            if extras:
+                line += "：" + " · ".join(extras)
+            parts.append(line)
+
     counts = {
         "symptom_count": len(symptoms_data),
         "emotion_count": len(emotions_data),
         "medication_count": len(active_meds),
         "visit_count": len(records_data),
         "diet_count": len(diet_data),
+        "effect_count": len(effects_data),
     }
     return "\n".join(parts), counts, has_data, days, period_label
 
