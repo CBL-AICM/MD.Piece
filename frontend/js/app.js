@@ -2455,9 +2455,11 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
     + '</body></html>';
 }
 
-// 把完整 HTML 字串（含 <style>）轉成 .pdf 並觸發下載。
-// 優先使用 html2pdf.js（PWA、手機 Safari 都能下載真正的 PDF 檔），
-// 若 CDN 沒載入到、或產生失敗，退回 iframe + window.print()（讓使用者用「另存為 PDF」）。
+// 把完整 HTML 字串（含 <style>）轉成 PDF 並顯示在「PDF 預覽 modal」裡。
+// 過去用 html2pdf.save() 直接觸發 anchor download，在 PWA / 手機 Safari 上常常
+// silent failure：toast「PDF 已下載」跳出來但檔案根本沒寫到磁碟、使用者也看不到 PDF。
+// 改成：產 blob → 開預覽 modal（iframe + 兩個明顯按鈕）→ 讓使用者明確控制下載/分頁開啟。
+// CDN 沒載入或產生失敗時退回 iframe + window.print() fallback。
 function previsitOpenPrint(html, filename) {
   var name = filename || ('MD.Piece-診前報告-' + new Date().toISOString().slice(0, 10) + '.pdf');
 
@@ -2508,10 +2510,12 @@ function previsitOpenPrint(html, filename) {
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak:    { mode: ['css', 'legacy'] }
     };
-    window.html2pdf().set(opt).from(contentRoot).save()
-      .then(function() {
-        document.body.removeChild(holder);
-        if (typeof showToast === 'function') showToast('PDF 已下載', 'success');
+    // outputPdf('blob') 拿 Blob 而非直接 .save()。讓我們自己控制下載 UX，
+    // 避免 .save() 的 anchor click 在 PWA / 手機被靜默丟棄。
+    window.html2pdf().set(opt).from(contentRoot).outputPdf('blob')
+      .then(function(blob) {
+        try { document.body.removeChild(holder); } catch (e) {}
+        _previsitShowPdfModal(blob, name);
       })
       .catch(function(err) {
         try { document.body.removeChild(holder); } catch (e) {}
@@ -2522,6 +2526,59 @@ function previsitOpenPrint(html, filename) {
   }
 
   previsitFallbackPrint(html);
+}
+
+// PDF 預覽 modal — 在使用者面前直接顯示 PDF + 明顯的「下載到本機」「在新分頁開啟」按鈕。
+// 解 PWA / 手機 Safari .save() silent failure 的核心：使用者明確點擊 anchor click，
+// 而不是程式自動觸發；瀏覽器才會真的彈出下載對話框。
+function _previsitShowPdfModal(blob, filename) {
+  var existing = document.getElementById('previsit-pdf-modal');
+  if (existing) existing.remove();
+  var url = URL.createObjectURL(blob);
+  var modal = document.createElement('div');
+  modal.id = 'previsit-pdf-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,42,69,0.55);padding:16px';
+  modal.innerHTML = ''
+    + '<div style="background:#fff;border-radius:14px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.3)">'
+    +   '<header style="padding:14px 18px;border-bottom:1px solid var(--border, #e2e7ed);display:flex;align-items:center;gap:10px">'
+    +     '<i data-lucide="file-text" style="width:18px;height:18px;color:var(--accent-deep,#2F6B96)"></i>'
+    +     '<div style="flex:1;min-width:0">'
+    +       '<div style="font-weight:600;font-size:14px;color:var(--navy,#0F2A45)">診前報告已產生</div>'
+    +       '<div style="font-size:11px;color:var(--text-muted,#6B7F92);font-family:var(--font-mono,monospace);word-break:break-all">' + escapeHtml(filename) + '</div>'
+    +     '</div>'
+    +     '<button type="button" id="previsit-pdf-close" aria-label="關閉" style="background:transparent;border:0;cursor:pointer;padding:6px;color:var(--text-muted,#6B7F92)"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div style="flex:1;min-height:0;background:#f3f5f8;overflow:hidden">'
+    +     '<iframe id="previsit-pdf-iframe" src="' + url + '" style="width:100%;height:100%;border:0;display:block;min-height:400px" title="診前報告預覽"></iframe>'
+    +   '</div>'
+    +   '<footer style="padding:12px 18px;border-top:1px solid var(--border,#e2e7ed);display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    +     '<span style="font-size:11px;color:var(--text-muted,#6B7F92);flex:1;min-width:160px">手機 PWA 看不到預覽時，請按「在新分頁開啟」</span>'
+    +     '<a id="previsit-pdf-open" href="' + url + '" target="_blank" rel="noopener" style="background:transparent;border:1px solid var(--border,#e2e7ed);color:var(--navy,#0F2A45);padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px">'
+    +       '<i data-lucide="external-link" style="width:14px;height:14px"></i>在新分頁開啟'
+    +     '</a>'
+    +     '<a id="previsit-pdf-download" href="' + url + '" download="' + escapeHtml(filename) + '" style="background:var(--accent-deep,#2F6B96);color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">'
+    +       '<i data-lucide="download" style="width:14px;height:14px"></i>下載到本機'
+    +     '</a>'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(modal);
+  if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+
+  function cleanup() {
+    try { URL.revokeObjectURL(url); } catch (e) {}
+    if (modal.parentNode) modal.parentNode.removeChild(modal);
+    document.removeEventListener('keydown', escHandler);
+  }
+  function escHandler(e) { if (e.key === 'Escape') cleanup(); }
+  document.addEventListener('keydown', escHandler);
+  document.getElementById('previsit-pdf-close').onclick = cleanup;
+  modal.addEventListener('click', function(e) { if (e.target === modal) cleanup(); });
+  // 下載按鈕點下後也關掉 modal（已完成主要目標），但給瀏覽器一點時間觸發下載
+  document.getElementById('previsit-pdf-download').addEventListener('click', function() {
+    setTimeout(cleanup, 500);
+  });
+
+  if (typeof showToast === 'function') showToast('PDF 已產生，請按「下載到本機」存檔', 'success');
 }
 
 // 備援：把 HTML 塞進隱藏 iframe，再呼叫 iframe 的 print()。
