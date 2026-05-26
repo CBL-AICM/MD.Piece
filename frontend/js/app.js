@@ -18892,7 +18892,12 @@ function fetchDietGuide() {
       renderDietSuggestions(g.meal_suggestions || {});
     })
     .catch(function(e) {
-      // 失敗時保留基本衛教，不要把畫面換成「載入失敗」
+      // 失敗時保留基本衛教（renderDietTargets 已先用 baseline 填好），但要把
+      // 「你要特別注意」與「今天吃什麼」兩個區塊從「載入中…」帶到空狀態，
+      // 否則它們會永遠卡在 loading placeholder。
+      console.warn('[diet] fetch guide failed:', e);
+      renderDietWarnings([]);
+      renderDietSuggestions({});
     });
 }
 
