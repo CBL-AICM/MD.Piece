@@ -1,3 +1,4 @@
+import concurrent.futures
 import json
 import logging
 from datetime import datetime, timedelta, timezone
@@ -10,6 +11,19 @@ from backend.services.llm_service import (
     call_claude,
     compute_patient_context,
 )
+
+# Vercel lambda 上限 60s — LLM provider 全卡死的最壞情況可能逼近這個額度，
+# 一旦 lambda 被砍掉，前端 fetch 永遠不 resolve（HTTP 000 + 連線 hang），
+# 使用者就看到「撰寫中…」轉圈圈沒下文。用 thread + 硬超時鎖在 45s 內，
+# 超時就走 raw-data fallback，讓 HTTP 一定有回應。
+_LLM_HARD_TIMEOUT_S = 45
+_LLM_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+
+def _call_claude_bounded(system_prompt: str, user_message: str) -> str:
+    """call_claude 加 45s 硬超時。超時 / 失敗都 raise，上層自行 fallback。"""
+    fut = _LLM_EXECUTOR.submit(call_claude, system_prompt, user_message)
+    return fut.result(timeout=_LLM_HARD_TIMEOUT_S)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -399,7 +413,12 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
         }
 
     try:
-        report_text = call_claude(MONTHLY_SYSTEM_PROMPT, full_summary)
+        report_text = _call_claude_bounded(MONTHLY_SYSTEM_PROMPT, full_summary)
+    except concurrent.futures.TimeoutError:
+        logger.error(f"Monthly report timeout (>{_LLM_HARD_TIMEOUT_S}s)，回 raw fallback")
+        report_text = (
+            f"報告生成超時（AI 服務忙線中），以下為原始數據摘要：\n\n{full_summary}"
+        )
     except Exception as e:
         logger.error(f"Monthly report generation failed: {e}")
         report_text = f"報告生成失敗，以下為原始數據摘要：\n\n{full_summary}"
@@ -508,13 +527,16 @@ def get_consultation_checklist(patient_id: str, days: int | None = Query(None, g
     )
 
     try:
-        raw = call_claude(checklist_system, user_message)
+        raw = _call_claude_bounded(checklist_system, user_message)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
         checklist = json.loads(raw)
         if not isinstance(checklist, list):
             raise ValueError("Expected a JSON array")
+    except concurrent.futures.TimeoutError:
+        logger.warning(f"Checklist LLM timeout (>{_LLM_HARD_TIMEOUT_S}s)，回預設清單")
+        checklist = default_checklist
     except Exception as e:
         logger.warning(f"Claude checklist parsing failed: {e}")
         checklist = [
@@ -572,10 +594,17 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
     )
 
     try:
-        summary = call_claude(patient_summary_system, data_summary).strip()
+        summary = _call_claude_bounded(patient_summary_system, data_summary).strip()
         if summary.startswith("```"):
             summary = summary.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
         source = "ai"
+    except concurrent.futures.TimeoutError:
+        logger.error(f"Patient summary timeout (>{_LLM_HARD_TIMEOUT_S}s)，回 fallback 文字")
+        summary = (
+            f"醫師您好，{period_label}我有持續記錄身體狀況，但這次 AI 摘要暫時忙線中沒辦法即時產生，"
+            "我把原始紀錄帶來，麻煩醫師看一下。謝謝！"
+        )
+        source = "timeout"
     except Exception as e:
         logger.error(f"Patient summary generation failed: {e}")
         summary = (
