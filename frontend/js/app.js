@@ -2813,7 +2813,10 @@ function showPage(page) {
     if (page === "drugSearch") loadDrugSearchPage();
     if (page === "diseaseSearch") loadDiseaseSearchPage();
     if (page === "reminders") loadRemindersPage();
-    if (page === "vitals") loadDoctorMeasurementRequests();
+    if (page === "vitals") {
+      loadDoctorMeasurementRequests();
+      if (typeof onMobileMetricChange === 'function') onMobileMetricChange();
+    }
     if (page === "admissions") loadAdmissionsPage();
     if (page === "timeline") loadTimelinePage();
     if (page === "followUps") loadFollowUpsPage();
@@ -9288,8 +9291,53 @@ function vitals() {
     _mobileRecentRows = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無紀錄</div>';
   }
 
+  // ── 手機版「記一筆」表單：選指標 → 數值 → 情境/方式 → 備註 ─────
+  var _mobileFormMetrics = allMetrics.filter(function(mm) { return mm.id !== 'bmi'; });
+  var _mobileMetricOptions = _mobileFormMetrics.map(function(mm) {
+    return '<option value="' + mm.id + '" data-dual="' + (mm.dual ? '1' : '0') + '" data-unit="' + escapeHtml(mm.unit || '') + '">'
+      + escapeHtml(mm.zh) + (mm.unit ? ' (' + escapeHtml(mm.unit) + ')' : '')
+      + '</option>';
+  }).join('');
+  var _mobileCtxOptions = '<option value="">— 未指定 —</option>' + VITAL_CONTEXT_OPTIONS.map(function(o) {
+    return '<option value="' + escapeHtml(o) + '">' + escapeHtml(o) + '</option>';
+  }).join('');
+  var _mobileMethodOptions = '<option value="">— 未指定 —</option>' + VITAL_METHOD_OPTIONS.map(function(o) {
+    return '<option value="' + escapeHtml(o) + '">' + escapeHtml(o) + '</option>';
+  }).join('');
+  var _mobileLogForm = ''
+    + '<div class="vt-mobile-form" style="background:var(--surface,#fff);border:1px solid var(--border-glass,rgba(0,0,0,0.08));border-radius:12px;padding:14px;margin-bottom:14px;display:flex;flex-direction:column;gap:10px">'
+    +   '<label style="font-size:12px;color:var(--text-muted);font-weight:600">指標</label>'
+    +   '<select id="vt-m-metric" onchange="onMobileMetricChange()" style="padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px">'
+    +     _mobileMetricOptions
+    +   '</select>'
+    +   '<div id="vt-m-single-wrap">'
+    +     '<label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">數值 <span id="vt-m-unit-lbl" style="color:var(--text-dim)"></span></label>'
+    +     '<input type="number" id="vt-m-val1" inputmode="decimal" step="any" placeholder="輸入數值" style="width:100%;padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px" />'
+    +   '</div>'
+    +   '<div id="vt-m-dual-wrap" style="display:none">'
+    +     '<label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">收縮壓 / 舒張壓 (mmHg)</label>'
+    +     '<div style="display:flex;gap:6px;align-items:center">'
+    +       '<input type="number" id="vt-m-val1d" inputmode="numeric" placeholder="例 120" min="40" max="260" style="flex:1;padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px" />'
+    +       '<span style="color:var(--text-muted)">/</span>'
+    +       '<input type="number" id="vt-m-val2d" inputmode="numeric" placeholder="例 80" min="30" max="160" style="flex:1;padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px" />'
+    +     '</div>'
+    +   '</div>'
+    +   '<label style="font-size:12px;color:var(--text-muted);font-weight:600">紀錄情境（選填）</label>'
+    +   '<select id="vt-m-context" style="padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px">' + _mobileCtxOptions + '</select>'
+    +   '<label style="font-size:12px;color:var(--text-muted);font-weight:600">記錄方式（選填）</label>'
+    +   '<select id="vt-m-method" style="padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px">' + _mobileMethodOptions + '</select>'
+    +   '<label style="font-size:12px;color:var(--text-muted);font-weight:600">備註（選填）</label>'
+    +   '<textarea id="vt-m-notes" rows="2" placeholder="例如：起床後、有運動..." style="width:100%;padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical"></textarea>'
+    +   '<button type="button" onclick="submitMobileVitalEntry()" style="padding:12px;background:var(--accent-primary,#4A90C2);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">新增紀錄</button>'
+    + '</div>';
+
   var _mobileVitalsBlock = ''
     + '<div class="mobile-only">'
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="plus-circle"></i> 記一筆</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   _mobileLogForm
     +   '<div class="sec-head">'
     +     '<h3 class="sec-title"><i data-lucide="activity"></i> 本週數值</h3>'
     +     '<span class="sec-spacer"></span>'
@@ -10126,6 +10174,62 @@ function submitVitalEntry(metricId) {
   if (notes) entry.notes = notes;
   saveVitalEntry(entry);
   if (typeof refreshNavBadges === 'function') refreshNavBadges();
+  showPage('vitals');
+}
+
+function onMobileMetricChange() {
+  const sel = document.getElementById('vt-m-metric');
+  if (!sel) return;
+  const opt = sel.options[sel.selectedIndex];
+  const isDual = opt && opt.dataset.dual === '1';
+  const unit = opt ? opt.dataset.unit : '';
+  const single = document.getElementById('vt-m-single-wrap');
+  const dual = document.getElementById('vt-m-dual-wrap');
+  if (single) single.style.display = isDual ? 'none' : 'block';
+  if (dual)   dual.style.display   = isDual ? 'block' : 'none';
+  const unitLbl = document.getElementById('vt-m-unit-lbl');
+  if (unitLbl) unitLbl.textContent = unit ? '(' + unit + ')' : '';
+}
+
+function submitMobileVitalEntry() {
+  const sel = document.getElementById('vt-m-metric');
+  if (!sel) return;
+  const metricId = sel.value;
+  const m = findMetric(metricId);
+  if (!m) { if (typeof showToast === 'function') showToast('找不到指標', 'warning'); return; }
+  const entry = {
+    id: 'vt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    metricId,
+    recordedAt: new Date().toISOString()
+  };
+  if (m.dual) {
+    const v1 = document.getElementById('vt-m-val1d').value;
+    const v2 = document.getElementById('vt-m-val2d').value;
+    if (!v1 || !v2) {
+      if (typeof showToast === 'function') showToast('請完整輸入收縮 / 舒張壓', 'warning');
+      document.getElementById(v1 ? 'vt-m-val2d' : 'vt-m-val1d').focus();
+      return;
+    }
+    entry.value = parseFloat(v1);
+    entry.value2 = parseFloat(v2);
+  } else {
+    const v1 = document.getElementById('vt-m-val1').value;
+    if (!v1) {
+      if (typeof showToast === 'function') showToast('請先輸入數值', 'warning');
+      document.getElementById('vt-m-val1').focus();
+      return;
+    }
+    entry.value = parseFloat(v1);
+  }
+  const ctx = document.getElementById('vt-m-context').value.trim();
+  const method = document.getElementById('vt-m-method').value.trim();
+  const notes = document.getElementById('vt-m-notes').value.trim();
+  if (ctx) entry.context = ctx;
+  if (method) entry.method = method;
+  if (notes) entry.notes = notes;
+  saveVitalEntry(entry);
+  if (typeof refreshNavBadges === 'function') refreshNavBadges();
+  if (typeof showToast === 'function') showToast('已新增紀錄 ✅', 'success');
   showPage('vitals');
 }
 
