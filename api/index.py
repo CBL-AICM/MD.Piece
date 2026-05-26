@@ -15,7 +15,7 @@ from backend.routers import (
     records, research, auth,
     medication_changes, alerts, labs, diet,
     drug_search, diseases, reminders, bell_reminders,
-    admissions, timeline,
+    admissions, timeline, profile,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,6 +76,7 @@ app.include_router(bell_reminders.router, prefix="/reminders", tags=["reminders"
 app.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 app.include_router(admissions.router, prefix="/admissions", tags=["admissions"])
 app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
+app.include_router(profile.router, prefix="/profile", tags=["profile"])
 
 
 @app.get("/api")
