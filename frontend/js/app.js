@@ -15229,6 +15229,23 @@ var _EXTRA_STOPWORDS = {
   '中':1,'了':1,'過':1,'過敏':1,'藥物':1,'食物':1,'青黴素':1,'盤尼西林':1,
   '不明':1,'健康':1,'正常':1,'無特殊':1,'無病史':1,'未知':1,'其他':1,
 };
+
+// 常見輸入錯字 → 正確醫學名稱（送進 LLM 與顯示在書架前先歸一化）
+// 主要修「同音／形近字」造成的誤拼，例如 隨→髓、髂→骼。
+var _DISEASE_TYPO_FIX = {
+  '脊隨炎': '脊髓炎',
+  '脊髓炎症': '脊髓炎',
+  '橫貫性脊隨炎': '橫貫性脊髓炎',
+  '視神經脊隨炎': '視神經脊髓炎',
+  '脊隨損傷': '脊髓損傷',
+  '脊隨側索硬化': '脊髓側索硬化',
+  '肌萎縮性脊隨側索硬化症': '肌萎縮性脊髓側索硬化症',
+};
+function normalizeDiseaseName(name) {
+  if (!name) return name;
+  var trimmed = String(name).trim();
+  return _DISEASE_TYPO_FIX[trimmed] || trimmed;
+}
 function extractUnrecognizedDiseases(text) {
   if (!text) return [];
   var s = String(text);
@@ -15254,9 +15271,10 @@ function extractUnrecognizedDiseases(text) {
     if (_EXTRA_STOPWORDS[c]) return;
     // 必須結尾像疾病字眼，避免「只有」「年了」「目前」等敘述被當成疾病
     if (!/(病|症|炎|癌|瘤|症候群|不全|衰竭|病變|麻痺|結石|出血|梗塞|腫瘤|硬化|增生|過敏症|缺乏|缺乏症|阻塞|血栓|纖維化|畸形|失調|障礙|疝氣)$/.test(c)) return;
-    if (seen[c]) return;
-    seen[c] = true;
-    out.push(c);
+    var normalized = normalizeDiseaseName(c);
+    if (seen[normalized]) return;
+    seen[normalized] = true;
+    out.push(normalized);
   });
   // 最多 8 個，避免雜訊塞爆書架
   return out.slice(0, 8);
@@ -15907,6 +15925,10 @@ function _eduOpenBookObject(book) {
         _eduSelectedDimension = null;
         document.getElementById("edu-notebook-right").innerHTML = renderRightPagePlaceholder();
         if (typeof lucide !== 'undefined') lucide.createIcons();
+      } else if (action === "retry-generate") {
+        if (_eduLastChapter && _eduLastChapter.key) {
+          eduOpenContent(_eduLastChapter.key, _eduLastChapter.label);
+        }
       }
     });
     nb.dataset.boundDelegate = "1";
@@ -16007,10 +16029,14 @@ function eduPickDisease(icd10, name) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// 記下「目前展開的章節」給 fallback 重試按鈕用
+var _eduLastChapter = null;
+
 // 在右頁就地寫入內容（不再切換 stage）
 function eduOpenContent(key, label) {
   if (!_eduSelectedBook) return;
   var book = _eduSelectedBook;
+  _eduLastChapter = { key: key, label: label };
 
   var titleText, fetchBody;
   if (book.dynamic === "diseases") {
@@ -16064,10 +16090,12 @@ function eduOpenContent(key, label) {
   eduGenerateContent(fetchBody, book, label);
 }
 
-function eduGenerateContent(fetchBody, book, label) {
+function eduGenerateContent(fetchBody, book, label, attempt) {
   // Vercel lambda 上限 60s。後端 _call_claude_bounded 設 45s，留 ~10s 給網路/cold start。
   // 前端再加 55s AbortController — 若 lambda 完全 hang 死（HTTP 000），確保使用者
   // 不會無限轉圈圈、會收到 fallback 訊息。
+  attempt = attempt || 1;
+  var MAX_ATTEMPTS = 2;  // 第一次失敗自動重試一次（解 LLM 短暫 rate-limit / cold start）
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
   fetch(API + "/education/generate", {
@@ -16089,8 +16117,23 @@ function eduGenerateContent(fetchBody, book, label) {
     })
     .catch(function() {
       if (timer) clearTimeout(timer);
-      var body = document.getElementById("edu-content-body");
-      if (body) body.innerHTML = eduFallbackContent(book, label);
+      if (attempt < MAX_ATTEMPTS) {
+        var body = document.getElementById("edu-content-body");
+        if (body) {
+          body.innerHTML =
+            '<div style="text-align:center;padding:40px;color:var(--text-muted)">' +
+              '<div class="loading-spinner"></div>' +
+              '<p style="margin-top:12px">第一次叫不到 AI，2 秒後自動重試…</p>' +
+            '</div>';
+        }
+        setTimeout(function() {
+          eduGenerateContent(fetchBody, book, label, attempt + 1);
+        }, 2000);
+        return;
+      }
+      var bodyEl = document.getElementById("edu-content-body");
+      if (bodyEl) bodyEl.innerHTML = eduFallbackContent(book, label);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     });
 }
 
@@ -16129,15 +16172,24 @@ function eduRenderCuratedArticleInRight(article, titleText) {
 }
 
 function eduFallbackContent(book, label) {
+  // 真正的狀態是「AI 即時生成失敗 / 忙線」，不是「靜態內容還沒寫」。
+  // 給使用者「重試」按鈕，按了就重跑同一章節的 eduOpenContent。
   return '' +
-    '<h3>' + escapeHtml(book.title) + '：' + escapeHtml(label) + '</h3>' +
-    '<p>這一頁正在編寫中——之後會由 MD.Piece 根據最新文獻自動填上溫暖、易懂的內容。</p>' +
-    '<p>在那之前，你可以：</p>' +
-    '<ul>' +
-      '<li>回到書架挑另一本書，先看看其他主題。</li>' +
-      '<li>把你想知道的細節寫進「醫療 Chat」，由 MD.Piece 直接回答。</li>' +
-    '</ul>' +
-    '<p style="color:var(--text-dim);margin-top:14px">' + escapeHtml(book.intro || '') + '</p>';
+    '<div style="padding:18px;border:1px solid var(--border);border-radius:10px;background:var(--bg-soft)">' +
+      '<h3 style="margin:0 0 10px">' + escapeHtml(book.title) + '：' + escapeHtml(label) + '</h3>' +
+      '<p style="margin:0 0 12px"><strong style="color:var(--rose-deep)">⚠️ AI 即時生成失敗</strong></p>' +
+      '<p style="margin:0 0 14px;line-height:1.7">這篇衛教是 MD.Piece AI 根據最新文獻當場生成的，這次連續兩次都叫不到 AI（可能 LLM 忙線、網路波動或當前疾病名稱不易判讀）。</p>' +
+      '<div style="margin:14px 0">' +
+        '<button class="primary" data-action="retry-generate" style="padding:8px 16px;font-size:.9rem">' +
+          '<i data-lucide="refresh-cw" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>重新生成這一章' +
+        '</button>' +
+      '</div>' +
+      '<p style="margin:14px 0 6px;color:var(--text-dim);font-size:.85rem">若連續失敗，也可以：</p>' +
+      '<ul style="margin:0;padding-left:20px;color:var(--text-dim);font-size:.85rem;line-height:1.7">' +
+        '<li>回書架挑另一本書，先看其他主題</li>' +
+        '<li>把細節寫進「醫療 Chat」，請 MD.Piece 直接回答</li>' +
+      '</ul>' +
+    '</div>';
 }
 
 // ─── 你的碎片（Pieces）— 上次回診以來的紀錄統整 ─────────────
