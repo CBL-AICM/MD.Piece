@@ -15508,6 +15508,19 @@ function eduSwitchStage(stageId) {
   // 不然會跟筆記本同畫面打架（CSS：body.edu-notebook-open .mobile-edu-cards { display:none }）
   document.body.classList.toggle("edu-notebook-open", stageId === "edu-stage-notebook");
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+  // 切到 notebook 時 auto-scroll：使用者通常已經滾到中段（書架 section），
+  // 點下書本後 mobile-edu-cards 被 CSS 隱藏、notebook 從頁首渲染，
+  // 不 scroll 的話畫面停在原位 → 看起來像「點了沒反應」。
+  if (stageId === "edu-stage-notebook") {
+    setTimeout(function() {
+      var nb = document.getElementById("edu-stage-notebook");
+      if (nb && typeof nb.scrollIntoView === 'function') {
+        nb.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 50);
+  }
 }
 
 function eduGoToShelf() {
