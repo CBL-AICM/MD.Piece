@@ -6770,6 +6770,7 @@ function loadInpatientActiveAdmission() {
       var active = rows.find(function(a) { return a.status === 'active'; }) || null;
       _fillNowCard(active);
       _fillDischargeStepper(active);
+      if (active && typeof _admMaybeCheckLocation === 'function') _admMaybeCheckLocation(active);
       // Timeline + Next Step：拿 admission_medications 排程合成今日 timeline
       if (active) {
         fetch(API + '/admissions/' + encodeURIComponent(active.id))
@@ -20602,6 +20603,15 @@ function admissions() {
     +         '<input id="adm-form-icd10" type="text" class="adm-input" placeholder="如 M06.9"/>'
     +       '</label>'
     +       '<label class="adm-field adm-field-full">'
+    +         '<span class="adm-field-label">醫院 <span class="adm-field-hint">(用於到出院日自動定位判定)</span></span>'
+    +         '<input id="adm-form-hospital" type="text" class="adm-input" list="adm-hospital-list" placeholder="輸入或選擇醫院"/>'
+    +         '<datalist id="adm-hospital-list"></datalist>'
+    +       '</label>'
+    +       '<label class="adm-field">'
+    +         '<span class="adm-field-label">預定出院日 <span class="adm-field-hint">(急性)</span></span>'
+    +         '<input id="adm-form-discharge" type="date" class="adm-input"/>'
+    +       '</label>'
+    +       '<label class="adm-field adm-field-full">'
     +         '<span class="adm-field-label">備註</span>'
     +         '<textarea id="adm-form-notes" rows="2" class="adm-textarea" placeholder="想記下的細節，例如治療反應、特殊提醒…"></textarea>'
     +       '</label>'
@@ -20626,10 +20636,35 @@ function admissions() {
     + '</section>';
 }
 
+// 醫院清單快取：建立 admission 時要用 name 反查 lat/lng 送出去。
+var _admHospitalCache = null;
+
+function _admLoadHospitalDatalist() {
+  var dl = document.getElementById('adm-hospital-list');
+  if (!dl) return;
+  // 已快取過就直接重畫，不再打 API。
+  if (_admHospitalCache) {
+    dl.innerHTML = _admHospitalCache.map(function(h) {
+      return '<option value="' + escapeHtml(h.name) + '"></option>';
+    }).join('');
+    return;
+  }
+  fetch(API + '/admissions/hospitals')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _admHospitalCache = (data && data.hospitals) || [];
+      dl.innerHTML = _admHospitalCache.map(function(h) {
+        return '<option value="' + escapeHtml(h.name) + '"></option>';
+      }).join('');
+    })
+    .catch(function() { /* 離線或失敗：picker 仍可手打名稱，無自動定位即可 */ });
+}
+
 function loadAdmissionsPage() {
   var pid = getStablePatientId();
   var listEl = document.getElementById('adm-list');
   if (!listEl) return;
+  _admLoadHospitalDatalist();
   fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -20641,10 +20676,80 @@ function loadAdmissionsPage() {
       listEl.innerHTML = rows.map(renderAdmissionCard).join('');
       rows.forEach(function(a) { loadAdmissionMedications(a.id); });
       if (typeof lucide !== 'undefined') lucide.createIcons();
+      // 對到了預定出院日、有登記醫院座標、仍 active 的住院做一次定位判定。
+      rows.forEach(_admMaybeCheckLocation);
     })
     .catch(function(e) {
       listEl.innerHTML = '<p class="adm-error">載入失敗：' + escapeHtml(String(e)) + '</p>';
     });
+}
+
+// 條件：active + 有 hospital_lat + 今天 >= discharge_date + 本 session 還沒對這筆檢查過。
+function _admMaybeCheckLocation(adm) {
+  if (!adm || adm.status !== 'active') return;
+  if (adm.hospital_lat === null || adm.hospital_lat === undefined) return;
+  if (!adm.discharge_date) return;
+  var planned = String(adm.discharge_date).slice(0, 10);
+  var today = new Date().toISOString().slice(0, 10);
+  if (today < planned) return;
+  var key = 'adm-loc-checked-' + adm.id + '-' + today;
+  try {
+    if (sessionStorage.getItem(key)) return;
+  } catch (e) { /* 私密瀏覽等情況沒 sessionStorage，當作沒檢查過繼續 */ }
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      try { sessionStorage.setItem(key, '1'); } catch (e) {}
+      fetch(API + '/admissions/' + encodeURIComponent(adm.id) + '/check-location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(res) { _admHandleLocationResult(adm, res); })
+        .catch(function() {});
+    },
+    function() { /* 使用者拒絕定位或失敗：靜默，下次再試 */ },
+    { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+  );
+}
+
+function _admHandleLocationResult(adm, res) {
+  if (!res || !res.action) return;
+  if (res.action === 'auto_discharged') {
+    if (typeof showToast === 'function') {
+      showToast('偵測到您已離開' + (adm.hospital_name || '醫院') + '，已自動結案', 'success');
+    }
+    loadAdmissionsPage();
+    if (typeof loadInpatientActiveAdmission === 'function') loadInpatientActiveAdmission();
+    return;
+  }
+  if (res.action === 'prompt_delay') {
+    var dist = res.distance_m ? Math.round(res.distance_m) + 'm' : '範圍內';
+    var ok = confirm(
+      '今天是預定出院日，但您似乎還在' + (adm.hospital_name || '醫院') + '（距離約 ' + dist + '）。\n' +
+      '是否將預定出院日延後一天？\n\n' +
+      '確定 = 延後一天\n取消 = 暫不變動（之後可手動結案）'
+    );
+    if (!ok) return;
+    var planned = String(adm.discharge_date).slice(0, 10);
+    var next = new Date(planned + 'T00:00:00');
+    next.setDate(next.getDate() + 1);
+    var nextIso = next.toISOString().slice(0, 10) + 'T10:00';
+    fetch(API + '/admissions/' + encodeURIComponent(adm.id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discharge_date: nextIso }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        if (typeof showToast === 'function') showToast('已延後一天至 ' + nextIso.slice(0, 10), 'success');
+        loadAdmissionsPage();
+      })
+      .catch(function() {
+        if (typeof showToast === 'function') showToast('延後失敗', 'error');
+      });
+  }
 }
 
 function renderAdmissionCard(a) {
@@ -20758,6 +20863,12 @@ function toggleAdmissionMedForm(admissionId) {
 
 function createAdmission() {
   var pid = getStablePatientId();
+  var hospitalInput = (document.getElementById('adm-form-hospital') || {}).value || '';
+  var hospitalMatch = null;
+  if (hospitalInput && _admHospitalCache) {
+    hospitalMatch = _admHospitalCache.find(function(h) { return h.name === hospitalInput.trim(); }) || null;
+  }
+  var dischargeDate = (document.getElementById('adm-form-discharge') || {}).value || '';
   var body = {
     patient_id: pid,
     type: document.getElementById('adm-form-type').value,
@@ -20766,6 +20877,12 @@ function createAdmission() {
     diagnosis_icd10: document.getElementById('adm-form-icd10').value || null,
     ward: document.getElementById('adm-form-ward').value || null,
     notes: document.getElementById('adm-form-notes').value || null,
+    hospital_name: hospitalInput.trim() || null,
+    hospital_lat: hospitalMatch ? hospitalMatch.lat : null,
+    hospital_lng: hospitalMatch ? hospitalMatch.lng : null,
+    // 「預定出院日」只給日期，後端 check-location 只比日期，這裡用 10:00 作預設時段，
+    // 與 step1 排定出院的格式（YYYY-MM-DDT10:00）一致，方便兩處共用。
+    discharge_date: dischargeDate ? (dischargeDate + 'T10:00') : null,
   };
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
   // 連按防抖：建立中 disable 按鈕並切「新增中⋯」label
@@ -20781,7 +20898,7 @@ function createAdmission() {
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已新增', 'success');
-      ['adm-form-diagnosis','adm-form-icd10','adm-form-ward','adm-form-notes','adm-form-admit'].forEach(function(id) {
+      ['adm-form-diagnosis','adm-form-icd10','adm-form-ward','adm-form-notes','adm-form-admit','adm-form-hospital','adm-form-discharge'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.value = '';
       });
