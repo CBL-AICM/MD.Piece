@@ -11999,6 +11999,60 @@ function _renderMobileMedList(meds) {
           }).join('')
         + '</div>';
     });
+
+    // 「其他」PRN / 每 X 小時藥 — 沒有固定時段所以不進 dynSlots，獨立一張卡，
+    // 每顆藥一個「打卡（現在服用）」按鈕，下面列今日已打的時間，可一日多次。
+    var otherMeds = (meds || []).filter(function(m) { return m && m.is_other; });
+    if (otherMeds.length) {
+      var otherCardHead = ''
+        + '<div style="padding:10px 14px;background:var(--bg-soft);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
+        +   '<i data-lucide="clock" style="width:12px;height:12px"></i> 其他（需要時 / 每 X 小時）'
+        +   '<span style="margin-left:auto;color:var(--text-muted);text-transform:none;letter-spacing:0;font-size:10.5px">不分時段 · 可一日多次</span>'
+        + '</div>';
+
+      var otherRows = otherMeds.map(function(m, idx) {
+        var safeId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        var sep = (idx < otherMeds.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
+        var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
+        // 抓今日已打卡時間（taken=true）並排序
+        var medIdStr = String(m.id);
+        var todayTakenTimes = todayLogs
+          .filter(function(l) { return l && String(l.medication_id) === medIdStr && l.taken; })
+          .map(function(l) {
+            var d = new Date(l.taken_at);
+            if (isNaN(d.getTime())) return null;
+            var hh = String(d.getHours()); if (hh.length < 2) hh = '0' + hh;
+            var mm = String(d.getMinutes()); if (mm.length < 2) mm = '0' + mm;
+            return hh + ':' + mm;
+          })
+          .filter(Boolean)
+          .sort();
+        var takenTxt = todayTakenTimes.length
+          ? '<span class="pill pill-ok mono" style="margin-right:4px">今日已打 ' + todayTakenTimes.length + ' 次</span>'
+            + '<span style="font-size:11px;color:var(--text-dim);font-variant-numeric:tabular-nums">' + todayTakenTimes.join(' · ') + '</span>'
+          : '<span style="font-size:11px;color:var(--text-muted);font-style:italic">今日尚未打卡</span>';
+        // 進度統計：每顆 PRN 預期 1 次（最低），實打用 todayTakenTimes
+        totalCnt += 1;
+        if (todayTakenTimes.length > 0) doneCnt += 1;
+        return ''
+          + '<div class="med-list-row" style="padding:10px 14px;flex-wrap:wrap;gap:8px 10px' + sep + '">'
+          +   '<div class="ico"><i data-lucide="pill"></i></div>'
+          +   '<div style="flex:1;min-width:0">'
+          +     '<div class="name">' + escapeHtml(m.name || '') + '</div>'
+          +     '<div class="dose">' + escapeHtml(doseTxt) + '</div>'
+          +     '<div style="margin-top:4px">' + takenTxt + '</div>'
+          +   '</div>'
+          +   '<button type="button" class="pill pill-info mono" '
+          +     'style="border:0;cursor:pointer;font:inherit;padding:6px 10px" '
+          +     'title="現在服用，立刻打卡（PRN / 不分時段藥可重複打卡）" '
+          +     'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\',\'other\')">'
+          +     '打卡（現在服用）'
+          +   '</button>'
+          + '</div>';
+      }).join('');
+      thtml += '<div class="card" style="padding:0;margin-bottom:10px">' + otherCardHead + otherRows + '</div>';
+    }
+
     if (!thtml) {
       thtml = '<div class="med-tip-card" style="background:var(--bg-soft);border-color:var(--border);color:var(--text-dim)"><i data-lucide="info"></i><span>沒有依時段排程的藥物</span></div>';
     }
