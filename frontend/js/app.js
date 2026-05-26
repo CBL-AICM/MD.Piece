@@ -15241,10 +15241,15 @@ function renderMyDiseaseShelf(items, extras) {
 }
 
 function eduOpenMyDiseaseBook(icd10, name) {
-  // 使用既有的疾病百科書本流程：開書 → 預選疾病 → 右頁列出六大維度
+  // 開書 → 預選疾病 → 直接展開第一個維度（疾病管理）內容
+  // 省去使用者還要再點一次右頁維度才看得到文章
   if (typeof eduOpenBook === 'function') eduOpenBook('diseases');
   setTimeout(function() {
     if (typeof eduPickDisease === 'function') eduPickDisease(icd10, name);
+    var first = (typeof EDU_DISEASE_DIMENSIONS !== 'undefined') && EDU_DISEASE_DIMENSIONS[0];
+    if (first && typeof eduOpenContent === 'function') {
+      eduOpenContent(first.key, first.label);
+    }
   }, 50);
 }
 
