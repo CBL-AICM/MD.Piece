@@ -10395,14 +10395,25 @@ function renderMobileMetricChips() {
   if (!el) return;
   var cur = (window.__vtMobileSel || {}).metricId;
   var list = getAllMetrics().filter(function(mm) { return mm.id !== 'bmi'; });
-  el.innerHTML = list.map(function(mm) {
+  var chipsHtml = list.map(function(mm) {
     var on = cur === mm.id;
+    var delBtn = mm.custom
+      ? '<span onclick="event.stopPropagation();deleteMobileCustomMetric(\'' + mm.id + '\')" '
+        + 'style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#c97a7a;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid #fff" title="刪除自訂指標">×</span>'
+      : '';
     return '<button type="button" onclick="setVitalChipMetric(\'' + mm.id + '\')" '
-      + 'style="' + _vitalChipStyle(on) + ';flex-direction:column;padding:12px 8px;min-height:64px">'
+      + 'style="' + _vitalChipStyle(on) + ';flex-direction:column;padding:12px 8px;min-height:64px;position:relative">'
+      + delBtn
       + '<i data-lucide="' + (mm.icon || 'tag') + '" style="width:18px;height:18px"></i>'
       + '<span>' + escapeHtml(mm.zh) + (mm.unit ? ' <small style="font-weight:400;opacity:0.7">' + escapeHtml(mm.unit) + '</small>' : '') + '</span>'
       + '</button>';
   }).join('');
+  chipsHtml += '<button type="button" onclick="openMobileAddCustomMetric()" '
+    + 'style="' + _vitalChipStyle(false) + ';flex-direction:column;padding:12px 8px;min-height:64px;border-style:dashed">'
+    + '<i data-lucide="plus" style="width:18px;height:18px"></i>'
+    + '<span>自訂</span>'
+    + '</button>';
+  el.innerHTML = chipsHtml;
   if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch (_) {}
   syncVitalMobileValueInputs();
 }
@@ -10461,6 +10472,70 @@ function initMobileVitalChips() {
   renderMobileMetricChips();
   renderMobileContextChips();
   renderMobileMethodChips();
+}
+
+function openMobileAddCustomMetric() {
+  var old = document.getElementById('vt-m-add-sheet');
+  if (old) old.remove();
+  var units = ['mg/dL','mmol/L','mmHg','bpm','%','kg','g','lb','cm','mm','ml','L','°C','°F','次','步','顆','片','分鐘','小時','kcal','級','分'];
+  var unitOptions = '<option value="">— 無單位 —</option>' + units.map(function(u) {
+    return '<option value="' + u + '">' + u + '</option>';
+  }).join('');
+  var overlay = document.createElement('div');
+  overlay.id = 'vt-m-add-sheet';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = ''
+    + '<div role="dialog" aria-modal="true" style="background:#fff;border-radius:14px;max-width:380px;width:100%;padding:18px">'
+    +   '<h3 style="margin:0 0 4px;font-size:16px;color:#111">新增自訂指標</h3>'
+    +   '<p style="margin:0 0 14px;font-size:12px;color:#6b7280">例：尿酸、步數、視力、運動時間</p>'
+    +   '<label style="font-size:12px;color:#6b7280;font-weight:600;display:block;margin-bottom:4px">指標名稱</label>'
+    +   '<input id="vt-m-add-name" maxlength="20" placeholder="輸入名稱" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box" />'
+    +   '<label style="font-size:12px;color:#6b7280;font-weight:600;display:block;margin-bottom:4px">單位</label>'
+    +   '<select id="vt-m-add-unit" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box">' + unitOptions + '</select>'
+    +   '<div style="display:flex;gap:8px">'
+    +     '<button type="button" onclick="closeMobileAddCustomMetric()" style="flex:1;padding:12px;background:transparent;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;cursor:pointer">取消</button>'
+    +     '<button type="button" onclick="submitMobileAddCustomMetric()" style="flex:2;padding:12px;background:#4A90C2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">新增</button>'
+    +   '</div>'
+    + '</div>';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeMobileAddCustomMetric(); });
+  document.body.appendChild(overlay);
+  setTimeout(function() { var n = document.getElementById('vt-m-add-name'); if (n) n.focus(); }, 80);
+}
+
+function closeMobileAddCustomMetric() {
+  var el = document.getElementById('vt-m-add-sheet');
+  if (el) el.remove();
+}
+
+function submitMobileAddCustomMetric() {
+  var name = document.getElementById('vt-m-add-name').value.trim();
+  if (!name) {
+    if (typeof showToast === 'function') showToast('請輸入指標名稱', 'warning');
+    document.getElementById('vt-m-add-name').focus();
+    return;
+  }
+  var unit = document.getElementById('vt-m-add-unit').value.trim();
+  var id = 'custom-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  var colors = ['blue','aqua','mint','pink'];
+  saveCustomMetric({
+    id: id, zh: name, icon: 'tag', unit: unit,
+    color: colors[Math.floor(Math.random() * colors.length)]
+  });
+  setTrackedMetricIds(getTrackedMetricIds().concat(id));
+  window.__vtMobileSel = window.__vtMobileSel || {};
+  window.__vtMobileSel.metricId = id;
+  closeMobileAddCustomMetric();
+  if (typeof showToast === 'function') showToast('已新增「' + name + '」✅', 'success');
+  showPage('vitals');
+}
+
+function deleteMobileCustomMetric(id) {
+  if (!confirm('刪除此自訂指標？已記錄的歷史會保留。')) return;
+  deleteCustomMetric(id);
+  if (window.__vtMobileSel && window.__vtMobileSel.metricId === id) {
+    window.__vtMobileSel.metricId = '';
+  }
+  showPage('vitals');
 }
 
 function submitMobileVitalEntry() {
