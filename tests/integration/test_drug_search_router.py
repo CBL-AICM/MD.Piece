@@ -36,10 +36,14 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from backend.main import app  # noqa: E402
 from backend.routers import drug_search as drug_search_module  # noqa: E402
-
-client = TestClient(app)
+from backend.security import create_access_token  # noqa: E402
 
 PATIENT_ID = "drug-search-test-patient"
+
+# Phase 1b 後 /medications/ POST 要 JWT；test_search_from_medication 會用到。
+# drug-search 本身 endpoints 沒強制 JWT，但統一給 token 不影響其他測試。
+_TEST_TOKEN = create_access_token({"id": PATIENT_ID, "username": "tester", "role": "patient"})
+client = TestClient(app, headers={"Authorization": f"Bearer {_TEST_TOKEN}"})
 
 
 @pytest.fixture(autouse=True)

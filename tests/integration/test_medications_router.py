@@ -37,10 +37,14 @@ db_mod._init_db()
 from fastapi.testclient import TestClient  # noqa: E402
 
 from backend.main import app  # noqa: E402
-
-client = TestClient(app)
+from backend.security import create_access_token  # noqa: E402
 
 PATIENT_ID = "test-patient-123"
+
+# Phase 1b 後 medications router 全部要 JWT；testclient 預設掛 token，
+# sub 設成 PATIENT_ID 才能通過 _enforce_self_patient 檢查。
+_TEST_TOKEN = create_access_token({"id": PATIENT_ID, "username": "tester", "role": "patient"})
+client = TestClient(app, headers={"Authorization": f"Bearer {_TEST_TOKEN}"})
 
 
 @pytest.fixture(autouse=True)
