@@ -48,14 +48,16 @@ ANTHROPIC_VISION_MAX_TOKENS = int(os.getenv("ANTHROPIC_VISION_MAX_TOKENS", "2048
 GOOGLE_VISION_API_KEY = os.getenv("GOOGLE_VISION_API_KEY", "")
 GOOGLE_VISION_URL = "https://vision.googleapis.com/v1/images:annotate"
 
-# Gemini 免費 tier — Google AI Studio 提供 gemini-2.0-flash 免費 GA，
+# Gemini 免費 tier — Google AI Studio 提供 gemini-2.5-flash 免費 GA，
 # 1500 req/day + 15 RPM，繁中品質遠優於 Llama，是 Groq rate-limit 後最便宜
 # 的高品質 fallback。注意：免費 tier 的請求可能被 Google 用於模型訓練
 # （付費 tier 不會），醫療資料敏感者請接受這個 ToS 後再啟用。
 # 申請：https://aistudio.google.com/apikey
+# Default 從 gemini-2.0-flash 改成 gemini-2.5-flash — 2026-05 起新申請的
+# 免費 key 對 2.0-flash 是 limit:0（沒免費額度），只有 2.5-flash 才有。
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 # Anthropic SDK 預設 timeout 是 600s + 2 retries — 在 Vercel 60s lambda 下，
 # 一次小卡頓就會吃掉整個 lambda 額度。改成差化化 timeout：
