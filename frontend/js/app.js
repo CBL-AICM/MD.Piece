@@ -2099,6 +2099,7 @@ function previsitStreamReport(pid, days) {
             patient_id: pid,
             report: '',
             raw_data: payload.raw_data || {},
+            raw_records: payload.raw_records || {},
             period_label: payload.period_label || '',
             days: payload.days || days,
             source: 'streaming',
@@ -2443,43 +2444,62 @@ var PREVISIT_DISCLAIMER_HTML = ''
 //   audience='patient' → 患者版（白話摘要 + 三件事，自己念給醫師聽）
 //   audience='doctor'  → 醫師版（專業臨床摘要 + 追蹤建議 + 風險提醒）
 // 期間（days / period_label）由 backend 依「上次回診」自動推算。
+//
+// 優先用頁面 SSE 跑完已快取的 _previsitData.report；只有沒快取（沒看過 previsit 頁
+// 或 SSE 還在跑）才退回非串流 /monthly、/patient-summary。
+// 兩個理由：(1) 第二次 LLM 呼叫（≈ 30–50s）常撞 Vercel 60s lambda 上限 → 504 → toast「失敗」；
+// (2) 兩次 LLM 輸出不一致，PDF 內容會跟頁面上看到的不一樣。
 function previsitDownload(audience) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) {
     if (typeof showToast === 'function') showToast('找不到使用者，請先登入', 'warning');
     return;
   }
-  if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
 
-  if (audience === 'doctor') {
-    fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var report = (data && data.report) || '（暫無報告）';
-        var counts = (data && data.raw_data) || {};
-        var periodLabel = (data && data.period_label) || '近 30 天';
-        var html = previsitBuildDoctorHTML(report, counts, periodLabel);
-        previsitOpenPrint(html, 'MD.Piece-診前報告-醫師版-' + new Date().toISOString().slice(0, 10) + '.pdf');
-      })
-      .catch(function() {
-        if (typeof showToast === 'function') showToast('產生醫師版報告失敗，請稍後再試', 'error');
-      });
+  var dateStr = new Date().toISOString().slice(0, 10);
+  var filename = 'MD.Piece-診前報告-' + (audience === 'doctor' ? '醫師版' : '患者版') + '-' + dateStr + '.pdf';
+
+  function buildAndPrint(reportMarkdown, counts, periodLabel, rawRecords, days) {
+    if (audience === 'doctor') {
+      previsitOpenPrint(previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel, rawRecords, days), filename);
+    } else {
+      var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
+      previsitOpenPrint(previsitBuildPatientHTML(reportMarkdown, counts, checklist, periodLabel, rawRecords, days), filename);
+    }
+  }
+
+  // SSE 完成後 source 會從 'streaming' 換成 'ai' / 'no_data'；只在那之後用快取
+  var cached = _previsitData && _previsitData.report;
+  if (cached && cached.report && cached.source && cached.source !== 'streaming') {
+    buildAndPrint(
+      cached.report,
+      cached.raw_data || {},
+      cached.period_label || '近 30 天',
+      cached.raw_records || {},
+      cached.days || 30
+    );
     return;
   }
 
-  // patient 版（預設）
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
+  // 退回非串流端點（cache 未就緒）
+  if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
+  var endpoint = audience === 'doctor' ? '/monthly' : '/patient-summary';
+  fetch(API + '/reports/' + encodeURIComponent(pid) + endpoint)
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var summary = (data && data.summary) || '（暫無摘要）';
-      var counts = (data && data.raw_data) || {};
-      var periodLabel = (data && data.period_label) || '近 30 天';
-      var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
-      var html = previsitBuildPatientHTML(summary, counts, checklist, periodLabel);
-      previsitOpenPrint(html, 'MD.Piece-診前報告-患者版-' + new Date().toISOString().slice(0, 10) + '.pdf');
+      var md = (data && (data.report || data.summary)) || '（暫無報告）';
+      buildAndPrint(
+        md,
+        (data && data.raw_data) || {},
+        (data && data.period_label) || '近 30 天',
+        (data && data.raw_records) || {},
+        (data && data.days) || 30
+      );
     })
     .catch(function() {
-      if (typeof showToast === 'function') showToast('產生患者版報告失敗，請稍後再試', 'error');
+      if (typeof showToast === 'function') {
+        showToast('產生' + (audience === 'doctor' ? '醫師' : '患者') + '版報告失敗，請稍後再試', 'error');
+      }
     });
 }
 
@@ -2490,7 +2510,7 @@ var _PV_PDF_STYLE = ''
   + '  h1 { font-size: 22px; margin: 0 0 4px; }'
   + '  .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
   + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
-  + '  h3 { font-size: 14px; margin: 16px 0 6px; color: #2a5d8f; }'
+  + '  h3 { font-size: 13.5px; margin: 14px 0 4px; color: #2a5d8f; font-weight: 600; }'
   + '  p { margin: 0 0 10px; }'
   + '  ul, ol { padding-left: 22px; margin: 0 0 10px; }'
   + '  ul li, ol li { margin-bottom: 6px; }'
@@ -2502,13 +2522,209 @@ var _PV_PDF_STYLE = ''
   + '  table.basic-info th { width: 110px; text-align: left; padding: 6px 10px; background: #f0f4fa; border: 1px solid #e2e2e2; color: #2a5d8f; font-weight: 600; vertical-align: top; }'
   + '  table.basic-info td { padding: 6px 10px; border: 1px solid #e2e2e2; vertical-align: top; }'
   + '  .basic-empty { color: #888; font-size: 12px; margin: 0 0 10px; }'
+  + '  table.rec { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: 12.5px; }'
+  + '  table.rec th, table.rec td { padding: 5px 8px; border: 1px solid #e6ebf1; vertical-align: top; text-align: left; }'
+  + '  table.rec thead th { background: #f0f4fa; color: #2a5d8f; font-weight: 600; font-size: 11.5px; }'
+  + '  table.rec tbody td { line-height: 1.55; }'
+  + '  .rec-empty { color: #888; font-size: 12px; margin: 2px 0 10px; padding: 4px 8px; background: #fafafa; border-radius: 4px; }'
+  + '  .rec-count { color: #6B7F92; font-size: 11.5px; font-weight: 400; margin-left: 6px; }'
   + '  .disclaimer { margin-top: 28px; padding: 12px 14px; border-top: 2px solid #d9d9d9; background: #fafafa; font-size: 11.5px; color: #555; line-height: 1.6; }'
   + '  .disclaimer p { margin: 0 0 6px; }'
   + '  .disclaimer p:last-child { margin: 0; }';
 
-function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
+// ── 本期間紀錄一覽 ────────────────────────────────────────────
+// 從 backend raw_records（雲端紀錄）+ localStorage vitals 組出
+// 完整的「醫師看了知道病人這段期間記了什麼」資料表。
+// 此區塊純 JS／不過 LLM；醫師需要看到 raw data 而非只看 AI 摘要。
+
+function _pvFmtDate(s) {
+  if (!s) return '';
+  return String(s).slice(0, 10);
+}
+function _pvFmtDateTime(s) {
+  if (!s) return '';
+  var v = String(s);
+  if (v.length >= 16) return v.slice(0, 10) + ' ' + v.slice(11, 16);
+  return v.slice(0, 10);
+}
+
+function _pvRecBlock(title, count, bodyHtml, emptyMsg) {
+  var head = '<h3>' + escapeHtml(title)
+    + (count != null ? '<span class="rec-count">（' + count + ' 筆）</span>' : '')
+    + '</h3>';
+  if (!count) return head + '<div class="rec-empty">' + escapeHtml(emptyMsg || '本期間無紀錄') + '</div>';
+  return head + bodyHtml;
+}
+
+function _pvSymptomsTable(arr) {
+  var rows = arr.map(function(s) {
+    var syms = s.symptoms;
+    if (Array.isArray(syms)) syms = syms.join('、');
+    return '<tr><td>' + escapeHtml(_pvFmtDateTime(s.created_at)) + '</td>'
+      + '<td>' + escapeHtml(syms || '') + '</td>'
+      + '<td>' + escapeHtml(s.intensity != null ? String(s.intensity) : '') + '</td>'
+      + '<td>' + escapeHtml(s.note || '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>時間</th><th>症狀</th><th>強度</th><th>備註</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function _pvEmotionsTable(arr) {
+  var rows = arr.map(function(e) {
+    return '<tr><td>' + escapeHtml(_pvFmtDateTime(e.created_at)) + '</td>'
+      + '<td>' + escapeHtml(e.score != null ? String(e.score) + ' / 5' : '') + '</td>'
+      + '<td>' + escapeHtml(e.note || '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>時間</th><th>評分</th><th>備註</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function _pvMedsTable(meds, logs) {
+  // 服藥率：以每藥 medication_id 在 logs 中的 taken / total 計算
+  var stats = {};
+  (logs || []).forEach(function(l) {
+    var mid = l.medication_id;
+    if (!mid) return;
+    if (!stats[mid]) stats[mid] = { total: 0, taken: 0 };
+    stats[mid].total += 1;
+    if (l.taken) stats[mid].taken += 1;
+  });
+  var rows = meds.map(function(m) {
+    var s = stats[m.id];
+    var rate = s && s.total ? Math.round(s.taken / s.total * 100) + '%' : '—';
+    return '<tr><td>' + escapeHtml(m.name || '') + '</td>'
+      + '<td>' + escapeHtml(m.dosage || '') + '</td>'
+      + '<td>' + escapeHtml(m.frequency || '') + '</td>'
+      + '<td>' + escapeHtml(rate) + (s ? ' <span style="color:#888;font-size:11px">(' + s.taken + '/' + s.total + ')</span>' : '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>藥名</th><th>劑量</th><th>頻次</th><th>服藥率</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function _pvEffectsTable(arr, meds) {
+  var byId = {};
+  (meds || []).forEach(function(m) { byId[m.id] = m.name; });
+  var rows = arr.map(function(e) {
+    return '<tr><td>' + escapeHtml(_pvFmtDate(e.recorded_at)) + '</td>'
+      + '<td>' + escapeHtml(byId[e.medication_id] || '未知藥物') + '</td>'
+      + '<td>' + escapeHtml(e.effectiveness != null ? e.effectiveness + ' / 5' : '') + '</td>'
+      + '<td>' + escapeHtml(e.side_effects || '') + '</td>'
+      + '<td>' + escapeHtml(e.symptom_changes || '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>日期</th><th>藥名</th><th>療效</th><th>副作用</th><th>症狀變化</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function _pvDietTable(arr) {
+  var ml = { breakfast: '早', lunch: '午', dinner: '晚', snack: '點' };
+  var rows = arr.map(function(d) {
+    return '<tr><td>' + escapeHtml(_pvFmtDateTime(d.eaten_at)) + '</td>'
+      + '<td>' + escapeHtml(ml[d.meal_type] || d.meal_type || '') + '</td>'
+      + '<td>' + escapeHtml(d.foods || '') + '</td>'
+      + '<td>' + escapeHtml(d.note || '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>時間</th><th>餐別</th><th>食物</th><th>備註</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function _pvVisitsTable(arr) {
+  var rows = arr.map(function(r) {
+    return '<tr><td>' + escapeHtml(_pvFmtDate(r.visit_date)) + '</td>'
+      + '<td>' + escapeHtml(r.diagnosis || '') + '</td>'
+      + '<td>' + escapeHtml(r.notes || '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>日期</th><th>診斷</th><th>備註</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function _pvAdmissionsTable(arr) {
+  var tmap = { acute: '急性住院', chronic_infusion: '長期療程' };
+  var rows = arr.map(function(a) {
+    var range = _pvFmtDate(a.admit_date) + (a.discharge_date ? ' → ' + _pvFmtDate(a.discharge_date) : ' → 進行中');
+    return '<tr><td>' + escapeHtml(range) + '</td>'
+      + '<td>' + escapeHtml(tmap[a.type] || a.type || '') + '</td>'
+      + '<td>' + escapeHtml(a.diagnosis || '') + '</td>'
+      + '<td>' + escapeHtml(a.ward || '') + '</td>'
+      + '<td>' + escapeHtml(a.notes || '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>期間</th><th>類型</th><th>診斷</th><th>單位</th><th>備註</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function _pvMedChangesTable(arr) {
+  var cmap = { start: '新開始', stop: '停藥', dose_up: '加量', dose_down: '減量', switch: '換藥', frequency: '改頻次', other: '其他' };
+  var rows = arr.map(function(m) {
+    return '<tr><td>' + escapeHtml(_pvFmtDate(m.effective_date)) + '</td>'
+      + '<td>' + escapeHtml(cmap[m.change_type] || m.change_type || '') + '</td>'
+      + '<td>' + escapeHtml(m.reason || '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>生效日</th><th>變更類型</th><th>原因</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function _pvVitalsTable(entries) {
+  if (!entries.length) return '';
+  // metricId → 顯示名稱（從 VITAL_METRICS 拿，找不到就用 id）
+  function metricName(id) {
+    var m = (typeof VITAL_METRICS !== 'undefined' && VITAL_METRICS) ? VITAL_METRICS.find(function(x) { return x.id === id; }) : null;
+    return m ? m.zh + (m.unit ? ' (' + m.unit + ')' : '') : id;
+  }
+  // 依時間倒序
+  entries = entries.slice().sort(function(a, b) {
+    return new Date(b.recordedAt) - new Date(a.recordedAt);
+  });
+  var rows = entries.map(function(e) {
+    var val;
+    if (e.systolic != null && e.diastolic != null) val = e.systolic + ' / ' + e.diastolic;
+    else val = (e.value != null ? String(e.value) : '');
+    var ctx = [e.context, e.method].filter(Boolean).join(' · ');
+    return '<tr><td>' + escapeHtml(_pvFmtDateTime(e.recordedAt)) + '</td>'
+      + '<td>' + escapeHtml(metricName(e.metricId)) + '</td>'
+      + '<td>' + escapeHtml(val) + '</td>'
+      + '<td>' + escapeHtml(ctx) + '</td>'
+      + '<td>' + escapeHtml(e.note || '') + '</td></tr>';
+  }).join('');
+  return '<table class="rec"><thead><tr><th>時間</th><th>項目</th><th>數值</th><th>情境</th><th>備註</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+// 讀本期間（days）的 vitals localStorage 紀錄
+function _pvGetVitalsForPeriod(days) {
+  try {
+    var all = JSON.parse(localStorage.getItem('mdpiece_vitals_entries') || '[]');
+    if (!days || !all.length) return all;
+    var cutoff = Date.now() - days * 86400000;
+    return all.filter(function(e) {
+      var t = new Date(e.recordedAt).getTime();
+      return t && t >= cutoff;
+    });
+  } catch (e) { return []; }
+}
+
+// 組「本期間紀錄一覽」整段 HTML（給 PDF 兩版共用）。
+// rawRecords：backend raw_records dict（症狀／情緒／用藥／服藥日誌／療效／飲食／就診／住院／用藥變更）
+// days：本期間天數（拿來篩 localStorage vitals）
+function previsitRawRecordsHTML(rawRecords, days) {
+  var rr = rawRecords || {};
+  var vitals = _pvGetVitalsForPeriod(days);
+  var blocks = [];
+
+  blocks.push(_pvRecBlock('症狀紀錄', (rr.symptoms || []).length,
+    _pvSymptomsTable(rr.symptoms || []), '本期間無症狀紀錄'));
+  blocks.push(_pvRecBlock('情緒紀錄', (rr.emotions || []).length,
+    _pvEmotionsTable(rr.emotions || []), '本期間無情緒紀錄'));
+  blocks.push(_pvRecBlock('生理量測', vitals.length,
+    _pvVitalsTable(vitals), '本期間無生理量測紀錄'));
+  blocks.push(_pvRecBlock('現用藥物 + 服藥率', (rr.medications || []).length,
+    _pvMedsTable(rr.medications || [], rr.medication_logs || []), '本期間無用藥資料'));
+  blocks.push(_pvRecBlock('藥物療效評分', (rr.effects || []).length,
+    _pvEffectsTable(rr.effects || [], rr.medications || []), '本期間無療效評分'));
+  blocks.push(_pvRecBlock('用藥變更', (rr.medication_changes || []).length,
+    _pvMedChangesTable(rr.medication_changes || []), '本期間無用藥變更'));
+  blocks.push(_pvRecBlock('飲食紀錄', (rr.diet || []).length,
+    _pvDietTable(rr.diet || []), '本期間無飲食紀錄'));
+  blocks.push(_pvRecBlock('就診紀錄', (rr.visits || []).length,
+    _pvVisitsTable(rr.visits || []), '本期間無就診紀錄'));
+  blocks.push(_pvRecBlock('住院 / 長期療程', (rr.admissions || []).length,
+    _pvAdmissionsTable(rr.admissions || []), '本期間無住院／療程紀錄'));
+
+  return blocks.join('');
+}
+
+function previsitBuildPatientHTML(summary, counts, checklist, periodLabel, rawRecords, days) {
   var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
-  // 整合摘要回傳的是 markdown（## 一、主訴…等五段），用 markdownToHtml 渲染；
+  // 整合摘要回傳的是 markdown（## 一、主訴…等六段），用 markdownToHtml 渲染；
   // 退而求其次（轉換器不在）才回到段落切分。
   var bodyHtml = (typeof markdownToHtml === 'function')
     ? markdownToHtml(String(summary))
@@ -2525,6 +2741,7 @@ function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
     +   '<td><strong>' + (counts.medication_count || 0) + '</strong><span>用藥</span></td>'
     +   '<td><strong>' + (counts.visit_count || 0) + '</strong><span>就診</span></td>'
     + '</tr></table>';
+  var recHtml = previsitRawRecordsHTML(rawRecords || {}, days || 30);
 
   return ''
     + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
@@ -2540,11 +2757,13 @@ function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
     + bodyHtml
     + '<h2>這次想請醫師確認的事</h2>'
     + checklistHtml
+    + '<h2>本期間紀錄一覽</h2>'
+    + recHtml
     + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
     + '</body></html>';
 }
 
-function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
+function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel, rawRecords, days) {
   var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
   var bodyHtml = (typeof markdownToHtml === 'function')
     ? markdownToHtml(String(reportMarkdown))
@@ -2556,6 +2775,7 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
     +   '<td><strong>' + (counts.medication_count || 0) + '</strong><span>用藥</span></td>'
     +   '<td><strong>' + (counts.visit_count || 0) + '</strong><span>就診</span></td>'
     + '</tr></table>';
+  var recHtml = previsitRawRecordsHTML(rawRecords || {}, days || 30);
 
   return ''
     + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
@@ -2569,6 +2789,8 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
     + statsHtml
     + '<h2>整合摘要</h2>'
     + bodyHtml
+    + '<h2>本期間紀錄一覽</h2>'
+    + recHtml
     + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
     + '</body></html>';
 }
