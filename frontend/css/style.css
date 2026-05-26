@@ -3527,7 +3527,100 @@ html[data-mode="senior"] .tc-desc {
 .hsec-mint   { --hsec-c: var(--success); }
 .hsec-gold   { --hsec-c: var(--cream-dim, #C4B8A5); }
 
-/* ── Layer 4: 拼圖迴廊 (jigsaw puzzle gallery) ───────── */
+/* ── Layer 4: 衛教推薦卡片 ────────────────────────────── */
+.home-layer-edu .home-layer-head { position: relative; }
+.home-edu-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.home-edu-more:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateX(2px);
+}
+
+.home-edu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.home-edu-loading {
+  grid-column: 1 / -1;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.home-edu-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 38px 14px 14px;
+  border: 1.5px solid var(--hedu-c, var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--hedu-bg, var(--bg-card));
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  color: var(--text);
+}
+.home-edu-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.home-edu-card:hover .home-edu-card-arrow { transform: translate(2px, -50%); color: var(--hedu-c, var(--accent)); }
+.home-edu-tag {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.home-edu-card-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+.home-edu-card-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.home-edu-card-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.home-edu-tint-teal  { --hedu-c: var(--teal); --hedu-bg: linear-gradient(135deg, rgba(63,168,150,0.08), rgba(63,168,150,0.02)); }
+.home-edu-tint-rose  { --hedu-c: #C97F4B; --hedu-bg: linear-gradient(135deg, rgba(201,127,75,0.08), rgba(201,127,75,0.02)); }
+.home-edu-tint-blue  { --hedu-c: var(--accent); --hedu-bg: linear-gradient(135deg, rgba(91,159,232,0.08), rgba(91,159,232,0.02)); }
+.home-edu-tint-amber { --hedu-c: var(--warning); --hedu-bg: linear-gradient(135deg, rgba(217,162,73,0.08), rgba(217,162,73,0.02)); }
+
+/* ── Layer 5: 拼圖迴廊 (jigsaw puzzle gallery) ───────── */
 .home-puzzle-frame {
   position: relative;
   margin: 0 auto;
@@ -3630,6 +3723,9 @@ html[data-mode="senior"] .tc-desc {
 
   .home-second-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .hsec-card { padding: 12px 10px; }
+
+  .home-edu-grid { grid-template-columns: 1fr; gap: 10px; }
+  .home-edu-card { padding: 12px 36px 12px 12px; }
 
   .home-puzzle-frame { max-width: 100%; }
   .hpz-label-cell { font-size: 0.6rem; padding: 2px; }

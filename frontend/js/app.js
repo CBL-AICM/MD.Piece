@@ -5058,24 +5058,7 @@ function home() {
     +     '<button class="sec-action" onclick="navigateTo(\'education\',null)">全部 <i data-lucide="arrow-right"></i></button>'
     +   '</div>'
     +   '<div id="mobile-home-edu" class="edu-feed">'
-    +     '<button class="card tint-teal edu-card-mini" onclick="navigateTo(\'education\',null)" style="cursor:pointer;text-align:left;width:100%;border:1.5px solid var(--border,rgba(31,61,88,0.10))">'
-    +       '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div style="font-size:10.5px;color:var(--teal-deep,#1F5F56);font-weight:600;letter-spacing:0.04em;margin-bottom:4px">// 高血壓</div>'
-    +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy,#0F2A45);line-height:1.4;margin-bottom:3px">每天量血壓的最佳時機</div>'
-    +       '<div style="font-size:11px;color:var(--text-muted,#6B7F92);line-height:1.5">起床後一小時內、坐穩 5 分鐘再量，數值最準確。連續記錄 7 天比單次值更有意義。</div>'
-    +     '</button>'
-    +     '<button class="card tint-rose edu-card-mini" onclick="navigateTo(\'education\',null)" style="cursor:pointer;text-align:left;width:100%;border:1.5px solid var(--border,rgba(31,61,88,0.10))">'
-    +       '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div style="font-size:10.5px;color:var(--rose-deep,#C97A7A);font-weight:600;letter-spacing:0.04em;margin-bottom:4px">// 用藥</div>'
-    +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy,#0F2A45);line-height:1.4;margin-bottom:3px">忘記吃藥怎麼補？</div>'
-    +       '<div style="font-size:11px;color:var(--text-muted,#6B7F92);line-height:1.5">距離下次服藥時間少於一半 → 跳過。多數慢性病藥物不需要追補，雙倍劑量風險更高。</div>'
-    +     '</button>'
-    +     '<button class="card tint-blue edu-card-mini" onclick="navigateTo(\'story\',null)" style="cursor:pointer;text-align:left;width:100%;border:1.5px solid var(--border,rgba(31,61,88,0.10))">'
-    +       '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div style="font-size:10.5px;color:var(--accent-deep,#2F6B96);font-weight:600;letter-spacing:0.04em;margin-bottom:4px">// 病史故事</div>'
-    +       '<div style="font-size:13.5px;font-weight:600;color:var(--navy,#0F2A45);line-height:1.4;margin-bottom:3px">每日一則 · 跟著故事走</div>'
-    +       '<div style="font-size:11px;color:var(--text-muted,#6B7F92);line-height:1.5">病友的真實經歷，幫助你理解自己正在經歷的階段，知道下一步可以做什麼。</div>'
-    +     '</button>'
+    +     '<div class="card" style="padding:14px;color:var(--text-muted,#6B7F92);font-size:11px;text-align:center">載入中…</div>'
     +   '</div>'
 
     // ╔════════════════════════════════════════════════════════
@@ -5236,11 +5219,30 @@ function home() {
       </section>
 
       <!-- ════════════════════════════════════════════════════
-           Layer 4 — 拼圖迴廊：查詢、學習、設定
+           Layer 4 — 衛教專欄：依登錄疾病動態推薦
+           ════════════════════════════════════════════════════ -->
+      <section class="home-layer home-layer-edu">
+        <header class="home-layer-head">
+          <span class="home-layer-num">04</span>
+          <div class="home-layer-titles">
+            <h3 class="home-layer-title">為你推薦的衛教</h3>
+            <p class="home-layer-sub" id="home-edu-sub">依你登錄的疾病自動挑選 · 附文獻來源</p>
+          </div>
+          <button class="home-edu-more" onclick="navigateTo('education',null)">
+            看全部 <i data-lucide="arrow-right" style="width:14px;height:14px"></i>
+          </button>
+        </header>
+        <div id="home-edu-list" class="home-edu-grid">
+          <div class="home-edu-loading">載入中…</div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════
+           Layer 5 — 拼圖迴廊：查詢、學習、設定
            ════════════════════════════════════════════════════ -->
       <section class="home-layer home-layer-puzzle">
         <header class="home-layer-head">
-          <span class="home-layer-num">04</span>
+          <span class="home-layer-num">05</span>
           <div class="home-layer-titles">
             <h3 class="home-layer-title">拼圖迴廊</h3>
             <p class="home-layer-sub">點任一塊拼圖，跳到對應功能</p>
@@ -5327,6 +5329,9 @@ function loadHomePage() {
       if (el) el.innerHTML = '<p class="home-ov-empty">' + _T('home.mood.error') + '</p>';
     });
 
+  // 衛教推薦（桌機 + 手機共用同一個 loader，依登錄疾病動態推薦）
+  if (typeof loadHomeEducation === 'function') loadHomeEducation();
+
   // === 行動版首頁額外注入（KPI sparkline / 待辦進度 / 回診科別 / SOS 計數）=====
   // 桌機版完全不受影響，因為這些 id 只存在於 .mobile-only 區塊。
   if (typeof _updateMobileHomeKPIs === 'function') _updateMobileHomeKPIs();
@@ -5337,6 +5342,115 @@ function loadHomePage() {
   // 滾動式 feed 新增的 Tier 2 區塊
   if (typeof _updateMobileHomeMedsMini === 'function') _updateMobileHomeMedsMini();
   if (typeof _renderMobileRecentRecords === 'function') _renderMobileRecentRecords();
+}
+
+// ── 首頁衛教推薦 ─────────────────────────────────────────
+// 桌機 #home-edu-list + 手機 #mobile-home-edu 共用同一個 loader。
+// 有登錄疾病 → 從 /education/my-diseases 抽出每個疾病前 2 篇文章；
+// 沒有疾病或 API 空 → fallback /education/articles/featured?limit=3。
+// 點卡片 → 跳到衛教頁並自動展開該文章（透過 _pendingEduArticleSlug）。
+var _pendingEduArticleSlug = null;
+
+function homeOpenEduArticle(slug) {
+  _pendingEduArticleSlug = slug;
+  navigateTo('education', null);
+}
+
+function loadHomeEducation() {
+  var desk = document.getElementById('home-edu-list');
+  var mob = document.getElementById('mobile-home-edu');
+  if (!desk && !mob) return;
+
+  var renderEmpty = function(msg) {
+    if (desk) desk.innerHTML = '<div class="home-edu-loading">' + escapeHtml(msg) + '</div>';
+    if (mob) mob.innerHTML = '<div class="card" style="padding:14px;color:var(--text-muted,#6B7F92);font-size:11px;text-align:center">' + escapeHtml(msg) + '</div>';
+  };
+
+  // 用 disease tag 配合圖卡 tint 輪播
+  var _tints = ['teal', 'rose', 'blue', 'amber'];
+  var _tintDeep = {
+    teal: 'var(--teal-deep,#1F5F56)',
+    rose: 'var(--rose-deep,#C97A7A)',
+    blue: 'var(--accent-deep,#2F6B96)',
+    amber: 'var(--amber-deep,#A77326)',
+  };
+
+  var renderCards = function(cards, subText) {
+    if (!cards.length) { renderEmpty('暫無衛教文章'); return; }
+
+    // 更新副標
+    var subEl = document.getElementById('home-edu-sub');
+    if (subEl && subText) subEl.textContent = subText;
+
+    // 桌機卡片
+    if (desk) {
+      desk.innerHTML = cards.map(function(c, i) {
+        var tint = _tints[i % _tints.length];
+        var tagHtml = c.tag ? '<span class="home-edu-tag" style="color:' + _tintDeep[tint] + '">// ' + escapeHtml(c.tag) + '</span>' : '';
+        var summaryHtml = c.summary ? '<p class="home-edu-card-desc">' + escapeHtml(c.summary) + '</p>' : '';
+        return '<button class="home-edu-card home-edu-tint-' + tint + '" onclick="homeOpenEduArticle(\'' + escapeHtml(c.slug) + '\')">' +
+                 tagHtml +
+                 '<h4 class="home-edu-card-title">' + escapeHtml(c.title) + '</h4>' +
+                 summaryHtml +
+                 '<span class="home-edu-card-arrow"><i data-lucide="arrow-right" style="width:14px;height:14px"></i></span>' +
+               '</button>';
+      }).join('');
+    }
+
+    // 手機卡片：沿用既有 .card .tint-* 樣式，跟 mobile 其他卡風格一致
+    if (mob) {
+      mob.innerHTML = cards.map(function(c, i) {
+        var tint = _tints[i % _tints.length];
+        var tagHtml = c.tag ? '<div style="font-size:10.5px;color:' + _tintDeep[tint] + ';font-weight:600;letter-spacing:0.04em;margin-bottom:4px">// ' + escapeHtml(c.tag) + '</div>' : '';
+        var summaryHtml = c.summary ? '<div style="font-size:11px;color:var(--text-muted,#6B7F92);line-height:1.5">' + escapeHtml(c.summary) + '</div>' : '';
+        return '<button class="card tint-' + tint + ' edu-card-mini" onclick="homeOpenEduArticle(\'' + escapeHtml(c.slug) + '\')" style="cursor:pointer;text-align:left;width:100%;border:1.5px solid var(--border,rgba(31,61,88,0.10))">' +
+                 '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>' +
+                 tagHtml +
+                 '<div style="font-size:13.5px;font-weight:600;color:var(--navy,#0F2A45);line-height:1.4;margin-bottom:3px">' + escapeHtml(c.title) + '</div>' +
+                 summaryHtml +
+               '</button>';
+      }).join('');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  };
+
+  // 把 my-diseases 的回傳轉成扁平卡片陣列（每個疾病最多取 2 篇）
+  var flattenMyDiseases = function(items) {
+    var out = [];
+    items.forEach(function(it) {
+      (it.articles || []).slice(0, 2).forEach(function(a) {
+        out.push({ slug: a.slug, title: a.title, summary: a.summary, tag: it.name });
+      });
+    });
+    return out.slice(0, 4);  // 桌機 grid 上限 4 張
+  };
+
+  var loadFeaturedFallback = function() {
+    fetch(API + '/education/articles/featured?limit=3')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        var arts = (data && data.articles) || [];
+        var cards = arts.map(function(a) {
+          var tag = (a.tags && a.tags[0]) || (a.dimension || '衛教');
+          return { slug: a.slug, title: a.title, summary: a.summary, tag: tag };
+        });
+        renderCards(cards, '今日精選衛教文章 · 來自每日輪播');
+      })
+      .catch(function() { renderEmpty('衛教資料載入失敗'); });
+  };
+
+  resolvePatientIcd10Codes(function(codes) {
+    if (!codes || !codes.length) { loadFeaturedFallback(); return; }
+    fetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        var items = ((data && data.items) || []).filter(function(it) { return it && it.is_supported && (it.articles || []).length; });
+        var cards = flattenMyDiseases(items);
+        if (!cards.length) { loadFeaturedFallback(); return; }
+        renderCards(cards, '依你登錄的疾病自動挑選 · 附文獻來源');
+      })
+      .catch(function() { loadFeaturedFallback(); });
+  });
 }
 
 // 滾動式 feed - Tier 2「今日服藥」mini 卡：顯示追蹤中藥物筆數
@@ -14957,6 +15071,22 @@ function loadEducationPage() {
   loadFeaturedArticles();
   loadMyDiseases();
   loadRelatedDiseases();
+
+  // 從首頁衛教卡跳過來時，等文章索引就緒後自動展開該文章
+  if (_pendingEduArticleSlug) {
+    var slug = _pendingEduArticleSlug;
+    _pendingEduArticleSlug = null;
+    var tries = 0;
+    var openWhenReady = function() {
+      tries++;
+      if (_eduArticles && _eduArticles[slug] && document.getElementById('edu-notebook') && typeof eduOpenArticle === 'function') {
+        eduOpenArticle(slug);
+      } else if (tries < 20) {
+        setTimeout(openWhenReady, 150);
+      }
+    };
+    setTimeout(openWhenReady, 150);
+  }
 
   // 確保 lucide icon 出現
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
