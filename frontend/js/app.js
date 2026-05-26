@@ -4947,12 +4947,14 @@ function home() {
     +   '</div>'
 
     // 下次回診（demo 樣式：日期 + 週次/時間 + 科別醫師 + 醫院樓層）
+    // 多筆排定回診且科別不同時，_updateMobileNextVisitMeta() 會用真實資料重繪 #mobile-next-visit-cards
     + (_mobileVisitIso
       ? '<div class="sec-head">'
         +   '<h3 class="sec-title"><i data-lucide="calendar-clock"></i> 下次回診</h3>'
         +   '<span class="sec-spacer"></span>'
         +   (_mobileVisitDays !== null && _mobileVisitDays > 0 ? '<span class="pill pill-info mono">D-' + _mobileVisitDays + '</span>' : '')
         + '</div>'
+        + '<div id="mobile-next-visit-cards">'
         + '<div class="card tint-blue" onclick="navigateTo(\'followUps\', null)" style="cursor:pointer">'
         +   '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
         +   '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">'
@@ -4962,14 +4964,17 @@ function home() {
         +   '<div id="mobile-next-visit-dept" style="font-size:12.5px;color:var(--navy);font-weight:500">回診當天記得帶健保卡與藥袋</div>'
         +   '<div id="mobile-next-visit-loc" style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px">—</div>'
         + '</div>'
+        + '</div>'
       : '<div class="sec-head">'
         +   '<h3 class="sec-title"><i data-lucide="calendar-clock"></i> 下次回診</h3>'
         +   '<span class="sec-spacer"></span>'
         + '</div>'
+        + '<div id="mobile-next-visit-cards">'
         + '<div class="card tint-blue" onclick="navigateTo(\'followUps\', null)" style="cursor:pointer">'
         +   '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
         +   '<div style="font-size:13px;color:var(--navy);font-weight:500;margin-bottom:2px">尚未排定下次回診</div>'
         +   '<div style="font-size:11px;color:var(--text-muted)">點此設定回診排程，App 會幫你倒數提醒</div>'
+        + '</div>'
         + '</div>')
 
     // ╔════════════════════════════════════════════════════════
@@ -5769,33 +5774,101 @@ function _updateMobileSosCount() {
   } catch (e) {}
 }
 
-// 行動版下次回診卡：注入醫師 / 醫院 / 樓層
+// 行動版下次回診卡：
+// - 0 / 1 個科別：注入醫師 / 醫院 / 樓層到既有單卡（行為與舊版相同）
+// - 2+ 個科別：重繪 #mobile-next-visit-cards 為「每科別一張卡（取該科最近一筆）」
 function _updateMobileNextVisitMeta() {
   try {
     var deptEl = document.getElementById('mobile-next-visit-dept');
     var locEl = document.getElementById('mobile-next-visit-loc');
-    if (!deptEl && !locEl) return;
-    if (typeof fetchNearestFollowUp !== 'function') return;
-    fetchNearestFollowUp().then(function(fu) {
-      if (!fu) return;
-      var parts = [];
-      if (fu.department) parts.push(fu.department);
-      if (fu.doctor_name) parts.push(fu.doctor_name + ' 醫師');
-      if (deptEl && parts.length) {
-        deptEl.textContent = parts.join(' · ');
+    var cardsContainer = document.getElementById('mobile-next-visit-cards');
+    if (!deptEl && !locEl && !cardsContainer) return;
+    if (typeof fetchFollowUps !== 'function') return;
+    fetchFollowUps().then(function(rows) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var todayTs = today.getTime();
+      var upcoming = (rows || []).filter(function(r) {
+        if (r.status !== 'scheduled') return false;
+        var s = String(r.scheduled_date || '').slice(0, 10);
+        var t = new Date(s + 'T00:00:00').getTime();
+        return !isNaN(t) && t >= todayTs;
+      });
+      upcoming.sort(function(a, b) {
+        return String(a.scheduled_date).localeCompare(String(b.scheduled_date));
+      });
+      // 依「科別」dedupe：每個科別保留最近一筆；null/空 科別合為單一桶
+      var byDept = {};
+      var order = [];
+      upcoming.forEach(function(fu) {
+        var key = fu.department || '__none__';
+        if (!byDept[key]) { byDept[key] = fu; order.push(key); }
+      });
+      if (!order.length) return; // 沒有任何排定回診，保留首頁原有 placeholder
+      if (order.length === 1) {
+        // 單一科別：沿用既有單卡，只注入 dept/doctor / hospital
+        var fu = byDept[order[0]];
+        var parts = [];
+        if (fu.department) parts.push(fu.department);
+        if (fu.doctor_name) parts.push(fu.doctor_name + ' 醫師');
+        if (deptEl && parts.length) deptEl.textContent = parts.join(' · ');
+        var loc = [];
+        if (fu.hospital) loc.push(fu.hospital);
+        if (fu.notes) {
+          // notes 裡若含「3F-A12」這類樓層門牌，順便拉出來
+          var m = String(fu.notes).match(/\d+\s*[FfＦ樓][^\s,。]*/);
+          if (m) loc.push(m[0]);
+        }
+        if (locEl && loc.length) locEl.textContent = loc.join(' · ');
+        return;
       }
-      var loc = [];
-      if (fu.hospital) loc.push(fu.hospital);
-      if (fu.notes) {
-        // notes 裡若含「3F-A12」這類樓層門牌，順便拉出來
-        var m = String(fu.notes).match(/\d+\s*[FfＦ樓][^\s,。]*/);
-        if (m) loc.push(m[0]);
-      }
-      if (locEl && loc.length) {
-        locEl.textContent = loc.join(' · ');
-      }
+      // 多科別：重繪整個卡片區
+      if (!cardsContainer) return;
+      cardsContainer.innerHTML = order.map(function(k) {
+        return _renderNextVisitDeptCard(byDept[k]);
+      }).join('');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     }).catch(function() {});
   } catch (e) {}
+}
+
+// 渲染「單一科別」的下次回診卡（給多科別模式用）。視覺與既有單卡 .card.tint-blue 對齊。
+function _renderNextVisitDeptCard(fu) {
+  var iso = String(fu.scheduled_date || '').slice(0, 10);
+  var dateLabel = iso ? iso.replace(/-/g, '/').slice(5) : '—';
+  var weekday = '';
+  if (iso && typeof _T === 'function') {
+    var d = new Date(iso + 'T00:00:00');
+    if (!isNaN(d.getTime())) {
+      weekday = _T('home.weekday.prefix') + _T('home.weekday.' + d.getDay());
+    }
+  }
+  var daysPill = '';
+  if (iso && typeof _daysBetween === 'function') {
+    var n = _daysBetween(iso);
+    if (n > 0) daysPill = ' <span class="pill pill-info mono">D-' + n + '</span>';
+    else if (n === 0) daysPill = ' <span class="pill pill-info mono">今天</span>';
+  }
+  var parts = [];
+  if (fu.department) parts.push(escapeHtml(fu.department));
+  else parts.push('未指定科別');
+  if (fu.doctor_name) parts.push(escapeHtml(fu.doctor_name) + ' 醫師');
+  var deptLine = parts.join(' · ');
+  var locParts = [];
+  if (fu.hospital) locParts.push(escapeHtml(fu.hospital));
+  if (fu.session === 'am') locParts.push('上午診');
+  else if (fu.session === 'pm') locParts.push('下午診');
+  var locLine = locParts.length ? locParts.join(' · ') : '—';
+  return ''
+    + '<div class="card tint-blue" onclick="navigateTo(\'followUps\', null)" style="cursor:pointer;margin-bottom:8px">'
+    +   '<div class="puzzle-motif br"><svg><use href="#puzzle-piece"/></svg></div>'
+    +   '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">'
+    +     '<span style="font-family:var(--font-brand);font-style:italic;font-weight:500;font-size:24px;color:var(--navy);letter-spacing:-0.01em">' + dateLabel + '</span>'
+    +     '<span style="font-size:11.5px;color:var(--text-dim)">' + weekday + '</span>'
+    +     daysPill
+    +   '</div>'
+    +   '<div style="font-size:12.5px;color:var(--navy);font-weight:500">' + deptLine + '</div>'
+    +   '<div style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px">' + locLine + '</div>'
+    + '</div>';
 }
 
 // 行動版待辦清單：用 demo 的 list-row 結構（tag pill + 時間 + 狀態 pill）渲染
@@ -22666,6 +22739,15 @@ function _renderFollowUpCard(row) {
     + '</article>';
 }
 
+// 回診排程「科別」選單：台灣常見分科。不在清單內的舊資料／少見科別走「其他」自行輸入。
+var FOLLOW_UP_DEPARTMENTS = [
+  '家醫科','一般內科','心臟內科','胸腔內科','腸胃肝膽科','腎臟內科',
+  '新陳代謝及內分泌科','神經內科','血液腫瘤科','感染科','風濕免疫科',
+  '一般外科','心臟血管外科','胸腔外科','神經外科','骨科','整形外科',
+  '泌尿科','大腸直腸外科','婦產科','小兒科','眼科','耳鼻喉科','皮膚科',
+  '牙科','精神科','復健科','急診科','中醫科','放射腫瘤科'
+];
+
 function openFollowUpEditor(id) {
   var existing = null;
   if (id && _followUpsCache) {
@@ -22695,7 +22777,15 @@ function openFollowUpEditor(id) {
     +         '<label><input type="radio" name="fu-session" value="pm" /><span>下午診</span></label>'
     +       '</div>'
     +     '</div>'
-    +     '<label class="fu-modal-field"><span>科別</span><input type="text" id="fu-input-dept" placeholder="例如 心臟內科" /></label>'
+    +     '<div class="fu-modal-field">'
+    +       '<span>科別</span>'
+    +       '<select id="fu-input-dept-select">'
+    +         '<option value="">— 未指定 —</option>'
+    +         FOLLOW_UP_DEPARTMENTS.map(function(d){ return '<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>'; }).join('')
+    +         '<option value="__other__">其他（自行輸入）</option>'
+    +       '</select>'
+    +       '<input type="text" id="fu-input-dept-other" placeholder="輸入科別名稱" hidden />'
+    +     '</div>'
     +     '<label class="fu-modal-field"><span>醫院</span><input type="text" id="fu-input-hosp" placeholder="例如 台大醫院" /></label>'
     +     '<label class="fu-modal-field"><span>醫師（選填）</span><input type="text" id="fu-input-doctor" placeholder="例如 王大明醫師" /></label>'
     +     '<label class="fu-modal-field"><span>備註（選填）</span><textarea id="fu-input-notes" rows="3" placeholder="這次想跟醫師討論的事、要帶的檢驗報告…"></textarea></label>'
@@ -22723,8 +22813,28 @@ function openFollowUpEditor(id) {
     initDate = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
   }
   overlay.querySelector('#fu-input-date').value = initDate;
+  var deptSelect = overlay.querySelector('#fu-input-dept-select');
+  var deptOther = overlay.querySelector('#fu-input-dept-other');
+  deptSelect.addEventListener('change', function() {
+    if (deptSelect.value === '__other__') {
+      deptOther.hidden = false;
+      deptOther.focus();
+    } else {
+      deptOther.hidden = true;
+      deptOther.value = '';
+    }
+  });
   if (existing) {
-    if (existing.department) overlay.querySelector('#fu-input-dept').value = existing.department;
+    if (existing.department) {
+      if (FOLLOW_UP_DEPARTMENTS.indexOf(existing.department) >= 0) {
+        deptSelect.value = existing.department;
+      } else {
+        // 不在清單內（舊資料／少見科別）：切到「其他」並保留原值
+        deptSelect.value = '__other__';
+        deptOther.value = existing.department;
+        deptOther.hidden = false;
+      }
+    }
     if (existing.hospital) overlay.querySelector('#fu-input-hosp').value = existing.hospital;
     if (existing.doctor_name) overlay.querySelector('#fu-input-doctor').value = existing.doctor_name;
     if (existing.notes) overlay.querySelector('#fu-input-notes').value = existing.notes;
@@ -22753,7 +22863,7 @@ function openFollowUpEditor(id) {
     var payload = {
       scheduled_date: date,
       session: sessChecked && sessChecked.value ? sessChecked.value : null,
-      department: overlay.querySelector('#fu-input-dept').value.trim() || null,
+      department: (deptSelect.value === '__other__' ? deptOther.value.trim() : deptSelect.value) || null,
       hospital: overlay.querySelector('#fu-input-hosp').value.trim() || null,
       doctor_name: overlay.querySelector('#fu-input-doctor').value.trim() || null,
       notes: overlay.querySelector('#fu-input-notes').value.trim() || null,
