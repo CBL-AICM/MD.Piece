@@ -11908,6 +11908,71 @@ function _renderMobileMedList(meds) {
           }).join('')
         + '</div>';
     });
+
+    // 「不分時段」區：PRN / 每 X 小時這類 is_other 藥物，沒有固定排程，
+    // 不算進今日預期次數，但要讓使用者隨時能看到 + 點打卡（例：止痛藥、安眠藥）。
+    var otherMeds = (meds || []).filter(function(m) { return m && m.is_other; });
+    if (otherMeds.length) {
+      thtml += ''
+        + '<div class="card" style="padding:0;margin-bottom:10px">'
+        +   '<div style="padding:10px 14px;background:var(--bg-soft);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px">'
+        +     '<i data-lucide="clock" style="width:12px;height:12px"></i> 不分時段 · 需要時'
+        +     '<span style="margin-left:auto"><span class="pill pill-mute mono">' + otherMeds.length + ' 種</span></span>'
+        +   '</div>'
+        +   otherMeds.map(function(m, idx) {
+            var safeId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            // 今日已服次數：從 todayLogs 數同 medication_id 且 taken !== false 的筆數
+            var takenToday = 0;
+            var lastAt = '';
+            var lastMin = -1;
+            for (var i = 0; i < todayLogs.length; i++) {
+              var l = todayLogs[i];
+              if (!l || String(l.medication_id) !== String(m.id)) continue;
+              if (l.taken === false || l.taken === 0) continue;
+              takenToday++;
+              if (l.taken_at) {
+                var d = new Date(l.taken_at);
+                if (!isNaN(d.getTime())) {
+                  var lm = d.getHours() * 60 + d.getMinutes();
+                  if (lm > lastMin) {
+                    lastMin = lm;
+                    var hh = String(d.getHours());
+                    var mm = String(d.getMinutes());
+                    if (hh.length < 2) hh = '0' + hh;
+                    if (mm.length < 2) mm = '0' + mm;
+                    lastAt = hh + ':' + mm;
+                  }
+                }
+              }
+            }
+            var metaBits = [];
+            if (m.interval_hours) metaBits.push('每 ' + m.interval_hours + ' 小時');
+            if (m.is_prn) metaBits.push('需要時');
+            if (m.dose) metaBits.push(m.dose);
+            var metaTxt = metaBits.join(' · ');
+            var statusPill = takenToday > 0
+              ? '<span class="pill pill-ok mono" title="今日已打卡次數">今日 ' + takenToday + ' 次' + (lastAt ? ' · ' + lastAt : '') + '</span>'
+              : '<span class="pill pill-mute mono">今日尚未</span>';
+            var sep = (idx < otherMeds.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
+            return ''
+              + '<div class="med-list-row" style="padding:10px 14px' + sep + '">'
+              +   '<div class="ico"><i data-lucide="pill"></i></div>'
+              +   '<div>'
+              +     '<div class="name">' + escapeHtml(m.name || '') + '</div>'
+              +     '<div class="dose">' + escapeHtml(metaTxt) + '</div>'
+              +   '</div>'
+              +   statusPill
+              +   '<button type="button" class="pill pill-info mono" '
+              +     'style="border:0;cursor:pointer;font:inherit;margin-left:6px" '
+              +     'title="點一下記錄一次服用（後端會檢查間隔是否符合）" '
+              +     'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\')">'
+              +     '+ 打卡'
+              +   '</button>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    }
+
     if (!thtml) {
       thtml = '<div class="med-tip-card" style="background:var(--bg-soft);border-color:var(--border);color:var(--text-dim)"><i data-lucide="info"></i><span>沒有依時段排程的藥物</span></div>';
     }
