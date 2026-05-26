@@ -5,18 +5,18 @@
 把資料同步到 Supabase patient_profiles 表，UPSERT 模式：一個 user_id
 對應一筆 profile，全欄位可選（漸進式填寫）。
 
-存取控制：本專案用 backend 自有 username+scrypt 而非 Supabase Auth，
-所以這邊不走 RLS by auth.uid()，由 backend layer 保證 user_id 來自登入態。
-前端帶 user_id 即可，未來改 Supabase Auth 再加 policy。
+Phase 1a 起：強制帶 Authorization: Bearer <jwt>，且 path 上的 user_id
+必須等於 token 的 sub —— 不能 PUT 別人的 profile（封 P0 越權漏洞，Issue #388）。
 """
 
 import re
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.db import _SCHEMAS, get_supabase
 from backend.models import PatientProfileUpsert
+from backend.security import current_user
 
 router = APIRouter()
 
@@ -66,10 +66,18 @@ _SCHEMAS.setdefault(
 )
 
 
-@router.get("/{user_id}")
-def get_profile(user_id: str):
-    """取得個人檔案。沒有就回 404（前端會 fallback 到 localStorage 或空表單）。"""
+def _enforce_self(user_id: str, me: dict) -> str:
+    """確認 path 上的 user_id 就是 token 持有者。Phase 1a 不允許跨人讀寫。"""
     uid = _safe_id(user_id)
+    if me.get("id") != uid:
+        raise HTTPException(status_code=403, detail="不可存取他人個人檔案")
+    return uid
+
+
+@router.get("/{user_id}")
+def get_profile(user_id: str, me: dict = Depends(current_user)):
+    """取得個人檔案。沒有就回 404（前端會 fallback 到空表單）。"""
+    uid = _enforce_self(user_id, me)
     sb = get_supabase()
     result = sb.table("patient_profiles").select("*").eq("user_id", uid).execute()
     if not result.data:
@@ -78,17 +86,15 @@ def get_profile(user_id: str):
 
 
 @router.put("/{user_id}")
-def upsert_profile(user_id: str, body: PatientProfileUpsert):
+def upsert_profile(user_id: str, body: PatientProfileUpsert, me: dict = Depends(current_user)):
     """完整覆寫個人檔案（UPSERT）。沒有就建、有就改。"""
-    uid = _safe_id(user_id)
+    uid = _enforce_self(user_id, me)
     payload = body.model_dump(exclude_unset=False)
-    # birthday 空字串 → None 並驗證格式
     payload["birthday"] = _validate_date(payload.get("birthday"))
     payload["user_id"] = uid
     payload["updated_at"] = datetime.utcnow().isoformat()
 
     sb = get_supabase()
-    # Supabase python client 的 upsert 需要 conflict 欄位
     result = sb.table("patient_profiles").upsert(payload, on_conflict="user_id").execute()
     if not result.data:
         raise HTTPException(status_code=500, detail="儲存個人檔案失敗")
