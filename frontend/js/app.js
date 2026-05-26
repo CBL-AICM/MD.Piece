@@ -9151,6 +9151,13 @@ const VITAL_METRICS = [
 
 const DEFAULT_TRACKED = ['weight','bp','heart','glucose'];
 
+const VITAL_CONTEXT_OPTIONS = [
+  '飯前','飯後','起床後','睡前','運動前','運動後','服藥前','服藥後','其他'
+];
+const VITAL_METHOD_OPTIONS = [
+  '居家自測','醫院測量','藥局測量','家人代測','裝置同步','其他'
+];
+
 function getTrackedMetricIds() {
   try {
     const raw = localStorage.getItem('mdpiece_vitals_tracked');
@@ -9920,6 +9927,8 @@ function renderVitalHistory() {
         <span class="vh-date">${dateStr}</span>
         <span class="vh-name scc-${m?.color || 'blue'}">${m?.zh || e.metricId}</span>
         <span class="vh-val"><strong>${valStr}</strong> <small>${m?.unit || ''}</small></span>
+        ${e.context ? `<span class="vh-notes">情境：${escapeHtml(e.context)}</span>` : ''}
+        ${e.method ? `<span class="vh-notes">方式：${escapeHtml(e.method)}</span>` : ''}
         ${e.notes ? `<span class="vh-notes">${escapeHtml(e.notes)}</span>` : ''}
         <button class="se-del" onclick="deleteVitalEntryAndRefresh('${e.id}')" title="刪除">×</button>
       </li>
@@ -10005,10 +10014,22 @@ function openVitalLog(metricId) {
       <div class="lf-icon scc-${m.color}"><i data-lucide="${m.icon}"></i></div>
       <div class="lf-info">
         <h3>${m.zh}${m.unit ? ` <small style="opacity:0.7">${m.unit}</small>` : ''}</h3>
-        <p class="lf-detail">輸入目前數值，可選填備註（例如：飯前/飯後、運動後）。</p>
+        <p class="lf-detail">輸入目前數值，並選擇紀錄情境與記錄方式（可選填備註）。</p>
       </div>
     </div>
     <div class="lf-form">
+  `;
+  const contextFieldHtml = `
+      <label class="lf-label">紀錄情境（選填）</label>
+      <select id="vt-context" class="vt-unit-select">
+        <option value="">— 未指定 —</option>
+        ${VITAL_CONTEXT_OPTIONS.map(o => `<option value="${o}">${o}</option>`).join('')}
+      </select>
+      <label class="lf-label">記錄方式（選填）</label>
+      <select id="vt-method" class="vt-unit-select">
+        <option value="">— 未指定 —</option>
+        ${VITAL_METHOD_OPTIONS.map(o => `<option value="${o}">${o}</option>`).join('')}
+      </select>
   `;
   if (m.id === 'bmi') {
     const bmi = calculateBMI();
@@ -10034,6 +10055,7 @@ function openVitalLog(metricId) {
         <input type="number" id="vt-val2" placeholder="例 80" min="30" max="160" step="1" />
         <span class="vt-dual-unit">${m.unit}</span>
       </div>
+      ${contextFieldHtml}
       <label class="lf-label">備註（選填）</label>
       <textarea id="vt-notes" placeholder="例如：起床後測量、有運動..." rows="2"></textarea>
       <div class="lf-actions">
@@ -10047,6 +10069,7 @@ function openVitalLog(metricId) {
     body += `
       <label class="lf-label">數值${m.unit ? ` (${m.unit})` : ''}</label>
       <input type="number" id="vt-val1" placeholder="輸入數值" ${m.range ? `min="${m.range[0]}" max="${m.range[1]}"` : ''} ${m.step ? `step="${m.step}"` : 'step="any"'} />
+      ${contextFieldHtml}
       <label class="lf-label">備註（選填）</label>
       <textarea id="vt-notes" placeholder="例如：飯前、運動後..." rows="2"></textarea>
       <div class="lf-actions">
@@ -10093,6 +10116,12 @@ function submitVitalEntry(metricId) {
     }
     entry.value2 = parseFloat(v2);
   }
+  const ctxEl = document.getElementById('vt-context');
+  const methodEl = document.getElementById('vt-method');
+  const ctx = ctxEl ? ctxEl.value.trim() : '';
+  const method = methodEl ? methodEl.value.trim() : '';
+  if (ctx) entry.context = ctx;
+  if (method) entry.method = method;
   const notes = document.getElementById('vt-notes').value.trim();
   if (notes) entry.notes = notes;
   saveVitalEntry(entry);
