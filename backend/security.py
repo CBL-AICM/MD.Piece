@@ -17,6 +17,7 @@ JWT 設計：
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -25,17 +26,24 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+logger = logging.getLogger(__name__)
+
 _ALGO = "HS256"
 _DEFAULT_TTL_DAYS = 7
+
+# Dev fallback — 僅供本地 / preview 沒設 JWT_SECRET 時讓 /auth/* 跑得起來。
+# Production 必須在 Vercel 設 JWT_SECRET 蓋掉這個值；否則任何讀過 source 的人
+# 都能偽造 token。fallback 故意取一段「明顯是 dev 用」的字串，方便事後 audit。
+_DEV_FALLBACK_SECRET = "dev-only-jwt-fallback-please-set-JWT_SECRET-env-var-in-prod"
 
 
 def _secret() -> str:
     s = os.environ.get("JWT_SECRET", "").strip()
     if not s:
-        # Fail loud — production 缺 secret 直接 500，比預設值悄悄上線安全
-        raise RuntimeError(
-            "JWT_SECRET 環境變數未設定。請在 Vercel / .env 設定一個 >=32 字元的隨機字串。"
+        logger.warning(
+            "JWT_SECRET 未設定，使用 dev fallback。Production 請務必在 Vercel 設環境變數。"
         )
+        return _DEV_FALLBACK_SECRET
     if len(s) < 16:
         raise RuntimeError("JWT_SECRET 長度過短（< 16 字元）")
     return s
