@@ -83,10 +83,12 @@ INTEGRATED_SUMMARY_PROMPT = (
     "「醫師我這個月最困擾的是反覆頭痛，幾乎每週都來個兩三天，痛起來連工作都做不下去。」\n\n"
     "## 二、資料整理（給醫師交班用）\n"
     "切換成第三人稱，像在跟主治交班，把本期間散落的資料串起來看 — 純資料彙整，不下判讀。\n"
-    "用 4–8 個條列，每點一句話，涵蓋（有資料才寫）：\n"
+    "用 4–10 個條列，每點一句話，涵蓋（有資料才寫）：\n"
     "- 症狀模式：高頻症狀、新增、已改善；併發或集中於特定時段／情境\n"
     "- 情緒走向：平均、走向方向、是否連續低落\n"
     "- 服藥狀況：服藥率區間、漏藥模式、療效評分與副作用回報（具體點出藥名 OK，但**不寫劑量**）\n"
+    "- **用藥變更**：本期間有沒有停藥／加藥／劑量調整／換藥（user message 的「用藥變更」區塊）\n"
+    "- **住院／長期療程**：本期間有沒有急性住院或長期療程（生物製劑等）施打紀錄\n"
     "- 飲食規律度，以及與【慢性病登記】之飲食禁忌是否相符\n"
     "- 慢性病登記 + 過敏史 與本期紀錄的交集點\n"
     "- 即將回診排程銜接\n"
@@ -155,12 +157,18 @@ INTEGRATED_SUMMARY_PROMPT = (
 
 
 def _empty_summary(period_label: str = "近 30 天"):
-    """DB 整體無法連線時的預設回傳：空 summary、零計數、has_data=False。"""
+    """DB 整體無法連線時的預設回傳：空 summary、零計數、has_data=False、空 raw_records。"""
+    empty_records = {
+        "symptoms": [], "emotions": [], "medications": [], "medication_logs": [],
+        "effects": [], "diet": [], "visits": [], "admissions": [],
+        "medication_changes": [], "upcoming_follow_ups": [],
+    }
     return (
         f"報告期間：{period_label}\n症狀記錄：無\n情緒記錄：無\n用藥紀錄：無\n就診紀錄：無\n飲食記錄：無",
         {"symptom_count": 0, "emotion_count": 0, "medication_count": 0,
-         "visit_count": 0, "diet_count": 0},
+         "visit_count": 0, "diet_count": 0, "admission_count": 0, "med_change_count": 0},
         False,
+        empty_records,
     )
 
 
@@ -224,7 +232,11 @@ def _get_period(patient_id: str):
 
 
 def _collect_period_summary(patient_id: str, days: int | None = None, period_label: str | None = None):
-    """收集本期間症狀／情緒／用藥／就診資料，回傳 (summary_text, raw_counts, has_data, days, period_label)。
+    """收集本期間症狀／情緒／用藥／就診資料。
+    回傳 (summary_text, raw_counts, has_data, days, period_label, raw_records)。
+
+    `summary_text` 給 LLM 當 user message；`raw_records` 是每類完整 list 給前端
+    PDF「本期間紀錄一覽」區塊用（不過 LLM）。
 
     `days` 沒帶（None）時會呼叫 `_get_period` 自動推算。
     任何 DB / 連線錯誤都會 swallow 成空資料，讓上層仍能產生「資料不足」版本的報告。
@@ -240,8 +252,8 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
         sb = get_supabase()
     except Exception as e:
         logger.warning(f"無法連線資料庫，產生空摘要：{e}")
-        text, counts, has_data = _empty_summary(period_label)
-        return text, counts, has_data, days, period_label
+        text, counts, has_data, raw_records = _empty_summary(period_label)
+        return text, counts, has_data, days, period_label, raw_records
 
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
@@ -285,8 +297,21 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
         .eq("status", "scheduled").gte("scheduled_date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
         .order("scheduled_date").limit(3).execute().data or []
     ), [])
+    # 住院 / 長期療程紀錄（本期間有 admit_date 的）
+    admissions_data = _safe_query(lambda: (
+        sb.table("admissions").select("*").eq("patient_id", patient_id)
+        .gte("admit_date", since[:10]).order("admit_date", desc=True).execute().data or []
+    ), [])
+    # 用藥變更紀錄（本期間 effective_date 的調藥）
+    med_changes_data = _safe_query(lambda: (
+        sb.table("medication_changes").select("*").eq("patient_id", patient_id)
+        .gte("effective_date", since).order("effective_date", desc=True).execute().data or []
+    ), [])
 
-    has_data = bool(symptoms_data or emotions_data or med_logs_data or records_data or diet_data or effects_data)
+    has_data = bool(
+        symptoms_data or emotions_data or med_logs_data or records_data
+        or diet_data or effects_data or admissions_data or med_changes_data
+    )
     parts = [f"報告期間：{period_label}\n"]
 
     # 個人背景 — 給 LLM 做風險偵測（慢性病 + 過敏 + 年齡 + 性別）
@@ -510,6 +535,39 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
                 line += "：" + " · ".join(extras)
             parts.append(line)
 
+    # 住院 / 長期療程 — 給 LLM 知道病人本期間有住院或長期療程
+    if admissions_data:
+        parts.append(f"\n住院／長期療程（{len(admissions_data)} 次）：")
+        for a in admissions_data:
+            ad = (a.get("admit_date") or "")[:10]
+            dd = (a.get("discharge_date") or "")[:10]
+            atype = {"acute": "急性住院", "chronic_infusion": "長期療程"}.get(a.get("type"), a.get("type") or "")
+            diag = a.get("diagnosis") or "未記錄"
+            ward = a.get("ward") or ""
+            line = f"  - {ad}"
+            if dd:
+                line += f" → {dd}"
+            line += f"｜{atype}｜{diag}"
+            if ward:
+                line += f"（{ward}）"
+            parts.append(line)
+
+    # 用藥變更（停藥／加藥／劑量調整）— 對醫師交班特別重要
+    if med_changes_data:
+        change_label = {
+            "start": "新開始", "stop": "停藥", "dose_up": "加量",
+            "dose_down": "減量", "switch": "換藥", "frequency": "改頻次", "other": "其他變更",
+        }
+        parts.append(f"\n用藥變更（{len(med_changes_data)} 次）：")
+        for m in med_changes_data:
+            ed = (m.get("effective_date") or "")[:10]
+            ctype = change_label.get(m.get("change_type"), m.get("change_type") or "")
+            reason = m.get("reason") or ""
+            line = f"  - {ed}｜{ctype}"
+            if reason:
+                line += f"（原因：{reason}）"
+            parts.append(line)
+
     counts = {
         "symptom_count": len(symptoms_data),
         "emotion_count": len(emotions_data),
@@ -517,8 +575,23 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
         "visit_count": len(records_data),
         "diet_count": len(diet_data),
         "effect_count": len(effects_data),
+        "admission_count": len(admissions_data),
+        "med_change_count": len(med_changes_data),
     }
-    return "\n".join(parts), counts, has_data, days, period_label
+    # raw_records — 全列給前端 PDF 渲染「本期間紀錄一覽」區塊（不過 LLM）
+    raw_records = {
+        "symptoms": symptoms_data,
+        "emotions": emotions_data,
+        "medications": active_meds,
+        "medication_logs": med_logs_data,
+        "effects": effects_data,
+        "diet": diet_data,
+        "visits": records_data,
+        "admissions": admissions_data,
+        "medication_changes": med_changes_data,
+        "upcoming_follow_ups": upcoming_fu,
+    }
+    return "\n".join(parts), counts, has_data, days, period_label, raw_records
 
 
 # ── 近 N 天月度報告（預設 30，前端可依回診日倒數覆寫） ─────────
@@ -531,7 +604,7 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     顯式帶 `days` 視為覆寫（測試／自訂區間用）。
     """
-    data_summary, counts, has_data, days, period_label = _collect_period_summary(
+    data_summary, counts, has_data, days, period_label, raw_records = _collect_period_summary(
         patient_id, days=days
     )
 
@@ -546,6 +619,7 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
             "days": days,
             "period_label": period_label,
             "raw_data": counts,
+            "raw_records": raw_records,
         }
 
     try:
@@ -567,6 +641,7 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
         "days": days,
         "period_label": period_label,
         "raw_data": counts,
+        "raw_records": raw_records,
     }
 
 
@@ -700,7 +775,7 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
 
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     """
-    data_summary, counts, has_data, days, period_label = _collect_period_summary(
+    data_summary, counts, has_data, days, period_label, raw_records = _collect_period_summary(
         patient_id, days=days
     )
 
@@ -721,6 +796,7 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
             "days": days,
             "period_label": period_label,
             "raw_data": counts,
+            "raw_records": raw_records,
         }
 
     # patient-summary 與 monthly 共用同一份整合摘要 — 風格憲法不適用（這是給醫師讀的交班，
@@ -754,6 +830,7 @@ def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le
         "days": days,
         "period_label": period_label,
         "raw_data": counts,
+        "raw_records": raw_records,
     }
 
 
@@ -781,7 +858,7 @@ def stream_integrated_summary(
       - done   ：最後一個事件（source: ai / no_data）
       - error  ：串流中失敗（含 detail）
     """
-    data_summary, counts, has_data, days, period_label = _collect_period_summary(
+    data_summary, counts, has_data, days, period_label, raw_records = _collect_period_summary(
         patient_id, days=days
     )
 
@@ -812,6 +889,7 @@ def stream_integrated_summary(
             yield _sse({
                 "type": "meta",
                 "raw_data": counts,
+                "raw_records": raw_records,
                 "days": days,
                 "period_label": period_label,
                 "has_data": False,
@@ -830,9 +908,11 @@ def stream_integrated_summary(
 
     def event_gen():
         # 先把 meta 推出去（前端立刻可以顯示「症狀 N 筆、情緒 N 次…」骨架）
+        # raw_records 包進 meta 給 PDF「本期間紀錄一覽」用，避免 PDF 下載再打一次後端
         yield _sse({
             "type": "meta",
             "raw_data": counts,
+            "raw_records": raw_records,
             "days": days,
             "period_label": period_label,
             "has_data": True,
