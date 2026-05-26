@@ -49,12 +49,18 @@ GOOGLE_VISION_API_KEY = os.getenv("GOOGLE_VISION_API_KEY", "")
 GOOGLE_VISION_URL = "https://vision.googleapis.com/v1/images:annotate"
 
 # Anthropic SDK 預設 timeout 是 600s + 2 retries — 在 Vercel 60s lambda 下，
-# 一次小卡頓就會吃掉整個 lambda 額度導致連線被砍。手動把 timeout 拉到 30s、
-# retries 降到 1，最壞情況 ~60s 但通常 fallback chain 會在更早接手。
+# 一次小卡頓就會吃掉整個 lambda 額度。改成差化化 timeout：
+#   - client-level 預設 25s：給「短文字」任務（分診、小禾、教育、checklist…
+#     一般 ≤ 1024 token 輸出）
+#   - 長文本（藥/病百科 2048~2560 token）：呼叫端 call_claude(..., timeout=50)
+#     會在 _call_anthropic 內透過 .with_options() 蓋掉這個 25s
+#   - vision OCR（藥袋/檢驗報告）：vision 函式自己用 .with_options(timeout=55)
+# 之前統一 30s 對長文本太緊（Haiku 寫 2048 token JSON 經常 25~40s），
+# 結果整個藥物百科 / 疾病百科 / 報告功能都被 SDK timeout 切掉變空白。
 try:
     import anthropic as _anthropic_sdk
     _anthropic_client = (
-        _anthropic_sdk.Anthropic(timeout=30.0, max_retries=1)
+        _anthropic_sdk.Anthropic(timeout=25.0, max_retries=1)
         if ANTHROPIC_API_KEY else None
     )
 except Exception as e:  # ImportError 或 client 初始化失敗
@@ -67,7 +73,7 @@ except Exception as e:  # ImportError 或 client 初始化失敗
 # Non-streaming providers
 # ==============================================================================
 
-def _call_ollama(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None) -> str:
+def _call_ollama(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
     msgs = [{"role": "system", "content": system_prompt}]
     if history:
         msgs.extend(history)
@@ -79,19 +85,19 @@ def _call_ollama(system_prompt: str, user_message: str, history=None, max_tokens
     }
     if max_tokens:
         payload["options"] = {"num_predict": int(max_tokens)}
-    # 預設 timeout 30s（原 120s 在 Vercel 60s lambda 下太長）；
+    # 預設 timeout 25s（短文字任務）；長文本呼叫端可傳 timeout=50 蓋掉。
     # localhost 不存在會直接 ConnectError 快速 fallback，這個值只在
     # OLLAMA_BASE_URL 設成遠端主機時才會被觸發到。
     resp = httpx.post(
         f"{OLLAMA_BASE}/api/chat",
         json=payload,
-        timeout=30.0,
+        timeout=timeout if timeout is not None else 25.0,
     )
     resp.raise_for_status()
     return resp.json()["message"]["content"]
 
 
-def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None) -> str:
+def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY not set; cannot use Groq provider")
     msgs = [{"role": "system", "content": system_prompt}]
@@ -100,9 +106,12 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
     msgs.append({"role": "user", "content": user_message})
 
     # 遇到 429 (rate limit) 自動 retry 一次。
-    # Vercel lambda 上限 60s，原本 60s timeout + 兩次 retry 會吃光額度，
-    # 改成 25s timeout + 1 次 retry，總預算 ~50s 留空間給 fallback。
+    # 預設 timeout 25s（短文字任務）；長文本呼叫端可傳 timeout=50 蓋掉。
+    # Vercel lambda 上限 60s，所以 long-text 走 50s + 1 retry 的最壞案例
+    # 需要呼叫端自己評估（藥/病百科沒有外層 bound，可以吃滿；reports
+    # 則用 _call_claude_bounded 鎖 45s 不會放長 timeout）。
     delays = [1.5]  # 一次 retry 機會
+    effective_timeout = timeout if timeout is not None else 25.0
     for attempt in range(len(delays) + 1):
         body: dict = {
             "model": GROQ_MODEL,
@@ -118,7 +127,7 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
                 "Content-Type": "application/json",
             },
             json=body,
-            timeout=25.0,
+            timeout=effective_timeout,
         )
         if resp.status_code == 429 and attempt < len(delays):
             wait = delays[attempt]
@@ -138,14 +147,16 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
     raise RuntimeError("Groq retry 全部用完仍 rate-limited")
 
 
-def _call_anthropic(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None) -> str:
+def _call_anthropic(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
     if _anthropic_client is None:
         raise RuntimeError(
             "ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝；無法使用 Anthropic provider"
         )
     msgs = list(history) if history else []
     msgs.append({"role": "user", "content": user_message})
-    msg = _anthropic_client.messages.create(
+    # 預設吃 client 的 25s timeout；長文本呼叫端傳 timeout=50 會走 with_options。
+    client = _anthropic_client.with_options(timeout=timeout) if timeout is not None else _anthropic_client
+    msg = client.messages.create(
         model=ANTHROPIC_MODEL,
         max_tokens=int(max_tokens) if max_tokens else ANTHROPIC_MAX_TOKENS,
         system=system_prompt,
@@ -173,13 +184,16 @@ def _fallback_chain(primary: str):
     return chain
 
 
-def call_claude(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None) -> str:
+def call_claude(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
     """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider，
     主 provider 失敗時自動降級到下一個可用的（anthropic → groq → ollama）。
 
     history: 可選，[{role: 'user'|'assistant', content: str}, ...] 多輪歷史
     max_tokens: 可選，覆寫該次呼叫的回應長度上限（避免結構化 JSON 被截斷）。
                 未指定時用 ANTHROPIC_MAX_TOKENS 預設值（1024）。
+    timeout:    可選，覆寫各 provider 該次呼叫的 timeout（秒）。
+                未指定時走 provider 預設（短文字任務 25s）；長文本
+                （藥/病百科 2048~2560 token）建議傳 timeout=50。
     """
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _PROVIDERS else "ollama")
     last_err = None
@@ -188,7 +202,7 @@ def call_claude(system_prompt: str, user_message: str, history=None, max_tokens:
         if fn is None:
             continue
         try:
-            return fn(system_prompt, user_message, history, max_tokens=max_tokens)
+            return fn(system_prompt, user_message, history, max_tokens=max_tokens, timeout=timeout)
         except Exception as e:
             last_err = e
             logger.warning(f"LLM provider {name} 失敗，嘗試下一個：{e}")
@@ -731,7 +745,9 @@ def _vision_ollama(image_base64: str, media_type: str) -> str:
 def _vision_anthropic(image_base64: str, media_type: str) -> str:
     if _anthropic_client is None:
         raise RuntimeError("ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝")
-    msg = _anthropic_client.messages.create(
+    # Sonnet 4.6 vision 跑藥袋 OCR + 2048 token JSON，正常 20~40s；
+    # 蓋過 client 預設 25s，給 55s（Vercel 60s lambda 留 5s 緩衝）。
+    msg = _anthropic_client.with_options(timeout=55.0).messages.create(
         model=ANTHROPIC_VISION_MODEL,
         max_tokens=ANTHROPIC_VISION_MAX_TOKENS,
         # OCR 需要穩定輸出（同一張藥單每次都要解到一樣的欄位），降低 temperature
@@ -762,6 +778,7 @@ def _vision_groq(image_base64: str, media_type: str) -> str:
         raise RuntimeError("GROQ_API_KEY 未設定")
     data_url = f"data:{media_type or 'image/jpeg'};base64,{image_base64}"
     # Groq vision 模型不支援 system role；把指令塞到 user message
+    # 原本 120s 在 Vercel 60s lambda 下會被砍；改 55s 留 5s 緩衝
     resp = httpx.post(
         f"{GROQ_BASE}/chat/completions",
         headers={
@@ -782,7 +799,7 @@ def _vision_groq(image_base64: str, media_type: str) -> str:
             "temperature": 0.2,
             "max_tokens": 2048,
         },
-        timeout=120.0,
+        timeout=55.0,
     )
     resp.raise_for_status()
     return (resp.json()["choices"][0]["message"]["content"] or "").strip()
@@ -898,7 +915,9 @@ def extract_medications_from_ocr_text(ocr_text: str) -> dict:
     這樣 router 可以共用後續處理邏輯。"""
     errors: list[dict] = []
     try:
-        raw = call_claude(_EXTRACT_FROM_OCR_PROMPT, ocr_text)
+        # OCR 抽欄位輸入長（一整張藥單）+ 輸出可能是多筆藥的 JSON 陣列，
+        # 短文字 25s 容易剛好不夠；放 50s 給 Anthropic / Groq 一個合理空間
+        raw = call_claude(_EXTRACT_FROM_OCR_PROMPT, ocr_text, timeout=50.0)
     except Exception as e:
         logger.error(f"extract_medications_from_ocr_text 失敗：{e}")
         errors.append({"provider": "extract", "error": f"{type(e).__name__}: {e}"})
@@ -982,7 +1001,8 @@ def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") ->
 
         if ocr_text and len(ocr_text.strip()) >= 20:
             try:
-                extract_raw = call_claude(_EXTRACT_FROM_OCR_PROMPT, ocr_text)
+                # 同 extract_medications_from_ocr_text：長輸入 + 多筆 JSON，給 50s
+                extract_raw = call_claude(_EXTRACT_FROM_OCR_PROMPT, ocr_text, timeout=50.0)
                 parsed = _parse_med_bag_json(extract_raw)
                 # 回傳 OCR 純文字當 raw_text（給前端 debug 看得懂）
                 parsed["raw_text"] = ocr_text
@@ -1066,7 +1086,8 @@ _LAB_REPORT_VISION_USER_PROMPT = (
 def _vision_lab_report_anthropic(image_base64: str, media_type: str) -> str:
     if _anthropic_client is None:
         raise RuntimeError("ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝")
-    msg = _anthropic_client.messages.create(
+    # 跟藥袋一樣：vision OCR + 結構化 JSON 需要 55s（蓋過 client 預設 25s）
+    msg = _anthropic_client.with_options(timeout=55.0).messages.create(
         model=ANTHROPIC_VISION_MODEL,
         max_tokens=ANTHROPIC_VISION_MAX_TOKENS,
         temperature=0.2,
@@ -1115,7 +1136,8 @@ def _vision_lab_report_groq(image_base64: str, media_type: str) -> str:
             "temperature": 0.2,
             "max_tokens": 4096,
         },
-        timeout=120.0,
+        # 原本 120s 在 Vercel 60s lambda 下會被砍；改 55s 留 5s 緩衝
+        timeout=55.0,
     )
     resp.raise_for_status()
     return (resp.json()["choices"][0]["message"]["content"] or "").strip()
@@ -1203,8 +1225,10 @@ def lookup_drug_info(drug_name: str) -> dict:
     user_message = f"請查詢這個藥物：「{drug_name}」"
     # 藥物百科 JSON 包含 6 個列表 + 150~300 字衛教，預設 1024 token 會被截斷
     # （結果就是回到使用者眼前的「未命名」空卡片），這裡放寬到 2048 才夠裝完整結構
+    # timeout=50：Haiku 4.5 寫 2048 token 結構化 JSON 經常 25~40s，
+    # 用 client 預設 25s 會被砍成空卡片；長文本任務給 50s 比較合理
     try:
-        raw = call_claude(_DRUG_INFO_PROMPT, user_message, max_tokens=2048)
+        raw = call_claude(_DRUG_INFO_PROMPT, user_message, max_tokens=2048, timeout=50.0)
     except Exception as e:
         # 例外細節只進 server log，不放進回傳 dict（避免 stack-trace 流到 client）
         logger.error("lookup_drug_info LLM 失敗：%s", type(e).__name__)
@@ -1330,7 +1354,8 @@ def recognize_lab_report(image_base64: str, media_type: str = "image/jpeg") -> d
 
         if ocr_text and len(ocr_text.strip()) >= 20:
             try:
-                extract_raw = call_claude(_LAB_REPORT_EXTRACT_PROMPT, ocr_text)
+                # 檢驗報告常 5~30 項，輸出 JSON 不短；同藥袋 OCR 抽欄位給 50s
+                extract_raw = call_claude(_LAB_REPORT_EXTRACT_PROMPT, ocr_text, timeout=50.0)
                 items = _parse_lab_items_json(extract_raw)
                 if items:
                     return {
@@ -1460,7 +1485,8 @@ def lookup_disease_info(disease_name: str) -> dict:
     user_message = f"請查詢這個疾病：「{disease_name}」"
     try:
         # 疾病百科 JSON 比藥物大（含 prognosis、self_care、treatments），給 2560 token 比較保險
-        raw = call_claude(_DISEASE_INFO_PROMPT, user_message, max_tokens=2560)
+        # 同藥物百科，timeout=50 給長 JSON 結構化生成足夠空間
+        raw = call_claude(_DISEASE_INFO_PROMPT, user_message, max_tokens=2560, timeout=50.0)
     except Exception as e:
         logger.error("lookup_disease_info LLM 失敗：%s", type(e).__name__)
         return _empty_disease_info("疾病資訊查詢服務暫時無法使用，請稍後再試。")
