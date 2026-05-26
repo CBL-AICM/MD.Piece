@@ -2,15 +2,25 @@ import hashlib
 import os
 import re
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.db import get_supabase
 from backend.models import PasswordChange, UserCreate, UserLogin, UserUpdate
-from backend.security import create_access_token
+from backend.security import create_access_token, current_user
 
 router = APIRouter()
 
 _USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,32}$")
+_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _enforce_self(user_id: str, me: dict) -> str:
+    """user_id path 必須等於 token 的 sub。"""
+    if not isinstance(user_id, str) or not _ID_RE.fullmatch(user_id):
+        raise HTTPException(status_code=400, detail="user_id 格式不合法")
+    if me.get("id") != user_id:
+        raise HTTPException(status_code=403, detail="不可存取他人帳號")
+    return user_id
 
 
 def _hash_password(password: str) -> str:
@@ -82,43 +92,39 @@ def login(body: UserLogin):
 
 
 @router.get("/user/{user_id}")
-def get_user(user_id: str):
+def get_user(user_id: str, me: dict = Depends(current_user)):
+    uid = _enforce_self(user_id, me)
     sb = get_supabase()
-    result = sb.table("users").select("*").eq("id", user_id).execute()
+    result = sb.table("users").select("*").eq("id", uid).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到使用者")
     return _public_user(result.data[0])
 
 
 @router.patch("/user/{user_id}")
-def update_user(user_id: str, body: UserUpdate):
+def update_user(user_id: str, body: UserUpdate, me: dict = Depends(current_user)):
+    uid = _enforce_self(user_id, me)
     sb = get_supabase()
     payload = body.model_dump(exclude_none=True)
     if not payload:
         raise HTTPException(status_code=400, detail="沒有要更新的欄位")
-    result = sb.table("users").update(payload).eq("id", user_id).execute()
+    result = sb.table("users").update(payload).eq("id", uid).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到使用者")
     return _public_user(result.data[0])
 
 
 @router.post("/user/{user_id}/password")
-def change_password(user_id: str, body: PasswordChange):
+def change_password(user_id: str, body: PasswordChange, me: dict = Depends(current_user)):
+    uid = _enforce_self(user_id, me)
     if len(body.new_password) < 6:
         raise HTTPException(status_code=400, detail="新密碼至少 6 個字元")
     sb = get_supabase()
-    result = sb.table("users").select("*").eq("id", user_id).execute()
+    result = sb.table("users").select("*").eq("id", uid).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到使用者")
     user = result.data[0]
     if not _verify_password(body.current_password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="目前密碼錯誤")
-    sb.table("users").update({"password_hash": _hash_password(body.new_password)}).eq("id", user_id).execute()
+    sb.table("users").update({"password_hash": _hash_password(body.new_password)}).eq("id", uid).execute()
     return {"ok": True}
-
-
-@router.get("/users")
-def list_users():
-    sb = get_supabase()
-    result = sb.table("users").select("*").order("created_at", desc=True).execute()
-    return {"users": [_public_user(u) for u in result.data]}
