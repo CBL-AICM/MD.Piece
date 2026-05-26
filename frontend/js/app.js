@@ -2831,10 +2831,6 @@ function showPage(page) {
     document.body.classList.toggle('is-home', page === 'home');
     document.body.setAttribute('data-page', page);
   } catch (e) {}
-  // 頁面層級的主題強制覆寫（症狀分析 / 報告 → light；夜間提醒 → dark）
-  if (typeof _reapplyThemeForCurrentPage === 'function') {
-    try { _reapplyThemeForCurrentPage(); } catch (e) { /* boot order safety */ }
-  }
   const pages = {
     home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
@@ -16210,36 +16206,9 @@ function applyFontSize(size) {
   document.documentElement.setAttribute('data-font-size', size);
 }
 
-// 頁面層級的主題強制覆寫（依 docs/research/ui_color_research.md §5）
-// 某些頁面內容性質上需要強制 light 或 dark，而不跟隨系統偏好
-const PAGE_FORCED_THEME = {
-  // 症狀分析與報告需要高對比 → 強制 light
-  symptoms: 'light',
-  symptomsAnalyze: 'light',
-  reports: 'light',
-  story: 'light',
-  // 夜間提醒 / 服藥提醒 → 強制 dark（晚間 20:00–06:00 才生效，避開白天）
-  reminders: '_dark_at_night',
-  medications: '_dark_at_night',
-};
-
-function _resolveForcedTheme(pageKey, fallback) {
-  const rule = PAGE_FORCED_THEME[pageKey];
-  if (!rule) return fallback;
-  if (rule === '_dark_at_night') {
-    const hour = new Date().getHours();
-    return (hour >= 20 || hour < 6) ? 'dark' : fallback;
-  }
-  return rule;
-}
-
 function applyTheme(pref) {
   const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  let resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
-  // 頁面強制覆寫優先（不寫 storage，僅作為當下顯示）
-  if (typeof _currentPageKey === 'string') {
-    resolved = _resolveForcedTheme(_currentPageKey, resolved);
-  }
+  const resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
   // 將最終解析結果寫到 <html data-theme>，新 CSS rules 用得到
   document.documentElement.setAttribute('data-theme', resolved);
   // 同步 html.dark class — v11-modern.css 的 sidebar / tabbar / topbar 等深色
@@ -16257,8 +16226,6 @@ function applyTheme(pref) {
   const lab = document.getElementById('tt-label');
   if (ico) ico.textContent = resolved === 'dark' ? '☾' : '☀';
   if (lab) lab.textContent = resolved.toUpperCase();
-  // 與既有 toggle 共用 storage key（保持向下相容）
-  try { localStorage.setItem('mdpiece_landing_theme', resolved); } catch (e) {}
   window.dispatchEvent(new CustomEvent('landing-theme-change', { detail: resolved }));
 }
 
