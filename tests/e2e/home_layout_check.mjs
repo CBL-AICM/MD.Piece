@@ -1,4 +1,4 @@
-// Quick visual check for the redesigned 4-layer home page.
+// Quick visual check for the redesigned 5-layer home page.
 // Bypasses login by injecting a mock user into localStorage.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
@@ -69,9 +69,9 @@ const PROFILES = [
     await page.waitForSelector('.home-layered', { timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(1500);
 
-    // Check that all 4 layers exist
+    // Check that all 5 layers exist (todo / core / second / edu / puzzle)
     const layerNums = await page.$$eval('.home-layer-num', els => els.map(e => e.textContent.trim()));
-    if (layerNums.length !== 4) issues.push(`[${p.name}] expected 4 layers, got ${layerNums.length} (${layerNums.join(',')})`);
+    if (layerNums.length !== 5) issues.push(`[${p.name}] expected 5 layers, got ${layerNums.length} (${layerNums.join(',')})`);
 
     // Check core cards (should be 4)
     const coreCount = await page.$$eval('.hcore-card', els => els.length);
