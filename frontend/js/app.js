@@ -9257,6 +9257,114 @@ function buildVitalSparklineSvg(metricId, color, days) {
     + '</svg>';
 }
 
+/** 取某指標最近 N 天紀錄並回傳排序後的 {t, v, raw} 陣列。 */
+function _vitalEntriesForChart(metricId, days) {
+  var since = Date.now() - (days || 30) * 86400000;
+  return getVitalEntries()
+    .filter(function(e) { return e.metricId === metricId && new Date(e.recordedAt).getTime() >= since; })
+    .map(function(e) { return { t: new Date(e.recordedAt).getTime(), v: parseFloat(e.value), raw: e }; })
+    .filter(function(e) { return !isNaN(e.v); })
+    .sort(function(a, b) { return a.t - b.t; });
+}
+
+/** 開啟單一指標的詳細折線圖 sheet（手機點 vital-card 後展開）。 */
+function openVitalChartSheet(metricId) {
+  var m = findMetric(metricId);
+  if (!m) return;
+  var entries = _vitalEntriesForChart(metricId, 30);
+  var color = '#4A90C2';
+
+  // 畫大圖（含 Y 軸標籤）
+  var W = 320, H = 160, padL = 32, padR = 12, padT = 12, padB = 22;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+  var svgBody = '';
+  if (entries.length === 0) {
+    svgBody = '<text x="' + (W/2) + '" y="' + (H/2) + '" text-anchor="middle" fill="#999" font-size="12">尚無紀錄</text>';
+  } else {
+    var minT = entries[0].t, maxT = entries[entries.length - 1].t, spanT = (maxT - minT) || 1;
+    var vals = entries.map(function(e) { return e.v; });
+    var minV = Math.min.apply(null, vals);
+    var maxV = Math.max.apply(null, vals);
+    if (minV === maxV) { minV -= 1; maxV += 1; }
+    var spanV = maxV - minV;
+    var xOf = function(t) { return entries.length === 1 ? (padL + plotW / 2) : (padL + (t - minT) / spanT * plotW); };
+    var yOf = function(v) { return padT + plotH - (v - minV) / spanV * plotH; };
+
+    // Y 軸 grid + 標籤（4 條線）
+    var grid = '';
+    for (var i = 0; i <= 3; i++) {
+      var yv = minV + (maxV - minV) * (i / 3);
+      var yPx = yOf(yv);
+      grid += '<line x1="' + padL + '" y1="' + yPx + '" x2="' + (W - padR) + '" y2="' + yPx + '" stroke="#e5e7eb" stroke-width="1"/>';
+      grid += '<text x="' + (padL - 4) + '" y="' + (yPx + 3) + '" text-anchor="end" fill="#6b7280" font-size="9">' + (Number.isInteger(yv) ? yv : yv.toFixed(1)) + '</text>';
+    }
+    // X 軸日期標籤（首末）
+    var d1 = new Date(minT), d2 = new Date(maxT);
+    var fmt = function(d) { return (d.getMonth()+1) + '/' + d.getDate(); };
+    var xLabels = '<text x="' + padL + '" y="' + (H - 6) + '" text-anchor="start" fill="#6b7280" font-size="9">' + fmt(d1) + '</text>'
+      + '<text x="' + (W - padR) + '" y="' + (H - 6) + '" text-anchor="end" fill="#6b7280" font-size="9">' + fmt(d2) + '</text>';
+
+    if (entries.length === 1) {
+      svgBody = grid + xLabels
+        + '<circle cx="' + xOf(entries[0].t) + '" cy="' + yOf(entries[0].v) + '" r="5" fill="' + color + '"/>'
+        + '<text x="' + xOf(entries[0].t) + '" y="' + (yOf(entries[0].v) - 8) + '" text-anchor="middle" fill="#374151" font-size="10" font-weight="600">' + entries[0].v + '</text>';
+    } else {
+      var linePts = entries.map(function(e) { return xOf(e.t).toFixed(1) + ',' + yOf(e.v).toFixed(1); }).join(' ');
+      var areaPts = (padL) + ',' + (padT + plotH) + ' ' + linePts + ' ' + (W - padR) + ',' + (padT + plotH);
+      var dots = entries.map(function(e) {
+        return '<circle cx="' + xOf(e.t).toFixed(1) + '" cy="' + yOf(e.v).toFixed(1) + '" r="3" fill="' + color + '"/>';
+      }).join('');
+      svgBody = grid + xLabels
+        + '<polygon fill="' + color + '" fill-opacity="0.16" points="' + areaPts + '"/>'
+        + '<polyline fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="' + linePts + '"/>'
+        + dots;
+    }
+  }
+
+  // 資料點清單
+  var rowsHtml = entries.length === 0
+    ? '<div style="padding:14px;text-align:center;color:#9ca3af;font-size:12px">尚無紀錄</div>'
+    : entries.slice().reverse().map(function(e) {
+        var d = new Date(e.t);
+        var dateStr = (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+        var bits = [];
+        if (e.raw.context) bits.push('情境：' + escapeHtml(e.raw.context));
+        if (e.raw.method)  bits.push('方式：' + escapeHtml(e.raw.method));
+        if (e.raw.notes)   bits.push(escapeHtml(e.raw.notes));
+        var meta = bits.length ? '<div style="font-size:11px;color:#6b7280;margin-top:2px">' + bits.join(' · ') + '</div>' : '';
+        var valStr = (e.raw.value2 != null) ? (e.raw.value + '/' + e.raw.value2) : String(e.raw.value);
+        return '<div style="padding:10px 12px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
+          + '<div style="min-width:0">'
+          +   '<div style="font-size:12px;color:#6b7280;font-family:var(--font-mono,monospace)">' + dateStr + '</div>'
+          +   meta
+          + '</div>'
+          + '<div style="font-size:14px;font-weight:600;color:#111;white-space:nowrap"><strong>' + valStr + '</strong> <span style="font-size:11px;color:#6b7280;font-weight:400">' + escapeHtml(m.unit || '') + '</span></div>'
+          + '</div>';
+      }).join('');
+
+  var overlay = document.createElement('div');
+  overlay.id = 'vt-chart-sheet';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  overlay.innerHTML = ''
+    + '<div role="dialog" aria-label="' + escapeHtml(m.zh) + '折線圖" style="background:#fff;border-radius:14px 14px 0 0;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column">'
+    +   '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #f1f5f9">'
+    +     '<div style="font-size:15px;font-weight:600;color:#111">' + escapeHtml(m.zh) + ' 折線圖 <span style="font-weight:400;color:#6b7280;font-size:12px">(最近 30 天 · ' + entries.length + ' 筆)</span></div>'
+    +     '<button type="button" onclick="closeVitalChartSheet()" aria-label="關閉" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#6b7280;padding:4px 8px">×</button>'
+    +   '</div>'
+    +   '<div style="padding:16px;background:#fafafa">'
+    +     '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;background:#fff;border-radius:8px;border:1px solid #f1f5f9">' + svgBody + '</svg>'
+    +   '</div>'
+    +   '<div style="overflow:auto;flex:1">' + rowsHtml + '</div>'
+    + '</div>';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeVitalChartSheet(); });
+  document.body.appendChild(overlay);
+}
+
+function closeVitalChartSheet() {
+  var el = document.getElementById('vt-chart-sheet');
+  if (el) el.remove();
+}
+
 function calculateBMI() {
   const w = getLatestEntry('weight'), h = getLatestEntry('height');
   if (!w || !h) return null;
@@ -9292,21 +9400,24 @@ function vitals() {
     : (todayCovered === totalToday ? '今日追蹤全部完成 ✨' : `${todayCovered} / ${totalToday} 項已記錄 · 還剩 ${totalToday - todayCovered}`);
 
   // ─── 手機 v11 demo 版面 — 本週數值 + 最近紀錄 ────────────── //
-  var _mobileVitalsCards = trackedMetrics.slice(0, 2).map(function(m, idx) {
+  // 顯示「全部」追蹤指標卡，每張可點 → openVitalChartSheet 看單一指標折線。
+  var _vitalTintCycle = ['t-rose', 't-blue', 't-mint', 't-amber'];
+  var _vitalColorCycle = ['#C97A7A', '#4A90C2', '#5BA88C', '#D89B5C'];
+  var _mobileVitalsCards = trackedMetrics.map(function(m, idx) {
     var latest = getLatestEntry(m.id);
-    var tint = idx === 0 ? 't-rose' : 't-blue';
-    var color = idx === 0 ? '#C97A7A' : '#4A90C2';
-    var val = latest ? (latest.value != null ? latest.value : (latest.systolic ? (latest.systolic + '/' + latest.diastolic) : '—')) : '—';
+    var tint = _vitalTintCycle[idx % _vitalTintCycle.length];
+    var color = _vitalColorCycle[idx % _vitalColorCycle.length];
+    var val = latest ? (latest.value != null ? (latest.value2 != null ? (latest.value + '/' + latest.value2) : latest.value) : '—') : '—';
     var unit = m.unit || '';
     var lastTime = latest ? ((new Date(latest.recordedAt)).getMonth()+1) + '/' + (new Date(latest.recordedAt)).getDate() : '';
     return ''
-      + '<div class="vital-card ' + tint + '">'
+      + '<button type="button" class="vital-card ' + tint + '" onclick="openVitalChartSheet(\'' + m.id + '\')" style="text-align:left;border:1px solid var(--border-glass,rgba(0,0,0,0.06));background:inherit;cursor:pointer;padding:12px;font:inherit;color:inherit;width:100%">'
       +   '<div class="puzzle-motif"><svg><use href="#puzzle-piece"/></svg></div>'
-      +   '<div class="vital-card-head"><i data-lucide="activity"></i><span class="lbl">' + escapeHtml(m.label || m.id) + '</span></div>'
+      +   '<div class="vital-card-head"><i data-lucide="activity"></i><span class="lbl">' + escapeHtml(m.zh || m.id) + '</span><i data-lucide="chevron-right" style="margin-left:auto;width:14px;height:14px;opacity:0.4"></i></div>'
       +   '<div class="vital-card-val">' + escapeHtml(String(val)) + '<span class="vital-card-unit">' + escapeHtml(unit) + '</span></div>'
-      +   '<div class="vital-card-meta">' + (lastTime ? '最後紀錄 ' + lastTime : '尚無紀錄') + '</div>'
+      +   '<div class="vital-card-meta">' + (lastTime ? '最後紀錄 ' + lastTime + ' · 點查看折線圖' : '尚無紀錄 · 點查看折線圖') + '</div>'
       +   (latest ? buildVitalSparklineSvg(m.id, color, 7) : '')
-      + '</div>';
+      + '</button>';
   }).join('');
   if (!_mobileVitalsCards) {
     _mobileVitalsCards = '<div class="vital-card" style="grid-column:1/-1;padding:16px;text-align:center;color:var(--text-muted);font-size:11px">尚未選擇追蹤項目 — 到下方勾選</div>';
