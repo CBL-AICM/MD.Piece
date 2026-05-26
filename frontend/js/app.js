@@ -4784,46 +4784,9 @@ function home() {
     +     '<button class="care-chip ' + (getCareMode() === 'inpatient' ? 'active' : '') + '" onclick="setCareMode(\'inpatient\')"><i data-lucide="hospital"></i> 住院模式</button>'
     +   '</div>'
 
-    // KPI 3 卡 mini — 數字 + 一句白話（資料注入見 _updateMobileHomeKPIs）
-    // 點卡片跳到對應頁可記錄／查看趨勢
-    +   '<div class="kpi-row">'
-    +     '<div class="kpi-mini t-rose" role="button" tabindex="0" onclick="navigateTo(\'vitals\',null)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="kpi-mini-label"><i data-lucide="heart-pulse"></i> 血壓</div>'
-    +       '<div class="kpi-mini-val" id="mobile-kpi-bp-val">—</div>'
-    +       '<div class="kpi-mini-meta" id="mobile-kpi-bp-meta">尚無紀錄</div>'
-    +       '<svg class="kpi-mini-spark" id="mobile-kpi-bp-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
-    +         '<polygon fill="#C97A7A" fill-opacity="0.16" points="0,22 0,11 16,12 32,8 48,13 64,9 80,14 100,11 100,22"/>'
-    +         '<polyline fill="none" stroke="#C97A7A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,11 16,12 32,8 48,13 64,9 80,14 100,11"/>'
-    +         '<circle cx="100" cy="11" r="2.6" fill="#C97A7A"/>'
-    +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 升高　·　點開記錄</div>'
-    +     '</div>'
-    +     '<div class="kpi-mini t-blue" role="button" tabindex="0" onclick="navigateTo(\'vitals\',null)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="kpi-mini-label"><i data-lucide="droplet"></i> 飯前血糖</div>'
-    +       '<div class="kpi-mini-val" id="mobile-kpi-glu-val">—</div>'
-    +       '<div class="kpi-mini-meta" id="mobile-kpi-glu-meta">尚無紀錄</div>'
-    +       '<svg class="kpi-mini-spark" id="mobile-kpi-glu-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
-    +         '<polygon fill="#4A90C2" fill-opacity="0.16" points="0,22 0,14 16,12 32,16 48,10 64,13 80,8 100,6 100,22"/>'
-    +         '<polyline fill="none" stroke="#4A90C2" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,14 16,12 32,16 48,10 64,13 80,8 100,6"/>'
-    +         '<circle cx="100" cy="6" r="2.6" fill="#4A90C2"/>'
-    +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 偏高　·　點開記錄</div>'
-    +     '</div>'
-    +     '<div class="kpi-mini t-teal" role="button" tabindex="0" onclick="navigateTo(\'emotions\',null)">'
-    +       '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
-    +       '<div class="kpi-mini-label"><i data-lucide="battery-charging"></i> 心情電量</div>'
-    +       '<div class="kpi-mini-val" id="mobile-kpi-mood-val">—</div>'
-    +       '<div class="kpi-mini-meta" id="mobile-kpi-mood-meta">尚無紀錄</div>'
-    +       '<svg class="kpi-mini-spark" id="mobile-kpi-mood-spark" viewBox="0 0 100 22" preserveAspectRatio="none">'
-    +         '<polygon fill="#2F8378" fill-opacity="0.16" points="0,22 0,8 16,9 32,12 48,17 64,14 80,18 100,13 100,22"/>'
-    +         '<polyline fill="none" stroke="#2F8378" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,8 16,9 32,12 48,17 64,14 80,18 100,13"/>'
-    +         '<circle cx="100" cy="13" r="2.6" fill="#2F8378"/>'
-    +       '</svg>'
-    +       '<div class="kpi-mini-explain">線往上 = 越累　·　點開記錄</div>'
-    +     '</div>'
-    +   '</div>'
+    // KPI 3 卡 mini — 動態挑選（前 30 天紀錄次數最高的指標 + 患者追蹤清單）
+    // 由 _updateMobileHomeKPIs() 注入內容（含真實 sparkline 與最新數值）
+    +   '<div class="kpi-row" id="mobile-home-kpi-row"></div>'
 
     // 不舒服一鍵
     +   '<div class="sec-head">'
@@ -5389,81 +5352,117 @@ function _renderMobileRecentRecords() {
 // 行動版首頁 KPI 注入：血壓 / 飯前血糖 / 心情電量
 // 資料源：localStorage `mdpiece_vitals_entries` + /emotions/daily
 // 找不到資料時保留「—」+「尚無紀錄」，不硬塞假值（避免誤導）。
+// 動態挑選首頁 KPI 卡的指標：
+//   1. 取最近 30 天紀錄次數最高的指標（患者實際常記錄的）
+//   2. 不夠 n 個，補追蹤清單（醫師／自己勾選的）
+//   3. 還不夠，補 DEFAULT_TRACKED
+// 跳過 BMI（衍生指標）。
+function _pickHomeHeroMetrics(n) {
+  n = n || 3;
+  var counts = {};
+  var since = Date.now() - 30 * 86400000;
+  try {
+    (getVitalEntries() || []).forEach(function(e) {
+      var t = new Date(e.recordedAt).getTime();
+      if (isNaN(t) || t < since) return;
+      counts[e.metricId] = (counts[e.metricId] || 0) + 1;
+    });
+  } catch (_) {}
+  var byCount = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a]; });
+  var tracked = [];
+  try { tracked = getTrackedMetricIds() || []; } catch (_) {}
+  var defaults = (typeof DEFAULT_TRACKED !== 'undefined') ? DEFAULT_TRACKED.slice() : ['bp', 'glucose', 'weight'];
+  var picked = [];
+  function add(id) {
+    if (!id || id === 'bmi' || picked.indexOf(id) !== -1) return;
+    if (!findMetric(id)) return;
+    picked.push(id);
+  }
+  byCount.forEach(add);
+  tracked.forEach(add);
+  defaults.forEach(add);
+  return picked.slice(0, n);
+}
+
+// 數值白話解讀（給 kpi-mini-meta）；不認得的指標回 "已紀錄"。
+function _interpretMetric(metricId, valueStr) {
+  var v;
+  if (metricId === 'bp') {
+    var sys = parseInt(String(valueStr).split('/')[0], 10);
+    if (isNaN(sys)) return '已紀錄';
+    if (sys >= 140) return '偏高，留意';
+    if (sys >= 130) return '稍高';
+    if (sys < 100) return '偏低';
+    return '範圍內';
+  }
+  v = parseFloat(valueStr);
+  if (isNaN(v)) return '已紀錄';
+  switch (metricId) {
+    case 'glucose':
+      if (v >= 126) return '偏高';
+      if (v >= 110) return '略高';
+      if (v < 70) return '偏低';
+      return '範圍內';
+    case 'heart':
+      if (v >= 100) return '偏快';
+      if (v < 60) return '偏慢';
+      return '範圍內';
+    case 'temp':
+      if (v >= 38) return '發燒';
+      if (v >= 37.5) return '微燒';
+      if (v < 36) return '偏低';
+      return '範圍內';
+    case 'spo2':
+      if (v < 92) return '偏低，留意';
+      if (v < 95) return '稍低';
+      return '範圍內';
+    default:
+      return '已紀錄';
+  }
+}
+
+function _metricTintAndColor(m) {
+  var c = m && m.color;
+  if (c === 'pink') return { tint: 't-rose', hex: '#C97A7A' };
+  if (c === 'mint') return { tint: 't-teal', hex: '#2F8378' };
+  return { tint: 't-blue', hex: '#4A90C2' };
+}
+
 function _updateMobileHomeKPIs() {
-  try {
-    var bpVal = document.getElementById('mobile-kpi-bp-val');
-    var bpMeta = document.getElementById('mobile-kpi-bp-meta');
-    if (bpVal && typeof getLatestEntry === 'function') {
-      var bp = getLatestEntry('bp');
-      if (bp && bp.value) {
-        // bp 可能是 "120/80" 或物件
-        var disp = (typeof bp.value === 'string') ? bp.value
-          : (bp.systolic && bp.diastolic) ? (bp.systolic + '/' + bp.diastolic)
-          : '—';
-        bpVal.textContent = disp;
-        if (bpMeta) {
-          // 判讀：以收縮壓 130 / 舒張壓 85 為界（提醒參考，非診斷）
-          var sys = parseInt(String(disp).split('/')[0], 10);
-          if (!isNaN(sys)) {
-            if (sys >= 140) bpMeta.textContent = '偏高，留意';
-            else if (sys >= 130) bpMeta.textContent = '有點高一點';
-            else if (sys < 100) bpMeta.textContent = '偏低';
-            else bpMeta.textContent = '範圍內';
-          } else {
-            bpMeta.textContent = '已紀錄';
-          }
-        }
-      }
+  var row = document.getElementById('mobile-home-kpi-row');
+  if (!row) return;
+  var ids = _pickHomeHeroMetrics(3);
+  var html = ids.map(function(id) {
+    var m = findMetric(id);
+    if (!m) return '';
+    var theme = _metricTintAndColor(m);
+    var latest = (typeof getLatestEntry === 'function') ? getLatestEntry(id) : null;
+    var valHtml = '—';
+    var metaTxt = '尚無紀錄';
+    if (latest && latest.value != null && latest.value !== '') {
+      var disp;
+      if (typeof latest.value === 'string') disp = latest.value;
+      else if (latest.value.systolic && latest.value.diastolic) disp = latest.value.systolic + '/' + latest.value.diastolic;
+      else disp = String(latest.value);
+      var unitDisp = m.unit ? ' <span style="font-size:11px;color:var(--text-muted);font-weight:400">' + escapeHtml(m.unit) + '</span>' : '';
+      valHtml = escapeHtml(disp) + unitDisp;
+      metaTxt = _interpretMetric(id, disp);
     }
-  } catch (e) {}
-
-  try {
-    var gluVal = document.getElementById('mobile-kpi-glu-val');
-    var gluMeta = document.getElementById('mobile-kpi-glu-meta');
-    if (gluVal && typeof getLatestEntry === 'function') {
-      var glu = getLatestEntry('glucose');
-      if (glu && glu.value) {
-        gluVal.textContent = String(glu.value);
-        if (gluMeta) {
-          var g = parseFloat(glu.value);
-          if (!isNaN(g)) {
-            if (g >= 126) gluMeta.textContent = '偏高';
-            else if (g >= 110) gluMeta.textContent = '略高 ' + (g - 100).toFixed(0) + ' 點';
-            else if (g < 70) gluMeta.textContent = '偏低';
-            else gluMeta.textContent = '範圍內';
-          } else {
-            gluMeta.textContent = '已紀錄';
-          }
-        }
-      }
+    var spark = (typeof buildVitalSparklineSvg === 'function') ? buildVitalSparklineSvg(id, theme.hex, 30) : '';
+    if (!spark) {
+      spark = '<div style="height:28px;margin-top:10px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--text-muted);opacity:.55">尚無趨勢</div>';
     }
-  } catch (e) {}
-
-  // 心情電量：用最近一天的 emotions/daily.average_score（0~1 → 1~5 顯示）
-  try {
-    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-    var moodVal = document.getElementById('mobile-kpi-mood-val');
-    var moodMeta = document.getElementById('mobile-kpi-mood-meta');
-    if (pid && moodVal) {
-      fetch(API + '/emotions/daily?patient_id=' + pid + '&days=3')
-        .then(function(r) { return r.ok ? r.json() : { daily: [] }; })
-        .then(function(d) {
-          var daily = (d && d.daily) || [];
-          if (!daily.length) return;
-          var last = daily[daily.length - 1];
-          if (!last || last.average_score == null) return;
-          // average_score 假設 0~1（與 _moodPercent 一致）→ 換算 1~5
-          var score = Math.max(1, Math.min(5, Math.round(last.average_score * 5)));
-          moodVal.innerHTML = score + '<span style="font-size:12px;color:var(--text-muted)">/5</span>';
-          if (moodMeta) {
-            if (score >= 4) moodMeta.textContent = '狀態不錯';
-            else if (score === 3) moodMeta.textContent = '還可以';
-            else moodMeta.textContent = '這幾天有點累';
-          }
-        })
-        .catch(function() {});
-    }
-  } catch (e) {}
+    return '<div class="kpi-mini ' + theme.tint + '" role="button" tabindex="0" onclick="openVitalChartSheet(\'' + id + '\')">'
+      + '<div class="puzzle-motif tr"><svg><use href="#puzzle-piece"/></svg></div>'
+      + '<div class="kpi-mini-label"><i data-lucide="' + (m.icon || 'activity') + '"></i> ' + escapeHtml(m.zh) + '</div>'
+      + '<div class="kpi-mini-val">' + valHtml + '</div>'
+      + '<div class="kpi-mini-meta">' + escapeHtml(metaTxt) + '</div>'
+      + spark
+      + '<div class="kpi-mini-explain">點查看趨勢</div>'
+      + '</div>';
+  }).join('');
+  row.innerHTML = html;
+  if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch (_) {}
 }
 
 // 行動版待辦進度 sec-count（X 完成 / Y 總數）
