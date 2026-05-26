@@ -9356,6 +9356,42 @@ a.story-news-title:hover { color: var(--story-text-dark); }
 }
 .pv-check-text { flex: 1; color: var(--app-text); }
 
+.pv-basic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px 14px;
+}
+.pv-basic-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--app-panel-soft);
+  border: 1px solid var(--app-border);
+}
+.pv-basic-label {
+  font-size: 0.75rem;
+  color: var(--app-text-dim);
+  letter-spacing: 0.02em;
+}
+.pv-basic-value {
+  font-size: 0.92rem;
+  color: var(--app-text);
+  word-break: break-word;
+  line-height: 1.45;
+}
+.pv-basic-empty {
+  margin: 0;
+  color: var(--app-text-dim);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+.pv-basic-empty a {
+  color: var(--app-term);
+  text-decoration: underline;
+}
+
 .pv-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));

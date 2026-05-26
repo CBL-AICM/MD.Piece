@@ -1801,6 +1801,80 @@ function renderPvVisitHero() {
     + '</div>';
 }
 
+// ─── 診前報告：基本個人資料（讀 records 頁的 localStorage） ──────
+function previsitBasicInfoEntries() {
+  var info = (typeof getBasicInfo === 'function') ? getBasicInfo() : {};
+  var u = (typeof getCurrentUser === 'function') ? (getCurrentUser() || {}) : {};
+  var entries = [];
+
+  if (u.nickname) entries.push(['姓名 / 暱稱', u.nickname]);
+
+  var genderMap = { male: '男', female: '女', other: '其他' };
+  if (info.gender) entries.push(['性別', genderMap[info.gender] || info.gender]);
+
+  if (info.birthday) {
+    var age = (typeof calcAge === 'function') ? calcAge(info.birthday) : '';
+    entries.push(['生日', info.birthday + (age ? '（' + age + '）' : '')]);
+  }
+
+  if (info.blood) entries.push(['血型', info.blood]);
+
+  var hwParts = [];
+  if (info.height) hwParts.push(info.height + ' cm');
+  if (info.weight) hwParts.push(info.weight + ' kg');
+  var bmi = (typeof calcBMI === 'function') ? calcBMI(info.height, info.weight) : '';
+  if (bmi) hwParts.push('BMI ' + bmi);
+  if (hwParts.length) entries.push(['身高體重', hwParts.join(' · ')]);
+
+  if (info.allergies) entries.push(['過敏', info.allergies]);
+  if (info.conditions) entries.push(['慢性病', info.conditions]);
+  if (info.current_disease) entries.push(['目前疾病', info.current_disease]);
+  if (info.meds) entries.push(['目前用藥', info.meds]);
+
+  if (info.doctor_name || info.hospital) {
+    entries.push(['主治醫師', [info.doctor_name, info.hospital].filter(Boolean).join('｜')]);
+  }
+  if (info.emergency_name || info.emergency_phone) {
+    entries.push(['緊急聯絡人', [info.emergency_name, info.emergency_phone].filter(Boolean).join(' ')]);
+  }
+
+  return entries;
+}
+
+function previsitBasicInfoHTML() {
+  var entries = previsitBasicInfoEntries();
+  if (!entries.length) {
+    return ''
+      + '<section class="pv-section pv-basic">'
+      + '  <h3 class="pv-section-title"><i data-lucide="id-card"></i> 基本個人資料</h3>'
+      + '  <p class="pv-basic-empty">尚未填寫。<a href="#" onclick="navigateTo(\'records\'); return false;">前往「我的基本資料」</a>填寫，看診更省心。</p>'
+      + '</section>';
+  }
+  var items = entries.map(function(e) {
+    return ''
+      + '<div class="pv-basic-item">'
+      + '  <span class="pv-basic-label">' + escapeHtml(e[0]) + '</span>'
+      + '  <span class="pv-basic-value">' + escapeHtml(e[1]) + '</span>'
+      + '</div>';
+  }).join('');
+  return ''
+    + '<section class="pv-section pv-basic">'
+    + '  <h3 class="pv-section-title"><i data-lucide="id-card"></i> 基本個人資料</h3>'
+    + '  <div class="pv-basic-grid">' + items + '</div>'
+    + '</section>';
+}
+
+function previsitBasicInfoTableHTML() {
+  var entries = previsitBasicInfoEntries();
+  if (!entries.length) {
+    return '<p class="basic-empty">（使用者未填寫基本資料，請先到「我的基本資料」頁完整填寫後再產出報告）</p>';
+  }
+  var rows = entries.map(function(e) {
+    return '<tr><th>' + escapeHtml(e[0]) + '</th><td>' + escapeHtml(e[1]) + '</td></tr>';
+  }).join('');
+  return '<table class="basic-info"><tbody>' + rows + '</tbody></table>';
+}
+
 function previsit() {
   var _pvDays = (typeof getReportDays === 'function') ? getReportDays() : 30;
 
@@ -1824,6 +1898,9 @@ function previsit() {
     +     '<div class="pv-hero-doc">' + (_mobileVisitIsoP ? '記得帶健保卡與藥袋' : '到「回診排程」頁設定') + '</div>'
     +     '<button class="pv-btn" onclick="previsitReload()"><i data-lucide="clipboard-check"></i> 立即產生診前報告</button>'
     +   '</div>'
+
+    // 基本個人資料 — 看診前自己對一遍，PDF 抬頭也會帶
+    +   previsitBasicInfoHTML()
 
     // 報告動作 — PDF 下載 + 複製（手機版漏掉了，desktop 有）
     +   '<div class="pv-mobile-actions">'
@@ -1907,6 +1984,8 @@ function previsit() {
     + '      </button>'
     + '    </div>'
     + '  </header>'
+    + ''
+    + previsitBasicInfoHTML()
     + ''
     + '  <section class="pv-section pv-timeline-section">'
     + '    <h3 class="pv-section-title"><i data-lucide="route"></i> 本週重點碎片</h3>'
@@ -2303,6 +2382,10 @@ var _PV_PDF_STYLE = ''
   + '  table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
   + '  table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
   + '  table.stats td span { font-size: 11px; color: #666; }'
+  + '  table.basic-info { width: 100%; border-collapse: collapse; margin: 4px 0 10px; }'
+  + '  table.basic-info th { width: 110px; text-align: left; padding: 6px 10px; background: #f0f4fa; border: 1px solid #e2e2e2; color: #2a5d8f; font-weight: 600; vertical-align: top; }'
+  + '  table.basic-info td { padding: 6px 10px; border: 1px solid #e2e2e2; vertical-align: top; }'
+  + '  .basic-empty { color: #888; font-size: 12px; margin: 0 0 10px; }'
   + '  .disclaimer { margin-top: 28px; padding: 12px 14px; border-top: 2px solid #d9d9d9; background: #fafafa; font-size: 11.5px; color: #555; line-height: 1.6; }'
   + '  .disclaimer p { margin: 0 0 6px; }'
   + '  .disclaimer p:last-child { margin: 0; }';
@@ -2329,6 +2412,8 @@ function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
     + '<style>' + _PV_PDF_STYLE + '</style></head><body>'
     + '<h1>診前報告（患者版）</h1>'
     + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：' + escapeHtml(periodLabel) + '</div>'
+    + '<h2>基本個人資料</h2>'
+    + previsitBasicInfoTableHTML()
     + '<h2>本期間紀錄概覽</h2>'
     + statsHtml
     + '<h2>給醫師的話（我整理的）</h2>'
@@ -2358,6 +2443,8 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel) {
     + '<style>' + _PV_PDF_STYLE + '</style></head><body>'
     + '<h1>診前報告（醫師版）</h1>'
     + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：' + escapeHtml(periodLabel) + '</div>'
+    + '<h2>患者基本資料</h2>'
+    + previsitBasicInfoTableHTML()
     + '<h2>本期間紀錄概覽</h2>'
     + statsHtml
     + '<h2>整合摘要</h2>'
