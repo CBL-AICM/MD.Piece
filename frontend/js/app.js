@@ -2815,7 +2815,7 @@ function showPage(page) {
     if (page === "reminders") loadRemindersPage();
     if (page === "vitals") {
       loadDoctorMeasurementRequests();
-      if (typeof onMobileMetricChange === 'function') onMobileMetricChange();
+      if (typeof initMobileVitalChips === 'function') initMobileVitalChips();
     }
     if (page === "admissions") loadAdmissionsPage();
     if (page === "timeline") loadTimelinePage();
@@ -9441,44 +9441,36 @@ function vitals() {
     _mobileRecentRows = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">尚無紀錄</div>';
   }
 
-  // ── 手機版「記一筆」表單：選指標 → 數值 → 情境/方式 → 備註 ─────
-  var _mobileFormMetrics = allMetrics.filter(function(mm) { return mm.id !== 'bmi'; });
-  var _mobileMetricOptions = _mobileFormMetrics.map(function(mm) {
-    return '<option value="' + mm.id + '" data-dual="' + (mm.dual ? '1' : '0') + '" data-unit="' + escapeHtml(mm.unit || '') + '">'
-      + escapeHtml(mm.zh) + (mm.unit ? ' (' + escapeHtml(mm.unit) + ')' : '')
-      + '</option>';
-  }).join('');
-  var _mobileCtxOptions = '<option value="">— 未指定 —</option>' + VITAL_CONTEXT_OPTIONS.map(function(o) {
-    return '<option value="' + escapeHtml(o) + '">' + escapeHtml(o) + '</option>';
-  }).join('');
-  var _mobileMethodOptions = '<option value="">— 未指定 —</option>' + VITAL_METHOD_OPTIONS.map(function(o) {
-    return '<option value="' + escapeHtml(o) + '">' + escapeHtml(o) + '</option>';
-  }).join('');
+  // ── 手機版「記一筆」模組：指標/情境/方式都用方塊 chip 點選，數值由患者自填 ─
+  // 初次進來預設選第一個非 BMI 的追蹤指標
+  if (!window.__vtMobileSel || !window.__vtMobileSel.metricId) {
+    var _defaultMetric = trackedMetrics.filter(function(mm) { return mm.id !== 'bmi'; })[0]
+      || allMetrics.filter(function(mm) { return mm.id !== 'bmi'; })[0];
+    window.__vtMobileSel = { metricId: _defaultMetric ? _defaultMetric.id : '', context: '', method: '' };
+  }
   var _mobileLogForm = ''
-    + '<div class="vt-mobile-form" style="background:var(--surface,#fff);border:1px solid var(--border-glass,rgba(0,0,0,0.08));border-radius:12px;padding:14px;margin-bottom:14px;display:flex;flex-direction:column;gap:10px">'
-    +   '<label style="font-size:12px;color:var(--text-muted);font-weight:600">指標</label>'
-    +   '<select id="vt-m-metric" onchange="onMobileMetricChange()" style="padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px">'
-    +     _mobileMetricOptions
-    +   '</select>'
+    + '<div class="vt-mobile-form" style="background:var(--surface,#fff);border:1px solid var(--border-glass,rgba(0,0,0,0.08));border-radius:14px;padding:14px;margin-bottom:14px;display:flex;flex-direction:column;gap:12px">'
+    +   '<div style="font-size:12px;color:var(--text-muted);font-weight:600">指標</div>'
+    +   '<div id="vt-m-metric-chips" class="vt-chip-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>'
     +   '<div id="vt-m-single-wrap">'
-    +     '<label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">數值 <span id="vt-m-unit-lbl" style="color:var(--text-dim)"></span></label>'
-    +     '<input type="number" id="vt-m-val1" inputmode="decimal" step="any" placeholder="輸入數值" style="width:100%;padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px" />'
+    +     '<div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:6px">數值 <span id="vt-m-unit-lbl" style="color:var(--text-dim);font-weight:400"></span></div>'
+    +     '<input type="number" id="vt-m-val1" inputmode="decimal" step="any" placeholder="自行輸入數值" style="width:100%;padding:12px;border:1px solid var(--border-glass);border-radius:10px;font-size:16px" />'
     +   '</div>'
     +   '<div id="vt-m-dual-wrap" style="display:none">'
-    +     '<label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">收縮壓 / 舒張壓 (mmHg)</label>'
-    +     '<div style="display:flex;gap:6px;align-items:center">'
-    +       '<input type="number" id="vt-m-val1d" inputmode="numeric" placeholder="例 120" min="40" max="260" style="flex:1;padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px" />'
-    +       '<span style="color:var(--text-muted)">/</span>'
-    +       '<input type="number" id="vt-m-val2d" inputmode="numeric" placeholder="例 80" min="30" max="160" style="flex:1;padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px" />'
+    +     '<div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:6px">收縮壓 / 舒張壓 (mmHg)</div>'
+    +     '<div style="display:flex;gap:8px;align-items:center">'
+    +       '<input type="number" id="vt-m-val1d" inputmode="numeric" placeholder="例 120" min="40" max="260" style="flex:1;padding:12px;border:1px solid var(--border-glass);border-radius:10px;font-size:16px" />'
+    +       '<span style="color:var(--text-muted);font-size:18px">/</span>'
+    +       '<input type="number" id="vt-m-val2d" inputmode="numeric" placeholder="例 80" min="30" max="160" style="flex:1;padding:12px;border:1px solid var(--border-glass);border-radius:10px;font-size:16px" />'
     +     '</div>'
     +   '</div>'
-    +   '<label style="font-size:12px;color:var(--text-muted);font-weight:600">紀錄情境（選填）</label>'
-    +   '<select id="vt-m-context" style="padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px">' + _mobileCtxOptions + '</select>'
-    +   '<label style="font-size:12px;color:var(--text-muted);font-weight:600">記錄方式（選填）</label>'
-    +   '<select id="vt-m-method" style="padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px">' + _mobileMethodOptions + '</select>'
-    +   '<label style="font-size:12px;color:var(--text-muted);font-weight:600">備註（選填）</label>'
-    +   '<textarea id="vt-m-notes" rows="2" placeholder="例如：起床後、有運動..." style="width:100%;padding:10px;border:1px solid var(--border-glass);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical"></textarea>'
-    +   '<button type="button" onclick="submitMobileVitalEntry()" style="padding:12px;background:var(--accent-primary,#4A90C2);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">新增紀錄</button>'
+    +   '<div style="font-size:12px;color:var(--text-muted);font-weight:600">紀錄情境（選填）</div>'
+    +   '<div id="vt-m-context-chips" class="vt-chip-row" style="display:flex;flex-wrap:wrap;gap:6px"></div>'
+    +   '<div style="font-size:12px;color:var(--text-muted);font-weight:600">記錄方式（選填）</div>'
+    +   '<div id="vt-m-method-chips" class="vt-chip-row" style="display:flex;flex-wrap:wrap;gap:6px"></div>'
+    +   '<div style="font-size:12px;color:var(--text-muted);font-weight:600">備註（選填）</div>'
+    +   '<textarea id="vt-m-notes" rows="2" placeholder="例如：左手量、休息 5 分鐘後..." style="width:100%;padding:10px;border:1px solid var(--border-glass);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical"></textarea>'
+    +   '<button type="button" onclick="submitMobileVitalEntry()" style="padding:14px;background:#4A90C2;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">新增紀錄</button>'
     + '</div>';
 
   var _mobileVitalsBlock = ''
@@ -10327,57 +10319,132 @@ function submitVitalEntry(metricId) {
   showPage('vitals');
 }
 
-function onMobileMetricChange() {
-  const sel = document.getElementById('vt-m-metric');
-  if (!sel) return;
-  const opt = sel.options[sel.selectedIndex];
-  const isDual = opt && opt.dataset.dual === '1';
-  const unit = opt ? opt.dataset.unit : '';
-  const single = document.getElementById('vt-m-single-wrap');
-  const dual = document.getElementById('vt-m-dual-wrap');
+// ─── 手機版「記一筆」模組：chip 點選邏輯 ──────────────────────
+//
+// state 存在 window.__vtMobileSel = { metricId, context, method }
+// 數值由患者自行輸入；情境/方式可不選（再點一次取消）。
+
+function _vitalChipStyle(on) {
+  return 'padding:10px;border-radius:10px;border:1.5px solid '
+    + (on ? '#4A90C2' : 'var(--border-glass,rgba(0,0,0,0.12))')
+    + ';background:' + (on ? 'rgba(74,144,194,0.10)' : 'var(--surface,#fff)')
+    + ';color:' + (on ? '#1E5A82' : 'var(--text,#374151)')
+    + ';font-size:13px;font-weight:' + (on ? '600' : '500')
+    + ';cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;text-align:center;line-height:1.2';
+}
+
+function renderMobileMetricChips() {
+  var el = document.getElementById('vt-m-metric-chips');
+  if (!el) return;
+  var cur = (window.__vtMobileSel || {}).metricId;
+  var list = getAllMetrics().filter(function(mm) { return mm.id !== 'bmi'; });
+  el.innerHTML = list.map(function(mm) {
+    var on = cur === mm.id;
+    return '<button type="button" onclick="setVitalChipMetric(\'' + mm.id + '\')" '
+      + 'style="' + _vitalChipStyle(on) + ';flex-direction:column;padding:12px 8px;min-height:64px">'
+      + '<i data-lucide="' + (mm.icon || 'tag') + '" style="width:18px;height:18px"></i>'
+      + '<span>' + escapeHtml(mm.zh) + (mm.unit ? ' <small style="font-weight:400;opacity:0.7">' + escapeHtml(mm.unit) + '</small>' : '') + '</span>'
+      + '</button>';
+  }).join('');
+  if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch (_) {}
+  syncVitalMobileValueInputs();
+}
+
+function renderMobileContextChips() {
+  var el = document.getElementById('vt-m-context-chips');
+  if (!el) return;
+  var cur = (window.__vtMobileSel || {}).context;
+  el.innerHTML = VITAL_CONTEXT_OPTIONS.map(function(o) {
+    var on = cur === o;
+    return '<button type="button" onclick="setVitalChipContext(\'' + o + '\')" '
+      + 'style="' + _vitalChipStyle(on) + ';padding:8px 14px">' + escapeHtml(o) + '</button>';
+  }).join('');
+}
+
+function renderMobileMethodChips() {
+  var el = document.getElementById('vt-m-method-chips');
+  if (!el) return;
+  var cur = (window.__vtMobileSel || {}).method;
+  el.innerHTML = VITAL_METHOD_OPTIONS.map(function(o) {
+    var on = cur === o;
+    return '<button type="button" onclick="setVitalChipMethod(\'' + o + '\')" '
+      + 'style="' + _vitalChipStyle(on) + ';padding:8px 14px">' + escapeHtml(o) + '</button>';
+  }).join('');
+}
+
+function syncVitalMobileValueInputs() {
+  var sel = window.__vtMobileSel || {};
+  var m = findMetric(sel.metricId);
+  var isDual = m && m.dual;
+  var single = document.getElementById('vt-m-single-wrap');
+  var dual = document.getElementById('vt-m-dual-wrap');
   if (single) single.style.display = isDual ? 'none' : 'block';
   if (dual)   dual.style.display   = isDual ? 'block' : 'none';
-  const unitLbl = document.getElementById('vt-m-unit-lbl');
-  if (unitLbl) unitLbl.textContent = unit ? '(' + unit + ')' : '';
+  var unitLbl = document.getElementById('vt-m-unit-lbl');
+  if (unitLbl) unitLbl.textContent = m && m.unit ? '(' + m.unit + ')' : '';
+}
+
+function setVitalChipMetric(id) {
+  window.__vtMobileSel = window.__vtMobileSel || {};
+  window.__vtMobileSel.metricId = id;
+  renderMobileMetricChips();
+}
+function setVitalChipContext(val) {
+  window.__vtMobileSel = window.__vtMobileSel || {};
+  window.__vtMobileSel.context = window.__vtMobileSel.context === val ? '' : val;
+  renderMobileContextChips();
+}
+function setVitalChipMethod(val) {
+  window.__vtMobileSel = window.__vtMobileSel || {};
+  window.__vtMobileSel.method = window.__vtMobileSel.method === val ? '' : val;
+  renderMobileMethodChips();
+}
+
+function initMobileVitalChips() {
+  renderMobileMetricChips();
+  renderMobileContextChips();
+  renderMobileMethodChips();
 }
 
 function submitMobileVitalEntry() {
-  const sel = document.getElementById('vt-m-metric');
-  if (!sel) return;
-  const metricId = sel.value;
-  const m = findMetric(metricId);
-  if (!m) { if (typeof showToast === 'function') showToast('找不到指標', 'warning'); return; }
-  const entry = {
+  var sel = window.__vtMobileSel || {};
+  var metricId = sel.metricId;
+  var m = findMetric(metricId);
+  if (!m) { if (typeof showToast === 'function') showToast('請先選擇指標', 'warning'); return; }
+  var entry = {
     id: 'vt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
-    metricId,
+    metricId: metricId,
     recordedAt: new Date().toISOString()
   };
   if (m.dual) {
-    const v1 = document.getElementById('vt-m-val1d').value;
-    const v2 = document.getElementById('vt-m-val2d').value;
-    if (!v1 || !v2) {
+    var v1d = document.getElementById('vt-m-val1d').value;
+    var v2d = document.getElementById('vt-m-val2d').value;
+    if (!v1d || !v2d) {
       if (typeof showToast === 'function') showToast('請完整輸入收縮 / 舒張壓', 'warning');
-      document.getElementById(v1 ? 'vt-m-val2d' : 'vt-m-val1d').focus();
+      var focusEl = document.getElementById(v1d ? 'vt-m-val2d' : 'vt-m-val1d');
+      if (focusEl) focusEl.focus();
       return;
     }
-    entry.value = parseFloat(v1);
-    entry.value2 = parseFloat(v2);
+    entry.value = parseFloat(v1d);
+    entry.value2 = parseFloat(v2d);
   } else {
-    const v1 = document.getElementById('vt-m-val1').value;
+    var v1 = document.getElementById('vt-m-val1').value;
     if (!v1) {
       if (typeof showToast === 'function') showToast('請先輸入數值', 'warning');
-      document.getElementById('vt-m-val1').focus();
+      var sEl = document.getElementById('vt-m-val1');
+      if (sEl) sEl.focus();
       return;
     }
     entry.value = parseFloat(v1);
   }
-  const ctx = document.getElementById('vt-m-context').value.trim();
-  const method = document.getElementById('vt-m-method').value.trim();
-  const notes = document.getElementById('vt-m-notes').value.trim();
-  if (ctx) entry.context = ctx;
-  if (method) entry.method = method;
+  if (sel.context) entry.context = sel.context;
+  if (sel.method)  entry.method  = sel.method;
+  var notes = document.getElementById('vt-m-notes').value.trim();
   if (notes) entry.notes = notes;
   saveVitalEntry(entry);
+  // 送出後清掉情境/方式選擇（指標保留方便連續記）
+  window.__vtMobileSel.context = '';
+  window.__vtMobileSel.method = '';
   if (typeof refreshNavBadges === 'function') refreshNavBadges();
   if (typeof showToast === 'function') showToast('已新增紀錄 ✅', 'success');
   showPage('vitals');
