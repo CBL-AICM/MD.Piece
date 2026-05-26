@@ -48,9 +48,15 @@ ANTHROPIC_VISION_MAX_TOKENS = int(os.getenv("ANTHROPIC_VISION_MAX_TOKENS", "2048
 GOOGLE_VISION_API_KEY = os.getenv("GOOGLE_VISION_API_KEY", "")
 GOOGLE_VISION_URL = "https://vision.googleapis.com/v1/images:annotate"
 
+# Anthropic SDK 預設 timeout 是 600s + 2 retries — 在 Vercel 60s lambda 下，
+# 一次小卡頓就會吃掉整個 lambda 額度導致連線被砍。手動把 timeout 拉到 30s、
+# retries 降到 1，最壞情況 ~60s 但通常 fallback chain 會在更早接手。
 try:
     import anthropic as _anthropic_sdk
-    _anthropic_client = _anthropic_sdk.Anthropic() if ANTHROPIC_API_KEY else None
+    _anthropic_client = (
+        _anthropic_sdk.Anthropic(timeout=30.0, max_retries=1)
+        if ANTHROPIC_API_KEY else None
+    )
 except Exception as e:  # ImportError 或 client 初始化失敗
     logger.warning(f"Anthropic SDK 未啟用：{e}")
     _anthropic_sdk = None
@@ -73,10 +79,13 @@ def _call_ollama(system_prompt: str, user_message: str, history=None, max_tokens
     }
     if max_tokens:
         payload["options"] = {"num_predict": int(max_tokens)}
+    # 預設 timeout 30s（原 120s 在 Vercel 60s lambda 下太長）；
+    # localhost 不存在會直接 ConnectError 快速 fallback，這個值只在
+    # OLLAMA_BASE_URL 設成遠端主機時才會被觸發到。
     resp = httpx.post(
         f"{OLLAMA_BASE}/api/chat",
         json=payload,
-        timeout=120.0,
+        timeout=30.0,
     )
     resp.raise_for_status()
     return resp.json()["message"]["content"]
@@ -90,9 +99,10 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
         msgs.extend(history)
     msgs.append({"role": "user", "content": user_message})
 
-    # 遇到 429 (rate limit) 自動 retry：指數退避 1.5s → 3s → 6s
-    # Groq free tier 偶爾突發限流，等一下就會通；retry 後再失敗才丟給 fallback chain
-    delays = [1.5, 3.0]  # 兩次 retry 機會
+    # 遇到 429 (rate limit) 自動 retry 一次。
+    # Vercel lambda 上限 60s，原本 60s timeout + 兩次 retry 會吃光額度，
+    # 改成 25s timeout + 1 次 retry，總預算 ~50s 留空間給 fallback。
+    delays = [1.5]  # 一次 retry 機會
     for attempt in range(len(delays) + 1):
         body: dict = {
             "model": GROQ_MODEL,
@@ -108,7 +118,7 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
                 "Content-Type": "application/json",
             },
             json=body,
-            timeout=60.0,
+            timeout=25.0,
         )
         if resp.status_code == 429 and attempt < len(delays):
             wait = delays[attempt]
