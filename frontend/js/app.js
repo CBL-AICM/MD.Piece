@@ -2443,43 +2443,50 @@ var PREVISIT_DISCLAIMER_HTML = ''
 //   audience='patient' → 患者版（白話摘要 + 三件事，自己念給醫師聽）
 //   audience='doctor'  → 醫師版（專業臨床摘要 + 追蹤建議 + 風險提醒）
 // 期間（days / period_label）由 backend 依「上次回診」自動推算。
+//
+// 優先用頁面 SSE 跑完已快取的 _previsitData.report；只有沒快取（沒看過 previsit 頁
+// 或 SSE 還在跑）才退回非串流 /monthly、/patient-summary。
+// 兩個理由：(1) 第二次 LLM 呼叫（≈ 30–50s）常撞 Vercel 60s lambda 上限 → 504 → toast「失敗」；
+// (2) 兩次 LLM 輸出不一致，PDF 內容會跟頁面上看到的不一樣。
 function previsitDownload(audience) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) {
     if (typeof showToast === 'function') showToast('找不到使用者，請先登入', 'warning');
     return;
   }
-  if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
 
-  if (audience === 'doctor') {
-    fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var report = (data && data.report) || '（暫無報告）';
-        var counts = (data && data.raw_data) || {};
-        var periodLabel = (data && data.period_label) || '近 30 天';
-        var html = previsitBuildDoctorHTML(report, counts, periodLabel);
-        previsitOpenPrint(html, 'MD.Piece-診前報告-醫師版-' + new Date().toISOString().slice(0, 10) + '.pdf');
-      })
-      .catch(function() {
-        if (typeof showToast === 'function') showToast('產生醫師版報告失敗，請稍後再試', 'error');
-      });
+  var dateStr = new Date().toISOString().slice(0, 10);
+  var filename = 'MD.Piece-診前報告-' + (audience === 'doctor' ? '醫師版' : '患者版') + '-' + dateStr + '.pdf';
+
+  function buildAndPrint(reportMarkdown, counts, periodLabel) {
+    if (audience === 'doctor') {
+      previsitOpenPrint(previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel), filename);
+    } else {
+      var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
+      previsitOpenPrint(previsitBuildPatientHTML(reportMarkdown, counts, checklist, periodLabel), filename);
+    }
+  }
+
+  // SSE 完成後 source 會從 'streaming' 換成 'ai' / 'no_data'；只在那之後用快取
+  var cached = _previsitData && _previsitData.report;
+  if (cached && cached.report && cached.source && cached.source !== 'streaming') {
+    buildAndPrint(cached.report, cached.raw_data || {}, cached.period_label || '近 30 天');
     return;
   }
 
-  // patient 版（預設）
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
+  // 退回非串流端點（cache 未就緒）
+  if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
+  var endpoint = audience === 'doctor' ? '/monthly' : '/patient-summary';
+  fetch(API + '/reports/' + encodeURIComponent(pid) + endpoint)
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var summary = (data && data.summary) || '（暫無摘要）';
-      var counts = (data && data.raw_data) || {};
-      var periodLabel = (data && data.period_label) || '近 30 天';
-      var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
-      var html = previsitBuildPatientHTML(summary, counts, checklist, periodLabel);
-      previsitOpenPrint(html, 'MD.Piece-診前報告-患者版-' + new Date().toISOString().slice(0, 10) + '.pdf');
+      var md = (data && (data.report || data.summary)) || '（暫無報告）';
+      buildAndPrint(md, (data && data.raw_data) || {}, (data && data.period_label) || '近 30 天');
     })
     .catch(function() {
-      if (typeof showToast === 'function') showToast('產生患者版報告失敗，請稍後再試', 'error');
+      if (typeof showToast === 'function') {
+        showToast('產生' + (audience === 'doctor' ? '醫師' : '患者') + '版報告失敗，請稍後再試', 'error');
+      }
     });
 }
 
