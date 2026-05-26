@@ -9,6 +9,7 @@ Phase 1a 起：強制帶 Authorization: Bearer <jwt>，且 path 上的 user_id
 必須等於 token 的 sub —— 不能 PUT 別人的 profile（封 P0 越權漏洞，Issue #388）。
 """
 
+import logging
 import re
 from datetime import datetime
 
@@ -17,6 +18,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.db import _SCHEMAS, get_supabase
 from backend.models import PatientProfileUpsert
 from backend.security import current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -94,8 +97,21 @@ def upsert_profile(user_id: str, body: PatientProfileUpsert, me: dict = Depends(
     payload["user_id"] = uid
     payload["updated_at"] = datetime.utcnow().isoformat()
 
-    sb = get_supabase()
-    result = sb.table("patient_profiles").upsert(payload, on_conflict="user_id").execute()
+    # supabase-py 在 Vercel runtime 上若丟非 HTTPException 例外，會被 Starlette
+    # ServerErrorMiddleware 吞成 plain-text 500，前端就看不到 root cause、production
+    # logs 也只有「Internal Server Error」。手動 catch + log + 回 JSON 502
+    # 讓前端 toast 拿得到原因、後端 logs 有 stack trace（rear-stage-sync-failure）。
+    try:
+        sb = get_supabase()
+        result = sb.table("patient_profiles").upsert(payload, on_conflict="user_id").execute()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("patient_profiles upsert failed for user_id=%s", uid)
+        raise HTTPException(
+            status_code=502,
+            detail=f"後端儲存失敗：{type(exc).__name__}: {str(exc)[:200]}",
+        )
     if not result.data:
         raise HTTPException(status_code=500, detail="儲存個人檔案失敗")
     return result.data[0]

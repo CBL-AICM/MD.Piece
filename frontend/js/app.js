@@ -3039,7 +3039,7 @@ function profileOnboardingSubmit() {
   info.conditions = combined;
   setBasicInfo(info);
   syncBasicInfoToServer(info).then(function(ok) {
-    if (!ok) showToast && showToast('已存本機，後端同步失敗（之後會自動重試）', 'warning');
+    if (!ok) showToast && showToast('已存本機，後端同步失敗，下次開啟 App 會自動重送', 'warning');
     _closeProfileOnboarding(overlay);
   });
 }
@@ -10391,6 +10391,9 @@ async function quickAdvice() {
 
 const BASIC_INFO_KEY = 'mdpiece_basic_info';
 const BASIC_INFO_MIGRATED_KEY = 'mdpiece_basic_info_migrated';
+// 後端同步失敗時暫存最後一次 payload；下次 boot 會自動重送。
+// 「之後會自動重試」這句話 toast 要兌現，靠這條（rear-stage-sync-failure）。
+const BASIC_INFO_DIRTY_KEY = 'mdpiece_basic_info_dirty';
 
 // 同步版（保留 sig，給渲染用）— 讀本地快取，後端是非同步預載的真值來源。
 function getBasicInfo() {
@@ -10435,6 +10438,8 @@ function fetchBasicInfoFromServer() {
 }
 
 // 把本地 info 推到後端。回 promise resolve(true|false)。
+// 失敗時會把 info 寫進 BASIC_INFO_DIRTY_KEY，下次 boot 走 retryPendingBasicInfoSync
+// 自動重送，跟 toast 的「之後會自動重試」對齊。
 function syncBasicInfoToServer(info) {
   var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!uid) return Promise.resolve(false);
@@ -10453,13 +10458,42 @@ function syncBasicInfoToServer(info) {
     emergency_name: info.emergency_name || null,
     emergency_phone: info.emergency_phone || null,
   };
+  var dirtyKey = BASIC_INFO_DIRTY_KEY + ':' + uid;
   return apiFetch(API + '/profile/' + encodeURIComponent(uid), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-    .then(function(r) { return r.ok; })
-    .catch(function() { return false; });
+    .then(function(r) {
+      if (r.ok) {
+        try { localStorage.removeItem(dirtyKey); } catch (e) {}
+        return true;
+      }
+      try { localStorage.setItem(dirtyKey, JSON.stringify(info)); } catch (e) {}
+      return false;
+    })
+    .catch(function() {
+      try { localStorage.setItem(dirtyKey, JSON.stringify(info)); } catch (e) {}
+      return false;
+    });
+}
+
+// boot 時呼叫：如果上次 sync 失敗有 dirty payload，靜默重送一次。
+// 成功就清掉、失敗就保留等下次 boot 再試。不顯示 toast、不擋 UI。
+function retryPendingBasicInfoSync() {
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!uid) return Promise.resolve();
+  var dirtyKey = BASIC_INFO_DIRTY_KEY + ':' + uid;
+  var raw;
+  try { raw = localStorage.getItem(dirtyKey); } catch (e) { return Promise.resolve(); }
+  if (!raw) return Promise.resolve();
+  var info;
+  try { info = JSON.parse(raw); }
+  catch (e) {
+    try { localStorage.removeItem(dirtyKey); } catch (e2) {}
+    return Promise.resolve();
+  }
+  return syncBasicInfoToServer(info);
 }
 
 // 一次性 migration：若 backend 沒資料但本地有舊資料 → 推上去。每個帳號只跑一次。
@@ -10626,7 +10660,14 @@ function loadRecordsPage() {
   // 拉完直接寫到欄位（避免 showPage 重渲整頁造成迴圈）。
   if (typeof migrateBasicInfoIfNeeded === 'function') {
     var before = JSON.stringify(getBasicInfo());
-    migrateBasicInfoIfNeeded().then(function() {
+    // 先把上次同步失敗的 payload 重送（兌現 toast 承諾的「之後會自動重試」），
+    // 再跑 migration 與 fetch。retry 失敗也不擋後續流程。
+    var bootSync = (typeof retryPendingBasicInfoSync === 'function')
+      ? retryPendingBasicInfoSync().catch(function() {})
+      : Promise.resolve();
+    bootSync.then(function() {
+      return migrateBasicInfoIfNeeded();
+    }).then(function() {
       return fetchBasicInfoFromServer();
     }).then(function(remote) {
       if (!remote) return;
@@ -10706,7 +10747,7 @@ function saveBasicInfo() {
   setBasicInfo(info);
   // 同步到後端 — Issue #131：不再只存 localStorage。失敗不擋 UI（本地已存）。
   syncBasicInfoToServer(info).then(function(ok) {
-    if (!ok) showToast && showToast('已存本機，後端同步失敗（之後會自動重試）', 'warning');
+    if (!ok) showToast && showToast('已存本機，後端同步失敗，下次開啟 App 會自動重送', 'warning');
   });
 
   // 自動辨識疾病 → user.icd10_codes，衛教頁的「我的疾病書架」就會出現
