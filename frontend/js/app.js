@@ -4904,6 +4904,10 @@ function home() {
     +       '<span class="qj-icon"><i data-lucide="puzzle"></i></span>'
     +       '<span class="qj-label">我的碎片</span>'
     +     '</button>'
+    +     '<button class="quick-jump-btn t-teal" onclick="navigateTo(\'records\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="id-card"></i></span>'
+    +       '<span class="qj-label">我的基本資料</span>'
+    +     '</button>'
     +   '</div>'
 
     // ╔════════════════════════════════════════════════════════
