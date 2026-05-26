@@ -17343,6 +17343,7 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
 .fu-modal-field span { font-weight: 600; color: var(--app-text); }
 .fu-modal-field input[type="text"],
 .fu-modal-field input[type="date"],
+.fu-modal-field select,
 .fu-modal-field textarea {
   padding: 9px 12px;
   border: 1.5px solid var(--app-border);
@@ -17354,6 +17355,7 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
 }
 .fu-modal-field textarea { resize: vertical; }
 .fu-modal-field input:focus,
+.fu-modal-field select:focus,
 .fu-modal-field textarea:focus {
   outline: none;
   border-color: var(--app-term);
