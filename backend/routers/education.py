@@ -4,6 +4,7 @@ from typing import Any, Optional
 import concurrent.futures
 import logging
 
+from backend.db import get_supabase
 from backend.services.knowledge_analysis import (
     get_disease_profile,
     compare_across_diseases,
@@ -214,6 +215,66 @@ GENERIC_TOPIC_PROMPT = (
 )
 
 
+# ── education_cache 快取（Supabase）──
+#
+# 衛教內容對相同的 disease+dimension（或同一 topic）幾乎都生出一樣的東西，
+# 沒有按使用者個別差異化的必要，所以可以放心做永久 cache。
+# 沒命中才呼叫 LLM；命中直接回 cache 內容、bump query_count。
+# 這個 cache 解掉了反覆打 Groq 命中 429 的問題（每張頁面六大維度全打）。
+
+def _edu_cache_key(mode: str, icd10_code: str | None, dimension: str | None, topic: str | None) -> str:
+    if mode == "icd10_dim":
+        return f"icd10:{icd10_code}/dim:{dimension}"
+    return f"topic:{(topic or '').strip().lower()}"
+
+
+def _edu_get_cache(cache_key: str) -> dict | None:
+    """SELECT cache_key → row 或 None。任何 DB 例外 swallow 成 cache miss。"""
+    try:
+        sb = get_supabase()
+        rows = (
+            sb.table("education_cache")
+            .select("*").eq("cache_key", cache_key).limit(1)
+            .execute().data or []
+        )
+        return rows[0] if rows else None
+    except Exception as e:
+        logger.warning(f"education_cache lookup 失敗，視為 miss：{type(e).__name__}: {e}")
+        return None
+
+
+def _edu_save_cache(cache_key: str, *, mode: str, icd10_code: str | None,
+                    dimension: str | None, topic: str | None,
+                    disease_name: str | None, content: str) -> None:
+    """寫 cache。失敗只 log，不影響回傳（cache miss 下次重生即可）。"""
+    if not content or len(content.strip()) < 100:
+        # 太短可能是 fallback 文字，不快取（下次有機會重生完整內容）
+        return
+    try:
+        sb = get_supabase()
+        sb.table("education_cache").upsert({
+            "cache_key": cache_key,
+            "mode": mode,
+            "icd10_code": icd10_code,
+            "dimension": dimension,
+            "topic": topic,
+            "disease_name": disease_name,
+            "content": content,
+            "query_count": 1,
+        }, on_conflict="cache_key").execute()
+    except Exception as e:
+        logger.warning(f"education_cache 寫入失敗（不阻塞回傳）：{type(e).__name__}: {e}")
+
+
+def _edu_bump_count(cache_key: str, current: int) -> None:
+    """命中後 bump query_count。失敗 swallow。"""
+    try:
+        sb = get_supabase()
+        sb.table("education_cache").update({"query_count": (current or 0) + 1}).eq("cache_key", cache_key).execute()
+    except Exception as e:
+        logger.debug(f"education_cache query_count bump skipped: {type(e).__name__}: {e}")
+
+
 @router.post("/generate")
 def generate_education(body: EducationRequest):
     """生成衛教文章。
@@ -221,6 +282,9 @@ def generate_education(body: EducationRequest):
     兩種模式（自動切換）：
     1. ICD-10 + 六大維度：套用該維度的細緻 prompt 模板
     2. 自由主題（topic）：給非疾病類的章節用，用通用 prompt
+
+    兩種模式都先查 education_cache；命中就直接回快取，沒命中才打 LLM。
+    LLM 回應後寫入快取。Cache miss 下 LLM 失敗會 raise 500（讓前端走 fallback）。
     """
     # 模式 1：ICD-10 + dimension
     if body.icd10_code and body.dimension and body.dimension in DIMENSION_PROMPTS:
@@ -228,6 +292,19 @@ def generate_education(body: EducationRequest):
         disease_name = ICD10_MAP.get(prefix)
         if not disease_name:
             raise HTTPException(status_code=400, detail=f"不支援的 ICD-10 代碼: {body.icd10_code}")
+
+        cache_key = _edu_cache_key("icd10_dim", prefix, body.dimension, None)
+        cached = _edu_get_cache(cache_key)
+        if cached and cached.get("content"):
+            _edu_bump_count(cache_key, cached.get("query_count") or 0)
+            return {
+                "icd10_code": prefix,
+                "disease_name": disease_name,
+                "dimension": body.dimension,
+                "dimension_label": KNOWLEDGE_DIMENSIONS[body.dimension],
+                "content": cached["content"],
+                "cached": True,
+            }
 
         prompt_template = DIMENSION_PROMPTS[body.dimension]
         user_message = prompt_template.format(disease=disease_name)
@@ -241,12 +318,19 @@ def generate_education(body: EducationRequest):
             logger.error(f"Claude API error: {e}")
             raise HTTPException(status_code=500, detail="衛教內容生成失敗，請稍後再試")
 
+        _edu_save_cache(
+            cache_key, mode="icd10_dim", icd10_code=prefix,
+            dimension=body.dimension, topic=None,
+            disease_name=disease_name, content=content,
+        )
+
         return {
             "icd10_code": prefix,
             "disease_name": disease_name,
             "dimension": body.dimension,
             "dimension_label": KNOWLEDGE_DIMENSIONS[body.dimension],
             "content": content,
+            "cached": False,
         }
 
     # 模式 2：自由主題（用於 SLE、RA、營養、急救等非疾病百科的書本章節）
@@ -256,6 +340,16 @@ def generate_education(body: EducationRequest):
             status_code=400,
             detail="請提供 icd10_code+dimension（疾病百科）或 topic（一般章節）",
         )
+
+    cache_key = _edu_cache_key("topic", None, None, topic)
+    cached = _edu_get_cache(cache_key)
+    if cached and cached.get("content"):
+        _edu_bump_count(cache_key, cached.get("query_count") or 0)
+        return {
+            "topic": topic,
+            "content": cached["content"],
+            "cached": True,
+        }
 
     user_message = GENERIC_TOPIC_PROMPT.format(topic=topic)
     try:
@@ -267,9 +361,16 @@ def generate_education(body: EducationRequest):
         logger.error(f"Claude API error: {e}")
         raise HTTPException(status_code=500, detail="衛教內容生成失敗，請稍後再試")
 
+    _edu_save_cache(
+        cache_key, mode="topic", icd10_code=None,
+        dimension=None, topic=topic,
+        disease_name=None, content=content,
+    )
+
     return {
         "topic": topic,
         "content": content,
+        "cached": False,
     }
 
 
