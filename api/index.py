@@ -105,6 +105,8 @@ def health_llm():
         status["anthropic"] = "ready" if llm_service._anthropic_client else "no_key_or_sdk"
     if "groq" in chain:
         status["groq"] = "ready" if llm_service.GROQ_API_KEY else "no_key"
+    if "gemini" in chain:
+        status["gemini"] = "ready" if llm_service.GEMINI_API_KEY else "no_key"
     return {
         "primary": llm_service.LLM_PROVIDER,
         "fallback_chain": chain,
