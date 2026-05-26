@@ -399,8 +399,10 @@ async function apiFetch(input, init) {
   if (tok && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + tok);
   init.headers = headers;
   var res = await fetch(input, init);
-  if (res.status === 401) {
-    // token 過期 / 無效 — 清掉並回到登入頁。不彈 confirm，避免長者反覆按。
+  // 只有「呼叫時原本有 token」才走「token 過期 → 清掉 → reload」流程。
+  // 如果一開始就沒 token（例如登入頁背景的 apiFetch），把 401 直接回給 caller，
+  // 避免 reload 迴圈讓使用者連登入頁都進不去（Phase 1b 加 enforce 後曝出的 bug）。
+  if (res.status === 401 && tok) {
     try {
       localStorage.removeItem('mdpiece_access_token');
       localStorage.removeItem('mdpiece_user');
