@@ -2394,9 +2394,13 @@ var _PV_PDF_STYLE = ''
 
 function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
   var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
-  var paragraphs = String(summary).split(/\n\s*\n/).map(function(p) {
-    return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
-  }).join('');
+  // 整合摘要回傳的是 markdown（## 一、主訴…等五段），用 markdownToHtml 渲染；
+  // 退而求其次（轉換器不在）才回到段落切分。
+  var bodyHtml = (typeof markdownToHtml === 'function')
+    ? markdownToHtml(String(summary))
+    : String(summary).split(/\n\s*\n/).map(function(p) {
+        return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
+      }).join('');
   var checklistHtml = checklist.length
     ? '<ol>' + checklist.map(function(t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ol>'
     : '<p style="color:#888">（暫無）</p>';
@@ -2418,8 +2422,8 @@ function previsitBuildPatientHTML(summary, counts, checklist, periodLabel) {
     + previsitBasicInfoTableHTML()
     + '<h2>本期間紀錄概覽</h2>'
     + statsHtml
-    + '<h2>給醫師的話（我整理的）</h2>'
-    + paragraphs
+    + '<h2>MD.Piece 整合摘要</h2>'
+    + bodyHtml
     + '<h2>這次想請醫師確認的事</h2>'
     + checklistHtml
     + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
