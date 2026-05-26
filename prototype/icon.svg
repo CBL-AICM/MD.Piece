@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <rect width="256" height="256" rx="64" fill="#F8F4E8"/>
+  <rect x="44" y="44" width="168" height="168" rx="46" fill="url(#bg)"/>
+  <path d="M128 28c20 0 36 16 36 36v10h14c20 0 36 16 36 36s-16 36-36 36h-10v46c0 12-10 22-22 22H82c-12 0-22-10-22-22V128c0-12 10-22 22-22h10V64c0-20 16-36 36-36z" fill="#FFF9F1" opacity=".9"/>
+  <path d="M124 72c10 0 18 8 18 18v14h14c10 0 18 8 18 18s-8 18-18 18h-14v34c0 10-8 18-18 18H90c-10 0-18-8-18-18V124c0-10 8-18 18-18h14V90c0-10 8-18 18-18z" fill="#7FBE87"/>
+  <text x="128" y="152" text-anchor="middle" font-family="Baloo 2, Noto Sans TC, sans-serif" font-size="54" font-weight="700" fill="#FFFDF7">MD</text>
+  <defs>
+    <linearGradient id="bg" x1="44" y1="44" x2="212" y2="212" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DFF2D8"/>
+      <stop offset="1" stop-color="#D9EEF7"/>
+    </linearGradient>
+  </defs>
+</svg>
