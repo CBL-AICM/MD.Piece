@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from typing import Any, Optional
+import concurrent.futures
 import logging
 
 from backend.services.knowledge_analysis import (
@@ -23,6 +24,31 @@ from backend.utils.icd10 import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# 同 reports.py：Vercel lambda 60s 上限，LLM 卡死會把 lambda 砍掉，
+# 前端 fetch 永遠不 resolve（看到 loading 轉圈圈轉到天荒地老）。
+# 包一層硬超時 45s，超時就 raise 讓上層走 fallback。
+_LLM_HARD_TIMEOUT_S = 45
+_LLM_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+
+def _call_claude_bounded(system_prompt: str, user_message: str) -> str:
+    fut = _LLM_EXECUTOR.submit(call_claude, system_prompt, user_message)
+    return fut.result(timeout=_LLM_HARD_TIMEOUT_S)
+
+
+def _timeout_fallback_content(topic_or_disease: str, dimension_label: str) -> str:
+    """AI 忙線 / lambda 超時時的友善 fallback — 不留白頁。"""
+    title = topic_or_disease + (f"・{dimension_label}" if dimension_label else "")
+    return (
+        f"## {title}\n\n"
+        "AI 衛教生成目前忙線中（請求超過後端額度），請稍候片刻再點一次本章節。\n\n"
+        "若多次仍無回應，可：\n\n"
+        "- 在「疾病百科」書本內挑同一疾病、改點其他維度（內容會分別生成）\n"
+        "- 查看本頁底部「相關疾病衛教文章」，那裡的審稿文章不需 AI 即可開啟\n"
+        "- 緊急醫療問題請直接諮詢您的主治醫師或撥打 119\n"
+    )
+
 
 # ── 六大維度衛教 prompt 模板 ──────────────────────────────
 
@@ -183,7 +209,10 @@ def generate_education(body: EducationRequest):
         user_message = prompt_template.format(disease=disease_name)
 
         try:
-            content = call_claude(SYSTEM_PROMPT, user_message)
+            content = _call_claude_bounded(SYSTEM_PROMPT, user_message)
+        except concurrent.futures.TimeoutError:
+            logger.warning(f"Education LLM timeout (>{_LLM_HARD_TIMEOUT_S}s) for {prefix}/{body.dimension}")
+            content = _timeout_fallback_content(disease_name, KNOWLEDGE_DIMENSIONS[body.dimension])
         except Exception as e:
             logger.error(f"Claude API error: {e}")
             raise HTTPException(status_code=500, detail="衛教內容生成失敗，請稍後再試")
@@ -206,7 +235,10 @@ def generate_education(body: EducationRequest):
 
     user_message = GENERIC_TOPIC_PROMPT.format(topic=topic)
     try:
-        content = call_claude(SYSTEM_PROMPT, user_message)
+        content = _call_claude_bounded(SYSTEM_PROMPT, user_message)
+    except concurrent.futures.TimeoutError:
+        logger.warning(f"Education LLM timeout (>{_LLM_HARD_TIMEOUT_S}s) for topic={topic}")
+        content = _timeout_fallback_content(topic, "")
     except Exception as e:
         logger.error(f"Claude API error: {e}")
         raise HTTPException(status_code=500, detail="衛教內容生成失敗，請稍後再試")

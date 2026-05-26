@@ -15991,22 +15991,30 @@ function eduOpenContent(key, label) {
 }
 
 function eduGenerateContent(fetchBody, book, label) {
+  // Vercel lambda 上限 60s。後端 _call_claude_bounded 設 45s，留 ~10s 給網路/cold start。
+  // 前端再加 55s AbortController — 若 lambda 完全 hang 死（HTTP 000），確保使用者
+  // 不會無限轉圈圈、會收到 fallback 訊息。
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
   fetch(API + "/education/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(fetchBody)
+    body: JSON.stringify(fetchBody),
+    signal: ctrl ? ctrl.signal : undefined,
   })
     .then(function(r) {
       if (!r.ok) throw new Error("API error");
       return r.json();
     })
     .then(function(data) {
+      if (timer) clearTimeout(timer);
       var content = data.content || data.report || "";
       if (!content) throw new Error("空內容");
       var body = document.getElementById("edu-content-body");
       if (body) body.innerHTML = markdownToHtml(content);
     })
     .catch(function() {
+      if (timer) clearTimeout(timer);
       var body = document.getElementById("edu-content-body");
       if (body) body.innerHTML = eduFallbackContent(book, label);
     });
