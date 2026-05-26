@@ -8,7 +8,7 @@ router = APIRouter()
 
 VALID_TYPES = {
     "er_visit", "missed_medication", "self_discontinued",
-    "infection", "low_mood", "psych_crisis", "other",
+    "infection", "low_mood", "psych_crisis", "recurrence_risk", "other",
 }
 VALID_SEVERITIES = {"low", "medium", "high", "critical"}
 CHECKIN_INTERVAL_DAYS = 3

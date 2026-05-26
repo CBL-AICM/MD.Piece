@@ -5451,6 +5451,9 @@ function home() {
         </div>
       </section>
 
+      <!-- 復發風險橫幅（依過去症狀紀錄評估；level=low 時隱藏） -->
+      <div id="home-recurrence-banner" class="home-recurrence-banner" hidden></div>
+
       <!-- ════════════════════════════════════════════════════
            Layer 2 — 核心功能：MD.Piece 理念的精神
            ════════════════════════════════════════════════════ -->
@@ -5535,6 +5538,63 @@ function home() {
     </div>`;
 }
 
+// 復發風險橫幅：讀 /recurrence/{pid}（依登入疾病 + 日常紀錄評估）
+// low 隱藏；medium 黃、high 橘、critical 紅。顯示首位疾病 + 前 2 條原因。
+function renderRecurrenceBanner(pid) {
+  var el = document.getElementById('home-recurrence-banner');
+  if (!el) return;
+  fetch(API + '/recurrence/' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.level || data.level === 'low') {
+        el.hidden = true;
+        el.innerHTML = '';
+        return;
+      }
+      var labels = { medium: '注意', high: '高風險', critical: '緊急' };
+      var icons = { medium: 'alert-circle', high: 'alert-triangle', critical: 'siren' };
+      var lvl = data.level;
+      var diseases = data.diseases || [];
+      var top = diseases[0] || { name: '症狀', reasons: [] };
+      var titlePrefix = (top.source === 'fallback_symptom') ? '「' + top.name + '」症狀' : '「' + top.name + '」';
+      var reasons = (top.reasons || []).slice(0, 2);
+      var reasonHtml = reasons.length
+        ? '<ul class="rrb-reasons">' +
+            reasons.map(function(r) { return '<li>' + escapeHtml(r) + '</li>'; }).join('') +
+          '</ul>'
+        : '';
+      // 多疾病：附加「另 N 項待留意」chip
+      var otherCount = diseases.filter(function(d) {
+        return d !== top && d.level !== 'low';
+      }).length;
+      var otherChip = otherCount > 0
+        ? '<span class="rrb-other">另 ' + otherCount + ' 項待留意</span>'
+        : '';
+      el.className = 'home-recurrence-banner rrb-' + lvl;
+      el.setAttribute('aria-label', '風險評估卡');
+      el.hidden = false;
+      el.innerHTML =
+        '<div class="rrb-icon"><i data-lucide="' + icons[lvl] + '"></i></div>' +
+        '<div class="rrb-body">' +
+        '  <div class="rrb-tag">風險評估卡</div>' +
+        '  <div class="rrb-head">' +
+        '    <span class="rrb-level">' + labels[lvl] + '</span>' +
+        '    <span class="rrb-title">' + escapeHtml(titlePrefix) + '風險評估</span>' +
+        '    <span class="rrb-score">分數 ' + (data.score || 0) + '</span>' +
+        '  </div>' +
+        reasonHtml +
+        otherChip +
+        '  <button class="rrb-cta" onclick="navigateTo(\'symptomsAnalyze\',null)">查看症狀紀錄</button>' +
+        '</div>';
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    })
+    .catch(function() {
+      el.hidden = true;
+    });
+}
+
 function loadHomePage() {
   var user = getCurrentUser();
   var pid = getStablePatientId();
@@ -5555,6 +5615,9 @@ function loadHomePage() {
   if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
   // 同步今日 SOS 歷史 chip（門診版快速回報 bar 共用住院的 storage）
   if (typeof refreshInpatientSosHistory === 'function') refreshInpatientSosHistory();
+
+  // 復發風險橫幅（low → 隱藏；medium 以上才顯示）
+  renderRecurrenceBanner(pid);
 
   apiFetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
