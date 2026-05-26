@@ -3288,6 +3288,65 @@ html[data-mode="senior"] .tc-desc {
   letter-spacing: 0.3px;
 }
 
+/* ── 復發風險橫幅（home-recurrence-banner） ─────────────
+ * 由 GET /recurrence/{pid} 餵資料；level=low 時整個 hidden。
+ * 三色：medium 黃、high 橘、critical 紅。 */
+.home-recurrence-banner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 12px;
+  margin: 0 0 14px;
+  border: 1px solid transparent;
+  background: #fffbeb;
+}
+.home-recurrence-banner[hidden] { display: none; }
+.home-recurrence-banner .rrb-icon {
+  flex: 0 0 28px;
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+}
+.home-recurrence-banner .rrb-icon i {
+  width: 22px; height: 22px;
+}
+.home-recurrence-banner .rrb-body { flex: 1 1 auto; min-width: 0; }
+.home-recurrence-banner .rrb-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  font-size: 0.95rem; font-weight: 600;
+}
+.home-recurrence-banner .rrb-level {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.4px;
+  background: rgba(0,0,0,0.06);
+}
+.home-recurrence-banner .rrb-score {
+  margin-left: auto;
+  font-size: 0.78rem; font-weight: 500; opacity: 0.7;
+}
+.home-recurrence-banner .rrb-reasons {
+  margin: 6px 0 8px; padding-left: 18px;
+  font-size: 0.85rem; line-height: 1.45;
+}
+.home-recurrence-banner .rrb-cta {
+  appearance: none; border: 0; cursor: pointer;
+  padding: 6px 12px; border-radius: 8px;
+  font-size: 0.85rem; font-weight: 600;
+  background: rgba(0,0,0,0.08); color: inherit;
+}
+.home-recurrence-banner .rrb-cta:hover { background: rgba(0,0,0,0.14); }
+
+.home-recurrence-banner.rrb-medium {
+  background: #fef3c7; color: #78350f; border-color: #fcd34d;
+}
+.home-recurrence-banner.rrb-high {
+  background: #ffedd5; color: #7c2d12; border-color: #fb923c;
+}
+.home-recurrence-banner.rrb-critical {
+  background: #fee2e2; color: #7f1d1d; border-color: #ef4444;
+}
+
 /* Layer 風格細節：核心層加重一點，拼圖層底色淡 */
 .home-layer-core {
   border-color: rgba(91,159,232,0.35);

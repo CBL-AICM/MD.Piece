@@ -5451,6 +5451,9 @@ function home() {
         </div>
       </section>
 
+      <!-- 復發風險橫幅（依過去症狀紀錄評估；level=low 時隱藏） -->
+      <div id="home-recurrence-banner" class="home-recurrence-banner" hidden></div>
+
       <!-- ════════════════════════════════════════════════════
            Layer 2 — 核心功能：MD.Piece 理念的精神
            ════════════════════════════════════════════════════ -->
@@ -5535,6 +5538,52 @@ function home() {
     </div>`;
 }
 
+// 復發風險橫幅：拉 /recurrence/{pid}，依 level 上色 + 顯示主要原因。
+// low 隱藏，medium 黃、high 橘、critical 紅。點擊跳到症狀分析歷史。
+function renderRecurrenceBanner(pid) {
+  var el = document.getElementById('home-recurrence-banner');
+  if (!el) return;
+  fetch(API + '/recurrence/' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.level || data.level === 'low') {
+        el.hidden = true;
+        el.innerHTML = '';
+        return;
+      }
+      var labels = { medium: '注意', high: '高風險', critical: '緊急' };
+      var icons = { medium: 'alert-circle', high: 'alert-triangle', critical: 'siren' };
+      var lvl = data.level;
+      var top = (data.clusters && data.clusters[0]) || {};
+      var cluster = top.cluster || '症狀';
+      var reasons = (data.reasons || []).slice(0, 2);
+      var reasonHtml = reasons.length
+        ? '<ul class="rrb-reasons">' +
+            reasons.map(function(r) { return '<li>' + escapeHtml(r) + '</li>'; }).join('') +
+          '</ul>'
+        : '';
+      el.className = 'home-recurrence-banner rrb-' + lvl;
+      el.hidden = false;
+      el.innerHTML =
+        '<div class="rrb-icon"><i data-lucide="' + icons[lvl] + '"></i></div>' +
+        '<div class="rrb-body">' +
+        '  <div class="rrb-head">' +
+        '    <span class="rrb-level">' + labels[lvl] + '</span>' +
+        '    <span class="rrb-title">「' + escapeHtml(cluster) + '」復發風險</span>' +
+        '    <span class="rrb-score">分數 ' + (data.score || 0) + '</span>' +
+        '  </div>' +
+        reasonHtml +
+        '  <button class="rrb-cta" onclick="navigateTo(\'symptomsAnalyze\',null)">查看症狀紀錄</button>' +
+        '</div>';
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    })
+    .catch(function() {
+      el.hidden = true;
+    });
+}
+
 function loadHomePage() {
   var user = getCurrentUser();
   var pid = getStablePatientId();
@@ -5555,6 +5604,9 @@ function loadHomePage() {
   if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
   // 同步今日 SOS 歷史 chip（門診版快速回報 bar 共用住院的 storage）
   if (typeof refreshInpatientSosHistory === 'function') refreshInpatientSosHistory();
+
+  // 復發風險橫幅（low → 隱藏；medium 以上才顯示）
+  renderRecurrenceBanner(pid);
 
   apiFetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
