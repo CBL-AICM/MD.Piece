@@ -86,9 +86,14 @@ def root():
 
 
 @app.get("/health/llm")
-def health_llm():
+def health_llm(probe: int = 0):
     """LLM provider 健檢：列出主 provider、fallback chain、各 provider 連線狀態。
-    用於排查「報告產不出來」「小禾沒回應」等 LLM-bound 端點失敗。"""
+    用於排查「報告產不出來」「小禾沒回應」等 LLM-bound 端點失敗。
+
+    /health/llm        → 只看 key 是否設定（快，~10ms）
+    /health/llm?probe=1 → 實際發 1 個 token 的 ping 確認 key 真的能用
+                          （慢，每 provider 1~3s；可分辨「key 設了但失效」）
+    """
     import httpx
     from backend.services import llm_service
     chain = llm_service._fallback_chain(
@@ -107,6 +112,25 @@ def health_llm():
         status["groq"] = "ready" if llm_service.GROQ_API_KEY else "no_key"
     if "gemini" in chain:
         status["gemini"] = "ready" if llm_service.GEMINI_API_KEY else "no_key"
+
+    if probe:
+        # 真實 ping：丟個 1~2 token 的小請求，確認 key 真的能呼叫成功
+        # 失敗訊息直接返回，方便 ops 一秒看出是 rate-limit / 401 / quota / 過期
+        probe_results = {}
+        for name in ("anthropic", "gemini", "groq", "ollama"):
+            if name not in chain:
+                continue
+            fn = llm_service._PROVIDERS.get(name)
+            if fn is None:
+                probe_results[name] = "not_implemented"
+                continue
+            try:
+                r = fn("回一個字", "1", max_tokens=2, timeout=5.0)
+                probe_results[name] = "ok" if (r and isinstance(r, str)) else "empty_response"
+            except Exception as e:
+                probe_results[name] = f"fail: {type(e).__name__}: {str(e)[:200]}"
+        status["_probe"] = probe_results
+
     return {
         "primary": llm_service.LLM_PROVIDER,
         "fallback_chain": chain,

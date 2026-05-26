@@ -16375,6 +16375,16 @@ function eduGenerateContent(fetchBody, book, label, attempt) {
     signal: ctrl ? ctrl.signal : undefined,
   })
     .then(function(r) {
+      // 後端把「LLM 全 provider 死光」標成 503 + detail.error="llm_unavailable"。
+      // 這種錯重試也救不回，直接秀「請設定 API key」的 fallback，不要再 retry。
+      if (r.status === 503) {
+        return r.json().then(function(j) {
+          var err = new Error("llm_unavailable");
+          err.llmUnavailable = true;
+          err.detail = j && j.detail;
+          throw err;
+        }, function() { throw new Error("API error"); });
+      }
       if (!r.ok) throw new Error("API error");
       return r.json();
     })
@@ -16385,8 +16395,15 @@ function eduGenerateContent(fetchBody, book, label, attempt) {
       var body = document.getElementById("edu-content-body");
       if (body) body.innerHTML = markdownToHtml(content);
     })
-    .catch(function() {
+    .catch(function(err) {
       if (timer) clearTimeout(timer);
+      // LLM 完全沒設 / 全失效 → 直接顯示「API key 未設」專屬 UI，不重試
+      if (err && err.llmUnavailable) {
+        var bodyEl2 = document.getElementById("edu-content-body");
+        if (bodyEl2) bodyEl2.innerHTML = eduLlmUnavailableContent(book, label, err.detail || {});
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+      }
       if (attempt < MAX_ATTEMPTS) {
         var body = document.getElementById("edu-content-body");
         if (body) {
@@ -16459,6 +16476,32 @@ function eduFallbackContent(book, label) {
         '<li>回書架挑另一本書，先看其他主題</li>' +
         '<li>把細節寫進「醫療 Chat」，請 MD.Piece 直接回答</li>' +
       '</ul>' +
+    '</div>';
+}
+
+// 後端回 503 + detail.error="llm_unavailable" 時用這個——意思是 LLM 完全沒設或全失效，
+// 重試也救不回；引導使用者（或管理者）直接去 Vercel 設 API key。
+function eduLlmUnavailableContent(book, label, detail) {
+  var msg = (detail && detail.message) || 'production 沒有可用的 LLM API key（ANTHROPIC / GEMINI 都沒設）';
+  var doc = (detail && detail.doc) || 'https://vercel.com/dashboard';
+  return '' +
+    '<div style="padding:18px;border:1px solid #fca5a5;border-radius:10px;background:#fef2f2">' +
+      '<h3 style="margin:0 0 10px">' + escapeHtml(book.title) + '：' + escapeHtml(label) + '</h3>' +
+      '<p style="margin:0 0 12px"><strong style="color:#991b1b">⚠️ AI 服務未配置</strong></p>' +
+      '<p style="margin:0 0 14px;line-height:1.7;color:#7f1d1d">' + escapeHtml(msg) + '</p>' +
+      '<p style="margin:0 0 14px;line-height:1.7;color:#7f1d1d;font-size:.85rem">' +
+        '推薦：申請 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:#0369a1;text-decoration:underline">Google AI Studio</a> 的免費 Gemini key（1500 req/day），' +
+        '在 Vercel 設成 <code>GEMINI_API_KEY</code> 即可。' +
+      '</p>' +
+      '<div style="margin:14px 0;display:flex;gap:8px;flex-wrap:wrap">' +
+        '<a class="primary" href="' + escapeHtml(doc) + '" target="_blank" rel="noopener" style="padding:8px 16px;font-size:.9rem;text-decoration:none;display:inline-block">' +
+          '<i data-lucide="external-link" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>開 Vercel env vars 設定頁' +
+        '</a>' +
+        '<button class="secondary" data-action="retry-generate" style="padding:8px 16px;font-size:.9rem">' +
+          '<i data-lucide="refresh-cw" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>設好了，重試' +
+        '</button>' +
+      '</div>' +
+      '<p style="margin:14px 0 0;color:#7f1d1d;font-size:.8rem">設定後請在 Vercel Deployments 頁 Redeploy 最新一筆（勾 Use existing Build Cache 加速）。</p>' +
     '</div>';
 }
 

@@ -51,6 +51,33 @@ def _timeout_fallback_content(topic_or_disease: str, dimension_label: str) -> st
     )
 
 
+def _is_llm_unavailable_error(exc: Exception) -> bool:
+    """判別「整個 LLM provider chain 全炸」（通常是 API key 沒設或全失效）。
+
+    call_claude 走完整 chain 後若全失敗會 raise RuntimeError("所有 LLM provider 都失敗，最後錯誤：...")
+    最末棒通常是 Ollama → Connection refused (Vercel 上 Ollama 永遠連不到)。
+    這種錯不該回 500「請稍後再試」（再怎麼試也不會好），要回 503 提示管理者設 key。
+    """
+    msg = str(exc)
+    return (
+        "所有 LLM provider 都失敗" in msg
+        or "Connection refused" in msg
+    )
+
+
+def _llm_unavailable_response() -> HTTPException:
+    """LLM 全炸的標準 503 回應 — 前端會解析這個 detail.error 顯示專屬提示。"""
+    return HTTPException(
+        status_code=503,
+        detail={
+            "error": "llm_unavailable",
+            "message": "AI 服務暫不可用：production 沒有可用的 LLM API key。"
+                       "請聯絡管理者於 Vercel 設定 ANTHROPIC_API_KEY 或 GEMINI_API_KEY。",
+            "doc": "https://vercel.com/human530s-projects/md-piece/settings/environment-variables",
+        },
+    )
+
+
 # ── 六大維度衛教 prompt 模板 ──────────────────────────────
 
 DIMENSION_PROMPTS = {
@@ -315,6 +342,9 @@ def generate_education(body: EducationRequest):
             logger.warning(f"Education LLM timeout (>{_LLM_HARD_TIMEOUT_S}s) for {prefix}/{body.dimension}")
             content = _timeout_fallback_content(disease_name, KNOWLEDGE_DIMENSIONS[body.dimension])
         except Exception as e:
+            if _is_llm_unavailable_error(e):
+                logger.error(f"LLM unavailable (chain exhausted): {e}")
+                raise _llm_unavailable_response()
             logger.error(f"Claude API error: {e}")
             raise HTTPException(status_code=500, detail="衛教內容生成失敗，請稍後再試")
 
