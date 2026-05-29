@@ -261,3 +261,64 @@ CREATE POLICY p ON reminders FOR ALL TO authenticated
 - 觸發 PR: #386
 - Supabase advisory: rls_disabled (critical)
 - Supabase project: `tbqvpqvvvgfgaezxbhkz` (MD.piece, ap-northeast-1)
+
+---
+
+## 10. PR 1 詳細技術設計（Phase 2.1–2.2：隱型 provision）
+
+> 目標：把現有 scrypt 帳號**隱型**對應到 Supabase Auth user，**完全藏在 feature flag 後、預設 off**，flag off 時對前端零行為變更。本 PR **不**切換 token 來源（仍回自管 JWT），那是 PR 2。
+
+### 10.1 環境變數
+
+| 變數 | 用途 | 預設 |
+|---|---|---|
+| `AUTH_SUPABASE_ENABLED` | 總開關；off 時完全不碰 Supabase Auth | `0`（off） |
+| `SUPABASE_SERVICE_ROLE_KEY` | provisioning 需要 admin 權限；**獨立於** `SUPABASE_KEY`（後者切 service_role 是 PR 2） | 無（flag on 時必填，缺則 fail-loud） |
+
+### 10.2 Schema（additive，可回滾）
+
+```sql
+-- Supabase migration（docs/migration_supabase_user_id.sql）
+ALTER TABLE users ADD COLUMN IF NOT EXISTS supabase_user_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_supabase_uid
+  ON users(supabase_user_id) WHERE supabase_user_id IS NOT NULL;
+```
+- SQLite fallback：同步加進 `backend/db.py` `_migrate_users_table()` 的 additions。
+
+### 10.3 新模組 `backend/services/supabase_auth.py`
+
+純判斷力之外的確定性邏輯（鐵則 5：狀態碼/重試走純程式碼）。對外介面：
+
+- `is_enabled() -> bool`：讀 `AUTH_SUPABASE_ENABLED`。
+- `provision_user(user_id, password) -> str`：用 admin API 建 Supabase Auth user
+  - email = `f"{user_id}@mdpiece.internal"`、`email_confirm=True`、password = 本次明文。
+  - **冪等**：若 email 已存在 → 改呼 admin update 設新密碼、回既有 supabase uid。
+  - 失敗時 raise；呼叫端 catch 後**只記 log、不可讓登入失敗**（provision 失敗不應擋住既有使用者登入）。
+- `sync_password(supabase_user_id, password)`：admin update user 密碼（PR1 接 change_password / recovery_reset 用）。
+
+### 10.4 接入點（`backend/routers/auth.py`）
+
+| 端點 | 新增行為（僅 flag on 時） |
+|---|---|
+| `login` | scrypt 驗證**成功後**：若 `supabase_user_id` 為空 → `provision_user` → 寫回 `users.supabase_user_id`。包在 try/except，失敗只記 log。**回傳仍是自管 JWT（不變）**。 |
+| `register` | 建帳號成功後同樣 provision（此時就有明文密碼）。 |
+| `change_password` / `recovery/reset` | 成功後若已有 `supabase_user_id` → `sync_password`（雙寫期密碼同步，§8 決策）。 |
+
+> `_public_user` 需把 `supabase_user_id` 一併過濾，不外洩。
+
+### 10.5 測試（`tests/integration/test_auth_supabase_provision.py`）
+
+mock `supabase_auth` 模組（不打真網路）：
+- flag **off**：login/register 完全不呼叫 provision（assert mock 未被呼叫）— 驗證零行為變更。
+- flag **on**：
+  - 首次 login 成功 → provision 被呼叫一次、`supabase_user_id` 寫入。
+  - 二次 login → **不**再 create（冪等，assert create 未再呼叫）。
+  - provision 拋例外 → login 仍回 200（失敗不擋登入）。
+  - change_password 成功 + 已有 supabase uid → `sync_password` 被呼叫。
+- 回應不含 `supabase_user_id`。
+
+### 10.6 驗收 / 回滾
+
+- **驗收**：preview branch 上設 flag on + service_role key，跑上述 e2e 全綠；prod 先保持 flag off 上線（零影響），確認無 regression 後再於 prod 開 flag 觀察 provision。
+- **回滾**：`AUTH_SUPABASE_ENABLED=0`。欄位為 additive、留著無害。
+
