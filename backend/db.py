@@ -367,6 +367,34 @@ _SCHEMAS = {
             note TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
+    "sleep_sessions": """
+        CREATE TABLE IF NOT EXISTS sleep_sessions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            bed_time TEXT NOT NULL,
+            sleep_onset TEXT,
+            wake_time TEXT,
+            out_of_bed_time TEXT,
+            total_sleep_minutes INTEGER,
+            time_in_bed_minutes INTEGER,
+            sleep_efficiency REAL,
+            waso_minutes INTEGER,
+            awakenings_count INTEGER,
+            source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('auto', 'manual', 'imported')),
+            is_edited INTEGER DEFAULT 0,
+            classifier TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )""",
+    "sleep_edits": """
+        CREATE TABLE IF NOT EXISTS sleep_edits (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            user_id TEXT,
+            previous_values TEXT,
+            edited_at TEXT DEFAULT (datetime('now')),
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
     "disease_reference": """
         CREATE TABLE IF NOT EXISTS disease_reference (
             id TEXT PRIMARY KEY,
