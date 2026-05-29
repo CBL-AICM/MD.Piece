@@ -1,13 +1,13 @@
-const CACHE_VERSION = "mdpiece-v125-diet-pick-bounded-timeout";
+const CACHE_VERSION = "mdpiece-v126-dark-no-grad";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v114-auth-jwt",
-  "/css/medical-warm.css?v=v5-puzzle-pattern",
-  "/css/v11-modern.css?v=v2-mobile-only",
+  "/css/style.css?v=v116-dark-no-grad",
+  "/css/medical-warm.css?v=v6-dark-no-grad",
+  "/css/v11-modern.css?v=v17-dark-no-grad",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
