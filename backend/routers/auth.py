@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -16,6 +17,9 @@ from backend.models import (
     UserUpdate,
 )
 from backend.security import create_access_token, current_user
+from backend.services import supabase_auth as sb_auth
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -97,9 +101,32 @@ def _public_user(row: dict) -> dict:
     """回給前端前，移除所有敏感／內部欄位。"""
     out = dict(row)
     for k in ("password_hash", "recovery_answer_hash", "recovery_question",
-              "failed_login_count", "locked_until"):
+              "failed_login_count", "locked_until", "supabase_user_id"):
         out.pop(k, None)
     return out
+
+
+def _maybe_provision(sb, user_id: str, password: str, existing_supabase_id) -> None:
+    """flag on 且尚未綁定時，隱型建立 Supabase Auth user 並寫回 supabase_user_id。
+    任何失敗都只記 log，絕不讓登入／註冊流程失敗（§10.4）。"""
+    if not sb_auth.is_enabled() or existing_supabase_id:
+        return
+    try:
+        uid = sb_auth.provision_user(user_id, password)
+        if uid:
+            sb.table("users").update({"supabase_user_id": uid}).eq("id", user_id).execute()
+    except Exception:  # noqa: BLE001
+        logger.exception("Supabase Auth provision 失敗（不影響登入）: user_id=%s", user_id)
+
+
+def _maybe_sync_password(supabase_user_id, password: str) -> None:
+    """改密碼／重設成功後，若已綁定 Supabase Auth 則同步密碼；失敗只記 log。"""
+    if not sb_auth.is_enabled() or not supabase_user_id:
+        return
+    try:
+        sb_auth.sync_password(supabase_user_id, password)
+    except Exception:  # noqa: BLE001
+        logger.exception("Supabase Auth 密碼同步失敗（本地已更新）: %s", supabase_user_id)
 
 
 def _parse_locked_until(value) -> datetime | None:
@@ -164,6 +191,8 @@ def register(body: UserCreate):
 
     result = sb.table("users").insert(payload).execute()
     user = _public_user(result.data[0])
+    # Phase 2：隱型 provision Supabase Auth（flag off 時不執行）
+    _maybe_provision(sb, user["id"], body.password, result.data[0].get("supabase_user_id"))
     # Phase 1a：附 access_token，前端存起來打後續 API
     return {**user, "access_token": create_access_token(user)}
 
@@ -188,6 +217,8 @@ def login(body: UserLogin):
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
 
     _clear_failed_attempts(sb, user_row["id"])
+    # Phase 2：第一次登入時隱型 provision（flag off 時不執行）
+    _maybe_provision(sb, user_row["id"], body.password, user_row.get("supabase_user_id"))
     user = _public_user(user_row)
     return {**user, "access_token": create_access_token(user)}
 
@@ -234,6 +265,7 @@ def change_password(user_id: str, body: PasswordChange, me: dict = Depends(curre
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
     sb.table("users").update({"password_hash": _hash_password(body.new_password)}).eq("id", uid).execute()
+    _maybe_sync_password(user.get("supabase_user_id"), body.new_password)
     return {"ok": True}
 
 
@@ -299,4 +331,5 @@ def recovery_reset(body: RecoveryReset):
         "failed_login_count": 0,
         "locked_until": None,
     }).eq("id", user_row["id"]).execute()
+    _maybe_sync_password(user_row.get("supabase_user_id"), body.new_password)
     return {"ok": True}
