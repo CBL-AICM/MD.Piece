@@ -1,10 +1,10 @@
 # MD.Piece — Supabase Auth + RLS 遷移計畫
 
-> **狀態**：Phase 0（design freeze）
+> **狀態**：Phase 1 完成（backend JWT 中間層已上線）；Phase 2 待開工
 > **負責**：cf.kuo@osterfith.io
 > **相關 issue**：#388
 > **預估**：~3 週、5 個 PR
-> **決策**：隱型遷移、保留 username
+> **決策**：隱型遷移、保留 username、後端改用 service_role key、完整 per-row RLS
 
 ---
 
@@ -220,13 +220,38 @@ CREATE POLICY p ON reminders FOR ALL TO authenticated
 
 ---
 
-## 8. 還沒決定的（待 Phase 1 開工前討論）
+## 8. 待決項 — 已拍板（2026-05-29）
 
-- [ ] JWT secret 放哪？env / Supabase Vault / 第三方
-- [ ] Refresh token 機制（Supabase 內建 vs 自管）
-- [ ] 是否做 email 驗證（既然 placeholder email，可能無意義）
-- [ ] Phase 2 雙寫期間，使用者改密碼要同步到 Supabase 嗎？
-- [ ] RLS 後，admin 介面（看全部使用者）怎麼授權？
+- [x] JWT secret 放哪？→ **env `JWT_SECRET`**（Phase 1 已採用，見 `backend/security.py`）
+- [x] Refresh token 機制 → **用 Supabase 內建**（Phase 2 切到 Supabase JWT 後沿用其 refresh）
+- [x] 是否做 email 驗證 → **否**（placeholder email `{user.id}@mdpiece.internal`，驗證無意義；Auth 設定關閉 confirm email）
+- [x] Phase 2 雙寫期間改密碼是否同步到 Supabase → **要**：`change_password` / `recovery/reset` 成功後，若該 user 已有 `supabase_user_id`，用 admin API 同步更新 Supabase 密碼
+- [x] RLS 後 admin 介面授權 → **用 service_role key**（admin / 後端管理呼叫走 service_role 繞過 RLS；一般使用者資料呼叫走該 user 的 Supabase JWT）
+
+---
+
+## 8b. 執行決策記錄（2026-05-29）
+
+- **策略**：採「完整版」— Supabase Auth + per-row `auth.uid()` policies（非僅 service_role deny-all 的務實版）。
+- **key**：production Vercel `SUPABASE_KEY` 將改為 **service_role**（使用者已確認可設定）。後端資料呼叫在 Phase 3 改帶該 user 的 Supabase JWT；service_role 僅供 provisioning / admin。
+- **現況盤點（2026-05-29 重查）**：`users` 已成長到 **26 rows**（§5 問題 #1 的 14 為舊數字，遷移前需重跑 SQL 重新確認 users∩patients 對應）。
+- **目前 RLS 實況**：22 表 RLS disabled；已啟用 RLS 的表（drug_reference / disease_reference / admissions* / patients / doctors / medical_records / symptoms_log）其 policy 多為 `USING (true)` 對 `anon`/`public`，等同全開 → critical advisory 屬實。
+- **安全前提**：先把後端確定改用 service_role 且驗證 production 正常後，才可開始把 anon 全開政策改為 deny / per-row，否則會鎖死全 App。
+- **必須在 preview branch 先做**：所有 RLS / Auth 變更先在 Supabase preview branch 跑完整 e2e，綠燈才上 prod；prod 一張表一張表開 RLS（§6 Phase 3.4）。
+
+### 建議的 PR 切分（每個獨立可上線、可回滾）
+
+| PR | 對應 Phase | 內容 | 風險 |
+|---|---|---|---|
+| 1 | 2.1–2.2 | 加 `users.supabase_user_id` 欄位（additive migration）；login 成功時隱型 provision Supabase Auth user + 雙寫，**藏在 feature flag `AUTH_SUPABASE_ENABLED`（預設 off）** | 低（flag off 時零行為變更） |
+| 2 | 2.3 | 後端驗證改吃 Supabase JWT（保留自管 JWT 為 fallback）；切換 production `SUPABASE_KEY` → service_role 並驗證 | 中 |
+| 3 | 3.1–3.2 | 補資料完整性：孤兒 patients 處理、第一次寫 clinical data 自動建 patients row、`admission_medications/doses` 加冗餘 `patient_id` + trigger | 中 |
+| 4 | 3.3–3.4 | preview branch 寫齊 per-row policies（UUID/TEXT 兩種寫法）；逐表開 RLS + 跑該 router e2e；綠燈才上 prod | 高 |
+| 5 | 4 | 清理：移除 scrypt、drop `password_hash`、前端改 Supabase auth helper（prod 跑穩兩週後才做） | 不可逆，最後做 |
+
+### ⚠️ 開工前提醒（Rule 6 / Rule 10）
+
+此遷移橫跨 5 個 PR、改動 live 醫療資料庫與 26 位真實病患的登入。每個 PR 應在**獨立聚焦的 session** 進行、於 **Supabase preview branch** 驗證、逐階段 checkpoint，不要在單一回合內硬推到底。
 
 ---
 
