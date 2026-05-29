@@ -181,10 +181,7 @@ img, svg, video { max-width: 100%; height: auto; }
   --landing-card:   rgba(168,240,224,0.06);
   --landing-border: rgba(168,240,224,0.28);
   --landing-glow:   rgba(94,234,212,0.45);
-  background:
-    radial-gradient(ellipse at 78% 18%, rgba(127,231,217,0.18), transparent 55%),
-    radial-gradient(ellipse at 18% 82%, rgba(255,214,232,0.12), transparent 55%),
-    linear-gradient(180deg, #07171C 0%, #0F2A30 55%, #133A40 100%);
+  background: #07171C;
   color: var(--landing-text);
 }
 

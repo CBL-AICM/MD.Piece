@@ -193,9 +193,9 @@ html.dark body.theme-modern {
   --purple:        #B0B8DC !important;
 }
 
-/* dark body bg — 深邃藍漸層 */
+/* dark body bg — 深邃藍純色（不用漸變） */
 html.dark body.theme-modern {
-  background: linear-gradient(180deg, #051A35 0%, #0A2548 50%, #0F2D54 100%) !important;
+  background: #0A2548 !important;
 }
 
 /* dark 卡片全面換深底 */
