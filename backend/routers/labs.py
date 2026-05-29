@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 import json
 import logging
 
+from backend.security import current_user
 from backend.services.llm_service import (
     build_patient_facing_system,
     call_claude,
@@ -109,7 +110,7 @@ def _coerce_bool(value, default: bool = False) -> bool:
 
 
 @router.post("/check", response_model=LabCheckResponse)
-def check_lab_value(body: LabCheckRequest):
+def check_lab_value(body: LabCheckRequest, me: dict = Depends(current_user)):
     """解讀單一檢驗值是否正常 + 給生活建議"""
     if not body.name.strip() or not body.value.strip():
         raise HTTPException(status_code=400, detail="請輸入檢驗項目與數值")
@@ -203,7 +204,7 @@ def _summarize_status(items: list[dict]) -> dict:
 
 
 @router.post("/scan")
-def scan_lab_report(body: LabScanRequest):
+def scan_lab_report(body: LabScanRequest, me: dict = Depends(current_user)):
     """拍/上傳檢驗報告，一次抽出所有項目並判讀正常/異常。
 
     回傳:

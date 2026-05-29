@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List, Literal
@@ -7,6 +7,7 @@ import json
 import logging
 
 from backend.db import get_supabase
+from backend.security import current_user
 from backend.services.llm_service import (
     build_patient_facing_system,
     call_claude,
@@ -113,10 +114,12 @@ def _build_xiaohe_system(persona_key: str, user_id: str) -> str:
 
 
 @router.post("/chat")
-def chat_with_xiaohe(body: ChatRequest):
+def chat_with_xiaohe(body: ChatRequest, me: dict = Depends(current_user)):
     """與小禾 AI 對話"""
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="請輸入訊息")
+    if body.user_id and body.user_id != me.get("id"):
+        raise HTTPException(status_code=403, detail="不可存取他人資料")
 
     persona_key = _select_persona(body.mode, body.version)
     system_prompt = _build_xiaohe_system(persona_key, body.user_id)
@@ -140,10 +143,12 @@ def chat_with_xiaohe(body: ChatRequest):
 
 
 @router.post("/chat/stream")
-def chat_with_xiaohe_stream(body: ChatRequest):
+def chat_with_xiaohe_stream(body: ChatRequest, me: dict = Depends(current_user)):
     """與小禾 AI 對話 — 串流版本（SSE）。每個事件是一段 token，最後送 done"""
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="請輸入訊息")
+    if body.user_id and body.user_id != me.get("id"):
+        raise HTTPException(status_code=403, detail="不可存取他人資料")
 
     persona_key = _select_persona(body.mode, body.version)
     system_prompt = _build_xiaohe_system(persona_key, body.user_id)
@@ -174,8 +179,10 @@ def chat_with_xiaohe_stream(body: ChatRequest):
 
 
 @router.get("/emotion-summary/{patient_id}")
-def get_emotion_summary(patient_id: str):
+def get_emotion_summary(patient_id: str, me: dict = Depends(current_user)):
     """回傳匿名情緒趨勢（不含對話內容，保護隱私）"""
+    if patient_id != me.get("id"):
+        raise HTTPException(status_code=403, detail="不可存取他人資料")
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=30)).isoformat()
     result = sb.table("emotions").select("*").eq("patient_id", patient_id).gte("created_at", since).order("created_at").execute()

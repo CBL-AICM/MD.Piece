@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 import logging
 
 from backend.db import get_supabase
+from backend.security import current_user
 from backend.utils.triage_rules import check_emergency, EMERGENCY_SYMPTOMS
 from backend.utils.baseline import calculate_baseline
 from backend.services.llm_service import (
@@ -14,6 +15,11 @@ from backend.services.llm_service import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _enforce_self(patient_id, me):
+    if patient_id and patient_id != me.get("id"):
+        raise HTTPException(status_code=403, detail="不可存取他人資料")
 
 # ─── Severity color mapping ──────────────────────────────────
 # 對應台灣分級醫療 5 級，前端用 data-severity attribute + CSS var(--sev-*)
@@ -47,12 +53,13 @@ class TriageRequest(BaseModel):
 
 
 @router.post("/evaluate")
-def evaluate_triage(body: TriageRequest):
+def evaluate_triage(body: TriageRequest, me: dict = Depends(current_user)):
     """
     雙層分流評估：
     第一層：規則引擎（急診清單觸發 → 直接 Emergency）
     第二層：LLM 依個人基準線判斷 Stable / Follow-up / Emergency
     """
+    _enforce_self(body.patient_id, me)
     # 第一層：規則引擎
     is_emergency = check_emergency(
         symptoms=body.symptoms,
@@ -151,8 +158,9 @@ def evaluate_triage(body: TriageRequest):
 
 
 @router.get("/baseline/{patient_id}")
-def get_baseline(patient_id: str):
+def get_baseline(patient_id: str, me: dict = Depends(current_user)):
     """取得個人化基準線：根據近兩週情緒與服藥紀錄計算"""
+    _enforce_self(patient_id, me)
     sb = get_supabase()
     from datetime import datetime, timedelta
     since = (datetime.utcnow() - timedelta(days=14)).isoformat()

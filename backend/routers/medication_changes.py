@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from backend.db import get_supabase
 from backend.models import MedicationChangeCreate
+from backend.security import current_user
 
 router = APIRouter()
 
@@ -9,11 +10,12 @@ router = APIRouter()
 def list_changes(
     patient_id: str | None = None,
     medication_id: str | None = None,
+    me: dict = Depends(current_user),
 ):
+    if patient_id and patient_id != me.get("id"):
+        raise HTTPException(status_code=403, detail="不可存取他人資料")
     sb = get_supabase()
-    q = sb.table("medication_changes").select("*")
-    if patient_id:
-        q = q.eq("patient_id", patient_id)
+    q = sb.table("medication_changes").select("*").eq("patient_id", me["id"])
     if medication_id:
         q = q.eq("medication_id", medication_id)
     result = q.order("effective_date", desc=True).execute()
@@ -21,9 +23,10 @@ def list_changes(
 
 
 @router.post("/")
-def create_change(body: MedicationChangeCreate):
+def create_change(body: MedicationChangeCreate, me: dict = Depends(current_user)):
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
+    data["patient_id"] = me["id"]  # 不信任 body 的 patient_id，鎖定為 caller
     valid_types = {"start", "stop", "dose_up", "dose_down", "switch", "frequency", "other"}
     if data["change_type"] not in valid_types:
         raise HTTPException(status_code=400, detail=f"change_type 必須為 {valid_types}")
@@ -32,8 +35,11 @@ def create_change(body: MedicationChangeCreate):
 
 
 @router.delete("/{change_id}")
-def delete_change(change_id: str):
+def delete_change(change_id: str, me: dict = Depends(current_user)):
     sb = get_supabase()
+    row = sb.table("medication_changes").select("patient_id").eq("id", change_id).execute()
+    if not row.data or row.data[0].get("patient_id") != me.get("id"):
+        raise HTTPException(status_code=404, detail="找不到調藥紀錄")
     result = sb.table("medication_changes").delete().eq("id", change_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到調藥紀錄")
