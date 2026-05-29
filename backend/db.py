@@ -183,6 +183,10 @@ _SCHEMAS = {
             avatar_color TEXT DEFAULT '#5B9FE8',
             avatar_url TEXT,
             id_number TEXT,
+            recovery_question TEXT,
+            recovery_answer_hash TEXT,
+            failed_login_count INTEGER DEFAULT 0,
+            locked_until TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
     "doctor_notes": """
@@ -364,6 +368,10 @@ def _migrate_users_table(conn):
         ("password_hash", "TEXT"),
         ("avatar_url", "TEXT"),
         ("id_number", "TEXT"),
+        ("recovery_question", "TEXT"),
+        ("recovery_answer_hash", "TEXT"),
+        ("failed_login_count", "INTEGER DEFAULT 0"),
+        ("locked_until", "TEXT"),
     ]
     for name, decl in additions:
         if name not in cols:

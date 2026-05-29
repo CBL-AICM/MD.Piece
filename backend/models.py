@@ -72,11 +72,36 @@ class UserCreate(BaseModel):
     avatar_color: str | None = None
     avatar_url: str | None = None
     id_number: str | None = None
+    # 可選：註冊時一併設定安全問題（用於忘記密碼自助重設）
+    recovery_question: str | None = None
+    recovery_answer: str | None = None
 
 
 class UserLogin(BaseModel):
     username: str
     password: str
+
+
+# ─── 忘記密碼（安全問題式重設）─────────────────────────────
+# 專案無 email 寄送能力，改用安全問題自助重設（Q&A 答案以 scrypt 雜湊存放）。
+
+
+class RecoverySet(BaseModel):
+    """已登入時設定／更新安全問題。"""
+    question: str
+    answer: str
+
+
+class RecoveryQuestionRequest(BaseModel):
+    """忘記密碼第一步：用帳號查回安全問題。"""
+    username: str
+
+
+class RecoveryReset(BaseModel):
+    """忘記密碼第二步：答對安全問題即可重設密碼。"""
+    username: str
+    answer: str
+    new_password: str
 
 
 class UserUpdate(BaseModel):
