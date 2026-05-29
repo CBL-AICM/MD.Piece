@@ -6185,21 +6185,29 @@ body.edu-notebook-open .mobile-edu-cards { display: none !important; }
   flex: 1;
   line-height: 1.4;
 }
-#edu-content-body h2, #edu-content-body h3, #edu-content-body h4 {
+/* 文章正文（.edu-article-body）與章節內容（#edu-content-body）共用同一套
+   緊湊排版 — 避免 .edu-article-body 的標題吃到瀏覽器預設大邊距，
+   在筆記紙上撐出大片留白（Rule 7：統一到較成熟的寫法）。 */
+#edu-content-body h1, .edu-article-body h1,
+#edu-content-body h2, #edu-content-body h3, #edu-content-body h4,
+.edu-article-body h2, .edu-article-body h3, .edu-article-body h4 {
   font-family: "Noto Sans TC", sans-serif;
   letter-spacing: 0.5px;
 }
-#edu-content-body h2 {
+#edu-content-body h1, .edu-article-body h1 {
+  color: var(--klein); margin: 4px 0 12px; font-size: 1.3rem; line-height: 1.35;
+}
+#edu-content-body h2, .edu-article-body h2 {
   color: var(--klein); margin: 18px 0 10px; font-size: 1.12rem;
   padding-left: 10px;
   border-left: 3px solid rgba(43,52,103,0.6);
 }
-#edu-content-body h3 { color: var(--klein); margin: 14px 0 8px; font-size: 1.02rem; }
-#edu-content-body h4 { color: #2E5A7B; margin: 12px 0 6px; font-size: .96rem; }
-#edu-content-body li { list-style: disc; margin-left: 22px; margin-bottom: 5px; }
-#edu-content-body strong { color: var(--text); }
-#edu-content-body p { margin-bottom: 10px; line-height: 1.85; }
-#edu-content-body blockquote {
+#edu-content-body h3, .edu-article-body h3 { color: var(--klein); margin: 14px 0 8px; font-size: 1.02rem; }
+#edu-content-body h4, .edu-article-body h4 { color: #2E5A7B; margin: 12px 0 6px; font-size: .96rem; }
+#edu-content-body li, .edu-article-body li { list-style: disc; margin-left: 22px; margin-bottom: 5px; }
+#edu-content-body strong, .edu-article-body strong { color: var(--text); }
+#edu-content-body p, .edu-article-body p { margin-bottom: 10px; line-height: 1.8; }
+#edu-content-body blockquote, .edu-article-body blockquote {
   border-left: 3px solid rgba(176,80,106,0.5);
   background: rgba(255,250,245,0.6);
   padding: 10px 14px;
@@ -6231,9 +6239,19 @@ body.edu-notebook-open .mobile-edu-cards { display: none !important; }
 }
 
 @media (max-width: 720px) {
-  .notebook { grid-template-columns: 1fr; }
-  .nb-page.left { border-right: none; border-bottom: 2px solid rgba(104,93,90,0.18); border-radius: 8px 8px 0 0; }
-  .nb-page.right { border-radius: 0 0 8px 8px; max-height: none; }
+  .notebook { grid-template-columns: 1fr; min-height: 0; }
+  /* 手機版兩頁是上下堆疊，左頁（文章資訊）內容少，不該被桌機的 min-height:480px
+     撐成一大片空白筆記紙 — 改成依內容高度自適應並收緊留白。 */
+  .nb-page { min-height: 0; }
+  .nb-page.left {
+    border-right: none; border-bottom: 2px solid rgba(104,93,90,0.18);
+    border-radius: 8px 8px 0 0;
+    min-height: auto;
+    padding: 20px 22px 20px 38px;
+  }
+  .nb-page.right { border-radius: 0 0 8px 8px; max-height: none; padding: 22px 22px 28px 38px; }
+  .nb-heading { font-size: 1.08rem; padding-bottom: 9px; margin-bottom: 13px; }
+  .nb-subtle { margin-bottom: 12px; }
   .notebook::before, .notebook::after { display: none; }
   .book { width: 48px; height: 140px; }
   .book.tall { height: 148px; } .book.medium { height: 138px; } .book.short { height: 128px; }
