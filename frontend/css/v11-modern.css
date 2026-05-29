@@ -211,6 +211,9 @@ html.dark body.theme-modern .qr-tile,
 html.dark body.theme-modern .pv-hero,
 html.dark body.theme-modern .vital-card,
 html.dark body.theme-modern .kpi,
+html.dark body.theme-modern .kpi-mini,
+html.dark body.theme-modern .quick-jump-btn,
+html.dark body.theme-modern .home-edu-card,
 html.dark body.theme-modern .ip-sos-btn,
 html.dark body.theme-modern .sos-btn,
 html.dark body.theme-modern .care-mode-card,
@@ -229,6 +232,7 @@ html.dark body.theme-modern textarea,
 html.dark body.theme-modern select,
 html.dark body.theme-modern button {
   background-color: var(--bg-mid) !important;
+  background-image: none !important;
   border-color: var(--border) !important;
   color: var(--text) !important;
 }
