@@ -5682,6 +5682,7 @@ function home() {
           ${homeSecondCard('vitals','activity','生理紀錄','血壓 · 血糖 · 體重','blue')}
           ${homeSecondCard('emotions','battery-charging','情緒電力','心情電量 · 走勢','rose')}
           ${homeSecondCard('diet','utensils-crossed','飲食紀錄','三餐 · 飲水 · 攝取','teal')}
+          ${homeSecondCard('menstrual','droplet','月經紀錄','週期 · 經血量 · 症狀','rose')}
           ${homeSecondCard('memo','sticky-note','Memo','想問醫師的事都丟這','purple')}
           ${homeSecondCard('admissions','hospital','住院 / 療程','急性住院 · 打藥週期','mint')}
           ${homeSecondCard('reminders','bell-ring','提醒通知','服藥 · 回診倒數','amber')}
