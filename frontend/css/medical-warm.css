@@ -43,10 +43,7 @@
     linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
 }
 #landing[data-theme="dark"] {
-  background:
-    radial-gradient(ellipse 600px 400px at 18% 28%, rgba(127,231,217,0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 800px 600px at 82% 72%, rgba(74,144,194,0.15) 0%, transparent 55%),
-    linear-gradient(180deg, #0B1426 0%, #15293D 100%) !important;
+  background: #0B1426 !important;
 }
 
 /* ─── ② 5 種 hero gradient → pastel tint ─────────────────────── */
