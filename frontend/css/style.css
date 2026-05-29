@@ -17445,126 +17445,187 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
 .pz-nearest-empty p { margin: 0 0 8px; }
 
 /* ════════════════════════════════════════════════════════════════════
-   住院模式 — 六大功能工具頁（hub / handover / med-recon / bedside / discharge）
-   設計：低焦慮（語意色只用於必要處）、WCAG（差異不單靠顏色，皆有文字+圖示）、
-   大觸控目標（≥44px）、白話、家屬可立刻看懂。
+   住院模式 — 六大功能工具頁（hub / handover / med-recon / bedside / edu / discharge）
+   依《MD.Piece 住院模組設計 prompt》§4 無障礙鐵則 + 7 條設計憲法：
+   - 同一個 App、模式輔色不同 → 工具頁與住院首頁共用同一套 --ip-* calm token（mint/sky/coral）。
+   - 低認知負荷 → 每頁先一句結論（.ip-tool-lead）再展開細節。
+   - WCAG → 觸控目標 ≥44px；差異不單靠顏色，皆配文字標籤 + 圖示。
+   - 降低焦慮 → 紅色保留給真正警示；用藥差異 / 惡化紅旗用 calm 琥珀 / 珊瑚，不用 danger 紅。
+   - 家屬共同使用者 → 大字、白話、卡片化。
    ════════════════════════════════════════════════════════════════════ */
-.ip-tool-page { padding: var(--space-4, 16px) var(--space-3, 12px) 80px; max-width: 720px; margin: 0 auto; }
-.ip-tool-back {
-  display: inline-flex; align-items: center; gap: 6px; background: var(--bg-soft);
-  color: var(--text-dim); border: none; border-radius: var(--radius-pill, 20px);
-  padding: 8px 14px; font-size: 14px; min-height: 40px; cursor: pointer; margin-bottom: 12px;
+
+/* 工具頁繼承住院首頁的 calm 設計系統（與 .home-inpatient 同一組 token，深色優先）。*/
+.ip-tool-page {
+  --ip-surface:  rgba(255,255,255,0.06);
+  --ip-border:   rgba(255,255,255,0.10);
+  --ip-text:     var(--app-text, #F1F6FF);
+  --ip-dim:      var(--app-text-dim, #BFD2EC);
+  --ip-muted:    rgba(255,255,255,0.55);
+  --ip-mint:     #7FE7D9;
+  --ip-coral:    #E8A98A;
+  --ip-sky:      #8EC5F2;
+  --ip-sage:     #A8D8B9;
+  --ip-warn:     #F2C26D;
+  --ip-radius:   18px;
+  --ip-shadow:   0 6px 24px rgba(0,0,0,0.18);
+  padding: var(--space-4, 16px) var(--space-3, 12px) 88px;
+  max-width: 720px; margin: 0 auto;
 }
-.ip-tool-back:hover { background: var(--bg-glass-hover); }
-.ip-tool-lead { color: var(--text-dim); font-size: 14px; line-height: 1.6; margin: 4px 0 14px; }
-.ip-tool-loading, .ip-tool-empty { color: var(--text-muted); font-size: 14px; padding: 18px 4px; text-align: center; }
+/* 淺色模式校正（對齊 .home-inpatient 的處理：半透明白在白底太淺）。*/
+#app-wrapper[data-theme="light"] .ip-tool-page {
+  --ip-surface: #FFFFFF;
+  --ip-border:  rgba(31, 61, 88, 0.16);
+  --ip-text:    var(--app-text, #1F3D58);
+  --ip-dim:     #4A6478;
+  --ip-muted:   rgba(31, 61, 88, 0.72);
+  --ip-shadow:  0 6px 20px rgba(31,61,88,0.10);
+}
+
+/* Section header — 與住院首頁同款 mono 編號徽章 */
+.ip-tool-page .ip-section-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
+.ip-tool-page .ip-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: 9px;
+  background: var(--ip-surface); border: 1px solid var(--ip-border); color: var(--ip-mint);
+  font-family: "JetBrains Mono", "Fira Code", monospace; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.6px;
+}
+.ip-tool-page .ip-section-head h3 { margin: 0; font-size: 1rem; font-weight: 600; color: var(--ip-text); flex: 1; }
+.ip-tool-page .ip-section-sub { font-size: 0.74rem; color: var(--ip-muted); }
+
+.ip-tool-back {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--ip-surface);
+  color: var(--ip-dim); border: 1px solid var(--ip-border); border-radius: 999px;
+  padding: 9px 16px; font-size: 14px; min-height: 44px; cursor: pointer; margin-bottom: 8px;
+}
+.ip-tool-back:hover { color: var(--ip-mint); border-color: var(--ip-mint); }
+/* 漸進式揭露：一句結論先行 */
+.ip-tool-lead { color: var(--ip-dim); font-size: 14px; line-height: 1.65; margin: 4px 0 16px; }
+.ip-tool-loading, .ip-tool-empty { color: var(--ip-muted); font-size: 14px; padding: 22px 8px; text-align: center; line-height: 1.6; }
 .ip-tool-cta {
   display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-  background: var(--accent); color: #fff; border: none; border-radius: var(--radius, 14px);
-  padding: 14px; font-size: 16px; font-weight: 600; min-height: 52px; cursor: pointer; margin-top: 16px;
-  box-shadow: var(--shadow-sm);
+  background: linear-gradient(135deg, var(--ip-mint), var(--ip-sky)); color: #0B2A38;
+  border: none; border-radius: var(--ip-radius); padding: 15px; font-size: 16px; font-weight: 700;
+  min-height: 54px; cursor: pointer; margin-top: 18px; box-shadow: var(--ip-shadow);
 }
-.ip-tool-cta:hover { filter: brightness(1.05); }
-.ip-tool-cta:disabled { background: var(--text-muted); cursor: not-allowed; box-shadow: none; }
+.ip-tool-cta:hover { filter: brightness(1.04); }
+.ip-tool-cta:disabled { background: var(--ip-surface); color: var(--ip-muted); cursor: not-allowed; box-shadow: none; }
+/* 免責框架（每頁必備）*/
 .ip-tool-disclaimer {
-  display: flex; align-items: flex-start; gap: 6px; margin-top: 18px; padding: 10px 12px;
-  background: var(--bg-soft); border-radius: var(--radius-sm, 10px);
-  color: var(--text-dim); font-size: 12px; line-height: 1.55;
+  display: flex; align-items: flex-start; gap: 6px; margin-top: 20px; padding: 11px 13px;
+  background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: 12px;
+  color: var(--ip-dim); font-size: 12px; line-height: 1.6;
 }
+/* AI 降級揭露 / CTI 提示語 */
 .ip-ai-note, .ip-cti-note {
-  display: flex; align-items: flex-start; gap: 6px; color: var(--text-dim);
-  font-size: 12px; background: var(--bg-soft); border-radius: var(--radius-sm, 10px);
-  padding: 8px 10px; margin: 0 0 10px;
+  display: flex; align-items: flex-start; gap: 6px; color: var(--ip-dim);
+  font-size: 12px; background: var(--ip-surface); border: 1px solid var(--ip-border);
+  border-radius: 12px; padding: 9px 11px; margin: 0 0 10px; line-height: 1.55;
 }
-.ip-src { color: var(--text-muted); font-size: 12px; }
-.ip-muted { color: var(--text-muted); }
+.ip-tool-page .ip-src { color: var(--ip-muted); font-size: 12px; }
+.ip-tool-page .ip-muted { color: var(--ip-muted); }
 
-/* hub（首頁工具入口）*/
-.ip-hub { margin: 14px 0; }
-.ip-hub-grid { display: flex; flex-direction: column; gap: 8px; }
+/* hub（住院首頁工具入口）— 跟首頁同調，故用 .home-inpatient token */
+.ip-hub { margin: 6px 0 18px; }
+.ip-hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ip-hub-card {
-  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
-  background: var(--bg-surface); border: 1px solid var(--bg-soft); border-radius: var(--radius, 14px);
-  padding: 12px 14px; min-height: 60px; cursor: pointer; box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+  background: var(--ip-surface, rgba(255,255,255,0.06)); border: 1px solid var(--ip-border, rgba(255,255,255,0.10));
+  border-radius: var(--ip-radius, 18px); padding: 14px 13px; min-height: 64px; cursor: pointer;
+  transition: border-color .18s ease, transform .18s ease;
 }
-.ip-hub-card:hover { border-color: var(--accent); }
+.ip-hub-card:hover { border-color: var(--ip-mint, #7FE7D9); transform: translateY(-1px); }
+.ip-hub-card:active { transform: translateY(0); }
 .ip-hub-ic {
-  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; display: flex;
-  align-items: center; justify-content: center; background: var(--accent-glow); color: var(--accent);
+  flex: 0 0 auto; width: 42px; height: 42px; border-radius: 13px; display: flex;
+  align-items: center; justify-content: center;
+  background: rgba(127,231,217,0.16); color: var(--ip-mint, #7FE7D9);
 }
-.ip-hub-tx { flex: 1; display: flex; flex-direction: column; }
-.ip-hub-title { font-weight: 600; color: var(--text); font-size: 15px; }
-.ip-hub-desc { color: var(--text-dim); font-size: 13px; }
+.ip-hub-tx { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ip-hub-title { font-weight: 600; color: var(--ip-text, #F1F6FF); font-size: 15px; }
+.ip-hub-desc { color: var(--ip-muted, rgba(255,255,255,0.55)); font-size: 12.5px; line-height: 1.4; }
 
-/* handover 預覽 */
+/* F1 交接報告預覽 */
 .ip-handover-preview { display: flex; flex-direction: column; gap: 12px; }
-.ip-ho-block { background: var(--bg-surface); border: 1px solid var(--bg-soft); border-radius: var(--radius, 14px); padding: 12px 14px; }
-.ip-ho-k { display: block; font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 4px; letter-spacing: .5px; }
-.ip-ho-block p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.6; }
-.ip-ho-list { margin: 4px 0 0; padding-left: 18px; color: var(--text); font-size: 14px; line-height: 1.7; }
+.ip-ho-block { background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: var(--ip-radius); padding: 14px 15px; }
+.ip-ho-k { display: block; font-size: 12px; font-weight: 700; color: var(--ip-mint); margin-bottom: 5px; letter-spacing: .5px; }
+.ip-ho-block p { margin: 0; color: var(--ip-text); font-size: 14px; line-height: 1.6; }
+.ip-ho-list { margin: 4px 0 0; padding-left: 18px; color: var(--ip-text); font-size: 14px; line-height: 1.75; }
 
-/* med reconciliation */
+/* F3 用藥核對 — 差異用 calm 色 + 文字標籤 + 圖示（不單靠顏色；紅色不出現）*/
 .ip-recon-sum { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-.ip-recon-chip { font-size: 13px; padding: 6px 12px; border-radius: var(--radius-pill, 20px); background: var(--bg-soft); color: var(--text-dim); font-weight: 600; }
-.ip-recon-chip[data-st="added"] { background: var(--accent-glow); color: var(--accent); }
-.ip-recon-chip[data-st="stopped"] { background: var(--bg-soft); color: var(--text-dim); }
-.ip-recon-chip[data-st="changed"] { background: var(--teal-glow); color: var(--teal); }
-.ip-recon-row { background: var(--bg-surface); border: 1px solid var(--bg-soft); border-radius: var(--radius, 14px); padding: 12px 14px; margin-bottom: 8px; }
-.ip-recon-row[data-st="changed"] { border-left: 4px solid var(--teal); }
-.ip-recon-row[data-st="added"] { border-left: 4px solid var(--accent); }
-.ip-recon-row[data-st="stopped"] { border-left: 4px solid var(--text-muted); }
-.ip-recon-name { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; color: var(--text); font-size: 15px; margin-bottom: 6px; }
-.ip-recon-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: var(--radius-pill, 20px); background: var(--bg-soft); color: var(--text-dim); }
-.ip-recon-badge[data-st="added"] { background: var(--accent-glow); color: var(--accent); }
-.ip-recon-badge[data-st="changed"] { background: var(--teal-glow); color: var(--teal); }
+.ip-recon-chip { font-size: 13px; padding: 7px 13px; border-radius: 999px; background: var(--ip-surface); border: 1px solid var(--ip-border); color: var(--ip-dim); font-weight: 600; }
+.ip-recon-chip[data-st="added"]   { color: var(--ip-sky); }
+.ip-recon-chip[data-st="changed"] { color: var(--ip-warn); }
+.ip-recon-chip[data-st="stopped"] { color: var(--ip-muted); }
+.ip-recon-chip[data-st="same"]    { color: var(--ip-sage); }
+.ip-recon-row { background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: var(--ip-radius); padding: 13px 15px; margin-bottom: 9px; border-left: 4px solid var(--ip-border); }
+.ip-recon-row[data-st="added"]   { border-left-color: var(--ip-sky); }
+.ip-recon-row[data-st="changed"] { border-left-color: var(--ip-warn); }
+.ip-recon-row[data-st="stopped"] { border-left-color: var(--ip-muted); }
+.ip-recon-row[data-st="same"]    { border-left-color: var(--ip-sage); }
+.ip-recon-name { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; color: var(--ip-text); font-size: 15px; margin-bottom: 8px; }
+.ip-recon-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--ip-surface); border: 1px solid var(--ip-border); color: var(--ip-dim); }
+.ip-recon-badge[data-st="added"]   { color: var(--ip-sky);  border-color: var(--ip-sky); }
+.ip-recon-badge[data-st="changed"] { color: var(--ip-warn); border-color: var(--ip-warn); }
+.ip-recon-badge[data-st="same"]    { color: var(--ip-sage); border-color: var(--ip-sage); }
 .ip-recon-cols { display: flex; align-items: center; gap: 10px; }
-.ip-recon-col { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.ip-recon-col-k { font-size: 11px; color: var(--text-muted); }
-.ip-recon-col span:last-child { color: var(--text); font-size: 14px; }
+.ip-recon-col { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ip-recon-col-k { font-size: 11px; color: var(--ip-muted); }
+.ip-recon-col span:last-child { color: var(--ip-text); font-size: 14px; }
 
-/* bedside */
-.ip-bs-field { margin-bottom: 16px; }
-.ip-bs-label { display: block; font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
-.ip-bs-pain-row { display: flex; gap: 4px; flex-wrap: wrap; }
-.ip-bs-pain { flex: 1; min-width: 36px; min-height: 44px; border: 1px solid var(--bg-soft); background: var(--bg-surface); border-radius: 10px; font-size: 15px; color: var(--text); cursor: pointer; }
-.ip-bs-pain.sel { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
-.ip-bs-pain-hint { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+/* F2 床邊紀錄 — 大觸控、極低負擔 */
+.ip-bs-form, .ip-qpl, #ip-bs-recent { background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: var(--ip-radius); padding: 16px 15px; margin-bottom: 14px; }
+.ip-bs-field { margin-bottom: 18px; }
+.ip-bs-field:last-of-type { margin-bottom: 8px; }
+.ip-bs-label { display: block; font-size: 15px; font-weight: 600; color: var(--ip-text); margin-bottom: 10px; }
+.ip-bs-pain-row { display: flex; gap: 5px; flex-wrap: wrap; }
+.ip-bs-pain { flex: 1; min-width: 38px; min-height: 46px; border: 1px solid var(--ip-border); background: transparent; border-radius: 11px; font-size: 15px; font-weight: 600; color: var(--ip-text); cursor: pointer; transition: all .15s ease; }
+.ip-bs-pain.sel { background: var(--ip-mint); color: #0B2A38; border-color: var(--ip-mint); }
+.ip-bs-pain-hint { display: flex; justify-content: space-between; font-size: 11px; color: var(--ip-muted); margin-top: 5px; }
 .ip-bs-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.ip-bs-chip { min-height: 44px; padding: 8px 16px; border: 1px solid var(--bg-soft); background: var(--bg-surface); border-radius: var(--radius-pill, 20px); font-size: 14px; color: var(--text); cursor: pointer; }
-.ip-bs-chip.sel { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
-.ip-bs-face { font-size: 22px; min-width: 52px; }
+.ip-bs-chip { min-height: 46px; padding: 9px 17px; border: 1px solid var(--ip-border); background: transparent; border-radius: 999px; font-size: 14px; color: var(--ip-text); cursor: pointer; transition: all .15s ease; }
+.ip-bs-chip.sel { background: var(--ip-mint); color: #0B2A38; border-color: var(--ip-mint); font-weight: 600; }
+.ip-bs-face { font-size: 22px; min-width: 54px; }
 .ip-bs-recent-list { list-style: none; padding: 0; margin: 8px 0 0; }
-.ip-bs-recent-list li { padding: 8px 0; border-bottom: 1px solid var(--bg-soft); font-size: 14px; color: var(--text); }
+.ip-bs-recent-list li { padding: 9px 0; border-bottom: 1px solid var(--ip-border); font-size: 14px; color: var(--ip-text); }
+.ip-bs-recent-list li:last-child { border-bottom: none; }
 
-/* QPL 想問醫師 */
-.ip-qpl { margin-top: 24px; }
-.ip-qpl-empty { color: var(--text-muted); font-size: 14px; padding: 8px 0; }
+/* F2 QPL 想問醫師 */
+.ip-qpl-empty { color: var(--ip-muted); font-size: 14px; padding: 8px 0; line-height: 1.6; }
 .ip-qpl-items { list-style: none; padding: 0; margin: 0; }
-.ip-qpl-item { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--bg-soft); }
-.ip-qpl-item.asked .ip-qpl-text { text-decoration: line-through; color: var(--text-muted); }
-.ip-qpl-check, .ip-qpl-del { background: none; border: none; cursor: pointer; color: var(--text-dim); display: flex; padding: 6px; min-width: 32px; min-height: 32px; align-items: center; justify-content: center; }
-.ip-qpl-item.asked .ip-qpl-check { color: var(--success); }
-.ip-qpl-text { flex: 1; font-size: 15px; color: var(--text); line-height: 1.4; }
-.ip-qpl-add { display: flex; gap: 8px; margin-top: 12px; }
-.ip-qpl-add input { flex: 1; min-height: 44px; border: 1px solid var(--bg-soft); border-radius: var(--radius-sm, 10px); padding: 0 12px; font-size: 15px; color: var(--text); background: var(--bg-surface); }
-.ip-qpl-add button { flex: 0 0 auto; width: 48px; min-height: 44px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm, 10px); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.ip-qpl-item { display: flex; align-items: center; gap: 8px; padding: 11px 0; border-bottom: 1px solid var(--ip-border); }
+.ip-qpl-item:last-child { border-bottom: none; }
+.ip-qpl-item.asked .ip-qpl-text { text-decoration: line-through; color: var(--ip-muted); }
+.ip-qpl-check, .ip-qpl-del { background: none; border: none; cursor: pointer; color: var(--ip-dim); display: flex; padding: 6px; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+.ip-qpl-item.asked .ip-qpl-check { color: var(--ip-sage); }
+.ip-qpl-text { flex: 1; font-size: 15px; color: var(--ip-text); line-height: 1.45; }
+.ip-qpl-add { display: flex; gap: 8px; margin-top: 14px; }
+.ip-qpl-add input { flex: 1; min-height: 46px; border: 1px solid var(--ip-border); border-radius: 12px; padding: 0 14px; font-size: 15px; color: var(--ip-text); background: transparent; }
+.ip-qpl-add input::placeholder { color: var(--ip-muted); }
+.ip-qpl-add button { flex: 0 0 auto; width: 50px; min-height: 46px; background: var(--ip-mint); color: #0B2A38; border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .ip-qpl-bank { margin-top: 14px; }
-.ip-qpl-bank summary { cursor: pointer; color: var(--accent); font-size: 14px; padding: 6px 0; }
-.ip-qpl-suggest { display: block; width: 100%; text-align: left; background: var(--bg-soft); border: none; border-radius: var(--radius-sm, 10px); padding: 10px 12px; margin: 6px 0; font-size: 14px; color: var(--text); cursor: pointer; }
-.ip-qpl-suggest:hover { background: var(--bg-glass-hover); }
-.ip-qpl-cat { display: inline-block; font-size: 11px; color: var(--accent); background: var(--accent-glow); border-radius: 6px; padding: 1px 7px; margin-right: 8px; }
+.ip-qpl-bank summary { cursor: pointer; color: var(--ip-mint); font-size: 14px; padding: 8px 0; min-height: 32px; }
+.ip-qpl-suggest { display: block; width: 100%; text-align: left; background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: 12px; padding: 12px 13px; margin: 7px 0; font-size: 14px; color: var(--ip-text); cursor: pointer; line-height: 1.45; }
+.ip-qpl-suggest:hover { border-color: var(--ip-mint); }
+.ip-qpl-cat { display: inline-block; font-size: 11px; color: var(--ip-mint); background: rgba(127,231,217,0.14); border-radius: 6px; padding: 2px 8px; margin-right: 8px; }
 
-/* personalized education + teach-back */
-.ip-pedu-card { background: var(--bg-surface); border: 1px solid var(--bg-soft); border-left: 4px solid var(--teal); border-radius: var(--radius, 14px); padding: 14px; margin-bottom: 10px; }
-.ip-pedu-card h4 { margin: 0 0 6px; font-size: 16px; color: var(--text); }
-.ip-pedu-card p { margin: 0 0 8px; font-size: 14px; line-height: 1.65; color: var(--text); }
-.ip-pedu-src { font-size: 11px; color: var(--text-muted); }
-.ip-teachback { display: flex; align-items: flex-start; gap: 8px; background: var(--teal-glow); color: var(--teal); border-radius: var(--radius, 14px); padding: 12px 14px; font-size: 14px; line-height: 1.55; margin: 10px 0; font-weight: 500; }
+/* F4 個人化衛教 + teach-back */
+.ip-pedu-card { background: var(--ip-surface); border: 1px solid var(--ip-border); border-left: 4px solid var(--ip-sky); border-radius: var(--ip-radius); padding: 15px; margin-bottom: 11px; }
+.ip-pedu-card h4 { margin: 0 0 7px; font-size: 16px; color: var(--ip-text); }
+.ip-pedu-card p { margin: 0 0 9px; font-size: 14px; line-height: 1.7; color: var(--ip-text); }
+.ip-pedu-src { font-size: 11px; color: var(--ip-muted); }
+.ip-teachback { display: flex; align-items: flex-start; gap: 8px; background: rgba(127,231,217,0.12); border: 1px solid rgba(127,231,217,0.30); color: var(--ip-mint); border-radius: var(--ip-radius); padding: 13px 15px; font-size: 14px; line-height: 1.6; margin: 12px 0; font-weight: 500; }
+#app-wrapper[data-theme="light"] .ip-tool-page .ip-teachback,
+#app-wrapper[data-theme="light"] .home-inpatient .ip-teachback { color: var(--teal); }
 
-/* discharge CTI 四支柱 */
-.ip-cti-pillar { background: var(--bg-surface); border: 1px solid var(--bg-soft); border-radius: var(--radius, 14px); padding: 14px; margin-bottom: 10px; }
-.ip-cti-pillar[data-key="red_flags"] { border-left: 4px solid var(--rose); }
-.ip-cti-pillar h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 16px; color: var(--text); }
+/* F6 出院 CTI 四支柱 — 惡化紅旗用 calm 珊瑚（非 danger 紅，避免加重焦慮）*/
+.ip-cti-pillar { background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: var(--ip-radius); padding: 15px; margin-bottom: 11px; }
+.ip-cti-pillar[data-key="red_flags"] { border-left: 4px solid var(--ip-coral); }
+.ip-cti-pillar h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 9px; font-size: 16px; color: var(--ip-text); }
+.ip-cti-pillar[data-key="red_flags"] h4 i { color: var(--ip-coral); }
 .ip-cti-list { list-style: none; padding: 0; margin: 0; }
-.ip-cti-list li { display: flex; align-items: flex-start; gap: 4px; padding: 6px 0; font-size: 14px; color: var(--text); line-height: 1.55; }
-.ip-cti-detail { color: var(--text-dim); font-size: 13px; }
+.ip-cti-list li { display: flex; align-items: flex-start; gap: 4px; padding: 7px 0; font-size: 14px; color: var(--ip-text); line-height: 1.6; }
+.ip-cti-detail { color: var(--ip-dim); font-size: 13px; }
+
+/* 手機窄屏：hub 退回單欄 */
+@media (max-width: 360px) { .ip-hub-grid { grid-template-columns: 1fr; } }
