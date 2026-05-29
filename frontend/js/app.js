@@ -2033,6 +2033,16 @@ function _mobilePvSwitchAud(which) {
 
 var _previsitData = { checklist: null, report: null };
 
+// 報告內容同步寫進桌機 pv-report-body 與手機「給醫師看」分頁。
+// 沒這層 mirror，手機版點「立即產生診前報告」後醫師分頁不會更新（內容只長在
+// desktop-only 的隱藏區塊），看起來像毫無反應。
+function _pvSetReportHtml(html) {
+  var bodyEl = document.getElementById('pv-report-body');
+  var mobEl = document.getElementById('mobile-pv-doctor');
+  if (bodyEl) bodyEl.innerHTML = html;
+  if (mobEl) mobEl.innerHTML = html;
+}
+
 function loadPrevisitPage() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
@@ -2060,14 +2070,13 @@ function loadPrevisitPage() {
 // 用 SSE 串流接整合摘要 — 一個字一個字長出來，回答「到底有沒有內容」的疑問。
 // 串流接不通（HTTP 錯誤、瀏覽器不支援 ReadableStream）就退回 /monthly 非串流端點。
 function previsitStreamReport(pid, days) {
-  var bodyEl = document.getElementById('pv-report-body');
   var statsEl = document.getElementById('pv-stats');
   var srcEl = document.getElementById('pv-report-source');
 
   var url = API + '/reports/' + encodeURIComponent(pid) + '/integrated-summary/stream?days=' + days;
 
   // 初始 loading 文字 — 等收到第一個 chunk 才換成實際內容
-  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…（資料整合與 AI 撰寫，會邊寫邊顯示）</p>';
+  _pvSetReportHtml('<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…（資料整合與 AI 撰寫，會邊寫邊顯示）</p>');
   if (srcEl) srcEl.textContent = '連線中…';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
@@ -2112,7 +2121,7 @@ function previsitStreamReport(pid, days) {
           gotAny = true;
           buffer += String(payload.text || '');
           if (_previsitData.report) _previsitData.report.report = buffer;
-          if (bodyEl) bodyEl.innerHTML = markdownToHtml(buffer);
+          _pvSetReportHtml(markdownToHtml(buffer));
         } else if (payload.type === 'done') {
           if (_previsitData.report) {
             _previsitData.report.source = payload.source || 'ai';
@@ -2121,12 +2130,10 @@ function previsitStreamReport(pid, days) {
           if (srcEl) srcEl.textContent = previsitSourceLabel(_previsitData.report);
           if (typeof lucide !== 'undefined') lucide.createIcons();
         } else if (payload.type === 'error') {
-          if (bodyEl) {
-            var prefix = gotAny ? markdownToHtml(buffer) + '<hr>' : '';
-            bodyEl.innerHTML = prefix +
-              '<p class="pv-error"><i data-lucide="alert-triangle"></i> 撰寫中發生錯誤：' +
-              escapeHtml(String(payload.detail || '請稍後再試')) + '</p>';
-          }
+          var prefix = gotAny ? markdownToHtml(buffer) + '<hr>' : '';
+          _pvSetReportHtml(prefix +
+            '<p class="pv-error"><i data-lucide="alert-triangle"></i> 撰寫中發生錯誤：' +
+            escapeHtml(String(payload.detail || '請稍後再試')) + '</p>');
           if (srcEl) srcEl.textContent = '撰寫失敗';
           if (typeof lucide !== 'undefined') lucide.createIcons();
         }
@@ -2319,9 +2326,12 @@ function previsitRenderChecklist(data) {
 }
 
 function previsitRenderChecklistError() {
+  var msg = '無法連線後端，請稍後再試。';
   var listEl = document.getElementById('pv-checklist-list');
-  if (!listEl) return;
-  listEl.innerHTML = '<li class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</li>';
+  if (listEl) listEl.innerHTML = '<li class="pv-error"><i data-lucide="alert-triangle"></i> ' + msg + '</li>';
+  // 手機患者分頁也要收尾，否則 previsitReload 設的 loading spinner 會一直轉（看似毫無反應）
+  var mob = document.getElementById('mobile-pv-talk-3');
+  if (mob) mob.innerHTML = '<div class="pv-talk-row"><div class="pv-talk-num n1"><i data-lucide="alert-triangle"></i></div><div><div class="name">' + msg + '</div></div></div>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -2342,9 +2352,9 @@ function previsitRenderReport(data) {
 
   var report = (data && data.report) || '';
   if (!report) {
-    bodyEl.innerHTML = '<p class="pv-empty">尚無報告內容。</p>';
+    _pvSetReportHtml('<p class="pv-empty">尚無報告內容。</p>');
   } else {
-    bodyEl.innerHTML = markdownToHtml(report);
+    _pvSetReportHtml(markdownToHtml(report));
   }
 
   if (srcEl) srcEl.textContent = previsitSourceLabel(data);
@@ -2352,9 +2362,7 @@ function previsitRenderReport(data) {
 }
 
 function previsitRenderReportError() {
-  var bodyEl = document.getElementById('pv-report-body');
-  if (!bodyEl) return;
-  bodyEl.innerHTML = '<p class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</p>';
+  _pvSetReportHtml('<p class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</p>');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -2382,9 +2390,10 @@ function previsitSourceLabel(data) {
 
 function previsitReload() {
   var listEl = document.getElementById('pv-checklist-list');
-  var bodyEl = document.getElementById('pv-report-body');
+  var mobTalk = document.getElementById('mobile-pv-talk-3');
   if (listEl) listEl.innerHTML = '<li class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 整理中…</li>';
-  if (bodyEl) bodyEl.innerHTML = '<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…</p>';
+  if (mobTalk) mobTalk.innerHTML = '<div class="pv-talk-row"><div class="pv-talk-num n1"><i data-lucide="loader" class="pv-spin"></i></div><div><div class="name">MD.Piece 整理中…</div></div></div>';
+  _pvSetReportHtml('<p class="pv-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…</p>');
   if (typeof lucide !== 'undefined') lucide.createIcons();
   loadPrevisitPage();
 }
