@@ -6818,13 +6818,13 @@ function closeInpatientQuickLog() {
 }
 function submitInpatientQuickLog(key, value) {
   if (key === 'mood') {
-    // 心情送後端 /emotions/log；後端失敗時 fallback 存 local，趨勢線之後接後端就會帶到
+    // 心情送後端 POST /emotions/（score 為 1-5 整數）；後端失敗時 fallback 存 local，趨勢線之後接後端就會帶到
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (pid) {
-      fetch(API + '/emotions/log', {
+      fetch(API + '/emotions/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patient_id: pid, score: value / 5, note: '住院模式快速紀錄' }),
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
+        body: JSON.stringify({ patient_id: pid, score: value, note: '住院模式快速紀錄' }),
       }).catch(function() {});
     }
     // 同時寫 local 一筆讓 sparkline 立刻有反應

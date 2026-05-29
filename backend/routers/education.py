@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Any, Optional
 import concurrent.futures
 import logging
+import math
 
 from backend.db import get_supabase
 from backend.services.knowledge_analysis import (
@@ -548,45 +549,61 @@ def get_articles(
     return {"articles": [a.to_card() for a in items]}
 
 
+def _rotate_daily_blocks(pool: list, limit: int, ordinal: int) -> list:
+    """把 pool 切成每組 limit 篇，依日期 ordinal 選「一整組」回傳（區塊輪播）。
+
+    逐篇位移（start = ordinal % n 的滑動視窗）會讓連續兩天有 limit-1 篇重複、
+    看起來像固定不動；區塊輪播則保證連續幾天都是完全不同的一組，直到走完整池才循環。
+    """
+    n = len(pool)
+    if n == 0:
+        return []
+    take = min(limit, n)
+    num_blocks = math.ceil(n / take)
+    block = ordinal % num_blocks
+    start = block * take
+    return [pool[(start + i) % n] for i in range(take)]
+
+
 @router.get("/articles/featured")
 def get_featured_articles(limit: int = 6):
-    """首頁今日精選：每天用日期 ordinal 在精選池子中輪播一輪，確保每天看到的文章組合都不同。
+    """首頁今日精選：每天輪播「一整組」精選文章，確保每天看到的文章組合都不同。
 
     池子順序：
-    1. 標記 `featured: true` 的文章（人工挑選，最高優先）
-    2. 若精選池子小於 `limit`，用「有 reviewed_at 且有 sources」的高品質審稿文章補齊
-    3. 仍不足時才退回任意 markdown 文章
+    1. 標記 `featured: true` 的文章（人工挑選，最高優先，排在最前面）
+    2. 接著用「有 reviewed_at 且有 sources」的高品質審稿文章擴充池子，
+       讓輪播池夠大、每天才換得到完全不同的一組
+    3. 仍空時回空清單
+
+    輪播方式見 _rotate_daily_blocks。
     """
     from datetime import date
 
     primary = education_content.list_articles(featured_only=True)
     primary.sort(key=lambda a: a.slug)
 
-    if len(primary) < max(limit * 2, 8):
-        # 精選池子不夠 → 拉「審稿過 + 有來源」的文章湊滿 rotation pool
-        fallback = [
-            a for a in education_content.list_articles()
-            if (not a.featured) and a.reviewed_at and a.sources
-        ]
-        fallback.sort(key=lambda a: a.slug)
-        seen = {a.slug for a in primary}
-        for a in fallback:
-            if a.slug not in seen:
-                primary.append(a)
-                seen.add(a.slug)
-
-    if not primary:
-        return {"articles": [], "rotation_date": date.today().isoformat(), "pool_size": 0}
+    # 永遠把「審稿過 + 有來源」的高品質文章併入輪播池（不再用門檻 gate），
+    # 池子越大、每天能換到的新組合越多，才符合「每日不同、不固定」的需求。
+    seen = {a.slug for a in primary}
+    fallback = [
+        a for a in education_content.list_articles()
+        if (not a.featured) and a.reviewed_at and a.sources
+    ]
+    fallback.sort(key=lambda a: a.slug)
+    for a in fallback:
+        if a.slug not in seen:
+            primary.append(a)
+            seen.add(a.slug)
 
     today = date.today()
-    n = len(primary)
-    start = today.toordinal() % n
-    take = min(limit, n)
-    rotated = [primary[(start + i) % n] for i in range(take)]
+    if not primary:
+        return {"articles": [], "rotation_date": today.isoformat(), "pool_size": 0}
+
+    rotated = _rotate_daily_blocks(primary, limit, today.toordinal())
     return {
         "articles": [a.to_card() for a in rotated],
         "rotation_date": today.isoformat(),
-        "pool_size": n,
+        "pool_size": len(primary),
     }
 
 

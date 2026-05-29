@@ -186,3 +186,42 @@ reviewed_at: 2026-05-10
     assert parsed[1]["impact_factor"] == 37.6
     assert parsed[2]["impact_factor"] is None
     assert art.has_high_if_sources(min_count=2, min_if=5.0) is True
+
+
+# ── 今日精選每日輪播（_rotate_daily_blocks）────────────────
+#
+# 商業意圖：衛教精選「每日都要是不同的一組文章，不能固定」。
+# 舊版用 start = ordinal % n 的滑動視窗，連續兩天會有 limit-1 篇重複，
+# 使用者看起來像固定不動。這裡的測試會在邏輯退回滑動視窗時失敗。
+
+from backend.routers.education import _rotate_daily_blocks
+
+
+def test_rotate_daily_blocks_consecutive_days_are_disjoint():
+    """連續兩天選出的精選組必須完全不重疊（區塊輪播，非逐篇位移）。"""
+    pool = list(range(20))  # 20 篇、每天取 6 篇 → 4 個區塊
+    limit = 6
+    base = 700000  # 任意日期 ordinal
+    day0 = set(_rotate_daily_blocks(pool, limit, base))
+    day1 = set(_rotate_daily_blocks(pool, limit, base + 1))
+    assert len(day0) == limit
+    assert day0 & day1 == set(), "連續兩天的精選不應重疊，否則會像固定不動"
+
+
+def test_rotate_daily_blocks_cycles_through_whole_pool():
+    """走完一個輪播週期後，池子裡每一篇都至少被選到過一次（內容不會被冷凍）。"""
+    pool = list(range(20))
+    limit = 6
+    import math
+    num_blocks = math.ceil(len(pool) / limit)
+    covered = set()
+    for d in range(num_blocks):
+        covered |= set(_rotate_daily_blocks(pool, limit, d))
+    assert covered == set(pool)
+
+
+def test_rotate_daily_blocks_handles_small_and_empty_pool():
+    assert _rotate_daily_blocks([], 6, 123) == []
+    # 池子比 limit 小時不應出錯，回傳整池（去重後）
+    got = _rotate_daily_blocks([1, 2, 3], 6, 123)
+    assert set(got) == {1, 2, 3}
