@@ -119,7 +119,8 @@ function _showElderModeHint(turnedOn) {
 
 const INPATIENT_NAV_PAGES = [
   'admissions', 'medications', 'vitals', 'memo', 'reminders',
-  'inpatientEdu', 'settings', 'account'
+  'inpatientEdu', 'handover', 'medRecon', 'bedside', 'dischargePlan',
+  'settings', 'account'
 ];
 
 function getCareMode() {
@@ -3223,7 +3224,7 @@ function showPage(page) {
     home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
-    followUps
+    followUps, handover, medRecon, bedside, dischargePlan
   };
   // Page transition
   app.style.opacity = '0';
@@ -3261,6 +3262,11 @@ function showPage(page) {
     if (page === "admissions") loadAdmissionsPage();
     if (page === "timeline") loadTimelinePage();
     if (page === "followUps") loadFollowUpsPage();
+    if (page === "inpatientEdu") loadInpatientEduPersonalized();
+    if (page === "handover") loadHandoverPage();
+    if (page === "medRecon") loadMedReconPage();
+    if (page === "bedside") loadBedsidePage();
+    if (page === "dischargePlan") loadDischargePlanPage();
     // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
     if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
@@ -6404,6 +6410,7 @@ function renderInpatientHome(ctx) {
     +   renderCareModeChips()
     +   renderInpatientNowCard(ctx)
     +   renderInpatientNextStep()
+    +   renderInpatientHub()
     +   renderInpatientSOS()
     +   renderInpatientTimeline()
     +   '<div class="ip-row-2">'
@@ -7277,6 +7284,7 @@ function inpatientEdu() {
 
   return ''
     + '<div class="ip-edu-page">'
+    +   '<div id="ip-edu-personalized"></div>'
     +   '<header class="ip-edu-page-head">'
     +     '<div class="ip-edu-page-titles">'
     +       '<h2>住院衛教</h2>'
@@ -7324,6 +7332,455 @@ function _ipEduUpdateToggleAllLabel() {
     return el && !el.open;
   });
   lbl.textContent = anyClosed ? '全部展開' : '全部收合';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 住院模式 — 六大功能前端（接 backend /inpatient/*）
+//   F1 交接報告(handover) F2 床邊紀錄+QPL(bedside) F3 用藥核對(medRecon)
+//   F4 個人化衛教(inpatientEdu 上方注入) F6 出院銜接(dischargePlan)
+//   F5 時間軸沿用既有 renderInpatientTimeline。
+// 設計憲法：一份資料兩視圖、句句可溯源、白話、低焦慮、家屬可立刻看懂、每頁帶免責框架。
+// ════════════════════════════════════════════════════════════════════════════
+
+function _ipPid() {
+  return (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+}
+function _ipGoto(page) {
+  if (typeof navigateTo === 'function') navigateTo(page, null);
+  else if (typeof showPage === 'function') showPage(page);
+}
+function _ipDisclaimer(text) {
+  return '<p class="ip-tool-disclaimer"><i data-lucide="info" style="width:13px;height:13px"></i> '
+    + escapeHtml(text || '') + '</p>';
+}
+function _ipToolHead(num, title, sub) {
+  return '<header class="ip-section-head">'
+    + '<span class="ip-num">' + num + '</span><h3>' + escapeHtml(title) + '</h3>'
+    + (sub ? '<span class="ip-section-sub">' + escapeHtml(sub) + '</span>' : '')
+    + '</header>';
+}
+function _ipBackBtn() {
+  return '<button type="button" class="ip-tool-back" onclick="_ipGoto(\'home\')">'
+    + '<i data-lucide="arrow-left" style="width:16px;height:16px"></i> 回住院首頁</button>';
+}
+
+// ── 住院工具入口（首頁的 hub 區）─────────────────────────────
+// 把六大功能做成大按鈕，家屬沒看過也能立刻看懂要點哪一個。
+function renderInpatientHub() {
+  var tools = [
+    { page: 'handover',     icon: 'file-text',      title: '交接報告',   desc: '一鍵整理給醫護的居家紀錄' },
+    { page: 'medRecon',     icon: 'pill',           title: '用藥核對',   desc: '在家的藥 vs 住院的藥' },
+    { page: 'bedside',      icon: 'clipboard-list', title: '床邊紀錄',   desc: '痛 / 睡 / 吃 + 想問醫師' },
+    { page: 'inpatientEdu', icon: 'book-heart',     title: '住院衛教',   desc: '只給這次住院相關的' },
+    { page: 'dischargePlan',icon: 'home',           title: '出院準備',   desc: '帶回家清單 + 注意紅旗' },
+  ];
+  var cards = tools.map(function(t) {
+    return '<button type="button" class="ip-hub-card" onclick="_ipGoto(\'' + t.page + '\')">'
+      + '<span class="ip-hub-ic"><i data-lucide="' + t.icon + '"></i></span>'
+      + '<span class="ip-hub-tx"><span class="ip-hub-title">' + t.title + '</span>'
+      + '<span class="ip-hub-desc">' + t.desc + '</span></span>'
+      + '<i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--text-dim)"></i>'
+      + '</button>';
+  }).join('');
+  return '<section class="ip-hub" aria-label="住院工具">'
+    + _ipToolHead('00', '住院工具', '需要的時候點開，平常不用記')
+    + '<div class="ip-hub-grid">' + cards + '</div>'
+    + '</section>';
+}
+
+// ── F4 個人化衛教：注入 inpatientEdu 頁最上方 ────────────────
+// 只推「這次住院診斷」相關內容；AI 只負責轉白話，失敗時回原始可信來源（後端已 fallback）。
+function loadInpatientEduPersonalized() {
+  var host = document.getElementById('ip-edu-personalized');
+  if (!host) return;
+  var pid = _ipPid();
+  if (!pid) { host.innerHTML = ''; return; }
+  apiFetch(API + '/inpatient/education?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      if (!d || !d.personalized || !(d.cards && d.cards.length)) { host.innerHTML = ''; return; }
+      var cards = d.cards.map(function(c) {
+        return '<article class="ip-pedu-card">'
+          + '<h4>' + escapeHtml(c.title) + '</h4>'
+          + '<p>' + escapeHtml(c.body) + '</p>'
+          + '<span class="ip-pedu-src">資料來源：' + escapeHtml(c.source || '') + '</span>'
+          + '</article>';
+      }).join('');
+      host.innerHTML = ''
+        + '<section class="ip-pedu" aria-label="為你這次住院整理的衛教">'
+        + '<header class="ip-edu-page-head"><div class="ip-edu-page-titles">'
+        + '<h2>為你這次住院整理的</h2>'
+        + '<p>' + escapeHtml('診斷：' + (d.diagnosis || '—')) + '</p></div></header>'
+        + cards
+        + '<div class="ip-teachback"><i data-lucide="message-circle-heart" style="width:16px;height:16px"></i> '
+        + '<span>' + escapeHtml(d.teach_back || '') + '</span></div>'
+        + _ipDisclaimer(d.disclaimer)
+        + '</section>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() { host.innerHTML = ''; });
+}
+
+// ── F1 交接報告 ──────────────────────────────────────────────
+function handover() {
+  return '<div class="ip-tool-page" data-care-mode="inpatient">'
+    + _ipBackBtn()
+    + _ipToolHead('01', '居家紀錄交接報告', '入院時給醫師、護理師看的整理')
+    + '<p class="ip-tool-lead">把你在家累積的紀錄，整理成一份給醫護看的報告（仿 SBAR / I-PASS）。'
+    + '每項資料都會標來源與時間，方便臨床人員查核。</p>'
+    + '<div id="ip-handover-preview" class="ip-handover-preview"><p class="ip-tool-loading">整理中…</p></div>'
+    + '<button type="button" class="ip-tool-cta" id="ip-handover-pdf" disabled onclick="downloadHandoverPdf()">'
+    + '<i data-lucide="download" style="width:18px;height:18px"></i> 產生 PDF（給醫護）</button>'
+    + '</div>';
+}
+var _ipHandoverData = null;
+function loadHandoverPage() {
+  _ipHandoverData = null;
+  var host = document.getElementById('ip-handover-preview');
+  var pid = _ipPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/inpatient/handover?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      if (!d) { host.innerHTML = '<p class="ip-tool-empty">目前沒有可整理的資料。</p>'; return; }
+      _ipHandoverData = d;
+      host.innerHTML = _renderHandoverPreview(d);
+      var btn = document.getElementById('ip-handover-pdf');
+      if (btn) btn.disabled = false;
+      if (d._ai === 'fallback') {
+        host.insertAdjacentHTML('afterbegin',
+          '<p class="ip-ai-note"><i data-lucide="cpu" style="width:13px;height:13px"></i> '
+          + 'AI 摘要暫時無法使用，「入院原因」一句改用你填寫的診斷直接呈現。</p>');
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() { host.innerHTML = '<p class="ip-tool-empty">載入失敗，請稍後再試。</p>'; });
+}
+function _renderHandoverPreview(d) {
+  var b = d.background || {};
+  var meds = (d.medications || []).map(function(m) {
+    return '<li>' + escapeHtml(m.name) + (m.dose ? '（' + escapeHtml(m.dose) + '）' : '')
+      + (m.frequency ? '　' + escapeHtml(m.frequency) : '')
+      + ' <span class="ip-src">— 病人自填 ' + escapeHtml(m.as_of || '') + '</span></li>';
+  }).join('') || '<li class="ip-muted">無居家用藥紀錄</li>';
+  var mon = (d.monitoring_trend || []).map(function(x) {
+    return '<li>' + escapeHtml(x.summary) + ' <span class="ip-src">— ' + escapeHtml(x.as_of || '') + '</span></li>';
+  }).join('') || '<li class="ip-muted">無近期自我監測紀錄</li>';
+  return ''
+    + '<div class="ip-ho-block"><span class="ip-ho-k">為何此時入院</span><p>' + escapeHtml(d.situation || '') + '</p></div>'
+    + '<div class="ip-ho-block"><span class="ip-ho-k">背景（病人自填）</span>'
+    +   '<p>慢性病：' + escapeHtml(b.chronic_conditions || '未填') + '<br>'
+    +   '過敏：' + escapeHtml(b.allergies || '未填') + '　血型：' + escapeHtml(b.blood_type || '未填') + '</p></div>'
+    + '<div class="ip-ho-block"><span class="ip-ho-k">居家用藥</span><ul class="ip-ho-list">' + meds + '</ul></div>'
+    + '<div class="ip-ho-block"><span class="ip-ho-k">近期自我監測</span><ul class="ip-ho-list">' + mon + '</ul></div>'
+    + _ipDisclaimer(d.disclaimer);
+}
+function downloadHandoverPdf() {
+  var d = _ipHandoverData;
+  if (!d) { if (typeof showToast === 'function') showToast('資料尚未載入', 'info'); return; }
+  if (typeof window.previsitOpenPrint !== 'function') {
+    if (typeof showToast === 'function') showToast('PDF 元件未載入', 'warning'); return;
+  }
+  var adm = d.admission || {};
+  var b = d.background || {};
+  var rowsMed = (d.medications || []).map(function(m) {
+    return '<tr><td>' + escapeHtml(m.name) + '</td><td>' + escapeHtml(m.dose || '') + '</td>'
+      + '<td>' + escapeHtml(m.frequency || '') + '</td><td>病人自填 ' + escapeHtml(m.as_of || '') + '</td></tr>';
+  }).join('') || '<tr><td colspan="4">無居家用藥紀錄</td></tr>';
+  var rowsMon = (d.monitoring_trend || []).map(function(x) {
+    return '<tr><td>' + escapeHtml(x.summary) + '</td><td>病人自填 ' + escapeHtml(x.as_of || '') + '</td></tr>';
+  }).join('') || '<tr><td colspan="2">無近期自我監測紀錄</td></tr>';
+  // 醫療文件風：黑白可印、乾淨、資訊密度適中（功能一設計要求）。
+  var html = '<!doctype html><html><head><meta charset="utf-8"><style>'
+    + 'body{font-family:"Noto Sans TC",sans-serif;color:#111;font-size:12px;line-height:1.5;padding:8px}'
+    + 'h1{font-size:18px;margin:0 0 2px}.sub{color:#444;font-size:11px;margin:0 0 10px}'
+    + '.sit{border:1px solid #111;padding:6px 8px;margin:8px 0;font-weight:bold}'
+    + 'h2{font-size:13px;border-bottom:1px solid #111;padding-bottom:2px;margin:12px 0 4px}'
+    + 'table{width:100%;border-collapse:collapse;margin:4px 0}'
+    + 'th,td{border:1px solid #999;padding:3px 5px;text-align:left;font-size:11px}'
+    + '.disc{margin-top:14px;border-top:1px dashed #999;padding-top:6px;color:#333;font-size:10px}'
+    + '</style></head><body>'
+    + '<h1>居家紀錄交接報告</h1>'
+    + '<p class="sub">格式：' + escapeHtml(d.format || 'SBAR / I-PASS')
+    +   '　產生時間：' + escapeHtml((d.generated_at || '').slice(0, 16))
+    +   '　診斷：' + escapeHtml(adm.diagnosis || '—')
+    +   (adm.ward ? '　病房：' + escapeHtml(adm.ward) : '') + '</p>'
+    + '<div class="sit">S（為何此時入院）：' + escapeHtml(d.situation || '') + '</div>'
+    + '<h2>B 背景（病人自填）</h2>'
+    + '<p>慢性病 / 基線：' + escapeHtml(b.chronic_conditions || '未填')
+    +   '　|　過敏：' + escapeHtml(b.allergies || '未填')
+    +   '　|　血型：' + escapeHtml(b.blood_type || '未填')
+    +   '　|　原就診：' + escapeHtml((b.regular_hospital || '') + ' ' + (b.regular_doctor || '')) + '</p>'
+    + '<h2>目前用藥清單（居家）</h2>'
+    + '<table><tr><th>藥名</th><th>劑量</th><th>頻率</th><th>來源 / 時間</th></tr>' + rowsMed + '</table>'
+    + '<h2>近期自我監測趨勢</h2>'
+    + '<table><tr><th>內容</th><th>來源 / 時間</th></tr>' + rowsMon + '</table>'
+    + '<p class="disc">' + escapeHtml(d.disclaimer || '') + '</p>'
+    + '</body></html>';
+  var fname = 'MD.Piece-交接報告-' + new Date().toISOString().slice(0, 10) + '.pdf';
+  window.previsitOpenPrint(html, fname);
+}
+
+// ── F3 用藥核對 ──────────────────────────────────────────────
+var _IP_RECON_LABEL = {
+  added:   { zh: '住院新增', icon: 'plus-circle' },
+  stopped: { zh: '住院停用', icon: 'minus-circle' },
+  changed: { zh: '劑量改變', icon: 'refresh-cw' },
+  same:    { zh: '維持',     icon: 'check' },
+};
+function medRecon() {
+  return '<div class="ip-tool-page" data-care-mode="inpatient">'
+    + _ipBackBtn()
+    + _ipToolHead('03', '用藥核對', '在家的藥 vs 住院的藥')
+    + '<p class="ip-tool-lead">很多人住院會問「我的藥怎麼跟在家不一樣？」這裡幫你並排對照。'
+    + '只是呈現差異，該不該調整請問醫師或藥師。</p>'
+    + '<div id="ip-recon-body"><p class="ip-tool-loading">比對中…</p></div>'
+    + '</div>';
+}
+function loadMedReconPage() {
+  var host = document.getElementById('ip-recon-body');
+  var pid = _ipPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/inpatient/med-reconciliation?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      if (!d) { host.innerHTML = '<p class="ip-tool-empty">載入失敗。</p>'; return; }
+      if (!d.rows || !d.rows.length) {
+        host.innerHTML = '<p class="ip-tool-empty">目前沒有可比對的用藥。先在「用藥」頁建立居家用藥、'
+          + '在「住院 / 療程」頁建立住院醫囑。</p>'; return;
+      }
+      var s = d.summary || {};
+      var chips = ''
+        + '<div class="ip-recon-sum">'
+        + '<span class="ip-recon-chip" data-st="added">新增 ' + (s.added || 0) + '</span>'
+        + '<span class="ip-recon-chip" data-st="stopped">停用 ' + (s.stopped || 0) + '</span>'
+        + '<span class="ip-recon-chip" data-st="changed">劑量改變 ' + (s.changed || 0) + '</span>'
+        + '<span class="ip-recon-chip" data-st="same">維持 ' + (s.same || 0) + '</span>'
+        + '</div>';
+      var rows = d.rows.map(function(row) {
+        var meta = _IP_RECON_LABEL[row.status] || _IP_RECON_LABEL.same;
+        var home = row.home ? (escapeHtml(row.home.dose || '—') + (row.home.frequency ? '　' + escapeHtml(row.home.frequency) : '')) : '<span class="ip-muted">無</span>';
+        var inp = row.inpatient ? (escapeHtml(row.inpatient.dose || '—') + (row.inpatient.frequency ? '　' + escapeHtml(row.inpatient.frequency) : '')) : '<span class="ip-muted">無</span>';
+        return '<article class="ip-recon-row" data-st="' + row.status + '">'
+          + '<div class="ip-recon-name">' + escapeHtml(row.name)
+          +   '<span class="ip-recon-badge" data-st="' + row.status + '">'
+          +     '<i data-lucide="' + meta.icon + '" style="width:13px;height:13px"></i> ' + meta.zh + '</span>'
+          + '</div>'
+          + '<div class="ip-recon-cols">'
+          +   '<div class="ip-recon-col"><span class="ip-recon-col-k">在家</span><span>' + home + '</span></div>'
+          +   '<i data-lucide="arrow-right" style="width:14px;height:14px;color:var(--text-dim)"></i>'
+          +   '<div class="ip-recon-col"><span class="ip-recon-col-k">住院</span><span>' + inp + '</span></div>'
+          + '</div>'
+          + '</article>';
+      }).join('');
+      host.innerHTML = chips + rows + _ipDisclaimer(d.disclaimer);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() { host.innerHTML = '<p class="ip-tool-empty">載入失敗，請稍後再試。</p>'; });
+}
+
+// ── F2 床邊自我記錄 + 想問醫師（QPL）─────────────────────────
+var _IP_BEDSIDE_FIELDS = [
+  { key: 'pain', label: '現在會痛嗎？', type: 'pain' },
+  { key: 'food', label: '吃得下嗎？', opts: [['none','幾乎沒吃'],['little','吃一點'],['half','吃一半'],['most','大部分吃完']] },
+  { key: 'sleep', label: '昨晚睡得如何？', opts: [['good','還不錯'],['fair','普通'],['poor','睡不好']] },
+  { key: 'treatment_response', label: '治療後感覺？', opts: [['better','舒服一點'],['same','差不多'],['worse','更不舒服']] },
+  { key: 'mood', label: '心情', type: 'mood' },
+];
+var _ipBedsideDraft = {};
+function bedside() {
+  return '<div class="ip-tool-page" data-care-mode="inpatient">'
+    + _ipBackBtn()
+    + _ipToolHead('02', '床邊紀錄', '躺著一隻手、三秒記完')
+    + '<section class="ip-bs-form" id="ip-bs-form">' + _renderBedsideForm() + '</section>'
+    + '<section class="ip-qpl"><header class="ip-section-head"><span class="ip-num">02b</span>'
+    +   '<h3>想問醫師的問題</h3><span class="ip-section-sub">查房前先記下來</span></header>'
+    +   '<div id="ip-qpl-list"><p class="ip-tool-loading">載入中…</p></div>'
+    +   '<div class="ip-qpl-add"><input type="text" id="ip-qpl-input" placeholder="例：我還要住幾天？" maxlength="120">'
+    +     '<button type="button" onclick="addInpatientQuestion()"><i data-lucide="plus" style="width:16px;height:16px"></i></button></div>'
+    +   '<details class="ip-qpl-bank"><summary>不知道問什麼？看建議題庫</summary><div id="ip-qpl-bank"></div></details>'
+    + '</section>'
+    + '<section id="ip-bs-recent"></section>'
+    + _ipDisclaimer('床邊紀錄只是幫你記下感覺，方便查房時跟醫師說，不是診斷。')
+    + '</div>';
+}
+function _renderBedsideForm() {
+  var blocks = _IP_BEDSIDE_FIELDS.map(function(f) {
+    var ctrl;
+    if (f.type === 'pain') {
+      var btns = '';
+      for (var i = 0; i <= 10; i++) {
+        btns += '<button type="button" class="ip-bs-pain" data-v="' + i + '" onclick="_ipBsSet(\'pain\',' + i + ',this)">' + i + '</button>';
+      }
+      ctrl = '<div class="ip-bs-pain-row">' + btns + '</div>'
+        + '<div class="ip-bs-pain-hint"><span>0 不痛</span><span>10 最痛</span></div>';
+    } else if (f.type === 'mood') {
+      var faces = [[1,'😟'],[2,'🙁'],[3,'😐'],[4,'🙂'],[5,'😄']];
+      ctrl = '<div class="ip-bs-chips">' + faces.map(function(m) {
+        return '<button type="button" class="ip-bs-chip ip-bs-face" data-v="' + m[0] + '" onclick="_ipBsSet(\'mood\',' + m[0] + ',this)">' + m[1] + '</button>';
+      }).join('') + '</div>';
+    } else {
+      ctrl = '<div class="ip-bs-chips">' + f.opts.map(function(o) {
+        return '<button type="button" class="ip-bs-chip" data-v="' + o[0] + '" onclick="_ipBsSet(\'' + f.key + '\',\'' + o[0] + '\',this)">' + escapeHtml(o[1]) + '</button>';
+      }).join('') + '</div>';
+    }
+    return '<div class="ip-bs-field"><span class="ip-bs-label">' + escapeHtml(f.label) + '</span>' + ctrl + '</div>';
+  }).join('');
+  return blocks
+    + '<button type="button" class="ip-tool-cta" onclick="submitBedside()"><i data-lucide="check" style="width:18px;height:18px"></i> 記下來</button>';
+}
+function _ipBsSet(key, val, el) {
+  _ipBedsideDraft[key] = val;
+  if (el && el.parentNode) {
+    Array.prototype.forEach.call(el.parentNode.children, function(c) { c.classList.remove('sel'); });
+    el.classList.add('sel');
+  }
+}
+function submitBedside() {
+  var pid = _ipPid();
+  if (!pid) return;
+  if (!Object.keys(_ipBedsideDraft).length) {
+    if (typeof showToast === 'function') showToast('先點選至少一項再記錄', 'info'); return;
+  }
+  var body = Object.assign({ patient_id: pid }, _ipBedsideDraft);
+  apiFetch(API + '/inpatient/bedside', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(function(r) {
+    if (!r.ok) throw new Error('save failed');
+    _ipBedsideDraft = {};
+    if (typeof showToast === 'function') showToast('已記錄 ✓', 'success');
+    var form = document.getElementById('ip-bs-form');
+    if (form) { form.innerHTML = _renderBedsideForm(); if (typeof lucide !== 'undefined') lucide.createIcons(); }
+    loadBedsideRecent();
+  }).catch(function() {
+    if (typeof showToast === 'function') showToast('記錄失敗，請稍後再試', 'warning');
+  });
+}
+function loadBedsidePage() {
+  _ipBedsideDraft = {};
+  loadBedsideRecent();
+  loadInpatientQuestions();
+  // 建議題庫
+  var bank = document.getElementById('ip-qpl-bank');
+  if (bank) {
+    apiFetch(API + '/inpatient/qpl-bank').then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        if (!d) return;
+        bank.innerHTML = (d.questions || []).map(function(q) {
+          return '<button type="button" class="ip-qpl-suggest" onclick="addInpatientQuestion(' + JSON.stringify(q.text).replace(/"/g, '&quot;') + ')">'
+            + '<span class="ip-qpl-cat">' + escapeHtml(q.category) + '</span>' + escapeHtml(q.text) + '</button>';
+        }).join('');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      });
+  }
+}
+function loadBedsideRecent() {
+  var host = document.getElementById('ip-bs-recent');
+  var pid = _ipPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/inpatient/bedside?patient_id=' + encodeURIComponent(pid) + '&limit=5')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      var logs = (d && d.logs) || [];
+      if (!logs.length) { host.innerHTML = ''; return; }
+      var items = logs.map(function(l) {
+        var parts = [];
+        if (l.pain != null) parts.push('痛 ' + l.pain);
+        if (l.food) parts.push('進食');
+        if (l.sleep) parts.push('睡眠');
+        if (l.mood != null) parts.push('心情 ' + l.mood);
+        return '<li><span class="ip-src">' + escapeHtml((l.created_at || '').slice(5, 16)) + '</span> ' + escapeHtml(parts.join('、')) + '</li>';
+      }).join('');
+      host.innerHTML = '<header class="ip-section-head"><span class="ip-num">02c</span><h3>最近紀錄</h3></header>'
+        + '<ul class="ip-bs-recent-list">' + items + '</ul>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+}
+function loadInpatientQuestions() {
+  var host = document.getElementById('ip-qpl-list');
+  var pid = _ipPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/inpatient/questions?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      var qs = (d && d.questions) || [];
+      if (!qs.length) { host.innerHTML = '<p class="ip-qpl-empty">還沒有問題。想到什麼就先記下來，查房才不會忘。</p>'; return; }
+      host.innerHTML = '<ul class="ip-qpl-items">' + qs.map(function(q) {
+        var asked = q.status === 'asked';
+        return '<li class="ip-qpl-item' + (asked ? ' asked' : '') + '">'
+          + '<button type="button" class="ip-qpl-check" onclick="toggleQuestionAsked(' + JSON.stringify(q.id).replace(/"/g, '&quot;') + ',' + asked + ')" aria-label="標記已問">'
+          +   '<i data-lucide="' + (asked ? 'check-circle-2' : 'circle') + '" style="width:18px;height:18px"></i></button>'
+          + '<span class="ip-qpl-text">' + escapeHtml(q.text) + '</span>'
+          + '<button type="button" class="ip-qpl-del" onclick="deleteInpatientQuestion(' + JSON.stringify(q.id).replace(/"/g, '&quot;') + ')" aria-label="刪除"><i data-lucide="x" style="width:15px;height:15px"></i></button>'
+          + '</li>';
+      }).join('') + '</ul>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+}
+function addInpatientQuestion(text) {
+  var pid = _ipPid();
+  if (!pid) return;
+  var input = document.getElementById('ip-qpl-input');
+  var t = (text != null ? text : (input ? input.value : '')) || '';
+  t = String(t).trim();
+  if (!t) return;
+  apiFetch(API + '/inpatient/questions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patient_id: pid, text: t }),
+  }).then(function(r) {
+    if (!r.ok) throw new Error('fail');
+    if (input && text == null) input.value = '';
+    loadInpatientQuestions();
+  }).catch(function() { if (typeof showToast === 'function') showToast('新增失敗', 'warning'); });
+}
+function toggleQuestionAsked(id, currentlyAsked) {
+  apiFetch(API + '/inpatient/questions/' + encodeURIComponent(id), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: currentlyAsked ? 'open' : 'asked' }),
+  }).then(function() { loadInpatientQuestions(); });
+}
+function deleteInpatientQuestion(id) {
+  apiFetch(API + '/inpatient/questions/' + encodeURIComponent(id), { method: 'DELETE' })
+    .then(function() { loadInpatientQuestions(); });
+}
+
+// ── F6 出院銜接（CTI 四支柱 + 惡化紅旗）──────────────────────
+function dischargePlan() {
+  return '<div class="ip-tool-page" data-care-mode="inpatient">'
+    + _ipBackBtn()
+    + _ipToolHead('06', '出院準備', '帶回家清單 + 要注意的紅旗')
+    + '<p class="ip-tool-lead">出院不是結束。下面四件事準備好，回家比較安心。</p>'
+    + '<div id="ip-discharge-body"><p class="ip-tool-loading">整理中…</p></div>'
+    + '</div>';
+}
+function loadDischargePlanPage() {
+  var host = document.getElementById('ip-discharge-body');
+  var pid = _ipPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/inpatient/discharge-checklist?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      if (!d) { host.innerHTML = '<p class="ip-tool-empty">載入失敗。</p>'; return; }
+      var icons = { medication: 'pill', record: 'folder', follow_up: 'calendar-check', red_flags: 'alert-triangle' };
+      var pillars = (d.pillars || []).map(function(p) {
+        var items = (p.items || []).map(function(it) {
+          return '<li><i data-lucide="dot" style="width:16px;height:16px"></i><span>'
+            + '<strong>' + escapeHtml(it.label) + '</strong>'
+            + (it.detail ? '<br><span class="ip-cti-detail">' + escapeHtml(it.detail) + '</span>' : '')
+            + '</span></li>';
+        }).join('');
+        return '<section class="ip-cti-pillar" data-key="' + p.key + '">'
+          + '<h4><i data-lucide="' + (icons[p.key] || 'check') + '" style="width:18px;height:18px"></i> ' + escapeHtml(p.title) + '</h4>'
+          + (p.note ? '<p class="ip-cti-note">' + escapeHtml(p.note) + '</p>' : '')
+          + '<ul class="ip-cti-list">' + items + '</ul></section>';
+      }).join('');
+      host.innerHTML = pillars
+        + '<div class="ip-teachback"><i data-lucide="message-circle-heart" style="width:16px;height:16px"></i> '
+        + '<span>' + escapeHtml(d.teach_back || '') + '</span></div>'
+        + _ipDisclaimer(d.disclaimer);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() { host.innerHTML = '<p class="ip-tool-empty">載入失敗，請稍後再試。</p>'; });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

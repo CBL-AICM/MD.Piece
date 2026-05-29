@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v128-i18n-domready-fix";
+const CACHE_VERSION = "mdpiece-v129-inpatient-mode";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
