@@ -1,0 +1,47 @@
+# 定時派送到期提醒（站內通知 + Web Push）。
+#
+# 為什麼用 GitHub Actions 而非 Vercel 原生 Cron：
+#   Vercel Hobby 方案的 Cron 只允許「每日」頻率，提醒需要每幾分鐘掃一次，
+#   因此改用 GitHub Actions 排程，定時呼叫後端的 GET /reminders/cron/dispatch。
+#
+# 需要的設定（一次性）：
+#   1. 後端（Vercel）env 設 CRON_TOKEN=<隨機字串>
+#   2. 本 repo → Settings → Secrets and variables → Actions → New repository secret
+#      名稱 CRON_TOKEN，值同上
+#   （可選）覆寫目標網址：設 repo variable DISPATCH_URL，預設用 production domain。
+name: push-dispatch
+
+on:
+  schedule:
+    # 每 10 分鐘掃一次到期提醒（GitHub Actions cron 最小間隔 5 分鐘，且可能延遲數分鐘）
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}   # 允許手動觸發測試
+
+concurrency:
+  group: push-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call dispatch endpoint
+        env:
+          CRON_TOKEN: ${{ secrets.CRON_TOKEN }}
+          DISPATCH_URL: ${{ vars.DISPATCH_URL || 'https://www.mdpiece.life/reminders/cron/dispatch' }}
+        run: |
+          if [ -z "$CRON_TOKEN" ]; then
+            echo "::error::缺少 CRON_TOKEN secret，請到 repo Settings → Secrets → Actions 新增。"
+            exit 1
+          fi
+          code=$(curl -s -m 60 -o /tmp/resp.json -w "%{http_code}" \
+            -H "X-Cron-Token: $CRON_TOKEN" \
+            "$DISPATCH_URL")
+          echo "HTTP $code"
+          cat /tmp/resp.json || true
+          echo
+          # 2xx 視為成功；其餘讓 job 失敗以便在 Actions 頁面看到紅燈
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::dispatch 回傳非 2xx（$code）"
+            exit 1
+          fi
