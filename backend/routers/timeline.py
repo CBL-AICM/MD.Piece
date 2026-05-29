@@ -20,10 +20,11 @@ importance 用來決定前端 Bento Grid 卡片大小：
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.security import current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -83,8 +84,11 @@ def _fetch_safely(sb, table: str, patient_id: str):
 def get_timeline(
     patient_id: str = Query(..., description="病患 ID"),
     limit: int = Query(100, ge=1, le=500, description="最多回傳幾筆"),
+    me: dict = Depends(current_user),
 ):
     """取得患者的健康事件時間軸（時間倒序）。"""
+    if patient_id != me.get("id"):
+        raise HTTPException(status_code=403, detail="不可存取他人資料")
     try:
         sb = get_supabase()
     except Exception as e:

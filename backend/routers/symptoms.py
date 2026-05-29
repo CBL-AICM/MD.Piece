@@ -1,10 +1,17 @@
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from backend.db import get_supabase
 from backend.models import SymptomAnalysisRequest
+from backend.security import current_user
 from backend.services.ai_analyzer import analyze_symptoms
 
 router = APIRouter()
+
+
+def _enforce_self(patient_id, me):
+    """patient_id 必須等於 token 的 sub，否則 403。"""
+    if patient_id and patient_id != me.get("id"):
+        raise HTTPException(status_code=403, detail="不可存取他人資料")
 
 SYMPTOM_ADVICE = {
     "fever": "多休息、補充水分。若體溫超過 38.5°C 持續超過 3 天，請就醫。",
@@ -23,15 +30,18 @@ SYMPTOM_ADVICE = {
 
 
 @router.get("/")
-def get_symptoms(patient_id: str):
+def get_symptoms(patient_id: str, me: dict = Depends(current_user)):
+    _enforce_self(patient_id, me)
     return {"symptoms": []}
 
 @router.post("/")
-def create_symptom(patient_id: str, body_part: str, severity: int, description: str = ""):
+def create_symptom(patient_id: str, body_part: str, severity: int, description: str = "", me: dict = Depends(current_user)):
+    _enforce_self(patient_id, me)
     return {"status": "recorded"}
 
 @router.get("/infection-check")
-def check_infection(patient_id: str):
+def check_infection(patient_id: str, me: dict = Depends(current_user)):
+    _enforce_self(patient_id, me)
     # 每日感染篩查：發燒、呼吸道、泌尿道、皮膚、腸胃道
     return {"infection_flag": False}
 
@@ -43,10 +53,11 @@ def get_advice(symptom: str):
 
 
 @router.post("/analyze")
-async def analyze(body: SymptomAnalysisRequest):
+async def analyze(body: SymptomAnalysisRequest, me: dict = Depends(current_user)):
     """AI 症狀分析。"""
     if not body.symptoms:
         raise HTTPException(status_code=400, detail="請提供至少一個症狀")
+    _enforce_self(body.patient_id, me)
 
     # 如果有 patient_id，取得病患資料作為參考（DB 失敗就略過，不擋分析）
     patient_info = None
@@ -92,16 +103,18 @@ async def analyze(body: SymptomAnalysisRequest):
 
 
 @router.get("/history/{patient_id}")
-def get_symptom_history(patient_id: str):
+def get_symptom_history(patient_id: str, me: dict = Depends(current_user)):
     """取得病患的症狀分析歷史。"""
+    _enforce_self(patient_id, me)
     sb = get_supabase()
     result = sb.table("symptoms_log").select("*").eq("patient_id", patient_id).order("created_at", desc=True).execute()
     return {"history": result.data}
 
 
 @router.delete("/history/{patient_id}/{log_id}")
-def delete_symptom_history(patient_id: str, log_id: str):
+def delete_symptom_history(patient_id: str, log_id: str, me: dict = Depends(current_user)):
     """刪除單筆症狀分析紀錄；patient_id 對得上才刪。"""
+    _enforce_self(patient_id, me)
     sb = get_supabase()
     result = (
         sb.table("symptoms_log")
