@@ -2326,9 +2326,12 @@ function previsitRenderChecklist(data) {
 }
 
 function previsitRenderChecklistError() {
+  var msg = '無法連線後端，請稍後再試。';
   var listEl = document.getElementById('pv-checklist-list');
-  if (!listEl) return;
-  listEl.innerHTML = '<li class="pv-error"><i data-lucide="alert-triangle"></i> 無法連線後端，請稍後再試。</li>';
+  if (listEl) listEl.innerHTML = '<li class="pv-error"><i data-lucide="alert-triangle"></i> ' + msg + '</li>';
+  // 手機患者分頁也要收尾，否則 previsitReload 設的 loading spinner 會一直轉（看似毫無反應）
+  var mob = document.getElementById('mobile-pv-talk-3');
+  if (mob) mob.innerHTML = '<div class="pv-talk-row"><div class="pv-talk-num n1"><i data-lucide="alert-triangle"></i></div><div><div class="name">' + msg + '</div></div></div>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 

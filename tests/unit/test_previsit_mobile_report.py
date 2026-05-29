@@ -67,6 +67,16 @@ def test_report_paths_route_through_mirror(func):
     )
 
 
+def test_checklist_error_clears_mobile_patient_tab():
+    """checklist 失敗時要收尾手機患者分頁（#mobile-pv-talk-3），否則 previsitReload
+    設的 loading spinner 會一直轉，使用者看起來像毫無反應。"""
+    body = _func_body(_read(), "previsitRenderChecklistError")
+    assert "mobile-pv-talk-3" in body, (
+        "previsitRenderChecklistError 必須更新 #mobile-pv-talk-3，"
+        "否則後端失敗時手機患者分頁會卡在 loading"
+    )
+
+
 def test_no_report_content_written_desktop_only():
     """report 內容不得繞過 mirror 直接寫進 #pv-report-body（會漏掉手機分頁）。
 
