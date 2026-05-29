@@ -1,0 +1,37 @@
+name: Keep Warm
+
+# 讓 Vercel serverless lambda 保持暖機，消除「閒置後第一則小禾訊息 ~5s 冷啟動」。
+# 每 5 分鐘打一次輕量端點 /api（回 JSON、不打 LLM、~0.4s），讓 Python lambda 不休眠。
+# GitHub cron 最短間隔為 5 分鐘；暖 lambda 通常可存活數分鐘，足以涵蓋日間使用。
+#
+# 取捨：會增加少量 Vercel 叫用次數（每天 ~288 次）。若要省用量可把 cron 拉長
+# （例如 '*/15 * * * *'）或只在日間跑。手動 workflow_dispatch 可隨時測試。
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+# 同時間只跑一個，避免排程塞車時疊在一起。
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping production API (warm the lambda)
+        run: |
+          set -e
+          url="https://www.mdpiece.life/api"
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 --retry 2 --retry-delay 5 "$url")
+          echo "GET $url -> HTTP $code"
+          # 2xx/3xx 都算成功；keep-warm 不該因偶發 5xx 把 workflow 標紅造成噪音通知。
+          case "$code" in
+            2*|3*) echo "warm ok" ;;
+            *) echo "::warning::keep-warm ping 非預期狀態碼 $code（不致命，下次再試）" ;;
+          esac
