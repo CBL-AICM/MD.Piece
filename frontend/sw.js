@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v126-dark-no-grad";
+const CACHE_VERSION = "mdpiece-v127-dark-text-contrast";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -7,7 +7,7 @@ const STATIC_ASSETS = [
   "/index.html",
   "/css/style.css?v=v116-dark-no-grad",
   "/css/medical-warm.css?v=v6-dark-no-grad",
-  "/css/v11-modern.css?v=v17-dark-no-grad",
+  "/css/v11-modern.css?v=v18-dark-text-contrast",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/js/i18n.js?v=v80-ui-and-reminders",
   "/js/bell.js?v=v81-bell",
