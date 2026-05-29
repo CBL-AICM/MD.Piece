@@ -54,6 +54,46 @@ if (args.length) {
 console.log(`API: ${API_BASE}`);
 console.log(`Images: ${images.length}\n`);
 
+// /medications/recognize 需要登入態（Bearer JWT，Issue #388 堵越權），且 body 的
+// patient_id 必須等於 token 的 user id。先登入（沒帳號就註冊）拿 token + id，
+// 後面每張圖的 POST 都帶上。credentials 可用 E2E_USERNAME / E2E_PASSWORD 覆寫。
+const E2E_USERNAME = process.env.E2E_USERNAME || 'e2e_rx_bot';
+const E2E_PASSWORD = process.env.E2E_PASSWORD || 'e2e-rx-bot-pw-2024';
+
+async function authenticate() {
+  const loginResp = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: E2E_USERNAME, password: E2E_PASSWORD }),
+  });
+  if (loginResp.status === 200) {
+    return loginResp.json();
+  }
+  if (loginResp.status === 401) {
+    // 帳號還不存在 → 註冊（後端會建一個 role=patient 的帳號並回 access_token）
+    const regResp = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: E2E_USERNAME, password: E2E_PASSWORD, nickname: 'E2E Rx Bot' }),
+    });
+    if (regResp.status === 200) return regResp.json();
+    const t = await regResp.text();
+    throw new Error(`auth register failed: HTTP ${regResp.status} ${t}`);
+  }
+  const t = await loginResp.text();
+  throw new Error(`auth login failed: HTTP ${loginResp.status} ${t}`);
+}
+
+console.log(`Authenticating as ${E2E_USERNAME}...`);
+const auth = await authenticate();
+const AUTH_TOKEN = auth.access_token;
+const AUTH_USER_ID = auth.id;
+if (!AUTH_TOKEN || !AUTH_USER_ID) {
+  console.error('Auth succeeded but response missing access_token / id:', JSON.stringify(auth));
+  process.exit(1);
+}
+console.log(`Authenticated (user id: ${AUTH_USER_ID})\n`);
+
 console.log('Initializing Tesseract worker (chi_tra+eng)...');
 const t0 = Date.now();
 const worker = await createWorker(['chi_tra', 'eng'], 1);
@@ -77,9 +117,12 @@ for (const img of images) {
     const imgB64 = fs.readFileSync(img).toString('base64');
     const resp = await fetch(`${API_BASE}/medications/recognize`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${AUTH_TOKEN}`,
+      },
       body: JSON.stringify({
-        patient_id: 'test-e2e',
+        patient_id: AUTH_USER_ID,  // 必須等於 token user id（_enforce_self_patient）
         image_base64: imgB64,
         media_type: 'image/jpeg',
         ocr_text: data.text,
