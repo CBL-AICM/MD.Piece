@@ -187,6 +187,7 @@ _SCHEMAS = {
             recovery_answer_hash TEXT,
             failed_login_count INTEGER DEFAULT 0,
             locked_until TEXT,
+            supabase_user_id TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
     "doctor_notes": """
@@ -400,6 +401,7 @@ def _migrate_users_table(conn):
         ("recovery_answer_hash", "TEXT"),
         ("failed_login_count", "INTEGER DEFAULT 0"),
         ("locked_until", "TEXT"),
+        ("supabase_user_id", "TEXT"),
     ]
     for name, decl in additions:
         if name not in cols:
@@ -409,6 +411,10 @@ def _migrate_users_table(conn):
                 pass
     try:
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username) WHERE username IS NOT NULL")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_supabase_uid ON users(supabase_user_id) WHERE supabase_user_id IS NOT NULL")
     except sqlite3.OperationalError:
         pass
 
