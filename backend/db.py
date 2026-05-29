@@ -316,6 +316,34 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (admission_medication_id) REFERENCES admission_medications(id)
         )""",
+    "bedside_logs": """
+        CREATE TABLE IF NOT EXISTS bedside_logs (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            admission_id TEXT,
+            pain INTEGER,
+            food TEXT,
+            sleep TEXT,
+            bowel TEXT,
+            activity TEXT,
+            treatment_response TEXT,
+            mood INTEGER,
+            note TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (admission_id) REFERENCES admissions(id)
+        )""",
+    "inpatient_questions": """
+        CREATE TABLE IF NOT EXISTS inpatient_questions (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            admission_id TEXT,
+            text TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'asked')),
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (patient_id) REFERENCES patients(id),
+            FOREIGN KEY (admission_id) REFERENCES admissions(id)
+        )""",
     "disease_reference": """
         CREATE TABLE IF NOT EXISTS disease_reference (
             id TEXT PRIMARY KEY,
