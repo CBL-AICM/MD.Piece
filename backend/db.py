@@ -7,6 +7,7 @@ the same .table().select().eq().insert().delete().execute() API
 so all router code works without modification.
 """
 
+import base64
 import json
 import logging
 import os
@@ -30,9 +31,13 @@ except BaseException:
     Client = None
 
 # Production fallback：本專案的 Supabase publishable (anon) key 與 URL。
-# anon key 設計上就是公開的（前端 client-side 也會看到），commit 進 repo 沒
-# 安全風險；若有設環境變數則優先採用（典型情境是改用 service_role 以 bypass RLS）。
-# 對應的 Supabase migration: md_piece_full_schema_and_anon_access (RLS 已 disable)。
+# anon key 本身公開沒關係，但 2026-05-29 起所有 public 表都已 ENABLE RLS 且
+# 不建任何 policy（migration: enable_rls_all_public_tables +
+# drop_permissive_allow_all_policies），所以 anon 角色「讀回 0 列、寫入一律被拒」。
+# 後端必須改帶 service_role secret（繞過 RLS）才能正常讀寫——請在部署環境設
+# SUPABASE_SERVICE_ROLE_KEY=<service_role secret>（或舊名 SUPABASE_KEY；
+# service_role 屬機密，切勿 commit 進 repo）。
+# 下方 _jwt_role() 會在 serverless 偵測到仍是 anon key 時 loud-fail 提醒。
 _DEFAULT_SUPABASE_URL = "https://tbqvpqvvvgfgaezxbhkz.supabase.co"
 _DEFAULT_SUPABASE_KEY = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
@@ -41,9 +46,33 @@ _DEFAULT_SUPABASE_KEY = (
     "gMiXYsqw6V4GlvGLZx8ZHXZMudnx5no_cD9E5aQ3kVs"
 )
 SUPABASE_URL = os.getenv("SUPABASE_URL") or _DEFAULT_SUPABASE_URL
-SUPABASE_KEY = os.getenv("SUPABASE_KEY") or _DEFAULT_SUPABASE_KEY
+# 優先用 service_role secret（繞過 RLS）。名稱優先序：
+#   1. SUPABASE_SERVICE_ROLE_KEY — 慣用名（backend/services/supabase_auth.py 也讀它）
+#   2. SUPABASE_KEY_1 — Vercel 上 SUPABASE_KEY 已被 anon key 佔用時，service_role
+#      secret 會被存成這個 _1 後綴名；放在 SUPABASE_KEY 之前才能蓋過 anon。
+#   3. SUPABASE_KEY — 舊名相容
+#   4. 都沒設才退回 commit 在 repo 的 anon key（RLS 開啟下會被擋）。
+SUPABASE_KEY = (
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    or os.getenv("SUPABASE_KEY_1")
+    or os.getenv("SUPABASE_KEY")
+    or _DEFAULT_SUPABASE_KEY
+)
 
 _client = None
+
+
+def _jwt_role(token):
+    """Best-effort decode of a Supabase JWT's `role` claim (payload only, no
+    signature check — diagnostics only). 用來判斷目前帶的是 anon 還是
+    service_role key；解不出來回 None。"""
+    try:
+        payload_b64 = token.split(".")[1]
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+        return payload.get("role")
+    except Exception:
+        return None
 
 # ─── SQLite DB path ──────────────────────────────────────────
 # Vercel's /var/task is read-only; only /tmp is writable. Detect serverless
@@ -831,6 +860,16 @@ def get_supabase():
     global _client
     if _client is None:
         is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+        # 所有 public 表都已 ENABLE RLS 且無 policy；anon 角色寫入一律被拒
+        # （PostgREST 回 4xx → 後端轉 HTTP 500）。在 serverless 偵測到仍帶
+        # anon key 時 loud-fail，避免又出現「全站寫入靜默 500」找不到原因。
+        if is_serverless and SUPABASE_KEY and _jwt_role(SUPABASE_KEY) == "anon":
+            logger.error(
+                "目前生效的仍是 anon 角色金鑰，但 public 表已全面開啟 RLS 且無 "
+                "policy — 所有寫入（建立提醒、註冊…）都會被拒並回 HTTP 500。"
+                "請在部署環境設 SUPABASE_SERVICE_ROLE_KEY（或 SUPABASE_KEY）"
+                "為 Supabase service_role secret。"
+            )
         if SUPABASE_URL and SUPABASE_KEY:
             if _supabase_available:
                 _client = create_client(SUPABASE_URL, SUPABASE_KEY)
