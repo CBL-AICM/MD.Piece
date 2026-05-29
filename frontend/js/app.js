@@ -120,7 +120,7 @@ function _showElderModeHint(turnedOn) {
 const INPATIENT_NAV_PAGES = [
   'admissions', 'medications', 'vitals', 'memo', 'reminders',
   'inpatientEdu', 'handover', 'medRecon', 'bedside', 'dischargePlan',
-  'settings', 'account'
+  'menstrual', 'settings', 'account'
 ];
 
 function getCareMode() {
