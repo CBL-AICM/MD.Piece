@@ -120,7 +120,7 @@ function _showElderModeHint(turnedOn) {
 const INPATIENT_NAV_PAGES = [
   'admissions', 'medications', 'vitals', 'memo', 'reminders',
   'inpatientEdu', 'handover', 'medRecon', 'bedside', 'dischargePlan',
-  'menstrual', 'settings', 'account'
+  'menstrual', 'sleep', 'settings', 'account'
 ];
 
 function getCareMode() {
@@ -3256,7 +3256,7 @@ function showPage(page) {
     home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
-    followUps, handover, medRecon, bedside, dischargePlan, menstrual, predict
+    followUps, handover, medRecon, bedside, dischargePlan, menstrual, predict, sleep
   };
   // Page transition
   app.style.opacity = '0';
@@ -3301,6 +3301,7 @@ function showPage(page) {
     if (page === "dischargePlan") loadDischargePlanPage();
     if (page === "menstrual") loadMenstrualPage();
     if (page === "predict") loadPredictPage();
+    if (page === "sleep") loadSleepPage();
     // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
     if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
@@ -5523,6 +5524,11 @@ function home() {
     +       '<span class="qj-label">月經紀錄</span>'
     +       '<span class="qj-sub">週期 · 症狀</span>'
     +     '</button>'
+    +     '<button class="quick-jump-btn t-blue" onclick="navigateTo(\'sleep\',null)">'
+    +       '<span class="qj-icon"><i data-lucide="moon"></i></span>'
+    +       '<span class="qj-label">睡眠紀錄</span>'
+    +       '<span class="qj-sub">時數 · 效率</span>'
+    +     '</button>'
     +     '<button class="quick-jump-btn t-purple" onclick="navigateTo(\'memo\',null)">'
     +       '<span class="qj-icon"><i data-lucide="sticky-note"></i></span>'
     +       '<span class="qj-label">備忘</span>'
@@ -5721,6 +5727,7 @@ function home() {
           ${homeSecondCard('emotions','battery-charging','情緒電力','心情電量 · 走勢','rose')}
           ${homeSecondCard('diet','utensils-crossed','飲食紀錄','三餐 · 飲水 · 攝取','teal')}
           ${homeSecondCard('menstrual','droplet','月經紀錄','週期 · 經血量 · 症狀','rose')}
+          ${homeSecondCard('sleep','moon','睡眠紀錄','睡眠時數 · 效率 · 趨勢','blue')}
           ${homeSecondCard('memo','sticky-note','Memo','想問醫師的事都丟這','purple')}
           ${homeSecondCard('admissions','hospital','住院 / 療程','急性住院 · 打藥週期','mint')}
           ${homeSecondCard('reminders','bell-ring','提醒通知','服藥 · 回診倒數','amber')}
@@ -8003,6 +8010,293 @@ function deleteMensCycle(id) {
   if (!confirm('刪除這筆經期紀錄？')) return;
   apiFetch(API + '/menstrual/cycles/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(function(){ showPage('menstrual'); });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 睡眠紀錄模組（純記錄工具）— 今日卡 / 單晚時間軸 / 趨勢 / 手動修正 / 匯入 / 匯出
+// 設計邊界：不下診斷、不給建議、不做風險警示、禁紅色警示、不用情緒性評語。
+// 後端：/sleep/today /sleep/sessions /sleep/trend /sleep/export.csv /sleep/ingest
+// ════════════════════════════════════════════════════════════════════════════
+function _sleepPid() {
+  return (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+}
+function _fmtMins(m) {
+  if (m == null) return '—';
+  var h = Math.floor(m / 60), mm = m % 60;
+  return h + ' 小時 ' + mm + ' 分';
+}
+function _fmtClock(iso) {
+  if (!iso) return '—';
+  try {
+    var d = new Date(iso);
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  } catch (e) { return '—'; }
+}
+function _sleepTodayLocalDateInput(iso, fallbackHour) {
+  // 把 ISO 轉成 <input type=datetime-local> 需要的 'YYYY-MM-DDTHH:MM'
+  var d = iso ? new Date(iso) : new Date();
+  if (!iso && fallbackHour != null) d.setHours(fallbackHour, 0, 0, 0);
+  var off = d.getTimezoneOffset() * 60000;
+  return new Date(d - off).toISOString().slice(0, 16);
+}
+
+function sleep() {
+  return '<div class="sleep-page">'
+    + '<header class="sleep-head">'
+    +   '<h2><i data-lucide="moon" style="width:20px;height:20px"></i> 睡眠紀錄</h2>'
+    +   '<p>忠實記錄你的睡眠，整理成你自己的長期趨勢。這裡只記錄、不做任何健康判斷。</p>'
+    + '</header>'
+    + '<section id="sleep-today" class="sleep-card"><p class="sleep-loading">載入中…</p></section>'
+    + '<section id="sleep-timeline-wrap"></section>'
+    + '<section class="sleep-card">'
+    +   '<div class="sleep-card-head"><h3>近期趨勢</h3>'
+    +     '<div class="sleep-range-tabs">'
+    +       '<button type="button" class="sleep-range-tab active" data-range="7" onclick="loadSleepTrend(7,this)">近 7 天</button>'
+    +       '<button type="button" class="sleep-range-tab" data-range="30" onclick="loadSleepTrend(30,this)">近 30 天</button>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div id="sleep-trend"><p class="sleep-loading">載入中…</p></div>'
+    + '</section>'
+    + '<section class="sleep-card">'
+    +   '<h3>補登一筆睡眠</h3>'
+    +   '<p class="sleep-hint">自動偵測難免有誤，你可以自己補登或修正。</p>'
+    +   '<div class="sleep-field"><label>上床時間</label><input type="datetime-local" id="sleep-bed" value="' + _sleepTodayLocalDateInput(null, 23) + '"></div>'
+    +   '<div class="sleep-field"><label>入睡時間</label><input type="datetime-local" id="sleep-onset" value="' + _sleepTodayLocalDateInput(null, 23) + '"></div>'
+    +   '<div class="sleep-field"><label>醒來時間</label><input type="datetime-local" id="sleep-wake" value="' + _sleepTodayLocalDateInput(null, 7) + '"></div>'
+    +   '<div class="sleep-field-2">'
+    +     '<div class="sleep-field"><label>夜間清醒次數</label><input type="number" id="sleep-awk" min="0" value="0" inputmode="numeric"></div>'
+    +     '<div class="sleep-field"><label>清醒總分鐘</label><input type="number" id="sleep-waso" min="0" value="0" inputmode="numeric"></div>'
+    +   '</div>'
+    +   '<button type="button" class="sleep-cta" onclick="submitSleepManual()"><i data-lucide="check" style="width:18px;height:18px"></i> 儲存這筆</button>'
+    + '</section>'
+    + '<section class="sleep-card">'
+    +   '<h3>紀錄列表</h3>'
+    +   '<div id="sleep-list"><p class="sleep-loading">載入中…</p></div>'
+    + '</section>'
+    + '<section class="sleep-card sleep-card-soft">'
+    +   '<h3>匯出與匯入</h3>'
+    +   '<p class="sleep-hint">匯出睡眠紀錄，回診時提供給醫護；或從 Apple Health / Health Connect 匯入。</p>'
+    +   '<div class="sleep-export-row">'
+    +     '<button type="button" class="sleep-secondary" onclick="exportSleepCsv()"><i data-lucide="download" style="width:16px;height:16px"></i> 匯出 CSV</button>'
+    +     '<button type="button" class="sleep-secondary" onclick="exportSleepPdf()"><i data-lucide="file-text" style="width:16px;height:16px"></i> 匯出 PDF</button>'
+    +   '</div>'
+    + '</section>'
+    + '<p class="sleep-disclaimer"><i data-lucide="info" style="width:13px;height:13px"></i> '
+    +   '本功能僅記錄與整理你的睡眠資料，不做任何醫療判斷或建議；如有疑慮請諮詢您的醫師。</p>'
+    + '</div>';
+}
+
+var _sleepSessionsCache = [];
+function loadSleepPage() {
+  loadSleepToday();
+  loadSleepTrend(7, null);
+  loadSleepList();
+}
+
+function loadSleepToday() {
+  var host = document.getElementById('sleep-today');
+  var pid = _sleepPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/sleep/today?user_id=' + encodeURIComponent(pid))
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      var s = d && d.session;
+      if (!s) {
+        host.innerHTML = '<div class="sleep-today-empty"><i data-lucide="moon-star" style="width:28px;height:28px"></i>'
+          + '<p>還沒有睡眠紀錄。可以在下面補登一筆，或設定自動偵測。</p></div>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+      }
+      var effPct = s.sleep_efficiency != null ? Math.round(s.sleep_efficiency * 100) + '%' : '—';
+      host.innerHTML = ''
+        + '<div class="sleep-card-head"><h3>昨晚睡眠</h3>'
+        + (s.is_edited ? '<span class="sleep-badge">已修正</span>' : '<span class="sleep-badge sleep-badge-src">' + _sleepSourceZh(s.source) + '</span>')
+        + '</div>'
+        + '<div class="sleep-today-big">'
+        +   '<div class="sleep-big-stat"><span class="sleep-big-num">' + _fmtMins(s.total_sleep_minutes) + '</span><span class="sleep-big-lbl">總睡眠</span></div>'
+        + '</div>'
+        + '<div class="sleep-today-row">'
+        +   '<div class="sleep-mini"><span class="sleep-mini-num">' + effPct + '</span><span class="sleep-mini-lbl">睡眠效率</span></div>'
+        +   '<div class="sleep-mini"><span class="sleep-mini-num">' + (s.awakenings_count != null ? s.awakenings_count : '—') + '</span><span class="sleep-mini-lbl">夜間清醒</span></div>'
+        + '</div>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      renderSleepTimeline(s);
+    })
+    .catch(function(){ host.innerHTML = '<p class="sleep-loading">載入失敗，請稍後再試。</p>'; });
+}
+
+function _sleepSourceZh(src) {
+  return { auto: '自動偵測', manual: '手動補登', imported: '外部匯入' }[src] || src;
+}
+
+// 單晚時間軸（規格 §5.2）：入睡 → 清醒段（淡色）→ 醒來
+function renderSleepTimeline(s) {
+  var wrap = document.getElementById('sleep-timeline-wrap');
+  if (!wrap || !s || !s.sleep_onset || !s.wake_time) { if (wrap) wrap.innerHTML = ''; return; }
+  var onset = new Date(s.sleep_onset).getTime();
+  var wake = new Date(s.wake_time).getTime();
+  var span = wake - onset;
+  if (span <= 0) { wrap.innerHTML = ''; return; }
+  // 用 WASO 比例做一段示意清醒區（中性淡色，無紅色）
+  var wasoPct = s.time_in_bed_minutes ? Math.min(40, Math.round((s.waso_minutes || 0) / (s.total_sleep_minutes + s.waso_minutes || 1) * 100)) : 0;
+  wrap.innerHTML = ''
+    + '<section class="sleep-card">'
+    +   '<h3>這一晚</h3>'
+    +   '<div class="sleep-axis">'
+    +     '<div class="sleep-axis-bar">'
+    +       (wasoPct > 0 ? '<span class="sleep-axis-wake" style="left:45%;width:' + wasoPct + '%"></span>' : '')
+    +     '</div>'
+    +     '<div class="sleep-axis-labels"><span>入睡 ' + _fmtClock(s.sleep_onset) + '</span><span>醒來 ' + _fmtClock(s.wake_time) + '</span></div>'
+    +   '</div>'
+    +   (s.awakenings_count ? '<p class="sleep-hint">這一晚醒來約 ' + s.awakenings_count + ' 次（淡色標記處）。</p>' : '<p class="sleep-hint">這一晚沒有偵測到明顯的中途清醒。</p>')
+    + '</section>';
+}
+
+// 趨勢折線（規格 §5.3）— 純 SVG，中性色
+function loadSleepTrend(days, btn) {
+  if (btn) {
+    document.querySelectorAll('.sleep-range-tab').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+  var host = document.getElementById('sleep-trend');
+  var pid = _sleepPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/sleep/trend?user_id=' + encodeURIComponent(pid) + '&days=' + days)
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d || !d.points || !d.points.length) {
+        host.innerHTML = '<p class="sleep-empty">這段期間還沒有足夠紀錄。多記幾天就能看到你的趨勢。</p>';
+        return;
+      }
+      var avgH = d.avg_total_sleep_minutes != null ? _fmtMins(d.avg_total_sleep_minutes) : '—';
+      var avgE = d.avg_sleep_efficiency != null ? Math.round(d.avg_sleep_efficiency * 100) + '%' : '—';
+      host.innerHTML = ''
+        + '<div class="sleep-trend-summary">'
+        +   '<div class="sleep-mini"><span class="sleep-mini-num">' + avgH + '</span><span class="sleep-mini-lbl">平均總睡眠</span></div>'
+        +   '<div class="sleep-mini"><span class="sleep-mini-num">' + avgE + '</span><span class="sleep-mini-lbl">平均效率</span></div>'
+        + '</div>'
+        + _sleepLineChart(d.points.map(function(p){ return p.total_sleep_minutes; }), '睡眠時數（分鐘）')
+        + _sleepLineChart(d.points.map(function(p){ return p.sleep_efficiency != null ? Math.round(p.sleep_efficiency * 100) : null; }), '睡眠效率（%）');
+    })
+    .catch(function(){ host.innerHTML = '<p class="sleep-empty">載入失敗，請稍後再試。</p>'; });
+}
+
+function _sleepLineChart(values, label) {
+  var vals = values.filter(function(v){ return v != null; });
+  if (!vals.length) return '';
+  var W = 300, H = 80, pad = 6;
+  var max = Math.max.apply(null, vals), min = Math.min.apply(null, vals);
+  var range = (max - min) || 1;
+  var n = values.length;
+  var step = n > 1 ? (W - pad * 2) / (n - 1) : 0;
+  var pts = [];
+  values.forEach(function(v, i){
+    if (v == null) return;
+    var x = pad + i * step;
+    var y = H - pad - ((v - min) / range) * (H - pad * 2);
+    pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+  });
+  return '<div class="sleep-chart">'
+    + '<span class="sleep-chart-label">' + label + '</span>'
+    + '<svg viewBox="0 0 ' + W + ' ' + H + '" class="sleep-chart-svg" preserveAspectRatio="none" aria-hidden="true">'
+    +   '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+    + '</svg>'
+    + '</div>';
+}
+
+function loadSleepList() {
+  var host = document.getElementById('sleep-list');
+  var pid = _sleepPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/sleep/sessions?user_id=' + encodeURIComponent(pid) + '&days=30')
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      var rows = (d && d.sessions) || [];
+      _sleepSessionsCache = rows;
+      if (!rows.length) { host.innerHTML = '<p class="sleep-empty">還沒有紀錄。</p>'; return; }
+      host.innerHTML = '<ul class="sleep-list">' + rows.map(function(s){
+        return '<li class="sleep-item">'
+          + '<div class="sleep-item-main">'
+          +   '<span class="sleep-item-date">' + (s.bed_time || '').slice(0, 10) + '</span>'
+          +   '<span class="sleep-item-sub">' + _fmtMins(s.total_sleep_minutes) + '・效率 ' + (s.sleep_efficiency != null ? Math.round(s.sleep_efficiency * 100) + '%' : '—')
+          +     '　<span class="sleep-tag">' + (s.is_edited ? '已修正' : _sleepSourceZh(s.source)) + '</span></span>'
+          + '</div>'
+          + '<button type="button" class="sleep-edit-btn" onclick="openSleepEdit(' + JSON.stringify(s.id).replace(/"/g, '&quot;') + ')" aria-label="修正"><i data-lucide="pencil" style="width:15px;height:15px"></i></button>'
+          + '</li>';
+      }).join('') + '</ul>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function(){ host.innerHTML = '<p class="sleep-empty">載入失敗，請稍後再試。</p>'; });
+}
+
+function submitSleepManual() {
+  var pid = _sleepPid();
+  if (!pid) return;
+  var bed = (document.getElementById('sleep-bed') || {}).value;
+  var onset = (document.getElementById('sleep-onset') || {}).value;
+  var wake = (document.getElementById('sleep-wake') || {}).value;
+  if (!bed || !onset || !wake) { if (typeof showToast === 'function') showToast('請填上床、入睡、醒來時間', 'info'); return; }
+  if (!(bed <= onset && onset <= wake)) { if (typeof showToast === 'function') showToast('時間順序需為 上床 ≤ 入睡 ≤ 醒來', 'warning'); return; }
+  var body = {
+    user_id: pid, source: 'manual',
+    bed_time: bed + ':00', sleep_onset: onset + ':00', wake_time: wake + ':00',
+    awakenings_count: parseInt((document.getElementById('sleep-awk') || {}).value || '0', 10) || 0,
+    waso_minutes: parseInt((document.getElementById('sleep-waso') || {}).value || '0', 10) || 0,
+  };
+  apiFetch(API + '/sleep/sessions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(function(r){
+    if (!r.ok) throw new Error('fail');
+    if (typeof showToast === 'function') showToast('已記錄 ✓', 'success');
+    showPage('sleep');
+  }).catch(function(){ if (typeof showToast === 'function') showToast('儲存失敗，請稍後再試', 'warning'); });
+}
+
+function openSleepEdit(id) {
+  var s = _sleepSessionsCache.filter(function(x){ return x.id === id; })[0];
+  if (!s) return;
+  var bed = prompt('上床時間（YYYY-MM-DDTHH:MM）', _sleepTodayLocalDateInput(s.bed_time));
+  if (bed === null) return;
+  var onset = prompt('入睡時間（YYYY-MM-DDTHH:MM）', _sleepTodayLocalDateInput(s.sleep_onset));
+  if (onset === null) return;
+  var wake = prompt('醒來時間（YYYY-MM-DDTHH:MM）', _sleepTodayLocalDateInput(s.wake_time));
+  if (wake === null) return;
+  apiFetch(API + '/sleep/sessions/' + encodeURIComponent(id), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bed_time: bed + ':00', sleep_onset: onset + ':00', wake_time: wake + ':00' }),
+  }).then(function(r){
+    if (!r.ok) throw new Error('fail');
+    if (typeof showToast === 'function') showToast('已修正 ✓', 'success');
+    showPage('sleep');
+  }).catch(function(){ if (typeof showToast === 'function') showToast('修正失敗，請稍後再試', 'warning'); });
+}
+
+function exportSleepCsv() {
+  var pid = _sleepPid();
+  if (!pid) return;
+  window.open(API + '/sleep/export.csv?user_id=' + encodeURIComponent(pid) + '&days=30', '_blank');
+}
+
+function exportSleepPdf() {
+  if (typeof window.previsitOpenPrint !== 'function') {
+    if (typeof showToast === 'function') showToast('PDF 元件未載入', 'warning'); return;
+  }
+  var rows = _sleepSessionsCache;
+  if (!rows || !rows.length) { if (typeof showToast === 'function') showToast('沒有可匯出的紀錄', 'info'); return; }
+  var trs = rows.map(function(s){
+    return '<tr><td>' + (s.bed_time || '').slice(0, 10) + '</td><td>' + _fmtClock(s.sleep_onset) + '</td><td>' + _fmtClock(s.wake_time) + '</td>'
+      + '<td>' + _fmtMins(s.total_sleep_minutes) + '</td><td>' + (s.sleep_efficiency != null ? Math.round(s.sleep_efficiency * 100) + '%' : '—') + '</td>'
+      + '<td>' + (s.awakenings_count != null ? s.awakenings_count : '—') + '</td><td>' + _sleepSourceZh(s.source) + (s.is_edited ? '（已修正）' : '') + '</td></tr>';
+  }).join('');
+  var html = '<!doctype html><html><head><meta charset="utf-8"><style>'
+    + 'body{font-family:"Noto Sans TC",sans-serif;color:#111;font-size:12px;padding:10px}'
+    + 'h1{font-size:18px;margin:0 0 2px}.sub{color:#444;font-size:11px;margin:0 0 10px}'
+    + 'table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:4px 6px;text-align:left;font-size:11px}'
+    + '.disc{margin-top:12px;border-top:1px dashed #999;padding-top:6px;color:#333;font-size:10px}</style></head><body>'
+    + '<h1>睡眠紀錄</h1><p class="sub">產生時間：' + new Date().toISOString().slice(0, 16).replace('T', ' ') + '　近 30 天</p>'
+    + '<table><tr><th>日期</th><th>入睡</th><th>醒來</th><th>總睡眠</th><th>效率</th><th>夜醒</th><th>來源</th></tr>' + trs + '</table>'
+    + '<p class="disc">本紀錄僅供健康資訊整理與回診參考，非醫療診斷。</p></body></html>';
+  window.previsitOpenPrint(html, 'MD.Piece-睡眠紀錄-' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

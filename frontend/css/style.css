@@ -17678,3 +17678,70 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
 .mens-del { background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; padding: 8px; min-width: 40px; min-height: 40px; align-items: center; justify-content: center; }
 .mens-del:hover { color: var(--danger); }
 .mens-disclaimer { display: flex; align-items: flex-start; gap: 6px; margin-top: 16px; padding: 11px 13px; background: var(--bg-soft); border-radius: var(--radius-sm, 10px); color: var(--text-dim); font-size: 12px; line-height: 1.6; }
+
+/* ════════════════════════════════════════════════════════════════════
+   睡眠紀錄模組 — 純記錄。大字、少術語、中性色，禁用紅色警示（規格 §5）。
+   ════════════════════════════════════════════════════════════════════ */
+.sleep-page { padding: var(--space-4, 16px) var(--space-3, 12px) 80px; max-width: 720px; margin: 0 auto; }
+.sleep-head h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 1.3rem; color: var(--text); }
+.sleep-head h2 i { color: var(--accent); }
+.sleep-head p { margin: 0 0 14px; color: var(--text-dim); font-size: 14px; line-height: 1.6; }
+.sleep-loading, .sleep-empty { color: var(--text-muted); font-size: 14px; padding: 16px 4px; text-align: center; line-height: 1.6; }
+.sleep-hint { color: var(--text-dim); font-size: 13px; line-height: 1.55; margin: 4px 0 12px; }
+
+.sleep-card { background: var(--bg-surface); border: 1px solid var(--bg-soft); border-radius: var(--radius, 14px); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
+.sleep-card-soft { background: var(--bg-soft); }
+.sleep-card h3 { margin: 0 0 10px; font-size: 1rem; color: var(--text); }
+.sleep-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.sleep-card-head h3 { margin: 0; }
+.sleep-badge { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--accent-glow); color: var(--accent); font-weight: 600; }
+.sleep-badge-src { background: var(--bg-soft); color: var(--text-dim); }
+
+/* 今日卡：大字（規格 §5.1）*/
+.sleep-today-big { text-align: center; padding: 8px 0 4px; }
+.sleep-big-num { display: block; font-size: 2.1rem; font-weight: 700; color: var(--text); letter-spacing: .5px; }
+.sleep-big-lbl { display: block; font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.sleep-today-row, .sleep-trend-summary { display: flex; gap: 10px; margin-top: 12px; }
+.sleep-mini { flex: 1; text-align: center; background: var(--bg-soft); border-radius: var(--radius-sm, 10px); padding: 12px 6px; }
+.sleep-mini-num { display: block; font-size: 1.15rem; font-weight: 700; color: var(--text); }
+.sleep-mini-lbl { display: block; font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.sleep-today-empty { text-align: center; color: var(--text-muted); padding: 14px 8px; }
+.sleep-today-empty i { color: var(--accent); margin-bottom: 6px; }
+.sleep-today-empty p { margin: 6px 0 0; font-size: 14px; line-height: 1.6; }
+
+/* 單晚時間軸（規格 §5.2）— 清醒段淡色，無紅色 */
+.sleep-axis { margin: 6px 0 4px; }
+.sleep-axis-bar { position: relative; height: 18px; border-radius: 9px; background: linear-gradient(90deg, var(--accent), var(--accent-light, var(--teal))); overflow: hidden; }
+.sleep-axis-wake { position: absolute; top: 0; height: 100%; background: rgba(255,255,255,0.55); border-left: 1px solid var(--bg-surface); border-right: 1px solid var(--bg-surface); }
+#app-wrapper[data-theme="light"] .sleep-axis-wake { background: rgba(255,255,255,0.7); }
+.sleep-axis-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+
+/* 趨勢折線 — 中性 accent 色 */
+.sleep-range-tabs { display: flex; gap: 6px; }
+.sleep-range-tab { min-height: 36px; padding: 6px 14px; border: 1px solid var(--bg-soft); background: var(--bg-deep); border-radius: 999px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
+.sleep-range-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.sleep-chart { margin-top: 14px; }
+.sleep-chart-label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+.sleep-chart-svg { width: 100%; height: 80px; display: block; }
+
+/* 表單 / 列表 */
+.sleep-field { margin-bottom: 12px; }
+.sleep-field > label { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.sleep-field input { width: 100%; min-height: 46px; border: 1px solid var(--bg-soft); border-radius: var(--radius-sm, 10px); padding: 0 12px; font-size: 15px; color: var(--text); background: var(--bg-deep); box-sizing: border-box; }
+.sleep-field-2 { display: flex; gap: 10px; }
+.sleep-field-2 .sleep-field { flex: 1; }
+.sleep-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--radius, 14px); padding: 14px; font-size: 16px; font-weight: 600; min-height: 52px; cursor: pointer; box-shadow: var(--shadow-sm); }
+.sleep-cta:hover { filter: brightness(1.05); }
+.sleep-list { list-style: none; padding: 0; margin: 0; }
+.sleep-item { display: flex; align-items: center; gap: 8px; padding: 11px 0; border-bottom: 1px solid var(--bg-soft); }
+.sleep-item:last-child { border-bottom: none; }
+.sleep-item-main { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.sleep-item-date { font-weight: 600; color: var(--text); font-size: 14px; }
+.sleep-item-sub { font-size: 13px; color: var(--text-dim); }
+.sleep-tag { font-size: 11px; color: var(--text-muted); background: var(--bg-soft); border-radius: 6px; padding: 1px 7px; }
+.sleep-edit-btn { background: none; border: none; cursor: pointer; color: var(--text-dim); display: flex; padding: 8px; min-width: 40px; min-height: 40px; align-items: center; justify-content: center; }
+.sleep-edit-btn:hover { color: var(--accent); }
+.sleep-export-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.sleep-secondary { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; padding: 10px 14px; border: 1px solid var(--bg-soft); background: var(--bg-surface); border-radius: var(--radius-sm, 10px); font-size: 14px; color: var(--text); cursor: pointer; }
+.sleep-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.sleep-disclaimer { display: flex; align-items: flex-start; gap: 6px; margin-top: 16px; padding: 11px 13px; background: var(--bg-soft); border-radius: var(--radius-sm, 10px); color: var(--text-dim); font-size: 12px; line-height: 1.6; }
