@@ -35,7 +35,8 @@ except BaseException:
 # 不建任何 policy（migration: enable_rls_all_public_tables +
 # drop_permissive_allow_all_policies），所以 anon 角色「讀回 0 列、寫入一律被拒」。
 # 後端必須改帶 service_role secret（繞過 RLS）才能正常讀寫——請在部署環境設
-# SUPABASE_KEY=<service_role secret>（service_role 屬機密，切勿 commit 進 repo）。
+# SUPABASE_SERVICE_ROLE_KEY=<service_role secret>（或舊名 SUPABASE_KEY；
+# service_role 屬機密，切勿 commit 進 repo）。
 # 下方 _jwt_role() 會在 serverless 偵測到仍是 anon key 時 loud-fail 提醒。
 _DEFAULT_SUPABASE_URL = "https://tbqvpqvvvgfgaezxbhkz.supabase.co"
 _DEFAULT_SUPABASE_KEY = (
@@ -45,7 +46,14 @@ _DEFAULT_SUPABASE_KEY = (
     "gMiXYsqw6V4GlvGLZx8ZHXZMudnx5no_cD9E5aQ3kVs"
 )
 SUPABASE_URL = os.getenv("SUPABASE_URL") or _DEFAULT_SUPABASE_URL
-SUPABASE_KEY = os.getenv("SUPABASE_KEY") or _DEFAULT_SUPABASE_KEY
+# 優先用 service_role secret（繞過 RLS）。部署環境慣用名 SUPABASE_SERVICE_ROLE_KEY
+# （backend/services/supabase_auth.py 也讀這個名字）；相容舊的 SUPABASE_KEY；
+# 兩者都沒設才退回 commit 在 repo 的 anon key（RLS 開啟下會被擋）。
+SUPABASE_KEY = (
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    or os.getenv("SUPABASE_KEY")
+    or _DEFAULT_SUPABASE_KEY
+)
 
 _client = None
 
@@ -853,9 +861,10 @@ def get_supabase():
         # anon key 時 loud-fail，避免又出現「全站寫入靜默 500」找不到原因。
         if is_serverless and SUPABASE_KEY and _jwt_role(SUPABASE_KEY) == "anon":
             logger.error(
-                "SUPABASE_KEY 仍是 anon 角色金鑰，但 public 表已全面開啟 RLS 且無 "
+                "目前生效的仍是 anon 角色金鑰，但 public 表已全面開啟 RLS 且無 "
                 "policy — 所有寫入（建立提醒、註冊…）都會被拒並回 HTTP 500。"
-                "請在部署環境把 SUPABASE_KEY 設為 Supabase service_role secret。"
+                "請在部署環境設 SUPABASE_SERVICE_ROLE_KEY（或 SUPABASE_KEY）"
+                "為 Supabase service_role secret。"
             )
         if SUPABASE_URL and SUPABASE_KEY:
             if _supabase_available:
