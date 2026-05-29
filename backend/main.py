@@ -11,7 +11,7 @@ from backend.routers import (
     medication_changes, alerts, labs, diet,
     drug_search, diseases, reminders, bell_reminders,
     admissions, timeline, follow_ups, profile,
-    inpatient, menstrual,
+    inpatient, menstrual, predict,
 )
 from backend.services import llm_service
 
@@ -69,6 +69,7 @@ app.include_router(menstrual.router, prefix="/menstrual", tags=["menstrual"])
 app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
 app.include_router(follow_ups.router, prefix="/follow-ups", tags=["follow-ups"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
+app.include_router(predict.router, tags=["predict"])
 
 @app.get("/health/llm")
 def health_llm():

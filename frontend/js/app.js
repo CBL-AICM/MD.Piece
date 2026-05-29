@@ -3224,7 +3224,7 @@ function showPage(page) {
     home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
-    followUps, handover, medRecon, bedside, dischargePlan, menstrual
+    followUps, handover, medRecon, bedside, dischargePlan, menstrual, predict
   };
   // Page transition
   app.style.opacity = '0';
@@ -3268,6 +3268,7 @@ function showPage(page) {
     if (page === "bedside") loadBedsidePage();
     if (page === "dischargePlan") loadDischargePlanPage();
     if (page === "menstrual") loadMenstrualPage();
+    if (page === "predict") loadPredictPage();
     // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
     if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
@@ -5757,6 +5758,10 @@ function loadHomePage() {
   if (typeof _loadNextInfusionInfo === 'function') _loadNextInfusionInfo();
   // 同步今日 SOS 歷史 chip（門診版快速回報 bar 共用住院的 storage）
   if (typeof refreshInpatientSosHistory === 'function') refreshInpatientSosHistory();
+
+  // 復發風險卡（畫面 A）— 以 DOM 注入方式掛在首頁最上方，
+  // 不動既有 home() HTML（規則 3：手術式修改）。
+  if (typeof injectHomeRiskCard === 'function') injectHomeRiskCard(pid);
 
   apiFetch(API + '/medications/?patient_id=' + pid)
     .then(function(r) { return r.json(); })
@@ -24300,6 +24305,388 @@ function _renderPiecesNearestFollowUp(fu) {
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
+}
+
+// ════════════════════════════════════════════════════════════════
+// 復發風險預測（predict / explain）— 對應 docs CLAUDE_predict_ui_ux.md
+// 設計原則：風險 → 為什麼 → 然後呢，三件事永遠成對出現；band 為主、
+// 百分比為次要小字；不嚇人、不遊戲化、不像在診斷。全用 vanilla JS +
+// inline SVG（本專案無 React/Recharts，依規則 11 遵循既有慣例）。
+// ════════════════════════════════════════════════════════════════
+
+// band → 視覺語義（色 + icon + 文字，不可只靠顏色 → 無障礙）
+var _RISK_BAND_META = {
+  low:    { label: '穩定',     color: '#3FA796', icon: '◔' },
+  medium: { label: '中度關注', color: '#E0A458', icon: '◑' },
+  high:   { label: '較需留意', color: '#D97757', icon: '◕' }
+};
+function _riskBandMeta(band) { return _RISK_BAND_META[band] || _RISK_BAND_META.low; }
+
+var _TREND_META = {
+  up:   { arrow: '↗', label: '上升中' },
+  flat: { arrow: '→', label: '持平' },
+  down: { arrow: '↘', label: '下降中' }
+};
+
+// 模組狀態：供時間窗切換與 explain 重查使用
+var _predictState = { pid: null, predictionId: null, window: 90, last: null };
+
+// ── RiskBandBadge ───────────────────────────────────────────
+function renderRiskBandBadge(band) {
+  var m = _riskBandMeta(band);
+  return '<span class="risk-badge" data-band="' + band + '" '
+    + 'style="--band-color:' + m.color + '">'
+    + '<span class="risk-badge-icon" aria-hidden="true">' + m.icon + '</span>'
+    + '<span class="risk-badge-label">' + m.label + '</span>'
+    + '</span>';
+}
+
+// ── ConfidenceMeter ─────────────────────────────────────────
+function renderConfidenceMeter(confidence, confidenceLabel, dataDays, lowData) {
+  var lvl = { low: 1, medium: 2, high: 3 }[confidence] || 1;
+  var dots = '';
+  for (var i = 1; i <= 3; i++) {
+    dots += '<span class="cm-dot' + (i <= lvl ? ' on' : '') + '"></span>';
+  }
+  var note = lowData ? '<span class="cm-warn">資料較少，預測僅供參考</span>' : '';
+  return '<div class="confidence-meter" aria-label="預測信心：' + (confidenceLabel || '') + '">'
+    + '<span class="cm-label">預測信心</span>'
+    + '<span class="cm-dots">' + dots + '</span>'
+    + '<span class="cm-value">' + (confidenceLabel || '—') + '</span>'
+    + '<span class="cm-days">（基於近 ' + (dataDays || 0) + ' 天紀錄）</span>'
+    + note
+    + '</div>';
+}
+
+// ── ShapBarList（畫面 C：因子瀑布條）─────────────────────────
+function renderShapBarList(explanations) {
+  if (!explanations || !explanations.length) {
+    return '<p class="shap-empty">目前沒有足以解釋的近期變化。</p>';
+  }
+  // 以最大絕對值正規化長度
+  var maxAbs = 1;
+  explanations.forEach(function(e) { maxAbs = Math.max(maxAbs, Math.abs(e.shap_percent)); });
+
+  var rows = explanations.map(function(e) {
+    var up = e.direction === 'up';
+    var w = Math.round(Math.abs(e.shap_percent) / maxAbs * 100);
+    var sign = up ? '推升 +' : '降低 −';
+    var bar = '<div class="shap-track">'
+      + '<div class="shap-fill ' + (up ? 'up' : 'down') + '" style="width:' + w + '%"></div>'
+      + '</div>';
+    var modTag = e.modifiable ? '<span class="shap-mod" title="你可以調整的因子">🔧 可調整</span>' : '';
+    // 可調整且為推升 → 提供一鍵加入就診摘要
+    var addBtn = (e.modifiable && up)
+      ? '<button class="shap-add" onclick="addToVisitSummary(\'' + _jsStr(e.label) + '\')">'
+        + '把「' + escapeHtml(e.label) + '」加入就診待討論</button>'
+      : '';
+    return '<div class="shap-row ' + (up ? 'up' : 'down') + '">'
+      + '<div class="shap-head">'
+      + '<span class="shap-name">' + escapeHtml(e.label) + '</span>'
+      + '<span class="shap-val">' + sign + Math.abs(e.shap_percent) + '%</span>'
+      + '</div>'
+      + bar
+      + '<div class="shap-foot">'
+      + '<span class="shap-plain">' + escapeHtml(e.plain_text || '') + '</span>'
+      + modTag
+      + '</div>'
+      + addBtn
+      + '</div>';
+  }).join('');
+  return '<div class="shap-list">' + rows + '</div>';
+}
+
+// ── RiskTrendChart（畫面 B：inline SVG 趨勢圖）────────────────
+function renderRiskTrendChart(trend) {
+  var W = 320, H = 180, padL = 4, padR = 4, padT = 8, padB = 22;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+  var pts = (trend && trend.points) || [];
+  if (pts.length < 2) {
+    return '<div class="trend-empty">趨勢資料累積中…</div>';
+  }
+  var n = pts.length;
+  function xFor(i) { return padL + (i / (n - 1)) * plotW; }
+  function yFor(pct) { return padT + (1 - Math.max(0, Math.min(100, pct)) / 100) * plotH; }
+
+  // band 背景帶：low 0-30 / medium 30-60 / high 60-100
+  function bandRect(lo, hi, color) {
+    var y = yFor(hi), h = yFor(lo) - yFor(hi);
+    return '<rect x="' + padL + '" y="' + y.toFixed(1) + '" width="' + plotW
+      + '" height="' + h.toFixed(1) + '" fill="' + color + '" opacity="0.12"/>';
+  }
+  var bands = bandRect(60, 100, '#D97757') + bandRect(30, 60, '#E0A458') + bandRect(0, 30, '#3FA796');
+
+  // 信心區間（陰影帶）：上緣 high → 下緣 low 形成 polygon
+  var top = [], bot = [];
+  pts.forEach(function(p, i) {
+    top.push(xFor(i).toFixed(1) + ',' + yFor(p.confidence_high).toFixed(1));
+    bot.push(xFor(i).toFixed(1) + ',' + yFor(p.confidence_low).toFixed(1));
+  });
+  var conf = '<polygon class="trend-conf" points="' + top.concat(bot.reverse()).join(' ') + '"/>';
+
+  // 風險線
+  var line = pts.map(function(p, i) { return xFor(i).toFixed(1) + ',' + yFor(p.risk_percent).toFixed(1); }).join(' ');
+  var poly = '<polyline class="trend-line" points="' + line + '"/>';
+
+  // 今天的點
+  var last = pts[n - 1];
+  var todayDot = '<circle class="trend-today" cx="' + xFor(n - 1).toFixed(1) + '" cy="'
+    + yFor(last.risk_percent).toFixed(1) + '" r="3.5"/>';
+
+  // 實際 flare 事件標記（✦）：依日期對應到最接近的取樣點 x
+  var flareMarks = '';
+  (trend.flare_events || []).forEach(function(ev) {
+    var idx = 0, best = Infinity;
+    pts.forEach(function(p, i) {
+      var d = Math.abs(new Date(p.date) - new Date(ev.date));
+      if (d < best) { best = d; idx = i; }
+    });
+    flareMarks += '<text class="trend-flare" x="' + xFor(idx).toFixed(1) + '" y="'
+      + (H - padB + 14) + '" text-anchor="middle">✦</text>';
+  });
+
+  var svg = '<svg class="trend-svg" viewBox="0 0 ' + W + ' ' + H + '" '
+    + 'preserveAspectRatio="none" role="img" aria-label="復發風險趨勢圖">'
+    + bands + conf + poly + todayDot + flareMarks + '</svg>';
+
+  // 時間窗切換
+  var windows = [[14, '14天'], [30, '1月'], [90, '3月'], [180, '6月']];
+  var tabs = windows.map(function(w) {
+    var on = (_predictState.window === w[0]) ? ' active' : '';
+    return '<button class="trend-tab' + on + '" onclick="_predictSetWindow(' + w[0] + ')">' + w[1] + '</button>';
+  }).join('');
+
+  var legend = '<div class="trend-legend">'
+    + '<span><i class="lg-line"></i>預測風險</span>'
+    + '<span><i class="lg-conf"></i>信心區間</span>'
+    + '<span><i class="lg-flare">✦</i>實際就診</span>'
+    + '</div>';
+
+  return '<div class="trend-chart">' + svg + legend
+    + '<div class="trend-tabs">' + tabs + '</div></div>';
+}
+
+// ── ColdStartCard（畫面 D：資料不足）────────────────────────
+function renderColdStartCard(pred) {
+  var done = pred.data_days || 0;
+  var total = pred.threshold_days || 14;
+  var pct = Math.min(100, Math.round(done / total * 100));
+  var collecting = (pred.collecting || []).join('、');
+  return '<div class="cold-start-card">'
+    + '<div class="cs-icon" aria-hidden="true">⏳</div>'
+    + '<h3 class="cs-title">預測功能準備中</h3>'
+    + '<p class="cs-body">再記錄 <strong>' + (pred.days_remaining || 0)
+    + '</strong> 天，系統就能開始推估你的復發風險趨勢。</p>'
+    + '<div class="cs-progress"><div class="cs-bar" style="width:' + pct + '%"></div></div>'
+    + '<p class="cs-count">已記錄 ' + done + ' / ' + total + ' 天</p>'
+    + '<p class="cs-collecting">目前正在收集：' + escapeHtml(collecting) + '</p>'
+    + '<button class="cs-cta" onclick="navigateTo(\'symptoms\',null)">今天記錄</button>'
+    + '<p class="predict-disclaimer"><i data-lucide="info"></i>'
+    + escapeHtml(pred.disclaimer || '') + '</p>'
+    + '</div>';
+}
+
+// ── RiskCard（畫面 A：Dashboard 風險卡）──────────────────────
+function renderRiskCard(pred) {
+  if (pred.cold_start) {
+    // 首頁精簡版冷啟動：給進度，不顯示空白或誤導性 0%
+    var done = pred.data_days || 0, total = pred.threshold_days || 14;
+    var pct = Math.min(100, Math.round(done / total * 100));
+    return '<div class="risk-card cold" onclick="navigateTo(\'predict\',null)">'
+      + '<div class="rc-top"><span class="rc-title">復發風險預測</span>'
+      + '<span class="rc-horizon">準備中</span></div>'
+      + '<p class="rc-cold">再記錄 ' + (pred.days_remaining || 0) + ' 天即可開始推估</p>'
+      + '<div class="cs-progress"><div class="cs-bar" style="width:' + pct + '%"></div></div>'
+      + '<p class="cs-count">已記錄 ' + done + ' / ' + total + ' 天</p>'
+      + '</div>';
+  }
+  var m = _riskBandMeta(pred.risk_band);
+  var tm = _TREND_META[pred.trend] || _TREND_META.flat;
+  var driver = pred.top_driver
+    ? '<p class="rc-driver">▸ 主要原因：' + escapeHtml(pred.top_driver.plain_text) + '</p>'
+    : '<p class="rc-driver rc-driver-calm">▸ 近期無明顯推升風險的因子</p>';
+
+  return '<div class="risk-card" data-band="' + pred.risk_band + '" style="--band-color:' + m.color + '">'
+    + '<div class="rc-top">'
+    + '<span class="rc-title">近期復發風險</span>'
+    + '<span class="rc-horizon">未來 ' + pred.horizon_days + ' 天</span>'
+    + '</div>'
+    + '<div class="rc-main">'
+    + renderRiskBandBadge(pred.risk_band)
+    + '<span class="rc-trend ' + pred.trend + '">' + tm.arrow + ' ' + tm.label + '</span>'
+    + '</div>'
+    + '<p class="rc-sub">約 ' + pred.risk_percent + '%・信心：' + pred.confidence_label + '</p>'
+    + driver
+    + '<div class="rc-actions">'
+    + '<button class="rc-btn primary" onclick="navigateTo(\'predict\',null)">看完整分析</button>'
+    + '<button class="rc-btn ghost" onclick="addToVisitSummary(\'復發風險\')">整理成就診摘要</button>'
+    + '</div>'
+    + '<p class="rc-disclaimer"><i data-lucide="info" style="width:12px;height:12px"></i>'
+    + escapeHtml(pred.disclaimer || '') + '</p>'
+    + '</div>';
+}
+
+// ── AddToSummaryButton 行為：寫進 Memo（forDoctor）就診待討論 ─
+function addToVisitSummary(featureLabel) {
+  try {
+    var memos = (typeof memoLoad === 'function') ? memoLoad() : [];
+    var text = '【復發風險】想和醫師討論：' + featureLabel;
+    // 避免重複加入同一筆
+    var dup = memos.some(function(m) { return m.text === text; });
+    if (dup) {
+      if (typeof showToast === 'function') showToast('已在就診待討論清單中', 'info');
+      return;
+    }
+    memos.unshift({
+      id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      type: 'text',
+      photo: null,
+      text: text,
+      forDoctor: true,
+      createdAt: new Date().toISOString()
+    });
+    if (typeof memoSaveAll === 'function') memoSaveAll(memos);
+    if (typeof refreshNavBadges === 'function') refreshNavBadges();
+    if (typeof showToast === 'function') showToast('已加入就診待討論（Memo）', 'success');
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('加入失敗，請稍後再試', 'error');
+  }
+}
+
+// 跳脫進 onclick 字串字面值用
+function _jsStr(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+// ── 首頁注入 RiskCard ───────────────────────────────────────
+function injectHomeRiskCard(pid) {
+  var app = document.getElementById('app');
+  if (!app) return;
+  // 避免重複注入
+  var existing = document.getElementById('home-risk-card-slot');
+  if (existing) existing.remove();
+  var slot = document.createElement('div');
+  slot.id = 'home-risk-card-slot';
+  slot.className = 'home-risk-slot';
+  slot.innerHTML = '<div class="risk-card skeleton"><div class="sk-line"></div>'
+    + '<div class="sk-line short"></div><div class="sk-block"></div></div>';
+  app.insertBefore(slot, app.firstChild);
+
+  fetch(API + '/predict/' + encodeURIComponent(pid), { method: 'POST' })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(pred) {
+      if (!pred) { slot.remove(); return; }
+      slot.innerHTML = renderRiskCard(pred);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() { slot.remove(); });  // DB 離線等 → 不顯示假卡（規則 12）
+}
+
+// ── predict 頁面（畫面 C 詳情 + 畫面 B 趨勢）─────────────────
+function predict() {
+  return ''
+    + '<div class="predict-page">'
+    + '<header class="predict-head">'
+    + '<button class="predict-back" onclick="navigateTo(\'home\',null)" aria-label="返回">'
+    + '<i data-lucide="chevron-left"></i></button>'
+    + '<div><h2>復發風險預測</h2>'
+    + '<p>長期紀錄推估的輔助參考 — 帶這頁去和醫師討論。</p></div>'
+    + '</header>'
+    + '<div id="predict-body">'
+    + '<div class="risk-card skeleton"><div class="sk-line"></div>'
+    + '<div class="sk-line short"></div><div class="sk-block"></div></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function loadPredictPage() {
+  var pid = getStablePatientId();
+  _predictState.pid = pid;
+  if (!_predictState.window) _predictState.window = 90;
+  var body = document.getElementById('predict-body');
+  if (!body) return;
+
+  fetch(API + '/predict/' + encodeURIComponent(pid), { method: 'POST' })
+    .then(function(r) {
+      if (r.status === 503) throw new Error('db_offline');
+      return r.json();
+    })
+    .then(function(pred) {
+      _predictState.predictionId = pred.prediction_id;
+      _predictState.last = pred;
+      if (pred.cold_start) {
+        body.innerHTML = renderColdStartCard(pred);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+      }
+      _renderPredictDetail(body, pred);
+      _loadPredictExplain(pred.prediction_id);
+      _loadPredictTrend(pid, _predictState.window);
+    })
+    .catch(function(e) {
+      body.innerHTML = '<div class="predict-error"><p>'
+        + (String(e.message) === 'db_offline'
+            ? '資料庫尚未連線，暫時無法產生預測。'
+            : '預測載入失敗，請稍後再試。')
+        + '</p></div>';
+    });
+}
+
+function _renderPredictDetail(body, pred) {
+  var m = _riskBandMeta(pred.risk_band);
+  var tm = _TREND_META[pred.trend] || _TREND_META.flat;
+  body.innerHTML = ''
+    + '<div class="predict-summary" data-band="' + pred.risk_band + '" style="--band-color:' + m.color + '">'
+    + '<div class="ps-line">' + renderRiskBandBadge(pred.risk_band)
+    + '<span class="ps-meta">未來 ' + pred.horizon_days + ' 天・約 ' + pred.risk_percent + '%</span>'
+    + '<span class="rc-trend ' + pred.trend + '">' + tm.arrow + ' ' + tm.label + '</span></div>'
+    + renderConfidenceMeter(pred.confidence, pred.confidence_label, pred.data_days, pred.low_data)
+    + '</div>'
+    // 畫面 B：趨勢圖
+    + '<section class="predict-section"><h3>風險趨勢</h3>'
+    + '<div id="predict-trend"><div class="trend-empty">載入趨勢中…</div></div></section>'
+    // 畫面 C：為什麼
+    + '<section class="predict-section"><h3>為什麼風險變這樣（近期相對變化）</h3>'
+    + '<div id="predict-explain"><p class="shap-empty">載入因子中…</p></div></section>'
+    + '<p class="predict-disclaimer"><i data-lucide="info"></i>'
+    + escapeHtml(pred.disclaimer || '') + '</p>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _loadPredictExplain(predictionId) {
+  var box = document.getElementById('predict-explain');
+  if (!box) return;
+  fetch(API + '/explain/' + encodeURIComponent(predictionId))
+    .then(function(r) { return r.json(); })
+    .then(function(exp) {
+      var mod = (exp.modifiable_factors && exp.modifiable_factors.length)
+        ? '<p class="shap-modifiable">🔧 你可以調整的：' + escapeHtml(exp.modifiable_factors.join('、')) + '</p>'
+        : '';
+      box.innerHTML = renderShapBarList(exp.explanations) + mod
+        + '<p class="predict-disclaimer subtle"><i data-lucide="info"></i>'
+        + escapeHtml(exp.disclaimer || '') + '</p>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      box.innerHTML = '<p class="shap-empty">因子解釋載入失敗。</p>';
+    });
+}
+
+function _loadPredictTrend(pid, window) {
+  var box = document.getElementById('predict-trend');
+  if (!box) return;
+  fetch(API + '/predict/' + encodeURIComponent(pid) + '/trend?window=' + window)
+    .then(function(r) { return r.json(); })
+    .then(function(trend) {
+      box.innerHTML = renderRiskTrendChart(trend);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() {
+      box.innerHTML = '<div class="trend-empty">趨勢載入失敗。</div>';
+    });
+}
+
+function _predictSetWindow(days) {
+  _predictState.window = days;
+  if (_predictState.pid) _loadPredictTrend(_predictState.pid, days);
 }
 
 showPage("home");
