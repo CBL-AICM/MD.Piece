@@ -29,19 +29,12 @@ except BaseException:
     _supabase_available = False
     Client = None
 
-# Production fallback：本專案的 Supabase publishable (anon) key 與 URL。
-# anon key 設計上就是公開的（前端 client-side 也會看到），commit 進 repo 沒
-# 安全風險；若有設環境變數則優先採用（典型情境是改用 service_role 以 bypass RLS）。
-# 對應的 Supabase migration: md_piece_full_schema_and_anon_access (RLS 已 disable)。
-_DEFAULT_SUPABASE_URL = "https://tbqvpqvvvgfgaezxbhkz.supabase.co"
-_DEFAULT_SUPABASE_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRicXZwcXZ2dmdmZ2FlenhiaGt6Iiwicm9sZSI6ImFub24i"
-    "LCJpYXQiOjE3NzM2NTA3OTYsImV4cCI6MjA4OTIyNjc5Nn0."
-    "gMiXYsqw6V4GlvGLZx8ZHXZMudnx5no_cD9E5aQ3kVs"
-)
-SUPABASE_URL = os.getenv("SUPABASE_URL") or _DEFAULT_SUPABASE_URL
-SUPABASE_KEY = os.getenv("SUPABASE_KEY") or _DEFAULT_SUPABASE_KEY
+# Supabase 憑證一律從環境變數讀取，絕不內嵌在程式碼裡（本 repo 為 public）。
+# Production（Vercel）必須設定 SUPABASE_URL 與 SUPABASE_KEY（service_role，會 bypass RLS）。
+# 本機開發若未設定，get_supabase() 會 fallback 到 SQLite（見下）。
+# 參考：docs/security-rls-hardening.md
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 _client = None
 
