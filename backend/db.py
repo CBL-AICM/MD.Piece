@@ -46,11 +46,15 @@ _DEFAULT_SUPABASE_KEY = (
     "gMiXYsqw6V4GlvGLZx8ZHXZMudnx5no_cD9E5aQ3kVs"
 )
 SUPABASE_URL = os.getenv("SUPABASE_URL") or _DEFAULT_SUPABASE_URL
-# 優先用 service_role secret（繞過 RLS）。部署環境慣用名 SUPABASE_SERVICE_ROLE_KEY
-# （backend/services/supabase_auth.py 也讀這個名字）；相容舊的 SUPABASE_KEY；
-# 兩者都沒設才退回 commit 在 repo 的 anon key（RLS 開啟下會被擋）。
+# 優先用 service_role secret（繞過 RLS）。名稱優先序：
+#   1. SUPABASE_SERVICE_ROLE_KEY — 慣用名（backend/services/supabase_auth.py 也讀它）
+#   2. SUPABASE_KEY_1 — Vercel 上 SUPABASE_KEY 已被 anon key 佔用時，service_role
+#      secret 會被存成這個 _1 後綴名；放在 SUPABASE_KEY 之前才能蓋過 anon。
+#   3. SUPABASE_KEY — 舊名相容
+#   4. 都沒設才退回 commit 在 repo 的 anon key（RLS 開啟下會被擋）。
 SUPABASE_KEY = (
     os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    or os.getenv("SUPABASE_KEY_1")
     or os.getenv("SUPABASE_KEY")
     or _DEFAULT_SUPABASE_KEY
 )
