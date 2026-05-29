@@ -29,7 +29,10 @@ VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "llava:7b")
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_BASE = "https://api.groq.com/openai/v1"
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+# 小禾 / 白話解讀等「短文字對話」預設用 8B-instant：Groq 上明顯比 70B 快
+# （首字 + 產字速度都快），繁中口語對話品質足夠。需要更高品質（如報告生成）
+# 可由呼叫端或環境變數 GROQ_MODEL 覆寫回 llama-3.3-70b-versatile。
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 # Groq 目前的 multi-modal 模型；藥袋辨識用視覺模型
 GROQ_VISION_MODEL = os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
 
