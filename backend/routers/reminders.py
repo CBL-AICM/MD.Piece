@@ -593,3 +593,29 @@ def dispatch_due_reminders(
         "removed_stale_endpoints": len(set(stale_endpoints)),
         "ran_at": now_iso,
     }
+
+
+@router.get("/cron/dispatch")
+def cron_dispatch(
+    limit: int = 200,
+    authorization: str | None = Header(default=None),
+    x_cron_token: str | None = Header(default=None, alias="X-Cron-Token"),
+):
+    """排程入口（GET）— 掃描所有到期 reminders 並派送 inbox + Web Push。
+
+    Vercel 原生 Cron Jobs 只會發 GET，且若有設 CRON_SECRET env 會自動帶
+    `Authorization: Bearer ${CRON_SECRET}`。外部排程（cron-job.org、GitHub
+    Actions…）則可帶 `X-Cron-Token: ${CRON_TOKEN}`。兩個 env 都沒設時開放
+    （與 POST /dispatch 行為一致，方便本地測試）。
+    """
+    cron_secret = os.getenv("CRON_SECRET")
+    cron_token = os.getenv("CRON_TOKEN")
+    if cron_secret or cron_token:
+        ok = (
+            (cron_secret and authorization == f"Bearer {cron_secret}")
+            or (cron_token and x_cron_token == cron_token)
+        )
+        if not ok:
+            raise HTTPException(status_code=401, detail="invalid cron auth")
+    # 內層 dispatch 自己也會驗 CRON_TOKEN；已通過上面驗證，帶上對應 token 讓它放行。
+    return dispatch_due_reminders(patient_id=None, limit=limit, x_cron_token=cron_token)
