@@ -16611,7 +16611,7 @@ html[data-mode="senior"] .home-inpatient .ip-edu-desc  { font-size: 0.84rem; }
 /* ─── 住院模式：sidebar 只保留住院相關項目 ─────────────────────────────── */
 /* 只保留 home + INPATIENT_NAV_PAGES：admissions / medications / vitals /
    memo / reminders / settings / account，其餘 nav-item 與 section label 隱藏。 */
-html[data-care-mode="inpatient"] .nav-item:not([data-page="admissions"]):not([data-page="medications"]):not([data-page="vitals"]):not([data-page="memo"]):not([data-page="reminders"]):not([data-page="settings"]):not([data-page="account"]) {
+html[data-care-mode="inpatient"] .nav-item:not([data-page="admissions"]):not([data-page="medications"]):not([data-page="vitals"]):not([data-page="memo"]):not([data-page="reminders"]):not([data-page="menstrual"]):not([data-page="settings"]):not([data-page="account"]) {
   display: none !important;
 }
 html[data-care-mode="inpatient"] .nav-section-label {
