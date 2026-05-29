@@ -1,0 +1,159 @@
+/* 復發風險預測 UI — 對應 docs CLAUDE_predict_ui_ux.md
+   調性：冷靜、臨床、可信；band 為主、不嚇人、不遊戲化。
+   色彩：low #3FA796 / medium #E0A458 / high #D97757（禁用純紅）。 */
+
+/* ── RiskBandBadge ──────────────────────────────────────── */
+.risk-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--band-color) 14%, transparent);
+  color: var(--band-color);
+  font-weight: 700; font-size: 15px; line-height: 1;
+}
+.risk-badge-icon { font-size: 16px; }
+.risk-badge-label { letter-spacing: .5px; }
+
+/* ── RiskCard（畫面 A）──────────────────────────────────── */
+.home-risk-slot { margin: 0 0 14px; }
+.risk-card {
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-left: 4px solid var(--band-color, #3FA796);
+  border-radius: 16px; padding: 16px 18px;
+  background: #fff; box-shadow: 0 2px 12px rgba(20, 40, 80, .05);
+}
+.risk-card.cold { border-left-color: #9aa7b5; cursor: pointer; }
+.rc-top { display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: #6b7785; margin-bottom: 10px; }
+.rc-title { font-weight: 600; color: #2b3a4b; }
+.rc-horizon { font-size: 12px; opacity: .75; }
+.rc-main { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rc-trend { font-size: 13px; font-weight: 600; }
+.rc-trend.up { color: #D97757; }
+.rc-trend.down { color: #3FA796; }
+.rc-trend.flat { color: #6b7785; }
+.rc-sub { font-size: 12px; color: #8a94a0; margin: 6px 0 8px; }
+.rc-driver { font-size: 14px; color: #2b3a4b; margin: 8px 0; line-height: 1.5; }
+.rc-driver-calm { color: #6b7785; }
+.rc-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.rc-btn { flex: 1 1 auto; min-width: 120px; padding: 9px 12px; border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid transparent; }
+.rc-btn.primary { background: #2b3a4b; color: #fff; }
+.rc-btn.ghost { background: #fff; color: #2b3a4b; border-color: rgba(0,0,0,.15); }
+.rc-disclaimer, .predict-disclaimer {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: #9aa7b5; margin-top: 10px; line-height: 1.4; }
+.rc-cold { font-size: 14px; color: #2b3a4b; margin: 4px 0 10px; }
+
+/* ── ConfidenceMeter ───────────────────────────────────── */
+.confidence-meter { display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; font-size: 12.5px; color: #6b7785; margin-top: 10px; }
+.cm-dots { display: inline-flex; gap: 3px; }
+.cm-dot { width: 7px; height: 7px; border-radius: 50%; background: #d7dde4; }
+.cm-dot.on { background: #5B9FE8; }
+.cm-value { font-weight: 700; color: #2b3a4b; }
+.cm-days { opacity: .8; }
+.cm-warn { flex-basis: 100%; color: #D97757; font-weight: 600; }
+
+/* ── predict 頁面 ──────────────────────────────────────── */
+.predict-page { max-width: 720px; margin: 0 auto; padding: 8px 4px 40px; }
+.predict-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.predict-back { width: 36px; height: 36px; border-radius: 10px; flex: 0 0 auto;
+  background: #fff; border: 1px solid rgba(0,0,0,.12); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; }
+.predict-head h2 { margin: 0; font-size: 19px; color: #2b3a4b; }
+.predict-head p { margin: 2px 0 0; font-size: 13px; color: #8a94a0; }
+
+.predict-summary { border: 1px solid rgba(0,0,0,.08);
+  border-left: 4px solid var(--band-color, #3FA796);
+  border-radius: 14px; padding: 14px 16px; background: #fff; margin-bottom: 18px; }
+.ps-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ps-meta { font-size: 14px; color: #2b3a4b; font-weight: 600; }
+
+.predict-section { margin-bottom: 22px; }
+.predict-section h3 { font-size: 15px; color: #2b3a4b; margin: 0 0 10px; }
+
+/* ── ShapBarList（畫面 C）──────────────────────────────── */
+.shap-list { display: flex; flex-direction: column; gap: 14px; }
+.shap-row { background: #fafbfc; border: 1px solid rgba(0,0,0,.05);
+  border-radius: 12px; padding: 10px 12px; }
+.shap-head { display: flex; justify-content: space-between; align-items: baseline; }
+.shap-name { font-weight: 600; color: #2b3a4b; font-size: 14px; }
+.shap-val { font-size: 13px; font-weight: 700; }
+.shap-row.up .shap-val { color: #D97757; }
+.shap-row.down .shap-val { color: #5B9FE8; }
+.shap-track { position: relative; height: 8px; border-radius: 999px;
+  background: #eef1f4; margin: 8px 0; overflow: hidden; }
+.shap-fill { position: absolute; top: 0; height: 100%; border-radius: 999px; }
+.shap-fill.up { left: 50%; background: #D97757; }      /* 向右 = 推升 */
+.shap-fill.down { right: 50%; background: #5B9FE8; }   /* 向左 = 降低 */
+.shap-foot { display: flex; justify-content: space-between; align-items: center;
+  gap: 8px; font-size: 12.5px; color: #6b7785; }
+.shap-mod { color: #2b7a6b; font-weight: 600; white-space: nowrap; }
+.shap-add { margin-top: 8px; width: 100%; padding: 8px; border-radius: 9px;
+  background: #eef6f4; color: #2b7a6b; border: 1px solid #cfe6e0;
+  font-size: 13px; font-weight: 600; cursor: pointer; }
+.shap-empty { font-size: 13px; color: #8a94a0; }
+.shap-modifiable { font-size: 13.5px; color: #2b7a6b; font-weight: 600; margin-top: 12px; }
+
+/* ── RiskTrendChart（畫面 B）──────────────────────────── */
+.trend-chart { background: #fff; border: 1px solid rgba(0,0,0,.06);
+  border-radius: 12px; padding: 12px; }
+.trend-svg { width: 100%; height: 180px; display: block; }
+.trend-conf { fill: #5B9FE8; opacity: .14; }
+.trend-line { fill: none; stroke: #2b3a4b; stroke-width: 2;
+  stroke-linejoin: round; stroke-linecap: round; }
+.trend-today { fill: #2b3a4b; stroke: #fff; stroke-width: 2; }
+.trend-flare { fill: #D97757; font-size: 13px; }
+.trend-empty { text-align: center; color: #9aa7b5; font-size: 13px; padding: 40px 0; }
+.trend-legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 2px 0;
+  font-size: 11.5px; color: #6b7785; }
+.trend-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.trend-legend .lg-line { width: 16px; height: 2px; background: #2b3a4b; }
+.trend-legend .lg-conf { width: 14px; height: 9px; background: #5B9FE8; opacity: .25; border-radius: 2px; }
+.trend-legend .lg-flare { color: #D97757; }
+.trend-tabs { display: flex; gap: 6px; margin-top: 12px; }
+.trend-tab { flex: 1; padding: 7px 0; border-radius: 8px; font-size: 13px;
+  background: #f1f4f7; color: #6b7785; border: none; cursor: pointer; }
+.trend-tab.active { background: #2b3a4b; color: #fff; font-weight: 600; }
+
+/* ── ColdStartCard（畫面 D）──────────────────────────── */
+.cold-start-card { background: #fff; border: 1px solid rgba(0,0,0,.08);
+  border-radius: 16px; padding: 28px 22px; text-align: center; max-width: 460px; margin: 0 auto; }
+.cs-icon { font-size: 36px; margin-bottom: 8px; }
+.cs-title { font-size: 18px; color: #2b3a4b; margin: 0 0 10px; }
+.cs-body { font-size: 14.5px; color: #4b5a6b; line-height: 1.6; margin: 0 0 16px; }
+.cs-progress { height: 10px; border-radius: 999px; background: #eef1f4; overflow: hidden; }
+.cs-bar { height: 100%; background: linear-gradient(90deg, #5B9FE8, #3FA796); border-radius: 999px;
+  transition: width .4s ease; }
+.cs-count { font-size: 13px; color: #6b7785; margin: 8px 0 4px; }
+.cs-collecting { font-size: 13px; color: #8a94a0; margin: 0 0 18px; }
+.cs-cta { padding: 11px 28px; border-radius: 10px; background: #2b3a4b; color: #fff;
+  border: none; font-size: 15px; font-weight: 600; cursor: pointer; }
+
+/* ── 載入骨架 / 錯誤 ───────────────────────────────────── */
+.risk-card.skeleton { border-left-color: #e3e8ee; }
+.sk-line, .sk-block { background: linear-gradient(90deg, #eef1f4 25%, #f6f8fa 50%, #eef1f4 75%);
+  background-size: 200% 100%; animation: sk-shimmer 1.3s infinite; border-radius: 8px; }
+.sk-line { height: 14px; margin-bottom: 10px; }
+.sk-line.short { width: 50%; }
+.sk-block { height: 60px; }
+@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.predict-error { text-align: center; color: #8a94a0; font-size: 14px; padding: 40px 0; }
+.predict-disclaimer.subtle { opacity: .8; margin-top: 12px; }
+
+/* ── 深色模式（沿用 body.theme-dark 慣例）──────────────── */
+body.theme-dark .risk-card,
+body.theme-dark .predict-summary,
+body.theme-dark .trend-chart,
+body.theme-dark .cold-start-card,
+body.theme-dark .predict-back { background: #1b2430; border-color: rgba(255,255,255,.08); }
+body.theme-dark .rc-title, body.theme-dark .rc-driver,
+body.theme-dark .predict-head h2, body.theme-dark .ps-meta,
+body.theme-dark .shap-name, body.theme-dark .cs-title,
+body.theme-dark .predict-section h3 { color: #e6ecf2; }
+body.theme-dark .rc-btn.primary, body.theme-dark .cs-cta,
+body.theme-dark .trend-tab.active { background: #5B9FE8; }
+body.theme-dark .rc-btn.ghost { background: #1b2430; color: #e6ecf2; }
+body.theme-dark .shap-row { background: #222d3a; border-color: rgba(255,255,255,.05); }
+body.theme-dark .trend-line { stroke: #cfe0f5; }
+body.theme-dark .trend-today { fill: #cfe0f5; stroke: #1b2430; }
