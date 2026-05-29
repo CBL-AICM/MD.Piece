@@ -1907,8 +1907,8 @@ function previsit() {
 
     // 報告動作 — PDF 下載 + 複製（手機版漏掉了，desktop 有）
     +   '<div class="pv-mobile-actions">'
-    +     '<button class="pv-btn pv-btn-mini" onclick="previsitDownload(\'patient\')">'
-    +       '<i data-lucide="file-down"></i> 患者版 PDF'
+    +     '<button class="pv-btn pv-btn-mini" onclick="previsitShowPatientEssence()">'
+    +       '<i data-lucide="sparkles"></i> 精華重點'
     +     '</button>'
     +     '<button class="pv-btn pv-btn-mini" onclick="previsitDownload(\'doctor\')">'
     +       '<i data-lucide="stethoscope"></i> 醫師版 PDF'
@@ -1976,10 +1976,10 @@ function previsit() {
     + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
     + '        <i data-lucide="refresh-cw"></i> 重新生成'
     + '      </button>'
-    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'patient\')" title="患者版：白話摘要 + 想問醫師的三件事，給自己帶進診間念給醫師聽">'
-    + '        <i data-lucide="file-down"></i> 患者版 PDF'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitShowPatientEssence()" title="精華重點：250–500 字白話摘要，回診前直接讀，不下載">'
+    + '        <i data-lucide="sparkles"></i> 精華重點'
     + '      </button>'
-    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'doctor\')" title="醫師版：專業臨床摘要 + 追蹤建議 + 風險提醒，可寄給醫師提前閱讀">'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitDownload(\'doctor\')" title="醫師版：一句話摘要 + 紅旗 + 關鍵指標趨勢 + 結構化摘要，可寄給醫師提前閱讀">'
     + '        <i data-lucide="stethoscope"></i> 醫師版 PDF'
     + '      </button>'
     + '      <button class="pv-btn pv-btn-primary" onclick="previsitCopy()" title="複製為純文字帶去診間">'
@@ -2441,13 +2441,12 @@ var PREVISIT_DISCLAIMER_HTML = ''
   + '<p><strong>⚠ 本報告內容為患者自行記錄之主觀紀錄整理</strong>，由 MD.Piece AI 彙整患者於應用程式中自填的症狀、情緒、用藥、飲食、就診等紀錄產生，<strong>未經臨床檢查或醫療專業驗證</strong>。</p>'
   + '<p>本報告僅供問診溝通參考，<strong>不構成醫療診斷、治療建議或處方依據</strong>。資料可能存在主觀偏差、記憶誤差或記錄遺漏，最終臨床判斷請以主治醫師親自評估為準。</p>';
 
-// 下載診前報告 PDF：
-//   audience='patient' → 患者版（白話摘要 + 三件事，自己念給醫師聽）
-//   audience='doctor'  → 醫師版（專業臨床摘要 + 追蹤建議 + 風險提醒）
+// 下載醫師版診前摘要 PDF（一句話摘要 / 紅旗 / 關鍵指標趨勢 / 結構化摘要 + 病人提問 + 原始數據附錄）。
+// 患者端不下載 PDF，改走 previsitShowPatientEssence() 的精華提示框。
 // 期間（days / period_label）由 backend 依「上次回診」自動推算。
 //
 // 優先用頁面 SSE 跑完已快取的 _previsitData.report；只有沒快取（沒看過 previsit 頁
-// 或 SSE 還在跑）才退回非串流 /monthly、/patient-summary。
+// 或 SSE 還在跑）才退回非串流 /monthly。
 // 兩個理由：(1) 第二次 LLM 呼叫（≈ 30–50s）常撞 Vercel 60s lambda 上限 → 504 → toast「失敗」；
 // (2) 兩次 LLM 輸出不一致，PDF 內容會跟頁面上看到的不一樣。
 function previsitDownload(audience) {
@@ -2458,15 +2457,11 @@ function previsitDownload(audience) {
   }
 
   var dateStr = new Date().toISOString().slice(0, 10);
-  var filename = 'MD.Piece-診前報告-' + (audience === 'doctor' ? '醫師版' : '患者版') + '-' + dateStr + '.pdf';
+  var filename = 'MD.Piece-診前摘要-醫師版-' + dateStr + '.pdf';
 
   function buildAndPrint(reportMarkdown, counts, periodLabel, rawRecords, days) {
-    if (audience === 'doctor') {
-      previsitOpenPrint(previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel, rawRecords, days), filename);
-    } else {
-      var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
-      previsitOpenPrint(previsitBuildPatientHTML(reportMarkdown, counts, checklist, periodLabel, rawRecords, days), filename);
-    }
+    var checklist = (_previsitData && _previsitData.checklist && _previsitData.checklist.checklist) || [];
+    previsitOpenPrint(previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel, rawRecords, days, checklist), filename);
   }
 
   // SSE 完成後 source 會從 'streaming' 換成 'ai' / 'no_data'；只在那之後用快取
@@ -2484,8 +2479,7 @@ function previsitDownload(audience) {
 
   // 退回非串流端點（cache 未就緒）
   if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
-  var endpoint = audience === 'doctor' ? '/monthly' : '/patient-summary';
-  fetch(API + '/reports/' + encodeURIComponent(pid) + endpoint)
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var md = (data && (data.report || data.summary)) || '（暫無報告）';
@@ -2499,9 +2493,78 @@ function previsitDownload(audience) {
     })
     .catch(function() {
       if (typeof showToast === 'function') {
-        showToast('產生' + (audience === 'doctor' ? '醫師' : '患者') + '版報告失敗，請稍後再試', 'error');
+        showToast('產生醫師版摘要失敗，請稍後再試', 'error');
       }
     });
+}
+
+// 患者版精華 — 不下載 PDF，直接彈出提示框顯示 250–500 字白話精華（/patient-summary）。
+function previsitShowPatientEssence() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) {
+    if (typeof showToast === 'function') showToast('找不到使用者，請先登入', 'warning');
+    return;
+  }
+  _previsitShowEssenceModal(null, '撰寫中…');
+  if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
+  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var text = (data && data.summary) || '';
+      _previsitShowEssenceModal(text, (data && data.period_label) || '');
+    })
+    .catch(function() {
+      _previsitShowEssenceModal(null, 'error');
+    });
+}
+
+// 精華提示框 modal。text=null + state 表示載入中('撰寫中…')或失敗('error')。
+function _previsitShowEssenceModal(text, state) {
+  var existing = document.getElementById('previsit-essence-modal');
+  if (existing) existing.remove();
+
+  var bodyHtml;
+  if (text == null && state === '撰寫中…') {
+    bodyHtml = '<p class="pv-essence-loading"><i data-lucide="loader" class="pv-spin"></i> MD.Piece 撰寫中…</p>';
+  } else if (text == null) {
+    bodyHtml = '<p style="color:#b91c1c">產生精華失敗，請稍後再試，或改用「醫師版 PDF」。</p>';
+  } else {
+    // 後端回的是純白話文字（可能多段），用段落呈現，逐行 escape 防 XSS
+    bodyHtml = String(text).split(/\n\s*\n/).map(function(p) {
+      return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+  }
+  var periodLabel = (text != null && state && state !== 'error') ? state : '';
+
+  var modal = document.createElement('div');
+  modal.id = 'previsit-essence-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,42,69,0.55);padding:16px';
+  modal.innerHTML = ''
+    + '<div style="background:#fff;border-radius:14px;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.3)">'
+    +   '<header style="padding:14px 18px;border-bottom:1px solid var(--border,#e2e7ed);display:flex;align-items:center;gap:10px">'
+    +     '<i data-lucide="sparkles" style="width:18px;height:18px;color:var(--accent-deep,#2F6B96)"></i>'
+    +     '<div style="flex:1;min-width:0">'
+    +       '<div style="font-weight:600;font-size:14px;color:var(--navy,#0F2A45)">診前精華重點</div>'
+    +       (periodLabel ? '<div style="font-size:11px;color:var(--text-muted,#6B7F92)">報告期間：' + escapeHtml(periodLabel) + '</div>' : '')
+    +     '</div>'
+    +     '<button type="button" id="previsit-essence-close" aria-label="關閉" style="background:transparent;border:0;cursor:pointer;padding:6px;color:var(--text-muted,#6B7F92)"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
+    +   '</header>'
+    +   '<div style="flex:1;min-height:0;overflow:auto;padding:16px 18px;font-size:14px;line-height:1.75;color:#222">' + bodyHtml + '</div>'
+    +   '<footer style="padding:10px 18px;border-top:1px solid var(--border,#e2e7ed);font-size:11px;color:var(--text-muted,#6B7F92)">'
+    +     '本精華僅供你回診前快速回顧與和醫師討論，不取代醫師診斷。'
+    +   '</footer>'
+    + '</div>';
+  document.body.appendChild(modal);
+  if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+
+  function cleanup() {
+    if (modal.parentNode) modal.parentNode.removeChild(modal);
+    document.removeEventListener('keydown', escHandler);
+  }
+  function escHandler(e) { if (e.key === 'Escape') cleanup(); }
+  document.addEventListener('keydown', escHandler);
+  document.getElementById('previsit-essence-close').onclick = cleanup;
+  modal.addEventListener('click', function(e) { if (e.target === modal) cleanup(); });
 }
 
 // 共用列印樣式（兩版共用）
@@ -2534,23 +2597,23 @@ var _PV_PDF_STYLE = ''
   + '  .disclaimer p:last-child { margin: 0; }'
   // v6 整合摘要視覺：§〇 三大重點橘色醒目方塊 / 【紀錄】【AI 摘要】tag 化為 badge / §七 紫色「可參考方向」框
   + '  .highlights { background: #fef3c7; border-left: 4px solid #d97706; padding: 10px 14px; margin: 10px 0; border-radius: 4px; }'
-  + '  .highlights h2 { border: none; margin: 0 0 6px; color: #92400e; font-size: 14px; padding: 0; }'
-  + '  .highlights ul { margin: 0; padding-left: 20px; }'
+  + '  .highlights h3 { border: none; margin: 0 0 6px; color: #92400e; font-size: 14px; padding: 0; }'
   + '  .highlights li { font-size: 13px; color: #451a03; margin-bottom: 3px; }'
+  + '  .red-flags { background: #fef2f2; border-left: 4px solid #dc2626; padding: 8px 14px 2px; margin: 10px 0; border-radius: 4px; }'
+  + '  .red-flags h3 { border: none; margin: 0 0 6px; color: #991b1b; font-size: 14px; padding: 0; }'
+  + '  .red-flags li { font-size: 13px; color: #450a0a; margin-bottom: 4px; }'
+  + '  .red-flags p { font-size: 13px; color: #450a0a; }'
   + '  .badge-record { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }'
-  + '  .badge-ai { display: inline-block; background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }'
-  + '  .referral-section { background: #f5f3ff; border-left: 3px solid #8b5cf6; padding: 12px 16px; border-radius: 4px; margin-top: 8px; }'
-  + '  .referral-section p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.7; }'
-  + '  .referral-section p:last-child { margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed #d4d4d8; color: #6b21a8; font-size: 12.5px; font-style: italic; }'
-  + '  .referral-section strong { color: #6b21a8; }';
+  + '  .badge-ai { display: inline-block; background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }';
 
 // ── v6 整合摘要 markdown 後處理 ────────────────────────────
 //
-// LLM 輸出的 markdown 已含七段（§〇 ~ §六 + §七）與 inline tag 【紀錄】/【AI 摘要】，
-// 但 markdownToHtml 預設只渲染成普通 h2 + 文字。這個函式把：
+// LLM 輸出的醫師版 markdown 含四段（一句話摘要 / 需注意事項·紅旗 / 關鍵指標趨勢 /
+// 結構化摘要）與 inline tag 【紀錄】/【AI 摘要】，但 markdownToHtml 預設只渲染成普通
+// h3 + 文字。這個函式把：
 //   1. 【紀錄】/【AI 摘要】 inline 文字 → 有色 badge
-//   2. §〇 本次三大重點段（h2 + 緊接 ul）→ 橘色醒目方塊 .highlights
-//   3. §七 可參考方向段（h2 之後直到下一個 h2）→ 紫色 .referral-section
+//   2. 一句話摘要段（h3 起，吃到下一個 h3）→ 橘色醒目方塊 .highlights
+//   3. 需注意事項 / 紅旗段（h3 起，吃到下一個 h3）→ 紅色方塊 .red-flags
 // 失敗時（pattern 沒命中）原樣回傳，不阻塞 PDF 產出。
 
 function previsitProcessIntegratedSummaryHTML(html) {
@@ -2562,16 +2625,19 @@ function previsitProcessIntegratedSummaryHTML(html) {
     return '<span class="' + cls + '">【' + tag + '】</span>';
   });
 
-  // 2) §〇 三大重點 — 找「<h2>〇、本次三大重點 ...</h2><ul>...</ul>」整段，包進 .highlights
+  // markdownToHtml 把「## 標題」渲染成 <h3>（非 <h2>），且 list 是裸 <li> 沒有 <ul> 外框。
+  // 因此這裡以 <h3 ...>標題 為錨點，吃到下一個 <h3 或文件結尾，整段包起來。
+
+  // 2) 一句話摘要 — 包進 .highlights 橘色方塊
   html = html.replace(
-    /(<h2>〇、本次三大重點[\s\S]*?<\/h2>\s*<ul>[\s\S]*?<\/ul>)/,
+    /(<h3[^>]*>\s*一句話摘要[\s\S]*?)(?=<h3|$)/,
     '<div class="highlights">$1</div>'
   );
 
-  // 3) §七 可參考方向 — 從「<h2>七、可參考方向...</h2>」開始，吃到下一個 h2 或文件結尾
+  // 3) 需注意事項 / 紅旗 — 包進 .red-flags 紅色方塊
   html = html.replace(
-    /(<h2>七、可參考方向[\s\S]*?<\/h2>)([\s\S]*?)(?=<h2|$)/,
-    '$1<div class="referral-section">$2</div>'
+    /(<h3[^>]*>\s*需注意事項[\s\S]*?)(?=<h3|$)/,
+    '<div class="red-flags">$1</div>'
   );
 
   return html;
@@ -2768,50 +2834,11 @@ function previsitRawRecordsHTML(rawRecords, days) {
   return blocks.join('');
 }
 
-function previsitBuildPatientHTML(summary, counts, checklist, periodLabel, rawRecords, days) {
-  var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
-  // 整合摘要回傳的是 markdown（v6: §〇 + §一~§七 共七段），用 markdownToHtml 渲染後
-  // 用 previsitProcessIntegratedSummaryHTML 把 §〇 highlight 方塊 / 【紀錄】【AI 摘要】
-  // badge / §七 紫色框做最後的視覺修飾。
-  var bodyHtml = (typeof markdownToHtml === 'function')
-    ? markdownToHtml(String(summary))
-    : String(summary).split(/\n\s*\n/).map(function(p) {
-        return '<p>' + escapeHtml(p.trim()).replace(/\n/g, '<br>') + '</p>';
-      }).join('');
-  bodyHtml = previsitProcessIntegratedSummaryHTML(bodyHtml);
-  var checklistHtml = checklist.length
-    ? '<ol>' + checklist.map(function(t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ol>'
-    : '<p style="color:#888">（暫無）</p>';
-  var statsHtml = ''
-    + '<table class="stats"><tr>'
-    +   '<td><strong>' + (counts.symptom_count || 0) + '</strong><span>症狀紀錄</span></td>'
-    +   '<td><strong>' + (counts.emotion_count || 0) + '</strong><span>情緒紀錄</span></td>'
-    +   '<td><strong>' + (counts.medication_count || 0) + '</strong><span>用藥</span></td>'
-    +   '<td><strong>' + (counts.visit_count || 0) + '</strong><span>就診</span></td>'
-    + '</tr></table>';
-  var recHtml = previsitRawRecordsHTML(rawRecords || {}, days || 30);
-
-  return ''
-    + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
-    + '<title>MD.Piece 診前報告（患者版）' + dateStr + '</title>'
-    + '<style>' + _PV_PDF_STYLE + '</style></head><body>'
-    + '<h1>診前報告（患者版）</h1>'
-    + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：' + escapeHtml(periodLabel) + '</div>'
-    + '<h2>基本個人資料</h2>'
-    + previsitBasicInfoTableHTML()
-    + '<h2>本期間紀錄概覽</h2>'
-    + statsHtml
-    + '<h2>MD.Piece 整合摘要</h2>'
-    + bodyHtml
-    + '<h2>這次想請醫師確認的事</h2>'
-    + checklistHtml
-    + '<h2>本期間紀錄一覽</h2>'
-    + recHtml
-    + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
-    + '</body></html>';
-}
-
-function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel, rawRecords, days) {
+// 醫師版診前摘要 PDF。版面對齊診前摘要 spec 的六分區：
+//   一句話摘要 / 需注意事項·紅旗 / 關鍵指標趨勢 / 結構化摘要（以上四段由 LLM 產出 = bodyHtml）
+//   + 病人提問（病人這次想問醫師的事，原樣列出 = checklist）
+//   + 原始數據附錄（完整時間序列，純 JS 渲染 = recHtml）
+function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel, rawRecords, days, checklist) {
   var dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
   var bodyHtml = (typeof markdownToHtml === 'function')
     ? markdownToHtml(String(reportMarkdown))
@@ -2824,21 +2851,26 @@ function previsitBuildDoctorHTML(reportMarkdown, counts, periodLabel, rawRecords
     +   '<td><strong>' + (counts.medication_count || 0) + '</strong><span>用藥</span></td>'
     +   '<td><strong>' + (counts.visit_count || 0) + '</strong><span>就診</span></td>'
     + '</tr></table>';
+  var questions = checklist || [];
+  var questionsHtml = questions.length
+    ? '<ol>' + questions.map(function(t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('') + '</ol>'
+    : '<p style="color:#888">（病人本次未列出特定提問）</p>';
   var recHtml = previsitRawRecordsHTML(rawRecords || {}, days || 30);
 
   return ''
     + '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
-    + '<title>MD.Piece 診前報告（醫師版）' + dateStr + '</title>'
+    + '<title>MD.Piece 診前摘要（醫師版）' + dateStr + '</title>'
     + '<style>' + _PV_PDF_STYLE + '</style></head><body>'
-    + '<h1>診前報告（醫師版）</h1>'
+    + '<h1>診前摘要（醫師版）</h1>'
     + '<div class="meta">產出日期：' + dateStr + ' · 報告期間：' + escapeHtml(periodLabel) + '</div>'
     + '<h2>患者基本資料</h2>'
     + previsitBasicInfoTableHTML()
     + '<h2>本期間紀錄概覽</h2>'
     + statsHtml
-    + '<h2>整合摘要</h2>'
     + bodyHtml
-    + '<h2>本期間紀錄一覽</h2>'
+    + '<h2>病人提問</h2>'
+    + questionsHtml
+    + '<h2>原始數據附錄（本期間紀錄一覽）</h2>'
     + recHtml
     + '<div class="disclaimer">' + PREVISIT_DISCLAIMER_HTML + '</div>'
     + '</body></html>';
