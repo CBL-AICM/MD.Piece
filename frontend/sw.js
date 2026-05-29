@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v130-inpatient-ux";
+const CACHE_VERSION = "mdpiece-v131-apifetch-auth";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -10,8 +10,8 @@ const STATIC_ASSETS = [
   "/css/v11-modern.css?v=v18-dark-text-contrast",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/js/i18n.js?v=v82-domready-fix",
-  "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v145-diet-pick-bounded-timeout",
+  "/js/bell.js?v=v82-apifetch",
+  "/js/app.js?v=v149-apifetch",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

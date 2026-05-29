@@ -192,7 +192,7 @@
     if (!patientId) return Promise.resolve({});
     _cachedPatientId = patientId;
     var base = apiBase || "";
-    return fetch(base + "/reminders/bell-prefs?patient_id=" + encodeURIComponent(patientId))
+    return (self.apiFetch || fetch)(base + "/reminders/bell-prefs?patient_id=" + encodeURIComponent(patientId))
       .then(function (r) { return r.ok ? r.json() : { prefs: [] }; })
       .then(function (data) {
         _cachedPrefs = {};
@@ -231,7 +231,7 @@
       volume: payload.volume,
       enabled: payload.enabled,
     };
-    return fetch(base + "/reminders/bell-prefs", {
+    return (self.apiFetch || fetch)(base + "/reminders/bell-prefs", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

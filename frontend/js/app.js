@@ -413,6 +413,7 @@ async function apiFetch(input, init) {
   }
   return res;
 }
+window.apiFetch = apiFetch;
 
 // 登出 — 清除使用者資料並回到 landing
 function logout() {
@@ -1455,7 +1456,7 @@ function story() {
 }
 
 function loadStoryPage() {
-  fetch(API + "/education/articles/daily?days=7")
+  apiFetch(API + "/education/articles/daily?days=7")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var today = (data && data.today) || {};
@@ -1746,7 +1747,7 @@ function storyOpenArchive(slug, catKey) {
     return;
   }
 
-  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+  apiFetch(API + "/education/articles/" + encodeURIComponent(slug))
     .then(function(r) {
       if (!r.ok) throw new Error("not found");
       return r.json();
@@ -2043,7 +2044,7 @@ function loadPrevisitPage() {
   // 載入 Timeline（本地症狀 + 雲端情緒，合併時序）
   refreshPvTimeline(pid);
 
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/checklist')
+  apiFetch(API + '/reports/' + encodeURIComponent(pid) + '/checklist')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _previsitData.checklist = data;
@@ -2169,7 +2170,7 @@ function previsitRenderStats(statsEl, raw) {
 }
 
 function previsitFallbackToMonthly(pid, days) {
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly?days=' + days)
+  apiFetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly?days=' + days)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _previsitData.report = data;
@@ -2210,7 +2211,7 @@ async function refreshPvTimeline(pid) {
 
   // 2. 雲端情緒（每日聚合）
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
+    var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
     (em.daily || []).forEach(function(d) {
       if (!d || !d.date) return;
       var t = new Date(d.date + 'T12:00:00').getTime();
@@ -2485,7 +2486,7 @@ function previsitDownload(audience) {
   // 退回非串流端點（cache 未就緒）
   if (typeof showToast === 'function') showToast('MD.Piece 撰寫中，請稍候…', 'info');
   var endpoint = audience === 'doctor' ? '/monthly' : '/patient-summary';
-  fetch(API + '/reports/' + encodeURIComponent(pid) + endpoint)
+  apiFetch(API + '/reports/' + encodeURIComponent(pid) + endpoint)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var md = (data && (data.report || data.summary)) || '（暫無報告）';
@@ -3476,7 +3477,7 @@ async function submitLogin() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('login-error').hidden = true;
   try {
-    const res = await fetch(`${API}/auth/login`, {
+    const res = await apiFetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -3540,7 +3541,7 @@ async function submitRegister() {
   }
 
   try {
-    const res = await fetch(`${API}/auth/register`, {
+    const res = await apiFetch(`${API}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -3570,7 +3571,7 @@ async function lookupRecoveryQuestion() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('forgot-error').hidden = true;
   try {
-    const res = await fetch(`${API}/auth/recovery/question`, {
+    const res = await apiFetch(`${API}/auth/recovery/question`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
@@ -3607,7 +3608,7 @@ async function submitRecoveryReset() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('forgot-error').hidden = true;
   try {
-    const res = await fetch(`${API}/auth/recovery/reset`, {
+    const res = await apiFetch(`${API}/auth/recovery/reset`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, answer, new_password: newPassword }),
@@ -4196,7 +4197,7 @@ async function _loadNextInfusionInfo() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
   try {
-    var listRes = await fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid)).then(function(x){return x.json();});
+    var listRes = await apiFetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid)).then(function(x){return x.json();});
     var actives = ((listRes && listRes.admissions) || []).filter(function(a) {
       return a.status === 'active';
     });
@@ -4223,7 +4224,7 @@ async function _loadNextInfusionInfo() {
       return;
     }
     var details = await Promise.all(infusionActives.map(function(a) {
-      return fetch(API + '/admissions/' + encodeURIComponent(a.id)).then(function(x){return x.json();}).catch(function(){return null;});
+      return apiFetch(API + '/admissions/' + encodeURIComponent(a.id)).then(function(x){return x.json();}).catch(function(){return null;});
     }));
     var earliest = null;
     var earliestName = '';
@@ -4499,7 +4500,7 @@ function onAdmissionPrepActivate(kind) {
     if (!adm) return;
     if (!confirm('把入住日改成今天，並立刻啟動「住院模式」？')) return;
     var nowIso = new Date().toISOString().slice(0, 19);
-    fetch(API + '/admissions/' + encodeURIComponent(adm.id), {
+    apiFetch(API + '/admissions/' + encodeURIComponent(adm.id), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ admit_date: nowIso }),
@@ -4517,7 +4518,7 @@ function onAdmissionPrepActivate(kind) {
     var inf = _ipUpcomingCache.infusion;
     if (!inf || !inf.medication_id) return;
     if (!confirm('把這次施打記錄為「已完成」？')) return;
-    fetch(API + '/admissions/medications/' + encodeURIComponent(inf.medication_id) + '/dose', {
+    apiFetch(API + '/admissions/medications/' + encodeURIComponent(inf.medication_id) + '/dose', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ admission_medication_id: inf.medication_id }),
@@ -4616,7 +4617,7 @@ async function refreshNavBadges() {
   // 情緒：後端 emotions/daily 的 date 用 UTC 切日，這裡保留 UTC todayKey 對齊；
   // 待後端切到本地時區後可改用 todayISO（_localDay()）。
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
+    var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
     var todayUTC = new Date().toISOString().slice(0, 10);
     var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
     var nc = d ? (d.count || 0) : 0;
@@ -4716,7 +4717,7 @@ async function refreshTodayDigest() {
 
   // 情緒 daily 聚合 — 後端 emotions/daily 用 UTC 切日，這裡 fallback 用 UTC todayKey
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
+    var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
     var todayUTC = new Date().toISOString().slice(0, 10);
     var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
     moodCount = d ? (d.count || 0) : 0;
@@ -4836,7 +4837,7 @@ async function _genAutoTodos() {
 
   // 情緒：今天還沒打卡
   try {
-    var rr = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(x){return x.json();});
+    var rr = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(x){return x.json();});
     var daily = rr.daily || [];
     var today = daily.find(function(d) { return d.date === todayISO && d.count > 0; });
     if (!today) {
@@ -5773,7 +5774,7 @@ function loadHomePage() {
       if (el) el.innerHTML = '<p class="home-ov-empty">' + _T('home.med.error') + '</p>';
     });
 
-  fetch(API + '/emotions/daily?patient_id=' + pid + '&days=7')
+  apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=7')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var el = document.getElementById('home-mood-summary');
@@ -5896,7 +5897,7 @@ function loadHomeEducation() {
   };
 
   var loadFeaturedFallback = function() {
-    fetch(API + '/education/articles/featured?limit=3')
+    apiFetch(API + '/education/articles/featured?limit=3')
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         var arts = (data && data.articles) || [];
@@ -5911,7 +5912,7 @@ function loadHomeEducation() {
 
   resolvePatientIcd10Codes(function(codes) {
     if (!codes || !codes.length) { loadFeaturedFallback(); return; }
-    fetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
+    apiFetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         var items = ((data && data.items) || []).filter(function(it) { return it && it.is_supported && (it.articles || []).length; });
@@ -6208,7 +6209,7 @@ function _updateMobileSosCount() {
     // 各症狀「最近 X/X」：由 /symptoms/history/{pid} 推估
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return;
-    fetch(API + '/symptoms/history/' + encodeURIComponent(pid))
+    apiFetch(API + '/symptoms/history/' + encodeURIComponent(pid))
       .then(function(r) { return r.ok ? r.json() : { history: [] }; })
       .then(function(d) {
         var hist = (d && d.history) || [];
@@ -6819,7 +6820,7 @@ function submitInpatientQuickLog(key, value) {
     // 心情送後端 /emotions/log；後端失敗時 fallback 存 local，趨勢線之後接後端就會帶到
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (pid) {
-      fetch(API + '/emotions/log', {
+      apiFetch(API + '/emotions/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ patient_id: pid, score: value / 5, note: '住院模式快速紀錄' }),
@@ -7066,7 +7067,7 @@ function onInpatientStepClick(stepId) {
     var iso = prompt('排定出院日期（YYYY-MM-DD）：', _localDay());
     if (!iso) return;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso.trim())) { if (typeof showToast === 'function') showToast('格式不對', 'error'); return; }
-    fetch(API + '/admissions/' + encodeURIComponent(admId), {
+    apiFetch(API + '/admissions/' + encodeURIComponent(admId), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ discharge_date: iso.trim() + 'T10:00' }),
@@ -7081,7 +7082,7 @@ function onInpatientStepClick(stepId) {
   }
   if (stepId === 'done') {
     if (!confirm('標記為「已出院」？\n會把這次住院關閉，住院模式相關區塊改成空狀態。')) return;
-    fetch(API + '/admissions/' + encodeURIComponent(admId), {
+    apiFetch(API + '/admissions/' + encodeURIComponent(admId), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'discharged', discharge_date: new Date().toISOString().slice(0, 19) }),
@@ -8089,7 +8090,7 @@ async function loadServerTimeline() {
   try {
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return false;
-    var res = await fetch(API + '/timeline?patient_id=' + encodeURIComponent(pid));
+    var res = await apiFetch(API + '/timeline?patient_id=' + encodeURIComponent(pid));
     if (!res.ok) return false;
     var data = await res.json();
     if (data && data.meta && data.meta.db_offline) return false;
@@ -8297,7 +8298,7 @@ function loadInpatientHome() {
 function loadInpatientActiveAdmission() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
+  apiFetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var rows = (data && data.admissions) || [];
@@ -8307,7 +8308,7 @@ function loadInpatientActiveAdmission() {
       if (active && typeof _admMaybeCheckLocation === 'function') _admMaybeCheckLocation(active);
       // Timeline + Next Step：拿 admission_medications 排程合成今日 timeline
       if (active) {
-        fetch(API + '/admissions/' + encodeURIComponent(active.id))
+        apiFetch(API + '/admissions/' + encodeURIComponent(active.id))
           .then(function(r) { return r.json(); })
           .then(function(adm) {
             var meds = (adm && adm.medications) || [];
@@ -8857,7 +8858,7 @@ function loadInpatientTrendSparklines() {
   _ipRefreshFeelingHint();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
+  apiFetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
     .then(function(r) {
       var ct = r.headers.get('content-type') || '';
       if (!r.ok || ct.indexOf('json') === -1) throw new Error('non-json');
@@ -9136,7 +9137,7 @@ function onInpatientNextDone() {
   var medId = btn.dataset.medId || '';
   // 排定給藥的「已完成」→ 後端 record dose（沿用 medications）
   if (itemId.indexOf('med-') === 0 && medId) {
-    fetch(API + '/admissions/medications/' + encodeURIComponent(medId) + '/dose', {
+    apiFetch(API + '/admissions/medications/' + encodeURIComponent(medId) + '/dose', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ admission_medication_id: medId }),
@@ -10023,7 +10024,7 @@ async function symBodyAiAnalyze() {
 
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   try {
-    var res = await fetch(API + '/symptoms/analyze', {
+    var res = await apiFetch(API + '/symptoms/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -10969,7 +10970,7 @@ function loadDoctorMeasurementRequests(announce) {
   const banner = document.getElementById('vt-doctor-request-banner');
   if (!banner) return;
   const pid = getStablePatientId();
-  fetch(`${API}/reminders/measurement-requests?patient_id=${encodeURIComponent(pid)}&status=pending&limit=10`)
+  apiFetch(`${API}/reminders/measurement-requests?patient_id=${encodeURIComponent(pid)}&status=pending&limit=10`)
     .then(r => r.ok ? r.json() : { items: [] })
     .then(data => renderDoctorMeasurementRequests(data.items || [], !!announce))
     .catch(() => {
@@ -11013,7 +11014,7 @@ function renderDoctorMeasurementRequests(items, announce) {
 function completeMeasurementRequest(reqId) {
   const input = document.getElementById(`mr-val-${reqId}`);
   const val = (input && input.value || '').trim();
-  fetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}/complete`, {
+  apiFetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}/complete`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ result_value: val || null }),
@@ -11024,7 +11025,7 @@ function completeMeasurementRequest(reqId) {
 
 function cancelMeasurementRequest(reqId) {
   if (!confirm('忽略這次請求？醫師會在報告看到。')) return;
-  fetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}`, { method: 'DELETE' })
+  apiFetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}`, { method: 'DELETE' })
     .then(() => loadDoctorMeasurementRequests());
 }
 
@@ -11052,7 +11053,7 @@ function getPlanForMetric(metricId) {
 function loadMeasurementPlans(refresh) {
   const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return Promise.resolve([]);
-  return fetch(`${API}/reminders/measurement-plan?patient_id=${encodeURIComponent(pid)}`)
+  return apiFetch(`${API}/reminders/measurement-plan?patient_id=${encodeURIComponent(pid)}`)
     .then(r => r.ok ? r.json() : { plans: [] })
     .then(data => {
       window.__vtPlans = data.plans || [];
@@ -11254,10 +11255,10 @@ function vtPlanDialogSave(metricId, isUpdate) {
   // 若是更新：先停用舊計畫
   const existing = getPlanForMetric(metricId);
   const promise = (isUpdate && existing)
-    ? fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(existing.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' }).catch(() => null)
+    ? apiFetch(`${API}/reminders/measurement-plan/${encodeURIComponent(existing.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' }).catch(() => null)
     : Promise.resolve();
 
-  promise.then(() => fetch(`${API}/reminders/measurement-plan`, {
+  promise.then(() => apiFetch(`${API}/reminders/measurement-plan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -11277,7 +11278,7 @@ function vtPlanDialogCancelExisting(planId) {
   if (!confirm('確定要移除這個提醒嗎？')) return;
   const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(planId)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
+  apiFetch(`${API}/reminders/measurement-plan/${encodeURIComponent(planId)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
     .then(() => {
       vtPlanDialogClose();
       loadMeasurementPlans(true);
@@ -11433,7 +11434,7 @@ function toggleVitalTracked(id) {
     } else {
       const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
       if (pid) {
-        fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(plan.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
+        apiFetch(`${API}/reminders/measurement-plan/${encodeURIComponent(plan.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
           .then(() => loadMeasurementPlans());
       }
     }
@@ -11949,7 +11950,7 @@ async function runSymptomAnalysis() {
 
   const pid = getStablePatientId();
   try {
-    const res = await fetch(`${API}/symptoms/analyze`, {
+    const res = await apiFetch(`${API}/symptoms/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symptoms, patient_id: pid }),
@@ -11985,7 +11986,7 @@ async function enrichSymptomAnalysisWithTriage(symptoms, pid) {
     stable:    { sev: 'self',     text: '可先自我照護觀察' },
   };
   try {
-    const res = await fetch(`${API}/triage/evaluate`, {
+    const res = await apiFetch(`${API}/triage/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ patient_id: pid, symptoms: symptoms || [] }),
@@ -12064,7 +12065,7 @@ function loadSymptomAnalysisHistory() {
   const pid = getStablePatientId();
   const el = document.getElementById("symptom-analyze-history");
   if (!el) return;
-  fetch(`${API}/symptoms/history/${pid}`)
+  apiFetch(`${API}/symptoms/history/${pid}`)
     .then(r => r.ok ? r.json() : { history: [] })
     .then(data => {
       const items = (data.history || []).slice(0, 5);
@@ -12108,7 +12109,7 @@ async function deleteSymptomHistoryItem(logId) {
   if (!confirm("確定要刪除這筆分析紀錄？")) return;
   const pid = getStablePatientId();
   try {
-    const res = await fetch(`${API}/symptoms/history/${pid}/${logId}`, { method: "DELETE" });
+    const res = await apiFetch(`${API}/symptoms/history/${pid}/${logId}`, { method: "DELETE" });
     if (!res.ok) {
       const txt = await res.text();
       throw new Error("HTTP " + res.status + ": " + txt.slice(0, 200));
@@ -12128,7 +12129,7 @@ async function analyzeSymptoms() {
   el.innerHTML = '<div class="loading">分析中...</div>';
 
   try {
-    const res = await fetch(`${API}/symptoms/analyze`, {
+    const res = await apiFetch(`${API}/symptoms/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symptoms }),
@@ -12166,7 +12167,7 @@ async function analyzeSymptoms() {
 async function quickAdvice() {
   const input = document.getElementById("symptom-input").value.split(",")[0].trim();
   if (!input) return;
-  const res = await fetch(`${API}/symptoms/advice?symptom=${encodeURIComponent(input)}`);
+  const res = await apiFetch(`${API}/symptoms/advice?symptom=${encodeURIComponent(input)}`);
   const data = await res.json();
   document.getElementById("analysis-result").innerHTML =
     `<div class="advice-box"><strong>${data.symptom}</strong>：${data.advice}</div>`;
@@ -12556,7 +12557,7 @@ function ensureChronicMeasurementReminders(info) {
       next.setHours(hh, mm, 0, 0);
       if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
       const measureLabel = { bp: '血壓', glucose: '血糖' }[slot.kind] || slot.kind;
-      fetch(`${API}/reminders/`, {
+      apiFetch(`${API}/reminders/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -16053,7 +16054,7 @@ function loadEducationPage() {
   // 進頁面預設停在書架階段，清掉殘留的 edu-notebook-open（避免從別頁回來時誤把卡片藏起來）
   document.body.classList.remove("edu-notebook-open");
   // 首次載入時抓疾病列表，給「疾病百科」這本書用
-  fetch(API + "/education/diseases")
+  apiFetch(API + "/education/diseases")
     .then(function(r) { return r.json(); })
     .then(function(data) { _eduDiseases = data.diseases || []; })
     .catch(function() { /* 不擋整體 UI */ });
@@ -16110,7 +16111,7 @@ function loadMyDiseases() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-    fetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
+    apiFetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         // 只渲染後端真的支援的疾病——不在 ICD10_MAP 的代碼點下去會跳 400
@@ -16330,7 +16331,7 @@ function loadRelatedDiseases() {
       card.style.display = "none";
       return;
     }
-    fetch(API + "/education/related?codes=" + encodeURIComponent(codes.join(",")) + "&limit=6")
+    apiFetch(API + "/education/related?codes=" + encodeURIComponent(codes.join(",")) + "&limit=6")
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         if (!data || !data.items || !data.items.length) {
@@ -16367,7 +16368,7 @@ function resolvePatientIcd10Codes(callback) {
   }
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : (user && user.id);
   if (!pid) { callback([]); return; }
-  fetch(API + "/patients/" + encodeURIComponent(pid))
+  apiFetch(API + "/patients/" + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(p) {
       callback((p && Array.isArray(p.icd10_codes)) ? p.icd10_codes : []);
@@ -16537,7 +16538,7 @@ function loadFeaturedArticles() {
   // 兩支獨立的請求：
   // 1. /education/articles — 全部文章，用來建立 slug 索引給書本章節對照
   // 2. /education/articles/featured — 後端依今日日期輪播好的精選清單
-  fetch(API + "/education/articles")
+  apiFetch(API + "/education/articles")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var arts = (data && data.articles) || [];
@@ -16554,7 +16555,7 @@ function loadFeaturedArticles() {
     .catch(function() { /* 索引建構失敗不阻擋顯示 */ });
 
   // 不限 desktop el — mobile sync 也要跑
-  fetch(API + "/education/articles/featured?limit=6")
+  apiFetch(API + "/education/articles/featured?limit=6")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var featured = (data && data.articles) || [];
@@ -16634,7 +16635,7 @@ function eduOpenArticle(slug) {
   eduSwitchStage("edu-stage-notebook");
   eduRenderArticleBreadcrumb(card ? card.title : "文章");
 
-  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+  apiFetch(API + "/education/articles/" + encodeURIComponent(slug))
     .then(function(r) {
       if (!r.ok) throw new Error("not found");
       return r.json();
@@ -16989,7 +16990,7 @@ function eduOpenContent(key, label) {
   // 1) 先看有沒有人工審稿過的文章可以對應到這個章節 → 直接出文章
   var curatedSlug = findCuratedArticleSlug(book, key);
   if (curatedSlug) {
-    fetch(API + "/education/articles/" + encodeURIComponent(curatedSlug))
+    apiFetch(API + "/education/articles/" + encodeURIComponent(curatedSlug))
       .then(function(r) { if (!r.ok) throw new Error("not found"); return r.json(); })
       .then(function(article) {
         _eduArticles[article.slug] = article;
@@ -17014,7 +17015,7 @@ function eduGenerateContent(fetchBody, book, label, attempt) {
   var MAX_ATTEMPTS = 2;  // 第一次失敗自動重試一次（解 LLM 短暫 rate-limit / cold start）
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
-  fetch(API + "/education/generate", {
+  apiFetch(API + "/education/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(fetchBody),
@@ -18218,7 +18219,7 @@ function chatSend() {
 
 // 把後端 SSE 流逐 token 渲染進 bot 氣泡；同時保持小禾打字動畫
 function chatStreamReply(body, fallbackText) {
-  fetch(API + '/xiaohe/chat/stream', {
+  apiFetch(API + '/xiaohe/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
     body: JSON.stringify(body)
@@ -18282,7 +18283,7 @@ function chatStreamReply(body, fallbackText) {
 
 // 串流不通時的 fallback：用原本的 /xiaohe/chat 並以 typewriter 效果顯示
 function chatNonStreamFallback(body, fallbackText) {
-  fetch(API + '/xiaohe/chat', {
+  apiFetch(API + '/xiaohe/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -18330,7 +18331,7 @@ function chatGenerateArticle() {
 
   chatShowThinking();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : 'demo';
-  fetch(API + '/xiaohe/chat', {
+  apiFetch(API + '/xiaohe/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -18806,7 +18807,7 @@ async function labsCheck() {
     if (ageS) body.age = parseInt(ageS, 10);
     if (sex)  body.sex = sex;
 
-    const res = await fetch(`${API}/labs/check`, {
+    const res = await apiFetch(`${API}/labs/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -18859,7 +18860,7 @@ function handleLabPhoto(input) {
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    fetch(API + '/labs/scan', {
+    apiFetch(API + '/labs/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64: base64, media_type: mediaType })
@@ -19491,7 +19492,7 @@ async function submitEmotion() {
   btn.innerHTML = '<i data-lucide="loader"></i> 送出中…';
   if (typeof lucide !== 'undefined') lucide.createIcons();
   try {
-    var res = await fetch(API + '/emotions/', {
+    var res = await apiFetch(API + '/emotions/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({ patient_id: pid, score: _emotionSelected, note: note }),
@@ -19527,7 +19528,7 @@ async function _moodFetch(days) {
   var pid = getStablePatientId();
   if (!pid) return null;
   try {
-    var res = await fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=' + days);
+    var res = await apiFetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=' + days);
     if (!res.ok) return null;
     var data = await res.json();
     var daily = data.daily || [];
@@ -20433,7 +20434,7 @@ function dietPickMeal(isReroll) {
   // 永遠轉，會走 .catch 顯示「抽不到，稍後再試」。
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
-  fetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs, {
+  apiFetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs, {
     signal: ctrl ? ctrl.signal : undefined,
   })
     .then(function(r) { return r.json(); })
@@ -20540,7 +20541,7 @@ function dietPickDrink(isReroll) {
   // 同 dietPickMeal：55s AbortController 防 lambda hang 死讓 spinner 永遠轉。
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
-  fetch(API + '/diet/drink/' + encodeURIComponent(pid) + qs, {
+  apiFetch(API + '/diet/drink/' + encodeURIComponent(pid) + qs, {
     signal: ctrl ? ctrl.signal : undefined,
   })
     .then(function(r) { return r.json(); })
@@ -20608,7 +20609,7 @@ async function dietRecordDrink() {
   }
   if (_dietDrinkCurrent.where_to_get) noteParts.push(_dietDrinkCurrent.where_to_get);
   try {
-    var res = await fetch(API + '/diet/records', {
+    var res = await apiFetch(API + '/diet/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({
@@ -20640,7 +20641,7 @@ function fetchCaffeineGuide() {
   // 用 class 而不是 ID，手機 + 桌機 body 都同步填入。
   var bodies = document.querySelectorAll('.diet-caffeine-body');
   if (!bodies.length) return;
-  fetch(API + '/diet/caffeine-guide')
+  apiFetch(API + '/diet/caffeine-guide')
     .then(function(r) { return r.json(); })
     .then(function(g) {
       var sources = (g.common_sources || []).map(function(s) {
@@ -20721,7 +20722,7 @@ function fetchDietGuide() {
   renderDietTargets(DIET_BASELINE_TARGETS, DIET_BASELINE_TIPS);
   var pid = getStablePatientId();
   if (!pid) { renderDietWarnings([]); renderDietSuggestions({}); return; }
-  fetch(API + '/diet/guide/' + encodeURIComponent(pid))
+  apiFetch(API + '/diet/guide/' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(g) {
       _dietGuide = g || {};
@@ -20874,7 +20875,7 @@ async function _mobileDietSubmit() {
   var note = (noteEl && noteEl.value || '').trim();
   if (statusEl) { statusEl.textContent = '送出中…'; statusEl.style.color = 'var(--text-muted)'; }
   try {
-    var res = await fetch(API + '/diet/records', {
+    var res = await apiFetch(API + '/diet/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note }),
@@ -20904,7 +20905,7 @@ async function dietSubmitLog() {
   statusEl.textContent = '送出中…';
   statusEl.className = 'diet-log-status';
   try {
-    var res = await fetch(API + '/diet/records', {
+    var res = await apiFetch(API + '/diet/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note }),
@@ -21029,7 +21030,7 @@ function fetchDietWeekly() {
   if (!stats) return;
   stats.innerHTML = '<div class="diet-empty">載入中…</div>';
   var tz = new Date().getTimezoneOffset();
-  fetch(API + '/diet/weekly/' + encodeURIComponent(pid) + '?weeks=4&tz_offset=' + tz)
+  apiFetch(API + '/diet/weekly/' + encodeURIComponent(pid) + '?weeks=4&tz_offset=' + tz)
     .then(function(r) {
       if (!r.ok) {
         return r.text().then(function(body) {
@@ -21502,7 +21503,7 @@ function loadDrugSearchPage() {
     runDrugSearch();
   }
   // 載入熱門查詢列表
-  fetch(API + "/drug-search/trending/list?limit=8")
+  apiFetch(API + "/drug-search/trending/list?limit=8")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var el = document.getElementById('drug-trending');
@@ -21562,7 +21563,7 @@ function runDrugSearch() {
   if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> 查詢中… 第一次查詢會稍久（AI 整理中）</p>';
   if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
 
-  fetch(API + "/drug-search/?q=" + encodeURIComponent(q))
+  apiFetch(API + "/drug-search/?q=" + encodeURIComponent(q))
     .then(function(r) { return r.json(); })
     .then(function(data) { renderDrugSearchResult(data); })
     .catch(function() {
@@ -21701,7 +21702,7 @@ function handleDrugPhoto(input) {
     if (card) card.style.display = '';
     if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">辨識中… 拍藥盒/藥袋會逐筆查詢，可能需要 10~30 秒</p>';
 
-    fetch(API + "/drug-search/from-photo", {
+    apiFetch(API + "/drug-search/from-photo", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64: b64, media_type: mediaType })
@@ -21891,7 +21892,7 @@ function loadDiseaseSearchPage() {
   if (input && input.value.trim()) {
     runDiseaseSearch();
   }
-  fetch(API + '/diseases/trending/list?limit=8')
+  apiFetch(API + '/diseases/trending/list?limit=8')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var el = document.getElementById('disease-trending');
@@ -21949,7 +21950,7 @@ function runDiseaseSearch() {
   if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> 查詢中… 第一次查詢會稍久（AI 整理 + 找文獻中）</p>';
   if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
 
-  fetch(API + '/diseases/?q=' + encodeURIComponent(q))
+  apiFetch(API + '/diseases/?q=' + encodeURIComponent(q))
     .then(function(r) { return r.json(); })
     .then(function(data) { renderDiseaseResult(data); })
     .catch(function() {
@@ -22166,7 +22167,7 @@ function diseaseChatSend() {
   if (input) input.value = '';
 
   _disease.pendingMsg = true;
-  fetch(API + '/diseases/chat', {
+  apiFetch(API + '/diseases/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -22427,7 +22428,7 @@ async function _mobileRemSubmit() {
     scheduled_at: whenIso,
   };
   try {
-    var res = await fetch(API + '/reminders/', {
+    var res = await apiFetch(API + '/reminders/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -22569,7 +22570,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 function reminderRefreshList() {
-  fetch(API + '/reminders/?patient_id=' + encodeURIComponent(_remindersPid))
+  apiFetch(API + '/reminders/?patient_id=' + encodeURIComponent(_remindersPid))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _remindersList = data.reminders || [];
@@ -22708,7 +22709,7 @@ function reminderRenderList() {
 }
 
 function reminderRefreshInbox() {
-  fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(_remindersPid) + '&limit=20')
+  apiFetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(_remindersPid) + '&limit=20')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _remindersInbox = data.items || [];
@@ -22781,7 +22782,7 @@ function reminderUpdateNavBadge(unread) {
 }
 
 function reminderMarkRead(id) {
-  fetch(API + '/reminders/inbox/' + encodeURIComponent(id), {
+  apiFetch(API + '/reminders/inbox/' + encodeURIComponent(id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ read: true }),
@@ -22789,7 +22790,7 @@ function reminderMarkRead(id) {
 }
 
 function reminderMarkAllRead() {
-  fetch(API + '/reminders/inbox/read-all?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
+  apiFetch(API + '/reminders/inbox/read-all?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
     .then(reminderRefreshInbox);
 }
 
@@ -22887,7 +22888,7 @@ function reminderRenderBellSettings() {
 }
 
 function reminderToggleActive(id, active) {
-  fetch(API + '/reminders/' + encodeURIComponent(id), {
+  apiFetch(API + '/reminders/' + encodeURIComponent(id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ active: !!active }),
@@ -22896,7 +22897,7 @@ function reminderToggleActive(id, active) {
 
 function reminderDelete(id) {
   if (!confirm('確定要刪除這筆提醒嗎？')) return;
-  fetch(API + '/reminders/' + encodeURIComponent(id), { method: 'DELETE' })
+  apiFetch(API + '/reminders/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(reminderRefreshList);
 }
 
@@ -22926,7 +22927,7 @@ function reminderSubmitNew() {
     scheduled_at: whenIso,
     active: true,
   };
-  fetch(API + '/reminders/', {
+  apiFetch(API + '/reminders/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -22941,7 +22942,7 @@ function reminderSubmitNew() {
 }
 
 function reminderTestDispatch() {
-  fetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
+  apiFetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       alert('已派發：' + (data.dispatched || 0) + ' 則（push 成功 ' + (data.push_ok || 0) + ' / 失敗 ' + (data.push_fail || 0) + '）');
@@ -22961,7 +22962,7 @@ function reminderRefreshPushState() {
     _applyPushEnabledUi();
     return;
   }
-  fetch(API + '/reminders/push/config')
+  apiFetch(API + '/reminders/push/config')
     .then(function(r) { return r.json(); })
     .then(function(cfg) {
       _webpushEnabled = !!cfg.webpush_enabled;
@@ -23018,7 +23019,7 @@ function reminderEnablePush() {
   }
   Notification.requestPermission().then(function(perm) {
     if (perm !== 'granted') { alert('需要允許通知才能啟用推播'); return; }
-    fetch(API + '/reminders/push/config')
+    apiFetch(API + '/reminders/push/config')
       .then(function(r) { return r.json(); })
       .then(function(cfg) {
         if (!cfg.webpush_enabled || !cfg.vapid_public_key) {
@@ -23035,7 +23036,7 @@ function reminderEnablePush() {
           });
         }).then(function(sub) {
           var json = sub.toJSON();
-          return fetch(API + '/reminders/push/subscribe', {
+          return apiFetch(API + '/reminders/push/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -23064,7 +23065,7 @@ function reminderDisablePush() {
     if (!sub) { alert('目前未啟用推播'); return; }
     var endpoint = sub.endpoint;
     return sub.unsubscribe().then(function() {
-      return fetch(API + '/reminders/push/subscribe?endpoint=' + encodeURIComponent(endpoint), { method: 'DELETE' });
+      return apiFetch(API + '/reminders/push/subscribe?endpoint=' + encodeURIComponent(endpoint), { method: 'DELETE' });
     });
   }).then(function() {
     _pushSubscribed = false;
@@ -23088,10 +23089,10 @@ function reminderBackgroundSync() {
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return;
     // 同步前先觸發伺服器派發（命中本帳號的到期 reminder）
-    fetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(pid), { method: 'POST' })
+    apiFetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(pid), { method: 'POST' })
       .catch(function() {})
       .finally(function() {
-        fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&unread_only=true&limit=1')
+        apiFetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&unread_only=true&limit=1')
           .then(function(r) { return r.json(); })
           .then(function(data) { reminderUpdateNavBadge(data.unread || 0); })
           .catch(function() {});
@@ -23190,7 +23191,7 @@ function _admLoadHospitalDatalist() {
     }).join('');
     return;
   }
-  fetch(API + '/admissions/hospitals')
+  apiFetch(API + '/admissions/hospitals')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _admHospitalCache = (data && data.hospitals) || [];
@@ -23206,7 +23207,7 @@ function loadAdmissionsPage() {
   var listEl = document.getElementById('adm-list');
   if (!listEl) return;
   _admLoadHospitalDatalist();
-  fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
+  apiFetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var rows = (data && data.admissions) || [];
@@ -23241,7 +23242,7 @@ function _admMaybeCheckLocation(adm) {
   navigator.geolocation.getCurrentPosition(
     function(pos) {
       try { sessionStorage.setItem(key, '1'); } catch (e) {}
-      fetch(API + '/admissions/' + encodeURIComponent(adm.id) + '/check-location', {
+      apiFetch(API + '/admissions/' + encodeURIComponent(adm.id) + '/check-location', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -23277,7 +23278,7 @@ function _admHandleLocationResult(adm, res) {
     var next = new Date(planned + 'T00:00:00');
     next.setDate(next.getDate() + 1);
     var nextIso = next.toISOString().slice(0, 10) + 'T10:00';
-    fetch(API + '/admissions/' + encodeURIComponent(adm.id), {
+    apiFetch(API + '/admissions/' + encodeURIComponent(adm.id), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ discharge_date: nextIso }),
@@ -23351,7 +23352,7 @@ function renderAdmissionCard(a) {
 }
 
 function loadAdmissionMedications(admissionId) {
-  fetch(API + '/admissions/' + encodeURIComponent(admissionId))
+  apiFetch(API + '/admissions/' + encodeURIComponent(admissionId))
     .then(function(r) { return r.json(); })
     .then(function(adm) {
       var box = document.getElementById('adm-meds-' + admissionId);
@@ -23431,7 +23432,7 @@ function createAdmission() {
   var origHTML = btn ? btn.innerHTML : null;
   if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader"></i> 新增中⋯'; if (typeof lucide !== 'undefined') lucide.createIcons(); }
   var restore = function() { if (btn) { btn.disabled = false; btn.innerHTML = origHTML; if (typeof lucide !== 'undefined') lucide.createIcons(); } };
-  fetch(API + '/admissions/', {
+  apiFetch(API + '/admissions/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -23459,7 +23460,7 @@ function addAdmissionMedication(admissionId) {
   };
   if (!body.name) { showToast('請填藥名', 'error'); return; }
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
-  fetch(API + '/admissions/medications', {
+  apiFetch(API + '/admissions/medications', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -23482,7 +23483,7 @@ function recordAdmissionDose(admMedId, admissionId) {
     var iso = next.trim().replace(' ', 'T');
     body.next_due_date = iso;
   }
-  fetch(API + '/admissions/medications/' + encodeURIComponent(admMedId) + '/dose', {
+  apiFetch(API + '/admissions/medications/' + encodeURIComponent(admMedId) + '/dose', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -23497,7 +23498,7 @@ function recordAdmissionDose(admMedId, admissionId) {
 
 function dischargeAdmission(admissionId) {
   if (!confirm('結案這次住院 / 療程？')) return;
-  fetch(API + '/admissions/' + encodeURIComponent(admissionId) + '/discharge', { method: 'POST' })
+  apiFetch(API + '/admissions/' + encodeURIComponent(admissionId) + '/discharge', { method: 'POST' })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已結案', 'success');
@@ -23522,7 +23523,7 @@ function saveAdmissionEdit(admissionId) {
   };
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
   if (!Object.keys(body).length) { showToast('沒有修改', 'info'); return; }
-  fetch(API + '/admissions/' + encodeURIComponent(admissionId), {
+  apiFetch(API + '/admissions/' + encodeURIComponent(admissionId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -23537,7 +23538,7 @@ function saveAdmissionEdit(admissionId) {
 
 function deleteAdmission(admissionId) {
   if (!confirm('整筆住院 / 療程都刪掉？\n排定給藥和施打紀錄也會一起清掉，無法復原。')) return;
-  fetch(API + '/admissions/' + encodeURIComponent(admissionId), { method: 'DELETE' })
+  apiFetch(API + '/admissions/' + encodeURIComponent(admissionId), { method: 'DELETE' })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已刪除', 'success');
@@ -23562,7 +23563,7 @@ function saveAdmissionMedicationEdit(medId, admissionId) {
   };
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
   if (!Object.keys(body).length) { showToast('沒有修改', 'info'); return; }
-  fetch(API + '/admissions/medications/' + encodeURIComponent(medId), {
+  apiFetch(API + '/admissions/medications/' + encodeURIComponent(medId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -23577,7 +23578,7 @@ function saveAdmissionMedicationEdit(medId, admissionId) {
 
 function deleteAdmissionMedication(medId, admissionId) {
   if (!confirm('刪掉這筆排定給藥？\n施打紀錄也會一起清掉。')) return;
-  fetch(API + '/admissions/medications/' + encodeURIComponent(medId), { method: 'DELETE' })
+  apiFetch(API + '/admissions/medications/' + encodeURIComponent(medId), { method: 'DELETE' })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已刪除', 'success');
@@ -23624,7 +23625,7 @@ function _foSessionLabel(s) {
 function fetchFollowUps() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return Promise.resolve([]);
-  return fetch(API + '/follow-ups/?patient_id=' + encodeURIComponent(pid))
+  return apiFetch(API + '/follow-ups/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : { follow_ups: [] }; })
     .then(function(d) { return (d && d.follow_ups) || []; })
     .catch(function() { return []; });
@@ -23633,7 +23634,7 @@ function fetchFollowUps() {
 function fetchNearestFollowUp() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return Promise.resolve(null);
-  return fetch(API + '/follow-ups/nearest?patient_id=' + encodeURIComponent(pid))
+  return apiFetch(API + '/follow-ups/nearest?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : { follow_up: null }; })
     .then(function(d) { return d && d.follow_up; })
     .catch(function() { return null; });
@@ -24044,7 +24045,7 @@ function openFollowUpEditor(id) {
 }
 
 function markFollowUpStatus(id, status) {
-  fetch(API + '/follow-ups/' + encodeURIComponent(id), {
+  apiFetch(API + '/follow-ups/' + encodeURIComponent(id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status: status })
@@ -24060,7 +24061,7 @@ function markFollowUpStatus(id, status) {
 
 function deleteFollowUp(id) {
   if (!confirm('確定刪除這筆回診排程？')) return;
-  fetch(API + '/follow-ups/' + encodeURIComponent(id), { method: 'DELETE' })
+  apiFetch(API + '/follow-ups/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast('已刪除', 'success');
