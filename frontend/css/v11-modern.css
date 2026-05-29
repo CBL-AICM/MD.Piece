@@ -268,6 +268,29 @@ html.dark body.theme-modern [style*="color:#3A5060"] {
   color: var(--text-dim) !important;
 }
 
+/* dark 其餘硬色號文字 remap — 深色文字單獨落在白底/卡片會看不見才修。
+   刻意排除：PDF/報告列印 <style> 用色（#2a5d8f/#222/#666/#555，印白紙要維持深色）、
+   以及成對淺色 chip（自帶淺底深字，維持淺標籤外觀，動一邊反而壞）。 */
+html.dark body.theme-modern [style*="color:#111"] {
+  color: var(--text) !important;
+}
+html.dark body.theme-modern [style*="color:#6b7280"],
+html.dark body.theme-modern [style*="color:#9ca3af"],
+html.dark body.theme-modern [style*="color:#888"],
+html.dark body.theme-modern [style*="color:#7F4A2E"] {
+  color: var(--text-dim) !important;
+}
+html.dark body.theme-modern [style*="color:#2563eb"],
+html.dark body.theme-modern [style*="color:#0369a1"] {
+  color: var(--accent-light) !important;
+}
+html.dark body.theme-modern [style*="color:#7f1d1d"],
+html.dark body.theme-modern [style*="color:#c0392b"],
+html.dark body.theme-modern [style*="color:#c53030"],
+html.dark body.theme-modern [style*="color:#c43d3d"] {
+  color: var(--rose-deep) !important;
+}
+
 /* dark 任何 inline white 背景強制換深 */
 html.dark body.theme-modern [style*="background:#FFFFFF"],
 html.dark body.theme-modern [style*="background: #FFFFFF"],
