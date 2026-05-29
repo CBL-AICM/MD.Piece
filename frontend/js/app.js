@@ -2936,7 +2936,10 @@ function previsitOpenPrint(html, filename) {
       margin:       [10, 10, 12, 10],
       filename:     name,
       image:        { type: 'jpeg', quality: 0.95 },
-      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      // scrollX/Y 歸零：holder 是 position:fixed top:0，但 html2canvas 預設會把
+      // 目前 window.scrollY 算進座標。使用者通常捲到頁面下方才點「下載」，
+      // 不歸零的話會在 PDF 第 1 頁頂端推出一段 ≈ 捲動距離的空白。
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak:    { mode: ['css', 'legacy'] }
     };
