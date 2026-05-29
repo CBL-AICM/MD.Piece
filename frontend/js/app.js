@@ -2573,21 +2573,25 @@ var _PV_PDF_STYLE = ''
   + '  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; color: #222; line-height: 1.75; font-size: 14px; }'
   + '  h1 { font-size: 22px; margin: 0 0 4px; }'
   + '  .meta { color: #666; font-size: 12px; margin-bottom: 18px; }'
-  + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; }'
-  + '  h3 { font-size: 13.5px; margin: 14px 0 4px; color: #2a5d8f; font-weight: 600; }'
+  + '  h2 { font-size: 15px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #2a5d8f; break-after: avoid; page-break-after: avoid; }'
+  + '  h3 { font-size: 13.5px; margin: 14px 0 4px; color: #2a5d8f; font-weight: 600; break-after: avoid; page-break-after: avoid; }'
   + '  p { margin: 0 0 10px; }'
   + '  ul, ol { padding-left: 22px; margin: 0 0 10px; }'
   + '  ul li, ol li { margin-bottom: 6px; }'
-  + '  table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }'
+  + '  table.stats { width: 100%; border-collapse: collapse; margin: 6px 0 4px; break-inside: avoid; page-break-inside: avoid; }'
+  + '  table.stats tr, table.stats td { break-inside: avoid; page-break-inside: avoid; }'
   + '  table.stats td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #e2e2e2; background: #f7f9fc; }'
   + '  table.stats td strong { display: block; font-size: 18px; color: #2a5d8f; }'
   + '  table.stats td span { font-size: 11px; color: #666; }'
   + '  table.basic-info { width: 100%; border-collapse: collapse; margin: 4px 0 10px; }'
   + '  table.basic-info th { width: 110px; text-align: left; padding: 6px 10px; background: #f0f4fa; border: 1px solid #e2e2e2; color: #2a5d8f; font-weight: 600; vertical-align: top; }'
   + '  table.basic-info td { padding: 6px 10px; border: 1px solid #e2e2e2; vertical-align: top; }'
+  + '  table.basic-info tr { break-inside: avoid; page-break-inside: avoid; }'
   + '  .basic-empty { color: #888; font-size: 12px; margin: 0 0 10px; }'
   + '  table.rec { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: 12.5px; }'
   + '  table.rec th, table.rec td { padding: 5px 8px; border: 1px solid #e6ebf1; vertical-align: top; text-align: left; }'
+  + '  table.rec tr { break-inside: avoid; page-break-inside: avoid; }'
+  + '  table.rec thead { display: table-header-group; }'
   + '  table.rec thead th { background: #f0f4fa; color: #2a5d8f; font-weight: 600; font-size: 11.5px; }'
   + '  table.rec tbody td { line-height: 1.55; }'
   + '  .rec-empty { color: #888; font-size: 12px; margin: 2px 0 10px; padding: 4px 8px; background: #fafafa; border-radius: 4px; }'
@@ -2595,14 +2599,15 @@ var _PV_PDF_STYLE = ''
   + '  .disclaimer { margin-top: 28px; padding: 12px 14px; border-top: 2px solid #d9d9d9; background: #fafafa; font-size: 11.5px; color: #555; line-height: 1.6; }'
   + '  .disclaimer p { margin: 0 0 6px; }'
   + '  .disclaimer p:last-child { margin: 0; }'
-  // v6 整合摘要視覺：§〇 三大重點橘色醒目方塊 / 【紀錄】【AI 摘要】tag 化為 badge / §七 紫色「可參考方向」框
-  + '  .highlights { background: #fef3c7; border-left: 4px solid #d97706; padding: 10px 14px; margin: 10px 0; border-radius: 4px; }'
-  + '  .highlights h3 { border: none; margin: 0 0 6px; color: #92400e; font-size: 14px; padding: 0; }'
+  // 診前摘要視覺：一句話摘要橘色方塊 / 需注意事項·紅旗紅色方塊 / 【紀錄】【AI 摘要】badge
+  + '  .highlights { background: #fef3c7; border-left: 4px solid #d97706; padding: 10px 14px; margin: 10px 0; border-radius: 4px; break-inside: avoid; page-break-inside: avoid; }'
+  + '  .highlights h3 { border: none; margin: 0 0 6px !important; color: #92400e; font-size: 14px; padding: 0; }'
   + '  .highlights li { font-size: 13px; color: #451a03; margin-bottom: 3px; }'
-  + '  .red-flags { background: #fef2f2; border-left: 4px solid #dc2626; padding: 8px 14px 2px; margin: 10px 0; border-radius: 4px; }'
-  + '  .red-flags h3 { border: none; margin: 0 0 6px; color: #991b1b; font-size: 14px; padding: 0; }'
+  + '  .highlights p { font-size: 13px; color: #451a03; margin: 0; }'
+  + '  .red-flags { background: #fef2f2; border-left: 4px solid #dc2626; padding: 8px 14px; margin: 10px 0; border-radius: 4px; break-inside: avoid; page-break-inside: avoid; }'
+  + '  .red-flags h3 { border: none; margin: 0 0 6px !important; color: #991b1b; font-size: 14px; padding: 0; }'
   + '  .red-flags li { font-size: 13px; color: #450a0a; margin-bottom: 4px; }'
-  + '  .red-flags p { font-size: 13px; color: #450a0a; }'
+  + '  .red-flags p { font-size: 13px; color: #450a0a; margin: 0 0 4px; }'
   + '  .badge-record { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }'
   + '  .badge-ai { display: inline-block; background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }';
 
@@ -2627,6 +2632,9 @@ function previsitProcessIntegratedSummaryHTML(html) {
 
   // markdownToHtml 把「## 標題」渲染成 <h3>（非 <h2>），且 list 是裸 <li> 沒有 <ul> 外框。
   // 因此這裡以 <h3 ...>標題 為錨點，吃到下一個 <h3 或文件結尾，整段包起來。
+
+  // 標題後面 markdownToHtml 會塞 <br><br>，造成標題與內文間出現過大空隙 → 收掉。
+  html = html.replace(/(<\/h[1-6]>)(?:\s*<br>)+/g, '$1');
 
   // 2) 一句話摘要 — 包進 .highlights 橘色方塊
   html = html.replace(
