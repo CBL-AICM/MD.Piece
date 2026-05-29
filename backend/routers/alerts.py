@@ -1,8 +1,9 @@
 import os
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from datetime import datetime, timedelta, timezone
 from backend.db import get_supabase
 from backend.models import AlertCreate, AlertUpdate
+from backend.security import current_user
 
 router = APIRouter()
 
@@ -14,17 +15,26 @@ VALID_SEVERITIES = {"low", "medium", "high", "critical"}
 CHECKIN_INTERVAL_DAYS = 3
 
 
+def _owned_alert(alert_id: str, me: dict):
+    """讀出 alert 並確認屬於 caller；否則 404（不洩漏他人 alert 是否存在）。"""
+    sb = get_supabase()
+    result = sb.table("alerts").select("*").eq("id", alert_id).execute()
+    row = result.data[0] if result.data else None
+    if not row or row.get("patient_id") != me.get("id"):
+        raise HTTPException(status_code=404, detail="找不到警示")
+    return sb, row
+
+
 @router.get("/")
 def list_alerts(
-    patient_id: str | None = None,
     severity: str | None = None,
     acknowledged: bool | None = None,
     resolved: bool | None = None,
+    me: dict = Depends(current_user),
 ):
+    # 只回 caller 自己的 alert（patient_id 鎖定為 token 的 sub，不接受任意 patient_id）。
     sb = get_supabase()
-    q = sb.table("alerts").select("*")
-    if patient_id:
-        q = q.eq("patient_id", patient_id)
+    q = sb.table("alerts").select("*").eq("patient_id", me["id"])
     if severity:
         q = q.eq("severity", severity)
     if acknowledged is not None:
@@ -36,29 +46,27 @@ def list_alerts(
 
 
 @router.get("/{alert_id}")
-def get_alert(alert_id: str):
-    sb = get_supabase()
-    result = sb.table("alerts").select("*").eq("id", alert_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="找不到警示")
-    return result.data[0]
+def get_alert(alert_id: str, me: dict = Depends(current_user)):
+    _sb, row = _owned_alert(alert_id, me)
+    return row
 
 
 @router.post("/")
-def create_alert(body: AlertCreate):
+def create_alert(body: AlertCreate, me: dict = Depends(current_user)):
     if body.alert_type not in VALID_TYPES:
         raise HTTPException(status_code=400, detail=f"alert_type 無效，需為 {VALID_TYPES}")
     if body.severity not in VALID_SEVERITIES:
         raise HTTPException(status_code=400, detail=f"severity 無效，需為 {VALID_SEVERITIES}")
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
+    data["patient_id"] = me["id"]  # 不信任 body 的 patient_id，鎖定為 caller 自己
     result = sb.table("alerts").insert(data).execute()
     return result.data[0]
 
 
 @router.put("/{alert_id}")
-def update_alert(alert_id: str, body: AlertUpdate):
-    sb = get_supabase()
+def update_alert(alert_id: str, body: AlertUpdate, me: dict = Depends(current_user)):
+    sb, _row = _owned_alert(alert_id, me)
     data = body.model_dump(exclude_none=True)
     if "acknowledged" in data:
         data["acknowledged"] = 1 if data["acknowledged"] else 0
@@ -77,8 +85,8 @@ def update_alert(alert_id: str, body: AlertUpdate):
 
 
 @router.delete("/{alert_id}")
-def delete_alert(alert_id: str):
-    sb = get_supabase()
+def delete_alert(alert_id: str, me: dict = Depends(current_user)):
+    sb, _row = _owned_alert(alert_id, me)
     result = sb.table("alerts").delete().eq("id", alert_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到警示")
