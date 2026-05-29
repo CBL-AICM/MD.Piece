@@ -1184,7 +1184,7 @@
   // Init on DOM ready (script is loaded at end of body, so DOM is parsed).
   document.documentElement.setAttribute('lang', getLang());
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyI18n);
+    document.addEventListener('DOMContentLoaded', function () { applyI18n(); });
   } else {
     applyI18n();
   }
