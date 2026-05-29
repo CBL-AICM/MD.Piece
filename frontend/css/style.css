@@ -17629,3 +17629,52 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
 
 /* 手機窄屏：hub 退回單欄 */
 @media (max-width: 360px) { .ip-hub-grid { grid-template-columns: 1fr; } }
+
+/* ════════════════════════════════════════════════════════════════════
+   月經紀錄頁 — 個人化縱向分析（outpatient）。用全域 token + 柔和 rose 點綴，
+   不用 danger 紅；不呈現「正常/異常」判斷。WCAG：觸控 ≥44px。
+   ════════════════════════════════════════════════════════════════════ */
+.mens-page { padding: var(--space-4, 16px) var(--space-3, 12px) 80px; max-width: 720px; margin: 0 auto; }
+.mens-head h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 1.3rem; color: var(--text); }
+.mens-head h2 i { color: var(--rose); }
+.mens-head p { margin: 0 0 14px; color: var(--text-dim); font-size: 14px; line-height: 1.6; }
+.mens-loading, .mens-empty { color: var(--text-muted); font-size: 14px; padding: 14px 4px; text-align: center; line-height: 1.6; }
+
+.mens-summary { margin-bottom: 14px; }
+.mens-stats { display: flex; gap: 8px; }
+.mens-stat { flex: 1; background: var(--bg-surface); border: 1px solid var(--bg-soft); border-radius: var(--radius, 14px); padding: 14px 8px; text-align: center; box-shadow: var(--shadow-sm); }
+.mens-stat-num { display: block; font-size: 1.05rem; font-weight: 700; color: var(--text); }
+.mens-stat-lbl { display: block; font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.mens-next { margin-top: 10px; background: rgba(232,168,168,0.12); border: 1px solid rgba(232,168,168,0.35); border-radius: var(--radius, 14px); padding: 12px 14px; }
+.mens-next-row { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; }
+.mens-next-row i { color: var(--rose); }
+.mens-next-note { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+
+.mens-card { background: var(--bg-surface); border: 1px solid var(--bg-soft); border-radius: var(--radius, 14px); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
+.mens-card h3 { margin: 0 0 12px; font-size: 1rem; color: var(--text); }
+.mens-field { margin-bottom: 14px; }
+.mens-field > label { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 7px; }
+.mens-field input[type="date"], .mens-field input[type="text"], .mens-field input[type="number"] {
+  width: 100%; min-height: 46px; border: 1px solid var(--bg-soft); border-radius: var(--radius-sm, 10px);
+  padding: 0 12px; font-size: 15px; color: var(--text); background: var(--bg-deep); box-sizing: border-box;
+}
+.mens-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.mens-chip { min-height: 44px; padding: 8px 16px; border: 1px solid var(--bg-soft); background: var(--bg-deep); border-radius: var(--radius-pill, 20px); font-size: 14px; color: var(--text); cursor: pointer; transition: all .15s ease; }
+.mens-chip.sel { background: var(--rose); color: #5a2330; border-color: var(--rose); font-weight: 600; }
+.mens-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; color: var(--text); cursor: pointer; }
+.mens-toggle input { width: 20px; height: 20px; accent-color: var(--rose); }
+.mens-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--radius, 14px); padding: 14px; font-size: 16px; font-weight: 600; min-height: 52px; cursor: pointer; box-shadow: var(--shadow-sm); }
+.mens-cta:hover { filter: brightness(1.05); }
+.mens-cta-soft { background: var(--teal); }
+
+.mens-list { list-style: none; padding: 0; margin: 0; }
+.mens-item { display: flex; align-items: flex-start; gap: 8px; padding: 11px 0; border-bottom: 1px solid var(--bg-soft); }
+.mens-item:last-child { border-bottom: none; }
+.mens-item-main { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.mens-item-date { font-weight: 600; color: var(--text); font-size: 14px; }
+.mens-item-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.mens-tag { font-size: 12px; color: var(--text-dim); background: var(--bg-soft); border-radius: 6px; padding: 2px 8px; }
+.mens-item-note { font-size: 13px; color: var(--text-dim); }
+.mens-del { background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; padding: 8px; min-width: 40px; min-height: 40px; align-items: center; justify-content: center; }
+.mens-del:hover { color: var(--danger); }
+.mens-disclaimer { display: flex; align-items: flex-start; gap: 6px; margin-top: 16px; padding: 11px 13px; background: var(--bg-soft); border-radius: var(--radius-sm, 10px); color: var(--text-dim); font-size: 12px; line-height: 1.6; }

@@ -3224,7 +3224,7 @@ function showPage(page) {
     home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
-    followUps, handover, medRecon, bedside, dischargePlan
+    followUps, handover, medRecon, bedside, dischargePlan, menstrual
   };
   // Page transition
   app.style.opacity = '0';
@@ -3267,6 +3267,7 @@ function showPage(page) {
     if (page === "medRecon") loadMedReconPage();
     if (page === "bedside") loadBedsidePage();
     if (page === "dischargePlan") loadDischargePlanPage();
+    if (page === "menstrual") loadMenstrualPage();
     // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
     if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
@@ -7781,6 +7782,184 @@ function loadDischargePlanPage() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
     })
     .catch(function() { host.innerHTML = '<p class="ip-tool-empty">載入失敗，請稍後再試。</p>'; });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 月經紀錄（個人化縱向分析）— 以你自己的週期基線呈現，不做診斷、不判定正常/異常。
+// 後端：/menstrual/cycles, /menstrual/daily, /menstrual/summary
+// ════════════════════════════════════════════════════════════════════════════
+var _MENS_FLOW = [['light','少量'],['medium','中等'],['heavy','大量']];
+var _MENS_SYMPTOMS = ['經痛','腰痠','頭痛','乳房脹痛','情緒低落','易怒','疲倦','腹脹','長痘','失眠'];
+var _MENS_OVU = [['negative','陰性'],['positive','陽性'],['peak','高峰']];
+var _mensCycleDraft = { flow: null, symptoms: [] };
+
+function menstrual() {
+  var todayStr = _mensTodayLocal();
+  return '<div class="mens-page">'
+    + '<header class="mens-head">'
+    +   '<h2><i data-lucide="droplet" style="width:20px;height:20px"></i> 月經紀錄</h2>'
+    +   '<p>記錄你自己的週期變化。所有數字都是「你自己的紀錄」，不做醫療判斷。</p>'
+    + '</header>'
+    + '<section id="mens-summary" class="mens-summary"><p class="mens-loading">載入中…</p></section>'
+    // 記這次經期
+    + '<section class="mens-card">'
+    +   '<h3>記一次經期</h3>'
+    +   '<div class="mens-field"><label>開始日</label><input type="date" id="mens-start" value="' + todayStr + '" max="' + todayStr + '"></div>'
+    +   '<div class="mens-field"><label>結束日（可留空）</label><input type="date" id="mens-end" max="' + todayStr + '"></div>'
+    +   '<div class="mens-field"><label>經血量</label><div class="mens-chips" id="mens-flow">'
+    +     _MENS_FLOW.map(function(f){ return '<button type="button" class="mens-chip" data-v="' + f[0] + '" onclick="_mensSetFlow(\'' + f[0] + '\',this)">' + f[1] + '</button>'; }).join('')
+    +   '</div></div>'
+    +   '<div class="mens-field"><label>症狀（可複選）</label><div class="mens-chips" id="mens-symptoms">'
+    +     _MENS_SYMPTOMS.map(function(s){ return '<button type="button" class="mens-chip" data-v="' + s + '" onclick="_mensToggleSymptom(\'' + s + '\',this)">' + s + '</button>'; }).join('')
+    +   '</div></div>'
+    +   '<div class="mens-field"><label>備註</label><input type="text" id="mens-note" placeholder="想記的都可以寫" maxlength="200"></div>'
+    +   '<button type="button" class="mens-cta" onclick="submitMensCycle()"><i data-lucide="check" style="width:18px;height:18px"></i> 儲存經期</button>'
+    + '</section>'
+    // 今日：BBT / 排卵 / 避孕藥
+    + '<section class="mens-card">'
+    +   '<h3>今天的紀錄</h3>'
+    +   '<div class="mens-field"><label>基礎體溫 BBT（°C）</label><input type="number" step="0.01" min="34" max="42" id="mens-bbt" placeholder="例：36.55" inputmode="decimal"></div>'
+    +   '<div class="mens-field"><label>排卵試紙</label><div class="mens-chips" id="mens-ovu">'
+    +     _MENS_OVU.map(function(o){ return '<button type="button" class="mens-chip" data-v="' + o[0] + '" onclick="_mensSetOvu(\'' + o[0] + '\',this)">' + o[1] + '</button>'; }).join('')
+    +   '</div></div>'
+    +   '<label class="mens-toggle"><input type="checkbox" id="mens-pill"> <span>今天的避孕藥已服用</span></label>'
+    +   '<button type="button" class="mens-cta mens-cta-soft" onclick="submitMensDaily()"><i data-lucide="save" style="width:18px;height:18px"></i> 儲存今日</button>'
+    + '</section>'
+    // 歷史
+    + '<section class="mens-card"><h3>經期歷史</h3><div id="mens-history"><p class="mens-loading">載入中…</p></div></section>'
+    + '<p class="mens-disclaimer"><i data-lucide="info" style="width:13px;height:13px"></i> '
+    +   '本功能僅記錄與整理你自己的週期資料，不做醫療診斷，也不判斷「正常／異常」；如有疑慮請諮詢您的醫師。</p>'
+    + '</div>';
+}
+
+function _mensTodayLocal() {
+  var d = new Date(); var off = d.getTimezoneOffset() * 60000;
+  return new Date(d - off).toISOString().slice(0, 10);
+}
+function _mensSetFlow(v, el) {
+  _mensCycleDraft.flow = v;
+  Array.prototype.forEach.call(el.parentNode.children, function(c){ c.classList.remove('sel'); });
+  el.classList.add('sel');
+}
+function _mensToggleSymptom(v, el) {
+  var i = _mensCycleDraft.symptoms.indexOf(v);
+  if (i === -1) { _mensCycleDraft.symptoms.push(v); el.classList.add('sel'); }
+  else { _mensCycleDraft.symptoms.splice(i, 1); el.classList.remove('sel'); }
+}
+var _mensOvuDraft = null;
+function _mensSetOvu(v, el) {
+  _mensOvuDraft = v;
+  Array.prototype.forEach.call(el.parentNode.children, function(c){ c.classList.remove('sel'); });
+  el.classList.add('sel');
+}
+
+function loadMenstrualPage() {
+  _mensCycleDraft = { flow: null, symptoms: [] };
+  _mensOvuDraft = null;
+  loadMensSummary();
+  loadMensHistory();
+}
+
+function loadMensSummary() {
+  var host = document.getElementById('mens-summary');
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!host || !pid) return;
+  apiFetch(API + '/menstrual/summary?patient_id=' + encodeURIComponent(pid))
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d) { host.innerHTML = ''; return; }
+      function stat(big, label) {
+        return '<div class="mens-stat"><span class="mens-stat-num">' + big + '</span><span class="mens-stat-lbl">' + label + '</span></div>';
+      }
+      var avgCycle = d.avg_cycle_length != null ? d.avg_cycle_length + ' 天' : '—';
+      var avgPeriod = d.avg_period_length != null ? d.avg_period_length + ' 天' : '—';
+      var last = d.last_start || '—';
+      var nextHtml = '';
+      if (d.estimate && d.estimated_next_start) {
+        var du = d.days_until_next;
+        var rel = du == null ? '' : (du > 0 ? '（約 ' + du + ' 天後）' : (du === 0 ? '（就是今天）' : '（已超過 ' + (-du) + ' 天）'));
+        nextHtml = '<div class="mens-next"><div class="mens-next-row"><i data-lucide="calendar-heart" style="width:16px;height:16px"></i>'
+          + '<span>預估下次：<strong>' + escapeHtml(d.estimated_next_start) + '</strong> ' + escapeHtml(rel) + '</span></div>'
+          + '<span class="mens-next-note">' + escapeHtml(d.estimate_note || '') + '</span></div>';
+      }
+      host.innerHTML = '<div class="mens-stats">'
+        + stat(avgCycle, '平均週期') + stat(avgPeriod, '平均經期') + stat(last, '上次經期')
+        + '</div>' + nextHtml;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function(){ host.innerHTML = ''; });
+}
+
+function loadMensHistory() {
+  var host = document.getElementById('mens-history');
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!host || !pid) return;
+  apiFetch(API + '/menstrual/cycles?patient_id=' + encodeURIComponent(pid))
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      var cycles = (d && d.cycles) || [];
+      if (!cycles.length) { host.innerHTML = '<p class="mens-empty">還沒有紀錄。記下第一次經期，之後就能看到你的週期。</p>'; return; }
+      var flowZh = { light: '少量', medium: '中等', heavy: '大量' };
+      host.innerHTML = '<ul class="mens-list">' + cycles.map(function(c){
+        var range = escapeHtml(c.start_date) + (c.end_date ? ' – ' + escapeHtml(c.end_date) : '');
+        var tags = [];
+        if (c.flow) tags.push(flowZh[c.flow] || c.flow);
+        (c.symptoms || []).forEach(function(s){ tags.push(s); });
+        return '<li class="mens-item">'
+          + '<div class="mens-item-main"><span class="mens-item-date">' + range + '</span>'
+          + (tags.length ? '<span class="mens-item-tags">' + tags.map(function(t){ return '<span class="mens-tag">' + escapeHtml(t) + '</span>'; }).join('') + '</span>' : '')
+          + (c.note ? '<span class="mens-item-note">' + escapeHtml(c.note) + '</span>' : '')
+          + '</div>'
+          + '<button type="button" class="mens-del" aria-label="刪除" onclick="deleteMensCycle(' + JSON.stringify(c.id).replace(/"/g, '&quot;') + ')"><i data-lucide="trash-2" style="width:15px;height:15px"></i></button>'
+          + '</li>';
+      }).join('') + '</ul>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function(){ host.innerHTML = '<p class="mens-empty">載入失敗，請稍後再試。</p>'; });
+}
+
+function submitMensCycle() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  var start = (document.getElementById('mens-start') || {}).value;
+  var end = (document.getElementById('mens-end') || {}).value;
+  var note = (document.getElementById('mens-note') || {}).value;
+  if (!start) { if (typeof showToast === 'function') showToast('請先選開始日', 'info'); return; }
+  if (end && end < start) { if (typeof showToast === 'function') showToast('結束日不能早於開始日', 'warning'); return; }
+  var body = { patient_id: pid, start_date: start, symptoms: _mensCycleDraft.symptoms };
+  if (end) body.end_date = end;
+  if (_mensCycleDraft.flow) body.flow = _mensCycleDraft.flow;
+  if (note) body.note = note;
+  apiFetch(API + '/menstrual/cycles', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(function(r){
+    if (!r.ok) throw new Error('fail');
+    if (typeof showToast === 'function') showToast('已記錄這次經期 ✓', 'success');
+    _mensCycleDraft = { flow: null, symptoms: [] };
+    showPage('menstrual');
+  }).catch(function(){ if (typeof showToast === 'function') showToast('儲存失敗，請稍後再試', 'warning'); });
+}
+
+function submitMensDaily() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  var bbt = (document.getElementById('mens-bbt') || {}).value;
+  var pill = (document.getElementById('mens-pill') || {}).checked;
+  var body = { patient_id: pid, date: _mensTodayLocal(), pill_taken: !!pill };
+  if (bbt) body.bbt_c = parseFloat(bbt);
+  if (_mensOvuDraft) body.ovulation_test = _mensOvuDraft;
+  apiFetch(API + '/menstrual/daily', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(function(r){
+    if (!r.ok) throw new Error('fail');
+    if (typeof showToast === 'function') showToast('今日紀錄已儲存 ✓', 'success');
+  }).catch(function(){ if (typeof showToast === 'function') showToast('儲存失敗，請稍後再試', 'warning'); });
+}
+
+function deleteMensCycle(id) {
+  if (!confirm('刪除這筆經期紀錄？')) return;
+  apiFetch(API + '/menstrual/cycles/' + encodeURIComponent(id), { method: 'DELETE' })
+    .then(function(){ showPage('menstrual'); });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

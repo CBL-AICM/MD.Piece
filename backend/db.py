@@ -345,6 +345,28 @@ _SCHEMAS = {
             FOREIGN KEY (patient_id) REFERENCES patients(id),
             FOREIGN KEY (admission_id) REFERENCES admissions(id)
         )""",
+    "menstrual_cycles": """
+        CREATE TABLE IF NOT EXISTS menstrual_cycles (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT,
+            flow TEXT,
+            symptoms TEXT,
+            note TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
+    "menstrual_daily": """
+        CREATE TABLE IF NOT EXISTS menstrual_daily (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            date TEXT NOT NULL,
+            bbt_c REAL,
+            ovulation_test TEXT,
+            pill_taken INTEGER,
+            note TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
     "disease_reference": """
         CREATE TABLE IF NOT EXISTS disease_reference (
             id TEXT PRIMARY KEY,
