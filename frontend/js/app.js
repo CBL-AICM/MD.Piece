@@ -3309,9 +3309,55 @@ function switchAuthTab(tab) {
   document.getElementById('auth-tab-register').classList.toggle('active', !isLogin);
   document.getElementById('auth-panel-login').classList.toggle('active', isLogin);
   document.getElementById('auth-panel-register').classList.toggle('active', !isLogin);
+  // 切回 login/register 時收起忘記密碼面板
+  const forgot = document.getElementById('auth-panel-forgot');
+  if (forgot) forgot.classList.remove('active');
   document.getElementById('login-error').hidden = true;
   document.getElementById('register-error').hidden = true;
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 忘記密碼面板：隱藏 login/register，顯示 forgot（tab 兩顆都不 active）。
+function showForgotPanel() {
+  document.getElementById('auth-tab-login').classList.remove('active');
+  document.getElementById('auth-tab-register').classList.remove('active');
+  document.getElementById('auth-panel-login').classList.remove('active');
+  document.getElementById('auth-panel-register').classList.remove('active');
+  document.getElementById('auth-panel-forgot').classList.add('active');
+  document.getElementById('forgot-step2').hidden = true;
+  document.getElementById('forgot-error').hidden = true;
+  // 預填登入頁打過的帳號
+  const u = document.getElementById('login-username').value.trim()
+    || localStorage.getItem('mdpiece_last_username') || '';
+  document.getElementById('forgot-username').value = u;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 顯示/隱藏某 panel 的所有密碼欄位（顯示密碼勾選框）。
+function toggleAuthPw(panel, show) {
+  const ids = {
+    login: ['login-password'],
+    register: ['reg-password', 'reg-password2'],
+    forgot: ['forgot-new-password'],
+  }[panel] || [];
+  const type = show ? 'text' : 'password';
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.type = type; });
+}
+
+// Caps Lock 偵測：在密碼欄打字時提示，避免使用者大寫鎖定卻不自知一直登入失敗。
+function detectCapsLock(event, hintId) {
+  const hint = document.getElementById(hintId);
+  if (!hint || !event.getModifierState) return;
+  hint.hidden = !event.getModifierState('CapsLock');
+}
+
+// 前端密碼強度檢查（與 backend/routers/auth.py 的 _validate_password 規則一致）。
+// 回 null 代表通過，否則回錯誤訊息字串。
+function validateClientPassword(password, username) {
+  if (password.length < 8) return '密碼至少 8 個字元';
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return '密碼需同時包含英文字母與數字';
+  if (username && password.toLowerCase() === username.toLowerCase()) return '密碼不可與帳號相同';
+  return null;
 }
 
 function onRegAvatarPicked(e) {
@@ -3448,13 +3494,25 @@ async function submitRegister() {
   const username = document.getElementById('reg-username').value.trim();
   const password = document.getElementById('reg-password').value;
   const password2 = document.getElementById('reg-password2').value;
+  const recoveryQuestion = document.getElementById('reg-recovery-question').value.trim();
+  const recoveryAnswer = document.getElementById('reg-recovery-answer').value.trim();
 
+  if (!/^[A-Za-z0-9_.\-]{3,32}$/.test(username)) {
+    showAuthError('register', '帳號格式不正確（3-32 字元，限英數字 _ . -）');
+    return;
+  }
   if (password !== password2) {
     showAuthError('register', '兩次輸入的密碼不一致');
     return;
   }
-  if (password.length < 6) {
-    showAuthError('register', '密碼至少 6 個字元');
+  const pwErr = validateClientPassword(password, username);
+  if (pwErr) {
+    showAuthError('register', pwErr);
+    return;
+  }
+  // 安全問題為選填，但若填了一邊就要兩邊都填
+  if ((recoveryQuestion && !recoveryAnswer) || (!recoveryQuestion && recoveryAnswer)) {
+    showAuthError('register', '安全問題與答案請一起填寫，或都留空');
     return;
   }
 
@@ -3470,6 +3528,10 @@ async function submitRegister() {
     role: 'patient',
     avatar_url: _regAvatarDataUrl || null,
   };
+  if (recoveryQuestion && recoveryAnswer) {
+    payload.recovery_question = recoveryQuestion;
+    payload.recovery_answer = recoveryAnswer;
+  }
 
   try {
     const res = await fetch(`${API}/auth/register`, {
@@ -3485,6 +3547,75 @@ async function submitRegister() {
     finishAuth(user);
   } catch (e) {
     showAuthError('register', e.message || '註冊失敗，請稍後再試');
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+// 忘記密碼第一步：用帳號查回安全問題；查到才展開第二步。
+async function lookupRecoveryQuestion() {
+  const username = document.getElementById('forgot-username').value.trim();
+  if (!username) return;
+  const btn = document.getElementById('forgot-lookup');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader"></i> 查詢中…';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('forgot-error').hidden = true;
+  try {
+    const res = await fetch(`${API}/auth/recovery/question`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '查無此帳號的安全問題');
+    }
+    const data = await res.json();
+    document.getElementById('forgot-question').textContent = data.question || '';
+    document.getElementById('forgot-step2').hidden = false;
+  } catch (e) {
+    showAuthError('forgot', e.message || '查詢失敗，請稍後再試');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+// 忘記密碼第二步：答對安全問題即可設定新密碼，成功後導回登入。
+async function submitRecoveryReset() {
+  const username = document.getElementById('forgot-username').value.trim();
+  const answer = document.getElementById('forgot-answer').value.trim();
+  const newPassword = document.getElementById('forgot-new-password').value;
+  if (!answer) { showAuthError('forgot', '請輸入安全問題的答案'); return; }
+  const pwErr = validateClientPassword(newPassword, username);
+  if (pwErr) { showAuthError('forgot', pwErr); return; }
+
+  const btn = document.getElementById('forgot-submit');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader"></i> 重設中…';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('forgot-error').hidden = true;
+  try {
+    const res = await fetch(`${API}/auth/recovery/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, answer, new_password: newPassword }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '重設失敗');
+    }
+    if (typeof showToast === 'function') showToast('密碼已重設，請用新密碼登入', 'success');
+    switchAuthTab('login');
+    document.getElementById('login-username').value = username;
+  } catch (e) {
+    showAuthError('forgot', e.message || '重設失敗，請稍後再試');
+  } finally {
     btn.disabled = false;
     btn.innerHTML = original;
     if (typeof lucide !== 'undefined') lucide.createIcons();

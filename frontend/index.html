@@ -243,12 +243,17 @@
           </label>
           <label class="auth-field">
             <span class="auth-label" data-i18n="auth.label.password">密碼</span>
-            <input id="login-password" type="password" autocomplete="current-password" placeholder="輸入密碼" data-i18n-placeholder="auth.placeholder.password" minlength="6" required />
+            <input id="login-password" type="password" autocomplete="current-password" placeholder="輸入密碼" data-i18n-placeholder="auth.placeholder.password" minlength="6" required onkeyup="detectCapsLock(event, 'login-caps')" />
+          </label>
+          <p class="auth-avatar-hint" id="login-caps" hidden><i data-lucide="alert-triangle"></i> <span data-i18n="auth.capsLock">大寫鎖定（Caps Lock）已開啟</span></p>
+          <label class="auth-show-pw" style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" onchange="toggleAuthPw('login', this.checked)" /> <span data-i18n="auth.showPassword">顯示密碼</span>
           </label>
           <p class="auth-error" id="login-error" hidden></p>
           <button class="auth-submit" id="login-submit" type="submit">
             <i data-lucide="log-in"></i> <span data-i18n="auth.submit.login">登入</span>
           </button>
+          <p class="auth-switch-hint"><a href="#" onclick="event.preventDefault(); showForgotPanel()" data-i18n="auth.forgot.link">忘記密碼？</a></p>
           <p class="auth-switch-hint"><span data-i18n="auth.switch.toRegister">還沒有帳號？</span><a href="#" onclick="event.preventDefault(); switchAuthTab('register')" data-i18n="auth.switch.toRegisterLink">立即註冊</a></p>
         </form>
 
@@ -282,19 +287,76 @@
 
           <label class="auth-field">
             <span class="auth-label" data-i18n="auth.label.password">密碼</span>
-            <input id="reg-password" type="password" autocomplete="new-password" placeholder="至少 6 個字元" data-i18n-placeholder="auth.placeholder.regPassword" minlength="6" required />
+            <input id="reg-password" type="password" autocomplete="new-password" placeholder="至少 8 字元，含英文與數字" data-i18n-placeholder="auth.placeholder.regPassword" minlength="8" required onkeyup="detectCapsLock(event, 'reg-caps')" />
           </label>
+          <p class="auth-avatar-hint" id="reg-caps" hidden><i data-lucide="alert-triangle"></i> <span data-i18n="auth.capsLock">大寫鎖定（Caps Lock）已開啟</span></p>
+          <p class="auth-avatar-hint" data-i18n="auth.passwordRule">密碼至少 8 個字元，且需同時包含英文字母與數字。</p>
 
           <label class="auth-field">
             <span class="auth-label" data-i18n="auth.label.password2">確認密碼</span>
-            <input id="reg-password2" type="password" autocomplete="new-password" placeholder="再次輸入密碼" data-i18n-placeholder="auth.placeholder.regPassword2" minlength="6" required />
+            <input id="reg-password2" type="password" autocomplete="new-password" placeholder="再次輸入密碼" data-i18n-placeholder="auth.placeholder.regPassword2" minlength="8" required />
           </label>
+
+          <label class="auth-show-pw" style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" onchange="toggleAuthPw('register', this.checked)" /> <span data-i18n="auth.showPassword">顯示密碼</span>
+          </label>
+
+          <div class="auth-recovery-block" style="margin-top:8px;border-top:1px dashed var(--border, #ddd);padding-top:8px;">
+            <p class="auth-avatar-hint" data-i18n="auth.recovery.regHint">（建議）設定安全問題，忘記密碼時可自助重設：</p>
+            <label class="auth-field">
+              <span class="auth-label" data-i18n="auth.recovery.question">安全問題</span>
+              <input id="reg-recovery-question" type="text" placeholder="例：第一隻寵物的名字？" data-i18n-placeholder="auth.recovery.questionPlaceholder" maxlength="80" />
+            </label>
+            <label class="auth-field">
+              <span class="auth-label" data-i18n="auth.recovery.answer">答案</span>
+              <input id="reg-recovery-answer" type="text" autocomplete="off" placeholder="記得住、別人猜不到的答案" data-i18n-placeholder="auth.recovery.answerPlaceholder" maxlength="80" />
+            </label>
+          </div>
 
           <p class="auth-error" id="register-error" hidden></p>
           <button class="auth-submit" id="register-submit" type="submit">
             <i data-lucide="user-plus"></i> <span data-i18n="auth.submit.register">建立帳號</span>
           </button>
           <p class="auth-switch-hint"><span data-i18n="auth.switch.toLogin">已經有帳號？</span><a href="#" onclick="event.preventDefault(); switchAuthTab('login')" data-i18n="auth.switch.toLoginLink">直接登入</a></p>
+        </form>
+
+        <!-- FORGOT PASSWORD PANEL（安全問題自助重設）-->
+        <form class="auth-panel" id="auth-panel-forgot" onsubmit="event.preventDefault(); submitRecoveryReset();">
+          <p class="auth-avatar-title" data-i18n="auth.forgot.title">忘記密碼</p>
+          <p class="auth-avatar-hint" data-i18n="auth.forgot.hint">輸入帳號，回答安全問題後即可設定新密碼。</p>
+
+          <label class="auth-field">
+            <span class="auth-label" data-i18n="auth.label.username">帳號</span>
+            <input id="forgot-username" type="text" autocomplete="username" placeholder="你的帳號" data-i18n-placeholder="auth.placeholder.username" maxlength="32" required />
+          </label>
+          <button class="auth-submit" id="forgot-lookup" type="button" onclick="lookupRecoveryQuestion()">
+            <i data-lucide="search"></i> <span data-i18n="auth.forgot.lookup">查詢安全問題</span>
+          </button>
+
+          <!-- 第二步：查到問題後才顯示 -->
+          <div id="forgot-step2" hidden>
+            <label class="auth-field">
+              <span class="auth-label" data-i18n="auth.recovery.question">安全問題</span>
+              <p id="forgot-question" class="auth-recovery-question" style="font-weight:600;margin:4px 0;"></p>
+            </label>
+            <label class="auth-field">
+              <span class="auth-label" data-i18n="auth.recovery.answer">答案</span>
+              <input id="forgot-answer" type="text" autocomplete="off" placeholder="輸入安全問題的答案" data-i18n-placeholder="auth.forgot.answerPlaceholder" maxlength="80" />
+            </label>
+            <label class="auth-field">
+              <span class="auth-label" data-i18n="auth.forgot.newPassword">新密碼</span>
+              <input id="forgot-new-password" type="password" autocomplete="new-password" placeholder="至少 8 字元，含英文與數字" data-i18n-placeholder="auth.placeholder.regPassword" minlength="8" />
+            </label>
+            <label class="auth-show-pw" style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+              <input type="checkbox" onchange="toggleAuthPw('forgot', this.checked)" /> <span data-i18n="auth.showPassword">顯示密碼</span>
+            </label>
+            <button class="auth-submit" id="forgot-submit" type="submit">
+              <i data-lucide="key-round"></i> <span data-i18n="auth.forgot.reset">重設密碼</span>
+            </button>
+          </div>
+
+          <p class="auth-error" id="forgot-error" hidden></p>
+          <p class="auth-switch-hint"><a href="#" onclick="event.preventDefault(); switchAuthTab('login')" data-i18n="auth.switch.toLoginLink">直接登入</a></p>
         </form>
       </div>
     </div>
