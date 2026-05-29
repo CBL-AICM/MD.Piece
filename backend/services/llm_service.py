@@ -638,6 +638,12 @@ def _parse_iso_ts(s: Optional[str]) -> Optional[datetime]:
         return None
 
 
+# 病人使用狀態的短期 TTL 快取（patient_id → (寫入時間, PatientContext|None)）。
+# 小禾連續對話每則訊息都會算 context，加快取避免重複 4 次 DB 往返。
+_CTX_CACHE: dict = {}
+_CTX_TTL_SEC = float(os.getenv("PATIENT_CONTEXT_TTL_SEC", "120"))
+
+
 def compute_patient_context(patient_id: Optional[str]) -> Optional[PatientContext]:
     """從 DB 算出病人目前的使用狀態（紀錄筆數、首筆/末筆時間）。
 
@@ -645,9 +651,19 @@ def compute_patient_context(patient_id: Optional[str]) -> Optional[PatientContex
     - DB 連不上或所有表都失敗 → None（呼叫端視為「狀態未知」）
     - 任何單一表失敗 → 忽略，繼續算其他表（best-effort）
 
-    刻意只挑 timestamp 欄位避免抓回大資料。"""
+    刻意只挑 timestamp 欄位避免抓回大資料。
+
+    效能：此函式在每則小禾對話「LLM 開始前」被呼叫，會對 Supabase 做 4 次序列查詢，
+    直接拖慢首字時間。但「使用狀態」在一次對話過程中幾乎不變，故加 TTL 短期快取
+    （預設 120s）：同一個人連續聊天時只查一次 DB，後續直接命中（規則 5：確定性快取）。"""
     if not patient_id:
         return None
+
+    # TTL 快取命中就直接回，省掉 4 次 DB 往返（小禾連續對話的主要延遲來源）。
+    now_ts = time.time()
+    cached = _CTX_CACHE.get(patient_id)
+    if cached is not None and (now_ts - cached[0]) < _CTX_TTL_SEC:
+        return cached[1]
 
     try:
         from backend.db import get_supabase
@@ -704,11 +720,13 @@ def compute_patient_context(patient_id: Optional[str]) -> Optional[PatientContex
     days_first = (now - first_dt).days if first_dt else None
     days_last = (now - last_dt).days if last_dt else None
 
-    return PatientContext(
+    ctx = PatientContext(
         record_count=total,
         days_since_first=days_first,
         days_since_last=days_last,
     )
+    _CTX_CACHE[patient_id] = (now_ts, ctx)
+    return ctx
 
 
 def _patient_state_hint(ctx: Optional[PatientContext]) -> str:
