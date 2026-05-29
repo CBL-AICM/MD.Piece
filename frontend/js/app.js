@@ -3808,14 +3808,30 @@ function accountPage() {
           </label>
           <label class="acct-field">
             <span>新密碼</span>
-            <input id="acct-pw-new" type="password" autocomplete="new-password" minlength="6" required />
+            <input id="acct-pw-new" type="password" autocomplete="new-password" minlength="8" required />
           </label>
           <label class="acct-field">
             <span>確認新密碼</span>
-            <input id="acct-pw-new2" type="password" autocomplete="new-password" minlength="6" required />
+            <input id="acct-pw-new2" type="password" autocomplete="new-password" minlength="8" required />
           </label>
+          <p class="acct-hint" style="font-size:12px;color:var(--text-muted)">密碼至少 8 字元，需同時包含英文字母與數字。</p>
           <p class="acct-msg" id="acct-pw-msg" hidden></p>
           <button class="acct-submit" type="submit"><i data-lucide="key-round"></i> 更新密碼</button>
+        </form>
+
+        <form class="acct-form" onsubmit="event.preventDefault(); saveRecovery();">
+          <h3>安全問題</h3>
+          <p class="acct-hint" id="acct-recovery-status" style="font-size:12px;color:var(--text-muted)">設定安全問題後，忘記密碼時可自助重設。</p>
+          <label class="acct-field">
+            <span>安全問題</span>
+            <input id="acct-recovery-question" type="text" maxlength="80" placeholder="例：第一隻寵物的名字？" />
+          </label>
+          <label class="acct-field">
+            <span>答案</span>
+            <input id="acct-recovery-answer" type="text" autocomplete="off" maxlength="80" placeholder="記得住、別人猜不到的答案" />
+          </label>
+          <p class="acct-msg" id="acct-recovery-msg" hidden></p>
+          <button class="acct-submit" type="submit"><i data-lucide="shield-check"></i> 儲存安全問題</button>
         </form>
 
         <div class="acct-actions">
@@ -3834,6 +3850,19 @@ function accountPage() {
 function loadAccountPage() {
   const fileInput = document.getElementById('acct-avatar-file');
   if (fileInput) fileInput.addEventListener('change', onAccountAvatarPicked);
+  // 反映目前是否已設定安全問題（不顯示題目內容，只標示狀態）
+  const u = getCurrentUser();
+  if (u && u.id) {
+    apiFetch(`${API}/auth/user/${u.id}`).then(r => r.ok ? r.json() : null).then(data => {
+      if (!data) return;
+      const status = document.getElementById('acct-recovery-status');
+      const qInput = document.getElementById('acct-recovery-question');
+      if (data.has_recovery) {
+        if (status) status.textContent = '已設定安全問題。可在下方更新；忘記密碼時可自助重設。';
+        if (qInput && data.recovery_question) qInput.value = data.recovery_question;
+      }
+    }).catch(() => {});
+  }
   const colorInput = document.getElementById('acct-color');
   if (colorInput) {
     colorInput.addEventListener('input', () => {
@@ -3919,8 +3948,9 @@ async function savePassword() {
     showAccountMsg('acct-pw-msg', '兩次輸入的新密碼不一致', true);
     return;
   }
-  if (next.length < 6) {
-    showAccountMsg('acct-pw-msg', '新密碼至少 6 個字元', true);
+  const pwErr = validateClientPassword(next, u.username);
+  if (pwErr) {
+    showAccountMsg('acct-pw-msg', pwErr, true);
     return;
   }
   try {
@@ -3939,6 +3969,34 @@ async function savePassword() {
     showAccountMsg('acct-pw-msg', '密碼已更新', false);
   } catch (e) {
     showAccountMsg('acct-pw-msg', e.message, true);
+  }
+}
+
+async function saveRecovery() {
+  const u = getCurrentUser();
+  if (!u) return;
+  const question = document.getElementById('acct-recovery-question').value.trim();
+  const answer = document.getElementById('acct-recovery-answer').value.trim();
+  if (!question || !answer) {
+    showAccountMsg('acct-recovery-msg', '請填寫安全問題與答案', true);
+    return;
+  }
+  try {
+    const res = await apiFetch(`${API}/auth/user/${u.id}/recovery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, answer })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || '儲存失敗');
+    }
+    document.getElementById('acct-recovery-answer').value = '';
+    showAccountMsg('acct-recovery-msg', '安全問題已儲存', false);
+    const status = document.getElementById('acct-recovery-status');
+    if (status) status.textContent = '已設定安全問題。忘記密碼時可自助重設。';
+  } catch (e) {
+    showAccountMsg('acct-recovery-msg', e.message, true);
   }
 }
 

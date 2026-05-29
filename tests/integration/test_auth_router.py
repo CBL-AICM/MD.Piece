@@ -217,6 +217,32 @@ def test_recovery_question_404_when_not_set():
         "username": _USERNAME, "answer": "x", "new_password": "Resetpw123"}).status_code == 400
 
 
+def test_set_recovery_via_account_and_get_user_exposure():
+    """已登入者可設定安全問題；get_user 回 has_recovery + 題目，但不外洩答案雜湊。"""
+    reg = _register()
+    token = reg.json()["access_token"]
+    uid = reg.json()["id"]
+    h = _auth_headers(token)
+
+    # 設定前：未設定
+    before = client.get(f"/auth/user/{uid}", headers=h).json()
+    assert before["has_recovery"] is False
+    assert "recovery_answer_hash" not in before
+
+    # 設定安全問題
+    assert client.post(f"/auth/user/{uid}/recovery", headers=h,
+                       json={"question": "母親的姓？", "answer": "陳"}).status_code == 200
+
+    after = client.get(f"/auth/user/{uid}", headers=h).json()
+    assert after["has_recovery"] is True
+    assert after["recovery_question"] == "母親的姓？"
+    assert "recovery_answer_hash" not in after  # 答案雜湊絕不外洩
+
+    # 設定後即可走忘記密碼流程
+    assert client.post("/auth/recovery/reset", json={
+        "username": _USERNAME, "answer": "陳", "new_password": "Resetpw123"}).status_code == 200
+
+
 def test_recovery_reset_enforces_password_strength():
     _register(recovery_question="顏色？", recovery_answer="藍")
     res = client.post("/auth/recovery/reset", json={

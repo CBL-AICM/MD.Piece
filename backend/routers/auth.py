@@ -200,8 +200,10 @@ def get_user(user_id: str, me: dict = Depends(current_user)):
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到使用者")
     user = _public_user(result.data[0])
-    # 讓前端知道是否已設定安全問題（不外洩問題內容與答案）。
+    # 本人查自己（已過 _enforce_self）：回傳是否設過安全問題與題目本身，
+    # 供帳號設定頁顯示／預填；答案雜湊仍不外洩。
     user["has_recovery"] = bool(result.data[0].get("recovery_answer_hash"))
+    user["recovery_question"] = result.data[0].get("recovery_question") or ""
     return user
 
 
@@ -243,8 +245,8 @@ def set_recovery(user_id: str, body: RecoverySet, me: dict = Depends(current_use
     answer = _normalize_answer(body.answer)
     if len(question) < 2:
         raise HTTPException(status_code=400, detail="請輸入安全問題")
-    if len(answer) < 2:
-        raise HTTPException(status_code=400, detail="安全問題答案至少 2 個字元")
+    if not answer:
+        raise HTTPException(status_code=400, detail="請輸入安全問題答案")
     sb = get_supabase()
     result = sb.table("users").update({
         "recovery_question": question,
