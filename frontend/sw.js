@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v137-edu-shelf";
+const CACHE_VERSION = "mdpiece-v138-edu-storybook";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -9,7 +9,7 @@ const STATIC_ASSETS = [
   "/css/medical-warm.css?v=v6-dark-no-grad",
   "/css/v11-modern.css?v=v18-dark-text-contrast",
   "/css/elder-mode.css?v=v4-fix-clobber",
-  "/css/ghibli-theme.css?v=v2",
+  "/css/ghibli-theme.css?v=v3",
   "/js/i18n.js?v=v82-domready-fix",
   "/js/bell.js?v=v81-bell",
   "/js/app.js?v=v145-diet-pick-bounded-timeout",

@@ -1,102 +1,105 @@
 /* ═══════════════════════════════════════════════════════════════
-   MD.Piece — 衛教書房・吉卜力風（education-scoped）
+   MD.Piece — 衛教書房・手作繪本風（education-scoped）
 
-   範圍限縮：所有規則都掛在 body[data-page="education"] 之下
-   （showPage() 會在 body 設 data-page=當前頁）。
-   → 只有「衛教文章庫 / 書櫃」這一頁套上吉卜力藍白天空＋奶油手繪卡片，
-     其餘所有畫面維持原本 v11，完全不受影響。
+   範圍限縮：全部規則掛在 body[data-page="education"] 之下，
+   只影響「衛教文章庫 / 書櫃」這一頁，其餘畫面維持原本 v11。
 
-   不覆寫既有 .bookshelf-wrap / .book —— 那組水彩手繪木櫃（style.css）
-   本身已是手繪風，這裡只把它放進藍天紙感的場景、讓周邊卡片同調。
+   設計語言：handcrafted storybook / gouache paper、暖紙質感＋細顆粒紋理、
+   霧面（無 glossy）、柔和圓角、muted earthy 配色
+   （sage green / cream beige / warm brown / desaturated blue）、
+   手繪墨線但偏編輯級專業感（非卡通），資訊層級清晰、可讀性優先。
 
-   還原：移除 index.html 這支 <link> 即可。
+   不改 style.css；要還原移除 index.html 這支 <link> 即可。
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── 只在衛教頁：內容區換成吉卜力藍白天空 + 奶油色票 ── */
+/* ── 只把 muted-earthy 色票限縮在衛教頁內容（背景維持原本，不覆寫）── */
 body[data-page="education"] #app {
-  background: linear-gradient(180deg,#5fb4e6 0%,#86c8ec 34%,#bce1f4 68%,#eaf6fc 100%) !important;
-  border-radius: 18px;
-  padding: 12px 12px 26px;
-  position: relative;
-  overflow: hidden;
-
-  /* 奶油＋墨線＋草原綠色票，僅作用於本頁內容（不外溢到 topbar / tabbar） */
-  --cream:        #f6eed6;
-  --cream-dim:    #ece1c1;
-  --bg-surface:   #f6eed6;
-  --bg-glass:     #f6eed6;
-  --text:         #3d352a;
-  --text-dim:     #6e6049;
-  --text-muted:   #8a7b62;
-  --navy:         #2c4636;
-  --border:       rgba(61,53,42,0.34);
-  --border-glass: rgba(61,53,42,0.30);
-  --border-mid:   rgba(61,53,42,0.46);
-  --accent:       #5aa6c4;
-  --accent-light: #86c8ec;
-  --accent-deep:  #3f7e96;
-  --green:        #6fa84e;
-  --green-deep:   #4f7e36;
-  --amber:        #e0a32f;
-  --amber-deep:   #b87e1f;
-  --rose:         #d65a3f;
-  --rose-deep:    #ad3e28;
+  --cream:        #f3ecda;   /* cream beige 紙面 */
+  --cream-dim:    #e9dec6;
+  --bg-surface:   #f3ecda;
+  --bg-glass:     #f3ecda;
+  --text:         #3f3527;   /* 暖棕墨字 */
+  --text-dim:     #6c5f4c;
+  --text-muted:   #8a7c66;
+  --navy:         #4a3d2c;   /* 標題：深暖棕 */
+  --border:       rgba(80,62,42,0.28);
+  --border-glass: rgba(80,62,42,0.24);
+  --border-mid:   rgba(80,62,42,0.40);
+  --accent:       #7d97a8;   /* desaturated blue */
+  --accent-light: #9fb3c0;
+  --accent-deep:  #5d7484;
+  --green:        #8a9a6f;   /* sage green */
+  --green-deep:   #6e7e54;
+  --amber:        #c6a35e;   /* muted 陽光土金 */
+  --amber-deep:   #a98442;
+  --rose:         #c2725a;   /* muted terracotta */
+  --rose-deep:    #a25842;
 }
-/* 蓬鬆白雲飄在書房天空（限本頁，不擋互動） */
-body[data-page="education"] #app::before {
-  content: "";
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background-repeat: no-repeat;
-  background-image:
-    radial-gradient(110px 38px at 14% 5%, rgba(255,255,255,.95), rgba(255,255,255,0) 72%),
-    radial-gradient(150px 48px at 84% 4%, rgba(255,255,255,.92), rgba(255,255,255,0) 72%),
-    radial-gradient(90px 30px at 60% 10%, rgba(255,255,255,.8),  rgba(255,255,255,0) 72%);
-}
-/* 內容浮在雲層之上 */
-body[data-page="education"] #app > * { position: relative; z-index: 1; }
-/* 本頁的星空/拼圖裝飾調淡 */
-body[data-page="education"] .puzzle-bg-layer { opacity: .2 !important; }
 
-/* ── 衛教頁的卡片 → 奶油底 + 手繪墨線 + 不規則圓角 ── */
+/* ── 衛教頁卡片 → 奶油紙卡：柔和圓角 + 細墨邊 + 軟陰影（不 glossy）── */
 body[data-page="education"] .card,
 body[data-page="education"] .list-card,
 body[data-page="education"] .home-edu-card,
 body[data-page="education"] .edu-card-mini {
   background: var(--cream) !important;
-  border: 2.5px solid rgba(61,53,42,0.78) !important;
-  border-radius: 16px 13px 17px 14px / 14px 17px 13px 16px !important;
-  box-shadow: 2px 3px 0 rgba(61,53,42,0.15) !important;
-  background-image: radial-gradient(rgba(120,90,50,.05) .6px, transparent .8px) !important;
-  background-size: 8px 8px !important;
+  border: 1.5px solid rgba(80,62,42,0.40) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 16px -10px rgba(80,60,40,0.40) !important;
+  /* 細顆粒紙紋 */
+  background-image: radial-gradient(rgba(120,95,60,.045) .6px, transparent .8px) !important;
+  background-size: 7px 7px !important;
 }
-
-/* hero（衛教·知識庫）→ 羊皮紙感 */
 body[data-page="education"] .pv-hero {
-  background: radial-gradient(circle at 28% 18%, #fdf3d8, #f0dcae 80%, #e6cf9a 100%) !important;
-  border: 2.5px solid rgba(61,53,42,0.78) !important;
-  border-radius: 16px 13px 17px 14px / 14px 17px 13px 16px !important;
-  box-shadow: 2px 3px 0 rgba(61,53,42,0.15) !important;
+  background: linear-gradient(180deg,#f6efdd,#efe5cd) !important;
+  border: 1.5px solid rgba(80,62,42,0.40) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 16px -10px rgba(80,60,40,0.40) !important;
 }
-
-/* 區塊標題 / 麵包屑 → 墨色，icon 線條圓潤加粗 */
-body[data-page="education"] .sec-title,
-body[data-page="education"] .edu-breadcrumb .crumb.current { color: var(--navy) !important; }
+body[data-page="education"] .sec-title { color: var(--navy) !important; }
 body[data-page="education"] .lucide,
 body[data-page="education"] svg.lucide {
-  stroke-width: 2.3 !important; stroke-linecap: round; stroke-linejoin: round;
+  stroke-width: 2.1 !important; stroke-linecap: round; stroke-linejoin: round;
 }
 
-/* ── 既有水彩木櫃：不改其皮，只讓它在藍天下更立體 + 收進手繪圓角 ── */
+/* ════════════════════════════════════════════════════════════
+   書櫃重設計：暖紙木箱（霧面）取代原本亮面蜂蜜木
+   ════════════════════════════════════════════════════════════ */
 body[data-page="education"] .bookshelf-wrap {
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.32),
-    inset 0 0 32px rgba(95,55,22,0.22),
-    0 14px 30px rgba(40,60,40,0.28),
-    2px 3px 0 rgba(61,53,42,0.18) !important;
+  /* 暖紙面 + 細顆粒，去掉亮面水彩噴點與蜂蜜漸層 */
+  background:
+    radial-gradient(rgba(120,95,60,.06) .7px, transparent .9px),
+    linear-gradient(180deg, #e3d4b6 0%, #d8c6a4 100%) !important;
+  background-size: 6px 6px, 100% 100% !important;
+  border: 2px solid #9c7c54 !important;          /* 柔和暖棕框 */
+  border-radius: 18px !important;
+  box-shadow: 0 10px 24px -14px rgba(70,52,30,0.45) !important;  /* 軟陰影 */
+  filter: none !important;
+}
+/* 移除亮面高光斑 */
+body[data-page="education"] .bookshelf-wrap::before { display: none !important; }
+
+/* 每層：去掉內陰影漸層，改柔和墨棕分隔線 */
+body[data-page="education"] .shelf {
+  background: none !important;
+  border-bottom: 2px solid rgba(124,94,62,0.45) !important;
+}
+body[data-page="education"] .shelf-label,
+body[data-page="education"] .bookshelf-title { color: #7c5e3e !important; opacity: .72 !important; }
+
+/* 書背：gouache 平塗 + 紙顆粒，霧面（去亮面高光），柔墨邊 */
+body[data-page="education"] .book {
+  background-color: var(--book-color, #cdbfa6) !important;
+  background-image:
+    radial-gradient(rgba(255,255,255,.10) .5px, transparent .7px),          /* 紙顆粒 */
+    linear-gradient(180deg, rgba(244,238,222,.20), rgba(120,95,60,.10)) !important; /* 暖紙薄敷，輕微統一色調 */
+  background-size: 5px 5px, 100% 100% !important;
+  border: 2px solid #5c4836 !important;          /* 暖棕墨線（非死黑） */
+  border-radius: 7px 8px 6px 9px !important;
+  box-shadow: 0 3px 7px -3px rgba(70,52,30,0.40) !important;  /* 軟陰影，拿掉亮面 inset 白邊 */
 }
 
-/* 免責頁尾在奶油底上維持可讀 */
+/* 免責頁尾在紙底上維持可讀 */
 body[data-page="education"] .disclaimer-footer {
-  background: rgba(255,255,255,0.5) !important;
+  background: rgba(255,255,255,0.45) !important;
   border-radius: 12px !important;
 }
