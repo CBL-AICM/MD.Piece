@@ -346,3 +346,38 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .codex-reader, .codex-reader.turning .codex-reader-stage { animation: none !important; }
 }
+
+/* ── 整頁古典插圖（扉頁 + 各章插圖頁）──────────────────────── */
+.codex-frontis, .codex-plate {
+  margin: 0; text-align: center;
+  break-inside: avoid; -webkit-column-break-inside: avoid;
+  break-after: column; -webkit-column-break-after: always; page-break-after: always;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  min-height: 86%;
+}
+.codex-plate-art {
+  display: inline-block; background: #f1e7cd; padding: 12px;
+  border: 2px solid #2a1d12; border-radius: 2px;
+  box-shadow: 3px 3px 0 rgba(58,42,30,.20);
+  max-width: 92%;
+}
+.codex-plate-art svg {
+  display: block; width: 100%; height: auto; max-height: 46vh;
+  filter: sepia(.45) contrast(1.06) brightness(.99);
+}
+.codex-plate figcaption {
+  margin-top: 10px; color: var(--codex-ink-soft);
+  font-family: "Cormorant Garamond","Noto Serif TC",serif;
+  font-size: .9rem; letter-spacing: 3px;
+}
+.codex-frontis-eyebrow {
+  margin-top: 16px; color: var(--codex-gold);
+  font-family: "Cormorant Garamond","Noto Serif TC",serif;
+  letter-spacing: 7px; font-size: .82rem;
+}
+.codex-frontis-rule { width: 64px; height: 0; border-top: 1.5px solid rgba(122,34,48,.5); margin: 8px auto; }
+.codex-frontis-title {
+  font-family: "Cormorant Garamond","Noto Serif TC",serif;
+  color: var(--codex-burgundy); font-size: 1.9rem; line-height: 1.25;
+  letter-spacing: 1px; padding: 0 10px;
+}

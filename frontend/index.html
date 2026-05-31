@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="css/v11-modern.css?v=v18-dark-text-contrast" />
   <link rel="stylesheet" href="css/v11-components.css?v=v6-bodymap-dual" />
   <link rel="stylesheet" href="css/ghibli-theme.css?v=v3" />
-  <link rel="stylesheet" href="css/edu-codex.css?v=v2" />
+  <link rel="stylesheet" href="css/edu-codex.css?v=v3" />
   <link rel="stylesheet" href="css/predict.css?v=v1" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
@@ -59,7 +59,7 @@
     // 把 V 改高一級 → 每個使用者下次開站會清光 SW + caches + reload，
     // 各種 stale cache 全部失效。每個版本每個使用者只清一次。
     (async function() {
-      var APP_BUST = 'v16-edu-pageturn-2026-05-31-a';
+      var APP_BUST = 'v17-edu-plates-2026-05-31-a';
       try {
         if (localStorage.getItem('mdp-cache-bust') === APP_BUST) return;
         localStorage.setItem('mdp-cache-bust', APP_BUST);
@@ -654,7 +654,7 @@
   <script src="js/i18n.js?v=v82-domready-fix"></script>
   <script src="js/bell.js?v=v81-bell"></script>
   <script src="js/app.js?v=v148-previsit-pdf-v6-visual"></script>
-  <script src="js/edu-codex.js?v=v2" defer></script>
+  <script src="js/edu-codex.js?v=v3" defer></script>
   <script src="js/landing.js"></script>
   <script>
     // ─── Star Field Animation ──────────────────────────────

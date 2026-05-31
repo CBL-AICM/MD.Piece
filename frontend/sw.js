@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v140-edu-pageturn";
+const CACHE_VERSION = "mdpiece-v141-edu-plates";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -10,11 +10,11 @@ const STATIC_ASSETS = [
   "/css/v11-modern.css?v=v18-dark-text-contrast",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/css/ghibli-theme.css?v=v3",
-  "/css/edu-codex.css?v=v2",
+  "/css/edu-codex.css?v=v3",
   "/js/i18n.js?v=v82-domready-fix",
   "/js/bell.js?v=v81-bell",
   "/js/app.js?v=v145-diet-pick-bounded-timeout",
-  "/js/edu-codex.js?v=v2",
+  "/js/edu-codex.js?v=v3",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
