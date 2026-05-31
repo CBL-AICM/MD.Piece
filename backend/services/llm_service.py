@@ -220,6 +220,10 @@ def _call_gemini(system_prompt: str, user_message: str, history=None, max_tokens
         "contents": _gemini_history_to_contents(history, user_message),
         "generationConfig": {
             "temperature": 0.4,
+            # gemini-2.5 系列預設會「思考」，在小 maxOutputTokens 下思考會吃光
+            # 額度導致正文回空（finishReason=MAX_TOKENS）。這裡是當 fallback 用的
+            # 衛教/對話生成，不需要 thinking — 關掉讓 token 全給正文，備援才可靠。
+            "thinkingConfig": {"thinkingBudget": 0},
         },
     }
     if max_tokens:
