@@ -1,243 +1,102 @@
 /* ═══════════════════════════════════════════════════════════════
-   MD.Piece — Ghibli Theme（吉卜力藍白天空 · 手繪故事書）
+   MD.Piece — 衛教書房・吉卜力風（education-scoped）
 
-   Overlay CSS：載在 style.css + v11-modern.css + v11-components.css 之後，
-   重新指定 v11 的設計 token（--bg / --cream / --accent / --green …），
-   並疊上手繪表層（藍白天空、墨線邊框、木格、羊皮紙、暖木 tabbar）。
+   範圍限縮：所有規則都掛在 body[data-page="education"] 之下
+   （showPage() 會在 body 設 data-page=當前頁）。
+   → 只有「衛教文章庫 / 書櫃」這一頁套上吉卜力藍白天空＋奶油手繪卡片，
+     其餘所有畫面維持原本 v11，完全不受影響。
 
-   啟用：<body class="theme-modern theme-ghibli">（已設為全站預設）
-   還原：把 index.html 的這支 <link> 拿掉，或移除 body 的 theme-ghibli class，
-        或網址加 ?ghibli=0（一次性關閉）。原 style.css / v11 完全不動。
+   不覆寫既有 .bookshelf-wrap / .book —— 那組水彩手繪木櫃（style.css）
+   本身已是手繪風，這裡只把它放進藍天紙感的場景、讓周邊卡片同調。
 
-   來源設計：frontend/preview-ghibli-mdpiece.html
+   還原：移除 index.html 這支 <link> 即可。
    ═══════════════════════════════════════════════════════════════ */
 
-/* ───────────────────────────────────────────────
-   ① 設計 token 重指定 → 吉卜力調色盤（沿用 v11 變數名）
-   ─────────────────────────────────────────────── */
-body.theme-ghibli {
-  /* 文字：深墨棕，落在奶油底上對比足夠 */
-  --text:          #3d352a !important;
-  --text-dim:      #6e6049 !important;
-  --text-muted:    #8a7b62 !important;
-  --navy:          #2c4636 !important;   /* 強調字 → 森林綠墨 */
+/* ── 只在衛教頁：內容區換成吉卜力藍白天空 + 奶油色票 ── */
+body[data-page="education"] #app {
+  background: linear-gradient(180deg,#5fb4e6 0%,#86c8ec 34%,#bce1f4 68%,#eaf6fc 100%) !important;
+  border-radius: 18px;
+  padding: 12px 12px 26px;
+  position: relative;
+  overflow: hidden;
 
-  /* 背景 / 卡面：奶油米白 */
-  --bg:            #f3ead0 !important;
-  --bg-soft:       #efe4c8 !important;
-  --bg-mid:        #e7d9b8 !important;
-  --bg-deep:       #dcc9a0 !important;
-  --bg-surface:    #f6eed6 !important;
-  --bg-glass:      #f6eed6 !important;
-  --cream:         #f6eed6 !important;
-  --cream-dim:     #ece1c1 !important;
-
-  /* 邊框：手繪墨線 */
-  --border:        rgba(61,53,42,0.34) !important;
-  --border-glass:  rgba(61,53,42,0.30) !important;
-  --border-mid:    rgba(61,53,42,0.46) !important;
-  --border-strong: rgba(61,53,42,0.62) !important;
-
-  /* 主色：吉卜力天空藍 */
-  --accent:        #5aa6c4 !important;
-  --accent-light:  #86c8ec !important;
-  --accent-deep:   #3f7e96 !important;
-  --accent-soft:   #d7ecf3 !important;
-  --accent-tint:   #e9f4f8 !important;
-  --accent-glow:   #5aa6c455 !important;
-  --klein:         #5aa6c4 !important;
-
-  /* 草原綠（成功 / 完成 / 主要動作） */
-  --green:         #6fa84e !important;
-  --green-deep:    #4f7e36 !important;
-  --green-soft:    #e2eed0 !important;
-  --green-tint:    #edf4e2 !important;
-
-  /* 陽光金（提醒 / 注意） */
-  --amber:         #e0a32f !important;
-  --amber-deep:    #b87e1f !important;
-  --amber-soft:    #f6e7c4 !important;
-  --amber-tint:    #faf1da !important;
-
-  /* 溫暖朱紅（警示 / 心率 / 緊急） */
-  --rose:          #d65a3f !important;
-  --rose-deep:     #ad3e28 !important;
-  --rose-soft:     #f6dcd2 !important;
-  --rose-tint:     #fbeae3 !important;
-
-  /* 水藍綠 */
-  --teal:          #5fae9a !important;
-  --teal-deep:     #3f7e6c !important;
-  --teal-light:    #8fccbb !important;
-  --teal-soft:     #dcefe7 !important;
-  --teal-tint:     #ecf6f2 !important;
+  /* 奶油＋墨線＋草原綠色票，僅作用於本頁內容（不外溢到 topbar / tabbar） */
+  --cream:        #f6eed6;
+  --cream-dim:    #ece1c1;
+  --bg-surface:   #f6eed6;
+  --bg-glass:     #f6eed6;
+  --text:         #3d352a;
+  --text-dim:     #6e6049;
+  --text-muted:   #8a7b62;
+  --navy:         #2c4636;
+  --border:       rgba(61,53,42,0.34);
+  --border-glass: rgba(61,53,42,0.30);
+  --border-mid:   rgba(61,53,42,0.46);
+  --accent:       #5aa6c4;
+  --accent-light: #86c8ec;
+  --accent-deep:  #3f7e96;
+  --green:        #6fa84e;
+  --green-deep:   #4f7e36;
+  --amber:        #e0a32f;
+  --amber-deep:   #b87e1f;
+  --rose:         #d65a3f;
+  --rose-deep:    #ad3e28;
 }
-
-/* ───────────────────────────────────────────────
-   ② 藍白天空背景（取代 v11 的暖灰漸層）
-   ─────────────────────────────────────────────── */
-body.theme-ghibli {
-  background: linear-gradient(180deg,#5fb4e6 0%,#86c8ec 36%,#bce1f4 70%,#eaf6fc 100%) !important;
-  background-attachment: fixed !important;
-}
-/* 蓬鬆白雲，固定在天空上、不擋互動 */
-body.theme-ghibli::before {
+/* 蓬鬆白雲飄在書房天空（限本頁，不擋互動） */
+body[data-page="education"] #app::before {
   content: "";
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background-repeat: no-repeat;
   background-image:
-    radial-gradient(120px 44px at 16% 9%, rgba(255,255,255,.97), rgba(255,255,255,0) 72%),
-    radial-gradient(80px 30px at 28% 13%, rgba(255,255,255,.92), rgba(255,255,255,0) 72%),
-    radial-gradient(140px 50px at 85% 7%, rgba(255,255,255,.95), rgba(255,255,255,0) 72%),
-    radial-gradient(90px 34px at 72% 12%, rgba(255,255,255,.88), rgba(255,255,255,0) 72%),
-    radial-gradient(150px 52px at 22% 60%, rgba(255,255,255,.5), rgba(255,255,255,0) 78%),
-    radial-gradient(170px 56px at 86% 84%, rgba(255,255,255,.46), rgba(255,255,255,0) 78%);
+    radial-gradient(110px 38px at 14% 5%, rgba(255,255,255,.95), rgba(255,255,255,0) 72%),
+    radial-gradient(150px 48px at 84% 4%, rgba(255,255,255,.92), rgba(255,255,255,0) 72%),
+    radial-gradient(90px 30px at 60% 10%, rgba(255,255,255,.8),  rgba(255,255,255,0) 72%);
 }
-/* app 內容浮在雲層之上 */
-body.theme-ghibli #app-wrapper,
-body.theme-ghibli #app,
-body.theme-ghibli main,
-body.theme-ghibli .app-main { position: relative; z-index: 1; }
+/* 內容浮在雲層之上 */
+body[data-page="education"] #app > * { position: relative; z-index: 1; }
+/* 本頁的星空/拼圖裝飾調淡 */
+body[data-page="education"] .puzzle-bg-layer { opacity: .2 !important; }
 
-/* 原本的星空 / 拼圖裝飾在藍天下調淡 */
-body.theme-ghibli .puzzle-bg-layer { opacity: .22 !important; }
-body.theme-ghibli #stars, body.theme-ghibli .stars-canvas { opacity: .15 !important; }
-
-/* ───────────────────────────────────────────────
-   ③ 手繪卡片：奶油底 + 墨線邊框 + 不規則圓角 + 偏移陰影
-   ─────────────────────────────────────────────── */
-body.theme-ghibli .card,
-body.theme-ghibli .glass-card,
-body.theme-ghibli .home-greet,
-body.theme-ghibli .home-hero,
-body.theme-ghibli .home-digest,
-body.theme-ghibli .home-ov,
-body.theme-ghibli .home-todo,
-body.theme-ghibli .home-info-row > *,
-body.theme-ghibli .pv-hero,
-body.theme-ghibli .vital-card,
-body.theme-ghibli .care-mode-card,
-body.theme-ghibli .med-today-hero,
-body.theme-ghibli .todo-card,
-body.theme-ghibli .section-card,
-body.theme-ghibli .list-card {
+/* ── 衛教頁的卡片 → 奶油底 + 手繪墨線 + 不規則圓角 ── */
+body[data-page="education"] .card,
+body[data-page="education"] .list-card,
+body[data-page="education"] .home-edu-card,
+body[data-page="education"] .edu-card-mini {
   background: var(--cream) !important;
-  border: 2.5px solid rgba(61,53,42,0.82) !important;
+  border: 2.5px solid rgba(61,53,42,0.78) !important;
   border-radius: 16px 13px 17px 14px / 14px 17px 13px 16px !important;
   box-shadow: 2px 3px 0 rgba(61,53,42,0.15) !important;
-  background-image:
-    radial-gradient(rgba(120,90,50,.05) .6px, transparent .8px) !important;
+  background-image: radial-gradient(rgba(120,90,50,.05) .6px, transparent .8px) !important;
   background-size: 8px 8px !important;
 }
 
-/* 格狀小磚 → 木格收納槽（手繪元素） */
-body.theme-ghibli .qr-tile,
-body.theme-ghibli .kpi,
-body.theme-ghibli .quick-jump-btn,
-body.theme-ghibli .audience-btn {
-  background: linear-gradient(160deg,#f0e2bd,#dcc596) !important;
-  border: 2.5px solid #73451f !important;
-  border-radius: 13px 10px 14px 11px / 11px 14px 10px 13px !important;
-  box-shadow:
-    inset 2px 2px 4px rgba(111,72,36,.40),
-    inset -1px -1px 0 rgba(255,248,225,.6),
-    1px 2px 0 rgba(61,53,42,.16) !important;
-  color: var(--text) !important;
-}
-
-/* hero / 問候卡 → 羊皮紙感 */
-body.theme-ghibli .home-hero,
-body.theme-ghibli .home-greet,
-body.theme-ghibli .pv-hero {
-  background:
-    radial-gradient(circle at 28% 18%, #fdf3d8, #f0dcae 80%, #e6cf9a 100%) !important;
-}
-
-/* ───────────────────────────────────────────────
-   ④ 按鈕：草原綠主要鍵 + 墨線 + 偏移陰影
-   ─────────────────────────────────────────────── */
-body.theme-ghibli .btn-primary,
-body.theme-ghibli .auth-submit,
-body.theme-ghibli .pv-btn,
-body.theme-ghibli .ocr-hero-btn,
-body.theme-ghibli .onboarding-next {
-  background: linear-gradient(180deg,#7cb85a,#4f7e36) !important;
-  color: #fbffef !important;
-  border: 2.5px solid rgba(61,53,42,0.85) !important;
-  border-radius: 12px 10px 13px 11px / 11px 13px 10px 12px !important;
-  box-shadow: 1px 2px 0 rgba(61,53,42,0.28) !important;
-  text-shadow: 0 1px 0 rgba(0,0,0,.22) !important;
-}
-body.theme-ghibli .btn-primary:active,
-body.theme-ghibli .auth-submit:active,
-body.theme-ghibli .pv-btn:active {
-  transform: translateY(1px) !important;
-  box-shadow: 0 1px 0 rgba(61,53,42,0.28) !important;
-}
-
-/* SOS / 緊急鍵 → 溫暖朱紅 */
-body.theme-ghibli .sos-btn,
-body.theme-ghibli .ip-sos-btn {
-  background: linear-gradient(180deg,#e2715a,#ad3e28) !important;
-  color: #fff7f2 !important;
-  border: 2.5px solid rgba(61,53,42,0.85) !important;
+/* hero（衛教·知識庫）→ 羊皮紙感 */
+body[data-page="education"] .pv-hero {
+  background: radial-gradient(circle at 28% 18%, #fdf3d8, #f0dcae 80%, #e6cf9a 100%) !important;
+  border: 2.5px solid rgba(61,53,42,0.78) !important;
   border-radius: 16px 13px 17px 14px / 14px 17px 13px 16px !important;
-  box-shadow: 2px 3px 0 rgba(61,53,42,0.22) !important;
+  box-shadow: 2px 3px 0 rgba(61,53,42,0.15) !important;
 }
 
-/* ───────────────────────────────────────────────
-   ⑤ 底部 tabbar → 暖木板（手繪元素）
-   ─────────────────────────────────────────────── */
-body.theme-ghibli #mobile-tabbar {
-  background: linear-gradient(180deg,#c08a4e 0%,#9a6332 100%) !important;
-  border-top: 2.5px solid rgba(61,53,42,0.85) !important;
-  border-radius: 18px 18px 0 0 !important;
-  box-shadow: 0 -2px 0 rgba(61,53,42,0.2) !important;
+/* 區塊標題 / 麵包屑 → 墨色，icon 線條圓潤加粗 */
+body[data-page="education"] .sec-title,
+body[data-page="education"] .edu-breadcrumb .crumb.current { color: var(--navy) !important; }
+body[data-page="education"] .lucide,
+body[data-page="education"] svg.lucide {
+  stroke-width: 2.3 !important; stroke-linecap: round; stroke-linejoin: round;
 }
-/* 木紋細紋 */
-body.theme-ghibli #mobile-tabbar::after {
-  content: ""; position: absolute; inset: 4px 6px auto 6px; height: 100%;
-  pointer-events: none; border-radius: 14px 14px 0 0;
-  background-image: repeating-linear-gradient(90deg, rgba(0,0,0,.06) 0 1px, transparent 1px 16px);
+
+/* ── 既有水彩木櫃：不改其皮，只讓它在藍天下更立體 + 收進手繪圓角 ── */
+body[data-page="education"] .bookshelf-wrap {
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.32),
+    inset 0 0 32px rgba(95,55,22,0.22),
+    0 14px 30px rgba(40,60,40,0.28),
+    2px 3px 0 rgba(61,53,42,0.18) !important;
 }
-body.theme-ghibli .mtab { color: #fbedcf !important; }
-body.theme-ghibli .mtab .mtab-pill,
-body.theme-ghibli .mtab span { color: #fbedcf !important; }
-/* 目前選取的 tab → 陽光金高亮 */
-body.theme-ghibli .mtab.active .mtab-pill,
-body.theme-ghibli .mtab[aria-current="true"] .mtab-pill {
-  background: linear-gradient(180deg,#f0c24a,#c8952a) !important;
-  color: #3d352a !important;
+
+/* 免責頁尾在奶油底上維持可讀 */
+body[data-page="education"] .disclaimer-footer {
+  background: rgba(255,255,255,0.5) !important;
   border-radius: 12px !important;
-  box-shadow: inset 0 0 0 1.5px rgba(61,53,42,0.5) !important;
-}
-/* 中央 FAB 快速紀錄鍵 → 草原綠木鈕 */
-body.theme-ghibli .mtab-fab-core {
-  background: linear-gradient(180deg,#7cb85a,#4f7e36) !important;
-  border: 2.5px solid rgba(61,53,42,0.85) !important;
-  color: #fbffef !important;
-  box-shadow: 1px 2px 0 rgba(61,53,42,0.3) !important;
-}
-
-/* ───────────────────────────────────────────────
-   ⑥ 小修飾：分隔線、徽章、輸入框
-   ─────────────────────────────────────────────── */
-body.theme-ghibli input,
-body.theme-ghibli textarea,
-body.theme-ghibli select {
-  background: #fbf6e6 !important;
-  border: 2px solid rgba(61,53,42,0.4) !important;
-  border-radius: 11px !important;
-  color: var(--text) !important;
-}
-body.theme-ghibli .nav-badge,
-body.theme-ghibli .badge {
-  border-radius: 8px !important;
-  border: 1.5px solid rgba(61,53,42,0.5) !important;
-}
-/* icon 線條維持 v11 的圓潤加粗，色彩自動吃 token */
-body.theme-ghibli .lucide,
-body.theme-ghibli svg.lucide {
-  stroke-width: 2.3 !important;
-  stroke-linecap: round; stroke-linejoin: round;
 }

@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="css/medical-warm.css?v=v6-dark-no-grad" />
   <link rel="stylesheet" href="css/v11-modern.css?v=v18-dark-text-contrast" />
   <link rel="stylesheet" href="css/v11-components.css?v=v6-bodymap-dual" />
-  <link rel="stylesheet" href="css/ghibli-theme.css?v=v1" />
+  <link rel="stylesheet" href="css/ghibli-theme.css?v=v2" />
   <link rel="stylesheet" href="css/predict.css?v=v1" />
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
@@ -28,7 +28,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js" defer></script>
   <title>MD.Piece</title>
 </head>
-<body class="theme-modern theme-ghibli">
+<body class="theme-modern">
   <!-- ★ Star canvas (always behind everything) -->
   <canvas id="star-canvas"></canvas>
 
@@ -54,24 +54,11 @@
       try { document.documentElement.classList.remove('dark'); } catch(e) {}
     })();
 
-    // ─── 吉卜力主題：全站預設開啟，提供關閉逃生口 ─────────────
-    // 關閉方式：網址加 ?ghibli=0，或 localStorage 'md.ghibli' = '0'
-    (function() {
-      try {
-        var qs = new URLSearchParams(location.search);
-        if (qs.get('ghibli') === '0') localStorage.setItem('md.ghibli', '0');
-        if (qs.get('ghibli') === '1') localStorage.setItem('md.ghibli', '1');
-        if (localStorage.getItem('md.ghibli') === '0') {
-          document.body.classList.remove('theme-ghibli');
-        }
-      } catch (e) { /* 忽略 — 不阻擋預設主題 */ }
-    })();
-
     // ─── 一次性 PWA cache 強制清除 ─────────────────────────
     // 把 V 改高一級 → 每個使用者下次開站會清光 SW + caches + reload，
     // 各種 stale cache 全部失效。每個版本每個使用者只清一次。
     (async function() {
-      var APP_BUST = 'v12-ghibli-2026-05-31-a';
+      var APP_BUST = 'v13-edu-shelf-2026-05-31-a';
       try {
         if (localStorage.getItem('mdp-cache-bust') === APP_BUST) return;
         localStorage.setItem('mdp-cache-bust', APP_BUST);
