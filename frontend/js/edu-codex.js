@@ -163,9 +163,227 @@
       dropCap(body);
       applyGlossary(body);
       ensureBar();
+      ensureLaunchBtn();
       updateProgress();
+      // 點開書本 → 自動彈開翻頁書本閱讀器
+      if (!body.getAttribute("data-auto")) {
+        body.setAttribute("data-auto", "1");
+        setTimeout(function () { openReader(); }, 80);
+      }
     } catch (e) {}
   }
+
+  // ════════════════════════════════════════════════════════════
+  //  翻頁書本閱讀器（古董書 · 真正分頁）
+  // ════════════════════════════════════════════════════════════
+  var _reader = null;
+  var _R = { page: 0, pages: 1, step: 0, gap: 0, flow: null, stage: null, fallback: false, chapters: [] };
+
+  function ensureLaunchBtn() {
+    var b = document.getElementById("codex-open-btn");
+    if (!b) {
+      b = document.createElement("button");
+      b.id = "codex-open-btn";
+      b.type = "button";
+      b.innerHTML = "📖 翻頁閱讀";
+      b.addEventListener("click", openReader);
+      document.body.appendChild(b);
+    }
+    b.classList.add("show");
+  }
+  function hideLaunchBtn() {
+    var b = document.getElementById("codex-open-btn");
+    if (b) b.classList.remove("show");
+  }
+
+  function openReader() {
+    try {
+      if (_reader) return;
+      var src = document.querySelector('body[data-page="education"] .edu-article-body');
+      if (!src) return;
+      var titleEl = document.querySelector("#edu-breadcrumb .crumb.current");
+      var title = titleEl ? (titleEl.textContent || "").trim() : "衛教文章";
+
+      _reader = document.createElement("div");
+      _reader.className = "codex-reader";
+      _reader.setAttribute("role", "dialog");
+      _reader.setAttribute("aria-modal", "true");
+      _reader.setAttribute("aria-label", "翻頁閱讀");
+      _reader.innerHTML =
+        '<div class="codex-reader-bar">' +
+          '<button type="button" class="codex-rbtn" data-act="close" aria-label="關閉">✕</button>' +
+          '<div class="codex-reader-title">' + esc(title) + "</div>" +
+          '<button type="button" class="codex-rbtn" data-act="toc" aria-label="章節">☰</button>' +
+        "</div>" +
+        '<div class="codex-book">' +
+          '<div class="codex-reader-stage">' +
+            '<div class="codex-spine"></div>' +
+            '<div class="codex-reader-flow edu-article-body"></div>' +
+            '<button type="button" class="codex-edge prev" aria-label="上一頁"></button>' +
+            '<button type="button" class="codex-edge next" aria-label="下一頁"></button>' +
+            '<div class="codex-folio"><span class="cur">1</span></div>' +
+          "</div>" +
+        "</div>" +
+        '<div class="codex-pagebar"><i></i></div>' +
+        '<div class="codex-reader-foot">' +
+          '<button type="button" class="codex-fbtn" data-act="prev">‹ 前頁</button>' +
+          '<div class="codex-pageno"><span class="cur">1</span> / <span class="tot">1</span></div>' +
+          '<button type="button" class="codex-fbtn" data-act="next">後頁 ›</button>' +
+        "</div>" +
+        '<aside class="codex-toc-drawer" hidden></aside>';
+      document.body.appendChild(_reader);
+
+      _R.flow = _reader.querySelector(".codex-reader-flow");
+      _R.stage = _reader.querySelector(".codex-reader-stage");
+      _R.flow.innerHTML = src.innerHTML; // 複製已增強內容（dropcap / glossary / 章節 id）
+      _R.page = 0;
+
+      document.body.classList.add("codex-reader-open");
+      _reader.addEventListener("click", onReaderClick);
+      bindSwipe(_R.stage);
+      window.addEventListener("keydown", onReaderKey);
+      window.addEventListener("resize", relayoutSoon);
+
+      // 彈開動畫後量測（字型/圖片載入會影響高度，延後再量一次）
+      requestAnimationFrame(function () { layout(); goTo(0, true); });
+      setTimeout(function () { if (_reader) { layout(); goTo(_R.page, true); } }, 300);
+      if (typeof lucide !== "undefined") { try { lucide.createIcons(); } catch (e) {} }
+    } catch (e) { closeReader(); }
+  }
+
+  function closeReader() {
+    try {
+      window.removeEventListener("keydown", onReaderKey);
+      window.removeEventListener("resize", relayoutSoon);
+      if (_reader) { _reader.remove(); _reader = null; }
+      document.body.classList.remove("codex-reader-open");
+      _R = { page: 0, pages: 1, step: 0, gap: 0, flow: null, stage: null, fallback: false, chapters: [] };
+    } catch (e) {}
+  }
+
+  function layout() {
+    try {
+      var flow = _R.flow, stage = _R.stage;
+      if (!flow || !stage) return;
+      var W = stage.clientWidth, H = stage.clientHeight;
+      if (W < 40 || H < 40) return;
+      var gap = Math.max(28, Math.round(W * 0.12));
+      _R.gap = gap;
+      flow.style.transition = "none";
+      flow.style.transform = "translateX(0)";
+      flow.style.overflow = "";
+      flow.style.width = W + "px";
+      flow.style.height = H + "px";
+      flow.style.columnGap = gap + "px";
+      flow.style.columnFill = "auto";
+      var cs = window.getComputedStyle(flow);
+      var padL = parseFloat(cs.paddingLeft) || 0;
+      var padR = parseFloat(cs.paddingRight) || 0;
+      var Cw = W - padL - padR;
+      flow.style.columnWidth = Cw + "px";
+      // 量測
+      var content = flow.scrollWidth - padL;
+      var step = Cw + gap;
+      var pages = Math.max(1, Math.round((content + gap) / step));
+      // 備援：columns 沒生效（內容仍垂直溢位）→ 改垂直捲動，仍維持書頁外觀
+      if (pages <= 1 && flow.scrollHeight > H + 6) {
+        flow.style.columnWidth = "";
+        flow.style.columnGap = "";
+        flow.style.overflowY = "auto";
+        flow.style.overflowX = "hidden";
+        _R.fallback = true; _R.pages = 1; _R.step = step;
+        buildDrawer(); updateFoot(); return;
+      }
+      _R.fallback = false; _R.step = step; _R.pages = pages;
+      // 各章節落在哪頁（transform 為 0 時量）
+      _R.chapters = [];
+      var heads = flow.querySelectorAll("h2, h3");
+      var fLeft = flow.getBoundingClientRect().left;
+      for (var i = 0; i < heads.length; i++) {
+        var x = heads[i].getBoundingClientRect().left - fLeft;
+        var pg = Math.max(0, Math.min(pages - 1, Math.round(x / step)));
+        _R.chapters.push({ text: heads[i].textContent || "", page: pg });
+      }
+      buildDrawer();
+      if (_R.page > pages - 1) _R.page = pages - 1;
+      requestAnimationFrame(function () {
+        if (_R.flow) _R.flow.style.transition = "transform .45s cubic-bezier(.4,0,.2,1)";
+      });
+      updateFoot();
+    } catch (e) {}
+  }
+
+  function goTo(p, instant) {
+    try {
+      if (!_reader || _R.fallback) { updateFoot(); return; }
+      var flow = _R.flow; if (!flow) return;
+      p = Math.max(0, Math.min(p, _R.pages - 1));
+      _R.page = p;
+      if (instant) flow.style.transition = "none";
+      flow.style.transform = "translateX(" + (-(p * _R.step)) + "px)";
+      if (instant) requestAnimationFrame(function () { if (_R.flow) _R.flow.style.transition = "transform .45s cubic-bezier(.4,0,.2,1)"; });
+      _reader.classList.remove("turning"); void _reader.offsetWidth; _reader.classList.add("turning");
+      updateFoot();
+    } catch (e) {}
+  }
+  function next() { goTo(_R.page + 1); }
+  function prev() { goTo(_R.page - 1); }
+
+  function updateFoot() {
+    if (!_reader) return;
+    var n = _R.fallback ? 1 : (_R.page + 1);
+    _reader.querySelectorAll(".codex-pageno .cur, .codex-folio .cur").forEach(function (el) { el.textContent = n; });
+    var tot = _reader.querySelector(".codex-pageno .tot"); if (tot) tot.textContent = _R.pages;
+    var bar = _reader.querySelector(".codex-pagebar i");
+    if (bar) bar.style.width = (_R.pages > 1 ? (_R.page / (_R.pages - 1) * 100) : 100) + "%";
+  }
+
+  function buildDrawer() {
+    var d = _reader && _reader.querySelector(".codex-toc-drawer");
+    if (!d) return;
+    if (!_R.chapters.length) { d.innerHTML = '<div class="codex-toc-title">本篇無章節</div>'; return; }
+    d.innerHTML = '<div class="codex-toc-title">◆ 章節</div>' + _R.chapters.map(function (c) {
+      return '<button type="button" class="codex-bm" data-jump="' + c.page + '">' + esc(c.text) + "</button>";
+    }).join("");
+  }
+
+  function onReaderClick(e) {
+    var t = e.target;
+    var hit = t.closest ? t.closest("[data-act], [data-jump], .codex-edge") : null;
+    if (!hit) return;
+    if (hit.classList.contains("codex-edge")) { hit.classList.contains("next") ? next() : prev(); return; }
+    if (hit.hasAttribute("data-jump")) {
+      goTo(parseInt(hit.getAttribute("data-jump"), 10) || 0);
+      var dr = _reader.querySelector(".codex-toc-drawer"); if (dr) dr.hidden = true;
+      return;
+    }
+    var act = hit.getAttribute("data-act");
+    if (act === "close") closeReader();
+    else if (act === "next") next();
+    else if (act === "prev") prev();
+    else if (act === "toc") { var d = _reader.querySelector(".codex-toc-drawer"); if (d) d.hidden = !d.hidden; }
+  }
+  function onReaderKey(e) {
+    if (!_reader) return;
+    if (e.key === "ArrowRight") next();
+    else if (e.key === "ArrowLeft") prev();
+    else if (e.key === "Escape") closeReader();
+  }
+  function bindSwipe(stage) {
+    var x0 = null, y0 = null, t0 = 0;
+    stage.addEventListener("touchstart", function (e) {
+      var t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+    }, { passive: true });
+    stage.addEventListener("touchend", function (e) {
+      if (x0 == null) return;
+      var t = e.changedTouches[0];
+      var dx = t.clientX - x0, dy = t.clientY - y0, dt = Date.now() - t0;
+      x0 = null;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4 && dt < 900) { dx < 0 ? next() : prev(); }
+    }, { passive: true });
+  }
+  var _relT;
+  function relayoutSoon() { clearTimeout(_relT); _relT = setTimeout(function () { layout(); goTo(_R.page, true); }, 200); }
 
   function scan() {
     try {
@@ -174,6 +392,8 @@
       if (!document.querySelector('body[data-page="education"] .edu-article-body')) {
         document.body.classList.remove("codex-reading");
         hideGloss();
+        hideLaunchBtn();
+        closeReader();
       }
     } catch (e) {}
   }
