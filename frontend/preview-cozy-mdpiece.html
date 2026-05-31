@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MD.Piece × 手繪暖色主題 — 整合預覽</title>
+<style>
+  /* =========================================================================
+     MD.Piece 套上「cozy 手繪故事書」主題後的樣子（整合預覽 / mock）
+     - 沿用 preview-survival-game.html 的設計語彙（暖色紙、墨線、木格、羊皮紙）
+     - 內容換成真實醫療畫面：生理紀錄 / 情緒電力 / 用藥提醒 / 藥櫃
+     - 手機 PWA 外框 + 真實底部分頁，全離線、純 inline SVG/CSS
+     ========================================================================= */
+  :root{
+    --paper:#efe2c8; --paper-deep:#e4d3b0; --ink:#3b2f25; --ink-soft:#6b5742;
+    --wood:#b6824b; --wood-dark:#8a5d31; --wood-deep:#6f4824;
+    --leaf:#7c9a55; --leaf-dark:#5f7b3c; --berry:#c2552f; --berry-dark:#9c3f22;
+    --sky:#bcd6cf; --gold:#d9a441; --gold-dark:#b07e22; --water:#6fa3b0;
+    --slot:#e9d8b4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;
+    font-family:"Comic Sans MS","Chalkboard SE","PingFang TC","Microsoft JhengHei",cursive,sans-serif;
+    color:var(--ink);
+    background:#cdb98f;
+    background-image:
+      radial-gradient(circle at 20% 10%,rgba(255,255,255,.25)0,transparent 40%),
+      radial-gradient(circle at 80% 90%,rgba(110,80,45,.18)0,transparent 46%);
+    display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 14px 40px;}
+
+  .lead{max-width:430px;text-align:center;color:#4a3a2a;}
+  .lead h1{margin:0 0 4px;font-size:18px;}
+  .lead p{margin:0;font-size:12px;color:#5f4a36;line-height:1.5;}
+
+  /* ---------- phone frame ---------- */
+  .phone{
+    width:390px;max-width:100%;
+    background:var(--paper);
+    border:3px solid var(--ink);
+    border-radius:34px;
+    padding:10px 10px 0;
+    box-shadow:0 10px 0 rgba(59,47,37,.25),0 0 0 6px #d8c39a inset;
+    position:relative;overflow:hidden;
+    background-image:
+      radial-gradient(circle at 50% 50%,rgba(90,65,35,.04)0,rgba(90,65,35,.16)100%),
+      radial-gradient(rgba(80,60,35,.08) .6px,transparent .8px);
+    background-size:auto,7px 7px;
+  }
+  .notch{width:120px;height:18px;background:var(--ink);border-radius:0 0 14px 14px;
+    margin:0 auto 8px;}
+  .screen{height:720px;overflow-y:auto;padding:2px 12px 84px;}
+  .screen::-webkit-scrollbar{width:0;}
+
+  /* ---------- top greeting ---------- */
+  .greet{display:flex;align-items:center;gap:10px;margin:4px 2px 14px;}
+  .avatar{width:46px;height:46px;flex:0 0 46px;border-radius:50%;
+    background:linear-gradient(160deg,var(--leaf),var(--leaf-dark));
+    border:2.5px solid var(--ink);display:flex;align-items:center;justify-content:center;
+    box-shadow:1px 2px 0 rgba(59,47,37,.2);}
+  .greet .hi b{font-size:16px;}
+  .greet .hi div{font-size:11px;color:var(--ink-soft);}
+  .greet .day{margin-left:auto;text-align:right;font-size:11px;color:var(--ink-soft);}
+  .greet .day b{font-size:14px;color:var(--ink);}
+
+  /* sketchy ink card */
+  .card{position:relative;background:var(--paper-deep);
+    border:2.5px solid var(--ink);
+    border-radius:15px 12px 16px 13px/13px 16px 12px 15px;
+    box-shadow:2px 3px 0 rgba(59,47,37,.16);
+    padding:13px 14px;margin-bottom:14px;}
+  .card::after{content:"";position:absolute;inset:3px;border:1.5px solid rgba(59,47,37,.3);
+    border-radius:12px 15px 11px 14px/14px 11px 15px 12px;pointer-events:none;}
+  .card > h2{margin:0 0 11px;font-size:14px;display:flex;align-items:center;gap:7px;}
+  .card > h2 .tag{margin-left:auto;font-size:10px;font-weight:normal;color:var(--ink-soft);
+    background:var(--paper);border:1.5px dashed var(--ink-soft);border-radius:7px;padding:2px 7px;}
+
+  /* ---------- 情緒電力 = sky/mood card ---------- */
+  .mood{background:linear-gradient(180deg,var(--sky)0%,#d9e7df 100%);
+    border:2.5px solid var(--ink);border-radius:15px 12px 16px 13px/13px 16px 12px 15px;
+    box-shadow:2px 3px 0 rgba(59,47,37,.16);overflow:hidden;position:relative;
+    padding:14px 14px 16px;margin-bottom:14px;}
+  .mood .row{display:flex;align-items:center;gap:12px;}
+  .mood .wx{width:62px;height:62px;flex:0 0 62px;}
+  .mood .mtxt b{font-size:17px;}
+  .mood .mtxt div{font-size:11px;color:var(--ink-soft);margin-top:1px;}
+  .mood .battery{margin-left:auto;display:flex;align-items:center;gap:5px;}
+  .batt-wrap{width:18px;height:46px;border:2.5px solid var(--ink);border-radius:5px;
+    background:#cdb78c;position:relative;overflow:hidden;}
+  .batt-wrap::before{content:"";position:absolute;top:-5px;left:50%;margin-left:-5px;
+    width:10px;height:4px;background:var(--ink);border-radius:2px 2px 0 0;}
+  .batt-fill{position:absolute;bottom:0;left:0;right:0;height:72%;
+    background:linear-gradient(180deg,var(--leaf),var(--leaf-dark));}
+  .mood .battery span{font-size:11px;font-weight:bold;color:var(--leaf-dark);}
+  .mood .why{margin-top:11px;font-size:11px;color:var(--ink-soft);background:rgba(255,255,255,.5);
+    border:1.5px dashed var(--ink-soft);border-radius:9px;padding:7px 9px;line-height:1.45;}
+  .mood .why b{color:var(--ink);}
+
+  /* ---------- 生理紀錄 meters ---------- */
+  .vit-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .vit{display:flex;align-items:center;gap:9px;background:var(--paper);
+    border:2px solid var(--ink);border-radius:11px;padding:7px 9px;
+    box-shadow:1px 2px 0 rgba(59,47,37,.12);}
+  .vit svg{width:28px;height:28px;flex:0 0 28px;}
+  .vit .v b{font-size:15px;}
+  .vit .v b small{font-size:9px;font-weight:normal;color:var(--ink-soft);}
+  .vit .v div{font-size:10px;color:var(--ink-soft);}
+  .vit .v .bar-wrap{width:84px;height:8px;background:#cdb78c;border:1.5px solid var(--ink);
+    border-radius:5px;overflow:hidden;margin-top:3px;}
+  .vit .v .bar{height:100%;}
+
+  /* ---------- 用藥提醒 = quest board ---------- */
+  .questboard{background:linear-gradient(180deg,var(--wood)0%,var(--wood-dark)100%);
+    border:3px solid var(--ink);border-radius:15px 12px 16px 13px/13px 16px 12px 15px;
+    box-shadow:2px 3px 0 rgba(59,47,37,.22);padding:13px;margin-bottom:14px;position:relative;}
+  .questboard::before{content:"";position:absolute;inset:5px;border-radius:11px;pointer-events:none;
+    background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.06)0 1px,transparent 1px 15px);}
+  .questboard h2{margin:0 0 11px;text-align:center;color:#fff4dc;font-size:14px;letter-spacing:.5px;
+    text-shadow:1px 1px 0 var(--wood-deep);position:relative;}
+  .note{position:relative;background:radial-gradient(circle at 30% 20%,#fdf3d8,#f0dcae 78%,#e3cb96 100%);
+    border-radius:6px;padding:11px 12px;margin-bottom:11px;color:var(--ink);
+    box-shadow:1px 2px 4px rgba(0,0,0,.26);
+    clip-path:polygon(0% 4%,4% 0%,40% 2%,70% 0%,96% 0%,100% 5%,99% 50%,100% 96%,95% 100%,55% 98%,20% 100%,3% 99%,0% 92%,1% 50%,0% 30%);}
+  .note:last-child{margin-bottom:0;}
+  .note .pin{position:absolute;top:-6px;left:50%;margin-left:-7px;width:14px;height:14px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#ff9a7a,var(--berry-dark));border:1.5px solid var(--ink);
+    box-shadow:0 2px 2px rgba(0,0,0,.3);}
+  .note .top{display:flex;align-items:center;gap:8px;}
+  .note .pill{width:30px;height:30px;flex:0 0 30px;background:var(--slot);border:2px solid var(--wood-deep);
+    border-radius:8px;display:flex;align-items:center;justify-content:center;
+    box-shadow:inset 1px 1px 2px rgba(111,72,36,.4);}
+  .note .pill svg{width:74%;height:74%;}
+  .note b{font-size:13px;}
+  .note .time{margin-left:auto;font-size:11px;font-weight:bold;color:var(--berry-dark);}
+  .note .desc{font-size:11px;color:var(--ink-soft);margin:6px 0 8px;line-height:1.4;}
+  .note .why{font-size:10.5px;color:var(--ink-soft);background:rgba(124,154,85,.16);
+    border-left:3px solid var(--leaf);border-radius:0 7px 7px 0;padding:5px 8px;line-height:1.4;}
+  .note .why b{color:var(--leaf-dark);}
+  .note .acts{display:flex;gap:7px;margin-top:9px;}
+  .btn{font-family:inherit;cursor:pointer;border:2px solid var(--ink);border-radius:9px;
+    padding:6px 12px;font-size:11px;font-weight:bold;box-shadow:1px 2px 0 rgba(59,47,37,.22);}
+  .btn.take{background:linear-gradient(180deg,var(--leaf),var(--leaf-dark));color:#fbffef;
+    text-shadow:0 1px 0 rgba(0,0,0,.25);}
+  .btn.snooze{background:var(--paper);color:var(--ink-soft);}
+  .note.done b,.note.done .desc{text-decoration:line-through;opacity:.6;}
+  .note.done .time{color:var(--leaf-dark);}
+
+  /* ---------- 我的藥櫃 = wooden slots ---------- */
+  .cab-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+  .slot{position:relative;aspect-ratio:1/1;border-radius:11px 9px 12px 10px/10px 12px 9px 11px;
+    background:linear-gradient(160deg,var(--slot),#dcc596);border:2.5px solid var(--wood-deep);
+    box-shadow:inset 2px 2px 4px rgba(111,72,36,.42),inset -1px -1px 0 rgba(255,248,225,.6),1px 2px 0 rgba(59,47,37,.15);
+    display:flex;align-items:center;justify-content:center;}
+  .slot svg{width:60%;height:60%;}
+  .slot .qty{position:absolute;right:4px;bottom:2px;font-size:10px;font-weight:bold;
+    text-shadow:0 1px 0 rgba(255,248,225,.9);}
+  .slot .nm{position:absolute;left:0;right:0;bottom:-15px;text-align:center;font-size:9px;color:var(--ink-soft);}
+  .cab-grid{margin-bottom:8px;}
+  .cab-row2{margin-bottom:16px;}
+
+  /* ---------- 工具帶 = quick actions ---------- */
+  .belt{display:flex;gap:9px;}
+  .tool{flex:1;background:linear-gradient(160deg,var(--slot),#dcc596);border:2.5px solid var(--wood-deep);
+    border-radius:11px 9px 12px 10px/10px 12px 9px 11px;padding:9px 4px 7px;text-align:center;
+    box-shadow:inset 1px 1px 3px rgba(111,72,36,.4),1px 2px 0 rgba(59,47,37,.15);cursor:pointer;}
+  .tool svg{width:30px;height:30px;}
+  .tool div{font-size:10px;color:var(--ink-soft);margin-top:2px;}
+
+  /* ---------- bottom nav ---------- */
+  .nav{position:absolute;left:10px;right:10px;bottom:0;height:72px;
+    background:linear-gradient(180deg,var(--wood)0%,var(--wood-dark)100%);
+    border:2.5px solid var(--ink);border-bottom:none;border-radius:16px 16px 0 0;
+    display:flex;justify-content:space-around;align-items:center;padding:0 6px;
+    box-shadow:0 -2px 0 rgba(59,47,37,.18);}
+  .nav a{flex:1;text-align:center;color:#fbedcf;text-decoration:none;opacity:.82;}
+  .nav a svg{width:24px;height:24px;}
+  .nav a div{font-size:9.5px;margin-top:1px;}
+  .nav a.on{opacity:1;}
+  .nav a.on .chip{display:block;}
+  .nav a .chip{display:none;width:6px;height:6px;border-radius:50%;background:var(--gold);
+    margin:2px auto 0;border:1px solid var(--ink);}
+
+  /* elder-mode hint */
+  .elderhint{max-width:430px;text-align:center;font-size:11px;color:#5f4a36;margin-top:2px;}
+  .elderhint b{color:#3b2f25;}
+</style>
+</head>
+<body>
+
+  <div class="lead">
+    <h1>MD.Piece × 手繪暖色主題</h1>
+    <p>把 cozy 故事書視覺語彙套到真實醫療畫面上的整合預覽：<br>
+       生理紀錄→體力表 · 情緒電力→心情天氣 · 用藥提醒→任務看板 · 藥物→木格藥櫃</p>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+
+      <!-- greeting -->
+      <div class="greet">
+        <div class="avatar">
+          <svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="#fbffef" stroke="#3b2f25" stroke-width="1.8"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" fill="#fbffef" stroke="#3b2f25" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="hi"><b>早安，阿嬤 ☀</b><div>今天身體感覺如何呢？</div></div>
+        <div class="day"><b>5月31日</b><div>週六 · 上午 8:40</div></div>
+      </div>
+
+      <!-- 情緒電力 = mood weather -->
+      <div class="mood">
+        <div class="row">
+          <svg class="wx" viewBox="0 0 64 64">
+            <circle cx="38" cy="22" r="11" fill="#d9a441" stroke="#3b2f25" stroke-width="2.4"/>
+            <g stroke="#d9a441" stroke-width="2.6" stroke-linecap="round"><path d="M38 4v6M53 14l-4 4M56 32h-6M24 7l3 5"/></g>
+            <path d="M16 46c-5 0-8-3-8-7s3-7 8-7c1-5 5-8 10-8 6 0 10 4 11 9 4 0 7 3 7 7s-3 6-7 6H16Z" fill="#fbfdfb" stroke="#3b2f25" stroke-width="2.6" stroke-linejoin="round"/>
+          </svg>
+          <div class="mtxt"><b>心情：晴時多雲</b><div>情緒電力 · 今天還不錯</div></div>
+          <div class="battery">
+            <div class="batt-wrap"><div class="batt-fill"></div></div>
+            <span>72%</span>
+          </div>
+        </div>
+        <div class="why"><b>為什麼這樣顯示？</b> 這 3 天你記錄的睡眠都有 6 小時以上、疼痛分數下降，所以電力回升。小核建議：早上可以散步 10 分鐘。</div>
+      </div>
+
+      <!-- 生理紀錄 = vitals meters -->
+      <div class="card">
+        <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 9 2-5h7" fill="none" stroke="#c2552f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          生理紀錄 <span class="tag">今晨量測</span>
+        </h2>
+        <div class="vit-grid">
+          <div class="vit">
+            <svg viewBox="0 0 32 32"><path d="M16 27C7 20 3 15 3 10.5 3 7 6 4.5 9.2 4.5c2.3 0 3.9 1.3 4.8 2.6h.4c.9-1.3 2.5-2.6 4.8-2.6C26.4 4.5 29 7 29 10.5 29 15 25 20 16 27Z" fill="#c2552f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg>
+            <div class="v"><b>78<small> bpm</small></b><div>心率 · 正常</div><div class="bar-wrap"><div class="bar" style="width:62%;background:#c2552f"></div></div></div>
+          </div>
+          <div class="vit">
+            <svg viewBox="0 0 32 32"><path d="M16 4c5 6 9 10 9 14.5A9 9 0 1 1 7 18.5C7 14 11 10 16 4Z" fill="#6fa3b0" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg>
+            <div class="v"><b>118/76</b><div>血壓 · 良好</div><div class="bar-wrap"><div class="bar" style="width:55%;background:#6fa3b0"></div></div></div>
+          </div>
+          <div class="vit">
+            <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="#7c9a55" stroke-width="3"/><path d="M16 5a11 11 0 0 1 0 22" fill="none" stroke="#5f7b3c" stroke-width="3" stroke-linecap="round"/></svg>
+            <div class="v"><b>98<small> %</small></b><div>血氧 · 良好</div><div class="bar-wrap"><div class="bar" style="width:98%;background:#7c9a55"></div></div></div>
+          </div>
+          <div class="vit">
+            <svg viewBox="0 0 32 32"><path d="M13 5a3 3 0 0 1 6 0v11a6 6 0 1 1-6 0V5Z" fill="#f0dcae" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="22" r="3.4" fill="#c2552f"/></svg>
+            <div class="v"><b>36.5<small> °C</small></b><div>體溫 · 正常</div><div class="bar-wrap"><div class="bar" style="width:50%;background:#c98a3f"></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 用藥提醒 = quest board -->
+      <div class="questboard">
+        <h2>✦ 今日用藥 & 照護任務 ✦</h2>
+
+        <div class="note">
+          <span class="pin"></span>
+          <div class="top">
+            <span class="pill"><svg viewBox="0 0 32 32"><rect x="6" y="11" width="20" height="10" rx="5" fill="#c2552f" stroke="#3b2f25" stroke-width="2"/><path d="M16 11v10" stroke="#fff7e6" stroke-width="2"/></svg></span>
+            <b>降血壓藥（脈優）</b>
+            <span class="time">08:00</span>
+          </div>
+          <div class="desc">早餐後 1 顆 · 配溫開水服用</div>
+          <div class="why"><b>為什麼提醒：</b>你昨天血壓 138/88 偏高，規律服藥可幫助穩定，避免頭暈。</div>
+          <div class="acts"><button class="btn take">✓ 已服用</button><button class="btn snooze">晚點提醒</button></div>
+        </div>
+
+        <div class="note">
+          <span class="pin"></span>
+          <div class="top">
+            <span class="pill"><svg viewBox="0 0 32 32"><path d="M9 9 23 23M9 23 23 9" stroke="#3b2f25" stroke-width="0"/><rect x="5" y="13" width="22" height="9" rx="4.5" fill="#d9a441" stroke="#3b2f25" stroke-width="2" transform="rotate(-30 16 17)"/></svg></span>
+            <b>血糖測量 + 記錄</b>
+            <span class="time">11:30</span>
+          </div>
+          <div class="desc">午餐前測飯前血糖，拍照上傳給家人</div>
+          <div class="why"><b>為什麼提醒：</b>女兒已開啟「家屬視角」，量測後會同步通知她，讓她安心。</div>
+          <div class="acts"><button class="btn take">開始量測</button><button class="btn snooze">晚點提醒</button></div>
+        </div>
+
+        <div class="note done">
+          <span class="pin"></span>
+          <div class="top">
+            <span class="pill"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="#7c9a55" stroke="#3b2f25" stroke-width="2"/><path d="M11 16l3 3 6-7" fill="none" stroke="#fbffef" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <b>晨間散步 10 分鐘</b>
+            <span class="time">已完成</span>
+          </div>
+          <div class="desc">今天天氣好，已陪阿公走到公園 — 真棒！</div>
+        </div>
+      </div>
+
+      <!-- 我的藥櫃 = wooden slots -->
+      <div class="card">
+        <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="#b6824b" stroke="#3b2f25" stroke-width="1.8"/><path d="M4 10h16M12 6v2M12 14v3" stroke="#3b2f25" stroke-width="1.6" stroke-linecap="round"/></svg>
+          我的藥櫃 <span class="tag">7 種藥</span>
+        </h2>
+        <div class="cab-grid">
+          <div class="slot"><svg viewBox="0 0 32 32"><rect x="5" y="12" width="22" height="8" rx="4" fill="#c2552f" stroke="#3b2f25" stroke-width="2"/><path d="M16 12v8" stroke="#fff7e6" stroke-width="2"/></svg><span class="qty">28</span><span class="nm">脈優</span></div>
+          <div class="slot"><svg viewBox="0 0 32 32"><ellipse cx="16" cy="16" rx="9" ry="6" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/><path d="M11 16h10" stroke="#b07e22" stroke-width="2"/></svg><span class="qty">14</span><span class="nm">阿斯匹靈</span></div>
+          <div class="slot"><svg viewBox="0 0 32 32"><rect x="6" y="13" width="20" height="9" rx="4.5" fill="#7c9a55" stroke="#3b2f25" stroke-width="2" transform="rotate(-28 16 17)"/></svg><span class="qty">30</span><span class="nm">降血糖</span></div>
+          <div class="slot"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="9" fill="#cfe6df" stroke="#3b2f25" stroke-width="2"/><path d="M16 11v10M11 16h10" stroke="#6fa3b0" stroke-width="2" stroke-linecap="round"/></svg><span class="qty">∞</span><span class="nm">維他命</span></div>
+        </div>
+        <div class="cab-grid cab-row2">
+          <div class="slot"><svg viewBox="0 0 32 32"><path d="M13 5a3 3 0 0 1 6 0v9a6 6 0 1 1-6 0V5Z" fill="#f0dcae" stroke="#3b2f25" stroke-width="2"/></svg><span class="qty">1</span><span class="nm">藥水</span></div>
+          <div class="slot"><svg viewBox="0 0 32 32"><rect x="5" y="12" width="22" height="8" rx="4" fill="#9c3f22" stroke="#3b2f25" stroke-width="2"/><path d="M16 12v8" stroke="#fff7e6" stroke-width="2"/></svg><span class="qty">10</span><span class="nm">止痛</span></div>
+          <div class="slot"><svg viewBox="0 0 32 32"><ellipse cx="16" cy="16" rx="9" ry="6" fill="#cdb78c" stroke="#3b2f25" stroke-width="2"/></svg><span class="qty">21</span><span class="nm">鈣片</span></div>
+          <div class="slot" style="background:linear-gradient(160deg,#d9c193,#cdb583);"><svg viewBox="0 0 32 32"><path d="M9 16h14M16 9v14" stroke="#8a5d31" stroke-width="2.6" stroke-linecap="round"/></svg><span class="nm">新增</span></div>
+        </div>
+      </div>
+
+      <!-- 工具帶 = quick actions -->
+      <div class="card">
+        <h2>快捷動作</h2>
+        <div class="belt">
+          <div class="tool"><svg viewBox="0 0 32 32"><path d="M7 25 22 10l-3-3L4 22l-1 4 4-1Z" fill="#7c9a55" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><path d="M19 7l3 3" stroke="#3b2f25" stroke-width="2"/></svg><div>記症狀</div></div>
+          <div class="tool"><svg viewBox="0 0 32 32"><rect x="5" y="9" width="22" height="16" rx="3" fill="#b6824b" stroke="#3b2f25" stroke-width="2"/><circle cx="16" cy="17" r="5" fill="#cfe6df" stroke="#3b2f25" stroke-width="2"/><path d="M11 9l2-3h6l2 3" fill="#8a5d31" stroke="#3b2f25" stroke-width="2"/></svg><div>拍藥盒</div></div>
+          <div class="tool"><svg viewBox="0 0 32 32"><path d="M6 7h20v14H14l-5 4v-4H6V7Z" fill="#d9a441" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="14" r="1.4" fill="#3b2f25"/><circle cx="16" cy="14" r="1.4" fill="#3b2f25"/><circle cx="20" cy="14" r="1.4" fill="#3b2f25"/></svg><div>問小核</div></div>
+          <div class="tool"><svg viewBox="0 0 32 32"><path d="M6 26V6M6 16h13l-2-3 2-3H6" fill="#c2552f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg><div>時間軸</div></div>
+        </div>
+      </div>
+
+    </div><!-- /screen -->
+
+    <!-- bottom nav (真實分頁) -->
+    <nav class="nav">
+      <a class="on" href="#"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-9Z" fill="#fbedcf" stroke="#3b2f25" stroke-width="1.6" stroke-linejoin="round"/></svg><div>首頁</div><span class="chip"></span></a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M7 25 22 10l-3-3L4 22l-1 4 4-1Z" transform="scale(.8) translate(3 1)" fill="none" stroke="#fbedcf" stroke-width="2" stroke-linejoin="round"/><path d="M5 6h14M5 11h9" stroke="#fbedcf" stroke-width="1.8" stroke-linecap="round"/></svg><div>症狀紀錄</div></a>
+      <a href="#"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="#fbedcf" stroke-width="1.8"/><path d="M4 10h16M12 6v2" stroke="#fbedcf" stroke-width="1.6" stroke-linecap="round"/></svg><div>藥物紀錄</div></a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M3 13h4l2-5 3 9 2-5h7" fill="none" stroke="#fbedcf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div>生理紀錄</div></a>
+      <a href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="#fbedcf" stroke-width="1.8"/><path d="M9 14c1 1.5 5 1.5 6 0" stroke="#fbedcf" stroke-width="1.8" stroke-linecap="round"/><circle cx="9.5" cy="10" r="1" fill="#fbedcf"/><circle cx="14.5" cy="10" r="1" fill="#fbedcf"/></svg><div>情緒電力</div></a>
+    </nav>
+  </div>
+
+  <p class="elderhint">＊此為<b>主題套用 mock</b>：版面、分頁、欄位皆對應現有 MD.Piece，僅換上手繪暖色皮膚。<br>
+     已保留設計憲法重點：<b>可解釋 AI（為什麼）</b>、<b>長者大字</b>、<b>家屬視角</b>、<b>繁中</b>。</p>
+
+</body>
+</html>
