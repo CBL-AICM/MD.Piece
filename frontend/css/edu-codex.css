@@ -1,0 +1,383 @@
+/* ═══════════════════════════════════════════════════════════════
+   MD.Piece — 衛教文章「醫典 / Medical Codex」閱讀體驗（education-scoped）
+
+   只作用於衛教頁的開書閱讀器（.notebook / .nb-page / .edu-article-body），
+   把文章變成古醫典手稿：羊皮紙質感、襯線字、暗紅墨點綴、章節分隔、
+   首字下沉、重點概念墨痕、文獻＝研究註記、章節書籤、閱讀進度。
+
+   搭配 js/edu-codex.js（漸進增強：書籤/進度/首字下沉/詞彙彈窗）。
+   還原：移除 index.html 的這支 <link> 與 <script> 即可；不動 app.js。
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --codex-ink:      #3a2a1e;
+  --codex-ink-soft: #6a5640;
+  --codex-burgundy: #7a2230;
+  --codex-burg-2:   #8c2f3a;
+  --codex-gold:     #9c7b3f;
+  --codex-parch:    #efe3c4;
+  --codex-parch-2:  #e7d6ac;
+  --codex-edge:     #cdb988;
+}
+
+/* ── 書桌底（書本外的木質暗底，襯托羊皮紙）── */
+body[data-page="education"] .edu-stage .notebook-wrap {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(60,40,20,.10), transparent 60%),
+    linear-gradient(180deg, #4a3525, #3a2918) !important;
+  padding: 14px !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 0 40px rgba(0,0,0,.35) !important;
+}
+
+/* ── 羊皮紙頁面 ── */
+body[data-page="education"] .notebook .nb-page {
+  font-family: "Cormorant Garamond", "Noto Serif TC", "Songti TC", "STSong", serif;
+  color: var(--codex-ink) !important;
+  background:
+    /* 邊角焦化暈染 */
+    radial-gradient(ellipse at 0% 0%,   rgba(120,80,30,.16), transparent 26%),
+    radial-gradient(ellipse at 100% 0%, rgba(120,80,30,.16), transparent 26%),
+    radial-gradient(ellipse at 0% 100%, rgba(120,80,30,.18), transparent 28%),
+    radial-gradient(ellipse at 100% 100%, rgba(120,80,30,.18), transparent 28%),
+    /* 紙纖維顆粒 */
+    radial-gradient(rgba(120,90,50,.06) .6px, transparent .9px),
+    /* 主羊皮色 */
+    linear-gradient(160deg, var(--codex-parch) 0%, var(--codex-parch-2) 100%) !important;
+  background-size: auto, auto, auto, auto, 7px 7px, 100% 100% !important;
+  border: 2px solid var(--codex-edge) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,250,235,.5),
+    inset 0 0 26px rgba(120,85,40,.20) !important;
+  border-radius: 4px !important;
+}
+/* 內側裝飾雙線框 */
+body[data-page="education"] .notebook .nb-page::before {
+  content: "" !important;
+  position: absolute !important; inset: 10px !important;
+  border: 1px solid rgba(122,34,48,.30) !important;
+  box-shadow: inset 0 0 0 3px rgba(122,34,48,.06) !important;
+  border-radius: 3px !important;
+  pointer-events: none !important;
+  background: none !important;
+}
+
+/* ── 左頁＝醫者前言 / 書籤 ── */
+body[data-page="education"] .nb-heading {
+  font-family: "Cormorant Garamond", "Noto Serif TC", serif !important;
+  color: var(--codex-burgundy) !important;
+  letter-spacing: .5px;
+  border-bottom: 1.5px solid rgba(122,34,48,.3) !important;
+  padding-bottom: 8px;
+}
+body[data-page="education"] .nb-heading::after { background: none !important; }
+body[data-page="education"] .nb-subtle {
+  font-style: italic;
+  color: var(--codex-ink-soft) !important;
+  font-size: 1.02rem !important;
+}
+
+/* ── 正文：襯線、墨色、寬鬆行距 ── */
+body[data-page="education"] .edu-article-body {
+  font-family: "Cormorant Garamond", "Noto Serif TC", "Songti TC", "STSong", serif !important;
+  color: var(--codex-ink) !important;
+  font-size: 1.12rem !important;
+  line-height: 2.0 !important;
+  text-align: justify;
+  letter-spacing: .2px;
+}
+
+/* 章節標題（# → h2，## → h3，### → h4）→ 章首樣式 + 飾紋 */
+body[data-page="education"] .edu-article-body h2,
+body[data-page="education"] .edu-article-body h3,
+body[data-page="education"] .edu-article-body h4 {
+  font-family: "Cormorant Garamond", "Noto Serif TC", serif !important;
+  color: var(--codex-burgundy) !important;
+  text-align: center !important;
+  letter-spacing: 1px;
+  margin: 26px 0 14px !important;
+  position: relative;
+}
+body[data-page="education"] .edu-article-body h2 { font-size: 1.55rem !important; }
+body[data-page="education"] .edu-article-body h3 { font-size: 1.3rem !important; }
+body[data-page="education"] .edu-article-body h4 { font-size: 1.12rem !important; color: var(--codex-burg-2) !important; }
+/* 章首飾紋 ❦ */
+body[data-page="education"] .edu-article-body h2::before,
+body[data-page="education"] .edu-article-body h3::before {
+  content: "❦";
+  display: block;
+  color: var(--codex-gold);
+  font-size: .9rem;
+  margin-bottom: 4px;
+  opacity: .8;
+}
+/* 章節下細分隔線 */
+body[data-page="education"] .edu-article-body h2::after {
+  content: "";
+  display: block; width: 120px; height: 0;
+  margin: 8px auto 0;
+  border-bottom: 1.5px solid rgba(122,34,48,.4);
+}
+
+/* 重點概念：strong → 墨痕底線高亮 */
+body[data-page="education"] .edu-article-body strong {
+  color: var(--codex-burgundy) !important;
+  font-weight: 700;
+  background: linear-gradient(180deg, transparent 62%, rgba(156,123,63,.28) 62%);
+  padding: 0 1px;
+}
+body[data-page="education"] .edu-article-body em {
+  color: var(--codex-ink-soft) !important;
+  font-style: italic;
+}
+body[data-page="education"] .edu-article-body li { list-style: none !important; position: relative; padding-left: 22px; margin-left: 0 !important; }
+body[data-page="education"] .edu-article-body li::before {
+  content: "❧"; position: absolute; left: 2px; color: var(--codex-gold); font-size: .85em;
+}
+
+/* 首字下沉（JS 包 .codex-dropcap） */
+body[data-page="education"] .codex-dropcap {
+  float: left;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 3.3rem;
+  line-height: .82;
+  padding: 4px 10px 2px 0;
+  color: var(--codex-burgundy);
+  font-weight: 700;
+}
+
+/* 文章內插圖 → 仿古銅版蝕刻（去彩、加墨框） */
+body[data-page="education"] .edu-article-body img {
+  filter: sepia(.55) contrast(1.05) brightness(.98) grayscale(.35);
+  border: 1.5px solid var(--codex-ink);
+  border-radius: 2px;
+  box-shadow: 3px 3px 0 rgba(58,42,30,.18);
+  background: #f3ead2;
+  padding: 6px;
+}
+
+/* ── 章節書籤（JS 注入左頁 .codex-toc）── */
+body[data-page="education"] .codex-toc {
+  margin-top: 16px;
+  border-top: 1.5px solid rgba(122,34,48,.25);
+  padding-top: 10px;
+}
+body[data-page="education"] .codex-toc-title {
+  font-family: "Cormorant Garamond", "Noto Serif TC", serif;
+  color: var(--codex-gold);
+  font-size: .9rem; letter-spacing: 2px; margin-bottom: 8px;
+}
+body[data-page="education"] .codex-bm {
+  display: block; width: 100%; text-align: left;
+  font-family: "Cormorant Garamond", "Noto Serif TC", serif;
+  background: linear-gradient(90deg, rgba(122,34,48,.10), transparent);
+  border: none; border-left: 3px solid var(--codex-burgundy);
+  color: var(--codex-ink); cursor: pointer;
+  padding: 7px 10px; margin-bottom: 5px; border-radius: 0 6px 6px 0;
+  font-size: 1rem; line-height: 1.35;
+  transition: background .15s, transform .15s;
+}
+body[data-page="education"] .codex-bm:hover { background: linear-gradient(90deg, rgba(122,34,48,.2), transparent); transform: translateX(2px); }
+body[data-page="education"] .codex-bm-h3 { padding-left: 20px; font-size: .94rem; color: var(--codex-ink-soft); border-left-color: var(--codex-gold); }
+body[data-page="education"] .codex-bm-h4 { padding-left: 30px; font-size: .9rem; color: var(--codex-ink-soft); border-left-color: rgba(156,123,63,.5); }
+
+/* ── 文獻出處 → 研究註記（依賴既有 inline 結構，這裡只柔化容器）── */
+body[data-page="education"] .edu-article-body ol li {
+  font-family: "Noto Sans TC", sans-serif !important;  /* 註記用無襯線保可讀 */
+}
+
+/* ════ 全域元件（JS 動態建立；以 body.codex-reading 控制顯示）════ */
+/* 閱讀進度條 */
+#codex-progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 4px;
+  background: rgba(122,34,48,.12); z-index: 1200;
+  opacity: 0; transition: opacity .25s; pointer-events: none;
+}
+#codex-progress.show { opacity: 1; }
+#codex-progress i {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, var(--codex-burgundy), var(--codex-gold));
+}
+body:not(.codex-reading) #codex-progress { opacity: 0 !important; }
+
+/* 詞彙彈窗（glossary） */
+body[data-page="education"] .codex-term {
+  border-bottom: 1.5px dotted var(--codex-burgundy);
+  cursor: help;
+  color: inherit;
+}
+.codex-gloss-pop {
+  position: absolute; z-index: 1300; max-width: 260px;
+  font-family: "Noto Sans TC", sans-serif;
+  background:
+    radial-gradient(rgba(120,90,50,.06) .6px, transparent .9px),
+    linear-gradient(160deg, #f6ecd2, #ecdcb6);
+  background-size: 7px 7px, 100% 100%;
+  border: 1.5px solid var(--codex-edge);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px -8px rgba(40,28,14,.5);
+  padding: 10px 12px;
+  animation: codexPop .18s ease both;
+}
+@keyframes codexPop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.codex-gloss-term { font-weight: 700; color: var(--codex-burgundy); font-size: .9rem; margin-bottom: 4px; }
+.codex-gloss-def { color: var(--codex-ink); font-size: .82rem; line-height: 1.6; }
+
+/* 開書時的翻頁感（淡入 + 輕微立體） */
+body[data-page="education"] #edu-stage-notebook.active .notebook { animation: codexOpen .4s ease both; }
+@keyframes codexOpen { from { opacity: 0; transform: perspective(1400px) rotateY(-4deg); } to { opacity: 1; transform: none; } }
+
+/* 無障礙：減少動態 */
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="education"] #edu-stage-notebook.active .notebook,
+  .codex-gloss-pop { animation: none !important; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   翻頁書本閱讀器（古董書，點開書本彈出）
+   ════════════════════════════════════════════════════════════ */
+body.codex-reader-open { overflow: hidden; }
+
+.codex-reader {
+  position: fixed; inset: 0; z-index: 1400;
+  display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) 6px env(safe-area-inset-bottom);
+  /* 暗色木桌 */
+  background:
+    radial-gradient(ellipse at 50% -8%, rgba(70,48,24,.30), transparent 60%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 2px, transparent 2px 26px),
+    linear-gradient(180deg, #2c1f15 0%, #20160e 100%);
+  animation: codexBookIn .42s cubic-bezier(.2,.9,.3,1.1) both;
+}
+@keyframes codexBookIn {
+  from { opacity: 0; transform: scale(.86) translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.codex-reader-bar {
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 6px;
+  color: #efe0bd; font-family: "Cormorant Garamond","Noto Serif TC",serif;
+}
+.codex-reader-title { flex: 1; text-align: center; font-size: 1.05rem; letter-spacing: .5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.codex-rbtn { background: rgba(255,255,255,.07); border: 1px solid rgba(239,224,189,.28);
+  color: #efe0bd; width: 38px; height: 38px; border-radius: 10px; font-size: 1.05rem; cursor: pointer; }
+.codex-rbtn:active { transform: scale(.94); }
+
+.codex-book { flex: 1; min-height: 0; display: flex; padding: 4px 2px; }
+
+/* 一頁書葉（古紙 + 破墨邊框 + 書脊陰影） */
+.codex-reader-stage {
+  position: relative; flex: 1; min-height: 0; border-radius: 5px 7px 6px 5px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(120,80,30,.16), transparent 24%),
+    radial-gradient(ellipse at 100% 100%, rgba(120,80,30,.20), transparent 26%),
+    radial-gradient(rgba(120,90,50,.06) .6px, transparent .9px),
+    linear-gradient(165deg, #f0e4c6 0%, #e6d3a8 100%);
+  background-size: auto, auto, 7px 7px, 100% 100%;
+  box-shadow: 0 18px 50px -12px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,250,235,.5);
+}
+/* 破墨邊框（SVG turbulence 手繪感：外黑內暗紅） */
+.codex-reader-stage::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 440' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.02' numOctaves='3' seed='6' result='n'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='n' scale='10'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url(%23r)' fill='none'%3E%3Crect x='9' y='9' width='282' height='422' stroke='%231a1310' stroke-width='8'/%3E%3Crect x='17' y='17' width='266' height='406' stroke='%237a2230' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%; background-repeat: no-repeat;
+}
+/* 書脊（左緣內陰影，暗示是攤開的書） */
+.codex-spine {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 26px; z-index: 3; pointer-events: none;
+  background: linear-gradient(90deg, rgba(60,40,20,.34), rgba(60,40,20,0));
+}
+
+/* 內容流（多欄分頁） */
+.codex-reader-flow {
+  position: relative; z-index: 2;
+  box-sizing: border-box; padding: 26px 26px 30px 34px;
+  will-change: transform;
+}
+/* 章節標題仿古書「第X章」紅字（沿用 .edu-article-body 既有 codex 樣式，再加強） */
+body[data-page="education"] .codex-reader-flow h2 { font-size: 1.7rem !important; margin-top: 6px !important; }
+.codex-reader-flow .codex-dropcap { font-size: 3.6rem; }
+
+/* 頁碼（書葉底部置中，像古書的頁碼） */
+.codex-folio {
+  position: absolute; left: 0; right: 0; bottom: 8px; z-index: 5; text-align: center;
+  font-family: "Cormorant Garamond","Noto Serif TC",serif; color: #6a4a2a; font-size: .95rem; letter-spacing: 1px;
+}
+
+/* 左右翻頁感應區 */
+.codex-edge { position: absolute; top: 0; bottom: 0; width: 30%; background: transparent; border: none; cursor: pointer; z-index: 5; }
+.codex-edge.prev { left: 0; } .codex-edge.next { right: 0; }
+
+/* 翻頁時書葉輕微立體 */
+.codex-reader.turning .codex-reader-stage { animation: codexTurn .45s ease; }
+@keyframes codexTurn { 0% { transform: perspective(1600px) rotateY(-2.5deg); } 100% { transform: none; } }
+
+/* 進度 + 控制列 */
+.codex-pagebar { height: 4px; margin: 6px 12px 0; background: rgba(239,224,189,.16); border-radius: 3px; overflow: hidden; }
+.codex-pagebar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--codex-burgundy), var(--codex-gold)); transition: width .3s; }
+.codex-reader-foot { display: flex; align-items: center; gap: 10px; padding: 8px 12px 4px;
+  color: #e9dcbb; font-family: "Cormorant Garamond","Noto Serif TC",serif; }
+.codex-fbtn { background: rgba(255,255,255,.06); border: 1px solid rgba(239,224,189,.26);
+  color: #efe0bd; padding: 9px 14px; border-radius: 11px; font-size: .95rem; cursor: pointer; }
+.codex-fbtn:active { transform: scale(.96); }
+.codex-pageno { flex: 1; text-align: center; letter-spacing: 1px; font-size: 1rem; }
+
+/* 章節抽屜 */
+.codex-toc-drawer {
+  position: absolute; top: 52px; left: 12px; right: 12px; max-height: 62%; overflow: auto; z-index: 8;
+  background: linear-gradient(160deg, #f6ecd2, #ecdcb6); border: 1.5px solid var(--codex-edge);
+  border-radius: 10px; padding: 12px; box-shadow: 0 18px 44px -10px rgba(0,0,0,.6);
+}
+
+/* 浮動「翻頁閱讀」按鈕 */
+#codex-open-btn {
+  position: fixed; right: 16px; bottom: 86px; z-index: 1150; display: none;
+  background: linear-gradient(180deg, var(--codex-burg-2), var(--codex-burgundy));
+  color: #f7ecd0; border: 1.5px solid rgba(40,20,16,.55);
+  padding: 11px 16px; border-radius: 24px;
+  font-family: "Noto Serif TC", serif; font-size: .92rem;
+  box-shadow: 0 8px 20px -6px rgba(0,0,0,.5); cursor: pointer;
+}
+#codex-open-btn.show { display: inline-flex; }
+body.codex-reader-open #codex-open-btn { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .codex-reader, .codex-reader.turning .codex-reader-stage { animation: none !important; }
+}
+
+/* ── 整頁古典插圖（扉頁 + 各章插圖頁）──────────────────────── */
+.codex-frontis, .codex-plate {
+  margin: 0; text-align: center;
+  break-inside: avoid; -webkit-column-break-inside: avoid;
+  break-after: column; -webkit-column-break-after: always; page-break-after: always;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  min-height: 86%;
+}
+.codex-plate-art {
+  display: inline-block; background: #f1e7cd; padding: 12px;
+  border: 2px solid #2a1d12; border-radius: 2px;
+  box-shadow: 3px 3px 0 rgba(58,42,30,.20);
+  max-width: 92%;
+}
+.codex-plate-art svg {
+  display: block; width: 100%; height: auto; max-height: 46vh;
+  filter: sepia(.45) contrast(1.06) brightness(.99);
+}
+.codex-plate figcaption {
+  margin-top: 10px; color: var(--codex-ink-soft);
+  font-family: "Cormorant Garamond","Noto Serif TC",serif;
+  font-size: .9rem; letter-spacing: 3px;
+}
+.codex-frontis-eyebrow {
+  margin-top: 16px; color: var(--codex-gold);
+  font-family: "Cormorant Garamond","Noto Serif TC",serif;
+  letter-spacing: 7px; font-size: .82rem;
+}
+.codex-frontis-rule { width: 64px; height: 0; border-top: 1.5px solid rgba(122,34,48,.5); margin: 8px auto; }
+.codex-frontis-title {
+  font-family: "Cormorant Garamond","Noto Serif TC",serif;
+  color: var(--codex-burgundy); font-size: 1.9rem; line-height: 1.25;
+  letter-spacing: 1px; padding: 0 10px;
+}

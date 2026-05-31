@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Whispering Woods — Cozy Survival HUD</title>
+<style>
+  /* ===== Cozy hand-drawn survival game UI =====================================
+     Self-contained preview. Storybook style: warm paper, sketchy ink outlines,
+     wooden slots, parchment quest board. All art is inline SVG + CSS — no assets.
+  ============================================================================ */
+
+  :root {
+    --paper:        #efe2c8;
+    --paper-deep:   #e4d3b0;
+    --paper-shadow: #d8c39a;
+    --ink:          #3b2f25;
+    --ink-soft:     #6b5742;
+    --wood:         #b6824b;
+    --wood-dark:    #8a5d31;
+    --wood-deep:    #6f4824;
+    --leaf:         #7c9a55;
+    --leaf-dark:    #5f7b3c;
+    --berry:        #c2552f;
+    --berry-dark:   #9c3f22;
+    --sky:          #bcd6cf;
+    --gold:         #d9a441;
+    --gold-dark:    #b07e22;
+    --water:        #6fa3b0;
+    --stamina:      #c98a3f;
+    --hunger:       #c2772f;
+    --slot:         #e9d8b4;
+    --slot-edge:    #c9ad7c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    font-family: "Comic Sans MS", "Chalkboard SE", "Segoe Print", "Bradley Hand", "PingFang TC", "Microsoft JhengHei", cursive, sans-serif;
+    color: var(--ink);
+    /* warm beige paper texture — layered grain + soft vignette */
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(circle at 18% 12%, rgba(255,255,255,.35) 0, transparent 38%),
+      radial-gradient(circle at 82% 88%, rgba(120,90,50,.16) 0, transparent 46%),
+      radial-gradient(circle at 50% 50%, rgba(90,65,35,.05) 0, rgba(90,65,35,.18) 100%),
+      repeating-linear-gradient(28deg, rgba(150,120,80,.05) 0 2px, transparent 2px 5px),
+      repeating-linear-gradient(-63deg, rgba(150,120,80,.04) 0 2px, transparent 2px 6px);
+  }
+
+  /* tiny paper-fiber speckle */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    opacity: .5;
+    background-image:
+      radial-gradient(rgba(80,60,35,.10) .6px, transparent .8px),
+      radial-gradient(rgba(80,60,35,.07) .6px, transparent .8px);
+    background-size: 7px 7px, 11px 11px;
+    background-position: 0 0, 3px 4px;
+  }
+
+  .stage {
+    position: relative; z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 26px 22px 40px;
+  }
+
+  /* ---- sketchy ink frame helper (double offset stroke) ---- */
+  .ink {
+    position: relative;
+    border: 2.5px solid var(--ink);
+    border-radius: 14px 11px 15px 12px / 12px 15px 11px 14px;
+    box-shadow:
+      2px 3px 0 rgba(59,47,37,.18),
+      inset 0 0 0 1px rgba(59,47,37,.06);
+  }
+  .ink::after {
+    content: "";
+    position: absolute; inset: 3px;
+    border: 1.5px solid rgba(59,47,37,.35);
+    border-radius: 11px 14px 10px 13px / 13px 10px 14px 11px;
+    pointer-events: none;
+  }
+
+  /* ============================= HEADER ============================= */
+  .topbar {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .title-plank {
+    background:
+      linear-gradient(180deg, var(--wood) 0%, var(--wood-dark) 100%);
+    padding: 10px 22px;
+    color: #fff7e6;
+    text-shadow: 1px 1px 0 var(--wood-deep);
+    border-radius: 13px 10px 14px 11px / 11px 14px 10px 13px;
+    border: 2.5px solid var(--ink);
+    box-shadow: 2px 3px 0 rgba(59,47,37,.25);
+    position: relative;
+  }
+  .title-plank::before, .title-plank::after {
+    content: "";
+    position: absolute; top: 50%; width: 7px; height: 7px;
+    margin-top: -3.5px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff5dd, var(--wood-deep));
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.35);
+  }
+  .title-plank::before { left: 8px; }
+  .title-plank::after  { right: 8px; }
+  .title-plank h1 {
+    margin: 0; font-size: 22px; letter-spacing: .5px; line-height: 1.15;
+  }
+  .title-plank h1 small {
+    display: block; font-size: 11px; font-weight: normal; opacity: .85;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+
+  /* ---- vital meters (health / hunger / thirst / stamina) ---- */
+  .vitals { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .meter {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--paper-deep);
+    padding: 7px 12px 7px 8px;
+  }
+  .meter .icon { width: 30px; height: 30px; flex: 0 0 30px; }
+  .meter .bar-wrap {
+    width: 96px; height: 13px;
+    background: #cdb78c;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: inset 1px 1px 0 rgba(59,47,37,.2);
+  }
+  .meter .bar {
+    height: 100%;
+    border-radius: 6px 0 0 6px;
+    background-image: repeating-linear-gradient(
+      -45deg, rgba(255,255,255,.18) 0 5px, transparent 5px 10px);
+  }
+  .bar.hp     { width: 78%; background-color: var(--berry); }
+  .bar.food   { width: 54%; background-color: var(--hunger); }
+  .bar.water  { width: 66%; background-color: var(--water); }
+  .bar.stam   { width: 88%; background-color: var(--stamina); }
+  .meter .lbl { font-size: 10px; color: var(--ink-soft); width: 38px; line-height: 1.1; }
+
+  /* ============================= LAYOUT ============================= */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .col { display: flex; flex-direction: column; gap: 20px; }
+
+  .panel { background: var(--paper-deep); padding: 16px 18px 18px; }
+  .panel > h2 {
+    margin: 0 0 12px;
+    font-size: 15px; letter-spacing: .5px;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--ink);
+  }
+  .panel > h2 .tag {
+    margin-left: auto; font-size: 10px; font-weight: normal;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1.5px dashed var(--ink-soft);
+    border-radius: 7px; padding: 2px 7px;
+  }
+
+  /* ============================= INVENTORY ========================= */
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  .slot {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 11px 9px 12px 10px / 10px 12px 9px 11px;
+    /* carved wooden slot */
+    background:
+      linear-gradient(160deg, var(--slot) 0%, #dcc596 100%);
+    border: 2.5px solid var(--wood-deep);
+    box-shadow:
+      inset 2px 2px 4px rgba(111,72,36,.45),
+      inset -1px -1px 0 rgba(255,248,225,.6),
+      1px 2px 0 rgba(59,47,37,.18);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .slot:hover {
+    transform: translateY(-3px) rotate(-1deg);
+    box-shadow:
+      inset 2px 2px 4px rgba(111,72,36,.4),
+      0 6px 0 rgba(59,47,37,.18);
+  }
+  .slot svg { width: 64%; height: 64%; }
+  .slot .qty {
+    position: absolute; right: 4px; bottom: 2px;
+    font-size: 11px; font-weight: bold; color: var(--ink);
+    text-shadow: 0 1px 0 rgba(255,248,225,.9);
+  }
+  .slot.empty { background: linear-gradient(160deg,#d9c193,#cdb583); }
+  .slot.empty::after {
+    content: ""; position: absolute; inset: 26%;
+    border: 2px dashed rgba(111,72,36,.4); border-radius: 50%;
+  }
+  .slot.selected {
+    border-color: var(--gold-dark);
+    box-shadow:
+      inset 2px 2px 4px rgba(111,72,36,.4),
+      0 0 0 3px rgba(217,164,65,.55),
+      1px 2px 0 rgba(59,47,37,.18);
+  }
+  .hotbar-note { font-size: 10px; color: var(--ink-soft); margin-top: 10px; text-align: center; }
+
+  /* ============================= CRAFTING ========================== */
+  .craft-list { display: flex; flex-direction: column; gap: 10px; }
+  .recipe {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 12px 9px 13px 10px / 10px 13px 9px 12px;
+    padding: 9px 12px;
+    box-shadow: 1px 2px 0 rgba(59,47,37,.15);
+  }
+  .recipe .out {
+    width: 44px; height: 44px; flex: 0 0 44px;
+    background: var(--slot);
+    border: 2px solid var(--wood-deep);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 1px 1px 3px rgba(111,72,36,.4);
+  }
+  .recipe .out svg { width: 70%; height: 70%; }
+  .recipe .info { flex: 1; }
+  .recipe .info b { font-size: 13px; }
+  .recipe .cost { font-size: 10px; color: var(--ink-soft); margin-top: 2px; display: flex; gap: 8px; }
+  .recipe .cost span { display: inline-flex; align-items: center; gap: 3px; }
+  .recipe .cost svg { width: 13px; height: 13px; }
+  .craft-btn {
+    font-family: inherit; cursor: pointer;
+    background: linear-gradient(180deg, var(--leaf), var(--leaf-dark));
+    color: #fbffef; text-shadow: 0 1px 0 rgba(0,0,0,.25);
+    border: 2px solid var(--ink); border-radius: 9px;
+    padding: 7px 12px; font-size: 12px; font-weight: bold;
+    box-shadow: 1px 2px 0 rgba(59,47,37,.25);
+    transition: transform .1s;
+  }
+  .craft-btn:hover { transform: translateY(-1px); }
+  .craft-btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(59,47,37,.25); }
+  .craft-btn.locked {
+    background: linear-gradient(180deg,#c9b58c,#b59c6e); color: #7a6647;
+    cursor: not-allowed; text-shadow: none;
+  }
+
+  /* ============================= QUEST BOARD ======================= */
+  .questboard {
+    /* parchment pinned to a wooden board */
+    background:
+      linear-gradient(180deg, var(--wood) 0%, var(--wood-dark) 100%);
+    padding: 16px;
+    border: 3px solid var(--ink);
+    border-radius: 14px 12px 15px 13px / 13px 15px 12px 14px;
+    box-shadow: 2px 4px 0 rgba(59,47,37,.3), inset 0 0 0 1px rgba(0,0,0,.1);
+    position: relative;
+  }
+  /* wood grain streaks */
+  .questboard::before {
+    content: ""; position: absolute; inset: 5px; pointer-events: none;
+    border-radius: 11px;
+    background-image:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 1px, transparent 1px 16px),
+      repeating-linear-gradient(90deg, rgba(255,240,210,.06) 8px 9px, transparent 9px 24px);
+  }
+  .questboard h2 {
+    margin: 0 0 12px; text-align: center; color: #fff4dc;
+    text-shadow: 1px 1px 0 var(--wood-deep);
+    font-size: 16px; letter-spacing: 1px; position: relative;
+  }
+  .parchment {
+    position: relative;
+    background:
+      radial-gradient(circle at 30% 20%, #fdf3d8, #f0dcae 75%, #e3cb96 100%);
+    border-radius: 6px;
+    padding: 12px 13px 12px;
+    margin-bottom: 13px;
+    color: var(--ink);
+    box-shadow: 1px 2px 4px rgba(0,0,0,.28);
+    /* torn-ish edges via clip */
+    clip-path: polygon(
+      0% 4%, 4% 0%, 30% 2%, 55% 0%, 78% 2%, 96% 0%, 100% 5%,
+      99% 40%, 100% 70%, 98% 96%, 95% 100%, 60% 98%, 35% 100%,
+      8% 99%, 2% 100%, 0% 92%, 1% 60%, 0% 30%);
+  }
+  .parchment:last-child { margin-bottom: 0; }
+  /* push pin */
+  .parchment .pin {
+    position: absolute; top: -6px; left: 50%; margin-left: -7px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ff9a7a, var(--berry-dark));
+    border: 1.5px solid var(--ink);
+    box-shadow: 0 2px 2px rgba(0,0,0,.3);
+  }
+  .parchment .q-top { display: flex; align-items: center; gap: 7px; }
+  .parchment .q-icon { width: 22px; height: 22px; flex: 0 0 22px; }
+  .parchment b { font-size: 13px; }
+  .parchment .q-desc { font-size: 11px; color: var(--ink-soft); margin: 5px 0 7px; line-height: 1.35; }
+  .q-progress {
+    height: 9px; background: #d7c096; border: 1.5px solid var(--ink);
+    border-radius: 6px; overflow: hidden;
+  }
+  .q-progress i { display: block; height: 100%; background: var(--leaf); }
+  .q-meta { display: flex; justify-content: space-between; font-size: 10px; margin-top: 5px; color: var(--ink-soft); }
+  .q-reward { display: inline-flex; align-items: center; gap: 3px; color: var(--gold-dark); font-weight: bold; }
+  .q-reward svg { width: 12px; height: 12px; }
+  .q-done b, .q-done .q-desc { text-decoration: line-through; opacity: .6; }
+
+  /* ============================= WEATHER / CLOCK =================== */
+  .weather-panel { text-align: center; }
+  .sky-card {
+    background: linear-gradient(180deg, var(--sky) 0%, #d9e7df 100%);
+    border: 2.5px solid var(--ink);
+    border-radius: 13px 10px 14px 11px / 11px 14px 10px 13px;
+    padding: 14px; position: relative; overflow: hidden;
+    box-shadow: inset 0 -6px 10px rgba(95,123,60,.18), 1px 2px 0 rgba(59,47,37,.15);
+  }
+  .sky-card .big-weather { width: 78px; height: 78px; margin: 2px auto 4px; }
+  .sky-card .temp { font-size: 20px; font-weight: bold; }
+  .sky-card .cond { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+  /* little hill silhouette */
+  .sky-card::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 26px;
+    background:
+      radial-gradient(60px 30px at 20% 100%, var(--leaf-dark) 60%, transparent 61%),
+      radial-gradient(80px 38px at 65% 100%, var(--leaf) 60%, transparent 61%),
+      radial-gradient(50px 26px at 95% 100%, var(--leaf-dark) 60%, transparent 61%);
+  }
+  .forecast { display: flex; justify-content: space-between; margin-top: 12px; gap: 6px; }
+  .fc { flex: 1; background: var(--paper); border: 2px solid var(--ink);
+        border-radius: 10px; padding: 7px 2px 6px; }
+  .fc .d { font-size: 10px; color: var(--ink-soft); }
+  .fc svg { width: 26px; height: 26px; margin: 3px 0 1px; }
+  .fc .t { font-size: 11px; font-weight: bold; }
+
+  /* day clock */
+  .dayclock {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 14px;
+    background: var(--paper); border: 2px solid var(--ink);
+    border-radius: 11px; padding: 9px 12px;
+  }
+  .dayclock .dial { width: 46px; height: 46px; flex: 0 0 46px; }
+  .dayclock .day-info { text-align: left; }
+  .dayclock .day-info b { font-size: 14px; }
+  .dayclock .day-info div { font-size: 10px; color: var(--ink-soft); }
+
+  /* ============================= TOOL BELT ========================= */
+  .belt { display: flex; gap: 9px; justify-content: center; flex-wrap: wrap; }
+  .tool {
+    width: 52px; height: 52px;
+    background: linear-gradient(160deg, var(--slot), #dcc596);
+    border: 2.5px solid var(--wood-deep);
+    border-radius: 11px 9px 12px 10px / 10px 12px 9px 11px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 1px 1px 3px rgba(111,72,36,.4), 1px 2px 0 rgba(59,47,37,.15);
+    position: relative; cursor: pointer;
+    transition: transform .12s;
+  }
+  .tool:hover { transform: translateY(-3px) rotate(2deg); }
+  .tool svg { width: 64%; height: 64%; }
+  .tool .dura {
+    position: absolute; left: 5px; right: 5px; bottom: 4px; height: 4px;
+    background: #cbb084; border-radius: 3px; overflow: hidden;
+    border: 1px solid rgba(59,47,37,.4);
+  }
+  .tool .dura i { display: block; height: 100%; background: var(--leaf); }
+
+  /* footer caption */
+  .footer-note {
+    margin-top: 26px; text-align: center; font-size: 11px; color: var(--ink-soft);
+  }
+  .footer-note span { border-bottom: 1.5px dashed var(--ink-soft); padding-bottom: 1px; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ================= TOP BAR : title + vitals ================= -->
+  <header class="topbar">
+    <div class="title-plank">
+      <h1>Whispering&nbsp;Woods<small>cozy survival</small></h1>
+    </div>
+
+    <div class="vitals">
+      <div class="meter ink">
+        <svg class="icon" viewBox="0 0 32 32"><!-- heart -->
+          <path d="M16 27C7 20 3 15 3 10.5 3 7 6 4.5 9.2 4.5c2.3 0 3.9 1.3 4.8 2.6h.4c.9-1.3 2.5-2.6 4.8-2.6C26.4 4.5 29 7 29 10.5 29 15 25 20 16 27Z"
+            fill="#c2552f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M10 9.5c-1.2 0-2.2 1-2.2 2.3" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
+        </svg>
+        <div><div class="lbl">Health</div><div class="bar-wrap"><div class="bar hp"></div></div></div>
+      </div>
+
+      <div class="meter ink">
+        <svg class="icon" viewBox="0 0 32 32"><!-- drumstick / hunger -->
+          <path d="M19 5c4 0 7 3 7 6.5 0 2.6-1.7 4.4-3.8 5.2l-8.4 8.4c-1.3 1.3-3.4 1.3-4.6 0-1.3-1.3-1.3-3.4 0-4.6l8.4-8.4C18.2 9.9 19 8 19 5Z"
+            fill="#c2772f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M9 21l-3 3M11 23l-3 3" stroke="#fff7e6" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <div><div class="lbl">Hunger</div><div class="bar-wrap"><div class="bar food"></div></div></div>
+      </div>
+
+      <div class="meter ink">
+        <svg class="icon" viewBox="0 0 32 32"><!-- droplet / thirst -->
+          <path d="M16 4c5 6 9 10 9 14.5A9 9 0 1 1 7 18.5C7 14 11 10 16 4Z"
+            fill="#6fa3b0" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M12 19c0 2.2 1.6 4 3.6 4.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+        </svg>
+        <div><div class="lbl">Thirst</div><div class="bar-wrap"><div class="bar water"></div></div></div>
+      </div>
+
+      <div class="meter ink">
+        <svg class="icon" viewBox="0 0 32 32"><!-- bolt / stamina -->
+          <path d="M18 3 7 18h7l-3 11 14-16h-8l4-10Z"
+            fill="#c98a3f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <div><div class="lbl">Stamina</div><div class="bar-wrap"><div class="bar stam"></div></div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN GRID ================= -->
+  <div class="grid">
+
+    <!-- ---------- LEFT COLUMN ---------- -->
+    <div class="col">
+
+      <!-- INVENTORY -->
+      <section class="panel ink">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z" fill="#b6824b" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 5h18v3H3z" fill="#8a5d31" stroke="#3b2f25" stroke-width="1.8"/><path d="M10 11h4" stroke="#3b2f25" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Knapsack
+          <span class="tag">12 / 20</span>
+        </h2>
+
+        <div class="inv-grid">
+          <!-- wood log -->
+          <div class="slot selected">
+            <svg viewBox="0 0 32 32"><ellipse cx="16" cy="9" rx="11" ry="4.5" fill="#c79a64" stroke="#3b2f25" stroke-width="2"/><path d="M5 9v9c0 2.5 4.9 4.5 11 4.5s11-2 11-4.5V9" fill="#b6824b" stroke="#3b2f25" stroke-width="2"/><ellipse cx="16" cy="9" rx="6" ry="2.4" fill="none" stroke="#8a5d31" stroke-width="1.6"/><ellipse cx="16" cy="9" rx="2.5" ry="1" fill="#8a5d31"/></svg>
+            <span class="qty">14</span>
+          </div>
+          <!-- stone -->
+          <div class="slot">
+            <svg viewBox="0 0 32 32"><path d="M6 19c-1-4 2-9 7-10s11 1 12 6-2 9-8 9-10-1-11-5Z" fill="#a9a59c" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><path d="M11 13l3 3-2 3" fill="none" stroke="#6b5742" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span class="qty">28</span>
+          </div>
+          <!-- berries -->
+          <div class="slot">
+            <svg viewBox="0 0 32 32"><circle cx="12" cy="18" r="6" fill="#c2552f" stroke="#3b2f25" stroke-width="2"/><circle cx="21" cy="20" r="5" fill="#9c3f22" stroke="#3b2f25" stroke-width="2"/><circle cx="18" cy="12" r="5" fill="#c2552f" stroke="#3b2f25" stroke-width="2"/><path d="M18 7c0-2 1.5-3 3-3" fill="none" stroke="#5f7b3c" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="16" r="1" fill="#fff" opacity=".7"/></svg>
+            <span class="qty">7</span>
+          </div>
+          <!-- mushroom -->
+          <div class="slot">
+            <svg viewBox="0 0 32 32"><path d="M5 16c0-6 5-9 11-9s11 3 11 9c0 1.5-1 2-3 2H8c-2 0-3-.5-3-2Z" fill="#c2552f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="1.6" fill="#fdf3d8"/><circle cx="20" cy="14" r="2" fill="#fdf3d8"/><path d="M13 18h6v6c0 2-6 2-6 0v-6Z" fill="#eaddc0" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span class="qty">3</span>
+          </div>
+          <!-- water flask -->
+          <div class="slot">
+            <svg viewBox="0 0 32 32"><path d="M13 4h6v4l3 4v13a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3V12l3-4V4Z" fill="#cfe6df" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><path d="M10 17h12v7a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3v-7Z" fill="#6fa3b0" stroke="#3b2f25" stroke-width="2"/><path d="M12 4h8" stroke="#3b2f25" stroke-width="2" stroke-linecap="round"/></svg>
+            <span class="qty">2</span>
+          </div>
+
+          <!-- rope -->
+          <div class="slot">
+            <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10" fill="none" stroke="#c79a64" stroke-width="5"/><circle cx="16" cy="16" r="10" fill="none" stroke="#8a5d31" stroke-width="5" stroke-dasharray="3 4"/><circle cx="16" cy="16" r="5.5" fill="none" stroke="#3b2f25" stroke-width="1.5"/></svg>
+            <span class="qty">5</span>
+          </div>
+          <!-- feather -->
+          <div class="slot">
+            <svg viewBox="0 0 32 32"><path d="M24 6c2 6-2 14-9 18-2 1-5 2-7 1 1-3 1-5 2-7C16 11 20 7 24 6Z" fill="#cfe0d6" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><path d="M22 9 9 23" stroke="#3b2f25" stroke-width="1.6" stroke-linecap="round"/><path d="M19 10l-2 4M22 13l-3 4M16 14l-2 4" stroke="#6b5742" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <span class="qty">9</span>
+          </div>
+          <!-- egg -->
+          <div class="slot">
+            <svg viewBox="0 0 32 32"><path d="M16 4c5 0 9 7 9 13a9 9 0 0 1-18 0c0-6 4-13 9-13Z" fill="#f4e6c4" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><path d="M11 18c.5 2 2 3.5 4 4" fill="none" stroke="#cbb084" stroke-width="2" stroke-linecap="round"/></svg>
+            <span class="qty">4</span>
+          </div>
+          <div class="slot empty"></div>
+          <div class="slot empty"></div>
+
+          <div class="slot empty"></div>
+          <div class="slot empty"></div>
+          <div class="slot empty"></div>
+          <div class="slot empty"></div>
+          <div class="slot empty"></div>
+        </div>
+        <p class="hotbar-note">↑ tap a slot to ready it · drag to rearrange · long-press to drop</p>
+      </section>
+
+      <!-- CRAFTING -->
+      <section class="panel ink">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M14 3l3 3-3 3-3-3 3-3Z" fill="#b6824b" stroke="#3b2f25" stroke-width="1.7" stroke-linejoin="round"/><path d="M12.5 7.5 4 16l1.5 4.5L10 19l8.5-8.5" fill="none" stroke="#3b2f25" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Crafting Bench
+          <span class="tag">workbench Lv.2</span>
+        </h2>
+
+        <div class="craft-list">
+          <!-- axe -->
+          <div class="recipe">
+            <div class="out"><svg viewBox="0 0 32 32"><path d="M19 4c4 0 8 3 8 7 0 1-3 0-5-1-1 2-2 3-4 3l-2-2c1-2 1-3 3-4-1-2-1-3-1-3 .3 0 .7 0 1 0Z" fill="#a9a59c" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/><path d="M16 11 6 24" stroke="#8a5d31" stroke-width="3.4" stroke-linecap="round"/></svg></div>
+            <div class="info">
+              <b>Sturdy Axe</b>
+              <div class="cost">
+                <span><svg viewBox="0 0 32 32"><ellipse cx="16" cy="12" rx="9" ry="4" fill="#c79a64" stroke="#3b2f25" stroke-width="2"/><path d="M7 12v6c0 2 4 3.5 9 3.5s9-1.5 9-3.5v-6" fill="#b6824b" stroke="#3b2f25" stroke-width="2"/></svg>×5</span>
+                <span><svg viewBox="0 0 32 32"><path d="M6 19c-1-4 2-9 7-10s11 1 12 6-3 9-9 9-9-1-10-5Z" fill="#a9a59c" stroke="#3b2f25" stroke-width="2"/></svg>×3</span>
+              </div>
+            </div>
+            <button class="craft-btn">Craft</button>
+          </div>
+
+          <!-- campfire -->
+          <div class="recipe">
+            <div class="out"><svg viewBox="0 0 32 32"><path d="M16 4c4 5 6 8 6 12a6 6 0 0 1-12 0c0-2 1-4 2-5 0 2 1 3 2 3 0-4 1-7 2-10Z" fill="#c2772f" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 26l18-3M9 22l14 6" stroke="#8a5d31" stroke-width="2.6" stroke-linecap="round"/></svg></div>
+            <div class="info">
+              <b>Campfire</b>
+              <div class="cost">
+                <span><svg viewBox="0 0 32 32"><ellipse cx="16" cy="12" rx="9" ry="4" fill="#c79a64" stroke="#3b2f25" stroke-width="2"/><path d="M7 12v6c0 2 4 3.5 9 3.5s9-1.5 9-3.5v-6" fill="#b6824b" stroke="#3b2f25" stroke-width="2"/></svg>×6</span>
+                <span><svg viewBox="0 0 32 32"><path d="M6 19c-1-4 2-9 7-10s11 1 12 6-3 9-9 9-9-1-10-5Z" fill="#a9a59c" stroke="#3b2f25" stroke-width="2"/></svg>×2</span>
+              </div>
+            </div>
+            <button class="craft-btn">Craft</button>
+          </div>
+
+          <!-- lantern (locked) -->
+          <div class="recipe">
+            <div class="out"><svg viewBox="0 0 32 32"><path d="M11 9h10v13a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2V9Z" fill="#cfe6df" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 9h12M13 5h6v4h-6z" fill="#b6824b" stroke="#3b2f25" stroke-width="1.8"/><path d="M16 13c2 2 2 5 0 7-2-2-2-5 0-7Z" fill="#d9a441" stroke="#3b2f25" stroke-width="1.4"/></svg></div>
+            <div class="info">
+              <b>Cozy Lantern</b>
+              <div class="cost">
+                <span>needs Workbench Lv.3</span>
+              </div>
+            </div>
+            <button class="craft-btn locked">🔒 Lvl 3</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TOOL BELT -->
+      <section class="panel ink">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 12h16M4 12a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3 3 3 0 0 1-3 3H7a3 3 0 0 1-3-3Z" fill="#b6824b" stroke="#3b2f25" stroke-width="1.7" stroke-linejoin="round"/><circle cx="9" cy="12" r="1.3" fill="#3b2f25"/><circle cx="15" cy="12" r="1.3" fill="#3b2f25"/></svg>
+          Tool Belt
+          <span class="tag">durability</span>
+        </h2>
+        <div class="belt">
+          <!-- axe -->
+          <div class="tool"><svg viewBox="0 0 32 32"><path d="M19 4c4 0 8 3 8 7 0 1-3 0-5-1-1 2-2 3-4 3l-2-2c1-2 1-3 3-4-1-2-1-3-1-3Z" fill="#a9a59c" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/><path d="M16 11 6 24" stroke="#8a5d31" stroke-width="3.2" stroke-linecap="round"/></svg><div class="dura"><i style="width:82%"></i></div></div>
+          <!-- pickaxe -->
+          <div class="tool"><svg viewBox="0 0 32 32"><path d="M5 7c6-1 16-1 22 4-6-1-10 0-14 3" fill="none" stroke="#a9a59c" stroke-width="3" stroke-linecap="round"/><path d="M13 13 7 26" stroke="#8a5d31" stroke-width="3.2" stroke-linecap="round"/></svg><div class="dura"><i style="width:60%"></i></div></div>
+          <!-- shovel -->
+          <div class="tool"><svg viewBox="0 0 32 32"><path d="M16 4v13" stroke="#8a5d31" stroke-width="3.2" stroke-linecap="round"/><path d="M11 16h10v4c0 3-2 5-5 5s-5-2-5-5v-4Z" fill="#a9a59c" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 4h6" stroke="#3b2f25" stroke-width="2.4" stroke-linecap="round"/></svg><div class="dura"><i style="width:44%"></i></div></div>
+          <!-- fishing rod -->
+          <div class="tool"><svg viewBox="0 0 32 32"><path d="M6 26C10 10 18 5 26 5" fill="none" stroke="#8a5d31" stroke-width="2.6" stroke-linecap="round"/><path d="M26 5v8" stroke="#6fa3b0" stroke-width="1.4"/><path d="M26 13a2 2 0 1 0 0 .1" fill="#c2552f" stroke="#3b2f25" stroke-width="1.4"/></svg><div class="dura"><i style="width:91%"></i></div></div>
+          <!-- watering can -->
+          <div class="tool"><svg viewBox="0 0 32 32"><path d="M8 12h13v9a4 4 0 0 1-4 4h-5a4 4 0 0 1-4-4v-9Z" fill="#7c9a55" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/><path d="M21 14l6-3-1 5" fill="none" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12c0-3 2-5 5-5" fill="none" stroke="#3b2f25" stroke-width="1.8" stroke-linecap="round"/></svg><div class="dura"><i style="width:73%"></i></div></div>
+        </div>
+      </section>
+
+    </div><!-- /left col -->
+
+    <!-- ---------- RIGHT COLUMN ---------- -->
+    <div class="col">
+
+      <!-- WEATHER + CLOCK -->
+      <section class="panel ink weather-panel">
+        <h2>Sky &amp; Season <span class="tag">spring</span></h2>
+        <div class="sky-card">
+          <svg class="big-weather" viewBox="0 0 64 64"><!-- sun behind cloud -->
+            <circle cx="40" cy="22" r="11" fill="#d9a441" stroke="#3b2f25" stroke-width="2.4"/>
+            <g stroke="#d9a441" stroke-width="2.6" stroke-linecap="round">
+              <path d="M40 4v6M55 14l-4 4M58 32h-6M26 7l3 5"/>
+            </g>
+            <path d="M16 44c-5 0-8-3-8-7s3-7 8-7c1-5 5-8 10-8 6 0 10 4 11 9 4 0 7 3 7 7s-3 6-7 6H16Z"
+              fill="#fbfdfb" stroke="#3b2f25" stroke-width="2.6" stroke-linejoin="round"/>
+          </svg>
+          <div class="temp">21°</div>
+          <div class="cond">Sunny w/ gentle clouds</div>
+        </div>
+
+        <div class="forecast">
+          <div class="fc"><div class="d">MON</div>
+            <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="7" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/><g stroke="#d9a441" stroke-width="2.2" stroke-linecap="round"><path d="M16 3v3M16 26v3M3 16h3M26 16h3M7 7l2 2M23 23l2 2M25 7l-2 2M9 23l-2 2"/></g></svg>
+            <div class="t">23°</div></div>
+          <div class="fc"><div class="d">TUE</div>
+            <svg viewBox="0 0 32 32"><path d="M9 22c-3 0-5-2-5-5s2-5 5-5c1-3 3-5 6-5 4 0 6 3 7 6 3 0 5 2 5 5s-2 4-5 4H9Z" fill="#cfe0d6" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg>
+            <div class="t">19°</div></div>
+          <div class="fc"><div class="d">WED</div>
+            <svg viewBox="0 0 32 32"><path d="M9 18c-3 0-5-2-5-5s2-5 5-5c1-3 3-5 6-5 4 0 6 3 7 6 3 0 5 2 5 5s-2 4-5 4H9Z" fill="#b9c6bf" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><g stroke="#6fa3b0" stroke-width="2" stroke-linecap="round"><path d="M11 23l-1 4M17 23l-1 4M23 23l-1 4"/></g></svg>
+            <div class="t">17°</div></div>
+          <div class="fc"><div class="d">THU</div>
+            <svg viewBox="0 0 32 32"><circle cx="16" cy="14" r="6" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/><path d="M11 22c-3 0-5-2-5-4s2-4 5-4c1-2 3-3 5-3" fill="#fbfdfb" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><g stroke="#6fa3b0" stroke-width="2" stroke-linecap="round"><path d="M13 24l-1 3M19 24l-1 3"/></g></svg>
+            <div class="t">20°</div></div>
+        </div>
+
+        <div class="dayclock">
+          <svg class="dial" viewBox="0 0 48 48"><!-- day/night dial -->
+            <circle cx="24" cy="24" r="20" fill="#f0dcae" stroke="#3b2f25" stroke-width="2.6"/>
+            <path d="M24 4a20 20 0 0 1 0 40Z" fill="#c3d6cd"/>
+            <circle cx="24" cy="24" r="20" fill="none" stroke="#3b2f25" stroke-width="2.6"/>
+            <circle cx="33" cy="15" r="3.5" fill="#d9a441" stroke="#3b2f25" stroke-width="1.6"/>
+            <path d="M16 30a4 4 0 1 0 4 5 5 5 0 0 1-4-5Z" fill="#eaddc0" stroke="#3b2f25" stroke-width="1.4"/>
+            <line x1="24" y1="24" x2="24" y2="9" stroke="#c2552f" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="24" cy="24" r="2.4" fill="#3b2f25"/>
+          </svg>
+          <div class="day-info">
+            <b>Day 14</b>
+            <div>Late afternoon · 16:40</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- QUEST BOARD -->
+      <section class="questboard">
+        <h2>✦ Quest Board ✦</h2>
+
+        <div class="parchment">
+          <span class="pin"></span>
+          <div class="q-top">
+            <svg class="q-icon" viewBox="0 0 24 24"><path d="M5 6h14v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6Z" fill="#7c9a55" stroke="#3b2f25" stroke-width="1.7"/><path d="M4 4h16v2H4z" fill="#5f7b3c" stroke="#3b2f25" stroke-width="1.5"/></svg>
+            <b>Gather the Harvest</b>
+          </div>
+          <div class="q-desc">Collect ripe berries before the first frost touches the orchard.</div>
+          <div class="q-progress"><i style="width:70%"></i></div>
+          <div class="q-meta"><span>7 / 10 berries</span>
+            <span class="q-reward"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#d9a441" stroke="#3b2f25" stroke-width="1.7"/><path d="M12 8v8M9 10h6" stroke="#b07e22" stroke-width="1.6" stroke-linecap="round"/></svg>+40</span>
+          </div>
+        </div>
+
+        <div class="parchment">
+          <span class="pin"></span>
+          <div class="q-top">
+            <svg class="q-icon" viewBox="0 0 24 24"><path d="M16 4c3 0 6 2 6 5 0 1-2 0-4-1-1 2-2 2-3 2l-1-1c1-1 1-2 2-3-1-1-1-2-1-2Z" fill="#a9a59c" stroke="#3b2f25" stroke-width="1.5"/><path d="M13 9 5 20" stroke="#8a5d31" stroke-width="2.6" stroke-linecap="round"/></svg>
+            <b>Mend the Cabin</b>
+          </div>
+          <div class="q-desc">Craft an axe and chop 5 sturdy logs to patch the leaky roof.</div>
+          <div class="q-progress"><i style="width:30%"></i></div>
+          <div class="q-meta"><span>craft axe · 0 / 5 logs</span>
+            <span class="q-reward"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#d9a441" stroke="#3b2f25" stroke-width="1.7"/><path d="M12 8v8M9 10h6" stroke="#b07e22" stroke-width="1.6" stroke-linecap="round"/></svg>+75</span>
+          </div>
+        </div>
+
+        <div class="parchment q-done">
+          <span class="pin"></span>
+          <div class="q-top">
+            <svg class="q-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#7c9a55" stroke="#3b2f25" stroke-width="1.7"/><path d="M8 12l3 3 5-6" fill="none" stroke="#fbffef" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <b>Light the First Fire</b>
+          </div>
+          <div class="q-desc">Build a campfire to keep the night chill away. Well done, wanderer!</div>
+          <div class="q-meta"><span>completed</span>
+            <span class="q-reward"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#d9a441" stroke="#3b2f25" stroke-width="1.7"/><path d="M12 8v8M9 10h6" stroke="#b07e22" stroke-width="1.6" stroke-linecap="round"/></svg>+30</span>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /right col -->
+  </div><!-- /grid -->
+
+  <p class="footer-note"><span>Whispering Woods — a cozy survival HUD · hand-drawn storybook UI kit</span></p>
+
+</div><!-- /stage -->
+</body>
+</html>

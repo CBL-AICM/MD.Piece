@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MD.Piece × 吉卜力動畫風配色 — Demo</title>
+<style>
+  /* =========================================================================
+     MD.Piece「cozy 手繪故事書」主題 — 完整版互動 demo
+     5 個可切換畫面：首頁 / 症狀 / 藥物 / 生理 / 情緒
+     全離線、單檔、純 inline SVG/CSS + vanilla JS（對應現有 app.js 的分頁概念）
+     ========================================================================= */
+  :root{
+    /* === 吉卜力／宮崎駿動畫風配色 ===
+       明亮通透的天空藍、油彩感蓊鬱綠、奶油米白、溫暖陽光金 */
+    --paper:#f6eed6; --paper-deep:#ece1c1; --ink:#3d352a; --ink-soft:#6e6049;
+    --wood:#c08a4e; --wood-dark:#9a6332; --wood-deep:#73451f;
+    --leaf:#6fa84e; --leaf-dark:#4f7e36; --berry:#d65a3f; --berry-dark:#ad3e28;
+    --sky:#9fd0e6; --gold:#f0c24a; --gold-dark:#c8952a; --water:#5aa6c4; --slot:#f0e2bd;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;
+    font-family:"Comic Sans MS","Chalkboard SE","PingFang TC","Microsoft JhengHei",cursive,sans-serif;
+    color:var(--ink);
+    /* 吉卜力藍白天空：天藍由上而下漸亮到接近白 */
+    background:linear-gradient(180deg,#5fb4e6 0%,#86c8ec 36%,#bce1f4 70%,#eaf6fc 100%);
+    background-attachment:fixed;
+    display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 14px 40px;position:relative;}
+  /* 蓬鬆白雲，滿天分布 */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-repeat:no-repeat;
+    background-image:
+      radial-gradient(120px 44px at 18% 10%,rgba(255,255,255,.98),rgba(255,255,255,0) 72%),
+      radial-gradient(80px 30px at 30% 14%,rgba(255,255,255,.95),rgba(255,255,255,0) 72%),
+      radial-gradient(64px 24px at 9% 15%,rgba(255,255,255,.9),rgba(255,255,255,0) 72%),
+      radial-gradient(140px 50px at 84% 7%,rgba(255,255,255,.97),rgba(255,255,255,0) 72%),
+      radial-gradient(90px 34px at 72% 12%,rgba(255,255,255,.9),rgba(255,255,255,0) 72%),
+      radial-gradient(110px 40px at 50% 30%,rgba(255,255,255,.78),rgba(255,255,255,0) 74%),
+      radial-gradient(150px 52px at 22% 64%,rgba(255,255,255,.62),rgba(255,255,255,0) 76%),
+      radial-gradient(170px 56px at 86% 82%,rgba(255,255,255,.6),rgba(255,255,255,0) 76%);}
+  .lead,.phone,.hintbar{position:relative;z-index:1;}
+  .lead{max-width:430px;text-align:center;color:#2f4a3a;}
+  .lead h1{margin:0 0 4px;font-size:18px;}
+  .lead p{margin:0;font-size:12px;color:#3a5544;line-height:1.5;}
+
+  /* ---------- phone frame ---------- */
+  .phone{width:390px;max-width:100%;background:var(--paper);border:3px solid var(--ink);
+    border-radius:34px;padding:10px 10px 0;position:relative;overflow:hidden;
+    box-shadow:0 10px 0 rgba(59,47,37,.25),0 0 0 6px #d8c39a inset;
+    background-image:radial-gradient(circle at 50% 50%,rgba(90,65,35,.04)0,rgba(90,65,35,.16)100%),
+      radial-gradient(rgba(80,60,35,.08).6px,transparent .8px);background-size:auto,7px 7px;}
+  .notch{width:120px;height:18px;background:var(--ink);border-radius:0 0 14px 14px;margin:0 auto 6px;}
+  .screen{height:730px;overflow-y:auto;padding:2px 12px 88px;}
+  .screen::-webkit-scrollbar{width:0;}
+
+  /* ---------- shared bits ---------- */
+  .page{display:none;}
+  .page.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  .ptitle{display:flex;align-items:center;gap:8px;margin:6px 2px 12px;}
+  .ptitle b{font-size:18px;}
+  .ptitle .sub{margin-left:auto;font-size:11px;color:var(--ink-soft);}
+
+  .card{position:relative;background:var(--paper-deep);border:2.5px solid var(--ink);
+    border-radius:15px 12px 16px 13px/13px 16px 12px 15px;box-shadow:2px 3px 0 rgba(59,47,37,.16);
+    padding:13px 14px;margin-bottom:14px;}
+  .card::after{content:"";position:absolute;inset:3px;border:1.5px solid rgba(59,47,37,.3);
+    border-radius:12px 15px 11px 14px/14px 11px 15px 12px;pointer-events:none;}
+  .card>h2{margin:0 0 11px;font-size:14px;display:flex;align-items:center;gap:7px;}
+  .card>h2 .tag{margin-left:auto;font-size:10px;font-weight:normal;color:var(--ink-soft);
+    background:var(--paper);border:1.5px dashed var(--ink-soft);border-radius:7px;padding:2px 7px;}
+
+  .btn{font-family:inherit;cursor:pointer;border:2px solid var(--ink);border-radius:9px;
+    padding:6px 12px;font-size:11px;font-weight:bold;box-shadow:1px 2px 0 rgba(59,47,37,.22);transition:transform .1s;}
+  .btn:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(59,47,37,.22);}
+  .btn.go{background:linear-gradient(180deg,var(--leaf),var(--leaf-dark));color:#fbffef;text-shadow:0 1px 0 rgba(0,0,0,.25);}
+  .btn.alt{background:var(--paper);color:var(--ink-soft);}
+  .btn.warm{background:linear-gradient(180deg,var(--gold),var(--gold-dark));color:#3b2f25;}
+
+  /* greeting */
+  .greet{display:flex;align-items:center;gap:10px;margin:4px 2px 14px;}
+  .avatar{width:46px;height:46px;flex:0 0 46px;border-radius:50%;
+    background:linear-gradient(160deg,var(--leaf),var(--leaf-dark));border:2.5px solid var(--ink);
+    display:flex;align-items:center;justify-content:center;box-shadow:1px 2px 0 rgba(59,47,37,.2);}
+  .greet .hi b{font-size:16px;}.greet .hi div{font-size:11px;color:var(--ink-soft);}
+  .greet .day{margin-left:auto;text-align:right;font-size:11px;color:var(--ink-soft);}
+  .greet .day b{font-size:14px;color:var(--ink);}
+
+  /* mood/weather card */
+  .mood{background:linear-gradient(180deg,var(--sky)0%,#d9e7df 100%);border:2.5px solid var(--ink);
+    border-radius:15px 12px 16px 13px/13px 16px 12px 15px;box-shadow:2px 3px 0 rgba(59,47,37,.16);
+    overflow:hidden;position:relative;padding:14px;margin-bottom:14px;}
+  .mood .row{display:flex;align-items:center;gap:12px;}
+  .mood .wx{width:62px;height:62px;flex:0 0 62px;}
+  .mood .mtxt b{font-size:17px;}.mood .mtxt div{font-size:11px;color:var(--ink-soft);margin-top:1px;}
+  .mood .battery{margin-left:auto;display:flex;align-items:center;gap:5px;}
+  .batt-wrap{width:18px;height:46px;border:2.5px solid var(--ink);border-radius:5px;background:#cdb78c;position:relative;overflow:hidden;}
+  .batt-wrap::before{content:"";position:absolute;top:-5px;left:50%;margin-left:-5px;width:10px;height:4px;background:var(--ink);border-radius:2px 2px 0 0;}
+  .batt-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,var(--leaf),var(--leaf-dark));transition:height .4s;}
+  .mood .battery span{font-size:11px;font-weight:bold;color:var(--leaf-dark);}
+  .why{font-size:10.5px;color:var(--ink-soft);background:rgba(124,154,85,.16);border-left:3px solid var(--leaf);
+    border-radius:0 7px 7px 0;padding:6px 9px;line-height:1.45;margin-top:11px;}
+  .why b{color:var(--leaf-dark);}
+
+  /* vitals */
+  .vit-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .vit{display:flex;align-items:center;gap:9px;background:var(--paper);border:2px solid var(--ink);
+    border-radius:11px;padding:7px 9px;box-shadow:1px 2px 0 rgba(59,47,37,.12);}
+  .vit svg{width:28px;height:28px;flex:0 0 28px;}
+  .vit .v b{font-size:15px;}.vit .v b small{font-size:9px;font-weight:normal;color:var(--ink-soft);}
+  .vit .v div{font-size:10px;color:var(--ink-soft);}
+  .vit .v .bar-wrap{width:84px;height:8px;background:#cdb78c;border:1.5px solid var(--ink);border-radius:5px;overflow:hidden;margin-top:3px;}
+  .vit .v .bar{height:100%;}
+
+  /* quest board */
+  .questboard{background:linear-gradient(180deg,var(--wood)0%,var(--wood-dark)100%);border:3px solid var(--ink);
+    border-radius:15px 12px 16px 13px/13px 16px 12px 15px;box-shadow:2px 3px 0 rgba(59,47,37,.22);
+    padding:13px;margin-bottom:14px;position:relative;}
+  .questboard::before{content:"";position:absolute;inset:5px;border-radius:11px;pointer-events:none;
+    background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.06)0 1px,transparent 1px 15px);}
+  .questboard h2{margin:0 0 11px;text-align:center;color:#fff4dc;font-size:14px;letter-spacing:.5px;
+    text-shadow:1px 1px 0 var(--wood-deep);position:relative;}
+  .qb-count{position:relative;text-align:center;color:#fff4dc;font-size:10px;opacity:.85;margin:-6px 0 10px;}
+  .note{position:relative;background:radial-gradient(circle at 30% 20%,#fdf3d8,#f0dcae 78%,#e3cb96 100%);
+    border-radius:6px;padding:11px 12px;margin-bottom:11px;color:var(--ink);box-shadow:1px 2px 4px rgba(0,0,0,.26);
+    clip-path:polygon(0% 4%,4% 0%,40% 2%,70% 0%,96% 0%,100% 5%,99% 50%,100% 96%,95% 100%,55% 98%,20% 100%,3% 99%,0% 92%,1% 50%,0% 30%);}
+  .note:last-child{margin-bottom:0;}
+  .note .pin{position:absolute;top:-6px;left:50%;margin-left:-7px;width:14px;height:14px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#ff9a7a,var(--berry-dark));border:1.5px solid var(--ink);box-shadow:0 2px 2px rgba(0,0,0,.3);}
+  .note .top{display:flex;align-items:center;gap:8px;}
+  .note .pill{width:30px;height:30px;flex:0 0 30px;background:var(--slot);border:2px solid var(--wood-deep);
+    border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:inset 1px 1px 2px rgba(111,72,36,.4);}
+  .note .pill svg{width:74%;height:74%;}
+  .note b{font-size:13px;}.note .time{margin-left:auto;font-size:11px;font-weight:bold;color:var(--berry-dark);}
+  .note .desc{font-size:11px;color:var(--ink-soft);margin:6px 0 8px;line-height:1.4;}
+  .note .acts{display:flex;gap:7px;margin-top:9px;}
+  .note.done b,.note.done .desc{text-decoration:line-through;opacity:.6;}
+  .note.done .time{color:var(--leaf-dark);}
+
+  /* med cabinet slots */
+  .cab-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px;}
+  .slot{position:relative;aspect-ratio:1/1;border-radius:11px 9px 12px 10px/10px 12px 9px 11px;
+    background:linear-gradient(160deg,var(--slot),#dcc596);border:2.5px solid var(--wood-deep);
+    box-shadow:inset 2px 2px 4px rgba(111,72,36,.42),inset -1px -1px 0 rgba(255,248,225,.6),1px 2px 0 rgba(59,47,37,.15);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s;}
+  .slot:hover{transform:translateY(-3px) rotate(-1deg);}
+  .slot svg{width:58%;height:58%;}
+  .slot .qty{position:absolute;right:4px;bottom:2px;font-size:10px;font-weight:bold;text-shadow:0 1px 0 rgba(255,248,225,.9);}
+  .slot .nm{position:absolute;left:0;right:0;bottom:-15px;text-align:center;font-size:9px;color:var(--ink-soft);}
+
+  /* quick action tools */
+  .belt{display:flex;gap:9px;}
+  .tool{flex:1;background:linear-gradient(160deg,var(--slot),#dcc596);border:2.5px solid var(--wood-deep);
+    border-radius:11px 9px 12px 10px/10px 12px 9px 11px;padding:9px 4px 7px;text-align:center;cursor:pointer;
+    box-shadow:inset 1px 1px 3px rgba(111,72,36,.4),1px 2px 0 rgba(59,47,37,.15);transition:transform .12s;}
+  .tool:hover{transform:translateY(-3px) rotate(2deg);}
+  .tool svg{width:30px;height:30px;}.tool div{font-size:10px;color:var(--ink-soft);margin-top:2px;}
+
+  /* symptom logger */
+  .bodymap{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;}
+  .bpart{flex:1 0 28%;text-align:center;background:var(--paper);border:2px solid var(--ink);border-radius:10px;
+    padding:8px 2px;font-size:11px;cursor:pointer;transition:.12s;}
+  .bpart.sel{background:linear-gradient(180deg,var(--berry),var(--berry-dark));color:#fff7e6;border-color:var(--ink);}
+  .bpart svg{width:24px;height:24px;display:block;margin:0 auto 2px;}
+  .sev-row{display:flex;align-items:center;gap:10px;margin:6px 0 2px;}
+  .sev-row input[type=range]{flex:1;accent-color:var(--berry);}
+  .sevface{width:40px;height:40px;flex:0 0 40px;}
+  .sevtxt{text-align:center;font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+  .sevtxt b{font-size:14px;color:var(--ink);}
+  .loglist{margin-top:4px;}
+  .logitem{display:flex;align-items:center;gap:8px;background:var(--paper);border:2px solid var(--ink);
+    border-radius:10px;padding:7px 10px;margin-bottom:7px;font-size:11px;}
+  .logitem .dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;}
+  .logitem .when{margin-left:auto;color:var(--ink-soft);font-size:10px;}
+
+  /* triage (Decision Aid) result */
+  .triage{background:radial-gradient(circle at 30% 10%,#fdf3d8,#f0dcae 80%);border:2.5px solid var(--ink);
+    border-radius:14px;padding:13px;box-shadow:2px 3px 0 rgba(59,47,37,.16);}
+  .triage .lvl{display:flex;align-items:center;gap:10px;}
+  .triage .badge{width:50px;height:50px;flex:0 0 50px;border-radius:50%;border:2.5px solid var(--ink);
+    display:flex;align-items:center;justify-content:center;font-size:22px;}
+  .triage .lvl b{font-size:16px;}.triage .lvl div{font-size:11px;color:var(--ink-soft);}
+  .triage ul{margin:10px 0 0;padding-left:18px;font-size:11px;color:var(--ink-soft);line-height:1.6;}
+  .triage ul b{color:var(--ink);}
+
+  /* history bars (vitals) */
+  .hist{display:flex;align-items:flex-end;gap:6px;height:84px;padding:4px 2px 0;}
+  .hist .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .hist .col i{width:100%;background:linear-gradient(180deg,var(--berry),var(--berry-dark));
+    border:2px solid var(--ink);border-radius:6px 6px 0 0;display:block;}
+  .hist .col span{font-size:9px;color:var(--ink-soft);}
+
+  /* mood picker */
+  .moodpick{display:flex;gap:8px;margin-bottom:6px;}
+  .mchip{flex:1;text-align:center;background:var(--paper);border:2px solid var(--ink);border-radius:11px;
+    padding:9px 2px 7px;cursor:pointer;transition:.12s;}
+  .mchip.sel{background:linear-gradient(180deg,var(--gold),var(--gold-dark));}
+  .mchip svg{width:30px;height:30px;}.mchip div{font-size:10px;color:var(--ink-soft);margin-top:1px;}
+  .forecast{display:flex;justify-content:space-between;gap:6px;margin-top:8px;}
+  .fc{flex:1;background:var(--paper);border:2px solid var(--ink);border-radius:10px;padding:7px 2px 6px;text-align:center;}
+  .fc .d{font-size:10px;color:var(--ink-soft);}.fc svg{width:24px;height:24px;margin:3px 0 1px;}.fc .t{font-size:10px;font-weight:bold;}
+
+  /* xiaohe bubble */
+  .xh{display:none;background:radial-gradient(circle at 20% 20%,#fdf3d8,#f0dcae);border:2.5px solid var(--ink);
+    border-radius:14px 14px 14px 4px;padding:11px 13px;margin-bottom:14px;font-size:11.5px;line-height:1.5;
+    box-shadow:2px 3px 0 rgba(59,47,37,.16);}
+  .xh.show{display:block;animation:fade .25s;}
+  .xh .who{display:flex;align-items:center;gap:7px;font-weight:bold;margin-bottom:6px;font-size:12px;}
+  .xh .who svg{width:24px;height:24px;}
+
+  /* toast */
+  .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(10px);
+    background:var(--ink);color:#fbffef;font-size:12px;padding:8px 16px;border-radius:20px;opacity:0;
+    pointer-events:none;transition:.25s;z-index:9;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* bottom nav */
+  .nav{position:absolute;left:10px;right:10px;bottom:0;height:72px;
+    background:linear-gradient(180deg,var(--wood)0%,var(--wood-dark)100%);border:2.5px solid var(--ink);border-bottom:none;
+    border-radius:16px 16px 0 0;display:flex;justify-content:space-around;align-items:center;padding:0 6px;
+    box-shadow:0 -2px 0 rgba(59,47,37,.18);z-index:8;}
+  .nav a{flex:1;text-align:center;color:#fbedcf;text-decoration:none;opacity:.8;cursor:pointer;}
+  .nav a svg{width:24px;height:24px;}.nav a div{font-size:9.5px;margin-top:1px;}
+  .nav a.on{opacity:1;}
+  .nav a .chip{display:none;width:6px;height:6px;border-radius:50%;background:var(--gold);margin:2px auto 0;border:1px solid var(--ink);}
+  .nav a.on .chip{display:block;}
+
+  .hintbar{max-width:430px;text-align:center;font-size:11px;color:#2f4a3a;margin-top:2px;}
+  .hintbar b{color:#3b2f25;}
+</style>
+</head>
+<body>
+
+  <div class="lead">
+    <h1>MD.Piece × 吉卜力動畫風配色</h1>
+    <p>同一套介面換上宮崎駿動畫的藍白天空、草原綠與陽光金。<br>下方 5 個分頁可切換，按鈕一樣都能操作。</p>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+
+      <!-- ============ 首頁 ============ -->
+      <section class="page active" id="home">
+        <div class="greet">
+          <div class="avatar"><svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="#fbffef" stroke="#3b2f25" stroke-width="1.8"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" fill="#fbffef" stroke="#3b2f25" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="hi"><b>早安，阿嬤 ☀</b><div>今天身體感覺如何呢？</div></div>
+          <div class="day"><b>5月31日</b><div>週六 · 上午 8:40</div></div>
+        </div>
+
+        <div class="mood">
+          <div class="row">
+            <svg class="wx" id="homeWx" viewBox="0 0 64 64">
+              <circle cx="38" cy="22" r="11" fill="#d9a441" stroke="#3b2f25" stroke-width="2.4"/>
+              <g stroke="#d9a441" stroke-width="2.6" stroke-linecap="round"><path d="M38 4v6M53 14l-4 4M56 32h-6M24 7l3 5"/></g>
+              <path d="M16 46c-5 0-8-3-8-7s3-7 8-7c1-5 5-8 10-8 6 0 10 4 11 9 4 0 7 3 7 7s-3 6-7 6H16Z" fill="#fbfdfb" stroke="#3b2f25" stroke-width="2.6" stroke-linejoin="round"/>
+            </svg>
+            <div class="mtxt"><b id="homeMood">心情：晴時多雲</b><div>情緒電力 · 今天還不錯</div></div>
+            <div class="battery"><div class="batt-wrap"><div class="batt-fill" style="height:72%"></div></div><span>72%</span></div>
+          </div>
+          <div class="why"><b>為什麼這樣顯示？</b> 這 3 天睡眠都有 6 小時以上、疼痛分數下降，所以電力回升。小核建議：早上散步 10 分鐘。</div>
+        </div>
+
+        <div class="card">
+          <h2><svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 9 2-5h7" fill="none" stroke="#c2552f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>今晨生理數值 <span class="tag">點「生理」看趨勢</span></h2>
+          <div class="vit-grid">
+            <div class="vit"><svg viewBox="0 0 32 32"><path d="M16 27C7 20 3 15 3 10.5 3 7 6 4.5 9.2 4.5c2.3 0 3.9 1.3 4.8 2.6h.4c.9-1.3 2.5-2.6 4.8-2.6C26.4 4.5 29 7 29 10.5 29 15 25 20 16 27Z" fill="#c2552f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg><div class="v"><b>78<small> bpm</small></b><div>心率 · 正常</div></div></div>
+            <div class="vit"><svg viewBox="0 0 32 32"><path d="M16 4c5 6 9 10 9 14.5A9 9 0 1 1 7 18.5C7 14 11 10 16 4Z" fill="#6fa3b0" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg><div class="v"><b>118/76</b><div>血壓 · 良好</div></div></div>
+          </div>
+        </div>
+
+        <div class="questboard">
+          <h2>✦ 今日用藥 & 任務 ✦</h2>
+          <div class="qb-count">完成 <span id="homeDone">1</span> / 3</div>
+          <div class="note done">
+            <span class="pin"></span>
+            <div class="top"><span class="pill"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="#7c9a55" stroke="#3b2f25" stroke-width="2"/><path d="M11 16l3 3 6-7" fill="none" stroke="#fbffef" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><b>晨間散步</b><span class="time">已完成</span></div>
+            <div class="desc">陪阿公走到公園 — 真棒！</div>
+          </div>
+          <div class="note" id="homeMed">
+            <span class="pin"></span>
+            <div class="top"><span class="pill"><svg viewBox="0 0 32 32"><rect x="6" y="11" width="20" height="10" rx="5" fill="#c2552f" stroke="#3b2f25" stroke-width="2"/><path d="M16 11v10" stroke="#fff7e6" stroke-width="2"/></svg></span><b>降血壓藥（脈優）</b><span class="time">08:00</span></div>
+            <div class="desc">早餐後 1 顆 · 配溫開水</div>
+            <div class="acts"><button class="btn go" onclick="takeHomeMed(this)">✓ 已服用</button><button class="btn alt">晚點提醒</button></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>快捷動作</h2>
+          <div class="belt">
+            <div class="tool" onclick="go('symptoms')"><svg viewBox="0 0 32 32"><path d="M7 25 22 10l-3-3L4 22l-1 4 4-1Z" fill="#7c9a55" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><path d="M19 7l3 3" stroke="#3b2f25" stroke-width="2"/></svg><div>記症狀</div></div>
+            <div class="tool" onclick="go('meds')"><svg viewBox="0 0 32 32"><rect x="5" y="9" width="22" height="16" rx="3" fill="#b6824b" stroke="#3b2f25" stroke-width="2"/><circle cx="16" cy="17" r="5" fill="#cfe6df" stroke="#3b2f25" stroke-width="2"/><path d="M11 9l2-3h6l2 3" fill="#8a5d31" stroke="#3b2f25" stroke-width="2"/></svg><div>拍藥盒</div></div>
+            <div class="tool" onclick="toggleXh()"><svg viewBox="0 0 32 32"><path d="M6 7h20v14H14l-5 4v-4H6V7Z" fill="#d9a441" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="14" r="1.4" fill="#3b2f25"/><circle cx="16" cy="14" r="1.4" fill="#3b2f25"/><circle cx="20" cy="14" r="1.4" fill="#3b2f25"/></svg><div>問小核</div></div>
+            <div class="tool" onclick="go('vitals')"><svg viewBox="0 0 32 32"><path d="M4 26V6M4 18h12l-2-3 2-3H4" fill="#c2552f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg><div>時間軸</div></div>
+          </div>
+        </div>
+
+        <div class="xh" id="xhBubble">
+          <div class="who"><svg viewBox="0 0 32 32"><path d="M6 7h20v14H14l-5 4v-4H6V7Z" fill="#d9a441" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="14" r="1.4" fill="#3b2f25"/><circle cx="16" cy="14" r="1.4" fill="#3b2f25"/><circle cx="20" cy="14" r="1.4" fill="#3b2f25"/></svg>小核</div>
+          阿嬤早安！您今天血壓 118/76 很穩定 👍。提醒：08:00 的脈優還沒吃喔，吃完幫您打勾。<b>為什麼重要：</b>規律服藥能避免血壓忽高忽低造成頭暈。
+        </div>
+      </section>
+
+      <!-- ============ 症狀紀錄 + 分析 ============ -->
+      <section class="page" id="symptoms">
+        <div class="ptitle"><b>症狀紀錄</b><span class="sub">點部位 → 拉強度 → 記錄</span></div>
+        <div class="card">
+          <h2>哪裡不舒服？</h2>
+          <div class="bodymap" id="bodymap">
+            <div class="bpart" data-p="頭部" onclick="pickPart(this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="5" fill="#f0dcae" stroke="#3b2f25" stroke-width="1.8"/><path d="M8 18c0-2 2-3 4-3s4 1 4 3" fill="none" stroke="#3b2f25" stroke-width="1.8"/></svg>頭部</div>
+            <div class="bpart" data-p="胸口" onclick="pickPart(this)"><svg viewBox="0 0 24 24"><path d="M12 5C9 5 6 7 6 10c0 4 4 7 6 9 2-2 6-5 6-9 0-3-3-5-6-5Z" fill="#c2552f" stroke="#3b2f25" stroke-width="1.8" stroke-linejoin="round"/></svg>胸口</div>
+            <div class="bpart" data-p="腹部" onclick="pickPart(this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="#7c9a55" stroke="#3b2f25" stroke-width="1.8"/><path d="M9 12c1 1.5 5 1.5 6 0" stroke="#fff" stroke-width="1.6"/></svg>腹部</div>
+            <div class="bpart" data-p="關節" onclick="pickPart(this)"><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5" fill="#cfe6df" stroke="#3b2f25" stroke-width="1.8"/><circle cx="15" cy="15" r="3.5" fill="#cfe6df" stroke="#3b2f25" stroke-width="1.8"/><path d="M11 11l2 2" stroke="#3b2f25" stroke-width="1.8"/></svg>關節</div>
+            <div class="bpart" data-p="腰背" onclick="pickPart(this)"><svg viewBox="0 0 24 24"><path d="M12 4v16M9 8l3-2 3 2M9 16l3 2 3-2" fill="none" stroke="#3b2f25" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>腰背</div>
+            <div class="bpart" data-p="其他" onclick="pickPart(this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#f0dcae" stroke="#3b2f25" stroke-width="1.8"/><path d="M10 10a2 2 0 1 1 2.6 2c-.6.4-.6 1-.6 1.5" fill="none" stroke="#3b2f25" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="#3b2f25"/></svg>其他</div>
+          </div>
+          <div class="sev-row">
+            <svg class="sevface" id="sevFace" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="#d9a441" stroke="#3b2f25" stroke-width="2.4"/><circle cx="14" cy="17" r="1.8" fill="#3b2f25"/><circle cx="26" cy="17" r="1.8" fill="#3b2f25"/><path id="sevMouth" d="M14 25c2 2 10 2 12 0" fill="none" stroke="#3b2f25" stroke-width="2.4" stroke-linecap="round"/></svg>
+            <input type="range" id="sev" min="1" max="5" value="2" oninput="updSev()">
+          </div>
+          <div class="sevtxt">疼痛強度：<b id="sevTxt">輕微（2）</b></div>
+          <button class="btn go" style="width:100%;padding:9px" onclick="logSymptom()">＋ 記錄這筆症狀</button>
+        </div>
+
+        <div class="card">
+          <h2>症狀分析 <span class="tag">Decision Aid</span></h2>
+          <div class="triage">
+            <div class="lvl"><div class="badge" style="background:#f0dcae">🟡</div><div><b>建議：門診追蹤</b><div>非緊急，但 2–3 天內看診較安心</div></div></div>
+            <ul>
+              <li><b>為什麼：</b>胸口悶 + 輕微、無冒冷汗／無喘 → 風險偏低</li>
+              <li><b>要注意：</b>若出現「壓迫感蔓延手臂、冒冷汗」請立刻就醫</li>
+              <li><b>科別：</b>心臟內科 / 家醫科</li>
+            </ul>
+            <div style="display:flex;gap:7px;margin-top:11px">
+              <button class="btn warm" onclick="toast('已加入回診提醒')">加入回診提醒</button>
+              <button class="btn alt" onclick="toast('已存進健康時間軸')">存到時間軸</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>最近紀錄</h2>
+          <div class="loglist" id="logList">
+            <div class="logitem"><span class="dot" style="background:#c2552f"></span>胸口 · 悶悶的<span class="when">昨天 21:10</span></div>
+            <div class="logitem"><span class="dot" style="background:#d9a441"></span>頭部 · 微脹<span class="when">前天 14:30</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 藥物紀錄 ============ -->
+      <section class="page" id="meds">
+        <div class="ptitle"><b>藥物紀錄</b><span class="sub" id="medCount">今日 1/3</span></div>
+
+        <div class="questboard">
+          <h2>✦ 今日服藥時程 ✦</h2>
+          <div class="note done">
+            <span class="pin"></span>
+            <div class="top"><span class="pill"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="#7c9a55" stroke="#3b2f25" stroke-width="2"/><path d="M11 16l3 3 6-7" fill="none" stroke="#fbffef" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><b>甲狀腺素</b><span class="time">07:00</span></div>
+            <div class="desc">空腹 1 顆 · 已服用</div>
+          </div>
+          <div class="note medRow">
+            <span class="pin"></span>
+            <div class="top"><span class="pill"><svg viewBox="0 0 32 32"><rect x="6" y="11" width="20" height="10" rx="5" fill="#c2552f" stroke="#3b2f25" stroke-width="2"/><path d="M16 11v10" stroke="#fff7e6" stroke-width="2"/></svg></span><b>降血壓藥（脈優）</b><span class="time">08:00</span></div>
+            <div class="desc">早餐後 1 顆 · 配溫開水</div>
+            <div class="why"><b>為什麼提醒：</b>昨天血壓 138/88 偏高，規律服藥可避免頭暈。</div>
+            <div class="acts"><button class="btn go" onclick="takeMed(this)">✓ 已服用</button><button class="btn alt">晚點提醒</button></div>
+          </div>
+          <div class="note medRow">
+            <span class="pin"></span>
+            <div class="top"><span class="pill"><svg viewBox="0 0 32 32"><rect x="5" y="13" width="22" height="9" rx="4.5" fill="#d9a441" stroke="#3b2f25" stroke-width="2" transform="rotate(-28 16 17)"/></svg></span><b>飯前血糖藥</b><span class="time">11:30</span></div>
+            <div class="desc">午餐前 1 顆</div>
+            <div class="why"><b>為什麼提醒：</b>女兒已開啟「家屬視角」，服用後會同步通知她。</div>
+            <div class="acts"><button class="btn go" onclick="takeMed(this)">✓ 已服用</button><button class="btn alt">晚點提醒</button></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><svg width="18" height="18" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="#b6824b" stroke="#3b2f25" stroke-width="1.8"/><path d="M4 10h16M12 6v2M12 14v3" stroke="#3b2f25" stroke-width="1.6" stroke-linecap="round"/></svg>我的藥櫃 <span class="tag">7 種藥</span></h2>
+          <div class="cab-grid">
+            <div class="slot" onclick="toast('脈優 · 剩 28 顆')"><svg viewBox="0 0 32 32"><rect x="5" y="12" width="22" height="8" rx="4" fill="#c2552f" stroke="#3b2f25" stroke-width="2"/><path d="M16 12v8" stroke="#fff7e6" stroke-width="2"/></svg><span class="qty">28</span><span class="nm">脈優</span></div>
+            <div class="slot" onclick="toast('阿斯匹靈 · 剩 14 顆')"><svg viewBox="0 0 32 32"><ellipse cx="16" cy="16" rx="9" ry="6" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/><path d="M11 16h10" stroke="#b07e22" stroke-width="2"/></svg><span class="qty">14</span><span class="nm">阿斯匹靈</span></div>
+            <div class="slot" onclick="toast('降血糖 · 剩 30 顆')"><svg viewBox="0 0 32 32"><rect x="6" y="13" width="20" height="9" rx="4.5" fill="#7c9a55" stroke="#3b2f25" stroke-width="2" transform="rotate(-28 16 17)"/></svg><span class="qty">30</span><span class="nm">降血糖</span></div>
+            <div class="slot" onclick="toast('維他命 D · 每日 1 顆')"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="9" fill="#cfe6df" stroke="#3b2f25" stroke-width="2"/><path d="M16 11v10M11 16h10" stroke="#6fa3b0" stroke-width="2" stroke-linecap="round"/></svg><span class="qty">∞</span><span class="nm">維他命</span></div>
+            <div class="slot" onclick="toast('止咳藥水 · 剩 1 瓶')"><svg viewBox="0 0 32 32"><path d="M13 5a3 3 0 0 1 6 0v9a6 6 0 1 1-6 0V5Z" fill="#f0dcae" stroke="#3b2f25" stroke-width="2"/></svg><span class="qty">1</span><span class="nm">藥水</span></div>
+            <div class="slot" onclick="toast('止痛藥 · 需要時 1 顆')"><svg viewBox="0 0 32 32"><rect x="5" y="12" width="22" height="8" rx="4" fill="#9c3f22" stroke="#3b2f25" stroke-width="2"/><path d="M16 12v8" stroke="#fff7e6" stroke-width="2"/></svg><span class="qty">10</span><span class="nm">止痛</span></div>
+            <div class="slot" onclick="toast('鈣片 · 剩 21 顆')"><svg viewBox="0 0 32 32"><ellipse cx="16" cy="16" rx="9" ry="6" fill="#cdb78c" stroke="#3b2f25" stroke-width="2"/></svg><span class="qty">21</span><span class="nm">鈣片</span></div>
+            <div class="slot" style="background:linear-gradient(160deg,#d9c193,#cdb583)" onclick="toast('掃描藥袋新增藥物')"><svg viewBox="0 0 32 32"><path d="M9 16h14M16 9v14" stroke="#8a5d31" stroke-width="2.6" stroke-linecap="round"/></svg><span class="nm">新增</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 生理紀錄 ============ -->
+      <section class="page" id="vitals">
+        <div class="ptitle"><b>生理紀錄</b><span class="sub">今晨量測</span></div>
+        <div class="card">
+          <h2>四項數值</h2>
+          <div class="vit-grid">
+            <div class="vit"><svg viewBox="0 0 32 32"><path d="M16 27C7 20 3 15 3 10.5 3 7 6 4.5 9.2 4.5c2.3 0 3.9 1.3 4.8 2.6h.4c.9-1.3 2.5-2.6 4.8-2.6C26.4 4.5 29 7 29 10.5 29 15 25 20 16 27Z" fill="#c2552f" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg><div class="v"><b>78<small> bpm</small></b><div>心率 · 正常</div><div class="bar-wrap"><div class="bar" style="width:62%;background:#c2552f"></div></div></div></div>
+            <div class="vit"><svg viewBox="0 0 32 32"><path d="M16 4c5 6 9 10 9 14.5A9 9 0 1 1 7 18.5C7 14 11 10 16 4Z" fill="#6fa3b0" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg><div class="v"><b>118/76</b><div>血壓 · 良好</div><div class="bar-wrap"><div class="bar" style="width:55%;background:#6fa3b0"></div></div></div></div>
+            <div class="vit"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="#7c9a55" stroke-width="3"/><path d="M16 5a11 11 0 0 1 0 22" fill="none" stroke="#5f7b3c" stroke-width="3" stroke-linecap="round"/></svg><div class="v"><b>98<small> %</small></b><div>血氧 · 良好</div><div class="bar-wrap"><div class="bar" style="width:98%;background:#7c9a55"></div></div></div></div>
+            <div class="vit"><svg viewBox="0 0 32 32"><path d="M13 5a3 3 0 0 1 6 0v11a6 6 0 1 1-6 0V5Z" fill="#f0dcae" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="22" r="3.4" fill="#c2552f"/></svg><div class="v"><b>36.5<small> °C</small></b><div>體溫 · 正常</div><div class="bar-wrap"><div class="bar" style="width:50%;background:#c98a3f"></div></div></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>血壓 7 日趨勢 <span class="tag">收縮壓</span></h2>
+          <div class="hist">
+            <div class="col"><i style="height:60%"></i><span>一</span></div>
+            <div class="col"><i style="height:78%"></i><span>二</span></div>
+            <div class="col"><i style="height:70%"></i><span>三</span></div>
+            <div class="col"><i style="height:88%;background:linear-gradient(180deg,#9c3f22,#7a2f1a)"></i><span>四</span></div>
+            <div class="col"><i style="height:66%"></i><span>五</span></div>
+            <div class="col"><i style="height:58%"></i><span>六</span></div>
+            <div class="col"><i style="height:50%"></i><span>日</span></div>
+          </div>
+          <div class="why" style="margin-top:12px"><b>小核解讀：</b>週四收縮壓 138 偏高（已標紅），可能與當天少喝水有關；其餘 6 天都在正常範圍，整體穩定。</div>
+        </div>
+
+        <div class="card">
+          <h2>我的健康時間軸 <span class="tag">跨院整合</span></h2>
+          <div class="loglist">
+            <div class="logitem"><span class="dot" style="background:#7c9a55"></span>台大 · 心臟內科回診<span class="when">5/20</span></div>
+            <div class="logitem"><span class="dot" style="background:#d9a441"></span>抽血報告（自上傳 OCR）<span class="when">5/18</span></div>
+            <div class="logitem"><span class="dot" style="background:#6fa3b0"></span>榮總 · 新增降血壓藥<span class="when">5/10</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 情緒電力 ============ -->
+      <section class="page" id="emotions">
+        <div class="ptitle"><b>情緒電力</b><span class="sub">記錄今天的心情天氣</span></div>
+        <div class="mood">
+          <div class="row">
+            <svg class="wx" id="emoWx" viewBox="0 0 64 64">
+              <circle cx="38" cy="22" r="11" fill="#d9a441" stroke="#3b2f25" stroke-width="2.4"/>
+              <g stroke="#d9a441" stroke-width="2.6" stroke-linecap="round"><path d="M38 4v6M53 14l-4 4M56 32h-6M24 7l3 5"/></g>
+              <path d="M16 46c-5 0-8-3-8-7s3-7 8-7c1-5 5-8 10-8 6 0 10 4 11 9 4 0 7 3 7 7s-3 6-7 6H16Z" fill="#fbfdfb" stroke="#3b2f25" stroke-width="2.6" stroke-linejoin="round"/>
+            </svg>
+            <div class="mtxt"><b id="emoMood">晴時多雲</b><div>選一個最接近今天的天氣</div></div>
+            <div class="battery"><div class="batt-wrap"><div class="batt-fill" id="emoBatt" style="height:72%"></div></div><span id="emoPct">72%</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>今天心情像什麼天氣？</h2>
+          <div class="moodpick" id="moodPick">
+            <div class="mchip" data-m="晴" data-pct="92" onclick="pickMood(this)"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="7" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/><g stroke="#d9a441" stroke-width="2.2" stroke-linecap="round"><path d="M16 3v3M16 26v3M3 16h3M26 16h3M7 7l2 2M23 23l2 2M25 7l-2 2M9 23l-2 2"/></g></svg><div>晴朗</div></div>
+            <div class="mchip sel" data-m="晴時多雲" data-pct="72" onclick="pickMood(this)"><svg viewBox="0 0 32 32"><circle cx="20" cy="12" r="6" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/><path d="M9 24c-3 0-5-2-5-4s2-4 5-4c1-3 4-4 6-4 4 0 6 3 6 6 3 0 5 2 5 4s-2 2-5 2H9Z" fill="#fbfdfb" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg><div>多雲</div></div>
+            <div class="mchip" data-m="陰天" data-pct="48" onclick="pickMood(this)"><svg viewBox="0 0 32 32"><path d="M9 22c-3 0-5-2-5-5s2-5 5-5c1-3 3-5 6-5 4 0 6 3 7 6 3 0 5 2 5 5s-2 4-5 4H9Z" fill="#b9c6bf" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/></svg><div>陰天</div></div>
+            <div class="mchip" data-m="下雨" data-pct="28" onclick="pickMood(this)"><svg viewBox="0 0 32 32"><path d="M9 18c-3 0-5-2-5-5s2-5 5-5c1-3 3-5 6-5 4 0 6 3 7 6 3 0 5 2 5 5s-2 4-5 4H9Z" fill="#9fb3aa" stroke="#3b2f25" stroke-width="2" stroke-linejoin="round"/><g stroke="#6fa3b0" stroke-width="2" stroke-linecap="round"><path d="M11 23l-1 4M17 23l-1 4M23 23l-1 4"/></g></svg><div>下雨</div></div>
+          </div>
+          <button class="btn go" style="width:100%;padding:9px;margin-top:4px" onclick="saveMood()">記錄今天的心情</button>
+        </div>
+
+        <div class="card">
+          <h2>本週心情預報 <span class="tag">7 日</span></h2>
+          <div class="forecast">
+            <div class="fc"><div class="d">一</div><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="7" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/></svg><div class="t">好</div></div>
+            <div class="fc"><div class="d">二</div><svg viewBox="0 0 32 32"><path d="M9 22c-3 0-5-2-5-5s2-5 5-5c1-3 3-5 6-5 4 0 6 3 7 6 3 0 5 2 5 5s-2 4-5 4H9Z" fill="#cfe0d6" stroke="#3b2f25" stroke-width="2"/></svg><div class="t">普</div></div>
+            <div class="fc"><div class="d">三</div><svg viewBox="0 0 32 32"><path d="M9 18c-3 0-5-2-5-5s2-5 5-5c1-3 3-5 6-5 4 0 6 3 7 6 3 0 5 2 5 5s-2 4-5 4H9Z" fill="#b9c6bf" stroke="#3b2f25" stroke-width="2"/><g stroke="#6fa3b0" stroke-width="2" stroke-linecap="round"><path d="M11 21l-1 3M18 21l-1 3"/></g></svg><div class="t">低</div></div>
+            <div class="fc"><div class="d">四</div><svg viewBox="0 0 32 32"><circle cx="16" cy="14" r="6" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/><path d="M11 22c-3 0-5-2-5-4s2-4 5-4c1-2 3-3 5-3" fill="#fbfdfb" stroke="#3b2f25" stroke-width="2"/></svg><div class="t">回升</div></div>
+            <div class="fc"><div class="d">五</div><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="7" fill="#d9a441" stroke="#3b2f25" stroke-width="2"/></svg><div class="t">好</div></div>
+          </div>
+          <div class="why" style="margin-top:12px"><b>為什麼預報下降：</b>週三是回診日，過往紀錄顯示您回診前一晚較焦慮、睡眠變短。要不要幫您排「睡前深呼吸」提醒？</div>
+        </div>
+      </section>
+
+    </div><!-- /screen -->
+
+    <div class="toast" id="toast"></div>
+
+    <!-- bottom nav -->
+    <nav class="nav" id="nav">
+      <a class="on" data-go="home" onclick="go('home')"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-9Z" fill="#fbedcf" stroke="#3b2f25" stroke-width="1.6" stroke-linejoin="round"/></svg><div>首頁</div><span class="chip"></span></a>
+      <a data-go="symptoms" onclick="go('symptoms')"><svg viewBox="0 0 24 24"><path d="M5 6h11M5 11h8M5 16h11" stroke="#fbedcf" stroke-width="1.8" stroke-linecap="round"/><path d="M19 14l3 3-3 3" fill="none" stroke="#fbedcf" stroke-width="1.8" stroke-linejoin="round"/></svg><div>症狀</div><span class="chip"></span></a>
+      <a data-go="meds" onclick="go('meds')"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="#fbedcf" stroke-width="1.8"/><path d="M4 10h16M12 6v2" stroke="#fbedcf" stroke-width="1.6" stroke-linecap="round"/></svg><div>藥物</div><span class="chip"></span></a>
+      <a data-go="vitals" onclick="go('vitals')"><svg viewBox="0 0 24 24"><path d="M3 13h4l2-5 3 9 2-5h7" fill="none" stroke="#fbedcf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div>生理</div><span class="chip"></span></a>
+      <a data-go="emotions" onclick="go('emotions')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="#fbedcf" stroke-width="1.8"/><path d="M9 14c1 1.5 5 1.5 6 0" stroke="#fbedcf" stroke-width="1.8" stroke-linecap="round"/><circle cx="9.5" cy="10" r="1" fill="#fbedcf"/><circle cx="14.5" cy="10" r="1" fill="#fbedcf"/></svg><div>情緒</div><span class="chip"></span></a>
+    </nav>
+  </div>
+
+  <p class="hintbar">＊完整互動 demo（前端 mock，未接後端）。對應現有分頁：<b>症狀 / 藥物 / 生理 / 情緒</b>。<br>
+     貫徹設計憲法：<b>可解釋 AI（為什麼）</b>、<b>長者大字</b>、<b>家屬視角</b>、<b>醫病共決（Decision Aid）</b>、<b>繁中</b>。</p>
+
+<script>
+  // ----- 分頁切換（對應 app.js 的 data-page 概念）-----
+  function go(id){
+    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));
+    document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('on',a.dataset.go===id));
+    document.querySelector('.screen').scrollTop=0;
+  }
+
+  // ----- toast -----
+  let tT;
+  function toast(msg){
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),1800);
+  }
+
+  // ----- 服藥打勾 -----
+  let doneCount=1;
+  function markDone(note){
+    if(note.classList.contains('done'))return false;
+    note.classList.add('done');
+    const acts=note.querySelector('.acts'); if(acts)acts.remove();
+    const why=note.querySelector('.why'); if(why)why.remove();
+    note.querySelector('.time').textContent='已服用';
+    const pill=note.querySelector('.pill');
+    pill.innerHTML='<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="#7c9a55" stroke="#3b2f25" stroke-width="2"/><path d="M11 16l3 3 6-7" fill="none" stroke="#fbffef" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return true;
+  }
+  function takeMed(btn){
+    if(markDone(btn.closest('.note'))){ doneCount++; refreshCounts(); toast('已記錄服藥 ✓ 已通知家人'); }
+  }
+  function takeHomeMed(btn){
+    if(markDone(btn.closest('.note'))){ doneCount++; refreshCounts(); toast('已服用 ✓'); }
+  }
+  function refreshCounts(){
+    document.getElementById('homeDone').textContent=doneCount;
+    document.getElementById('medCount').textContent='今日 '+doneCount+'/3';
+  }
+
+  // ----- 問小核 -----
+  function toggleXh(){ document.getElementById('xhBubble').classList.toggle('show'); }
+
+  // ----- 症狀：部位 + 強度 -----
+  let selPart='胸口';
+  function pickPart(el){
+    document.querySelectorAll('#bodymap .bpart').forEach(b=>b.classList.remove('sel'));
+    el.classList.add('sel'); selPart=el.dataset.p;
+  }
+  const sevWords=['','非常輕微','輕微','中等','明顯','嚴重'];
+  const sevColor=['','#7c9a55','#d9a441','#d9a441','#c2772f','#c2552f'];
+  const sevMouth=['','M14 24c2 1.5 10 1.5 12 0','M14 25c2 2 10 2 12 0','M14 26h12','M14 27c2-2 10-2 12 0','M14 28c2-3 10-3 12 0'];
+  function updSev(){
+    const v=+document.getElementById('sev').value;
+    document.getElementById('sevTxt').textContent=sevWords[v]+'（'+v+'）';
+    document.getElementById('sevMouth').setAttribute('d',sevMouth[v]);
+    document.querySelector('#sevFace circle').setAttribute('fill',v>=4?'#e8b46b':'#d9a441');
+  }
+  function logSymptom(){
+    const v=+document.getElementById('sev').value;
+    const list=document.getElementById('logList');
+    const row=document.createElement('div');
+    row.className='logitem';
+    row.innerHTML='<span class="dot" style="background:'+sevColor[v]+'"></span>'+selPart+' · '+sevWords[v]+'<span class="when">剛剛</span>';
+    list.prepend(row);
+    toast('已記錄：'+selPart+' · '+sevWords[v]);
+  }
+
+  // ----- 情緒：心情天氣 -----
+  let selMood='晴時多雲', selPct=72;
+  const wxSun='<circle cx="32" cy="32" r="13" fill="#d9a441" stroke="#3b2f25" stroke-width="2.6"/><g stroke="#d9a441" stroke-width="3" stroke-linecap="round"><path d="M32 6v8M32 50v8M6 32h8M50 32h8M14 14l5 5M45 45l5 5M50 14l-5 5M19 45l-5 5"/></g>';
+  const wxCloud='<circle cx="40" cy="24" r="11" fill="#d9a441" stroke="#3b2f25" stroke-width="2.4"/><g stroke="#d9a441" stroke-width="2.6" stroke-linecap="round"><path d="M40 6v6M55 16l-4 4M58 34h-6M26 9l3 5"/></g><path d="M18 48c-5 0-8-3-8-7s3-7 8-7c1-5 5-8 10-8 6 0 10 4 11 9 4 0 7 3 7 7s-3 6-7 6H18Z" fill="#fbfdfb" stroke="#3b2f25" stroke-width="2.6" stroke-linejoin="round"/>';
+  const wxGrey='<path d="M18 42c-6 0-10-4-10-9s4-9 10-9c2-6 6-9 11-9 7 0 11 5 11 10 5 0 9 3 9 8s-4 8-9 8H18Z" fill="#b9c6bf" stroke="#3b2f25" stroke-width="2.6" stroke-linejoin="round"/>';
+  const wxRain='<path d="M18 38c-6 0-10-4-10-9s4-9 10-9c2-6 6-9 11-9 7 0 11 5 11 10 5 0 9 3 9 8s-4 8-9 8H18Z" fill="#9fb3aa" stroke="#3b2f25" stroke-width="2.6" stroke-linejoin="round"/><g stroke="#6fa3b0" stroke-width="3" stroke-linecap="round"><path d="M20 46l-2 8M32 46l-2 8M44 46l-2 8"/></g>';
+  const wxMap={'晴':wxSun,'晴時多雲':wxCloud,'陰天':wxGrey,'下雨':wxRain};
+  function pickMood(el){
+    document.querySelectorAll('#moodPick .mchip').forEach(c=>c.classList.remove('sel'));
+    el.classList.add('sel');
+    selMood=el.dataset.m; selPct=+el.dataset.pct;
+    document.getElementById('emoWx').innerHTML=wxMap[selMood];
+    document.getElementById('emoMood').textContent=selMood;
+    document.getElementById('emoBatt').style.height=selPct+'%';
+    document.getElementById('emoPct').textContent=selPct+'%';
+  }
+  function saveMood(){
+    // 同步回首頁
+    document.getElementById('homeWx').innerHTML=wxMap[selMood];
+    document.getElementById('homeMood').textContent='心情：'+selMood;
+    document.querySelector('#home .batt-fill').style.height=selPct+'%';
+    document.querySelector('#home .battery span').textContent=selPct+'%';
+    toast('今天的心情已記錄 ☁ → 已同步首頁');
+  }
+</script>
+</body>
+</html>

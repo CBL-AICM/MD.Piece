@@ -1,0 +1,105 @@
+/* ═══════════════════════════════════════════════════════════════
+   MD.Piece — 衛教書房・手作繪本風（education-scoped）
+
+   範圍限縮：全部規則掛在 body[data-page="education"] 之下，
+   只影響「衛教文章庫 / 書櫃」這一頁，其餘畫面維持原本 v11。
+
+   設計語言：handcrafted storybook / gouache paper、暖紙質感＋細顆粒紋理、
+   霧面（無 glossy）、柔和圓角、muted earthy 配色
+   （sage green / cream beige / warm brown / desaturated blue）、
+   手繪墨線但偏編輯級專業感（非卡通），資訊層級清晰、可讀性優先。
+
+   不改 style.css；要還原移除 index.html 這支 <link> 即可。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 只把 muted-earthy 色票限縮在衛教頁內容（背景維持原本，不覆寫）── */
+body[data-page="education"] #app {
+  --cream:        #f3ecda;   /* cream beige 紙面 */
+  --cream-dim:    #e9dec6;
+  --bg-surface:   #f3ecda;
+  --bg-glass:     #f3ecda;
+  --text:         #3f3527;   /* 暖棕墨字 */
+  --text-dim:     #6c5f4c;
+  --text-muted:   #8a7c66;
+  --navy:         #4a3d2c;   /* 標題：深暖棕 */
+  --border:       rgba(80,62,42,0.28);
+  --border-glass: rgba(80,62,42,0.24);
+  --border-mid:   rgba(80,62,42,0.40);
+  --accent:       #7d97a8;   /* desaturated blue */
+  --accent-light: #9fb3c0;
+  --accent-deep:  #5d7484;
+  --green:        #8a9a6f;   /* sage green */
+  --green-deep:   #6e7e54;
+  --amber:        #c6a35e;   /* muted 陽光土金 */
+  --amber-deep:   #a98442;
+  --rose:         #c2725a;   /* muted terracotta */
+  --rose-deep:    #a25842;
+}
+
+/* ── 衛教頁卡片 → 奶油紙卡：柔和圓角 + 細墨邊 + 軟陰影（不 glossy）── */
+body[data-page="education"] .card,
+body[data-page="education"] .list-card,
+body[data-page="education"] .home-edu-card,
+body[data-page="education"] .edu-card-mini {
+  background: var(--cream) !important;
+  border: 1.5px solid rgba(80,62,42,0.40) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 16px -10px rgba(80,60,40,0.40) !important;
+  /* 細顆粒紙紋 */
+  background-image: radial-gradient(rgba(120,95,60,.045) .6px, transparent .8px) !important;
+  background-size: 7px 7px !important;
+}
+body[data-page="education"] .pv-hero {
+  background: linear-gradient(180deg,#f6efdd,#efe5cd) !important;
+  border: 1.5px solid rgba(80,62,42,0.40) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 16px -10px rgba(80,60,40,0.40) !important;
+}
+body[data-page="education"] .sec-title { color: var(--navy) !important; }
+body[data-page="education"] .lucide,
+body[data-page="education"] svg.lucide {
+  stroke-width: 2.1 !important; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ════════════════════════════════════════════════════════════
+   書櫃重設計：暖紙木箱（霧面）取代原本亮面蜂蜜木
+   ════════════════════════════════════════════════════════════ */
+body[data-page="education"] .bookshelf-wrap {
+  /* 暖紙面 + 細顆粒，去掉亮面水彩噴點與蜂蜜漸層 */
+  background:
+    radial-gradient(rgba(120,95,60,.06) .7px, transparent .9px),
+    linear-gradient(180deg, #e3d4b6 0%, #d8c6a4 100%) !important;
+  background-size: 6px 6px, 100% 100% !important;
+  border: 2px solid #9c7c54 !important;          /* 柔和暖棕框 */
+  border-radius: 18px !important;
+  box-shadow: 0 10px 24px -14px rgba(70,52,30,0.45) !important;  /* 軟陰影 */
+  filter: none !important;
+}
+/* 移除亮面高光斑 */
+body[data-page="education"] .bookshelf-wrap::before { display: none !important; }
+
+/* 每層：去掉內陰影漸層，改柔和墨棕分隔線 */
+body[data-page="education"] .shelf {
+  background: none !important;
+  border-bottom: 2px solid rgba(124,94,62,0.45) !important;
+}
+body[data-page="education"] .shelf-label,
+body[data-page="education"] .bookshelf-title { color: #7c5e3e !important; opacity: .72 !important; }
+
+/* 書背：gouache 平塗 + 紙顆粒，霧面（去亮面高光），柔墨邊 */
+body[data-page="education"] .book {
+  background-color: var(--book-color, #cdbfa6) !important;
+  background-image:
+    radial-gradient(rgba(255,255,255,.10) .5px, transparent .7px),          /* 紙顆粒 */
+    linear-gradient(180deg, rgba(244,238,222,.20), rgba(120,95,60,.10)) !important; /* 暖紙薄敷，輕微統一色調 */
+  background-size: 5px 5px, 100% 100% !important;
+  border: 2px solid #5c4836 !important;          /* 暖棕墨線（非死黑） */
+  border-radius: 7px 8px 6px 9px !important;
+  box-shadow: 0 3px 7px -3px rgba(70,52,30,0.40) !important;  /* 軟陰影，拿掉亮面 inset 白邊 */
+}
+
+/* 免責頁尾在紙底上維持可讀 */
+body[data-page="education"] .disclaimer-footer {
+  background: rgba(255,255,255,0.45) !important;
+  border-radius: 12px !important;
+}
