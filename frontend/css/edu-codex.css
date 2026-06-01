@@ -18,6 +18,10 @@
   --codex-parch:    #efe3c4;
   --codex-parch-2:  #e7d6ac;
   --codex-edge:     #cdb988;
+  /* 手寫字型堆疊：優先用系統／開源楷書手寫字（多數裝置已內建），無大檔 webfont；
+     缺字時優雅退回現有襯線，仍可讀（長者模式 readability 不致崩）。 */
+  --codex-hand: "LXGW WenKai TC", "LXGW WenKai", "Jason Handwriting", "KaiTi TC",
+                "KaiTi", "DFKai-SB", "BiauKai", "標楷體", "Noto Serif TC", serif;
 }
 
 /* ── 書桌底（書本外的木質暗底，襯托羊皮紙）── */
@@ -79,7 +83,8 @@ body[data-page="education"] .nb-subtle {
 
 /* ── 正文：襯線、墨色、寬鬆行距 ── */
 body[data-page="education"] .edu-article-body {
-  font-family: "Cormorant Garamond", "Noto Serif TC", "Songti TC", "STSong", serif !important;
+  /* 衛教內文用手寫體更生動（章名仍維持襯線紅字，對齊圖 2 印刷標題） */
+  font-family: var(--codex-hand) !important;
   color: var(--codex-ink) !important;
   font-size: 1.12rem !important;
   line-height: 2.0 !important;
@@ -135,15 +140,20 @@ body[data-page="education"] .edu-article-body li::before {
   content: "❧"; position: absolute; left: 2px; color: var(--codex-gold); font-size: .85em;
 }
 
-/* 首字下沉（JS 包 .codex-dropcap） */
+/* 首字下沉（JS 包 .codex-dropcap）— 蝕刻「初模框」：boxed engraving initial，
+   對齊古版書章首大寫字母被細墨線框 + 米紙底襯的傳統（畫風支柱 1/6）。 */
 body[data-page="education"] .codex-dropcap {
   float: left;
   font-family: "Cormorant Garamond", serif;
-  font-size: 3.3rem;
-  line-height: .82;
-  padding: 4px 10px 2px 0;
+  font-size: 3rem;
+  line-height: 1;
+  margin: 4px 12px 2px 0;
+  padding: 8px 12px;
   color: var(--codex-burgundy);
   font-weight: 700;
+  border: 1.4px solid var(--codex-ink);
+  background: linear-gradient(160deg, #f4ead0, #ecdcb4);
+  box-shadow: 2px 2px 0 rgba(58,42,30,.16);
 }
 
 /* 文章內插圖 → 仿古銅版蝕刻（去彩、加墨框） */
@@ -276,7 +286,12 @@ body.codex-reader-open { overflow: hidden; }
     radial-gradient(rgba(120,90,50,.06) .6px, transparent .9px),
     linear-gradient(165deg, #f0e4c6 0%, #e6d3a8 100%);
   background-size: auto, auto, 7px 7px, 100% 100%;
-  box-shadow: 0 18px 50px -12px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,250,235,.5);
+  /* 紙張堆疊感：右／下緣疊出多層紙邊，像一疊厚筆記本（對齊參考圖的仿真筆記本）。 */
+  box-shadow:
+    3px 4px 0 -1px #ece0bf, 6px 8px 0 -1px #e4d5ac,
+    10px 13px 0 -1px #d9c89a, 14px 19px 0 -1px #cdba86,
+    0 22px 52px -12px rgba(0,0,0,.7),
+    inset 0 0 0 1px rgba(255,250,235,.5);
 }
 /* 破墨邊框（SVG turbulence 手繪感：外黑內暗紅） */
 .codex-reader-stage::after {
@@ -355,15 +370,40 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   min-height: 86%;
 }
+/* 每章插圖自成一頁（整頁插圖頁，對齊圖 2「左頁插圖／右頁文字」） */
+.codex-plate {
+  break-before: column; -webkit-column-break-before: always;
+}
+/* 左頁對齊用的空白欄（JS 在對開模式視需要插入，把插圖推到左頁） */
+.codex-col-spacer {
+  height: 100%; min-height: 86%;
+  break-after: column; -webkit-column-break-after: always;
+  break-inside: avoid; -webkit-column-break-inside: avoid;
+}
 .codex-plate-art {
-  display: inline-block; background: #f1e7cd; padding: 12px;
-  border: 2px solid #2a1d12; border-radius: 2px;
+  position: relative;
+  display: inline-block; padding: 16px;
+  border: none; border-radius: 1px;
   box-shadow: 3px 3px 0 rgba(58,42,30,.20);
   max-width: 92%;
+  /* 加強排線材質：暖米底 + 斜向細排線（45° hatching）做出蝕刻紙的手感 */
+  background:
+    repeating-linear-gradient(45deg, rgba(58,42,30,.06) 0 1px, transparent 1px 5px),
+    #f1e7cd;
+}
+/* 破墨雙線蝕刻框（feTurbulence 手繪抖動：外粗內細）— 取代乾淨的向量直線框，
+   對齊銅版書插圖的破墨手繪邊框（畫風支柱 5）。 */
+.codex-plate-art::before {
+  content: ""; position: absolute; inset: 5px; pointer-events: none; z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 380' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='e'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.014 0.03' numOctaves='3' seed='4' result='n'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='n' scale='6'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url(%23e)' fill='none' stroke='%232a1d12'%3E%3Crect x='6' y='6' width='288' height='368' stroke-width='3'/%3E%3Crect x='12' y='12' width='276' height='356' stroke-width='1'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%; background-repeat: no-repeat;
 }
 .codex-plate-art svg {
+  position: relative; z-index: 2;
   display: block; width: 100%; height: auto; max-height: 46vh;
-  filter: sepia(.45) contrast(1.06) brightness(.99);
+  /* 桌機＝古董書：維持銅版雕刻單色（sepia 去彩 + 紅 spot color）。
+     手機＝筆記本：在下方 media query 改高飽和（暖色插畫）。 */
+  filter: sepia(.42) contrast(1.06) brightness(.99);
 }
 .codex-plate figcaption {
   margin-top: 10px; color: var(--codex-ink-soft);
@@ -380,4 +420,152 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
   font-family: "Cormorant Garamond","Noto Serif TC",serif;
   color: var(--codex-burgundy); font-size: 1.9rem; line-height: 1.25;
   letter-spacing: 1px; padding: 0 10px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   手機版「活頁筆記本」（≤ 767px）
+   — 桌機端維持古董書原樣，僅手機切換為活頁筆記本 UI；
+     貼紙與圓點 indicator 在桌機由 CSS 隱藏。
+   ════════════════════════════════════════════════════════════ */
+
+/* 書籤貼紙與底部圓點 indicator：桌機完全不顯示 */
+@media (min-width: 768px) {
+  .codex-bookmark-sticker,
+  .codex-dots { display: none !important; }
+
+  /* 書本實體感：四周留出桌面、書葉外加皮革封面／裝訂邊（圖 2 的書本物件感） */
+  .codex-book { padding: 14px 46px 6px; }
+  .codex-reader-stage {
+    box-shadow:
+      0 0 0 9px #2a1d12, 0 0 0 12px #1a120c,                 /* 皮革封面邊 + 暗裝訂 */
+      3px 4px 0 9px #ece0bf, 7px 9px 0 9px #e0d0a4,          /* 露出的書頁厚度 */
+      0 26px 60px -14px rgba(0,0,0,.78),
+      inset 0 0 0 1px rgba(255,250,235,.5);
+  }
+  /* 對開兩頁的中央書脊（左右兩頁交界的內凹陰影） */
+  .codex-spine {
+    left: 50%; right: auto; transform: translateX(-50%); width: 48px;
+    background: linear-gradient(90deg,
+      rgba(60,40,20,0) 0%, rgba(60,40,20,.06) 32%,
+      rgba(60,40,20,.34) 50%, rgba(60,40,20,.06) 68%, rgba(60,40,20,0) 100%);
+  }
+  /* 桌機插圖更純的單色雕刻（圖 2 的銅版黑白線畫） */
+  .codex-plate-art svg { filter: grayscale(.55) sepia(.3) contrast(1.1) brightness(.98); }
+
+  /* 翻頁葉（3D）：next 從書脊往左翻、prev 從書脊往右翻 */
+  .codex-leaf {
+    position: absolute; top: 0; bottom: 0; width: 50%; z-index: 6; pointer-events: none;
+    background: linear-gradient(90deg, #e7d9b4 0%, #f1e5c7 60%, #f3e8ca 100%);
+    box-shadow: 0 0 34px rgba(60,40,20,.28);
+    backface-visibility: hidden;
+  }
+  .codex-leaf.turn-next { right: 0; transform-origin: left center;
+    animation: codexLeafNext .6s cubic-bezier(.36,.1,.2,1) forwards; }
+  .codex-leaf.turn-prev { left: 0; transform-origin: right center;
+    animation: codexLeafPrev .6s cubic-bezier(.36,.1,.2,1) forwards; }
+  @keyframes codexLeafNext {
+    0%   { transform: perspective(1700px) rotateY(0deg); }
+    100% { transform: perspective(1700px) rotateY(-172deg); }
+  }
+  @keyframes codexLeafPrev {
+    0%   { transform: perspective(1700px) rotateY(0deg); }
+    100% { transform: perspective(1700px) rotateY(172deg); }
+  }
+}
+@media (prefers-reduced-motion: reduce) { .codex-leaf { display: none !important; } }
+
+@media (max-width: 767px) {
+  /* 書葉外觀：左留位給打孔釘環、角更柔、不需要破墨 SVG 邊框（手機螢幕太小、易雜訊） */
+  .codex-reader-stage {
+    margin: 22px 14px 0 22px;
+    border-radius: 8px 12px 12px 6px;
+    /* 右／下緣疊紙（紙張堆疊感）+ 左緣釘環內陰影 */
+    box-shadow:
+      3px 4px 0 -1px #ece0bf, 6px 8px 0 -1px #e3d4ab, 9px 12px 0 -1px #d6c597,
+      0 18px 50px -12px rgba(0,0,0,.7),
+      inset 14px 0 22px -14px rgba(60,40,20,.32),
+      inset 0 0 0 1px rgba(255,250,235,.5);
+  }
+  .codex-reader-stage::after { display: none; }     /* 關掉破墨邊框，讓筆記本感更乾淨 */
+  .codex-spine { display: none; }                   /* 書脊在手機不適合 */
+
+  /* 左側 5 個打孔釘環（pure CSS：黑色金屬釘 + 內凹高光） */
+  .codex-reader-stage::before {
+    content: "";
+    position: absolute;
+    left: -12px; top: 8%; bottom: 8%;
+    width: 14px;
+    pointer-events: none;
+    z-index: 5;
+    background-image:
+      radial-gradient(circle at 50% 10%,  #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px),
+      radial-gradient(circle at 50% 32.5%, #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px),
+      radial-gradient(circle at 50% 55%,   #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px),
+      radial-gradient(circle at 50% 77.5%, #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px),
+      radial-gradient(circle at 50% 100%,  #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px);
+    background-repeat: no-repeat;
+    filter: drop-shadow(1px 1px 0 rgba(255,250,235,.45)) drop-shadow(0 1px 2px rgba(0,0,0,.4));
+  }
+
+  /* 上方書籤貼紙 — 米黃紙條 + 醫療圖示，輕微旋轉、貼紙撕角陰影 */
+  .codex-bookmark-sticker {
+    position: absolute;
+    top: -10px; right: 28px;
+    width: 50px; height: 62px;
+    z-index: 7;
+    background:
+      linear-gradient(180deg, #f6e9c2 0%, #ecdba6 100%);
+    border: 1px solid rgba(120,90,40,.32);
+    border-radius: 2px 2px 3px 3px;
+    box-shadow:
+      2px 5px 9px rgba(0,0,0,.28),
+      inset 0 -6px 10px rgba(120,90,40,.16);
+    transform: rotate(-3.5deg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .codex-bookmark-sticker .lucide,
+  .codex-bookmark-sticker svg {
+    width: 24px; height: 24px;
+    color: var(--codex-burgundy);
+    stroke-width: 2.2;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.18));
+  }
+  /* 貼紙底部撕痕（兩條斜陰影模擬撕開的紙邊） */
+  .codex-bookmark-sticker::after {
+    content: ""; position: absolute;
+    left: -1px; right: -1px; bottom: -3px; height: 4px;
+    background:
+      linear-gradient(transparent 40%, rgba(120,90,40,.28) 41% 55%, transparent 56%),
+      linear-gradient(135deg, transparent 0 40%, rgba(0,0,0,.12) 41% 45%, transparent 46%);
+    background-size: 100% 100%, 6px 4px;
+    background-repeat: no-repeat, repeat-x;
+  }
+
+  /* 進度條改為圓點 indicator（既有 pagebar 還是保留為底層輔助） */
+  .codex-pagebar {
+    height: 2px;                                    /* 變細，幾乎不搶戲 */
+    margin: 4px 36px 0;
+    opacity: .55;
+  }
+  .codex-dots {
+    display: flex; gap: 7px; justify-content: center;
+    padding: 8px 0 2px;
+    min-height: 16px;
+  }
+  .codex-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(239,224,189,.32);
+    transition: transform .25s ease, background-color .25s ease;
+  }
+  .codex-dot.active {
+    background: var(--codex-gold);
+    transform: scale(1.55);
+    box-shadow: 0 0 0 2px rgba(156,123,63,.25);
+  }
+
+  /* 控制列在手機略小一點，騰出空間給圓點 */
+  .codex-fbtn { padding: 7px 12px; font-size: .9rem; }
+
+  /* 手機＝暖色筆記本：插圖改高飽和（拿掉桌機的 sepia 去彩），讓彩色插畫跳出來 */
+  .codex-plate-art svg { filter: contrast(1.08) saturate(1.18); }
 }

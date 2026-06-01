@@ -389,6 +389,11 @@ def generate_education(body: EducationRequest):
         logger.warning(f"Education LLM timeout (>{_LLM_HARD_TIMEOUT_S}s) for topic={topic}")
         content = _timeout_fallback_content(topic, "")
     except Exception as e:
+        # 與模式 1 一致：全 provider 死光（多半是沒設 API key）回 503 llm_unavailable，
+        # 讓前端顯示「請設定 API key」而非當成暫時性錯誤無限重試。
+        if _is_llm_unavailable_error(e):
+            logger.error(f"LLM unavailable (chain exhausted): {e}")
+            raise _llm_unavailable_response()
         logger.error(f"Claude API error: {e}")
         raise HTTPException(status_code=500, detail="衛教內容生成失敗，請稍後再試")
 
