@@ -6095,32 +6095,6 @@ body.edu-notebook-open .mobile-edu-cards { display: none !important; }
   line-height: 1.55;
   counter-increment: nbitem;
 }
-
-/* 「開始閱讀」CTA（導引頁主按鈕）— 對齊書頁色票、滿版、有 icon+主說明+副說明。
-   點下去直接觸發 chapter open 流程，連帶讓對開古董書閱讀器自動彈出。 */
-.nb-start-reading {
-  display: flex; align-items: center; gap: 12px;
-  width: 100%; margin: 16px 0 6px;
-  padding: 14px 18px;
-  background: linear-gradient(180deg, #8c2f3a, #7a2230);
-  color: #f7ecd0;
-  border: 1.5px solid rgba(40,20,16,.55);
-  border-radius: 12px;
-  font-family: "Noto Serif TC", serif;
-  font-size: 1rem; font-weight: 600;
-  letter-spacing: 1px;
-  box-shadow: 0 8px 20px -6px rgba(0,0,0,.35);
-  cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-.nb-start-reading:hover { transform: translateY(-1px); box-shadow: 0 12px 28px -8px rgba(0,0,0,.45); }
-.nb-start-reading:active { transform: translateY(0); box-shadow: 0 4px 12px -4px rgba(0,0,0,.3); }
-.nb-start-reading .lucide { color: #f0d99d; flex: 0 0 auto; }
-.nb-start-reading span { flex: 1; text-align: left; }
-.nb-start-reading small {
-  font-size: .78rem; font-weight: 400; opacity: .82;
-  font-family: "Noto Sans TC", sans-serif; letter-spacing: 0;
-}
 .nb-item strong {
   font-family: "Noto Sans TC", sans-serif;
   font-weight: 600;
