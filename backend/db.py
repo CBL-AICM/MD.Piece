@@ -424,6 +424,18 @@ _SCHEMAS = {
             edited_at TEXT DEFAULT (datetime('now')),
             created_at TEXT DEFAULT (datetime('now'))
         )""",
+    "wearable_connections": """
+        CREATE TABLE IF NOT EXISTS wearable_connections (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            access_token TEXT,
+            refresh_token TEXT,
+            scope TEXT,
+            expires_at TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )""",
     "disease_reference": """
         CREATE TABLE IF NOT EXISTS disease_reference (
             id TEXT PRIMARY KEY,

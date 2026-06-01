@@ -8067,6 +8067,19 @@ function sleep() {
     + '</header>'
     + '<section id="sleep-today" class="sleep-card"><p class="sleep-loading">載入中…</p></section>'
     + '<section id="sleep-timeline-wrap"></section>'
+    + '<section class="sleep-card" id="sleep-connect-card">'
+    +   '<div class="sleep-card-head"><h3>連接穿戴裝置</h3></div>'
+    +   '<p class="sleep-hint">授權後自動把手環／手機健康 App 的睡眠紀錄同步進來（來源標記為「外部匯入」），不需手動補登。</p>'
+    +   '<div id="sleep-connect-status"><p class="sleep-loading">載入中…</p></div>'
+    + '</section>'
+    + '<section class="sleep-card sleep-card-soft">'
+    +   '<div class="sleep-card-head"><h3>前景偵測（實驗）</h3></div>'
+    +   '<p class="sleep-hint">沒有手環時，可用手機動作感測器估算睡眠。請把手機放床邊、螢幕保持亮著、App 開著——這是前景示意，無法整夜背景偵測。</p>'
+    +   '<div class="sleep-export-row">'
+    +     '<button type="button" class="sleep-secondary" id="sleep-sensor-btn" onclick="toggleSleepSensorDemo()"><i data-lucide="activity" style="width:16px;height:16px"></i> 開始偵測</button>'
+    +   '</div>'
+    +   '<p id="sleep-sensor-status" class="sleep-hint"></p>'
+    + '</section>'
     + '<section class="sleep-card">'
     +   '<div class="sleep-card-head"><h3>近期趨勢</h3>'
     +     '<div class="sleep-range-tabs">'
@@ -8094,7 +8107,7 @@ function sleep() {
     + '</section>'
     + '<section class="sleep-card sleep-card-soft">'
     +   '<h3>匯出與匯入</h3>'
-    +   '<p class="sleep-hint">匯出睡眠紀錄，回診時提供給醫護；或從 Apple Health / Health Connect 匯入。</p>'
+    +   '<p class="sleep-hint">匯出睡眠紀錄，回診時提供給醫護。要自動匯入手環資料，請用上方「連接穿戴裝置」。</p>'
     +   '<div class="sleep-export-row">'
     +     '<button type="button" class="sleep-secondary" onclick="exportSleepCsv()"><i data-lucide="download" style="width:16px;height:16px"></i> 匯出 CSV</button>'
     +     '<button type="button" class="sleep-secondary" onclick="exportSleepPdf()"><i data-lucide="file-text" style="width:16px;height:16px"></i> 匯出 PDF</button>'
@@ -8110,6 +8123,145 @@ function loadSleepPage() {
   loadSleepToday();
   loadSleepTrend(7, null);
   loadSleepList();
+  loadSleepConnections();
+}
+
+// ── 連接穿戴裝置（廠商 OAuth：Fitbit）─────────────────────
+function loadSleepConnections() {
+  var host = document.getElementById('sleep-connect-status');
+  var pid = _sleepPid();
+  if (!host || !pid) return;
+  Promise.all([
+    apiFetch(API + '/sleep/providers').then(function(r){ return r.ok ? r.json() : { providers: [] }; }),
+    apiFetch(API + '/sleep/connections?user_id=' + encodeURIComponent(pid)).then(function(r){ return r.ok ? r.json() : { connections: [] }; })
+  ]).then(function(res){
+    var fb = ((res[0].providers) || []).filter(function(p){ return p.id === 'fitbit'; })[0];
+    var connected = ((res[1].connections) || []).some(function(c){ return c.provider === 'fitbit'; });
+    if (!fb) { host.innerHTML = ''; return; }
+    if (!fb.configured) {
+      host.innerHTML = '<p class="sleep-hint">Fitbit 連接尚未在伺服器啟用（管理者需設定金鑰）。</p>';
+      return;
+    }
+    if (connected) {
+      host.innerHTML = '<div class="sleep-export-row">'
+        + '<button type="button" class="sleep-cta" onclick="syncFitbit()"><i data-lucide="refresh-cw" style="width:16px;height:16px"></i> 立即同步</button>'
+        + '<button type="button" class="sleep-secondary" onclick="disconnectFitbit()"><i data-lucide="unlink" style="width:16px;height:16px"></i> 中斷連接</button>'
+        + '</div><p class="sleep-hint">已連接 Fitbit。</p>';
+    } else {
+      host.innerHTML = '<div class="sleep-export-row">'
+        + '<button type="button" class="sleep-cta" onclick="connectFitbit()"><i data-lucide="link" style="width:16px;height:16px"></i> 連接 Fitbit</button>'
+        + '</div>';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }).catch(function(){ host.innerHTML = '<p class="sleep-hint">連接狀態載入失敗。</p>'; });
+}
+
+function connectFitbit() {
+  var pid = _sleepPid();
+  if (!pid) return;
+  apiFetch(API + '/sleep/connect/fitbit/start?user_id=' + encodeURIComponent(pid))
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (d && d.authorize_url) { window.location.href = d.authorize_url; }
+      else if (typeof showToast === 'function') showToast('目前無法連接 Fitbit', 'warning');
+    }).catch(function(){ if (typeof showToast === 'function') showToast('連接失敗，請稍後再試', 'warning'); });
+}
+
+function syncFitbit() {
+  var pid = _sleepPid();
+  if (!pid) return;
+  if (typeof showToast === 'function') showToast('同步中…', 'info');
+  apiFetch(API + '/sleep/sync/fitbit', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: pid, days: 7 })
+  }).then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+    .then(function(d){
+      if (typeof showToast === 'function') showToast('已同步 ' + (d.synced || 0) + ' 筆（略過重複 ' + (d.skipped || 0) + '）', 'success');
+      showPage('sleep');
+    }).catch(function(){ if (typeof showToast === 'function') showToast('同步失敗，請確認已連接 Fitbit', 'warning'); });
+}
+
+function disconnectFitbit() {
+  var pid = _sleepPid();
+  if (!pid) return;
+  if (!confirm('要中斷 Fitbit 連接嗎？已匯入的睡眠紀錄會保留。')) return;
+  apiFetch(API + '/sleep/connections/fitbit?user_id=' + encodeURIComponent(pid), { method: 'DELETE' })
+    .then(function(){ if (typeof showToast === 'function') showToast('已中斷連接', 'success'); loadSleepConnections(); })
+    .catch(function(){ if (typeof showToast === 'function') showToast('操作失敗', 'warning'); });
+}
+
+// ── 前景偵測 demo（手機加速度計 → 現有判睡演算法 /sleep/ingest）──
+var _sleepSensor = null;
+function toggleSleepSensorDemo() {
+  if (_sleepSensor && _sleepSensor.running) stopSleepSensorDemo();
+  else startSleepSensorDemo();
+}
+function _setSensorBtn(label, icon) {
+  var btn = document.getElementById('sleep-sensor-btn');
+  if (!btn) return;
+  btn.innerHTML = '<i data-lucide="' + icon + '" style="width:16px;height:16px"></i> ' + label;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function _setSensorStatus(msg) {
+  var el = document.getElementById('sleep-sensor-status');
+  if (el) el.textContent = msg;
+}
+function startSleepSensorDemo() {
+  if (typeof DeviceMotionEvent === 'undefined') {
+    if (typeof showToast === 'function') showToast('此裝置不支援動作感測', 'warning'); return;
+  }
+  function begin() {
+    _sleepSensor = { running: true, startMs: Date.now(), minute: {}, handler: null };
+    _sleepSensor.handler = function(e){
+      var a = e.accelerationIncludingGravity || e.acceleration; if (!a) return;
+      var mag = Math.sqrt((a.x || 0) * (a.x || 0) + (a.y || 0) * (a.y || 0) + (a.z || 0) * (a.z || 0));
+      var min = Math.floor((Date.now() - _sleepSensor.startMs) / 60000);
+      var b = _sleepSensor.minute[min] || (_sleepSensor.minute[min] = { last: mag, acc: 0 });
+      b.acc += Math.abs(mag - b.last); b.last = mag;
+    };
+    window.addEventListener('devicemotion', _sleepSensor.handler);
+    _setSensorBtn('停止並分析', 'square');
+    _setSensorStatus('偵測中…請把手機放床邊、螢幕保持亮著。停止後會用判睡演算法分析這段。');
+    if (typeof showToast === 'function') showToast('開始前景偵測', 'info');
+  }
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {  // iOS 13+
+    DeviceMotionEvent.requestPermission().then(function(state){
+      if (state === 'granted') begin();
+      else if (typeof showToast === 'function') showToast('未取得動作感測權限', 'warning');
+    }).catch(function(){ if (typeof showToast === 'function') showToast('無法取得動作感測權限', 'warning'); });
+  } else { begin(); }
+}
+function stopSleepSensorDemo() {
+  if (!_sleepSensor || !_sleepSensor.running) return;
+  window.removeEventListener('devicemotion', _sleepSensor.handler);
+  _sleepSensor.running = false;
+  _setSensorBtn('開始偵測', 'activity');
+  var pid = _sleepPid();
+  var startMs = _sleepSensor.startMs;
+  var minutes = _sleepSensor.minute;
+  var keys = Object.keys(minutes);
+  if (!pid || keys.length < 3) { _setSensorStatus('偵測時間太短（至少需約 3 分鐘）。'); return; }
+  var epochs = keys.map(function(k){
+    return {
+      timestamp: new Date(startMs + parseInt(k, 10) * 60000).toISOString(),
+      activity_count: Math.round(minutes[k].acc),
+    };
+  });
+  _setSensorStatus('分析中…');
+  apiFetch(API + '/sleep/ingest', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    // 前景 demo 可在任何時段：放寬夜間時段為全日，讓白天測試也能產生 session
+    body: JSON.stringify({ user_id: pid, epochs: epochs, night_start_hour: 0, night_end_hour: 24 })
+  }).then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+    .then(function(d){
+      if (d && d.session) {
+        _setSensorStatus('完成：已記錄一筆自動偵測睡眠。');
+        if (typeof showToast === 'function') showToast('已產生一筆自動偵測紀錄', 'success');
+        showPage('sleep');
+      } else {
+        _setSensorStatus('這段沒有偵測到明顯睡眠（可能動作太多或時間太短）。');
+      }
+    }).catch(function(){ _setSensorStatus('分析失敗，請稍後再試。'); });
 }
 
 function loadSleepToday() {
