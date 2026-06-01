@@ -370,6 +370,16 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   min-height: 86%;
 }
+/* 每章插圖自成一頁（整頁插圖頁，對齊圖 2「左頁插圖／右頁文字」） */
+.codex-plate {
+  break-before: column; -webkit-column-break-before: always;
+}
+/* 左頁對齊用的空白欄（JS 在對開模式視需要插入，把插圖推到左頁） */
+.codex-col-spacer {
+  height: 100%; min-height: 86%;
+  break-after: column; -webkit-column-break-after: always;
+  break-inside: avoid; -webkit-column-break-inside: avoid;
+}
 .codex-plate-art {
   position: relative;
   display: inline-block; padding: 16px;
@@ -423,13 +433,24 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
   .codex-bookmark-sticker,
   .codex-dots { display: none !important; }
 
+  /* 書本實體感：四周留出桌面、書葉外加皮革封面／裝訂邊（圖 2 的書本物件感） */
+  .codex-book { padding: 14px 46px 6px; }
+  .codex-reader-stage {
+    box-shadow:
+      0 0 0 9px #2a1d12, 0 0 0 12px #1a120c,                 /* 皮革封面邊 + 暗裝訂 */
+      3px 4px 0 9px #ece0bf, 7px 9px 0 9px #e0d0a4,          /* 露出的書頁厚度 */
+      0 26px 60px -14px rgba(0,0,0,.78),
+      inset 0 0 0 1px rgba(255,250,235,.5);
+  }
   /* 對開兩頁的中央書脊（左右兩頁交界的內凹陰影） */
   .codex-spine {
     left: 50%; right: auto; transform: translateX(-50%); width: 48px;
     background: linear-gradient(90deg,
       rgba(60,40,20,0) 0%, rgba(60,40,20,.06) 32%,
-      rgba(60,40,20,.30) 50%, rgba(60,40,20,.06) 68%, rgba(60,40,20,0) 100%);
+      rgba(60,40,20,.34) 50%, rgba(60,40,20,.06) 68%, rgba(60,40,20,0) 100%);
   }
+  /* 桌機插圖更純的單色雕刻（圖 2 的銅版黑白線畫） */
+  .codex-plate-art svg { filter: grayscale(.55) sepia(.3) contrast(1.1) brightness(.98); }
 
   /* 翻頁葉（3D）：next 從書脊往左翻、prev 從書脊往右翻 */
   .codex-leaf {
