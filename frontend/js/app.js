@@ -23300,14 +23300,15 @@ function reminderToggleWeekly() {
 
 function loadRemindersPage() {
   _remindersPid = getStablePatientId();
-  // 預設首次觸發時間 = 30 分鐘後
-  var when = document.getElementById('rem-when');
-  if (when && !when.value) {
-    var d = new Date(Date.now() + 30 * 60 * 1000);
-    var pad = function(n) { return ('0' + n).slice(-2); };
-    when.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-  }
+  // 預設首次觸發時間 = 30 分鐘後（桌機與手機表單都要預填，否則手機按建立會卡在「請選擇時間」）
+  var d = new Date(Date.now() + 30 * 60 * 1000);
+  var pad = function(n) { return ('0' + n).slice(-2); };
+  var defaultWhen = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+    + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  ['rem-when', 'mobile-rem-when'].forEach(function(id) {
+    var when = document.getElementById(id);
+    if (when && !when.value) when.value = defaultWhen;
+  });
   _remindersBindDelegated();
   reminderRefreshList();
   _remindersSeenInboxIds = null;  // 初次載入不響鈴，只記住目前 inbox 狀態
