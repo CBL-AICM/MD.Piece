@@ -417,7 +417,36 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
 @media (min-width: 768px) {
   .codex-bookmark-sticker,
   .codex-dots { display: none !important; }
+
+  /* 對開兩頁的中央書脊（左右兩頁交界的內凹陰影） */
+  .codex-spine {
+    left: 50%; right: auto; transform: translateX(-50%); width: 48px;
+    background: linear-gradient(90deg,
+      rgba(60,40,20,0) 0%, rgba(60,40,20,.06) 32%,
+      rgba(60,40,20,.30) 50%, rgba(60,40,20,.06) 68%, rgba(60,40,20,0) 100%);
+  }
+
+  /* 翻頁葉（3D）：next 從書脊往左翻、prev 從書脊往右翻 */
+  .codex-leaf {
+    position: absolute; top: 0; bottom: 0; width: 50%; z-index: 6; pointer-events: none;
+    background: linear-gradient(90deg, #e7d9b4 0%, #f1e5c7 60%, #f3e8ca 100%);
+    box-shadow: 0 0 34px rgba(60,40,20,.28);
+    backface-visibility: hidden;
+  }
+  .codex-leaf.turn-next { right: 0; transform-origin: left center;
+    animation: codexLeafNext .6s cubic-bezier(.36,.1,.2,1) forwards; }
+  .codex-leaf.turn-prev { left: 0; transform-origin: right center;
+    animation: codexLeafPrev .6s cubic-bezier(.36,.1,.2,1) forwards; }
+  @keyframes codexLeafNext {
+    0%   { transform: perspective(1700px) rotateY(0deg); }
+    100% { transform: perspective(1700px) rotateY(-172deg); }
+  }
+  @keyframes codexLeafPrev {
+    0%   { transform: perspective(1700px) rotateY(0deg); }
+    100% { transform: perspective(1700px) rotateY(172deg); }
+  }
 }
+@media (prefers-reduced-motion: reduce) { .codex-leaf { display: none !important; } }
 
 @media (max-width: 767px) {
   /* 書葉外觀：左留位給打孔釘環、角更柔、不需要破墨 SVG 邊框（手機螢幕太小、易雜訊） */

@@ -347,7 +347,12 @@
       if (!flow || !stage) return;
       var W = stage.clientWidth, H = stage.clientHeight;
       if (W < 40 || H < 40) return;
-      var gap = Math.max(28, Math.round(W * 0.12));
+      // 桌機（≥768px）＝對開兩頁：每欄＝半頁、一次顯示兩欄；手機＝單頁。
+      var twoUp = !!(window.matchMedia && window.matchMedia("(min-width: 768px)").matches);
+      _R.twoUp = twoUp;
+      _R.colsPerView = twoUp ? 2 : 1;
+      // 對開時 gap 當作中央書脊寬；單頁時為頁間留白
+      var gap = twoUp ? Math.max(30, Math.round(W * 0.05)) : Math.max(28, Math.round(W * 0.12));
       _R.gap = gap;
       flow.style.transition = "none";
       flow.style.transform = "translateX(0)";
@@ -360,10 +365,11 @@
       var padL = parseFloat(cs.paddingLeft) || 0;
       var padR = parseFloat(cs.paddingRight) || 0;
       var Cw = W - padL - padR;
-      flow.style.columnWidth = Cw + "px";
-      // 量測
+      var colW = twoUp ? Math.floor((Cw - gap) / 2) : Cw;
+      flow.style.columnWidth = colW + "px";
+      // 量測（step ＝ 一欄寬＋gap）
       var content = flow.scrollWidth - padL;
-      var step = Cw + gap;
+      var step = colW + gap;
       var pages = Math.max(1, Math.round((content + gap) / step));
       // 備援：columns 沒生效（內容仍垂直溢位）→ 改垂直捲動，仍維持書頁外觀
       if (pages <= 1 && flow.scrollHeight > H + 6) {
@@ -397,7 +403,10 @@
     try {
       if (!_reader || _R.fallback) { updateFoot(); return; }
       var flow = _R.flow; if (!flow) return;
-      p = Math.max(0, Math.min(p, _R.pages - 1));
+      var cpv = _R.colsPerView || 1;
+      p = Math.floor(p / cpv) * cpv;                                 // 對齊到對開起始欄
+      var maxStart = Math.max(0, Math.ceil(_R.pages / cpv) * cpv - cpv);
+      p = Math.max(0, Math.min(p, maxStart));
       _R.page = p;
       if (instant) flow.style.transition = "none";
       flow.style.transform = "translateX(" + (-(p * _R.step)) + "px)";
@@ -406,13 +415,34 @@
       updateFoot();
     } catch (e) {}
   }
-  function next() { goTo(_R.page + 1); }
-  function prev() { goTo(_R.page - 1); }
+  // 翻頁葉（3D）：對開模式才生效，在書脊處長出一張紙旋轉，做出翻頁動畫。
+  // prefers-reduced-motion 直接略過。
+  function turnLeaf(dir) {
+    try {
+      if (!_R.twoUp || !_R.stage) return;
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      var leaf = document.createElement("div");
+      leaf.className = "codex-leaf " + (dir > 0 ? "turn-next" : "turn-prev");
+      _R.stage.appendChild(leaf);
+      var kill = function () { if (leaf.parentNode) leaf.parentNode.removeChild(leaf); };
+      leaf.addEventListener("animationend", kill);
+      setTimeout(kill, 800);
+    } catch (e) {}
+  }
+  function next() { var c = _R.colsPerView || 1; if (_R.page + c <= _R.pages - 1) turnLeaf(1); goTo(_R.page + c); }
+  function prev() { var c = _R.colsPerView || 1; if (_R.page - c >= 0) turnLeaf(-1); goTo(_R.page - c); }
 
   function updateFoot() {
     if (!_reader) return;
     var n = _R.fallback ? 1 : (_R.page + 1);
-    _reader.querySelectorAll(".codex-pageno .cur, .codex-folio .cur").forEach(function (el) { el.textContent = n; });
+    _reader.querySelectorAll(".codex-folio .cur").forEach(function (el) { el.textContent = n; });
+    // 對開模式頁碼顯示成「左–右」（如 3–4）
+    var label = "" + n;
+    if (_R.twoUp && !_R.fallback) {
+      var right = Math.min(_R.pages, _R.page + 2);
+      if (right > n) label = n + "–" + right;
+    }
+    _reader.querySelectorAll(".codex-pageno .cur").forEach(function (el) { el.textContent = label; });
     var tot = _reader.querySelector(".codex-pageno .tot"); if (tot) tot.textContent = _R.pages;
     var bar = _reader.querySelector(".codex-pagebar i");
     if (bar) bar.style.width = (_R.pages > 1 ? (_R.page / (_R.pages - 1) * 100) : 100) + "%";
