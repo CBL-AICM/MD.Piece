@@ -17420,25 +17420,40 @@ function renderTopicsLeftPage(book) {
 function renderRightPagePlaceholder() {
   var book = _eduSelectedBook;
   if (!book) return '';
+  // 「開始閱讀」按鈕：點下去直接開第一章（reuse 章節 click handler 的 data-action）。
+  // 為了避免使用者卡在導引頁不知道下一步往哪走（無入口可見性）。
+  function startReadingBtn(key, label) {
+    return '<button class="nb-start-reading" data-action="open-content"' +
+           ' data-key="' + escapeHtml(key) + '"' +
+           ' data-label="' + escapeHtml(label) + '">' +
+           '<i data-lucide="book-open" style="width:18px;height:18px"></i>' +
+           '<span>開始閱讀</span>' +
+           '<small>從「' + escapeHtml(label) + '」開始</small>' +
+           '</button>';
+  }
   if (book.dynamic === "diseases") {
     if (!_eduSelectedDisease) {
       return '<div class="nb-heading"><i data-lucide="layers" style="width:20px;height:20px"></i> 六大衛教維度</div>' +
              '<div class="nb-empty">← 先從左頁挑一個疾病，這裡才會展開六大維度，再點任一維度直接讀內容。</div>';
     }
-    // 已選疾病但尚未選維度：顯示維度清單
+    // 已選疾病但尚未選維度：顯示維度清單 + 「開始閱讀（第一個維度）」
     var listHtml = EDU_DISEASE_DIMENSIONS.map(function(d) {
       return '<button class="nb-item" data-action="open-content"' +
              ' data-key="' + escapeHtml(d.key) + '"' +
              ' data-label="' + escapeHtml(d.label) + '">' +
              '<strong>' + escapeHtml(d.label) + '</strong><small>' + escapeHtml(d.desc) + '</small></button>';
     }).join("");
+    var firstDim = EDU_DISEASE_DIMENSIONS[0];
     return '<div class="nb-heading"><i data-lucide="layers" style="width:20px;height:20px"></i> 六大衛教維度</div>' +
            '<div class="nb-subtle">' + escapeHtml(_eduSelectedDisease.name) + '（' + escapeHtml(_eduSelectedDisease.icd10) + '）</div>' +
+           (firstDim ? startReadingBtn(firstDim.key, firstDim.label) : '') +
            '<div class="nb-list">' + listHtml + '</div>';
   }
-  // 一般書本的初始右頁：書本說明 + 提示
+  // 一般書本的初始右頁：書本說明 + 提示 + 「開始閱讀（第一章）」
+  var first = (book.topics && book.topics[0]) ? book.topics[0] : null;
   return '<div class="nb-heading"><i data-lucide="bookmark" style="width:20px;height:20px"></i> 章節導讀</div>' +
          '<div class="nb-subtle">' + escapeHtml(book.intro || "") + '</div>' +
+         (first ? startReadingBtn(first.key, first.label) : '') +
          '<p style="margin-top:14px;color:var(--text-dim);font-size:.9rem;line-height:1.8">' +
          '左邊那一頁列出了這本書的所有章節。點任一章節，內容就會直接寫在這一頁；想換章節就再點別的，或按下方「← 章節清單」回到提示。</p>';
 }
