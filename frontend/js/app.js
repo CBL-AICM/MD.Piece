@@ -8298,7 +8298,13 @@ function _finalizeSleepCapture(startMs, minutes, auto) {
 // 睡醒回到 App：若上次偵測尚未結算，回到睡眠頁即視為已醒，自動結算成一筆
 // 紀錄（這就是「睡醒後自動記錄」）。偵測中（記憶體仍在跑）則只重取 Wake Lock。
 function _resumeSleepCaptureIfAny() {
-  if (_sleepSensor && _sleepSensor.running) { _requestSleepWakeLock(); return; }
+  if (_sleepSensor && _sleepSensor.running) {
+    // 偵測中切頁再回來：重取 Wake Lock 並還原按鈕/狀態（否則會誤顯示成未開始）
+    _requestSleepWakeLock();
+    _setSensorBtn('我醒了，結束並記錄', 'sun');
+    _setSensorStatus('偵測中…請插著電、螢幕保持亮、App 留前景。睡醒回到這頁會自動記錄。');
+    return;
+  }
   var raw = null;
   try { raw = localStorage.getItem(_SLEEP_CAP_KEY); } catch (e) {}
   if (!raw) return;
@@ -18292,6 +18298,24 @@ function applyFontSize(size) {
   document.documentElement.setAttribute('data-font-size', size);
 }
 
+// 手機版設定列：點一下循環切換字級（小→標準→大字→年長版），即時套用並就地
+// 更新標籤。桌面版用分段控制（onSettingChange），手機版沒有分段控制空間，故用
+// tap-to-cycle，與同區塊「主題 / 模式」列的點擊切換一致。
+function cycleFontSize() {
+  var order = ['small', 'normal', 'large', 'xlarge'];
+  var labels = { small: '小', normal: '標準', large: '大字', xlarge: '年長版' };
+  var next = order[(order.indexOf(getSetting('fontSize', 'normal')) + 1) % order.length];
+  setSetting('fontSize', next);
+  applyFontSize(next);
+  var mv = document.getElementById('m-font-val');
+  if (mv) mv.textContent = labels[next];
+  // 若桌面分段控制同時在 DOM 裡，順手同步其 active 狀態
+  document.querySelectorAll('.set-seg-btn[data-group="fontSize"]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.value === next);
+  });
+  if (typeof showToast === 'function') showToast('字級：' + labels[next], 'success');
+}
+
 function applyTheme(pref) {
   const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
@@ -19164,10 +19188,10 @@ function settings() {
     +       '<div class="val">' + _themeLabel + '</div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
-    +     '<div class="settings-row" onclick="alert(\'到下方「字級」捲動切換\')">'
+    +     '<div class="settings-row" onclick="cycleFontSize()">'
     +       '<div class="ico"><i data-lucide="type"></i></div>'
-    +       '<div><div class="name">字級</div><div class="sub">小 / 標準 / 大字 / 年長版</div></div>'
-    +       '<div class="val">' + _fontLabel + '</div>'
+    +       '<div><div class="name">字級</div><div class="sub">小 / 標準 / 大字 / 年長版（點一下切換）</div></div>'
+    +       '<div class="val" id="m-font-val">' + _fontLabel + '</div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
     +     '<div class="settings-row" onclick="onSettingChange(\'mode\',\'' + (md === 'senior' ? 'standard' : 'senior') + '\')">'
