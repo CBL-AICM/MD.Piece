@@ -18281,7 +18281,9 @@ const SETTINGS_KEYS = {
   density:  'mdpiece_density'         // cozy | compact
 };
 
-const FONT_SIZE_PX = { small: 14, normal: 16, large: 18, xlarge: 20 };
+// 字級＝整頁等比縮放倍率（zoom）：全站近半文字是固定 px（JS 內嵌樣式），單改根
+// font-size 只有用 rem 的那半會變、幾乎看不出來；用 zoom 連 px 一起縮放才真的有感。
+const FONT_SIZE_ZOOM = { small: 0.9, normal: 1, large: 1.15, xlarge: 1.3 };
 
 function getSetting(key, fallback) {
   try { return localStorage.getItem(SETTINGS_KEYS[key]) || fallback; }
@@ -18293,27 +18295,9 @@ function setSetting(key, value) {
 }
 
 function applyFontSize(size) {
-  const px = FONT_SIZE_PX[size] || FONT_SIZE_PX.normal;
-  document.documentElement.style.fontSize = px + 'px';
   document.documentElement.setAttribute('data-font-size', size);
-}
-
-// 手機版設定列：點一下循環切換字級（小→標準→大字→年長版），即時套用並就地
-// 更新標籤。桌面版用分段控制（onSettingChange），手機版沒有分段控制空間，故用
-// tap-to-cycle，與同區塊「主題 / 模式」列的點擊切換一致。
-function cycleFontSize() {
-  var order = ['small', 'normal', 'large', 'xlarge'];
-  var labels = { small: '小', normal: '標準', large: '大字', xlarge: '年長版' };
-  var next = order[(order.indexOf(getSetting('fontSize', 'normal')) + 1) % order.length];
-  setSetting('fontSize', next);
-  applyFontSize(next);
-  var mv = document.getElementById('m-font-val');
-  if (mv) mv.textContent = labels[next];
-  // 若桌面分段控制同時在 DOM 裡，順手同步其 active 狀態
-  document.querySelectorAll('.set-seg-btn[data-group="fontSize"]').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.value === next);
-  });
-  if (typeof showToast === 'function') showToast('字級：' + labels[next], 'success');
+  // zoom 對整頁等比縮放（px 與 rem 一起變）；比單改根 font-size 有感得多。
+  document.documentElement.style.zoom = FONT_SIZE_ZOOM[size] || 1;
 }
 
 function applyTheme(pref) {
@@ -19188,11 +19172,13 @@ function settings() {
     +       '<div class="val">' + _themeLabel + '</div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
-    +     '<div class="settings-row" onclick="cycleFontSize()">'
+    +     '<div class="settings-row" style="cursor:default">'
     +       '<div class="ico"><i data-lucide="type"></i></div>'
-    +       '<div><div class="name">字級</div><div class="sub">小 / 標準 / 大字 / 年長版（點一下切換）</div></div>'
-    +       '<div class="val" id="m-font-val">' + _fontLabel + '</div>'
-    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +       '<div style="flex:1"><div class="name">字級</div><div class="sub">點選想要的字級</div></div>'
+    +       '<div class="val">' + _fontLabel + '</div>'
+    +     '</div>'
+    +     '<div class="set-seg" style="margin:2px 14px 12px;gap:6px">'
+    +       seg('fontSize', [{value:'small',label:'小'},{value:'normal',label:'標準'},{value:'large',label:'大字'},{value:'xlarge',label:'年長版'}], fs)
     +     '</div>'
     +     '<div class="settings-row" onclick="onSettingChange(\'mode\',\'' + (md === 'senior' ? 'standard' : 'senior') + '\')">'
     +       '<div class="ico"><i data-lucide="user"></i></div>'
