@@ -65,6 +65,24 @@ def _fetch_safely(sb, table: str, patient_id: str):
         return []
 
 
+# 預測使用的縱向訊號來源表 + 各自的時間欄位。
+SOURCE_TABLES = (
+    ("emotions", "created_at"),
+    ("medication_logs", "taken_at"),
+    ("symptoms_log", "created_at"),
+    ("bedside_logs", "created_at"),
+)
+
+
+def _load_sources(sb, patient_id: str) -> dict:
+    """一次抓齊所有來源表（每張表各一次查詢）。
+
+    trend 沿時間窗取樣數十個點，每點都需要同一批原始資料；先抓一次、在記憶體
+    內依各取樣日切窗，避免 O(取樣點 × 表) 的重複查詢拖垮 serverless（規則 2）。
+    """
+    return {table: _fetch_safely(sb, table, patient_id) for table, _ in SOURCE_TABLES}
+
+
 def _avg(nums):
     nums = [n for n in nums if n is not None]
     return sum(nums) / len(nums) if nums else None
@@ -89,8 +107,7 @@ def _split_windows(rows, date_key, as_of: datetime):
 # ── 單一因子貢獻 ──────────────────────────────────────────────
 # contribution 為「風險百分點」的有號小數（正=推升、負=降低）。
 # 每個因子最多影響 ±0.25，避免單一訊號獨大（保守、臨床取向）。
-def _factor_emotion(sb, pid, as_of):
-    rows = _fetch_safely(sb, "emotions", pid)
+def _factor_emotion(rows, as_of):
     recent, base = _split_windows(rows, "created_at", as_of)
     r_avg = _avg([x.get("score") for x in recent])
     if r_avg is None:
@@ -120,8 +137,7 @@ def _factor_emotion(sb, pid, as_of):
     }
 
 
-def _factor_adherence(sb, pid, as_of):
-    rows = _fetch_safely(sb, "medication_logs", pid)
+def _factor_adherence(rows, as_of):
     recent, base = _split_windows(rows, "taken_at", as_of)
     if not recent and not base:
         return None
@@ -148,8 +164,7 @@ def _factor_adherence(sb, pid, as_of):
     }
 
 
-def _factor_symptoms(sb, pid, as_of):
-    rows = _fetch_safely(sb, "symptoms_log", pid)
+def _factor_symptoms(rows, as_of):
     recent, base = _split_windows(rows, "created_at", as_of)
     if not recent and not base:
         return None
@@ -174,8 +189,7 @@ def _factor_symptoms(sb, pid, as_of):
     }
 
 
-def _factor_sleep(sb, pid, as_of):
-    rows = _fetch_safely(sb, "bedside_logs", pid)
+def _factor_sleep(rows, as_of):
     recent, base = _split_windows(rows, "created_at", as_of)
     # sleep 欄位為自由文字，抽出可量化的「不足」訊號
     poor_words = ("差", "不好", "失眠", "睡不", "難睡", "少", "淺")
@@ -210,21 +224,20 @@ def _factor_sleep(sb, pid, as_of):
     }
 
 
-def _distinct_record_days(sb, pid, as_of) -> int:
+def _distinct_record_days_from(sources: dict, as_of) -> int:
     """近 60 天內有任何紀錄的「不重複天數」，用來判斷冷啟動與信心。"""
     days = set()
     cut = as_of - timedelta(days=BASELINE_WINDOW)
-    for table, key in (
-        ("emotions", "created_at"),
-        ("medication_logs", "taken_at"),
-        ("symptoms_log", "created_at"),
-        ("bedside_logs", "created_at"),
-    ):
-        for r in _fetch_safely(sb, table, pid):
+    for table, key in SOURCE_TABLES:
+        for r in sources.get(table, []):
             dt = _parse_dt(r.get(key) or r.get("created_at"))
             if dt and cut <= dt <= as_of:
                 days.add(dt.date())
     return len(days)
+
+
+def _distinct_record_days(sb, pid, as_of) -> int:
+    return _distinct_record_days_from(_load_sources(sb, pid), as_of)
 
 
 def _confidence_for(data_days: int):
@@ -243,15 +256,20 @@ def _band_for(score: float) -> str:
     return "high"
 
 
-def compute_factors(sb, patient_id: str, as_of: datetime):
-    """回傳該時間點所有「有資料」的因子貢獻（已濾掉 None）。"""
+def compute_factors_from(sources: dict, as_of: datetime):
+    """從已抓好的來源資料算該時間點的因子貢獻（已濾掉 None）。"""
     raw = [
-        _factor_emotion(sb, patient_id, as_of),
-        _factor_adherence(sb, patient_id, as_of),
-        _factor_symptoms(sb, patient_id, as_of),
-        _factor_sleep(sb, patient_id, as_of),
+        _factor_emotion(sources.get("emotions", []), as_of),
+        _factor_adherence(sources.get("medication_logs", []), as_of),
+        _factor_symptoms(sources.get("symptoms_log", []), as_of),
+        _factor_sleep(sources.get("bedside_logs", []), as_of),
     ]
     return [f for f in raw if f is not None]
+
+
+def compute_factors(sb, patient_id: str, as_of: datetime):
+    """回傳該時間點所有「有資料」的因子貢獻（已濾掉 None）。"""
+    return compute_factors_from(_load_sources(sb, patient_id), as_of)
 
 
 def score_from_factors(factors) -> float:
@@ -259,17 +277,22 @@ def score_from_factors(factors) -> float:
     return max(RISK_FLOOR, min(RISK_CEIL, total))
 
 
+def risk_from(sources: dict, as_of: datetime):
+    """單一時間點的完整推估（不含趨勢方向）— 用已抓好的資料。"""
+    factors = compute_factors_from(sources, as_of)
+    return score_from_factors(factors), factors
+
+
 def risk_at(sb, patient_id: str, as_of: datetime):
     """單一時間點的完整推估（不含趨勢方向）。"""
-    factors = compute_factors(sb, patient_id, as_of)
-    risk = score_from_factors(factors)
-    return risk, factors
+    return risk_from(_load_sources(sb, patient_id), as_of)
 
 
 def predict(sb, patient_id: str, as_of: Optional[datetime] = None) -> dict:
     """主預測：回傳 RiskCard / ConfidenceMeter / ColdStartCard 所需欄位。"""
     as_of = as_of or datetime.utcnow()
-    data_days = _distinct_record_days(sb, patient_id, as_of)
+    sources = _load_sources(sb, patient_id)
+    data_days = _distinct_record_days_from(sources, as_of)
 
     # ── 冷啟動：資料不足，不給誤導性數字（畫面 D）──────────────
     if data_days < THRESHOLD_DAYS:
@@ -286,10 +309,10 @@ def predict(sb, patient_id: str, as_of: Optional[datetime] = None) -> dict:
             "generated_at": as_of.isoformat(),
         }
 
-    risk, factors = risk_at(sb, patient_id, as_of)
+    risk, factors = risk_from(sources, as_of)
 
     # 趨勢方向：與 7 天前的推估比較（方向比絕對值重要）
-    prev_risk, _ = risk_at(sb, patient_id, as_of - timedelta(days=7))
+    prev_risk, _ = risk_from(sources, as_of - timedelta(days=7))
     diff = risk - prev_risk
     if diff > 0.04:
         trend, trend_label = "up", "上升中"
@@ -335,8 +358,9 @@ def predict(sb, patient_id: str, as_of: Optional[datetime] = None) -> dict:
 
 def explain(sb, patient_id: str, as_of: datetime) -> dict:
     """畫面 C：把每個因子攤成 SHAP-like 水平條（紅推升/藍降低）。"""
-    risk, factors = risk_at(sb, patient_id, as_of)
-    data_days = _distinct_record_days(sb, patient_id, as_of)
+    sources = _load_sources(sb, patient_id)
+    risk, factors = risk_from(sources, as_of)
+    data_days = _distinct_record_days_from(sources, as_of)
     confidence, confidence_label = _confidence_for(data_days)
 
     explanations = []
@@ -379,12 +403,16 @@ def trend_series(sb, patient_id: str, window_days: int, as_of: Optional[datetime
     n_points = 24
     step = max(1, window_days // n_points)
 
+    # 一次抓齊原始資料，所有取樣點在記憶體內重算（規則 2：避免每點重複查 DB，
+    # 否則在 serverless 上會逾時 → 前端「載入失敗」）。
+    sources = _load_sources(sb, patient_id)
+
     points = []
     d = window_days
     while d >= 0:
         sample_dt = as_of - timedelta(days=d)
-        risk, _ = risk_at(sb, patient_id, sample_dt)
-        dd = _distinct_record_days(sb, patient_id, sample_dt)
+        risk, _ = risk_from(sources, sample_dt)
+        dd = _distinct_record_days_from(sources, sample_dt)
         # 信心半寬：資料越少越寬（從 ±18% 收斂到 ±5%）
         half = max(0.05, 0.18 - (min(dd, 45) / 45.0) * 0.13)
         pct = risk * 100
