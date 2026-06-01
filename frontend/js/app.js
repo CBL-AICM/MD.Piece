@@ -24881,7 +24881,21 @@ var _TREND_META = {
 };
 
 // 模組狀態：供時間窗切換與 explain 重查使用
-var _predictState = { pid: null, predictionId: null, window: 90, last: null };
+var _predictState = { pid: null, predictionId: null, window: 90, last: null, disease: null, knowledgeTried: false };
+
+// 病患主要疾病（本地檔案）→ 讓預測對準「這個人的病」（後端 disease_hint）。
+// 同時支援未同步 server profile 的 demo 使用者。
+function _predictDiseaseHint() {
+  try {
+    var info = (typeof getBasicInfo === 'function') ? (getBasicInfo() || {}) : {};
+    return (info.current_disease || '').trim();
+  } catch (e) { return ''; }
+}
+function _predictDiseaseQS(prefix) {
+  var d = _predictDiseaseHint();
+  if (!d) return '';
+  return (prefix || '&') + 'disease=' + encodeURIComponent(d);
+}
 
 // ── RiskBandBadge ───────────────────────────────────────────
 function renderRiskBandBadge(band) {
@@ -24927,14 +24941,22 @@ function renderShapBarList(explanations) {
       + '<div class="shap-fill ' + (up ? 'up' : 'down') + '" style="width:' + w + '%"></div>'
       + '</div>';
     var modTag = e.modifiable ? '<span class="shap-mod" title="你可以調整的因子">🔧 可調整</span>' : '';
+    // 文獻證實與此病復發相關 → 掛上「根據」標記與證據句（這就是演算法↔此病復發的連結）
+    var linkTag = e.disease_linked
+      ? '<span class="shap-linked" title="文獻證實此因子與你的疾病復發有關">📚 文獻相關</span>'
+      : '';
+    var evidence = (e.disease_linked && e.evidence)
+      ? '<p class="shap-evidence"><i data-lucide="book-open" style="width:12px;height:12px"></i>'
+        + escapeHtml(e.evidence) + '</p>'
+      : '';
     // 可調整且為推升 → 提供一鍵加入就診摘要
     var addBtn = (e.modifiable && up)
       ? '<button class="shap-add" onclick="addToVisitSummary(\'' + _jsStr(e.label) + '\')">'
         + '把「' + escapeHtml(e.label) + '」加入就診待討論</button>'
       : '';
-    return '<div class="shap-row ' + (up ? 'up' : 'down') + '">'
+    return '<div class="shap-row ' + (up ? 'up' : 'down') + (e.disease_linked ? ' linked' : '') + '">'
       + '<div class="shap-head">'
-      + '<span class="shap-name">' + escapeHtml(e.label) + '</span>'
+      + '<span class="shap-name">' + escapeHtml(e.label) + linkTag + '</span>'
       + '<span class="shap-val">' + sign + Math.abs(e.shap_percent) + '%</span>'
       + '</div>'
       + bar
@@ -24942,6 +24964,7 @@ function renderShapBarList(explanations) {
       + '<span class="shap-plain">' + escapeHtml(e.plain_text || '') + '</span>'
       + modTag
       + '</div>'
+      + evidence
       + addBtn
       + '</div>';
   }).join('');
@@ -25027,15 +25050,61 @@ function renderColdStartCard(pred) {
   return '<div class="cold-start-card">'
     + '<div class="cs-icon" aria-hidden="true">⏳</div>'
     + '<h3 class="cs-title">預測功能準備中</h3>'
-    + '<p class="cs-body">再記錄 <strong>' + (pred.days_remaining || 0)
-    + '</strong> 天，系統就能開始推估你的復發風險趨勢。</p>'
+    + '<p class="cs-body">復發風險預測需要兩種材料：<strong>你的疾病</strong>（決定看哪些文獻），'
+    + '加上<strong>你持續記錄的身體訊號</strong>（看你最近的變化）。先把這兩塊補齊。</p>'
+    // 材料一：疾病綁定（先收集 user 資訊）
+    + renderDiseaseBindStep(pred.disease)
+    // 材料二：紀錄收集進度
+    + '<div class="cs-step"><div class="cs-step-head"><span class="cs-step-no">2</span>'
+    + '<span class="cs-step-title">持續記錄身體訊號</span></div>'
     + '<div class="cs-progress"><div class="cs-bar" style="width:' + pct + '%"></div></div>'
-    + '<p class="cs-count">已記錄 ' + done + ' / ' + total + ' 天</p>'
+    + '<p class="cs-count">已記錄 ' + done + ' / ' + total + ' 天'
+    + (pred.days_remaining ? '（再 ' + pred.days_remaining + ' 天即可開始推估）' : '') + '</p>'
     + '<p class="cs-collecting">目前正在收集：' + escapeHtml(collecting) + '</p>'
-    + '<button class="cs-cta" onclick="navigateTo(\'symptoms\',null)">今天記錄</button>'
+    + renderRecordsInventory(pred.records_analyzed)
+    + '<button class="cs-cta" onclick="navigateTo(\'symptoms\',null)">今天記錄一筆</button>'
+    + '</div>'
     + '<p class="predict-disclaimer"><i data-lucide="info"></i>'
     + escapeHtml(pred.disclaimer || '') + '</p>'
     + '</div>';
+}
+
+// ── 疾病綁定步驟（收集 user 資訊：先有病名才能對準文獻）─────────
+function renderDiseaseBindStep(disease) {
+  disease = disease || {};
+  var hint = _predictDiseaseHint();
+  if (disease.bound || hint) {
+    var name = escapeHtml(disease.disease_name || hint);
+    var lit = disease.has_literature
+      ? '<span class="db-ok">✓ 已載入文獻根據</span>'
+      : '<button class="db-warm" onclick="predictWarmKnowledge()">查文獻根據</button>';
+    return '<div class="cs-step done"><div class="cs-step-head"><span class="cs-step-no">✓</span>'
+      + '<span class="cs-step-title">主要疾病：' + name + '</span></div>'
+      + '<div class="db-litline">' + lit + '<button class="db-edit" onclick="predictShowBindForm()">更換</button></div>'
+      + '<div id="predict-bind-form"></div></div>';
+  }
+  return '<div class="cs-step"><div class="cs-step-head"><span class="cs-step-no">1</span>'
+    + '<span class="cs-step-title">綁定你的主要疾病</span></div>'
+    + '<p class="cs-hint">預測會依「這個病在文獻上的復發狀況」對準你，不綁定就只能用一般基線。</p>'
+    + '<div id="predict-bind-form">' + _diseaseBindFormHTML('') + '</div></div>';
+}
+
+function _diseaseBindFormHTML(value) {
+  return '<div class="db-form">'
+    + '<input id="predict-disease-input" class="db-input" type="text" '
+    + 'placeholder="例：高血壓、乳癌、憂鬱症…" value="' + escapeHtml(value || '') + '" '
+    + 'onkeydown="if(event.key===\'Enter\')predictBindDisease()">'
+    + '<button class="db-save" onclick="predictBindDisease()">儲存並查文獻</button>'
+    + '</div>';
+}
+
+function predictShowBindForm() {
+  var box = document.getElementById('predict-bind-form');
+  if (box) {
+    box.innerHTML = _diseaseBindFormHTML(_predictDiseaseHint());
+    var inp = document.getElementById('predict-disease-input');
+    if (inp) inp.focus();
+  }
 }
 
 // ── RiskCard（畫面 A：Dashboard 風險卡）──────────────────────
@@ -25054,21 +25123,30 @@ function renderRiskCard(pred) {
   }
   var m = _riskBandMeta(pred.risk_band);
   var tm = _TREND_META[pred.trend] || _TREND_META.flat;
+  var d = pred.disease || {};
+  var title = d.bound && d.disease_name
+    ? escapeHtml(d.disease_name) + ' · 復發風險'
+    : '近期復發風險';
+  // 最可能的復發原因（預估參考）— 帶文獻相關標記
   var driver = pred.top_driver
-    ? '<p class="rc-driver">▸ 主要原因：' + escapeHtml(pred.top_driver.plain_text) + '</p>'
+    ? '<p class="rc-driver">▸ 最需留意：' + escapeHtml(pred.top_driver.plain_text)
+      + (pred.top_driver.disease_linked ? '<span class="rc-linked">📚 文獻相關</span>' : '') + '</p>'
     : '<p class="rc-driver rc-driver-calm">▸ 近期無明顯推升風險的因子</p>';
+  // 百分比預設收起（band 為主；對齊病人端安全憲法，只在使用者主動點開才看數字）
+  var pctDetail = '<details class="rc-pct"><summary>看數字（僅供參考）</summary>'
+    + '<span>約 ' + pred.risk_percent + '%・信心：' + escapeHtml(pred.confidence_label || '') + '</span></details>';
 
   return '<div class="risk-card" data-band="' + pred.risk_band + '" style="--band-color:' + m.color + '">'
     + '<div class="rc-top">'
-    + '<span class="rc-title">近期復發風險</span>'
+    + '<span class="rc-title">' + title + '</span>'
     + '<span class="rc-horizon">未來 ' + pred.horizon_days + ' 天</span>'
     + '</div>'
     + '<div class="rc-main">'
     + renderRiskBandBadge(pred.risk_band)
     + '<span class="rc-trend ' + pred.trend + '">' + tm.arrow + ' ' + tm.label + '</span>'
     + '</div>'
-    + '<p class="rc-sub">約 ' + pred.risk_percent + '%・信心：' + pred.confidence_label + '</p>'
     + driver
+    + pctDetail
     + '<div class="rc-actions">'
     + '<button class="rc-btn primary" onclick="navigateTo(\'predict\',null)">看完整分析</button>'
     + '<button class="rc-btn ghost" onclick="addToVisitSummary(\'復發風險\')">整理成就診摘要</button>'
@@ -25122,7 +25200,7 @@ function injectHomeRiskCard(pid) {
     + '<div class="sk-line short"></div><div class="sk-block"></div></div>';
   app.insertBefore(slot, app.firstChild);
 
-  fetch(API + '/predict/' + encodeURIComponent(pid), { method: 'POST' })
+  fetch(API + '/predict/' + encodeURIComponent(pid) + _predictDiseaseQS('?'), { method: 'POST' })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(pred) {
       if (!pred) { slot.remove(); return; }
@@ -25155,8 +25233,9 @@ function loadPredictPage() {
   if (!_predictState.window) _predictState.window = 90;
   var body = document.getElementById('predict-body');
   if (!body) return;
+  _predictState.disease = _predictDiseaseHint();
 
-  fetch(API + '/predict/' + encodeURIComponent(pid), { method: 'POST' })
+  fetch(API + '/predict/' + encodeURIComponent(pid) + _predictDiseaseQS('?'), { method: 'POST' })
     .then(function(r) {
       if (r.status === 503) throw new Error('db_offline');
       return r.json();
@@ -25172,6 +25251,12 @@ function loadPredictPage() {
       _renderPredictDetail(body, pred);
       _loadPredictExplain(pred.prediction_id);
       _loadPredictTrend(pid, _predictState.window);
+      // 疾病已綁定但尚未載入文獻 → 自動在背景查一次文獻根據（慢路徑，不擋畫面）
+      var d = pred.disease || {};
+      if (d.bound && !d.has_literature && !_predictState.knowledgeTried) {
+        _predictState.knowledgeTried = true;
+        predictWarmKnowledge(true);
+      }
     })
     .catch(function(e) {
       body.innerHTML = '<div class="predict-error"><p>'
@@ -25185,28 +25270,134 @@ function loadPredictPage() {
 function _renderPredictDetail(body, pred) {
   var m = _riskBandMeta(pred.risk_band);
   var tm = _TREND_META[pred.trend] || _TREND_META.flat;
+  var d = pred.disease || {};
+  var heading = d.bound && d.disease_name
+    ? '你的「' + escapeHtml(d.disease_name) + '」未來 ' + pred.horizon_days + ' 天復發風險'
+    : '近期復發風險（未來 ' + pred.horizon_days + ' 天）';
+  // 百分比收起（band 為主；點開才看數字）
+  var pctDetail = '<details class="ps-pct"><summary>看數字（僅供參考）</summary>'
+    + '<span>約 ' + pred.risk_percent + '%</span></details>';
+
   body.innerHTML = ''
     + '<div class="predict-summary" data-band="' + pred.risk_band + '" style="--band-color:' + m.color + '">'
+    + '<p class="ps-heading">' + heading + '</p>'
     + '<div class="ps-line">' + renderRiskBandBadge(pred.risk_band)
-    + '<span class="ps-meta">未來 ' + pred.horizon_days + ' 天・約 ' + pred.risk_percent + '%</span>'
     + '<span class="rc-trend ' + pred.trend + '">' + tm.arrow + ' ' + tm.label + '</span></div>'
+    + pctDetail
     + renderConfidenceMeter(pred.confidence, pred.confidence_label, pred.data_days, pred.low_data)
     + '</div>'
+    // 最可能的復發原因（預估參考）
+    + renderTopCause(pred.top_driver)
+    // 疾病 / 文獻區塊（醫學文獻怎麼說 + 要注意什麼）— 由 explain/disease 資料填充
+    + '<div id="predict-disease">' + renderDiseaseBlock(d) + '</div>'
     // 畫面 B：趨勢圖
     + '<section class="predict-section"><h3>風險趨勢</h3>'
     + '<div id="predict-trend"><div class="trend-empty">載入趨勢中…</div></div></section>'
-    // 畫面 C：為什麼
-    + '<section class="predict-section"><h3>為什麼風險變這樣（近期相對變化）</h3>'
+    // 畫面 C：為什麼（你的近期變化）
+    + '<section class="predict-section"><h3>為什麼是這個結果（你的近期變化）</h3>'
     + '<div id="predict-explain"><p class="shap-empty">載入因子中…</p></div></section>'
+    // 分析用到你的哪些紀錄（透明）
+    + '<section class="predict-section"><h3>這次分析用到你的哪些紀錄</h3>'
+    + renderRecordsInventory(pred.records_analyzed) + '</section>'
+    + '<button class="predict-tosummary" onclick="addToVisitSummary(\'復發風險（含因子與文獻）\')">'
+    + '<i data-lucide="clipboard-list"></i> 整理成就診摘要，帶去問醫師</button>'
     + '<p class="predict-disclaimer"><i data-lucide="info"></i>'
     + escapeHtml(pred.disclaimer || '') + '</p>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// ── 最可能的復發原因（預估參考）─────────────────────────────
+function renderTopCause(top) {
+  if (!top) {
+    return '<section class="predict-cause calm"><h3>最可能的復發原因</h3>'
+      + '<p class="cause-body">近期沒有明顯推升風險的因子，繼續保持目前的記錄與生活就好。</p></section>';
+  }
+  var linked = top.disease_linked
+    ? '<span class="cause-linked">📚 文獻證實與你的疾病復發相關</span>'
+    : '<span class="cause-general">一般訊號（與此病復發的直接文獻較少）</span>';
+  var evi = top.evidence
+    ? '<p class="cause-evidence"><i data-lucide="book-open" style="width:13px;height:13px"></i>' + escapeHtml(top.evidence) + '</p>'
+    : '';
+  var act = top.modifiable
+    ? '<button class="cause-add" onclick="addToVisitSummary(\'' + _jsStr(top.label) + '\')">把這點加入就診待討論</button>'
+    : '';
+  return '<section class="predict-cause"><h3>你目前最需要留意的復發原因（預估參考）</h3>'
+    + '<p class="cause-main">' + escapeHtml(top.plain_text || top.label || '') + '</p>'
+    + linked + evi + act
+    + '<p class="cause-note">這是電腦根據你的紀錄與文獻整理的「預估參考」，不是診斷；會不會復發要由醫師判斷。</p>'
+    + '</section>';
+}
+
+// ── 疾病 / 文獻區塊：醫學文獻怎麼說 + 要注意什麼 + 引用 ───────────
+function renderDiseaseBlock(d) {
+  d = d || {};
+  if (!d.bound && !_predictDiseaseHint()) {
+    // 未綁定疾病 → 收集 user 資訊的入口
+    return '<section class="predict-section predict-bind">'
+      + '<h3>先綁定你的主要疾病</h3>'
+      + '<p class="cs-hint">綁定後，預測會依「這個病在文獻上的復發狀況」對準你，並列出該病要注意的復發徵兆與文獻根據。</p>'
+      + '<div id="predict-bind-form">' + _diseaseBindFormHTML('') + '</div></section>';
+  }
+  var lit = '';
+  if (d.has_literature) {
+    var rr = d.recurrence_range_text
+      ? '<p class="lit-rate"><strong>文獻復發率：</strong>' + escapeHtml(d.recurrence_range_text)
+        + (d.recurrence_horizon ? '（' + escapeHtml(d.recurrence_horizon) + '）' : '') + '</p>'
+      : '';
+    var summary = d.recurrence_summary ? '<p class="lit-summary">' + escapeHtml(d.recurrence_summary) + '</p>' : '';
+    var refs = renderReferenceChips(d.references);
+    lit = '<div class="lit-block">' + rr + summary + refs + '</div>';
+  } else {
+    lit = '<div class="lit-block pending"><p>尚未載入這個病的文獻復發資料。</p>'
+      + '<button class="db-warm" onclick="predictWarmKnowledge()">查文獻根據</button></div>';
+  }
+  var watch = renderWatchSigns(d.watch_signs);
+  return '<section class="predict-section">'
+    + '<h3>醫學文獻怎麼說（' + escapeHtml(d.disease_name || _predictDiseaseHint()) + '）</h3>'
+    + lit + watch + '</section>';
+}
+
+function renderWatchSigns(signs) {
+  if (!signs || !signs.length) return '';
+  var items = signs.map(function(s) {
+    return '<li><i data-lucide="alert-circle" style="width:14px;height:14px"></i>' + escapeHtml(s) + '</li>';
+  }).join('');
+  return '<div class="watch-signs"><p class="watch-title">這個病要特別留意的復發徵兆：</p>'
+    + '<ul>' + items + '</ul></div>';
+}
+
+function renderReferenceChips(refs) {
+  if (!refs || !refs.length) return '';
+  var chips = refs.slice(0, 4).map(function(ref) {
+    var label = escapeHtml((ref.title || ref.journal || ('PMID ' + (ref.pmid || ''))).slice(0, 60));
+    var url = ref.url || (ref.pmid ? 'https://pubmed.ncbi.nlm.nih.gov/' + ref.pmid + '/' : '');
+    if (!url) return '<span class="ref-chip">' + label + '</span>';
+    return '<a class="ref-chip" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">'
+      + '<i data-lucide="external-link" style="width:11px;height:11px"></i>' + label + '</a>';
+  }).join('');
+  return '<div class="ref-chips"><span class="ref-label">文獻來源：</span>' + chips + '</div>';
+}
+
+// ── 分析用到你的哪些紀錄（透明：所有紀錄都是評估核心材料）──────
+function renderRecordsInventory(records) {
+  if (!records || !records.length) return '';
+  var rows = records.map(function(r) {
+    var has = r.present;
+    var cls = has ? 'ri-on' : 'ri-off';
+    var cnt = has ? '<span class="ri-count">' + r.count + ' 筆</span>'
+                  : '<span class="ri-missing">尚無紀錄</span>';
+    return '<li class="' + cls + '">'
+      + '<i data-lucide="' + (has ? 'check-circle-2' : 'circle') + '" style="width:14px;height:14px"></i>'
+      + '<span class="ri-label">' + escapeHtml(r.label) + '</span>' + cnt + '</li>';
+  }).join('');
+  return '<ul class="records-inventory">' + rows + '</ul>'
+    + '<p class="ri-foot">紀錄越完整，預測越貼近你。空白的項目可在各功能頁補上。</p>';
+}
+
 function _loadPredictExplain(predictionId) {
   var box = document.getElementById('predict-explain');
   if (!box) return;
-  fetch(API + '/explain/' + encodeURIComponent(predictionId))
+  fetch(API + '/explain/' + encodeURIComponent(predictionId) + _predictDiseaseQS('?'))
     .then(function(r) { return r.json(); })
     .then(function(exp) {
       var mod = (exp.modifiable_factors && exp.modifiable_factors.length)
@@ -25225,7 +25416,7 @@ function _loadPredictExplain(predictionId) {
 function _loadPredictTrend(pid, window) {
   var box = document.getElementById('predict-trend');
   if (!box) return;
-  fetch(API + '/predict/' + encodeURIComponent(pid) + '/trend?window=' + window)
+  fetch(API + '/predict/' + encodeURIComponent(pid) + '/trend?window=' + window + _predictDiseaseQS('&'))
     .then(function(r) { return r.json(); })
     .then(function(trend) {
       box.innerHTML = renderRiskTrendChart(trend);
@@ -25239,6 +25430,78 @@ function _loadPredictTrend(pid, window) {
 function _predictSetWindow(days) {
   _predictState.window = days;
   if (_predictState.pid) _loadPredictTrend(_predictState.pid, days);
+}
+
+// ── 收集 user 資訊：綁定主要疾病（材料一）──────────────────────
+function predictBindDisease() {
+  var inp = document.getElementById('predict-disease-input');
+  if (!inp) return;
+  var name = (inp.value || '').trim();
+  if (!name) {
+    if (typeof showToast === 'function') showToast('請先輸入你的主要疾病', 'info');
+    inp.focus();
+    return;
+  }
+  // 持久化到個人檔案（本地立即生效；server 同步為 best-effort，未登入也不影響預測）
+  try {
+    var info = (typeof getBasicInfo === 'function') ? (getBasicInfo() || {}) : {};
+    info.current_disease = name;
+    if (typeof setBasicInfo === 'function') setBasicInfo(info);
+    if (typeof syncBasicInfoToServer === 'function') { try { syncBasicInfoToServer(info); } catch (e) {} }
+  } catch (e) {}
+  _predictState.disease = name;
+  _predictState.knowledgeTried = false;
+  if (typeof showToast === 'function') showToast('已綁定「' + name + '」，正在查文獻根據…', 'success');
+  // 重新載入（帶上新 disease hint），並立即查文獻
+  loadPredictPage();
+  predictWarmKnowledge(true);
+}
+
+// ── 收集 user 資訊：查/暖快取該病的文獻復發知識（材料一之根據）──
+function predictWarmKnowledge(silent) {
+  var pid = _predictState.pid || (typeof getStablePatientId === 'function' ? getStablePatientId() : null);
+  if (!pid) return;
+  var hint = _predictDiseaseHint();
+  if (!hint) {
+    if (!silent && typeof showToast === 'function') showToast('請先綁定主要疾病', 'info');
+    return;
+  }
+  // 把所有「查文獻根據」按鈕切成載入中
+  Array.prototype.forEach.call(document.querySelectorAll('.db-warm'), function(b) {
+    b.disabled = true; b.textContent = '查文獻中…';
+  });
+  fetch(API + '/predict/' + encodeURIComponent(pid) + '/disease-knowledge?disease=' + encodeURIComponent(hint),
+        { method: 'POST' })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(resp) {
+      if (!resp) throw new Error('warm_failed');
+      if (resp.status === 'fetched' || resp.status === 'cached') {
+        // 文獻已就緒 → 直接更新疾病區塊（不整頁重載，保留使用者捲動位置）
+        var box = document.getElementById('predict-disease');
+        if (box && resp.disease) {
+          box.innerHTML = renderDiseaseBlock(resp.disease);
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+          loadPredictPage();
+        }
+        if (!silent && typeof showToast === 'function') showToast('已載入文獻根據', 'success');
+      } else if (resp.status === 'unavailable') {
+        // 誠實回報：查不到就說查不到，不捏造（規則 12）
+        Array.prototype.forEach.call(document.querySelectorAll('.db-warm'), function(b) {
+          b.disabled = false; b.textContent = '查文獻根據';
+        });
+        if (typeof showToast === 'function')
+          showToast('查不到「' + hint + '」的文獻復發資料，可換更精確的病名再試', 'info');
+      } else {
+        loadPredictPage();
+      }
+    })
+    .catch(function() {
+      Array.prototype.forEach.call(document.querySelectorAll('.db-warm'), function(b) {
+        b.disabled = false; b.textContent = '查文獻根據';
+      });
+      if (!silent && typeof showToast === 'function') showToast('查文獻失敗，請稍後再試', 'error');
+    });
 }
 
 showPage("home");

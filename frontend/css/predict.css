@@ -141,6 +141,100 @@
 .predict-error { text-align: center; color: #8a94a0; font-size: 14px; padding: 40px 0; }
 .predict-disclaimer.subtle { opacity: .8; margin-top: 12px; }
 
+/* ── 疾病別 / 文獻 / 預估參考（新增）─────────────────────── */
+/* 文獻相關標記：低調的書本色，不搶 band */
+.rc-linked, .cause-linked, .shap-linked {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 600; color: #5a6b9a;
+  background: #eef1fb; border-radius: 999px; padding: 1px 7px; margin-left: 6px; white-space: nowrap; }
+.cause-general { font-size: 12px; color: #8a94a0; }
+
+/* 百分比收合：band 為主，數字藏在 details 裡 */
+.rc-pct, .ps-pct { margin: 8px 0 2px; font-size: 12.5px; color: #8a94a0; }
+.rc-pct summary, .ps-pct summary { cursor: pointer; color: #6b7785; }
+.rc-pct[open] span, .ps-pct[open] span { display: inline-block; margin-top: 4px; color: #2b3a4b; font-weight: 600; }
+
+.ps-heading { font-size: 15.5px; font-weight: 700; color: #2b3a4b; margin: 0 0 10px; line-height: 1.5; }
+
+/* 最可能的復發原因（預估參考） */
+.predict-cause { background: #fff; border: 1px solid rgba(0,0,0,.07);
+  border-left: 4px solid #E0A458; border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; }
+.predict-cause.calm { border-left-color: #3FA796; }
+.predict-cause h3 { font-size: 14px; color: #6b7785; margin: 0 0 8px; }
+.cause-main { font-size: 16px; font-weight: 700; color: #2b3a4b; margin: 0 0 8px; line-height: 1.5; }
+.cause-body { font-size: 14px; color: #4b5a6b; margin: 0; line-height: 1.6; }
+.cause-evidence { display: flex; align-items: flex-start; gap: 5px; font-size: 12.5px;
+  color: #5a6b9a; background: #f5f7fd; border-radius: 8px; padding: 7px 9px; margin: 8px 0; line-height: 1.5; }
+.cause-add { margin-top: 6px; padding: 8px 12px; border-radius: 9px; background: #eef6f4;
+  color: #2b7a6b; border: 1px solid #cfe6e0; font-size: 13px; font-weight: 600; cursor: pointer; }
+.cause-note { font-size: 11.5px; color: #9aa7b5; margin: 10px 0 0; line-height: 1.5; }
+
+/* 醫學文獻怎麼說 */
+.lit-block { background: #fafbfc; border: 1px solid rgba(0,0,0,.05); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.lit-block.pending { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #8a94a0; font-size: 13px; flex-wrap: wrap; }
+.lit-rate { font-size: 14px; color: #2b3a4b; margin: 0 0 6px; line-height: 1.5; }
+.lit-summary { font-size: 13.5px; color: #4b5a6b; margin: 0; line-height: 1.6; }
+
+/* 要注意的復發徵兆 */
+.watch-signs { margin-top: 10px; }
+.watch-title { font-size: 13.5px; font-weight: 600; color: #2b3a4b; margin: 0 0 6px; }
+.watch-signs ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.watch-signs li { display: flex; align-items: flex-start; gap: 7px; font-size: 13.5px; color: #4b5a6b; line-height: 1.5; }
+.watch-signs li i { color: #E0A458; flex: 0 0 auto; margin-top: 2px; }
+
+/* 文獻引用 chips（根據） */
+.ref-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.ref-label { font-size: 12px; color: #8a94a0; }
+.ref-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: #5a6b9a;
+  background: #eef1fb; border: 1px solid #dde3f4; border-radius: 999px; padding: 3px 9px; text-decoration: none; max-width: 100%; }
+.ref-chip:hover { background: #e3e8f7; }
+
+/* SHAP 因子的文獻證據 + 連結態 */
+.shap-row.linked { border-color: #dde3f4; }
+.shap-evidence { display: flex; align-items: flex-start; gap: 5px; font-size: 12px; color: #5a6b9a;
+  background: #f5f7fd; border-radius: 8px; padding: 6px 8px; margin: 8px 0 0; line-height: 1.5; }
+
+/* 分析用到哪些紀錄（透明清單） */
+.records-inventory { list-style: none; padding: 0; margin: 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.records-inventory li { display: flex; align-items: center; gap: 7px; font-size: 13px; padding: 4px 0; }
+.records-inventory .ri-on { color: #2b3a4b; }
+.records-inventory .ri-on i { color: #3FA796; }
+.records-inventory .ri-off { color: #aab4c0; }
+.ri-label { flex: 1; }
+.ri-count { font-size: 12px; font-weight: 600; color: #2b7a6b; }
+.ri-missing { font-size: 11.5px; color: #b6bfca; }
+.ri-foot { font-size: 11.5px; color: #9aa7b5; margin: 10px 0 0; line-height: 1.5; }
+
+/* 整理成就診摘要大鈕 */
+.predict-tosummary { display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 13px; border-radius: 12px; background: #2b3a4b; color: #fff;
+  border: none; font-size: 15px; font-weight: 600; cursor: pointer; margin: 6px 0 16px; }
+
+/* 疾病綁定步驟（收集 user 資訊） */
+.cs-step { text-align: left; background: #fafbfc; border: 1px solid rgba(0,0,0,.06);
+  border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; }
+.cs-step.done { background: #f1f8f6; border-color: #cfe6e0; }
+.cs-step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cs-step-no { width: 22px; height: 22px; flex: 0 0 auto; border-radius: 50%;
+  background: #2b3a4b; color: #fff; font-size: 12.5px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; }
+.cs-step.done .cs-step-no { background: #3FA796; }
+.cs-step-title { font-size: 14.5px; font-weight: 600; color: #2b3a4b; }
+.cs-hint { font-size: 12.5px; color: #8a94a0; margin: 0 0 10px; line-height: 1.5; }
+.predict-bind { background: #fff; border: 1px solid rgba(0,0,0,.07); border-radius: 14px; padding: 14px 16px; }
+
+.db-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.db-input { flex: 1 1 160px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid rgba(0,0,0,.15); font-size: 14px; }
+.db-save, .db-warm { padding: 10px 14px; border-radius: 10px; background: #2b3a4b; color: #fff;
+  border: none; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.db-warm { background: #5B9FE8; }
+.db-warm:disabled { background: #aab4c0; cursor: default; }
+.db-litline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.db-ok { font-size: 13px; font-weight: 600; color: #2b7a6b; }
+.db-edit { background: none; border: none; color: #8a94a0; font-size: 12.5px; cursor: pointer; text-decoration: underline; padding: 0; }
+
 /* ── 深色模式（沿用 body.theme-dark 慣例）──────────────── */
 body.theme-dark .risk-card,
 body.theme-dark .predict-summary,
@@ -157,3 +251,14 @@ body.theme-dark .rc-btn.ghost { background: #1b2430; color: #e6ecf2; }
 body.theme-dark .shap-row { background: #222d3a; border-color: rgba(255,255,255,.05); }
 body.theme-dark .trend-line { stroke: #cfe0f5; }
 body.theme-dark .trend-today { fill: #cfe0f5; stroke: #1b2430; }
+body.theme-dark .predict-cause,
+body.theme-dark .predict-bind { background: #1b2430; border-color: rgba(255,255,255,.08); }
+body.theme-dark .lit-block, body.theme-dark .cs-step { background: #222d3a; border-color: rgba(255,255,255,.06); }
+body.theme-dark .cs-step.done { background: #1c2e2a; border-color: rgba(63,167,150,.3); }
+body.theme-dark .cause-main, body.theme-dark .ps-heading, body.theme-dark .cause-add,
+body.theme-dark .lit-rate, body.theme-dark .watch-title, body.theme-dark .cs-step-title,
+body.theme-dark .records-inventory .ri-on { color: #e6ecf2; }
+body.theme-dark .cause-evidence, body.theme-dark .shap-evidence,
+body.theme-dark .rc-linked, body.theme-dark .cause-linked, body.theme-dark .shap-linked,
+body.theme-dark .ref-chip { background: #232d44; color: #aab8e0; border-color: rgba(255,255,255,.08); }
+body.theme-dark .db-input { background: #222d3a; color: #e6ecf2; border-color: rgba(255,255,255,.12); }

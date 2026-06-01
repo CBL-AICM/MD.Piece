@@ -454,6 +454,7 @@ _SCHEMAS = {
             self_care TEXT,
             red_flags TEXT,
             references_data TEXT,
+            recurrence_data TEXT,
             source TEXT DEFAULT 'claude',
             disclaimer TEXT,
             query_count INTEGER DEFAULT 0,

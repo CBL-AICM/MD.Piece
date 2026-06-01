@@ -63,7 +63,7 @@ def _rich_rows(days=45):
 # ── 1. 查詢次數與取樣點數脫鉤（核心回歸）──────────────────────
 
 def test_trend_queries_do_not_scale_with_window():
-    """window 越大取樣點越多，但來源表只該被抓一次，總查詢數維持個位數。"""
+    """window 越大取樣點越多，但來源表只該被抓一次 → 查詢數必須與取樣點數脫鉤。"""
     counts = {}
     for window in (7, 30, 90, 180):
         sb = _FakeSB(_rich_rows())
@@ -73,21 +73,26 @@ def test_trend_queries_do_not_scale_with_window():
     # 取樣點數應隨 window 變多（證明確實有多點，不是只算一個點魚目混珠）
     assert counts[180][0] > counts[7][0]
 
-    # 但每個 window 的查詢次數都該是常數級（4 來源表 + medical_records = 5，
-    # 給一點寬容上限 8）。若改回每點查一次，window=180 會是上百次 → 爆掉。
+    # 核心回歸：查詢次數必須「與 window/取樣點數無關」=> 四個 window 完全相同。
+    # 若有人把「先抓一次、記憶體內重算」改回「每點各自查」，window=180 會是上百次，
+    # 這個相等斷言會立刻變紅。
+    query_counts = {w: v[1] for w, v in counts.items()}
+    assert len(set(query_counts.values())) == 1, f"查詢數隨 window 變動了：{query_counts}"
+
+    # 並給一個與「掃齊所有紀錄表 + 疾病脈絡」相稱的常數上限（無疾病時不查 disease_reference）。
     for window, (n_points, n_queries) in counts.items():
-        assert n_queries <= 8, f"window={window} 用了 {n_queries} 次查詢（取樣 {n_points} 點）— 疑似每點重複查 DB"
+        assert n_queries <= 12, f"window={window} 用了 {n_queries} 次查詢（取樣 {n_points} 點）— 疑似每點重複查 DB"
 
 
 def test_predict_and_explain_query_budget():
-    """predict / explain 也不該重複載入來源表。"""
+    """predict / explain 也不該重複載入來源表（與取樣/重算次數無關的常數級查詢）。"""
     sb = _FakeSB(_rich_rows())
     r.predict(sb, "p", as_of=_AS_OF)
-    assert sb.store["count"] <= 5
+    assert sb.store["count"] <= 12
 
     sb2 = _FakeSB(_rich_rows())
     r.explain(sb2, "p", _AS_OF)
-    assert sb2.store["count"] <= 5
+    assert sb2.store["count"] <= 12
 
 
 # ── 2. 冷啟動門檻依真實天數，不是寫死 ────────────────────────
@@ -132,3 +137,82 @@ def test_trend_point_matches_direct_risk_estimate():
         day = datetime.fromisoformat(pt["date"])
         expected_risk, _ = r.risk_from(sources, day)
         assert pt["risk_percent"] == round(expected_risk * 100)
+
+
+# ── 4. 疾病別錨：演算法確實「連結到 user 的疾病復發」（核心需求）──────
+
+def _rows_with_disease(rec_data, days=45, low_score=2):
+    rows = _rich_rows(days=days)
+    rows["emotions"] = [{"patient_id": "p", "score": low_score,
+                         "created_at": (_AS_OF - timedelta(days=i)).isoformat()} for i in range(days)]
+    rows["patient_profiles"] = [{"user_id": "p", "current_disease": "高血壓"}]
+    rows["disease_reference"] = [{
+        "id": "d1", "name_zh": "高血壓", "name_en": "Hypertension",
+        "aliases": ["高血壓"], "recurrence_data": rec_data,
+        "references_data": [{"title": "BP control & recurrence", "pmid": "123", "url": "u"}],
+    }]
+    return rows
+
+
+def _rec(band, drivers=None):
+    return {
+        "matched": True, "name_zh": "高血壓", "name_en": "Hypertension",
+        "recurrence_rate": {"band": band, "range_text": "5 年內約 20–30%",
+                            "horizon": "5 年", "summary": "好好控制血壓可降低復發"},
+        "drivers": drivers or [],
+        "watch_signs": ["頭痛、頭暈持續不退"],
+        "disclaimer": "此為文獻整理，非個人診斷。",
+    }
+
+
+def test_disease_band_sets_baseline():
+    """同樣的病患紀錄，疾病文獻復發 band 越高 → 起始風險越高（證明錨真的接到疾病復發）。
+
+    若有人把疾病別基線改回固定 0.15，high 與 low 會相等，這裡就會變紅。
+    """
+    hi = r.predict(_FakeSB(_rows_with_disease(_rec("high"))), "p", as_of=_AS_OF)
+    lo = r.predict(_FakeSB(_rows_with_disease(_rec("low"))), "p", as_of=_AS_OF)
+    assert hi["risk_percent"] > lo["risk_percent"]
+    assert hi["disease"]["recurrence_band"] == "high"
+    assert hi["disease"]["bound"] is True
+    assert hi["disease"]["has_literature"] is True
+
+
+def test_disease_literature_and_watch_signs_surface():
+    """疾病區塊要帶出文獻區間、徵兆與引用（『要注意什麼』有根據）。"""
+    out = r.predict(_FakeSB(_rows_with_disease(_rec("medium"))), "p", as_of=_AS_OF)
+    d = out["disease"]
+    assert d["disease_name"] == "高血壓"
+    assert d["recurrence_range_text"]
+    assert "頭痛、頭暈持續不退" in d["watch_signs"]
+    assert d["references"] and d["references"][0].get("pmid") == "123"
+
+
+def test_no_disease_is_honest_not_fabricated():
+    """沒綁定疾病 → bound=False、has_literature=False，且不捏造復發率（規則 12）。"""
+    out = r.predict(_FakeSB(_rich_rows()), "p", as_of=_AS_OF)
+    assert out["disease"]["bound"] is False
+    assert out["disease"]["has_literature"] is False
+    assert out["disease"]["recurrence_band"] is None
+
+
+def test_top_cause_prefers_disease_linked_driver():
+    """最可能的復發原因：優先挑『正在惡化且文獻證實與此病復發相關』的因子，並帶出 evidence。"""
+    drivers = [{"label": "壓力", "maps_to": "stress", "direction": "up",
+                "weight": "high", "modifiable": True,
+                "plain_text": "長期壓力與血壓控制不佳有關",
+                "evidence": "文獻顯示慢性壓力與高血壓復發相關"}]
+    out = r.predict(_FakeSB(_rows_with_disease(_rec("medium", drivers), low_score=2)), "p", as_of=_AS_OF)
+    td = out["top_driver"]
+    assert td is not None
+    assert td["feature"] == "stress"
+    assert td["disease_linked"] is True
+    assert td["evidence"]
+
+
+def test_records_analyzed_lists_all_record_types():
+    """透明：predict 要回報分析用到病患哪些紀錄（所有紀錄都是評估核心材料）。"""
+    out = r.predict(_FakeSB(_rich_rows()), "p", as_of=_AS_OF)
+    tables = {row["table"] for row in out["records_analyzed"]}
+    for table, _date, _key, _scored in r.SIGNAL_TABLES:
+        assert table in tables
