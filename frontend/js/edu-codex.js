@@ -220,6 +220,11 @@
   var PLATE_LABELS = ["圖 · 心之府", "圖 · 本草", "圖 · 製劑", "圖 · 顱骨"];
   function hashStr(s) { var h = 0; s = s || ""; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; } return Math.abs(h); }
 
+  // 手機版書籤貼紙的醫療圖示：依文章標題穩定挑選一個（同一篇始終同一圖示，
+  // 不同文章視覺有變化）。三個圖示分屬「整體照護 / 用藥 / 就診」三個語意。
+  var _STICKER_ICONS = ["heart", "pill", "stethoscope"];
+  function pickStickerIcon(title) { return _STICKER_ICONS[hashStr(title) % _STICKER_ICONS.length]; }
+
   function decoratePlates(flow, title) {
     if (!flow) return;
     var base = hashStr(title);
@@ -286,6 +291,10 @@
         '<div class="codex-book">' +
           '<div class="codex-reader-stage">' +
             '<div class="codex-spine"></div>' +
+            // 手機版書籤貼紙（桌機由 CSS 隱藏）— 依文章標題雜湊穩定挑選圖示
+            '<div class="codex-bookmark-sticker" aria-hidden="true">' +
+              '<i data-lucide="' + pickStickerIcon(title) + '"></i>' +
+            "</div>" +
             '<div class="codex-reader-flow edu-article-body"></div>' +
             '<button type="button" class="codex-edge prev" aria-label="上一頁"></button>' +
             '<button type="button" class="codex-edge next" aria-label="下一頁"></button>' +
@@ -293,6 +302,7 @@
           "</div>" +
         "</div>" +
         '<div class="codex-pagebar"><i></i></div>' +
+        '<div class="codex-dots" aria-hidden="true"></div>' +  // 手機版圓點 indicator
         '<div class="codex-reader-foot">' +
           '<button type="button" class="codex-fbtn" data-act="prev">‹ 前頁</button>' +
           '<div class="codex-pageno"><span class="cur">1</span> / <span class="tot">1</span></div>' +
@@ -405,6 +415,25 @@
     var tot = _reader.querySelector(".codex-pageno .tot"); if (tot) tot.textContent = _R.pages;
     var bar = _reader.querySelector(".codex-pagebar i");
     if (bar) bar.style.width = (_R.pages > 1 ? (_R.page / (_R.pages - 1) * 100) : 100) + "%";
+    refreshDots();
+  }
+
+  // 手機版圓點 indicator：≤8 頁直接一頁一點，>8 頁壓縮成 8 點（每點對應 N 頁），
+  // 避免在頁數多的衛教文上點數爆量；桌機 CSS 完全隱藏這個容器。
+  function refreshDots() {
+    var box = _reader && _reader.querySelector(".codex-dots");
+    if (!box) return;
+    var total = Math.max(1, _R.pages || 1);
+    if (total <= 1) { box.innerHTML = ""; return; }
+    var maxDots = 8;
+    var nDots = Math.min(total, maxDots);
+    var perDot = total / nDots;
+    var activeDot = Math.min(nDots - 1, Math.floor(_R.page / perDot));
+    var html = "";
+    for (var i = 0; i < nDots; i++) {
+      html += '<span class="codex-dot' + (i === activeDot ? " active" : "") + '"></span>';
+    }
+    box.innerHTML = html;
   }
 
   function buildDrawer() {

@@ -381,3 +381,107 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
   color: var(--codex-burgundy); font-size: 1.9rem; line-height: 1.25;
   letter-spacing: 1px; padding: 0 10px;
 }
+
+/* ════════════════════════════════════════════════════════════
+   手機版「活頁筆記本」（≤ 767px）
+   — 桌機端維持古董書原樣，僅手機切換為活頁筆記本 UI；
+     貼紙與圓點 indicator 在桌機由 CSS 隱藏。
+   ════════════════════════════════════════════════════════════ */
+
+/* 書籤貼紙與底部圓點 indicator：桌機完全不顯示 */
+@media (min-width: 768px) {
+  .codex-bookmark-sticker,
+  .codex-dots { display: none !important; }
+}
+
+@media (max-width: 767px) {
+  /* 書葉外觀：左留位給打孔釘環、角更柔、不需要破墨 SVG 邊框（手機螢幕太小、易雜訊） */
+  .codex-reader-stage {
+    margin: 22px 8px 0 22px;
+    border-radius: 8px 12px 12px 6px;
+    /* 補強左緣陰影，模擬釘環壓進紙裡 */
+    box-shadow:
+      0 18px 50px -12px rgba(0,0,0,.7),
+      inset 14px 0 22px -14px rgba(60,40,20,.32),
+      inset 0 0 0 1px rgba(255,250,235,.5);
+  }
+  .codex-reader-stage::after { display: none; }     /* 關掉破墨邊框，讓筆記本感更乾淨 */
+  .codex-spine { display: none; }                   /* 書脊在手機不適合 */
+
+  /* 左側 5 個打孔釘環（pure CSS：黑色金屬釘 + 內凹高光） */
+  .codex-reader-stage::before {
+    content: "";
+    position: absolute;
+    left: -12px; top: 8%; bottom: 8%;
+    width: 14px;
+    pointer-events: none;
+    z-index: 5;
+    background-image:
+      radial-gradient(circle at 50% 10%,  #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px),
+      radial-gradient(circle at 50% 32.5%, #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px),
+      radial-gradient(circle at 50% 55%,   #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px),
+      radial-gradient(circle at 50% 77.5%, #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px),
+      radial-gradient(circle at 50% 100%,  #0e0a06 0 4.5px, rgba(60,40,20,.35) 5px 6.5px, transparent 7px);
+    background-repeat: no-repeat;
+    filter: drop-shadow(1px 1px 0 rgba(255,250,235,.45)) drop-shadow(0 1px 2px rgba(0,0,0,.4));
+  }
+
+  /* 上方書籤貼紙 — 米黃紙條 + 醫療圖示，輕微旋轉、貼紙撕角陰影 */
+  .codex-bookmark-sticker {
+    position: absolute;
+    top: -10px; right: 28px;
+    width: 50px; height: 62px;
+    z-index: 7;
+    background:
+      linear-gradient(180deg, #f6e9c2 0%, #ecdba6 100%);
+    border: 1px solid rgba(120,90,40,.32);
+    border-radius: 2px 2px 3px 3px;
+    box-shadow:
+      2px 5px 9px rgba(0,0,0,.28),
+      inset 0 -6px 10px rgba(120,90,40,.16);
+    transform: rotate(-3.5deg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .codex-bookmark-sticker .lucide,
+  .codex-bookmark-sticker svg {
+    width: 24px; height: 24px;
+    color: var(--codex-burgundy);
+    stroke-width: 2.2;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.18));
+  }
+  /* 貼紙底部撕痕（兩條斜陰影模擬撕開的紙邊） */
+  .codex-bookmark-sticker::after {
+    content: ""; position: absolute;
+    left: -1px; right: -1px; bottom: -3px; height: 4px;
+    background:
+      linear-gradient(transparent 40%, rgba(120,90,40,.28) 41% 55%, transparent 56%),
+      linear-gradient(135deg, transparent 0 40%, rgba(0,0,0,.12) 41% 45%, transparent 46%);
+    background-size: 100% 100%, 6px 4px;
+    background-repeat: no-repeat, repeat-x;
+  }
+
+  /* 進度條改為圓點 indicator（既有 pagebar 還是保留為底層輔助） */
+  .codex-pagebar {
+    height: 2px;                                    /* 變細，幾乎不搶戲 */
+    margin: 4px 36px 0;
+    opacity: .55;
+  }
+  .codex-dots {
+    display: flex; gap: 7px; justify-content: center;
+    padding: 8px 0 2px;
+    min-height: 16px;
+  }
+  .codex-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(239,224,189,.32);
+    transition: transform .25s ease, background-color .25s ease;
+  }
+  .codex-dot.active {
+    background: var(--codex-gold);
+    transform: scale(1.55);
+    box-shadow: 0 0 0 2px rgba(156,123,63,.25);
+  }
+
+  /* 控制列在手機略小一點，騰出空間給圓點 */
+  .codex-fbtn { padding: 7px 12px; font-size: .9rem; }
+}
