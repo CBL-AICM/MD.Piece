@@ -53,8 +53,15 @@ def _reset_db():
     yield
 
 
+# 測試睡眠資料一律以「昨晚」為基準：list/export/trend 端點預設只回近 30 天，
+# 早期寫死 2026-05-01 在跨月後會悄悄掉出時間窗而誤判失敗（規則 9）。端點的窗
+# 邏輯本身正確（有明確的 days 參數），故修測試、不動端點。同檔 test_trend_aggregates
+# 早已用相對日期，這裡統一沿用同一寫法（規則 7）。
+_LAST_NIGHT = (datetime.utcnow() - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
 def _gen_epochs(start_iso_hour=23, mins=480, activity=0.0):
-    base = datetime(2026, 5, 1, start_iso_hour, 0)
+    base = _LAST_NIGHT.replace(hour=start_iso_hour)
     return [
         {"timestamp": (base + timedelta(minutes=i)).isoformat(), "activity_count": activity}
         for i in range(mins)
@@ -84,12 +91,13 @@ def test_ingest_daytime_signal_no_session():
 # ── 驗收 #3：三種來源 + 修正保留原值 ──────────────────────
 
 def test_three_sources_write_with_correct_tag():
+    bed = _LAST_NIGHT.replace(hour=23)
     for src in ("manual", "imported"):
         r = client.post("/sleep/sessions", json={
             "user_id": USER, "source": src,
-            "bed_time": "2026-05-01T23:00:00",
-            "sleep_onset": "2026-05-01T23:20:00",
-            "wake_time": "2026-05-02T07:00:00",
+            "bed_time": bed.isoformat(),
+            "sleep_onset": (bed + timedelta(minutes=20)).isoformat(),
+            "wake_time": (bed + timedelta(hours=8)).isoformat(),
         })
         assert r.status_code == 200, r.text
         assert r.json()["source"] == src
@@ -116,9 +124,10 @@ def test_edit_sets_is_edited_and_preserves_original():
     sid = ing.json()["session"]["id"]
     orig_onset = ing.json()["session"]["sleep_onset"]
 
-    # 把入睡時間往後改 1 小時
+    # 把入睡時間往後改 1 小時（相對於這筆紀錄的就寢時間，避免寫死日期）
+    bed_dt = datetime.fromisoformat(ing.json()["session"]["bed_time"])
     edited = client.put(f"/sleep/sessions/{sid}", json={
-        "sleep_onset": "2026-05-02T00:00:00",
+        "sleep_onset": (bed_dt + timedelta(hours=1)).isoformat(),
     })
     assert edited.status_code == 200, edited.text
     body = edited.json()
@@ -157,11 +166,12 @@ def test_trend_aggregates():
 
 
 def test_export_csv():
+    bed = _LAST_NIGHT.replace(hour=23)
     client.post("/sleep/sessions", json={
         "user_id": USER, "source": "manual",
-        "bed_time": "2026-05-01T23:00:00",
-        "sleep_onset": "2026-05-01T23:20:00",
-        "wake_time": "2026-05-02T07:00:00",
+        "bed_time": bed.isoformat(),
+        "sleep_onset": (bed + timedelta(minutes=20)).isoformat(),
+        "wake_time": (bed + timedelta(hours=8)).isoformat(),
     })
     r = client.get("/sleep/export.csv", params={"user_id": USER})
     assert r.status_code == 200
