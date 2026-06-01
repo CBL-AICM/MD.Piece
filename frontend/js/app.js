@@ -8073,10 +8073,10 @@ function sleep() {
     +   '<div id="sleep-connect-status"><p class="sleep-loading">載入中…</p></div>'
     + '</section>'
     + '<section class="sleep-card sleep-card-soft">'
-    +   '<div class="sleep-card-head"><h3>前景偵測（實驗）</h3></div>'
-    +   '<p class="sleep-hint">沒有手環時，可用手機動作感測器估算睡眠。請把手機放床邊、螢幕保持亮著、App 開著——這是前景示意，無法整夜背景偵測。</p>'
+    +   '<div class="sleep-card-head"><h3>手機睡眠偵測</h3></div>'
+    +   '<p class="sleep-hint">沒有手環時：睡前按「開始偵測」，手機<b>插著電、螢幕保持亮著、App 留在前景</b>放床邊；睡醒回到這頁會用判睡演算法自動記錄昨晚睡眠。網頁限制：螢幕關掉或切走 App 會中斷採樣。</p>'
     +   '<div class="sleep-export-row">'
-    +     '<button type="button" class="sleep-secondary" id="sleep-sensor-btn" onclick="toggleSleepSensorDemo()"><i data-lucide="activity" style="width:16px;height:16px"></i> 開始偵測</button>'
+    +     '<button type="button" class="sleep-secondary" id="sleep-sensor-btn" onclick="toggleSleepSensorDemo()"><i data-lucide="moon" style="width:16px;height:16px"></i> 開始偵測</button>'
     +   '</div>'
     +   '<p id="sleep-sensor-status" class="sleep-hint"></p>'
     + '</section>'
@@ -8124,6 +8124,7 @@ function loadSleepPage() {
   loadSleepTrend(7, null);
   loadSleepList();
   loadSleepConnections();
+  _resumeSleepCaptureIfAny();
 }
 
 // ── 連接穿戴裝置（廠商 OAuth：Fitbit）─────────────────────
@@ -8190,10 +8191,15 @@ function disconnectFitbit() {
     .catch(function(){ if (typeof showToast === 'function') showToast('操作失敗', 'warning'); });
 }
 
-// ── 前景偵測 demo（手機加速度計 → 現有判睡演算法 /sleep/ingest）──
+// ── 手機睡眠偵測（睡前開始 → Wake Lock 整夜前景採樣 → 睡醒自動記錄）──
+// 純 PWA 限制：螢幕關掉或切走 App，瀏覽器就停止 devicemotion。故需插電、
+// 螢幕保持亮著、App 留前景。採樣進度持續寫入 localStorage，睡醒回到 App 時
+// 自動用既有判睡演算法（/sleep/ingest）結算成一筆「自動偵測」睡眠。
+var _SLEEP_CAP_KEY = 'mdpiece_sleep_capture';
 var _sleepSensor = null;
+
 function toggleSleepSensorDemo() {
-  if (_sleepSensor && _sleepSensor.running) stopSleepSensorDemo();
+  if (_sleepSensor && _sleepSensor.running) stopSleepSensorDemo(false);
   else startSleepSensorDemo();
 }
 function _setSensorBtn(label, icon) {
@@ -8206,23 +8212,44 @@ function _setSensorStatus(msg) {
   var el = document.getElementById('sleep-sensor-status');
   if (el) el.textContent = msg;
 }
+function _persistSleepCapture() {
+  if (!_sleepSensor) return;
+  try {
+    localStorage.setItem(_SLEEP_CAP_KEY, JSON.stringify({
+      startMs: _sleepSensor.startMs, minute: _sleepSensor.minute, savedAt: Date.now(),
+    }));
+  } catch (e) {}
+}
+function _requestSleepWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  navigator.wakeLock.request('screen').then(function(lock){
+    if (_sleepSensor) _sleepSensor.wakeLock = lock;
+  }).catch(function(){});
+}
+function _sleepVisibilityReacquire() {
+  if (document.visibilityState === 'visible' && _sleepSensor && _sleepSensor.running) _requestSleepWakeLock();
+}
 function startSleepSensorDemo() {
   if (typeof DeviceMotionEvent === 'undefined') {
     if (typeof showToast === 'function') showToast('此裝置不支援動作感測', 'warning'); return;
   }
   function begin() {
-    _sleepSensor = { running: true, startMs: Date.now(), minute: {}, handler: null };
+    _sleepSensor = { running: true, startMs: Date.now(), minute: {}, handler: null, wakeLock: null };
     _sleepSensor.handler = function(e){
       var a = e.accelerationIncludingGravity || e.acceleration; if (!a) return;
       var mag = Math.sqrt((a.x || 0) * (a.x || 0) + (a.y || 0) * (a.y || 0) + (a.z || 0) * (a.z || 0));
       var min = Math.floor((Date.now() - _sleepSensor.startMs) / 60000);
-      var b = _sleepSensor.minute[min] || (_sleepSensor.minute[min] = { last: mag, acc: 0 });
+      if (!_sleepSensor.minute[min]) { _sleepSensor.minute[min] = { last: mag, acc: 0 }; _persistSleepCapture(); }
+      var b = _sleepSensor.minute[min];
       b.acc += Math.abs(mag - b.last); b.last = mag;
     };
     window.addEventListener('devicemotion', _sleepSensor.handler);
-    _setSensorBtn('停止並分析', 'square');
-    _setSensorStatus('偵測中…請把手機放床邊、螢幕保持亮著。停止後會用判睡演算法分析這段。');
-    if (typeof showToast === 'function') showToast('開始前景偵測', 'info');
+    document.addEventListener('visibilitychange', _sleepVisibilityReacquire);
+    _requestSleepWakeLock();
+    _persistSleepCapture();
+    _setSensorBtn('我醒了，結束並記錄', 'sun');
+    _setSensorStatus('偵測中…請插著電、螢幕保持亮著、App 留前景放床邊。睡醒回到這頁會自動記錄。');
+    if (typeof showToast === 'function') showToast('開始睡眠偵測', 'info');
   }
   if (typeof DeviceMotionEvent.requestPermission === 'function') {  // iOS 13+
     DeviceMotionEvent.requestPermission().then(function(state){
@@ -8231,16 +8258,21 @@ function startSleepSensorDemo() {
     }).catch(function(){ if (typeof showToast === 'function') showToast('無法取得動作感測權限', 'warning'); });
   } else { begin(); }
 }
-function stopSleepSensorDemo() {
-  if (!_sleepSensor || !_sleepSensor.running) return;
-  window.removeEventListener('devicemotion', _sleepSensor.handler);
-  _sleepSensor.running = false;
-  _setSensorBtn('開始偵測', 'activity');
+function stopSleepSensorDemo(auto) {
+  if (_sleepSensor && _sleepSensor.handler) window.removeEventListener('devicemotion', _sleepSensor.handler);
+  document.removeEventListener('visibilitychange', _sleepVisibilityReacquire);
+  if (_sleepSensor && _sleepSensor.wakeLock) { try { _sleepSensor.wakeLock.release(); } catch (e) {} }
+  var startMs = _sleepSensor ? _sleepSensor.startMs : null;
+  var minutes = _sleepSensor ? _sleepSensor.minute : null;
+  if (_sleepSensor) _sleepSensor.running = false;
+  _setSensorBtn('開始偵測', 'moon');
+  _finalizeSleepCapture(startMs, minutes, auto);
+}
+function _finalizeSleepCapture(startMs, minutes, auto) {
   var pid = _sleepPid();
-  var startMs = _sleepSensor.startMs;
-  var minutes = _sleepSensor.minute;
-  var keys = Object.keys(minutes);
-  if (!pid || keys.length < 3) { _setSensorStatus('偵測時間太短（至少需約 3 分鐘）。'); return; }
+  try { localStorage.removeItem(_SLEEP_CAP_KEY); } catch (e) {}
+  var keys = minutes ? Object.keys(minutes) : [];
+  if (!pid || keys.length < 3) { _setSensorStatus('偵測時間太短（至少需約 3 分鐘），這次不記錄。'); return; }
   var epochs = keys.map(function(k){
     return {
       timestamp: new Date(startMs + parseInt(k, 10) * 60000).toISOString(),
@@ -8250,18 +8282,37 @@ function stopSleepSensorDemo() {
   _setSensorStatus('分析中…');
   apiFetch(API + '/sleep/ingest', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    // 前景 demo 可在任何時段：放寬夜間時段為全日，讓白天測試也能產生 session
+    // 偵測可橫跨任何時段：放寬夜間時段為全日，避免被夜間視窗濾掉
     body: JSON.stringify({ user_id: pid, epochs: epochs, night_start_hour: 0, night_end_hour: 24 })
   }).then(function(r){ return r.ok ? r.json() : Promise.reject(); })
     .then(function(d){
       if (d && d.session) {
         _setSensorStatus('完成：已記錄一筆自動偵測睡眠。');
-        if (typeof showToast === 'function') showToast('已產生一筆自動偵測紀錄', 'success');
+        if (typeof showToast === 'function') showToast(auto ? '睡醒囉，已自動記錄昨晚睡眠' : '已記錄一筆自動偵測睡眠', 'success');
         showPage('sleep');
       } else {
         _setSensorStatus('這段沒有偵測到明顯睡眠（可能動作太多或時間太短）。');
       }
     }).catch(function(){ _setSensorStatus('分析失敗，請稍後再試。'); });
+}
+// 睡醒回到 App：若上次偵測尚未結算，回到睡眠頁即視為已醒，自動結算成一筆
+// 紀錄（這就是「睡醒後自動記錄」）。偵測中（記憶體仍在跑）則只重取 Wake Lock。
+function _resumeSleepCaptureIfAny() {
+  if (_sleepSensor && _sleepSensor.running) {
+    // 偵測中切頁再回來：重取 Wake Lock 並還原按鈕/狀態（否則會誤顯示成未開始）
+    _requestSleepWakeLock();
+    _setSensorBtn('我醒了，結束並記錄', 'sun');
+    _setSensorStatus('偵測中…請插著電、螢幕保持亮、App 留前景。睡醒回到這頁會自動記錄。');
+    return;
+  }
+  var raw = null;
+  try { raw = localStorage.getItem(_SLEEP_CAP_KEY); } catch (e) {}
+  if (!raw) return;
+  var cap;
+  try { cap = JSON.parse(raw); } catch (e) { cap = null; }
+  if (!cap || !cap.startMs || !cap.minute) { try { localStorage.removeItem(_SLEEP_CAP_KEY); } catch (e2) {} return; }
+  _setSensorBtn('開始偵測', 'moon');
+  _finalizeSleepCapture(cap.startMs, cap.minute, true);
 }
 
 function loadSleepToday() {
@@ -18247,6 +18298,24 @@ function applyFontSize(size) {
   document.documentElement.setAttribute('data-font-size', size);
 }
 
+// 手機版設定列：點一下循環切換字級（小→標準→大字→年長版），即時套用並就地
+// 更新標籤。桌面版用分段控制（onSettingChange），手機版沒有分段控制空間，故用
+// tap-to-cycle，與同區塊「主題 / 模式」列的點擊切換一致。
+function cycleFontSize() {
+  var order = ['small', 'normal', 'large', 'xlarge'];
+  var labels = { small: '小', normal: '標準', large: '大字', xlarge: '年長版' };
+  var next = order[(order.indexOf(getSetting('fontSize', 'normal')) + 1) % order.length];
+  setSetting('fontSize', next);
+  applyFontSize(next);
+  var mv = document.getElementById('m-font-val');
+  if (mv) mv.textContent = labels[next];
+  // 若桌面分段控制同時在 DOM 裡，順手同步其 active 狀態
+  document.querySelectorAll('.set-seg-btn[data-group="fontSize"]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.value === next);
+  });
+  if (typeof showToast === 'function') showToast('字級：' + labels[next], 'success');
+}
+
 function applyTheme(pref) {
   const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
@@ -19119,10 +19188,10 @@ function settings() {
     +       '<div class="val">' + _themeLabel + '</div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
-    +     '<div class="settings-row" onclick="alert(\'到下方「字級」捲動切換\')">'
+    +     '<div class="settings-row" onclick="cycleFontSize()">'
     +       '<div class="ico"><i data-lucide="type"></i></div>'
-    +       '<div><div class="name">字級</div><div class="sub">小 / 標準 / 大字 / 年長版</div></div>'
-    +       '<div class="val">' + _fontLabel + '</div>'
+    +       '<div><div class="name">字級</div><div class="sub">小 / 標準 / 大字 / 年長版（點一下切換）</div></div>'
+    +       '<div class="val" id="m-font-val">' + _fontLabel + '</div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
     +     '<div class="settings-row" onclick="onSettingChange(\'mode\',\'' + (md === 'senior' ? 'standard' : 'senior') + '\')">'
