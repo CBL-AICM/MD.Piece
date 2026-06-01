@@ -18,6 +18,10 @@
   --codex-parch:    #efe3c4;
   --codex-parch-2:  #e7d6ac;
   --codex-edge:     #cdb988;
+  /* 手寫字型堆疊：優先用系統／開源楷書手寫字（多數裝置已內建），無大檔 webfont；
+     缺字時優雅退回現有襯線，仍可讀（長者模式 readability 不致崩）。 */
+  --codex-hand: "LXGW WenKai TC", "LXGW WenKai", "Jason Handwriting", "KaiTi TC",
+                "KaiTi", "DFKai-SB", "BiauKai", "標楷體", "Noto Serif TC", serif;
 }
 
 /* ── 書桌底（書本外的木質暗底，襯托羊皮紙）── */
@@ -79,7 +83,8 @@ body[data-page="education"] .nb-subtle {
 
 /* ── 正文：襯線、墨色、寬鬆行距 ── */
 body[data-page="education"] .edu-article-body {
-  font-family: "Cormorant Garamond", "Noto Serif TC", "Songti TC", "STSong", serif !important;
+  /* 衛教內文用手寫體更生動（章名仍維持襯線紅字，對齊圖 2 印刷標題） */
+  font-family: var(--codex-hand) !important;
   color: var(--codex-ink) !important;
   font-size: 1.12rem !important;
   line-height: 2.0 !important;
