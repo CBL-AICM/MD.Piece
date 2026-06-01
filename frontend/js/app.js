@@ -18281,7 +18281,9 @@ const SETTINGS_KEYS = {
   density:  'mdpiece_density'         // cozy | compact
 };
 
-const FONT_SIZE_PX = { small: 14, normal: 16, large: 18, xlarge: 20 };
+// 字級＝整頁等比縮放倍率（zoom）：全站近半文字是固定 px（JS 內嵌樣式），單改根
+// font-size 只有用 rem 的那半會變、幾乎看不出來；用 zoom 連 px 一起縮放才真的有感。
+const FONT_SIZE_ZOOM = { small: 0.9, normal: 1, large: 1.15, xlarge: 1.3 };
 
 function getSetting(key, fallback) {
   try { return localStorage.getItem(SETTINGS_KEYS[key]) || fallback; }
@@ -18293,9 +18295,9 @@ function setSetting(key, value) {
 }
 
 function applyFontSize(size) {
-  const px = FONT_SIZE_PX[size] || FONT_SIZE_PX.normal;
-  document.documentElement.style.fontSize = px + 'px';
   document.documentElement.setAttribute('data-font-size', size);
+  // zoom 對整頁等比縮放（px 與 rem 一起變）；比單改根 font-size 有感得多。
+  document.documentElement.style.zoom = FONT_SIZE_ZOOM[size] || 1;
 }
 
 // 手機版設定列：點一下循環切換字級（小→標準→大字→年長版），即時套用並就地
