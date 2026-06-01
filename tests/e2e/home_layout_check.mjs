@@ -77,9 +77,9 @@ const PROFILES = [
     const coreCount = await page.$$eval('.hcore-card', els => els.length);
     if (coreCount !== 4) issues.push(`[${p.name}] expected 4 core cards, got ${coreCount}`);
 
-    // Check secondary cards (should be 8)
+    // Check secondary cards (should be 11)
     const secCount = await page.$$eval('.hsec-card', els => els.length);
-    if (secCount !== 8) issues.push(`[${p.name}] expected 8 secondary cards, got ${secCount}`);
+    if (secCount !== 11) issues.push(`[${p.name}] expected 11 secondary cards, got ${secCount}`);
 
     // Check puzzle pieces (should be 9)
     const puzzleCount = await page.$$eval('.hpz-piece', els => els.length);
