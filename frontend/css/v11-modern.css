@@ -136,6 +136,15 @@ body.theme-modern .sos-btn {
 }
 
 /* ═══════════════════════════════════════════════════════
+   color-scheme — 告訴瀏覽器目前實際採用哪一種配色
+   applyTheme() 會在 <html> 上寫 data-theme="light|dark"。
+   宣告 color-scheme 後，Samsung Internet / Chrome 不會再對淺色
+   主題硬套「強制深色」，淺色就乾淨淺色、深色就用我們的高對比深色。
+   ═══════════════════════════════════════════════════════ */
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="dark"]  { color-scheme: dark; }
+
+/* ═══════════════════════════════════════════════════════
    DARK MODE — 高級藍（premium navy）
    觸發：<html class="dark"> + body.theme-modern
    ═══════════════════════════════════════════════════════ */

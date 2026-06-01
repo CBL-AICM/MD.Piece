@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v142-predict-home-entry";
+const CACHE_VERSION = "mdpiece-v143-color-scheme";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -7,7 +7,7 @@ const STATIC_ASSETS = [
   "/index.html",
   "/css/style.css?v=v116-dark-no-grad",
   "/css/medical-warm.css?v=v6-dark-no-grad",
-  "/css/v11-modern.css?v=v18-dark-text-contrast",
+  "/css/v11-modern.css?v=v19-color-scheme",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/css/ghibli-theme.css?v=v3",
   "/css/edu-codex.css?v=v3",
