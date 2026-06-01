@@ -1725,6 +1725,151 @@ def lookup_disease_info(disease_name: str) -> dict:
     return result
 
 
+# ── 疾病復發知識（給復發風險預測引擎當錨）─────────────────────
+# 給 backend/utils/recurrence.py 用：把「某疾病在文獻上的復發率與復發驅動因子」
+# 整理成結構化、可被決定性引擎消費的資料，並由呼叫端配 PubMed 文獻當「根據」。
+#
+# 嚴守 Rule 5（只讓 LLM 做判斷/摘要）＋ Rule 12（不捏造）＋ llm_service 既有
+# 病人端安全憲法：這裡產出的是「族群層級的流行病學整理」，**不是對這位病人的
+# 個人化預測**，而且一律以分級 band＋區間文字呈現，不報單一精確數字。
+#
+# maps_to 只能是引擎追得到的訊號鍵，讓「文獻說的復發驅動」對得上「病人實際紀錄」：
+#   stress（情緒/壓力）、adherence（服藥順從）、symptoms（症狀活動度）、
+#   sleep（睡眠）、labs（檢驗數值）、visits（就診/急性事件頻率）、
+#   diet（飲食/生活型態）、weight（體重）、other（其他，引擎不主動評分）
+
+_DISEASE_RECURRENCE_PROMPT = (
+    "你是臨床流行病學整理助手，為一個『復發風險預測引擎』整理某疾病的**族群層級**復發知識。\n"
+    "這不是要你預測某位病人，而是整理文獻上的一般性證據，讓決定性引擎拿去當錨。\n\n"
+    "輸入：疾病名稱（中/英文，可能不精確）。\n"
+    "回覆**必須是純 JSON**（不要 markdown、不要前後文字），結構：\n"
+    "{\n"
+    '  "matched": true | false,\n'
+    '  "name_zh": "中文病名（無則 null）",\n'
+    '  "name_en": "英文病名（無則 null）",\n'
+    '  "recurrence_rate": {\n'
+    '    "band": "low | medium | high",          // 文獻上這個病的復發傾向分級\n'
+    '    "range_text": "區間文字，例：5 年內約 20–30%（一定用區間，禁止單一精確值）",\n'
+    '    "horizon": "對應的時間範圍，例：5 年 / 1 年 / 治療後",\n'
+    '    "summary": "30~60 字白話：這個病的復發在文獻上大致是什麼狀況"\n'
+    "  },\n"
+    '  "drivers": [        // 文獻上最主要的復發驅動因子，依重要性排序，最多 6 個\n'
+    "    {\n"
+    '      "label": "白話因子名（例：血壓控制不佳、漏藥、睡眠長期不足）",\n'
+    '      "maps_to": "stress|adherence|symptoms|sleep|labs|visits|diet|weight|other",\n'
+    '      "direction": "up",        // 一律 up（此因子惡化會推升復發）\n'
+    '      "weight": "high|medium|low",   // 文獻上與復發關聯的強度\n'
+    '      "modifiable": true|false,      // 病人/生活面是否可調整\n'
+    '      "plain_text": "一句白話：為什麼這個因子和復發有關",\n'
+    '      "evidence": "一句文獻根據（族群層級、可量化更好，但不要編數字）"\n'
+    "    }\n"
+    "  ],\n"
+    '  "watch_signs": ["復發前最該留意的徵兆/訊號 1（白話）", "..."],\n'
+    '  "disclaimer": "此為文獻整理的一般性資訊，非個人診斷；是否復發請由醫師判斷。"\n'
+    "}\n\n"
+    "規則（醫療場景，安全優先）：\n"
+    "1. **完全不認識**這個病：matched=false，其餘填 null / 空陣列，不要硬掰。\n"
+    "2. **絕對不要捏造精確數字**。復發率一律用 band＋區間文字；沒把握的區間就講保守的定性描述。\n"
+    "3. drivers 只放文獻上真有關聯的因子；maps_to 只能用上面列舉的鍵；對不上就用 other。\n"
+    "4. drivers 依『與復發關聯強度』由高到低排序（引擎會用順序挑最可能的復發原因）。\n"
+    "5. 全部繁體中文（病名英文可保留）。語氣平實，不恐嚇、不給假保證。\n"
+    "6. 一定保留 disclaimer 欄位。"
+)
+
+
+def _empty_disease_recurrence(disclaimer: str) -> dict:
+    return {
+        "matched": False,
+        "name_zh": None,
+        "name_en": None,
+        "recurrence_rate": {"band": None, "range_text": None, "horizon": None, "summary": None},
+        "drivers": [],
+        "watch_signs": [],
+        "disclaimer": disclaimer,
+    }
+
+
+_RECURRENCE_MAPS_TO = {
+    "stress", "adherence", "symptoms", "sleep", "labs", "visits", "diet", "weight", "other",
+}
+
+
+def lookup_disease_recurrence(disease_name: str) -> dict:
+    """整理某疾病的『族群層級復發知識』給復發風險引擎當錨（見 _DISEASE_RECURRENCE_PROMPT）。
+
+    呼叫端（recurrence 引擎 / diseases router）應配 pubmed_search 附文獻，
+    並把結果快取進 disease_reference.recurrence_data，避免每次都打 LLM。
+
+    LLM 不可用或回傳無法解析時，回 matched=false 的空殼（Rule 12：不捏造）。
+    """
+    if not (disease_name or "").strip():
+        return _empty_disease_recurrence("未提供疾病名稱。")
+    user_message = f"請整理這個疾病的復發知識：「{disease_name}」"
+    try:
+        raw = call_claude(_DISEASE_RECURRENCE_PROMPT, user_message, max_tokens=1536, timeout=50.0)
+    except Exception as e:
+        logger.error("lookup_disease_recurrence LLM 失敗：%s", type(e).__name__)
+        return _empty_disease_recurrence("復發知識查詢服務暫時無法使用。")
+
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    if not text.startswith("{"):
+        l = text.find("{")
+        r = text.rfind("}")
+        if l != -1 and r != -1 and r > l:
+            text = text[l : r + 1]
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning("lookup_disease_recurrence 回傳非 JSON：%s", (raw or "")[:200])
+        return _empty_disease_recurrence("AI 回覆解析失敗。")
+
+    # 補齊 / 清洗欄位（防呆，避免下游引擎踩空）
+    result.setdefault("matched", bool(result.get("name_zh") or result.get("name_en")))
+    rr = result.get("recurrence_rate")
+    if not isinstance(rr, dict):
+        rr = {}
+    band = rr.get("band")
+    rr["band"] = band if band in ("low", "medium", "high") else None
+    for k in ("range_text", "horizon", "summary"):
+        if not isinstance(rr.get(k), str) or not rr.get(k).strip():
+            rr[k] = None
+    result["recurrence_rate"] = rr
+
+    drivers = result.get("drivers")
+    clean_drivers = []
+    if isinstance(drivers, list):
+        for d in drivers:
+            if not isinstance(d, dict) or not (d.get("label") or "").strip():
+                continue
+            maps_to = d.get("maps_to")
+            clean_drivers.append({
+                "label": str(d.get("label")).strip(),
+                "maps_to": maps_to if maps_to in _RECURRENCE_MAPS_TO else "other",
+                "direction": "up",
+                "weight": d.get("weight") if d.get("weight") in ("high", "medium", "low") else "medium",
+                "modifiable": bool(d.get("modifiable", True)),
+                "plain_text": (d.get("plain_text") or "").strip(),
+                "evidence": (d.get("evidence") or "").strip(),
+            })
+    result["drivers"] = clean_drivers[:6]
+
+    ws = result.get("watch_signs")
+    result["watch_signs"] = [str(w).strip() for w in ws if str(w).strip()][:6] if isinstance(ws, list) else []
+
+    result.setdefault(
+        "disclaimer",
+        "此為文獻整理的一般性資訊，非個人診斷；是否復發請由醫師判斷。",
+    )
+
+    # matched=true 但實質全空 → 視為無法辨識（Rule 12：不給空殼假裝有料）
+    if result["matched"] and not (result["recurrence_rate"]["band"] or result["drivers"]):
+        result["matched"] = False
+
+    return result
+
+
 # ── PubMed 文獻檢索 ─────────────────────────────────────────
 # 給疾病百科用的「文獻來源」：呼叫 NCBI E-utilities，依疾病英文名找近年 review。
 # 失敗就回傳空 list，不影響主流程。
