@@ -19,10 +19,11 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.services import wearable_sync
 from backend.utils.sleep_pipeline import (
     Epoch,
     SleepConfig,
@@ -253,6 +254,188 @@ def delete_session(session_id: str):
     sb = get_supabase()
     sb.table("sleep_sessions").delete().eq("id", session_id).execute()
     return {"deleted": session_id}
+
+
+# ── 穿戴裝置雲端同步（廠商 OAuth，參考實作：Fitbit）──────────
+#
+# source=imported 的真正來源：使用者授權後，後端用廠商雲端 API 拉睡眠紀錄。
+# OAuth token 是機密，只存後端 wearable_connections 表、絕不回給前端。
+# 真正要上線需在部署環境設 FITBIT_CLIENT_ID / FITBIT_CLIENT_SECRET（規則 12）。
+
+
+class SyncRequest(BaseModel):
+    user_id: str
+    days: int = 7
+
+
+def _get_connection(sb, user_id: str, provider: str):
+    try:
+        rows = (
+            sb.table("wearable_connections").select("*")
+            .eq("user_id", user_id).eq("provider", provider)
+            .limit(1).execute().data or []
+        )
+        return rows[0] if rows else None
+    except Exception as e:
+        logger.info(f"get wearable connection: {e}")
+        return None
+
+
+def _upsert_connection(sb, user_id: str, provider: str, tok: dict):
+    """有則更新、無則新增（query builder 無 upsert，這裡手動做）。"""
+    existing = _get_connection(sb, user_id, provider)
+    payload = {
+        "user_id": user_id,
+        "provider": provider,
+        "access_token": tok.get("access_token"),
+        "refresh_token": tok.get("refresh_token"),
+        "scope": tok.get("scope"),
+        "expires_at": tok.get("expires_at"),
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+    if existing:
+        sb.table("wearable_connections").update(payload).eq("id", existing["id"]).execute()
+    else:
+        sb.table("wearable_connections").insert(payload).execute()
+
+
+def _token_expired(exp_iso: Optional[str]) -> bool:
+    if not exp_iso:
+        return True
+    try:
+        exp = datetime.fromisoformat(exp_iso)
+    except ValueError:
+        return True
+    now = datetime.now(exp.tzinfo) if exp.tzinfo else datetime.utcnow()
+    return now >= exp - timedelta(seconds=60)
+
+
+@router.get("/providers")
+def list_providers():
+    """前端據此顯示可連接的穿戴裝置與其是否已備好金鑰。"""
+    return {
+        "providers": [
+            {
+                "id": wearable_sync.PROVIDER,
+                "name": "Fitbit",
+                "configured": wearable_sync.is_configured(),
+            }
+        ]
+    }
+
+
+@router.get("/connections")
+def list_connections(user_id: str = Query(...)):
+    """使用者已連接哪些 provider（只回 provider 與時間，不外流 token）。"""
+    sb = get_supabase()
+    try:
+        rows = (
+            sb.table("wearable_connections").select("*")
+            .eq("user_id", user_id).execute().data or []
+        )
+    except Exception:
+        rows = []
+    return {
+        "connections": [
+            {"provider": r.get("provider"), "updated_at": r.get("updated_at")}
+            for r in rows
+        ]
+    }
+
+
+@router.get("/connect/fitbit/start")
+def fitbit_start(user_id: str = Query(...)):
+    """回傳 Fitbit 授權頁 URL；未設定金鑰時 loud-fail（規則 12）。"""
+    if not wearable_sync.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="尚未設定 Fitbit 連接（缺 FITBIT_CLIENT_ID / FITBIT_CLIENT_SECRET）。"
+                   "請於部署環境補上後再試。",
+        )
+    return {"authorize_url": wearable_sync.build_authorize_url(user_id)}
+
+
+@router.get("/connect/fitbit/callback")
+def fitbit_callback(code: str = Query(""), state: str = Query("")):
+    """Fitbit 導回：驗 state → 授權碼換 token → 存連線 → 導回前端。"""
+    if not wearable_sync.is_configured():
+        return RedirectResponse(url="/?sleep_connect=error")
+    user_id = wearable_sync.parse_state(state)
+    if not user_id or not code:
+        return RedirectResponse(url="/?sleep_connect=error")
+    try:
+        tok = wearable_sync.exchange_code(code)
+        _upsert_connection(get_supabase(), user_id, wearable_sync.PROVIDER, tok)
+    except Exception as e:
+        logger.error(f"fitbit callback failed: {e}")
+        return RedirectResponse(url="/?sleep_connect=error")
+    return RedirectResponse(url="/?sleep_connect=ok")
+
+
+@router.post("/sync/fitbit")
+def fitbit_sync(body: SyncRequest):
+    """拉近 N 天 Fitbit 睡眠紀錄，映射成 imported session 存後台（去重）。"""
+    if not wearable_sync.is_configured():
+        raise HTTPException(status_code=503, detail="尚未設定 Fitbit 連接，無法同步。")
+    sb = get_supabase()
+    conn = _get_connection(sb, body.user_id, wearable_sync.PROVIDER)
+    if not conn:
+        raise HTTPException(status_code=400, detail="尚未連接 Fitbit，請先完成授權。")
+
+    access_token = conn.get("access_token")
+    if _token_expired(conn.get("expires_at")):
+        if not conn.get("refresh_token"):
+            raise HTTPException(status_code=401, detail="Fitbit 授權已過期，請重新連接。")
+        try:
+            tok = wearable_sync.refresh(conn["refresh_token"])
+            _upsert_connection(sb, body.user_id, wearable_sync.PROVIDER, tok)
+            access_token = tok["access_token"]
+        except Exception as e:
+            logger.error(f"fitbit refresh failed: {e}")
+            raise HTTPException(status_code=401, detail="Fitbit 重新授權失敗，請重新連接。")
+
+    days = max(1, min(int(body.days or 7), 100))
+    end_d = datetime.utcnow().date()
+    start_d = end_d - timedelta(days=days)
+    try:
+        logs = wearable_sync.fetch_sleep(access_token, start_d.isoformat(), end_d.isoformat())
+    except Exception as e:
+        logger.error(f"fitbit fetch failed: {e}")
+        raise HTTPException(status_code=502, detail="向 Fitbit 取得睡眠資料失敗，請稍後再試。")
+
+    # 去重：已匯入過（同分鐘 bed_time）的就跳過，避免重覆同步灌入重複列。
+    since = (datetime.utcnow() - timedelta(days=days + 1)).isoformat()
+    existing = (
+        sb.table("sleep_sessions").select("*")
+        .eq("user_id", body.user_id).gte("bed_time", since).execute().data or []
+    )
+    seen = {(r.get("bed_time") or "")[:16] for r in existing if r.get("source") == "imported"}
+
+    synced = 0
+    skipped = 0
+    for log in logs:
+        row = wearable_sync.map_fitbit_sleep_to_session(log, body.user_id)
+        if row["bed_time"][:16] in seen:
+            skipped += 1
+            continue
+        try:
+            sb.table("sleep_sessions").insert(row).execute()
+            seen.add(row["bed_time"][:16])
+            synced += 1
+        except Exception as e:
+            logger.warning(f"insert imported session skipped: {e}")
+    return {"synced": synced, "skipped": skipped, "provider": wearable_sync.PROVIDER}
+
+
+@router.delete("/connections/{provider}")
+def disconnect(provider: str, user_id: str = Query(...)):
+    """中斷某 provider 連線（刪 token；已匯入的睡眠紀錄保留）。"""
+    sb = get_supabase()
+    try:
+        sb.table("wearable_connections").delete().eq("user_id", user_id).eq("provider", provider).execute()
+    except Exception as e:
+        logger.info(f"disconnect: {e}")
+    return {"disconnected": provider}
 
 
 # ── 趨勢（規格 §5.3）──────────────────────────────────────

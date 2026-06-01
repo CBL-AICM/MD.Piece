@@ -182,3 +182,23 @@ def test_export_csv():
     # 設計邊界：匯出純資料，不得有診斷/評語字眼
     for banned in ("診斷", "風險", "睡得很糟", "建議就醫"):
         assert banned not in text
+
+
+# ── 穿戴裝置 OAuth：未設定金鑰時必須 loud-fail（規則 12）──────
+
+def test_providers_reports_unconfigured_without_secrets():
+    """測試環境沒設 FITBIT_* → providers 回 configured=false，不假裝可連。"""
+    r = client.get("/sleep/providers")
+    assert r.status_code == 200
+    fitbit = next(p for p in r.json()["providers"] if p["id"] == "fitbit")
+    assert fitbit["configured"] is False
+
+
+def test_connect_start_503_when_unconfigured():
+    r = client.get("/sleep/connect/fitbit/start", params={"user_id": USER})
+    assert r.status_code == 503
+
+
+def test_sync_503_when_unconfigured():
+    r = client.post("/sleep/sync/fitbit", json={"user_id": USER, "days": 7})
+    assert r.status_code == 503
