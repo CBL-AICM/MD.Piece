@@ -281,7 +281,12 @@ body.codex-reader-open { overflow: hidden; }
     radial-gradient(rgba(120,90,50,.06) .6px, transparent .9px),
     linear-gradient(165deg, #f0e4c6 0%, #e6d3a8 100%);
   background-size: auto, auto, 7px 7px, 100% 100%;
-  box-shadow: 0 18px 50px -12px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,250,235,.5);
+  /* 紙張堆疊感：右／下緣疊出多層紙邊，像一疊厚筆記本（對齊參考圖的仿真筆記本）。 */
+  box-shadow:
+    3px 4px 0 -1px #ece0bf, 6px 8px 0 -1px #e4d5ac,
+    10px 13px 0 -1px #d9c89a, 14px 19px 0 -1px #cdba86,
+    0 22px 52px -12px rgba(0,0,0,.7),
+    inset 0 0 0 1px rgba(255,250,235,.5);
 }
 /* 破墨邊框（SVG turbulence 手繪感：外黑內暗紅） */
 .codex-reader-stage::after {
@@ -362,10 +367,14 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
 }
 .codex-plate-art {
   position: relative;
-  display: inline-block; background: #f1e7cd; padding: 16px;
+  display: inline-block; padding: 16px;
   border: none; border-radius: 1px;
   box-shadow: 3px 3px 0 rgba(58,42,30,.20);
   max-width: 92%;
+  /* 加強排線材質：暖米底 + 斜向細排線（45° hatching）做出蝕刻紙的手感 */
+  background:
+    repeating-linear-gradient(45deg, rgba(58,42,30,.06) 0 1px, transparent 1px 5px),
+    #f1e7cd;
 }
 /* 破墨雙線蝕刻框（feTurbulence 手繪抖動：外粗內細）— 取代乾淨的向量直線框，
    對齊銅版書插圖的破墨手繪邊框（畫風支柱 5）。 */
@@ -377,7 +386,8 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
 .codex-plate-art svg {
   position: relative; z-index: 2;
   display: block; width: 100%; height: auto; max-height: 46vh;
-  filter: sepia(.45) contrast(1.06) brightness(.99);
+  /* 高飽和：拿掉原本的 sepia 去彩，改提升對比與飽和，讓彩色插圖（如聽診器）跳出來 */
+  filter: contrast(1.08) saturate(1.15);
 }
 .codex-plate figcaption {
   margin-top: 10px; color: var(--codex-ink-soft);
@@ -411,10 +421,11 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
 @media (max-width: 767px) {
   /* 書葉外觀：左留位給打孔釘環、角更柔、不需要破墨 SVG 邊框（手機螢幕太小、易雜訊） */
   .codex-reader-stage {
-    margin: 22px 8px 0 22px;
+    margin: 22px 14px 0 22px;
     border-radius: 8px 12px 12px 6px;
-    /* 補強左緣陰影，模擬釘環壓進紙裡 */
+    /* 右／下緣疊紙（紙張堆疊感）+ 左緣釘環內陰影 */
     box-shadow:
+      3px 4px 0 -1px #ece0bf, 6px 8px 0 -1px #e3d4ab, 9px 12px 0 -1px #d6c597,
       0 18px 50px -12px rgba(0,0,0,.7),
       inset 14px 0 22px -14px rgba(60,40,20,.32),
       inset 0 0 0 1px rgba(255,250,235,.5);

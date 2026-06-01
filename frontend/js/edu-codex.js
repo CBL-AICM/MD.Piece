@@ -206,18 +206,19 @@
       '<g stroke-width="1" opacity=".45"><path d="M150 188 l18 16 M140 212 l24 14 M118 226 l20 12"/></g>' +
       '<path d="M36 250 q-8 -34 8 -40 q16 6 8 40 Z" transform="translate(150 -6)"/>' +
     '</svg>',
-    // 顱骨
-    '<svg viewBox="0 0 240 300" fill="none" stroke="#2a1d12" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
-      '<path d="M62 132 C60 80 94 50 120 50 C146 50 180 80 178 132 C178 152 170 162 166 176 L158 200 C156 210 148 214 138 214 L102 214 C92 214 84 210 82 200 L74 176 C70 162 62 152 62 132 Z"/>' +
-      '<path d="M98 214 C98 238 110 248 120 248 C130 248 142 238 142 214"/>' +
-      '<ellipse cx="98" cy="140" rx="16" ry="18"/><ellipse cx="142" cy="140" rx="16" ry="18"/>' +
-      '<path d="M120 156 L112 184 C116 188 124 188 128 184 Z"/>' +
-      '<path d="M104 214 V232 M114 214 V234 M126 214 V234 M136 214 V232 M100 224 H140"/>' +
-      '<path d="M120 50 C116 72 124 72 120 94" stroke-width="1.3" opacity=".6"/>' +
-      '<g stroke-width="1" opacity=".4"><path d="M150 108 l16 10 M150 120 l18 8 M74 108 l-16 10 M74 120 l-18 8"/></g>' +
+    // 聽診器（粗線條 + 高飽和：burgundy 耳管 + 暖金聽診面）
+    '<svg viewBox="0 0 240 300" fill="none" stroke="#3a2417" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M80 46 C68 86 86 112 118 126"/>' +
+      '<path d="M160 46 C172 86 154 112 122 126"/>' +
+      '<circle cx="80" cy="42" r="9" fill="#9c2a38" stroke="#3a2417" stroke-width="5"/>' +
+      '<circle cx="160" cy="42" r="9" fill="#9c2a38" stroke="#3a2417" stroke-width="5"/>' +
+      '<path d="M120 126 C120 160 120 186 120 202"/>' +
+      '<circle cx="120" cy="232" r="32" fill="#e8b14e" stroke="#3a2417" stroke-width="8"/>' +
+      '<circle cx="120" cy="232" r="17" fill="#f3e7c8" stroke="#3a2417" stroke-width="5"/>' +
+      '<g stroke-width="3" opacity=".45"><path d="M150 196 l16 10 M150 208 l18 8"/></g>' +
     '</svg>'
   ];
-  var PLATE_LABELS = ["圖 · 心之府", "圖 · 本草", "圖 · 製劑", "圖 · 顱骨"];
+  var PLATE_LABELS = ["圖 · 心之府", "圖 · 本草", "圖 · 製劑", "圖 · 聽診"];
   function hashStr(s) { var h = 0; s = s || ""; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; } return Math.abs(h); }
 
   // 手機版書籤貼紙的醫療圖示：依文章標題穩定挑選一個（同一篇始終同一圖示，
