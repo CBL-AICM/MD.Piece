@@ -18300,24 +18300,6 @@ function applyFontSize(size) {
   document.documentElement.style.zoom = FONT_SIZE_ZOOM[size] || 1;
 }
 
-// 手機版設定列：點一下循環切換字級（小→標準→大字→年長版），即時套用並就地
-// 更新標籤。桌面版用分段控制（onSettingChange），手機版沒有分段控制空間，故用
-// tap-to-cycle，與同區塊「主題 / 模式」列的點擊切換一致。
-function cycleFontSize() {
-  var order = ['small', 'normal', 'large', 'xlarge'];
-  var labels = { small: '小', normal: '標準', large: '大字', xlarge: '年長版' };
-  var next = order[(order.indexOf(getSetting('fontSize', 'normal')) + 1) % order.length];
-  setSetting('fontSize', next);
-  applyFontSize(next);
-  var mv = document.getElementById('m-font-val');
-  if (mv) mv.textContent = labels[next];
-  // 若桌面分段控制同時在 DOM 裡，順手同步其 active 狀態
-  document.querySelectorAll('.set-seg-btn[data-group="fontSize"]').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.value === next);
-  });
-  if (typeof showToast === 'function') showToast('字級：' + labels[next], 'success');
-}
-
 function applyTheme(pref) {
   const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
@@ -19190,11 +19172,13 @@ function settings() {
     +       '<div class="val">' + _themeLabel + '</div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
-    +     '<div class="settings-row" onclick="cycleFontSize()">'
+    +     '<div class="settings-row" style="cursor:default">'
     +       '<div class="ico"><i data-lucide="type"></i></div>'
-    +       '<div><div class="name">字級</div><div class="sub">小 / 標準 / 大字 / 年長版（點一下切換）</div></div>'
-    +       '<div class="val" id="m-font-val">' + _fontLabel + '</div>'
-    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
+    +       '<div style="flex:1"><div class="name">字級</div><div class="sub">點選想要的字級</div></div>'
+    +       '<div class="val">' + _fontLabel + '</div>'
+    +     '</div>'
+    +     '<div class="set-seg" style="margin:2px 14px 12px;gap:6px">'
+    +       seg('fontSize', [{value:'small',label:'小'},{value:'normal',label:'標準'},{value:'large',label:'大字'},{value:'xlarge',label:'年長版'}], fs)
     +     '</div>'
     +     '<div class="settings-row" onclick="onSettingChange(\'mode\',\'' + (md === 'senior' ? 'standard' : 'senior') + '\')">'
     +       '<div class="ico"><i data-lucide="user"></i></div>'
