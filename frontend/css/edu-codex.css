@@ -386,8 +386,9 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
 .codex-plate-art svg {
   position: relative; z-index: 2;
   display: block; width: 100%; height: auto; max-height: 46vh;
-  /* 高飽和：拿掉原本的 sepia 去彩，改提升對比與飽和，讓彩色插圖（如聽診器）跳出來 */
-  filter: contrast(1.08) saturate(1.15);
+  /* 桌機＝古董書：維持銅版雕刻單色（sepia 去彩 + 紅 spot color）。
+     手機＝筆記本：在下方 media query 改高飽和（暖色插畫）。 */
+  filter: sepia(.42) contrast(1.06) brightness(.99);
 }
 .codex-plate figcaption {
   margin-top: 10px; color: var(--codex-ink-soft);
@@ -509,4 +510,7 @@ body.codex-reader-open #codex-open-btn { display: none !important; }
 
   /* 控制列在手機略小一點，騰出空間給圓點 */
   .codex-fbtn { padding: 7px 12px; font-size: .9rem; }
+
+  /* 手機＝暖色筆記本：插圖改高飽和（拿掉桌機的 sepia 去彩），讓彩色插畫跳出來 */
+  .codex-plate-art svg { filter: contrast(1.08) saturate(1.18); }
 }
