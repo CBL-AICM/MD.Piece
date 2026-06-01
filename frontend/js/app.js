@@ -18300,6 +18300,19 @@ function applyFontSize(size) {
   document.documentElement.style.zoom = FONT_SIZE_ZOOM[size] || 1;
 }
 
+// 手機版「字級」列：點一下展開選單，選項各以自身大小預覽，點選即套用並收合。
+function toggleFontMenu() {
+  var m = document.getElementById('m-font-menu');
+  if (m) m.style.display = (m.style.display === 'none' || !m.style.display) ? 'block' : 'none';
+}
+function closeFontMenu() {
+  var m = document.getElementById('m-font-menu');
+  if (m) m.style.display = 'none';
+  var labels = { small: '小', normal: '標準', large: '大字', xlarge: '年長版' };
+  var mv = document.getElementById('m-font-val');
+  if (mv) mv.textContent = labels[getSetting('fontSize', 'normal')] || '標準';
+}
+
 function applyTheme(pref) {
   const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const resolved = pref === 'auto' ? (sysDark ? 'dark' : 'light') : pref;
@@ -19172,13 +19185,17 @@ function settings() {
     +       '<div class="val">' + _themeLabel + '</div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
-    +     '<div class="settings-row" style="cursor:default">'
+    +     '<div class="settings-row" onclick="toggleFontMenu()">'
     +       '<div class="ico"><i data-lucide="type"></i></div>'
-    +       '<div style="flex:1"><div class="name">字級</div><div class="sub">點選想要的字級</div></div>'
-    +       '<div class="val">' + _fontLabel + '</div>'
+    +       '<div style="flex:1"><div class="name">字級</div><div class="sub">點此選擇字級</div></div>'
+    +       '<div class="val" id="m-font-val">' + _fontLabel + '</div>'
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
-    +     '<div class="set-seg" style="margin:2px 14px 12px;gap:6px">'
-    +       seg('fontSize', [{value:'small',label:'小'},{value:'normal',label:'標準'},{value:'large',label:'大字'},{value:'xlarge',label:'年長版'}], fs)
+    +     '<div id="m-font-menu" class="set-font-menu" style="display:none;padding:2px 14px 12px">'
+    +       '<button type="button" class="set-seg-btn' + (fs === 'small' ? ' active' : '') + '" data-group="fontSize" data-value="small" onclick="onSettingChange(\'fontSize\',\'small\');closeFontMenu()" style="display:block;width:100%;text-align:left;margin:0 0 8px;font-size:13px">小</button>'
+    +       '<button type="button" class="set-seg-btn' + (fs === 'normal' ? ' active' : '') + '" data-group="fontSize" data-value="normal" onclick="onSettingChange(\'fontSize\',\'normal\');closeFontMenu()" style="display:block;width:100%;text-align:left;margin:0 0 8px;font-size:16px">標準</button>'
+    +       '<button type="button" class="set-seg-btn' + (fs === 'large' ? ' active' : '') + '" data-group="fontSize" data-value="large" onclick="onSettingChange(\'fontSize\',\'large\');closeFontMenu()" style="display:block;width:100%;text-align:left;margin:0 0 8px;font-size:20px">大字</button>'
+    +       '<button type="button" class="set-seg-btn' + (fs === 'xlarge' ? ' active' : '') + '" data-group="fontSize" data-value="xlarge" onclick="onSettingChange(\'fontSize\',\'xlarge\');closeFontMenu()" style="display:block;width:100%;text-align:left;margin:0;font-size:24px">年長版</button>'
     +     '</div>'
     +     '<div class="settings-row" onclick="onSettingChange(\'mode\',\'' + (md === 'senior' ? 'standard' : 'senior') + '\')">'
     +       '<div class="ico"><i data-lucide="user"></i></div>'
