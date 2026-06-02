@@ -3533,7 +3533,7 @@ async function submitLogin() {
       throw new Error(err.detail || '登入失敗');
     }
     const user = await res.json();
-    finishAuth(user);
+    finishAuth(user, false);
   } catch (e) {
     showAuthError('login', e.message || '登入失敗，請稍後再試');
     btn.disabled = false;
@@ -3597,7 +3597,7 @@ async function submitRegister() {
       throw new Error(err.detail || '註冊失敗');
     }
     const user = await res.json();
-    finishAuth(user);
+    finishAuth(user, true);
   } catch (e) {
     showAuthError('register', e.message || '註冊失敗，請稍後再試');
     btn.disabled = false;
@@ -3675,7 +3675,7 @@ async function submitRecoveryReset() {
   }
 }
 
-function finishAuth(user) {
+function finishAuth(user, isNewRegistration) {
   if (user.username) {
     try { localStorage.setItem('mdpiece_last_username', user.username); } catch {}
   }
@@ -3687,8 +3687,8 @@ function finishAuth(user) {
     document.getElementById('app-wrapper').classList.add('show');
     showPage('home');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    // Profile onboarding 先跳（強制問慢性病），完成後再進原本的 tutorial onboarding
-    if (typeof maybeShowProfileOnboarding === 'function') {
+    // 慢性病問卷只在「註冊」時跳；登入不打擾。完成後再進原本的 tutorial onboarding。
+    if (isNewRegistration && typeof maybeShowProfileOnboarding === 'function') {
       maybeShowProfileOnboarding(function() {
         if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
       });
