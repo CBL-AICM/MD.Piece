@@ -18462,9 +18462,12 @@ const SETTINGS_KEYS = {
   density:  'mdpiece_density'         // cozy | compact
 };
 
-// 字級＝整頁等比縮放倍率（zoom）：全站近半文字是固定 px（JS 內嵌樣式），單改根
-// font-size 只有用 rem 的那半會變、幾乎看不出來；用 zoom 連 px 一起縮放才真的有感。
-const FONT_SIZE_ZOOM = { small: 0.9, normal: 1, large: 1.15, xlarge: 1.3 };
+// 字級＝根 font-size 等比縮放倍率。曾用 document.zoom 連固定 px 文字一起縮放，
+// 但 zoom 是非標準屬性，會讓全站 position:fixed/absolute 元素（頂欄、底部導覽、
+// 彈窗、浮動鈕…）一起位移 —— 選非「標準」字級時整個版面就跑位。改回縮放根
+// font-size：rem-based 文字照樣放大、版面不再偏移；少數內嵌固定 px 的文字放大
+// 幅度較小，是換取「不跑位」的取捨。
+const FONT_SIZE_SCALE = { small: 0.9, normal: 1, large: 1.15, xlarge: 1.3 };
 
 function getSetting(key, fallback) {
   try { return localStorage.getItem(SETTINGS_KEYS[key]) || fallback; }
@@ -18477,8 +18480,10 @@ function setSetting(key, value) {
 
 function applyFontSize(size) {
   document.documentElement.setAttribute('data-font-size', size);
-  // zoom 對整頁等比縮放（px 與 rem 一起變）；比單改根 font-size 有感得多。
-  document.documentElement.style.zoom = FONT_SIZE_ZOOM[size] || 1;
+  // 用根 font-size 等比縮放（rem 會跟著變）；不用 zoom，避免 fixed/absolute 元素位移。
+  document.documentElement.style.fontSize = (FONT_SIZE_SCALE[size] || 1) * 100 + '%';
+  // 清掉從帶 zoom 的舊版升上來時可能殘留的 inline zoom。
+  document.documentElement.style.zoom = '';
 }
 
 function applyTheme(pref) {
