@@ -68,6 +68,7 @@ class UserCreate(BaseModel):
     username: str
     password: str
     nickname: str
+    email: str | None = None  # 選填：註冊時收集，存在帳號上
     role: str | None = None  # 後端強制覆寫為 'patient'
     avatar_color: str | None = None
     avatar_url: str | None = None
