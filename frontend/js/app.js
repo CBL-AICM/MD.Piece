@@ -701,7 +701,13 @@ function memoSyncOnLoad() {
       var byId = {};
       data.memos.forEach(function(m) { if (m && m.id) byId[m.id] = m; });
       memoLoad().forEach(function(m) {
-        if (m && m.id && !byId[m.id]) { memoSyncPush(m); byId[m.id] = m; }
+        if (!m || !m.id) return;
+        var server = byId[m.id];
+        // 本機獨有，或本機是較新的版本（離線編輯 updatedAt 較新）→ 補傳並保留本機，
+        // 不要被後端的舊版蓋掉（否則離線改的 memo 會遺失）。
+        var lt = m.updatedAt || m.createdAt || '';
+        var st = server ? (server.updatedAt || server.createdAt || '') : '';
+        if (!server || String(lt) > String(st)) { memoSyncPush(m); byId[m.id] = m; }
       });
       var merged = Object.keys(byId).map(function(k) { return byId[k]; });
       merged.sort(function(a, b) {
