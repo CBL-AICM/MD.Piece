@@ -185,22 +185,22 @@ img, svg, video { max-width: 100%; height: auto; }
   color: var(--landing-text);
 }
 
-/* ── LIGHT theme (暖陽插畫日光) ─────────────────────────────── */
+/* ── LIGHT theme (柔霧薰衣草 · Periwinkle Mist) ──────────────── */
 #landing[data-theme="light"] {
-  --landing-text:   #5C3A32;
-  --landing-dim:    #8B7868;
-  --landing-mint:   #9DAEC0;
-  --landing-aqua:   #7E94A8;
-  --landing-pop:    #C97F4B;
-  --landing-pink:   #E8B4A0;
-  --landing-term:   #B8553F;
-  --landing-card:   rgba(255,250,240,0.68);
-  --landing-border: rgba(31,61,88,0.35);
-  --landing-glow:   rgba(74,144,194,0.32);
+  --landing-text:   #2c3247;
+  --landing-dim:    #6b7287;
+  --landing-mint:   #9aa2c6;
+  --landing-aqua:   #8a93bc;
+  --landing-pop:    #5b6488;
+  --landing-pink:   #b9c0dd;
+  --landing-term:   #4a5578;
+  --landing-card:   rgba(255,255,255,0.72);
+  --landing-border: rgba(91,100,136,0.30);
+  --landing-glow:   rgba(91,100,136,0.30);
   background:
-    radial-gradient(ellipse at 78% 18%, rgba(232,201,163,0.7), transparent 55%),
-    radial-gradient(ellipse at 18% 82%, rgba(232,168,168,0.45), transparent 55%),
-    linear-gradient(180deg, #FBF6EC 0%, #F5E9D0 55%, #E8D4B8 100%);
+    radial-gradient(ellipse at 78% 18%, rgba(154,162,198,0.45), transparent 55%),
+    radial-gradient(ellipse at 18% 82%, rgba(185,192,221,0.42), transparent 55%),
+    linear-gradient(180deg, #f4f5fa 0%, #ecedf4 55%, #e2e4ef 100%);
   color: var(--landing-text);
 }
 
@@ -619,7 +619,7 @@ img, svg, video { max-width: 100%; height: auto; }
   --app-chrome-1:   #ffffff;   /* titlebar 漸層上層 */
   --app-chrome-2:   #e6e9f5;   /* titlebar 漸層下層 */
   --app-border:     #b9c0dd;   /* 柔薰衣草邊框 */
-  --app-shadow:     2px 2px 0 rgba(91,100,136,0.16);
+  --app-shadow:     0 4px 16px rgba(91,100,136,0.14);
   --app-glow:       rgba(91,100,136,0.45);
   --app-chip-text:  #2c3247;   /* slate navy text on light chips */
   --heading-fg:     #4a5578;   /* 板岩藍紫 heading accent */
@@ -12087,20 +12087,18 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   html[data-mode="senior"] .topbar h2 { font-size: 1.2rem; }
 }
 
-/* Light theme tweaks — softer shadows on the cream palette */
+/* Light theme tweaks — 柔和擴散陰影（Periwinkle Mist 軟性風格，取代硬邊疊紙陰影）*/
 @media (max-width: 768px) {
   #app-wrapper[data-theme="light"] .mobile-tabbar {
-    box-shadow: 2px 2px 0 var(--app-border), 0 10px 24px rgba(31,61,88,0.12);
+    box-shadow: 0 -2px 16px rgba(91,100,136,0.10), 0 -1px 4px rgba(91,100,136,0.06);
   }
   #app-wrapper[data-theme="light"] #app .home-section,
   #app-wrapper[data-theme="light"] #app .card,
   #app-wrapper[data-theme="light"] #app .pzl-card,
   #app-wrapper[data-theme="light"] #app .home-hero {
     box-shadow:
-      0 1px 0 var(--app-border),
-      0 3px 0 var(--app-panel-soft),
-      0 4px 0 var(--app-border),
-      0 8px 18px rgba(31,61,88,0.10);
+      0 4px 16px rgba(91,100,136,0.12),
+      0 1px 4px rgba(91,100,136,0.08);
   }
 }
 
