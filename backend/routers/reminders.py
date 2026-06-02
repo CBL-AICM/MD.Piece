@@ -160,35 +160,49 @@ def _days_of_week_from_str(raw):
 def _compute_next_fire(frequency, current_fire, time_of_day, days_of_week):
     """根據 frequency 與目前 next_fire_at，算出下一次該發送的 UTC 時間。
     回傳 None 代表此 reminder 不會再發（once 已發過）。
+
+    以「原本排定的觸發時刻」current_fire 為錨往後推，保留正確的時刻與時區。
+    next_fire_at 已是前端換算好的 UTC instant；time_of_day 只是本地 HH:MM 標記，
+    不能拿來當 UTC 計算（跨時區會整組偏掉）。錯過多次（app 長時間沒開）也會一路
+    補到「未來最近一次」，不會卡在過去、也不會每次以 now 為基準而漂移。
     """
     if frequency == "once":
         return None
 
     now = datetime.now(timezone.utc)
-    base = current_fire if current_fire and current_fire > now else now
+    anchor = current_fire or now
 
     if frequency == "daily":
-        return base + timedelta(days=1)
+        nxt = anchor + timedelta(days=1)
+        while nxt <= now:
+            nxt += timedelta(days=1)
+        return nxt
 
     if frequency == "weekly":
         days = sorted(_days_of_week_from_str(days_of_week))
+        candidate = anchor + timedelta(days=1)
         if not days:
-            return base + timedelta(days=7)
-        candidate = base + timedelta(days=1)
-        for _ in range(8):
-            # Python: Mon=0..Sun=6（與我們約定一致）
-            if candidate.weekday() in days:
+            while candidate <= now:
+                candidate += timedelta(days=7)
+            return candidate
+        # 往後找「未來、且落在指定星期」的最近一天，保留 anchor 的時刻
+        for _ in range(366):
+            if candidate > now and candidate.weekday() in days:
                 return candidate
             candidate += timedelta(days=1)
-        return base + timedelta(days=7)
+        return anchor + timedelta(days=7)
 
     if frequency == "monthly":
-        year, month = base.year, base.month + 1
-        if month > 12:
-            year += 1
-            month = 1
-        day = min(base.day, 28)
-        return base.replace(year=year, month=month, day=day)
+        nxt = anchor
+        for _ in range(120):
+            year, month = nxt.year, nxt.month + 1
+            if month > 12:
+                year += 1
+                month = 1
+            nxt = nxt.replace(year=year, month=month, day=min(nxt.day, 28))
+            if nxt > now:
+                return nxt
+        return nxt
 
     return None
 

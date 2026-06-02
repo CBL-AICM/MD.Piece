@@ -22978,6 +22978,7 @@ var _pushSubscribed = false;
 var _webpushEnabled = null;  // null=未探測, true=後端已啟用, false=未啟用
 var _remindersInboxTimer = null;
 var _remindersSeenInboxIds = null;  // null = 初次載入時不響鈴
+var _remindersBellPrefsLoaded = false;  // 全 app 範圍只載一次鈴聲偏好
 var _remBellKinds = [
   { kind: 'medication',     label: '服藥提醒' },
   { kind: 'appointment',    label: '回診/預約' },
@@ -23824,18 +23825,36 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// 全域：登入後或 app 啟動時，背景同步未讀數
+// 全域：登入後或 app 啟動時，背景派發到期提醒 + 全 app 範圍響鈴 + 同步未讀數。
+// （修：原本只在「提醒」頁的 30 秒輪詢才會響鈴，其他頁面到期提醒只更新紅點、不出聲。）
 function reminderBackgroundSync() {
   try {
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return;
-    // 同步前先觸發伺服器派發（命中本帳號的到期 reminder）
+    // 鈴聲偏好只載一次，讓使用者自訂的鈴聲/音量/開關在任何頁面都生效
+    if (window.MDBell && typeof MDBell.loadPrefs === 'function' && !_remindersBellPrefsLoaded) {
+      _remindersBellPrefsLoaded = true;
+      try { MDBell.loadPrefs(pid, API); } catch (e) {}
+    }
+    // 同步前先觸發伺服器派發（命中本帳號的到期 reminder → 寫入 inbox）
     fetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(pid), { method: 'POST' })
       .catch(function() {})
       .finally(function() {
-        fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&unread_only=true&limit=1')
+        // 抓回 inbox 內容（不只未讀數）→ 在「任何頁面」都能對新到期提醒響鈴
+        fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&limit=20')
           .then(function(r) { return r.json(); })
-          .then(function(data) { reminderUpdateNavBadge(data.unread || 0); })
+          .then(function(data) {
+            var items = data.items || [];
+            if (typeof _ringBellForNewInboxArrivals === 'function') {
+              _ringBellForNewInboxArrivals(items);
+            }
+            // 若正好在提醒頁，順手把列表也更新成最新
+            if (_remindersPid && document.getElementById('rem-inbox-list')) {
+              _remindersInbox = items;
+              if (typeof reminderRenderInbox === 'function') reminderRenderInbox(data.unread || 0);
+            }
+            reminderUpdateNavBadge(data.unread || 0);
+          })
           .catch(function() {});
       });
   } catch {}
