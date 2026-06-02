@@ -23050,6 +23050,17 @@ function reminders() {
     +     '<button onclick="_mobileRemSubmit()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="save" style="width:13px;height:13px"></i> 建立提醒</button>'
     +   '</div>'
 
+    // 鈴聲設定（mobile 簡化版；用 class 而非 id，與 desktop 共用 render）
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="music-4"></i> 鈴聲設定</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<span style="font-size:11px;color:var(--text-muted)">每種提醒可設不同鈴聲</span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:12px;margin-bottom:12px">'
+    +     '<div class="rem-bell-list-target" data-bell-target="mobile"><p style="color:var(--text-muted);font-size:12px">載入中…</p></div>'
+    +     '<p style="margin-top:8px;color:var(--text-muted);font-size:11px">手機鎖屏時會用震動提示；App 在前景時才會播放選擇的鈴聲。</p>'
+    +   '</div>'
+
     +   '<div class="disclaimer-footer">'
     +     '<i data-lucide="info"></i>'
     +     '<span>提醒僅供協助記憶，不取代醫囑。請以醫師指示為主。</span>'
@@ -23128,7 +23139,7 @@ function reminders() {
     + '    <h3><i data-lucide="music-4" style="width:18px;height:18px;vertical-align:middle"></i> 鈴聲設定</h3>'
     + '    <span style="font-size:0.8rem;color:var(--text-muted)">每種提醒可以設定不同鈴聲</span>'
     + '  </div>'
-    + '  <div id="rem-bell-list" style="margin-top:12px"><p style="color:var(--text-muted)">載入中…</p></div>'
+    + '  <div class="rem-bell-list-target" data-bell-target="desktop" style="margin-top:12px"><p style="color:var(--text-muted)">載入中…</p></div>'
     + '  <p style="margin-top:8px;color:var(--text-muted);font-size:0.78rem">手機鎖屏時，系統會用震動提示；App 在前景時才會播放上方選擇的鈴聲。</p>'
     + '</div>'
     + '<div class="card">'
@@ -23557,74 +23568,71 @@ function _ringBellForNewInboxArrivals(items) {
 }
 
 function reminderRenderBellSettings() {
-  var el = document.getElementById('rem-bell-list');
-  if (!el || !window.MDBell) return;
-  _remClear(el);
+  if (!window.MDBell) return;
+  var targets = document.querySelectorAll('.rem-bell-list-target');
+  if (!targets.length) return;
   var presets = MDBell.listPresets();
-  _remBellKinds.forEach(function(item) {
-    var pref = MDBell.getPref(item.kind);
-    var row = _remH('div', {
-      style: 'display:grid;grid-template-columns:1.2fr 1.4fr 1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-glass)',
-    });
-    row.appendChild(_remH('div', { style: 'font-weight:500' }, item.label));
+  targets.forEach(function(el) {
+    _remClear(el);
+    _remBellKinds.forEach(function(item) {
+      var pref = MDBell.getPref(item.kind);
+      var row = _remH('div', { 'class': 'rem-bell-row' });
+      row.appendChild(_remH('div', { 'class': 'rem-bell-label' }, item.label));
 
-    // 鈴聲下拉
-    var sel = _remH('select', {
-      style: 'padding:6px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:transparent;color:inherit',
-      'data-action': 'bell-sound', 'data-kind': item.kind,
-    });
-    presets.forEach(function(p) {
-      var opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.label;
-      if (p.id === pref.bell_sound) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    sel.addEventListener('change', function() {
-      MDBell.savePref(item.kind, { bell_sound: sel.value, volume: pref.volume, enabled: pref.enabled }, API);
-      pref.bell_sound = sel.value;
-    });
-    row.appendChild(sel);
+      // 鈴聲下拉
+      var sel = _remH('select', {
+        'class': 'rem-bell-sound',
+        'data-action': 'bell-sound', 'data-kind': item.kind,
+      });
+      presets.forEach(function(p) {
+        var opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.label;
+        if (p.id === pref.bell_sound) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', function() {
+        MDBell.savePref(item.kind, { bell_sound: sel.value, volume: pref.volume, enabled: pref.enabled }, API);
+        pref.bell_sound = sel.value;
+      });
+      row.appendChild(sel);
 
-    // 音量
-    var volWrap = _remH('div', { style: 'display:flex;align-items:center;gap:6px' });
-    var volInput = _remH('input', {
-      type: 'range', min: '0', max: '100', value: String(pref.volume || 70),
-      style: 'flex:1',
-    });
-    var volLabel = _remH('span', { style: 'font-size:0.75rem;color:var(--text-muted);min-width:30px;text-align:right' }, String(pref.volume || 70));
-    volInput.addEventListener('input', function() { volLabel.textContent = volInput.value; });
-    volInput.addEventListener('change', function() {
-      pref.volume = parseInt(volInput.value, 10);
-      MDBell.savePref(item.kind, pref, API);
-    });
-    volWrap.appendChild(volInput);
-    volWrap.appendChild(volLabel);
-    row.appendChild(volWrap);
+      // 音量
+      var volWrap = _remH('div', { 'class': 'rem-bell-vol' });
+      var volInput = _remH('input', {
+        type: 'range', min: '0', max: '100', value: String(pref.volume || 70),
+      });
+      var volLabel = _remH('span', { 'class': 'rem-bell-vol-label' }, String(pref.volume || 70));
+      volInput.addEventListener('input', function() { volLabel.textContent = volInput.value; });
+      volInput.addEventListener('change', function() {
+        pref.volume = parseInt(volInput.value, 10);
+        MDBell.savePref(item.kind, pref, API);
+      });
+      volWrap.appendChild(volInput);
+      volWrap.appendChild(volLabel);
+      row.appendChild(volWrap);
 
-    // 預覽
-    var previewBtn = _remH('button', {
-      'class': 'secondary',
-      style: 'padding:4px 10px;font-size:0.8rem',
-    }, '🔊 試聽');
-    previewBtn.addEventListener('click', function() {
-      MDBell.preview(sel.value, parseInt(volInput.value, 10));
-    });
-    row.appendChild(previewBtn);
+      // 預覽
+      var previewBtn = _remH('button', { 'class': 'secondary rem-bell-preview' }, '🔊 試聽');
+      previewBtn.addEventListener('click', function() {
+        MDBell.preview(sel.value, parseInt(volInput.value, 10));
+      });
+      row.appendChild(previewBtn);
 
-    // 開關
-    var toggleLabel = _remH('label', { style: 'display:inline-flex;align-items:center;gap:4px;font-size:0.8rem' });
-    var toggle = _remH('input', { type: 'checkbox' });
-    toggle.checked = pref.enabled !== false;
-    toggle.addEventListener('change', function() {
-      pref.enabled = toggle.checked;
-      MDBell.savePref(item.kind, pref, API);
-    });
-    toggleLabel.appendChild(toggle);
-    toggleLabel.appendChild(document.createTextNode('啟用'));
-    row.appendChild(toggleLabel);
+      // 開關
+      var toggleLabel = _remH('label', { 'class': 'rem-bell-toggle' });
+      var toggle = _remH('input', { type: 'checkbox' });
+      toggle.checked = pref.enabled !== false;
+      toggle.addEventListener('change', function() {
+        pref.enabled = toggle.checked;
+        MDBell.savePref(item.kind, pref, API);
+      });
+      toggleLabel.appendChild(toggle);
+      toggleLabel.appendChild(document.createTextNode('啟用'));
+      row.appendChild(toggleLabel);
 
-    el.appendChild(row);
+      el.appendChild(row);
+    });
   });
 }
 

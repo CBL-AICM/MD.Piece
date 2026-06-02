@@ -17763,3 +17763,56 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
 .sleep-secondary { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; padding: 10px 14px; border: 1px solid var(--bg-soft); background: var(--bg-surface); border-radius: var(--radius-sm, 10px); font-size: 14px; color: var(--text); cursor: pointer; }
 .sleep-secondary:hover { border-color: var(--accent); color: var(--accent); }
 .sleep-disclaimer { display: flex; align-items: flex-start; gap: 6px; margin-top: 16px; padding: 11px 13px; background: var(--bg-soft); border-radius: var(--radius-sm, 10px); color: var(--text-dim); font-size: 12px; line-height: 1.6; }
+
+/* ─── 提醒鈴聲設定 row（desktop 5 欄、mobile stack）─── */
+.rem-bell-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-glass);
+}
+.rem-bell-row:last-child { border-bottom: none; }
+.rem-bell-label { font-weight: 500; }
+.rem-bell-sound {
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+  background: transparent;
+  color: inherit;
+  font-size: 0.9rem;
+}
+.rem-bell-vol { display: flex; align-items: center; gap: 6px; }
+.rem-bell-vol input[type="range"] { flex: 1; min-width: 0; }
+.rem-bell-vol-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 30px;
+  text-align: right;
+}
+.rem-bell-preview { padding: 4px 10px; font-size: 0.8rem; }
+.rem-bell-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+/* 窄螢幕 stack：label + 開關 / 鈴聲 + 試聽 / 音量 */
+@media (max-width: 600px) {
+  .rem-bell-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "label toggle"
+      "sound preview"
+      "vol vol";
+    gap: 8px 10px;
+    padding: 10px 0;
+  }
+  .rem-bell-label { grid-area: label; font-size: 0.95rem; }
+  .rem-bell-toggle { grid-area: toggle; justify-self: end; }
+  .rem-bell-sound { grid-area: sound; min-width: 0; width: 100%; }
+  .rem-bell-preview { grid-area: preview; }
+  .rem-bell-vol { grid-area: vol; }
+}
