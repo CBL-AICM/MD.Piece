@@ -13,7 +13,14 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 OUT_DIR = Path(__file__).parent
-FONT_PATH = "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"
+# 跨平台中文字型 fallback — 取第一個存在的（原本只寫死 Ubuntu 路徑，Windows/macOS 會找不到字型）
+_FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",  # Ubuntu/Debian: apt install fonts-wqy-zenhei
+    "C:/Windows/Fonts/msjh.ttc",                      # Windows 微軟正黑體
+    "C:/Windows/Fonts/mingliu.ttc",                   # Windows 細明體
+    "/System/Library/Fonts/PingFang.ttc",             # macOS
+]
+FONT_PATH = next((p for p in _FONT_CANDIDATES if Path(p).exists()), _FONT_CANDIDATES[0])
 
 
 def f(size: int) -> ImageFont.FreeTypeFont:
