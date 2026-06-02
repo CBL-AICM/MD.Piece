@@ -3991,7 +3991,7 @@ function accountPage() {
             <input id="acct-nickname" type="text" maxlength="20" value="${(u.nickname || '').replace(/"/g, '&quot;')}" required />
           </label>
           <label class="acct-field">
-            <span>Email（選填，用於寄送報告）</span>
+            <span>Email</span>
             <input id="acct-email" type="email" maxlength="120" placeholder="example@mail.com" value="${(u.email || '').replace(/"/g, '&quot;')}" />
           </label>
           <label class="acct-field">
