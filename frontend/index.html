@@ -2,6 +2,59 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
+
+  <!-- ⚠️ 全域錯誤浮層 — iOS Safari 出錯常只剩白畫面、開發者看不到 console，-->
+  <!-- 這層把真正的 JS 錯誤直接顯示在畫面上，方便使用者截圖回報。放在最前面以盡早攔截。-->
+  <script>
+    (function () {
+      function show(kind, detail) {
+        try {
+          var box = document.getElementById('mdp-err-overlay');
+          if (!box) {
+            box = document.createElement('div');
+            box.id = 'mdp-err-overlay';
+            box.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:2147483647;max-height:60vh;'
+              + 'overflow:auto;background:#7f1d1d;color:#fff;padding:10px 12px;-webkit-overflow-scrolling:touch;'
+              + 'font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",monospace;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+            var bar = document.createElement('div');
+            bar.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-weight:700';
+            bar.innerHTML = '<span>⚠️ 發生錯誤（請截圖回報）</span>';
+            var btns = document.createElement('span');
+            var copy = document.createElement('button');
+            copy.textContent = '複製';
+            copy.style.cssText = 'margin-right:8px;background:#fff;color:#7f1d1d;border:0;border-radius:6px;padding:3px 10px;font-weight:700';
+            copy.onclick = function () { try { navigator.clipboard.writeText(box.dataset.log || ''); copy.textContent = '已複製'; } catch (e) {} };
+            var close = document.createElement('button');
+            close.textContent = '關閉';
+            close.style.cssText = 'background:transparent;color:#fff;border:1px solid #fff;border-radius:6px;padding:3px 10px';
+            close.onclick = function () { box.remove(); };
+            btns.appendChild(copy); btns.appendChild(close); bar.appendChild(btns); box.appendChild(bar);
+            var pre = document.createElement('pre');
+            pre.id = 'mdp-err-body';
+            pre.style.cssText = 'margin:0;white-space:pre-wrap;word-break:break-word';
+            box.appendChild(pre);
+            (document.body || document.documentElement).appendChild(box);
+          }
+          box.dataset.log = (box.dataset.log || '') + '[' + kind + '] ' + detail + '\n'
+            + 'UA: ' + navigator.userAgent + '\nURL: ' + location.href + '\n———\n';
+          var body = document.getElementById('mdp-err-body');
+          if (body) body.textContent = box.dataset.log;
+        } catch (e) { /* 浮層自身絕不能再丟錯 */ }
+      }
+      window.onerror = function (msg, src, lineno, colno, err) {
+        // 跨來源 CDN 只會回報不透明的 "Script error."、無細節，濾掉避免誤報
+        if ((msg === 'Script error.' || msg === 'Script error') && !err) return false;
+        show('error', (msg || 'unknown') + ' @ ' + (src || '?') + ':' + (lineno || '?') + ':' + (colno || '?')
+          + (err && err.stack ? '\n' + err.stack : ''));
+        return false;
+      };
+      window.addEventListener('unhandledrejection', function (e) {
+        var r = e && e.reason;
+        show('promise', (r && (r.stack || r.message)) || String(r));
+      });
+    })();
+  </script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0B1426" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
@@ -59,7 +112,7 @@
     // 把 V 改高一級 → 每個使用者下次開站會清光 SW + caches + reload，
     // 各種 stale cache 全部失效。每個版本每個使用者只清一次。
     (async function() {
-      var APP_BUST = 'v17-edu-plates-2026-05-31-a';
+      var APP_BUST = 'v18-ios-fix-2026-06-02';
       try {
         if (localStorage.getItem('mdp-cache-bust') === APP_BUST) return;
         localStorage.setItem('mdp-cache-bust', APP_BUST);
@@ -658,7 +711,7 @@
 
   <script src="js/i18n.js?v=v83-predict-nav"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v152-fontsize"></script>
+  <script src="js/app.js?v=v153-ios-fix"></script>
   <script src="js/edu-codex.js?v=v3" defer></script>
   <script src="js/landing.js"></script>
   <script>
