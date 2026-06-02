@@ -248,6 +248,7 @@ _SCHEMAS = {
             password_hash TEXT,
             nickname TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('doctor', 'patient')),
+            email TEXT,
             avatar_color TEXT DEFAULT '#5B9FE8',
             avatar_url TEXT,
             id_number TEXT,
@@ -526,6 +527,7 @@ def _migrate_users_table(conn):
     additions = [
         ("username", "TEXT"),
         ("password_hash", "TEXT"),
+        ("email", "TEXT"),
         ("avatar_url", "TEXT"),
         ("id_number", "TEXT"),
         ("recovery_question", "TEXT"),

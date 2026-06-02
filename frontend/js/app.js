@@ -3616,6 +3616,8 @@ async function submitRegister() {
   const password2 = document.getElementById('reg-password2').value;
   const recoveryQuestion = document.getElementById('reg-recovery-question').value.trim();
   const recoveryAnswer = document.getElementById('reg-recovery-answer').value.trim();
+  const emailEl = document.getElementById('reg-email');
+  const email = emailEl ? emailEl.value.trim() : '';
 
   if (!/^[A-Za-z0-9_.\-]{3,32}$/.test(username)) {
     showAuthError('register', '帳號格式不正確（3-32 字元，限英數字 _ . -）');
@@ -3635,6 +3637,11 @@ async function submitRegister() {
     showAuthError('register', '安全問題與答案請一起填寫，或都留空');
     return;
   }
+  // email 為選填，有填才做基本格式檢查（網域用不含點的標籤，避免 ReDoS）
+  if (email && !/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email)) {
+    showAuthError('register', 'email 格式不正確');
+    return;
+  }
 
   const btn = document.getElementById('register-submit');
   const original = btn.innerHTML;
@@ -3648,6 +3655,7 @@ async function submitRegister() {
     role: 'patient',
     avatar_url: _regAvatarDataUrl || null,
   };
+  if (email) payload.email = email;
   if (recoveryQuestion && recoveryAnswer) {
     payload.recovery_question = recoveryQuestion;
     payload.recovery_answer = recoveryAnswer;

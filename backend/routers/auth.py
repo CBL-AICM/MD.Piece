@@ -25,6 +25,9 @@ router = APIRouter()
 
 _USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,32}$")
 _ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+# 網域標籤用不含「.」的字元類，避免 `[^@\s]+\.[^@\s]+` 的重疊歧義導致
+# 多項式回溯（ReDoS）；此寫法為線性匹配。
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
 
 # 登入／重設防暴力破解：連續失敗達上限就鎖一段時間。
 # serverless 不能用記憶體計數，故狀態存在 users 表（failed_login_count / locked_until）。
@@ -170,6 +173,12 @@ def register(body: UserCreate):
     ok, msg = _validate_password(body.password, body.username)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
+
+    # email 為選填；空白視同未填，有填則做基本格式檢查後存起來。
+    if body.email is not None:
+        body.email = body.email.strip() or None
+    if body.email and not _EMAIL_RE.match(body.email):
+        raise HTTPException(status_code=400, detail="email 格式不正確")
 
     sb = get_supabase()
     existing = sb.table("users").select("id").eq("username", body.username).execute()
