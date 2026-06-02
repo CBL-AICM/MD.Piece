@@ -701,7 +701,13 @@ function memoSyncOnLoad() {
       var byId = {};
       data.memos.forEach(function(m) { if (m && m.id) byId[m.id] = m; });
       memoLoad().forEach(function(m) {
-        if (m && m.id && !byId[m.id]) { memoSyncPush(m); byId[m.id] = m; }
+        if (!m || !m.id) return;
+        var server = byId[m.id];
+        // 本機獨有，或本機是較新的版本（離線編輯 updatedAt 較新）→ 補傳並保留本機，
+        // 不要被後端的舊版蓋掉（否則離線改的 memo 會遺失）。
+        var lt = m.updatedAt || m.createdAt || '';
+        var st = server ? (server.updatedAt || server.createdAt || '') : '';
+        if (!server || String(lt) > String(st)) { memoSyncPush(m); byId[m.id] = m; }
       });
       var merged = Object.keys(byId).map(function(k) { return byId[k]; });
       merged.sort(function(a, b) {
@@ -5861,6 +5867,11 @@ function loadHomePage() {
   var user = getCurrentUser();
   var pid = getStablePatientId();
 
+  // 症狀條目與後端對齊（拉回 + 補傳本機既有），不阻塞首頁渲染。
+  if (typeof symptomSyncOnLoad === 'function') symptomSyncOnLoad();
+  // 生理量測同步（同上）。
+  if (typeof vitalSyncOnLoad === 'function') vitalSyncOnLoad();
+
   // 住院模式有完全不同的首頁佈局，走另一條資料載入。
   if (getCareMode() === 'inpatient') {
     if (typeof loadInpatientHome === 'function') loadInpatientHome();
@@ -10422,10 +10433,65 @@ function saveSymptomEntry(entry) {
   const all = getSymptomEntries();
   all.push(entry);
   localStorage.setItem('mdpiece_symptoms', JSON.stringify(all));
+  symptomSyncPush(entry);
 }
 function deleteSymptomEntry(id) {
   localStorage.setItem('mdpiece_symptoms',
     JSON.stringify(getSymptomEntries().filter(e => e.id !== id)));
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (pid && id) {
+    try {
+      fetch(API + '/symptoms/entries/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+            { method: 'DELETE' }).catch(function() {});
+    } catch (e) {}
+  }
+}
+
+// 把單筆症狀條目背景同步到後端（best-effort；後端以 (patient_id, client_id) 幂等 upsert，
+// 所以新增、補傳重送都安全）。離線/失敗就留本機，下次開 App 補傳。
+function symptomSyncPush(entry) {
+  if (!entry || !entry.id) return;
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    fetch(API + '/symptoms/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_id: pid,
+        client_id: entry.id,
+        category_id: entry.categoryId || '',
+        intensity: (entry.intensity != null ? entry.intensity : null),
+        frequency: (entry.frequency != null ? entry.frequency : null),
+        notes: entry.notes || '',
+        proxy_for: entry.proxy_for || null,
+        recorded_at: entry.recordedAt || null,
+      }),
+    }).catch(function() {});
+  } catch (e) {}
+}
+
+// 開 App（首頁）時：拉後端症狀條目合併進本機，並把本機獨有的補傳上去。
+// 本機仍是同步讀取來源，眾多 sparkline／報表不必改成 async。
+function symptomSyncOnLoad() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  fetch(API + '/symptoms/entries?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !Array.isArray(data.entries)) return;
+      var byId = {};
+      data.entries.forEach(function(e) { if (e && e.id) byId[e.id] = e; });
+      getSymptomEntries().forEach(function(e) {
+        if (e && e.id && !byId[e.id]) { symptomSyncPush(e); byId[e.id] = e; }
+      });
+      var merged = Object.keys(byId).map(function(k) { return byId[k]; });
+      merged.sort(function(a, b) {
+        return String(b.recordedAt || '').localeCompare(String(a.recordedAt || ''));
+      });
+      localStorage.setItem('mdpiece_symptoms', JSON.stringify(merged));
+    })
+    .catch(function() {});
 }
 function getVisitDates() {
   try { return JSON.parse(localStorage.getItem('mdpiece_visit_dates') || '{}'); }
@@ -11274,10 +11340,64 @@ function saveVitalEntry(e) {
   const arr = getVitalEntries();
   arr.push(e);
   localStorage.setItem('mdpiece_vitals_entries', JSON.stringify(arr));
+  vitalSyncPush(e);
 }
 function deleteVitalEntry(id) {
   localStorage.setItem('mdpiece_vitals_entries',
     JSON.stringify(getVitalEntries().filter(e => e.id !== id)));
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (pid && id) {
+    try {
+      fetch(API + '/vitals/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+            { method: 'DELETE' }).catch(function() {});
+    } catch (e) {}
+  }
+}
+
+// 把單筆量測背景同步到後端（best-effort；後端以 (patient_id, client_id) 幂等 upsert）。
+function vitalSyncPush(e) {
+  if (!e || !e.id) return;
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    fetch(API + '/vitals/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_id: pid,
+        client_id: e.id,
+        metric_id: e.metricId || '',
+        value: (e.value != null ? e.value : null),
+        value2: (e.value2 != null ? e.value2 : null),
+        context: e.context || null,
+        method: e.method || null,
+        notes: e.notes || '',
+        recorded_at: e.recordedAt || null,
+      }),
+    }).catch(function() {});
+  } catch (err) {}
+}
+
+// 開 App（首頁）時：拉後端量測合併進本機，並把本機獨有的補傳上去。
+function vitalSyncOnLoad() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  fetch(API + '/vitals/?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !Array.isArray(data.entries)) return;
+      var byId = {};
+      data.entries.forEach(function(e) { if (e && e.id) byId[e.id] = e; });
+      getVitalEntries().forEach(function(e) {
+        if (e && e.id && !byId[e.id]) { vitalSyncPush(e); byId[e.id] = e; }
+      });
+      var merged = Object.keys(byId).map(function(k) { return byId[k]; });
+      merged.sort(function(a, b) {
+        return String(b.recordedAt || '').localeCompare(String(a.recordedAt || ''));
+      });
+      localStorage.setItem('mdpiece_vitals_entries', JSON.stringify(merged));
+    })
+    .catch(function() {});
 }
 function getLatestEntry(metricId) {
   const arr = getVitalEntries().filter(e => e.metricId === metricId);
@@ -23073,6 +23193,7 @@ function reminders() {
     +       '<span class="pill ' + permPillCls + '"><i data-lucide="shield-check"></i>' + permLabel + '</span>'
     +       '<button class="pv-btn rem-push-enable-btn" onclick="reminderEnablePush()" style="margin-top:0"><i data-lucide="bell-plus"></i> 啟用推播</button>'
     +     '</div>'
+    +     '<div id="rem-push-note" style="display:none;margin-top:6px;font-size:12px;color:var(--text-muted);position:relative;z-index:1"></div>'
     +   '</div>'
 
     // 通知中心 — 站內通知
@@ -23793,6 +23914,7 @@ function reminderRefreshPushState() {
 function _applyPushEnabledUi() {
   var btns = document.querySelectorAll('.rem-push-enable-btn');
   var el = document.getElementById('reminders-push-state');
+  var note = document.getElementById('rem-push-note');
   if (_webpushEnabled === false) {
     for (var i = 0; i < btns.length; i++) {
       btns[i].disabled = true;
@@ -23801,6 +23923,7 @@ function _applyPushEnabledUi() {
       btns[i].title = '伺服器尚未開放手機推播，僅支援站內通知';
     }
     if (el) el.textContent = '推播訂閱：伺服器尚未開放手機推播';
+    if (note) { note.textContent = '手機推播尚未開放，目前僅以站內通知提醒（站內通知一定收到）。'; note.style.display = ''; }
   } else {
     for (var j = 0; j < btns.length; j++) {
       btns[j].disabled = false;
@@ -23808,6 +23931,7 @@ function _applyPushEnabledUi() {
       btns[j].style.cursor = '';
       btns[j].title = '';
     }
+    if (note) { note.textContent = ''; note.style.display = 'none'; }
   }
 }
 

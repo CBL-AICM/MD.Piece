@@ -111,6 +111,8 @@
     { "src": "/explain", "dest": "api/index.py" },
     { "src": "/memos/(.*)", "dest": "api/index.py" },
     { "src": "/memos", "dest": "api/index.py" },
+    { "src": "/vitals/(.*)", "dest": "api/index.py" },
+    { "src": "/vitals", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
 }
