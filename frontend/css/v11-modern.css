@@ -784,6 +784,10 @@ html.dark body.theme-modern #app {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
+    /* 底部安全區（手機手勢列）用「加高」吸收，而非吃進固定 height 的內容區。
+       box-sizing 是 border-box，若只加 padding-bottom 而不加高，內容會被擠到上半部、
+       FAB 蓋住自己的「紀錄」標籤、底下露出空白帶（被切掉 / 留白）。 */
+    height: calc(72px + env(safe-area-inset-bottom)) !important;
     padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important;
     border-left: 0 !important;
     border-right: 0 !important;
