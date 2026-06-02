@@ -23068,6 +23068,7 @@ function reminders() {
     +       '<span class="pill ' + permPillCls + '"><i data-lucide="shield-check"></i>' + permLabel + '</span>'
     +       '<button class="pv-btn rem-push-enable-btn" onclick="reminderEnablePush()" style="margin-top:0"><i data-lucide="bell-plus"></i> 啟用推播</button>'
     +     '</div>'
+    +     '<div id="rem-push-note" style="display:none;margin-top:6px;font-size:12px;color:var(--text-muted);position:relative;z-index:1"></div>'
     +   '</div>'
 
     // 通知中心 — 站內通知
@@ -23788,6 +23789,7 @@ function reminderRefreshPushState() {
 function _applyPushEnabledUi() {
   var btns = document.querySelectorAll('.rem-push-enable-btn');
   var el = document.getElementById('reminders-push-state');
+  var note = document.getElementById('rem-push-note');
   if (_webpushEnabled === false) {
     for (var i = 0; i < btns.length; i++) {
       btns[i].disabled = true;
@@ -23796,6 +23798,7 @@ function _applyPushEnabledUi() {
       btns[i].title = '伺服器尚未開放手機推播，僅支援站內通知';
     }
     if (el) el.textContent = '推播訂閱：伺服器尚未開放手機推播';
+    if (note) { note.textContent = '手機推播尚未開放，目前僅以站內通知提醒（站內通知一定收到）。'; note.style.display = ''; }
   } else {
     for (var j = 0; j < btns.length; j++) {
       btns[j].disabled = false;
@@ -23803,6 +23806,7 @@ function _applyPushEnabledUi() {
       btns[j].style.cursor = '';
       btns[j].title = '';
     }
+    if (note) { note.textContent = ''; note.style.display = 'none'; }
   }
 }
 
