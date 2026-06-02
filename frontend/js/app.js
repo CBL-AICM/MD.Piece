@@ -5861,6 +5861,9 @@ function loadHomePage() {
   var user = getCurrentUser();
   var pid = getStablePatientId();
 
+  // 症狀條目與後端對齊（拉回 + 補傳本機既有），不阻塞首頁渲染。
+  if (typeof symptomSyncOnLoad === 'function') symptomSyncOnLoad();
+
   // 住院模式有完全不同的首頁佈局，走另一條資料載入。
   if (getCareMode() === 'inpatient') {
     if (typeof loadInpatientHome === 'function') loadInpatientHome();
@@ -10422,10 +10425,65 @@ function saveSymptomEntry(entry) {
   const all = getSymptomEntries();
   all.push(entry);
   localStorage.setItem('mdpiece_symptoms', JSON.stringify(all));
+  symptomSyncPush(entry);
 }
 function deleteSymptomEntry(id) {
   localStorage.setItem('mdpiece_symptoms',
     JSON.stringify(getSymptomEntries().filter(e => e.id !== id)));
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (pid && id) {
+    try {
+      fetch(API + '/symptoms/entries/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+            { method: 'DELETE' }).catch(function() {});
+    } catch (e) {}
+  }
+}
+
+// 把單筆症狀條目背景同步到後端（best-effort；後端以 (patient_id, client_id) 幂等 upsert，
+// 所以新增、補傳重送都安全）。離線/失敗就留本機，下次開 App 補傳。
+function symptomSyncPush(entry) {
+  if (!entry || !entry.id) return;
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    fetch(API + '/symptoms/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_id: pid,
+        client_id: entry.id,
+        category_id: entry.categoryId || '',
+        intensity: (entry.intensity != null ? entry.intensity : null),
+        frequency: (entry.frequency != null ? entry.frequency : null),
+        notes: entry.notes || '',
+        proxy_for: entry.proxy_for || null,
+        recorded_at: entry.recordedAt || null,
+      }),
+    }).catch(function() {});
+  } catch (e) {}
+}
+
+// 開 App（首頁）時：拉後端症狀條目合併進本機，並把本機獨有的補傳上去。
+// 本機仍是同步讀取來源，眾多 sparkline／報表不必改成 async。
+function symptomSyncOnLoad() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  fetch(API + '/symptoms/entries?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !Array.isArray(data.entries)) return;
+      var byId = {};
+      data.entries.forEach(function(e) { if (e && e.id) byId[e.id] = e; });
+      getSymptomEntries().forEach(function(e) {
+        if (e && e.id && !byId[e.id]) { symptomSyncPush(e); byId[e.id] = e; }
+      });
+      var merged = Object.keys(byId).map(function(k) { return byId[k]; });
+      merged.sort(function(a, b) {
+        return String(b.recordedAt || '').localeCompare(String(a.recordedAt || ''));
+      });
+      localStorage.setItem('mdpiece_symptoms', JSON.stringify(merged));
+    })
+    .catch(function() {});
 }
 function getVisitDates() {
   try { return JSON.parse(localStorage.getItem('mdpiece_visit_dates') || '{}'); }

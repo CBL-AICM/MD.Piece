@@ -1,5 +1,6 @@
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 from backend.db import get_supabase
 from backend.models import SymptomAnalysisRequest
 from backend.services.ai_analyzer import analyze_symptoms
@@ -113,3 +114,90 @@ def delete_symptom_history(patient_id: str, log_id: str):
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到這筆紀錄或不屬於該病患")
     return {"deleted": log_id}
+
+
+# ─── 症狀日記條目（病患自記的症狀，原本只存在前端 localStorage）────────────
+# 對應 symptom_entries 表；以 (patient_id, client_id) 幂等 upsert，
+# 讓前端既有條目能補傳、不重複。與上面的 symptoms_log（AI 分析紀錄）分開存。
+
+class SymptomEntryUpsert(BaseModel):
+    patient_id: str
+    client_id: str
+    category_id: str = ""
+    intensity: int | None = None
+    frequency: int | None = None
+    notes: str = ""
+    proxy_for: str | None = None
+    recorded_at: str | None = None
+
+
+def _public_entry(row: dict) -> dict:
+    """DB 列 → 前端 symptom entry 形狀（與 localStorage 內結構一致）。"""
+    return {
+        "id": row.get("client_id") or row.get("id"),
+        "categoryId": row.get("category_id") or "",
+        "intensity": row.get("intensity"),
+        "frequency": row.get("frequency"),
+        "notes": row.get("notes") or "",
+        "proxy_for": row.get("proxy_for"),
+        "recordedAt": row.get("recorded_at"),
+    }
+
+
+@router.get("/entries")
+def list_symptom_entries(patient_id: str = Query(...)):
+    sb = get_supabase()
+    res = (
+        sb.table("symptom_entries")
+        .select("*")
+        .eq("patient_id", patient_id)
+        .order("recorded_at", desc=True)
+        .execute()
+    )
+    return {"entries": [_public_entry(r) for r in (res.data or [])]}
+
+
+@router.post("/entries")
+def upsert_symptom_entry(body: SymptomEntryUpsert):
+    sb = get_supabase()
+    existing = (
+        sb.table("symptom_entries")
+        .select("id")
+        .eq("patient_id", body.patient_id)
+        .eq("client_id", body.client_id)
+        .execute()
+    )
+    fields = {
+        "category_id": body.category_id,
+        "intensity": body.intensity,
+        "frequency": body.frequency,
+        "notes": body.notes,
+        "proxy_for": body.proxy_for,
+    }
+    if existing.data:
+        (
+            sb.table("symptom_entries")
+            .update(fields)
+            .eq("patient_id", body.patient_id)
+            .eq("client_id", body.client_id)
+            .execute()
+        )
+    else:
+        payload = {"patient_id": body.patient_id, "client_id": body.client_id, **fields}
+        if body.recorded_at:
+            payload["recorded_at"] = body.recorded_at
+        sb.table("symptom_entries").insert(payload).execute()
+    return {"status": "ok", "client_id": body.client_id}
+
+
+@router.delete("/entries/{patient_id}/{client_id}")
+def delete_symptom_entry(patient_id: str, client_id: str):
+    sb = get_supabase()
+    (
+        sb.table("symptom_entries")
+        .delete()
+        .eq("patient_id", patient_id)
+        .eq("client_id", client_id)
+        .execute()
+    )
+    return {"deleted": client_id}
