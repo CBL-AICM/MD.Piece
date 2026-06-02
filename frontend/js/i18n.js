@@ -201,6 +201,7 @@
       'page.account': '帳號設定',
       'page.records': '我的基本資料',
       'page.doctors': '醫師列表',
+      'page.predict': '復發風險預測',
 
       // language toggle button
       'lang.toggleTitle': '切換語言',
@@ -729,6 +730,7 @@
       'page.account': 'Account',
       'page.records': 'My Profile',
       'page.doctors': 'Doctors',
+      'page.predict': 'Relapse Risk',
 
       'lang.toggleTitle': 'Switch language',
       'lang.label': 'EN',
