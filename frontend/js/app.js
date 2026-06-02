@@ -3056,6 +3056,9 @@ function _previsitShowPdfModal(blob, filename) {
     +     '<a id="previsit-pdf-open" href="' + url + '" target="_blank" rel="noopener" style="background:transparent;border:1px solid var(--border,#e2e7ed);color:var(--navy,#0F2A45);padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px">'
     +       '<i data-lucide="external-link" style="width:14px;height:14px"></i>在新分頁開啟'
     +     '</a>'
+    +     '<button type="button" id="previsit-pdf-share" style="display:none;background:var(--accent,#3E8EC8);color:#fff;border:0;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;align-items:center;gap:6px">'
+    +       '<i data-lucide="share-2" style="width:14px;height:14px"></i>分享 / 寄出'
+    +     '</button>'
     +     '<a id="previsit-pdf-download" href="' + url + '" download="' + escapeHtml(filename) + '" style="background:var(--accent-deep,#2F6B96);color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">'
     +       '<i data-lucide="download" style="width:14px;height:14px"></i>下載到本機'
     +     '</a>'
@@ -3078,7 +3081,30 @@ function _previsitShowPdfModal(blob, filename) {
     setTimeout(cleanup, 500);
   });
 
-  if (typeof showToast === 'function') showToast('PDF 已產生，請按「下載到本機」存檔', 'success');
+  // 「分享 / 寄出」：用裝置原生分享（Web Share API）把 PDF 交給 email/LINE 等 app 寄出。
+  // 只在支援「分享檔案」的裝置（多為手機）顯示；桌機通常不支援，維持隱藏改用下載。
+  var shareBtn = document.getElementById('previsit-pdf-share');
+  if (shareBtn) {
+    var canShareFiles = false;
+    try {
+      var probe = new File([blob], filename, { type: 'application/pdf' });
+      canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [probe] }));
+    } catch (e) { canShareFiles = false; }
+    if (canShareFiles) {
+      shareBtn.style.display = 'inline-flex';
+      shareBtn.addEventListener('click', function() {
+        try {
+          var file = new File([blob], filename, { type: 'application/pdf' });
+          navigator.share({ files: [file], title: '診前報告', text: 'MD.Piece 診前報告' })
+            .catch(function() {});  // 使用者取消或失敗都不報錯
+        } catch (e) {
+          if (typeof showToast === 'function') showToast('此裝置不支援分享，請改用「下載到本機」', 'warning');
+        }
+      });
+    }
+  }
+
+  if (typeof showToast === 'function') showToast('PDF 已產生，可「下載到本機」或「分享 / 寄出」', 'success');
 }
 
 // 備援：把 HTML 塞進隱藏 iframe，再呼叫 iframe 的 print()。
