@@ -250,7 +250,9 @@
     playBell(kind, overrides);
   }
 
-  if ("serviceWorker" in navigator) {
+  // 用 truthy 檢查而非 "in"：純 HTTP / 非 localhost 等不安全 context 下
+  // serviceWorker 屬性存在但值為 undefined，"in" 會通過卻在 .addEventListener 崩潰
+  if (navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener("message", handleSWMessage);
   }
 

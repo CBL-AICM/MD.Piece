@@ -24196,7 +24196,9 @@ function reminderEnablePush() {
 }
 
 function reminderDisablePush() {
-  if (!('serviceWorker' in navigator)) return;
+  // truthy 檢查而非 "in"：不安全 context（純 HTTP/非 localhost）下屬性在但值 undefined，
+  // 這裡沒有 PushManager guard 當後盾，"in" 會通過後在 .ready 崩潰
+  if (!navigator.serviceWorker) return;
   navigator.serviceWorker.ready.then(function(reg) {
     return reg.pushManager.getSubscription();
   }).then(function(sub) {
@@ -24213,7 +24215,8 @@ function reminderDisablePush() {
 }
 
 // 在 SW 收到推播點擊時，把使用者帶到提醒頁
-if ('serviceWorker' in navigator) {
+// 用 truthy 檢查：不安全 context（純 HTTP/非 localhost）下屬性在但值是 undefined，"in" 會通過卻崩潰
+if (navigator.serviceWorker) {
   navigator.serviceWorker.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'mdpiece-notification-click') {
       if (typeof navigateTo === 'function') navigateTo('reminders');
@@ -25270,7 +25273,8 @@ function _renderPiecesNearestFollowUp(fu) {
 
 // ─── Service Worker ───────────────────────────────────────
 
-if ("serviceWorker" in navigator) {
+// 用 truthy 檢查：不安全 context（純 HTTP/非 localhost）下屬性在但值是 undefined，"in" 會通過卻崩潰
+if (navigator.serviceWorker) {
   navigator.serviceWorker.register("/sw.js");
 }
 

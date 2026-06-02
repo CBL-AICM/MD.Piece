@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MD.Piece × 衛教手帳 — kawaii 樣稿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Yomogi&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  /* =========================================================================
+     MD.Piece · 衛教手帳（kawaii scrapbook 樣稿 / mock）
+     - 給青少年慢性病夥伴的療癒系衛教介面
+     - 暖色紙感 + 貼紙 + 手帳 + 紙膠帶，圓角、虛線、手繪邊
+     - 手機 PWA 外框，全離線：純 inline SVG / CSS，無外部 JS 依賴
+     - 假資料人物：小柔，15 歲，第一型糖尿病；陪伴吉祥物「小豆」
+     ========================================================================= */
+
+  :root{
+    /* —— 調色盤（依設計簡報）—— */
+    --cream:#FFF8F0;          /* 奶油白 */
+    --beige:#F6EAD9;          /* 暖米色 */
+    --beige-deep:#ecdcc4;
+    --pink:#FADADD;           /* 粉彩粉 */
+    --pink-deep:#f4b9c2;
+    --lav:#E6D9FF;            /* 粉彩薰衣草 */
+    --lav-deep:#cdb5f4;
+    --sky:#DCEEFF;            /* 柔天藍 */
+    --sky-deep:#b6dcff;
+    --butter:#FFF2B3;         /* 奶油黃 */
+    --butter-deep:#ffe27a;
+    --sage:#DDE8D5;           /* 鼠尾草綠 */
+    --sage-deep:#bcd9ab;
+    /* —— 墨色（暖棕，不用純黑，較柔）—— */
+    --ink:#6b5a4d;
+    --ink-soft:#9a8576;
+    --ink-faint:#c7b5a4;
+    --line:#e6d6c1;
+    --shadow:rgba(150,118,86,.18);
+    --shadow-soft:rgba(150,118,86,.10);
+    /* —— 字 —— */
+    --f-hand:"Yomogi","Klee One","Zen Maru Gothic","Microsoft JhengHei","PingFang TC",cursive;
+    --f-body:"Zen Maru Gothic","Klee One","Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;min-height:100%;}
+  body{
+    font-family:var(--f-body);
+    color:var(--ink);
+    background:#f3e7d4;
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(250,218,221,.55) 0, transparent 34%),
+      radial-gradient(circle at 88% 12%, rgba(230,217,255,.5) 0, transparent 32%),
+      radial-gradient(circle at 12% 82%, rgba(220,238,255,.5) 0, transparent 34%),
+      radial-gradient(circle at 90% 88%, rgba(255,242,179,.5) 0, transparent 34%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.045'/></svg>");
+    display:flex;flex-direction:column;align-items:center;
+    gap:18px;padding:30px 14px 48px;
+  }
+
+  /* ───────── 標題說明（樣稿慣例）───────── */
+  .lead{max-width:480px;text-align:center;}
+  .lead h1{margin:0 0 6px;font-family:var(--f-hand);font-size:26px;color:#7a6453;
+    letter-spacing:.5px;}
+  .lead p{margin:0;font-size:12.5px;color:#8a7561;line-height:1.65;}
+  .lead .chips{margin-top:11px;display:flex;gap:7px;justify-content:center;flex-wrap:wrap;}
+  .lead .chips span{font-size:11px;color:#7a6453;background:rgba(255,255,255,.72);
+    border:1.5px dashed #d9c3a8;border-radius:20px;padding:4px 11px;}
+
+  /* ───────── 場景：手機 + 漂浮塗鴉 ───────── */
+  .scene{position:relative;width:418px;max-width:100%;}
+  .doodle{position:absolute;pointer-events:none;opacity:.9;z-index:0;
+    animation:float 6s ease-in-out infinite;}
+  .doodle.d1{top:-26px;left:-46px;width:74px;animation-delay:.0s;}
+  .doodle.d2{top:60px;right:-52px;width:58px;animation-delay:.8s;}
+  .doodle.d3{bottom:180px;left:-54px;width:50px;animation-delay:1.6s;}
+  .doodle.d4{bottom:40px;right:-46px;width:66px;animation-delay:.4s;}
+  .doodle.d5{top:140px;left:-40px;width:38px;animation-delay:1.2s;}
+  @media(max-width:520px){.doodle{display:none;}}
+
+  /* ───────── 手機外框 ───────── */
+  .phone{
+    position:relative;z-index:1;
+    width:418px;max-width:100%;
+    background:var(--cream);
+    border:3px solid #efe0cb;
+    border-radius:42px;
+    padding:13px 13px 0;
+    box-shadow:0 22px 44px var(--shadow), 0 0 0 7px #fffdf9 inset;
+    overflow:hidden;
+  }
+  /* 紙膠帶把手機「貼」在手帳上 */
+  .phone .washi-top{position:absolute;z-index:3;top:-14px;left:50%;transform:translateX(-50%) rotate(-2.5deg);
+    width:150px;height:30px;}
+  .notch{width:118px;height:7px;background:#e8d9c2;border-radius:6px;margin:3px auto 10px;}
+  .screen{height:760px;overflow-y:auto;padding:2px 13px 96px;position:relative;}
+  .screen::-webkit-scrollbar{width:0;}
+
+  /* ───────── 頂部問候 ───────── */
+  .greet{display:flex;align-items:center;gap:11px;margin:6px 2px 18px;}
+  .avatar{width:50px;height:50px;flex:0 0 50px;border-radius:50%;
+    background:radial-gradient(circle at 35% 28%,#fff,var(--sky-deep));
+    border:2.5px solid #fff;box-shadow:0 4px 10px var(--shadow);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .avatar svg{width:100%;height:100%;}
+  .greet .hi b{font-family:var(--f-hand);font-size:18px;color:#6f5b4a;}
+  .greet .hi div{font-size:11.5px;color:var(--ink-soft);margin-top:1px;}
+  .streak{margin-left:auto;position:relative;background:linear-gradient(165deg,var(--butter),var(--butter-deep));
+    border:2px solid #fff;border-radius:16px;padding:6px 11px 6px 9px;text-align:center;
+    box-shadow:0 5px 12px rgba(220,180,70,.28);transform:rotate(3deg);}
+  .streak b{display:block;font-size:16px;line-height:1;color:#a9802a;font-family:var(--f-hand);}
+  .streak small{font-size:9.5px;color:#b78f3e;letter-spacing:.3px;}
+  .streak .fire{position:absolute;top:-12px;left:-9px;font-size:20px;transform:rotate(-12deg);}
+
+  /* ───────── Hero 進度卡 + 吉祥物 ───────── */
+  .hero{position:relative;background:linear-gradient(170deg,#fff 0%,var(--pink) 120%);
+    border:2.5px solid #fff;border-radius:30px;padding:18px 16px 16px;margin-bottom:20px;
+    box-shadow:0 14px 30px var(--shadow);overflow:hidden;}
+  .hero::after{content:"";position:absolute;inset:6px;border:2px dashed rgba(244,185,194,.7);
+    border-radius:24px;pointer-events:none;}
+  .hero .spark{position:absolute;top:10px;right:14px;font-size:15px;opacity:.8;}
+  .hero-row{display:flex;align-items:center;gap:14px;position:relative;z-index:1;}
+  .mascot{width:96px;height:96px;flex:0 0 96px;animation:bob 4.5s ease-in-out infinite;}
+  .hero .htxt{flex:1;}
+  .hero .htxt .lbl{font-family:var(--f-hand);font-size:15px;color:#9c6470;}
+  .hero .htxt .big{font-size:13px;color:#7a6453;line-height:1.5;margin:3px 0 9px;}
+  .hero .htxt .big b{color:#d98494;font-size:15px;}
+  .ringwrap{display:flex;align-items:center;gap:12px;}
+  .ring{width:78px;height:78px;flex:0 0 78px;position:relative;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;}
+  .ring .pct b{font-size:21px;font-family:var(--f-hand);color:#d98494;line-height:1;}
+  .ring .pct small{font-size:9px;color:var(--ink-soft);}
+  .bubble{flex:1;position:relative;background:#fff;border:2px solid var(--pink-deep);
+    border-radius:16px;padding:9px 11px;font-size:11.5px;color:#7a6453;line-height:1.5;
+    box-shadow:0 5px 12px var(--shadow-soft);}
+  .bubble::before{content:"";position:absolute;left:-9px;top:18px;width:0;height:0;
+    border:6px solid transparent;border-right-color:var(--pink-deep);}
+  .bubble::after{content:"";position:absolute;left:-6px;top:18px;width:0;height:0;
+    border:6px solid transparent;border-right-color:#fff;}
+  .bubble b{color:#d98494;}
+
+  /* ───────── 快速動作貼紙列 ───────── */
+  .qrow{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:22px;}
+  .sticker{position:relative;border:2.5px solid #fff;border-radius:20px;padding:12px 4px 9px;
+    text-align:center;cursor:pointer;box-shadow:0 7px 14px var(--shadow);
+    transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s;}
+  .sticker:hover{transform:translateY(-4px) rotate(-2deg);box-shadow:0 12px 20px var(--shadow);}
+  .sticker:active{transform:translateY(-1px) scale(.96);}
+  .sticker .ic{width:34px;height:34px;margin:0 auto 5px;display:block;}
+  .sticker span{font-size:11px;color:#6f5b4a;font-weight:700;}
+  .sticker.s1{background:var(--sky);}     .sticker.s2{background:var(--sage);}
+  .sticker.s3{background:var(--lav);}      .sticker.s4{background:var(--butter);}
+
+  /* ───────── 卡片共用 ───────── */
+  .sec-title{display:flex;align-items:center;gap:8px;margin:0 2px 12px;
+    font-family:var(--f-hand);font-size:19px;color:#7a6453;}
+  .sec-title .em{font-size:20px;}
+  .sec-title .more{margin-left:auto;font-size:11px;font-weight:400;color:var(--ink-soft);
+    background:#fff;border:1.5px dashed var(--ink-faint);border-radius:14px;padding:3px 10px;
+    cursor:pointer;font-family:var(--f-body);}
+
+  .card{position:relative;background:#fff;border:2px solid #f1e4d2;border-radius:26px;
+    padding:15px 15px;margin-bottom:22px;box-shadow:0 12px 26px var(--shadow-soft);}
+  .card.dashed::after{content:"";position:absolute;inset:7px;border:2px dashed var(--line);
+    border-radius:20px;pointer-events:none;}
+  /* 紙膠帶 */
+  .tape{position:absolute;width:62px;height:21px;opacity:.78;z-index:2;
+    box-shadow:0 2px 5px rgba(0,0,0,.05);}
+  .tape.tl{top:-9px;left:18px;transform:rotate(-7deg);}
+  .tape.tr{top:-9px;right:18px;transform:rotate(6deg);}
+
+  /* ───────── 用藥手帳卡 ───────── */
+  .med-card{background:linear-gradient(180deg,#fff 0%,#fffdf7 100%);}
+  .med-head{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .med-head b{font-family:var(--f-hand);font-size:16px;color:#6f5b4a;}
+  .med-head .date{margin-left:auto;font-size:10.5px;color:var(--ink-soft);}
+  .med-row{display:flex;align-items:center;gap:11px;padding:11px 4px;cursor:pointer;
+    border-bottom:2px dashed #f0e6d6;user-select:none;transition:opacity .2s;}
+  .med-row:last-of-type{border-bottom:none;}
+  .check{width:28px;height:28px;flex:0 0 28px;border-radius:9px;border:2.5px solid var(--sage-deep);
+    background:#fff;position:relative;transition:all .2s cubic-bezier(.34,1.56,.64,1);}
+  .check::after{content:"";position:absolute;left:8px;top:3px;width:7px;height:13px;
+    border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) scale(0);
+    transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
+  .med-row.done .check{background:var(--sage-deep);border-color:var(--sage-deep);}
+  .med-row.done .check::after{transform:rotate(45deg) scale(1);}
+  .med-time{width:54px;flex:0 0 54px;text-align:center;}
+  .med-time b{display:block;font-size:13px;color:#7a6453;font-family:var(--f-hand);}
+  .med-time small{font-size:9px;color:var(--ink-soft);}
+  .med-info{flex:1;}
+  .med-info b{font-size:13.5px;color:#6f5b4a;}
+  .med-info div{font-size:10.5px;color:var(--ink-soft);margin-top:1px;}
+  .med-row.done .med-info b{text-decoration:line-through;color:var(--ink-faint);}
+  .med-pill{width:30px;height:30px;flex:0 0 30px;border-radius:9px;display:flex;
+    align-items:center;justify-content:center;font-size:16px;}
+  .med-foot{display:flex;align-items:center;gap:9px;margin-top:12px;background:var(--sage);
+    border-radius:15px;padding:9px 12px;}
+  .med-foot .mbar{flex:1;height:10px;background:#fff;border-radius:6px;overflow:hidden;}
+  .med-foot .mbar i{display:block;height:100%;background:linear-gradient(90deg,var(--sage-deep),#9cc488);
+    border-radius:6px;transition:width .4s cubic-bezier(.34,1.56,.64,1);}
+  .med-foot b{font-size:11.5px;color:#5e7a4c;white-space:nowrap;}
+
+  /* ───────── 自我照護清單 ───────── */
+  .chk-card{background:linear-gradient(180deg,#fff,#fbf6ff);}
+  .chk-row{display:flex;align-items:center;gap:11px;padding:10px 4px;cursor:pointer;
+    user-select:none;border-bottom:2px dashed #efe7f7;}
+  .chk-row:last-child{border-bottom:none;}
+  .chk-row .check{border-color:var(--lav-deep);}
+  .chk-row.done .check{background:var(--lav-deep);border-color:var(--lav-deep);}
+  .chk-row span{flex:1;font-size:13px;color:#6f5b4a;}
+  .chk-row.done span{text-decoration:line-through;color:var(--ink-faint);}
+  .chk-row .em{font-size:17px;}
+
+  /* ───────── 衛教文章卡 ───────── */
+  .arts{display:flex;flex-direction:column;gap:13px;margin-bottom:22px;}
+  .art{display:flex;gap:12px;align-items:center;background:#fff;border:2px solid #f1e4d2;
+    border-radius:22px;padding:11px 13px;cursor:pointer;box-shadow:0 8px 18px var(--shadow-soft);
+    transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s;}
+  .art:hover{transform:translateY(-3px) rotate(-.6deg);box-shadow:0 14px 24px var(--shadow);}
+  .art .thumb{width:54px;height:54px;flex:0 0 54px;border-radius:16px;display:flex;
+    align-items:center;justify-content:center;font-size:26px;}
+  .art.a1 .thumb{background:var(--sky);}  .art.a2 .thumb{background:var(--pink);}
+  .art.a3 .thumb{background:var(--butter);}
+  .art .meta{flex:1;}
+  .art .cat{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:11px;
+    margin-bottom:4px;}
+  .art.a1 .cat{background:var(--sky-deep);color:#3f6f9c;}
+  .art.a2 .cat{background:var(--pink-deep);color:#a85767;}
+  .art.a3 .cat{background:var(--butter-deep);color:#9c7a2a;}
+  .art .meta b{display:block;font-size:13px;color:#6f5b4a;line-height:1.35;}
+  .art .meta small{font-size:10px;color:var(--ink-soft);}
+  .art .go{font-size:18px;color:var(--ink-faint);}
+
+  /* ───────── 健康足跡時間軸 ───────── */
+  .tl-card{background:linear-gradient(180deg,#fff,#f5fbff);}
+  .timeline{position:relative;padding-left:30px;margin-top:4px;}
+  .timeline::before{content:"";position:absolute;left:9px;top:8px;bottom:8px;width:0;
+    border-left:3px dashed var(--sky-deep);}
+  .tl-item{position:relative;padding:7px 0 16px;}
+  .tl-item:last-child{padding-bottom:2px;}
+  .tl-item .dot{position:absolute;left:-30px;top:5px;width:22px;height:22px;border-radius:50%;
+    background:#fff;border:2.5px solid var(--sky-deep);display:flex;align-items:center;
+    justify-content:center;font-size:11px;box-shadow:0 3px 7px var(--shadow-soft);}
+  .tl-item.hit .dot{background:var(--butter);border-color:var(--butter-deep);}
+  .tl-item .when{font-size:10px;color:var(--ink-soft);}
+  .tl-item .what{font-size:13px;color:#6f5b4a;font-weight:700;margin-top:1px;}
+  .tl-item .what small{display:block;font-size:10.5px;font-weight:400;color:var(--ink-soft);
+    margin-top:2px;}
+
+  /* ───────── 成就徽章 ───────── */
+  .badges{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:22px;}
+  .badge{text-align:center;cursor:pointer;}
+  .badge .disc{width:60px;height:60px;margin:0 auto 6px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:27px;position:relative;
+    border:3px solid #fff;box-shadow:0 7px 14px var(--shadow);
+    transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
+  .badge:hover .disc{transform:translateY(-3px) scale(1.06) rotate(-4deg);}
+  .badge.b1 .disc{background:radial-gradient(circle at 35% 30%,#fff6c8,var(--butter-deep));}
+  .badge.b2 .disc{background:radial-gradient(circle at 35% 30%,#ffe3e8,var(--pink-deep));}
+  .badge.b3 .disc{background:radial-gradient(circle at 35% 30%,#e7f7e0,var(--sage-deep));}
+  .badge.locked .disc{background:#f0e9df;color:#cdbfae;box-shadow:0 5px 10px var(--shadow-soft);}
+  .badge .nm{font-size:10px;color:#6f5b4a;line-height:1.3;}
+  .badge.locked .nm{color:var(--ink-faint);}
+  .badge .star{position:absolute;top:-7px;right:-5px;font-size:14px;}
+
+  /* ───────── 可愛空狀態 ───────── */
+  .empty{background:linear-gradient(180deg,#fff,#fffaf3);text-align:center;
+    padding:22px 18px;}
+  .empty svg{width:104px;height:104px;margin:0 auto 8px;display:block;
+    animation:bob 5s ease-in-out infinite;}
+  .empty b{display:block;font-family:var(--f-hand);font-size:15px;color:#7a6453;margin-bottom:4px;}
+  .empty p{margin:0 0 13px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;}
+  .empty .ebtn{display:inline-flex;align-items:center;gap:6px;background:var(--pink);
+    border:2.5px solid #fff;border-radius:18px;padding:9px 18px;font-size:12.5px;font-weight:700;
+    color:#a85767;cursor:pointer;box-shadow:0 7px 14px var(--shadow);
+    transition:transform .18s cubic-bezier(.34,1.56,.64,1);}
+  .empty .ebtn:hover{transform:translateY(-2px) scale(1.03);}
+
+  .madeby{text-align:center;font-size:10.5px;color:var(--ink-faint);margin:4px 0 2px;}
+
+  /* ───────── 底部漂浮分頁 ───────── */
+  .tabbar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+    width:calc(100% - 36px);background:#fff;border:2.5px solid #f1e4d2;border-radius:26px;
+    box-shadow:0 12px 26px var(--shadow);display:flex;align-items:flex-end;
+    justify-content:space-around;padding:9px 8px 10px;z-index:5;}
+  .tab{flex:1;text-align:center;cursor:pointer;color:var(--ink-faint);}
+  .tab .ti{font-size:21px;line-height:1;display:block;}
+  .tab small{font-size:9.5px;display:block;margin-top:2px;}
+  .tab.on{color:#d98494;}
+  .tab.fab{flex:0 0 58px;}
+  .tab.fab .plus{width:54px;height:54px;margin:-26px auto 0;border-radius:50%;
+    background:linear-gradient(160deg,var(--pink),var(--pink-deep));
+    border:3px solid #fff;display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:28px;box-shadow:0 9px 18px rgba(244,150,170,.5);
+    transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
+  .tab.fab:hover .plus{transform:translateY(-3px) rotate(90deg);}
+
+  /* ───────── 動畫 ───────── */
+  @keyframes float{0%,100%{transform:translateY(0) rotate(-2deg);}50%{transform:translateY(-14px) rotate(3deg);}}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+  @keyframes pop{0%{transform:scale(1);}40%{transform:scale(1.18);}100%{transform:scale(1);}}
+  .pop{animation:pop .35s ease;}
+
+  @media(max-width:440px){
+    .screen{height:auto;min-height:680px;}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ───────── 樣稿說明 ───────── -->
+  <div class="lead">
+    <h1>衛教手帳 🌷</h1>
+    <p>MD.Piece 給青少年慢性病夥伴的療癒系衛教介面樣稿。<br>
+       暖色紙感 × 貼紙 × 手帳，陪你把長期照護過成一本溫柔的日記。</p>
+    <div class="chips">
+      <span>🩹 醫療但不冰冷</span>
+      <span>🧸 童趣・可信任</span>
+      <span>📒 手帳式衛教</span>
+      <span>純離線 inline SVG/CSS</span>
+    </div>
+  </div>
+
+  <!-- ───────── 場景 ───────── -->
+  <div class="scene">
+
+    <!-- 漂浮塗鴉 -->
+    <svg class="doodle d1" viewBox="0 0 100 70"><g fill="#fff" stroke="#ead9c0" stroke-width="2"><ellipse cx="34" cy="44" rx="26" ry="18"/><ellipse cx="60" cy="38" rx="22" ry="20"/><ellipse cx="76" cy="48" rx="18" ry="14"/></g></svg>
+    <svg class="doodle d2" viewBox="0 0 60 60"><path d="M30 4l7 16 17 2-13 12 4 18-15-9-15 9 4-18-13-12 17-2z" fill="#FFF2B3" stroke="#ffe27a" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg class="doodle d3" viewBox="0 0 60 56"><path d="M30 52C12 38 4 28 4 18 4 9 11 4 18 4c5 0 9 3 12 7 3-4 7-7 12-7 7 0 14 5 14 14 0 10-8 20-26 34z" fill="#FADADD" stroke="#f4b9c2" stroke-width="2"/></svg>
+    <svg class="doodle d4" viewBox="0 0 64 64"><g stroke="#cdb5f4" stroke-width="2" fill="#E6D9FF"><circle cx="32" cy="22" r="11"/><circle cx="20" cy="36" r="11"/><circle cx="44" cy="36" r="11"/><circle cx="32" cy="44" r="11"/></g><circle cx="32" cy="34" r="8" fill="#fff" stroke="#cdb5f4" stroke-width="2"/></svg>
+    <svg class="doodle d5" viewBox="0 0 40 40"><path d="M20 3l4 12 12 1-9 8 3 12-10-6-10 6 3-12-9-8 12-1z" fill="#fff" stroke="#cdb5f4" stroke-width="2" stroke-linejoin="round"/></svg>
+
+    <!-- ───────── 手機 ───────── -->
+    <div class="phone">
+      <!-- 紙膠帶 -->
+      <svg class="washi-top" viewBox="0 0 150 30"><rect width="150" height="30" fill="#DCEEFF" opacity=".82"/><g stroke="#b6dcff" stroke-width="3">
+        <line x1="14" y1="0" x2="2" y2="30"/><line x1="40" y1="0" x2="28" y2="30"/><line x1="66" y1="0" x2="54" y2="30"/><line x1="92" y1="0" x2="80" y2="30"/><line x1="118" y1="0" x2="106" y2="30"/><line x1="144" y1="0" x2="132" y2="30"/></g></svg>
+
+      <div class="notch"></div>
+      <div class="screen">
+
+        <!-- 問候 -->
+        <div class="greet">
+          <div class="avatar">
+            <svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="25" fill="#DCEEFF"/><circle cx="25" cy="22" r="11" fill="#fff3e0"/><path d="M14 19a11 11 0 0122 0c0-7-5-11-11-11s-11 4-11 11z" fill="#7a5a44"/><circle cx="21" cy="22" r="1.6" fill="#6b5a4d"/><circle cx="29" cy="22" r="1.6" fill="#6b5a4d"/><circle cx="18" cy="25" r="2.4" fill="#FADADD" opacity=".8"/><circle cx="32" cy="25" r="2.4" fill="#FADADD" opacity=".8"/><path d="M22 27q3 2.6 6 0" fill="none" stroke="#c98" stroke-width="1.4" stroke-linecap="round"/><path d="M9 50c0-9 7-15 16-15s16 6 16 15z" fill="#FADADD"/></svg>
+          </div>
+          <div class="hi">
+            <b>嗨，小柔 ☁️</b>
+            <div>今天也一起好好照顧自己～</div>
+          </div>
+          <div class="streak">
+            <span class="fire">🔥</span>
+            <b>12</b>
+            <small>天連續打卡</small>
+          </div>
+        </div>
+
+        <!-- Hero 進度 + 吉祥物 -->
+        <div class="hero">
+          <span class="spark">✨</span>
+          <div class="hero-row">
+            <!-- 吉祥物「小豆」 -->
+            <svg class="mascot" viewBox="0 0 120 120">
+              <ellipse cx="60" cy="108" rx="30" ry="6" fill="#000" opacity=".06"/>
+              <!-- 葉芽 -->
+              <path d="M60 26c0-10-8-15-15-14 1 9 7 14 15 14z" fill="#bcd9ab" stroke="#9cc488" stroke-width="2"/>
+              <path d="M60 26c0-10 8-15 15-14-1 9-7 14-15 14z" fill="#cfe6c0" stroke="#9cc488" stroke-width="2"/>
+              <line x1="60" y1="40" x2="60" y2="26" stroke="#9cc488" stroke-width="3" stroke-linecap="round"/>
+              <!-- 身體 -->
+              <ellipse cx="60" cy="72" rx="40" ry="38" fill="#DDE8D5" stroke="#bcd9ab" stroke-width="2.5"/>
+              <ellipse cx="60" cy="80" rx="27" ry="24" fill="#eef5e9"/>
+              <!-- 手 -->
+              <ellipse cx="22" cy="78" rx="8" ry="11" fill="#DDE8D5" stroke="#bcd9ab" stroke-width="2.5"/>
+              <ellipse cx="98" cy="78" rx="8" ry="11" fill="#DDE8D5" stroke="#bcd9ab" stroke-width="2.5"/>
+              <!-- 臉 -->
+              <path d="M46 66q6 7 12 0" fill="none" stroke="#6b5a4d" stroke-width="3" stroke-linecap="round"/>
+              <path d="M62 66q6 7 12 0" fill="none" stroke="#6b5a4d" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="44" cy="78" r="6" fill="#FADADD" opacity=".85"/>
+              <circle cx="76" cy="78" r="6" fill="#FADADD" opacity=".85"/>
+              <path d="M54 76q6 6 12 0" fill="none" stroke="#6b5a4d" stroke-width="2.6" stroke-linecap="round"/>
+            </svg>
+            <div class="htxt">
+              <div class="lbl">本週健康任務</div>
+              <div class="big">已完成 <b>5 / 7</b> 個小任務，<br>你做得超棒的！</div>
+              <div class="ringwrap">
+                <div class="ring">
+                  <svg width="78" height="78" viewBox="0 0 78 78">
+                    <circle cx="39" cy="39" r="32" fill="none" stroke="#f6e2e6" stroke-width="9"/>
+                    <circle cx="39" cy="39" r="32" fill="none" stroke="#f4b9c2" stroke-width="9"
+                      stroke-linecap="round" stroke-dasharray="143.5 201" />
+                  </svg>
+                  <div class="pct"><b>71%</b><small>本週</small></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ringwrap" style="margin-top:13px;position:relative;z-index:1;">
+            <div class="bubble">小豆說：再完成 <b>2 個任務</b> 就能解鎖新徽章「自我照護小達人」囉！🌟</div>
+          </div>
+        </div>
+
+        <!-- 快速動作貼紙 -->
+        <div class="qrow">
+          <div class="sticker s1">
+            <svg class="ic" viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#fff" opacity=".55"/><path d="M17 7c4 5 6 8 6 11a6 6 0 11-12 0c0-3 2-6 6-11z" fill="#5b9fe8"/></svg>
+            <span>記錄血糖</span>
+          </div>
+          <div class="sticker s2">
+            <svg class="ic" viewBox="0 0 34 34"><rect x="6" y="5" width="22" height="26" rx="4" fill="#fff" opacity=".6"/><rect x="9" y="9" width="13" height="2.4" rx="1.2" fill="#6f9a4f"/><rect x="9" y="14" width="16" height="2.4" rx="1.2" fill="#6f9a4f"/><rect x="9" y="19" width="11" height="2.4" rx="1.2" fill="#6f9a4f"/></svg>
+            <span>今日衛教</span>
+          </div>
+          <div class="sticker s3">
+            <svg class="ic" viewBox="0 0 34 34"><rect x="5" y="13" width="24" height="11" rx="5.5" fill="#fff" opacity=".6" transform="rotate(-30 17 18)"/><rect x="5" y="13" width="12" height="11" rx="5.5" fill="#9b78d8" transform="rotate(-30 17 18)"/></svg>
+            <span>用藥打卡</span>
+          </div>
+          <div class="sticker s4">
+            <svg class="ic" viewBox="0 0 34 34"><path d="M6 9a3 3 0 013-3h16a3 3 0 013 3v12a3 3 0 01-3 3H14l-6 5v-5a3 3 0 01-2-3z" fill="#fff" opacity=".6"/><circle cx="13" cy="15" r="1.8" fill="#c79a2a"/><circle cx="19" cy="15" r="1.8" fill="#c79a2a"/><circle cx="25" cy="15" r="1.8" fill="#c79a2a"/></svg>
+            <span>問問醫師</span>
+          </div>
+        </div>
+
+        <!-- 用藥手帳 -->
+        <div class="card med-card dashed">
+          <svg class="tape tl" viewBox="0 0 62 21"><rect width="62" height="21" fill="#FFF2B3" opacity=".8"/></svg>
+          <div class="med-head">
+            <span style="font-size:18px;">💊</span>
+            <b>今天的用藥</b>
+            <span class="date">6 月 3 日 · 週三</span>
+          </div>
+          <div class="med-row done" data-toggle="med">
+            <div class="check"></div>
+            <div class="med-time"><b>07:30</b><small>早餐前</small></div>
+            <div class="med-pill" style="background:var(--sky)">💉</div>
+            <div class="med-info"><b>速效胰島素</b><div>依碳水計算劑量</div></div>
+          </div>
+          <div class="med-row done" data-toggle="med">
+            <div class="check"></div>
+            <div class="med-time"><b>12:00</b><small>午餐前</small></div>
+            <div class="med-pill" style="background:var(--sky)">💉</div>
+            <div class="med-info"><b>速效胰島素</b><div>依碳水計算劑量</div></div>
+          </div>
+          <div class="med-row" data-toggle="med">
+            <div class="check"></div>
+            <div class="med-time"><b>18:00</b><small>晚餐前</small></div>
+            <div class="med-pill" style="background:var(--sky)">💉</div>
+            <div class="med-info"><b>速效胰島素</b><div>依碳水計算劑量</div></div>
+          </div>
+          <div class="med-row" data-toggle="med">
+            <div class="check"></div>
+            <div class="med-time"><b>22:00</b><small>睡前</small></div>
+            <div class="med-pill" style="background:var(--lav)">🌙</div>
+            <div class="med-info"><b>長效胰島素</b><div>固定 1 劑，穩定整夜血糖</div></div>
+          </div>
+          <div class="med-foot">
+            <div class="mbar"><i id="medbar" style="width:50%"></i></div>
+            <b id="medtxt">2 / 4 已完成</b>
+          </div>
+        </div>
+
+        <!-- 自我照護清單 -->
+        <div class="card chk-card dashed">
+          <div class="med-head" style="margin-bottom:6px;">
+            <span style="font-size:18px;">🧺</span>
+            <b>今日自我照護</b>
+            <span class="date">輕輕勾起來就好</span>
+          </div>
+          <div class="chk-row done" data-toggle="chk"><div class="check"></div><span class="em">🩸</span><span>量測空腹血糖</span></div>
+          <div class="chk-row done" data-toggle="chk"><div class="check"></div><span class="em">🍙</span><span>記錄三餐碳水份數</span></div>
+          <div class="chk-row" data-toggle="chk"><div class="check"></div><span class="em">🚶</span><span>飯後散步 15 分鐘</span></div>
+          <div class="chk-row" data-toggle="chk"><div class="check"></div><span class="em">😴</span><span>睡前再量一次血糖</span></div>
+        </div>
+
+        <!-- 衛教文章 -->
+        <div class="sec-title"><span class="em">📚</span>衛教小教室<span class="more">看更多</span></div>
+        <div class="arts">
+          <div class="art a1">
+            <div class="thumb">🍞</div>
+            <div class="meta"><span class="cat">飲食</span><b>認識碳水化合物份數計算</b><small>3 分鐘讀完 · 附互動小練習</small></div>
+            <span class="go">›</span>
+          </div>
+          <div class="art a2">
+            <div class="thumb">🏃</div>
+            <div class="meta"><span class="cat">運動</span><b>運動時怎麼避免低血糖？</b><small>4 分鐘讀完 · 含緊急處理</small></div>
+            <span class="go">›</span>
+          </div>
+          <div class="art a3">
+            <div class="thumb">💛</div>
+            <div class="meta"><span class="cat">心情</span><b>跟同學說我有糖尿病，會怪嗎？</b><small>5 分鐘讀完 · 學長姐的話</small></div>
+            <span class="go">›</span>
+          </div>
+        </div>
+
+        <!-- 健康足跡時間軸 -->
+        <div class="card tl-card">
+          <svg class="tape tr" viewBox="0 0 62 21"><rect width="62" height="21" fill="#DCEEFF" opacity=".85"/></svg>
+          <div class="sec-title" style="margin:2px 2px 6px;"><span class="em">🐾</span>我的健康足跡</div>
+          <div class="timeline">
+            <div class="tl-item hit"><div class="dot">🌱</div><div class="when">2024 · 3 月</div><div class="what">確診那一天<small>小豆陪你一起出發 🫶</small></div></div>
+            <div class="tl-item hit"><div class="dot">💉</div><div class="when">2024 · 4 月</div><div class="what">第一次自己打針成功<small>你超勇敢的！</small></div></div>
+            <div class="tl-item hit"><div class="dot">🍙</div><div class="when">2024 · 9 月</div><div class="what">碳水計算第一次滿分<small>飲食日記連續 30 天</small></div></div>
+            <div class="tl-item"><div class="dot">🎯</div><div class="when">下個里程碑</div><div class="what">HbA1c 達標 7.0 以下<small>再一點點就到了，加油！</small></div></div>
+          </div>
+        </div>
+
+        <!-- 成就徽章 -->
+        <div class="sec-title"><span class="em">🏅</span>我的徽章<span class="more">4 / 8</span></div>
+        <div class="badges">
+          <div class="badge b1"><div class="disc">📅<span class="star">⭐</span></div><div class="nm">連續打卡<br>7 天</div></div>
+          <div class="badge b2"><div class="disc">📖<span class="star">⭐</span></div><div class="nm">讀完衛教<br>10 篇</div></div>
+          <div class="badge b3"><div class="disc">💪</div><div class="nm">運動小將</div></div>
+          <div class="badge locked"><div class="disc">🔒</div><div class="nm">碳水達人</div></div>
+        </div>
+
+        <!-- 可愛空狀態 -->
+        <div class="card empty">
+          <svg viewBox="0 0 120 120">
+            <ellipse cx="60" cy="110" rx="26" ry="5" fill="#000" opacity=".05"/>
+            <rect x="30" y="34" width="60" height="62" rx="12" fill="#fff" stroke="#f0e6d6" stroke-width="3"/>
+            <line x1="42" y1="50" x2="78" y2="50" stroke="#ead9c0" stroke-width="3" stroke-linecap="round"/>
+            <line x1="42" y1="62" x2="78" y2="62" stroke="#ead9c0" stroke-width="3" stroke-linecap="round"/>
+            <line x1="42" y1="74" x2="64" y2="74" stroke="#ead9c0" stroke-width="3" stroke-linecap="round"/>
+            <!-- 小豆探頭 -->
+            <ellipse cx="84" cy="78" rx="20" ry="19" fill="#DDE8D5" stroke="#bcd9ab" stroke-width="2.5"/>
+            <path d="M84 60c0-7-5-10-10-9 1 6 5 9 10 9z" fill="#cfe6c0" stroke="#9cc488" stroke-width="2"/>
+            <path d="M76 76q4 5 8 0" fill="none" stroke="#6b5a4d" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M85 76q4 5 8 0" fill="none" stroke="#6b5a4d" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="76" cy="85" r="4.5" fill="#FADADD" opacity=".85"/>
+            <circle cx="93" cy="85" r="4.5" fill="#FADADD" opacity=".85"/>
+          </svg>
+          <b>還沒有提問紀錄唷～</b>
+          <p>看衛教時有任何看不懂的地方，<br>都可以隨時問問小豆和醫療團隊 💬</p>
+          <div class="ebtn">✏️ 寫下我的第一個問題</div>
+        </div>
+
+        <div class="madeby">made with 💛 for 小柔 · MD.Piece</div>
+
+        <!-- 底部分頁 -->
+        <div class="tabbar">
+          <div class="tab on"><span class="ti">🏠</span><small>首頁</small></div>
+          <div class="tab"><span class="ti">📚</span><small>衛教</small></div>
+          <div class="tab fab"><div class="plus">＋</div></div>
+          <div class="tab"><span class="ti">📊</span><small>紀錄</small></div>
+          <div class="tab"><span class="ti">🧸</span><small>我的</small></div>
+        </div>
+
+      </div><!-- /screen -->
+    </div><!-- /phone -->
+  </div><!-- /scene -->
+
+<script>
+  // —— 勾選互動（用藥 + 自我照護）——
+  // 規則 5：純前端確定性切換，不需要任何模型判斷。
+  document.addEventListener('click', function (e) {
+    var row = e.target.closest('[data-toggle]');
+    if (row) {
+      row.classList.toggle('done');
+      var chk = row.querySelector('.check');
+      if (chk) { chk.classList.remove('pop'); void chk.offsetWidth; chk.classList.add('pop'); }
+      if (row.getAttribute('data-toggle') === 'med') updateMed();
+      return;
+    }
+    // 徽章 / 貼紙的可愛回饋
+    var poppable = e.target.closest('.badge .disc, .sticker, .ebtn, .art');
+    if (poppable) { poppable.classList.remove('pop'); void poppable.offsetWidth; poppable.classList.add('pop'); }
+  });
+
+  function updateMed() {
+    var rows = document.querySelectorAll('.med-row');
+    var done = document.querySelectorAll('.med-row.done').length;
+    var pct = Math.round(done / rows.length * 100);
+    document.getElementById('medbar').style.width = pct + '%';
+    document.getElementById('medtxt').textContent = done + ' / ' + rows.length + ' 已完成';
+  }
+  updateMed();
+
+  // —— 漂浮塗鴉隨機微差，讓畫面更自然 ——
+  document.querySelectorAll('.doodle').forEach(function (d, i) {
+    d.style.animationDuration = (5.5 + (i % 3) * 0.9) + 's';
+  });
+
+  // —— 底部分頁切換 high-light（純視覺）——
+  document.querySelectorAll('.tab:not(.fab)').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('on'); });
+      t.classList.add('on');
+    });
+  });
+</script>
+</body>
+</html>
