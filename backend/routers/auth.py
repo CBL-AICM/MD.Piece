@@ -25,7 +25,9 @@ router = APIRouter()
 
 _USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,32}$")
 _ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# 網域標籤用不含「.」的字元類，避免 `[^@\s]+\.[^@\s]+` 的重疊歧義導致
+# 多項式回溯（ReDoS）；此寫法為線性匹配。
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
 
 # 登入／重設防暴力破解：連續失敗達上限就鎖一段時間。
 # serverless 不能用記憶體計數，故狀態存在 users 表（failed_login_count / locked_until）。

@@ -3637,8 +3637,8 @@ async function submitRegister() {
     showAuthError('register', '安全問題與答案請一起填寫，或都留空');
     return;
   }
-  // email 為選填，有填才做基本格式檢查
-  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  // email 為選填，有填才做基本格式檢查（網域用不含點的標籤，避免 ReDoS）
+  if (email && !/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email)) {
     showAuthError('register', 'email 格式不正確');
     return;
   }
