@@ -107,6 +107,7 @@ class RecoveryReset(BaseModel):
 
 class UserUpdate(BaseModel):
     nickname: str | None = None
+    email: str | None = None
     avatar_color: str | None = None
     avatar_url: str | None = None
     id_number: str | None = None

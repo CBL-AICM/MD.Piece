@@ -3991,6 +3991,10 @@ function accountPage() {
             <input id="acct-nickname" type="text" maxlength="20" value="${(u.nickname || '').replace(/"/g, '&quot;')}" required />
           </label>
           <label class="acct-field">
+            <span>Email（選填，用於寄送報告）</span>
+            <input id="acct-email" type="email" maxlength="120" placeholder="example@mail.com" value="${(u.email || '').replace(/"/g, '&quot;')}" />
+          </label>
+          <label class="acct-field">
             <span>頭像主色</span>
             <input id="acct-color" type="color" value="${u.avatar_color || '#5B9FE8'}" />
           </label>
@@ -4117,12 +4121,18 @@ async function saveProfile() {
   if (!u) return;
   const nickname = document.getElementById('acct-nickname').value.trim();
   const avatar_color = document.getElementById('acct-color').value;
+  const emailEl = document.getElementById('acct-email');
+  const email = emailEl ? emailEl.value.trim() : '';
   if (!nickname) return;
+  if (email && !/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(email)) {
+    showAccountMsg('acct-profile-msg', 'email 格式不正確', true);
+    return;
+  }
   try {
     const res = await apiFetch(`${API}/auth/user/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, avatar_color })
+      body: JSON.stringify({ nickname, email, avatar_color })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
