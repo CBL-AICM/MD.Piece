@@ -3367,6 +3367,20 @@ function switchAuthTab(tab) {
   if (forgot) forgot.classList.remove('active');
   document.getElementById('login-error').hidden = true;
   document.getElementById('register-error').hidden = true;
+  var reg2Err = document.getElementById('register2-error');
+  if (reg2Err) reg2Err.hidden = true;
+  // 切到 register tab 時 reset 回 step 1（避免使用者切走再回來還停在 step 2）
+  if (!isLogin) {
+    var s1 = document.getElementById('auth-reg-step-1');
+    var s2 = document.getElementById('auth-reg-step-2');
+    if (s1 && s2) {
+      s1.hidden = false;
+      s2.hidden = true;
+      document.querySelectorAll('#reg-step-indicator .auth-step-dot').forEach(function(d) {
+        d.classList.toggle('active', d.dataset.step === '1');
+      });
+    }
+  }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -3542,14 +3556,26 @@ async function submitLogin() {
   }
 }
 
-async function submitRegister() {
-  const nickname = document.getElementById('reg-nickname').value.trim();
+// 註冊 form 的 onsubmit dispatcher：依目前停留的 step 決定要前進還是真的送出
+function handleRegisterSubmit() {
+  var step1 = document.getElementById('auth-reg-step-1');
+  if (step1 && !step1.hidden) {
+    registerGoToStep2();
+  } else {
+    submitRegister(false);
+  }
+}
+
+// 註冊精靈 step 1 → 2：驗證帳號／密碼／安全問題 OK 才前進。
+function registerGoToStep2() {
   const username = document.getElementById('reg-username').value.trim();
+  const nickname = document.getElementById('reg-nickname').value.trim();
   const password = document.getElementById('reg-password').value;
   const password2 = document.getElementById('reg-password2').value;
   const recoveryQuestion = document.getElementById('reg-recovery-question').value.trim();
   const recoveryAnswer = document.getElementById('reg-recovery-answer').value.trim();
 
+  if (!nickname) { showAuthError('register', '請輸入暱稱'); return; }
   if (!/^[A-Za-z0-9_.\-]{3,32}$/.test(username)) {
     showAuthError('register', '帳號格式不正確（3-32 字元，限英數字 _ . -）');
     return;
@@ -3559,13 +3585,47 @@ async function submitRegister() {
     return;
   }
   const pwErr = validateClientPassword(password, username);
-  if (pwErr) {
-    showAuthError('register', pwErr);
-    return;
-  }
-  // 安全問題為選填，但若填了一邊就要兩邊都填
+  if (pwErr) { showAuthError('register', pwErr); return; }
   if ((recoveryQuestion && !recoveryAnswer) || (!recoveryQuestion && recoveryAnswer)) {
     showAuthError('register', '安全問題與答案請一起填寫，或都留空');
+    return;
+  }
+
+  document.getElementById('register-error').hidden = true;
+  document.getElementById('auth-reg-step-1').hidden = true;
+  document.getElementById('auth-reg-step-2').hidden = false;
+  // Step 指示器更新
+  document.querySelectorAll('#reg-step-indicator .auth-step-dot').forEach(function(d) {
+    d.classList.toggle('active', d.dataset.step === '2');
+  });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function registerBackToStep1() {
+  document.getElementById('auth-reg-step-2').hidden = true;
+  document.getElementById('auth-reg-step-1').hidden = false;
+  document.querySelectorAll('#reg-step-indicator .auth-step-dot').forEach(function(d) {
+    d.classList.toggle('active', d.dataset.step === '1');
+  });
+}
+
+function registerSkipPersonalInfo() {
+  submitRegister(true);
+}
+
+async function submitRegister(skipPersonalInfo) {
+  // 在 step 2 才會被觸發，但保險起見再驗一次 step 1 欄位
+  const nickname = document.getElementById('reg-nickname').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  const recoveryQuestion = document.getElementById('reg-recovery-question').value.trim();
+  const recoveryAnswer = document.getElementById('reg-recovery-answer').value.trim();
+
+  if (!/^[A-Za-z0-9_.\-]{3,32}$/.test(username) || password !== password2 ||
+      validateClientPassword(password, username) ||
+      (recoveryQuestion && !recoveryAnswer) || (!recoveryQuestion && recoveryAnswer)) {
+    showAuthError('register2', '帳號資料異常，請回上一步檢查');
     return;
   }
 
@@ -3574,7 +3634,7 @@ async function submitRegister() {
   btn.disabled = true;
   btn.innerHTML = '<i data-lucide="loader"></i> 建立中…';
   if (typeof lucide !== 'undefined') lucide.createIcons();
-  document.getElementById('register-error').hidden = true;
+  document.getElementById('register2-error').hidden = true;
 
   const payload = {
     username, password, nickname,
@@ -3597,13 +3657,53 @@ async function submitRegister() {
       throw new Error(err.detail || '註冊失敗');
     }
     const user = await res.json();
-    finishAuth(user, true);
+    // 註冊成功 → 先設 user（讓 getStablePatientId 拿得到 uid）
+    setCurrentUser(user);
+
+    // 不論跳過或完整填，都標記 profile-onb skip flag——
+    // step 2 已經把舊 overlay 的功能（收慢性病）吸收掉了，避免 finishAuth 再彈。
+    try {
+      var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+      if (uid) localStorage.setItem(PROFILE_ONB_SKIP_KEY + ':' + uid, '1');
+    } catch (e) {}
+
+    if (!skipPersonalInfo) {
+      var info = _collectRegisterStep2Info();
+      setBasicInfo(info);
+      try {
+        var ok = await syncBasicInfoToServer(info);
+        if (!ok && typeof showToast === 'function') {
+          showToast((typeof _T === 'function' ? _T('auth.reg.step2.savingErr') : '已建立帳號，但個人資料同步失敗（之後可在「我的資料」重填）'), 'warning');
+        }
+      } catch (e) {}
+    }
+    // 個人資料 step 2 已收齊（或主動跳過），直接走 tutorial onboarding 路徑
+    // 不需再彈舊的 profile-onb-overlay
+    finishAuth(user, false);
   } catch (e) {
-    showAuthError('register', e.message || '註冊失敗，請稍後再試');
+    showAuthError('register2', e.message || '註冊失敗，請稍後再試');
     btn.disabled = false;
     btn.innerHTML = original;
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
+}
+
+// 收集註冊 step 2 的 10 個個人資料欄位
+function _collectRegisterStep2Info() {
+  function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+  function trimmed(id) { return (val(id) || '').trim(); }
+  return {
+    gender: val('reg-gender'),
+    birthday: val('reg-birthday'),
+    blood: val('reg-blood'),
+    height: val('reg-height'),
+    weight: val('reg-weight'),
+    allergies: trimmed('reg-allergies'),
+    conditions: trimmed('reg-conditions'),
+    current_disease: trimmed('reg-current-disease'),
+    emergency_name: trimmed('reg-emergency-name'),
+    emergency_phone: trimmed('reg-emergency-phone'),
+  };
 }
 
 // 忘記密碼第一步：用帳號查回安全問題；查到才展開第二步。

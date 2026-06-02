@@ -65,6 +65,13 @@
       'auth.recovery.questionPlaceholder': '例：第一隻寵物的名字？',
       'auth.recovery.answer': '答案',
       'auth.recovery.answerPlaceholder': '記得住、別人猜不到的答案',
+      'auth.reg.next': '下一步：填個人資料',
+      'auth.reg.back': '上一步',
+      'auth.reg.skipInfo': '先跳過個人資料',
+      'auth.reg.stepAria': '註冊進度',
+      'auth.reg.step2.title': '個人資料',
+      'auth.reg.step2.hint': '看診時可一鍵複製給醫師。全部選填，跳過後可在「我的資料」補填。',
+      'auth.reg.step2.savingErr': '已建立帳號，但個人資料同步失敗（之後可在「我的資料」重填）',
 
       // sidebar nav
       'nav.symptoms': '症狀紀錄',
@@ -599,6 +606,13 @@
       'auth.recovery.questionPlaceholder': "e.g. Your first pet's name?",
       'auth.recovery.answer': 'Answer',
       'auth.recovery.answerPlaceholder': 'Memorable but hard to guess',
+      'auth.reg.next': 'Next: personal info',
+      'auth.reg.back': 'Back',
+      'auth.reg.skipInfo': 'Skip personal info for now',
+      'auth.reg.stepAria': 'Registration progress',
+      'auth.reg.step2.title': 'Personal Info',
+      'auth.reg.step2.hint': 'One-tap copy for your doctor. All optional — fill later in "My Info" if you skip.',
+      'auth.reg.step2.savingErr': 'Account created, but personal info failed to sync (you can refill in "My Info" later)',
 
       'nav.symptoms': 'Symptoms',
       'nav.symptomsAnalyze': 'Symptom Analysis',

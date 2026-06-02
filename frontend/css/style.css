@@ -7901,6 +7901,80 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
 }
 .auth-switch-hint a:hover { text-decoration: underline; }
 
+/* select / textarea 沿用 input 樣式（註冊 step 2 個人資料用到） */
+.auth-field select,
+.auth-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-glass, rgba(31,61,88,0.22));
+  background: var(--bg-deep);
+  color: var(--text);
+  font-size: 0.96rem;
+  font-family: inherit;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  box-sizing: border-box;
+  resize: vertical;
+}
+.auth-field select:focus,
+.auth-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* 註冊兩步精靈：頂部步驟指示器 */
+.auth-step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.auth-step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border-glass, rgba(31,61,88,0.22));
+  transition: background 0.18s, transform 0.18s;
+}
+.auth-step-dot.active {
+  background: var(--klein);
+  transform: scale(1.15);
+}
+.auth-step-bar {
+  width: 36px;
+  height: 2px;
+  background: var(--border-glass, rgba(31,61,88,0.22));
+  border-radius: 2px;
+}
+
+/* Step 2 兩欄式 grid（性別/生日/血型/身高/體重 + 緊急聯絡人）*/
+.auth-reg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (max-width: 420px) {
+  .auth-reg-grid { grid-template-columns: 1fr; }
+}
+
+/* Step 2 底部：上一步 + 完成 並排 */
+.auth-reg-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.auth-reg-actions .auth-submit { flex: 1; }
+.auth-submit-secondary {
+  background: transparent !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-glass, rgba(31,61,88,0.22)) !important;
+}
+.auth-submit-secondary:hover:not(:disabled) {
+  background: var(--bg-soft) !important;
+}
+
 /* ═══════════════════════════════════════════════════════════
    ACCOUNT SETTINGS PAGE
    ═══════════════════════════════════════════════════════════ */
