@@ -666,12 +666,60 @@ function memoSaveAll(arr) {
   catch (e) { showToast("儲存失敗，可能空間不足", "error"); }
 }
 
+// 把單筆 memo 背景同步到後端（best-effort）。後端以 (patient_id, client_id)
+// 幂等 upsert，所以新增、編輯、補傳重送都安全；離線/失敗就留在本機，下次開頁補傳。
+function memoSyncPush(m) {
+  if (!m || !m.id) return;
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    fetch(API + '/memos/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_id: pid,
+        client_id: m.id,
+        kind: m.type || 'text',
+        content: m.text || '',
+        photo_data: m.photo || null,
+        for_doctor: !!m.forDoctor,
+        created_at: m.createdAt || null,
+      }),
+    }).catch(function() {});
+  } catch (e) {}
+}
+
+// 開 memo 頁時：拉後端資料合併進本機快取，並把「本機有、後端沒有」的補傳上去。
+// 本機仍是同步讀取來源（其他畫面不必改成 async）；後端只是在底下對齊。
+function memoSyncOnLoad() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  fetch(API + '/memos/?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !Array.isArray(data.memos)) return;
+      var byId = {};
+      data.memos.forEach(function(m) { if (m && m.id) byId[m.id] = m; });
+      memoLoad().forEach(function(m) {
+        if (m && m.id && !byId[m.id]) { memoSyncPush(m); byId[m.id] = m; }
+      });
+      var merged = Object.keys(byId).map(function(k) { return byId[k]; });
+      merged.sort(function(a, b) {
+        return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+      });
+      memoSaveAll(merged);
+      memoRenderList();
+    })
+    .catch(function() {});
+}
+
 function loadMemoPage() {
   _memoFilter = "all";
   _memoComposeMode = null;
   _memoStagedPhoto = null;
   _memoStagedPhotoCanvas = null;
   memoRenderList();
+  memoSyncOnLoad();
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
 }
 
@@ -1099,6 +1147,11 @@ function memoSave() {
     });
   }
   memoSaveAll(memos);
+  // 新增時是 unshift 到最前面；編輯時是原位更新 — 取出剛存的那筆送後端。
+  var savedMemo = editingId
+    ? memos.find(function(x) { return x.id === editingId; })
+    : memos[0];
+  memoSyncPush(savedMemo);
   memoCancelCompose();
   memoRenderList();
   showToast(editingId ? "已更新" : "已儲存", "success");
@@ -1134,6 +1187,14 @@ function memoDelete(id) {
   if (!confirm("確定要刪除這則 memo？")) return;
   var memos = memoLoad().filter(function(m) { return m.id !== id; });
   memoSaveAll(memos);
+  // 後端同步刪除（best-effort；失敗不影響本機已刪）
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (pid) {
+    try {
+      fetch(API + '/memos/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+            { method: 'DELETE' }).catch(function() {});
+    } catch (e) {}
+  }
   memoRenderList();
 }
 
@@ -22978,6 +23039,7 @@ var _pushSubscribed = false;
 var _webpushEnabled = null;  // null=未探測, true=後端已啟用, false=未啟用
 var _remindersInboxTimer = null;
 var _remindersSeenInboxIds = null;  // null = 初次載入時不響鈴
+var _remindersBellPrefsLoaded = false;  // 全 app 範圍只載一次鈴聲偏好
 var _remBellKinds = [
   { kind: 'medication',     label: '服藥提醒' },
   { kind: 'appointment',    label: '回診/預約' },
@@ -23824,18 +23886,36 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// 全域：登入後或 app 啟動時，背景同步未讀數
+// 全域：登入後或 app 啟動時，背景派發到期提醒 + 全 app 範圍響鈴 + 同步未讀數。
+// （修：原本只在「提醒」頁的 30 秒輪詢才會響鈴，其他頁面到期提醒只更新紅點、不出聲。）
 function reminderBackgroundSync() {
   try {
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return;
-    // 同步前先觸發伺服器派發（命中本帳號的到期 reminder）
+    // 鈴聲偏好只載一次，讓使用者自訂的鈴聲/音量/開關在任何頁面都生效
+    if (window.MDBell && typeof MDBell.loadPrefs === 'function' && !_remindersBellPrefsLoaded) {
+      _remindersBellPrefsLoaded = true;
+      try { MDBell.loadPrefs(pid, API); } catch (e) {}
+    }
+    // 同步前先觸發伺服器派發（命中本帳號的到期 reminder → 寫入 inbox）
     fetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(pid), { method: 'POST' })
       .catch(function() {})
       .finally(function() {
-        fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&unread_only=true&limit=1')
+        // 抓回 inbox 內容（不只未讀數）→ 在「任何頁面」都能對新到期提醒響鈴
+        fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&limit=20')
           .then(function(r) { return r.json(); })
-          .then(function(data) { reminderUpdateNavBadge(data.unread || 0); })
+          .then(function(data) {
+            var items = data.items || [];
+            if (typeof _ringBellForNewInboxArrivals === 'function') {
+              _ringBellForNewInboxArrivals(items);
+            }
+            // 若正好在提醒頁，順手把列表也更新成最新
+            if (_remindersPid && document.getElementById('rem-inbox-list')) {
+              _remindersInbox = items;
+              if (typeof reminderRenderInbox === 'function') reminderRenderInbox(data.unread || 0);
+            }
+            reminderUpdateNavBadge(data.unread || 0);
+          })
           .catch(function() {});
       });
   } catch {}

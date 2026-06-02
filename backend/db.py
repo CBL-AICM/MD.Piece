@@ -134,6 +134,18 @@ _SCHEMAS = {
             note TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
+    "memos": """
+        CREATE TABLE IF NOT EXISTS memos (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT,
+            client_id TEXT,
+            kind TEXT,
+            content TEXT,
+            photo_data TEXT,
+            for_doctor INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT
+        )""",
     "medications": """
         CREATE TABLE IF NOT EXISTS medications (
             id TEXT PRIMARY KEY,

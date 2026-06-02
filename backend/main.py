@@ -12,6 +12,7 @@ from backend.routers import (
     drug_search, diseases, reminders, bell_reminders,
     admissions, timeline, follow_ups, profile,
     inpatient, menstrual, predict, sleep,
+    memos,
 )
 from backend.services import llm_service
 
@@ -49,6 +50,7 @@ app.include_router(records.router, prefix="/records", tags=["records"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(education.router, prefix="/education", tags=["education"])
 app.include_router(emotions.router, prefix="/emotions", tags=["emotions"])
+app.include_router(memos.router, prefix="/memos", tags=["memos"])
 app.include_router(medications.router, prefix="/medications", tags=["medications"])
 app.include_router(drug_search.router, prefix="/drug-search", tags=["drug-search"])
 app.include_router(diseases.router, prefix="/diseases", tags=["diseases"])
