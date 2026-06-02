@@ -602,27 +602,27 @@ img, svg, video { max-width: 100%; height: auto; }
   --klein:          #c8c6c6;
 }
 
-/* Light = 晨光米（Lunar Beige）— 暖米底 + 藏青字 + 星芒金強調 */
+/* Light = 柔霧薰衣草（Periwinkle Mist）— 霧藍灰底 + 板岩藍字 + 薰衣草紫強調 */
 #app-wrapper[data-theme="light"] {
-  --app-bg:         #e8d1b6;   /* Lunar Beige — 飽和暖米底，與白卡撞色 */
-  --app-grid:       rgba(19,36,66,0.05);
-  --app-text:       #132442;   /* Royal Night — 主文字 */
-  --app-text-dim:   #4a5a72;   /* Foggy Blue 加深 — 次文字撐住對比 */
-  --app-mint:       #ece0c8;   /* 米色 active 背景 */
-  --app-mint-strong:#bc8909;   /* Starburst Gold — FAB / 圓點 / 邊條 */
-  --app-aqua:       #1a3a63;   /* 銀河藏青 — 強調藍 */
-  --app-pink:       #bc8909;   /* 星芒金 — 暖色 callout */
-  --app-blue:       #637d92;   /* Foggy Blue 面板 */
-  --app-term:       #bc8909;   /* Starburst Gold accent */
-  --app-panel:      #fffaf0;   /* 暖白 — 卡片表面 */
-  --app-panel-soft: #f3e3c5;   /* 比 bg 略深的米色 hover */
-  --app-chrome-1:   #fffaf0;   /* titlebar 漸層上層 */
-  --app-chrome-2:   #e8d1b6;   /* titlebar 漸層下層 */
-  --app-border:     #132442;   /* Royal Night 邊框 */
-  --app-shadow:     2px 2px 0 rgba(19,36,66,0.18);
-  --app-glow:       rgba(188,137,9,0.5);
-  --app-chip-text:  #132442;   /* navy text on light chips */
-  --heading-fg:     #bc8909;   /* Starburst Gold heading accent */
+  --app-bg:         #eceef4;   /* Periwinkle Mist — 柔霧藍灰底，與白卡撞色 */
+  --app-grid:       rgba(75,85,120,0.05);
+  --app-text:       #2c3247;   /* Slate Navy — 主文字 */
+  --app-text-dim:   #6b7287;   /* 灰藍 — 次文字撐住對比 */
+  --app-mint:       #e6e9f5;   /* 淡薰衣草 active 背景 */
+  --app-mint-strong:#5b6488;   /* Slate Periwinkle — FAB / 圓點 / 邊條 */
+  --app-aqua:       #4a5578;   /* 板岩藍紫 — 強調藍 */
+  --app-pink:       #8a93bc;   /* 薰衣草 — 柔色 callout */
+  --app-blue:       #9aa2c6;   /* 霧藍紫 面板 */
+  --app-term:       #5b6488;   /* Slate Periwinkle accent */
+  --app-panel:      #ffffff;   /* 純白 — 卡片表面 */
+  --app-panel-soft: #eef0f8;   /* 比 bg 略淡的薰衣草 hover */
+  --app-chrome-1:   #ffffff;   /* titlebar 漸層上層 */
+  --app-chrome-2:   #e6e9f5;   /* titlebar 漸層下層 */
+  --app-border:     #b9c0dd;   /* 柔薰衣草邊框 */
+  --app-shadow:     2px 2px 0 rgba(91,100,136,0.16);
+  --app-glow:       rgba(91,100,136,0.45);
+  --app-chip-text:  #2c3247;   /* slate navy text on light chips */
+  --heading-fg:     #4a5578;   /* 板岩藍紫 heading accent */
 }
 
 /* Body grid background — only when app is shown */
