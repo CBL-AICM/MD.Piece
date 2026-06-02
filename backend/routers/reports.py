@@ -8,8 +8,10 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.services import email_service
 from backend.services.llm_service import (
     build_patient_facing_system,
     call_claude,
@@ -1522,4 +1524,50 @@ def wellness_correlation(patient_id: str, days: int | None = None):
         "pearson_r": r,
         "interpretation": interpretation,
     }
+
+
+# ── 把診前報告 PDF 寄到使用者自己的 email ──────────────────────
+# 前端用 html2pdf 產生 PDF（已驗證），把 base64 傳上來；後端查帳號的 email、
+# 用 Resend 寄給「使用者本人」。只寄到帳號上的 email（不收任意收件人），避免被當寄信跳板。
+
+class EmailPdfRequest(BaseModel):
+    pdf_base64: str
+    filename: str | None = None
+
+
+@router.post("/{patient_id}/email-pdf")
+def email_report_pdf(patient_id: str, body: EmailPdfRequest):
+    if not email_service.is_configured():
+        raise HTTPException(status_code=503, detail="寄信服務尚未設定（後端缺 RESEND_API_KEY）")
+    if not body.pdf_base64:
+        raise HTTPException(status_code=400, detail="缺少 PDF 內容")
+
+    sb = get_supabase()
+    rows = sb.table("users").select("email,nickname").eq("id", patient_id).limit(1).execute().data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="找不到使用者")
+    email = (rows[0].get("email") or "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="此帳號尚未設定 email，請先在註冊/帳號設定填寫")
+
+    nickname = rows[0].get("nickname") or ""
+    filename = (body.filename or "MD.Piece-診前報告.pdf").strip() or "MD.Piece-診前報告.pdf"
+    html = (
+        f"<p>{nickname} 您好，</p>"
+        "<p>附件是您的 MD.Piece 診前報告 PDF，回診時可提供給醫師參考。</p>"
+        "<p>—— MD.Piece</p>"
+    )
+    try:
+        result = email_service.send_email(
+            to=email,
+            subject="您的 MD.Piece 診前報告",
+            html=html,
+            attachments=[{"filename": filename, "content": body.pdf_base64}],
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    at = email.find("@")
+    masked = (email[:2] + "***" + email[at:]) if at > 0 else "***"
+    return {"sent": True, "to": masked, "id": (result or {}).get("id")}
 

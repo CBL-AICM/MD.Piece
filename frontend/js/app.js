@@ -3059,6 +3059,9 @@ function _previsitShowPdfModal(blob, filename) {
     +     '<button type="button" id="previsit-pdf-share" style="display:none;background:var(--accent,#3E8EC8);color:#fff;border:0;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;align-items:center;gap:6px">'
     +       '<i data-lucide="share-2" style="width:14px;height:14px"></i>分享 / 寄出'
     +     '</button>'
+    +     '<button type="button" id="previsit-pdf-email" style="background:transparent;border:1px solid var(--accent-deep,#2F6B96);color:var(--accent-deep,#2F6B96);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">'
+    +       '<i data-lucide="mail" style="width:14px;height:14px"></i>寄到我的 email'
+    +     '</button>'
     +     '<a id="previsit-pdf-download" href="' + url + '" download="' + escapeHtml(filename) + '" style="background:var(--accent-deep,#2F6B96);color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">'
     +       '<i data-lucide="download" style="width:14px;height:14px"></i>下載到本機'
     +     '</a>'
@@ -3104,7 +3107,46 @@ function _previsitShowPdfModal(blob, filename) {
     }
   }
 
-  if (typeof showToast === 'function') showToast('PDF 已產生，可「下載到本機」或「分享 / 寄出」', 'success');
+  // 「寄到我的 email」：把已產生的 PDF base64 傳給後端，由後端用 Resend 寄到帳號上的 email。
+  var emailBtn = document.getElementById('previsit-pdf-email');
+  if (emailBtn) {
+    emailBtn.addEventListener('click', function() {
+      var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+      if (!pid) { if (typeof showToast === 'function') showToast('請先登入', 'warning'); return; }
+      var orig = emailBtn.innerHTML;
+      function reset() {
+        emailBtn.disabled = false; emailBtn.innerHTML = orig;
+        if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+      }
+      emailBtn.disabled = true;
+      emailBtn.innerHTML = '<i data-lucide="loader"></i> 寄送中…';
+      if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+      var reader = new FileReader();
+      reader.onloadend = function() {
+        var s = String(reader.result || '');
+        var b64 = s.slice(s.indexOf(',') + 1);
+        fetch(API + '/reports/' + encodeURIComponent(pid) + '/email-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdf_base64: b64, filename: filename })
+        })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+          .then(function(res) {
+            if (res.ok && res.d && res.d.sent) {
+              if (typeof showToast === 'function') showToast('已寄到你的 email：' + (res.d.to || ''), 'success');
+            } else {
+              if (typeof showToast === 'function') showToast((res.d && res.d.detail) || '寄送失敗', 'error');
+            }
+            reset();
+          })
+          .catch(function() { if (typeof showToast === 'function') showToast('寄送失敗，請稍後再試', 'error'); reset(); });
+      };
+      reader.onerror = function() { if (typeof showToast === 'function') showToast('讀取 PDF 失敗', 'error'); reset(); };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  if (typeof showToast === 'function') showToast('PDF 已產生，可下載、分享或寄到你的 email', 'success');
 }
 
 // 備援：把 HTML 塞進隱藏 iframe，再呼叫 iframe 的 print()。
