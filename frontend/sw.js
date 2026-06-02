@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v148-fontfix";
+const CACHE_VERSION = "mdpiece-v149-ios-fix";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -13,7 +13,7 @@ const STATIC_ASSETS = [
   "/css/edu-codex.css?v=v3",
   "/js/i18n.js?v=v83-predict-nav",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v154-fontfix",
+  "/js/app.js?v=v155-ios-fix",
   "/js/edu-codex.js?v=v3",
   "/manifest.json",
   "/icons/icon-192.png",

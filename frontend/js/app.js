@@ -26,6 +26,20 @@ function _localDay(input) {
     + String(d.getDate()).padStart(2, "0");
 }
 
+// ─── iOS / PWA 安裝偵測 ─────────────────────────────────────
+// iOS Safari 在「語音輸入、Web Push、安裝流程」上的能力與其他瀏覽器差很多，
+// 多處要分流；集中成兩個 helper 共用，避免各處各寫一套判斷（鐵則 7）。
+function isIOS() {
+  var ua = navigator.userAgent || "";
+  // iPadOS 13+ 會自報成 Mac，靠觸控點數補判
+  return /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function isStandalonePWA() {
+  return window.navigator.standalone === true
+    || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+}
+
 // ─── 顯示模式（年長版 / 普通版）─────────────────────────────
 // 'senior' = 大字體、寬按鈕、高對比；'standard' = 原本的精緻 UI
 //
@@ -19186,8 +19200,12 @@ var _chatRecActive = false;
 
 function chatToggleMic() {
   var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Rec) {
-    showToast('這個瀏覽器不支援語音輸入（建議用 Chrome/Edge/Safari）', 'warning');
+  // iOS Safari/WebKit 不支援語音辨識（即使少數情境存在 webkitSpeechRecognition 也不會動），
+  // 直接給正確指引，不要再誤導使用者「改用 Safari」。
+  if (isIOS() || !Rec) {
+    showToast(isIOS()
+      ? 'iPhone／iPad 目前不支援語音輸入，請改用鍵盤打字'
+      : '這個瀏覽器不支援語音輸入（建議用電腦版 Chrome／Edge）', 'warning');
     return;
   }
   if (_chatRecActive && _chatRec) {
@@ -24068,7 +24086,11 @@ function reminderTestDispatch() {
 function reminderRefreshPushState() {
   var el = document.getElementById('reminders-push-state');
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    if (el) el.textContent = '推播訂閱：此瀏覽器不支援 Web Push';
+    if (el) {
+      el.textContent = (isIOS() && !isStandalonePWA())
+        ? '推播訂閱：iPhone 需先用 Safari「分享 → 加入主畫面」安裝後（iOS 16.4 以上）才能開啟'
+        : '推播訂閱：此瀏覽器不支援 Web Push';
+    }
     _webpushEnabled = false;
     _applyPushEnabledUi();
     return;
@@ -24128,7 +24150,9 @@ function _urlBase64ToUint8Array(base64String) {
 
 function reminderEnablePush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    alert('此瀏覽器不支援 Web Push');
+    alert((isIOS() && !isStandalonePWA())
+      ? 'iPhone 需先用 Safari 下方「分享 ⬆️ → 加入主畫面」把 MD.Piece 安裝成 App（iOS 16.4 以上），\n從主畫面開啟後才能啟用推播提醒。'
+      : '此瀏覽器不支援 Web Push');
     return;
   }
   Notification.requestPermission().then(function(perm) {
@@ -25248,6 +25272,42 @@ function _renderPiecesNearestFollowUp(fu) {
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
+}
+
+// ─── iOS「加入主畫面」安裝引導 ──────────────────────────────
+// iOS Safari 沒有 beforeinstallprompt，使用者不知道怎麼把 PWA 裝起來；而 Web Push
+// （吃藥／回診提醒）在 iOS「必須」先安裝成 PWA 才有。偵測 iOS 且尚未安裝、且使用者
+// 沒關過 → 顯示一次可關閉的底部引導橫幅。
+function _maybeShowIosInstallHint() {
+  try {
+    if (!isIOS() || isStandalonePWA()) return;
+    if (localStorage.getItem('mdp-ios-install-dismissed') === '1') return;
+    if (document.getElementById('mdp-ios-install')) return;
+    var bar = document.createElement('div');
+    bar.id = 'mdp-ios-install';
+    bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));'
+      + 'z-index:9998;background:#1a1d30;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:14px;'
+      + 'padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:flex;gap:10px;align-items:flex-start;'
+      + 'font:13px/1.5 -apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif';
+    bar.innerHTML = '<div style="flex:1">'
+      + '<div style="font-weight:700;margin-bottom:2px">把 MD.Piece 加入主畫面</div>'
+      + '<div style="opacity:.85">點 Safari 下方 <b>分享 ⬆️</b> →「<b>加入主畫面</b>」，即可像 App 一樣全螢幕使用，並接收吃藥／回診提醒。</div>'
+      + '</div>';
+    var close = document.createElement('button');
+    close.textContent = '知道了';
+    close.style.cssText = 'flex-shrink:0;align-self:center;background:#3E8EC8;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:600';
+    close.onclick = function () {
+      try { localStorage.setItem('mdp-ios-install-dismissed', '1'); } catch (e) {}
+      bar.remove();
+    };
+    bar.appendChild(close);
+    document.body.appendChild(bar);
+  } catch (e) { /* 引導橫幅失敗不可影響 App */ }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _maybeShowIosInstallHint);
+} else {
+  _maybeShowIosInstallHint();
 }
 
 // ════════════════════════════════════════════════════════════════
