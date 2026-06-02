@@ -8,27 +8,21 @@
 - 刪除依 (patient_id, client_id) 精準刪；不同病患同 client_id 不互相干擾。
 若有人把 upsert 改回每次都 insert、或把欄位對映寫錯，這些測試會立刻變紅。
 """
-import os
-import tempfile
-
 import pytest
 
 
 @pytest.fixture
-def memos_mod():
+def memos_mod(tmp_path):
     # 強制走 SQLite：db.py 預設會指向 production Supabase，這裡務必清掉。
+    # 用 pytest 內建 tmp_path（安全、自動清理），不用 tempfile.mktemp。
     import backend.db as db
     db.SUPABASE_URL = None
     db.SUPABASE_KEY = None
     db._client = None
-    db.DB_PATH = tempfile.mktemp(suffix=".db")
+    db.DB_PATH = str(tmp_path / "memos_test.db")
     db._init_db()
     from backend.routers import memos
-    yield memos
-    try:
-        os.remove(db.DB_PATH)
-    except OSError:
-        pass
+    return memos
 
 
 def test_upsert_then_list_maps_fields(memos_mod):
