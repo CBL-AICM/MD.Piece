@@ -180,12 +180,15 @@ def _compute_next_fire(frequency, current_fire, time_of_day, days_of_week):
 
     if frequency == "weekly":
         days = sorted(_days_of_week_from_str(days_of_week))
-        candidate = anchor + timedelta(days=1)
         if not days:
-            while candidate <= now:
-                candidate += timedelta(days=7)
-            return candidate
-        # 往後找「未來、且落在指定星期」的最近一天，保留 anchor 的時刻
+            # 沒指定星期 → 維持每 7 天的週期，保留同一個星期幾與時刻
+            # （不能用 anchor+1 天，否則週一的提醒會漂成週二）。
+            nxt = anchor + timedelta(days=7)
+            while nxt <= now:
+                nxt += timedelta(days=7)
+            return nxt
+        # 有指定星期：往後找「未來、且落在指定星期」的最近一天，保留 anchor 的時刻
+        candidate = anchor + timedelta(days=1)
         for _ in range(366):
             if candidate > now and candidate.weekday() in days:
                 return candidate

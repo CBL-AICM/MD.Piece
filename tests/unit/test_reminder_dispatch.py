@@ -56,9 +56,13 @@ def test_weekly_picks_next_allowed_weekday_keeping_time():
     assert (nxt.hour, nxt.minute) == (8, 0)
 
 
-def test_weekly_without_days_advances_one_week():
+def test_weekly_without_days_keeps_same_weekday():
+    """無指定星期：必須保留同一個星期幾（推 7 的整數倍天），
+    不可漂成隔天（週一 → 週二）。這是 Codex 抓到的回歸。"""
     anchor = _fixed_8am_yesterday()
     nxt = _compute_next_fire("weekly", anchor, "08:00", None)
     now = datetime.now(timezone.utc)
     assert nxt > now
     assert (nxt.hour, nxt.minute) == (8, 0)
+    assert nxt.weekday() == anchor.weekday()      # 同一個星期幾
+    assert (nxt - anchor).days % 7 == 0           # 整數週，不漂移

@@ -701,7 +701,13 @@ function memoSyncOnLoad() {
       var byId = {};
       data.memos.forEach(function(m) { if (m && m.id) byId[m.id] = m; });
       memoLoad().forEach(function(m) {
-        if (m && m.id && !byId[m.id]) { memoSyncPush(m); byId[m.id] = m; }
+        if (!m || !m.id) return;
+        var server = byId[m.id];
+        // 本機獨有，或本機是較新的版本（離線編輯 updatedAt 較新）→ 補傳並保留本機，
+        // 不要被後端的舊版蓋掉（否則離線改的 memo 會遺失）。
+        var lt = m.updatedAt || m.createdAt || '';
+        var st = server ? (server.updatedAt || server.createdAt || '') : '';
+        if (!server || String(lt) > String(st)) { memoSyncPush(m); byId[m.id] = m; }
       });
       var merged = Object.keys(byId).map(function(k) { return byId[k]; });
       merged.sort(function(a, b) {
@@ -5863,6 +5869,8 @@ function loadHomePage() {
 
   // 症狀條目與後端對齊（拉回 + 補傳本機既有），不阻塞首頁渲染。
   if (typeof symptomSyncOnLoad === 'function') symptomSyncOnLoad();
+  // 生理量測同步（同上）。
+  if (typeof vitalSyncOnLoad === 'function') vitalSyncOnLoad();
 
   // 住院模式有完全不同的首頁佈局，走另一條資料載入。
   if (getCareMode() === 'inpatient') {
@@ -11332,10 +11340,64 @@ function saveVitalEntry(e) {
   const arr = getVitalEntries();
   arr.push(e);
   localStorage.setItem('mdpiece_vitals_entries', JSON.stringify(arr));
+  vitalSyncPush(e);
 }
 function deleteVitalEntry(id) {
   localStorage.setItem('mdpiece_vitals_entries',
     JSON.stringify(getVitalEntries().filter(e => e.id !== id)));
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (pid && id) {
+    try {
+      fetch(API + '/vitals/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+            { method: 'DELETE' }).catch(function() {});
+    } catch (e) {}
+  }
+}
+
+// 把單筆量測背景同步到後端（best-effort；後端以 (patient_id, client_id) 幂等 upsert）。
+function vitalSyncPush(e) {
+  if (!e || !e.id) return;
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    fetch(API + '/vitals/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_id: pid,
+        client_id: e.id,
+        metric_id: e.metricId || '',
+        value: (e.value != null ? e.value : null),
+        value2: (e.value2 != null ? e.value2 : null),
+        context: e.context || null,
+        method: e.method || null,
+        notes: e.notes || '',
+        recorded_at: e.recordedAt || null,
+      }),
+    }).catch(function() {});
+  } catch (err) {}
+}
+
+// 開 App（首頁）時：拉後端量測合併進本機，並把本機獨有的補傳上去。
+function vitalSyncOnLoad() {
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  fetch(API + '/vitals/?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !Array.isArray(data.entries)) return;
+      var byId = {};
+      data.entries.forEach(function(e) { if (e && e.id) byId[e.id] = e; });
+      getVitalEntries().forEach(function(e) {
+        if (e && e.id && !byId[e.id]) { vitalSyncPush(e); byId[e.id] = e; }
+      });
+      var merged = Object.keys(byId).map(function(k) { return byId[k]; });
+      merged.sort(function(a, b) {
+        return String(b.recordedAt || '').localeCompare(String(a.recordedAt || ''));
+      });
+      localStorage.setItem('mdpiece_vitals_entries', JSON.stringify(merged));
+    })
+    .catch(function() {});
 }
 function getLatestEntry(metricId) {
   const arr = getVitalEntries().filter(e => e.metricId === metricId);
