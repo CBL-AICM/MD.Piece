@@ -784,6 +784,11 @@ html.dark body.theme-modern #app {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
+    /* 滿版 nav：style.css @media 還留著 width:auto + max-width:calc(100vw-16px)（無 !important），
+       會讓 left:0/right:0 的滿版 bar 實際縮成 100vw-16px 又靠左 → 右下露 16px 空隙/被切、
+       FAB 偏離正中。這裡一併蓋掉，bar 才真正貼齊兩邊、FAB 置中。 */
+    width: 100% !important;
+    max-width: none !important;
     /* 底部安全區（手機手勢列）用「加高」吸收，而非吃進固定 height 的內容區。
        box-sizing 是 border-box，若只加 padding-bottom 而不加高，內容會被擠到上半部、
        FAB 蓋住自己的「紀錄」標籤、底下露出空白帶（被切掉 / 留白）。 */
