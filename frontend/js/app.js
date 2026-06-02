@@ -18566,36 +18566,39 @@ function applyFontSize(size) {
   document.documentElement.style.zoom = '';
 }
 
-// 字型堆疊：只用裝置可能內建的中文字型（無下載）；沒有就自動 fallback。
+// 字型堆疊：只用各 OS 可能內建的中文字型（無下載）；沒有就一路 fallback。
+// 涵蓋 Windows（新細明體 / 標楷體）、macOS·iOS（Songti / Kaiti）、Android（Noto）。
 const FONT_FAMILY_STACK = {
   default: '',
-  serif: '"Noto Serif TC","Songti TC","Source Han Serif TC",serif',
-  kai:   '"DFKai-SB","BiauKai","Kaiti TC","標楷體","Kaiti",serif',
+  serif: '"Noto Serif TC","Source Han Serif TC","Songti TC","新細明體","PMingLiU","MingLiU",serif',
+  kai:   '"DFKai-SB","標楷體","KaiTi","BiauKai","Kaiti TC","Kaiti",serif',
 };
 
-// 粗體＋字型用「注入一個 <style>」套用，不動 CSS 檔（也免再 bump CSS 版號）：
-//  - 字型走 body{}（晚於 CSS 檔載入 → 蓋過預設，且尊重 code/mono 等自訂 family）
-//  - 粗體用 !important 壓過各元素明確字重（像 iOS「粗體文字」）
+// 粗體＋字型用「注入一個 <style>」套用，不動 CSS 檔（也免再 bump CSS 版號）。
+// 關鍵：元件層（medical-warm.css 等）用大量 class-based !important 寫死 "Noto Sans TC"，
+// 只改 body 帶不動它們（繼承不會贏過元件自己的規則）；故用「含 ID」的 #app-wrapper *
+// （特異度 1,0,0）壓過所有 class 規則，字型/粗體才會真的套到可見文字。
 function applyFontStyle() {
   var fam = getSetting('fontFamily', 'default');
   var bold = getSetting('fontBold', 'off') === 'on';
-  // 字型：設 body 的 inline !important。inline-important 是作者層最高優先，必勝過
-  // 任何 stylesheet 規則（不論特異度）—— 之前用注入 stylesheet 的 body{} 會輸給
-  // 既有更高優先序的 body 字型規則而不生效。靠繼承帶到一般文字；code/mono/logo
-  // 各有自己的 font-family，不受影響。
+  // 清掉舊版曾設過的 body inline 字型（改用注入 <style>）。
+  if (document.body) document.body.style.removeProperty('font-family');
   var stack = (fam !== 'default' && FONT_FAMILY_STACK[fam]) ? FONT_FAMILY_STACK[fam] : '';
-  if (document.body) {
-    if (stack) document.body.style.setProperty('font-family', stack, 'important');
-    else document.body.style.removeProperty('font-family');
+  var css = '';
+  if (stack) {
+    // 排除 code/pre/.mono 保留等寬；其餘全站文字換成所選字型。
+    css += '#app-wrapper *:not(code):not(pre):not([class*="mono"]){font-family:' + stack + ' !important;}';
   }
-  // 粗體：注入 <style>，用 !important 壓過各元素明確字重（像 iOS「粗體文字」）。
+  if (bold) {
+    css += '#app-wrapper *{font-weight:600 !important;}';
+  }
   var el = document.getElementById('mdpiece-font-pref');
   if (!el) {
     el = document.createElement('style');
     el.id = 'mdpiece-font-pref';
     (document.head || document.documentElement).appendChild(el);
   }
-  el.textContent = bold ? 'body *{font-weight:600 !important;}' : '';
+  el.textContent = css;
   document.documentElement.setAttribute('data-font-bold', bold ? 'on' : 'off');
   document.documentElement.setAttribute('data-font-family', fam);
 }
