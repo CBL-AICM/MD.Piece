@@ -28,3 +28,14 @@ name: "MD.Piece CodeQL config"
 # 追得到 sanitizer，可以把這段拿掉。
 paths-ignore:
   - backend/db.py
+  # 為什麼排除 tests/：
+  #
+  # tests/ 全為測試 / demo 腳本，本來就會刻意把資料 print 到 stdout 來驗證行為
+  # （例：tests/demo_recurrence_output.py 灌合成病患後印 predict/explain/trend
+  # 的真實 JSON）。CodeQL 的 clear-text-logging-sensitive-data 會把「print 病患
+  # 型態欄位（diagnosis/symptoms/sleep…）」標成 high-severity，但：
+  #   1. 資料全為合成（demo-patient-001 + 假文獻 + 合成紀錄），無任何真實 PII。
+  #   2. 只在本機 / CI 執行、印到 stdout，腳本跑完自刪臨時 DB，不寫入 prod。
+  # 與上面 db.py 同理：測試碼不進 prod 執行路徑，整個目錄排除對安全防線的實質
+  # 損失為 0。若日後 tests/ 開始放會進 prod 的共用程式碼，再縮小排除範圍。
+  - tests
