@@ -252,6 +252,11 @@ def update_user(user_id: str, body: UserUpdate, me: dict = Depends(current_user)
     uid = _enforce_self(user_id, me)
     sb = get_supabase()
     payload = body.model_dump(exclude_none=True)
+    # email：空字串視為清空（→ None）；有填則做基本格式檢查。
+    if "email" in payload:
+        payload["email"] = payload["email"].strip() or None
+        if payload["email"] and not _EMAIL_RE.match(payload["email"]):
+            raise HTTPException(status_code=400, detail="email 格式不正確")
     if not payload:
         raise HTTPException(status_code=400, detail="沒有要更新的欄位")
     result = sb.table("users").update(payload).eq("id", uid).execute()
