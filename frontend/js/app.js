@@ -3073,6 +3073,9 @@ function _previsitShowPdfModal(blob, filename) {
     +     '<button type="button" id="previsit-pdf-share" style="display:none;background:var(--accent,#3E8EC8);color:#fff;border:0;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;align-items:center;gap:6px">'
     +       '<i data-lucide="share-2" style="width:14px;height:14px"></i>分享 / 寄出'
     +     '</button>'
+    +     '<button type="button" id="previsit-pdf-email" style="background:transparent;border:1px solid var(--accent-deep,#2F6B96);color:var(--accent-deep,#2F6B96);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">'
+    +       '<i data-lucide="mail" style="width:14px;height:14px"></i>寄到我的 email'
+    +     '</button>'
     +     '<a id="previsit-pdf-download" href="' + url + '" download="' + escapeHtml(filename) + '" style="background:var(--accent-deep,#2F6B96);color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px">'
     +       '<i data-lucide="download" style="width:14px;height:14px"></i>下載到本機'
     +     '</a>'
@@ -3118,7 +3121,46 @@ function _previsitShowPdfModal(blob, filename) {
     }
   }
 
-  if (typeof showToast === 'function') showToast('PDF 已產生，可「下載到本機」或「分享 / 寄出」', 'success');
+  // 「寄到我的 email」：把已產生的 PDF base64 傳給後端，由後端用 Resend 寄到帳號上的 email。
+  var emailBtn = document.getElementById('previsit-pdf-email');
+  if (emailBtn) {
+    emailBtn.addEventListener('click', function() {
+      var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+      if (!pid) { if (typeof showToast === 'function') showToast('請先登入', 'warning'); return; }
+      var orig = emailBtn.innerHTML;
+      function reset() {
+        emailBtn.disabled = false; emailBtn.innerHTML = orig;
+        if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+      }
+      emailBtn.disabled = true;
+      emailBtn.innerHTML = '<i data-lucide="loader"></i> 寄送中…';
+      if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (_) {}
+      var reader = new FileReader();
+      reader.onloadend = function() {
+        var s = String(reader.result || '');
+        var b64 = s.slice(s.indexOf(',') + 1);
+        fetch(API + '/reports/' + encodeURIComponent(pid) + '/email-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdf_base64: b64, filename: filename })
+        })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+          .then(function(res) {
+            if (res.ok && res.d && res.d.sent) {
+              if (typeof showToast === 'function') showToast('已寄到你的 email：' + (res.d.to || ''), 'success');
+            } else {
+              if (typeof showToast === 'function') showToast((res.d && res.d.detail) || '寄送失敗', 'error');
+            }
+            reset();
+          })
+          .catch(function() { if (typeof showToast === 'function') showToast('寄送失敗，請稍後再試', 'error'); reset(); });
+      };
+      reader.onerror = function() { if (typeof showToast === 'function') showToast('讀取 PDF 失敗', 'error'); reset(); };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  if (typeof showToast === 'function') showToast('PDF 已產生，可下載、分享或寄到你的 email', 'success');
 }
 
 // 備援：把 HTML 塞進隱藏 iframe，再呼叫 iframe 的 print()。
@@ -3375,7 +3417,8 @@ function showPage(page) {
     home, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
-    followUps, handover, medRecon, bedside, dischargePlan, menstrual, predict, sleep
+    followUps, handover, medRecon, bedside, dischargePlan, menstrual, predict, sleep,
+    fontsize: fontSizePage
   };
   // Page transition
   app.style.opacity = '0';
@@ -3403,6 +3446,7 @@ function showPage(page) {
     if (page === "symptomsAnalyze") loadSymptomAnalysisHistory();
     if (page === "account") loadAccountPage();
     if (page === "settings") loadSettingsPage();
+    if (page === "fontsize") loadFontSizePage();
     if (page === "drugSearch") loadDrugSearchPage();
     if (page === "diseaseSearch") loadDiseaseSearchPage();
     if (page === "reminders") loadRemindersPage();
@@ -18503,11 +18547,13 @@ function _piecesShowCopyFallback(text) {
 //       重設 ID 卡、清除快取/重新整理、關於
 
 const SETTINGS_KEYS = {
-  fontSize: 'mdpiece_font_size',      // small | normal | large | xlarge
-  theme:    'mdpiece_theme_pref',     // dark | light | auto
-  motion:   'mdpiece_motion',         // on | reduced
-  sound:    'mdpiece_sound',          // on | off
-  density:  'mdpiece_density'         // cozy | compact
+  fontSize:   'mdpiece_font_size',      // small | normal | large | xlarge
+  fontBold:   'mdpiece_font_bold',      // on | off
+  fontFamily: 'mdpiece_font_family',    // default | serif | kai
+  theme:      'mdpiece_theme_pref',     // dark | light | auto
+  motion:     'mdpiece_motion',         // on | reduced
+  sound:      'mdpiece_sound',          // on | off
+  density:    'mdpiece_density'         // cozy | compact
 };
 
 // 字級＝根 font-size 等比縮放倍率。曾用 document.zoom 連固定 px 文字一起縮放，
@@ -18532,6 +18578,43 @@ function applyFontSize(size) {
   document.documentElement.style.fontSize = (FONT_SIZE_SCALE[size] || 1) * 100 + '%';
   // 清掉從帶 zoom 的舊版升上來時可能殘留的 inline zoom。
   document.documentElement.style.zoom = '';
+}
+
+// 字型堆疊：只用各 OS 可能內建的中文字型（無下載）；沒有就一路 fallback。
+// 涵蓋 Windows（新細明體 / 標楷體）、macOS·iOS（Songti / Kaiti）、Android（Noto）。
+const FONT_FAMILY_STACK = {
+  default: '',
+  serif: '"Noto Serif TC","Source Han Serif TC","Songti TC","新細明體","PMingLiU","MingLiU",serif',
+  kai:   '"DFKai-SB","標楷體","KaiTi","BiauKai","Kaiti TC","Kaiti",serif',
+};
+
+// 粗體＋字型用「注入一個 <style>」套用，不動 CSS 檔（也免再 bump CSS 版號）。
+// 關鍵：元件層（medical-warm.css 等）用大量 class-based !important 寫死 "Noto Sans TC"，
+// 只改 body 帶不動它們（繼承不會贏過元件自己的規則）；故用「含 ID」的 #app-wrapper *
+// （特異度 1,0,0）壓過所有 class 規則，字型/粗體才會真的套到可見文字。
+function applyFontStyle() {
+  var fam = getSetting('fontFamily', 'default');
+  var bold = getSetting('fontBold', 'off') === 'on';
+  // 清掉舊版曾設過的 body inline 字型（改用注入 <style>）。
+  if (document.body) document.body.style.removeProperty('font-family');
+  var stack = (fam !== 'default' && FONT_FAMILY_STACK[fam]) ? FONT_FAMILY_STACK[fam] : '';
+  var css = '';
+  if (stack) {
+    // 排除 code/pre/.mono 保留等寬；其餘全站文字換成所選字型。
+    css += '#app-wrapper *:not(code):not(pre):not([class*="mono"]){font-family:' + stack + ' !important;}';
+  }
+  if (bold) {
+    css += '#app-wrapper *{font-weight:600 !important;}';
+  }
+  var el = document.getElementById('mdpiece-font-pref');
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'mdpiece-font-pref';
+    (document.head || document.documentElement).appendChild(el);
+  }
+  el.textContent = css;
+  document.documentElement.setAttribute('data-font-bold', bold ? 'on' : 'off');
+  document.documentElement.setAttribute('data-font-family', fam);
 }
 
 function applyTheme(pref) {
@@ -18574,6 +18657,7 @@ function applyDensity(density) {
 
 function initUserSettings() {
   applyFontSize(getSetting('fontSize', 'normal'));
+  applyFontStyle();
   applyMotion(getSetting('motion', 'on'));
   applyDensity(getSetting('density', 'cozy'));
   // 主題：若使用者尚未選擇，沿用既有 mdpiece_landing_theme（舊 toggleAppTheme
@@ -19410,13 +19494,11 @@ function settings() {
     +       '<div class="val">' + _themeLabel + '</div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
-    +     '<div class="settings-row" style="cursor:default">'
+    +     '<div class="settings-row" onclick="navigateTo(\'fontsize\',null)">'
     +       '<div class="ico"><i data-lucide="type"></i></div>'
-    +       '<div style="flex:1"><div class="name">字級</div><div class="sub">點選想要的字級</div></div>'
+    +       '<div style="flex:1"><div class="name">字級與字型</div><div class="sub">大小 · 粗細 · 字型 · 預覽</div></div>'
     +       '<div class="val">' + _fontLabel + '</div>'
-    +     '</div>'
-    +     '<div class="set-seg" style="margin:2px 14px 12px;gap:6px">'
-    +       seg('fontSize', [{value:'small',label:'小'},{value:'normal',label:'標準'},{value:'large',label:'大字'},{value:'xlarge',label:'年長版'}], fs)
+    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
     +     '<div class="settings-row" onclick="onSettingChange(\'mode\',\'' + (md === 'senior' ? 'standard' : 'senior') + '\')">'
     +       '<div class="ico"><i data-lucide="user"></i></div>'
@@ -19526,12 +19608,7 @@ function settings() {
     + '  <div class="set-group">'
     + '    <h3 class="set-group-title"><i data-lucide="monitor"></i> ' + _T('set.group.display') + '</h3>'
     +      row(_T('set.row.fontSize.t'), _T('set.row.fontSize.d'),
-            '<div class="set-seg">' + seg('fontSize', [
-              {value:'small',  label:_T('set.opt.font.small')},
-              {value:'normal', label:_T('set.opt.font.normal')},
-              {value:'large',  label:_T('set.opt.font.large')},
-              {value:'xlarge', label:_T('set.opt.font.xlarge')}
-            ], fs) + '</div>')
+            '<button class="set-btn" onclick="navigateTo(\'fontsize\',null)"><i data-lucide="type"></i> 大小 · 粗細 · 字型 · 預覽 ›</button>')
     +      row(_T('set.row.theme.t'), _T('set.row.theme.d'),
             '<div class="set-seg">' + seg('theme', [
               {value:'light', label:_T('set.opt.theme.light')},
@@ -19604,10 +19681,70 @@ function loadSettingsPage() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// ─── 字級與字型專屬頁（像 iOS「文字大小」：尺寸 + 粗體 + 字型 + 即時預覽）──
+function fontSizePage() {
+  var fs   = getSetting('fontSize', 'normal');
+  var fam  = getSetting('fontFamily', 'default');
+  var bold = getSetting('fontBold', 'off') === 'on';
+  function fseg(group, opts, current) {
+    return opts.map(function (o) {
+      return '<button type="button" class="set-seg-btn' + (o.value === current ? ' active' : '') + '"'
+        + ' data-group="' + group + '" data-value="' + o.value + '"'
+        + ' onclick="onSettingChange(\'' + group + '\',\'' + o.value + '\')">' + o.label + '</button>';
+    }).join('');
+  }
+  return ''
+    + '<div class="fontset-page" style="max-width:560px;margin:0 auto;padding:14px">'
+    +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+    +     '<button class="pv-btn pv-btn-ghost" style="padding:6px 10px" onclick="navigateTo(\'settings\',null)"><i data-lucide="chevron-left"></i> 設定</button>'
+    +     '<h2 style="margin:0;font-size:1.15rem;color:var(--navy)">字級與字型</h2>'
+    +   '</div>'
+    +   '<p style="color:var(--text-muted);font-size:0.9rem;margin:0 2px 14px">調整下面的選項，上方預覽會即時改變，並自動記住、全站通用。</p>'
+
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="eye"></i> 即時預覽</h3></div>'
+    +   '<div class="card" style="padding:16px;margin-bottom:16px">'
+    +     '<div style="font-size:1.25rem;font-weight:700;color:var(--navy)">王小明 的提醒</div>'
+    +     '<div style="font-size:1rem;margin-top:8px">今天 08:00 — 飯後血壓藥（白色 5mg）一顆</div>'
+    +     '<p style="font-size:0.95rem;color:var(--text-muted);margin-top:10px;line-height:1.6">這是一段範例說明文字，用來預覽你選的字級、粗細與字型看起來的樣子。</p>'
+    +     '<span class="pill pill-info" style="margin-top:10px;display:inline-flex">範例標籤</span>'
+    +   '</div>'
+
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="type"></i> 字級大小</h3></div>'
+    +   '<div class="set-seg" style="margin-bottom:16px;gap:6px">'
+    +     fseg('fontSize', [{value:'small',label:'小'},{value:'normal',label:'標準'},{value:'large',label:'大字'},{value:'xlarge',label:'年長版'}], fs)
+    +   '</div>'
+
+    +   '<div class="settings-list" style="margin-bottom:16px">'
+    +     '<div class="settings-row" style="cursor:default">'
+    +       '<div class="ico"><i data-lucide="bold"></i></div>'
+    +       '<div style="flex:1"><div class="name">粗體文字</div><div class="sub">把文字加粗，看得更清楚</div></div>'
+    +       '<label class="set-switch">'
+    +         '<input type="checkbox" id="sw-fontbold"' + (bold ? ' checked' : '') + ' onchange="onSwitchChange(\'fontBold\', this.checked ? \'on\' : \'off\')" />'
+    +         '<span class="set-switch-track"><span class="set-switch-thumb"></span></span>'
+    +       '</label>'
+    +     '</div>'
+    +   '</div>'
+
+    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="case-sensitive"></i> 字型</h3></div>'
+    +   '<div class="set-seg" style="margin-bottom:8px;gap:6px">'
+    +     fseg('fontFamily', [{value:'default',label:'黑體'},{value:'serif',label:'明體'},{value:'kai',label:'楷體'}], fam)
+    +   '</div>'
+    +   '<p style="font-size:0.8rem;color:var(--text-muted);margin:0 2px 18px">字型以你裝置內建為準；沒有的字型會自動使用相近替代。</p>'
+    + '</div>';
+}
+
+function loadFontSizePage() {
+  // 確保 Lucide 圖示渲染
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function onSettingChange(group, value) {
   if (group === 'fontSize') {
     setSetting('fontSize', value);
     applyFontSize(value);
+  } else if (group === 'fontFamily') {
+    setSetting('fontFamily', value);
+    applyFontStyle();
   } else if (group === 'theme') {
     try { localStorage.setItem(SETTINGS_KEYS.theme, value); } catch (e) {}
     applyTheme(value);
@@ -19631,6 +19768,7 @@ function onSettingChange(group, value) {
 function onSwitchChange(key, value) {
   setSetting(key, value);
   if (key === 'motion') applyMotion(value);
+  if (key === 'fontBold') applyFontStyle();
   if (typeof showToast === 'function') showToast('已儲存設定', 'success');
 }
 

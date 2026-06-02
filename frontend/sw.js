@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v146-ios-fix";
+const CACHE_VERSION = "mdpiece-v149-ios-fix";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -7,13 +7,13 @@ const STATIC_ASSETS = [
   "/index.html",
   "/css/style.css?v=v116-dark-no-grad",
   "/css/medical-warm.css?v=v6-dark-no-grad",
-  "/css/v11-modern.css?v=v18-dark-text-contrast",
+  "/css/v11-modern.css?v=v19-tabbar-fullbleed",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/css/ghibli-theme.css?v=v3",
   "/css/edu-codex.css?v=v3",
   "/js/i18n.js?v=v83-predict-nav",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v153-ios-fix",
+  "/js/app.js?v=v155-ios-fix",
   "/js/edu-codex.js?v=v3",
   "/manifest.json",
   "/icons/icon-192.png",
