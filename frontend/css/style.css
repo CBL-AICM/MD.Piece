@@ -3560,6 +3560,41 @@ html[data-mode="senior"] .tc-desc {
   color: var(--text-muted);
 }
 
+/* 首頁衛教區的「快速查疾病」框 — 連到疾病百科查詢 */
+.home-edu-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+.home-edu-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.home-edu-search button {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 9px;
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .home-edu-card {
   position: relative;
   display: flex;
