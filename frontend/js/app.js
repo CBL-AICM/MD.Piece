@@ -25275,7 +25275,9 @@ function _renderPiecesNearestFollowUp(fu) {
 
 // 用 truthy 檢查：不安全 context（純 HTTP/非 localhost）下屬性在但值是 undefined，"in" 會通過卻崩潰
 if (navigator.serviceWorker) {
-  navigator.serviceWorker.register("/sw.js");
+  // 註冊失敗（行動網路瞬斷常見）是非致命的，瀏覽器之後會自行重試；
+  // 必須 catch 掉，否則 unhandledrejection 會灌爆畫面上的錯誤浮層。
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
 // ─── iOS「加入主畫面」安裝引導 ──────────────────────────────
