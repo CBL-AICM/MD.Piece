@@ -14727,13 +14727,37 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   position: relative;
   padding-bottom: 20px;
 }
-/* 淺色模式校正：把半透明白換成不透明度更高的 navy（55% 在白底太淺，看不清楚）。 */
+/* 淺色模式校正：把半透明白換成不透明度更高的 navy（55% 在白底太淺，看不清楚）。
+   注意：此區塊同時服務「門診首頁借用 .home-inpatient class 的一鍵回報卡片」，
+   故保留 navy 校正；真正的住院頁（data-care-mode=inpatient）由下方 Buffer Island 覆寫。 */
 #app-wrapper[data-theme="light"] .home-inpatient {
   --ip-bg:      rgba(31, 61, 88, 0.05);
   --ip-surface: #FFFFFF;
   --ip-border:  rgba(31, 61, 88, 0.16);
   --ip-muted:   rgba(31, 61, 88, 0.72);
   --ip-dim:     #4A6478;
+}
+
+/* ── 住院模式 · 淺色 = Buffer Island（米白底＋陽光黃＋天空藍＋療愈棕）──
+   只作用於真正的住院頁（data-care-mode=inpatient），不動門診首頁的一鍵回報卡片。
+   accent 採中間調：在白底可讀，且元件以深字 #0F1A2E 置於填色上時亦清楚。 */
+html[data-care-mode="inpatient"] #app-wrapper[data-theme="light"] {
+  --app-bg: #fbf4e6;            /* 放空的白 — 住院模式暖米底 */
+}
+#app-wrapper[data-theme="light"] .home-inpatient[data-care-mode="inpatient"],
+#app-wrapper[data-theme="light"] .ip-tool-page {
+  --ip-bg:      rgba(211,193,174,0.16);  /* 療愈棕淡底 */
+  --ip-surface: #ffffff;
+  --ip-border:  #e3d6c3;                 /* 療愈棕邊框 */
+  --ip-text:    #403a32;                 /* 暖炭字 */
+  --ip-dim:     #6e6354;
+  --ip-muted:   #948776;
+  --ip-mint:    #4e9ac9;                 /* 慢悠悠的藍 — 主互動色 */
+  --ip-sky:     #7fbce4;                 /* 天空藍 · 次 */
+  --ip-sage:    #b3a78b;                 /* 療愈棕（取代綠）*/
+  --ip-coral:   #dd9069;                 /* 暖珊瑚點綴 */
+  --ip-warn:    #eab04a;                 /* 還沒用完的陽光 */
+  --ip-shadow:  0 6px 20px rgba(150,120,80,0.12);
 }
 
 /* Section header 共用 */
@@ -17487,15 +17511,8 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
   padding: var(--space-4, 16px) var(--space-3, 12px) 88px;
   max-width: 720px; margin: 0 auto;
 }
-/* 淺色模式校正（對齊 .home-inpatient 的處理：半透明白在白底太淺）。*/
-#app-wrapper[data-theme="light"] .ip-tool-page {
-  --ip-surface: #FFFFFF;
-  --ip-border:  rgba(31, 61, 88, 0.16);
-  --ip-text:    var(--app-text, #1F3D58);
-  --ip-dim:     #4A6478;
-  --ip-muted:   rgba(31, 61, 88, 0.72);
-  --ip-shadow:  0 6px 20px rgba(31,61,88,0.10);
-}
+/* 淺色 .ip-tool-page 的 token 已上移至住院模式 Buffer Island 區塊
+   （與 .home-inpatient[data-care-mode=inpatient] 共用，見 ~L14748）。 */
 
 /* Section header — 與住院首頁同款 mono 編號徽章 */
 .ip-tool-page .ip-section-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
