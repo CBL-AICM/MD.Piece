@@ -1204,8 +1204,12 @@
       window.addEventListener("load", () => {
         // updateViaCache: 'none' bypasses HTTP cache for sw.js
         navigator.serviceWorker.register("/sw.js", { updateViaCache: 'none' }).then((reg) => {
-          // Check for SW updates every 10 seconds
-          setInterval(() => reg.update(), 10000);
+          // Check for SW updates every 10 seconds.
+          // 行動瀏覽器（尤其 Samsung Internet）背景更新檢查常因網路瞬斷失敗，
+          // 丟出 "An unknown error occurred when fetching the script."。這是非致命的，
+          // 瀏覽器下一輪會自己重試 —— 必須 catch 掉，否則 unhandledrejection 會
+          // 灌爆畫面上的錯誤浮層，讓使用者誤以為 App 壞了。
+          setInterval(() => { reg.update().catch(() => {}); }, 10000);
 
           reg.addEventListener("updatefound", () => {
             const newWorker = reg.installing;
