@@ -21,8 +21,19 @@ from xml.etree import ElementTree as ET
 
 logger = logging.getLogger(__name__)
 
-# 衛福部新聞 RSS（中文官方來源）。可由環境變數加 NEWS_FEED_URLS 補上元氣網、健康 2.0 等。
-DEFAULT_FEED_URLS = ("https://www.mohw.gov.tw/rss-16-1.html",)
+# 預設 RSS 來源組合：官方公告 + 健康媒體 + 娛樂媒體
+# - 衛福部：官方背書、政策性消息
+# - ETtoday 健康：健康主題，常有名人病情報導（celebrity_health 主要來源）
+# - 自由時報娛樂：純娛樂、名人活動，偶有「XX 確診」健康新聞
+# - 自由時報全部：覆蓋面廣的綜合新聞（含社會、政治、運動），多樣性備援
+# 各來源都在 2026-05-22 用 WebFetch 驗過 active 且有正常 item。
+# 可由 NEWS_FEED_URLS（逗號分隔）完全覆寫；不想要某個源就用環境變數重設。
+DEFAULT_FEED_URLS = (
+    "https://www.mohw.gov.tw/rss-16-1.html",
+    "https://feeds.feedburner.com/ettoday/health",
+    "https://news.ltn.com.tw/rss/entertainment.xml",
+    "https://news.ltn.com.tw/rss/all.xml",
+)
 USER_AGENT = "MD.Piece/1.0 (+https://www.mdpiece.life)"
 TTL_SECONDS = 3600
 FETCH_TIMEOUT = 4.0

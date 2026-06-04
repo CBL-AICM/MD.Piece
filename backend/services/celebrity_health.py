@@ -26,8 +26,10 @@ logger = logging.getLogger(__name__)
 
 CACHE_TTL_SECONDS = 24 * 3600
 MAX_STORIES = 4
-# 一次 daily 請求最多跑 LLM 的新聞則數，避免冷快取時請求 latency 暴衝
-MAX_LLM_CALLS_PER_REQUEST = 10
+# 單次 daily 請求最多跑 LLM 的新聞則數，避免 cold start（serverless 沒 warm cache）
+# 時 latency 飆到不可接受。預過濾後通常 5 則內就能撈到 1–2 個名人故事；
+# subsequent warm 請求會吃 link-key 快取，幾乎不會撞到這個 cap。
+MAX_LLM_CALLS_PER_REQUEST = 5
 
 # 預過濾：只有提到健康關鍵字的新聞才送 LLM，省 token
 _HEALTH_KEYWORDS = (
