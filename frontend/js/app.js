@@ -5757,7 +5757,13 @@ function home() {
     +   '<div class="sec-head">'
     +     '<h3 class="sec-title"><i data-lucide="book-heart"></i> 衛教專欄</h3>'
     +     '<span class="sec-spacer"></span>'
+    +     '<button class="sec-action" onclick="navigateTo(\'diseaseSearch\',null)">查疾病 <i data-lucide="stethoscope"></i></button>'
     +     '<button class="sec-action" onclick="navigateTo(\'education\',null)">全部 <i data-lucide="arrow-right"></i></button>'
+    +   '</div>'
+    +   '<div class="card" style="padding:8px 10px;display:flex;gap:6px;align-items:center;margin-bottom:10px">'
+    +     '<i data-lucide="search" style="width:15px;height:15px;color:var(--text-muted)"></i>'
+    +     '<input id="mobile-home-disease-q" type="text" placeholder="快速查疾病：痛風、糖尿病…" onkeydown="if(event.key===\'Enter\')homeDiseaseQuickSearch(true)" style="flex:1;border:none;outline:none;font-size:13px;padding:5px;background:transparent" />'
+    +     '<button type="button" onclick="homeDiseaseQuickSearch(true)" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">查詢</button>'
     +   '</div>'
     +   '<div id="mobile-home-edu" class="edu-feed">'
     +     '<div class="card" style="padding:14px;color:var(--text-muted,#6B7F92);font-size:11px;text-align:center">載入中…</div>'
@@ -5933,10 +5939,18 @@ function home() {
             <h3 class="home-layer-title">為你推薦的衛教</h3>
             <p class="home-layer-sub" id="home-edu-sub">依你登錄的疾病自動挑選 · 附文獻來源</p>
           </div>
+          <button class="home-edu-more" onclick="navigateTo('diseaseSearch',null)">
+            查疾病 <i data-lucide="stethoscope" style="width:14px;height:14px"></i>
+          </button>
           <button class="home-edu-more" onclick="navigateTo('education',null)">
             看全部 <i data-lucide="arrow-right" style="width:14px;height:14px"></i>
           </button>
         </header>
+        <div class="home-edu-search">
+          <i data-lucide="search" style="width:15px;height:15px"></i>
+          <input id="home-disease-q" type="text" placeholder="快速查疾病：例如 痛風、第二型糖尿病" onkeydown="if(event.key==='Enter')homeDiseaseQuickSearch()" />
+          <button type="button" onclick="homeDiseaseQuickSearch()">查詢</button>
+        </div>
         <div id="home-edu-list" class="home-edu-grid">
           <div class="home-edu-loading">載入中…</div>
         </div>
@@ -6064,6 +6078,20 @@ function loadHomePage() {
 // 沒有疾病或 API 空 → fallback /education/articles/featured?limit=3。
 // 點卡片 → 跳到衛教頁並自動展開該文章（透過 _pendingEduArticleSlug）。
 var _pendingEduArticleSlug = null;
+// 從疾病百科查詢結果跳回衛教時，記住要預先展開的疾病（在 loadEducationPage 處理）。
+var _pendingEduDisease = null;
+
+// 首頁「快速查疾病」框：帶著輸入直接跳到疾病百科並即時查詢；空白則只開頁。
+function homeDiseaseQuickSearch(isMobile) {
+  var el = document.getElementById(isMobile ? 'mobile-home-disease-q' : 'home-disease-q');
+  var q = (el && el.value || '').trim();
+  if (!q) {
+    if (typeof navigateTo === 'function') navigateTo('diseaseSearch', null);
+    return;
+  }
+  if (typeof navigateToDiseaseSearch === 'function') navigateToDiseaseSearch(q);
+  else if (typeof navigateTo === 'function') navigateTo('diseaseSearch', null);
+}
 
 function homeOpenEduArticle(slug) {
   _pendingEduArticleSlug = slug;
@@ -17076,7 +17104,10 @@ function loadEducationPage() {
   // 首次載入時抓疾病列表，給「疾病百科」這本書用
   fetch(API + "/education/diseases")
     .then(function(r) { return r.json(); })
-    .then(function(data) { _eduDiseases = data.diseases || []; })
+    .then(function(data) {
+      _eduDiseases = data.diseases || [];
+      _eduMaybeOpenPendingDisease();
+    })
     .catch(function() { /* 不擋整體 UI */ });
 
   loadFeaturedArticles();
@@ -17101,6 +17132,35 @@ function loadEducationPage() {
 
   // 確保 lucide icon 出現
   if (typeof lucide !== 'undefined') setTimeout(function() { lucide.createIcons(); }, 30);
+}
+
+// 從疾病百科查詢「看相關衛教文章」跳回來時，自動翻開「疾病百科」這本書並預選該疾病
+// （直接看到六大衛教維度）。對不到內建疾病就留在書架，讓使用者自行瀏覽。
+function _eduMaybeOpenPendingDisease() {
+  if (!_pendingEduDisease) return;
+  var want = _pendingEduDisease;
+  _pendingEduDisease = null;
+  if (!Array.isArray(_eduDiseases) || !_eduDiseases.length) return;
+  var code = String(want.icd10 || '').slice(0, 3).toUpperCase();
+  var wantName = String(want.name || '').trim();
+  var match = null;
+  for (var i = 0; i < _eduDiseases.length; i++) {
+    var d = _eduDiseases[i];
+    if (code && String(d.icd10 || '').slice(0, 3).toUpperCase() === code) { match = d; break; }
+    if (wantName && d.name === wantName) { match = d; break; }
+  }
+  if (!match) return;
+  var tries = 0;
+  var open = function() {
+    tries++;
+    if (document.getElementById('edu-notebook') && typeof eduOpenBook === 'function') {
+      eduOpenBook('diseases');
+      if (typeof eduPickDisease === 'function') eduPickDisease(match.icd10, match.name);
+    } else if (tries < 20) {
+      setTimeout(open, 150);
+    }
+  };
+  setTimeout(open, 120);
 }
 
 // ── 我的疾病書架 + 我的疾病衛教文章 ────────────────────────
@@ -17673,6 +17733,22 @@ function eduOpenArticle(slug) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// 從文章解析出可丟去「疾病百科查詢」的疾病名稱：先用 icd10 對應疾病列表，
+// 其次用目前疾病百科書本選定的疾病；都對不到就回空字串（不顯示查詢入口）。
+function _eduArticleDiseaseName(article) {
+  if (!article) return '';
+  var code = String(article.icd10 || '').slice(0, 3).toUpperCase();
+  if (code && Array.isArray(_eduDiseases)) {
+    for (var i = 0; i < _eduDiseases.length; i++) {
+      if (String(_eduDiseases[i].icd10 || '').slice(0, 3).toUpperCase() === code) {
+        return _eduDiseases[i].name || '';
+      }
+    }
+  }
+  if (_eduSelectedDisease && _eduSelectedDisease.name) return _eduSelectedDisease.name;
+  return '';
+}
+
 function renderArticleSpread(article, body) {
   // 優先用後端解析過的 parsed_sources（含 impact_factor / journal / doi）
   var parsed = article.parsed_sources || [];
@@ -17749,9 +17825,24 @@ function renderArticleSpread(article, body) {
       '</div>'
     : '<div style="margin-top:24px;padding:10px 12px;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:.8rem">本文尚未補齊文獻來源</div>';
 
+  // 文章末尾「深入查詢這個疾病」入口 — 連到疾病百科查詢（用藥 / 風險 / 未來 + 可追問）。
+  // 只有對得到疾病名稱才顯示，避免在營養 / 新聞類文章放不相關入口。
+  var inquiryDisease = _eduArticleDiseaseName(article);
+  var inquiryCta = inquiryDisease
+    ? '<div class="edu-inquiry-cta" style="margin-top:24px;padding:14px 16px;border-radius:12px;background:var(--bg-soft);border:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;break-inside:avoid;-webkit-column-break-inside:avoid">' +
+        '<div style="flex:1;min-width:170px">' +
+          '<div style="font-weight:600;color:var(--text)">想更深入了解「' + escapeHtml(inquiryDisease) + '」？</div>' +
+          '<div style="font-size:.8rem;color:var(--text-dim);margin-top:2px">到疾病百科查用藥、風險與未來發展，還能即時追問細節。</div>' +
+        '</div>' +
+        '<button class="primary" type="button" data-disease="' + escapeHtml(inquiryDisease) + '" onclick="navigateToDiseaseSearch(this.dataset.disease)" style="white-space:nowrap">' +
+          '<i data-lucide="stethoscope" style="width:14px;height:14px;vertical-align:middle"></i> 深入查詢這個疾病' +
+        '</button>' +
+      '</div>'
+    : '';
+
   var rightInner = (body == null)
     ? '<div class="nb-empty" style="padding:30px">內容載入中…</div>'
-    : '<div class="edu-article-body" style="line-height:1.85">' + markdownToHtml(body) + sourcesBlock + evidenceLine + '</div>';
+    : '<div class="edu-article-body" style="line-height:1.85">' + markdownToHtml(body) + sourcesBlock + evidenceLine + inquiryCta + '</div>';
 
   return '<div class="nb-page left">' + leftHtml + '</div>' +
          '<div class="nb-page right" id="edu-notebook-right">' + rightInner + '</div>';
@@ -23202,6 +23293,18 @@ function renderDiseaseResult(data) {
   html += _diseaseListBlock('自我照護建議', 'leaf', data.self_care);
   html += _diseaseListBlock('立刻就醫的訊號', 'siren', data.red_flags, 'var(--danger)');
 
+  // 連到衛教專欄：展開這個疾病的六大衛教維度（衛教 ↔ 疾病查詢互通）。
+  var eduCtaName = data.name_zh || data.name_en || '';
+  html += '<div style="margin-top:18px;padding:14px 16px;border-radius:12px;background:var(--bg-soft);border:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<div style="flex:1;min-width:170px">'
+    +   '<div style="font-weight:600;color:var(--text)">想看「' + escapeHtml(eduCtaName) + '」的完整衛教？</div>'
+    +   '<div style="font-size:.82rem;color:var(--text-dim);margin-top:2px">到衛教專欄展開六大衛教維度：疾病管理 · 用藥 · 症狀 · 生活 · 風險 · 追蹤。</div>'
+    + '</div>'
+    + '<button class="primary" type="button" data-icd10="' + escapeHtml(data.icd10_code || '') + '" data-disease="' + escapeHtml(eduCtaName) + '" onclick="navigateToEducationForDisease(this.dataset.icd10, this.dataset.disease)" style="white-space:nowrap">'
+    +   '<i data-lucide="graduation-cap" style="width:14px;height:14px;vertical-align:middle"></i> 看相關衛教文章'
+    + '</button>'
+    + '</div>';
+
   // 永遠在最後加：文獻來源 + 免責聲明
   html += _diseaseRefBlock(data.references || []);
   html += _diseaseDisclaimerBlock(data.disclaimer);
@@ -23228,6 +23331,7 @@ function renderDiseaseResult(data) {
       +     (data.complications && data.complications.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">長期風險</strong><ul style="margin:4px 0 0;padding-left:18px;color:var(--text-dim);font-size:11px">' + data.complications.slice(0, 4).map(function(s){return '<li>' + escapeHtml(s) + '</li>';}).join('') + '</ul></div>' : '')
       +     (data.self_care && data.self_care.length ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">自我照護</strong><ul style="margin:4px 0 0;padding-left:18px;color:var(--text-dim);font-size:11px">' + data.self_care.slice(0, 4).map(function(s){return '<li>' + escapeHtml(s) + '</li>';}).join('') + '</ul></div>' : '')
       +     (data.prognosis ? '<div style="font-size:11.5px;line-height:1.6;margin-top:6px"><strong style="color:var(--navy)">未來發展</strong><div style="color:var(--text-dim);margin-top:2px">' + escapeHtml(data.prognosis) + '</div></div>' : '')
+      +     '<button type="button" data-icd10="' + escapeHtml(data.icd10_code || '') + '" data-disease="' + escapeHtml(name) + '" onclick="navigateToEducationForDisease(this.dataset.icd10, this.dataset.disease)" style="margin-top:10px;width:100%;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="graduation-cap" style="width:14px;height:14px"></i> 看相關衛教</button>'
       +     '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.5">' + escapeHtml(data.disclaimer || '此資訊由 AI 整理，僅供衛教參考。') + '</div>'
       +   '</div>'
       + '</div>';
@@ -23352,6 +23456,13 @@ function navigateToDiseaseSearch(name) {
   } else {
     showPage('diseaseSearch');
   }
+}
+
+// 從疾病百科查詢結果「看相關衛教文章」呼叫：導向衛教頁並預先展開該疾病的六大衛教維度。
+function navigateToEducationForDisease(icd10, name) {
+  _pendingEduDisease = { icd10: icd10 || '', name: name || '' };
+  if (typeof navigateTo === 'function') navigateTo('education', null);
+  else if (typeof showPage === 'function') showPage('education');
 }
 
 // ─── 提醒通知（Reminders） ─────────────────────────────────
