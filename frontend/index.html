@@ -116,7 +116,7 @@
       try {
         if (localStorage.getItem('mdp-cache-bust') === APP_BUST) return;
         localStorage.setItem('mdp-cache-bust', APP_BUST);
-        if ('serviceWorker' in navigator) {
+        if (navigator.serviceWorker) {
           var regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map(function(r) { return r.unregister(); }));
         }
@@ -1193,7 +1193,9 @@
     })();
 
     // ─── Service Worker (aggressive auto-update) ──────────
-    if ("serviceWorker" in navigator) {
+    // 用 truthy 檢查而非 "in"：iOS／不安全 context 下 serviceWorker 屬性存在但值為
+    // undefined，"in" 會通過卻在 .register 崩潰（對齊 bell.js 既有處理）。
+    if (navigator.serviceWorker) {
       // Nuke ALL caches on every page load — always get fresh content
       if ('caches' in window) {
         caches.keys().then(keys => {

@@ -185,22 +185,22 @@ img, svg, video { max-width: 100%; height: auto; }
   color: var(--landing-text);
 }
 
-/* ── LIGHT theme (暖陽插畫日光) ─────────────────────────────── */
+/* ── LIGHT theme (柔霧薰衣草 · Periwinkle Mist) ──────────────── */
 #landing[data-theme="light"] {
-  --landing-text:   #5C3A32;
-  --landing-dim:    #8B7868;
-  --landing-mint:   #9DAEC0;
-  --landing-aqua:   #7E94A8;
-  --landing-pop:    #C97F4B;
-  --landing-pink:   #E8B4A0;
-  --landing-term:   #B8553F;
-  --landing-card:   rgba(255,250,240,0.68);
-  --landing-border: rgba(31,61,88,0.35);
-  --landing-glow:   rgba(74,144,194,0.32);
+  --landing-text:   #2c3247;
+  --landing-dim:    #6b7287;
+  --landing-mint:   #9aa2c6;
+  --landing-aqua:   #8a93bc;
+  --landing-pop:    #5b6488;
+  --landing-pink:   #b9c0dd;
+  --landing-term:   #4a5578;
+  --landing-card:   rgba(255,255,255,0.72);
+  --landing-border: rgba(91,100,136,0.30);
+  --landing-glow:   rgba(91,100,136,0.30);
   background:
-    radial-gradient(ellipse at 78% 18%, rgba(232,201,163,0.7), transparent 55%),
-    radial-gradient(ellipse at 18% 82%, rgba(232,168,168,0.45), transparent 55%),
-    linear-gradient(180deg, #FBF6EC 0%, #F5E9D0 55%, #E8D4B8 100%);
+    radial-gradient(ellipse at 78% 18%, rgba(154,162,198,0.45), transparent 55%),
+    radial-gradient(ellipse at 18% 82%, rgba(185,192,221,0.42), transparent 55%),
+    linear-gradient(180deg, #f4f5fa 0%, #ecedf4 55%, #e2e4ef 100%);
   color: var(--landing-text);
 }
 
@@ -602,27 +602,27 @@ img, svg, video { max-width: 100%; height: auto; }
   --klein:          #c8c6c6;
 }
 
-/* Light = 晨光米（Lunar Beige）— 暖米底 + 藏青字 + 星芒金強調 */
+/* Light = 柔霧薰衣草（Periwinkle Mist）— 霧藍灰底 + 板岩藍字 + 薰衣草紫強調 */
 #app-wrapper[data-theme="light"] {
-  --app-bg:         #e8d1b6;   /* Lunar Beige — 飽和暖米底，與白卡撞色 */
-  --app-grid:       rgba(19,36,66,0.05);
-  --app-text:       #132442;   /* Royal Night — 主文字 */
-  --app-text-dim:   #4a5a72;   /* Foggy Blue 加深 — 次文字撐住對比 */
-  --app-mint:       #ece0c8;   /* 米色 active 背景 */
-  --app-mint-strong:#bc8909;   /* Starburst Gold — FAB / 圓點 / 邊條 */
-  --app-aqua:       #1a3a63;   /* 銀河藏青 — 強調藍 */
-  --app-pink:       #bc8909;   /* 星芒金 — 暖色 callout */
-  --app-blue:       #637d92;   /* Foggy Blue 面板 */
-  --app-term:       #bc8909;   /* Starburst Gold accent */
-  --app-panel:      #fffaf0;   /* 暖白 — 卡片表面 */
-  --app-panel-soft: #f3e3c5;   /* 比 bg 略深的米色 hover */
-  --app-chrome-1:   #fffaf0;   /* titlebar 漸層上層 */
-  --app-chrome-2:   #e8d1b6;   /* titlebar 漸層下層 */
-  --app-border:     #132442;   /* Royal Night 邊框 */
-  --app-shadow:     2px 2px 0 rgba(19,36,66,0.18);
-  --app-glow:       rgba(188,137,9,0.5);
-  --app-chip-text:  #132442;   /* navy text on light chips */
-  --heading-fg:     #bc8909;   /* Starburst Gold heading accent */
+  --app-bg:         #eceef4;   /* Periwinkle Mist — 柔霧藍灰底，與白卡撞色 */
+  --app-grid:       rgba(75,85,120,0.05);
+  --app-text:       #2c3247;   /* Slate Navy — 主文字 */
+  --app-text-dim:   #6b7287;   /* 灰藍 — 次文字撐住對比 */
+  --app-mint:       #e6e9f5;   /* 淡薰衣草 active 背景 */
+  --app-mint-strong:#5b6488;   /* Slate Periwinkle — FAB / 圓點 / 邊條 */
+  --app-aqua:       #4a5578;   /* 板岩藍紫 — 強調藍 */
+  --app-pink:       #8a93bc;   /* 薰衣草 — 柔色 callout */
+  --app-blue:       #9aa2c6;   /* 霧藍紫 面板 */
+  --app-term:       #5b6488;   /* Slate Periwinkle accent */
+  --app-panel:      #ffffff;   /* 純白 — 卡片表面 */
+  --app-panel-soft: #eef0f8;   /* 比 bg 略淡的薰衣草 hover */
+  --app-chrome-1:   #ffffff;   /* titlebar 漸層上層 */
+  --app-chrome-2:   #e6e9f5;   /* titlebar 漸層下層 */
+  --app-border:     #b9c0dd;   /* 柔薰衣草邊框 */
+  --app-shadow:     0 4px 16px rgba(91,100,136,0.14);
+  --app-glow:       rgba(91,100,136,0.45);
+  --app-chip-text:  #2c3247;   /* slate navy text on light chips */
+  --heading-fg:     #4a5578;   /* 板岩藍紫 heading accent */
 }
 
 /* Body grid background — only when app is shown */
@@ -12122,20 +12122,18 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
   html[data-mode="senior"] .topbar h2 { font-size: 1.2rem; }
 }
 
-/* Light theme tweaks — softer shadows on the cream palette */
+/* Light theme tweaks — 柔和擴散陰影（Periwinkle Mist 軟性風格，取代硬邊疊紙陰影）*/
 @media (max-width: 768px) {
   #app-wrapper[data-theme="light"] .mobile-tabbar {
-    box-shadow: 2px 2px 0 var(--app-border), 0 10px 24px rgba(31,61,88,0.12);
+    box-shadow: 0 -2px 16px rgba(91,100,136,0.10), 0 -1px 4px rgba(91,100,136,0.06);
   }
   #app-wrapper[data-theme="light"] #app .home-section,
   #app-wrapper[data-theme="light"] #app .card,
   #app-wrapper[data-theme="light"] #app .pzl-card,
   #app-wrapper[data-theme="light"] #app .home-hero {
     box-shadow:
-      0 1px 0 var(--app-border),
-      0 3px 0 var(--app-panel-soft),
-      0 4px 0 var(--app-border),
-      0 8px 18px rgba(31,61,88,0.10);
+      0 4px 16px rgba(91,100,136,0.12),
+      0 1px 4px rgba(91,100,136,0.08);
   }
 }
 
@@ -14764,13 +14762,37 @@ html[data-mode="senior"] .onboarding-next  { font-size: 1.02rem; padding: 11px 2
   position: relative;
   padding-bottom: 20px;
 }
-/* 淺色模式校正：把半透明白換成不透明度更高的 navy（55% 在白底太淺，看不清楚）。 */
+/* 淺色模式校正：把半透明白換成不透明度更高的 navy（55% 在白底太淺，看不清楚）。
+   注意：此區塊同時服務「門診首頁借用 .home-inpatient class 的一鍵回報卡片」，
+   故保留 navy 校正；真正的住院頁（data-care-mode=inpatient）由下方 Buffer Island 覆寫。 */
 #app-wrapper[data-theme="light"] .home-inpatient {
   --ip-bg:      rgba(31, 61, 88, 0.05);
   --ip-surface: #FFFFFF;
   --ip-border:  rgba(31, 61, 88, 0.16);
   --ip-muted:   rgba(31, 61, 88, 0.72);
   --ip-dim:     #4A6478;
+}
+
+/* ── 住院模式 · 淺色 = Buffer Island（米白底＋陽光黃＋天空藍＋療愈棕）──
+   只作用於真正的住院頁（data-care-mode=inpatient），不動門診首頁的一鍵回報卡片。
+   accent 採中間調：在白底可讀，且元件以深字 #0F1A2E 置於填色上時亦清楚。 */
+html[data-care-mode="inpatient"] #app-wrapper[data-theme="light"] {
+  --app-bg: #fbf4e6;            /* 放空的白 — 住院模式暖米底 */
+}
+#app-wrapper[data-theme="light"] .home-inpatient[data-care-mode="inpatient"],
+#app-wrapper[data-theme="light"] .ip-tool-page {
+  --ip-bg:      rgba(211,193,174,0.16);  /* 療愈棕淡底 */
+  --ip-surface: #ffffff;
+  --ip-border:  #e3d6c3;                 /* 療愈棕邊框 */
+  --ip-text:    #403a32;                 /* 暖炭字 */
+  --ip-dim:     #6e6354;
+  --ip-muted:   #948776;
+  --ip-mint:    #4e9ac9;                 /* 慢悠悠的藍 — 主互動色 */
+  --ip-sky:     #7fbce4;                 /* 天空藍 · 次 */
+  --ip-sage:    #b3a78b;                 /* 療愈棕（取代綠）*/
+  --ip-coral:   #dd9069;                 /* 暖珊瑚點綴 */
+  --ip-warn:    #eab04a;                 /* 還沒用完的陽光 */
+  --ip-shadow:  0 6px 20px rgba(150,120,80,0.12);
 }
 
 /* Section header 共用 */
@@ -17524,15 +17546,8 @@ html[data-mode="senior"] .tl-bento-card[data-importance="high"] {
   padding: var(--space-4, 16px) var(--space-3, 12px) 88px;
   max-width: 720px; margin: 0 auto;
 }
-/* 淺色模式校正（對齊 .home-inpatient 的處理：半透明白在白底太淺）。*/
-#app-wrapper[data-theme="light"] .ip-tool-page {
-  --ip-surface: #FFFFFF;
-  --ip-border:  rgba(31, 61, 88, 0.16);
-  --ip-text:    var(--app-text, #1F3D58);
-  --ip-dim:     #4A6478;
-  --ip-muted:   rgba(31, 61, 88, 0.72);
-  --ip-shadow:  0 6px 20px rgba(31,61,88,0.10);
-}
+/* 淺色 .ip-tool-page 的 token 已上移至住院模式 Buffer Island 區塊
+   （與 .home-inpatient[data-care-mode=inpatient] 共用，見 ~L14748）。 */
 
 /* Section header — 與住院首頁同款 mono 編號徽章 */
 .ip-tool-page .ip-section-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }

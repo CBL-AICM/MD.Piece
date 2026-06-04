@@ -24196,7 +24196,7 @@ function reminderTestDispatch() {
 
 function reminderRefreshPushState() {
   var el = document.getElementById('reminders-push-state');
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+  if (!navigator.serviceWorker || !('PushManager' in window)) {
     if (el) {
       el.textContent = (isIOS() && !isStandalonePWA())
         ? '推播訂閱：iPhone 需先用 Safari「分享 → 加入主畫面」安裝後（iOS 16.4 以上）才能開啟'
@@ -24260,7 +24260,7 @@ function _urlBase64ToUint8Array(base64String) {
 }
 
 function reminderEnablePush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+  if (!navigator.serviceWorker || !('PushManager' in window)) {
     alert((isIOS() && !isStandalonePWA())
       ? 'iPhone 需先用 Safari 下方「分享 ⬆️ → 加入主畫面」把 MD.Piece 安裝成 App（iOS 16.4 以上），\n從主畫面開啟後才能啟用推播提醒。'
       : '此瀏覽器不支援 Web Push');
