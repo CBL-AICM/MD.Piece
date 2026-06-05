@@ -17,7 +17,7 @@ from backend.routers import (
     drug_search, diseases, reminders, bell_reminders,
     admissions, timeline, profile, follow_ups,
     inpatient, menstrual, predict, sleep,
-    memos, vitals,
+    memos, vitals, health_literacy,
 )
 
 logger = logging.getLogger(__name__)
@@ -81,6 +81,7 @@ app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
 app.include_router(follow_ups.router, prefix="/follow-ups", tags=["follow-ups"])
 app.include_router(inpatient.router, prefix="/inpatient", tags=["inpatient"])
+app.include_router(health_literacy.router, prefix="/health-literacy", tags=["health-literacy"])
 app.include_router(menstrual.router, prefix="/menstrual", tags=["menstrual"])
 app.include_router(predict.router, tags=["predict"])
 app.include_router(sleep.router, prefix="/sleep", tags=["sleep"])
