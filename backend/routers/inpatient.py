@@ -455,6 +455,57 @@ def delete_question(question_id: str):
     return {"deleted": question_id}
 
 
+# ── M04 — 從床邊紀錄自動建議「想問醫師」（個人化，補 qpl-bank 的通用題）──────
+# 住院模式 v2 Phase 2：把 F2 床邊症狀（bedside_logs）接到 F2 想問醫師（inpatient_questions），
+# 補上設計計畫書 Flow B「查房前：從 ePRO 自動建議問題」這條 link（critique P0-2 / P0-3）。
+#
+# 規則 5：症狀 → 建議問句是確定性對應，純程式碼 if-else，不丟 LLM。
+# 規則 12：每條建議都標 source（基於哪個症狀），可解釋、非黑箱（對齊設計憲法 2）。
+# 只讀 bedside_logs、不寫入；病人一鍵採用才透過既有 POST /questions 落地（不另建表）。
+def _suggest_from_bedside(log: dict) -> list[dict]:
+    """依最近一筆床邊紀錄產生個人化「想問醫師」候選。log 可為空 dict（→ 回空 list）。"""
+    out: list[dict] = []
+    pain = log.get("pain")
+    if isinstance(pain, int) and pain >= 7:
+        out.append({"text": f"我的疼痛到 {pain} 分了，止痛藥可以再調整嗎？", "source": f"痛 {pain}/10"})
+    if log.get("sleep") == "poor":
+        out.append({"text": "我這幾天晚上睡不好，有沒有辦法改善？", "source": "睡眠不好"})
+    mood = log.get("mood")
+    if isinstance(mood, int) and mood <= 2:
+        out.append({"text": "我最近心情比較低落，有什麼可以幫忙的嗎？", "source": "心情偏低"})
+    if log.get("food") in ("none", "little"):
+        out.append({"text": "我吃不太下，需要調整飲食或補充營養嗎？", "source": "進食偏少"})
+    if log.get("treatment_response") == "worse":
+        out.append({"text": "我覺得比之前更不舒服了，治療需要調整嗎？", "source": "自覺變差"})
+    note = (log.get("note") or "").strip()
+    if note:
+        clip = note if len(note) <= 22 else note[:22] + "…"
+        out.append({"text": f"我想跟醫師說：「{clip}」", "source": "我寫的"})
+    return out
+
+
+@router.get("/suggested-questions")
+def suggested_questions(
+    patient_id: str = Query(...),
+    admission_id: Optional[str] = Query(None),
+):
+    """讀最近一筆床邊紀錄 → 個人化「想問醫師」候選（純規則）。
+
+    與 /qpl-bank（通用題）互補：這裡是「依你今天記的症狀」客製。
+    規則 12：沒有床邊紀錄時回 suggested=[]，明確空集合、不臆造問題。
+    """
+    sb = get_supabase()
+    rows = _fetch_safely(sb, "bedside_logs", patient_id)
+    if admission_id:
+        rows = [r for r in rows if r.get("admission_id") == admission_id]
+    rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    latest = rows[0] if rows else {}
+    return {
+        "suggested": _suggest_from_bedside(latest),
+        "based_on": {"has_log": bool(latest), "created_at": latest.get("created_at")},
+    }
+
+
 # ══════════════════════════════════════════════════════════════
 # F4 — 個人化住院衛教（讀取 + LLM 轉白話）
 # ══════════════════════════════════════════════════════════════

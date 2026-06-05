@@ -8056,6 +8056,7 @@ function bedside() {
     + '<section class="ip-qpl"><header class="ip-section-head"><span class="ip-num">02b</span>'
     +   '<h3>想問醫師的問題</h3><span class="ip-section-sub">查房前先記下來</span></header>'
     +   '<div id="ip-qpl-list"><p class="ip-tool-loading">載入中…</p></div>'
+    +   '<div id="ip-qpl-personal"></div>'
     +   '<div class="ip-qpl-add"><input type="text" id="ip-qpl-input" placeholder="例：我還要住幾天？" maxlength="120">'
     +     '<button type="button" onclick="addInpatientQuestion()"><i data-lucide="plus" style="width:16px;height:16px"></i></button></div>'
     +   '<details class="ip-qpl-bank"><summary>不知道問什麼？看建議題庫</summary><div id="ip-qpl-bank"></div></details>'
@@ -8112,6 +8113,7 @@ function submitBedside() {
     var form = document.getElementById('ip-bs-form');
     if (form) { form.innerHTML = _renderBedsideForm(); if (typeof lucide !== 'undefined') lucide.createIcons(); }
     loadBedsideRecent();
+    loadInpatientSuggestedQuestions();   // 症狀更新 → 個人化建議題即時刷新（P0-2 迴圈）
   }).catch(function() {
     if (typeof showToast === 'function') showToast('記錄失敗，請稍後再試', 'warning');
   });
@@ -8120,6 +8122,7 @@ function loadBedsidePage() {
   _ipBedsideDraft = {};
   loadBedsideRecent();
   loadInpatientQuestions();
+  loadInpatientSuggestedQuestions();
   // 建議題庫
   var bank = document.getElementById('ip-qpl-bank');
   if (bank) {
@@ -8176,6 +8179,28 @@ function loadInpatientQuestions() {
       }).join('') + '</ul>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
     });
+}
+// 依床邊紀錄產生的「個人化」建議題（補通用 qpl-bank）。住院 v2 Phase 2 / critique P0-2、P0-3：
+// 把 F2 床邊症狀接到「想問醫師」，後端 GET /inpatient/suggested-questions（純規則，鐵則 5）。
+// 規則 12：沒有可建議的就清空、不硬塞題目。每顆按鈕標 source（來自哪個症狀）→ 可解釋（設計憲法 2）。
+function loadInpatientSuggestedQuestions() {
+  var host = document.getElementById('ip-qpl-personal');
+  var pid = _ipPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/inpatient/suggested-questions?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      var sug = (d && d.suggested) || [];
+      if (!sug.length) { host.innerHTML = ''; return; }
+      host.innerHTML = '<p class="ip-qpl-personal-head" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--teal);margin:10px 0 8px">'
+        + '<i data-lucide="sparkles" style="width:15px;height:15px"></i>依你今天記的，幫你想問的</p>'
+        + sug.map(function(q) {
+            return '<button type="button" class="ip-qpl-suggest" onclick="addInpatientQuestion(' + JSON.stringify(q.text).replace(/"/g, '&quot;') + ')">'
+              + '<span class="ip-qpl-cat">' + escapeHtml(q.source || '') + '</span>' + escapeHtml(q.text) + '</button>';
+          }).join('');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() { host.innerHTML = ''; });
 }
 function addInpatientQuestion(text) {
   var pid = _ipPid();
