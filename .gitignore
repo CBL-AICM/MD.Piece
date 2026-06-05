@@ -32,3 +32,6 @@ md_piece.db
 tests/e2e/home_shots/
 tests/e2e/mobile_shots/
 tests/e2e/node_modules/
+
+# Claude Code scheduled-tasks runtime lock (執行期產物，非版控)
+.claude/scheduled_tasks.lock
