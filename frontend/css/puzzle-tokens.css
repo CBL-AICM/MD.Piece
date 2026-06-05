@@ -1,0 +1,279 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MD.Piece — 「拼圖診療室 / The Puzzle Clinic」Design Tokens
+   ART DIRECTION v3 ·  日系手繪漫畫 × 日系淡色 × 舒適 × 遊戲感
+   ---------------------------------------------------------------------------
+   Soft Japanese illustration palette (pale coral + pale sky + sage + apricot +
+   lavender) on warm cream. Hand-drawn manga line-art, but GENTLE: thin soft-ink
+   strokes, cozy rounded wobble corners, soft layered shadows — Animal-Crossing /
+   Professor-Layton cozy-game comfort, not harsh print.
+
+   CORE PRINCIPLE = LEGIBILITY FIRST (看得清楚為核心):
+     · Clean rounded gothic (Zen Maru Gothic) — no ultra-heavy display, no
+       red/blue misprint offset (both muddied CJK).
+     · Pale fills carry DARK-INK text/icons (never white) — higher contrast AND
+       more 日系淡色 than saturated fills with white.
+   USABILITY FIRST (使用方便): big targets, single-task focus, calm motion.
+   NO system emoji — every icon/illustration is hand-drawn inline SVG.
+   Every action is a PUZZLE PIECE collected between visits. Calm-core: never nags.
+   Bilingual 繁中(主)/EN(次). Dark mode = soft warm night, no pure black.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── 1. PALETTE — LIGHT 「日系淡彩」 ───────────────────────────────────────*/
+:root {
+  /* Vintage cream paper (Hanako-kun) */
+  --c-paper:        #F3EAD3;   /* page                                     */
+  --c-paper-raised: #FBF4E2;   /* cards / panels                           */
+  --c-paper-sunk:   #E9DEC2;   /* wells, empty puzzle slots, inputs        */
+  --c-paper-edge:   #DCCBA8;   /* dividers, tabs, soft shadow base         */
+
+  /* Bold warm ink — defined manga outline + legible text */
+  --c-ink:        #2E2A22;     /* primary text + ink outline               */
+  --c-ink-soft:   #6A6253;     /* secondary text                           */
+  --c-ink-faint:  #A99E86;     /* hints / disabled                         */
+  --c-ink-line:   rgba(46,42,34,0.20);
+
+  /* Hanako-kun (地縛少年花子君) vintage accents */
+  --c-red:    #D46A5C;  --c-red-deep:  #B14A3E;  --c-red-soft:  #EBB3A8;  /* dusty vermilion */
+  --c-blue:   #4C9E9E;  --c-blue-deep: #2F7A7A;  --c-blue-soft: #AAD2D0;  /* teal            */
+  --c-green:  #7FA86A;  --c-green-deep:#5E8449;  --c-green-soft:#C5D8B4;  /* muted sage      */
+  --c-sun:    #E0A82E;  --c-sun-deep:  #B5821A;  --c-sun-soft:  #F2D88E;  /* mustard gold    */
+  --c-grape:  #9B7BA8;  --c-grape-deep:#785A88;  --c-grape-soft:#D4C5DC;  /* plum            */
+
+  /* Semantic roles */
+  --c-primary: var(--c-blue);  --c-primary-deep: var(--c-blue-deep);   /* trust / main */
+  --c-accent:  var(--c-red);   --c-accent-deep:  var(--c-red-deep);    /* care / energy */
+  --c-success: var(--c-green); --c-success-deep: var(--c-green-deep);
+  --c-info:    var(--c-blue);  --c-info-deep:    var(--c-blue-deep);
+  --c-warning: var(--c-sun);   --c-warning-deep: var(--c-sun-deep);
+  --c-danger:  var(--c-red);   --c-danger-deep:  var(--c-red-deep);
+
+  /* Clinical severity — 5-tier 分級醫療, calm→urgent. ER kept clearly stronger
+     than the pastels for patient-safety legibility (淡色 ≠ ambiguous urgency). */
+  --sev-self:     var(--c-green);   /* 自我照護 */
+  --sev-clinic:   var(--c-blue);    /* 基層診所 */
+  --sev-regional: var(--c-grape);   /* 區域醫院 */
+  --sev-medical:  var(--c-red-deep);/* 醫學中心 */
+  --sev-er:       #D6452F;          /* 急診 — clear coral-red */
+
+  --flare-low:  var(--c-green);
+  --flare-mid:  var(--c-sun);
+  --flare-high: #D6452F;
+
+  /* Tinted washes (pale fills BEHIND dark-ink text — the legible cozy pattern) */
+  --wash-red:   rgba(212,106,92,0.15);
+  --wash-blue:  rgba(76,158,158,0.15);
+  --wash-green: rgba(127,168,106,0.16);
+  --wash-sun:   rgba(224,168,46,0.18);
+  --wash-grape: rgba(155,123,168,0.16);
+  --wash-ink:   rgba(46,42,34,0.05);
+
+  /* Fixed dark text for use ON pale colour fills (buttons/ticks/slots). NOT
+     overridden in dark — those fills stay light in both themes, so their
+     text/icon must stay dark to remain legible (看得清楚為核心). */
+  --on-fill: #2E2A22;
+}
+
+/* ─── 2. PALETTE — DARK 「柔夜 / Soft Night」 (no pure black) ───────────────*/
+[data-theme="dark"] {
+  --c-paper:        #25231C;
+  --c-paper-raised: #2F2C23;
+  --c-paper-sunk:   #1C1A14;
+  --c-paper-edge:   #3D3930;
+
+  --c-ink:        #F2E9D2;
+  --c-ink-soft:   #C4BBA2;
+  --c-ink-faint:  #8A8272;
+  --c-ink-line:   rgba(242,233,210,0.16);
+
+  --c-red:   #E89484;  --c-red-deep:  #CC6B5A;  --c-red-soft:  #5C342E;
+  --c-blue:  #6FBFBE;  --c-blue-deep: #4C9E9E;  --c-blue-soft: #2C4A4A;
+  --c-green: #98C081;  --c-green-deep:#76A05E;  --c-green-soft:#374A2C;
+  --c-sun:   #E8C266;  --c-sun-deep:  #C89A38;  --c-sun-soft:  #4E4220;
+  --c-grape: #BCA3C8;  --c-grape-deep:#9A7FAA;  --c-grape-soft:#3E3348;
+
+  --sev-er:  #E86A52;
+  --flare-high: #E86A52;
+
+  --wash-red:   rgba(232,148,132,0.16);
+  --wash-blue:  rgba(111,191,190,0.16);
+  --wash-green: rgba(152,192,129,0.16);
+  --wash-sun:   rgba(232,194,102,0.18);
+  --wash-grape: rgba(188,163,200,0.16);
+  --wash-ink:   rgba(240,232,216,0.05);
+}
+
+/* ─── 3. TYPOGRAPHY — clarity first ────────────────────────────────────────
+   Zen Maru Gothic = rounded, friendly, cozy-game, excellent 繁中 legibility.
+   Used for body AND headings (500/700, NOT ultra-heavy). Klee One = soft
+   handwriting for AI "why" notes only. Load in <head>:
+     Zen+Maru+Gothic(400;500;700), Klee+One(400;600), Noto+Sans+TC(400;500;700). */
+:root {
+  --font-display: "Zen Maru Gothic", "Noto Sans TC", system-ui, sans-serif;
+  --font-ui:      "Zen Maru Gothic", "Noto Sans TC", system-ui, sans-serif;
+  --font-hand:    "Klee One", "Zen Maru Gothic", cursive;
+  --font-mono:    "Rigelstar", ui-monospace, monospace;
+
+  --fs-xs: .8125rem; --fs-sm: .875rem; --fs-base: 1rem; --fs-lg: 1.125rem;
+  --fs-xl: 1.25rem; --fs-2xl: 1.5rem; --fs-3xl: 1.875rem; --fs-4xl: 2.375rem;
+  --lh-tight: 1.3; --lh-base: 1.65; --lh-loose: 1.85;
+  --fw-normal: 400; --fw-medium: 500; --fw-bold: 700;
+  --type-scale: 1;
+}
+
+/* ─── 4. SPACE · RADIUS · ELEVATION (soft cozy-game primitives) ────────────*/
+:root {
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px;
+  --sp-8:32px; --sp-10:40px; --sp-12:48px;
+
+  /* Soft hand-drawn wobble corners (cozy, not crisp-print) */
+  --r-panel: 15px 13px 16px 14px / 14px 16px 13px 15px;
+  --r-btn:   12px 10px 13px 11px / 11px 13px 10px 12px;
+  --r-chip:  9px 7px 10px 8px / 8px 10px 7px 9px;
+  --r-pill:  999px;
+
+  /* Thin soft-ink strokes (gentle manga line, not heavy) */
+  --stroke:      2px solid var(--c-ink);
+  --stroke-thin: 1.5px solid var(--c-ink);
+  --stroke-hair: 1px solid var(--c-ink-line);
+  --stroke-dash: 1.5px dashed var(--c-ink-faint);
+
+  /* Soft layered shadows (gentle lift, not hard print). Names kept stable so
+     component CSS referencing --shadow-print/-red/-blue stays valid. */
+  --shadow-print:    0 3px 0 rgba(46,42,34,0.08), 0 6px 16px rgba(46,42,34,0.09);
+  --shadow-print-sm: 0 2px 0 rgba(46,42,34,0.07), 0 3px 8px rgba(46,42,34,0.07);
+  --shadow-red:      0 3px 0 var(--c-red-soft),  0 6px 14px rgba(204,123,113,0.14);
+  --shadow-blue:     0 3px 0 var(--c-blue-soft), 0 6px 14px rgba(92,144,182,0.14);
+  --shadow-press:    0 1px 0 rgba(46,42,34,0.12);
+
+  --tap-min: 44px; --tap-elder: 56px;
+
+  --tone-size: 6px;
+  --tone-ink-color: rgba(46,42,34,0.05);
+}
+[data-theme="dark"] {
+  --shadow-print:    0 3px 0 rgba(0,0,0,0.22), 0 6px 16px rgba(0,0,0,0.30);
+  --shadow-print-sm: 0 2px 0 rgba(0,0,0,0.20), 0 3px 8px rgba(0,0,0,0.24);
+  --shadow-red:      0 3px 0 rgba(0,0,0,0.22), 0 6px 14px rgba(0,0,0,0.28);
+  --shadow-blue:     0 3px 0 rgba(0,0,0,0.22), 0 6px 14px rgba(0,0,0,0.28);
+  --tone-ink-color:  rgba(240,232,216,0.04);
+}
+
+/* ─── 5. MOTION — calm; soft "settle" pop; honor reduce-motion ─────────────*/
+:root {
+  --ease-soft: cubic-bezier(0.34, 1.4, 0.5, 1);   /* gentle settle */
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast:.13s; --t-base:.24s; --t-slow:.4s; --t-breathe:5s;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; scroll-behavior:auto !important;
+  }
+}
+
+/* ─── 6. PUZZLE SYSTEM TOKENS ──────────────────────────────────────────────*/
+:root {
+  --piece-gap:4px; --piece-r:6px;
+  --slot-bg: var(--c-paper-sunk);
+  --slot-edge: var(--stroke-dash);
+  --piece-edge: var(--stroke-thin);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   7. PRIMITIVE UTILITY CLASSES (prefix pz-)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* very faint paper grain (subtle, comfortable — replaces busy screentone) */
+.tone { background-image: radial-gradient(var(--tone-ink-color) 1px, transparent 1.4px); background-size: var(--tone-size) var(--tone-size); }
+
+/* misprint now CLEAN (legibility first) — kept as a no-op alias for safety */
+.pz-misprint { color: var(--c-ink); }
+
+/* gentle ambient tint behind a hero (replaces harsh speed-lines) */
+.pz-speedlines { position: relative; overflow: hidden; }
+.pz-speedlines::before {
+  content:""; position:absolute; inset:0;
+  background: radial-gradient(120% 90% at 80% 0%, var(--wash-red), transparent 60%);
+  pointer-events:none;
+}
+
+/* Card — soft panel, gentle double-rule, cozy wobble, soft shadow */
+.pz-panel {
+  position: relative; background: var(--c-paper-raised);
+  border: var(--stroke); border-radius: var(--r-panel);
+  box-shadow: var(--shadow-print); padding: var(--sp-4);
+}
+.pz-panel::after {
+  content:""; position:absolute; inset:4px;
+  border: var(--stroke-hair); border-radius: 11px 13px 10px 12px / 12px 10px 13px 11px;
+  pointer-events:none;
+}
+
+/* Button — pale fill + DARK-INK text (legible), soft press */
+.pz-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  font-family: var(--font-ui); font-weight: var(--fw-bold); cursor: pointer;
+  color: var(--c-ink); background: var(--c-paper-raised);
+  border: var(--stroke); border-radius: var(--r-btn);
+  box-shadow: var(--shadow-print-sm); min-height: var(--tap-min);
+  padding: var(--sp-2) var(--sp-4);
+  transition: transform var(--t-fast) var(--ease-soft), box-shadow var(--t-fast);
+}
+.pz-btn:active { transform: translateY(2px); box-shadow: var(--shadow-press); }
+.pz-btn--blue { background: var(--c-blue);  border-color: var(--c-blue-deep);  color: var(--on-fill); }
+.pz-btn--red  { background: var(--c-red);   border-color: var(--c-red-deep);   color: var(--on-fill); }
+.pz-btn--green{ background: var(--c-green);  border-color: var(--c-green-deep); color: var(--on-fill); }
+.pz-btn--ghost{ background: transparent; box-shadow: none; }
+
+/* Chip — outlined tag, ink text on pale wash */
+.pz-chip {
+  display:inline-flex; align-items:center; gap:var(--sp-1);
+  font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-ink);
+  padding: 3px var(--sp-2); border: var(--stroke-thin); border-radius: var(--r-chip);
+  background: var(--c-paper);
+}
+
+/* Severity tag — OUTLINED (pale wash + tier-colored border + ink text) = legible */
+.pz-sev { color: var(--c-ink); }
+.pz-sev--self    { background: var(--wash-green); border-color: var(--c-green-deep); }
+.pz-sev--clinic  { background: var(--wash-blue);  border-color: var(--c-blue-deep); }
+.pz-sev--regional{ background: var(--wash-grape); border-color: var(--c-grape-deep); }
+.pz-sev--medical { background: var(--wash-red);   border-color: var(--c-red-deep); }
+.pz-sev--er      { background: rgba(214,69,47,0.16); border-color: #D6452F; }
+
+/* "Why" explainer — REQUIRED on every AI output (constitution rule 2) */
+.pz-why {
+  font-family: var(--font-hand); font-size: var(--fs-sm); line-height: var(--lh-base);
+  color: var(--c-ink-soft); background: var(--wash-blue);
+  border-left: 3px solid var(--c-blue-deep); border-radius: 0 8px 8px 0;
+  padding: var(--sp-2) var(--sp-3);
+}
+.pz-why b { color: var(--c-blue-deep); }
+
+/* Hand-drawn icon — soft-ink stroke, rounded */
+.pz-ic { width:24px; height:24px; display:inline-block; vertical-align:middle;
+  fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
+/* Puzzle piece */
+.pz-piece { aspect-ratio:1; border-radius:var(--piece-r); border:var(--slot-edge); background:var(--slot-bg);
+  transition: transform var(--t-base) var(--ease-soft); }
+.pz-piece--filled { border:var(--piece-edge); box-shadow:var(--shadow-print-sm); }
+
+/* Reward chip "+1 片" — gentle, calm-core */
+.pz-reward { display:inline-flex; align-items:center; gap:var(--sp-1);
+  font-family:var(--font-hand); font-weight:var(--fw-bold); font-size:var(--fs-sm);
+  color:var(--c-red-deep); background:var(--wash-red);
+  border:var(--stroke-thin); border-color:var(--c-red-deep); border-radius:var(--r-pill);
+  padding:3px var(--sp-3); }
+
+/* Bilingual label */
+.pz-bi { display:inline-flex; flex-direction:column; line-height:1.15; }
+.pz-bi .en { font-size:.72em; color:var(--c-ink-faint); font-weight:var(--fw-normal); letter-spacing:.03em; }
+
+/* ─── 8. SENIOR MODE 「年長版」 ─────────────────────────────────────────────*/
+[data-mode="senior"] {
+  --type-scale: 1.16; --tap-min: var(--tap-elder);
+  --stroke: 2.5px solid var(--c-ink); --stroke-thin: 2px solid var(--c-ink);
+}
+
+html { font-size: calc(16px * var(--type-scale)); }

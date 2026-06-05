@@ -1,0 +1,153 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MD.Piece — 「地縛少年花子君 / Hanako-kun」vintage-manga theme
+   ---------------------------------------------------------------------------
+   ADDITIVE theme: loaded LAST in index.html, so it re-skins every screen by
+   overriding the existing design tokens in style.css. It touches NO JavaScript
+   and NO markup — all functionality is preserved exactly. Remove the one
+   <link> in index.html to revert.
+
+   Hanako-kun research → design:
+     · Palette: teal/turquoise (Hanako's signature) as hero, mustard-gold,
+       dusty vermilion, plum, on vintage cream; bold near-black ink outlines.
+     · Composition: Taisho-era storybook — ornamental double-frame borders,
+       paper texture, flat cel fills + strong linework.
+   Mirrors frontend/css/puzzle-tokens.css (the design source of truth).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── 1. token overrides — LIGHT (maps Hanako palette onto style.css names) ──*/
+:root {
+  /* surfaces — vintage cream */
+  --bg-deep:    #F3EAD3 !important;
+  --bg-mid:     #EFE4CC !important;
+  --bg-soft:    #E9DEC2 !important;
+  --bg-surface: #FBF4E2 !important;
+  --bg-glass:   #FBF4E2 !important;
+  --bg-glass-hover: #F2E8CF !important;
+  --border-glass:  rgba(46,42,34,0.38) !important;
+  --border-strong: rgba(46,42,34,0.62) !important;
+
+  /* primary — Hanako teal */
+  --accent:      #4C9E9E !important;
+  --accent-light:#6FBFBE !important;
+  --accent-glow: rgba(76,158,158,0.22) !important;
+  --klein:       #2E2A22 !important;   /* deep ink (text/border accent) */
+
+  /* secondary — teal family */
+  --teal:        #2F7A7A !important;
+  --teal-light:  #4C9E9E !important;
+  --teal-glow:   rgba(47,122,122,0.22) !important;
+
+  /* card creams */
+  --cream:     #FBF4E2 !important;
+  --cream-dim: #F2E8CF !important;
+
+  /* accent family — mustard / plum / dusty rose */
+  --purple:     #9B7BA8 !important;  --purple-glow: rgba(155,123,168,0.33) !important;
+  --rose:       #D46A5C !important;  --rose-glow:   rgba(212,106,92,0.33) !important;
+  --success:    #5E8449 !important;  --success-glow:rgba(94,132,73,0.22) !important;
+  --warning:    #E0A82E !important;
+  --danger:     #D6452F !important;
+
+  /* text — bold warm ink */
+  --text:       #2E2A22 !important;
+  --text-dim:   #6A6253 !important;
+  --text-muted: #A99E86 !important;
+
+  /* hero gradients → teal/mustard vintage */
+  --gradient-hero:         linear-gradient(135deg, #4C9E9E 0%, #6FBFBE 100%) !important;
+  --gradient-hero-teal:    linear-gradient(135deg, #2F7A7A 0%, #4C9E9E 100%) !important;
+  --gradient-hero-mint:    linear-gradient(135deg, #5E8449 0%, #8FB575 100%) !important;
+  --gradient-hero-coral:   linear-gradient(135deg, #B14A3E 0%, #D46A5C 100%) !important;
+  --gradient-hero-lavender:linear-gradient(135deg, #785A88 0%, #9B7BA8 100%) !important;
+
+  /* clinical severity — calm teal → urgent vermilion */
+  --sev-self:     #5E8449 !important;
+  --sev-clinic:   #4C9E9E !important;
+  --sev-regional: #785A88 !important;
+  --sev-medical:  #B14A3E !important;
+  --sev-er:       #D6452F !important;
+
+  /* softer ink shadows + cozy radius */
+  --shadow:      0 3px 0 rgba(46,42,34,0.08), 0 6px 16px rgba(46,42,34,0.10) !important;
+  --shadow-sm:   0 2px 0 rgba(46,42,34,0.07), 0 3px 8px rgba(46,42,34,0.08) !important;
+  --shadow-lift: 0 4px 0 rgba(46,42,34,0.08), 0 10px 24px rgba(46,42,34,0.12) !important;
+  --radius:    16px !important;
+  --radius-sm: 11px !important;
+}
+
+/* ─── 2. token overrides — DARK 「夜印」(no pure black) ──────────────────────
+   The app toggles dark via html.dark / [data-theme="dark"]. */
+html.dark, [data-theme="dark"] {
+  --bg-deep:    #25231C !important;
+  --bg-mid:     #2A2720 !important;
+  --bg-soft:    #322E25 !important;
+  --bg-surface: #2F2C23 !important;
+  --bg-glass:   #2F2C23 !important;
+  --bg-glass-hover: #3A352B !important;
+  --border-glass:  rgba(242,233,210,0.22) !important;
+  --border-strong: rgba(242,233,210,0.40) !important;
+  --accent:      #6FBFBE !important;  --accent-light:#8FD3D2 !important;
+  --teal:        #4C9E9E !important;  --teal-light:  #6FBFBE !important;
+  --cream:     #2F2C23 !important;    --cream-dim: #25231C !important;
+  --purple:#BCA3C8 !important; --rose:#E89484 !important; --success:#8FB575 !important;
+  --warning:#E8C266 !important; --danger:#E86A52 !important; --klein:#F2E9D2 !important;
+  --text:#F2E9D2 !important; --text-dim:#C4BBA2 !important; --text-muted:#8A8272 !important;
+  --sev-self:#8FB575 !important; --sev-clinic:#6FBFBE !important; --sev-regional:#BCA3C8 !important;
+  --sev-medical:#E89484 !important; --sev-er:#E86A52 !important;
+}
+
+/* ─── 3. typography — cozy rounded Hanako-ish gothic ────────────────────────*/
+body, button, input, textarea, select {
+  font-family: "Zen Maru Gothic", "Noto Sans TC", system-ui, sans-serif !important;
+}
+
+/* ─── 4. body paper texture (subtle, vintage) ──────────────────────────────*/
+body {
+  background-image:
+    radial-gradient(rgba(46,42,34,0.045) 1px, transparent 1.6px) !important;
+  background-size: 7px 7px !important;
+}
+html.dark body { background-image: radial-gradient(rgba(242,233,210,0.04) 1px, transparent 1.6px) !important; }
+
+/* ─── 5. Hanako ornamental touch — vintage double-frame on cards ────────────
+   Conservative: only adds an inner rule + softens corners on common card
+   containers. Pointer-events none so it never blocks clicks. */
+.card, .glass-card, .panel, .stat-card, .feature-card, .info-card {
+  border-radius: var(--radius) !important;
+  position: relative;
+}
+.card::after, .glass-card::after, .feature-card::after {
+  content: ""; position: absolute; inset: 4px;
+  border: 1px solid var(--border-glass);
+  border-radius: 11px; pointer-events: none; opacity: .5;
+}
+
+/* buttons: cozy rounded + gentle press (no behavioural change) */
+button, .btn, .button {
+  border-radius: var(--radius-sm) !important;
+}
+
+/* nav active accent → teal underline feel (cosmetic) */
+.nav-item.active, .nav-item[aria-current="page"] {
+  box-shadow: inset 3px 0 0 var(--accent) !important;
+}
+
+/* mobile centre record FAB hardcodes the old medical-blue with a high-specificity
+   !important rule in v11-modern.css — match that specificity to re-skin to teal */
+html body.theme-modern nav#mobile-tabbar .mtab.mtab-fab .mtab-fab-core,
+body.theme-modern .mobile-tabbar .mtab-fab .mtab-fab-core,
+body.theme-modern .mtab.mtab-fab .mtab-fab-core {
+  background: linear-gradient(180deg, var(--accent-light), var(--accent)) !important;
+}
+
+/* ─── 6. landing re-skin (verifiable without backend) ───────────────────────*/
+#landing {
+  background: radial-gradient(120% 100% at 50% 0%, #FBF4E2 0%, #EAD9B8 100%) !important;
+  background-image:
+    radial-gradient(120% 100% at 50% 0%, #FBF4E2 0%, #EAD9B8 100%),
+    radial-gradient(rgba(46,42,34,0.05) 1px, transparent 1.6px) !important;
+  background-size: auto, 7px 7px !important;
+}
+html.dark #landing, #landing[data-theme="dark"] {
+  background: radial-gradient(120% 100% at 50% 0%, #2F2C23 0%, #1C1A14 100%) !important;
+}
