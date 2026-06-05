@@ -501,6 +501,16 @@ _SCHEMAS = {
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
         )""",
+    "ehl_results": """
+        CREATE TABLE IF NOT EXISTS ehl_results (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            answers TEXT,
+            total_score INTEGER,
+            literacy_level TEXT,
+            recommended_mode TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
 }
 
 
