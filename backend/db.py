@@ -511,6 +511,27 @@ _SCHEMAS = {
             recommended_mode TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
+    "surveys": """
+        CREATE TABLE IF NOT EXISTS surveys (
+            id TEXT PRIMARY KEY,
+            key TEXT UNIQUE NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            items TEXT,
+            scoring TEXT,
+            created_by TEXT,
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
+    "survey_responses": """
+        CREATE TABLE IF NOT EXISTS survey_responses (
+            id TEXT PRIMARY KEY,
+            survey_key TEXT NOT NULL,
+            patient_id TEXT,
+            answers TEXT,
+            score INTEGER,
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
 }
 
 
