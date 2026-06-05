@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>住院模式 v2 — 互動設計原型</title>
+<!--
+  MD.Piece 住院模式 v2 互動原型（design prototype, 非正式程式）
+  目的：把 docs/inpatient-v2-design-critique.md 的重設計方向變成可點擊畫面。
+  涵蓋：精簡 Today / M01 每日 ePRO / M04 查房前問醫師 / elder-mode 簡化模式。
+  技術：單檔 vanilla JS（對齊 codebase 無框架慣例）。資料皆為示意，不連後端。
+-->
+<style>
+  :root{
+    /* 對齊真實 app 的 calm 醫療藍設計系統（frontend/css/style.css :root）— 同一套 token，不另立風格 */
+    --bg:#FFFFFF; --bg-soft:#F7F9FC; --card:#FFFFFF; --ink:#1F3D58; --dim:#5A7388; --faint:#8FA4B5;
+    --line:rgba(31,61,88,.12); --brand:#4A90C2; --brand-ink:#1F3D58; --brand-soft:#EAF2F9;
+    --sage:#2F8378; --sage-soft:#E4F0EE; --coral:#D85F5F; --coral-soft:#FBEAEA;
+    --sky:#6FB7DE; --amber:#E8B568; --amber-soft:#FBF3E1; --purple:#8B95C5;
+    --font-base:16px; --tap:44px; --radius:14px;
+    --shadow:0 4px 14px rgba(31,61,88,.10),0 1px 4px rgba(31,61,88,.08);
+    --shadow-sm:0 2px 8px rgba(31,61,88,.08);
+  }
+  html.elder{ --font-base:20px; --tap:56px; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    background:linear-gradient(180deg,#F7F9FC,#EFF3F8);
+    color:var(--ink);min-height:100vh;display:flex;gap:34px;justify-content:center;align-items:flex-start;
+    padding:32px 20px 60px;font-size:var(--font-base);line-height:1.5;-webkit-font-smoothing:antialiased}
+
+  /* ── 左側控制面板 ── */
+  .panel{width:300px;flex:0 0 auto;position:sticky;top:32px}
+  .panel h1{font-size:19px;margin:0 0 4px;letter-spacing:.3px}
+  .panel .sub{color:var(--dim);font-size:13px;margin:0 0 18px}
+  .ctl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
+  .ctl h2{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--faint);margin:0 0 10px}
+  .switch{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;font-size:14px;padding:6px 0}
+  .switch input{appearance:none;width:42px;height:24px;background:var(--line);border-radius:99px;position:relative;cursor:pointer;transition:.2s;flex:0 0 auto}
+  .switch input:checked{background:var(--brand)}
+  .switch input::after{content:"";position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .switch input:checked::after{left:21px}
+  .legend{font-size:12px;color:var(--dim);line-height:1.7}
+  .legend b{color:var(--brand-ink)}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--brand-soft);color:var(--brand-ink);font-weight:600;margin-right:4px}
+  .scenario{font-size:13px;width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;color:var(--ink);background:#fafafe}
+
+  /* ── 手機外框 ── */
+  .device{flex:0 0 auto;width:392px;height:812px;background:#0e0c1c;border-radius:46px;padding:12px;box-shadow:0 40px 80px -30px rgba(40,30,90,.6);position:relative}
+  .phone{width:100%;height:100%;background:var(--bg);border-radius:36px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:130px;height:26px;background:#0e0c1c;border-radius:0 0 16px 16px;z-index:40}
+  .screen{flex:1;overflow-y:auto;overflow-x:hidden;padding:42px 16px 90px;scroll-behavior:smooth}
+  .screen::-webkit-scrollbar{width:0}
+  .view{display:none;animation:fade .28s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ── 共用元件 ── */
+  .eyebrow{font-size:12px;color:var(--faint);letter-spacing:.5px;margin:0 0 2px;display:flex;align-items:center;gap:6px}
+  .h-title{font-size:20px;font-weight:700;margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);margin-bottom:14px}
+  .muted{color:var(--dim)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:var(--tap);border:0;border-radius:14px;
+    font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;padding:0 18px;transition:transform .08s,filter .15s}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:var(--brand);color:#fff;width:100%;box-shadow:0 8px 20px -8px var(--brand)}
+  .btn-primary:hover{filter:brightness(1.05)}
+  .btn-ghost{background:var(--brand-soft);color:var(--brand-ink)}
+  .btn-line{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+  .ico{width:18px;height:18px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .toast{position:absolute;left:50%;bottom:104px;transform:translateX(-50%) translateY(20px);background:#211c3a;color:#fff;
+    padding:12px 18px;border-radius:14px;font-size:14px;opacity:0;pointer-events:none;transition:.3s;z-index:60;max-width:88%;text-align:center;box-shadow:var(--shadow)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ── Today ── */
+  .now{background:linear-gradient(135deg,#4A90C2,#6FB7DE);color:#fff;border:0}
+  .now .day{display:flex;align-items:baseline;gap:8px;margin:8px 0 6px}
+  .now .day b{font-size:40px;font-weight:800;line-height:1}
+  .now .safe{font-size:13px;opacity:.92;display:flex;gap:6px;align-items:center;margin:10px 0 0}
+  .hero-cta{position:relative;overflow:hidden}
+  .hero-cta .badge{position:absolute;top:14px;right:14px;background:var(--coral);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(216,95,95,.5)}50%{box-shadow:0 0 0 7px rgba(216,95,95,0)}}
+  .hero-cta h3{margin:0 0 4px;font-size:18px;padding-right:82px}
+  .glance{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .glance .g{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow-sm)}
+  .glance .g .k{font-size:12px;color:var(--faint);display:flex;gap:5px;align-items:center}
+  .glance .g .v{font-size:15px;font-weight:600;margin-top:5px}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:30px;margin-top:8px}
+  .spark i{flex:1;background:var(--brand-soft);border-radius:3px 3px 0 0;display:block}
+  .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .quick button{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 4px;min-height:var(--tap);
+    display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink)}
+  .quick button:active{transform:scale(.96)}
+  .quick .qi{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .q-pain .qi{background:var(--coral-soft);color:var(--coral)} .q-breath .qi{background:#e6f0fa;color:var(--sky)} .q-nausea .qi{background:var(--sage-soft);color:var(--sage)}
+  .bell-note{font-size:12px;color:var(--coral);background:var(--coral-soft);border-radius:12px;padding:10px 12px;margin-top:10px;display:flex;gap:7px;line-height:1.5}
+
+  /* ── ePRO ── */
+  .q{margin-bottom:18px}
+  .q .ql{font-weight:600;margin:0 0 4px;font-size:16px}
+  .q .qh{font-size:13px;color:var(--dim);margin:0 0 12px}
+  .emoji-row{display:flex;gap:8px;justify-content:space-between}
+  .emoji-row button{flex:1;aspect-ratio:1;border:1.5px solid var(--line);background:#fff;border-radius:14px;font-size:26px;cursor:pointer;transition:.12s;display:flex;align-items:center;justify-content:center;min-height:var(--tap)}
+  .emoji-row button.sel{border-color:var(--brand);background:var(--brand-soft);transform:scale(1.06)}
+  .nrs{display:flex;gap:5px;flex-wrap:wrap}
+  .nrs button{width:calc((100% - 50px)/11);min-width:26px;aspect-ratio:1;border:1.5px solid var(--line);background:#fff;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px;color:var(--dim)}
+  .nrs button.sel{color:#fff;border-color:transparent}
+  .nrs button.sel[data-sev="ok"]{background:var(--sage)} .nrs button.sel[data-sev="mid"]{background:var(--amber)} .nrs button.sel[data-sev="hi"]{background:var(--coral)}
+  .scale-ends{display:flex;justify-content:space-between;font-size:12px;color:var(--faint);margin-top:6px}
+  .free textarea{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:12px;font-family:inherit;font-size:15px;resize:none;min-height:84px}
+  .free-tools{display:flex;gap:8px;margin-top:8px}
+  .free-tools button{flex:1}
+  .progress-top{height:5px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:18px}
+  .progress-top i{display:block;height:100%;background:var(--brand);width:0;transition:width .3s;border-radius:99px}
+
+  /* ── M04 問醫師 ── */
+  .qcount{font-size:13px;color:var(--dim);margin:0 0 12px;display:flex;align-items:center;gap:6px}
+  .qcount b{color:var(--brand-ink)}
+  .qitem{display:flex;gap:11px;align-items:flex-start;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:13px;margin-bottom:9px;cursor:pointer;transition:.12s}
+  .qitem.on{border-color:var(--brand);background:var(--brand-soft)}
+  .qitem.dim{opacity:.5}
+  .qbox{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);flex:0 0 auto;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .qitem.on .qbox{background:var(--brand);border-color:var(--brand)}
+  .qbox .ico{width:14px;height:14px;stroke:#fff;opacity:0}
+  .qitem.on .qbox .ico{opacity:1}
+  .qitem .qt{font-size:15px;line-height:1.45}
+  .qitem .src{font-size:11px;color:var(--amber);background:var(--amber-soft);padding:1px 7px;border-radius:99px;margin-top:6px;display:inline-block}
+  .qitem .src.self{color:var(--brand-ink);background:var(--brand-soft)}
+  .addq{display:flex;gap:8px;margin:6px 0 16px}
+  .addq input{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:11px;font-family:inherit;font-size:14px}
+
+  /* ── 朗讀卡 overlay ── */
+  .overlay{position:absolute;inset:0;background:rgba(20,16,40,.55);z-index:70;display:none;align-items:flex-end}
+  .overlay.show{display:flex}
+  .read-card{background:#fff;width:100%;border-radius:26px 26px 0 0;padding:24px 22px 30px;animation:up .3s ease;max-height:92%;overflow-y:auto}
+  @keyframes up{from{transform:translateY(100%)}to{transform:none}}
+  .read-card h2{font-size:22px;margin:0 0 4px} .read-card .rh{color:var(--dim);font-size:14px;margin:0 0 18px}
+  .read-q{font-size:21px;font-weight:700;line-height:1.5;padding:16px 0;border-bottom:1px dashed var(--line);display:flex;gap:12px}
+  .read-q span.n{color:var(--brand);flex:0 0 auto}
+  .read-card.big h2{font-size:26px} .read-card.big .read-q{font-size:26px}
+
+  /* 列表/狀況/更多 簡頁 */
+  .row{display:flex;align-items:center;gap:13px;padding:15px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+  .row:last-child{border-bottom:0}
+  .row .ri{width:40px;height:40px;border-radius:12px;background:var(--brand-soft);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .row .rt b{display:block;font-size:15px} .row .rt span{font-size:13px;color:var(--dim)}
+  .row .rc{margin-left:auto;color:var(--faint)}
+
+  /* ── tabbar ── */
+  .tabbar{position:absolute;bottom:0;left:0;right:0;height:74px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);display:flex;z-index:50;padding-bottom:6px}
+  .tabbar button{flex:1;border:0;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--faint);font-family:inherit;font-size:11px;position:relative}
+  .tabbar button.on{color:var(--brand)}
+  .tabbar button .ico{width:23px;height:23px}
+  .tabbar .dot{position:absolute;top:8px;right:calc(50% - 18px);width:8px;height:8px;background:var(--coral);border-radius:50%;display:none}
+  .tabbar button.has-dot .dot{display:block}
+
+  /* 設計註解 */
+  .annot{display:none}
+  body.notes .annot{display:flex;gap:7px;font-size:11px;color:#fff;background:linear-gradient(90deg,#1F3D58,#4A90C2);border-radius:10px;padding:7px 10px;margin:-6px 0 14px;line-height:1.5;box-shadow:var(--shadow-sm)}
+  .annot b{flex:0 0 auto;background:rgba(255,255,255,.22);border-radius:6px;padding:0 6px;height:fit-content}
+</style>
+</head>
+<body>
+
+<aside class="panel">
+  <h1>住院模式 v2 · 互動原型</h1>
+  <p class="sub">重設計方向 + Phase 2（M01 ePRO / M04 問醫師）。畫面可點擊操作。</p>
+
+  <div class="ctl">
+    <h2>檢視模式</h2>
+    <label class="switch">大字簡化模式（M07 低 eHL 自動套用）
+      <input type="checkbox" id="t-elder" onchange="document.documentElement.classList.toggle('elder',this.checked)">
+    </label>
+    <label class="switch">顯示設計註解（對照 critique）
+      <input type="checkbox" id="t-notes" onchange="document.body.classList.toggle('notes',this.checked)">
+    </label>
+  </div>
+
+  <div class="ctl">
+    <h2>情境跳轉</h2>
+    <select id="scenario-jump" name="scenario-jump" aria-label="情境跳轉" class="scenario" onchange="go(this.value);this.selectedIndex=0">
+      <option value="">— 跳到畫面 —</option>
+      <option value="today">① 精簡 Today</option>
+      <option value="epro">② M01 每日 ePRO</option>
+      <option value="ask">③ M04 查房前問醫師</option>
+      <option value="status">④ 我的狀況</option>
+    </select>
+  </div>
+
+  <div class="ctl">
+    <h2>設計重點</h2>
+    <p class="legend">
+      <span class="pill">P0-1</span>首頁 9 區 → Today <b>4 件事</b><br>
+      <span class="pill">P0-2</span>補上核心 <b>每日 ePRO 迴圈</b><br>
+      <span class="pill">P0-3</span><b>問醫師</b>升為第一級 tab<br>
+      <span class="pill">P1-1</span>症狀三套 → <b>單一 ePRO</b>源<br>
+      <span class="pill">P1-2</span>移除「已通知護理站」假承諾
+    </p>
+  </div>
+  <p class="legend" style="padding:0 4px">流程：在 <b>ePRO</b> 把疼痛拉到 7+ 送出 → 到 <b>問醫師</b> 看自動生成的候選題 → 勾 3 題 → 開「查房朗讀卡」。</p>
+</aside>
+
+<div class="device">
+  <div class="notch"></div>
+  <div class="phone">
+    <div class="screen" id="screen">
+
+      <!-- ① TODAY -->
+      <section class="view active" data-view="today">
+        <p class="eyebrow">${ICON.heart} 今日 · 6 月 5 日 週四</p>
+        <h2 class="h-title">早安，林先生</h2>
+
+        <div class="annot"><b>P0-1</b> 一個主行動 + 三個瞥一眼，取代原本 9 個堆疊區塊</div>
+
+        <div class="card now">
+          <div class="eyebrow" style="color:rgba(255,255,255,.85)">${ICON.shield} 住院中 · 風濕免疫科 7 樓 A 棟</div>
+          <div class="day"><b>第 3</b><span>天 · 類風濕性關節炎調藥</span></div>
+          <p class="safe">${ICON.shield} 護理站隨時都在。緊急請按床邊紅色叫人鈴。</p>
+        </div>
+
+        <div class="annot"><b>P0-2</b> 主行動卡＝今天的 ePRO；未填時常駐提醒，撐起 Day3≥60% KPI</div>
+        <button class="card hero-cta" style="text-align:left;border:0;width:100%;cursor:pointer;background:var(--card)" onclick="go('epro')">
+          <span class="badge" id="epro-badge">今天還沒填</span>
+          <h3 id="epro-cta-title">今天覺得怎麼樣？花 1 分鐘記一下</h3>
+          <p class="muted" id="epro-cta-sub" style="margin:0;font-size:14px">5 個問題 + 想說的話，可以用講的。填完幫你整理成想問醫師的話。</p>
+          <span class="btn btn-primary" style="margin-top:14px;pointer-events:none" id="epro-cta-btn">開始填今天的 ePRO →</span>
+        </button>
+
+        <div class="glance">
+          <div class="g">
+            <span class="k">${ICON.clock} 下一個排程</span>
+            <div class="v">10:30 抽血</div>
+            <p class="muted" style="font-size:12px;margin:4px 0 0">追蹤 CRP 發炎指數</p>
+          </div>
+          <div class="g">
+            <span class="k">${ICON.activity} 疼痛這幾天</span>
+            <div class="spark"><i style="height:40%"></i><i style="height:55%"></i><i style="height:50%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:85%" id="spark-today"></i></div>
+          </div>
+        </div>
+
+        <div class="annot"><b>P1-1 / P1-2</b> 即時不適＝ePRO 的快捷入口，資料同源；文案誠實、附叫人鈴指引</div>
+        <div class="card">
+          <p class="eyebrow">${ICON.zap} 現在就不舒服？按一下</p>
+          <div class="quick">
+            <button class="q-pain" onclick="quick('疼痛')"><span class="qi">${ICON.zap}</span>痛</button>
+            <button class="q-breath" onclick="quick('喘')"><span class="qi">${ICON.wind}</span>喘</button>
+            <button class="q-nausea" onclick="quick('噁心')"><span class="qi">${ICON.drop}</span>噁心</button>
+          </div>
+          <p class="bell-note">${ICON.bell} 按一下＝記到你的紀錄裡，查房時給醫師看。<b style="white-space:nowrap">緊急狀況請按床邊紅色叫人鈴或撥 119。</b></p>
+        </div>
+      </section>
+
+      <!-- ② ePRO (M01) -->
+      <section class="view" data-view="epro">
+        <p class="eyebrow">${ICON.edit} 自陳 ePRO · 每日 1 次</p>
+        <h2 class="h-title">今天覺得怎麼樣？</h2>
+        <div class="progress-top"><i id="epro-prog"></i></div>
+        <div class="annot"><b>M01</b> 5 題量表 + 1 自由描述（語音/拍照）；≤6 步、大按鈕</div>
+
+        <div class="card">
+          <div class="q">
+            <p class="ql">1 · 今天最痛的時候，有多痛？</p>
+            <p class="qh">0 = 不痛　10 = 你能想像最痛</p>
+            <div class="nrs" id="nrs-pain"></div>
+            <div class="scale-ends"><span>不痛</span><span>非常痛</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="q"><p class="ql">2 · 今天累不累？</p><div class="emoji-row" data-q="fatigue">
+            <button data-v="1">🔋</button><button data-v="2">🙂</button><button data-v="3">😐</button><button data-v="4">😴</button><button data-v="5">😵</button></div></div>
+          <div class="q" style="margin-bottom:0"><p class="ql">3 · 會不會想吐 / 噁心？</p><div class="emoji-row" data-q="nausea">
+            <button data-v="1">😌</button><button data-v="2">🙂</button><button data-v="3">😐</button><button data-v="4">😣</button><button data-v="5">🤢</button></div></div>
+        </div>
+
+        <div class="card">
+          <div class="q"><p class="ql">4 · 昨晚睡得好嗎？</p><div class="emoji-row" data-q="sleep">
+            <button data-v="5">😀</button><button data-v="4">🙂</button><button data-v="3">😐</button><button data-v="2">😟</button><button data-v="1">😫</button></div></div>
+          <div class="q" style="margin-bottom:0"><p class="ql">5 · 今天心情如何？</p><div class="emoji-row" data-q="mood">
+            <button data-v="1">😢</button><button data-v="2">😟</button><button data-v="3">😐</button><button data-v="4">🙂</button><button data-v="5">😊</button></div></div>
+        </div>
+
+        <div class="card free">
+          <div class="q" style="margin-bottom:0">
+            <p class="ql">6 · 還有什麼想說的？（可以不填）</p>
+            <p class="qh">想跟醫師說的、不舒服的地方、想問的事都可以</p>
+            <textarea id="epro-free" placeholder="例：右手腕早上特別僵硬，要過中午才比較能動…"></textarea>
+            <div class="free-tools">
+              <button class="btn btn-line" onclick="mockVoice()">${ICON.mic} 用講的</button>
+              <button class="btn btn-line" onclick="toast('（原型示意）開啟相機拍照')">${ICON.camera} 拍照</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="margin-top:4px" onclick="submitEpro()">送出今天的紀錄</button>
+        <p class="muted" style="text-align:center;font-size:12px;margin:12px 0 0">${ICON.lock} 預設只存在你的手機，不會傳給醫院或第三方。</p>
+      </section>
+
+      <!-- ③ M04 問醫師 -->
+      <section class="view" data-view="ask">
+        <p class="eyebrow">${ICON.message} 問醫師 · 查房前準備</p>
+        <h2 class="h-title">查房時，我想問…</h2>
+        <div class="annot"><b>P0-3 / M04</b> 從 ePRO 自動建議候選題；勾最多 3 題 → 一鍵朗讀卡</div>
+
+        <div class="card" style="background:var(--brand-soft);border-color:#dcd5fa">
+          <p class="eyebrow" style="color:var(--brand-ink)">${ICON.clock} 醫師大約 9:00 查房</p>
+          <p style="margin:6px 0 0;font-size:14px">過去 24 小時你記到：<b id="ask-summary">疼痛偏高、睡不好</b>。下面是幫你想好的問題，勾你想問的。</p>
+        </div>
+
+        <p class="qcount">已選 <b id="qsel">0</b> / 3 題　<span class="muted">（建議 3 題以內，醫師時間有限）</span></p>
+
+        <div class="addq">
+          <input id="addq-input" placeholder="自己加一題想問的…" onkeydown="if(event.key==='Enter')addQ()">
+          <button class="btn btn-ghost" onclick="addQ()">${ICON.plus} 加</button>
+        </div>
+
+        <div id="qlist"></div>
+
+        <button class="btn btn-primary" style="margin-top:8px" onclick="openRead()">${ICON.book} 查房時打開朗讀卡</button>
+      </section>
+
+      <!-- ④ 我的狀況 -->
+      <section class="view" data-view="status">
+        <p class="eyebrow">${ICON.folder} 我的狀況</p>
+        <h2 class="h-title">這次住院的紀錄</h2>
+        <div class="annot"><b>P2-1</b> v1 既有工具收進這裡，不刪功能、只搬位置</div>
+        <div class="card" style="padding:6px 16px">
+          <div class="row" onclick="toast('用藥核對（v1 既有）')"><span class="ri">${ICON.pill}</span><span class="rt"><b>用藥核對</b><span>在家的藥 vs 住院的藥</span></span><span class="rc">${ICON.chev}</span></div>
+          <div class="row" onclick="toast('今日治療 timeline（v1 既有）')"><span class="ri">${ICON.activity}</span><span class="rt"><b>今日治療</b><span>檢查 · 打藥 · 護理處置</span></span><span class="rc">${ICON.chev}</span></div>
+          <div class="row" onclick="toast('查房紀錄＝我見了誰（M08）')"><span class="ri">${ICON.message}</span><span class="rt"><b>查房紀錄</b><span>醫師說了什麼（事後記）</span></span><span class="rc">${ICON.chev}</span></div>
+          <div class="row" onclick="toast('交接報告（v1 既有）')"><span class="ri">${ICON.file}</span><span class="rt"><b>交接報告</b><span>給醫護看的居家紀錄整理</span></span><span class="rc">${ICON.chev}</span></div>
+        </div>
+        <div class="annot"><b>P1-2</b> 「查房紀錄」是事後記錄，與「問醫師」事前準備在 IA 上分流</div>
+      </section>
+
+    </div><!-- /screen -->
+
+    <div class="toast" id="toast"></div>
+
+    <!-- 朗讀卡 -->
+    <div class="overlay" id="read-overlay">
+      <div class="read-card big" id="read-card">
+        <h2>醫師您好，我有想問的</h2>
+        <p class="rh">林先生 · 住院第 3 天 · 把手機轉給醫師看也可以</p>
+        <div id="read-list"></div>
+        <button class="btn btn-line" style="width:100%;margin-top:18px" onclick="closeRead()">關閉</button>
+      </div>
+    </div>
+
+    <!-- tabbar -->
+    <nav class="tabbar">
+      <button class="on" data-tab="today" onclick="go('today')">${ICON.home}<span>今日</span></button>
+      <button data-tab="epro" id="tab-epro" onclick="go('epro')"><span class="dot"></span>${ICON.edit}<span>自陳</span></button>
+      <button data-tab="ask" id="tab-ask" onclick="go('ask')"><span class="dot"></span>${ICON.message}<span>問醫師</span></button>
+      <button data-tab="status" onclick="go('status')">${ICON.folder}<span>狀況</span></button>
+      <button data-tab="more" onclick="toast('更多：出院準備 / 衛教 / 設定字級·語言')">${ICON.menu}<span>更多</span></button>
+    </nav>
+
+  </div><!-- /phone -->
+</div><!-- /device -->
+
+<script>
+/* ── 極簡 inline icon set（stroke 風，仿 lucide）────────────────── */
+const P = (d)=>`<svg class="ico" viewBox="0 0 24 24">${d}</svg>`;
+const ICON = {
+  heart:P('<path d="M19 14c1.5-1.5 3-3.5 3-5.5A4.5 4.5 0 0 0 12 6 4.5 4.5 0 0 0 2 8.5c0 2 1.5 4 3 5.5l7 7Z"/>'),
+  shield:P('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>'),
+  clock:P('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  activity:P('<path d="M3 12h4l3 8 4-16 3 8h4"/>'),
+  zap:P('<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>'),
+  wind:P('<path d="M3 8h11a3 3 0 1 0-3-3M3 16h14a3 3 0 1 1-3 3"/>'),
+  drop:P('<path d="M12 3s6 6 6 10a6 6 0 0 1-12 0c0-4 6-10 6-10"/>'),
+  bell:P('<path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 0 0 4 0"/>'),
+  edit:P('<path d="M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6"/><path d="M18 2 22 6 12 16H8v-4z"/>'),
+  message:P('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
+  book:P('<path d="M4 4v15a1 1 0 0 0 1 1h14M6 4h13v13H6a2 2 0 0 0-2 2"/>'),
+  plus:P('<path d="M12 5v14M5 12h14"/>'),
+  mic:P('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>'),
+  camera:P('<path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/>'),
+  lock:P('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+  folder:P('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
+  pill:P('<path d="M10.5 13.5 3 21M14 4l6 6a4 4 0 0 1-6 6l-6-6a4 4 0 0 1 6-6Z"/>'),
+  file:P('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'),
+  home:P('<path d="M3 11l9-8 9 8M5 10v10h14V10"/>'),
+  menu:P('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  chev:P('<path d="m9 6 6 6-6 6"/>'),
+  check:P('<path d="M5 13l4 4L19 7"/>'),
+};
+// 把模板字串裡的 ${ICON.x} 早已在 HTML 解析前？否 — HTML 是靜態字串，需手動注入：
+document.querySelectorAll('*').forEach(()=>{}); // noop
+
+/* HTML 內以 ${ICON.x} 寫法是給閱讀用；實際在載入後做一次文字替換注入 SVG。 */
+(function injectIcons(){
+  const screen = document.querySelector('body');
+  // 走訪所有文字節點，替換 ${ICON.key}
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const hits=[]; let n;
+  while((n=walk.nextNode())){ if(n.nodeValue.includes('${ICON.')) hits.push(n); }
+  hits.forEach(t=>{
+    const span=document.createElement('span');
+    span.innerHTML=t.nodeValue.replace(/\$\{ICON\.(\w+)\}/g,(_,k)=>ICON[k]||'');
+    t.replaceWith(span);
+  });
+})();
+
+/* ── 路由 ── */
+const state = { epro:null, pain:null, sel:new Set(), qid:0 };
+function go(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===view));
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===view));
+  document.getElementById('screen').scrollTop=0;
+}
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* ── Today 快捷 ── */
+function quick(name){ toast('已記下「'+name+'」· 查房時可給醫師看'); }
+
+/* ── ePRO ── */
+// NRS 0–10
+(function buildNRS(){
+  const box=document.getElementById('nrs-pain');
+  for(let i=0;i<=10;i++){ const b=document.createElement('button'); b.textContent=i; b.dataset.v=i;
+    b.dataset.sev = i>=7?'hi':(i>=4?'mid':'ok');
+    b.onclick=()=>{ box.querySelectorAll('button').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); state.pain=i; bumpProg(); };
+    box.appendChild(b); }
+})();
+document.querySelectorAll('.emoji-row').forEach(row=>{
+  row.querySelectorAll('button').forEach(b=>{
+    b.onclick=()=>{ row.querySelectorAll('button').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); row.dataset.val=b.dataset.v; bumpProg(); };
+  });
+});
+function bumpProg(){
+  let done=0; if(state.pain!=null)done++;
+  document.querySelectorAll('.emoji-row').forEach(r=>{ if(r.dataset.val)done++; });
+  document.getElementById('epro-prog').style.width = Math.round(done/5*100)+'%';
+}
+function mockVoice(){ const ta=document.getElementById('epro-free'); toast('🎙️ 聆聽中…（原型示意）');
+  setTimeout(()=>{ ta.value='右手腕早上特別僵硬，要過中午才比較能動，晚上也常常痛到睡不著。'; },900); }
+
+function submitEpro(){
+  if(state.pain==null){ toast('先選第 1 題「有多痛」喔'); go('epro'); return; }
+  const get=q=>{ const r=document.querySelector('.emoji-row[data-q="'+q+'"]'); return r&&r.dataset.val?+r.dataset.val:null; };
+  state.epro = { pain:state.pain, fatigue:get('fatigue'), nausea:get('nausea'), sleep:get('sleep'), mood:get('mood'), free:document.getElementById('epro-free').value.trim() };
+  // 自動生成「問醫師」候選（規則 5：純規則，非 LLM）
+  genCandidates(state.epro);
+  // 更新 Today 主行動卡 → 已填態
+  document.getElementById('epro-badge').textContent='✓ 已完成';
+  document.getElementById('epro-badge').style.background='var(--sage)';
+  document.getElementById('epro-badge').style.animation='none';
+  document.getElementById('epro-cta-title').textContent='今天的 ePRO 已完成 ✓';
+  document.getElementById('epro-cta-sub').textContent='幫你整理了 '+autoCount+' 個可以問醫師的問題，去看看？';
+  document.getElementById('epro-cta-btn').textContent='看查房要問的問題 →';
+  document.querySelector('.hero-cta').setAttribute('onclick',"go('ask')");
+  document.getElementById('spark-today').style.height = Math.max(20,state.pain*9)+'%';
+  document.getElementById('spark-today').style.background = state.pain>=7?'var(--coral)':'var(--brand-soft)';
+  // tab 紅點：提示去問醫師
+  document.getElementById('tab-ask').classList.add('has-dot');
+  document.getElementById('tab-epro').classList.remove('has-dot');
+  toast('謝謝，幫你記下了 · 已整理好要問醫師的話');
+  setTimeout(()=>go('today'),650);
+}
+
+/* ── M04 候選題 ── */
+let autoCount=0;
+const baseQs=[
+  { t:'我這次的調藥計畫，大概還要住幾天？', src:'self' },
+];
+function genCandidates(e){
+  const auto=[];
+  if(e.pain>=7) auto.push({ t:`我的疼痛到 ${e.pain} 分了，止痛藥可以再調整嗎？`, src:'痛 '+e.pain+'/10' });
+  if(e.sleep!=null&&e.sleep<=2) auto.push({ t:'我這幾天晚上睡不好，有沒有辦法改善？', src:'睡眠偏低' });
+  if(e.nausea!=null&&e.nausea>=4) auto.push({ t:'我一直想吐，是不是藥物的關係？', src:'噁心偏高' });
+  if(e.free) auto.push({ t:'我想跟醫師說：「'+ (e.free.length>22?e.free.slice(0,22)+'…':e.free) +'」', src:'我寫的' });
+  autoCount=auto.length;
+  // 摘要
+  const tags=[]; if(e.pain>=7)tags.push('疼痛偏高'); if(e.sleep<=2)tags.push('睡不好'); if(e.nausea>=4)tags.push('噁心');
+  document.getElementById('ask-summary').textContent = tags.length?tags.join('、'):'狀況大致平穩';
+  renderQs([...auto, ...baseQs]);
+}
+function renderQs(list){
+  if(!state._qs){ state._qs=[]; }
+  // 初始化（只做一次把 list 灌進 state）
+  state._qs = list.map((q,i)=>({ id:i, ...q, on:false }));
+  state.sel.clear(); paintQs();
+}
+function paintQs(){
+  const host=document.getElementById('qlist');
+  if(!state._qs||!state._qs.length){ host.innerHTML='<p class="muted" style="text-align:center;padding:20px">先去「自陳」填今天的 ePRO，這裡會自動幫你想好問題。</p>'; document.getElementById('qsel').textContent='0'; return; }
+  const full=state.sel.size>=3;
+  host.innerHTML=state._qs.map(q=>{
+    const on=state.sel.has(q.id);
+    const dim=!on&&full?' dim':'';
+    const badge = q.src==='self'?'<span class="src self">自己加的</span>':'<span class="src">'+ICON.check.replace('ico','ico')+' 來自 '+q.src+'</span>';
+    return `<div class="qitem${on?' on':''}${dim}" onclick="toggleQ(${q.id})">
+      <span class="qbox">${ICON.check}</span>
+      <span><span class="qt">${q.t}</span><br>${q.src==='self'?'<span class="src self">自己加的</span>':'<span class="src">來自：'+q.src+'</span>'}</span></div>`;
+  }).join('');
+  document.getElementById('qsel').textContent=state.sel.size;
+}
+function toggleQ(id){
+  if(state.sel.has(id)) state.sel.delete(id);
+  else { if(state.sel.size>=3){ toast('一次選 3 題就好，醫師時間有限'); return; } state.sel.add(id); }
+  paintQs();
+}
+function addQ(){
+  const inp=document.getElementById('addq-input'); const v=inp.value.trim(); if(!v)return;
+  if(!state._qs)state._qs=[];
+  state._qs.push({ id:Date.now(), t:v, src:'self', on:false }); inp.value=''; paintQs(); toast('加好了，記得勾選');
+}
+// 預設先放一題，讓未填 ePRO 也有東西看
+renderQs(baseQs);
+
+/* ── 朗讀卡 ── */
+function openRead(){
+  if(state.sel.size===0){ toast('先勾你想問的問題（最多 3 題）'); return; }
+  const picked=state._qs.filter(q=>state.sel.has(q.id));
+  document.getElementById('read-list').innerHTML=picked.map((q,i)=>
+    `<div class="read-q"><span class="n">${i+1}.</span><span>${q.t.replace(/^我想跟醫師說：「|」$/g,'')}</span></div>`).join('');
+  document.getElementById('read-overlay').classList.add('show');
+}
+function closeRead(){ document.getElementById('read-overlay').classList.remove('show'); }
+
+go('today');
+</script>
+</body>
+</html>
