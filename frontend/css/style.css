@@ -11422,6 +11422,52 @@ html[data-mode="senior"] .mtl-chip { font-size: 0.95rem; padding: 8px 14px; }
   .pv-tl-title { font-size: 0.88rem; }
 }
 
+/* 用藥歷程時間軸（線性記錄）— #med-timeline / #mobile-med-timeline */
+.medtl { position: relative; list-style: none; margin: 4px 0 0; padding: 0 0 0 26px; }
+.medtl::before {
+  content: ''; position: absolute; left: 11px; top: 8px; bottom: 8px;
+  width: 2px; background: var(--border-glass); border-radius: 1px;
+}
+.medtl-item { position: relative; margin-bottom: 12px; }
+.medtl-item:last-child { margin-bottom: 0; }
+.medtl-dot {
+  position: absolute; left: -26px; top: 2px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--bg-surface); border: 2px solid var(--border-glass);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+}
+.medtl-dot i { width: 13px; height: 13px; }
+.medtl-card {
+  background: var(--bg-surface); border: 1.5px solid var(--border-glass);
+  border-left-width: 3px; border-radius: var(--radius-sm);
+  padding: 10px 12px; transition: transform var(--transition);
+}
+.medtl-card:hover { transform: translateX(2px); }
+.medtl-when {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.3px;
+}
+.medtl-time { margin-left: 6px; }
+.medtl-title {
+  font-size: 0.92rem; font-weight: 600; color: var(--text);
+  line-height: 1.35; margin-top: 2px; overflow-wrap: anywhere;
+}
+.medtl-summary {
+  font-size: 0.8rem; color: var(--text-dim);
+  margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;
+}
+.medtl-empty { color: var(--text-muted); font-size: 0.9rem; padding: 8px 0; margin: 0; }
+
+.medtl-item[data-tone="good"]    .medtl-dot  { border-color: var(--success); color: var(--success); }
+.medtl-item[data-tone="good"]    .medtl-card { border-left-color: var(--success); }
+.medtl-item[data-tone="warn"]    .medtl-dot  { border-color: var(--rose); color: var(--rose); }
+.medtl-item[data-tone="warn"]    .medtl-card { border-left-color: var(--rose); }
+.medtl-item[data-tone="info"]    .medtl-dot  { border-color: var(--accent); color: var(--accent); }
+.medtl-item[data-tone="info"]    .medtl-card { border-left-color: var(--accent); }
+.medtl-item[data-tone="neutral"] .medtl-dot  { border-color: var(--text-muted); color: var(--text-muted); }
+.medtl-item[data-tone="neutral"] .medtl-card { border-left-color: var(--border-glass); }
+
 .pv-loading {
   display: inline-flex;
   align-items: center;

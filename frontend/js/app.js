@@ -14052,6 +14052,17 @@ function medications() {
     +     '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px 12px;text-align:center">載入中…</div>'
     +   '</div>'
 
+    // 用藥歷程時間軸（mobile）— 線性記錄
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="history"></i> ' + _T('meds.timeline.title') + '</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +   '</div>'
+    +   '<div id="mobile-med-timeline">'
+    +     '<div class="med-tip-card" style="background:var(--bg-soft);border-color:var(--border);color:var(--text-dim)">'
+    +       '<i data-lucide="loader"></i><span>' + _T('meds.timeline.loading') + '</span>'
+    +     '</div>'
+    +   '</div>'
+
     // 免責 footer
     +   '<div class="disclaimer-footer">'
     +     '<i data-lucide="info"></i>'
@@ -14102,6 +14113,11 @@ function medications() {
       </div>
       <div id="meds-manage-hint" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(232,136,156,0.08);border:1px solid rgba(232,136,156,0.28);border-radius:var(--radius-sm);color:var(--text-dim);font-size:0.82rem">${_T('meds.list.manageHint')}</div>
       <div id="med-list" style="margin-top:12px"><p style="color:var(--text-muted)">${_T('meds.list.loading')}</p></div>
+    </div>
+    <div class="card">
+      <h3><i data-lucide="history" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.timeline.title')}</h3>
+      <p style="margin-top:4px;color:var(--text-dim);font-size:0.9rem">${_T('meds.timeline.desc')}</p>
+      <div id="med-timeline" style="margin-top:12px"><p style="color:var(--text-muted)">${_T('meds.timeline.loading')}</p></div>
     </div>
     <div class="card" id="med-checkin-card" style="display:none">
       <h3><i data-lucide="bell" style="width:18px;height:18px;vertical-align:middle"></i> ${_T('meds.checkin.title')}</h3>
@@ -14185,6 +14201,49 @@ function loadMedicationsPage() {
     .then(function(r) { return r.json(); })
     .then(function(data) { renderMedImprovement(data); })
     .catch(function() {});
+
+  apiFetch(API + "/medications/timeline?patient_id=" + _medsPatientId + "&days=90")
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderMedTimeline(data); })
+    .catch(function() { renderMedTimeline(null); });
+}
+
+// 用藥歷程時間軸：把後端 /medications/timeline 的線性事件渲染成垂直時間軸。
+// 同時寫進桌機 (#med-timeline) 與手機 (#mobile-med-timeline) 容器。
+var _MED_TL_META = {
+  dose_taken:  { icon: 'check-circle-2', tone: 'good'    },
+  dose_skipped:{ icon: 'circle-slash',   tone: 'warn'    },
+  med_added:   { icon: 'plus-circle',    tone: 'info'    },
+  med_stopped: { icon: 'ban',            tone: 'warn'    },
+  effect:      { icon: 'activity',       tone: 'info'    },
+  change:      { icon: 'refresh-cw',     tone: 'neutral' },
+};
+function renderMedTimeline(data) {
+  var targets = ['med-timeline', 'mobile-med-timeline']
+    .map(function(id) { return document.getElementById(id); })
+    .filter(Boolean);
+  if (!targets.length) return;
+  var events = (data && data.events) || [];
+  var html;
+  if (!events.length) {
+    html = '<p class="medtl-empty">' + _T('meds.timeline.empty') + '</p>';
+  } else {
+    html = '<ol class="medtl">' + events.map(function(e) {
+      var meta = _MED_TL_META[e.type] || { icon: 'circle', tone: 'neutral' };
+      var when = escapeHtml(e.date || '') + (e.time ? ' <span class="medtl-time">' + escapeHtml(e.time) + '</span>' : '');
+      return ''
+        + '<li class="medtl-item" data-tone="' + meta.tone + '">'
+        +   '<span class="medtl-dot"><i data-lucide="' + meta.icon + '"></i></span>'
+        +   '<div class="medtl-card">'
+        +     '<div class="medtl-when">' + when + '</div>'
+        +     '<div class="medtl-title">' + escapeHtml(e.title || '') + '</div>'
+        +     (e.summary ? '<div class="medtl-summary">' + escapeHtml(e.summary) + '</div>' : '')
+        +   '</div>'
+        + '</li>';
+    }).join('') + '</ol>';
+  }
+  targets.forEach(function(el) { el.innerHTML = html; });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderMedCheckIn(data) {

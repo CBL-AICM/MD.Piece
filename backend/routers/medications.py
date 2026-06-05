@@ -598,6 +598,231 @@ def get_medication_logs(
     return {"logs": result.data, "days": days}
 
 
+# ── 藥物時間軸（線性記錄）────────────────────────────────
+
+# change_type → 中文標籤（對齊 medication_changes 的 CHECK 約束）
+_CHANGE_TYPE_LABELS = {
+    "start": "開始用藥",
+    "stop": "停藥",
+    "dose_up": "增加劑量",
+    "dose_down": "減少劑量",
+    "switch": "換藥",
+    "frequency": "調整頻率",
+    "other": "用藥調整",
+}
+
+
+def _med_name_map(sb, patient_id: str) -> dict[str, dict]:
+    """一次撈出該患者所有藥物，回傳 {medication_id: row}，供時間軸把
+    medication_id 還原成藥名／劑量。撈不到就回空 dict。"""
+    try:
+        rows = sb.table("medications").select("*").eq("patient_id", patient_id).execute().data or []
+    except Exception as e:
+        logger.warning("timeline med name lookup failed: %s", type(e).__name__)
+        return {}
+    return {r["id"]: r for r in rows if r.get("id")}
+
+
+def _split_ts(ts: str | None) -> tuple[str, str]:
+    """把 ISO 時間字串切成 (YYYY-MM-DD, HH:MM)；無法解析時回原值前綴與空字串。"""
+    if not ts:
+        return "", ""
+    s = str(ts)
+    date = s[:10]
+    time = s[11:16] if len(s) >= 16 else ""
+    return date, time
+
+
+def _change_summary(c: dict) -> str:
+    """從 medication_changes 的前後劑量／頻率與原因組出一句說明。"""
+    parts: list[str] = []
+    prev_d, new_d = c.get("previous_dosage"), c.get("new_dosage")
+    if prev_d or new_d:
+        parts.append(f"劑量 {prev_d or '—'} → {new_d or '—'}")
+    prev_f, new_f = c.get("previous_frequency"), c.get("new_frequency")
+    if prev_f or new_f:
+        parts.append(f"頻率 {prev_f or '—'} → {new_f or '—'}")
+    reason = (c.get("reason") or "").strip()
+    if reason:
+        parts.append(f"原因：{reason}")
+    return "；".join(parts)
+
+
+@router.get("/timeline")
+def medication_timeline(
+    patient_id: str = Query(...),
+    days: int = Query(90, ge=1, le=730, description="涵蓋最近幾天"),
+    me: dict = Depends(current_user),
+):
+    """
+    藥物紀錄的線性時間軸：把四類藥物事件合併成單一時序清單（時間倒序）。
+
+    事件來源：
+      - dose_taken / dose_skipped：medication_logs（服藥打卡 / 跳過）
+      - med_added：medications.created_at（新增藥物；若目前 active=0 會註記已停用）
+      - effect：medication_effects（療效紀錄）
+      - change：medication_changes（用藥調整，含停藥 / 加減量 / 換藥 / 調頻率）
+
+    每筆事件帶 timestamp（排序用）、date / time（顯示用）、type、title、summary、
+    medication_name 與 tone（good / warn / info / neutral，給前端決定卡片顏色）。
+
+    註：medications 沒有「停用時間」欄位，故 soft-delete（active=0）只在 med_added
+    事件上註記「目前已停用」，不另外捏造一個停用時間點（Rule 12：不靜默造假）。
+    """
+    pid = _enforce_self_patient(patient_id, me)
+    sb = get_supabase()
+    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    since_date = since[:10]
+
+    meds = _med_name_map(sb, pid)
+
+    def _name(med_id: str | None) -> str:
+        m = meds.get(med_id or "")
+        return (m.get("name") if m else None) or "藥物"
+
+    events: list[dict] = []
+
+    # 1. 服藥打卡 / 跳過（medication_logs）
+    try:
+        logs = (
+            sb.table("medication_logs").select("*")
+            .eq("patient_id", pid).gte("taken_at", since)
+            .order("taken_at", desc=True).execute().data or []
+        )
+    except Exception as e:
+        logger.warning("timeline logs fetch failed: %s", type(e).__name__)
+        logs = []
+    for l in logs:
+        ts = l.get("taken_at")
+        date, time = _split_ts(ts)
+        name = _name(l.get("medication_id"))
+        taken = bool(l.get("taken"))
+        if taken:
+            summary = (l.get("notes") or "").strip()
+            event_type, tone, title = "dose_taken", "good", f"服藥打卡：{name}"
+        else:
+            reason = (l.get("skip_reason") or "").strip()
+            note = (l.get("notes") or "").strip()
+            summary = "；".join(p for p in (f"原因：{reason}" if reason else "", note) if p)
+            event_type, tone, title = "dose_skipped", "warn", f"跳過服藥：{name}"
+        events.append({
+            "id": f"log-{l.get('id')}",
+            "type": event_type,
+            "timestamp": ts,
+            "date": date,
+            "time": time,
+            "medication_id": l.get("medication_id"),
+            "medication_name": name,
+            "title": title,
+            "summary": summary,
+            "tone": tone,
+        })
+
+    # 2. 新增藥物（medications.created_at；active=0 時註記已停用）
+    for med_id, m in meds.items():
+        created = m.get("created_at")
+        if not created or str(created)[:10] < since_date:
+            continue
+        date, time = _split_ts(created)
+        name = m.get("name") or "藥物"
+        bits = [b for b in (m.get("dosage"), m.get("frequency")) if b]
+        summary = "、".join(bits)
+        if not m.get("active", 1):
+            summary = (summary + "（目前已停用）") if summary else "目前已停用"
+        events.append({
+            "id": f"add-{med_id}",
+            "type": "med_added",
+            "timestamp": created,
+            "date": date,
+            "time": time,
+            "medication_id": med_id,
+            "medication_name": name,
+            "title": f"新增藥物：{name}",
+            "summary": summary,
+            "tone": "info",
+        })
+
+    # 3. 療效紀錄（medication_effects）
+    try:
+        effects = (
+            sb.table("medication_effects").select("*")
+            .eq("patient_id", pid).gte("recorded_at", since)
+            .order("recorded_at", desc=True).execute().data or []
+        )
+    except Exception as e:
+        logger.warning("timeline effects fetch failed: %s", type(e).__name__)
+        effects = []
+    for ef in effects:
+        ts = ef.get("recorded_at")
+        date, time = _split_ts(ts)
+        name = _name(ef.get("medication_id"))
+        score = ef.get("effectiveness")
+        bits = []
+        if score is not None:
+            bits.append(f"療效 {score}/5")
+        se = (ef.get("side_effects") or "").strip()
+        if se:
+            bits.append(f"副作用：{se}")
+        sc = (ef.get("symptom_changes") or "").strip()
+        if sc:
+            bits.append(f"症狀變化：{sc}")
+        note = (ef.get("notes") or "").strip()
+        if note:
+            bits.append(note)
+        events.append({
+            "id": f"eff-{ef.get('id')}",
+            "type": "effect",
+            "timestamp": ts,
+            "date": date,
+            "time": time,
+            "medication_id": ef.get("medication_id"),
+            "medication_name": name,
+            "title": f"療效紀錄：{name}",
+            "summary": "；".join(bits),
+            "tone": "info",
+        })
+
+    # 4. 用藥調整（medication_changes，含停藥）
+    try:
+        changes = (
+            sb.table("medication_changes").select("*")
+            .eq("patient_id", pid).gte("effective_date", since)
+            .order("effective_date", desc=True).execute().data or []
+        )
+    except Exception as e:
+        logger.warning("timeline changes fetch failed: %s", type(e).__name__)
+        changes = []
+    for c in changes:
+        ts = c.get("effective_date") or c.get("created_at")
+        date, time = _split_ts(ts)
+        name = _name(c.get("medication_id"))
+        ctype = c.get("change_type") or "other"
+        label = _CHANGE_TYPE_LABELS.get(ctype, "用藥調整")
+        is_stop = ctype == "stop"
+        events.append({
+            "id": f"chg-{c.get('id')}",
+            "type": "med_stopped" if is_stop else "change",
+            "timestamp": ts,
+            "date": date,
+            "time": time,
+            "medication_id": c.get("medication_id"),
+            "medication_name": name,
+            "title": f"{label}：{name}",
+            "summary": _change_summary(c),
+            "tone": "warn" if is_stop else "neutral",
+        })
+
+    # 時間倒序；無時間者沉到尾端
+    events.sort(key=lambda e: e.get("timestamp") or "", reverse=True)
+
+    return {
+        "patient_id": pid,
+        "days": days,
+        "events": events,
+        "count": len(events),
+    }
+
+
 # ── 療效追蹤 ──────────────────────────────────────────────
 
 @router.post("/effects")
