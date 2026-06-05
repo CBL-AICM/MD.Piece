@@ -6,13 +6,12 @@
 -- eHEALSResult 跨住院期次保存（app 層級，非單次住院），居家版亦可重用。
 -- 冪等，可安全重跑。
 --
--- RLS 取捨（規則 7 — 攤開講）：本專案 migration 對 RLS 有三種寫法並存：
---   (a) migration_inpatient.sql      → DISABLE RLS（最舊）
---   (b) migration_vital_entries.sql  → ENABLE RLS + stopgap_anon_all 寬鬆 policy
---   (c) backend/db.py 註解(2026-05-29) → ENABLE RLS + 不建任何 policy，後端改帶
---       service_role secret 繞過 RLS（最新、刻意收緊的現況）。
--- 本檔採 (c)：與目前 production 安全姿態一致。後端 get_supabase() 已強制
--- 要求 service_role（偵測到 anon 會 loud-fail），故無 policy 也能正常讀寫。
+-- RLS（規則 7 — 攤開講）：production 後端目前實際帶的是 anon key（db.py 內建預設），
+-- 故沿用 migration_vital_entries.sql 作法：ENABLE RLS + stopgap_anon_all 寬鬆 policy，
+-- anon/authenticated 皆可讀寫（與其他既有可寫表一致）。
+-- 少了這條 policy，anon 寫入會被 RLS 擋下 → /screen 回 _persisted:false（部署時實際踩到）。
+-- 較安全的作法是後端改帶 service_role secret + 移除此 policy（db.py 2026-05-29 註解方向），
+-- 屬跨表基礎建設，另案處理。
 
 CREATE TABLE IF NOT EXISTS ehl_results (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -28,3 +27,6 @@ CREATE INDEX IF NOT EXISTS idx_ehl_results_patient
     ON ehl_results (patient_id, created_at DESC);
 
 ALTER TABLE ehl_results ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS stopgap_anon_all ON ehl_results;
+CREATE POLICY stopgap_anon_all ON ehl_results
+    FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
