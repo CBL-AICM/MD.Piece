@@ -22,10 +22,11 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.security import current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -188,3 +189,88 @@ def screen(body: ScreenSubmit):
         return {**result, "_persisted": False, "disclaimer": DISCLAIMER}
 
     return {**result, "_persisted": True, "id": saved_id, "disclaimer": DISCLAIMER}
+
+
+# ── 後台聚合統計 ───────────────────────────────────────────
+
+def _level_for_score(total: int) -> str:
+    """用與 _score 相同的門檻把總分歸到 level（補存檔缺 literacy_level 的舊資料）。"""
+    if total <= _LOW_MAX:
+        return "low"
+    if total >= _HIGH_MIN:
+        return "high"
+    return "adequate"
+
+
+def _median(nums: list[float]) -> Optional[float]:
+    if not nums:
+        return None
+    s = sorted(nums)
+    n = len(s)
+    mid = n // 2
+    return s[mid] if n % 2 else round((s[mid - 1] + s[mid]) / 2, 1)
+
+
+@router.get("/stats")
+def stats(me: dict = Depends(current_user)):
+    """
+    eHEALS 跨病患聚合統計（後台 / 醫護端）。
+
+    純程式碼彙總（規則 5）：回傳填答人數、總分 avg/min/max/median、
+    level 分布（low / adequate / high）與建議模式分布（simplified / standard），
+    並附門檻說明（規則 12：可解釋）。
+
+    僅回傳聚合數字、不含任何個別病患資料；且限 role=doctor 檢視，避免問卷母體外洩。
+    """
+    if me.get("role") != "doctor":
+        raise HTTPException(status_code=403, detail="僅限醫護端檢視問卷彙總統計")
+
+    sb = get_supabase()
+    try:
+        rows = sb.table("ehl_results").select("*").execute().data or []
+    except Exception as e:
+        logger.info(f"ehl: stats lookup failed: {e}")
+        rows = []
+
+    by_level = {"low": 0, "adequate": 0, "high": 0}
+    by_mode = {"simplified": 0, "standard": 0}
+    scores: list[int] = []
+    for r in rows:
+        total = r.get("total_score")
+        if not isinstance(total, int):
+            continue
+        scores.append(total)
+        level = r.get("literacy_level") or _level_for_score(total)
+        if level in by_level:
+            by_level[level] += 1
+        mode = r.get("recommended_mode")
+        if mode not in by_mode:
+            # 缺 recommended_mode 的舊資料：low → simplified、其餘 standard
+            mode = "simplified" if level == "low" else "standard"
+        by_mode[mode] += 1
+
+    respondents = len(scores)
+
+    def _pct(n: int) -> float:
+        return round(n / respondents * 100, 1) if respondents else 0.0
+
+    return {
+        "instrument": "eHEALS",
+        "respondents": respondents,
+        "score": {
+            "avg": round(sum(scores) / respondents, 1) if respondents else None,
+            "min": min(scores) if scores else None,
+            "max": max(scores) if scores else None,
+            "median": _median(scores),
+            "scale_min": 8,
+            "scale_max": 40,
+        },
+        "by_level": {
+            k: {"count": v, "percent": _pct(v)} for k, v in by_level.items()
+        },
+        "by_mode": {
+            k: {"count": v, "percent": _pct(v)} for k, v in by_mode.items()
+        },
+        "thresholds": {"low_max": _LOW_MAX, "high_min": _HIGH_MIN},
+        "disclaimer": DISCLAIMER,
+    }
