@@ -11468,6 +11468,43 @@ html[data-mode="senior"] .mtl-chip { font-size: 0.95rem; padding: 8px 14px; }
 .medtl-item[data-tone="neutral"] .medtl-dot  { border-color: var(--text-muted); color: var(--text-muted); }
 .medtl-item[data-tone="neutral"] .medtl-card { border-left-color: var(--border-glass); }
 
+/* 照片裁切器 modal（Cropper.js 外層 chrome）*/
+.imgcrop-overlay {
+  position: fixed; inset: 0; z-index: 4000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(15, 23, 38, 0.66); padding: 16px;
+}
+.imgcrop-panel {
+  background: var(--bg-surface); border-radius: 16px;
+  width: min(440px, 100%); max-height: 92vh; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 18px 48px rgba(15, 23, 38, 0.30);
+}
+.imgcrop-stage {
+  background: #11151c; max-height: 60vh; min-height: 220px;
+  display: flex; align-items: center; justify-content: center;
+}
+.imgcrop-stage .imgcrop-img { max-width: 100%; display: block; }
+.imgcrop-tools {
+  display: flex; gap: 8px; justify-content: center;
+  padding: 12px; border-bottom: 1px solid var(--border-glass);
+}
+.imgcrop-tool {
+  width: 40px; height: 40px; border-radius: 10px;
+  border: 1.5px solid var(--border-glass); background: var(--bg-glass);
+  color: var(--text); display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: border-color var(--transition), background var(--transition);
+}
+.imgcrop-tool:hover { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+.imgcrop-tool i { width: 18px; height: 18px; }
+.imgcrop-actions { display: flex; gap: 10px; padding: 12px; }
+.imgcrop-btn {
+  flex: 1; padding: 11px; border-radius: 10px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid var(--border-glass); background: var(--bg-glass); color: var(--text);
+}
+.imgcrop-ok { background: var(--accent); border-color: var(--accent); color: #fff; }
+.imgcrop-ok:hover { filter: brightness(1.05); }
+
 .pv-loading {
   display: inline-flex;
   align-items: center;
