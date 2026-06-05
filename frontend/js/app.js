@@ -3849,12 +3849,195 @@ function finishAuth(user, isNewRegistration) {
     // 慢性病問卷只在「註冊」時跳；登入不打擾。完成後再進原本的 tutorial onboarding。
     if (isNewRegistration && typeof maybeShowProfileOnboarding === 'function') {
       maybeShowProfileOnboarding(function() {
-        if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
+        // M07：profile 之後、tutorial 之前做 eHEALS 篩檢（低分自動套大字簡化版）
+        var next = (typeof maybeShowOnboarding === 'function') ? maybeShowOnboarding : function () {};
+        if (typeof maybeShowEhealsScreen === 'function') maybeShowEhealsScreen(next);
+        else next();
       });
     } else if (typeof maybeShowOnboarding === 'function') {
       maybeShowOnboarding();
     }
   }, 250);
+}
+
+// ═══ M07 — 健康識能（eHEALS）篩檢 + 簡化模式 ════════════════════════
+// 住院模式 v2：8 題量表 → 低分自動套用「簡化模式」。
+// 設計決策：簡化模式直接重用既有 elder-mode（setMode('senior')），不另建一套。
+// 規則 12：篩檢任何失敗都不可擋住 onboarding 流程；標準分數不強制關掉使用者現有的大字偏好。
+var _ehlAnswers = {};
+var _ehlOnDone = null;
+
+// 首啟 / onboarding 用：做過或略過就直接往下走，否則開篩檢。
+function maybeShowEhealsScreen(onDone) {
+  onDone = (typeof onDone === 'function') ? onDone : function () {};
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  try {
+    if (uid && (localStorage.getItem('mdpiece_ehl_done:' + uid) === '1'
+             || localStorage.getItem('mdpiece_ehl_skip:' + uid) === '1')) {
+      onDone(); return;
+    }
+  } catch (e) { /* ignore */ }
+  if (!uid) { openEhealsScreen({ onDone: onDone }); return; }
+  fetch(API + '/health-literacy/latest?patient_id=' + encodeURIComponent(uid))
+    .then(function (r) { return r.ok ? r.json() : { result: null }; })
+    .then(function (j) {
+      if (j && j.result) {
+        try { localStorage.setItem('mdpiece_ehl_done:' + uid, '1'); } catch (e) {}
+        onDone();
+      } else {
+        openEhealsScreen({ onDone: onDone });
+      }
+    })
+    .catch(function () { onDone(); });  // 後端不可用不擋流程
+}
+
+// 手動入口（設定頁）或 onboarding 都走這裡；忽略 skip 旗標（使用者主動要做）。
+function openEhealsScreen(opts) {
+  opts = opts || {};
+  // 已開著就別重開；但仍把 onDone 傳下去，避免 onboarding chain 卡住。
+  if (document.getElementById('ehl-sheet')) { if (opts.onDone) opts.onDone(); return; }
+  fetch(API + '/health-literacy/questions')
+    .then(function (r) { return r.json(); })
+    .then(function (data) { _ehlRender(data, opts); })
+    .catch(function () {
+      if (typeof showToast === 'function') showToast('小測暫時載入失敗，稍後再試', 'warning');
+      if (opts.onDone) opts.onDone();
+    });
+}
+
+function _ehlRender(data, opts) {
+  _ehlAnswers = {};
+  _ehlOnDone = (opts && opts.onDone) || null;
+  var scale = data.scale || ['非常不同意', '不同意', '普通', '同意', '非常同意'];
+  var items = data.items || [];
+  var qsHtml = items.map(function (it) {
+    var optsHtml = scale.map(function (label, idx) {
+      var val = idx + 1;
+      return '<button type="button" class="ehl-opt" role="radio" aria-checked="false" data-q="' + it.id + '" data-v="' + val + '"'
+        + ' onclick="_ehlSelect(' + it.id + ',' + val + ',this)" aria-label="' + escapeHtml(label) + '">'
+        + '<span class="ehl-opt-dot"></span><span class="ehl-opt-label">' + escapeHtml(label) + '</span></button>';
+    }).join('');
+    return '<div class="ehl-q" id="ehl-q-' + it.id + '">'
+      + '<div class="ehl-q-text"><span class="ehl-q-num">' + it.id + '</span><span id="ehl-qlabel-' + it.id + '">' + escapeHtml(it.text) + '</span></div>'
+      + '<div class="ehl-opts" role="radiogroup" aria-labelledby="ehl-qlabel-' + it.id + '">' + optsHtml + '</div>'
+      + '</div>';
+  }).join('');
+
+  var sheet = document.createElement('div');
+  sheet.id = 'ehl-sheet';
+  sheet.className = 'ip-prep-sheet ehl-sheet';
+  sheet.innerHTML = ''
+    + '<div class="ip-prep-backdrop" onclick="skipEhealsScreen()"></div>'
+    + '<div class="ip-prep-panel ehl-panel" role="dialog" aria-label="健康識能小測" aria-modal="true" tabindex="-1">'
+    +   '<header class="ip-prep-head">'
+    +     '<div class="ip-prep-when">'
+    +       '<span class="ip-prep-when-num">健康識能小幫手</span>'
+    +       '<span class="ip-prep-when-sub">約 1 分鐘 · 幫你把畫面調到最好用</span>'
+    +     '</div>'
+    +     '<button type="button" class="ip-prep-close" onclick="skipEhealsScreen()" aria-label="關閉">'
+    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
+    +     '</button>'
+    +   '</header>'
+    +   '<p class="ehl-intro">' + escapeHtml(data.intro || '') + '</p>'
+    +   '<div class="ehl-progress-row">'
+    +     '<div class="ehl-progress" role="progressbar" aria-valuemin="0" aria-valuemax="' + items.length + '" aria-valuenow="0" aria-label="篩檢進度">'
+    +       '<div class="ehl-progress-fill" id="ehl-progress-fill"></div>'
+    +     '</div>'
+    +     '<span class="ehl-progress-text" id="ehl-progress-text" aria-live="polite">0/' + items.length + '</span>'
+    +   '</div>'
+    +   '<div class="ehl-body">' + qsHtml + '</div>'
+    +   '<div class="ehl-foot">'
+    +     '<button type="button" id="ehl-submit" class="ip-prep-cta ehl-cta" disabled onclick="submitEhealsScreen()">'
+    +       '<i data-lucide="wand-2" style="width:16px;height:16px"></i>'
+    +       '<span>完成，幫我設定（<span id="ehl-count">0</span>/' + items.length + '）</span>'
+    +     '</button>'
+    +     '<button type="button" class="ip-prep-secondary" onclick="skipEhealsScreen()">稍後再說</button>'
+    +     '<p class="ehl-disc">' + escapeHtml(data.disclaimer || '') + '</p>'
+    +   '</div>'
+    + '</div>';
+  // Esc 關閉（無障礙鍵盤操作）
+  sheet.addEventListener('keydown', function (e) { if (e.key === 'Escape') skipEhealsScreen(); });
+  document.body.appendChild(sheet);
+  requestAnimationFrame(function () {
+    sheet.classList.add('open');
+    var panel = sheet.querySelector('.ehl-panel');
+    if (panel) { try { panel.focus(); } catch (e) {} }  // 開啟時把焦點移進對話框
+  });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _ehlSelect(qid, val, btn) {
+  _ehlAnswers[qid] = val;
+  var row = document.getElementById('ehl-q-' + qid);
+  if (row) {
+    row.querySelectorAll('.ehl-opt').forEach(function (b) {
+      var sel = (b === btn);
+      b.classList.toggle('is-sel', sel);
+      b.setAttribute('aria-checked', sel ? 'true' : 'false');
+    });
+    row.classList.add('is-answered');
+  }
+  var total = document.querySelectorAll('#ehl-sheet .ehl-q').length;
+  var answered = Object.keys(_ehlAnswers).length;
+  var cnt = document.getElementById('ehl-count'); if (cnt) cnt.textContent = answered;
+  // 進度條 + 可朗讀狀態
+  var pct = total ? Math.round(answered / total * 100) : 0;
+  var fill = document.getElementById('ehl-progress-fill'); if (fill) fill.style.width = pct + '%';
+  var ptext = document.getElementById('ehl-progress-text'); if (ptext) ptext.textContent = answered + '/' + total;
+  var pbar = document.querySelector('#ehl-sheet .ehl-progress'); if (pbar) pbar.setAttribute('aria-valuenow', answered);
+  var sub = document.getElementById('ehl-submit'); if (sub) sub.disabled = answered < total;
+}
+
+function submitEhealsScreen() {
+  var sheet = document.getElementById('ehl-sheet'); if (!sheet) return;
+  var total = sheet.querySelectorAll('.ehl-q').length;
+  var answers = [];
+  for (var i = 1; i <= total; i++) {
+    if (!_ehlAnswers[i]) return;  // 還沒答完
+    answers.push(_ehlAnswers[i]);
+  }
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  var sub = document.getElementById('ehl-submit'); if (sub) sub.disabled = true;
+  fetch(API + '/health-literacy/screen', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patient_id: uid, answers: answers }),
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      try { if (uid) localStorage.setItem('mdpiece_ehl_done:' + uid, '1'); } catch (e) {}
+      // 低分 → 自動套大字簡化版（elder-mode）；標準分數不動使用者現有偏好。
+      if (res && res.recommended_mode === 'simplified' && typeof setMode === 'function') {
+        setMode('senior');
+      }
+      if (typeof showToast === 'function') {
+        showToast((res && res.explanation) || '已完成，謝謝！', 'success');
+      }
+      _ehlFinish();
+    })
+    .catch(function () {
+      if (typeof showToast === 'function') showToast('送出失敗，請稍後再試', 'warning');
+      if (sub) sub.disabled = false;
+    });
+}
+
+// 略過 / 關閉（X、背景、稍後再說）：記旗標避免下次自動再跳，但設定頁仍可手動再開。
+function skipEhealsScreen() {
+  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  try { if (uid) localStorage.setItem('mdpiece_ehl_skip:' + uid, '1'); } catch (e) {}
+  _ehlFinish();
+}
+
+function _ehlFinish() {
+  var cb = _ehlOnDone; _ehlOnDone = null;
+  closeEhealsScreen();
+  if (typeof cb === 'function') setTimeout(cb, 240);
+}
+
+function closeEhealsScreen() {
+  var sheet = document.getElementById('ehl-sheet'); if (!sheet) return;
+  sheet.classList.remove('open');
+  setTimeout(function () { if (sheet.parentNode) sheet.remove(); }, 220);
 }
 
 // ─── Profile onboarding（Issue #131 follow-up）──────────
@@ -4649,7 +4832,7 @@ function openAdmissionPrepSheet(kind) {
   sheet.dataset.ctxId = ctxId;
   sheet.innerHTML = ''
     + '<div class="ip-prep-backdrop" onclick="closeAdmissionPrepSheet()"></div>'
-    + '<div class="ip-prep-panel" role="dialog" aria-label="準備清單">'
+    + '<div class="ip-prep-panel" role="dialog" aria-label="準備清單" aria-modal="true" tabindex="-1">'
     +   '<div class="ip-prep-handle"></div>'
     +   '<header class="ip-prep-head">'
     +     '<div class="ip-prep-when">'
@@ -4678,8 +4861,13 @@ function openAdmissionPrepSheet(kind) {
     +     '</button>'
     +   '</div>'
     + '</div>';
+  sheet.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAdmissionPrepSheet(); });
   document.body.appendChild(sheet);
-  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  requestAnimationFrame(function() {
+    sheet.classList.add('open');
+    var panel = sheet.querySelector('.ip-prep-panel');
+    if (panel) { try { panel.focus(); } catch (e) {} }
+  });
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 function closeAdmissionPrepSheet() {
@@ -9478,7 +9666,7 @@ function _openInpatientTimelineSheet(item) {
   sheet.className = 'ip-tl-sheet';
   sheet.innerHTML = ''
     + '<div class="ip-tl-sheet-backdrop" onclick="_closeInpatientTimelineSheet()"></div>'
-    + '<div class="ip-tl-sheet-panel" role="dialog" aria-label="任務詳情">'
+    + '<div class="ip-tl-sheet-panel" role="dialog" aria-label="任務詳情" aria-modal="true" tabindex="-1">'
     +   '<div class="ip-tl-sheet-handle"></div>'
     +   '<div class="ip-tl-sheet-head">'
     +     '<span class="ip-tl-sheet-icon"><i data-lucide="' + item.icon + '"></i></span>'
@@ -9494,8 +9682,13 @@ function _openInpatientTimelineSheet(item) {
     +   '</div>'
     +   '<button type="button" class="ip-tl-sheet-close" onclick="_closeInpatientTimelineSheet()">關閉</button>'
     + '</div>';
+  sheet.addEventListener('keydown', function (e) { if (e.key === 'Escape') _closeInpatientTimelineSheet(); });
   document.body.appendChild(sheet);
-  requestAnimationFrame(function() { sheet.classList.add('open'); });
+  requestAnimationFrame(function() {
+    sheet.classList.add('open');
+    var panel = sheet.querySelector('.ip-tl-sheet-panel');
+    if (panel) { try { panel.focus(); } catch (e) {} }
+  });
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -19813,6 +20006,14 @@ function fontSizePage() {
     +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="type"></i> 字級大小</h3></div>'
     +   '<div class="set-seg" style="margin-bottom:16px;gap:6px">'
     +     fseg('fontSize', [{value:'small',label:'小'},{value:'normal',label:'標準'},{value:'large',label:'大字'},{value:'xlarge',label:'年長版'}], fs)
+    +   '</div>'
+
+    +   '<div class="settings-list" style="margin-bottom:16px">'
+    +     '<button type="button" class="settings-row" style="width:100%;text-align:left;background:none;border:0;cursor:pointer" onclick="openEhealsScreen()">'
+    +       '<div class="ico"><i data-lucide="wand-2"></i></div>'
+    +       '<div style="flex:1"><div class="name">讓 App 幫我選字級</div><div class="sub">回答 8 個小問題（約 1 分鐘），自動調整字級與簡化畫面</div></div>'
+    +       '<i data-lucide="chevron-right" style="color:var(--text-muted)"></i>'
+    +     '</button>'
     +   '</div>'
 
     +   '<div class="settings-list" style="margin-bottom:16px">'
