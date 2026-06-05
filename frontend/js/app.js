@@ -5062,17 +5062,24 @@ function renderTodayDigestCard() {
   // 拼圖診療室簽名元件：6 格拼圖碎片板（取代舊的線性進度條）。
   // 每收集 1 個碎片填亮 1 片，由 refreshTodayDigest() 依 score 切換 .filled。
   // 重用 index.html 已定義的 #md-puzzle-piece SVG symbol（全站可用）。
+  // 花子君簽名 flourish：右上 art-nouveau 花瓣 motif + 手寫感 calm 句
+  // （對齊設計稿 preview-puzzle-clinic.html 的 .hero .petal / .calm；樣式在 skin css）。
   var pieces = '';
   for (var i = 0; i < 6; i++) {
     pieces += '<svg class="hd-piece" data-piece="' + i + '" viewBox="0 0 100 100" aria-hidden="true"><use href="#md-puzzle-piece"></use></svg>';
   }
   return ''
     + '<section class="home-digest" aria-label="今日拼圖">'
+    +   '<svg class="home-digest-petal" viewBox="0 0 50 50" aria-hidden="true">'
+    +     '<path d="M25 25 Q18 13 25 6 Q32 13 25 25Z"/><path d="M25 25 Q37 18 44 25 Q37 32 25 25Z"/><path d="M25 25 Q32 37 25 44 Q18 37 25 25Z"/><path d="M25 25 Q13 32 6 25 Q13 18 25 25Z"/>'
+    +     '<circle cx="25" cy="25" r="3"/>'
+    +   '</svg>'
     +   '<div class="home-digest-head">'
     +     '<span class="home-digest-eyebrow">TODAY · 今日拼圖</span>'
     +     '<span class="home-digest-progress" id="home-digest-progress">— / 6 個碎片</span>'
     +   '</div>'
     +   '<div class="home-digest-pieces" id="home-digest-pieces" role="img" aria-labelledby="home-digest-progress">' + pieces + '</div>'
+    +   '<p class="home-digest-calm">健康，是一塊一塊拼起來的。</p>'
     +   '<div class="home-digest-stats">'
     +     '<div class="home-digest-stat" data-cat="symptom">'
     +       '<span class="home-digest-icon"><i data-lucide="scan-search"></i></span>'

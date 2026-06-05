@@ -109,6 +109,33 @@ textarea:focus, select:focus {
   transform: scale(1.06);
 }
 
+/* ─── TODAY hero 花子君簽名 flourish（對齊設計稿 .hero .petal / .calm）──────────
+   .home-digest 本身已是 position:relative; overflow:hidden（style.css），右下角另有
+   既有拼圖 ::after motif。花瓣放右上角（不撞既有裝飾）：rose 花瓣 + 墨線描邊 +
+   芥末金花心，5s 呼吸微動。head 補右內距讓進度數字讓開花瓣；內容統一 z-index:1
+   壓在花瓣（z-index:0）之上。calm 句用 --rose 當花子簽名色（明暗皆讀得清）。 */
+.home-digest-petal {
+  position: absolute; top: 10px; right: 14px;
+  width: 40px; height: 40px; z-index: 0; pointer-events: none;
+  transform-origin: 50% 50%;
+  animation: hd-petal-breathe 5s var(--pz-ease-soft) infinite alternate;
+}
+.home-digest-petal path { fill: var(--rose); stroke: var(--klein); stroke-width: 1.5; }
+.home-digest-petal circle { fill: var(--warning); }
+@keyframes hd-petal-breathe {
+  from { transform: scale(1)    rotate(-2deg); opacity: .82; }
+  to   { transform: scale(1.08) rotate(3deg);  opacity: 1;   }
+}
+@media (prefers-reduced-motion: reduce) { .home-digest-petal { animation: none; } }
+.home-digest-head, .home-digest-pieces, .home-digest-calm, .home-digest-stats {
+  position: relative; z-index: 1;
+}
+.home-digest-head { padding-right: 56px !important; }   /* 進度數字讓開右上花瓣 */
+.home-digest-calm {
+  margin: 0 0 12px; font-size: var(--fs-sm, 0.9rem);
+  color: var(--rose) !important; font-weight: 500; letter-spacing: .01em;
+}
+
 /* ─── STRUCTURAL FRAME — define sidebar / topbar with a hairline ink edge ───*/
 .sidebar { border-right: var(--pz-stroke-thin) !important; }
 .topbar  { border-bottom: var(--pz-stroke-thin) !important; }
