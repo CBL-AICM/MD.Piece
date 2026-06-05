@@ -117,6 +117,8 @@
     { "src": "/memos", "dest": "api/index.py" },
     { "src": "/vitals/(.*)", "dest": "api/index.py" },
     { "src": "/vitals", "dest": "api/index.py" },
+    { "src": "/health-literacy/(.*)", "dest": "api/index.py" },
+    { "src": "/health-literacy", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
 }
