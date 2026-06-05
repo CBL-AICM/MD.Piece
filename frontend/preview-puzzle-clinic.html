@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light" data-mode="standard">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MD.Piece × 拼圖診療室 — 日系手繪漫畫 · 淡色舒適 · 遊戲感</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Klee+One:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+/* ════ tokens MIRROR of frontend/css/puzzle-tokens.css (inline = single-file offline)
+   ART v3: 日系手繪漫畫 × 日系淡色 × 舒適 × 遊戲感 · 看得清楚為核心 · 無 emoji ════ */
+:root{
+  /* ── Hanako-kun (地縛少年花子君) vintage-manga palette: teal + mustard + dusty rose + plum on cream, bold warm-ink ── */
+  --c-paper:#F3EAD3; --c-paper-raised:#FBF4E2; --c-paper-sunk:#E9DEC2; --c-paper-edge:#DCCBA8;
+  --c-ink:#2E2A22; --c-ink-soft:#6A6253; --c-ink-faint:#A99E86; --c-ink-line:rgba(46,42,34,.20);
+  --c-red:#D46A5C; --c-red-deep:#B14A3E; --c-red-soft:#EBB3A8;          /* dusty vermilion */
+  --c-blue:#4C9E9E; --c-blue-deep:#2F7A7A; --c-blue-soft:#AAD2D0;       /* Hanako teal */
+  --c-green:#7FA86A; --c-green-deep:#5E8449; --c-green-soft:#C5D8B4;    /* muted sage */
+  --c-sun:#E0A82E; --c-sun-deep:#B5821A; --c-sun-soft:#F2D88E;          /* mustard gold */
+  --c-grape:#9B7BA8; --c-grape-deep:#785A88; --c-grape-soft:#D4C5DC;    /* plum */
+  --sev-self:var(--c-green); --sev-clinic:var(--c-blue); --sev-regional:var(--c-grape);
+  --sev-medical:var(--c-red-deep); --sev-er:#D6452F;
+  --flare-low:var(--c-green); --flare-mid:var(--c-sun); --flare-high:#D6452F;
+  --wash-red:rgba(212,106,92,.15); --wash-blue:rgba(76,158,158,.15); --wash-green:rgba(127,168,106,.16);
+  --wash-sun:rgba(224,168,46,.18); --wash-grape:rgba(155,123,168,.16); --wash-ink:rgba(46,42,34,.05);
+  --on-fill:#2E2A22; /* fixed dark ink text for ON colour fills (legible in BOTH themes) */
+  --font-display:"Zen Maru Gothic","Noto Sans TC",system-ui,sans-serif;
+  --font-ui:"Zen Maru Gothic","Noto Sans TC",system-ui,sans-serif;
+  --font-hand:"Klee One","Zen Maru Gothic",cursive;
+  --fs-xs:.8125rem; --fs-sm:.875rem; --fs-base:1rem; --fs-lg:1.125rem; --fs-xl:1.25rem;
+  --fs-2xl:1.5rem; --fs-3xl:1.875rem; --fs-4xl:2.375rem; --lh-base:1.65; --type-scale:1;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
+  --r-panel:15px 13px 16px 14px/14px 16px 13px 15px; --r-btn:12px 10px 13px 11px/11px 13px 10px 12px;
+  --r-chip:9px 7px 10px 8px/8px 10px 7px 9px; --r-pill:999px;
+  --stroke:2px solid var(--c-ink); --stroke-thin:1.5px solid var(--c-ink);
+  --stroke-hair:1px solid var(--c-ink-line); --stroke-dash:1.5px dashed var(--c-ink-faint);
+  --shadow-print:0 3px 0 rgba(87,78,69,.08),0 6px 16px rgba(87,78,69,.09);
+  --shadow-print-sm:0 2px 0 rgba(87,78,69,.07),0 3px 8px rgba(87,78,69,.07);
+  --shadow-red:0 3px 0 var(--c-red-soft),0 6px 14px rgba(204,123,113,.14);
+  --shadow-blue:0 3px 0 var(--c-blue-soft),0 6px 14px rgba(92,144,182,.14);
+  --shadow-press:0 1px 0 rgba(87,78,69,.12);
+  --tap-min:44px; --tone-ink-color:rgba(87,78,69,.05);
+  --ease-soft:cubic-bezier(.34,1.4,.5,1); --ease-out:cubic-bezier(.22,1,.36,1);
+  --t-fast:.13s; --t-base:.24s; --t-slow:.4s; --piece-r:6px;
+}
+/* ─── DARK 「丹寧夜」: denim-indigo base (丹寧牛仔藍打底) + mustard topstitch gold ─── */
+[data-theme="dark"]{
+  --c-paper:#1D3550; --c-paper-raised:#264563; --c-paper-sunk:#14283A; --c-paper-edge:#36577A;
+  --c-ink:#EAF1F8; --c-ink-soft:#AEC0D4; --c-ink-faint:#7589A0; --c-ink-line:rgba(234,241,248,.16);
+  --c-red:#F09A86; --c-red-deep:#E07A64; --c-red-soft:#5A352F;
+  --c-blue:#62C9CB; --c-blue-deep:#45ADAF; --c-blue-soft:#1E4A55;
+  --c-green:#9CC987; --c-green-deep:#7AAB62; --c-green-soft:#2E482C;
+  --c-sun:#ECC56A; --c-sun-deep:#CFA13F; --c-sun-soft:#4A4020;
+  --c-grape:#C3ABD2; --c-grape-deep:#9E84B4; --c-grape-soft:#3A3450;
+  --sev-er:#F0654E; --flare-high:#F0654E;
+  --wash-red:rgba(240,154,134,.15); --wash-blue:rgba(98,201,203,.15); --wash-green:rgba(156,201,135,.15);
+  --wash-sun:rgba(236,197,106,.18); --wash-grape:rgba(195,171,210,.16); --wash-ink:rgba(234,241,248,.06);
+  --shadow-print:0 3px 0 rgba(0,0,0,.30),0 6px 16px rgba(0,0,0,.40);
+  --shadow-print-sm:0 2px 0 rgba(0,0,0,.24),0 3px 8px rgba(0,0,0,.30);
+  --shadow-red:0 3px 0 rgba(0,0,0,.26); --shadow-blue:0 3px 0 rgba(0,0,0,.26);
+}
+[data-mode="senior"]{ --type-scale:1.16; --tap-min:56px; --stroke:2.5px solid var(--c-ink); --stroke-thin:2px solid var(--c-ink); }
+
+*{box-sizing:border-box; margin:0; padding:0;}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.001ms!important; transition-duration:.001ms!important;} }
+html{font-size:calc(16px*var(--type-scale));}
+body{ font-family:var(--font-ui); color:var(--c-ink); line-height:var(--lh-base);
+  /* full-bleed Hanako backdrop — teal glow top, mustard glow bottom, paper texture → 不留白 */
+  background-color:var(--c-paper-edge);
+  background-image:
+    radial-gradient(135% 72% at 50% -8%, var(--c-blue-soft), transparent 44%),
+    radial-gradient(120% 56% at 50% 112%, var(--c-sun-soft), transparent 50%),
+    radial-gradient(var(--tone-ink-color) 1px, transparent 1.5px);
+  background-size:cover, cover, 7px 7px;
+  background-attachment:fixed, fixed, scroll;
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; gap:14px; padding:22px 14px 48px;
+  transition:background .4s var(--ease-out);}
+[data-theme="dark"] body{ background-color:#102234;
+  background-image:
+    radial-gradient(135% 72% at 50% -8%, rgba(69,173,175,.18), transparent 44%),
+    radial-gradient(120% 56% at 50% 112%, rgba(236,197,106,.12), transparent 50%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.022) 0 1.5px, transparent 1.5px 5px),
+    radial-gradient(rgba(234,241,248,.045) 1px, transparent 1.5px);
+  background-size:cover, cover, auto, 7px 7px; background-attachment:fixed, fixed, scroll, scroll; }
+
+/* true full-bleed on real phones (滿版): drop the device frame, fill the viewport.
+   !important because the base .phone rule is defined later in the file and would
+   otherwise win the source-order tie inside this media query. */
+@media (max-width:480px){
+  body{ padding:0 !important; gap:0 !important; }
+  .lead{ display:none !important; }
+  .phone{ width:100vw !important; max-width:100vw !important; min-height:100dvh !important; border:none !important; border-radius:0 !important; box-shadow:none !important; padding:0 !important; }
+  .notch{ display:none !important; }
+  .screen{ height:calc(100dvh - 62px) !important; }
+}
+.pz-ic{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; display:inline-block; vertical-align:middle; flex:0 0 auto;}
+
+.lead{max-width:444px; text-align:center;}
+.lead h1{font-family:var(--font-display); font-weight:700; font-size:var(--fs-2xl); margin-bottom:6px; letter-spacing:.02em;}
+.lead p{font-size:var(--fs-xs); color:var(--c-ink-soft); line-height:1.6;}
+.lead b{color:var(--c-red-deep);} .lead i{color:var(--c-blue-deep); font-style:normal; font-weight:700;}
+
+/* phone — soft */
+.phone{width:394px; max-width:100%; position:relative; background:var(--c-paper);
+  border:3px solid var(--c-ink); border-radius:36px; padding:9px 9px 0; overflow:hidden;
+  box-shadow:0 12px 28px rgba(87,78,69,.22), 0 0 0 5px var(--c-paper-edge) inset;}
+[data-theme="dark"] .phone{box-shadow:0 12px 30px rgba(0,0,0,.5),0 0 0 5px var(--c-paper-edge) inset;}
+.notch{width:118px; height:20px; background:var(--c-ink); border-radius:0 0 13px 13px; margin:0 auto 4px;}
+
+/* topbar */
+.topbar{display:flex; align-items:center; gap:8px; padding:5px 6px 9px; border-bottom:var(--stroke-thin); border-color:var(--c-ink-line);}
+.brand{display:flex; align-items:center; gap:8px;}
+.brand .logo{width:36px; height:36px; flex:0 0 36px;}
+.brand b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-lg); line-height:1; letter-spacing:.01em;}
+.brand .sub{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.sp{margin-left:auto;}
+.tbtn{display:inline-flex; align-items:center; gap:3px; font-family:var(--font-ui); font-weight:700; font-size:var(--fs-xs);
+  cursor:pointer; background:var(--c-paper-raised); color:var(--c-ink); border:var(--stroke-thin); border-radius:var(--r-chip);
+  box-shadow:var(--shadow-print-sm); min-width:38px; height:33px; padding:0 8px;}
+.tbtn:active{transform:translateY(1px); box-shadow:var(--shadow-press);}
+.tbtn .pz-ic{width:16px; height:16px;}
+
+.screen{height:706px; overflow-y:auto; padding:4px 14px 96px; scrollbar-width:none;}
+.screen::-webkit-scrollbar{width:0;}
+.page{display:none;} .page.active{display:block; animation:pageIn .34s var(--ease-out);}
+/* 轉場: manga panel slide-in (paired with the staggered card-rise below) */
+@keyframes pageIn{from{opacity:0; transform:translateX(18px);} to{opacity:1; transform:none;}}
+/* symptom category cards (record flow) */
+.catcard{font-family:var(--font-ui); font-weight:700; font-size:var(--fs-xs); cursor:pointer; background:var(--c-paper-raised); color:var(--c-ink); border:var(--stroke-thin); border-radius:var(--r-chip); padding:9px 4px; box-shadow:var(--shadow-print-sm); transition:transform var(--t-fast) var(--ease-soft);}
+.catcard:active{transform:translateY(1px);}
+.catcard.on{background:var(--c-red); border-color:var(--c-red-deep); color:var(--on-fill);}
+
+.ptitle{display:flex; align-items:baseline; gap:8px; margin:10px 2px 13px;}
+.ptitle b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-xl);}
+.ptitle .en{font-family:var(--font-hand); font-size:var(--fs-sm); color:var(--c-ink-faint);}
+.ptitle .sub{margin-left:auto; font-size:var(--fs-xs); color:var(--c-ink-soft);}
+
+.card{position:relative; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel);
+  box-shadow:var(--shadow-print); padding:15px; margin-bottom:15px;}
+.card::after{content:""; position:absolute; inset:4px; border:var(--stroke-hair);
+  border-radius:11px 13px 10px 12px/12px 10px 13px 11px; pointer-events:none;}
+.card>h2{font-family:var(--font-display); font-weight:700; font-size:var(--fs-base); display:flex; align-items:center; gap:8px; margin-bottom:12px;}
+.card>h2 .pz-ic{width:21px; height:21px;}
+.card>h2 .en{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-faint); font-weight:400;}
+.card>h2 .tag{margin-left:auto; font-family:var(--font-ui); font-size:var(--fs-xs); font-weight:700; color:var(--c-ink-soft);
+  background:var(--c-paper); border:var(--stroke-thin); border-color:var(--c-ink-line); border-radius:7px; padding:2px 8px;}
+
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; font-family:var(--font-ui); font-weight:700; font-size:var(--fs-sm);
+  cursor:pointer; color:var(--c-ink); background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-btn);
+  box-shadow:var(--shadow-print-sm); min-height:var(--tap-min); padding:9px 14px;
+  transition:transform var(--t-fast) var(--ease-soft), box-shadow var(--t-fast);}
+.btn:active{transform:translateY(2px); box-shadow:var(--shadow-press);}
+.btn.blue{background:var(--c-blue); border-color:var(--c-blue-deep); color:var(--on-fill);} .btn.red{background:var(--c-red); border-color:var(--c-red-deep); color:var(--on-fill);}
+.btn.green{background:var(--c-green); border-color:var(--c-green-deep); color:var(--on-fill);}
+
+.chip{display:inline-flex; align-items:center; gap:4px; font-size:var(--fs-xs); font-weight:500; color:var(--c-ink); padding:4px 9px;
+  border:var(--stroke-thin); border-radius:var(--r-chip); background:var(--c-paper);}
+.chip .pz-ic{width:15px; height:15px;}
+.sev{font-weight:700;}
+.sev.self{background:var(--wash-green); border-color:var(--c-green-deep);} .sev.clinic{background:var(--wash-blue); border-color:var(--c-blue-deep);}
+.sev.regional{background:var(--wash-grape); border-color:var(--c-grape-deep);} .sev.medical{background:var(--wash-red); border-color:var(--c-red-deep);}
+.sev.er{background:rgba(220,111,94,.16); border-color:#DC6F5E; color:var(--c-ink);}
+
+/* explanation note — cleaner, more structured (professional, every function uses it) */
+.why{position:relative; font-family:var(--font-ui); font-size:var(--fs-sm); line-height:1.62; color:var(--c-ink-soft);
+  background:var(--wash-blue); border:var(--stroke-thin); border-color:var(--c-blue-deep); border-left-width:4px;
+  border-radius:7px; padding:9px 12px; margin-top:11px;}
+.why b{color:var(--c-blue-deep); font-weight:700;}
+
+/* professional explainability panel — 依據 / 信心 / 影響因素 / 來源 / 下一步 */
+.explain{border:var(--stroke-thin); border-color:var(--c-blue-deep); border-radius:var(--r-panel); background:var(--c-paper);
+  box-shadow:var(--shadow-print-sm); overflow:hidden; margin-top:12px;}
+.explain .eh{display:flex; align-items:center; gap:7px; background:var(--wash-blue); border-bottom:var(--stroke-thin); border-color:var(--c-blue-deep); padding:8px 12px;}
+.explain .eh .pz-ic{width:17px; height:17px; color:var(--c-blue-deep);}
+.explain .eh b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-sm); color:var(--c-ink);}
+.explain .eh .en2{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-faint);}
+.explain .conf{margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; color:var(--c-ink-soft); white-space:nowrap;}
+.explain .conf .cbar{width:52px; height:7px; border:1.5px solid var(--c-ink); border-radius:4px; overflow:hidden; background:var(--c-paper-raised);}
+.explain .conf .cbar b{display:block; height:100%; background:var(--c-blue);}
+.explain .eb{padding:11px 12px;}
+.explain .erow{margin-bottom:11px;} .explain .erow:last-child{margin-bottom:0;}
+.explain .elab{font-size:10px; font-weight:700; color:var(--c-blue-deep); letter-spacing:.08em; margin-bottom:4px;}
+.explain .etxt{font-size:var(--fs-sm); line-height:1.6; color:var(--c-ink);}
+.explain .factor{display:flex; align-items:center; gap:9px; padding:3px 0; font-size:var(--fs-xs);}
+.explain .factor .fn2{flex:0 0 86px; color:var(--c-ink);}
+.explain .factor .fbar{flex:1; height:9px; border:1.5px solid var(--c-ink); border-radius:5px; overflow:hidden; background:var(--c-paper-raised);}
+.explain .factor .fbar b{display:block; height:100%;}
+.explain .factor .fw{flex:0 0 36px; text-align:right; color:var(--c-ink-soft); font-family:var(--font-display); font-weight:700;}
+.explain .src{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--c-ink-faint);}
+.explain .src .pz-ic{width:13px; height:13px;}
+.explain .nextstep{background:var(--wash-green); border-left:3px solid var(--c-green-deep); border-radius:0 6px 6px 0; padding:8px 11px; font-size:var(--fs-sm); line-height:1.55;}
+.explain .nextstep b{color:var(--c-green-deep);}
+
+/* greeting */
+.greet{display:flex; align-items:center; gap:11px; margin:10px 2px 14px;}
+.greet .av{width:50px; height:50px; flex:0 0 50px; border:var(--stroke); border-radius:50%; background:var(--wash-green); padding:3px;}
+.greet .hi b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-lg);}
+.greet .hi div{font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.greet .day{margin-left:auto; text-align:right; font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.greet .day b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-base); color:var(--c-ink);}
+
+/* hero */
+.hero{position:relative; overflow:hidden; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel);
+  box-shadow:var(--shadow-print); padding:16px; margin-bottom:15px;}
+.hero::before{content:""; position:absolute; inset:0; background:radial-gradient(120% 95% at 82% 0%,var(--wash-red),transparent 62%); pointer-events:none;}
+.hero .petal{position:absolute; top:12px; right:14px; width:50px; height:50px; animation:breathe 5s var(--ease-out) infinite alternate;}
+@keyframes breathe{from{transform:translateY(0) rotate(-3deg);} to{transform:translateY(-4px) rotate(3deg);}}
+.hero .label{position:relative; font-family:var(--font-ui); font-weight:500; font-size:var(--fs-xs); color:var(--c-ink-soft); letter-spacing:.06em;}
+.hero .big{position:relative; font-family:var(--font-display); font-weight:700; font-size:var(--fs-4xl); line-height:1.05;}
+.hero .big small{font-size:var(--fs-lg); color:var(--c-ink-soft);}
+.hero .calm{position:relative; font-family:var(--font-hand); font-size:var(--fs-sm); color:var(--c-red-deep); margin-top:3px;}
+.slots{display:flex; gap:6px; margin-top:13px; position:relative;}
+.slot{flex:1; aspect-ratio:1; border-radius:var(--piece-r); border:var(--stroke-dash); background:var(--c-paper-sunk);
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--on-fill); transition:all var(--t-base) var(--ease-soft);}
+.slot.f{border:var(--stroke-thin); box-shadow:var(--shadow-print-sm);}
+.slot.r{background:var(--c-red);} .slot.b{background:var(--c-blue);} .slot.g{background:var(--c-green);} .slot.s{background:var(--c-sun);}
+.slot.pop{animation:pop .45s var(--ease-soft);}
+@keyframes pop{0%{transform:scale(.4) rotate(-10deg); opacity:0;}60%{transform:scale(1.1);}100%{transform:scale(1);}}
+
+/* status grid */
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:15px;}
+.hgo{cursor:pointer; transition:transform var(--t-fast) var(--ease-soft), box-shadow var(--t-fast) var(--ease-soft);}
+.hgo:active{transform:translateY(2px); box-shadow:var(--shadow-press);}
+.hgo.chev::after{content:"›"; position:absolute; top:7px; right:12px; font-family:var(--font-display); font-weight:700; font-size:18px; line-height:1; color:var(--c-ink-faint); pointer-events:none;}
+.stat{position:relative; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:12px 13px;}
+.stat .k{display:flex; gap:6px; align-items:center; font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.stat .k .pz-ic{width:17px; height:17px; color:var(--c-ink);}
+.stat .v{font-family:var(--font-display); font-weight:700; font-size:var(--fs-2xl); line-height:1.15; margin-top:4px;}
+.stat .v small{font-family:var(--font-ui); font-size:var(--fs-sm); color:var(--c-ink-soft);}
+.dots{display:flex; gap:4px; margin-top:8px;}
+.dots i{width:14px; height:14px; border-radius:4px; border:var(--stroke-thin); background:var(--c-paper-sunk);}
+.dots i.on{background:var(--c-blue);}
+.gauge{height:12px; border:var(--stroke-thin); border-radius:6px; margin-top:9px; overflow:hidden; background:linear-gradient(90deg,var(--flare-low),var(--flare-mid),var(--flare-high));}
+.needle{position:relative; height:0;} .needle i{position:absolute; top:-16px; width:3px; height:16px; background:var(--c-ink); border-radius:2px;}
+.batt{display:flex; align-items:center; gap:8px; margin-top:7px;}
+.batt .cell{width:21px; height:38px; border:var(--stroke); border-radius:5px; position:relative; overflow:hidden; background:var(--c-paper-sunk);}
+.batt .cell::before{content:""; position:absolute; top:-5px; left:50%; margin-left:-5px; width:10px; height:4px; background:var(--c-ink); border-radius:2px 2px 0 0;}
+.batt .cell b{position:absolute; bottom:0; left:0; right:0; height:78%; background:var(--c-green);}
+.batt span{font-family:var(--font-display); font-weight:700; font-size:var(--fs-xl); color:var(--c-green-deep);}
+
+.qa{display:flex; gap:9px; margin-bottom:6px;}
+.qa .btn{flex:1; flex-direction:column; gap:4px; font-size:var(--fs-sm); padding:11px 4px;}
+.qa .btn .pz-ic{width:23px; height:23px;}
+
+.sketch{width:100%; height:120px;}
+.sketch .axis{stroke:var(--c-ink-faint); stroke-width:1.4; stroke-dasharray:2 3;}
+.sketch .line{fill:none; stroke:var(--c-red-deep); stroke-width:3; stroke-linecap:round; stroke-linejoin:round;}
+.sketch .mk{fill:var(--c-paper-raised); stroke:var(--c-red-deep); stroke-width:2.2;}
+
+/* timeline */
+.tl{display:flex; flex-direction:column; gap:0;}
+.tl .row{display:flex; gap:11px; align-items:flex-start; padding-bottom:14px; position:relative;}
+.tl .row::before{content:""; position:absolute; left:22px; top:15px; bottom:-2px; width:2px; background:var(--c-ink-line);}
+.tl .row:last-child::before{display:none;}
+.tl .when{font-family:var(--font-display); font-weight:700; font-size:var(--fs-xs); color:var(--c-ink-soft); width:38px; flex:0 0 38px; text-align:right; padding-top:1px;}
+.tl .pip{width:14px; height:14px; flex:0 0 14px; border-radius:50%; border:var(--stroke-thin); background:var(--c-paper-raised); margin-top:2px; z-index:1;}
+.tl .pip.r{background:var(--c-red);} .tl .pip.b{background:var(--c-blue);} .tl .pip.g{background:var(--c-green);}
+.tl .what{font-size:var(--fs-sm);} .tl .what small{color:var(--c-ink-faint); font-size:var(--fs-xs);}
+
+/* puzzle board */
+.board{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin:4px 0 12px;}
+.pc{aspect-ratio:1; border-radius:var(--piece-r); border:var(--stroke-dash); background:var(--c-paper-sunk);}
+.pc.on{border:var(--stroke-thin); box-shadow:var(--shadow-print-sm);}
+.pc.sky{background:var(--c-blue-soft);} .pc.sky2{background:var(--c-blue);}
+.pc.bloom{background:var(--c-red-soft);} .pc.bloom2{background:var(--c-red);}
+.pc.trunk{background:var(--c-sun-deep);} .pc.bark{background:#B98C5A;} .pc.ground{background:var(--c-green);}
+.reward{display:inline-flex; align-items:center; gap:5px; font-family:var(--font-hand); font-weight:700; font-size:var(--fs-sm);
+  color:var(--c-red-deep); background:var(--wash-red); border:var(--stroke-thin); border-color:var(--c-red-deep); border-radius:999px; padding:3px 12px;}
+
+/* collection set bars */
+.setrow{display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:var(--stroke-hair);}
+.setrow:last-child{border-bottom:none;}
+.setmini{display:grid; grid-template-columns:repeat(3,1fr); gap:2px; width:38px; height:38px; flex:0 0 38px; border:var(--stroke-thin); border-radius:6px; padding:3px;}
+.setmini i{border-radius:1.5px; background:var(--c-paper-sunk);}
+.setmini i.on{background:var(--c-grape);}
+.setrow .nm{flex:1;} .setrow .nm b{font-size:var(--fs-sm);} .setrow .nm div{font-size:11px; color:var(--c-ink-soft);}
+.bar{height:9px; border:var(--stroke-thin); border-radius:5px; background:var(--c-paper-sunk); overflow:hidden; margin-top:4px;}
+.bar b{display:block; height:100%; background:var(--c-green);}
+
+/* gallery wall */
+.shelf{display:flex; gap:11px; overflow-x:auto; padding:2px 0 6px; scrollbar-width:none;} .shelf::-webkit-scrollbar{height:0;}
+.frame{flex:0 0 116px; text-align:center;}
+.frame .art{height:88px; border:var(--stroke); border-radius:6px; box-shadow:var(--shadow-print-sm); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;}
+.frame .cap{font-size:var(--fs-xs); margin-top:6px; color:var(--c-ink-soft);}
+.frame.lock .art{background:var(--c-paper-sunk);}
+.prog{position:absolute; bottom:0; left:0; right:0; height:6px; background:var(--c-red);}
+.badges{display:flex; gap:11px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px;} .badges::-webkit-scrollbar{height:0;}
+.badge{flex:0 0 auto; text-align:center; width:72px;}
+.badge .seal{width:58px; height:58px; margin:0 auto; border-radius:50%; border:var(--stroke); box-shadow:var(--shadow-print-sm); display:flex; align-items:center; justify-content:center; background:var(--wash-sun); color:var(--c-sun-deep);}
+.badge .seal .pz-ic{width:26px; height:26px;}
+.badge.locked .seal{background:var(--c-paper-sunk); color:var(--c-ink-faint); opacity:.65;}
+.badge .nm{font-size:10px; margin-top:5px; color:var(--c-ink-soft); line-height:1.25;}
+
+/* med */
+.medslot{margin-bottom:14px;} .medslot .sh{display:flex; align-items:center; gap:8px; font-size:var(--fs-sm); color:var(--c-ink-soft); margin:0 2px 9px;}
+.medslot .sh b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-base); color:var(--c-ink);} .medslot .sh .pz-ic{width:19px; height:19px; color:var(--c-ink);}
+.med{display:flex; align-items:center; gap:12px; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:11px 13px; margin-bottom:9px;}
+.med .pill{width:42px; height:42px; flex:0 0 42px; border-radius:11px; border:var(--stroke); display:flex; align-items:center; justify-content:center; color:var(--c-ink);}
+.med .pill .pz-ic{width:22px; height:22px;}
+.med .nm b{font-size:var(--fs-base);} .med .nm div{font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.med .act{margin-left:auto;}
+.tick{width:46px; height:46px; border-radius:50%; border:var(--stroke); cursor:pointer; background:var(--c-paper); display:flex; align-items:center; justify-content:center; color:var(--c-ink); transition:transform var(--t-fast) var(--ease-soft);}
+.tick .pz-ic{width:23px; height:23px;} .tick.done{background:var(--c-green); border-color:var(--c-green-deep); color:var(--on-fill);}
+.tick.miss{background:var(--wash-red); border-color:var(--c-red-deep); color:var(--c-red-deep); font-family:var(--font-hand); font-size:12px; font-weight:700;}
+.tick:active{transform:scale(.9);}
+
+/* emotion wheel */
+.wheel{width:200px; height:200px; margin:8px auto 4px; position:relative; border:var(--stroke); border-radius:50%;
+  background:radial-gradient(circle,var(--c-blue) 0%,var(--c-blue-soft) 30%,var(--c-paper-raised) 50%,var(--c-red-soft) 74%,var(--c-red) 100%);}
+.wheel .ax{position:absolute; left:50%; top:50%; width:1.5px; height:50%; background:var(--c-ink-line); transform-origin:top;}
+.wheel .lab{position:absolute; font-family:var(--font-display); font-weight:700; font-size:11px; color:var(--c-ink);}
+.wheel .dot{position:absolute; width:26px; height:26px; border-radius:50%; border:var(--stroke); background:var(--c-paper-raised); box-shadow:var(--shadow-print-sm); transform:translate(-50%,-50%);}
+.wleg{display:flex; justify-content:space-between; font-size:var(--fs-xs); color:var(--c-ink-soft); margin:8px 4px 0;}
+
+/* bookshelf */
+.shelfwood{background:var(--c-paper-sunk); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:14px 12px; display:flex; gap:7px; align-items:flex-end; margin-bottom:11px;}
+.book{flex:1; border:var(--stroke-thin); border-radius:3px 5px 3px 3px; box-shadow:var(--shadow-press); display:flex; align-items:flex-end; justify-content:center; padding:9px 2px; writing-mode:vertical-rl; font-family:var(--font-display); font-weight:700; font-size:12px; color:var(--c-ink); cursor:pointer;}
+.book:active{transform:translateY(-3px);}
+.book.r{background:var(--c-red-soft); height:106px;} .book.b{background:var(--c-blue-soft); height:122px;} .book.g{background:var(--c-green-soft); height:98px;} .book.s{background:var(--c-sun-soft); height:114px;} .book.p{background:var(--c-grape-soft); height:102px;}
+
+/* hospital one-handed */
+.hosbanner{display:flex; align-items:center; gap:9px; background:var(--wash-red); border:var(--stroke); border-color:var(--c-red-deep); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:11px 13px; margin-bottom:13px;}
+.hosbanner .pz-ic{width:24px; height:24px; color:var(--c-red-deep);}
+.hosbanner b{font-family:var(--font-display); font-weight:700;} .hosbanner div{font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.bigbtn{display:flex; align-items:center; gap:14px; width:100%; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print); padding:15px 15px; margin-bottom:11px; cursor:pointer; transition:transform var(--t-fast) var(--ease-soft);}
+.bigbtn:active{transform:translateY(2px); box-shadow:var(--shadow-press);}
+.bigbtn .ico{width:54px; height:54px; flex:0 0 54px; border:var(--stroke); border-radius:13px; display:flex; align-items:center; justify-content:center; color:var(--c-ink);}
+.bigbtn .ico .pz-ic{width:30px; height:30px;}
+.bigbtn b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-lg);} .bigbtn div{font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.bigbtn .arrow{margin-left:auto; color:var(--c-ink-faint);}
+.bigbtn.b .ico{background:var(--wash-blue);} .bigbtn.r .ico{background:var(--wash-red);} .bigbtn.g .ico{background:var(--wash-green);} .bigbtn.s .ico{background:var(--wash-sun);}
+.check{display:flex; align-items:center; gap:10px; padding:10px 2px; border-bottom:var(--stroke-hair); font-size:var(--fs-sm);}
+.check:last-child{border-bottom:none;}
+.box{width:24px; height:24px; flex:0 0 24px; border:var(--stroke-thin); border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--c-green-deep);}
+.box.done{background:var(--wash-green); border-color:var(--c-green-deep);}
+.check.done .t{color:var(--c-ink-faint); text-decoration:line-through;}
+
+/* all-functions catalog */
+.cat{display:grid; grid-template-columns:1fr 1fr; gap:11px;}
+.fn{position:relative; display:flex; flex-direction:column; gap:6px; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:12px; cursor:pointer; transition:transform var(--t-fast) var(--ease-soft);}
+.fn:active{transform:translateY(2px); box-shadow:var(--shadow-press);}
+.fn .fi{width:42px; height:42px; border:var(--stroke-thin); border-radius:11px; display:flex; align-items:center; justify-content:center; background:var(--wash-blue); color:var(--c-ink);}
+.fn .fi .pz-ic{width:24px; height:24px;}
+.fn.r .fi{background:var(--wash-red);} .fn.g .fi{background:var(--wash-green);} .fn.s .fi{background:var(--wash-sun);} .fn.p .fi{background:var(--wash-grape);}
+.fn .fn-t{font-family:var(--font-display); font-weight:700; font-size:var(--fs-sm); line-height:1.25;}
+.fn .fn-e{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-faint);}
+.fn .fn-d{font-size:11px; color:var(--c-ink-soft); line-height:1.4;}
+.sech{font-family:var(--font-display); font-weight:700; font-size:var(--fs-sm); color:var(--c-ink-soft); margin:15px 2px 9px; display:flex; align-items:center; gap:8px;}
+.sech::after{content:""; flex:1; height:2px; background:var(--c-ink-line); border-radius:2px;}
+
+/* chat */
+.bub{position:relative; max-width:80%; padding:11px 13px; margin-bottom:12px; font-size:var(--fs-sm); border:var(--stroke-thin); box-shadow:var(--shadow-print-sm);}
+.bub.ai{background:var(--wash-green); border-radius:14px 14px 14px 4px; border-color:var(--c-green-deep);}
+.bub.me{background:var(--wash-blue); border-radius:14px 14px 4px 14px; border-color:var(--c-blue-deep); margin-left:auto;}
+
+/* tabs */
+.tabs{position:absolute; left:9px; right:9px; bottom:0; display:flex; padding:7px 4px 12px; background:var(--c-paper-raised); border-top:var(--stroke);}
+.tab{flex:1; background:none; border:none; cursor:pointer; color:var(--c-ink-faint); font-family:var(--font-ui); font-weight:700; display:flex; flex-direction:column; align-items:center; gap:2px; padding:3px 0; font-size:10px;}
+.tab .pz-ic{width:24px; height:24px;}
+.tab .en{font-size:8px; color:var(--c-ink-faint); font-weight:400;}
+.tab.on{color:var(--c-red-deep);} .tab.on .pz-ic{transform:translateY(-1px);}
+
+/* ── oil-painting puzzle (圖一: 油畫藍調 starry-city) — pieces UNCOVER the art ── */
+.oil{position:relative; border:var(--stroke); border-radius:8px; overflow:hidden; box-shadow:var(--shadow-print-sm); aspect-ratio:7/5; margin:2px 0 12px;}
+.oil .art{position:absolute; inset:0; width:100%; height:100%; display:block;}
+.oil .mask{position:absolute; inset:0; display:grid; grid-template-columns:repeat(7,1fr); grid-template-rows:repeat(5,1fr);}
+.oil .mask i{outline:.5px solid rgba(255,250,235,.10); outline-offset:-.5px;}
+.oil .mask i.cv{background:var(--c-paper-sunk); outline:var(--stroke-dash); outline-offset:-2px;}
+.gframe{flex:0 0 128px; text-align:center;}
+.gframe .oil{aspect-ratio:3/4; margin:0;}
+.gframe .cap{font-size:var(--fs-xs); margin-top:6px; color:var(--c-ink-soft);}
+.gframe.lk .oil{filter:grayscale(.65) brightness(.78);}
+.gframe .lkov{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(33,30,25,.34); color:#fff;}
+.oilcap{display:flex; align-items:center; gap:8px; font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-soft); margin-top:2px;}
+
+/* ── onboarding 導覽教學 (overlay, implemented) ── */
+.onb{position:absolute; inset:0; z-index:60; background:var(--c-paper); background-image:radial-gradient(var(--tone-ink-color) 1px,transparent 1.5px); background-size:7px 7px; display:flex; flex-direction:column; padding:24px 22px 22px;}
+.onb.hidden{display:none;}
+.onb .skip{align-self:flex-end; background:none; border:none; color:var(--c-ink-faint); font-family:var(--font-ui); font-weight:700; font-size:var(--fs-sm); cursor:pointer; padding:4px;}
+.onb .stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:13px;}
+.onb .ill{width:170px; height:170px; border:var(--stroke); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-print); position:relative; overflow:hidden;}
+.onb .ill .pz-ic{width:74px; height:74px; stroke-width:1.6;}
+.onb h3{font-family:var(--font-display); font-weight:700; font-size:var(--fs-2xl); margin-top:4px;}
+.onb .en2{font-family:var(--font-hand); color:var(--c-ink-faint); font-size:var(--fs-sm); margin-top:-6px;}
+.onb p{font-size:var(--fs-sm); color:var(--c-ink-soft); line-height:1.75; max-width:300px;}
+.onb .dots{display:flex; gap:7px; justify-content:center; margin:8px 0 14px;}
+.onb .dots i{width:9px; height:9px; border-radius:50%; border:var(--stroke-thin); background:var(--c-paper-sunk); transition:all var(--t-base) var(--ease-soft);}
+.onb .dots i.on{background:var(--c-red); width:22px; border-radius:5px;}
+.onb .nav{display:flex; gap:10px;}
+.onbstep{display:none;} .onbstep.on{display:flex; flex-direction:column; align-items:center; gap:13px; animation:fade .3s var(--ease-out);}
+
+/* ── auth 登錄系統 (overlay) ── */
+.auth{position:absolute; inset:0; z-index:55; background:var(--c-paper); background-image:radial-gradient(var(--tone-ink-color) 1px,transparent 1.5px); background-size:7px 7px; display:flex; flex-direction:column; align-items:center; padding:30px 26px; overflow-y:auto;}
+.auth.hidden{display:none;}
+.auth .biglogo{width:88px; height:88px; border:var(--stroke); border-radius:27px; background:var(--wash-green); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-print); margin-bottom:11px;}
+.auth .biglogo .pz-ic{width:46px; height:46px;}
+.auth h2{font-family:var(--font-display); font-weight:700; font-size:var(--fs-2xl);}
+.auth .tagline{font-family:var(--font-hand); color:var(--c-ink-soft); font-size:var(--fs-sm); margin-bottom:20px; text-align:center;}
+.tabs2{display:flex; border:var(--stroke); border-radius:var(--r-btn); overflow:hidden; margin-bottom:17px; width:100%; box-shadow:var(--shadow-print-sm);}
+.tabs2 button{flex:1; background:none; border:none; padding:11px; font-family:var(--font-ui); font-weight:700; cursor:pointer; color:var(--c-ink-soft);}
+.tabs2 button.on{background:var(--c-blue); color:var(--on-fill);}
+.field{width:100%; margin-bottom:13px;}
+.field>label{display:block; font-size:var(--fs-xs); color:var(--c-ink-soft); margin-bottom:5px; font-weight:500;}
+.field .inp{display:flex; align-items:center; gap:9px; border:var(--stroke); border-radius:var(--r-btn); background:var(--c-paper-raised); padding:0 13px; box-shadow:var(--shadow-print-sm);}
+.field .inp .pz-ic{width:19px; height:19px; color:var(--c-ink-faint);}
+.field .inp input{flex:1; border:none; background:none; outline:none; padding:13px 0; font-family:var(--font-ui); font-size:var(--fs-base); color:var(--c-ink);}
+.auth .alt{font-size:var(--fs-xs); color:var(--c-ink-soft); margin-top:14px; text-align:center;}
+
+/* ── 推理 detective case-file (symptom analysis) ── */
+.case{background:var(--wash-sun); border:var(--stroke); border-color:var(--c-sun-deep); border-radius:var(--r-panel); padding:13px; margin-top:12px; box-shadow:var(--shadow-print-sm); position:relative;}
+.case .ct{font-family:var(--font-display); font-weight:700; display:flex; align-items:center; gap:7px; margin-bottom:4px; font-size:var(--fs-sm);}
+.case .ct .pz-ic{width:18px; height:18px; color:var(--c-sun-deep);}
+.case .sub{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-faint); margin-bottom:8px;}
+.clue{display:flex; gap:9px; align-items:flex-start; padding:5px 0; font-size:var(--fs-sm); border-bottom:1px dashed var(--c-ink-line);}
+.clue:last-of-type{border-bottom:none;}
+.clue .pin{width:18px; height:18px; flex:0 0 18px; margin-top:1px; color:var(--c-red-deep);}
+.case .ded{display:flex; gap:8px; align-items:center; margin-top:9px; padding-top:9px; border-top:2px solid var(--c-sun-deep);}
+.case .ded .pz-ic{width:20px; height:20px; color:var(--c-green-deep); flex:0 0 20px;}
+.case .ded b{font-size:var(--fs-sm);}
+
+/* ── interiors: back-nav + reusable inner components ── */
+.back{display:inline-flex; align-items:center; gap:3px; cursor:pointer; font-family:var(--font-ui); font-weight:700; font-size:var(--fs-sm); color:var(--c-blue-deep); background:none; border:none; margin:8px 0 0; padding:2px 0;}
+.back .pz-ic{width:17px; height:17px;}
+.kv{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--c-ink-line); font-size:var(--fs-sm);}
+.kv:last-child{border-bottom:none;}
+.kv .kx{color:var(--c-ink-soft); flex:0 0 92px;}
+.kv .vx{font-family:var(--font-display); font-weight:700;}
+.kv .flag{margin-left:auto; font-size:var(--fs-xs); font-weight:700; padding:2px 9px; border:var(--stroke-thin); border-radius:var(--r-chip);}
+.flag.ok{background:var(--wash-green); border-color:var(--c-green-deep); color:var(--c-green-deep);} .flag.hi{background:var(--wash-red); border-color:var(--c-red-deep); color:var(--c-red-deep);}
+.setr{display:flex; align-items:center; gap:11px; padding:12px 0; border-bottom:1px dashed var(--c-ink-line);}
+.setr:last-child{border-bottom:none;} .setr .sx{flex:1;} .setr .sx b{font-size:var(--fs-sm);} .setr .sx div{font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.sw{width:48px; height:28px; border:var(--stroke); border-radius:15px; background:var(--c-paper-sunk); position:relative; cursor:pointer; flex:0 0 48px;}
+.sw::after{content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:var(--c-paper-raised); border:var(--stroke-thin); transition:left var(--t-base) var(--ease-soft);}
+.sw.on{background:var(--c-green);} .sw.on::after{left:22px;}
+.water{display:flex; gap:6px; flex-wrap:wrap;}
+.water i{width:22px; height:27px; border:var(--stroke-thin); border-radius:4px 4px 8px 8px; background:var(--c-paper-sunk); cursor:pointer;}
+.water i.on{background:var(--c-blue);}
+.pcal{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+.pcal i{aspect-ratio:1; border-radius:6px; border:var(--stroke-thin); display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-ink-soft); background:var(--c-paper-raised);}
+.pcal i.flow{background:var(--c-red-soft);} .pcal i.flow2{background:var(--c-red); color:var(--on-fill);} .pcal i.tdy{outline:2.5px solid var(--c-blue-deep); outline-offset:1px;}
+.seg{display:flex; border:var(--stroke); border-radius:var(--r-btn); overflow:hidden; box-shadow:var(--shadow-print-sm);}
+.seg button{flex:1; background:none; border:none; padding:9px; font-family:var(--font-ui); font-weight:700; font-size:var(--fs-xs); cursor:pointer; color:var(--c-ink-soft);}
+.seg button.on{background:var(--c-blue); color:var(--on-fill);}
+.sbar{display:flex; align-items:center; gap:9px; border:var(--stroke); border-radius:var(--r-btn); background:var(--c-paper-raised); padding:0 13px; box-shadow:var(--shadow-print-sm); margin-bottom:13px;}
+.sbar .pz-ic{width:19px; height:19px; color:var(--c-ink-faint);} .sbar input{flex:1; border:none; background:none; outline:none; padding:13px 0; font-family:var(--font-ui); font-size:var(--fs-base); color:var(--c-ink);}
+.story{font-family:var(--font-hand); font-size:var(--fs-base); line-height:2; color:var(--c-ink); }
+.story::first-letter{font-size:2.4em; color:var(--c-red-deep); float:left; line-height:.8; margin:4px 6px 0 0;}
+
+/* ── professional data chart (numeric line charts — clean, NOT hand-drawn) ── */
+.dchart{margin-top:4px;}
+.dchart svg{width:100%; height:auto; display:block; overflow:visible; font-family:var(--font-ui);}
+.dchart .axis{stroke:var(--c-ink); stroke-width:1.4;}
+.dchart .grid{stroke:var(--c-ink-line); stroke-width:1; stroke-dasharray:3 3;}
+.dchart .band{opacity:.14;}
+.dchart .ln{fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;}
+.dchart .pt{stroke-width:2;}
+.dchart text{fill:var(--c-ink-soft); font-size:9px;}
+.dchart .vlab{fill:var(--c-ink); font-weight:700; font-size:10px;}
+.dchart .unit{fill:var(--c-ink-faint); font-size:8.5px;}
+
+/* ── 打卡日曆 check-in calendar (串接拼圖收集) ── */
+.calhead{display:flex; align-items:center; gap:9px; margin-bottom:10px;}
+.calhead .streak{margin-left:auto; display:inline-flex; align-items:center; gap:5px; font-family:var(--font-hand); font-weight:700; color:var(--c-sun-deep); background:var(--wash-sun); border:var(--stroke-thin); border-color:var(--c-sun-deep); border-radius:999px; padding:2px 11px; font-size:var(--fs-xs);}
+.cal{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+.cal .dow{font-size:10px; color:var(--c-ink-faint); text-align:center; font-weight:700; padding-bottom:2px;}
+.cal i{aspect-ratio:1; border-radius:6px; border:var(--stroke-thin); background:var(--c-paper-sunk); position:relative; display:flex; align-items:flex-start; justify-content:flex-start; font-size:9px; color:var(--c-ink-faint); padding:2px 0 0 3px;}
+.cal i.l1{background:var(--c-blue-soft);} .cal i.l2{background:var(--c-blue); color:var(--on-fill);} .cal i.l3{background:var(--c-blue-deep); color:var(--on-fill);}
+.cal i.tdy{outline:2.5px solid var(--c-sun-deep); outline-offset:1px; z-index:1;}
+.cal i .pcs{position:absolute; bottom:1px; right:0; left:0; text-align:center; font-family:var(--font-display); font-size:8px; font-weight:700;}
+.callink{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:var(--fs-sm); background:var(--wash-blue); border:var(--stroke-thin); border-color:var(--c-blue-deep); border-radius:8px; padding:8px 11px;}
+.callink .pz-ic{width:18px; height:18px; color:var(--c-blue-deep); flex:0 0 18px;}
+
+/* ── subtle PWA-style page transition (gentle staggered rise; reduce-motion safe) ── */
+.page.active > *{animation:rise .42s var(--ease-soft) backwards;}
+.page.active > *:nth-child(2){animation-delay:.05s;} .page.active > *:nth-child(3){animation-delay:.10s;}
+.page.active > *:nth-child(4){animation-delay:.15s;} .page.active > *:nth-child(5){animation-delay:.19s;}
+@keyframes rise{from{opacity:0; transform:translateY(11px);} to{opacity:1; transform:none;}}
+</style>
+</head>
+<body>
+
+<!-- ════ hand-drawn SVG icon sprite (NO system emoji) ════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></symbol>
+  <symbol id="ic-puzzle" viewBox="0 0 24 24"><path d="M10 4h4a1 1 0 011 1v2a2 2 0 104 0V5h2a1 1 0 011 1v4a1 1 0 01-1 1h-2a2 2 0 100 4h2v4a1 1 0 01-1 1h-4a2 2 0 10-4 0H5a1 1 0 01-1-1v-4a2 2 0 100-4H4V6a1 1 0 011-1h2a2 2 0 104 0z"/></symbol>
+  <symbol id="ic-pill" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(45 12 12)"/><path d="M8.5 8.5l7 7"/></symbol>
+  <symbol id="ic-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></symbol>
+  <symbol id="ic-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.6-9-9a4.5 4.5 0 018-3 4.5 4.5 0 018 3c-2 4.4-9 9-9 9z"/></symbol>
+  <symbol id="ic-sprout" viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 14C9 14 6 12 5 7c4-.5 6 1.5 7 5z"/><path d="M12 12c0-3 2-5 7-5-.5 4-3 6-7 5z"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="ic-thermo" viewBox="0 0 24 24"><path d="M14 14V5a2 2 0 10-4 0v9a4 4 0 104 0z"/><path d="M12 14V8"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M19 19H6a2 2 0 01-2-2"/></symbol>
+  <symbol id="ic-hospital" viewBox="0 0 24 24"><path d="M5 21V6l7-3 7 3v15"/><path d="M3 21h18M12 8v6M9 11h6"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4z"/><path d="M10 20a2 2 0 004 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="ic-droplet" viewBox="0 0 24 24"><path d="M12 3c4 5 6 8 6 11a6 6 0 11-12 0c0-3 2-6 6-11z"/></symbol>
+  <symbol id="ic-moon" viewBox="0 0 24 24"><path d="M20 14a8 8 0 11-10-10 7 7 0 1010 10z"/></symbol>
+  <symbol id="ic-bowl" viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 01-18 0z"/><path d="M7 11a5 5 0 0110 0M12 3v3"/></symbol>
+  <symbol id="ic-note" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h6"/></symbol>
+  <symbol id="ic-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h4"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M12 8v4M12 15h.01"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0111 0"/><path d="M16 5.5a3 3 0 010 5.6M16.5 14.5a5.5 5.5 0 014 5.5"/></symbol>
+  <symbol id="ic-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></symbol>
+  <symbol id="ic-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2.2"/><path d="M13 9h5M13 13h5M5 16a3.5 3.5 0 017 0"/></symbol>
+  <symbol id="ic-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M8 16v-4M12 16v-7M16 16v-2"/></symbol>
+  <symbol id="ic-flask" viewBox="0 0 24 24"><path d="M9 3v6l-5 9a1.5 1.5 0 001.3 2.2h13.4A1.5 1.5 0 0020 18l-5-9V3"/><path d="M8 3h8M7 14h10"/></symbol>
+  <symbol id="ic-stetho" viewBox="0 0 24 24"><path d="M5 3v5a4 4 0 008 0V3"/><path d="M9 12v2a5 5 0 0010 0v-2"/><circle cx="19" cy="9" r="2.2"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></symbol>
+  <symbol id="ic-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 2.5 14 0 17M12 3.5c-2.5 2.5-2.5 14 0 17"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+  <symbol id="ic-text" viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A15 15 0 013 6a2 2 0 012-2z"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M3 8.5a2 2 0 012-2h1.6l1.2-2h6.4l1.2 2H19a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="12" cy="12.8" r="3.4"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0114 0"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10c-1 1-1 2-1 3H9c0-1 0-2-1-3a6 6 0 014-10z"/></symbol>
+  <symbol id="ic-arrow" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="ic-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2 2 2 0 000 4 2 2 0 010 4H5a2 2 0 01-2-2 2 2 0 000-4z"/><path d="M12 6v2M12 11v2M12 16v2"/></symbol>
+  <!-- ░░ 圖一 style: 油畫藍調 Starry-City artwork (Van-Gogh-esque) ░░ -->
+  <defs>
+    <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2a52"/><stop offset=".45" stop-color="#324f86"/><stop offset=".74" stop-color="#6277a4"/><stop offset="1" stop-color="#d3b083"/></linearGradient>
+    <radialGradient id="g-moon"><stop offset="0" stop-color="#fff4d8"/><stop offset=".55" stop-color="#f4e0ad" stop-opacity=".45"/><stop offset="1" stop-color="#f4e0ad" stop-opacity="0"/></radialGradient>
+  </defs>
+  <symbol id="art-starry" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice">
+    <rect width="140" height="100" fill="url(#g-sky)"/>
+    <circle cx="27" cy="21" r="31" fill="url(#g-moon)"/>
+    <circle cx="27" cy="21" r="14" fill="#fdf1cf" stroke="#e8cf93" stroke-width="1"/>
+    <path d="M18 21a9 9 0 0118 0" fill="none" stroke="#e6c98c" stroke-width="1" opacity=".55"/>
+    <g fill="#cdd9ec"><path d="M40 41c8-7 21-6 27 1 8-5 19 0 19 7 0 5-7 8-15 8H45c-8 0-12-3-12-8 0-4 3-7 7-8z" opacity=".85"/>
+      <path d="M86 31c6-4 16-3 20 2 6-2 13 1 13 6s-6 7-12 7H89c-6 0-10-3-10-7 0-3 3-6 8-8z" opacity=".62"/>
+      <path d="M8 58c6-5 16-4 21 1 6-2 12 1 12 6H10c-6 0-9-3-9-6 0-1 .3-1 7-1z" opacity=".5"/></g>
+    <g fill="#f4cd72"><circle cx="70" cy="13" r="1.5"/><circle cx="102" cy="19" r="1.2"/><circle cx="122" cy="38" r="1.4"/><circle cx="58" cy="52" r="1.1"/><circle cx="112" cy="56" r="1.3"/><circle cx="48" cy="30" r="1"/>
+      <path d="M88 47l1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/><path d="M126 64l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8z"/></g>
+    <path d="M0 84V78h4l1-8 1 8h8l1-14 2 0 1 14 8 1 2-7 2 7 10-1 1-24 2-2 2 2 1 24 10 1 2-5 2 5 10-1 1-12 2 0 1 12 12 1 2-8 2 8 12-1 2-5 6 5V100H0z" fill="#16213f"/>
+    <g fill="#f4c66a"><rect x="20" y="74" width="1.5" height="2.5"/><rect x="41" y="60" width="1.4" height="2.5"/><rect x="64" y="78" width="1.5" height="2"/><rect x="92" y="76" width="1.5" height="2.5"/><rect x="112" y="80" width="1.5" height="2"/><rect x="30" y="80" width="1.4" height="2"/></g>
+    <rect y="91" width="140" height="9" fill="#3a4a73"/>
+    <path d="M36 91q34-13 68 0" fill="none" stroke="#212f58" stroke-width="3"/>
+    <g fill="#f4c66a" opacity=".82"><circle cx="48" cy="95" r="1.1"/><circle cx="72" cy="96" r="1.3"/><circle cx="96" cy="95" r="1.1"/><circle cx="60" cy="97" r=".9"/></g>
+  </symbol>
+  <symbol id="art-sakura" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice">
+    <rect width="140" height="100" fill="#dce9f2"/><circle cx="112" cy="22" r="13" fill="#fdeedd"/>
+    <path d="M0 80q40-16 80-5t60 1V100H0Z" fill="#bcd5af" opacity=".75"/><rect y="80" width="140" height="20" fill="#c6dcb8"/>
+    <path d="M60 82V50" stroke="#9a6a3c" stroke-width="5" fill="none"/><path d="M60 60l-9-8M60 56l10-7" stroke="#9a6a3c" stroke-width="3" fill="none"/>
+    <g fill="#f3b6c2"><circle cx="50" cy="44" r="14"/><circle cx="68" cy="40" r="15"/><circle cx="60" cy="52" r="13"/><circle cx="79" cy="50" r="11"/></g>
+    <g fill="#fad4dc"><circle cx="56" cy="42" r="5"/><circle cx="71" cy="48" r="4"/></g>
+    <g fill="#f3b6c2"><circle cx="40" cy="64" r="1.4"/><circle cx="90" cy="62" r="1.2"/><circle cx="30" cy="72" r="1.3"/><circle cx="102" cy="70" r="1.2"/></g></symbol>
+  <symbol id="art-maple" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice">
+    <rect width="140" height="100" fill="#f3ddb6"/><circle cx="26" cy="24" r="14" fill="#f7d79a"/><rect y="78" width="140" height="22" fill="#caa05f"/>
+    <path d="M0 82q42-14 80-3t60 0V100H0Z" fill="#d9b074" opacity=".7"/>
+    <path d="M62 84V50" stroke="#7a4a26" stroke-width="5"/><g fill="#d4622e"><circle cx="54" cy="42" r="14"/><circle cx="72" cy="38" r="15"/><circle cx="64" cy="50" r="13"/></g>
+    <g fill="#e8893f"><circle cx="60" cy="44" r="6"/></g>
+    <g fill="#d4622e"><circle cx="40" cy="66" r="1.6"/><circle cx="92" cy="60" r="1.4"/><circle cx="100" cy="74" r="1.5"/><circle cx="28" cy="72" r="1.3"/></g></symbol>
+  <symbol id="art-snow" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice">
+    <defs><linearGradient id="g-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26375f"/><stop offset="1" stop-color="#62799f"/></linearGradient></defs>
+    <rect width="140" height="100" fill="url(#g-snow)"/><circle cx="112" cy="22" r="11" fill="#fdf1cf"/><rect y="78" width="140" height="22" fill="#dde6f0"/>
+    <rect x="46" y="60" width="26" height="18" fill="#3a4a6e"/><path d="M44 60l15-11 15 11z" fill="#5a6f97"/><rect x="55" y="67" width="6" height="8" fill="#f4c66a"/>
+    <path d="M86 78l8-15 8 15z" fill="#2d3e63"/><path d="M104 78l6-11 6 11z" fill="#34466e"/>
+    <g fill="#eef4fb"><circle cx="20" cy="20" r="1.4"/><circle cx="40" cy="34" r="1.2"/><circle cx="72" cy="24" r="1.3"/><circle cx="92" cy="40" r="1.2"/><circle cx="122" cy="50" r="1.3"/><circle cx="30" cy="54" r="1.1"/></g></symbol>
+  <symbol id="art-forest" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice">
+    <defs><linearGradient id="g-for" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d2e5c7"/><stop offset="1" stop-color="#80a670"/></linearGradient></defs>
+    <rect width="140" height="100" fill="url(#g-for)"/><circle cx="102" cy="20" r="16" fill="#f6efce" opacity=".7"/>
+    <g stroke="#eef0cf" stroke-width="2" opacity=".4"><path d="M102 20L62 72M102 20L82 78M102 20L122 78"/></g>
+    <path d="M20 80l12-30 12 30z" fill="#6f9a55"/><path d="M44 82l14-36 14 36z" fill="#5f8a47"/><path d="M70 80l12-30 12 30z" fill="#7ca36c"/><path d="M96 82l14-34 14 34z" fill="#557a3e"/>
+    <rect y="80" width="140" height="20" fill="#4f6e38"/></symbol>
+</svg>
+
+<div class="lead">
+  <h1>拼圖診療室 · The Puzzle Clinic</h1>
+  <p>日系手繪漫畫 · <b>淡色舒適</b> · <i>遊戲感</i> — 把每個症狀、每顆藥、每次回診收成一片拼圖。<br>
+  右上：<b>中/EN</b> · <i>日/夜</i> · 年長版。底部換頁，「更多」看全部功能。</p>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+
+  <!-- ░░ 導覽教學 onboarding (designed + implemented) ░░ -->
+  <div class="onb" id="onb">
+    <button class="skip" id="onbSkip">略過 Skip</button>
+    <div class="stage">
+      <div class="onbstep on" data-step="0">
+        <div class="ill" style="background:var(--wash-green)"><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-sprout"/></svg></div>
+        <h3>歡迎使用 MD.Piece</h3><div class="en2">The Puzzle Clinic · 拼圖診療室</div>
+        <p>把每天的不舒服、吃藥、心情都收成一片拼圖，看診時直接給醫師看，不用臨時想破頭。</p>
+      </div>
+      <div class="onbstep" data-step="1">
+        <div class="ill" style="background:var(--wash-red)"><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-home"/></svg></div>
+        <h3>3 秒看懂今天</h3><div class="en2">Today at a glance</div>
+        <p>首頁就是你的「狀態中心」：今天服藥、下次回診、病情風險、心情，一眼看完。</p>
+      </div>
+      <div class="onbstep" data-step="2">
+        <div class="ill" style="background:var(--wash-sun)"><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-search"/></svg></div>
+        <h3>像偵探一樣推理</h3><div class="en2">Symptom case file · 推理</div>
+        <p>點身上不舒服的位置，小禾把線索拼起來，推出可能原因與該看哪一科。</p>
+      </div>
+      <div class="onbstep" data-step="3">
+        <div class="ill"><svg class="art"><use href="#art-starry"/></svg></div>
+        <h3>收集你的星空</h3><div class="en2">Collect the oil painting</div>
+        <p>每記一片，就點亮一塊油畫；集滿就解鎖一幅星空掛畫，掛進你的房間。</p>
+      </div>
+      <div class="onbstep" data-step="4">
+        <div class="ill" style="background:var(--wash-grape)"><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-sprout"/></svg></div>
+        <h3>小禾一直都在</h3><div class="en2">Xiaohe is always here</div>
+        <p>不知道怎麼跟醫師說？跟小禾聊一聊就好。隨時能在「更多 → 重看導覽」再看一次。</p>
+      </div>
+    </div>
+    <div class="dots" id="onbDots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+    <div class="nav">
+      <button class="btn" id="onbBack" style="flex:1; visibility:hidden">上一步</button>
+      <button class="btn blue" id="onbNext" style="flex:2">下一步</button>
+    </div>
+  </div>
+
+  <!-- ░░ 登錄系統 auth ░░ -->
+  <div class="auth hidden" id="auth">
+    <div class="biglogo"><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-sprout"/></svg></div>
+    <h2>MD.Piece</h2><div class="tagline">將日常碎片拼起，醫起走出治療的迷霧</div>
+    <div class="tabs2"><button class="on" id="atLogin">登入 Sign in</button><button id="atReg">註冊 Sign up</button></div>
+    <div class="field"><label for="au-user">帳號 Username</label><div class="inp"><svg class="pz-ic"><use href="#ic-user"/></svg><input id="au-user" name="username" type="text" autocomplete="username" value="yijun" /></div></div>
+    <div class="field"><label for="au-pass">密碼 Password</label><div class="inp"><svg class="pz-ic"><use href="#ic-lock"/></svg><input id="au-pass" name="password" type="password" autocomplete="current-password" value="123456" /></div></div>
+    <button class="btn blue" id="authGo" style="width:100%; margin-top:4px">登入 · 開始守護</button>
+    <div class="alt">忘記密碼？ · 還沒有帳號？<b style="color:var(--c-blue-deep)">立即註冊</b></div>
+    <button id="authBack" style="margin-top:14px; background:none; border:none; color:var(--c-ink-faint); font-family:var(--font-ui); font-weight:700; font-size:var(--fs-sm); cursor:pointer">← 回到導覽</button>
+  </div>
+
+  <div class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+        <rect x="3" y="3" width="34" height="34" rx="11" fill="var(--c-green-soft)" stroke="var(--c-ink)" stroke-width="2.5"/>
+        <path d="M9 28V13l6 8 6-8v15" fill="none" stroke="var(--c-blue-deep)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="28.5" cy="14" r="3.6" fill="var(--c-red)" stroke="var(--c-ink)" stroke-width="2"/>
+      </svg>
+      <div><b>MD.Piece</b><div class="sub">拼圖診療室</div></div>
+    </div>
+    <div class="sp"></div>
+    <button class="tbtn" id="langBtn" title="語言 / Language"><svg class="pz-ic"><use href="#ic-globe"/></svg><span id="langTx">中</span></button>
+    <button class="tbtn" id="themeBtn" title="日 / 夜"><svg class="pz-ic"><use href="#ic-moon" id="themeIc"/></svg></button>
+    <button class="tbtn" id="modeBtn" title="標準 / 年長"><svg class="pz-ic"><use href="#ic-text"/></svg><span id="modeTx">標</span></button>
+  </div>
+
+  <div class="screen" id="screen">
+    <!-- ══════════ HOME ══════════ -->
+    <section class="page active" data-page="home">
+      <div class="greet hgo" data-go="records" title="個人檔案 · Profile">
+        <svg class="av" viewBox="0 0 44 44" aria-hidden="true"><use href="#ic-sprout" x="10" y="9" width="24" height="24" style="color:var(--c-green-deep)"/></svg>
+        <div class="hi"><b><span data-i18n="g.morning">早安</span>，怡君</b><div data-i18n="g.sub">今天也一起，慢慢來</div></div>
+        <div class="day"><b>6 / 05</b><div data-i18n="g.thu">星期四</div></div>
+      </div>
+      <div class="hero hgo" data-go="pieces" title="拼圖收藏 · Pieces">
+        <svg class="petal" viewBox="0 0 50 50" aria-hidden="true"><g fill="var(--c-red-soft)" stroke="var(--c-red-deep)" stroke-width="1.5">
+          <path d="M25 25 Q18 13 25 6 Q32 13 25 25Z"/><path d="M25 25 Q37 18 44 25 Q37 32 25 25Z"/><path d="M25 25 Q32 37 25 44 Q18 37 25 25Z"/><path d="M25 25 Q13 32 6 25 Q13 18 25 25Z"/></g><circle cx="25" cy="25" r="3" fill="var(--c-sun)"/></svg>
+        <div class="label" data-i18n="h.today">今天的碎片 · TODAY'S PIECES</div>
+        <div class="big">4 <small data-i18n="h.of">/ 6 片</small></div>
+        <div class="calm" data-i18n="h.calm">健康，是一塊一塊拼起來的。</div>
+        <div class="slots" id="homeSlots">
+          <div class="slot f r" data-i18n="h.s1">症</div><div class="slot f b" data-i18n="h.s2">藥</div>
+          <div class="slot f g" data-i18n="h.s3">心</div><div class="slot f s" data-i18n="h.s4">睡</div>
+          <div class="slot"></div><div class="slot"></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="stat hgo chev" data-go="meds"><div class="k"><svg class="pz-ic"><use href="#ic-pill"/></svg><span data-i18n="h.meds">今日服藥</span></div>
+          <div class="v">3<small> / 4</small></div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+        <div class="stat hgo chev" data-go="previsit"><div class="k"><svg class="pz-ic"><use href="#ic-calendar"/></svg><span data-i18n="h.visit">下次回診</span></div>
+          <div class="v">5<small data-i18n="h.d"> 天</small></div>
+          <div class="chip sev clinic" style="margin-top:8px" data-i18n="h.dept">風濕免疫科</div></div>
+        <div class="stat hgo chev" data-go="predict"><div class="k"><svg class="pz-ic"><use href="#ic-thermo"/></svg><span data-i18n="h.flare">病情風險</span></div>
+          <div class="v" style="color:var(--c-sun-deep)" data-i18n="h.watch">留意</div><div class="gauge"></div><div class="needle"><i style="left:58%"></i></div></div>
+        <div class="stat hgo chev" data-go="mood"><div class="k"><svg class="pz-ic"><use href="#ic-heart"/></svg><span data-i18n="h.mood">今日心情</span></div>
+          <div class="batt"><div class="cell"><b></b></div><span>78%</span></div></div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-sprout"/></svg> <span data-i18n="h.ai">小禾發現</span> <span class="en">Xiaohe noticed</span><span class="tag">AI</span></h2>
+        <div style="font-size:var(--fs-sm)" data-i18n="h.aibody">睡眠連續 3 天下降，疼痛從 3 升到 6。也許值得提早回診和醫師聊聊。</div>
+        <div class="explain">
+          <div class="eh"><svg class="pz-ic"><use href="#ic-bulb"/></svg> <b>為什麼這樣判斷</b> <span class="en2">Why</span>
+            <span class="conf">信心 中–高 <span class="cbar"><b style="width:72%"></b></span></span></div>
+          <div class="eb">
+            <div class="erow"><div class="elab">判斷依據 · BASIS</div><div class="etxt">睡眠連續 3 天下降（−2.1 小時／晚）、疼痛由 3 升至 6、晨僵延長 — 符合類風濕「發作前兆」型態。</div></div>
+            <div class="erow"><div class="elab">影響因素 · FACTORS</div>
+              <div class="factor"><span class="fn2">睡眠下降</span><span class="fbar"><b style="width:80%;background:var(--c-red)"></b></span><span class="fw">40%</span></div>
+              <div class="factor"><span class="fn2">疼痛上升</span><span class="fbar"><b style="width:70%;background:var(--c-red)"></b></span><span class="fw">35%</span></div>
+              <div class="factor"><span class="fn2">晨僵延長</span><span class="fbar"><b style="width:50%;background:var(--c-sun)"></b></span><span class="fw">25%</span></div></div>
+            <div class="erow"><div class="elab">資料來源 · SOURCE</div><div class="src"><svg class="pz-ic"><use href="#ic-doc"/></svg> 你最近 14 天的自我紀錄 · 共 28 筆</div></div>
+            <div class="nextstep"><b>下一步：</b>留意 2–3 天；若持續惡化，建議提前回診並帶上此摘要。</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:9px; margin-top:12px;">
+          <button class="btn red" style="flex:1" data-go="previsit" data-i18n="h.esc">整理回診摘要</button>
+          <button class="btn" style="flex:1" id="aiOk" data-i18n="h.ok">知道了</button></div>
+      </div>
+      <div class="card hgo" data-go="symptoms">
+        <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-pulse"/></svg> <span data-i18n="h.pain">疼痛趨勢</span> <span class="en">14-day pain</span><span class="tag">6/05</span></h2>
+        <div class="dchart"><svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <rect class="band" style="fill:var(--c-red)" x="34" y="14" width="258" height="42"/>
+          <line class="grid" x1="34" y1="14" x2="292" y2="14"/><text class="unit" x="14" y="17">10</text>
+          <line class="grid" x1="34" y1="66" x2="292" y2="66"/><text x="18" y="69">5</text>
+          <line class="grid" x1="34" y1="118" x2="292" y2="118"/><text x="18" y="121">0</text>
+          <line class="axis" x1="34" y1="14" x2="34" y2="118"/><line class="axis" x1="34" y1="118" x2="292" y2="118"/>
+          <polyline class="ln" style="stroke:var(--c-red-deep)" points="44,87 79,87 114,97 149,87 184,76 219,66 254,76 286,55"/>
+          <g class="pt" style="stroke:var(--c-red-deep); fill:var(--c-paper-raised)"><circle cx="44" cy="87" r="3"/><circle cx="184" cy="76" r="3"/><circle cx="286" cy="55" r="3.6"/></g>
+          <text class="vlab" x="278" y="49">6</text>
+          <text x="37" y="131">5/23</text><text x="134" y="131">5/30</text><text x="262" y="131">6/05</text>
+          <text class="unit" x="34" y="145">疼痛 0–10 · 紅帶＝偏高 ≥6 ｜ 圓點＝你記的碎片</text>
+        </svg></div>
+        <div class="oilcap" style="margin-top:10px"><svg class="pz-ic" style="width:15px;height:15px;color:var(--c-blue-deep)"><use href="#ic-pulse"/></svg> 點開看完整症狀紀錄與分析 ›</div>
+      </div>
+      <div class="qa">
+        <button class="btn blue qa-add" data-fill="r"><svg class="pz-ic"><use href="#ic-pulse"/></svg><span data-i18n="qa.sym">記症狀</span></button>
+        <button class="btn red qa-add" data-fill="b"><svg class="pz-ic"><use href="#ic-pill"/></svg><span data-i18n="qa.med">服藥打卡</span></button>
+        <button class="btn green qa-add" data-fill="g"><svg class="pz-ic"><use href="#ic-heart"/></svg><span data-i18n="qa.mood">寫心情</span></button>
+      </div>
+      <div id="rewardZone" style="text-align:center; min-height:30px; margin-top:8px;"></div>
+    </section>
+
+    <!-- ══════════ PIECES · 拼圖模式 (deepened) ══════════ -->
+    <section class="page" data-page="pieces">
+      <div class="ptitle"><b>拼圖收藏</b><span class="en">Puzzle Collection</span><span class="sub" data-i18n="p.cycle">本期回診 18 / 28</span></div>
+      <div class="card">
+        <div class="calhead"><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-calendar"/></svg> <b style="font-family:var(--font-display)">打卡日曆</b> <span style="font-family:var(--font-hand);font-size:var(--fs-xs);color:var(--c-ink-faint)">Check-in</span> <span class="streak"><svg class="pz-ic" style="width:13px;color:var(--c-sun-deep)"><use href="#ic-sun"/></svg> 連續 12 天</span></div>
+        <div class="cal" id="checkCal"></div>
+        <div class="callink"><svg class="pz-ic"><use href="#ic-puzzle"/></svg> 本月已收集 <b style="font-family:var(--font-display)">18 片</b> → 點亮「星空之城」66%</div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-puzzle"/></svg> 星空之城 <span class="en">Starry City · 油畫藍調</span><span class="tag">66%</span></h2>
+        <div class="oil"><svg class="art"><use href="#art-starry"/></svg><div class="mask" id="oilMask"></div></div>
+        <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">
+          <span class="reward">還差 12 片</span>
+          <span class="chip" style="border-color:var(--c-green-deep); background:var(--wash-green)"><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-plus"/></svg> 今天新拼上 3 片</span></div>
+        <div class="oilcap"><svg class="pz-ic" style="width:15px;height:15px;color:var(--c-sun-deep)"><use href="#ic-bulb"/></svg> 每記一片，就點亮這幅星空油畫的一塊；集滿就掛進你的房間。</div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-grid"/></svg> 收藏系列 <span class="en">Collections</span></h2>
+        <div class="setrow"><div class="setmini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="nm"><b>四季系列 · 春</b><div>春日櫻花 / 夏祭 / 秋楓 / 雪夜</div><div class="bar"><b style="width:30%"></b></div></div></div>
+        <div class="setrow"><div class="setmini"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          <div class="nm"><b>療癒系列 · 完成</b><div>森林 / 海 / 草原</div><div class="bar"><b style="width:100%; background:var(--c-blue)"></b></div></div></div>
+        <div class="setrow"><div class="setmini"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="nm"><b>住院旅程 · 進行中</b><div>住院期間自動收集的紀念</div><div class="bar"><b style="width:12%; background:var(--c-red)"></b></div></div></div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-home"/></svg> 我的房間 <span class="en">My Room</span></h2>
+        <div class="shelf">
+          <div class="gframe"><div class="oil"><svg class="art"><use href="#art-starry"/></svg></div><div class="cap">星空之城 · 66%</div></div>
+          <div class="gframe"><div class="oil"><svg class="art"><use href="#art-sakura"/></svg></div><div class="cap">春日櫻花 · 完成</div></div>
+          <div class="gframe"><div class="oil"><svg class="art"><use href="#art-forest"/></svg></div><div class="cap">療癒森林 · 完成</div></div>
+          <div class="gframe"><div class="oil"><svg class="art"><use href="#art-maple"/></svg></div><div class="cap">秋日楓林 · 42%</div></div>
+          <div class="gframe lk"><div class="oil"><svg class="art"><use href="#art-snow"/></svg><div class="lkov"><svg class="pz-ic"><use href="#ic-lock"/></svg></div></div><div class="cap">雪夜 · 未解鎖</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-check"/></svg> 成就印章 <span class="en">Keepsakes</span></h2>
+        <div class="badges">
+          <div class="badge"><div class="seal"><svg class="pz-ic"><use href="#ic-pill"/></svg></div><div class="nm">連續服藥 7 天</div></div>
+          <div class="badge"><div class="seal"><svg class="pz-ic"><use href="#ic-search"/></svg></div><div class="nm">首次症狀分析</div></div>
+          <div class="badge"><div class="seal"><svg class="pz-ic"><use href="#ic-book"/></svg></div><div class="nm">寫了 14 篇日記</div></div>
+          <div class="badge locked"><div class="seal"><svg class="pz-ic"><use href="#ic-puzzle"/></svg></div><div class="nm">集滿一幅畫</div></div>
+        </div>
+        <div class="why" style="background:var(--wash-red); border-color:var(--c-red-deep)"><b style="color:var(--c-red-deep)" data-i18n="p.calmk">沒有壓力 ·</b> <span data-i18n="p.calmv">印章只記得你做到的事，從不催你。漏了一天也不會不見。</span></div>
+      </div>
+    </section>
+
+    <!-- ══════════ SYMPTOMS ══════════ -->
+    <section class="page" data-page="symptoms">
+      <div class="ptitle"><b>症狀紀錄</b><span class="en">Symptoms</span></div>
+      <div class="card">
+        <h2><svg class="pz-ic"><use href="#ic-pulse"/></svg> 點哪裡不舒服 <span class="en">Body map</span></h2>
+        <div style="display:flex; gap:14px; align-items:center;">
+          <svg viewBox="0 0 80 150" width="76" style="flex:0 0 76px">
+            <g fill="var(--c-paper-sunk)" stroke="var(--c-ink)" stroke-width="2.2" stroke-linejoin="round">
+              <circle cx="40" cy="18" r="11"/><path d="M28 32h24l5 36-9 3 1 40H35l1-40-9-3z"/><path d="M27 36l-9 30 7 3 8-26zM53 36l9 30-7 3-8-26z"/></g>
+            <circle cx="46" cy="56" r="7" fill="var(--c-red)" stroke="var(--c-ink)" stroke-width="2.2"/>
+            <circle cx="46" cy="56" r="13" fill="none" stroke="var(--c-red-deep)" stroke-width="1.6" stroke-dasharray="3 3"/></svg>
+          <div style="flex:1">
+            <div class="chip" style="margin-bottom:9px; border-color:var(--c-red-deep)"><span style="color:var(--c-red-deep); font-weight:700">● 右肩</span></div>
+            <button class="btn red" style="width:100%"><svg class="pz-ic"><use href="#ic-sprout"/></svg> <span data-i18n="s.analyze">分析這個位置</span></button></div>
+        </div>
+        <div class="case">
+          <div class="ct"><svg class="pz-ic"><use href="#ic-search"/></svg> 小禾的推理筆記 <span style="margin-left:auto;font-weight:400;color:var(--c-ink-soft);font-size:var(--fs-xs)">Case File</span></div>
+          <div class="sub">把線索拼起來，像偵探一樣推出方向</div>
+          <div class="clue"><svg class="pz-ic pin"><use href="#ic-pulse"/></svg> 線索 1 · 右肩痛升到 6/10</div>
+          <div class="clue"><svg class="pz-ic pin"><use href="#ic-clock"/></svg> 線索 2 · 晨僵超過 30 分鐘</div>
+          <div class="clue"><svg class="pz-ic pin"><use href="#ic-droplet"/></svg> 線索 3 · 雙手關節對稱腫脹</div>
+          <div class="ded"><svg class="pz-ic"><use href="#ic-bulb"/></svg> <div><b>推論：較像「發炎性」</b> — 建議「基層 → 風濕免疫科」評估。</div></div>
+          <div style="display:flex; align-items:center; gap:9px; margin-top:9px; padding-top:9px; border-top:1px dashed var(--c-ink-line); font-size:11px; color:var(--c-ink-soft);">
+            <span style="font-weight:700; color:var(--c-sun-deep)">信心 中</span>
+            <span style="flex:0 0 50px; height:7px; border:1.5px solid var(--c-ink); border-radius:4px; overflow:hidden; background:var(--c-paper-raised)"><b style="display:block; height:100%; width:60%; background:var(--c-sun-deep)"></b></span>
+            <span style="margin-left:auto; display:inline-flex; align-items:center; gap:5px"><svg class="pz-ic" style="width:13px;height:13px"><use href="#ic-doc"/></svg> 來源：你的 7 筆右肩紀錄 ＋ ICD-10 對照</span>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:11px; flex-wrap:wrap;">
+          <span class="chip sev clinic" data-i18n="s.tier">建議：基層診所</span><span class="chip" data-i18n="s.urg">急迫度：可預約</span></div>
+        <div style="font-size:11px; color:var(--c-ink-faint); margin-top:9px" data-i18n="s.disc">＊推測僅供與醫師討論，非診斷結果。</div>
+      </div>
+      <!-- 記一筆症狀 · symptom recording flow (category → intensity → frequency → notes) -->
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-pulse"/></svg> 記一筆症狀 <span class="en">Log a symptom</span></h2>
+        <div style="font-size:11px; color:var(--c-ink-soft); margin-bottom:9px">選你現在感覺到的，再填強度與次數（會自動進入回診報告）</div>
+        <div class="catwrap" style="display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:13px">
+          <button class="catcard">頭痛</button><button class="catcard on">關節腫痛</button><button class="catcard">腸胃不適</button>
+          <button class="catcard">呼吸不適</button><button class="catcard">皮膚</button><button class="catcard">其他</button></div>
+        <div style="font-size:11px; color:var(--c-ink-soft); margin-bottom:5px">疼痛 / 不適程度 · <b style="color:var(--c-red-deep)">6 / 10</b></div>
+        <div style="display:flex; gap:3px; margin-bottom:13px">
+          <span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-sun)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-sun)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-red)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-red)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-paper-sunk)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-paper-sunk)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-paper-sunk)"></span><span style="flex:1;height:18px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-paper-sunk)"></span></div>
+        <div style="display:flex; gap:11px; align-items:center; margin-bottom:11px"><span style="font-size:11px;color:var(--c-ink-soft);flex:0 0 56px">今天幾次</span><div class="seg" style="flex:1"><button>1 次</button><button class="on">2 次</button><button>3 次以上</button></div></div>
+        <div class="sbar" style="margin-bottom:12px"><svg class="pz-ic"><use href="#ic-note"/></svg><input id="sym-note" name="symptomNote" aria-label="症狀備註" placeholder="備註：部位 / 誘因 / 持續時間…" value="雙手・晨起明顯・持續 2 天" /></div>
+        <button class="btn red" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 新增紀錄 ＋1 片</button>
+      </div>
+
+      <div class="card">
+        <h2><svg class="pz-ic"><use href="#ic-clock"/></svg> 最近紀錄 <span class="en">Recent</span><span class="tag">本期 7</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">6/05</div><div class="pip r"></div><div class="what">右肩痛 <small>· 程度 6/10 · 晨僵</small></div></div>
+          <div class="row"><div class="when">6/04</div><div class="pip b"></div><div class="what">頭痛 <small>· 程度 3/10 · 睡前</small></div></div>
+          <div class="row"><div class="when">6/02</div><div class="pip r"></div><div class="what">關節腫 <small>· 程度 5/10 · 雙手</small></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ MEDS ══════════ -->
+    <section class="page" data-page="meds">
+      <div class="ptitle"><b>藥物紀錄</b><span class="en">Medications</span><span class="sub" data-i18n="m.adh">服藥率 92%</span></div>
+
+      <!-- 拍藥袋 OCR auto-fill (signature flow) -->
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-camera"/></svg> 拍藥袋，自動填好 <span class="en">Scan Rx · OCR</span></h2>
+        <div style="position:relative; border:2px dashed var(--c-blue-deep); border-radius:12px; background:var(--wash-blue); padding:16px; text-align:center; margin-bottom:11px">
+          <svg viewBox="0 0 64 64" width="48" height="48" style="display:block;margin:0 auto" fill="none" stroke="var(--c-blue-deep)" stroke-width="2.4" stroke-linejoin="round">
+            <path d="M17 14h30l-3 38H20z"/><path d="M17 23h30"/>
+            <rect x="25" y="31" width="14" height="3" rx="1.5" fill="var(--c-blue-deep)" stroke="none"/>
+            <rect x="25" y="38" width="10" height="3" rx="1.5" fill="var(--c-blue-deep)" stroke="none"/></svg>
+          <div style="font-size:var(--fs-xs); color:var(--c-ink-soft); margin-top:6px">把藥袋／藥單／處方箋放滿畫面，自動辨識 <b>藥名・劑量・用法</b></div></div>
+        <div style="display:flex; gap:7px; margin-bottom:9px">
+          <button class="btn blue" style="flex:1.5"><svg class="pz-ic"><use href="#ic-camera"/></svg> 拍攝藥袋</button>
+          <button class="btn" style="flex:1"><svg class="pz-ic"><use href="#ic-plus"/></svg> 上傳</button>
+          <button class="btn" style="flex:1">手動</button></div>
+        <div style="font-size:11px; color:var(--c-ink-faint); margin-bottom:11px">小提示：放滿畫面 · 平放避反光 · 光線充足 · 一次拍一包</div>
+        <div style="border:var(--stroke-thin); border-radius:10px; background:var(--c-paper); padding:11px">
+          <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--c-green-deep); font-weight:700; margin-bottom:6px"><svg class="pz-ic" style="width:14px;height:14px"><use href="#ic-check"/></svg> 辨識完成 · 確認後儲存（可修改）</div>
+          <div class="kv"><span class="kx">藥名</span><b>Methotrexate（甲氨蝶呤）</b></div>
+          <div class="kv"><span class="kx">劑量</span>2.5 mg · 1 顆</div>
+          <div class="kv"><span class="kx">用法</span>每週一次 · 早餐後</div>
+          <div class="kv"><span class="kx">時段</span><span class="chip">早晨</span></div>
+          <button class="btn green" style="width:100%; margin-top:9px"><svg class="pz-ic"><use href="#ic-plus"/></svg> 加入我的藥物 ＋1 片</button></div>
+      </div>
+
+      <div class="medslot">
+        <div class="sh"><svg class="pz-ic"><use href="#ic-sun"/></svg> <b data-i18n="m.morning">早晨</b> · <span data-i18n="m.morningh">起床後 / 早餐</span></div>
+        <div class="med"><div class="pill" style="background:var(--wash-blue)"><svg class="pz-ic"><use href="#ic-pill"/></svg></div>
+          <div class="nm"><b>Methotrexate</b><div>2.5mg · 1 顆</div></div><div class="act"><button class="tick done"><svg class="pz-ic"><use href="#ic-check"/></svg></button></div></div>
+        <div class="med"><div class="pill" style="background:var(--wash-sun)"><svg class="pz-ic"><use href="#ic-pill"/></svg></div>
+          <div class="nm"><b>Folic Acid</b><div>5mg · 1 顆</div></div><div class="act"><button class="tick done"><svg class="pz-ic"><use href="#ic-check"/></svg></button></div></div>
+      </div>
+      <div class="medslot">
+        <div class="sh"><svg class="pz-ic"><use href="#ic-moon"/></svg> <b data-i18n="m.evening">晚上</b> · <span data-i18n="m.eveningh">晚餐 / 睡前</span></div>
+        <div class="med"><div class="pill" style="background:var(--wash-red)"><svg class="pz-ic"><use href="#ic-pill"/></svg></div>
+          <div class="nm"><b>Prednisolone</b><div>5mg · 1 顆</div></div><div class="act"><button class="tick miss" data-i18n="m.makeup">補打</button></div></div>
+        <div class="why"><b data-i18n="m.whyk">打卡記的是真實時刻 ·</b> <span data-i18n="m.whyv">不是排程時間，醫師看得到你實際幾點吃。漏掉的時段會變成「補打」。</span></div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-puzzle"/></svg> 記一片「吃完的感覺」 <span class="en">Effect</span></h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <span class="chip" data-i18n="m.e1">舒服多了</span><span class="chip" data-i18n="m.e2">沒什麼變化</span><span class="chip" data-i18n="m.e3">有點不舒服</span>
+          <span class="reward">＋1 片</span></div>
+      </div>
+
+      <!-- 服藥統計 · professional adherence stats -->
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-chart"/></svg> 服藥統計 <span class="en">Adherence</span><span class="tag">近 14 天</span></h2>
+        <div class="grid2" style="margin-bottom:11px">
+          <div class="stat" style="box-shadow:none; border:var(--stroke-thin)"><div class="k">服藥率</div><div class="v" style="color:var(--c-green-deep)">92<small>%</small></div></div>
+          <div class="stat" style="box-shadow:none; border:var(--stroke-thin)"><div class="k">每日改善</div><div class="v" style="color:var(--c-blue-deep)">+8<small> 分</small></div></div></div>
+        <div style="display:flex; gap:3px; margin-bottom:7px">
+          <span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-red)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-red)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span><span style="flex:1;height:22px;border:1.5px solid var(--c-ink);border-radius:3px;background:var(--c-green)"></span></div>
+        <div style="font-size:11px; color:var(--c-ink-soft)">綠＝有服藥 · 紅＝漏服 · 目前連續達標 <b>5 天</b></div>
+      </div>
+
+      <!-- 服藥時間線 · real-moment dose history -->
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-clock"/></svg> 服藥時間線 <span class="en">Dose history</span><span class="tag">近 3 天</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">今 08:12</div><div class="pip g"></div><div class="what">Methotrexate · 已服 <small>· 準時（排程 08:00）</small></div></div>
+          <div class="row"><div class="when">今 08:30</div><div class="pip g"></div><div class="what">Folic Acid · 已服 <small>· 準時</small></div></div>
+          <div class="row"><div class="when">昨 20:45</div><div class="pip" style="background:var(--c-sun)"></div><div class="what">Prednisolone · 已服 <small>· 補打（排程 20:00，晚 45 分）</small></div></div>
+          <div class="row"><div class="when">昨 08:05</div><div class="pip g"></div><div class="what">Methotrexate · 已服</div></div>
+          <div class="row"><div class="when">前 20:00</div><div class="pip r"></div><div class="what">Prednisolone <small>· 漏服未補</small></div></div>
+        </div>
+        <div class="why"><b>記的是真實時刻 ·</b> 醫師能看到你實際幾點服藥、是否準時，比「排程時間」更有臨床參考價值。</div>
+      </div>
+
+      <!-- 我的藥物清單 -->
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-pill"/></svg> 我的藥物 <span class="en">My meds</span><span class="tag">3 種</span></h2>
+        <div class="kv"><span style="flex:0 0 122px"><b>Methotrexate</b></span> 抗風濕 · 96% <span class="chip" style="margin-left:auto">詳細</span></div>
+        <div class="kv"><span style="flex:0 0 122px"><b>Folic Acid</b></span> 葉酸保護 · 98% <span class="chip" style="margin-left:auto">詳細</span></div>
+        <div class="kv"><span style="flex:0 0 122px"><b>Prednisolone</b></span> 類固醇 · 85% <span class="chip" style="margin-left:auto">詳細</span></div>
+      </div>
+
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-doc"/></svg> 產生藥物報告（回診用）</button>
+    </section>
+
+    <!-- ══════════ MOOD ══════════ -->
+    <section class="page" data-page="mood">
+      <div class="ptitle"><b>情緒電力</b><span class="en">Mood Battery</span></div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-heart"/></svg> 今天的心情輪 <span class="en">Emotion wheel</span></h2>
+        <div class="wheel">
+          <div class="ax" style="transform:rotate(0deg)"></div><div class="ax" style="transform:rotate(60deg)"></div><div class="ax" style="transform:rotate(120deg)"></div>
+          <span class="lab" style="top:5px;left:50%;transform:translateX(-50%)">焦慮</span><span class="lab" style="bottom:5px;left:50%;transform:translateX(-50%)">平靜</span>
+          <span class="lab" style="top:50%;left:6px;transform:translateY(-50%)">低落</span><span class="lab" style="top:50%;right:6px;transform:translateY(-50%)">煩躁</span>
+          <div class="dot" style="left:68%; top:36%"></div></div>
+        <div class="wleg"><span data-i18n="mo.calm">中央＝平靜（藍）</span><span data-i18n="mo.intense">外圈＝強烈（紅）</span></div>
+        <div class="why"><b data-i18n="mo.whyk">紅＝強烈、藍＝平靜 ·</b> <span data-i18n="mo.whyv">連續幾天電量偏低，回診報告會自動提醒你跟醫師聊聊。</span></div>
+        <button class="btn blue" style="width:100%; margin-top:12px" data-i18n="mo.submit">送出今日打卡</button>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-heart"/></svg> 今天的電力 <span class="en">Today's battery</span><span class="tag">6/05</span></h2>
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:11px">
+          <div class="batt"><div class="cell"><b style="height:62%; background:var(--c-sun)"></b></div><span style="color:var(--c-sun-deep)">62%</span></div>
+          <div style="flex:1; font-size:var(--fs-sm); color:var(--c-ink-soft)">主要情緒 <b style="font-family:var(--font-display); color:var(--c-ink)">煩躁 偏外圈</b><div style="font-size:11px">比昨天 <b style="color:var(--c-red-deep)">−14%</b> · 連續 2 天偏低</div></div>
+        </div>
+        <div style="font-size:11px; color:var(--c-ink-soft); margin-bottom:5px">選一個最接近的感覺</div>
+        <div style="display:flex; gap:7px; flex-wrap:wrap; margin-bottom:11px">
+          <span class="chip">平靜</span><span class="chip">疲累</span><span class="chip" style="border-color:var(--c-red-deep); background:var(--wash-red); color:var(--c-red-deep); font-weight:700">煩躁</span><span class="chip">焦慮</span><span class="chip">低落</span>
+        </div>
+        <div style="display:flex; gap:11px; align-items:center; margin-bottom:11px"><span style="font-size:11px; color:var(--c-ink-soft); flex:0 0 56px">電量自評</span><div class="seg" style="flex:1"><button>飽滿</button><button class="on">普通</button><button>快沒電</button></div></div>
+        <div class="sbar" style="margin-bottom:12px"><svg class="pz-ic"><use href="#ic-note"/></svg><input id="mood-note" name="moodNote" aria-label="心情備註" placeholder="想記下的事：誘因 / 睡眠 / 疼痛…" value="關節痛影響睡眠・有點煩" /></div>
+        <button class="btn green" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 記一片心情 ＋1 片</button>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-pulse"/></svg> 電力趨勢 <span class="en">7-day battery</span><span class="tag">近 7 天</span></h2>
+        <div class="dchart"><svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <rect class="band" style="fill:var(--c-red)" x="34" y="82" width="258" height="36"/>
+          <line class="grid" x1="34" y1="14" x2="292" y2="14"/><text class="unit" x="14" y="17">100</text>
+          <line class="grid" x1="34" y1="66" x2="292" y2="66"/><text x="18" y="69">50</text>
+          <line class="grid" x1="34" y1="118" x2="292" y2="118"/><text x="22" y="121">0</text>
+          <line class="axis" x1="34" y1="14" x2="34" y2="118"/><line class="axis" x1="34" y1="118" x2="292" y2="118"/>
+          <polyline class="ln" style="stroke:var(--c-blue-deep)" points="44,45 85,50 126,60 167,72 208,76 249,88 286,95"/>
+          <g class="pt" style="stroke:var(--c-blue-deep); fill:var(--c-paper-raised)"><circle cx="44" cy="45" r="3"/><circle cx="208" cy="76" r="3"/><circle cx="286" cy="95" r="3.6"/></g>
+          <text class="vlab" x="278" y="89">62</text>
+          <text x="37" y="131">5/30</text><text x="150" y="131">6/02</text><text x="262" y="131">6/05</text>
+          <text class="unit" x="34" y="145">電量 0–100% · 紅帶＝偏低 ≤30% ｜ 圓點＝你記的碎片</text>
+        </svg></div>
+        <div class="explain">
+          <div class="eh"><svg class="pz-ic"><use href="#ic-bulb"/></svg> <b>為什麼提醒你</b> <span class="en2">Why</span>
+            <span class="conf">信心 中 <span class="cbar"><b style="width:58%"></b></span></span></div>
+          <div class="eb">
+            <div class="erow"><div class="elab">判斷依據 · BASIS</div><div class="etxt">電量連續 2 天下滑（78%→62%），且情緒落點移向外圈「煩躁」— 與近日疼痛上升、睡眠變短同步出現。</div></div>
+            <div class="erow"><div class="elab">影響因素 · FACTORS</div>
+              <div class="factor"><span class="fn2">睡眠變短</span><span class="fbar"><b style="width:65%; background:var(--c-red)"></b></span><span class="fw">45%</span></div>
+              <div class="factor"><span class="fn2">疼痛上升</span><span class="fbar"><b style="width:55%; background:var(--c-sun)"></b></span><span class="fw">35%</span></div>
+              <div class="factor"><span class="fn2">天數連續</span><span class="fbar"><b style="width:40%; background:var(--c-sun)"></b></span><span class="fw">20%</span></div></div>
+            <div class="erow"><div class="elab">資料來源 · SOURCE</div><div class="src"><svg class="pz-ic"><use href="#ic-doc"/></svg> 你近 7 天的心情打卡 · 共 9 筆</div></div>
+            <div class="nextstep"><b>下一步：</b>再記 1–2 天；若電量持續 ≤30%，回診摘要會自動標記，建議跟醫師聊聊。</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-clock"/></svg> 最近心情 <span class="en">Recent entries</span><span class="tag">近 5 筆</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">6/05</div><div class="pip r"></div><div class="what">煩躁 <small>· 電量 62% · 關節痛影響睡眠</small></div></div>
+          <div class="row"><div class="when">6/04</div><div class="pip" style="background:var(--c-sun)"></div><div class="what">疲累 <small>· 電量 70% · 晨僵明顯</small></div></div>
+          <div class="row"><div class="when">6/03</div><div class="pip b"></div><div class="what">平靜 <small>· 電量 84% · 睡得不錯</small></div></div>
+          <div class="row"><div class="when">6/02</div><div class="pip b"></div><div class="what">平靜 <small>· 電量 80%</small></div></div>
+          <div class="row"><div class="when">6/01</div><div class="pip g"></div><div class="what">放鬆 <small>· 電量 88% · 假日休息</small></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ PRE-VISIT ══════════ -->
+    <section class="page" data-page="previsit">
+      <div class="ptitle"><b>診前報告</b><span class="en">Pre-visit</span></div>
+      <div class="hero" style="box-shadow:var(--shadow-blue)"><div style="position:absolute;inset:0;background:radial-gradient(120% 95% at 82% 0%,var(--wash-blue),transparent 62%)"></div>
+        <div class="label" data-i18n="pv.count">下次回診倒數 · NEXT VISIT</div>
+        <div class="big">5 <small data-i18n="h.d">天</small></div>
+        <div class="calm" style="color:var(--c-blue-deep)" data-i18n="pv.dept">6/10（二）上午 · 風濕免疫科 · 陳醫師</div></div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-note"/></svg> 最該跟醫師說的 3 件事 <span class="en">3 to ask</span><span class="tag">AI</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">1</div><div class="pip r"></div><div class="what">右肩痛升到 6/10，晨僵 30 分鐘</div></div>
+          <div class="row"><div class="when">2</div><div class="pip b"></div><div class="what">睡眠連續 3 天變短（−2 小時）</div></div>
+          <div class="row"><div class="when">3</div><div class="pip r"></div><div class="what">類固醇晚間那顆常忘記</div></div></div>
+        <div class="why"><b data-i18n="pv.whyk">為什麼挑這 3 件 ·</b> <span data-i18n="pv.whyv">從你 14 天紀錄中，挑出「變化最大」「醫師最會問」的重點。</span></div>
+        <div class="explain" style="margin-top:11px">
+          <div class="eh"><svg class="pz-ic"><use href="#ic-note"/></svg> <b>這 3 件怎麼挑出來的</b> <span class="en2">How ranked</span>
+            <span class="conf">信心 高 <span class="cbar"><b style="width:82%"></b></span></span></div>
+          <div class="eb">
+            <div class="erow"><div class="elab">判斷依據 · BASIS</div><div class="etxt">從近 14 天 26 筆紀錄中，依「相對變化幅度 × 醫師提問頻率」排序，取前 3 名。</div></div>
+            <div class="erow"><div class="elab">影響因素 · FACTORS</div>
+              <div class="factor"><span class="fn2">右肩痛</span><span class="fbar"><b style="width:88%;background:var(--c-red)"></b></span><span class="fw">＋6</span></div>
+              <div class="factor"><span class="fn2">睡眠時數</span><span class="fbar"><b style="width:70%;background:var(--c-red)"></b></span><span class="fw">−2h</span></div>
+              <div class="factor"><span class="fn2">類固醇漏服</span><span class="fbar"><b style="width:55%;background:var(--c-sun)"></b></span><span class="fw">3 次</span></div></div>
+            <div class="erow"><div class="elab">資料來源 · SOURCE</div><div class="src"><svg class="pz-ic"><use href="#ic-doc"/></svg> 你的症狀／睡眠／服藥紀錄 · 風濕免疫科常見問診題庫</div></div>
+            <div class="nextstep"><b>下一步：</b>回診時依序唸出這 3 件；醫師版 PDF 已附原始數據與趨勢圖。</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; gap:9px;">
+        <button class="btn blue" style="flex:1"><svg class="pz-ic"><use href="#ic-doc"/></svg> <span data-i18n="pv.pdf1">病人版 PDF</span></button>
+        <button class="btn red" style="flex:1"><svg class="pz-ic"><use href="#ic-doc"/></svg> <span data-i18n="pv.pdf2">醫師版 PDF</span></button>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-check"/></svg> 回診前準備 <span class="en">Get ready</span><span class="tag">5 天前</span></h2>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-green-deep)"><use href="#ic-check"/></svg><span class="kx" style="flex:0 0 96px">健保卡</span> 已放包包 <span class="flag ok">完成</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-green-deep)"><use href="#ic-check"/></svg><span class="kx" style="flex:0 0 96px">用藥清單</span> 3 種 · 已更新 <span class="flag ok">完成</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-ink-faint)"><use href="#ic-doc"/></svg><span class="kx" style="flex:0 0 96px">診前 PDF</span> 尚未匯出 <span class="chip" style="margin-left:auto">匯出</span></div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-note"/></svg> 想問醫師的事 <span class="en">My questions</span><span class="tag">Memo</span></h2>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-sun-deep)"><use href="#ic-note"/></svg> 類固醇要吃到什麼時候？</div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-sun-deep)"><use href="#ic-note"/></svg> 右肩痛需要照 X 光嗎？</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px">
+          <span class="chip"><svg class="pz-ic"><use href="#ic-plus"/></svg> 再加一則</span>
+          <span class="reward">已收 2 則</span></div>
+      </div>
+    </section>
+
+    <!-- ══════════ HOSPITAL · 住院模式 (deepened, one-hand) ══════════ -->
+    <section class="page" data-page="hospital">
+      <div class="ptitle"><b>住院模式</b><span class="en">Hospital · one-hand</span></div>
+      <div class="hosbanner"><svg class="pz-ic"><use href="#ic-hospital"/></svg><div><b data-i18n="hs.on">住院中 · 第 3 天</b><div data-i18n="hs.room">病房 12B · 大字單手版</div></div></div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-clock"/></svg> 今日行程 <span class="en">Today</span><span class="tag">14:02</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">08:00</div><div class="pip g"></div><div class="what">抽血 <small>· 已完成</small></div></div>
+          <div class="row"><div class="when">09:30</div><div class="pip g"></div><div class="what">MRI 檢查 <small>· 已完成</small></div></div>
+          <div class="row"><div class="when">14:00</div><div class="pip r"></div><div class="what"><b>服藥（現在）</b> <small>· 還有 2 顆</small></div></div>
+          <div class="row"><div class="when">16:00</div><div class="pip b"></div><div class="what">醫師查房 <small>· 想問的事先記</small></div></div>
+        </div>
+      </div>
+      <div class="bigbtn r"><div class="ico"><svg class="pz-ic"><use href="#ic-pill"/></svg></div><div><b data-i18n="hs.med">服藥</b><div data-i18n="hs.medh">下一次 14:00 · 還有 2 顆</div></div><svg class="pz-ic arrow"><use href="#ic-plus"/></svg></div>
+      <div class="bigbtn b"><div class="ico"><svg class="pz-ic"><use href="#ic-flask"/></svg></div><div><b data-i18n="hs.lab">檢驗結果</b><div data-i18n="hs.labh">今早抽血 · CRP 待回報</div></div><svg class="pz-ic arrow"><use href="#ic-plus"/></svg></div>
+      <div class="bigbtn s"><div class="ico"><svg class="pz-ic"><use href="#ic-stetho"/></svg></div><div><b data-i18n="hs.round">查房筆記</b><div data-i18n="hs.roundh">想問醫師的 3 件事</div></div><svg class="pz-ic arrow"><use href="#ic-plus"/></svg></div>
+      <div class="bigbtn g"><div class="ico"><svg class="pz-ic"><use href="#ic-phone"/></svg></div><div><b data-i18n="hs.fam">呼叫家屬</b><div data-i18n="hs.famh">一鍵通知 · 附今日摘要</div></div><svg class="pz-ic arrow"><use href="#ic-plus"/></svg></div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-check"/></svg> 住院待辦 <span class="en">Checklist</span></h2>
+        <div class="check done"><div class="box done"><svg class="pz-ic"><use href="#ic-check"/></svg></div><span class="t">簽署 MRI 同意書</span></div>
+        <div class="check"><div class="box"></div><span class="t">14:00 服藥（類固醇）</span></div>
+        <div class="check"><div class="box"></div><span class="t">準備查房想問的問題</span></div>
+        <div class="check"><div class="box"></div><span class="t">晚餐前量血壓</span></div>
+      </div>
+      <div class="card" style="border-color:var(--c-red-deep)">
+        <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-shield"/></svg> 緊急資訊 <span class="en">Emergency</span></h2>
+        <div style="font-size:var(--fs-sm); line-height:1.8">過敏：<b>青黴素</b> · 血型：<b>O+</b><br>緊急聯絡：<b>女兒 怡安</b> · 0912-xxx-xxx</div>
+      </div>
+    </section>
+
+    <!-- ══════════ OUTPATIENT · 門診模式 ══════════ -->
+    <section class="page" data-page="outpatient">
+      <div class="ptitle"><b>門診模式</b><span class="en">Outpatient</span></div>
+      <div class="hosbanner" style="background:var(--wash-blue); border-color:var(--c-blue-deep)"><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-stetho"/></svg><div><b>今日回診 · 6/10 上午</b><div>風濕免疫科 · 陳醫師</div></div></div>
+      <div class="grid2">
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-ticket"/></svg> 候診號碼</div><div class="v">12<small> 號</small></div><div style="font-size:var(--fs-xs);color:var(--c-ink-soft);margin-top:5px">看到 9 號 · 前面還有 3 位</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-clock"/></svg> 預估看診</div><div class="v">約 15<small> 分</small></div><div class="chip sev clinic" style="margin-top:7px">可先去洗手間</div></div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-doc"/></svg> 帶這些去 <span class="en">Bring</span></h2>
+        <div class="check done"><div class="box done"><svg class="pz-ic"><use href="#ic-check"/></svg></div><span class="t">健保卡</span></div>
+        <div class="check done"><div class="box done"><svg class="pz-ic"><use href="#ic-check"/></svg></div><span class="t">藥袋 / 目前用藥清單</span></div>
+        <div class="check"><div class="box"></div><span class="t">診前報告 PDF（已產生）</span></div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-note"/></svg> 最該問醫師的 3 件事 <span class="en">Ask</span><span class="tag">AI</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">1</div><div class="pip r"></div><div class="what">右肩痛升到 6/10、晨僵 30 分鐘</div></div>
+          <div class="row"><div class="when">2</div><div class="pip b"></div><div class="what">睡眠連續 3 天變短</div></div>
+          <div class="row"><div class="when">3</div><div class="pip r"></div><div class="what">類固醇晚間那顆常忘記</div></div>
+        </div>
+        <div class="why"><b>為什麼挑這 3 件 ·</b> 由近 14 天「症狀升高、睡眠下降、漏服藥」三項紀錄排序，挑出對本次回診最關鍵者。來源：你的碎片紀錄 + 上次醫囑。<span class="en" style="display:block;color:var(--c-ink-faint);font-size:11px;margin-top:2px">Why these 3 · ranked from your last 14 days of logs</span></div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-check"/></svg> 看診後 <span class="en">After visit</span></h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <span class="chip"><svg class="pz-ic"><use href="#ic-note"/></svg> 記醫師說的話</span>
+          <span class="chip"><svg class="pz-ic"><use href="#ic-calendar"/></svg> 設下次回診</span>
+          <span class="chip"><svg class="pz-ic"><use href="#ic-pill"/></svg> 更新處方</span>
+          <span class="reward">＋2 片</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ EDUCATION ══════════ -->
+    <section class="page" data-page="education">
+      <div class="ptitle"><b>衛教書房</b><span class="en">Library</span></div>
+      <div class="card">
+        <h2><svg class="pz-ic"><use href="#ic-book"/></svg> 七層書架 · 挑一本翻開 <span class="en">Shelf</span></h2>
+        <div class="shelfwood"><div class="book b">免疫專區</div><div class="book r">認識辨識</div><div class="book g">治療管理</div><div class="book s">預防支持</div><div class="book p">精神系列</div></div>
+        <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-blue-deep)"><use href="#ic-book"/></svg> 認識・類風濕性關節炎 <span class="flag ok">已審稿</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-green-deep)"><use href="#ic-pill"/></svg> DMARD（如 MTX）怎麼吃 <span class="chip" style="margin-left:auto">3 分鐘</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-sun-deep)"><use href="#ic-sprout"/></svg> flare 來了該怎麼辦 <span class="chip" style="margin-left:auto">2 分鐘</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-grape-deep)"><use href="#ic-shield"/></svg> 免疫低下時的疫苗注意 <span class="chip" style="margin-left:auto">未讀</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;align-items:center"><span class="chip"><svg class="pz-ic"><use href="#ic-search"/></svg> 查這個病：類風濕性關節炎</span><span class="chip"><svg class="pz-ic"><use href="#ic-globe"/></svg> 更多書架文章</span></div>
+        <div class="why"><b data-i18n="e.whyk">人工審稿 ·</b> <span data-i18n="e.whyv">每篇都附文獻來源，翻開右頁直接讀，看得安心。</span></div>
+      </div>
+
+      <!-- 衛教內容 · opened article (the actual reading view, with sources) -->
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-book"/></svg> 認識・類風濕性關節炎 <span class="en">Article</span><span class="tag">已審稿</span></h2>
+        <div style="font-weight:700; font-size:var(--fs-sm); color:var(--c-blue-deep); margin-bottom:4px">什麼是類風濕性關節炎？</div>
+        <div style="font-size:var(--fs-sm); line-height:1.8">一種自體免疫疾病：免疫系統誤把關節滑膜當成敵人攻擊，造成<b>對稱性</b>的腫、痛與晨僵，好發於手指、手腕等小關節。</div>
+        <div style="font-weight:700; font-size:var(--fs-sm); color:var(--c-blue-deep); margin:11px 0 4px">為什麼會晨僵？</div>
+        <div style="font-size:var(--fs-sm); line-height:1.8">夜間發炎物質累積、關節液變黏，早上需活動 30 分鐘以上才緩解 —「晨僵超過 30 分鐘」是醫師的重要判斷依據。</div>
+        <div style="font-weight:700; font-size:var(--fs-sm); color:var(--c-blue-deep); margin:11px 0 4px">日常可以做什麼？</div>
+        <div style="font-size:var(--fs-sm); line-height:1.8">規律服藥（DMARD 如 MTX）、適度活動與保暖、記錄 flare，惡化時提前回診。</div>
+        <div style="margin-top:12px; padding-top:9px; border-top:1px dashed var(--c-ink-line); font-size:11px; color:var(--c-ink-faint); line-height:1.7">
+          <b style="color:var(--c-ink-soft)">文獻來源</b><br>· ACR/EULAR 2010 分類標準<br>· Cochrane 2024 · DOI: 10.1002/14651858.CD001431.pub6</div>
+        <div style="display:flex; gap:8px; margin-top:12px">
+          <button class="btn" style="flex:1"><svg class="pz-ic"><use href="#ic-sprout"/></svg> 朗讀</button>
+          <button class="btn green" style="flex:1"><svg class="pz-ic"><use href="#ic-puzzle"/></svg> 讀完 ＋1 片</button></div>
+      </div>
+    </section>
+
+    <!-- ══════════ CHAT ══════════ -->
+    <section class="page" data-page="chat">
+      <div class="ptitle"><b>醫起聊天</b><span class="en">Chat with Xiaohe</span></div>
+      <div class="bub ai" data-i18n="c.a1">嗨怡君～這三天你記了 4 片碎片，辛苦了。想聊聊最近的關節僵硬嗎？</div>
+      <div class="bub me" data-i18n="c.m1">早上手指比較緊，過中午才鬆開。</div>
+      <div class="bub ai" data-i18n="c.a2">了解。「晨僵超過 30 分鐘」是醫師會想知道的重點，我先幫你收成一片，回診摘要會自動帶上。要不要也寫成今天的日記？</div>
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap">
+        <span class="chip"><svg class="pz-ic"><use href="#ic-puzzle"/></svg> <span data-i18n="c.c1">收成碎片</span></span>
+        <span class="chip"><svg class="pz-ic"><use href="#ic-book"/></svg> <span data-i18n="c.c2">寫成日記</span></span>
+        <span class="chip"><svg class="pz-ic"><use href="#ic-doc"/></svg> <span data-i18n="c.c3">整理給醫師</span></span></div>
+      <div class="sbar" style="margin-top:12px"><svg class="pz-ic"><use href="#ic-text"/></svg><input id="chatq" name="chatq" aria-label="跟小禾說" placeholder="跟小禾說一句… · Message Xiaohe" /><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-phone"/></svg></div>
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <button class="btn" style="flex:0 0 auto"><svg class="pz-ic"><use href="#ic-camera"/></svg> 語音</button>
+        <button class="btn blue" style="flex:1"><svg class="pz-ic"><use href="#ic-check"/></svg> 傳送 <span class="en" style="color:var(--on-fill);opacity:.75;font-size:11px">Send</span></button>
+      </div>
+    </section>
+
+    <!-- ══════════ 功能內頁 · function interiors ══════════ -->
+    <section class="page" data-page="vitals">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>生理紀錄</b><span class="en">Vitals</span></div>
+      <div class="grid2">
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-heart"/></svg> 血壓</div><div class="v">128<small>/82</small></div><div style="font-size:11px;color:var(--c-green-deep);margin-top:3px">正常範圍</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-droplet"/></svg> 血糖</div><div class="v">105<small> mg/dL</small></div><div style="font-size:11px;color:var(--c-green-deep);margin-top:3px">飯前正常</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-chart"/></svg> 體重</div><div class="v">58.2<small> kg</small></div><div style="font-size:11px;color:var(--c-ink-soft);margin-top:3px">−0.3 本週</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-pulse"/></svg> 心率</div><div class="v">72<small> bpm</small></div><div style="font-size:11px;color:var(--c-green-deep);margin-top:3px">休息</div></div>
+      </div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-chart"/></svg> 血壓趨勢 <span class="en">14 天</span></h2>
+        <div class="dchart"><svg viewBox="0 0 300 158" preserveAspectRatio="xMidYMid meet">
+          <rect class="band" style="fill:var(--c-green)" x="34" y="48" width="258" height="44"/>
+          <line class="grid" x1="34" y1="14" x2="292" y2="14"/><text class="unit" x="2" y="17">160</text>
+          <line class="grid" x1="34" y1="48" x2="292" y2="48"/><text x="8" y="51">130</text>
+          <line class="grid" x1="34" y1="92" x2="292" y2="92"/><text x="13" y="95">90</text>
+          <line class="grid" x1="34" y1="126" x2="292" y2="126"/><text x="13" y="129">60</text>
+          <line class="axis" x1="34" y1="14" x2="34" y2="126"/><line class="axis" x1="34" y1="126" x2="292" y2="126"/>
+          <polyline class="ln" style="stroke:var(--c-blue-deep)" points="44,43 79,50 114,46 149,52 184,49 219,55 254,51 286,57"/>
+          <g class="pt" style="stroke:var(--c-blue-deep); fill:var(--c-paper-raised)"><circle cx="44" cy="43" r="3.2"/><circle cx="114" cy="46" r="3.2"/><circle cx="184" cy="49" r="3.2"/><circle cx="286" cy="57" r="3.8"/></g>
+          <text class="vlab" x="37" y="37">134</text><text class="vlab" x="274" y="53">122</text>
+          <text x="37" y="139">5/23</text><text x="134" y="139">5/30</text><text x="262" y="139">6/05</text>
+          <text class="unit" x="34" y="152">收縮壓 mmHg · 綠帶＝正常 90–130</text>
+        </svg></div>
+        <div class="why" style="margin-top:9px"><b>判讀 · Reading：</b>14 天平均 126/82，落在正常綠帶內且緩降（−12 mmHg），無需調整；<b>來源：</b>居家血壓計手動量測 8 筆。</div></div>
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 新增量測 ＋1 片</button>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-chart"/></svg> 體重趨勢 <span class="en">Weight · 14 天</span><span class="tag">−0.3 kg</span></h2>
+        <div class="dchart"><svg viewBox="0 0 300 158" preserveAspectRatio="xMidYMid meet">
+          <rect class="band" style="fill:var(--c-green)" x="34" y="40" width="258" height="56"/>
+          <line class="grid" x1="34" y1="40" x2="292" y2="40"/><text class="unit" x="6" y="43">60</text>
+          <line class="grid" x1="34" y1="68" x2="292" y2="68"/><text x="6" y="71">58</text>
+          <line class="grid" x1="34" y1="96" x2="292" y2="96"/><text x="6" y="99">56</text>
+          <line class="axis" x1="34" y1="40" x2="34" y2="126"/><line class="axis" x1="34" y1="126" x2="292" y2="126"/>
+          <polyline class="ln" style="stroke:var(--c-green-deep)" points="44,62 79,64 114,63 149,66 184,65 219,67 254,68 286,70"/>
+          <g class="pt" style="stroke:var(--c-green-deep); fill:var(--c-paper-raised)"><circle cx="44" cy="62" r="3.2"/><circle cx="184" cy="65" r="3.2"/><circle cx="286" cy="70" r="3.8"/></g>
+          <text class="vlab" x="37" y="56">58.5</text><text class="vlab" x="272" y="66">58.2</text>
+          <text x="37" y="139">5/23</text><text x="134" y="139">5/30</text><text x="262" y="139">6/05</text>
+          <text class="unit" x="34" y="152">體重 kg · 綠帶＝穩定區 56–60</text>
+        </svg></div>
+        <div class="why" style="margin-top:9px"><b>小禾提醒：</b>體重緩降但仍在穩定區，搭配類固醇期間屬正常；若一週掉 >1 kg 會提醒回報。</div></div>
+    </section>
+
+    <section class="page" data-page="diet">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>飲食紀錄</b><span class="en">Diet</span></div>
+      <!-- 抽一道 · draw-a-dish (gamified meal pick, avoids your 忌口) -->
+      <div class="hero" style="box-shadow:var(--shadow-blue)"><div style="position:absolute;inset:0;background:radial-gradient(120% 95% at 82% 0%,var(--wash-sun),transparent 62%)"></div>
+        <div class="label">今天抽一道 · DRAW A DISH</div>
+        <div style="display:flex; align-items:center; gap:12px; position:relative; margin-top:7px">
+          <div style="width:58px;height:58px;flex:0 0 58px;border:var(--stroke);border-radius:14px;background:var(--wash-green);display:flex;align-items:center;justify-content:center"><svg class="pz-ic" style="width:32px;height:32px;color:var(--c-green-deep)"><use href="#ic-bowl"/></svg></div>
+          <div style="flex:1"><div style="font-family:var(--font-display);font-weight:700;font-size:var(--fs-lg)">清蒸鱸魚 ＋ 燙地瓜葉</div>
+            <div style="font-size:var(--fs-xs);color:var(--c-ink-soft);margin-top:2px">約 420 kcal · 高蛋白低油 · 已避開葡萄柚／酒</div></div></div>
+        <div style="display:flex; gap:8px; margin-top:12px; position:relative">
+          <button class="btn" style="flex:1"><svg class="pz-ic"><use href="#ic-plus"/></svg> 再抽一次</button>
+          <button class="btn green" style="flex:1"><svg class="pz-ic"><use href="#ic-check"/></svg> 記下這一道</button></div>
+      </div>
+
+      <!-- 今日營養 · professional nutrition stats with targets -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-chart"/></svg> 今日營養 <span class="en">Nutrition</span><span class="tag">目標達成 72%</span></h2>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px dashed var(--c-ink-line)"><span style="flex:0 0 56px;font-size:var(--fs-sm);color:var(--c-ink-soft)">熱量</span><span style="flex:1;height:10px;border:1.5px solid var(--c-ink);border-radius:5px;overflow:hidden;background:var(--c-paper-raised)"><b style="display:block;height:100%;width:81%;background:var(--c-sun)"></b></span><span style="flex:0 0 96px;text-align:right;font-family:var(--font-display);font-weight:700;font-size:var(--fs-xs)">1450<span style="color:var(--c-ink-faint)"> /1800 kcal</span></span></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px dashed var(--c-ink-line)"><span style="flex:0 0 56px;font-size:var(--fs-sm);color:var(--c-ink-soft)">蛋白質</span><span style="flex:1;height:10px;border:1.5px solid var(--c-ink);border-radius:5px;overflow:hidden;background:var(--c-paper-raised)"><b style="display:block;height:100%;width:88%;background:var(--c-green)"></b></span><span style="flex:0 0 96px;text-align:right;font-family:var(--font-display);font-weight:700;font-size:var(--fs-xs)">62<span style="color:var(--c-ink-faint)"> /70 g</span></span></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px dashed var(--c-ink-line)"><span style="flex:0 0 56px;font-size:var(--fs-sm);color:var(--c-ink-soft)">鈉</span><span style="flex:1;height:10px;border:1.5px solid var(--c-ink);border-radius:5px;overflow:hidden;background:var(--c-paper-raised)"><b style="display:block;height:100%;width:80%;background:var(--c-red)"></b></span><span style="flex:0 0 96px;text-align:right;font-family:var(--font-display);font-weight:700;font-size:var(--fs-xs);color:var(--c-red-deep)">1600<span style="color:var(--c-ink-faint)"> /2000 mg</span></span></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:6px 0"><span style="flex:0 0 56px;font-size:var(--fs-sm);color:var(--c-ink-soft)">纖維</span><span style="flex:1;height:10px;border:1.5px solid var(--c-ink);border-radius:5px;overflow:hidden;background:var(--c-paper-raised)"><b style="display:block;height:100%;width:72%;background:var(--c-green)"></b></span><span style="flex:0 0 96px;text-align:right;font-family:var(--font-display);font-weight:700;font-size:var(--fs-xs)">18<span style="color:var(--c-ink-faint)"> /25 g</span></span></div>
+        <div class="why" style="margin-top:9px"><b>鈉偏高 ·</b> 今日已達 80% 上限，晚餐建議少湯少醬。</div>
+      </div>
+
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-droplet"/></svg> 喝水 <span class="en">Water</span><span class="tag">6 / 8 杯</span></h2>
+        <div class="water"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div></div>
+
+      <!-- 今日餐食 · dish-by-dish log (一道一道) -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-bowl"/></svg> 今日餐食 <span class="en">Logged dishes</span><span class="tag">3 道</span></h2>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-sun-deep)"><use href="#ic-sun"/></svg><span class="kx" style="flex:0 0 50px">早餐</span> 地瓜粥 · 水煮蛋 <span class="flag ok">清淡 · 320</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-sun-deep)"><use href="#ic-bowl"/></svg><span class="kx" style="flex:0 0 50px">午餐</span> 雞胸 · 燙青菜 <span class="flag ok">均衡 · 480</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-grape-deep)"><use href="#ic-droplet"/></svg><span class="kx" style="flex:0 0 50px">點心</span> 無糖豆漿 <span class="flag ok">清淡 · 90</span></div>
+        <button class="btn blue" style="width:100%; margin-top:6px"><svg class="pz-ic"><use href="#ic-plus"/></svg> 記一道菜（拍照 / 手動）＋1 片</button>
+      </div>
+
+      <div class="card" style="border-color:var(--c-red-deep)"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-pill"/></svg> 忌口提醒 <span class="en">Avoid</span></h2>
+        <div style="font-size:var(--fs-sm);line-height:1.7">服用 <b>Methotrexate</b> 期間，避免<b>飲酒</b>、少吃<b>葡萄柚</b>；類固醇期間少鈉少糖。</div></div>
+    </section>
+
+    <section class="page" data-page="sleep">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>睡眠紀錄</b><span class="en">Sleep</span></div>
+      <div class="grid2">
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-moon"/></svg> 昨晚</div><div class="v">6.5<small> 小時</small></div><div style="font-size:11px;color:var(--c-red-deep);margin-top:3px">比平常少 1.5h</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-pulse"/></svg> 睡眠效率</div><div class="v">82<small>%</small></div><div style="font-size:11px;color:var(--c-sun-deep);margin-top:3px">略偏低</div></div>
+      </div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-chart"/></svg> 一週睡眠 <span class="en">7 天</span></h2>
+        <div style="display:flex;gap:7px;align-items:flex-end;height:96px;padding-top:4px">
+          <div style="flex:1;height:84%;background:var(--c-grape-soft);border:var(--stroke-thin);border-radius:4px 4px 0 0"></div>
+          <div style="flex:1;height:78%;background:var(--c-grape-soft);border:var(--stroke-thin);border-radius:4px 4px 0 0"></div>
+          <div style="flex:1;height:88%;background:var(--c-grape-soft);border:var(--stroke-thin);border-radius:4px 4px 0 0"></div>
+          <div style="flex:1;height:72%;background:var(--c-grape-soft);border:var(--stroke-thin);border-radius:4px 4px 0 0"></div>
+          <div style="flex:1;height:58%;background:var(--c-red-soft);border:var(--stroke-thin);border-radius:4px 4px 0 0"></div>
+          <div style="flex:1;height:52%;background:var(--c-red-soft);border:var(--stroke-thin);border-radius:4px 4px 0 0"></div>
+          <div style="flex:1;height:46%;background:var(--c-red-soft);border:var(--stroke-thin);border-radius:4px 4px 0 0"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--c-ink-faint)"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日 6.5h</span></div>
+        <div style="font-size:11px;color:var(--c-ink-faint);margin-top:3px">綠＝達標 ≥7h · 紅＝不足 · 平均 6.8h</div></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-moon"/></svg> 昨晚睡眠階段 <span class="en">Stages</span><span class="tag">6.5h</span></h2>
+        <div style="display:flex;height:18px;border:var(--stroke-thin);border-radius:5px;overflow:hidden;margin-bottom:8px"><b style="width:14%;background:var(--c-sun-soft)" title="醒"></b><b style="width:52%;background:var(--c-blue-soft)" title="淺睡"></b><b style="width:22%;background:var(--c-blue)" title="深睡"></b><b style="width:12%;background:var(--c-grape-soft)" title="REM"></b></div>
+        <div class="kv"><span class="kx">深睡 Deep</span><span class="vx">1.4 h</span><span class="flag ok">22%</span></div>
+        <div class="kv"><span class="kx">淺睡 Light</span><span class="vx">3.4 h</span><span class="flag ok">52%</span></div>
+        <div class="kv"><span class="kx">REM</span><span class="vx">0.8 h</span><span class="flag hi">偏低 12%</span></div>
+        <div class="kv"><span class="kx">夜醒 Awake</span><span class="vx">0.9 h</span><span class="flag hi">3 次</span></div></div>
+      <div class="why"><b>小禾提醒：</b>睡眠連續 3 天下降，已自動加入回診報告。</div>
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 記錄昨晚睡眠（手動 / 同步手環）＋1 片</button>
+    </section>
+
+    <section class="page" data-page="menstrual">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>月經紀錄</b><span class="en">Period</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-droplet"/></svg> 本月週期 <span class="en">Cycle</span><span class="tag">第 14 天</span></h2>
+        <div class="pcal"><i>1</i><i class="flow2">2</i><i class="flow2">3</i><i class="flow">4</i><i class="flow">5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i><i>11</i><i>12</i><i>13</i><i class="tdy">14</i></div>
+        <div class="why" style="margin-top:9px"><b>下次預測 · Predicted：</b>6/19（約 5 天後），排卵期 6/16–6/18。<b>依據</b>近 6 次平均週期 28 天；<b>信心</b>中（近 3 次落差 ±2 天）。</div></div>
+      <div class="grid2">
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-calendar"/></svg> 平均週期 <span class="en" style="font-size:.72em;color:var(--c-ink-faint)">Cycle</span></div><div class="v">28<small> 天</small></div><div style="font-size:11px;color:var(--c-green-deep);margin-top:3px">規律</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-droplet"/></svg> 行經 <span class="en" style="font-size:.72em;color:var(--c-ink-faint)">Period</span></div><div class="v">5<small> 天</small></div><div style="font-size:11px;color:var(--c-ink-soft);margin-top:3px">經量中</div></div></div>
+      <div class="card"><h2><svg class="pz-ic"><use href="#ic-pulse"/></svg> 經期症狀 <span class="en">Symptoms</span></h2>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center"><span class="chip">腹痛</span><span class="chip">疲倦</span><span class="chip">情緒低</span><span class="reward">＋1 片</span></div></div>
+      <button class="btn red" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 記錄今天（經量 / 症狀）＋1 片</button>
+    </section>
+
+    <section class="page" data-page="memo">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>Memo</b><span class="en">想問醫師的事</span></div>
+      <div class="card"><div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-sun-deep)"><use href="#ic-note"/></svg> 類固醇要吃到什麼時候？</div>
+        <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-sun-deep)"><use href="#ic-note"/></svg> 可以打疫苗嗎？</div>
+        <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-sun-deep)"><use href="#ic-note"/></svg> 右肩痛要不要照 X 光？</div></div>
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 新增一則</button>
+    </section>
+
+    <section class="page" data-page="drugSearch">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>藥物百科</b><span class="en">Drug Lookup</span></div>
+      <div class="sbar"><svg class="pz-ic"><use href="#ic-search"/></svg><input id="drugq" name="drugq" aria-label="搜尋藥物" value="Prednisolone" /></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-flask"/></svg> Prednisolone 5mg <span class="tag">類固醇</span></h2>
+        <div class="kv"><span class="kx">用途</span> 抗發炎、抑制免疫</div>
+        <div class="kv"><span class="kx">用法</span> 早餐後 1 顆</div>
+        <div class="kv"><span class="kx">常見副作用</span> 食慾增加、失眠、水腫</div>
+        <div class="why"><b>衛教來源：</b>藥品仿單 + 人工審稿（附 DOI）。</div></div>
+      <div class="card" style="border-color:var(--c-red-deep)"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-shield"/></svg> 交互作用・與你目前用藥 <span class="en">Interactions</span><span class="tag">3 筆</span></h2>
+        <div class="kv"><span class="kx">＋ Methotrexate</span> 同為免疫抑制 · 感染風險↑ <span class="flag hi">留意</span></div>
+        <div class="kv"><span class="kx">＋ 葡萄柚</span> 影響代謝 · 濃度可能升高 <span class="flag hi">避開</span></div>
+        <div class="kv"><span class="kx">＋ NSAID</span> 一同使用增加腸胃出血 <span class="flag ok">飯後</span></div>
+        <div class="why"><b>怎麼比對的 ·</b> 以你「目前用藥清單」逐項比對藥品仿單交互作用表，紅旗為需與醫師確認者。</div></div>
+    </section>
+
+    <section class="page" data-page="diseaseSearch">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>疾病百科</b><span class="en">Disease</span></div>
+      <div class="sbar"><svg class="pz-ic"><use href="#ic-search"/></svg><input id="disq" name="disq" aria-label="搜尋疾病" value="類風濕性關節炎" /></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-stetho"/></svg> 類風濕性關節炎 <span class="tag">RA</span></h2>
+        <div class="kv"><span class="kx">典型症狀</span> 對稱關節腫痛、晨僵 &gt;30 分</div>
+        <div class="kv"><span class="kx">治療</span> DMARD（如 MTX）、生物製劑</div>
+        <div class="kv"><span class="kx">自我照顧</span> 規律服藥、適度活動、記錄 flare</div>
+        <div class="why"><b>來源：</b>人工審稿衛教，附文獻。</div></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-book"/></svg> 延伸衛教 <span class="en">Related</span><span class="tag">已審稿</span></h2>
+        <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-red-deep)"><use href="#ic-book"/></svg> 認識・類風濕性關節炎 <span class="chip" style="margin-left:auto">讀衛教</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-green-deep)"><use href="#ic-pill"/></svg> DMARD（如 MTX）怎麼吃 <span class="chip" style="margin-left:auto">讀衛教</span></div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:9px"><span style="font-size:var(--fs-xs);color:var(--c-ink-soft)">何時就醫</span><span class="chip sev self">自我照護</span><span class="chip sev clinic">基層診所</span><span class="chip sev medical">醫學中心</span></div>
+        <div class="why"><b>就醫分級 ·</b> 穩定期可自我照護＋規律回診診所；關節急性紅腫熱痛或發燒，轉風濕免疫科（醫學中心）評估。</div></div>
+    </section>
+
+    <section class="page" data-page="predict">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>復發風險</b><span class="en">Flare Risk</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-thermo"/></svg> 本週 Flare 風險 <span class="tag">AI</span></h2>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:var(--fs-3xl);color:var(--c-sun-deep);line-height:1.2">留意 · 中</div>
+        <div class="gauge"></div><div class="needle"><i style="left:60%"></i></div>
+        <div class="explain">
+          <div class="eh"><svg class="pz-ic"><use href="#ic-thermo"/></svg> <b>風險如何估算</b> <span class="en2">How</span>
+            <span class="conf">信心 中 <span class="cbar"><b style="width:58%"></b></span></span></div>
+          <div class="eb">
+            <div class="erow"><div class="elab">判斷依據 · BASIS</div><div class="etxt">三項前兆訊號同時上升，分數落在「留意」區間（0–100 量表中為 58）。</div></div>
+            <div class="erow"><div class="elab">影響因素 · FACTORS</div>
+              <div class="factor"><span class="fn2">疼痛趨勢</span><span class="fbar"><b style="width:74%;background:var(--c-red)"></b></span><span class="fw">＋</span></div>
+              <div class="factor"><span class="fn2">睡眠時數</span><span class="fbar"><b style="width:66%;background:var(--c-red)"></b></span><span class="fw">↓</span></div>
+              <div class="factor"><span class="fn2">晨僵時間</span><span class="fbar"><b style="width:55%;background:var(--c-sun)"></b></span><span class="fw">↑</span></div>
+              <div class="factor"><span class="fn2">用藥遵從</span><span class="fbar"><b style="width:30%;background:var(--c-green)"></b></span><span class="fw">穩</span></div></div>
+            <div class="erow"><div class="elab">資料來源 · SOURCE</div><div class="src"><svg class="pz-ic"><use href="#ic-doc"/></svg> 近 14 天症狀／睡眠／服藥紀錄 · 模型參考 Cochrane 2024</div></div>
+            <div class="nextstep"><b>下一步：</b>留意 2–3 天；惡化（疼痛 ≥7 或呼吸變差）→ 一鍵整理摘要、提前回診。</div>
+          </div>
+        </div></div>
+    </section>
+
+    <section class="page" data-page="followUps">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>回診排程</b><span class="en">Follow-ups</span></div>
+      <div class="card"><div class="kv"><span class="kx">6/10 上午</span> 風濕免疫科 · 陳醫師 <span class="flag ok">5 天後</span></div>
+        <div class="kv"><span class="kx">6/24 下午</span> 抽血追蹤 <span class="chip" style="margin-left:auto">已排</span></div>
+        <div class="kv"><span class="kx">7/15 上午</span> 骨密度檢查 <span class="chip" style="margin-left:auto">已排</span></div></div>
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 新增回診</button>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-clock"/></svg> 過去回診 <span class="en">Past visits</span><span class="tag">近 3 次</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">5/13</div><div class="pip b"></div><div class="what">風濕免疫科 · 陳醫師 <small>· 類固醇加量、抽血追蹤</small></div></div>
+          <div class="row"><div class="when">4/15</div><div class="pip b"></div><div class="what">風濕免疫科 · 陳醫師 <small>· 例行追蹤 · CRP 5.1</small></div></div>
+          <div class="row"><div class="when">3/18</div><div class="pip g"></div><div class="what">骨密度檢查 <small>· 影像醫學科 · 正常</small></div></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="stat" style="box-shadow:none; border:var(--stroke-thin)"><div class="k"><svg class="pz-ic"><use href="#ic-calendar"/></svg> 平均間隔</div><div class="v" style="color:var(--c-grape-deep)">28<small> 天</small></div></div>
+        <div class="stat" style="box-shadow:none; border:var(--stroke-thin)"><div class="k"><svg class="pz-ic"><use href="#ic-check"/></svg> 準時就診</div><div class="v" style="color:var(--c-green-deep)">100<small>%</small></div></div>
+      </div>
+      <div class="why" style="margin-top:11px"><b>自動提醒 ·</b> 系統會在回診前 3 天通知，並提醒你先匯出診前報告、補齊抽血。回診全部排定時保持安靜，不重複催。</div>
+    </section>
+
+    <section class="page" data-page="labs">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>報告數值</b><span class="en">Labs</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-flask"/></svg> 最近抽血 <span class="en">5/28</span></h2>
+        <div class="kv"><span class="kx">CRP</span><span class="vx">8.2</span><span class="flag hi">偏高</span></div>
+        <div class="kv"><span class="kx">ESR</span><span class="vx">32</span><span class="flag hi">偏高</span></div>
+        <div class="kv"><span class="kx">WBC</span><span class="vx">6.8</span><span class="flag ok">正常</span></div>
+        <div class="kv"><span class="kx">eGFR</span><span class="vx">92</span><span class="flag ok">正常</span></div></div>
+      <button class="btn"><svg class="pz-ic"><use href="#ic-plus"/></svg> 上傳報告（自動 OCR）</button>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-chart"/></svg> CRP 趨勢 <span class="en">發炎指標</span><span class="tag">近 4 次</span></h2>
+        <div class="dchart"><svg viewBox="0 0 300 158" preserveAspectRatio="xMidYMid meet">
+          <rect class="band" style="fill:var(--c-green)" x="34" y="104" width="258" height="22"/>
+          <line class="grid" x1="34" y1="14" x2="292" y2="14"/><text class="unit" x="6" y="17">12</text>
+          <line class="grid" x1="34" y1="51" x2="292" y2="51"/><text x="13" y="54">8</text>
+          <line class="grid" x1="34" y1="88" x2="292" y2="88"/><text x="13" y="91">4</text>
+          <line class="grid" x1="34" y1="126" x2="292" y2="126"/><text x="18" y="129">0</text>
+          <line class="axis" x1="34" y1="14" x2="34" y2="126"/><line class="axis" x1="34" y1="126" x2="292" y2="126"/>
+          <polyline class="ln" style="stroke:var(--c-red-deep)" points="52,98 132,79 212,60 280,51"/>
+          <g class="pt" style="stroke:var(--c-red-deep); fill:var(--c-paper-raised)"><circle cx="52" cy="98" r="3.2"/><circle cx="132" cy="79" r="3.2"/><circle cx="212" cy="60" r="3.2"/><circle cx="280" cy="51" r="3.8"/></g>
+          <text class="vlab" x="45" y="92">3.1</text><text class="vlab" x="268" y="47">8.2</text>
+          <text x="40" y="139">4/01</text><text x="124" y="139">4/30</text><text x="262" y="139">5/28</text>
+          <text class="unit" x="34" y="152">CRP mg/L · 綠帶＝正常 &lt;5 · 近期上升</text>
+        </svg></div>
+        <div class="why" style="margin-top:9px"><b>小禾解讀 ·</b> CRP 與 ESR 同步上升代表發炎活性增加，與右肩痛、晨僵變化一致。下一步：6/24 追蹤抽血，回診請醫師評估是否調整 DMARD。</div>
+      </div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-flask"/></svg> 歷次對照 <span class="en">CRP · ESR</span></h2>
+        <div class="kv"><span class="kx">5/28</span><span class="vx">CRP 8.2 · ESR 32</span><span class="flag hi">偏高</span></div>
+        <div class="kv"><span class="kx">4/30</span><span class="vx">CRP 5.4 · ESR 24</span><span class="flag hi">略高</span></div>
+        <div class="kv"><span class="kx">4/01</span><span class="vx">CRP 3.1 · ESR 18</span><span class="flag ok">正常</span></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="timeline">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>健康時間軸</b><span class="en">Timeline</span></div>
+      <div class="card"><div class="tl">
+        <div class="row"><div class="when">5/20</div><div class="pip r"></div><div class="what">感冒 <small>· 自述</small></div></div>
+        <div class="row"><div class="when">5/21</div><div class="pip r"></div><div class="what">心跳變快 <small>· 92 bpm</small></div></div>
+        <div class="row"><div class="when">5/22</div><div class="pip b"></div><div class="what">類固醇增加 <small>· 處方</small></div></div>
+        <div class="row"><div class="when">5/28</div><div class="pip b"></div><div class="what">抽血 CRP 8.2 <small>· 報告</small></div></div>
+        <div class="row"><div class="when">6/05</div><div class="pip r"></div><div class="what">右肩痛 6/10 <small>· 症狀</small></div></div></div></div>
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-doc"/></svg> 上傳檢驗 / 處方 → 自動 OCR</button>
+      <div class="why" style="margin-top:11px"><b>為什麼串成一條軸 ·</b> 把不同醫院、不同次就診的症狀、處方與檢驗報告，依時間自動拼回同一條時間軸；上傳的藥單／報告會 OCR 後標上來源，回診時一眼看完整段病程，不必翻好幾本病歷。</div>
+    </section>
+
+    <section class="page" data-page="story">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>每日故事</b><span class="en">Daily Story</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-book"/></svg> 6 月 5 日 · 晴 <span class="tag">小禾代筆</span></h2>
+        <div class="story">今天右肩有點緊，但還是把藥按時吃了。早上深呼吸三次，肩膀慢慢鬆開。雖然睡得不多，還是收集了 4 片碎片——一步一步，把自己拼回來。</div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:10px;flex-wrap:wrap"><span class="chip"><svg class="pz-ic" style="width:15px;color:var(--c-sun-deep)"><use href="#ic-pill"/></svg> 按時服藥</span><span class="chip"><svg class="pz-ic" style="width:15px;color:var(--c-blue-deep)"><use href="#ic-heart"/></svg> 深呼吸</span><span class="chip"><svg class="pz-ic" style="width:15px;color:var(--c-green-deep)"><use href="#ic-bowl"/></svg> 清淡飲食</span><span class="reward">今日 ＋4 片</span></div></div>
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-sprout"/></svg> 讓小禾把今天寫成故事</button>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-book"/></svg> 過往故事 <span class="en">Past stories</span><span class="tag">本月 18 篇</span></h2>
+        <div class="kv"><span class="kx">6/04 · 雨</span> 晨僵久了點，午後好轉 <span class="chip" style="margin-left:auto">＋3 片</span></div>
+        <div class="kv"><span class="kx">6/03 · 多雲</span> 散步 20 分鐘，膝蓋不痛 <span class="chip" style="margin-left:auto">＋5 片</span></div>
+        <div class="kv"><span class="kx">6/02 · 晴</span> 抽血回來，數值有進步 <span class="chip" style="margin-left:auto">＋4 片</span></div></div>
+    </section>
+
+    <section class="page" data-page="records">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>個人健康檔案</b><span class="en">Health Profile</span></div>
+
+      <!-- 身分卡 identity header -->
+      <div class="card" style="display:flex; gap:13px; align-items:center">
+        <svg viewBox="0 0 44 44" aria-hidden="true" style="width:56px;height:56px;flex:0 0 56px;border:var(--stroke);border-radius:50%;background:var(--wash-blue);padding:3px"><use href="#ic-user" x="9" y="9" width="26" height="26" style="color:var(--c-blue-deep)"/></svg>
+        <div style="flex:1; min-width:0">
+          <b style="font-family:var(--font-display); font-size:var(--fs-lg)">王怡君 <span style="font-family:var(--font-hand);font-weight:400;font-size:var(--fs-xs);color:var(--c-ink-faint)">Yi-Jun</span></b>
+          <div style="font-size:11px; color:var(--c-ink-soft); margin:1px 0 7px">整合病歷號 MD-00231 · 35 歲 · 女</div>
+          <div style="display:flex; gap:5px; flex-wrap:wrap">
+            <span class="chip">O 型 Rh+</span><span class="chip">156 cm</span><span class="chip sev clinic">RA 第 6 年</span></div>
+        </div>
+        <button class="btn" style="flex:0 0 auto; padding:7px 9px"><svg class="pz-ic"><use href="#ic-text"/></svg></button>
+      </div>
+
+      <!-- 檔案完成度 (puzzle metaphor) -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-puzzle"/></svg> 檔案完成度 <span class="en">Completeness</span><span class="tag">86%</span></h2>
+        <div class="bar" style="margin:4px 0 4px"><b style="width:86%; background:var(--c-grape)"></b></div>
+        <div class="why"><b>再拼 2 片就完整 ·</b> 補上「身高體重更新」與「預立醫療意願」，這份檔案在<b>急診與跨院轉診</b>時最能幫到你。</div></div>
+
+      <!-- 過敏與警示 (safety) -->
+      <div class="card" style="border-color:var(--c-red-deep)"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-shield"/></svg> 過敏與用藥警示 <span class="en">Allergies &amp; Alerts</span></h2>
+        <div class="kv"><span class="chip sev er">嚴重</span> <b style="color:var(--c-red-deep)">青黴素類 Penicillin</b> · 蕁麻疹／呼吸困難</div>
+        <div class="kv"><span class="chip sev medical">中等</span> 顯影劑 Contrast media · 全身起疹</div>
+        <div class="kv"><span class="chip sev clinic">食物</span> 帶殼海鮮 · 輕微搔癢</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-ink-faint);margin-top:9px"><svg class="pz-ic" style="width:13px;height:13px"><use href="#ic-clock"/></svg> 最後確認 2026/06/05 · 由本人確認 · 會同步到急診卡</div></div>
+
+      <!-- 慢性病與診斷 -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-stetho"/></svg> 慢性病與診斷 <span class="en">Conditions</span><span class="tag">ICD-10</span></h2>
+        <div class="kv"><span class="kx">主診斷</span> 類風濕性關節炎 <span class="chip" style="margin-left:auto">M06.9</span></div>
+        <div class="kv"><span class="kx">診斷</span> 2020/04 · 林口長庚 風濕免疫科</div>
+        <div class="kv"><span class="kx">共病</span> 骨質疏鬆（類固醇相關）<span class="chip" style="margin-left:auto">M81.8</span></div>
+        <div class="kv"><span class="kx">活動度</span> DAS28 3.4 <span class="flag ok">低度活動</span></div></div>
+
+      <!-- 長期用藥 -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-pill"/></svg> 長期用藥 <span class="en">Long-term meds</span><span class="tag">3 種</span></h2>
+        <div class="kv"><span class="kx">MTX</span> Methotrexate 15mg · 每週一次 <span class="flag ok">穩定</span></div>
+        <div class="kv"><span class="kx">葉酸</span> Folic acid 5mg · 每日 <span class="flag ok">穩定</span></div>
+        <div class="kv"><span class="kx">類固醇</span> Prednisolone 10mg · 每日 <span class="flag hi">減量中</span></div>
+        <button class="btn" data-go="meds" style="width:100%;margin-top:10px"><svg class="pz-ic"><use href="#ic-pill"/></svg> 查看完整用藥與打卡 ›</button></div>
+
+      <!-- 身體數據 -->
+      <div class="grid2">
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-thermo"/></svg><span>身高</span></div><div class="v">156<small> cm</small></div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-heart"/></svg><span>體重</span></div><div class="v">58.2<small> kg</small></div><div class="flag ok" style="margin-top:6px">穩定</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-pulse"/></svg><span>BMI</span></div><div class="v">23.9</div><div class="chip" style="margin-top:6px">正常範圍</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-droplet"/></svg><span>血型</span></div><div class="v">O<small> 型 Rh+</small></div></div>
+      </div>
+
+      <!-- 重大傷病 / 保險 -->
+      <div class="card" style="border-color:var(--c-sun-deep)"><h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-id"/></svg> 重大傷病 / 保險 <span class="en">Major Illness Card</span></h2>
+        <div class="kv"><span class="kx">重大傷病</span> 類風濕性關節炎 <span class="flag ok">已核發</span></div>
+        <div class="kv"><span class="kx">證明效期</span> 2024/01 – 2029/01</div>
+        <div class="kv"><span class="kx">健保身分</span> 一般 · RA 相關免部分負擔</div>
+        <div class="why"><b>為什麼重要 ·</b> 持重大傷病證明就醫，RA 相關治療可<b>免部分負擔</b>；效期前 3 個月系統會提醒你回診換證。</div></div>
+
+      <!-- 緊急聯絡人 -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-users"/></svg> 緊急聯絡人 <span class="en">Emergency contacts</span></h2>
+        <div class="kv"><span class="kx">主要</span> 女兒 林怡安 · 同住 <button class="btn" style="margin-left:auto;padding:5px 9px;font-size:var(--fs-xs)"><svg class="pz-ic" style="width:15px;height:15px"><use href="#ic-phone"/></svg> 撥打</button></div>
+        <div class="kv"><span class="kx">次要</span> 配偶 林志明 <button class="btn" style="margin-left:auto;padding:5px 9px;font-size:var(--fs-xs)"><svg class="pz-ic" style="width:15px;height:15px"><use href="#ic-phone"/></svg> 撥打</button></div>
+        <button class="btn green" style="width:100%;margin-top:10px"><svg class="pz-ic"><use href="#ic-plus"/></svg> 新增聯絡人</button></div>
+
+      <!-- 預立醫療決定 -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-doc"/></svg> 預立醫療意願 <span class="en">Advance care</span></h2>
+        <div class="setr"><div class="sx"><b>器官捐贈意願</b><div>已於健保卡註記</div></div><div class="sw on" data-sw></div></div>
+        <div class="setr"><div class="sx"><b>醫療委任代理人</b><div>女兒 林怡安</div></div><div class="sw on" data-sw></div></div>
+        <div class="setr"><div class="sx"><b>安寧緩和意願 (DNR)</b><div>尚未填寫</div></div><div class="sw" data-sw></div></div>
+        <div class="why">這些意願只有你與你指定的代理人看得到，可隨時修改。</div></div>
+
+      <!-- 跨院整合來源 (existing) -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-hospital"/></svg> 跨院整合來源 <span class="en">Linked Sources</span><span class="tag">3 院</span></h2>
+        <div class="kv"><span class="kx">林口長庚</span> 風濕免疫科 · 主院 <span class="flag ok">已同步</span></div>
+        <div class="kv"><span class="kx">台大醫院</span> 檢驗報告 <span class="flag ok">已同步</span></div>
+        <div class="kv"><span class="kx">社區藥局</span> 慢箋領藥 <span class="flag hi">待更新</span></div>
+        <button class="btn" style="width:100%;margin-top:11px"><svg class="pz-ic"><use href="#ic-camera"/></svg> 上傳紙本報告 · OCR 辨識</button>
+        <div class="why"><b>為什麼整合 ·</b> 您的資料分散在 3 間院所，這份檔案自動把<b>過敏、長期用藥、慢性病</b>合併成一份；社區藥局慢箋尚未回傳，故標「待更新」。</div></div>
+
+      <!-- 給醫師的摘要 (existing) -->
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-doc"/></svg> 給醫師的摘要 <span class="en">Copy Preview</span></h2>
+        <div class="story" style="font-size:var(--fs-sm);line-height:1.7">王怡君 / 女 / 35y。RA 病史 6 年，長期 MTX 15mg/週 + Folic 5mg + Prednisolone 10mg。<b style="color:var(--c-red-deep)">青黴素過敏</b>。近 4 週晨僵 ↑，CRP 8.2（5/28）。緊急聯絡：女兒怡安 0912-xxx。</div>
+        <button class="btn" style="width:100%;margin-top:11px"><svg class="pz-ic"><use href="#ic-doc"/></svg> 複製給醫師</button></div>
+
+      <!-- 資料與隱私 -->
+      <div class="card"><h2><svg class="pz-ic"><use href="#ic-lock"/></svg> 資料與隱私 <span class="en">Data &amp; Privacy</span></h2>
+        <button class="bigbtn" style="margin-bottom:9px"><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-doc"/></svg><div style="flex:1;text-align:left"><b style="font-family:var(--font-display)">匯出我的健康資料</b><div style="font-size:11px;color:var(--c-ink-soft)">PDF · FHIR 標準格式</div></div><span style="color:var(--c-ink-faint);font-family:var(--font-display);font-weight:700">›</span></button>
+        <button class="bigbtn" data-go="family" style="margin-bottom:9px"><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-users"/></svg><div style="flex:1;text-align:left"><b style="font-family:var(--font-display)">誰能看我的資料</b><div style="font-size:11px;color:var(--c-ink-soft)">家屬權限 · 3 人</div></div><span style="color:var(--c-ink-faint);font-family:var(--font-display);font-weight:700">›</span></button>
+        <button class="bigbtn" style="margin-bottom:0"><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-shield"/></svg><div style="flex:1;text-align:left"><b style="font-family:var(--font-display)">刪除帳號與資料</b><div style="font-size:11px;color:var(--c-ink-soft)">30 天內可復原</div></div><span style="color:var(--c-ink-faint);font-family:var(--font-display);font-weight:700">›</span></button></div>
+    </section>
+
+    <section class="page" data-page="reminders">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>提醒通知</b><span class="en">Reminders</span></div>
+      <div class="card">
+        <div class="setr"><div class="sx"><b>服藥提醒</b><div>08:00 · 20:00</div></div><div class="sw on" data-sw></div></div>
+        <div class="setr"><div class="sx"><b>回診倒數</b><div>提前 3 天通知</div></div><div class="sw on" data-sw></div></div>
+        <div class="setr"><div class="sx"><b>喝水提醒</b><div>每 2 小時</div></div><div class="sw" data-sw></div></div></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-clock"/></svg> 今日排程 <span class="en">Today</span><span class="tag">4 則</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">08:00</div><div class="pip g"></div><div class="what"><b>早上服藥</b> MTX · Folic <small>· 已完成</small></div></div>
+          <div class="row"><div class="when">14:00</div><div class="pip b"></div><div class="what"><b>喝水提醒</b> <small>· 已關閉</small></div></div>
+          <div class="row"><div class="when">20:00</div><div class="pip r"></div><div class="what"><b>晚上服藥</b> Prednisolone <small>· 待提醒</small></div></div>
+          <div class="row"><div class="when">6/10</div><div class="pip b"></div><div class="what"><b>回診倒數</b> 陳醫師 <small>· 提前 3 天通知</small></div></div>
+        </div></div>
+      <div class="card"><h2><svg class="pz-ic"><use href="#ic-bell"/></svg> 提醒語氣 <span class="en">Tone</span></h2>
+        <div class="seg"><button class="on">溫柔</button><button>簡短</button><button>嚴肅</button></div></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-moon"/></svg> 免打擾與頻率 <span class="en">Quiet · Frequency</span></h2>
+        <div class="setr"><div class="sx"><b>免打擾時段</b><div>22:00 – 07:00 不發提醒</div></div><div class="sw on" data-sw></div></div>
+        <div class="setr"><div class="sx"><b>漏服自動補提醒</b><div>逾時 30 分鐘再提醒一次</div></div><div class="sw on" data-sw></div></div>
+        <div class="why"><b>為什麼這樣設計 ·</b> 提醒只在<b>狀況變差或漏服</b>時提高頻率；正常時保持安靜、夜間完全不打擾，避免通知疲勞。</div></div>
+    </section>
+
+    <section class="page" data-page="emergency">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>緊急資訊</b><span class="en">Emergency</span></div>
+      <div class="card" style="border-color:var(--c-red-deep)"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-shield"/></svg> 鎖屏也能打開 <span class="en">Lock-screen</span></h2>
+        <div class="kv"><span class="kx">姓名</span><span class="vx">王怡君</span></div>
+        <div class="kv"><span class="kx">血型</span><span class="vx">O+</span></div>
+        <div class="kv"><span class="kx">過敏</span><span class="vx" style="color:var(--c-red-deep)">青黴素</span></div>
+        <div class="kv"><span class="kx">慢性病</span><span class="vx">類風濕性關節炎</span></div>
+        <div class="kv"><span class="kx">用藥</span> MTX · 類固醇</div></div>
+      <div class="card" style="border-color:var(--c-sun-deep)"><h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-stetho"/></svg> 給急救人員 <span class="en">For Responders</span></h2>
+        <div class="kv"><span class="chip sev medical">長期類固醇</span> 突然停藥有腎上腺危象風險，急救時請評估壓力劑量</div>
+        <div class="kv"><span class="chip sev er">勿用</span> <span style="color:var(--c-red-deep)">青黴素類抗生素</span></div>
+        <div class="src" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-ink-faint);margin-top:9px"><svg class="pz-ic" style="width:13px;height:13px"><use href="#ic-clock"/></svg> 資料最後更新 2026/06/05 · 由本人確認</div></div>
+      <button class="btn red" style="width:100%"><svg class="pz-ic"><use href="#ic-phone"/></svg> 一鍵撥打緊急聯絡人</button>
+    </section>
+
+    <section class="page" data-page="family">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>家屬共享</b><span class="en">Family</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-users"/></svg> 共享對象 <span class="en">Members</span></h2>
+        <div class="kv"><span class="kx">女兒 怡安</span> 可看摘要 · 收提醒 <span class="flag ok">已連結</span></div>
+        <div class="kv"><span class="kx">先生 大維</span> 僅緊急通知 <span class="chip" style="margin-left:auto">受邀中</span></div></div>
+      <div class="card">
+        <div class="setr"><div class="sx"><b>同步服藥提醒</b><div>家屬可回「已協助服藥」</div></div><div class="sw on" data-sw></div></div>
+        <div class="setr"><div class="sx"><b>分享診前報告</b><div>每次回診自動同步</div></div><div class="sw on" data-sw></div></div></div>
+      <button class="btn green" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 邀請家屬 · 產生連結</button>
+      <div class="explain">
+        <div class="eh"><svg class="pz-ic"><use href="#ic-shield"/></svg><b>權限如何運作</b><span class="en2">Permissions</span></div>
+        <div class="eb">
+          <div class="erow"><div class="elab">可看摘要</div><div class="etxt">看得到病情趨勢、服藥紀錄與診前報告；<b>看不到</b>原始病歷與聊天內容。</div></div>
+          <div class="erow"><div class="elab">僅緊急通知</div><div class="etxt">平時收不到任何資料，只有在<b>漏服或風險升高</b>時才會收到一則通知。</div></div>
+          <div class="erow"><div class="nextstep"><b>下一步 ·</b> 受邀者需在 48 小時內點連結並由本人確認，逾期自動失效。</div></div>
+        </div></div>
+    </section>
+
+    <section class="page" data-page="search">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>搜尋</b><span class="en">Search</span></div>
+      <div class="sbar"><svg class="pz-ic"><use href="#ic-search"/></svg><input id="globalq" name="globalq" aria-label="搜尋" placeholder="找功能、症狀、藥…" value="類固醇" /></div>
+      <div class="card"><div class="kv"><svg class="pz-ic" style="width:18px"><use href="#ic-flask"/></svg> Prednisolone · 藥物百科</div>
+        <div class="kv"><svg class="pz-ic" style="width:18px"><use href="#ic-pill"/></svg> 類固醇 · 晚上那顆常忘記</div>
+      <div class="seg" style="margin-bottom:13px"><button class="on">全部</button><button>藥</button><button>症狀</button><button>衛教</button><button>功能</button></div>
+      <div class="sech"><svg class="pz-ic" style="width:16px;height:16px"><use href="#ic-flask"/></svg> 藥物 · Medications</div>
+      <div class="card" style="margin-bottom:11px"><div class="kv"><svg class="pz-ic" style="width:18px"><use href="#ic-flask"/></svg> Prednisolone · 藥物百科 <span class="chip" style="margin-left:auto">類固醇</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:18px"><use href="#ic-pill"/></svg> 類固醇 · 晚上那顆常忘記 <span class="chip" style="margin-left:auto">我的用藥</span></div></div>
+      <div class="sech"><svg class="pz-ic" style="width:16px;height:16px"><use href="#ic-book"/></svg> 衛教 · Education</div>
+      <div class="card" style="margin-bottom:11px"><div class="kv"><svg class="pz-ic" style="width:18px"><use href="#ic-book"/></svg> 長期使用類固醇的注意事項 <span class="chip" style="margin-left:auto">衛教</span></div></div>
+      <div class="sech"><svg class="pz-ic" style="width:16px;height:16px"><use href="#ic-note"/></svg> 我的紀錄 · My Notes</div>
+      <div class="card"><div class="kv"><svg class="pz-ic" style="width:18px"><use href="#ic-note"/></svg> 「要吃到什麼時候？」· Memo <span class="chip" style="margin-left:auto">5/22</span></div></div>
+    </section>
+
+    <section class="page" data-page="settings">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>系統設定</b><span class="en">Settings</span></div>
+      <div class="card">
+        <div class="setr"><div class="sx"><b>字體大小</b></div><div class="seg" style="flex:0 0 156px"><button>小</button><button class="on">標準</button><button>大</button></div></div>
+        <div class="setr"><div class="sx"><b>主題</b></div><div class="seg" style="flex:0 0 156px"><button class="on">淺</button><button>深</button><button>自動</button></div></div>
+        <div class="setr"><div class="sx"><b>年長版</b><div>放大字體與按鈕</div></div><div class="sw" data-sw></div></div>
+        <div class="setr"><div class="sx"><b>動畫效果</b></div><div class="sw on" data-sw></div></div>
+        <div class="setr"><div class="sx"><b>提示音效</b></div><div class="sw on" data-sw></div></div></div>
+      <button class="btn"><svg class="pz-ic"><use href="#ic-bulb"/></svg> 重看新手導覽</button>
+    </section>
+
+    <section class="page" data-page="medChanges">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>用藥異動</b><span class="en">Med Changes</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-clock"/></svg> 異動時間軸 <span class="en">Timeline</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">5/22</div><div class="pip r"></div><div class="what"><b>類固醇 ↑ 加量</b> Prednisolone 5→10mg <small>· 陳醫師 · 因 flare</small></div></div>
+          <div class="row"><div class="when">4/30</div><div class="pip b"></div><div class="what"><b>新增</b> Folic Acid 5mg <small>· 配合 MTX 保護</small></div></div>
+          <div class="row"><div class="when">3/15</div><div class="pip g"></div><div class="what"><b>停用</b> 止痛藥 NSAID <small>· 症狀緩解</small></div></div>
+        </div>
+        <div class="why"><b>為什麼追蹤異動 ·</b> 回診時醫師最常問「藥怎麼調、為什麼調」。這份時間軸自動整理加量／減量／新增／停用，一眼看完。</div></div>
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 記一筆異動</button>
+    </section>
+
+    <section class="page" data-page="alerts">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>系統警示</b><span class="en">Alerts</span><span class="sub">4 則需要注意</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-bell"/></svg> 需要注意 <span class="en">Attention</span></h2>
+        <div class="kv"><span class="chip sev medical">檢驗</span> CRP 8.2 偏高（5/28）<span class="chip" style="margin-left:auto">已入報告</span></div>
+        <div class="kv"><span class="chip sev clinic">病情</span> Flare 風險升至「留意」<span class="chip" style="margin-left:auto">看建議</span></div>
+        <div class="kv"><span class="chip sev er">服藥</span> 昨晚漏服類固醇<span class="chip" style="margin-left:auto">補打</span></div>
+        <div class="kv"><span class="chip sev self">回診</span> 距下次回診 5 天<span class="chip" style="margin-left:auto">準備</span></div>
+        <div class="why"><b>智慧提醒 ·</b> 警示只在狀況變差時提高頻率與優先度；正常時保持安靜，避免通知疲勞。</div></div>
+    </section>
+
+    <section class="page" data-page="reports">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>報告產生器</b><span class="en">Reports</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-doc"/></svg> 產生新報告 <span class="en">Generate</span></h2>
+        <div style="font-size:11px;color:var(--c-ink-soft);margin-bottom:5px">時間範圍</div>
+        <div class="seg" style="margin-bottom:11px"><button>7 天</button><button class="on">14 天</button><button>30 天</button><button>90 天</button></div>
+        <div style="font-size:11px;color:var(--c-ink-soft);margin-bottom:5px">版本</div>
+        <div class="seg" style="margin-bottom:12px"><button class="on">病人版</button><button>醫師版</button></div>
+        <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-doc"/></svg> 產生 PDF</button></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-grid"/></svg> 將包含內容 <span class="en">Includes · 病人版 · 14 天</span></h2>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-red-deep)"><use href="#ic-pulse"/></svg> 症狀趨勢 · 疼痛 / 晨僵 <span class="flag ok" style="margin-left:auto">28 筆</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-blue-deep)"><use href="#ic-pill"/></svg> 服藥達成率 · 用藥異動 <span class="flag ok" style="margin-left:auto">92%</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-sun-deep)"><use href="#ic-flask"/></svg> 抽血數值 · CRP / ESR <span class="flag hi" style="margin-left:auto">2 項偏高</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-grape-deep)"><use href="#ic-heart"/></svg> 情緒電力 · 睡眠摘要 <span class="flag ok" style="margin-left:auto">已附</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px;color:var(--c-ink-soft)"><use href="#ic-note"/></svg> 想問醫師的 3 個問題 <span class="chip" style="margin-left:auto">Memo</span></div>
+        <div class="why"><b>病人版 ↔ 醫師版 ·</b> 病人版用白話＋圖、隱去敏感欄位；醫師版加上原始數值、ICD 與用藥劑量。<b>摘要由小禾自動彙整</b>，每段都附來源筆數，可在 PDF 內展開查證。</div></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-clock"/></svg> 最近報告 <span class="en">Recent</span></h2>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px"><use href="#ic-doc"/></svg> 6/01 診前報告 · 醫師版 <span class="chip" style="margin-left:auto">PDF</span></div>
+        <div class="kv"><svg class="pz-ic" style="width:17px;height:17px"><use href="#ic-doc"/></svg> 5/15 藥物報告 · 病人版 <span class="chip" style="margin-left:auto">PDF</span></div></div>
+    </section>
+
+    <section class="page" data-page="admissions">
+      <button class="back"><svg class="pz-ic"><use href="#ic-arrow"/></svg> 更多</button>
+      <div class="ptitle"><b>療程管理</b><span class="en">Treatment Cycles</span></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-hospital"/></svg> 進行中 <span class="en">Active</span></h2>
+        <div style="font-size:var(--fs-base);font-family:var(--font-display);font-weight:700">長期打藥週期 · 第 3 / 6 期</div>
+        <div style="font-size:var(--fs-xs);color:var(--c-ink-soft);margin:3px 0 8px">下次施打 6/20 · 風濕免疫科</div>
+        <div class="bar"><b style="width:50%;background:var(--c-blue)"></b></div></div>
+      <div class="grid2">
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-pill"/></svg><span>已完成劑數</span></div>
+          <div class="v">3<small> / 6</small></div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-calendar"/></svg><span>距下次施打</span></div>
+          <div class="v">15<small> 天</small></div>
+          <div class="chip sev clinic" style="margin-top:8px">6/20 · 風濕免疫科</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-thermo"/></svg><span>本期療效</span></div>
+          <div class="v" style="color:var(--c-green-deep)">改善</div><div class="flag ok" style="margin-top:6px">DAS28 5.1 → 3.4</div></div>
+        <div class="stat"><div class="k"><svg class="pz-ic"><use href="#ic-droplet"/></svg><span>施打前抽血</span></div>
+          <div class="v" style="color:var(--c-sun-deep)">待排</div><div class="chip" style="margin-top:8px">6/17 前完成</div></div>
+      </div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-sprout"/></svg> 療程說明 <span class="en">Why this plan</span></h2>
+        <div class="why"><b>為什麼是 6 期 ·</b> 生物製劑採每 4 週一劑、共 6 劑為一個評估週期；第 3 劑後 DAS28 已由 5.1 降到 3.4（中度→低度活動），故維持原排程，第 6 劑後再評估是否拉長間隔。<b>下一步：</b>6/17 前完成施打前抽血（肝腎功能 + CRP），數值正常才施打 6/20 那劑。</div></div>
+      <div class="card"><h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-clock"/></svg> 療程紀錄 <span class="en">History</span></h2>
+        <div class="tl">
+          <div class="row"><div class="when">5/01</div><div class="pip r"></div><div class="what"><b>急性住院</b> 肺炎 · 4 天 <small>· 區域醫院</small></div></div>
+          <div class="row"><div class="when">3/10</div><div class="pip b"></div><div class="what">門診打藥 · 第 2 期 <small>· 已完成</small></div></div></div></div>
+      <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-plus"/></svg> 新增療程 / 住院</button>
+    </section>
+
+    <!-- ══════════ MORE · 全部功能 ══════════ -->
+    <section class="page" data-page="more">
+      <div class="ptitle"><b>全部功能</b><span class="en">All Functions</span><span class="sub" data-i18n="mr.note">每一項都已設計</span></div>
+      <div class="sech" data-i18n="mr.daily">每日紀錄</div>
+      <div class="cat">
+        <div class="fn b go" data-go="symptoms"><div class="fi"><svg class="pz-ic"><use href="#ic-pulse"/></svg></div><div class="fn-t">症狀紀錄<div class="fn-e">Symptoms</div></div><div class="fn-d">強度・部位・趨勢</div></div>
+        <div class="fn r go" data-go="meds"><div class="fi"><svg class="pz-ic"><use href="#ic-pill"/></svg></div><div class="fn-t">藥物紀錄<div class="fn-e">Medications</div></div><div class="fn-d">拍藥袋・打卡・療效</div></div>
+        <div class="fn s"><div class="fi"><svg class="pz-ic"><use href="#ic-chart"/></svg></div><div class="fn-t">生理紀錄<div class="fn-e">Vitals</div></div><div class="fn-d">血壓・血糖・體重</div></div>
+        <div class="fn g go" data-go="mood"><div class="fi"><svg class="pz-ic"><use href="#ic-heart"/></svg></div><div class="fn-t">情緒電力<div class="fn-e">Mood</div></div><div class="fn-d">情緒輪・電量・走勢</div></div>
+        <div class="fn b"><div class="fi"><svg class="pz-ic"><use href="#ic-bowl"/></svg></div><div class="fn-t">飲食紀錄<div class="fn-e">Diet</div></div><div class="fn-d">攝取・水分・忌口</div></div>
+        <div class="fn r"><div class="fi"><svg class="pz-ic"><use href="#ic-droplet"/></svg></div><div class="fn-t">月經紀錄<div class="fn-e">Period</div></div><div class="fn-d">週期・經量・症狀</div></div>
+        <div class="fn p"><div class="fi"><svg class="pz-ic"><use href="#ic-moon"/></svg></div><div class="fn-t">睡眠紀錄<div class="fn-e">Sleep</div></div><div class="fn-d">時數・效率・趨勢</div></div>
+        <div class="fn s"><div class="fi"><svg class="pz-ic"><use href="#ic-note"/></svg></div><div class="fn-t">Memo<div class="fn-e">Memo</div></div><div class="fn-d">想問醫師的事都丟這</div></div>
+      </div>
+      <div class="sech" data-i18n="mr.search">查詢與分析</div>
+      <div class="cat">
+        <div class="fn g go" data-go="symptoms"><div class="fi"><svg class="pz-ic"><use href="#ic-sprout"/></svg></div><div class="fn-t">症狀分析<div class="fn-e">Analysis</div></div><div class="fn-d">可能病因・該看哪科</div></div>
+        <div class="fn b"><div class="fi"><svg class="pz-ic"><use href="#ic-flask"/></svg></div><div class="fn-t">藥物百科<div class="fn-e">Drug Lookup</div></div><div class="fn-d">副作用・用法・衛教</div></div>
+        <div class="fn s"><div class="fi"><svg class="pz-ic"><use href="#ic-stetho"/></svg></div><div class="fn-t">疾病百科<div class="fn-e">Disease</div></div><div class="fn-d">查疾病・症狀・治療</div></div>
+        <div class="fn r"><div class="fi"><svg class="pz-ic"><use href="#ic-chart"/></svg></div><div class="fn-t">復發風險<div class="fn-e">Relapse</div></div><div class="fn-d">flare 風險預測</div></div>
+      </div>
+      <div class="sech" data-i18n="mr.report">健康報告</div>
+      <div class="cat">
+        <div class="fn b"><div class="fi"><svg class="pz-ic"><use href="#ic-clock"/></svg></div><div class="fn-t">回診排程<div class="fn-e">Follow-ups</div></div><div class="fn-d">科別・醫院・時段</div></div>
+        <div class="fn r go" data-go="previsit"><div class="fi"><svg class="pz-ic"><use href="#ic-doc"/></svg></div><div class="fn-t">診前報告<div class="fn-e">Pre-visit</div></div><div class="fn-d">倒數・摘要・PDF</div></div>
+        <div class="fn s"><div class="fi"><svg class="pz-ic"><use href="#ic-flask"/></svg></div><div class="fn-t">報告數值<div class="fn-e">Labs</div></div><div class="fn-d">抽血・影像・異常追蹤</div></div>
+        <div class="fn b"><div class="fi"><svg class="pz-ic"><use href="#ic-doc"/></svg></div><div class="fn-t">報告產生器<div class="fn-e">Reports</div></div><div class="fn-d">範圍・版本・PDF</div></div>
+        <div class="fn g go" data-go="pieces"><div class="fi"><svg class="pz-ic"><use href="#ic-puzzle"/></svg></div><div class="fn-t">拼圖收藏<div class="fn-e">Pieces</div></div><div class="fn-d">回診之間的收藏</div></div>
+        <div class="fn p"><div class="fi"><svg class="pz-ic"><use href="#ic-clock"/></svg></div><div class="fn-t">健康時間軸<div class="fn-e">Timeline</div></div><div class="fn-d">上傳檢驗→OCR</div></div>
+        <div class="fn r"><div class="fi"><svg class="pz-ic"><use href="#ic-pill"/></svg></div><div class="fn-t">用藥異動<div class="fn-e">Med Changes</div></div><div class="fn-d">加量・減量・停用</div></div>
+      </div>
+      <div class="sech" data-i18n="mr.learn">學習・住院・陪伴</div>
+      <div class="cat">
+        <div class="fn b go" data-go="education"><div class="fi"><svg class="pz-ic"><use href="#ic-book"/></svg></div><div class="fn-t">衛教書房<div class="fn-e">Library</div></div><div class="fn-d">七層書架・有來源</div></div>
+        <div class="fn b go" data-go="outpatient"><div class="fi"><svg class="pz-ic"><use href="#ic-stetho"/></svg></div><div class="fn-t">門診模式<div class="fn-e">Outpatient</div></div><div class="fn-d">候診・帶什麼・問什麼</div></div>
+        <div class="fn r go" data-go="hospital"><div class="fi"><svg class="pz-ic"><use href="#ic-hospital"/></svg></div><div class="fn-t">住院模式<div class="fn-e">Hospital</div></div><div class="fn-d">單手・大字・查房</div></div>
+        <div class="fn s"><div class="fi"><svg class="pz-ic"><use href="#ic-hospital"/></svg></div><div class="fn-t">療程管理<div class="fn-e">Cycles</div></div><div class="fn-d">住院・打藥週期</div></div>
+        <div class="fn s"><div class="fi"><svg class="pz-ic"><use href="#ic-book"/></svg></div><div class="fn-t">每日故事<div class="fn-e">Daily Story</div></div><div class="fn-d">把心情寫成一篇</div></div>
+        <div class="fn g go" data-go="chat"><div class="fi"><svg class="pz-ic"><use href="#ic-sprout"/></svg></div><div class="fn-t">醫起聊天<div class="fn-e">Chat</div></div><div class="fn-d">小禾整理近況</div></div>
+      </div>
+      <div class="sech" data-i18n="mr.sys">帳號・安全・設定</div>
+      <div class="cat">
+        <div class="fn b"><div class="fi"><svg class="pz-ic"><use href="#ic-id"/></svg></div><div class="fn-t">基本資料<div class="fn-e">Profile</div></div><div class="fn-d">過敏・慢病・用藥</div></div>
+        <div class="fn s"><div class="fi"><svg class="pz-ic"><use href="#ic-bell"/></svg></div><div class="fn-t">提醒通知<div class="fn-e">Reminders</div></div><div class="fn-d">時段・語氣・通道</div></div>
+        <div class="fn r"><div class="fi"><svg class="pz-ic"><use href="#ic-bell"/></svg></div><div class="fn-t">系統警示<div class="fn-e">Alerts</div></div><div class="fn-d">異常・風險・漏服</div></div>
+        <div class="fn r"><div class="fi"><svg class="pz-ic"><use href="#ic-shield"/></svg></div><div class="fn-t">緊急資訊<div class="fn-e">Emergency</div></div><div class="fn-d">鎖屏可開・過敏・聯絡</div></div>
+        <div class="fn g"><div class="fi"><svg class="pz-ic"><use href="#ic-users"/></svg></div><div class="fn-t">家屬共享<div class="fn-e">Family</div></div><div class="fn-d">代理視角・同步提醒</div></div>
+        <div class="fn p"><div class="fi"><svg class="pz-ic"><use href="#ic-search"/></svg></div><div class="fn-t">搜尋<div class="fn-e">Search</div></div><div class="fn-d">找功能・症狀・藥</div></div>
+        <div class="fn b"><div class="fi"><svg class="pz-ic"><use href="#ic-gear"/></svg></div><div class="fn-t">系統設定<div class="fn-e">Settings</div></div><div class="fn-d">字體・主題・年長版</div></div>
+        <div class="fn s" id="fnOnb"><div class="fi"><svg class="pz-ic"><use href="#ic-bulb"/></svg></div><div class="fn-t">重看導覽<div class="fn-e">Tutorial</div></div><div class="fn-d">再看一次新手教學</div></div>
+        <div class="fn p" id="fnLogin"><div class="fi"><svg class="pz-ic"><use href="#ic-lock"/></svg></div><div class="fn-t">登入 / 帳號<div class="fn-e">Account</div></div><div class="fn-d">登入・註冊・安全</div></div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab on" data-go="home"><svg class="pz-ic"><use href="#ic-home"/></svg><span data-i18n="t.home">首頁</span><span class="en">Home</span></button>
+    <button class="tab" data-go="pieces"><svg class="pz-ic"><use href="#ic-puzzle"/></svg><span data-i18n="t.pieces">碎片</span><span class="en">Pieces</span></button>
+    <button class="tab" data-go="symptoms"><svg class="pz-ic"><use href="#ic-pulse"/></svg><span data-i18n="t.sym">症狀</span><span class="en">Symptoms</span></button>
+    <button class="tab" data-go="meds"><svg class="pz-ic"><use href="#ic-pill"/></svg><span data-i18n="t.med">藥物</span><span class="en">Meds</span></button>
+    <button class="tab" data-go="more"><svg class="pz-ic"><use href="#ic-grid"/></svg><span data-i18n="t.more">更多</span><span class="en">More</span></button>
+  </nav>
+</div>
+
+<script>
+const DICT = { 'zh-TW':{}, 'en':{
+  'g.morning':'Good morning','g.sub':"let's take it slow today",'g.thu':'Thursday',
+  'h.today':"TODAY'S PIECES · 今天的碎片",'h.of':'/ 6','h.calm':'Health is pieced together, one bit at a time.',
+  'h.s1':'Sym','h.s2':'Med','h.s3':'Mood','h.s4':'Sleep',
+  'h.meds':"Today's meds",'h.visit':'Next visit','h.d':' days','h.dept':'Rheumatology',
+  'h.flare':'Flare risk','h.watch':'Watch','h.mood':"Today's mood",
+  'h.ai':'Xiaohe noticed','h.aibody':'Sleep down 3 days; pain rose 3→6. Worth seeing your doctor sooner.',
+  'h.whyk':'Why: ','h.whyv':'sleep −2.1h/night + pain +3 matches an early-flare signal (source: your last 14 days).',
+  'h.esc':'Build visit summary','h.ok':'Got it','h.pain':'Pain trend','h.painnote':'↗ slow rise this week · dots = pieces you logged',
+  'qa.sym':'Log symptom','qa.med':'Med check-in','qa.mood':'Log mood',
+  'p.cycle':'This cycle 18 / 28','p.unlock':'Fill it to unlock this artwork for your room.',
+  'p.calmk':'No pressure ·','p.calmv':'stamps only remember what you did — they never nag, and a missed day never disappears.',
+  's.analyze':'Analyze this spot','s.aih':"Xiaohe's first read ·",'s.aiv':'right-shoulder pain + 30-min morning stiffness looks inflammatory. Suggest clinic → rheumatology.',
+  's.tier':'Suggest: primary clinic','s.urg':'Urgency: bookable','s.disc':'*A discussion aid, not a diagnosis.',
+  'm.adh':'Adherence 92%','m.morning':'Morning','m.morningh':'after waking / breakfast','m.evening':'Evening','m.eveningh':'dinner / bedtime','m.makeup':'log it',
+  'm.whyk':'Check-in logs the real moment ·','m.whyv':'not the scheduled time — your doctor sees when you actually took it. Missed slots turn to "log it".',
+  'm.e1':'Much better','m.e2':'No change','m.e3':'A bit rough',
+  'mo.calm':'Center = calm (blue)','mo.intense':'Outer = intense (red)','mo.whyk':'Red = intense, blue = calm ·','mo.whyv':'several low-battery days in a row get flagged in your pre-visit report.','mo.submit':"Submit today's mood",
+  'pv.count':'NEXT VISIT · countdown','pv.dept':'Tue 6/10 AM · Rheumatology · Dr. Chen','pv.whyk':'Why these 3 ·','pv.whyv':'picked the biggest changes your doctor is most likely to ask about, from your 14-day log.','pv.pdf1':'Patient PDF','pv.pdf2':'Doctor PDF',
+  'hs.on':'Inpatient · day 3','hs.room':'Room 12B · large one-hand','hs.med':'Medication','hs.medh':'next 14:00 · 2 pills','hs.lab':'Lab results','hs.labh':'bloods this morning · CRP pending','hs.round':'Rounds notes','hs.roundh':'3 things to ask the doctor','hs.fam':'Call family','hs.famh':'one tap · with today summary',
+  'e.whyk':'Human-reviewed ·','e.whyv':'every article cites its sources — open the right page and read with confidence.',
+  'c.a1':'Hi Yijun~ you logged 4 pieces in 3 days, nicely done. Talk about the joint stiffness?','c.m1':'Fingers feel tight in the morning, loosen after noon.','c.a2':'Got it. "Morning stiffness over 30 min" matters to your doctor — saved as a piece, your visit summary will carry it. Make it today\'s journal too?','c.c1':'Save a piece','c.c2':'Make journal','c.c3':'Tidy for doctor',
+  't.home':'Home','t.pieces':'Pieces','t.sym':'Symptoms','t.med':'Meds','t.more':'More',
+  'mr.note':'every one is designed','mr.daily':'Daily Records','mr.search':'Search & Analysis','mr.report':'Health Reports','mr.learn':'Learn · Hospital · Support','mr.sys':'Account · Safety · Settings',
+}};
+document.querySelectorAll('[data-i18n]').forEach(el=>{ DICT['zh-TW'][el.dataset.i18n] = el.innerHTML; });
+let lang='zh-TW';
+function applyLang(){ document.querySelectorAll('[data-i18n]').forEach(el=>{ const v=DICT[lang][el.dataset.i18n]; if(v!=null) el.innerHTML=v; });
+  document.documentElement.lang = lang==='en'?'en':'zh-Hant'; document.getElementById('langTx').textContent = lang==='en'?'EN':'中'; }
+document.getElementById('langBtn').onclick=()=>{ lang=lang==='zh-TW'?'en':'zh-TW'; applyLang(); };
+document.getElementById('themeBtn').onclick=()=>{ const d=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme', d?'light':'dark'); document.getElementById('themeIc').setAttribute('href', d?'#ic-moon':'#ic-sun'); };
+document.getElementById('modeBtn').onclick=()=>{ const s=document.documentElement.getAttribute('data-mode')==='senior';
+  document.documentElement.setAttribute('data-mode', s?'standard':'senior'); document.getElementById('modeTx').textContent = s?'標':'年'; };
+function goTo(page){ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.dataset.page===page));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on', x.dataset.go===page)); document.getElementById('screen').scrollTop=0; }
+document.querySelectorAll('.tab').forEach(t=> t.onclick=()=>goTo(t.dataset.go));
+document.querySelectorAll('.fn.go').forEach(f=> f.onclick=()=>goTo(f.dataset.go));
+/* 首頁所有內容皆可點 → 進入對應功能頁 */
+document.querySelectorAll('.hgo[data-go]').forEach(el=> el.onclick=()=>goTo(el.dataset.go));
+document.querySelectorAll('.btn[data-go]').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); goTo(b.dataset.go); });
+document.querySelectorAll('.bigbtn[data-go]').forEach(b=> b.onclick=()=>goTo(b.dataset.go));
+(function(){ const ok=document.getElementById('aiOk'); if(!ok) return;
+  ok.onclick=(e)=>{ e.stopPropagation(); const c=ok.closest('.card'); if(!c) return;
+    c.style.transition='opacity .4s var(--ease-soft), transform .4s var(--ease-soft)';
+    c.style.opacity='0'; c.style.transform='translateY(-8px)';
+    setTimeout(()=>{ c.style.display='none'; }, 400); }; })();
+document.querySelectorAll('.qa-add').forEach(b=>{ b.onclick=()=>{
+  const empty=[...document.querySelectorAll('#homeSlots .slot')].find(s=>!s.classList.contains('f'));
+  if(empty){ empty.classList.add('f', b.dataset.fill, 'pop'); empty.textContent = lang==='en'?'＋':'新'; }
+  const z=document.getElementById('rewardZone'); z.innerHTML='';
+  const r=document.createElement('span'); r.className='reward'; r.textContent= lang==='en'?'＋1 piece collected':'＋收成 1 片';
+  z.appendChild(r); r.style.animation='pop .5s var(--ease-soft)';
+  setTimeout(()=>{ r.style.transition='opacity .6s'; r.style.opacity='0'; }, 2200); };});
+
+/* oil-painting mask: 35 cells, 12 still covered → 66% revealed (圖一 reveals as you collect) */
+(function(){ const m=document.getElementById('oilMask'); if(!m) return;
+  const cov=new Set([3,6,7,13,17,20,24,27,28,31,33,34]);
+  for(let k=0;k<35;k++){ const c=document.createElement('i'); if(cov.has(k)) c.className='cv'; m.appendChild(c); } })();
+
+/* 打卡日曆: 5-week check-in heatmap — each day's pieces = colour intensity (串接拼圖) */
+(function(){ const c=document.getElementById('checkCal'); if(!c) return;
+  ['日','一','二','三','四','五','六'].forEach(d=>{ const h=document.createElement('div'); h.className='dow'; h.textContent=d; c.appendChild(h); });
+  const seq=[1,2,0,1,2,1,0, 2,1,3,1,0,2,1, 1,2,1,0,1,2,3, 1,1,2,1,2,1,3, 2,1,2,3,2,1,4];
+  seq.forEach((lv,k)=>{ const i=document.createElement('i'); const cl=Math.min(lv,3);
+    if(cl) i.className='l'+cl; if(k===seq.length-1) i.classList.add('tdy');
+    if(lv) i.innerHTML='<span class="pcs">'+lv+'</span>'; c.appendChild(i); }); })();
+
+/* 導覽教學 onboarding (implemented) */
+const onb=document.getElementById('onb'), authEl=document.getElementById('auth'); let step=0; const STEPS=5;
+function showStep(n){ step=Math.max(0,Math.min(STEPS-1,n));
+  document.querySelectorAll('.onbstep').forEach(s=>s.classList.toggle('on',+s.dataset.step===step));
+  document.querySelectorAll('#onbDots i').forEach((d,i)=>d.classList.toggle('on',i===step));
+  document.getElementById('onbBack').style.visibility=step===0?'hidden':'visible';
+  document.getElementById('onbNext').textContent=step===STEPS-1?(lang==='en'?'Get started':'開始使用'):(lang==='en'?'Next':'下一步'); }
+document.getElementById('onbNext').onclick=()=>{ if(step===STEPS-1){ onb.classList.add('hidden'); authEl.classList.remove('hidden'); } else showStep(step+1); };
+document.getElementById('onbBack').onclick=()=>showStep(step-1);
+document.getElementById('onbSkip').onclick=()=>{ onb.classList.add('hidden'); authEl.classList.add('hidden'); };
+function reOnb(){ onb.classList.remove('hidden'); authEl.classList.add('hidden'); showStep(0); }
+showStep(0);
+
+/* 登錄系統 auth */
+document.getElementById('authGo').onclick=()=>authEl.classList.add('hidden');
+document.getElementById('authBack').onclick=reOnb;
+document.getElementById('atLogin').onclick=function(){ this.classList.add('on'); document.getElementById('atReg').classList.remove('on'); };
+document.getElementById('atReg').onclick=function(){ this.classList.add('on'); document.getElementById('atLogin').classList.remove('on'); };
+const fnOnb=document.getElementById('fnOnb'); if(fnOnb) fnOnb.onclick=reOnb;
+const fnLogin=document.getElementById('fnLogin'); if(fnLogin) fnLogin.onclick=()=>authEl.classList.remove('hidden');
+
+/* function interiors: wire EVERY catalog card to its inner page by its English label */
+const FNMAP={Symptoms:'symptoms',Medications:'meds',Vitals:'vitals',Mood:'mood',Diet:'diet',Period:'menstrual',Sleep:'sleep',Memo:'memo',Analysis:'symptoms','Drug Lookup':'drugSearch',Disease:'diseaseSearch',Relapse:'predict','Follow-ups':'followUps','Pre-visit':'previsit',Labs:'labs',Pieces:'pieces',Timeline:'timeline','Med Changes':'medChanges',Reports:'reports','Cycles':'admissions',Alerts:'alerts',Library:'education',Hospital:'hospital',Outpatient:'outpatient','Daily Story':'story',Chat:'chat',Profile:'records',Reminders:'reminders',Emergency:'emergency',Family:'family',Search:'search',Settings:'settings',Tutorial:'__onb',Account:'__auth'};
+document.querySelectorAll('.fn').forEach(f=>{ const e=((f.querySelector('.fn-e')||{}).textContent||'').trim(); const pg=FNMAP[e]; if(!pg) return;
+  f.onclick=()=>{ if(pg==='__onb') reOnb(); else if(pg==='__auth') authEl.classList.remove('hidden'); else goTo(pg); }; });
+document.querySelectorAll('.back').forEach(b=> b.onclick=()=>goTo('more'));
+document.querySelectorAll('[data-sw]').forEach(s=> s.onclick=()=>s.classList.toggle('on'));
+document.querySelectorAll('.seg').forEach(g=> g.querySelectorAll('button').forEach(b=> b.onclick=()=>{ g.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }));
+document.querySelectorAll('.catwrap').forEach(g=> g.querySelectorAll('.catcard').forEach(b=> b.onclick=()=>{ g.querySelectorAll('.catcard').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }));
+document.querySelectorAll('.water i').forEach((w,i,all)=> w.onclick=()=>all.forEach((x,j)=>x.classList.toggle('on',j<=i)));
+document.querySelectorAll('.btn').forEach(b=>{ if((b.textContent||'').indexOf('重看')>=0) b.onclick=reOnb; });
+
+applyLang();
+</script>
+</body>
+</html>
