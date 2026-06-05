@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>拼圖診療室 · 網頁版 · The Puzzle Clinic (Web)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+/* ═══ Hanako-kun tokens (mirrors puzzle-tokens.css / phone preview) ═══ */
+:root{
+  --c-paper:#F3EAD3; --c-paper-raised:#FBF4E2; --c-paper-sunk:#E9DEC2; --c-paper-edge:#EAD9B8;
+  --c-ink:#2E2A22; --c-ink-soft:#6A6253; --c-ink-faint:#A99E86; --c-ink-line:rgba(46,42,34,.16);
+  --c-red:#D46A5C; --c-red-deep:#B14A3E; --c-red-soft:#F0C9C0;       /* dusty vermilion */
+  --c-blue:#4C9E9E; --c-blue-deep:#2F7A7A; --c-blue-soft:#BFE0DE;    /* Hanako teal */
+  --c-green:#7FA86A; --c-green-deep:#5E8449; --c-green-soft:#D5E3C6;
+  --c-sun:#E0A82E; --c-sun-deep:#B5821A; --c-sun-soft:#F2D88E;       /* mustard gold */
+  --c-grape:#9B7BA8; --c-grape-deep:#785A88; --c-grape-soft:#D4C5DC; /* plum */
+  --sev-self:var(--c-green); --sev-clinic:var(--c-blue); --sev-regional:var(--c-grape);
+  --sev-medical:var(--c-red-deep); --sev-er:#D6452F;
+  --flare-low:var(--c-green); --flare-mid:var(--c-sun); --flare-high:#D6452F;
+  --wash-red:rgba(212,106,92,.15); --wash-blue:rgba(76,158,158,.15); --wash-green:rgba(127,168,106,.16);
+  --wash-sun:rgba(224,168,46,.18); --wash-grape:rgba(155,123,168,.16); --wash-ink:rgba(46,42,34,.05);
+  --on-fill:#2E2A22;
+  --font-display:"Zen Maru Gothic","Noto Sans TC",system-ui,sans-serif;
+  --font-ui:"Zen Maru Gothic","Noto Sans TC",system-ui,sans-serif;
+  --font-hand:"Klee One","Zen Maru Gothic",cursive;
+  --fs-xs:.8125rem; --fs-sm:.875rem; --fs-base:1rem; --fs-lg:1.125rem; --fs-xl:1.25rem;
+  --fs-2xl:1.5rem; --fs-3xl:1.875rem; --fs-4xl:2.375rem; --lh-base:1.65; --type-scale:1;
+  --r-panel:15px 13px 16px 14px/14px 16px 13px 15px; --r-btn:12px 10px 13px 11px/11px 13px 10px 12px;
+  --r-chip:9px 7px 10px 8px/8px 10px 7px 9px;
+  --stroke:2px solid var(--c-ink); --stroke-thin:1.5px solid var(--c-ink);
+  --stroke-hair:1px solid var(--c-ink-line); --stroke-dash:1.5px dashed var(--c-ink-faint);
+  --shadow-print:0 3px 0 rgba(87,78,69,.08),0 6px 16px rgba(87,78,69,.09);
+  --shadow-print-sm:0 2px 0 rgba(87,78,69,.07),0 3px 8px rgba(87,78,69,.07);
+  --shadow-press:0 1px 0 rgba(87,78,69,.12);
+  --tap-min:44px; --tone-ink-color:rgba(87,78,69,.05);
+  --ease-soft:cubic-bezier(.34,1.4,.5,1); --ease-out:cubic-bezier(.22,1,.36,1);
+  --t-fast:.13s; --t-base:.24s; --piece-r:6px;
+}
+/* DARK 「丹寧夜」denim-indigo base + mustard topstitch */
+[data-theme="dark"]{
+  --c-paper:#1D3550; --c-paper-raised:#264563; --c-paper-sunk:#14283A; --c-paper-edge:#36577A;
+  --c-ink:#EAF1F8; --c-ink-soft:#AEC0D4; --c-ink-faint:#7589A0; --c-ink-line:rgba(234,241,248,.16);
+  --c-red:#F09A86; --c-red-deep:#E07A64; --c-red-soft:#5A352F;
+  --c-blue:#62C9CB; --c-blue-deep:#45ADAF; --c-blue-soft:#1E4A55;
+  --c-green:#9CC987; --c-green-deep:#7AAB62; --c-green-soft:#2E482C;
+  --c-sun:#ECC56A; --c-sun-deep:#CFA13F; --c-sun-soft:#4A4020;
+  --c-grape:#C3ABD2; --c-grape-deep:#9E84B4; --c-grape-soft:#3A3450;
+  --sev-er:#F0654E; --flare-high:#F0654E;
+  --wash-red:rgba(240,154,134,.15); --wash-blue:rgba(98,201,203,.15); --wash-green:rgba(156,201,135,.15);
+  --wash-sun:rgba(236,197,106,.18); --wash-grape:rgba(195,171,210,.16); --wash-ink:rgba(234,241,248,.06);
+  --shadow-print:0 3px 0 rgba(0,0,0,.30),0 6px 16px rgba(0,0,0,.40);
+  --shadow-print-sm:0 2px 0 rgba(0,0,0,.24),0 3px 8px rgba(0,0,0,.30);
+  --shadow-press:0 1px 0 rgba(0,0,0,.4);
+}
+[data-mode="senior"]{ --type-scale:1.16; --tap-min:54px; --stroke:2.5px solid var(--c-ink); --stroke-thin:2px solid var(--c-ink); }
+
+*{box-sizing:border-box; margin:0; padding:0;}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.001ms!important; transition-duration:.001ms!important;} }
+html{font-size:calc(16px*var(--type-scale));}
+body{font-family:var(--font-ui); color:var(--c-ink); line-height:var(--lh-base); min-height:100vh;
+  background-color:var(--c-paper);
+  background-image:
+    radial-gradient(120% 70% at 100% 0%, var(--wash-blue), transparent 42%),
+    radial-gradient(110% 60% at 0% 100%, var(--wash-sun), transparent 48%),
+    radial-gradient(var(--tone-ink-color) 1px, transparent 1.5px);
+  background-size:cover,cover,7px 7px; background-attachment:fixed,fixed,scroll;
+  transition:background .4s var(--ease-out);}
+[data-theme="dark"] body{
+  background-color:#102234;
+  background-image:
+    radial-gradient(120% 70% at 100% 0%, rgba(69,173,175,.18), transparent 42%),
+    radial-gradient(110% 60% at 0% 100%, rgba(236,197,106,.12), transparent 48%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.022) 0 1.5px, transparent 1.5px 5px),
+    radial-gradient(rgba(234,241,248,.045) 1px, transparent 1.5px);
+  background-size:cover,cover,auto,7px 7px;}
+.pz-ic{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; display:inline-block; vertical-align:middle; flex:0 0 auto;}
+
+/* ═══ desktop shell ═══ */
+.appbar{position:sticky; top:0; z-index:30; height:64px; display:flex; align-items:center; gap:16px; padding:0 22px;
+  background:var(--c-paper-raised); border-bottom:var(--stroke); box-shadow:var(--shadow-print-sm);}
+.brand{display:flex; align-items:center; gap:11px;}
+.brand .logo{width:40px; height:40px; flex:0 0 40px; border:var(--stroke); border-radius:11px; background:var(--wash-green);
+  display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-print-sm);}
+.brand .logo .pz-ic{width:24px; height:24px; color:var(--c-green-deep);}
+.brand .bt b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-lg); line-height:1; letter-spacing:.01em; display:block;}
+.brand .bt span{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.asearch{flex:0 1 380px; display:flex; align-items:center; gap:9px; border:var(--stroke); border-radius:var(--r-btn);
+  background:var(--c-paper); padding:0 13px; box-shadow:var(--shadow-print-sm); height:40px; margin-left:10px;}
+.asearch .pz-ic{width:18px; height:18px; color:var(--c-ink-faint);}
+.asearch input{flex:1; border:none; background:none; outline:none; font-family:var(--font-ui); font-size:var(--fs-sm); color:var(--c-ink);}
+.asearch .kbd{font-size:10px; color:var(--c-ink-faint); border:var(--stroke-thin); border-color:var(--c-ink-line); border-radius:5px; padding:1px 6px;}
+.sp{margin-left:auto;}
+.tools{display:flex; align-items:center; gap:8px;}
+.tbtn{display:inline-flex; align-items:center; gap:4px; font-family:var(--font-ui); font-weight:700; font-size:var(--fs-xs);
+  cursor:pointer; background:var(--c-paper); color:var(--c-ink); border:var(--stroke-thin); border-radius:var(--r-chip);
+  box-shadow:var(--shadow-print-sm); min-width:40px; height:38px; padding:0 10px;}
+.tbtn:active{transform:translateY(1px); box-shadow:var(--shadow-press);}
+.tbtn .pz-ic{width:17px; height:17px;}
+.uav{width:40px; height:40px; flex:0 0 40px; border:var(--stroke); border-radius:50%; background:var(--wash-blue); padding:3px; cursor:pointer;}
+
+.layout{display:grid; grid-template-columns:250px minmax(0,1fr); align-items:start;}
+.side{position:sticky; top:64px; align-self:start; height:calc(100vh - 64px); overflow-y:auto;
+  background:var(--c-paper-raised); border-right:var(--stroke); padding:16px 12px 26px; scrollbar-width:thin;}
+.navgroup{margin-bottom:15px;}
+.navgroup .gh{font-family:var(--font-ui); font-size:10px; font-weight:700; letter-spacing:.13em; color:var(--c-ink-faint); padding:0 9px 7px; text-transform:uppercase;}
+.navitem{display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:11px; cursor:pointer; color:var(--c-ink);
+  margin-bottom:2px; border:1.5px solid transparent; transition:background var(--t-fast), border-color var(--t-fast);}
+.navitem .ni{width:34px; height:34px; flex:0 0 34px; border:var(--stroke-thin); border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--c-paper);}
+.navitem .ni .pz-ic{width:19px; height:19px;}
+.navitem .nl{font-family:var(--font-display); font-weight:700; font-size:var(--fs-sm); line-height:1.15;}
+.navitem .ne{font-family:var(--font-hand); font-size:10px; color:var(--c-ink-faint); line-height:1;}
+.navitem:hover{background:var(--c-paper);}
+.navitem.on{background:var(--wash-blue); border-color:var(--c-blue-deep);}
+.navitem.on .ni{background:var(--c-blue); border-color:var(--c-blue-deep); color:var(--on-fill);}
+.sideprog{margin-top:6px; border:var(--stroke); border-radius:var(--r-panel); background:var(--c-paper); box-shadow:var(--shadow-print-sm); padding:13px;}
+.sideprog .st{display:flex; align-items:center; gap:7px; font-family:var(--font-display); font-weight:700; font-size:var(--fs-sm); margin-bottom:9px;}
+.sideprog .st .pz-ic{width:18px; height:18px; color:var(--c-grape-deep);}
+.sideprog .slots{display:grid; grid-template-columns:repeat(6,1fr); gap:5px;}
+.sideprog .calm{font-family:var(--font-hand); font-size:11px; color:var(--c-ink-soft); margin-top:9px; line-height:1.4;}
+
+.main{padding:24px 30px 70px; max-width:1280px;}
+.view{display:none;} .view.active{display:block; animation:rise .4s var(--ease-out);}
+@keyframes rise{from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;}}
+.vhead{display:flex; align-items:flex-end; gap:12px; margin-bottom:20px; flex-wrap:wrap;}
+.vhead .ttl{font-family:var(--font-display); font-weight:700; font-size:var(--fs-3xl); line-height:1.05;}
+.vhead .en{font-family:var(--font-hand); font-size:var(--fs-base); color:var(--c-ink-faint);}
+.vhead .day{margin-left:auto; text-align:right;}
+.vhead .day b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-xl); display:block;}
+.vhead .day span{font-size:var(--fs-xs); color:var(--c-ink-soft);}
+
+/* bento dashboard grid */
+.dash{display:grid; grid-template-columns:repeat(12,1fr); gap:18px; align-items:start;}
+.dash>*{margin-bottom:0 !important;}
+.c3{grid-column:span 3;} .c4{grid-column:span 4;} .c5{grid-column:span 5;}
+.c6{grid-column:span 6;} .c7{grid-column:span 7;} .c8{grid-column:span 8;} .c12{grid-column:span 12;}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;}
+.two>*{margin-bottom:0 !important;}
+@media(max-width:1180px){ .c3{grid-column:span 6;} .c4,.c5{grid-column:span 6;} .c7,.c8{grid-column:span 12;} }
+@media(max-width:980px){ .layout{grid-template-columns:1fr;} .side{display:none;} .dash>*{grid-column:span 12 !important;} .two{grid-template-columns:1fr;} .asearch{display:none;} }
+
+/* ═══ reused components (from phone preview / puzzle-tokens) ═══ */
+.card{position:relative; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel);
+  box-shadow:var(--shadow-print); padding:16px; margin-bottom:16px;}
+.card::after{content:""; position:absolute; inset:4px; border:var(--stroke-hair);
+  border-radius:11px 13px 10px 12px/12px 10px 13px 11px; pointer-events:none;}
+.card>h2{font-family:var(--font-display); font-weight:700; font-size:var(--fs-base); display:flex; align-items:center; gap:8px; margin-bottom:13px;}
+.card>h2 .pz-ic{width:21px; height:21px;}
+.card>h2 .en{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-faint); font-weight:400;}
+.card>h2 .tag{margin-left:auto; font-family:var(--font-ui); font-size:var(--fs-xs); font-weight:700; color:var(--c-ink-soft);
+  background:var(--c-paper); border:var(--stroke-thin); border-color:var(--c-ink-line); border-radius:7px; padding:2px 8px;}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; font-family:var(--font-ui); font-weight:700; font-size:var(--fs-sm);
+  cursor:pointer; color:var(--c-ink); background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-btn);
+  box-shadow:var(--shadow-print-sm); min-height:var(--tap-min); padding:9px 14px; transition:transform var(--t-fast) var(--ease-soft);}
+.btn:active{transform:translateY(2px); box-shadow:var(--shadow-press);}
+.btn.blue{background:var(--c-blue); border-color:var(--c-blue-deep); color:var(--on-fill);}
+.btn.red{background:var(--c-red); border-color:var(--c-red-deep); color:var(--on-fill);}
+.btn.green{background:var(--c-green); border-color:var(--c-green-deep); color:var(--on-fill);}
+.chip{display:inline-flex; align-items:center; gap:4px; font-size:var(--fs-xs); font-weight:500; color:var(--c-ink); padding:4px 9px;
+  border:var(--stroke-thin); border-radius:var(--r-chip); background:var(--c-paper);}
+.chip .pz-ic{width:15px; height:15px;}
+.sev{font-weight:700;}
+.sev.self{background:var(--wash-green); border-color:var(--c-green-deep);} .sev.clinic{background:var(--wash-blue); border-color:var(--c-blue-deep);}
+.sev.regional{background:var(--wash-grape); border-color:var(--c-grape-deep);} .sev.medical{background:var(--wash-red); border-color:var(--c-red-deep);}
+.sev.er{background:rgba(220,111,94,.16); border-color:#DC6F5E;}
+.why{position:relative; font-family:var(--font-ui); font-size:var(--fs-sm); line-height:1.62; color:var(--c-ink-soft);
+  background:var(--wash-blue); border:var(--stroke-thin); border-color:var(--c-blue-deep); border-left-width:4px;
+  border-radius:7px; padding:9px 12px; margin-top:11px;}
+.why b{color:var(--c-blue-deep); font-weight:700;}
+.explain{border:var(--stroke-thin); border-color:var(--c-blue-deep); border-radius:var(--r-panel); background:var(--c-paper);
+  box-shadow:var(--shadow-print-sm); overflow:hidden; margin-top:12px;}
+.explain .eh{display:flex; align-items:center; gap:7px; background:var(--wash-blue); border-bottom:var(--stroke-thin); border-color:var(--c-blue-deep); padding:9px 13px;}
+.explain .eh .pz-ic{width:17px; height:17px; color:var(--c-blue-deep);}
+.explain .eh b{font-family:var(--font-display); font-weight:700; font-size:var(--fs-sm); color:var(--c-ink);}
+.explain .eh .en2{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-faint);}
+.explain .conf{margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; color:var(--c-ink-soft); white-space:nowrap;}
+.explain .conf .cbar{width:54px; height:7px; border:1.5px solid var(--c-ink); border-radius:4px; overflow:hidden; background:var(--c-paper-raised);}
+.explain .conf .cbar b{display:block; height:100%; background:var(--c-blue);}
+.explain .eb{padding:13px;}
+.explain .erow{margin-bottom:12px;} .explain .erow:last-child{margin-bottom:0;}
+.explain .elab{font-size:10px; font-weight:700; color:var(--c-blue-deep); letter-spacing:.08em; margin-bottom:4px;}
+.explain .etxt{font-size:var(--fs-sm); line-height:1.6; color:var(--c-ink);}
+.explain .factor{display:flex; align-items:center; gap:9px; padding:3px 0; font-size:var(--fs-xs);}
+.explain .factor .fn2{flex:0 0 86px; color:var(--c-ink);}
+.explain .factor .fbar{flex:1; height:9px; border:1.5px solid var(--c-ink); border-radius:5px; overflow:hidden; background:var(--c-paper-raised);}
+.explain .factor .fbar b{display:block; height:100%;}
+.explain .factor .fw{flex:0 0 36px; text-align:right; color:var(--c-ink-soft); font-family:var(--font-display); font-weight:700;}
+.explain .src{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--c-ink-faint);}
+.explain .src .pz-ic{width:13px; height:13px;}
+.explain .nextstep{background:var(--wash-green); border-left:3px solid var(--c-green-deep); border-radius:0 6px 6px 0; padding:9px 12px; font-size:var(--fs-sm); line-height:1.55;}
+.explain .nextstep b{color:var(--c-green-deep);}
+.hero{position:relative; overflow:hidden; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel);
+  box-shadow:var(--shadow-print); padding:18px;}
+.hero::before{content:""; position:absolute; inset:0; background:radial-gradient(120% 95% at 82% 0%,var(--wash-red),transparent 62%); pointer-events:none;}
+.hero .petal{position:absolute; top:14px; right:16px; width:54px; height:54px; animation:breathe 5s var(--ease-out) infinite alternate;}
+@keyframes breathe{from{transform:translateY(0) rotate(-3deg);} to{transform:translateY(-4px) rotate(3deg);}}
+.hero .label{position:relative; font-weight:500; font-size:var(--fs-xs); color:var(--c-ink-soft); letter-spacing:.06em;}
+.hero .big{position:relative; font-family:var(--font-display); font-weight:700; font-size:var(--fs-4xl); line-height:1.05;}
+.hero .big small{font-size:var(--fs-lg); color:var(--c-ink-soft);}
+.hero .calm{position:relative; font-family:var(--font-hand); font-size:var(--fs-sm); color:var(--c-red-deep); margin-top:3px;}
+.slots{display:flex; gap:7px; margin-top:14px; position:relative;}
+.slot{flex:1; aspect-ratio:1; border-radius:var(--piece-r); border:var(--stroke-dash); background:var(--c-paper-sunk);
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:14px; color:var(--on-fill);}
+.slot.f{border:var(--stroke-thin); box-shadow:var(--shadow-print-sm);}
+.slot.r{background:var(--c-red);} .slot.b{background:var(--c-blue);} .slot.g{background:var(--c-green);} .slot.s{background:var(--c-sun);}
+.stat{position:relative; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:14px 15px;}
+.stat .k{display:flex; gap:6px; align-items:center; font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.stat .k .pz-ic{width:17px; height:17px; color:var(--c-ink);}
+.stat .v{font-family:var(--font-display); font-weight:700; font-size:var(--fs-2xl); line-height:1.15; margin-top:5px;}
+.stat .v small{font-family:var(--font-ui); font-size:var(--fs-sm); color:var(--c-ink-soft);}
+.dots{display:flex; gap:4px; margin-top:9px;}
+.dots i{width:14px; height:14px; border-radius:4px; border:var(--stroke-thin); background:var(--c-paper-sunk);}
+.dots i.on{background:var(--c-blue);}
+.gauge{height:12px; border:var(--stroke-thin); border-radius:6px; margin-top:10px; overflow:hidden; background:linear-gradient(90deg,var(--flare-low),var(--flare-mid),var(--flare-high));}
+.needle{position:relative; height:0;} .needle i{position:absolute; top:-16px; width:3px; height:16px; background:var(--c-ink); border-radius:2px;}
+.batt{display:flex; align-items:center; gap:9px; margin-top:8px;}
+.batt .cell{width:22px; height:40px; border:var(--stroke); border-radius:5px; position:relative; overflow:hidden; background:var(--c-paper-sunk);}
+.batt .cell::before{content:""; position:absolute; top:-5px; left:50%; margin-left:-5px; width:10px; height:4px; background:var(--c-ink); border-radius:2px 2px 0 0;}
+.batt .cell b{position:absolute; bottom:0; left:0; right:0; height:78%; background:var(--c-green);}
+.batt span{font-family:var(--font-display); font-weight:700; font-size:var(--fs-xl); color:var(--c-green-deep);}
+.hgo{cursor:pointer; transition:transform var(--t-fast) var(--ease-soft);} .hgo:hover{transform:translateY(-2px);}
+.hgo.chev::after{content:"›"; position:absolute; top:9px; right:13px; font-family:var(--font-display); font-weight:700; font-size:18px; line-height:1; color:var(--c-ink-faint); pointer-events:none;}
+.qa{display:flex; gap:10px;}
+.qa .btn{flex:1; flex-direction:column; gap:5px; font-size:var(--fs-sm); padding:13px 4px;}
+.qa .btn .pz-ic{width:24px; height:24px;}
+.tl{display:flex; flex-direction:column; gap:0;}
+.tl .row{display:flex; gap:11px; align-items:flex-start; padding-bottom:14px; position:relative;}
+.tl .row::before{content:""; position:absolute; left:22px; top:15px; bottom:-2px; width:2px; background:var(--c-ink-line);}
+.tl .row:last-child::before{display:none;}
+.tl .when{font-family:var(--font-display); font-weight:700; font-size:var(--fs-xs); color:var(--c-ink-soft); width:40px; flex:0 0 40px; text-align:right; padding-top:1px;}
+.tl .pip{width:14px; height:14px; flex:0 0 14px; border-radius:50%; border:var(--stroke-thin); background:var(--c-paper-raised); margin-top:2px; z-index:1;}
+.tl .pip.r{background:var(--c-red);} .tl .pip.b{background:var(--c-blue);} .tl .pip.g{background:var(--c-green);}
+.tl .what{font-size:var(--fs-sm);} .tl .what small{color:var(--c-ink-faint); font-size:var(--fs-xs);}
+.bar{height:9px; border:var(--stroke-thin); border-radius:5px; background:var(--c-paper-sunk); overflow:hidden; margin-top:4px;}
+.bar b{display:block; height:100%; background:var(--c-green);}
+.reward{display:inline-flex; align-items:center; gap:5px; font-family:var(--font-hand); font-weight:700; font-size:var(--fs-sm);
+  color:var(--c-red-deep); background:var(--wash-red); border:var(--stroke-thin); border-color:var(--c-red-deep); border-radius:999px; padding:3px 12px;}
+.kv{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--c-ink-line); font-size:var(--fs-sm);}
+.kv:last-child{border-bottom:none;}
+.kv .kx{color:var(--c-ink-soft); flex:0 0 96px;}
+.kv .vx{font-family:var(--font-display); font-weight:700;}
+.kv .flag{margin-left:auto; font-size:var(--fs-xs); font-weight:700; padding:2px 9px; border:var(--stroke-thin); border-radius:var(--r-chip);}
+.flag.ok{background:var(--wash-green); border-color:var(--c-green-deep); color:var(--c-green-deep);} .flag.hi{background:var(--wash-red); border-color:var(--c-red-deep); color:var(--c-red-deep);}
+.setr{display:flex; align-items:center; gap:11px; padding:12px 0; border-bottom:1px dashed var(--c-ink-line);}
+.setr:last-child{border-bottom:none;} .setr .sx{flex:1;} .setr .sx b{font-size:var(--fs-sm);} .setr .sx div{font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.sw{width:48px; height:28px; border:var(--stroke); border-radius:15px; background:var(--c-paper-sunk); position:relative; cursor:pointer; flex:0 0 48px;}
+.sw::after{content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:var(--c-paper-raised); border:var(--stroke-thin); transition:left var(--t-base) var(--ease-soft);}
+.sw.on{background:var(--c-green);} .sw.on::after{left:22px;}
+.seg{display:flex; border:var(--stroke); border-radius:var(--r-btn); overflow:hidden; box-shadow:var(--shadow-print-sm);}
+.seg button{flex:1; background:none; border:none; padding:9px; font-family:var(--font-ui); font-weight:700; font-size:var(--fs-xs); cursor:pointer; color:var(--c-ink-soft);}
+.seg button.on{background:var(--c-blue); color:var(--on-fill);}
+.dchart{margin-top:4px;}
+.dchart svg{width:100%; height:auto; display:block; overflow:visible; font-family:var(--font-ui);}
+.dchart .axis{stroke:var(--c-ink); stroke-width:1.4;}
+.dchart .grid{stroke:var(--c-ink-line); stroke-width:1; stroke-dasharray:3 3;}
+.dchart .band{opacity:.14;}
+.dchart .ln{fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;}
+.dchart .pt{stroke-width:2;}
+.dchart text{fill:var(--c-ink-soft); font-size:9px;}
+.dchart .vlab{fill:var(--c-ink); font-weight:700; font-size:10px;}
+.dchart .unit{fill:var(--c-ink-faint); font-size:8.5px;}
+.case{background:var(--wash-sun); border:var(--stroke); border-color:var(--c-sun-deep); border-radius:var(--r-panel); padding:14px; box-shadow:var(--shadow-print-sm); position:relative;}
+.case .ct{font-family:var(--font-display); font-weight:700; display:flex; align-items:center; gap:7px; margin-bottom:4px; font-size:var(--fs-sm);}
+.case .ct .pz-ic{width:18px; height:18px; color:var(--c-sun-deep);}
+.case .sub{font-family:var(--font-hand); font-size:var(--fs-xs); color:var(--c-ink-faint); margin-bottom:8px;}
+.clue{display:flex; gap:9px; align-items:flex-start; padding:6px 0; font-size:var(--fs-sm); border-bottom:1px dashed var(--c-ink-line);}
+.clue:last-of-type{border-bottom:none;}
+.clue .pin{width:18px; height:18px; flex:0 0 18px; margin-top:1px; color:var(--c-red-deep);}
+.case .ded{display:flex; gap:8px; align-items:center; margin-top:9px; padding-top:9px; border-top:2px solid var(--c-sun-deep);}
+.case .ded .pz-ic{width:20px; height:20px; color:var(--c-green-deep); flex:0 0 20px;}
+.med{display:flex; align-items:center; gap:12px; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:12px 14px; margin-bottom:10px;}
+.med .pill{width:44px; height:44px; flex:0 0 44px; border-radius:11px; border:var(--stroke); display:flex; align-items:center; justify-content:center;}
+.med .pill .pz-ic{width:23px; height:23px;}
+.med .nm{flex:1;} .med .nm b{font-size:var(--fs-base);} .med .nm div{font-size:var(--fs-xs); color:var(--c-ink-soft);}
+.tick{width:46px; height:46px; flex:0 0 46px; border-radius:50%; border:var(--stroke); cursor:pointer; background:var(--c-paper); display:flex; align-items:center; justify-content:center; color:var(--c-ink); transition:transform var(--t-fast) var(--ease-soft);}
+.tick .pz-ic{width:23px; height:23px;} .tick.done{background:var(--c-green); border-color:var(--c-green-deep); color:var(--on-fill);}
+.tick:active{transform:scale(.9);}
+.calhead{display:flex; align-items:center; gap:9px; margin-bottom:11px;}
+.calhead .streak{margin-left:auto; display:inline-flex; align-items:center; gap:5px; font-family:var(--font-hand); font-weight:700; color:var(--c-sun-deep); background:var(--wash-sun); border:var(--stroke-thin); border-color:var(--c-sun-deep); border-radius:999px; padding:2px 11px; font-size:var(--fs-xs);}
+.cal{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+.cal .dow{font-size:10px; color:var(--c-ink-faint); text-align:center; font-weight:700; padding-bottom:2px;}
+.cal i{aspect-ratio:1; border-radius:6px; border:var(--stroke-thin); background:var(--c-paper-sunk); position:relative; display:flex; align-items:flex-start; justify-content:flex-start; font-size:9px; color:var(--c-ink-faint); padding:2px 0 0 4px;}
+.cal i.l1{background:var(--c-blue-soft);} .cal i.l2{background:var(--c-blue); color:var(--on-fill);} .cal i.l3{background:var(--c-blue-deep); color:var(--on-fill);}
+.cal i.tdy{outline:2.5px solid var(--c-sun-deep); outline-offset:1px; z-index:1;}
+.cal i .pcs{position:absolute; bottom:1px; right:0; left:0; text-align:center; font-family:var(--font-display); font-size:8px; font-weight:700;}
+.callink{display:flex; align-items:center; gap:8px; margin-top:11px; font-size:var(--fs-sm); background:var(--wash-blue); border:var(--stroke-thin); border-color:var(--c-blue-deep); border-radius:8px; padding:9px 12px;}
+.callink .pz-ic{width:18px; height:18px; color:var(--c-blue-deep); flex:0 0 18px;}
+.oil{position:relative; border:var(--stroke); border-radius:8px; overflow:hidden; box-shadow:var(--shadow-print-sm); aspect-ratio:7/5; margin:2px 0 12px;}
+.oil .art{position:absolute; inset:0; width:100%; height:100%; display:block;}
+.oil .mask{position:absolute; inset:0; display:grid; grid-template-columns:repeat(7,1fr); grid-template-rows:repeat(5,1fr);}
+.oil .mask i{outline:.5px solid rgba(255,250,235,.10); outline-offset:-.5px;}
+.oil .mask i.cv{background:var(--c-paper-sunk); outline:var(--stroke-dash); outline-offset:-2px;}
+.shelf{display:flex; gap:13px; flex-wrap:wrap;}
+.gframe{flex:0 0 132px; text-align:center;}
+.gframe .oil{aspect-ratio:3/4; margin:0;}
+.gframe .cap{font-size:var(--fs-xs); margin-top:6px; color:var(--c-ink-soft);}
+.gframe.lk .oil{filter:grayscale(.65) brightness(.78);}
+.gframe .lkov{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(33,30,25,.34); color:#fff;}
+.shelfwood{background:var(--c-paper-sunk); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:15px 13px; display:flex; gap:8px; align-items:flex-end; margin-bottom:13px;}
+.book{flex:1; border:var(--stroke-thin); border-radius:3px 5px 3px 3px; box-shadow:var(--shadow-press); display:flex; align-items:flex-end; justify-content:center; padding:9px 2px; writing-mode:vertical-rl; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--c-ink); cursor:pointer;}
+.book:hover{transform:translateY(-4px);}
+.book.r{background:var(--c-red-soft); height:118px;} .book.b{background:var(--c-blue-soft); height:138px;} .book.g{background:var(--c-green-soft); height:108px;} .book.s{background:var(--c-sun-soft); height:128px;} .book.p{background:var(--c-grape-soft); height:112px;}
+.story{font-family:var(--font-hand); font-size:var(--fs-base); line-height:2; color:var(--c-ink);}
+.story::first-letter{font-size:2.4em; color:var(--c-red-deep); float:left; line-height:.8; margin:4px 6px 0 0;}
+.av{width:64px; height:64px; flex:0 0 64px; border:var(--stroke); border-radius:50%; background:var(--wash-blue); padding:4px;}
+/* ═══ management-console components (data-dense) ═══ */
+.toolbar{display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap;}
+.toolbar .tlabel{font-family:var(--font-display); font-weight:700; font-size:var(--fs-sm); color:var(--c-ink-soft); display:flex; align-items:center; gap:6px;}
+.toolbar .tlabel .pz-ic{width:17px; height:17px;}
+.toolbar .seg{flex:0 0 auto; width:auto;}
+.toolbar .seg button{padding:8px 14px;}
+.kpi{display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:18px;}
+.kpi .tile{position:relative; background:var(--c-paper-raised); border:var(--stroke); border-radius:var(--r-panel); box-shadow:var(--shadow-print-sm); padding:13px 14px 13px 17px; overflow:hidden;}
+.kpi .tile::after{content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--c-blue);}
+.kpi .tile.r::after{background:var(--c-red);} .kpi .tile.g::after{background:var(--c-green);} .kpi .tile.s::after{background:var(--c-sun);} .kpi .tile.p::after{background:var(--c-grape);}
+.kpi .kl{font-size:11px; color:var(--c-ink-soft); display:flex; align-items:center; gap:5px;}
+.kpi .kl .pz-ic{width:15px; height:15px; color:var(--c-ink-faint);}
+.kpi .kn{font-family:var(--font-display); font-weight:700; font-size:var(--fs-2xl); line-height:1.05; margin-top:5px;}
+.kpi .kn small{font-size:var(--fs-sm); color:var(--c-ink-soft); font-family:var(--font-ui);}
+.kpi .kt{font-size:11px; font-weight:700; margin-top:3px; display:inline-flex; align-items:center; gap:3px;}
+.kpi .kt.up{color:var(--c-red-deep);} .kpi .kt.dn{color:var(--c-green-deep);} .kpi .kt.warn{color:var(--c-sun-deep);} .kpi .kt.flat{color:var(--c-ink-faint);}
+@media(max-width:1180px){ .kpi{grid-template-columns:repeat(3,1fr);} }
+@media(max-width:680px){ .kpi{grid-template-columns:repeat(2,1fr);} }
+.tablewrap{overflow-x:auto; scrollbar-width:thin;}
+.dtable{width:100%; border-collapse:separate; border-spacing:0; font-size:var(--fs-sm);}
+.dtable th{text-align:left; font-family:var(--font-ui); font-weight:700; font-size:11px; letter-spacing:.04em; color:var(--c-ink-soft); padding:9px 11px; border-bottom:var(--stroke-thin); border-color:var(--c-ink); white-space:nowrap;}
+.dtable td{padding:11px; border-bottom:1px dashed var(--c-ink-line); vertical-align:middle;}
+.dtable tbody tr:last-child td{border-bottom:none;}
+.dtable tbody tr:hover{background:var(--wash-ink);}
+.dtable .nm{font-family:var(--font-display); font-weight:700;}
+.dtable .num{font-family:var(--font-display); font-weight:700; text-align:right; white-space:nowrap;}
+.dtable .mini{height:26px; width:84px; display:block;}
+.dtable .mini .ln{fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+.dtable .mini .pt{stroke-width:2; fill:var(--c-paper-raised);}
+</style>
+</head>
+<body>
+
+<!-- icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></symbol>
+  <symbol id="ic-puzzle" viewBox="0 0 24 24"><path d="M10 4h4a1 1 0 011 1v2a2 2 0 104 0V5h2a1 1 0 011 1v4a1 1 0 01-1 1h-2a2 2 0 100 4h2v4a1 1 0 01-1 1h-4a2 2 0 10-4 0H5a1 1 0 01-1-1v-4a2 2 0 100-4H4V6a1 1 0 011-1h2a2 2 0 104 0z"/></symbol>
+  <symbol id="ic-pill" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(45 12 12)"/><path d="M8.5 8.5l7 7"/></symbol>
+  <symbol id="ic-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></symbol>
+  <symbol id="ic-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.6-9-9a4.5 4.5 0 018-3 4.5 4.5 0 018 3c-2 4.4-9 9-9 9z"/></symbol>
+  <symbol id="ic-sprout" viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 14C9 14 6 12 5 7c4-.5 6 1.5 7 5z"/><path d="M12 12c0-3 2-5 7-5-.5 4-3 6-7 5z"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="ic-thermo" viewBox="0 0 24 24"><path d="M14 14V5a2 2 0 10-4 0v9a4 4 0 104 0z"/><path d="M12 14V8"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M19 19H6a2 2 0 01-2-2"/></symbol>
+  <symbol id="ic-hospital" viewBox="0 0 24 24"><path d="M5 21V6l7-3 7 3v15"/><path d="M3 21h18M12 8v6M9 11h6"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4z"/><path d="M10 20a2 2 0 004 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="ic-droplet" viewBox="0 0 24 24"><path d="M12 3c4 5 6 8 6 11a6 6 0 11-12 0c0-3 2-6 6-11z"/></symbol>
+  <symbol id="ic-moon" viewBox="0 0 24 24"><path d="M20 14a8 8 0 11-10-10 7 7 0 1010 10z"/></symbol>
+  <symbol id="ic-bowl" viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 01-18 0z"/><path d="M7 11a5 5 0 0110 0M12 3v3"/></symbol>
+  <symbol id="ic-note" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h6"/></symbol>
+  <symbol id="ic-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h4"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M12 8v4M12 15h.01"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0111 0"/><path d="M16 5.5a3 3 0 010 5.6M16.5 14.5a5.5 5.5 0 014 5.5"/></symbol>
+  <symbol id="ic-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2.2"/><path d="M13 9h5M13 13h5M5 16a3.5 3.5 0 017 0"/></symbol>
+  <symbol id="ic-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M8 16v-4M12 16v-7M16 16v-2"/></symbol>
+  <symbol id="ic-flask" viewBox="0 0 24 24"><path d="M9 3v6l-5 9a1.5 1.5 0 001.3 2.2h13.4A1.5 1.5 0 0020 18l-5-9V3"/><path d="M8 3h8M7 14h10"/></symbol>
+  <symbol id="ic-stetho" viewBox="0 0 24 24"><path d="M5 3v5a4 4 0 008 0V3"/><path d="M9 12v2a5 5 0 0010 0v-2"/><circle cx="19" cy="9" r="2.2"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></symbol>
+  <symbol id="ic-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 2.5 14 0 17M12 3.5c-2.5 2.5-2.5 14 0 17"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+  <symbol id="ic-text" viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A15 15 0 013 6a2 2 0 012-2z"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M3 8.5a2 2 0 012-2h1.6l1.2-2h6.4l1.2 2H19a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="12" cy="12.8" r="3.4"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0114 0"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10c-1 1-1 2-1 3H9c0-1 0-2-1-3a6 6 0 014-10z"/></symbol>
+  <symbol id="ic-arrow" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="ic-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2 2 2 0 000 4 2 2 0 010 4H5a2 2 0 01-2-2 2 2 0 000-4z"/><path d="M12 6v2M12 11v2M12 16v2"/></symbol>
+  <symbol id="art-starry" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice"><rect width="140" height="100" fill="#2F4858"/><rect y="64" width="140" height="36" fill="#3A6B6B"/><circle cx="112" cy="24" r="13" fill="#E0A82E"/><path d="M0 70 L24 54 L44 66 L70 48 L96 64 L120 50 L140 64 V100 H0Z" fill="#22343F"/><g fill="#F2D88E"><circle cx="28" cy="20" r="1.6"/><circle cx="54" cy="32" r="1.3"/><circle cx="80" cy="18" r="1.5"/><circle cx="40" cy="44" r="1.1"/></g></symbol>
+  <symbol id="art-sakura" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice"><rect width="140" height="100" fill="#F2D8DE"/><rect y="70" width="140" height="30" fill="#8FB575"/><path d="M70 70 V36" stroke="#7A5A48" stroke-width="5"/><g fill="#D46A5C"><circle cx="58" cy="30" r="13"/><circle cx="84" cy="32" r="12"/><circle cx="70" cy="20" r="12"/></g></symbol>
+  <symbol id="art-forest" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice"><rect width="140" height="100" fill="#BFE0DE"/><rect y="72" width="140" height="28" fill="#5E8449"/><g fill="#2F7A7A"><path d="M30 74 L44 40 L58 74Z"/><path d="M70 78 L88 32 L106 78Z"/></g></symbol>
+  <symbol id="art-maple" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice"><rect width="140" height="100" fill="#F2D88E"/><rect y="72" width="140" height="28" fill="#B5821A"/><g fill="#B14A3E"><circle cx="46" cy="40" r="18"/><circle cx="92" cy="44" r="16"/></g></symbol>
+  <symbol id="art-snow" viewBox="0 0 140 100" preserveAspectRatio="xMidYMid slice"><rect width="140" height="100" fill="#5A6B82"/><rect y="74" width="140" height="26" fill="#D9E2EC"/><g fill="#FBF4E2"><circle cx="30" cy="28" r="2"/><circle cx="60" cy="40" r="1.6"/><circle cx="96" cy="24" r="2.1"/></g></symbol>
+</svg>
+
+<!-- ═══════════ TOP APP BAR ═══════════ -->
+<header class="appbar">
+  <div class="brand">
+    <span class="logo"><svg class="pz-ic"><use href="#ic-puzzle"/></svg></span>
+    <div class="bt"><b>MD.Piece</b><span data-i18n="brand">拼圖診療室 · The Puzzle Clinic</span></div>
+  </div>
+  <label class="asearch">
+    <svg class="pz-ic"><use href="#ic-search"/></svg>
+    <input id="globalSearch" name="globalSearch" aria-label="搜尋" placeholder="搜尋功能・症狀・藥・衛教…" />
+    <span class="kbd">Ctrl K</span>
+  </label>
+  <div class="sp"></div>
+  <div class="tools">
+    <button class="tbtn" id="langBtn"><svg class="pz-ic"><use href="#ic-globe"/></svg><span id="langTx">中</span></button>
+    <button class="tbtn" id="themeBtn"><svg class="pz-ic"><use href="#ic-moon" id="themeIc"/></svg></button>
+    <button class="tbtn" id="modeBtn"><svg class="pz-ic"><use href="#ic-text"/></svg><span id="modeTx" data-i18n="t.std">標</span></button>
+    <svg class="uav" viewBox="0 0 44 44" aria-label="個人檔案" role="button" tabindex="0" data-go="profile"><use href="#ic-user" x="9" y="9" width="26" height="26" style="color:var(--c-blue-deep)"/></svg>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- ═══════════ SIDEBAR ═══════════ -->
+  <aside class="side">
+    <div class="navgroup">
+      <div class="gh" data-i18n="nav.clinmgmt">臨床管理</div>
+      <div class="navitem" data-go="overview"><span class="ni"><svg class="pz-ic"><use href="#ic-grid"/></svg></span><div><div class="nl" data-i18n="nav.ov">數據總覽</div><div class="ne">Overview</div></div></div>
+      <div class="navitem" data-go="labs"><span class="ni"><svg class="pz-ic"><use href="#ic-flask"/></svg></span><div><div class="nl" data-i18n="nav.labs">檢驗數值</div><div class="ne">Labs</div></div></div>
+    </div>
+    <div class="navgroup">
+      <div class="gh" data-i18n="nav.daily">每日記錄</div>
+      <div class="navitem on" data-go="home"><span class="ni"><svg class="pz-ic"><use href="#ic-home"/></svg></span><div><div class="nl" data-i18n="nav.home">首頁</div><div class="ne">Home</div></div></div>
+      <div class="navitem" data-go="symptoms"><span class="ni"><svg class="pz-ic"><use href="#ic-pulse"/></svg></span><div><div class="nl" data-i18n="nav.sym">症狀分析</div><div class="ne">Symptoms</div></div></div>
+      <div class="navitem" data-go="meds"><span class="ni"><svg class="pz-ic"><use href="#ic-pill"/></svg></span><div><div class="nl" data-i18n="nav.med">藥物紀錄</div><div class="ne">Medications</div></div></div>
+      <div class="navitem" data-go="pieces"><span class="ni"><svg class="pz-ic"><use href="#ic-puzzle"/></svg></span><div><div class="nl" data-i18n="nav.pieces">拼圖收藏</div><div class="ne">Pieces</div></div></div>
+    </div>
+    <div class="navgroup">
+      <div class="gh" data-i18n="nav.clinic">就診報告</div>
+      <div class="navitem" data-go="previsit"><span class="ni"><svg class="pz-ic"><use href="#ic-doc"/></svg></span><div><div class="nl" data-i18n="nav.pv">診前報告</div><div class="ne">Pre-visit</div></div></div>
+      <div class="navitem" data-go="reminders"><span class="ni"><svg class="pz-ic"><use href="#ic-bell"/></svg></span><div><div class="nl" data-i18n="nav.rem">提醒通知</div><div class="ne">Reminders</div></div></div>
+    </div>
+    <div class="navgroup">
+      <div class="gh" data-i18n="nav.learn">學習・帳號</div>
+      <div class="navitem" data-go="education"><span class="ni"><svg class="pz-ic"><use href="#ic-book"/></svg></span><div><div class="nl" data-i18n="nav.edu">衛教書房</div><div class="ne">Library</div></div></div>
+      <div class="navitem" data-go="profile"><span class="ni"><svg class="pz-ic"><use href="#ic-id"/></svg></span><div><div class="nl" data-i18n="nav.profile">個人檔案</div><div class="ne">Profile</div></div></div>
+    </div>
+    <div class="sideprog">
+      <div class="st"><svg class="pz-ic"><use href="#ic-puzzle"/></svg> <span data-i18n="side.today">今天的碎片</span></div>
+      <div class="slots">
+        <div class="slot f r">症</div><div class="slot f b">藥</div><div class="slot f g">心</div>
+        <div class="slot f s">睡</div><div class="slot"></div><div class="slot"></div>
+      </div>
+      <div class="calm" data-i18n="side.calm">已收 4 / 6 片 · 健康是一塊一塊拼起來的。</div>
+    </div>
+  </aside>
+
+  <!-- ═══════════ MAIN ═══════════ -->
+  <main class="main">
+
+    <!-- ───── HOME · dashboard ───── -->
+    <section class="view active" data-view="home">
+      <div class="vhead">
+        <div><div class="ttl" data-i18n="h.hi">早安，怡君</div><div class="en" data-i18n="h.sub">今天也一起，慢慢來 · let's take it slow</div></div>
+        <div class="day"><b>6 / 05</b><span data-i18n="h.thu">星期四 · 多雲</span></div>
+      </div>
+      <div class="kpi">
+        <div class="tile g"><div class="kl"><svg class="pz-ic"><use href="#ic-pill"/></svg> 服藥達成率</div><div class="kn">92<small>%</small></div><div class="kt dn">▲ 比上週 +3%</div></div>
+        <div class="tile r"><div class="kl"><svg class="pz-ic"><use href="#ic-flask"/></svg> CRP 發炎</div><div class="kn">8.2<small> mg/L</small></div><div class="kt up">▲ 偏高・上升</div></div>
+        <div class="tile g"><div class="kl"><svg class="pz-ic"><use href="#ic-stetho"/></svg> DAS28 活動度</div><div class="kn">3.4</div><div class="kt dn">▼ 改善 5.1→3.4</div></div>
+        <div class="tile"><div class="kl"><svg class="pz-ic"><use href="#ic-calendar"/></svg> 回診倒數</div><div class="kn">5<small> 天</small></div><div class="kt flat">6/10 風濕免疫科</div></div>
+        <div class="tile s"><div class="kl"><svg class="pz-ic"><use href="#ic-thermo"/></svg> 風險分數</div><div class="kn">62</div><div class="kt warn">● 留意・越線</div></div>
+        <div class="tile p"><div class="kl"><svg class="pz-ic"><use href="#ic-sun"/></svg> 連續打卡</div><div class="kn">12<small> 天</small></div><div class="kt flat">本月 18 片</div></div>
+      </div>
+      <div class="toolbar">
+        <div class="tlabel"><svg class="pz-ic"><use href="#ic-grid"/></svg> 期間</div>
+        <div class="seg"><button>近 7 天</button><button class="on">近 30 天</button><button>近 90 天</button></div>
+        <div class="sp"></div>
+        <button class="btn"><svg class="pz-ic"><use href="#ic-doc"/></svg> 匯出報表</button>
+        <button class="btn blue"><svg class="pz-ic"><use href="#ic-plus"/></svg> 新增紀錄</button>
+      </div>
+      <div class="dash">
+        <!-- hero -->
+        <div class="hero c4">
+          <svg class="petal" viewBox="0 0 50 50" aria-hidden="true"><g fill="var(--c-red-soft)" stroke="var(--c-red-deep)" stroke-width="1.5"><path d="M25 25 Q18 13 25 6 Q32 13 25 25Z"/><path d="M25 25 Q37 18 44 25 Q37 32 25 25Z"/><path d="M25 25 Q32 37 25 44 Q18 37 25 25Z"/><path d="M25 25 Q13 32 6 25 Q13 18 25 25Z"/></g><circle cx="25" cy="25" r="3" fill="var(--c-sun)"/></svg>
+          <div class="label" data-i18n="h.today">今天的碎片 · TODAY'S PIECES</div>
+          <div class="big">4 <small data-i18n="h.of">/ 6 片</small></div>
+          <div class="calm" data-i18n="h.calm">健康，是一塊一塊拼起來的。</div>
+          <div class="slots">
+            <div class="slot f r">症</div><div class="slot f b">藥</div><div class="slot f g">心</div>
+            <div class="slot f s">睡</div><div class="slot"></div><div class="slot"></div>
+          </div>
+        </div>
+        <!-- AI explain -->
+        <div class="card c8">
+          <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-sprout"/></svg> <span data-i18n="h.ai">小禾發現</span> <span class="en">Xiaohe noticed</span><span class="tag">AI</span></h2>
+          <div style="font-size:var(--fs-sm)" data-i18n="h.aibody">睡眠連續 3 天下降，疼痛從 3 升到 6。也許值得提早回診和醫師聊聊。</div>
+          <div class="explain">
+            <div class="eh"><svg class="pz-ic"><use href="#ic-bulb"/></svg> <b data-i18n="h.why">為什麼這樣判斷</b> <span class="en2">Why</span>
+              <span class="conf"><span data-i18n="h.confmid">信心 中–高</span> <span class="cbar"><b style="width:72%"></b></span></span></div>
+            <div class="eb">
+              <div class="erow"><div class="elab">判斷依據 · BASIS</div><div class="etxt">睡眠連續 3 天下降（−2.1 小時／晚）、疼痛由 3 升至 6、晨僵延長 — 符合類風濕「發作前兆」型態。</div></div>
+              <div class="erow"><div class="elab">影響因素 · FACTORS</div>
+                <div class="factor"><span class="fn2">睡眠下降</span><span class="fbar"><b style="width:80%;background:var(--c-red)"></b></span><span class="fw">40%</span></div>
+                <div class="factor"><span class="fn2">疼痛上升</span><span class="fbar"><b style="width:70%;background:var(--c-red)"></b></span><span class="fw">35%</span></div>
+                <div class="factor"><span class="fn2">晨僵延長</span><span class="fbar"><b style="width:50%;background:var(--c-sun)"></b></span><span class="fw">25%</span></div></div>
+              <div class="erow"><div class="elab">資料來源 · SOURCE</div><div class="src"><svg class="pz-ic"><use href="#ic-doc"/></svg> 你最近 14 天的自我紀錄 · 共 28 筆</div></div>
+              <div class="nextstep"><b>下一步：</b>留意 2–3 天；若持續惡化，建議提前回診並帶上此摘要。</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:13px">
+            <button class="btn red" data-go="previsit"><svg class="pz-ic"><use href="#ic-doc"/></svg> <span data-i18n="h.esc">整理回診摘要</span></button>
+            <button class="btn" data-i18n="h.ok">知道了</button>
+          </div>
+        </div>
+        <!-- 4 stats -->
+        <div class="stat c3 hgo chev" data-go="meds"><div class="k"><svg class="pz-ic"><use href="#ic-pill"/></svg><span data-i18n="h.meds">今日服藥</span></div><div class="v">3<small> / 4</small></div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+        <div class="stat c3 hgo chev" data-go="previsit"><div class="k"><svg class="pz-ic"><use href="#ic-calendar"/></svg><span data-i18n="h.visit">下次回診</span></div><div class="v">5<small data-i18n="h.d"> 天</small></div><div class="chip sev clinic" style="margin-top:8px" data-i18n="h.dept">風濕免疫科</div></div>
+        <div class="stat c3 hgo chev"><div class="k"><svg class="pz-ic"><use href="#ic-thermo"/></svg><span data-i18n="h.flare">病情風險</span></div><div class="v" style="color:var(--c-sun-deep)" data-i18n="h.watch">留意</div><div class="gauge"></div><div class="needle"><i style="left:58%"></i></div></div>
+        <div class="stat c3 hgo chev"><div class="k"><svg class="pz-ic"><use href="#ic-heart"/></svg><span data-i18n="h.mood">今日心情</span></div><div class="batt"><div class="cell"><b></b></div><span>78%</span></div></div>
+        <!-- pain chart -->
+        <div class="card c5">
+          <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-pulse"/></svg> <span data-i18n="h.pain">疼痛趨勢</span> <span class="en">14-day pain</span><span class="tag">6/05</span></h2>
+          <div class="dchart"><svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <rect class="band" style="fill:var(--c-red)" x="34" y="14" width="258" height="42"/>
+            <line class="grid" x1="34" y1="14" x2="292" y2="14"/><text class="unit" x="14" y="17">10</text>
+            <line class="grid" x1="34" y1="66" x2="292" y2="66"/><text x="18" y="69">5</text>
+            <line class="grid" x1="34" y1="118" x2="292" y2="118"/><text x="18" y="121">0</text>
+            <line class="axis" x1="34" y1="14" x2="34" y2="118"/><line class="axis" x1="34" y1="118" x2="292" y2="118"/>
+            <polyline class="ln" style="stroke:var(--c-red-deep)" points="44,87 79,87 114,97 149,87 184,76 219,66 254,76 286,55"/>
+            <g class="pt" style="stroke:var(--c-red-deep); fill:var(--c-paper-raised)"><circle cx="44" cy="87" r="3"/><circle cx="184" cy="76" r="3"/><circle cx="286" cy="55" r="3.6"/></g>
+            <text class="vlab" x="278" y="49">6</text>
+            <text x="37" y="131">5/23</text><text x="134" y="131">5/30</text><text x="262" y="131">6/05</text>
+            <text class="unit" x="34" y="145">疼痛 0–10 · 紅帶＝偏高 ≥6 ｜ 圓點＝你記的碎片</text>
+          </svg></div>
+        </div>
+        <!-- today reminders timeline -->
+        <div class="card c4">
+          <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-clock"/></svg> <span data-i18n="h.sched">今日排程</span> <span class="en">Today</span><span class="tag">4 則</span></h2>
+          <div class="tl">
+            <div class="row"><div class="when">08:00</div><div class="pip g"></div><div class="what"><b>早上服藥</b> MTX · Folic <small>· 已完成</small></div></div>
+            <div class="row"><div class="when">14:00</div><div class="pip b"></div><div class="what"><b>喝水提醒</b> <small>· 已關閉</small></div></div>
+            <div class="row"><div class="when">20:00</div><div class="pip r"></div><div class="what"><b>晚上服藥</b> Prednisolone <small>· 待提醒</small></div></div>
+            <div class="row"><div class="when">6/10</div><div class="pip b"></div><div class="what"><b>回診倒數</b> 陳醫師 <small>· 提前 3 天</small></div></div>
+          </div>
+        </div>
+        <!-- quick check-in -->
+        <div class="card c3">
+          <h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-plus"/></svg> <span data-i18n="h.quick">快速打卡</span></h2>
+          <div class="qa" style="flex-direction:column">
+            <button class="btn blue"><svg class="pz-ic"><use href="#ic-pulse"/></svg> <span data-i18n="qa.sym">記症狀</span></button>
+            <button class="btn red"><svg class="pz-ic"><use href="#ic-pill"/></svg> <span data-i18n="qa.med">服藥打卡</span></button>
+            <button class="btn green"><svg class="pz-ic"><use href="#ic-heart"/></svg> <span data-i18n="qa.mood">寫心情</span></button>
+          </div>
+          <div style="text-align:center; margin-top:11px"><span class="reward">今天 ＋4 片</span></div>
+        </div>
+        <!-- collection progress -->
+        <div class="card c7">
+          <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-puzzle"/></svg> <span data-i18n="h.coll">拼圖收集進度</span> <span class="en">Starry City</span><span class="tag">66%</span></h2>
+          <div style="display:flex; gap:16px; align-items:center">
+            <div class="oil" style="flex:0 0 200px; margin:0"><svg class="art"><use href="#art-starry"/></svg><div class="mask" id="oilMaskHome"></div></div>
+            <div style="flex:1">
+              <div style="display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin-bottom:9px"><span class="reward">還差 12 片</span><span class="chip" style="border-color:var(--c-green-deep); background:var(--wash-green)">本月已收 18 片</span></div>
+              <div class="bar"><b style="width:66%; background:var(--c-blue)"></b></div>
+              <div style="font-size:var(--fs-sm); color:var(--c-ink-soft); margin-top:10px; line-height:1.6">每記一片，就點亮這幅「星空之城」油畫的一塊；集滿就掛進你的房間。<b style="color:var(--c-blue-deep)">連續打卡 12 天</b>。</div>
+              <button class="btn" data-go="pieces" style="margin-top:11px"><svg class="pz-ic"><use href="#ic-puzzle"/></svg> 看我的收藏 ›</button>
+            </div>
+          </div>
+        </div>
+        <!-- recommended education -->
+        <div class="card c5">
+          <h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-book"/></svg> <span data-i18n="h.rec">為你推薦的衛教</span> <span class="en">For you</span></h2>
+          <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-blue-deep)"><use href="#ic-book"/></svg> 認識・類風濕性關節炎 <span class="flag ok">已審稿</span></div>
+          <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-green-deep)"><use href="#ic-pill"/></svg> DMARD（如 MTX）怎麼吃 <span class="chip" style="margin-left:auto">3 分鐘</span></div>
+          <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-sun-deep)"><use href="#ic-sprout"/></svg> flare 來了該怎麼辦 <span class="chip" style="margin-left:auto">2 分鐘</span></div>
+          <button class="btn" data-go="education" style="width:100%; margin-top:11px"><svg class="pz-ic"><use href="#ic-book"/></svg> 進入衛教書房 ›</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── SYMPTOMS ───── -->
+    <section class="view" data-view="symptoms">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.sym">症狀分析</div><div class="en">Symptoms · Decision Aid</div></div></div>
+      <div class="two">
+        <div>
+          <div class="card">
+            <h2><svg class="pz-ic"><use href="#ic-pulse"/></svg> 點哪裡不舒服 <span class="en">Body map</span></h2>
+            <div style="display:flex; gap:18px; align-items:center">
+              <svg viewBox="0 0 80 150" width="92" style="flex:0 0 92px"><g fill="var(--c-paper-sunk)" stroke="var(--c-ink)" stroke-width="2.2" stroke-linejoin="round"><circle cx="40" cy="18" r="11"/><path d="M28 32h24l5 36-9 3 1 40H35l1-40-9-3z"/><path d="M27 36l-9 30 7 3 8-26zM53 36l9 30-7 3-8-26z"/></g><circle cx="46" cy="56" r="7" fill="var(--c-red)" stroke="var(--c-ink)" stroke-width="2.2"/><circle cx="46" cy="56" r="13" fill="none" stroke="var(--c-red-deep)" stroke-width="1.6" stroke-dasharray="3 3"/></svg>
+              <div style="flex:1">
+                <div class="chip" style="margin-bottom:11px; border-color:var(--c-red-deep)"><span style="color:var(--c-red-deep); font-weight:700">● 右肩</span></div>
+                <button class="btn red" style="width:100%"><svg class="pz-ic"><use href="#ic-sprout"/></svg> 分析這個位置</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-pulse"/></svg> 記一筆症狀 <span class="en">Log a symptom</span></h2>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:13px">
+              <button class="btn">頭痛</button><button class="btn red">關節腫痛</button><button class="btn">腸胃不適</button>
+              <button class="btn">呼吸不適</button><button class="btn">皮膚</button><button class="btn">其他</button>
+            </div>
+            <div style="font-size:11px; color:var(--c-ink-soft); margin-bottom:5px">疼痛 / 不適程度 · <b style="color:var(--c-red-deep)">6 / 10</b></div>
+            <div class="bar" style="height:14px"><b style="width:60%; background:var(--c-red)"></b></div>
+            <button class="btn red" style="width:100%; margin-top:13px"><svg class="pz-ic"><use href="#ic-plus"/></svg> 記一片症狀 ＋1 片</button>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="case" style="margin:0">
+              <div class="ct"><svg class="pz-ic"><use href="#ic-search"/></svg> 小禾的推理筆記 <span style="margin-left:auto;font-weight:400;color:var(--c-ink-soft);font-size:var(--fs-xs)">Case File</span></div>
+              <div class="sub">把線索拼起來，像偵探一樣推出方向</div>
+              <div class="clue"><svg class="pz-ic pin"><use href="#ic-pulse"/></svg> 線索 1 · 右肩痛升到 6/10</div>
+              <div class="clue"><svg class="pz-ic pin"><use href="#ic-clock"/></svg> 線索 2 · 晨僵超過 30 分鐘</div>
+              <div class="clue"><svg class="pz-ic pin"><use href="#ic-droplet"/></svg> 線索 3 · 雙手關節對稱腫脹</div>
+              <div class="ded"><svg class="pz-ic"><use href="#ic-bulb"/></svg> <div><b>推論：較像「發炎性」</b> — 建議「基層 → 風濕免疫科」評估。</div></div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:13px; flex-wrap:wrap">
+              <span class="chip sev clinic">建議：基層診所</span><span class="chip">急迫度：可預約</span>
+            </div>
+            <div style="font-size:11px; color:var(--c-ink-faint); margin-top:10px">＊推測僅供與醫師討論，非診斷結果。</div>
+          </div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-shield"/></svg> 何時該就醫 <span class="en">When to seek care</span></h2>
+            <div style="display:flex; gap:7px; flex-wrap:wrap; align-items:center">
+              <span class="chip sev self">自我照護</span><span class="chip sev clinic">基層診所</span><span class="chip sev medical">醫學中心</span><span class="chip sev er">急診</span>
+            </div>
+            <div class="why"><b>分級就醫 ·</b> 穩定期可自我照護＋規律回診；關節急性紅腫熱痛或發燒，轉風濕免疫科（醫學中心）評估。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── MEDS ───── -->
+    <section class="view" data-view="meds">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.med">藥物紀錄</div><div class="en">Medications · adherence 92%</div></div></div>
+      <div class="two">
+        <div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-pill"/></svg> 今日服藥 <span class="en">Today</span><span class="tag">3 / 4</span></h2>
+            <div class="med"><div class="pill" style="background:var(--wash-sun); color:var(--c-sun-deep)"><svg class="pz-ic"><use href="#ic-pill"/></svg></div><div class="nm"><b>MTX 15mg</b><div>每週一次 · 早餐後</div></div><div class="tick done"><svg class="pz-ic"><use href="#ic-check"/></svg></div></div>
+            <div class="med"><div class="pill" style="background:var(--wash-green); color:var(--c-green-deep)"><svg class="pz-ic"><use href="#ic-pill"/></svg></div><div class="nm"><b>葉酸 5mg</b><div>每日 · 早餐後</div></div><div class="tick done"><svg class="pz-ic"><use href="#ic-check"/></svg></div></div>
+            <div class="med"><div class="pill" style="background:var(--wash-red); color:var(--c-red-deep)"><svg class="pz-ic"><use href="#ic-pill"/></svg></div><div class="nm"><b>Prednisolone 10mg</b><div>每日 · 晚餐後 · 待服</div></div><div class="tick"><svg class="pz-ic"><use href="#ic-check"/></svg></div></div>
+            <div class="why"><b>打卡記錄真實時間 ·</b> 不是排程時間 — 醫師看得到你「實際」服藥時刻；漏服會轉為「補打卡」。</div>
+          </div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-camera"/></svg> 拍藥袋・自動辨識 <span class="en">OCR</span></h2>
+            <button class="btn blue" style="width:100%"><svg class="pz-ic"><use href="#ic-camera"/></svg> 拍照辨識藥袋 → 自動建檔</button>
+            <div class="why">辨識藥名、劑量、頻率與外觀，建立你的用藥清單；可人工校正。</div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-chart"/></svg> 服藥達成率 <span class="en">14-day adherence</span><span class="tag">92%</span></h2>
+            <div class="dchart"><svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet">
+              <rect class="band" style="fill:var(--c-green)" x="34" y="14" width="258" height="30"/>
+              <line class="grid" x1="34" y1="14" x2="292" y2="14"/><text class="unit" x="14" y="17">100</text>
+              <line class="grid" x1="34" y1="66" x2="292" y2="66"/><text x="18" y="69">50</text>
+              <line class="grid" x1="34" y1="118" x2="292" y2="118"/><text x="22" y="121">0</text>
+              <line class="axis" x1="34" y1="14" x2="34" y2="118"/><line class="axis" x1="34" y1="118" x2="292" y2="118"/>
+              <polyline class="ln" style="stroke:var(--c-green-deep)" points="44,30 79,30 114,44 149,30 184,30 219,40 254,30 286,28"/>
+              <g class="pt" style="stroke:var(--c-green-deep); fill:var(--c-paper-raised)"><circle cx="114" cy="44" r="3"/><circle cx="219" cy="40" r="3"/></g>
+              <text x="37" y="131">5/23</text><text x="150" y="131">5/30</text><text x="262" y="131">6/05</text>
+              <text class="unit" x="34" y="145">每日達成率 % · 綠帶＝達標 ≥90 ｜ 圓點＝漏服日</text>
+            </svg></div>
+          </div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-clock"/></svg> 服藥時間線 <span class="en">Timeline</span></h2>
+            <div class="tl">
+              <div class="row"><div class="when">今 08:05</div><div class="pip g"></div><div class="what"><b>MTX · 葉酸</b> <small>· 準時</small></div></div>
+              <div class="row"><div class="when">昨 20:40</div><div class="pip r"></div><div class="what"><b>類固醇</b> <small>· 晚 40 分鐘</small></div></div>
+              <div class="row"><div class="when">昨 08:00</div><div class="pip g"></div><div class="what"><b>MTX · 葉酸</b> <small>· 準時</small></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── PIECES ───── -->
+    <section class="view" data-view="pieces">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.pieces">拼圖收藏</div><div class="en">Puzzle Collection · 本期 18 / 28</div></div></div>
+      <div class="dash">
+        <div class="card c5">
+          <div class="calhead"><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-calendar"/></svg> <b style="font-family:var(--font-display)">打卡日曆</b> <span class="streak"><svg class="pz-ic" style="width:13px;color:var(--c-sun-deep)"><use href="#ic-sun"/></svg> 連續 12 天</span></div>
+          <div class="cal" id="checkCalWeb"></div>
+          <div class="callink"><svg class="pz-ic"><use href="#ic-puzzle"/></svg> 本月已收集 <b style="font-family:var(--font-display)">18 片</b> → 點亮「星空之城」66%</div>
+        </div>
+        <div class="card c7">
+          <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-puzzle"/></svg> 星空之城 <span class="en">Starry City · 油畫藍調</span><span class="tag">66%</span></h2>
+          <div class="oil"><svg class="art"><use href="#art-starry"/></svg><div class="mask" id="oilMaskPieces"></div></div>
+          <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap"><span class="reward">還差 12 片</span><span class="chip" style="border-color:var(--c-green-deep); background:var(--wash-green)">今天新拼上 3 片</span></div>
+        </div>
+        <div class="card c12">
+          <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-home"/></svg> 我的房間 <span class="en">My Room</span></h2>
+          <div class="shelf">
+            <div class="gframe"><div class="oil"><svg class="art"><use href="#art-starry"/></svg></div><div class="cap">星空之城 · 66%</div></div>
+            <div class="gframe"><div class="oil"><svg class="art"><use href="#art-sakura"/></svg></div><div class="cap">春日櫻花 · 完成</div></div>
+            <div class="gframe"><div class="oil"><svg class="art"><use href="#art-forest"/></svg></div><div class="cap">療癒森林 · 完成</div></div>
+            <div class="gframe"><div class="oil"><svg class="art"><use href="#art-maple"/></svg></div><div class="cap">秋日楓林 · 42%</div></div>
+            <div class="gframe lk"><div class="oil"><svg class="art"><use href="#art-snow"/></svg><div class="lkov"><svg class="pz-ic"><use href="#ic-lock"/></svg></div></div><div class="cap">雪夜 · 未解鎖</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── EDUCATION ───── -->
+    <section class="view" data-view="education">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.edu">衛教書房</div><div class="en">Library · 七層書架・有來源</div></div></div>
+      <div class="two">
+        <div class="card">
+          <h2><svg class="pz-ic" style="color:var(--c-grape-deep)"><use href="#ic-book"/></svg> 書架分區 <span class="en">Shelves</span></h2>
+          <div class="shelfwood"><div class="book b">免疫專區</div><div class="book r">認識辨識</div><div class="book g">治療管理</div><div class="book s">預防支持</div><div class="book p">精神系列</div></div>
+          <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-blue-deep)"><use href="#ic-book"/></svg> 認識・類風濕性關節炎 <span class="flag ok">已審稿</span></div>
+          <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-green-deep)"><use href="#ic-pill"/></svg> DMARD（如 MTX）怎麼吃 <span class="chip" style="margin-left:auto">3 分鐘</span></div>
+          <div class="kv"><svg class="pz-ic" style="width:18px;color:var(--c-sun-deep)"><use href="#ic-sprout"/></svg> flare 來了該怎麼辦 <span class="chip" style="margin-left:auto">2 分鐘</span></div>
+        </div>
+        <div class="card">
+          <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-doc"/></svg> 認識・類風濕性關節炎 <span class="en">Article</span></h2>
+          <div class="story">類風濕性關節炎是一種自體免疫疾病，免疫系統錯誤攻擊關節，造成發炎、腫脹與晨僵。早期治療、規律用藥能有效控制，把每天的小變化記下來，就是給醫師最好的線索。</div>
+          <div class="why"><b>衛教來源 ·</b> 人工審稿衛教，附文獻 DOI。<b>延伸：</b>查疾病百科「類風濕性關節炎」。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── PROFILE ───── -->
+    <section class="view" data-view="profile">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.profile">個人健康檔案</div><div class="en">Health Profile</div></div></div>
+      <div class="two">
+        <div>
+          <div class="card" style="display:flex; gap:14px; align-items:center">
+            <svg class="av" viewBox="0 0 44 44"><use href="#ic-user" x="9" y="9" width="26" height="26" style="color:var(--c-blue-deep)"/></svg>
+            <div style="flex:1">
+              <b style="font-family:var(--font-display); font-size:var(--fs-lg)">王怡君 <span style="font-family:var(--font-hand);font-weight:400;font-size:var(--fs-xs);color:var(--c-ink-faint)">Yi-Jun</span></b>
+              <div style="font-size:11px; color:var(--c-ink-soft); margin:1px 0 7px">整合病歷號 MD-00231 · 35 歲 · 女</div>
+              <div style="display:flex; gap:5px; flex-wrap:wrap"><span class="chip">O 型 Rh+</span><span class="chip">156 cm</span><span class="chip sev clinic">RA 第 6 年</span></div>
+            </div>
+          </div>
+          <div class="card" style="border-color:var(--c-red-deep)">
+            <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-shield"/></svg> 過敏與用藥警示 <span class="en">Allergies</span></h2>
+            <div class="kv"><span class="chip sev er">嚴重</span> <b style="color:var(--c-red-deep)">青黴素類 Penicillin</b> · 蕁麻疹／呼吸困難</div>
+            <div class="kv"><span class="chip sev medical">中等</span> 顯影劑 Contrast media · 全身起疹</div>
+          </div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-stetho"/></svg> 慢性病與診斷 <span class="en">Conditions</span><span class="tag">ICD-10</span></h2>
+            <div class="kv"><span class="kx">主診斷</span> 類風濕性關節炎 <span class="chip" style="margin-left:auto">M06.9</span></div>
+            <div class="kv"><span class="kx">活動度</span> DAS28 3.4 <span class="flag ok">低度活動</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-pill"/></svg> 長期用藥 <span class="en">Long-term meds</span><span class="tag">3 種</span></h2>
+            <div class="kv"><span class="kx">MTX</span> Methotrexate 15mg · 每週一次 <span class="flag ok">穩定</span></div>
+            <div class="kv"><span class="kx">葉酸</span> Folic 5mg · 每日 <span class="flag ok">穩定</span></div>
+            <div class="kv"><span class="kx">類固醇</span> Prednisolone 10mg · 每日 <span class="flag hi">減量中</span></div>
+          </div>
+          <div class="card" style="border-color:var(--c-sun-deep)">
+            <h2><svg class="pz-ic" style="color:var(--c-sun-deep)"><use href="#ic-id"/></svg> 重大傷病 / 保險 <span class="en">Major Illness</span></h2>
+            <div class="kv"><span class="kx">重大傷病</span> 類風濕性關節炎 <span class="flag ok">已核發</span></div>
+            <div class="kv"><span class="kx">證明效期</span> 2024/01 – 2029/01</div>
+            <div class="why"><b>為什麼重要 ·</b> 持證就醫，RA 相關治療<b>免部分負擔</b>；效期前 3 個月提醒換證。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── PREVISIT ───── -->
+    <section class="view" data-view="previsit">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.pv">診前報告</div><div class="en">Pre-visit · Decision Aid</div></div></div>
+      <div class="two">
+        <div>
+          <div class="hero" style="box-shadow:var(--shadow-print)">
+            <div class="label">下次回診倒數 · NEXT VISIT</div>
+            <div class="big">5 <small>天</small></div>
+            <div class="calm" style="color:var(--c-blue-deep)">6/10（二）上午 · 風濕免疫科 · 陳醫師</div>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-check"/></svg> 回診前準備 <span class="en">Get ready</span></h2>
+            <div class="kv"><svg class="pz-ic" style="width:17px;color:var(--c-green-deep)"><use href="#ic-check"/></svg><span class="kx" style="flex:0 0 96px">健保卡</span> 已放包包 <span class="flag ok">完成</span></div>
+            <div class="kv"><svg class="pz-ic" style="width:17px;color:var(--c-green-deep)"><use href="#ic-check"/></svg><span class="kx" style="flex:0 0 96px">用藥清單</span> 3 種 · 已更新 <span class="flag ok">完成</span></div>
+            <div class="kv"><svg class="pz-ic" style="width:17px;color:var(--c-ink-faint)"><use href="#ic-doc"/></svg><span class="kx" style="flex:0 0 96px">診前 PDF</span> 尚未匯出 <span class="chip" style="margin-left:auto">匯出</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-note"/></svg> 最該跟醫師說的 3 件事 <span class="en">3 to ask</span><span class="tag">AI</span></h2>
+            <div class="tl">
+              <div class="row"><div class="when">1</div><div class="pip r"></div><div class="what">右肩痛升到 6/10，晨僵 30 分鐘</div></div>
+              <div class="row"><div class="when">2</div><div class="pip b"></div><div class="what">睡眠連續 3 天變短（−2 小時）</div></div>
+              <div class="row"><div class="when">3</div><div class="pip r"></div><div class="what">類固醇晚間那顆常忘記</div></div>
+            </div>
+            <div class="why"><b>為什麼挑這 3 件 ·</b> 從你 14 天紀錄中，挑出「變化最大」「醫師最會問」的重點。</div>
+            <div style="display:flex; gap:10px; margin-top:13px">
+              <button class="btn blue" style="flex:1"><svg class="pz-ic"><use href="#ic-doc"/></svg> 病人版 PDF</button>
+              <button class="btn red" style="flex:1"><svg class="pz-ic"><use href="#ic-doc"/></svg> 醫師版 PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── REMINDERS ───── -->
+    <section class="view" data-view="reminders">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.rem">提醒通知</div><div class="en">Reminders · 客製時段・頻率・語氣</div></div></div>
+      <div class="two">
+        <div class="card">
+          <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-bell"/></svg> 提醒開關 <span class="en">Toggles</span></h2>
+          <div class="setr"><div class="sx"><b>服藥提醒</b><div>08:00 · 20:00</div></div><div class="sw on"></div></div>
+          <div class="setr"><div class="sx"><b>回診倒數</b><div>提前 3 天通知</div></div><div class="sw on"></div></div>
+          <div class="setr"><div class="sx"><b>喝水提醒</b><div>每 2 小時</div></div><div class="sw"></div></div>
+          <div class="setr"><div class="sx"><b>免打擾時段</b><div>22:00 – 07:00 不發提醒</div></div><div class="sw on"></div></div>
+        </div>
+        <div class="card">
+          <h2><svg class="pz-ic"><use href="#ic-bell"/></svg> 提醒語氣 <span class="en">Tone</span></h2>
+          <div class="seg" style="margin-bottom:13px"><button class="on">溫柔</button><button>簡短</button><button>嚴肅</button></div>
+          <div class="why"><b>為什麼這樣設計 ·</b> 提醒只在<b>狀況變差或漏服</b>時提高頻率；正常時保持安靜、夜間完全不打擾，避免通知疲勞。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── OVERVIEW · 管理儀表板 ───── -->
+    <section class="view" data-view="overview">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.ov">數據總覽</div><div class="en">Clinical Overview · 管理儀表板</div></div><div class="day"><b>6 / 05</b><span>最後同步 14:02</span></div></div>
+      <div class="toolbar">
+        <div class="tlabel"><svg class="pz-ic"><use href="#ic-grid"/></svg> 期間</div>
+        <div class="seg"><button>近 7 天</button><button class="on">近 30 天</button><button>近 90 天</button></div>
+        <div class="sp"></div>
+        <button class="btn"><svg class="pz-ic"><use href="#ic-doc"/></svg> 匯出報表</button>
+        <button class="btn"><svg class="pz-ic"><use href="#ic-camera"/></svg> 上傳報告 OCR</button>
+        <button class="btn blue"><svg class="pz-ic"><use href="#ic-plus"/></svg> 新增紀錄</button>
+      </div>
+      <div class="kpi">
+        <div class="tile g"><div class="kl"><svg class="pz-ic"><use href="#ic-pill"/></svg> 服藥達成率</div><div class="kn">92<small>%</small></div><div class="kt dn">▲ 比上週 +3%</div></div>
+        <div class="tile r"><div class="kl"><svg class="pz-ic"><use href="#ic-flask"/></svg> CRP 發炎</div><div class="kn">8.2<small> mg/L</small></div><div class="kt up">▲ 偏高・上升</div></div>
+        <div class="tile g"><div class="kl"><svg class="pz-ic"><use href="#ic-stetho"/></svg> DAS28 活動度</div><div class="kn">3.4</div><div class="kt dn">▼ 改善 5.1→3.4</div></div>
+        <div class="tile"><div class="kl"><svg class="pz-ic"><use href="#ic-calendar"/></svg> 回診倒數</div><div class="kn">5<small> 天</small></div><div class="kt flat">6/10 風濕免疫科</div></div>
+        <div class="tile s"><div class="kl"><svg class="pz-ic"><use href="#ic-thermo"/></svg> 風險分數</div><div class="kn">62</div><div class="kt warn">● 留意・越線</div></div>
+        <div class="tile p"><div class="kl"><svg class="pz-ic"><use href="#ic-sun"/></svg> 連續打卡</div><div class="kn">12<small> 天</small></div><div class="kt flat">本月 18 片</div></div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-flask"/></svg> 檢驗數值管理 <span class="en">Labs</span><span class="tag">近 4 次</span></h2>
+          <div class="tablewrap"><table class="dtable">
+            <thead><tr><th>項目</th><th>最新</th><th>參考範圍</th><th>趨勢</th><th>狀態</th></tr></thead>
+            <tbody>
+              <tr><td class="nm">CRP</td><td class="num">8.2</td><td>&lt;5 mg/L</td><td><svg class="mini" viewBox="0 0 84 26"><polyline class="ln" style="stroke:var(--c-red-deep)" points="2,20 30,15 58,9 82,5"/><circle class="pt" style="stroke:var(--c-red-deep)" cx="82" cy="5" r="2.6"/></svg></td><td><span class="flag hi">偏高</span></td></tr>
+              <tr><td class="nm">ESR</td><td class="num">32</td><td>&lt;20 mm/h</td><td><svg class="mini" viewBox="0 0 84 26"><polyline class="ln" style="stroke:var(--c-sun-deep)" points="2,18 30,16 58,11 82,8"/><circle class="pt" style="stroke:var(--c-sun-deep)" cx="82" cy="8" r="2.6"/></svg></td><td><span class="flag hi">偏高</span></td></tr>
+              <tr><td class="nm">RF 類風濕因子</td><td class="num">68</td><td>&lt;14 IU/mL</td><td><svg class="mini" viewBox="0 0 84 26"><polyline class="ln" style="stroke:var(--c-grape-deep)" points="2,12 30,13 58,11 82,12"/></svg></td><td><span class="flag hi">陽性</span></td></tr>
+              <tr><td class="nm">Hb 血色素</td><td class="num">12.8</td><td>12–16 g/dL</td><td><svg class="mini" viewBox="0 0 84 26"><polyline class="ln" style="stroke:var(--c-green-deep)" points="2,14 30,13 58,14 82,13"/></svg></td><td><span class="flag ok">正常</span></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-chart"/></svg> CRP 趨勢 <span class="en">發炎指標</span><span class="tag">5/28</span></h2>
+          <div class="dchart"><svg viewBox="0 0 300 158" preserveAspectRatio="xMidYMid meet">
+            <rect class="band" style="fill:var(--c-green)" x="34" y="104" width="258" height="22"/>
+            <line class="grid" x1="34" y1="14" x2="292" y2="14"/><text class="unit" x="6" y="17">12</text>
+            <line class="grid" x1="34" y1="51" x2="292" y2="51"/><text x="13" y="54">8</text>
+            <line class="grid" x1="34" y1="88" x2="292" y2="88"/><text x="13" y="91">4</text>
+            <line class="grid" x1="34" y1="126" x2="292" y2="126"/><text x="18" y="129">0</text>
+            <line class="axis" x1="34" y1="14" x2="34" y2="126"/><line class="axis" x1="34" y1="126" x2="292" y2="126"/>
+            <polyline class="ln" style="stroke:var(--c-red-deep)" points="52,98 132,79 212,60 280,51"/>
+            <g class="pt" style="stroke:var(--c-red-deep); fill:var(--c-paper-raised)"><circle cx="52" cy="98" r="3.2"/><circle cx="132" cy="79" r="3.2"/><circle cx="212" cy="60" r="3.2"/><circle cx="280" cy="51" r="3.8"/></g>
+            <text class="vlab" x="45" y="92">3.1</text><text class="vlab" x="268" y="47">8.2</text>
+            <text x="40" y="139">4/01</text><text x="124" y="139">4/30</text><text x="262" y="139">5/28</text>
+            <text class="unit" x="34" y="152">CRP mg/L · 綠帶＝正常 &lt;5 · 近期上升</text>
+          </svg></div>
+          <div class="why"><b>小禾解讀 ·</b> CRP 與 ESR 同步上升＝發炎活性增加，與右肩痛一致。下一步 6/24 追蹤抽血。</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-green-deep)"><use href="#ic-pill"/></svg> 用藥管理 <span class="en">Medication management</span><span class="tag">3 種</span></h2>
+        <div class="tablewrap"><table class="dtable">
+          <thead><tr><th>藥名</th><th>劑量</th><th>頻率</th><th>14 天達成率</th><th>最近一次</th><th>狀態</th></tr></thead>
+          <tbody>
+            <tr><td class="nm">Methotrexate</td><td>15 mg</td><td>每週一次</td><td class="num">100%</td><td>今 08:05</td><td><span class="flag ok">穩定</span></td></tr>
+            <tr><td class="nm">Folic acid 葉酸</td><td>5 mg</td><td>每日</td><td class="num">96%</td><td>今 08:05</td><td><span class="flag ok">穩定</span></td></tr>
+            <tr><td class="nm">Prednisolone 類固醇</td><td>10 mg</td><td>每日</td><td class="num">86%</td><td>昨 20:40</td><td><span class="flag hi">減量中</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-calendar"/></svg> 回診與療程排程 <span class="en">Schedule</span><span class="tag">跨院整合</span></h2>
+        <div class="tablewrap"><table class="dtable">
+          <thead><tr><th>日期</th><th>科別 / 項目</th><th>院所・醫師</th><th>目的</th><th>狀態</th></tr></thead>
+          <tbody>
+            <tr><td class="nm">6/10</td><td>風濕免疫科</td><td>林口長庚・陳醫師</td><td>例行追蹤・調整用藥</td><td><span class="chip sev clinic">即將</span></td></tr>
+            <tr><td class="nm">6/17</td><td>抽血檢驗</td><td>台大醫院</td><td>施打前肝腎功能 + CRP</td><td><span class="chip">待排</span></td></tr>
+            <tr><td class="nm">6/20</td><td>生物製劑施打</td><td>林口長庚・陳醫師</td><td>第 4 劑 / 共 6 劑</td><td><span class="chip">待排</span></td></tr>
+            <tr><td class="nm">5/13</td><td>風濕免疫科</td><td>林口長庚・陳醫師</td><td>類固醇加量、抽血追蹤</td><td><span class="flag ok">已完成</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ───── LABS · 檢驗數值 ───── -->
+    <section class="view" data-view="labs">
+      <div class="vhead"><div><div class="ttl" data-i18n="nav.labs">檢驗數值</div><div class="en">Labs · 趨勢與參考範圍</div></div></div>
+      <div class="two">
+        <div class="card">
+          <h2><svg class="pz-ic" style="color:var(--c-red-deep)"><use href="#ic-chart"/></svg> CRP 趨勢 <span class="en">發炎指標</span><span class="tag">近 4 次</span></h2>
+          <div class="dchart"><svg viewBox="0 0 300 158" preserveAspectRatio="xMidYMid meet">
+            <rect class="band" style="fill:var(--c-green)" x="34" y="104" width="258" height="22"/>
+            <line class="grid" x1="34" y1="14" x2="292" y2="14"/><text class="unit" x="6" y="17">12</text>
+            <line class="grid" x1="34" y1="51" x2="292" y2="51"/><text x="13" y="54">8</text>
+            <line class="grid" x1="34" y1="88" x2="292" y2="88"/><text x="13" y="91">4</text>
+            <line class="grid" x1="34" y1="126" x2="292" y2="126"/><text x="18" y="129">0</text>
+            <line class="axis" x1="34" y1="14" x2="34" y2="126"/><line class="axis" x1="34" y1="126" x2="292" y2="126"/>
+            <polyline class="ln" style="stroke:var(--c-red-deep)" points="52,98 132,79 212,60 280,51"/>
+            <g class="pt" style="stroke:var(--c-red-deep); fill:var(--c-paper-raised)"><circle cx="52" cy="98" r="3.2"/><circle cx="132" cy="79" r="3.2"/><circle cx="212" cy="60" r="3.2"/><circle cx="280" cy="51" r="3.8"/></g>
+            <text class="vlab" x="45" y="92">3.1</text><text class="vlab" x="268" y="47">8.2</text>
+            <text x="40" y="139">4/01</text><text x="124" y="139">4/30</text><text x="262" y="139">5/28</text>
+            <text class="unit" x="34" y="152">CRP mg/L · 綠帶＝正常 &lt;5</text>
+          </svg></div>
+        </div>
+        <div class="card">
+          <h2><svg class="pz-ic" style="color:var(--c-blue-deep)"><use href="#ic-flask"/></svg> 歷次對照 <span class="en">CRP · ESR</span></h2>
+          <div class="tablewrap"><table class="dtable">
+            <thead><tr><th>日期</th><th>CRP</th><th>ESR</th><th>狀態</th></tr></thead>
+            <tbody>
+              <tr><td class="nm">5/28</td><td class="num">8.2</td><td class="num">32</td><td><span class="flag hi">偏高</span></td></tr>
+              <tr><td class="nm">4/30</td><td class="num">5.4</td><td class="num">24</td><td><span class="flag hi">略高</span></td></tr>
+              <tr><td class="nm">4/01</td><td class="num">3.1</td><td class="num">18</td><td><span class="flag ok">正常</span></td></tr>
+            </tbody>
+          </table></div>
+          <div class="why"><b>怎麼讀 ·</b> 兩項同步上升代表發炎活性增加；建議回診請醫師評估是否調整 DMARD。＊數值僅供與醫師討論。</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ─── lightweight i18n (chrome strings; body stays bilingual) ─── */
+const DICT={'zh-TW':{}, 'en':{
+  'brand':'The Puzzle Clinic','nav.daily':'DAILY','nav.home':'Home','nav.sym':'Symptoms','nav.med':'Medications','nav.pieces':'Pieces',
+  'nav.clinic':'CLINIC','nav.pv':'Pre-visit','nav.rem':'Reminders','nav.learn':'LEARN · ACCOUNT','nav.edu':'Library','nav.profile':'Profile',
+  'nav.clinmgmt':'CLINICAL','nav.ov':'Overview','nav.labs':'Labs',
+  'side.today':"Today's pieces",'side.calm':'4 / 6 collected · health, one piece at a time.','t.std':'A',
+  'h.hi':'Good morning, Yijun','h.sub':"let's take it slow today",'h.thu':'Thu · cloudy',
+  'h.today':"TODAY'S PIECES",'h.of':'/ 6','h.calm':'Health is pieced together, one bit at a time.',
+  'h.ai':'Xiaohe noticed','h.aibody':'Sleep down 3 days; pain rose 3→6. Worth seeing your doctor sooner.','h.why':'Why this read','h.confmid':'Confidence mid–high',
+  'h.esc':'Build visit summary','h.ok':'Got it','h.meds':"Today's meds",'h.visit':'Next visit','h.d':' days','h.dept':'Rheumatology',
+  'h.flare':'Flare risk','h.watch':'Watch','h.mood':"Today's mood",'h.pain':'Pain trend','h.sched':'Today','h.quick':'Quick log',
+  'h.coll':'Collection progress','h.rec':'Recommended for you',
+  'qa.sym':'Log symptom','qa.med':'Med check-in','qa.mood':'Log mood'
+}};
+document.querySelectorAll('[data-i18n]').forEach(el=>{ DICT['zh-TW'][el.dataset.i18n]=el.innerHTML; });
+let lang='zh-TW';
+function applyLang(){ document.querySelectorAll('[data-i18n]').forEach(el=>{ const v=DICT[lang][el.dataset.i18n]; if(v!=null) el.innerHTML=v; });
+  document.documentElement.lang = lang==='en'?'en':'zh-Hant'; document.getElementById('langTx').textContent = lang==='en'?'EN':'中'; }
+document.getElementById('langBtn').onclick=()=>{ lang=lang==='zh-TW'?'en':'zh-TW'; applyLang(); };
+
+/* ─── theme (denim dark) ─── */
+document.getElementById('themeBtn').onclick=()=>{ const d=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme', d?'light':'dark'); document.getElementById('themeIc').setAttribute('href', d?'#ic-moon':'#ic-sun'); };
+/* ─── senior mode ─── */
+document.getElementById('modeBtn').onclick=()=>{ const s=document.documentElement.getAttribute('data-mode')==='senior';
+  document.documentElement.setAttribute('data-mode', s?'standard':'senior'); document.getElementById('modeTx').textContent = s?(lang==='en'?'A':'標'):(lang==='en'?'A+':'大'); };
+
+/* ─── sidebar / card navigation ─── */
+function goTo(view){ document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.dataset.view===view));
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('on', n.dataset.go===view));
+  document.querySelector('.main').scrollTo({top:0,behavior:'instant'}); window.scrollTo(0,0); }
+document.querySelectorAll('[data-go]').forEach(el=> el.addEventListener('click', ()=>goTo(el.dataset.go)));
+
+/* ─── toggles inside content ─── */
+document.querySelectorAll('.sw').forEach(s=> s.onclick=()=>s.classList.toggle('on'));
+document.querySelectorAll('.seg').forEach(g=> g.querySelectorAll('button').forEach(b=> b.onclick=()=>{ g.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }));
+document.querySelectorAll('.tick').forEach(t=> t.onclick=()=>t.classList.toggle('done'));
+
+/* ─── oil-painting masks (12 of 35 cells still covered → 66% revealed) ─── */
+function paintMask(id){ const m=document.getElementById(id); if(!m) return; const cov=new Set([3,6,7,13,17,20,24,27,28,31,33,34]);
+  for(let k=0;k<35;k++){ const c=document.createElement('i'); if(cov.has(k)) c.className='cv'; m.appendChild(c); } }
+paintMask('oilMaskHome'); paintMask('oilMaskPieces');
+
+/* ─── check-in calendar ─── */
+(function(){ const c=document.getElementById('checkCalWeb'); if(!c) return;
+  ['日','一','二','三','四','五','六'].forEach(d=>{ const h=document.createElement('div'); h.className='dow'; h.textContent=d; c.appendChild(h); });
+  const seq=[1,2,0,1,2,1,0, 2,1,3,1,0,2,1, 1,2,1,0,1,2,3, 1,1,2,1,2,1,3, 2,1,2,3,2,1,4];
+  seq.forEach((lv,k)=>{ const i=document.createElement('i'); const cl=Math.min(lv,3); if(cl) i.className='l'+cl;
+    if(k===seq.length-1) i.classList.add('tdy'); if(lv) i.innerHTML='<span class="pcs">'+lv+'</span>'; c.appendChild(i); }); })();
+
+applyLang();
+</script>
+</body>
+</html>
