@@ -815,8 +815,12 @@ function memoOnPhotoPicked(ev) {
   }
 
   prep.then(function(usableFile) {
+    // 進壓縮前先讓使用者裁切 / 旋轉（自由比例）；取消＝沿用原圖、不裁。
+    // usableFile 已是 JPEG（HEIC 在上面轉過），openImageCropper 不會再轉一次。
+    return openImageCropper(usableFile, { outputSize: 1280 }).then(function(cropped) {
+      var chosen = cropped || usableFile;
     // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
-    return memoCompressImage(usableFile, 1280, 0.85).then(function(result) {
+    return memoCompressImage(chosen, 1280, 0.85).then(function(result) {
       if (!memoIsValidDataUrl(result.dataUrl)) throw new Error("compress produced invalid dataURL");
       _memoStagedPhoto = result.dataUrl;
       _memoStagedPhotoCanvas = result.canvas || null;
@@ -837,6 +841,7 @@ function memoOnPhotoPicked(ev) {
         memoOpenComposer("為這張照片加備註（可選）", { forDoctor: false });
         resetInput();
       });
+    });
     });
   }).catch(function(e) {
     console.warn("[memo] photo prep failed", e);
@@ -3574,15 +3579,20 @@ function onRegAvatarPicked(e) {
     try { input.value = ''; } catch (_) {}
     return;
   }
-  prepareAvatarDataUrl(file).then(dataUrl => {
-    _regAvatarDataUrl = dataUrl;
-    const img = document.getElementById('reg-avatar-img');
-    const ph = document.getElementById('reg-avatar-placeholder');
-    const clr = document.getElementById('reg-avatar-clear');
-    if (img) { img.src = dataUrl; img.hidden = false; }
-    if (ph) ph.hidden = true;
-    if (clr) clr.hidden = false;
-    if (typeof showToast === 'function') showToast('頭像已準備好，記得按「建立帳號」儲存', 'success');
+  openImageCropper(file, { aspectRatio: 1, outputSize: 320 }).then(cropped => {
+    if (!cropped) { try { input.value = ''; } catch (_) {} return; }   // 使用者取消裁切
+    return prepareAvatarDataUrl(cropped).then(dataUrl => {
+      _regAvatarDataUrl = dataUrl;
+      const img = document.getElementById('reg-avatar-img');
+      const ph = document.getElementById('reg-avatar-placeholder');
+      const clr = document.getElementById('reg-avatar-clear');
+      if (img) { img.src = dataUrl; img.hidden = false; }
+      if (ph) ph.hidden = true;
+      if (clr) clr.hidden = false;
+      // 成功也清空 input，否則再選「同一張」不會觸發 change（換不掉的根因）
+      try { input.value = ''; } catch (_) {}
+      if (typeof showToast === 'function') showToast('頭像已準備好，記得按「建立帳號」儲存', 'success');
+    });
   }).catch(err => {
     console.warn('[avatar] register pick failed', err);
     try { input.value = ''; } catch (_) {}
@@ -3653,6 +3663,91 @@ function prepareAvatarDataUrl(file) {
       throw new Error('頭像讀取失敗，請換一張');
     }
     return dataUrl;
+  });
+}
+
+// 通用照片裁切器（Cropper.js）：開 modal 讓使用者裁切 / 旋轉 / 縮放，
+// 回傳裁切後的 JPEG File；使用者取消則 resolve(null)，呼叫端可決定要不要沿用原圖。
+//   opts.aspectRatio：數字＝固定比例（頭像用 1 方形）；省略 / NaN＝自由比例。
+//   opts.outputSize  ：固定比例時為方形邊長；自由比例時為長邊上限（預設 320）。
+// HEIC 會先轉成 JPEG 再進 Cropper（Cropper 吃 <img>，無法直接解 HEIC）。
+// 若 Cropper 函式庫沒載到，直接回原檔（graceful degrade，不擋使用者）。
+function openImageCropper(file, opts) {
+  opts = opts || {};
+  var aspect = (typeof opts.aspectRatio === 'number') ? opts.aspectRatio : NaN;
+  var outSize = opts.outputSize || 320;
+  var prep;
+  if (typeof memoIsHeic === 'function' && memoIsHeic(file) && typeof memoConvertHeicToJpeg === 'function') {
+    if (typeof showToast === 'function') showToast('照片是 HEIC 格式，正在轉檔…', 'info');
+    prep = memoConvertHeicToJpeg(file);
+  } else {
+    prep = Promise.resolve(file);
+  }
+  return prep.then(function(usable) {
+    return new Promise(function(resolve) {
+      if (typeof Cropper === 'undefined') { resolve(usable); return; }
+      var url = URL.createObjectURL(usable);
+      var overlay = document.createElement('div');
+      overlay.className = 'imgcrop-overlay';
+      overlay.innerHTML = ''
+        + '<div class="imgcrop-panel" role="dialog" aria-modal="true" aria-label="調整照片">'
+        +   '<div class="imgcrop-stage"><img class="imgcrop-img" alt="" /></div>'
+        +   '<div class="imgcrop-tools">'
+        +     '<button type="button" class="imgcrop-tool" data-act="rot-l" title="向左旋轉"><i data-lucide="rotate-ccw"></i></button>'
+        +     '<button type="button" class="imgcrop-tool" data-act="rot-r" title="向右旋轉"><i data-lucide="rotate-cw"></i></button>'
+        +     '<button type="button" class="imgcrop-tool" data-act="zoom-in" title="放大"><i data-lucide="zoom-in"></i></button>'
+        +     '<button type="button" class="imgcrop-tool" data-act="zoom-out" title="縮小"><i data-lucide="zoom-out"></i></button>'
+        +     '<button type="button" class="imgcrop-tool" data-act="reset" title="重設"><i data-lucide="refresh-ccw"></i></button>'
+        +   '</div>'
+        +   '<div class="imgcrop-actions">'
+        +     '<button type="button" class="imgcrop-btn imgcrop-cancel">取消</button>'
+        +     '<button type="button" class="imgcrop-btn imgcrop-ok">套用</button>'
+        +   '</div>'
+        + '</div>';
+      document.body.appendChild(overlay);
+      var imgEl = overlay.querySelector('.imgcrop-img');
+      imgEl.src = url;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      var cropper = new Cropper(imgEl, {
+        aspectRatio: aspect,
+        viewMode: 1,
+        autoCropArea: 1,
+        background: false,
+        movable: true,
+        zoomable: true,
+        responsive: true,
+      });
+      function cleanup() {
+        try { cropper.destroy(); } catch (e) {}
+        try { URL.revokeObjectURL(url); } catch (e) {}
+        overlay.remove();
+      }
+      overlay.querySelector('.imgcrop-tools').addEventListener('click', function(e) {
+        var b = e.target.closest('[data-act]');
+        if (!b) return;
+        var act = b.getAttribute('data-act');
+        if (act === 'rot-l') cropper.rotate(-90);
+        else if (act === 'rot-r') cropper.rotate(90);
+        else if (act === 'zoom-in') cropper.zoom(0.1);
+        else if (act === 'zoom-out') cropper.zoom(-0.1);
+        else if (act === 'reset') cropper.reset();
+      });
+      overlay.querySelector('.imgcrop-cancel').addEventListener('click', function() {
+        cleanup();
+        resolve(null);
+      });
+      overlay.querySelector('.imgcrop-ok').addEventListener('click', function() {
+        var canvasOpts = !isNaN(aspect)
+          ? { width: outSize, height: outSize, imageSmoothingQuality: 'high' }
+          : { maxWidth: outSize, maxHeight: outSize, imageSmoothingQuality: 'high' };
+        var canvas = cropper.getCroppedCanvas(canvasOpts);
+        if (!canvas) { cleanup(); resolve(usable); return; }
+        canvas.toBlob(function(blob) {
+          cleanup();
+          resolve(blob ? new File([blob], 'cropped.jpg', { type: 'image/jpeg' }) : usable);
+        }, 'image/jpeg', 0.9);
+      });
+    });
   });
 }
 
@@ -4287,8 +4382,10 @@ async function onAccountAvatarPicked(e) {
     return;
   }
   try {
+    const cropped = await openImageCropper(file, { aspectRatio: 1, outputSize: 320 });
+    if (!cropped) { try { input.value = ''; } catch (_) {} return; }   // 使用者取消裁切
     if (typeof showToast === 'function') showToast('正在處理頭像…', 'info');
-    const dataUrl = await prepareAvatarDataUrl(file);
+    const dataUrl = await prepareAvatarDataUrl(cropped);
     const res = await apiFetch(`${API}/auth/user/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
