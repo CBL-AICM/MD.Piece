@@ -67,7 +67,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&family=ZCOOL+KuaiLe&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=v116-dark-no-grad" />
+  <link rel="stylesheet" href="css/style.css?v=v117-inpatient-v2" />
   <link rel="stylesheet" href="css/elder-mode.css?v=v4-fix-clobber" />
   <link rel="stylesheet" href="css/medical-warm.css?v=v6-dark-no-grad" />
   <link rel="stylesheet" href="css/v11-modern.css?v=v19-tabbar-fullbleed" />
@@ -113,7 +113,7 @@
     // 把 V 改高一級 → 每個使用者下次開站會清光 SW + caches + reload，
     // 各種 stale cache 全部失效。每個版本每個使用者只清一次。
     (async function() {
-      var APP_BUST = 'v18-ios-fix-2026-06-02';
+      var APP_BUST = 'v19-inpatient-v2-2026-06-05';
       try {
         if (localStorage.getItem('mdp-cache-bust') === APP_BUST) return;
         localStorage.setItem('mdp-cache-bust', APP_BUST);
@@ -712,7 +712,7 @@
 
   <script src="js/i18n.js?v=v83-predict-nav"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v155-ios-fix"></script>
+  <script src="js/app.js?v=v156-inpatient-v2"></script>
   <script src="js/edu-codex.js?v=v3" defer></script>
   <script src="js/landing.js"></script>
   <script>

@@ -15016,6 +15016,79 @@ html[data-care-mode="inpatient"] #app-wrapper[data-theme="light"] {
 }
 .ip-now-safe svg { color: var(--ip-mint); }
 
+/* v2 重設計：★每日主行動卡（ePRO CTA）─ critique P0-2 ─────────── */
+.ip-epro-cta {
+  display: block;
+  width: 100%;
+  text-align: left;
+  position: relative;
+  margin: 0 0 18px;
+  padding: 18px 18px 16px;
+  border-radius: 16px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  box-shadow: 0 4px 14px rgba(15, 26, 46, 0.10);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.08s, box-shadow 0.15s;
+}
+.ip-epro-cta:active { transform: scale(0.99); }
+.ip-epro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ip-mint);
+  background: rgba(47, 131, 120, 0.12);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.ip-epro-title {
+  margin: 10px 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ip-text);
+  letter-spacing: 0.2px;
+}
+.ip-epro-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ip-muted);
+}
+.ip-epro-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 11px 0;
+  border-radius: 13px;
+  background: var(--ip-mint);
+  color: #0F1A2E;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+/* SOS 誠實叫人鈴提示 ─ critique P1-2 ─────────────────────────── */
+.ip-sos-bellnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--ip-coral-soft, rgba(216, 95, 95, 0.10));
+  color: var(--ip-coral, #D85F5F);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+.ip-sos-bellnote svg { flex: 0 0 auto; margin-top: 1px; }
+.ip-sos-bellnote strong { white-space: nowrap; }
+/* P2-2：裝飾性 section 編號對患者無資訊量，移除（保留在 code/aria 外）。 */
+.home-inpatient .ip-num { display: none; }
+
 /* 2. NextStep — countdown card ───────────────────────────── */
 .ip-next { margin-bottom: 20px; }
 .ip-next-card {

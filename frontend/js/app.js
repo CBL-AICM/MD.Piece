@@ -6864,14 +6864,18 @@ function _renderMobileTodoList() {
 //   7. 病情趨勢 (TrendChips)  — 痛 / 累 / 心情 7 日走勢
 //   8. 出院進度 (Discharge)   — 4-step stepper
 //   9. 住院衛教 (Edu)         — 給「現在這個療程 / 診斷」相關的衛教卡
+// v2 重設計（docs/inpatient-v2-design-critique.md）：把住院首頁從 9 區堆疊收斂成
+// 「一條每日主迴圈」— 現在狀態 → ★主行動（每日自我紀錄）→ 即時不適快捷 → 下一個排程，
+// 其餘 v1 功能保留但下移（搬位不刪功能，鐵則 3）。
 function renderInpatientHome(ctx) {
   return ''
     + '<div class="home-page home-inpatient" data-care-mode="inpatient">'
     +   renderCareModeChips()
     +   renderInpatientNowCard(ctx)
+    +   renderInpatientEproCta()
+    +   renderInpatientSOS()
     +   renderInpatientNextStep()
     +   renderInpatientHub()
-    +   renderInpatientSOS()
     +   renderInpatientTimeline()
     +   '<div class="ip-row-2">'
     +     renderInpatientDayProgress()
@@ -6880,8 +6884,22 @@ function renderInpatientHome(ctx) {
     +   renderInpatientTrendChips()
     +   renderInpatientDischargeStepper()
     +   renderInpatientEducation()
-    +   '<p class="ip-footer-note">出現任何不舒服請按綠色「求助護理」鈕；緊急狀況請按床邊紅色叫人鈴。</p>'
+    +   '<p class="ip-footer-note">這些按鈕只會把紀錄存進你的手機，不會連動護理站。緊急狀況請按床邊紅色叫人鈴。</p>'
     + '</div>';
+}
+
+// ★ 每日主行動卡（critique P0-2）：住院情境最高價值的「每日自我紀錄」迴圈入口。
+// 導向既有「床邊紀錄」（痛/睡/吃 + 想問醫師）＝ ePRO 等價；填完即由 #528 的
+// /inpatient/suggested-questions 自動產生「查房要問醫師」候選（P0-3 醫病共決）。
+// 文案誠實：不宣稱已填/未填狀態（避免假承諾，設計憲法 2），只給邀請。
+function renderInpatientEproCta() {
+  return ''
+    + '<button type="button" class="ip-epro-cta" onclick="_ipGoto(\'bedside\')" aria-label="去做今天的自我紀錄">'
+    +   '<span class="ip-epro-badge"><i data-lucide="sparkles" style="width:13px;height:13px"></i> 每日 1 分鐘</span>'
+    +   '<h3 class="ip-epro-title">今天覺得怎麼樣？花 1 分鐘記一下</h3>'
+    +   '<p class="ip-epro-sub">記下痛 / 睡 / 吃，填完會幫你整理成「查房可以問醫師」的話。</p>'
+    +   '<span class="ip-epro-go">開始今天的紀錄 <i data-lucide="arrow-right" style="width:16px;height:16px"></i></span>'
+    + '</button>';
 }
 
 // 1. 現在狀態 (Now Card) — Hero ─────────────────────────────────────────────
@@ -6971,6 +6989,8 @@ function renderInpatientSOS() {
     +     '<span class="ip-section-sub">不用打字 · 不用想 · 直接按</span>'
     +   '</header>'
     +   '<div class="ip-sos-grid">' + btns + '</div>'
+    +   '<p class="ip-sos-bellnote"><i data-lucide="bell-ring" style="width:14px;height:14px"></i> '
+    +     '按一下＝記到你的紀錄裡，查房時給醫師看。<strong>緊急狀況請按床邊紅色叫人鈴或撥 119。</strong></p>'
     +   '<div class="ip-sos-history" id="ip-sos-history" hidden>'
     +     '<div class="ip-sos-history-head">'
     +       '<span>今天已回報</span>'
@@ -8056,6 +8076,7 @@ function bedside() {
     + '<section class="ip-qpl"><header class="ip-section-head"><span class="ip-num">02b</span>'
     +   '<h3>想問醫師的問題</h3><span class="ip-section-sub">查房前先記下來</span></header>'
     +   '<div id="ip-qpl-list"><p class="ip-tool-loading">載入中…</p></div>'
+    +   '<div id="ip-qpl-personal"></div>'
     +   '<div class="ip-qpl-add"><input type="text" id="ip-qpl-input" placeholder="例：我還要住幾天？" maxlength="120">'
     +     '<button type="button" onclick="addInpatientQuestion()"><i data-lucide="plus" style="width:16px;height:16px"></i></button></div>'
     +   '<details class="ip-qpl-bank"><summary>不知道問什麼？看建議題庫</summary><div id="ip-qpl-bank"></div></details>'
@@ -8112,6 +8133,7 @@ function submitBedside() {
     var form = document.getElementById('ip-bs-form');
     if (form) { form.innerHTML = _renderBedsideForm(); if (typeof lucide !== 'undefined') lucide.createIcons(); }
     loadBedsideRecent();
+    loadInpatientSuggestedQuestions();   // 症狀更新 → 個人化建議題即時刷新（P0-2 迴圈）
   }).catch(function() {
     if (typeof showToast === 'function') showToast('記錄失敗，請稍後再試', 'warning');
   });
@@ -8120,6 +8142,7 @@ function loadBedsidePage() {
   _ipBedsideDraft = {};
   loadBedsideRecent();
   loadInpatientQuestions();
+  loadInpatientSuggestedQuestions();
   // 建議題庫
   var bank = document.getElementById('ip-qpl-bank');
   if (bank) {
@@ -8176,6 +8199,28 @@ function loadInpatientQuestions() {
       }).join('') + '</ul>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
     });
+}
+// 依床邊紀錄產生的「個人化」建議題（補通用 qpl-bank）。住院 v2 Phase 2 / critique P0-2、P0-3：
+// 把 F2 床邊症狀接到「想問醫師」，後端 GET /inpatient/suggested-questions（純規則，鐵則 5）。
+// 規則 12：沒有可建議的就清空、不硬塞題目。每顆按鈕標 source（來自哪個症狀）→ 可解釋（設計憲法 2）。
+function loadInpatientSuggestedQuestions() {
+  var host = document.getElementById('ip-qpl-personal');
+  var pid = _ipPid();
+  if (!host || !pid) return;
+  apiFetch(API + '/inpatient/suggested-questions?patient_id=' + encodeURIComponent(pid))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      var sug = (d && d.suggested) || [];
+      if (!sug.length) { host.innerHTML = ''; return; }
+      host.innerHTML = '<p class="ip-qpl-personal-head" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--teal);margin:10px 0 8px">'
+        + '<i data-lucide="sparkles" style="width:15px;height:15px"></i>依你今天記的，幫你想問的</p>'
+        + sug.map(function(q) {
+            return '<button type="button" class="ip-qpl-suggest" onclick="addInpatientQuestion(' + JSON.stringify(q.text).replace(/"/g, '&quot;') + ')">'
+              + '<span class="ip-qpl-cat">' + escapeHtml(q.source || '') + '</span>' + escapeHtml(q.text) + '</button>';
+          }).join('');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    })
+    .catch(function() { host.innerHTML = ''; });
 }
 function addInpatientQuestion(text) {
   var pid = _ipPid();
@@ -10252,10 +10297,12 @@ function onInpatientSOS(key, btn) {
       recordedAt: new Date().toISOString(),
     });
   }
+  // 誠實文案（critique P1-2 / 設計憲法 2）：本鍵只把症狀記進你的紀錄，並未連動護理站系統。
+  // 不可讓病人誤以為護理站已收到而不去按實體叫人鈴。
   if (key === 'help') {
-    if (typeof showToast === 'function') showToast('已通知護理站，請稍候。', 'success');
+    if (typeof showToast === 'function') showToast('緊急或需要護理師，請按床邊紅色叫人鈴。這次求助已幫你記下。', 'info');
   } else {
-    if (typeof showToast === 'function') showToast('已記下「' + labelMap[key] + '」，並通知護理站。', 'success');
+    if (typeof showToast === 'function') showToast('已記下「' + labelMap[key] + '」，查房時可以給醫師看。緊急請按床邊紅色叫人鈴。', 'success');
   }
   // 重新整理趨勢線 + SOS 歷史
   loadInpatientTrendSparklines();
