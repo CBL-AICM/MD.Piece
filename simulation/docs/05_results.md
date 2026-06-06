@@ -6,7 +6,7 @@ config_hash `6e5c84dbb48d` · seed 20260606 · n=3200 patients · PROSPECTIVE mo
 - This is a **microsimulation**; the sign of the result is, in the limit, a function of the friction/capture parameters we chose. The value is the **response surface**, not a point estimate.
 - We author BOTH the recall-loss and MD.Piece-capture models. Mitigations: dropouts/non-adoption counted against MD.Piece; deliberately pessimistic retention; a **V-SANITY parity check** (MD.Piece reduced to recall ⇒ effect ≈ 0).
 - Absolute fidelity numbers are optimistic vs a real study (ground truth here is lossless; real EHR is not). Only **relative** arm comparisons are claimed.
-- **Assumption registry:** 15 structural assumptions, **7 still validation-required (expert judgment)**. Net design bias: 4 assumptions favor MD.Piece, 4 favor recall (the design leans conservative/anti-app).
+- **Assumption registry:** 15 structural assumptions, **7 still validation-required (expert judgment)**. Net design bias: 4 assumptions favor MD.Piece, 4 favor recall (the design is balanced).
 
 ## Primary estimand — MD.Piece − Patient Recall (paired, per patient)
 | metric | recall | mdpiece | Δ (mdpiece−recall) | 95% CI |

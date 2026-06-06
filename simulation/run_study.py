@@ -125,9 +125,11 @@ def build_report(cfg, patients, rec_eval, mdp_eval, retention, parity) -> str:
              "(MD.Piece reduced to recall ⇒ effect ≈ 0).")
     L.append("- Absolute fidelity numbers are optimistic vs a real study (ground truth here is lossless; "
              "real EHR is not). Only **relative** arm comparisons are claimed.")
+    lean = ("balanced" if fav_mp == fav_rc
+            else "leans conservative/anti-app" if fav_rc > fav_mp else "leans pro-app")
     L.append(f"- **Assumption registry:** {len(asn)} structural assumptions, **{n_unval} still "
              f"validation-required (expert judgment)**. Net design bias: {fav_mp} assumptions favor MD.Piece, "
-             f"{fav_rc} favor recall (the design leans conservative/anti-app).\n")
+             f"{fav_rc} favor recall (the design is {lean}).\n")
 
     L.append("## Primary estimand — MD.Piece − Patient Recall (paired, per patient)")
     L.append("| metric | recall | mdpiece | Δ (mdpiece−recall) | 95% CI |")
