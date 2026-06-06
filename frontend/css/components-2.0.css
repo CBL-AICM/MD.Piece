@@ -98,3 +98,31 @@
 .mp-list .li+.li{border-top:1px solid var(--line)}
 .mp-list .li .ti{font-size:.9rem;font-weight:600;color:var(--content)}
 .mp-list .li .me{font-size:.74rem;color:var(--content-subtle);margin-top:2px}
+
+/* ── Observe ⇄ Record patterns (creative Today) ── */
+/* 今日碎片 PieceProgress — record + observe in one */
+.mp-pieces{display:flex;justify-content:space-between;margin:14px 0 4px}
+.mp-pc{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;background:none;border:none;cursor:pointer;padding:0;min-width:44px}
+.mp-pc svg{width:40px;height:40px}
+.mp-pc .pl{font-size:10.5px;font-weight:600;color:var(--content-muted)}
+.mp-pc.done .pl{color:var(--content)}
+.mp-pc .pwrap{position:relative;display:flex}
+.mp-pc .ck{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;padding-top:2px}
+.mp-prog{height:7px;border-radius:5px;background:#eef3f0;margin:14px 2px 6px;overflow:hidden}
+.mp-prog i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#3fa494,var(--action));transition:width var(--motion-base) var(--ease-gentle)}
+.mp-psub{font-size:12px;color:var(--content-muted);text-align:center}
+/* ObservationStrip — 7-day glanceable trend */
+.mp-week{display:flex;gap:6px;align-items:flex-end;height:54px;margin:14px 0 6px}
+.mp-wd{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:flex-end}
+.mp-wd .b{width:100%;min-height:5px;border-radius:5px;background:#cfe0d8}
+.mp-wd .dl{font-size:10px;color:var(--content-subtle)}
+/* BodyHeatmap row */
+.mp-heat{display:flex;gap:14px;align-items:center;margin-top:8px}
+.mp-heat .fig{flex:0 0 70px;display:flex;justify-content:center}
+/* MetricMiniCard pair */
+.mp-metricwrap{display:flex;gap:12px;margin-top:14px}
+.mp-metric{flex:1;background:var(--surface-1);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-1);padding:13px}
+.mp-metric .ml{font-size:11px;color:var(--content-muted);font-weight:700}
+.mp-metric .mv{font-family:var(--font-mono);font-size:20px;font-weight:600;color:var(--primary);margin-top:3px}
+.mp-metric .mv small{font-size:11px;color:var(--content-subtle);font-weight:500}
+.mp-metric .mt{font-size:10px;color:var(--action-deep);font-weight:700;margin-top:5px}

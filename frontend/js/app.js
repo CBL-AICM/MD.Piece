@@ -6270,35 +6270,153 @@ function _home2Greeting() {
   if (h < 18) return '午安';
   return '晚安';
 }
+// 共用：判斷某筆紀錄是否「今天」（檢查常見日期欄位）。
+function _h2isToday(v) {
+  if (!v) return false;
+  var s = String(v).slice(0, 10);
+  var n = new Date();
+  var t = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+  return s === t;
+}
+function _h2anyToday(arr) {
+  if (!Array.isArray(arr)) return false;
+  var FIELDS = ['date', 'created_at', 'logged_at', 'recorded_at', 'log_date', 'timestamp', 'time', 'recorded_date', 'created'];
+  return arr.some(function (it) { return it && FIELDS.some(function (f) { return _h2isToday(it[f]); }); });
+}
+function _h2arr(data, keys) {
+  if (Array.isArray(data)) return data;
+  if (!data) return null;
+  for (var i = 0; i < keys.length; i++) { if (Array.isArray(data[keys[i]])) return data[keys[i]]; }
+  return null;
+}
+function _h2bodySvg() {
+  return '<svg width="62" height="112" viewBox="0 0 62 112" fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">'
+    + '<circle cx="31" cy="13" r="9"/><path d="M31 22 L31 64 M31 32 L14 47 M31 32 L48 47 M31 64 L21 104 M31 64 L41 104"/></svg>';
+}
+// 今日碎片 6 型設定（med 無「今天服藥」端點 → 預設可記錄，不自動標記）。
+var _H2_PIECES = [
+  { key: 'symptom', label: '症狀', color: 'var(--ev-symptom)', page: 'symptoms', url: '/symptoms/?patient_id=', keys: ['symptoms', 'logs', 'items', 'data'] },
+  { key: 'med', label: '用藥', color: 'var(--ev-medication)', page: 'medications', url: null, keys: [] },
+  { key: 'emotion', label: '情緒', color: 'var(--teal)', page: 'emotions', url: '/emotions/daily?days=2&patient_id=', keys: ['daily'] },
+  { key: 'vital', label: '生理', color: '#4E8C97', page: 'vitals', url: '/vitals/?patient_id=', keys: ['entries', 'vitals', 'items', 'data'] },
+  { key: 'sleep', label: '睡眠', color: '#5A6E9A', page: 'sleep', url: '/sleep/?patient_id=', keys: ['sleep', 'items', 'data'] },
+  { key: 'diet', label: '飲食', color: 'var(--amber)', page: 'diet', url: '/diet/?patient_id=', keys: ['diet', 'meals', 'items', 'data'] }
+];
+function _h2pieceSlot(cfg, done) {
+  var path = 'M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z';
+  var svg = done
+    ? '<div class="pwrap"><svg viewBox="0 0 100 100" style="color:' + cfg.color + '"><path d="' + path + '" fill="currentColor"/></svg><span class="ck">✓</span></div>'
+    : '<div class="pwrap"><svg viewBox="0 0 100 100" style="color:#c2cdc8"><path d="' + path + '" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="6 5" stroke-linejoin="round"/></svg></div>';
+  return '<button class="mp-pc' + (done ? ' done' : '') + '" onclick="navigateTo(\'' + cfg.page + '\',null)">' + svg + '<span class="pl">' + cfg.label + '</span></button>';
+}
+
 function home2() {
-  // 滿版響應式：桌機 auto-fit 多欄填滿、手機單欄；不留白（規則 3：只改此頁）。
+  // 2.0 創意首頁：Observe ⇄ Record。今日碎片(記錄+觀察) + 7天觀察條 + 生理微趨勢 + 身體熱點。
   return ''
-    + '<div class="mp" style="padding:10px 22px 72px">'
+    + '<div class="mp" style="padding:10px 20px 80px;max-width:680px;margin:0 auto">'
     +   '<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0 4px">'
     +     '<button onclick="showPage(\'home\')" style="background:none;border:none;color:var(--content-muted);font-size:.8rem;font-weight:600;cursor:pointer">← 目前首頁</button>'
     +     '<span style="font-size:.68rem;color:var(--content-subtle);font-weight:700;letter-spacing:.06em">2.0 PREVIEW</span>'
     +   '</div>'
-    +   '<div style="padding:4px 2px 2px">'
-    +     '<h1 id="home2-greet" style="font-family:var(--font-serif);font-size:1.6rem;font-weight:700;color:var(--primary);margin:0">午安</h1>'
-    +     '<p id="home2-date" style="font-size:.84rem;color:var(--content-muted);margin:3px 0 0"></p>'
-    +     '<span class="mp-status calm" id="home2-next" style="margin-top:10px"><span class="mp-dot"></span>讀取回診…</span>'
+    +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:4px 2px 2px">'
+    +     '<div><h1 id="home2-greet" style="font-family:var(--font-serif);font-size:1.55rem;font-weight:700;color:var(--primary);margin:0">午安</h1>'
+    +       '<p id="home2-date" style="font-size:.84rem;color:var(--content-muted);margin:3px 0 0"></p></div>'
+    +     '<span class="mp-status calm" id="home2-next" style="margin-top:4px"><span class="mp-dot"></span>讀取回診…</span>'
     +   '</div>'
-    +   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-top:14px;align-items:start">'
-    +     '<div class="mp-card" style="margin-top:0"><div class="mp-row"><div class="mp-cl"><span class="mp-dot" style="background:var(--ev-medication)"></span>用藥</div>'
-    +       '<button class="mp-chev" style="background:none;border:none;cursor:pointer" onclick="navigateTo(\'medications\',null)">&rsaquo;</button></div>'
-    +       '<div id="home2-meds" style="margin-top:6px"><span class="mp-csub">讀取中…</span></div></div>'
-    +     '<div class="mp-card" style="margin-top:0"><div class="mp-cl">情緒電力</div><div id="home2-mood" style="margin-top:6px"><span class="mp-csub">讀取中…</span></div></div>'
-    +     '<div class="mp-card" style="margin-top:0"><div class="mp-row"><div class="mp-cl">近況追蹤</div><span class="mp-status calm"><span class="mp-dot"></span>持續記錄中</span></div>'
-    +       '<div class="mp-csub" style="margin-top:8px">追蹤而非預測 — 記錄越多，掌握越完整。</div></div>'
-    +     '<div class="mp-card" style="margin-top:0"><div class="mp-cl">最近的紀錄</div><div id="home2-events" style="margin-top:8px"><span class="mp-csub">讀取中…</span></div></div>'
-    +   '</div>'
-    +   '<div class="mp-sh" style="margin-top:18px"><span class="t">快速記一筆</span></div>'
-    +   '<div class="mp-chips">'
-    +     '<span class="mp-chip" onclick="navigateTo(\'symptoms\',null)"><b>＋</b> 症狀</span>'
-    +     '<span class="mp-chip" onclick="navigateTo(\'medications\',null)"><b>＋</b> 用藥</span>'
-    +     '<span class="mp-chip" onclick="navigateTo(\'vitals\',null)"><b>＋</b> 生理</span>'
-    +   '</div>'
+    +   '<div class="mp-card"><div class="mp-cl" style="display:flex;justify-content:space-between"><span id="home2-pcount">今日碎片</span><span style="color:var(--action-deep)">把今天拼起來</span></div>'
+    +     '<div class="mp-pieces" id="home2-pieces">' + _H2_PIECES.map(function (c) { return _h2pieceSlot(c, false); }).join('') + '</div>'
+    +     '<div class="mp-prog"><i id="home2-prog" style="width:0%"></i></div>'
+    +     '<div class="mp-psub" id="home2-psub">想到什麼都可以拼上 — 不用每天拼滿</div></div>'
+    +   '<div class="mp-card"><div class="mp-cl" style="display:flex;justify-content:space-between"><span>本週觀察 · 不適強度</span><span style="color:var(--action-deep)">趨勢</span></div>'
+    +     '<div class="mp-week" id="home2-week"></div>'
+    +     '<div class="mp-psub" id="home2-weeksub" style="text-align:left">讀取中…</div></div>'
+    +   '<div class="mp-metricwrap">'
+    +     '<div class="mp-metric"><div class="ml">血壓</div><div class="mv" id="home2-bp">—</div><div class="mt" id="home2-bp-t"></div></div>'
+    +     '<div class="mp-metric"><div class="ml">心率</div><div class="mv" id="home2-hr">—</div><div class="mt" id="home2-hr-t"></div></div></div>'
+    +   '<div class="mp-card"><div class="mp-cl">身體熱點 · 近 7 天</div>'
+    +     '<div class="mp-heat"><div class="fig">' + _h2bodySvg() + '</div>'
+    +       '<div style="flex:1"><div id="home2-heat" style="font-size:.88rem;font-weight:600;color:var(--content)">讀取中…</div>'
+    +         '<div style="font-size:.78rem;color:var(--content-muted);margin-top:3px">反覆部位會標記在這，回診時方便跟醫師說。</div>'
+    +         '<button class="mp-btn primary" style="margin-top:9px;height:40px;padding:0 14px;font-size:.82rem" onclick="navigateTo(\'symptoms\',null)">點身體記症狀</button></div></div></div>'
+    +   '<div class="mp-sh"><span class="t">最近的紀錄</span><span class="a" style="cursor:pointer" onclick="navigateTo(\'pieces\',null)">全部 &rsaquo;</span></div>'
+    +   '<div class="mp-card" id="home2-events" style="padding:14px"><span class="mp-csub">讀取中…</span></div>'
     + '</div>';
+}
+function loadHome2Page() {
+  try {
+    var user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : '';
+    var name = (user && (user.nickname || user.name || user.username)) || '朋友';
+    var g = document.getElementById('home2-greet'); if (g) g.textContent = _home2Greeting() + '，' + name;
+    var d = document.getElementById('home2-date'); if (d) { var n = new Date(); d.textContent = (n.getMonth() + 1) + ' 月 ' + n.getDate() + ' 日'; }
+
+    // ── 今日碎片：每型抓一次，判斷今天是否已記錄 ──
+    Promise.all(_H2_PIECES.map(function (c) {
+      if (!c.url) return Promise.resolve(false);
+      return apiFetch(API + c.url + pid).then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) { return _h2anyToday(_h2arr(data, c.keys)); }).catch(function () { return false; });
+    })).then(function (states) {
+      var box = document.getElementById('home2-pieces'); if (box) box.innerHTML = _H2_PIECES.map(function (c, i) { return _h2pieceSlot(c, states[i]); }).join('');
+      var done = states.filter(Boolean).length, total = _H2_PIECES.length;
+      var t = document.getElementById('home2-pcount'); if (t) t.textContent = '今日碎片　' + done + ' / ' + total;
+      var p = document.getElementById('home2-prog'); if (p) p.style.width = Math.round(done / total * 100) + '%';
+      var s = document.getElementById('home2-psub');
+      // 研究啟示：避免「6 格未拼＝6 項待辦」的罪惡感框架 → 慶祝已記下的，明說不用拼滿。
+      if (s) s.textContent = done > 0 ? ('今天記下了 ' + done + ' 件 · 想到什麼都可以拼上，不用每天拼滿') : '今天想記點什麼？點下面任一片即可';
+    });
+
+    // ── 本週觀察：近 7 天症狀強度 ──
+    apiFetch(API + '/symptoms/?patient_id=' + pid).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+      var arr = _h2arr(data, ['symptoms', 'logs', 'items', 'data']) || [];
+      var days = [], labels = ['日', '一', '二', '三', '四', '五', '六'], maxByDay = {};
+      for (var i = 6; i >= 0; i--) { var dt = new Date(); dt.setDate(dt.getDate() - i); var key = dt.toISOString().slice(0, 10); days.push({ key: key, lbl: labels[dt.getDay()] }); maxByDay[key] = 0; }
+      arr.forEach(function (it) {
+        var ds = it.date || it.created_at || it.logged_at || it.recorded_at; if (!ds) return; var k = String(ds).slice(0, 10);
+        if (k in maxByDay) { var v = Number(it.intensity || it.severity || it.score || it.level || 0); if (v > maxByDay[k]) maxByDay[k] = v; }
+      });
+      var box = document.getElementById('home2-week'); if (!box) return;
+      box.innerHTML = days.map(function (dd) {
+        var v = maxByDay[dd.key], h = v ? Math.round(v / 5 * 100) : 8;
+        var col = v >= 4 ? '#d98b58' : (v >= 3 ? '#e0b066' : (v ? '#9ccdb9' : '#dfe8e3'));
+        return '<div class="mp-wd"><div class="b" style="height:' + h + '%;background:' + col + '"></div><span class="dl">' + dd.lbl + '</span></div>';
+      }).join('');
+      var any = Object.keys(maxByDay).some(function (k) { return maxByDay[k] > 0; });
+      var sub = document.getElementById('home2-weeksub'); if (sub) sub.textContent = any ? '一眼看出狀況往哪走 · 為什麼' : '本週還沒有症狀紀錄 — 開始記錄就會看到走勢';
+    }).catch(function () { var sub = document.getElementById('home2-weeksub'); if (sub) sub.textContent = '本週還沒有症狀紀錄'; });
+
+    // ── 生理微趨勢 + 身體熱點：共用 /vitals 與 /symptoms ──
+    apiFetch(API + '/vitals/?patient_id=' + pid).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+      var arr = _h2arr(data, ['entries', 'vitals', 'items', 'data']) || [];
+      function latest(pred) { for (var i = arr.length - 1; i >= 0; i--) { if (pred(arr[i])) return arr[i]; } return null; }
+      var bp = latest(function (v) { return v && (v.systolic || v.bp_systolic || v.sbp); });
+      var hr = latest(function (v) { return v && (v.heart_rate || v.hr || v.pulse); });
+      var bpEl = document.getElementById('home2-bp'); if (bpEl && bp) { bpEl.innerHTML = (bp.systolic || bp.bp_systolic || bp.sbp) + '/' + (bp.diastolic || bp.bp_diastolic || bp.dbp || '—'); document.getElementById('home2-bp-t').textContent = '範圍內'; }
+      var hrEl = document.getElementById('home2-hr'); if (hrEl && hr) { hrEl.innerHTML = (hr.heart_rate || hr.hr || hr.pulse) + '<small> bpm</small>'; document.getElementById('home2-hr-t').textContent = '範圍內'; }
+    }).catch(function () {});
+    apiFetch(API + '/symptoms/?patient_id=' + pid).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+      var arr = _h2arr(data, ['symptoms', 'logs', 'items', 'data']) || [];
+      var cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7); var counts = {};
+      arr.forEach(function (it) { var ds = it.date || it.created_at; if (ds && new Date(ds) >= cutoff) { var loc = it.location || it.body_part || it.part || it.site; if (loc) counts[loc] = (counts[loc] || 0) + 1; } });
+      var top = null, topN = 0; Object.keys(counts).forEach(function (k) { if (counts[k] > topN) { topN = counts[k]; top = k; } });
+      var el = document.getElementById('home2-heat'); if (el) el.textContent = top ? (top + ' · 近 7 天 ' + topN + ' 次') : '近 7 天沒有反覆部位';
+    }).catch(function () { var el = document.getElementById('home2-heat'); if (el) el.textContent = '—'; });
+
+    // ── 下次回診 ──
+    apiFetch(API + '/follow-ups/?patient_id=' + pid).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+      var el = document.getElementById('home2-next'); if (!el) return;
+      var list = data && (data.follow_ups || data.followUps || data.items || (Array.isArray(data) ? data : null));
+      var next = null, today = new Date();
+      if (list && list.length) {
+        list.forEach(function (f) { var ds = f.scheduled_date || f.date || f.visit_date || f.scheduled_at || f.datetime; if (!ds) return; var dd = new Date(ds); if (isNaN(dd)) return; if (dd >= today && (!next || dd < next._d)) { next = f; next._d = dd; } });
+      }
+      if (next) { var days = Math.max(0, Math.round((next._d - today) / 86400000)); var dept = next.department || next.dept || next.specialty || ''; el.innerHTML = '<span class="mp-dot"></span>回診 ' + (dept ? dept + ' ' : '') + '還有 ' + days + ' 天'; }
+      else { el.innerHTML = '<span class="mp-dot"></span>尚未排定回診'; }
+    }).catch(function () { var el = document.getElementById('home2-next'); if (el) el.innerHTML = '<span class="mp-dot"></span>尚未排定回診'; });
+
+    // ── 最近事件 ──
+    var ev = document.getElementById('home2-events');
+    if (ev) ev.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="mp-csub">你的健康事件都彙整在「碎片」</span><button class="mp-btn ghost" style="height:36px;padding:0 13px;font-size:.82rem" onclick="navigateTo(\'pieces\',null)">查看</button></div>';
+  } catch (e) { if (window.console) console.warn('[home2] load error', e); }
 }
 function loadHome2Page() {
   try {
@@ -6329,7 +6447,7 @@ function loadHome2Page() {
       var next = null, today = new Date();
       if (list && list.length) {
         list.forEach(function (f) {
-          var ds = f.date || f.visit_date || f.scheduled_at || f.datetime; if (!ds) return;
+          var ds = f.scheduled_date || f.date || f.visit_date || f.scheduled_at || f.datetime; if (!ds) return;
           var dd = new Date(ds); if (isNaN(dd)) return;
           if (dd >= today && (!next || dd < next._d)) { next = f; next._d = dd; }
         });
@@ -8587,6 +8705,7 @@ function sleep() {
     +   '<p>忠實記錄你的睡眠，整理成你自己的長期趨勢。這裡只記錄、不做任何健康判斷。</p>'
     + '</header>'
     + '<section id="sleep-today" class="sleep-card"><p class="sleep-loading">載入中…</p></section>'
+    + '<section class="sleep-card" id="sleep-bookend">' + _renderSleepBookend() + '</section>'
     + '<section id="sleep-timeline-wrap"></section>'
     + '<section class="sleep-card" id="sleep-connect-card">'
     +   '<div class="sleep-card-head"><h3>連接穿戴裝置</h3></div>'
@@ -8637,6 +8756,54 @@ function sleep() {
     + '<p class="sleep-disclaimer"><i data-lucide="info" style="width:13px;height:13px"></i> '
     +   '本功能僅記錄與整理你的睡眠資料，不做任何醫療判斷或建議；如有疑慮請諮詢您的醫師。</p>'
     + '</div>';
+}
+
+// ── 睡眠「書檔式」快速記錄：睡前 / 起床各按一下 → 用真實時間戳，比隔天回想更省力也更準。──
+function _sleepPendingBed() { try { return localStorage.getItem('mdpiece_sleep_pending_bed') || ''; } catch (e) { return ''; } }
+function _renderSleepBookend() {
+  var bed = _sleepPendingBed();
+  if (bed) {
+    var t = new Date(bed);
+    var hm = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
+    return '<div class="sleep-card-head"><h3>快速記錄</h3></div>'
+      + '<p class="sleep-hint">已記下 <b>' + hm + '</b> 上床。起床後按「我醒了」，自動算出睡眠長度（比隔天回想更準）。</p>'
+      + '<button type="button" class="sleep-cta" onclick="sleepBookendWake()"><i data-lucide="sun" style="width:18px;height:18px"></i> 我醒了</button>'
+      + '<button type="button" class="sleep-secondary" style="margin-top:8px" onclick="sleepBookendCancel()">取消這次</button>';
+  }
+  return '<div class="sleep-card-head"><h3>快速記錄</h3></div>'
+    + '<p class="sleep-hint">睡前按一下、起床再按一下 — 用真實時間，最省力也最準（自動偵測或手環有資料時可略過）。</p>'
+    + '<button type="button" class="sleep-cta" onclick="sleepBookendBed()"><i data-lucide="moon" style="width:18px;height:18px"></i> 我要睡了</button>';
+}
+function _refreshSleepBookend() { var el = document.getElementById('sleep-bookend'); if (el) { el.innerHTML = _renderSleepBookend(); if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch (e) {} } }
+function sleepBookendBed() {
+  try { localStorage.setItem('mdpiece_sleep_pending_bed', new Date().toISOString()); } catch (e) {}
+  _refreshSleepBookend();
+  if (typeof showToast === 'function') showToast('晚安，好好休息 🌙', 'success');
+}
+function sleepBookendCancel() {
+  try { localStorage.removeItem('mdpiece_sleep_pending_bed'); } catch (e) {}
+  _refreshSleepBookend();
+}
+function sleepBookendWake() {
+  var bed = _sleepPendingBed();
+  if (!bed) { _refreshSleepBookend(); return; }
+  var wake = new Date(); var bedDt = new Date(bed);
+  if (wake <= bedDt) { if (typeof showToast === 'function') showToast('起床時間需晚於上床時間', 'error'); return; }
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : '';
+  var btn = document.querySelector('#sleep-bookend .sleep-cta'); if (btn) btn.disabled = true;
+  apiFetch(API + '/sleep/sessions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: pid, bed_time: bed, sleep_onset: bed, wake_time: wake.toISOString(), source: 'manual' })
+  }).then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(function () {
+    try { localStorage.removeItem('mdpiece_sleep_pending_bed'); } catch (e) {}
+    var mins = Math.round((wake - bedDt) / 60000), h = Math.floor(mins / 60), m = mins % 60;
+    if (typeof showToast === 'function') showToast('已記錄睡眠 ' + h + ' 小時' + (m ? ' ' + m + ' 分' : ''), 'success');
+    _refreshSleepBookend();
+    if (typeof loadSleepPage === 'function') loadSleepPage();
+  }).catch(function () {
+    if (btn) btn.disabled = false;
+    if (typeof showToast === 'function') showToast('儲存失敗，請稍後再試或用下方手動補登', 'error');
+  });
 }
 
 var _sleepSessionsCache = [];
@@ -21428,6 +21595,28 @@ function loadEmotionsPage() {
 
 
 // ─── 飲食紀錄 ───────────────────────────────────────────
+// ── 水分快速記錄（client-side；雲端同步為後續增量）──
+function _waterKey() { var n = new Date(); return 'mdpiece_water_' + n.getFullYear() + '-' + (n.getMonth() + 1) + '-' + n.getDate(); }
+function _waterTotal() { try { return parseInt(localStorage.getItem(_waterKey()) || '0', 10) || 0; } catch (e) { return 0; } }
+function _renderWaterWidget() {
+  var total = _waterTotal();
+  var target = (typeof DIET_BASELINE_TARGETS !== 'undefined' && DIET_BASELINE_TARGETS.water_ml) || 2000;
+  var pct = Math.min(100, Math.round(total / target * 100));
+  var bs = 'border:1.4px solid #cbe0ef;background:#fff;color:#2b6aa0;font-weight:700;border-radius:12px;padding:10px 14px;font-size:.9rem;cursor:pointer;min-height:44px';
+  return '<h3><i data-lucide="glass-water" style="width:16px;height:16px"></i> 水分紀錄</h3>'
+    + '<div style="display:flex;align-items:baseline;gap:8px;margin:6px 0 8px"><span style="font-family:ui-monospace,monospace;font-size:1.7rem;font-weight:700;color:#2b6aa0">' + total + '</span><span style="color:var(--text-muted,#888)">/ ' + target + ' ml</span></div>'
+    + '<div style="height:8px;border-radius:5px;background:#e9f0f6;overflow:hidden"><i style="display:block;height:100%;width:' + pct + '%;background:linear-gradient(90deg,#5b9fe8,#2b6aa0);border-radius:5px"></i></div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">'
+    + '<button type="button" style="' + bs + '" onclick="waterAdd(250)">＋ 一杯 250</button>'
+    + '<button type="button" style="' + bs + '" onclick="waterAdd(500)">＋ 一瓶 500</button>'
+    + '<button type="button" style="' + bs + '" onclick="waterAdd(150)">＋ 一口 150</button>'
+    + '<button type="button" style="border:none;background:none;color:var(--text-muted,#999);font-size:.82rem;cursor:pointer;margin-left:auto" onclick="waterReset()">歸零</button>'
+    + '</div>'
+    + '<p style="font-size:.72rem;color:var(--text-dim,#aaa);margin-top:8px">先記在這台裝置；雲端同步為後續增量</p>';
+}
+function _refreshWater() { var els = document.querySelectorAll('.water-quick'); for (var i = 0; i < els.length; i++) { els[i].innerHTML = _renderWaterWidget(); } if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch (e) {} }
+function waterAdd(ml) { try { localStorage.setItem(_waterKey(), String(_waterTotal() + ml)); } catch (e) {} _refreshWater(); if (typeof showToast === 'function') showToast('已記 +' + ml + ' ml', 'success'); }
+function waterReset() { try { localStorage.removeItem(_waterKey()); } catch (e) {} _refreshWater(); }
 // 三段式：基本衛教（蛋白質/水/纖維）+ 疾病禁忌 + 今日推薦食物 + 打卡
 
 var DIET_MEAL_LABEL = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心' };
@@ -21553,6 +21742,8 @@ function diet() {
     +   '<div class="card" style="padding:10px 14px;margin-bottom:14px">'
     +     '<ul id="mobile-diet-tips" style="margin:0;padding-left:18px;font-size:11.5px;color:var(--text-dim);line-height:1.7"></ul>'
     +   '</div>'
+
+    +   '<div class="card water-quick" style="padding:12px 14px;margin-bottom:14px">' + _renderWaterWidget() + '</div>'
 
     // 你要特別注意 — warning card
     +   '<div class="sec-head">'
@@ -21726,6 +21917,8 @@ function diet() {
     +   '</header>'
 
     +   renderDietTodayHero()
+
+    +   '<div class="diet-card water-quick">' + _renderWaterWidget() + '</div>'
 
     +   '<div class="diet-card diet-basic-nutrients-card">'
     +     '<h3><i data-lucide="apple" style="width:16px;height:16px"></i> 基本營養素衛教</h3>'
