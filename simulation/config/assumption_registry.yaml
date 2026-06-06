@@ -53,7 +53,8 @@ assumptions:
     bias_direction: NEUTRAL
     severity: high
     how_to_test: "Swap exponential→power-law forgetting; check recall-arm metric stability."
-    status: validation_required
+    status: literature_anchored
+    source: "Brown & Adams 1992 Med Care PMID1583918 (salience-dependent recall FN 0.10-0.53; minimal short-interval decay; age effect); Fellholter 2025 BMC Geriatr PMID41053639 (salience/literacy/age-dependent self-report concordance)."
     decision_ref: arch_4_L5a
 
   - id: A07
@@ -117,7 +118,8 @@ assumptions:
     bias_direction: NEUTRAL
     severity: medium
     how_to_test: "Face-validity: simulated relapse rates fall within disease_registry plausible ranges."
-    status: validation_required
+    status: partially_literature_anchored
+    source: "Per-disease relapse rates now literature-anchored (see disease_registry relapse_rate_source: NMOSD Jarius2016/Bilodeau2026, MS Kappos2021, SLE Hao2022, RA Mori2022, Crohn Chauhan2019, MG SuchDiaz2020). The OU+Hawkes+seasonal-Poisson FORM remains a modeling choice."
     decision_ref: arch_7
 
   - id: A15

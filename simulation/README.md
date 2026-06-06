@@ -34,7 +34,11 @@ sign flips on `notif_recovery`; the full-adoption ceiling is +0.235 (the gap = t
 penalty); uniform-vs-clinical salience barely moves it (not a weighting artifact). **Global Sobol**
 (`docs/07_sobol.md`, Saltelli N=64): variance is ~additive (ΣS1≈1.0, interactions negligible) and
 dominated by `notif_recovery` (ST≈0.40) > `recall_tau` (0.28) > `onboarding` (0.24) — corroborating
-the one-at-a-time ranking, so the decisive driver isn't hidden in interactions.
+the one-at-a-time ranking, so the decisive driver isn't hidden in interactions. **Literature
+calibration** (`docs/09_literature_calibration.md`): the high-leverage parameters (per-disease
+relapse rates, demographics, the recall model, notification recovery) are anchored to PubMed
+sources with PMID/DOI citations; the headline barely moves (ΔCRS +0.110 → +0.108), so the
+conclusion is robust to evidence-based recalibration. Validation-required assumptions: 7 → 5.
 
 **Phase 5 progress** (`pytest simulation/tests/` → **27/27 green**):
 - **L1 patients + L4 persona** — `python -m simulation.build_population`. Determinism,

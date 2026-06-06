@@ -14,7 +14,8 @@ friction:
     tau_days:                              # retention time-constant per persona recall_accuracy band
       value: 120                           # base; effective tau = tau_days * persona.recall_accuracy * salience
       range: [60, 240]
-      validation_required: true
+      validation_required: false
+      source: "Brown & Adams 1992 Med Care PMID1583918 (patient recall false-negative 0.10 for salient events -> 0.53 for trivial; no decay over 2-3mo; small age effect); Fellholter 2025 BMC Geriatr PMID41053639 (self-report vs GP concordance kappa 0.41-1.0 by condition salience; age/cognition/education effects). Supports salience-weighted, age/literacy-modulated forgetting."
       note: "Larger tau = slower forgetting. The single most influential recall knob."
     telescoping:
       enabled: true
@@ -55,6 +56,7 @@ friction:
       max_recovered_frac:
         value: 0.30
         range: [0.0, 0.5]
+        source: "Greer 2020 JNCCN PMID32023526: smartphone reminders improved adherence by 16-22% ONLY in at-risk subgroups (baseline non-adherent +22.3%, anxious +16.1%), not overall. Supports modest, persona-dependent recovery (~0.2-0.3) — and this is the top sign-flipping parameter."
       delayed_log_penalty_days: {value: 3, range: [1, 7]}   # added to logged_lag_days
     ocr_capture:                           # D4 — OFF by default in v0.1
       enabled: false
@@ -105,6 +107,7 @@ usage:
       value: 75                            # PESSIMISTIC default (D3, A09): ~M3 most users gone
       range: [30, 180]
       validation_required: true
+      source: "Schmitz 2018 JAMIA PMID30445467 (mHealth scoping review): low participation retention is a defining, recurrent challenge of mHealth research apps (qualitative). Default kept deliberately pessimistic; still optimistic vs commonly-cited real-world M1 retention ~30%."
       note: "Effective median = base * persona.retention_kappa. Headline sensitivity axis."
     shape:
       value: 1.4                           # >1 = hazard rises then falls; tunes curve steepness

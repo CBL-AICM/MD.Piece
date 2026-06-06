@@ -32,9 +32,10 @@ defaults:
 
 NMOSD:
   icd10: G36.0
-  age_sex: {mean_age: 43, sd_age: 14, sex: {F: 0.80, M: 0.20}}
+  age_sex: {mean_age: 42, sd_age: 14, sex: {F: 0.83, M: 0.17}}  # LIT: Bilodeau 2026 (median 42y, 83%F)
   severity_dist: [0.05, 0.25, 0.40, 0.25, 0.05]
-  relapse_rate_yr: 0.8             # attacks/yr; high disability per attack
+  relapse_rate_yr: 0.5             # LIT-ANCHORED (was 0.8)
+  relapse_rate_source: "Jarius 2016 J Neuroinflammation PMID27793206 ARR 0.92 (MOG-IgG); Bilodeau 2026 Neurol Neuroimmunol Neuroinflamm PMID41494145 treated ARR 0.0-0.34. 0.5=treated specialty midpoint."
   hawkes_excitation: 0.35
   infection_rate_yr: 1.4           # rituximab/immunosuppression elevated
   ou_reversion: 0.04
@@ -46,9 +47,10 @@ NMOSD:
 
 MS:
   icd10: G35
-  age_sex: {mean_age: 38, sd_age: 11, sex: {F: 0.70, M: 0.30}}
+  age_sex: {mean_age: 37, sd_age: 11, sex: {F: 0.65, M: 0.35}}  # LIT: OPTIMUM 2021 (median 37y, 64.9%F)
   severity_dist: [0.10, 0.35, 0.35, 0.15, 0.05]
-  relapse_rate_yr: 0.5             # RRMS modern DMT era
+  relapse_rate_yr: 0.30            # LIT-ANCHORED (was 0.5) modern DMT era
+  relapse_rate_source: "Kappos 2021 OPTIMUM JAMA Neurol PMID33779698 ARR ponesimod 0.202 / teriflunomide 0.290."
   hawkes_excitation: 0.25
   infection_rate_yr: 1.0
   ou_reversion: 0.03               # progressive component = slow drift
@@ -62,7 +64,8 @@ SLE:
   icd10: M32.9
   age_sex: {mean_age: 34, sd_age: 12, sex: {F: 0.90, M: 0.10}}
   severity_dist: [0.08, 0.30, 0.37, 0.20, 0.05]
-  relapse_rate_yr: 1.6             # flares common, multi-organ
+  relapse_rate_yr: 0.45            # LIT-ANCHORED (was 1.6)
+  relapse_rate_source: "Hao 2022 Lupus Sci Med PMID35241499: SELENA-SLEDAI flare 0.10-0.23/pt-yr if controlled, 0.49 if never-controlled. 0.45=mixed-activity specialty cohort."
   hawkes_excitation: 0.40
   infection_rate_yr: 1.6           # immunosuppression + disease
   ou_reversion: 0.05
@@ -76,7 +79,8 @@ RA:
   icd10: M06.9
   age_sex: {mean_age: 52, sd_age: 13, sex: {F: 0.75, M: 0.25}}
   severity_dist: [0.10, 0.40, 0.35, 0.13, 0.02]
-  relapse_rate_yr: 1.2
+  relapse_rate_yr: 0.40            # LIT-ANCHORED (was 1.2)
+  relapse_rate_source: "Mori 2022 PLoS One PMID35737642: crude flare incidence 0.36/person-yr (cumulative 45% at 1y) after DMARD/tofacitinib discontinuation."
   hawkes_excitation: 0.30
   infection_rate_yr: 1.3           # biologics/JAK elevated
   ou_reversion: 0.04
@@ -90,7 +94,8 @@ CROHN:
   icd10: K50.90
   age_sex: {mean_age: 31, sd_age: 12, sex: {F: 0.52, M: 0.48}}
   severity_dist: [0.10, 0.38, 0.35, 0.15, 0.02]
-  relapse_rate_yr: 1.4
+  relapse_rate_yr: 0.45            # LIT-ANCHORED (was 1.4)
+  relapse_rate_source: "Chauhan 2019 Cureus PMID31467814: 32% relapse within 1y of diagnosis (50% at 3y), pediatric CD cohort."
   hawkes_excitation: 0.45          # strong flare clustering
   infection_rate_yr: 1.3
   ou_reversion: 0.05
@@ -104,7 +109,8 @@ MG:
   icd10: G70.00
   age_sex: {mean_age: 47, sd_age: 18, sex: {F: 0.55, M: 0.45}}  # bimodal age
   severity_dist: [0.10, 0.35, 0.35, 0.15, 0.05]
-  relapse_rate_yr: 0.9             # myasthenic exacerbations/crises
+  relapse_rate_yr: 0.35            # LIT-ANCHORED (was 0.9)
+  relapse_rate_source: "Such-Diaz 2020 Rev Neurol PMID32700310: annual exacerbation incidence 0.35/yr (severe 0.12/yr) in MG cohort."
   hawkes_excitation: 0.35
   infection_rate_yr: 1.2           # infection is a classic crisis trigger
   ou_reversion: 0.05
