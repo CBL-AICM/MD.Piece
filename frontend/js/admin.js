@@ -47,7 +47,7 @@
       + '<div class="ad-field"><label>密碼</label><input class="ad-input" id="ad-p" type="password" autocomplete="current-password" /></div>'
       + '<div class="ad-err" id="ad-err">' + esc(errMsg || '') + '</div>'
       + '<button class="ad-btn" id="ad-login"><i data-lucide="log-in"></i> 登入</button>'
-      + '<p class="ad-meta" style="text-align:center;margin-top:14px">僅限 doctor 角色帳號。此頁不收集病患資料、僅供研究分析。</p>'
+      + '<p class="ad-meta" style="text-align:center;margin-top:14px">僅限研究者帳號。此頁不收集病患資料、僅供研究分析。</p>'
       + '</div></div>';
     icons();
     var u = document.getElementById('ad-u'), p = document.getElementById('ad-p');
@@ -63,7 +63,7 @@
         return r.json().then(function (j) { return { ok: r.ok, j: j }; });
       }).then(function (res) {
         if (!res.ok) { err.textContent = res.j.detail || '登入失敗'; btn.disabled = false; return; }
-        if (res.j.role !== 'doctor') { err.textContent = '此頁僅限研究者（doctor）帳號'; btn.disabled = false; return; }
+        if (res.j.role !== 'doctor') { err.textContent = '此頁僅限研究者帳號'; btn.disabled = false; return; }
         setTok(res.j.access_token);
         renderDashboard('analysis');
       }).catch(function () { err.textContent = '連線失敗，稍後再試'; btn.disabled = false; });
@@ -85,7 +85,7 @@
       + '<button class="ad-tab" data-tab="participants">患者管理</button>'
       + '</div><div id="ad-body"><div class="ad-empty">載入中…</div></div></div>';
     document.getElementById('ad-logout').onclick = function () { setTok(null); renderLogin(); };
-    var who = role(getTok()); document.getElementById('ad-who').textContent = who ? ('身分：' + who) : '';
+    var who = role(getTok()); document.getElementById('ad-who').textContent = who ? '身分：研究者' : '';
     Array.prototype.forEach.call(document.querySelectorAll('.ad-tab[data-tab]'), function (b) {
       b.onclick = function () { renderDashboard(b.getAttribute('data-tab')); };
     });
