@@ -48,6 +48,8 @@ def load(hash_dir: Path):
                                   "information_friction_score", "doctor_understanding"])
     wide.columns = [f"{a}_{m}" for m, a in wide.columns]
     wide = wide.merge(pts[["patient_id", "persona", "disease"]], on="patient_id")
+    wide["d_crs"] = (wide["MDPIECE_clinical_reconstruction_score"]
+                     - wide["PATIENT_RECALL_clinical_reconstruction_score"])
     return ev, pts, ret, wide
 
 
@@ -160,6 +162,64 @@ def flare_calibration(hash_dir: Path, pts):
     return out
 
 
+def population_outcome(wide, hash_str):
+    """Every one of the 3,200 patients: the MD.Piece outcome after processing their data."""
+    personas = ["PERFECT_LOGGER", "CAREGIVER_MANAGED", "ANXIOUS", "SYMPTOM_DRIVEN",
+                "NORMAL", "ELDERLY_LOW_LITERACY", "LOW_ENGAGEMENT", "TECH_AVOIDANT"]
+    cmap = {p: c for p, c in zip(personas, plt.cm.tab10(np.linspace(0, 1, 10)))}
+
+    fig = plt.figure(figsize=(17, 11))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.15, 1], hspace=0.28, wspace=0.22)
+    n = len(wide)
+    fig.suptitle(f"MD.Piece outcome for ALL {n:,} patients — record fidelity vs unaided recall "
+                 f"(config {hash_str})", fontsize=15, fontweight="bold")
+
+    # A — waterfall: every patient ranked by how much MD.Piece helped/hurt
+    axA = fig.add_subplot(gs[0, :])
+    d = wide.sort_values("d_crs").reset_index(drop=True)
+    x = np.arange(n)
+    delta = d["d_crs"].values
+    axA.fill_between(x, 0, delta, where=delta >= 0, color=C_POS, interpolate=True, label="MD.Piece improved the record")
+    axA.fill_between(x, 0, delta, where=delta < 0, color=C_NEG, interpolate=True, label="MD.Piece degraded the record")
+    n_harm = int((delta < 0).sum()); n_help = n - n_harm
+    axA.axhline(0, color="k", lw=0.8)
+    axA.axvline(n_harm, color="k", ls="--", lw=1)
+    axA.set_xlim(0, n); axA.set_xlabel("patients ranked by outcome (each vertical slice = 1 patient)")
+    axA.set_ylabel("Δ Clinical Reconstruction Score\n(MD.Piece − recall)")
+    axA.set_title(f"A. Per-patient outcome waterfall — {n_help:,} helped ({n_help/n:.0%}),  "
+                  f"{n_harm:,} harmed ({n_harm/n:.0%}),  mean {delta.mean():+.3f}")
+    axA.legend(loc="upper left", fontsize=9)
+    axA.text(n_harm + 60, delta.max() * 0.7, f"← crossover at patient {n_harm:,}", fontsize=9)
+
+    # B — before vs after scatter: every patient, recall fidelity (x) vs MD.Piece fidelity (y)
+    axB = fig.add_subplot(gs[1, 0])
+    for p in personas:
+        s = wide[wide.persona == p]
+        axB.scatter(s["PATIENT_RECALL_clinical_reconstruction_score"],
+                    s["MDPIECE_clinical_reconstruction_score"],
+                    s=9, alpha=0.45, color=cmap[p], label=p, linewidths=0)
+    axB.plot([0, 1], [0, 1], "k--", lw=1.2)
+    axB.text(0.62, 0.9, "above line:\nMD.Piece better", fontsize=8, color=C_POS)
+    axB.text(0.7, 0.42, "below line:\nrecall better", fontsize=8, color=C_NEG)
+    axB.set_xlim(0, 1); axB.set_ylim(0, 1)
+    axB.set_xlabel("Patient-recall reconstruction score"); axB.set_ylabel("MD.Piece reconstruction score")
+    axB.set_title("B. Before → after, every patient (colour = persona)")
+    axB.legend(fontsize=6.5, markerscale=1.6, loc="lower right", ncol=2)
+
+    # C — absolute outcome distributions for the whole population
+    axC = fig.add_subplot(gs[1, 1])
+    axC.hist(wide["PATIENT_RECALL_clinical_reconstruction_score"], bins=40, alpha=0.55,
+             color=C_RECALL, label=f"Patient recall (mean {wide['PATIENT_RECALL_clinical_reconstruction_score'].mean():.2f})")
+    axC.hist(wide["MDPIECE_clinical_reconstruction_score"], bins=40, alpha=0.55,
+             color=C_MDP, label=f"MD.Piece (mean {wide['MDPIECE_clinical_reconstruction_score'].mean():.2f})")
+    axC.set_xlabel("Clinical Reconstruction Score [0–1]"); axC.set_ylabel("patients")
+    axC.set_title("C. Outcome distribution across all 3,200"); axC.legend(fontsize=8)
+
+    out = FIGDIR / "population_outcome.png"
+    fig.savefig(out, dpi=130); plt.close(fig)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--hash", default="713d8a608280")
@@ -169,7 +229,8 @@ def main():
     ev, pts, ret, wide = load(hd)
     f1 = dashboard(ev, pts, ret, wide, args.hash)
     f2 = flare_calibration(hd, pts)
-    print(f"wrote {f1}\nwrote {f2}")
+    f3 = population_outcome(wide, args.hash)
+    print(f"wrote {f1}\nwrote {f2}\nwrote {f3}")
 
 
 if __name__ == "__main__":
