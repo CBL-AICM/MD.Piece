@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>MD.Piece 研究後台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css?v=2.0-a1" />
+  <link rel="stylesheet" href="css/components-2.0.css?v=2.0-a1" />
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root { --ad-bg:#f3eee3; --ad-card:#fffdf8; --ad-line:#e6decd; --ad-ink:#2a2420; --ad-primary:#1e8a82; --ad-navy:#1a1730; --ad-muted:#8a8175; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--surface-2,#f3eee3); color:var(--content,#2a2420);
+      font-family:'Noto Sans TC',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    .ad-wrap { max-width:1080px; margin:0 auto; padding:18px 16px 60px; }
+    /* login */
+    .ad-login { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .ad-login-card { width:100%; max-width:380px; background:var(--surface-1,#fffdf8); border:1px solid var(--line,#e6decd);
+      border-radius:18px; padding:30px 26px; box-shadow:0 12px 40px rgba(42,36,32,.12); }
+    .ad-brand { font-family:'Noto Serif TC',serif; font-weight:700; font-size:1.45rem; color:var(--primary,#1e8a82); text-align:center; }
+    .ad-brand small { display:block; font-family:'JetBrains Mono',monospace; font-size:.7rem; letter-spacing:.15em; color:var(--content-muted,#8a8175); margin-top:6px; font-weight:500; }
+    .ad-field { margin-top:16px; }
+    .ad-field label { display:block; font-size:.82rem; color:var(--content-muted,#8a8175); margin-bottom:5px; }
+    .ad-input { width:100%; padding:11px 13px; border:1.4px solid var(--line,#d9d2c5); border-radius:11px; font:inherit; background:#fff; }
+    .ad-input:focus { outline:none; border-color:var(--primary,#1e8a82); }
+    .ad-btn { width:100%; margin-top:20px; padding:12px; border:0; border-radius:12px; background:var(--primary,#1e8a82); color:#fff;
+      font-weight:700; font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .ad-btn.secondary { background:transparent; color:var(--primary,#1e8a82); border:1.4px solid var(--primary,#1e8a82); }
+    .ad-btn[disabled] { opacity:.55; cursor:default; }
+    .ad-err { margin-top:12px; color:#b4232a; font-size:.85rem; text-align:center; min-height:1em; }
+    /* header */
+    .ad-head { display:flex; align-items:center; gap:12px; padding:6px 2px 16px; border-bottom:1px solid var(--line,#e6decd); margin-bottom:16px; }
+    .ad-head h1 { font-family:'Noto Serif TC',serif; font-size:1.3rem; margin:0; color:var(--navy,#1a1730); flex:1; }
+    .ad-head .who { font-size:.8rem; color:var(--content-muted,#8a8175); }
+    .ad-tabs { display:flex; gap:8px; margin-bottom:18px; }
+    .ad-tab { padding:9px 16px; border:1.4px solid var(--line,#d9d2c5); border-radius:11px; background:var(--surface-1,#fffdf8);
+      font-weight:600; font-size:.92rem; cursor:pointer; color:var(--content,#2a2420); }
+    .ad-tab.active { background:var(--primary,#1e8a82); border-color:var(--primary,#1e8a82); color:#fff; }
+    .ad-card { background:var(--surface-1,#fffdf8); border:1px solid var(--line,#e6decd); border-radius:14px; padding:14px 16px; margin-bottom:14px; }
+    .ad-card h3 { margin:0 0 4px; font-size:1rem; color:var(--navy,#1a1730); }
+    .ad-card h3 .meta { font-size:.72rem; color:var(--content-muted,#8a8175); font-weight:500; }
+    table.ad-tbl { width:100%; border-collapse:collapse; font-size:.84rem; margin:8px 0 4px; }
+    .ad-tbl th, .ad-tbl td { border:1px solid var(--line,#eee4d4); padding:6px 9px; text-align:center; }
+    .ad-tbl th { background:var(--surface-2,#f6f1e7); font-weight:600; }
+    .ad-tbl td.l, .ad-tbl th.l { text-align:left; }
+    .ad-r { font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--primary,#1e8a82); }
+    .ad-sub { font-size:.7rem; color:var(--content-muted,#8a8175); }
+    .ad-meta { font-size:.8rem; color:var(--content-subtle,#9a9087); margin:4px 0 8px; line-height:1.55; }
+    .ad-row { cursor:pointer; }
+    .ad-row:hover td { background:var(--surface-2,#f6f1e7); }
+    .ad-pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.72rem; font-weight:700; }
+    .ad-pill.ok { background:#dff1ec; color:#1e8a82; }
+    .ad-pill.part { background:#fbf0d9; color:#9a6b16; }
+    .ad-pill.none { background:#efe9dd; color:#8a8175; }
+    .ad-actions { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .ad-actions .ad-btn { width:auto; margin:0; padding:9px 14px; font-size:.88rem; }
+    /* drawer */
+    .ad-drawer-bg { position:fixed; inset:0; background:rgba(26,23,48,.4); z-index:50; }
+    .ad-drawer { position:fixed; top:0; right:0; bottom:0; width:min(520px,94vw); background:var(--surface-1,#fffdf8);
+      z-index:51; box-shadow:-8px 0 30px rgba(0,0,0,.2); overflow:auto; padding:18px 18px 60px; }
+    .ad-drawer-head { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .ad-drawer-head h2 { font-size:1.1rem; margin:0; flex:1; color:var(--navy,#1a1730); }
+    .ad-x { border:0; background:transparent; cursor:pointer; color:var(--content-muted,#8a8175); }
+    .ad-empty { text-align:center; color:var(--content-muted,#8a8175); padding:30px; }
+  </style>
+</head>
+<body>
+  <div id="app"><div class="ad-empty">載入中…</div></div>
+  <script src="js/admin.js?v=1"></script>
+</body>
+</html>
