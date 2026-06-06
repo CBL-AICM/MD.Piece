@@ -220,6 +220,113 @@ def population_outcome(wide, hash_str):
     return out
 
 
+def persona_disease_heatmap(wide, hash_str):
+    """Mean Δ Clinical Reconstruction Score for every persona × disease cell."""
+    personas = ["PERFECT_LOGGER", "CAREGIVER_MANAGED", "ANXIOUS", "SYMPTOM_DRIVEN",
+                "NORMAL", "ELDERLY_LOW_LITERACY", "LOW_ENGAGEMENT", "TECH_AVOIDANT"]
+    diseases = ["NMOSD", "MS", "SLE", "RA", "CROHN", "MG", "OTHER"]
+    M = wide.pivot_table(index="persona", columns="disease", values="d_crs", aggfunc="mean")
+    N = wide.pivot_table(index="persona", columns="disease", values="d_crs", aggfunc="size")
+    M = M.reindex(index=personas, columns=diseases)
+    N = N.reindex(index=personas, columns=diseases)
+
+    fig, ax = plt.subplots(figsize=(11, 8))
+    vmax = np.nanmax(np.abs(M.values))
+    im = ax.imshow(M.values, cmap="RdYlGn", vmin=-vmax, vmax=vmax, aspect="auto")
+    ax.set_xticks(range(len(diseases))); ax.set_xticklabels(diseases)
+    ax.set_yticks(range(len(personas))); ax.set_yticklabels(personas)
+    for i in range(len(personas)):
+        for j in range(len(diseases)):
+            v, nn = M.values[i, j], N.values[i, j]
+            if not np.isnan(v):
+                ax.text(j, i, f"{v:+.2f}\n(n={int(nn)})", ha="center", va="center",
+                        fontsize=7.5, color="black")
+    ax.set_title(f"Δ Clinical Reconstruction Score (MD.Piece − recall) by persona × disease\n"
+                 f"green = MD.Piece helps, red = harms  (config {hash_str})", fontsize=12)
+    fig.colorbar(im, ax=ax, label="Δ CRS", shrink=0.8)
+    fig.tight_layout()
+    out = FIGDIR / "persona_disease_heatmap.png"
+    fig.savefig(out, dpi=130); plt.close(fig)
+    return out
+
+
+def _draw_patient(ax, he, pid, persona, disease):
+    gt = he[(he.patient_id == pid) & (he.arm == "GROUND_TRUTH")]
+    rec = he[(he.patient_id == pid) & (he.arm == "PATIENT_RECALL")]
+    mdp = he[(he.patient_id == pid) & (he.arm == "MDPIECE")]
+    rec_map = dict(zip(rec["true_event_id"].dropna(), rec["event_date_recorded"]))
+    mdp_map = dict(zip(mdp["true_event_id"].dropna(), mdp["event_date_recorded"]))
+    lanes = {"GROUND TRUTH": 2, "PATIENT RECALL": 1, "MD.PIECE": 0}
+    for y in lanes.values():
+        ax.axhline(y, color="#ddd", lw=0.8, zorder=0)
+    ax.scatter(gt["event_date_true"], [2] * len(gt), s=18 + gt["salience"] * 70,
+               c=gt["salience"], cmap="viridis", zorder=3, edgecolor="k", linewidths=0.3)
+    ncap_r = ncap_m = 0
+    for _, e in gt.iterrows():
+        td, eid, sal = e["event_date_true"], e["event_id"], e["salience"]
+        if eid in rec_map:
+            rd = rec_map[eid]; ncap_r += 1
+            ax.plot([td, rd], [2, 1], color="#ccc", lw=0.4, zorder=1)
+            ax.scatter([rd], [1], s=26 + sal * 70, color=C_POS, zorder=3, edgecolor="k", linewidths=0.3)
+            if abs(rd - td) > 6:
+                ax.plot([td, rd], [1, 1], color="#f4a261", lw=1.2, zorder=2)
+        else:
+            ax.scatter([td], [1], marker="x", s=28, color=C_NEG, alpha=0.7, zorder=3)
+        if eid in mdp_map:
+            ncap_m += 1
+            ax.scatter([mdp_map[eid]], [0], s=26 + sal * 70, color=C_MDP, zorder=3, edgecolor="k", linewidths=0.3)
+        else:
+            ax.scatter([td], [0], marker="x", s=28, color=C_NEG, alpha=0.7, zorder=3)
+    if len(mdp):
+        drop = mdp["event_date_recorded"].max()
+        ax.axvspan(drop, 365, ymin=0, ymax=0.34, color=C_NEG, alpha=0.06)
+    ax.set_yticks(list(lanes.values())); ax.set_yticklabels(list(lanes.keys()), fontsize=8)
+    ax.set_ylim(-0.5, 2.5); ax.set_xlim(-5, 370)
+    n = len(gt)
+    verdict = "MD.Piece WINS" if ncap_m > ncap_r else "MD.Piece LOSES"
+    ax.set_title(f"{pid} · {persona} · {disease} — {n} true events:  "
+                 f"recall {ncap_r} ({ncap_r/n:.0%}),  MD.Piece {ncap_m} ({ncap_m/n:.0%})   → {verdict}",
+                 fontsize=10)
+
+
+def patient_timeline(hd, pts, hash_str):
+    """Two contrasting patients: which ground-truth events each arm captured vs missed."""
+    he = pd.read_parquet(hd / "health_events.parquet",
+                         columns=["patient_id", "arm", "event_id", "true_event_id",
+                                  "event_type", "event_date_true", "event_date_recorded", "salience"])
+    gt_all = he[he.arm == "GROUND_TRUTH"]
+    counts = gt_all.groupby("patient_id").size()
+    pmap = pts.set_index("patient_id")["persona"]; dmap = pts.set_index("patient_id")["disease"]
+    cands = counts[(counts >= 28) & (counts <= 52)].index
+
+    def cap(cand, arm):
+        return he[(he.patient_id == cand) & (he.arm == arm)]["true_event_id"].dropna().nunique()
+
+    win = loss = None
+    for c in cands:
+        per = pmap.get(c); ncr, ncm = cap(c, "PATIENT_RECALL"), cap(c, "MDPIECE")
+        if win is None and per in ("CAREGIVER_MANAGED", "PERFECT_LOGGER", "ANXIOUS") and ncm > ncr + 3:
+            win = c
+        if loss is None and per in ("NORMAL", "LOW_ENGAGEMENT", "TECH_AVOIDANT") and ncm < ncr - 5:
+            loss = c
+        if win and loss:
+            break
+    win = win or cands[0]; loss = loss or cands[1]
+
+    fig, axes = plt.subplots(2, 1, figsize=(16, 9), sharex=True)
+    fig.suptitle("Which events each record captured vs missed — a winning case (top) and a losing case (bottom)\n"
+                 "● captured   ✕ missed   grey line = link to true event   orange bar = recall date error (telescoping)",
+                 fontsize=12, fontweight="bold")
+    _draw_patient(axes[0], he, win, pmap.get(win), dmap.get(win))
+    _draw_patient(axes[1], he, loss, pmap.get(loss), dmap.get(loss))
+    axes[1].set_xlabel("day of the 12-month period")
+    axes[1].text(axes[1].get_xlim()[1] * 0.62, -0.33, "MD.Piece dropout →", fontsize=8, color=C_NEG)
+    fig.tight_layout(rect=[0, 0, 1, 0.94])
+    out = FIGDIR / "patient_timeline.png"
+    fig.savefig(out, dpi=130); plt.close(fig)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--hash", default="713d8a608280")
@@ -230,7 +337,9 @@ def main():
     f1 = dashboard(ev, pts, ret, wide, args.hash)
     f2 = flare_calibration(hd, pts)
     f3 = population_outcome(wide, args.hash)
-    print(f"wrote {f1}\nwrote {f2}\nwrote {f3}")
+    f4 = persona_disease_heatmap(wide, args.hash)
+    f5 = patient_timeline(hd, pts, args.hash)
+    print("\n".join(f"wrote {f}" for f in (f1, f2, f3, f4, f5)))
 
 
 if __name__ == "__main__":
