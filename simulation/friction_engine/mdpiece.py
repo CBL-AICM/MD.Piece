@@ -28,6 +28,9 @@ from simulation.friction_engine.recall import recall_observer
 from simulation.usage_engine import UsageTrajectory
 
 _FLARE_LIKE = ("FLARE", "SYMPTOM", "EMERGENCY_VISIT")
+# Document-backed event types recoverable via OCR upload (passive capture, design pillar B)
+_OCR_TYPES = ("LAB", "IMAGING", "HOSPITALIZATION", "EMERGENCY_VISIT",
+              "MEDICATION_CHANGE", "INFUSION", "PROCEDURE", "INFECTION")
 
 
 def mdpiece_observer(truth_events: list[Event], patient: PatientRow, persona: dict,
@@ -47,6 +50,9 @@ def mdpiece_observer(truth_events: list[Event], patient: PatientRow, persona: di
     nr = mp["notification_recovery"]
     max_recover = float(pval(nr["max_recovered_frac"]))
     lag_penalty = int(pval(nr["delayed_log_penalty_days"]))
+    ocr = mp.get("ocr_capture", {})
+    ocr_on = bool(ocr.get("enabled", False))
+    ocr_frac = float(pval(ocr.get("recovered_frac", 0.0)))
 
     logging_prob = float(persona.get("logging_prob", 0.3))
     notif = float(persona.get("notif_response", 0.4))
@@ -102,6 +108,18 @@ def mdpiece_observer(truth_events: list[Event], patient: PatientRow, persona: di
                 severity_true=e.severity_true, severity_recorded=perturb_severity(e.severity_true, 0.5),
                 medication=e.medication, dose=e.dose, frequency=e.frequency,
                 temporal_error_days=date_rec - t, logged_lag_days=max(1, terr),
+            ))
+        elif ocr_on and e.event_type in _OCR_TYPES and rng.random() < ocr_frac:
+            # OCR from uploaded documents (lab reports, discharge summaries, prescriptions):
+            # passive, engagement-INDEPENDENT capture; date-accurate from the document itself.
+            # (When ocr_on is False this branch short-circuits before drawing, preserving determinism.)
+            out.append(Event(
+                event_id=new_id(), patient_id=patient.patient_id, arm="MDPIECE",
+                event_type=e.event_type, event_date_true=t, source=e.source, salience=e.salience,
+                true_event_id=e.event_id, event_date_recorded=t,
+                severity_true=e.severity_true, severity_recorded=e.severity_true,
+                medication=e.medication, dose=e.dose, frequency=e.frequency,
+                temporal_error_days=0, logged_lag_days=0,
             ))
         # else: omitted (absence of row)
 
