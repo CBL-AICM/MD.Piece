@@ -530,6 +530,9 @@ _SCHEMAS = {
             patient_id TEXT,
             answers TEXT,
             score INTEGER,
+            timepoint TEXT,
+            scores TEXT,
+            participant_code TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
 }
@@ -547,9 +550,30 @@ def _get_conn():
         for sql in _SCHEMAS.values():
             conn.execute(sql)
         _migrate_users_table(conn)
+        _migrate_survey_responses_table(conn)
         conn.commit()
         _db_initialized = True
     return conn
+
+
+def _migrate_survey_responses_table(conn):
+    """Add study columns (timepoint / scores / participant_code) to existing
+    survey_responses tables — matches migration_surveys_study_v2.sql so local
+    SQLite created before this feature still gets the new columns."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(survey_responses)")}
+    for name, decl in [("timepoint", "TEXT"), ("scores", "TEXT"), ("participant_code", "TEXT")]:
+        if name not in cols:
+            try:
+                conn.execute(f"ALTER TABLE survey_responses ADD COLUMN {name} {decl}")
+            except sqlite3.OperationalError:
+                pass
+    try:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_survey_responses_study "
+            "ON survey_responses (survey_key, patient_id, timepoint, created_at DESC)"
+        )
+    except sqlite3.OperationalError:
+        pass
 
 
 def _migrate_users_table(conn):
