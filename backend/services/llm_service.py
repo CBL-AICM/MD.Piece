@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import os
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -87,18 +88,23 @@ except Exception as e:  # ImportError 或 client 初始化失敗
 # Non-streaming providers
 # ==============================================================================
 
-def _call_ollama(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
+def _call_ollama(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None, temperature: float | None = None, model: str | None = None) -> str:
     msgs = [{"role": "system", "content": system_prompt}]
     if history:
         msgs.extend(history)
     msgs.append({"role": "user", "content": user_message})
     payload: dict = {
-        "model": TEXT_MODEL,
+        "model": model or TEXT_MODEL,
         "stream": False,
         "messages": msgs,
     }
+    opts: dict = {}
     if max_tokens:
-        payload["options"] = {"num_predict": int(max_tokens)}
+        opts["num_predict"] = int(max_tokens)
+    if temperature is not None:
+        opts["temperature"] = temperature
+    if opts:
+        payload["options"] = opts
     # 預設 timeout 25s（短文字任務）；長文本呼叫端可傳 timeout=50 蓋掉。
     # localhost 不存在會直接 ConnectError 快速 fallback，這個值只在
     # OLLAMA_BASE_URL 設成遠端主機時才會被觸發到。
@@ -111,7 +117,7 @@ def _call_ollama(system_prompt: str, user_message: str, history=None, max_tokens
     return resp.json()["message"]["content"]
 
 
-def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
+def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None, temperature: float | None = None, model: str | None = None) -> str:
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY not set; cannot use Groq provider")
     msgs = [{"role": "system", "content": system_prompt}]
@@ -135,9 +141,9 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
     effective_timeout = timeout if timeout is not None else 25.0
     for attempt in range(len(delays) + 1):
         body: dict = {
-            "model": GROQ_MODEL,
+            "model": model or GROQ_MODEL,
             "messages": msgs,
-            "temperature": 0.4,
+            "temperature": temperature if temperature is not None else 0.4,
         }
         if max_tokens:
             body["max_tokens"] = int(max_tokens)
@@ -176,7 +182,7 @@ def _call_groq(system_prompt: str, user_message: str, history=None, max_tokens: 
     raise RuntimeError("Groq retry 全部用完仍 rate-limited")
 
 
-def _call_anthropic(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
+def _call_anthropic(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None, temperature: float | None = None, model: str | None = None) -> str:
     if _anthropic_client is None:
         raise RuntimeError(
             "ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝；無法使用 Anthropic provider"
@@ -185,12 +191,15 @@ def _call_anthropic(system_prompt: str, user_message: str, history=None, max_tok
     msgs.append({"role": "user", "content": user_message})
     # 預設吃 client 的 25s timeout；長文本呼叫端傳 timeout=50 會走 with_options。
     client = _anthropic_client.with_options(timeout=timeout) if timeout is not None else _anthropic_client
-    msg = client.messages.create(
-        model=ANTHROPIC_MODEL,
-        max_tokens=int(max_tokens) if max_tokens else ANTHROPIC_MAX_TOKENS,
-        system=system_prompt,
-        messages=msgs,
-    )
+    kwargs: dict = {
+        "model": model or ANTHROPIC_MODEL,
+        "max_tokens": int(max_tokens) if max_tokens else ANTHROPIC_MAX_TOKENS,
+        "system": system_prompt,
+        "messages": msgs,
+    }
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+    msg = client.messages.create(**kwargs)
     return msg.content[0].text
 
 
@@ -205,7 +214,7 @@ def _gemini_history_to_contents(history, user_message: str) -> list:
     return contents
 
 
-def _call_gemini(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
+def _call_gemini(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None, temperature: float | None = None, model: str | None = None) -> str:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY not set; cannot use Gemini provider")
 
@@ -219,7 +228,7 @@ def _call_gemini(system_prompt: str, user_message: str, history=None, max_tokens
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": _gemini_history_to_contents(history, user_message),
         "generationConfig": {
-            "temperature": 0.4,
+            "temperature": temperature if temperature is not None else 0.4,
             # gemini-2.5 系列預設會「思考」，在小 maxOutputTokens 下思考會吃光
             # 額度導致正文回空（finishReason=MAX_TOKENS）。這裡是當 fallback 用的
             # 衛教/對話生成，不需要 thinking — 關掉讓 token 全給正文，備援才可靠。
@@ -229,7 +238,7 @@ def _call_gemini(system_prompt: str, user_message: str, history=None, max_tokens
     if max_tokens:
         body["generationConfig"]["maxOutputTokens"] = int(max_tokens)
 
-    url = f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    url = f"{GEMINI_BASE}/models/{model or GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     for attempt in range(len(delays) + 1):
         resp = httpx.post(
             url,
@@ -300,7 +309,7 @@ def _fallback_chain(primary: str):
     return chain
 
 
-def call_claude(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None) -> str:
+def call_claude(system_prompt: str, user_message: str, history=None, max_tokens: int | None = None, timeout: float | None = None, temperature: float | None = None, model: str | None = None) -> str:
     """文字生成（相容原 claude_service 簽名）— 依 LLM_PROVIDER 自動切換 provider，
     主 provider 失敗時自動降級到下一個可用的（anthropic → groq → ollama）。
 
@@ -310,15 +319,25 @@ def call_claude(system_prompt: str, user_message: str, history=None, max_tokens:
     timeout:    可選，覆寫各 provider 該次呼叫的 timeout（秒）。
                 未指定時走 provider 預設（短文字任務 25s）；長文本
                 （藥/病百科 2048~2560 token）建議傳 timeout=50。
+    temperature: 可選，覆寫該次取樣溫度（結構化抽取建議 0.2 求穩定）。
+                未指定時各 provider 用自己的預設（0.4）。
+    model:      可選，覆寫主 provider 該次使用的模型。**只套用在主 provider**
+                （chain[0]）；若主 provider 失敗降級到別家，model 會被丟掉、
+                改用該 provider 自己的預設，避免把某家的模型名丟給另一家而報錯。
     """
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _PROVIDERS else "ollama")
+    primary = chain[0] if chain else None
     last_err = None
     for name in chain:
         fn = _PROVIDERS.get(name)
         if fn is None:
             continue
         try:
-            return fn(system_prompt, user_message, history, max_tokens=max_tokens, timeout=timeout)
+            return fn(
+                system_prompt, user_message, history,
+                max_tokens=max_tokens, timeout=timeout, temperature=temperature,
+                model=model if name == primary else None,
+            )
         except Exception as e:
             last_err = e
             logger.warning(f"LLM provider {name} 失敗，嘗試下一個：{e}")
@@ -1004,10 +1023,74 @@ def _vision_fallback_chain(primary: str) -> list[str]:
     return chain
 
 
+# 確定性的藥物欄位清理（Rule 5：確定性轉換用純程式，不丟給 LLM）。
+# Tesseract.js 對中文常逐字插空白（「每 8 小 時」「飯 前 服用」「1 錠」），
+# 模型多半會原封不動帶過。這層在解析後把 CJK 相鄰的空白收掉。
+_CJK = "一-鿿"
+
+# 標準給藥縮寫 → 中文（保留原縮寫於括號內，方便對照藥袋）。
+# 只在「整欄位就是這個縮寫」時展開，避免誤動到含縮寫的長句。
+_DOSE_ABBR = {
+    "QD": "一天一次（QD）", "QDAY": "一天一次（QD）",
+    "BID": "一天兩次（BID）", "TID": "一天三次（TID）", "QID": "一天四次（QID）",
+    "QN": "每晚一次（QN）", "QHS": "睡前（HS）", "HS": "睡前（HS）",
+    "Q4H": "每4小時（Q4H）", "Q6H": "每6小時（Q6H）", "Q8H": "每8小時（Q8H）",
+    "Q12H": "每12小時（Q12H）", "Q24H": "每24小時（Q24H）",
+    "PRN": "需要時（PRN）", "AC": "飯前（AC）", "PC": "飯後（PC）", "STAT": "立即（STAT）",
+}
+
+
+def _collapse_cjk_spaces(s):
+    """把字串正規化空白，並收掉緊鄰 CJK 字元的空白。
+    例：「每 8 小 時」→「每8小時」、「飯 前 服用」→「飯前服用」、「1 錠」→「1錠」。
+    純英文片段（如 Q8H、500mg）不受影響。"""
+    if not isinstance(s, str):
+        return s
+    s = re.sub(r"\s+", " ", s).strip()
+    s = re.sub(rf"(?<=[{_CJK}])\s+", "", s)   # CJK 後面的空白
+    s = re.sub(rf"\s+(?=[{_CJK}])", "", s)    # CJK 前面的空白
+    return s
+
+
+def _expand_dose_abbr(s):
+    """頻率／用法欄位若整格就是一個標準縮寫，展開成中文（含原縮寫）。"""
+    if not isinstance(s, str) or not s.strip():
+        return s
+    key = re.sub(r"[^A-Za-z0-9]", "", s).upper()
+    return _DOSE_ABBR.get(key, s)
+
+
+def _clean_med_fields(m: dict) -> dict:
+    """對單筆藥物 dict 做確定性清理：收 CJK 空白、展開給藥縮寫、空字串轉 None。"""
+    out = dict(m)
+    for k in ("name", "dosage", "frequency", "usage", "duration", "category",
+              "purpose", "instructions", "hospital", "prescribed_date"):
+        if k in out:
+            out[k] = _collapse_cjk_spaces(out[k])
+    for k in ("frequency", "usage"):
+        if out.get(k):
+            out[k] = _expand_dose_abbr(out[k])
+    for k, v in list(out.items()):
+        if isinstance(v, str) and not v.strip():
+            out[k] = None
+    return out
+
+
+def _med_extract_model() -> str | None:
+    """OCR→結構化抽取要用的模型覆寫（只在主 provider 上生效）。
+    Groq 預設的 llama-3.1-8b-instant（8B）做中文藥單抽取會幻覺，這裡升到
+    llama-3.3-70b-versatile（可由 MED_EXTRACT_GROQ_MODEL 覆寫）。
+    其他 provider（anthropic 走 Haiku 4.5、gemini、ollama）回 None 用各自預設。"""
+    if LLM_PROVIDER == "groq":
+        return os.getenv("MED_EXTRACT_GROQ_MODEL", "llama-3.3-70b-versatile")
+    return None
+
+
 def _parse_med_bag_json(raw: str) -> dict:
     """容錯地把模型輸出的字串轉成 JSON。
 
-    處理：去掉 markdown code fence、抽出第一個 `{...}` 區塊、修剪後再 json.loads。
+    處理：去掉 markdown code fence、抽出第一個 `{...}` 區塊、修剪後再 json.loads，
+    最後對每筆藥物做確定性欄位清理（收 CJK 空白、展開給藥縮寫）。
     若仍解析失敗，回傳空 medications 陣列但保留 raw_text 給前端 debug。
     """
     text = (raw or "").strip()
@@ -1032,7 +1115,7 @@ def _parse_med_bag_json(raw: str) -> dict:
     meds = result.get("medications")
     if not isinstance(meds, list):
         meds = []
-    result["medications"] = meds
+    result["medications"] = [_clean_med_fields(m) for m in meds if isinstance(m, dict)]
     result["raw_text"] = raw
     return result
 
@@ -1090,8 +1173,12 @@ def extract_medications_from_ocr_text(ocr_text: str) -> dict:
     errors: list[dict] = []
     try:
         # OCR 抽欄位輸入長（一整張藥單）+ 輸出可能是多筆藥的 JSON 陣列，
-        # 短文字 25s 容易剛好不夠；放 50s 給 Anthropic / Groq 一個合理空間
-        raw = call_claude(_EXTRACT_FROM_OCR_PROMPT, ocr_text, timeout=50.0)
+        # 短文字 25s 容易剛好不夠；放 50s 給 Anthropic / Groq 一個合理空間。
+        # temperature 0.2 求穩定（同一張藥單每次抽到一樣的欄位）；model 升級抽取模型。
+        raw = call_claude(
+            _EXTRACT_FROM_OCR_PROMPT, ocr_text,
+            timeout=50.0, temperature=0.2, model=_med_extract_model(),
+        )
     except Exception as e:
         logger.error(f"extract_medications_from_ocr_text 失敗：{e}")
         errors.append({"provider": "extract", "error": f"{type(e).__name__}: {e}"})
@@ -1144,25 +1231,46 @@ def _google_vision_ocr(image_base64: str) -> str:
     return (annotation.get("text") or "").strip()
 
 
-def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") -> dict:
+def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg", client_ocr_text: str | None = None) -> dict:
     """
     辨識藥袋／藥單／處方箋照片，提取藥物資訊。
 
     優先順序：
       1. **Google Cloud Vision OCR + LLM 抽欄位**（中文小字準度最高，需 GOOGLE_VISION_API_KEY）
-      2. Fallback：原本的 LLM vision 一段式（anthropic / groq / ollama）
+      2. **前端 client OCR 文字 + LLM 抽欄位**（前端 Tesseract.js 已在裝置上跑完，免費；
+         比 LLM vision 穩定，當 Google Vision 沒設 key／失敗時的次選）
+      3. Fallback：LLM vision 一段式（anthropic / groq / ollama）
 
-    本地開發用 Ollama；雲端部署優先 Google Vision（OCR 準），
-    Anthropic / Groq 作為 LLM vision 備援。
+    本地開發用 Ollama；雲端部署優先 Google Vision（OCR 最準），client OCR 次之，
+    Anthropic / Groq vision 作為最後備援。
+
+    client_ocr_text: 前端 Tesseract.js 的 OCR 純文字（可選）。有 Google Vision 時
+                     不會用到；沒有時優先於 LLM vision。
 
     回傳: {
         "medications": [{"name": ..., "dosage": ..., "frequency": ..., ...}],
         "raw_text": "<OCR / vision 的原始輸出>",
-        "provider": "<實際成功的 provider>",  # google_vision / anthropic / groq / ollama / None
+        "provider": "<實際成功的 provider>",  # google_vision / client_ocr / anthropic / groq / ollama / None
         "errors":   [{"provider": "...", "error": "..."}],
     }
     """
     errors: list[dict] = []
+
+    def _extract(ocr_text: str, provider_tag: str):
+        """OCR 純文字 → 結構化欄位。成功（有 medications）回 parsed dict，否則回 None。"""
+        # 同 extract_medications_from_ocr_text：長輸入 + 多筆 JSON 給 50s；
+        # temperature 0.2 求穩定、model 升級抽取模型。
+        extract_raw = call_claude(
+            _EXTRACT_FROM_OCR_PROMPT, ocr_text,
+            timeout=50.0, temperature=0.2, model=_med_extract_model(),
+        )
+        parsed = _parse_med_bag_json(extract_raw)
+        parsed["raw_text"] = ocr_text  # 回 OCR 純文字當 raw_text（給前端 debug 看得懂）
+        if parsed.get("medications"):
+            parsed["provider"] = provider_tag
+            parsed["errors"] = errors
+            return parsed
+        return None
 
     # Stage 1: Google Vision OCR → text LLM 抽欄位（最準的路徑）
     if GOOGLE_VISION_API_KEY:
@@ -1175,14 +1283,8 @@ def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") ->
 
         if ocr_text and len(ocr_text.strip()) >= 20:
             try:
-                # 同 extract_medications_from_ocr_text：長輸入 + 多筆 JSON，給 50s
-                extract_raw = call_claude(_EXTRACT_FROM_OCR_PROMPT, ocr_text, timeout=50.0)
-                parsed = _parse_med_bag_json(extract_raw)
-                # 回傳 OCR 純文字當 raw_text（給前端 debug 看得懂）
-                parsed["raw_text"] = ocr_text
-                if parsed.get("medications"):
-                    parsed["provider"] = "google_vision"
-                    parsed["errors"] = errors
+                parsed = _extract(ocr_text, "google_vision")
+                if parsed is not None:
                     return parsed
                 errors.append({"provider": "google_vision+extract", "error": "no medications extracted from ocr"})
             except Exception as e:
@@ -1190,6 +1292,17 @@ def recognize_medicine_bag(image_base64: str, media_type: str = "image/jpeg") ->
                 logger.warning(f"從 OCR 抽欄位失敗：{e}")
         elif ocr_text is not None:
             errors.append({"provider": "google_vision", "error": f"ocr too short ({len(ocr_text or '')} chars)"})
+
+    # Stage 1.5: 前端 client OCR 文字（Google Vision 沒設/失敗時的次選，免費且比 LLM vision 穩）
+    if client_ocr_text and len(client_ocr_text.strip()) >= 20:
+        try:
+            parsed = _extract(client_ocr_text, "client_ocr")
+            if parsed is not None:
+                return parsed
+            errors.append({"provider": "client_ocr+extract", "error": "no medications extracted from ocr"})
+        except Exception as e:
+            errors.append({"provider": "client_ocr+extract", "error": f"{type(e).__name__}: {e}"})
+            logger.warning(f"從 client OCR 抽欄位失敗：{e}")
 
     # Stage 2 (fallback): 原本的 LLM vision 一段式 chain
     chain = _vision_fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _VISION_PROVIDERS else "ollama")

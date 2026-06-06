@@ -378,11 +378,20 @@ def recognize_from_photo(body: MedicationPhotoUpload, me: dict = Depends(current
     """
     _enforce_self_patient(body.patient_id, me)
     try:
-        if body.ocr_text and len(body.ocr_text.strip()) >= 20:
-            # 前端已用 Tesseract.js 做完 OCR，直接抽結構化欄位（跳過影像 LLM）
+        if body.image_base64:
+            # 有照片就走後端辨識：優先 Google Vision OCR（中文小字最準），
+            # 沒設 key／失敗時自動退回前端送上來的 client OCR 文字，最後才 LLM vision。
+            # 準度跟著環境設定自動提升，又不會弄壞「只有 client OCR」的舊路徑。
+            recognition = recognize_medicine_bag(
+                body.image_base64, body.media_type, client_ocr_text=body.ocr_text
+            )
+        elif body.ocr_text and len(body.ocr_text.strip()) >= 20:
+            # 沒附照片、只有前端 OCR 文字 → 直接抽結構化欄位
             recognition = extract_medications_from_ocr_text(body.ocr_text)
         else:
-            recognition = recognize_medicine_bag(body.image_base64, body.media_type)
+            raise HTTPException(status_code=400, detail="需要藥袋照片或 OCR 文字才能辨識")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"recognize_medicine_bag failed: {e}")
         raise HTTPException(status_code=500, detail=f"影像辨識服務失敗：{e}")
