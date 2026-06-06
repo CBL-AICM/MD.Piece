@@ -1,0 +1,91 @@
+/* ============================================================
+   MD.Piece 2.0 — Design Tokens (single source of truth)
+   Identity: Quiet Companion · skin: original navy+teal+mint (clinical-dialed)
+   Backward-compatible: pure CSS custom properties. No backend change.
+   Replaces the 11 ad-hoc theme files over time. Components must read
+   ONLY semantic tokens — never raw hex.
+   Modes: light (default) · .dark · [data-elder] · [data-context="clinical"]
+   ============================================================ */
+:root{
+  /* — primitives — */
+  --navy:#1F3D58; --navy-deep:#15293B;
+  --teal:#2F8378; --teal-deep:#256B61; --teal-soft:#E6F3EE;
+  --amber:#C98B2F; --amber-deep:#9A6C1F;
+  --rose:#C2685F; --blue:#4A90C2; --periwinkle:#5A6E9A;
+  --cream:#F4F8F6; --white:#FFFFFF; --mist:#EEF4F1;
+
+  /* — semantic: surface / content / line — */
+  --surface-0:var(--cream);
+  --surface-1:var(--white);
+  --surface-2:var(--mist);
+  --line:#E4EDE9;
+  --content:#1F3D58;
+  --content-muted:#6E7E79;
+  --content-subtle:#9AAAA4;
+
+  /* — semantic: brand / action — */
+  --primary:var(--navy);
+  --primary-fg:#FFFFFF;
+  --action:var(--teal);
+  --action-deep:var(--teal-deep);
+  --accent:var(--amber);
+
+  /* — clinical status scale (always color + icon + text) — */
+  --status-calm:#2F8378;     --status-calm-fg:#256B61;
+  --status-watch:#C98B2F;    --status-watch-fg:#9A6C1F;
+  --status-elevated:#D9774A; --status-elevated-fg:#B85A33;
+  --status-urgent:#CB4F44;   --status-urgent-fg:#A93A30;
+
+  /* — health-event type registry colors — */
+  --ev-medication:#4A90C2; --ev-symptom:#C2685F; --ev-infection:#C98B2F;
+  --ev-hospitalization:#5A6E9A; --ev-appointment:#7E86B5; --ev-lab:#4E8C97;
+  --ev-milestone:#2F8378; --ev-infusion:#2F8378; --ev-surgery:#6E6258;
+
+  /* — typography — */
+  --font-sans:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  --font-serif:"Noto Serif TC",Georgia,serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --scale:1;
+  --text-xs:calc(.75rem*var(--scale));   --text-sm:calc(.8125rem*var(--scale));
+  --text-base:calc(1rem*var(--scale));   --text-lg:calc(1.125rem*var(--scale));
+  --text-xl:calc(1.25rem*var(--scale));  --text-2xl:calc(1.5rem*var(--scale));
+  --text-3xl:calc(1.875rem*var(--scale));
+
+  /* — space / radius / touch — */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
+  --space-6:24px; --space-8:32px; --space-12:48px; --space-16:64px;
+  --radius-sm:8px; --radius-md:12px; --radius-card:17px; --radius-pill:999px;
+  --touch-min:48px; --touch-fab:56px;
+
+  /* — elevation (warm-tinted, low) — */
+  --shadow-1:0 1px 2px rgba(31,61,88,.05),0 8px 20px rgba(31,61,88,.06);
+  --shadow-2:0 6px 16px rgba(31,61,88,.10);
+  --shadow-fab:0 8px 18px rgba(31,61,88,.40);
+
+  /* — motion (reduced-motion safe below) — */
+  --motion-fast:150ms; --motion-base:220ms; --motion-slow:400ms;
+  --ease:cubic-bezier(.4,0,.2,1); --ease-gentle:cubic-bezier(.25,.1,.25,1);
+  --focus-ring:0 0 0 2px var(--surface-0),0 0 0 4px var(--action);
+
+  /* — puzzle watermark opacity (clinical-dialed) — */
+  --puzzle-opacity:.06;
+}
+
+/* Dark mode — "evening" navy, not black */
+.dark{
+  --surface-0:#13212E; --surface-1:#1B2C3A; --surface-2:#22384A; --line:#2C4256;
+  --content:#E7EEF2; --content-muted:#9DB0B9; --content-subtle:#6E8390;
+  --primary:#2A4D6B; --primary-fg:#FFFFFF; --action:#5FB3A6; --action-deep:#7FC6BB;
+  --shadow-1:none; --shadow-2:0 0 0 1px var(--line);
+  --puzzle-opacity:.05;
+}
+
+/* Elder mode — single scale multiplier (replaces elder-mode.css) */
+[data-elder]{ --scale:1.25; }
+
+/* Clinical context — strip warmth: no watermark, plain surfaces */
+[data-context="clinical"]{ --surface-0:#FFFFFF; --puzzle-opacity:0; }
+
+@media (prefers-reduced-motion:reduce){
+  :root{ --motion-fast:1ms; --motion-base:1ms; --motion-slow:1ms; }
+}

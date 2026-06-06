@@ -3414,7 +3414,7 @@ function showPage(page) {
     document.body.setAttribute('data-page', page);
   } catch (e) {}
   const pages = {
-    home, symptoms, symptomsAnalyze, records, medications, education,
+    home, home2, symptoms, symptomsAnalyze, records, medications, education,
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
     followUps, handover, medRecon, bedside, dischargePlan, menstrual, predict, sleep,
@@ -3432,6 +3432,7 @@ function showPage(page) {
     } catch (e) {}
     // 頁面載入後的初始化
     if (page === "home") loadHomePage();
+    if (page === "home2") loadHome2Page();
     if (page === "records") loadRecordsPage();
     if (page === "education") loadEducationPage();
     if (page === "story") loadStoryPage();
@@ -6258,6 +6259,91 @@ function loadHomePage() {
   // 滾動式 feed 新增的 Tier 2 區塊
   if (typeof _updateMobileHomeMedsMini === 'function') _updateMobileHomeMedsMini();
   if (typeof _renderMobileRecentRecords === 'function') _renderMobileRecentRecords();
+}
+
+// ── 2.0 預覽：Today (home2) — opt-in 路由，與現行 home 完全隔離 ──────
+// 規則 3 手術式：不動 renderHomeQuickReport / loadHomePage。
+// markup 用 .mp- 元件（components-2.0.css）+ tokens.css；資料走既有 apiFetch 端點。
+function _home2Greeting() {
+  var h = new Date().getHours();
+  if (h < 11) return '早安';
+  if (h < 18) return '午安';
+  return '晚安';
+}
+function home2() {
+  // 滿版響應式：桌機 auto-fit 多欄填滿、手機單欄；不留白（規則 3：只改此頁）。
+  return ''
+    + '<div class="mp" style="padding:10px 22px 72px">'
+    +   '<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0 4px">'
+    +     '<button onclick="showPage(\'home\')" style="background:none;border:none;color:var(--content-muted);font-size:.8rem;font-weight:600;cursor:pointer">← 目前首頁</button>'
+    +     '<span style="font-size:.68rem;color:var(--content-subtle);font-weight:700;letter-spacing:.06em">2.0 PREVIEW</span>'
+    +   '</div>'
+    +   '<div style="padding:4px 2px 2px">'
+    +     '<h1 id="home2-greet" style="font-family:var(--font-serif);font-size:1.6rem;font-weight:700;color:var(--primary);margin:0">午安</h1>'
+    +     '<p id="home2-date" style="font-size:.84rem;color:var(--content-muted);margin:3px 0 0"></p>'
+    +     '<span class="mp-status calm" id="home2-next" style="margin-top:10px"><span class="mp-dot"></span>讀取回診…</span>'
+    +   '</div>'
+    +   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-top:14px;align-items:start">'
+    +     '<div class="mp-card" style="margin-top:0"><div class="mp-row"><div class="mp-cl"><span class="mp-dot" style="background:var(--ev-medication)"></span>用藥</div>'
+    +       '<button class="mp-chev" style="background:none;border:none;cursor:pointer" onclick="navigateTo(\'medications\',null)">&rsaquo;</button></div>'
+    +       '<div id="home2-meds" style="margin-top:6px"><span class="mp-csub">讀取中…</span></div></div>'
+    +     '<div class="mp-card" style="margin-top:0"><div class="mp-cl">情緒電力</div><div id="home2-mood" style="margin-top:6px"><span class="mp-csub">讀取中…</span></div></div>'
+    +     '<div class="mp-card" style="margin-top:0"><div class="mp-row"><div class="mp-cl">近況追蹤</div><span class="mp-status calm"><span class="mp-dot"></span>持續記錄中</span></div>'
+    +       '<div class="mp-csub" style="margin-top:8px">追蹤而非預測 — 記錄越多，掌握越完整。</div></div>'
+    +     '<div class="mp-card" style="margin-top:0"><div class="mp-cl">最近的紀錄</div><div id="home2-events" style="margin-top:8px"><span class="mp-csub">讀取中…</span></div></div>'
+    +   '</div>'
+    +   '<div class="mp-sh" style="margin-top:18px"><span class="t">快速記一筆</span></div>'
+    +   '<div class="mp-chips">'
+    +     '<span class="mp-chip" onclick="navigateTo(\'symptoms\',null)"><b>＋</b> 症狀</span>'
+    +     '<span class="mp-chip" onclick="navigateTo(\'medications\',null)"><b>＋</b> 用藥</span>'
+    +     '<span class="mp-chip" onclick="navigateTo(\'vitals\',null)"><b>＋</b> 生理</span>'
+    +   '</div>'
+    + '</div>';
+}
+function loadHome2Page() {
+  try {
+    var user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : '';
+    var name = (user && (user.nickname || user.name || user.username)) || '朋友';
+    var g = document.getElementById('home2-greet'); if (g) g.textContent = _home2Greeting() + '，' + name;
+    var d = document.getElementById('home2-date'); if (d) { var n = new Date(); d.textContent = (n.getMonth() + 1) + ' 月 ' + n.getDate() + ' 日'; }
+    // 用藥（已驗證端點）
+    apiFetch(API + '/medications/?patient_id=' + pid).then(function (r) { return r.json(); }).then(function (data) {
+      var el = document.getElementById('home2-meds'); if (!el) return;
+      var meds = ((data && data.medications) || []).filter(function (m) { return m.active !== 0; });
+      if (!meds.length) { el.innerHTML = '<span class="mp-csub">尚未新增藥物</span>'; return; }
+      el.innerHTML = '<span class="mp-big" style="font-size:1.7rem">' + meds.length + '</span> <span class="mp-csub">種藥物追蹤中</span>';
+    }).catch(function () { var el = document.getElementById('home2-meds'); if (el) el.innerHTML = '<span class="mp-csub">讀取失敗</span>'; });
+    // 情緒（已驗證端點）
+    fetch(API + '/emotions/daily?patient_id=' + pid + '&days=7').then(function (r) { return r.json(); }).then(function (data) {
+      var el = document.getElementById('home2-mood'); if (!el) return;
+      var daily = (data && data.daily) || [];
+      if (!daily.length) { el.innerHTML = '<span class="mp-csub">今天還沒打卡情緒</span>'; return; }
+      var last = daily[daily.length - 1];
+      el.innerHTML = '<span style="font-size:1.4rem">' + (last.emoji || '🙂') + '</span> <span class="mp-csub" style="margin-left:6px">最近一筆心情電量</span>';
+    }).catch(function () { var el = document.getElementById('home2-mood'); if (el) el.innerHTML = '<span class="mp-csub">—</span>'; });
+    // 下次回診（嘗試既有端點；無法解析則中性 fallback，不臆測形狀而崩潰）
+    apiFetch(API + '/follow-ups/?patient_id=' + pid).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+      var el = document.getElementById('home2-next'); if (!el) return;
+      var list = data && (data.follow_ups || data.followUps || data.items || (Array.isArray(data) ? data : null));
+      var next = null, today = new Date();
+      if (list && list.length) {
+        list.forEach(function (f) {
+          var ds = f.date || f.visit_date || f.scheduled_at || f.datetime; if (!ds) return;
+          var dd = new Date(ds); if (isNaN(dd)) return;
+          if (dd >= today && (!next || dd < next._d)) { next = f; next._d = dd; }
+        });
+      }
+      if (next) {
+        var days = Math.max(0, Math.round((next._d - today) / 86400000));
+        var dept = next.department || next.dept || next.specialty || '';
+        el.innerHTML = '<span class="mp-dot"></span>下次回診　' + (dept ? dept + '　' : '') + '還有 ' + days + ' 天';
+      } else { el.innerHTML = '<span class="mp-dot"></span>尚未排定回診'; }
+    }).catch(function () { var el = document.getElementById('home2-next'); if (el) el.innerHTML = '<span class="mp-dot"></span>尚未排定回診'; });
+    // 最近紀錄：導到既有「碎片」頁（不臆測 timeline 形狀）
+    var ev = document.getElementById('home2-events');
+    if (ev) ev.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="mp-csub">你的健康事件都彙整在「碎片」</span><button class="mp-btn ghost" style="height:36px;padding:0 13px;font-size:.82rem" onclick="navigateTo(\'pieces\',null)">查看</button></div>';
+  } catch (e) { if (window.console) console.warn('[home2] load error', e); }
 }
 
 // ── 首頁衛教推薦 ─────────────────────────────────────────

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<title>MD.Piece 2.0 — More Screens (回診 / 藥物 / 報告)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/tokens.css" />
+<link rel="stylesheet" href="css/components-2.0.css" />
+<style>
+  body{margin:0;background:#d9dee2;padding:34px;font-family:var(--font-sans)}
+  .stage{display:flex;gap:34px;align-items:flex-start}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-weight:700;color:#2a3942;font-size:15px}.cap span{color:#7c8a92;font-weight:500;font-size:13px}
+  .greet h1{font-family:var(--font-serif);font-size:1.35rem;font-weight:700;color:var(--primary)}
+  .greet p{font-size:.8rem;color:var(--content-muted);margin-top:3px}
+  .slot{display:flex;align-items:center;justify-content:space-between;padding:11px 2px}
+  .slot+.slot{border-top:1px solid var(--line)}
+  .slot .when{font-size:.86rem;font-weight:600;color:var(--content)}
+  .slot .when b{font-family:var(--font-mono);color:var(--primary);margin-right:8px}
+  .done{color:var(--status-calm-fg);font-weight:700;font-size:.8rem}
+  .tap{color:var(--action-deep);font-weight:700;font-size:.8rem;border:1.3px solid #cbe5dd;border-radius:10px;padding:7px 13px;background:var(--surface-1)}
+  .lab-val{font-family:var(--font-mono);font-size:1.5rem;font-weight:600;color:var(--primary)}
+  .lab-val small{font-size:.8rem;color:var(--content-subtle);font-weight:500;margin-left:3px}
+  .lab-range{font-size:.7rem;color:var(--content-subtle);margin-top:2px}
+  .pz-def{width:0;height:0;position:absolute}
+</style>
+</head>
+<body class="mp">
+<svg class="pz-def"><defs><symbol id="pz" viewBox="0 0 100 100"><path d="M 20 20 L 40 20 C 40 5 60 5 60 20 L 80 20 L 80 40 C 95 40 95 60 80 60 L 80 80 L 60 80 C 60 65 40 65 40 80 L 20 80 L 20 60 C 35 60 35 40 20 40 Z" fill="currentColor"/></symbol></defs></svg>
+<div class="stage">
+
+  <!-- ===== 回診排程 ===== -->
+  <div class="col"><div class="cap">回診排程 <span>· Appointments</span></div>
+  <div class="mp-phone">
+    <div class="mp-bgwrap"><svg width="170" height="170" style="left:-40px;top:90px;color:rgba(126,134,181,calc(var(--puzzle-opacity) + .01))"><use href="#pz" width="170" height="170"/></svg></div>
+    <div class="mp-sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+    <div class="mp-appbar"><div class="mp-ib"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h15M3 11h15M3 16h15"/></svg></div><span class="brand" style="font-size:1rem">回診排程</span><span class="mp-sp"></span></div>
+    <div class="mp-scroll">
+      <div class="mp-card" style="background:linear-gradient(165deg,#23496a,#1c3a55);border:none;color:#fff">
+        <div class="mp-cl" style="color:#bcd3e6">下次回診</div>
+        <div style="font-family:var(--font-mono);font-size:2.1rem;font-weight:600;margin:7px 0 2px">還有 12 天</div>
+        <div style="font-size:.9rem;color:#dce8f1">6/18（三）14:30　·　風濕科　林○○ 醫師</div>
+        <button class="mp-btn" style="background:#fff;color:var(--primary);width:100%;margin-top:14px">診前準備　摘要 · 想問醫師的事 ›</button>
+      </div>
+      <div class="mp-sh"><span class="t">即將到來</span><span class="a">新增 ＋</span></div>
+      <div class="mp-card mp-list" style="padding:4px 14px">
+        <div class="li"><span class="mp-dot" style="width:10px;height:10px;background:var(--ev-appointment)"></span><div class="body" style="flex:1"><div class="ti">神經科　王○○ 醫師</div><div class="me">7/02（三）10:00　·　台大醫院</div></div><span class="me" style="color:var(--action-deep);font-weight:700">26 天</span></div>
+      </div>
+      <div class="mp-sh"><span class="t">已完成</span></div>
+      <div class="mp-card mp-list" style="padding:4px 14px">
+        <div class="li"><span class="mp-dot" style="width:10px;height:10px;background:var(--content-subtle)"></span><div class="body" style="flex:1"><div class="ti" style="color:var(--content-muted)">風濕科　林○○ 醫師</div><div class="me">5/05　·　已完成</div></div><span class="me" style="color:var(--action-deep);font-weight:700">看摘要 ›</span></div>
+      </div>
+    </div>
+    <div class="mp-fab">＋</div>
+    <div class="mp-tabbar">
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>今天</div>
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>紀錄</div>
+      <div class="it" style="flex:0 0 52px"></div>
+      <div class="it on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>回診</div>
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg>我的</div>
+    </div><div class="mp-hb"></div>
+  </div></div>
+
+  <!-- ===== 藥物 ===== -->
+  <div class="col"><div class="cap">藥物 <span>· Medications</span></div>
+  <div class="mp-phone">
+    <div class="mp-bgwrap"><svg width="160" height="160" style="right:-35px;top:120px;color:rgba(74,144,194,calc(var(--puzzle-opacity) + .01))"><use href="#pz" width="160" height="160"/></svg></div>
+    <div class="mp-sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+    <div class="mp-appbar"><div class="mp-ib"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h15M3 11h15M3 16h15"/></svg></div><span class="brand" style="font-size:1rem">藥物</span><span class="mp-sp"></span></div>
+    <div class="mp-scroll">
+      <div class="mp-card">
+        <div class="mp-row"><div class="mp-cl"><span class="mp-dot" style="background:var(--ev-medication)"></span>今日服藥</div><span class="mp-status calm"><span class="mp-dot"></span>進度良好</span></div>
+        <div class="mp-big">2<small> / 4</small></div>
+        <div class="mp-bar"><i style="width:50%"></i></div>
+        <div style="margin-top:6px">
+          <div class="slot"><span class="when"><b>08:00</b>早　MTX 15mg</span><span class="done">✓ 已服</span></div>
+          <div class="slot"><span class="when"><b>13:00</b>午　Prednisolone 5mg</span><span class="done">✓ 已服</span></div>
+          <div class="slot"><span class="when"><b>18:00</b>晚　Azathioprine 50mg</span><span class="tap">打卡</span></div>
+          <div class="slot"><span class="when"><b>22:00</b>睡前　Folic acid</span><span class="tap">打卡</span></div>
+        </div>
+      </div>
+      <div class="mp-card">
+        <div class="mp-row"><div class="mp-cl">30 天遵從率</div><span style="font-family:var(--font-mono);font-weight:600;color:var(--action-deep)">88%</span></div>
+        <div class="mp-spark"><i style="height:90%"></i><i style="height:70%"></i><i style="height:95%"></i><i style="height:60%"></i><i style="height:88%"></i><i style="height:92%"></i><i style="height:75%"></i><i style="height:90%"></i></div>
+      </div>
+      <div class="mp-sh"><span class="t">我的藥物</span><span class="a">拍藥袋 ＋</span></div>
+      <div class="mp-card mp-list" style="padding:4px 14px">
+        <div class="li"><span class="mp-dot" style="width:10px;height:10px;background:var(--ev-medication)"></span><div class="body" style="flex:1"><div class="ti">MTX（甲氨蝶呤）15mg</div><div class="me">每週一　·　口服</div></div><span class="mp-chev">›</span></div>
+        <div class="li"><span class="mp-dot" style="width:10px;height:10px;background:var(--ev-medication)"></span><div class="body" style="flex:1"><div class="ti">Prednisolone 5mg</div><div class="me">每日　·　口服</div></div><span class="mp-chev">›</span></div>
+      </div>
+    </div>
+    <div class="mp-fab">＋</div>
+    <div class="mp-tabbar">
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>今天</div>
+      <div class="it on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>紀錄</div>
+      <div class="it" style="flex:0 0 52px"></div>
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>回診</div>
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg>我的</div>
+    </div><div class="mp-hb"></div>
+  </div></div>
+
+  <!-- ===== 報告數值 (Evidence register) ===== -->
+  <div class="col"><div class="cap">報告數值 <span>· Labs（Evidence register）</span></div>
+  <div class="mp-phone" data-context="clinical" style="background:#fafcfb">
+    <div class="mp-sb"><span>9:41</span><span class="d"><i></i><i></i><i></i></span></div>
+    <div class="mp-appbar"><div class="mp-ib"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h15M3 11h15M3 16h15"/></svg></div><span class="brand" style="font-size:1rem">報告數值</span><span class="mp-sp"></span></div>
+    <div class="mp-scroll">
+      <div class="mp-card">
+        <div class="mp-row"><div><div class="mp-cl">ESR　紅血球沉降速率</div><div class="lab-val" style="margin-top:5px">32<small>mm/hr</small></div><div class="lab-range">參考　0–20　·　6/04 抽血</div></div>
+          <span class="mp-status watch"><span class="mp-dot"></span>偏高</span></div>
+        <div class="mp-spark" style="height:24px"><i style="height:50%;background:#d8cdb6"></i><i style="height:58%;background:#d8cdb6"></i><i style="height:80%;background:#d8cdb6"></i><i style="height:72%;background:#d8cdb6"></i></div>
+      </div>
+      <div class="mp-card">
+        <div class="mp-row"><div><div class="mp-cl">CRP　C 反應蛋白</div><div class="lab-val" style="margin-top:5px">0.8<small>mg/dL</small></div><div class="lab-range">參考　&lt; 1.0　·　6/04</div></div>
+          <span class="mp-status calm"><span class="mp-dot"></span>正常</span></div>
+      </div>
+      <div class="mp-card">
+        <div class="mp-row"><div><div class="mp-cl">eGFR　腎絲球過濾率</div><div class="lab-val" style="margin-top:5px">78<small>mL/min</small></div><div class="lab-range">參考　&gt; 90　·　6/04</div></div>
+          <span class="mp-status watch"><span class="mp-dot"></span>留意</span></div>
+      </div>
+      <button class="mp-btn ghost" style="width:100%;margin-top:14px">＋ 上傳檢驗單　/　手動輸入</button>
+    </div>
+    <div class="mp-tabbar">
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>今天</div>
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>紀錄</div>
+      <div class="it" style="flex:0 0 52px"></div>
+      <div class="it on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>回診</div>
+      <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg>我的</div>
+    </div><div class="mp-hb"></div>
+  </div></div>
+
+</div>
+</body>
+</html>
