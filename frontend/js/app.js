@@ -4265,117 +4265,6 @@ function closeStudyRun() {
   setTimeout(function () { if (s.parentNode) s.remove(); }, 220);
 }
 
-// ── 醫師：研究分析後台 ─────────────────────────────────────
-function openStudyAnalysis() {
-  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/analysis')
-    .then(function (r) { if (!r.ok) throw new Error('forbidden'); return r.json(); })
-    .then(function (data) { _studyRenderAnalysis(data); })
-    .catch(function () { if (typeof showToast === 'function') showToast('分析載入失敗（需醫護端權限）', 'warning'); });
-}
-
-function _studyDesc(d) {
-  if (!d || !d.n) return '—';
-  var sd = (d.sd != null ? '±' + d.sd : '');
-  return d.mean + sd + '<br><span style="font-size:.7rem;color:var(--text-muted)">n=' + d.n + ' · 中位 ' + d.median + '</span>';
-}
-
-function _studyRenderAnalysis(data) {
-  _studyEnsureStyles();
-  var ex = document.getElementById('study-analysis'); if (ex) ex.remove();
-  var parts = (data.parts || []).map(function (p) {
-    var inner = '';
-    if (p.by_timepoint) {
-      var tps = p.timepoints || Object.keys(p.by_timepoint);
-      var head = '<tr><th>時點</th>' + tps.map(function (t) { return '<th>' + escapeHtml(t) + '</th>'; }).join('') + '</tr>';
-      var rowv = '<tr><td>數值</td>' + tps.map(function (t) { return '<td>' + _studyDesc(p.by_timepoint[t]) + '</td>'; }).join('') + '</tr>';
-      inner += '<table class="study-tbl">' + head + rowv + '</table>';
-    }
-    if (p.paired_D0_D28) {
-      var rb = p.paired_D0_D28;
-      inner += '<p class="study-meta">配對 D0→D28 效應量 r = <span class="study-r">' + rb.r + '</span>（' + escapeHtml(rb.direction) + '，n=' + rb.n_pairs + '）</p>';
-    }
-    if (p.subscales) {
-      var tps2 = p.timepoints || [];
-      Object.keys(p.subscales).forEach(function (name) {
-        var byt = p.subscales[name];
-        var cells = tps2.map(function (t) {
-          var d = byt[t] || {};
-          var pa = (d.pct_acceptable != null ? ' · ≥可接受 ' + d.pct_acceptable + '%' : '');
-          return '<td>' + _studyDesc(d) + pa + '</td>';
-        }).join('');
-        inner += '<table class="study-tbl"><tr><th>' + escapeHtml(name) + '</th>' + tps2.map(function (t) { return '<th>' + escapeHtml(t) + '</th>'; }).join('') + '</tr><tr><td>平均</td>' + cells + '</tr></table>';
-      });
-    }
-    if (p.top_score_rate) {
-      var tsr = Object.keys(p.top_score_rate).map(function (t) { var x = p.top_score_rate[t]; return escapeHtml(t) + '：' + (x.rate != null ? Math.round(x.rate * 100) + '%' : '—') + '（n=' + x.n + '）'; }).join('；');
-      inner += '<p class="study-meta">collaboRATE top-score 率：' + tsr + '</p>';
-    }
-    if (p.nps) {
-      var npsr = Object.keys(p.nps).map(function (t) { var x = p.nps[t]; return escapeHtml(t) + '：NPS ' + x.nps + '（推薦 ' + x.promoters + '／中立 ' + x.passives + '／貶低 ' + x.detractors + '）'; }).join('；');
-      inner += '<p class="study-meta">' + npsr + '</p>';
-    }
-    if (p.cronbach_alpha) {
-      var ca = p.cronbach_alpha;
-      if (ca.subscales) {
-        inner += '<p class="study-meta">Cronbach α：' + Object.keys(ca.subscales).map(function (k) { return escapeHtml(k) + ' ' + ca.subscales[k].alpha; }).join('；') + '</p>';
-      } else {
-        inner += '<p class="study-meta">Cronbach α = <span class="study-r">' + ca.alpha + '</span>（k=' + ca.k + '，' + escapeHtml(ca.scope || '') + '）</p>';
-      }
-    }
-    if (p.background) {
-      inner += Object.keys(p.background).map(function (iid) {
-        var b = p.background[iid];
-        var cc = Object.keys(b.counts || {}).map(function (o) { return escapeHtml(o) + '×' + b.counts[o]; }).join('、');
-        return '<p class="study-meta">' + escapeHtml(b.text) + '：' + (cc || '—') + '</p>';
-      }).join('');
-    }
-    return '<div class="card" style="padding:12px 14px;margin-bottom:12px">'
-      + '<div style="font-weight:700;color:var(--navy,#1a1730)">' + escapeHtml(p.part) + '. ' + escapeHtml(p.title)
-      + ' <span style="font-size:.72rem;color:var(--text-muted);font-weight:500">（' + escapeHtml(p.method) + '，n=' + p.respondents + '）</span></div>'
-      + inner + '</div>';
-  }).join('');
-
-  var sheet = document.createElement('div');
-  sheet.id = 'study-analysis';
-  sheet.className = 'ip-prep-sheet';
-  sheet.innerHTML = ''
-    + '<div class="ip-prep-backdrop" onclick="closeStudyAnalysis()"></div>'
-    + '<div class="ip-prep-panel" role="dialog" aria-label="研究分析" aria-modal="true" tabindex="-1" style="max-height:90vh;overflow:auto">'
-    +   '<header class="ip-prep-head">'
-    +     '<div class="ip-prep-when"><span class="ip-prep-when-num">研究分析後台</span>'
-    +       '<span class="ip-prep-when-sub">受試者 ' + (data.respondents || 0) + ' 人 · 描述統計＋效應量＋α</span></div>'
-    +     '<button type="button" class="ip-prep-close" onclick="closeStudyAnalysis()" aria-label="關閉"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
-    +   '</header>'
-    +   '<div style="display:flex;gap:8px;margin:6px 2px 12px">'
-    +     '<button type="button" class="ip-prep-secondary" style="flex:1" onclick="_studyExport(\'long\')"><i data-lucide="download" style="width:15px;height:15px"></i> 匯出 long CSV</button>'
-    +     '<button type="button" class="ip-prep-secondary" style="flex:1" onclick="_studyExport(\'wide\')"><i data-lucide="download" style="width:15px;height:15px"></i> 匯出 wide CSV</button>'
-    +   '</div>'
-    +   '<div style="padding:2px">' + parts + '</div>'
-    +   '<p class="study-meta" style="padding:0 4px">' + escapeHtml(data.note || '') + '</p>'
-    + '</div>';
-  document.body.appendChild(sheet);
-  requestAnimationFrame(function () { sheet.classList.add('open'); });
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function closeStudyAnalysis() {
-  var s = document.getElementById('study-analysis'); if (!s) return;
-  s.classList.remove('open');
-  setTimeout(function () { if (s.parentNode) s.remove(); }, 220);
-}
-
-function _studyExport(fmt) {
-  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/export?format=' + fmt)
-    .then(function (r) { if (!r.ok) throw new Error('export'); return r.text(); })
-    .then(function (text) {
-      var blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a'); a.href = url; a.download = STUDY_KEY + '_' + fmt + '.csv';
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    })
-    .catch(function () { if (typeof showToast === 'function') showToast('匯出失敗（需醫護端權限）', 'warning'); });
-}
-
 // ─── Profile onboarding（Issue #131 follow-up）──────────
 // 註冊／首次登入後若 backend profile.conditions 空就跳，強制收集慢性病。
 // 「先跳過」會記在 localStorage（per-uid），下次登入不會再跳，但 records 頁仍可填。
@@ -20544,13 +20433,6 @@ function settings() {
     +       '<div style="flex:1"><div class="name">研究問卷</div><div class="sub">慢性病管理可行性研究 · 分時點填答</div></div>'
     +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
     +     '</div>'
-    +     ((user && user.role === 'doctor')
-            ? '<div class="settings-row" onclick="openStudyAnalysis()">'
-              + '<div class="ico"><i data-lucide="bar-chart-3"></i></div>'
-              + '<div style="flex:1"><div class="name">研究分析後台</div><div class="sub">描述統計 · 效應量 · α · 匯出 CSV</div></div>'
-              + '<div class="chev"><i data-lucide="chevron-right"></i></div>'
-              + '</div>'
-            : '')
     +   '</div>'
 
     // 法律與隱私

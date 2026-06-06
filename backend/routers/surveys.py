@@ -764,6 +764,47 @@ def participant_summary(study: str, pid: str, me: dict = Depends(current_user)):
             "eheals_m07": eheals, "adherence": _adherence(sb, pid)}
 
 
+@router.get("/study/{study}/participants")
+def study_participants(study: str, me: dict = Depends(current_user)):
+    """研究受試者進度列表（限 doctor）：各時點完成度 + 依從天數 + 代號。供患者管理後台。"""
+    if me.get("role") != "doctor":
+        raise HTTPException(status_code=403, detail="僅醫護端可檢視受試者列表")
+    sb = get_supabase()
+    surveys = _study_surveys(sb, study)
+    if not surveys:
+        raise HTTPException(status_code=404, detail="找不到該研究問卷組")
+
+    applicable: dict = {}          # tp -> 該時點適用問卷份數
+    for s in surveys:
+        for tp in (s["scoring"].get("timepoints") or []):
+            applicable[tp] = applicable.get(tp, 0) + 1
+
+    part: dict = {}                # pid -> {code,last,tp:{tp:set(keys)}}
+    for s in surveys:
+        for r in _responses_for(sb, s["key"]):
+            pid = r["patient_id"]
+            p = part.setdefault(pid, {"code": None, "last": "", "tp": {}})
+            if r["participant_code"]:
+                p["code"] = r["participant_code"]
+            if (r["created_at"] or "") > p["last"]:
+                p["last"] = r["created_at"]
+            p["tp"].setdefault(r["timepoint"], set()).add(s["key"])
+
+    out = []
+    for pid, p in part.items():
+        completion = {tp: {"done": len(p["tp"].get(tp, set())), "total": total}
+                      for tp, total in applicable.items()}
+        out.append({
+            "patient_id": pid,
+            "participant_code": p["code"],
+            "last_activity": p["last"],
+            "completion": completion,
+            "adherence_days": _adherence(sb, pid)["active_days"],
+        })
+    out.sort(key=lambda x: (x["participant_code"] or "~", x["patient_id"]))
+    return {"study": study, "applicable": applicable, "count": len(out), "participants": out}
+
+
 @router.get("/study/{study}/analysis")
 def study_analysis(study: str, me: dict = Depends(current_user)):
     """研究層級聚合分析（限 doctor）。僅回聚合，不洩個別作答（規則 12 / 憲法 7）。"""
