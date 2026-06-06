@@ -698,31 +698,68 @@ def _background_dist(survey: dict, responses: list) -> dict:
 
 
 def _adherence(sb, pid: str) -> dict:
-    """整合每位使用者日常紀錄活動（RQ1 依從率 proxy）：症狀/生理值/睡眠的活動天數。"""
+    """整合每位使用者日常紀錄活動（RQ1 依從率 proxy）：症狀/生理值/睡眠。
+
+    回傳：活動天數 + 各來源天數 + 逐日統整 timeline（date×來源筆數）
+    + 簡易分析（區間 / 最長連續天數 / 覆蓋率）。純程式碼彙整（規則 5）。
+    """
     def _scan(table, id_col, date_cols):
         try:
             rows = sb.table(table).select("*").eq(id_col, pid).execute().data or []
         except Exception:
-            return set(), 0
-        days = set()
+            return [], 0
+        days = []
         for r in rows:
             for c in date_cols:
                 if r.get(c):
-                    days.add(str(r[c])[:10])
+                    days.append(str(r[c])[:10])
                     break
         return days, len(rows)
 
-    sym_d, sym_n = _scan("symptom_entries", "patient_id", ["recorded_at", "created_at"])
-    vit_d, vit_n = _scan("vital_entries", "patient_id", ["recorded_at", "created_at"])
-    slp_d, slp_n = _scan("sleep_sessions", "user_id", ["bed_time", "created_at"])
+    sym_days, sym_n = _scan("symptom_entries", "patient_id", ["recorded_at", "created_at"])
+    vit_days, vit_n = _scan("vital_entries", "patient_id", ["recorded_at", "created_at"])
+    slp_days, slp_n = _scan("sleep_sessions", "user_id", ["bed_time", "created_at"])
+
+    # 逐日統整：date -> 各來源筆數
+    daily: dict = {}
+    for src, days in (("symptoms", sym_days), ("vitals", vit_days), ("sleep", slp_days)):
+        for d in days:
+            cell = daily.setdefault(d, {"symptoms": 0, "vitals": 0, "sleep": 0})
+            cell[src] += 1
+    ordered = sorted(daily)
+    timeline = [dict(date=d, total=sum(daily[d].values()), **daily[d]) for d in ordered]
+
+    # 簡易分析：區間 / 最長連續天數 / 覆蓋率（活躍天數 ÷ 區間天數）
+    def _parse(s):
+        try:
+            return datetime.strptime(s, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+    dates = [x for x in (_parse(d) for d in ordered) if x]
+    longest = streak = 0
+    prev = None
+    for x in dates:
+        streak = streak + 1 if (prev is not None and (x - prev).days == 1) else 1
+        longest = max(longest, streak)
+        prev = x
+    span = (dates[-1] - dates[0]).days + 1 if dates else 0
+
     return {
-        "active_days": len(sym_d | vit_d | slp_d),
+        "active_days": len(daily),
         "by_source": {
-            "symptoms": {"records": sym_n, "days": len(sym_d)},
-            "vitals": {"records": vit_n, "days": len(vit_d)},
-            "sleep": {"records": slp_n, "days": len(slp_d)},
+            "symptoms": {"records": sym_n, "days": len(set(sym_days))},
+            "vitals": {"records": vit_n, "days": len(set(vit_days))},
+            "sleep": {"records": slp_n, "days": len(set(slp_days))},
         },
-        "note": "活動天數＝有任一日常紀錄的不重複日數，作為依從率參考；精確 7 天完成率請依施測時點離線計算。",
+        "daily": timeline,
+        "analysis": {
+            "first_date": ordered[0] if ordered else None,
+            "last_date": ordered[-1] if ordered else None,
+            "span_days": span,
+            "longest_streak": longest,
+            "coverage": round(len(daily) / span, 2) if span else None,
+        },
+        "note": "活動天數＝有任一日常紀錄的不重複日數；逐日 timeline 與最長連續/覆蓋率供研究者檢視填寫規律。",
     }
 
 

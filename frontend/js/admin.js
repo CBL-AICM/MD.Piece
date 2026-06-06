@@ -47,7 +47,7 @@
       + '<div class="ad-field"><label>密碼</label><input class="ad-input" id="ad-p" type="password" autocomplete="current-password" /></div>'
       + '<div class="ad-err" id="ad-err">' + esc(errMsg || '') + '</div>'
       + '<button class="ad-btn" id="ad-login"><i data-lucide="log-in"></i> 登入</button>'
-      + '<p class="ad-meta" style="text-align:center;margin-top:14px">僅限 doctor 角色帳號。此頁不收集病患資料、僅供研究分析。</p>'
+      + '<p class="ad-meta" style="text-align:center;margin-top:14px">僅限研究者帳號。此頁不收集病患資料、僅供研究分析。</p>'
       + '</div></div>';
     icons();
     var u = document.getElementById('ad-u'), p = document.getElementById('ad-p');
@@ -63,7 +63,7 @@
         return r.json().then(function (j) { return { ok: r.ok, j: j }; });
       }).then(function (res) {
         if (!res.ok) { err.textContent = res.j.detail || '登入失敗'; btn.disabled = false; return; }
-        if (res.j.role !== 'doctor') { err.textContent = '此頁僅限研究者（doctor）帳號'; btn.disabled = false; return; }
+        if (res.j.role !== 'doctor') { err.textContent = '此頁僅限研究者帳號'; btn.disabled = false; return; }
         setTok(res.j.access_token);
         renderDashboard('analysis');
       }).catch(function () { err.textContent = '連線失敗，稍後再試'; btn.disabled = false; });
@@ -85,7 +85,7 @@
       + '<button class="ad-tab" data-tab="participants">患者管理</button>'
       + '</div><div id="ad-body"><div class="ad-empty">載入中…</div></div></div>';
     document.getElementById('ad-logout').onclick = function () { setTok(null); renderLogin(); };
-    var who = role(getTok()); document.getElementById('ad-who').textContent = who ? ('身分：' + who) : '';
+    var who = role(getTok()); document.getElementById('ad-who').textContent = who ? '身分：研究者' : '';
     Array.prototype.forEach.call(document.querySelectorAll('.ad-tab[data-tab]'), function (b) {
       b.onclick = function () { renderDashboard(b.getAttribute('data-tab')); };
     });
@@ -257,6 +257,25 @@
     }
     return '已填';
   }
+  function _dailyCard(adh) {
+    var daily = (adh && adh.daily) || [];
+    var an = (adh && adh.analysis) || {};
+    var summary = '<p class="ad-meta">區間 ' + esc(an.first_date || '—') + ' ～ ' + esc(an.last_date || '—')
+      + '（' + (an.span_days || 0) + ' 天）· 活躍 <b>' + (adh.active_days || 0) + '</b> 天'
+      + ' · 最長連續 ' + (an.longest_streak || 0) + ' 天'
+      + (an.coverage != null ? ' · 覆蓋率 ' + Math.round(an.coverage * 100) + '%' : '') + '</p>';
+    var title = '<h3 style="font-size:.95rem;margin:16px 0 4px;color:var(--navy,#1a1730)">每日紀錄統整</h3>';
+    if (!daily.length) return title + '<p class="ad-meta">尚無日常紀錄。</p>';
+    var head = '<tr><th class="l">日期</th><th>症狀</th><th>生理值</th><th>睡眠</th><th>合計</th></tr>';
+    var rows = daily.map(function (d) {
+      return '<tr><td class="l ad-sub">' + esc(d.date) + '</td>'
+        + '<td>' + (d.symptoms || '·') + '</td><td>' + (d.vitals || '·') + '</td>'
+        + '<td>' + (d.sleep || '·') + '</td><td class="ad-r">' + (d.total || 0) + '</td></tr>';
+    }).join('');
+    return title + summary
+      + '<div class="ad-card" style="padding:6px 10px"><table class="ad-tbl">' + head + rows + '</table></div>';
+  }
+
   function renderParticipant(dr, data, close) {
     var adh = data.adherence || {};
     // 以所有出現過的時點為欄
@@ -282,7 +301,8 @@
       + '（症狀 ' + (((adh.by_source || {}).symptoms || {}).days || 0) + '／生理值 ' + (((adh.by_source || {}).vitals || {}).days || 0) + '／睡眠 ' + (((adh.by_source || {}).sleep || {}).days || 0) + '）</p>'
       + ehl
       + '<div class="ad-card" style="padding:6px 10px"><table class="ad-tbl">' + head + rows + '</table></div>'
-      + '<p class="ad-meta">數值為各量表計分結果；「·」表該時點不適用、「未填」表尚未作答。</p>';
+      + '<p class="ad-meta">數值為各量表計分結果；「·」表該時點不適用、「未填」表尚未作答。</p>'
+      + _dailyCard(adh);
     document.getElementById('ad-dx').onclick = close;
     icons();
   }
