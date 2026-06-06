@@ -119,6 +119,8 @@
     { "src": "/vitals", "dest": "api/index.py" },
     { "src": "/health-literacy/(.*)", "dest": "api/index.py" },
     { "src": "/health-literacy", "dest": "api/index.py" },
+    { "src": "/surveys/(.*)", "dest": "api/index.py" },
+    { "src": "/surveys", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
 }
