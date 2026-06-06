@@ -1,0 +1,5 @@
+# Generated study artifacts are reproducible from (code + config) via the determinism
+# contract (docs/01_architecture.md §3.3) — regenerate with `python -m simulation.run_study`.
+# So we do NOT commit the (large) data files; the result REPORTS live in ../docs/ instead.
+*
+!.gitignore

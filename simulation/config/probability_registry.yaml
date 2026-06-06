@@ -1,0 +1,195 @@
+# PROBABILITY REGISTRY (arch §9.2). Every numeric parameter NOT already in the
+# disease/persona registries: friction, usage, doctor, and evaluation weights.
+# Each is a sensitivity-analysis axis (Phase 7 sweeps this file).
+# Format per knob: value, range [lo, hi] for sweeps, validation_required, note.
+
+# ============================================================
+# L5 FRICTION ENGINE
+# ============================================================
+friction:
+
+  # --- 5a Recall observer: salience-weighted Ebbinghaus forgetting ---
+  recall:
+    forgetting_model: exponential          # exponential | power_law (A06 alt)
+    tau_days:                              # retention time-constant per persona recall_accuracy band
+      value: 120                           # base; effective tau = tau_days * persona.recall_accuracy * salience
+      range: [60, 240]
+      validation_required: true
+      note: "Larger tau = slower forgetting. The single most influential recall knob."
+    telescoping:
+      enabled: true
+      forward_bias_frac:                   # surviving events' dates shift toward visit by this frac of the gap
+        value: 0.25
+        range: [0.0, 0.5]
+      note: "Backward telescoping (recalled as more recent) — classic recall bias."
+    severity_regression:                   # recalled severity regresses toward 'mild'
+      strength:
+        value: 0.35                        # 0=no regression, 1=collapse to mild
+        range: [0.0, 0.7]
+    false_logging_rate:                    # fabricated events (recall-only, source confusion)
+      value: 0.03
+      range: [0.0, 0.10]
+    med_recall_grading: {drug: 0.5, dose: 0.3, frequency: 0.2}   # partial-credit weights (sum=1)
+
+  # --- 5b MD.Piece observer: prospective logging + dropout ---
+  mdpiece:
+    base_logging_prob_source: persona_registry   # logging_prob comes from persona, modulated below
+    engagement_coupling:
+      value: 1.0                           # multiply logging_prob by engagement(t) from usage engine
+      range: [0.5, 1.0]
+    caregiver_boost:
+      value: 0.30                          # +additive to logging_prob when caregiver_assisted (A10)
+      range: [0.0, 0.5]
+    flare_logging_multiplier_cap:
+      value: 2.5                           # cap on symptom-driven flare logging spike
+      range: [1.0, 3.0]
+    logged_quality_decay:                  # A03 — data-entry fatigue; defeats 'perfect after logging'
+      value: 0.05                          # small per-month degradation in logged accuracy
+      range: [0.0, 0.20]
+      validation_required: true
+      note: "Set to 0 to test the optimistic 'logged = permanent perfect' assumption."
+    mis_entry_rate:                        # wrong value entered at log time
+      value: 0.06
+      range: [0.0, 0.15]
+    notification_recovery:                 # a reminder recovers a would-be-omitted event (delayed log)
+      max_recovered_frac:
+        value: 0.30
+        range: [0.0, 0.5]
+      delayed_log_penalty_days: {value: 3, range: [1, 7]}   # added to logged_lag_days
+    ocr_capture:                           # D4 — OFF by default in v0.1
+      enabled: false
+      note: "When true, recovers a fraction of omitted events from uploaded documents."
+
+  # --- Information Friction Score weights (arch §2.3) — D2-adjacent, sensitivity-critical ---
+  if_score_weights:                        # must sum to 1.0
+    event_omission: 0.30
+    medication_error: 0.25
+    temporal_error: 0.15
+    severity_error: 0.15
+    unreviewed_fraction: 0.15              # the doctor-side (L8) term
+    validation_required: true
+    note: "Whole conclusion can hinge on these. Re-run under equal weights as a bias check (A07)."
+
+# ============================================================
+# L2 HEALTHCARE UTILIZATION (within disease_engine) — scheduled + hazard-driven care
+# Care-seeking scales with patient health_literacy & clinic_access (social determinants),
+# NOT with new per-persona constants (keeps the parameter surface honest — Rule 2).
+# ============================================================
+utilization:
+  refill_interval_days: {value: 30, range: [14, 90]}
+  lab_on_appointment_prob: {value: 0.6, range: [0.2, 0.9]}
+  imaging_on_appointment_prob: {value: 0.15, range: [0.0, 0.4]}
+  access_multiplier: {0: 0.65, 1: 0.85, 2: 1.0}   # clinic_access -> care-seeking scaling
+  care_seeking:
+    symptom_visit_prob: {value: 0.40, range: [0.1, 0.8]}  # unscheduled visit on symptom onset
+    flare_visit_prob:   {value: 0.80, range: [0.4, 0.95]} # seek care on a flare
+    literacy_weight: {value: 0.4, range: [0.0, 1.0]}      # health_literacy lifts appropriate care-seeking
+  ed:
+    base_hazard_at_max_activity: {value: 0.04, range: [0.01, 0.10]}  # daily ED hazard when a=1
+    low_access_multiplier: {value: 1.8, range: [1.0, 3.0]}          # poor access -> ED substitution
+    admission_prob_given_ed: {value: 0.35, range: [0.1, 0.6]}
+    icu_prob_given_admission: {value: 0.12, range: [0.0, 0.3]}
+  escalation:
+    prob_given_flare_visit: {value: 0.70, range: [0.3, 0.95]}  # steroid/treatment escalation
+    steroid: oral_prednisone
+    effect_size: {value: 0.35, range: [0.1, 0.6]}              # downward push on a(t) after lag
+    deescalation_stable_days: {value: 30, range: [14, 90]}     # taper after sustained remission
+
+# ============================================================
+# L6 USAGE ENGINE — discrete-time survival retention
+# ============================================================
+usage:
+  retention:
+    hazard_model: log_logistic             # declining hazard (early-heavy dropout)
+    median_lifetime_days:
+      value: 75                            # PESSIMISTIC default (D3, A09): ~M3 most users gone
+      range: [30, 180]
+      validation_required: true
+      note: "Effective median = base * persona.retention_kappa. Headline sensitivity axis."
+    shape:
+      value: 1.4                           # >1 = hazard rises then falls; tunes curve steepness
+      range: [1.0, 2.5]
+    flare_reengagement:
+      spike_multiplier: {value: 3.0, range: [1.0, 5.0]}   # engagement burst during a flare
+      decay_days: {value: 14, range: [7, 30]}
+    caregiver_retention_floor:
+      value: 0.40                          # caregiver-managed patients can't drop below this active prob
+      range: [0.0, 0.6]
+    onboarding_completion:
+      value: 0.70                          # BASE fraction (at engagement_level=0.5) past Day-1 onboarding
+      range: [0.4, 0.9]
+    onboarding_engagement_spread:
+      value: 0.6                           # onboarding scales with persona engagement_level (not uniform):
+      range: [0.0, 1.0]                    # p = base + (engagement_level - 0.5)*spread. High-engagement
+      note: "personas almost always onboard; low-engagement often never adopt (a real MD.Piece outcome)."
+  notifications:
+    weekly_sends: {value: 3, range: [0, 7]}
+
+# ============================================================
+# L8 DOCTOR ENGINE
+# ============================================================
+doctor:
+  persona_mix:                             # share of physicians by persona
+    HIGHLY_ENGAGED: 0.15
+    MODERATELY_ENGAGED: 0.30
+    TIME_CONSTRAINED: 0.25
+    SKEPTICAL: 0.12
+    DATA_ORIENTED: 0.10
+    TRADITIONAL: 0.08
+  review_probability:                      # P(physician actually reviews the record/snapshot)
+    base: {value: 0.55, range: [0.2, 0.9]}
+    persona_offset: {HIGHLY_ENGAGED: +0.35, TIME_CONSTRAINED: -0.25, TRADITIONAL: -0.30, SKEPTICAL: -0.15}
+  reading_time_sec:
+    base: {value: 90, range: [30, 300]}
+    per_event: {value: 4, range: [1, 10]}  # +sec per event presented (more data = more time)
+  reading_budget_base_sec: {value: 200, range: [60, 600]}   # attention budget at the snapshot
+  budget_multiplier:                       # time-constrained physicians have less to spend
+    HIGHLY_ENGAGED: 1.8
+    MODERATELY_ENGAGED: 1.2
+    TIME_CONSTRAINED: 0.45
+    SKEPTICAL: 0.9
+    DATA_ORIENTED: 1.3
+    TRADITIONAL: 0.8
+  understanding:
+    # understanding = saturating fn of (completeness * snapshot_signal_to_noise),
+    # capped by physician reading-time budget. Diminishing returns + possible NEGATIVE
+    # return on noise (a noisy over-complete record can REDUCE a time-constrained reader).
+    saturation_k:
+      value: 4.0                           # logistic steepness; higher = quicker saturation
+      range: [1.0, 8.0]
+    noise_penalty:
+      value: 0.6                           # how much low signal-to-noise subtracts (A11-adjacent)
+      range: [0.0, 1.0]
+      note: "This is what lets MD.Piece LOSE the clinical endpoint while winning the data endpoint."
+    threshold:
+      value: 0.6                           # understanding level counted as 'clinically understood'
+      range: [0.4, 0.8]
+    accuracy_coupling:
+      value: 0.7                           # TRUE understanding is discounted by record ACCURACY:
+      range: [0.0, 1.0]                    # a complete-but-wrong-dated record gives FALSE confidence,
+      note: "not real understanding. 0 = volume-only (old behavior); 1 = full accuracy discount (A11 fix)."
+    trust_completeness_coupling:
+      value: 0.4                           # skeptical physicians weight completeness less
+      range: [0.0, 1.0]
+
+# ============================================================
+# CLINICAL SALIENCE TABLE (D2) — drives forgetting + eval weighting
+# Expert-judgment ordinal weights; the #1 thing a clinician must sign off (arch §12 D2).
+# ============================================================
+salience_by_event_type:
+  HOSPITALIZATION: 1.00
+  EMERGENCY_VISIT: 0.95
+  INFUSION: 0.80
+  MEDICATION_CHANGE: 0.75
+  PROCEDURE: 0.75
+  FLARE: 0.70
+  RELAPSE: 0.90          # via FLARE source=relapse
+  TREATMENT: 0.70
+  INFECTION: 0.55
+  APPOINTMENT: 0.45
+  LAB: 0.40
+  IMAGING: 0.45
+  REFILL: 0.35
+  SYMPTOM: 0.30
+  REMISSION: 0.50
+  validation_required: true
