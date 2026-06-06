@@ -14484,6 +14484,14 @@ function medications() {
     +     '<i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--accent);position:relative;z-index:1"></i>'
     +   '</button>'
 
+    // 拍照預覽 + 辨識結果渲染目標（mobile）。
+    // 注意：handleMedPhoto / _renderMedPreviewAndRecognize / renderRecognizedEditable
+    // 都以 id 寫死 med-photo-preview / med-recognize-result。全站套 theme-modern，
+    // desktop-only 區塊永遠 display:none，所以這兩個容器必須放在可見的 mobile-only 裡，
+    // 否則拍完照辨識有跑、結果卻渲染進隱藏容器（= 拍完照沒東西）。
+    +   '<div id="med-photo-preview" style="margin-top:10px"></div>'
+    +   '<div id="med-recognize-result" style="margin-top:10px"></div>'
+
     // 手動新增藥物（次要 CTA — 給臨時加藥、沒有藥袋的情境）
     +   '<button class="ocr-hero-btn med-manual-btn" onclick="renderManualMedForm(\'\', \'請填寫藥物資訊（至少藥名必填）\', \'mobile-med-form-container\')">'
     +     '<div style="width:44px;height:44px;border-radius:11px;background:var(--bg-soft);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border)">'
@@ -14580,8 +14588,9 @@ function medications() {
         <input type="file" id="med-camera" accept="image/*" capture="environment" style="display:none" onchange="handleMedPhoto(this)" />
         <input type="file" id="med-upload" accept="image/*" style="display:none" onchange="handleMedPhoto(this)" />
       </div>
-      <div id="med-photo-preview" style="margin-top:12px"></div>
-      <div id="med-recognize-result" style="margin-top:12px"></div>
+      <!-- med-photo-preview / med-recognize-result 已移至 mobile-only 區塊（全站套 theme-modern，
+           desktop-only 永遠 display:none，結果容器放這裡會看不見）。input#med-camera 仍由本區渲染、
+           mobile hero 共用同一 id。 -->
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center">
