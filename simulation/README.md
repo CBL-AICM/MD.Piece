@@ -29,9 +29,12 @@ information loss than unaided retrospective recall?**
 (helps 64% of patients) — but on raw **Event Recall Rate** Δ=**−0.126** and **Doctor
 Understanding** Δ=**−0.120**. I.e. MD.Piece captures *fewer* events but records them *more
 accurately*. Benefit concentrates in caregiver-managed (+0.44) & high-engagement personas;
-harm in tech-avoidant (−0.13) & low-engagement. **Sensitivity** (`sensitivity_report.md`): the
+harm in tech-avoidant (−0.13) & low-engagement. **Sensitivity** (`docs/06_sensitivity.md`): the
 sign flips on `notif_recovery`; the full-adoption ceiling is +0.235 (the gap = the engagement
-penalty); uniform-vs-clinical salience barely moves it (not a weighting artifact).
+penalty); uniform-vs-clinical salience barely moves it (not a weighting artifact). **Global Sobol**
+(`docs/07_sobol.md`, Saltelli N=64): variance is ~additive (ΣS1≈1.0, interactions negligible) and
+dominated by `notif_recovery` (ST≈0.40) > `recall_tau` (0.28) > `onboarding` (0.24) — corroborating
+the one-at-a-time ranking, so the decisive driver isn't hidden in interactions.
 
 **Phase 5 progress** (`pytest simulation/tests/` → **27/27 green**):
 - **L1 patients + L4 persona** — `python -m simulation.build_population`. Determinism,
