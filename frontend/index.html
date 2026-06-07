@@ -116,7 +116,7 @@
     // 把 V 改高一級 → 每個使用者下次開站會清光 SW + caches + reload，
     // 各種 stale cache 全部失效。每個版本每個使用者只清一次。
     (async function() {
-      var APP_BUST = 'v19-inpatient-v2-2026-06-05';
+      var APP_BUST = 'v20-survey-ui-2026-06-07';
       try {
         if (localStorage.getItem('mdp-cache-bust') === APP_BUST) return;
         localStorage.setItem('mdp-cache-bust', APP_BUST);
@@ -578,6 +578,10 @@
           <span class="nav-icon"><i data-lucide="user-cog" style="width:18px;height:18px"></i></span>
           <span class="nav-text"><span class="nav-label" data-i18n="nav.account">帳號設定</span><span class="nav-sub" data-i18n="nav.sub.account">個資 · 通知</span></span>
         </button>
+        <button class="nav-item" type="button" onclick="closeSidebar(); openStudyHub();">
+          <span class="nav-icon"><i data-lucide="clipboard-pen" style="width:18px;height:18px"></i></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.surveys">研究問卷</span><span class="nav-sub" data-i18n="nav.sub.surveys">慢性病管理可行性研究 · 分時點填答</span></span>
+        </button>
       </nav>
       <div class="sidebar-foot">
         <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
@@ -713,9 +717,9 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=v83-predict-nav"></script>
+  <script src="js/i18n.js?v=v84-survey-ui"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v156-inpatient-v2"></script>
+  <script src="js/app.js?v=v157-survey-ui"></script>
   <script src="js/edu-codex.js?v=v3" defer></script>
   <script src="js/landing.js"></script>
   <script>
