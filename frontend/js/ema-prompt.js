@@ -66,6 +66,8 @@
     var scrim = document.createElement('div'); scrim.className = 'ema-scrim';
     var sheet = document.createElement('div'); sheet.className = 'ema-sheet';
     var items = survey.items || [];
+    // 研究問卷的量尺放在 scoring.scale（非逐題）；render 時以此 fallback，避免渲染錯範圍。
+    var sc = (survey.scoring && survey.scoring.scale) || {};
 
     function close(complete) {
       sheet.classList.remove('on'); scrim.classList.remove('on');
@@ -82,11 +84,14 @@
       var q = document.createElement('div'); q.className = 'ema-q';
       var inner = '<div class="ema-qt">' + esc(it.text) + '</div>';
       if (it.type === 'likert') {
-        var lo = (it.min != null ? it.min : 1), hi = (it.max != null ? it.max : 7);
+        var lo = (it.min != null ? it.min : (sc.min != null ? sc.min : 1));
+        var hi = (it.max != null ? it.max : (sc.max != null ? sc.max : 7));
+        var loL = it.lo || sc.min_label || '';
+        var hiL = it.hi || sc.max_label || '';
         inner += '<div class="ema-lk">';
         for (var v = lo; v <= hi; v++) inner += '<button data-v="' + v + '">' + v + '</button>';
         inner += '</div>';
-        if (it.lo || it.hi) inner += '<div class="ema-ends"><span>' + esc(it.lo || '') + '</span><span>' + esc(it.hi || '') + '</span></div>';
+        if (loL || hiL) inner += '<div class="ema-ends"><span>' + esc(loL) + '</span><span>' + esc(hiL) + '</span></div>';
       } else if (it.type === 'single' || it.type === 'multi') {
         (it.options || []).forEach(function (o) { inner += '<button class="ema-opt" data-o="' + esc(o) + '">' + esc(o) + '</button>'; });
       } else if (it.type === 'text') {
