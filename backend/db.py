@@ -535,6 +535,19 @@ _SCHEMAS = {
             participant_code TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
+    "app_events": """
+        CREATE TABLE IF NOT EXISTS app_events (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            session_id TEXT,
+            event_type TEXT NOT NULL,
+            event_name TEXT,
+            target TEXT,
+            value REAL,
+            metadata TEXT,
+            occurred_at TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
 }
 
 
