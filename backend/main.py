@@ -13,7 +13,7 @@ from backend.routers import (
     admissions, timeline, follow_ups, profile,
     inpatient, menstrual, predict, sleep,
     memos, vitals, health_literacy, surveys,
-    events, ema,
+    events, ema, rewards,
 )
 from backend.services import llm_service
 
@@ -78,6 +78,7 @@ app.include_router(sleep.router, prefix="/sleep", tags=["sleep"])
 app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
 app.include_router(follow_ups.router, prefix="/follow-ups", tags=["follow-ups"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
+app.include_router(rewards.router, prefix="/rewards", tags=["rewards"])
 app.include_router(predict.router, tags=["predict"])
 
 @app.get("/health/llm")

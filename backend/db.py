@@ -548,6 +548,17 @@ _SCHEMAS = {
             occurred_at TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )""",
+    "reward_redemptions": """
+        CREATE TABLE IF NOT EXISTS reward_redemptions (
+            id TEXT PRIMARY KEY,
+            patient_id TEXT NOT NULL,
+            reward_id TEXT NOT NULL,
+            reward_name TEXT,
+            cost INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'requested',
+            note TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )""",
 }
 
 

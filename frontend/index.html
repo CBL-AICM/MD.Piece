@@ -75,6 +75,7 @@
   <link rel="stylesheet" href="css/ghibli-theme.css?v=v3" />
   <link rel="stylesheet" href="css/edu-codex.css?v=v3" />
   <link rel="stylesheet" href="css/predict.css?v=v1" />
+  <link rel="stylesheet" href="css/rewards.css?v=v1-rewards" /><!-- 獎勵中心（additive；只用 tokens，無覆寫） -->
   <link rel="stylesheet" href="css/hanako.css" /><!-- 地縛少年花子君 vintage-manga theme (additive; re-skins via tokens, no JS/markup change) -->
   <!-- ★ MD.Piece 2.0 design system (additive · .mp- prefixed · no CSS-var collisions · consumed only by new 2.0 markup) -->
   <link rel="stylesheet" href="css/tokens.css?v=2.0-a1" />
@@ -116,7 +117,7 @@
     // 把 V 改高一級 → 每個使用者下次開站會清光 SW + caches + reload，
     // 各種 stale cache 全部失效。每個版本每個使用者只清一次。
     (async function() {
-      var APP_BUST = 'v20-survey-ui-2026-06-07';
+      var APP_BUST = 'v21-rewards-2026-06-07';
       try {
         if (localStorage.getItem('mdp-cache-bust') === APP_BUST) return;
         localStorage.setItem('mdp-cache-bust', APP_BUST);
@@ -582,6 +583,10 @@
           <span class="nav-icon"><i data-lucide="clipboard-pen" style="width:18px;height:18px"></i></span>
           <span class="nav-text"><span class="nav-label" data-i18n="nav.surveys">健康回饋問卷</span><span class="nav-sub" data-i18n="nav.sub.surveys">不同時間點各填一次，幫我們做得更好</span></span>
         </button>
+        <button class="nav-item" data-page="rewards" onclick="navigateTo('rewards', this)">
+          <span class="nav-icon"><i data-lucide="award" style="width:18px;height:18px"></i></span>
+          <span class="nav-text"><span class="nav-label" data-i18n="nav.rewards">獎勵中心</span><span class="nav-sub" data-i18n="nav.sub.rewards">紀錄換積分 · 徽章 · 兌換</span></span>
+        </button>
       </nav>
       <div class="sidebar-foot">
         <button class="mode-toggle" data-mode-toggle onclick="toggleMode()" aria-pressed="false">
@@ -717,9 +722,9 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=v84-survey-ui"></script>
+  <script src="js/i18n.js?v=v85-rewards"></script>
   <script src="js/bell.js?v=v81-bell"></script>
-  <script src="js/app.js?v=v157-survey-ui"></script>
+  <script src="js/app.js?v=v158-rewards"></script>
   <script src="js/tracker.js?v=v3-ema" defer></script>
   <script src="js/ema-prompt.js?v=v3-ema" defer></script>
   <script src="js/edu-codex.js?v=v3" defer></script>
