@@ -16,19 +16,19 @@ const URL_BASE = process.env.PREVIEW_URL || 'http://127.0.0.1:3000/';
 // Mirrors backend /surveys/study/.../summary shape (parts come from seed).
 const HUB = {
   parts: [
-    { key: 'A',  part: 'A',  title: 'A. 背景資料',                 timepoints: ['D0'],          by_timepoint: { D0: { completed: true } } },
-    { key: 'B1', part: 'B1', title: 'B1. 慢性病自我效能（SECD-6）',  timepoints: ['D0','D14','D28'], by_timepoint: { D0: { completed: false } } },
-    { key: 'B2', part: 'B2', title: 'B2. 數位健康識能（eHEALS 改編）', timepoints: ['D0'],        by_timepoint: { D0: { completed: false } } },
-    { key: 'B3', part: 'B3', title: 'B3. 就診前準備度（自編）',       timepoints: ['D0','D14','D28'], by_timepoint: { D0: { completed: false } } },
-    { key: 'C1', part: 'C1', title: 'C1. 每日記錄功能',             timepoints: ['D14','D28'],   by_timepoint: {} },
-    { key: 'D1', part: 'D1', title: 'D1. 醫師同理（CARE）',          timepoints: ['FU48'],        by_timepoint: {} },
+    { key: 'A',  part: 'A',  title: 'A. 背景資料',                      timepoints: ['D0'],          by_timepoint: { D0: { completed: true } } },
+    { key: 'B1', part: 'B1', title: 'B1. 慢性病自我照顧的把握',          timepoints: ['D0','D14','D28'], by_timepoint: { D0: { completed: false } } },
+    { key: 'B2', part: 'B2', title: 'B2. 用網路或 App 找健康資訊的信心', timepoints: ['D0'],          by_timepoint: { D0: { completed: false } } },
+    { key: 'B3', part: 'B3', title: 'B3. 看診前的準備',                 timepoints: ['D0','D14','D28'], by_timepoint: { D0: { completed: false } } },
+    { key: 'C1', part: 'C1', title: 'C1. 每日記錄功能',                 timepoints: ['D14','D28'],   by_timepoint: {} },
+    { key: 'D1', part: 'D1', title: 'D1. 看診時醫師的同理',             timepoints: ['FU48'],        by_timepoint: {} },
   ],
   adherence: { active_days: 7, by_source: { symptoms: { days: 6 }, vitals: { days: 2 }, sleep: { days: 0 } } },
   eheals_m07: { total_score: 31 },
 };
 
 const SURVEY = {
-  key: 'B1', title: 'B1. 慢性病自我效能（SECD-6）',
+  key: 'B1', title: 'B1. 慢性病自我照顧的把握',
   description: '對做到下列事情有多少把握：1=完全沒把握，10=完全有把握。',
   scoring: { scale: { min: 1, max: 10, min_label: '完全沒把握', max_label: '完全有把握' } },
   items: [

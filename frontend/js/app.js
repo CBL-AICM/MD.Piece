@@ -4186,12 +4186,25 @@ function _studyEnsureStyles() {
     + '.study-qt{font-size:.95rem;font-weight:600;color:var(--content,#2a2420);line-height:1.5;margin-bottom:10px}'
     + '.study-opts{display:flex;flex-wrap:wrap;gap:8px}'
     + '.study-opts.study-col{flex-direction:column}'
+    // 數字量表：等寬格狀排列，10 點變整齊的 5+5 而非凌亂的 6+4，按鈕加大好點。
+    + '.study-opts.study-scale{display:grid;gap:8px}'
+    + '.study-scale .study-opt{min-width:0;padding:13px 0;text-align:center;justify-content:center;font-size:1.02rem}'
+    + '.study-na-row{margin-top:8px;display:flex}'
     + '.study-opt{min-width:40px;padding:9px 12px;border:1.4px solid var(--line,#d9d2c5);border-radius:11px;'
-    + 'background:var(--surface-1,#fff);color:var(--content,#2a2420);font-size:.9rem;font-weight:600;cursor:pointer;line-height:1.3}'
+    + 'background:var(--surface-1,#fff);color:var(--content,#2a2420);font-size:.9rem;font-weight:600;cursor:pointer;line-height:1.3;'
+    + 'display:inline-flex;align-items:center;transition:background .12s,border-color .12s,transform .06s}'
+    + '.study-opt:active{transform:scale(.96)}'
     + '.study-opt.study-wide{width:100%;text-align:left}'
-    + '.study-opt.is-sel{background:var(--primary,#1e8a82);border-color:var(--primary,#1e8a82);color:#fff}'
-    + '.study-opt.study-na.is-sel{background:var(--content-muted,#8a8175);border-color:var(--content-muted,#8a8175)}'
+    + '.study-opt.is-sel{background:var(--primary,#1e8a82);border-color:var(--primary,#1e8a82);color:#fff;box-shadow:0 2px 8px -3px var(--primary,#1e8a82)}'
+    + '.study-opt.study-na.is-sel{background:var(--content-muted,#8a8175);border-color:var(--content-muted,#8a8175);box-shadow:none}'
     + '.study-ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--content-subtle,#9a9087);margin-top:6px}'
+    // 進度條：讓填答者（尤其長者）看得到「還剩幾題」，降低未知感。
+    + '.study-prog{display:flex;align-items:center;gap:9px;margin:0 2px 10px}'
+    + '.study-prog-bar{flex:1;height:7px;border-radius:999px;background:var(--line,#ece7dd);overflow:hidden}'
+    + '.study-prog-bar>i{display:block;height:100%;width:0;background:var(--teal,#2F8378);border-radius:999px;transition:width .25s ease}'
+    + '.study-prog span{flex:0 0 auto;font-size:.76rem;font-weight:600;color:var(--content-subtle,#9a9087)}'
+    // 問卷標題在病患端用親切的無襯線字，不沿用 ip-prep 的等寬程式字（僅 study 範圍內覆寫）。
+    + '#study-run .ip-prep-when-num,#study-sheet .ip-prep-when-num{font-family:var(--font-sans,system-ui,-apple-system,"Noto Sans TC",sans-serif);letter-spacing:0;font-size:1.18rem;line-height:1.38}'
     + '.study-chk{display:flex;align-items:center;gap:8px;font-size:.9rem;padding:6px 2px}'
     + '.study-text{width:100%;border:1.4px solid var(--line,#d9d2c5);border-radius:11px;padding:10px;font:inherit;box-sizing:border-box}'
     + '.study-tbl{width:100%;border-collapse:collapse;font-size:.82rem;margin:6px 0 4px}'
@@ -4357,17 +4370,22 @@ function _studyItemHtml(it, scoring) {
     var mx = (it.max != null ? it.max : scale.max);
     var pts = scale.point_labels || null;
     var btns = '';
+    var n = 0;
     for (var v = mn; v <= mx; v++) {
       var lbl = pts ? (pts[v - 1] != null ? pts[v - 1] : v) : v;
       btns += '<button type="button" class="study-opt" data-q="' + it.id + '" data-v="' + v + '" '
         + 'onclick="_studySelect(\'' + it.id + '\',' + v + ',this)">' + escapeHtml(String(lbl)) + '</button>';
+      n++;
     }
+    // ≤7 點排成一列；8–10 點折成兩列等寬（10 → 5+5），維持整齊好點。
+    var cols = n <= 7 ? n : Math.ceil(n / 2);
     var naBtn = scale.na
-      ? '<button type="button" class="study-opt study-na" data-q="' + it.id + '" onclick="_studySelect(\'' + it.id + '\',\'NA\',this)">N/A</button>' : '';
+      ? '<div class="study-na-row"><button type="button" class="study-opt study-na" data-q="' + it.id + '" onclick="_studySelect(\'' + it.id + '\',\'NA\',this)">N/A</button></div>' : '';
     var ends = (scale.min_label || scale.max_label)
       ? '<div class="study-ends"><span>' + escapeHtml(scale.min_label || '') + '</span><span>' + escapeHtml(scale.max_label || '') + '</span></div>' : '';
     return '<div class="study-q" id="study-q-' + it.id + '"><div class="study-qt">' + escapeHtml(it.text) + '</div>'
-      + '<div class="study-opts">' + btns + naBtn + '</div>' + ends + '</div>';
+      + '<div class="study-opts study-scale" style="grid-template-columns:repeat(' + cols + ',1fr)">' + btns + '</div>'
+      + ends + naBtn + '</div>';
   }
   if (t === 'single') {
     var o1 = (it.options || []).map(function (o) {
@@ -4390,7 +4408,7 @@ function _studyItemHtml(it, scoring) {
 
 function _studyRenderSurvey(s, tp) {
   _studyEnsureStyles();
-  _studyState = { answers: {}, key: s.key, tp: tp };
+  _studyState = { answers: {}, key: s.key, tp: tp, total: (s.items || []).length };
   var ex = document.getElementById('study-run'); if (ex) ex.remove();
   var scoring = s.scoring || {};
   var body = (s.items || []).map(function (it) { return _studyItemHtml(it, scoring); }).join('');
@@ -4401,12 +4419,13 @@ function _studyRenderSurvey(s, tp) {
     + '<div class="ip-prep-backdrop" onclick="closeStudyRun()"></div>'
     + '<div class="ip-prep-panel" role="dialog" aria-label="' + escapeHtml(s.title) + '" aria-modal="true" tabindex="-1" style="max-height:90vh;overflow:auto">'
     +   '<header class="ip-prep-head">'
-    +     '<div class="ip-prep-when"><span class="ip-prep-when-num">' + escapeHtml(s.title) + '</span>'
+    +     '<div class="ip-prep-when"><span class="ip-prep-when-num">' + escapeHtml(_studyCleanTitle(s.title)) + '</span>'
     +       '<span class="ip-prep-when-sub">' + (s.description ? escapeHtml(s.description) : '') + '</span></div>'
     +     '<button type="button" class="ip-prep-close" onclick="closeStudyRun()" aria-label="' + _T('app.c6.close') + '"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
     +   '</header>'
     +   '<div style="padding:2px">' + body + '</div>'
     +   '<div class="ehl-foot">'
+    +     '<div class="study-prog"><div class="study-prog-bar"><i id="study-prog-fill"></i></div><span id="study-prog-txt"></span></div>'
     +     '<button type="button" class="ip-prep-cta" onclick="submitStudySurvey()"><i data-lucide="check" style="width:16px;height:16px"></i><span>' + _T('app.c6.submit') + '</span></button>'
     +     '<button type="button" class="ip-prep-secondary" onclick="closeStudyRun()">' + _T('app.c6.later') + '</button>'
     +     '<p class="study-meta" style="text-align:center">' + _T('app.c6.noRightWrongSkip') + '</p>'
@@ -4414,22 +4433,46 @@ function _studyRenderSurvey(s, tp) {
     + '</div>';
   document.body.appendChild(sheet);
   requestAnimationFrame(function () { sheet.classList.add('open'); });
+  _studyUpdateProgress();
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 已作答題數（複選空陣列、空字串不算），給進度條用。
+function _studyAnsweredCount() {
+  var a = _studyState.answers || {};
+  var n = 0;
+  Object.keys(a).forEach(function (k) {
+    var v = a[k];
+    if (Array.isArray(v)) { if (v.length) n++; }
+    else if (v !== '' && v != null) n++;
+  });
+  return n;
+}
+function _studyUpdateProgress() {
+  var total = _studyState.total || 0;
+  var done = _studyAnsweredCount();
+  var fill = document.getElementById('study-prog-fill');
+  var txt = document.getElementById('study-prog-txt');
+  if (fill) fill.style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+  if (txt) txt.textContent = _Tf('app.c6.progress', { done: done, total: total });
 }
 
 function _studySelect(qid, val, btn) {
   _studyState.answers[qid] = val;
   var row = document.getElementById('study-q-' + qid);
   if (row) row.querySelectorAll('.study-opt').forEach(function (b) { b.classList.toggle('is-sel', b === btn); });
+  _studyUpdateProgress();
 }
 function _studyMulti(qid) {
   var row = document.getElementById('study-q-' + qid); if (!row) return;
   var vals = [];
   row.querySelectorAll('input[type=checkbox]:checked').forEach(function (c) { vals.push(c.value); });
   _studyState.answers[qid] = vals;
+  _studyUpdateProgress();
 }
 function _studyText(qid, val) {
   if ((val || '').trim()) _studyState.answers[qid] = val; else delete _studyState.answers[qid];
+  _studyUpdateProgress();
 }
 
 function submitStudySurvey() {
