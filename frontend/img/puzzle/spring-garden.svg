@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="療癒花園">
+  <!-- 平面化、粗線條、可愛風的「療癒花園」療程拼圖。300x300，可被 3x3 切片。 -->
+  <defs>
+    <clipPath id="sg-frame"><rect x="0" y="0" width="300" height="300" rx="18"/></clipPath>
+  </defs>
+  <g clip-path="url(#sg-frame)" stroke="#3a4a3f" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="0" y="0" width="300" height="300" fill="#dff1e3" stroke="none"/>
+    <rect x="0" y="210" width="300" height="90" fill="#cfe6c6" stroke="none"/>
+    <!-- 太陽笑臉 -->
+    <g>
+      <circle cx="248" cy="56" r="30" fill="#ffd86b"/>
+      <g stroke="#ffd86b" stroke-width="6">
+        <line x1="248" y1="10" x2="248" y2="20"/>
+        <line x1="294" y1="56" x2="284" y2="56"/>
+        <line x1="284" y1="24" x2="277" y2="31"/>
+      </g>
+      <circle cx="240" cy="52" r="3.5" fill="#3a4a3f" stroke="none"/>
+      <circle cx="256" cy="52" r="3.5" fill="#3a4a3f" stroke="none"/>
+      <path d="M238 64 q10 8 20 0" fill="none" stroke-width="4"/>
+    </g>
+    <!-- 灑水壺 -->
+    <g>
+      <path d="M40 130 h70 v54 q0 16 -16 16 h-38 q-16 0 -16 -16 z" fill="#8fcadf"/>
+      <path d="M110 142 l40 -16 l4 10 l-40 18 z" fill="#8fcadf"/>
+      <circle cx="156" cy="124" r="9" fill="#8fcadf"/>
+      <path d="M40 130 q-8 -22 18 -22" fill="none"/>
+      <g stroke="#8fcadf" stroke-width="5"><line x1="158" y1="132" x2="150" y2="150"/><line x1="166" y1="132" x2="160" y2="150"/></g>
+    </g>
+    <!-- 花朵 -->
+    <g>
+      <line x1="90" y1="300" x2="90" y2="230"/>
+      <g fill="#ff9aa2"><circle cx="90" cy="214" r="13"/><circle cx="74" cy="226" r="13"/><circle cx="106" cy="226" r="13"/><circle cx="82" cy="240" r="13"/><circle cx="98" cy="240" r="13"/></g>
+      <circle cx="90" cy="227" r="9" fill="#ffe08a"/>
+    </g>
+    <g>
+      <line x1="200" y1="300" x2="200" y2="234"/>
+      <g fill="#c9a8e8"><circle cx="200" cy="220" r="12"/><circle cx="186" cy="231" r="12"/><circle cx="214" cy="231" r="12"/><circle cx="193" cy="244" r="12"/><circle cx="207" cy="244" r="12"/></g>
+      <circle cx="200" cy="232" r="8" fill="#ffe08a"/>
+    </g>
+    <!-- 葉子 -->
+    <path d="M150 300 v-40 q22 -2 26 -24 q-24 0 -26 22 z" fill="#7fc081"/>
+    <rect x="2.5" y="2.5" width="295" height="295" rx="16" fill="none" stroke="#3a4a3f" stroke-width="5"/>
+  </g>
+</svg>
