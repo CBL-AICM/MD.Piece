@@ -92,3 +92,18 @@ def test_catalog_affordability_reflects_balance():
     assert cat["health-kit"]["affordable"] is False     # 200 > 120
     assert R.get_reward("health-kit")["cost"] == 200
     assert R.get_reward("does-not-exist") is None
+
+
+def test_spent_excludes_cancelled_so_cancel_refunds():
+    # 為什麼：後台「退回」一筆兌換＝退點。若 cancelled 仍計入已花點數，
+    # 病患會被白白扣點，發放流程就失去可逆性——這條保證 cancel 真的退點。
+    rows = [
+        {"cost": 50, "status": "requested"},   # 已扣
+        {"cost": 120, "status": "fulfilled"},  # 已扣（已發放仍算花掉）
+        {"cost": 200, "status": "cancelled"},  # 退回，不計
+    ]
+    assert R.spent_from_rows(rows) == 170      # 50 + 120，不含被退回的 200
+    # status 缺漏視為 requested（仍計入），避免舊資料被當成免費
+    assert R.spent_from_rows([{"cost": 30}]) == 30
+    # 全部退回 → 已花 0
+    assert R.spent_from_rows([{"cost": 80, "status": "cancelled"}]) == 0

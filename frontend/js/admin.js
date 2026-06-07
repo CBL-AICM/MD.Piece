@@ -103,6 +103,7 @@
       + '<div class="ad-tabs">'
       + '<button class="ad-tab" data-tab="analysis">' + esc(T('admin.tab.analysis')) + '</button>'
       + '<button class="ad-tab" data-tab="participants">' + esc(T('admin.tab.participants')) + '</button>'
+      + '<button class="ad-tab" data-tab="rewards">' + esc(T('admin.tab.rewards')) + '</button>'
       + '</div><div id="ad-body"><div class="ad-empty">' + esc(T('admin.loading')) + '</div></div></div>';
     document.getElementById('ad-logout').onclick = function () { setTok(null); renderLogin(); };
     wireLang();
@@ -112,7 +113,9 @@
     });
     icons();
     setActiveTab(tab);
-    if (tab === 'participants') loadParticipants(); else loadAnalysis();
+    if (tab === 'participants') loadParticipants();
+    else if (tab === 'rewards') loadRedemptions();
+    else loadAnalysis();
   }
   function setActiveTab(tab) {
     Array.prototype.forEach.call(document.querySelectorAll('.ad-tab[data-tab]'), function (b) {
@@ -333,6 +336,62 @@
       + _dailyCard(adh);
     document.getElementById('ad-dx').onclick = close;
     icons();
+  }
+
+  // ── rewards / redemptions tab ─────────────────────────────
+  // 院方在此檢視病患的兌換申請，並核發（fulfilled）或退回退點（cancelled）。
+  function rwStatus(st) {
+    st = st || 'requested';
+    var cls = st === 'fulfilled' ? 'ok' : (st === 'cancelled' ? 'none' : 'part');
+    return '<span class="ad-pill ' + cls + '">' + esc(T('admin.rw.st.' + st)) + '</span>';
+  }
+  function loadRedemptions() {
+    var body = document.getElementById('ad-body');
+    body.innerHTML = '<div id="ad-rw"><div class="ad-empty">' + esc(T('admin.loading')) + '</div></div>';
+    api('/rewards/admin/redemptions').then(function (r) {
+      if (!r.ok) throw new Error('rw'); return r.json();
+    }).then(renderRedemptions).catch(function (e) {
+      if (String(e.message) !== '401') document.getElementById('ad-rw').innerHTML = '<div class="ad-empty">' + esc(T('admin.rw.err')) + '</div>';
+    });
+  }
+  function renderRedemptions(data) {
+    var box = document.getElementById('ad-rw');
+    var rs = data.redemptions || [];
+    if (!rs.length) { box.innerHTML = '<div class="ad-empty">' + esc(T('admin.rw.empty')) + '</div>'; return; }
+    var c = data.counts || {};
+    var head = '<tr><th class="l">' + esc(T('admin.rw.col.patient')) + '</th><th class="l">' + esc(T('admin.rw.col.reward')) + '</th>'
+      + '<th>' + esc(T('admin.rw.col.cost')) + '</th><th>' + esc(T('admin.rw.col.status')) + '</th>'
+      + '<th class="l">' + esc(T('admin.rw.col.time')) + '</th><th></th></tr>';
+    var rows = rs.map(function (r) {
+      var pending = (r.status || 'requested') === 'requested';
+      var act = pending
+        ? '<button class="ad-btn" data-act="fulfill" data-id="' + esc(r.id) + '">' + esc(T('admin.rw.fulfill')) + '</button>'
+          + ' <button class="ad-btn secondary" data-act="cancel" data-id="' + esc(r.id) + '">' + esc(T('admin.rw.cancel')) + '</button>'
+        : '<span class="ad-sub">—</span>';
+      return '<tr><td class="l"><span class="ad-sub">' + esc((r.patient_id || '').slice(0, 8)) + '</span></td>'
+        + '<td class="l">' + esc(r.reward_name || r.reward_id || '—') + '</td>'
+        + '<td>' + (r.cost != null ? r.cost : '—') + '</td>'
+        + '<td>' + rwStatus(r.status) + '</td>'
+        + '<td class="l ad-sub">' + esc((r.created_at || '').slice(0, 10)) + '</td>'
+        + '<td>' + act + '</td></tr>';
+    }).join('');
+    box.innerHTML = '<p class="ad-meta">' + esc(Tf('admin.rw.summary', { req: c.requested || 0, ful: c.fulfilled || 0, can: c.cancelled || 0 })) + '</p>'
+      + '<div class="ad-card" style="padding:6px 10px"><table class="ad-tbl">' + head + rows + '</table></div>';
+    Array.prototype.forEach.call(box.querySelectorAll('button[data-act]'), function (b) {
+      b.onclick = function () { rwAction(b.getAttribute('data-act'), b.getAttribute('data-id'), b); };
+    });
+  }
+  function rwAction(act, id, btn) {
+    btn.disabled = true;
+    api('/rewards/admin/redemptions/' + encodeURIComponent(id) + '/' + act, { method: 'POST' }).then(function (r) {
+      if (!r.ok) throw new Error('act'); return r.json();
+    }).then(function () { loadRedemptions(); }).catch(function (e) {
+      if (String(e.message) !== '401') {
+        btn.disabled = false;
+        var box = document.getElementById('ad-rw');
+        if (box) { var n = document.createElement('div'); n.className = 'ad-empty'; n.textContent = T('admin.rw.actErr'); box.insertBefore(n, box.firstChild); }
+      }
+    });
   }
 
   // ── boot ──────────────────────────────────────────────────

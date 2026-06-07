@@ -24,10 +24,11 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.security import current_user
 from backend.utils import rewards_rules as rules
 
 logger = logging.getLogger(__name__)
@@ -151,7 +152,7 @@ def _spent_points(sb, pid):
     except Exception as exc:
         logger.info("rewards redemptions read failed: %s", type(exc).__name__)
         return 0, []
-    spent = sum(int(r.get("cost") or 0) for r in rows)
+    spent = rules.spent_from_rows(rows)
     return spent, rows
 
 
@@ -246,3 +247,74 @@ def redeem(body: RedeemRequest):
         "available_after": available - reward["cost"],
         "message": "兌換已登記，將由院方安排發放。",
     }
+
+
+# ── 後台發放（限 doctor）─────────────────────────────────────
+# 兌換意願由病患端 redeem 寫入（status='requested'），院方在後台核發或退回：
+#   requested → fulfilled  已實際發放（仍扣點）
+#   requested → cancelled  退回並退點（spent_from_rows 不計 cancelled）
+# 沿用 surveys.py 慣例：Depends(current_user) + 檢查 role=doctor。
+
+def _require_doctor(me):
+    if me.get("role") != "doctor":
+        raise HTTPException(status_code=403, detail="僅醫護端可管理兌換")
+
+
+@router.get("/admin/redemptions")
+def admin_list_redemptions(
+    status: str = Query(None, description="可選 requested/fulfilled/cancelled 過濾"),
+    limit: int = Query(200, ge=1, le=1000),
+    me: dict = Depends(current_user),
+):
+    """後台：列出所有兌換申請（最新在前），可依 status 過濾，並附各狀態計數。"""
+    _require_doctor(me)
+    sb = get_supabase()
+    try:
+        q = sb.table("reward_redemptions").select("*")
+        if status:
+            q = q.eq("status", status)
+        rows = q.order("created_at", desc=True).limit(limit).execute().data or []
+    except Exception as exc:
+        logger.error("admin list redemptions failed: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="兌換清單暫時無法載入（reward_redemptions 資料表是否已建立？"
+                   "見 docs/migration_reward_redemptions.sql）。",
+        )
+    counts = {"requested": 0, "fulfilled": 0, "cancelled": 0}
+    for r in rows:
+        st = r.get("status") or "requested"
+        counts[st] = counts.get(st, 0) + 1
+    return {"redemptions": rows, "counts": counts}
+
+
+def _set_redemption_status(redemption_id, new_status, allowed_from, me):
+    """把某筆兌換改成 new_status；只允許從 allowed_from 的狀態轉換。限 doctor。"""
+    _require_doctor(me)
+    sb = get_supabase()
+    try:
+        cur = sb.table("reward_redemptions").select("*").eq("id", redemption_id).limit(1).execute().data
+    except Exception as exc:
+        logger.error("redemption fetch failed: %s", exc)
+        raise HTTPException(status_code=503, detail="兌換資料暫時無法存取")
+    if not cur:
+        raise HTTPException(status_code=404, detail="找不到該兌換紀錄")
+    old = cur[0].get("status") or "requested"
+    if old not in allowed_from:
+        raise HTTPException(status_code=409, detail=f"目前狀態為「{old}」，無法執行此操作")
+    saved = sb.table("reward_redemptions").update({"status": new_status}).eq("id", redemption_id).execute()
+    return saved.data[0] if saved.data else dict(cur[0], status=new_status)
+
+
+@router.post("/admin/redemptions/{redemption_id}/fulfill")
+def admin_fulfill(redemption_id: str, me: dict = Depends(current_user)):
+    """後台：標記某兌換為已發放（requested → fulfilled）。限 doctor。"""
+    row = _set_redemption_status(redemption_id, "fulfilled", ("requested",), me)
+    return {"redemption": row, "status": "fulfilled"}
+
+
+@router.post("/admin/redemptions/{redemption_id}/cancel")
+def admin_cancel(redemption_id: str, me: dict = Depends(current_user)):
+    """後台：取消兌換並退回點數（requested → cancelled）。限 doctor。"""
+    row = _set_redemption_status(redemption_id, "cancelled", ("requested",), me)
+    return {"redemption": row, "status": "cancelled", "refunded": row.get("cost")}
