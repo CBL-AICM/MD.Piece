@@ -29,7 +29,7 @@ const HUB = {
 
 const SURVEY = {
   key: 'B1', title: 'B1. 慢性病自我照顧的把握',
-  description: '對做到下列事情有多少把握：1=完全沒把握，10=完全有把握。',
+  description: '下面每件事，覺得自己有多少把握？1=完全沒把握，10=完全有把握。',
   scoring: { scale: { min: 1, max: 10, min_label: '完全沒把握', max_label: '完全有把握' } },
   items: [
     { id: 'q1', type: 'likert', text: '我有把握自己能控制疲倦不影響想做的事。' },
