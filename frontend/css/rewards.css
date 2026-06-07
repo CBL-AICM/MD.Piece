@@ -284,3 +284,52 @@
   .rw-hero-meta { width: 100%; }
   .rw-points { justify-content: center; }
 }
+
+/* ── 首頁入口卡（主畫面明顯位置）──────────────────────────────
+   只用 tokens，主題／長者模式自動跟著走。手機與桌機共用同一張卡。 */
+.rw-home {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--content);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0;
+  cursor: pointer;
+  min-height: var(--touch-min);
+  transition: transform var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.rw-home:hover { transform: translateY(-1px); box-shadow: var(--shadow-1); }
+.rw-home:active { transform: translateY(0); }
+.rw-home-ring { position: relative; width: 46px; height: 46px; flex: none; }
+.rw-home-ring svg { width: 46px; height: 46px; transform: rotate(-90deg); }
+.rw-home-ring .bg { fill: none; stroke: var(--line); stroke-width: 4; }
+.rw-home-ring .fg {
+  fill: none; stroke: var(--primary); stroke-width: 4; stroke-linecap: round;
+  stroke-dasharray: 113; stroke-dashoffset: 113;
+  transition: stroke-dashoffset var(--motion-slow) var(--ease-gentle);
+}
+.rw-home-lv {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: var(--text-sm); font-weight: 700; color: var(--primary);
+}
+.rw-home-main { flex: 1; min-width: 0; }
+.rw-home-title {
+  display: flex; align-items: center; gap: var(--space-1);
+  font-size: var(--text-base); font-weight: 700; color: var(--content);
+}
+.rw-home-title svg { width: 16px; height: 16px; }
+.rw-home-sub {
+  font-size: var(--text-xs); color: var(--content-muted); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rw-home-pts { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; flex: none; }
+.rw-home-pts b { font-size: var(--text-xl); font-weight: 800; color: var(--primary); }
+.rw-home-pts span { font-size: var(--text-xs); color: var(--content-muted); }
+.rw-home-chev { width: 18px; height: 18px; color: var(--content-subtle); flex: none; }

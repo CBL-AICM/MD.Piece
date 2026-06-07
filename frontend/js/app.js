@@ -3518,6 +3518,55 @@ window.addEventListener('mdpiece-lang-change', function () {
 // 徽章與可兌換獎勵。前端只負責呈現與兌換，所有換算都在 backend 純程式碼完成
 // （規則 5）；本頁是 additive 的可選頁，不動任何既有頁面或主畫面。
 
+// 首頁獎勵入口：把獎勵機制放到主畫面，讓使用者一眼看到「紀錄能換積分」。
+// 同一張卡可同時出現在手機 / 桌機首頁（各一份，靠 .js-home-rw class 一起填）。
+// 只讀換算、點了才進獎勵中心；載入失敗就靜默隱藏，不讓首頁因此報錯。
+function renderHomeRewardsEntry() {
+  return ''
+    + '<button type="button" class="rw-home js-home-rw" onclick="navigateTo(\'rewards\',null)" aria-label="' + _T('home.rw.aria') + '">'
+    +   '<span class="rw-home-ring"><svg viewBox="0 0 46 46">'
+    +       '<circle class="bg" cx="23" cy="23" r="18"></circle>'
+    +       '<circle class="fg" cx="23" cy="23" r="18" data-rw-ring></circle>'
+    +     '</svg><span class="rw-home-lv" data-rw-lv>·</span></span>'
+    +   '<span class="rw-home-main">'
+    +     '<span class="rw-home-title"><i data-lucide="award"></i> ' + _T('nav.rewards') + '</span>'
+    +     '<span class="rw-home-sub" data-rw-sub>' + _T('home.rw.loading') + '</span>'
+    +   '</span>'
+    +   '<span class="rw-home-pts"><b data-rw-pts>—</b><span>' + _T('home.rw.points') + '</span></span>'
+    +   '<i data-lucide="chevron-right" class="rw-home-chev"></i>'
+    + '</button>';
+}
+
+function _updateHomeRewards() {
+  var nodes = document.querySelectorAll('.js-home-rw');
+  if (!nodes.length) return;
+  var pid = getStablePatientId();
+  var C = 2 * Math.PI * 18; // 與 .fg r=18 一致
+  fetch(API + '/rewards/summary?patient_id=' + encodeURIComponent(pid))
+    .then(function (r) { return r.json(); })
+    .then(function (s) {
+      if (!s || !s.points) { _hideHomeRewards(nodes); return; }
+      var lv = s.level || {}, pts = s.points || {};
+      var prog = Math.max(0, Math.min(1, lv.progress || 0));
+      var sub = (lv.name || '');
+      if (lv.next_name) sub += ' · ' + _Tf('home.rw.toNext', { n: lv.to_next, next: lv.next_name });
+      Array.prototype.forEach.call(nodes, function (n) {
+        var el;
+        if ((el = n.querySelector('[data-rw-lv]'))) el.textContent = lv.index || 1;
+        if ((el = n.querySelector('[data-rw-sub]'))) el.textContent = sub;
+        if ((el = n.querySelector('[data-rw-pts]'))) el.textContent = (pts.available != null ? pts.available : 0);
+        if ((el = n.querySelector('[data-rw-ring]'))) {
+          el.style.strokeDasharray = C; el.style.strokeDashoffset = C * (1 - prog);
+        }
+      });
+      if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (e) {}
+    })
+    .catch(function () { _hideHomeRewards(nodes); });
+}
+function _hideHomeRewards(nodes) {
+  Array.prototype.forEach.call(nodes, function (n) { n.style.display = 'none'; });
+}
+
 function rewards() {
   return ''
     + '<section class="rw-wrap">'
@@ -6294,6 +6343,7 @@ function home() {
       ['story',       'book-open',             'nav.story'],
       ['labs',        'trending-up',           'nav.labs'],
       ['pieces',      'puzzle',                'nav.pieces'],
+      ['rewards',     'award',                 'nav.rewards'],
       ['chat',        'message-circle-heart',  'nav.chat'],
       ['settings',    'settings',              'nav.settings'],
       ['account',     'user-cog',              'nav.account'],
@@ -6396,6 +6446,9 @@ function home() {
     +       '<i data-lucide="clipboard-pen"></i><span>' + _T('app.c8.surveyBtn') + '</span>'
     +     '</button>'
     +   '</div>'
+
+    // 獎勵入口 — 主畫面明顯位置，點進獎勵中心
+    +   renderHomeRewardsEntry()
 
     // 門/住院
     +   '<div class="care-mode-mini">'
@@ -6661,6 +6714,9 @@ function home() {
         </div>
       </div>
 
+      <!-- 獎勵入口 — 主畫面明顯位置，點進獎勵中心 -->
+      ${renderHomeRewardsEntry()}
+
       <!-- 不舒服一鍵回報 — 跟住院模式同樣的 4 顆大按鈕，省下打字想分類的時間 -->
       ${renderHomeQuickReport()}
 
@@ -6890,6 +6946,7 @@ function loadHomePage() {
   // === 行動版首頁額外注入（KPI sparkline / 待辦進度 / 回診科別 / SOS 計數）=====
   // 桌機版完全不受影響，因為這些 id 只存在於 .mobile-only 區塊。
   if (typeof _updateMobileHomeKPIs === 'function') _updateMobileHomeKPIs();
+  if (typeof _updateHomeRewards === 'function') _updateHomeRewards();
   if (typeof _updateMobileTodoCount === 'function') _updateMobileTodoCount();
   if (typeof _updateMobileSosCount === 'function') _updateMobileSosCount();
   if (typeof _updateMobileNextVisitMeta === 'function') _updateMobileNextVisitMeta();
