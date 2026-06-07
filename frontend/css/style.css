@@ -7825,6 +7825,15 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
+/* 「顯示密碼」checkbox 不該套 input 全域 width:100%（同 .memo-check 處理），
+   否則 checkbox 撐滿整列、把標籤擠到最右側換行。 */
+.auth-show-pw input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
 
 .auth-avatar-row {
   display: flex;
