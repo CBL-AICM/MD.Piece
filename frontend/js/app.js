@@ -4123,16 +4123,74 @@ function _studyEnsureStyles() {
     + '.study-opt.study-wide{width:100%;text-align:left}'
     + '.study-opt.is-sel{background:var(--primary,#1e8a82);border-color:var(--primary,#1e8a82);color:#fff}'
     + '.study-opt.study-na.is-sel{background:var(--content-muted,#8a8175);border-color:var(--content-muted,#8a8175)}'
-    + '.study-ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--content-subtle,#9a9}.study-ends{margin-top:6px}'
+    + '.study-ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--content-subtle,#9a9087);margin-top:6px}'
     + '.study-chk{display:flex;align-items:center;gap:8px;font-size:.9rem;padding:6px 2px}'
     + '.study-text{width:100%;border:1.4px solid var(--line,#d9d2c5);border-radius:11px;padding:10px;font:inherit;box-sizing:border-box}'
     + '.study-tbl{width:100%;border-collapse:collapse;font-size:.82rem;margin:6px 0 4px}'
     + '.study-tbl th,.study-tbl td{border:1px solid var(--line,#eee);padding:5px 8px;text-align:center}'
     + '.study-tbl th{background:var(--surface-2,#f6f1e7);font-weight:600}'
     + '.study-r{font-family:var(--font-mono,monospace);font-weight:700}'
-    + '.study-meta{font-size:.78rem;color:var(--content-subtle,#9a9087);margin:2px 0 10px;line-height:1.5}';
+    + '.study-meta{font-size:.78rem;color:var(--content-subtle,#9a9087);margin:2px 0 10px;line-height:1.5}'
+    + '.study-nudge{position:fixed;left:12px;right:12px;bottom:84px;z-index:9000;display:flex;align-items:center;gap:9px;'
+    + 'padding:11px 13px;border-radius:14px;background:var(--surface-1,#fff);color:var(--content,#2a2420);'
+    + 'border:1.4px solid var(--teal,#2F8378);box-shadow:0 8px 24px -10px rgba(31,61,88,.35);'
+    + 'font-size:.86rem;line-height:1.4;opacity:0;transform:translateY(10px);transition:opacity .22s,transform .22s;max-width:520px;margin:0 auto}'
+    + '.study-nudge.open{opacity:1;transform:translateY(0)}'
+    + '.study-nudge i{color:var(--teal,#2F8378)}'
+    + '.study-nudge-go{flex:0 0 auto;border:none;border-radius:999px;background:var(--teal,#2F8378);color:#fff;'
+    + 'font-size:.82rem;font-weight:600;padding:7px 13px;cursor:pointer}'
+    + '.study-nudge-x{flex:0 0 auto;border:none;background:transparent;color:var(--content-subtle,#9a9087);font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}';
   var st = document.createElement('style'); st.id = 'study-styles'; st.textContent = css;
   document.head.appendChild(st);
+}
+
+// ── 不定時隨即提醒：問卷到期未填時，在使用 App 過程中於不固定時點輕推一下。
+// 不是固定鬧鐘（那是後端 D14/D28 排程做的）；這裡靠「下次開 App 時、且過了
+// 一段隨機冷卻（2–8 小時）」自然觸發，填完就不再出現。
+function _studyMaybeNudge() {
+  var u = getCurrentUser();
+  if (!u || !u.id || u.role === 'doctor') return;
+  var nextAt = 0;
+  try { nextAt = parseInt(localStorage.getItem('mdpiece_study_nudge_next') || '0', 10) || 0; } catch (e) {}
+  if (Date.now() < nextAt) return;
+  var pid = getStablePatientId();
+  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary')
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      var curTp = _studyCurrentTp();
+      var due = (data.parts || []).filter(function (p) {
+        return (p.timepoints || []).indexOf(curTp) >= 0 && !(((p.by_timepoint || {})[curTp] || {}).completed);
+      });
+      // 下次提醒落在 2–8 小時後的隨機時點（不定時）。
+      var gap = Math.round((2 + Math.random() * 6) * 3600000);
+      try { localStorage.setItem('mdpiece_study_nudge_next', String(Date.now() + gap)); } catch (e) {}
+      if (due.length) _studyShowNudge();
+    })
+    .catch(function () {});
+}
+
+function _studyShowNudge() {
+  if (document.getElementById('study-nudge')) return;
+  _studyEnsureStyles();
+  var el = document.createElement('div');
+  el.id = 'study-nudge';
+  el.className = 'study-nudge';
+  el.innerHTML = ''
+    + '<i data-lucide="clipboard-pen" style="width:16px;height:16px;flex:0 0 auto"></i>'
+    + '<span style="flex:1">' + _T('app.c6.nudgeText') + '</span>'
+    + '<button type="button" class="study-nudge-go" onclick="closeStudyNudge();openStudyHub()">' + _T('app.c6.nudgeGo') + '</button>'
+    + '<button type="button" class="study-nudge-x" aria-label="' + _T('app.c6.close') + '" onclick="closeStudyNudge()">&times;</button>';
+  document.body.appendChild(el);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  requestAnimationFrame(function () { el.classList.add('open'); });
+  el._t = setTimeout(closeStudyNudge, 9000);
+}
+
+function closeStudyNudge() {
+  var el = document.getElementById('study-nudge'); if (!el) return;
+  clearTimeout(el._t); el.classList.remove('open');
+  setTimeout(function () { if (el.parentNode) el.remove(); }, 250);
 }
 
 // ── 病患：研究問卷 hub ─────────────────────────────────────
@@ -6551,6 +6609,8 @@ function loadHomePage() {
   // 滾動式 feed 新增的 Tier 2 區塊
   if (typeof _updateMobileHomeMedsMini === 'function') _updateMobileHomeMedsMini();
   if (typeof _renderMobileRecentRecords === 'function') _renderMobileRecentRecords();
+  // 不定時隨即：問卷到期未填時，偶爾在首頁輕推一下（填完自動停）。
+  if (typeof _studyMaybeNudge === 'function') _studyMaybeNudge();
 }
 
 // ── 2.0 預覽：Today (home2) — opt-in 路由，與現行 home 完全隔離 ──────

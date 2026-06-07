@@ -79,6 +79,18 @@ const SURVEY = {
   await run.screenshot({ path: resolve(SHOT_DIR, 'runner.png') });
   console.log('✓ runner.png');
 
+  // 3) irregular nudge on the home screen
+  await page.evaluate(() => {
+    ['study-run', 'study-sheet'].forEach((id) => { const e = document.getElementById(id); if (e) e.remove(); });
+    const l = document.getElementById('landing'); if (l) l.style.display = 'none';
+    const a = document.getElementById('app-wrapper'); if (a) a.classList.add('show');
+    if (typeof showPage === 'function') showPage('home');
+    if (typeof _studyShowNudge === 'function') _studyShowNudge();
+  });
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: resolve(SHOT_DIR, 'nudge.png') });
+  console.log('✓ nudge.png');
+
   await browser.close();
   if (errs.length) { console.log('page errors:\n  ' + errs.join('\n  ')); }
 })();
