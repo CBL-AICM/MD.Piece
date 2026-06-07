@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # 允許的事件大類（與 app_events_schema.md 目錄一致）。
-_EVENT_TYPES = {"session", "screen", "feature", "reminder", "error", "crash", "api", "data", "edit", "push"}
+# visit：臨床里程碑（如「回診結束」visit/completed），供 EMA event 規則延遲推 post-visit 問卷。
+_EVENT_TYPES = {"session", "screen", "feature", "reminder", "error", "crash",
+                "api", "data", "edit", "push", "visit"}
 _MAX_BATCH = 200
 
 
@@ -84,7 +86,18 @@ def ingest_events(body: EventBatch, me: dict = Depends(current_user)):
         logger.error(f"ingest_events failed after {saved}/{len(rows)}: {ex}")
         # 規則 12：部分成功也要 loud，回報實際寫入數，不假裝全成功。
         raise HTTPException(status_code=400, detail=f"事件寫入失敗（已寫 {saved}/{len(rows)} 筆）：{ex}")
-    return {"ingested": saved, "_persisted": True}
+
+    # EMA 自動觸發 hook：剛寫入的事件即時評估 event 規則（如「回診結束」visit/completed）→ 排成 delivery。
+    # best-effort：失敗只記 log，不影響「事件已成功寫入」這件事（規則 12：不靜默吃掉事件）。
+    triggered = 0
+    try:
+        from backend.routers import ema
+        triggered = len(ema._evaluate(sb, me.get("id"), [
+            {"event_type": e.event_type, "event_name": e.event_name, "target": e.target}
+            for e in events]))
+    except Exception as ex:
+        logger.info(f"ema evaluate hook skipped: {ex}")
+    return {"ingested": saved, "_persisted": True, "ema_triggered": triggered}
 
 
 # ── 聚合（純程式碼；規則 5）──────────────────────────────────

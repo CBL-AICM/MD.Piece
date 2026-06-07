@@ -121,6 +121,10 @@
     { "src": "/health-literacy", "dest": "api/index.py" },
     { "src": "/surveys/(.*)", "dest": "api/index.py" },
     { "src": "/surveys", "dest": "api/index.py" },
+    { "src": "/events/(.*)", "dest": "api/index.py" },
+    { "src": "/events", "dest": "api/index.py" },
+    { "src": "/ema/(.*)", "dest": "api/index.py" },
+    { "src": "/ema", "dest": "api/index.py" },
     { "src": "/admin", "dest": "frontend/admin.html" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
