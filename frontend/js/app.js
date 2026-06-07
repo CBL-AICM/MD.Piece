@@ -4104,6 +4104,47 @@ function _studyCurrentTp() {
   }
   return 'D28';
 }
+
+// 回診後回饋（FU48）視窗：綁「實際回診日」而非註冊日 +N，因為不是每位患者
+// 都剛好 D14/D28。最近一筆「已完成」回診，回診後 2–16 天內視為該填回診回饋。
+var STUDY_FU48_FROM_DAYS = 2;
+var STUDY_FU48_TO_DAYS = 16;
+var _studyFu48Active = false;   // 由 _studyRefreshFu48() 依回診記錄更新
+function _studyFu48ActiveFor(followUps) {
+  if (!followUps || !followUps.length) return false;
+  var now = Date.now();
+  for (var i = 0; i < followUps.length; i++) {
+    var f = followUps[i] || {};
+    if ((f.status || '') !== 'completed') continue;
+    var ds = _foDateOnly(f.scheduled_date);
+    if (!ds) continue;
+    var elapsed = Math.floor((now - new Date(ds + 'T00:00:00').getTime()) / 86400000);
+    if (elapsed >= STUDY_FU48_FROM_DAYS && elapsed < STUDY_FU48_TO_DAYS) return true;
+  }
+  return false;
+}
+// 是否該推送某份問卷：落在目前日數窗格，或（FU48 視窗開啟時）屬於 FU48。
+function _studyDueNow(p, curTp) {
+  var tps = p.timepoints || [];
+  if (tps.indexOf(curTp) >= 0) return true;
+  return _studyFu48Active && tps.indexOf('FU48') >= 0;
+}
+// 這份問卷該以哪個時點提交：優先用目前日數窗格，否則（FU48 視窗）用 FU48。
+function _studySubmitTp(p, curTp) {
+  return ((p.timepoints || []).indexOf(curTp) >= 0) ? curTp : 'FU48';
+}
+// 這份問卷現在是否「該填且還沒填」：窗格內 + 對應時點尚未完成。
+function _studyPartDue(p, curTp) {
+  if (!_studyDueNow(p, curTp)) return false;
+  var tp = _studySubmitTp(p, curTp);
+  return !(((p.by_timepoint || {})[tp] || {}).completed);
+}
+// 依患者回診記錄刷新 FU48 視窗狀態（純日期判斷，規則 5）。失敗不擋 UI。
+function _studyRefreshFu48() {
+  return fetchFollowUps()
+    .then(function (rows) { _studyFu48Active = _studyFu48ActiveFor(rows); })
+    .catch(function () { _studyFu48Active = false; });
+}
 // 拿掉標題開頭的研究編號（如「B1. 」），只留白話標題。
 function _studyCleanTitle(t) { return String(t || '').replace(/^[A-E]\d*\.\s*/, ''); }
 
@@ -4154,14 +4195,14 @@ function _studyMaybeNudge() {
   try { nextAt = parseInt(localStorage.getItem('mdpiece_study_nudge_next') || '0', 10) || 0; } catch (e) {}
   if (Date.now() < nextAt) return;
   var pid = getStablePatientId();
-  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary')
-    .then(function (r) { return r.ok ? r.json() : null; })
+  _studyRefreshFu48().then(function () {
+    return apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary');
+  })
+    .then(function (r) { return r && r.ok ? r.json() : null; })
     .then(function (data) {
       if (!data) return;
       var curTp = _studyCurrentTp();
-      var due = (data.parts || []).filter(function (p) {
-        return (p.timepoints || []).indexOf(curTp) >= 0 && !(((p.by_timepoint || {})[curTp] || {}).completed);
-      });
+      var due = (data.parts || []).filter(function (p) { return _studyPartDue(p, curTp); });
       // 下次提醒落在 2–8 小時後的隨機時點（不定時）。
       var gap = Math.round((2 + Math.random() * 6) * 3600000);
       try { localStorage.setItem('mdpiece_study_nudge_next', String(Date.now() + gap)); } catch (e) {}
@@ -4203,8 +4244,11 @@ function openStudyHub() {
     apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid)
       + '/ensure-reminders?start_date=' + encodeURIComponent(user.created_at), { method: 'POST' }).catch(function () {});
   }
-  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary')
-    .then(function (r) { if (!r.ok) throw new Error('load'); return r.json(); })
+  // FU48 視窗依患者實際回診記錄判斷（不是每位都 D14/D28），開 hub 前先刷新。
+  _studyRefreshFu48().then(function () {
+    return apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary');
+  })
+    .then(function (r) { if (!r || !r.ok) throw new Error('load'); return r.json(); })
     .then(function (data) { _studyRenderHub(data); })
     .catch(function () { if (typeof showToast === 'function') showToast(_T('app.c6.studyLoadFail'), 'warning'); });
 }
@@ -4214,12 +4258,13 @@ function _studyRenderHub(data) {
   var ex = document.getElementById('study-sheet'); if (ex) ex.remove();
   var parts = data.parts || [];
   var adh = data.adherence || {};
-  // 只推送「目前時程窗格」對應、且還沒填的問卷。
+  // 只推送「目前時程窗格」對應、且還沒填的問卷；FU48 視窗開啟時一併納入回診回饋。
   var curTp = _studyCurrentTp();
   var dueRows = parts.filter(function (p) {
-    return (p.timepoints || []).indexOf(curTp) >= 0 && !(((p.by_timepoint || {})[curTp] || {}).completed);
+    return _studyPartDue(p, curTp);
   }).map(function (p) {
-    return '<div class="settings-row" style="cursor:pointer" onclick="openStudySurvey(\'' + p.key + '\',\'' + curTp + '\')">'
+    var subTp = _studySubmitTp(p, curTp);
+    return '<div class="settings-row" style="cursor:pointer" onclick="openStudySurvey(\'' + p.key + '\',\'' + subTp + '\')">'
       + '<div class="ico"><i data-lucide="clipboard-pen"></i></div>'
       + '<div style="flex:1"><div class="name">' + escapeHtml(_studyCleanTitle(p.title)) + '</div>'
       + '<div class="sub">' + _T('app.c6.tapToFill') + '</div></div>'
@@ -26301,12 +26346,25 @@ function markFollowUpStatus(id, status) {
     body: JSON.stringify({ status: status })
   })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
-    .then(function() {
+    .then(function(updated) {
       showToast(_T("app.c33.updated"), 'success');
+      // 回診完成 → 依「實際回診日 +~48h」排回診後回饋提醒（冪等、失敗不擋 UI）。
+      if (status === 'completed') _studyScheduleFu48(updated);
       loadFollowUpsPage();
       if (typeof refreshNearestFollowUpCard === 'function') refreshNearestFollowUpCard();
     })
     .catch(function(e) { showToast(_T("app.c33.updateFail") + e.message, 'error'); });
+}
+
+// 回診完成後，請後端依實際回診日排「回診後回饋（FU48）」提醒。盡力而為。
+function _studyScheduleFu48(followUp) {
+  var u = getCurrentUser();
+  if (!u || !u.id || u.role === 'doctor') return;
+  var visit = _foDateOnly(followUp && followUp.scheduled_date);
+  if (!visit) return;
+  var pid = getStablePatientId();
+  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid)
+    + '/ensure-fu48?visit_date=' + encodeURIComponent(visit), { method: 'POST' }).catch(function () {});
 }
 
 function deleteFollowUp(id) {

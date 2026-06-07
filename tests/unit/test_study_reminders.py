@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from backend.routers.surveys import (  # noqa: E402
-    STUDY_REMINDER_OFFSETS, _study_due_at, _study_reminder_source_id,
+    FU48_OFFSET_DAYS, STUDY_REMINDER_OFFSETS, _study_due_at, _study_reminder_source_id,
 )
 
 
@@ -62,3 +62,14 @@ def test_reminder_source_id_is_stable_and_scoped():
     b = _study_reminder_source_id("s1", "D28")
     c = _study_reminder_source_id("s2", "D14")
     assert a != b and a != c
+
+
+def test_fu48_fires_two_days_after_actual_visit():
+    # FU48 綁「實際回診日」而非註冊日 +N：回診 3/10 → 3/12 上午提醒。
+    # 這正是「不是每位患者都 D14/D28」的核心——時點要跟著回診走。
+    visit = datetime(2026, 3, 10, tzinfo=timezone.utc)
+    assert _study_due_at(visit, FU48_OFFSET_DAYS) == datetime(2026, 3, 12, 9, 0, tzinfo=timezone.utc)
+
+
+def test_fu48_offset_is_about_48h():
+    assert FU48_OFFSET_DAYS == 2

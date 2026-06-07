@@ -806,9 +806,12 @@ def participant_summary(study: str, pid: str, me: dict = Depends(current_user)):
 
 
 # ─── 到期才推送：依參與起算日（帳號建立日 = Day 0）排程問卷提醒 ───────────
-# 只排「之後才該填」的時點：D0 是當下不需提醒、FU48 是回診事件型（不在日數窗格）。
+# 只排「固定日數」的時點：D0 是當下不需提醒。FU48 是回診事件型，改由
+# ensure-fu48 依患者「實際回診日」排程（呼應：不是每位都剛好 D14/D28）。
 # 天數需與前端 STUDY_WINDOWS（app.js）一致。規則 5：時程是確定性運算 → 純程式碼。
 STUDY_REMINDER_OFFSETS = {"D14": 14, "D28": 28}
+# 回診後回饋（FU48）：回診日 +2 天（約 48 小時、第三天上午 09:00 UTC）觸發。
+FU48_OFFSET_DAYS = 2
 
 
 def _study_due_at(start: datetime, days: int) -> datetime:
@@ -869,6 +872,40 @@ def ensure_study_reminders(study: str, pid: str, start_date: str = Query(...)):
         ))
         created.append(tp)
     return {"created": created, "existing": existing}
+
+
+@router.post("/study/{study}/participants/{pid}/ensure-fu48")
+def ensure_fu48_reminder(study: str, pid: str, visit_date: str = Query(...)):
+    """回診後回饋（FU48）：病患回診完成後，依「實際回診日 +~48h」排一筆 once 提醒。
+    用回診日而非註冊日 +N，呼應『不是每位患者都剛好 D14/D28』。冪等：已排過就不重排。"""
+    from backend.models import ReminderCreate
+    from backend.routers.reminders import create_reminder
+
+    try:
+        visit = datetime.strptime(visit_date[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="visit_date 格式錯誤，需為 YYYY-MM-DD")
+
+    sb = get_supabase()
+    source_id = _study_reminder_source_id(study, "FU48")
+    dup = (sb.table("reminders").select("id")
+           .eq("patient_id", pid).eq("source_id", source_id).limit(1).execute())
+    if dup.data:
+        return {"created": False, "reason": "exists"}
+    due = _study_due_at(visit, FU48_OFFSET_DAYS)
+    create_reminder(ReminderCreate(
+        patient_id=pid,
+        reminder_type="custom",
+        title="回診後回饋問卷",
+        body="您最近回診了，方便的話填一下這次看診的回饋，2 分鐘就好 🙂",
+        source_id=source_id,
+        url="/?open=survey",
+        frequency="once",
+        scheduled_at=due,
+        priority="normal",
+        source="auto",
+    ))
+    return {"created": True, "scheduled_at": due.isoformat()}
 
 
 @router.get("/study/{study}/participants")
