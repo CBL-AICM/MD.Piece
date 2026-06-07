@@ -56,10 +56,10 @@ body.theme-modern .sec-action {
 body.theme-modern .sec-action .lucide { width: 11px; height: 11px; }
 
 /* card tint */
-body.theme-modern .card.tint-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC) 0%, #fff 60%); }
-body.theme-modern .card.tint-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6) 0%, #fff 60%); }
-body.theme-modern .card.tint-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6) 0%, #fff 60%); }
-body.theme-modern .card.tint-green { background: linear-gradient(135deg, var(--green-tint, #F1F8F4) 0%, #fff 60%); }
+body.theme-modern .card.tint-blue { background: var(--accent-tint, #F2F8FC); }
+body.theme-modern .card.tint-rose { background: var(--rose-tint, #FDF6F6); }
+body.theme-modern .card.tint-teal { background: var(--teal-tint, #F1F8F6); }
+body.theme-modern .card.tint-green { background: var(--green-tint, #F1F8F4); }
 
 /* ─── HOME — 早安卡 ─── */
 body.theme-modern .home-greet {
@@ -137,9 +137,9 @@ body.theme-modern .kpi-mini:active {
   transform: scale(0.98);
   box-shadow: 0 1px 0 rgba(31,61,88,0.02), 0 2px 8px -4px rgba(74,57,40,0.18);
 }
-body.theme-modern .kpi-mini.t-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6), #fff 70%); }
-body.theme-modern .kpi-mini.t-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC), #fff 70%); }
-body.theme-modern .kpi-mini.t-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6), #fff 70%); }
+body.theme-modern .kpi-mini.t-rose { background: var(--rose-tint, #FDF6F6); }
+body.theme-modern .kpi-mini.t-blue { background: var(--accent-tint, #F2F8FC); }
+body.theme-modern .kpi-mini.t-teal { background: var(--teal-tint, #F1F8F6); }
 body.theme-modern .kpi-mini-label {
   font-size: 11px; color: var(--text-muted, #6B7F92); font-weight: 600;
   letter-spacing: 0.03em; margin-bottom: 6px;
@@ -173,10 +173,10 @@ body.theme-modern .sos-btn {
   text-align: center;
 }
 body.theme-modern .sos-btn .puzzle-motif { opacity: 0.08; }
-body.theme-modern .sos-btn.t-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6) 0%, #fff 65%); }
-body.theme-modern .sos-btn.t-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC) 0%, #fff 65%); }
-body.theme-modern .sos-btn.t-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6) 0%, #fff 65%); }
-body.theme-modern .sos-btn.t-amber { background: linear-gradient(135deg, rgba(201,139,47,0.06) 0%, #fff 65%); }
+body.theme-modern .sos-btn.t-rose { background: var(--rose-tint, #FDF6F6); }
+body.theme-modern .sos-btn.t-blue { background: var(--accent-tint, #F2F8FC); }
+body.theme-modern .sos-btn.t-teal { background: var(--teal-tint, #F1F8F6); }
+body.theme-modern .sos-btn.t-amber { background: rgba(201,139,47,0.06); }
 body.theme-modern .sos-btn .sos-icon {
   width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
@@ -348,10 +348,10 @@ body.theme-modern .vital-card {
 }
 body.theme-modern .vital-card .puzzle-motif { right: -8px; top: -8px; width: 36px; height: 36px; opacity: 0.04; }
 body.theme-modern .vital-card.t-rose .puzzle-motif { color: var(--rose-deep, #C97A7A); }
-body.theme-modern .vital-card.t-blue { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC), #fff 70%); }
+body.theme-modern .vital-card.t-blue { background: var(--accent-tint, #F2F8FC); }
 body.theme-modern .vital-card.t-blue .puzzle-motif { color: var(--accent, #4A90C2); }
-body.theme-modern .vital-card.t-rose { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6), #fff 70%); }
-body.theme-modern .vital-card.t-teal { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6), #fff 70%); }
+body.theme-modern .vital-card.t-rose { background: var(--rose-tint, #FDF6F6); }
+body.theme-modern .vital-card.t-teal { background: var(--teal-tint, #F1F8F6); }
 body.theme-modern .vital-card.t-teal .puzzle-motif { color: var(--teal, #2F8378); }
 body.theme-modern .vital-card-head { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
 body.theme-modern .vital-card-head .lucide { width: 12px; height: 12px; }
@@ -772,19 +772,19 @@ body.theme-modern .quick-jump-btn .qj-sub {
 }
 
 /* tint variants（同 .sos-btn / .kpi-mini 配色，保持一致） */
-body.theme-modern .quick-jump-btn.t-blue   { background: linear-gradient(135deg, var(--accent-tint, #F2F8FC) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-blue   { background: var(--accent-tint, #F2F8FC); }
 body.theme-modern .quick-jump-btn.t-blue   .qj-icon .lucide { color: var(--accent-deep, #2F6B96); }
-body.theme-modern .quick-jump-btn.t-rose   { background: linear-gradient(135deg, var(--rose-tint, #FDF6F6) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-rose   { background: var(--rose-tint, #FDF6F6); }
 body.theme-modern .quick-jump-btn.t-rose   .qj-icon .lucide { color: var(--rose-deep, #C97A7A); }
-body.theme-modern .quick-jump-btn.t-teal   { background: linear-gradient(135deg, var(--teal-tint, #F1F8F6) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-teal   { background: var(--teal-tint, #F1F8F6); }
 body.theme-modern .quick-jump-btn.t-teal   .qj-icon .lucide { color: var(--teal-deep, #1F5F56); }
-body.theme-modern .quick-jump-btn.t-amber  { background: linear-gradient(135deg, rgba(201,139,47,0.06) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-amber  { background: rgba(201,139,47,0.06); }
 body.theme-modern .quick-jump-btn.t-amber  .qj-icon .lucide { color: var(--amber-deep, #9A6A1F); }
-body.theme-modern .quick-jump-btn.t-green  { background: linear-gradient(135deg, var(--green-tint, #F1F8F4) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-green  { background: var(--green-tint, #F1F8F4); }
 body.theme-modern .quick-jump-btn.t-green  .qj-icon .lucide { color: var(--green-deep, #2F6F47); }
-body.theme-modern .quick-jump-btn.t-purple { background: linear-gradient(135deg, rgba(139,107,196,0.06) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-purple { background: rgba(139,107,196,0.06); }
 body.theme-modern .quick-jump-btn.t-purple .qj-icon .lucide { color: #6F4FA8; }
-body.theme-modern .quick-jump-btn.t-mint   { background: linear-gradient(135deg, rgba(96,180,160,0.07) 0%, #fff 65%); }
+body.theme-modern .quick-jump-btn.t-mint   { background: rgba(96,180,160,0.07); }
 body.theme-modern .quick-jump-btn.t-mint   .qj-icon .lucide { color: #2F8378; }
 
 /* 迷你版（次要功能：診前、醫師、提醒、趨勢、聊、碎片） */
