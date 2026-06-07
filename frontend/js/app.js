@@ -4139,6 +4139,33 @@ function _studyPartDue(p, curTp) {
   var tp = _studySubmitTp(p, curTp);
   return !(((p.by_timepoint || {})[tp] || {}).completed);
 }
+// 某時點是否整批填完（該時點適用的問卷都已完成）。
+function _studyTpDone(parts, tp) {
+  var applicable = 0, done = 0;
+  for (var i = 0; i < parts.length; i++) {
+    if (((parts[i].timepoints) || []).indexOf(tp) < 0) continue;
+    applicable++;
+    if (((parts[i].by_timepoint || {})[tp] || {}).completed) done++;
+  }
+  return applicable > 0 && done === applicable;
+}
+// hub 時程一覽：讓病患看懂「現在在哪、之後還有哪些、回診後會再來一次」。
+function _studyRenderTimeline(parts, curTp) {
+  var nowTp = _studyFu48Active ? 'FU48' : curTp;
+  var chips = STUDY_TP.map(function (t) {
+    var done = _studyTpDone(parts, t.id);
+    var isNow = t.id === nowTp;
+    var bg = isNow ? 'var(--teal,#2F8378)' : (done ? 'var(--green-soft,#e7f3ec)' : '#f3f1ee');
+    var col = isNow ? '#fff' : (done ? 'var(--green-deep,#2c6a45)' : 'var(--text-dim,#7a716a)');
+    var tail = isNow ? '（' + _T('app.c6.scheduleNow') + '）' : '';
+    return '<span style="display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;'
+      + 'font-size:11.5px;font-weight:600;background:' + bg + ';color:' + col + '">'
+      + (done ? '✓ ' : '') + escapeHtml(t.label) + tail + '</span>';
+  }).join('');
+  return '<div class="sec-head" style="margin-top:6px"><h3 class="sec-title">' + _T('app.c6.scheduleTitle') + '</h3></div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">' + chips + '</div>'
+    + '<p class="study-meta">' + _T('app.c6.scheduleFu48Note') + '</p>';
+}
 // 依患者回診記錄刷新 FU48 視窗狀態（純日期判斷，規則 5）。失敗不擋 UI。
 function _studyRefreshFu48() {
   return fetchFollowUps()
@@ -4299,6 +4326,7 @@ function _studyRenderHub(data) {
     +     '<input id="study-code" class="study-text" style="margin-bottom:6px" value="' + escapeHtml(_studyCode()) + '" oninput="_setStudyCode(this.value)" placeholder="P__" />'
     +     adhNote + ehlNote
     +     tpHtml
+    +     _studyRenderTimeline(parts, curTp)
     +     '<p class="study-meta">' + _T('app.c6.studyNoRightWrong') + '</p>'
     +   '</div>'
     + '</div>';
