@@ -7825,6 +7825,15 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
+/* 「顯示密碼」checkbox 不該套 input 全域 width:100%（同 .memo-check 處理），
+   否則 checkbox 撐滿整列、把標籤擠到最右側換行。 */
+.auth-show-pw input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
 
 .auth-avatar-row {
   display: flex;
@@ -15131,7 +15140,8 @@ html[data-care-mode="inpatient"] #app-wrapper[data-theme="light"] {
   line-height: 1.5;
 }
 .ip-sos-bellnote svg { flex: 0 0 auto; margin-top: 1px; }
-.ip-sos-bellnote strong { white-space: nowrap; }
+.ip-sos-bellnote-txt { flex: 1 1 auto; min-width: 0; }
+.ip-sos-bellnote strong { font-weight: 700; }
 /* P2-2：裝飾性 section 編號對患者無資訊量，移除（保留在 code/aria 外）。 */
 .home-inpatient .ip-num { display: none; }
 

@@ -21,6 +21,8 @@
   };
 
   function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+  // i18n helper: edu-codex 隨 index.html 載入 i18n.js，渲染期 window.MDPiece_i18n 必在。
+  function T(k) { return (window.MDPiece_i18n && window.MDPiece_i18n.t) ? window.MDPiece_i18n.t(k) : k; }
 
   // ── 閱讀進度條 ──
   function ensureBar() {
@@ -87,7 +89,7 @@
       if (!left || left.querySelector(".codex-toc")) return;
       var nav = document.createElement("nav");
       nav.className = "codex-toc";
-      nav.innerHTML = '<div class="codex-toc-title">◆ 章節書籤</div>' +
+      nav.innerHTML = '<div class="codex-toc-title">' + esc(T("codex.toc.bookmarks")) + '</div>' +
         items.map(function (it) {
           return '<button type="button" class="codex-bm codex-bm-' + it.tag + '" data-target="' + it.id + '">' + esc(it.text) + "</button>";
         }).join("");
@@ -207,26 +209,26 @@
 
   // 文章疾病 → 器官／概念圖（關鍵字比對，越具體放越前面）
   var DISEASE_PLATES = [
-    { k: ["高血壓", "血壓"], svg: "bp", label: "圖 · 血壓" },
-    { k: ["糖尿", "血糖", "胰島", "代謝症候"], svg: "glucose", label: "圖 · 血糖" },
-    { k: ["腎", "洗腎", "透析", "尿蛋白"], svg: "kidney", label: "圖 · 腎臟" },
-    { k: ["肺", "氣喘", "哮喘", "copd", "阻塞性", "呼吸", "肺炎", "支氣管"], svg: "lungs", label: "圖 · 肺與呼吸" },
-    { k: ["腦", "中風", "失智", "阿茲海默", "帕金森", "癲癇", "頭痛", "偏頭痛", "多發性硬化"], svg: "brain", label: "圖 · 腦與神經" },
-    { k: ["關節", "退化性", "類風濕", "痛風", "骨質疏鬆", "脊椎", "五十肩", "骨"], svg: "joint", label: "圖 · 骨與關節" },
-    { k: ["肝", "肝炎", "脂肪肝", "肝硬化"], svg: "liver", label: "圖 · 肝臟" },
-    { k: ["胃", "腸", "消化", "潰瘍", "腸躁", "胃食道", "便秘"], svg: "stomach", label: "圖 · 腸胃" },
-    { k: ["眼", "視網膜", "青光眼", "白內障", "乾眼", "黃斑", "乾燥症"], svg: "eye", label: "圖 · 眼睛" },
-    { k: ["免疫", "紅斑性狼瘡", "sle", "狼瘡", "過敏", "癌", "腫瘤", "白血病", "淋巴", "血液"], svg: "cell", label: "圖 · 細胞與免疫" },
-    { k: ["心", "心臟", "心血管", "冠心", "心衰", "心肌", "高血脂", "膽固醇", "動脈"], svg: "heart", label: "圖 · 心與血管" }
+    { k: ["高血壓", "血壓"], svg: "bp", label: "codex.plate.bp" },
+    { k: ["糖尿", "血糖", "胰島", "代謝症候"], svg: "glucose", label: "codex.plate.glucose" },
+    { k: ["腎", "洗腎", "透析", "尿蛋白"], svg: "kidney", label: "codex.plate.kidney" },
+    { k: ["肺", "氣喘", "哮喘", "copd", "阻塞性", "呼吸", "肺炎", "支氣管"], svg: "lungs", label: "codex.plate.lungs" },
+    { k: ["腦", "中風", "失智", "阿茲海默", "帕金森", "癲癇", "頭痛", "偏頭痛", "多發性硬化"], svg: "brain", label: "codex.plate.brain" },
+    { k: ["關節", "退化性", "類風濕", "痛風", "骨質疏鬆", "脊椎", "五十肩", "骨"], svg: "joint", label: "codex.plate.joint" },
+    { k: ["肝", "肝炎", "脂肪肝", "肝硬化"], svg: "liver", label: "codex.plate.liver" },
+    { k: ["胃", "腸", "消化", "潰瘍", "腸躁", "胃食道", "便秘"], svg: "stomach", label: "codex.plate.stomach" },
+    { k: ["眼", "視網膜", "青光眼", "白內障", "乾眼", "黃斑", "乾燥症"], svg: "eye", label: "codex.plate.eye" },
+    { k: ["免疫", "紅斑性狼瘡", "sle", "狼瘡", "過敏", "癌", "腫瘤", "白血病", "淋巴", "血液"], svg: "cell", label: "codex.plate.cell" },
+    { k: ["心", "心臟", "心血管", "冠心", "心衰", "心肌", "高血脂", "膽固醇", "動脈"], svg: "heart", label: "codex.plate.heart" }
   ];
   // 章節主題 → 主題圖（用藥／症狀／生活／風險／追蹤／緊急）
   var DIMENSION_PLATES = [
-    { k: ["用藥", "藥物", "服藥", "藥"], svg: "pill", label: "圖 · 用藥" },
-    { k: ["症狀", "徵兆", "辨認", "警訊"], svg: "symptom", label: "圖 · 症狀" },
-    { k: ["生活", "飲食", "運動", "作息", "自我照護", "保健"], svg: "life", label: "圖 · 生活" },
-    { k: ["併發", "風險", "長期", "惡化", "預後"], svg: "alert", label: "圖 · 長期風險" },
-    { k: ["追蹤", "監測", "回診", "檢查", "記錄"], svg: "track", label: "圖 · 追蹤" },
-    { k: ["緊急", "立即", "送醫", "危險", "急性"], svg: "urgent", label: "圖 · 緊急就醫" }
+    { k: ["用藥", "藥物", "服藥", "藥"], svg: "pill", label: "codex.plate.pill" },
+    { k: ["症狀", "徵兆", "辨認", "警訊"], svg: "symptom", label: "codex.plate.symptom" },
+    { k: ["生活", "飲食", "運動", "作息", "自我照護", "保健"], svg: "life", label: "codex.plate.life" },
+    { k: ["併發", "風險", "長期", "惡化", "預後"], svg: "alert", label: "codex.plate.alert" },
+    { k: ["追蹤", "監測", "回診", "檢查", "記錄"], svg: "track", label: "codex.plate.track" },
+    { k: ["緊急", "立即", "送醫", "危險", "急性"], svg: "urgent", label: "codex.plate.urgent" }
   ];
   function matchPlate(text, list) {
     var s = String(text || "").toLowerCase();
@@ -259,7 +261,7 @@
     frontis.innerHTML =
       '<div class="codex-plate-art">' + coverSvg + "</div>" +
       '<figcaption class="codex-frontis-cap">' +
-        '<div class="codex-frontis-eyebrow">醫 典 圖 譜</div>' +
+        '<div class="codex-frontis-eyebrow">' + esc(T("codex.frontis.eyebrow")) + '</div>' +
         '<div class="codex-frontis-rule"></div>' +
         '<div class="codex-frontis-title">' + esc(title) + "</div>" +
       "</figcaption>";
@@ -273,7 +275,7 @@
       var fig = document.createElement("figure");
       fig.className = "codex-plate";
       fig.innerHTML = '<div class="codex-plate-art">' + PLATE_SVG[plate.svg] + "</div>" +
-        '<figcaption>' + esc(plate.label) + "</figcaption>";
+        '<figcaption>' + esc(T(plate.label)) + "</figcaption>";
       heads[i].parentNode.insertBefore(fig, heads[i]);
     }
   }
@@ -284,7 +286,7 @@
       b = document.createElement("button");
       b.id = "codex-open-btn";
       b.type = "button";
-      b.innerHTML = "📖 翻頁閱讀";
+      b.textContent = "📖 " + T("codex.open");
       b.addEventListener("click", openReader);
       document.body.appendChild(b);
     }
@@ -301,18 +303,18 @@
       var src = document.querySelector('body[data-page="education"] .edu-article-body');
       if (!src) return;
       var titleEl = document.querySelector("#edu-breadcrumb .crumb.current");
-      var title = titleEl ? (titleEl.textContent || "").trim() : "衛教文章";
+      var title = titleEl ? (titleEl.textContent || "").trim() : T("codex.fallbackTitle");
 
       _reader = document.createElement("div");
       _reader.className = "codex-reader";
       _reader.setAttribute("role", "dialog");
       _reader.setAttribute("aria-modal", "true");
-      _reader.setAttribute("aria-label", "翻頁閱讀");
+      _reader.setAttribute("aria-label", T("codex.aria.reader"));
       _reader.innerHTML =
         '<div class="codex-reader-bar">' +
-          '<button type="button" class="codex-rbtn" data-act="close" aria-label="關閉">✕</button>' +
+          '<button type="button" class="codex-rbtn" data-act="close" aria-label="' + esc(T("codex.aria.close")) + '">✕</button>' +
           '<div class="codex-reader-title">' + esc(title) + "</div>" +
-          '<button type="button" class="codex-rbtn" data-act="toc" aria-label="章節">☰</button>' +
+          '<button type="button" class="codex-rbtn" data-act="toc" aria-label="' + esc(T("codex.aria.toc")) + '">☰</button>' +
         "</div>" +
         '<div class="codex-book">' +
           '<div class="codex-reader-stage">' +
@@ -322,17 +324,17 @@
               '<i data-lucide="' + pickStickerIcon(title) + '"></i>' +
             "</div>" +
             '<div class="codex-reader-flow edu-article-body"></div>' +
-            '<button type="button" class="codex-edge prev" aria-label="上一頁"></button>' +
-            '<button type="button" class="codex-edge next" aria-label="下一頁"></button>' +
+            '<button type="button" class="codex-edge prev" aria-label="' + esc(T("codex.aria.prev")) + '"></button>' +
+            '<button type="button" class="codex-edge next" aria-label="' + esc(T("codex.aria.next")) + '"></button>' +
             '<div class="codex-folio"><span class="cur">1</span></div>' +
           "</div>" +
         "</div>" +
         '<div class="codex-pagebar"><i></i></div>' +
         '<div class="codex-dots" aria-hidden="true"></div>' +  // 手機版圓點 indicator
         '<div class="codex-reader-foot">' +
-          '<button type="button" class="codex-fbtn" data-act="prev">‹ 前頁</button>' +
+          '<button type="button" class="codex-fbtn" data-act="prev">' + esc(T("codex.foot.prev")) + '</button>' +
           '<div class="codex-pageno"><span class="cur">1</span> / <span class="tot">1</span></div>' +
-          '<button type="button" class="codex-fbtn" data-act="next">後頁 ›</button>' +
+          '<button type="button" class="codex-fbtn" data-act="next">' + esc(T("codex.foot.next")) + '</button>' +
         "</div>" +
         '<aside class="codex-toc-drawer" hidden></aside>';
       document.body.appendChild(_reader);
@@ -520,8 +522,8 @@
   function buildDrawer() {
     var d = _reader && _reader.querySelector(".codex-toc-drawer");
     if (!d) return;
-    if (!_R.chapters.length) { d.innerHTML = '<div class="codex-toc-title">本篇無章節</div>'; return; }
-    d.innerHTML = '<div class="codex-toc-title">◆ 章節</div>' + _R.chapters.map(function (c) {
+    if (!_R.chapters.length) { d.innerHTML = '<div class="codex-toc-title">' + esc(T("codex.toc.empty")) + '</div>'; return; }
+    d.innerHTML = '<div class="codex-toc-title">' + esc(T("codex.toc.title")) + '</div>' + _R.chapters.map(function (c) {
       return '<button type="button" class="codex-bm" data-jump="' + c.page + '">' + esc(c.text) + "</button>";
     }).join("");
   }
