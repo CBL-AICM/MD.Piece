@@ -246,7 +246,7 @@ function refreshProxyBanner() {
   el.innerHTML = ''
     + '<i data-lucide="users" style="width:14px;height:14px"></i>'
     + '<span>' + _T('app.c1.helpingFor') + ' <strong>' + escapeHtml(p.name) + '</strong>' + (p.relation ? '（' + escapeHtml(p.relation) + '）' : '') + _T('app.c1.proxyBannerNote') + '</span>'
-    + '<button type="button" class="proxy-banner-switch" onclick="onProxySwitch()" aria-label="切換代理對象">'
+    + '<button type="button" class="proxy-banner-switch" onclick="onProxySwitch()" aria-label="' + _T('app.d1.switchProxyTarget') + '">'
     +   '<i data-lucide="repeat" style="width:12px;height:12px"></i>'
     + '</button>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -389,6 +389,15 @@ window.addEventListener('mdpiece-lang-change', function () {
   _remBellKinds = _bld__remBellKinds();
   _RISK_BAND_META = _bld__RISK_BAND_META();
   _TREND_META = _bld__TREND_META();
+  _IP_EDU_TOPICS = _bld__IP_EDU_TOPICS();
+  _IP_RECON_LABEL = _bld__IP_RECON_LABEL();
+  _IP_BEDSIDE_FIELDS = _bld__IP_BEDSIDE_FIELDS();
+  _MENS_SYMPTOMS = _bld__MENS_SYMPTOMS();
+  MED_CATEGORY_FUNCTION = _bld_MED_CATEGORY_FUNCTION();
+  EDU_BOOKS = _bld_EDU_BOOKS();
+  DIET_BASELINE_TIPS = _bld_DIET_BASELINE_TIPS();
+  DIET_BASIC_NUTRIENTS = _bld_DIET_BASIC_NUTRIENTS();
+  _dietWeeklyLineSeries = _bld__dietWeeklyLineSeries();
 });
 
 // 切換語言時 tabbar 文字也要跟著重畫（因為內含 i18n key）
@@ -545,7 +554,7 @@ function memo() {
     + '<div class="mobile-only">'
     +   '<div class="pv-hero" style="margin-bottom:12px">'
     +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
-    +     '<div class="pv-hero-eye">TODAY · 今日 Memo</div>'
+    +     '<div class="pv-hero-eye">TODAY · ' + _T('app.d2.todayMemoEye') + '</div>'
     +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">'
     +       (_todayCount > 0 ? _Tf('app.c1.memoTodayCount', { count: _todayCount, doctorCount: _doctorCount }) : _T('app.c1.memoNothingToday'))
     +     '</div>'
@@ -1206,7 +1215,7 @@ function memoEdit(id) {
 
   var box = document.getElementById("memo-composer");
   if (!box) return;
-  document.getElementById("memo-composer-title").textContent = "編輯 memo";
+  document.getElementById("memo-composer-title").textContent = _T("app.d3.editMemo");
   document.getElementById("memo-text").value = m.text || "";
   document.getElementById("memo-for-doctor").checked = !!m.forDoctor;
 
@@ -1569,7 +1578,7 @@ function loadStoryPage() {
     .catch(function() {
       STORY_CATEGORIES.forEach(function(c) {
         var body = document.getElementById("story-body-" + c.key);
-        if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">載入失敗，請稍後再試。</div>';
+        if (body) body.innerHTML = '<div style="color:var(--text-dim);font-size:.9rem;padding:12px 0">' + _T("app.d4.loadFailedRetry") + '</div>';
       });
       var nf = document.getElementById("story-newsfeed-list");
       if (nf) nf.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">' + _T("app.c2.announcementsFailed") + '</div>';
@@ -1911,7 +1920,7 @@ function previsitBasicInfoEntries() {
 
   if (u.nickname) entries.push([_T("app.c3.nameNickname"), u.nickname]);
 
-  var genderMap = { male: '男', female: '女', other: '其他' };
+  var genderMap = { male: _T("app.d4.male"), female: _T("app.d4.female"), other: _T("app.d4.other") };
   if (info.gender) entries.push([_T("app.c3.gender"), genderMap[info.gender] || info.gender]);
 
   if (info.birthday) {
@@ -2072,7 +2081,7 @@ function previsit() {
     + '      <p class="pv-sub">' + _Tf("app.c3.previsitSub", { n: _pvDays }) + '</p>'
     + '    </div>'
     + '    <div class="pv-actions-top">'
-    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="重新生成">'
+    + '      <button class="pv-btn pv-btn-ghost" onclick="previsitReload()" title="' + _T("app.d5.regenerateTitle") + '">'
     + '        <i data-lucide="refresh-cw"></i> ' + _T("app.c3.regenerate")
     + '      </button>'
     + '      <button class="pv-btn pv-btn-ghost" onclick="previsitShowPatientEssence()" title="' + _T("app.c3.keyHighlightsTitle") + '">'
@@ -2653,7 +2662,7 @@ function _previsitShowEssenceModal(text, state) {
     +     '<i data-lucide="sparkles" style="width:18px;height:18px;color:var(--accent-deep,#2F6B96)"></i>'
     +     '<div style="flex:1;min-width:0">'
     +       '<div style="font-weight:600;font-size:14px;color:var(--navy,#0F2A45)">' + _T("app.c4.essenceTitle") + '</div>'
-    +       (periodLabel ? '<div style="font-size:11px;color:var(--text-muted,#6B7F92)">報告期間：' + escapeHtml(periodLabel) + '</div>' : '')
+    +       (periodLabel ? '<div style="font-size:11px;color:var(--text-muted,#6B7F92)">' + _T("app.d6.reportPeriodLabel") + escapeHtml(periodLabel) + '</div>' : '')
     +     '</div>'
     +     '<button type="button" id="previsit-essence-close" aria-label="' + _T("app.c4.close") + '" style="background:transparent;border:0;cursor:pointer;padding:6px;color:var(--text-muted,#6B7F92)"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
     +   '</header>'
@@ -2770,7 +2779,7 @@ function _pvFmtDateTime(s) {
 
 function _pvRecBlock(title, count, bodyHtml, emptyMsg) {
   var head = '<h3>' + escapeHtml(title)
-    + (count != null ? '<span class="rec-count">（' + count + ' 筆）</span>' : '')
+    + (count != null ? '<span class="rec-count">' + _Tf("app.d6.countItems", { n: count }) + '</span>' : '')
     + '</h3>';
   if (!count) return head + '<div class="rec-empty">' + escapeHtml(emptyMsg || _T("app.c4.noRecordsThisPeriod")) + '</div>';
   return head + bodyHtml;
@@ -2832,7 +2841,7 @@ function _pvEffectsTable(arr, meds) {
 }
 
 function _pvDietTable(arr) {
-  var ml = { breakfast: '早', lunch: '午', dinner: '晚', snack: '點' };
+  var ml = { breakfast: _T("app.d6.mealBreakfast"), lunch: _T("app.d6.mealLunch"), dinner: _T("app.d6.mealDinner"), snack: _T("app.d6.mealSnack") };
   var rows = arr.map(function(d) {
     return '<tr><td>' + escapeHtml(_pvFmtDateTime(d.eaten_at)) + '</td>'
       + '<td>' + escapeHtml(ml[d.meal_type] || d.meal_type || '') + '</td>'
@@ -2852,7 +2861,7 @@ function _pvVisitsTable(arr) {
 }
 
 function _pvAdmissionsTable(arr) {
-  var tmap = { acute: '急性住院', chronic_infusion: '長期療程' };
+  var tmap = { acute: _T("app.d6.admitAcute"), chronic_infusion: _T("app.d6.admitChronic") };
   var rows = arr.map(function(a) {
     var range = _pvFmtDate(a.admit_date) + (a.discharge_date ? ' → ' + _pvFmtDate(a.discharge_date) : ' → ' + _T("app.c4.ongoing"));
     return '<tr><td>' + escapeHtml(range) + '</td>'
@@ -2865,7 +2874,7 @@ function _pvAdmissionsTable(arr) {
 }
 
 function _pvMedChangesTable(arr) {
-  var cmap = { start: '新開始', stop: '停藥', dose_up: '加量', dose_down: '減量', switch: '換藥', frequency: '改頻次', other: '其他' };
+  var cmap = { start: _T("app.d6.chgStart"), stop: _T("app.d6.chgStop"), dose_up: _T("app.d6.chgDoseUp"), dose_down: _T("app.d6.chgDoseDown"), switch: _T("app.d6.chgSwitch"), frequency: _T("app.d6.chgFrequency"), other: _T("app.d6.chgOther") };
   var rows = arr.map(function(m) {
     return '<tr><td>' + escapeHtml(_pvFmtDate(m.effective_date)) + '</td>'
       + '<td>' + escapeHtml(cmap[m.change_type] || m.change_type || '') + '</td>'
@@ -4379,7 +4388,7 @@ function accountPage() {
   const roleIcon = 'heart-pulse';
   const avatarHtml = u.avatar_url
     ? `<img src="${u.avatar_url}" alt="" class="acct-avatar-img" />`
-    : `<img src="icons/xiaohe.jpg" alt="預設頭像（小禾）" class="acct-avatar-img acct-avatar-default" />`;
+    : `<img src="icons/xiaohe.jpg" alt="${_T('app.d9.defaultAvatarAlt')}" class="acct-avatar-img acct-avatar-default" />`;
 
   // ─── Mobile v11 hero ───
   const _mobileAccHero = `
@@ -5958,7 +5967,7 @@ function home() {
   ];
 
   // ─── 手機 v11 demo 版面（同一份資料，不同呈現）────────────────
-  var _mobileGreetCh = (name && name.length) ? name.charAt(0) : '我';
+  var _mobileGreetCh = (name && name.length) ? name.charAt(0) : _T('app.d12.avatarFallbackChar');
   var _mobileToday = new Date();
   var _mobileMD = (_mobileToday.getMonth()+1) + '/' + _mobileToday.getDate();
   var _mobileWeek = _T('home.weekday.' + _mobileToday.getDay());
@@ -6184,7 +6193,7 @@ function home() {
     +     '</button>'
     +     '<button class="quick-jump-btn t-purple" onclick="openStudyHub()">'
     +       '<span class="qj-icon"><i data-lucide="clipboard-pen"></i></span>'
-    +       '<span class="qj-label">研究問卷</span>'
+    +       '<span class="qj-label">' + _T('app.d13.researchSurvey') + '</span>'
     +     '</button>'
     +   '</div>'
 
@@ -6596,7 +6605,7 @@ function loadHome2Page() {
     var user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : '';
     var name = (user && (user.nickname || user.name || user.username)) || _T('app.c9.friend');
-    var g = document.getElementById('home2-greet'); if (g) g.textContent = _home2Greeting() + '，' + name;
+    var g = document.getElementById('home2-greet'); if (g) g.textContent = _home2Greeting() + _T('app.d14.greetSep') + name;
     var d = document.getElementById('home2-date'); if (d) { var n = new Date(); d.textContent = _Tf('app.c9.monthDay', { m: (n.getMonth() + 1), d: n.getDate() }); }
 
     // ── 今日碎片：每型抓一次，判斷今天是否已記錄 ──
@@ -6617,7 +6626,7 @@ function loadHome2Page() {
     // ── 本週觀察：近 7 天症狀強度 ──
     apiFetch(API + '/symptoms/?patient_id=' + pid).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
       var arr = _h2arr(data, ['symptoms', 'logs', 'items', 'data']) || [];
-      var days = [], labels = ['日', '一', '二', '三', '四', '五', '六'], maxByDay = {};
+      var days = [], labels = [_T('app.d14.weekSun'), _T('app.d14.weekMon'), _T('app.d14.weekTue'), _T('app.d14.weekWed'), _T('app.d14.weekThu'), _T('app.d14.weekFri'), _T('app.d14.weekSat')], maxByDay = {};
       for (var i = 6; i >= 0; i--) { var dt = new Date(); dt.setDate(dt.getDate() - i); var key = dt.toISOString().slice(0, 10); days.push({ key: key, lbl: labels[dt.getDay()] }); maxByDay[key] = 0; }
       arr.forEach(function (it) {
         var ds = it.date || it.created_at || it.logged_at || it.recorded_at; if (!ds) return; var k = String(ds).slice(0, 10);
@@ -6639,8 +6648,8 @@ function loadHome2Page() {
       function latest(pred) { for (var i = arr.length - 1; i >= 0; i--) { if (pred(arr[i])) return arr[i]; } return null; }
       var bp = latest(function (v) { return v && (v.systolic || v.bp_systolic || v.sbp); });
       var hr = latest(function (v) { return v && (v.heart_rate || v.hr || v.pulse); });
-      var bpEl = document.getElementById('home2-bp'); if (bpEl && bp) { bpEl.innerHTML = (bp.systolic || bp.bp_systolic || bp.sbp) + '/' + (bp.diastolic || bp.bp_diastolic || bp.dbp || '—'); document.getElementById('home2-bp-t').textContent = '範圍內'; }
-      var hrEl = document.getElementById('home2-hr'); if (hrEl && hr) { hrEl.innerHTML = (hr.heart_rate || hr.hr || hr.pulse) + '<small> bpm</small>'; document.getElementById('home2-hr-t').textContent = '範圍內'; }
+      var bpEl = document.getElementById('home2-bp'); if (bpEl && bp) { bpEl.innerHTML = (bp.systolic || bp.bp_systolic || bp.sbp) + '/' + (bp.diastolic || bp.bp_diastolic || bp.dbp || '—'); document.getElementById('home2-bp-t').textContent = _T('app.d14.inRange'); }
+      var hrEl = document.getElementById('home2-hr'); if (hrEl && hr) { hrEl.innerHTML = (hr.heart_rate || hr.hr || hr.pulse) + '<small> bpm</small>'; document.getElementById('home2-hr-t').textContent = _T('app.d14.inRange'); }
     }).catch(function () {});
     apiFetch(API + '/symptoms/?patient_id=' + pid).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
       var arr = _h2arr(data, ['symptoms', 'logs', 'items', 'data']) || [];
@@ -6672,7 +6681,7 @@ function loadHome2Page() {
     var user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : '';
     var name = (user && (user.nickname || user.name || user.username)) || _T('app.c9.friend');
-    var g = document.getElementById('home2-greet'); if (g) g.textContent = _home2Greeting() + '，' + name;
+    var g = document.getElementById('home2-greet'); if (g) g.textContent = _home2Greeting() + _T('app.d14.greetSep') + name;
     var d = document.getElementById('home2-date'); if (d) { var n = new Date(); d.textContent = _Tf('app.c9.monthDay', { m: (n.getMonth() + 1), d: n.getDate() }); }
     // 用藥（已驗證端點）
     apiFetch(API + '/medications/?patient_id=' + pid).then(function (r) { return r.json(); }).then(function (data) {
@@ -7000,35 +7009,35 @@ function _interpretMetric(metricId, valueStr) {
   var v;
   if (metricId === 'bp') {
     var sys = parseInt(String(valueStr).split('/')[0], 10);
-    if (isNaN(sys)) return '已紀錄';
-    if (sys >= 140) return '偏高，留意';
-    if (sys >= 130) return '稍高';
-    if (sys < 100) return '偏低';
-    return '範圍內';
+    if (isNaN(sys)) return _T('app.d15.recorded');
+    if (sys >= 140) return _T('app.d15.highWatch');
+    if (sys >= 130) return _T('app.d15.slightlyHigh');
+    if (sys < 100) return _T('app.d15.low');
+    return _T('app.d15.inRange');
   }
   v = parseFloat(valueStr);
-  if (isNaN(v)) return '已紀錄';
+  if (isNaN(v)) return _T('app.d15.recorded');
   switch (metricId) {
     case 'glucose':
-      if (v >= 126) return '偏高';
-      if (v >= 110) return '略高';
-      if (v < 70) return '偏低';
-      return '範圍內';
+      if (v >= 126) return _T('app.d15.high');
+      if (v >= 110) return _T('app.d15.mildHigh');
+      if (v < 70) return _T('app.d15.low');
+      return _T('app.d15.inRange');
     case 'heart':
-      if (v >= 100) return '偏快';
-      if (v < 60) return '偏慢';
-      return '範圍內';
+      if (v >= 100) return _T('app.d15.fast');
+      if (v < 60) return _T('app.d15.slow');
+      return _T('app.d15.inRange');
     case 'temp':
-      if (v >= 38) return '發燒';
-      if (v >= 37.5) return '微燒';
-      if (v < 36) return '偏低';
-      return '範圍內';
+      if (v >= 38) return _T('app.d15.fever');
+      if (v >= 37.5) return _T('app.d15.lowFever');
+      if (v < 36) return _T('app.d15.low');
+      return _T('app.d15.inRange');
     case 'spo2':
-      if (v < 92) return '偏低，留意';
-      if (v < 95) return '稍低';
-      return '範圍內';
+      if (v < 92) return _T('app.d15.lowWatch');
+      if (v < 95) return _T('app.d15.slightlyLow');
+      return _T('app.d15.inRange');
     default:
-      return '已紀錄';
+      return _T('app.d15.recorded');
   }
 }
 
@@ -7049,7 +7058,7 @@ function _updateMobileHomeKPIs() {
     var theme = _metricTintAndColor(m);
     var latest = (typeof getLatestEntry === 'function') ? getLatestEntry(id) : null;
     var valHtml = '—';
-    var metaTxt = '尚無紀錄';
+    var metaTxt = _T('app.d15.noRecordYet');
     if (latest && latest.value != null && latest.value !== '') {
       var disp;
       if (typeof latest.value === 'string') disp = latest.value;
@@ -7733,7 +7742,7 @@ function openInpatientQuickLog(key) {
     +   '<header class="ip-prep-head">'
     +     '<div class="ip-prep-when">'
     +       '<span class="ip-prep-when-num">' + cfg.title + '</span>'
-    +       '<span class="ip-prep-when-sub">' + cfg.label + ' · 1 = 最輕微 · 5 = 最嚴重</span>'
+    +       '<span class="ip-prep-when-sub">' + cfg.label + ' · 1 = ' + _T("app.d16.mildest") + ' · 5 = ' + _T("app.d16.severest") + '</span>'
     +     '</div>'
     +     '<button type="button" class="ip-prep-close" onclick="closeInpatientQuickLog()" aria-label="' + _T("app.c10.close") + '"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
     +   '</header>'
@@ -8070,127 +8079,128 @@ function _inpatientEduCard(icon, title, desc, topic) {
 // ════════════════════════════════════════════════════════════════════════════
 // 住院衛教獨立頁 — 跟一般 /education 不共用。內容專門針對「住院期間會遇到的場景」。
 // ════════════════════════════════════════════════════════════════════════════
-var _IP_EDU_TOPICS = [
-  { id: 'hygiene',  icon: 'shower-head',     title: '住院時的清潔', tldr: '點滴在手上不能弄濕，可以擦澡 / 部分淋浴。', body: [
-    '【可以做】用塑膠袋包住點滴注射部位，用沒有點滴的那隻手洗，或請護理協助擦澡。',
-    '【不要做】把點滴泡水裡 / 拉扯到管路 / 自己拔掉。',
-    '【何時叫人】洗到一半覺得頭暈、點滴漏液、貼布鬆開時請立刻按叫人鈴。',
-    '【日常】住院期間皮膚比較乾，每天可塗一點乳液 (避開點滴部位)。',
+function _bld__IP_EDU_TOPICS() { return [
+  { id: 'hygiene',  icon: 'shower-head',     title: _T('app.d17.hygieneTopicTitle'), tldr: _T('app.d17.hygieneTopicTldr'), body: [
+    _T('app.d17.hygieneBody1'),
+    _T('app.d17.hygieneBody2'),
+    _T('app.d17.hygieneBody3'),
+    _T('app.d17.hygieneBody4'),
   ]},
-  { id: 'sleep',    icon: 'moon',            title: '住院睡不好怎麼辦', tldr: '病房光線、夜間查房、隔壁聲音都會影響睡眠。', body: [
-    '【環境】用眼罩 + 耳塞；床頭燈只開最小。',
-    '【作息】白天盡量起來坐一下 / 走動，晚上比較好睡。',
-    '【夜間】每 4-6 小時的測量是常規，可以先告訴護理「敲門就好，可以不用大聲叫」。',
-    '【焦慮】放在 Memo 隔天問醫師；如果睡前焦慮，跟「醫起聊天」說一下會被引導。',
-    '【藥物】長期失眠告訴醫師，可能會評估短期助眠藥，但不要自己吃帶來的安眠藥沒先報。',
+  { id: 'sleep',    icon: 'moon',            title: _T('app.d17.sleepTopicTitle'), tldr: _T('app.d17.sleepTopicTldr'), body: [
+    _T('app.d17.sleepBody1'),
+    _T('app.d17.sleepBody2'),
+    _T('app.d17.sleepBody3'),
+    _T('app.d17.sleepBody4'),
+    _T('app.d17.sleepBody5'),
   ]},
-  { id: 'diet',     icon: 'utensils-crossed',title: '住院的飲食限制', tldr: '禁食是為了避免麻醉或檢查時嘔吐。', body: [
-    '【禁食前】手術 / 麻醉前一般要禁食 8 hr (含水)；某些檢查 4-6 hr 即可。',
-    '【可以做】依醫囑時段內，正常吃醫院供餐 (或家屬帶清淡 / 易消化的食物)。',
-    '【不要做】偷偷喝水 / 吃零食。如果不小心吃了，要老實告訴護理。',
-    '【容易忽略】口香糖、糖果、咖啡也算「吃東西」。',
-    '【特別飲食】糖尿病 / 腎臟病 / 心臟病有專屬餐單，營養師會來說明。',
+  { id: 'diet',     icon: 'utensils-crossed',title: _T('app.d17.dietTopicTitle'), tldr: _T('app.d17.dietTopicTldr'), body: [
+    _T('app.d17.dietBody1'),
+    _T('app.d17.dietBody2'),
+    _T('app.d17.dietBody3'),
+    _T('app.d17.dietBody4'),
+    _T('app.d17.dietBody5'),
   ]},
-  { id: 'mobility', icon: 'footprints',      title: '下床走動的安全', tldr: '長時間躺床會肌肉萎縮 + 增加血栓風險。', body: [
-    '【可以做】依醫囑時段下床走動，先在床邊坐 1-2 分鐘讓血壓穩定再站。',
-    '【點滴】用點滴架推著走，注意管路長度，不要勾到東西。',
-    '【穿著】穿防滑拖鞋；不穿襪子滑地板。',
-    '【何時叫人】感覺頭暈 / 想吐 / 胸悶 立刻坐下按叫人鈴。',
-    '【目標】每天累計走 5-10 分鐘起跳，比一直躺好。',
+  { id: 'mobility', icon: 'footprints',      title: _T('app.d17.mobilityTopicTitle'), tldr: _T('app.d17.mobilityTopicTldr'), body: [
+    _T('app.d17.mobilityBody1'),
+    _T('app.d17.mobilityBody2'),
+    _T('app.d17.mobilityBody3'),
+    _T('app.d17.mobilityBody4'),
+    _T('app.d17.mobilityBody5'),
   ]},
-  { id: 'iv',       icon: 'droplet',         title: '點滴 / 注射部位', tldr: '局部紅腫、漏液、滴速不對都要叫護理。', body: [
-    '【正常】貼布乾淨、滴速規律、注射處不痛。',
-    '【異常】紅腫 / 燒燙感 / 漏液 / 滴不動 / 整隻手腫起來。',
-    '【不要做】自己調滴速 / 把空氣壓進管路 / 自己拔針。',
-    '【翻身 + 上廁所】可以做，動作慢一點，注意點滴架。',
+  { id: 'iv',       icon: 'droplet',         title: _T('app.d17.ivTopicTitle'), tldr: _T('app.d17.ivTopicTldr'), body: [
+    _T('app.d17.ivBody1'),
+    _T('app.d17.ivBody2'),
+    _T('app.d17.ivBody3'),
+    _T('app.d17.ivBody4'),
   ]},
-  { id: 'blood',    icon: 'syringe',         title: '抽血 / 打針的小事', tldr: '怕針 / 血管細也沒關係，可以先說。', body: [
-    '【怕針】跟護理說「我會怕，可以讓我看別的地方嗎？」或「請慢一點」。',
-    '【血管細】多喝水 (依醫囑) 讓血管比較好找；或請有經驗的人員。',
-    '【抽完】壓棉花 3-5 分鐘 (吃抗凝劑要 5-10 分鐘)，不要揉。',
-    '【容易瘀青】是正常的，1-2 週會消；如果一週後越來越大、會痛要回報。',
+  { id: 'blood',    icon: 'syringe',         title: _T('app.d17.bloodTopicTitle'), tldr: _T('app.d17.bloodTopicTldr'), body: [
+    _T('app.d17.bloodBody1'),
+    _T('app.d17.bloodBody2'),
+    _T('app.d17.bloodBody3'),
+    _T('app.d17.bloodBody4'),
   ]},
-  { id: 'mind',     icon: 'heart-handshake', title: '心情 / 焦慮', tldr: '住院本來就會緊張，講出來反而會好一點。', body: [
-    '【寫下來】把擔心的事打進 Memo，等醫師查房時拿出來看。',
-    '【跟誰說】家屬、護理師、「醫起聊天」都可以。',
-    '【類固醇情緒波動】類固醇治療常有焦躁 / 失眠 / 易怒，這不是你的問題，是藥的，要告訴醫師。',
-    '【深呼吸】4 秒吸氣 → 4 秒憋 → 4 秒吐氣 → 4 秒空，重複 4 次。',
-    '【嚴重】持續無望感 / 不想活下去的念頭，立刻跟護理或家屬說。',
+  { id: 'mind',     icon: 'heart-handshake', title: _T('app.d17.mindTopicTitle'), tldr: _T('app.d17.mindTopicTldr'), body: [
+    _T('app.d17.mindBody1'),
+    _T('app.d17.mindBody2'),
+    _T('app.d17.mindBody3'),
+    _T('app.d17.mindBody4'),
+    _T('app.d17.mindBody5'),
   ]},
-  { id: 'visit',    icon: 'users',           title: '訪客 / 家屬陪病', tldr: '探病有時段，陪病要報到。', body: [
-    '【探病時段】各院區不同，通常 10:00-12:00 / 14:00-20:00；ICU 更嚴格。',
-    '【陪病】夜間陪病通常一人，要在護理站登記、戴識別證。',
-    '【感染管控】感冒 / 流感 / 腸胃炎症狀不要來訪；訪客戴口罩、進門先洗手。',
-    '【免疫低下患者】禁止鮮花 / 盆栽 / 生食、生水進病房。',
+  { id: 'visit',    icon: 'users',           title: _T('app.d17.visitTopicTitle'), tldr: _T('app.d17.visitTopicTldr'), body: [
+    _T('app.d17.visitBody1'),
+    _T('app.d17.visitBody2'),
+    _T('app.d17.visitBody3'),
+    _T('app.d17.visitBody4'),
   ]},
-  { id: 'discharge',icon: 'log-out',         title: '出院前該準備', tldr: '帶藥單 / 病摘 / 收據 / 下次回診時間。', body: [
-    '【藥】出院藥單會逐一核對，問清楚每顆「為什麼吃」「飯前 / 飯後」「漏吃怎麼辦」。',
-    '【病歷摘要】請護理站幫忙印一份，自己保留。',
-    '【收據】住院收據 (申報保險用) 通常出院櫃台領；副本一份要的話現場說。',
-    '【回診】下次回診日 / 拆線日 / 抽血追蹤日寫進 MD.Piece「下次回診」chip。',
-    '【出院當天】通常 10:00-12:00 辦理；家屬幫忙打包 + 結清病房費。',
+  { id: 'discharge',icon: 'log-out',         title: _T('app.d17.dischargeTopicTitle'), tldr: _T('app.d17.dischargeTopicTldr'), body: [
+    _T('app.d17.dischargeBody1'),
+    _T('app.d17.dischargeBody2'),
+    _T('app.d17.dischargeBody3'),
+    _T('app.d17.dischargeBody4'),
+    _T('app.d17.dischargeBody5'),
   ],
   // Decision Aid 範例 — 醫師說「明天可以出院或再觀察一天」時的選項對照
   decision: {
-    question: '醫師說「明天可以出院、也可以再觀察一天」— 怎麼決定？',
-    personalNote: '參考你的紀錄：近 3 天疼痛趨勢、生命徵象、有無家人能接送。',
+    question: _T('app.d17.dischargeDecisionQ'),
+    personalNote: _T('app.d17.dischargeDecisionNote'),
     options: [
       {
-        label: '選 A：明天出院',
-        pros: ['少 1 天住院費 / 部分負擔', '回家休息品質通常較好', '可避免院內感染風險'],
-        cons: ['若狀況變差需重新掛號 / 急診', '出院藥可能要等門診才能調整', '家屬要安排接送 + 在家照顧'],
-        risk: '若你有多重慢病 / 一個人住，建議再觀察至少 24 小時。',
-        nextSteps: ['告訴主治醫師你選擇出院', '完成準備清單 17 項', '排定下次回診（7-14 天內）'],
+        label: _T('app.d17.dischargeOptALabel'),
+        pros: [_T('app.d17.dischargeOptAPro1'), _T('app.d17.dischargeOptAPro2'), _T('app.d17.dischargeOptAPro3')],
+        cons: [_T('app.d17.dischargeOptACon1'), _T('app.d17.dischargeOptACon2'), _T('app.d17.dischargeOptACon3')],
+        risk: _T('app.d17.dischargeOptARisk'),
+        nextSteps: [_T('app.d17.dischargeOptANext1'), _T('app.d17.dischargeOptANext2'), _T('app.d17.dischargeOptANext3')],
       },
       {
-        label: '選 B：再觀察一天',
-        pros: ['有醫護隨時可叫', '可再追一次抽血 / 監測', '家屬有更多時間準備'],
-        cons: ['多 1 天住院費 + 部分負擔', '院內感染風險稍高', '睡眠品質可能較差'],
-        risk: '若你昨晚 SOS 回報 > 3 次或趨勢圖標「↗加重」，這個選項通常更安全。',
-        nextSteps: ['告訴主治醫師你選擇觀察', '設定明天的「下一步」目標', '請社工確認保險日數'],
+        label: _T('app.d17.dischargeOptBLabel'),
+        pros: [_T('app.d17.dischargeOptBPro1'), _T('app.d17.dischargeOptBPro2'), _T('app.d17.dischargeOptBPro3')],
+        cons: [_T('app.d17.dischargeOptBCon1'), _T('app.d17.dischargeOptBCon2'), _T('app.d17.dischargeOptBCon3')],
+        risk: _T('app.d17.dischargeOptBRisk'),
+        nextSteps: [_T('app.d17.dischargeOptBNext1'), _T('app.d17.dischargeOptBNext2'), _T('app.d17.dischargeOptBNext3')],
       },
     ],
   }},
-  { id: 'sos',      icon: 'bell-ring',       title: '什麼狀況要立刻叫人', tldr: '別忍。下面的狀況請立刻按床邊紅鈴或求助護理。', body: [
-    '【立刻叫】突發胸痛 / 喘不過氣 / 大量出血 / 點滴流血 / 跌倒了',
-    '【立刻叫】持續性嘔吐 / 高燒 (>38.5°C) / 意識模糊 / 半邊手腳沒力',
-    '【可以晚一點】輕微痠痛 / 拉肚子一次 / 失眠想換床 — 等下次查房或下班護理過去時說',
-    '【記住】沒人會嫌你叫太多。寧可叫了沒事，不要忍著出事。',
+  { id: 'sos',      icon: 'bell-ring',       title: _T('app.d17.sosTopicTitle'), tldr: _T('app.d17.sosTopicTldr'), body: [
+    _T('app.d17.sosBody1'),
+    _T('app.d17.sosBody2'),
+    _T('app.d17.sosBody3'),
+    _T('app.d17.sosBody4'),
   ]},
   // ── 經濟支援 / 保險 ──────────────────────────────────────
-  { id: 'insurance', icon: 'shield-check',   title: '保險申請 — 重點清單',           tldr: '住院/手術通常 30 天內可申請；申請文件要正本+影本各一份。', body: [
-    '【哪些可申請】商業醫療險 (日額/實支實付)、防癌險、重大傷病險、意外險，視保單內容而定。',
-    '【期限】住院/手術理賠通常 30 天內提出最順，但實際依保單條款；超過 2 年才申請可能會被拒。',
-    '【需要文件】① 診斷證明書 (蓋章) ② 醫療收據正本 ③ 病歷摘要 ④ 健保收費明細 (申報用)',
-    '【關鍵字】請醫師在診斷證明上明確寫「主診斷」「手術名稱」「住院起訖日」「ICD-10 碼」— 之後申請理賠才不會被退件。',
-    '【建議】① 出院前把上述文件辦齊 ② 收據建議申請 2-3 份正本 (健保署/商業險公司各一)。',
-    '【小提醒】住院期間若有複雜手術或加護病房，事後申請可能涉及多家保險公司。先把保單列清單再開始辦。',
+  { id: 'insurance', icon: 'shield-check',   title: _T('app.d17.insuranceTopicTitle'),           tldr: _T('app.d17.insuranceTopicTldr'), body: [
+    _T('app.d17.insuranceBody1'),
+    _T('app.d17.insuranceBody2'),
+    _T('app.d17.insuranceBody3'),
+    _T('app.d17.insuranceBody4'),
+    _T('app.d17.insuranceBody5'),
+    _T('app.d17.insuranceBody6'),
   ]},
-  { id: 'studentIns', icon: 'school',        title: '學生平安保險 / 兒童學保',       tldr: '在校學生意外、住院皆可申請，給付不大但容易忽略。', body: [
-    '【誰適用】幼稚園 ~ 大學在學學生 (含夜校)，學校統一加保。',
-    '【可申請】① 意外住院 (每日定額) ② 意外醫療 (門診/手術 實支實付，上限不高) ③ 死殘給付',
-    '【申請流程】① 跟學校註冊組/輔導室拿申請書 ② 附診斷證明、收據影本 ③ 學校統一送承保公司',
-    '【期限】事故 2 年內。',
-    '【小提醒】學保不能單獨申請住院定額 — 必須是「意外」造成的住院。生病住院通常不適用。',
-    '【兒童保險】很多家長為孩子另保的「兒童保險」會包含醫療日額、燒燙傷、重大疾病、手術等，記得也一併申請。',
+  { id: 'studentIns', icon: 'school',        title: _T('app.d17.studentInsTopicTitle'),       tldr: _T('app.d17.studentInsTopicTldr'), body: [
+    _T('app.d17.studentInsBody1'),
+    _T('app.d17.studentInsBody2'),
+    _T('app.d17.studentInsBody3'),
+    _T('app.d17.studentInsBody4'),
+    _T('app.d17.studentInsBody5'),
+    _T('app.d17.studentInsBody6'),
   ]},
-  { id: 'illness14',  icon: 'calendar-clock',title: '14 天住院理賠 / 重要時間點',     tldr: '商業險常用門檻：住院 14 天、30 天、90 天 ...，每階段有不同給付。', body: [
-    '【為什麼是 14 天】很多商業保單會設「住院 14 天內」是基本給付、超過 14 天進入「長期住院加倍」等加成。',
-    '【常見階段】③ < 7 天：基本日額 ④ 8-14 天：加成日額 ⑤ 15-30 天：再加成 ⑥ > 30 天：可能觸發殘廢/重大傷病條款。',
-    '【建議追蹤】用「住院第 N 天」(NowCard 已自動算) 對應保單條款，避免錯過給付段。',
-    '【加護病房 ICU】通常另有獨立加成；要記下入住/轉出 ICU 的日期。',
-    '【慢性 / 長期】超過 30 天的住院，可申請「重大傷病卡」(健保署)，減免部分負擔。',
+  { id: 'illness14',  icon: 'calendar-clock',title: _T('app.d17.illness14TopicTitle'),     tldr: _T('app.d17.illness14TopicTldr'), body: [
+    _T('app.d17.illness14Body1'),
+    _T('app.d17.illness14Body2'),
+    _T('app.d17.illness14Body3'),
+    _T('app.d17.illness14Body4'),
+    _T('app.d17.illness14Body5'),
   ]},
-  { id: 'social',     icon: 'heart-handshake', title: '社會資源 — 你可能不知道的補助', tldr: '健保 +縣市政府 + 民間基金會三層補助，住院期間可申請。', body: [
-    '【健保署】重大傷病卡、低收入戶醫療補助、健保部分負擔減免。',
-    '【縣市衛生局】依縣市不同：失能津貼、長照 2.0、輔具補助、罕見疾病補助。',
-    '【社福機構】① 中華民國紅十字會 (急難救助) ② 兒童福利聯盟 (兒童醫療) ③ 罕病基金會 ④ 創世基金會 (植物人/老人) ⑤ 各疾病協會 (癌症、慢性病等)',
-    '【醫院社工】最快的入口！住院期間請護理站轉介社工師，社工會幫你評估能申請的所有資源。',
-    '【就業 / 經濟】① 勞保傷病給付 (受僱者) ② 國保 ③ 子女教育補助 ④ 房租 / 水電費減免 ⑤ 工會急難救助',
-    '【容易忽略】① 看護費補助 (部分縣市) ② 交通車費 (洗腎/化療接送) ③ 慢性病連續處方箋 (省掛號費)',
-    '【建議做法】住院期間花 10 分鐘列「家庭收入/支出清單」交給社工，他們能評估你能領的補助組合。',
+  { id: 'social',     icon: 'heart-handshake', title: _T('app.d17.socialTopicTitle'), tldr: _T('app.d17.socialTopicTldr'), body: [
+    _T('app.d17.socialBody1'),
+    _T('app.d17.socialBody2'),
+    _T('app.d17.socialBody3'),
+    _T('app.d17.socialBody4'),
+    _T('app.d17.socialBody5'),
+    _T('app.d17.socialBody6'),
+    _T('app.d17.socialBody7'),
   ]},
-];
+]; }
+var _IP_EDU_TOPICS = _bld__IP_EDU_TOPICS();
 var _IP_EDU_EXPANDED = {}; // 主題 id → boolean
 
 function inpatientEdu() {
@@ -8222,15 +8232,15 @@ function inpatientEdu() {
     +   '<div id="ip-edu-personalized"></div>'
     +   '<header class="ip-edu-page-head">'
     +     '<div class="ip-edu-page-titles">'
-    +       '<h2>住院衛教</h2>'
-    +       '<p>專門整理住院期間會遇到的場景。和一般衛教不同，這裡更實用、更具體。</p>'
+    +       '<h2>' + _T('app.d17.inpatientEduHeading') + '</h2>'
+    +       '<p>' + _T('app.d17.inpatientEduIntro') + '</p>'
     +     '</div>'
     +     '<button type="button" class="ip-edu-page-expand-all" onclick="_ipEduToggleAll()">'
-    +       '<i data-lucide="chevrons-down-up" style="width:14px;height:14px"></i><span id="ip-edu-toggle-all-label">全部展開</span>'
+    +       '<i data-lucide="chevrons-down-up" style="width:14px;height:14px"></i><span id="ip-edu-toggle-all-label">' + _T('app.d17.expandAll') + '</span>'
     +     '</button>'
     +   '</header>'
     +   '<div class="ip-edu-sections">' + sections + '</div>'
-    +   '<p class="ip-edu-footer">本頁僅供參考，最終以醫師、護理師說明為準。</p>'
+    +   '<p class="ip-edu-footer">' + _T('app.d17.eduPageFooter') + '</p>'
     + '</div>';
 }
 
@@ -8266,7 +8276,7 @@ function _ipEduUpdateToggleAllLabel() {
     var el = document.getElementById('ip-edu-sec-' + t.id);
     return el && !el.open;
   });
-  lbl.textContent = anyClosed ? '全部展開' : '全部收合';
+  lbl.textContent = anyClosed ? _T('app.d17.expandAll') : _T('app.d17.collapseAll');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -8296,18 +8306,18 @@ function _ipToolHead(num, title, sub) {
 }
 function _ipBackBtn() {
   return '<button type="button" class="ip-tool-back" onclick="_ipGoto(\'home\')">'
-    + '<i data-lucide="arrow-left" style="width:16px;height:16px"></i> 回住院首頁</button>';
+    + '<i data-lucide="arrow-left" style="width:16px;height:16px"></i> ' + _T('app.d17.backToInpatientHome') + '</button>';
 }
 
 // ── 住院工具入口（首頁的 hub 區）─────────────────────────────
 // 把六大功能做成大按鈕，家屬沒看過也能立刻看懂要點哪一個。
 function renderInpatientHub() {
   var tools = [
-    { page: 'handover',     icon: 'file-text',      title: '交接報告',   desc: '一鍵整理給醫護的居家紀錄' },
-    { page: 'medRecon',     icon: 'pill',           title: '用藥核對',   desc: '在家的藥 vs 住院的藥' },
-    { page: 'bedside',      icon: 'clipboard-list', title: '床邊紀錄',   desc: '痛 / 睡 / 吃 + 想問醫師' },
-    { page: 'inpatientEdu', icon: 'book-heart',     title: '住院衛教',   desc: '只給這次住院相關的' },
-    { page: 'dischargePlan',icon: 'home',           title: '出院準備',   desc: '帶回家清單 + 注意紅旗' },
+    { page: 'handover',     icon: 'file-text',      title: _T('app.d17.hubHandoverTitle'),   desc: _T('app.d17.hubHandoverDesc') },
+    { page: 'medRecon',     icon: 'pill',           title: _T('app.d17.hubMedReconTitle'),   desc: _T('app.d17.hubMedReconDesc') },
+    { page: 'bedside',      icon: 'clipboard-list', title: _T('app.d17.hubBedsideTitle'),   desc: _T('app.d17.hubBedsideDesc') },
+    { page: 'inpatientEdu', icon: 'book-heart',     title: _T('app.d17.hubInpatientEduTitle'),   desc: _T('app.d17.hubInpatientEduDesc') },
+    { page: 'dischargePlan',icon: 'home',           title: _T('app.d17.hubDischargeTitle'),   desc: _T('app.d17.hubDischargeDesc') },
   ];
   var cards = tools.map(function(t) {
     return '<button type="button" class="ip-hub-card" onclick="_ipGoto(\'' + t.page + '\')">'
@@ -8457,12 +8467,13 @@ function downloadHandoverPdf() {
 }
 
 // ── F3 用藥核對 ──────────────────────────────────────────────
-var _IP_RECON_LABEL = {
-  added:   { zh: '住院新增', icon: 'plus-circle' },
-  stopped: { zh: '住院停用', icon: 'minus-circle' },
-  changed: { zh: '劑量改變', icon: 'refresh-cw' },
-  same:    { zh: '維持',     icon: 'check' },
-};
+function _bld__IP_RECON_LABEL() { return {
+  added:   { zh: _T('app.d17.reconAdded'), icon: 'plus-circle' },
+  stopped: { zh: _T('app.d17.reconStopped'), icon: 'minus-circle' },
+  changed: { zh: _T('app.d17.reconChanged'), icon: 'refresh-cw' },
+  same:    { zh: _T('app.d17.reconSame'),     icon: 'check' },
+}; }
+var _IP_RECON_LABEL = _bld__IP_RECON_LABEL();
 function medRecon() {
   return '<div class="ip-tool-page" data-care-mode="inpatient">'
     + _ipBackBtn()
@@ -8515,13 +8526,14 @@ function loadMedReconPage() {
 }
 
 // ── F2 床邊自我記錄 + 想問醫師（QPL）─────────────────────────
-var _IP_BEDSIDE_FIELDS = [
-  { key: 'pain', label: '現在會痛嗎？', type: 'pain' },
-  { key: 'food', label: '吃得下嗎？', opts: [['none','幾乎沒吃'],['little','吃一點'],['half','吃一半'],['most','大部分吃完']] },
-  { key: 'sleep', label: '昨晚睡得如何？', opts: [['good','還不錯'],['fair','普通'],['poor','睡不好']] },
-  { key: 'treatment_response', label: '治療後感覺？', opts: [['better','舒服一點'],['same','差不多'],['worse','更不舒服']] },
-  { key: 'mood', label: '心情', type: 'mood' },
-];
+function _bld__IP_BEDSIDE_FIELDS() { return [
+  { key: 'pain', label: _T('app.d18.painNow'), type: 'pain' },
+  { key: 'food', label: _T('app.d18.canEat'), opts: [['none',_T('app.d18.foodNone')],['little',_T('app.d18.foodLittle')],['half',_T('app.d18.foodHalf')],['most',_T('app.d18.foodMost')]] },
+  { key: 'sleep', label: _T('app.d18.sleepLastNight'), opts: [['good',_T('app.d18.sleepGood')],['fair',_T('app.d18.sleepFair')],['poor',_T('app.d18.sleepPoor')]] },
+  { key: 'treatment_response', label: _T('app.d18.afterTreatment'), opts: [['better',_T('app.d18.feelBetter')],['same',_T('app.d18.feelSame')],['worse',_T('app.d18.feelWorse')]] },
+  { key: 'mood', label: _T('app.d18.mood'), type: 'mood' },
+]; }
+var _IP_BEDSIDE_FIELDS = _bld__IP_BEDSIDE_FIELDS();
 var _ipBedsideDraft = {};
 function bedside() {
   return '<div class="ip-tool-page" data-care-mode="inpatient">'
@@ -8623,13 +8635,13 @@ function loadBedsideRecent() {
       if (!logs.length) { host.innerHTML = ''; return; }
       var items = logs.map(function(l) {
         var parts = [];
-        if (l.pain != null) parts.push('痛 ' + l.pain);
-        if (l.food) parts.push('進食');
-        if (l.sleep) parts.push('睡眠');
-        if (l.mood != null) parts.push('心情 ' + l.mood);
+        if (l.pain != null) parts.push(_T('app.d18.painTag') + ' ' + l.pain);
+        if (l.food) parts.push(_T('app.d18.foodTag'));
+        if (l.sleep) parts.push(_T('app.d18.sleepTag'));
+        if (l.mood != null) parts.push(_T('app.d18.moodTag') + ' ' + l.mood);
         return '<li><span class="ip-src">' + escapeHtml((l.created_at || '').slice(5, 16)) + '</span> ' + escapeHtml(parts.join('、')) + '</li>';
       }).join('');
-      host.innerHTML = '<header class="ip-section-head"><span class="ip-num">02c</span><h3>最近紀錄</h3></header>'
+      host.innerHTML = '<header class="ip-section-head"><span class="ip-num">02c</span><h3>' + _T('app.d18.recentRecords') + '</h3></header>'
         + '<ul class="ip-bs-recent-list">' + items + '</ul>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
     });
@@ -8646,10 +8658,10 @@ function loadInpatientQuestions() {
       host.innerHTML = '<ul class="ip-qpl-items">' + qs.map(function(q) {
         var asked = q.status === 'asked';
         return '<li class="ip-qpl-item' + (asked ? ' asked' : '') + '">'
-          + '<button type="button" class="ip-qpl-check" onclick="toggleQuestionAsked(' + JSON.stringify(q.id).replace(/"/g, '&quot;') + ',' + asked + ')" aria-label="標記已問">'
+          + '<button type="button" class="ip-qpl-check" onclick="toggleQuestionAsked(' + JSON.stringify(q.id).replace(/"/g, '&quot;') + ',' + asked + ')" aria-label="' + _T('app.d18.markAsked') + '">'
           +   '<i data-lucide="' + (asked ? 'check-circle-2' : 'circle') + '" style="width:18px;height:18px"></i></button>'
           + '<span class="ip-qpl-text">' + escapeHtml(q.text) + '</span>'
-          + '<button type="button" class="ip-qpl-del" onclick="deleteInpatientQuestion(' + JSON.stringify(q.id).replace(/"/g, '&quot;') + ')" aria-label="刪除"><i data-lucide="x" style="width:15px;height:15px"></i></button>'
+          + '<button type="button" class="ip-qpl-del" onclick="deleteInpatientQuestion(' + JSON.stringify(q.id).replace(/"/g, '&quot;') + ')" aria-label="' + _T('app.d18.delete') + '"><i data-lucide="x" style="width:15px;height:15px"></i></button>'
           + '</li>';
       }).join('') + '</ul>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -8748,7 +8760,8 @@ function loadDischargePlanPage() {
 // 後端：/menstrual/cycles, /menstrual/daily, /menstrual/summary
 // ════════════════════════════════════════════════════════════════════════════
 var _MENS_FLOW = [['light','少量'],['medium','中等'],['heavy','大量']];
-var _MENS_SYMPTOMS = ['經痛','腰痠','頭痛','乳房脹痛','情緒低落','易怒','疲倦','腹脹','長痘','失眠'];
+function _bld__MENS_SYMPTOMS() { return [_T('app.d18.symCramps'),_T('app.d18.symBackache'),_T('app.d18.symHeadache'),_T('app.d18.symBreastTender'),_T('app.d18.symLowMood'),_T('app.d18.symIrritable'),_T('app.d18.symFatigue'),_T('app.d18.symBloating'),_T('app.d18.symAcne'),_T('app.d18.symInsomnia')]; }
+var _MENS_SYMPTOMS = _bld__MENS_SYMPTOMS();
 var _MENS_OVU = [['negative','陰性'],['positive','陽性'],['peak','高峰']];
 var _mensCycleDraft = { flow: null, symptoms: [] };
 
@@ -9307,7 +9320,7 @@ function renderSleepTimeline(s) {
     +     '<div class="sleep-axis-bar">'
     +       (wasoPct > 0 ? '<span class="sleep-axis-wake" style="left:45%;width:' + wasoPct + '%"></span>' : '')
     +     '</div>'
-    +     '<div class="sleep-axis-labels"><span>入睡 ' + _fmtClock(s.sleep_onset) + '</span><span>醒來 ' + _fmtClock(s.wake_time) + '</span></div>'
+    +     '<div class="sleep-axis-labels"><span>' + _T('app.d19.fallAsleep') + ' ' + _fmtClock(s.sleep_onset) + '</span><span>' + _T('app.d19.wakeUp') + ' ' + _fmtClock(s.wake_time) + '</span></div>'
     +   '</div>'
     +   (s.awakenings_count ? '<p class="sleep-hint">' + _Tf('app.c12.nightWokeCount', { n: s.awakenings_count }) + '</p>' : '<p class="sleep-hint">' + _T('app.c12.nightNoWaking') + '</p>')
     + '</section>';
@@ -9379,7 +9392,7 @@ function loadSleepList() {
         return '<li class="sleep-item">'
           + '<div class="sleep-item-main">'
           +   '<span class="sleep-item-date">' + (s.bed_time || '').slice(0, 10) + '</span>'
-          +   '<span class="sleep-item-sub">' + _fmtMins(s.total_sleep_minutes) + '・效率 ' + (s.sleep_efficiency != null ? Math.round(s.sleep_efficiency * 100) + '%' : '—')
+          +   '<span class="sleep-item-sub">' + _fmtMins(s.total_sleep_minutes) + '・' + _T('app.d19.efficiency') + ' ' + (s.sleep_efficiency != null ? Math.round(s.sleep_efficiency * 100) + '%' : '—')
           +     '　<span class="sleep-tag">' + (s.is_edited ? _T('app.c12.edited') : _sleepSourceZh(s.source)) + '</span></span>'
           + '</div>'
           + '<button type="button" class="sleep-edit-btn" onclick="openSleepEdit(' + JSON.stringify(s.id).replace(/"/g, '&quot;') + ')" aria-label="' + _T('app.c12.correct') + '"><i data-lucide="pencil" style="width:15px;height:15px"></i></button>'
@@ -11062,7 +11075,7 @@ function symptoms() {
               </button>
               <p class="sym-body-ai-warn">
                 <i data-lucide="info" style="width:11px;height:11px"></i>
-                AI 推測僅供與醫師討論參考，不是診斷
+                ${_T("app.d23.aiGuessDisclaimer")}
               </p>
               <div class="sym-body-ai-result" id="sym-body-ai-result"></div>
             </div>
@@ -11669,8 +11682,8 @@ function mobileSymBodyPick(partId, label) {
   });
   var cap = document.getElementById('m-bodymap-caption');
   if (cap) {
-    cap.innerHTML = '已選：<strong>' + label + '</strong>　·　'
-      + '<a href="javascript:mobileSymBodyClear()" style="color:#7F4A2E;text-decoration:underline">清除</a>';
+    cap.innerHTML = _T('app.d24.selected') + '<strong>' + label + '</strong>　·　'
+      + '<a href="javascript:mobileSymBodyClear()" style="color:#7F4A2E;text-decoration:underline">' + _T('app.d24.clear') + '</a>';
   }
 }
 function mobileSymBodyClear() {
@@ -11782,10 +11795,10 @@ async function symBodyAiAnalyze() {
 function _renderBodyAiResult(el, subRegion, data) {
   var urgency = data.urgency || 'low';
   var urgencyMap = {
-    emergency: { label: '緊急', tone: 'emergency', icon: 'alert-octagon' },
-    high:      { label: '較高',  tone: 'high',      icon: 'alert-triangle' },
-    medium:    { label: '中等',  tone: 'medium',    icon: 'alert-circle' },
-    low:       { label: '輕微',  tone: 'low',       icon: 'info' },
+    emergency: { label: _T('app.d24.urgencyEmergency'), tone: 'emergency', icon: 'alert-octagon' },
+    high:      { label: _T('app.d24.urgencyHigh'),  tone: 'high',      icon: 'alert-triangle' },
+    medium:    { label: _T('app.d24.urgencyMedium'),  tone: 'medium',    icon: 'alert-circle' },
+    low:       { label: _T('app.d24.urgencyLow'),  tone: 'low',       icon: 'info' },
   };
   var u = urgencyMap[urgency] || urgencyMap.low;
   var conditions = Array.isArray(data.conditions) ? data.conditions.slice(0, 4) : [];
@@ -11795,14 +11808,14 @@ function _renderBodyAiResult(el, subRegion, data) {
         var desc = (typeof c === 'object' && c.description) ? c.description : '';
         return '<li><strong>' + escapeHtml(String(name)) + '</strong>' + (desc ? '<span class="sbai-cond-desc">' + escapeHtml(String(desc)) + '</span>' : '') + '</li>';
       }).join('') + '</ul>'
-    : '<p class="sbai-empty">AI 沒有特別指向的可能，建議直接諮詢醫師。</p>';
+    : '<p class="sbai-empty">' + _T('app.d24.aiNoSuggestion') + '</p>';
 
   el.innerHTML = ''
     + '<div class="sbai-card">'
     +   '<div class="sbai-head">'
     +     '<span class="sbai-region">' + escapeHtml(subRegion) + '</span>'
     +     '<span class="sbai-urgency sbai-urgency-' + u.tone + '">'
-    +       '<i data-lucide="' + u.icon + '" style="width:12px;height:12px"></i> 緊急度 · ' + u.label
+    +       '<i data-lucide="' + u.icon + '" style="width:12px;height:12px"></i> ' + _T('app.d24.urgencyLabel') + ' · ' + u.label
     +     '</span>'
     +   '</div>'
     +   '<div class="sbai-block">'
@@ -11811,10 +11824,10 @@ function _renderBodyAiResult(el, subRegion, data) {
     +   '</div>'
     +   '<div class="sbai-block">'
     +     '<div class="sbai-block-label">' + _T('app.c15.recommendedDept') + '</div>'
-    +     '<div class="sbai-dept">' + escapeHtml(data.recommended_department || '家醫科') + '</div>'
+    +     '<div class="sbai-dept">' + escapeHtml(data.recommended_department || _T('app.d24.familyMedicine')) + '</div>'
     +   '</div>'
     +   (data.advice ? '<div class="sbai-block"><div class="sbai-block-label">' + _T('app.c15.advice') + '</div><p class="sbai-advice">' + escapeHtml(data.advice) + '</p></div>' : '')
-    +   '<p class="sbai-disclaimer"><i data-lucide="info" style="width:11px;height:11px"></i> ' + escapeHtml(data.disclaimer || '此分析僅供參考，不取代醫師診斷；如有不適請立即就醫。') + '</p>'
+    +   '<p class="sbai-disclaimer"><i data-lucide="info" style="width:11px;height:11px"></i> ' + escapeHtml(data.disclaimer || _T('app.d24.aiDisclaimer')) + '</p>'
     + '</div>';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -12767,7 +12780,7 @@ function loadDoctorMeasurementRequests(announce) {
     .then(r => r.ok ? r.json() : { items: [] })
     .then(data => renderDoctorMeasurementRequests(data.items || [], !!announce))
     .catch(() => {
-      if (announce) banner.innerHTML = '<div style="padding:10px;border:1px dashed var(--border-glass);border-radius:8px;color:var(--text-muted)">無法連線醫師端，請稍後再試。</div>';
+      if (announce) banner.innerHTML = '<div style="padding:10px;border:1px dashed var(--border-glass);border-radius:8px;color:var(--text-muted)">' + _T('app.d26.cannotReachDoctor') + '</div>';
     });
 }
 
@@ -12899,7 +12912,7 @@ function openMeasurementPlanDialog(metricId, opts) {
         <div id="vt-plan-weekly" style="display:none;margin-bottom:10px">
           <div style="font-size:0.85rem;margin-bottom:6px">${_T("app.c17.chooseWeekday")}</div>
           <div style="display:flex;gap:4px;flex-wrap:wrap">
-            ${['一','二','三','四','五','六','日'].map((d,i) => `
+            ${[_T('app.d26.dowMon'),_T('app.d26.dowTue'),_T('app.d26.dowWed'),_T('app.d26.dowThu'),_T('app.d26.dowFri'),_T('app.d26.dowSat'),_T('app.d26.dowSun')].map((d,i) => `
               <label style="display:flex;align-items:center;gap:3px;padding:6px 10px;border:1px solid var(--border-glass);border-radius:6px;cursor:pointer;font-size:0.85rem">
                 <input type="checkbox" class="vt-plan-dow" value="${i}" ${i === 0 ? 'checked' : ''} /> ${d}
               </label>
@@ -12967,7 +12980,7 @@ function vtPlanPresetChanged(presetId, prefillTimes) {
 
   const renderTimes = () => {
     timesEl.innerHTML = `
-      <div style="font-size:0.85rem;margin-bottom:6px">提醒時間：</div>
+      <div style="font-size:0.85rem;margin-bottom:6px">${_T('app.d26.reminderTime')}</div>
       <div id="vt-plan-time-list" style="display:flex;flex-direction:column;gap:6px">
         ${times.map((t, idx) => `
           <div style="display:flex;gap:6px;align-items:center">
@@ -12977,7 +12990,7 @@ function vtPlanPresetChanged(presetId, prefillTimes) {
         `).join('')}
       </div>
       ${presetId === 'custom' && times.length < 6 ? `
-        <button type="button" onclick="vtPlanAddTime()" style="margin-top:6px;padding:6px 10px;background:transparent;border:1px dashed var(--border-glass);border-radius:6px;cursor:pointer;font-size:0.85rem">+ 加一個時間</button>
+        <button type="button" onclick="vtPlanAddTime()" style="margin-top:6px;padding:6px 10px;background:transparent;border:1px dashed var(--border-glass);border-radius:6px;cursor:pointer;font-size:0.85rem">${_T('app.d26.addOneTime')}</button>
       ` : ''}
     `;
   };
@@ -13223,7 +13236,7 @@ function toggleVitalTracked(id) {
   // 關閉追蹤：若有現存 plan，先確認是否一併取消
   const plan = getPlanForMetric(id);
   if (plan) {
-    if (!confirm('要同時移除這個指標的提醒嗎？\n（按取消會保留提醒，只從追蹤清單移除）')) {
+    if (!confirm(_T("app.d27.confirmRemoveMetricReminder"))) {
       // 不取消提醒，只移出追蹤清單
     } else {
       const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
@@ -13309,9 +13322,9 @@ function openVitalLog(metricId) {
     body += `
       <label class="lf-label">${_Tf("app.c17.bpLabel", { unit: m.unit })}</label>
       <div class="vt-dual-wrap">
-        <input type="number" id="vt-val1" placeholder="例 120" min="40" max="260" step="1" />
+        <input type="number" id="vt-val1" placeholder="${_T("app.d27.bpExampleHigh")}" min="40" max="260" step="1" />
         <span class="vt-dual-sep">/</span>
-        <input type="number" id="vt-val2" placeholder="例 80" min="30" max="160" step="1" />
+        <input type="number" id="vt-val2" placeholder="${_T("app.d27.bpExampleLow")}" min="30" max="160" step="1" />
         <span class="vt-dual-unit">${m.unit}</span>
       </div>
       ${contextFieldHtml}
@@ -13606,18 +13619,18 @@ function saveBmiSnapshot(bmi) {
 }
 
 function deleteVitalEntryAndRefresh(id) {
-  if (!confirm('刪除這筆紀錄？')) return;
+  if (!confirm(_T("app.d28.confirmDeleteRecord"))) return;
   deleteVitalEntry(id);
   showPage('vitals');
 }
 
 function interpretBMI(v) {
-  if (v < 18.5) return '體重過輕';
-  if (v < 24)   return '健康範圍';
-  if (v < 27)   return '體重過重';
-  if (v < 30)   return '輕度肥胖';
-  if (v < 35)   return '中度肥胖';
-  return '重度肥胖';
+  if (v < 18.5) return _T("app.d28.bmiUnderweight");
+  if (v < 24)   return _T("app.d28.bmiHealthy");
+  if (v < 27)   return _T("app.d28.bmiOverweight");
+  if (v < 30)   return _T("app.d28.bmiObese1");
+  if (v < 35)   return _T("app.d28.bmiObese2");
+  return _T("app.d28.bmiObese3");
 }
 
 // ─── 症狀分析（獨立頁） ────────────────────────────────────
@@ -13687,10 +13700,10 @@ function symptomsAnalyze() {
 // 對齊 docs/research/ui_color_research.md §4 與 backend/routers/triage.py
 function _symptomUrgency(level) {
   const map = {
-    emergency: { label: "緊急",   severity: "er"       },  // → var(--sev-er)
-    high:      { label: "高",     severity: "medical"  },  // → var(--sev-medical)
-    medium:    { label: "中",     severity: "clinic"   },  // → var(--sev-clinic)
-    low:       { label: "低",     severity: "self"     },  // → var(--sev-self)
+    emergency: { label: _T("app.d28.urgencyEmergency"),   severity: "er"       },  // → var(--sev-er)
+    high:      { label: _T("app.d28.urgencyHigh"),     severity: "medical"  },  // → var(--sev-medical)
+    medium:    { label: _T("app.d28.urgencyMedium"),     severity: "clinic"   },  // → var(--sev-clinic)
+    low:       { label: _T("app.d28.urgencyLow"),     severity: "self"     },  // → var(--sev-self)
   };
   return map[level] || map.low;
 }
@@ -13931,10 +13944,10 @@ async function analyzeSymptoms() {
     const data = await res.json();
 
     const urgencyMap = {
-      emergency: { label: "緊急", cls: "urgency-emergency" },
-      high: { label: "高", cls: "urgency-high" },
-      medium: { label: "中", cls: "urgency-medium" },
-      low: { label: "低", cls: "urgency-low" },
+      emergency: { label: _T("app.d28.urgencyEmergency"), cls: "urgency-emergency" },
+      high: { label: _T("app.d28.urgencyHigh"), cls: "urgency-high" },
+      medium: { label: _T("app.d28.urgencyMedium"), cls: "urgency-medium" },
+      low: { label: _T("app.d28.urgencyLow"), cls: "urgency-low" },
     };
     const urg = urgencyMap[data.urgency] || urgencyMap.low;
 
@@ -14789,10 +14802,10 @@ function renderMedImprovement(data) {
     return;
   }
   var trendMap = {
-    improving:        { cls: "up",   label: "↑ 改善中",   color: "#4caf90" },
-    declining:        { cls: "down", label: "↓ 下降中",   color: "#e8889c" },
-    stable:           { cls: "flat", label: "→ 平穩",     color: "#5b9fe8" },
-    insufficient_data:{ cls: "flat", label: "· 資料累積中", color: "#5b9fe8" },
+    improving:        { cls: "up",   label: _T('app.d30.trendImproving'),   color: "#4caf90" },
+    declining:        { cls: "down", label: _T('app.d30.trendDeclining'),   color: "#e8889c" },
+    stable:           { cls: "flat", label: _T('app.d30.trendStable'),     color: "#5b9fe8" },
+    insufficient_data:{ cls: "flat", label: _T('app.d30.trendInsufficient'), color: "#5b9fe8" },
   };
   var t = trendMap[summary.trend] || trendMap.stable;
   var last = daily[daily.length - 1];
@@ -14890,13 +14903,13 @@ function _renderMedTodayHero(meds) {
   var remaining = Math.max(0, expected - taken);
   var pct = expected > 0 ? Math.min(100, Math.round((taken / expected) * 100)) : 0;
   var statusLine = expected > 0
-    ? (taken + ' / ' + expected + ' 完成' + (remaining > 0 ? ' · 還剩 ' + remaining + ' 顆' : ' · 今日已完成 ✨'))
-    : ('今日記錄 ' + taken + ' 次 · 你有 ' + meds.length + ' 種藥');
+    ? (taken + ' / ' + expected + ' ' + _T('app.d30.done') + (remaining > 0 ? ' · ' + _Tf('app.d30.remainingPills', { n: remaining }) : ' · ' + _T('app.d30.allDoneToday') + ' ✨'))
+    : (_Tf('app.d30.recordedTimesToday', { n: taken }) + ' · ' + _Tf('app.d30.medKinds', { n: meds.length }));
   return ''
     + '<div class="med-today-hero">'
     +   '<div class="med-today-hero-head">'
-    +     '<span class="med-today-eyebrow">TODAY · 今日服藥</span>'
-    +     '<span class="med-today-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 以醫師處方為準</span>'
+    +     '<span class="med-today-eyebrow">TODAY · ' + _T('app.d30.todayMeds') + '</span>'
+    +     '<span class="med-today-warn"><i data-lucide="info" style="width:11px;height:11px"></i> ' + _T('app.d30.followPrescription') + '</span>'
     +   '</div>'
     +   '<div class="med-today-title">' + statusLine + '</div>'
     +   '<div class="med-today-bar"><div class="med-today-bar-fill" style="width:' + pct + '%"></div></div>'
@@ -14994,7 +15007,7 @@ function _customScheduleSummary(custom) {
     var wd = (e.weekdays || []).slice().sort();
     var label;
     if (wd.length === 7) {
-      label = '每天';
+      label = _T('app.d30.everyDay');
     } else {
       label = '週' + wd.map(function(d){ return WD[d] || '?'; }).join('');
     }
@@ -15031,7 +15044,7 @@ function openMedScheduleEditor(medId) {
     + '<div class="mdm-backdrop" onclick="closeMedScheduleEditor()"></div>'
     + '<div class="mdm-panel" role="dialog" aria-modal="true" aria-label="' + _T('app.c19.editScheduleTitle') + '" style="max-width:520px">'
     +   '<header class="mdm-head">'
-    +     '<button type="button" class="mdm-close" onclick="closeMedScheduleEditor()" aria-label="關閉">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedScheduleEditor()" aria-label="' + _T("app.d31.close") + '">'
     +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
     +     '</button>'
     +     '<div class="mdm-title-wrap">'
@@ -15067,7 +15080,7 @@ function renderMedScheduleEditor() {
   var body = document.getElementById('med-schedule-body');
   var st = window._medScheduleEditing;
   if (!body || !st) return;
-  var WD_LABELS = ['一','二','三','四','五','六','日']; // 0=Mon..6=Sun
+  var WD_LABELS = [_T("app.d31.wdMon"),_T("app.d31.wdTue"),_T("app.d31.wdWed"),_T("app.d31.wdThu"),_T("app.d31.wdFri"),_T("app.d31.wdSat"),_T("app.d31.wdSun")]; // 0=Mon..6=Sun
   var html = '';
   st.entries.forEach(function(e, i) {
     html += '<div class="med-sched-entry" style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--bg-soft)">'
@@ -15086,12 +15099,12 @@ function renderMedScheduleEditor() {
         + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' '
         + 'onchange="toggleMedScheduleWeekday(' + i + ',' + d + ')" '
         + 'style="display:none">'
-        + '週' + lab
+        + _T("app.d31.weekdayPrefix") + lab
         + '</label>';
     });
     html += '</div>'
       + '<label style="display:flex;align-items:center;gap:8px;font-size:13px">'
-      +   '<span style="color:var(--text-dim)">時刻</span>'
+      +   '<span style="color:var(--text-dim)">' + _T("app.d31.timeLabel") + '</span>'
       +   '<input type="time" value="' + escapeHtml(e.time) + '" '
       +     'onchange="setMedScheduleTime(' + i + ', this.value)" '
       +     'style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-variant-numeric:tabular-nums">'
@@ -15213,7 +15226,7 @@ function openMedEditBasics(medId) {
     + '<div class="mdm-backdrop" onclick="closeMedEditBasics()"></div>'
     + '<div class="mdm-panel" role="dialog" aria-modal="true" aria-label="' + _T('app.c19.editMedBasicsTitle') + '" style="max-width:520px">'
     +   '<header class="mdm-head">'
-    +     '<button type="button" class="mdm-close" onclick="closeMedEditBasics()" aria-label="關閉">'
+    +     '<button type="button" class="mdm-close" onclick="closeMedEditBasics()" aria-label="' + _T("app.d31.close") + '">'
     +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
     +     '</button>'
     +     '<div class="mdm-title-wrap">'
@@ -15547,10 +15560,10 @@ function _renderMobileMedList(meds) {
         +   '</div>'
         +   '<div class="time">' + escapeHtml(m.time_of_day || '') + '</div>'
         +   '<div style="display:flex;align-items:center;gap:6px">'
-        +     '<button type="button" class="med-customize-edit-btn" onclick="openMedEditBasics(\'' + safeMedId + '\')" title="編輯藥名 / 劑量 / 頻率" aria-label="編輯藥物基本資料" style="padding:5px 8px">'
+        +     '<button type="button" class="med-customize-edit-btn" onclick="openMedEditBasics(\'' + safeMedId + '\')" title="' + _T("app.d32.editBasicsTitle") + '" aria-label="' + _T("app.d32.editBasicsAria") + '" style="padding:5px 8px">'
         +       '<i data-lucide="pencil"></i>'
         +     '</button>'
-        +     '<button type="button" class="med-customize-edit-btn" onclick="deleteMedication(\'' + safeMedId + '\',\'' + safeNameAttr + '\')" title="刪除這顆藥" aria-label="刪除藥物" style="padding:5px 8px;color:var(--danger,#c0392b);border-color:rgba(192,57,43,0.3)">'
+        +     '<button type="button" class="med-customize-edit-btn" onclick="deleteMedication(\'' + safeMedId + '\',\'' + safeNameAttr + '\')" title="' + _T("app.d32.deleteMedTitle") + '" aria-label="' + _T("app.d32.deleteMedAria") + '" style="padding:5px 8px;color:var(--danger,#c0392b);border-color:rgba(192,57,43,0.3)">'
         +       '<i data-lucide="trash-2"></i>'
         +     '</button>'
         +   '</div>'
@@ -15785,12 +15798,12 @@ function _renderMedCard(med, slotKey, isOther) {
       '<div class="med-card-actions" onclick="event.stopPropagation()">' +
         '<button type="button" class="med-card-take" onclick="tapMedTake(\'' + med.id + '\',\'' + slotKey + '\')" aria-label="' + _T('meds.card.take') + '">' + _T('meds.card.take') + '</button>' +
         '<div class="med-card-actions-row">' +
-          '<button type="button" class="med-card-mini med-card-mini-info" onclick="openMedDetail(\'' + med.id + '\')" title="看這顆藥的使用狀況與療效" aria-label="查看詳情"><i data-lucide="bar-chart-3" style="width:18px;height:18px"></i></button>' +
-          '<button type="button" class="med-card-mini" onclick="openMedEditBasics(\'' + med.id + '\')" title="編輯藥名 / 劑量 / 頻率" aria-label="編輯藥物"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>' +
-          '<button type="button" class="med-card-mini" onclick="openMedScheduleEditor(\'' + med.id + '\')" title="編輯提醒時刻" aria-label="編輯排程"><i data-lucide="calendar-clock" style="width:14px;height:14px"></i></button>' +
+          '<button type="button" class="med-card-mini med-card-mini-info" onclick="openMedDetail(\'' + med.id + '\')" title="' + _T("app.d32.medDetailTitle") + '" aria-label="' + _T("app.d32.viewDetail") + '"><i data-lucide="bar-chart-3" style="width:18px;height:18px"></i></button>' +
+          '<button type="button" class="med-card-mini" onclick="openMedEditBasics(\'' + med.id + '\')" title="' + _T("app.d32.editBasicsTitle") + '" aria-label="' + _T("app.d32.editMed") + '"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>' +
+          '<button type="button" class="med-card-mini" onclick="openMedScheduleEditor(\'' + med.id + '\')" title="' + _T("app.d32.editReminderTime") + '" aria-label="' + _T("app.d32.editSchedule") + '"><i data-lucide="calendar-clock" style="width:14px;height:14px"></i></button>' +
           '<button type="button" class="med-card-mini" onclick="logMedTaken(\'' + med.id + '\',false)" title="' + _T('meds.card.skipTitle') + '">✗</button>' +
           '<button type="button" class="med-card-mini" onclick="showEffectForm(\'' + med.id + '\',\'' + safeName + '\')" title="' + _T('meds.card.effectTitle') + '">★</button>' +
-          '<button type="button" class="med-card-mini" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)" title="查詢藥物百科（副作用 / 用法 / 衛教）">?</button>' +
+          '<button type="button" class="med-card-mini" data-name="' + escapeHtml(med.name || '') + '" onclick="openDrugSearchFor(this.dataset.name)" title="' + _T("app.d32.drugEncyclopediaTitle") + '">?</button>' +
         '</div>' +
       '</div>' +
     '</div>'
@@ -15937,32 +15950,33 @@ function closeMedTypesSheet() {
 
 // 把醫療分類映射成淺顯的「功能」說明 — 患者不一定看得懂藥袋上的英文分類，
 // 所以提供一個保底文案；若藥物本身有 purpose，仍以 purpose 為主。
-var MED_CATEGORY_FUNCTION = {
-  '降血壓': '放鬆血管、降低血壓，保護心臟與腎臟',
-  '高血壓': '放鬆血管、降低血壓，保護心臟與腎臟',
-  '降血糖': '幫助身體運用葡萄糖，控制血糖',
-  '糖尿病': '幫助身體運用葡萄糖，控制血糖',
-  '降血脂': '降低壞膽固醇與三酸甘油酯，預防動脈硬化',
-  '高血脂': '降低壞膽固醇與三酸甘油酯，預防動脈硬化',
-  '心血管': '改善心臟與血管功能，預防中風與心肌梗塞',
-  '抗凝血': '降低血液凝結傾向，預防血栓',
-  '利尿劑': '幫助身體排出多餘水分與鈉',
-  '止痛': '阻斷疼痛訊號，減輕疼痛與發炎',
-  '消炎': '降低發炎反應，緩解紅腫熱痛',
-  '抗生素': '殺死或抑制細菌，治療細菌感染',
-  '抗組織胺': '減緩過敏反應，緩解癢、流鼻水、打噴嚏',
-  '腸胃': '緩解胃酸、脹氣或調節腸胃蠕動',
-  '制酸劑': '中和或減少胃酸，保護胃黏膜',
-  '助眠': '幫助入睡、改善睡眠品質',
-  '安眠': '幫助入睡、改善睡眠品質',
-  '抗焦慮': '緩解焦慮、放鬆神經',
-  '抗憂鬱': '調節神經傳導物質，改善情緒低落',
-  '甲狀腺': '補充或調節甲狀腺荷爾蒙',
-  '骨質疏鬆': '減緩骨質流失、強化骨骼',
-  '氣喘': '舒緩支氣管，改善呼吸',
-  '止咳': '緩解咳嗽',
-  '化痰': '稀釋痰液、幫助排痰',
-};
+function _bld_MED_CATEGORY_FUNCTION() { return {
+  '降血壓': _T("app.d32.funcBloodPressure"),
+  '高血壓': _T("app.d32.funcBloodPressure"),
+  '降血糖': _T("app.d32.funcBloodSugar"),
+  '糖尿病': _T("app.d32.funcBloodSugar"),
+  '降血脂': _T("app.d32.funcBloodLipid"),
+  '高血脂': _T("app.d32.funcBloodLipid"),
+  '心血管': _T("app.d32.funcCardiovascular"),
+  '抗凝血': _T("app.d32.funcAnticoagulant"),
+  '利尿劑': _T("app.d32.funcDiuretic"),
+  '止痛': _T("app.d32.funcPainkiller"),
+  '消炎': _T("app.d32.funcAntiInflammatory"),
+  '抗生素': _T("app.d32.funcAntibiotic"),
+  '抗組織胺': _T("app.d32.funcAntihistamine"),
+  '腸胃': _T("app.d32.funcGastro"),
+  '制酸劑': _T("app.d32.funcAntacid"),
+  '助眠': _T("app.d32.funcSleepAid"),
+  '安眠': _T("app.d32.funcSleepAid"),
+  '抗焦慮': _T("app.d32.funcAntiAnxiety"),
+  '抗憂鬱': _T("app.d32.funcAntidepressant"),
+  '甲狀腺': _T("app.d32.funcThyroid"),
+  '骨質疏鬆': _T("app.d32.funcOsteoporosis"),
+  '氣喘': _T("app.d32.funcAsthma"),
+  '止咳': _T("app.d32.funcCoughSuppressant"),
+  '化痰': _T("app.d32.funcExpectorant"),
+}; }
+var MED_CATEGORY_FUNCTION = _bld_MED_CATEGORY_FUNCTION();
 
 function _medCategoryFunction(med) {
   if (med && med.purpose) return String(med.purpose).trim();
@@ -16426,17 +16440,17 @@ function _runClientOcr(dataUrl, onProgress) {
       // tesseract.js 載入失敗（網路 / CDN 擋）— 直接退回 backend OCR
       return fail("Tesseract not loaded");
     }
-    if (onProgress) onProgress("下載中文辨識引擎...");
+    if (onProgress) onProgress(_T('app.d33.ocrDownloadEngine'));
     try {
       Tesseract.recognize(dataUrl, "chi_tra+eng", {
         logger: function(m) {
           if (!onProgress) return;
-          if (m.status === "loading tesseract core") onProgress("載入辨識引擎...");
-          else if (m.status === "loading language traineddata") onProgress("下載中文語言包...");
-          else if (m.status === "initializing api" || m.status === "initialized api") onProgress("初始化辨識引擎...");
+          if (m.status === "loading tesseract core") onProgress(_T('app.d33.ocrLoadEngine'));
+          else if (m.status === "loading language traineddata") onProgress(_T('app.d33.ocrDownloadLangPack'));
+          else if (m.status === "initializing api" || m.status === "initialized api") onProgress(_T('app.d33.ocrInitEngine'));
           else if (m.status === "recognizing text") {
             var pct = Math.round((m.progress || 0) * 100);
-            onProgress("正在辨識文字 " + pct + "%");
+            onProgress(_Tf('app.d33.ocrRecognizingText', { pct: pct }));
           }
         },
       })
@@ -16521,7 +16535,7 @@ function _renderMedPreviewAndRecognize(dataUrl, mediaType) {
       var providerNote = "";
       if (data.errors && data.errors.length) {
         var lines = data.errors.map(function(e) {
-          return "• " + (e.provider || "?") + "：" + (e.error || "未知錯誤");
+          return "• " + (e.provider || "?") + "：" + (e.error || _T('app.d34.unknownError'));
         }).join("\n");
         providerNote = "\n\n" + _T('app.c21.triedServices') + "\n" + lines;
       }
@@ -16548,7 +16562,7 @@ function handleMedPhoto(input) {
 
   _compressMedPhoto(file).then(function(prepared) {
     if (!prepared) {
-      renderManualMedForm("", "讀取照片失敗，請改用手動填寫下方資料。");
+      renderManualMedForm("", _T('app.d34.photoReadFailed'));
       return;
     }
     _renderMedPreviewAndRecognize(prepared.dataUrl, prepared.mediaType);
@@ -16570,7 +16584,7 @@ function renderRecognizedEditable(parsed, errors, rawText, alreadySaved) {
   var savedNames = {};
   (alreadySaved || []).forEach(function(m) { savedNames[m.name] = true; });
 
-  var SLOT_LABEL = { morning: "早", noon: "中午", evening: "晚", other: "其他" };
+  var SLOT_LABEL = { morning: _T('app.d34.slotMorning'), noon: _T('app.d34.slotNoon'), evening: _T('app.d34.slotEvening'), other: _T('app.d34.slotOtherLabel') };
   var inputStyle = "padding:6px;border-radius:4px;border:1px solid var(--border-glass);background:var(--bg-glass);color:var(--text)";
   var rows = parsed.map(function(m, i) {
     var isSaved = savedNames[m.name];
@@ -17247,10 +17261,10 @@ var _eduSelectedTopic = null;      // 給一般書本用：當前選到的章節
 
 // 衛教主題 20 本書，分四層書架。
 // 點開書 → 直接進入筆記本跨頁：左頁是章節清單、右頁就是內容。
-var EDU_BOOKS = [
+function _bld_EDU_BOOKS() { return [
   // ── 第一層：免疫專區 ──
   { key: "rheum_overview", title: "自體免疫總論", nameEn: "Autoimmune Disease", tag: "AID", color: "c-purple", size: "tall", icon: "shield-alert",
-    shelf: 0, intro: "免疫系統為什麼會誤把自己當敵人？了解風濕免疫疾病的共通語言。",
+    shelf: 0, intro: _T("app.d35.introRheumOverview"),
     topics: [
       { key: "what_is_autoimm", label: "什麼是自體免疫疾病", desc: "免疫失衡如何造成多系統發炎" },
       { key: "common_sx",       label: "常見警訊",         desc: "晨僵、雷諾現象、皮疹、不明發燒" },
@@ -17260,7 +17274,7 @@ var EDU_BOOKS = [
       { key: "preg_plan",       label: "懷孕計畫",         desc: "穩定期再受孕，藥物分級與替換" }
     ] },
   { key: "rheum_ra", title: "類風濕關節炎", nameEn: "Rheumatoid Arthritis", tag: "RA", color: "c-rose", size: "tall", icon: "hand",
-    shelf: 0, intro: "RA 是免疫系統把自己的關節當敵人。早期治療能保住關節功能。",
+    shelf: 0, intro: _T("app.d35.introRheumRa"),
     topics: [
       { key: "ra_recognize",  label: "認識 RA",       desc: "對稱性多關節腫痛、晨僵超過 30 分鐘" },
       { key: "ra_diagnosis",  label: "診斷與分級",    desc: "2010 ACR/EULAR 分類標準" },
@@ -17271,7 +17285,7 @@ var EDU_BOOKS = [
       { key: "ra_pregnancy",  label: "RA 與懷孕",     desc: "備孕、孕期、哺乳的藥物調整" }
     ] },
   { key: "rheum_sle", title: "紅斑性狼瘡", nameEn: "Lupus Erythematosus", tag: "SLE", color: "c-red", size: "tall", icon: "flame",
-    shelf: 0, intro: "SLE 像千面女郎，可影響皮膚、關節、腎臟、神經、血液。",
+    shelf: 0, intro: _T("app.d35.introRheumSle"),
     topics: [
       { key: "sle_what",      label: "什麼是 SLE",      desc: "為什麼會發病、誰是高風險族群" },
       { key: "sle_criteria",  label: "分類標準",        desc: "2019 EULAR/ACR 分類條目" },
@@ -17282,7 +17296,7 @@ var EDU_BOOKS = [
       { key: "sle_pregnancy", label: "SLE 與懷孕",      desc: "穩定 6 個月以上、低劑量 ASA" }
     ] },
   { key: "rheum_as", title: "僵直性脊椎炎", nameEn: "Ankylosing Spondylitis", tag: "AS", color: "c-indigo", size: "medium", icon: "spine",
-    shelf: 0, intro: "年輕男性的下背痛不是閃到腰——可能是 AS 在敲門。",
+    shelf: 0, intro: _T("app.d35.introRheumAs"),
     topics: [
       { key: "as_back_pain", label: "發炎性下背痛",   desc: "晨僵、活動後改善、夜間痛醒" },
       { key: "as_hlab27",    label: "HLA-B27 與影像", desc: "薦腸關節炎 X 光、MRI 骨髓水腫" },
@@ -17292,7 +17306,7 @@ var EDU_BOOKS = [
       { key: "as_daily",     label: "生活與工作",     desc: "辦公桌、開車、睡姿建議" }
     ] },
   { key: "rheum_gout", title: "痛風與高尿酸", nameEn: "Gout & Hyperuricemia", tag: "Gout", color: "c-amber", size: "short", icon: "zap",
-    shelf: 0, intro: "痛起來像被火燒——但只要好好控尿酸，就不必再忍。",
+    shelf: 0, intro: _T("app.d35.introRheumGout"),
     topics: [
       { key: "gout_attack", label: "急性發作怎麼辦",   desc: "冰敷、抬高、NSAID 或秋水仙素" },
       { key: "gout_diet",   label: "飲食地雷",         desc: "海鮮、內臟、含糖飲料、酒類" },
@@ -17302,7 +17316,7 @@ var EDU_BOOKS = [
       { key: "gout_metab",  label: "與代謝症候群",     desc: "高血壓、糖尿病、脂肪肝的連動" }
     ] },
   { key: "rheum_sjogren", title: "乾燥症", nameEn: "Sjögren Syndrome", tag: "SS", color: "c-cyan", size: "medium", icon: "droplet",
-    shelf: 0, intro: "口乾、眼乾不只是老化——也可能是免疫系統打到外分泌腺。",
+    shelf: 0, intro: _T("app.d35.introRheumSjogren"),
     topics: [
       { key: "sj_self_check", label: "口乾眼乾自我評估", desc: "Schirmer test、唾液流速、SSI 量表" },
       { key: "sj_labs",       label: "診斷工具",         desc: "anti-SSA/Ro、anti-SSB/La、唇腺切片" },
@@ -17312,7 +17326,7 @@ var EDU_BOOKS = [
       { key: "sj_lymphoma",   label: "淋巴瘤風險",       desc: "腫大唾液腺與長期追蹤" }
     ] },
   { key: "rheum_fibro", title: "纖維肌痛症", nameEn: "Fibromyalgia", tag: "FM", color: "c-pink", size: "short", icon: "waves",
-    shelf: 0, intro: "全身廣泛性疼痛、卻找不到發炎——纖維肌痛症需要被看見。",
+    shelf: 0, intro: _T("app.d35.introRheumFibro"),
     topics: [
       { key: "fm_what",      label: "中樞性敏感化",   desc: "為什麼疼痛訊號被放大" },
       { key: "fm_criteria",  label: "診斷標準",       desc: "2016 ACR：WPI + SSS 評分" },
@@ -17321,7 +17335,7 @@ var EDU_BOOKS = [
       { key: "fm_meds",      label: "藥物選擇",       desc: "Pregabalin、Duloxetine、Amitriptyline" }
     ] },
   { key: "rheum_biologics", title: "生物製劑指南", nameEn: "Biologic Therapy", tag: "Bio", color: "c-blue", size: "tall", icon: "syringe",
-    shelf: 0, intro: "生物製劑、JAK 抑制劑：聽起來高科技，其實已是免疫疾病的日常。",
+    shelf: 0, intro: _T("app.d35.introRheumBiologics"),
     topics: [
       { key: "bio_what",     label: "什麼是生物製劑", desc: "與小分子標靶藥的差別" },
       { key: "bio_classes",  label: "藥物類別速查",   desc: "TNFi / IL-6 / IL-17 / JAKi / B-cell" },
@@ -17334,10 +17348,10 @@ var EDU_BOOKS = [
 
   // ── 第二層：認識與辨識 ──
   { key: "diseases", title: "疾病百科", nameEn: "Disease Encyclopedia", tag: "Dx", color: "c-brown",  size: "tall",   icon: "book-open-text",
-    shelf: 1, intro: "查找疾病、了解病程、認識六大衛教維度。",
+    shelf: 1, intro: _T("app.d35.introDiseases"),
     dynamic: "diseases" },
   { key: "symptoms", title: "症狀辨識", nameEn: "Symptom Recognition", tag: "Sx", color: "c-rust",   size: "medium", icon: "search-check",
-    shelf: 1, intro: "學會分辨身體傳來的訊號，知道該不該擔心。",
+    shelf: 1, intro: _T("app.d35.introSymptoms"),
     topics: [
       { key: "fever",     label: "發燒處理", desc: "什麼時候只是小感冒、什麼時候要就醫" },
       { key: "headache",  label: "頭痛分辨", desc: "緊張型、偏頭痛與危險性頭痛" },
@@ -17348,7 +17362,7 @@ var EDU_BOOKS = [
       { key: "rash",      label: "皮膚紅疹", desc: "蕁麻疹、過敏、感染、自體免疫的辨別" }
     ] },
   { key: "labs", title: "檢驗報告", nameEn: "Laboratory Report", tag: "Lab", color: "c-blue", size: "short", icon: "flask-conical",
-    shelf: 1, intro: "把抽血、影像、心電圖的數字翻譯成你聽得懂的話。",
+    shelf: 1, intro: _T("app.d35.introLabs"),
     topics: [
       { key: "cbc",      label: "血液常規 CBC", desc: "白血球、紅血球、血紅素、血小板" },
       { key: "lipid",    label: "血脂三項", desc: "總膽固醇、LDL、HDL、三酸甘油脂" },
@@ -17361,7 +17375,7 @@ var EDU_BOOKS = [
 
   // ── 第三層：治療與管理 ──
   { key: "medications", title: "藥物指南", nameEn: "Medication Guide", tag: "Rx", color: "c-pink", size: "tall", icon: "pill",
-    shelf: 2, intro: "藥不是敵人，是隊友。學會跟藥物相處。",
+    shelf: 2, intro: _T("app.d35.introMedications"),
     topics: [
       { key: "schedule",  label: "用藥時間", desc: "飯前、飯後、睡前的差別" },
       { key: "missed",    label: "忘記吃藥怎麼辦", desc: "什麼時候補、什麼時候別補" },
@@ -17372,7 +17386,7 @@ var EDU_BOOKS = [
       { key: "steroid",   label: "類固醇正解", desc: "副作用、減量、月亮臉與骨鬆" }
     ] },
   { key: "nutrition", title: "飲食營養", nameEn: "Nutrition & Diet", tag: "Diet", color: "c-green", size: "medium", icon: "salad",
-    shelf: 2, intro: "把廚房變成第二個藥房，從每一餐照顧自己。",
+    shelf: 2, intro: _T("app.d35.introNutrition"),
     topics: [
       { key: "balance",   label: "六大類食物", desc: "我的餐盤怎麼分配" },
       { key: "lowsalt",   label: "低鹽飲食", desc: "高血壓、心衰、腎臟病" },
@@ -17383,7 +17397,7 @@ var EDU_BOOKS = [
       { key: "fluid",     label: "水分管理", desc: "腎臟病與心衰的喝水拿捏" }
     ] },
   { key: "exercise", title: "運動復健", nameEn: "Exercise & Rehab", tag: "Rehab", color: "c-lime", size: "short", icon: "activity",
-    shelf: 2, intro: "從沙發起身的第一步，就是復原的開始。",
+    shelf: 2, intro: _T("app.d35.introExercise"),
     topics: [
       { key: "aerobic",   label: "有氧運動", desc: "走路、游泳、騎車的劑量" },
       { key: "strength",  label: "肌力訓練", desc: "彈力帶、自體重的家居版本" },
@@ -17396,7 +17410,7 @@ var EDU_BOOKS = [
 
   // ── 第四層：預防與支持 ──
   { key: "mental", title: "心理健康", nameEn: "Mental Health", tag: "MH", color: "c-purple", size: "medium", icon: "brain",
-    shelf: 3, intro: "情緒也是身體的一部份，照顧它，身體才完整。",
+    shelf: 3, intro: _T("app.d35.introMental"),
     topics: [
       { key: "anxiety",   label: "焦慮自助", desc: "深呼吸、定向、漸進式放鬆" },
       { key: "depress",   label: "認識憂鬱", desc: "持續兩週的訊號與就醫時機" },
@@ -17405,7 +17419,7 @@ var EDU_BOOKS = [
       { key: "stress",    label: "壓力管理", desc: "工作、家庭、照顧者的喘息" }
     ] },
   { key: "emergency", title: "急救應變", nameEn: "Emergency Care", tag: "ER", color: "c-red", size: "tall", icon: "siren",
-    shelf: 3, intro: "三分鐘決定一切——學會正確呼救與第一時間處理。",
+    shelf: 3, intro: _T("app.d35.introEmergency"),
     topics: [
       { key: "cpr",       label: "CPR 心肺復甦", desc: "壓胸節奏與 AED 使用" },
       { key: "choke",     label: "哈姆立克法", desc: "成人、兒童與嬰兒的差別" },
@@ -17415,7 +17429,7 @@ var EDU_BOOKS = [
       { key: "anaphyl",   label: "過敏性休克", desc: "EpiPen 與 119 的時機" }
     ] },
   { key: "prevent", title: "預防保健", nameEn: "Prevention & Wellness", tag: "Prev", color: "c-cyan", size: "medium", icon: "shield-check",
-    shelf: 3, intro: "在生病之前先一步——疫苗、篩檢與生活習慣。",
+    shelf: 3, intro: _T("app.d35.introPrevent"),
     topics: [
       { key: "vaccine",   label: "成人疫苗", desc: "流感、肺炎鏈球菌、帶狀皰疹" },
       { key: "screen",    label: "癌症篩檢", desc: "四癌篩檢、低劑量肺部 CT" },
@@ -17424,7 +17438,7 @@ var EDU_BOOKS = [
       { key: "weight",    label: "體重管理", desc: "BMI、腰圍、體脂與內臟脂肪" }
     ] },
   { key: "chronic", title: "慢性病管理", nameEn: "Chronic Disease", tag: "CD", color: "c-indigo", size: "tall", icon: "clipboard-check",
-    shelf: 3, intro: "慢性病不是結束，是每天和身體和解的開始。",
+    shelf: 3, intro: _T("app.d35.introChronic"),
     topics: [
       { key: "diary",     label: "自我監測日誌", desc: "血壓、血糖、體重的紀錄要點" },
       { key: "goal",      label: "與醫師討論目標", desc: "個人化目標而非教科書數字" },
@@ -17433,7 +17447,7 @@ var EDU_BOOKS = [
       { key: "burnout",   label: "照顧疲勞", desc: "病人與家屬的喘息空間" }
     ] },
   { key: "women_kids", title: "婦幼保健", nameEn: "Maternal & Child", tag: "M&C", color: "c-rose", size: "short", icon: "baby",
-    shelf: 3, intro: "孕期、哺乳、成長——給媽媽與孩子的暖心提醒。",
+    shelf: 3, intro: _T("app.d35.introWomenKids"),
     topics: [
       { key: "preg",      label: "孕期保健", desc: "葉酸、產檢時程、體重增加" },
       { key: "breastfeed",label: "哺乳指南", desc: "親餵、瓶餵、副食品銜接" },
@@ -17442,7 +17456,7 @@ var EDU_BOOKS = [
       { key: "fever_kid", label: "兒童發燒處理", desc: "退燒藥與就醫指標" }
     ] },
   { key: "elder", title: "銀髮照護", nameEn: "Elder Care", tag: "Eld", color: "c-amber", size: "medium", icon: "heart-handshake",
-    shelf: 3, intro: "陪伴長輩好好變老——失能、失智、跌倒、營養。",
+    shelf: 3, intro: _T("app.d35.introElder"),
     topics: [
       { key: "fall",      label: "預防跌倒", desc: "居家環境與肌力訓練" },
       { key: "dementia",  label: "失智照護", desc: "早期徵兆與互動技巧" },
@@ -17453,7 +17467,7 @@ var EDU_BOOKS = [
 
   // ── 第五層：精神系列 ──
   { key: "psych_mood", title: "情緒障礙", nameEn: "Mood Disorders", tag: "Mood", color: "c-purple", size: "tall", icon: "cloud-rain",
-    shelf: 4, intro: "情緒不只是「想開一點」——是大腦化學物質的失衡，可以治療。",
+    shelf: 4, intro: _T("app.d35.introPsychMood"),
     topics: [
       { key: "mdd",           label: "重度憂鬱症",     desc: "DSM-5 診斷、抗憂鬱藥、心理治療" },
       { key: "persistent_dep",label: "持續性憂鬱症",   desc: "兩年以上的低落，不是性格問題" },
@@ -17462,7 +17476,7 @@ var EDU_BOOKS = [
       { key: "postpartum",    label: "產後憂鬱",       desc: "與產後情緒低落 baby blues 的差別" }
     ] },
   { key: "psych_anxiety", title: "焦慮譜系", nameEn: "Anxiety Spectrum", tag: "Anx", color: "c-rose", size: "tall", icon: "wind",
-    shelf: 4, intro: "焦慮不是膽小，是大腦的警報系統太敏感——可以調回正常音量。",
+    shelf: 4, intro: _T("app.d35.introPsychAnxiety"),
     topics: [
       { key: "gad",           label: "廣泛性焦慮症",   desc: "對所有事情都擔心個沒完" },
       { key: "panic",         label: "恐慌症",         desc: "突發心悸、瀕死感的處理" },
@@ -17472,7 +17486,7 @@ var EDU_BOOKS = [
       { key: "ptsd",          label: "創傷後壓力症",   desc: "閃回、過度警覺、EMDR" }
     ] },
   { key: "psych_severe", title: "思覺失調與成癮", nameEn: "Psychosis & Addiction", tag: "Psy", color: "c-indigo", size: "tall", icon: "sparkles",
-    shelf: 4, intro: "幻覺、妄想、戒不掉的物質——都是大腦的疾病，不是道德問題。",
+    shelf: 4, intro: _T("app.d35.introPsychSevere"),
     topics: [
       { key: "schizophrenia", label: "思覺失調症",     desc: "幻覺、妄想、抗精神病藥" },
       { key: "delusional",    label: "妄想症",         desc: "局部的、固定的錯誤信念" },
@@ -17481,7 +17495,7 @@ var EDU_BOOKS = [
       { key: "sedative",      label: "安眠藥依賴",     desc: "苯二氮平類的減量計畫" }
     ] },
   { key: "psych_neurodev", title: "神經發展疾患", nameEn: "Neurodevelopmental", tag: "ND", color: "c-cyan", size: "tall", icon: "puzzle",
-    shelf: 4, intro: "從小到大跟著的大腦差異——自閉、ADHD 不是「長大就好」，但有方法好好相處。",
+    shelf: 4, intro: _T("app.d35.introPsychNeurodev"),
     topics: [
       { key: "asd_adult",     label: "成人自閉症光譜", desc: "高功能、亞斯伯格、社交特質與支持" },
       { key: "adhd_adult",    label: "成人 ADHD",      desc: "拖延、衝動、注意力與藥物管理" },
@@ -17493,7 +17507,7 @@ var EDU_BOOKS = [
 
   // ── 第六層：小兒系列 ──
   { key: "peds_common", title: "兒童常見病", nameEn: "Common Pediatric", tag: "Peds", color: "c-amber", size: "tall", icon: "thermometer",
-    shelf: 5, intro: "孩子的常見不舒服——這本書幫你判斷在家照顧 vs. 該去看醫生。",
+    shelf: 5, intro: _T("app.d35.introPedsCommon"),
     topics: [
       { key: "kid_fever",     label: "兒童發燒",       desc: "幾度算發燒、退燒藥、何時急診" },
       { key: "ge_dehydration",label: "腸胃炎與脫水",   desc: "電解質補充、口服補液、警訊" },
@@ -17575,7 +17589,8 @@ var EDU_BOOKS = [
       { key: "cts",           label: "腕隧道症候群",   desc: "手麻、夜間加重、護腕與手術" },
       { key: "cipn",          label: "化療後神經病變", desc: "癌友常見的麻痛照護" }
     ] }
-];
+]; }
+var EDU_BOOKS = _bld_EDU_BOOKS();
 
 // 疾病維度（給疾病百科這本書用）
 var EDU_DISEASE_DIMENSIONS = [
@@ -17805,7 +17820,7 @@ function _mobileEduSyncMyDiseases(items, extras) {
   }
 
   var html = supported.map(function(it) {
-    var name = it.name || it.label || '未命名疾病';
+    var name = it.name || it.label || _T("app.d36.unnamedDisease");
     var icd10 = it.icd10 || '';
     var onclick = icd10
       ? 'eduOpenMyDiseaseBook(\'' + escapeHtml(icd10) + '\',\'' + escapeHtml(name) + '\')'
@@ -17815,7 +17830,7 @@ function _mobileEduSyncMyDiseases(items, extras) {
 
   // extras 索引必須對齊 _eduExtraDiseases（由 renderMyDiseaseShelf 設定）
   html += extraList.map(function(x, j) {
-    var name = (typeof x === 'string') ? x : (x.name || x.label || '未命名疾病');
+    var name = (typeof x === 'string') ? x : (x.name || x.label || _T("app.d36.unnamedDisease"));
     return rowHtml(name, '', true, 'eduOpenExtraDisease(' + j + ')');
   }).join('');
 
@@ -18132,7 +18147,7 @@ function renderMyDiseaseShelf(items, extras) {
              '<i data-lucide="sparkles" class="book-icon" style="width:16px;height:16px"></i>' +
              '<span class="book-spine">' +
                '<span class="book-title">' + nameSafe + '</span>' +
-               '<span class="book-subtitle">AI 生成</span>' +
+               '<span class="book-subtitle">' + _T('app.d37.aiGenerated') + '</span>' +
              '</span>' +
              '<span class="book-tag">AI</span>' +
            '</button>';
@@ -18161,12 +18176,12 @@ function eduOpenExtraDisease(idx) {
     icon: 'sparkles',
     intro: _Tf('app.c23.extraIntro', { name: name }),
     topics: [
-      { key: 'awareness',     label: '認識這個疾病',     desc: '是什麼、誰會得、治療概觀' },
-      { key: 'symptoms',      label: '症狀辨識',         desc: '常見症狀與身體訊號' },
-      { key: 'meds',          label: '用藥與副作用',     desc: '常用藥物作用、注意事項' },
-      { key: 'self',          label: '自我管理',         desc: '飲食、運動、生活調整' },
-      { key: 'emergency',     label: '緊急應變',         desc: '何時要立刻就醫' },
-      { key: 'complications', label: '長期風險與併發症', desc: '長期影響與追蹤建議' },
+      { key: 'awareness',     label: _T('app.d37.topicAwarenessLabel'),     desc: _T('app.d37.topicAwarenessDesc') },
+      { key: 'symptoms',      label: _T('app.d37.topicSymptomsLabel'),         desc: _T('app.d37.topicSymptomsDesc') },
+      { key: 'meds',          label: _T('app.d37.topicMedsLabel'),     desc: _T('app.d37.topicMedsDesc') },
+      { key: 'self',          label: _T('app.d37.topicSelfLabel'),         desc: _T('app.d37.topicSelfDesc') },
+      { key: 'emergency',     label: _T('app.d37.topicEmergencyLabel'),         desc: _T('app.d37.topicEmergencyDesc') },
+      { key: 'complications', label: _T('app.d37.topicComplicationsLabel'), desc: _T('app.d37.topicComplicationsDesc') },
     ],
   });
 }
@@ -18824,7 +18839,7 @@ function renderRightPagePlaceholder() {
              '<strong>' + escapeHtml(d.label) + '</strong><small>' + escapeHtml(d.desc) + '</small></button>';
     }).join("");
     return '<div class="nb-heading"><i data-lucide="layers" style="width:20px;height:20px"></i> ' + _T("app.c24.sixDimensions") + '</div>' +
-           '<div class="nb-subtle">' + escapeHtml(_eduSelectedDisease.name) + '（' + escapeHtml(_eduSelectedDisease.icd10) + '）</div>' +
+           '<div class="nb-subtle">' + escapeHtml(_eduSelectedDisease.name) + _T("app.d38.parenOpen") + escapeHtml(_eduSelectedDisease.icd10) + _T("app.d38.parenClose") + '</div>' +
            '<div class="nb-list">' + listHtml + '</div>';
   }
   // 一般書本的初始右頁：書本說明 + 提示
@@ -19054,7 +19069,7 @@ function eduFallbackContent(book, label) {
 // 後端回 503 + detail.error="llm_unavailable" 時用這個——意思是 LLM 完全沒設或全失效，
 // 重試也救不回；引導使用者（或管理者）直接去 Vercel 設 API key。
 function eduLlmUnavailableContent(book, label, detail) {
-  var msg = (detail && detail.message) || 'production 沒有可用的 LLM API key（ANTHROPIC / GEMINI 都沒設）';
+  var msg = (detail && detail.message) || _T("app.d39.noLlmKeyInProd");
   var doc = (detail && detail.doc) || 'https://vercel.com/dashboard';
   return '' +
     '<div style="padding:18px;border:1px solid #fca5a5;border-radius:10px;background:#fef2f2">' +
@@ -19225,7 +19240,7 @@ function pieces() {
   var mobileTimeline = s.timeline.slice(0, 6).map(function(t) {
     var ico = t.kind === 'symptom' ? 'scan-search' : (t.kind === 'memo' ? 'sticky-note' : 'activity');
     var pillCls = t.kind === 'symptom' ? 'pill-info' : (t.kind === 'memo' ? 'pill-rose' : 'pill-teal');
-    var kindLabel = t.kind === 'symptom' ? '症狀' : (t.kind === 'memo' ? 'Memo' : '生理');
+    var kindLabel = t.kind === 'symptom' ? _T("app.c24.symptom") : (t.kind === 'memo' ? 'Memo' : _T("app.c24.vital"));
     return ''
       + '<div style="position:relative;padding-left:18px;margin-bottom:8px">'
       +   '<span style="position:absolute;left:0;top:6px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg-mid,#fff)"></span>'
@@ -19666,7 +19681,7 @@ function chatMascotSvg(state, frame) {
       + bottom;
     return ''
       + '<div class="chat-mascot-img-wrap chat-mascot-typing">'
-      +   '<pre class="chat-mascot-ascii" aria-label="小禾正在打字">' + ascii + '</pre>'
+      +   '<pre class="chat-mascot-ascii" aria-label="' + _T("app.d40.mascotTyping") + '">' + ascii + '</pre>'
       + '</div>';
   }
   if (state === 'thinking') {
@@ -19676,7 +19691,7 @@ function chatMascotSvg(state, frame) {
       + ' (  づ<span class="chat-mascot-spark">?</span>';
     return ''
       + '<div class="chat-mascot-img-wrap chat-mascot-thinking">'
-      +   '<pre class="chat-mascot-ascii" aria-label="小禾思考中">' + thinkAscii + '</pre>'
+      +   '<pre class="chat-mascot-ascii" aria-label="' + _T("app.d40.mascotThinking") + '">' + thinkAscii + '</pre>'
       + '</div>';
   }
   // idle
@@ -20533,7 +20548,7 @@ function settings() {
     + '  <div class="set-group">'
     + '    <h3 class="set-group-title"><i data-lucide="monitor"></i> ' + _T('set.group.display') + '</h3>'
     +      row(_T('set.row.fontSize.t'), _T('set.row.fontSize.d'),
-            '<button class="set-btn" onclick="navigateTo(\'fontsize\',null)"><i data-lucide="type"></i> 大小 · 粗細 · 字型 · 預覽 ›</button>')
+            '<button class="set-btn" onclick="navigateTo(\'fontsize\',null)"><i data-lucide="type"></i> ' + _T("app.d42.fontRowBtn") + ' ›</button>')
     +      row(_T('set.row.theme.t'), _T('set.row.theme.d'),
             '<div class="set-seg">' + seg('theme', [
               {value:'light', label:_T('set.opt.theme.light')},
@@ -20587,9 +20602,9 @@ function settings() {
 
     // 研究（《整合實驗設計與問卷 v2》三實驗可行性研究）— 桌面版入口
     + '  <div class="set-group">'
-    + '    <h3 class="set-group-title"><i data-lucide="clipboard-list"></i> 研究</h3>'
-    +      row('研究問卷', '慢性病管理可行性研究 · 分時點填答（D0 / D14 / D28 / 回診後 48 小時）',
-            '<button class="set-btn" onclick="openStudyHub()"><i data-lucide="clipboard-pen"></i> 開始填寫 ›</button>')
+    + '    <h3 class="set-group-title"><i data-lucide="clipboard-list"></i> ' + _T("app.d42.research") + '</h3>'
+    +      row(_T("app.d42.researchSurvey"), _T("app.d42.researchSurveyDesc"),
+            '<button class="set-btn" onclick="openStudyHub()"><i data-lucide="clipboard-pen"></i> ' + _T("app.d42.startFilling") + ' ›</button>')
     + '  </div>'
 
     // About
@@ -21640,7 +21655,7 @@ function renderMoodCalendar() {
     cells.push(
       '<button class="' + classes + '" style="background:' + bg + '" ' +
         'onclick="moodCalSelect(\'' + key + '\')" ' +
-        'aria-label="' + key + (rec ? ' 電量 ' + pctTip + '%' : '') + '">' +
+        'aria-label="' + key + (rec ? ' ' + _T("app.d44.battery") + ' ' + pctTip + '%' : '') + '">' +
         '<span class="mood-cal-day">' + d + '</span>' +
         (emoji ? '<span class="mood-cal-emoji">' + emoji + '</span>' : '') +
       '</button>'
@@ -21728,7 +21743,7 @@ function renderMoodLine() {
       var yBot = yFor(rec.min_score);
       rangeRects += '<rect x="' + (x - 9) + '" y="' + yTop + '" width="18" height="' + (yBot - yTop) + '" fill="#86C7B8" opacity="0.22" rx="4"/>';
     }
-    pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="13" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="3.5"><title>' + k + ' 電量 ' + _moodPercent(rec.average_score) + '%</title></circle>';
+    pointCircles += '<circle cx="' + x + '" cy="' + y + '" r="13" fill="' + _moodColor(rec.average_score) + '" stroke="#fff" stroke-width="3.5"><title>' + k + ' ' + _T("app.d44.battery") + ' ' + _moodPercent(rec.average_score) + '%</title></circle>';
   });
 
   // 橫向格線（0% / 25% / 50% / 75% / 100%）
@@ -21889,7 +21904,7 @@ function _renderWaterWidget() {
     + '<button type="button" style="' + bs + '" onclick="waterAdd(250)">' + _T("app.c28.cup250") + '</button>'
     + '<button type="button" style="' + bs + '" onclick="waterAdd(500)">' + _T("app.c28.bottle500") + '</button>'
     + '<button type="button" style="' + bs + '" onclick="waterAdd(150)">' + _T("app.c28.sip150") + '</button>'
-    + '<button type="button" style="border:none;background:none;color:var(--text-muted,#999);font-size:.82rem;cursor:pointer;margin-left:auto" onclick="waterReset()">歸零</button>'
+    + '<button type="button" style="border:none;background:none;color:var(--text-muted,#999);font-size:.82rem;cursor:pointer;margin-left:auto" onclick="waterReset()">' + _T("app.d44.resetToZero") + '</button>'
     + '</div>'
     + '<p style="font-size:.72rem;color:var(--text-dim,#aaa);margin-top:8px">' + _T("app.c28.localFirstSync") + '</p>';
 }
@@ -21905,75 +21920,77 @@ var _dietSelectedMeal = 'breakfast';
 
 // 基本衛教預設值（沒登入或 API 失敗時也至少顯示這些）
 var DIET_BASELINE_TARGETS = { protein_g: 60, water_ml: 2000, fiber_g: 25 };
-var DIET_BASELINE_TIPS = [
-  '三餐定時定量，避免暴飲暴食',
-  '每餐都有蛋白質、蔬菜與全穀類',
-  '減少油炸、加工食品與含糖飲料',
-  '餐前 30 分鐘喝一杯水有助消化',
-];
+function _bld_DIET_BASELINE_TIPS() { return [
+  _T("app.d44.tipRegularMeals"),
+  _T("app.d44.tipBalancedPlate"),
+  _T("app.d44.tipReduceFried"),
+  _T("app.d44.tipWaterBeforeMeal"),
+]; }
+var DIET_BASELINE_TIPS = _bld_DIET_BASELINE_TIPS();
 
 // 基本營養素衛教（固定內容，與個人化資料無關）
-var DIET_BASIC_NUTRIENTS = [
+function _bld_DIET_BASIC_NUTRIENTS() { return [
   {
-    name: '蛋白質',
+    name: _T("app.d44.nutProteinName"),
     icon: 'beef',
-    daily: '每公斤體重 1.0–1.2 g（運動者 1.4–1.7 g）',
-    role: '修復組織、製造酵素與抗體',
-    sources: '魚、雞胸、蛋、豆腐、無糖豆漿、希臘優格',
-    tip: '每餐都要有一份手掌大的蛋白質，分散吃比一次大量好吸收',
+    daily: _T("app.d44.nutProteinDaily"),
+    role: _T("app.d44.nutProteinRole"),
+    sources: _T("app.d44.nutProteinSources"),
+    tip: _T("app.d44.nutProteinTip"),
   },
   {
-    name: '碳水化合物',
+    name: _T("app.d44.nutCarbName"),
     icon: 'wheat',
-    daily: '佔每日總熱量 50–60%',
-    role: '主要能量來源，供給大腦與肌肉',
-    sources: '糙米、燕麥、地瓜、全麥麵包、水果',
-    tip: '選低 GI 全穀類，少吃精緻糖與含糖飲料',
+    daily: _T("app.d44.nutCarbDaily"),
+    role: _T("app.d44.nutCarbRole"),
+    sources: _T("app.d44.nutCarbSources"),
+    tip: _T("app.d44.nutCarbTip"),
   },
   {
-    name: '脂肪（好油）',
+    name: _T("app.d44.nutFatName"),
     icon: 'droplet',
     daily: '佔每日總熱量 20–30%',
-    role: '吸收脂溶性維生素、合成荷爾蒙',
-    sources: '橄欖油、酪梨、堅果、鯖魚、鮭魚',
-    tip: '多吃 Omega-3，避開油炸與反式脂肪（人造奶油、酥油）',
+    role: _T("app.d44.nutFatRole"),
+    sources: _T("app.d44.nutFatSources"),
+    tip: _T("app.d44.nutFatTip"),
   },
   {
-    name: '膳食纖維',
+    name: _T("app.d44.nutFiberName"),
     icon: 'leaf',
-    daily: '每天 25–35 g',
-    role: '促進腸道蠕動、穩定血糖、餵養好菌',
-    sources: '蔬菜、水果、燕麥、糙米、豆類',
-    tip: '一天至少 3 份蔬菜（一份約一個拳頭大）+ 2 份水果',
+    daily: _T("app.d44.nutFiberDaily"),
+    role: _T("app.d44.nutFiberRole"),
+    sources: _T("app.d44.nutFiberSources"),
+    tip: _T("app.d44.nutFiberTip"),
   },
   {
-    name: '水分',
+    name: _T("app.d44.nutWaterName"),
     icon: 'glass-water',
-    daily: '每天 2000–2500 ml（依體重 30 ml/kg 估算）',
-    role: '代謝廢物、調節體溫、運送養分',
-    sources: '白開水、無糖茶、清湯',
-    tip: '看尿色：淡黃就夠，深黃要再多喝；別等口渴才喝',
+    daily: _T("app.d44.nutWaterDaily"),
+    role: _T("app.d44.nutWaterRole"),
+    sources: _T("app.d44.nutWaterSources"),
+    tip: _T("app.d44.nutWaterTip"),
   },
   {
-    name: '維生素 & 礦物質',
+    name: _T("app.d44.nutVitaminName"),
     icon: 'sparkles',
-    daily: '從多色蔬果中自然攝取',
-    role: '維生素 D / B 群、鈣、鐵、鋅參與骨骼、造血、免疫',
-    sources: '深色蔬菜、彩色水果、海帶、堅果、紅肉、蛋黃',
-    tip: '彩虹飲食法：紅黃綠紫白每天都吃一點，比單吃保健品有效',
+    daily: _T("app.d44.nutVitaminDaily"),
+    role: _T("app.d44.nutVitaminRole"),
+    sources: _T("app.d44.nutVitaminSources"),
+    tip: _T("app.d44.nutVitaminTip"),
   },
-];
+]; }
+var DIET_BASIC_NUTRIENTS = _bld_DIET_BASIC_NUTRIENTS();
 
 function renderDietTodayHero() {
   // 飲食頁主要是教育 + 推薦，今日 hero 顯示「該吃什麼／避開什麼」入口提示。
   return ''
     + '<div class="page-app-hero page-app-hero-green">'
     +   '<div class="page-app-hero-head">'
-    +     '<span class="page-app-hero-eyebrow">TODAY · 今日飲食指南</span>'
-    +     '<span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> 飲食建議以醫師/營養師為主</span>'
+    +     '<span class="page-app-hero-eyebrow">TODAY · ' + _T("app.d44.todayDietGuide") + '</span>'
+    +     '<span class="page-app-hero-warn"><i data-lucide="info" style="width:11px;height:11px"></i> ' + _T("app.d44.dietAdviceDisclaimer") + '</span>'
     +   '</div>'
-    +   '<div class="page-app-hero-title">看你的病史，今天該吃／避開什麼</div>'
-    +   '<div class="page-app-hero-meta">下方有「今日營養目標」與「你要特別注意」兩塊，會根據你登錄的疾病自動調整</div>'
+    +   '<div class="page-app-hero-title">' + _T("app.d44.dietHeroTitle") + '</div>'
+    +   '<div class="page-app-hero-meta">' + _T("app.d44.dietHeroMeta") + '</div>'
     + '</div>';
 }
 
@@ -21990,7 +22007,7 @@ function renderBasicNutrients() {
       +     '<span class="diet-nutrient-daily">' + chatEscape(n.daily) + '</span>'
       +   '</div>'
       +   '<div class="diet-nutrient-role">' + chatEscape(n.role) + '</div>'
-      +   '<div class="diet-nutrient-sources"><span class="diet-nutrient-label">食物來源</span>' + chatEscape(n.sources) + '</div>'
+      +   '<div class="diet-nutrient-sources"><span class="diet-nutrient-label">' + _T("app.d44.foodSources") + '</span>' + chatEscape(n.sources) + '</div>'
       +   '<div class="diet-nutrient-tip">' + chatEscape(n.tip) + '</div>'
       + '</div>';
   }).join('');
@@ -22004,20 +22021,20 @@ function diet() {
     + '<div class="mobile-only">'
     +   '<div class="pv-hero" style="margin-bottom:12px">'
     +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-blue-teal"/></svg>'
-    +     '<div class="pv-hero-eye">飲食 · 三餐打卡</div>'
-    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">今天該吃什麼，避開什麼？</div>'
-    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">看你的病史，自動列出今日營養目標 + 特別注意</div>'
+    +     '<div class="pv-hero-eye">' + _T("app.d45.dietMealCheckin") + '</div>'
+    +     '<div style="font-size:17px;font-weight:600;color:var(--navy);margin-top:6px;line-height:1.4;position:relative;z-index:1">' + _T("app.d45.whatToEatAvoid") + '</div>'
+    +     '<div class="pv-hero-meta" style="position:relative;z-index:1">' + _T("app.d45.heroMeta") + '</div>'
     +   '</div>'
 
     // 今日營養目標 — 3 顆 KPI 卡
     +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="target"></i> 今日營養目標</h3>'
+    +     '<h3 class="sec-title"><i data-lucide="target"></i> ' + _T("app.d45.todayNutritionGoals") + '</h3>'
     +     '<span class="sec-spacer"></span>'
     +   '</div>'
     +   '<div class="kpi-row" id="mobile-diet-targets" style="margin-bottom:10px">'
-    +     '<div class="kpi-mini t-rose"><div class="kpi-mini-label"><i data-lucide="beef"></i>蛋白質</div><div class="kpi-mini-val" id="mobile-diet-protein">—</div><div class="kpi-mini-meta">g / 日</div></div>'
-    +     '<div class="kpi-mini t-blue"><div class="kpi-mini-label"><i data-lucide="glass-water"></i>水分</div><div class="kpi-mini-val" id="mobile-diet-water">—</div><div class="kpi-mini-meta">ml / 日</div></div>'
-    +     '<div class="kpi-mini t-teal"><div class="kpi-mini-label"><i data-lucide="leaf"></i>纖維</div><div class="kpi-mini-val" id="mobile-diet-fiber">—</div><div class="kpi-mini-meta">g / 日</div></div>'
+    +     '<div class="kpi-mini t-rose"><div class="kpi-mini-label"><i data-lucide="beef"></i>' + _T("app.d45.protein") + '</div><div class="kpi-mini-val" id="mobile-diet-protein">—</div><div class="kpi-mini-meta">' + _T("app.d45.gramsPerDay") + '</div></div>'
+    +     '<div class="kpi-mini t-blue"><div class="kpi-mini-label"><i data-lucide="glass-water"></i>' + _T("app.d45.water") + '</div><div class="kpi-mini-val" id="mobile-diet-water">—</div><div class="kpi-mini-meta">' + _T("app.d45.mlPerDay") + '</div></div>'
+    +     '<div class="kpi-mini t-teal"><div class="kpi-mini-label"><i data-lucide="leaf"></i>' + _T("app.d45.fiber") + '</div><div class="kpi-mini-val" id="mobile-diet-fiber">—</div><div class="kpi-mini-meta">' + _T("app.d45.gramsPerDay") + '</div></div>'
     +   '</div>'
     +   '<div class="card" style="padding:10px 14px;margin-bottom:14px">'
     +     '<ul id="mobile-diet-tips" style="margin:0;padding-left:18px;font-size:11.5px;color:var(--text-dim);line-height:1.7"></ul>'
@@ -22027,7 +22044,7 @@ function diet() {
 
     // 你要特別注意 — warning card
     +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="alert-triangle"></i> 你要特別注意</h3>'
+    +     '<h3 class="sec-title"><i data-lucide="alert-triangle"></i> ' + _T("app.d45.payAttention") + '</h3>'
     +     '<span class="sec-spacer"></span>'
     +   '</div>'
     +   '<div id="mobile-diet-warnings" style="margin-bottom:12px">'
@@ -22041,8 +22058,8 @@ function diet() {
     +       '<i data-lucide="dices" style="width:20px;height:20px"></i>'
     +     '</div>'
     +     '<div style="flex:1;position:relative;z-index:1">'
-    +       '<div style="font-size:14.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">幫我抽一道 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
-    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">依你的病史和偏好挑一道菜</div>'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">' + _T("app.d45.pickOneForMe") + ' <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">' + _T("app.d45.pickByHistoryPref") + '</div>'
     +     '</div>'
     +   '</button>'
 
@@ -22053,13 +22070,13 @@ function diet() {
     // 用 <details> 折疊讓預設精簡、想細調時點開。
     +   '<details class="card" style="padding:10px 14px;margin-bottom:10px;background:#fff;border:1.5px solid var(--border);border-radius:14px">'
     +     '<summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:6px;list-style:none">'
-    +       '<i data-lucide="sliders-horizontal" style="width:14px;height:14px"></i> 進階篩選（價位、不吃的東西…）'
+    +       '<i data-lucide="sliders-horizontal" style="width:14px;height:14px"></i> ' + _T("app.d45.advancedFilter")
     +     '</summary>'
     +     '<div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">'
     +       '<div>'
-    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">餐次</div>'
+    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">' + _T("app.d45.mealLabel") + '</div>'
     +         '<div class="diet-pick-meal-tabs" style="display:flex;flex-wrap:wrap;gap:4px">'
-    +           [['any','隨便'],['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點心']].map(function(p) {
+    +           [['any',_T("app.d45.mealAny")],['breakfast',_T("app.d45.mealBreakfastShort")],['lunch',_T("app.d45.mealLunchShort")],['dinner',_T("app.d45.mealDinnerShort")],['snack',_T("app.d45.mealSnack")]].map(function(p) {
                   return '<button class="diet-pick-tab' + (p[0]==='any'?' active':'') + '" '
                     + 'data-pick-meal="' + p[0] + '" onclick="dietPickSetMeal(\'' + p[0] + '\')">'
                     + p[1] + '</button>';
@@ -22067,9 +22084,9 @@ function diet() {
     +         '</div>'
     +       '</div>'
     +       '<div>'
-    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">價位</div>'
+    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">' + _T("app.d45.priceLabel") + '</div>'
     +         '<div class="diet-pick-price-tabs" style="display:flex;flex-wrap:wrap;gap:4px">'
-    +           [['any','不限'],['$','$ ≤100'],['$$','$$ 100–200'],['$$$','$$$ 200+']].map(function(p) {
+    +           [['any',_T("app.d45.unlimited")],['$','$ ≤100'],['$$','$$ 100–200'],['$$$','$$$ 200+']].map(function(p) {
                   return '<button class="diet-pick-tab diet-pick-price' + (p[0]==='any'?' active':'') + '" '
                     + 'data-pick-price="' + p[0] + '" onclick="dietPickSetPrice(\'' + p[0] + '\')">'
                     + p[1] + '</button>';
@@ -22077,9 +22094,9 @@ function diet() {
     +         '</div>'
     +       '</div>'
     +       '<div>'
-    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">熱量</div>'
+    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">' + _T("app.d45.calorieLabel") + '</div>'
     +         '<div class="diet-pick-cal-tabs" style="display:flex;flex-wrap:wrap;gap:4px">'
-    +           [['any','不限'],['low','輕 ≤350'],['mid','一般 350–650'],['high','高 650+']].map(function(p) {
+    +           [['any',_T("app.d45.unlimited")],['low',_T("app.d45.calLowShort")],['mid',_T("app.d45.calMidShort")],['high',_T("app.d45.calHighShort")]].map(function(p) {
                   return '<button class="diet-pick-tab diet-pick-cal' + (p[0]==='any'?' active':'') + '" '
                     + 'data-pick-cal="' + p[0] + '" onclick="dietPickSetCal(\'' + p[0] + '\')">'
                     + p[1] + '</button>';
@@ -22087,14 +22104,14 @@ function diet() {
     +         '</div>'
     +       '</div>'
     +       '<div class="diet-pick-flags" style="display:flex;flex-direction:column;gap:6px;font-size:12px">'
-    +         '<label class="diet-pick-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" class="diet-pick-nearby-input" onchange="dietPickToggleNearby(this.checked)" /> <span>只推附近能取得（超商/便當店/早餐店）</span></label>'
-    +         '<label class="diet-pick-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" class="diet-pick-avoid-recent-input" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>避開本週吃過的</span></label>'
+    +         '<label class="diet-pick-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" class="diet-pick-nearby-input" onchange="dietPickToggleNearby(this.checked)" /> <span>' + _T("app.d45.onlyNearby") + '</span></label>'
+    +         '<label class="diet-pick-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" class="diet-pick-avoid-recent-input" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>' + _T("app.d45.avoidThisWeek") + '</span></label>'
     +       '</div>'
     +       '<div>'
-    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">不吃的東西</div>'
+    +         '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">' + _T("app.d45.dislikes") + '</div>'
     +         '<div class="diet-pick-dislike-row diet-pick-dislike-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;min-height:24px"></div>'
     +         '<div class="diet-pick-dislike-input" style="display:flex;gap:6px">'
-    +           '<input type="text" class="diet-pick-dislike-add" maxlength="20" placeholder="例：香菜、辣椒" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:12px" />'
+    +           '<input type="text" class="diet-pick-dislike-add" maxlength="20" placeholder="' + _T("app.d45.dislikePlaceholder") + '" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font:inherit;font-size:12px" />'
     +           '<button onclick="dietPickAddDislike()" type="button" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer"><i data-lucide="plus" style="width:13px;height:13px"></i></button>'
     +         '</div>'
     +       '</div>'
@@ -22117,8 +22134,8 @@ function diet() {
     +       '<i data-lucide="coffee" style="width:20px;height:20px"></i>'
     +     '</div>'
     +     '<div style="flex:1;position:relative;z-index:1">'
-    +       '<div style="font-size:14.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">配杯飲料 <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
-    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">依你的病史 + 上面選的價位 / 不吃食材建議</div>'
+    +       '<div style="font-size:14.5px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px">' + _T("app.d45.pairDrink") + ' <i data-lucide="arrow-right" style="width:13px;height:13px"></i></div>'
+    +       '<div style="font-size:11.5px;color:var(--text-dim);margin-top:2px">' + _T("app.d45.drinkSub") + '</div>'
     +     '</div>'
     +   '</button>'
 
@@ -22126,7 +22143,7 @@ function diet() {
 
     // 餐次推薦
     +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="salad"></i> 今天吃什麼</h3>'
+    +     '<h3 class="sec-title"><i data-lucide="salad"></i> ' + _T("app.d45.whatToEatToday") + '</h3>'
     +     '<span class="sec-spacer"></span>'
     +   '</div>'
     +   '<div class="meds-period-card" style="margin-bottom:12px">'
@@ -22138,7 +22155,7 @@ function diet() {
 
     // 打卡今天吃了什麼 — 用 card form 樣式
     +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="pencil"></i> 打卡今天吃了什麼</h3>'
+    +     '<h3 class="sec-title"><i data-lucide="pencil"></i> ' + _T("app.d45.logWhatYouAte") + '</h3>'
     +     '<span class="sec-spacer"></span>'
     +   '</div>'
     +   '<div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">'
@@ -22158,7 +22175,7 @@ function diet() {
 
     // 今日已記錄
     +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="list"></i> 今日已記錄</h3>'
+    +     '<h3 class="sec-title"><i data-lucide="list"></i> ' + _T("app.d45.todayLogged") + '</h3>'
     +     '<span class="sec-spacer"></span>'
     +   '</div>'
     +   '<div id="mobile-diet-today" class="list-card">'
@@ -22169,7 +22186,7 @@ function diet() {
     // 用 class diet-basic-nutrients / diet-caffeine-body 讓 renderBasicNutrients /
     // fetchCaffeineGuide 透過 querySelectorAll 同步填入。
     +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="apple"></i> 基本營養素衛教</h3>'
+    +     '<h3 class="sec-title"><i data-lucide="apple"></i> ' + _T("app.d45.basicNutrientsEdu") + '</h3>'
     +   '</div>'
     +   '<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#fff;border:1.5px solid var(--border);border-radius:14px">'
     +     '<p style="font-size:11px;color:var(--text-muted);margin:0 0 10px">' + _T("app.c28.sixNutrientsBlurb") + '</p>'
@@ -22177,7 +22194,7 @@ function diet() {
     +   '</div>'
 
     +   '<div class="sec-head">'
-    +     '<h3 class="sec-title"><i data-lucide="coffee"></i> 咖啡因衛教</h3>'
+    +     '<h3 class="sec-title"><i data-lucide="coffee"></i> ' + _T("app.d45.caffeineEdu") + '</h3>'
     +   '</div>'
     +   '<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#fff;border:1.5px solid var(--border);border-radius:14px">'
     +     '<div class="diet-caffeine-body"><p class="diet-empty" style="font-size:11px;color:var(--text-muted);text-align:center">' + _T("app.c28.loading") + '</p></div>'
@@ -22228,53 +22245,53 @@ function diet() {
     +     '<h3><i data-lucide="dices" style="width:16px;height:16px"></i> ' + _T("app.c28.whatToEatTool") + '</h3>'
     +     '<p class="diet-pick-sub">' + _T("app.c28.pickSub") + '</p>'
     +     '<div class="diet-pick-meal-tabs" id="diet-pick-meal-tabs">'
-    +       [['any','隨便'],['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點心']].map(function(p) {
+    +       [['any',_T("app.d45.mealAny")],['breakfast',_T("app.d45.mealBreakfastShort")],['lunch',_T("app.d45.mealLunchShort")],['dinner',_T("app.d45.mealDinnerShort")],['snack',_T("app.d45.mealSnack")]].map(function(p) {
               return '<button class="diet-pick-tab' + (p[0]==='any'?' active':'') + '" '
                 + 'data-pick-meal="' + p[0] + '" onclick="dietPickSetMeal(\'' + p[0] + '\')">'
                 + p[1] + '</button>';
             }).join('')
     +     '</div>'
     +     '<div class="diet-pick-price-tabs" id="diet-pick-price-tabs">'
-    +       [['any','不限預算'],['$','$（≤100）'],['$$','$$（100–200）'],['$$$','$$$（200+）']].map(function(p) {
+    +       [['any',_T("app.d45.unlimitedBudget")],['$','$（≤100）'],['$$','$$（100–200）'],['$$$','$$$（200+）']].map(function(p) {
               return '<button class="diet-pick-tab diet-pick-price' + (p[0]==='any'?' active':'') + '" '
                 + 'data-pick-price="' + p[0] + '" onclick="dietPickSetPrice(\'' + p[0] + '\')">'
                 + p[1] + '</button>';
             }).join('')
     +     '</div>'
     +     '<div class="diet-pick-cal-tabs" id="diet-pick-cal-tabs">'
-    +       [['any','不限熱量'],['low','輕量（≤350）'],['mid','一般（350–650）'],['high','高熱量（650+）']].map(function(p) {
+    +       [['any',_T("app.d45.unlimitedCal")],['low',_T("app.d45.calLow")],['mid',_T("app.d45.calMid")],['high',_T("app.d45.calHigh")]].map(function(p) {
               return '<button class="diet-pick-tab diet-pick-cal' + (p[0]==='any'?' active':'') + '" '
                 + 'data-pick-cal="' + p[0] + '" onclick="dietPickSetCal(\'' + p[0] + '\')">'
                 + p[1] + '</button>';
             }).join('')
     +     '</div>'
     +     '<div class="diet-pick-flags">'
-    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-nearby" class="diet-pick-nearby-input" onchange="dietPickToggleNearby(this.checked)" /> <span>只推附近能取得（超商/便當店/早餐店）</span></label>'
-    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-avoid-recent" class="diet-pick-avoid-recent-input" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>避開本週吃過的</span></label>'
+    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-nearby" class="diet-pick-nearby-input" onchange="dietPickToggleNearby(this.checked)" /> <span>' + _T("app.d45.onlyNearby") + '</span></label>'
+    +       '<label class="diet-pick-toggle"><input type="checkbox" id="diet-pick-avoid-recent" class="diet-pick-avoid-recent-input" checked onchange="dietPickToggleAvoidRecent(this.checked)" /> <span>' + _T("app.d45.avoidThisWeek") + '</span></label>'
     +     '</div>'
     +     '<div class="diet-pick-dislike">'
     +       '<div class="diet-pick-dislike-row diet-pick-dislike-chips" id="diet-pick-dislike-chips"></div>'
     +       '<div class="diet-pick-dislike-input">'
-    +         '<input type="text" id="diet-pick-dislike-add" class="diet-pick-dislike-add" maxlength="20" placeholder="不吃什麼？例：香菜、辣椒" />'
+    +         '<input type="text" id="diet-pick-dislike-add" class="diet-pick-dislike-add" maxlength="20" placeholder="' + _T("app.d45.dislikePlaceholderLong") + '" />'
     +         '<button onclick="dietPickAddDislike()" type="button"><i data-lucide="plus" style="width:14px;height:14px"></i></button>'
     +       '</div>'
     +     '</div>'
     +     '<div id="diet-pick-result" class="diet-pick-result diet-pick-empty">'
     +       '<i data-lucide="utensils" style="width:28px;height:28px"></i>'
-    +       '<div>按下面的按鈕，幫你抽一道菜</div>'
+    +       '<div>' + _T("app.d45.pressBelowToPick") + '</div>'
     +     '</div>'
     +     '<div class="diet-pick-actions">'
     +       '<button class="diet-pick-btn primary" onclick="dietPickMeal(false)">'
-    +         '<i data-lucide="dices" style="width:16px;height:16px"></i> 給我一道'
+    +         '<i data-lucide="dices" style="width:16px;height:16px"></i> ' + _T("app.d45.giveMeOne")
     +       '</button>'
     +       '<button class="diet-pick-btn primary diet-pick-btn-drink" onclick="dietPickDrink(false)">'
-    +         '<i data-lucide="coffee" style="width:16px;height:16px"></i> 配杯飲料'
+    +         '<i data-lucide="coffee" style="width:16px;height:16px"></i> ' + _T("app.d45.pairDrink")
     +       '</button>'
     +       '<button class="diet-pick-btn secondary" id="diet-pick-reroll" onclick="dietPickMeal(true)" disabled>'
-    +         '<i data-lucide="refresh-cw" style="width:16px;height:16px"></i> 換一道'
+    +         '<i data-lucide="refresh-cw" style="width:16px;height:16px"></i> ' + _T("app.d45.swapDish")
     +       '</button>'
     +       '<button class="diet-pick-btn quiet" id="diet-pick-log" onclick="dietPickLogIt()" disabled>'
-    +         '<i data-lucide="check" style="width:16px;height:16px"></i> 就吃這個'
+    +         '<i data-lucide="check" style="width:16px;height:16px"></i> ' + _T("app.d45.eatThis")
     +       '</button>'
     +     '</div>'
     +     '<div id="diet-drink-result" class="diet-drink-result"></div>'
@@ -22305,7 +22322,7 @@ function diet() {
     +       '<textarea id="diet-log-foods" rows="2" maxlength="200" placeholder="' + _T("app.c28.foodsPlaceholderLong") + '"></textarea>'
     +       '<input type="text" id="diet-log-note" maxlength="80" placeholder="' + _T("app.c28.notePlaceholderLong") + '" />'
     +       '<button class="diet-log-submit" onclick="dietSubmitLog()">'
-    +         '<i data-lucide="check" style="width:14px;height:14px"></i> 送出'
+    +         '<i data-lucide="check" style="width:14px;height:14px"></i> ' + _T("app.d45.submit")
     +       '</button>'
     +       '<div id="diet-log-status" class="diet-log-status"></div>'
     +     '</div>'
@@ -22320,7 +22337,7 @@ function diet() {
     +     '<h3><i data-lucide="trending-up" style="width:16px;height:16px"></i> ' + _T("app.c28.thisWeekStatus") + '</h3>'
     +     '<p class="diet-card-sub">' + _T("app.c28.weeklyBlurb") + '</p>'
     +     '<div class="diet-weekly-week-tabs" id="diet-weekly-week-tabs">'
-    +       [['0','本週'],['1','上週'],['2','前週'],['3','再前']].map(function(p) {
+    +       [['0',_T("app.d45.thisWeek")],['1',_T("app.d45.lastWeek")],['2',_T("app.d45.twoWeeksAgo")],['3',_T("app.d45.threeWeeksAgo")]].map(function(p) {
               return '<button class="diet-weekly-week-tab' + (p[0]==='0'?' active':'') + '" '
                 + 'data-week-idx="' + p[0] + '" onclick="dietWeeklySwitchWeek(' + p[0] + ')">'
                 + p[1] + '</button>';
@@ -22330,7 +22347,7 @@ function diet() {
     +       '<div class="diet-empty">' + _T("app.c28.loading") + '</div>'
     +     '</div>'
     +     '<div class="diet-weekly-chart-tabs" id="diet-weekly-chart-tabs">'
-    +       [['line','完整度+攝取'],['stack','餐別堆疊'],['multi','早午晚點']].map(function(p) {
+    +       [['line',_T("app.d45.chartLine")],['stack',_T("app.d45.chartStack")],['multi',_T("app.d45.chartMulti")]].map(function(p) {
               return '<button class="diet-weekly-chart-tab' + (p[0]==='line'?' active':'') + '" '
                 + 'data-chart-type="' + p[0] + '" onclick="dietWeeklySwitchChart(\'' + p[0] + '\')">'
                 + p[1] + '</button>';
@@ -22560,7 +22577,7 @@ function renderDietPick(g) {
   var components = (g.components || []).map(function(c) {
     return '<span class="diet-pick-chip">' + chatEscape(c) + '</span>';
   }).join('');
-  var mealLabelMap = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心' };
+  var mealLabelMap = { breakfast: _T("app.d46.breakfast"), lunch: _T("app.d46.lunch"), dinner: _T("app.d46.dinner"), snack: _T("app.d46.snack") };
   var mealBadge = (_dietPickMealType === 'any' && g.meal_type)
     ? '<span class="diet-pick-meal-badge">' + _T("app.c29.pickedAMeal") + ' ' + mealLabelMap[g.meal_type] + '</span>'
     : '';
@@ -22740,7 +22757,7 @@ function fetchCaffeineGuide() {
           + '</div>';
       }).join('');
       var html = ''
-        + '<p class="diet-caf-overview">一般成人每日建議 ≤ <strong>' + g.daily_safe_mg + ' mg</strong>，孕期 ≤ <strong>' + g.pregnancy_safe_mg + ' mg</strong>。</p>'
+        + '<p class="diet-caf-overview">' + _Tf("app.d46.caffeineOverview", { daily: g.daily_safe_mg, preg: g.pregnancy_safe_mg }) + '</p>'
         + '<div class="diet-caf-grid">'
         +   '<div><div class="diet-caf-subtitle">' + _T("app.c29.commonDrinkCaffeine") + '</div>'
         +     '<table class="diet-caf-table"><tbody>' + sources + '</tbody></table>'
@@ -23032,15 +23049,15 @@ function fetchDietTodayRecords() {
       return r.text().then(function(text) {
         try { return JSON.parse(text); }
         catch (e) {
-          throw new Error('回應非 JSON：' + (text || '').slice(0, 120));
+          throw new Error(_T("app.d47.respNotJson") + (text || '').slice(0, 120));
         }
       });
     })
     .then(function(data) {
       var rows = (data && data.records) || [];
       if (data && data.error) {
-        box.innerHTML = '<p class="diet-empty">讀取失敗：' + chatEscape(data.error) +
-          ' <button class="diet-retry-btn" type="button" onclick="fetchDietTodayRecords()">重試</button></p>';
+        box.innerHTML = '<p class="diet-empty">' + _T("app.d47.loadFailed") + chatEscape(data.error) +
+          ' <button class="diet-retry-btn" type="button" onclick="fetchDietTodayRecords()">' + _T("app.d47.retry") + '</button></p>';
         return;
       }
       if (!rows.length) {
@@ -23083,8 +23100,8 @@ function fetchDietTodayRecords() {
     })
     .catch(function(e) {
       console.error('[diet] fetch today records failed:', e);
-      var msg = (e && e.message) ? e.message : '網路錯誤';
-      box.innerHTML = '<p class="diet-empty">讀取失敗：' + chatEscape(msg) +
+      var msg = (e && e.message) ? e.message : _T("app.d47.networkError");
+      box.innerHTML = '<p class="diet-empty">' + _T("app.d47.loadFailed") + chatEscape(msg) +
         ' <button class="diet-retry-btn" type="button" onclick="fetchDietTodayRecords()">重試</button></p>';
     });
 }
@@ -23100,12 +23117,13 @@ var _dietWeeklyMealColors = {
   snack:     '#4caf90',
 };
 // 折線圖 4 條線的設定（key 對應 by_day.intake_pct.* 與 completeness）
-var _dietWeeklyLineSeries = [
-  { key: 'completeness', label: '完整度', color: '#4caf90', desc: '早午晚點打卡加權' },
-  { key: 'protein',      label: '蛋白質', color: '#e76f51', desc: '佔每日目標 %' },
-  { key: 'water',        label: '水分',   color: '#5b9fe8', desc: '佔每日目標 %' },
-  { key: 'fiber',        label: '纖維',   color: '#b07cd6', desc: '佔每日目標 %' },
-];
+function _bld__dietWeeklyLineSeries() { return [
+  { key: 'completeness', label: _T("app.d47.completeness"), color: '#4caf90', desc: _T("app.d47.completenessDesc") },
+  { key: 'protein',      label: _T("app.d47.protein"), color: '#e76f51', desc: _T("app.d47.pctOfDailyTarget") },
+  { key: 'water',        label: _T("app.d47.water"),   color: '#5b9fe8', desc: _T("app.d47.pctOfDailyTarget") },
+  { key: 'fiber',        label: _T("app.d47.fiber"),   color: '#b07cd6', desc: _T("app.d47.pctOfDailyTarget") },
+]; }
+var _dietWeeklyLineSeries = _bld__dietWeeklyLineSeries();
 
 function fetchDietWeekly() {
   var pid = getStablePatientId();
@@ -23126,15 +23144,15 @@ function fetchDietWeekly() {
     .then(function(data) {
       _dietWeeklyData = data || { weeks: [] };
       if (data && data.error) {
-        stats.innerHTML = '<div class="diet-empty">讀取失敗：' + chatEscape(data.error) +
-          ' <button class="diet-retry-btn" type="button" onclick="fetchDietWeekly()">重試</button></div>';
+        stats.innerHTML = '<div class="diet-empty">' + _T("app.d47.loadFailed") + chatEscape(data.error) +
+          ' <button class="diet-retry-btn" type="button" onclick="fetchDietWeekly()">' + _T("app.d47.retry") + '</button></div>';
         return;
       }
       renderDietWeekly();
     })
     .catch(function(e) {
       console.error('[diet] weekly fetch failed:', e);
-      stats.innerHTML = '<div class="diet-empty">讀取失敗：' + chatEscape((e && e.message) || '網路錯誤') +
+      stats.innerHTML = '<div class="diet-empty">' + _T("app.d47.loadFailed") + chatEscape((e && e.message) || _T("app.d47.networkError")) +
         ' <button class="diet-retry-btn" type="button" onclick="fetchDietWeekly()">重試</button></div>';
     });
 }
@@ -23187,7 +23205,7 @@ function renderDietWeekly() {
     if (d.snack)     hits.snack++;
   });
   stats.innerHTML =
-    [['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點']].map(function(p) {
+    [['breakfast',_T("app.d47.mealBreakfastShort")],['lunch',_T("app.d47.mealLunchShort")],['dinner',_T("app.d47.mealDinnerShort")],['snack',_T("app.d47.mealSnackShort")]].map(function(p) {
       return '<div class="diet-weekly-stat" style="border-color:' + _dietWeeklyMealColors[p[0]] + '">' +
         '<div class="diet-weekly-stat-meal" style="color:' + _dietWeeklyMealColors[p[0]] + '">' + p[1] + '</div>' +
         '<div class="diet-weekly-stat-frac">' + hits[p[0]] + '<span class="diet-weekly-stat-of">/7</span></div>' +
@@ -23464,7 +23482,7 @@ function drawDietWeeklyMulti(week) {
   ctx.font = (9 * dpr) + 'px system-ui';
   var legendX = padLeft;
   var legendY = pad - 4 * dpr;
-  [['breakfast','早'],['lunch','午'],['dinner','晚'],['snack','點']].forEach(function(p) {
+  [['breakfast',_T("app.d47.mealBreakfastShort")],['lunch',_T("app.d47.mealLunchShort")],['dinner',_T("app.d47.mealDinnerShort")],['snack',_T("app.d47.mealSnackShort")]].forEach(function(p) {
     ctx.fillStyle = _dietWeeklyMealColors[p[0]];
     ctx.fillRect(legendX, legendY - 6 * dpr, 8 * dpr, 8 * dpr);
     ctx.fillStyle = 'rgba(120,140,170,0.9)';
@@ -24479,7 +24497,7 @@ function reminders() {
     + '  <div id="rem-weekly-wrap" style="display:none;margin-top:8px">'
     + '    <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:4px">' + _T("app.c31.weeklyRepeatDays") + '</div>'
     + '    <div style="display:flex;gap:6px;flex-wrap:wrap">'
-    + ['一','二','三','四','五','六','日'].map(function(label, idx) {
+    + [_T("app.d49.dowMon"),_T("app.d49.dowTue"),_T("app.d49.dowWed"),_T("app.d49.dowThu"),_T("app.d49.dowFri"),_T("app.d49.dowSat"),_T("app.d49.dowSun")].map(function(label, idx) {
         return '<label style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);cursor:pointer">'
           + '<input type="checkbox" class="rem-dow" value="' + idx + '" /> ' + label + '</label>';
       }).join('')
@@ -24559,9 +24577,9 @@ function _mobileRemSyncList() {
     box.innerHTML = '<div class="card" style="padding:14px;color:var(--text-muted);font-size:11px;text-align:center">' + _T("app.c31.noRemindersMobile") + '</div>';
     return;
   }
-  var typeLabel = { medication: '吃藥', appointment: '回診', lab: '檢查', measurement: '量測', custom: '自訂' };
+  var typeLabel = { medication: _T("app.d50.typeMedication"), appointment: _T("app.d50.typeAppointment"), lab: _T("app.d50.typeLab"), measurement: _T("app.d50.typeMeasurement"), custom: _T("app.d50.typeCustom") };
   var typePillCls = { medication: 'pill-teal', appointment: 'pill-info', lab: 'pill-warn', measurement: 'pill-info', custom: 'pill-mute' };
-  var freqLabel = { once: '單次', daily: '每天', weekly: '每週', monthly: '每月' };
+  var freqLabel = { once: _T("app.d50.freqOnce"), daily: _T("app.d50.freqDaily"), weekly: _T("app.d50.freqWeekly"), monthly: _T("app.d50.freqMonthly") };
   box.innerHTML = _remindersList.map(function(r) {
     var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
     var active = (r.active === true || r.active === 1);
@@ -24626,21 +24644,21 @@ function reminderToggleSource() {
   }
   if (t === 'medication') {
     wrap.style.display = '';
-    _setOptions([{ value: '', label: '— 不關聯 —' }]);
+    _setOptions([{ value: '', label: _T("app.d50.noLink") }]);
     apiFetch(API + '/medications/?patient_id=' + _remindersPid)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var meds = (data.medications || []).filter(function(m) { return m.active !== 0; });
-        var opts = [{ value: '', label: '— 不關聯 —' }].concat(meds.map(function(m) {
+        var opts = [{ value: '', label: _T("app.d50.noLink") }].concat(meds.map(function(m) {
           var label = String(m.name || '') + (m.dosage ? ' · ' + String(m.dosage) : '');
           return { value: m.id, label: label };
         }));
         _setOptions(opts);
       })
-      .catch(function() { _setOptions([{ value: '', label: '（無法載入藥物清單）' }]); });
+      .catch(function() { _setOptions([{ value: '', label: _T("app.d50.cannotLoadMeds") }]); });
   } else {
     wrap.style.display = 'none';
-    _setOptions([{ value: '', label: '— 不關聯 —' }]);
+    _setOptions([{ value: '', label: _T("app.d50.noLink") }]);
   }
 }
 
@@ -24776,8 +24794,8 @@ function reminderRenderList() {
     el.appendChild(_remH('p', { style: 'color:var(--text-muted)' }, _T("app.c31.noRemindersDesktop")));
     return;
   }
-  var typeLabel = { medication: '吃藥', appointment: '回診', lab: '檢查', custom: '自訂' };
-  var freqLabel = { once: '單次', daily: '每天', weekly: '每週', monthly: '每月' };
+  var typeLabel = { medication: _T("app.d50.typeMedication"), appointment: _T("app.d50.typeAppointment"), lab: _T("app.d50.typeLab"), custom: _T("app.d50.typeCustom") };
+  var freqLabel = { once: _T("app.d50.freqOnce"), daily: _T("app.d50.freqDaily"), weekly: _T("app.d50.freqWeekly"), monthly: _T("app.d50.freqMonthly") };
   _remindersList.forEach(function(r) {
     var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString() : '—';
     var active = (r.active === true || r.active === 1);
@@ -24845,9 +24863,9 @@ function reminderRenderInbox(unread) {
   var unreadNum = Number(unread || 0);
   var totalNum = Number(_remindersInbox.length);
   var summary = _remH('div', { style: 'margin-bottom:8px;font-size:0.85rem;color:var(--text-dim)' }, [
-    '未讀 ',
+    _T("app.d50.unread"),
     _remH('strong', null, String(unreadNum)),
-    ' 則 / 共 ' + totalNum + ' 則',
+    _Tf("app.d50.itemsOfTotal", { n: totalNum }),
   ]);
   el.appendChild(summary);
 
@@ -25480,10 +25498,10 @@ function renderAdmissionCard(a) {
     +         '<input id="adm-med-due-' + a.id + '" type="datetime-local" style="padding:6px;border:1px solid var(--border);border-radius:4px;font-size:.85rem"/>'
     +       '</div>'
     +       '<div style="margin-top:6px;text-align:right">'
-    +         '<button onclick="addAdmissionMedication(\'' + a.id + '\')" style="background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:.8rem">儲存</button>'
+    +         '<button onclick="addAdmissionMedication(\'' + a.id + '\')" style="background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:.8rem">' + _T('app.d51.save') + '</button>'
     +       '</div>'
     +     '</div>'
-    +     '<div id="adm-meds-' + a.id + '"><p style="color:var(--text-dim);font-size:.8rem;margin:0">載入中…</p></div>'
+    +     '<div id="adm-meds-' + a.id + '"><p style="color:var(--text-dim);font-size:.8rem;margin:0">' + _T('app.d51.loading') + '</p></div>'
     +   '</div>'
     + '</div>';
 }
@@ -26222,9 +26240,9 @@ function _renderPiecesNearestFollowUp(fu) {
   if (!fu) {
     return ''
       + '<div class="pz-nearest-empty">'
-      +   '<p>尚未排定任何回診。</p>'
+      +   '<p>' + _T("app.d53.noFollowUpScheduled") + '</p>'
       +   '<button type="button" class="pz-link-btn" onclick="navigateTo(\'followUps\',null)">'
-      +     '<i data-lucide="calendar-plus"></i> 前往新增'
+      +     '<i data-lucide="calendar-plus"></i> ' + _T("app.d53.goToAdd")
       +   '</button>'
       + '</div>';
   }
@@ -26586,7 +26604,7 @@ function renderRiskCard(pred) {
     + pctDetail
     + '<div class="rc-actions">'
     + '<button class="rc-btn primary" onclick="navigateTo(\'predict\',null)">' + _T("app.c34.seeFullAnalysis") + '</button>'
-    + '<button class="rc-btn ghost" onclick="addToVisitSummary(\'復發風險\')">整理成就診摘要</button>'
+    + '<button class="rc-btn ghost" onclick="addToVisitSummary(\'復發風險\')">' + _T("app.d54.compileVisitSummary") + '</button>'
     + '</div>'
     + '<p class="rc-disclaimer"><i data-lucide="info" style="width:12px;height:12px"></i>'
     + escapeHtml(pred.disclaimer || '') + '</p>'
