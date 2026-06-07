@@ -178,10 +178,12 @@
   }
 
   function listPresets() {
+    var i18n = window.MDPiece_i18n;
+    var fallback = { gentle: "溫和", chime: "風鈴", soft: "柔和", alert: "提示", urgent: "急促" };
     return Object.keys(PRESETS).map(function (id) {
       return {
         id: id,
-        label: { gentle: "溫和", chime: "風鈴", soft: "柔和", alert: "提示", urgent: "急促" }[id] || id,
+        label: i18n ? i18n.t("bell.sound." + id) : (fallback[id] || id),
       };
     });
   }
