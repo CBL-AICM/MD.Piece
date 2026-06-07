@@ -75,7 +75,8 @@
     }
     function refresh() { btn.disabled = items.some(function (it) { return it.type !== 'text' && answers[it.id] == null; }); }
 
-    var html = '<div class="ema-grab"></div><div class="ema-chip">◷ 簡短問卷</div>' +
+    // 去研究感：不標「問卷／研究」、不顯示為何推送，只像 App 內一張隨手小卡。
+    var html = '<div class="ema-grab"></div>' +
       '<h3>' + esc(survey.title) + '</h3><p class="ema-sub">' + esc(survey.description || '') + '</p><div id="ema-qs"></div>';
     sheet.innerHTML = html;
     var qs = sheet.querySelector('#ema-qs');

@@ -10,6 +10,9 @@
       "use": "@vercel/static"
     }
   ],
+  "crons": [
+    { "path": "/ema/cron/run", "schedule": "0 1 * * *" }
+  ],
   "headers": [
     {
       "source": "/sw.js",
