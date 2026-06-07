@@ -136,21 +136,21 @@
   <!-- ════ 左：研究者控制 ════ -->
   <div class="panel">
     <h1>EMA 不定時問卷推送</h1>
-    <p class="sub">互動原型 · <b>回診結束後</b>、<b>記錄一段時間後</b>等里程碑，以<b>日常不定時</b>方式推問卷，結果回後端。點下方情境試。</p>
+    <p class="sub">互動原型 · <b>剛註冊</b>、<b>記錄後</b>、<b>時不時</b>，偶爾不定時跳一則 10 秒打卡——不是固定畫面叫你填問卷。點下方情境試。</p>
 
     <div class="ctl">
       <h2>▶ 觸發情境（點擊模擬）</h2>
-      <button class="scn" onclick="fire('visit_done')">
-        <span class="t"><span class="tag ev">里程碑</span>回診結束後</span>
-        <span class="d">48 小時後白天不定時 Web Push → post-visit 問卷（同理／共享決策）</span>
+      <button class="scn" onclick="fire('register')">
+        <span class="t"><span class="tag ev">生命週期</span>剛註冊時</span>
+        <span class="d">入組第一天白天偶爾跳一則歡迎打卡（不是叫你去填問卷）</span>
       </button>
-      <button class="scn" onclick="fire('record_14d')">
-        <span class="t"><span class="tag ev">里程碑</span>連續記錄滿 14 天</span>
-        <span class="d">當天白天不定時 Web Push → D14 自我效能（SECD）</span>
+      <button class="scn" onclick="fire('afterlog')">
+        <span class="t"><span class="tag ev">事件</span>剛記錄完</span>
+        <span class="d">記完日常記錄後，偶爾 Web Push 一則 10 秒打卡</span>
       </button>
-      <button class="scn" onclick="fire('daily_checkin')">
+      <button class="scn" onclick="fire('occasional')">
         <span class="t"><span class="tag tm">不定時</span>日常隨機時段</span>
-        <span class="d">每天至多一份 · App 內 30 秒狀態微問卷</span>
+        <span class="d">每天至多一份、時點隨機，像日常提醒一樣偶爾出現</span>
       </button>
     </div>
 
@@ -189,17 +189,17 @@
           <div class="g"><div class="k">血壓</div><div class="v">128 / 82</div></div>
           <div class="g"><div class="k">睡眠</div><div class="v">6.5 小時</div></div>
         </div>
-        <div class="card row-card" style="cursor:pointer" onclick="fire('visit_done')">
+        <div class="card row-card" style="cursor:pointer" onclick="fire('register')">
           <div class="ic" style="background:var(--brand-soft);color:var(--brand)">
-            <svg class="ico" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 16l2 2 4-4"/></svg></div>
-          <div><div style="font-weight:700">今日回診已完成 ✓</div><div class="muted" style="font-size:12.5px;color:var(--dim)">點我＝模擬「回診結束」里程碑 →</div></div>
+            <svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 .01M19 8v6M22 11h-6"/></svg></div>
+          <div><div style="font-weight:700">歡迎加入 MD.Piece 👋</div><div class="muted" style="font-size:12.5px;color:var(--dim)">點我＝模擬「剛註冊」→ 偶爾跳歡迎打卡</div></div>
         </div>
-        <div class="card row-card" style="cursor:pointer" onclick="fire('record_14d')">
+        <div class="card row-card" style="cursor:pointer" onclick="fire('afterlog')">
           <div class="ic" style="background:var(--sage-soft);color:var(--sage)">
             <svg class="ico" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-          <div><div style="font-weight:700">每日記錄 · 連續第 14 天</div><div class="muted" style="font-size:12.5px;color:var(--dim)">點我＝模擬「記錄滿 14 天」里程碑 →</div></div>
+          <div><div style="font-weight:700">完成今日記錄 ✓</div><div class="muted" style="font-size:12.5px;color:var(--dim)">點我＝模擬「剛記錄完」→ 偶爾推一則打卡</div></div>
         </div>
-        <p style="font-size:12px;color:var(--faint);text-align:center;margin-top:8px">↑ 點卡片＝模擬里程碑事件，引擎排成日後一份不定時推送</p>
+        <p style="font-size:12px;color:var(--faint);text-align:center;margin-top:8px">↑ 不是固定畫面叫你填，而是觸發後偶爾、不定時跳一則 10 秒打卡</p>
       </div>
 
       <!-- Web Push 橫幅 -->
@@ -240,25 +240,19 @@
 <script>
 // ── 三個示意情境（micro-survey 內容取自 study 量表，縮短）──
 const SURVEYS = {
-  'mdpiece-d1-care': {
-    title:'關於剛剛的回診', sub:'回想本次看診這位醫師',
-    items:[
-      {id:1, t:'這位醫師讓您覺得自在（親切溫暖、尊重您）', min:1, max:5, lo:'差', hi:'極好'},
-      {id:'collab', t:'醫療團隊把「您最在意的事」納入決定，做了多少努力？', min:0, max:9, lo:'完全沒努力', hi:'盡了全力'},
-    ]},
-  'mdpiece-b1-secd6': {
-    title:'這兩週的自我照顧', sub:'對做到下列事情有多少把握',
-    items:[ {id:5, t:'我有把握做好管理健康所需的各項事務，以減少看醫師的需要', min:1, max:10, lo:'完全沒把握', hi:'完全有把握'} ]},
+  'ema-mood': {
+    title:'快速打卡', sub:'花 10 秒，現在的感覺',
+    items:[ {id:'mood', t:'現在心情如何？', min:1, max:5, lo:'很差', hi:'很好'} ]},
   'ema-state': {
-    title:'此刻的狀態', sub:'拖選此刻的整體感受',
-    items:[ {id:'burden', t:'現在整體症狀對你的困擾程度？', min:0, max:10, lo:'完全沒有', hi:'非常嚴重'} ]},
+    title:'隨手打卡', sub:'花 10 秒就好',
+    items:[ {id:'burden', t:'現在整體狀態還好嗎？', min:0, max:10, lo:'很不好', hi:'很好'} ]},
 };
 const SCN = {
-  visit_done:{ch:'ev', channel:'push',  survey:'mdpiece-d1-care', ctx:'回診結束 48 小時後 · 白天不定時推送',
-              rule:{type:'event', match:{event_type:'visit', event_name:'completed'}, delay_min:2880, deliver_window:{start:'10:00', end:'21:00'}}},
-  record_14d:{ch:'ev', channel:'push',  survey:'mdpiece-b1-secd6', ctx:'連續記錄滿 14 天 · 當天白天不定時推送',
-              rule:{type:'elapsed', on:'enrollment_day', day:14, deliver_window:{start:'10:00', end:'21:00'}, respect_daily_cap:true}},
-  daily_checkin:{ch:'tm', channel:'inapp', survey:'ema-state', ctx:'日常時段內隨機 · 每天至多一份',
+  register:  {ch:'ev', channel:'inapp', survey:'ema-mood', ctx:'剛註冊 · 歡迎隨手打卡',
+              rule:{type:'elapsed', on:'enrollment_day', day:1, deliver_window:{start:'10:00', end:'21:00'}}},
+  afterlog:  {ch:'ev', channel:'push',  survey:'ema-mood', ctx:'剛記錄完 · 偶爾打卡',
+              rule:{type:'event', match:{event_type:'data', event_name:'submit'}, cooldown_min:1440, deliver_window:{start:'10:00', end:'21:00'}}},
+  occasional:{ch:'tm', channel:'push',  survey:'ema-state', ctx:'日常時段內隨機 · 每天至多一份',
               rule:{type:'time', windows:[{start:'10:00', end:'21:00'}], per_window:1, respect_daily_cap:true}},
 };
 
@@ -295,7 +289,7 @@ function openFromPush(){ document.getElementById('push').classList.remove('show'
 function openSheet(s){
   const sv = SURVEYS[s.survey]; answers = {};
   document.getElementById('ctxChip').className = 'ctxchip '+s.ch;
-  document.getElementById('ctxChip').innerHTML = (s.ch==='ev'?'◉ 里程碑觸發':'◷ 日常不定時')+' · '+esc(s.ctx);
+  document.getElementById('ctxChip').innerHTML = (s.ch==='ev'?'◉ 事件 / 生命週期':'◷ 日常不定時')+' · '+esc(s.ctx);
   document.getElementById('sheetTitle').textContent = sv.title;
   document.getElementById('sheetSub').textContent = sv.sub;
   const wrap = document.getElementById('qWrap'); wrap.innerHTML='';
@@ -347,7 +341,7 @@ function renderQ(){
   const box=document.getElementById('queue');
   if(!Q.length){ box.innerHTML='<div class="empty">點左側情境觸發後，這裡顯示推送與作答狀態</div>'; return; }
   box.innerHTML = Q.map(r=>`<div class="qline"><span class="dot ${r.status}"></span>
-    <span><b>${r.id}</b> · <span class="tag ${r.ch}" style="font-size:9.5px">${r.ch==='ev'?'里程碑':'不定時'}</span> ${esc(r.survey)}</span>
+    <span><b>${r.id}</b> · <span class="tag ${r.ch}" style="font-size:9.5px">${r.ch==='ev'?'事件':'不定時'}</span> ${esc(r.survey)}</span>
     <span class="meta">${r.status==='completed'?'✓ 完成':r.status==='expired'?'過期':'待作答'}</span></div>`).join('');
 }
 
@@ -370,7 +364,7 @@ function logAPI(s, sv, ans){
 }
 
 // 初始顯示第一條規則
-document.getElementById('cfgBox').innerHTML = cfgHTML(SCN.visit_done.rule);
+document.getElementById('cfgBox').innerHTML = cfgHTML(SCN.register.rule);
 </script>
 </body>
 </html>
