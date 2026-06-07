@@ -184,6 +184,20 @@ def evaluate_badges(activity):
 
 
 # ── 兌換 ─────────────────────────────────────────────────
+# 兌換狀態：requested（待發放）/ fulfilled（已發放）都已扣點；
+# cancelled（院方退回）視為退點，不計入已花點數。
+REDEMPTION_STATUSES = ("requested", "fulfilled", "cancelled")
+
+
+def spent_from_rows(rows):
+    """已花點數＝未取消的兌換 cost 加總。cancelled 退回不計；status 缺漏視為 requested。"""
+    return sum(
+        int(r.get("cost") or 0)
+        for r in rows
+        if (r.get("status") or "requested") != "cancelled"
+    )
+
+
 def catalog_with_affordability(available):
     """在兌換清單上標出每項以目前 available 點數是否買得起。"""
     return [dict(r, affordable=available >= r["cost"]) for r in CATALOG]
