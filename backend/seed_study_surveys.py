@@ -382,6 +382,115 @@ STUDY_SURVEYS = [
             "reference": {"name": "開放質性（person-based approach）"},
         },
     },
+
+    # ════════════════════════════════════════════════════════════════
+    # codebook v3 新增（SR 自填部分）— 詳見 docs/research/variable_codebook.md
+    #   只收能進現有問卷引擎的自填變項；TEL 遙測 / EHR 臨床另案（見 codebook §7）。
+    # ════════════════════════════════════════════════════════════════
+
+    # ===== G1 人口學補充（D0，不計分）— codebook §1 =====
+    # 只收 A 背景未涵蓋的新變項，避免重複（規則 3）。
+    {
+        "key": "mdpiece-g1-demographics",
+        "title": "G1. 人口學補充資料",
+        "description": "僅 Day 0 填寫一次；A 背景已收的不重複收。",
+        "items": [
+            {"id": "marital_status", "type": "single", "text": "婚姻狀態",
+             "options": ["未婚", "已婚", "離異", "喪偶"]},
+            {"id": "living_arrangement", "type": "single", "text": "居住狀態",
+             "options": ["獨居", "與家人同住", "機構"]},
+            {"id": "household_size", "type": "single", "text": "同住人數",
+             "options": ["0（獨居）", "1", "2", "3", "4 以上"]},
+            {"id": "employment_status", "type": "single", "text": "就業狀態",
+             "options": ["全職", "兼職", "退休", "無業", "家管"]},
+            {"id": "occupation_category", "type": "single", "text": "職業類別",
+             "options": ["軍公教", "服務業", "工業/製造", "農林漁牧", "專業技術", "其他/無"]},
+            {"id": "monthly_income_band", "type": "single", "text": "家庭月收入級距",
+             "options": ["未滿 3 萬", "3–6 萬", "6–10 萬", "10 萬以上", "不願透露"]},
+            {"id": "insurance_status", "type": "single", "text": "健保身分",
+             "options": ["一般", "重大傷病卡", "低收入戶"]},
+            {"id": "residence_urbanicity", "type": "single", "text": "居住地",
+             "options": ["都會", "鄉鎮", "偏遠"]},
+            {"id": "preferred_language", "type": "single", "text": "慣用語言",
+             "options": ["國語", "台語", "客語", "其他"]},
+            {"id": "caregiver_relationship", "type": "single", "text": "主要協助者關係",
+             "options": ["配偶", "子女", "其他親屬", "看護", "無"]},
+            {"id": "internet_access_home", "type": "single", "text": "家中網路",
+             "options": ["有 Wi-Fi", "僅行動數據", "無"]},
+        ],
+        "scoring": {
+            "study": STUDY, "part": "G1", "order": 16, "timepoints": ["D0"],
+            "method": "none",
+            "reference": {"name": "自編人口學補充（codebook v3 §1）"},
+        },
+    },
+
+    # ===== G2 疾病與生活型態自填（D0，不計分）— codebook §2 =====
+    # 共病以 Charlson CCI 清單收（自填與病歷一致性極佳，PMID 34991091）。
+    {
+        "key": "mdpiece-g2-disease",
+        "title": "G2. 疾病與生活型態資料",
+        "description": "僅 Day 0 填寫一次。共病為複選；其餘單選或填寫。",
+        "items": [
+            {"id": "age_at_diagnosis", "type": "text", "text": "主要慢性病確診時的年齡（歲）"},
+            {"id": "comorbidity_checklist", "type": "multi",
+             "text": "目前經醫師診斷的疾病（可複選；Charlson 共病清單）",
+             "options": ["心肌梗塞", "心臟衰竭", "周邊血管疾病", "腦中風/腦血管疾病", "失智症",
+                          "慢性肺病(COPD/氣喘)", "風濕免疫疾病", "消化性潰瘍", "輕度肝病",
+                          "糖尿病(無併發症)", "糖尿病(有併發症)", "偏癱/截癱", "中重度腎病",
+                          "惡性腫瘤", "白血病", "淋巴瘤", "中重度肝病", "轉移性癌症", "愛滋病"]},
+            {"id": "smoking_status", "type": "single", "text": "抽菸狀態",
+             "options": ["從不抽菸", "已戒菸", "目前抽菸"]},
+            {"id": "alcohol_use", "type": "single", "text": "飲酒習慣",
+             "options": ["從不", "偶爾", "經常"]},
+            {"id": "num_regular_medications", "type": "single", "text": "目前長期服用藥物種類數",
+             "options": ["無", "1–2 種", "3–4 種", "5 種以上"]},
+            {"id": "medication_adherence_baseline", "type": "single",
+             "text": "過去一個月，您按醫囑服藥的情況",
+             "options": ["完全按時", "偶爾忘記", "經常忘記", "常自行調整/停藥"]},
+            _likert("baseline_symptom_burden",
+                    "過去一週，整體症狀對您的困擾程度（0=完全沒有，10=非常嚴重）",
+                    min=0, max=10),
+            {"id": "disease_severity_selfrated", "type": "single",
+             "text": "您自評目前疾病的嚴重程度",
+             "options": ["很輕微", "輕微", "中等", "嚴重", "很嚴重"]},
+            {"id": "hospitalization_history_12m", "type": "single",
+             "text": "過去 12 個月因慢性病住院次數",
+             "options": ["0", "1", "2", "3 次以上"]},
+            {"id": "er_visits_history_12m", "type": "single",
+             "text": "過去 12 個月因慢性病掛急診次數",
+             "options": ["0", "1", "2", "3 次以上"]},
+            {"id": "family_history_flag", "type": "single", "text": "直系親屬是否有相同慢性病",
+             "options": ["否", "是", "不確定"]},
+        ],
+        "scoring": {
+            "study": STUDY, "part": "G2", "order": 17, "timepoints": ["D0"],
+            "method": "none",
+            "reference": {"name": "自編疾病自填（codebook v3 §2）",
+                          "comorbidity_tool": "Charlson Comorbidity Index",
+                          "pmid": "34991091", "doi": "10.1159/000521288"},
+        },
+    },
+
+    # ===== G3 病人賦能 PAM-13（D0/D28）— codebook §6，⚠️ 待授權，暫不啟用 =====
+    # PAM-13 為 Insignia Health 授權量表；研究使用需先取得授權。授權確認前不收錄
+    # verbatim 題目，僅留設計佔位。取得授權後補 13 題與 scoring（scale 1–4 + N/A，
+    # method=sum，常模轉 0–100 與 level 1–4）。驗證文獻：Ngooi 2016
+    # (PMID 27645458, DOI 10.1007/s11136-016-1412-5)。
+    # 啟用方式：補完 items 後解除下方註解即可（order 18）。
+    # {
+    #     "key": "mdpiece-g3-pam13",
+    #     "title": "G3. 病人賦能（PAM-13）",
+    #     "description": "1=非常不同意，4=非常同意；不適用可選 N/A。",
+    #     "items": [_likert(i, f"（PAM-13 第 {i} 題，待授權）") for i in range(1, 14)],
+    #     "scoring": {
+    #         "study": STUDY, "part": "G3", "order": 18, "timepoints": ["D0", "D28"],
+    #         "scale": {"min": 1, "max": 4, "na": True}, "na_value": "NA",
+    #         "method": "sum", "missing": {"max_missing": 1},
+    #         "reference": {"name": "PAM-13", "license": "Insignia Health 授權（待取得）",
+    #                       "pmid": "27645458", "doi": "10.1007/s11136-016-1412-5"},
+    #     },
+    # },
 ]
 
 

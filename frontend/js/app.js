@@ -11533,6 +11533,7 @@ function saveSymptomEntry(entry) {
   all.push(entry);
   localStorage.setItem('mdpiece_symptoms', JSON.stringify(all));
   symptomSyncPush(entry);
+  if (window.Tracker) Tracker.track('data', 'submit', { target: 'symptom' });  // EMA：記錄後偶爾追一則打卡
 }
 function deleteSymptomEntry(id) {
   localStorage.setItem('mdpiece_symptoms',
@@ -12440,6 +12441,7 @@ function saveVitalEntry(e) {
   arr.push(e);
   localStorage.setItem('mdpiece_vitals_entries', JSON.stringify(arr));
   vitalSyncPush(e);
+  if (window.Tracker) Tracker.track('data', 'submit', { target: 'vital' });  // EMA：記錄後偶爾追一則打卡
 }
 function deleteVitalEntry(id) {
   localStorage.setItem('mdpiece_vitals_entries',
