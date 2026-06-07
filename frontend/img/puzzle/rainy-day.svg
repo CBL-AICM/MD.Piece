@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="聽雨的午後">
+  <!-- 平面化、粗線條、可愛風的「聽雨午後」療程拼圖。300x300，可被 3x3 切片。 -->
+  <defs>
+    <clipPath id="rd-frame"><rect x="0" y="0" width="300" height="300" rx="18"/></clipPath>
+  </defs>
+  <g clip-path="url(#rd-frame)" stroke="#2b3a55" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- 天空 -->
+    <rect x="0" y="0" width="300" height="300" fill="#bcd6e8" stroke="none"/>
+    <rect x="0" y="200" width="300" height="100" fill="#cde3d6" stroke="none"/>
+    <!-- 雲 -->
+    <g fill="#eef4f8">
+      <path d="M40 70 q-22 0 -22 22 q0 22 22 22 h70 q24 0 24 -24 q0 -22 -24 -22 q-2 -20 -26 -20 q-20 0 -24 22 z"/>
+      <path d="M190 50 q-20 0 -20 20 q0 20 20 20 h66 q22 0 22 -22 q0 -20 -22 -20 q-4 -16 -24 -16 q-18 0 -22 18 z"/>
+    </g>
+    <!-- 雨絲 -->
+    <g stroke="#7fb0cf" stroke-width="5">
+      <line x1="55" y1="120" x2="48" y2="150"/>
+      <line x1="95" y1="125" x2="88" y2="158"/>
+      <line x1="210" y1="100" x2="203" y2="132"/>
+      <line x1="250" y1="105" x2="243" y2="138"/>
+      <line x1="150" y1="135" x2="143" y2="168"/>
+    </g>
+    <!-- 小水窪 -->
+    <ellipse cx="80" cy="262" rx="44" ry="12" fill="#a9cfe6"/>
+    <ellipse cx="225" cy="270" rx="40" ry="11" fill="#a9cfe6"/>
+    <!-- 黃雨傘 + 笑臉 -->
+    <g>
+      <path d="M150 150 q-58 0 -62 48 q30 -20 62 -20 q32 0 62 20 q-4 -48 -62 -48 z" fill="#ffcf5c"/>
+      <line x1="150" y1="178" x2="150" y2="240"/>
+      <path d="M150 240 q0 14 14 14" fill="none"/>
+      <circle cx="135" cy="195" r="4" fill="#2b3a55" stroke="none"/>
+      <circle cx="165" cy="195" r="4" fill="#2b3a55" stroke="none"/>
+      <path d="M138 205 q12 10 24 0" fill="none" stroke-width="4"/>
+    </g>
+    <!-- 嫩芽 -->
+    <g>
+      <path d="M255 300 v-40" fill="none"/>
+      <path d="M255 268 q-20 -4 -24 -22 q20 0 24 16 z" fill="#9ad29b"/>
+      <path d="M255 280 q20 -4 24 -20 q-20 0 -24 14 z" fill="#9ad29b"/>
+    </g>
+    <!-- 邊框線 -->
+    <rect x="2.5" y="2.5" width="295" height="295" rx="16" fill="none" stroke="#2b3a55" stroke-width="5"/>
+  </g>
+</svg>

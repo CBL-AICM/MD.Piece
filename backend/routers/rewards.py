@@ -122,6 +122,39 @@ def _gather_activity(sb, pid):
     return activity, day_sources, survey_dates
 
 
+def _month_activity(day_sources, survey_dates, year_month):
+    """把全量的 day_sources / survey_dates 過濾到指定月份（'YYYY-MM'），組出
+    rewards_rules.puzzle_board 需要的 month-scoped activity dict。純過濾＋重算，
+    不另外讀 DB（沿用 summary 已撈好的逐日來源；規則 2/3：不重複查表）。"""
+    prefix = str(year_month)[:7]
+    month_days = {d: s for d, s in day_sources.items() if str(d)[:7] == prefix}
+    active_days = sorted(month_days.keys())
+    longest, _current = rules.compute_streaks(active_days)
+    emotion_days = sum(1 for s in month_days.values() if "emotion" in s)
+    triple_day = any({"symptom", "vital", "emotion"} <= s for s in month_days.values())
+    survey_count = sum(1 for d in survey_dates if str(d)[:7] == prefix)
+    return {
+        "active_days": len(active_days),
+        "survey_count": survey_count,
+        "emotion_days": emotion_days,
+        "longest_streak": longest,
+        "triple_day": triple_day,
+    }
+
+
+def _completed_puzzle_months(day_sources, survey_dates):
+    """掃所有「有任何紀錄的月份」，回傳已集滿 9 片的月份清單（收藏冊用）。
+    純函式組合，唯讀。每個月各自用 month-scoped activity 判 complete。"""
+    months = {str(d)[:7] for d in day_sources}
+    months |= {str(d)[:7] for d in survey_dates}
+    done = []
+    for ym in sorted(months):
+        board = rules.puzzle_board(ym, _month_activity(day_sources, survey_dates, ym))
+        if board["complete"]:
+            done.append({"year_month": ym, "theme": board["theme"]})
+    return done
+
+
 def _build_ledger(day_sources, survey_dates, points, eheals_done, limit=12):
     """組「最近加分明細」，讓使用者看得到分數怎麼來的（憲法 2 可解釋）。"""
     events = []
@@ -178,6 +211,21 @@ def get_summary(patient_id: str = Query(...)):
         },
         "badges": rules.evaluate_badges(activity),
         "ledger": _build_ledger(day_sources, survey_dates, points, activity["eheals_done"]),
+    }
+
+
+@router.get("/puzzle")
+def get_puzzle(patient_id: str = Query(...), month: str = Query(None, description="YYYY-MM；省略＝本月")):
+    """療程拼圖（每月主題收藏）：回當月 9 片解鎖狀態＋歷史已完成清單。
+    純唯讀換算，沿用 _gather_activity 的逐日來源、不另外讀表（規則 2/5）。"""
+    ym = month or datetime.now(timezone.utc).strftime("%Y-%m")
+    sb = get_supabase()
+    _activity, day_sources, survey_dates = _gather_activity(sb, patient_id)
+    board = rules.puzzle_board(ym, _month_activity(day_sources, survey_dates, ym))
+    return {
+        "patient_id": patient_id,
+        "board": board,
+        "collection": _completed_puzzle_months(day_sources, survey_dates),
     }
 
 

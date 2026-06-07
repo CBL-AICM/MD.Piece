@@ -201,3 +201,132 @@ def spent_from_rows(rows):
 def catalog_with_affordability(available):
     """在兌換清單上標出每項以目前 available 點數是否買得起。"""
     return [dict(r, affordable=available >= r["cost"]) for r in CATALOG]
+
+
+# ── 療程拼圖（每月主題收藏 metagame）──────────────────────────
+# 概念：每月一張 9 片（3x3）療程主題拼圖，靠使用者「平常的健康紀錄」自動解鎖，
+# 不花積分買、不抽卡。全部用確定性規則，跟上面的積分一樣是純算術、可單元測試。
+#
+# 設計鐵則（對照產品憲法 / 12 鐵則）：
+#   - 單調不減：解鎖門檻只看「當月累積量」，量只增不減 → 已解鎖的片永不收回。
+#   - 零付費：解鎖完全來自既有紀錄行為，不需新操作、不需花點數。
+#   - 每片可解釋（憲法 2）：每片都附「為什麼解鎖 / 還差什麼」。
+#   - 不製造焦慮：文案溫和，未解鎖只說「再 N 就好」，不倒數施壓。
+#
+# 月主題用 year_month 決定（12 主題輪替，跨年仍穩定）。集滿 9 片 → complete，
+# 解鎖一個既有兌換品項（PUZZLE_COMPLETE_REWARD），由使用者自行到獎勵中心兌換
+# （不自動寫入 reward_redemptions，避免動到既有兌換流程與帳本；router 只回報
+# 「已可兌換」狀態）。
+
+# 月主題輪替（用 month 1-12 取，跨年穩定）。flat 可愛風，貼合療程/照護語境。
+PUZZLE_THEMES = [
+    {"key": "spring-garden", "name": "療癒花園", "en": "Healing Garden"},
+    {"key": "warm-tea", "name": "暖心茶時光", "en": "Warm Tea Time"},
+    {"key": "morning-walk", "name": "晨間散步", "en": "Morning Walk"},
+    {"key": "blossom", "name": "盛開時節", "en": "In Full Bloom"},
+    {"key": "sunny-window", "name": "灑進陽光的窗", "en": "Sunny Window"},
+    {"key": "rainy-day", "name": "聽雨的午後", "en": "Rainy Afternoon"},
+    {"key": "summer-fruit", "name": "夏日鮮果", "en": "Summer Fruit"},
+    {"key": "starry-night", "name": "好眠星空", "en": "Starry Night"},
+    {"key": "autumn-leaf", "name": "微涼秋葉", "en": "Autumn Leaves"},
+    {"key": "harvest", "name": "豐收餐桌", "en": "Harvest Table"},
+    {"key": "cozy-home", "name": "溫暖的家", "en": "Cozy Home"},
+    {"key": "snow-rest", "name": "冬日歇息", "en": "Winter Rest"},
+]
+
+# 集滿 9 片可兌換的品項（沿用既有 CATALOG 的 id；不另設新獎品池）。
+PUZZLE_COMPLETE_REWARD = "edu-booklet"
+
+# 9 片的解鎖條件（確定性、可解釋、單調不減）。每片一條 rule：
+#   field   ＝ 用 month-scoped activity 的哪個累積量判斷
+#   need    ＝ 達標門檻（>= 即解鎖）
+#   piece_zh/piece_en ＝ 解鎖後可說「靠什麼拿到的」
+# 第 1~4 片走「每 3 個活躍日一片」的階梯（3/6/9/12 天），新手最快看到進度；
+# 第 5~9 片串起問卷、情緒、連續、全面紀錄、月里程碑，剛好把 App 的紀錄行為都帶到。
+PUZZLE_PIECE_RULES = [
+    {"field": "active_days", "need": 3,  "piece_zh": "本月累積 3 個有紀錄的日子", "piece_en": "3 active days this month"},
+    {"field": "active_days", "need": 6,  "piece_zh": "本月累積 6 個有紀錄的日子", "piece_en": "6 active days this month"},
+    {"field": "active_days", "need": 9,  "piece_zh": "本月累積 9 個有紀錄的日子", "piece_en": "9 active days this month"},
+    {"field": "active_days", "need": 12, "piece_zh": "本月累積 12 個有紀錄的日子", "piece_en": "12 active days this month"},
+    {"field": "survey_count", "need": 1, "piece_zh": "本月填了 1 份健康問卷", "piece_en": "Filled 1 survey this month"},
+    {"field": "emotion_days", "need": 3, "piece_zh": "本月有 3 天記錄了心情", "piece_en": "Logged mood on 3 days this month"},
+    {"field": "longest_streak", "need": 3, "piece_zh": "本月達成連續 3 天打卡", "piece_en": "Reached a 3-day streak this month"},
+    {"field": "triple_day", "need": 1, "piece_zh": "本月曾在同一天記齊 症狀＋生理＋情緒", "piece_en": "Logged symptom + vital + mood in one day"},
+    {"field": "longest_streak", "need": 7, "piece_zh": "本月達成連續 7 天打卡", "piece_en": "Reached a 7-day streak this month"},
+]
+
+PUZZLE_TOTAL_PIECES = len(PUZZLE_PIECE_RULES)  # = 9
+
+
+def theme_for_month(year_month):
+    """由 'YYYY-MM' 取當月主題（12 主題輪替）。格式不對時退回第一個主題（不丟例外，
+    讓 UI 永遠有東西可顯示——規則 12 寧可降級也不靜默壞掉）。"""
+    month = 1
+    try:
+        month = int(str(year_month).split("-")[1])
+    except (IndexError, ValueError):
+        month = 1
+    if not 1 <= month <= 12:
+        month = 1
+    return PUZZLE_THEMES[(month - 1) % len(PUZZLE_THEMES)]
+
+
+def _piece_value(activity, field):
+    """取 month-scoped activity 在某 field 的數值；triple_day 這種布林換成 0/1。"""
+    v = activity.get(field, 0)
+    if isinstance(v, bool):
+        return 1 if v else 0
+    return int(v or 0)
+
+
+def puzzle_board(year_month, activity):
+    """算某月的拼圖狀態（純函式，零 DB / 零 LLM）。
+
+    activity 是「該月」的累積量 dict（由 router 把全量紀錄過濾到當月後組好）：
+      active_days     當月有任一紀錄的不重複日數
+      survey_count    當月提交的問卷份數
+      emotion_days    當月有情緒紀錄的不重複日數
+      longest_streak  當月最長連續打卡天數
+      triple_day      當月是否曾在同一天集滿 症狀＋生理＋情緒（bool）
+
+    回傳：theme、total_pieces=9、pieces[]（每片 index/unlocked/reason 或 hint）、
+    unlocked_count、complete、to_next（距離下一片還差多少，已滿則 0）、
+    complete_reward（集滿可兌換的品項 id）。
+    """
+    theme = theme_for_month(year_month)
+    pieces = []
+    unlocked_count = 0
+    to_next = None  # 第一個還沒解鎖的片，距離門檻還差多少
+    for i, rule in enumerate(PUZZLE_PIECE_RULES):
+        have = _piece_value(activity, rule["field"])
+        unlocked = have >= rule["need"]
+        gap = max(0, rule["need"] - have)
+        piece = {
+            "index": i,                       # 0-based，對應 3x3 grid 位置
+            "unlocked": unlocked,
+            "field": rule["field"],
+            "need": rule["need"],
+            "have": have,
+            # reason：解鎖了就說「靠什麼拿到的」；hint：還沒解鎖就說「還差什麼」
+            "reason_zh": rule["piece_zh"] if unlocked else None,
+            "reason_en": rule["piece_en"] if unlocked else None,
+            "hint_zh": None if unlocked else f"再 {gap} 就能解鎖（{rule['piece_zh']}）",
+            "hint_en": None if unlocked else f"{gap} more to go ({rule['piece_en']})",
+            "remaining": 0 if unlocked else gap,
+        }
+        pieces.append(piece)
+        if unlocked:
+            unlocked_count += 1
+        elif to_next is None:
+            to_next = gap
+    complete = unlocked_count >= PUZZLE_TOTAL_PIECES
+    return {
+        "year_month": str(year_month),
+        "theme": theme,
+        "total_pieces": PUZZLE_TOTAL_PIECES,
+        "unlocked_count": unlocked_count,
+        "pieces": pieces,
+        "complete": complete,
+        "to_next": 0 if complete else (to_next or 0),
+        "complete_reward": PUZZLE_COMPLETE_REWARD if complete else None,
+    }

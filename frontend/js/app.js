@@ -3585,14 +3585,17 @@ function loadRewardsPage() {
   Promise.all([
     fetch(API + '/rewards/summary?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
     fetch(API + '/rewards/catalog?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
+    // 拼圖載入失敗不該拖垮整頁，單獨吞錯回 null（規則 12：降級但不靜默壞掉）
+    fetch(API + '/rewards/puzzle?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }).catch(function () { return null; }),
   ]).then(function (res) {
     var summary = res[0] || {};
     var catalog = res[1] || {};
+    var puzzle = res[2] || null;
     if (!summary || !summary.points) {
       box.innerHTML = '<div class="rw-empty">' + escapeHtml((summary && summary.detail) || '獎勵資料暫時無法載入，請稍後再試。') + '</div>';
       return;
     }
-    box.innerHTML = _rewardsHtml(summary, catalog);
+    box.innerHTML = _rewardsHtml(summary, catalog, puzzle);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }).catch(function () {
     box.innerHTML = '<div class="rw-empty">獎勵資料載入失敗。<br><button class="rw-btn" onclick="loadRewardsPage()">重新載入</button></div>';
@@ -3600,7 +3603,7 @@ function loadRewardsPage() {
   });
 }
 
-function _rewardsHtml(s, catalog) {
+function _rewardsHtml(s, catalog, puzzle) {
   var lv = s.level || {};
   var pts = s.points || {};
   var streak = s.streak || {};
@@ -3699,7 +3702,9 @@ function _rewardsHtml(s, catalog) {
 
   var note = '<p class="rw-note">積分依你在 App 的紀錄自動換算，不需額外操作。兌換後由院方安排發放，實際品項以院方公告為準。</p>';
 
-  return hero + stats + badgeCard + catalogCard + ledgerCard + note;
+  var puzzleCard = puzzle ? _puzzleHtml(puzzle) : '';
+
+  return hero + stats + puzzleCard + badgeCard + catalogCard + ledgerCard + note;
 }
 
 function _nextLevelHtml(lv, earned) {
@@ -3730,6 +3735,135 @@ function redeemReward(rewardId) {
   }).catch(function () {
     showToast('兌換失敗，請稍後再試', 'error');
   });
+}
+
+// ─── 療程拼圖（每月主題收藏 metagame）─────────────────────────
+// 每月一張 9 片（3x3）主題拼圖，靠使用者平常的健康紀錄自動解鎖（解鎖規則全在
+// backend/utils/rewards_rules.py 純算術完成，前端只負責呈現）。已解鎖片顯示插畫
+// 片段（同一張 theme 圖切成 3x3 的對應切片）、未解鎖片灰階＋鎖並附「還差什麼」。
+
+// theme.key → 插畫檔（frontend/img/puzzle/）。12 主題對應到 4 張季節插畫，
+// 每張都做成可被 3x3 切片，確保任何月份都有圖、不會破圖。
+var _PZ_ART = {
+  'spring-garden': 'spring-garden', 'blossom': 'spring-garden', 'morning-walk': 'spring-garden',
+  'sunny-window': 'sunny-window', 'summer-fruit': 'sunny-window', 'harvest': 'sunny-window',
+  'rainy-day': 'rainy-day', 'autumn-leaf': 'rainy-day', 'warm-tea': 'rainy-day',
+  'starry-night': 'starry-night', 'cozy-home': 'starry-night', 'snow-rest': 'starry-night',
+};
+var _PZ_ART_VER = 'v1';
+function _pzArtUrl(themeKey) {
+  var file = _PZ_ART[themeKey] || 'rainy-day';
+  return 'img/puzzle/' + file + '.svg?v=' + _PZ_ART_VER;
+}
+
+// 把 board 渲染成一張卡（3x3 grid + 進度 + 集滿提示）。純呈現，不打 API。
+function _puzzleHtml(data) {
+  if (!data || !data.board) return '';
+  var b = data.board;
+  var theme = b.theme || {};
+  var lang = (window.MDPiece_i18n && window.MDPiece_i18n.getLang && window.MDPiece_i18n.getLang()) || 'zh-TW';
+  var themeName = (lang.indexOf('en') === 0 ? (theme.en || theme.name) : (theme.name || theme.en)) || '';
+  var artUrl = _pzArtUrl(theme.key);
+
+  var cells = (b.pieces || []).map(function (p) {
+    var i = p.index || 0, r = Math.floor(i / 3), c = i % 3;
+    var pos = (c * 50) + '% ' + (r * 50) + '%';
+    var locked = !p.unlocked;
+    var aria = _T(locked ? 'puzzle.lockedAria' : 'puzzle.unlockedAria');
+    return ''
+      + '<button type="button" class="rw-pz-cell' + (locked ? ' locked' : '') + '"'
+      +   ' style="background-image:url(\'' + artUrl + '\');background-position:' + pos + '"'
+      +   ' aria-label="' + aria + '" onclick="_puzzleTap(' + i + ')">'
+      +   (locked ? '<span class="rw-pz-lock"><i data-lucide="lock"></i></span>' : '')
+      + '</button>';
+  }).join('');
+
+  // 進度文案：未滿就說「還差 N 步」，滿了就慶祝
+  var unlocked = b.unlocked_count || 0;
+  var progressTxt, progDone = '';
+  if (b.complete) {
+    progressTxt = _T('puzzle.allUnlocked');
+    progDone = ' done';
+  } else {
+    progressTxt = _Tf('puzzle.progress', { n: b.to_next || 1 });
+  }
+  var pct = Math.round((unlocked / (b.total_pieces || 9)) * 100);
+
+  var rewardLine = '';
+  if (b.complete && b.complete_reward) {
+    var rwName = _puzzleRewardName(b.complete_reward);
+    rewardLine = '<div class="rw-pz-reward"><i data-lucide="gift"></i> '
+      + escapeHtml(_Tf('puzzle.completeReward', { name: rwName })) + '</div>';
+  }
+
+  // 把 board 暫存，給 _puzzleTap 取用（純前端互動，無 API）
+  window._pzBoard = b;
+
+  return ''
+    + '<div class="rw-card">'
+    +   '<div class="rw-card-title rw-pz-head"><i data-lucide="puzzle" style="width:18px;height:18px"></i> '
+    +     escapeHtml(_T('puzzle.title'))
+    +     '<span class="rw-pz-theme">' + escapeHtml(themeName) + '</span>'
+    +   '</div>'
+    +   '<div class="rw-pz-sub">' + escapeHtml(_Tf('puzzle.sub', { n: unlocked })) + '</div>'
+    +   '<div class="rw-pz-grid">' + cells + '</div>'
+    +   '<div id="rw-pz-detail"></div>'
+    +   '<div class="rw-pz-progress' + progDone + '">' + escapeHtml(progressTxt) + '</div>'
+    +   '<div class="rw-pz-bar"><i style="width:' + pct + '%"></i></div>'
+    +   rewardLine
+    +   '<div class="rw-pz-hint">' + escapeHtml(_T('puzzle.tapHint')) + '</div>'
+    + '</div>'
+    + _puzzleCollectionHtml(data.collection);
+}
+
+function _puzzleRewardName(rewardId) {
+  // 兌換品名沿用既有 CATALOG 顯示名；前端沒有就退回 id（後端集滿才會帶這欄）。
+  var names = { 'edu-booklet': (window.MDPiece_i18n && /^en/.test(MDPiece_i18n.getLang())) ? 'Health booklet' : '衛教小手冊' };
+  return names[rewardId] || rewardId;
+}
+
+// 點某片 → 在格子下方顯示「為什麼解鎖 / 還差什麼」（可解釋，憲法 2）。
+function _puzzleTap(index) {
+  var b = window._pzBoard;
+  var box = document.getElementById('rw-pz-detail');
+  if (!b || !box) return;
+  var p = (b.pieces || [])[index];
+  if (!p) return;
+  var lang = (window.MDPiece_i18n && MDPiece_i18n.getLang()) || 'zh-TW';
+  var en = lang.indexOf('en') === 0;
+  var txt = p.unlocked
+    ? (en ? p.reason_en : p.reason_zh)
+    : (en ? p.hint_en : p.hint_zh);
+  var cls = p.unlocked ? 'is-unlocked' : 'is-locked';
+  var icon = p.unlocked ? 'check-circle-2' : 'lock';
+  box.innerHTML = '<div class="rw-pz-detail ' + cls + '"><i data-lucide="' + icon + '"></i><span>'
+    + escapeHtml(txt || '') + '</span></div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 收藏冊：跨月已完成的整張拼圖縮圖（呈現「療程旅程」）。
+function _puzzleCollectionHtml(collection) {
+  collection = collection || [];
+  var items = collection.map(function (c) {
+    var theme = c.theme || {};
+    var lang = (window.MDPiece_i18n && MDPiece_i18n.getLang()) || 'zh-TW';
+    var name = (lang.indexOf('en') === 0 ? (theme.en || theme.name) : (theme.name || theme.en)) || '';
+    return ''
+      + '<div class="rw-pz-col-item">'
+      +   '<div class="rw-pz-col-thumb" style="background-image:url(\'' + _pzArtUrl(theme.key) + '\')"></div>'
+      +   '<div class="rw-pz-col-cap">' + escapeHtml(c.year_month || '') + '<br>' + escapeHtml(name) + '</div>'
+      + '</div>';
+  }).join('');
+  var body = collection.length
+    ? '<div class="rw-pz-collection">' + items + '</div>'
+    : '<div class="rw-empty">' + escapeHtml(_T('puzzle.collectionEmpty')) + '</div>';
+  return ''
+    + '<div class="rw-card">'
+    +   '<div class="rw-card-title"><i data-lucide="library" style="width:18px;height:18px"></i> '
+    +     escapeHtml(_T('puzzle.collectionTitle'))
+    +     '<small>' + escapeHtml(_Tf('puzzle.collectionDone', { n: collection.length })) + '</small></div>'
+    +   body
+    + '</div>';
 }
 
 // ─── 登入 / 註冊 ───────────────────────────────────────────
@@ -4441,7 +4575,17 @@ function _studyEnsureStyles() {
     + '.study-nudge i{color:var(--teal,#2F8378)}'
     + '.study-nudge-go{flex:0 0 auto;border:none;border-radius:999px;background:var(--teal,#2F8378);color:#fff;'
     + 'font-size:.82rem;font-weight:600;padding:7px 13px;cursor:pointer}'
-    + '.study-nudge-x{flex:0 0 auto;border:none;background:transparent;color:var(--content-subtle,#9a9087);font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}';
+    + '.study-nudge-x{flex:0 0 auto;border:none;background:transparent;color:var(--content-subtle,#9a9087);font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}'
+    // ── 親切的 2D 平面化外觀（additive，只在 .study-flat 範圍內加強，不覆寫既有 .study-opt 等）──
+    // 粗一點的線條 + 圓潤色塊，配合 tokens 變數；長者模式 --scale 自動跟著放大字級。
+    + '.study-flat .study-opt{border-width:2px;border-radius:13px}'
+    + '.study-flat .study-opt:hover{border-color:var(--teal,#2F8378)}'
+    + '.study-flat .study-opt.is-sel{box-shadow:0 3px 0 -1px var(--teal-deep,#256B61)}'
+    + '.study-flat .study-prog-bar{height:9px;border:1.6px solid var(--line,#ece7dd);background:var(--surface-2,#f6f1e7)}'
+    // 進題逐格淡入：克制、尊重 prefers-reduced-motion（下方 @media 關掉）。
+    + '.study-flat .study-q{animation:studyQIn .32s var(--qd,0s) both cubic-bezier(.2,.7,.3,1)}'
+    + '@keyframes studyQIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}'
+    + '@media (prefers-reduced-motion:reduce){.study-flat .study-q{animation:none}}';
   var st = document.createElement('style'); st.id = 'study-styles'; st.textContent = css;
   document.head.appendChild(st);
 }
@@ -4557,7 +4701,7 @@ function _studyRenderHub(data) {
     +   '</header>'
     +   '<div style="padding:0 2px">'
     +     '<label style="font-size:.82rem;color:var(--text-muted);display:block;margin:6px 2px 4px">' + _T('app.c6.subjectCode') + '</label>'
-    +     '<input id="study-code" class="study-text" style="margin-bottom:6px" value="' + escapeHtml(_studyCode()) + '" oninput="_setStudyCode(this.value)" placeholder="P__" />'
+    +     '<input id="study-code" class="study-text" style="margin-bottom:6px" value="' + escapeHtml(_studyCode()) + '" oninput="_setStudyCode(this.value)" placeholder="' + _T('app.c6.subjectCodePh') + '" />'
     +     adhNote + ehlNote
     +     tpHtml
     +     _studyRenderTimeline(parts, curTp)
@@ -4583,9 +4727,11 @@ function openStudySurvey(key, tp) {
     .catch(function () { if (typeof showToast === 'function') showToast(_T('app.c6.surveyLoadFail'), 'warning'); });
 }
 
-function _studyItemHtml(it, scoring) {
+function _studyItemHtml(it, scoring, delay) {
   var scale = scoring.scale || {};
   var t = it.type;
+  // 進場階梯延遲（秒）注入 --qd；不傳則 0。reduced-motion 由 CSS 整段關掉動畫。
+  var qStyle = ' style="--qd:' + (Number(delay) || 0) + 's"';
   if (t === 'likert') {
     var mn = (it.min != null ? it.min : scale.min);
     var mx = (it.max != null ? it.max : scale.max);
@@ -4604,7 +4750,7 @@ function _studyItemHtml(it, scoring) {
       ? '<div class="study-na-row"><button type="button" class="study-opt study-na" data-q="' + it.id + '" onclick="_studySelect(\'' + it.id + '\',\'NA\',this)">N/A</button></div>' : '';
     var ends = (scale.min_label || scale.max_label)
       ? '<div class="study-ends"><span>' + escapeHtml(scale.min_label || '') + '</span><span>' + escapeHtml(scale.max_label || '') + '</span></div>' : '';
-    return '<div class="study-q" id="study-q-' + it.id + '"><div class="study-qt">' + escapeHtml(it.text) + '</div>'
+    return '<div class="study-q" id="study-q-' + it.id + '"' + qStyle + '><div class="study-qt">' + escapeHtml(it.text) + '</div>'
       + '<div class="study-opts study-scale" style="grid-template-columns:repeat(' + cols + ',1fr)">' + btns + '</div>'
       + ends + naBtn + '</div>';
   }
@@ -4613,17 +4759,17 @@ function _studyItemHtml(it, scoring) {
       return '<button type="button" class="study-opt study-wide" data-q="' + it.id + '" data-v="' + escapeHtml(o) + '" '
         + 'onclick="_studySelect(\'' + it.id + '\',this.getAttribute(\'data-v\'),this)">' + escapeHtml(o) + '</button>';
     }).join('');
-    return '<div class="study-q" id="study-q-' + it.id + '"><div class="study-qt">' + escapeHtml(it.text) + '</div>'
+    return '<div class="study-q" id="study-q-' + it.id + '"' + qStyle + '><div class="study-qt">' + escapeHtml(it.text) + '</div>'
       + '<div class="study-opts study-col">' + o1 + '</div></div>';
   }
   if (t === 'multi') {
     var o2 = (it.options || []).map(function (o) {
       return '<label class="study-chk"><input type="checkbox" value="' + escapeHtml(o) + '" onchange="_studyMulti(\'' + it.id + '\')"> ' + escapeHtml(o) + '</label>';
     }).join('');
-    return '<div class="study-q" id="study-q-' + it.id + '"><div class="study-qt">' + escapeHtml(it.text) + '</div>'
+    return '<div class="study-q" id="study-q-' + it.id + '"' + qStyle + '><div class="study-qt">' + escapeHtml(it.text) + '</div>'
       + '<div class="study-opts study-col">' + o2 + '</div></div>';
   }
-  return '<div class="study-q" id="study-q-' + it.id + '"><div class="study-qt">' + escapeHtml(it.text) + '</div>'
+  return '<div class="study-q" id="study-q-' + it.id + '"' + qStyle + '><div class="study-qt">' + escapeHtml(it.text) + '</div>'
     + '<textarea class="study-text" data-q="' + it.id + '" rows="3" oninput="_studyText(\'' + it.id + '\',this.value)"></textarea></div>';
 }
 
@@ -4632,13 +4778,16 @@ function _studyRenderSurvey(s, tp) {
   _studyState = { answers: {}, key: s.key, tp: tp, total: (s.items || []).length };
   var ex = document.getElementById('study-run'); if (ex) ex.remove();
   var scoring = s.scoring || {};
-  var body = (s.items || []).map(function (it) { return _studyItemHtml(it, scoring); }).join('');
+  var body = (s.items || []).map(function (it, i) {
+    // 逐題進場的階梯延遲（克制：最多累到 0.36s），尊重 reduced-motion 由 CSS 關掉。
+    return _studyItemHtml(it, scoring, Math.min(i, 9) * 0.04);
+  }).join('');
   var sheet = document.createElement('div');
   sheet.id = 'study-run';
   sheet.className = 'ip-prep-sheet';
   sheet.innerHTML = ''
     + '<div class="ip-prep-backdrop" onclick="closeStudyRun()"></div>'
-    + '<div class="ip-prep-panel" role="dialog" aria-label="' + escapeHtml(s.title) + '" aria-modal="true" tabindex="-1" style="max-height:90vh;overflow:auto">'
+    + '<div class="ip-prep-panel study-flat" role="dialog" aria-label="' + escapeHtml(s.title) + '" aria-modal="true" tabindex="-1" style="max-height:90vh;overflow:auto">'
     +   '<header class="ip-prep-head">'
     +     '<div class="ip-prep-when"><span class="ip-prep-when-num">' + escapeHtml(_studyCleanTitle(s.title)) + '</span>'
     +       '<span class="ip-prep-when-sub">' + (s.description ? escapeHtml(s.description) : '') + '</span></div>'
