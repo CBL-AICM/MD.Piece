@@ -15,7 +15,9 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from backend.routers.surveys import STUDY_REMINDER_OFFSETS, _study_due_at  # noqa: E402
+from backend.routers.surveys import (  # noqa: E402
+    STUDY_REMINDER_OFFSETS, _study_due_at, _study_reminder_source_id,
+)
 
 
 def test_offsets_match_frontend_windows():
@@ -49,3 +51,14 @@ def test_due_at_crosses_month_boundary():
     # 月底起算要正確進位，不能用「同月加日」的錯誤寫法。
     start = datetime(2026, 1, 20, 8, 0, tzinfo=timezone.utc)
     assert _study_due_at(start, 28) == datetime(2026, 2, 17, 9, 0, tzinfo=timezone.utc)
+
+
+def test_reminder_source_id_is_stable_and_scoped():
+    # 建立(ensure)與停用(deactivate)共用這個鍵；格式一旦漂移，
+    # 「填完就停」會悄悄關不掉提醒、使用者被一直吵——這正是要擋的回歸。
+    assert _study_reminder_source_id("mdpiece_feasibility_v2", "D14") == "study:mdpiece_feasibility_v2:D14"
+    # 不同 study / 時點要產生不同鍵，才不會誤關別人的提醒。
+    a = _study_reminder_source_id("s1", "D14")
+    b = _study_reminder_source_id("s1", "D28")
+    c = _study_reminder_source_id("s2", "D14")
+    assert a != b and a != c

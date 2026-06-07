@@ -495,6 +495,10 @@ def submit_response(key: str, body: ResponseCreate):
     except Exception as e:
         logger.error(f"submit survey response failed: {e}")
         raise HTTPException(status_code=400, detail=f"作答儲存失敗：{e}")
+    # 填完就停：關掉這個時點的排程提醒，避免到期還在提醒（規則：填完不再吵）。
+    study = (survey.get("scoring") or {}).get("study")
+    if study and tp:
+        _deactivate_study_reminder(sb, study, tp, body.patient_id)
     return {"id": saved_id, "survey_key": key, "timepoint": tp, "scores": scores, "_persisted": True}
 
 
@@ -813,6 +817,23 @@ def _study_due_at(start: datetime, days: int) -> datetime:
     return (base + timedelta(days=days)).replace(hour=9, minute=0, second=0, microsecond=0)
 
 
+def _study_reminder_source_id(study: str, tp: str) -> str:
+    """排程提醒的去重鍵；建立與停用必須用同一個鍵，否則填完關不掉、會繼續吵。"""
+    return f"study:{study}:{tp}"
+
+
+def _deactivate_study_reminder(sb, study: str, tp: str, pid: str) -> None:
+    """填完該時點問卷後，把對應排程提醒關掉，避免到期還在提醒。盡力而為、不擋作答。"""
+    if not (study and tp and pid):
+        return
+    try:
+        (sb.table("reminders").update({"active": 0})
+         .eq("patient_id", pid)
+         .eq("source_id", _study_reminder_source_id(study, tp)).execute())
+    except Exception as exc:
+        logger.warning("deactivate study reminder failed: %s", type(exc).__name__)
+
+
 @router.post("/study/{study}/participants/{pid}/ensure-reminders")
 def ensure_study_reminders(study: str, pid: str, start_date: str = Query(...)):
     """到期才推送：以起算日為 Day 0，為 D14／D28 各建立一筆 once 提醒（冪等）。
@@ -828,7 +849,7 @@ def ensure_study_reminders(study: str, pid: str, start_date: str = Query(...)):
     sb = get_supabase()
     created, existing = [], []
     for tp, days in STUDY_REMINDER_OFFSETS.items():
-        source_id = f"study:{study}:{tp}"
+        source_id = _study_reminder_source_id(study, tp)
         dup = (sb.table("reminders").select("id")
                .eq("patient_id", pid).eq("source_id", source_id).limit(1).execute())
         if dup.data:
