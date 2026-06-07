@@ -163,6 +163,7 @@
       <h2>顯示</h2>
       <label class="switch">長者模式（大字）<input type="checkbox" onchange="document.documentElement.classList.toggle('elder',this.checked)"></label>
       <label class="switch">自動彈出（不用點推播）<input type="checkbox" id="autoOpen" checked></label>
+      <label class="switch">使用者視角（去研究感）<input type="checkbox" id="userView" onchange="if(cur)openSheet(cur)"></label>
     </div>
 
     <div class="ctl legend">
@@ -288,7 +289,9 @@ function openFromPush(){ document.getElementById('push').classList.remove('show'
 
 function openSheet(s){
   const sv = SURVEYS[s.survey]; answers = {};
+  var uv = document.getElementById('userView') && document.getElementById('userView').checked;
   document.getElementById('ctxChip').className = 'ctxchip '+s.ch;
+  document.getElementById('ctxChip').style.display = uv ? 'none' : '';   // 使用者視角：不顯示為何推送
   document.getElementById('ctxChip').innerHTML = (s.ch==='ev'?'◉ 事件 / 生命週期':'◷ 日常不定時')+' · '+esc(s.ctx);
   document.getElementById('sheetTitle').textContent = sv.title;
   document.getElementById('sheetSub').textContent = sv.sub;
