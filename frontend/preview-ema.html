@@ -136,21 +136,21 @@
   <!-- ════ 左：研究者控制 ════ -->
   <div class="panel">
     <h1>EMA 不定時問卷推送</h1>
-    <p class="sub">互動原型 · 依<b>時間窗</b>（不定時）與<b>使用情境</b>（事件）推問卷，結果回後端。點下方情境試試。</p>
+    <p class="sub">互動原型 · <b>回診結束後</b>、<b>記錄一段時間後</b>等里程碑，以<b>日常不定時</b>方式推問卷，結果回後端。點下方情境試。</p>
 
     <div class="ctl">
       <h2>▶ 觸發情境（點擊模擬）</h2>
-      <button class="scn" onclick="fire('ev_risk')">
-        <span class="t"><span class="tag ev">事件</span>看完「風險儀表板」</span>
-        <span class="d">App 內立即彈出 C2 微問卷（2 題）</span>
+      <button class="scn" onclick="fire('visit_done')">
+        <span class="t"><span class="tag ev">里程碑</span>回診結束後</span>
+        <span class="d">48 小時後白天不定時 Web Push → post-visit 問卷（同理／共享決策）</span>
       </button>
-      <button class="scn" onclick="fire('tm_evening')">
-        <span class="t"><span class="tag tm">時間</span>晚間 20:14 隨機窗</span>
-        <span class="d">Web Push 推播 → 點開填當下狀態（1 題）</span>
+      <button class="scn" onclick="fire('record_14d')">
+        <span class="t"><span class="tag ev">里程碑</span>連續記錄滿 14 天</span>
+        <span class="d">當天白天不定時 Web Push → D14 自我效能（SECD）</span>
       </button>
-      <button class="scn" onclick="fire('ev_daily')">
-        <span class="t"><span class="tag ev">事件</span>完成「每日記錄」</span>
-        <span class="d">App 內彈出體驗微問卷（1 題）</span>
+      <button class="scn" onclick="fire('daily_checkin')">
+        <span class="t"><span class="tag tm">不定時</span>日常隨機時段</span>
+        <span class="d">每天至多一份 · App 內 30 秒狀態微問卷</span>
       </button>
     </div>
 
@@ -166,10 +166,10 @@
     </div>
 
     <div class="ctl legend">
-      <b>兩種觸發</b><br>
-      <span class="tag ev">事件</span> event-contingent：app_events 命中規則即推（依使用情境）<br>
-      <span class="tag tm">時間</span> signal-contingent：每日時間窗內<b>隨機</b>時點推（不定時）<br><br>
-      <b>兩個通道</b>：Web Push（沒開 App 也推）＋ App 內補彈未作答的。
+      <b>里程碑觸發（自然發生）</b><br>
+      <span class="tag ev">里程碑</span> 回診結束 → 隔 48h 推；記錄滿 N 天 → 當天推<br>
+      <span class="tag tm">不定時</span> 日常時段內<b>隨機</b>時點，每天至多一份<br><br>
+      <b>不一做完就跳出</b>：里程碑後在白天隨機時點以 Web Push 送，像日常提醒。Web Push 沒開 App 也推；App 內補彈未作答的。
     </div>
   </div>
 
@@ -189,17 +189,17 @@
           <div class="g"><div class="k">血壓</div><div class="v">128 / 82</div></div>
           <div class="g"><div class="k">睡眠</div><div class="v">6.5 小時</div></div>
         </div>
-        <div class="card row-card" style="cursor:pointer" onclick="fire('ev_risk')">
-          <div class="ic" style="background:var(--coral-soft);color:var(--coral)">
-            <svg class="ico" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
-          <div><div style="font-weight:700">90 天復發風險：中</div><div class="muted" style="font-size:12.5px;color:var(--dim)">點我看主要貢獻特徵 →</div></div>
+        <div class="card row-card" style="cursor:pointer" onclick="fire('visit_done')">
+          <div class="ic" style="background:var(--brand-soft);color:var(--brand)">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 16l2 2 4-4"/></svg></div>
+          <div><div style="font-weight:700">今日回診已完成 ✓</div><div class="muted" style="font-size:12.5px;color:var(--dim)">點我＝模擬「回診結束」里程碑 →</div></div>
         </div>
-        <div class="card row-card" style="cursor:pointer" onclick="fire('ev_daily')">
+        <div class="card row-card" style="cursor:pointer" onclick="fire('record_14d')">
           <div class="ic" style="background:var(--sage-soft);color:var(--sage)">
             <svg class="ico" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-          <div><div style="font-weight:700">完成今日每日記錄</div><div class="muted" style="font-size:12.5px;color:var(--dim)">睡眠・壓力・血壓 已填 →</div></div>
+          <div><div style="font-weight:700">每日記錄 · 連續第 14 天</div><div class="muted" style="font-size:12.5px;color:var(--dim)">點我＝模擬「記錄滿 14 天」里程碑 →</div></div>
         </div>
-        <p style="font-size:12px;color:var(--faint);text-align:center;margin-top:8px">↑ 點卡片＝模擬產生 app_events 事件</p>
+        <p style="font-size:12px;color:var(--faint);text-align:center;margin-top:8px">↑ 點卡片＝模擬里程碑事件，引擎排成日後一份不定時推送</p>
       </div>
 
       <!-- Web Push 橫幅 -->
@@ -240,26 +240,26 @@
 <script>
 // ── 三個示意情境（micro-survey 內容取自 study 量表，縮短）──
 const SURVEYS = {
-  'mdpiece-c2-risk': {
-    title:'關於剛剛的風險預測', sub:'1=非常不同意，7=非常同意',
+  'mdpiece-d1-care': {
+    title:'關於剛剛的回診', sub:'回想本次看診這位醫師',
     items:[
-      {id:1, t:'App 顯示的「90 天復發風險等級」讓我容易理解', min:1, max:7},
-      {id:2, t:'風險等級讓我想跟醫師討論', min:1, max:7},
+      {id:1, t:'這位醫師讓您覺得自在（親切溫暖、尊重您）', min:1, max:5, lo:'差', hi:'極好'},
+      {id:'collab', t:'醫療團隊把「您最在意的事」納入決定，做了多少努力？', min:0, max:9, lo:'完全沒努力', hi:'盡了全力'},
     ]},
+  'mdpiece-b1-secd6': {
+    title:'這兩週的自我照顧', sub:'對做到下列事情有多少把握',
+    items:[ {id:5, t:'我有把握做好管理健康所需的各項事務，以減少看醫師的需要', min:1, max:10, lo:'完全沒把握', hi:'完全有把握'} ]},
   'ema-state': {
     title:'此刻的狀態', sub:'拖選此刻的整體感受',
-    items:[ {id:'burden', t:'現在整體症狀對你的困擾程度？（0=完全沒有，10=非常嚴重）', min:0, max:10} ]},
-  'mdpiece-c1-daily': {
-    title:'關於每日記錄', sub:'1=非常不同意，7=非常同意',
-    items:[ {id:4, t:'看到自己的記錄圖表，讓我更了解自己的健康變化', min:1, max:7} ]},
+    items:[ {id:'burden', t:'現在整體症狀對你的困擾程度？', min:0, max:10, lo:'完全沒有', hi:'非常嚴重'} ]},
 };
 const SCN = {
-  ev_risk:   {ch:'ev', channel:'inapp', survey:'mdpiece-c2-risk', ctx:'因為你剛看完「風險儀表板」',
-              rule:{type:'event', match:{event_type:'screen', target:'risk_dashboard'}, cooldown_min:120, max_per_day:2}},
-  tm_evening:{ch:'tm', channel:'push',  survey:'ema-state', ctx:'晚間時間窗（19:00–21:00）隨機推送',
-              rule:{type:'time', windows:[{start:'19:00', end:'21:00'}], per_window:1}},
-  ev_daily:  {ch:'ev', channel:'inapp', survey:'mdpiece-c1-daily', ctx:'因為你剛完成「每日記錄」',
-              rule:{type:'event', match:{event_type:'data', event_name:'submit', target:'daily_log'}, cooldown_min:240, max_per_day:1}},
+  visit_done:{ch:'ev', channel:'push',  survey:'mdpiece-d1-care', ctx:'回診結束 48 小時後 · 白天不定時推送',
+              rule:{type:'event', match:{event_type:'visit', event_name:'completed'}, delay_min:2880, deliver_window:{start:'10:00', end:'21:00'}}},
+  record_14d:{ch:'ev', channel:'push',  survey:'mdpiece-b1-secd6', ctx:'連續記錄滿 14 天 · 當天白天不定時推送',
+              rule:{type:'elapsed', on:'enrollment_day', day:14, deliver_window:{start:'10:00', end:'21:00'}, respect_daily_cap:true}},
+  daily_checkin:{ch:'tm', channel:'inapp', survey:'ema-state', ctx:'日常時段內隨機 · 每天至多一份',
+              rule:{type:'time', windows:[{start:'10:00', end:'21:00'}], per_window:1, respect_daily_cap:true}},
 };
 
 let did = 0, answers = {}, cur = null;
@@ -295,7 +295,7 @@ function openFromPush(){ document.getElementById('push').classList.remove('show'
 function openSheet(s){
   const sv = SURVEYS[s.survey]; answers = {};
   document.getElementById('ctxChip').className = 'ctxchip '+s.ch;
-  document.getElementById('ctxChip').innerHTML = (s.ch==='ev'?'◉ 情境觸發':'◷ 不定時觸發')+' · '+esc(s.ctx);
+  document.getElementById('ctxChip').innerHTML = (s.ch==='ev'?'◉ 里程碑觸發':'◷ 日常不定時')+' · '+esc(s.ctx);
   document.getElementById('sheetTitle').textContent = sv.title;
   document.getElementById('sheetSub').textContent = sv.sub;
   const wrap = document.getElementById('qWrap'); wrap.innerHTML='';
@@ -303,9 +303,9 @@ function openSheet(s){
     const q = document.createElement('div'); q.className='q';
     let btns='';
     for(let v=it.min; v<=it.max; v++) btns += `<button onclick="pick('${it.id}',${v},this)">${v}</button>`;
-    const ends = (it.min===0)
-      ? '<div class="ends"><span>完全沒有</span><span>非常嚴重</span></div>'
-      : '<div class="ends"><span>非常不同意</span><span>非常同意</span></div>';
+    const lo = it.lo || (it.min===0 ? '完全沒有' : '非常不同意');
+    const hi = it.hi || (it.min===0 ? '非常嚴重' : '非常同意');
+    const ends = `<div class="ends"><span>${lo}</span><span>${hi}</span></div>`;
     q.innerHTML = `<div class="qt">${esc(it.t)}</div><div class="likert">${btns}${ends}</div>`;
     wrap.appendChild(q);
   });
@@ -347,7 +347,7 @@ function renderQ(){
   const box=document.getElementById('queue');
   if(!Q.length){ box.innerHTML='<div class="empty">點左側情境觸發後，這裡顯示推送與作答狀態</div>'; return; }
   box.innerHTML = Q.map(r=>`<div class="qline"><span class="dot ${r.status}"></span>
-    <span><b>${r.id}</b> · <span class="tag ${r.ch}" style="font-size:9.5px">${r.ch==='ev'?'事件':'時間'}</span> ${esc(r.survey)}</span>
+    <span><b>${r.id}</b> · <span class="tag ${r.ch}" style="font-size:9.5px">${r.ch==='ev'?'里程碑':'不定時'}</span> ${esc(r.survey)}</span>
     <span class="meta">${r.status==='completed'?'✓ 完成':r.status==='expired'?'過期':'待作答'}</span></div>`).join('');
 }
 
@@ -370,7 +370,7 @@ function logAPI(s, sv, ans){
 }
 
 // 初始顯示第一條規則
-document.getElementById('cfgBox').innerHTML = cfgHTML(SCN.ev_risk.rule);
+document.getElementById('cfgBox').innerHTML = cfgHTML(SCN.visit_done.rule);
 </script>
 </body>
 </html>

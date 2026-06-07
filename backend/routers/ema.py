@@ -60,7 +60,7 @@ _SCHEMAS.setdefault("ema_deliveries", """
         created_at TEXT DEFAULT (datetime('now'))
     )""")
 
-_TRIGGER_TYPES = {"event", "time"}
+_TRIGGER_TYPES = {"event", "time", "elapsed"}
 
 
 # ── Models ────────────────────────────────────────────────
@@ -196,6 +196,8 @@ def create_rule(body: RuleCreate, me: dict = Depends(current_user)):
         raise HTTPException(status_code=400, detail="event 規則需提供 match（event_type/name/target）")
     if tc["type"] == "time" and not (tc.get("windows") or []):
         raise HTTPException(status_code=400, detail="time 規則需提供 windows（[{start,end}]）")
+    if tc["type"] == "elapsed" and not (tc.get("day") or tc.get("threshold")):
+        raise HTTPException(status_code=400, detail="elapsed 規則需提供 day（入組第幾天 / 累積記錄天數）")
     sb = get_supabase()
     if not sb.table("surveys").select("key").eq("key", body.survey_key).limit(1).execute().data:
         raise HTTPException(status_code=400, detail=f"survey_key 不存在：{body.survey_key}")
@@ -266,9 +268,15 @@ def evaluate_events(body: EvaluateBody, me: dict = Depends(current_user)):
                 today_n = sum(1 for p in prior if str(p.get("scheduled_at") or "")[:10] == today)
                 if today_n >= int(cap):
                     continue
-            d = _make_delivery(sb, rule, pid, "event",
-                               now.isoformat(timespec="seconds"), {"event": evd})
-            created.append({"id": d.get("id"), "rule_id": rule["id"], "survey_key": rule["survey_key"]})
+            # delay_min：里程碑事件（如「回診結束」）可隔一段時間再推（對齊 FU48）。
+            # deliver_window：在當天的窗內隨機時點 → 日常「不定時」感，而非立即跳出。
+            delay = int(tc.get("delay_min") or 0)
+            base = now + timedelta(minutes=delay)
+            sched = _scheduled_at(base, tc)
+            d = _make_delivery(sb, rule, pid, "event", sched,
+                               {"event": evd, "delay_min": delay})
+            created.append({"id": d.get("id"), "rule_id": rule["id"],
+                            "survey_key": rule["survey_key"], "scheduled_at": sched})
     return {"patient_id": pid, "created": created, "count": len(created)}
 
 
@@ -287,32 +295,105 @@ def _rand_time(window: dict, day: str) -> Optional[str]:
     return f"{day}T{t // 60:02d}:{t % 60:02d}:00"
 
 
+def _scheduled_at(base: datetime, tc: dict) -> str:
+    """推送時點：有 deliver_window 就在當天該窗內隨機（不定時感），否則用 base 本身。"""
+    win = tc.get("deliver_window")
+    if win:
+        s = _rand_time(win, base.date().isoformat())
+        if s:
+            return s
+    return base.isoformat(timespec="seconds")
+
+
+def _deliveries_user_on(sb, pid: str, date: str) -> list:
+    """某受試者某日的全部 delivery（跨規則）— 供「每日 ≤1 份」節流。"""
+    try:
+        rows = sb.table("ema_deliveries").select("*").eq("user_id", pid).execute().data or []
+    except Exception:
+        rows = []
+    return [r for r in rows if str(r.get("scheduled_at") or "")[:10] == date]
+
+
+def _enroll_progress(sb, pid: str, on_date: str):
+    """回傳 (入組第幾天 day_index, 累積記錄天數 record_days)；以最早活動日為入組日。
+
+    活動來源：survey_responses + app_events（記錄/作答即視為活躍）。供 elapsed 觸發判斷
+    「記錄一段時間」。純程式碼彙整（規則 5）。
+    """
+    days = []
+    for tbl, col, dcols in (("survey_responses", "patient_id", ("created_at",)),
+                            ("app_events", "user_id", ("occurred_at", "created_at"))):
+        try:
+            rows = sb.table(tbl).select("*").eq(col, pid).execute().data or []
+        except Exception:
+            rows = []
+        for r in rows:
+            for dc in dcols:
+                if r.get(dc):
+                    days.append(str(r[dc])[:10])
+                    break
+    if not days:
+        return None, 0
+    first = min(days)
+    record_days = len(set(days))
+    try:
+        idx = (datetime.fromisoformat(on_date).date() - datetime.fromisoformat(first).date()).days + 1
+    except ValueError:
+        idx = None
+    return idx, record_days
+
+
 @router.post("/schedule")
 def schedule_time(body: ScheduleBody, me: dict = Depends(current_user)):
-    """為時間規則 × 受試者產生當日隨機推送時點（限 doctor / cron）。冪等：同規則+人+窗+日不重排。"""
+    """每日排程器（限 doctor / cron）：處理 time（每日窗）與 elapsed（入組/記錄里程碑）規則。
+
+    日常不定時：每位受試者每日至多 1 份（respect_daily_cap 預設 True），時點隨機。冪等可重跑。
+    建議每天跑一次（cron），把「記錄滿 N 天」「到第 N 天」自動轉成當日的一份隨機推送。
+    """
     if me.get("role") != "doctor":
-        raise HTTPException(status_code=403, detail="僅研究者 / 排程可建立時間推送")
+        raise HTTPException(status_code=403, detail="僅研究者 / 排程可建立推送")
     sb = get_supabase()
     day = (body.date or _now().date().isoformat())
-    rules = _load_rules(sb, body.study, "time")
+    rules = _load_rules(sb, body.study, "time") + _load_rules(sb, body.study, "elapsed")
     created = 0
     for rule in rules:
         tc = rule["trigger_config"]
-        windows = tc.get("windows") or []
-        per = int(tc.get("per_window") or 1)
+        ttype = tc.get("type")
+        cap = tc.get("respect_daily_cap", True)
         for pid in body.participant_ids:
-            prior = _deliveries_for(sb, rule["id"], pid)
-            done_windows = {(_json(p.get("context")) or {}).get("window")
-                            for p in prior if str(p.get("scheduled_at") or "")[:10] == day}
-            for wi, w in enumerate(windows):
-                if wi in done_windows:                  # 冪等：該窗當日已排過
-                    continue
-                for _ in range(per):
+            if cap and _deliveries_user_on(sb, pid, day):       # 日常 ≤1 份/日
+                continue
+
+            if ttype == "time":
+                prior = _deliveries_for(sb, rule["id"], pid)
+                done = {(_json(p.get("context")) or {}).get("window")
+                        for p in prior if str(p.get("scheduled_at") or "")[:10] == day}
+                for wi, w in enumerate(tc.get("windows") or []):
+                    if wi in done:
+                        continue
                     sched = _rand_time(w, day)
                     if not sched:
                         continue
-                    _make_delivery(sb, rule, pid, "time", sched, {"window": wi, "window_def": w})
+                    _make_delivery(sb, rule, pid, "time", sched, {"window": wi})
                     created += 1
+                    if cap:
+                        break                                    # 每日只發一份
+
+            elif ttype == "elapsed":
+                if _deliveries_for(sb, rule["id"], pid):         # 里程碑：發過就不再發
+                    continue
+                on = tc.get("on", "enrollment_day")
+                thr = int(tc.get("day") or tc.get("threshold") or 0)
+                idx, rec = _enroll_progress(sb, pid, day)
+                reached = ((on == "enrollment_day" and idx == thr) or
+                           (on == "record_days" and rec >= thr))
+                if not reached:
+                    continue
+                base = datetime.fromisoformat(day + "T00:00:00")
+                sched = _scheduled_at(base, tc)
+                _make_delivery(sb, rule, pid, "elapsed", sched,
+                               {"on": on, "threshold": thr, "day_index": idx, "record_days": rec})
+                created += 1
     return {"date": day, "scheduled": created}
 
 
