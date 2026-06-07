@@ -801,18 +801,11 @@ function memoOnPhotoPicked(ev) {
   _memoComposeMode = "photo";
   function resetInput() { try { input.value = ""; } catch (e) { /* noop */ } }
 
-  // HEIC（iPhone 預設格式）：Samsung / Chrome / Firefox 都不能直接解，先轉 JPEG
-  var prep;
-  if (memoIsHeic(file)) {
-    showToast("照片是 HEIC 格式，正在轉檔...", "info");
-    prep = memoConvertHeicToJpeg(file).catch(function(err) {
-      console.warn("[memo] HEIC convert failed", err);
-      showToast("HEIC 轉檔失敗 — 請改用 JPEG（iPhone 設定 → 相機 → 格式 → 相容）", "error");
-      throw err;
-    });
-  } else {
-    prep = Promise.resolve(file);
-  }
+  // 先讓使用者裁切 / 旋轉（cropper 內部會處理 HEIC → JPEG）；取消時 reject 由下方
+  // 既有 .catch 收尾（resetInput）。
+  var prep = window.openCropper
+    ? window.openCropper(file, { title: "裁切照片" })
+    : Promise.resolve(file);
 
   prep.then(function(usableFile) {
     // 大圖縮到 max 1280px、JPEG 0.85，避免 localStorage 爆掉
@@ -3575,7 +3568,9 @@ function onRegAvatarPicked(e) {
     try { input.value = ''; } catch (_) {}
     return;
   }
-  prepareAvatarDataUrl(file).then(dataUrl => {
+  (window.openCropper ? window.openCropper(file, { aspect: 1, title: '裁切頭像', outputMaxEdge: 800 }) : Promise.resolve(file))
+    .then(cropped => prepareAvatarDataUrl(cropped))
+    .then(dataUrl => {
     _regAvatarDataUrl = dataUrl;
     const img = document.getElementById('reg-avatar-img');
     const ph = document.getElementById('reg-avatar-placeholder');
@@ -3585,6 +3580,7 @@ function onRegAvatarPicked(e) {
     if (clr) clr.hidden = false;
     if (typeof showToast === 'function') showToast('頭像已準備好，記得按「建立帳號」儲存', 'success');
   }).catch(err => {
+    if (err && err.message === 'cancelled') { try { input.value = ''; } catch (_) {} return; }
     console.warn('[avatar] register pick failed', err);
     try { input.value = ''; } catch (_) {}
     if (typeof showToast === 'function') showToast(err && err.message ? err.message : '頭像讀取失敗', 'error');
@@ -4511,9 +4507,16 @@ async function onAccountAvatarPicked(e) {
     try { input.value = ''; } catch (_) {}
     return;
   }
+  let cropped;
+  try {
+    cropped = window.openCropper ? await window.openCropper(file, { aspect: 1, title: '裁切頭像', outputMaxEdge: 800 }) : file;
+  } catch (_) {
+    try { input.value = ''; } catch (e) {}
+    return; // 使用者取消裁切
+  }
   try {
     if (typeof showToast === 'function') showToast('正在處理頭像…', 'info');
-    const dataUrl = await prepareAvatarDataUrl(file);
+    const dataUrl = await prepareAvatarDataUrl(cropped);
     const res = await apiFetch(`${API}/auth/user/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -9850,13 +9853,19 @@ var _tlOcrThumb = null;
 function _tlPickFile(input) {
   var f = input.files && input.files[0];
   if (!f) return;
-  // 只處理圖片做 OCR；PDF 先存檔名不 OCR
+  // 只處理圖片做 OCR；PDF 先存檔名不 OCR（PDF 不裁切）
   if (!/^image\//.test(f.type)) {
     var sumEl = document.getElementById('tl-up-summary');
     if (sumEl && !sumEl.value) sumEl.value = '(PDF) ' + f.name;
     _tlOcrThumb = null;
     return;
   }
+  (window.openCropper ? window.openCropper(f, { title: '裁切附件' }) : Promise.resolve(f))
+    .then(function(f) { _tlProcessImage(f); })
+    .catch(function() { /* 使用者取消裁切 */ });
+}
+
+function _tlProcessImage(f) {
   // 縮圖預覽 (壓 320px)
   shrinkImageToDataUrl(f, 320, 0.7).then(function(dataUrl) {
     _tlOcrThumb = dataUrl;
@@ -16512,20 +16521,23 @@ function _renderMedPreviewAndRecognize(dataUrl, mediaType) {
 function handleMedPhoto(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
-
-  document.getElementById("med-photo-preview").innerHTML =
-    '<div style="text-align:center;padding:8px;color:var(--text-muted);font-size:0.85rem">壓縮並上傳照片...</div>';
-  document.getElementById("med-recognize-result").innerHTML = "";
-
-  _compressMedPhoto(file).then(function(prepared) {
-    if (!prepared) {
-      renderManualMedForm("", "讀取照片失敗，請改用手動填寫下方資料。");
-      return;
-    }
-    _renderMedPreviewAndRecognize(prepared.dataUrl, prepared.mediaType);
-  });
-
   input.value = "";
+
+  (window.openCropper ? window.openCropper(file, { title: "裁切藥袋照片" }) : Promise.resolve(file))
+    .then(function(file) {
+      document.getElementById("med-photo-preview").innerHTML =
+        '<div style="text-align:center;padding:8px;color:var(--text-muted);font-size:0.85rem">壓縮並上傳照片...</div>';
+      document.getElementById("med-recognize-result").innerHTML = "";
+
+      _compressMedPhoto(file).then(function(prepared) {
+        if (!prepared) {
+          renderManualMedForm("", "讀取照片失敗，請改用手動填寫下方資料。");
+          return;
+        }
+        _renderMedPreviewAndRecognize(prepared.dataUrl, prepared.mediaType);
+      });
+    })
+    .catch(function() { /* 使用者取消裁切 */ });
 }
 
 function escapeHtml(s) {
@@ -20853,7 +20865,14 @@ async function labsCheck() {
 // ── 拍攝整份報告，一次列出所有項目正常/異常 ───────────────
 function handleLabPhoto(input) {
   if (!input.files || !input.files[0]) return;
-  var file = input.files[0];
+  var rawFile = input.files[0];
+  input.value = '';
+  (window.openCropper ? window.openCropper(rawFile, { title: '裁切檢驗報告' }) : Promise.resolve(rawFile))
+    .then(function(file) { _handleLabPhotoFile(file); })
+    .catch(function() { /* 使用者取消裁切 */ });
+}
+
+function _handleLabPhotoFile(file) {
   var preview = document.getElementById('lab-scan-preview');
   var result = document.getElementById('lab-scan-result');
   var hint = document.getElementById('lab-scan-hint');
@@ -20864,7 +20883,6 @@ function handleLabPhoto(input) {
   _compressMedPhoto(file).then(function(prepared) {
     if (!prepared) {
       if (preview) preview.innerHTML = '<div class="labs-error">讀取照片失敗，請改用上方手動輸入。</div>';
-      input.value = '';
       return;
     }
     var dataUrl = prepared.dataUrl;
@@ -20906,7 +20924,6 @@ function handleLabPhoto(input) {
         if (result) result.innerHTML = '<p class="labs-error">辨識服務連線失敗：' + escapeHtml((err && err.message) || '網路錯誤') + '</p>';
       });
   });
-  input.value = '';
 }
 
 function labsRenderScanResult(data) {
@@ -23732,8 +23749,15 @@ function _renderDrugCard(d) {
 }
 
 function handleDrugPhoto(input) {
-  var file = input && input.files && input.files[0];
-  if (!file) return;
+  var rawFile = input && input.files && input.files[0];
+  if (!rawFile) return;
+  if (input) { try { input.value = ''; } catch (_) {} }
+  (window.openCropper ? window.openCropper(rawFile, { title: '裁切藥品照片' }) : Promise.resolve(rawFile))
+    .then(function(file) { _handleDrugPhotoFile(file); })
+    .catch(function() { /* 使用者取消裁切 */ });
+}
+
+function _handleDrugPhotoFile(file) {
   var reader = new FileReader();
   reader.onload = function(ev) {
     var dataUrl = ev.target.result || '';
@@ -23761,8 +23785,6 @@ function handleDrugPhoto(input) {
       });
   };
   reader.readAsDataURL(file);
-  // 重置以便連拍
-  input.value = '';
 }
 
 function renderDrugPhotoResults(data) {
