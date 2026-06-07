@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v151-survey-ui";
+const CACHE_VERSION = "mdpiece-v152-rewards";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -11,6 +11,7 @@ const STATIC_ASSETS = [
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/css/ghibli-theme.css?v=v3",
   "/css/edu-codex.css?v=v3",
+  "/css/rewards.css?v=v1-rewards",
   "/js/i18n.js?v=v83-predict-nav",
   "/js/bell.js?v=v81-bell",
   "/js/app.js?v=v156-inpatient-v2",

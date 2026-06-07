@@ -1,0 +1,248 @@
+"""
+健康積分／獎勵中心 API。
+
+把使用者「已經在做的事」換算成積分、等級、徽章與可兌換獎勵：
+  - 填問卷、每日打卡、連續打卡、完成 eHEALS → 自動累積積分（唯讀換算，不需新操作）
+  - 兌換獎勵 → 記一筆兌換意願（status='requested'），實品由院方線下發放
+
+事件流：
+  GET  /rewards/summary      唯讀彙整：earned/available、等級、連續、徽章、加分明細
+  GET  /rewards/catalog      兌換清單（標出目前是否買得起）
+  GET  /rewards/redemptions  我的兌換紀錄
+  POST /rewards/redeem       兌換一項（檢查餘額 → 寫入 reward_redemptions）
+
+設計鐵則：
+  - 規則 5：得分／等級／徽章／可否兌換都在 rewards_rules.py 用純算術算，零 LLM。
+  - 規則 2/3：積分是對既有紀錄表的唯讀換算，不改任何既有功能或寫入流程。
+  - 規則 7：讀取端沿用 sibling 日常紀錄 router（emotions/symptoms/vitals）「帶
+    patient_id、不強制登入」的慣例（那些底層資料本來就這樣讀，demo 帳號也能用）。
+    若日後全 App 改走 patients.py 的 JWT 自存取模式，本 router 應一起改、勿混用。
+  - 規則 12：唯一新增的寫入（兌換）若因 reward_redemptions 尚未建表而失敗，
+    明確回報並指向 migration，不靜默吞掉。
+"""
+
+import logging
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+
+from backend.db import get_supabase
+from backend.utils import rewards_rules as rules
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+# 哪些表算「打卡」：(table, id 欄, 取日期的候選欄, 來源標籤)。
+# 注意 sleep_sessions 用 user_id，其餘用 patient_id（兩者皆＝user.id）。
+_CHECKIN_SOURCES = [
+    ("symptom_entries", "patient_id", ["recorded_at", "created_at"], "symptom"),
+    ("vital_entries", "patient_id", ["recorded_at", "created_at"], "vital"),
+    ("emotions", "patient_id", ["created_at"], "emotion"),
+    ("sleep_sessions", "user_id", ["bed_time", "created_at"], "sleep"),
+    ("medication_logs", "patient_id", ["taken_at", "created_at"], "medication"),
+    ("diet_records", "patient_id", ["eaten_at", "created_at"], "diet"),
+]
+
+# 來源標籤 → 中文（給前端 ledger 顯示「為什麼得分」；憲法 2 可解釋）。
+_SOURCE_ZH = {
+    "symptom": "症狀", "vital": "生理", "emotion": "情緒",
+    "sleep": "睡眠", "medication": "服藥", "diet": "飲食",
+}
+
+
+class RedeemRequest(BaseModel):
+    patient_id: str
+    reward_id: str
+
+
+def _scan_days(sb, table, id_col, date_cols, pid):
+    """撈某表屬於該使用者的紀錄，回 [日期字串...]（每列取第一個有值的日期欄）。
+    表不存在或讀取失敗就回空（比照 surveys._adherence 的容錯）。"""
+    try:
+        rows = sb.table(table).select("*").eq(id_col, pid).execute().data or []
+    except Exception as exc:
+        logger.info("rewards scan %s failed: %s", table, type(exc).__name__)
+        return []
+    days = []
+    for r in rows:
+        for c in date_cols:
+            if r.get(c):
+                days.append(str(r[c])[:10])
+                break
+    return days
+
+
+def _count(sb, table, id_col, pid):
+    try:
+        return len(sb.table(table).select("id").eq(id_col, pid).execute().data or [])
+    except Exception as exc:
+        logger.info("rewards count %s failed: %s", table, type(exc).__name__)
+        return 0
+
+
+def _gather_activity(sb, pid):
+    """從各既有資料表組出 rewards_rules 需要的 activity dict，外加可解釋用的
+    逐日來源（day_sources）。純彙整、不寫入任何資料。"""
+    day_sources: dict[str, set] = {}
+    emotion_days: set[str] = set()
+    for table, id_col, date_cols, label in _CHECKIN_SOURCES:
+        for d in _scan_days(sb, table, id_col, date_cols, pid):
+            day_sources.setdefault(d, set()).add(label)
+            if label == "emotion":
+                emotion_days.add(d)
+
+    active_days = sorted(day_sources.keys())
+    longest, current = rules.compute_streaks(active_days)
+    triple_day = any({"symptom", "vital", "emotion"} <= s for s in day_sources.values())
+
+    survey_dates = sorted(
+        d for d in _scan_days(sb, "survey_responses", "patient_id", ["created_at"], pid)
+    )
+    try:
+        eheals_done = bool(
+            sb.table("ehl_results").select("id").eq("patient_id", pid).limit(1).execute().data
+        )
+    except Exception:
+        eheals_done = False
+
+    medication_log_count = _count(sb, "medication_logs", "patient_id", pid)
+
+    activity = {
+        "survey_count": len(survey_dates),
+        "active_day_count": len(active_days),
+        "longest_streak": longest,
+        "current_streak": current,
+        "eheals_done": eheals_done,
+        "emotion_days": len(emotion_days),
+        "medication_log_count": medication_log_count,
+        "triple_day": triple_day,
+    }
+    return activity, day_sources, survey_dates
+
+
+def _build_ledger(day_sources, survey_dates, points, eheals_done, limit=12):
+    """組「最近加分明細」，讓使用者看得到分數怎麼來的（憲法 2 可解釋）。"""
+    events = []
+    for d in survey_dates:
+        events.append({"date": d, "type": "survey", "label": "填寫問卷",
+                       "points": rules.PER_SURVEY})
+    for d, srcs in day_sources.items():
+        zh = "、".join(_SOURCE_ZH.get(s, s) for s in sorted(srcs))
+        events.append({"date": d, "type": "checkin", "label": f"每日打卡（{zh}）",
+                       "points": rules.PER_ACTIVE_DAY})
+    for threshold in points.get("streak_milestones_reached", []):
+        pts = dict(rules.STREAK_MILESTONES)[threshold]
+        events.append({"date": None, "type": "streak",
+                       "label": f"連續打卡 {threshold} 天", "points": pts})
+    if eheals_done:
+        events.append({"date": None, "type": "eheals", "label": "完成健康識能量表",
+                       "points": rules.EHEALS_BONUS})
+    # 有日期的新到舊排前面，里程碑／識能（無日期）排後
+    events.sort(key=lambda e: (e["date"] is not None, e["date"] or ""), reverse=True)
+    return events[:limit]
+
+
+def _spent_points(sb, pid):
+    """已兌換扣掉的點數＝兌換紀錄 cost 加總。表不存在就視為 0（規則 12：summary
+    仍可顯示 earned，只是還沒有任何兌換）。"""
+    try:
+        rows = sb.table("reward_redemptions").select("*").eq("patient_id", pid).execute().data or []
+    except Exception as exc:
+        logger.info("rewards redemptions read failed: %s", type(exc).__name__)
+        return 0, []
+    spent = sum(int(r.get("cost") or 0) for r in rows)
+    return spent, rows
+
+
+@router.get("/summary")
+def get_summary(patient_id: str = Query(...)):
+    """唯讀彙整：earned/spent/available、等級進度、連續天數、徽章、加分明細。"""
+    sb = get_supabase()
+    activity, day_sources, survey_dates = _gather_activity(sb, patient_id)
+    points = rules.compute_points(activity)
+    earned = points["earned"]
+    spent, _ = _spent_points(sb, patient_id)
+    available = max(0, earned - spent)
+
+    return {
+        "patient_id": patient_id,
+        "points": {"earned": earned, "spent": spent, "available": available},
+        "breakdown": points["breakdown"],
+        "level": rules.level_for(earned),
+        "streak": {
+            "current": activity["current_streak"],
+            "longest": activity["longest_streak"],
+            "active_days": activity["active_day_count"],
+        },
+        "badges": rules.evaluate_badges(activity),
+        "ledger": _build_ledger(day_sources, survey_dates, points, activity["eheals_done"]),
+    }
+
+
+@router.get("/catalog")
+def get_catalog(patient_id: str = Query(None)):
+    """兌換清單。帶 patient_id 時順便標出每項目前是否買得起。"""
+    available = 0
+    if patient_id:
+        sb = get_supabase()
+        activity, _, _ = _gather_activity(sb, patient_id)
+        earned = rules.compute_points(activity)["earned"]
+        spent, _ = _spent_points(sb, patient_id)
+        available = max(0, earned - spent)
+    return {"available": available, "catalog": rules.catalog_with_affordability(available)}
+
+
+@router.get("/redemptions")
+def get_redemptions(patient_id: str = Query(...)):
+    """我的兌換紀錄（最新在前）。"""
+    sb = get_supabase()
+    _, rows = _spent_points(sb, patient_id)
+    rows = sorted(rows, key=lambda r: r.get("created_at") or "", reverse=True)
+    return {"redemptions": rows}
+
+
+@router.post("/redeem")
+def redeem(body: RedeemRequest):
+    """兌換一項獎勵：純程式碼檢查餘額 → 寫入一筆 status='requested' 待院方發放。"""
+    reward = rules.get_reward(body.reward_id)
+    if not reward:
+        raise HTTPException(status_code=404, detail="找不到該兌換品項")
+
+    sb = get_supabase()
+    activity, _, _ = _gather_activity(sb, body.patient_id)
+    earned = rules.compute_points(activity)["earned"]
+    spent, _ = _spent_points(sb, body.patient_id)
+    available = max(0, earned - spent)
+    if available < reward["cost"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"點數不足：需 {reward['cost']} 點，目前可用 {available} 點",
+        )
+
+    row = {
+        "patient_id": body.patient_id,
+        "reward_id": reward["id"],
+        "reward_name": reward["name"],
+        "cost": reward["cost"],
+        "status": "requested",
+    }
+    try:
+        saved = sb.table("reward_redemptions").insert(row).execute()
+    except Exception as exc:
+        # 規則 12：不靜默吞掉。表沒建好就明確指向 migration。
+        logger.error("redeem insert failed: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="兌換暫時無法完成（reward_redemptions 資料表尚未就緒，"
+                   "請先套用 docs/migration_reward_redemptions.sql）。",
+        )
+    saved_id = saved.data[0].get("id") if saved.data else None
+    return {
+        "id": saved_id,
+        "reward": reward,
+        "status": "requested",
+        "redeemed_at": datetime.now(timezone.utc).isoformat(),
+        "available_after": available - reward["cost"],
+        "message": "兌換已登記，將由院方安排發放。",
+    }

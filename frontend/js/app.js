@@ -3445,6 +3445,7 @@ function showPage(page) {
     vitals, emotions, memo, previsit, story, labs, pieces, chat, account, settings, diet,
     drugSearch, diseaseSearch, reminders: reminders, admissions, inpatientEdu, timeline,
     followUps, handover, medRecon, bedside, dischargePlan, menstrual, predict, sleep,
+    rewards,
     fontsize: fontSizePage
   };
   // Page transition
@@ -3493,6 +3494,7 @@ function showPage(page) {
     if (page === "menstrual") loadMenstrualPage();
     if (page === "predict") loadPredictPage();
     if (page === "sleep") loadSleepPage();
+    if (page === "rewards") loadRewardsPage();
     // 家屬代理 banner 在頁面之上，每頁切換都重新刷新
     if (typeof refreshProxyBanner === 'function') refreshProxyBanner();
     // Render Lucide icons
@@ -3510,6 +3512,176 @@ function showPage(page) {
 window.addEventListener('mdpiece-lang-change', function () {
   if (_currentPageKey) showPage(_currentPageKey);
 });
+
+// ─── 獎勵中心（健康積分）─────────────────────────────────────
+// 把使用者既有的紀錄行為（填問卷 / 打卡 / 連續 / eHEALS）換算成積分、等級、
+// 徽章與可兌換獎勵。前端只負責呈現與兌換，所有換算都在 backend 純程式碼完成
+// （規則 5）；本頁是 additive 的可選頁，不動任何既有頁面或主畫面。
+
+function rewards() {
+  return ''
+    + '<section class="rw-wrap">'
+    +   '<header class="rw-head">'
+    +     '<h2><i data-lucide="award" style="width:22px;height:22px"></i> 獎勵中心</h2>'
+    +     '<p>把你平常的紀錄與回饋，化成積分與獎勵。填問卷、每天打卡、持續紀錄都會自動累積。</p>'
+    +   '</header>'
+    +   '<div id="rw-content"><div class="rw-empty">載入中…</div></div>'
+    + '</section>';
+}
+
+function loadRewardsPage() {
+  var pid = getStablePatientId();
+  var box = document.getElementById('rw-content');
+  if (!box) return;
+  Promise.all([
+    fetch(API + '/rewards/summary?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
+    fetch(API + '/rewards/catalog?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
+  ]).then(function (res) {
+    var summary = res[0] || {};
+    var catalog = res[1] || {};
+    if (!summary || !summary.points) {
+      box.innerHTML = '<div class="rw-empty">' + escapeHtml((summary && summary.detail) || '獎勵資料暫時無法載入，請稍後再試。') + '</div>';
+      return;
+    }
+    box.innerHTML = _rewardsHtml(summary, catalog);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }).catch(function () {
+    box.innerHTML = '<div class="rw-empty">獎勵資料載入失敗。<br><button class="rw-btn" onclick="loadRewardsPage()">重新載入</button></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+}
+
+function _rewardsHtml(s, catalog) {
+  var lv = s.level || {};
+  var pts = s.points || {};
+  var streak = s.streak || {};
+  var progress = typeof lv.progress === 'number' ? lv.progress : 0;
+  var R = 54, C = 2 * Math.PI * R, offset = C * (1 - Math.max(0, Math.min(1, progress)));
+
+  // Hero：等級環 + 可用點數
+  var hero = ''
+    + '<div class="rw-card rw-hero">'
+    +   '<div class="rw-ring">'
+    +     '<svg viewBox="0 0 132 132">'
+    +       '<circle class="rw-ring-bg" cx="66" cy="66" r="' + R + '"></circle>'
+    +       '<circle class="rw-ring-fg" cx="66" cy="66" r="' + R + '" '
+    +         'stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) + '"></circle>'
+    +     '</svg>'
+    +     '<div class="rw-ring-center">'
+    +       '<span class="rw-ring-lv">Lv.' + (lv.index || 1) + '</span>'
+    +       '<span class="rw-ring-name">' + escapeHtml(lv.name || '萌芽') + '</span>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="rw-hero-meta">'
+    +     '<div class="rw-points"><span class="rw-points-big">' + (pts.available || 0) + '</span><span class="rw-points-unit">可用點數</span></div>'
+    +     '<div class="rw-points-sub">累積 ' + (pts.earned || 0) + ' 點 · 已兌換 ' + (pts.spent || 0) + ' 點</div>'
+    +     _nextLevelHtml(lv, pts.earned || 0)
+    +   '</div>'
+    + '</div>';
+
+  // 連續打卡 + 來源明細
+  var bd = s.breakdown || {};
+  var stats = ''
+    + '<div class="rw-card">'
+    +   '<div class="rw-card-title"><i data-lucide="flame" style="width:18px;height:18px"></i> 你的紀律</div>'
+    +   '<div class="rw-stat-row">'
+    +     '<div class="rw-stat"><div class="rw-stat-num">' + (streak.current || 0) + '</div><div class="rw-stat-label">目前連續天數</div></div>'
+    +     '<div class="rw-stat"><div class="rw-stat-num">' + (streak.longest || 0) + '</div><div class="rw-stat-label">最長連續天數</div></div>'
+    +     '<div class="rw-stat"><div class="rw-stat-num">' + (streak.active_days || 0) + '</div><div class="rw-stat-label">累積打卡天數</div></div>'
+    +   '</div>'
+    +   '<div class="rw-chips" style="margin-top:var(--space-3)">'
+    +     '<span class="rw-chip">填問卷 <b>+' + (bd.survey || 0) + '</b></span>'
+    +     '<span class="rw-chip">每日打卡 <b>+' + (bd.active_days || 0) + '</b></span>'
+    +     '<span class="rw-chip">連續里程碑 <b>+' + (bd.streak || 0) + '</b></span>'
+    +     '<span class="rw-chip">健康識能 <b>+' + (bd.eheals || 0) + '</b></span>'
+    +   '</div>'
+    + '</div>';
+
+  // 徽章牆
+  var badges = (s.badges || []).map(function (b) {
+    return ''
+      + '<div class="rw-badge' + (b.earned ? '' : ' locked') + '">'
+      +   '<div class="rw-badge-ic"><i data-lucide="' + escapeHtml(b.icon || 'medal') + '"></i></div>'
+      +   '<div class="rw-badge-name">' + escapeHtml(b.name || '') + '</div>'
+      +   '<div class="rw-badge-desc">' + escapeHtml(b.desc || '') + '</div>'
+      + '</div>';
+  }).join('');
+  var earnedCount = (s.badges || []).filter(function (b) { return b.earned; }).length;
+  var badgeCard = ''
+    + '<div class="rw-card">'
+    +   '<div class="rw-card-title"><i data-lucide="medal" style="width:18px;height:18px"></i> 徽章<small>' + earnedCount + ' / ' + (s.badges || []).length + ' 已解鎖</small></div>'
+    +   '<div class="rw-badges">' + badges + '</div>'
+    + '</div>';
+
+  // 兌換清單
+  var rewardsList = (catalog.catalog || []).map(function (r) {
+    var ok = !!r.affordable;
+    return ''
+      + '<div class="rw-reward">'
+      +   '<div class="rw-reward-ic"><i data-lucide="' + escapeHtml(r.icon || 'gift') + '"></i></div>'
+      +   '<div class="rw-reward-body">'
+      +     '<div class="rw-reward-name">' + escapeHtml(r.name || '') + '</div>'
+      +     '<div class="rw-reward-desc">' + escapeHtml(r.desc || '') + '</div>'
+      +     '<div class="rw-reward-cost">' + (r.cost || 0) + ' 點</div>'
+      +   '</div>'
+      +   '<button class="rw-btn" ' + (ok ? '' : 'disabled ') + 'onclick="redeemReward(\'' + escapeHtml(r.id) + '\')">' + (ok ? '兌換' : '點數不足') + '</button>'
+      + '</div>';
+  }).join('');
+  var catalogCard = ''
+    + '<div class="rw-card">'
+    +   '<div class="rw-card-title"><i data-lucide="gift" style="width:18px;height:18px"></i> 兌換獎勵</div>'
+    +   (rewardsList || '<div class="rw-empty">目前沒有可兌換的品項。</div>')
+    + '</div>';
+
+  // 加分明細
+  var led = (s.ledger || []).map(function (e) {
+    return ''
+      + '<div class="rw-led">'
+      +   '<span class="rw-led-date">' + escapeHtml(e.date || '—') + '</span>'
+      +   '<span class="rw-led-label">' + escapeHtml(e.label || '') + '</span>'
+      +   '<span class="rw-led-pts">+' + (e.points || 0) + '</span>'
+      + '</div>';
+  }).join('');
+  var ledgerCard = ''
+    + '<div class="rw-card">'
+    +   '<div class="rw-card-title"><i data-lucide="receipt-text" style="width:18px;height:18px"></i> 最近加分明細</div>'
+    +   '<div class="rw-ledger">' + (led || '<div class="rw-empty">還沒有加分紀錄，開始填問卷或打卡就會出現囉。</div>') + '</div>'
+    + '</div>';
+
+  var note = '<p class="rw-note">積分依你在 App 的紀錄自動換算，不需額外操作。兌換後由院方安排發放，實際品項以院方公告為準。</p>';
+
+  return hero + stats + badgeCard + catalogCard + ledgerCard + note;
+}
+
+function _nextLevelHtml(lv, earned) {
+  if (!lv || lv.next_floor == null) {
+    return '<div class="rw-next">已達最高等級，感謝你的持續紀錄 🎉</div>'
+      + '<div class="rw-bar"><i style="width:100%"></i></div>';
+  }
+  var pct = Math.round((typeof lv.progress === 'number' ? lv.progress : 0) * 100);
+  return '<div class="rw-next">距離「' + escapeHtml(lv.next_name || '') + '」還差 ' + (lv.to_next || 0) + ' 點</div>'
+    + '<div class="rw-bar"><i style="width:' + pct + '%"></i></div>';
+}
+
+function redeemReward(rewardId) {
+  var pid = getStablePatientId();
+  fetch(API + '/rewards/redeem', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patient_id: pid, reward_id: rewardId }),
+  }).then(function (r) {
+    return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+  }).then(function (res) {
+    if (res.ok) {
+      showToast((res.data && res.data.message) || '兌換已登記', 'success');
+      loadRewardsPage();
+    } else {
+      showToast((res.data && res.data.detail) || '兌換失敗', 'warning');
+    }
+  }).catch(function () {
+    showToast('兌換失敗，請稍後再試', 'error');
+  });
+}
 
 // ─── 登入 / 註冊 ───────────────────────────────────────────
 
