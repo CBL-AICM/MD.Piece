@@ -6041,6 +6041,9 @@ function home() {
     +         '<span>' + _mobileVisitText + '</span>'
     +       '</div>'
     +     '</div>'
+    +     '<button class="home-greet-survey" type="button" onclick="openStudyHub()" aria-label="' + _T('app.c6.studySurvey') + '">'
+    +       '<i data-lucide="clipboard-pen"></i><span>' + _T('app.c8.surveyBtn') + '</span>'
+    +     '</button>'
     +   '</div>'
 
     // 門/住院

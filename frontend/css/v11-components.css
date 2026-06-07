@@ -90,6 +90,15 @@ body.theme-modern .home-greet-date {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
 body.theme-modern .home-greet-date strong { color: var(--accent-deep, #2F6B96); font-weight: 600; }
+body.theme-modern .home-greet-survey {
+  flex-shrink: 0; z-index: 1; position: relative;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 11px; border-radius: 999px;
+  background: var(--teal-soft, #E5F0EE); color: var(--teal-deep, #1F5F56);
+  border: 1.4px solid var(--teal, #2F8378);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+body.theme-modern .home-greet-survey .lucide { width: 14px; height: 14px; }
 
 /* care-mode-mini */
 body.theme-modern .care-mode-mini {
