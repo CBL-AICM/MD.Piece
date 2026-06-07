@@ -6162,6 +6162,10 @@ function home() {
     +       '<span class="qj-icon"><i data-lucide="id-card"></i></span>'
     +       '<span class="qj-label">我的基本資料</span>'
     +     '</button>'
+    +     '<button class="quick-jump-btn t-purple" onclick="openStudyHub()">'
+    +       '<span class="qj-icon"><i data-lucide="clipboard-pen"></i></span>'
+    +       '<span class="qj-label">研究問卷</span>'
+    +     '</button>'
     +   '</div>'
 
     // ╔════════════════════════════════════════════════════════
@@ -20554,6 +20558,13 @@ function settings() {
             '<button class="set-btn set-btn-warn" onclick="settingsResetCard()"><i data-lucide="id-card"></i> ' + _T('set.row.reset.btn') + '</button>')
     +      row(_T('set.row.logout.t'), _T('set.row.logout.d'),
             '<button class="set-btn set-btn-danger" onclick="logout()"><i data-lucide="log-out"></i> ' + _T('set.row.logout.btn') + '</button>')
+    + '  </div>'
+
+    // 研究（《整合實驗設計與問卷 v2》三實驗可行性研究）— 桌面版入口
+    + '  <div class="set-group">'
+    + '    <h3 class="set-group-title"><i data-lucide="clipboard-list"></i> 研究</h3>'
+    +      row('研究問卷', '慢性病管理可行性研究 · 分時點填答（D0 / D14 / D28 / 回診後 48 小時）',
+            '<button class="set-btn" onclick="openStudyHub()"><i data-lucide="clipboard-pen"></i> 開始填寫 ›</button>')
     + '  </div>'
 
     // About

@@ -104,6 +104,7 @@
       'nav.timeline': '健康時間軸',
       'nav.inpatientEdu': '住院衛教',
       'nav.records': '我的基本資料',
+      'nav.surveys': '研究問卷',
       'nav.sub.symptoms': '症狀強度及類型與位置',
       'nav.sub.medications': '藥物管理',
       'nav.sub.admissions': '急性住院 · 長期打藥週期',
@@ -128,6 +129,7 @@
       'nav.sub.records': '性別 · 過敏 · 慢性病 · 用藥',
       'nav.sub.settings': '語言 · 主題 · 字級',
       'nav.sub.account': '個資 · 通知',
+      'nav.sub.surveys': '慢性病管理可行性研究 · 分時點填答',
       // profile onboarding overlay (index.html)
       'onb.profile.title': '還剩最後一步',
       'onb.profile.desc': '告訴我們你目前的慢性病或長期關注的健康問題 — MD.Piece 才能精準提醒和分析。資料會同步到雲端，換手機也不會不見。',
@@ -785,6 +787,7 @@
       'nav.timeline': 'Health Timeline',
       'nav.inpatientEdu': 'Inpatient Guide',
       'nav.records': 'My Profile',
+      'nav.surveys': 'Research Survey',
       'nav.sub.symptoms': 'Intensity, type & location',
       'nav.sub.medications': 'Medication management',
       'nav.sub.admissions': 'Acute stay · long-term infusion cycles',
@@ -809,6 +812,7 @@
       'nav.sub.records': 'Gender · allergies · conditions · meds',
       'nav.sub.settings': 'Language · theme · font size',
       'nav.sub.account': 'Personal info · notifications',
+      'nav.sub.surveys': 'Chronic-care feasibility study · timepoint check-ins',
       // profile onboarding overlay (index.html)
       'onb.profile.title': 'One last step',
       'onb.profile.desc': 'Tell us your current chronic conditions or long-term health concerns so MD.Piece can remind and analyze precisely. Your data syncs to the cloud, so it follows you across devices.',
