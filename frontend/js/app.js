@@ -4081,6 +4081,100 @@ function _bld_STUDY_TP() { return [
 var STUDY_TP = _bld_STUDY_TP();
 var _studyState = { answers: {}, key: null, tp: null };
 
+// 問卷時程：以帳號建立日為 Day 0，按天數窗格只推送「目前該填」的那一批，
+// 不把整個流程一次攤開（避免讓使用者覺得在跑研究протокол）。
+// FU48（回診後 48 小時）是事件型，需回診訊號才觸發，不放進日數窗格。
+var STUDY_WINDOWS = [
+  { tp: 'D0',  from: 0,  to: 14 },
+  { tp: 'D14', from: 14, to: 28 },
+  { tp: 'D28', from: 28, to: Infinity },
+];
+function _studyElapsedDays() {
+  var u = getCurrentUser();
+  var iso = u && u.created_at;
+  if (!iso) return 0;
+  var t0 = new Date(iso).getTime();
+  if (isNaN(t0)) return 0;
+  return Math.max(0, Math.floor((Date.now() - t0) / 86400000));
+}
+function _studyCurrentTp() {
+  var d = _studyElapsedDays();
+  for (var i = 0; i < STUDY_WINDOWS.length; i++) {
+    if (d >= STUDY_WINDOWS[i].from && d < STUDY_WINDOWS[i].to) return STUDY_WINDOWS[i].tp;
+  }
+  return 'D28';
+}
+
+// 回診後回饋（FU48）視窗：綁「實際回診日」而非註冊日 +N，因為不是每位患者
+// 都剛好 D14/D28。最近一筆「已完成」回診，回診後 2–16 天內視為該填回診回饋。
+var STUDY_FU48_FROM_DAYS = 2;
+var STUDY_FU48_TO_DAYS = 16;
+var _studyFu48Active = false;   // 由 _studyRefreshFu48() 依回診記錄更新
+function _studyFu48ActiveFor(followUps) {
+  if (!followUps || !followUps.length) return false;
+  var now = Date.now();
+  for (var i = 0; i < followUps.length; i++) {
+    var f = followUps[i] || {};
+    if ((f.status || '') !== 'completed') continue;
+    var ds = _foDateOnly(f.scheduled_date);
+    if (!ds) continue;
+    var elapsed = Math.floor((now - new Date(ds + 'T00:00:00').getTime()) / 86400000);
+    if (elapsed >= STUDY_FU48_FROM_DAYS && elapsed < STUDY_FU48_TO_DAYS) return true;
+  }
+  return false;
+}
+// 是否該推送某份問卷：落在目前日數窗格，或（FU48 視窗開啟時）屬於 FU48。
+function _studyDueNow(p, curTp) {
+  var tps = p.timepoints || [];
+  if (tps.indexOf(curTp) >= 0) return true;
+  return _studyFu48Active && tps.indexOf('FU48') >= 0;
+}
+// 這份問卷該以哪個時點提交：優先用目前日數窗格，否則（FU48 視窗）用 FU48。
+function _studySubmitTp(p, curTp) {
+  return ((p.timepoints || []).indexOf(curTp) >= 0) ? curTp : 'FU48';
+}
+// 這份問卷現在是否「該填且還沒填」：窗格內 + 對應時點尚未完成。
+function _studyPartDue(p, curTp) {
+  if (!_studyDueNow(p, curTp)) return false;
+  var tp = _studySubmitTp(p, curTp);
+  return !(((p.by_timepoint || {})[tp] || {}).completed);
+}
+// 某時點是否整批填完（該時點適用的問卷都已完成）。
+function _studyTpDone(parts, tp) {
+  var applicable = 0, done = 0;
+  for (var i = 0; i < parts.length; i++) {
+    if (((parts[i].timepoints) || []).indexOf(tp) < 0) continue;
+    applicable++;
+    if (((parts[i].by_timepoint || {})[tp] || {}).completed) done++;
+  }
+  return applicable > 0 && done === applicable;
+}
+// hub 時程一覽：讓病患看懂「現在在哪、之後還有哪些、回診後會再來一次」。
+function _studyRenderTimeline(parts, curTp) {
+  var nowTp = _studyFu48Active ? 'FU48' : curTp;
+  var chips = STUDY_TP.map(function (t) {
+    var done = _studyTpDone(parts, t.id);
+    var isNow = t.id === nowTp;
+    var bg = isNow ? 'var(--teal,#2F8378)' : (done ? 'var(--green-soft,#e7f3ec)' : '#f3f1ee');
+    var col = isNow ? '#fff' : (done ? 'var(--green-deep,#2c6a45)' : 'var(--text-dim,#7a716a)');
+    var tail = isNow ? '（' + _T('app.c6.scheduleNow') + '）' : '';
+    return '<span style="display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;'
+      + 'font-size:11.5px;font-weight:600;background:' + bg + ';color:' + col + '">'
+      + (done ? '✓ ' : '') + escapeHtml(t.label) + tail + '</span>';
+  }).join('');
+  return '<div class="sec-head" style="margin-top:6px"><h3 class="sec-title">' + _T('app.c6.scheduleTitle') + '</h3></div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">' + chips + '</div>'
+    + '<p class="study-meta">' + _T('app.c6.scheduleFu48Note') + '</p>';
+}
+// 依患者回診記錄刷新 FU48 視窗狀態（純日期判斷，規則 5）。失敗不擋 UI。
+function _studyRefreshFu48() {
+  return fetchFollowUps()
+    .then(function (rows) { _studyFu48Active = _studyFu48ActiveFor(rows); })
+    .catch(function () { _studyFu48Active = false; });
+}
+// 拿掉標題開頭的研究編號（如「B1. 」），只留白話標題。
+function _studyCleanTitle(t) { return String(t || '').replace(/^[A-E]\d*\.\s*/, ''); }
+
 function _studyCode() { try { return localStorage.getItem('mdpiece_study_code') || ''; } catch (e) { return ''; } }
 function _setStudyCode(v) { try { localStorage.setItem('mdpiece_study_code', (v || '').trim()); } catch (e) {} }
 
@@ -4092,21 +4186,92 @@ function _studyEnsureStyles() {
     + '.study-qt{font-size:.95rem;font-weight:600;color:var(--content,#2a2420);line-height:1.5;margin-bottom:10px}'
     + '.study-opts{display:flex;flex-wrap:wrap;gap:8px}'
     + '.study-opts.study-col{flex-direction:column}'
+    // 數字量表：等寬格狀排列，10 點變整齊的 5+5 而非凌亂的 6+4，按鈕加大好點。
+    + '.study-opts.study-scale{display:grid;gap:8px}'
+    + '.study-scale .study-opt{min-width:0;padding:13px 0;text-align:center;justify-content:center;font-size:1.02rem}'
+    + '.study-na-row{margin-top:8px;display:flex}'
     + '.study-opt{min-width:40px;padding:9px 12px;border:1.4px solid var(--line,#d9d2c5);border-radius:11px;'
-    + 'background:var(--surface-1,#fff);color:var(--content,#2a2420);font-size:.9rem;font-weight:600;cursor:pointer;line-height:1.3}'
+    + 'background:var(--surface-1,#fff);color:var(--content,#2a2420);font-size:.9rem;font-weight:600;cursor:pointer;line-height:1.3;'
+    + 'display:inline-flex;align-items:center;transition:background .12s,border-color .12s,transform .06s}'
+    + '.study-opt:active{transform:scale(.96)}'
     + '.study-opt.study-wide{width:100%;text-align:left}'
-    + '.study-opt.is-sel{background:var(--primary,#1e8a82);border-color:var(--primary,#1e8a82);color:#fff}'
-    + '.study-opt.study-na.is-sel{background:var(--content-muted,#8a8175);border-color:var(--content-muted,#8a8175)}'
-    + '.study-ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--content-subtle,#9a9}.study-ends{margin-top:6px}'
+    + '.study-opt.is-sel{background:var(--primary,#1e8a82);border-color:var(--primary,#1e8a82);color:#fff;box-shadow:0 2px 8px -3px var(--primary,#1e8a82)}'
+    + '.study-opt.study-na.is-sel{background:var(--content-muted,#8a8175);border-color:var(--content-muted,#8a8175);box-shadow:none}'
+    + '.study-ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--content-subtle,#9a9087);margin-top:6px}'
+    // 進度條：讓填答者（尤其長者）看得到「還剩幾題」，降低未知感。
+    + '.study-prog{display:flex;align-items:center;gap:9px;margin:0 2px 10px}'
+    + '.study-prog-bar{flex:1;height:7px;border-radius:999px;background:var(--line,#ece7dd);overflow:hidden}'
+    + '.study-prog-bar>i{display:block;height:100%;width:0;background:var(--teal,#2F8378);border-radius:999px;transition:width .25s ease}'
+    + '.study-prog span{flex:0 0 auto;font-size:.76rem;font-weight:600;color:var(--content-subtle,#9a9087)}'
+    // 問卷標題在病患端用親切的無襯線字，不沿用 ip-prep 的等寬程式字（僅 study 範圍內覆寫）。
+    + '#study-run .ip-prep-when-num,#study-sheet .ip-prep-when-num{font-family:var(--font-sans,system-ui,-apple-system,"Noto Sans TC",sans-serif);letter-spacing:0;font-size:1.18rem;line-height:1.38}'
     + '.study-chk{display:flex;align-items:center;gap:8px;font-size:.9rem;padding:6px 2px}'
     + '.study-text{width:100%;border:1.4px solid var(--line,#d9d2c5);border-radius:11px;padding:10px;font:inherit;box-sizing:border-box}'
     + '.study-tbl{width:100%;border-collapse:collapse;font-size:.82rem;margin:6px 0 4px}'
     + '.study-tbl th,.study-tbl td{border:1px solid var(--line,#eee);padding:5px 8px;text-align:center}'
     + '.study-tbl th{background:var(--surface-2,#f6f1e7);font-weight:600}'
     + '.study-r{font-family:var(--font-mono,monospace);font-weight:700}'
-    + '.study-meta{font-size:.78rem;color:var(--content-subtle,#9a9087);margin:2px 0 10px;line-height:1.5}';
+    + '.study-meta{font-size:.78rem;color:var(--content-subtle,#9a9087);margin:2px 0 10px;line-height:1.5}'
+    + '.study-nudge{position:fixed;left:12px;right:12px;bottom:84px;z-index:9000;display:flex;align-items:center;gap:9px;'
+    + 'padding:11px 13px;border-radius:14px;background:var(--surface-1,#fff);color:var(--content,#2a2420);'
+    + 'border:1.4px solid var(--teal,#2F8378);box-shadow:0 8px 24px -10px rgba(31,61,88,.35);'
+    + 'font-size:.86rem;line-height:1.4;opacity:0;transform:translateY(10px);transition:opacity .22s,transform .22s;max-width:520px;margin:0 auto}'
+    + '.study-nudge.open{opacity:1;transform:translateY(0)}'
+    + '.study-nudge i{color:var(--teal,#2F8378)}'
+    + '.study-nudge-go{flex:0 0 auto;border:none;border-radius:999px;background:var(--teal,#2F8378);color:#fff;'
+    + 'font-size:.82rem;font-weight:600;padding:7px 13px;cursor:pointer}'
+    + '.study-nudge-x{flex:0 0 auto;border:none;background:transparent;color:var(--content-subtle,#9a9087);font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}';
   var st = document.createElement('style'); st.id = 'study-styles'; st.textContent = css;
   document.head.appendChild(st);
+}
+
+// ── 不定時隨即提醒：問卷到期未填時，在使用 App 過程中於不固定時點輕推一下。
+// 不是固定鬧鐘（那是後端 D14/D28 排程做的）；這裡靠「下次開 App 時、且過了
+// 一段隨機冷卻（2–8 小時）」自然觸發，填完就不再出現。
+function _studyMaybeNudge() {
+  var u = getCurrentUser();
+  if (!u || !u.id || u.role === 'doctor') return;
+  var nextAt = 0;
+  try { nextAt = parseInt(localStorage.getItem('mdpiece_study_nudge_next') || '0', 10) || 0; } catch (e) {}
+  if (Date.now() < nextAt) return;
+  var pid = getStablePatientId();
+  _studyRefreshFu48().then(function () {
+    return apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary');
+  })
+    .then(function (r) { return r && r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      var curTp = _studyCurrentTp();
+      var due = (data.parts || []).filter(function (p) { return _studyPartDue(p, curTp); });
+      // 下次提醒落在 2–8 小時後的隨機時點（不定時）。
+      var gap = Math.round((2 + Math.random() * 6) * 3600000);
+      try { localStorage.setItem('mdpiece_study_nudge_next', String(Date.now() + gap)); } catch (e) {}
+      if (due.length) _studyShowNudge();
+    })
+    .catch(function () {});
+}
+
+function _studyShowNudge() {
+  if (document.getElementById('study-nudge')) return;
+  _studyEnsureStyles();
+  var el = document.createElement('div');
+  el.id = 'study-nudge';
+  el.className = 'study-nudge';
+  el.innerHTML = ''
+    + '<i data-lucide="clipboard-pen" style="width:16px;height:16px;flex:0 0 auto"></i>'
+    + '<span style="flex:1">' + _T('app.c6.nudgeText') + '</span>'
+    + '<button type="button" class="study-nudge-go" onclick="closeStudyNudge();openStudyHub()">' + _T('app.c6.nudgeGo') + '</button>'
+    + '<button type="button" class="study-nudge-x" aria-label="' + _T('app.c6.close') + '" onclick="closeStudyNudge()">&times;</button>';
+  document.body.appendChild(el);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  requestAnimationFrame(function () { el.classList.add('open'); });
+  el._t = setTimeout(closeStudyNudge, 9000);
+}
+
+function closeStudyNudge() {
+  var el = document.getElementById('study-nudge'); if (!el) return;
+  clearTimeout(el._t); el.classList.remove('open');
+  setTimeout(function () { if (el.parentNode) el.remove(); }, 250);
 }
 
 // ── 病患：研究問卷 hub ─────────────────────────────────────
@@ -4114,8 +4279,16 @@ function openStudyHub() {
   var user = getCurrentUser();
   if (!user || !user.id) { if (typeof showToast === 'function') showToast(_T('app.c6.loginBeforeStudy'), 'warning'); return; }
   var pid = getStablePatientId();
-  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary')
-    .then(function (r) { if (!r.ok) throw new Error('load'); return r.json(); })
+  // 到期才推送：以註冊日為 Day 0，請後端冪等排程 D14／D28 提醒（失敗不擋 UI）。
+  if (user.created_at) {
+    apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid)
+      + '/ensure-reminders?start_date=' + encodeURIComponent(user.created_at), { method: 'POST' }).catch(function () {});
+  }
+  // FU48 視窗依患者實際回診記錄判斷（不是每位都 D14/D28），開 hub 前先刷新。
+  _studyRefreshFu48().then(function () {
+    return apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary');
+  })
+    .then(function (r) { if (!r || !r.ok) throw new Error('load'); return r.json(); })
     .then(function (data) { _studyRenderHub(data); })
     .catch(function () { if (typeof showToast === 'function') showToast(_T('app.c6.studyLoadFail'), 'warning'); });
 }
@@ -4125,19 +4298,22 @@ function _studyRenderHub(data) {
   var ex = document.getElementById('study-sheet'); if (ex) ex.remove();
   var parts = data.parts || [];
   var adh = data.adherence || {};
-  var tpHtml = STUDY_TP.map(function (tp) {
-    var rows = parts.filter(function (p) { return (p.timepoints || []).indexOf(tp.id) >= 0; }).map(function (p) {
-      var st = (p.by_timepoint || {})[tp.id] || {};
-      var done = !!st.completed;
-      return '<div class="settings-row" style="cursor:pointer" onclick="openStudySurvey(\'' + p.key + '\',\'' + tp.id + '\')">'
-        + '<div class="ico"><i data-lucide="' + (done ? 'check-circle-2' : 'clipboard-pen') + '"></i></div>'
-        + '<div style="flex:1"><div class="name">' + escapeHtml(p.part) + '. ' + escapeHtml(p.title) + '</div>'
-        + '<div class="sub">' + (done ? _T('app.c6.doneRefill') : _T('app.c6.tapToFill')) + '</div></div>'
-        + '<div class="chev"><i data-lucide="chevron-right"></i></div></div>';
-    }).join('') || '<p style="color:var(--text-muted);font-size:.85rem;margin:8px 4px">' + _T('app.c6.noSurveyForTp') + '</p>';
-    return '<div class="sec-head"><h3 class="sec-title">' + escapeHtml(tp.label) + '</h3></div>'
-      + '<div class="settings-list" style="margin-bottom:14px">' + rows + '</div>';
+  // 只推送「目前時程窗格」對應、且還沒填的問卷；FU48 視窗開啟時一併納入回診回饋。
+  var curTp = _studyCurrentTp();
+  var dueRows = parts.filter(function (p) {
+    return _studyPartDue(p, curTp);
+  }).map(function (p) {
+    var subTp = _studySubmitTp(p, curTp);
+    return '<div class="settings-row" style="cursor:pointer" onclick="openStudySurvey(\'' + p.key + '\',\'' + subTp + '\')">'
+      + '<div class="ico"><i data-lucide="clipboard-pen"></i></div>'
+      + '<div style="flex:1"><div class="name">' + escapeHtml(_studyCleanTitle(p.title)) + '</div>'
+      + '<div class="sub">' + _T('app.c6.tapToFill') + '</div></div>'
+      + '<div class="chev"><i data-lucide="chevron-right"></i></div></div>';
   }).join('');
+  var tpHtml = dueRows
+    ? '<div class="sec-head"><h3 class="sec-title">' + _T('app.c6.dueHeader') + '</h3></div>'
+      + '<div class="settings-list" style="margin-bottom:14px">' + dueRows + '</div>'
+    : '<p class="study-meta" style="padding:12px 4px">' + _T('app.c6.allCaughtUp') + '</p>';
 
   var ehlNote = data.eheals_m07
     ? '<p class="study-meta">' + _Tf('app.c6.ehealsImported', { score: escapeHtml(String(data.eheals_m07.total_score)) }) + '</p>'
@@ -4163,6 +4339,7 @@ function _studyRenderHub(data) {
     +     '<input id="study-code" class="study-text" style="margin-bottom:6px" value="' + escapeHtml(_studyCode()) + '" oninput="_setStudyCode(this.value)" placeholder="P__" />'
     +     adhNote + ehlNote
     +     tpHtml
+    +     _studyRenderTimeline(parts, curTp)
     +     '<p class="study-meta">' + _T('app.c6.studyNoRightWrong') + '</p>'
     +   '</div>'
     + '</div>';
@@ -4193,17 +4370,22 @@ function _studyItemHtml(it, scoring) {
     var mx = (it.max != null ? it.max : scale.max);
     var pts = scale.point_labels || null;
     var btns = '';
+    var n = 0;
     for (var v = mn; v <= mx; v++) {
       var lbl = pts ? (pts[v - 1] != null ? pts[v - 1] : v) : v;
       btns += '<button type="button" class="study-opt" data-q="' + it.id + '" data-v="' + v + '" '
         + 'onclick="_studySelect(\'' + it.id + '\',' + v + ',this)">' + escapeHtml(String(lbl)) + '</button>';
+      n++;
     }
+    // ≤7 點排成一列；8–10 點折成兩列等寬（10 → 5+5），維持整齊好點。
+    var cols = n <= 7 ? n : Math.ceil(n / 2);
     var naBtn = scale.na
-      ? '<button type="button" class="study-opt study-na" data-q="' + it.id + '" onclick="_studySelect(\'' + it.id + '\',\'NA\',this)">N/A</button>' : '';
+      ? '<div class="study-na-row"><button type="button" class="study-opt study-na" data-q="' + it.id + '" onclick="_studySelect(\'' + it.id + '\',\'NA\',this)">N/A</button></div>' : '';
     var ends = (scale.min_label || scale.max_label)
       ? '<div class="study-ends"><span>' + escapeHtml(scale.min_label || '') + '</span><span>' + escapeHtml(scale.max_label || '') + '</span></div>' : '';
     return '<div class="study-q" id="study-q-' + it.id + '"><div class="study-qt">' + escapeHtml(it.text) + '</div>'
-      + '<div class="study-opts">' + btns + naBtn + '</div>' + ends + '</div>';
+      + '<div class="study-opts study-scale" style="grid-template-columns:repeat(' + cols + ',1fr)">' + btns + '</div>'
+      + ends + naBtn + '</div>';
   }
   if (t === 'single') {
     var o1 = (it.options || []).map(function (o) {
@@ -4226,11 +4408,10 @@ function _studyItemHtml(it, scoring) {
 
 function _studyRenderSurvey(s, tp) {
   _studyEnsureStyles();
-  _studyState = { answers: {}, key: s.key, tp: tp };
+  _studyState = { answers: {}, key: s.key, tp: tp, total: (s.items || []).length };
   var ex = document.getElementById('study-run'); if (ex) ex.remove();
   var scoring = s.scoring || {};
   var body = (s.items || []).map(function (it) { return _studyItemHtml(it, scoring); }).join('');
-  var tpLabel = (STUDY_TP.filter(function (x) { return x.id === tp; })[0] || {}).label || tp;
   var sheet = document.createElement('div');
   sheet.id = 'study-run';
   sheet.className = 'ip-prep-sheet';
@@ -4238,12 +4419,13 @@ function _studyRenderSurvey(s, tp) {
     + '<div class="ip-prep-backdrop" onclick="closeStudyRun()"></div>'
     + '<div class="ip-prep-panel" role="dialog" aria-label="' + escapeHtml(s.title) + '" aria-modal="true" tabindex="-1" style="max-height:90vh;overflow:auto">'
     +   '<header class="ip-prep-head">'
-    +     '<div class="ip-prep-when"><span class="ip-prep-when-num">' + escapeHtml(s.title) + '</span>'
-    +       '<span class="ip-prep-when-sub">' + escapeHtml(tpLabel) + (s.description ? ' · ' + escapeHtml(s.description) : '') + '</span></div>'
+    +     '<div class="ip-prep-when"><span class="ip-prep-when-num">' + escapeHtml(_studyCleanTitle(s.title)) + '</span>'
+    +       '<span class="ip-prep-when-sub">' + (s.description ? escapeHtml(s.description) : '') + '</span></div>'
     +     '<button type="button" class="ip-prep-close" onclick="closeStudyRun()" aria-label="' + _T('app.c6.close') + '"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
     +   '</header>'
     +   '<div style="padding:2px">' + body + '</div>'
     +   '<div class="ehl-foot">'
+    +     '<div class="study-prog"><div class="study-prog-bar"><i id="study-prog-fill"></i></div><span id="study-prog-txt"></span></div>'
     +     '<button type="button" class="ip-prep-cta" onclick="submitStudySurvey()"><i data-lucide="check" style="width:16px;height:16px"></i><span>' + _T('app.c6.submit') + '</span></button>'
     +     '<button type="button" class="ip-prep-secondary" onclick="closeStudyRun()">' + _T('app.c6.later') + '</button>'
     +     '<p class="study-meta" style="text-align:center">' + _T('app.c6.noRightWrongSkip') + '</p>'
@@ -4251,22 +4433,46 @@ function _studyRenderSurvey(s, tp) {
     + '</div>';
   document.body.appendChild(sheet);
   requestAnimationFrame(function () { sheet.classList.add('open'); });
+  _studyUpdateProgress();
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 已作答題數（複選空陣列、空字串不算），給進度條用。
+function _studyAnsweredCount() {
+  var a = _studyState.answers || {};
+  var n = 0;
+  Object.keys(a).forEach(function (k) {
+    var v = a[k];
+    if (Array.isArray(v)) { if (v.length) n++; }
+    else if (v !== '' && v != null) n++;
+  });
+  return n;
+}
+function _studyUpdateProgress() {
+  var total = _studyState.total || 0;
+  var done = _studyAnsweredCount();
+  var fill = document.getElementById('study-prog-fill');
+  var txt = document.getElementById('study-prog-txt');
+  if (fill) fill.style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+  if (txt) txt.textContent = _Tf('app.c6.progress', { done: done, total: total });
 }
 
 function _studySelect(qid, val, btn) {
   _studyState.answers[qid] = val;
   var row = document.getElementById('study-q-' + qid);
   if (row) row.querySelectorAll('.study-opt').forEach(function (b) { b.classList.toggle('is-sel', b === btn); });
+  _studyUpdateProgress();
 }
 function _studyMulti(qid) {
   var row = document.getElementById('study-q-' + qid); if (!row) return;
   var vals = [];
   row.querySelectorAll('input[type=checkbox]:checked').forEach(function (c) { vals.push(c.value); });
   _studyState.answers[qid] = vals;
+  _studyUpdateProgress();
 }
 function _studyText(qid, val) {
   if ((val || '').trim()) _studyState.answers[qid] = val; else delete _studyState.answers[qid];
+  _studyUpdateProgress();
 }
 
 function submitStudySurvey() {
@@ -6014,6 +6220,9 @@ function home() {
     +         '<span>' + _mobileVisitText + '</span>'
     +       '</div>'
     +     '</div>'
+    +     '<button class="home-greet-survey" type="button" onclick="openStudyHub()" aria-label="' + _T('app.c6.studySurvey') + '">'
+    +       '<i data-lucide="clipboard-pen"></i><span>' + _T('app.c8.surveyBtn') + '</span>'
+    +     '</button>'
     +   '</div>'
 
     // 門/住院
@@ -6516,6 +6725,8 @@ function loadHomePage() {
   // 滾動式 feed 新增的 Tier 2 區塊
   if (typeof _updateMobileHomeMedsMini === 'function') _updateMobileHomeMedsMini();
   if (typeof _renderMobileRecentRecords === 'function') _renderMobileRecentRecords();
+  // 不定時隨即：問卷到期未填時，偶爾在首頁輕推一下（填完自動停）。
+  if (typeof _studyMaybeNudge === 'function') _studyMaybeNudge();
 }
 
 // ── 2.0 預覽：Today (home2) — opt-in 路由，與現行 home 完全隔離 ──────
@@ -26208,12 +26419,25 @@ function markFollowUpStatus(id, status) {
     body: JSON.stringify({ status: status })
   })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
-    .then(function() {
+    .then(function(updated) {
       showToast(_T("app.c33.updated"), 'success');
+      // 回診完成 → 依「實際回診日 +~48h」排回診後回饋提醒（冪等、失敗不擋 UI）。
+      if (status === 'completed') _studyScheduleFu48(updated);
       loadFollowUpsPage();
       if (typeof refreshNearestFollowUpCard === 'function') refreshNearestFollowUpCard();
     })
     .catch(function(e) { showToast(_T("app.c33.updateFail") + e.message, 'error'); });
+}
+
+// 回診完成後，請後端依實際回診日排「回診後回饋（FU48）」提醒。盡力而為。
+function _studyScheduleFu48(followUp) {
+  var u = getCurrentUser();
+  if (!u || !u.id || u.role === 'doctor') return;
+  var visit = _foDateOnly(followUp && followUp.scheduled_date);
+  if (!visit) return;
+  var pid = getStablePatientId();
+  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid)
+    + '/ensure-fu48?visit_date=' + encodeURIComponent(visit), { method: 'POST' }).catch(function () {});
 }
 
 function deleteFollowUp(id) {

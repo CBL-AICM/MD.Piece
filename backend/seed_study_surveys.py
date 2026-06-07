@@ -45,7 +45,7 @@ STUDY_SURVEYS = [
     {
         "key": "mdpiece-a-background",
         "title": "A. 背景資料",
-        "description": "僅 Day 0 填寫一次。",
+        "description": "只需填一次。",
         "items": [
             {"id": "a1", "type": "single", "text": "性別",
              "options": ["男", "女", "其他/不願透露"]},
@@ -77,8 +77,8 @@ STUDY_SURVEYS = [
     # ===== B1 SECD-6（D0/D14/D28，平均）=====
     {
         "key": "mdpiece-b1-secd6",
-        "title": "B1. 慢性病自我效能（SECD-6）",
-        "description": "對做到下列事情有多少把握：1=完全沒把握，10=完全有把握。",
+        "title": "B1. 慢性病自我照顧的把握",
+        "description": "下面每件事，覺得自己有多少把握？1=完全沒把握，10=完全有把握。",
         "items": [
             _likert(1, "我有把握不讓疾病帶來的疲倦，影響我想做的事情"),
             _likert(2, "我有把握不讓疾病帶來的身體不適或疼痛，影響我想做的事情"),
@@ -98,8 +98,8 @@ STUDY_SURVEYS = [
     # ===== B2 eHEALS 改編（D0，加總；與 M07 eHEALS 同量表）=====
     {
         "key": "mdpiece-b2-eheals",
-        "title": "B2. 數位健康識能（eHEALS 改編）",
-        "description": "請回答同意程度：1=非常不同意，5=非常同意。（原量表針對「網際網路」，本研究改編為「網路或 App」）",
+        "title": "B2. 用網路或 App 找健康資訊的信心",
+        "description": "下面每句話同不同意？1=非常不同意，5=非常同意。題目說的「網路」也包含手機 App。",
         "items": [
             _likert(1, "我知道網路或 App 上有哪些可用的健康資源"),
             _likert(2, "我知道去哪裡找到網路或 App 上有用的健康資源"),
@@ -122,8 +122,8 @@ STUDY_SURVEYS = [
     # ===== B3 就診前準備度（自編5；D0/D14/D28，平均）=====
     {
         "key": "mdpiece-b3-prep",
-        "title": "B3. 就診前準備度（自編）",
-        "description": "依您「目前看診前」的感受：1=完全不同意，6=完全同意。",
+        "title": "B3. 看診前的準備",
+        "description": "想想最近看醫師前的感覺，每句話符不符合？1=完全不同意，6=完全同意。",
         "items": [
             _likert(1, "看醫師前，我能說得出最近身體狀況的「主要變化」"),
             _likert(2, "看醫師前，我能舉出具體的數值或事件當作例子"),
@@ -142,7 +142,7 @@ STUDY_SURVEYS = [
     {
         "key": "mdpiece-c1-daily",
         "title": "C1. 每日記錄功能",
-        "description": "1=非常不同意，7=非常同意；與情境不符可選 N/A。",
+        "description": "每句話同不同意？1=非常不同意，7=非常同意；用不到的選 N/A 就好。",
         "items": [
             _likert(1, "每日記錄約 2 分鐘，對我是合理的負擔"),
             _likert(2, "記錄欄位（睡眠、壓力、血壓等）切合我的需求"),
@@ -160,7 +160,7 @@ STUDY_SURVEYS = [
     {
         "key": "mdpiece-c2-risk",
         "title": "C2. 風險預測功能",
-        "description": "1=非常不同意，7=非常同意；與情境不符可選 N/A。",
+        "description": "每句話同不同意？1=非常不同意，7=非常同意；用不到的選 N/A 就好。",
         "items": [
             _likert(1, "App 顯示的「90 天復發風險等級」讓我容易理解"),
             _likert(2, "我願意參考 App 預測的風險等級（我知道這是模型推估）"),
@@ -177,8 +177,8 @@ STUDY_SURVEYS = [
     # ===== C3 SHAP 接受度（自編5；D14/D28；q5 獨立報告）=====
     {
         "key": "mdpiece-c3-shap",
-        "title": "C3. SHAP 主要貢獻特徵接受度",
-        "description": "1=非常不同意，7=非常同意；與情境不符可選 N/A。",
+        "title": "C3. 風險原因說明好不好懂",
+        "description": "每句話同不同意？1=非常不同意，7=非常同意；用不到的選 N/A 就好。",
         "items": [
             _likert(1, "「主要貢獻特徵」清單對我來說容易理解"),
             _likert(2, "我認為「主要貢獻特徵」反映了我近期重要的健康變化"),
@@ -198,7 +198,7 @@ STUDY_SURVEYS = [
     {
         "key": "mdpiece-c4-summary",
         "title": "C4. 三段式就診前摘要",
-        "description": "1=非常不同意，7=非常同意；與情境不符可選 N/A。",
+        "description": "每句話同不同意？1=非常不同意，7=非常同意；用不到的選 N/A 就好。",
         "items": [
             _likert(1, "三段式摘要（風險等級＋主要貢獻特徵＋想討論的問題）結構清楚"),
             _likert(2, "摘要讓我看診前的準備更充分"),
@@ -216,8 +216,8 @@ STUDY_SURVEYS = [
     # ===== C5 MAUQ 單機版患者版（18；D28；三分量表）=====
     {
         "key": "mdpiece-c5-mauq",
-        "title": "C5. App 可用性（MAUQ 單機版患者版）",
-        "description": "就「過去 4 週使用 MD. Piece 的整體經驗」：1=非常不同意，7=非常同意；不符情境可選 N/A。",
+        "title": "C5. App 好不好用",
+        "description": "想想這 4 週用 MD. Piece 的整體感覺，每句話同不同意？1=非常不同意，7=非常同意；用不到的選 N/A 就好。",
         "items": [
             _likert("s1", "這個 App 用起來很容易"),
             _likert("s2", "學會使用這個 App 對我來說很容易"),
@@ -256,8 +256,8 @@ STUDY_SURVEYS = [
     # ===== D1 CARE 同理（10；回診後48h；加總）=====
     {
         "key": "mdpiece-d1-care",
-        "title": "D1. 醫師同理（CARE）",
-        "description": "評估「本次看診」這位醫師的表現：1=差，2=普通，3=好，4=很好，5=極好；與情境不符可選「不適用」。",
+        "title": "D1. 看診時醫師的同理",
+        "description": "想想這次看診，這位醫師做得如何？1=差，2=普通，3=好，4=很好，5=極好；用不到的選「不適用」。",
         "items": [
             _likert(1, "讓您覺得自在（親切溫暖、尊重您；不冷漠、不唐突）"),
             _likert(2, "讓您能說出自己的「故事」（給您時間用自己的話完整描述病情；不打斷、不岔開話題）"),
@@ -283,8 +283,8 @@ STUDY_SURVEYS = [
     # ===== D2 Wake Forest 信任短版（5；回診後48h；加總，q1 反向）=====
     {
         "key": "mdpiece-d2-trust",
-        "title": "D2. 醫師信任（Wake Forest 短版）",
-        "description": "對「本次看診醫師」的感受：1=非常不同意，2=不同意，3=中立，4=同意，5=非常同意。",
+        "title": "D2. 對醫師的信任",
+        "description": "想想這次看診的醫師，每句話同不同意？1=非常不同意，2=不同意，3=中立，4=同意，5=非常同意。",
         "items": [
             _likert(1, "有時候，這位醫師在意自己方便，多過在意我的醫療需求", reverse=True),
             _likert(2, "這位醫師非常仔細且謹慎"),
@@ -304,8 +304,8 @@ STUDY_SURVEYS = [
     # ===== D3 collaboRATE（3；回診後48h；top-score）=====
     {
         "key": "mdpiece-d3-collaborate",
-        "title": "D3. 共享決策（collaboRATE）",
-        "description": "回想本次看診：0=完全沒有努力，9=已做了所有的努力。",
+        "title": "D3. 看診時一起做決定",
+        "description": "回想這次看診，醫療團隊做了多少努力？0=完全沒有努力，9=已做了所有的努力。",
         "items": [
             _likert(1, "為了幫助您「了解自己的健康問題」，醫療團隊做了多少努力？"),
             _likert(2, "為了「傾聽您最在意的健康問題」，醫療團隊做了多少努力？"),
@@ -323,8 +323,8 @@ STUDY_SURVEYS = [
     # ===== D4 溝通行為改變（自編5；D28，平均）=====
     {
         "key": "mdpiece-d4-comm",
-        "title": "D4. 溝通行為改變（自編）",
-        "description": "相較於使用 App「之前」，您現在看診時：1=完全不同意，6=完全同意。",
+        "title": "D4. 看診溝通的改變",
+        "description": "跟還沒用 App 之前比，你現在看診時：1=完全不同意，6=完全同意。",
         "items": [
             _likert(1, "我更能主動說出最近的主要變化"),
             _likert(2, "我更常拿出具體數字或紀錄與醫師討論"),
@@ -344,11 +344,11 @@ STUDY_SURVEYS = [
     {
         "key": "mdpiece-e-intent",
         "title": "E. 繼續使用意圖與推薦",
-        "description": "E1：1=非常不同意，7=非常同意。E2：推薦可能性 0–10。",
+        "description": "前面幾題：1=非常不同意，7=非常同意。最後：推薦的可能性 0–10。",
         "items": [
             _likert("e1_1", "我覺得 MD. Piece 對管理我的健康是有用的"),
             _likert("e1_2", "我覺得 MD. Piece 用起來不費力"),
-            _likert("e1_3", "如果可以，我打算在研究結束後繼續使用 MD. Piece"),
+            _likert("e1_3", "如果可以，我打算之後繼續使用 MD. Piece"),
             _likert("e1_4", "我願意把 MD. Piece 納入我的日常習慣"),
             _likert("e2_1", "從 0 到 10，您有多大可能把這個 App 推薦給有類似情況的朋友？",
                     variant="nps", min=0, max=10),
@@ -368,8 +368,8 @@ STUDY_SURVEYS = [
     # ===== F 開放質性（D28，不計分）=====
     {
         "key": "mdpiece-f-open",
-        "title": "F. 開放式問題",
-        "description": "僅 Day 28，可選填。",
+        "title": "F. 想對我們說的話",
+        "description": "可選填，想到什麼都可以寫。",
         "items": [
             {"id": "f1", "type": "text", "text": "您覺得 MD. Piece 最有幫助的功能是哪一個？為什麼？"},
             {"id": "f2", "type": "text", "text": "您覺得 MD. Piece 最需要改進的地方是？"},

@@ -25,7 +25,7 @@ import json
 import logging
 import math
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -495,6 +495,10 @@ def submit_response(key: str, body: ResponseCreate):
     except Exception as e:
         logger.error(f"submit survey response failed: {e}")
         raise HTTPException(status_code=400, detail=f"作答儲存失敗：{e}")
+    # 填完就停：關掉這個時點的排程提醒，避免到期還在提醒（規則：填完不再吵）。
+    study = (survey.get("scoring") or {}).get("study")
+    if study and tp:
+        _deactivate_study_reminder(sb, study, tp, body.patient_id)
     return {"id": saved_id, "survey_key": key, "timepoint": tp, "scores": scores, "_persisted": True}
 
 
@@ -799,6 +803,109 @@ def participant_summary(study: str, pid: str, me: dict = Depends(current_user)):
 
     return {"study": study, "patient_id": pid, "parts": parts,
             "eheals_m07": eheals, "adherence": _adherence(sb, pid)}
+
+
+# ─── 到期才推送：依參與起算日（帳號建立日 = Day 0）排程問卷提醒 ───────────
+# 只排「固定日數」的時點：D0 是當下不需提醒。FU48 是回診事件型，改由
+# ensure-fu48 依患者「實際回診日」排程（呼應：不是每位都剛好 D14/D28）。
+# 天數需與前端 STUDY_WINDOWS（app.js）一致。規則 5：時程是確定性運算 → 純程式碼。
+STUDY_REMINDER_OFFSETS = {"D14": 14, "D28": 28}
+# 回診後回饋（FU48）：回診日 +2 天（約 48 小時、第三天上午 09:00 UTC）觸發。
+FU48_OFFSET_DAYS = 2
+
+
+def _study_due_at(start: datetime, days: int) -> datetime:
+    """參與起算日 + N 天、當天 09:00（UTC）觸發。純日期運算，可單元測試。"""
+    base = start if start.tzinfo else start.replace(tzinfo=timezone.utc)
+    return (base + timedelta(days=days)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+
+def _study_reminder_source_id(study: str, tp: str) -> str:
+    """排程提醒的去重鍵；建立與停用必須用同一個鍵，否則填完關不掉、會繼續吵。"""
+    return f"study:{study}:{tp}"
+
+
+def _deactivate_study_reminder(sb, study: str, tp: str, pid: str) -> None:
+    """填完該時點問卷後，把對應排程提醒關掉，避免到期還在提醒。盡力而為、不擋作答。"""
+    if not (study and tp and pid):
+        return
+    try:
+        (sb.table("reminders").update({"active": 0})
+         .eq("patient_id", pid)
+         .eq("source_id", _study_reminder_source_id(study, tp)).execute())
+    except Exception as exc:
+        logger.warning("deactivate study reminder failed: %s", type(exc).__name__)
+
+
+@router.post("/study/{study}/participants/{pid}/ensure-reminders")
+def ensure_study_reminders(study: str, pid: str, start_date: str = Query(...)):
+    """到期才推送：以起算日為 Day 0，為 D14／D28 各建立一筆 once 提醒（冪等）。
+    既有 /reminders 派發機制會在到期時送 Web Push + 站內通知，這裡只負責「排程」。"""
+    from backend.models import ReminderCreate
+    from backend.routers.reminders import create_reminder
+
+    try:
+        start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="start_date 格式錯誤（需 ISO 8601）")
+
+    sb = get_supabase()
+    created, existing = [], []
+    for tp, days in STUDY_REMINDER_OFFSETS.items():
+        source_id = _study_reminder_source_id(study, tp)
+        dup = (sb.table("reminders").select("id")
+               .eq("patient_id", pid).eq("source_id", source_id).limit(1).execute())
+        if dup.data:
+            existing.append(tp)
+            continue
+        create_reminder(ReminderCreate(
+            patient_id=pid,
+            reminder_type="custom",
+            title="健康回饋問卷",
+            body="這次的回饋問卷可以填囉，幫我們把照顧做得更好 🙂",
+            source_id=source_id,
+            url="/?open=survey",
+            frequency="once",
+            scheduled_at=_study_due_at(start, days),
+            priority="normal",
+            source="auto",
+        ))
+        created.append(tp)
+    return {"created": created, "existing": existing}
+
+
+@router.post("/study/{study}/participants/{pid}/ensure-fu48")
+def ensure_fu48_reminder(study: str, pid: str, visit_date: str = Query(...)):
+    """回診後回饋（FU48）：病患回診完成後，依「實際回診日 +~48h」排一筆 once 提醒。
+    用回診日而非註冊日 +N，呼應『不是每位患者都剛好 D14/D28』。冪等：已排過就不重排。"""
+    from backend.models import ReminderCreate
+    from backend.routers.reminders import create_reminder
+
+    try:
+        visit = datetime.strptime(visit_date[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="visit_date 格式錯誤，需為 YYYY-MM-DD")
+
+    sb = get_supabase()
+    source_id = _study_reminder_source_id(study, "FU48")
+    dup = (sb.table("reminders").select("id")
+           .eq("patient_id", pid).eq("source_id", source_id).limit(1).execute())
+    if dup.data:
+        return {"created": False, "reason": "exists"}
+    due = _study_due_at(visit, FU48_OFFSET_DAYS)
+    create_reminder(ReminderCreate(
+        patient_id=pid,
+        reminder_type="custom",
+        title="回診後回饋問卷",
+        body="您最近回診了，方便的話填一下這次看診的回饋，2 分鐘就好 🙂",
+        source_id=source_id,
+        url="/?open=survey",
+        frequency="once",
+        scheduled_at=due,
+        priority="normal",
+        source="auto",
+    ))
+    return {"created": True, "scheduled_at": due.isoformat()}
 
 
 @router.get("/study/{study}/participants")
