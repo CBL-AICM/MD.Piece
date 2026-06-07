@@ -42,7 +42,7 @@
   --ev-milestone:#2F8378; --ev-infusion:#2F8378; --ev-surgery:#6E6258;
 
   /* — typography — */
-  --font-sans:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  --font-sans:"Nunito","Varela Round","Zen Maru Gothic","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
   --font-serif:"Noto Serif TC",Georgia,serif;
   --font-mono:"JetBrains Mono",ui-monospace,monospace;
   --scale:1;
@@ -54,13 +54,14 @@
   /* — space / radius / touch — */
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
   --space-6:24px; --space-8:32px; --space-12:48px; --space-16:64px;
-  --radius-sm:8px; --radius-md:12px; --radius-card:17px; --radius-pill:999px;
+  /* radius bumped for chunky-cute 2D look; pill stays fully round */
+  --radius-sm:12px; --radius-md:16px; --radius-card:22px; --radius-pill:999px;
   --touch-min:48px; --touch-fab:56px;
 
-  /* — elevation (warm-tinted, low) — */
-  --shadow-1:0 1px 2px rgba(31,61,88,.05),0 8px 20px rgba(31,61,88,.06);
-  --shadow-2:0 6px 16px rgba(31,61,88,.10);
-  --shadow-fab:0 8px 18px rgba(31,61,88,.40);
+  /* — elevation: flattened toward 2D (low-contrast, single soft layer) — */
+  --shadow-1:0 1px 3px rgba(31,61,88,.05);
+  --shadow-2:0 2px 6px rgba(31,61,88,.07);
+  --shadow-fab:0 4px 12px rgba(31,61,88,.28);
 
   /* — motion (reduced-motion safe below) — */
   --motion-fast:150ms; --motion-base:220ms; --motion-slow:400ms;

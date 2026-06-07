@@ -5,3 +5,4 @@ package-lock.json
 *.traineddata
 *.traineddata.gz
 mobile_shots/
+visual_language_shots/

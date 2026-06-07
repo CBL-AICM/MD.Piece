@@ -68,14 +68,19 @@
   --gradient-hero-coral:  #C97A7A;
   --gradient-hero-lavender:#6B73A8;
 
-  /* UI tokens */
+  /* UI tokens
+     NOTE: --radius / --radius-sm / --shadow* are overridden app-wide by
+     hanako.css (!important) which already supplies the flat-cute skin, so
+     they are left at their originals here. --radius-pill (fully round) and
+     the springier --transition are NOT overridden, so the visual-language
+     pass tunes them here. Fonts/icons live in css/visual-language.css. */
   --radius:     14px;
   --radius-sm:  10px;
-  --radius-pill:20px;
+  --radius-pill:999px;
   --shadow:     0 4px 14px rgba(31,61,88,0.10), 0 1px 4px rgba(31,61,88,0.08);
   --shadow-sm:  0 2px 8px rgba(31,61,88,0.08);
   --shadow-lift:0 10px 28px rgba(31,61,88,0.14), 0 3px 8px rgba(31,61,88,0.09);
-  --transition: .25s cubic-bezier(.4,0,.2,1);
+  --transition: .2s cubic-bezier(.34,1.2,.64,1);
 
   /* ─── Design Tokens（集中化，避免散落的 hard-coded 值）──────
      依 docs/research/ui_color_research.md 的建議：

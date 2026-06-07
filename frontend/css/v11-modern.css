@@ -43,7 +43,9 @@ body.theme-modern h1, body.theme-modern h2, body.theme-modern h3,
 body.theme-modern h4, body.theme-modern h5, body.theme-modern h6,
 body.theme-modern .brand, body.theme-modern .logo,
 body.theme-modern [class*="rigelstar"], body.theme-modern [class*="netron"] {
-  font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+  /* Visual language: friendly rounded base type (Latin -> Nunito/Varela Round,
+     CJK -> Zen Maru Gothic, safety -> Noto Sans TC so no glyph ever tofus). */
+  font-family: "Nunito", "Varela Round", "Zen Maru Gothic", "Noto Sans TC", -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
 }
 body.theme-modern .font-brand,
 body.theme-modern [class*="brand-title"] {
