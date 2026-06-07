@@ -3585,14 +3585,17 @@ function loadRewardsPage() {
   Promise.all([
     fetch(API + '/rewards/summary?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
     fetch(API + '/rewards/catalog?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
+    // 拼圖載入失敗不該拖垮整頁，單獨吞錯回 null（規則 12：降級但不靜默壞掉）
+    fetch(API + '/rewards/puzzle?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }).catch(function () { return null; }),
   ]).then(function (res) {
     var summary = res[0] || {};
     var catalog = res[1] || {};
+    var puzzle = res[2] || null;
     if (!summary || !summary.points) {
       box.innerHTML = '<div class="rw-empty">' + escapeHtml((summary && summary.detail) || '獎勵資料暫時無法載入，請稍後再試。') + '</div>';
       return;
     }
-    box.innerHTML = _rewardsHtml(summary, catalog);
+    box.innerHTML = _rewardsHtml(summary, catalog, puzzle);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }).catch(function () {
     box.innerHTML = '<div class="rw-empty">獎勵資料載入失敗。<br><button class="rw-btn" onclick="loadRewardsPage()">重新載入</button></div>';
@@ -3600,7 +3603,7 @@ function loadRewardsPage() {
   });
 }
 
-function _rewardsHtml(s, catalog) {
+function _rewardsHtml(s, catalog, puzzle) {
   var lv = s.level || {};
   var pts = s.points || {};
   var streak = s.streak || {};
@@ -3699,7 +3702,9 @@ function _rewardsHtml(s, catalog) {
 
   var note = '<p class="rw-note">積分依你在 App 的紀錄自動換算，不需額外操作。兌換後由院方安排發放，實際品項以院方公告為準。</p>';
 
-  return hero + stats + badgeCard + catalogCard + ledgerCard + note;
+  var puzzleCard = puzzle ? _puzzleHtml(puzzle) : '';
+
+  return hero + stats + puzzleCard + badgeCard + catalogCard + ledgerCard + note;
 }
 
 function _nextLevelHtml(lv, earned) {
@@ -3730,6 +3735,135 @@ function redeemReward(rewardId) {
   }).catch(function () {
     showToast('兌換失敗，請稍後再試', 'error');
   });
+}
+
+// ─── 療程拼圖（每月主題收藏 metagame）─────────────────────────
+// 每月一張 9 片（3x3）主題拼圖，靠使用者平常的健康紀錄自動解鎖（解鎖規則全在
+// backend/utils/rewards_rules.py 純算術完成，前端只負責呈現）。已解鎖片顯示插畫
+// 片段（同一張 theme 圖切成 3x3 的對應切片）、未解鎖片灰階＋鎖並附「還差什麼」。
+
+// theme.key → 插畫檔（frontend/img/puzzle/）。12 主題對應到 4 張季節插畫，
+// 每張都做成可被 3x3 切片，確保任何月份都有圖、不會破圖。
+var _PZ_ART = {
+  'spring-garden': 'spring-garden', 'blossom': 'spring-garden', 'morning-walk': 'spring-garden',
+  'sunny-window': 'sunny-window', 'summer-fruit': 'sunny-window', 'harvest': 'sunny-window',
+  'rainy-day': 'rainy-day', 'autumn-leaf': 'rainy-day', 'warm-tea': 'rainy-day',
+  'starry-night': 'starry-night', 'cozy-home': 'starry-night', 'snow-rest': 'starry-night',
+};
+var _PZ_ART_VER = 'v1';
+function _pzArtUrl(themeKey) {
+  var file = _PZ_ART[themeKey] || 'rainy-day';
+  return 'img/puzzle/' + file + '.svg?v=' + _PZ_ART_VER;
+}
+
+// 把 board 渲染成一張卡（3x3 grid + 進度 + 集滿提示）。純呈現，不打 API。
+function _puzzleHtml(data) {
+  if (!data || !data.board) return '';
+  var b = data.board;
+  var theme = b.theme || {};
+  var lang = (window.MDPiece_i18n && window.MDPiece_i18n.getLang && window.MDPiece_i18n.getLang()) || 'zh-TW';
+  var themeName = (lang.indexOf('en') === 0 ? (theme.en || theme.name) : (theme.name || theme.en)) || '';
+  var artUrl = _pzArtUrl(theme.key);
+
+  var cells = (b.pieces || []).map(function (p) {
+    var i = p.index || 0, r = Math.floor(i / 3), c = i % 3;
+    var pos = (c * 50) + '% ' + (r * 50) + '%';
+    var locked = !p.unlocked;
+    var aria = _T(locked ? 'puzzle.lockedAria' : 'puzzle.unlockedAria');
+    return ''
+      + '<button type="button" class="rw-pz-cell' + (locked ? ' locked' : '') + '"'
+      +   ' style="background-image:url(\'' + artUrl + '\');background-position:' + pos + '"'
+      +   ' aria-label="' + aria + '" onclick="_puzzleTap(' + i + ')">'
+      +   (locked ? '<span class="rw-pz-lock"><i data-lucide="lock"></i></span>' : '')
+      + '</button>';
+  }).join('');
+
+  // 進度文案：未滿就說「還差 N 步」，滿了就慶祝
+  var unlocked = b.unlocked_count || 0;
+  var progressTxt, progDone = '';
+  if (b.complete) {
+    progressTxt = _T('puzzle.allUnlocked');
+    progDone = ' done';
+  } else {
+    progressTxt = _Tf('puzzle.progress', { n: b.to_next || 1 });
+  }
+  var pct = Math.round((unlocked / (b.total_pieces || 9)) * 100);
+
+  var rewardLine = '';
+  if (b.complete && b.complete_reward) {
+    var rwName = _puzzleRewardName(b.complete_reward);
+    rewardLine = '<div class="rw-pz-reward"><i data-lucide="gift"></i> '
+      + escapeHtml(_Tf('puzzle.completeReward', { name: rwName })) + '</div>';
+  }
+
+  // 把 board 暫存，給 _puzzleTap 取用（純前端互動，無 API）
+  window._pzBoard = b;
+
+  return ''
+    + '<div class="rw-card">'
+    +   '<div class="rw-card-title rw-pz-head"><i data-lucide="puzzle" style="width:18px;height:18px"></i> '
+    +     escapeHtml(_T('puzzle.title'))
+    +     '<span class="rw-pz-theme">' + escapeHtml(themeName) + '</span>'
+    +   '</div>'
+    +   '<div class="rw-pz-sub">' + escapeHtml(_Tf('puzzle.sub', { n: unlocked })) + '</div>'
+    +   '<div class="rw-pz-grid">' + cells + '</div>'
+    +   '<div id="rw-pz-detail"></div>'
+    +   '<div class="rw-pz-progress' + progDone + '">' + escapeHtml(progressTxt) + '</div>'
+    +   '<div class="rw-pz-bar"><i style="width:' + pct + '%"></i></div>'
+    +   rewardLine
+    +   '<div class="rw-pz-hint">' + escapeHtml(_T('puzzle.tapHint')) + '</div>'
+    + '</div>'
+    + _puzzleCollectionHtml(data.collection);
+}
+
+function _puzzleRewardName(rewardId) {
+  // 兌換品名沿用既有 CATALOG 顯示名；前端沒有就退回 id（後端集滿才會帶這欄）。
+  var names = { 'edu-booklet': (window.MDPiece_i18n && /^en/.test(MDPiece_i18n.getLang())) ? 'Health booklet' : '衛教小手冊' };
+  return names[rewardId] || rewardId;
+}
+
+// 點某片 → 在格子下方顯示「為什麼解鎖 / 還差什麼」（可解釋，憲法 2）。
+function _puzzleTap(index) {
+  var b = window._pzBoard;
+  var box = document.getElementById('rw-pz-detail');
+  if (!b || !box) return;
+  var p = (b.pieces || [])[index];
+  if (!p) return;
+  var lang = (window.MDPiece_i18n && MDPiece_i18n.getLang()) || 'zh-TW';
+  var en = lang.indexOf('en') === 0;
+  var txt = p.unlocked
+    ? (en ? p.reason_en : p.reason_zh)
+    : (en ? p.hint_en : p.hint_zh);
+  var cls = p.unlocked ? 'is-unlocked' : 'is-locked';
+  var icon = p.unlocked ? 'check-circle-2' : 'lock';
+  box.innerHTML = '<div class="rw-pz-detail ' + cls + '"><i data-lucide="' + icon + '"></i><span>'
+    + escapeHtml(txt || '') + '</span></div>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 收藏冊：跨月已完成的整張拼圖縮圖（呈現「療程旅程」）。
+function _puzzleCollectionHtml(collection) {
+  collection = collection || [];
+  var items = collection.map(function (c) {
+    var theme = c.theme || {};
+    var lang = (window.MDPiece_i18n && MDPiece_i18n.getLang()) || 'zh-TW';
+    var name = (lang.indexOf('en') === 0 ? (theme.en || theme.name) : (theme.name || theme.en)) || '';
+    return ''
+      + '<div class="rw-pz-col-item">'
+      +   '<div class="rw-pz-col-thumb" style="background-image:url(\'' + _pzArtUrl(theme.key) + '\')"></div>'
+      +   '<div class="rw-pz-col-cap">' + escapeHtml(c.year_month || '') + '<br>' + escapeHtml(name) + '</div>'
+      + '</div>';
+  }).join('');
+  var body = collection.length
+    ? '<div class="rw-pz-collection">' + items + '</div>'
+    : '<div class="rw-empty">' + escapeHtml(_T('puzzle.collectionEmpty')) + '</div>';
+  return ''
+    + '<div class="rw-card">'
+    +   '<div class="rw-card-title"><i data-lucide="library" style="width:18px;height:18px"></i> '
+    +     escapeHtml(_T('puzzle.collectionTitle'))
+    +     '<small>' + escapeHtml(_Tf('puzzle.collectionDone', { n: collection.length })) + '</small></div>'
+    +   body
+    + '</div>';
 }
 
 // ─── 登入 / 註冊 ───────────────────────────────────────────

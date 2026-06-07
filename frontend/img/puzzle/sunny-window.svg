@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="灑進陽光的窗">
+  <!-- 平面化、粗線條、可愛風的「灑進陽光的窗」療程拼圖。300x300，可被 3x3 切片。 -->
+  <defs>
+    <clipPath id="sw-frame"><rect x="0" y="0" width="300" height="300" rx="18"/></clipPath>
+  </defs>
+  <g clip-path="url(#sw-frame)" stroke="#5a4632" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="0" y="0" width="300" height="300" fill="#fff2d6" stroke="none"/>
+    <!-- 窗框 -->
+    <rect x="46" y="40" width="208" height="180" rx="12" fill="#bfe2f2"/>
+    <line x1="150" y1="40" x2="150" y2="220"/>
+    <line x1="46" y1="130" x2="254" y2="130"/>
+    <!-- 太陽 -->
+    <circle cx="110" cy="92" r="24" fill="#ffd25e"/>
+    <circle cx="103" cy="88" r="3.5" fill="#5a4632" stroke="none"/>
+    <circle cx="117" cy="88" r="3.5" fill="#5a4632" stroke="none"/>
+    <path d="M101 100 q9 7 18 0" fill="none" stroke-width="4"/>
+    <!-- 雲 -->
+    <path d="M180 170 q-14 0 -14 14 q0 14 14 14 h44 q16 0 16 -16 q0 -14 -16 -14 q-2 -12 -16 -12 q-14 0 -16 12 z" fill="#f3fbff"/>
+    <!-- 窗台盆栽 -->
+    <rect x="36" y="220" width="228" height="22" fill="#e7c98f"/>
+    <g>
+      <path d="M96 220 q-4 -34 -22 -44 q-4 24 16 44 z" fill="#7fc081"/>
+      <path d="M96 220 q4 -34 22 -44 q4 24 -16 44 z" fill="#9ad29b"/>
+      <rect x="80" y="218" width="36" height="8" fill="#cf8a5a"/>
+    </g>
+    <g>
+      <line x1="204" y1="220" x2="204" y2="190"/>
+      <g fill="#ff9aa2"><circle cx="204" cy="180" r="10"/><circle cx="193" cy="189" r="10"/><circle cx="215" cy="189" r="10"/></g>
+      <circle cx="204" cy="188" r="6" fill="#ffe08a"/>
+    </g>
+    <!-- 暖光地板 -->
+    <rect x="0" y="242" width="300" height="58" fill="#f6dca0" stroke="none"/>
+    <line x1="0" y1="242" x2="300" y2="242"/>
+    <rect x="2.5" y="2.5" width="295" height="295" rx="16" fill="none" stroke="#5a4632" stroke-width="5"/>
+  </g>
+</svg>
