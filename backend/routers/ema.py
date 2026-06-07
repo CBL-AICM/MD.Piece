@@ -352,7 +352,9 @@ def _run_schedule(sb, study: Optional[str], participant_ids: list, day: str) -> 
 
     供 /schedule 端點與 /cron/run 共用。
     """
-    rules = _load_rules(sb, study, "time") + _load_rules(sb, study, "elapsed")
+    # elapsed（旅程指定日的特定問卷）先於 time（每日填充）處理：
+    # 同一天兩者都符合時，讓旅程當天的問卷優先，剩餘名額才給填充（每日上限 ≤1）。
+    rules = _load_rules(sb, study, "elapsed") + _load_rules(sb, study, "time")
     created = 0
     for rule in rules:
         tc = rule["trigger_config"]
