@@ -18,7 +18,7 @@ from backend.routers import (
     admissions, timeline, profile, follow_ups,
     inpatient, menstrual, predict, sleep,
     memos, vitals, health_literacy, surveys,
-    events, ema,
+    events, ema, rewards,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,7 @@ app.include_router(predict.router, tags=["predict"])
 app.include_router(sleep.router, prefix="/sleep", tags=["sleep"])
 app.include_router(memos.router, prefix="/memos", tags=["memos"])
 app.include_router(vitals.router, prefix="/vitals", tags=["vitals"])
+app.include_router(rewards.router, prefix="/rewards", tags=["rewards"])
 
 
 @app.get("/api")
