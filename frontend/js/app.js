@@ -4140,6 +4140,11 @@ function openStudyHub() {
   var user = getCurrentUser();
   if (!user || !user.id) { if (typeof showToast === 'function') showToast(_T('app.c6.loginBeforeStudy'), 'warning'); return; }
   var pid = getStablePatientId();
+  // 到期才推送：以註冊日為 Day 0，請後端冪等排程 D14／D28 提醒（失敗不擋 UI）。
+  if (user.created_at) {
+    apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid)
+      + '/ensure-reminders?start_date=' + encodeURIComponent(user.created_at), { method: 'POST' }).catch(function () {});
+  }
   apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary')
     .then(function (r) { if (!r.ok) throw new Error('load'); return r.json(); })
     .then(function (data) { _studyRenderHub(data); })
