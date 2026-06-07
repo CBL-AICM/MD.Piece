@@ -4081,6 +4081,32 @@ function _bld_STUDY_TP() { return [
 var STUDY_TP = _bld_STUDY_TP();
 var _studyState = { answers: {}, key: null, tp: null };
 
+// 問卷時程：以帳號建立日為 Day 0，按天數窗格只推送「目前該填」的那一批，
+// 不把整個流程一次攤開（避免讓使用者覺得在跑研究протокол）。
+// FU48（回診後 48 小時）是事件型，需回診訊號才觸發，不放進日數窗格。
+var STUDY_WINDOWS = [
+  { tp: 'D0',  from: 0,  to: 14 },
+  { tp: 'D14', from: 14, to: 28 },
+  { tp: 'D28', from: 28, to: Infinity },
+];
+function _studyElapsedDays() {
+  var u = getCurrentUser();
+  var iso = u && u.created_at;
+  if (!iso) return 0;
+  var t0 = new Date(iso).getTime();
+  if (isNaN(t0)) return 0;
+  return Math.max(0, Math.floor((Date.now() - t0) / 86400000));
+}
+function _studyCurrentTp() {
+  var d = _studyElapsedDays();
+  for (var i = 0; i < STUDY_WINDOWS.length; i++) {
+    if (d >= STUDY_WINDOWS[i].from && d < STUDY_WINDOWS[i].to) return STUDY_WINDOWS[i].tp;
+  }
+  return 'D28';
+}
+// 拿掉標題開頭的研究編號（如「B1. 」），只留白話標題。
+function _studyCleanTitle(t) { return String(t || '').replace(/^[A-E]\d*\.\s*/, ''); }
+
 function _studyCode() { try { return localStorage.getItem('mdpiece_study_code') || ''; } catch (e) { return ''; } }
 function _setStudyCode(v) { try { localStorage.setItem('mdpiece_study_code', (v || '').trim()); } catch (e) {} }
 
@@ -4125,19 +4151,21 @@ function _studyRenderHub(data) {
   var ex = document.getElementById('study-sheet'); if (ex) ex.remove();
   var parts = data.parts || [];
   var adh = data.adherence || {};
-  var tpHtml = STUDY_TP.map(function (tp) {
-    var rows = parts.filter(function (p) { return (p.timepoints || []).indexOf(tp.id) >= 0; }).map(function (p) {
-      var st = (p.by_timepoint || {})[tp.id] || {};
-      var done = !!st.completed;
-      return '<div class="settings-row" style="cursor:pointer" onclick="openStudySurvey(\'' + p.key + '\',\'' + tp.id + '\')">'
-        + '<div class="ico"><i data-lucide="' + (done ? 'check-circle-2' : 'clipboard-pen') + '"></i></div>'
-        + '<div style="flex:1"><div class="name">' + escapeHtml(p.part) + '. ' + escapeHtml(p.title) + '</div>'
-        + '<div class="sub">' + (done ? _T('app.c6.doneRefill') : _T('app.c6.tapToFill')) + '</div></div>'
-        + '<div class="chev"><i data-lucide="chevron-right"></i></div></div>';
-    }).join('') || '<p style="color:var(--text-muted);font-size:.85rem;margin:8px 4px">' + _T('app.c6.noSurveyForTp') + '</p>';
-    return '<div class="sec-head"><h3 class="sec-title">' + escapeHtml(tp.label) + '</h3></div>'
-      + '<div class="settings-list" style="margin-bottom:14px">' + rows + '</div>';
+  // 只推送「目前時程窗格」對應、且還沒填的問卷。
+  var curTp = _studyCurrentTp();
+  var dueRows = parts.filter(function (p) {
+    return (p.timepoints || []).indexOf(curTp) >= 0 && !(((p.by_timepoint || {})[curTp] || {}).completed);
+  }).map(function (p) {
+    return '<div class="settings-row" style="cursor:pointer" onclick="openStudySurvey(\'' + p.key + '\',\'' + curTp + '\')">'
+      + '<div class="ico"><i data-lucide="clipboard-pen"></i></div>'
+      + '<div style="flex:1"><div class="name">' + escapeHtml(_studyCleanTitle(p.title)) + '</div>'
+      + '<div class="sub">' + _T('app.c6.tapToFill') + '</div></div>'
+      + '<div class="chev"><i data-lucide="chevron-right"></i></div></div>';
   }).join('');
+  var tpHtml = dueRows
+    ? '<div class="sec-head"><h3 class="sec-title">' + _T('app.c6.dueHeader') + '</h3></div>'
+      + '<div class="settings-list" style="margin-bottom:14px">' + dueRows + '</div>'
+    : '<p class="study-meta" style="padding:12px 4px">' + _T('app.c6.allCaughtUp') + '</p>';
 
   var ehlNote = data.eheals_m07
     ? '<p class="study-meta">' + _Tf('app.c6.ehealsImported', { score: escapeHtml(String(data.eheals_m07.total_score)) }) + '</p>'
@@ -4230,7 +4258,6 @@ function _studyRenderSurvey(s, tp) {
   var ex = document.getElementById('study-run'); if (ex) ex.remove();
   var scoring = s.scoring || {};
   var body = (s.items || []).map(function (it) { return _studyItemHtml(it, scoring); }).join('');
-  var tpLabel = (STUDY_TP.filter(function (x) { return x.id === tp; })[0] || {}).label || tp;
   var sheet = document.createElement('div');
   sheet.id = 'study-run';
   sheet.className = 'ip-prep-sheet';
@@ -4239,7 +4266,7 @@ function _studyRenderSurvey(s, tp) {
     + '<div class="ip-prep-panel" role="dialog" aria-label="' + escapeHtml(s.title) + '" aria-modal="true" tabindex="-1" style="max-height:90vh;overflow:auto">'
     +   '<header class="ip-prep-head">'
     +     '<div class="ip-prep-when"><span class="ip-prep-when-num">' + escapeHtml(s.title) + '</span>'
-    +       '<span class="ip-prep-when-sub">' + escapeHtml(tpLabel) + (s.description ? ' · ' + escapeHtml(s.description) : '') + '</span></div>'
+    +       '<span class="ip-prep-when-sub">' + (s.description ? escapeHtml(s.description) : '') + '</span></div>'
     +     '<button type="button" class="ip-prep-close" onclick="closeStudyRun()" aria-label="' + _T('app.c6.close') + '"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
     +   '</header>'
     +   '<div style="padding:2px">' + body + '</div>'

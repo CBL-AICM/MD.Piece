@@ -50,6 +50,7 @@ const SURVEY = {
   await page.addInitScript(() => {
     localStorage.setItem('mdpiece_user', JSON.stringify({
       id: 'demo-user', username: 'demo', nickname: '示範', role: 'patient', avatar_color: '#5B9FE8',
+      created_at: new Date().toISOString(), // 註冊當天 → Day 0 窗格
     }));
     localStorage.setItem('mdpiece_onboarded', '1');
     localStorage.setItem('mdpiece_landing_theme', 'light');
