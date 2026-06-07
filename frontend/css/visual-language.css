@@ -1,0 +1,107 @@
+/* ============================================================
+   MD.Piece — Visual Language layer (global, additive, last-loaded)
+   Goal: 2D flat · chunky-cute rounded · friendly readable type ·
+         bolder rounded line-icons · restrained micro-transitions.
+   Scope: GLOBAL only. No component markup / JS changes. No layout.
+   Radius + shadow tokens live in style.css / tokens.css :root.
+   Loaded AFTER every other stylesheet.
+   ============================================================ */
+
+/* ── Type: friendly rounded, but no-tofu safe ─────────────────
+   Per-glyph fallback chain (browser falls back glyph-by-glyph):
+   · Latin  -> Nunito / Varela Round (rounded, highly readable)
+   · CJK    -> Zen Maru Gothic (rounded gothic, wide CJK coverage)
+   · safety -> Noto Sans TC (full Traditional-Chinese, never tofu)
+   Mono numeric displays (JetBrains Mono) and decorative/brand fonts
+   keep their own family — they set font-family on their own rules and
+   are intentionally NOT touched here (avoids clobbering chunky numbers
+   and the brand wordmark). */
+:root {
+  --vl-font-friendly: "Nunito", "Varela Round", "Zen Maru Gothic",
+                      "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+/* Inheritance root + the form controls that don't inherit font.
+   The vast majority of UI text inherits from body, so this swaps the
+   app onto the friendly stack in one place. The ~56 style.css rules
+   that re-pin "Noto Sans TC" stay readable (same text family, no tofu);
+   we deliberately do not blanket-override them to avoid clobbering the
+   mono numeric displays that share class-level specificity. */
+body,
+#app,
+#app-wrapper,
+button,
+input,
+select,
+textarea {
+  font-family: var(--vl-font-friendly);
+}
+
+/* ── Line-icons: chunkier + rounded (Lucide) ──────────────────
+   Lucide already renders round caps/joins; bump weight for a cuter,
+   bolder feel. Scope to .lucide so the decorative home-puzzle SVG
+   (intentionally stroke-width:0.8) is never touched. */
+svg.lucide {
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* style.css pins some icon strokes to 1.8 via `.x svg`; lift those to
+   a friendlier weight — still scoped to lucide icons only. */
+.nav-icon svg.lucide,
+.hq-icon svg.lucide,
+.pzl-icon svg.lucide,
+.hcore-icon svg.lucide,
+.hsec-icon svg.lucide,
+.tc-icon svg.lucide {
+  stroke-width: 2.4;
+}
+
+/* ── Micro-transitions: restrained, springy, accessible ───────
+   Gentle hover/press feedback on common interactive primitives.
+   Subtle on purpose; honors prefers-reduced-motion below. */
+button,
+a,
+.btn,
+[role="button"],
+.nav-item,
+.mtab,
+.home-senior-tile {
+  transition: transform var(--transition, .2s ease),
+              box-shadow var(--transition, .2s ease),
+              background-color var(--transition, .2s ease),
+              border-color var(--transition, .2s ease),
+              opacity var(--transition, .2s ease);
+}
+
+/* Press feedback — app-wide, no per-component JS. */
+button:active,
+a:active,
+.btn:active,
+[role="button"]:active,
+.nav-item:active,
+.mtab:active,
+.home-senior-tile:active {
+  transform: scale(.97);
+}
+
+/* Gentle lift on hover for the senior tiles (pointer devices only,
+   so touch taps don't get a sticky hover state). */
+@media (hover: hover) and (pointer: fine) {
+  .home-senior-tile:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* ── Accessibility: respect reduced-motion globally ───────────── */
+@media (prefers-reduced-motion: reduce) {
+  button, a, .btn, [role="button"],
+  .nav-item, .mtab, .home-senior-tile {
+    transition: none !important;
+  }
+  button:active, a:active, .btn:active, [role="button"]:active,
+  .nav-item:active, .mtab:active, .home-senior-tile:active,
+  .home-senior-tile:hover {
+    transform: none !important;
+  }
+}

@@ -1,13 +1,14 @@
-const CACHE_VERSION = "mdpiece-v152-rewards";
+const CACHE_VERSION = "mdpiece-v153-visual-lang";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
 const STATIC_ASSETS = [
   "/",
   "/index.html",
-  "/css/style.css?v=v117-inpatient-v2",
+  "/css/style.css?v=v118-visual-lang",
+  "/css/visual-language.css?v=v1",
   "/css/medical-warm.css?v=v6-dark-no-grad",
-  "/css/v11-modern.css?v=v19-tabbar-fullbleed",
+  "/css/v11-modern.css?v=v20-visual-lang",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/css/ghibli-theme.css?v=v3",
   "/css/edu-codex.css?v=v3",
