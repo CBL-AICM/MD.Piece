@@ -22900,7 +22900,11 @@ function diet() {
                 + DIET_MEAL_LABEL[m] + '</button>';
             }).join('')
     +     '</div>'
-    +     '<textarea id="mobile-diet-log-foods" rows="2" maxlength="200" placeholder="' + _T("app.c28.foodsPlaceholder") + '" style="border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;resize:vertical"></textarea>'
+    +     '<textarea id="mobile-diet-log-foods" rows="2" maxlength="200" oninput="_dietClearPhotoCal(\'mobile\')" placeholder="' + _T("app.c28.foodsPlaceholder") + '" style="border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;resize:vertical"></textarea>'
+    +     '<label style="display:inline-flex;align-items:center;justify-content:center;gap:5px;background:var(--bg-soft,#f1f5f9);color:var(--navy);border:1.5px dashed var(--border);border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer">'
+    +       '<i data-lucide="camera" style="width:13px;height:13px"></i> ' + _T("app.c29.photoCalorie")
+    +       '<input type="file" accept="image/*" capture="environment" onchange="dietPhotoPick(event,\'mobile\')" style="display:none" />'
+    +     '</label>'
     +     '<input type="text" id="mobile-diet-log-note" maxlength="80" placeholder="' + _T("app.c28.notePlaceholder") + '" style="border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:12px" />'
     +     '<button onclick="_mobileDietSubmit()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px">'
     +       '<i data-lucide="check" style="width:13px;height:13px"></i> ' + _T("app.c28.submitCheckin")
@@ -23054,7 +23058,11 @@ function diet() {
                 + DIET_MEAL_LABEL[m] + '</button>';
             }).join('')
     +       '</div>'
-    +       '<textarea id="diet-log-foods" rows="2" maxlength="200" placeholder="' + _T("app.c28.foodsPlaceholderLong") + '"></textarea>'
+    +       '<textarea id="diet-log-foods" rows="2" maxlength="200" oninput="_dietClearPhotoCal(\'desktop\')" placeholder="' + _T("app.c28.foodsPlaceholderLong") + '"></textarea>'
+    +       '<label class="diet-log-photo-btn" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed var(--border);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer">'
+    +         '<i data-lucide="camera" style="width:14px;height:14px"></i> ' + _T("app.c29.photoCalorie")
+    +         '<input type="file" accept="image/*" capture="environment" onchange="dietPhotoPick(event,\'desktop\')" style="display:none" />'
+    +       '</label>'
     +       '<input type="text" id="diet-log-note" maxlength="80" placeholder="' + _T("app.c28.notePlaceholderLong") + '" />'
     +       '<button class="diet-log-submit" onclick="dietSubmitLog()">'
     +         '<i data-lucide="check" style="width:14px;height:14px"></i> ' + _T("app.d45.submit")
@@ -23700,6 +23708,53 @@ function _mobileDietLogMeal(m) {
     b.classList.toggle('active', b.getAttribute('data-mobile-log-meal') === m);
   });
 }
+
+// 拍照算熱量：辨識出的整餐熱量先暫存（送出時帶上）；scope 區分手機 / 桌機表單
+var _dietPhotoCal = { mobile: null, desktop: null };
+
+// 使用者手動改動 foods 文字後，先前拍照辨識的熱量就不再對應，清掉避免帶錯數字
+function _dietClearPhotoCal(scope) { _dietPhotoCal[scope] = null; }
+
+// 選照片 → 壓縮（沿用藥袋那套 _compressMedPhoto）→ POST /diet/recognize →
+// 把辨識出的食物填進 foods 欄位、暫存總熱量，讓使用者確認後再送出
+function dietPhotoPick(ev, scope) {
+  var input = ev.target;
+  var file = input.files && input.files[0];
+  input.value = '';  // 清掉 input 讓同一張照片也能再次觸發 onchange
+  if (!file) return;
+  if (file.type && file.type.indexOf('image/') !== 0) {
+    showToast(_T('app.c1.selectImageFile'), 'warning');
+    return;
+  }
+  var foodsId  = scope === 'mobile' ? 'mobile-diet-log-foods'  : 'diet-log-foods';
+  var statusId = scope === 'mobile' ? 'mobile-diet-log-status' : 'diet-log-status';
+  var statusEl = document.getElementById(statusId);
+  _dietPhotoCal[scope] = null;
+  if (statusEl) { statusEl.textContent = _T('app.c29.photoAnalyzing'); statusEl.style.color = 'var(--text-muted)'; }
+  _compressMedPhoto(file).then(function(out) {
+    if (!out || !out.dataUrl) throw new Error('compress failed');
+    var base64 = out.dataUrl.split(',')[1];
+    return fetch(API + '/diet/recognize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: base64, media_type: out.mediaType || 'image/jpeg' }),
+    });
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (!data || !data.ok || !(data.items && data.items.length)) {
+      if (statusEl) { statusEl.textContent = (data && data.note) || _T('app.c29.photoNoFood'); statusEl.style.color = 'var(--rose-deep)'; }
+      return;
+    }
+    var foodsEl = document.getElementById(foodsId);
+    if (foodsEl && data.foods_text) foodsEl.value = data.foods_text;
+    _dietPhotoCal[scope] = data.total_calories || 0;
+    var msg = _Tf('app.c29.photoResult', { cal: data.total_calories });
+    if (data.confidence === 'low') msg += '｜' + _T('app.c29.photoLowConf');
+    if (statusEl) { statusEl.textContent = msg; statusEl.style.color = 'var(--teal-deep)'; }
+  }).catch(function(e) {
+    console.error('[diet] photo recognize failed:', e);
+    if (statusEl) { statusEl.textContent = _T('app.c29.photoFailed'); statusEl.style.color = 'var(--rose-deep)'; }
+  });
+}
 async function _mobileDietSubmit() {
   var pid = getStablePatientId();
   if (!pid) { showToast(_T('app.c27.pleaseLoginFirst'), 'warning'); return; }
@@ -23714,7 +23769,7 @@ async function _mobileDietSubmit() {
     var res = await fetch(API + '/diet/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
-      body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note }),
+      body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note, calories: _dietPhotoCal.mobile }),
     });
     if (!res.ok) {
       var err = await res.json().catch(function() { return {}; });
@@ -23722,6 +23777,7 @@ async function _mobileDietSubmit() {
     }
     if (foodsEl) foodsEl.value = '';
     if (noteEl) noteEl.value = '';
+    _dietPhotoCal.mobile = null;
     if (statusEl) { statusEl.textContent = _T("app.c29.recordedSpace") + ' ' + DIET_MEAL_LABEL[_dietLogMeal]; statusEl.style.color = 'var(--teal-deep)'; }
     showToast(_T("app.c29.dietCheckinDone"), 'success');
     fetchDietTodayRecords();
@@ -23744,7 +23800,7 @@ async function dietSubmitLog() {
     var res = await fetch(API + '/diet/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
-      body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note }),
+      body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note, calories: _dietPhotoCal.desktop }),
     });
     if (!res.ok) {
       var err = await res.json().catch(function() { return {}; });
@@ -23752,6 +23808,7 @@ async function dietSubmitLog() {
     }
     document.getElementById('diet-log-foods').value = '';
     document.getElementById('diet-log-note').value = '';
+    _dietPhotoCal.desktop = null;
     statusEl.textContent = _T("app.c29.recordedSpace") + ' ' + DIET_MEAL_LABEL[_dietLogMeal];
     statusEl.className = 'diet-log-status diet-log-status-ok';
     showToast(_T("app.c29.dietCheckinDone"), 'success');
@@ -23806,6 +23863,7 @@ function fetchDietTodayRecords() {
           +   '<span class="diet-record-meal">' + (DIET_MEAL_LABEL[r.meal_type] || r.meal_type) + '</span>'
           +   '<div class="diet-record-body">'
           +     '<div class="diet-record-foods">' + chatEscape(r.foods || '') + '</div>'
+          +     (r.calories ? '<div class="diet-record-cal" style="font-size:11px;color:var(--teal-deep);font-weight:600;margin-top:2px">≈ ' + r.calories + ' ' + _T('app.c29.kcal') + '</div>' : '')
           +     (r.note ? '<div class="diet-record-note">' + chatEscape(r.note) + '</div>' : '')
           +   '</div>'
           +   '<span class="diet-record-time">' + t + '</span>'
@@ -23825,6 +23883,7 @@ function fetchDietTodayRecords() {
               +   '<span style="font-size:16px">' + (mealEmoji[r.meal_type] || '🍽') + '</span>'
               +   '<div>'
               +     '<div class="name">' + chatEscape(r.foods || '') + '</div>'
+              +     (r.calories ? '<div style="font-size:10.5px;color:var(--teal-deep);font-weight:600;margin-top:2px">≈ ' + r.calories + ' ' + _T('app.c29.kcal') + '</div>' : '')
               +     (r.note ? '<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">' + chatEscape(r.note) + '</div>' : '')
               +   '</div>'
               +   '<span class="time">' + t + '</span>'

@@ -1695,6 +1695,217 @@ def recognize_lab_report(image_base64: str, media_type: str = "image/jpeg") -> d
     }
 
 
+# ── 食物照片熱量辨識 ────────────────────────────────────────
+# 從一張餐點照片，辨識出每樣食物並估算熱量（kcal）。
+# 食物辨識不是 OCR（照片上沒有文字），所以不走 Google Vision，
+# 只用 LLM vision 一段式 chain（anthropic / groq），跟 lab report 的 Stage 2 一樣。
+
+_FOOD_PHOTO_PROMPT = (
+    "你是台灣飲食熱量估算助手。輸入是一張餐點 / 食物 / 飲料的照片。\n"
+    "請辨識照片中所有可吃的食物與飲料，逐項估算「照片中看到的份量」的熱量（大卡 kcal）。\n\n"
+    "每個項目要包含：\n"
+    "  - name      食物名稱（繁體中文、台灣慣用名，例：滷雞腿、白飯、燙青菜、珍珠奶茶）\n"
+    "  - portion   你判斷的份量描述（例：一碗、半個、約 200g、一杯 500ml）\n"
+    "  - calories  這個份量的估算熱量，整數大卡\n\n"
+    "回覆**必須是純 JSON**，不要 markdown code block、不要前後說明：\n"
+    "{\n"
+    '  "items": [{"name":"白飯","portion":"一碗","calories":280}],\n'
+    '  "total_calories": <整數，所有項目熱量加總>,\n'
+    '  "confidence": "high | medium | low",  // 你對這次估算的把握度\n'
+    '  "note": "<一句話的友善提醒，遵守不審判、不下診斷的口吻；可空字串>"\n'
+    "}\n"
+    "規則：\n"
+    "1. 一律繁體中文、台灣食品慣用名\n"
+    "2. 份量看不準時，採台灣常見「一份」保守估計，寧可低估也不要灌水\n"
+    "3. 看不出是什麼食物的項目就不要列，不要硬湊\n"
+    "4. 照片若完全沒有食物（風景、人臉、文件、空盤）：items 回空陣列、total_calories 0、"
+    "   confidence 'low'、note 提醒『這張照片看不到食物，請重拍餐點』\n"
+    "5. confidence：擺盤清楚單一餐點→high；多樣混雜或份量難判→medium；模糊 / 角度差→low\n"
+    "6. note 不下診斷、不審判，是病人會直接讀到的文字\n"
+)
+
+_FOOD_PHOTO_VISION_USER_PROMPT = (
+    "這是一張食物照片。請按照系統提示辨識所有食物並估算熱量，回傳純 JSON。"
+)
+
+
+def _vision_food_anthropic(image_base64: str, media_type: str) -> str:
+    if _anthropic_client is None:
+        raise RuntimeError("ANTHROPIC_API_KEY 未設定或 anthropic SDK 未安裝")
+    # 跟藥袋 / 檢驗報告一樣：vision + 結構化 JSON 需要 55s（蓋過 client 預設 25s）
+    msg = _anthropic_client.with_options(timeout=55.0).messages.create(
+        model=ANTHROPIC_VISION_MODEL,
+        max_tokens=ANTHROPIC_VISION_MAX_TOKENS,
+        temperature=0.2,
+        system=_FOOD_PHOTO_PROMPT,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type or "image/jpeg",
+                            "data": image_base64,
+                        },
+                    },
+                    {"type": "text", "text": _FOOD_PHOTO_VISION_USER_PROMPT},
+                ],
+            }
+        ],
+    )
+    return (msg.content[0].text or "").strip()
+
+
+def _vision_food_groq(image_base64: str, media_type: str) -> str:
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY 未設定")
+    data_url = f"data:{media_type or 'image/jpeg'};base64,{image_base64}"
+    resp = httpx.post(
+        f"{GROQ_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": GROQ_VISION_MODEL,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": _FOOD_PHOTO_PROMPT + "\n\n" + _FOOD_PHOTO_VISION_USER_PROMPT},
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                    ],
+                }
+            ],
+            "temperature": 0.2,
+            "max_tokens": 2048,
+        },
+        timeout=55.0,
+    )
+    resp.raise_for_status()
+    return (resp.json()["choices"][0]["message"]["content"] or "").strip()
+
+
+_FOOD_VISION_PROVIDERS = {
+    "anthropic": _vision_food_anthropic,
+    "groq": _vision_food_groq,
+}
+
+
+def _parse_food_json(raw: str) -> dict:
+    """容錯解析 LLM 回的食物熱量 JSON。失敗回 {}。"""
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    if not text.startswith("{"):
+        l, r = text.find("{"), text.rfind("}")
+        if l != -1 and r != -1 and r > l:
+            text = text[l:r + 1]
+    try:
+        obj = json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning(f"Food photo parse non-JSON: {raw[:200]}")
+        return {}
+    return obj if isinstance(obj, dict) else {}
+
+
+def _normalize_food_result(parsed: dict) -> dict:
+    """把 LLM 回的食物 dict 清成穩定結構：clamp 數值、補 total、組 foods_text。
+
+    total_calories 一律由 items 重算（Rule 5：加總是確定性運算，不靠 LLM 算對），
+    foods_text 用「、」串接食物名，方便前端直接填進既有的 foods 欄位。
+    """
+    items_raw = parsed.get("items") if isinstance(parsed.get("items"), list) else []
+    items: list[dict] = []
+    total = 0
+    for it in items_raw:
+        if not isinstance(it, dict):
+            continue
+        name = str(it.get("name", "")).strip()
+        if not name:
+            continue
+        try:
+            cal = int(round(float(it.get("calories", 0) or 0)))
+        except (TypeError, ValueError):
+            cal = 0
+        cal = max(0, min(cal, 5000))  # 防呆：單項熱量荒謬大數直接 clamp
+        items.append({
+            "name": name,
+            "portion": str(it.get("portion", "")).strip(),
+            "calories": cal,
+        })
+        total += cal
+    confidence = parsed.get("confidence")
+    if confidence not in ("high", "medium", "low"):
+        confidence = "low"
+    return {
+        "items": items,
+        "total_calories": total,
+        "foods_text": "、".join(it["name"] for it in items),
+        "confidence": confidence,
+        "note": str(parsed.get("note", "")).strip(),
+    }
+
+
+def analyze_food_photo(image_base64: str, media_type: str = "image/jpeg") -> dict:
+    """辨識一張食物照片，估算每樣食物與總熱量（kcal）。
+
+    走 LLM vision 一段式 chain（anthropic → groq），跟 lab report 的 fallback
+    stage 相同；食物辨識不是文字 OCR，所以不走 Google Vision。
+
+    回傳: {
+        "items": [{"name", "portion", "calories"}, ...],
+        "total_calories": <int，由 items 加總>,
+        "foods_text": "<以「、」串接的食物名，可直接填入 diet_records.foods>",
+        "confidence": "high | medium | low",
+        "note": "<一句話友善提醒>",
+        "raw_text": "<vision 原始輸出>",
+        "provider": "anthropic | groq | None",
+        "errors": [{"provider": "...", "error": "..."}],
+    }
+    """
+    errors: list[dict] = []
+    chain = []
+    if _anthropic_client is not None:
+        chain.append("anthropic")
+    if GROQ_API_KEY:
+        chain.append("groq")
+
+    last_raw = ""
+    for name in chain:
+        fn = _FOOD_VISION_PROVIDERS.get(name)
+        if fn is None:
+            continue
+        try:
+            raw = fn(image_base64, media_type)
+        except Exception as e:
+            errors.append({"provider": name, "error": f"{type(e).__name__}: {e}"})
+            logger.warning(f"Food vision provider {name} 失敗：{e}")
+            continue
+        last_raw = raw
+        parsed = _parse_food_json(raw)
+        if parsed:
+            result = _normalize_food_result(parsed)
+            result["raw_text"] = raw
+            result["provider"] = name
+            result["errors"] = errors
+            return result
+        errors.append({"provider": name, "error": "no food parsed"})
+
+    return {
+        "items": [],
+        "total_calories": 0,
+        "foods_text": "",
+        "confidence": "low",
+        "note": "",
+        "raw_text": last_raw,
+        "provider": None,
+        "errors": errors,
+    }
+
+
 # ── 疾病百科查詢 ────────────────────────────────────────────
 # 給疾病搜尋功能用：給定疾病名（中/英文），請 LLM 整理疾病資訊、用藥、風險、未來發展。
 # 結果會被 backend/routers/diseases.py 寫進 disease_reference 表做快取。

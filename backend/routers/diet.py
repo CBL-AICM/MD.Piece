@@ -15,6 +15,7 @@ Supabase 需要的資料表（migration SQL）：
         meal_type   text not null check (meal_type in ('breakfast','lunch','dinner','snack')),
         foods       text not null,
         note        text default '',
+        calories    integer,        -- 整餐估算熱量（kcal），拍照辨識或手動，可為 null
         eaten_at    timestamptz not null default now(),
         created_at  timestamptz not null default now()
     );
@@ -32,7 +33,7 @@ import logging
 import re
 
 from backend.db import get_supabase
-from backend.services.llm_service import build_patient_facing_system, call_claude
+from backend.services.llm_service import build_patient_facing_system, call_claude, analyze_food_photo
 from backend.utils.diet_nutrient_llm import estimate_nutrients as _estimate_nutrients_llm
 
 logger = logging.getLogger(__name__)
@@ -311,6 +312,7 @@ class DietRecordIn(BaseModel):
     foods: str      # 文字描述：「白飯、滷雞腿、燙青菜」
     note: str = ""
     eaten_at: Optional[datetime] = None
+    calories: Optional[int] = None  # 整餐估算熱量（kcal），來自拍照辨識或手動；可空
 
 
 VALID_MEALS = {"breakfast", "lunch", "dinner", "snack"}
@@ -324,6 +326,11 @@ def log_diet_record(body: DietRecordIn):
     if not foods:
         raise HTTPException(status_code=400, detail="foods 不能空白")
 
+    # 熱量防呆：負數視為未填，荒謬大數 clamp（一餐再多也很難超過 5000 kcal）
+    calories = body.calories
+    if calories is not None:
+        calories = max(0, min(int(calories), 5000))
+
     sb = get_supabase()
     data = {
         "patient_id": body.patient_id,
@@ -331,6 +338,7 @@ def log_diet_record(body: DietRecordIn):
         "foods":      foods,
         "note":       body.note.strip(),
         "eaten_at":   (body.eaten_at or datetime.utcnow()).isoformat(),
+        "calories":   calories,
     }
     try:
         result = sb.table("diet_records").insert(data).execute()
@@ -338,6 +346,45 @@ def log_diet_record(body: DietRecordIn):
     except Exception as e:
         logger.error(f"飲食紀錄寫入失敗：{e}")
         raise HTTPException(status_code=500, detail="紀錄寫入失敗")
+
+
+class FoodPhotoIn(BaseModel):
+    image_base64: str            # 純 base64（不含 data: 前綴）
+    media_type: str = "image/jpeg"
+
+
+@router.post("/recognize")
+def recognize_food_photo(body: FoodPhotoIn):
+    """拍照辨識熱量：上傳一張食物照片 → LLM vision 估算每樣食物與總熱量。
+
+    只做辨識、不寫入紀錄；前端拿到結果讓使用者確認 / 調整餐別後，再走
+    既有的 POST /diet/records（帶 calories）存檔。
+    """
+    if not body.image_base64:
+        raise HTTPException(status_code=400, detail="缺少照片")
+    try:
+        result = analyze_food_photo(body.image_base64, body.media_type)
+    except Exception as e:
+        logger.error(f"食物照片辨識失敗：{e}")
+        raise HTTPException(status_code=500, detail="辨識服務暫時無法使用")
+    if not result.get("items"):
+        # 沒辨識到食物不是 server error；回 200 讓前端顯示「重拍」提示
+        return {
+            "ok": False,
+            "items": [],
+            "total_calories": 0,
+            "foods_text": "",
+            "confidence": result.get("confidence", "low"),
+            "note": result.get("note", "") or "這張照片看不到食物，請重拍餐點",
+        }
+    return {
+        "ok": True,
+        "items": result["items"],
+        "total_calories": result["total_calories"],
+        "foods_text": result["foods_text"],
+        "confidence": result.get("confidence", "low"),
+        "note": result.get("note", ""),
+    }
 
 
 # ─── 吃什麼神器 ───────────────────────────────────────────
