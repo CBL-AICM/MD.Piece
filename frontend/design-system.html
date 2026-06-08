@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-page="design-system">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>MD.Piece — 海邊記憶書 · Seaside Memory Book · Design Language</title>
+<meta name="description" content="MD.Piece visual design language — a healing illustrated storybook that helps patients slowly rebuild the puzzle of their lives." />
+
+<!-- Editorial, book-like type per the design language -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Zen+Old+Mincho:wght@400;500;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<!-- The production tokens this page documents -->
+<link rel="stylesheet" href="css/seaside-tokens.css" />
+
+<style>
+  /* ── page-local layout only (everything visual comes from the tokens) ── */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { min-height: 100vh; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
+  section { padding: clamp(40px, 7vw, 88px) 0; }
+  .sec-head { margin-bottom: var(--space-8); }
+  .sec-head .sea-caps { display: block; margin-bottom: var(--space-2); }
+  .sec-head h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--text-3xl);
+    letter-spacing: var(--tracking-display); color: var(--text-primary); margin: 0 0 var(--space-3); }
+  .sec-head p { max-width: 60ch; color: var(--content-muted); margin: 0; font-size: var(--text-lg); }
+  .grid { display: grid; gap: var(--space-5); }
+  .cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .stack > * + * { margin-top: var(--space-4); }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .divider { height: 1px; background: var(--line); border: 0; margin: 0; }
+  @media (max-width: 860px){ .cols-2,.cols-3,.cols-4{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px){ .cols-2,.cols-3,.cols-4{ grid-template-columns: 1fr; } }
+
+  /* ── sticky toolbar ── */
+  .toolbar { position: sticky; top: 0; z-index: 40; backdrop-filter: blur(8px);
+    background: color-mix(in srgb, var(--background-primary) 82%, transparent);
+    border-bottom: 1px solid var(--line); }
+  .toolbar .wrap { display: flex; align-items: center; gap: var(--space-4); height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display);
+    font-weight: 700; font-size: var(--text-lg); color: var(--text-primary); letter-spacing: .02em; }
+  .brand .dot { width: 22px; height: 22px; color: var(--coral-milk-d); }
+  .toolbar .spacer { flex: 1; }
+  .tog { font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600;
+    color: var(--content-muted); background: var(--surface-primary); border: 1px solid var(--line);
+    border-radius: var(--radius-pill); padding: 8px 14px; cursor: pointer; min-height: 40px;
+    transition: all var(--motion-fast) var(--ease-out); }
+  .tog:hover { border-color: var(--line-ink); color: var(--text-primary); }
+  .tog[aria-pressed="true"] { background: var(--primary); color: var(--primary-fg); border-color: var(--ocean-deep); }
+
+  /* ── hero / home-screen demo ── */
+  .hero { position: relative; overflow: hidden; border-radius: var(--radius-large);
+    background:
+      radial-gradient(140% 100% at 80% -20%, color-mix(in srgb, var(--ocean-breeze) 60%, transparent), transparent 60%),
+      linear-gradient(165deg, var(--ocean-breeze-l) 0%, var(--soft-shell) 55%, var(--coral-milk-l) 100%);
+    border: 1px solid var(--line); box-shadow: var(--shadow-medium); padding: clamp(28px,5vw,56px);
+    margin-top: var(--space-8); }
+  .dark .hero, [data-theme="dark"] .hero {
+    background: radial-gradient(140% 100% at 80% -20%, color-mix(in srgb, var(--muted-ocean) 80%, transparent), transparent 60%),
+      linear-gradient(165deg, #2A3A45 0%, var(--dark-ocean) 60%, #2D3640 100%); }
+  .hero .cloud { position: absolute; color: #fff; opacity: .5; filter: blur(.3px); }
+  .hero .cloud.c1 { top: 22px; right: 8%; width: 130px; }
+  .hero .cloud.c2 { top: 96px; right: 30%; width: 84px; opacity:.34; }
+  .dark .hero .cloud, [data-theme="dark"] .hero .cloud { color: var(--soft-grayblue); opacity:.18; }
+  .hero .float-piece { position: absolute; width: 46px; height: 46px; opacity: .9; }
+  .hero .fp1 { top: 38px; right: 16%; color: var(--coral-milk-d); }
+  .hero .fp2 { bottom: 40px; right: 9%; color: var(--ocean-breeze-d); width: 34px; height:34px; }
+  .hero-eyebrow { font-family: var(--font-serif); font-style: italic; font-size: var(--text-lg);
+    color: var(--ocean-deep-2); opacity:.85; }
+  .dark .hero-eyebrow, [data-theme="dark"] .hero-eyebrow { color: var(--warm-mist); opacity:.7; }
+  .hero h1 { font-family: var(--font-display); font-weight: 500; letter-spacing: var(--tracking-display);
+    font-size: clamp(2rem, 5.4vw, 3.1rem); line-height: 1.22; color: var(--ocean-deep);
+    margin: var(--space-3) 0 var(--space-2); max-width: 18ch; }
+  .dark .hero h1, [data-theme="dark"] .hero h1 { color: var(--warm-mist); }
+  .hero .sub { color: var(--ocean-deep); opacity: .72; font-size: var(--text-lg); max-width: 40ch; }
+  .dark .hero .sub, [data-theme="dark"] .hero .sub { color: var(--warm-mist); opacity:.66; }
+  .hero-pieces { display: flex; gap: var(--space-2); margin-top: var(--space-6); }
+  .hero-pieces .sea-piece, .hero-pieces .sea-slot { width: 40px; }
+
+  /* today's journey list (home) */
+  .journey-today { margin-top: var(--space-6); display: grid; gap: var(--space-3); }
+  .jt-item { display: flex; align-items: center; gap: var(--space-3); background: color-mix(in srgb, var(--surface-primary) 78%, transparent);
+    border: 1px solid var(--line); border-radius: var(--radius-medium); padding: var(--space-3) var(--space-4); }
+  .jt-item .sea-ic { color: var(--ocean-breeze-d); flex: none; }
+  .jt-item.done { opacity: .62; }
+  .jt-item.done .jt-title { text-decoration: line-through; text-decoration-color: var(--ocean-breeze); }
+  .jt-title { font-family: var(--font-cjk); font-weight: 500; color: var(--text-primary); }
+  .jt-meta { margin-left: auto; }
+
+  /* ── palette ── */
+  .swatch { border-radius: var(--radius-medium); border: 1px solid var(--line); overflow: hidden; box-shadow: var(--shadow-soft); }
+  .swatch .chip-color { height: 96px; }
+  .swatch .chip-label { padding: 12px 14px; background: var(--surface-primary); }
+  .swatch .chip-label .name { font-family: var(--font-display); font-weight:500; color: var(--text-primary); }
+  .swatch .chip-label .hex { font-family: var(--font-serif); font-style:italic; color: var(--content-muted); font-size: var(--text-sm); }
+
+  /* type specimen */
+  .specimen { background: var(--surface-primary); border: 1px solid var(--line); border-radius: var(--radius-large); padding: clamp(20px,4vw,40px); box-shadow: var(--shadow-soft); }
+  .specimen .label { font-family: var(--font-body); font-size: var(--text-xs); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--content-subtle); }
+  .specimen .row-type { padding: var(--space-4) 0; border-bottom: 1px dashed var(--line); }
+  .specimen .row-type:last-child { border-bottom: 0; }
+
+  /* icon grid */
+  .icon-cell { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: var(--space-5) var(--space-3);
+    background: var(--surface-primary); border: 1px solid var(--line); border-radius: var(--radius-medium); box-shadow: var(--shadow-soft); }
+  .icon-cell .sea-ic { color: var(--ocean-deep); }
+  .icon-cell span { font-family: var(--font-cjk); font-size: var(--text-xs); color: var(--content-muted); }
+
+  /* journey map */
+  .map { position: relative; background:
+      radial-gradient(120% 90% at 50% 120%, var(--wash-ocean), transparent 60%), var(--surface-primary);
+    border: 1px solid var(--line); border-radius: var(--radius-large); box-shadow: var(--shadow-soft);
+    padding: clamp(20px,4vw,40px); overflow: hidden; }
+  .chapters { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-5); position: relative; z-index: 2; }
+  @media (max-width: 860px){ .chapters{ grid-template-columns: 1fr 1fr; } }
+  .chapter { text-align: center; }
+  .chapter .node { width: 84px; height: 84px; margin: 0 auto var(--space-3); border-radius: 50%;
+    display: grid; place-items: center; border: 1.5px solid var(--line-ink); box-shadow: var(--shadow-soft);
+    position: relative; }
+  .chapter .node .sea-ic { color: var(--ocean-deep); }
+  .chapter .node.locked { opacity: .4; border-style: dashed; }
+  .chapter .node .ribbon { position:absolute; bottom: -8px; right: -6px; font-family: var(--font-serif); font-style: italic;
+    font-size: 11px; background: var(--surface-primary); border:1px solid var(--line-ink); border-radius: var(--radius-pill); padding: 1px 7px; color: var(--content-muted); }
+  .chapter .ttl { font-family: var(--font-display); font-weight: 500; color: var(--text-primary); font-size: var(--text-base); }
+  .chapter .en { font-family: var(--font-serif); font-style: italic; color: var(--content-subtle); font-size: var(--text-sm); }
+
+  /* achievement toasts */
+  .toast { display: flex; gap: var(--space-3); align-items: center; background: var(--surface-primary);
+    border: 1px solid var(--line-ink); border-radius: var(--radius-medium); box-shadow: var(--shadow-medium);
+    padding: var(--space-4) var(--space-5); }
+  .toast .seal { width: 48px; height: 48px; flex: none; color: var(--coral-milk-d); }
+  .toast .t-text { font-family: var(--font-cjk); color: var(--text-primary); font-weight: 500; }
+  .toast .t-sub { font-family: var(--font-serif); font-style: italic; color: var(--content-muted); font-size: var(--text-sm); }
+
+  /* module mini cards */
+  .mod { display: flex; flex-direction: column; gap: var(--space-3); }
+  .mod .mod-top { display: flex; align-items: center; gap: 10px; }
+  .mod .mod-top .sea-ic { color: var(--ev-ink, var(--ocean-deep)); }
+  .mod .mod-title { font-family: var(--font-display); font-weight: 500; color: var(--text-primary); }
+  .mod .mod-en { font-family: var(--font-serif); font-style: italic; color: var(--content-subtle); font-size: var(--text-sm); }
+  .mini-piece-row { display: flex; gap: 5px; margin-top: 4px; }
+  .mini-piece-row .sea-piece, .mini-piece-row .sea-slot { width: 26px; border-radius: 5px; }
+
+  footer { padding: var(--space-12) 0 var(--space-16); color: var(--content-subtle); }
+  footer .wrap { font-family: var(--font-serif); font-style: italic; font-size: var(--text-base); text-align: center; }
+
+  .pill-note { font-family: var(--font-serif); font-style: italic; color: var(--content-muted); font-size: var(--text-sm); }
+</style>
+</head>
+
+<body class="sea-page sea-grain">
+
+<!-- ════════ inline SVG sprite: hand-drawn icons (no emoji, no material) ════════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- a real puzzle-piece silhouette (knob top + blank right) -->
+    <symbol id="i-piece" viewBox="0 0 48 48">
+      <path d="M7 16c0-1.5 1-2.5 2.5-2.5H16c0-3 1.6-5 4-5s4 2 4 5h6.5c1.5 0 2.5 1 2.5 2.5V22c3 0 5 1.6 5 4s-2 4-5 4v6.5c0 1.5-1 2.5-2.5 2.5H9.5C8 39 7 38 7 36.5V16z"/>
+    </symbol>
+    <symbol id="i-notebook" viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v15a1 1 0 0 1-1.4.9L12 18l-5.6 2.9A1 1 0 0 1 5 20V5a2 2 0 0 1 1-1.7"/><path d="M9 3v15"/></symbol>
+    <symbol id="i-pill" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="6" rx="3"/><path d="M7 9v8a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V9"/><path d="M8 13h8"/></symbol>
+    <symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/><path d="M9.5 14a2.5 2.5 0 0 0 2.5 2.5"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/><path d="M9 15l2 2 3-3.5"/></symbol>
+    <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 8v11M3 12h15a3 3 0 0 1 3 3v4M3 19h18"/><circle cx="8" cy="11" r="2"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L18 6h0a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path d="M2 9c2.2 0 2.2 2 4.4 2S8.6 9 10.8 9s2.2 2 4.4 2S17.4 9 19.6 9 21.8 11 24 11"/><path d="M2 15c2.2 0 2.2 2 4.4 2S8.6 15 10.8 15s2.2 2 4.4 2 2.2-2 4.4-2 2.2 2 4.4 2"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 64 40"><path d="M16 32a10 10 0 0 1 0-20c1 0 2 .1 3 .4A13 13 0 0 1 44 14a9 9 0 0 1 4 18z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20S4 14.5 4 9.2A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 8 2.2C20 14.5 12 20 12 20z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h6v17H6a2 2 0 0 0-2 2zM20 5a2 2 0 0 0-2-2h-6v17h6a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-seal" viewBox="0 0 48 48"><circle cx="24" cy="24" r="15"/><path d="M24 9v30M9 24h30" opacity=".4"/><path d="M18 24l4 4 8-8"/></symbol>
+    <symbol id="i-anchor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v13M5 13a7 7 0 0 0 14 0M5 13H3M19 13h2"/></symbol>
+    <symbol id="i-flower" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><path d="M12 9.6V5M12 14.4V19M9.6 12H5M14.4 12H19M10.3 10.3 7.5 7.5M13.7 13.7l2.8 2.8M13.7 10.3l2.8-2.8M10.3 13.7 7.5 16.5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 4l2.3 5.2L20 10l-4 3.8L17 19l-5-2.8L7 19l1-5.2L4 10l5.7-.8z"/></symbol>
+  </defs>
+</svg>
+
+<!-- ════════ toolbar ════════ -->
+<header class="toolbar">
+  <div class="wrap">
+    <span class="brand"><svg class="dot" viewBox="0 0 48 48"><use href="#i-piece"/></svg>MD.Piece</span>
+    <span class="spacer"></span>
+    <button class="tog" id="t-theme" aria-pressed="false">夜紙模式 · Night</button>
+    <button class="tog" id="t-senior" aria-pressed="false">長者模式 · Senior</button>
+    <button class="tog" id="t-replay">重播動畫 · Replay</button>
+  </div>
+</header>
+
+<!-- ════════ cover / home-screen ════════ -->
+<section id="home">
+  <div class="wrap">
+    <span class="sea-caps">Visual Design Language · v4</span>
+    <div class="sec-head" style="margin-top:8px">
+      <h2 style="font-size:var(--text-4xl); margin-bottom:6px">海邊記憶書</h2>
+      <p class="sea-eyebrow" style="font-size:var(--text-xl)">Seaside Memory Book — a healing storybook for rebuilding the puzzle of your life.</p>
+    </div>
+
+    <!-- the HOME hero, as patients see it -->
+    <div class="hero sea-anim-page" id="hero">
+      <svg class="cloud c1" viewBox="0 0 64 40"><use href="#i-cloud"/></svg>
+      <svg class="cloud c2" viewBox="0 0 64 40"><use href="#i-cloud"/></svg>
+      <svg class="float-piece fp1 sea-anim-float" viewBox="0 0 48 48"><use href="#i-piece"/></svg>
+      <svg class="float-piece fp2 sea-anim-float" viewBox="0 0 48 48" style="animation-delay:-2s"><use href="#i-piece"/></svg>
+
+      <span class="hero-eyebrow">今天的旅程 · Today's Journey</span>
+      <h1>今天的旅程，又完整了一些。</h1>
+      <p class="sub">你今天找回了 <b>3</b> 塊記憶碎片。目前正在「海邊走廊」這一章。</p>
+
+      <div class="hero-pieces" aria-label="今日已收集的記憶碎片">
+        <span class="sea-piece"></span>
+        <span class="sea-piece"></span>
+        <span class="sea-piece" id="hp-collect"></span>
+        <span class="sea-slot"></span>
+        <span class="sea-slot"></span>
+      </div>
+
+      <div class="journey-today">
+        <div class="jt-item done"><svg class="sea-ic" viewBox="0 0 24 24"><use href="#i-pill"/></svg><span class="jt-title">早晨服藥 · 已記下</span><span class="jt-meta sea-reward">＋1 碎片</span></div>
+        <div class="jt-item done"><svg class="sea-ic" viewBox="0 0 24 24"><use href="#i-notebook"/></svg><span class="jt-title">今天的身體感受 · 已留下紀錄</span><span class="jt-meta sea-reward">＋1 碎片</span></div>
+        <div class="jt-item"><svg class="sea-ic" viewBox="0 0 24 24"><use href="#i-calendar"/></svg><span class="jt-title">為下週回診做準備</span><span class="jt-meta sea-chip">還沒開始</span></div>
+      </div>
+    </div>
+    <p class="pill-note" style="margin-top:14px">語氣對照　✗「3 Tasks Completed」　✓「你找回了 3 塊記憶碎片。」　目的不是生產力，是慢慢把生活拼回來。</p>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ════════ palette ════════ -->
+<section id="palette">
+  <div class="wrap">
+    <div class="sec-head"><span class="sea-caps">Foundations · 01</span><h2>色彩 — 海風與舊照片</h2>
+      <p>Ocean wind, summer clouds, old photographs, Japanese watercolour. Five anchors, a closed family of derived steps. No bright medical blue, no neon, no pure black or white.</p></div>
+    <div class="grid cols-3">
+      <div class="swatch"><div class="chip-color" style="background:var(--ocean-deep)"></div><div class="chip-label"><div class="name">Deep Ocean</div><div class="hex">#2C3943 · text / deep water</div></div></div>
+      <div class="swatch"><div class="chip-color" style="background:var(--cloudy-stone)"></div><div class="chip-label"><div class="name">Cloudy Stone</div><div class="hex">#77726F · secondary ink</div></div></div>
+      <div class="swatch"><div class="chip-color" style="background:var(--ocean-breeze)"></div><div class="chip-label"><div class="name">Ocean Breeze</div><div class="hex">#9DABB4 · quiet accent</div></div></div>
+      <div class="swatch"><div class="chip-color" style="background:var(--coral-milk)"></div><div class="chip-label"><div class="name">Coral Milk</div><div class="hex">#E5D4CA · reward / warmth</div></div></div>
+      <div class="swatch"><div class="chip-color" style="background:var(--soft-shell); border-bottom:1px solid var(--line)"></div><div class="chip-label"><div class="name">Soft Shell</div><div class="hex">#ECE6E3 · page paper</div></div></div>
+      <div class="swatch"><div class="chip-color" style="background:linear-gradient(90deg,var(--status-calm),var(--status-watch),var(--status-elevated),var(--status-urgent))"></div><div class="chip-label"><div class="name">Severity · calm→urgent</div><div class="hex">muted, but ER stays legible</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ typography ════════ -->
+<section id="type">
+  <div class="wrap">
+    <div class="sec-head"><span class="sea-caps">Foundations · 02</span><h2>字體 — 編輯級、書本感、永恆</h2>
+      <p>Zen Old Mincho for headlines, Noto Serif TC for Chinese body, Cormorant Garamond for editorial English &amp; numerals, Inter for latin UI text.</p></div>
+    <div class="specimen stack">
+      <div class="row-type"><span class="label">Display · Zen Old Mincho</span><div class="sea-display" style="font-size:var(--text-4xl)">遺失的故事，慢慢浮現。</div></div>
+      <div class="row-type"><span class="label">Editorial · Cormorant Garamond italic</span><div class="sea-eyebrow" style="font-size:var(--text-2xl)">A story slowly recovering itself.</div></div>
+      <div class="row-type"><span class="label">Body 繁中 · Noto Serif TC</span><div style="font-family:var(--font-cjk); font-size:var(--text-lg); line-height:var(--lh-base); max-width:54ch">把每一次服藥、每一個症狀、每一張檢驗報告，都當成一塊回家的記憶碎片。你不是在管理疾病，你是在把生活重新拼起來。</div></div>
+      <div class="row-type"><span class="label">Body latin · Inter</span><div style="font-family:var(--font-body); font-size:var(--text-base); color:var(--content-muted); max-width:60ch">Every record returns a missing piece. Numerals in Cormorant: <span style="font-family:var(--font-serif); font-size:1.3em">0 1 2 3 4 5 6 7 8 9</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ iconography ════════ -->
+<section id="icons">
+  <div class="wrap">
+    <div class="sec-head"><span class="sea-caps">Foundations · 03</span><h2>圖標 — 手繪、墨線、收藏感</h2>
+      <p>Hand-drawn single-weight ink strokes, rounded caps. Notebook, medicine bottle, lab droplet, calendar, hospital bed, camera, compass, wave — never emoji, never material icons.</p></div>
+    <div class="grid cols-4">
+      <div class="icon-cell"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-notebook"/></svg><span>症狀手記</span></div>
+      <div class="icon-cell"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-pill"/></svg><span>服藥</span></div>
+      <div class="icon-cell"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-droplet"/></svg><span>檢驗</span></div>
+      <div class="icon-cell"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-calendar"/></svg><span>回診</span></div>
+      <div class="icon-cell"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-bed"/></svg><span>住院</span></div>
+      <div class="icon-cell"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-camera"/></svg><span>上傳報告</span></div>
+      <div class="icon-cell"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-compass"/></svg><span>旅程</span></div>
+      <div class="icon-cell"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-book"/></svg><span>記憶圖書館</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ components ════════ -->
+<section id="components">
+  <div class="wrap">
+    <div class="sec-head"><span class="sea-caps">Components · 04</span><h2>元件 — 紙、墨、與留白</h2>
+      <p>Paper cards with hairline ink, pill buttons with a paper-press, outlined severity tags, and the required margin-note "why" on every AI output.</p></div>
+
+    <div class="grid cols-2">
+      <div class="sea-card stack">
+        <span class="sea-caps">Buttons &amp; chips</span>
+        <div class="row">
+          <button class="sea-btn sea-btn--primary">記下今天的感受</button>
+          <button class="sea-btn sea-btn--accent">收藏這塊碎片</button>
+          <button class="sea-btn">看看為什麼</button>
+          <button class="sea-btn sea-btn--quiet">稍後再說</button>
+        </div>
+        <div class="row">
+          <span class="sea-chip"><svg class="sea-ic" style="width:16px;height:16px" viewBox="0 0 24 24"><use href="#i-heart"/></svg>情緒紀錄</span>
+          <span class="sea-chip">每日提醒</span>
+          <span class="sea-reward">＋1 記憶碎片</span>
+        </div>
+      </div>
+
+      <div class="sea-card stack">
+        <span class="sea-caps">分級醫療 · severity (colour + text, never colour alone)</span>
+        <div class="row">
+          <span class="sea-chip sea-sev sea-sev--self">自我照護</span>
+          <span class="sea-chip sea-sev sea-sev--clinic">基層診所</span>
+          <span class="sea-chip sea-sev sea-sev--regional">區域醫院</span>
+          <span class="sea-chip sea-sev sea-sev--medical">醫學中心</span>
+          <span class="sea-chip sea-sev sea-sev--er">急診</span>
+        </div>
+        <div class="sea-why"><b>為什麼這樣建議：</b>你連續 3 天記錄到「夜間胸悶 + 喘」，加上你的高血壓病史，小核把這組合的風險權重提到中高 —— 所以建議今天先到<b>基層診所</b>，而不是等下次回診。</div>
+      </div>
+
+      <div class="sea-card stack">
+        <span class="sea-caps">Empty state · no symptom records</span>
+        <div class="sea-empty">
+          <svg class="sea-empty-art sea-ic sea-ic--lg" style="width:56px;height:56px" viewBox="0 0 24 24"><use href="#i-notebook"/></svg>
+          <div class="sea-empty-text">今天還沒有留下任何紀錄。</div>
+        </div>
+      </div>
+      <div class="sea-card stack">
+        <span class="sea-caps">Empty state · no medication</span>
+        <div class="sea-empty">
+          <svg class="sea-empty-art sea-ic sea-ic--lg" style="width:56px;height:56px" viewBox="0 0 24 24"><use href="#i-pill"/></svg>
+          <div class="sea-empty-text">記錄每一次服藥，<br/>也是照顧自己的一部分。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ puzzle journey ════════ -->
+<section id="journey">
+  <div class="wrap">
+    <div class="sec-head"><span class="sea-caps">Reward · 05</span><h2>我的拼圖旅程</h2>
+      <p>Progress is a story map, not a dashboard. Eight illustrated chapters; each action restores part of a memory illustration. No points, no levels — only pieces returning home.</p></div>
+    <div class="map sea-anim-page">
+      <div class="chapters">
+        <div class="chapter"><div class="node" style="background:color-mix(in srgb,var(--chapter-spring) 26%,var(--surface-primary))"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-flower"/></svg><span class="ribbon">已完成</span></div><div class="ttl">春日復健室</div><div class="en">Spring Recovery Room</div></div>
+        <div class="chapter"><div class="node" style="background:color-mix(in srgb,var(--chapter-rain) 26%,var(--surface-primary))"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-droplet"/></svg><span class="ribbon">已完成</span></div><div class="ttl">雨天診間</div><div class="en">Rainy Day Clinic</div></div>
+        <div class="chapter"><div class="node" style="background:color-mix(in srgb,var(--chapter-summer) 26%,var(--surface-primary))"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-book"/></svg><span class="ribbon">已完成</span></div><div class="ttl">夏日研究室</div><div class="en">Summer Research Room</div></div>
+        <div class="chapter"><div class="node" style="background:color-mix(in srgb,var(--chapter-seaside) 34%,var(--surface-primary)); box-shadow:var(--memory-glow-on)"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-wave"/></svg><span class="ribbon">進行中</span></div><div class="ttl">海邊走廊</div><div class="en">Seaside Corridor</div></div>
+        <div class="chapter"><div class="node locked"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-flower"/></svg></div><div class="ttl">黃昏醫院庭園</div><div class="en">Twilight Garden</div></div>
+        <div class="chapter"><div class="node locked"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-star"/></svg></div><div class="ttl">星之迴廊</div><div class="en">Star Corridor</div></div>
+        <div class="chapter"><div class="node locked"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-book"/></svg></div><div class="ttl">記憶圖書館</div><div class="en">Memory Library</div></div>
+        <div class="chapter"><div class="node locked"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-compass"/></svg></div><div class="ttl">未來的地平線</div><div class="en">Future Horizon</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ achievement language ════════ -->
+<section id="achievements">
+  <div class="wrap">
+    <div class="sec-head"><span class="sea-caps">Reward · 06</span><h2>找回的時刻 — 不說「Achievement Unlocked」</h2>
+      <p>Every milestone is narrated as a memory returning, never as a badge popping. A watercolour ripple, a soft glow, a piece snapping into place over 600–900ms.</p></div>
+    <div class="grid cols-2">
+      <div class="toast sea-anim-restore"><svg class="seal" viewBox="0 0 48 48"><use href="#i-seal"/></svg><div><div class="t-text">新的記憶碎片被找回了</div><div class="t-sub">A lost piece has returned home.</div></div></div>
+      <div class="toast sea-anim-restore" style="animation-delay:.15s"><svg class="seal" viewBox="0 0 48 48"><use href="#i-anchor"/></svg><div><div class="t-text">海風帶來了新的線索</div><div class="t-sub">The sea breeze carried a new clue.</div></div></div>
+      <div class="toast sea-anim-restore" style="animation-delay:.3s"><svg class="seal" viewBox="0 0 48 48"><use href="#i-book"/></svg><div><div class="t-text">一段遺失的故事重新浮現</div><div class="t-sub">A forgotten story resurfaces.</div></div></div>
+      <div class="toast sea-anim-restore" style="animation-delay:.45s"><svg class="seal" viewBox="0 0 48 48"><use href="#i-compass"/></svg><div><div class="t-text">你的旅程更加完整了</div><div class="t-sub">Your journey is a little more whole.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ clinical modules ════════ -->
+<section id="modules">
+  <div class="wrap">
+    <div class="sec-head"><span class="sea-caps">Modules · 07</span><h2>臨床功能，講成故事</h2>
+      <p>Symptom tracking, medication, lab results, appointments and hospitalization — each is a chapter of pieces, each AI line carries its "why".</p></div>
+    <div class="grid cols-3">
+      <div class="sea-card mod"><div class="mod-top" style="--ev-ink:var(--ev-symptom)"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-notebook"/></svg><div><div class="mod-title">症狀手記</div><div class="mod-en">Symptom Tracking</div></div></div><p style="margin:0;color:var(--content-muted);font-family:var(--font-cjk)">今天的身體，像什麼天氣？用一句話、一張臉、或語音留下。</p><div class="mini-piece-row"><span class="sea-piece"></span><span class="sea-piece"></span><span class="sea-slot"></span></div></div>
+      <div class="sea-card mod"><div class="mod-top" style="--ev-ink:var(--ev-medication)"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-pill"/></svg><div><div class="mod-title">服藥旅程</div><div class="mod-en">Medication</div></div></div><p style="margin:0;color:var(--content-muted);font-family:var(--font-cjk)">溫柔的提醒，可調時段與語氣。家屬也能收到，回一句「已協助服藥」。</p><div class="mini-piece-row"><span class="sea-piece"></span><span class="sea-piece"></span><span class="sea-piece"></span></div></div>
+      <div class="sea-card mod"><div class="mod-top" style="--ev-ink:var(--ev-lab)"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-droplet"/></svg><div><div class="mod-title">檢驗光譜</div><div class="mod-en">Lab Results</div></div></div><p style="margin:0;color:var(--content-muted);font-family:var(--font-cjk)">拍一張報告，平台 OCR 後排進時間軸。趨勢用水彩曲線，不是冷冰冰的表格。</p><div class="mini-piece-row"><span class="sea-piece"></span><span class="sea-slot"></span><span class="sea-slot"></span></div></div>
+      <div class="sea-card mod"><div class="mod-top" style="--ev-ink:var(--ev-appointment)"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-calendar"/></svg><div><div class="mod-title">回診準備</div><div class="mod-en">Appointments</div></div></div><p style="margin:0;color:var(--content-muted);font-family:var(--font-cjk)">回診前，幫你把想問的問題、最近的變化整理成一頁帶去。</p><div class="mini-piece-row"><span class="sea-piece"></span><span class="sea-piece"></span><span class="sea-slot"></span></div></div>
+      <div class="sea-card mod"><div class="mod-top" style="--ev-ink:var(--ev-hospitalization)"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-bed"/></svg><div><div class="mod-title">住院日誌</div><div class="mod-en">Hospitalization</div></div></div><p style="margin:0;color:var(--content-muted);font-family:var(--font-cjk)">把住院那幾天，記成一段可以回頭看的旅程，而不是一疊出院摘要。</p><div class="mini-piece-row"><span class="sea-piece"></span><span class="sea-slot"></span><span class="sea-slot"></span></div></div>
+      <div class="sea-card mod"><div class="mod-top" style="--ev-ink:var(--ev-education)"><svg class="sea-ic sea-ic--lg" viewBox="0 0 24 24"><use href="#i-book"/></svg><div><div class="mod-title">衛教書房</div><div class="mod-en">Education</div></div></div><p style="margin:0;color:var(--content-muted);font-family:var(--font-cjk)">讀完一篇，就點亮書架上的一本書，也找回一塊碎片。</p><div class="mini-piece-row"><span class="sea-piece"></span><span class="sea-piece"></span><span class="sea-slot"></span></div></div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">「每一筆病歷，都是一塊回家的記憶碎片。」— MD.Piece · Seaside Memory Book</div></footer>
+
+<script>
+  const root = document.documentElement;
+  const tTheme  = document.getElementById('t-theme');
+  const tSenior = document.getElementById('t-senior');
+  const tReplay = document.getElementById('t-replay');
+
+  tTheme.addEventListener('click', () => {
+    const on = root.classList.toggle('dark');           // .dark (tokens.css convention)
+    if (on) root.setAttribute('data-theme', 'dark');    // [data-theme="dark"] (puzzle-tokens convention)
+    else root.removeAttribute('data-theme');
+    tTheme.setAttribute('aria-pressed', on);
+  });
+  tSenior.addEventListener('click', () => {
+    const on = !root.hasAttribute('data-elder');
+    root.toggleAttribute('data-elder', on);
+    if (on) root.setAttribute('data-mode','senior'); else root.removeAttribute('data-mode');
+    tSenior.setAttribute('aria-pressed', on);
+  });
+
+  // replay the calm microinteractions (collect / restore / page-turn)
+  function replay(){
+    document.querySelectorAll('.sea-anim-page, .sea-anim-restore, .sea-anim-collect').forEach(el => {
+      el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+    });
+    const piece = document.getElementById('hp-collect');
+    piece.classList.remove('sea-anim-collect'); void piece.offsetWidth; piece.classList.add('sea-anim-collect');
+  }
+  tReplay.addEventListener('click', replay);
+  // gently demo the puzzle-collect on the hero's third piece on load
+  window.addEventListener('load', () => document.getElementById('hp-collect').classList.add('sea-anim-collect'));
+</script>
+</body>
+</html>

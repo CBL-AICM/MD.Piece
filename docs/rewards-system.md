@@ -1,5 +1,13 @@
 # 健康積分 · 獎勵中心（Rewards）
 
+> **呈現層已改為「記憶碎片」模型**（v4 海邊記憶書設計語言，見 [`docs/design-language.md`](design-language.md) §5）。
+> 前端（`app.js` 獎勵頁、`i18n.js`）不再出現「積分／點數／等級／徽章」字樣，改稱
+> **記憶碎片（pieces）／章節（chapter）／找回的記憶（recovered memories）**，符合設計憲法
+> 「不給積分、不升等」。
+> 下方文件中的「積分／等級／徽章」是**後端確定性引擎 `backend/utils/rewards_rules.py` 的內部命名**，
+> 刻意保留不動（規則 5：算分是 if-else 純程式、zero LLM）。同一份資料、兩種說法，未混寫
+> （規則 7）。API 欄位（`points`、`level`、`badges`）維持不變以免破壞既有契約。
+
 把使用者「已經在做的事」——填問卷、每天打卡、持續紀錄、完成 eHEALS——換算成積分、
 等級、徽章與可兌換獎勵，藉遊戲化提升日常紀錄與回饋的依從度。
 
