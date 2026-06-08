@@ -3756,6 +3756,20 @@ function _pzArtUrl(themeKey) {
   return 'img/puzzle/' + file + '.svg?v=' + _PZ_ART_VER;
 }
 
+// theme.key → 章節插畫（frontend/img/chapters/，Canva 生成的 painterly 場景）。
+// 用於拼圖板頂端的「章節 hero」橫幅，呼應「海邊的記憶之書」世界觀。
+var _PZ_CHAPTER = {
+  'spring-garden': 'spring-recovery', 'blossom': 'spring-recovery',
+  'morning-walk': 'seaside-corridor', 'sunny-window': 'seaside-corridor',
+  'rainy-day': 'rainy-clinic', 'cozy-home': 'rainy-clinic',
+  'summer-fruit': 'summer-research', 'harvest': 'summer-research',
+  'warm-tea': 'twilight-garden', 'autumn-leaf': 'twilight-garden',
+  'starry-night': 'star-corridor', 'snow-rest': 'star-corridor',
+};
+function _pzChapterUrl(themeKey) {
+  return 'img/chapters/' + (_PZ_CHAPTER[themeKey] || 'seaside-corridor') + '.jpg';
+}
+
 // 把 board 渲染成一張卡（3x3 grid + 進度 + 集滿提示）。純呈現，不打 API。
 function _puzzleHtml(data) {
   if (!data || !data.board) return '';
@@ -3801,9 +3815,11 @@ function _puzzleHtml(data) {
 
   return ''
     + '<div class="rw-card">'
-    +   '<div class="rw-card-title rw-pz-head"><i data-lucide="puzzle" style="width:18px;height:18px"></i> '
-    +     escapeHtml(_T('puzzle.title'))
-    +     '<span class="rw-pz-theme">' + escapeHtml(themeName) + '</span>'
+    +   '<div class="rw-pz-hero" style="background-image:url(\'' + _pzChapterUrl(theme.key) + '\')">'
+    +     '<div class="rw-pz-hero-scrim">'
+    +       '<div class="rw-pz-hero-kicker"><i data-lucide="puzzle" style="width:15px;height:15px"></i> ' + escapeHtml(_T('puzzle.title')) + '</div>'
+    +       '<div class="rw-pz-hero-title">' + escapeHtml(themeName) + '</div>'
+    +     '</div>'
     +   '</div>'
     +   '<div class="rw-pz-sub">' + escapeHtml(_Tf('puzzle.sub', { n: unlocked })) + '</div>'
     +   '<div class="rw-pz-grid">' + cells + '</div>'

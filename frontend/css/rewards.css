@@ -472,3 +472,45 @@
 @media (prefers-reduced-motion: reduce) {
   .rw-pz-cell, .rw-pz-cell.reveal, .rw-pz-bar > i { transition: none; animation: none; }
 }
+
+/* ── 章節 hero 橫幅（拼圖板頂端的 painterly 場景插畫）──────────────
+   呼應「海邊的記憶之書」：每月主題配一張章節插畫，標題壓在柔和漸層上。
+   只用 tokens；長者模式（--scale）字級自動跟著走。 */
+.rw-pz-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  background-size: cover;
+  background-position: center;
+  background-color: var(--surface-2);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+.rw-pz-hero-scrim {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--space-4);
+  background: linear-gradient(to top,
+    rgba(20, 28, 34, .62) 0%, rgba(20, 28, 34, .26) 38%, rgba(20, 28, 34, 0) 64%);
+}
+.rw-pz-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, .9);
+  letter-spacing: .06em;
+}
+.rw-pz-hero-title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  margin-top: 2px;
+  text-shadow: 0 1px 6px rgba(20, 28, 34, .45);
+}

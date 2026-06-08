@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v154-visual-puzzle";
+const CACHE_VERSION = "mdpiece-v155-chapter-art";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
