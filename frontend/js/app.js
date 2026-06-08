@@ -25351,10 +25351,13 @@ function _mobileRemSyncInbox() {
   box.innerHTML = _remindersInbox.slice(0, 8).map(function(i) {
     var t = i.created_at ? new Date(i.created_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
     var unread = !i.read_at;
+    var meta = _remTypeMeta(i.reminder_type);
+    var pillHtml = meta ? '<span class="pill ' + meta.cls + '" style="margin-bottom:4px">' + escapeHtml(meta.label) + '</span>' : '';
     return ''
       + '<div class="list-row" style="grid-template-columns:14px 1fr auto;padding:10px 12px;align-items:flex-start" data-action="read" data-id="' + escapeHtml(String(i.id || '')) + '">'
       +   '<span style="width:8px;height:8px;border-radius:50%;background:' + (unread ? 'var(--accent)' : 'transparent') + ';margin-top:5px"></span>'
       +   '<div>'
+      +     pillHtml
       +     '<div class="name" style="font-weight:' + (unread ? '600' : '500') + '">' + escapeHtml(i.title || '') + '</div>'
       +     (i.body ? '<div style="font-size:10.5px;color:var(--text-dim);margin-top:2px;line-height:1.5">' + escapeHtml(i.body) + '</div>' : '')
       +   '</div>'
@@ -25519,12 +25522,17 @@ function _remindersBindDelegated() {
   }
 }
 
+// 提醒類型 / 鈴聲種類 → pill 顏色（清單、收件匣、鈴聲設定共用同一份配色）
+function _remKindPillCls(kind) {
+  var cls = { medication: 'pill-teal', appointment: 'pill-info', lab: 'pill-warn', measurement: 'pill-info', doctor_request: 'pill-rose', custom: 'pill-mute' };
+  return cls[kind] || 'pill-mute';
+}
+
 // 提醒類型 → pill 標籤 / 顏色（清單與收件匣共用，避免兩處走樣）。未知類型回傳 null。
 function _remTypeMeta(type) {
   var labels = { medication: _T("app.d50.typeMedication"), appointment: _T("app.d50.typeAppointment"), lab: _T("app.d50.typeLab"), measurement: _T("app.d50.typeMeasurement"), custom: _T("app.d50.typeCustom") };
-  var cls = { medication: 'pill-teal', appointment: 'pill-info', lab: 'pill-warn', measurement: 'pill-info', custom: 'pill-mute' };
   if (!labels[type]) return null;
-  return { label: labels[type], cls: cls[type] };
+  return { label: labels[type], cls: _remKindPillCls(type) };
 }
 
 function reminderRenderList() {
@@ -25708,7 +25716,7 @@ function reminderRenderBellSettings() {
     var row = _remH('div', {
       style: 'display:grid;grid-template-columns:1.2fr 1.4fr 1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-glass)',
     });
-    row.appendChild(_remH('div', { style: 'font-weight:500' }, item.label));
+    row.appendChild(_remH('div', null, _remH('span', { 'class': 'pill ' + _remKindPillCls(item.kind) }, item.label)));
 
     // 鈴聲下拉
     var sel = _remH('select', {
