@@ -3597,6 +3597,7 @@ function loadRewardsPage() {
     }
     box.innerHTML = _rewardsHtml(summary, catalog, puzzle);
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    _maybeMemoryToast(puzzle);  // 偵測新碎片／新章節 → 記憶尋回 toast（§12）
   }).catch(function () {
     box.innerHTML = '<div class="rw-empty">獎勵資料載入失敗。<br><button class="rw-btn" onclick="loadRewardsPage()">重新載入</button></div>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3828,7 +3829,7 @@ function _puzzleHtml(data) {
     +   rewardLine
     +   '<div class="rw-pz-hint">' + escapeHtml(_T('puzzle.tapHint')) + '</div>'
     + '</div>'
-    + _puzzleCollectionHtml(data.collection);
+    + _journeyMapHtml(data);
 }
 
 function _puzzleRewardName(rewardId) {
@@ -3856,28 +3857,75 @@ function _puzzleTap(index) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 收藏冊：跨月已完成的整張拼圖縮圖（呈現「療程旅程」）。
-function _puzzleCollectionHtml(collection) {
-  collection = collection || [];
-  var items = collection.map(function (c) {
-    var theme = c.theme || {};
-    var lang = (window.MDPiece_i18n && MDPiece_i18n.getLang()) || 'zh-TW';
-    var name = (lang.indexOf('en') === 0 ? (theme.en || theme.name) : (theme.name || theme.en)) || '';
+// ─── 旅程地圖（8 章節故事地圖，design-language.md §6）──────────────
+// 把既有的「已完成月份」資料映射到 8 個敘事章節：前 6 章對應既有插畫場景
+// （_PZ_CHAPTER 的值），第 7/8 章插畫待補（Canva 額度）→ 先以「尚未展開的篇章」呈現。
+// 純前端呈現＋確定性映射，不打 API、不動後端積分引擎（積分→碎片的 presentation
+// remap 依設計文件 §5 留作後續；此處只升級「收藏冊」為故事地圖）。
+var _PZ_JOURNEY = [
+  { n: 1, scene: 'spring-recovery' },
+  { n: 2, scene: 'rainy-clinic' },
+  { n: 3, scene: 'summer-research' },
+  { n: 4, scene: 'seaside-corridor' },
+  { n: 5, scene: 'twilight-garden' },
+  { n: 6, scene: 'star-corridor' },
+  { n: 7, scene: null },   // 記憶圖書館（插畫待補）
+  { n: 8, scene: null },   // 未來的地平線（插畫待補）
+];
+
+// 收藏冊裡每個已完成月份的主題 → _PZ_CHAPTER 對應的場景；回傳「已尋回場景」集合。
+function _journeyDoneScenes(collection) {
+  var done = {};
+  (collection || []).forEach(function (c) {
+    var scene = _PZ_CHAPTER[(c.theme || {}).key];
+    if (scene) done[scene] = true;
+  });
+  return done;
+}
+
+// 蜿蜒故事地圖：完成節點繫緞帶、當前節點發光、未尋回淡化、未展開虛線（§6 視覺）。
+function _journeyMapHtml(data) {
+  data = data || {};
+  var board = data.board || {};
+  var doneScenes = _journeyDoneScenes(data.collection);
+  var activeScene = _PZ_CHAPTER[(board.theme || {}).key] || null;  // 本月正在尋回的場景
+  var activeUnlocked = board.unlocked_count || 0;
+  var total = board.total_pieces || 9;
+  var doneCount = _PZ_JOURNEY.filter(function (ch) { return ch.scene && doneScenes[ch.scene]; }).length;
+
+  var nodes = _PZ_JOURNEY.map(function (ch) {
+    var state;
+    if (ch.scene && doneScenes[ch.scene]) state = 'complete';
+    else if (ch.scene && ch.scene === activeScene) state = 'active';
+    else if (ch.scene) state = 'locked';
+    else state = 'future';
+
+    var thumb = ch.scene
+      ? '<span class="rw-jn-thumb" style="background-image:url(\'img/chapters/' + ch.scene + '-sq.jpg?v=' + _PZ_ART_VER + '\')"></span>'
+      : '<span class="rw-jn-thumb is-future"><i data-lucide="' + (ch.n === 7 ? 'library' : 'sunrise') + '"></i></span>';
+    var ribbon = state === 'complete'
+      ? '<span class="rw-jn-ribbon"><i data-lucide="bookmark-check"></i></span>' : '';
+    var stateTxt = _T('journey.state.' + state);
+    if (state === 'active') stateTxt += ' · ' + activeUnlocked + ' / ' + total;
+
     return ''
-      + '<div class="rw-pz-col-item">'
-      +   '<div class="rw-pz-col-thumb" style="background-image:url(\'' + _pzArtUrl(theme.key) + '\')"></div>'
-      +   '<div class="rw-pz-col-cap">' + escapeHtml(c.year_month || '') + '<br>' + escapeHtml(name) + '</div>'
+      + '<div class="rw-jn-node is-' + state + '">'
+      +   '<span class="rw-jn-num">' + ch.n + '</span>'
+      +   '<span class="rw-jn-art">' + thumb + ribbon + '</span>'
+      +   '<span class="rw-jn-meta">'
+      +     '<span class="rw-jn-name">' + escapeHtml(_T('journey.ch' + ch.n)) + '</span>'
+      +     '<span class="rw-jn-state">' + escapeHtml(stateTxt) + '</span>'
+      +   '</span>'
       + '</div>';
   }).join('');
-  var body = collection.length
-    ? '<div class="rw-pz-collection">' + items + '</div>'
-    : '<div class="rw-empty">' + escapeHtml(_T('puzzle.collectionEmpty')) + '</div>';
+
   return ''
     + '<div class="rw-card">'
-    +   '<div class="rw-card-title"><i data-lucide="library" style="width:18px;height:18px"></i> '
-    +     escapeHtml(_T('puzzle.collectionTitle'))
-    +     '<small>' + escapeHtml(_Tf('puzzle.collectionDone', { n: collection.length })) + '</small></div>'
-    +   body
+    +   '<div class="rw-card-title"><i data-lucide="map" style="width:18px;height:18px"></i> '
+    +     escapeHtml(_T('journey.title'))
+    +     '<small>' + escapeHtml(_Tf('journey.done', { done: doneCount, total: _PZ_JOURNEY.length })) + '</small></div>'
+    +   '<div class="rw-jn-sub">' + escapeHtml(_T('journey.sub')) + '</div>'
+    +   '<div class="rw-journey">' + nodes + '</div>'
     + '</div>';
 }
 
@@ -15069,6 +15117,63 @@ function showToast(msg, type) {
   toast.textContent = msg;
   existing.appendChild(toast);
   toast._fadeTimer = setTimeout(function() { toast.style.opacity = "0"; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+}
+
+// ─── 記憶尋回 toast（design-language.md §12）──────────────────────
+// 絕不用「成就解鎖」：用「記憶回來了」的語氣＋斜體英文副標、貝殼/書/羅盤插圖。
+// 與一般 showToast 分開的置中容器，視覺上更像故事書的提示（sea-restore 進場）。
+var _MEM_SUB = {
+  'mem.toast.clue': 'A sea breeze carries a new clue',
+  'mem.toast.story': 'A lost story resurfaces',
+  'mem.toast.journey': 'Your journey grows more whole',
+};
+var _MEM_ICON = { 'mem.toast.clue': 'shell', 'mem.toast.story': 'book-open', 'mem.toast.journey': 'compass' };
+
+function showMemoryToast(key) {
+  var box = document.getElementById('mem-toast-container');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'mem-toast-container';
+    document.body.appendChild(box);
+  }
+  var el = document.createElement('div');
+  el.className = 'mem-toast';
+  el.innerHTML = ''
+    + '<span class="mem-toast-seal"><i data-lucide="' + (_MEM_ICON[key] || 'shell') + '"></i></span>'
+    + '<span class="mem-toast-body">'
+    +   '<span class="mem-toast-title">' + escapeHtml(_T(key)) + '</span>'
+    +   '<span class="mem-toast-sub">' + escapeHtml(_MEM_SUB[key] || '') + '</span>'
+    + '</span>';
+  box.appendChild(el);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  setTimeout(function () {
+    el.classList.add('leaving');
+    setTimeout(function () { el.remove(); }, 500);
+  }, 4200);
+}
+
+// 比對「這次看到的拼圖狀態」與上次記住的，偵測是否有新碎片／新章節回來 →
+// 觸發記憶 toast。純確定性比對（規則 5），首次載入只記住、不打擾。
+function _maybeMemoryToast(puzzle) {
+  if (!puzzle || !puzzle.board) return;
+  var board = puzzle.board;
+  var ym = board.year_month || '';
+  var unlocked = board.unlocked_count || 0;
+  var doneScenes = _journeyDoneScenes(puzzle.collection);
+  var chapters = Object.keys(doneScenes).sort().join(',');
+  var STORE = 'mdpiece_pz_seen';
+  var prev = null;
+  try { prev = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) {}
+  try { localStorage.setItem(STORE, JSON.stringify({ ym: ym, unlocked: unlocked, chapters: chapters })); } catch (e) {}
+  if (!prev) return;  // 首次：只記住、不打擾
+  var prevCh = (prev.chapters ? prev.chapters.split(',') : []).filter(Boolean).length;
+  var curCh = (chapters ? chapters.split(',') : []).filter(Boolean).length;
+  if (curCh > prevCh) {
+    // 完成新章節：第一章用「故事重新浮現」，之後用「旅程更完整」（確定性、非隨機）
+    showMemoryToast(curCh >= 2 ? 'mem.toast.journey' : 'mem.toast.story');
+  } else if (ym === prev.ym && unlocked > (prev.unlocked || 0)) {
+    showMemoryToast('mem.toast.clue');  // 本月又尋回一塊碎片
+  }
 }
 
 // 把 fetch response 翻成人話：優先用 backend 的 JSON `detail`（中文），fallback 才用 HTTP code
