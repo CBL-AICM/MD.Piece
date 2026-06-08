@@ -1,0 +1,32 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   MD.Piece — 海邊記憶書 / Seaside Memory Book · live-app activation layer (v4)
+   ----------------------------------------------------------------------------
+   Loaded LAST in index.html. The colour/radius/shadow re-skin comes from
+   css/seaside-tokens.css (loaded after tokens.css, re-using the same semantic
+   token names). This thin layer does the one thing tokens can't: it flips the
+   global TYPE from the friendly rounded sans pinned by visual-language.css to
+   the editorial serif of the Seaside language.
+
+   FULLY REVERSIBLE: remove the two <link>s (seaside-tokens.css + this file)
+   from index.html to restore the previous skin exactly. Additive · no markup
+   change · honours prefers-reduced-motion (handled in seaside-tokens.css).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* visual-language.css pins body/#app/controls to var(--vl-font-friendly).
+   Re-point that single variable to the Seaside body stack → editorial serif
+   Chinese (Noto Serif TC) + Inter latin, app-wide, in one declaration. */
+:root { --vl-font-friendly: var(--font-body); }
+
+/* Headlines → Zen Old Mincho (storybook display). Scoped to common heading
+   elements only (Rule 3 — surgical); components that pin their own font keep it. */
+h1, h2, h3,
+.sec-title,
+.rw-head h2,
+.rw-ring-name {
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-display);
+}
+
+/* The brand "why" / AI margin-note already reads tokens; nudge it toward the
+   editorial italic serif so explanations feel like a hand-written aside. */
+.rw-note { font-family: var(--font-serif); font-style: italic; }
