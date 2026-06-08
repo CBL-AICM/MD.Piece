@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v158-memory-copy";
+const CACHE_VERSION = "mdpiece-v159-empty-states";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
