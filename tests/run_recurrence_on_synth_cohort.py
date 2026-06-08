@@ -222,6 +222,7 @@ def run():
     band_flare = defaultdict(lambda: [0, 0])     # band → [n, n_anyflare]
     per_disease = defaultdict(lambda: {"n": 0, "anyflare": 0, "onset": 0, "risk": []})
     samples = {}
+    patient_rows = []                            # 逐患者一列（原始資料）
 
     print("=" * 72)
     print(f"產品復發引擎 × 過去合成 {N} 位假患者（{len(diseases)}疾病×{N_PER}, seed={BASE_SEED}, "
@@ -241,6 +242,18 @@ def run():
             pd_["n"] += 1
             pd_["anyflare"] += int(truth["anyflare"])
             pd_["onset"] += int(truth["onset"])
+            td0 = pred.get("top_driver")
+            patient_rows.append({
+                "patient_id": p.patient_id, "disease_id": did, "disease_zh": ZH[did],
+                "assigned_band": BAND[did], "cold_start": int(bool(pred.get("cold_start"))),
+                "risk_percent": pred.get("risk_percent", ""), "risk_band": pred.get("risk_band", ""),
+                "trend": pred.get("trend", ""), "confidence": pred.get("confidence", ""),
+                "disease_bound": int(pred["disease"]["bound"]),
+                "top_driver": (td0["feature"] if td0 else ""),
+                "actual_anyflare_14d": int(truth["anyflare"]),
+                "actual_onset_14d": int(truth["onset"]),
+                "in_flare_at_asof": int(truth["in_flare_at_asof"]),
+            })
             if pred.get("cold_start"):
                 cold += 1
                 continue
@@ -357,6 +370,18 @@ def run():
     with open(out, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
     print(f"\n彙整已寫出：{out}")
+
+    # 逐患者原始資料列（每位一行）→ CSV
+    import csv
+    csv_path = os.path.join(HERE, "_recurrence_synth_cohort_patients.csv")
+    cols = ["patient_id", "disease_id", "disease_zh", "assigned_band", "cold_start",
+            "risk_percent", "risk_band", "trend", "confidence", "disease_bound",
+            "top_driver", "actual_anyflare_14d", "actual_onset_14d", "in_flare_at_asof"]
+    with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        w.writerows(patient_rows)
+    print(f"逐患者資料（{len(patient_rows)} 列）已寫出：{csv_path}")
     return 1 if failures else 0
 
 

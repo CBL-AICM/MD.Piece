@@ -1,0 +1,369 @@
+{
+  "n": 3200,
+  "n_per_disease": 200,
+  "base_seed": 2024,
+  "day_as_of": 165,
+  "horizon": 14,
+  "coverage": {
+    "predicted": 3200,
+    "cold_start": 0,
+    "disease_bound": 3200
+  },
+  "risk_band": {
+    "high": 467,
+    "low": 2436,
+    "medium": 297
+  },
+  "trend": {
+    "up": 659,
+    "down": 486,
+    "flat": 2055
+  },
+  "confidence": {
+    "high": 3200
+  },
+  "top_driver_feature": {
+    "symptoms": 737,
+    "（無推升因子）": 1404,
+    "stress": 11,
+    "adherence": 983,
+    "labs": 34,
+    "sleep": 31
+  },
+  "mean_risk_percent": 22.43,
+  "actual_flare_base_rate": {
+    "anyflare": 0.1291,
+    "onset": 0.0887
+  },
+  "auroc": {
+    "anyflare": 0.6989303502685853,
+    "onset": 0.5771985306903147
+  },
+  "mean_risk_flare_vs_nonflare": {
+    "flare": 44.26,
+    "nonflare": 19.19
+  },
+  "band_vs_actual_flare_rate": {
+    "low": 0.0772,
+    "medium": 0.1684,
+    "high": 0.3747
+  },
+  "per_disease": {
+    "ANCA 血管炎": {
+      "n": 200,
+      "anyflare_rate": 0.1,
+      "mean_risk": 19.98
+    },
+    "僵直性脊椎炎": {
+      "n": 200,
+      "anyflare_rate": 0.14,
+      "mean_risk": 24.82
+    },
+    "氣喘": {
+      "n": 200,
+      "anyflare_rate": 0.26,
+      "mean_risk": 21.45
+    },
+    "貝賽特氏病": {
+      "n": 200,
+      "anyflare_rate": 0.1,
+      "mean_risk": 26.34
+    },
+    "慢性蕁麻疹": {
+      "n": 200,
+      "anyflare_rate": 0.165,
+      "mean_risk": 16.52
+    },
+    "痛風": {
+      "n": 200,
+      "anyflare_rate": 0.085,
+      "mean_risk": 19.0
+    },
+    "特發性肺纖維化": {
+      "n": 200,
+      "anyflare_rate": 0.005,
+      "mean_risk": 12.26
+    },
+    "IgG4 相關疾病": {
+      "n": 200,
+      "anyflare_rate": 0.0,
+      "mean_risk": 9.88
+    },
+    "發炎性腸道疾病": {
+      "n": 200,
+      "anyflare_rate": 0.085,
+      "mean_risk": 26.88
+    },
+    "多發性硬化症": {
+      "n": 200,
+      "anyflare_rate": 0.09,
+      "mean_risk": 23.64
+    },
+    "退化性關節炎": {
+      "n": 200,
+      "anyflare_rate": 0.115,
+      "mean_risk": 30.41
+    },
+    "乾癬性關節炎": {
+      "n": 200,
+      "anyflare_rate": 0.135,
+      "mean_risk": 26.02
+    },
+    "類風濕性關節炎": {
+      "n": 200,
+      "anyflare_rate": 0.395,
+      "mean_risk": 30.6
+    },
+    "乾燥症": {
+      "n": 200,
+      "anyflare_rate": 0.0,
+      "mean_risk": 12.44
+    },
+    "系統性紅斑性狼瘡": {
+      "n": 200,
+      "anyflare_rate": 0.385,
+      "mean_risk": 45.12
+    },
+    "全身性硬化症": {
+      "n": 200,
+      "anyflare_rate": 0.005,
+      "mean_risk": 13.44
+    }
+  },
+  "sanity_failures": [],
+  "samples": {
+    "stable_low": {
+      "pred": {
+        "prediction_id": "AAV_0001:2026-06-08",
+        "patient_id": "AAV_0001",
+        "cold_start": false,
+        "horizon_days": 14,
+        "risk_score": 0.094,
+        "risk_percent": 9,
+        "risk_band": "low",
+        "trend": "down",
+        "trend_label": "下降中",
+        "confidence": "high",
+        "confidence_label": "高",
+        "data_days": 61,
+        "threshold_days": 14,
+        "top_driver": null,
+        "disease": {
+          "disease_name": "anca_vasculitis",
+          "disease_source": "hint",
+          "bound": true,
+          "has_literature": true,
+          "recurrence_band": "high",
+          "recurrence_range_text": "（模擬世代；band 為疾病分級啟發式）",
+          "recurrence_horizon": "12 個月",
+          "recurrence_summary": "ANCA 血管炎 復發與用藥順從性、活動度、壓力相關。",
+          "watch_signs": [
+            "症狀活動度上升",
+            "新發或加劇的不適"
+          ],
+          "references": [
+            {
+              "pmid": "00000000",
+              "title": "anca_vasculitis flare predictors",
+              "year": 2020,
+              "source": "sim"
+            }
+          ]
+        },
+        "records_analyzed": [
+          {
+            "table": "emotions",
+            "label": "情緒 / 壓力",
+            "count": 61,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "medication_logs",
+            "label": "用藥",
+            "count": 61,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "symptoms_log",
+            "label": "症狀",
+            "count": 0,
+            "scored": true,
+            "present": false
+          },
+          {
+            "table": "bedside_logs",
+            "label": "睡眠 / 心情",
+            "count": 61,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "sleep_sessions",
+            "label": "睡眠量測",
+            "count": 0,
+            "scored": true,
+            "present": false
+          },
+          {
+            "table": "medical_records",
+            "label": "就診紀錄",
+            "count": 0,
+            "scored": true,
+            "present": false
+          },
+          {
+            "table": "diet_records",
+            "label": "飲食",
+            "count": 61,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "labs",
+            "label": "檢驗",
+            "count": 9,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "menstrual_cycles",
+            "label": "生理週期",
+            "count": 0,
+            "scored": false,
+            "present": false
+          }
+        ],
+        "low_data": false,
+        "disclaimer": "此為長期紀錄推估的輔助參考，非診斷，最終由醫師判斷。",
+        "generated_at": "2026-06-08T09:00:00"
+      },
+      "truth": {
+        "anyflare": false,
+        "onset": false,
+        "in_flare_at_asof": false
+      }
+    },
+    "flare_high": {
+      "pred": {
+        "prediction_id": "AAV_0019:2026-06-08",
+        "patient_id": "AAV_0019",
+        "cold_start": false,
+        "horizon_days": 14,
+        "risk_score": 0.85,
+        "risk_percent": 85,
+        "risk_band": "high",
+        "trend": "up",
+        "trend_label": "上升中",
+        "confidence": "high",
+        "confidence_label": "高",
+        "data_days": 61,
+        "threshold_days": 14,
+        "top_driver": {
+          "feature": "symptoms",
+          "label": "症狀活動度",
+          "plain_text": "症狀記錄變頻繁",
+          "modifiable": false,
+          "disease_linked": true,
+          "evidence": "症狀活動度升高常為復發前兆（橋接：活動度／in_flare）。"
+        },
+        "disease": {
+          "disease_name": "anca_vasculitis",
+          "disease_source": "hint",
+          "bound": true,
+          "has_literature": true,
+          "recurrence_band": "high",
+          "recurrence_range_text": "（模擬世代；band 為疾病分級啟發式）",
+          "recurrence_horizon": "12 個月",
+          "recurrence_summary": "ANCA 血管炎 復發與用藥順從性、活動度、壓力相關。",
+          "watch_signs": [
+            "症狀活動度上升",
+            "新發或加劇的不適"
+          ],
+          "references": [
+            {
+              "pmid": "00000000",
+              "title": "anca_vasculitis flare predictors",
+              "year": 2020,
+              "source": "sim"
+            }
+          ]
+        },
+        "records_analyzed": [
+          {
+            "table": "emotions",
+            "label": "情緒 / 壓力",
+            "count": 61,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "medication_logs",
+            "label": "用藥",
+            "count": 61,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "symptoms_log",
+            "label": "症狀",
+            "count": 12,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "bedside_logs",
+            "label": "睡眠 / 心情",
+            "count": 61,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "sleep_sessions",
+            "label": "睡眠量測",
+            "count": 0,
+            "scored": true,
+            "present": false
+          },
+          {
+            "table": "medical_records",
+            "label": "就診紀錄",
+            "count": 1,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "diet_records",
+            "label": "飲食",
+            "count": 51,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "labs",
+            "label": "檢驗",
+            "count": 9,
+            "scored": true,
+            "present": true
+          },
+          {
+            "table": "menstrual_cycles",
+            "label": "生理週期",
+            "count": 0,
+            "scored": false,
+            "present": false
+          }
+        ],
+        "low_data": false,
+        "disclaimer": "此為長期紀錄推估的輔助參考，非診斷，最終由醫師判斷。",
+        "generated_at": "2026-06-08T09:00:00"
+      },
+      "truth": {
+        "anyflare": true,
+        "onset": false,
+        "in_flare_at_asof": true
+      }
+    }
+  }
+}
