@@ -453,21 +453,131 @@
 .rw-pz-detail.is-locked svg { color: var(--content-subtle); }
 .rw-pz-detail.is-unlocked svg { color: var(--action); }
 
-/* 收藏冊：已完成的整張小縮圖 + 月份 */
-.rw-pz-collection {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
-  gap: var(--space-3);
+/* ── 旅程地圖：8 章節故事地圖（design-language.md §6）────────────────
+   蜿蜒小徑：每章一個節點，沿左側點狀小徑串起。完成＝清晰＋緞帶；
+   正在尋回＝發光；尚未尋回＝去飽和淡化；尚未展開（章 7/8）＝虛線。 */
+.rw-jn-sub { font-size: var(--text-xs); color: var(--content-muted); margin: 2px 0 var(--space-3); }
+.rw-journey { position: relative; }
+/* 左側點狀小徑（穿過各章編號徽章中心，被徽章實底蓋住、僅章節間露出）*/
+.rw-journey::before {
+  content: "";
+  position: absolute;
+  left: 19px; top: 24px; bottom: 24px; width: 2px;
+  background: repeating-linear-gradient(to bottom,
+    var(--content-subtle) 0 4px, transparent 4px 10px);
+  opacity: .5;
 }
-.rw-pz-col-item { text-align: center; }
-.rw-pz-col-thumb {
-  width: 100%;
-  aspect-ratio: 1 / 1;
+.rw-jn-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+.rw-jn-num {
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-serif, serif);
+  font-size: var(--text-sm); font-weight: 600;
+  background: var(--surface-1);
+  color: var(--content-muted);
+  border: 1px solid var(--line);
+  z-index: 1;
+}
+.rw-jn-art { position: relative; flex: none; }
+.rw-jn-thumb {
+  display: block;
+  width: 56px; height: 56px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: var(--surface-2) center / cover no-repeat;
 }
-.rw-pz-col-cap { font-size: var(--text-xs); color: var(--content-muted); margin-top: 4px; }
+.rw-jn-thumb.is-future {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface-1);
+  border-style: dashed;
+  color: var(--content-subtle);
+}
+.rw-jn-thumb.is-future svg { width: 22px; height: 22px; }
+.rw-jn-ribbon {
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--action);
+  color: var(--primary-fg);
+  box-shadow: var(--shadow-1);
+}
+.rw-jn-ribbon svg { width: 13px; height: 13px; }
+.rw-jn-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rw-jn-name { font-family: var(--font-serif, serif); font-size: var(--text-base); color: var(--content); }
+.rw-jn-state { font-size: var(--text-xs); color: var(--content-muted); }
+
+/* 已尋回 */
+.rw-jn-node.is-complete .rw-jn-num { background: var(--action); color: var(--primary-fg); border-color: transparent; }
+/* 正在尋回：發光 */
+.rw-jn-node.is-active .rw-jn-num {
+  border-color: var(--action);
+  color: var(--action-deep);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--action) 18%, transparent);
+}
+.rw-jn-node.is-active .rw-jn-thumb { box-shadow: 0 0 0 2px var(--action); }
+.rw-jn-node.is-active .rw-jn-name { font-weight: 600; }
+.rw-jn-node.is-active .rw-jn-state { color: var(--action-deep); }
+/* 尚未尋回：去飽和淡化 */
+.rw-jn-node.is-locked .rw-jn-thumb { filter: grayscale(1); opacity: .5; }
+.rw-jn-node.is-locked .rw-jn-name,
+.rw-jn-node.is-locked .rw-jn-num { color: var(--content-subtle); }
+/* 尚未展開（章 7/8，插畫待補）*/
+.rw-jn-node.is-future { opacity: .7; }
+.rw-jn-node.is-future .rw-jn-num { border-style: dashed; }
+
+/* ── 記憶尋回 toast（design-language.md §12）──────────────────────
+   置中於頂端、與一般 showToast 分離；故事書語氣＋斜體英文副標＋sea-restore。 */
+#mem-toast-container {
+  position: fixed;
+  top: 18px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex; flex-direction: column; gap: 10px; align-items: center;
+  width: max-content; max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+.mem-toast {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card, 18px);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
+  animation: sea-restore .55s var(--ease-gentle, ease) both;
+}
+.mem-toast.leaving { animation: sea-restore-out .5s var(--ease, ease) both; }
+.mem-toast-seal {
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--action);
+}
+.mem-toast-seal svg { width: 20px; height: 20px; }
+.mem-toast-body { display: flex; flex-direction: column; gap: 1px; }
+.mem-toast-title { font-family: var(--font-serif, serif); font-size: var(--text-base); color: var(--content); }
+.mem-toast-sub { font-style: italic; font-size: var(--text-xs); color: var(--content-muted); }
+@keyframes sea-restore {
+  0% { opacity: 0; transform: translateY(-10px) scale(.96); }
+  60% { opacity: 1; transform: translateY(0) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sea-restore-out { to { opacity: 0; transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .mem-toast, .mem-toast.leaving { animation: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .rw-pz-cell, .rw-pz-cell.reveal, .rw-pz-bar > i { transition: none; animation: none; }
