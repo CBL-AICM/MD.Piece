@@ -3742,22 +3742,15 @@ function redeemReward(rewardId) {
 // backend/utils/rewards_rules.py 純算術完成，前端只負責呈現）。已解鎖片顯示插畫
 // 片段（同一張 theme 圖切成 3x3 的對應切片）、未解鎖片灰階＋鎖並附「還差什麼」。
 
-// theme.key → 插畫檔（frontend/img/puzzle/）。12 主題對應到 4 張季節插畫，
-// 每張都做成可被 3x3 切片，確保任何月份都有圖、不會破圖。
-var _PZ_ART = {
-  'spring-garden': 'spring-garden', 'blossom': 'spring-garden', 'morning-walk': 'spring-garden',
-  'sunny-window': 'sunny-window', 'summer-fruit': 'sunny-window', 'harvest': 'sunny-window',
-  'rainy-day': 'rainy-day', 'autumn-leaf': 'rainy-day', 'warm-tea': 'rainy-day',
-  'starry-night': 'starry-night', 'cozy-home': 'starry-night', 'snow-rest': 'starry-night',
-};
-var _PZ_ART_VER = 'v1';
+// 拼圖片的圖＝章節場景的「方形裁切」（與頂端 hero 同一張畫面）。集滿 9 片即拼出
+// 整幅 painterly 章節插畫，與 hero 風格統一。對映表用下方 _PZ_CHAPTER。
+var _PZ_ART_VER = 'v2-scene';
 function _pzArtUrl(themeKey) {
-  var file = _PZ_ART[themeKey] || 'rainy-day';
-  return 'img/puzzle/' + file + '.svg?v=' + _PZ_ART_VER;
+  return 'img/chapters/' + (_PZ_CHAPTER[themeKey] || 'seaside-corridor') + '-sq.jpg?v=' + _PZ_ART_VER;
 }
 
 // theme.key → 章節插畫（frontend/img/chapters/，Canva 生成的 painterly 場景）。
-// 用於拼圖板頂端的「章節 hero」橫幅，呼應「海邊的記憶之書」世界觀。
+// 頂端「章節 hero」橫幅用全幅 .jpg；拼圖片用方形裁切 -sq.jpg。呼應「海邊的記憶之書」。
 var _PZ_CHAPTER = {
   'spring-garden': 'spring-recovery', 'blossom': 'spring-recovery',
   'morning-walk': 'seaside-corridor', 'sunny-window': 'seaside-corridor',
