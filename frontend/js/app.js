@@ -3572,7 +3572,7 @@ function rewards() {
     + '<section class="rw-wrap">'
     +   '<header class="rw-head">'
     +     '<h2><i data-lucide="award" style="width:22px;height:22px"></i> 獎勵中心</h2>'
-    +     '<p>把你平常的紀錄與回饋，化成積分與獎勵。填問卷、每天打卡、持續紀錄都會自動累積。</p>'
+    +     '<p>每一次紀錄，都會找回一塊記憶碎片。填問卷、每天打卡、持續紀錄，都會慢慢把你的故事拼回來。</p>'
     +   '</header>'
     +   '<div id="rw-content"><div class="rw-empty">載入中…</div></div>'
     + '</section>';
@@ -3620,13 +3620,13 @@ function _rewardsHtml(s, catalog, puzzle) {
     +         'stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) + '"></circle>'
     +     '</svg>'
     +     '<div class="rw-ring-center">'
-    +       '<span class="rw-ring-lv">Lv.' + (lv.index || 1) + '</span>'
+    +       '<span class="rw-ring-lv">第 ' + (lv.index || 1) + ' 章</span>'
     +       '<span class="rw-ring-name">' + escapeHtml(lv.name || '萌芽') + '</span>'
     +     '</div>'
     +   '</div>'
     +   '<div class="rw-hero-meta">'
-    +     '<div class="rw-points"><span class="rw-points-big">' + (pts.available || 0) + '</span><span class="rw-points-unit">可用點數</span></div>'
-    +     '<div class="rw-points-sub">累積 ' + (pts.earned || 0) + ' 點 · 已兌換 ' + (pts.spent || 0) + ' 點</div>'
+    +     '<div class="rw-points"><span class="rw-points-big">' + (pts.available || 0) + '</span><span class="rw-points-unit">可用碎片</span></div>'
+    +     '<div class="rw-points-sub">已找回 ' + (pts.earned || 0) + ' 塊 · 已兌換 ' + (pts.spent || 0) + ' 塊</div>'
     +     _nextLevelHtml(lv, pts.earned || 0)
     +   '</div>'
     + '</div>';
@@ -3661,7 +3661,7 @@ function _rewardsHtml(s, catalog, puzzle) {
   var earnedCount = (s.badges || []).filter(function (b) { return b.earned; }).length;
   var badgeCard = ''
     + '<div class="rw-card">'
-    +   '<div class="rw-card-title"><i data-lucide="medal" style="width:18px;height:18px"></i> 徽章<small>' + earnedCount + ' / ' + (s.badges || []).length + ' 已解鎖</small></div>'
+    +   '<div class="rw-card-title"><i data-lucide="medal" style="width:18px;height:18px"></i> 找回的記憶<small>' + earnedCount + ' / ' + (s.badges || []).length + ' 已找回</small></div>'
     +   '<div class="rw-badges">' + badges + '</div>'
     + '</div>';
 
@@ -3674,9 +3674,9 @@ function _rewardsHtml(s, catalog, puzzle) {
       +   '<div class="rw-reward-body">'
       +     '<div class="rw-reward-name">' + escapeHtml(r.name || '') + '</div>'
       +     '<div class="rw-reward-desc">' + escapeHtml(r.desc || '') + '</div>'
-      +     '<div class="rw-reward-cost">' + (r.cost || 0) + ' 點</div>'
+      +     '<div class="rw-reward-cost">' + (r.cost || 0) + ' 塊碎片</div>'
       +   '</div>'
-      +   '<button class="rw-btn" ' + (ok ? '' : 'disabled ') + 'onclick="redeemReward(\'' + escapeHtml(r.id) + '\')">' + (ok ? '兌換' : '點數不足') + '</button>'
+      +   '<button class="rw-btn" ' + (ok ? '' : 'disabled ') + 'onclick="redeemReward(\'' + escapeHtml(r.id) + '\')">' + (ok ? '兌換' : '碎片還不夠') + '</button>'
       + '</div>';
   }).join('');
   var catalogCard = ''
@@ -3696,11 +3696,11 @@ function _rewardsHtml(s, catalog, puzzle) {
   }).join('');
   var ledgerCard = ''
     + '<div class="rw-card">'
-    +   '<div class="rw-card-title"><i data-lucide="receipt-text" style="width:18px;height:18px"></i> 最近加分明細</div>'
-    +   '<div class="rw-ledger">' + (led || '<div class="rw-empty">還沒有加分紀錄，開始填問卷或打卡就會出現囉。</div>') + '</div>'
+    +   '<div class="rw-card-title"><i data-lucide="receipt-text" style="width:18px;height:18px"></i> 最近找回的碎片</div>'
+    +   '<div class="rw-ledger">' + (led || '<div class="rw-empty">還沒有找回任何碎片，開始填問卷或打卡，就會慢慢出現。</div>') + '</div>'
     + '</div>';
 
-  var note = '<p class="rw-note">積分依你在 App 的紀錄自動換算，不需額外操作。兌換後由院方安排發放，實際品項以院方公告為準。</p>';
+  var note = '<p class="rw-note">記憶碎片依你在 App 的紀錄自動找回，不需額外操作。兌換後由院方安排發放，實際品項以院方公告為準。</p>';
 
   var puzzleCard = puzzle ? _puzzleHtml(puzzle) : '';
 
@@ -3709,11 +3709,11 @@ function _rewardsHtml(s, catalog, puzzle) {
 
 function _nextLevelHtml(lv, earned) {
   if (!lv || lv.next_floor == null) {
-    return '<div class="rw-next">已達最高等級，感謝你的持續紀錄 🎉</div>'
+    return '<div class="rw-next">你已翻到目前的最後一章，旅程仍在繼續。</div>'
       + '<div class="rw-bar"><i style="width:100%"></i></div>';
   }
   var pct = Math.round((typeof lv.progress === 'number' ? lv.progress : 0) * 100);
-  return '<div class="rw-next">距離「' + escapeHtml(lv.next_name || '') + '」還差 ' + (lv.to_next || 0) + ' 點</div>'
+  return '<div class="rw-next">再找回 ' + (lv.to_next || 0) + ' 塊，就能翻開「' + escapeHtml(lv.next_name || '') + '」</div>'
     + '<div class="rw-bar"><i style="width:' + pct + '%"></i></div>';
 }
 
