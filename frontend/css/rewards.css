@@ -514,3 +514,33 @@
   margin-top: 2px;
   text-shadow: 0 1px 6px rgba(20, 28, 34, .45);
 }
+
+/* ── 首頁入口卡 → 當月章節 painterly hero（背景圖 + 漸層 scrim + 淺色字）──
+   背景由 app.js 以當月主題插畫 inline 帶入；文字一律轉白以維持可讀。 */
+.rw-home.rw-home-hero {
+  position: relative;
+  min-height: 88px;
+  border: none;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--surface-2);
+  overflow: hidden;
+  box-shadow: var(--shadow-2);
+}
+.rw-home.rw-home-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(20,28,34,.74), rgba(20,28,34,.34) 58%, rgba(20,28,34,.56));
+}
+.rw-home.rw-home-hero > * { position: relative; z-index: 1; }
+.rw-home-hero .rw-home-ring .bg { stroke: rgba(255,255,255,.32); }
+.rw-home-hero .rw-home-ring .fg { stroke: #fff; }
+.rw-home-hero .rw-home-lv,
+.rw-home-hero .rw-home-title { color: #fff; }
+.rw-home-hero .rw-home-title svg { color: #fff; }
+.rw-home-hero .rw-home-sub { color: rgba(255,255,255,.86); }
+.rw-home-hero .rw-home-pts b { color: #fff; }
+.rw-home-hero .rw-home-pts span { color: rgba(255,255,255,.86); }
+.rw-home-hero .rw-home-chev { color: rgba(255,255,255,.9); }
