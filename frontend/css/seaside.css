@@ -1,0 +1,63 @@
+/* ============================================================
+   MD.Piece skin — 「海邊的記憶之書 / Seaside Memory Book」
+   Opt-in：?skin=seaside（存 localStorage）。啟用時 index.html 的 boot script
+   會退役 ghibli/hanako/visual-language 三層舊皮膚，讓本檔成為單一事實來源。
+   只覆寫 tokens.css 的語意 token（不碰元件結構），主題／長者模式自動跟著走。
+   依 docs/design-language.md 的指定色票與字體。
+   ============================================================ */
+:root.theme-seaside {
+  /* — primitives — */
+  --ocean-deep:#2C3943; --cloudy-stone:#77726F; --ocean-breeze:#9DABB4;
+  --coral-milk:#E5D4CA; --coral-deep:#C9A892; --soft-shell:#ECE6E3;
+
+  /* — surface / content / line — */
+  --surface-0:#ECE6E3; --surface-1:#F7F4F2; --surface-2:#F5F1EE;
+  --line:rgba(44,57,67,.10);
+  --content:#2C3943; --content-muted:#77726F; --content-subtle:#9DABB4;
+
+  /* — brand / action（Ocean Breeze 太淺，文字/動作用加深版以達 AA）— */
+  --primary:#2C3943; --primary-fg:#F7F4F2;
+  --action:#6E828E; --action-deep:#586B76; --accent:#C9A892;
+
+  /* — status：柔和、不刺眼（不用醫療藍/螢光紅）— */
+  --status-calm:#8AA39B;     --status-calm-fg:#5E7A70;
+  --status-watch:#C9A892;    --status-watch-fg:#9C7B63;
+  --status-elevated:#C2856B; --status-elevated-fg:#9E6248;
+  --status-urgent:#B5635A;   --status-urgent-fg:#8F463E;
+
+  /* — typography：書本感（標題 mincho、內文襯線 + Inter）— */
+  --font-sans:"Inter","Noto Serif TC","Noto Sans TC",system-ui,sans-serif;
+  --font-serif:"Zen Old Mincho","Cormorant Garamond","Noto Serif TC",serif;
+
+  /* — radius / elevation：大圓角、柔和紙感陰影 — */
+  --radius-sm:16px; --radius-md:24px; --radius-card:30px;
+  --shadow-1:0 8px 24px rgba(44,57,67,.08);
+  --shadow-2:0 12px 32px rgba(44,57,67,.12);
+  --shadow-fab:0 12px 28px rgba(44,57,67,.22);
+  --focus-ring:0 0 0 2px var(--surface-0),0 0 0 4px #6E828E;
+  --puzzle-opacity:.05;
+}
+
+/* Dark — 「紙張在夜裡」，不用 OLED 純黑 */
+:root.theme-seaside.dark {
+  --surface-0:#1F2830; --surface-1:#2A3741; --surface-2:#243038;
+  --line:rgba(207,197,191,.10);
+  --content:#CFC5BF; --content-muted:#9DA7AD; --content-subtle:#7F919D;
+  --primary:#3A4954; --primary-fg:#CFC5BF;
+  --action:#7F919D; --action-deep:#9DB0B9; --accent:#B89B8B;
+  --shadow-1:none; --shadow-2:0 0 0 1px var(--line);
+}
+
+/* 內文字型：勝過 v11-modern 在 body.theme-modern 的 !important font-family */
+.theme-seaside body {
+  font-family:var(--font-sans) !important;
+  background:var(--surface-0);
+  color:var(--content);
+}
+/* 標題用 Zen Old Mincho／Cormorant，書封般的聲音 */
+.theme-seaside h1, .theme-seaside h2, .theme-seaside h3,
+.theme-seaside .home-greet-title, .theme-seaside .home-title,
+.theme-seaside .rw-head h2, .theme-seaside .rw-pz-hero-title {
+  font-family:var(--font-serif) !important;
+  letter-spacing:.02em;
+}

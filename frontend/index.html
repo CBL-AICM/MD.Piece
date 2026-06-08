@@ -66,7 +66,7 @@
   <meta name="description" content="MD.piece使患者重新認識治療的旅程。以AI輔助醫療的平台整合疾病管理、治療追蹤與醫病協作，協助患者與醫療團隊建立更流暢且連續的照護體驗。" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Varela+Round&family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&family=ZCOOL+KuaiLe&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Varela+Round&family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400;500;600&family=ZCOOL+KuaiLe&family=Zen+Maru+Gothic:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Zen+Old+Mincho:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=v118-visual-lang" />
   <link rel="stylesheet" href="css/elder-mode.css?v=v4-fix-clobber" />
   <link rel="stylesheet" href="css/medical-warm.css?v=v6-dark-no-grad" />
@@ -82,6 +82,18 @@
   <link rel="stylesheet" href="css/components-2.0.css?v=2.0-a1" />
   <!-- ★ Visual language layer (global · additive · last-loaded · token-level skin: friendly rounded type + chunky icons + flat-cute radii/shadows) -->
   <link rel="stylesheet" href="css/visual-language.css?v=v1" />
+  <!-- ★ Seaside Memory Book skin (opt-in via ?skin=seaside; 啟用時退役 ghibli/hanako/visual-language) -->
+  <link rel="stylesheet" href="css/seaside.css?v=v1" />
+  <script>(function(){try{
+    var q=new URLSearchParams(location.search).get('skin');
+    if(q!==null){ q ? localStorage.setItem('mdpiece_skin',q) : localStorage.removeItem('mdpiece_skin'); }
+    if(localStorage.getItem('mdpiece_skin')==='seaside'){
+      document.documentElement.classList.add('theme-seaside');
+      ['ghibli-theme','hanako','visual-language'].forEach(function(n){
+        var l=document.querySelector('link[href*="css/'+n+'"]'); if(l){ l.disabled=true; }
+      });
+    }
+  }catch(e){}})();</script>
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
   <!-- Tesseract.js — 瀏覽器端 OCR（中文小字辨識），延後 load -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
