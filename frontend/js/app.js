@@ -25400,7 +25400,9 @@ function reminderRenderList() {
     el.appendChild(_remH('p', { style: 'color:var(--text-muted)' }, _T("app.c31.noRemindersDesktop")));
     return;
   }
-  var typeLabel = { medication: _T("app.d50.typeMedication"), appointment: _T("app.d50.typeAppointment"), lab: _T("app.d50.typeLab"), custom: _T("app.d50.typeCustom") };
+  // 與手機版 _mobileRemSyncList 共用同一套 type pill / 頻率對應，桌面也走 pill 樣式
+  var typeLabel = { medication: _T("app.d50.typeMedication"), appointment: _T("app.d50.typeAppointment"), lab: _T("app.d50.typeLab"), measurement: _T("app.d50.typeMeasurement"), custom: _T("app.d50.typeCustom") };
+  var typePillCls = { medication: 'pill-teal', appointment: 'pill-info', lab: 'pill-warn', measurement: 'pill-info', custom: 'pill-mute' };
   var freqLabel = { once: _T("app.d50.freqOnce"), daily: _T("app.d50.freqDaily"), weekly: _T("app.d50.freqWeekly"), monthly: _T("app.d50.freqMonthly") };
   _remindersList.forEach(function(r) {
     var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString() : '—';
@@ -25408,10 +25410,17 @@ function reminderRenderList() {
     var typeText = typeLabel[r.reminder_type] || String(r.reminder_type || '');
     var freqText = freqLabel[r.frequency] || String(r.frequency || '');
 
+    var pills = [
+      _remH('span', { 'class': 'pill ' + (typePillCls[r.reminder_type] || 'pill-mute') }, typeText),
+      _remH('span', { 'class': 'pill pill-mute' }, freqText),
+    ];
+    if (!active) pills.push(_remH('span', { 'class': 'pill pill-mute' }, _T("app.c31.disabled")));
+    var pillRow = _remH('div', { style: 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px' }, pills);
+
     var titleEl = _remH('div', { style: 'font-weight:600' }, String(r.title || ''));
-    var metaEl = _remH('div', { style: 'font-size:0.85rem;color:var(--text-dim);margin-top:2px' },
-      typeText + ' · ' + freqText + ' · ' + _T("app.c31.nextColon") + next + (active ? '' : ' · ' + _T("app.c31.disabledSuffix")));
-    var leftChildren = [titleEl, metaEl];
+    var nextEl = _remH('div', { style: 'font-size:0.8rem;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:3px' },
+      _T("app.c31.nextColon") + next);
+    var leftChildren = [pillRow, titleEl, nextEl];
     if (r.body) {
       leftChildren.push(_remH('div', { style: 'font-size:0.85rem;color:var(--text-dim);margin-top:4px' }, String(r.body)));
     }
@@ -25433,7 +25442,7 @@ function reminderRenderList() {
     var actions = _remH('div', { style: 'display:flex;flex-direction:column;gap:4px' }, [toggleBtn, delBtn]);
 
     var card = _remH('div', {
-      style: 'padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px',
+      style: 'padding:12px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px' + (active ? '' : ';opacity:0.55'),
     }, [left, actions]);
     el.appendChild(card);
   });
