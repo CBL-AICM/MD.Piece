@@ -3523,7 +3523,7 @@ window.addEventListener('mdpiece-lang-change', function () {
 // 只讀換算、點了才進獎勵中心；載入失敗就靜默隱藏，不讓首頁因此報錯。
 function renderHomeRewardsEntry() {
   return ''
-    + '<button type="button" class="rw-home js-home-rw" onclick="navigateTo(\'rewards\',null)" aria-label="' + _T('home.rw.aria') + '">'
+    + '<button type="button" class="rw-home rw-home-hero js-home-rw" style="background-image:url(\'' + _pzCurrentChapterUrl() + '\')" onclick="navigateTo(\'rewards\',null)" aria-label="' + _T('home.rw.aria') + '">'
     +   '<span class="rw-home-ring"><svg viewBox="0 0 46 46">'
     +       '<circle class="bg" cx="23" cy="23" r="18"></circle>'
     +       '<circle class="fg" cx="23" cy="23" r="18" data-rw-ring></circle>'
@@ -3761,6 +3761,12 @@ var _PZ_CHAPTER = {
 };
 function _pzChapterUrl(themeKey) {
   return 'img/chapters/' + (_PZ_CHAPTER[themeKey] || 'seaside-corridor') + '.jpg';
+}
+// 當月主題 key（與後端 theme_for_month 同序：PUZZLE_THEMES[(月-1)%12]）。
+// 給首頁入口卡當 painterly hero 背景用，免再打一支 API。
+var _PZ_THEME_KEYS = ['spring-garden','warm-tea','morning-walk','blossom','sunny-window','rainy-day','summer-fruit','starry-night','autumn-leaf','harvest','cozy-home','snow-rest'];
+function _pzCurrentChapterUrl() {
+  return _pzChapterUrl(_PZ_THEME_KEYS[new Date().getMonth()] || 'rainy-day');
 }
 
 // 把 board 渲染成一張卡（3x3 grid + 進度 + 集滿提示）。純呈現，不打 API。
