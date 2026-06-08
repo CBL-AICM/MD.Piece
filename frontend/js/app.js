@@ -13556,7 +13556,7 @@ function openMeasurementPlanDialog(metricId, opts) {
         <h3 style="margin:0 0 12px;font-size:1.05rem">${_T("app.c17.howOften")}</h3>
         <div id="vt-plan-presets" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
           ${VT_PLAN_PRESETS.map((p,i) => `
-            <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--border-glass);border-radius:8px;cursor:pointer">
+            <label class="vt-preset-card">
               <input type="radio" name="vt-plan-preset" value="${p.id}" ${i === 0 ? 'checked' : ''} onchange="vtPlanPresetChanged('${p.id}')" />
               <span>${p.label}</span>
             </label>
@@ -15094,7 +15094,7 @@ function showToast(msg, type) {
   if (!existing) {
     existing = document.createElement("div");
     existing.id = "toast-container";
-    existing.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none";
+    // 位置由 CSS #toast-container 控制（手機改底部置中，見 style.css media query）
     document.body.appendChild(existing);
   }
   // Dedupe：同訊息若還在畫面上，就更新計數而不疊新的。
@@ -25342,7 +25342,7 @@ function _mobileRemSyncList() {
 function _mobileRemSyncInbox() {
   var box = document.getElementById('mobile-rem-inbox');
   var cnt = document.getElementById('mobile-rem-inbox-count');
-  if (cnt) cnt.textContent = _Tf("app.c31.countUnread", { n: ((_remindersInbox || []).filter(function(i) { return !i.read_at; }).length) });
+  if (cnt) cnt.textContent = _Tf("app.c31.countUnread", { n: ((_remindersInbox || []).filter(function(i) { return !(i.read === true || i.read === 1); }).length) });
   if (!box) return;
   if (!_remindersInbox || !_remindersInbox.length) {
     box.innerHTML = '<div class="list-row" style="grid-template-columns:1fr;color:var(--text-muted);font-size:11px;padding:14px;text-align:center">' + _T("app.c31.noNotifications") + '</div>';
@@ -25350,7 +25350,7 @@ function _mobileRemSyncInbox() {
   }
   box.innerHTML = _remindersInbox.slice(0, 8).map(function(i) {
     var t = i.created_at ? new Date(i.created_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-    var unread = !i.read_at;
+    var unread = !(i.read === true || i.read === 1);
     var meta = _remTypeMeta(i.reminder_type);
     var pillHtml = meta ? '<span class="pill ' + meta.cls + '" style="margin-bottom:4px">' + escapeHtml(meta.label) + '</span>' : '';
     return ''
