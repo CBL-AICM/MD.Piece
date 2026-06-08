@@ -15046,7 +15046,7 @@ function showToast(msg, type) {
   if (!existing) {
     existing = document.createElement("div");
     existing.id = "toast-container";
-    existing.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px";
+    existing.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none";
     document.body.appendChild(existing);
   }
   // Dedupe：同訊息若還在畫面上，就更新計數而不疊新的。
@@ -15055,20 +15055,44 @@ function showToast(msg, type) {
   if (dupe) {
     var count = (parseInt(dupe.dataset.count, 10) || 1) + 1;
     dupe.dataset.count = count;
-    dupe.textContent = msg + ' ×' + count;
-    dupe.style.opacity = '1';
+    var dmsg = dupe.querySelector('.toast-msg');
+    if (dmsg) dmsg.textContent = msg + ' ×' + count;
+    dupe.style.opacity = "1";
     clearTimeout(dupe._fadeTimer);
-    dupe._fadeTimer = setTimeout(function() { dupe.style.opacity = "0"; setTimeout(function() { dupe.remove(); }, 300); }, 3000);
+    dupe._fadeTimer = setTimeout(function() { _toastDismiss(dupe); }, 3000);
     return;
   }
-  var colors = { success: "#00D4AA", error: "#D94D4D", info: "#2B5CE6", warning: "#E8A84B" };
+  // 淡色底 + 左側色條 + 深色字 + 圓形圖示，與全站 .pill / warm 風格一致
+  var palette = {
+    success: { bg: "#E7F8F2", bar: "#00C29A", fg: "#0A6E5C", icon: "M20 6L9 17l-5-5" },
+    error:   { bg: "#FCEDEC", bar: "#D94D4D", fg: "#9A2B2B", icon: "M18 6L6 18M6 6l12 12" },
+    info:    { bg: "#EAF0FE", bar: "#2B5CE6", fg: "#1E3FA0", icon: "M12 16v-4M12 8h.01" },
+    warning: { bg: "#FDF3E3", bar: "#E8A84B", fg: "#8A5A12", icon: "M12 9v4M12 17h.01" },
+  };
+  var c = palette[type] || palette.info;
   var toast = document.createElement("div");
   toast.dataset.toastKey = key;
   toast.dataset.count = '1';
-  toast.style.cssText = "padding:12px 20px;border-radius:8px;color:white;font-size:0.9rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.3s;max-width:360px;background:" + (colors[type] || colors.info);
-  toast.textContent = msg;
+  toast.style.cssText = "pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;border-left:4px solid " + c.bar + ";background:" + c.bg + ";color:" + c.fg + ";font-size:0.9rem;font-weight:500;box-shadow:0 6px 20px rgba(20,40,60,0.14);max-width:360px;opacity:0;transform:translateX(16px);transition:opacity 0.28s ease,transform 0.28s ease";
+  // 圖示（固定 SVG path，非使用者資料，無 XSS 風險）
+  var iconWrap = document.createElement("div");
+  iconWrap.style.cssText = "flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:" + c.bar;
+  iconWrap.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="' + c.icon + '"/></svg>';
+  var msgEl = document.createElement("span");
+  msgEl.className = "toast-msg";
+  msgEl.textContent = msg;
+  toast.appendChild(iconWrap);
+  toast.appendChild(msgEl);
   existing.appendChild(toast);
-  toast._fadeTimer = setTimeout(function() { toast.style.opacity = "0"; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+  // 進場：下一幀滑入
+  requestAnimationFrame(function() { toast.style.opacity = "1"; toast.style.transform = "translateX(0)"; });
+  toast._fadeTimer = setTimeout(function() { _toastDismiss(toast); }, 3000);
+}
+
+function _toastDismiss(el) {
+  el.style.opacity = "0";
+  el.style.transform = "translateX(16px)";
+  setTimeout(function() { el.remove(); }, 300);
 }
 
 // 把 fetch response 翻成人話：優先用 backend 的 JSON `detail`（中文），fallback 才用 HTTP code
@@ -25390,6 +25414,14 @@ function _remindersBindDelegated() {
   }
 }
 
+// 提醒類型 → pill 標籤 / 顏色（清單與收件匣共用，避免兩處走樣）。未知類型回傳 null。
+function _remTypeMeta(type) {
+  var labels = { medication: _T("app.d50.typeMedication"), appointment: _T("app.d50.typeAppointment"), lab: _T("app.d50.typeLab"), measurement: _T("app.d50.typeMeasurement"), custom: _T("app.d50.typeCustom") };
+  var cls = { medication: 'pill-teal', appointment: 'pill-info', lab: 'pill-warn', measurement: 'pill-info', custom: 'pill-mute' };
+  if (!labels[type]) return null;
+  return { label: labels[type], cls: cls[type] };
+}
+
 function reminderRenderList() {
   // mobile mirror first
   if (typeof _mobileRemSyncList === 'function') _mobileRemSyncList();
@@ -25400,18 +25432,17 @@ function reminderRenderList() {
     el.appendChild(_remH('p', { style: 'color:var(--text-muted)' }, _T("app.c31.noRemindersDesktop")));
     return;
   }
-  // 與手機版 _mobileRemSyncList 共用同一套 type pill / 頻率對應，桌面也走 pill 樣式
-  var typeLabel = { medication: _T("app.d50.typeMedication"), appointment: _T("app.d50.typeAppointment"), lab: _T("app.d50.typeLab"), measurement: _T("app.d50.typeMeasurement"), custom: _T("app.d50.typeCustom") };
-  var typePillCls = { medication: 'pill-teal', appointment: 'pill-info', lab: 'pill-warn', measurement: 'pill-info', custom: 'pill-mute' };
   var freqLabel = { once: _T("app.d50.freqOnce"), daily: _T("app.d50.freqDaily"), weekly: _T("app.d50.freqWeekly"), monthly: _T("app.d50.freqMonthly") };
   _remindersList.forEach(function(r) {
     var next = r.next_fire_at ? new Date(r.next_fire_at).toLocaleString() : '—';
     var active = (r.active === true || r.active === 1);
-    var typeText = typeLabel[r.reminder_type] || String(r.reminder_type || '');
+    var tmeta = _remTypeMeta(r.reminder_type);
+    var typeText = tmeta ? tmeta.label : String(r.reminder_type || '');
+    var typeCls = tmeta ? tmeta.cls : 'pill-mute';
     var freqText = freqLabel[r.frequency] || String(r.frequency || '');
 
     var pills = [
-      _remH('span', { 'class': 'pill ' + (typePillCls[r.reminder_type] || 'pill-mute') }, typeText),
+      _remH('span', { 'class': 'pill ' + typeCls }, typeText),
       _remH('span', { 'class': 'pill pill-mute' }, freqText),
     ];
     if (!active) pills.push(_remH('span', { 'class': 'pill pill-mute' }, _T("app.c31.disabled")));
@@ -25487,13 +25518,20 @@ function reminderRenderInbox(unread) {
   _remindersInbox.forEach(function(n) {
     var isRead = (n.read === true || n.read === 1);
     var when = n.created_at ? new Date(n.created_at).toLocaleString() : '';
-    var headerLeft = _remH('div', { style: 'font-weight:' + (isRead ? '500' : '600') }, String(n.title || ''));
-    var headerRight = _remH('div', { style: 'font-size:0.75rem;color:var(--text-muted);white-space:nowrap' }, when);
-    var header = _remH('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [headerLeft, headerRight]);
-    var children = [header];
+    var tmeta = _remTypeMeta(n.reminder_type);
+
+    // 頂列：類型 pill（若可辨識）+ 未讀 pill，與「我的提醒」清單同一套樣式
+    var pills = [];
+    if (tmeta) pills.push(_remH('span', { 'class': 'pill ' + tmeta.cls }, tmeta.label));
+    if (!isRead) pills.push(_remH('span', { 'class': 'pill pill-info' }, _T("app.d50.unread").trim()));
+    var children = [];
+    if (pills.length) children.push(_remH('div', { style: 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px' }, pills));
+
+    children.push(_remH('div', { style: 'font-weight:' + (isRead ? '500' : '600') }, String(n.title || '')));
     if (n.body) {
       children.push(_remH('div', { style: 'font-size:0.85rem;color:var(--text-dim);margin-top:4px' }, String(n.body)));
     }
+    children.push(_remH('div', { style: 'font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono,monospace);margin-top:3px' }, when));
     if (!isRead) {
       children.push(_remH('button', {
         'class': 'secondary',
@@ -25503,7 +25541,7 @@ function reminderRenderInbox(unread) {
       }, _T('app.c32.markRead')));
     }
     var card = _remH('div', {
-      style: 'padding:10px;border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:6px;background:' + (isRead ? 'transparent' : 'rgba(100,140,200,0.06)'),
+      style: 'padding:12px;border:1px solid var(--border-glass);border-left:3px solid ' + (isRead ? 'var(--border-glass)' : 'var(--accent, #2B5CE6)') + ';border-radius:var(--radius-sm);margin-bottom:6px;background:' + (isRead ? 'transparent' : 'rgba(100,140,200,0.06)'),
     }, children);
     el.appendChild(card);
   });
