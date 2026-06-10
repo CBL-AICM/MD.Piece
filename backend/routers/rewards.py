@@ -279,12 +279,14 @@ def redeem(body: RedeemRequest):
     try:
         saved = sb.table("reward_redemptions").insert(row).execute()
     except Exception as exc:
-        # 規則 12：不靜默吞掉。表沒建好就明確指向 migration。
+        # 規則 12：不靜默吞掉，但也別硬指一個可能錯的原因。寫入失敗常見有二：
+        # (1) reward_redemptions 尚未建表；(2) 表已建但 anon 角色被 RLS 擋下
+        # （缺 stopgap_anon_all policy）。兩者都靠套用同一份 migration 修復。
         logger.error("redeem insert failed: %s", exc)
         raise HTTPException(
             status_code=503,
-            detail="兌換暫時無法完成（reward_redemptions 資料表尚未就緒，"
-                   "請先套用 docs/migration_reward_redemptions.sql）。",
+            detail="兌換暫時無法完成（寫入未成功；請確認 reward_redemptions "
+                   "資料表與 RLS policy 已套用 docs/migration_reward_redemptions.sql）。",
         )
     saved_id = saved.data[0].get("id") if saved.data else None
     return {

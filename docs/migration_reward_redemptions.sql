@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS reward_redemptions (
 CREATE INDEX IF NOT EXISTS reward_redemptions_patient_idx
     ON reward_redemptions (patient_id, created_at DESC);
 
--- 規則 7：沿用目前的安全姿態（RLS 開啟、不建 policy；後端帶 service_role 繞過、
--- anon 一律被擋），而非舊 migration 的 DISABLE RLS。見 backend/db.py 開頭說明。
+-- 規則 7：沿用目前「實際生效」的安全姿態——RLS 開啟 + 一條 stopgap_anon_all
+-- 允許全表 policy，與其他所有使用者資料表（symptom_entries / survey_responses /
+-- ehl_results …）一致。後端目前仍帶 anon key，若不建 policy，anon 寫入會被 RLS
+-- 擋下（PostgREST 4xx），導致兌換失敗。待後端全面切換 service_role 後，再隨其他表
+-- 一起把這些 stopgap policy 收斂掉。見 backend/db.py 開頭說明。
 ALTER TABLE reward_redemptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY stopgap_anon_all ON reward_redemptions
+    FOR ALL TO anon, authenticated
+    USING (true) WITH CHECK (true);
