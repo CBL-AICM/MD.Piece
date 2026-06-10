@@ -465,6 +465,190 @@ function logout() {
   window.location.reload();
 }
 
+// ─── 多帳號快速切換 ──────────────────────────────────────────
+// 記住每個登入成功的帳號（含各自的 access_token），讓使用者在 token 未過期前
+// 不必重打密碼就能切換。沿用現有信任姿態：單一 token 本來就存在 localStorage，
+// 多存幾個屬同等風險（規則 7/11：對齊既有做法）。切到 token 已過期的帳號會吃到
+// apiFetch 的 401 → 清除 → 回登入頁（既有流程），不需另外驗證（規則 5）。
+var ACCOUNTS_KEY = 'mdpiece_accounts';
+
+function getAccounts() {
+  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || []; }
+  catch { return []; }
+}
+
+function _saveAccounts(list) {
+  try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list || [])); } catch (e) {}
+}
+
+// 登入/註冊成功後呼叫：記住或更新此帳號（移到清單最前）。
+function rememberAccount(user, token) {
+  if (!user || !user.id) return;
+  token = token || getAccessToken() || '';
+  var list = getAccounts().filter(function (a) { return a.id !== user.id; });
+  list.unshift({
+    id: user.id,
+    username: user.username || '',
+    nickname: user.nickname || '',
+    avatar_url: user.avatar_url || '',
+    role: user.role || 'patient',
+    created_at: user.created_at || '',
+    token: token,
+    savedAt: Date.now(),
+  });
+  _saveAccounts(list);
+}
+
+// 從這台裝置移除一個記住的帳號（不影響其登入態，只是清單拿掉）。
+function forgetAccount(id) {
+  _saveAccounts(getAccounts().filter(function (a) { return a.id !== id; }));
+}
+
+// 切到已記住的帳號：先把目前帳號的最新 token 存回清單，再把目標設為目前帳號並重載。
+function switchToAccount(id) {
+  var acct = getAccounts().filter(function (a) { return a.id === id; })[0];
+  if (!acct) return;
+  var current = getCurrentUser();
+  if (current && current.id === id) { closeAccountSwitcher(); return; }
+  if (current && current.id) rememberAccount(current, getAccessToken());
+  if (acct.username) { try { localStorage.setItem('mdpiece_last_username', acct.username); } catch (e) {} }
+  try { localStorage.removeItem('mdpiece_demo_pid'); } catch (e) {}
+  if (!acct.token) {
+    // 沒有 token（理論上不會發生）→ 退回登入頁，帳號已帶入 last_username
+    switchAccount();
+    return;
+  }
+  // 只寫乾淨的 user 欄位；切勿把 token / savedAt 等記帳欄位流進 mdpiece_user。
+  setCurrentUser({
+    id: acct.id,
+    username: acct.username,
+    nickname: acct.nickname,
+    avatar_url: acct.avatar_url,
+    role: acct.role || 'patient',
+    created_at: acct.created_at || '',
+    access_token: acct.token,
+  });
+  window.location.reload();
+}
+
+// 新增其他帳號：保留已記住清單，只清掉目前登入態回到登入頁去登入另一個帳號。
+function addAnotherAccount() {
+  var current = getCurrentUser();
+  if (current && current.id) rememberAccount(current, getAccessToken());
+  try {
+    localStorage.removeItem('mdpiece_user');
+    localStorage.removeItem('mdpiece_access_token');
+    localStorage.removeItem('mdpiece_demo_pid');
+  } catch (e) {}
+  window.location.reload();
+}
+
+// 開啟切換帳號面板（bottom sheet）。使用者資料一律以 textContent 注入，避免 XSS。
+function openAccountSwitcher() {
+  var current = getCurrentUser();
+  // 把目前帳號補進清單（涵蓋本功能上線前就已登入的舊使用者）
+  if (current && current.id && !getAccounts().some(function (a) { return a.id === current.id; })) {
+    rememberAccount(current, getAccessToken());
+  }
+  closeAccountSwitcher();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'acct-switcher-overlay';
+  overlay.setAttribute('style',
+    'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.4);');
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) closeAccountSwitcher(); });
+
+  var sheet = document.createElement('div');
+  sheet.setAttribute('style',
+    'background:var(--bg-surface,#fff);width:100%;max-width:480px;border-radius:18px 18px 0 0;' +
+    'padding:18px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,0.18);' +
+    'max-height:80vh;overflow:auto;');
+
+  var title = document.createElement('div');
+  title.setAttribute('style', 'font-weight:700;font-size:16px;margin:2px 4px 12px;color:var(--text,#1f3d58)');
+  title.textContent = _T('app.c6.accountSwitcherTitle');
+  sheet.appendChild(title);
+
+  getAccounts().forEach(function (a) { sheet.appendChild(_acctSwitcherRow(a, current)); });
+
+  var addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.setAttribute('style', _acctSwitcherBtnStyle());
+  addBtn.innerHTML = '<i data-lucide="user-plus"></i>';
+  var addTxt = document.createElement('span');
+  addTxt.textContent = _T('app.c6.addAnotherAccount');
+  addBtn.appendChild(addTxt);
+  addBtn.addEventListener('click', addAnotherAccount);
+  sheet.appendChild(addBtn);
+
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeAccountSwitcher() {
+  var o = document.getElementById('acct-switcher-overlay');
+  if (o && o.parentNode) o.parentNode.removeChild(o);
+}
+
+function _acctSwitcherBtnStyle() {
+  return 'display:flex;align-items:center;gap:10px;width:100%;padding:12px;margin-top:8px;' +
+    'border:1px solid var(--border,rgba(31,61,88,0.12));border-radius:12px;background:none;cursor:pointer;' +
+    'text-align:left;color:var(--text,#1f3d58);font-size:14px;';
+}
+
+function _acctSwitcherRow(a, current) {
+  var isCurrent = current && current.id === a.id;
+  var row = document.createElement('div');
+  row.setAttribute('style',
+    'display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;margin-top:8px;border-radius:12px;' +
+    'border:1px solid ' + (isCurrent ? 'var(--accent,#5B9FE8)' : 'var(--border,rgba(31,61,88,0.12))') + ';' +
+    'background:' + (isCurrent ? 'rgba(91,159,232,0.08)' : 'none') + ';');
+
+  var av = document.createElement('div');
+  av.setAttribute('style', 'width:38px;height:38px;border-radius:50%;overflow:hidden;flex:0 0 auto;background:var(--bg-soft,#eef3f8);');
+  var img = document.createElement('img');
+  img.src = a.avatar_url || 'icons/xiaohe.jpg';
+  img.alt = '';
+  img.setAttribute('style', 'width:100%;height:100%;object-fit:cover;');
+  av.appendChild(img);
+  row.appendChild(av);
+
+  var info = document.createElement('button');
+  info.type = 'button';
+  info.setAttribute('style', 'flex:1 1 auto;min-width:0;background:none;border:none;cursor:pointer;text-align:left;padding:0;');
+  var nm = document.createElement('div');
+  nm.setAttribute('style', 'font-weight:600;font-size:14px;color:var(--text,#1f3d58);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;');
+  nm.textContent = a.nickname || a.username || '—';
+  var sub = document.createElement('div');
+  sub.setAttribute('style', 'font-size:12px;color:var(--text-muted,#7a8a99);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;');
+  sub.textContent = isCurrent ? _T('app.c6.currentAccount') : ('@' + (a.username || ''));
+  info.appendChild(nm); info.appendChild(sub);
+  if (!isCurrent) info.addEventListener('click', function () { switchToAccount(a.id); });
+  row.appendChild(info);
+
+  if (isCurrent) {
+    var chk = document.createElement('i');
+    chk.setAttribute('data-lucide', 'check');
+    chk.setAttribute('style', 'color:var(--accent,#5B9FE8);flex:0 0 auto;width:18px;height:18px;');
+    row.appendChild(chk);
+  } else {
+    var rm = document.createElement('button');
+    rm.type = 'button';
+    rm.setAttribute('aria-label', _T('app.c6.forgetAccount'));
+    rm.setAttribute('style', 'flex:0 0 auto;background:none;border:none;cursor:pointer;color:var(--text-muted,#7a8a99);padding:6px;');
+    rm.innerHTML = '<i data-lucide="x"></i>';
+    rm.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!confirm(_T('app.c6.forgetAccountConfirm'))) return;
+      forgetAccount(a.id);
+      openAccountSwitcher();
+    });
+    row.appendChild(rm);
+  }
+  return row;
+}
+
 // 取得或建立一個穩定 UUID（避免 demo 模式下 patient_id 不是 UUID 導致後端寫入失敗）
 function getStablePatientId() {
   var user = getCurrentUser();
@@ -4284,6 +4468,9 @@ function finishAuth(user, isNewRegistration) {
   if (user.username) {
     try { localStorage.setItem('mdpiece_last_username', user.username); } catch {}
   }
+  // 多帳號切換：記住此次登入成功的帳號（含 token）。setCurrentUser 會把
+  // access_token 拆出存放但不會動到傳入的 user 物件，故此處仍讀得到 token。
+  rememberAccount(user, user.access_token);
   setCurrentUser(user);
   const overlay = document.getElementById('register-overlay');
   overlay.classList.remove('show');
@@ -5011,9 +5198,11 @@ function _closeProfileOnboarding(overlay) {
   }, 200);
 }
 
-// 切換帳號 — 不二次確認，直接回到登入頁
+// 切換帳號 — 不二次確認，直接回到登入頁（保留 mdpiece_accounts 清單）。
+// 同時清掉 access_token，避免殘留舊 token（先前漏清的小 bug）。
 function switchAccount() {
   try { localStorage.removeItem('mdpiece_user'); } catch {}
+  try { localStorage.removeItem('mdpiece_access_token'); } catch {}
   try { localStorage.removeItem('mdpiece_demo_pid'); } catch {}
   window.location.reload();
 }
@@ -5034,7 +5223,7 @@ function accountPage() {
     <div class="mobile-only" style="margin-bottom:12px">
       <div class="home-greet" style="position:relative;overflow:hidden">
         <svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice" style="opacity:0.25"><use href="#puzzle-bg-blue-teal"/></svg>
-        <div class="home-avatar" style="position:relative;z-index:1">${avatarHtml}</div>
+        <div class="home-avatar" role="button" tabindex="0" style="position:relative;z-index:1;cursor:pointer" title="${_T('app.c6.switchAccount')}" onclick="openAccountSwitcher()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAccountSwitcher()}">${avatarHtml}</div>
         <div class="home-greet-text" style="position:relative;z-index:1">
           <div class="home-greet-title">${(u.nickname || u.username || _T('app.c6.unnamed')).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>
           <div class="home-greet-date"><i data-lucide="${roleIcon}" style="width:11px;height:11px"></i> ${roleLabel} · ${u.username || ''}</div>
@@ -5126,7 +5315,7 @@ function accountPage() {
         </form>
 
         <div class="acct-actions">
-          <button class="acct-action acct-action-secondary" onclick="switchAccount()">
+          <button class="acct-action acct-action-secondary" onclick="openAccountSwitcher()">
             <i data-lucide="users"></i> ${_T('app.c6.switchAccount')}
           </button>
           <button class="acct-action acct-action-danger" onclick="logout()">
@@ -6643,7 +6832,7 @@ function home() {
     // 早安卡 — 拼圖漸層背景
     +   '<div class="home-greet">'
     +     '<svg class="puzzle-bg-layer" preserveAspectRatio="xMidYMid slice"><use href="#puzzle-bg-rose-amber"/></svg>'
-    +     '<div class="home-avatar">'
+    +     '<div class="home-avatar" role="button" tabindex="0" style="cursor:pointer" title="' + _T('app.c6.switchAccount') + '" onclick="openAccountSwitcher()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openAccountSwitcher()}">'
     +       ((user && user.avatar_url) ? '<img src="' + escapeHtml(user.avatar_url) + '" alt="' + escapeHtml(avatarAlt) + '" />' : escapeHtml(_mobileGreetCh))
     +     '</div>'
     +     '<div class="home-greet-text">'
