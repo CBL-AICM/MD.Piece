@@ -301,6 +301,7 @@ _SCHEMAS = {
                 ('breakfast', 'lunch', 'dinner', 'snack')),
             foods TEXT NOT NULL,
             note TEXT DEFAULT '',
+            calories INTEGER,
             eaten_at TEXT DEFAULT (datetime('now')),
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (patient_id) REFERENCES patients(id)
