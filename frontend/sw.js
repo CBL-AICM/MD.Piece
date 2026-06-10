@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v160-empty2";
+const CACHE_VERSION = "mdpiece-v161-food-cal";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -13,9 +13,9 @@ const STATIC_ASSETS = [
   "/css/ghibli-theme.css?v=v3",
   "/css/edu-codex.css?v=v3",
   "/css/rewards.css?v=v3-puzzle",
-  "/js/i18n.js?v=v87-puzzle",
+  "/js/i18n.js?v=v91-food-cal",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v160-puzzle",
+  "/js/app.js?v=v164-food-cal",
   "/js/edu-codex.js?v=v3",
   "/img/puzzle/spring-garden.svg?v=v1",
   "/img/puzzle/sunny-window.svg?v=v1",
