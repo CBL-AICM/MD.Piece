@@ -1,0 +1,34 @@
+# 只讓 backend/ 與 frontend/ 進入映像（見 Dockerfile 的 COPY）；
+# 其餘一律排除以縮小 build context 與映像體積。
+.git
+.github
+.synaptic
+.vscode
+**/__pycache__
+**/*.pyc
+*.zip
+*.ipynb
+*.md
+ChatDev
+gpt-researcher
+storm
+research
+knowledge_base
+kaggle-kernel
+autoresearch-feature-ynJbT
+autoresearch_runner.py
+colab_t4_patch.py
+dify
+interaction
+interface
+content
+public
+src
+vite-plugin-pwa
+output
+docs
+tests
+mcp_server
+config
+api
+start.ps1

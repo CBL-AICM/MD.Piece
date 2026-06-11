@@ -1,0 +1,18 @@
+# 每日 EMA 排程派送（取代原 vercel.json 的 crons）
+# Fly.io 沒有內建 cron，改用 GitHub Actions 定時打 production 的 /ema/cron/run。
+# 需在 repo Settings → Secrets → Actions 設 CRON_TOKEN，值與 Fly secret 的 CRON_TOKEN 相同。
+name: EMA daily cron
+
+on:
+  schedule:
+    - cron: "0 1 * * *"   # 每日 01:00 UTC，對齊原 vercel.json
+  workflow_dispatch: {}    # 也可在 Actions 頁手動觸發測試
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit /ema/cron/run
+        run: |
+          curl -fsS -X GET "https://www.mdpiece.life/ema/cron/run" \
+            -H "X-Cron-Token: ${{ secrets.CRON_TOKEN }}"
