@@ -1,0 +1,9 @@
+{
+  "name": "md-piece-functions",
+  "private": true,
+  "type": "module",
+  "description": "Node serverless functions (Vercel) — 與 Python 後端 (api/index.py) 並存",
+  "dependencies": {
+    "@vercel/connect": "^0.2.2"
+  }
+}
