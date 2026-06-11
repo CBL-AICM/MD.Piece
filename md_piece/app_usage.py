@@ -326,6 +326,7 @@ class UsageRecord:
     churn_day: int = -1                              # 最後一個活躍日（相對 join）
     engaged_at_12m: bool = False
     non_registration_reason: str = ""
+    event_days: dict = field(default_factory=dict)   # collect_days=True 時：feature -> [相對 join 的活躍日]
 
     def to_dict(self) -> dict:
         from dataclasses import asdict
@@ -364,6 +365,7 @@ def simulate_patient_usage(
     join_day: int,
     sim_days: int,
     seed: int,
+    collect_days: bool = False,
 ) -> UsageRecord:
     """模擬單一患者 12 個月(sim_days)的 MD.Piece 使用行為。"""
     se = profile.socioeconomic
@@ -421,6 +423,7 @@ def simulate_patient_usage(
     active_month = set()
     active_rel_days: list[int] = []      # 活躍日（相對 join），供留存里程碑判斷
     last_active = -1
+    events: dict = {}                    # collect_days 時收集每個 feature 的記錄日(相對 join)
 
     for d in range(join_day, sim_days):
         ds = d - join_day
@@ -443,6 +446,8 @@ def simulate_patient_usage(
                     if feat_state[fk]["adopted"]:
                         feat_state[fk]["n_records"] += 1
                         feat_state[fk]["last_day"] = d
+                        if collect_days:
+                            events.setdefault(fk, []).append(d)
                 is_active = True       # 回診當天通常也會開 App
             next_visit += visit_interval
 
@@ -459,6 +464,8 @@ def simulate_patient_usage(
             if rng.random() < 0.5:
                 feat_state["reminders"]["n_records"] += 1
                 feat_state["reminders"]["last_day"] = d
+                if collect_days:
+                    events.setdefault("reminders", []).append(d)
 
         # 每日型功能
         for feat in FEATURES:
@@ -469,6 +476,8 @@ def simulate_patient_usage(
                     feat_state[feat.key]["n_records"] += 1
                     feat_state[feat.key]["last_day"] = d
                     med_logged_days += 1
+                    if collect_days:
+                        events.setdefault("medications", []).append(d)
                 continue
             rate = feat.daily_rate
             if feat.activity_driven and symptomatic[d]:
@@ -476,8 +485,12 @@ def simulate_patient_usage(
             if rng.random() < rate:
                 feat_state[feat.key]["n_records"] += 1
                 feat_state[feat.key]["last_day"] = d
+                if collect_days:
+                    events.setdefault(feat.key, []).append(d)
 
     # ---- 彙整 ----
+    if collect_days:
+        rec.event_days = events
     rec.features = feat_state
     rec.active_days = active_days
     rec.total_records = int(sum(v["n_records"] for v in feat_state.values()))
