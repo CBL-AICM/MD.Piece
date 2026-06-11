@@ -5,5 +5,3 @@ python-dotenv
 anthropic
 pywebpush
 PyJWT
-httpx
-python-multipart

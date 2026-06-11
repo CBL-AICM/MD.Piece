@@ -29,19 +29,6 @@ app.add_middleware(
 )
 
 
-# PWA 快取控制：service worker 與入口 HTML 必須 no-store，否則使用者會卡在舊版
-# （對齊原 vercel.json 的 headers 設定，避免「改了沒生效」的快取地獄）。
-@app.middleware("http")
-async def _pwa_cache_headers(request: Request, call_next):
-    resp = await call_next(request)
-    path = request.url.path
-    if path in ("/", "/index.html", "/sw.js"):
-        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    elif path.startswith(("/css/", "/js/", "/icons/")):
-        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
-    return resp
-
-
 @app.exception_handler(RuntimeError)
 async def runtime_error_handler(request: Request, exc: RuntimeError):
     msg = str(exc)
@@ -125,18 +112,5 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 @app.get("/")
 def root():
     return FileResponse(FRONTEND_DIR / "index.html")
-
-
-@app.get("/admin")
-def admin():
-    """研究後台頁（對齊原 vercel.json 的 /admin → admin.html）。"""
-    return FileResponse(FRONTEND_DIR / "admin.html")
-
-
-@app.get("/healthz")
-def healthz():
-    """輕量健康檢查端點（Fly.io health check 用，不打外部服務）。"""
-    return {"ok": True}
-
 
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
