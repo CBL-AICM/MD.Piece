@@ -95,6 +95,14 @@ class CompleteBody(BaseModel):
     response_id: Optional[str] = None
 
 
+class PushBody(BaseModel):
+    survey_key: str
+    user_ids: Optional[list[str]] = None   # 指定對象；與 all_patients 擇一（可並用，取聯集）
+    all_patients: bool = False              # True = 推給全部 patient 角色使用者
+    study: Optional[str] = None
+    expires_after_min: int = 1440           # 手動推送預設一天內有效
+
+
 # ── Helpers（純程式碼；規則 5）────────────────────────────
 
 def _json(v):
@@ -520,6 +528,52 @@ def dispatch(me: dict = Depends(current_user)):
     if me.get("role") != "doctor":
         raise HTTPException(status_code=403, detail="僅研究者 / 排程可派送")
     return _run_dispatch(get_supabase(), send_push=True)
+
+
+@router.post("/push")
+def push_now(body: PushBody, me: dict = Depends(current_user)):
+    """研究者手動推送（限 doctor）：對指定使用者（或全部病患）立即建立 delivery 並派送。
+
+    不經規則引擎：trigger_type='manual'、scheduled_at=now，重用 _run_dispatch 走既有
+    站內通知 + Web Push 通道；病患端開 App 由既有 /ema/pending 補彈（ema-prompt.js）。
+    """
+    if me.get("role") != "doctor":
+        raise HTTPException(status_code=403, detail="僅研究者可手動推送問卷")
+    sb = get_supabase()
+    if not sb.table("surveys").select("key").eq("key", body.survey_key).limit(1).execute().data:
+        raise HTTPException(status_code=400, detail=f"survey_key 不存在：{body.survey_key}")
+
+    ids = set(body.user_ids or [])
+    if body.all_patients:
+        try:
+            rows = sb.table("users").select("*").eq("role", "patient").execute().data or []
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"讀取病患清單失敗：{e}")
+        ids.update(r["id"] for r in rows if r.get("id"))
+    ids.discard("")
+    if not ids:
+        raise HTTPException(status_code=400, detail="未指定推送對象（user_ids 或 all_patients）")
+
+    now = _now()
+    sched = now.isoformat(timespec="seconds")
+    expires = (now + timedelta(minutes=int(body.expires_after_min or 1440))).isoformat(timespec="seconds")
+    created, failed = 0, 0
+    for uid in sorted(ids):
+        try:
+            sb.table("ema_deliveries").insert({
+                "user_id": uid, "rule_id": None, "survey_key": body.survey_key,
+                "trigger_type": "manual", "status": "pending",
+                "context": {"pushed_by": me.get("id"), "study": body.study},
+                "scheduled_at": sched, "expires_at": expires,
+            }).execute()
+            created += 1
+        except Exception as e:
+            failed += 1
+            logger.warning(f"manual push insert failed for {uid}: {e}")
+    disp = _run_dispatch(sb, send_push=True)
+    # 規則 12：部分失敗要回報，不可只回成功數
+    return {"survey_key": body.survey_key, "recipients": len(ids),
+            "created": created, "failed": failed, **disp}
 
 
 def _study_participants(sb, study: Optional[str]) -> list:

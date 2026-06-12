@@ -4230,6 +4230,18 @@
       'admin.ema.needEvent': '事件觸發需填事件類型',
       'admin.ema.needWindow': '不定時需填推送時段（起訖）',
       'admin.ema.needDay': '里程碑需填天數',
+      // 立即推送（手動）
+      'admin.ema.pushTitle': '立即推送問卷',
+      'admin.ema.pushNote': '不經規則，立刻把一份問卷推給指定使用者：寫入站內通知＋發 Web Push；對方開 App 也會自動補彈。',
+      'admin.ema.f.target': '推送對象',
+      'admin.ema.target.all': '全部病患',
+      'admin.ema.target.ids': '指定使用者 ID',
+      'admin.ema.f.ids': '使用者 ID（逗號或換行分隔）',
+      'admin.ema.needIds': '請填至少一個使用者 ID',
+      'admin.ema.push': '推送',
+      'admin.ema.pushConfirm': '確定把「{survey}」推送給{target}？',
+      'admin.ema.nUsers': ' {n} 位使用者',
+      'admin.ema.pushResult': '已送出 {created}/{n} 筆推送（Web Push {pushed} 則；建立失敗 {failed} 筆）',
     },
 
     'en': {
@@ -8444,6 +8456,18 @@
       'admin.ema.needEvent': 'Event trigger needs an event type',
       'admin.ema.needWindow': 'Anytime trigger needs a delivery window (start/end)',
       'admin.ema.needDay': 'Milestone needs a day count',
+      // Manual push
+      'admin.ema.pushTitle': 'Push a survey now',
+      'admin.ema.pushNote': 'Bypass rules and push a survey immediately: writes an in-app notification + Web Push; it also pops up next time they open the app.',
+      'admin.ema.f.target': 'Recipients',
+      'admin.ema.target.all': 'All patients',
+      'admin.ema.target.ids': 'Specific user IDs',
+      'admin.ema.f.ids': 'User IDs (comma or newline separated)',
+      'admin.ema.needIds': 'Enter at least one user ID',
+      'admin.ema.push': 'Push',
+      'admin.ema.pushConfirm': 'Push "{survey}" to {target}?',
+      'admin.ema.nUsers': '{n} users',
+      'admin.ema.pushResult': 'Sent {created}/{n} deliveries (Web Push {pushed}; {failed} failed to create)',
     },
   };
 
