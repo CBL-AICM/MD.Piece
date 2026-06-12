@@ -166,3 +166,23 @@ def test_records_without_patient_id_does_not_leak_all():
     diagnoses = [rec.get("diagnosis") for rec in r_a.json()["records"]]
     assert "A 的診斷" in diagnoses
     assert "B 的診斷" not in diagnoses
+
+
+def test_cannot_read_or_delete_other_account_record_by_id():
+    """單筆病歷（by record_id）也要擋跨帳號：A 不可用 B 的 record_id 讀/刪（IDOR）。"""
+    sb = db_mod.get_supabase()
+    sb.table("patients").insert({"id": PATIENT_A, "name": "A", "age": 0}).execute()
+    sb.table("patients").insert({"id": PATIENT_B, "name": "B", "age": 0}).execute()
+    rec_b = sb.table("medical_records").insert(
+        {"patient_id": PATIENT_B, "diagnosis": "B 的病歷"}
+    ).execute().data[0]
+
+    r_get = client.get(f"/records/{rec_b['id']}", headers=_AUTH_A)
+    assert r_get.status_code == 403, r_get.text
+
+    r_del = client.delete(f"/records/{rec_b['id']}", headers=_AUTH_A)
+    assert r_del.status_code == 403, r_del.text
+
+    # B 的病歷仍在（沒被 A 刪掉）
+    still = sb.table("medical_records").select("id").eq("id", rec_b["id"]).execute().data
+    assert still, "B 的病歷不應被 A 刪除"

@@ -6,6 +6,15 @@ from backend.security import current_user_optional, enforce_patient_scope
 router = APIRouter()
 
 
+def _assert_owns_record(sb, record_id: str, me) -> dict:
+    """以 record_id 操作病歷時的擁有權檢查：已登入則該筆 patient_id 必須是自己。"""
+    res = sb.table("medical_records").select("*").eq("id", record_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="找不到該病歷")
+    enforce_patient_scope(res.data[0].get("patient_id"), me)
+    return res.data[0]
+
+
 @router.get("/")
 def get_records(
     patient_id: str | None = Query(None),
@@ -40,8 +49,9 @@ def get_records(
 
 
 @router.get("/{record_id}")
-def get_record(record_id: str):
+def get_record(record_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    _assert_owns_record(sb, record_id, me)
     result = sb.table("medical_records").select("*, patients(name, age, gender)").eq("id", record_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該病歷")
@@ -49,7 +59,8 @@ def get_record(record_id: str):
 
 
 @router.post("/")
-def create_record(body: MedicalRecordCreate):
+def create_record(body: MedicalRecordCreate, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
     if "visit_date" in data and data["visit_date"]:
@@ -59,8 +70,9 @@ def create_record(body: MedicalRecordCreate):
 
 
 @router.put("/{record_id}")
-def update_record(record_id: str, body: MedicalRecordUpdate):
+def update_record(record_id: str, body: MedicalRecordUpdate, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    _assert_owns_record(sb, record_id, me)
     data = body.model_dump(exclude_none=True)
     if not data:
         raise HTTPException(status_code=400, detail="沒有提供更新資料")
@@ -73,8 +85,9 @@ def update_record(record_id: str, body: MedicalRecordUpdate):
 
 
 @router.delete("/{record_id}")
-def delete_record(record_id: str):
+def delete_record(record_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    _assert_owns_record(sb, record_id, me)
     result = sb.table("medical_records").delete().eq("id", record_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該病歷")
