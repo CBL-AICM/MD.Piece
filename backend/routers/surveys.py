@@ -605,6 +605,50 @@ def _study_surveys(sb, study: str) -> list:
     return out
 
 
+def _fetch_all(make_query, page: int = 1000) -> list:
+    """分頁撈滿，突破 PostgREST 預設單次 1000 列上限。
+
+    make_query() 每頁回傳一個全新的 query builder（已套好 select/filter，
+    尚未 execute）；本函式以 .range() 逐頁取直到取不滿一頁為止。
+    """
+    out: list = []
+    start = 0
+    while True:
+        try:
+            rows = make_query().range(start, start + page - 1).execute().data or []
+        except Exception as e:
+            logger.info(f"fetch_all page @{start} failed: {e}")
+            break
+        out.extend(rows)
+        if len(rows) < page:
+            break
+        start += page
+    return out
+
+
+def _active_days_bulk(sb) -> dict:
+    """一次掃 symptom/vital/sleep 三表，回 {pid: 活躍天數}（同日多來源只算一天）。
+
+    取代逐人 _adherence，避免列出全部患者時 N×查詢造成逾時（規則 5：純程式彙整）。
+    """
+    days_by_pid: dict = {}
+    for table, id_col, date_cols in (
+        ("symptom_entries", "patient_id", ("recorded_at", "created_at")),
+        ("vital_entries", "patient_id", ("recorded_at", "created_at")),
+        ("sleep_sessions", "user_id", ("bed_time", "created_at")),
+    ):
+        rows = _fetch_all(lambda t=table: sb.table(t).select("*"))
+        for r in rows:
+            pid = r.get(id_col)
+            if not pid:
+                continue
+            for c in date_cols:
+                if r.get(c):
+                    days_by_pid.setdefault(pid, set()).add(str(r[c])[:10])
+                    break
+    return {pid: len(d) for pid, d in days_by_pid.items()}
+
+
 def _responses_for(sb, key: str, patient_id: Optional[str] = None) -> list:
     q = sb.table("survey_responses").select("*").eq("survey_key", key)
     if patient_id:
@@ -939,18 +983,33 @@ def study_participants(study: str, me: dict = Depends(current_user)):
                 p["last"] = r["created_at"]
             p["tp"].setdefault(r["timepoint"], set()).add(s["key"])
 
+    # 受試者基底＝所有已註冊的 patient 角色使用者（即使尚未填任何問卷也要列出）。
+    # 分頁撈滿避免 PostgREST 1000 列上限靜默截斷（規則 12）。
+    users = _fetch_all(lambda: sb.table("users").select("*").eq("role", "patient"))
+    user_by_id = {u["id"]: u for u in users if u.get("id")}
+    # 併入有填答但不在 users 清單的 pid（測試資料／角色異動），避免漏列。
+    all_ids = set(user_by_id) | set(part)
+
+    # 依從天數一次性批次計算（不逐人查；列全部患者時逐人 _adherence 會逾時）。
+    active_days = _active_days_bulk(sb)
+
     out = []
-    for pid, p in part.items():
+    for pid in all_ids:
+        p = part.get(pid, {"code": None, "last": "", "tp": {}})
+        u = user_by_id.get(pid, {})
         completion = {tp: {"done": len(p["tp"].get(tp, set())), "total": total}
                       for tp, total in applicable.items()}
         out.append({
             "patient_id": pid,
             "participant_code": p["code"],
+            "nickname": u.get("nickname") or "",
+            "username": u.get("username") or "",
+            "registered_at": u.get("created_at") or "",
             "last_activity": p["last"],
             "completion": completion,
-            "adherence_days": _adherence(sb, pid)["active_days"],
+            "adherence_days": active_days.get(pid, 0),
         })
-    out.sort(key=lambda x: (x["participant_code"] or "~", x["patient_id"]))
+    out.sort(key=lambda x: (x["participant_code"] or "~", x["nickname"] or "~", x["patient_id"]))
     return {"study": study, "applicable": applicable, "count": len(out), "participants": out}
 
 
