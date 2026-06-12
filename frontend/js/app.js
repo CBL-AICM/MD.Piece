@@ -454,6 +454,40 @@ async function apiFetch(input, init) {
   return res;
 }
 
+// 切換 / 新建帳號時，清掉「未按帳號區隔」的本地病患資料，避免上一個帳號的紀錄
+// （血壓、症狀、筆記、時間軸、檢驗、基本資料…）外洩給新帳號。
+// 採「預設清除 + 白名單保留」：保留帳號基礎設施（清掉會弄壞多帳號切換）與裝置層
+// 顯示偏好（非病患資料）。如此日後新增的資料 key 不必再逐一登記就不會外洩。
+// 註：todos / next_visit / water 等已用 _<pid> 後綴自我隔離，本來就不會外洩。
+var _LOCAL_DATA_KEEP = {
+  // 帳號 / 登入基礎設施 — 清掉會弄壞多帳號切換或登入狀態
+  'mdpiece_user': 1, 'mdpiece_access_token': 1, 'mdpiece_accounts': 1,
+  'mdpiece_last_username': 1, 'mdpiece_local_data_owner': 1,
+  // 裝置層顯示偏好 — 非病患資料，跨帳號保留較不擾人
+  'mdpiece_lang': 1, 'mdpiece_mode': 1, 'mdpiece_care_mode': 1, 'mdpiece_reminder_tone': 1,
+  'mdpiece_font_size': 1, 'mdpiece_font_bold': 1, 'mdpiece_font_family': 1,
+  'mdpiece_theme_pref': 1, 'mdpiece_landing_theme': 1,
+  'mdpiece_motion': 1, 'mdpiece_sound': 1, 'mdpiece_density': 1,
+  // 管理 / 分析基礎設施
+  'mdpiece_admin_token': 1, 'mdpiece_feasibility_v2': 1,
+  'mdpiece_event_queue': 1, 'mdpiece_session_id': 1,
+  // 新手導覽完成旗標 — 非病患資料，清掉會讓切帳號每次重跑導覽
+  'mdpiece_onboarded': 1, 'mdpiece_profile_onb_skip': 1, 'mdpiece_pz_seen': 1,
+};
+
+function clearLocalPatientData() {
+  var removed = 0;
+  try {
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('mdpiece_') === 0 && !_LOCAL_DATA_KEEP[k]) keys.push(k);
+    }
+    keys.forEach(function (k) { try { localStorage.removeItem(k); removed++; } catch (e) {} });
+  } catch (e) {}
+  return removed;
+}
+
 // 登出 — 清除使用者資料並回到 landing
 function logout() {
   if (!confirm(_T('app.c1.confirmLogout'))) return;
@@ -4472,6 +4506,18 @@ function finishAuth(user, isNewRegistration) {
   // access_token 拆出存放但不會動到傳入的 user 物件，故此處仍讀得到 token。
   rememberAccount(user, user.access_token);
   setCurrentUser(user);
+  // 新建帳號（必清）或切到不同帳號時，清掉上一個帳號殘留在本機、未分帳號的病患資料。
+  // 同一帳號重複登入（owner 相同）則保留其本機紀錄。
+  try {
+    // owner 用 user.id（不可變、登入與帳號切換兩條路徑都一定有）；切勿用 id_number，
+    // switchToAccount 存回的精簡 user 沒有該欄位，會導致切回自己帳號被誤判而清空。
+    var _owner = String((user && (user.id || user.username)) || 'guest');
+    var _prevOwner = localStorage.getItem('mdpiece_local_data_owner');
+    if (isNewRegistration || (_prevOwner && _prevOwner !== _owner)) {
+      clearLocalPatientData();
+    }
+    localStorage.setItem('mdpiece_local_data_owner', _owner);
+  } catch (e) {}
   const overlay = document.getElementById('register-overlay');
   overlay.classList.remove('show');
   setTimeout(() => {

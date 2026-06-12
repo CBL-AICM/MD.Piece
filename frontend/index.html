@@ -915,6 +915,17 @@
         landing.style.display = 'none';
         const user = getCurrentUser();
         if (user) {
+          // 切到不同帳號（含帳號快速切換 switchToAccount 的重載）時，清掉上一個帳號
+          // 殘留在本機、未分帳號的病患資料。marker 不存在時不清（無法判斷資料屬誰，
+          // 避免誤刪升級前既有使用者只存在本機的紀錄）。新建/新登入由 finishAuth 處理。
+          try {
+            var _owner = String((user.id || user.username) || 'guest');
+            var _prevOwner = localStorage.getItem('mdpiece_local_data_owner');
+            if (_prevOwner && _prevOwner !== _owner && typeof clearLocalPatientData === 'function') {
+              clearLocalPatientData();
+            }
+            localStorage.setItem('mdpiece_local_data_owner', _owner);
+          } catch (e) {}
           document.getElementById('app-wrapper').classList.add('show');
           setTopbarPageTitle('home');
           showPage('home');
