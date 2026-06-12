@@ -104,6 +104,7 @@
       + '<button class="ad-tab" data-tab="analysis">' + esc(T('admin.tab.analysis')) + '</button>'
       + '<button class="ad-tab" data-tab="participants">' + esc(T('admin.tab.participants')) + '</button>'
       + '<button class="ad-tab" data-tab="rewards">' + esc(T('admin.tab.rewards')) + '</button>'
+      + '<button class="ad-tab" data-tab="ema">' + esc(T('admin.tab.ema')) + '</button>'
       + '</div><div id="ad-body"><div class="ad-empty">' + esc(T('admin.loading')) + '</div></div></div>';
     document.getElementById('ad-logout').onclick = function () { setTok(null); renderLogin(); };
     wireLang();
@@ -115,6 +116,7 @@
     setActiveTab(tab);
     if (tab === 'participants') loadParticipants();
     else if (tab === 'rewards') loadRedemptions();
+    else if (tab === 'ema') loadEmaRules();
     else loadAnalysis();
   }
   function setActiveTab(tab) {
@@ -391,6 +393,176 @@
         var box = document.getElementById('ad-rw');
         if (box) { var n = document.createElement('div'); n.className = 'ad-empty'; n.textContent = T('admin.rw.actErr'); box.insertBefore(n, box.firstChild); }
       }
+    });
+  }
+
+  // ── EMA 問卷推送規則 tab ───────────────────────────────────
+  // 對接 backend/routers/ema.py 的規則 CRUD（GET/POST/DELETE /ema/rules，doctor 限定）。
+  // 研究者在此定義「何時推哪份問卷」：事件觸發 / 不定時時段 / 入組里程碑。
+  var _emaSurveys = null;            // GET /surveys 快取（給問卷下拉用）
+
+  function _emaTrigText(tc) {
+    tc = tc || {};
+    if (tc.type === 'event') return Tf('admin.ema.trig.event', { type: (tc.match || {}).event_type || '—' });
+    if (tc.type === 'time') {
+      var w = (tc.windows || [])[0] || {};
+      return Tf('admin.ema.trig.time', { win: (w.start || '?') + '–' + (w.end || '?') });
+    }
+    if (tc.type === 'elapsed') {
+      var onTxt = T('admin.ema.onShort.' + (tc.on === 'record_days' ? 'record' : 'enrollment'));
+      return Tf('admin.ema.trig.elapsed', { on: onTxt, day: (tc.day || tc.threshold || '?') });
+    }
+    return '—';
+  }
+
+  function loadEmaRules() {
+    var body = document.getElementById('ad-body');
+    body.innerHTML = '<div id="ad-ema"><div class="ad-empty">' + esc(T('admin.loading')) + '</div></div>';
+    // 先抓問卷清單（下拉用，公開端點），再抓規則
+    fetch(API + '/surveys').then(function (r) { return r.ok ? r.json() : { surveys: [] }; })
+      .then(function (sd) { _emaSurveys = sd.surveys || []; }, function () { _emaSurveys = []; })
+      .then(function () {
+        return api('/ema/rules?study=' + encodeURIComponent(STUDY)).then(function (r) {
+          if (!r.ok) throw new Error('ema'); return r.json();
+        });
+      })
+      .then(renderEmaRules)
+      .catch(function (e) {
+        if (String(e.message) !== '401') document.getElementById('ad-ema').innerHTML = '<div class="ad-empty">' + esc(T('admin.ema.err')) + '</div>';
+      });
+  }
+
+  function renderEmaRules(data) {
+    var box = document.getElementById('ad-ema');
+    var rules = (data && data.rules) || [];
+    var list;
+    if (!rules.length) {
+      list = '<div class="ad-empty">' + esc(T('admin.ema.empty')) + '</div>';
+    } else {
+      var head = '<tr><th class="l">' + esc(T('admin.ema.col.name')) + '</th><th class="l">' + esc(T('admin.ema.col.survey')) + '</th>'
+        + '<th class="l">' + esc(T('admin.ema.col.trigger')) + '</th><th></th></tr>';
+      var rows = rules.map(function (r) {
+        return '<tr><td class="l"><b>' + esc(r.name || '—') + '</b></td>'
+          + '<td class="l"><span class="ad-sub">' + esc(r.survey_key || '—') + '</span></td>'
+          + '<td class="l">' + esc(_emaTrigText(r.trigger_config)) + '</td>'
+          + '<td><button class="ad-btn secondary" data-deact="' + esc(r.id) + '">' + esc(T('admin.ema.deactivate')) + '</button></td></tr>';
+      }).join('');
+      list = '<div class="ad-card" style="padding:6px 10px"><table class="ad-tbl">' + head + rows + '</table></div>';
+    }
+    box.innerHTML = '<h3 style="font-size:.95rem;margin:4px 0 8px;color:var(--navy,#1a1730)">' + esc(T('admin.ema.listTitle')) + '</h3>'
+      + list + _emaCreateFormHtml();
+    Array.prototype.forEach.call(box.querySelectorAll('button[data-deact]'), function (b) {
+      b.onclick = function () { emaDeactivate(b.getAttribute('data-deact'), b); };
+    });
+    _wireEmaForm();
+    icons();
+  }
+
+  function _emaCreateFormHtml() {
+    var opts = (_emaSurveys || []).map(function (s) {
+      return '<option value="' + esc(s.key) + '">' + esc(s.title || s.key) + '</option>';
+    }).join('');
+    return '<div class="ad-card" style="margin-top:14px">'
+      + '<h3>' + esc(T('admin.ema.createTitle')) + '</h3>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.name')) + '</label><input class="ad-input" id="ema-name" /></div>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.survey')) + '</label><select class="ad-input" id="ema-survey">' + opts + '</select></div>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.type')) + '</label><select class="ad-input" id="ema-type">'
+      +   '<option value="event">' + esc(T('admin.ema.type.event')) + '</option>'
+      +   '<option value="time">' + esc(T('admin.ema.type.time')) + '</option>'
+      +   '<option value="elapsed">' + esc(T('admin.ema.type.elapsed')) + '</option>'
+      + '</select></div>'
+      + '<div id="ema-cfg"></div>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.expires')) + '</label><input class="ad-input" id="ema-expires" type="number" min="1" value="120" /></div>'
+      + '<div class="ad-err" id="ema-err"></div>'
+      + '<button class="ad-btn" id="ema-create"><i data-lucide="plus"></i> ' + esc(T('admin.ema.create')) + '</button>'
+      + '</div>';
+  }
+
+  function _emaWindowFields(optional) {
+    return '<div class="ad-field"><label>' + esc(T(optional ? 'admin.ema.f.winOpt' : 'admin.ema.f.win')) + '</label>'
+      + '<div style="display:flex;gap:8px">'
+      + '<input class="ad-input" id="ema-wstart" placeholder="10:00" />'
+      + '<input class="ad-input" id="ema-wend" placeholder="21:00" /></div></div>';
+  }
+
+  function _emaCfgFields(type) {
+    if (type === 'time') return _emaWindowFields(false);
+    if (type === 'elapsed') {
+      return '<div class="ad-field"><label>' + esc(T('admin.ema.f.on')) + '</label><select class="ad-input" id="ema-on">'
+        + '<option value="enrollment_day">' + esc(T('admin.ema.on.enrollment')) + '</option>'
+        + '<option value="record_days">' + esc(T('admin.ema.on.record')) + '</option></select></div>'
+        + '<div class="ad-field"><label>' + esc(T('admin.ema.f.day')) + '</label><input class="ad-input" id="ema-day" type="number" min="1" value="1" /></div>'
+        + _emaWindowFields(true);
+    }
+    // event（預設）
+    return '<div class="ad-field"><label>' + esc(T('admin.ema.f.eventType')) + '</label><input class="ad-input" id="ema-evtype" placeholder="data" /></div>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.eventName')) + '</label><input class="ad-input" id="ema-evname" placeholder="submit" /></div>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.cooldown')) + '</label><input class="ad-input" id="ema-cooldown" type="number" min="0" placeholder="1440" /></div>'
+      + _emaWindowFields(true);
+  }
+
+  function _wireEmaForm() {
+    var typeSel = document.getElementById('ema-type');
+    var cfg = document.getElementById('ema-cfg');
+    if (typeSel && cfg) {
+      var sync = function () { cfg.innerHTML = _emaCfgFields(typeSel.value); icons(); };
+      typeSel.onchange = sync;
+      sync();
+    }
+    var btn = document.getElementById('ema-create');
+    if (btn) btn.onclick = emaCreateRule;
+  }
+
+  function _emaVal(id) { var el = document.getElementById(id); return el ? (el.value || '').trim() : ''; }
+
+  function emaCreateRule() {
+    var err = document.getElementById('ema-err');
+    var name = _emaVal('ema-name');
+    var survey = _emaVal('ema-survey');
+    var type = _emaVal('ema-type');
+    if (!name || !survey) { err.textContent = T('admin.ema.needName'); return; }
+    var tc = { type: type };
+    var ws = _emaVal('ema-wstart'), we = _emaVal('ema-wend');
+    var win = (ws && we) ? { start: ws, end: we } : null;
+    if (type === 'event') {
+      var evt = _emaVal('ema-evtype');
+      if (!evt) { err.textContent = T('admin.ema.needEvent'); return; }
+      tc.match = { event_type: evt };
+      var evn = _emaVal('ema-evname'); if (evn) tc.match.event_name = evn;
+      var cd = _emaVal('ema-cooldown'); if (cd) tc.cooldown_min = parseInt(cd, 10);
+      if (win) tc.deliver_window = win;
+    } else if (type === 'time') {
+      if (!win) { err.textContent = T('admin.ema.needWindow'); return; }
+      tc.windows = [win];
+      tc.respect_daily_cap = true;
+    } else if (type === 'elapsed') {
+      tc.on = _emaVal('ema-on') || 'enrollment_day';
+      tc.day = parseInt(_emaVal('ema-day') || '0', 10);
+      if (!tc.day) { err.textContent = T('admin.ema.needDay'); return; }
+      if (win) tc.deliver_window = win;
+    }
+    var expires = parseInt(_emaVal('ema-expires') || '120', 10);
+    var btn = document.getElementById('ema-create');
+    btn.disabled = true; err.textContent = '';
+    api('/ema/rules', {
+      method: 'POST',
+      body: JSON.stringify({ name: name, survey_key: survey, trigger_config: tc, study: STUDY, expires_after_min: expires }),
+    }).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, j: j }; });
+    }).then(function (res) {
+      if (!res.ok) { btn.disabled = false; err.textContent = Tf('admin.ema.createErr', { msg: (res.j && res.j.detail) || '' }); return; }
+      loadEmaRules();
+    }).catch(function (e) {
+      if (String(e.message) !== '401') { btn.disabled = false; err.textContent = T('admin.err.network'); }
+    });
+  }
+
+  function emaDeactivate(id, btn) {
+    btn.disabled = true;
+    api('/ema/rules/' + encodeURIComponent(id), { method: 'DELETE' }).then(function (r) {
+      if (!r.ok) throw new Error('deact'); return r.json();
+    }).then(function () { loadEmaRules(); }).catch(function (e) {
+      if (String(e.message) !== '401') btn.disabled = false;
     });
   }
 
