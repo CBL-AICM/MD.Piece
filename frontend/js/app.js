@@ -23099,6 +23099,7 @@ function diet() {
     +       '<i data-lucide="check" style="width:13px;height:13px"></i> ' + _T("app.c28.submitCheckin")
     +     '</button>'
     +     '<div id="mobile-diet-log-status" style="font-size:11px;color:var(--text-muted)"></div>'
+    +     '<div id="mobile-diet-photo-card" class="diet-photo-card" style="display:none"></div>'
     +   '</div>'
 
     // 今日已記錄
@@ -23257,6 +23258,7 @@ function diet() {
     +         '<i data-lucide="check" style="width:14px;height:14px"></i> ' + _T("app.d45.submit")
     +       '</button>'
     +       '<div id="diet-log-status" class="diet-log-status"></div>'
+    +       '<div id="diet-photo-card" class="diet-photo-card" style="display:none"></div>'
     +     '</div>'
     +   '</div>'
 
@@ -23902,7 +23904,90 @@ function _mobileDietLogMeal(m) {
 var _dietPhotoCal = { mobile: null, desktop: null };
 
 // 使用者手動改動 foods 文字後，先前拍照辨識的熱量就不再對應，清掉避免帶錯數字
-function _dietClearPhotoCal(scope) { _dietPhotoCal[scope] = null; }
+function _dietClearPhotoCal(scope) {
+  _dietPhotoCal[scope] = null;
+  var card = document.getElementById((scope === 'mobile' ? 'mobile-' : '') + 'diet-photo-card');
+  if (card) { card.style.display = 'none'; card.innerHTML = ''; }
+}
+
+// 把 /diet/recognize 的完整營養結果渲染成「食物營養分析卡」：熱量環 + 三大營養素
+// + 健康評分（附「為什麼」，對齊設計憲法 #2 可解釋 AI）+ 食材分解 + 營養占比。
+function _renderDietPhotoCard(scope, data) {
+  var card = document.getElementById((scope === 'mobile' ? 'mobile-' : '') + 'diet-photo-card');
+  if (!card) return;
+  var cal = data.total_calories || 0;
+  var macros = data.macros || { protein_g: 0, carb_g: 0, fat_g: 0 };
+  var pct = data.macro_pct || { protein: 0, carb: 0, fat: 0 };
+  var items = data.items || [];
+
+  // 熱量環：用 conic-gradient 依三大營養素熱量占比上色（蛋白藍 / 碳水橘 / 脂肪粉）
+  var pStop = pct.protein || 0;
+  var cStop = pStop + (pct.carb || 0);
+  var ring = 'background:conic-gradient('
+    + 'var(--blue,#3b82f6) 0% ' + pStop + '%,'
+    + 'var(--amber-deep,#d97706) ' + pStop + '% ' + cStop + '%,'
+    + 'var(--rose-deep,#e11d48) ' + cStop + '% 100%);';
+
+  var macroRow = function(color, label, grams) {
+    return '<div class="diet-pc-macro">'
+      + '<span class="diet-pc-dot" style="background:' + color + '"></span>'
+      + '<span class="diet-pc-macro-label">' + label + '</span>'
+      + '<span class="diet-pc-macro-val">' + grams + ' ' + _T('app.c29.gram') + '</span>'
+      + '</div>';
+  };
+
+  var html = ''
+    + '<div class="diet-pc-top">'
+    +   '<div class="diet-pc-ring" style="' + ring + '"><div class="diet-pc-ring-in">'
+    +     '<div class="diet-pc-ring-num">' + cal + '</div>'
+    +     '<div class="diet-pc-ring-unit">' + _T('app.c29.kcal') + '</div>'
+    +   '</div></div>'
+    +   '<div class="diet-pc-macros">'
+    +     macroRow('var(--blue,#3b82f6)', _T('app.d45.protein'), macros.protein_g)
+    +     macroRow('var(--amber-deep,#d97706)', _T('app.c29.macroCarb'), macros.carb_g)
+    +     macroRow('var(--rose-deep,#e11d48)', _T('app.c29.macroFat'), macros.fat_g)
+    +   '</div>'
+    + '</div>';
+
+  // 健康評分：只有 LLM 真的給分才顯示（Rule 12：沒資料不捏造），附「為什麼」
+  if (data.health_score != null) {
+    var hs = data.health_score;
+    html += '<div class="diet-pc-health">'
+      + '<div class="diet-pc-health-head">'
+      +   '<i data-lucide="heart" style="width:15px;height:15px;color:var(--rose-deep,#e11d48)"></i>'
+      +   '<span>' + _T('app.c29.healthScore') + '</span>'
+      +   '<span class="diet-pc-health-score">' + hs + ' / 10</span>'
+      + '</div>'
+      + '<div class="diet-pc-health-bar"><div class="diet-pc-health-fill" style="width:' + (hs * 10) + '%"></div></div>'
+      + (data.health_reason
+          ? '<div class="diet-pc-health-why"><b>' + _T('app.c29.whyLabel') + '：</b>' + chatEscape(data.health_reason) + '</div>'
+          : '')
+      + '</div>';
+  }
+
+  // 成分（食材分解）：逐項食物 + 份量 + 熱量
+  if (items.length) {
+    html += '<div class="diet-pc-items">'
+      + '<div class="diet-pc-sec-title">' + _T('app.c29.ingredients') + '</div>'
+      + items.map(function(it) {
+          return '<div class="diet-pc-item">'
+            + '<span class="diet-pc-item-name">' + chatEscape(it.name)
+            + (it.portion ? ' <small style="color:var(--text-muted)">' + chatEscape(it.portion) + '</small>' : '')
+            + '</span>'
+            + '<span class="diet-pc-item-cal">' + (it.calories || 0) + ' ' + _T('app.c29.kcal') + '</span>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+
+  if (data.confidence === 'low') {
+    html += '<div class="diet-pc-lowconf"><i data-lucide="info" style="width:11px;height:11px"></i> ' + _T('app.c29.photoLowConf') + '</div>';
+  }
+
+  card.innerHTML = html;
+  card.style.display = 'block';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
 
 // 選照片 → 壓縮（沿用藥袋那套 _compressMedPhoto）→ POST /diet/recognize →
 // 把辨識出的食物填進 foods 欄位、暫存總熱量，讓使用者確認後再送出
@@ -23939,6 +24024,7 @@ function dietPhotoPick(ev, scope) {
     var msg = _Tf('app.c29.photoResult', { cal: data.total_calories });
     if (data.confidence === 'low') msg += '｜' + _T('app.c29.photoLowConf');
     if (statusEl) { statusEl.textContent = msg; statusEl.style.color = 'var(--teal-deep)'; }
+    _renderDietPhotoCard(scope, data);
   }).catch(function(e) {
     console.error('[diet] photo recognize failed:', e);
     if (statusEl) { statusEl.textContent = _T('app.c29.photoFailed'); statusEl.style.color = 'var(--rose-deep)'; }
@@ -23966,7 +24052,7 @@ async function _mobileDietSubmit() {
     }
     if (foodsEl) foodsEl.value = '';
     if (noteEl) noteEl.value = '';
-    _dietPhotoCal.mobile = null;
+    _dietClearPhotoCal('mobile');
     if (statusEl) { statusEl.textContent = _T("app.c29.recordedSpace") + ' ' + DIET_MEAL_LABEL[_dietLogMeal]; statusEl.style.color = 'var(--teal-deep)'; }
     showToast(_T("app.c29.dietCheckinDone"), 'success');
     fetchDietTodayRecords();
@@ -23997,7 +24083,7 @@ async function dietSubmitLog() {
     }
     document.getElementById('diet-log-foods').value = '';
     document.getElementById('diet-log-note').value = '';
-    _dietPhotoCal.desktop = null;
+    _dietClearPhotoCal('desktop');
     statusEl.textContent = _T("app.c29.recordedSpace") + ' ' + DIET_MEAL_LABEL[_dietLogMeal];
     statusEl.className = 'diet-log-status diet-log-status-ok';
     showToast(_T("app.c29.dietCheckinDone"), 'success');

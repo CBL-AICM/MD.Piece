@@ -1706,11 +1706,16 @@ _FOOD_PHOTO_PROMPT = (
     "每個項目要包含：\n"
     "  - name      食物名稱（繁體中文、台灣慣用名，例：滷雞腿、白飯、燙青菜、珍珠奶茶）\n"
     "  - portion   你判斷的份量描述（例：一碗、半個、約 200g、一杯 500ml）\n"
-    "  - calories  這個份量的估算熱量，整數大卡\n\n"
+    "  - calories  這個份量的估算熱量，整數大卡\n"
+    "  - protein_g 這個份量的蛋白質克數（可一位小數，不確定填 0）\n"
+    "  - carb_g    這個份量的碳水化合物克數（可一位小數，不確定填 0）\n"
+    "  - fat_g     這個份量的脂肪克數（可一位小數，不確定填 0）\n\n"
     "回覆**必須是純 JSON**，不要 markdown code block、不要前後說明：\n"
     "{\n"
-    '  "items": [{"name":"白飯","portion":"一碗","calories":280}],\n'
+    '  "items": [{"name":"白飯","portion":"一碗","calories":280,"protein_g":5.6,"carb_g":62,"fat_g":0.6}],\n'
     '  "total_calories": <整數，所有項目熱量加總>,\n'
+    '  "health_score": <1-10 整數，這一餐整體的健康程度，10 最健康；不確定給 5>,\n'
+    '  "health_reason": "<一句話說明為什麼給這個分數，遵守不審判口吻；可空字串>",\n'
     '  "confidence": "high | medium | low",  // 你對這次估算的把握度\n'
     '  "note": "<一句話的友善提醒，遵守不審判、不下診斷的口吻；可空字串>"\n'
     "}\n"
@@ -1722,6 +1727,9 @@ _FOOD_PHOTO_PROMPT = (
     "   confidence 'low'、note 提醒『這張照片看不到食物，請重拍餐點』\n"
     "5. confidence：擺盤清楚單一餐點→high；多樣混雜或份量難判→medium；模糊 / 角度差→low\n"
     "6. note 不下診斷、不審判，是病人會直接讀到的文字\n"
+    "7. 三大營養素克數寧可保守估，真的看不出就填 0；不要為了湊數字亂編\n"
+    "8. health_score 用判斷：油炸、高糖、高鈉、精緻澱粉為主 → 偏低；"
+    "原型食物、足量蔬菜、優質蛋白、少加工 → 偏高。health_reason 用陪伴口吻說明「為什麼」\n"
 )
 
 _FOOD_PHOTO_VISION_USER_PROMPT = (
@@ -1817,9 +1825,18 @@ def _normalize_food_result(parsed: dict) -> dict:
     total_calories 一律由 items 重算（Rule 5：加總是確定性運算，不靠 LLM 算對），
     foods_text 用「、」串接食物名，方便前端直接填進既有的 foods 欄位。
     """
+    def _macro(val: float) -> float:
+        # 三大營養素克數防呆：負數歸零、荒謬大數 clamp、保留一位小數
+        try:
+            g = float(val or 0)
+        except (TypeError, ValueError):
+            g = 0.0
+        return round(max(0.0, min(g, 500.0)), 1)
+
     items_raw = parsed.get("items") if isinstance(parsed.get("items"), list) else []
     items: list[dict] = []
     total = 0
+    sum_p = sum_c = sum_f = 0.0
     for it in items_raw:
         if not isinstance(it, dict):
             continue
@@ -1831,18 +1848,50 @@ def _normalize_food_result(parsed: dict) -> dict:
         except (TypeError, ValueError):
             cal = 0
         cal = max(0, min(cal, 5000))  # 防呆：單項熱量荒謬大數直接 clamp
+        p, c, f = _macro(it.get("protein_g")), _macro(it.get("carb_g")), _macro(it.get("fat_g"))
         items.append({
             "name": name,
             "portion": str(it.get("portion", "")).strip(),
             "calories": cal,
+            "protein_g": p,
+            "carb_g": c,
+            "fat_g": f,
         })
         total += cal
+        sum_p += p
+        sum_c += c
+        sum_f += f
     confidence = parsed.get("confidence")
     if confidence not in ("high", "medium", "low"):
         confidence = "low"
+
+    # 三大營養素總量與熱量占比都由 code 重算（Rule 5：加總與占比是確定性運算，不靠 LLM）
+    macros = {"protein_g": round(sum_p, 1), "carb_g": round(sum_c, 1), "fat_g": round(sum_f, 1)}
+    kcal_p, kcal_c, kcal_f = sum_p * 4, sum_c * 4, sum_f * 9
+    kcal_macro = kcal_p + kcal_c + kcal_f
+    if kcal_macro > 0:
+        macro_pct = {
+            "protein": round(kcal_p / kcal_macro * 100, 1),
+            "carb":    round(kcal_c / kcal_macro * 100, 1),
+            "fat":     round(kcal_f / kcal_macro * 100, 1),
+        }
+    else:
+        macro_pct = {"protein": 0.0, "carb": 0.0, "fat": 0.0}
+
+    # health_score 是主觀判斷（Rule 5：交給 LLM），只在 code 做範圍防呆；無效則回 None 讓前端隱藏
+    try:
+        hs = int(round(float(parsed.get("health_score"))))
+        health_score = max(1, min(hs, 10))
+    except (TypeError, ValueError):
+        health_score = None
+
     return {
         "items": items,
         "total_calories": total,
+        "macros": macros,
+        "macro_pct": macro_pct,
+        "health_score": health_score,
+        "health_reason": str(parsed.get("health_reason", "")).strip(),
         "foods_text": "、".join(it["name"] for it in items),
         "confidence": confidence,
         "note": str(parsed.get("note", "")).strip(),
@@ -1856,8 +1905,12 @@ def analyze_food_photo(image_base64: str, media_type: str = "image/jpeg") -> dic
     stage 相同；食物辨識不是文字 OCR，所以不走 Google Vision。
 
     回傳: {
-        "items": [{"name", "portion", "calories"}, ...],
+        "items": [{"name", "portion", "calories", "protein_g", "carb_g", "fat_g"}, ...],
         "total_calories": <int，由 items 加總>,
+        "macros": {"protein_g", "carb_g", "fat_g"},   # 由 items 加總（確定性）
+        "macro_pct": {"protein", "carb", "fat"},        # 熱量占比 %（確定性）
+        "health_score": <1-10 int 或 None>,             # LLM 判斷的健康程度
+        "health_reason": "<為什麼給這個分數>",
         "foods_text": "<以「、」串接的食物名，可直接填入 diet_records.foods>",
         "confidence": "high | medium | low",
         "note": "<一句話友善提醒>",
@@ -1897,6 +1950,10 @@ def analyze_food_photo(image_base64: str, media_type: str = "image/jpeg") -> dic
     return {
         "items": [],
         "total_calories": 0,
+        "macros": {"protein_g": 0.0, "carb_g": 0.0, "fat_g": 0.0},
+        "macro_pct": {"protein": 0.0, "carb": 0.0, "fat": 0.0},
+        "health_score": None,
+        "health_reason": "",
         "foods_text": "",
         "confidence": "low",
         "note": "",
