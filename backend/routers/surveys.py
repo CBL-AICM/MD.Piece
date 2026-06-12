@@ -33,7 +33,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from backend.db import get_supabase
-from backend.security import current_user
+from backend.security import current_user, current_user_optional, enforce_patient_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -461,8 +461,9 @@ def get_survey(key: str):
 
 
 @router.post("/{key}/responses")
-def submit_response(key: str, body: ResponseCreate):
+def submit_response(key: str, body: ResponseCreate, me: dict | None = Depends(current_user_optional)):
     """提交一份作答。計分為純程式碼（規則 5）；存檔失敗會 loud-fail（規則 12）。"""
+    enforce_patient_scope(body.patient_id, me)
     if not isinstance(body.answers, dict) or not body.answers:
         raise HTTPException(status_code=400, detail="answers 需為非空物件 {item_id: value}")
     sb = get_supabase()
@@ -838,9 +839,11 @@ def _deactivate_study_reminder(sb, study: str, tp: str, pid: str) -> None:
 
 
 @router.post("/study/{study}/participants/{pid}/ensure-reminders")
-def ensure_study_reminders(study: str, pid: str, start_date: str = Query(...)):
+def ensure_study_reminders(study: str, pid: str, start_date: str = Query(...),
+                           me: dict | None = Depends(current_user_optional)):
     """到期才推送：以起算日為 Day 0，為 D14／D28 各建立一筆 once 提醒（冪等）。
     既有 /reminders 派發機制會在到期時送 Web Push + 站內通知，這裡只負責「排程」。"""
+    enforce_patient_scope(pid, me)
     from backend.models import ReminderCreate
     from backend.routers.reminders import create_reminder
 
@@ -875,9 +878,11 @@ def ensure_study_reminders(study: str, pid: str, start_date: str = Query(...)):
 
 
 @router.post("/study/{study}/participants/{pid}/ensure-fu48")
-def ensure_fu48_reminder(study: str, pid: str, visit_date: str = Query(...)):
+def ensure_fu48_reminder(study: str, pid: str, visit_date: str = Query(...),
+                         me: dict | None = Depends(current_user_optional)):
     """回診後回饋（FU48）：病患回診完成後，依「實際回診日 +~48h」排一筆 once 提醒。
     用回診日而非註冊日 +N，呼應『不是每位患者都剛好 D14/D28』。冪等：已排過就不重排。"""
+    enforce_patient_scope(pid, me)
     from backend.models import ReminderCreate
     from backend.routers.reminders import create_reminder
 

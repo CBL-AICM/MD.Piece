@@ -3,9 +3,10 @@
 對應 Supabase `memos` 表，以 (patient_id, client_id) 做幂等 upsert：
 前端本機既有的 memo 可補傳、編輯會覆蓋、重複送不會產生多筆。
 """
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 
 router = APIRouter()
 
@@ -34,7 +35,8 @@ def _public(row: dict) -> dict:
 
 
 @router.get("/")
-def list_memos(patient_id: str = Query(...)):
+def list_memos(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     res = (
         sb.table("memos")
@@ -47,7 +49,8 @@ def list_memos(patient_id: str = Query(...)):
 
 
 @router.post("/")
-def upsert_memo(body: MemoUpsert):
+def upsert_memo(body: MemoUpsert, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     sb = get_supabase()
     existing = (
         sb.table("memos")
@@ -80,7 +83,8 @@ def upsert_memo(body: MemoUpsert):
 
 
 @router.delete("/{patient_id}/{client_id}")
-def delete_memo(patient_id: str, client_id: str):
+def delete_memo(patient_id: str, client_id: str, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     (
         sb.table("memos")

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta, date
 
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 
 SCORE_EMOJI = {1: "😢", 2: "😟", 3: "😐", 4: "🙂", 5: "😄"}
 
@@ -22,8 +23,10 @@ class EmotionLog(BaseModel):
 def get_emotions(
     patient_id: str = Query(...),
     days: int = Query(30, description="查詢最近幾天"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """取得病患的情緒紀錄"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
     result = sb.table("emotions").select("*").eq("patient_id", patient_id).gte("created_at", since).order("created_at", desc=True).execute()
@@ -31,10 +34,11 @@ def get_emotions(
 
 
 @router.post("/")
-def log_emotion(body: EmotionLog):
+def log_emotion(body: EmotionLog, me: dict | None = Depends(current_user_optional)):
     """記錄今日情緒；若連續低落則自動建立警示。"""
     if body.score < 1 or body.score > 5:
         raise HTTPException(status_code=400, detail="score 必須在 1-5 之間")
+    enforce_patient_scope(body.patient_id, me)
     sb = get_supabase()
     data = {
         "patient_id": body.patient_id,
@@ -82,11 +86,12 @@ def log_emotion(body: EmotionLog):
 
 
 @router.get("/silent-guardian")
-def check_silent_guardian(patient_id: str = Query(...)):
+def check_silent_guardian(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """
     靜默守護：偵測連續低落情緒，觸發心理危機提醒。
     規則：最近 7 天中有 3 天以上 score <= 2 → 觸發警示
     """
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=7)).isoformat()
     result = sb.table("emotions").select("*").eq("patient_id", patient_id).gte("created_at", since).order("created_at", desc=True).execute()
@@ -107,6 +112,7 @@ def check_silent_guardian(patient_id: str = Query(...)):
 def get_daily_mood(
     patient_id: str = Query(...),
     days: int = Query(30, ge=1, le=365, description="查詢最近幾天"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """
     每日心情彙整：將同一天的多筆紀錄聚合為一筆，便於日曆/時間軸顯示。
@@ -114,6 +120,7 @@ def get_daily_mood(
     每日回傳：日期、平均分數（四捨五入）、最高/最低分數、表情符號、
     當日最後一則 note、紀錄筆數。缺漏的日期不會補零。
     """
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
     result = (
@@ -169,8 +176,10 @@ def get_daily_mood(
 def get_emotion_trend(
     patient_id: str = Query(...),
     days: int = Query(30),
+    me: dict | None = Depends(current_user_optional),
 ):
     """取得情緒趨勢資料（用於圖表）"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
     result = sb.table("emotions").select("*").eq("patient_id", patient_id).gte("created_at", since).order("created_at").execute()

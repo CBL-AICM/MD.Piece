@@ -23,8 +23,10 @@ Supabase 需要的資料表（migration SQL）：
         on diet_records (patient_id, eaten_at desc);
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+
+from backend.security import current_user_optional, enforce_patient_scope
 from typing import Optional, List, Tuple
 from datetime import datetime, timedelta, date
 import concurrent.futures
@@ -267,7 +269,7 @@ def _parse_diet_json(raw: str) -> dict:
 
 
 @router.get("/guide/{patient_id}")
-def get_diet_guide(patient_id: str):
+def get_diet_guide(patient_id: str, me: dict | None = Depends(current_user_optional)):
     """根據患者登記疾病生成飲食指南。
 
     warnings（要避開的食物）走確定性查表 DISEASE_FOOD_WARNINGS — 食物禁忌
@@ -275,6 +277,7 @@ def get_diet_guide(patient_id: str):
     確定性查表也讓沒連線 / 沒 API key 的環境照樣能正確顯示警告。
     general_tips 與 meal_suggestions 仍透過 LLM 做個人化，失敗時退回 DIET_FALLBACK。
     """
+    enforce_patient_scope(patient_id, me)
     diagnoses = _patient_diagnoses(patient_id)
     warnings = _build_warnings_from_diseases(diagnoses)
 
@@ -319,7 +322,8 @@ VALID_MEALS = {"breakfast", "lunch", "dinner", "snack"}
 
 
 @router.post("/records")
-def log_diet_record(body: DietRecordIn):
+def log_diet_record(body: DietRecordIn, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     if body.meal_type not in VALID_MEALS:
         raise HTTPException(status_code=400, detail=f"meal_type 必須是 {sorted(VALID_MEALS)}")
     foods = body.foods.strip()
@@ -638,8 +642,10 @@ def pick_meal(
     avoid_recent: bool = Query(True,  description="是否避開本週吃過的"),
     exclude:      str  = Query("",    description="逗號分隔，已被丟掉的菜色"),
     dislike:      str  = Query("",    description="逗號分隔，個人不吃的食材"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """吃什麼神器：依病史 + 餐別 + 價位 + 熱量 + 黑名單 + 附近 + 歷史隨機推薦一道菜。"""
+    enforce_patient_scope(patient_id, me)
     diagnoses = _patient_diagnoses(patient_id)
     excluded  = [x.strip() for x in exclude.split(",") if x.strip()]
     dislikes  = [x.strip() for x in dislike.split(",") if x.strip()]
@@ -845,8 +851,10 @@ def pick_drink(
     avoid_recent: bool = Query(True, description="是否避開本週喝過的"),
     exclude:     str  = Query("",    description="逗號分隔，已被丟掉的飲料"),
     dislike:     str  = Query("",    description="逗號分隔，個人不喝的成分"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """喝什麼神器：依病史隨機推薦一杯具體飲料，含咖啡因 mg 與糖度。"""
+    enforce_patient_scope(patient_id, me)
     diagnoses = _patient_diagnoses(patient_id)
     excluded  = [x.strip() for x in exclude.split(",") if x.strip()]
     dislikes  = [x.strip() for x in dislike.split(",") if x.strip()]
@@ -917,7 +925,9 @@ def get_diet_records(
     # JS Date.getTimezoneOffset() 規格：分鐘、UTC 西側為正。台灣 = -480。
     # 前端不傳 → 預設台灣（-480），讓打卡當下立刻顯示在「今日」。
     tz_offset: int = Query(-480, ge=-840, le=840, description="使用者時區（分鐘，JS 規格）"),
+    me: dict | None = Depends(current_user_optional),
 ):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     q = sb.table("diet_records").select("*").eq("patient_id", patient_id)
     if date_str:
@@ -1167,12 +1177,14 @@ def get_diet_weekly(
     patient_id: str,
     weeks: int = Query(4, ge=1, le=12, description="近 N 週（每週滾動 7 天）"),
     tz_offset: int = Query(-480, ge=-840, le=840, description="JS Date.getTimezoneOffset()，台灣 = -480"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """近 N 週的飲食彙整（純統計，無 LLM）。
 
     第 i 週（i=0 是本週）：今天往前 i*7 天作為 end，再往前 6 天作為 start。
     回 weeks[] 由近到遠。
     """
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     today_local = (datetime.utcnow() - timedelta(minutes=tz_offset)).date()
     range_start_local = today_local - timedelta(days=weeks * 7 - 1)
