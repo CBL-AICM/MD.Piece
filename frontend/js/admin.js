@@ -450,12 +450,86 @@
       list = '<div class="ad-card" style="padding:6px 10px"><table class="ad-tbl">' + head + rows + '</table></div>';
     }
     box.innerHTML = '<h3 style="font-size:.95rem;margin:4px 0 8px;color:var(--navy,#1a1730)">' + esc(T('admin.ema.listTitle')) + '</h3>'
-      + list + _emaCreateFormHtml();
+      + list + _emaPushFormHtml() + _emaCreateFormHtml();
     Array.prototype.forEach.call(box.querySelectorAll('button[data-deact]'), function (b) {
       b.onclick = function () { emaDeactivate(b.getAttribute('data-deact'), b); };
     });
+    _wireEmaPushForm();
     _wireEmaForm();
     icons();
+  }
+
+  // ── 立即推送（手動）：選問卷 → 選對象 → POST /ema/push ──────
+  function _emaSurveyOptions() {
+    return (_emaSurveys || []).map(function (s) {
+      return '<option value="' + esc(s.key) + '">' + esc(s.title || s.key) + '</option>';
+    }).join('');
+  }
+
+  function _emaPushFormHtml() {
+    return '<div class="ad-card" style="margin-top:14px">'
+      + '<h3>' + esc(T('admin.ema.pushTitle')) + '</h3>'
+      + '<p class="ad-meta">' + esc(T('admin.ema.pushNote')) + '</p>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.survey')) + '</label><select class="ad-input" id="emap-survey">' + _emaSurveyOptions() + '</select></div>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.target')) + '</label><select class="ad-input" id="emap-target">'
+      +   '<option value="all">' + esc(T('admin.ema.target.all')) + '</option>'
+      +   '<option value="ids">' + esc(T('admin.ema.target.ids')) + '</option>'
+      + '</select></div>'
+      + '<div class="ad-field" id="emap-ids-wrap" style="display:none"><label>' + esc(T('admin.ema.f.ids')) + '</label>'
+      +   '<textarea class="ad-input" id="emap-ids" rows="3" placeholder="11c7ce49-…, 2af31b…"></textarea></div>'
+      + '<div class="ad-field"><label>' + esc(T('admin.ema.f.expires')) + '</label><input class="ad-input" id="emap-expires" type="number" min="1" value="1440" /></div>'
+      + '<div class="ad-err" id="emap-err"></div>'
+      + '<p class="ad-meta" id="emap-result" style="display:none"></p>'
+      + '<button class="ad-btn" id="emap-send"><i data-lucide="send"></i> ' + esc(T('admin.ema.push')) + '</button>'
+      + '</div>';
+  }
+
+  function _wireEmaPushForm() {
+    var tgt = document.getElementById('emap-target');
+    var idsWrap = document.getElementById('emap-ids-wrap');
+    if (tgt && idsWrap) tgt.onchange = function () { idsWrap.style.display = tgt.value === 'ids' ? '' : 'none'; };
+    var btn = document.getElementById('emap-send');
+    if (btn) btn.onclick = emaPushNow;
+  }
+
+  function emaPushNow() {
+    var err = document.getElementById('emap-err');
+    var res = document.getElementById('emap-result');
+    var survey = _emaVal('emap-survey');
+    var target = _emaVal('emap-target');
+    var ids = [];
+    if (target === 'ids') {
+      ids = _emaVal('emap-ids').split(/[\s,;]+/).filter(function (x) { return x; });
+      if (!ids.length) { err.textContent = T('admin.ema.needIds'); return; }
+    }
+    if (!survey) { err.textContent = T('admin.ema.needName'); return; }
+    var targetTxt = target === 'all' ? T('admin.ema.target.all') : Tf('admin.ema.nUsers', { n: ids.length });
+    if (!confirm(Tf('admin.ema.pushConfirm', { survey: survey, target: targetTxt }))) return;
+    var btn = document.getElementById('emap-send');
+    btn.disabled = true; err.textContent = ''; res.style.display = 'none';
+    api('/ema/push', {
+      method: 'POST',
+      body: JSON.stringify({
+        survey_key: survey,
+        all_patients: target === 'all',
+        user_ids: ids,
+        study: STUDY,
+        expires_after_min: parseInt(_emaVal('emap-expires') || '1440', 10),
+      }),
+    }).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, j: j }; });
+    }).then(function (out) {
+      btn.disabled = false;
+      if (!out.ok) { err.textContent = Tf('admin.ema.createErr', { msg: (out.j && out.j.detail) || '' }); return; }
+      var j = out.j || {};
+      res.style.display = '';
+      res.textContent = Tf('admin.ema.pushResult', {
+        created: j.created || 0, n: j.recipients || 0,
+        pushed: j.pushed || 0, failed: j.failed || 0,
+      });
+    }).catch(function (e) {
+      if (String(e.message) !== '401') { btn.disabled = false; err.textContent = T('admin.err.network'); }
+    });
   }
 
   function _emaCreateFormHtml() {
