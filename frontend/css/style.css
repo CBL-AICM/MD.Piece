@@ -13121,6 +13121,41 @@ html[data-mode="senior"] .pv-stat-num { font-size: 1.4rem; }
 .diet-log-status-ok { color: #2E7A3F; }
 .diet-log-status-error { color: #C9554B; }
 
+/* 拍照算熱量 — 食物營養分析卡 */
+.diet-photo-card {
+  margin-top: 10px; padding: 14px;
+  background: var(--app-panel, var(--panel)); border: 1.5px solid var(--app-border, var(--border));
+  border-radius: 14px; display: flex; flex-direction: column; gap: 12px;
+}
+.diet-pc-top { display: flex; align-items: center; gap: 16px; }
+.diet-pc-ring {
+  width: 96px; height: 96px; border-radius: 50%;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+}
+.diet-pc-ring-in {
+  width: 72px; height: 72px; border-radius: 50%; background: var(--app-panel, var(--panel));
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.diet-pc-ring-num { font-size: 1.4rem; font-weight: 800; color: var(--navy); line-height: 1; }
+.diet-pc-ring-unit { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+.diet-pc-macros { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.diet-pc-macro { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.diet-pc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.diet-pc-macro-label { color: var(--text-dim); }
+.diet-pc-macro-val { margin-left: auto; font-weight: 700; color: var(--navy); }
+.diet-pc-health { border-top: 1px solid var(--border); padding-top: 10px; }
+.diet-pc-health-head { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-dim); }
+.diet-pc-health-score { margin-left: auto; font-weight: 800; color: var(--navy); }
+.diet-pc-health-bar { margin-top: 6px; height: 7px; border-radius: 4px; background: var(--bg-soft, #f1f5f9); overflow: hidden; }
+.diet-pc-health-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #f59e0b, #e11d48); }
+.diet-pc-health-why { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+.diet-pc-items { border-top: 1px solid var(--border); padding-top: 10px; }
+.diet-pc-sec-title { font-size: 0.82rem; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+.diet-pc-item { display: flex; align-items: baseline; gap: 8px; font-size: 0.82rem; padding: 3px 0; }
+.diet-pc-item-name { color: var(--text-dim); }
+.diet-pc-item-cal { margin-left: auto; font-weight: 600; color: var(--teal-deep, #1F5F56); white-space: nowrap; }
+.diet-pc-lowconf { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--text-muted); }
+
 /* 今日紀錄列表 */
 .diet-record {
   display: grid;
