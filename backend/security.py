@@ -17,6 +17,7 @@ JWT 設計：
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import re
@@ -72,7 +73,7 @@ def create_access_token(user: dict, ttl_days: int = _DEFAULT_TTL_DAYS) -> str:
 
 def _decode(token: str) -> dict:
     try:
-        return jwt.decode(token, _secret(), algorithms=[_ALGO])
+        payload = jwt.decode(token, _secret(), algorithms=[_ALGO])
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -85,6 +86,52 @@ def _decode(token: str) -> dict:
             detail="認證 token 無效",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    # 帶 purpose 的是特殊用途 token（如密碼重設信裡的 token），含 sub 但
+    # 絕不可拿來當登入 token 冒用身份；access token 從不帶 purpose。
+    if payload.get("purpose"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="認證 token 無效",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return payload
+
+
+# ─── 忘記密碼（Email 連結式）重設 token ─────────────────────
+# 設計：token 內含現任 password_hash 的指紋（pfp）。密碼一改指紋就對不上，
+# 舊連結立即失效 → 不必在 DB 存 token 即達成「一次性」。
+
+_RESET_TOKEN_TTL_MINUTES = 30
+
+
+def password_fingerprint(password_hash: str) -> str:
+    """現任密碼雜湊的短指紋；只進 token payload，不外洩任何可逆資訊。"""
+    return hashlib.sha256((password_hash or "").encode("utf-8")).hexdigest()[:16]
+
+
+def create_password_reset_token(user_id: str, password_hash: str) -> str:
+    now = datetime.now(tz=timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "purpose": "pwd_reset",
+        "pfp": password_fingerprint(password_hash),
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=_RESET_TOKEN_TTL_MINUTES)).timestamp()),
+    }
+    return jwt.encode(payload, _secret(), algorithm=_ALGO)
+
+
+def decode_password_reset_token(token: str) -> dict:
+    """驗重設 token；給未登入的重設端點用，故錯誤回 400 而非 401。"""
+    try:
+        payload = jwt.decode(token, _secret(), algorithms=[_ALGO])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="重設連結已過期，請重新申請")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="重設連結無效")
+    if payload.get("purpose") != "pwd_reset":
+        raise HTTPException(status_code=400, detail="重設連結無效")
+    return payload
 
 
 _bearer_required = HTTPBearer(auto_error=True)

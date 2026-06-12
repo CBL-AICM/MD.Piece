@@ -413,6 +413,15 @@
             <i data-lucide="search"></i> <span data-i18n="auth.forgot.lookup">查詢安全問題</span>
           </button>
 
+          <!-- Email 重設連結（與安全問題並存的替代路徑） -->
+          <div class="auth-recovery-block" style="margin-top:8px;border-top:1px dashed var(--border, #ddd);padding-top:8px;">
+            <p class="auth-avatar-hint" data-i18n="auth.forgot.emailHint">沒設安全問題？若帳號有綁 Email，可改寄密碼重設連結到信箱：</p>
+            <button class="auth-submit" id="forgot-email-send" type="button" onclick="requestEmailReset()">
+              <i data-lucide="mail"></i> <span data-i18n="auth.forgot.emailSend">寄送重設連結</span>
+            </button>
+            <p class="auth-avatar-hint" id="forgot-email-sent" hidden></p>
+          </div>
+
           <!-- 第二步：查到問題後才顯示 -->
           <div id="forgot-step2" hidden>
             <label class="auth-field">
@@ -436,6 +445,31 @@
           </div>
 
           <p class="auth-error" id="forgot-error" hidden></p>
+          <p class="auth-switch-hint"><a href="#" onclick="event.preventDefault(); switchAuthTab('login')" data-i18n="auth.switch.toLoginLink">直接登入</a></p>
+        </form>
+
+        <!-- EMAIL RESET PANEL（從重設信連結進入，URL 帶 ?reset_token=）-->
+        <form class="auth-panel" id="auth-panel-email-reset" onsubmit="event.preventDefault(); submitEmailReset();">
+          <p class="auth-avatar-title" data-i18n="auth.emailReset.title">設定新密碼</p>
+          <p class="auth-avatar-hint" data-i18n="auth.emailReset.hint">您已透過 Email 連結驗證身分，請設定新密碼。</p>
+
+          <label class="auth-field">
+            <span class="auth-label" data-i18n="auth.forgot.newPassword">新密碼</span>
+            <input id="email-reset-password" type="password" autocomplete="new-password" placeholder="至少 8 字元，含英文與數字" data-i18n-placeholder="auth.placeholder.regPassword" minlength="8" required onkeyup="detectCapsLock(event, 'email-reset-caps')" />
+          </label>
+          <p class="auth-avatar-hint" id="email-reset-caps" hidden><i data-lucide="alert-triangle"></i> <span data-i18n="auth.capsLock">大寫鎖定（Caps Lock）已開啟</span></p>
+          <label class="auth-field">
+            <span class="auth-label" data-i18n="auth.label.password2">確認密碼</span>
+            <input id="email-reset-password2" type="password" autocomplete="new-password" placeholder="再次輸入密碼" data-i18n-placeholder="auth.placeholder.regPassword2" minlength="8" required />
+          </label>
+          <label class="auth-show-pw" style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" onchange="toggleAuthPw('emailReset', this.checked)" /> <span data-i18n="auth.showPassword">顯示密碼</span>
+          </label>
+
+          <p class="auth-error" id="email-reset-error" hidden></p>
+          <button class="auth-submit" id="email-reset-submit" type="submit">
+            <i data-lucide="key-round"></i> <span data-i18n="auth.forgot.reset">重設密碼</span>
+          </button>
           <p class="auth-switch-hint"><a href="#" onclick="event.preventDefault(); switchAuthTab('login')" data-i18n="auth.switch.toLoginLink">直接登入</a></p>
         </form>
       </div>

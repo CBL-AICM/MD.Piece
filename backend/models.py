@@ -83,8 +83,10 @@ class UserLogin(BaseModel):
     password: str
 
 
-# ─── 忘記密碼（安全問題式重設）─────────────────────────────
-# 專案無 email 寄送能力，改用安全問題自助重設（Q&A 答案以 scrypt 雜湊存放）。
+# ─── 忘記密碼 ─────────────────────────────────────────────
+# 兩條並存的自助重設路徑：
+# 1. 安全問題（Q&A 答案以 scrypt 雜湊存放）— 不依賴 email
+# 2. Email 重設連結（Resend 寄信 + 短效一次性 token）— 帳號需綁 email
 
 
 class RecoverySet(BaseModel):
@@ -102,6 +104,17 @@ class RecoveryReset(BaseModel):
     """忘記密碼第二步：答對安全問題即可重設密碼。"""
     username: str
     answer: str
+    new_password: str
+
+
+class EmailResetRequest(BaseModel):
+    """忘記密碼（Email 連結式）第一步：用帳號申請寄送重設連結。"""
+    username: str
+
+
+class EmailResetConfirm(BaseModel):
+    """忘記密碼（Email 連結式）第二步：憑信中 token 設定新密碼。"""
+    token: str
     new_password: str
 
 

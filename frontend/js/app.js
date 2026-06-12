@@ -4153,10 +4153,21 @@ let _authRole = 'patient';
 let _loginRole = 'patient';
 let _regAvatarDataUrl = '';
 
+// 忘記密碼重設信的連結會帶 ?reset_token=...，啟動時先收起來，
+// 等登入覆蓋層打開時直接切到「設定新密碼」面板。
+let _emailResetToken = '';
+try {
+  _emailResetToken = new URLSearchParams(window.location.search).get('reset_token') || '';
+} catch (e) { /* ignore */ }
+
 function showIdCardRegister() {
   const overlay = document.getElementById('register-overlay');
   overlay.style.display = 'flex';
-  switchAuthTab('login');
+  if (_emailResetToken) {
+    showEmailResetPanel();
+  } else {
+    switchAuthTab('login');
+  }
   // 預填上次登入過的帳號（若有）
   const lastUsername = localStorage.getItem('mdpiece_last_username') || '';
   const loginInput = document.getElementById('login-username');
@@ -4177,9 +4188,11 @@ function switchAuthTab(tab) {
   document.getElementById('auth-tab-register').classList.toggle('active', !isLogin);
   document.getElementById('auth-panel-login').classList.toggle('active', isLogin);
   document.getElementById('auth-panel-register').classList.toggle('active', !isLogin);
-  // 切回 login/register 時收起忘記密碼面板
+  // 切回 login/register 時收起忘記密碼／Email 重設面板
   const forgot = document.getElementById('auth-panel-forgot');
   if (forgot) forgot.classList.remove('active');
+  const emailReset = document.getElementById('auth-panel-email-reset');
+  if (emailReset) emailReset.classList.remove('active');
   document.getElementById('login-error').hidden = true;
   document.getElementById('register-error').hidden = true;
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -4191,9 +4204,11 @@ function showForgotPanel() {
   document.getElementById('auth-tab-register').classList.remove('active');
   document.getElementById('auth-panel-login').classList.remove('active');
   document.getElementById('auth-panel-register').classList.remove('active');
+  document.getElementById('auth-panel-email-reset').classList.remove('active');
   document.getElementById('auth-panel-forgot').classList.add('active');
   document.getElementById('forgot-step2').hidden = true;
   document.getElementById('forgot-error').hidden = true;
+  document.getElementById('forgot-email-sent').hidden = true;
   // 預填登入頁打過的帳號
   const u = document.getElementById('login-username').value.trim()
     || localStorage.getItem('mdpiece_last_username') || '';
@@ -4207,6 +4222,7 @@ function toggleAuthPw(panel, show) {
     login: ['login-password'],
     register: ['reg-password', 'reg-password2'],
     forgot: ['forgot-new-password'],
+    emailReset: ['email-reset-password', 'email-reset-password2'],
   }[panel] || [];
   const type = show ? 'text' : 'password';
   ids.forEach(id => { const el = document.getElementById(id); if (el) el.type = type; });
@@ -4491,6 +4507,87 @@ async function submitRecoveryReset() {
     document.getElementById('login-username').value = username;
   } catch (e) {
     showAuthError('forgot', e.message || _T("app.c5.resetFailedRetry"));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+// 忘記密碼（Email 連結式）：請後端寄一次性重設連結到帳號綁定的信箱。
+async function requestEmailReset() {
+  const username = document.getElementById('forgot-username').value.trim();
+  if (!username) { showAuthError('forgot', _T("app.c5.enterUsernameFirst")); return; }
+  const btn = document.getElementById('forgot-email-send');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader"></i> ' + _T("app.c5.sendingResetEmail");
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('forgot-error').hidden = true;
+  document.getElementById('forgot-email-sent').hidden = true;
+  try {
+    const res = await apiFetch(`${API}/auth/recovery/email/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || _T("app.c5.resetEmailFailed"));
+    const sent = document.getElementById('forgot-email-sent');
+    sent.textContent = data.message || _T("app.c5.resetEmailSent");
+    sent.hidden = false;
+  } catch (e) {
+    showAuthError('forgot', e.message || _T("app.c5.resetEmailFailed"));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+// 從重設信連結（?reset_token=）進入時，直接顯示「設定新密碼」面板。
+function showEmailResetPanel() {
+  document.getElementById('auth-tab-login').classList.remove('active');
+  document.getElementById('auth-tab-register').classList.remove('active');
+  document.getElementById('auth-panel-login').classList.remove('active');
+  document.getElementById('auth-panel-register').classList.remove('active');
+  document.getElementById('auth-panel-forgot').classList.remove('active');
+  document.getElementById('auth-panel-email-reset').classList.add('active');
+  document.getElementById('email-reset-error').hidden = true;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// 憑信中 token 設定新密碼；成功後清掉網址上的 token 並導回登入。
+async function submitEmailReset() {
+  const pw = document.getElementById('email-reset-password').value;
+  const pw2 = document.getElementById('email-reset-password2').value;
+  if (pw !== pw2) { showAuthError('email-reset', _T("app.c5.pwMismatch")); return; }
+  const pwErr = validateClientPassword(pw, null);
+  if (pwErr) { showAuthError('email-reset', pwErr); return; }
+
+  const btn = document.getElementById('email-reset-submit');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader"></i> ' + _T("app.c5.resetting");
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('email-reset-error').hidden = true;
+  try {
+    const res = await apiFetch(`${API}/auth/recovery/email/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _emailResetToken, new_password: pw }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || _T("app.c5.resetFailed"));
+    }
+    _emailResetToken = '';
+    // token 是一次性的，從網址移除，避免重新整理又跳回此面板
+    try { history.replaceState(null, '', window.location.pathname); } catch (e) { /* ignore */ }
+    if (typeof showToast === 'function') showToast(_T("app.c5.pwResetSuccess"), 'success');
+    switchAuthTab('login');
+  } catch (e) {
+    showAuthError('email-reset', e.message || _T("app.c5.resetFailedRetry"));
   } finally {
     btn.disabled = false;
     btn.innerHTML = original;

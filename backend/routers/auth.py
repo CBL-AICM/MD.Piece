@@ -1,13 +1,17 @@
 import hashlib
+import html as html_lib
 import logging
 import os
 import re
+import time
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.db import get_supabase
 from backend.models import (
+    EmailResetConfirm,
+    EmailResetRequest,
     PasswordChange,
     RecoveryQuestionRequest,
     RecoveryReset,
@@ -16,7 +20,14 @@ from backend.models import (
     UserLogin,
     UserUpdate,
 )
-from backend.security import create_access_token, current_user
+from backend.security import (
+    create_access_token,
+    create_password_reset_token,
+    current_user,
+    decode_password_reset_token,
+    password_fingerprint,
+)
+from backend.services import email_service
 from backend.services import supabase_auth as sb_auth
 
 logger = logging.getLogger(__name__)
@@ -335,6 +346,105 @@ def recovery_reset(body: RecoveryReset):
     if not _verify_password(_normalize_answer(body.answer), user_row["recovery_answer_hash"]):
         _register_failed_attempt(sb, user_row, now)
         raise HTTPException(status_code=400, detail="帳號或安全問題答案錯誤")
+
+    ok, msg = _validate_password(body.new_password, user_row.get("username"))
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+
+    sb.table("users").update({
+        "password_hash": _hash_password(body.new_password),
+        "failed_login_count": 0,
+        "locked_until": None,
+    }).eq("id", user_row["id"]).execute()
+    _maybe_sync_password(user_row.get("supabase_user_id"), body.new_password)
+    return {"ok": True}
+
+
+# ─── 忘記密碼（Email 連結式重設）────────────────────────────
+# 與安全問題式並存：帳號有綁 email 就能改寄一次性重設連結（30 分鐘有效）。
+
+# 重設連結指向的前端網址（信件由後端寄出，連結必須是完整絕對網址）。
+_PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://www.mdpiece.life").rstrip("/")
+
+# 無論帳號是否存在、有沒有綁 email，一律回這句，防帳號列舉。
+_GENERIC_RESET_SENT_MSG = "若此帳號存在且已設定 Email，重設連結已寄出（30 分鐘內有效），請查收信箱"
+
+# 同帳號 60 秒內只寄一封，防灌信。serverless 各 instance 記憶體獨立，
+# 此為 best-effort（正確性不依賴它；token 本身有時效與一次性保護）。
+_EMAIL_RESET_COOLDOWN_SECONDS = 60
+_last_reset_email_at: dict[str, float] = {}
+
+
+def _build_reset_email_html(nickname: str, link: str) -> str:
+    name = html_lib.escape(nickname or "您好")
+    return f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+      <h2>MD.Piece 密碼重設</h2>
+      <p>{name}，我們收到您的密碼重設申請。</p>
+      <p>請點下方按鈕設定新密碼，連結 30 分鐘內有效、只能使用一次：</p>
+      <p style="margin:24px 0;">
+        <a href="{link}" style="background:#4a7c59;color:#fff;padding:12px 24px;
+           border-radius:8px;text-decoration:none;display:inline-block;">設定新密碼</a>
+      </p>
+      <p style="font-size:13px;color:#666;">按鈕無法點擊時，請複製此網址到瀏覽器開啟：<br>{link}</p>
+      <p style="font-size:13px;color:#666;">若這不是您本人的申請，請忽略這封信，您的密碼不會被變更。</p>
+    </div>
+    """
+
+
+@router.post("/recovery/email/request")
+def email_reset_request(body: EmailResetRequest):
+    """忘記密碼（Email）第一步：寄一次性重設連結到帳號綁定的信箱。"""
+    if not email_service.is_configured():
+        # 鐵則 12：寄信服務沒設定就明講，不假裝有寄
+        raise HTTPException(status_code=503, detail="系統未啟用 Email 重設，請改用安全問題重設或聯絡管理員")
+
+    sb = get_supabase()
+    result = sb.table("users").select("*").eq("username", body.username).execute()
+    generic = {"ok": True, "message": _GENERIC_RESET_SENT_MSG}
+    if not result.data:
+        return generic
+    user_row = result.data[0]
+    email = (user_row.get("email") or "").strip()
+    if not email:
+        return generic
+
+    now = time.monotonic()
+    last = _last_reset_email_at.get(body.username)
+    if last is not None and now - last < _EMAIL_RESET_COOLDOWN_SECONDS:
+        return generic
+    _last_reset_email_at[body.username] = now
+
+    token = create_password_reset_token(user_row["id"], user_row.get("password_hash", ""))
+    link = f"{_PUBLIC_BASE_URL}/?reset_token={token}"
+    try:
+        email_service.send_email(
+            to=email,
+            subject="MD.Piece 密碼重設連結",
+            html=_build_reset_email_html(user_row.get("nickname", ""), link),
+        )
+    except RuntimeError:
+        logger.exception("密碼重設信寄送失敗: username=%s", body.username)
+        raise HTTPException(status_code=502, detail="重設信寄送失敗，請稍後再試")
+    return generic
+
+
+@router.post("/recovery/email/reset")
+def email_reset_confirm(body: EmailResetConfirm):
+    """忘記密碼（Email）第二步：驗 token 後設定新密碼。
+
+    token 內含申請當下密碼雜湊的指紋：密碼改過（含已用過此連結）指紋就對不上，
+    連結立即失效——免存 DB 即達成一次性。
+    """
+    payload = decode_password_reset_token(body.token)
+    sb = get_supabase()
+    result = sb.table("users").select("*").eq("id", payload["sub"]).execute()
+    if not result.data:
+        raise HTTPException(status_code=400, detail="重設連結無效")
+    user_row = result.data[0]
+
+    if payload.get("pfp") != password_fingerprint(user_row.get("password_hash", "")):
+        raise HTTPException(status_code=400, detail="重設連結已失效（已使用過或密碼已變更），請重新申請")
 
     ok, msg = _validate_password(body.new_password, user_row.get("username"))
     if not ok:
