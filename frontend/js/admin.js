@@ -230,34 +230,79 @@
       if (String(e.message) !== '401') document.getElementById('ad-pt').innerHTML = '<div class="ad-empty">' + esc(T('admin.err.participantsLoad')) + '</div>';
     });
   }
+  // 患者清單可達上千列 → 前端搜尋 + 分頁，避免一次塞滿 DOM。
+  var _ptAll = [];
+  var _ptQuery = '';
+  var _ptPage = 0;
+  var PT_PAGE_SIZE = 50;
+
   function renderParticipants(data) {
     var box = document.getElementById('ad-pt');
-    var ps = data.participants || [];
-    if (!ps.length) {
+    _ptAll = data.participants || [];
+    _ptQuery = '';
+    _ptPage = 0;
+    if (!_ptAll.length) {
       box.innerHTML = '<div class="ad-empty">' + esc(T('admin.participants.empty')) + '</div>';
       return;
     }
+    box.innerHTML = '<p class="ad-meta">' + esc(Tf('admin.participants.summary', { n: _ptAll.length })) + '</p>'
+      + '<div class="ad-field" style="margin-bottom:10px"><input class="ad-input" id="ad-pt-search" placeholder="' + esc(T('admin.pt.search')) + '" /></div>'
+      + '<div id="ad-pt-list"></div>';
+    var s = document.getElementById('ad-pt-search');
+    if (s) s.oninput = function () { _ptQuery = (s.value || '').trim().toLowerCase(); _ptPage = 0; _ptRenderList(); };
+    _ptRenderList();
+  }
+
+  function _ptFiltered() {
+    if (!_ptQuery) return _ptAll;
+    return _ptAll.filter(function (p) {
+      return ((p.nickname || '') + ' ' + (p.username || '') + ' ' + (p.participant_code || '') + ' ' + (p.patient_id || ''))
+        .toLowerCase().indexOf(_ptQuery) !== -1;
+    });
+  }
+
+  function _ptRenderList() {
+    var box = document.getElementById('ad-pt-list');
+    if (!box) return;
+    var list = _ptFiltered();
+    var pages = Math.max(1, Math.ceil(list.length / PT_PAGE_SIZE));
+    if (_ptPage >= pages) _ptPage = pages - 1;
+    var slice = list.slice(_ptPage * PT_PAGE_SIZE, (_ptPage + 1) * PT_PAGE_SIZE);
+    if (!list.length) { box.innerHTML = '<div class="ad-empty">' + esc(T('admin.pt.noMatch')) + '</div>'; return; }
     var head = '<tr><th class="l">' + esc(T('admin.col.code')) + '</th><th class="l">' + esc(T('admin.col.user')) + '</th>'
       + TPS.map(function (t) { return '<th>' + esc(tpName(t.id)) + '</th>'; }).join('')
       + '<th>' + esc(T('admin.col.adherenceDays')) + '</th><th class="l">' + esc(T('admin.col.lastActivity')) + '</th></tr>';
-    var rows = ps.map(function (p) {
+    var rows = slice.map(function (p) {
       var tpc = TPS.map(function (t) {
         var c = (p.completion || {})[t.id];
         return '<td>' + (c ? pill(c.done, c.total) : '<span class="ad-sub">—</span>') + '</td>';
       }).join('');
       var uidShort = (p.patient_id || '').slice(0, 8);
+      var name = p.nickname || p.username || '';
+      var who = name
+        ? '<b>' + esc(name) + '</b><div class="ad-sub">' + esc(uidShort) + '</div>'
+        : '<span class="ad-sub">' + esc(uidShort) + '</span>';
       var last = (p.last_activity || '').slice(0, 10);
       return '<tr class="ad-row" data-pid="' + esc(p.patient_id) + '">'
         + '<td class="l"><b>' + esc(p.participant_code || '—') + '</b></td>'
-        + '<td class="l"><span class="ad-sub">' + esc(uidShort) + '</span></td>'
+        + '<td class="l">' + who + '</td>'
         + tpc + '<td>' + (p.adherence_days != null ? p.adherence_days : '—') + '</td>'
         + '<td class="l ad-sub">' + esc(last) + '</td></tr>';
     }).join('');
-    box.innerHTML = '<p class="ad-meta">' + esc(Tf('admin.participants.summary', { n: ps.length })) + '</p>'
-      + '<div class="ad-card" style="padding:6px 10px"><table class="ad-tbl">' + head + rows + '</table></div>';
+    var pager = pages > 1
+      ? '<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px">'
+        + '<button class="ad-btn secondary" id="ad-pt-prev"' + (_ptPage <= 0 ? ' disabled' : '') + '>‹</button>'
+        + '<span class="ad-sub">' + esc(Tf('admin.pt.page', { page: _ptPage + 1, pages: pages })) + '</span>'
+        + '<button class="ad-btn secondary" id="ad-pt-next"' + (_ptPage >= pages - 1 ? ' disabled' : '') + '>›</button>'
+        + '</div>'
+      : '';
+    box.innerHTML = '<p class="ad-sub" style="margin:0 2px 6px">' + esc(Tf('admin.pt.shown', { shown: slice.length, total: list.length })) + '</p>'
+      + '<div class="ad-card" style="padding:6px 10px"><table class="ad-tbl">' + head + rows + '</table></div>' + pager;
     Array.prototype.forEach.call(box.querySelectorAll('.ad-row'), function (tr) {
       tr.onclick = function () { openParticipant(tr.getAttribute('data-pid')); };
     });
+    var prev = document.getElementById('ad-pt-prev'); if (prev) prev.onclick = function () { if (_ptPage > 0) { _ptPage--; _ptRenderList(); } };
+    var next = document.getElementById('ad-pt-next'); if (next) next.onclick = function () { _ptPage++; _ptRenderList(); };
   }
 
   // ── per-participant drawer ────────────────────────────────

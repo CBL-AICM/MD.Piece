@@ -674,6 +674,7 @@ class _SqliteQuery:
         self._order_col = None
         self._order_desc = False
         self._limit_n = None
+        self._offset_n = None
         self._insert_data = None
         self._update_data = None
 
@@ -746,6 +747,12 @@ class _SqliteQuery:
         self._limit_n = n
         return self
 
+    def range(self, start, end):
+        # PostgREST .range(start, end) 為閉區間；轉成 LIMIT/OFFSET（供分頁撈滿）。
+        self._offset_n = int(start)
+        self._limit_n = int(end) - int(start) + 1
+        return self
+
     # ─── Execute ────────────────────────
     @staticmethod
     def _serialize_value(v):
@@ -793,6 +800,8 @@ class _SqliteQuery:
             sql += f' ORDER BY "{_safe_ident(self._order_col)}" {direction}'
         if self._limit_n:
             sql += f" LIMIT {int(self._limit_n)}"
+        if self._offset_n:
+            sql += f" OFFSET {int(self._offset_n)}"
 
         rows = conn.execute(sql, params).fetchall()
         data = [self._deserialize_row(dict(r)) for r in rows]
@@ -916,6 +925,7 @@ class _HttpxQuery:
         self._filters = []     # list of (col, "eq.val") tuples
         self._order = None     # (col, desc)
         self._limit = None
+        self._offset = None
         self._payload = None
 
     # operation setters
@@ -945,6 +955,11 @@ class _HttpxQuery:
         return self
     def limit(self, n):
         self._limit = int(n); return self
+    def range(self, start, end):
+        # PostgREST .range(start, end) 為閉區間 → offset/limit 查詢參數（供分頁撈滿）。
+        self._offset = int(start)
+        self._limit = int(end) - int(start) + 1
+        return self
 
     def _build_qs(self, extra=None):
         params = []
@@ -955,6 +970,8 @@ class _HttpxQuery:
             params.append(("order", f"{col}.{'desc' if desc else 'asc'}"))
         if self._limit is not None:
             params.append(("limit", str(self._limit)))
+        if self._offset is not None:
+            params.append(("offset", str(self._offset)))
         if extra:
             params.extend(extra)
         return params
