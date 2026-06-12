@@ -256,7 +256,7 @@
   function _ptFiltered() {
     if (!_ptQuery) return _ptAll;
     return _ptAll.filter(function (p) {
-      return ((p.nickname || '') + ' ' + (p.username || '') + ' ' + (p.participant_code || '') + ' ' + (p.patient_id || ''))
+      return ((p.nickname || '') + ' ' + (p.username || '') + ' ' + (p.participant_code || '') + ' ' + (p.patient_id || '') + ' ' + (p.disease || ''))
         .toLowerCase().indexOf(_ptQuery) !== -1;
     });
   }
@@ -270,6 +270,8 @@
     var slice = list.slice(_ptPage * PT_PAGE_SIZE, (_ptPage + 1) * PT_PAGE_SIZE);
     if (!list.length) { box.innerHTML = '<div class="ad-empty">' + esc(T('admin.pt.noMatch')) + '</div>'; return; }
     var head = '<tr><th class="l">' + esc(T('admin.col.code')) + '</th><th class="l">' + esc(T('admin.col.user')) + '</th>'
+      + '<th>' + esc(T('admin.col.gender')) + '</th><th>' + esc(T('admin.col.age')) + '</th>'
+      + '<th class="l">' + esc(T('admin.col.disease')) + '</th>'
       + TPS.map(function (t) { return '<th>' + esc(tpName(t.id)) + '</th>'; }).join('')
       + '<th>' + esc(T('admin.col.adherenceDays')) + '</th><th class="l">' + esc(T('admin.col.lastActivity')) + '</th></tr>';
     var rows = slice.map(function (p) {
@@ -283,9 +285,13 @@
         ? '<b>' + esc(name) + '</b><div class="ad-sub">' + esc(uidShort) + '</div>'
         : '<span class="ad-sub">' + esc(uidShort) + '</span>';
       var last = (p.last_activity || '').slice(0, 10);
+      var sex = p.gender === 'male' ? T('admin.gender.male') : (p.gender === 'female' ? T('admin.gender.female') : '—');
       return '<tr class="ad-row" data-pid="' + esc(p.patient_id) + '">'
         + '<td class="l"><b>' + esc(p.participant_code || '—') + '</b></td>'
         + '<td class="l">' + who + '</td>'
+        + '<td>' + esc(sex) + '</td>'
+        + '<td>' + (p.age != null ? p.age : '—') + '</td>'
+        + '<td class="l">' + (p.disease ? esc(p.disease) : '<span class="ad-sub">—</span>') + '</td>'
         + tpc + '<td>' + (p.adherence_days != null ? p.adherence_days : '—') + '</td>'
         + '<td class="l ad-sub">' + esc(last) + '</td></tr>';
     }).join('');
