@@ -990,6 +990,18 @@ def study_participants(study: str, me: dict = Depends(current_user)):
     # 併入有填答但不在 users 清單的 pid（測試資料／角色異動），避免漏列。
     all_ids = set(user_by_id) | set(part)
 
+    # 基本資料（性別／生日→年齡／疾病）：patient_profiles 一次撈滿後在記憶體 join。
+    profiles = _fetch_all(lambda: sb.table("patient_profiles").select("*"))
+    prof_by_id = {p["user_id"]: p for p in profiles if p.get("user_id")}
+
+    def _age_of(birthday) -> Optional[int]:
+        try:
+            b = datetime.strptime(str(birthday)[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
+        today = datetime.now().date()
+        return today.year - b.year - ((today.month, today.day) < (b.month, b.day))
+
     # 依從天數一次性批次計算（不逐人查；列全部患者時逐人 _adherence 會逾時）。
     active_days = _active_days_bulk(sb)
 
@@ -997,6 +1009,7 @@ def study_participants(study: str, me: dict = Depends(current_user)):
     for pid in all_ids:
         p = part.get(pid, {"code": None, "last": "", "tp": {}})
         u = user_by_id.get(pid, {})
+        prof = prof_by_id.get(pid, {})
         completion = {tp: {"done": len(p["tp"].get(tp, set())), "total": total}
                       for tp, total in applicable.items()}
         out.append({
@@ -1004,6 +1017,9 @@ def study_participants(study: str, me: dict = Depends(current_user)):
             "participant_code": p["code"],
             "nickname": u.get("nickname") or "",
             "username": u.get("username") or "",
+            "gender": prof.get("gender") or "",
+            "age": _age_of(prof.get("birthday")),
+            "disease": prof.get("current_disease") or "",
             "registered_at": u.get("created_at") or "",
             "last_activity": p["last"],
             "completion": completion,
