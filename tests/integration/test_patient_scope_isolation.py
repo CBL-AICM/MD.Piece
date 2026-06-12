@@ -107,6 +107,38 @@ def test_demo_anonymous_still_allowed():
     assert r.status_code == 200, r.text
 
 
+@pytest.mark.parametrize(
+    "path, params",
+    [
+        ("/timeline", {"patient_id": PATIENT_B}),
+        ("/reminders/", {"patient_id": PATIENT_B}),
+        ("/reminders/inbox/list", {"patient_id": PATIENT_B}),
+        ("/follow-ups/", {"patient_id": PATIENT_B}),
+        ("/sleep/sessions", {"user_id": PATIENT_B}),
+        ("/diet/records/" + PATIENT_B, {}),
+        ("/menstrual/cycles", {"patient_id": PATIENT_B}),
+        ("/health-literacy/latest", {"patient_id": PATIENT_B}),
+        ("/admissions/", {"patient_id": PATIENT_B}),
+        ("/inpatient/bedside", {"patient_id": PATIENT_B}),
+    ],
+)
+def test_cross_account_get_blocked_across_routers(path, params):
+    """同一套 enforce_patient_scope 套用到的各 router：A 帶 B 的 id 一律 403。
+
+    這把「逐 router 補上的隔離」鎖住——任何一個 router 漏接 me / enforce，
+    對應的參數化案例就會掉到 200 而失敗。
+    """
+    r = client.get(path, params=params, headers=_AUTH_A)
+    assert r.status_code == 403, f"{path} 應擋下跨帳號存取，得到 {r.status_code}: {r.text}"
+
+
+def test_medication_changes_without_patient_id_does_not_leak_all():
+    """medication_changes 與 records 同款：demo 不帶 patient_id → 回空，不回全表。"""
+    r = client.get("/medication-changes/")
+    assert r.status_code == 200, r.text
+    assert r.json()["changes"] == []
+
+
 def test_records_without_patient_id_does_not_leak_all():
     """舊 P0：GET /records/ 不帶 patient_id 會回所有病患的病歷。修復後：
     - demo 不帶 patient_id → 回空，不洩漏全表。

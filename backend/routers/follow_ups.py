@@ -9,10 +9,11 @@ chip 只顯示「最近一筆未完成的回診」。
 import re
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.db import _SCHEMAS, get_supabase
 from backend.models import FollowUpCreate, FollowUpUpdate
+from backend.security import current_user_optional, enforce_patient_scope
 
 router = APIRouter()
 
@@ -75,8 +76,18 @@ def _validate_date(s):
     return s
 
 
+def _assert_owns_follow_up(sb, fid: str, me: dict | None) -> dict:
+    """以 follow_up_id 取資料時的擁有權檢查：已登入則該筆 patient_id 必須是自己。"""
+    res = sb.table("follow_ups").select("*").eq("id", fid).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="找不到回診")
+    enforce_patient_scope(res.data[0].get("patient_id"), me)
+    return res.data[0]
+
+
 @router.post("/")
-def create_follow_up(body: FollowUpCreate):
+def create_follow_up(body: FollowUpCreate, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     pid = _safe_id(body.patient_id, "patient_id")
     data = {
         "patient_id": pid,
@@ -100,7 +111,9 @@ def list_follow_ups(
     patient_id: str = Query(...),
     status: str | None = None,
     upcoming_only: bool = False,
+    me: dict | None = Depends(current_user_optional),
 ):
+    enforce_patient_scope(patient_id, me)
     pid = _safe_id(patient_id, "patient_id")
     sb = get_supabase()
     q = sb.table("follow_ups").select("*").eq("patient_id", pid)
@@ -114,8 +127,9 @@ def list_follow_ups(
 
 
 @router.get("/nearest")
-def get_nearest_follow_up(patient_id: str = Query(...)):
+def get_nearest_follow_up(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """回傳最近一筆未來且狀態為 scheduled 的回診；沒有則 follow_up=None。"""
+    enforce_patient_scope(patient_id, me)
     pid = _safe_id(patient_id, "patient_id")
     sb = get_supabase()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -133,17 +147,14 @@ def get_nearest_follow_up(patient_id: str = Query(...)):
 
 
 @router.get("/{follow_up_id}")
-def get_follow_up(follow_up_id: str):
+def get_follow_up(follow_up_id: str, me: dict | None = Depends(current_user_optional)):
     fid = _safe_id(follow_up_id, "follow_up_id")
     sb = get_supabase()
-    result = sb.table("follow_ups").select("*").eq("id", fid).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="找不到回診")
-    return result.data[0]
+    return _assert_owns_follow_up(sb, fid, me)
 
 
 @router.put("/{follow_up_id}")
-def update_follow_up(follow_up_id: str, body: FollowUpUpdate):
+def update_follow_up(follow_up_id: str, body: FollowUpUpdate, me: dict | None = Depends(current_user_optional)):
     fid = _safe_id(follow_up_id, "follow_up_id")
     updates = body.model_dump(exclude_none=True)
     if "scheduled_date" in updates:
@@ -157,6 +168,7 @@ def update_follow_up(follow_up_id: str, body: FollowUpUpdate):
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     sb = get_supabase()
+    _assert_owns_follow_up(sb, fid, me)
     result = sb.table("follow_ups").update(updates).eq("id", fid).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到回診")
@@ -164,9 +176,10 @@ def update_follow_up(follow_up_id: str, body: FollowUpUpdate):
 
 
 @router.delete("/{follow_up_id}")
-def delete_follow_up(follow_up_id: str):
+def delete_follow_up(follow_up_id: str, me: dict | None = Depends(current_user_optional)):
     fid = _safe_id(follow_up_id, "follow_up_id")
     sb = get_supabase()
+    _assert_owns_follow_up(sb, fid, me)
     result = sb.table("follow_ups").delete().eq("id", fid).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到回診")

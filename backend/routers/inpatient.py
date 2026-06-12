@@ -23,13 +23,23 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _assert_owns_question(sb, question_id: str, me) -> dict:
+    """以 question_id 操作時的擁有權檢查：已登入則該筆 patient_id 必須是自己。"""
+    res = sb.table("inpatient_questions").select("*").eq("id", question_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="找不到該問題")
+    enforce_patient_scope(res.data[0].get("patient_id"), me)
+    return res.data[0]
 
 
 # ── 免責框架（每個畫面 / 報告都要有）──────────────────────────
@@ -147,6 +157,7 @@ _SITUATION_SYSTEM = (
 def handover(
     patient_id: str = Query(...),
     admission_id: Optional[str] = Query(None),
+    me: dict | None = Depends(current_user_optional),
 ):
     """F1 交接報告資料：仿 SBAR / I-PASS。前端負責排版成 1–2 頁 PDF。
 
@@ -154,6 +165,7 @@ def handover(
          → medications（居家用藥，逐筆標來源+時間）→ monitoring（近期自我監測）。
     每項資料標註來源與時間，讓臨床人員可獨立查核（提升信任 + 守在法規安全側）。
     """
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     profile = _get_profile(sb, patient_id)
     admission = _resolve_admission(sb, patient_id, admission_id)
@@ -256,12 +268,14 @@ def handover(
 def med_reconciliation(
     patient_id: str = Query(...),
     admission_id: Optional[str] = Query(None),
+    me: dict | None = Depends(current_user_optional),
 ):
     """F3：居家用藥 vs 住院醫囑並排，標示 新增／停用／劑量改變／維持。
 
     規則 5：差異判定是確定性任務 → 純程式碼比對（依正規化藥名配對、比劑量字串），
     不丟 LLM。僅作資訊呈現，不給「該不該吃」指示（法規紅線）。
     """
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     admission = _resolve_admission(sb, patient_id, admission_id)
     adm_id = admission.get("id")
@@ -336,8 +350,9 @@ class BedsideCreate(BaseModel):
 
 
 @router.post("/bedside")
-def create_bedside(body: BedsideCreate):
+def create_bedside(body: BedsideCreate, me: dict | None = Depends(current_user_optional)):
     """床邊自我記錄：極低操作負擔，全部欄位可選（躺著一隻手點完）。"""
+    enforce_patient_scope(body.patient_id, me)
     sb = get_supabase()
     data = body.model_dump(exclude_none=True)
     if body.pain is not None and not (0 <= body.pain <= 10):
@@ -357,7 +372,9 @@ def list_bedside(
     patient_id: str = Query(...),
     admission_id: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
+    me: dict | None = Depends(current_user_optional),
 ):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = _fetch_safely(sb, "bedside_logs", patient_id)
     if admission_id:
@@ -405,7 +422,9 @@ _Q_STATUS = {"open", "asked"}
 def list_questions(
     patient_id: str = Query(...),
     admission_id: Optional[str] = Query(None),
+    me: dict | None = Depends(current_user_optional),
 ):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = _fetch_safely(sb, "inpatient_questions", patient_id)
     if admission_id:
@@ -415,7 +434,8 @@ def list_questions(
 
 
 @router.post("/questions")
-def create_question(body: QuestionCreate):
+def create_question(body: QuestionCreate, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     text = (body.text or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="問題內容不可空白")
@@ -435,13 +455,14 @@ def create_question(body: QuestionCreate):
 
 
 @router.put("/questions/{question_id}")
-def update_question(question_id: str, body: QuestionUpdate):
+def update_question(question_id: str, body: QuestionUpdate, me: dict | None = Depends(current_user_optional)):
     data = body.model_dump(exclude_none=True)
     if not data:
         raise HTTPException(status_code=400, detail="沒有提供更新資料")
     if "status" in data and data["status"] not in _Q_STATUS:
         raise HTTPException(status_code=400, detail=f"status 必須是 {_Q_STATUS} 之一")
     sb = get_supabase()
+    _assert_owns_question(sb, question_id, me)
     result = sb.table("inpatient_questions").update(data).eq("id", question_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="找不到該問題")
@@ -449,8 +470,9 @@ def update_question(question_id: str, body: QuestionUpdate):
 
 
 @router.delete("/questions/{question_id}")
-def delete_question(question_id: str):
+def delete_question(question_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    _assert_owns_question(sb, question_id, me)
     sb.table("inpatient_questions").delete().eq("id", question_id).execute()
     return {"deleted": question_id}
 
@@ -488,12 +510,14 @@ def _suggest_from_bedside(log: dict) -> list[dict]:
 def suggested_questions(
     patient_id: str = Query(...),
     admission_id: Optional[str] = Query(None),
+    me: dict | None = Depends(current_user_optional),
 ):
     """讀最近一筆床邊紀錄 → 個人化「想問醫師」候選（純規則）。
 
     與 /qpl-bank（通用題）互補：這裡是「依你今天記的症狀」客製。
     規則 12：沒有床邊紀錄時回 suggested=[]，明確空集合、不臆造問題。
     """
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = _fetch_safely(sb, "bedside_logs", patient_id)
     if admission_id:
@@ -550,9 +574,11 @@ def _generic_edu_cards() -> list[dict]:
 def education(
     patient_id: str = Query(...),
     admission_id: Optional[str] = Query(None),
+    me: dict | None = Depends(current_user_optional),
 ):
     """F4：只推與「這次住院診斷」相關的衛教，內容以 disease_reference 為底，
     AI 只負責轉白話（規則 5）。附 teach-back 互動確認。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     admission = _resolve_admission(sb, patient_id, admission_id)
     diagnosis = (admission.get("diagnosis") or "").strip()
@@ -624,10 +650,12 @@ def _split_red_flags(raw) -> list[str]:
 def discharge_checklist(
     patient_id: str = Query(...),
     admission_id: Optional[str] = Query(None),
+    me: dict | None = Depends(current_user_optional),
 ):
     """F6：出院「帶回家」清單，依 Coleman CTI 四支柱組裝。
     惡化紅旗以衛教語氣呈現（「若出現 X 請聯絡醫療人員」），
     不由 App 判定「你病情惡化了」（法規紅線）。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     admission = _resolve_admission(sb, patient_id, admission_id)
     adm_id = admission.get("id")

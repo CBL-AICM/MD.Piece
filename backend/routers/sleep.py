@@ -18,11 +18,12 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 from backend.services import wearable_sync
 from backend.utils.sleep_pipeline import (
     Epoch,
@@ -89,8 +90,9 @@ def _parse_dt(s: Optional[str], label: str):
 # ── 自動偵測 ingest（pipeline）────────────────────────────
 
 @router.post("/ingest")
-def ingest(body: IngestRequest):
+def ingest(body: IngestRequest, me: dict | None = Depends(current_user_optional)):
     """跑判睡 pipeline，輸出並存入一筆 auto SleepSession。"""
+    enforce_patient_scope(body.user_id, me)
     if not body.epochs:
         raise HTTPException(status_code=400, detail="epochs 不可為空")
     cfg = SleepConfig()
@@ -128,7 +130,8 @@ def ingest(body: IngestRequest):
 # ── 手動補登 / 外部匯入 ───────────────────────────────────
 
 @router.post("/sessions")
-def create_session(body: SleepSessionCreate):
+def create_session(body: SleepSessionCreate, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.user_id, me)
     if body.source not in {"manual", "imported"}:
         raise HTTPException(status_code=400, detail="source 只能是 manual 或 imported")
     bed = _parse_dt(body.bed_time, "bed_time")
@@ -168,7 +171,9 @@ def list_sessions(
     user_id: str = Query(...),
     days: int = Query(30, ge=1, le=365),
     limit: int = Query(120, ge=1, le=500),
+    me: dict | None = Depends(current_user_optional),
 ):
+    enforce_patient_scope(user_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
     try:
@@ -186,8 +191,9 @@ def list_sessions(
 
 
 @router.get("/today")
-def today(user_id: str = Query(...)):
+def today(user_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """今日睡眠卡：回傳最近一筆 session（規格 §5.1）。"""
+    enforce_patient_scope(user_id, me)
     sb = get_supabase()
     try:
         rows = (
@@ -203,13 +209,14 @@ def today(user_id: str = Query(...)):
 
 
 @router.put("/sessions/{session_id}")
-def edit_session(session_id: str, body: SleepSessionEdit):
+def edit_session(session_id: str, body: SleepSessionEdit, me: dict | None = Depends(current_user_optional)):
     """手動修正一筆紀錄：保留原值於 sleep_edits log、is_edited=true、重算指標。"""
     sb = get_supabase()
     existing = sb.table("sleep_sessions").select("*").eq("id", session_id).limit(1).execute().data
     if not existing:
         raise HTTPException(status_code=404, detail="找不到該睡眠紀錄")
     old = existing[0]
+    enforce_patient_scope(old.get("user_id"), me)
 
     bed = _parse_dt(body.bed_time, "bed_time") if body.bed_time else _parse_dt(old["bed_time"], "bed_time")
     onset = _parse_dt(body.sleep_onset, "sleep_onset") if body.sleep_onset else _parse_dt(old["sleep_onset"], "sleep_onset")
@@ -250,8 +257,11 @@ def edit_session(session_id: str, body: SleepSessionEdit):
 
 
 @router.delete("/sessions/{session_id}")
-def delete_session(session_id: str):
+def delete_session(session_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    existing = sb.table("sleep_sessions").select("user_id").eq("id", session_id).limit(1).execute().data
+    if existing:
+        enforce_patient_scope(existing[0].get("user_id"), me)
     sb.table("sleep_sessions").delete().eq("id", session_id).execute()
     return {"deleted": session_id}
 
@@ -325,8 +335,9 @@ def list_providers():
 
 
 @router.get("/connections")
-def list_connections(user_id: str = Query(...)):
+def list_connections(user_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """使用者已連接哪些 provider（只回 provider 與時間，不外流 token）。"""
+    enforce_patient_scope(user_id, me)
     sb = get_supabase()
     try:
         rows = (
@@ -344,8 +355,9 @@ def list_connections(user_id: str = Query(...)):
 
 
 @router.get("/connect/fitbit/start")
-def fitbit_start(user_id: str = Query(...)):
+def fitbit_start(user_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """回傳 Fitbit 授權頁 URL；未設定金鑰時 loud-fail（規則 12）。"""
+    enforce_patient_scope(user_id, me)
     if not wearable_sync.is_configured():
         raise HTTPException(
             status_code=503,
@@ -373,8 +385,9 @@ def fitbit_callback(code: str = Query(""), state: str = Query("")):
 
 
 @router.post("/sync/fitbit")
-def fitbit_sync(body: SyncRequest):
+def fitbit_sync(body: SyncRequest, me: dict | None = Depends(current_user_optional)):
     """拉近 N 天 Fitbit 睡眠紀錄，映射成 imported session 存後台（去重）。"""
+    enforce_patient_scope(body.user_id, me)
     if not wearable_sync.is_configured():
         raise HTTPException(status_code=503, detail="尚未設定 Fitbit 連接，無法同步。")
     sb = get_supabase()
@@ -428,8 +441,9 @@ def fitbit_sync(body: SyncRequest):
 
 
 @router.delete("/connections/{provider}")
-def disconnect(provider: str, user_id: str = Query(...)):
+def disconnect(provider: str, user_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """中斷某 provider 連線（刪 token；已匯入的睡眠紀錄保留）。"""
+    enforce_patient_scope(user_id, me)
     sb = get_supabase()
     try:
         sb.table("wearable_connections").delete().eq("user_id", user_id).eq("provider", provider).execute()
@@ -441,8 +455,10 @@ def disconnect(provider: str, user_id: str = Query(...)):
 # ── 趨勢（規格 §5.3）──────────────────────────────────────
 
 @router.get("/trend")
-def trend(user_id: str = Query(...), days: int = Query(7, ge=1, le=90)):
+def trend(user_id: str = Query(...), days: int = Query(7, ge=1, le=90),
+          me: dict | None = Depends(current_user_optional)):
     """近 N 天睡眠時數 / 效率折線資料 + 平均。純彙整，不做判讀。"""
+    enforce_patient_scope(user_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
     try:
@@ -478,8 +494,10 @@ def trend(user_id: str = Query(...), days: int = Query(7, ge=1, le=90)):
 # ── 匯出（規格 §5.6）──────────────────────────────────────
 
 @router.get("/export.csv")
-def export_csv(user_id: str = Query(...), days: int = Query(30, ge=1, le=365)):
+def export_csv(user_id: str = Query(...), days: int = Query(30, ge=1, le=365),
+               me: dict | None = Depends(current_user_optional)):
     """匯出 CSV 供患者回診提供給醫護。純資料，無任何評語。"""
+    enforce_patient_scope(user_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=days)).isoformat()
     try:

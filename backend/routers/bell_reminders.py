@@ -18,7 +18,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.db import _SCHEMAS, get_supabase
 from backend.models import (
@@ -28,6 +28,7 @@ from backend.models import (
     MeasurementRequestComplete,
     MeasurementRequestCreate,
 )
+from backend.security import current_user_optional, enforce_patient_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -110,8 +111,9 @@ def _now_iso():
 # ─── Bell preferences ─────────────────────────────────────
 
 @router.get("/bell-prefs")
-def list_bell_prefs(patient_id: str = Query(...)):
+def list_bell_prefs(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """列出該病患所有鈴聲偏好；缺項由前端用預設值補。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = (
         sb.table("patient_bell_prefs")
@@ -127,7 +129,8 @@ def list_bell_prefs(patient_id: str = Query(...)):
 
 
 @router.put("/bell-prefs")
-def upsert_bell_pref(body: BellPrefUpsert):
+def upsert_bell_pref(body: BellPrefUpsert, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     if body.kind not in VALID_KINDS:
         raise HTTPException(status_code=400, detail=f"kind 無效，需為 {VALID_KINDS}")
     if not (0 <= body.volume <= 100):
@@ -162,7 +165,8 @@ def upsert_bell_pref(body: BellPrefUpsert):
 # ─── Custom bell sound metadata ───────────────────────────
 
 @router.get("/bell-sounds")
-def list_bell_sounds(patient_id: str = Query(...)):
+def list_bell_sounds(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = (
         sb.table("bell_sounds")
@@ -176,7 +180,8 @@ def list_bell_sounds(patient_id: str = Query(...)):
 
 
 @router.post("/bell-sounds")
-def create_bell_sound(body: BellSoundCreate):
+def create_bell_sound(body: BellSoundCreate, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.owner_patient_id, me)
     if body.duration_sec is not None and body.duration_sec > 10:
         raise HTTPException(status_code=400, detail="鈴聲長度不可超過 10 秒")
     if body.file_size_bytes is not None and body.file_size_bytes > 512 * 1024:
@@ -380,12 +385,13 @@ def _parse_iso_utc(s: str):
 
 
 @router.post("/measurement-plan")
-def create_measurement_plan(body: MeasurementPlanCreate):
+def create_measurement_plan(body: MeasurementPlanCreate, me: dict | None = Depends(current_user_optional)):
     """建立一個量測提醒計畫：依 frequency_preset / times 展開成多筆 reminders。
 
     自訂指標（measure_type 不在 VALID_MEASURE_TYPES 中）也接受，但只建 reminders、
     不建 measurement_requests（因為 measurement_requests 給醫師端用，醫師端只認標準項目）。
     """
+    enforce_patient_scope(body.patient_id, me)
     if body.frequency_preset not in VALID_PLAN_PRESETS:
         raise HTTPException(
             status_code=400,
@@ -500,8 +506,9 @@ def create_measurement_plan(body: MeasurementPlanCreate):
 
 
 @router.get("/measurement-plan")
-def list_measurement_plans(patient_id: str = Query(...)):
+def list_measurement_plans(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """回傳該病患目前所有 active 的量測計畫，按 source_id（plan_id）分組。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = (
         sb.table("reminders")
@@ -546,8 +553,10 @@ def list_measurement_plans(patient_id: str = Query(...)):
 
 
 @router.delete("/measurement-plan/{plan_id}")
-def cancel_measurement_plan(plan_id: str, patient_id: str = Query(...)):
+def cancel_measurement_plan(plan_id: str, patient_id: str = Query(...),
+                            me: dict | None = Depends(current_user_optional)):
     """停用該計畫下所有 reminders（active=0），並把連動的 measurement_request 標 cancelled。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = (
         sb.table("reminders")

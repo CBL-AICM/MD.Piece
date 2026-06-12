@@ -15,7 +15,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from backend.db import _SCHEMAS, get_supabase
 from backend.models import (
@@ -24,6 +24,7 @@ from backend.models import (
     ReminderCreate,
     ReminderUpdate,
 )
+from backend.security import current_user_optional, enforce_patient_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -224,8 +225,18 @@ def _normalize_reminder_row(row):
 
 # ─── Reminders CRUD ────────────────────────────────────────
 
+def _assert_owns_reminder(sb, reminder_id: str, me) -> dict:
+    """以 reminder_id 操作時的擁有權檢查：已登入則該筆 patient_id 必須是自己。"""
+    res = sb.table("reminders").select("*").eq("id", reminder_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="找不到提醒")
+    enforce_patient_scope(res.data[0].get("patient_id"), me)
+    return res.data[0]
+
+
 @router.post("/")
-def create_reminder(body: ReminderCreate):
+def create_reminder(body: ReminderCreate, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     if body.reminder_type not in VALID_TYPES:
         raise HTTPException(status_code=400, detail=f"reminder_type 無效，需為 {VALID_TYPES}")
     if body.frequency not in VALID_FREQUENCIES:
@@ -268,7 +279,9 @@ def list_reminders(
     patient_id: str = Query(...),
     active: bool | None = None,
     reminder_type: str | None = None,
+    me: dict | None = Depends(current_user_optional),
 ):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     q = sb.table("reminders").select("*").eq("patient_id", patient_id)
     if active is not None:
@@ -283,20 +296,16 @@ def list_reminders(
 
 
 @router.get("/{reminder_id}")
-def get_reminder(reminder_id: str):
+def get_reminder(reminder_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
-    result = sb.table("reminders").select("*").eq("id", reminder_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="找不到提醒")
-    return _normalize_reminder_row(result.data[0])
+    row = _assert_owns_reminder(sb, reminder_id, me)
+    return _normalize_reminder_row(row)
 
 
 @router.put("/{reminder_id}")
-def update_reminder(reminder_id: str, body: ReminderUpdate):
+def update_reminder(reminder_id: str, body: ReminderUpdate, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
-    existing = sb.table("reminders").select("*").eq("id", reminder_id).execute().data
-    if not existing:
-        raise HTTPException(status_code=404, detail="找不到提醒")
+    existing = [_assert_owns_reminder(sb, reminder_id, me)]
 
     updates = body.model_dump(exclude_none=True)
     if "frequency" in updates and updates["frequency"] not in VALID_FREQUENCIES:
@@ -320,8 +329,9 @@ def update_reminder(reminder_id: str, body: ReminderUpdate):
 
 
 @router.delete("/{reminder_id}")
-def delete_reminder(reminder_id: str):
+def delete_reminder(reminder_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    _assert_owns_reminder(sb, reminder_id, me)
     # 先把 inbox 中的 reminder_id 設為 NULL，避免 FK 衝突；保留通知歷史。
     try:
         sb.table("notification_inbox").update({"reminder_id": None}).eq("reminder_id", reminder_id).execute()
@@ -345,7 +355,8 @@ def push_config():
 
 
 @router.post("/push/subscribe")
-def push_subscribe(body: PushSubscriptionCreate):
+def push_subscribe(body: PushSubscriptionCreate, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     # 驗證 endpoint 必須是 HTTPS 且 hostname 完全等於白名單裡的某個值。
     parsed = urlparse(body.endpoint)
     if parsed.scheme != "https" or not parsed.hostname:
@@ -390,7 +401,9 @@ def inbox_list(
     patient_id: str = Query(...),
     unread_only: bool = False,
     limit: int = 50,
+    me: dict | None = Depends(current_user_optional),
 ):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     q = sb.table("notification_inbox").select("*").eq("patient_id", patient_id)
     if unread_only:
@@ -414,7 +427,8 @@ def inbox_mark(item_id: str, body: InboxUpdate):
 
 
 @router.post("/inbox/read-all")
-def inbox_read_all(patient_id: str = Query(...)):
+def inbox_read_all(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     sb.table("notification_inbox").update({
         "read": 1,
@@ -476,6 +490,7 @@ def dispatch_due_reminders(
     patient_id: str | None = Query(default=None),
     limit: int = 200,
     x_cron_token: str | None = Header(default=None, alias="X-Cron-Token"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """掃描已到期的 reminders：寫入 inbox + Web Push。
 
@@ -485,6 +500,8 @@ def dispatch_due_reminders(
     expected = os.getenv("CRON_TOKEN")
     if expected and not patient_id and x_cron_token != expected:
         raise HTTPException(status_code=401, detail="invalid cron token")
+    # 登入者只能派發自己的提醒（demo / cron 內部呼叫不帶身分 → 不強制）。
+    enforce_patient_scope(patient_id, me)
 
     sb = get_supabase()
     now = datetime.now(timezone.utc)

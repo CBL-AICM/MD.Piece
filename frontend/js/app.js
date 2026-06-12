@@ -1747,7 +1747,7 @@ function story() {
 }
 
 function loadStoryPage() {
-  fetch(API + "/education/articles/daily?days=7")
+  apiFetch(API + "/education/articles/daily?days=7")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var today = (data && data.today) || {};
@@ -2038,7 +2038,7 @@ function storyOpenArchive(slug, catKey) {
     return;
   }
 
-  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+  apiFetch(API + "/education/articles/" + encodeURIComponent(slug))
     .then(function(r) {
       if (!r.ok) throw new Error("not found");
       return r.json();
@@ -2345,7 +2345,7 @@ function loadPrevisitPage() {
   // 載入 Timeline（本地症狀 + 雲端情緒，合併時序）
   refreshPvTimeline(pid);
 
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/checklist')
+  apiFetch(API + '/reports/' + encodeURIComponent(pid) + '/checklist')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _previsitData.checklist = data;
@@ -2468,7 +2468,7 @@ function previsitRenderStats(statsEl, raw) {
 }
 
 function previsitFallbackToMonthly(pid, days) {
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly?days=' + days)
+  apiFetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly?days=' + days)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _previsitData.report = data;
@@ -2780,7 +2780,7 @@ function previsitDownload(audience) {
 
   // 退回非串流端點（cache 未就緒）
   if (typeof showToast === 'function') showToast(_T("app.c4.writingPleaseWait"), 'info');
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
+  apiFetch(API + '/reports/' + encodeURIComponent(pid) + '/monthly')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var md = (data && (data.report || data.summary)) || _T("app.c4.noReportYet");
@@ -2808,7 +2808,7 @@ function previsitShowPatientEssence() {
   }
   _previsitShowEssenceModal(null, '撰寫中…');
   if (typeof showToast === 'function') showToast(_T("app.c4.writingPleaseWait"), 'info');
-  fetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
+  apiFetch(API + '/reports/' + encodeURIComponent(pid) + '/patient-summary')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var text = (data && data.summary) || '';
@@ -3350,7 +3350,7 @@ function _previsitShowPdfModal(blob, filename) {
       reader.onloadend = function() {
         var s = String(reader.result || '');
         var b64 = s.slice(s.indexOf(',') + 1);
-        fetch(API + '/reports/' + encodeURIComponent(pid) + '/email-pdf', {
+        apiFetch(API + '/reports/' + encodeURIComponent(pid) + '/email-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pdf_base64: b64, filename: filename })
@@ -4304,7 +4304,7 @@ async function submitLogin() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('login-error').hidden = true;
   try {
-    const res = await fetch(`${API}/auth/login`, {
+    const res = await apiFetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -4376,7 +4376,7 @@ async function submitRegister() {
   }
 
   try {
-    const res = await fetch(`${API}/auth/register`, {
+    const res = await apiFetch(`${API}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -4406,7 +4406,7 @@ async function lookupRecoveryQuestion() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('forgot-error').hidden = true;
   try {
-    const res = await fetch(`${API}/auth/recovery/question`, {
+    const res = await apiFetch(`${API}/auth/recovery/question`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
@@ -4443,7 +4443,7 @@ async function submitRecoveryReset() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('forgot-error').hidden = true;
   try {
-    const res = await fetch(`${API}/auth/recovery/reset`, {
+    const res = await apiFetch(`${API}/auth/recovery/reset`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, answer, new_password: newPassword }),
@@ -4511,7 +4511,7 @@ function maybeShowEhealsScreen(onDone) {
     }
   } catch (e) { /* ignore */ }
   if (!uid) { openEhealsScreen({ onDone: onDone }); return; }
-  fetch(API + '/health-literacy/latest?patient_id=' + encodeURIComponent(uid))
+  apiFetch(API + '/health-literacy/latest?patient_id=' + encodeURIComponent(uid))
     .then(function (r) { return r.ok ? r.json() : { result: null }; })
     .then(function (j) {
       if (j && j.result) {
@@ -4529,7 +4529,7 @@ function openEhealsScreen(opts) {
   opts = opts || {};
   // 已開著就別重開；但仍把 onDone 傳下去，避免 onboarding chain 卡住。
   if (document.getElementById('ehl-sheet')) { if (opts.onDone) opts.onDone(); return; }
-  fetch(API + '/health-literacy/questions')
+  apiFetch(API + '/health-literacy/questions')
     .then(function (r) { return r.json(); })
     .then(function (data) { _ehlRender(data, opts); })
     .catch(function () {
@@ -4631,7 +4631,7 @@ function submitEhealsScreen() {
   }
   var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   var sub = document.getElementById('ehl-submit'); if (sub) sub.disabled = true;
-  fetch(API + '/health-literacy/screen', {
+  apiFetch(API + '/health-literacy/screen', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ patient_id: uid, answers: answers }),
@@ -5676,7 +5676,7 @@ async function _loadNextInfusionInfo() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
   try {
-    var listRes = await fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid)).then(function(x){return x.json();});
+    var listRes = await apiFetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid)).then(function(x){return x.json();});
     var actives = ((listRes && listRes.admissions) || []).filter(function(a) {
       return a.status === 'active';
     });
@@ -5703,7 +5703,7 @@ async function _loadNextInfusionInfo() {
       return;
     }
     var details = await Promise.all(infusionActives.map(function(a) {
-      return fetch(API + '/admissions/' + encodeURIComponent(a.id)).then(function(x){return x.json();}).catch(function(){return null;});
+      return apiFetch(API + '/admissions/' + encodeURIComponent(a.id)).then(function(x){return x.json();}).catch(function(){return null;});
     }));
     var earliest = null;
     var earliestName = '';
@@ -5985,7 +5985,7 @@ function onAdmissionPrepActivate(kind) {
     if (!adm) return;
     if (!confirm(_T("app.c7.confirmStartAdmit"))) return;
     var nowIso = new Date().toISOString().slice(0, 19);
-    fetch(API + '/admissions/' + encodeURIComponent(adm.id), {
+    apiFetch(API + '/admissions/' + encodeURIComponent(adm.id), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ admit_date: nowIso }),
@@ -6003,7 +6003,7 @@ function onAdmissionPrepActivate(kind) {
     var inf = _ipUpcomingCache.infusion;
     if (!inf || !inf.medication_id) return;
     if (!confirm(_T("app.c7.confirmMarkDose"))) return;
-    fetch(API + '/admissions/medications/' + encodeURIComponent(inf.medication_id) + '/dose', {
+    apiFetch(API + '/admissions/medications/' + encodeURIComponent(inf.medication_id) + '/dose', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ admission_medication_id: inf.medication_id }),
@@ -7659,7 +7659,7 @@ function loadHomeEducation() {
   };
 
   var loadFeaturedFallback = function() {
-    fetch(API + '/education/articles/featured?limit=3')
+    apiFetch(API + '/education/articles/featured?limit=3')
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         var arts = (data && data.articles) || [];
@@ -7674,7 +7674,7 @@ function loadHomeEducation() {
 
   resolvePatientIcd10Codes(function(codes) {
     if (!codes || !codes.length) { loadFeaturedFallback(); return; }
-    fetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
+    apiFetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         var items = ((data && data.items) || []).filter(function(it) { return it && it.is_supported && (it.articles || []).length; });
@@ -8851,7 +8851,7 @@ function onInpatientStepClick(stepId) {
     var iso = prompt(_T("app.c10.dischargeDatePrompt"), _localDay());
     if (!iso) return;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso.trim())) { if (typeof showToast === 'function') showToast(_T("app.c10.badFormat"), 'error'); return; }
-    fetch(API + '/admissions/' + encodeURIComponent(admId), {
+    apiFetch(API + '/admissions/' + encodeURIComponent(admId), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ discharge_date: iso.trim() + 'T10:00' }),
@@ -8866,7 +8866,7 @@ function onInpatientStepClick(stepId) {
   }
   if (stepId === 'done') {
     if (!confirm(_T("app.c10.dischargeConfirm"))) return;
-    fetch(API + '/admissions/' + encodeURIComponent(admId), {
+    apiFetch(API + '/admissions/' + encodeURIComponent(admId), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'discharged', discharge_date: new Date().toISOString().slice(0, 19) }),
@@ -10621,7 +10621,7 @@ async function loadServerTimeline() {
   try {
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return false;
-    var res = await fetch(API + '/timeline?patient_id=' + encodeURIComponent(pid));
+    var res = await apiFetch(API + '/timeline?patient_id=' + encodeURIComponent(pid));
     if (!res.ok) return false;
     var data = await res.json();
     if (data && data.meta && data.meta.db_offline) return false;
@@ -10829,7 +10829,7 @@ function loadInpatientHome() {
 function loadInpatientActiveAdmission() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
+  apiFetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var rows = (data && data.admissions) || [];
@@ -10839,7 +10839,7 @@ function loadInpatientActiveAdmission() {
       if (active && typeof _admMaybeCheckLocation === 'function') _admMaybeCheckLocation(active);
       // Timeline + Next Step：拿 admission_medications 排程合成今日 timeline
       if (active) {
-        fetch(API + '/admissions/' + encodeURIComponent(active.id))
+        apiFetch(API + '/admissions/' + encodeURIComponent(active.id))
           .then(function(r) { return r.json(); })
           .then(function(adm) {
             var meds = (adm && adm.medications) || [];
@@ -11675,7 +11675,7 @@ function onInpatientNextDone() {
   var medId = btn.dataset.medId || '';
   // 排定給藥的「已完成」→ 後端 record dose（沿用 medications）
   if (itemId.indexOf('med-') === 0 && medId) {
-    fetch(API + '/admissions/medications/' + encodeURIComponent(medId) + '/dose', {
+    apiFetch(API + '/admissions/medications/' + encodeURIComponent(medId) + '/dose', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ admission_medication_id: medId }),
@@ -13619,7 +13619,7 @@ function loadDoctorMeasurementRequests(announce) {
   const banner = document.getElementById('vt-doctor-request-banner');
   if (!banner) return;
   const pid = getStablePatientId();
-  fetch(`${API}/reminders/measurement-requests?patient_id=${encodeURIComponent(pid)}&status=pending&limit=10`)
+  apiFetch(`${API}/reminders/measurement-requests?patient_id=${encodeURIComponent(pid)}&status=pending&limit=10`)
     .then(r => r.ok ? r.json() : { items: [] })
     .then(data => renderDoctorMeasurementRequests(data.items || [], !!announce))
     .catch(() => {
@@ -13663,7 +13663,7 @@ function renderDoctorMeasurementRequests(items, announce) {
 function completeMeasurementRequest(reqId) {
   const input = document.getElementById(`mr-val-${reqId}`);
   const val = (input && input.value || '').trim();
-  fetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}/complete`, {
+  apiFetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}/complete`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ result_value: val || null }),
@@ -13674,7 +13674,7 @@ function completeMeasurementRequest(reqId) {
 
 function cancelMeasurementRequest(reqId) {
   if (!confirm(_T('app.c16.confirmIgnoreRequest'))) return;
-  fetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}`, { method: 'DELETE' })
+  apiFetch(`${API}/reminders/measurement-requests/${encodeURIComponent(reqId)}`, { method: 'DELETE' })
     .then(() => loadDoctorMeasurementRequests());
 }
 
@@ -13703,7 +13703,7 @@ function getPlanForMetric(metricId) {
 function loadMeasurementPlans(refresh) {
   const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return Promise.resolve([]);
-  return fetch(`${API}/reminders/measurement-plan?patient_id=${encodeURIComponent(pid)}`)
+  return apiFetch(`${API}/reminders/measurement-plan?patient_id=${encodeURIComponent(pid)}`)
     .then(r => r.ok ? r.json() : { plans: [] })
     .then(data => {
       window.__vtPlans = data.plans || [];
@@ -13905,10 +13905,10 @@ function vtPlanDialogSave(metricId, isUpdate) {
   // 若是更新：先停用舊計畫
   const existing = getPlanForMetric(metricId);
   const promise = (isUpdate && existing)
-    ? fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(existing.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' }).catch(() => null)
+    ? apiFetch(`${API}/reminders/measurement-plan/${encodeURIComponent(existing.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' }).catch(() => null)
     : Promise.resolve();
 
-  promise.then(() => fetch(`${API}/reminders/measurement-plan`, {
+  promise.then(() => apiFetch(`${API}/reminders/measurement-plan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -13928,7 +13928,7 @@ function vtPlanDialogCancelExisting(planId) {
   if (!confirm(_T("app.c17.confirmRemoveReminder"))) return;
   const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(planId)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
+  apiFetch(`${API}/reminders/measurement-plan/${encodeURIComponent(planId)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
     .then(() => {
       vtPlanDialogClose();
       loadMeasurementPlans(true);
@@ -14084,7 +14084,7 @@ function toggleVitalTracked(id) {
     } else {
       const pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
       if (pid) {
-        fetch(`${API}/reminders/measurement-plan/${encodeURIComponent(plan.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
+        apiFetch(`${API}/reminders/measurement-plan/${encodeURIComponent(plan.plan_id)}?patient_id=${encodeURIComponent(pid)}`, { method: 'DELETE' })
           .then(() => loadMeasurementPlans());
       }
     }
@@ -14636,7 +14636,7 @@ async function enrichSymptomAnalysisWithTriage(symptoms, pid) {
     stable:    { sev: 'self',     text: _T('app.c18.triageStable') },
   };
   try {
-    const res = await fetch(`${API}/triage/evaluate`, {
+    const res = await apiFetch(`${API}/triage/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ patient_id: pid, symptoms: symptoms || [] }),
@@ -14817,7 +14817,7 @@ async function analyzeSymptoms() {
 async function quickAdvice() {
   const input = document.getElementById("symptom-input").value.split(",")[0].trim();
   if (!input) return;
-  const res = await fetch(`${API}/symptoms/advice?symptom=${encodeURIComponent(input)}`);
+  const res = await apiFetch(`${API}/symptoms/advice?symptom=${encodeURIComponent(input)}`);
   const data = await res.json();
   document.getElementById("analysis-result").innerHTML =
     `<div class="advice-box"><strong>${data.symptom}</strong>：${data.advice}</div>`;
@@ -15207,7 +15207,7 @@ function ensureChronicMeasurementReminders(info) {
       next.setHours(hh, mm, 0, 0);
       if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
       const measureLabel = { bp: '血壓', glucose: '血糖' }[slot.kind] || slot.kind;
-      fetch(`${API}/reminders/`, {
+      apiFetch(`${API}/reminders/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -18855,7 +18855,7 @@ function loadEducationPage() {
   // 進頁面預設停在書架階段，清掉殘留的 edu-notebook-open（避免從別頁回來時誤把卡片藏起來）
   document.body.classList.remove("edu-notebook-open");
   // 首次載入時抓疾病列表，給「疾病百科」這本書用
-  fetch(API + "/education/diseases")
+  apiFetch(API + "/education/diseases")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _eduDiseases = data.diseases || [];
@@ -18944,7 +18944,7 @@ function loadMyDiseases() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-    fetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
+    apiFetch(API + '/education/my-diseases?codes=' + encodeURIComponent(codes.join(',')))
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         // 只渲染後端真的支援的疾病——不在 ICD10_MAP 的代碼點下去會跳 400
@@ -19164,7 +19164,7 @@ function loadRelatedDiseases() {
       card.style.display = "none";
       return;
     }
-    fetch(API + "/education/related?codes=" + encodeURIComponent(codes.join(",")) + "&limit=6")
+    apiFetch(API + "/education/related?codes=" + encodeURIComponent(codes.join(",")) + "&limit=6")
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         if (!data || !data.items || !data.items.length) {
@@ -19201,7 +19201,7 @@ function resolvePatientIcd10Codes(callback) {
   }
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : (user && user.id);
   if (!pid) { callback([]); return; }
-  fetch(API + "/patients/" + encodeURIComponent(pid))
+  apiFetch(API + "/patients/" + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(p) {
       callback((p && Array.isArray(p.icd10_codes)) ? p.icd10_codes : []);
@@ -19371,7 +19371,7 @@ function loadFeaturedArticles() {
   // 兩支獨立的請求：
   // 1. /education/articles — 全部文章，用來建立 slug 索引給書本章節對照
   // 2. /education/articles/featured — 後端依今日日期輪播好的精選清單
-  fetch(API + "/education/articles")
+  apiFetch(API + "/education/articles")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var arts = (data && data.articles) || [];
@@ -19388,7 +19388,7 @@ function loadFeaturedArticles() {
     .catch(function() { /* 索引建構失敗不阻擋顯示 */ });
 
   // 不限 desktop el — mobile sync 也要跑
-  fetch(API + "/education/articles/featured?limit=6")
+  apiFetch(API + "/education/articles/featured?limit=6")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var featured = (data && data.articles) || [];
@@ -19468,7 +19468,7 @@ function eduOpenArticle(slug) {
   eduSwitchStage("edu-stage-notebook");
   eduRenderArticleBreadcrumb(card ? card.title : _T("app.c24.article"));
 
-  fetch(API + "/education/articles/" + encodeURIComponent(slug))
+  apiFetch(API + "/education/articles/" + encodeURIComponent(slug))
     .then(function(r) {
       if (!r.ok) throw new Error("not found");
       return r.json();
@@ -19854,7 +19854,7 @@ function eduOpenContent(key, label) {
   // 1) 先看有沒有人工審稿過的文章可以對應到這個章節 → 直接出文章
   var curatedSlug = findCuratedArticleSlug(book, key);
   if (curatedSlug) {
-    fetch(API + "/education/articles/" + encodeURIComponent(curatedSlug))
+    apiFetch(API + "/education/articles/" + encodeURIComponent(curatedSlug))
       .then(function(r) { if (!r.ok) throw new Error("not found"); return r.json(); })
       .then(function(article) {
         _eduArticles[article.slug] = article;
@@ -19879,7 +19879,7 @@ function eduGenerateContent(fetchBody, book, label, attempt) {
   var MAX_ATTEMPTS = 2;  // 第一次失敗自動重試一次（解 LLM 短暫 rate-limit / cold start）
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
-  fetch(API + "/education/generate", {
+  apiFetch(API + "/education/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(fetchBody),
@@ -21134,7 +21134,7 @@ function chatSend() {
 
 // 把後端 SSE 流逐 token 渲染進 bot 氣泡；同時保持小禾打字動畫
 function chatStreamReply(body, fallbackText) {
-  fetch(API + '/xiaohe/chat/stream', {
+  apiFetch(API + '/xiaohe/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
     body: JSON.stringify(body)
@@ -21198,7 +21198,7 @@ function chatStreamReply(body, fallbackText) {
 
 // 串流不通時的 fallback：用原本的 /xiaohe/chat 並以 typewriter 效果顯示
 function chatNonStreamFallback(body, fallbackText) {
-  fetch(API + '/xiaohe/chat', {
+  apiFetch(API + '/xiaohe/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -21246,7 +21246,7 @@ function chatGenerateArticle() {
 
   chatShowThinking();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : 'demo';
-  fetch(API + '/xiaohe/chat', {
+  apiFetch(API + '/xiaohe/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -21803,7 +21803,7 @@ async function labsCheck() {
     if (ageS) body.age = parseInt(ageS, 10);
     if (sex)  body.sex = sex;
 
-    const res = await fetch(`${API}/labs/check`, {
+    const res = await apiFetch(`${API}/labs/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -21856,7 +21856,7 @@ function handleLabPhoto(input) {
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    fetch(API + '/labs/scan', {
+    apiFetch(API + '/labs/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64: base64, media_type: mediaType })
@@ -23469,7 +23469,7 @@ function dietPickMeal(isReroll) {
   // 永遠轉，會走 .catch 顯示「抽不到，稍後再試」。
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
-  fetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs, {
+  apiFetch(API + '/diet/pick/' + encodeURIComponent(pid) + qs, {
     signal: ctrl ? ctrl.signal : undefined,
   })
     .then(function(r) { return r.json(); })
@@ -23576,7 +23576,7 @@ function dietPickDrink(isReroll) {
   // 同 dietPickMeal：55s AbortController 防 lambda hang 死讓 spinner 永遠轉。
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 55000) : null;
-  fetch(API + '/diet/drink/' + encodeURIComponent(pid) + qs, {
+  apiFetch(API + '/diet/drink/' + encodeURIComponent(pid) + qs, {
     signal: ctrl ? ctrl.signal : undefined,
   })
     .then(function(r) { return r.json(); })
@@ -23644,7 +23644,7 @@ async function dietRecordDrink() {
   }
   if (_dietDrinkCurrent.where_to_get) noteParts.push(_dietDrinkCurrent.where_to_get);
   try {
-    var res = await fetch(API + '/diet/records', {
+    var res = await apiFetch(API + '/diet/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({
@@ -23676,7 +23676,7 @@ function fetchCaffeineGuide() {
   // 用 class 而不是 ID，手機 + 桌機 body 都同步填入。
   var bodies = document.querySelectorAll('.diet-caffeine-body');
   if (!bodies.length) return;
-  fetch(API + '/diet/caffeine-guide')
+  apiFetch(API + '/diet/caffeine-guide')
     .then(function(r) { return r.json(); })
     .then(function(g) {
       var sources = (g.common_sources || []).map(function(s) {
@@ -23757,7 +23757,7 @@ function fetchDietGuide() {
   renderDietTargets(DIET_BASELINE_TARGETS, DIET_BASELINE_TIPS);
   var pid = getStablePatientId();
   if (!pid) { renderDietWarnings([]); renderDietSuggestions({}); return; }
-  fetch(API + '/diet/guide/' + encodeURIComponent(pid))
+  apiFetch(API + '/diet/guide/' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(g) {
       _dietGuide = g || {};
@@ -24008,7 +24008,7 @@ function dietPhotoPick(ev, scope) {
   _compressMedPhoto(file).then(function(out) {
     if (!out || !out.dataUrl) throw new Error('compress failed');
     var base64 = out.dataUrl.split(',')[1];
-    return fetch(API + '/diet/recognize', {
+    return apiFetch(API + '/diet/recognize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64: base64, media_type: out.mediaType || 'image/jpeg' }),
@@ -24041,7 +24041,7 @@ async function _mobileDietSubmit() {
   var note = (noteEl && noteEl.value || '').trim();
   if (statusEl) { statusEl.textContent = _T("app.c29.submitting"); statusEl.style.color = 'var(--text-muted)'; }
   try {
-    var res = await fetch(API + '/diet/records', {
+    var res = await apiFetch(API + '/diet/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note, calories: _dietPhotoCal.mobile }),
@@ -24072,7 +24072,7 @@ async function dietSubmitLog() {
   statusEl.textContent = _T("app.c29.submitting");
   statusEl.className = 'diet-log-status';
   try {
-    var res = await fetch(API + '/diet/records', {
+    var res = await apiFetch(API + '/diet/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({ patient_id: pid, meal_type: _dietLogMeal, foods: foods, note: note, calories: _dietPhotoCal.desktop }),
@@ -24201,7 +24201,7 @@ function fetchDietWeekly() {
   if (!stats) return;
   stats.innerHTML = '<div class="diet-empty">' + _T("app.c29.loading") + '</div>';
   var tz = new Date().getTimezoneOffset();
-  fetch(API + '/diet/weekly/' + encodeURIComponent(pid) + '?weeks=4&tz_offset=' + tz)
+  apiFetch(API + '/diet/weekly/' + encodeURIComponent(pid) + '?weeks=4&tz_offset=' + tz)
     .then(function(r) {
       if (!r.ok) {
         return r.text().then(function(body) {
@@ -24674,7 +24674,7 @@ function loadDrugSearchPage() {
     runDrugSearch();
   }
   // 載入熱門查詢列表
-  fetch(API + "/drug-search/trending/list?limit=8")
+  apiFetch(API + "/drug-search/trending/list?limit=8")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var el = document.getElementById('drug-trending');
@@ -24734,7 +24734,7 @@ function runDrugSearch() {
   if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> ' + _T("app.c30.drugSearching") + '</p>';
   if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
 
-  fetch(API + "/drug-search/?q=" + encodeURIComponent(q))
+  apiFetch(API + "/drug-search/?q=" + encodeURIComponent(q))
     .then(function(r) { return r.json(); })
     .then(function(data) { renderDrugSearchResult(data); })
     .catch(function() {
@@ -24873,7 +24873,7 @@ function handleDrugPhoto(input) {
     if (card) card.style.display = '';
     if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">' + _T("app.c30.photoRecognizing") + '</p>';
 
-    fetch(API + "/drug-search/from-photo", {
+    apiFetch(API + "/drug-search/from-photo", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_base64: b64, media_type: mediaType })
@@ -25063,7 +25063,7 @@ function loadDiseaseSearchPage() {
   if (input && input.value.trim()) {
     runDiseaseSearch();
   }
-  fetch(API + '/diseases/trending/list?limit=8')
+  apiFetch(API + '/diseases/trending/list?limit=8')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var el = document.getElementById('disease-trending');
@@ -25121,7 +25121,7 @@ function runDiseaseSearch() {
   if (box) box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px"><i data-lucide="loader" style="width:18px;height:18px;vertical-align:middle"></i> ' + _T("app.c30.diseaseSearching") + '</p>';
   if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(e) {} }
 
-  fetch(API + '/diseases/?q=' + encodeURIComponent(q))
+  apiFetch(API + '/diseases/?q=' + encodeURIComponent(q))
     .then(function(r) { return r.json(); })
     .then(function(data) { renderDiseaseResult(data); })
     .catch(function() {
@@ -25351,7 +25351,7 @@ function diseaseChatSend() {
   if (input) input.value = '';
 
   _disease.pendingMsg = true;
-  fetch(API + '/diseases/chat', {
+  apiFetch(API + '/diseases/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -25622,7 +25622,7 @@ async function _mobileRemSubmit() {
     scheduled_at: whenIso,
   };
   try {
-    var res = await fetch(API + '/reminders/', {
+    var res = await apiFetch(API + '/reminders/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -25767,7 +25767,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 function reminderRefreshList() {
-  fetch(API + '/reminders/?patient_id=' + encodeURIComponent(_remindersPid))
+  apiFetch(API + '/reminders/?patient_id=' + encodeURIComponent(_remindersPid))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _remindersList = data.reminders || [];
@@ -25927,7 +25927,7 @@ function reminderRenderList() {
 }
 
 function reminderRefreshInbox() {
-  fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(_remindersPid) + '&limit=20')
+  apiFetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(_remindersPid) + '&limit=20')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _remindersInbox = data.items || [];
@@ -26007,7 +26007,7 @@ function reminderUpdateNavBadge(unread) {
 }
 
 function reminderMarkRead(id) {
-  fetch(API + '/reminders/inbox/' + encodeURIComponent(id), {
+  apiFetch(API + '/reminders/inbox/' + encodeURIComponent(id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ read: true }),
@@ -26015,7 +26015,7 @@ function reminderMarkRead(id) {
 }
 
 function reminderMarkAllRead() {
-  fetch(API + '/reminders/inbox/read-all?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
+  apiFetch(API + '/reminders/inbox/read-all?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
     .then(reminderRefreshInbox);
 }
 
@@ -26113,7 +26113,7 @@ function reminderRenderBellSettings() {
 }
 
 function reminderToggleActive(id, active) {
-  fetch(API + '/reminders/' + encodeURIComponent(id), {
+  apiFetch(API + '/reminders/' + encodeURIComponent(id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ active: !!active }),
@@ -26122,7 +26122,7 @@ function reminderToggleActive(id, active) {
 
 function reminderDelete(id) {
   if (!confirm(_T('app.c32.confirmDeleteReminder'))) return;
-  fetch(API + '/reminders/' + encodeURIComponent(id), { method: 'DELETE' })
+  apiFetch(API + '/reminders/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(reminderRefreshList);
 }
 
@@ -26152,7 +26152,7 @@ function reminderSubmitNew() {
     scheduled_at: whenIso,
     active: true,
   };
-  fetch(API + '/reminders/', {
+  apiFetch(API + '/reminders/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -26167,7 +26167,7 @@ function reminderSubmitNew() {
 }
 
 function reminderTestDispatch() {
-  fetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
+  apiFetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(_remindersPid), { method: 'POST' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       alert(_T('app.c32.dispatched') + (data.dispatched || 0) + _T('app.c32.dispatchedMid') + (data.push_ok || 0) + _T('app.c32.dispatchedFail') + (data.push_fail || 0) + '）');
@@ -26191,7 +26191,7 @@ function reminderRefreshPushState() {
     _applyPushEnabledUi();
     return;
   }
-  fetch(API + '/reminders/push/config')
+  apiFetch(API + '/reminders/push/config')
     .then(function(r) { return r.json(); })
     .then(function(cfg) {
       _webpushEnabled = !!cfg.webpush_enabled;
@@ -26253,7 +26253,7 @@ function reminderEnablePush() {
   }
   Notification.requestPermission().then(function(perm) {
     if (perm !== 'granted') { alert(_T('app.c32.needNotifPerm')); return; }
-    fetch(API + '/reminders/push/config')
+    apiFetch(API + '/reminders/push/config')
       .then(function(r) { return r.json(); })
       .then(function(cfg) {
         if (!cfg.webpush_enabled || !cfg.vapid_public_key) {
@@ -26270,7 +26270,7 @@ function reminderEnablePush() {
           });
         }).then(function(sub) {
           var json = sub.toJSON();
-          return fetch(API + '/reminders/push/subscribe', {
+          return apiFetch(API + '/reminders/push/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -26301,7 +26301,7 @@ function reminderDisablePush() {
     if (!sub) { alert(_T('app.c32.pushNotEnabledYet')); return; }
     var endpoint = sub.endpoint;
     return sub.unsubscribe().then(function() {
-      return fetch(API + '/reminders/push/subscribe?endpoint=' + encodeURIComponent(endpoint), { method: 'DELETE' });
+      return apiFetch(API + '/reminders/push/subscribe?endpoint=' + encodeURIComponent(endpoint), { method: 'DELETE' });
     });
   }).then(function() {
     _pushSubscribed = false;
@@ -26332,11 +26332,11 @@ function reminderBackgroundSync() {
       try { MDBell.loadPrefs(pid, API); } catch (e) {}
     }
     // 同步前先觸發伺服器派發（命中本帳號的到期 reminder → 寫入 inbox）
-    fetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(pid), { method: 'POST' })
+    apiFetch(API + '/reminders/dispatch?patient_id=' + encodeURIComponent(pid), { method: 'POST' })
       .catch(function() {})
       .finally(function() {
         // 抓回 inbox 內容（不只未讀數）→ 在「任何頁面」都能對新到期提醒響鈴
-        fetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&limit=20')
+        apiFetch(API + '/reminders/inbox/list?patient_id=' + encodeURIComponent(pid) + '&limit=20')
           .then(function(r) { return r.json(); })
           .then(function(data) {
             var items = data.items || [];
@@ -26446,7 +26446,7 @@ function _admLoadHospitalDatalist() {
     }).join('');
     return;
   }
-  fetch(API + '/admissions/hospitals')
+  apiFetch(API + '/admissions/hospitals')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       _admHospitalCache = (data && data.hospitals) || [];
@@ -26462,7 +26462,7 @@ function loadAdmissionsPage() {
   var listEl = document.getElementById('adm-list');
   if (!listEl) return;
   _admLoadHospitalDatalist();
-  fetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
+  apiFetch(API + '/admissions/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var rows = (data && data.admissions) || [];
@@ -26497,7 +26497,7 @@ function _admMaybeCheckLocation(adm) {
   navigator.geolocation.getCurrentPosition(
     function(pos) {
       try { sessionStorage.setItem(key, '1'); } catch (e) {}
-      fetch(API + '/admissions/' + encodeURIComponent(adm.id) + '/check-location', {
+      apiFetch(API + '/admissions/' + encodeURIComponent(adm.id) + '/check-location', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -26533,7 +26533,7 @@ function _admHandleLocationResult(adm, res) {
     var next = new Date(planned + 'T00:00:00');
     next.setDate(next.getDate() + 1);
     var nextIso = next.toISOString().slice(0, 10) + 'T10:00';
-    fetch(API + '/admissions/' + encodeURIComponent(adm.id), {
+    apiFetch(API + '/admissions/' + encodeURIComponent(adm.id), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ discharge_date: nextIso }),
@@ -26607,7 +26607,7 @@ function renderAdmissionCard(a) {
 }
 
 function loadAdmissionMedications(admissionId) {
-  fetch(API + '/admissions/' + encodeURIComponent(admissionId))
+  apiFetch(API + '/admissions/' + encodeURIComponent(admissionId))
     .then(function(r) { return r.json(); })
     .then(function(adm) {
       var box = document.getElementById('adm-meds-' + admissionId);
@@ -26687,7 +26687,7 @@ function createAdmission() {
   var origHTML = btn ? btn.innerHTML : null;
   if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader"></i> ' + _T('app.c32.adding'); if (typeof lucide !== 'undefined') lucide.createIcons(); }
   var restore = function() { if (btn) { btn.disabled = false; btn.innerHTML = origHTML; if (typeof lucide !== 'undefined') lucide.createIcons(); } };
-  fetch(API + '/admissions/', {
+  apiFetch(API + '/admissions/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -26715,7 +26715,7 @@ function addAdmissionMedication(admissionId) {
   };
   if (!body.name) { showToast(_T('app.c32.pleaseFillMedName'), 'error'); return; }
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
-  fetch(API + '/admissions/medications', {
+  apiFetch(API + '/admissions/medications', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -26738,7 +26738,7 @@ function recordAdmissionDose(admMedId, admissionId) {
     var iso = next.trim().replace(' ', 'T');
     body.next_due_date = iso;
   }
-  fetch(API + '/admissions/medications/' + encodeURIComponent(admMedId) + '/dose', {
+  apiFetch(API + '/admissions/medications/' + encodeURIComponent(admMedId) + '/dose', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -26753,7 +26753,7 @@ function recordAdmissionDose(admMedId, admissionId) {
 
 function dischargeAdmission(admissionId) {
   if (!confirm(_T('app.c32.confirmClose'))) return;
-  fetch(API + '/admissions/' + encodeURIComponent(admissionId) + '/discharge', { method: 'POST' })
+  apiFetch(API + '/admissions/' + encodeURIComponent(admissionId) + '/discharge', { method: 'POST' })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast(_T("app.c33.closed"), 'success');
@@ -26778,7 +26778,7 @@ function saveAdmissionEdit(admissionId) {
   };
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
   if (!Object.keys(body).length) { showToast(_T("app.c33.noChange"), 'info'); return; }
-  fetch(API + '/admissions/' + encodeURIComponent(admissionId), {
+  apiFetch(API + '/admissions/' + encodeURIComponent(admissionId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -26793,7 +26793,7 @@ function saveAdmissionEdit(admissionId) {
 
 function deleteAdmission(admissionId) {
   if (!confirm(_T("app.c33.confirmDeleteAdmission"))) return;
-  fetch(API + '/admissions/' + encodeURIComponent(admissionId), { method: 'DELETE' })
+  apiFetch(API + '/admissions/' + encodeURIComponent(admissionId), { method: 'DELETE' })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast(_T("app.c33.deleted"), 'success');
@@ -26818,7 +26818,7 @@ function saveAdmissionMedicationEdit(medId, admissionId) {
   };
   Object.keys(body).forEach(function(k) { if (body[k] === null || body[k] === '') delete body[k]; });
   if (!Object.keys(body).length) { showToast(_T("app.c33.noChange"), 'info'); return; }
-  fetch(API + '/admissions/medications/' + encodeURIComponent(medId), {
+  apiFetch(API + '/admissions/medications/' + encodeURIComponent(medId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -26833,7 +26833,7 @@ function saveAdmissionMedicationEdit(medId, admissionId) {
 
 function deleteAdmissionMedication(medId, admissionId) {
   if (!confirm(_T("app.c33.confirmDeleteMed"))) return;
-  fetch(API + '/admissions/medications/' + encodeURIComponent(medId), { method: 'DELETE' })
+  apiFetch(API + '/admissions/medications/' + encodeURIComponent(medId), { method: 'DELETE' })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast(_T("app.c33.deleted"), 'success');
@@ -26880,7 +26880,7 @@ function _foSessionLabel(s) {
 function fetchFollowUps() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return Promise.resolve([]);
-  return fetch(API + '/follow-ups/?patient_id=' + encodeURIComponent(pid))
+  return apiFetch(API + '/follow-ups/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : { follow_ups: [] }; })
     .then(function(d) { return (d && d.follow_ups) || []; })
     .catch(function() { return []; });
@@ -26889,7 +26889,7 @@ function fetchFollowUps() {
 function fetchNearestFollowUp() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return Promise.resolve(null);
-  return fetch(API + '/follow-ups/nearest?patient_id=' + encodeURIComponent(pid))
+  return apiFetch(API + '/follow-ups/nearest?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : { follow_up: null }; })
     .then(function(d) { return d && d.follow_up; })
     .catch(function() { return null; });
@@ -27300,7 +27300,7 @@ function openFollowUpEditor(id) {
 }
 
 function markFollowUpStatus(id, status) {
-  fetch(API + '/follow-ups/' + encodeURIComponent(id), {
+  apiFetch(API + '/follow-ups/' + encodeURIComponent(id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status: status })
@@ -27329,7 +27329,7 @@ function _studyScheduleFu48(followUp) {
 
 function deleteFollowUp(id) {
   if (!confirm(_T("app.c33.confirmDeleteFollowUp"))) return;
-  fetch(API + '/follow-ups/' + encodeURIComponent(id), { method: 'DELETE' })
+  apiFetch(API + '/follow-ups/' + encodeURIComponent(id), { method: 'DELETE' })
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function() {
       showToast(_T("app.c33.deleted"), 'success');
@@ -27768,7 +27768,7 @@ function injectHomeRiskCard(pid) {
     + '<div class="sk-line short"></div><div class="sk-block"></div></div>';
   app.insertBefore(slot, app.firstChild);
 
-  fetch(API + '/predict/' + encodeURIComponent(pid) + _predictDiseaseQS('?'), { method: 'POST' })
+  apiFetch(API + '/predict/' + encodeURIComponent(pid) + _predictDiseaseQS('?'), { method: 'POST' })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(pred) {
       if (!pred) { slot.remove(); return; }
@@ -27803,7 +27803,7 @@ function loadPredictPage() {
   if (!body) return;
   _predictState.disease = _predictDiseaseHint();
 
-  fetch(API + '/predict/' + encodeURIComponent(pid) + _predictDiseaseQS('?'), { method: 'POST' })
+  apiFetch(API + '/predict/' + encodeURIComponent(pid) + _predictDiseaseQS('?'), { method: 'POST' })
     .then(function(r) {
       if (r.status === 503) throw new Error('db_offline');
       return r.json();
@@ -27965,7 +27965,7 @@ function renderRecordsInventory(records) {
 function _loadPredictExplain(predictionId) {
   var box = document.getElementById('predict-explain');
   if (!box) return;
-  fetch(API + '/explain/' + encodeURIComponent(predictionId) + _predictDiseaseQS('?'))
+  apiFetch(API + '/explain/' + encodeURIComponent(predictionId) + _predictDiseaseQS('?'))
     .then(function(r) { return r.json(); })
     .then(function(exp) {
       var mod = (exp.modifiable_factors && exp.modifiable_factors.length)
@@ -27984,7 +27984,7 @@ function _loadPredictExplain(predictionId) {
 function _loadPredictTrend(pid, window) {
   var box = document.getElementById('predict-trend');
   if (!box) return;
-  fetch(API + '/predict/' + encodeURIComponent(pid) + '/trend?window=' + window + _predictDiseaseQS('&'))
+  apiFetch(API + '/predict/' + encodeURIComponent(pid) + '/trend?window=' + window + _predictDiseaseQS('&'))
     .then(function(r) { return r.json(); })
     .then(function(trend) {
       box.innerHTML = renderRiskTrendChart(trend);
@@ -28038,7 +28038,7 @@ function predictWarmKnowledge(silent) {
   Array.prototype.forEach.call(document.querySelectorAll('.db-warm'), function(b) {
     b.disabled = true; b.textContent = _T("app.c34.checkingLiterature");
   });
-  fetch(API + '/predict/' + encodeURIComponent(pid) + '/disease-knowledge?disease=' + encodeURIComponent(hint),
+  apiFetch(API + '/predict/' + encodeURIComponent(pid) + '/disease-knowledge?disease=' + encodeURIComponent(hint),
         { method: 'POST' })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(resp) {

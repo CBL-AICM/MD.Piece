@@ -26,7 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.db import get_supabase
-from backend.security import current_user
+from backend.security import current_user, current_user_optional, enforce_patient_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -119,8 +119,9 @@ def get_questions():
 
 
 @router.get("/latest")
-def latest(patient_id: str = Query(...)):
+def latest(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """取該病患最近一次 eHEALS 結果；沒有則回 {"result": None}，前端據此決定是否首啟提示。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     try:
         r = (
@@ -158,11 +159,12 @@ def latest(patient_id: str = Query(...)):
 
 
 @router.post("/screen")
-def screen(body: ScreenSubmit):
+def screen(body: ScreenSubmit, me: dict | None = Depends(current_user_optional)):
     """提交 8 題作答 → 純程式碼計分 → 存檔 → 回傳結果與建議模式。
 
     規則 12：格式不對就明確 400，不靜默吞掉或亂猜分數。
     """
+    enforce_patient_scope(body.patient_id, me)
     answers = body.answers or []
     if len(answers) != len(_EHEALS_ITEMS):
         raise HTTPException(status_code=400, detail=f"需要 {len(_EHEALS_ITEMS)} 題作答")

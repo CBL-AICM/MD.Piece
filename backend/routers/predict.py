@@ -11,9 +11,10 @@ DB 離線 / 缺表時沉著回 503 或冷啟動狀態，不捏造數字（規則
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 from backend.utils import recurrence
 
 logger = logging.getLogger(__name__)
@@ -42,8 +43,10 @@ def _parse_prediction_id(prediction_id: str):
 def post_predict(
     patient_id: str,
     disease: str | None = Query(None, description="前端本地檔案的主要疾病（讓未同步 profile 者也能對準疾病）"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """產生病患「未來 14 天復發風險」推估（band 為主、百分比次要）。"""
+    enforce_patient_scope(patient_id, me)
     try:
         sb = get_supabase()
     except Exception as e:
@@ -56,11 +59,13 @@ def post_predict(
 def post_disease_knowledge(
     patient_id: str,
     disease: str | None = Query(None, description="主要疾病；未提供則由 server 端 profile / 就診紀錄解析"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """整理 / 暖快取病患疾病的「文獻復發知識」（給前端收集流程明確觸發）。
 
     這是會打 LLM 的慢路徑，刻意與 predict 熱路徑分離，避免重蹈 #487 逾時。
     """
+    enforce_patient_scope(patient_id, me)
     try:
         sb = get_supabase()
     except Exception as e:
@@ -74,8 +79,10 @@ def get_trend(
     patient_id: str,
     window: int = Query(90, ge=7, le=180, description="時間窗天數：14 / 30 / 90 / 180"),
     disease: str | None = Query(None, description="主要疾病（讓趨勢基線與卡片一致）"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """風險趨勢時間序列（畫面 B）。"""
+    enforce_patient_scope(patient_id, me)
     try:
         sb = get_supabase()
     except Exception as e:
@@ -88,9 +95,11 @@ def get_trend(
 def get_explain(
     prediction_id: str,
     disease: str | None = Query(None, description="主要疾病（讓因子解釋與卡片一致）"),
+    me: dict | None = Depends(current_user_optional),
 ):
     """因子解釋（畫面 C）— SHAP-like，紅推升/藍降低 + 人話 + 可調節標籤。"""
     patient_id, as_of = _parse_prediction_id(prediction_id)
+    enforce_patient_scope(patient_id, me)
     try:
         sb = get_supabase()
     except Exception as e:

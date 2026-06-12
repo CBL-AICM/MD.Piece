@@ -16,10 +16,11 @@ import logging
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -93,8 +94,19 @@ def _row_out(r: dict) -> dict:
 
 # ── 經期 cycles CRUD ──────────────────────────────────────
 
+def _assert_owns_cycle(sb, cycle_id: str, me: dict | None) -> dict:
+    """以 cycle_id 改/刪時的擁有權檢查：已登入則該筆 patient_id 必須是自己。"""
+    res = sb.table("menstrual_cycles").select("*").eq("id", cycle_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="找不到該經期紀錄")
+    enforce_patient_scope(res.data[0].get("patient_id"), me)
+    return res.data[0]
+
+
 @router.get("/cycles")
-def list_cycles(patient_id: str = Query(...), limit: int = Query(60, ge=1, le=300)):
+def list_cycles(patient_id: str = Query(...), limit: int = Query(60, ge=1, le=300),
+                me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = (
         sb.table("menstrual_cycles").select("*")
@@ -106,7 +118,8 @@ def list_cycles(patient_id: str = Query(...), limit: int = Query(60, ge=1, le=30
 
 
 @router.post("/cycles")
-def create_cycle(body: CycleCreate):
+def create_cycle(body: CycleCreate, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     start = _parse_date(body.start_date, "start_date")
     end = _parse_date(body.end_date, "end_date")
     if start is None:
@@ -134,7 +147,8 @@ def create_cycle(body: CycleCreate):
 
 
 @router.put("/cycles/{cycle_id}")
-def update_cycle(cycle_id: str, body: CycleUpdate):
+def update_cycle(cycle_id: str, body: CycleUpdate, me: dict | None = Depends(current_user_optional)):
+    _assert_owns_cycle(get_supabase(), cycle_id, me)
     data: dict = {}
     if body.start_date is not None:
         data["start_date"] = _parse_date(body.start_date, "start_date").isoformat()
@@ -158,8 +172,9 @@ def update_cycle(cycle_id: str, body: CycleUpdate):
 
 
 @router.delete("/cycles/{cycle_id}")
-def delete_cycle(cycle_id: str):
+def delete_cycle(cycle_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    _assert_owns_cycle(sb, cycle_id, me)
     sb.table("menstrual_cycles").delete().eq("id", cycle_id).execute()
     return {"deleted": cycle_id}
 
@@ -167,7 +182,9 @@ def delete_cycle(cycle_id: str):
 # ── 每日紀錄（BBT / 排卵 / 避孕藥）upsert by date ──────────
 
 @router.get("/daily")
-def list_daily(patient_id: str = Query(...), days: int = Query(60, ge=1, le=400)):
+def list_daily(patient_id: str = Query(...), days: int = Query(60, ge=1, le=400),
+               me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = (
         sb.table("menstrual_daily").select("*")
@@ -179,7 +196,8 @@ def list_daily(patient_id: str = Query(...), days: int = Query(60, ge=1, le=400)
 
 
 @router.post("/daily")
-def upsert_daily(body: DailyUpsert):
+def upsert_daily(body: DailyUpsert, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     d = _parse_date(body.date, "date")
     if d is None:
         raise HTTPException(status_code=400, detail="date 必填")
@@ -216,12 +234,14 @@ def upsert_daily(body: DailyUpsert):
 # ── 摘要（純程式碼推算，標明僅供估算）─────────────────────
 
 @router.get("/summary")
-def summary(patient_id: str = Query(...), window: int = Query(6, ge=2, le=24)):
+def summary(patient_id: str = Query(...), window: int = Query(6, ge=2, le=24),
+            me: dict | None = Depends(current_user_optional)):
     """以使用者自己的紀錄推算：平均週期、平均經期、上次經期、預估下次。
 
     規則 5：全部是確定性算術。預估下次明確標 estimate=True + ESTIMATE_NOTE。
     不做任何「正常/異常」判斷（法規紅線）。
     """
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     rows = (
         sb.table("menstrual_cycles").select("*")
