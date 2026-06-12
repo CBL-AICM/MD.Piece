@@ -897,7 +897,7 @@ function memoSyncPush(m) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
   try {
-    fetch(API + '/memos/', {
+    apiFetch(API + '/memos/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -918,7 +918,7 @@ function memoSyncPush(m) {
 function memoSyncOnLoad() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(API + '/memos/?patient_id=' + encodeURIComponent(pid))
+  apiFetch(API + '/memos/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
       if (!data || !Array.isArray(data.memos)) return;
@@ -1421,7 +1421,7 @@ function memoDelete(id) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (pid) {
     try {
-      fetch(API + '/memos/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+      apiFetch(API + '/memos/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
             { method: 'DELETE' }).catch(function() {});
     } catch (e) {}
   }
@@ -2509,7 +2509,7 @@ async function refreshPvTimeline(pid) {
 
   // 2. 雲端情緒（每日聚合）
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
+    var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=14').then(function(r){return r.json();});
     (em.daily || []).forEach(function(d) {
       if (!d || !d.date) return;
       var t = new Date(d.date + 'T12:00:00').getTime();
@@ -3726,7 +3726,7 @@ function _updateHomeRewards() {
   if (!nodes.length) return;
   var pid = getStablePatientId();
   var C = 2 * Math.PI * 18; // 與 .fg r=18 一致
-  fetch(API + '/rewards/summary?patient_id=' + encodeURIComponent(pid))
+  apiFetch(API + '/rewards/summary?patient_id=' + encodeURIComponent(pid))
     .then(function (r) { return r.json(); })
     .then(function (s) {
       if (!s || !s.points) { _hideHomeRewards(nodes); return; }
@@ -3767,10 +3767,10 @@ function loadRewardsPage() {
   var box = document.getElementById('rw-content');
   if (!box) return;
   Promise.all([
-    fetch(API + '/rewards/summary?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
-    fetch(API + '/rewards/catalog?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
+    apiFetch(API + '/rewards/summary?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
+    apiFetch(API + '/rewards/catalog?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
     // 拼圖載入失敗不該拖垮整頁，單獨吞錯回 null（規則 12：降級但不靜默壞掉）
-    fetch(API + '/rewards/puzzle?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }).catch(function () { return null; }),
+    apiFetch(API + '/rewards/puzzle?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }).catch(function () { return null; }),
   ]).then(function (res) {
     var summary = res[0] || {};
     var catalog = res[1] || {};
@@ -3904,7 +3904,7 @@ function _nextLevelHtml(lv, earned) {
 
 function redeemReward(rewardId) {
   var pid = getStablePatientId();
-  fetch(API + '/rewards/redeem', {
+  apiFetch(API + '/rewards/redeem', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ patient_id: pid, reward_id: rewardId }),
@@ -6102,7 +6102,7 @@ async function refreshNavBadges() {
   // 情緒：後端 emotions/daily 的 date 用 UTC 切日，這裡保留 UTC todayKey 對齊；
   // 待後端切到本地時區後可改用 todayISO（_localDay()）。
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
+    var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
     var todayUTC = new Date().toISOString().slice(0, 10);
     var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
     var nc = d ? (d.count || 0) : 0;
@@ -6202,7 +6202,7 @@ async function refreshTodayDigest() {
 
   // 情緒 daily 聚合 — 後端 emotions/daily 用 UTC 切日，這裡 fallback 用 UTC todayKey
   try {
-    var em = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
+    var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
     var todayUTC = new Date().toISOString().slice(0, 10);
     var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
     moodCount = d ? (d.count || 0) : 0;
@@ -6322,7 +6322,7 @@ async function _genAutoTodos() {
 
   // 情緒：今天還沒打卡
   try {
-    var rr = await fetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(x){return x.json();});
+    var rr = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(x){return x.json();});
     var daily = rr.daily || [];
     var today = daily.find(function(d) { return d.date === todayISO && d.count > 0; });
     if (!today) {
@@ -7315,7 +7315,7 @@ function loadHomePage() {
       if (el) el.innerHTML = '<p class="home-ov-empty">' + _T('home.med.error') + '</p>';
     });
 
-  fetch(API + '/emotions/daily?patient_id=' + pid + '&days=7')
+  apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=7')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var el = document.getElementById('home-mood-summary');
@@ -7532,7 +7532,7 @@ function loadHome2Page() {
       el.innerHTML = '<span class="mp-big" style="font-size:1.7rem">' + meds.length + '</span> <span class="mp-csub">' + _T('app.c9.medTracking') + '</span>';
     }).catch(function () { var el = document.getElementById('home2-meds'); if (el) el.innerHTML = '<span class="mp-csub">' + _T('app.c9.loadFailed') + '</span>'; });
     // 情緒（已驗證端點）
-    fetch(API + '/emotions/daily?patient_id=' + pid + '&days=7').then(function (r) { return r.json(); }).then(function (data) {
+    apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=7').then(function (r) { return r.json(); }).then(function (data) {
       var el = document.getElementById('home2-mood'); if (!el) return;
       var daily = (data && data.daily) || [];
       if (!daily.length) { el.innerHTML = '<span class="mp-csub">' + _T('app.c9.noMoodToday') + '</span>'; return; }
@@ -7971,7 +7971,7 @@ function _updateMobileSosCount() {
     // 各症狀「最近 X/X」：由 /symptoms/history/{pid} 推估
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (!pid) return;
-    fetch(API + '/symptoms/history/' + encodeURIComponent(pid))
+    apiFetch(API + '/symptoms/history/' + encodeURIComponent(pid))
       .then(function(r) { return r.ok ? r.json() : { history: [] }; })
       .then(function(d) {
         var hist = (d && d.history) || [];
@@ -8604,7 +8604,7 @@ function submitInpatientQuickLog(key, value) {
     // 心情送後端 POST /emotions/（score 為 1-5 整數）；後端失敗時 fallback 存 local，趨勢線之後接後端就會帶到
     var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
     if (pid) {
-      fetch(API + '/emotions/', {
+      apiFetch(API + '/emotions/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
         body: JSON.stringify({ patient_id: pid, score: value, note: '住院模式快速紀錄' }),
@@ -11394,7 +11394,7 @@ function loadInpatientTrendSparklines() {
   _ipRefreshFeelingHint();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
+  apiFetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=7')
     .then(function(r) {
       var ct = r.headers.get('content-type') || '';
       if (!r.ok || ct.indexOf('json') === -1) throw new Error('non-json');
@@ -12171,7 +12171,7 @@ function deleteSymptomEntry(id) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (pid && id) {
     try {
-      fetch(API + '/symptoms/entries/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+      apiFetch(API + '/symptoms/entries/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
             { method: 'DELETE' }).catch(function() {});
     } catch (e) {}
   }
@@ -12184,7 +12184,7 @@ function symptomSyncPush(entry) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
   try {
-    fetch(API + '/symptoms/entries', {
+    apiFetch(API + '/symptoms/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -12206,7 +12206,7 @@ function symptomSyncPush(entry) {
 function symptomSyncOnLoad() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(API + '/symptoms/entries?patient_id=' + encodeURIComponent(pid))
+  apiFetch(API + '/symptoms/entries?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
       if (!data || !Array.isArray(data.entries)) return;
@@ -12618,7 +12618,7 @@ async function symBodyAiAnalyze() {
 
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   try {
-    var res = await fetch(API + '/symptoms/analyze', {
+    var res = await apiFetch(API + '/symptoms/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -13079,7 +13079,7 @@ function deleteVitalEntry(id) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (pid && id) {
     try {
-      fetch(API + '/vitals/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+      apiFetch(API + '/vitals/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
             { method: 'DELETE' }).catch(function() {});
     } catch (e) {}
   }
@@ -13091,7 +13091,7 @@ function vitalSyncPush(e) {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
   try {
-    fetch(API + '/vitals/', {
+    apiFetch(API + '/vitals/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -13113,7 +13113,7 @@ function vitalSyncPush(e) {
 function vitalSyncOnLoad() {
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return;
-  fetch(API + '/vitals/?patient_id=' + encodeURIComponent(pid))
+  apiFetch(API + '/vitals/?patient_id=' + encodeURIComponent(pid))
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
       if (!data || !Array.isArray(data.entries)) return;
@@ -14600,7 +14600,7 @@ async function runSymptomAnalysis() {
 
   const pid = getStablePatientId();
   try {
-    const res = await fetch(`${API}/symptoms/analyze`, {
+    const res = await apiFetch(`${API}/symptoms/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symptoms, patient_id: pid }),
@@ -14715,7 +14715,7 @@ function loadSymptomAnalysisHistory() {
   const pid = getStablePatientId();
   const el = document.getElementById("symptom-analyze-history");
   if (!el) return;
-  fetch(`${API}/symptoms/history/${pid}`)
+  apiFetch(`${API}/symptoms/history/${pid}`)
     .then(r => r.ok ? r.json() : { history: [] })
     .then(data => {
       const items = (data.history || []).slice(0, 5);
@@ -14759,7 +14759,7 @@ async function deleteSymptomHistoryItem(logId) {
   if (!confirm(_T("app.c18.confirmDeleteAnalysis"))) return;
   const pid = getStablePatientId();
   try {
-    const res = await fetch(`${API}/symptoms/history/${pid}/${logId}`, { method: "DELETE" });
+    const res = await apiFetch(`${API}/symptoms/history/${pid}/${logId}`, { method: "DELETE" });
     if (!res.ok) {
       const txt = await res.text();
       throw new Error("HTTP " + res.status + ": " + txt.slice(0, 200));
@@ -14779,7 +14779,7 @@ async function analyzeSymptoms() {
   el.innerHTML = '<div class="loading">' + _T("app.c18.analyzing") + '</div>';
 
   try {
-    const res = await fetch(`${API}/symptoms/analyze`, {
+    const res = await apiFetch(`${API}/symptoms/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symptoms }),
@@ -22488,7 +22488,7 @@ async function submitEmotion() {
   btn.innerHTML = '<i data-lucide="loader"></i> ' + _T('app.c27.submitting');
   if (typeof lucide !== 'undefined') lucide.createIcons();
   try {
-    var res = await fetch(API + '/emotions/', {
+    var res = await apiFetch(API + '/emotions/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Id': pid },
       body: JSON.stringify({ patient_id: pid, score: _emotionSelected, note: note }),
@@ -22524,7 +22524,7 @@ async function _moodFetch(days) {
   var pid = getStablePatientId();
   if (!pid) return null;
   try {
-    var res = await fetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=' + days);
+    var res = await apiFetch(API + '/emotions/daily?patient_id=' + encodeURIComponent(pid) + '&days=' + days);
     if (!res.ok) return null;
     var data = await res.json();
     var daily = data.daily || [];

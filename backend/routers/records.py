@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.db import get_supabase
 from backend.models import MedicalRecordCreate, MedicalRecordUpdate
+from backend.security import current_user_optional, enforce_patient_scope
 
 router = APIRouter()
 
@@ -11,13 +12,22 @@ def get_records(
     date_from: str | None = Query(None),
     date_to: str | None = Query(None),
     diagnosis: str | None = Query(None),
+    me: dict | None = Depends(current_user_optional),
 ):
-    """列出病歷，支援篩選。"""
-    sb = get_supabase()
-    query = sb.table("medical_records").select("*, patients(name)")
+    """列出病歷，支援篩選。
 
-    if patient_id:
-        query = query.eq("patient_id", patient_id)
+    原本 patient_id 省略時會回「所有病患」的病歷（P0 跨帳號洩漏）。改為：
+    - 已登入：一律只回自己（patient_id 強制為 token.sub，忽略前端值）。
+    - demo 未登入：必須帶 patient_id，否則回空（絕不回全表）。
+    """
+    if isinstance(me, dict):
+        patient_id = me["id"]
+    if not patient_id:
+        return {"records": []}
+
+    sb = get_supabase()
+    query = sb.table("medical_records").select("*, patients(name)").eq("patient_id", patient_id)
+
     if date_from:
         query = query.gte("visit_date", date_from)
     if date_to:
@@ -72,8 +82,9 @@ def delete_record(record_id: str):
 
 
 @router.get("/patient/{patient_id}")
-def get_patient_records(patient_id: str):
+def get_patient_records(patient_id: str, me: dict | None = Depends(current_user_optional)):
     """取得某位病患的所有就診紀錄。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     result = sb.table("medical_records").select("*").eq("patient_id", patient_id).order("visit_date", desc=True).execute()
     return {"records": result.data}

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -30,6 +31,9 @@ logger = logging.getLogger(__name__)
 
 _ALGO = "HS256"
 _DEFAULT_TTL_DAYS = 7
+
+# patient_id / user_id 的合法字元（UUID 與 legacy demo id 都涵蓋）。
+_PATIENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 # Dev fallback — 僅供本地 / preview 沒設 JWT_SECRET 時讓 /auth/* 跑得起來。
 # Production 必須在 Vercel 設 JWT_SECRET 蓋掉這個值；否則任何讀過 source 的人
@@ -115,3 +119,30 @@ def current_user_optional(
         "username": payload.get("username"),
         "role": payload.get("role"),
     }
+
+
+def enforce_patient_scope(patient_id: Optional[str], me: Optional[dict]) -> None:
+    """跨帳號資料隔離的共用檢查 —— 相容既有 demo 匿名模式。
+
+    這些日常紀錄 router（vitals / emotions / symptoms / memos / rewards / records…）
+    原本「只信任前端傳來的 patient_id、不驗身分」，導致已登入的 A 帳號可讀寫 B
+    帳號的資料（Issue：不同帳號看到同一筆）。此函式把驗證集中一處：
+
+    - **已登入**（帶有效 JWT，`me` 不為 None）：`patient_id` 必須等於 token.sub，
+      否則 403。這就堵住跨帳號存取。
+    - **demo 匿名**（未帶 token，`me` 為 None）：放行。demo 資料以裝置本地隨機
+      UUID 為鍵、無帳號可列舉，沿用既有匿名可用的產品行為（規則 3：不擅自砍功能）。
+
+    與 medications.py / patients.py 的差異（規則 7：攤開講）：那兩個 router 用硬性
+    `current_user`、不支援 demo；本函式給「需保留 demo」的 router 用 optional 驗證。
+
+    `me` 只在「確實是已登入身分 dict」時才強制。HTTP 路徑下 FastAPI 會注入 None
+    （demo）或 user dict（已登入）；單元測試直接呼叫 router function 時 `me` 會是
+    未注入的 Depends sentinel，視同無登入態、不強制（直接呼叫屬可信內部用法）。
+    """
+    if not isinstance(me, dict):
+        return
+    if patient_id is not None and not _PATIENT_ID_RE.fullmatch(patient_id):
+        raise HTTPException(status_code=400, detail="patient_id 格式不合法")
+    if patient_id is not None and me.get("id") != patient_id:
+        raise HTTPException(status_code=403, detail="不可存取他人資料")

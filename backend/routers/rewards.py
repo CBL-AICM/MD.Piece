@@ -28,7 +28,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.db import get_supabase
-from backend.security import current_user
+from backend.security import current_user, current_user_optional, enforce_patient_scope
 from backend.utils import rewards_rules as rules
 
 logger = logging.getLogger(__name__)
@@ -190,8 +190,9 @@ def _spent_points(sb, pid):
 
 
 @router.get("/summary")
-def get_summary(patient_id: str = Query(...)):
+def get_summary(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """唯讀彙整：earned/spent/available、等級進度、連續天數、徽章、加分明細。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     activity, day_sources, survey_dates = _gather_activity(sb, patient_id)
     points = rules.compute_points(activity)
@@ -215,9 +216,11 @@ def get_summary(patient_id: str = Query(...)):
 
 
 @router.get("/puzzle")
-def get_puzzle(patient_id: str = Query(...), month: str = Query(None, description="YYYY-MM；省略＝本月")):
+def get_puzzle(patient_id: str = Query(...), month: str = Query(None, description="YYYY-MM；省略＝本月"),
+               me: dict | None = Depends(current_user_optional)):
     """療程拼圖（每月主題收藏）：回當月 9 片解鎖狀態＋歷史已完成清單。
     純唯讀換算，沿用 _gather_activity 的逐日來源、不另外讀表（規則 2/5）。"""
+    enforce_patient_scope(patient_id, me)
     ym = month or datetime.now(timezone.utc).strftime("%Y-%m")
     sb = get_supabase()
     _activity, day_sources, survey_dates = _gather_activity(sb, patient_id)
@@ -230,8 +233,9 @@ def get_puzzle(patient_id: str = Query(...), month: str = Query(None, descriptio
 
 
 @router.get("/catalog")
-def get_catalog(patient_id: str = Query(None)):
+def get_catalog(patient_id: str = Query(None), me: dict | None = Depends(current_user_optional)):
     """兌換清單。帶 patient_id 時順便標出每項目前是否買得起。"""
+    enforce_patient_scope(patient_id, me)
     available = 0
     if patient_id:
         sb = get_supabase()
@@ -243,8 +247,9 @@ def get_catalog(patient_id: str = Query(None)):
 
 
 @router.get("/redemptions")
-def get_redemptions(patient_id: str = Query(...)):
+def get_redemptions(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
     """我的兌換紀錄（最新在前）。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     _, rows = _spent_points(sb, patient_id)
     rows = sorted(rows, key=lambda r: r.get("created_at") or "", reverse=True)
@@ -252,8 +257,9 @@ def get_redemptions(patient_id: str = Query(...)):
 
 
 @router.post("/redeem")
-def redeem(body: RedeemRequest):
+def redeem(body: RedeemRequest, me: dict | None = Depends(current_user_optional)):
     """兌換一項獎勵：純程式碼檢查餘額 → 寫入一筆 status='requested' 待院方發放。"""
+    enforce_patient_scope(body.patient_id, me)
     reward = rules.get_reward(body.reward_id)
     if not reward:
         raise HTTPException(status_code=404, detail="找不到該兌換品項")

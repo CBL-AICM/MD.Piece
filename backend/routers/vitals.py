@@ -3,9 +3,10 @@
 原本只存在前端 localStorage（mdpiece_vitals_entries），從不上傳。
 對應 Supabase `vital_entries` 表，以 (patient_id, client_id) 幂等 upsert。
 """
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 
 router = APIRouter()
 
@@ -37,7 +38,8 @@ def _public(row: dict) -> dict:
 
 
 @router.get("/")
-def list_vitals(patient_id: str = Query(...)):
+def list_vitals(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     res = (
         sb.table("vital_entries")
@@ -50,7 +52,8 @@ def list_vitals(patient_id: str = Query(...)):
 
 
 @router.post("/")
-def upsert_vital(body: VitalUpsert):
+def upsert_vital(body: VitalUpsert, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     sb = get_supabase()
     existing = (
         sb.table("vital_entries")
@@ -84,7 +87,8 @@ def upsert_vital(body: VitalUpsert):
 
 
 @router.delete("/{patient_id}/{client_id}")
-def delete_vital(patient_id: str, client_id: str):
+def delete_vital(patient_id: str, client_id: str, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     (
         sb.table("vital_entries")

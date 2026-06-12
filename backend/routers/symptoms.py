@@ -1,8 +1,9 @@
 import json
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from backend.db import get_supabase
 from backend.models import SymptomAnalysisRequest
+from backend.security import current_user_optional, enforce_patient_scope
 from backend.services.ai_analyzer import analyze_symptoms
 
 router = APIRouter()
@@ -44,10 +45,12 @@ def get_advice(symptom: str):
 
 
 @router.post("/analyze")
-async def analyze(body: SymptomAnalysisRequest):
+async def analyze(body: SymptomAnalysisRequest, me: dict | None = Depends(current_user_optional)):
     """AI 症狀分析。"""
     if not body.symptoms:
         raise HTTPException(status_code=400, detail="請提供至少一個症狀")
+    # 已登入時，分析所附的 patient_id 必須是自己（症狀會寫入 symptoms_log）。
+    enforce_patient_scope(body.patient_id, me)
 
     # 如果有 patient_id，取得病患資料作為參考（DB 失敗就略過，不擋分析）
     patient_info = None
@@ -93,16 +96,18 @@ async def analyze(body: SymptomAnalysisRequest):
 
 
 @router.get("/history/{patient_id}")
-def get_symptom_history(patient_id: str):
+def get_symptom_history(patient_id: str, me: dict | None = Depends(current_user_optional)):
     """取得病患的症狀分析歷史。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     result = sb.table("symptoms_log").select("*").eq("patient_id", patient_id).order("created_at", desc=True).execute()
     return {"history": result.data}
 
 
 @router.delete("/history/{patient_id}/{log_id}")
-def delete_symptom_history(patient_id: str, log_id: str):
+def delete_symptom_history(patient_id: str, log_id: str, me: dict | None = Depends(current_user_optional)):
     """刪除單筆症狀分析紀錄；patient_id 對得上才刪。"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     result = (
         sb.table("symptoms_log")
@@ -145,7 +150,8 @@ def _public_entry(row: dict) -> dict:
 
 
 @router.get("/entries")
-def list_symptom_entries(patient_id: str = Query(...)):
+def list_symptom_entries(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     res = (
         sb.table("symptom_entries")
@@ -158,7 +164,8 @@ def list_symptom_entries(patient_id: str = Query(...)):
 
 
 @router.post("/entries")
-def upsert_symptom_entry(body: SymptomEntryUpsert):
+def upsert_symptom_entry(body: SymptomEntryUpsert, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(body.patient_id, me)
     sb = get_supabase()
     existing = (
         sb.table("symptom_entries")
@@ -191,7 +198,8 @@ def upsert_symptom_entry(body: SymptomEntryUpsert):
 
 
 @router.delete("/entries/{patient_id}/{client_id}")
-def delete_symptom_entry(patient_id: str, client_id: str):
+def delete_symptom_entry(patient_id: str, client_id: str, me: dict | None = Depends(current_user_optional)):
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     (
         sb.table("symptom_entries")
