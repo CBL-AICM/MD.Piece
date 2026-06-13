@@ -1,0 +1,59 @@
+# 16 疾病 ML 模型訓練設定（給 enrich_backend 用）。
+# 相對 config.yaml：縮短 epoch/cohort 以利 CPU 在合理時間內訓練出可用模型，
+# 但保留全部 16 疾病(原本匯出的 model.onnx 只含 3 疾病，無法分析其餘 13 種)。
+data:
+  diseases:
+    - rheumatoid_arthritis
+    - asthma
+    - systemic_sclerosis
+    - systemic_lupus_erythematosus
+    - inflammatory_bowel_disease
+    - multiple_sclerosis
+    - gout
+    - ankylosing_spondylitis
+    - psoriatic_arthritis
+    - sjogren_syndrome
+    - behcet_disease
+    - anca_vasculitis
+    - igg4_related_disease
+    - chronic_urticaria
+    - osteoarthritis
+    - idiopathic_pulmonary_fibrosis
+  n_patients_per_disease: 120
+  sim_days: 160
+  base_seed: 2024
+  window_size: 7
+  horizon_days: 1
+  flare_horizon_days: 7
+
+split:
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  split_by: patient
+  split_seed: 7
+
+model:
+  type: lstm_attention
+  hidden: 64
+  n_layers: 2
+  dropout: 0.2
+
+train:
+  batch_size: 256
+  lr: 1.5e-3
+  epochs: 18
+  early_stop_patience: 5
+  weight_decay: 1.0e-5
+  loss_weights:
+    activity_mse: 1.0
+    flare_bce: 0.5
+  num_workers: 0
+  device: auto
+  seed: 2024
+
+paths:
+  data_cache: output/mdpiece/ml_data_enrich
+  ckpt_dir: output/mdpiece/checkpoints_enrich
+  log_dir: output/mdpiece/logs_enrich
+  model_card: output/mdpiece/model_card_enrich.md
