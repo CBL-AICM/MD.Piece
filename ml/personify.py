@@ -223,21 +223,22 @@ def run(n_per, sim_days, base_seed, n_workers, limit, do_llm, llm_all=False, llm
             if llm_limit:
                 targets = targets[:llm_limit]
             print(f"  待生成 {len(targets)} 則(已完成 {len(done)} 則跳過)")
-        diary_buf, failures = [], 0
+        diary_buf, consec_fail = [], 0
         for idx, p in enumerate(targets):
             story = persona_by_pid[p.patient_id]["persona"]["life_story"]
             diary = polish_with_llm(story, info[p.patient_id]["nick"])
-            if diary:
-                diary_buf.append({
-                    "patient_id": _uid(p.patient_id), "kind": "text",
-                    "content": f"{DIARY_MEMO_TAG}（AI 生動版）\n{diary}",
-                    "created_at": datetime.now(timezone.utc).isoformat()})
-                n_llm += 1
-            else:
-                failures += 1
-                if failures <= 1:
-                    print("  ⚠ LLM 回 None(Ollama 未啟動且無 ANTHROPIC_API_KEY) → 中止")
+            if not diary:
+                consec_fail += 1
+                if consec_fail >= 10:
+                    print("  ⚠ 連續 10 次 LLM 失敗 → 中止(請確認 Ollama 運作)")
                     break
+                continue
+            consec_fail = 0
+            diary_buf.append({
+                "patient_id": _uid(p.patient_id), "kind": "text",
+                "content": f"{DIARY_MEMO_TAG}（AI 生動版）\n{diary}",
+                "created_at": datetime.now(timezone.utc).isoformat()})
+            n_llm += 1
             if len(diary_buf) >= 20:        # 頻繁落地，斷掉也不白跑(可續跑)
                 sb.table("memos").insert(diary_buf).execute(); diary_buf = []
                 print(f"  …已生成 {n_llm}/{len(targets)}")
@@ -278,13 +279,17 @@ def diaries_only(llm_limit):
     if llm_limit:
         targets = targets[:llm_limit]
     print(f"已註冊 {len(rows)} 人；已有日記 {len(done)} 人；本次生成 {len(targets)} 則…")
-    buf, n = [], 0
+    buf, n, consec_fail = [], 0, 0
     for idx, r in enumerate(targets):
         p = r["persona"] or {}
         diary = polish_with_llm(p.get("life_story", ""), p.get("nickname", "我"))
         if not diary:
-            print("  ⚠ LLM 回 None(Ollama 未啟動且無 ANTHROPIC_API_KEY) → 中止")
-            break
+            consec_fail += 1
+            if consec_fail >= 10:          # 連續 10 次失敗才視為 Ollama 真的掛了
+                print("  ⚠ 連續 10 次 LLM 失敗 → 中止(請確認 Ollama 運作)")
+                break
+            continue                       # 瞬斷就跳過這位，續跑下一位
+        consec_fail = 0
         buf.append({"patient_id": r["user_id"], "kind": "text",
                     "content": f"{DIARY_MEMO_TAG}（AI 生動版）\n{diary}",
                     "created_at": datetime.now(timezone.utc).isoformat()})

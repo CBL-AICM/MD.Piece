@@ -243,13 +243,14 @@ def build_family_graph(people: list[dict], seed: int = 2024) -> dict[str, dict]:
 # LLM 潤飾(hybrid)：有 ANTHROPIC_API_KEY 時用 Claude 改寫成生動日記
 # ---------------------------------------------------------------------------
 
-def _ollama_chat(system: str, user: str, timeout: int = 120) -> str:
-    """呼叫本機 Ollama(免金鑰、免費)。失敗會丟例外。"""
+def _ollama_chat(system: str, user: str, timeout: int = 300) -> str:
+    """呼叫本機 Ollama(免金鑰、免費)。keep_alive 讓模型常駐避免每次冷載。失敗丟例外。"""
     body = json.dumps({
         "model": OLLAMA_MODEL,
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
         "stream": False,
+        "keep_alive": "30m",
         "options": {"temperature": 0.85, "num_predict": 160},
     }).encode("utf-8")
     req = urllib.request.Request(OLLAMA_URL + "/api/chat", data=body,
@@ -258,19 +259,21 @@ def _ollama_chat(system: str, user: str, timeout: int = 120) -> str:
         return json.loads(resp.read().decode("utf-8"))["message"]["content"].strip()
 
 
-def polish_with_llm(story: str, nickname: str) -> str | None:
-    """把自述潤飾成生動的第一人稱日記。優先本機 Ollama，否則用 App 的 Claude；都不行回 None。"""
+def polish_with_llm(story: str, nickname: str, retries: int = 2) -> str | None:
+    """把自述潤飾成生動的第一人稱日記。優先本機 Ollama(含重試，容忍冷載)，
+    否則用 App 的 Claude；都不行回 None。"""
     sysp = ("你是一位台灣患者本人。請用「繁體中文」、第一人稱、口語、有溫度地把以下生平"
             "改寫成『單獨一段、120 字以內』的今日日記，像真人在跟自己對話，"
             "不要分段、不要條列、不要說自己是 AI。"
             "全程只能使用繁體中文，嚴禁夾雜任何英文字母、拼音或表情符號。")
     user = f"我的生平：{story}\n\n請以「{nickname}」的口吻寫今天的日記。"
-    try:                                   # 1) 本機 Ollama
-        out = _ollama_chat(sysp, user)
-        if out:
-            return out
-    except Exception:
-        pass
+    for _ in range(retries + 1):           # 1) 本機 Ollama(重試容忍冷載/瞬斷)
+        try:
+            out = _ollama_chat(sysp, user)
+            if out:
+                return out
+        except Exception:
+            continue
     try:                                   # 2) Anthropic(需 ANTHROPIC_API_KEY)
         from backend.services.claude_service import call_claude
         return call_claude(sysp, user)
