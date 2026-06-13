@@ -7806,6 +7806,11 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
   color: var(--text-dim);
   text-transform: uppercase;
 }
+/* 必填欄位：依 input 的 required 屬性自動在 label 加上「*」 */
+.auth-field:has(input:required) .auth-label::after {
+  content: " *";
+  color: #B0382C;
+}
 .auth-field input,
 .acct-field input {
   width: 100%;
@@ -7978,6 +7983,48 @@ html[data-mode="senior"] .pz-export-btn { padding: 14px 22px; font-size: 1.05rem
   text-decoration: none;
 }
 .auth-switch-hint a:hover { text-decoration: underline; }
+
+/* ── 電腦版：登入/註冊卡片橫向排版（品牌區左、表單右） ──────
+   手機版 .auth-side / .auth-main 以 display:contents 維持原直向結構 */
+.auth-side,
+.auth-main { display: contents; }
+
+@media (min-width: 900px) {
+  .auth-scene { max-width: 880px; }
+  .auth-card {
+    display: flex;
+    align-items: stretch;
+    gap: 36px;
+    padding: 32px 40px 36px;
+    /* 卡片本身不捲動，改由右側表單面板內部捲動（品牌區與分頁籤固定） */
+    overflow: hidden;
+  }
+  .auth-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 0 0 260px;
+    padding-right: 36px;
+    border-right: 1.5px dashed var(--border-glass, rgba(31,61,88,0.22));
+  }
+  .auth-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+  }
+  .auth-main .auth-panel.active {
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 6px;
+  }
+  .auth-side .auth-motif { height: auto; margin: 0 0 12px; }
+  .auth-side .auth-header { margin-bottom: 0; }
+  .auth-side .auth-brand { font-size: 2.1rem; }
+  .auth-side .auth-motif-icon { width: 40px; height: 40px; }
+  .auth-side .auth-motif-piece { width: 32px; height: 32px; }
+}
 
 /* ═══════════════════════════════════════════════════════════
    ACCOUNT SETTINGS PAGE

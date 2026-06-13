@@ -287,6 +287,8 @@
       <div class="auth-card">
         <svg class="auth-card-corner auth-card-corner-tr" aria-hidden="true"><use href="#md-puzzle-piece-2"/></svg>
         <svg class="auth-card-corner auth-card-corner-bl" aria-hidden="true"><use href="#md-puzzle-piece"/></svg>
+        <!-- 桌機橫向排版：左側品牌區（motif + brand），手機維持直向（display:contents） -->
+        <div class="auth-side">
         <!-- Medical+puzzle motif at top -->
         <div class="auth-motif" aria-hidden="true">
           <svg class="auth-motif-piece"><use href="#md-puzzle-piece"/></svg>
@@ -304,7 +306,10 @@
           </div>
           <p class="auth-subtitle" data-i18n="auth.brand.subtitle">MEDICAL PLATFORM</p>
         </div>
+        </div><!-- /.auth-side -->
 
+        <!-- 桌機橫向排版：右側表單區（tabs + panels） -->
+        <div class="auth-main">
         <div class="auth-tabs" role="tablist">
           <button class="auth-tab active" id="auth-tab-login" role="tab" onclick="switchAuthTab('login')" data-i18n="auth.tab.login">登入</button>
           <button class="auth-tab" id="auth-tab-register" role="tab" onclick="switchAuthTab('register')" data-i18n="auth.tab.register">註冊</button>
@@ -472,6 +477,7 @@
           </button>
           <p class="auth-switch-hint"><a href="#" onclick="event.preventDefault(); switchAuthTab('login')" data-i18n="auth.switch.toLoginLink">直接登入</a></p>
         </form>
+        </div><!-- /.auth-main -->
       </div>
     </div>
   </div>
