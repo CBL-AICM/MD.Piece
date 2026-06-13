@@ -123,7 +123,7 @@ def _family_summary(pid, fam, info) -> str:
     return "；".join(parts) if parts else "家人不在本世界（外部）"
 
 
-def run(n_per, sim_days, base_seed, n_workers, limit, do_llm):
+def run(n_per, sim_days, base_seed, n_workers, limit, do_llm, llm_all=False):
     sb = get_supabase()
     print(f"[1/3] 生成 {len(DISEASES)}×{n_per} 並建人生自述 + 家族圖…")
     patients, info, fam, registered = _people_and_personas(
@@ -194,21 +194,44 @@ def run(n_per, sim_days, base_seed, n_workers, limit, do_llm):
         if upd:
             print(f"  更新 {len(upd)} 位已註冊者的家庭姓名(冠父姓/去重)")
 
-    print("[3/3] LLM 潤飾樣本(hybrid)…")
+    mode = "全體" if llm_all else "樣本(每病 1 位)"
+    print(f"[3/3] LLM 潤飾{mode}(hybrid)…")
     n_llm = 0
     if do_llm and limit is None:
-        seen = set()
-        for p in patients:
-            if p.disease_id in seen or p.patient_id not in registered:
-                continue
-            row = next(r for r in persona_rows if r["patient_id"] == p.patient_id)
-            diary = polish_with_llm(row["persona"]["life_story"], info[p.patient_id]["nick"])
+        persona_by_pid = {r["patient_id"]: r for r in persona_rows}
+        targets = [p for p in patients if p.patient_id in registered]
+        if not llm_all:
+            seen, sample = set(), []
+            for p in targets:
+                if p.disease_id not in seen:
+                    seen.add(p.disease_id); sample.append(p)
+            targets = sample
+        # 冪等：先刪舊日記 memo
+        uids = [_uid(p.patient_id) for p in targets]
+        for i in range(0, len(uids), 100):
+            sb.table("memos").delete().in_("patient_id", uids[i:i + 100]).like(
+                "content", DIARY_MEMO_TAG + "%").execute()
+        diary_buf, failures = [], 0
+        for idx, p in enumerate(targets):
+            story = persona_by_pid[p.patient_id]["persona"]["life_story"]
+            diary = polish_with_llm(story, info[p.patient_id]["nick"])
             if diary:
-                sb.table("memos").insert({
+                diary_buf.append({
                     "patient_id": _uid(p.patient_id), "kind": "text",
                     "content": f"{DIARY_MEMO_TAG}（AI 生動版）\n{diary}",
-                    "created_at": datetime.now(timezone.utc).isoformat()}).execute()
-                seen.add(p.disease_id); n_llm += 1
+                    "created_at": datetime.now(timezone.utc).isoformat()})
+                n_llm += 1
+            else:
+                failures += 1
+                if failures <= 1:
+                    print("  ⚠ polish_with_llm 回 None(可能無 ANTHROPIC_API_KEY) → 中止 LLM")
+                    break
+            if len(diary_buf) >= 100:
+                sb.table("memos").insert(diary_buf).execute(); diary_buf = []
+            if idx and idx % 200 == 0:
+                print(f"  …{idx}/{len(targets)}")
+        if diary_buf:
+            sb.table("memos").insert(diary_buf).execute()
         print(f"  LLM 潤飾 {n_llm} 則" if n_llm else "  無 ANTHROPIC_API_KEY → 略過(僅模板)")
     else:
         print("  略過 LLM(--no-llm)")
@@ -238,16 +261,18 @@ def main():
     g.add_argument("--full", action="store_true")
     g.add_argument("--canary", type=int, metavar="N")
     g.add_argument("--cleanup", action="store_true")
-    ap.add_argument("--no-llm", action="store_true", help="不呼叫 LLM 潤飾樣本")
+    ap.add_argument("--no-llm", action="store_true", help="不呼叫 LLM 潤飾")
+    ap.add_argument("--llm-all", action="store_true",
+                    help="對全體已註冊者跑 LLM 入戲版日記(需 ANTHROPIC_API_KEY)")
     ap.add_argument("--base-seed", type=int, default=2024)
     ap.add_argument("--n-workers", type=int, default=4)
     a = ap.parse_args()
     if a.cleanup:
         cleanup()
     elif a.canary is not None:
-        run(20, 365, a.base_seed, a.n_workers, a.canary, not a.no_llm)
+        run(20, 365, a.base_seed, a.n_workers, a.canary, not a.no_llm, a.llm_all)
     else:
-        run(200, 365, a.base_seed, a.n_workers, None, not a.no_llm)
+        run(200, 365, a.base_seed, a.n_workers, None, not a.no_llm, a.llm_all)
 
 
 if __name__ == "__main__":
