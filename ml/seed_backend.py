@@ -324,7 +324,13 @@ def cleanup():
         sb.table("sleep_sessions").delete().in_("user_id", ids[i:i + 100]).execute()
         sb.table("patient_profiles").delete().in_("user_id", ids[i:i + 100]).execute()
     sb.table("users").delete().like("username", TAG + "%").execute()
-    print(f"已刪除 {len(ids)} 位帳號與其所有紀錄。")
+    # 專屬 sim 表(含未註冊候選者)整張清掉
+    for t in ("sim_persona", "sim_world_state"):
+        try:
+            sb.table(t).delete().neq("patient_id", "").execute()
+        except Exception:
+            pass
+    print(f"已刪除 {len(ids)} 位帳號與其所有紀錄(含 persona/world 狀態)。")
 
 
 def main():

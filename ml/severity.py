@@ -22,6 +22,7 @@ COMORBID_ZH = {
     "hypertension": "高血壓", "diabetes": "糖尿病", "osteoporosis": "骨質疏鬆",
     "ckd": "慢性腎臟病", "hyperlipidemia": "高血脂", "anemia": "貧血",
     "thyroid": "甲狀腺疾病", "gerd": "胃食道逆流", "copd": "慢性阻塞性肺病",
+    "cataract": "白內障", "osteoarthritis": "退化性關節炎",
 }
 DISEASE_ALLERGY = {
     "asthma": "塵蟎、花粉", "chronic_urticaria": "食物/藥物過敏原",
