@@ -320,8 +320,9 @@ def cleanup():
     for t in record_tables:
         for i in range(0, len(ids), 100):
             sb.table(t).delete().in_("patient_id", ids[i:i + 100]).execute()
-    for i in range(0, len(ids), 100):     # sleep_sessions 用 user_id
+    for i in range(0, len(ids), 100):     # sleep_sessions / patient_profiles 用 user_id
         sb.table("sleep_sessions").delete().in_("user_id", ids[i:i + 100]).execute()
+        sb.table("patient_profiles").delete().in_("user_id", ids[i:i + 100]).execute()
     sb.table("users").delete().like("username", TAG + "%").execute()
     print(f"已刪除 {len(ids)} 位帳號與其所有紀錄。")
 
