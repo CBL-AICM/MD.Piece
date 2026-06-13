@@ -320,6 +320,32 @@ def _register_candidate(sim, pid, day, rng):
     return user, prof, med_rows
 
 
+REL_ZH = {"spouse": "另一半", "parent": "父母", "child": "孩子", "sibling": "手足"}
+
+
+def _family_map(sb):
+    """從 sim_persona 載入家族連結與暱稱：pid -> {relations, nick}。"""
+    links, nick = {}, {}
+    start = 0
+    while True:
+        page = sb.table("sim_persona").select("patient_id,persona").range(
+            start, start + 999).execute().data
+        for r in page:
+            p = r.get("persona") or {}
+            rels = []
+            if p.get("spouse"):
+                rels.append(("spouse", p["spouse"]))
+            rels += [("parent", x) for x in (p.get("parents") or [])]
+            rels += [("child", x) for x in (p.get("children") or [])]
+            rels += [("sibling", x) for x in (p.get("siblings") or [])]
+            links[r["patient_id"]] = rels
+            nick[r["patient_id"]] = p.get("nickname", "家人")
+        if len(page) < 1000:
+            break
+        start += 1000
+    return links, nick
+
+
 def tick(run_date: date):
     sb = get_supabase()
     day = _now_day(run_date)
@@ -329,10 +355,13 @@ def tick(run_date: date):
     iso = run_date.isoformat()
     active_uids = [r["user_id"] for r in rows if r["status"] == "active" and r["user_id"]]
     med_names, med_id_map = _med_info(sb, active_uids)
+    fam_links, fam_nick = _family_map(sb)
 
     buf: dict[str, list] = {}
     new_users, new_profiles, new_meds, state_updates = [], [], [], []
-    n_active = n_records = n_reg = n_churn = n_death = n_react = 0
+    events: dict[str, dict] = {}            # pid -> {flare_onset, died}
+    row_by_pid: dict[str, dict] = {}
+    n_active = n_records = n_reg = n_churn = n_death = n_react = n_family = 0
 
     def addbuf(tbl_rows):
         for t, rs in tbl_rows.items():
@@ -361,6 +390,7 @@ def tick(run_date: date):
         for tx in sim["treatments"]:
             tx["dose_multiplier_today"] = 0.0 if rng.random() < min(
                 0.4, 0.08 * sim["adherence_mult"]) else 1.0
+        prev_act = sim["activity"]
         st = DynamicsState(activity=sim["activity"],
                            irreversible_burden=sim["irreversible_burden"],
                            active_triggers=[tuple(x) for x in sim["active_triggers"]],
@@ -370,6 +400,7 @@ def tick(run_date: date):
 
         thr = cfg.flare["threshold"]
         symptomatic = bool(st2.activity > thr or st2.activity > sim["mean_act_ref"] * 1.2)
+        flare_onset = bool(prev_act <= thr < st2.activity)   # 今天才進入 flare(重病)
 
         if status == "active":
             n_active += 1
@@ -416,6 +447,41 @@ def tick(run_date: date):
         r["sim"] = sim
         r["updated_at"] = datetime.now(timezone.utc).isoformat()
         state_updates.append(r)
+        row_by_pid[r["patient_id"]] = r
+        events[r["patient_id"]] = {"flare_onset": flare_onset,
+                                   "died": status == "deceased"}
+
+    # ── 家族事件傳播：家人重病/離世 → 親屬壓力上升(影響未來病情 + 心情紀錄) ──
+    for r in state_updates:
+        if r["status"] != "active" or not r["user_id"]:
+            continue
+        sim = r["sim"]
+        frng = _rng(sim["tick_seed"] + 7, day)
+        for rel, member in fam_links.get(r["patient_id"], []):
+            ev = events.get(member)
+            if not ev or not (ev["died"] or ev["flare_onset"]):
+                continue
+            mag, dur = (2.6, int(frng.integers(30, 90))) if ev["died"] \
+                else (1.0, int(frng.integers(7, 21)))
+            sim["active_triggers"].append(["family_stress", float(dur), float(mag)])
+            n_family += 1
+            mname = fam_nick.get(member, "家人")
+            rz = REL_ZH.get(rel, "家人")
+            if ev["died"] and frng.random() < 0.8:
+                buf.setdefault("memos", []).append({
+                    "patient_id": r["user_id"], "kind": "text",
+                    "content": f"👪 家裡的大事：我的{rz}{mname}最近走了，心裡空空的，"
+                               "這陣子吃不下也睡不好。",
+                    "created_at": _ts_on(run_date, 22)})
+                n_records += 1
+            elif ev["flare_onset"] and frng.random() < 0.35:
+                buf.setdefault("memos", []).append({
+                    "patient_id": r["user_id"], "kind": "text",
+                    "content": f"👪 我的{rz}{mname}最近病情不穩，跑醫院、照顧他，"
+                               "我也累得喘不過氣。",
+                    "created_at": _ts_on(run_date, 21)})
+                n_records += 1
+            break                            # 一天最多反映一位家人的事件
 
     # 寫入：先帳號(FK)，再紀錄，最後狀態
     for i in range(0, len(new_users), BATCH):
@@ -434,7 +500,7 @@ def tick(run_date: date):
     print("=" * 56)
     print(f"tick {iso}(第 {day} 天)")
     print(f"  active {n_active}｜新增紀錄 {n_records} 筆｜新註冊 {n_reg}"
-          f"｜流失 {n_churn}｜離世 {n_death}｜用藥反應 {n_react}")
+          f"｜流失 {n_churn}｜離世 {n_death}｜用藥反應 {n_react}｜家族事件 {n_family}")
     print("=" * 56)
 
 
