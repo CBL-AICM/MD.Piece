@@ -123,7 +123,7 @@ def _family_summary(pid, fam, info) -> str:
     return "；".join(parts) if parts else "家人不在本世界（外部）"
 
 
-def run(n_per, sim_days, base_seed, n_workers, limit, do_llm, llm_all=False):
+def run(n_per, sim_days, base_seed, n_workers, limit, do_llm, llm_all=False, llm_limit=0):
     sb = get_supabase()
     print(f"[1/3] 生成 {len(DISEASES)}×{n_per} 並建人生自述 + 家族圖…")
     patients, info, fam, registered = _people_and_personas(
@@ -194,8 +194,8 @@ def run(n_per, sim_days, base_seed, n_workers, limit, do_llm, llm_all=False):
         if upd:
             print(f"  更新 {len(upd)} 位已註冊者的家庭姓名(冠父姓/去重)")
 
-    mode = "全體" if llm_all else "樣本(每病 1 位)"
-    print(f"[3/3] LLM 潤飾{mode}(hybrid)…")
+    mode = "全體(可續跑)" if llm_all else "樣本(每病 1 位)"
+    print(f"[3/3] LLM 潤飾{mode}(Ollama/本機優先)…")
     n_llm = 0
     if do_llm and limit is None:
         persona_by_pid = {r["patient_id"]: r for r in persona_rows}
@@ -206,11 +206,23 @@ def run(n_per, sim_days, base_seed, n_workers, limit, do_llm, llm_all=False):
                 if p.disease_id not in seen:
                     seen.add(p.disease_id); sample.append(p)
             targets = sample
-        # 冪等：先刪舊日記 memo
-        uids = [_uid(p.patient_id) for p in targets]
-        for i in range(0, len(uids), 100):
-            sb.table("memos").delete().in_("patient_id", uids[i:i + 100]).like(
-                "content", DIARY_MEMO_TAG + "%").execute()
+            uids = [_uid(p.patient_id) for p in targets]    # 樣本：刪舊重生
+            for i in range(0, len(uids), 100):
+                sb.table("memos").delete().in_("patient_id", uids[i:i + 100]).like(
+                    "content", DIARY_MEMO_TAG + "%").execute()
+        else:
+            # 全體：續跑——跳過已有日記者(本機 LLM 慢，可分批/過夜跑)
+            done = set()
+            tuids = [_uid(p.patient_id) for p in targets]
+            for i in range(0, len(tuids), 100):
+                got = sb.table("memos").select("patient_id").in_(
+                    "patient_id", tuids[i:i + 100]).like(
+                    "content", DIARY_MEMO_TAG + "%").execute().data
+                done.update(g["patient_id"] for g in got)
+            targets = [p for p in targets if _uid(p.patient_id) not in done]
+            if llm_limit:
+                targets = targets[:llm_limit]
+            print(f"  待生成 {len(targets)} 則(已完成 {len(done)} 則跳過)")
         diary_buf, failures = [], 0
         for idx, p in enumerate(targets):
             story = persona_by_pid[p.patient_id]["persona"]["life_story"]
@@ -224,15 +236,14 @@ def run(n_per, sim_days, base_seed, n_workers, limit, do_llm, llm_all=False):
             else:
                 failures += 1
                 if failures <= 1:
-                    print("  ⚠ polish_with_llm 回 None(可能無 ANTHROPIC_API_KEY) → 中止 LLM")
+                    print("  ⚠ LLM 回 None(Ollama 未啟動且無 ANTHROPIC_API_KEY) → 中止")
                     break
-            if len(diary_buf) >= 100:
+            if len(diary_buf) >= 20:        # 頻繁落地，斷掉也不白跑(可續跑)
                 sb.table("memos").insert(diary_buf).execute(); diary_buf = []
-            if idx and idx % 200 == 0:
-                print(f"  …{idx}/{len(targets)}")
+                print(f"  …已生成 {n_llm}/{len(targets)}")
         if diary_buf:
             sb.table("memos").insert(diary_buf).execute()
-        print(f"  LLM 潤飾 {n_llm} 則" if n_llm else "  無 ANTHROPIC_API_KEY → 略過(僅模板)")
+        print(f"  LLM 潤飾 {n_llm} 則")
     else:
         print("  略過 LLM(--no-llm)")
 
@@ -240,6 +251,50 @@ def run(n_per, sim_days, base_seed, n_workers, limit, do_llm, llm_all=False):
     print(f"完成人格化：{len(persona_rows)} 人有人生自述；{n_couple} 人有配偶、"
           f"{n_kid} 人的父母也在世界內(慢病家族聚集)。")
     print("=" * 56)
+
+
+def diaries_only(llm_limit):
+    """只生成 LLM 入戲日記(不重建世代)：讀 prod 既有 sim_persona，續跑未完成者。
+
+    本機 Ollama 慢(~1 則/分)，用此模式可分批/過夜跑：
+      PYTHONPATH=. python -m ml.personify --diaries --llm-limit 50
+    """
+    sb = get_supabase()
+    rows, start = [], 0
+    while True:
+        page = sb.table("sim_persona").select("user_id,persona").range(
+            start, start + 999).execute().data
+        rows.extend([r for r in page if r.get("user_id")])     # 僅已註冊者
+        if len(page) < 1000:
+            break
+        start += 1000
+    uids = [r["user_id"] for r in rows]
+    done = set()
+    for i in range(0, len(uids), 100):
+        got = sb.table("memos").select("patient_id").in_(
+            "patient_id", uids[i:i + 100]).like("content", DIARY_MEMO_TAG + "%").execute().data
+        done.update(g["patient_id"] for g in got)
+    targets = [r for r in rows if r["user_id"] not in done]
+    if llm_limit:
+        targets = targets[:llm_limit]
+    print(f"已註冊 {len(rows)} 人；已有日記 {len(done)} 人；本次生成 {len(targets)} 則…")
+    buf, n = [], 0
+    for idx, r in enumerate(targets):
+        p = r["persona"] or {}
+        diary = polish_with_llm(p.get("life_story", ""), p.get("nickname", "我"))
+        if not diary:
+            print("  ⚠ LLM 回 None(Ollama 未啟動且無 ANTHROPIC_API_KEY) → 中止")
+            break
+        buf.append({"patient_id": r["user_id"], "kind": "text",
+                    "content": f"{DIARY_MEMO_TAG}（AI 生動版）\n{diary}",
+                    "created_at": datetime.now(timezone.utc).isoformat()})
+        n += 1
+        if len(buf) >= 20:
+            sb.table("memos").insert(buf).execute(); buf = []
+            print(f"  …已生成 {n}/{len(targets)}")
+    if buf:
+        sb.table("memos").insert(buf).execute()
+    print(f"完成：本次新增 {n} 則日記(累計 {len(done)+n}/{len(rows)})")
 
 
 def cleanup():
@@ -260,19 +315,25 @@ def main():
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--full", action="store_true")
     g.add_argument("--canary", type=int, metavar="N")
+    g.add_argument("--diaries", action="store_true",
+                   help="只生成 LLM 入戲日記(讀既有 persona，續跑；本機 Ollama)")
     g.add_argument("--cleanup", action="store_true")
     ap.add_argument("--no-llm", action="store_true", help="不呼叫 LLM 潤飾")
     ap.add_argument("--llm-all", action="store_true",
-                    help="對全體已註冊者跑 LLM 入戲版日記(需 ANTHROPIC_API_KEY)")
+                    help="對全體已註冊者跑 LLM 入戲版日記(Ollama 本機優先；可續跑)")
+    ap.add_argument("--llm-limit", type=int, default=0,
+                    help="本次最多生成幾則日記(0=不限；本機 LLM 慢時用來分批)")
     ap.add_argument("--base-seed", type=int, default=2024)
     ap.add_argument("--n-workers", type=int, default=4)
     a = ap.parse_args()
     if a.cleanup:
         cleanup()
+    elif a.diaries:
+        diaries_only(a.llm_limit)
     elif a.canary is not None:
-        run(20, 365, a.base_seed, a.n_workers, a.canary, not a.no_llm, a.llm_all)
+        run(20, 365, a.base_seed, a.n_workers, a.canary, not a.no_llm, a.llm_all, a.llm_limit)
     else:
-        run(200, 365, a.base_seed, a.n_workers, None, not a.no_llm, a.llm_all)
+        run(200, 365, a.base_seed, a.n_workers, None, not a.no_llm, a.llm_all, a.llm_limit)
 
 
 if __name__ == "__main__":
