@@ -16713,6 +16713,7 @@ function _renderMobileMedList(meds) {
             var status = slotStatuses[idx];
             // backslash 先於單引號（同 safeMedId）；完整 escape 滿足 CodeQL。
             var safeId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            var safeName = String(m.name || '').replace(/\\/g, "\\\\").replace(/'/g, "\\'");
             var rowPill;
             if (status.state === 'taken') {
               rowPill = '<span class="pill pill-ok mono" title="' + _T("app.c20.actualCheckinTime") + '">' + _Tf("app.c20.takenAt", { t: status.loggedAt }) + '</span>';
@@ -16732,6 +16733,16 @@ function _renderMobileMedList(meds) {
                 + 'aria-label="' + _T("app.c20.checkin") + '" '
                 + 'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\')"></button>';
             }
+            // 「停藥」按鈕：療程中途不再需要這顆藥時，直接從今日服藥這裡停用，
+            // 不必跳回藥物清單。deleteMedication 已含 confirm + DELETE + reload。
+            var stopBtn = '<button type="button" '
+              + 'style="margin-left:6px;background:transparent;border:1px solid var(--border);color:var(--text-dim);'
+              + 'border-radius:6px;padding:2px 7px;font-size:10.5px;cursor:pointer;line-height:1.2;white-space:nowrap" '
+              + 'title="從今天起停用這顆藥（會從清單與提醒移除）" '
+              + 'aria-label="停藥" '
+              + 'onclick="event.stopPropagation();deleteMedication(\'' + safeId + '\',\'' + safeName + '\')">'
+              + '停藥'
+              + '</button>';
             var sep = (idx < arr.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
             var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
             return ''
@@ -16743,6 +16754,7 @@ function _renderMobileMedList(meds) {
               +   '</div>'
               +   '<div class="time">' + escapeHtml(s.time) + '</div>'
               +   rowPill
+              +   stopBtn
               + '</div>';
           }).join('')
         + '</div>';
@@ -16760,6 +16772,7 @@ function _renderMobileMedList(meds) {
 
       var otherRows = otherMeds.map(function(m, idx) {
         var safeId = String(m.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        var safeName = String(m.name || '').replace(/\\/g, "\\\\").replace(/'/g, "\\'");
         var sep = (idx < otherMeds.length - 1) ? ';border-bottom:1px solid var(--border)' : '';
         var doseTxt = (m.dose || '') + (m.frequency ? ' · ' + m.frequency : '');
         // 抓今日已打卡時間（taken=true）並排序
@@ -16795,6 +16808,14 @@ function _renderMobileMedList(meds) {
           +     'title="' + _T("app.c20.prnTakeTitle") + '" '
           +     'onclick="event.stopPropagation();tapMedTake(\'' + safeId + '\',\'other\')">'
           +     _T("app.c20.takeNow")
+          +   '</button>'
+          +   '<button type="button" '
+          +     'style="margin-left:6px;background:transparent;border:1px solid var(--border);color:var(--text-dim);'
+          +     'border-radius:6px;padding:2px 7px;font-size:10.5px;cursor:pointer;line-height:1.2;white-space:nowrap" '
+          +     'title="從今天起停用這顆藥（會從清單與提醒移除）" '
+          +     'aria-label="停藥" '
+          +     'onclick="event.stopPropagation();deleteMedication(\'' + safeId + '\',\'' + safeName + '\')">'
+          +     '停藥'
           +   '</button>'
           + '</div>';
       }).join('');
