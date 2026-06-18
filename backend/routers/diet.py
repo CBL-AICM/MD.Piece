@@ -286,8 +286,11 @@ def get_diet_guide(patient_id: str, me: dict | None = Depends(current_user_optio
         "請依規格產出飲食建議 JSON。"
     )
     try:
-        raw = call_claude(DIET_SYSTEM_PROMPT, user_msg)
+        raw = _call_claude_bounded(DIET_SYSTEM_PROMPT, user_msg)
         parsed = _parse_diet_json(raw)
+    except concurrent.futures.TimeoutError:
+        logger.warning(f"飲食指南 LLM timeout (>{_LLM_HARD_TIMEOUT_S}s)，走 DIET_FALLBACK")
+        parsed = {}
     except Exception as e:
         logger.error(f"飲食指南 LLM 失敗：{e}")
         parsed = {}
