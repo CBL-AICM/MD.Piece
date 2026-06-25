@@ -2608,39 +2608,6 @@ html[data-mode="senior"] .tc-desc {
 }
 .ip-prep-sheet.open { pointer-events: auto; opacity: 1; }
 
-/* ── M07 健康識能小測（eHEALS）— 重用 .ip-prep-sheet 容器與動畫 ──
-   設計重點：篩檢本身要服務「可能需要大字」的人，所以預設就放大、好讀，
-   不依賴 elder-mode（elder-mode 是篩完才決定的）。選取狀態做成 radio 樣式，一眼可辨。 */
-.ehl-panel { max-width: 480px; max-height: 88vh; display: flex; flex-direction: column; }
-.ehl-intro { font-size: 0.95rem; color: var(--text-muted, #5a6b7b); line-height: 1.6; margin: 4px 2px 10px; }
-/* sticky 進度條：放在可捲動內容之上，捲動時持續可見 */
-.ehl-progress-row { display: flex; align-items: center; gap: 10px; margin: 0 2px 6px; }
-.ehl-progress { flex: 1; height: 8px; border-radius: 999px; background: var(--border, rgba(31,61,88,0.14)); overflow: hidden; }
-.ehl-progress-fill { height: 100%; width: 0; border-radius: 999px; background: var(--accent, #3B7AAA); transition: width .25s ease; }
-.ehl-progress-text { flex: 0 0 auto; font-size: 0.85rem; font-weight: 700; color: var(--accent, #3B7AAA); min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
-.ehl-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 2px; }
-.ehl-q { padding: 14px 0; border-top: 1px solid var(--border, rgba(31,61,88,0.10)); }
-.ehl-q:first-child { border-top: 0; }
-.ehl-q-text { font-size: 1.02rem; font-weight: 600; color: var(--navy, #1F3D58); line-height: 1.55; margin-bottom: 12px; display: flex; gap: 9px; align-items: flex-start; }
-.ehl-q-num { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--border, rgba(31,61,88,0.16)); color: var(--text-muted, #5a6b7b); font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
-.ehl-q.is-answered .ehl-q-num { background: var(--success, #3E9D6E); color: #fff; }
-.ehl-opts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.ehl-opt { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 11px 3px; border: 1.5px solid var(--border, rgba(31,61,88,0.16)); border-radius: 13px; background: var(--bg-surface, #fff); cursor: pointer; min-height: 64px; transition: border-color .15s, background .15s, transform .1s; }
-.ehl-opt:active { transform: scale(0.95); }
-.ehl-opt:focus-visible { outline: 3px solid var(--accent-light, #9bb8cf); outline-offset: 2px; }
-.ehl-opt-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(31,61,88,0.30); flex: 0 0 auto; position: relative; transition: border-color .15s; }
-.ehl-opt-label { font-size: 0.8rem; color: var(--text-muted, #5a6b7b); line-height: 1.25; text-align: center; }
-.ehl-opt.is-sel { border-color: var(--accent, #3B7AAA); background: var(--accent-soft, rgba(59,122,170,0.12)); }
-.ehl-opt.is-sel .ehl-opt-dot { border-color: var(--accent, #3B7AAA); }
-.ehl-opt.is-sel .ehl-opt-dot::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent, #3B7AAA); }
-.ehl-opt.is-sel .ehl-opt-label { color: var(--accent, #3B7AAA); font-weight: 700; }
-.ehl-foot { padding-top: 12px; margin-top: 2px; border-top: 1px solid var(--border, rgba(31,61,88,0.10)); }
-.ehl-cta { width: 100%; }
-.ehl-cta:disabled { opacity: 0.5; cursor: not-allowed; }
-.ehl-disc { font-size: 0.74rem; color: var(--text-muted, #8090a0); line-height: 1.5; margin: 10px 2px 0; }
-#app-wrapper[data-theme="dark"] .ehl-opt { background: rgba(255,255,255,0.04); }
-#app-wrapper[data-theme="dark"] .ehl-opt-dot { border-color: rgba(255,255,255,0.32); }
-
 .ip-prep-backdrop {
   position: absolute;
   inset: 0;
