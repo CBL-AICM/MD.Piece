@@ -14,9 +14,6 @@
       "use": "@vercel/node"
     }
   ],
-  "crons": [
-    { "path": "/ema/cron/run", "schedule": "0 1 * * *" }
-  ],
   "headers": [
     {
       "source": "/sw.js",
@@ -124,14 +121,10 @@
     { "src": "/memos", "dest": "api/index.py" },
     { "src": "/vitals/(.*)", "dest": "api/index.py" },
     { "src": "/vitals", "dest": "api/index.py" },
-    { "src": "/health-literacy/(.*)", "dest": "api/index.py" },
-    { "src": "/health-literacy", "dest": "api/index.py" },
-    { "src": "/surveys/(.*)", "dest": "api/index.py" },
-    { "src": "/surveys", "dest": "api/index.py" },
+    { "src": "/admin-stats/(.*)", "dest": "api/index.py" },
+    { "src": "/admin-stats", "dest": "api/index.py" },
     { "src": "/events/(.*)", "dest": "api/index.py" },
     { "src": "/events", "dest": "api/index.py" },
-    { "src": "/ema/(.*)", "dest": "api/index.py" },
-    { "src": "/ema", "dest": "api/index.py" },
     { "src": "/rewards/(.*)", "dest": "api/index.py" },
     { "src": "/rewards", "dest": "api/index.py" },
     { "src": "/api/github-token", "dest": "api/github-token.js" },

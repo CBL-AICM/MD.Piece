@@ -2,7 +2,7 @@
 健康積分／獎勵中心 API。
 
 把使用者「已經在做的事」換算成積分、等級、徽章與可兌換獎勵：
-  - 填問卷、每日打卡、連續打卡、完成 eHEALS → 自動累積積分（唯讀換算，不需新操作）
+  - 每日打卡、連續打卡、情緒/服藥紀錄 → 自動累積積分（唯讀換算，不需新操作）
   - 兌換獎勵 → 記一筆兌換意願（status='requested'），實品由院方線下發放
 
 事件流：
@@ -97,33 +97,21 @@ def _gather_activity(sb, pid):
     longest, current = rules.compute_streaks(active_days)
     triple_day = any({"symptom", "vital", "emotion"} <= s for s in day_sources.values())
 
-    survey_dates = sorted(
-        d for d in _scan_days(sb, "survey_responses", "patient_id", ["created_at"], pid)
-    )
-    try:
-        eheals_done = bool(
-            sb.table("ehl_results").select("id").eq("patient_id", pid).limit(1).execute().data
-        )
-    except Exception:
-        eheals_done = False
-
     medication_log_count = _count(sb, "medication_logs", "patient_id", pid)
 
     activity = {
-        "survey_count": len(survey_dates),
         "active_day_count": len(active_days),
         "longest_streak": longest,
         "current_streak": current,
-        "eheals_done": eheals_done,
         "emotion_days": len(emotion_days),
         "medication_log_count": medication_log_count,
         "triple_day": triple_day,
     }
-    return activity, day_sources, survey_dates
+    return activity, day_sources
 
 
-def _month_activity(day_sources, survey_dates, year_month):
-    """把全量的 day_sources / survey_dates 過濾到指定月份（'YYYY-MM'），組出
+def _month_activity(day_sources, year_month):
+    """把全量的 day_sources 過濾到指定月份（'YYYY-MM'），組出
     rewards_rules.puzzle_board 需要的 month-scoped activity dict。純過濾＋重算，
     不另外讀 DB（沿用 summary 已撈好的逐日來源；規則 2/3：不重複查表）。"""
     prefix = str(year_month)[:7]
@@ -132,35 +120,29 @@ def _month_activity(day_sources, survey_dates, year_month):
     longest, _current = rules.compute_streaks(active_days)
     emotion_days = sum(1 for s in month_days.values() if "emotion" in s)
     triple_day = any({"symptom", "vital", "emotion"} <= s for s in month_days.values())
-    survey_count = sum(1 for d in survey_dates if str(d)[:7] == prefix)
     return {
         "active_days": len(active_days),
-        "survey_count": survey_count,
         "emotion_days": emotion_days,
         "longest_streak": longest,
         "triple_day": triple_day,
     }
 
 
-def _completed_puzzle_months(day_sources, survey_dates):
+def _completed_puzzle_months(day_sources):
     """掃所有「有任何紀錄的月份」，回傳已集滿 9 片的月份清單（收藏冊用）。
     純函式組合，唯讀。每個月各自用 month-scoped activity 判 complete。"""
     months = {str(d)[:7] for d in day_sources}
-    months |= {str(d)[:7] for d in survey_dates}
     done = []
     for ym in sorted(months):
-        board = rules.puzzle_board(ym, _month_activity(day_sources, survey_dates, ym))
+        board = rules.puzzle_board(ym, _month_activity(day_sources, ym))
         if board["complete"]:
             done.append({"year_month": ym, "theme": board["theme"]})
     return done
 
 
-def _build_ledger(day_sources, survey_dates, points, eheals_done, limit=12):
+def _build_ledger(day_sources, points, limit=12):
     """組「最近加分明細」，讓使用者看得到分數怎麼來的（憲法 2 可解釋）。"""
     events = []
-    for d in survey_dates:
-        events.append({"date": d, "type": "survey", "label": "填寫問卷",
-                       "points": rules.PER_SURVEY})
     for d, srcs in day_sources.items():
         zh = "、".join(_SOURCE_ZH.get(s, s) for s in sorted(srcs))
         events.append({"date": d, "type": "checkin", "label": f"每日打卡（{zh}）",
@@ -169,10 +151,7 @@ def _build_ledger(day_sources, survey_dates, points, eheals_done, limit=12):
         pts = dict(rules.STREAK_MILESTONES)[threshold]
         events.append({"date": None, "type": "streak",
                        "label": f"連續打卡 {threshold} 天", "points": pts})
-    if eheals_done:
-        events.append({"date": None, "type": "eheals", "label": "完成健康識能量表",
-                       "points": rules.EHEALS_BONUS})
-    # 有日期的新到舊排前面，里程碑／識能（無日期）排後
+    # 有日期的新到舊排前面，里程碑（無日期）排後
     events.sort(key=lambda e: (e["date"] is not None, e["date"] or ""), reverse=True)
     return events[:limit]
 
@@ -194,7 +173,7 @@ def get_summary(patient_id: str = Query(...), me: dict | None = Depends(current_
     """唯讀彙整：earned/spent/available、等級進度、連續天數、徽章、加分明細。"""
     enforce_patient_scope(patient_id, me)
     sb = get_supabase()
-    activity, day_sources, survey_dates = _gather_activity(sb, patient_id)
+    activity, day_sources = _gather_activity(sb, patient_id)
     points = rules.compute_points(activity)
     earned = points["earned"]
     spent, _ = _spent_points(sb, patient_id)
@@ -211,7 +190,7 @@ def get_summary(patient_id: str = Query(...), me: dict | None = Depends(current_
             "active_days": activity["active_day_count"],
         },
         "badges": rules.evaluate_badges(activity),
-        "ledger": _build_ledger(day_sources, survey_dates, points, activity["eheals_done"]),
+        "ledger": _build_ledger(day_sources, points),
     }
 
 
@@ -223,12 +202,12 @@ def get_puzzle(patient_id: str = Query(...), month: str = Query(None, descriptio
     enforce_patient_scope(patient_id, me)
     ym = month or datetime.now(timezone.utc).strftime("%Y-%m")
     sb = get_supabase()
-    _activity, day_sources, survey_dates = _gather_activity(sb, patient_id)
-    board = rules.puzzle_board(ym, _month_activity(day_sources, survey_dates, ym))
+    _activity, day_sources = _gather_activity(sb, patient_id)
+    board = rules.puzzle_board(ym, _month_activity(day_sources, ym))
     return {
         "patient_id": patient_id,
         "board": board,
-        "collection": _completed_puzzle_months(day_sources, survey_dates),
+        "collection": _completed_puzzle_months(day_sources),
     }
 
 

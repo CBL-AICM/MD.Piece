@@ -66,11 +66,22 @@
     .ad-drawer-head h2 { font-size:1.1rem; margin:0; flex:1; color:var(--navy,#1a1730); }
     .ad-x { border:0; background:transparent; cursor:pointer; color:var(--content-muted,#8a8175); }
     .ad-empty { text-align:center; color:var(--content-muted,#8a8175); padding:30px; }
+    /* 患者人數統計卡 */
+    .ad-stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px; }
+    .ad-stat-headline { display:flex; flex-direction:column; justify-content:center; align-items:flex-start; }
+    .ad-stat-big { font-size:2.4rem; font-weight:800; line-height:1; color:var(--primary,#1e8a82); font-family:'JetBrains Mono',monospace; }
+    .ad-stat-cap { font-size:.82rem; font-weight:700; color:var(--navy,#1a1730); margin-top:4px; }
+    .ad-stat-card { margin-bottom:0; }
+    .ad-stat-card h3 { margin:0 0 8px; font-size:.9rem; }
+    .ad-dist-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:3px 0; font-size:.84rem; border-top:1px solid var(--line,#f0eadc); }
+    .ad-dist-row:first-of-type { border-top:0; }
+    .ad-dist-k { color:var(--content,#2a2420); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ad-dist-v { font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--primary,#1e8a82); flex:0 0 auto; }
   </style>
 </head>
 <body>
   <div id="app"><div class="ad-empty" data-i18n="admin.loading">載入中…</div></div>
-  <script src="js/i18n.js?v=2.0-a2-rewards"></script>
-  <script src="js/admin.js?v=3-rewards"></script>
+  <script src="js/i18n.js?v=2.0-a3-stats"></script>
+  <script src="js/admin.js?v=4-stats"></script>
 </body>
 </html>
