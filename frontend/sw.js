@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v161-food-cal";
+const CACHE_VERSION = "mdpiece-v162-color-scheme";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -8,7 +8,7 @@ const STATIC_ASSETS = [
   "/css/style.css?v=v118-visual-lang",
   "/css/visual-language.css?v=v1",
   "/css/medical-warm.css?v=v6-dark-no-grad",
-  "/css/v11-modern.css?v=v20-visual-lang",
+  "/css/v11-modern.css?v=v21-color-scheme",
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/css/ghibli-theme.css?v=v3",
   "/css/edu-codex.css?v=v3",
