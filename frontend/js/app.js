@@ -24980,6 +24980,17 @@ function reminders() {
     +     '<button onclick="_mobileRemSubmit()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="save" style="width:13px;height:13px"></i> ' + _T("app.c31.createReminder") + '</button>'
     +   '</div>'
 
+    // 鈴聲設定（mobile）— 與桌機共用 reminderRenderBellSettings()，靠 class rem-bell-list-target 一起 render，修正手機看不到鈴聲設定
+    +   '<div class="sec-head">'
+    +     '<h3 class="sec-title"><i data-lucide="music-4"></i> ' + _T("app.c31.bellSettings") + '</h3>'
+    +     '<span class="sec-spacer"></span>'
+    +     '<span style="font-size:11px;color:var(--text-muted)">' + _T("app.c31.bellPerTypeHint") + '</span>'
+    +   '</div>'
+    +   '<div class="card" style="padding:12px;margin-bottom:12px">'
+    +     '<div class="rem-bell-list-target"><p style="color:var(--text-muted);font-size:12px">' + _T("app.c31.loading") + '</p></div>'
+    +     '<p style="margin-top:8px;color:var(--text-muted);font-size:11px">' + _T("app.c31.bellLockScreenNote") + '</p>'
+    +   '</div>'
+
     +   '<div class="disclaimer-footer">'
     +     '<i data-lucide="info"></i>'
     +     '<span>' + _T("app.c31.reminderDisclaimer") + '</span>'
@@ -25058,7 +25069,7 @@ function reminders() {
     + '    <h3><i data-lucide="music-4" style="width:18px;height:18px;vertical-align:middle"></i> ' + _T("app.c31.bellSettings") + '</h3>'
     + '    <span style="font-size:0.8rem;color:var(--text-muted)">' + _T("app.c31.bellPerTypeHint") + '</span>'
     + '  </div>'
-    + '  <div id="rem-bell-list" style="margin-top:12px"><p style="color:var(--text-muted)">' + _T("app.c31.loading") + '</p></div>'
+    + '  <div id="rem-bell-list" class="rem-bell-list-target" style="margin-top:12px"><p style="color:var(--text-muted)">' + _T("app.c31.loading") + '</p></div>'
     + '  <p style="margin-top:8px;color:var(--text-muted);font-size:0.78rem">' + _T("app.c31.bellLockScreenNote") + '</p>'
     + '</div>'
     + '<div class="card">'
@@ -25219,14 +25230,15 @@ function reminderToggleWeekly() {
 
 function loadRemindersPage() {
   _remindersPid = getStablePatientId();
-  // 預設首次觸發時間 = 30 分鐘後
-  var when = document.getElementById('rem-when');
-  if (when && !when.value) {
-    var d = new Date(Date.now() + 30 * 60 * 1000);
-    var pad = function(n) { return ('0' + n).slice(-2); };
-    when.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-  }
+  // 預設首次觸發時間 = 30 分鐘後（桌機與手機表單都要預填，否則手機按「建立提醒」會卡在「請選擇時間」）
+  var d = new Date(Date.now() + 30 * 60 * 1000);
+  var pad = function(n) { return ('0' + n).slice(-2); };
+  var defaultWhen = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+    + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  ['rem-when', 'mobile-rem-when'].forEach(function(id) {
+    var when = document.getElementById(id);
+    if (when && !when.value) when.value = defaultWhen;
+  });
   _remindersBindDelegated();
   reminderRefreshList();
   _remindersSeenInboxIds = null;  // 初次載入不響鈴，只記住目前 inbox 狀態
@@ -25518,74 +25530,72 @@ function _ringBellForNewInboxArrivals(items) {
 }
 
 function reminderRenderBellSettings() {
-  var el = document.getElementById('rem-bell-list');
-  if (!el || !window.MDBell) return;
-  _remClear(el);
+  if (!window.MDBell) return;
+  // 桌機卡片 (#rem-bell-list) 與手機卡片都掛 class rem-bell-list-target → 一起 render
+  var targets = document.querySelectorAll('.rem-bell-list-target');
+  if (!targets.length) return;
   var presets = MDBell.listPresets();
-  _remBellKinds.forEach(function(item) {
-    var pref = MDBell.getPref(item.kind);
-    var row = _remH('div', {
-      style: 'display:grid;grid-template-columns:1.2fr 1.4fr 1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-glass)',
-    });
-    row.appendChild(_remH('div', null, _remH('span', { 'class': 'pill ' + _remKindPillCls(item.kind) }, item.label)));
+  targets.forEach(function(el) {
+    _remClear(el);
+    _remBellKinds.forEach(function(item) {
+      var pref = MDBell.getPref(item.kind);
+      var row = _remH('div', { 'class': 'rem-bell-row' });
+      row.appendChild(_remH('div', { 'class': 'rem-bell-label' }, _remH('span', { 'class': 'pill ' + _remKindPillCls(item.kind) }, item.label)));
 
-    // 鈴聲下拉
-    var sel = _remH('select', {
-      style: 'padding:6px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:transparent;color:inherit',
-      'data-action': 'bell-sound', 'data-kind': item.kind,
-    });
-    presets.forEach(function(p) {
-      var opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.label;
-      if (p.id === pref.bell_sound) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    sel.addEventListener('change', function() {
-      MDBell.savePref(item.kind, { bell_sound: sel.value, volume: pref.volume, enabled: pref.enabled }, API);
-      pref.bell_sound = sel.value;
-    });
-    row.appendChild(sel);
+      // 鈴聲下拉
+      var sel = _remH('select', {
+        'class': 'rem-bell-sound',
+        'data-action': 'bell-sound', 'data-kind': item.kind,
+      });
+      presets.forEach(function(p) {
+        var opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.label;
+        if (p.id === pref.bell_sound) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', function() {
+        MDBell.savePref(item.kind, { bell_sound: sel.value, volume: pref.volume, enabled: pref.enabled }, API);
+        pref.bell_sound = sel.value;
+      });
+      row.appendChild(sel);
 
-    // 音量
-    var volWrap = _remH('div', { style: 'display:flex;align-items:center;gap:6px' });
-    var volInput = _remH('input', {
-      type: 'range', min: '0', max: '100', value: String(pref.volume || 70),
-      style: 'flex:1',
-    });
-    var volLabel = _remH('span', { style: 'font-size:0.75rem;color:var(--text-muted);min-width:30px;text-align:right' }, String(pref.volume || 70));
-    volInput.addEventListener('input', function() { volLabel.textContent = volInput.value; });
-    volInput.addEventListener('change', function() {
-      pref.volume = parseInt(volInput.value, 10);
-      MDBell.savePref(item.kind, pref, API);
-    });
-    volWrap.appendChild(volInput);
-    volWrap.appendChild(volLabel);
-    row.appendChild(volWrap);
+      // 音量
+      var volWrap = _remH('div', { 'class': 'rem-bell-vol' });
+      var volInput = _remH('input', {
+        type: 'range', min: '0', max: '100', value: String(pref.volume || 70),
+      });
+      var volLabel = _remH('span', { 'class': 'rem-bell-vol-label' }, String(pref.volume || 70));
+      volInput.addEventListener('input', function() { volLabel.textContent = volInput.value; });
+      volInput.addEventListener('change', function() {
+        pref.volume = parseInt(volInput.value, 10);
+        MDBell.savePref(item.kind, pref, API);
+      });
+      volWrap.appendChild(volInput);
+      volWrap.appendChild(volLabel);
+      row.appendChild(volWrap);
 
-    // 預覽
-    var previewBtn = _remH('button', {
-      'class': 'secondary',
-      style: 'padding:4px 10px;font-size:0.8rem',
-    }, '🔊 ' + _T('app.c32.preview'));
-    previewBtn.addEventListener('click', function() {
-      MDBell.preview(sel.value, parseInt(volInput.value, 10));
-    });
-    row.appendChild(previewBtn);
+      // 預覽
+      var previewBtn = _remH('button', { 'class': 'secondary rem-bell-preview' }, '🔊 ' + _T('app.c32.preview'));
+      previewBtn.addEventListener('click', function() {
+        MDBell.preview(sel.value, parseInt(volInput.value, 10));
+      });
+      row.appendChild(previewBtn);
 
-    // 開關
-    var toggleLabel = _remH('label', { style: 'display:inline-flex;align-items:center;gap:4px;font-size:0.8rem' });
-    var toggle = _remH('input', { type: 'checkbox' });
-    toggle.checked = pref.enabled !== false;
-    toggle.addEventListener('change', function() {
-      pref.enabled = toggle.checked;
-      MDBell.savePref(item.kind, pref, API);
-    });
-    toggleLabel.appendChild(toggle);
-    toggleLabel.appendChild(document.createTextNode(_T('app.c32.enable')));
-    row.appendChild(toggleLabel);
+      // 開關
+      var toggleLabel = _remH('label', { 'class': 'rem-bell-toggle' });
+      var toggle = _remH('input', { type: 'checkbox' });
+      toggle.checked = pref.enabled !== false;
+      toggle.addEventListener('change', function() {
+        pref.enabled = toggle.checked;
+        MDBell.savePref(item.kind, pref, API);
+      });
+      toggleLabel.appendChild(toggle);
+      toggleLabel.appendChild(document.createTextNode(_T('app.c32.enable')));
+      row.appendChild(toggleLabel);
 
-    el.appendChild(row);
+      el.appendChild(row);
+    });
   });
 }
 
