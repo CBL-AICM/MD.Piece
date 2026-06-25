@@ -1,0 +1,184 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MD.Piece — 「拼圖診療室 / The Puzzle Clinic」component skin
+   ---------------------------------------------------------------------------
+   ADDITIVE, loaded LAST (after hanako.css). hanako.css already maps the Hanako
+   palette + font onto style.css tokens; THIS file pushes the *components* to the
+   puzzle-clinic manga look that lives in preview-puzzle-clinic.html:
+     · bold warm-ink strokes (2px)      · soft hand-drawn wobble corners
+     · layered "print" shadows          · sunk-paper inputs
+   Touches NO JavaScript and NO markup — every selector below is an existing
+   class in the live app, so all functionality is preserved. Remove the one
+   <link> in index.html to revert. Ink colour = hanako's --klein (theme-aware:
+   warm ink in light, cream in dark), sunk paper = hanako's --bg-soft.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* soft hand-drawn wobble corners (cozy-game, not crisp print) */
+  --pz-r-panel: 15px 13px 16px 14px / 14px 16px 13px 15px;
+  --pz-r-btn:   12px 10px 13px 11px / 11px 13px 10px 12px;
+  --pz-r-chip:  9px 7px 10px 8px / 8px 10px 7px 9px;
+  /* thin soft-ink manga strokes — ink colour follows theme via --klein */
+  --pz-stroke:      2px solid var(--klein);
+  --pz-stroke-thin: 1.5px solid var(--klein);
+  /* layered print shadows (gentle lift + hard offset edge) */
+  --pz-shadow:    0 3px 0 rgba(46,42,34,0.08), 0 6px 16px rgba(46,42,34,0.09);
+  --pz-shadow-sm: 0 2px 0 rgba(46,42,34,0.07), 0 3px 8px rgba(46,42,34,0.07);
+  --pz-press:     0 1px 0 rgba(46,42,34,0.12);
+  --pz-ease-soft: cubic-bezier(0.34, 1.4, 0.5, 1);
+  /* fixed dark ink for text/icons sitting ON a pale colour fill — stays legible
+     in BOTH themes (the teal fill never goes near-black), 看得清楚為核心 */
+  --pz-on-fill: #2E2A22;
+}
+html.dark, [data-theme="dark"] {
+  --pz-shadow:    0 3px 0 rgba(0,0,0,0.26), 0 6px 16px rgba(0,0,0,0.34);
+  --pz-shadow-sm: 0 2px 0 rgba(0,0,0,0.22), 0 3px 8px rgba(0,0,0,0.26);
+  --pz-press:     0 1px 0 rgba(0,0,0,0.30);
+}
+
+/* ─── CARDS / PANELS — ink stroke + wobble + print shadow ───────────────────*/
+.card, .glass-card, .panel, .stat-card, .feature-card, .info-card,
+.auth-card, .onboarding-card {
+  border: var(--pz-stroke) !important;
+  border-radius: var(--pz-r-panel) !important;
+  box-shadow: var(--pz-shadow) !important;
+}
+
+/* ─── PRIMARY BUTTONS / CTAs — outlined manga key, soft press ───────────────
+   Targets primary actions via the app's consistent -submit / -cta suffixes
+   plus .btn/.btn-primary. Icon + toggle buttons (-toggle, -btn) stay untouched
+   so the topbar/sidebar utility chrome keeps its light footprint. */
+.btn, .btn-primary, .btn-pill-primary, .auth-submit,
+[class*="-submit"], [class*="-cta"], .home-cta, .onboarding-next {
+  border: var(--pz-stroke) !important;
+  border-radius: var(--pz-r-btn) !important;
+  box-shadow: var(--pz-shadow-sm) !important;
+  transition: transform var(--t-fast, .13s) var(--pz-ease-soft),
+              box-shadow var(--t-fast, .13s) !important;
+}
+.btn:active, .btn-primary:active, .btn-pill-primary:active, .auth-submit:active,
+[class*="-submit"]:active, [class*="-cta"]:active,
+.home-cta:active, .onboarding-next:active {
+  transform: translateY(2px) !important;
+  box-shadow: var(--pz-press) !important;
+}
+
+/* ─── INPUTS — sunk paper well + ink stroke + chip wobble ───────────────────*/
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+textarea, select {
+  background: var(--bg-soft) !important;
+  border: var(--pz-stroke-thin) !important;
+  border-radius: var(--pz-r-chip) !important;
+}
+/* keep focus obvious (teal) on top of the manga stroke */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
+textarea:focus, select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow) !important;
+  outline: none !important;
+}
+
+/* ─── AUTH TABS — inactive thin, active heavy ink on raised paper ───────────*/
+.auth-tab {
+  border: var(--pz-stroke-thin) !important;
+  border-radius: var(--pz-r-btn) !important;
+}
+.auth-tab.active {
+  border: var(--pz-stroke) !important;
+  background: var(--bg-surface) !important;
+  box-shadow: var(--pz-shadow-sm) !important;
+}
+
+/* ─── 今日拼圖 6-slot board (app.js renderTodayDigestCard markup) ───────────
+   Empty slot = sunk paper + faint ink stroke; collected = teal fill, settle-pop.
+   Inherited CSS `fill`/`color` override the symbol path's fill="none"/currentColor. */
+.home-digest-pieces {
+  display: flex; gap: var(--sp-2, 8px); flex-wrap: wrap;
+  margin: 12px 0 14px;
+}
+.hd-piece {
+  width: 30px; height: 30px; flex: 0 0 auto;
+  color: var(--text-muted);            /* stroke (empty) */
+  fill: var(--bg-soft);                /* interior (empty = sunk paper) */
+  stroke-width: 3;
+  transition: transform var(--t-base, .24s) var(--pz-ease-soft),
+              fill var(--t-base, .24s), color var(--t-base, .24s);
+}
+.hd-piece.filled {
+  color: var(--teal, var(--accent));   /* stroke (collected) */
+  fill: var(--accent);                 /* interior (collected = teal) */
+  transform: scale(1.06);
+}
+
+/* ─── TODAY hero 花子君簽名 flourish（對齊設計稿 .hero .petal / .calm）──────────
+   .home-digest 本身已是 position:relative; overflow:hidden（style.css），右下角另有
+   既有拼圖 ::after motif。花瓣放右上角（不撞既有裝飾）：rose 花瓣 + 墨線描邊 +
+   芥末金花心，5s 呼吸微動。head 補右內距讓進度數字讓開花瓣；內容統一 z-index:1
+   壓在花瓣（z-index:0）之上。calm 句用 --rose 當花子簽名色（明暗皆讀得清）。 */
+.home-digest-petal {
+  position: absolute; top: 10px; right: 14px;
+  width: 40px; height: 40px; z-index: 0; pointer-events: none;
+  transform-origin: 50% 50%;
+  animation: hd-petal-breathe 5s var(--pz-ease-soft) infinite alternate;
+}
+.home-digest-petal path { fill: var(--rose); stroke: var(--klein); stroke-width: 1.5; }
+.home-digest-petal circle { fill: var(--warning); }
+@keyframes hd-petal-breathe {
+  from { transform: scale(1)    rotate(-2deg); opacity: .82; }
+  to   { transform: scale(1.08) rotate(3deg);  opacity: 1;   }
+}
+@media (prefers-reduced-motion: reduce) { .home-digest-petal { animation: none; } }
+.home-digest-head, .home-digest-pieces, .home-digest-calm, .home-digest-stats {
+  position: relative; z-index: 1;
+}
+.home-digest-head { padding-right: 56px !important; }   /* 進度數字讓開右上花瓣 */
+.home-digest-calm {
+  margin: 0 0 12px; font-size: var(--fs-sm, 0.9rem);
+  color: var(--rose) !important; font-weight: 500; letter-spacing: .01em;
+}
+
+/* ─── STRUCTURAL FRAME — define sidebar / topbar with a hairline ink edge ───*/
+.sidebar { border-right: var(--pz-stroke-thin) !important; }
+.topbar  { border-bottom: var(--pz-stroke-thin) !important; }
+
+/* ─── HOME — page-specific elements that don't share .card ──────────────────
+   .home-greet was hardcoded #fff + faint navy hairline; .care-chip active was
+   medical-navy. Bring both into the cream + ink + teal manga system. */
+.home-greet {
+  background: var(--bg-surface) !important;
+  border: var(--pz-stroke) !important;
+  border-radius: var(--pz-r-panel) !important;
+  box-shadow: var(--pz-shadow) !important;
+}
+/* 門診/住院 segmented toggle → sunk well, equal-width borders (no state shift) */
+.care-mode-mini {
+  background: var(--bg-soft) !important;
+  border: var(--pz-stroke-thin) !important;
+  border-radius: 999px !important;
+}
+.care-chip {
+  background: transparent !important;
+  color: var(--klein) !important;
+  border: 2px solid transparent !important;
+  border-radius: var(--pz-r-btn) !important;
+}
+.care-chip.active {
+  background: var(--accent) !important;
+  color: var(--pz-on-fill) !important;
+  border: var(--pz-stroke) !important;
+  box-shadow: var(--pz-shadow-sm) !important;
+}
+
+/* ─── PREVISIT — .pv-btn used the old medical-navy fill (the only other
+   navy-background button in the app besides .care-chip.active). Teal primary +
+   ink; the -ghost variant becomes a paper outline button. ──────────────────*/
+.pv-btn {
+  background: var(--accent) !important;
+  color: var(--pz-on-fill) !important;
+  border: var(--pz-stroke) !important;
+  border-radius: var(--pz-r-btn) !important;
+  box-shadow: var(--pz-shadow-sm) !important;
+}
+.pv-btn-ghost, .pv-btn-mini {           /* secondary actions → paper outline */
+  background: var(--bg-surface) !important;
+  color: var(--klein) !important;
+}
