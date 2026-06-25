@@ -3731,7 +3731,7 @@ window.addEventListener('mdpiece-lang-change', function () {
 });
 
 // ─── 獎勵中心（健康積分）─────────────────────────────────────
-// 把使用者既有的紀錄行為（填問卷 / 打卡 / 連續 / eHEALS）換算成積分、等級、
+// 把使用者既有的紀錄行為（每日打卡 / 連續紀錄）換算成積分、等級、
 // 徽章與可兌換獎勵。前端只負責呈現與兌換，所有換算都在 backend 純程式碼完成
 // （規則 5）；本頁是 additive 的可選頁，不動任何既有頁面或主畫面。
 
@@ -3789,7 +3789,7 @@ function rewards() {
     + '<section class="rw-wrap">'
     +   '<header class="rw-head">'
     +     '<h2><i data-lucide="award" style="width:22px;height:22px"></i> 獎勵中心</h2>'
-    +     '<p>把你平常的紀錄與回饋，化成積分與獎勵。填問卷、每天打卡、持續紀錄都會自動累積。</p>'
+    +     '<p>把你平常的健康紀錄，化成積分與獎勵。每天打卡、持續紀錄都會自動累積。</p>'
     +   '</header>'
     +   '<div id="rw-content"><div class="rw-empty">載入中…</div></div>'
     + '</section>';
