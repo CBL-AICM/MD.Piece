@@ -378,7 +378,6 @@ function _setActiveMobileTabForPage(page) {
 // 重新渲染前先換到新語言（下方 showPage on lang-change）。註冊在最前面以先執行。
 window.addEventListener('mdpiece-lang-change', function () {
   STORY_CATEGORIES = _bld_STORY_CATEGORIES();
-  STUDY_TP = _bld_STUDY_TP();
   _PREP_CHECKLISTS = _bld__PREP_CHECKLISTS();
   _H2_PIECES = _bld__H2_PIECES();
   _IP_EXAM_TYPES = _bld__IP_EXAM_TYPES();
@@ -3861,10 +3860,8 @@ function _rewardsHtml(s, catalog, puzzle) {
     +     '<div class="rw-stat"><div class="rw-stat-num">' + (streak.active_days || 0) + '</div><div class="rw-stat-label">累積打卡天數</div></div>'
     +   '</div>'
     +   '<div class="rw-chips" style="margin-top:var(--space-3)">'
-    +     '<span class="rw-chip">填問卷 <b>+' + (bd.survey || 0) + '</b></span>'
     +     '<span class="rw-chip">每日打卡 <b>+' + (bd.active_days || 0) + '</b></span>'
     +     '<span class="rw-chip">連續里程碑 <b>+' + (bd.streak || 0) + '</b></span>'
-    +     '<span class="rw-chip">健康識能 <b>+' + (bd.eheals || 0) + '</b></span>'
     +   '</div>'
     + '</div>';
 
@@ -3916,7 +3913,7 @@ function _rewardsHtml(s, catalog, puzzle) {
   var ledgerCard = ''
     + '<div class="rw-card">'
     +   '<div class="rw-card-title"><i data-lucide="receipt-text" style="width:18px;height:18px"></i> 最近加分明細</div>'
-    +   '<div class="rw-ledger">' + (led || '<div class="rw-empty">還沒有加分紀錄，開始填問卷或打卡就會出現囉。</div>') + '</div>'
+    +   '<div class="rw-ledger">' + (led || '<div class="rw-empty">還沒有加分紀錄，開始每天打卡記錄就會出現囉。</div>') + '</div>'
     + '</div>';
 
   var note = '<p class="rw-note">積分依你在 App 的紀錄自動換算，不需額外操作。兌換後由院方安排發放，實際品項以院方公告為準。</p>';
@@ -4622,644 +4619,15 @@ function finishAuth(user, isNewRegistration) {
     document.getElementById('app-wrapper').classList.add('show');
     showPage('home');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    // 慢性病問卷只在「註冊」時跳；登入不打擾。完成後再進原本的 tutorial onboarding。
+    // 慢性病資料收集只在「註冊」時跳；登入不打擾。完成後再進原本的 tutorial onboarding。
     if (isNewRegistration && typeof maybeShowProfileOnboarding === 'function') {
       maybeShowProfileOnboarding(function() {
-        // M07：profile 之後、tutorial 之前做 eHEALS 篩檢（低分自動套大字簡化版）
-        var next = (typeof maybeShowOnboarding === 'function') ? maybeShowOnboarding : function () {};
-        if (typeof maybeShowEhealsScreen === 'function') maybeShowEhealsScreen(next);
-        else next();
+        if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
       });
     } else if (typeof maybeShowOnboarding === 'function') {
       maybeShowOnboarding();
     }
   }, 250);
-}
-
-// ═══ M07 — 健康識能（eHEALS）篩檢 + 簡化模式 ════════════════════════
-// 住院模式 v2：8 題量表 → 低分自動套用「簡化模式」。
-// 設計決策：簡化模式直接重用既有 elder-mode（setMode('senior')），不另建一套。
-// 規則 12：篩檢任何失敗都不可擋住 onboarding 流程；標準分數不強制關掉使用者現有的大字偏好。
-var _ehlAnswers = {};
-var _ehlOnDone = null;
-
-// 首啟 / onboarding 用：做過或略過就直接往下走，否則開篩檢。
-function maybeShowEhealsScreen(onDone) {
-  onDone = (typeof onDone === 'function') ? onDone : function () {};
-  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-  try {
-    if (uid && (localStorage.getItem('mdpiece_ehl_done:' + uid) === '1'
-             || localStorage.getItem('mdpiece_ehl_skip:' + uid) === '1')) {
-      onDone(); return;
-    }
-  } catch (e) { /* ignore */ }
-  if (!uid) { openEhealsScreen({ onDone: onDone }); return; }
-  apiFetch(API + '/health-literacy/latest?patient_id=' + encodeURIComponent(uid))
-    .then(function (r) { return r.ok ? r.json() : { result: null }; })
-    .then(function (j) {
-      if (j && j.result) {
-        try { localStorage.setItem('mdpiece_ehl_done:' + uid, '1'); } catch (e) {}
-        onDone();
-      } else {
-        openEhealsScreen({ onDone: onDone });
-      }
-    })
-    .catch(function () { onDone(); });  // 後端不可用不擋流程
-}
-
-// 手動入口（設定頁）或 onboarding 都走這裡；忽略 skip 旗標（使用者主動要做）。
-function openEhealsScreen(opts) {
-  opts = opts || {};
-  // 已開著就別重開；但仍把 onDone 傳下去，避免 onboarding chain 卡住。
-  if (document.getElementById('ehl-sheet')) { if (opts.onDone) opts.onDone(); return; }
-  apiFetch(API + '/health-literacy/questions')
-    .then(function (r) { return r.json(); })
-    .then(function (data) { _ehlRender(data, opts); })
-    .catch(function () {
-      if (typeof showToast === 'function') showToast(_T("app.c5.quizLoadFailed"), 'warning');
-      if (opts.onDone) opts.onDone();
-    });
-}
-
-function _ehlRender(data, opts) {
-  _ehlAnswers = {};
-  _ehlOnDone = (opts && opts.onDone) || null;
-  var scale = data.scale || [_T("app.c5.stronglyDisagree"), _T("app.c5.disagree"), _T("app.c5.neutral"), _T("app.c5.agree"), _T("app.c5.stronglyAgree")];
-  var items = data.items || [];
-  var qsHtml = items.map(function (it) {
-    var optsHtml = scale.map(function (label, idx) {
-      var val = idx + 1;
-      return '<button type="button" class="ehl-opt" role="radio" aria-checked="false" data-q="' + it.id + '" data-v="' + val + '"'
-        + ' onclick="_ehlSelect(' + it.id + ',' + val + ',this)" aria-label="' + escapeHtml(label) + '">'
-        + '<span class="ehl-opt-dot"></span><span class="ehl-opt-label">' + escapeHtml(label) + '</span></button>';
-    }).join('');
-    return '<div class="ehl-q" id="ehl-q-' + it.id + '">'
-      + '<div class="ehl-q-text"><span class="ehl-q-num">' + it.id + '</span><span id="ehl-qlabel-' + it.id + '">' + escapeHtml(it.text) + '</span></div>'
-      + '<div class="ehl-opts" role="radiogroup" aria-labelledby="ehl-qlabel-' + it.id + '">' + optsHtml + '</div>'
-      + '</div>';
-  }).join('');
-
-  var sheet = document.createElement('div');
-  sheet.id = 'ehl-sheet';
-  sheet.className = 'ip-prep-sheet ehl-sheet';
-  sheet.innerHTML = ''
-    + '<div class="ip-prep-backdrop" onclick="skipEhealsScreen()"></div>'
-    + '<div class="ip-prep-panel ehl-panel" role="dialog" aria-label="' + _T("app.c5.healthLiteracyQuiz") + '" aria-modal="true" tabindex="-1">'
-    +   '<header class="ip-prep-head">'
-    +     '<div class="ip-prep-when">'
-    +       '<span class="ip-prep-when-num">' + _T("app.c5.healthLiteracyHelper") + '</span>'
-    +       '<span class="ip-prep-when-sub">' + _T("app.c5.quizSubtitle") + '</span>'
-    +     '</div>'
-    +     '<button type="button" class="ip-prep-close" onclick="skipEhealsScreen()" aria-label="' + _T("app.c5.close") + '">'
-    +       '<i data-lucide="x" style="width:18px;height:18px"></i>'
-    +     '</button>'
-    +   '</header>'
-    +   '<p class="ehl-intro">' + escapeHtml(data.intro || '') + '</p>'
-    +   '<div class="ehl-progress-row">'
-    +     '<div class="ehl-progress" role="progressbar" aria-valuemin="0" aria-valuemax="' + items.length + '" aria-valuenow="0" aria-label="' + _T("app.c5.screeningProgress") + '">'
-    +       '<div class="ehl-progress-fill" id="ehl-progress-fill"></div>'
-    +     '</div>'
-    +     '<span class="ehl-progress-text" id="ehl-progress-text" aria-live="polite">0/' + items.length + '</span>'
-    +   '</div>'
-    +   '<div class="ehl-body">' + qsHtml + '</div>'
-    +   '<div class="ehl-foot">'
-    +     '<button type="button" id="ehl-submit" class="ip-prep-cta ehl-cta" disabled onclick="submitEhealsScreen()">'
-    +       '<i data-lucide="wand-2" style="width:16px;height:16px"></i>'
-    +       '<span>' + _T("app.c5.doneSetMeUp") + '（<span id="ehl-count">0</span>/' + items.length + '）</span>'
-    +     '</button>'
-    +     '<button type="button" class="ip-prep-secondary" onclick="skipEhealsScreen()">' + _T("app.c5.maybeLater") + '</button>'
-    +     '<p class="ehl-disc">' + escapeHtml(data.disclaimer || '') + '</p>'
-    +   '</div>'
-    + '</div>';
-  // Esc 關閉（無障礙鍵盤操作）
-  sheet.addEventListener('keydown', function (e) { if (e.key === 'Escape') skipEhealsScreen(); });
-  document.body.appendChild(sheet);
-  requestAnimationFrame(function () {
-    sheet.classList.add('open');
-    var panel = sheet.querySelector('.ehl-panel');
-    if (panel) { try { panel.focus(); } catch (e) {} }  // 開啟時把焦點移進對話框
-  });
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function _ehlSelect(qid, val, btn) {
-  _ehlAnswers[qid] = val;
-  var row = document.getElementById('ehl-q-' + qid);
-  if (row) {
-    row.querySelectorAll('.ehl-opt').forEach(function (b) {
-      var sel = (b === btn);
-      b.classList.toggle('is-sel', sel);
-      b.setAttribute('aria-checked', sel ? 'true' : 'false');
-    });
-    row.classList.add('is-answered');
-  }
-  var total = document.querySelectorAll('#ehl-sheet .ehl-q').length;
-  var answered = Object.keys(_ehlAnswers).length;
-  var cnt = document.getElementById('ehl-count'); if (cnt) cnt.textContent = answered;
-  // 進度條 + 可朗讀狀態
-  var pct = total ? Math.round(answered / total * 100) : 0;
-  var fill = document.getElementById('ehl-progress-fill'); if (fill) fill.style.width = pct + '%';
-  var ptext = document.getElementById('ehl-progress-text'); if (ptext) ptext.textContent = answered + '/' + total;
-  var pbar = document.querySelector('#ehl-sheet .ehl-progress'); if (pbar) pbar.setAttribute('aria-valuenow', answered);
-  var sub = document.getElementById('ehl-submit'); if (sub) sub.disabled = answered < total;
-}
-
-function submitEhealsScreen() {
-  var sheet = document.getElementById('ehl-sheet'); if (!sheet) return;
-  var total = sheet.querySelectorAll('.ehl-q').length;
-  var answers = [];
-  for (var i = 1; i <= total; i++) {
-    if (!_ehlAnswers[i]) return;  // 還沒答完
-    answers.push(_ehlAnswers[i]);
-  }
-  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-  var sub = document.getElementById('ehl-submit'); if (sub) sub.disabled = true;
-  apiFetch(API + '/health-literacy/screen', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ patient_id: uid, answers: answers }),
-  })
-    .then(function (r) { return r.json(); })
-    .then(function (res) {
-      try { if (uid) localStorage.setItem('mdpiece_ehl_done:' + uid, '1'); } catch (e) {}
-      // 低分 → 自動套大字簡化版（elder-mode）；標準分數不動使用者現有偏好。
-      if (res && res.recommended_mode === 'simplified' && typeof setMode === 'function') {
-        setMode('senior');
-      }
-      if (typeof showToast === 'function') {
-        showToast((res && res.explanation) || _T('app.c6.doneThanks'), 'success');
-      }
-      _ehlFinish();
-    })
-    .catch(function () {
-      if (typeof showToast === 'function') showToast(_T('app.c6.submitFailRetry'), 'warning');
-      if (sub) sub.disabled = false;
-    });
-}
-
-// 略過 / 關閉（X、背景、稍後再說）：記旗標避免下次自動再跳，但設定頁仍可手動再開。
-function skipEhealsScreen() {
-  var uid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-  try { if (uid) localStorage.setItem('mdpiece_ehl_skip:' + uid, '1'); } catch (e) {}
-  _ehlFinish();
-}
-
-function _ehlFinish() {
-  var cb = _ehlOnDone; _ehlOnDone = null;
-  closeEhealsScreen();
-  if (typeof cb === 'function') setTimeout(cb, 240);
-}
-
-function closeEhealsScreen() {
-  var sheet = document.getElementById('ehl-sheet'); if (!sheet) return;
-  sheet.classList.remove('open');
-  setTimeout(function () { if (sheet.parentNode) sheet.remove(); }, 220);
-}
-
-// ═══ 研究問卷（《MD_Piece 整合實驗設計與問卷 v2》三實驗可行性研究）═══════════
-// 病患端：研究問卷 hub（選時點 → 填答 runner）；醫師端：分析後台 + CSV 匯出。
-// 計分在後端（規則 5）；前端只負責渲染題目、收作答、顯示彙整。
-var STUDY_KEY = 'mdpiece_feasibility_v2';
-function _bld_STUDY_TP() { return [
-  { id: 'D0', label: _T('app.c6.tpD0') },
-  { id: 'D14', label: _T('app.c6.tpD14') },
-  { id: 'D28', label: _T('app.c6.tpD28') },
-  { id: 'FU48', label: _T('app.c6.tpFU48') },
-]; }
-var STUDY_TP = _bld_STUDY_TP();
-var _studyState = { answers: {}, key: null, tp: null };
-
-// 問卷時程：以帳號建立日為 Day 0，按天數窗格只推送「目前該填」的那一批，
-// 不把整個流程一次攤開（避免讓使用者覺得在跑研究протокол）。
-// FU48（回診後 48 小時）是事件型，需回診訊號才觸發，不放進日數窗格。
-var STUDY_WINDOWS = [
-  { tp: 'D0',  from: 0,  to: 14 },
-  { tp: 'D14', from: 14, to: 28 },
-  { tp: 'D28', from: 28, to: Infinity },
-];
-function _studyElapsedDays() {
-  var u = getCurrentUser();
-  var iso = u && u.created_at;
-  if (!iso) return 0;
-  var t0 = new Date(iso).getTime();
-  if (isNaN(t0)) return 0;
-  return Math.max(0, Math.floor((Date.now() - t0) / 86400000));
-}
-function _studyCurrentTp() {
-  var d = _studyElapsedDays();
-  for (var i = 0; i < STUDY_WINDOWS.length; i++) {
-    if (d >= STUDY_WINDOWS[i].from && d < STUDY_WINDOWS[i].to) return STUDY_WINDOWS[i].tp;
-  }
-  return 'D28';
-}
-
-// 回診後回饋（FU48）視窗：綁「實際回診日」而非註冊日 +N，因為不是每位患者
-// 都剛好 D14/D28。最近一筆「已完成」回診，回診後 2–16 天內視為該填回診回饋。
-var STUDY_FU48_FROM_DAYS = 2;
-var STUDY_FU48_TO_DAYS = 16;
-var _studyFu48Active = false;   // 由 _studyRefreshFu48() 依回診記錄更新
-function _studyFu48ActiveFor(followUps) {
-  if (!followUps || !followUps.length) return false;
-  var now = Date.now();
-  for (var i = 0; i < followUps.length; i++) {
-    var f = followUps[i] || {};
-    if ((f.status || '') !== 'completed') continue;
-    var ds = _foDateOnly(f.scheduled_date);
-    if (!ds) continue;
-    var elapsed = Math.floor((now - new Date(ds + 'T00:00:00').getTime()) / 86400000);
-    if (elapsed >= STUDY_FU48_FROM_DAYS && elapsed < STUDY_FU48_TO_DAYS) return true;
-  }
-  return false;
-}
-// 是否該推送某份問卷：落在目前日數窗格，或（FU48 視窗開啟時）屬於 FU48。
-function _studyDueNow(p, curTp) {
-  var tps = p.timepoints || [];
-  if (tps.indexOf(curTp) >= 0) return true;
-  return _studyFu48Active && tps.indexOf('FU48') >= 0;
-}
-// 這份問卷該以哪個時點提交：優先用目前日數窗格，否則（FU48 視窗）用 FU48。
-function _studySubmitTp(p, curTp) {
-  return ((p.timepoints || []).indexOf(curTp) >= 0) ? curTp : 'FU48';
-}
-// 這份問卷現在是否「該填且還沒填」：窗格內 + 對應時點尚未完成。
-function _studyPartDue(p, curTp) {
-  if (!_studyDueNow(p, curTp)) return false;
-  var tp = _studySubmitTp(p, curTp);
-  return !(((p.by_timepoint || {})[tp] || {}).completed);
-}
-// 某時點是否整批填完（該時點適用的問卷都已完成）。
-function _studyTpDone(parts, tp) {
-  var applicable = 0, done = 0;
-  for (var i = 0; i < parts.length; i++) {
-    if (((parts[i].timepoints) || []).indexOf(tp) < 0) continue;
-    applicable++;
-    if (((parts[i].by_timepoint || {})[tp] || {}).completed) done++;
-  }
-  return applicable > 0 && done === applicable;
-}
-// hub 時程一覽：讓病患看懂「現在在哪、之後還有哪些、回診後會再來一次」。
-function _studyRenderTimeline(parts, curTp) {
-  var nowTp = _studyFu48Active ? 'FU48' : curTp;
-  var chips = STUDY_TP.map(function (t) {
-    var done = _studyTpDone(parts, t.id);
-    var isNow = t.id === nowTp;
-    var bg = isNow ? 'var(--teal,#2F8378)' : (done ? 'var(--green-soft,#e7f3ec)' : '#f3f1ee');
-    var col = isNow ? '#fff' : (done ? 'var(--green-deep,#2c6a45)' : 'var(--text-dim,#7a716a)');
-    var tail = isNow ? '（' + _T('app.c6.scheduleNow') + '）' : '';
-    return '<span style="display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;'
-      + 'font-size:11.5px;font-weight:600;background:' + bg + ';color:' + col + '">'
-      + (done ? '✓ ' : '') + escapeHtml(t.label) + tail + '</span>';
-  }).join('');
-  return '<div class="sec-head" style="margin-top:6px"><h3 class="sec-title">' + _T('app.c6.scheduleTitle') + '</h3></div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">' + chips + '</div>'
-    + '<p class="study-meta">' + _T('app.c6.scheduleFu48Note') + '</p>';
-}
-// 依患者回診記錄刷新 FU48 視窗狀態（純日期判斷，規則 5）。失敗不擋 UI。
-function _studyRefreshFu48() {
-  return fetchFollowUps()
-    .then(function (rows) { _studyFu48Active = _studyFu48ActiveFor(rows); })
-    .catch(function () { _studyFu48Active = false; });
-}
-// 拿掉標題開頭的研究編號（如「B1. 」），只留白話標題。
-function _studyCleanTitle(t) { return String(t || '').replace(/^[A-E]\d*\.\s*/, ''); }
-
-function _studyCode() { try { return localStorage.getItem('mdpiece_study_code') || ''; } catch (e) { return ''; } }
-function _setStudyCode(v) { try { localStorage.setItem('mdpiece_study_code', (v || '').trim()); } catch (e) {} }
-
-function _studyEnsureStyles() {
-  if (document.getElementById('study-styles')) return;
-  var css = ''
-    + '.study-q{padding:14px 0;border-top:1px solid var(--line,#eee)}'
-    + '.study-q:first-child{border-top:0}'
-    + '.study-qt{font-size:.95rem;font-weight:600;color:var(--content,#2a2420);line-height:1.5;margin-bottom:10px}'
-    + '.study-opts{display:flex;flex-wrap:wrap;gap:8px}'
-    + '.study-opts.study-col{flex-direction:column}'
-    // 數字量表：等寬格狀排列，10 點變整齊的 5+5 而非凌亂的 6+4，按鈕加大好點。
-    + '.study-opts.study-scale{display:grid;gap:8px}'
-    + '.study-scale .study-opt{min-width:0;padding:13px 0;text-align:center;justify-content:center;font-size:1.02rem}'
-    + '.study-na-row{margin-top:8px;display:flex}'
-    + '.study-opt{min-width:40px;padding:9px 12px;border:1.4px solid var(--line,#d9d2c5);border-radius:11px;'
-    + 'background:var(--surface-1,#fff);color:var(--content,#2a2420);font-size:.9rem;font-weight:600;cursor:pointer;line-height:1.3;'
-    + 'display:inline-flex;align-items:center;transition:background .12s,border-color .12s,transform .06s}'
-    + '.study-opt:active{transform:scale(.96)}'
-    + '.study-opt.study-wide{width:100%;text-align:left}'
-    + '.study-opt.is-sel{background:var(--primary,#1e8a82);border-color:var(--primary,#1e8a82);color:#fff;box-shadow:0 2px 8px -3px var(--primary,#1e8a82)}'
-    + '.study-opt.study-na.is-sel{background:var(--content-muted,#8a8175);border-color:var(--content-muted,#8a8175);box-shadow:none}'
-    + '.study-ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--content-subtle,#9a9087);margin-top:6px}'
-    // 進度條：讓填答者（尤其長者）看得到「還剩幾題」，降低未知感。
-    + '.study-prog{display:flex;align-items:center;gap:9px;margin:0 2px 10px}'
-    + '.study-prog-bar{flex:1;height:7px;border-radius:999px;background:var(--line,#ece7dd);overflow:hidden}'
-    + '.study-prog-bar>i{display:block;height:100%;width:0;background:var(--teal,#2F8378);border-radius:999px;transition:width .25s ease}'
-    + '.study-prog span{flex:0 0 auto;font-size:.76rem;font-weight:600;color:var(--content-subtle,#9a9087)}'
-    // 問卷標題在病患端用親切的無襯線字，不沿用 ip-prep 的等寬程式字（僅 study 範圍內覆寫）。
-    + '#study-run .ip-prep-when-num,#study-sheet .ip-prep-when-num{font-family:var(--font-sans,system-ui,-apple-system,"Noto Sans TC",sans-serif);letter-spacing:0;font-size:1.18rem;line-height:1.38}'
-    + '.study-chk{display:flex;align-items:center;gap:8px;font-size:.9rem;padding:6px 2px}'
-    + '.study-text{width:100%;border:1.4px solid var(--line,#d9d2c5);border-radius:11px;padding:10px;font:inherit;box-sizing:border-box}'
-    + '.study-tbl{width:100%;border-collapse:collapse;font-size:.82rem;margin:6px 0 4px}'
-    + '.study-tbl th,.study-tbl td{border:1px solid var(--line,#eee);padding:5px 8px;text-align:center}'
-    + '.study-tbl th{background:var(--surface-2,#f6f1e7);font-weight:600}'
-    + '.study-r{font-family:var(--font-mono,monospace);font-weight:700}'
-    + '.study-meta{font-size:.78rem;color:var(--content-subtle,#9a9087);margin:2px 0 10px;line-height:1.5}'
-    + '.study-nudge{position:fixed;left:12px;right:12px;bottom:84px;z-index:9000;display:flex;align-items:center;gap:9px;'
-    + 'padding:11px 13px;border-radius:14px;background:var(--surface-1,#fff);color:var(--content,#2a2420);'
-    + 'border:1.4px solid var(--teal,#2F8378);box-shadow:0 8px 24px -10px rgba(31,61,88,.35);'
-    + 'font-size:.86rem;line-height:1.4;opacity:0;transform:translateY(10px);transition:opacity .22s,transform .22s;max-width:520px;margin:0 auto}'
-    + '.study-nudge.open{opacity:1;transform:translateY(0)}'
-    + '.study-nudge i{color:var(--teal,#2F8378)}'
-    + '.study-nudge-go{flex:0 0 auto;border:none;border-radius:999px;background:var(--teal,#2F8378);color:#fff;'
-    + 'font-size:.82rem;font-weight:600;padding:7px 13px;cursor:pointer}'
-    + '.study-nudge-x{flex:0 0 auto;border:none;background:transparent;color:var(--content-subtle,#9a9087);font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}'
-    // ── 親切的 2D 平面化外觀（additive，只在 .study-flat 範圍內加強，不覆寫既有 .study-opt 等）──
-    // 粗一點的線條 + 圓潤色塊，配合 tokens 變數；長者模式 --scale 自動跟著放大字級。
-    + '.study-flat .study-opt{border-width:2px;border-radius:13px}'
-    + '.study-flat .study-opt:hover{border-color:var(--teal,#2F8378)}'
-    + '.study-flat .study-opt.is-sel{box-shadow:0 3px 0 -1px var(--teal-deep,#256B61)}'
-    + '.study-flat .study-prog-bar{height:9px;border:1.6px solid var(--line,#ece7dd);background:var(--surface-2,#f6f1e7)}'
-    // 進題逐格淡入：克制、尊重 prefers-reduced-motion（下方 @media 關掉）。
-    + '.study-flat .study-q{animation:studyQIn .32s var(--qd,0s) both cubic-bezier(.2,.7,.3,1)}'
-    + '@keyframes studyQIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}'
-    + '@media (prefers-reduced-motion:reduce){.study-flat .study-q{animation:none}}';
-  var st = document.createElement('style'); st.id = 'study-styles'; st.textContent = css;
-  document.head.appendChild(st);
-}
-
-// ── 不定時隨即提醒：問卷到期未填時，在使用 App 過程中於不固定時點輕推一下。
-// 不是固定鬧鐘（那是後端 D14/D28 排程做的）；這裡靠「下次開 App 時、且過了
-// 一段隨機冷卻（2–8 小時）」自然觸發，填完就不再出現。
-function _studyMaybeNudge() {
-  var u = getCurrentUser();
-  if (!u || !u.id || u.role === 'doctor') return;
-  var nextAt = 0;
-  try { nextAt = parseInt(localStorage.getItem('mdpiece_study_nudge_next') || '0', 10) || 0; } catch (e) {}
-  if (Date.now() < nextAt) return;
-  var pid = getStablePatientId();
-  _studyRefreshFu48().then(function () {
-    return apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary');
-  })
-    .then(function (r) { return r && r.ok ? r.json() : null; })
-    .then(function (data) {
-      if (!data) return;
-      var curTp = _studyCurrentTp();
-      var due = (data.parts || []).filter(function (p) { return _studyPartDue(p, curTp); });
-      // 下次提醒落在 2–8 小時後的隨機時點（不定時）。
-      var gap = Math.round((2 + Math.random() * 6) * 3600000);
-      try { localStorage.setItem('mdpiece_study_nudge_next', String(Date.now() + gap)); } catch (e) {}
-      if (due.length) _studyShowNudge();
-    })
-    .catch(function () {});
-}
-
-function _studyShowNudge() {
-  if (document.getElementById('study-nudge')) return;
-  _studyEnsureStyles();
-  var el = document.createElement('div');
-  el.id = 'study-nudge';
-  el.className = 'study-nudge';
-  el.innerHTML = ''
-    + '<i data-lucide="clipboard-pen" style="width:16px;height:16px;flex:0 0 auto"></i>'
-    + '<span style="flex:1">' + _T('app.c6.nudgeText') + '</span>'
-    + '<button type="button" class="study-nudge-go" onclick="closeStudyNudge();openStudyHub()">' + _T('app.c6.nudgeGo') + '</button>'
-    + '<button type="button" class="study-nudge-x" aria-label="' + _T('app.c6.close') + '" onclick="closeStudyNudge()">&times;</button>';
-  document.body.appendChild(el);
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-  requestAnimationFrame(function () { el.classList.add('open'); });
-  el._t = setTimeout(closeStudyNudge, 9000);
-}
-
-function closeStudyNudge() {
-  var el = document.getElementById('study-nudge'); if (!el) return;
-  clearTimeout(el._t); el.classList.remove('open');
-  setTimeout(function () { if (el.parentNode) el.remove(); }, 250);
-}
-
-// ── 病患：研究問卷 hub ─────────────────────────────────────
-function openStudyHub() {
-  var user = getCurrentUser();
-  if (!user || !user.id) { if (typeof showToast === 'function') showToast(_T('app.c6.loginBeforeStudy'), 'warning'); return; }
-  var pid = getStablePatientId();
-  // 到期才推送：以註冊日為 Day 0，請後端冪等排程 D14／D28 提醒（失敗不擋 UI）。
-  if (user.created_at) {
-    apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid)
-      + '/ensure-reminders?start_date=' + encodeURIComponent(user.created_at), { method: 'POST' }).catch(function () {});
-  }
-  // FU48 視窗依患者實際回診記錄判斷（不是每位都 D14/D28），開 hub 前先刷新。
-  _studyRefreshFu48().then(function () {
-    return apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid) + '/summary');
-  })
-    .then(function (r) { if (!r || !r.ok) throw new Error('load'); return r.json(); })
-    .then(function (data) { _studyRenderHub(data); })
-    .catch(function () { if (typeof showToast === 'function') showToast(_T('app.c6.studyLoadFail'), 'warning'); });
-}
-
-function _studyRenderHub(data) {
-  _studyEnsureStyles();
-  var ex = document.getElementById('study-sheet'); if (ex) ex.remove();
-  var parts = data.parts || [];
-  var adh = data.adherence || {};
-  // 只推送「目前時程窗格」對應、且還沒填的問卷；FU48 視窗開啟時一併納入回診回饋。
-  var curTp = _studyCurrentTp();
-  var dueRows = parts.filter(function (p) {
-    return _studyPartDue(p, curTp);
-  }).map(function (p) {
-    var subTp = _studySubmitTp(p, curTp);
-    return '<div class="settings-row" style="cursor:pointer" onclick="openStudySurvey(\'' + p.key + '\',\'' + subTp + '\')">'
-      + '<div class="ico"><i data-lucide="clipboard-pen"></i></div>'
-      + '<div style="flex:1"><div class="name">' + escapeHtml(_studyCleanTitle(p.title)) + '</div>'
-      + '<div class="sub">' + _T('app.c6.tapToFill') + '</div></div>'
-      + '<div class="chev"><i data-lucide="chevron-right"></i></div></div>';
-  }).join('');
-  var tpHtml = dueRows
-    ? '<div class="sec-head"><h3 class="sec-title">' + _T('app.c6.dueHeader') + '</h3></div>'
-      + '<div class="settings-list" style="margin-bottom:14px">' + dueRows + '</div>'
-    : '<p class="study-meta" style="padding:12px 4px">' + _T('app.c6.allCaughtUp') + '</p>';
-
-  var ehlNote = data.eheals_m07
-    ? '<p class="study-meta">' + _Tf('app.c6.ehealsImported', { score: escapeHtml(String(data.eheals_m07.total_score)) }) + '</p>'
-    : '';
-  var adhNote = '<p class="study-meta">' + _T('app.c6.adhActiveDays') + '：<b>' + (adh.active_days || 0) + '</b> ' + _T('app.c6.daysUnit') + '（' + _T('app.c6.srcSymptoms') + ' '
-    + (((adh.by_source || {}).symptoms || {}).days || 0) + '／' + _T('app.c6.srcVitals') + ' '
-    + (((adh.by_source || {}).vitals || {}).days || 0) + '／' + _T('app.c6.srcSleep') + ' '
-    + (((adh.by_source || {}).sleep || {}).days || 0) + '）。</p>';
-
-  var sheet = document.createElement('div');
-  sheet.id = 'study-sheet';
-  sheet.className = 'ip-prep-sheet';
-  sheet.innerHTML = ''
-    + '<div class="ip-prep-backdrop" onclick="closeStudySheet()"></div>'
-    + '<div class="ip-prep-panel" role="dialog" aria-label="' + _T('app.c6.studySurvey') + '" aria-modal="true" tabindex="-1" style="max-height:88vh;overflow:auto">'
-    +   '<header class="ip-prep-head">'
-    +     '<div class="ip-prep-when"><span class="ip-prep-when-num">' + _T('app.c6.studySurvey') + '</span>'
-    +       '<span class="ip-prep-when-sub">' + _T('app.c6.studySubtitle') + '</span></div>'
-    +     '<button type="button" class="ip-prep-close" onclick="closeStudySheet()" aria-label="' + _T('app.c6.close') + '"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
-    +   '</header>'
-    +   '<div style="padding:0 2px">'
-    +     '<label style="font-size:.82rem;color:var(--text-muted);display:block;margin:6px 2px 4px">' + _T('app.c6.subjectCode') + '</label>'
-    +     '<input id="study-code" class="study-text" style="margin-bottom:6px" value="' + escapeHtml(_studyCode()) + '" oninput="_setStudyCode(this.value)" placeholder="' + _T('app.c6.subjectCodePh') + '" />'
-    +     adhNote + ehlNote
-    +     tpHtml
-    +     _studyRenderTimeline(parts, curTp)
-    +     '<p class="study-meta">' + _T('app.c6.studyNoRightWrong') + '</p>'
-    +   '</div>'
-    + '</div>';
-  document.body.appendChild(sheet);
-  requestAnimationFrame(function () { sheet.classList.add('open'); });
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function closeStudySheet() {
-  var s = document.getElementById('study-sheet'); if (!s) return;
-  s.classList.remove('open');
-  setTimeout(function () { if (s.parentNode) s.remove(); }, 220);
-}
-
-// ── 病患：單一問卷 runner ──────────────────────────────────
-function openStudySurvey(key, tp) {
-  apiFetch(API + '/surveys/' + encodeURIComponent(key))
-    .then(function (r) { if (!r.ok) throw new Error('load'); return r.json(); })
-    .then(function (s) { _studyRenderSurvey(s, tp); })
-    .catch(function () { if (typeof showToast === 'function') showToast(_T('app.c6.surveyLoadFail'), 'warning'); });
-}
-
-function _studyItemHtml(it, scoring, delay) {
-  var scale = scoring.scale || {};
-  var t = it.type;
-  // 進場階梯延遲（秒）注入 --qd；不傳則 0。reduced-motion 由 CSS 整段關掉動畫。
-  var qStyle = ' style="--qd:' + (Number(delay) || 0) + 's"';
-  if (t === 'likert') {
-    var mn = (it.min != null ? it.min : scale.min);
-    var mx = (it.max != null ? it.max : scale.max);
-    var pts = scale.point_labels || null;
-    var btns = '';
-    var n = 0;
-    for (var v = mn; v <= mx; v++) {
-      var lbl = pts ? (pts[v - 1] != null ? pts[v - 1] : v) : v;
-      btns += '<button type="button" class="study-opt" data-q="' + it.id + '" data-v="' + v + '" '
-        + 'onclick="_studySelect(\'' + it.id + '\',' + v + ',this)">' + escapeHtml(String(lbl)) + '</button>';
-      n++;
-    }
-    // ≤7 點排成一列；8–10 點折成兩列等寬（10 → 5+5），維持整齊好點。
-    var cols = n <= 7 ? n : Math.ceil(n / 2);
-    var naBtn = scale.na
-      ? '<div class="study-na-row"><button type="button" class="study-opt study-na" data-q="' + it.id + '" onclick="_studySelect(\'' + it.id + '\',\'NA\',this)">N/A</button></div>' : '';
-    var ends = (scale.min_label || scale.max_label)
-      ? '<div class="study-ends"><span>' + escapeHtml(scale.min_label || '') + '</span><span>' + escapeHtml(scale.max_label || '') + '</span></div>' : '';
-    return '<div class="study-q" id="study-q-' + it.id + '"' + qStyle + '><div class="study-qt">' + escapeHtml(it.text) + '</div>'
-      + '<div class="study-opts study-scale" style="grid-template-columns:repeat(' + cols + ',1fr)">' + btns + '</div>'
-      + ends + naBtn + '</div>';
-  }
-  if (t === 'single') {
-    var o1 = (it.options || []).map(function (o) {
-      return '<button type="button" class="study-opt study-wide" data-q="' + it.id + '" data-v="' + escapeHtml(o) + '" '
-        + 'onclick="_studySelect(\'' + it.id + '\',this.getAttribute(\'data-v\'),this)">' + escapeHtml(o) + '</button>';
-    }).join('');
-    return '<div class="study-q" id="study-q-' + it.id + '"' + qStyle + '><div class="study-qt">' + escapeHtml(it.text) + '</div>'
-      + '<div class="study-opts study-col">' + o1 + '</div></div>';
-  }
-  if (t === 'multi') {
-    var o2 = (it.options || []).map(function (o) {
-      return '<label class="study-chk"><input type="checkbox" value="' + escapeHtml(o) + '" onchange="_studyMulti(\'' + it.id + '\')"> ' + escapeHtml(o) + '</label>';
-    }).join('');
-    return '<div class="study-q" id="study-q-' + it.id + '"' + qStyle + '><div class="study-qt">' + escapeHtml(it.text) + '</div>'
-      + '<div class="study-opts study-col">' + o2 + '</div></div>';
-  }
-  return '<div class="study-q" id="study-q-' + it.id + '"' + qStyle + '><div class="study-qt">' + escapeHtml(it.text) + '</div>'
-    + '<textarea class="study-text" data-q="' + it.id + '" rows="3" oninput="_studyText(\'' + it.id + '\',this.value)"></textarea></div>';
-}
-
-function _studyRenderSurvey(s, tp) {
-  _studyEnsureStyles();
-  _studyState = { answers: {}, key: s.key, tp: tp, total: (s.items || []).length };
-  var ex = document.getElementById('study-run'); if (ex) ex.remove();
-  var scoring = s.scoring || {};
-  var body = (s.items || []).map(function (it, i) {
-    // 逐題進場的階梯延遲（克制：最多累到 0.36s），尊重 reduced-motion 由 CSS 關掉。
-    return _studyItemHtml(it, scoring, Math.min(i, 9) * 0.04);
-  }).join('');
-  var sheet = document.createElement('div');
-  sheet.id = 'study-run';
-  sheet.className = 'ip-prep-sheet';
-  sheet.innerHTML = ''
-    + '<div class="ip-prep-backdrop" onclick="closeStudyRun()"></div>'
-    + '<div class="ip-prep-panel study-flat" role="dialog" aria-label="' + escapeHtml(s.title) + '" aria-modal="true" tabindex="-1" style="max-height:90vh;overflow:auto">'
-    +   '<header class="ip-prep-head">'
-    +     '<div class="ip-prep-when"><span class="ip-prep-when-num">' + escapeHtml(_studyCleanTitle(s.title)) + '</span>'
-    +       '<span class="ip-prep-when-sub">' + (s.description ? escapeHtml(s.description) : '') + '</span></div>'
-    +     '<button type="button" class="ip-prep-close" onclick="closeStudyRun()" aria-label="' + _T('app.c6.close') + '"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
-    +   '</header>'
-    +   '<div style="padding:2px">' + body + '</div>'
-    +   '<div class="ehl-foot">'
-    +     '<div class="study-prog"><div class="study-prog-bar"><i id="study-prog-fill"></i></div><span id="study-prog-txt"></span></div>'
-    +     '<button type="button" class="ip-prep-cta" onclick="submitStudySurvey()"><i data-lucide="check" style="width:16px;height:16px"></i><span>' + _T('app.c6.submit') + '</span></button>'
-    +     '<button type="button" class="ip-prep-secondary" onclick="closeStudyRun()">' + _T('app.c6.later') + '</button>'
-    +     '<p class="study-meta" style="text-align:center">' + _T('app.c6.noRightWrongSkip') + '</p>'
-    +   '</div>'
-    + '</div>';
-  document.body.appendChild(sheet);
-  requestAnimationFrame(function () { sheet.classList.add('open'); });
-  _studyUpdateProgress();
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-// 已作答題數（複選空陣列、空字串不算），給進度條用。
-function _studyAnsweredCount() {
-  var a = _studyState.answers || {};
-  var n = 0;
-  Object.keys(a).forEach(function (k) {
-    var v = a[k];
-    if (Array.isArray(v)) { if (v.length) n++; }
-    else if (v !== '' && v != null) n++;
-  });
-  return n;
-}
-function _studyUpdateProgress() {
-  var total = _studyState.total || 0;
-  var done = _studyAnsweredCount();
-  var fill = document.getElementById('study-prog-fill');
-  var txt = document.getElementById('study-prog-txt');
-  if (fill) fill.style.width = (total ? Math.round(done / total * 100) : 0) + '%';
-  if (txt) txt.textContent = _Tf('app.c6.progress', { done: done, total: total });
-}
-
-function _studySelect(qid, val, btn) {
-  _studyState.answers[qid] = val;
-  var row = document.getElementById('study-q-' + qid);
-  if (row) row.querySelectorAll('.study-opt').forEach(function (b) { b.classList.toggle('is-sel', b === btn); });
-  _studyUpdateProgress();
-}
-function _studyMulti(qid) {
-  var row = document.getElementById('study-q-' + qid); if (!row) return;
-  var vals = [];
-  row.querySelectorAll('input[type=checkbox]:checked').forEach(function (c) { vals.push(c.value); });
-  _studyState.answers[qid] = vals;
-  _studyUpdateProgress();
-}
-function _studyText(qid, val) {
-  if ((val || '').trim()) _studyState.answers[qid] = val; else delete _studyState.answers[qid];
-  _studyUpdateProgress();
-}
-
-function submitStudySurvey() {
-  var ans = _studyState.answers || {};
-  if (!Object.keys(ans).length) { if (typeof showToast === 'function') showToast(_T('app.c6.answerOneFirst'), 'warning'); return; }
-  var pid = getStablePatientId();
-  apiFetch(API + '/surveys/' + encodeURIComponent(_studyState.key) + '/responses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ patient_id: pid, answers: ans, timepoint: _studyState.tp, participant_code: _studyCode() }),
-  })
-    .then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.detail || _T('app.c6.submitFail')); }); return r.json(); })
-    .then(function () {
-      if (typeof showToast === 'function') showToast(_T('app.c6.submittedThanks'), 'success');
-      closeStudyRun();
-      setTimeout(openStudyHub, 260);  // 回 hub 並刷新完成狀態
-    })
-    .catch(function (e) { if (typeof showToast === 'function') showToast((e && e.message) || _T('app.c6.submitFailRetry'), 'warning'); });
-}
-
-function closeStudyRun() {
-  var s = document.getElementById('study-run'); if (!s) return;
-  s.classList.remove('open');
-  setTimeout(function () { if (s.parentNode) s.remove(); }, 220);
 }
 
 // ─── Profile onboarding（Issue #131 follow-up）──────────
@@ -6986,9 +6354,6 @@ function home() {
     +         '<span>' + _mobileVisitText + '</span>'
     +       '</div>'
     +     '</div>'
-    +     '<button class="home-greet-survey" type="button" onclick="openStudyHub()" aria-label="' + _T('app.c6.studySurvey') + '">'
-    +       '<i data-lucide="clipboard-pen"></i><span>' + _T('app.c8.surveyBtn') + '</span>'
-    +     '</button>'
     +   '</div>'
 
     // 獎勵入口 — 主畫面明顯位置，點進獎勵中心
@@ -7168,10 +6533,6 @@ function home() {
     +     '<button class="quick-jump-btn t-teal" onclick="navigateTo(\'records\',null)">'
     +       '<span class="qj-icon"><i data-lucide="id-card"></i></span>'
     +       '<span class="qj-label">' + _T('app.c8.myProfile') + '</span>'
-    +     '</button>'
-    +     '<button class="quick-jump-btn t-purple" onclick="openStudyHub()">'
-    +       '<span class="qj-icon"><i data-lucide="clipboard-pen"></i></span>'
-    +       '<span class="qj-label">' + _T('app.d13.researchSurvey') + '</span>'
     +     '</button>'
     +   '</div>'
 
@@ -7498,8 +6859,6 @@ function loadHomePage() {
   // 滾動式 feed 新增的 Tier 2 區塊
   if (typeof _updateMobileHomeMedsMini === 'function') _updateMobileHomeMedsMini();
   if (typeof _renderMobileRecentRecords === 'function') _renderMobileRecentRecords();
-  // 不定時隨即：問卷到期未填時，偶爾在首頁輕推一下（填完自動停）。
-  if (typeof _studyMaybeNudge === 'function') _studyMaybeNudge();
 }
 
 // ── 2.0 預覽：Today (home2) — opt-in 路由，與現行 home 完全隔離 ──────
@@ -21545,16 +20904,6 @@ function settings() {
     +     '</div>'
     +   '</div>'
 
-    // 研究（《整合實驗設計與問卷 v2》三實驗可行性研究）
-    +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="clipboard-list"></i> ' + _T("app.c26.research") + '</h3></div>'
-    +   '<div class="settings-list">'
-    +     '<div class="settings-row" onclick="openStudyHub()">'
-    +       '<div class="ico"><i data-lucide="clipboard-pen"></i></div>'
-    +       '<div style="flex:1"><div class="name">' + _T("app.c26.researchSurvey") + '</div><div class="sub">' + _T("app.c26.researchSurveySub") + '</div></div>'
-    +       '<div class="chev"><i data-lucide="chevron-right"></i></div>'
-    +     '</div>'
-    +   '</div>'
-
     // 法律與隱私
     +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="file-text"></i> ' + _T("app.c26.legalPrivacy") + '</h3></div>'
     +   '<div class="settings-list">'
@@ -21667,13 +21016,6 @@ function settings() {
             '<button class="set-btn set-btn-danger" onclick="logout()"><i data-lucide="log-out"></i> ' + _T('set.row.logout.btn') + '</button>')
     + '  </div>'
 
-    // 研究（《整合實驗設計與問卷 v2》三實驗可行性研究）— 桌面版入口
-    + '  <div class="set-group">'
-    + '    <h3 class="set-group-title"><i data-lucide="clipboard-list"></i> ' + _T("app.d42.research") + '</h3>'
-    +      row(_T("app.d42.researchSurvey"), _T("app.d42.researchSurveyDesc"),
-            '<button class="set-btn" onclick="openStudyHub()"><i data-lucide="clipboard-pen"></i> ' + _T("app.d42.startFilling") + ' ›</button>')
-    + '  </div>'
-
     // About
     + '  <div class="set-group">'
     + '    <h3 class="set-group-title"><i data-lucide="info"></i> ' + _T('set.group.about') + '</h3>'
@@ -21726,14 +21068,6 @@ function fontSizePage() {
     +   '<div class="sec-head"><h3 class="sec-title"><i data-lucide="type"></i> ' + _T("app.c26.fontSizeTitle") + '</h3></div>'
     +   '<div class="set-seg" style="margin-bottom:16px;gap:6px">'
     +     fseg('fontSize', [{value:'small',label:_T("app.c26.fontSmall")},{value:'normal',label:_T("app.c26.fontNormal")},{value:'large',label:_T("app.c26.fontLarge")},{value:'xlarge',label:_T("app.c26.fontElder")}], fs)
-    +   '</div>'
-
-    +   '<div class="settings-list" style="margin-bottom:16px">'
-    +     '<button type="button" class="settings-row" style="width:100%;text-align:left;background:none;border:0;cursor:pointer" onclick="openEhealsScreen()">'
-    +       '<div class="ico"><i data-lucide="wand-2"></i></div>'
-    +       '<div style="flex:1"><div class="name">' + _T("app.c26.autoFontTitle") + '</div><div class="sub">' + _T("app.c26.autoFontSub") + '</div></div>'
-    +       '<i data-lucide="chevron-right" style="color:var(--text-muted)"></i>'
-    +     '</button>'
     +   '</div>'
 
     +   '<div class="settings-list" style="margin-bottom:16px">'
@@ -27451,23 +26785,10 @@ function markFollowUpStatus(id, status) {
     .then(async function(r) { if (!r.ok) throw new Error(await _parseApiError(r)); return r.json(); })
     .then(function(updated) {
       showToast(_T("app.c33.updated"), 'success');
-      // 回診完成 → 依「實際回診日 +~48h」排回診後回饋提醒（冪等、失敗不擋 UI）。
-      if (status === 'completed') _studyScheduleFu48(updated);
       loadFollowUpsPage();
       if (typeof refreshNearestFollowUpCard === 'function') refreshNearestFollowUpCard();
     })
     .catch(function(e) { showToast(_T("app.c33.updateFail") + e.message, 'error'); });
-}
-
-// 回診完成後，請後端依實際回診日排「回診後回饋（FU48）」提醒。盡力而為。
-function _studyScheduleFu48(followUp) {
-  var u = getCurrentUser();
-  if (!u || !u.id || u.role === 'doctor') return;
-  var visit = _foDateOnly(followUp && followUp.scheduled_date);
-  if (!visit) return;
-  var pid = getStablePatientId();
-  apiFetch(API + '/surveys/study/' + STUDY_KEY + '/participants/' + encodeURIComponent(pid)
-    + '/ensure-fu48?visit_date=' + encodeURIComponent(visit), { method: 'POST' }).catch(function () {});
 }
 
 function deleteFollowUp(id) {
