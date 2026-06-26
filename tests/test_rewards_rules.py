@@ -2,7 +2,7 @@
 健康積分規則引擎單元測試（純函式，不碰 DB）。
 
 規則 9：每個測試都驗「為什麼這條規則重要」，而非只跑得過。
-積分若算錯（問卷沒給分、連續中斷把分數收回、兌換沒檢查餘額、等級門檻錯置），
+積分若算錯（打卡沒給分、連續中斷把分數收回、兌換沒檢查餘額、等級門檻錯置），
 會直接影響使用者信任與院方發放——這些測試就是用來在規則漂移時亮紅燈。
 
 執行：
@@ -17,13 +17,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.utils import rewards_rules as R  # noqa: E402
 
 
-def test_survey_and_active_day_points():
-    # 為什麼：填問卷 +20/份、每日打卡 +10/天 是最核心的兩條規則，算錯整套就崩。
-    a = {"survey_count": 2, "active_day_count": 5, "longest_streak": 0, "eheals_done": False}
+def test_active_day_points():
+    # 為什麼：每日打卡 +10/天 是核心計分規則，算錯整套就崩。
+    a = {"active_day_count": 5, "longest_streak": 0}
     p = R.compute_points(a)
-    assert p["breakdown"]["survey"] == 40
     assert p["breakdown"]["active_days"] == 50
-    assert p["earned"] == 90  # 40 + 50，無連續/識能加分
+    assert p["earned"] == 50  # 只有打卡分，無連續加分
 
 
 def test_streak_bonus_is_cumulative_and_monotonic():
@@ -32,14 +31,8 @@ def test_streak_bonus_is_cumulative_and_monotonic():
     assert R.streak_bonus(7) == (55, [3, 7])          # 15 + 40
     assert R.streak_bonus(30) == (345, [3, 7, 14, 30])  # 15+40+90+200
     # 即使目前連續只剩 1 天，最長曾達 7 仍保留 55 分。
-    a = {"survey_count": 0, "active_day_count": 0, "longest_streak": 7, "current_streak": 1}
+    a = {"active_day_count": 0, "longest_streak": 7, "current_streak": 1}
     assert R.compute_points(a)["breakdown"]["streak"] == 55
-
-
-def test_eheals_bonus_only_when_done():
-    # 為什麼：eHEALS 完成才給 +30，沒完成不能給，否則獎勵失去意義。
-    assert R.compute_points({"eheals_done": True})["breakdown"]["eheals"] == 30
-    assert R.compute_points({"eheals_done": False})["breakdown"]["eheals"] == 0
 
 
 def test_compute_streaks_current_is_trailing_run():
@@ -70,15 +63,14 @@ def test_badges_unlock_on_exact_conditions():
     # 為什麼：徽章解鎖條件若鬆動（例如 6 天就給「規律一週」），徽章就名不符實。
     none = {b["id"]: b for b in R.evaluate_badges({})}
     assert none["week-regular"]["earned"] is False
-    assert none["first-feedback"]["earned"] is False
 
     rich = {b["id"]: b for b in R.evaluate_badges({
-        "survey_count": 1, "longest_streak": 30, "emotion_days": 14,
-        "medication_log_count": 30, "eheals_done": True, "triple_day": True,
+        "longest_streak": 30, "emotion_days": 14,
+        "medication_log_count": 30, "triple_day": True,
     })}
     assert all(rich[k]["earned"] for k in
-               ["first-feedback", "week-regular", "month-regular",
-                "mood-aware", "med-buddy", "eheals-done", "all-round"])
+               ["week-regular", "month-regular",
+                "mood-aware", "med-buddy", "all-round"])
     # 邊界：連續 6 天還不該拿「規律一週」
     six = {b["id"]: b for b in R.evaluate_badges({"longest_streak": 6})}
     assert six["week-regular"]["earned"] is False
@@ -168,7 +160,7 @@ def test_puzzle_complete_unlocks_a_redeemable_reward():
     # 為什麼：集滿 9 片才算 complete，且必須指向一個既有可兌換品項，
     # 否則「集滿有獎」的承諾落空。湊齊所有門檻 → complete + complete_reward。
     full = {
-        "active_days": 12, "survey_count": 1, "emotion_days": 3,
+        "active_days": 15, "emotion_days": 3,
         "longest_streak": 7, "triple_day": True,
     }
     board = R.puzzle_board("2026-06", full)

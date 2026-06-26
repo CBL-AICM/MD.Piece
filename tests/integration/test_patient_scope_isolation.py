@@ -117,7 +117,6 @@ def test_demo_anonymous_still_allowed():
         ("/sleep/sessions", {"user_id": PATIENT_B}),
         ("/diet/records/" + PATIENT_B, {}),
         ("/menstrual/cycles", {"patient_id": PATIENT_B}),
-        ("/health-literacy/latest", {"patient_id": PATIENT_B}),
         ("/admissions/", {"patient_id": PATIENT_B}),
         ("/inpatient/bedside", {"patient_id": PATIENT_B}),
     ],
