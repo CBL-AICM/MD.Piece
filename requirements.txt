@@ -5,4 +5,11 @@ httpx
 python-multipart
 aiofiles
 PyJWT>=2.8.0
-pywebpush
+
+# pywebpush 暫時停用：它硬相依的 http-ece 在 PyPI「沒有任何 wheel」，且其 setup.py
+# 用到新版 wheel/setuptools 已移除的 install_layout，在 Vercel Python builder 上
+# `pip install` 必定失敗（AttributeError: install_layout）→ 每次部署 Error、正式站
+# 長期卡在含問卷的舊版。requirements 未鎖版本，這是上游改版觸發、非本 repo 改動。
+# reminders.py 的 import 有 try/except 保護，缺它時 web push 優雅降級（不送伺服器
+# 推播），不影響啟動與其他功能。待 http-ece 修好打包或改用有 wheel 的替代方案再恢復。
+# pywebpush
