@@ -3,5 +3,9 @@ uvicorn
 supabase
 python-dotenv
 anthropic
-pywebpush
 PyJWT
+# pywebpush 暫時停用：相依的 http-ece 無 wheel 且 setup.py 在新版 wheel/setuptools
+# 下建置失敗（install_layout 已移除），會讓 Vercel 部署與本機安裝都掛掉。
+# reminders.py 對其 import 有 try/except 保護，缺它時 web push 優雅降級。詳見根目錄
+# requirements.txt 註解。待 http-ece 修好或換有 wheel 的替代方案再恢復。
+# pywebpush
