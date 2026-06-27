@@ -5,7 +5,7 @@ import logging
 
 from backend.db import get_supabase
 from backend.security import current_user_optional, enforce_patient_scope
-from backend.utils.triage_rules import check_emergency, EMERGENCY_SYMPTOMS
+from backend.utils.triage_rules import check_emergency, matched_emergency_symptoms
 from backend.utils.baseline import calculate_baseline
 from backend.services.llm_service import (
     build_patient_facing_system,
@@ -65,7 +65,7 @@ def evaluate_triage(body: TriageRequest, me: dict | None = Depends(current_user_
     )
 
     if is_emergency:
-        triggered = [s for s in body.symptoms if s in EMERGENCY_SYMPTOMS]
+        triggered = matched_emergency_symptoms(body.symptoms)
         return {
             "result": "emergency",
             "severity_color": severity_color_for("emergency"),
