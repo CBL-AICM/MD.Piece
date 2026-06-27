@@ -135,8 +135,15 @@ def test_med_reconciliation_name_match_is_case_insensitive():
 
 # ── F1 交接報告 ───────────────────────────────────────────
 
-def test_handover_aggregates_meds_with_source_and_fallback_situation():
-    """交接報告要帶居家用藥（標來源）、背景；LLM 離線時 situation 走可溯源 fallback。"""
+def test_handover_aggregates_meds_with_source_and_fallback_situation(monkeypatch):
+    """交接報告要帶居家用藥（標來源）、背景；LLM 離線時 situation 走可溯源 fallback。
+
+    確定性驗證 fallback 路徑：強制 _safe_llm 回 None（模擬 LLM 離線），不依賴
+    測試環境是否真有 LLM 連線（否則本機有 ANTHROPIC_API_KEY / Ollama 時 _ai 會是 ok）。
+    """
+    import backend.routers.inpatient as inpatient_mod
+    monkeypatch.setattr(inpatient_mod, "_safe_llm", lambda *a, **k: None)
+
     adm = _make_admission(diagnosis="心衰竭")
     _add_home_med("Furosemide", "40mg", "每天一次")
 
