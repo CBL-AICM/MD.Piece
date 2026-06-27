@@ -27,7 +27,7 @@ router = APIRouter()
 
 # 研究用模擬帳號前綴（3200→1600 假患者，username 形如 sim3200_ra_0151）。
 # 一律排除於人數統計之外；僅過濾、不刪除資料。
-SIM_USERNAME_PREFIX = "sim3200"
+SIM_USERNAME_PREFIX = "sim3200_"
 
 
 def _is_sim(username: Optional[str]) -> bool:

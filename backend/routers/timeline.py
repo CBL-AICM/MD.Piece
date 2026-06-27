@@ -96,8 +96,8 @@ def get_timeline(
 
     entries: list[dict] = []
 
-    # 1. 就診紀錄（visit）
-    for r in _fetch_safely(sb, "records", patient_id):
+    # 1. 就診紀錄（visit）——就診紀錄正規表為 medical_records（records.py / db.py _SCHEMAS）
+    for r in _fetch_safely(sb, "medical_records", patient_id):
         icd = r.get("icd10") or r.get("diagnosis_code")
         entries.append(
             {
