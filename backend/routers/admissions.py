@@ -33,6 +33,23 @@ def _assert_owns_admission(sb, admission_id: str, me) -> dict:
     enforce_patient_scope(res.data[0].get("patient_id"), me)
     return res.data[0]
 
+
+def _assert_owns_admission_medication(sb, admission_medication_id: str, me) -> dict:
+    """以 admission_medication_id 操作時的擁有權檢查：
+    先由藥物列反查其 admission_id，再由 admission 反查 patient_id 做 scope 驗證。
+    （admission_medications 沒有自己的 patient_id 欄位，只能透過 parent admission 反查。）"""
+    res = (
+        sb.table("admission_medications")
+        .select("*")
+        .eq("id", admission_medication_id)
+        .limit(1)
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=404, detail="找不到對應的療程藥物")
+    _assert_owns_admission(sb, res.data[0].get("admission_id"), me)
+    return res.data[0]
+
 # 地理圍欄半徑（公尺）— 涵蓋一般院區 + GPS 抖動容差。
 GEOFENCE_RADIUS_M = 300
 
@@ -380,13 +397,12 @@ def check_location(admission_id: str, body: LocationCheck, me: dict | None = Dep
 # ── 排定給藥（住院期間 / 療程內）─────────────────────────
 
 @router.post("/medications")
-def add_admission_medication(body: AdmissionMedicationCreate):
+def add_admission_medication(body: AdmissionMedicationCreate, me: dict | None = Depends(current_user_optional)):
     """在某次住院 / 療程下排定一筆給藥節奏。"""
     sb = get_supabase()
 
-    parent = sb.table("admissions").select("id").eq("id", body.admission_id).limit(1).execute()
-    if not parent.data:
-        raise HTTPException(status_code=404, detail="找不到對應的住院/療程紀錄")
+    # 擁有權檢查：只能在自己的住院/療程下排藥（順帶確認 parent 存在）。
+    _assert_owns_admission(sb, body.admission_id, me)
 
     data = body.model_dump(exclude_none=True)
     try:
@@ -398,12 +414,15 @@ def add_admission_medication(body: AdmissionMedicationCreate):
 
 
 @router.put("/medications/{admission_medication_id}")
-def update_admission_medication(admission_medication_id: str, body: AdmissionMedicationUpdate):
+def update_admission_medication(admission_medication_id: str, body: AdmissionMedicationUpdate,
+                                me: dict | None = Depends(current_user_optional)):
     """改一筆排定給藥（藥名 / 劑量 / 頻率 / 下次預定日）。"""
     data = body.model_dump(exclude_none=True)
     if not data:
         raise HTTPException(status_code=400, detail="沒有提供更新資料")
     sb = get_supabase()
+    # 反查 parent admission 做擁有權檢查，避免改到別人的療程藥物。
+    _assert_owns_admission_medication(sb, admission_medication_id, me)
     result = (
         sb.table("admission_medications")
         .update(data)
@@ -416,18 +435,11 @@ def update_admission_medication(admission_medication_id: str, body: AdmissionMed
 
 
 @router.delete("/medications/{admission_medication_id}")
-def delete_admission_medication(admission_medication_id: str):
+def delete_admission_medication(admission_medication_id: str, me: dict | None = Depends(current_user_optional)):
     """刪掉一筆排定給藥，連同它的施打紀錄一起清掉。"""
     sb = get_supabase()
-    parent = (
-        sb.table("admission_medications")
-        .select("id")
-        .eq("id", admission_medication_id)
-        .limit(1)
-        .execute()
-    )
-    if not parent.data:
-        raise HTTPException(status_code=404, detail="找不到對應的療程藥物")
+    # 反查 parent admission 做擁有權檢查（同時確認該藥物存在）。
+    _assert_owns_admission_medication(sb, admission_medication_id, me)
     try:
         sb.table("admission_medication_doses").delete().eq("admission_medication_id", admission_medication_id).execute()
     except Exception as e:
@@ -490,18 +502,12 @@ def upcoming_doses(
 
 
 @router.post("/medications/{admission_medication_id}/dose")
-def record_dose(admission_medication_id: str, body: DoseRecord):
+def record_dose(admission_medication_id: str, body: DoseRecord,
+                me: dict | None = Depends(current_user_optional)):
     """記錄一次實際施打，並更新 last_given_at / next_due_date。"""
     sb = get_supabase()
-    parent = (
-        sb.table("admission_medications")
-        .select("id")
-        .eq("id", admission_medication_id)
-        .limit(1)
-        .execute()
-    )
-    if not parent.data:
-        raise HTTPException(status_code=404, detail="找不到對應的療程藥物")
+    # 反查 parent admission 做擁有權檢查（同時確認該藥物存在），避免替別人偽造施打。
+    _assert_owns_admission_medication(sb, admission_medication_id, me)
 
     given_at = body.given_at or datetime.utcnow().isoformat()
     dose_row = {
@@ -526,8 +532,10 @@ def record_dose(admission_medication_id: str, body: DoseRecord):
 
 
 @router.get("/medications/{admission_medication_id}/doses")
-def list_doses(admission_medication_id: str):
+def list_doses(admission_medication_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    # 反查 parent admission 做擁有權檢查，避免讀到別人的施打紀錄。
+    _assert_owns_admission_medication(sb, admission_medication_id, me)
     result = (
         sb.table("admission_medication_doses")
         .select("*")

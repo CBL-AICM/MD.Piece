@@ -137,13 +137,16 @@ def check_lab_value(body: LabCheckRequest):
             disclaimer="本結果僅供參考，請以實際檢驗單位與醫師判讀為準",
         )
 
+    # 規則 5：狀態碼已回答的事不交給 LLM——嚴重異常（high/critical）一律強制建議就醫。
+    _status = data.get("status", "unknown")
+    _see_doctor = _coerce_bool(data.get("see_doctor"), default=False) or _status in ("high", "critical")
     return LabCheckResponse(
         item=data.get("item", body.name),
         normal_range=data.get("normal_range", "未知"),
-        status=data.get("status", "unknown"),
+        status=_status,
         meaning=data.get("meaning", ""),
         advice=data.get("advice", ""),
-        see_doctor=_coerce_bool(data.get("see_doctor"), default=False),
+        see_doctor=_see_doctor,
         disclaimer=data.get("disclaimer", "本結果僅供參考，請以實際檢驗單位與醫師判讀為準"),
     )
 
@@ -185,7 +188,8 @@ def _normalize_scanned_item(raw: dict) -> dict:
         "status": status,
         "meaning": _coerce_str(raw.get("meaning")).strip(),
         "advice": _coerce_str(raw.get("advice")).strip(),
-        "see_doctor": _coerce_bool(raw.get("see_doctor"), default=False),
+        # 規則 5：嚴重異常（high/critical）一律強制建議就醫，不依賴 LLM 自填。
+        "see_doctor": _coerce_bool(raw.get("see_doctor"), default=False) or status in ("high", "critical"),
     }
 
 

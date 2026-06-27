@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 import logging
 
 from backend.db import get_supabase
-from backend.utils.triage_rules import check_emergency, EMERGENCY_SYMPTOMS
+from backend.security import current_user_optional, enforce_patient_scope
+from backend.utils.triage_rules import check_emergency, matched_emergency_symptoms
 from backend.utils.baseline import calculate_baseline
 from backend.services.llm_service import (
     build_patient_facing_system,
@@ -47,12 +48,15 @@ class TriageRequest(BaseModel):
 
 
 @router.post("/evaluate")
-def evaluate_triage(body: TriageRequest):
+def evaluate_triage(body: TriageRequest, me: dict | None = Depends(current_user_optional)):
     """
     雙層分流評估：
     第一層：規則引擎（急診清單觸發 → 直接 Emergency）
     第二層：LLM 依個人基準線判斷 Stable / Follow-up / Emergency
     """
+    # 已登入時只能評估自己的 patient_id（demo 匿名放行，比照 symptoms.py）
+    enforce_patient_scope(body.patient_id, me)
+
     # 第一層：規則引擎
     is_emergency = check_emergency(
         symptoms=body.symptoms,
@@ -61,7 +65,7 @@ def evaluate_triage(body: TriageRequest):
     )
 
     if is_emergency:
-        triggered = [s for s in body.symptoms if s in EMERGENCY_SYMPTOMS]
+        triggered = matched_emergency_symptoms(body.symptoms)
         return {
             "result": "emergency",
             "severity_color": severity_color_for("emergency"),
@@ -74,8 +78,8 @@ def evaluate_triage(body: TriageRequest):
     # 第二層：LLM 基準線比對
     sb = get_supabase()
 
-    # 取得病患資訊
-    patient_result = sb.table("patients").select("*").eq("id", body.patient_id).execute()
+    # 取得病患資訊（只取分流 prompt 用得到的欄位，不撈整列）
+    patient_result = sb.table("patients").select("name,age").eq("id", body.patient_id).execute()
     patient = patient_result.data[0] if patient_result.data else {}
 
     # 組合今日數據
@@ -128,31 +132,44 @@ def evaluate_triage(body: TriageRequest):
         parts.append(f"- 備註：{body.notes}")
     user_message = "\n".join(parts)
 
+    # 失敗（LLM 例外 / tag 無法解析）時的安全收斂：醫療場景不可假綠燈，
+    # 一律保守降到 follow_up（建議回診）並標記 degraded，讓前端/病人知道
+    # 這不是完整分流結論，而非沿用 LLM 任意輸出當權威說明。
+    DEGRADED_MESSAGE = "目前暫時無法完整分流，這不是完整評估結果；若您感到不適，請就醫由醫師判斷。"
+    degraded = False
     try:
         llm_response = call_claude(system_prompt, user_message)
         lines = llm_response.strip().split("\n", 1)
         result_tag = lines[0].strip().lower()
 
         if result_tag not in ("stable", "follow_up", "emergency"):
-            result_tag = "stable"
-        message = lines[1].strip() if len(lines) > 1 else "狀況評估完成"
+            logger.error(f"Triage LLM 回傳非法 tag，保守降為 follow_up：{result_tag!r}")
+            result_tag = "follow_up"
+            degraded = True
+            message = DEGRADED_MESSAGE
+        else:
+            message = lines[1].strip() if len(lines) > 1 else "狀況評估完成"
     except Exception as e:
         logger.error(f"Triage LLM call failed: {e}")
-        result_tag = "stable"
-        message = "AI 分流暫時無法使用，根據您回報的症狀暫判為穩定，如有不適請就醫。"
+        result_tag = "follow_up"
+        degraded = True
+        message = DEGRADED_MESSAGE
 
     return {
         "result": result_tag,
         "severity_color": severity_color_for(result_tag),
         "layer": 2,
         "message": message,
+        "degraded": degraded,
         "today_data": today_data,
     }
 
 
 @router.get("/baseline/{patient_id}")
-def get_baseline(patient_id: str):
+def get_baseline(patient_id: str, me: dict | None = Depends(current_user_optional)):
     """取得個人化基準線：根據近兩週情緒與服藥紀錄計算"""
+    # 已登入時只能讀自己的基準線（demo 匿名放行，比照 symptoms.py）
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     from datetime import datetime, timedelta
     since = (datetime.utcnow() - timedelta(days=14)).isoformat()

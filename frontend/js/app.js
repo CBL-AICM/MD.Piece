@@ -21150,7 +21150,9 @@ function settingsResetCard() {
 
 function markdownToHtml(md) {
   if (!md) return "";
-  return md
+  // 安全：先 HTML escape 原始字串再套 markdown，防 DOM XSS（含 LLM 生成內容會被快取重播）。
+  // escapeHtml 只轉 &<>"'，不動 markdown 語法字元（* # -），故下方規則照常運作。
+  return escapeHtml(md)
     .replace(/^### (.+)$/gm, '<h4 style="margin-top:16px;margin-bottom:8px;color:var(--accent)">$1</h4>')
     .replace(/^## (.+)$/gm, '<h3 style="margin-top:20px;margin-bottom:8px">$1</h3>')
     .replace(/^# (.+)$/gm, '<h2 style="margin-top:24px;margin-bottom:12px">$1</h2>')

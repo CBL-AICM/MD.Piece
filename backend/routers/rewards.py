@@ -218,7 +218,7 @@ def get_catalog(patient_id: str = Query(None), me: dict | None = Depends(current
     available = 0
     if patient_id:
         sb = get_supabase()
-        activity, _, _ = _gather_activity(sb, patient_id)
+        activity, _ = _gather_activity(sb, patient_id)
         earned = rules.compute_points(activity)["earned"]
         spent, _ = _spent_points(sb, patient_id)
         available = max(0, earned - spent)
@@ -236,17 +236,19 @@ def get_redemptions(patient_id: str = Query(...), me: dict | None = Depends(curr
 
 
 @router.post("/redeem")
-def redeem(body: RedeemRequest, me: dict | None = Depends(current_user_optional)):
-    """兌換一項獎勵：純程式碼檢查餘額 → 寫入一筆 status='requested' 待院方發放。"""
-    enforce_patient_scope(body.patient_id, me)
+def redeem(body: RedeemRequest, me: dict = Depends(current_user)):
+    """兌換一項獎勵：純程式碼檢查餘額 → 寫入一筆 status='requested' 待院方發放。
+    兌換會扣點數、寫入待發放紀錄，屬敏感寫入：強制登入（current_user），且一律
+    以 me.id 為兌換對象，忽略 body.patient_id，避免匿名/他人替別人兌換寫入。"""
+    pid = me["id"]
     reward = rules.get_reward(body.reward_id)
     if not reward:
         raise HTTPException(status_code=404, detail="找不到該兌換品項")
 
     sb = get_supabase()
-    activity, _, _ = _gather_activity(sb, body.patient_id)
+    activity, _ = _gather_activity(sb, pid)
     earned = rules.compute_points(activity)["earned"]
-    spent, _ = _spent_points(sb, body.patient_id)
+    spent, _ = _spent_points(sb, pid)
     available = max(0, earned - spent)
     if available < reward["cost"]:
         raise HTTPException(
@@ -255,7 +257,7 @@ def redeem(body: RedeemRequest, me: dict | None = Depends(current_user_optional)
         )
 
     row = {
-        "patient_id": body.patient_id,
+        "patient_id": pid,
         "reward_id": reward["id"],
         "reward_name": reward["name"],
         "cost": reward["cost"],

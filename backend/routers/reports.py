@@ -1,3 +1,5 @@
+import base64
+import binascii
 import concurrent.futures
 import json
 import logging
@@ -6,11 +8,12 @@ import statistics
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 from backend.services import email_service
 from backend.services.llm_service import (
     build_patient_facing_system,
@@ -1076,12 +1079,18 @@ def _collect_period_summary(patient_id: str, days: int | None = None, period_lab
 
 
 @router.get("/{patient_id}/monthly")
-def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=365)):
+def get_monthly_report(
+    patient_id: str,
+    days: int | None = Query(None, ge=1, le=365),
+    me: dict | None = Depends(current_user_optional),
+):
     """回診間整合報告：症狀 + 情緒 + 用藥 + 就診 + 飲食。
 
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     顯式帶 `days` 視為覆寫（測試／自訂區間用）。
     """
+    # IDOR 防護：已登入者只能拉自己的病歷；demo 匿名沿用既有放行
+    enforce_patient_scope(patient_id, me)
     data_summary, counts, has_data, days, period_label, raw_records = _collect_period_summary(
         patient_id, days=days
     )
@@ -1127,11 +1136,17 @@ def get_monthly_report(patient_id: str, days: int | None = Query(None, ge=1, le=
 
 
 @router.get("/{patient_id}/checklist")
-def get_consultation_checklist(patient_id: str, days: int | None = Query(None, ge=1, le=365)):
+def get_consultation_checklist(
+    patient_id: str,
+    days: int | None = Query(None, ge=1, le=365),
+    me: dict | None = Depends(current_user_optional),
+):
     """建議問診清單：根據本期間數據，生成這次最需要確認的三件事。
 
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     """
+    # IDOR 防護：已登入者只能拉自己的清單；demo 匿名沿用既有放行
+    enforce_patient_scope(patient_id, me)
     if days is None:
         days, period_label, _ = _get_period(patient_id)
     else:
@@ -1248,11 +1263,17 @@ def get_consultation_checklist(patient_id: str, days: int | None = Query(None, g
 
 
 @router.get("/{patient_id}/patient-summary")
-def get_patient_summary(patient_id: str, days: int | None = Query(None, ge=1, le=365)):
+def get_patient_summary(
+    patient_id: str,
+    days: int | None = Query(None, ge=1, le=365),
+    me: dict | None = Depends(current_user_optional),
+):
     """產出患者帶去診間用的白話摘要（PDF / Word 用）。
 
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     """
+    # IDOR 防護：已登入者只能拉自己的摘要；demo 匿名沿用既有放行
+    enforce_patient_scope(patient_id, me)
     data_summary, counts, has_data, days, period_label, raw_records = _collect_period_summary(
         patient_id, days=days
     )
@@ -1328,6 +1349,7 @@ def _sse(payload: dict) -> str:
 def stream_integrated_summary(
     patient_id: str,
     days: int | None = Query(None, ge=1, le=365),
+    me: dict | None = Depends(current_user_optional),
 ):
     """整合摘要 SSE 串流。事件型別：
       - meta   ：第一個事件，含 raw_data / days / period_label
@@ -1335,6 +1357,8 @@ def stream_integrated_summary(
       - done   ：最後一個事件（source: ai / no_data）
       - error  ：串流中失敗（含 detail）
     """
+    # IDOR 防護：串流前先擋，避免外洩他人病歷；在組 generator 前同步 raise 才會回 403
+    enforce_patient_scope(patient_id, me)
     data_summary, counts, has_data, days, period_label, raw_records = _collect_period_summary(
         patient_id, days=days
     )
@@ -1422,13 +1446,19 @@ def _pearson(xs: list[float], ys: list[float]) -> float | None:
 
 
 @router.get("/{patient_id}/wellness-correlation")
-def wellness_correlation(patient_id: str, days: int | None = None):
+def wellness_correlation(
+    patient_id: str,
+    days: int | None = None,
+    me: dict | None = Depends(current_user_optional),
+):
     """
     每日「心情」與「用藥改善程度」的相關性（Pearson）。
     回傳並排的每日序列與相關係數，前端可畫雙線圖。
 
     `days` 沒帶時 backend 自動依「上次回診到今天」推算；無回診紀錄則用預設 30。
     """
+    # IDOR 防護：已登入者只能拉自己的相關性資料；demo 匿名沿用既有放行
+    enforce_patient_scope(patient_id, me)
     if days is None:
         days, period_label, _ = _get_period(patient_id)
     else:
@@ -1536,11 +1566,27 @@ class EmailPdfRequest(BaseModel):
 
 
 @router.post("/{patient_id}/email-pdf")
-def email_report_pdf(patient_id: str, body: EmailPdfRequest):
+def email_report_pdf(
+    patient_id: str,
+    body: EmailPdfRequest,
+    me: dict | None = Depends(current_user_optional),
+):
+    # IDOR 防護：已登入者只能把自己的報告寄到自己帳號的 email；demo 匿名沿用既有放行
+    enforce_patient_scope(patient_id, me)
     if not email_service.is_configured():
         raise HTTPException(status_code=503, detail="寄信服務尚未設定（後端缺 RESEND_API_KEY）")
     if not body.pdf_base64:
         raise HTTPException(status_code=400, detail="缺少 PDF 內容")
+
+    # PDF 大小／格式把關：避免被當大附件外寄跳板，也擋掉非 PDF 內容
+    try:
+        pdf_bytes = base64.b64decode(body.pdf_base64, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=400, detail="PDF 內容格式錯誤（非合法 base64）")
+    if len(pdf_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="PDF 檔案過大（上限 5MB）")
+    if not pdf_bytes.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="附件不是有效的 PDF 檔")
 
     sb = get_supabase()
     rows = sb.table("users").select("email,nickname").eq("id", patient_id).limit(1).execute().data or []
