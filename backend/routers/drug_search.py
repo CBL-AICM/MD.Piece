@@ -13,7 +13,7 @@
 - 熱門查詢排行（首頁可用）：GET /drug-search/trending
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
@@ -23,6 +23,7 @@ import re
 import uuid
 
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 from backend.services.llm_service import (
     lookup_drug_info,
     recognize_medicine_bag,
@@ -484,7 +485,10 @@ def search_from_photo(body: DrugPhotoQuery):
 
 
 @router.get("/from-medication/{medication_id}")
-def search_from_medication(medication_id: str):
+def search_from_medication(
+    medication_id: str,
+    me: Optional[dict] = Depends(current_user_optional),
+):
     """以個人用藥清單裡的某筆 medication_id 查藥物百科。
 
     用途：使用者在「藥物紀錄」頁的某筆藥旁邊點「查詢詳情」，前端帶 medication_id 過來，
@@ -494,7 +498,8 @@ def search_from_medication(medication_id: str):
     try:
         rows = (
             sb.table("medications")
-            .select("id,name,dosage")
+            # patient_id 用於越權檢查：避免已登入者拿他人 medication_id 反查到別人藥名/劑量（PHI）
+            .select("id,name,dosage,patient_id")
             .eq("id", medication_id)
             .limit(1)
             .execute()
@@ -506,6 +511,8 @@ def search_from_medication(medication_id: str):
         raise HTTPException(status_code=500, detail="個人用藥資料讀取失敗")
     if not rows:
         raise HTTPException(status_code=404, detail=f"找不到用藥紀錄：{medication_id}")
+    # 已登入則此筆 medication 必須屬於 caller，否則 403；demo 匿名（me 為 None）沿用既有放行
+    enforce_patient_scope(rows[0].get("patient_id"), me)
     name = (rows[0].get("name") or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="此用藥紀錄沒有藥名，無法查詢")

@@ -388,8 +388,13 @@ def push_subscribe(body: PushSubscriptionCreate, me: dict | None = Depends(curre
 
 
 @router.delete("/push/subscribe")
-def push_unsubscribe(endpoint: str = Query(...)):
+def push_unsubscribe(endpoint: str = Query(...), me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    # 先查該 endpoint 綁定的病患再做擁有權檢查，避免登入者退訂別人的裝置訂閱。
+    # 查無此 endpoint 視為已退訂（冪等，前端 unsubscribe 後重送也不報錯）。
+    row = sb.table("push_subscriptions").select("patient_id").eq("endpoint", endpoint).execute().data
+    if row:
+        enforce_patient_scope(row[0].get("patient_id"), me)
     sb.table("push_subscriptions").delete().eq("endpoint", endpoint).execute()
     return {"message": "已取消訂閱", "endpoint": endpoint}
 
@@ -414,8 +419,13 @@ def inbox_list(
 
 
 @router.put("/inbox/{item_id}")
-def inbox_mark(item_id: str, body: InboxUpdate):
+def inbox_mark(item_id: str, body: InboxUpdate, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    # 先查該通知所屬病患再做擁有權檢查，避免改到別人的 inbox（登入者只能動自己的）。
+    owner = sb.table("notification_inbox").select("patient_id").eq("id", item_id).execute()
+    if not owner.data:
+        raise HTTPException(status_code=404, detail="找不到通知")
+    enforce_patient_scope(owner.data[0].get("patient_id"), me)
     updates = {
         "read": 1 if body.read else 0,
         "read_at": datetime.now(timezone.utc).isoformat() if body.read else None,
@@ -494,15 +504,25 @@ def dispatch_due_reminders(
 ):
     """掃描已到期的 reminders：寫入 inbox + Web Push。
 
-    - 若設了環境變數 CRON_TOKEN，呼叫時須帶 X-Cron-Token header。
-    - 帶 patient_id 時只派發該病患的（前端登入後可呼叫，無需 token）。
+    - 已登入病患（帶 JWT）：只能派發自己的 patient_id，無需 token。
+    - 未帶有效 JWT 的呼叫（cron / 匿名）：一律需帶正確 X-Cron-Token；
+      光帶 patient_id 不能繞過（堵住「帶 patient_id 即免 token」的洞）。
     """
-    expected = os.getenv("CRON_TOKEN")
-    if expected and not patient_id and x_cron_token != expected:
-        raise HTTPException(status_code=401, detail="invalid cron token")
-    # 登入者只能派發自己的提醒（demo / cron 內部呼叫不帶身分 → 不強制）。
-    enforce_patient_scope(patient_id, me)
+    if isinstance(me, dict):
+        # 登入者：只能派發自己的提醒；不需 CRON_TOKEN。
+        enforce_patient_scope(patient_id, me)
+    else:
+        # 無 JWT：必須有正確 CRON_TOKEN 才放行（光帶 patient_id 不能繞過）。
+        expected = os.getenv("CRON_TOKEN")
+        if not expected or x_cron_token != expected:
+            raise HTTPException(status_code=401, detail="invalid cron token")
 
+    return _scan_and_dispatch(patient_id, limit)
+
+
+def _scan_and_dispatch(patient_id, limit):
+    """實際掃描到期 reminders → 寫 inbox + 發 Web Push。
+    此函式不做授權，授權由各呼叫端（POST /dispatch、GET /cron/dispatch）負責。"""
     sb = get_supabase()
     now = datetime.now(timezone.utc)
     now_iso = now.isoformat()
@@ -651,5 +671,6 @@ def cron_dispatch(
         )
         if not ok:
             raise HTTPException(status_code=401, detail="invalid cron auth")
-    # 內層 dispatch 自己也會驗 CRON_TOKEN；已通過上面驗證，帶上對應 token 讓它放行。
-    return dispatch_due_reminders(patient_id=None, limit=limit, x_cron_token=cron_token)
+    # 授權已於上面完成（CRON_SECRET 或 CRON_TOKEN，或本地未設兩者皆開放）；
+    # 直接跑共用掃描，不再經內層 dispatch 的授權（避免只設 CRON_SECRET 時被擋）。
+    return _scan_and_dispatch(patient_id=None, limit=limit)

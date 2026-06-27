@@ -28,7 +28,7 @@ from backend.models import (
     MeasurementRequestComplete,
     MeasurementRequestCreate,
 )
-from backend.security import current_user_optional, enforce_patient_scope
+from backend.security import current_user, current_user_optional, enforce_patient_scope
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -195,11 +195,14 @@ def create_bell_sound(body: BellSoundCreate, me: dict | None = Depends(current_u
 
 
 @router.delete("/bell-sounds/{sound_id}")
-def delete_bell_sound(sound_id: str):
+def delete_bell_sound(sound_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
-    result = sb.table("bell_sounds").delete().eq("id", sound_id).execute()
-    if not result.data:
+    # 先查擁有者，已登入者只能刪自己的鈴聲（demo 匿名沿用既有可用行為）
+    existing = sb.table("bell_sounds").select("owner_patient_id").eq("id", sound_id).execute().data
+    if not existing:
         raise HTTPException(status_code=404, detail="找不到鈴聲")
+    enforce_patient_scope(existing[0].get("owner_patient_id"), me)
+    sb.table("bell_sounds").delete().eq("id", sound_id).execute()
     return {"deleted": True, "id": sound_id}
 
 
@@ -234,7 +237,11 @@ def _create_reminder_for_request(sb, req_row):
 
 
 @router.post("/measurement-requests")
-def create_measurement_request(body: MeasurementRequestCreate):
+def create_measurement_request(body: MeasurementRequestCreate, me: dict = Depends(current_user)):
+    # 寫入敏感醫療動作（推播+塞醫師 inbox）：硬性登入，且只有醫師能發。
+    # doctor_id 一律取自 token，不信任 body.doctor_id，杜絕偽造他人醫師身份。
+    if me.get("role") != "doctor":
+        raise HTTPException(status_code=403, detail="僅醫師可發起量測請求")
     if body.measure_type not in VALID_MEASURE_TYPES:
         raise HTTPException(
             status_code=400,
@@ -250,7 +257,7 @@ def create_measurement_request(body: MeasurementRequestCreate):
 
     sb = get_supabase()
     req_payload = {
-        "doctor_id": body.doctor_id,
+        "doctor_id": me["id"],
         "patient_id": body.patient_id,
         "measure_type": body.measure_type,
         "note": body.note,
@@ -288,11 +295,20 @@ def list_measurement_requests(
     doctor_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
     limit: int = 50,
+    me: dict | None = Depends(current_user_optional),
 ):
     if not patient_id and not doctor_id:
         raise HTTPException(status_code=400, detail="須指定 patient_id 或 doctor_id")
     if status and status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"status 無效，需為 {VALID_STATUSES}")
+
+    # 已登入者只能查與自己相關的：病患限本人 patient_id；醫師覆寫成自己的 doctor_id。
+    # demo 匿名（me=None）沿用既有可用行為（病患 banner 用裝置本地 patient_id 查詢）。
+    if isinstance(me, dict):
+        if me.get("role") == "doctor":
+            doctor_id = me["id"]
+        else:
+            enforce_patient_scope(patient_id, me)
 
     sb = get_supabase()
     q = sb.table("measurement_requests").select("*")
@@ -307,11 +323,14 @@ def list_measurement_requests(
 
 
 @router.put("/measurement-requests/{req_id}/complete")
-def complete_measurement_request(req_id: str, body: MeasurementRequestComplete):
+def complete_measurement_request(req_id: str, body: MeasurementRequestComplete,
+                                 me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
     existing = sb.table("measurement_requests").select("*").eq("id", req_id).execute().data
     if not existing:
         raise HTTPException(status_code=404, detail="找不到請求")
+    # 已登入病患只能回填自己的請求（防竄改他人 result_value）；demo 匿名放行。
+    enforce_patient_scope(existing[0].get("patient_id"), me)
     if existing[0].get("status") not in (None, "pending"):
         raise HTTPException(status_code=400, detail="此請求已處理過")
 
@@ -344,8 +363,13 @@ def complete_measurement_request(req_id: str, body: MeasurementRequestComplete):
 
 
 @router.delete("/measurement-requests/{req_id}")
-def cancel_measurement_request(req_id: str):
+def cancel_measurement_request(req_id: str, me: dict | None = Depends(current_user_optional)):
     sb = get_supabase()
+    # 先查擁有者，已登入病患只能取消自己的請求；demo 匿名放行。
+    existing = sb.table("measurement_requests").select("patient_id").eq("id", req_id).execute().data
+    if not existing:
+        raise HTTPException(status_code=404, detail="找不到請求")
+    enforce_patient_scope(existing[0].get("patient_id"), me)
     sb.table("measurement_requests").update({
         "status": "cancelled",
         "updated_at": _now_iso(),
