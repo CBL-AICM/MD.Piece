@@ -10,32 +10,12 @@
 若有人把 reconciliation 寫死成全部 same，test_med_reconciliation_classifies_changes 會失敗（規則 9）。
 """
 
-import os
-import sys
-import tempfile
-
 import pytest
 
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
-os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
+from fastapi.testclient import TestClient
 
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="inpatienttest_", suffix=".db", delete=False)
-_TMP_DB.close()
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.main import app  # noqa: E402
-from backend.security import create_access_token  # noqa: E402
+from backend.main import app
+from backend.security import create_access_token
 
 PATIENT_ID = "inpatient-test-1"
 # medications router 走 JWT（Phase 1b）；sub 設成 PATIENT_ID 才能通過 _enforce_self_patient。
@@ -45,25 +25,19 @@ client = TestClient(app, headers={"Authorization": f"Bearer {_TEST_TOKEN}"})
 
 
 @pytest.fixture(autouse=True)
-def _reset_db():
-    import sqlite3
+def _llm_offline(monkeypatch):
+    """整合測試一律視為「LLM 離線」：讓 call_claude 直接拋錯，_safe_llm 會吞掉並回
+    None，handover / discharge 的 situation 因而走可溯源 fallback（_ai='fallback'）。
 
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()
-    db_mod.get_supabase()
+    否則開發機若剛好有本機 Ollama 在跑（LLM_PROVIDER 預設 ollama →
+    localhost:11434），會拿到真模型回覆使 _ai='ok'、test_handover 失敗。整合測試
+    不該依賴真實 LLM——與 test_drug_search / test_diseases mock 掉 LLM 同一原則。"""
+    from backend.services import llm_service
 
-    conn = sqlite3.connect(_TMP_DB.name)
-    for t in (
-        "bedside_logs", "inpatient_questions", "admission_medications",
-        "admissions", "medications", "patient_profiles", "patients",
-        "disease_reference",
-    ):
-        conn.execute(f"DELETE FROM {t}")
-    conn.commit()
-    conn.close()
+    def _offline(*args, **kwargs):
+        raise RuntimeError("LLM offline (forced in tests)")
+
+    monkeypatch.setattr(llm_service, "call_claude", _offline)
     yield
 
 

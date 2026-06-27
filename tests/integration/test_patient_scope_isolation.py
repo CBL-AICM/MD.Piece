@@ -10,33 +10,13 @@
 用本地 SQLite fallback（與 test_medications_router 同模式）。
 """
 
-import os
-import tempfile
-
 import pytest
 
-# 以本地 SQLite 跑測試：在 import db 前清掉 Supabase 環境變數
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
-os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
+import backend.db as db_mod
+from fastapi.testclient import TestClient
 
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="scopetest_", suffix=".db", delete=False)
-_TMP_DB.close()
-os.environ["SQLITE_DB_PATH"] = _TMP_DB.name
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.main import app  # noqa: E402
-from backend.security import create_access_token  # noqa: E402
+from backend.main import app
+from backend.security import create_access_token
 
 PATIENT_A = "patient-aaa-1111"
 PATIENT_B = "patient-bbb-2222"
@@ -46,25 +26,6 @@ _AUTH_A = {"Authorization": f"Bearer {_TOKEN_A}"}
 
 # 預設無 token 的 client（demo 匿名）；要帶 A 的身分時各別傳 headers。
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def _reset_db():
-    import sqlite3
-
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()
-    db_mod.get_supabase()
-
-    conn = sqlite3.connect(_TMP_DB.name)
-    for t in ("vital_entries", "emotions", "memos", "medical_records", "patients"):
-        conn.execute(f"DELETE FROM {t}")
-    conn.commit()
-    conn.close()
-    yield
 
 
 def test_logged_in_cannot_read_other_account_vitals():

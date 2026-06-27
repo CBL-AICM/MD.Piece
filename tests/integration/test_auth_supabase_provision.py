@@ -8,54 +8,17 @@
 - 回應不外洩 supabase_user_id
 """
 
-import os
-import tempfile
-
 import pytest
 
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
-os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
-os.environ["JWT_SECRET"] = "test-secret-at-least-16-chars-long-xxxx"
+from fastapi.testclient import TestClient
 
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="authprovtest_", suffix=".db", delete=False)
-_TMP_DB.close()
-os.environ["SQLITE_DB_PATH"] = _TMP_DB.name
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.main import app  # noqa: E402
-from backend.services import supabase_auth  # noqa: E402
+from backend.main import app
+from backend.services import supabase_auth
 
 client = TestClient(app)
 
 _GOOD_PASSWORD = "Secret123"
 _USERNAME = "provuser.test"
-
-
-@pytest.fixture(autouse=True)
-def _reset_db():
-    import sqlite3
-
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()
-    conn = sqlite3.connect(_TMP_DB.name)
-    conn.execute("DELETE FROM users")
-    conn.commit()
-    conn.close()
-    yield
 
 
 class _Spy:
