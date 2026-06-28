@@ -218,7 +218,7 @@ def get_catalog(patient_id: str = Query(None), me: dict | None = Depends(current
     available = 0
     if patient_id:
         sb = get_supabase()
-        activity, _, _ = _gather_activity(sb, patient_id)
+        activity, _ = _gather_activity(sb, patient_id)
         earned = rules.compute_points(activity)["earned"]
         spent, _ = _spent_points(sb, patient_id)
         available = max(0, earned - spent)
@@ -244,7 +244,7 @@ def redeem(body: RedeemRequest, me: dict | None = Depends(current_user_optional)
         raise HTTPException(status_code=404, detail="找不到該兌換品項")
 
     sb = get_supabase()
-    activity, _, _ = _gather_activity(sb, body.patient_id)
+    activity, _ = _gather_activity(sb, body.patient_id)
     earned = rules.compute_points(activity)["earned"]
     spent, _ = _spent_points(sb, body.patient_id)
     available = max(0, earned - spent)
