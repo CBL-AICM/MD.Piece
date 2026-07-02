@@ -1,0 +1,14 @@
+# Determinism contract (arch §3.3). The ONLY source of randomness.
+# Every run is reproducible from (this file + the other configs).
+run:
+  master_seed: 20260606        # change to generate an independent replicate
+  n_patients: 3200
+  horizon_days: 365            # 12 months, daily resolution
+  enrolment_window_days: 30    # patients enrol staggered over first 30 days (avoids cohort artifacts)
+
+# Per-patient RNG streams are spawned via SeedSequence(master_seed).spawn(n_patients)
+# so patient i's stream is independent of n_patients and of worker/order (parallel-safe).
+rng:
+  spawn_per_patient: true
+  # named sub-streams so changing one engine does not perturb another patient's other engines
+  substreams: [demographics, disease, utilization, persona, recall, usage, mdpiece, doctor]
