@@ -1,0 +1,140 @@
+# DISEASE REGISTRY (arch §9.4). Per-disease clinical parameters driving L2/L3.
+# ALL numeric values are clinically-plausible STARTING POINTS, not measured constants.
+# Each disease block: validation_required: true until literature citations attached.
+# icd10 anchors verified against ICD-10-CM 2026 category codes.
+#
+# Parameter glossary:
+#   relapse_rate_yr      : expected relapses/flares per patient-year (Poisson/Hawkes base)
+#   hawkes_excitation    : Hawkes BRANCHING RATIO in [0,1) = expected offspring flares per
+#                          flare (a flare raises near-term flare risk); 0=no clustering.
+#                          MUST be <1 (stationarity); background rate auto-calibrated so the
+#                          stationary flare rate equals relapse_rate_yr.
+#   infection_rate_yr    : clinically-relevant infections/year (immunosuppression-adjusted)
+#   ou_reversion         : daily mean-reversion speed of latent activity a(t) toward baseline
+#   steroid_response_lag : days from escalation to activity improvement
+#   outpatient_interval  : routine follow-up interval (days) when stable
+#   infusion_interval    : days between maintenance infusions (null = not infusion-managed)
+
+defaults:
+  validation_required: true
+  ou_baseline_by_severity: {0: 0.05, 1: 0.20, 2: 0.40, 3: 0.65, 4: 0.85}
+  symptom_threshold: 0.55          # a(t) crossing this (rising) opens a symptom episode
+  symptom_hysteresis: 0.12         # episode closes only below (threshold - hysteresis): kills chatter
+  symptom_recur_days: 14           # while an episode stays open, emit an 'ongoing symptom' this often
+  flare_threshold: 0.75            # a(t) above this on a Hawkes flare => FLARE event
+  ou_sigma: 0.08                   # daily volatility of the latent activity OU process
+  flare_activity_jump: 0.25        # how much a Hawkes flare raises a(t)
+  hawkes_decay_days: 21            # self-excitation memory: flare risk elevated this long
+  infection_activity_bump: 0.20    # an infection raises a(t) across its window
+  infection_window_days: 7         # days an infection elevates activity
+  missed_refill_activity_bump: 0.12 # treatment lapse (missed refill) raises a(t)
+  activity_severity_bins: [0.2, 0.4, 0.6, 0.8]  # a(t) -> ordinal severity 0..4
+
+NMOSD:
+  icd10: G36.0
+  age_sex: {mean_age: 42, sd_age: 14, sex: {F: 0.83, M: 0.17}}  # LIT: Bilodeau 2026 (median 42y, 83%F)
+  severity_dist: [0.05, 0.25, 0.40, 0.25, 0.05]
+  relapse_rate_yr: 0.5             # LIT-ANCHORED (was 0.8)
+  relapse_rate_source: "Jarius 2016 J Neuroinflammation PMID27793206 ARR 0.92 (MOG-IgG); Bilodeau 2026 Neurol Neuroimmunol Neuroinflamm PMID41494145 treated ARR 0.0-0.34. 0.5=treated specialty midpoint."
+  hawkes_excitation: 0.35
+  infection_rate_yr: 1.4           # rituximab/immunosuppression elevated
+  ou_reversion: 0.04
+  steroid_response_lag: 4
+  outpatient_interval: 90
+  infusion_interval: 180           # rituximab ~6-monthly maintenance
+  standard_treatments: [rituximab, eculizumab, azathioprine, oral_prednisone]
+  rationale: "Relapsing, attack-driven; each relapse high-salience (often hospitalized). Infusion-managed."
+
+MS:
+  icd10: G35
+  age_sex: {mean_age: 37, sd_age: 11, sex: {F: 0.65, M: 0.35}}  # LIT: OPTIMUM 2021 (median 37y, 64.9%F)
+  severity_dist: [0.10, 0.35, 0.35, 0.15, 0.05]
+  relapse_rate_yr: 0.30            # LIT-ANCHORED (was 0.5) modern DMT era
+  relapse_rate_source: "Kappos 2021 OPTIMUM JAMA Neurol PMID33779698 ARR ponesimod 0.202 / teriflunomide 0.290."
+  hawkes_excitation: 0.25
+  infection_rate_yr: 1.0
+  ou_reversion: 0.03               # progressive component = slow drift
+  steroid_response_lag: 5
+  outpatient_interval: 120
+  infusion_interval: 180           # ocrelizumab 6-monthly (subset); many oral DMTs
+  standard_treatments: [ocrelizumab, natalizumab, dimethyl_fumarate, interferon_beta]
+  rationale: "Relapsing-remitting + slow progression. Mix of infusion and oral DMT."
+
+SLE:
+  icd10: M32.9
+  age_sex: {mean_age: 34, sd_age: 12, sex: {F: 0.90, M: 0.10}}
+  severity_dist: [0.08, 0.30, 0.37, 0.20, 0.05]
+  relapse_rate_yr: 0.45            # LIT-ANCHORED (was 1.6)
+  relapse_rate_source: "Hao 2022 Lupus Sci Med PMID35241499: SELENA-SLEDAI flare 0.10-0.23/pt-yr if controlled, 0.49 if never-controlled. 0.45=mixed-activity specialty cohort."
+  hawkes_excitation: 0.40
+  infection_rate_yr: 1.6           # immunosuppression + disease
+  ou_reversion: 0.05
+  steroid_response_lag: 3
+  outpatient_interval: 90
+  infusion_interval: null          # mostly oral; belimumab IV subset
+  standard_treatments: [hydroxychloroquine, oral_prednisone, mycophenolate, belimumab]
+  rationale: "Highly female, flare-prone, multi-system. Strong flare clustering."
+
+RA:
+  icd10: M06.9
+  age_sex: {mean_age: 52, sd_age: 13, sex: {F: 0.75, M: 0.25}}
+  severity_dist: [0.10, 0.40, 0.35, 0.13, 0.02]
+  relapse_rate_yr: 0.40            # LIT-ANCHORED (was 1.2)
+  relapse_rate_source: "Mori 2022 PLoS One PMID35737642: crude flare incidence 0.36/person-yr (cumulative 45% at 1y) after DMARD/tofacitinib discontinuation."
+  hawkes_excitation: 0.30
+  infection_rate_yr: 1.3           # biologics/JAK elevated
+  ou_reversion: 0.04
+  steroid_response_lag: 4
+  outpatient_interval: 120
+  infusion_interval: 56            # infliximab ~8-weekly (subset on IV biologics)
+  standard_treatments: [methotrexate, adalimumab, tofacitinib, oral_prednisone]
+  rationale: "Older onset, joint-predominant flares, biologic/DMARD-managed."
+
+CROHN:
+  icd10: K50.90
+  age_sex: {mean_age: 31, sd_age: 12, sex: {F: 0.52, M: 0.48}}
+  severity_dist: [0.10, 0.38, 0.35, 0.15, 0.02]
+  relapse_rate_yr: 0.45            # LIT-ANCHORED (was 1.4)
+  relapse_rate_source: "Chauhan 2019 Cureus PMID31467814: 32% relapse within 1y of diagnosis (50% at 3y), pediatric CD cohort."
+  hawkes_excitation: 0.45          # strong flare clustering
+  infection_rate_yr: 1.3
+  ou_reversion: 0.05
+  steroid_response_lag: 4
+  outpatient_interval: 90
+  infusion_interval: 56            # infliximab 8-weekly maintenance (subset)
+  standard_treatments: [infliximab, ustekinumab, azathioprine, budesonide]
+  rationale: "Relapsing-remitting bowel disease; flare→escalation→infusion chains common."
+
+MG:
+  icd10: G70.00
+  age_sex: {mean_age: 47, sd_age: 18, sex: {F: 0.55, M: 0.45}}  # bimodal age
+  severity_dist: [0.10, 0.35, 0.35, 0.15, 0.05]
+  relapse_rate_yr: 0.35            # LIT-ANCHORED (was 0.9)
+  relapse_rate_source: "Such-Diaz 2020 Rev Neurol PMID32700310: annual exacerbation incidence 0.35/yr (severe 0.12/yr) in MG cohort."
+  hawkes_excitation: 0.35
+  infection_rate_yr: 1.2           # infection is a classic crisis trigger
+  ou_reversion: 0.05
+  steroid_response_lag: 6          # steroids can transiently worsen first
+  outpatient_interval: 90
+  infusion_interval: 28            # IVIG/efgartigimod cycles (subset)
+  standard_treatments: [pyridostigmine, oral_prednisone, IVIG, efgartigimod]
+  rationale: "Fluctuating weakness; infection-triggered crises are very high-salience (ICU)."
+
+OTHER:
+  icd10: null
+  age_sex: {mean_age: 50, sd_age: 16, sex: {F: 0.55, M: 0.45}}
+  severity_dist: [0.20, 0.40, 0.28, 0.10, 0.02]
+  relapse_rate_yr: 0.7
+  hawkes_excitation: 0.20
+  infection_rate_yr: 1.0
+  ou_reversion: 0.04
+  steroid_response_lag: 5
+  outpatient_interval: 150
+  infusion_interval: null
+  standard_treatments: [disease_modifying_generic, oral_prednisone]
+  rationale: "Heterogeneous chronic-disease bucket; deliberately lower-activity baseline."
+
+# Seasonal infection hazard (shared, scaled per-disease infection_rate_yr).
+infection_seasonality:
+  amplitude: 0.4        # peak/trough modulation of base rate
+  peak_day: 15          # mid-January peak (Northern-hemisphere winter); configurable

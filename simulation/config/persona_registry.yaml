@@ -1,0 +1,126 @@
+# PERSONA REGISTRY (arch §9.3, L4). The 8 behavioral personas.
+#
+# ⚠️ HIGHEST researcher-degrees-of-freedom in the whole platform (arch §11.2).
+# EVERY number here is EXPERT JUDGMENT, not measured. This table is the #1
+# external-validation and #1 sensitivity-analysis target. Treat with suspicion.
+#
+# Each behavioral parameter is a DISTRIBUTION (beta, given as mean+concentration),
+# not a constant — within-persona heterogeneity is required so personas overlap.
+# Params (all 0–1):
+#   logging_prob        : P(log a given event the day it happens)        [drives MDPIECE]
+#   retention_kappa     : retention longevity multiplier (×median life)  [drives dropout]
+#   recall_accuracy     : baseline retrospective recall fidelity         [drives RECALL]
+#   med_recall_accuracy : medication-specific recall fidelity            [drives RECALL]
+#   symptom_report_acc  : symptom severity reporting fidelity            [both arms]
+#   notif_response      : P(respond to a reminder)                       [MDPIECE recovery]
+#   engagement_level    : sustained app engagement intensity             [MDPIECE]
+# beta concentration controls spread: higher = tighter around mean.
+
+beta_concentration: 12        # global default spread for all persona params
+
+personas:
+  PERFECT_LOGGER:
+    logging_prob: 0.95
+    retention_kappa: 8.0           # by definition ~never drops (median lifetime >> horizon)
+    recall_accuracy: 0.85
+    med_recall_accuracy: 0.90
+    symptom_report_acc: 0.88
+    notif_response: 0.90
+    engagement_level: 0.95
+    note: "Aspirational ceiling. Rare in reality; keep population share small."
+
+  NORMAL:
+    logging_prob: 0.45
+    retention_kappa: 1.0
+    recall_accuracy: 0.55
+    med_recall_accuracy: 0.62
+    symptom_report_acc: 0.60
+    notif_response: 0.50
+    engagement_level: 0.50
+    note: "The modal user. Mediocre on purpose — MD.Piece must earn benefit here."
+
+  SYMPTOM_DRIVEN:
+    logging_prob: 0.40            # low baseline...
+    retention_kappa: 1.1
+    recall_accuracy: 0.50
+    med_recall_accuracy: 0.55
+    symptom_report_acc: 0.70
+    notif_response: 0.55
+    engagement_level: 0.45
+    flare_logging_multiplier: 2.0  # ...but logs heavily DURING flares (event-coupled)
+    note: "Engagement spikes with symptoms; expected to benefit most from MD.Piece."
+
+  ANXIOUS:
+    logging_prob: 0.70
+    retention_kappa: 2.2           # anxious users check often -> high retention
+    recall_accuracy: 0.45            # vivid but distorted memory (over-reports severity)
+    med_recall_accuracy: 0.60
+    symptom_report_acc: 0.50         # severity inflation bias (see friction config)
+    notif_response: 0.80
+    engagement_level: 0.75
+    severity_bias: +0.5              # tends to over-report severity (ordinal shift)
+    note: "High logging but biased severity; tests that 'more data' ≠ 'more accurate'."
+
+  LOW_ENGAGEMENT:
+    logging_prob: 0.12
+    retention_kappa: 0.4
+    recall_accuracy: 0.45
+    med_recall_accuracy: 0.50
+    symptom_report_acc: 0.45
+    notif_response: 0.20
+    engagement_level: 0.15
+    note: "The crossover case: MD.Piece may LOSE here (dropout > recall decay prevented)."
+
+  TECH_AVOIDANT:
+    logging_prob: 0.08
+    retention_kappa: 0.3
+    recall_accuracy: 0.55            # memory fine; it's the TECH that fails, not recall
+    med_recall_accuracy: 0.60
+    symptom_report_acc: 0.55
+    notif_response: 0.15
+    engagement_level: 0.10
+    note: "Decouples memory from tech. MD.Piece expected to underperform recall here."
+
+  CAREGIVER_MANAGED:
+    logging_prob: 0.65               # caregiver does the logging
+    retention_kappa: 3.0             # caregiver sustains engagement
+    recall_accuracy: 0.40            # patient's OWN recall weak (often elderly/impaired)...
+    med_recall_accuracy: 0.45
+    symptom_report_acc: 0.55
+    notif_response: 0.70
+    engagement_level: 0.65
+    caregiver_required: true
+    note: "MD.Piece expected to benefit greatly: proxy logging compensates poor self-recall."
+
+  ELDERLY_LOW_LITERACY:
+    logging_prob: 0.15
+    retention_kappa: 0.5
+    recall_accuracy: 0.35
+    med_recall_accuracy: 0.40
+    symptom_report_acc: 0.45
+    notif_response: 0.30
+    engagement_level: 0.20
+    note: "Worst recall AND worst tech. Net MD.Piece effect genuinely ambiguous → keep honest."
+
+# --- Assignment model (arch §4 L4) ---
+# Persona is sampled CONDITIONAL on patient attributes via a softmax over feature scores,
+# NOT uniformly. This wires the adoption-selection confound on purpose (eval adjusts for it).
+# Features: tech_literacy, health_literacy, age, caregiver_support, disease (anxiety proxy),
+#           baseline_adherence.
+assignment:
+  method: conditional_softmax
+  base_rates:                 # prior shares before conditioning (must sum to 1.0)
+    PERFECT_LOGGER: 0.05
+    NORMAL: 0.30
+    SYMPTOM_DRIVEN: 0.15
+    ANXIOUS: 0.12
+    LOW_ENGAGEMENT: 0.15
+    TECH_AVOIDANT: 0.08
+    CAREGIVER_MANAGED: 0.08
+    ELDERLY_LOW_LITERACY: 0.07
+  feature_weights:
+    # high tech_literacy pushes toward PERFECT_LOGGER/NORMAL, away from TECH_AVOIDANT/ELDERLY
+    tech_literacy: {PERFECT_LOGGER: +1.5, NORMAL: +0.5, TECH_AVOIDANT: -2.0, ELDERLY_LOW_LITERACY: -1.5}
+    age_over_70:   {ELDERLY_LOW_LITERACY: +2.0, CAREGIVER_MANAGED: +1.0, TECH_AVOIDANT: +0.8}
+    caregiver_support: {CAREGIVER_MANAGED: +2.5, ELDERLY_LOW_LITERACY: +0.5}
+    low_health_literacy: {LOW_ENGAGEMENT: +1.0, ELDERLY_LOW_LITERACY: +1.0}

@@ -1,0 +1,138 @@
+# ASSUMPTION REGISTRY (arch §9.1). Every STRUCTURAL assumption (not just numeric
+# parameters — those live in probability_registry.yaml). Each entry records:
+#   statement, bias_direction (who it favors), severity, how_to_test, status, decision_ref
+#
+# bias_direction: FAVORS_MDPIECE | FAVORS_RECALL | NEUTRAL | UNKNOWN
+# This file is the audit trail. The platform prints a count of unvalidated assumptions
+# at the top of every evaluation report (fail-loud about evidence base — Rule 12).
+
+assumptions:
+
+  - id: A01
+    statement: "MD.Piece is modeled as a second LOSSY observer (logging+dropout loss), not a perfect recorder."
+    bias_direction: FAVORS_RECALL
+    severity: critical
+    how_to_test: "Parity check: set mdpiece loss = recall loss → effect must → 0."
+    status: design_decision
+    decision_ref: arch_2.1
+
+  - id: A02
+    statement: "App dropout and non-adoption are MD.Piece OUTCOMES, not censored/missing."
+    bias_direction: FAVORS_RECALL
+    severity: critical
+    how_to_test: "Compare effect with vs without dropouts dropped; the gap is the cheat magnitude."
+    status: design_decision
+    decision_ref: arch_1.2
+
+  - id: A03
+    statement: "Logged events undergo NO further memory decay (app's core value), minus a small logged-quality decay term."
+    bias_direction: FAVORS_MDPIECE
+    severity: high
+    how_to_test: "Sensitivity on logged_quality_decay 0 → high; watch effect shrink."
+    status: validation_required
+    decision_ref: arch_4_L5b
+
+  - id: A04
+    statement: "Patient socio-cognitive attributes derive from a SINGLE latent advantage factor + per-axis residual (D5)."
+    bias_direction: UNKNOWN
+    severity: medium
+    how_to_test: "Refit with a 2-factor (cognitive vs digital) structure; compare adoption-adjusted effect."
+    status: design_decision
+    decision_ref: arch_12_D5
+
+  - id: A05
+    statement: "Persona assignment is conditional on attributes (softmax), inducing adoption-selection confound ON PURPOSE."
+    bias_direction: FAVORS_MDPIECE
+    severity: high
+    how_to_test: "Report crude vs adoption-adjusted (reweighted) estimate; the gap = selection inflation."
+    status: design_decision
+    decision_ref: arch_2.2
+
+  - id: A06
+    statement: "Memory follows salience-weighted exponential forgetting (Ebbinghaus form); telescoping shifts dates toward visit."
+    bias_direction: NEUTRAL
+    severity: high
+    how_to_test: "Swap exponential→power-law forgetting; check recall-arm metric stability."
+    status: literature_anchored
+    source: "Brown & Adams 1992 Med Care PMID1583918 (salience-dependent recall FN 0.10-0.53; minimal short-interval decay; age effect); Fellholter 2025 BMC Geriatr PMID41053639 (salience/literacy/age-dependent self-report concordance)."
+    decision_ref: arch_4_L5a
+
+  - id: A07
+    statement: "Clinical salience weights (hospitalization >> mild-symptom-day) are a fixed expert table (D2)."
+    bias_direction: UNKNOWN
+    severity: high
+    how_to_test: "Re-run under uniform weights; large divergence ⇒ conclusions are weight-driven."
+    status: validation_required
+    decision_ref: arch_12_D2
+
+  - id: A08
+    statement: "Cohort = specialty-clinic disease mix (rare diseases over-represented) (D1)."
+    bias_direction: NEUTRAL
+    severity: medium
+    how_to_test: "Re-run population_representative mix; compare aggregate (not stratified) effects."
+    status: design_decision
+    decision_ref: arch_12_D1
+
+  - id: A09
+    statement: "Default app retention is deliberately PESSIMISTIC (health-app M1 retention low) (D3)."
+    bias_direction: FAVORS_RECALL
+    severity: high
+    how_to_test: "Sensitivity sweep retention_kappa global multiplier 0.5×→2×."
+    status: validation_required
+    decision_ref: arch_12_D3
+
+  - id: A10
+    statement: "MD.Piece capture INCLUDES caregiver-proxy logging; EXCLUDES OCR document upload (D4)."
+    bias_direction: FAVORS_RECALL
+    severity: medium
+    how_to_test: "Enable OCR-capture term; measure how much it lifts MD.Piece (especially low-engagement)."
+    status: design_decision
+    decision_ref: arch_12_D4
+
+  - id: A11
+    statement: "Clinician (L8) reviews each snapshot near-COLD; no model of prior continuity knowledge."
+    bias_direction: FAVORS_MDPIECE
+    severity: medium
+    how_to_test: "Add a prior-knowledge term that pre-fills understanding; watch MD.Piece clinical edge shrink."
+    status: known_limitation
+    decision_ref: arch_11.6
+
+  - id: A12
+    statement: "12-month horizon; no mortality, no competing risks, no loss-to-follow-up beyond app dropout."
+    bias_direction: NEUTRAL
+    severity: low
+    how_to_test: "Out of scope v0.1; revisit for multi-year extension."
+    status: known_limitation
+    decision_ref: arch_11.7
+
+  - id: A13
+    statement: "Recall and logging errors share an engagement/literacy driver (correlated within patient); residual structure assumed independent."
+    bias_direction: UNKNOWN
+    severity: medium
+    how_to_test: "Introduce an explicit shared-noise term; check whether paired differences widen."
+    status: validation_required
+    decision_ref: arch_11.5
+
+  - id: A14
+    statement: "Disease activity = OU mean-reversion + Hawkes flares + seasonal-Poisson infections."
+    bias_direction: NEUTRAL
+    severity: medium
+    how_to_test: "Face-validity: simulated relapse rates fall within disease_registry plausible ranges."
+    status: partially_literature_anchored
+    source: "Per-disease relapse rates now literature-anchored (see disease_registry relapse_rate_source: NMOSD Jarius2016/Bilodeau2026, MS Kappos2021, SLE Hao2022, RA Mori2022, Crohn Chauhan2019, MG SuchDiaz2020). The OU+Hawkes+seasonal-Poisson FORM remains a modeling choice."
+    decision_ref: arch_7
+
+  - id: A15
+    statement: "Doctor understanding is discounted by record ACCURACY (accuracy_coupling): a complete
+                but mis-dated/mis-graded record yields false confidence, not true understanding."
+    bias_direction: FAVORS_MDPIECE
+    severity: medium
+    how_to_test: "Sweep accuracy_coupling 0 (volume-only) -> 1 (full discount); watch the recall arm's
+                  doctor-understanding advantage shrink as wrong-dated volume stops counting."
+    status: validation_required
+    decision_ref: arch_11.6
+
+# Roll-up the platform must print:
+summary_required_in_reports:
+  - "N assumptions total / N still validation_required"
+  - "N assumptions FAVORS_MDPIECE vs N FAVORS_RECALL (net directional bias of the design)"

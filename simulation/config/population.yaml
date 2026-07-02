@@ -1,0 +1,53 @@
+# L1 Patient Generator config. D1 default = SPECIALTY-CLINIC MIX (arch §12 D1).
+# Every value: validation_required until a citation is attached in the assumption registry.
+
+cohort_mode: specialty_clinic   # specialty_clinic | population_representative | both
+
+# Disease mix (must sum to 1.0). Specialty-platform skew: rare neuro/rheum
+# diseases (NMOSD, MG) deliberately over-represented vs general population,
+# matching MD.Piece's likely real recruited user base.
+disease_mix:
+  NMOSD:  0.10
+  MS:     0.18
+  SLE:    0.18
+  RA:     0.22
+  CROHN:  0.16
+  MG:     0.08
+  OTHER:  0.08
+
+# Demographics are sampled CONDITIONAL on disease (see disease_registry.yaml age_sex).
+
+# --- Latent advantage factor (arch §4 L1, D5) ---
+# A single standard-normal z per patient loads onto socio-cognitive attributes,
+# inducing realistic correlation AND the deliberate adoption-selection confound.
+# Per-axis residual lets health_literacy and tech_literacy diverge (e.g. an elder
+# who is health-literate but tech-avoidant) — D5 default keeps single factor + residual.
+latent_factor:
+  enabled: true
+  loadings:                 # how strongly z drives each attribute (0–1)
+    ses: 0.60
+    education: 0.65
+    health_literacy: 0.70
+    tech_literacy: 0.55
+    clinic_access: 0.45
+    baseline_adherence: 0.50
+  residual_sd: 0.45         # per-axis idiosyncratic noise so axes dissociate
+  age_tech_penalty: 0.020   # tech_literacy decrement per year over age 60 (elderly digital divide)
+
+# --- Marginal attribute distributions (before latent coupling) ---
+sex_default: {F: 0.62, M: 0.38}        # overridden per-disease where autoimmune skews female
+education_dist: [0.18, 0.42, 0.32, 0.08]      # primary/secondary/tertiary/postgrad
+ses_dist: [0.20, 0.20, 0.20, 0.20, 0.20]      # quintiles by construction
+clinic_access_dist: [0.20, 0.45, 0.35]        # poor/moderate/good
+insurance_dist: {NHI: 0.82, NHI_PLUS_PRIVATE: 0.15, UNINSURED: 0.03}  # Taiwan NHI context
+
+# Caregiver support prevalence rises with age and severity.
+caregiver:
+  base_prob: 0.15
+  age65_plus_prob: 0.45
+  severity_bonus_per_level: 0.08    # +per disease-severity level
+  full_proxy_share: 0.30            # of those with support, fraction that are full proxies
+
+comorbidity:
+  poisson_lambda_base: 1.1
+  age_scaling: 0.03                 # +lambda per year over 50
