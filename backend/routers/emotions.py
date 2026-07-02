@@ -8,6 +8,18 @@ from backend.security import current_user_optional, enforce_patient_scope
 
 SCORE_EMOJI = {1: "😢", 2: "😟", 3: "😐", 4: "🙂", 5: "😄"}
 
+
+def _tw_day(ts: str) -> str:
+    """created_at（UTC ISO 字串）→ 台灣日界（UTC+8）的 YYYY-MM-DD。"""
+    if not ts:
+        return ""
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except ValueError:
+        return ts[:10]
+    return ((dt + timedelta(hours=8)).isoformat())[:10]
+
+
 router = APIRouter()
 
 # 情緒記錄 - 每日評分、靜默守護機制、心理危機偵測
@@ -56,8 +68,15 @@ def log_emotion(body: EmotionLog, me: dict | None = Depends(current_user_optiona
                 .eq("patient_id", body.patient_id).gte("created_at", since)
                 .execute().data or []
             )
-            low_count = sum(1 for r in recent if (r.get("score") or 5) <= 2)
-            if low_count >= 3:
+            # 以「不同天數」計（台灣日界），同一天多筆低分只算 1 天
+            low_day_set = {
+                _tw_day(r.get("created_at") or "")
+                for r in recent
+                if (r.get("score") or 5) <= 2
+            }
+            low_day_set.discard("")
+            low_days = len(low_day_set)
+            if low_days >= 3:
                 # 24 小時內已有相同 alert 就不重複
                 day_ago = (datetime.utcnow() - timedelta(days=1)).isoformat()
                 existing = (
@@ -72,8 +91,8 @@ def log_emotion(body: EmotionLog, me: dict | None = Depends(current_user_optiona
                     sb.table("alerts").insert({
                         "patient_id": body.patient_id,
                         "alert_type": "low_mood",
-                        "severity": "medium" if low_count == 3 else "high",
-                        "title": f"連續情緒低落（近 7 天 {low_count} 天 ≤ 2 分）",
+                        "severity": "medium" if low_days == 3 else "high",
+                        "title": f"連續情緒低落（近 7 天 {low_days} 天 ≤ 2 分）",
                         "detail": "建議於下次回診評估心理狀態，必要時轉介心理諮商。",
                         "acknowledged": 0,
                         "resolved": 0,
@@ -97,12 +116,19 @@ def check_silent_guardian(patient_id: str = Query(...), me: dict | None = Depend
     result = sb.table("emotions").select("*").eq("patient_id", patient_id).gte("created_at", since).order("created_at", desc=True).execute()
     records = result.data or []
 
-    low_count = sum(1 for r in records if r.get("score", 5) <= 2)
-    alert = low_count >= 3
+    # 以「不同天數」計（台灣日界），同一天多筆低分只算 1 天
+    low_day_set = {
+        _tw_day(r.get("created_at") or "")
+        for r in records
+        if r.get("score", 5) <= 2
+    }
+    low_day_set.discard("")
+    low_days = len(low_day_set)
+    alert = low_days >= 3
 
     return {
         "alert": alert,
-        "low_days": low_count,
+        "low_days": low_days,
         "total_records": len(records),
         "message": "偵測到連續低落情緒，建議關懷此病患" if alert else "情緒狀態正常",
     }
@@ -135,7 +161,7 @@ def get_daily_mood(
 
     by_day: dict[str, list[dict]] = {}
     for r in records:
-        day = (r.get("created_at") or "")[:10]
+        day = _tw_day(r.get("created_at") or "")  # 台灣日界（UTC+8）
         if not day:
             continue
         by_day.setdefault(day, []).append(r)
@@ -155,7 +181,7 @@ def get_daily_mood(
             "average_score": avg,
             "max_score": max(scores),
             "min_score": min(scores),
-            "emoji": SCORE_EMOJI.get(round(avg), "😐"),
+            "emoji": SCORE_EMOJI.get(int(avg + 0.5), "😐"),  # 四捨五入（避免銀行家捨入），對齊前端 Math.round
             "note": last_note,
             "count": len(items),
         })

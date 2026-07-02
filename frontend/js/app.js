@@ -487,6 +487,22 @@ function clearLocalPatientData() {
   return removed;
 }
 
+// 確認本機病患資料的歸屬帳號：owner 換人（或 forceClear）就先清掉未分帳號的
+// 本地病患資料，再記下新 owner。登入（finishAuth）與快速切換（switchToAccount）
+// 兩條路徑共用，避免 memo / 聊天等紀錄跨帳號外洩或被補傳到新帳號。
+function claimLocalDataOwner(user, forceClear) {
+  try {
+    // owner 用 user.id（不可變、登入與帳號切換兩條路徑都一定有）；切勿用 id_number，
+    // switchToAccount 存回的精簡 user 沒有該欄位，會導致切回自己帳號被誤判而清空。
+    var owner = String((user && (user.id || user.username)) || 'guest');
+    var prevOwner = localStorage.getItem('mdpiece_local_data_owner');
+    if (forceClear || (prevOwner && prevOwner !== owner)) {
+      clearLocalPatientData();
+    }
+    localStorage.setItem('mdpiece_local_data_owner', owner);
+  } catch (e) {}
+}
+
 // 登出 — 清除使用者資料並回到 landing
 function logout() {
   if (!confirm(_T('app.c1.confirmLogout'))) return;
@@ -561,6 +577,9 @@ function switchToAccount(id) {
     created_at: acct.created_at || '',
     access_token: acct.token,
   });
+  // 與登入路徑（finishAuth）相同的歸屬檢查：換帳號就清掉上一帳號的本地病患資料，
+  // 避免跨帳號外洩、或把上一帳號的 memo 補傳到新帳號。
+  claimLocalDataOwner(acct, false);
   window.location.reload();
 }
 
@@ -764,7 +783,10 @@ function memo() {
     var t = m.createdAt || m.created_at;
     return t && _localDay(t) === _todayKey;
   }).length;
-  var _doctorCount = _memoList.filter(function(m) { return m.forDoctor; }).length;
+  var _doctorCount = _memoList.filter(function(m) {
+    var t = m.createdAt || m.created_at;
+    return m.forDoctor && t && _localDay(t) === _todayKey;
+  }).length;
 
   // ─── Mobile v11 block ───
   var _mobileMemoBlock = ''
@@ -828,7 +850,7 @@ function memo() {
     + '</div>';
 
   return _mobileMemoBlock + `
-    <div class="desktop-only">
+    <div class="desktop-only memo-desktop">
     <div class="page-app-hero page-app-hero-rose">
       <div class="page-app-hero-head">
         <span class="page-app-hero-eyebrow">TODAY · ${_T('app.c1.todayMemo')}</span>
@@ -923,6 +945,43 @@ function memoSaveAll(arr) {
   catch (e) { showToast(_T("app.c1.saveFailedSpace"), "error"); }
 }
 
+// 刪除 tombstone：本機刪掉但後端 DELETE 還沒成功（離線／失敗）的 memo id，
+// 記下來避免下次開頁同步時從後端「復活」，並在下次開頁重試 DELETE。
+var MEMO_TOMBSTONE_KEY = "mdpiece_memo_deleted_v1";
+function memoTombstonesLoad() {
+  try {
+    var parsed = JSON.parse(localStorage.getItem(MEMO_TOMBSTONE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) { return []; }
+}
+function memoTombstonesSave(arr) {
+  try { localStorage.setItem(MEMO_TOMBSTONE_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+function memoTombstoneAdd(id) {
+  if (!id) return;
+  var list = memoTombstonesLoad();
+  if (list.some(function(t) { return t && t.id === id; })) return;
+  list.push({ id: id, deletedAt: new Date().toISOString() });
+  memoTombstonesSave(list);
+}
+function memoTombstoneRemove(id) {
+  memoTombstonesSave(memoTombstonesLoad().filter(function(t) { return !t || t.id !== id; }));
+}
+
+// 把單筆 memo 的刪除同步到後端（best-effort）：成功才移除 tombstone，
+// 失敗（離線等）留著 tombstone，下次開頁 memoSyncOnLoad 會重試。
+function memoSyncDelete(id) {
+  if (!id) return;
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    apiFetch(API + '/memos/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+          { method: 'DELETE' })
+      .then(function(r) { if (r && r.ok) memoTombstoneRemove(id); })
+      .catch(function() {});
+  } catch (e) {}
+}
+
 // 把單筆 memo 背景同步到後端（best-effort）。後端以 (patient_id, client_id)
 // 幂等 upsert，所以新增、編輯、補傳重送都安全；離線/失敗就留在本機，下次開頁補傳。
 function memoSyncPush(m) {
@@ -955,16 +1014,26 @@ function memoSyncOnLoad() {
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
       if (!data || !Array.isArray(data.memos)) return;
+      // 本機已刪除但後端 DELETE 未成功的 id（tombstone）：不拉回，改重試 DELETE。
+      var deadIds = {};
+      memoTombstonesLoad().forEach(function(t) { if (t && t.id) deadIds[t.id] = 1; });
       var byId = {};
-      data.memos.forEach(function(m) { if (m && m.id) byId[m.id] = m; });
+      data.memos.forEach(function(m) {
+        if (!m || !m.id) return;
+        if (deadIds[m.id]) { memoSyncDelete(m.id); return; }
+        byId[m.id] = m;
+      });
       memoLoad().forEach(function(m) {
         if (!m || !m.id) return;
+        if (deadIds[m.id]) return; // 已標記刪除 → 不補傳
         var server = byId[m.id];
-        // 本機獨有，或本機是較新的版本（離線編輯 updatedAt 較新）→ 補傳並保留本機，
-        // 不要被後端的舊版蓋掉（否則離線改的 memo 會遺失）。
-        var lt = m.updatedAt || m.createdAt || '';
-        var st = server ? (server.updatedAt || server.createdAt || '') : '';
-        if (!server || String(lt) > String(st)) { memoSyncPush(m); byId[m.id] = m; }
+        // 本機獨有，或本機「確定較新」（離線編輯 updatedAt 較新）→ 補傳並保留本機，
+        // 不要被後端的舊版蓋掉。時間一律轉數值比較（本機 `...Z` vs 伺服器 `...+00:00`
+        // 字串字典序會誤判）；相等或時間無效視為已同步，不重傳也不覆蓋。
+        if (!server) { memoSyncPush(m); byId[m.id] = m; return; }
+        var lt = new Date(m.updatedAt || m.createdAt || 0).getTime();
+        var st = new Date(server.updatedAt || server.createdAt || 0).getTime();
+        if (isFinite(lt) && isFinite(st) && lt > st) { memoSyncPush(m); byId[m.id] = m; }
       });
       var merged = Object.keys(byId).map(function(k) { return byId[k]; });
       merged.sort(function(a, b) {
@@ -990,6 +1059,7 @@ function memoStartText() {
   _memoComposeMode = "text";
   _memoStagedPhoto = null;
   _memoStagedPhotoCanvas = null;
+  _memoEditingId = null; // 快速新增入口 — 清掉殘留的編輯狀態，避免覆蓋舊 memo
   memoOpenComposer(_T("app.c1.writeWhatToSay"), { forDoctor: true });
 }
 
@@ -1042,6 +1112,7 @@ function memoOnPhotoPicked(ev) {
     return;
   }
   _memoComposeMode = "photo";
+  _memoEditingId = null; // 快速新增入口 — 清掉殘留的編輯狀態，避免覆蓋舊 memo
   function resetInput() { try { input.value = ""; } catch (e) { /* noop */ } }
 
   // HEIC（iPhone 預設格式）：Samsung / Chrome / Firefox 都不能直接解，先轉 JPEG
@@ -1362,6 +1433,9 @@ function memoOpenComposer(title, opts) {
 
   memoRenderStagedPreview();
   box.style.display = "block";
+  // v11 全寬度藏掉 .desktop-only（composer 的父容器）— 加 body class 讓
+  // v11-modern.css 把 .memo-desktop modal 化露出 composer（同 is-sym-logging 前例）
+  document.body.classList.add('is-memo-composing');
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   setTimeout(function() {
     var ta = document.getElementById("memo-text");
@@ -1375,6 +1449,7 @@ function memoCancelCompose() {
   _memoStagedPhoto = null;
   _memoStagedPhotoCanvas = null;
   _memoEditingId = null;
+  document.body.classList.remove('is-memo-composing');
   var box = document.getElementById("memo-composer");
   if (box) box.style.display = "none";
 }
@@ -1388,17 +1463,17 @@ function memoSave() {
   }
   var memos = memoLoad();
   var editingId = _memoEditingId;
+  // 編輯目標可能已被刪除（例如另一裝置刪掉後同步）→ 退回新增，內容不無聲丟失
+  var idx = editingId ? memos.findIndex(function(x) { return x.id === editingId; }) : -1;
+  if (editingId && idx < 0) editingId = null;
   if (editingId) {
-    var idx = memos.findIndex(function(x) { return x.id === editingId; });
-    if (idx >= 0) {
-      memos[idx] = Object.assign({}, memos[idx], {
-        type: _memoStagedPhoto ? "photo" : "text",
-        photo: _memoStagedPhoto || null,
-        text: text,
-        forDoctor: !!forDoctor,
-        updatedAt: new Date().toISOString()
-      });
-    }
+    memos[idx] = Object.assign({}, memos[idx], {
+      type: _memoStagedPhoto ? "photo" : "text",
+      photo: _memoStagedPhoto || null,
+      text: text,
+      forDoctor: !!forDoctor,
+      updatedAt: new Date().toISOString()
+    });
   } else {
     memos.unshift({
       id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
@@ -1438,6 +1513,8 @@ function memoEdit(id) {
 
   memoRenderStagedPreview();
   box.style.display = "block";
+  // 同 memoOpenComposer：composer 在被 v11 藏掉的 .desktop-only 內，需 modal 化露出
+  document.body.classList.add('is-memo-composing');
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   setTimeout(function() {
     var ta = document.getElementById("memo-text");
@@ -1450,14 +1527,10 @@ function memoDelete(id) {
   if (!confirm(_T("app.c2.confirmDeleteMemo"))) return;
   var memos = memoLoad().filter(function(m) { return m.id !== id; });
   memoSaveAll(memos);
-  // 後端同步刪除（best-effort；失敗不影響本機已刪）
-  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-  if (pid) {
-    try {
-      apiFetch(API + '/memos/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
-            { method: 'DELETE' }).catch(function() {});
-    } catch (e) {}
-  }
+  // 後端同步刪除（best-effort；失敗不影響本機已刪）。先記 tombstone，
+  // DELETE 成功才移除，避免離線刪除的 memo 下次開頁從後端復活。
+  memoTombstoneAdd(id);
+  memoSyncDelete(id);
   memoRenderList();
 }
 
@@ -1521,7 +1594,9 @@ function memoToggleDoctor(id) {
   var m = memos.find(function(x) { return x.id === id; });
   if (!m) return;
   m.forDoctor = !m.forDoctor;
+  m.updatedAt = new Date().toISOString();
   memoSaveAll(memos);
+  memoSyncPush(m);
   memoRenderList();
 }
 
@@ -1563,54 +1638,54 @@ function memoRenderList() {
                           _memoFilter === "self"   ? _T("app.c2.memoTitleSelf") : _T("app.c2.memoTitleAll");
   }
 
+  // 空清單不 early return：後面的 mobile mirror 與 chip 高亮同步也要跑
   if (!filtered.length) {
     listEl.innerHTML =
       '<div class="memo-empty">' +
         (all.length ? _T("app.c2.memoEmptyFiltered") :
                       _T("app.c2.memoEmptyAll")) +
       '</div>';
-    return;
+  } else {
+    var html = filtered.map(function(m) {
+      var bodyHtml = "";
+      if (m.photo) {
+        // Samsung Internet 上 <img src=dataURL> 會破圖 — 留空 div 佔位，渲染完 DOM 後再用
+        // memoMountPhoto 把圖畫到 <canvas> 上放進去。
+        bodyHtml += '<div class="memo-photo-slot" data-memo-photo="' + escapeHtml(m.id) + '"></div>';
+      }
+      if (m.text) {
+        bodyHtml += '<div class="memo-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
+      }
+      var pill = m.forDoctor
+        ? '<span class="memo-pill memo-pill-doctor"><i data-lucide="stethoscope" style="width:12px;height:12px"></i> ' + _T("app.c2.forDoctor") + '</span>'
+        : '<span class="memo-pill memo-pill-self"><i data-lucide="user" style="width:12px;height:12px"></i> ' + _T("app.c2.forSelf") + '</span>';
+      return '' +
+        '<article class="memo-item">' +
+          '<div class="memo-item-meta">' +
+            pill +
+            '<span class="memo-time">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>' +
+            '<button class="memo-toggle" onclick="memoToggleDoctor(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.toggleDoctorSelf") + '">' +
+              '<i data-lucide="repeat" style="width:14px;height:14px"></i>' +
+            '</button>' +
+            '<button class="memo-edit" onclick="memoEdit(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.edit") + '">' +
+              '<i data-lucide="pencil" style="width:14px;height:14px"></i>' +
+            '</button>' +
+            '<button class="memo-del" onclick="memoDelete(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.delete") + '">' +
+              '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
+            '</button>' +
+          '</div>' +
+          '<div class="memo-item-body" onclick="memoOpenLightbox(\'' + escapeHtml(m.id) + '\')" role="button" tabindex="0" aria-label="' + _T("app.c2.tapToEnlarge") + '">' + bodyHtml + '</div>' +
+        '</article>';
+    }).join("");
+
+    listEl.innerHTML = html;
+    // DOM 渲染完後把每則 memo 的照片畫到對應 slot 上
+    filtered.forEach(function(m) {
+      if (!m.photo) return;
+      var slot = listEl.querySelector('[data-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
+      if (slot) memoMountPhoto(slot, m.photo, "memo-photo");
+    });
   }
-
-  var html = filtered.map(function(m) {
-    var bodyHtml = "";
-    if (m.photo) {
-      // Samsung Internet 上 <img src=dataURL> 會破圖 — 留空 div 佔位，渲染完 DOM 後再用
-      // memoMountPhoto 把圖畫到 <canvas> 上放進去。
-      bodyHtml += '<div class="memo-photo-slot" data-memo-photo="' + escapeHtml(m.id) + '"></div>';
-    }
-    if (m.text) {
-      bodyHtml += '<div class="memo-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
-    }
-    var pill = m.forDoctor
-      ? '<span class="memo-pill memo-pill-doctor"><i data-lucide="stethoscope" style="width:12px;height:12px"></i> ' + _T("app.c2.forDoctor") + '</span>'
-      : '<span class="memo-pill memo-pill-self"><i data-lucide="user" style="width:12px;height:12px"></i> ' + _T("app.c2.forSelf") + '</span>';
-    return '' +
-      '<article class="memo-item">' +
-        '<div class="memo-item-meta">' +
-          pill +
-          '<span class="memo-time">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>' +
-          '<button class="memo-toggle" onclick="memoToggleDoctor(\'' + m.id + '\')" title="' + _T("app.c2.toggleDoctorSelf") + '">' +
-            '<i data-lucide="repeat" style="width:14px;height:14px"></i>' +
-          '</button>' +
-          '<button class="memo-edit" onclick="memoEdit(\'' + m.id + '\')" title="' + _T("app.c2.edit") + '">' +
-            '<i data-lucide="pencil" style="width:14px;height:14px"></i>' +
-          '</button>' +
-          '<button class="memo-del" onclick="memoDelete(\'' + m.id + '\')" title="' + _T("app.c2.delete") + '">' +
-            '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
-          '</button>' +
-        '</div>' +
-        '<div class="memo-item-body" onclick="memoOpenLightbox(\'' + m.id + '\')" role="button" tabindex="0" aria-label="' + _T("app.c2.tapToEnlarge") + '">' + bodyHtml + '</div>' +
-      '</article>';
-  }).join("");
-
-  listEl.innerHTML = html;
-  // DOM 渲染完後把每則 memo 的照片畫到對應 slot 上
-  filtered.forEach(function(m) {
-    if (!m.photo) return;
-    var slot = listEl.querySelector('[data-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
-    if (slot) memoMountPhoto(slot, m.photo, "memo-photo");
-  });
 
   // mobile mirror — v11 list-row style
   var mListEl = document.getElementById('mobile-memo-list');
@@ -1628,14 +1703,14 @@ function memoRenderList() {
         var photoHtml = m.photo ? '<div class="mobile-memo-photo-slot" data-mobile-memo-photo="' + escapeHtml(m.id) + '" style="margin-top:4px;border-radius:8px;overflow:hidden;max-width:100%"></div>' : '';
         var textHtml = m.text ? '<div style="font-size:12px;color:var(--navy);line-height:1.5;margin-top:4px">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' : '';
         return ''
-          + '<div class="list-row" style="grid-template-columns:1fr;padding:11px 13px;align-items:flex-start;cursor:pointer" onclick="memoOpenLightbox(\'' + m.id + '\')">'
+          + '<div class="list-row" style="grid-template-columns:1fr;padding:11px 13px;align-items:flex-start;cursor:pointer" onclick="memoOpenLightbox(\'' + escapeHtml(m.id) + '\')">'
           +   '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
           +     '<span class="' + pillCls + '"><i data-lucide="' + pillIcon + '"></i>' + pillTxt + '</span>'
           +     '<span class="time" style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace)">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>'
           +     '<span style="flex:1"></span>'
-          +     '<button onclick="event.stopPropagation();memoToggleDoctor(\'' + m.id + '\')" title="' + _T("app.c2.toggleDoctorSelfSlash") + '" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="repeat" style="width:13px;height:13px"></i></button>'
-          +     '<button onclick="event.stopPropagation();memoEdit(\'' + m.id + '\')" title="' + _T("app.c2.edit") + '" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="pencil" style="width:13px;height:13px"></i></button>'
-          +     '<button onclick="event.stopPropagation();memoDelete(\'' + m.id + '\')" title="' + _T("app.c2.delete") + '" style="border:none;background:none;cursor:pointer;color:var(--rose-deep);padding:2px"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoToggleDoctor(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.toggleDoctorSelfSlash") + '" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="repeat" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoEdit(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.edit") + '" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="pencil" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoDelete(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.delete") + '" style="border:none;background:none;cursor:pointer;color:var(--rose-deep);padding:2px"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>'
           +   '</div>'
           +   textHtml
           +   photoHtml
@@ -2552,7 +2627,7 @@ async function refreshPvTimeline(pid) {
         when: t,
         type: 'mood',
         title: _T("app.c3.moodBattery") + pct + '%',
-        desc: _Tf("app.c3.dailyRecords", { n: (d.count || 1) }) + (d.note ? '：' + String(d.note).slice(0, 50) : ''),
+        desc: _Tf("app.c3.dailyRecords", { n: (d.count || 1) }) + (function() { var nt = _stripEmotionNotePrefix(d.note); return nt ? '：' + nt.slice(0, 50) : ''; })(),
         icon: 'battery-charging',
       });
     });
@@ -3650,6 +3725,8 @@ function showPage(page) {
   // class 殘留會讓任何有 .sym-page.desktop-only 的頁面（如 vitals）被當 modal
   // 鎖全螢幕並隱藏內容（規則 9：CSS selector 不該誤傷其他頁面）
   document.body.classList.remove('is-sym-logging');
+  // 同理清掉 memo composer 的 modal 狀態，避免殘留讓 memo 頁一進來就整片空白 overlay
+  document.body.classList.remove('is-memo-composing');
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   // 同步在 body 設 .is-home / data-page，給 CSS 選擇器用（topbar 返回按鈕需要）
@@ -4608,16 +4685,7 @@ function finishAuth(user, isNewRegistration) {
   setCurrentUser(user);
   // 新建帳號（必清）或切到不同帳號時，清掉上一個帳號殘留在本機、未分帳號的病患資料。
   // 同一帳號重複登入（owner 相同）則保留其本機紀錄。
-  try {
-    // owner 用 user.id（不可變、登入與帳號切換兩條路徑都一定有）；切勿用 id_number，
-    // switchToAccount 存回的精簡 user 沒有該欄位，會導致切回自己帳號被誤判而清空。
-    var _owner = String((user && (user.id || user.username)) || 'guest');
-    var _prevOwner = localStorage.getItem('mdpiece_local_data_owner');
-    if (isNewRegistration || (_prevOwner && _prevOwner !== _owner)) {
-      clearLocalPatientData();
-    }
-    localStorage.setItem('mdpiece_local_data_owner', _owner);
-  } catch (e) {}
+  claimLocalDataOwner(user, isNewRegistration);
   const overlay = document.getElementById('register-overlay');
   overlay.classList.remove('show');
   setTimeout(() => {
@@ -5616,12 +5684,10 @@ async function refreshNavBadges() {
     setBadge('medications', nm > 0 ? ('+' + nm) : '!', nm > 0 ? 'done' : 'todo');
   } catch (e) {}
 
-  // 情緒：後端 emotions/daily 的 date 用 UTC 切日，這裡保留 UTC todayKey 對齊；
-  // 待後端切到本地時區後可改用 todayISO（_localDay()）。
+  // 情緒：後端 emotions/daily 的 date 用台灣日界（UTC+8）切日，與本地日 todayISO 對齊
   try {
     var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
-    var todayUTC = new Date().toISOString().slice(0, 10);
-    var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
+    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
     var nc = d ? (d.count || 0) : 0;
     setBadge('emotions', nc > 0 ? ('+' + nc) : '!', nc > 0 ? 'done' : 'todo');
   } catch (e) {}
@@ -5717,11 +5783,10 @@ async function refreshTodayDigest() {
     }).length;
   } catch (e) {}
 
-  // 情緒 daily 聚合 — 後端 emotions/daily 用 UTC 切日，這裡 fallback 用 UTC todayKey
+  // 情緒 daily 聚合 — 後端 emotions/daily 用台灣日界（UTC+8）切日，與本地日 todayISO 對齊
   try {
     var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
-    var todayUTC = new Date().toISOString().slice(0, 10);
-    var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
+    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
     moodCount = d ? (d.count || 0) : 0;
   } catch (e) {}
 
@@ -5794,8 +5859,9 @@ function removeUserTodo(id) {
 }
 async function _genAutoTodos() {
   var out = [];
-  // 此函數只用 todayISO 跟後端 emotions/daily 的 date 對比；後端用 UTC 切日所以這裡保留 UTC。
-  var todayISO = new Date().toISOString().slice(0, 10);
+  // 此函數只用 todayISO 跟後端 emotions/daily 的 date 對比；後端用台灣日界（UTC+8）切日，
+  // 與本地日（使用者在台灣）一致，統一走 _localDay()。
+  var todayISO = _localDay();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return out;
 
@@ -5992,6 +6058,15 @@ function _finalizeVisit(opts) {
 
   // 2. 清除原始紀錄（只清時間序列資料，保留設定/基本資料）
   try { localStorage.removeItem('mdpiece_symptoms'); } catch (e) {}
+  // memo 在後端也有一份（(patient_id, client_id) 同步）：清 localStorage 前先逐筆
+  // best-effort DELETE 並記 tombstone，否則下次開頁 memoSyncOnLoad 會全部拉回來。
+  try {
+    memoLoad().forEach(function(m) {
+      if (!m || !m.id) return;
+      memoTombstoneAdd(m.id);
+      memoSyncDelete(m.id);
+    });
+  } catch (e) {}
   try { localStorage.removeItem('mdpiece_memos_v1'); } catch (e) {}
   try { localStorage.removeItem('mdpiece_vitals_entries'); } catch (e) {}
 
@@ -7246,7 +7321,7 @@ function _renderMobileRecentRecords() {
     memos.forEach(function(m) {
       items.push({
         kind: 'memo',
-        ts: m.timestamp || m.created_at || m.date || '',
+        ts: m.createdAt || m.timestamp || m.created_at || m.date || '',
         title: 'Memo · ' + (m.title || m.summary || m.text || _T('app.c9.memo')),
         desc: m.text || m.summary || '',
       });
@@ -8084,6 +8159,10 @@ function openInpatientQuickLog(key) {
   var sheet = document.createElement('div');
   sheet.id = 'ip-quicklog-sheet';
   sheet.className = 'ip-prep-sheet';
+  // mood 的 1-5 是心情好壞（1 差、5 好），跟 pain/fatigue 的嚴重度方向相反 → 用專屬副標
+  var scaleSub = (key === 'mood')
+    ? '1 = ' + _T("app.d16.moodWorst") + ' · 5 = ' + _T("app.d16.moodBest")
+    : '1 = ' + _T("app.d16.mildest") + ' · 5 = ' + _T("app.d16.severest");
   sheet.innerHTML = ''
     + '<div class="ip-prep-backdrop" onclick="closeInpatientQuickLog()"></div>'
     + '<div class="ip-prep-panel ip-ql-panel" role="dialog" aria-label="快速紀錄">'
@@ -8091,7 +8170,7 @@ function openInpatientQuickLog(key) {
     +   '<header class="ip-prep-head">'
     +     '<div class="ip-prep-when">'
     +       '<span class="ip-prep-when-num">' + cfg.title + '</span>'
-    +       '<span class="ip-prep-when-sub">' + cfg.label + ' · 1 = ' + _T("app.d16.mildest") + ' · 5 = ' + _T("app.d16.severest") + '</span>'
+    +       '<span class="ip-prep-when-sub">' + cfg.label + ' · ' + scaleSub + '</span>'
     +     '</div>'
     +     '<button type="button" class="ip-prep-close" onclick="closeInpatientQuickLog()" aria-label="' + _T("app.c10.close") + '"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
     +   '</header>'
@@ -10895,7 +10974,7 @@ function loadInpatientTrendSparklines() {
   _drawSparkline('pain', _aggDaily(syms, function(e) { return painCats.indexOf(e.categoryId) !== -1 ? (e.intensity || 0) : null; }));
   _drawSparkline('fatigue', _aggDaily(syms, function(e) { return e.categoryId === 'fatigue' ? (e.intensity || 0) : null; }));
   // 心情：先用本地快速 log 暫填，再拉後端 daily 覆寫（後端拉不到時保留 local 版）。
-  // 後端回應 average_score 0..1 → 乘 10 對齊 local 1-5*2 = 2-10 的 scale。
+  // 後端 average_score 為 1-5 → 乘 2 對齊 local 1-5*2 = 2-10（0-10 量綱）的 scale。
   var localMood = _ipLocalMoodDaily();
   _drawSparkline('mood', localMood);
   // 三條 series 都有了 → 評估「好一點」並更新出院 step
@@ -10911,7 +10990,7 @@ function loadInpatientTrendSparklines() {
     .then(function(data) {
       var daily = (data && data.daily) || [];
       if (!daily.length) return; // 後端沒資料就不蓋 local
-      var vals = daily.map(function(d) { return (d.average_score != null) ? d.average_score * 10 : null; });
+      var vals = daily.map(function(d) { return (d.average_score != null) ? d.average_score * 2 : null; });
       _drawSparkline('mood', vals);
       _ipMoodSeriesBackend = vals;
       _ipRefreshFeelingHint();
@@ -20142,15 +20221,22 @@ function chatGreeting() {
   var name = u.nickname || _T("app.c25.youFallback");
   var v = chatGetVersion();
   if (v === 'elderly') {
-    return _Tf("app.c25.greetElderly", { name: name });
+    return _Tf("app.c25.greetElderly", { name: escapeHtml(name) });
   }
-  return _Tf("app.c25.greetNormal", { name: name });
+  return _Tf("app.c25.greetNormal", { name: escapeHtml(name) });
 }
 
 function chat() {
   var hist = chatLoadHistory();
   var mode = chatGetMode();
   var ver  = chatGetVersion();
+
+  // onclick 屬性以雙引號界定，chip 文案改用跳脫單引號包住（比照 navigateTo chip）。
+  // 先跳脫反斜線再跳脫單引號（順序不可反，否則跳脫用的反斜線會被二次跳脫），
+  // 避免文案內的 \ 或 ' 截斷屬性或改變 JS 字串語意
+  var _qaEsc = function(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); };
+  var qaSummarize = _qaEsc(_T("app.c25.quickAskSummarize"));
+  var qaAnxious   = _qaEsc(_T("app.c25.quickAskAnxious"));
 
   // mobile v11 mirror of chat messages
   var mobileMsgs = hist.length
@@ -20189,8 +20275,8 @@ function chat() {
 
     // 快速提問 chip
     +   '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">'
-    +     '<button class="chip" onclick="chatQuickAsk(' + JSON.stringify(_T("app.c25.quickAskSummarize")) + ')">' + _T("app.c25.organizeRecent") + '</button>'
-    +     '<button class="chip" onclick="chatQuickAsk(' + JSON.stringify(_T("app.c25.quickAskAnxious")) + ')">' + _T("app.c25.chatWithMe") + '</button>'
+    +     '<button class="chip" onclick="chatQuickAsk(\'' + qaSummarize + '\')">' + _T("app.c25.organizeRecent") + '</button>'
+    +     '<button class="chip" onclick="chatQuickAsk(\'' + qaAnxious + '\')">' + _T("app.c25.chatWithMe") + '</button>'
     +     '<button class="chip" style="background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep)" onclick="chatGenerateArticle()"><i data-lucide="sparkles" style="width:10px;height:10px"></i> ' + _T("app.c25.generateArticle") + '</button>'
     +   '</div>'
 
@@ -20246,8 +20332,8 @@ function chat() {
 
     + '  <div class="chat-suggest" id="chat-suggest">'
     + '    <span class="chat-suggest-label">' + _T("app.c25.chatLabel") + '</span>'
-    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(' + JSON.stringify(_T("app.c25.quickAskSummarize")) + ')">' + _T("app.c25.organizeRecent") + '</button>'
-    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(' + JSON.stringify(_T("app.c25.quickAskAnxious")) + ')">' + _T("app.c25.chatWithMe") + '</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'' + qaSummarize + '\')">' + _T("app.c25.organizeRecent") + '</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'' + qaAnxious + '\')">' + _T("app.c25.chatWithMe") + '</button>'
     + '    <button type="button" class="chat-chip chat-chip-special" onclick="chatGenerateArticle()">'
     + '      <i data-lucide="sparkles" style="width:14px;height:14px"></i> ' + _T("app.c25.generateArticle") + ''
     + '    </button>'
@@ -20298,14 +20384,14 @@ function _mobileChatRenderMessage(m) {
       + '<div style="display:flex;justify-content:flex-start">'
       +   '<div style="max-width:85%;background:var(--accent-tint);border:1.5px solid var(--accent);color:var(--navy);padding:10px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55">'
       +     '<div style="font-size:11px;font-weight:600;color:var(--accent-deep);margin-bottom:5px;display:flex;align-items:center;gap:4px"><i data-lucide="file-text" style="width:12px;height:12px"></i> ' + _T("app.c25.articleByXiaohe") + '</div>'
-      +     '<div style="white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+      +     '<div class="chat-text-mob" style="white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
       +   '</div>'
       + '</div>';
   }
   return ''
     + '<div style="display:flex;justify-content:flex-start;gap:6px;align-items:flex-end">'
     +   '<div style="width:24px;height:24px;border-radius:50%;background:var(--rose-tint);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🌿</div>'
-    +   '<div style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+    +   '<div class="chat-text-mob" style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
     + '</div>';
 }
 
@@ -20448,6 +20534,7 @@ function chatAppendMessage(role, text) {
   var stream = document.getElementById('chat-stream');
   var mStream = document.getElementById('mobile-chat-stream');
   var node = null;
+  var mNode = null;
   if (stream) {
     var wrap = document.createElement('div');
     wrap.innerHTML = chatRenderMessage({ role: role, text: text });
@@ -20457,26 +20544,51 @@ function chatAppendMessage(role, text) {
   if (mStream) {
     var mWrap = document.createElement('div');
     mWrap.innerHTML = _mobileChatRenderMessage({ role: role, text: text });
-    var mNode = mWrap.firstChild;
+    mNode = mWrap.firstChild;
     if (mNode) mStream.appendChild(mNode);
     mStream.scrollTop = mStream.scrollHeight;
   }
   if (typeof lucide !== 'undefined') lucide.createIcons();
   chatScrollToBottom();
-  return node;
+  // 回傳可同時更新桌機 + 手機兩份 DOM 的 handle（body 掛 theme-modern 時
+  // 使用者看到的是 .mobile-only 鏡像，串流更新必須兩邊都寫）
+  var textSel = (role === 'article') ? '.chat-article-text' : '.chat-text';
+  return {
+    desktop: node,
+    mobile: mNode,
+    setText: function (html) {
+      var el = node ? node.querySelector(textSel) : null;
+      if (el) el.innerHTML = html;
+      var mEl = mNode ? mNode.querySelector('.chat-text-mob') : null;
+      if (mEl) mEl.innerHTML = html;
+      if (mStream) mStream.scrollTop = mStream.scrollHeight;
+    }
+  };
 }
 
 function chatShowThinking() {
+  var node = null;
   var stream = document.getElementById('chat-stream');
-  if (!stream) return null;
-  var node = document.createElement('div');
-  node.className = 'chat-msg chat-msg-bot chat-msg-thinking';
-  node.id = 'chat-thinking';
-  node.innerHTML = ''
-    + '<div class="chat-bubble">'
-    +   '<div class="chat-typing-dots"><span></span><span></span><span></span></div>'
-    + '</div>';
-  stream.appendChild(node);
+  if (stream) {
+    node = document.createElement('div');
+    node.className = 'chat-msg chat-msg-bot chat-msg-thinking';
+    node.id = 'chat-thinking';
+    node.innerHTML = ''
+      + '<div class="chat-bubble">'
+      +   '<div class="chat-typing-dots"><span></span><span></span><span></span></div>'
+      + '</div>';
+    stream.appendChild(node);
+  }
+  // 手機鏡像也要有打字點點
+  var mStream = document.getElementById('mobile-chat-stream');
+  if (mStream) {
+    var mNode = document.createElement('div');
+    mNode.id = 'mobile-chat-thinking';
+    mNode.style.cssText = 'display:flex;justify-content:flex-start';
+    mNode.innerHTML = '<div style="background:var(--bg-soft);padding:8px 12px;border-radius:14px 14px 14px 4px"><div class="chat-typing-dots"><span></span><span></span><span></span></div></div>';
+    mStream.appendChild(mNode);
+    mStream.scrollTop = mStream.scrollHeight;
+  }
   chatSetMascotState('thinking');
   chatScrollToBottom();
   return node;
@@ -20485,6 +20597,8 @@ function chatShowThinking() {
 function chatRemoveThinking() {
   var n = document.getElementById('chat-thinking');
   if (n && n.parentNode) n.parentNode.removeChild(n);
+  var mn = document.getElementById('mobile-chat-thinking');
+  if (mn && mn.parentNode) mn.parentNode.removeChild(mn);
 }
 
 var _chatMascotTypingTimer = null;
@@ -20521,26 +20635,30 @@ function chatSetMascotState(state) {
 }
 
 // 打字機效果：把文字一個個塞進 element
+// node 可以是 DOM element，或 chatAppendMessage 回傳的 handle（同步更新桌機 + 手機）
 function chatTypeInto(node, text, opts, onDone) {
   opts = opts || {};
   var speed = opts.speed || 22; // ms per char
   var i = 0;
+  var put = (node && typeof node.setText === 'function')
+    ? function (html) { node.setText(html); }
+    : function (html) { node.innerHTML = html; };
   if (_chatTypeTimer) { clearInterval(_chatTypeTimer); _chatTypeTimer = null; }
   _chatTyping = true;
   chatSetMascotState('typing');
-  node.innerHTML = '<span class="chat-caret">▌</span>';
+  put('<span class="chat-caret">▌</span>');
   _chatTypeTimer = setInterval(function() {
     if (i >= text.length) {
       clearInterval(_chatTypeTimer); _chatTypeTimer = null;
       _chatTyping = false;
-      node.innerHTML = chatEscape(text);
+      put(chatEscape(text));
       chatSetMascotState('idle');
       if (typeof onDone === 'function') onDone();
       chatScrollToBottom();
       return;
     }
     var partial = text.slice(0, i + 1);
-    node.innerHTML = chatEscape(partial) + '<span class="chat-caret">▌</span>';
+    put(chatEscape(partial) + '<span class="chat-caret">▌</span>');
     chatScrollToBottom();
     i += 1;
   }, speed);
@@ -20652,8 +20770,7 @@ function chatStreamReply(body, fallbackText) {
     chatSetMascotState('typing');
     _chatTyping = true;
 
-    var node = chatAppendMessage('bot', '');
-    var textEl = node ? node.querySelector('.chat-text') : null;
+    var msg = chatAppendMessage('bot', '');
     var reader = resp.body.getReader();
     var decoder = new TextDecoder('utf-8');
     var buf = '';
@@ -20675,9 +20792,9 @@ function chatStreamReply(body, fallbackText) {
           var payload = line.slice(idx + 5).trim();
           var obj = null;
           try { obj = JSON.parse(payload); } catch (e) { continue; }
-          if (obj.delta && textEl) {
+          if (obj.delta) {
             fullText += obj.delta;
-            textEl.innerHTML = chatEscape(fullText);
+            msg.setText(chatEscape(fullText));
             chatScrollToBottom();
           }
           if (obj.done) {
@@ -20691,8 +20808,11 @@ function chatStreamReply(body, fallbackText) {
     return pump().then(function () {
       _chatTyping = false;
       chatSetMascotState('idle');
+      var finalText = fullText || fallbackText || '';
+      // 0 delta（空串流）時把 fallback 也寫回氣泡，避免畫面留空但 history 有字
+      if (!fullText && finalText) msg.setText(chatEscape(finalText));
       var h = chatLoadHistory();
-      h.push({ role: 'bot', text: fullText || fallbackText || '', t: Date.now() });
+      h.push({ role: 'bot', text: finalText, t: Date.now() });
       chatSaveHistory(h);
     });
   }).catch(function (err) {
@@ -20715,19 +20835,16 @@ function chatNonStreamFallback(body, fallbackText) {
     .then(function (data) {
       var reply = (data && data.reply) ? String(data.reply)
         : (fallbackText || _T("app.c26.networkBusy"));
-      var node = chatAppendMessage('bot', '');
-      var textEl = node ? node.querySelector('.chat-text') : null;
-      if (!textEl) return;
-      chatTypeInto(textEl, reply, {}, function () {
+      var msg = chatAppendMessage('bot', '');
+      chatTypeInto(msg, reply, {}, function () {
         var h = chatLoadHistory();
         h.push({ role: 'bot', text: reply, t: Date.now() });
         chatSaveHistory(h);
       });
     })
     .catch(function () {
-      var node = chatAppendMessage('bot', '');
-      var textEl = node ? node.querySelector('.chat-text') : null;
-      if (textEl) chatTypeInto(textEl, _T("app.c26.networkBusy"));
+      var msg = chatAppendMessage('bot', '');
+      chatTypeInto(msg, _T("app.c26.networkBusy"));
     });
 }
 
@@ -20747,6 +20864,9 @@ function chatGenerateArticle() {
     + '結尾給自己一句鼓勵。如果對話內容不足，就以一般問候與健康提醒為主。\n\n'
     + '【對話】\n' + (recent || '（尚無對話）');
 
+  // 在 push 新訊息「之前」抓歷史，讓 history 不含本則 user 訊息（比照 chatSend）
+  var apiHistory = chatBuildApiHistory(12);
+
   // 把使用者意圖也記下來
   hist.push({ role: 'user', text: _T("app.c26.writeArticle"), t: Date.now() });
   chatSaveHistory(hist);
@@ -20760,7 +20880,7 @@ function chatGenerateArticle() {
     body: JSON.stringify({
       user_id: pid, message: prompt,
       mode: chatGetMode(), version: chatGetVersion(),
-      history: chatBuildApiHistory(12)
+      history: apiHistory
     })
   })
     .then(function(r) { return r.json().catch(function() { return {}; }); })
@@ -20768,10 +20888,8 @@ function chatGenerateArticle() {
       chatRemoveThinking();
       var article = (data && data.reply) ? String(data.reply)
         : _T("app.c26.articleFallback");
-      var node = chatAppendMessage('article', '');
-      var textEl = node ? node.querySelector('.chat-article-text') : null;
-      if (!textEl) return;
-      chatTypeInto(textEl, article, { speed: 18 }, function() {
+      var msg = chatAppendMessage('article', '');
+      chatTypeInto(msg, article, { speed: 18 }, function() {
         var h = chatLoadHistory();
         h.push({ role: 'article', text: article, t: Date.now() });
         chatSaveHistory(h);
@@ -20780,9 +20898,8 @@ function chatGenerateArticle() {
     .catch(function() {
       chatRemoveThinking();
       var fallback = _T("app.c26.networkBusyArticle");
-      var node = chatAppendMessage('bot', '');
-      var textEl = node ? node.querySelector('.chat-text') : null;
-      if (textEl) chatTypeInto(textEl, fallback);
+      var msg = chatAppendMessage('bot', '');
+      chatTypeInto(msg, fallback);
     });
 }
 
@@ -21519,46 +21636,48 @@ var EMOTION_LEVELS = [
 // 喜怒哀樂四象限 — 先選情緒類型，下方電池就變成「程度」
 // 情緒輪：6 個方向（喜怒哀樂 + 焦慮 緊張）× 3 強度環 + 中心「平靜」
 // 角度走 SVG 慣例：0°=右、90°=下、-90°=上。每 60° 一個情緒。
-// rings 由內到外 = 弱 → 中 → 強，分別給 score 2 / 3 / 5；中心 score = 1。
+// rings 由內到外 = 弱 → 中 → 強；score 是「情緒效價」（1 最低落、5 最好，對齊後端），
+// 不是強度：正面情緒（喜/樂）內→外 = 3/4/5，負面情緒（焦/哀/緊/怒）內→外 = 3/2/1
+// （越強分數越低）。強度語意由 word（如「非常難過」）帶在 note 裡。中心「平靜」= 3。
 var EMOTION_WHEEL = [
   { id: 'joy',     angle: -90, char: '喜', color: '#E8A93A',
     rings: [
-      { score: 2, emoji: '🙂', word: '有點開心' },
-      { score: 3, emoji: '😊', word: '開心' },
+      { score: 3, emoji: '🙂', word: '有點開心' },
+      { score: 4, emoji: '😊', word: '開心' },
       { score: 5, emoji: '😄', word: '非常開心' },
     ] },
   { id: 'relax',   angle: -30, char: '樂', color: '#6FA67B',
     rings: [
-      { score: 2, emoji: '😌', word: '放鬆' },
-      { score: 3, emoji: '🥰', word: '愉快' },
+      { score: 3, emoji: '😌', word: '放鬆' },
+      { score: 4, emoji: '🥰', word: '愉快' },
       { score: 5, emoji: '🤩', word: '幸福' },
     ] },
   { id: 'anxiety', angle:  30, char: '焦', color: '#C098DA',
     rings: [
-      { score: 2, emoji: '😟', word: '有點焦慮' },
-      { score: 3, emoji: '😰', word: '焦慮' },
-      { score: 5, emoji: '😱', word: '非常焦慮' },
+      { score: 3, emoji: '😟', word: '有點焦慮' },
+      { score: 2, emoji: '😰', word: '焦慮' },
+      { score: 1, emoji: '😱', word: '非常焦慮' },
     ] },
   { id: 'sorrow',  angle:  90, char: '哀', color: '#5A7DB0',
     rings: [
-      { score: 2, emoji: '🥹', word: '委屈' },
-      { score: 3, emoji: '😢', word: '難過' },
-      { score: 5, emoji: '😭', word: '非常難過' },
+      { score: 3, emoji: '🥹', word: '委屈' },
+      { score: 2, emoji: '😢', word: '難過' },
+      { score: 1, emoji: '😭', word: '非常難過' },
     ] },
   { id: 'tense',   angle: 150, char: '緊', color: '#D89968',
     rings: [
-      { score: 2, emoji: '😬', word: '有點緊張' },
-      { score: 3, emoji: '😖', word: '緊張' },
-      { score: 5, emoji: '😣', word: '非常緊繃' },
+      { score: 3, emoji: '😬', word: '有點緊張' },
+      { score: 2, emoji: '😖', word: '緊張' },
+      { score: 1, emoji: '😣', word: '非常緊繃' },
     ] },
   { id: 'anger',   angle: 210, char: '怒', color: '#D86E5E',
     rings: [
-      { score: 2, emoji: '😒', word: '有點不爽' },
-      { score: 3, emoji: '😠', word: '生氣' },
-      { score: 5, emoji: '🤬', word: '非常憤怒' },
+      { score: 3, emoji: '😒', word: '有點不爽' },
+      { score: 2, emoji: '😠', word: '生氣' },
+      { score: 1, emoji: '🤬', word: '非常憤怒' },
     ] },
 ];
-var EMOTION_CENTER = { score: 1, emoji: '😶', word: '平靜', char: '靜', color: '#9CA8B8' };
+var EMOTION_CENTER = { score: 3, emoji: '😶', word: '平靜', char: '靜', color: '#9CA8B8' };
 var _selectedEmotionCell = null; // { emotion(或'center'), score, emoji, word, char }
 
 // 為了讓 mood-ring-hero + 月曆 + 表格繼續用 _moodColor / _moodEmoji
@@ -21570,17 +21689,19 @@ function _getEmotionType(id) {
   return EMOTION_TYPES.find(function(t) { return t.id === id; }) || EMOTION_TYPES[0];
 }
 function emotionIntensityText(score, typeId) {
+  // score 是效價（1 最低落、5 最好），對回該情緒方向 rings 裡相同 score 的 word
   var s = Math.max(1, Math.min(5, Math.round(score || 0)));
-  if (s <= 1) return '平靜';
   var w = EMOTION_WHEEL.find(function(e) { return e.id === typeId; });
-  if (!w) return '普通';
-  if (s <= 2) return w.rings[0].word;
-  if (s <= 3) return w.rings[1].word;
-  return w.rings[2].word;
+  if (w) {
+    var ring = w.rings.find(function(r) { return r.score === s; });
+    if (ring) return ring.word;
+  }
+  if (s === EMOTION_CENTER.score) return EMOTION_CENTER.word;
+  return '普通';
 }
 function selectEmotionCell(emotionId, score) {
   if (emotionId === 'center') {
-    _selectedEmotionCell = { emotion: 'center', score: 1, emoji: EMOTION_CENTER.emoji, word: EMOTION_CENTER.word, char: EMOTION_CENTER.char };
+    _selectedEmotionCell = { emotion: 'center', score: EMOTION_CENTER.score, emoji: EMOTION_CENTER.emoji, word: EMOTION_CENTER.word, char: EMOTION_CENTER.char };
   } else {
     var w = EMOTION_WHEEL.find(function(e) { return e.id === emotionId; });
     if (!w) return;
@@ -21651,7 +21772,7 @@ function renderEmotionWheel() {
         + '</g>';
     });
   });
-  var centerMarker = '<g class="emo-marker" data-emotion="center" data-score="1">'
+  var centerMarker = '<g class="emo-marker" data-emotion="center" data-score="' + EMOTION_CENTER.score + '">'
     + '<circle cx="' + CX + '" cy="' + CY + '" r="26" fill="var(--bg-surface)" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/>'
     + '<text x="' + CX + '" y="' + (CY + 1) + '" font-size="22" text-anchor="middle" dominant-baseline="central">' + EMOTION_CENTER.emoji + '</text>'
     + '</g>';
@@ -21728,7 +21849,7 @@ function emoWheelDrag(ev) {
   var dist = Math.sqrt(dx * dx + dy * dy);
   if (dist < 38) {
     _emoMoveThumb(160, 160, 'var(--text-muted)');
-    selectEmotionCell('center', 1);
+    selectEmotionCell('center', EMOTION_CENTER.score);
     return;
   }
   var angle = Math.atan2(dy, dx) * 180 / Math.PI;
@@ -21803,6 +21924,11 @@ function _moodPercent(score) {
   if (score == null) return null;
   // score 1~5 → 0%~100%（線性）
   return Math.round((Math.max(1, Math.min(5, score)) - 1) * 25);
+}
+
+// note 儲存格式帶「[類型字] 」前綴（submitEmotion 塞的），顯示時去掉；不改儲存格式
+function _stripEmotionNotePrefix(note) {
+  return String(note || '').replace(/^\[.\]\s*/, '');
 }
 
 function _moodColor(score) {
@@ -22080,7 +22206,8 @@ function moodCalSelect(dateKey) {
     tip.textContent = dateKey + ' · ' + _T("app.c28.noRecord");
     return;
   }
-  var note = rec.note ? '「' + rec.note + '」' : _T("app.c28.noNote");
+  var noteText = _stripEmotionNotePrefix(rec.note);
+  var note = noteText ? '「' + noteText + '」' : _T("app.c28.noNote");
   var avgPct = _moodPercent(rec.average_score);
   var loPct = _moodPercent(rec.min_score);
   var hiPct = _moodPercent(rec.max_score);
@@ -22212,7 +22339,8 @@ function renderMoodTable() {
   }
   var rows = _moodTableExpanded ? daily : daily.slice(0, 7);
   var trs = rows.map(function(d) {
-    var note = d.note ? escapeHtml(d.note) : '<span class="mood-table-muted">—</span>';
+    var noteText = _stripEmotionNotePrefix(d.note);
+    var note = noteText ? escapeHtml(noteText) : '<span class="mood-table-muted">—</span>';
     var avgPct = _moodPercent(d.average_score);
     var loPct = _moodPercent(d.min_score);
     var hiPct = _moodPercent(d.max_score);

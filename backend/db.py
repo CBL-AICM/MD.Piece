@@ -677,6 +677,7 @@ class _SqliteQuery:
         self._offset_n = None
         self._insert_data = None
         self._update_data = None
+        self._on_conflict = None
 
     # ─── Operation setters ──────────────
     def select(self, cols="*", **kwargs):
@@ -689,6 +690,14 @@ class _SqliteQuery:
         if isinstance(data, str):
             data = json.loads(data)
         self._insert_data = data
+        return self
+
+    def upsert(self, data, on_conflict=None, **kwargs):
+        self._op = "upsert"
+        if isinstance(data, str):
+            data = json.loads(data)
+        self._insert_data = data
+        self._on_conflict = [c.strip() for c in on_conflict.split(",")] if on_conflict else None
         return self
 
     def update(self, data, **kwargs):
@@ -779,6 +788,8 @@ class _SqliteQuery:
                 return self._exec_select(conn)
             elif self._op == "insert":
                 return self._exec_insert(conn)
+            elif self._op == "upsert":
+                return self._exec_upsert(conn)
             elif self._op == "update":
                 return self._exec_update(conn)
             elif self._op == "delete":
@@ -859,6 +870,32 @@ class _SqliteQuery:
         conn.commit()
         return _SqliteResult([data])
 
+    def _exec_upsert(self, conn):
+        """模擬 PostgREST upsert：on_conflict 欄位已有資料 → 更新該列，否則插入。
+        （SQLite fallback 為單機單程序，select-then-write 的競態風險可忽略。）"""
+        data = self._insert_data
+        if not data:
+            return _SqliteResult([])
+        keys = self._on_conflict or (["id"] if data.get("id") else None)
+        if keys and all(data.get(k) is not None for k in keys):
+            table = _safe_ident(self._table)
+            where = " AND ".join(f'"{_safe_ident(k)}" = ?' for k in keys)
+            params = [data[k] for k in keys]
+            row = conn.execute(f'SELECT id FROM "{table}" WHERE {where}', params).fetchone()
+            if row:
+                update_data = {k: v for k, v in data.items() if k not in keys}
+                serialized = {k: self._serialize_value(v) for k, v in update_data.items()}
+                if serialized:
+                    set_clause = ', '.join(f'"{_safe_ident(k)}" = ?' for k in serialized)
+                    conn.execute(
+                        f'UPDATE "{table}" SET {set_clause} WHERE {where}',
+                        list(serialized.values()) + params,
+                    )
+                    conn.commit()
+                sel = conn.execute(f'SELECT * FROM "{table}" WHERE {where}', params).fetchall()
+                return _SqliteResult([self._deserialize_row(dict(r)) for r in sel])
+        return self._exec_insert(conn)
+
     def _exec_update(self, conn):
         data = self._update_data
         if not data:
@@ -927,12 +964,15 @@ class _HttpxQuery:
         self._limit = None
         self._offset = None
         self._payload = None
+        self._on_conflict = None
 
     # operation setters
     def select(self, cols="*", **_):
         self._op = "select"; self._select_cols = cols; return self
     def insert(self, data, **_):
         self._op = "insert"; self._payload = data; return self
+    def upsert(self, data, on_conflict=None, **_):
+        self._op = "upsert"; self._payload = data; self._on_conflict = on_conflict; return self
     def update(self, data, **_):
         self._op = "update"; self._payload = data; return self
     def delete(self, **_):
@@ -990,6 +1030,17 @@ class _HttpxQuery:
             r = httpx.post(url, headers=headers, json=body, timeout=10.0)
             if r.status_code >= 400:
                 logger.error("Supabase insert failed: %s — %s", r.status_code, r.text)
+                r.raise_for_status()
+            return _HttpxResult(r.json())
+
+        if self._op == "upsert":
+            # PostgREST 原生 upsert：merge-duplicates + on_conflict 欄位
+            headers = {**self._headers, "Prefer": "resolution=merge-duplicates,return=representation"}
+            params = [("on_conflict", self._on_conflict)] if self._on_conflict else None
+            body = self._payload if isinstance(self._payload, list) else [self._payload]
+            r = httpx.post(url, headers=headers, params=params, json=body, timeout=10.0)
+            if r.status_code >= 400:
+                logger.error("Supabase upsert failed: %s — %s", r.status_code, r.text)
                 r.raise_for_status()
             return _HttpxResult(r.json())
 
