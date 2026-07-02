@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1F3D58" />
+  <title>MD.Piece — 把治療的旅程，拼回完整</title>
+  <meta name="description" content="MD.Piece 是免安裝的 PWA 醫療輔助平台：症狀分析與可解釋的分診建議、可客製化的用藥提醒與家屬視角、跨院健康時間軸。讓你和醫療團隊看見同一張健康全貌。" />
+  <meta property="og:title" content="MD.Piece — 把治療的旅程，拼回完整" />
+  <meta property="og:description" content="免安裝、開瀏覽器即用的醫療輔助平台。症狀分析、用藥提醒、健康時間軸，每個建議都附上「為什麼」。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.mdpiece.life/landing" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet" />
+  <!-- 2.0 design tokens（單一真相來源；本頁只讀語意 token，不寫死色票） -->
+  <link rel="stylesheet" href="css/tokens.css?v=2.0-visual-lang" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-sans);
+      /* 長者可讀性：全頁基準 18px、行高寬鬆 */
+      font-size: 18px;
+      line-height: 1.7;
+      color: var(--content);
+      background: var(--surface-0);
+      -webkit-font-smoothing: antialiased;
+    }
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 var(--space-6); }
+    section { padding: var(--space-16) 0; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      font-size: .89em; font-weight: 700; color: var(--action-deep);
+      background: var(--teal-soft); border-radius: var(--radius-pill);
+      padding: 6px 16px; margin-bottom: var(--space-4);
+    }
+    h1, h2, h3 { line-height: 1.3; font-weight: 900; letter-spacing: .01em; }
+    h2 { font-size: clamp(1.6rem, 3.5vw, 2.25rem); margin-bottom: var(--space-3); }
+    .section-lead { color: var(--content-muted); max-width: 620px; margin-bottom: var(--space-8); }
+
+    /* ===== 導覽列 ===== */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      min-height: 64px; gap: var(--space-4);
+    }
+    .brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 800; font-size: 1.2em; }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: var(--primary); color: var(--primary-fg);
+      display: grid; place-items: center;
+    }
+    .nav-links { display: flex; gap: var(--space-6); font-weight: 600; color: var(--content-muted); }
+    .nav-links a:hover { color: var(--content); }
+    @media (max-width: 720px) { .nav-links { display: none; } }
+
+    /* ===== 按鈕（觸控目標 ≥ 48px） ===== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+      min-height: var(--touch-min); padding: 0 var(--space-6);
+      border-radius: var(--radius-pill); font-weight: 700; font-size: 1em;
+      border: 0; cursor: pointer; transition: transform var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+    }
+    .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .btn-primary { background: var(--action); color: #fff; }
+    .btn-primary:hover { background: var(--action-deep); transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--content); border: 1.5px solid var(--line); }
+    .btn-ghost:hover { border-color: var(--action); color: var(--action-deep); }
+    .btn-lg { min-height: var(--touch-fab); padding: 0 var(--space-8); font-size: 1.1em; }
+
+    /* ===== Hero ===== */
+    .hero {
+      background: linear-gradient(170deg, var(--surface-1) 0%, var(--teal-soft) 100%);
+      border-bottom: 1px solid var(--line);
+      padding: var(--space-16) 0;
+      overflow: hidden;
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1.15fr .85fr;
+      gap: var(--space-12); align-items: center;
+    }
+    @media (max-width: 880px) { .hero-grid { grid-template-columns: 1fr; } }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.1rem); margin-bottom: var(--space-5); }
+    .hero h1 em { font-style: normal; color: var(--action-deep); }
+    .hero-sub { color: var(--content-muted); font-size: 1.1em; max-width: 540px; margin-bottom: var(--space-8); }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-6); }
+    .hero-trust { display: flex; flex-wrap: wrap; gap: var(--space-4); color: var(--content-muted); font-size: .92em; font-weight: 600; }
+    .hero-trust span { display: inline-flex; align-items: center; gap: 6px; }
+    .hero-trust i { width: 18px; height: 18px; color: var(--action); }
+
+    /* ===== 手機畫面示意（純 CSS） ===== */
+    .phone {
+      width: min(320px, 86vw); margin: 0 auto;
+      background: var(--surface-1); border: 1px solid var(--line);
+      border-radius: 36px; padding: var(--space-4);
+      box-shadow: 0 18px 48px rgba(31, 61, 88, .16);
+    }
+    .phone-screen { background: var(--surface-0); border-radius: 26px; padding: var(--space-4); display: grid; gap: var(--space-3); }
+    .p-greet { font-weight: 800; font-size: 1.05em; }
+    .p-chip {
+      display: inline-flex; align-items: center; gap: 6px; justify-self: start;
+      background: var(--teal-soft); color: var(--status-calm-fg);
+      font-size: .8em; font-weight: 700; padding: 4px 12px; border-radius: var(--radius-pill);
+    }
+    .p-card {
+      background: var(--surface-1); border: 1px solid var(--line);
+      border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+      display: flex; align-items: center; gap: var(--space-3);
+      box-shadow: var(--shadow-1); font-size: .9em;
+    }
+    .p-card i { width: 22px; height: 22px; flex: none; }
+    .p-card strong { display: block; font-size: .95em; }
+    .p-card small { color: var(--content-muted); font-size: .85em; }
+    .p-med i { color: var(--ev-medication); }
+    .p-sym i { color: var(--ev-symptom); }
+    .p-fam i { color: var(--status-calm); }
+    .p-why {
+      background: var(--teal-soft); border: 1px dashed var(--action);
+      border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+      font-size: .82em; color: var(--action-deep); line-height: 1.55;
+    }
+
+    /* ===== 功能卡（三大場景） ===== */
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); }
+    @media (max-width: 880px) { .cards { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--surface-1); border: 1px solid var(--line);
+      border-radius: var(--radius-card); padding: var(--space-8) var(--space-6);
+      box-shadow: var(--shadow-1);
+    }
+    .card-icon {
+      width: 52px; height: 52px; border-radius: var(--radius-md);
+      display: grid; place-items: center; margin-bottom: var(--space-5);
+    }
+    .card-icon i { width: 26px; height: 26px; }
+    .ci-teal { background: var(--teal-soft); color: var(--action-deep); }
+    .ci-blue { background: #E8F1F8; color: var(--ev-medication); }
+    .ci-peri { background: #ECEEF6; color: var(--periwinkle); }
+    .card h3 { font-size: 1.25em; margin-bottom: var(--space-3); }
+    .card p { color: var(--content-muted); font-size: .97em; }
+    .card ul { list-style: none; margin-top: var(--space-4); display: grid; gap: var(--space-2); }
+    .card li { display: flex; gap: var(--space-2); align-items: flex-start; font-size: .92em; color: var(--content-muted); }
+    .card li i { width: 18px; height: 18px; flex: none; margin-top: 4px; color: var(--action); }
+
+    /* ===== 設計理念（7 條） ===== */
+    .principles { background: var(--primary); color: #fff; }
+    .principles h2, .principles .section-lead { color: #fff; }
+    .principles .section-lead { color: #C9D6E2; }
+    .p-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); }
+    .p-item {
+      background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: var(--radius-md); padding: var(--space-5);
+      display: flex; gap: var(--space-3); align-items: flex-start;
+    }
+    .p-item i { width: 22px; height: 22px; flex: none; margin-top: 4px; color: #8FD0C5; }
+    .p-item strong { display: block; margin-bottom: 2px; }
+    .p-item span { color: #C9D6E2; font-size: .9em; }
+
+    /* ===== 運作方式 ===== */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); counter-reset: step; }
+    @media (max-width: 880px) { .steps { grid-template-columns: 1fr; } }
+    .step { position: relative; padding: var(--space-6); background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-card); }
+    .step::before {
+      counter-increment: step; content: counter(step);
+      display: grid; place-items: center; width: 44px; height: 44px;
+      border-radius: 50%; background: var(--teal-soft); color: var(--action-deep);
+      font-weight: 800; font-size: 1.15em; margin-bottom: var(--space-4);
+    }
+    .step h3 { font-size: 1.15em; margin-bottom: var(--space-2); }
+    .step p { color: var(--content-muted); font-size: .95em; }
+
+    /* ===== 實證設計 ===== */
+    .evidence-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+    @media (max-width: 880px) { .evidence-grid { grid-template-columns: 1fr; } }
+    .ev-card {
+      border-left: 4px solid var(--action); background: var(--surface-1);
+      border-radius: var(--radius-md); padding: var(--space-6);
+      box-shadow: var(--shadow-1);
+    }
+    .ev-card p { font-size: .97em; margin-bottom: var(--space-3); }
+    .ev-card cite { font-style: normal; color: var(--content-subtle); font-size: .85em; }
+
+    /* ===== FAQ ===== */
+    .faq details {
+      background: var(--surface-1); border: 1px solid var(--line);
+      border-radius: var(--radius-md); padding: var(--space-5) var(--space-6);
+      margin-bottom: var(--space-3);
+    }
+    .faq summary { font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+    .faq summary::after { content: "＋"; color: var(--action); font-weight: 800; }
+    .faq details[open] summary::after { content: "－"; }
+    .faq details p { margin-top: var(--space-3); color: var(--content-muted); }
+
+    /* ===== 行動呼籲 ===== */
+    .cta-final { text-align: center; background: linear-gradient(170deg, var(--teal-soft) 0%, var(--surface-1) 100%); border-top: 1px solid var(--line); }
+    .cta-final h2 { margin-bottom: var(--space-4); }
+    .cta-final p { color: var(--content-muted); margin-bottom: var(--space-8); }
+
+    /* ===== 頁尾 ===== */
+    footer { background: var(--surface-1); border-top: 1px solid var(--line); padding: var(--space-8) 0; }
+    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); color: var(--content-muted); font-size: .9em; }
+    .disclaimer { margin-top: var(--space-4); color: var(--content-subtle); font-size: .85em; max-width: 720px; }
+
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="#top" aria-label="MD.Piece 首頁">
+        <span class="brand-mark"><i data-lucide="puzzle" style="width:20px;height:20px"></i></span>
+        MD.Piece
+      </a>
+      <nav class="nav-links" aria-label="主選單">
+        <a href="#features">核心功能</a>
+        <a href="#principles">設計理念</a>
+        <a href="#how">怎麼開始</a>
+        <a href="#faq">常見問題</a>
+      </nav>
+      <a class="btn btn-primary" href="/">開始使用</a>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow"><i data-lucide="sparkles" style="width:16px;height:16px"></i>免安裝的 PWA 醫療輔助平台</span>
+          <h1>把每一次看診之間的日子，<em>拼回完整的照護</em></h1>
+          <p class="hero-sub">
+            慢性病的治療，大多發生在診間之外。MD.Piece 幫你記錄症狀、用藥與心情，
+            整理成你和醫療團隊都看得懂的健康全貌——而且每個 AI 建議，都附上「為什麼」。
+          </p>
+          <div class="hero-ctas">
+            <a class="btn btn-primary btn-lg" href="/">免費開始使用</a>
+            <a class="btn btn-ghost btn-lg" href="#features">看看能做什麼</a>
+          </div>
+          <div class="hero-trust">
+            <span><i data-lucide="smartphone"></i>不用下載 App</span>
+            <span><i data-lucide="accessibility"></i>長者大字模式</span>
+            <span><i data-lucide="languages"></i>繁體中文打造</span>
+          </div>
+        </div>
+        <div class="phone" role="img" aria-label="MD.Piece 應用程式畫面示意：今日狀態、用藥提醒與家人協助紀錄">
+          <div class="phone-screen">
+            <div class="p-greet">早安，今天感覺如何？</div>
+            <span class="p-chip"><i data-lucide="heart-pulse" style="width:14px;height:14px"></i>病況穩定</span>
+            <div class="p-card p-med">
+              <i data-lucide="pill"></i>
+              <div><strong>早上 8:00 服藥提醒</strong><small>抗發炎藥・飯後服用</small></div>
+            </div>
+            <div class="p-card p-sym">
+              <i data-lucide="clipboard-pen"></i>
+              <div><strong>記錄今天的症狀</strong><small>關節疼痛・30 秒完成</small></div>
+            </div>
+            <div class="p-card p-fam">
+              <i data-lucide="users"></i>
+              <div><strong>女兒已確認服藥 ✓</strong><small>家屬視角・上午 8:12</small></div>
+            </div>
+            <div class="p-why">
+              <strong>為什麼建議回診？</strong><br />
+              連續 5 天晨間僵硬超過 30 分鐘，依你的病史屬於需要留意的變化。
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 三大核心功能（對應策略場景 A / B / C） -->
+    <section id="features">
+      <div class="container">
+        <span class="eyebrow">核心功能</span>
+        <h2>專注做好三件事</h2>
+        <p class="section-lead">我們不做大而全的醫院系統，只解決患者每天真正卡住的三個場景。</p>
+        <div class="cards">
+          <article class="card">
+            <div class="card-icon ci-teal"><i data-lucide="stethoscope"></i></div>
+            <h3>症狀分析與分診建議</h3>
+            <p>不舒服的時候，該掛急診、門診，還是先觀察？AI 給你的不只是答案，還有完整的理由。</p>
+            <ul>
+              <li><i data-lucide="check"></i>說明哪些症狀觸發了建議、權重多少</li>
+              <li><i data-lucide="check"></i>依年齡、慢病與用藥史的個人化風險</li>
+              <li><i data-lucide="check"></i>列出每個選項的利弊與預期等待</li>
+            </ul>
+          </article>
+          <article class="card">
+            <div class="card-icon ci-blue"><i data-lucide="bell-ring"></i></div>
+            <h3>客製化提醒＋家屬視角</h3>
+            <p>提醒的時段、頻率、語氣都由你決定——嚴肅、溫柔或極簡。家人也能一起照看。</p>
+            <ul>
+              <li><i data-lucide="check"></i>多時段、多頻率，預設合理、全部可改</li>
+              <li><i data-lucide="check"></i>家屬同步收到提醒，可回報「已協助服藥」</li>
+              <li><i data-lucide="check"></i>長者模式：超大按鈕與大字介面</li>
+            </ul>
+          </article>
+          <article class="card">
+            <div class="card-icon ci-peri"><i data-lucide="calendar-range"></i></div>
+            <h3>我的健康時間軸</h3>
+            <p>在不同醫院的檢驗報告與處方箋，拍照上傳就自動整理成同一條時間軸。</p>
+            <ul>
+              <li><i data-lucide="check"></i>上傳 PDF／照片，自動辨識與結構化</li>
+              <li><i data-lucide="check"></i>跨院、跨科別，依時間一覽病程</li>
+              <li><i data-lucide="check"></i>一鍵生成就診摘要，回診帶著走</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 設計理念（7 條設計憲法） -->
+    <section id="principles" class="principles">
+      <div class="container">
+        <span class="eyebrow">設計理念</span>
+        <h2>七條我們不妥協的原則</h2>
+        <p class="section-lead">每一個功能上線前，都要先通過這七條檢核。</p>
+        <div class="p-grid">
+          <div class="p-item"><i data-lucide="zap"></i><div><strong>開瀏覽器即用</strong><span>免安裝、可加到主畫面，離線也能讀已快取的紀錄。</span></div></div>
+          <div class="p-item"><i data-lucide="search-check"></i><div><strong>可解釋的 AI</strong><span>所有建議必附理由、來源與可調整的輸入，拒絕黑盒。</span></div></div>
+          <div class="p-item"><i data-lucide="sliders-horizontal"></i><div><strong>提醒由你作主</strong><span>時段、頻率、語氣、通道，全部可以自己調。</span></div></div>
+          <div class="p-item"><i data-lucide="building-2"></i><div><strong>跨院整合</strong><span>自己上傳報告，平台自動整理成一條時間軸。</span></div></div>
+          <div class="p-item"><i data-lucide="scale"></i><div><strong>醫病共同決策</strong><span>呈現選項、利弊與個人化風險，而不是替你決定。</span></div></div>
+          <div class="p-item"><i data-lucide="glasses"></i><div><strong>長者與家屬友善</strong><span>大字模式、語音輔助，一鍵切換「我自己／我幫家人」。</span></div></div>
+          <div class="p-item"><i data-lucide="map-pin"></i><div><strong>為台灣而做</strong><span>繁體中文、分級醫療轉診脈絡與在地照護場景。</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 怎麼開始 -->
+    <section id="how">
+      <div class="container">
+        <span class="eyebrow">怎麼開始</span>
+        <h2>三步驟，今天就能用</h2>
+        <div class="steps">
+          <div class="step">
+            <h3>打開瀏覽器，免費註冊</h3>
+            <p>手機或電腦都可以，不用去 App Store 下載任何東西。</p>
+          </div>
+          <div class="step">
+            <h3>日常隨手記錄</h3>
+            <p>症狀、用藥、心情，每次 30 秒。需要時邀請家人一起照看。</p>
+          </div>
+          <div class="step">
+            <h3>回診時帶著全貌</h3>
+            <p>一鍵生成就診摘要，讓醫師快速掌握兩次看診之間發生的事。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 實證設計 -->
+    <section id="evidence">
+      <div class="container">
+        <span class="eyebrow">實證設計</span>
+        <h2>不是憑感覺，是照文獻做的</h2>
+        <p class="section-lead">MD.Piece 的核心設計，建立在公開發表的醫學研究之上。</p>
+        <div class="evidence-grid">
+          <div class="ev-card">
+            <p>涵蓋 209 篇隨機對照試驗、107,698 名受試者的系統性回顧證實：醫病共決工具能顯著提升患者的疾病知識與決策參與，且不增加決策後悔。這正是我們分診建議的設計標準。</p>
+            <cite>Stacey et al., Cochrane Database Syst Rev 2024 (DOI: 10.1002/14651858.CD001431.pub6)</cite>
+          </div>
+          <div class="ev-card">
+            <p>研究指出，無法客製化的用藥提醒，採用率只有 35.7%。所以在 MD.Piece，提醒的每一個細節——時段、頻率、語氣——都交還給你決定。</p>
+            <cite>Oudbier et al., Int J Med Inform 2025 (DOI: 10.1016/j.ijmedinf.2025.105949)</cite>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 常見問題 -->
+    <section id="faq" class="faq">
+      <div class="container">
+        <span class="eyebrow">常見問題</span>
+        <h2>你可能想知道</h2>
+        <div style="max-width:760px">
+          <details>
+            <summary>需要安裝 App 嗎？</summary>
+            <p>不用。MD.Piece 是 PWA（漸進式網頁應用），手機打開瀏覽器就能用；加到主畫面後，使用體驗和原生 App 一樣。</p>
+          </details>
+          <details>
+            <summary>AI 的建議可以相信嗎？</summary>
+            <p>我們要求每個 AI 建議都附上「為什麼」：哪些症狀觸發了它、依據是什麼、你可以調整哪些輸入。AI 是輔助你和醫師討論的工具，不是取代診斷的黑盒子。</p>
+          </details>
+          <details>
+            <summary>長輩不太會用手機，用得來嗎？</summary>
+            <p>有專門的長者模式：超大字體、超大按鈕。家人也可以用家屬視角一起照看——收到同步提醒、協助記錄，一鍵切換「我自己／我幫家人」。</p>
+          </details>
+          <details>
+            <summary>我的健康資料安全嗎？</summary>
+            <p>資料以加密連線傳輸並儲存在雲端資料庫，僅你本人與你授權的家屬、醫療團隊可以存取。我們不會販售你的個人健康資料。</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- 最終 CTA -->
+    <section class="cta-final">
+      <div class="container">
+        <h2>下一次回診前，先把日子記下來</h2>
+        <p>免費、免安裝，現在就可以開始。</p>
+        <a class="btn btn-primary btn-lg" href="/">開始使用 MD.Piece</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <span>© 2026 MD.Piece · www.mdpiece.life</span>
+        <span><a href="/" style="color:var(--action-deep);font-weight:700">登入／註冊</a></span>
+      </div>
+      <p class="disclaimer">
+        MD.Piece 是健康管理的輔助工具，提供的內容與建議僅供參考，不能取代專業醫療人員的診斷與治療。
+        若有緊急醫療狀況，請立即撥打 119 或前往最近的急診室。
+      </p>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script>if (window.lucide && lucide.createIcons) lucide.createIcons();</script>
+</body>
+</html>
