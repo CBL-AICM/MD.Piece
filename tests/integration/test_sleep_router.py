@@ -7,50 +7,17 @@
   - 趨勢彙整與 CSV 匯出可運作。
 """
 
-import os
-import tempfile
 from datetime import datetime, timedelta
 
 import pytest
 
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
+import backend.db as db_mod
+from fastapi.testclient import TestClient
 
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="sleeptest_", suffix=".db", delete=False)
-_TMP_DB.close()
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.main import app  # noqa: E402
+from backend.main import app
 
 USER = "sleep-test-1"
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def _reset_db():
-    import sqlite3
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()
-    db_mod.get_supabase()
-    conn = sqlite3.connect(_TMP_DB.name)
-    conn.execute("DELETE FROM sleep_sessions")
-    conn.execute("DELETE FROM sleep_edits")
-    conn.commit()
-    conn.close()
-    yield
 
 
 # 測試睡眠資料一律以「昨晚」為基準：list/export/trend 端點預設只回近 30 天，
@@ -136,7 +103,7 @@ def test_edit_sets_is_edited_and_preserves_original():
 
     # 原值應保留在 sleep_edits log
     import sqlite3
-    conn = sqlite3.connect(_TMP_DB.name)
+    conn = sqlite3.connect(db_mod.DB_PATH)
     rows = conn.execute("SELECT previous_values FROM sleep_edits WHERE session_id=?", (sid,)).fetchall()
     conn.close()
     assert len(rows) == 1

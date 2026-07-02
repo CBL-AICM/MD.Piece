@@ -4,43 +4,18 @@
 若有人把快取拿掉，test_context_cache_avoids_repeat_db_calls 會失敗。
 """
 
-import os
-import tempfile
-
 import pytest
 
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
-
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="ctxcache_", suffix=".db", delete=False)
-_TMP_DB.close()
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-import backend.services.llm_service as llm  # noqa: E402
+import backend.db as db_mod
+import backend.services.llm_service as llm
 
 PID = "ctx-cache-test"
 
 
 @pytest.fixture(autouse=True)
 def _reset():
-    import sqlite3
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()
-    conn = sqlite3.connect(_TMP_DB.name)
-    conn.execute("DELETE FROM symptoms_log")
-    conn.commit()
-    conn.close()
+    # DB 隔離由 tests/conftest.py 統一處理；這裡只需重置 llm_service 的
+    # in-process 病患脈絡快取，避免上一個測試的快取洩漏到下一個。
     llm._CTX_CACHE.clear()
     llm._CTX_TTL_SEC = 120.0
     yield
