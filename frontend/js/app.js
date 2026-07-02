@@ -850,7 +850,7 @@ function memo() {
     + '</div>';
 
   return _mobileMemoBlock + `
-    <div class="desktop-only">
+    <div class="desktop-only memo-desktop">
     <div class="page-app-hero page-app-hero-rose">
       <div class="page-app-hero-head">
         <span class="page-app-hero-eyebrow">TODAY · ${_T('app.c1.todayMemo')}</span>
@@ -1433,6 +1433,9 @@ function memoOpenComposer(title, opts) {
 
   memoRenderStagedPreview();
   box.style.display = "block";
+  // v11 全寬度藏掉 .desktop-only（composer 的父容器）— 加 body class 讓
+  // v11-modern.css 把 .memo-desktop modal 化露出 composer（同 is-sym-logging 前例）
+  document.body.classList.add('is-memo-composing');
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   setTimeout(function() {
     var ta = document.getElementById("memo-text");
@@ -1446,6 +1449,7 @@ function memoCancelCompose() {
   _memoStagedPhoto = null;
   _memoStagedPhotoCanvas = null;
   _memoEditingId = null;
+  document.body.classList.remove('is-memo-composing');
   var box = document.getElementById("memo-composer");
   if (box) box.style.display = "none";
 }
@@ -1509,6 +1513,8 @@ function memoEdit(id) {
 
   memoRenderStagedPreview();
   box.style.display = "block";
+  // 同 memoOpenComposer：composer 在被 v11 藏掉的 .desktop-only 內，需 modal 化露出
+  document.body.classList.add('is-memo-composing');
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   setTimeout(function() {
     var ta = document.getElementById("memo-text");
@@ -3719,6 +3725,8 @@ function showPage(page) {
   // class 殘留會讓任何有 .sym-page.desktop-only 的頁面（如 vitals）被當 modal
   // 鎖全螢幕並隱藏內容（規則 9：CSS selector 不該誤傷其他頁面）
   document.body.classList.remove('is-sym-logging');
+  // 同理清掉 memo composer 的 modal 狀態，避免殘留讓 memo 頁一進來就整片空白 overlay
+  document.body.classList.remove('is-memo-composing');
   const app = document.getElementById("app");
   app.setAttribute('data-page', pageSlugForTerminal[page] || page);
   // 同步在 body 設 .is-home / data-page，給 CSS 選擇器用（topbar 返回按鈕需要）
