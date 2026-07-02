@@ -2552,7 +2552,7 @@ async function refreshPvTimeline(pid) {
         when: t,
         type: 'mood',
         title: _T("app.c3.moodBattery") + pct + '%',
-        desc: _Tf("app.c3.dailyRecords", { n: (d.count || 1) }) + (d.note ? '：' + String(d.note).slice(0, 50) : ''),
+        desc: _Tf("app.c3.dailyRecords", { n: (d.count || 1) }) + (function() { var nt = _stripEmotionNotePrefix(d.note); return nt ? '：' + nt.slice(0, 50) : ''; })(),
         icon: 'battery-charging',
       });
     });
@@ -5616,12 +5616,10 @@ async function refreshNavBadges() {
     setBadge('medications', nm > 0 ? ('+' + nm) : '!', nm > 0 ? 'done' : 'todo');
   } catch (e) {}
 
-  // 情緒：後端 emotions/daily 的 date 用 UTC 切日，這裡保留 UTC todayKey 對齊；
-  // 待後端切到本地時區後可改用 todayISO（_localDay()）。
+  // 情緒：後端 emotions/daily 的 date 用台灣日界（UTC+8）切日，與本地日 todayISO 對齊
   try {
     var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();}).catch(function(){return{daily:[]};});
-    var todayUTC = new Date().toISOString().slice(0, 10);
-    var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
+    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
     var nc = d ? (d.count || 0) : 0;
     setBadge('emotions', nc > 0 ? ('+' + nc) : '!', nc > 0 ? 'done' : 'todo');
   } catch (e) {}
@@ -5717,11 +5715,10 @@ async function refreshTodayDigest() {
     }).length;
   } catch (e) {}
 
-  // 情緒 daily 聚合 — 後端 emotions/daily 用 UTC 切日，這裡 fallback 用 UTC todayKey
+  // 情緒 daily 聚合 — 後端 emotions/daily 用台灣日界（UTC+8）切日，與本地日 todayISO 對齊
   try {
     var em = await apiFetch(API + '/emotions/daily?patient_id=' + pid + '&days=1').then(function(r){return r.json();});
-    var todayUTC = new Date().toISOString().slice(0, 10);
-    var d = (em.daily || []).find(function(x) { return x.date === todayUTC; });
+    var d = (em.daily || []).find(function(x) { return x.date === todayISO; });
     moodCount = d ? (d.count || 0) : 0;
   } catch (e) {}
 
@@ -5794,8 +5791,9 @@ function removeUserTodo(id) {
 }
 async function _genAutoTodos() {
   var out = [];
-  // 此函數只用 todayISO 跟後端 emotions/daily 的 date 對比；後端用 UTC 切日所以這裡保留 UTC。
-  var todayISO = new Date().toISOString().slice(0, 10);
+  // 此函數只用 todayISO 跟後端 emotions/daily 的 date 對比；後端用台灣日界（UTC+8）切日，
+  // 與本地日（使用者在台灣）一致，統一走 _localDay()。
+  var todayISO = _localDay();
   var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
   if (!pid) return out;
 
@@ -8084,6 +8082,10 @@ function openInpatientQuickLog(key) {
   var sheet = document.createElement('div');
   sheet.id = 'ip-quicklog-sheet';
   sheet.className = 'ip-prep-sheet';
+  // mood 的 1-5 是心情好壞（1 差、5 好），跟 pain/fatigue 的嚴重度方向相反 → 用專屬副標
+  var scaleSub = (key === 'mood')
+    ? '1 = ' + _T("app.d16.moodWorst") + ' · 5 = ' + _T("app.d16.moodBest")
+    : '1 = ' + _T("app.d16.mildest") + ' · 5 = ' + _T("app.d16.severest");
   sheet.innerHTML = ''
     + '<div class="ip-prep-backdrop" onclick="closeInpatientQuickLog()"></div>'
     + '<div class="ip-prep-panel ip-ql-panel" role="dialog" aria-label="快速紀錄">'
@@ -8091,7 +8093,7 @@ function openInpatientQuickLog(key) {
     +   '<header class="ip-prep-head">'
     +     '<div class="ip-prep-when">'
     +       '<span class="ip-prep-when-num">' + cfg.title + '</span>'
-    +       '<span class="ip-prep-when-sub">' + cfg.label + ' · 1 = ' + _T("app.d16.mildest") + ' · 5 = ' + _T("app.d16.severest") + '</span>'
+    +       '<span class="ip-prep-when-sub">' + cfg.label + ' · ' + scaleSub + '</span>'
     +     '</div>'
     +     '<button type="button" class="ip-prep-close" onclick="closeInpatientQuickLog()" aria-label="' + _T("app.c10.close") + '"><i data-lucide="x" style="width:18px;height:18px"></i></button>'
     +   '</header>'
@@ -10895,7 +10897,7 @@ function loadInpatientTrendSparklines() {
   _drawSparkline('pain', _aggDaily(syms, function(e) { return painCats.indexOf(e.categoryId) !== -1 ? (e.intensity || 0) : null; }));
   _drawSparkline('fatigue', _aggDaily(syms, function(e) { return e.categoryId === 'fatigue' ? (e.intensity || 0) : null; }));
   // 心情：先用本地快速 log 暫填，再拉後端 daily 覆寫（後端拉不到時保留 local 版）。
-  // 後端回應 average_score 0..1 → 乘 10 對齊 local 1-5*2 = 2-10 的 scale。
+  // 後端 average_score 為 1-5 → 乘 2 對齊 local 1-5*2 = 2-10（0-10 量綱）的 scale。
   var localMood = _ipLocalMoodDaily();
   _drawSparkline('mood', localMood);
   // 三條 series 都有了 → 評估「好一點」並更新出院 step
@@ -10911,7 +10913,7 @@ function loadInpatientTrendSparklines() {
     .then(function(data) {
       var daily = (data && data.daily) || [];
       if (!daily.length) return; // 後端沒資料就不蓋 local
-      var vals = daily.map(function(d) { return (d.average_score != null) ? d.average_score * 10 : null; });
+      var vals = daily.map(function(d) { return (d.average_score != null) ? d.average_score * 2 : null; });
       _drawSparkline('mood', vals);
       _ipMoodSeriesBackend = vals;
       _ipRefreshFeelingHint();
@@ -21519,46 +21521,48 @@ var EMOTION_LEVELS = [
 // 喜怒哀樂四象限 — 先選情緒類型，下方電池就變成「程度」
 // 情緒輪：6 個方向（喜怒哀樂 + 焦慮 緊張）× 3 強度環 + 中心「平靜」
 // 角度走 SVG 慣例：0°=右、90°=下、-90°=上。每 60° 一個情緒。
-// rings 由內到外 = 弱 → 中 → 強，分別給 score 2 / 3 / 5；中心 score = 1。
+// rings 由內到外 = 弱 → 中 → 強；score 是「情緒效價」（1 最低落、5 最好，對齊後端），
+// 不是強度：正面情緒（喜/樂）內→外 = 3/4/5，負面情緒（焦/哀/緊/怒）內→外 = 3/2/1
+// （越強分數越低）。強度語意由 word（如「非常難過」）帶在 note 裡。中心「平靜」= 3。
 var EMOTION_WHEEL = [
   { id: 'joy',     angle: -90, char: '喜', color: '#E8A93A',
     rings: [
-      { score: 2, emoji: '🙂', word: '有點開心' },
-      { score: 3, emoji: '😊', word: '開心' },
+      { score: 3, emoji: '🙂', word: '有點開心' },
+      { score: 4, emoji: '😊', word: '開心' },
       { score: 5, emoji: '😄', word: '非常開心' },
     ] },
   { id: 'relax',   angle: -30, char: '樂', color: '#6FA67B',
     rings: [
-      { score: 2, emoji: '😌', word: '放鬆' },
-      { score: 3, emoji: '🥰', word: '愉快' },
+      { score: 3, emoji: '😌', word: '放鬆' },
+      { score: 4, emoji: '🥰', word: '愉快' },
       { score: 5, emoji: '🤩', word: '幸福' },
     ] },
   { id: 'anxiety', angle:  30, char: '焦', color: '#C098DA',
     rings: [
-      { score: 2, emoji: '😟', word: '有點焦慮' },
-      { score: 3, emoji: '😰', word: '焦慮' },
-      { score: 5, emoji: '😱', word: '非常焦慮' },
+      { score: 3, emoji: '😟', word: '有點焦慮' },
+      { score: 2, emoji: '😰', word: '焦慮' },
+      { score: 1, emoji: '😱', word: '非常焦慮' },
     ] },
   { id: 'sorrow',  angle:  90, char: '哀', color: '#5A7DB0',
     rings: [
-      { score: 2, emoji: '🥹', word: '委屈' },
-      { score: 3, emoji: '😢', word: '難過' },
-      { score: 5, emoji: '😭', word: '非常難過' },
+      { score: 3, emoji: '🥹', word: '委屈' },
+      { score: 2, emoji: '😢', word: '難過' },
+      { score: 1, emoji: '😭', word: '非常難過' },
     ] },
   { id: 'tense',   angle: 150, char: '緊', color: '#D89968',
     rings: [
-      { score: 2, emoji: '😬', word: '有點緊張' },
-      { score: 3, emoji: '😖', word: '緊張' },
-      { score: 5, emoji: '😣', word: '非常緊繃' },
+      { score: 3, emoji: '😬', word: '有點緊張' },
+      { score: 2, emoji: '😖', word: '緊張' },
+      { score: 1, emoji: '😣', word: '非常緊繃' },
     ] },
   { id: 'anger',   angle: 210, char: '怒', color: '#D86E5E',
     rings: [
-      { score: 2, emoji: '😒', word: '有點不爽' },
-      { score: 3, emoji: '😠', word: '生氣' },
-      { score: 5, emoji: '🤬', word: '非常憤怒' },
+      { score: 3, emoji: '😒', word: '有點不爽' },
+      { score: 2, emoji: '😠', word: '生氣' },
+      { score: 1, emoji: '🤬', word: '非常憤怒' },
     ] },
 ];
-var EMOTION_CENTER = { score: 1, emoji: '😶', word: '平靜', char: '靜', color: '#9CA8B8' };
+var EMOTION_CENTER = { score: 3, emoji: '😶', word: '平靜', char: '靜', color: '#9CA8B8' };
 var _selectedEmotionCell = null; // { emotion(或'center'), score, emoji, word, char }
 
 // 為了讓 mood-ring-hero + 月曆 + 表格繼續用 _moodColor / _moodEmoji
@@ -21570,17 +21574,19 @@ function _getEmotionType(id) {
   return EMOTION_TYPES.find(function(t) { return t.id === id; }) || EMOTION_TYPES[0];
 }
 function emotionIntensityText(score, typeId) {
+  // score 是效價（1 最低落、5 最好），對回該情緒方向 rings 裡相同 score 的 word
   var s = Math.max(1, Math.min(5, Math.round(score || 0)));
-  if (s <= 1) return '平靜';
   var w = EMOTION_WHEEL.find(function(e) { return e.id === typeId; });
-  if (!w) return '普通';
-  if (s <= 2) return w.rings[0].word;
-  if (s <= 3) return w.rings[1].word;
-  return w.rings[2].word;
+  if (w) {
+    var ring = w.rings.find(function(r) { return r.score === s; });
+    if (ring) return ring.word;
+  }
+  if (s === EMOTION_CENTER.score) return EMOTION_CENTER.word;
+  return '普通';
 }
 function selectEmotionCell(emotionId, score) {
   if (emotionId === 'center') {
-    _selectedEmotionCell = { emotion: 'center', score: 1, emoji: EMOTION_CENTER.emoji, word: EMOTION_CENTER.word, char: EMOTION_CENTER.char };
+    _selectedEmotionCell = { emotion: 'center', score: EMOTION_CENTER.score, emoji: EMOTION_CENTER.emoji, word: EMOTION_CENTER.word, char: EMOTION_CENTER.char };
   } else {
     var w = EMOTION_WHEEL.find(function(e) { return e.id === emotionId; });
     if (!w) return;
@@ -21651,7 +21657,7 @@ function renderEmotionWheel() {
         + '</g>';
     });
   });
-  var centerMarker = '<g class="emo-marker" data-emotion="center" data-score="1">'
+  var centerMarker = '<g class="emo-marker" data-emotion="center" data-score="' + EMOTION_CENTER.score + '">'
     + '<circle cx="' + CX + '" cy="' + CY + '" r="26" fill="var(--bg-surface)" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/>'
     + '<text x="' + CX + '" y="' + (CY + 1) + '" font-size="22" text-anchor="middle" dominant-baseline="central">' + EMOTION_CENTER.emoji + '</text>'
     + '</g>';
@@ -21728,7 +21734,7 @@ function emoWheelDrag(ev) {
   var dist = Math.sqrt(dx * dx + dy * dy);
   if (dist < 38) {
     _emoMoveThumb(160, 160, 'var(--text-muted)');
-    selectEmotionCell('center', 1);
+    selectEmotionCell('center', EMOTION_CENTER.score);
     return;
   }
   var angle = Math.atan2(dy, dx) * 180 / Math.PI;
@@ -21803,6 +21809,11 @@ function _moodPercent(score) {
   if (score == null) return null;
   // score 1~5 → 0%~100%（線性）
   return Math.round((Math.max(1, Math.min(5, score)) - 1) * 25);
+}
+
+// note 儲存格式帶「[類型字] 」前綴（submitEmotion 塞的），顯示時去掉；不改儲存格式
+function _stripEmotionNotePrefix(note) {
+  return String(note || '').replace(/^\[.\]\s*/, '');
 }
 
 function _moodColor(score) {
@@ -22080,7 +22091,8 @@ function moodCalSelect(dateKey) {
     tip.textContent = dateKey + ' · ' + _T("app.c28.noRecord");
     return;
   }
-  var note = rec.note ? '「' + rec.note + '」' : _T("app.c28.noNote");
+  var noteText = _stripEmotionNotePrefix(rec.note);
+  var note = noteText ? '「' + noteText + '」' : _T("app.c28.noNote");
   var avgPct = _moodPercent(rec.average_score);
   var loPct = _moodPercent(rec.min_score);
   var hiPct = _moodPercent(rec.max_score);
@@ -22212,7 +22224,8 @@ function renderMoodTable() {
   }
   var rows = _moodTableExpanded ? daily : daily.slice(0, 7);
   var trs = rows.map(function(d) {
-    var note = d.note ? escapeHtml(d.note) : '<span class="mood-table-muted">—</span>';
+    var noteText = _stripEmotionNotePrefix(d.note);
+    var note = noteText ? escapeHtml(noteText) : '<span class="mood-table-muted">—</span>';
     var avgPct = _moodPercent(d.average_score);
     var loPct = _moodPercent(d.min_score);
     var hiPct = _moodPercent(d.max_score);
