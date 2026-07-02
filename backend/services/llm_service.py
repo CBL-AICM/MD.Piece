@@ -484,7 +484,11 @@ _STREAM_PROVIDERS = {
 
 
 def stream_claude(system_prompt: str, user_message: str, history=None):
-    """串流文字生成（產生純文字片段的 generator）；主 provider 失敗時自動降級。"""
+    """串流文字生成（產生純文字片段的 generator）；主 provider 失敗時自動降級。
+
+    只在「第一個片段產出之前」失敗才換下一個 provider（first-chunk probe）；
+    一旦開始輸出，中途錯誤直接往外拋，避免前一個 provider 的半截回答
+    和下一個 provider 從頭重講的回答黏在一起。空串流視同失敗。"""
     chain = _fallback_chain(LLM_PROVIDER if LLM_PROVIDER in _STREAM_PROVIDERS else "ollama")
     last_err = None
     for name in chain:
@@ -492,14 +496,19 @@ def stream_claude(system_prompt: str, user_message: str, history=None):
         if fn is None:
             continue
         try:
-            # 用 list-iter 包裝以便偵測第一個 yield 之前的錯誤
             gen = fn(system_prompt, user_message, history)
-            yield from gen
-            return
+            first = next(gen)
+        except StopIteration:
+            last_err = RuntimeError(f"provider {name} 回傳空串流")
+            logger.warning(f"LLM stream provider {name} 回傳空串流，嘗試下一個")
+            continue
         except Exception as e:
             last_err = e
             logger.warning(f"LLM stream provider {name} 失敗，嘗試下一個：{e}")
             continue
+        yield first
+        yield from gen
+        return
     raise RuntimeError(f"所有 LLM stream provider 都失敗，最後錯誤：{last_err}")
 
 

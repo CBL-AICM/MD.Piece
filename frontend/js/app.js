@@ -20213,15 +20213,20 @@ function chatGreeting() {
   var name = u.nickname || _T("app.c25.youFallback");
   var v = chatGetVersion();
   if (v === 'elderly') {
-    return _Tf("app.c25.greetElderly", { name: name });
+    return _Tf("app.c25.greetElderly", { name: escapeHtml(name) });
   }
-  return _Tf("app.c25.greetNormal", { name: name });
+  return _Tf("app.c25.greetNormal", { name: escapeHtml(name) });
 }
 
 function chat() {
   var hist = chatLoadHistory();
   var mode = chatGetMode();
   var ver  = chatGetVersion();
+
+  // onclick 屬性以雙引號界定，chip 文案改用跳脫單引號包住（比照 navigateTo chip），
+  // 並先跳脫文案內可能出現的單引號，避免截斷屬性
+  var qaSummarize = _T("app.c25.quickAskSummarize").replace(/'/g, "\\'");
+  var qaAnxious   = _T("app.c25.quickAskAnxious").replace(/'/g, "\\'");
 
   // mobile v11 mirror of chat messages
   var mobileMsgs = hist.length
@@ -20260,8 +20265,8 @@ function chat() {
 
     // 快速提問 chip
     +   '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">'
-    +     '<button class="chip" onclick="chatQuickAsk(' + JSON.stringify(_T("app.c25.quickAskSummarize")) + ')">' + _T("app.c25.organizeRecent") + '</button>'
-    +     '<button class="chip" onclick="chatQuickAsk(' + JSON.stringify(_T("app.c25.quickAskAnxious")) + ')">' + _T("app.c25.chatWithMe") + '</button>'
+    +     '<button class="chip" onclick="chatQuickAsk(\'' + qaSummarize + '\')">' + _T("app.c25.organizeRecent") + '</button>'
+    +     '<button class="chip" onclick="chatQuickAsk(\'' + qaAnxious + '\')">' + _T("app.c25.chatWithMe") + '</button>'
     +     '<button class="chip" style="background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep)" onclick="chatGenerateArticle()"><i data-lucide="sparkles" style="width:10px;height:10px"></i> ' + _T("app.c25.generateArticle") + '</button>'
     +   '</div>'
 
@@ -20317,8 +20322,8 @@ function chat() {
 
     + '  <div class="chat-suggest" id="chat-suggest">'
     + '    <span class="chat-suggest-label">' + _T("app.c25.chatLabel") + '</span>'
-    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(' + JSON.stringify(_T("app.c25.quickAskSummarize")) + ')">' + _T("app.c25.organizeRecent") + '</button>'
-    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(' + JSON.stringify(_T("app.c25.quickAskAnxious")) + ')">' + _T("app.c25.chatWithMe") + '</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'' + qaSummarize + '\')">' + _T("app.c25.organizeRecent") + '</button>'
+    + '    <button type="button" class="chat-chip" onclick="chatQuickAsk(\'' + qaAnxious + '\')">' + _T("app.c25.chatWithMe") + '</button>'
     + '    <button type="button" class="chat-chip chat-chip-special" onclick="chatGenerateArticle()">'
     + '      <i data-lucide="sparkles" style="width:14px;height:14px"></i> ' + _T("app.c25.generateArticle") + ''
     + '    </button>'
@@ -20369,14 +20374,14 @@ function _mobileChatRenderMessage(m) {
       + '<div style="display:flex;justify-content:flex-start">'
       +   '<div style="max-width:85%;background:var(--accent-tint);border:1.5px solid var(--accent);color:var(--navy);padding:10px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55">'
       +     '<div style="font-size:11px;font-weight:600;color:var(--accent-deep);margin-bottom:5px;display:flex;align-items:center;gap:4px"><i data-lucide="file-text" style="width:12px;height:12px"></i> ' + _T("app.c25.articleByXiaohe") + '</div>'
-      +     '<div style="white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+      +     '<div class="chat-text-mob" style="white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
       +   '</div>'
       + '</div>';
   }
   return ''
     + '<div style="display:flex;justify-content:flex-start;gap:6px;align-items:flex-end">'
     +   '<div style="width:24px;height:24px;border-radius:50%;background:var(--rose-tint);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🌿</div>'
-    +   '<div style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
+    +   '<div class="chat-text-mob" style="max-width:75%;background:var(--bg-soft);color:var(--navy);padding:8px 12px;border-radius:14px 14px 14px 4px;font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word">' + chatEscape(m.text) + '</div>'
     + '</div>';
 }
 
@@ -20519,6 +20524,7 @@ function chatAppendMessage(role, text) {
   var stream = document.getElementById('chat-stream');
   var mStream = document.getElementById('mobile-chat-stream');
   var node = null;
+  var mNode = null;
   if (stream) {
     var wrap = document.createElement('div');
     wrap.innerHTML = chatRenderMessage({ role: role, text: text });
@@ -20528,26 +20534,51 @@ function chatAppendMessage(role, text) {
   if (mStream) {
     var mWrap = document.createElement('div');
     mWrap.innerHTML = _mobileChatRenderMessage({ role: role, text: text });
-    var mNode = mWrap.firstChild;
+    mNode = mWrap.firstChild;
     if (mNode) mStream.appendChild(mNode);
     mStream.scrollTop = mStream.scrollHeight;
   }
   if (typeof lucide !== 'undefined') lucide.createIcons();
   chatScrollToBottom();
-  return node;
+  // 回傳可同時更新桌機 + 手機兩份 DOM 的 handle（body 掛 theme-modern 時
+  // 使用者看到的是 .mobile-only 鏡像，串流更新必須兩邊都寫）
+  var textSel = (role === 'article') ? '.chat-article-text' : '.chat-text';
+  return {
+    desktop: node,
+    mobile: mNode,
+    setText: function (html) {
+      var el = node ? node.querySelector(textSel) : null;
+      if (el) el.innerHTML = html;
+      var mEl = mNode ? mNode.querySelector('.chat-text-mob') : null;
+      if (mEl) mEl.innerHTML = html;
+      if (mStream) mStream.scrollTop = mStream.scrollHeight;
+    }
+  };
 }
 
 function chatShowThinking() {
+  var node = null;
   var stream = document.getElementById('chat-stream');
-  if (!stream) return null;
-  var node = document.createElement('div');
-  node.className = 'chat-msg chat-msg-bot chat-msg-thinking';
-  node.id = 'chat-thinking';
-  node.innerHTML = ''
-    + '<div class="chat-bubble">'
-    +   '<div class="chat-typing-dots"><span></span><span></span><span></span></div>'
-    + '</div>';
-  stream.appendChild(node);
+  if (stream) {
+    node = document.createElement('div');
+    node.className = 'chat-msg chat-msg-bot chat-msg-thinking';
+    node.id = 'chat-thinking';
+    node.innerHTML = ''
+      + '<div class="chat-bubble">'
+      +   '<div class="chat-typing-dots"><span></span><span></span><span></span></div>'
+      + '</div>';
+    stream.appendChild(node);
+  }
+  // 手機鏡像也要有打字點點
+  var mStream = document.getElementById('mobile-chat-stream');
+  if (mStream) {
+    var mNode = document.createElement('div');
+    mNode.id = 'mobile-chat-thinking';
+    mNode.style.cssText = 'display:flex;justify-content:flex-start';
+    mNode.innerHTML = '<div style="background:var(--bg-soft);padding:8px 12px;border-radius:14px 14px 14px 4px"><div class="chat-typing-dots"><span></span><span></span><span></span></div></div>';
+    mStream.appendChild(mNode);
+    mStream.scrollTop = mStream.scrollHeight;
+  }
   chatSetMascotState('thinking');
   chatScrollToBottom();
   return node;
@@ -20556,6 +20587,8 @@ function chatShowThinking() {
 function chatRemoveThinking() {
   var n = document.getElementById('chat-thinking');
   if (n && n.parentNode) n.parentNode.removeChild(n);
+  var mn = document.getElementById('mobile-chat-thinking');
+  if (mn && mn.parentNode) mn.parentNode.removeChild(mn);
 }
 
 var _chatMascotTypingTimer = null;
@@ -20592,26 +20625,30 @@ function chatSetMascotState(state) {
 }
 
 // 打字機效果：把文字一個個塞進 element
+// node 可以是 DOM element，或 chatAppendMessage 回傳的 handle（同步更新桌機 + 手機）
 function chatTypeInto(node, text, opts, onDone) {
   opts = opts || {};
   var speed = opts.speed || 22; // ms per char
   var i = 0;
+  var put = (node && typeof node.setText === 'function')
+    ? function (html) { node.setText(html); }
+    : function (html) { node.innerHTML = html; };
   if (_chatTypeTimer) { clearInterval(_chatTypeTimer); _chatTypeTimer = null; }
   _chatTyping = true;
   chatSetMascotState('typing');
-  node.innerHTML = '<span class="chat-caret">▌</span>';
+  put('<span class="chat-caret">▌</span>');
   _chatTypeTimer = setInterval(function() {
     if (i >= text.length) {
       clearInterval(_chatTypeTimer); _chatTypeTimer = null;
       _chatTyping = false;
-      node.innerHTML = chatEscape(text);
+      put(chatEscape(text));
       chatSetMascotState('idle');
       if (typeof onDone === 'function') onDone();
       chatScrollToBottom();
       return;
     }
     var partial = text.slice(0, i + 1);
-    node.innerHTML = chatEscape(partial) + '<span class="chat-caret">▌</span>';
+    put(chatEscape(partial) + '<span class="chat-caret">▌</span>');
     chatScrollToBottom();
     i += 1;
   }, speed);
@@ -20723,8 +20760,7 @@ function chatStreamReply(body, fallbackText) {
     chatSetMascotState('typing');
     _chatTyping = true;
 
-    var node = chatAppendMessage('bot', '');
-    var textEl = node ? node.querySelector('.chat-text') : null;
+    var msg = chatAppendMessage('bot', '');
     var reader = resp.body.getReader();
     var decoder = new TextDecoder('utf-8');
     var buf = '';
@@ -20746,9 +20782,9 @@ function chatStreamReply(body, fallbackText) {
           var payload = line.slice(idx + 5).trim();
           var obj = null;
           try { obj = JSON.parse(payload); } catch (e) { continue; }
-          if (obj.delta && textEl) {
+          if (obj.delta) {
             fullText += obj.delta;
-            textEl.innerHTML = chatEscape(fullText);
+            msg.setText(chatEscape(fullText));
             chatScrollToBottom();
           }
           if (obj.done) {
@@ -20762,8 +20798,11 @@ function chatStreamReply(body, fallbackText) {
     return pump().then(function () {
       _chatTyping = false;
       chatSetMascotState('idle');
+      var finalText = fullText || fallbackText || '';
+      // 0 delta（空串流）時把 fallback 也寫回氣泡，避免畫面留空但 history 有字
+      if (!fullText && finalText) msg.setText(chatEscape(finalText));
       var h = chatLoadHistory();
-      h.push({ role: 'bot', text: fullText || fallbackText || '', t: Date.now() });
+      h.push({ role: 'bot', text: finalText, t: Date.now() });
       chatSaveHistory(h);
     });
   }).catch(function (err) {
@@ -20786,19 +20825,16 @@ function chatNonStreamFallback(body, fallbackText) {
     .then(function (data) {
       var reply = (data && data.reply) ? String(data.reply)
         : (fallbackText || _T("app.c26.networkBusy"));
-      var node = chatAppendMessage('bot', '');
-      var textEl = node ? node.querySelector('.chat-text') : null;
-      if (!textEl) return;
-      chatTypeInto(textEl, reply, {}, function () {
+      var msg = chatAppendMessage('bot', '');
+      chatTypeInto(msg, reply, {}, function () {
         var h = chatLoadHistory();
         h.push({ role: 'bot', text: reply, t: Date.now() });
         chatSaveHistory(h);
       });
     })
     .catch(function () {
-      var node = chatAppendMessage('bot', '');
-      var textEl = node ? node.querySelector('.chat-text') : null;
-      if (textEl) chatTypeInto(textEl, _T("app.c26.networkBusy"));
+      var msg = chatAppendMessage('bot', '');
+      chatTypeInto(msg, _T("app.c26.networkBusy"));
     });
 }
 
@@ -20818,6 +20854,9 @@ function chatGenerateArticle() {
     + '結尾給自己一句鼓勵。如果對話內容不足，就以一般問候與健康提醒為主。\n\n'
     + '【對話】\n' + (recent || '（尚無對話）');
 
+  // 在 push 新訊息「之前」抓歷史，讓 history 不含本則 user 訊息（比照 chatSend）
+  var apiHistory = chatBuildApiHistory(12);
+
   // 把使用者意圖也記下來
   hist.push({ role: 'user', text: _T("app.c26.writeArticle"), t: Date.now() });
   chatSaveHistory(hist);
@@ -20831,7 +20870,7 @@ function chatGenerateArticle() {
     body: JSON.stringify({
       user_id: pid, message: prompt,
       mode: chatGetMode(), version: chatGetVersion(),
-      history: chatBuildApiHistory(12)
+      history: apiHistory
     })
   })
     .then(function(r) { return r.json().catch(function() { return {}; }); })
@@ -20839,10 +20878,8 @@ function chatGenerateArticle() {
       chatRemoveThinking();
       var article = (data && data.reply) ? String(data.reply)
         : _T("app.c26.articleFallback");
-      var node = chatAppendMessage('article', '');
-      var textEl = node ? node.querySelector('.chat-article-text') : null;
-      if (!textEl) return;
-      chatTypeInto(textEl, article, { speed: 18 }, function() {
+      var msg = chatAppendMessage('article', '');
+      chatTypeInto(msg, article, { speed: 18 }, function() {
         var h = chatLoadHistory();
         h.push({ role: 'article', text: article, t: Date.now() });
         chatSaveHistory(h);
@@ -20851,9 +20888,8 @@ function chatGenerateArticle() {
     .catch(function() {
       chatRemoveThinking();
       var fallback = _T("app.c26.networkBusyArticle");
-      var node = chatAppendMessage('bot', '');
-      var textEl = node ? node.querySelector('.chat-text') : null;
-      if (textEl) chatTypeInto(textEl, fallback);
+      var msg = chatAppendMessage('bot', '');
+      chatTypeInto(msg, fallback);
     });
 }
 

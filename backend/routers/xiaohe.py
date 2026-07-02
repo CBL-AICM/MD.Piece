@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List, Literal
@@ -7,6 +7,7 @@ import json
 import logging
 
 from backend.db import get_supabase
+from backend.security import current_user_optional, enforce_patient_scope
 from backend.services.llm_service import (
     build_patient_facing_system,
     call_claude,
@@ -84,6 +85,10 @@ XIAOHE_PERSONAS = {
 }
 
 
+# 單則訊息／history 每則 content 的長度上限（字元），避免 token 爆掉
+MAX_MESSAGE_CHARS = 4000
+
+
 class ChatTurn(BaseModel):
     role: Literal["user", "assistant"]
     content: str
@@ -120,18 +125,21 @@ def _build_xiaohe_system(persona_key: str, user_id: str) -> str:
 
 
 @router.post("/chat")
-def chat_with_xiaohe(body: ChatRequest):
+def chat_with_xiaohe(body: ChatRequest, me: dict | None = Depends(current_user_optional)):
     """與小禾 AI 對話"""
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="請輸入訊息")
+    if len(body.message) > MAX_MESSAGE_CHARS:
+        raise HTTPException(status_code=400, detail="訊息太長，請縮短後再送出")
+    enforce_patient_scope(body.user_id, me)
 
     persona_key = _select_persona(body.mode, body.version)
     system_prompt = _build_xiaohe_system(persona_key, body.user_id)
 
-    # 把 history 限制在最近 12 輪，避免 token 爆掉
+    # 把 history 限制在最近 12 輪、每則截斷超長 content，避免 token 爆掉
     hist = None
     if body.history:
-        hist = [{"role": t.role, "content": t.content} for t in body.history[-12:]]
+        hist = [{"role": t.role, "content": t.content[:MAX_MESSAGE_CHARS]} for t in body.history[-12:]]
 
     try:
         reply = call_claude(system_prompt, body.message, history=hist)
@@ -147,17 +155,20 @@ def chat_with_xiaohe(body: ChatRequest):
 
 
 @router.post("/chat/stream")
-def chat_with_xiaohe_stream(body: ChatRequest):
+def chat_with_xiaohe_stream(body: ChatRequest, me: dict | None = Depends(current_user_optional)):
     """與小禾 AI 對話 — 串流版本（SSE）。每個事件是一段 token，最後送 done"""
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="請輸入訊息")
+    if len(body.message) > MAX_MESSAGE_CHARS:
+        raise HTTPException(status_code=400, detail="訊息太長，請縮短後再送出")
+    enforce_patient_scope(body.user_id, me)
 
     persona_key = _select_persona(body.mode, body.version)
     system_prompt = _build_xiaohe_system(persona_key, body.user_id)
 
     hist = None
     if body.history:
-        hist = [{"role": t.role, "content": t.content} for t in body.history[-12:]]
+        hist = [{"role": t.role, "content": t.content[:MAX_MESSAGE_CHARS]} for t in body.history[-12:]]
 
     def event_gen():
         try:
@@ -181,8 +192,9 @@ def chat_with_xiaohe_stream(body: ChatRequest):
 
 
 @router.get("/emotion-summary/{patient_id}")
-def get_emotion_summary(patient_id: str):
+def get_emotion_summary(patient_id: str, me: dict | None = Depends(current_user_optional)):
     """回傳匿名情緒趨勢（不含對話內容，保護隱私）"""
+    enforce_patient_scope(patient_id, me)
     sb = get_supabase()
     since = (datetime.utcnow() - timedelta(days=30)).isoformat()
     result = sb.table("emotions").select("*").eq("patient_id", patient_id).gte("created_at", since).order("created_at").execute()
