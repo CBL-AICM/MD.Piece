@@ -129,6 +129,7 @@
     { "src": "/rewards", "dest": "api/index.py" },
     { "src": "/api/github-token", "dest": "api/github-token.js" },
     { "src": "/admin", "dest": "frontend/admin.html" },
+    { "src": "/landing", "dest": "frontend/landing.html" },
     { "src": "/(.*)", "dest": "frontend/$1" }
   ]
 }
