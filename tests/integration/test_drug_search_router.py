@@ -8,35 +8,14 @@
 - /drug-search/from-medication/{id} 用個人用藥的 name 做查詢
 """
 
-import os
-import sys
-import tempfile
-
 import pytest
 
-# 以本地 SQLite 跑測試：在 import db 前清空 Supabase 環境變數
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
-os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
+import backend.db as db_mod
+from fastapi.testclient import TestClient
 
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="drugsearchtest_", suffix=".db", delete=False)
-_TMP_DB.close()
-os.environ["SQLITE_DB_PATH"] = _TMP_DB.name
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.main import app  # noqa: E402
-from backend.routers import drug_search as drug_search_module  # noqa: E402
-from backend.security import create_access_token  # noqa: E402
+from backend.main import app
+from backend.routers import drug_search as drug_search_module
+from backend.security import create_access_token
 
 PATIENT_ID = "drug-search-test-patient"
 
@@ -44,30 +23,6 @@ PATIENT_ID = "drug-search-test-patient"
 # drug-search 本身 endpoints 沒強制 JWT，但統一給 token 不影響其他測試。
 _TEST_TOKEN = create_access_token({"id": PATIENT_ID, "username": "tester", "role": "patient"})
 client = TestClient(app, headers={"Authorization": f"Bearer {_TEST_TOKEN}"})
-
-
-@pytest.fixture(autouse=True)
-def _reset_db():
-    """每個測試前：把 db 指回本 module 的 SQLite 檔，再清空相關表。
-
-    多個測試檔同時跑時，後 import 的 test_*.py 會把 db_mod.DB_PATH 蓋成自己的暫存檔，
-    這個 fixture 在每個 drug_search 測試啟動時把 DB_PATH 拉回這裡，避免讀寫到別檔。
-    """
-    import sqlite3
-
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()  # 確保 schema 存在
-
-    conn = sqlite3.connect(_TMP_DB.name)
-    conn.execute("DELETE FROM drug_reference")
-    conn.execute("DELETE FROM medications")
-    conn.execute("DELETE FROM patients")
-    conn.commit()
-    conn.close()
-    yield
 
 
 def _fake_acetaminophen(name: str) -> dict:

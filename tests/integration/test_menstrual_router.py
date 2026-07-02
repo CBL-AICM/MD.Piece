@@ -7,53 +7,16 @@
   - daily 以 (patient_id, date) upsert：同一天再寫一次是更新不是新增一列。
 """
 
-import os
-import tempfile
 from datetime import date, timedelta
 
 import pytest
 
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
-os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
+from fastapi.testclient import TestClient
 
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="menstrualtest_", suffix=".db", delete=False)
-_TMP_DB.close()
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.main import app  # noqa: E402
+from backend.main import app
 
 PATIENT_ID = "menstrual-test-1"
 client = TestClient(app)  # menstrual router 不強制 JWT（同 admissions/inpatient）
-
-
-@pytest.fixture(autouse=True)
-def _reset_db():
-    import sqlite3
-
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()
-    db_mod.get_supabase()
-
-    conn = sqlite3.connect(_TMP_DB.name)
-    conn.execute("DELETE FROM menstrual_cycles")
-    conn.execute("DELETE FROM menstrual_daily")
-    conn.commit()
-    conn.close()
-    yield
 
 
 def _add_cycle(start, end=None, flow=None, symptoms=None):

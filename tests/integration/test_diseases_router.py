@@ -9,58 +9,14 @@
 - GET /diseases/from-symptom/{id}?disease=xxx 直接走 search 流程
 """
 
-import os
-import sys
-import tempfile
-
 import pytest
 
-# 以本地 SQLite 跑測試：在 import db 前清空 Supabase 環境變數
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
-os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
+from fastapi.testclient import TestClient
 
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="diseasetest_", suffix=".db", delete=False)
-_TMP_DB.close()
-os.environ["SQLITE_DB_PATH"] = _TMP_DB.name
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.main import app  # noqa: E402
-from backend.routers import diseases as diseases_module  # noqa: E402
+from backend.main import app
+from backend.routers import diseases as diseases_module
 
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def _reset_db():
-    """每個測試前把 db 指回本檔的 SQLite，並清空 disease_reference / symptoms_log。"""
-    import sqlite3
-
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()
-
-    conn = sqlite3.connect(_TMP_DB.name)
-    conn.execute("DELETE FROM disease_reference")
-    try:
-        conn.execute("DELETE FROM symptoms_log")
-    except sqlite3.OperationalError:
-        pass
-    conn.commit()
-    conn.close()
-    yield
 
 
 def _fake_t2dm(name: str) -> dict:

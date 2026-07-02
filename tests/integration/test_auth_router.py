@@ -9,57 +9,17 @@
 - 忘記密碼（安全問題）：設定→查問題→答對可重設並用新密碼登入；答錯被擋且套用鎖定
 """
 
-import os
-import sys
-import tempfile
-
 import pytest
 
-# 以本地 SQLite 跑測試：在 import db 前清空 Supabase 環境變數
-os.environ.pop("SUPABASE_URL", None)
-os.environ.pop("SUPABASE_KEY", None)
-os.environ.pop("VERCEL", None)
-os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
-os.environ["JWT_SECRET"] = "test-secret-at-least-16-chars-long-xxxx"
+from fastapi.testclient import TestClient
 
-_TMP_DB = tempfile.NamedTemporaryFile(prefix="authtest_", suffix=".db", delete=False)
-_TMP_DB.close()
-os.environ["SQLITE_DB_PATH"] = _TMP_DB.name
-
-import backend.db as db_mod  # noqa: E402
-
-db_mod.DB_PATH = _TMP_DB.name
-db_mod.SUPABASE_URL = ""
-db_mod.SUPABASE_KEY = ""
-db_mod._client = None  # type: ignore[attr-defined]
-db_mod._init_db()
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from backend.main import app  # noqa: E402
+from backend.main import app
 
 client = TestClient(app)
 
 # 後端帳號驗證用 _USERNAME_RE 不允許全數字以外的格式，但允許英數混合。
 _GOOD_PASSWORD = "Secret123"
 _USERNAME = "alice.test"
-
-
-@pytest.fixture(autouse=True)
-def _reset_db():
-    import sqlite3
-
-    db_mod.DB_PATH = _TMP_DB.name
-    db_mod.SUPABASE_URL = ""
-    db_mod.SUPABASE_KEY = ""
-    db_mod._client = None  # type: ignore[attr-defined]
-    db_mod._init_db()
-
-    conn = sqlite3.connect(_TMP_DB.name)
-    conn.execute("DELETE FROM users")
-    conn.commit()
-    conn.close()
-    yield
 
 
 def _register(username=_USERNAME, password=_GOOD_PASSWORD, **extra):
