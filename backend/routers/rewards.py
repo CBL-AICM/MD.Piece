@@ -22,7 +22,7 @@
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -57,9 +57,38 @@ class RedeemRequest(BaseModel):
     reward_id: str
 
 
+# 各紀錄表的時間戳都以 UTC 存（如 medications.py 的 datetime.utcnow()）。積分／連續／
+# 拼圖都是以「使用者所在時區的日曆日」計，台灣為 UTC+8，直接切 UTC 字串前 10 碼會把
+# 早上 8 點前的紀錄算到前一天。沿用 repo 既有慣例（diet.py 的 utcnow()+timedelta(hours=8)）。
+_TW_OFFSET = timedelta(hours=8)
+
+
+def _local_day(raw):
+    """把資料表存的 UTC 時間戳換算成台灣（+8）的日曆日 'YYYY-MM-DD'。
+    純日期字串（無時間部分）無時區可調，原樣取前 10 碼；解析失敗亦退回前 10 碼（不丟例外）。"""
+    s = str(raw)
+    head = s[:10]
+    if len(s) <= 10 or s[10] not in ("T", " "):
+        return head
+    try:
+        dt = datetime.strptime(s[:19].replace(" ", "T"), "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return head
+    return (dt + _TW_OFFSET).strftime("%Y-%m-%d")
+
+
+def _norm_month(ym):
+    """把 'YYYY-M' / 'YYYY-MM' 正規化成零補位的 'YYYY-MM'；格式不對回原字串前 7 碼。
+    避免 month=2026-6 這種未補位字串比不到零補位的日期鍵而回傳全鎖拼圖。"""
+    parts = str(ym).split("-")
+    if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+        return f"{int(parts[0]):04d}-{int(parts[1]):02d}"
+    return str(ym)[:7]
+
+
 def _scan_days(sb, table, id_col, date_cols, pid):
-    """撈某表屬於該使用者的紀錄，回 [日期字串...]（每列取第一個有值的日期欄）。
-    表不存在或讀取失敗就回空（比照 surveys._adherence 的容錯）。"""
+    """撈某表屬於該使用者的紀錄，回 [日期字串...]（每列取第一個有值的日期欄，換算成台灣日）。
+    表不存在或讀取失敗就回空（唯讀換算的容錯：缺一張表不該讓整頁掛掉）。"""
     try:
         rows = sb.table(table).select("*").eq(id_col, pid).execute().data or []
     except Exception as exc:
@@ -69,7 +98,7 @@ def _scan_days(sb, table, id_col, date_cols, pid):
     for r in rows:
         for c in date_cols:
             if r.get(c):
-                days.append(str(r[c])[:10])
+                days.append(_local_day(r[c]))
                 break
     return days
 
@@ -114,7 +143,7 @@ def _month_activity(day_sources, year_month):
     """把全量的 day_sources 過濾到指定月份（'YYYY-MM'），組出
     rewards_rules.puzzle_board 需要的 month-scoped activity dict。純過濾＋重算，
     不另外讀 DB（沿用 summary 已撈好的逐日來源；規則 2/3：不重複查表）。"""
-    prefix = str(year_month)[:7]
+    prefix = _norm_month(year_month)
     month_days = {d: s for d, s in day_sources.items() if str(d)[:7] == prefix}
     active_days = sorted(month_days.keys())
     longest, _current = rules.compute_streaks(active_days)
@@ -200,7 +229,9 @@ def get_puzzle(patient_id: str = Query(...), month: str = Query(None, descriptio
     """療程拼圖（每月主題收藏）：回當月 9 片解鎖狀態＋歷史已完成清單。
     純唯讀換算，沿用 _gather_activity 的逐日來源、不另外讀表（規則 2/5）。"""
     enforce_patient_scope(patient_id, me)
-    ym = month or datetime.now(timezone.utc).strftime("%Y-%m")
+    # 「本月」以台灣（+8）日曆月為準，與前端首頁入口卡（app.js 用瀏覽器本地月）一致，
+    # 避免每月頭 8 小時後端還停在上個月。帶入的 month 一律正規化成零補位 'YYYY-MM'。
+    ym = _norm_month(month) if month else (datetime.utcnow() + _TW_OFFSET).strftime("%Y-%m")
     sb = get_supabase()
     _activity, day_sources = _gather_activity(sb, patient_id)
     board = rules.puzzle_board(ym, _month_activity(day_sources, ym))
@@ -218,7 +249,7 @@ def get_catalog(patient_id: str = Query(None), me: dict | None = Depends(current
     available = 0
     if patient_id:
         sb = get_supabase()
-        activity, _, _ = _gather_activity(sb, patient_id)
+        activity, _ = _gather_activity(sb, patient_id)
         earned = rules.compute_points(activity)["earned"]
         spent, _ = _spent_points(sb, patient_id)
         available = max(0, earned - spent)
@@ -244,7 +275,7 @@ def redeem(body: RedeemRequest, me: dict | None = Depends(current_user_optional)
         raise HTTPException(status_code=404, detail="找不到該兌換品項")
 
     sb = get_supabase()
-    activity, _, _ = _gather_activity(sb, body.patient_id)
+    activity, _ = _gather_activity(sb, body.patient_id)
     earned = rules.compute_points(activity)["earned"]
     spent, _ = _spent_points(sb, body.patient_id)
     available = max(0, earned - spent)
@@ -316,15 +347,26 @@ def admin_list_redemptions(
             detail="兌換清單暫時無法載入（reward_redemptions 資料表是否已建立？"
                    "見 docs/migration_reward_redemptions.sql）。",
         )
+    # counts 要反映全表各狀態總數，與 status 過濾 / limit 截斷無關，故另外只撈 status 欄統計，
+    # 不能從已被過濾又截斷的 rows 算（否則帶 status 過濾時其他狀態全變 0、資料量 >limit 時失真）。
     counts = {"requested": 0, "fulfilled": 0, "cancelled": 0}
-    for r in rows:
-        st = r.get("status") or "requested"
-        counts[st] = counts.get(st, 0) + 1
+    try:
+        all_status = sb.table("reward_redemptions").select("status").execute().data or []
+        for r in all_status:
+            st = r.get("status") or "requested"
+            counts[st] = counts.get(st, 0) + 1
+    except Exception as exc:
+        logger.info("rewards admin counts failed: %s", type(exc).__name__)
     return {"redemptions": rows, "counts": counts}
 
 
 def _set_redemption_status(redemption_id, new_status, allowed_from, me):
-    """把某筆兌換改成 new_status；只允許從 allowed_from 的狀態轉換。限 doctor。"""
+    """把某筆兌換改成 new_status；只允許從 allowed_from 的狀態轉換。限 doctor。
+
+    更新用 compare-and-swap（UPDATE ... WHERE status=舊值）確保併發下只有一方生效——
+    避免兩位醫護同時對同一筆按「核發」「退回」時後寫覆蓋前寫（已發放的獎勵又被退點）。
+    因 SQLite/PostgREST 兩種 shim 對 update 回傳語意不同，一律以更新後重讀的實際狀態為準。
+    """
     _require_doctor(me)
     sb = get_supabase()
     try:
@@ -337,8 +379,22 @@ def _set_redemption_status(redemption_id, new_status, allowed_from, me):
     old = cur[0].get("status") or "requested"
     if old not in allowed_from:
         raise HTTPException(status_code=409, detail=f"目前狀態為「{old}」，無法執行此操作")
-    saved = sb.table("reward_redemptions").update({"status": new_status}).eq("id", redemption_id).execute()
-    return saved.data[0] if saved.data else dict(cur[0], status=new_status)
+    try:
+        (
+            sb.table("reward_redemptions")
+            .update({"status": new_status})
+            .eq("id", redemption_id)
+            .eq("status", old)  # 原子條件：狀態自讀取後被他人改動就命中 0 列
+            .execute()
+        )
+        after = sb.table("reward_redemptions").select("*").eq("id", redemption_id).limit(1).execute().data
+    except Exception as exc:
+        logger.error("redemption status update failed: %s", exc)
+        raise HTTPException(status_code=503, detail="兌換狀態更新暫時無法完成")
+    row = after[0] if after else None
+    if not row or row.get("status") != new_status:
+        raise HTTPException(status_code=409, detail="兌換狀態剛被更新，請重新整理後再試")
+    return row
 
 
 @router.post("/admin/redemptions/{redemption_id}/fulfill")

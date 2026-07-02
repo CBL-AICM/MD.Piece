@@ -3933,7 +3933,11 @@ function _nextLevelHtml(lv, earned) {
     + '<div class="rw-bar"><i style="width:' + pct + '%"></i></div>';
 }
 
+var _rwRedeeming = false;
 function redeemReward(rewardId) {
+  // 防連點：後端 redeem 是 check-then-insert、無交易鎖，連點兩次會各自通過餘額檢查而重複扣點。
+  if (_rwRedeeming) return;
+  _rwRedeeming = true;
   var pid = getStablePatientId();
   apiFetch(API + '/rewards/redeem', {
     method: 'POST',
@@ -3942,6 +3946,7 @@ function redeemReward(rewardId) {
   }).then(function (r) {
     return r.json().then(function (data) { return { ok: r.ok, data: data }; });
   }).then(function (res) {
+    _rwRedeeming = false;
     if (res.ok) {
       showToast((res.data && res.data.message) || '兌換已登記', 'success');
       loadRewardsPage();
@@ -3949,6 +3954,7 @@ function redeemReward(rewardId) {
       showToast((res.data && res.data.detail) || '兌換失敗', 'warning');
     }
   }).catch(function () {
+    _rwRedeeming = false;
     showToast('兌換失敗，請稍後再試', 'error');
   });
 }
