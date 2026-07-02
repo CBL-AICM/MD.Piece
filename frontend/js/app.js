@@ -487,6 +487,22 @@ function clearLocalPatientData() {
   return removed;
 }
 
+// 確認本機病患資料的歸屬帳號：owner 換人（或 forceClear）就先清掉未分帳號的
+// 本地病患資料，再記下新 owner。登入（finishAuth）與快速切換（switchToAccount）
+// 兩條路徑共用，避免 memo / 聊天等紀錄跨帳號外洩或被補傳到新帳號。
+function claimLocalDataOwner(user, forceClear) {
+  try {
+    // owner 用 user.id（不可變、登入與帳號切換兩條路徑都一定有）；切勿用 id_number，
+    // switchToAccount 存回的精簡 user 沒有該欄位，會導致切回自己帳號被誤判而清空。
+    var owner = String((user && (user.id || user.username)) || 'guest');
+    var prevOwner = localStorage.getItem('mdpiece_local_data_owner');
+    if (forceClear || (prevOwner && prevOwner !== owner)) {
+      clearLocalPatientData();
+    }
+    localStorage.setItem('mdpiece_local_data_owner', owner);
+  } catch (e) {}
+}
+
 // 登出 — 清除使用者資料並回到 landing
 function logout() {
   if (!confirm(_T('app.c1.confirmLogout'))) return;
@@ -561,6 +577,9 @@ function switchToAccount(id) {
     created_at: acct.created_at || '',
     access_token: acct.token,
   });
+  // 與登入路徑（finishAuth）相同的歸屬檢查：換帳號就清掉上一帳號的本地病患資料，
+  // 避免跨帳號外洩、或把上一帳號的 memo 補傳到新帳號。
+  claimLocalDataOwner(acct, false);
   window.location.reload();
 }
 
@@ -764,7 +783,10 @@ function memo() {
     var t = m.createdAt || m.created_at;
     return t && _localDay(t) === _todayKey;
   }).length;
-  var _doctorCount = _memoList.filter(function(m) { return m.forDoctor; }).length;
+  var _doctorCount = _memoList.filter(function(m) {
+    var t = m.createdAt || m.created_at;
+    return m.forDoctor && t && _localDay(t) === _todayKey;
+  }).length;
 
   // ─── Mobile v11 block ───
   var _mobileMemoBlock = ''
@@ -923,6 +945,43 @@ function memoSaveAll(arr) {
   catch (e) { showToast(_T("app.c1.saveFailedSpace"), "error"); }
 }
 
+// 刪除 tombstone：本機刪掉但後端 DELETE 還沒成功（離線／失敗）的 memo id，
+// 記下來避免下次開頁同步時從後端「復活」，並在下次開頁重試 DELETE。
+var MEMO_TOMBSTONE_KEY = "mdpiece_memo_deleted_v1";
+function memoTombstonesLoad() {
+  try {
+    var parsed = JSON.parse(localStorage.getItem(MEMO_TOMBSTONE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) { return []; }
+}
+function memoTombstonesSave(arr) {
+  try { localStorage.setItem(MEMO_TOMBSTONE_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+function memoTombstoneAdd(id) {
+  if (!id) return;
+  var list = memoTombstonesLoad();
+  if (list.some(function(t) { return t && t.id === id; })) return;
+  list.push({ id: id, deletedAt: new Date().toISOString() });
+  memoTombstonesSave(list);
+}
+function memoTombstoneRemove(id) {
+  memoTombstonesSave(memoTombstonesLoad().filter(function(t) { return !t || t.id !== id; }));
+}
+
+// 把單筆 memo 的刪除同步到後端（best-effort）：成功才移除 tombstone，
+// 失敗（離線等）留著 tombstone，下次開頁 memoSyncOnLoad 會重試。
+function memoSyncDelete(id) {
+  if (!id) return;
+  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
+  if (!pid) return;
+  try {
+    apiFetch(API + '/memos/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
+          { method: 'DELETE' })
+      .then(function(r) { if (r && r.ok) memoTombstoneRemove(id); })
+      .catch(function() {});
+  } catch (e) {}
+}
+
 // 把單筆 memo 背景同步到後端（best-effort）。後端以 (patient_id, client_id)
 // 幂等 upsert，所以新增、編輯、補傳重送都安全；離線/失敗就留在本機，下次開頁補傳。
 function memoSyncPush(m) {
@@ -955,16 +1014,26 @@ function memoSyncOnLoad() {
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
       if (!data || !Array.isArray(data.memos)) return;
+      // 本機已刪除但後端 DELETE 未成功的 id（tombstone）：不拉回，改重試 DELETE。
+      var deadIds = {};
+      memoTombstonesLoad().forEach(function(t) { if (t && t.id) deadIds[t.id] = 1; });
       var byId = {};
-      data.memos.forEach(function(m) { if (m && m.id) byId[m.id] = m; });
+      data.memos.forEach(function(m) {
+        if (!m || !m.id) return;
+        if (deadIds[m.id]) { memoSyncDelete(m.id); return; }
+        byId[m.id] = m;
+      });
       memoLoad().forEach(function(m) {
         if (!m || !m.id) return;
+        if (deadIds[m.id]) return; // 已標記刪除 → 不補傳
         var server = byId[m.id];
-        // 本機獨有，或本機是較新的版本（離線編輯 updatedAt 較新）→ 補傳並保留本機，
-        // 不要被後端的舊版蓋掉（否則離線改的 memo 會遺失）。
-        var lt = m.updatedAt || m.createdAt || '';
-        var st = server ? (server.updatedAt || server.createdAt || '') : '';
-        if (!server || String(lt) > String(st)) { memoSyncPush(m); byId[m.id] = m; }
+        // 本機獨有，或本機「確定較新」（離線編輯 updatedAt 較新）→ 補傳並保留本機，
+        // 不要被後端的舊版蓋掉。時間一律轉數值比較（本機 `...Z` vs 伺服器 `...+00:00`
+        // 字串字典序會誤判）；相等或時間無效視為已同步，不重傳也不覆蓋。
+        if (!server) { memoSyncPush(m); byId[m.id] = m; return; }
+        var lt = new Date(m.updatedAt || m.createdAt || 0).getTime();
+        var st = new Date(server.updatedAt || server.createdAt || 0).getTime();
+        if (isFinite(lt) && isFinite(st) && lt > st) { memoSyncPush(m); byId[m.id] = m; }
       });
       var merged = Object.keys(byId).map(function(k) { return byId[k]; });
       merged.sort(function(a, b) {
@@ -990,6 +1059,7 @@ function memoStartText() {
   _memoComposeMode = "text";
   _memoStagedPhoto = null;
   _memoStagedPhotoCanvas = null;
+  _memoEditingId = null; // 快速新增入口 — 清掉殘留的編輯狀態，避免覆蓋舊 memo
   memoOpenComposer(_T("app.c1.writeWhatToSay"), { forDoctor: true });
 }
 
@@ -1042,6 +1112,7 @@ function memoOnPhotoPicked(ev) {
     return;
   }
   _memoComposeMode = "photo";
+  _memoEditingId = null; // 快速新增入口 — 清掉殘留的編輯狀態，避免覆蓋舊 memo
   function resetInput() { try { input.value = ""; } catch (e) { /* noop */ } }
 
   // HEIC（iPhone 預設格式）：Samsung / Chrome / Firefox 都不能直接解，先轉 JPEG
@@ -1388,17 +1459,17 @@ function memoSave() {
   }
   var memos = memoLoad();
   var editingId = _memoEditingId;
+  // 編輯目標可能已被刪除（例如另一裝置刪掉後同步）→ 退回新增，內容不無聲丟失
+  var idx = editingId ? memos.findIndex(function(x) { return x.id === editingId; }) : -1;
+  if (editingId && idx < 0) editingId = null;
   if (editingId) {
-    var idx = memos.findIndex(function(x) { return x.id === editingId; });
-    if (idx >= 0) {
-      memos[idx] = Object.assign({}, memos[idx], {
-        type: _memoStagedPhoto ? "photo" : "text",
-        photo: _memoStagedPhoto || null,
-        text: text,
-        forDoctor: !!forDoctor,
-        updatedAt: new Date().toISOString()
-      });
-    }
+    memos[idx] = Object.assign({}, memos[idx], {
+      type: _memoStagedPhoto ? "photo" : "text",
+      photo: _memoStagedPhoto || null,
+      text: text,
+      forDoctor: !!forDoctor,
+      updatedAt: new Date().toISOString()
+    });
   } else {
     memos.unshift({
       id: "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
@@ -1450,14 +1521,10 @@ function memoDelete(id) {
   if (!confirm(_T("app.c2.confirmDeleteMemo"))) return;
   var memos = memoLoad().filter(function(m) { return m.id !== id; });
   memoSaveAll(memos);
-  // 後端同步刪除（best-effort；失敗不影響本機已刪）
-  var pid = (typeof getStablePatientId === 'function') ? getStablePatientId() : null;
-  if (pid) {
-    try {
-      apiFetch(API + '/memos/' + encodeURIComponent(pid) + '/' + encodeURIComponent(id),
-            { method: 'DELETE' }).catch(function() {});
-    } catch (e) {}
-  }
+  // 後端同步刪除（best-effort；失敗不影響本機已刪）。先記 tombstone，
+  // DELETE 成功才移除，避免離線刪除的 memo 下次開頁從後端復活。
+  memoTombstoneAdd(id);
+  memoSyncDelete(id);
   memoRenderList();
 }
 
@@ -1521,7 +1588,9 @@ function memoToggleDoctor(id) {
   var m = memos.find(function(x) { return x.id === id; });
   if (!m) return;
   m.forDoctor = !m.forDoctor;
+  m.updatedAt = new Date().toISOString();
   memoSaveAll(memos);
+  memoSyncPush(m);
   memoRenderList();
 }
 
@@ -1563,54 +1632,54 @@ function memoRenderList() {
                           _memoFilter === "self"   ? _T("app.c2.memoTitleSelf") : _T("app.c2.memoTitleAll");
   }
 
+  // 空清單不 early return：後面的 mobile mirror 與 chip 高亮同步也要跑
   if (!filtered.length) {
     listEl.innerHTML =
       '<div class="memo-empty">' +
         (all.length ? _T("app.c2.memoEmptyFiltered") :
                       _T("app.c2.memoEmptyAll")) +
       '</div>';
-    return;
+  } else {
+    var html = filtered.map(function(m) {
+      var bodyHtml = "";
+      if (m.photo) {
+        // Samsung Internet 上 <img src=dataURL> 會破圖 — 留空 div 佔位，渲染完 DOM 後再用
+        // memoMountPhoto 把圖畫到 <canvas> 上放進去。
+        bodyHtml += '<div class="memo-photo-slot" data-memo-photo="' + escapeHtml(m.id) + '"></div>';
+      }
+      if (m.text) {
+        bodyHtml += '<div class="memo-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
+      }
+      var pill = m.forDoctor
+        ? '<span class="memo-pill memo-pill-doctor"><i data-lucide="stethoscope" style="width:12px;height:12px"></i> ' + _T("app.c2.forDoctor") + '</span>'
+        : '<span class="memo-pill memo-pill-self"><i data-lucide="user" style="width:12px;height:12px"></i> ' + _T("app.c2.forSelf") + '</span>';
+      return '' +
+        '<article class="memo-item">' +
+          '<div class="memo-item-meta">' +
+            pill +
+            '<span class="memo-time">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>' +
+            '<button class="memo-toggle" onclick="memoToggleDoctor(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.toggleDoctorSelf") + '">' +
+              '<i data-lucide="repeat" style="width:14px;height:14px"></i>' +
+            '</button>' +
+            '<button class="memo-edit" onclick="memoEdit(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.edit") + '">' +
+              '<i data-lucide="pencil" style="width:14px;height:14px"></i>' +
+            '</button>' +
+            '<button class="memo-del" onclick="memoDelete(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.delete") + '">' +
+              '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
+            '</button>' +
+          '</div>' +
+          '<div class="memo-item-body" onclick="memoOpenLightbox(\'' + escapeHtml(m.id) + '\')" role="button" tabindex="0" aria-label="' + _T("app.c2.tapToEnlarge") + '">' + bodyHtml + '</div>' +
+        '</article>';
+    }).join("");
+
+    listEl.innerHTML = html;
+    // DOM 渲染完後把每則 memo 的照片畫到對應 slot 上
+    filtered.forEach(function(m) {
+      if (!m.photo) return;
+      var slot = listEl.querySelector('[data-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
+      if (slot) memoMountPhoto(slot, m.photo, "memo-photo");
+    });
   }
-
-  var html = filtered.map(function(m) {
-    var bodyHtml = "";
-    if (m.photo) {
-      // Samsung Internet 上 <img src=dataURL> 會破圖 — 留空 div 佔位，渲染完 DOM 後再用
-      // memoMountPhoto 把圖畫到 <canvas> 上放進去。
-      bodyHtml += '<div class="memo-photo-slot" data-memo-photo="' + escapeHtml(m.id) + '"></div>';
-    }
-    if (m.text) {
-      bodyHtml += '<div class="memo-text">' + escapeHtml(m.text).replace(/\n/g, "<br>") + '</div>';
-    }
-    var pill = m.forDoctor
-      ? '<span class="memo-pill memo-pill-doctor"><i data-lucide="stethoscope" style="width:12px;height:12px"></i> ' + _T("app.c2.forDoctor") + '</span>'
-      : '<span class="memo-pill memo-pill-self"><i data-lucide="user" style="width:12px;height:12px"></i> ' + _T("app.c2.forSelf") + '</span>';
-    return '' +
-      '<article class="memo-item">' +
-        '<div class="memo-item-meta">' +
-          pill +
-          '<span class="memo-time">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>' +
-          '<button class="memo-toggle" onclick="memoToggleDoctor(\'' + m.id + '\')" title="' + _T("app.c2.toggleDoctorSelf") + '">' +
-            '<i data-lucide="repeat" style="width:14px;height:14px"></i>' +
-          '</button>' +
-          '<button class="memo-edit" onclick="memoEdit(\'' + m.id + '\')" title="' + _T("app.c2.edit") + '">' +
-            '<i data-lucide="pencil" style="width:14px;height:14px"></i>' +
-          '</button>' +
-          '<button class="memo-del" onclick="memoDelete(\'' + m.id + '\')" title="' + _T("app.c2.delete") + '">' +
-            '<i data-lucide="trash-2" style="width:14px;height:14px"></i>' +
-          '</button>' +
-        '</div>' +
-        '<div class="memo-item-body" onclick="memoOpenLightbox(\'' + m.id + '\')" role="button" tabindex="0" aria-label="' + _T("app.c2.tapToEnlarge") + '">' + bodyHtml + '</div>' +
-      '</article>';
-  }).join("");
-
-  listEl.innerHTML = html;
-  // DOM 渲染完後把每則 memo 的照片畫到對應 slot 上
-  filtered.forEach(function(m) {
-    if (!m.photo) return;
-    var slot = listEl.querySelector('[data-memo-photo="' + (window.CSS && CSS.escape ? CSS.escape(m.id) : m.id) + '"]');
-    if (slot) memoMountPhoto(slot, m.photo, "memo-photo");
-  });
 
   // mobile mirror — v11 list-row style
   var mListEl = document.getElementById('mobile-memo-list');
@@ -1628,14 +1697,14 @@ function memoRenderList() {
         var photoHtml = m.photo ? '<div class="mobile-memo-photo-slot" data-mobile-memo-photo="' + escapeHtml(m.id) + '" style="margin-top:4px;border-radius:8px;overflow:hidden;max-width:100%"></div>' : '';
         var textHtml = m.text ? '<div style="font-size:12px;color:var(--navy);line-height:1.5;margin-top:4px">' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</div>' : '';
         return ''
-          + '<div class="list-row" style="grid-template-columns:1fr;padding:11px 13px;align-items:flex-start;cursor:pointer" onclick="memoOpenLightbox(\'' + m.id + '\')">'
+          + '<div class="list-row" style="grid-template-columns:1fr;padding:11px 13px;align-items:flex-start;cursor:pointer" onclick="memoOpenLightbox(\'' + escapeHtml(m.id) + '\')">'
           +   '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
           +     '<span class="' + pillCls + '"><i data-lucide="' + pillIcon + '"></i>' + pillTxt + '</span>'
           +     '<span class="time" style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-mono,monospace)">' + escapeHtml(memoFormatTime(m.createdAt)) + '</span>'
           +     '<span style="flex:1"></span>'
-          +     '<button onclick="event.stopPropagation();memoToggleDoctor(\'' + m.id + '\')" title="' + _T("app.c2.toggleDoctorSelfSlash") + '" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="repeat" style="width:13px;height:13px"></i></button>'
-          +     '<button onclick="event.stopPropagation();memoEdit(\'' + m.id + '\')" title="' + _T("app.c2.edit") + '" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="pencil" style="width:13px;height:13px"></i></button>'
-          +     '<button onclick="event.stopPropagation();memoDelete(\'' + m.id + '\')" title="' + _T("app.c2.delete") + '" style="border:none;background:none;cursor:pointer;color:var(--rose-deep);padding:2px"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoToggleDoctor(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.toggleDoctorSelfSlash") + '" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="repeat" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoEdit(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.edit") + '" style="border:none;background:none;cursor:pointer;color:var(--text-muted);padding:2px"><i data-lucide="pencil" style="width:13px;height:13px"></i></button>'
+          +     '<button onclick="event.stopPropagation();memoDelete(\'' + escapeHtml(m.id) + '\')" title="' + _T("app.c2.delete") + '" style="border:none;background:none;cursor:pointer;color:var(--rose-deep);padding:2px"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>'
           +   '</div>'
           +   textHtml
           +   photoHtml
@@ -4608,16 +4677,7 @@ function finishAuth(user, isNewRegistration) {
   setCurrentUser(user);
   // 新建帳號（必清）或切到不同帳號時，清掉上一個帳號殘留在本機、未分帳號的病患資料。
   // 同一帳號重複登入（owner 相同）則保留其本機紀錄。
-  try {
-    // owner 用 user.id（不可變、登入與帳號切換兩條路徑都一定有）；切勿用 id_number，
-    // switchToAccount 存回的精簡 user 沒有該欄位，會導致切回自己帳號被誤判而清空。
-    var _owner = String((user && (user.id || user.username)) || 'guest');
-    var _prevOwner = localStorage.getItem('mdpiece_local_data_owner');
-    if (isNewRegistration || (_prevOwner && _prevOwner !== _owner)) {
-      clearLocalPatientData();
-    }
-    localStorage.setItem('mdpiece_local_data_owner', _owner);
-  } catch (e) {}
+  claimLocalDataOwner(user, isNewRegistration);
   const overlay = document.getElementById('register-overlay');
   overlay.classList.remove('show');
   setTimeout(() => {
@@ -5990,6 +6050,15 @@ function _finalizeVisit(opts) {
 
   // 2. 清除原始紀錄（只清時間序列資料，保留設定/基本資料）
   try { localStorage.removeItem('mdpiece_symptoms'); } catch (e) {}
+  // memo 在後端也有一份（(patient_id, client_id) 同步）：清 localStorage 前先逐筆
+  // best-effort DELETE 並記 tombstone，否則下次開頁 memoSyncOnLoad 會全部拉回來。
+  try {
+    memoLoad().forEach(function(m) {
+      if (!m || !m.id) return;
+      memoTombstoneAdd(m.id);
+      memoSyncDelete(m.id);
+    });
+  } catch (e) {}
   try { localStorage.removeItem('mdpiece_memos_v1'); } catch (e) {}
   try { localStorage.removeItem('mdpiece_vitals_entries'); } catch (e) {}
 
@@ -7244,7 +7313,7 @@ function _renderMobileRecentRecords() {
     memos.forEach(function(m) {
       items.push({
         kind: 'memo',
-        ts: m.timestamp || m.created_at || m.date || '',
+        ts: m.createdAt || m.timestamp || m.created_at || m.date || '',
         title: 'Memo · ' + (m.title || m.summary || m.text || _T('app.c9.memo')),
         desc: m.text || m.summary || '',
       });
