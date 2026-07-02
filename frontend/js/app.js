@@ -20231,10 +20231,12 @@ function chat() {
   var mode = chatGetMode();
   var ver  = chatGetVersion();
 
-  // onclick 屬性以雙引號界定，chip 文案改用跳脫單引號包住（比照 navigateTo chip），
-  // 並先跳脫文案內可能出現的單引號，避免截斷屬性
-  var qaSummarize = _T("app.c25.quickAskSummarize").replace(/'/g, "\\'");
-  var qaAnxious   = _T("app.c25.quickAskAnxious").replace(/'/g, "\\'");
+  // onclick 屬性以雙引號界定，chip 文案改用跳脫單引號包住（比照 navigateTo chip）。
+  // 先跳脫反斜線再跳脫單引號（順序不可反，否則跳脫用的反斜線會被二次跳脫），
+  // 避免文案內的 \ 或 ' 截斷屬性或改變 JS 字串語意
+  var _qaEsc = function(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); };
+  var qaSummarize = _qaEsc(_T("app.c25.quickAskSummarize"));
+  var qaAnxious   = _qaEsc(_T("app.c25.quickAskAnxious"));
 
   // mobile v11 mirror of chat messages
   var mobileMsgs = hist.length
