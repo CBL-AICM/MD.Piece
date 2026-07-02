@@ -1,4 +1,4 @@
-const CACHE_VERSION = "mdpiece-v166-no-survey";
+const CACHE_VERSION = "mdpiece-v167-rw-fix";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -12,10 +12,10 @@ const STATIC_ASSETS = [
   "/css/elder-mode.css?v=v4-fix-clobber",
   "/css/ghibli-theme.css?v=v3",
   "/css/edu-codex.css?v=v3",
-  "/css/rewards.css?v=v3-puzzle",
-  "/js/i18n.js?v=v92-no-survey",
+  "/css/rewards.css?v=v6-cleanup",
+  "/js/i18n.js?v=v93-rw-cleanup",
   "/js/bell.js?v=v81-bell",
-  "/js/app.js?v=v165-no-survey",
+  "/js/app.js?v=v166-rw-fix",
   "/js/edu-codex.js?v=v3",
   "/img/puzzle/spring-garden.svg?v=v1",
   "/img/puzzle/sunny-window.svg?v=v1",

@@ -3715,11 +3715,7 @@
       'puzzle.completeReward': '九塊碎片都回來了，可到下方兌換「{name}」',
       'puzzle.lockedAria': '尚未尋回的記憶碎片',
       'puzzle.unlockedAria': '已尋回的記憶碎片',
-      'puzzle.howTitle': '碎片怎麼回來',
       'puzzle.tapHint': '點任一塊看「為什麼回來了 / 還差什麼」',
-      'puzzle.collectionTitle': '記憶收藏冊',
-      'puzzle.collectionEmpty': '拼完一整幅，就會收進這裡——你的旅程，一塊一塊慢慢完整。',
-      'puzzle.collectionDone': '已尋回 {n} 幅',
       // 旅程地圖（design-language.md §6：8 章節故事地圖）
       'journey.title': '我的拼圖旅程',
       'journey.sub': '八個篇章，記錄你一路尋回的記憶。',
@@ -7828,11 +7824,7 @@
       'puzzle.completeReward': 'All nine pieces are home — you can redeem “{name}” below',
       'puzzle.lockedAria': 'A memory piece not yet recovered',
       'puzzle.unlockedAria': 'A recovered memory piece',
-      'puzzle.howTitle': 'How pieces come home',
       'puzzle.tapHint': 'Tap any piece to see why it returned / what’s left',
-      'puzzle.collectionTitle': 'Memory Archive',
-      'puzzle.collectionEmpty': 'Complete a whole picture and it rests here — your journey, piece by piece.',
-      'puzzle.collectionDone': '{n} recovered',
       // Puzzle Journey (design-language.md §6: 8-chapter story map)
       'journey.title': 'My Puzzle Journey',
       'journey.sub': 'Eight chapters tracing the memories you’ve recovered.',

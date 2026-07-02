@@ -297,9 +297,12 @@
     var body = document.getElementById('ad-body');
     body.innerHTML = '<div id="ad-rw"><div class="ad-empty">' + esc(T('admin.loading')) + '</div></div>';
     api('/rewards/admin/redemptions').then(function (r) {
-      if (!r.ok) throw new Error('rw'); return r.json();
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok) { var e = new Error(String(r.status)); e.detail = data && data.detail; throw e; }
+        return data;
+      });
     }).then(renderRedemptions).catch(function (e) {
-      if (String(e.message) !== '401') document.getElementById('ad-rw').innerHTML = '<div class="ad-empty">' + esc(T('admin.rw.err')) + '</div>';
+      if (String(e.message) !== '401') document.getElementById('ad-rw').innerHTML = '<div class="ad-empty">' + esc(e.detail || T('admin.rw.err')) + '</div>';
     });
   }
   function renderRedemptions(data) {
@@ -332,12 +335,15 @@
   function rwAction(act, id, btn) {
     btn.disabled = true;
     api('/rewards/admin/redemptions/' + encodeURIComponent(id) + '/' + act, { method: 'POST' }).then(function (r) {
-      if (!r.ok) throw new Error('act'); return r.json();
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok) { var e = new Error(String(r.status)); e.detail = data && data.detail; throw e; }
+        return data;
+      });
     }).then(function () { loadRedemptions(); }).catch(function (e) {
       if (String(e.message) !== '401') {
         btn.disabled = false;
         var box = document.getElementById('ad-rw');
-        if (box) { var n = document.createElement('div'); n.className = 'ad-empty'; n.textContent = T('admin.rw.actErr'); box.insertBefore(n, box.firstChild); }
+        if (box) { var n = document.createElement('div'); n.className = 'ad-empty'; n.textContent = e.detail || T('admin.rw.actErr'); box.insertBefore(n, box.firstChild); }
       }
     });
   }
