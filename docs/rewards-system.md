@@ -1,6 +1,6 @@
 # 健康積分 · 獎勵中心（Rewards）
 
-把使用者「已經在做的事」——填問卷、每天打卡、持續紀錄、完成 eHEALS——換算成積分、
+把使用者「已經在做的事」——每天打卡、持續紀錄——換算成積分、
 等級、徽章與可兌換獎勵，藉遊戲化提升日常紀錄與回饋的依從度。
 
 ## 設計原則
@@ -18,14 +18,14 @@
 
 | 來源 | 給分 |
 | --- | --- |
-| 填問卷（每份 `survey_responses`） | +20 |
 | 每日打卡（當天有任一健康紀錄） | +10／天（一天封頂一次，避免刷分） |
 | 連續打卡里程碑（依最長連續天數累計） | 3 天 +15、7 天 +40、14 天 +90、30 天 +200 |
-| 完成 eHEALS 健康識能量表 | +30（一次） |
+
+> 打卡「日」以台灣（UTC+8）日曆日計（各表時間戳存 UTC，換算後才切日）。
+> 問卷／eHEALS 計分已於 2026-06 移除問卷功能時一併移除。
 
 - **等級**：萌芽(0)→穩定(100)→規律(300)→自律(700)→達人(1500)，由累積 `earned` 決定。
-- **徽章**（確定性解鎖）：初次回饋／規律一週／規律一月／情緒覺察／用藥好夥伴／
-  健康識能達成／全面紀錄。
+- **徽章**（確定性解鎖）：規律一週／規律一月／情緒覺察／用藥好夥伴／全面紀錄。
 - **可用點數** `available = earned − spent`，`spent` 為兌換紀錄成本加總。
 
 ## 兌換（對應「後續會發放獎勵」）
@@ -39,9 +39,12 @@
 | 方法 | 路徑 | 說明 |
 | --- | --- | --- |
 | GET | `/rewards/summary?patient_id=` | earned/spent/available、等級進度、連續、徽章、加分明細 |
+| GET | `/rewards/puzzle?patient_id=&month=` | 療程拼圖：當月 9 片解鎖狀態＋歷史已完成月份 |
 | GET | `/rewards/catalog?patient_id=` | 兌換清單（標出目前是否買得起） |
 | GET | `/rewards/redemptions?patient_id=` | 我的兌換紀錄 |
 | POST | `/rewards/redeem` | `{patient_id, reward_id}`，檢查餘額後登記兌換 |
+| GET | `/rewards/admin/redemptions` | 後台（限 doctor）：所有兌換申請＋各狀態計數（全表統計） |
+| POST | `/rewards/admin/redemptions/{id}/fulfill` \| `/cancel` | 後台（限 doctor）：核發／退回退點（單向轉換） |
 
 ## 資料表
 
@@ -53,7 +56,8 @@
 ## 測試
 
 - `tests/test_rewards_rules.py`：規則引擎單元測試（規則 9，驗「為什麼」）。
-- 端到端（summary／catalog／redeem／餘額不足）已於 SQLite fallback 驗證通過。
+- `tests/integration/test_rewards_router.py`：端點整合測試（catalog/redeem 不 500、
+  餘額檢查、台灣日界、後台計數與狀態轉換），SQLite fallback。
 
 ## 前端
 

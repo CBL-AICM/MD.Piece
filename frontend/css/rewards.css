@@ -337,13 +337,6 @@
 /* ── 療程拼圖（每月主題收藏）─────────────────────────────────
    3x3 grid，已解鎖片顯示插畫片段、未解鎖灰階＋鎖。全 .rw-pz- 前綴、
    只用 tokens、不覆寫既有 class。轉場克制，且尊重 prefers-reduced-motion。*/
-.rw-pz-head { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
-.rw-pz-theme {
-  margin-left: auto;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--primary);
-}
 .rw-pz-sub { font-size: var(--text-xs); color: var(--content-muted); margin: 2px 0 var(--space-3); }
 
 .rw-pz-grid {
@@ -387,13 +380,6 @@
   z-index: 1;
 }
 .rw-pz-lock svg { width: 22px; height: 22px; opacity: .7; }
-/* 剛解鎖的片：一次性的輕柔揭示（不重複、不刺眼）*/
-.rw-pz-cell.reveal { animation: rw-pz-pop var(--motion-slow, .5s) var(--ease-gentle, ease) both; }
-@keyframes rw-pz-pop {
-  0% { transform: scale(.82); opacity: 0; }
-  60% { transform: scale(1.04); opacity: 1; }
-  100% { transform: scale(1); }
-}
 
 .rw-pz-progress {
   margin-top: var(--space-3);
@@ -580,7 +566,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rw-pz-cell, .rw-pz-cell.reveal, .rw-pz-bar > i { transition: none; animation: none; }
+  .rw-pz-cell, .rw-pz-bar > i { transition: none; animation: none; }
 }
 
 /* ── 章節 hero 橫幅（拼圖板頂端的 painterly 場景插畫）──────────────

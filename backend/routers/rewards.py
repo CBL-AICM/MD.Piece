@@ -87,28 +87,20 @@ def _norm_month(ym):
 
 
 def _scan_days(sb, table, id_col, date_cols, pid):
-    """撈某表屬於該使用者的紀錄，回 [日期字串...]（每列取第一個有值的日期欄，換算成台灣日）。
-    表不存在或讀取失敗就回空（唯讀換算的容錯：缺一張表不該讓整頁掛掉）。"""
+    """撈某表屬於該使用者的紀錄，回 (該表每列的台灣打卡日清單, 總列數)。
+    表不存在或讀取失敗就回 ([], 0)（唯讀換算的容錯：缺一張表不該讓整頁掛掉）。"""
     try:
         rows = sb.table(table).select("*").eq(id_col, pid).execute().data or []
     except Exception as exc:
         logger.info("rewards scan %s failed: %s", table, type(exc).__name__)
-        return []
+        return [], 0
     days = []
     for r in rows:
         for c in date_cols:
             if r.get(c):
                 days.append(_local_day(r[c]))
                 break
-    return days
-
-
-def _count(sb, table, id_col, pid):
-    try:
-        return len(sb.table(table).select("id").eq(id_col, pid).execute().data or [])
-    except Exception as exc:
-        logger.info("rewards count %s failed: %s", table, type(exc).__name__)
-        return 0
+    return days, len(rows)
 
 
 def _gather_activity(sb, pid):
@@ -116,17 +108,20 @@ def _gather_activity(sb, pid):
     逐日來源（day_sources）。純彙整、不寫入任何資料。"""
     day_sources: dict[str, set] = {}
     emotion_days: set[str] = set()
+    medication_log_count = 0
     for table, id_col, date_cols, label in _CHECKIN_SOURCES:
-        for d in _scan_days(sb, table, id_col, date_cols, pid):
+        days, nrows = _scan_days(sb, table, id_col, date_cols, pid)
+        for d in days:
             day_sources.setdefault(d, set()).add(label)
             if label == "emotion":
                 emotion_days.add(d)
+        if label == "medication":
+            # 服藥打卡次數＝該表列數，沿用上面那次掃描，免再對 medication_logs 多查一次
+            medication_log_count = nrows
 
     active_days = sorted(day_sources.keys())
     longest, current = rules.compute_streaks(active_days)
     triple_day = any({"symptom", "vital", "emotion"} <= s for s in day_sources.values())
-
-    medication_log_count = _count(sb, "medication_logs", "patient_id", pid)
 
     activity = {
         "active_day_count": len(active_days),
@@ -319,7 +314,7 @@ def redeem(body: RedeemRequest, me: dict | None = Depends(current_user_optional)
 # 兌換意願由病患端 redeem 寫入（status='requested'），院方在後台核發或退回：
 #   requested → fulfilled  已實際發放（仍扣點）
 #   requested → cancelled  退回並退點（spent_from_rows 不計 cancelled）
-# 沿用 surveys.py 慣例：Depends(current_user) + 檢查 role=doctor。
+# 後台端點：Depends(current_user) + 檢查 role=doctor。
 
 def _require_doctor(me):
     if me.get("role") != "doctor":

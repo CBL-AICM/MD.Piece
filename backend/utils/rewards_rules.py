@@ -11,7 +11,7 @@
   - 規則 9：每條規則都能被 tests/test_rewards_rules.py 在邏輯漂移時打回。
 
 router（rewards.py）負責從各資料表撈出 activity dict，本檔只負責換算；
-DB 讀取與換算分離（比照 surveys.py：計分純函式、DB 在 endpoint）。
+DB 讀取與換算分離：計分為純函式，DB 讀取集中在 endpoint。
 
 activity dict（由 router 組好後傳入）欄位：
   active_day_count      有任一健康紀錄的不重複日數
@@ -174,7 +174,6 @@ def evaluate_badges(activity):
 # ── 兌換 ─────────────────────────────────────────────────
 # 兌換狀態：requested（待發放）/ fulfilled（已發放）都已扣點；
 # cancelled（院方退回）視為退點，不計入已花點數。
-REDEMPTION_STATUSES = ("requested", "fulfilled", "cancelled")
 
 
 def spent_from_rows(rows):
@@ -272,7 +271,6 @@ def puzzle_board(year_month, activity):
 
     activity 是「該月」的累積量 dict（由 router 把全量紀錄過濾到當月後組好）：
       active_days     當月有任一紀錄的不重複日數
-      survey_count    當月提交的問卷份數
       emotion_days    當月有情緒紀錄的不重複日數
       longest_streak  當月最長連續打卡天數
       triple_day      當月是否曾在同一天集滿 症狀＋生理＋情緒（bool）
