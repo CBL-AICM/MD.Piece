@@ -514,7 +514,10 @@ def simulate_patient_usage(
         "D30": (win_count(1, 30) >= 2) if obs_days >= 20 else False,
         "D90": (win_count(61, 90) >= 2) if obs_days >= 90 else False,
         "D180": (win_count(151, 180) >= 2) if obs_days >= 180 else False,
-        "D365": (win_count(last30_lo, obs_days) >= 2),
+        # 只在模擬真的跑滿 12 個月(sim_days>=365)時才計 D365；否則(如 --quick 180 天)
+        # 這個尾端 30 天視窗落在月中而非 12 個月，報成 D365/engaged@12m 會誤導。
+        # 分批上線的晚加入者(join≤45)其 [335,365] 視窗仍在觀察期內，屬 12 個月日曆點，正確納入。
+        "D365": (win_count(last30_lo, obs_days) >= 2) if sim_days >= 365 else False,
     }
     rec.engaged_at_12m = rec.retained["D365"]
     return rec

@@ -265,14 +265,17 @@ def render_report(s) -> str:
     t = s["totals"]
     e = s["engagement"]
     r = s["retention_curve_pct"]
+    cand = t["candidates"]                       # 依實際執行參數，非寫死
+    per_dis = cand // len(DISEASES)
+    months = round(s["sim_days"] / 30)
     L = []
-    L.append("# MD.Piece — 3200 虛擬患者註冊與 12 個月使用模擬")
+    L.append(f"# MD.Piece — {cand} 虛擬患者註冊與 {months} 個月使用模擬")
     L.append("")
-    L.append(f"*產生時間：{s['generated_at']}　模擬天數：{s['sim_days']} 天（12 個月）*")
+    L.append(f"*產生時間：{s['generated_at']}　模擬天數：{s['sim_days']} 天（約 {months} 個月）*")
     L.append("")
-    L.append("本報告把先前的 3200 位虛擬患者（16 種疾病 × 200，seed=2024）放進虛擬世界，"
-             "為每人建立社經/家庭/地區/性別/共病背景，讓其中 "
-             f"**{t['registered']}** 位註冊 MD.Piece 並真實使用 12 個月，"
+    L.append(f"本報告把先前的 {cand} 位虛擬患者（{len(DISEASES)} 種疾病 × {per_dis}，seed=2024）"
+             "放進虛擬世界，為每人建立社經/家庭/地區/性別/共病背景，讓其中 "
+             f"**{t['registered']}** 位註冊 MD.Piece 並真實使用 {months} 個月，"
              "模擬包含留存流失、逐功能記錄、忘記吃藥/沒紀錄/中途棄用等真實情境。")
     L.append("")
     L.append("## 一、總覽")
