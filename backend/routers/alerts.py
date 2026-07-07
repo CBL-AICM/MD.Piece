@@ -1,7 +1,7 @@
 import os
 from fastapi import APIRouter, Depends, Header, HTTPException
 from datetime import datetime, timedelta, timezone
-from backend.db import get_supabase
+from backend.db import fetch_all, get_supabase
 from backend.models import AlertCreate, AlertUpdate
 from backend.security import current_user
 
@@ -117,7 +117,9 @@ def scan_checkins(
     threshold_iso = (now - timedelta(days=interval_days)).isoformat()
     dedupe_iso = (now - timedelta(hours=24)).isoformat()
 
-    meds = sb.table("medications").select("patient_id, active").execute().data or []
+    # 分頁撈滿：全表 medications 已破千列，未分頁的 select 會被 PostgREST 截在 1000，
+    # 讓後段的患者掃描漏掉逾半數人的漏服提醒。
+    meds = fetch_all(lambda: sb.table("medications").select("patient_id, active"))
     patient_ids = sorted({m["patient_id"] for m in meds if m.get("active", 1) and m.get("patient_id")})
 
     created = []

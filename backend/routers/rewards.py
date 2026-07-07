@@ -27,22 +27,27 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from backend.db import get_supabase
+from backend.db import fetch_all, get_supabase
 from backend.security import current_user, current_user_optional, enforce_patient_scope
 from backend.utils import rewards_rules as rules
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# 哪些表算「打卡」：(table, id 欄, 取日期的候選欄, 來源標籤)。
+# 哪些表算「打卡」：(table, id 欄, 取日期的候選欄, 來源標籤, 該日期欄是否已是台灣本地時間)。
 # 注意 sleep_sessions 用 user_id，其餘用 patient_id（兩者皆＝user.id）。
+# already_local：多數表以 UTC 存（utcnow()），需 +8 換台灣日；但 sleep_sessions 的
+# bed_time 是前端 datetime-local（台灣壁鐘）直接存的 naive 值，再 +8 會把晚上就寢的
+# 紀錄多推到隔天（規則 7：兩種時間慣例並存，就地標記、不混算）。
+# ponytail: 穿戴裝置匯入的 bed_time 可能帶 UTC offset，這條走 local 分支會少 +8；
+#           手動輸入（主要路徑）才是對的，待統一睡眠時間存法後移除此旗標。
 _CHECKIN_SOURCES = [
-    ("symptom_entries", "patient_id", ["recorded_at", "created_at"], "symptom"),
-    ("vital_entries", "patient_id", ["recorded_at", "created_at"], "vital"),
-    ("emotions", "patient_id", ["created_at"], "emotion"),
-    ("sleep_sessions", "user_id", ["bed_time", "created_at"], "sleep"),
-    ("medication_logs", "patient_id", ["taken_at", "created_at"], "medication"),
-    ("diet_records", "patient_id", ["eaten_at", "created_at"], "diet"),
+    ("symptom_entries", "patient_id", ["recorded_at", "created_at"], "symptom", False),
+    ("vital_entries", "patient_id", ["recorded_at", "created_at"], "vital", False),
+    ("emotions", "patient_id", ["created_at"], "emotion", False),
+    ("sleep_sessions", "user_id", ["bed_time", "created_at"], "sleep", True),
+    ("medication_logs", "patient_id", ["taken_at", "created_at"], "medication", False),
+    ("diet_records", "patient_id", ["eaten_at", "created_at"], "diet", False),
 ]
 
 # 來源標籤 → 中文（給前端 ledger 顯示「為什麼得分」；憲法 2 可解釋）。
@@ -63,12 +68,13 @@ class RedeemRequest(BaseModel):
 _TW_OFFSET = timedelta(hours=8)
 
 
-def _local_day(raw):
-    """把資料表存的 UTC 時間戳換算成台灣（+8）的日曆日 'YYYY-MM-DD'。
+def _local_day(raw, already_local=False):
+    """把資料表存的時間戳換算成台灣（+8）的日曆日 'YYYY-MM-DD'。
+    already_local=True 表示該值本來就是台灣壁鐘時間（如 sleep bed_time），不再 +8。
     純日期字串（無時間部分）無時區可調，原樣取前 10 碼；解析失敗亦退回前 10 碼（不丟例外）。"""
     s = str(raw)
     head = s[:10]
-    if len(s) <= 10 or s[10] not in ("T", " "):
+    if already_local or len(s) <= 10 or s[10] not in ("T", " "):
         return head
     try:
         dt = datetime.strptime(s[:19].replace(" ", "T"), "%Y-%m-%dT%H:%M:%S")
@@ -86,19 +92,18 @@ def _norm_month(ym):
     return str(ym)[:7]
 
 
-def _scan_days(sb, table, id_col, date_cols, pid):
+def _scan_days(sb, table, id_col, date_cols, pid, already_local=False):
     """撈某表屬於該使用者的紀錄，回 (該表每列的台灣打卡日清單, 總列數)。
-    表不存在或讀取失敗就回 ([], 0)（唯讀換算的容錯：缺一張表不該讓整頁掛掉）。"""
-    try:
-        rows = sb.table(table).select("*").eq(id_col, pid).execute().data or []
-    except Exception as exc:
-        logger.info("rewards scan %s failed: %s", table, type(exc).__name__)
-        return [], 0
+    只取需要的欄位並分頁撈滿（避免 PostgREST 1000 列上限把重度使用者的歷史截斷，
+    導致連續天數斷裂、積分縮水）。表不存在或讀取失敗就回 ([], 0)（唯讀換算的容錯：
+    缺一張表不該讓整頁掛掉）。"""
+    cols = ",".join([id_col, *date_cols])
+    rows = fetch_all(lambda: sb.table(table).select(cols).eq(id_col, pid))
     days = []
     for r in rows:
         for c in date_cols:
             if r.get(c):
-                days.append(_local_day(r[c]))
+                days.append(_local_day(r[c], already_local))
                 break
     return days, len(rows)
 
@@ -109,8 +114,8 @@ def _gather_activity(sb, pid):
     day_sources: dict[str, set] = {}
     emotion_days: set[str] = set()
     medication_log_count = 0
-    for table, id_col, date_cols, label in _CHECKIN_SOURCES:
-        days, nrows = _scan_days(sb, table, id_col, date_cols, pid)
+    for table, id_col, date_cols, label, already_local in _CHECKIN_SOURCES:
+        days, nrows = _scan_days(sb, table, id_col, date_cols, pid, already_local)
         for d in days:
             day_sources.setdefault(d, set()).add(label)
             if label == "emotion":
@@ -180,16 +185,30 @@ def _build_ledger(day_sources, points, limit=12):
     return events[:limit]
 
 
+def _read_redemptions(sb, pid):
+    """撈某使用者的兌換紀錄（分頁撈滿）。讀取失敗會由 fetch_all 記 log 並回目前累積。"""
+    return fetch_all(lambda: sb.table("reward_redemptions").select("*").eq("patient_id", pid))
+
+
 def _spent_points(sb, pid):
-    """已兌換扣掉的點數＝兌換紀錄 cost 加總。表不存在就視為 0（規則 12：summary
-    仍可顯示 earned，只是還沒有任何兌換）。"""
+    """已兌換扣掉的點數＝兌換紀錄 cost 加總。表不存在／讀取失敗就視為 0（規則 12：
+    summary 仍可顯示 earned，只是還沒有任何兌換）。餘額檢查路徑改用 _spent_strict。"""
     try:
-        rows = sb.table("reward_redemptions").select("*").eq("patient_id", pid).execute().data or []
+        rows = _read_redemptions(sb, pid)
     except Exception as exc:
         logger.info("rewards redemptions read failed: %s", type(exc).__name__)
         return 0, []
     spent = rules.spent_from_rows(rows)
     return spent, rows
+
+
+def _spent_strict(sb, pid):
+    """給 /redeem 餘額檢查用：讀兌換紀錄時若表確實存在但讀取出錯，寧可 raise 也不
+    回 0（避免把讀取失敗當成「沒花過點數」而放行超額兌換——規則 12：fail loud）。
+    ponytail: 單次 select 不分頁；單一病患兌換數破 1000 才會被 PostgREST 截斷，
+              實務上到不了，真的到得了再改分頁。"""
+    rows = sb.table("reward_redemptions").select("*").eq("patient_id", pid).execute().data
+    return rules.spent_from_rows(rows or [])
 
 
 @router.get("/summary")
@@ -237,6 +256,42 @@ def get_puzzle(patient_id: str = Query(...), month: str = Query(None, descriptio
     }
 
 
+@router.get("/companion")
+def get_companion(patient_id: str = Query(...), me: dict | None = Depends(current_user_optional)):
+    """健康小夥伴：一隻靠既有健康紀錄餵養長大的皮克敏／寶可夢式小生物。
+
+    全部由既有紀錄唯讀換算（規則 2/5，零新寫入、零 LLM）：
+      - xp    ＝ earned 積分（只增不減；兌換扣點不影響成長）
+      - stage ＝ 成長階段（蛋→破殼→幼年→茁壯→閃耀）與距下一階段進度
+      - mood  ＝ 距最近一次紀錄幾天（永遠溫和，最差只是「睡著了」）
+      - message＝依（蛋期／心情）挑一句給慢性病患者的鼓勵語（確定性輪替）
+    名字與物種是純外觀個人化，存前端 localStorage，不經後端。
+    """
+    enforce_patient_scope(patient_id, me)
+    sb = get_supabase()
+    activity, day_sources = _gather_activity(sb, patient_id)
+    xp = rules.compute_points(activity)["earned"]
+    today = (datetime.utcnow() + _TW_OFFSET).strftime("%Y-%m-%d")
+    last_active = max(day_sources) if day_sources else None
+
+    stage = rules.companion_stage(xp)
+    mood = rules.companion_mood(last_active, today)
+    # 還在蛋期就用蛋期專屬鼓勵語；破殼後依心情池挑。
+    pool_key = "egg" if stage["key"] == "egg" else mood["key"]
+    message = rules.companion_message(pool_key, today, xp)
+    return {
+        "patient_id": patient_id,
+        "xp": xp,
+        "stage": stage,
+        "mood": mood,
+        "message": message,
+        "last_active": last_active,
+        "active_days": activity["active_day_count"],
+        "current_streak": activity["current_streak"],
+        "species": [dict(s) for s in rules.COMPANION_SPECIES],
+    }
+
+
 @router.get("/catalog")
 def get_catalog(patient_id: str = Query(None), me: dict | None = Depends(current_user_optional)):
     """兌換清單。帶 patient_id 時順便標出每項目前是否買得起。"""
@@ -272,7 +327,12 @@ def redeem(body: RedeemRequest, me: dict | None = Depends(current_user_optional)
     sb = get_supabase()
     activity, _ = _gather_activity(sb, body.patient_id)
     earned = rules.compute_points(activity)["earned"]
-    spent, _ = _spent_points(sb, body.patient_id)
+    try:
+        spent = _spent_strict(sb, body.patient_id)
+    except Exception as exc:
+        # 規則 12：讀不到「已花點數」時 fail loud，不當成 0 而放行超額兌換。
+        logger.error("redeem balance read failed: %s", exc)
+        raise HTTPException(status_code=503, detail="兌換暫時無法完成（點數餘額讀取失敗，請稍後再試）")
     available = max(0, earned - spent)
     if available < reward["cost"]:
         raise HTTPException(
@@ -300,12 +360,30 @@ def redeem(body: RedeemRequest, me: dict | None = Depends(current_user_optional)
                    "資料表與 RLS policy 已套用 docs/migration_reward_redemptions.sql）。",
         )
     saved_id = saved.data[0].get("id") if saved.data else None
+
+    # check-then-insert 無交易鎖：兩筆併發兌換可能都通過上面的餘額檢查而超額扣點。
+    # 補償式檢查——寫入後重讀總花點，若已超過 earned，代表本次是競態的輸家，撤回本筆並回 409。
+    # 只在本筆有可撤回 id 時才做（SQLite/httpx/supabase 皆支援 delete-by-id）。
+    if saved_id is not None:
+        try:
+            if _spent_strict(sb, body.patient_id) > earned:
+                sb.table("reward_redemptions").delete().eq("id", saved_id).execute()
+                raise HTTPException(
+                    status_code=409,
+                    detail="兌換未完成：點數剛好被另一筆兌換用掉了，請重新整理後再試",
+                )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            # 補償檢查本身失敗不阻斷主流程（兌換已寫入），僅記錄。
+            logger.info("redeem post-insert overspend check skipped: %s", type(exc).__name__)
+
     return {
         "id": saved_id,
         "reward": reward,
         "status": "requested",
         "redeemed_at": datetime.now(timezone.utc).isoformat(),
-        "available_after": available - reward["cost"],
+        "available_after": max(0, available - reward["cost"]),
         "message": "兌換已登記，將由院方安排發放。",
     }
 
@@ -344,9 +422,11 @@ def admin_list_redemptions(
         )
     # counts 要反映全表各狀態總數，與 status 過濾 / limit 截斷無關，故另外只撈 status 欄統計，
     # 不能從已被過濾又截斷的 rows 算（否則帶 status 過濾時其他狀態全變 0、資料量 >limit 時失真）。
+    # 用 fetch_all 分頁撈滿：全表兌換數破千後，未分頁的 select 會被 PostgREST 截在 1000，
+    # 讓「全表各狀態總數」本身又失真（正是本段註解要避免的事）。
     counts = {"requested": 0, "fulfilled": 0, "cancelled": 0}
     try:
-        all_status = sb.table("reward_redemptions").select("status").execute().data or []
+        all_status = fetch_all(lambda: sb.table("reward_redemptions").select("status"))
         for r in all_status:
             st = r.get("status") or "requested"
             counts[st] = counts.get(st, 0) + 1

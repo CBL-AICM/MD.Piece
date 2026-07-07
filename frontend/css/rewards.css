@@ -640,3 +640,145 @@
 .rw-home-hero .rw-home-pts b { color: #fff; }
 .rw-home-hero .rw-home-pts span { color: rgba(255,255,255,.86); }
 .rw-home-hero .rw-home-chev { color: rgba(255,255,255,.9); }
+
+/* ══════════════════════════════════════════════════════════════
+   健康小夥伴（Pikmin／Pokémon 式養成）— additive，只用既有 tokens
+   生物主色由 JS 以 --cmp-c 帶入（物種色）；文字／表面走 tokens，深淺色皆可讀。
+   ══════════════════════════════════════════════════════════════ */
+.cmp-card {
+  --cmp-c: #6FB98F;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.cmp-stage-tag {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--cmp-c);
+  background: color-mix(in srgb, var(--cmp-c) 14%, transparent);
+  border-radius: 999px;
+  padding: 3px 12px;
+  margin-bottom: var(--space-2);
+}
+.cmp-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: center;
+}
+.cmp-art { flex: 0 0 auto; width: 118px; height: 118px; }
+.cmp-svg { width: 100%; height: 100%; display: block; }
+.cmp-svg .cmp-shadow { fill: rgba(20, 28, 34, .12); }
+.cmp-svg .cmp-body   { fill: var(--cmp-c); }
+.cmp-svg .cmp-belly  { fill: color-mix(in srgb, var(--cmp-c) 22%, #fff); }
+.cmp-svg .cmp-egg-body { fill: color-mix(in srgb, var(--cmp-c) 30%, #fff); stroke: var(--cmp-c); stroke-width: 2; }
+.cmp-svg .cmp-egg-crack { fill: none; stroke: var(--cmp-c); stroke-width: 2; stroke-linejoin: round; opacity: .7; }
+.cmp-svg .cmp-eye    { fill: #2b3a42; }
+.cmp-svg .cmp-line   { fill: none; stroke: #2b3a42; stroke-width: 2.4; stroke-linecap: round; }
+.cmp-svg .cmp-smile  { fill: #2b3a42; }
+.cmp-svg .cmp-mouth  { fill: #2b3a42; }
+.cmp-svg .cmp-cheek  { fill: color-mix(in srgb, var(--cmp-c) 40%, #ff8fa3); opacity: .55; }
+.cmp-svg .cmp-leaf   { fill: color-mix(in srgb, var(--cmp-c) 60%, #3f9c5a); }
+.cmp-svg .cmp-glow   { fill: var(--cmp-c); opacity: .16; }
+.cmp-svg .cmp-sparkle { fill: color-mix(in srgb, var(--cmp-c) 50%, #ffd34e); }
+.cmp-svg .cmp-z      { fill: var(--cmp-c); font-size: 15px; font-weight: 700; opacity: .8; }
+.cmp-svg .cmp-z-sm   { font-size: 11px; opacity: .6; }
+
+/* 呼吸感的輕微上下浮動；蛋期靜止 */
+.cmp-svg:not(.cmp-egg) > g { animation: cmpBob 3.6s ease-in-out infinite; transform-origin: 60px 100px; }
+.cmp-svg .cmp-sparkle { animation: cmpTwinkle 1.8s ease-in-out infinite; transform-origin: center; }
+@keyframes cmpBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes cmpTwinkle { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .cmp-svg:not(.cmp-egg) > g, .cmp-svg .cmp-sparkle { animation: none; }
+}
+
+.cmp-bubble {
+  position: relative;
+  flex: 1 1 auto;
+  max-width: 260px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--content);
+}
+.cmp-bubble::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 7px solid transparent;
+  border-right-color: var(--surface-2);
+}
+.cmp-namerow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.cmp-name { font-size: var(--text-lg); font-weight: 700; color: var(--content); }
+.cmp-rename {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--content-muted);
+  cursor: pointer;
+}
+.cmp-rename:hover { color: var(--cmp-c); border-color: var(--cmp-c); }
+.cmp-grow { margin-top: var(--space-3); }
+.cmp-grow-line { font-size: var(--text-sm); color: var(--content-muted); margin-bottom: var(--space-2); }
+.cmp-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-3, var(--line));
+  overflow: hidden;
+}
+.cmp-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cmp-c) 70%, #fff), var(--cmp-c));
+  transition: width .6s ease;
+}
+.cmp-xp { font-size: var(--text-xs); color: var(--content-subtle, var(--content-muted)); margin-top: 4px; }
+
+/* 領養：物種選擇 */
+.cmp-adopt-sub { color: var(--content-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); }
+.cmp-picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+.cmp-pick {
+  --cmp-c: #6FB98F;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-3) var(--space-2);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+  cursor: pointer;
+  transition: border-color .2s ease, transform .1s ease;
+}
+.cmp-pick:hover { border-color: var(--cmp-c); transform: translateY(-2px); }
+.cmp-pick-art { width: 74px; height: 74px; }
+.cmp-pick-name { font-weight: 700; font-size: var(--text-base); color: var(--content); }
+.cmp-pick-desc { font-size: var(--text-xs); color: var(--content-muted); line-height: 1.4; }
+@media (max-width: 480px) {
+  .cmp-hero { flex-direction: column; }
+  .cmp-bubble { text-align: center; max-width: 100%; }
+  .cmp-bubble::before { display: none; }
+  .cmp-picks { grid-template-columns: 1fr; }
+  .cmp-pick { flex-direction: row; text-align: left; }
+  .cmp-pick-art { flex: 0 0 auto; }
+}

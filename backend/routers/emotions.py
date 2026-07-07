@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 
 from backend.db import get_supabase
 from backend.security import current_user_optional, enforce_patient_scope

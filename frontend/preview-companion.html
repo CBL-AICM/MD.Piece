@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>健康小夥伴 — 設計預覽</title>
+  <!-- 用真實的 tokens 與 rewards.css，確保預覽與 App 內完全一致（非另做一份樣式） -->
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/rewards.css?v=v7-companion" />
+  <style>
+    body { margin: 0; padding: 24px; background: var(--bg, #f6f7f5); font-family: system-ui, -apple-system, "Noto Sans TC", sans-serif; }
+    .pv-wrap { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .pv-h1 { font-size: 22px; font-weight: 800; color: var(--content, #223); margin: 0; }
+    .pv-sub { color: var(--content-muted, #667); margin: 4px 0 0; font-size: 14px; }
+    .pv-sec-title { font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--content-muted, #667); text-transform: uppercase; margin: 8px 0 0; }
+    .pv-matrix { display: grid; grid-template-columns: 90px repeat(4, 1fr); gap: 10px; align-items: center;
+      background: var(--surface-1, #fff); border: 1px solid var(--line, #e3e6e2); border-radius: 16px; padding: 16px; }
+    .pv-cell { text-align: center; }
+    .pv-cell .cmp-svg { width: 84px; height: 84px; margin: 0 auto; }
+    .pv-rowlabel { font-weight: 700; color: var(--content, #223); font-size: 14px; }
+    .pv-colhead { font-size: 12px; color: var(--content-muted, #667); text-align: center; font-weight: 600; }
+    .pv-species { display: flex; gap: 16px; }
+    .pv-species .cmp-svg { width: 70px; height: 70px; }
+    .pv-note { font-size: 12px; color: var(--content-muted, #778); }
+  </style>
+</head>
+<body>
+  <div class="pv-wrap">
+    <div>
+      <h1 class="pv-h1">🌱 健康小夥伴 — 設計預覽</h1>
+      <p class="pv-sub">一隻靠「既有健康紀錄」餵養長大的皮克敏／寶可夢式小生物。成長階段、心情、鼓勵語全由後端唯讀換算，零新操作、零 LLM。此頁用 App 真實 CSS 呈現，方便你在 merge 前先看設計。</p>
+    </div>
+
+    <p class="pv-sec-title">成長階段 × 心情（縱：階段；橫：心情）</p>
+    <div class="pv-matrix" id="pv-matrix"></div>
+
+    <p class="pv-sec-title">三種物種（顏色）</p>
+    <div class="pv-species" id="pv-species"></div>
+
+    <p class="pv-sec-title">完整夥伴卡（App 內樣子）</p>
+    <div id="pv-card"></div>
+
+    <p class="pv-sec-title">領養（第一次進獎勵中心）</p>
+    <div id="pv-adopt"></div>
+
+    <p class="pv-note">※ 名字與物種存在裝置 localStorage（純外觀個人化，不需後端表、匿名可用）；成長值＝earned 積分（只增不減，兌換扣點不影響成長）。</p>
+  </div>
+
+  <script>
+    // 以下 SVG 產生器與 App（frontend/js/app.js）內的 _companionCreatureSvg 同源，
+    // 為了讓此設計預覽自足（不 boot 整個 App）而在此鏡射一份。
+    var _COMPANION_HUE = { sprout: '#6FB98F', droplet: '#5FA8D3', sunny: '#E8A94B' };
+    function _cmpBodyScale(s){ return {egg:0,hatch:0.62,kid:0.78,grown:0.92,shine:1.0}[s]||0.8; }
+    function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+    function creature(stageKey, moodKey){
+      var isEgg = stageKey==='egg', scale=_cmpBodyScale(stageKey), eyes, mouth, extra='';
+      if(moodKey==='sleepy'){ eyes='<path d="M50 60 q4 4 8 0" class="cmp-line"/><path d="M62 60 q4 4 8 0" class="cmp-line"/>'; mouth='<circle cx="60" cy="70" r="2.4" class="cmp-mouth"/>'; extra='<text x="80" y="40" class="cmp-z">z</text><text x="88" y="32" class="cmp-z cmp-z-sm">z</text>'; }
+      else if(moodKey==='miss'){ eyes='<circle cx="54" cy="60" r="2.8" class="cmp-eye"/><circle cx="66" cy="60" r="2.8" class="cmp-eye"/>'; mouth='<path d="M55 71 q5 -3 10 0" class="cmp-line"/>'; }
+      else if(moodKey==='happy'){ eyes='<circle cx="54" cy="60" r="3" class="cmp-eye"/><circle cx="66" cy="60" r="3" class="cmp-eye"/>'; mouth='<path d="M54 69 q6 6 12 0" class="cmp-line"/>'; }
+      else { eyes='<path d="M50 61 q4 -5 8 0" class="cmp-line"/><path d="M62 61 q4 -5 8 0" class="cmp-line"/>'; mouth='<path d="M53 68 q7 8 14 0 z" class="cmp-smile"/>'; extra='<g class="cmp-sparkle"><path d="M30 34 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z"/><path d="M92 54 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 z"/></g>'; }
+      var cheeks=(moodKey==='sparkle'||moodKey==='happy')?'<circle cx="46" cy="66" r="3.5" class="cmp-cheek"/><circle cx="74" cy="66" r="3.5" class="cmp-cheek"/>':'';
+      if(isEgg){ return '<svg viewBox="0 0 120 120" class="cmp-svg cmp-egg"><ellipse cx="60" cy="98" rx="26" ry="6" class="cmp-shadow"/><path d="M60 24 C40 24 34 58 34 74 a26 26 0 0 0 52 0 C86 58 80 24 60 24 z" class="cmp-egg-body"/><path d="M44 66 l8 -6 6 8 8 -8 6 6" class="cmp-egg-crack"/><path d="M52 82 q4 3 8 0" class="cmp-line"/></svg>'; }
+      var leaf=(stageKey==='grown'||stageKey==='shine')?'<path d="M60 20 q10 -10 16 -4 q-2 10 -16 10 z" class="cmp-leaf"/>':'';
+      var glow=(stageKey==='shine')?'<circle cx="60" cy="64" r="40" class="cmp-glow"/>':'';
+      return '<svg viewBox="0 0 120 120" class="cmp-svg cmp-stage-'+stageKey+'"><ellipse cx="60" cy="100" rx="26" ry="6" class="cmp-shadow"/>'+glow+'<g transform="translate(60 66) scale('+scale.toFixed(2)+') translate(-60 -66)">'+leaf+'<path d="M60 28 C36 28 30 52 30 68 C30 92 44 100 60 100 C76 100 90 92 90 68 C90 52 84 28 60 28 z" class="cmp-body"/><ellipse cx="60" cy="52" rx="24" ry="20" class="cmp-belly"/>'+cheeks+eyes+mouth+'</g>'+extra+'</svg>';
+    }
+
+    var stages=[['egg','孵蛋期'],['hatch','破殼期'],['kid','幼年期'],['grown','茁壯期'],['shine','閃耀期']];
+    var moods=[['sparkle','精神奕奕'],['happy','心情很好'],['miss','想你了'],['sleepy','睡著了']];
+
+    // 矩陣
+    var m='<div></div>'+moods.map(function(x){return '<div class="pv-colhead">'+x[1]+'</div>';}).join('');
+    stages.forEach(function(st){
+      m+='<div class="pv-rowlabel">'+st[1]+'</div>';
+      moods.forEach(function(mo){
+        m+='<div class="pv-cell cmp-card cmp-mood-'+mo[0]+'" style="--cmp-c:'+_COMPANION_HUE.sprout+';background:none;border:none;box-shadow:none;padding:0">'+creature(st[0],mo[0])+'</div>';
+      });
+    });
+    document.getElementById('pv-matrix').innerHTML=m;
+
+    // 物種
+    var sp=[['sprout','小芽'],['droplet','小露'],['sunny','小暖']];
+    document.getElementById('pv-species').innerHTML=sp.map(function(s){
+      return '<div class="pv-cell cmp-card" style="--cmp-c:'+_COMPANION_HUE[s[0]]+';padding:8px 16px"><div>'+creature('grown','sparkle')+'</div><div class="cmp-name" style="font-size:14px">'+s[1]+'</div></div>';
+    }).join('');
+
+    // 完整卡
+    document.getElementById('pv-card').innerHTML=
+      '<div class="rw-card cmp-card" style="--cmp-c:'+_COMPANION_HUE.droplet+'">'
+      +'<div class="cmp-stage-tag">茁壯期 · 精神奕奕</div>'
+      +'<div class="cmp-hero cmp-mood-sparkle"><div class="cmp-art">'+creature('grown','sparkle')+'</div>'
+      +'<div class="cmp-bubble">今天也有好好照顧自己，我超驕傲的！每一筆紀錄，都是你溫柔對待身體的證明。</div></div>'
+      +'<div class="cmp-namerow"><span class="cmp-name">露露</span>'
+      +'<button class="cmp-rename">✎</button></div>'
+      +'<div class="cmp-grow"><div class="cmp-grow-line">再累積 60 點紀錄，就能長成「閃耀期」</div>'
+      +'<div class="cmp-bar"><i style="width:66%"></i></div><div class="cmp-xp">成長值 340</div></div></div>';
+
+    // 領養
+    document.getElementById('pv-adopt').innerHTML=
+      '<div class="rw-card cmp-card cmp-adopt"><div class="rw-card-title">🥚 認養你的健康小夥伴</div>'
+      +'<p class="cmp-adopt-sub">挑一隻小夥伴。你每天的健康紀錄都會餵養牠、陪牠一起長大。</p>'
+      +'<div class="cmp-picks">'+sp.map(function(s,i){
+        var d=['安靜溫柔，會跟著你的紀錄慢慢發芽、長出新葉。','活潑愛乾淨，最喜歡看你按時照顧自己。','熱情開朗，你的每一筆紀錄都讓牠更閃亮。'][i];
+        return '<button class="cmp-pick" style="--cmp-c:'+_COMPANION_HUE[s[0]]+'"><span class="cmp-pick-art">'+creature('kid','happy')+'</span><span class="cmp-pick-name">'+s[1]+'</span><span class="cmp-pick-desc">'+d+'</span></button>';
+      }).join('')+'</div></div>';
+  </script>
+</body>
+</html>
