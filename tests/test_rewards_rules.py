@@ -172,3 +172,65 @@ def test_puzzle_complete_unlocks_a_redeemable_reward():
     assert R.get_reward(board["complete_reward"]) is not None
     # 未完成時不可外洩兌換資格
     assert R.puzzle_board("2026-06", {"active_days": 12})["complete_reward"] is None
+
+
+# ── 健康小夥伴（companion metagame）──────────────────────────
+
+def test_companion_stage_thresholds_and_progress():
+    # 為什麼：成長階段是夥伴的核心回饋。門檻錯置或進度算錯，使用者看到的
+    # 「還差多少破殼／升級」就會誤導，破壞養成動機。
+    assert R.companion_stage(0)["key"] == "egg"
+    assert R.companion_stage(29)["key"] == "egg"
+    assert R.companion_stage(30)["key"] == "hatch"      # 剛好破殼門檻
+    # 30→150 區間中點 90：進度應 0.5、距下一階段 60。
+    mid = R.companion_stage(90)
+    assert mid["progress"] == 0.5 and mid["to_next"] == 60
+    top = R.companion_stage(99999)
+    assert top["key"] == "shine" and top["progress"] == 1.0 and top["to_next"] == 0
+
+
+def test_companion_xp_equals_earned_and_is_monotonic():
+    # 為什麼：夥伴 XP 必須＝earned（只增不減），兌換扣點不能讓夥伴「退化」，
+    # 否則花點數兌換反而懲罰使用者、與鼓勵初衷相反。
+    a = {"active_day_count": 10, "longest_streak": 7}
+    xp = R.compute_points(a)["earned"]
+    # earned 只由 active/streak 決定，與兌換無關 → 用同一 activity 兩次結果一致。
+    assert R.compute_points(a)["earned"] == xp
+    assert R.companion_stage(xp)["key"] in {s[1] for s in R.COMPANION_STAGES}
+
+
+def test_companion_mood_is_gentle_and_never_punishing():
+    # 為什麼：慢性病照護鐵則——久沒紀錄最差只能是「睡著了」，不可出現生病／死亡
+    # 等懲罰性狀態。同時今天有紀錄要能被認出（sparkle），給即時正回饋。
+    assert R.companion_mood("2026-07-08", "2026-07-08")["key"] == "sparkle"
+    assert R.companion_mood("2026-07-07", "2026-07-08")["key"] == "happy"
+    assert R.companion_mood("2026-07-05", "2026-07-08")["key"] == "miss"      # 3 天
+    assert R.companion_mood("2026-06-01", "2026-07-08")["key"] == "sleepy"    # 很久
+    assert R.companion_mood(None, "2026-07-08")["key"] == "sleepy"            # 從未紀錄
+    # 每個 mood 都要有中英文，UI 不會顯示空字串
+    for key in R.COMPANION_MOODS:
+        m = R.companion_mood(None, "2026-07-08") if key == "sleepy" else None
+    assert set(R.COMPANION_MOODS) == {"sparkle", "happy", "miss", "sleepy"}
+
+
+def test_companion_message_is_deterministic_and_always_returns_one():
+    # 為什麼：鼓勵語選取是純算術（規則 5），同一天同輸入必須固定（可重現、可測），
+    # 且任何 pool_key 都要回得出一句（含壞 key 退回 sleepy 池），UI 永不空白。
+    m1 = R.companion_message("sparkle", "2026-07-08", 120)
+    m2 = R.companion_message("sparkle", "2026-07-08", 120)
+    assert m1 == m2 and m1["zh"] and m1["en"]              # 確定性 + 雙語非空
+    # 壞 pool_key 不丟例外，退回 sleepy 池
+    assert R.companion_message("nonexistent", "2026-07-08", 0) in R.COMPANION_MESSAGES["sleepy"]
+    # 壞日期字串不丟例外
+    assert R.companion_message("egg", "garbage", 0)["zh"]
+
+
+def test_companion_name_is_sanitized_and_falls_back_to_default():
+    # 為什麼：名字會被顯示，長度／空白／不可列印字元若不整理，會撐爆 UI 或顯示亂碼；
+    # 空名要退回物種預設名，卡片永遠有稱呼。
+    sp = R.get_species("sprout")
+    assert R.normalize_companion_name("  芽芽  ", sp) == "芽芽"           # 去頭尾空白
+    assert R.normalize_companion_name("", sp) == sp["default_name"]       # 空 → 預設
+    assert R.normalize_companion_name(None, sp) == sp["default_name"]     # 非字串 → 預設
+    assert len(R.normalize_companion_name("超長名字" * 10, sp)) == R.COMPANION_NAME_MAX  # 截長
+    assert R.get_species("does-not-exist") is None

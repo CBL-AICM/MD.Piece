@@ -266,6 +266,173 @@ def _piece_value(activity, field):
     return int(v or 0)
 
 
+# ── 健康小夥伴（companion metagame）──────────────────────────
+# 概念：一隻皮克敏／寶可夢式的小生物，靠使用者「平常的健康紀錄」餵養長大。
+# XP＝earned 積分（唯讀換算、只增不減；兌換扣點不影響夥伴成長），
+# 心情＝距離最近一次紀錄的天數（永遠溫和：最差只是「睡著了」，不會生病或死掉——
+# 慢性病照護不製造罪惡感）。全部確定性算術（規則 5），可單元測試。
+
+COMPANION_SPECIES = [
+    {"key": "sprout", "name_zh": "小芽", "name_en": "Sprout", "default_name": "芽芽",
+     "personality_zh": "安靜溫柔，會跟著你的紀錄慢慢發芽、長出新葉。",
+     "personality_en": "Gentle and quiet — sprouts new leaves as you keep logging."},
+    {"key": "droplet", "name_zh": "小露", "name_en": "Droplet", "default_name": "露露",
+     "personality_zh": "活潑愛乾淨，最喜歡看你按時照顧自己。",
+     "personality_en": "Playful and tidy — loves seeing you care for yourself on time."},
+    {"key": "sunny", "name_zh": "小暖", "name_en": "Sunny", "default_name": "暖暖",
+     "personality_zh": "熱情開朗，你的每一筆紀錄都讓牠更閃亮。",
+     "personality_en": "Warm and cheerful — every entry makes it glow a little brighter."},
+]
+
+_SPECIES_BY_KEY = {s["key"]: s for s in COMPANION_SPECIES}
+
+
+def get_species(key):
+    """取夥伴物種定義；不存在回 None。"""
+    return _SPECIES_BY_KEY.get(key)
+
+
+COMPANION_NAME_MAX = 12
+
+
+def normalize_companion_name(name, species):
+    """整理使用者取的名字：去頭尾空白、移除不可列印字元、截到 12 字；
+    空值或全被清掉時退回該物種的預設名。顯示端仍需 escapeHtml（信任邊界在前端）。"""
+    default = (species or {}).get("default_name") or "小夥伴"
+    if not isinstance(name, str):
+        return default
+    cleaned = "".join(ch for ch in name if ch.isprintable()).strip()
+    return cleaned[:COMPANION_NAME_MAX] or default
+
+
+# 成長階段：(XP 門檻下限, key, 中文名, 英文名)。
+# 第一階段門檻刻意低（30 XP ≈ 認真記錄 2~3 天）讓「破殼」很快發生——
+# 新手最快嘗到甜頭；後段拉長，給長期慢病管理一條可走一年的成長曲線。
+COMPANION_STAGES = [
+    (0, "egg", "孵蛋期", "Egg"),
+    (30, "hatch", "破殼期", "Hatchling"),
+    (150, "kid", "幼年期", "Child"),
+    (400, "grown", "茁壯期", "Grown-up"),
+    (1000, "shine", "閃耀期", "Radiant"),
+]
+
+
+def companion_stage(xp):
+    """由 XP（=earned 積分）換算成長階段與「距離下一階段」進度（同 level_for 形狀）。"""
+    xp = int(xp or 0)
+    idx = 0
+    for i, (floor, _k, _zh, _en) in enumerate(COMPANION_STAGES):
+        if xp >= floor:
+            idx = i
+    floor, key, zh, en = COMPANION_STAGES[idx]
+    out = {
+        "index": idx,                    # 0-based
+        "key": key,
+        "name_zh": zh,
+        "name_en": en,
+        "count": len(COMPANION_STAGES),
+        "floor": floor,
+    }
+    if idx + 1 < len(COMPANION_STAGES):
+        next_floor, _nk, nzh, nen = COMPANION_STAGES[idx + 1]
+        span = next_floor - floor
+        out.update({
+            "next_floor": next_floor,
+            "next_name_zh": nzh,
+            "next_name_en": nen,
+            "to_next": next_floor - xp,
+            "progress": round((xp - floor) / span, 2) if span else 1.0,
+        })
+    else:
+        out.update({
+            "next_floor": None, "next_name_zh": None, "next_name_en": None,
+            "to_next": 0, "progress": 1.0,
+        })
+    return out
+
+
+# 心情：只看「距離最近一次紀錄幾天」。語氣鐵則：永遠不指責、不倒數施壓；
+# 最差狀態只是打盹，隨時回來記一筆就會醒。
+COMPANION_MOODS = {
+    "sparkle": {"zh": "精神奕奕", "en": "Full of energy"},
+    "happy": {"zh": "心情很好", "en": "Happy"},
+    "miss": {"zh": "想你了", "en": "Missing you"},
+    "sleepy": {"zh": "睡著了", "en": "Napping"},
+}
+
+
+def companion_mood(last_active_day, today):
+    """由最近一次紀錄日（台灣日 'YYYY-MM-DD'）與今天算心情。
+    今天有紀錄→sparkle；昨天→happy；2~3 天→miss；更久或從未→sleepy。"""
+    from datetime import date
+
+    def _parse(s):
+        try:
+            return date.fromisoformat(str(s)[:10])
+        except (TypeError, ValueError):
+            return None
+
+    t = _parse(today)
+    last = _parse(last_active_day)
+    gap = (t - last).days if (t and last) else None
+    if gap is not None and gap <= 0:
+        key = "sparkle"
+    elif gap == 1:
+        key = "happy"
+    elif gap is not None and gap <= 3:
+        key = "miss"
+    else:
+        key = "sleepy"
+    return dict(COMPANION_MOODS[key], key=key)
+
+
+# 鼓勵語庫：依（蛋期／心情）分池。寫給慢性病患者：肯定小步前進、允許休息、
+# 永不愧疚式催促。挑選為確定性輪替（同一天固定、跨天輪換），零 LLM（規則 5）。
+COMPANION_MESSAGES = {
+    "egg": [
+        {"zh": "我在蛋裡聽得到你的心跳……每記錄一筆，蛋就更暖一點。", "en": "I can hear your heartbeat from inside the egg… every entry keeps it warm."},
+        {"zh": "再累積一點點紀錄，我就要破殼囉！", "en": "Just a little more logging and I'll hatch!"},
+        {"zh": "謝謝你把我帶回家。慢慢來，我等得起。", "en": "Thank you for adopting me. Take your time — I can wait."},
+    ],
+    "sparkle": [
+        {"zh": "今天也有好好照顧自己，我超驕傲的！", "en": "You took care of yourself today — I'm so proud!"},
+        {"zh": "每一筆紀錄，都是你溫柔對待身體的證明。", "en": "Every entry is proof you're being kind to your body."},
+        {"zh": "慢性病照護是場馬拉松，今天你又穩穩跑了一段！", "en": "Chronic care is a marathon — you ran another steady stretch today!"},
+        {"zh": "有你在，我每天都在長大。謝謝你！", "en": "I grow a little every day because of you. Thank you!"},
+        {"zh": "今天的你，比昨天更懂自己的身體了。", "en": "You understand your body a little better than yesterday."},
+        {"zh": "紀錄完成！小小的一步，大大的累積。", "en": "Logged! Small steps add up to something big."},
+    ],
+    "happy": [
+        {"zh": "昨天有記錄，今天也想聽聽你的狀況～", "en": "You logged yesterday — I'd love to hear how today feels too."},
+        {"zh": "我吃飽睡好，等你回來記一筆！", "en": "I'm well fed and rested, ready whenever you are!"},
+        {"zh": "不急，照自己的步調就好。我都在。", "en": "No rush — go at your own pace. I'm right here."},
+    ],
+    "miss": [
+        {"zh": "想你了～最近身體還好嗎？", "en": "I missed you! How have you been feeling?"},
+        {"zh": "好幾天沒見了，回來記一筆讓我安心好嗎？", "en": "It's been a few days — a quick entry would put my mind at ease."},
+        {"zh": "休息也是照顧的一部分。準備好了再回來就好。", "en": "Rest is part of self-care too. Come back when you're ready."},
+    ],
+    "sleepy": [
+        {"zh": "Zzz……（輕輕記一筆，我就會醒來喔）", "en": "Zzz… (log one entry and I'll wake right up)"},
+        {"zh": "我先瞇一下。你回來記錄，我馬上起床！", "en": "Just napping — I'll be up the moment you log something!"},
+        {"zh": "不管隔多久回來，我都會在這裡等你。", "en": "However long it's been, I'll always be here waiting for you."},
+    ],
+}
+
+
+def companion_message(pool_key, today, xp):
+    """從語庫挑一句：同一天固定、跨天輪替（day ordinal + xp 取模，確定性、零隨機）。
+    pool_key 不存在時退到 sleepy 池（永遠有話可說，UI 不會空白）。"""
+    from datetime import date
+
+    pool = COMPANION_MESSAGES.get(pool_key) or COMPANION_MESSAGES["sleepy"]
+    try:
+        ordinal = date.fromisoformat(str(today)[:10]).toordinal()
+    except (TypeError, ValueError):
+        ordinal = 0
+    return pool[(ordinal + int(xp or 0)) % len(pool)]
+
+
 def puzzle_board(year_month, activity):
     """算某月的拼圖狀態（純函式，零 DB / 零 LLM）。
 

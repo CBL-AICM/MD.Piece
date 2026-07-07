@@ -472,6 +472,8 @@ var _LOCAL_DATA_KEEP = {
   'mdpiece_event_queue': 1, 'mdpiece_session_id': 1,
   // 新手導覽完成旗標 — 非病患資料，清掉會讓切帳號每次重跑導覽
   'mdpiece_onboarded': 1, 'mdpiece_profile_onb_skip': 1, 'mdpiece_pz_seen': 1,
+  // 健康小夥伴 — 純外觀個人化（物種／名字／已看階段），裝置層保留，非病患資料
+  'mdpiece_companion_v1': 1, 'mdpiece_companion_seen_v1': 1,
 };
 
 function clearLocalPatientData() {
@@ -941,8 +943,10 @@ function memoLoad() {
   } catch (e) { return []; }
 }
 function memoSaveAll(arr) {
-  try { localStorage.setItem(MEMO_STORE_KEY, JSON.stringify(arr)); }
-  catch (e) { showToast(_T("app.c1.saveFailedSpace"), "error"); }
+  // 回傳是否寫入成功；quota 爆掉時 localStorage 維持舊值（setItem 失敗不會部分寫入），
+  // 呼叫端據此決定要不要顯示「已儲存」與關閉編輯器，避免謊報成功又讓新筆記消失。
+  try { localStorage.setItem(MEMO_STORE_KEY, JSON.stringify(arr)); return true; }
+  catch (e) { showToast(_T("app.c1.saveFailedSpace"), "error"); return false; }
 }
 
 // 刪除 tombstone：本機刪掉但後端 DELETE 還沒成功（離線／失敗）的 memo id，
@@ -1484,7 +1488,9 @@ function memoSave() {
       createdAt: new Date().toISOString()
     });
   }
-  memoSaveAll(memos);
+  // 寫入失敗（多半是相簿照片把 localStorage 塞爆）就地保留編輯器與內容，不謊報成功、
+  // 不清掉暫存照片，讓使用者能刪舊筆記或移除照片再存（memoSaveAll 已彈出空間不足提示）。
+  if (!memoSaveAll(memos)) return;
   // 新增時是 unshift 到最前面；編輯時是原位更新 — 取出剛存的那筆送後端。
   var savedMemo = editingId
     ? memos.find(function(x) { return x.id === editingId; })
@@ -3861,6 +3867,180 @@ function _hideHomeRewards(nodes) {
   Array.prototype.forEach.call(nodes, function (n) { n.style.display = 'none'; });
 }
 
+// ─── 健康小夥伴（Pikmin／Pokémon 式養成）────────────────────────
+// 一隻靠「既有健康紀錄」餵養長大的小生物。成長階段／心情／鼓勵語全由後端唯讀換算
+// （backend/routers/rewards.py GET /companion）；名字與物種是純外觀個人化，存在
+// localStorage（裝置層，如同 theme/care_mode），不需後端表也不需登入。
+// ponytail: 一隻寵物綁裝置、不隨帳號切換而重取；XP/心情永遠反映當前登入帳號的真實紀錄。
+var COMPANION_STORE_KEY = 'mdpiece_companion_v1';
+var _COMPANION_SEEN_KEY = 'mdpiece_companion_seen_v1';  // 記上次看到的階段，用來只在升級時慶祝
+
+function _companionLoad() {
+  try {
+    var o = JSON.parse(localStorage.getItem(COMPANION_STORE_KEY) || 'null');
+    return (o && o.adopted) ? o : null;
+  } catch (e) { return null; }
+}
+function _companionSaveLocal(obj) {
+  try { localStorage.setItem(COMPANION_STORE_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+function _cmpLang() {
+  return (window.MDPiece_i18n && window.MDPiece_i18n.getLang && window.MDPiece_i18n.getLang() === 'en') ? 'en' : 'zh';
+}
+// 從後端 species[] 依 key 取物種定義（含預設名／個性）；找不到回第一個。
+function _companionSpeciesOf(cmp, key) {
+  var list = (cmp && cmp.species) || [];
+  for (var i = 0; i < list.length; i++) if (list[i].key === key) return list[i];
+  return list[0] || null;
+}
+
+// 物種 → 主色（CSS 變數 --cmp-c）。三種物種＝三種色系，走既有 seaside/rewards token 色域。
+var _COMPANION_HUE = { sprout: '#6FB98F', droplet: '#5FA8D3', sunny: '#E8A94B' };
+
+// 依成長階段回傳身體縮放（0 蛋期最小～1 閃耀期最大）。
+function _cmpBodyScale(stageKey) {
+  return { egg: 0.0, hatch: 0.62, kid: 0.78, grown: 0.92, shine: 1.0 }[stageKey] || 0.8;
+}
+
+// 生物 SVG：身體大小隨階段、臉隨心情變化；蛋期只顯示蛋殼。純外觀、無互動。
+function _companionCreatureSvg(stageKey, moodKey) {
+  var isEgg = stageKey === 'egg';
+  var scale = _cmpBodyScale(stageKey);
+  // ── 臉（依心情）──────────────────────
+  var eyes, mouth, extra = '';
+  if (moodKey === 'sleepy') {
+    eyes = '<path d="M50 60 q4 4 8 0" class="cmp-line"/><path d="M62 60 q4 4 8 0" class="cmp-line"/>';
+    mouth = '<circle cx="60" cy="70" r="2.4" class="cmp-mouth"/>';
+    extra = '<text x="80" y="40" class="cmp-z">z</text><text x="88" y="32" class="cmp-z cmp-z-sm">z</text>';
+  } else if (moodKey === 'miss') {
+    eyes = '<circle cx="54" cy="60" r="2.8" class="cmp-eye"/><circle cx="66" cy="60" r="2.8" class="cmp-eye"/>';
+    mouth = '<path d="M55 71 q5 -3 10 0" class="cmp-line"/>';  // 小小的抿嘴
+  } else if (moodKey === 'happy') {
+    eyes = '<circle cx="54" cy="60" r="3" class="cmp-eye"/><circle cx="66" cy="60" r="3" class="cmp-eye"/>';
+    mouth = '<path d="M54 69 q6 6 12 0" class="cmp-line"/>';
+  } else { // sparkle
+    eyes = '<path d="M50 61 q4 -5 8 0" class="cmp-line"/><path d="M62 61 q4 -5 8 0" class="cmp-line"/>';
+    mouth = '<path d="M53 68 q7 8 14 0 z" class="cmp-smile"/>';
+    extra = '<g class="cmp-sparkle"><path d="M30 34 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z"/>'
+          + '<path d="M92 54 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 z"/></g>';
+  }
+  var cheeks = (moodKey === 'sparkle' || moodKey === 'happy')
+    ? '<circle cx="46" cy="66" r="3.5" class="cmp-cheek"/><circle cx="74" cy="66" r="3.5" class="cmp-cheek"/>' : '';
+
+  if (isEgg) {
+    // 蛋期：蛋殼 + 沉睡臉，還沒破殼。
+    return '<svg viewBox="0 0 120 120" class="cmp-svg cmp-egg" aria-hidden="true">'
+      + '<ellipse cx="60" cy="98" rx="26" ry="6" class="cmp-shadow"/>'
+      + '<path d="M60 24 C40 24 34 58 34 74 a26 26 0 0 0 52 0 C86 58 80 24 60 24 z" class="cmp-egg-body"/>'
+      + '<path d="M44 66 l8 -6 6 8 8 -8 6 6" class="cmp-egg-crack"/>'
+      + '<path d="M52 82 q4 3 8 0" class="cmp-line"/>'
+      + '</svg>';
+  }
+  // 破殼後：身體（隨階段縮放）+ 臉 + 裝飾。
+  var leaf = (stageKey === 'grown' || stageKey === 'shine')
+    ? '<path d="M60 20 q10 -10 16 -4 q-2 10 -16 10 z" class="cmp-leaf"/>' : '';
+  var glow = (stageKey === 'shine') ? '<circle cx="60" cy="64" r="40" class="cmp-glow"/>' : '';
+  return '<svg viewBox="0 0 120 120" class="cmp-svg cmp-stage-' + stageKey + '" aria-hidden="true">'
+    + '<ellipse cx="60" cy="100" rx="26" ry="6" class="cmp-shadow"/>'
+    + glow
+    + '<g transform="translate(60 66) scale(' + scale.toFixed(2) + ') translate(-60 -66)">'
+    +   leaf
+    +   '<path d="M60 28 C36 28 30 52 30 68 C30 92 44 100 60 100 C76 100 90 92 90 68 C90 52 84 28 60 28 z" class="cmp-body"/>'
+    +   '<ellipse cx="60" cy="52" rx="24" ry="20" class="cmp-belly"/>'
+    +   cheeks + eyes + mouth
+    + '</g>'
+    + extra
+    + '</svg>';
+}
+
+// 未領養：物種選擇卡。領養後：完整夥伴卡（生物 + 名字 + 鼓勵語 + 成長進度）。
+function _companionHtml(cmp) {
+  var lang = _cmpLang();
+  var local = _companionLoad();
+  if (!local) {
+    var choices = (cmp.species || []).map(function (sp) {
+      return ''
+        + '<button type="button" class="cmp-pick" style="--cmp-c:' + (_COMPANION_HUE[sp.key] || '#6FB98F') + '"'
+        +   ' onclick="_companionAdopt(\'' + escapeHtml(sp.key) + '\')">'
+        +   '<span class="cmp-pick-art">' + _companionCreatureSvg('kid', 'happy') + '</span>'
+        +   '<span class="cmp-pick-name">' + escapeHtml(lang === 'en' ? sp.name_en : sp.name_zh) + '</span>'
+        +   '<span class="cmp-pick-desc">' + escapeHtml(lang === 'en' ? sp.personality_en : sp.personality_zh) + '</span>'
+        + '</button>';
+    }).join('');
+    return ''
+      + '<div class="rw-card cmp-card cmp-adopt">'
+      +   '<div class="rw-card-title"><i data-lucide="egg" style="width:18px;height:18px"></i> ' + escapeHtml(_T('cmp.adopt.title')) + '</div>'
+      +   '<p class="cmp-adopt-sub">' + escapeHtml(_T('cmp.adopt.sub')) + '</p>'
+      +   '<div class="cmp-picks">' + choices + '</div>'
+      + '</div>';
+  }
+
+  var sp = _companionSpeciesOf(cmp, local.species) || {};
+  var stage = cmp.stage || {}, mood = cmp.mood || {};
+  var name = local.name || (lang === 'en' ? sp.name_en : sp.default_name) || '小夥伴';
+  var stageName = lang === 'en' ? (stage.name_en || '') : (stage.name_zh || '');
+  var moodName = lang === 'en' ? (mood.en || '') : (mood.zh || '');
+  var msg = cmp.message ? (lang === 'en' ? cmp.message.en : cmp.message.zh) : '';
+  var pct = Math.round(Math.max(0, Math.min(1, (typeof stage.progress === 'number' ? stage.progress : 0))) * 100);
+  var toNext = stage.to_next || 0;
+  var nextName = lang === 'en' ? stage.next_name_en : stage.next_name_zh;
+  var growLine = (stage.next_floor == null)
+    ? _T('cmp.maxStage')
+    : _Tf('cmp.toNext', { n: toNext, next: nextName || '' });
+
+  return ''
+    + '<div class="rw-card cmp-card cmp-sp-' + escapeHtml(local.species) + '" style="--cmp-c:' + (_COMPANION_HUE[local.species] || '#6FB98F') + '">'
+    +   '<div class="cmp-stage-tag">' + escapeHtml(stageName) + ' · ' + escapeHtml(moodName) + '</div>'
+    +   '<div class="cmp-hero cmp-mood-' + escapeHtml(mood.key || 'happy') + '">'
+    +     '<div class="cmp-art">' + _companionCreatureSvg(stage.key || 'kid', mood.key || 'happy') + '</div>'
+    +     '<div class="cmp-bubble">' + escapeHtml(msg) + '</div>'
+    +   '</div>'
+    +   '<div class="cmp-namerow">'
+    +     '<span class="cmp-name">' + escapeHtml(name) + '</span>'
+    +     '<button type="button" class="cmp-rename" onclick="_companionRename()" aria-label="' + escapeHtml(_T('cmp.rename')) + '"><i data-lucide="pencil" style="width:13px;height:13px"></i></button>'
+    +   '</div>'
+    +   '<div class="cmp-grow">'
+    +     '<div class="cmp-grow-line">' + escapeHtml(growLine) + '</div>'
+    +     '<div class="cmp-bar"><i style="width:' + pct + '%"></i></div>'
+    +     '<div class="cmp-xp">' + _Tf('cmp.xp', { n: cmp.xp || 0 }) + '</div>'
+    +   '</div>'
+    + '</div>';
+}
+
+function _companionAdopt(speciesKey) {
+  var cmp = { adopted: true, species: speciesKey, name: '' };
+  _companionSaveLocal(cmp);
+  _companionRename(true);   // 領養後立刻請使用者命名（可略過用預設名）
+  loadRewardsPage();        // 重繪成完整夥伴卡
+}
+
+function _companionRename(isFirst) {
+  var local = _companionLoad() || {};
+  var cur = local.name || '';
+  var next = window.prompt(_T(isFirst ? 'cmp.namePromptFirst' : 'cmp.namePrompt'), cur);
+  if (next === null) return;                 // 取消：維持原名／預設名
+  local.name = (next || '').trim().slice(0, 12);
+  local.adopted = true;
+  _companionSaveLocal(local);
+  if (!isFirst) loadRewardsPage();
+}
+
+// 破殼／升級／今天有紀錄時給一次即時鼓勵 toast。用 localStorage 記上次看到的階段，
+// 只在「階段前進」時慶祝，避免每次進頁都彈。
+function _companionCelebrate(cmp) {
+  if (!_companionLoad()) return;             // 還沒領養不慶祝
+  var stage = cmp.stage || {};
+  var seen = null;
+  try { seen = localStorage.getItem(_COMPANION_SEEN_KEY); } catch (e) {}
+  var idx = typeof stage.index === 'number' ? stage.index : 0;
+  try { localStorage.setItem(_COMPANION_SEEN_KEY, String(idx)); } catch (e) {}
+  if (seen !== null && idx > parseInt(seen, 10)) {
+    var lang = _cmpLang();
+    var nm = lang === 'en' ? (stage.name_en || '') : (stage.name_zh || '');
+    if (typeof showToast === 'function') showToast(_Tf('cmp.leveledUp', { stage: nm }), 'success');
+  }
+}
+
 function rewards() {
   return ''
     + '<section class="rw-wrap">'
@@ -3881,16 +4061,20 @@ function loadRewardsPage() {
     apiFetch(API + '/rewards/catalog?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }),
     // 拼圖載入失敗不該拖垮整頁，單獨吞錯回 null（規則 12：降級但不靜默壞掉）
     apiFetch(API + '/rewards/puzzle?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }).catch(function () { return null; }),
+    // 健康小夥伴同理：載入失敗吞錯回 null，卡片就不顯示，不拖垮整頁。
+    apiFetch(API + '/rewards/companion?patient_id=' + encodeURIComponent(pid)).then(function (r) { return r.json(); }).catch(function () { return null; }),
   ]).then(function (res) {
     var summary = res[0] || {};
     var catalog = res[1] || {};
     var puzzle = res[2] || null;
+    var companion = res[3] || null;
     if (!summary || !summary.points) {
       box.innerHTML = '<div class="rw-empty">' + escapeHtml((summary && summary.detail) || '獎勵資料暫時無法載入，請稍後再試。') + '</div>';
       return;
     }
-    box.innerHTML = _rewardsHtml(summary, catalog, puzzle);
+    box.innerHTML = _rewardsHtml(summary, catalog, puzzle, companion);
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (companion) _companionCelebrate(companion);  // 破殼／升級／今天有紀錄的即時鼓勵
     _maybeMemoryToast(puzzle);  // 偵測新碎片／新章節 → 記憶尋回 toast（§12）
   }).catch(function () {
     box.innerHTML = '<div class="rw-empty">獎勵資料載入失敗。<br><button class="rw-btn" onclick="loadRewardsPage()">重新載入</button></div>';
@@ -3898,7 +4082,8 @@ function loadRewardsPage() {
   });
 }
 
-function _rewardsHtml(s, catalog, puzzle) {
+function _rewardsHtml(s, catalog, puzzle, companion) {
+  var companionCard = companion ? _companionHtml(companion) : '';
   var lv = s.level || {};
   var pts = s.points || {};
   var streak = s.streak || {};
@@ -3997,7 +4182,7 @@ function _rewardsHtml(s, catalog, puzzle) {
 
   var puzzleCard = puzzle ? _puzzleHtml(puzzle) : '';
 
-  return hero + stats + puzzleCard + badgeCard + catalogCard + ledgerCard + note;
+  return companionCard + hero + stats + puzzleCard + badgeCard + catalogCard + ledgerCard + note;
 }
 
 function _nextLevelHtml(lv, earned) {
@@ -22112,6 +22297,7 @@ async function submitEmotion() {
     document.getElementById('emotion-status').className = 'emotions-status emotions-status-ok';
     _resetEmotionWheel();
     showToast(_T('app.c27.emotionCheckinDone'), 'success');
+    _moodCache.loadedDays = 0;  // 讓下面的 refreshMoodViews 重抓，否則環/月曆/表格停在打卡前的快取
     refreshMoodViews();
     if (typeof refreshNavBadges === 'function') refreshNavBadges();
   } catch (e) {
@@ -22119,6 +22305,9 @@ async function submitEmotion() {
     document.getElementById('emotion-status').className = 'emotions-status emotions-status-error';
   } finally {
     btn.innerHTML = '<i data-lucide="send" style="width:14px;height:14px"></i> ' + _T('app.c27.submitTodayCheckin');
+    // 依目前是否仍有選取決定按鈕啟用狀態：成功後 wheel 已重置→維持 disabled；
+    // 失敗時選取還在→重新啟用讓使用者可再試（原本 finally 只換文字、漏了重設 disabled）。
+    _updateEmotionSubmitState();
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 }

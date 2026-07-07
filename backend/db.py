@@ -722,6 +722,18 @@ class _SqliteQuery:
         self._params.append(val)
         return self
 
+    def in_(self, col, values):
+        vals = list(values or [])
+        col = _safe_ident(col)
+        if not vals:
+            # 空清單：IN () 是語法錯誤，改成永遠不成立（對齊 PostgREST in.() 回 0 列）。
+            self._conditions.append("1 = 0")
+            return self
+        placeholders = ", ".join("?" for _ in vals)
+        self._conditions.append(f'"{col}" IN ({placeholders})')
+        self._params.extend(vals)
+        return self
+
     def gte(self, col, val):
         self._conditions.append(f'"{_safe_ident(col)}" >= ?')
         self._params.append(val)
@@ -984,6 +996,12 @@ class _HttpxQuery:
         return self
     def eq(self, col, val):     return self._add(col, "eq", val)
     def neq(self, col, val):    return self._add(col, "neq", val)
+    def in_(self, col, values):
+        # PostgREST：col=in.(v1,v2,...)。空清單 → in.() 回 0 列（對齊 SQLite shim 的 1=0）。
+        # 呼叫端目前只傳 UUID / patient_id（[A-Za-z0-9_-]），無 PostgREST 保留字需跳脫。
+        vals = ",".join(str(v) for v in (values or []))
+        self._filters.append((_safe_ident(col), f"in.({vals})"))
+        return self
     def gte(self, col, val):    return self._add(col, "gte", val)
     def gt(self, col, val):     return self._add(col, "gt", val)
     def lte(self, col, val):    return self._add(col, "lte", val)
@@ -1077,6 +1095,31 @@ class _HttpxSupabase:
 
 
 # ─── Public API ───────────────────────────────────────────────
+
+def fetch_all(make_query, page: int = 1000) -> list:
+    """分頁撈滿一個查詢的所有列，突破 PostgREST 預設單次 1000 列上限。
+
+    PostgREST（Supabase）未帶 range 的 select 最多只回 1000 列，超過就靜默截斷；
+    SQLite / httpx shim 無此限制但 .range() 也都支援，故本 helper 對三種後端一致。
+
+    make_query() 每次呼叫回傳一個全新、已套好 select/filter 但尚未 execute 的 query
+    builder；本函式以 .range() 逐頁取，直到某頁取不滿 page 列為止。
+    任何一頁讀取失敗即停止並回傳目前累積列（呼叫端負責判斷是否可接受部分結果）。
+    """
+    out: list = []
+    start = 0
+    while True:
+        try:
+            rows = make_query().range(start, start + page - 1).execute().data or []
+        except Exception as e:
+            logger.info("fetch_all @%d failed: %s", start, type(e).__name__)
+            break
+        out.extend(rows)
+        if len(rows) < page:
+            break
+        start += page
+    return out
+
 
 def get_supabase():
     """取得資料庫 client。有 Supabase 憑證用 Supabase，否則用 SQLite。
