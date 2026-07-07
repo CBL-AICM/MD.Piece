@@ -41,6 +41,36 @@ MARITAL = ["未婚", "已婚", "離婚", "喪偶"]
 URBAN_RURAL = ["都會", "城鎮", "鄉村"]
 URBAN_PROBS = [0.55, 0.30, 0.15]
 
+# 台灣縣市分布 — (縣市, 區域, 都市化分層, 人口權重/百萬)。
+# 人口權重以內政部 2024 人口統計近似。urban_tier 對應 URBAN_RURAL，
+# 讓地區與 urban_rural 相關（都會型多落在六都核心，鄉村型多落在東部/農業縣/離島）。
+# Reference: 內政部戶政司 (2024) 縣市人口統計。
+REGIONS = [
+    # 縣市,     區域,    都市化,  人口權重
+    ("臺北市", "北部", "都會", 2.50),
+    ("新北市", "北部", "都會", 4.00),
+    ("桃園市", "北部", "都會", 2.30),
+    ("基隆市", "北部", "都會", 0.36),
+    ("新竹市", "北部", "都會", 0.45),
+    ("新竹縣", "北部", "城鎮", 0.58),
+    ("宜蘭縣", "北部", "城鎮", 0.45),
+    ("臺中市", "中部", "都會", 2.85),
+    ("彰化縣", "中部", "城鎮", 1.25),
+    ("苗栗縣", "中部", "城鎮", 0.54),
+    ("雲林縣", "中部", "城鎮", 0.67),
+    ("南投縣", "中部", "鄉村", 0.48),
+    ("高雄市", "南部", "都會", 2.74),
+    ("臺南市", "南部", "都會", 1.86),
+    ("嘉義市", "南部", "城鎮", 0.27),
+    ("嘉義縣", "南部", "城鎮", 0.49),
+    ("屏東縣", "南部", "城鎮", 0.80),
+    ("花蓮縣", "東部", "鄉村", 0.32),
+    ("臺東縣", "東部", "鄉村", 0.21),
+    ("澎湖縣", "離島", "鄉村", 0.11),
+    ("金門縣", "離島", "鄉村", 0.14),
+    ("連江縣", "離島", "鄉村", 0.013),
+]
+
 DIET_TYPES = ["台式_常見", "地中海", "西式高脂", "素食", "低碳"]
 DIET_PROBS = [0.55, 0.10, 0.12, 0.15, 0.08]
 
@@ -94,6 +124,8 @@ class SocioeconomicProfile:
     insurance_type: str
     employment_status: str
     urban_rural: str
+    region: str = ""            # 縣市，例：臺北市
+    region_macro: str = ""      # 區域，例：北部
 
 
 @dataclass
@@ -232,6 +264,22 @@ def _sample_social(age: int, sex: str, rng: np.random.Generator) -> SocialProfil
     )
 
 
+def _sample_region(urban: str, rng: np.random.Generator) -> tuple[str, str]:
+    """依 urban_rural 分層，在符合的縣市中按人口權重抽一個地區。
+
+    回傳 (縣市, 區域)。都會型抽六都核心、鄉村型抽東部/農業縣/離島，
+    讓地理分布與都市化程度相關，而非獨立隨機。
+    """
+    pool = [r for r in REGIONS if r[2] == urban]
+    if not pool:                       # 理論上不會發生；保底用全部
+        pool = REGIONS
+    weights = np.array([r[3] for r in pool], dtype=float)
+    weights = weights / weights.sum()
+    idx = int(rng.choice(len(pool), p=weights))
+    county, macro, _tier, _w = pool[idx]
+    return county, macro
+
+
 def _sample_socioeconomic(
     age: int, age_bin: str, rng: np.random.Generator
 ) -> SocioeconomicProfile:
@@ -260,14 +308,17 @@ def _sample_socioeconomic(
     else:
         employment = rng.choice(EMPLOYMENT_LEVELS, p=[0.55, 0.10, 0.10, 0.05, 0.0, 0.18, 0.02])
 
-    urban = rng.choice(URBAN_RURAL, p=URBAN_PROBS)
+    urban = str(rng.choice(URBAN_RURAL, p=URBAN_PROBS))
+    region, region_macro = _sample_region(urban, rng)
 
     return SocioeconomicProfile(
         education=str(education),
         income_tier=str(income),
         insurance_type=str(insurance),
         employment_status=str(employment),
-        urban_rural=str(urban),
+        urban_rural=urban,
+        region=region,
+        region_macro=region_macro,
     )
 
 

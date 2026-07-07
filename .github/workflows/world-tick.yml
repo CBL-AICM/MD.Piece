@@ -1,0 +1,55 @@
+# MD.Piece 活世界 — 每日 tick(雲端 cron)
+#
+# 每天把 sim_world_state 裡的虛擬患者病情往前推一天、寫入當天紀錄、
+# 讓候選者陸續註冊、部分患者流失。資料寫入正式 Supabase(db.py 內建 anon 憑證)。
+#
+# ⚠️ GitHub 的 schedule 只會在「預設分支(main)」上觸發。本專案框架在
+#    feature 分支，所以：
+#    - 排程生效：需把此 workflow 併入 main（或預設分支）。
+#    - 併入前：可用 Actions 頁的 "Run workflow"(workflow_dispatch) 手動觸發，
+#      並在 branch 下拉選含程式碼的分支。
+#    - 若 SUPABASE_URL/SUPABASE_KEY 未設為 secret，db.py 會用內建 prod 預設值。
+
+name: world-tick
+
+on:
+  schedule:
+    - cron: "0 22 * * *"        # 每天 UTC 22:00 = 台灣 06:00
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "含程式碼的分支"
+        default: "claude/train-ai-model-0NYvq"
+      date:
+        description: "tick 日期 YYYY-MM-DD(留空=今天)"
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: world-tick            # 避免兩次 tick 同時跑(冪等仍有 last_tick_date 保護)
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || 'claude/train-ai-model-0NYvq' }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps (輕量，不需 torch)
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas pyyaml "supabase>=2" python-dotenv
+      - name: Run daily world tick
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ github.event.inputs.date }}" ]; then DATE_ARG="--date ${{ github.event.inputs.date }}"; fi
+          PYTHONPATH=. python -m ml.world --tick $DATE_ARG
