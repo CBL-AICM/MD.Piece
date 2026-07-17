@@ -3622,6 +3622,7 @@
 
       // page titles (senior / verbose form, used by topbar)
       'page.home': '首頁',
+      'page.reminders': '提醒通知',
       'page.symptoms': '症狀紀錄',
       'page.medications': '藥物紀錄',
       'page.vitals': '生理紀錄',
@@ -7734,6 +7735,7 @@
       'tab.navAria': 'Main navigation',
 
       'page.home': 'Home',
+      'page.reminders': 'Reminders',
       'page.symptoms': 'Symptoms',
       'page.medications': 'Medications',
       'page.vitals': 'Vitals',
