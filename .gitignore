@@ -25,6 +25,10 @@ Thumbs.db
 
 # SQLite database
 md_piece.db
+
+# Personal knowledge (local only, not project-specific)
+raw/personal/
+knowledge/personal/
 .vercel
 .env*.local
 
