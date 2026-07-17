@@ -86,7 +86,22 @@
      依 docs/research/ui_color_research.md 的建議：
      繁中筆畫密集，比英文站 +1 階字級；長者模式再 +1 階。 */
 
-  /* Typography scale (mobile-first) */
+  /* ─── Font families ──────────────────────────────────────────
+     繁中優先用原生平台字（PingFang TC / 微軟正黑體），
+     沒有時再 fallback 到 Noto Sans TC。
+     數字 / dose 用 tabular-nums 的等寬 fallback。
+     襯線體用於強調引言或 hero 標題（節制使用）。 */
+  --font-tc:       "PingFang TC", "Heiti TC", "Microsoft JhengHei",
+                   "Noto Sans TC", -apple-system, BlinkMacSystemFont,
+                   "Segoe UI", system-ui, sans-serif;
+  --font-tc-serif: "Noto Serif TC", "Source Han Serif TC",
+                   "Songti TC", "PMingLiU", Georgia, serif;
+  --font-mono:     "JetBrains Mono", "Fira Code", "SF Mono",
+                   "Roboto Mono", Menlo, Consolas, monospace;
+  --font-num:      "JetBrains Mono", ui-monospace, "SF Mono", Menlo,
+                   "Noto Sans TC", sans-serif;
+
+  /* Typography scale (mobile-first, 1.125 modular ratio) */
   --font-xs:    13px;
   --font-sm:    14px;
   --font-base:  16px;
@@ -94,11 +109,28 @@
   --font-xl:    20px;
   --font-2xl:   24px;
   --font-3xl:   32px;
+  --font-4xl:   40px;
+  --font-display: 48px;   /* hero / landing */
+
+  /* Font weights — 對應 Noto Sans TC 已載入的 300~700 */
+  --fw-light:    300;
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
 
   /* Line height */
   --lh-tight:   1.3;
   --lh-base:    1.6;
   --lh-loose:   1.8;
+  --lh-cjk-heading: 1.35;  /* 繁中標題偏鬆，避免上下擠 */
+  --lh-cjk-body:    1.7;   /* 繁中內文偏鬆，閱讀更輕鬆 */
+
+  /* Letter spacing — CJK 字符方塊本身有間距，慎用負值 */
+  --ls-tight:   -0.01em;   /* 大標題微縮排，畫面更緊湊 */
+  --ls-normal:  0;
+  --ls-wide:    0.02em;    /* 小字 / 標籤更清楚 */
+  --ls-overline: 0.08em;   /* 分類 label，配合 uppercase */
 
   /* Spacing (4px grid) */
   --space-1:    4px;
@@ -129,10 +161,100 @@
 
 html { overflow-x: hidden; }
 
-body {
-  font-family: "Noto Sans TC", sans-serif;
+/* ═══════════════════════════════════════════════════════════
+   Typography utility classes（語意化排版）
+   ─────────────────────────────────────────────────────────────
+   每個 class 一次設定 size + line-height + weight + tracking，
+   元件可選擇性 opt-in。原本 hard-coded 字級的元件不受影響。
+   命名前綴 .t-* 避免與既有 .text-* 衝突。
+   ═══════════════════════════════════════════════════════════ */
+
+.t-display {
+  font-size: var(--font-display);
+  line-height: var(--lh-cjk-heading);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+}
+.t-h1 {
+  font-size: var(--font-3xl);
+  line-height: var(--lh-cjk-heading);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+}
+.t-h2 {
+  font-size: var(--font-2xl);
+  line-height: var(--lh-cjk-heading);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-tight);
+}
+.t-h3 {
+  font-size: var(--font-xl);
+  line-height: var(--lh-tight);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-normal);
+}
+.t-body {
   font-size: var(--font-base);
+  line-height: var(--lh-cjk-body);
+  font-weight: var(--fw-regular);
+}
+.t-body-lg {
+  font-size: var(--font-lg);
+  line-height: var(--lh-cjk-body);
+  font-weight: var(--fw-regular);
+}
+.t-caption {
+  font-size: var(--font-sm);
   line-height: var(--lh-base);
+  font-weight: var(--fw-regular);
+  color: var(--text-dim);
+}
+.t-overline {
+  font-size: var(--font-xs);
+  line-height: var(--lh-tight);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* 強調 — 用於需要拉出視覺重心的關鍵字（不是改 H 階層） */
+.t-emphasis {
+  font-weight: var(--fw-semibold);
+  color: var(--klein);
+}
+
+/* 劑量 / 數值 — 等寬數字，讓 5mg / 10mg / 100mg 的位數對齊 */
+.t-dose,
+.t-num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-weight: var(--fw-semibold);
+}
+
+/* 醫療分類 label — 配合 .t-overline 給卡片小標題用 */
+.t-medical-label {
+  font-size: var(--font-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* 警示文字 — 用於用藥警告、嚴重分診 */
+.t-alert {
+  font-weight: var(--fw-bold);
+  color: var(--danger);
+  letter-spacing: var(--ls-normal);
+}
+
+body {
+  font-family: var(--font-tc);
+  font-size: var(--font-base);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-cjk-body);
+  letter-spacing: var(--ls-normal);
   background: var(--bg-deep);
   background-attachment: fixed;
   color: var(--text);
@@ -140,6 +262,11 @@ body {
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;     /* iOS Safari 旋轉時不自動放大字 */
   text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* CJK OpenType：開啟連字、字距微調，但關閉容易誤觸的 liga */
+  font-feature-settings: "kern" 1, "palt" 0;
+  text-rendering: optimizeLegibility;
 }
 
 /* 圖片預設不要撐破容器 */

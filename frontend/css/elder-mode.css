@@ -32,8 +32,21 @@ html[data-mode="senior"] {
   --font-xl:    26px;
   --font-2xl:   30px;
   --font-3xl:   36px;
+  --font-4xl:   44px;
+  --font-display: 52px;
   --lh-base:    1.75;
   --lh-loose:   2.0;
+  --lh-cjk-body:    1.85;   /* 老花更需要寬行距 */
+  --lh-cjk-heading: 1.45;
+
+  /* 字重整體上調一階 — 細字對老花最不友善 */
+  --fw-regular:  500;
+  --fw-medium:   600;
+  --fw-semibold: 700;
+
+  /* 字距放寬 — 增加字符辨識度，特別是相近字（已/己、未/末） */
+  --ls-normal:  0.015em;
+  --ls-wide:    0.04em;
 
   /* 觸控目標 ≥ 56px */
   --tap-min:    var(--tap-elder);
@@ -48,7 +61,9 @@ html[data-mode="senior"] {
 html.elder-mode body,
 html[data-mode="senior"] body {
   font-size: var(--font-base);
-  line-height: var(--lh-base);
+  line-height: var(--lh-cjk-body);
+  font-weight: var(--fw-regular);    /* = 500 in elder mode */
+  letter-spacing: var(--ls-normal);  /* = 0.015em in elder mode */
 }
 
 /* ─── Buttons：所有 button / .btn / [role="button"] ──────────────
