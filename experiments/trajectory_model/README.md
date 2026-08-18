@@ -7,14 +7,14 @@
 
 ```bash
 cd experiments/trajectory_model
-python -m pytest tests -q                 # 20 個單元測試（FADE 等價、洩漏防護、β=0 無增益、分層混合、漂移起始…）
+python -m pytest tests -q                 # 20 個單元測試（FADE 等價、洩漏防護、β=0 無增益、分層混合、漂移起始、雙準則群數…）
 python run.py --quick                     # 煙霧測試（n=400、1 seed；--quick --n 1500 可放大）
 python -u run.py --jobs 12 --out results  # 完整格點：n=3000、5 seed、各變體（數小時）
 python run.py --figures-only --out results   # 只由 results.json 重繪六張圖
 ```
 
 輸出：`results/results.json`（所有數值結果：每個參數組合、每 seed、聚合平均／範圍、校準紀錄、τ 掃描、
-洩漏警訊清單、figure_data）、`results/figures/fig1–6*.png`（黑白灰）、`results/assumptions.md`（假設／校準參數清單，供計畫書附錄）。
+洩漏警訊清單、figure_data）、`results/figures/fig1–7*.png`（黑白灰）、`results/assumptions.md`（假設／校準參數清單，供計畫書附錄）。
 
 ## 檔案
 
@@ -49,9 +49,9 @@ python run.py --figures-only --out results   # 只由 results.json 重繪六張�
 
 | v2 | 落地 |
 |---|---|
-| 壹 τ | 主分析 τ=60、窗 {21,42,60,90}；τ 14/30 與 12 個月目標 → `unreachable` 留白；τ 掃描曲線 fig6 |
-| 貳 起始水準 | 主分析 `kdigo_g2_g4_uniform`（`assumption_alignment_corrected`）；`ohare_ranges` 示範變體實際跑 |
-| 參 結局 | 風險驅動；三時點；`test_hazard_beta_zero_makes_trajectory_uninformative` |
+| 壹 τ | 主分析 τ=60、窗 {21,42,60,90}；τ 14/30 與 12 個月目標 → `unreachable` 留白；fig6 τ 掃描曲線，圖說載明實測值（τ=30 最長 94 天、τ=14 最長 44 天）|
+| 貳 起始水準 | 主分析 `kdigo_g2_g4_uniform`（`assumption_alignment_corrected`）；`ohare_ranges` 示範變體實際跑（分層單一型別 1.00、定態期型別可分辨 AUC 0.96——即對齊偏誤的樣子）|
+| 參 結局 | 風險驅動；三時點；β 固定 HR 3（C 對 β 非單調，見 params）；`test_hazard_beta_zero_makes_trajectory_uninformative` |
 | 肆 警報 | 主警報單尾上升（τ 同為正且 > 95 分位）；下降型偏離獨立計數（`downward`）；假設檢定雙尾 |
 | 伍 置換 | 方法說明（上）＋程式註解 |
 | 陸 burn-in | 趨勢基準 90 天內不警報、自偽警報分母扣除（`alarms_from_flags(start_day)`）|
@@ -59,7 +59,15 @@ python run.py --figures-only --out results   # 只由 results.json 重繪六張�
 | 捌 起始重疊 | 同分布 x₀、型別由 s 決定、分層單一型別 >90% 停止（pilot 與每 job）|
 | 玖 漂移起始 | `build_mu_path`；並報 t_event−t_crit 與 t_event−首次警報；>1 年標為設定產物 |
 | 拾 不宣稱 | 計畫書表二已加 N7（絕對提前期）、N8（C 增益絕對大小）|
-| 拾壹 | 假設清單 → `results/assumptions.md`；圖 1／5 由本輪重跑產生 |
+| 拾壹 | 假設清單 → `results/assumptions.md`（含三道閘門）；圖 1／5 由本輪重跑產生 |
+| 附錄壹 群數 | k_max=8；報告 K = 同時滿足「K→K+1 BIC 改善 < 整段 5%」且「穩定度 ≥ 0.60（Hennig）」的最小 K；輸出 BIC／穩定度曲線（fig7 雙軸）、`k_ceiling_hit`（BIC 到 8 仍單調改善）、`continuous_heterogeneity`（撞頂且穩定度遞減 → 該層異質性連續、離散劃分不受支持）、`n_true_labels`／`over_split_by` |
+| 附錄貳 線性定態前期 | 線性型下降起始日與翻轉型漂移起始日同分布（U(0,1095)）；報兩型定態期分布與 KS p；`linear_from_day0` 敏感度變體 |
+| 附錄參 閘門 | 跑格點前：分層單一型別 ≤ 0.9；β=0 時 \|ΔC\| < 0.01（n=12000 檢核世代、三地標帶號平均——n=1500 的 ΔC 雜訊 ±0.02 會誤判）；定態期型別 AUROC 0.45–0.55；任一未過即中止並寫 gates.json |
+
+## 變體
+
+`default`（τ60）、`fliptime90`、`linear_from_day0`、`ohare_ranges`（示範）、`dropout`（模組四）、`beta_x0.5`／`beta_x2`（模組四）；
+`tau14`／`tau30`／`fliptime365` → unreachable 留白（僅入 fig6）。
 
 ## 誠實提醒
 
