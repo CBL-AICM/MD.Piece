@@ -13,6 +13,11 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 
+# 平行是「多程序」，每個程序的 BLAS/OpenMP 只准用 1 條執行緒；否則 12 個程序 × 多執行緒的
+# sklearn/numpy 會互相搶核心（第一次跑時每個 worker 只吃到 ~65% CPU）。必須在 import numpy 之前設。
+for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_v, "1")
+
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -41,6 +46,17 @@ def cohort_summary(C):
 
 
 def run_job(args):
+    res = _run_job(args)
+    # 每個 job 完成就落地一份（晚期崩潰不會把幾小時的結果一起帶走）
+    outdir = args[0].get("_jobdir")
+    if outdir:
+        os.makedirs(outdir, exist_ok=True)
+        with open(os.path.join(outdir, f"{res['variant']}_{res['seed']}.json"), "w", encoding="utf-8") as f:
+            json.dump({k: v for k, v in res.items() if k != "fig"}, f, ensure_ascii=False, default=_json_default)
+    return res
+
+
+def _run_job(args):
     P, variant, seed, calib, want_fig = args
     t0 = time.time()
     C = make_cohort(P, seed, tau=variant["tau"], delta_mu_median=calib["delta_mu"]["delta_mu_median"],
@@ -135,6 +151,16 @@ def _json_default(o):
     return str(o)
 
 
+def make_figures(results, figdir):
+    """五張圖全部由 results.json 內容重繪（`--figures-only`），改圖不必重跑三小時。"""
+    fd = results["figure_data"]
+    FG.fig1_single_case(fd["fig1"], figdir)
+    FG.fig2_strata_types(fd["clustering_q5_A"], fd["gen_share"], figdir, title="預設變體 seed 0")
+    FG.fig3_static_vs_dynamic(results["aggregate"]["default"]["prediction"], figdir)
+    FG.fig4_timing_shift(fd["timing"], figdir)
+    FG.fig5_leadtime(fd["fig5"], figdir)
+
+
 # ------------------------------------------------------------------ 主程式
 def build_variants(P, quick):
     fl = P["flip"]
@@ -184,7 +210,14 @@ def main():
     ap.add_argument("--seeds", type=int, default=None)
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     ap.add_argument("--quick", action="store_true", help="小規模煙霧測試（n=400、1 seed、少量置換）")
+    ap.add_argument("--figures-only", action="store_true", help="只用既有 results.json 重繪五張圖")
     a = ap.parse_args()
+
+    if a.figures_only:
+        with open(os.path.join(a.out, "results.json"), encoding="utf-8") as f:
+            make_figures(json.load(f), os.path.join(a.out, "figures"))
+        print("已重繪 figures/")
+        return
 
     P = load_params(a.params)
     if a.n: P["sim"]["n"] = a.n
@@ -196,6 +229,7 @@ def main():
                             n_permutation_leadtime=200)
         P["prediction"].update(landmarks_days=[180, 365, 730])
     os.makedirs(a.out, exist_ok=True)
+    P["_jobdir"] = os.path.join(a.out, "jobs")
 
     variants = build_variants(P, a.quick)
     seeds = [P["sim"]["seed"] + i for i in range(P["sim"]["n_seeds"])]
@@ -231,18 +265,13 @@ def main():
                              n=P["sim"]["n"], seeds=seeds, params_file=a.params),
                    provenance=P["_provenance"], params={k: v for k, v in P.items() if not k.startswith("_")},
                    calibration=calibrations, aggregate=agg, per_seed=per, leak_alert=leak,
-                   figure_setting=figdata["setting"])
+                   figure_setting=figdata["setting"],
+                   figure_data=dict(**figdata, clustering_q5_A=fig_res["clustering"]["q5_A"],
+                                    timing=fig_res["prediction"]["timing"]))
     with open(os.path.join(a.out, "results.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=1, default=_json_default)
 
-    figdir = os.path.join(a.out, "figures")
-    d = per["default"][0]
-    FG.fig1_single_case(figdata["fig1"], figdir)
-    FG.fig2_strata_types(fig_res["clustering"]["q5_A"], figdata["gen_share"], figdir, title="預設變體 seed 0")
-    FG.fig3_static_vs_dynamic(agg["default"]["prediction"], figdir)
-    FG.fig4_timing_shift(fig_res["prediction"]["timing"], figdir)
-    FG.fig5_leadtime(figdata["fig5"], figdir)
-
+    make_figures(results, os.path.join(a.out, "figures"))
     print(f"\n完成，{time.time() - t0:.0f} s。結果：{a.out}/results.json、figures/")
     if leak:
         print("※ 洩漏警訊：以下 (變體, 地標) 的動態 C 指數增益 > 0.05，請檢查資料流再解讀：", leak)

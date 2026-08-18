@@ -82,9 +82,10 @@ def fig3_static_vs_dynamic(agg_pred, outdir):
         mo = [agg_pred["landmarks"][L][f"reclass_{rule}"]["moved_out"]["mean"] for L in Ls]
         ax[1].bar(xs + (j - 0.5) * 0.35, mi, 0.35, color=GREYS[j], hatch=HATCH[j], edgecolor="k", lw=0.5, label=f"移入高風險（{rule}）")
         ax[1].bar(xs + (j - 0.5) * 0.35, [-v for v in mo], 0.35, color="1.0", hatch=HATCH[j], edgecolor="k", lw=0.5, label=f"移出高風險（{rule}）")
-        for xi, v in zip(xs, nri):
-            ax[1].text(xi + (j - 0.5) * 0.35, 0.02 + max(mi), f"NRI\n{v:+.2f}", ha="center", fontsize=6.5)
+        for xi, v, top in zip(xs, nri, mi):
+            ax[1].text(xi + (j - 0.5) * 0.35, top + 0.008, f"NRI\n{v:+.2f}", ha="center", va="bottom", fontsize=6.5)
     ax[1].axhline(0, color="k", lw=0.6); ax[1].set_xticks(xs); ax[1].set_xticklabels([f"{L} 天" for L in Ls])
+    ax[1].set_ylim(top=ax[1].get_ylim()[1] * 1.15)
     ax[1].set_ylabel("風險集內比例（上=移入，下=移出）"); ax[1].legend(fontsize=6.5, loc="lower right")
     ax[1].set_title("淨重新分類（abs=事件率閾值，rel=前 20%）", fontsize=9)
     return _save(fig, outdir, "fig3_static_vs_dynamic.png")
