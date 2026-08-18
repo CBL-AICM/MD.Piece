@@ -6,7 +6,8 @@
 複製日期：2026-08-17
 
 除下列一處外，函式本體逐字照抄，讓兩個研究的方法一致：
-- simulate_S0：依決定書 §5 加入時間尺度 tau，並允許外給 mu_end / sigma / x0 / rng。
+- simulate_S0：依決定書 §5 加入時間尺度 tau，並允許外給 mu_end / sigma / x0 / rng；
+  依決定書 v2 第玖項允許外給整條 mu_path（漂移起始日之前 mu 固定）。
   預設值下（tau=1、其餘 None）與 FADE 原版逐位元相同（tests/test_fade_equiv.py 驗證）。
 """
 import numpy as np
@@ -21,20 +22,21 @@ SEED = 20260813
 # S0：雙穩態隨機微分方程
 # =============================================================
 def simulate_S0(n=N_PATIENTS, T=T_DAYS, seed=SEED, substeps=10, tau=1.0,
-                mu_start=-0.60, mu_end=None, sigma=None, x0=None, rng=None):
+                mu_start=-0.60, mu_end=None, sigma=None, x0=None, rng=None, mu_path=None):
     """dx = (1/tau)(-x^3 + x + mu(t)) dt + sigma dW；mu 線性漂移，跨過 MU_C 即翻轉。
 
-    ［軌跡模型修改，決定書 §5/§10］tau 決定系統回復速度、也就是基線自相關水準；
-    FADE 原版隱含 tau=1 天，本研究預設 30 天。其餘新增參數只是把原本寫死的
-    分布改成可外給，未改變積分法（Euler–Maruyama、每日 substeps 子步、clip ±3）。
+    ［軌跡模型修改，決定書 §5/§10、v2 第玖項］tau 決定系統回復速度、也就是基線自相關水準；
+    FADE 原版隱含 tau=1 天，本研究主分析 60 天。mu_path 可外給（n×T），用來讓 mu 在漂移
+    起始日之前固定；不給時照原版由 mu_start 線性漂移到 mu_end。其餘新增參數只是把原本
+    寫死的分布改成可外給，未改變積分法（Euler–Maruyama、每日 substeps 子步、clip ±3）。
     """
     if rng is None:
         rng = np.random.default_rng(seed)
-    if mu_end is None:
+    if mu_end is None and mu_path is None:
         mu_end = rng.uniform(-0.10, 2.00, size=n)
+    n = len(mu_end) if mu_path is None else len(mu_path)
     if sigma is None:
         sigma = rng.uniform(0.08, 0.16, size=n)
-    n = len(mu_end)
 
     dt = 1.0 / substeps
     if x0 is None:
@@ -42,7 +44,10 @@ def simulate_S0(n=N_PATIENTS, T=T_DAYS, seed=SEED, substeps=10, tau=1.0,
     else:
         x = np.array(x0, dtype=float).copy()
     X = np.zeros((n, T), dtype=np.float32)
-    mu_path = np.linspace(0.0, 1.0, T)[None, :] * (mu_end - mu_start)[:, None] + mu_start
+    if mu_path is None:
+        mu_path = np.linspace(0.0, 1.0, T)[None, :] * (mu_end - mu_start)[:, None] + mu_start
+    else:
+        mu_path = np.asarray(mu_path, dtype=float)
 
     for t in range(T):
         mu_t = mu_path[:, t]

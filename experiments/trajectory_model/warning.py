@@ -8,7 +8,9 @@
 Kendall tau 用「截至該評估日的完整指標序列」，每 7 天評估一次（決定書 §9）。
 虛無分布：抽 200 人 × 100 次區塊置換（區塊長 = 窗長）合併成共同分布，並以 KS 檢定檢核高／低
 變異兩群同質性，不同質則分層（決定書 §9）。
-警報規則（事前寫定，禁止事項 2/5）：AR(1) 與 SD 的 tau 同時落在虛無分布的雙尾 (alpha) 區間之外。
+警報規則（事前寫定；v2 肆）：主要規則單尾上升——AR(1) 與 SD 的 tau 同時 > 0 且同時超過虛無 95 分位
+（韌性流失的定義就是自相關上升）；「下降型偏離」（同時 < 0 且低於 5 分位）獨立計數報告，不計入主要提前期。
+假設檢定（兩型提前期比較）維持雙尾（禁止事項 5）。
 """
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
@@ -136,13 +138,10 @@ def build_null(X, win, mode, bw_frac, mlen, n_subj, n_perm, rng, var_group):
                            n_high_var=int(G.sum()), n_low_var=int((~G).sum()))
 
 
-def _thresholds(TA, TS, alpha, two_sided):
-    if two_sided:
-        lo, hi = alpha / 2, 1 - alpha / 2
-        return dict(ar_lo=np.nanquantile(TA, lo, axis=0), ar_hi=np.nanquantile(TA, hi, axis=0),
-                    sd_lo=np.nanquantile(TS, lo, axis=0), sd_hi=np.nanquantile(TS, hi, axis=0))
-    return dict(ar_lo=np.full(TA.shape[1], -np.inf), ar_hi=np.nanquantile(TA, 1 - alpha, axis=0),
-                sd_lo=np.full(TS.shape[1], -np.inf), sd_hi=np.nanquantile(TS, 1 - alpha, axis=0))
+def _thresholds(TA, TS, alpha):
+    """上尾（主要警報）與下尾（下降型偏離計數）各取 alpha 分位；兩者都是單尾（v2 肆）。"""
+    return dict(ar_lo=np.nanquantile(TA, alpha, axis=0), ar_hi=np.nanquantile(TA, 1 - alpha, axis=0),
+                sd_lo=np.nanquantile(TS, alpha, axis=0), sd_hi=np.nanquantile(TS, 1 - alpha, axis=0))
 
 
 def _q(v):
@@ -153,24 +152,25 @@ def _q(v):
                 q75=float(np.percentile(v, 75)), mean=float(v.mean()))
 
 
-def alarms_from_flags(flags, days, t_end, t_event, horizon, T):
+def alarms_from_flags(flags, days, t_end, t_event, horizon, T, start_day=0):
     """flags: n × n_eval 布林（評估日是否警報）；忽略事件後的評估日。
-    回傳 first_alarm(天, -1=無)、偽警報次數（episode 起點後 horizon 天內無事件）、追蹤人年。"""
+    回傳 first_alarm(天, -1=無)、偽警報次數（episode 起點後 horizon 天內無事件）、追蹤人年。
+    start_day：燒入期（v2 陸）——之前不得警報，且自人年分母扣除。"""
     n = len(flags)
-    active = days[None, :] <= t_end[:, None]
+    active = (days[None, :] <= t_end[:, None]) & (days[None, :] >= start_day)
     f = flags & active
     first = np.where(f.any(axis=1), days[np.argmax(f, axis=1)], -1)
     starts = f & ~np.concatenate([np.zeros((n, 1), bool), f[:, :-1]], axis=1)   # episode 起點
     has_ev = t_event >= 0
     ev_within = has_ev[:, None] & (t_event[:, None] - days[None, :] >= 0) & (t_event[:, None] - days[None, :] <= horizon)
     false_ct = (starts & ~ev_within).sum(axis=1)
-    py = np.where(has_ev, t_event, T) / DAYS_PER_YEAR
+    py = np.maximum(np.where(has_ev, t_event, T) - start_day, 0) / DAYS_PER_YEAR
     return first, false_ct, py
 
 
-def trend_alarm(X, x_event, days, horizon, min_history):
-    """H3 後半的比較基準：截至評估日的 OLS 直線外推，預測 horizon 天內跨門檻即警報。
-    min_history：歷史短於此不評估（幾週的 OU 雜訊就能外推出任何斜率）。"""
+def trend_alarm(X, threshold, days, horizon, min_history):
+    """H3 後半的比較基準：截至評估日的 OLS 直線外推，預測 horizon 天內向下跨過門檻（eGFR 低＝差）即警報。
+    min_history：歷史短於此不評估（幾週的 OU 雜訊就能外推出任何斜率；v2 陸）。"""
     n, T = X.shape
     Xf = X.astype(np.float64)
     t = np.arange(1, T + 1, dtype=float)
@@ -184,8 +184,8 @@ def trend_alarm(X, x_event, days, horizon, min_history):
         sx, stx, st, stt = cs_x[:, m - 1], cs_tx[:, m - 1], cs_t[m - 1], cs_tt[m - 1]
         slope = (m * stx - st * sx) / (m * stt - st * st)
         icpt = (sx - slope * st) / m
-        cross = (x_event - icpt) / np.where(slope > 0, slope, np.nan)      # 預測跨門檻的天
-        flags[:, k] = (slope > 0) & np.isfinite(cross) & (cross - d <= horizon)
+        cross = (threshold - icpt) / np.where(slope < 0, slope, np.nan)      # 預測向下跨門檻的天
+        flags[:, k] = (slope < 0) & np.isfinite(cross) & (cross - d <= horizon)
     return flags
 
 
@@ -204,11 +204,13 @@ def perm_diff_median(a, b, n_perm, rng):
     return dict(diff=float(obs), p=float((cnt + 1) / (n_perm + 1)), n_a=int(na), n_b=int(len(b)))
 
 
+
+
 def run_warning(C, P, win, mode, rng, verbose=False):
     """單一（窗長, 去趨勢）設定的完整模組五。"""
     W = P["warning"]
     X, T, n = C["X"], C["T"], C["n"]
-    te, tc, is_flip = C["t_event"], C["t_crit"], C["is_flip"]
+    te, tc, tt, is_flip = C["t_event"], C["t_crit"], C["t_threshold"], C["is_flip"]
     bw = W["gaussian_bw_frac"]["value"]
     days, mlen = _eval_prefix_lengths(T, win, W["eval_every_days"])
     horizon = W["alarm_event_horizon_days"]["value"]
@@ -220,32 +222,24 @@ def run_warning(C, P, win, mode, rng, verbose=False):
     TA, TS, G, nullinfo = build_null(X, win, mode, bw, mlen, W["null_subjects"], W["null_perms_per_subject"],
                                      rng, var_group)
     if nullinfo["stratified"]:
-        thr = {True: _thresholds(TA[G], TS[G], W["alpha"], W["two_sided"]),
-               False: _thresholds(TA[~G], TS[~G], W["alpha"], W["two_sided"])}
+        thr = {True: _thresholds(TA[G], TS[G], W["alpha"]), False: _thresholds(TA[~G], TS[~G], W["alpha"])}
     else:
-        thr = {True: _thresholds(TA, TS, W["alpha"], W["two_sided"])}
+        thr = {True: _thresholds(TA, TS, W["alpha"])}
         thr[False] = thr[True]
 
     AR, SD = rolling_indicators(X, win, mode, bw)
     ta, ts = _tau_at(AR, SD, mlen)
-    lo_ar = np.where(var_group[:, None], thr[True]["ar_lo"], thr[False]["ar_lo"])
-    hi_ar = np.where(var_group[:, None], thr[True]["ar_hi"], thr[False]["ar_hi"])
-    lo_sd = np.where(var_group[:, None], thr[True]["sd_lo"], thr[False]["sd_lo"])
-    hi_sd = np.where(var_group[:, None], thr[True]["sd_hi"], thr[False]["sd_hi"])
-    out_ar = (ta < lo_ar) | (ta > hi_ar)
-    out_sd = (ts < lo_sd) | (ts > hi_sd)
-    flags = out_ar & out_sd
+    pick = lambda key: np.where(var_group[:, None], thr[True][key], thr[False][key])
+    # 主要警報（單尾上升）與下降型偏離（獨立計數）
+    flags_up = (ta > 0) & (ts > 0) & (ta > pick("ar_hi")) & (ts > pick("sd_hi"))
+    flags_dn = (ta < 0) & (ts < 0) & (ta < pick("ar_lo")) & (ts < pick("sd_lo"))
     t_end = np.where(te >= 0, te, T)
-    first, false_ct, py = alarms_from_flags(flags, days, t_end, te, horizon, T)
+    first, false_ct, py = alarms_from_flags(flags_up, days, t_end, te, horizon, T)
+    dn_first, dn_ct, _ = alarms_from_flags(flags_dn, days, t_end, te, horizon, T)
 
-    tflags = trend_alarm(X, C["scale"]["x_event"], days, W["trend_alarm_horizon_days"]["value"],
-                         W["trend_min_history_days"]["value"])
-    tfirst, tfalse, _ = alarms_from_flags(tflags, days, t_end, te, horizon, T)
-
-    # 首次警報時兩個指標的方向（雙尾規則下，記錄是「都上升」還是「下降」觸發，供解讀）
-    fi = np.searchsorted(days, np.where(first >= 0, first, days[0]))
-    dir_ar = ta[np.arange(n), np.minimum(fi, len(days) - 1)] > 0
-    dir_sd = ts[np.arange(n), np.minimum(fi, len(days) - 1)] > 0
+    burn = W["trend_min_history_days"]["value"]
+    tflags = trend_alarm(X, C["scale"]["threshold_egfr"], days, W["trend_alarm_horizon_days"]["value"], burn)
+    tfirst, tfalse, tpy = alarms_from_flags(tflags, days, t_end, te, horizon, T, start_day=burn)
 
     ev = te >= 0
     res = dict(window=int(win), detrend=mode, n_eval_days=int(len(days)), null=nullinfo,
@@ -256,26 +250,29 @@ def run_warning(C, P, win, mode, rng, verbose=False):
                by_type={})
     for name, mask in (("flip", is_flip), ("linear", ~is_flip)):
         m_ev = mask & ev
-        alarmed = mask & (first >= 0)
         det = m_ev & (first >= 0) & (first <= te)
-        lead_ev = (te - first)[det].astype(float)
+        tdet = m_ev & (tfirst >= 0) & (tfirst <= te)
         row = dict(n=int(mask.sum()), n_event=int(m_ev.sum()),
-                   frac_any_alarm=float(alarmed.sum() / max(1, mask.sum())),
+                   frac_any_alarm=float((mask & (first >= 0)).sum() / max(1, mask.sum())),
                    detection_rate=float(det.sum() / max(1, m_ev.sum())),
-                   lead_to_event_days=_q(lead_ev),
+                   lead_to_event_days=_q((te - first)[det].astype(float)),
                    false_alarms_per_person_year=float(false_ct[mask].sum() / max(py[mask].sum(), 1e-9)),
-                   direction=dict(ar1_up=float(np.nanmean(ta[mask, -1] > 0)), sd_up=float(np.nanmean(ts[mask, -1] > 0))),
-                   first_alarm_direction=dict(
-                       both_up=float((dir_ar & dir_sd)[alarmed].mean()) if alarmed.any() else np.nan,
-                       both_down=float((~dir_ar & ~dir_sd)[alarmed].mean()) if alarmed.any() else np.nan,
-                       mixed=float((dir_ar ^ dir_sd)[alarmed].mean()) if alarmed.any() else np.nan),
-                   trend_detection_rate=float((m_ev & (tfirst >= 0) & (tfirst <= te)).sum() / max(1, m_ev.sum())),
-                   trend_lead_to_event_days=_q((te - tfirst)[m_ev & (tfirst >= 0) & (tfirst <= te)].astype(float)),
-                   trend_false_alarms_per_person_year=float(tfalse[mask].sum() / max(py[mask].sum(), 1e-9)))
+                   # 下降型偏離（v2 肆）：只計數報告，不計入主要提前期
+                   downward=dict(frac_any=float((mask & (dn_first >= 0)).sum() / max(1, mask.sum())),
+                                 episodes_per_person_year=float(dn_ct[mask].sum() / max(py[mask].sum(), 1e-9)),
+                                 frac_before_event=float(((dn_first >= 0) & (dn_first <= te))[m_ev].mean()) if m_ev.any() else np.nan),
+                   trend_detection_rate=float(tdet.sum() / max(1, m_ev.sum())),
+                   trend_lead_to_event_days=_q((te - tfirst)[tdet].astype(float)),
+                   trend_false_alarms_per_person_year=float(tfalse[mask].sum() / max(tpy[mask].sum(), 1e-9)))
         if name == "flip":
             wc = mask & (tc >= 0) & (first >= 0)
-            row["lead_to_crit_days"] = _q((tc - first)[wc].astype(float))     # 可為負（臨界日之後才警報）
+            row["lead_to_crit_days"] = _q((tc - first)[wc].astype(float))         # 可為負（臨界日之後才警報）
             row["frac_alarm_before_crit"] = float(((tc - first)[wc] > 0).mean()) if wc.any() else np.nan
+            wt = mask & (tt >= 0) & (first >= 0)
+            row["lead_to_threshold_days"] = _q((tt - first)[wt].astype(float))
+            wce = mask & ev & (tc >= 0)
+            row["event_minus_crit_days"] = _q((te - tc)[wce].astype(float))       # v2 玖.3 兩個量並報
+            row["frac_alarm_after_onset"] = float((first[mask & (first >= 0)] >= C["t_onset"][mask & (first >= 0)]).mean()) if (mask & (first >= 0)).any() else np.nan
         res["by_type"][name] = row
     a = (te - first)[is_flip & ev & (first >= 0) & (first <= te)]
     b = (te - first)[~is_flip & ev & (first >= 0) & (first <= te)]
@@ -283,7 +280,6 @@ def run_warning(C, P, win, mode, rng, verbose=False):
     ta_ = (te - tfirst)[is_flip & ev & (tfirst >= 0) & (tfirst <= te)]
     tb_ = (te - tfirst)[~is_flip & ev & (tfirst >= 0) & (tfirst <= te)]
     res["perm_test_trend_lead_flip_vs_linear"] = perm_diff_median(ta_, tb_, W["n_permutation_leadtime"], rng)
-    # 預警相對趨勢外推的增量（同一人）：CSD 警報比趨勢警報早幾天
     both = ev & (first >= 0) & (tfirst >= 0) & (first <= te) & (tfirst <= te)
     res["csd_minus_trend_lead_days"] = {"flip": _q((tfirst - first)[both & is_flip].astype(float)),
                                         "linear": _q((tfirst - first)[both & ~is_flip].astype(float))}

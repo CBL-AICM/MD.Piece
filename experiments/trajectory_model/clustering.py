@@ -162,8 +162,9 @@ def cluster_stratum(X, method, P, rng, gen_labels=None):
 
 
 def generator_labels(C):
-    """翻轉型 = 10、線性型 = 子類別 0..2。"""
-    return np.where(C["is_flip"], 10, C["cls"])
+    """線性型 = 子類別 0..2；翻轉型分「五年內未跨 μc（穩定）」= 10 與「已跨 μc（翻轉）」= 11——
+    漂移起始日隨機後，多數翻轉型在 T 內未翻轉、序列近似定態，與已翻轉者是兩種形狀。"""
+    return np.where(C["is_flip"], np.where(C["t_crit"] >= 0, 11, 10), C["cls"])
 
 
 def run_clustering(C, strata, method, P, rng):

@@ -17,7 +17,7 @@ P = load_params(os.path.join(HERE, "params.json"), verbose=False)
 # ---------------------------------------------------------------- 模組二
 def test_risk_score_ignores_everything_after_baseline():
     """禁止事項 1：基線分數不得用 x(t>0)。把 t>0 的整條序列改掉，分數必須一位不變。"""
-    C = make_cohort(P, 2, n=200, delta_mu_median=1.55, kappa=0.5)
+    C = make_cohort(P, 2, n=200, delta_mu_median=0.6, lam0=1.2e-4, beta=1.1)
     coefs = fit_risk_coefficients(C)
     s1 = risk_score(C, coefs)
     C2 = dict(C); C2["X"] = C["X"] + 100.0
@@ -61,7 +61,7 @@ def test_landmark_features_cannot_see_the_future():
     F2 = landmark_features(X2, 200, 90)
     assert np.array_equal(np.nan_to_num(F1), np.nan_to_num(F2))
     # 也不得用「未來」的分群標籤：run_prediction 的輸入根本沒有 clustering 這個欄位
-    C = make_cohort(P, 4, n=150, delta_mu_median=1.55, kappa=0.5)
+    C = make_cohort(P, 4, n=150, delta_mu_median=0.6, lam0=1.2e-4, beta=1.1)
     Pq = dict(P); Pq["prediction"] = dict(P["prediction"], landmarks_days=[180], timing_landmark_step_days=365)
     r = run_prediction(C, Pq, 4)
     assert set(r["landmarks"]) == {"180"} and "auc_dynamic" in r["landmarks"]["180"]
@@ -91,10 +91,14 @@ def test_alarm_bookkeeping_first_alarm_false_alarms_and_person_time():
     assert list(first) == [14, 7, -1]
     assert list(false_ct) == [0, 2, 0]
     assert abs(py[0] - 40 / 365.25) < 1e-9 and abs(py[1] - 100 / 365.25) < 1e-9
+    # v2 陸：burn-in 期不得警報且自分母扣除
+    first_b, false_b, py_b = alarms_from_flags(flags, days, t_end, t_event, horizon=30, T=T, start_day=10)
+    assert list(first_b) == [14, 35, -1] and list(false_b) == [0, 1, 0]
+    assert abs(py_b[1] - 90 / 365.25) < 1e-9
 
 
-def test_block_permutation_preserves_blocks_and_two_sided_thresholds():
-    """區塊置換要保留窗內結構（只打亂區塊順序），雙尾閾值要用 alpha/2 兩端（禁止事項 5）。"""
+def test_block_permutation_preserves_blocks_and_one_sided_thresholds():
+    """區塊置換要保留窗內結構（只打亂區塊順序）；警報閾值上尾／下尾各取 alpha（v2 肆：主警報單尾上升）。"""
     x = np.arange(20.0)
     Xp = block_permute(x, 6, 5, np.random.default_rng(0))
     orig_blocks = [tuple(x[0:6]), tuple(x[6:12]), tuple(x[12:18]), tuple(x[18:20])]
@@ -105,7 +109,7 @@ def test_block_permutation_preserves_blocks_and_two_sided_thresholds():
         for b in orig_blocks:
             assert any(s[i:i + len(b)] == b for i in range(len(s) - len(b) + 1))
     null = np.random.default_rng(1).normal(size=(4000, 3))
-    thr = _thresholds(null, null, 0.05, True)
-    assert np.all(thr["ar_lo"] < -1.8) and np.all(thr["ar_hi"] > 1.8)
+    thr = _thresholds(null, null, 0.05)
+    assert np.all(thr["ar_lo"] < -1.5) and np.all(thr["ar_hi"] > 1.5)          # 上尾／下尾各 5%
     M = residual_matrix(21, "linear", 0.25)
     assert np.allclose(M @ np.arange(21.0), 0, atol=1e-9)        # 直線去趨勢把直線消掉

@@ -22,22 +22,42 @@ def _save(fig, outdir, name):
 
 
 def fig1_single_case(fd, outdir):
-    """單一翻轉型個案：x(t)、滾動 AR(1)、滾動 SD，標出臨界日／事件日／首次警報。"""
+    """單一翻轉型個案：eGFR(t)、滾動 AR(1)、滾動 SD，標出漂移起始／臨界日／門檻日／事件日／首次警報。"""
     x, ar, sd = np.asarray(fd["x"]), np.asarray(fd["ar1"]), np.asarray(fd["sd"])
     win, T = fd["window"], len(x)
     tt = np.arange(T); tw = np.arange(len(ar)) + win - 1
     fig, ax = plt.subplots(3, 1, figsize=(7.5, 6.5), sharex=True)
-    ax[0].plot(tt, x, color="0.2", lw=0.8); ax[0].axhline(fd["x_event"], color="0.5", ls=":", lw=1)
-    ax[0].set_ylabel("活動度 x（無單位；虛線=事件門檻）")
+    ax[0].plot(tt, x, color="0.2", lw=0.8); ax[0].axhline(fd["threshold"], color="0.5", ls=":", lw=1)
+    ax[0].set_ylabel("eGFR（mL/min/1.73m²；虛線=門檻 15）")
     ax[1].plot(tw, ar, color="0.2", lw=0.8); ax[1].set_ylabel(f"滾動 AR(1)（窗 {win} 天）")
-    ax[2].plot(tw, sd, color="0.2", lw=0.8); ax[2].set_ylabel(f"滾動 SD（窗 {win} 天）")
+    ax[2].plot(tw, sd, color="0.2", lw=0.8); ax[2].set_ylabel(f"滾動 SD（mL/min/1.73m²；窗 {win} 天）")
     ax[2].set_xlabel("時間（天）")
     for a in ax:
+        if fd.get("t_onset", -1) >= 0: a.axvline(fd["t_onset"], color="0.7", ls=":", lw=1)
         if fd["t_crit"] >= 0: a.axvline(fd["t_crit"], color="0.1", ls="--", lw=1)
-        if fd["t_event"] >= 0: a.axvline(fd["t_event"], color="0.1", ls="-", lw=1)
+        if fd.get("t_threshold", -1) >= 0: a.axvline(fd["t_threshold"], color="0.4", ls="--", lw=0.8)
+        if fd["t_event"] >= 0: a.axvline(fd["t_event"], color="0.1", ls="-", lw=1.2)
         if fd["first_alarm"] >= 0: a.axvline(fd["first_alarm"], color="0.55", ls="-.", lw=1)
-    ax[0].set_title(f"翻轉型個案 #{fd['idx']}：--臨界日 {fd['t_crit']}，—事件日 {fd['t_event']}，-·-首次警報 {fd['first_alarm']}（去趨勢：{fd['detrend']}）", fontsize=9)
+    ax[0].set_title(f"翻轉型個案 #{fd['idx']}：漂移起始 {fd.get('t_onset', float('nan')):.0f}、--臨界日 {fd['t_crit']}、門檻日 {fd.get('t_threshold', -1)}、"
+                    f"—事件日 {fd['t_event']}、-·-首次警報 {fd['first_alarm']}（去趨勢：{fd['detrend']}）", fontsize=8.5)
     return _save(fig, outdir, "fig1_flip_case_indicators.png")
+
+
+def fig6_tau_scan(scans, outdir):
+    """v2 壹：Δμ 掃描曲線——各 tau 下 median(t_threshold − t_crit) 對 Δμ 中位；tau ≤ 30 時預警窗口塌縮。"""
+    fig, ax = plt.subplots(1, 2, figsize=(9, 3.6))
+    for j, (tau, rows) in enumerate(sorted(scans.items(), key=lambda kv: float(kv[0]))):
+        m = [r["delta_mu_median"] for r in rows]
+        d = [r["median_threshold_minus_crit_days"] if r["median_threshold_minus_crit_days"] is not None else np.nan for r in rows]
+        fr = [r["frac_crossing"] for r in rows]
+        ax[0].plot(m, d, marker="osd^"[j % 4], color=GREYS[j], label=f"τ = {tau} 天")
+        ax[1].plot(m, fr, marker="osd^"[j % 4], color=GREYS[j], label=f"τ = {tau} 天")
+    ax[0].axhline(180, color="k", ls=":", lw=0.8); ax[0].axhline(90, color="0.5", ls=":", lw=0.8)
+    ax[0].set_xscale("log"); ax[0].set_xlabel("Δμ 中位（漂移量）"); ax[0].set_ylabel("t_threshold − t_crit 中位（天）")
+    ax[0].set_title("鬆弛時間 τ 決定預警窗口是否存在（點線＝180／90 天）", fontsize=9); ax[0].legend(fontsize=8)
+    ax[1].set_xscale("log"); ax[1].set_xlabel("Δμ 中位"); ax[1].set_ylabel("跨過 μc 且到達門檻的比例"); ax[1].legend(fontsize=8)
+    ax[1].set_title("τ ≤ 30：t_threshold − t_crit 中位不超過 90 天，預警窗口塌縮", fontsize=9)
+    return _save(fig, outdir, "fig6_tau_scan.png")
 
 
 def fig2_strata_types(cl_res, gen_share, outdir, title=""):

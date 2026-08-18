@@ -1,55 +1,65 @@
 # 疾病軌跡模型（模擬與分析流程）
 
-依 `疾病軌跡模型_建置提示詞_v1.md` 與 `規格決定書_v1.md`（2026-08-17）實作。
+依 `疾病軌跡模型_建置提示詞_v1.md`、`規格決定書_v1.md`、`規格決定書_v2_裁決.md`（2026-08-17/18）實作。
 檢驗 H1（風險層內多種軌跡型態）、H2（軌跡資訊改變的是對象與時機而非排序）、H3（預警的型態依賴）。
 
 ## 執行
 
 ```bash
 cd experiments/trajectory_model
-python -m pytest tests -q            # 17 個單元測試（含 FADE 等價、洩漏防護、統計定義）
-python run.py --quick                # 煙霧測試：n=400、1 seed、少量置換（約 1.5 分鐘）
-python -u run.py --jobs 12 --out results   # 完整格點：n=3000、5 seed、6 變體（數十分鐘～數小時，視 CPU）
+python -m pytest tests -q                 # 20 個單元測試（FADE 等價、洩漏防護、β=0 無增益、分層混合、漂移起始…）
+python run.py --quick                     # 煙霧測試（n=400、1 seed；--quick --n 1500 可放大）
+python -u run.py --jobs 12 --out results  # 完整格點：n=3000、5 seed、各變體（數小時）
+python run.py --figures-only --out results   # 只由 results.json 重繪六張圖
 ```
 
-輸出：`results/results.json`（所有數值結果，含每個參數組合、每個 seed、聚合的平均／範圍）、
-`results/figures/fig1–fig5*.png`（黑白灰）。
+輸出：`results/results.json`（所有數值結果：每個參數組合、每 seed、聚合平均／範圍、校準紀錄、τ 掃描、
+洩漏警訊清單、figure_data）、`results/figures/fig1–6*.png`（黑白灰）、`results/assumptions.md`（假設／校準參數清單，供計畫書附錄）。
 
 ## 檔案
 
 | 檔案 | 模組 | 內容 |
 |---|---|---|
-| `params.json` | 零 | 外部參數檔：每列附 `source`；`derived_from` 為 `assumption`／`calibrated_*` 者啟動時列印 |
-| `fade_components.py` | — | 自 FADE `fade_sim.py` 逐字複製的元件（決定書 §10）；僅 `simulate_S0` 加 `tau` 參數 |
-| `cohort.py` | 一 | 生成器（甲：OU 有色雜訊線性型；乙：雙穩態 SDE 複用 `simulate_S0`）、x↔eGFR 刻度、校準（§1 Δμ、§3 κ）|
+| `params.json` | 零 | 外部參數檔：每列附 `source`；`derived_from` 為 `assumption`／`calibrated_*` 者啟動時列印並寫入 assumptions.md |
+| `fade_components.py` | — | 自 FADE `fade_sim.py` 逐字複製的元件（v1 §10）；僅 `simulate_S0` 加 `tau` 與外給 `mu_path` |
+| `cohort.py` | 一 | 生成器（甲：OU 有色雜訊線性型；乙：雙穩態 SDE 於標準座標 y，平移到個案基線）、風險驅動事件、漂移起始日、校準（Δμ、λ0）、分層混合檢核、型別可分辨度 |
 | `risk.py` | 二 | 基線 logistic 風險分數（pilot 世代配適一次）、五／十分位分層 |
-| `clustering.py` | 三 | 方法 A（多項式係數 → GMM）／B（特徵 → k-means）；BIC＋bootstrap 穩定度選 K；時間打亂置換檢定；對生成器標籤的 ARI/NMI |
+| `clustering.py` | 三 | 方法 A（正交多項式係數 → GMM）／B（特徵 → k-means，分類似然 BIC）；BIC＋bootstrap 穩定度選 K；時間打亂置換檢定；對生成器標籤 ARI/NMI |
 | `prediction.py` | 四 | 靜態 vs 地標動態；C 指數／Brier；淨重新分類（絕對＋相對閾值）；介入時點位移（每 90 天）|
-| `warning.py` | 五 | 滾動 AR(1)/SD（= FADE 定義，向量化）；逐前綴 Kendall τ；區塊置換共同虛無分布＋同質性檢核；雙尾警報規則；提前期／偽警報；趨勢外推比較基準 |
-| `figures.py` | — | 五張圖 |
-| `run.py` | — | 單一入口；格點與變體；平行；聚合；洩漏警訊 |
+| `warning.py` | 五 | 滾動 AR(1)/SD（= FADE 定義，向量化）；逐前綴 Kendall τ；區塊置換共同虛無＋同質性；單尾上升警報＋下降型偏離計數；三種提前期；趨勢外推基準（burn-in）|
+| `figures.py` | — | 六張圖（含 v2 壹 的 τ 掃描圖）|
+| `run.py` | — | 單一入口；變體與格點；unreachable 留白；分層混合檢核停止；平行；聚合；洩漏警訊 |
 | `tests/` | — | 每個模組至少一個測試，每個測試註明它守住哪條方法學規則 |
 
-## 決定書 → 程式對照（重點）
+## 生成器（v2 後）
 
-- §2 刻度：`cohort.derived_scale`——健康穩態 x_L(μ_start) ↔ eGFR 90、摺疊點 −1/√3 ↔ 60、事件門檻 = eGFR 15 映射後的固定 x 值，兩型共用；`t_crit` 與 `t_event` 分開記錄，另記 `t_depart` 與「下墜時間」（eGFR 60→15）。
-- §4 甲型 OU：`cohort.simulate_linear`；`tau_ou` 預設自動取 τ/λ₀ 使兩型 lag-1 自相關理論值相同；每組設定都回報兩型基線 AR(1)。
-- §5 τ：`fade_components.simulate_S0(tau=...)`；格點 14/30/60。
-- §6 退出：`make_cohort(dropout=True)` 複用 `apply_S2` 的退出邏輯（語意 = 停止記錄，結果事件仍已知）；只跑模組四。
-- §7 高風險：`prediction._high` 絕對（≥ 事件率）與相對（前 20%）兩種都報。
-- §8 位移：`prediction.run_prediction` 的 `timing`：每 90 天地標、直方圖＋累積分布（圖 4）。
-- §9 虛無分布：`warning.build_null` 200 人 × 100 次區塊置換合併；KS 檢核高／低變異兩群，p<0.05 分層。
-- §10 複用：`fade_components.py`；`tests/test_fade_equiv.py` 證明 `simulate_S0`（τ=1）逐位元相同、滾動指標與 `resilience_tau` 給出相同 τ。
+- **共同刻度**：序列單位為 eGFR（低＝差）。兩型 x₀ 自同一基線分布抽（KDIGO G2–G4 均勻）；型別由潛在易感度決定（`type_link_beta`），不得由 x₀ 決定（v2 捌）。
+- **翻轉型**：雙穩態 SDE 在標準座標 y 上跑（FADE `simulate_S0`，τ=60），以固定尺度 b（健康態↔90、摺疊點↔60 的參考幾何）平移到個案基線 eGFR = eGFR₀ − b·(y − y_L)，因此翻轉形狀與 CSD 可偵測性與 x₀ 無關。每人抽漂移起始日（0–1095 天）與漂移期（90–730 天），起始日前 μ 固定、序列定態（v2 玖）。
+- **線性型**：eGFR = eGFR₀ − 斜率·t + OU 雜訊；斜率子類別取 O'Hare 2012。
+- **三個時點**：`t_crit`（μ 跨 μc）、`t_threshold`（eGFR 首次 ≤ 15，描述性里程碑）、`t_event`（風險驅動：λ(t)=λ₀·exp(β·(15−max(eGFR,0))/10)，β 固定 ln 3（KFRE 量級假設），λ₀ 校準到五年事件率 22.5%）（v2 參）。
+- **校準**：Δμ 中位以 median(t_threshold − t_crit)=180 天反推（參考幾何 x₀=90）；不可達的 τ／時程格標 `unreachable` 留白（v2 壹）。
 
-## 實作中發現、需你裁決的事項（詳見 PR／回報）
+## 方法章節要寫進去的三件事（v2 伍、柒、拾壹）
 
-1. **§1 翻轉時程反推在 τ=14/30 不可達**：雜訊誘發的提早逃逸使 t_event − t_crit 的中位數對任何漂移速率都 ≤ 約 90 天（`results.json → calibration.*.delta_mu.scan`）。τ=60 可達（Δμ 中位 1.04 → 180 天）。不可達時退回 FADE 等價 Δμ 分布（`fade_default_fallback`），3／12 個月兩格改為 Δμ×0.5／×2 敏感度變體並明說。
-2. **§1 起始水準 vs §3 C 指數目標互相矛盾**：O'Hare 各類別的起始水準是「透析前兩年」的水準，照字面線性型 5 年事件率 ≈ 99%、靜態 C ≈ 0.97，§3 的 0.65–0.75 校準不可能達成。已加 `linear_classes.linear_start_mode`：預設 `kdigo_g2_g4_uniform`（起始 eGFR 均勻取自 15–90，標為假設），`ohare_ranges` 為字面版可切換。
-3. **模組四洩漏警訊會觸發**：動態 C 指數在 365／730 天地標增益 > 0.05。資料流經測試證明只用 X[:, :L]（`test_landmark_features_cannot_see_the_future`）；增益來自結局本身是同一序列跨門檻，近期水準／斜率是合法的近端訊號——這是生成器的性質，不是發現，也不是洩漏。
-4. **警報規則雙尾**：依禁止事項 5，AR(1) 與 SD 的 τ 落在雙尾 95% 區間外才警報，因此「下降」也會觸發；`first_alarm_direction` 記錄首次警報時兩指標方向，供判讀。
-5. **時間打亂置換檢定的意義**：置換保留每條序列的水準與總變異，p 值只回答「分群是否由時間形狀驅動」；只靠起始水準分開的群 p 不顯著。
-6. **趨勢外推比較基準**（H3 後半，我加的）：至少 90 天歷史才評估（`trend_min_history_days`，假設）；CSD 警報規則本身未動。
-7. **k-means 的資訊準則**：常見的等向 k-means BIC 在純高斯雜訊上會一路選到 k_max（測試抓到），改用分割的分類似然 BIC（完整共變異數）；GMM 方法 A 的多項式係數改用正交基底、不做 z 分數（否則純雜訊高次項被放大、沿雜訊維度切群）。
+1. **時間打亂置換的虛無假設**是「該序列的時間順序不帶資訊」，**不是**「該序列無變異」：置換保留每條序列的水準與總變異，因此顯著代表變化的**形狀**有意義，而非幅度有意義。
+2. **方法學自我檢核實例**（單元測試抓出、已修）：(a) 常見的 k-means 等向 BIC 在純高斯雜訊上會一路選到 k_max → 改用分割的分類似然 BIC（完整共變異數），雜訊上選 K=1、植入兩群選 K=2；(b) 原始多項式基底 1, t, t² 高度共線，z-score 不解決共線，純雜訊的高次項會被放大而沿雜訊維度切群 → 改用正交（Legendre）基底、不做 z-score。這兩項說明為何以兩種演算法互相對照。
+3. **限制**：方法 A 是「每人 OLS 係數 → GMM」的兩階段近似，非逐點似然的完整群組軌跡模型；已知偏誤方向——忽略係數的估計不確定性，短序列／高雜訊時類內散布被高估、類界模糊、傾向低估類別分離度而以較多小群補償（本研究序列長 1825 點，此偏誤較小，但仍應報告 `hit_kmax`）。
+
+## v2 裁決落地對照
+
+| v2 | 落地 |
+|---|---|
+| 壹 τ | 主分析 τ=60、窗 {21,42,60,90}；τ 14/30 與 12 個月目標 → `unreachable` 留白；τ 掃描曲線 fig6 |
+| 貳 起始水準 | 主分析 `kdigo_g2_g4_uniform`（`assumption_alignment_corrected`）；`ohare_ranges` 示範變體實際跑 |
+| 參 結局 | 風險驅動；三時點；`test_hazard_beta_zero_makes_trajectory_uninformative` |
+| 肆 警報 | 主警報單尾上升（τ 同為正且 > 95 分位）；下降型偏離獨立計數（`downward`）；假設檢定雙尾 |
+| 伍 置換 | 方法說明（上）＋程式註解 |
+| 陸 burn-in | 趨勢基準 90 天內不警報、自偽警報分母扣除（`alarms_from_flags(start_day)`）|
+| 柒 方法缺陷 | 寫入方法章節（上）|
+| 捌 起始重疊 | 同分布 x₀、型別由 s 決定、分層單一型別 >90% 停止（pilot 與每 job）|
+| 玖 漂移起始 | `build_mu_path`；並報 t_event−t_crit 與 t_event−首次警報；>1 年標為設定產物 |
+| 拾 不宣稱 | 計畫書表二已加 N7（絕對提前期）、N8（C 增益絕對大小）|
+| 拾壹 | 假設清單 → `results/assumptions.md`；圖 1／5 由本輪重跑產生 |
 
 ## 誠實提醒
 
