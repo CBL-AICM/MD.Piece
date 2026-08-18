@@ -62,7 +62,7 @@ def fig6_tau_scan(scans, outdir):
         vals = [r["median_threshold_minus_crit_days"] for r in rows if r["median_threshold_minus_crit_days"] is not None and np.isfinite(r["median_threshold_minus_crit_days"])]
         mx[float(tau)] = max(vals) if vals else float("nan")
     parts = "、".join(f"τ={int(t)} 最長 {mx[t]:.0f} 天" for t in sorted(mx) if t < 60)
-    ax[1].set_title(f"實測：{parts}——皆不足以支撐六個月的預警窗口", fontsize=9)
+    ax[1].set_title(f"實測：{parts}（皆不足六個月）", fontsize=9)
     fig.suptitle("τ ≤ 30 時預警窗口塌縮：雜訊誘發的提早逃逸使臨界日與門檻日塌縮在一起", fontsize=9)
     return _save(fig, outdir, "fig6_tau_scan.png")
 

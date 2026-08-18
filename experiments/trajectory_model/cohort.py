@@ -396,7 +396,7 @@ def calibrate_delta_mu(P, tau=None, target_days=None, seed=None, n_pilot=800, it
     return out
 
 
-def calibrate_hazard(P, delta_mu_median, tau=None, seed=None, n_pilot=1500, iters=12, verbose=True, start_mode=None, linear_onset=None):
+def calibrate_hazard(P, delta_mu_median, tau=None, seed=None, n_pilot=1500, iters=12, verbose=True, start_mode=None, linear_onset=None, kappa_fixed=None):
     """v2 參：λ0 校準使五年事件率落在目標區間中點；β 固定為文獻量級的假設值（hazard.beta_per_10_egfr），
     因為靜態 C 對 β 並非單調（在中等 β 附近最高、極端 β 反而下降），無法用二分法求；
     C 若不在目標區間，改在 kappa 格點（基線↔易感度相關）上挑最接近中點者。
@@ -411,6 +411,9 @@ def calibrate_hazard(P, delta_mu_median, tau=None, seed=None, n_pilot=1500, iter
     def fit(kappa):
         C0 = make_cohort(P, seed, n=n_pilot, tau=tau, delta_mu_median=delta_mu_median, lam0=1e-4, beta=beta,
                          start_mode=start_mode, kappa=kappa, linear_onset=linear_onset)
+        # 二分前確認目標事件率被 λ0 上下界夾住（codex 稽核）
+        er_at = [with_events(C0, np.exp(bb), beta, P)["event"].mean() for bb in (l_lo, l_hi)]
+        bracketed = bool(er_at[0] <= er_mid <= er_at[1])
         lo, hi = l_lo, l_hi
         for _ in range(iters):
             mid = 0.5 * (lo + hi)
@@ -419,18 +422,19 @@ def calibrate_hazard(P, delta_mu_median, tau=None, seed=None, n_pilot=1500, iter
             else:
                 hi = mid
         lam = float(np.exp(0.5 * (lo + hi))); Cb = with_events(C0, lam, beta, P)
-        return dict(kappa=kappa, lambda0_per_day=lam, pilot_event_rate=float(Cb["event"].mean()), pilot_static_auc=float(static_auc(Cb)))
+        return dict(kappa=kappa, lambda0_per_day=lam, pilot_event_rate=float(Cb["event"].mean()), pilot_static_auc=float(static_auc(Cb)),
+                    lambda0_bracketed=bracketed)
 
-    k0 = _val(B["kappa"])
+    k0 = _val(B["kappa"]) if kappa_fixed is None else kappa_fixed
     best = fit(k0); tried = [best]
-    if not (c_lo <= best["pilot_static_auc"] <= c_hi):
+    if kappa_fixed is None and not (c_lo <= best["pilot_static_auc"] <= c_hi):
         for k in _val(B["kappa_grid"]):
             if k != k0:
                 tried.append(fit(k))
         best = min(tried, key=lambda r: abs(r["pilot_static_auc"] - c_mid))
     out = dict(beta_per_10_egfr=float(beta), hazard_ratio_per_10_egfr=float(np.exp(beta)), **best,
                event_rate_target=[er_lo, er_hi], static_c_target=[c_lo, c_hi],
-               in_target=bool(c_lo <= best["pilot_static_auc"] <= c_hi and er_lo <= best["pilot_event_rate"] <= er_hi),
+               in_target=bool(c_lo <= best["pilot_static_auc"] <= c_hi and er_lo <= best["pilot_event_rate"] <= er_hi and best["lambda0_bracketed"]),
                kappa_tried=tried)
     if verbose:
         print(f"[校準 λ0] β={beta:.3f}/10 eGFR（HR {np.exp(beta):.2f}，固定）、kappa={best['kappa']}、λ0={best['lambda0_per_day']:.2e}/天 → "

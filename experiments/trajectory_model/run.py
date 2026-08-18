@@ -142,7 +142,12 @@ def aggregate(objs):
         return None
     o0 = objs[0]
     if isinstance(o0, dict):
-        return {k: aggregate([o.get(k) for o in objs]) for k in o0 if not str(k).startswith("_") and k != "mean_traj"}
+        keys = []                                                       # 所有 seed 的 key 聯集（codex 稽核：只看第一個會靜默丟欄位）
+        for o in objs:
+            for k in (o or {}):
+                if k not in keys:
+                    keys.append(k)
+        return {k: aggregate([o.get(k) if isinstance(o, dict) else None for o in objs]) for k in keys if not str(k).startswith("_") and k != "mean_traj"}
     if isinstance(o0, list):
         if all(isinstance(o, list) and len(o) == len(o0) for o in objs) and o0 and not isinstance(o0[0], str):
             return [aggregate([o[i] for o in objs]) for i in range(len(o0))]
@@ -216,7 +221,10 @@ def calibrate_variant(P, v, cache):
     if v.get("beta_mult", 1.0) != 1.0:
         Pv = json.loads(json.dumps({k: x for k, x in P.items() if not k.startswith("_")}))
         Pv["hazard"]["beta_per_10_egfr"]["value"] = _val(P["hazard"]["beta_per_10_egfr"]) * v["beta_mult"]
-    hz = calibrate_hazard(Pv, dm["delta_mu_median"], tau=v["tau"], start_mode=v.get("start_mode"), linear_onset=v.get("linear_onset"))
+    kfix = None
+    if v.get("beta_mult", 1.0) != 1.0:                                  # β 敏感度只動 β 與 λ0：kappa 固定為 default 的值，X 與 U 才與 default 相同
+        kfix = cache[(v["tau"], v["target"], None, 1.0, None)]["hazard"]["kappa"]
+    hz = calibrate_hazard(Pv, dm["delta_mu_median"], tau=v["tau"], start_mode=v.get("start_mode"), linear_onset=v.get("linear_onset"), kappa_fixed=kfix)
     pilot = make_cohort(P, P["sim"]["seed"] + 1000, n=1500, tau=v["tau"], delta_mu_median=dm["delta_mu_median"],
                         lam0=hz["lambda0_per_day"], beta=hz["beta_per_10_egfr"], kappa=hz["kappa"], start_mode=v.get("start_mode"),
                         linear_onset=v.get("linear_onset"))
@@ -250,18 +258,21 @@ def run_gates(P, calib, n=4000, n_gate=12000):
     thr1 = _val(P["risk_score"]["stratum_single_type_max"])
     g1 = dict(gate="閘門一 風險層內單一型別佔比（全部層之最大值）", value=round(float(worst), 3),
               criterion=f"<= {thr1}", passed=bool(worst <= thr1), fail_means="H1 被設定成偽，x0 重疊未生效")
-    # 閘門二：β=0 → 事件與 x(t) 無關。ΔC 在 n=1500 的抽樣雜訊約 ±0.02（兩個方向都有），
-    # 0.01 的門檻要在更大的檢核世代（n_gate）上、以三地標的「帶號平均」評估，才量得到結構性耦合而非雜訊。
-    Cg = make_cohort(P, P["sim"]["seed"] + 3000, n=n_gate, tau=v["tau"], delta_mu_median=calib["delta_mu"]["delta_mu_median"],
-                     lam0=calib["hazard"]["lambda0_per_day"], beta=0.0, kappa=calib["hazard"]["kappa"])
-    Cg = with_events(Cg, calib["hazard"]["lambda0_per_day"] * 2.5, 0.0, P)
+    # 閘門二：β=0 → 事件與 x(t) 無關。ΔC 在 n=1500 的抽樣雜訊約 ±0.02，n=12000 約 ±0.007（兩個方向都有）；
+    # 依 codex 稽核改為「每個地標的 |ΔC| 都要 < 0.01」（帶號平均會讓正負抵消），並以 3 個閘門 seed 平均壓噪音，逐地標列印。
     Pq = dict(P); Pq["prediction"] = dict(P["prediction"], landmarks_days=[180, 365, 730])
-    r0 = run_prediction(Cg, Pq, 77, timing=False)
-    gains = {L: row["c_gain"] for L, row in r0["landmarks"].items()}
-    mean_signed = float(np.mean(list(gains.values())))
-    g2 = dict(gate=f"閘門二 β=0 時動態相對靜態的 C 增益 |ΔC|（n={n_gate}，三地標帶號平均；各地標見 detail）", value=round(abs(mean_signed), 4),
-              detail={L: round(g, 4) for L, g in gains.items()}, criterion="< 0.01", passed=bool(abs(mean_signed) < 0.01),
-              fail_means="結局仍與 x(t) 耦合，洩漏未解")
+    per_seed = []
+    for gs in range(3):
+        Cg = make_cohort(P, P["sim"]["seed"] + 3000 + gs, n=n_gate, tau=v["tau"], delta_mu_median=calib["delta_mu"]["delta_mu_median"],
+                         lam0=calib["hazard"]["lambda0_per_day"], beta=0.0, kappa=calib["hazard"]["kappa"])
+        Cg = with_events(Cg, calib["hazard"]["lambda0_per_day"] * 2.5, 0.0, P)
+        r0 = run_prediction(Cg, Pq, 77 + gs, timing=False)
+        per_seed.append({L: row["c_gain"] for L, row in r0["landmarks"].items()})
+    gains = {L: float(np.mean([d[L] for d in per_seed])) for L in per_seed[0]}
+    worst = float(max(abs(g) for g in gains.values()))
+    g2 = dict(gate=f"閘門二 β=0 時動態相對靜態的 C 增益：max_L |ΔC_L|（n={n_gate}×3 seed 平均；各地標／各 seed 見 detail）", value=round(worst, 4),
+              detail=dict(mean={L: round(g, 4) for L, g in gains.items()}, per_seed=[{L: round(g, 4) for L, g in d.items()} for d in per_seed]),
+              criterion="< 0.01", passed=bool(worst < 0.01), fail_means="結局仍與 x(t) 耦合，洩漏未解")
     auc = type_separability(C, 180, pre_onset_only=True)
     g3 = dict(gate="閘門三 僅取定態期資料（起始日 >= 180 天者之前 180 天）之型別分類 AUROC", value=round(float(auc), 3),
               criterion="0.45–0.55", passed=bool(0.45 <= auc <= 0.55), fail_means="兩型在機制啟動前即可分，混淆未除")

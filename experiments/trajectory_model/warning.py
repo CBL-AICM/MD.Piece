@@ -59,6 +59,8 @@ def prefix_tau(Y, chunk=64):
     S_k = Σ_{j<k} (2 c_j - j)，c_j = 較早且較小的個數。c_j 以 sqrt(m) 分桶法算：
     較低桶的計數用一次 cumsum、同桶內才做兩兩比較 → O(m·sqrt(m))，比 O(m²) 快一個量級。"""
     Y = np.asarray(Y, dtype=np.float64)
+    # 前提：指標為連續值（tau-a，不做 tie 校正；相等值極少見）。NaN（如零變異窗的 AR(1)）以 0 代入，避免被排到最大。
+    Y = np.where(np.isfinite(Y), Y, 0.0)
     B_all, m = Y.shape
     out = np.empty((B_all, m), np.float32)
     bs = int(np.ceil(np.sqrt(m))); nb = int(np.ceil(m / bs)); pad = nb * bs - m

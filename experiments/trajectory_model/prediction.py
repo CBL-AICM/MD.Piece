@@ -11,9 +11,11 @@
      決定書 §7）；建議介入時點位移（每 90 天一個地標，決定書 §8）。
 """
 import numpy as np
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import brier_score_loss, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.pipeline import make_pipeline
 
 from fade_components import window_features
 from risk import baseline_matrix
@@ -23,9 +25,10 @@ def cv_pred(F, y, folds, seed):
     y = np.asarray(y).astype(int)
     if y.min() == y.max() or min(np.bincount(y)) < folds:
         return np.full(len(y), y.mean(), dtype=float)
-    F = np.where(np.isnan(F), np.nanmedian(F, axis=0), F)          # 缺值 → 欄中位數（退出敏感度用）
+    # 缺值補中位數放在 Pipeline 內：補值統計只由訓練摺估計（codex 稽核：全體先補值會讓驗證摺參與補值參數）
     cv = StratifiedKFold(folds, shuffle=True, random_state=seed)
-    return cross_val_predict(LogisticRegression(max_iter=2000), F, y, cv=cv, method="predict_proba")[:, 1]
+    model = make_pipeline(SimpleImputer(strategy="median"), LogisticRegression(max_iter=2000))
+    return cross_val_predict(model, F, y, cv=cv, method="predict_proba")[:, 1]
 
 
 def landmark_features(Xobs, L, lookback):
@@ -95,24 +98,37 @@ def run_prediction(C, P, seed, dropout=False, timing=True):
                            high_abs=float(hs["abs"].mean()), high_rel=float(hs["rel"].mean())),
                landmarks={}, dropout=bool(dropout))
 
-    def fit_landmark(L):
+    def fit_landmark(L, refit_static=False):
         risk = (te < 0) | (te >= L)
         yL = (te[risk] >= 0)
         F = np.c_[B[risk], landmark_features(Xobs[risk], L, Q["lookback_days"])]
-        return risk, yL, cv_pred(F, yL, Q["cv_folds"], seed + L)
+        pd = cv_pred(F, yL, Q["cv_folds"], seed + L)
+        if not refit_static:
+            return risk, yL, pd
+        # 公平比較用的對照（codex 稽核）：同一風險集、同一結局 (L,T]、只用基線特徵重新配適
+        ps_refit = cv_pred(B[risk], yL, Q["cv_folds"], seed + L)
+        return risk, yL, pd, ps_refit
 
     for L in Q["landmarks_days"]:
-        risk, yL, pd = fit_landmark(L)
+        risk, yL, pd, ps_refit = fit_landmark(L, refit_static=True)
         ps = p_static[risk]
         rate_L = float(yL.mean()) if len(yL) else np.nan
         row = dict(n_risk=int(risk.sum()), event_rate=rate_L,
+                   # 規格：靜態只配適一次（五年結局），在地標風險集上評估排序；auc 是五年二元結局的 AUC（二元 C 統計量，非 Harrell C）
                    auc_static=_auc(yL, ps), auc_dynamic=_auc(yL, pd),
-                   brier_static=_brier(yL, ps), brier_dynamic=_brier(yL, pd))
+                   brier_static=_brier(yL, ps), brier_dynamic=_brier(yL, pd),
+                   # 同 estimand 對照：基線特徵在同一風險集、同一 (L,T] 結局重新配適
+                   auc_static_refit=_auc(yL, ps_refit), brier_static_refit=_brier(yL, ps_refit))
         row["c_gain"] = row["auc_dynamic"] - row["auc_static"]
+        row["c_gain_vs_refit"] = row["auc_dynamic"] - row["auc_static_refit"]
         row["leak_alert"] = bool(row["c_gain"] > Q["leak_alert_c_gain"]["value"])
         for rule in ("abs", "rel"):
             hd = _high(pd, rule, top, rate_L)
+            # (a) 名單更替：靜態＝基線時的分類（規格語意：加入軌跡後被移入／移出高風險組）
             row[f"reclass_{rule}"] = reclassification(yL, hs[rule][risk], hd)
+            # (b) 標準 NRI：兩模型在同一風險集、同一門檻下分類（abs=風險集事件率；rel=風險集內前 20%）
+            hs_same = _high(ps, rule, top, rate_L)
+            row[f"reclass_same_riskset_{rule}"] = reclassification(yL, hs_same, hd)
         res["landmarks"][str(L)] = row
 
     if not timing:
