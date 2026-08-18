@@ -32,6 +32,7 @@
       "source": "v2 貳：O'Hare 世代以開始透析為終點回顧兩年，人人最後透析；其起始水準搬到前瞻模擬必得 ~99% 事件率、靜態 C 0.97——設計不相容，非參數設錯。主分析兩型 x0 均勻取自 KDIGO G2–G4（15–90）；ohare_ranges 保留並實際跑一次作示範。",
       "derived_from": "assumption_alignment_corrected"},
     "uniform_start_range_egfr": [15, 90],
+    "linear_onset_mode": {"value": "shared", "source": "v2 附錄貳：線性型下降起始日與翻轉型漂移起始日同分布，之前為定態 OU；day0 = linear_from_day0 敏感度變體（盛行個案）", "derived_from": "spec_decision"},
     "classes": [
       {"name": "persistently_low", "share_raw": 0.628, "egfr_start_range": [15, 30], "slope_mean": 7.7, "slope_sd": 4.7,
        "source": "O'Hare 2012 Group 1：62.8%，eGFR<30，斜率 7.7±4.7；範圍僅供 ohare_ranges 示範（下界 15 = 門檻，assumption）"},
@@ -100,9 +101,10 @@
   "clustering": {
     "_why": "建置提示詞 模組三。方法 A：每人三次正交（Legendre）多項式係數 → 高斯有限混合；方法 B：[水準, 斜率, 曲率, 變異度] → k-means（分類似然 BIC）。群數以 BIC 加 bootstrap 穩定度決定。時間打亂置換檢定：虛無假設為「該序列的時間順序不帶資訊」，非「該序列無變異」（v2 伍）。",
     "poly_degree": 3,
-    "k_max": 6,
+    "k_max": 8,
     "n_bootstrap": 200,
-    "stability_min": {"value": 0.8, "source": "assumption（事前寫定）", "derived_from": "assumption"},
+    "stability_min": {"value": 0.6, "source": "v2 附錄壹：Hennig 慣例（<0.60 不穩定、>=0.75 穩定），看結果前寫定"},
+    "bic_gain_frac": {"value": 0.05, "source": "v2 附錄壹：K→K+1 的 BIC 改善量 < 整段範圍 5%，看結果前寫定"},
     "n_permutation": 100
   },
 

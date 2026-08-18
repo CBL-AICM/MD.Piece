@@ -56,7 +56,14 @@ def fig6_tau_scan(scans, outdir):
     ax[0].set_xscale("log"); ax[0].set_xlabel("Δμ 中位（漂移量）"); ax[0].set_ylabel("t_threshold − t_crit 中位（天）")
     ax[0].set_title("鬆弛時間 τ 決定預警窗口是否存在（點線＝180／90 天）", fontsize=9); ax[0].legend(fontsize=8)
     ax[1].set_xscale("log"); ax[1].set_xlabel("Δμ 中位"); ax[1].set_ylabel("跨過 μc 且到達門檻的比例"); ax[1].legend(fontsize=8)
-    ax[1].set_title("τ ≤ 30：t_threshold − t_crit 中位不超過 90 天，預警窗口塌縮", fontsize=9)
+    # 圖說載明實測值（v2 附錄肆）
+    mx = {}
+    for tau, rows in scans.items():
+        vals = [r["median_threshold_minus_crit_days"] for r in rows if r["median_threshold_minus_crit_days"] is not None and np.isfinite(r["median_threshold_minus_crit_days"])]
+        mx[float(tau)] = max(vals) if vals else float("nan")
+    parts = "、".join(f"τ={int(t)} 最長 {mx[t]:.0f} 天" for t in sorted(mx) if t < 60)
+    ax[1].set_title(f"實測：{parts}——皆不足以支撐六個月的預警窗口", fontsize=9)
+    fig.suptitle("τ ≤ 30 時預警窗口塌縮：雜訊誘發的提早逃逸使臨界日與門檻日塌縮在一起", fontsize=9)
     return _save(fig, outdir, "fig6_tau_scan.png")
 
 
@@ -145,3 +152,31 @@ def fig5_leadtime(lead, outdir):
     ax[1].set_xlabel("臨界日 − 首次警報日（天；>0 = 臨界日前就警報）"); ax[1].set_ylabel("人數")
     ax[1].set_title("翻轉型：到已知臨界日", fontsize=9)
     return _save(fig, outdir, "fig5_leadtime_flip_vs_linear.png")
+
+
+def fig7_k_selection(clA, clB, outdir):
+    """v2 附錄壹：每一風險層（五分位）的 BIC 曲線與穩定度曲線同圖雙軸；標出雙準則選定的 K、
+    Hennig 門檻 0.60／0.75、與 k_ceiling_hit。"""
+    sets = [("方法 A（GMM）", clA)] + ([("方法 B（k-means）", clB)] if clB else [])
+    S = len(clA)
+    fig, axes = plt.subplots(len(sets), S, figsize=(2.6 * S, 2.6 * len(sets) + 0.6), squeeze=False)
+    for r, (name, cl) in enumerate(sets):
+        for s, row in enumerate(cl):
+            ax = axes[r, s]
+            ks = sorted(int(k) for k in row["bic_by_k"])
+            bic = [row["bic_by_k"][str(k)] if str(k) in row["bic_by_k"] else row["bic_by_k"][k] for k in ks]
+            stab = [row["stability_by_k"][str(k)] if str(k) in row["stability_by_k"] else row["stability_by_k"][k] for k in ks]
+            ax.plot(ks, bic, "o-", color="0.15", ms=3, lw=1)
+            ax.set_ylabel("BIC" if s == 0 else "")
+            ax2 = ax.twinx()
+            ax2.plot(ks, stab, "s--", color="0.55", ms=3, lw=1)
+            ax2.set_ylim(0, 1.05)
+            ax2.axhline(0.60, color="0.7", ls=":", lw=0.8); ax2.axhline(0.75, color="0.7", ls=":", lw=0.8)
+            if s == S - 1: ax2.set_ylabel("穩定度（虛線）")
+            else: ax2.set_yticklabels([])
+            ax.axvline(row["K"], color="0.3", lw=1.2, alpha=0.6)
+            tag = ("撞頂 " if row.get("k_ceiling_hit") else "") + ("連續 " if row.get("continuous_heterogeneity") else "")
+            ax.set_title(f"{name} 層{row['stratum']}：K={row['K']} 真{row.get('n_true_labels', '?')} {tag}", fontsize=7.5)
+            ax.set_xlabel("K"); ax.tick_params(labelsize=7); ax2.tick_params(labelsize=7)
+    fig.suptitle("群數選取（雙準則：BIC 改善 < 5% 範圍 且 穩定度 ≥ 0.60 的最小 K）；「撞頂」= BIC 到 k_max 仍單調改善", fontsize=9)
+    return _save(fig, outdir, "fig7_k_selection_curves.png")

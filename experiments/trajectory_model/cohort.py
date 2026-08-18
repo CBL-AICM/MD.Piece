@@ -156,20 +156,26 @@ def draw_egfr0(P, is_flip, cls, rng, mode=None):
     raise ValueError(mode)
 
 
-def simulate_linear(P, sc, egfr0, cls, rng, T, substeps):
-    """(甲) eGFR = eGFR0 − slope*t + eta，eta 為 OU（v1 §4：不得用白雜訊）。"""
+def simulate_linear(P, sc, egfr0, cls, rng, T, substeps, onset_mode=None):
+    """(甲) eGFR = eGFR0 − slope·max(t − t_slope_onset, 0) + eta，eta 為 OU（v1 §4：不得用白雜訊）。
+    v2 附錄貳：下降起始日 t_slope_onset 與翻轉型漂移起始日自同一分布抽（之前為定態 OU），
+    否則兩型在「早期是否平坦」上系統性不同，H3 的差異無法歸因於臨界減速；
+    onset_mode="day0" 為 linear_from_day0 敏感度變體（盛行個案自第 0 天即下降）。"""
     C = P["linear_classes"]["classes"]
     n = len(cls)
     slope_yr = rng.normal([C[k]["slope_mean"] for k in cls], [C[k]["slope_sd"] for k in cls])   # eGFR/年 下降量
     slope = slope_yr / DAYS_PER_YEAR
+    mode = _val(P["linear_classes"]["linear_onset_mode"]) if onset_mode is None else onset_mode
+    o_lo, o_hi = _val(P["flip"]["drift_onset_range_days"])
+    onset = np.zeros(n) if mode == "day0" else rng.uniform(o_lo, o_hi, n)
     dt = 1.0 / substeps
     eta = rng.normal(0, sc["sd_egfr"], n)                       # 由定態分布起始
     X = np.zeros((n, T), dtype=np.float32)
     for t in range(T):
         for _ in range(substeps):
             eta = eta - eta / sc["tau_ou"] * dt + sc["sigma_ou"] * np.sqrt(dt) * rng.normal(0, 1, n)
-        X[:, t] = egfr0 - slope * (t + 1) + eta
-    return X, slope_yr
+        X[:, t] = egfr0 - slope * np.maximum(t + 1 - onset, 0.0) + eta
+    return X, slope_yr, onset
 
 
 def build_mu_path(P, mu0, dmu, T, rng):
@@ -218,7 +224,7 @@ def hazard_events(X, lam0, beta, thr, U, h_max, floor=0.0):
 
 
 def make_cohort(P, seed, n=None, tau=None, delta_mu_median=None, lam0=None, beta=None,
-                dropout=False, start_mode=None, kappa=None):
+                dropout=False, start_mode=None, kappa=None, linear_onset=None):
     """產生一個世代。回傳 dict（全部 numpy 陣列＋衍生刻度）。"""
     S = P["sim"]
     n = S["n"] if n is None else n
@@ -244,7 +250,7 @@ def make_cohort(P, seed, n=None, tau=None, delta_mu_median=None, lam0=None, beta
     slope_yr = np.full(n, np.nan); mu_end = np.full(n, np.nan); t_crit = np.full(n, -1)
     t_onset = np.full(n, np.nan); drift_dur = np.full(n, np.nan)
     if len(li):
-        X[li], slope_yr[li] = simulate_linear(P, sc, egfr0[li], cls[li], rng, T, sub)
+        X[li], slope_yr[li], t_onset[li] = simulate_linear(P, sc, egfr0[li], cls[li], rng, T, sub, linear_onset)
     if len(fi):
         X[fi], mu_end[fi], t_crit[fi], t_onset[fi], drift_dur[fi], _ = simulate_flip(P, sc, egfr0[fi], s[fi], rng, T, sub, dmu)
 
@@ -291,6 +297,11 @@ def flip_timing_summary(C):
     out["threshold_minus_crit_days"] = q((tt - tc)[ok])
     out["event_minus_crit_days"] = q((te - tc)[te >= 0])
     out["onset_days"] = q(C["t_onset"][f]); out["drift_duration_days"] = q(C["drift_dur"][f])
+    # v2 附錄貳：兩型定態期長度分布無系統性差異（中位、四分位距、KS p）
+    from scipy.stats import ks_2samp
+    lo = C["t_onset"][~f]
+    out["linear_onset_days"] = q(lo)
+    out["onset_ks_p_flip_vs_linear"] = float(ks_2samp(C["t_onset"][f], lo).pvalue) if (f.sum() > 10 and (~f).sum() > 10 and np.std(lo) > 0) else None
     return out
 
 
@@ -301,13 +312,17 @@ def stratum_type_mix(is_flip, strata):
     return shares, worst
 
 
-def type_separability(C, days=180, folds=5):
-    """v2 玖：漂移開始前翻轉型與線性型是否難以區分——只用前 `days` 天的 [level, trend, ar1, sd]
-    以 logistic 交叉驗證分辨型別的 AUC（≈0.5 = 難以區分）。"""
-    F = np.array([window_features(C["X"][i].astype(float), 0, days) for i in range(C["n"])])
+def type_separability(C, days=180, folds=5, pre_onset_only=False):
+    """v2 玖／附錄閘門三：機制啟動前翻轉型與線性型是否難以區分——用前 `days` 天的 [level, trend, ar1, sd]
+    以 logistic 交叉驗證分辨型別的 AUC（≈0.5 = 難以區分）。pre_onset_only=True 時只納入起始日 >= days 者
+    （兩型起始日同分布，此篩選對稱），即「僅取定態期資料」。"""
+    idx = np.arange(C["n"])
+    if pre_onset_only:
+        idx = idx[np.nan_to_num(C["t_onset"], nan=np.inf) >= days]
+    F = np.array([window_features(C["X"][i].astype(float), 0, days) for i in idx])
     F = np.where(np.isnan(F), np.nanmedian(F, axis=0), F)
-    y = C["is_flip"].astype(int)
-    if y.min() == y.max():
+    y = C["is_flip"][idx].astype(int)
+    if len(y) < 50 or y.min() == y.max():
         return np.nan
     p = cross_val_predict(LogisticRegression(max_iter=1000), F, y, cv=StratifiedKFold(folds, shuffle=True, random_state=0),
                           method="predict_proba")[:, 1]
@@ -381,7 +396,7 @@ def calibrate_delta_mu(P, tau=None, target_days=None, seed=None, n_pilot=800, it
     return out
 
 
-def calibrate_hazard(P, delta_mu_median, tau=None, seed=None, n_pilot=1500, iters=12, verbose=True, start_mode=None):
+def calibrate_hazard(P, delta_mu_median, tau=None, seed=None, n_pilot=1500, iters=12, verbose=True, start_mode=None, linear_onset=None):
     """v2 參：λ0 校準使五年事件率落在目標區間中點；β 固定為文獻量級的假設值（hazard.beta_per_10_egfr），
     因為靜態 C 對 β 並非單調（在中等 β 附近最高、極端 β 反而下降），無法用二分法求；
     C 若不在目標區間，改在 kappa 格點（基線↔易感度相關）上挑最接近中點者。
@@ -395,7 +410,7 @@ def calibrate_hazard(P, delta_mu_median, tau=None, seed=None, n_pilot=1500, iter
 
     def fit(kappa):
         C0 = make_cohort(P, seed, n=n_pilot, tau=tau, delta_mu_median=delta_mu_median, lam0=1e-4, beta=beta,
-                         start_mode=start_mode, kappa=kappa)
+                         start_mode=start_mode, kappa=kappa, linear_onset=linear_onset)
         lo, hi = l_lo, l_hi
         for _ in range(iters):
             mid = 0.5 * (lo + hi)

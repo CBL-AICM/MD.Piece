@@ -5,8 +5,11 @@
        這是群組軌跡模型的兩階段近似：先把每條序列壓成基底係數，再對係數做混合模型。
        ponytail: 沒有寫完整的 EM 群組軌跡模型（共用殘差變異、逐點似然），需要時再換。
 方法 B：[水準, 斜率, 曲率, 變異度] → k-means。
-群數：對 K=1..k_max 算 BIC 與 bootstrap 穩定度（同一對個案是否落在同一群的一致率），
-     在穩定度 >= stability_min 的 K 中取 BIC 最小者；沒有任何 K 過門檻就取 1。
+群數（v2 附錄壹，看結果前寫定的雙準則）：對 K=1..k_max 算 BIC 與 bootstrap 穩定度（同一對個案是否落在同一群
+     的一致率，重抽 200 次）；報告的 K 為同時滿足「K→K+1 的 BIC 改善量 < 整段 BIC 範圍的 5%」且
+     「穩定度 ≥ 0.60（Hennig 慣例：<0.60 不穩定、≥0.75 穩定）」的最小 K。BIC 到 k_max 仍單調改善者
+     `k_ceiling_hit`=True；若同時穩定度隨 K 遞減，該層異質性呈連續分布、離散劃分不受支持（陰性結果，照實報）。
+     選定 K 另與生成器在該層的真實類別數比對（顯著偏多 = 過度分裂）。
 置換檢定：把每條序列的時間順序打亂後重算特徵、以同一 K 重跑，比較 silhouette。
        注意：時間打亂保留每條序列的「水準」，所以這個 p 值只回答「分群是否由時間形狀（斜率、
        曲率、變異）驅動」；只靠起始水準分開的群，p 會不顯著——這不是 bug，是該檢定的定義。
@@ -101,7 +104,8 @@ def stability(F, K, method, ref_labels, n_boot, rng):
     return float(np.mean(acc)) if acc else np.nan
 
 
-def select_k(F, method, k_max, n_boot, stab_min, rng):
+def select_k(F, method, k_max, n_boot, stab_min, bic_gain_frac, rng):
+    """雙準則（v2 附錄壹）。回傳 (best_row, rows, diag)。"""
     rows = []
     for K in range(1, k_max + 1):
         if K >= len(F):
@@ -110,9 +114,26 @@ def select_k(F, method, k_max, n_boot, stab_min, rng):
         lab = m.predict(F)
         st = stability(F, K, method, lab, n_boot, rng)
         rows.append(dict(K=K, bic=bic, stability=st, labels=lab))
-    ok = [r for r in rows if r["K"] == 1 or (np.isfinite(r["stability"]) and r["stability"] >= stab_min)]
-    best = min(ok, key=lambda r: r["bic"])
-    return best, rows
+    bics = np.array([r["bic"] for r in rows]); stabs = np.array([r["stability"] for r in rows])
+    rng_bic = max(bics.max() - bics.min(), 1e-12)
+    gain = np.r_[bics[:-1] - bics[1:], np.nan] / rng_bic          # K→K+1 的改善量佔整段範圍比例；最後一個 K 無 K+1
+    best = None
+    for i, r in enumerate(rows):
+        small_gain = (i == len(rows) - 1) or (gain[i] < bic_gain_frac)
+        stable = np.isfinite(stabs[i]) and stabs[i] >= stab_min
+        if small_gain and stable:
+            best = r; break
+    ceiling = best is None or best["K"] == rows[-1]["K"]
+    if best is None:
+        best = rows[-1]
+    monotone = bool(np.all(np.diff(bics) < 0)) and len(rows) == k_max      # 到 k_max 仍單調改善
+    stab_dec = bool(len(stabs) >= 3 and np.polyfit(np.arange(len(stabs)), np.nan_to_num(stabs, nan=0.0), 1)[0] < 0)
+    diag = dict(bic_gain_frac_by_k={int(r["K"]): (float(g) if np.isfinite(g) else None) for r, g in zip(rows, gain)},
+                selected_bic_gain_frac=(float(gain[best["K"] - 1]) if np.isfinite(gain[best["K"] - 1]) else None),
+                selected_stability=float(best["stability"]), k_ceiling_hit=bool(monotone),
+                selected_at_kmax=bool(best["K"] == k_max), stability_decreasing_with_k=stab_dec,
+                continuous_heterogeneity=bool(monotone and stab_dec))
+    return best, rows, diag
 
 
 def _silhouette(F, labels):
@@ -143,19 +164,22 @@ def cluster_stratum(X, method, P, rng, gen_labels=None):
     Q = P["clustering"]
     deg = Q["poly_degree"]
     F = featurize(X, method, deg)
-    best, rows = select_k(F, method, Q["k_max"], Q["n_bootstrap"],
-                          P["clustering"]["stability_min"]["value"], rng)
+    best, rows, diag = select_k(F, method, Q["k_max"], Q["n_bootstrap"], P["clustering"]["stability_min"]["value"],
+                                P["clustering"]["bic_gain_frac"]["value"], rng)
     lab = best["labels"]
     shares = np.bincount(lab, minlength=best["K"]) / len(lab)
-    out = dict(K=int(best["K"]), hit_kmax=bool(best["K"] == Q["k_max"]),      # 撞到上限要明說（無靜默上限）
-               shares=[float(s) for s in shares], stability=float(best["stability"]),
+    out = dict(K=int(best["K"]), shares=[float(s) for s in shares], stability=float(best["stability"]),
                bic_by_k={int(r["K"]): float(r["bic"]) for r in rows},
                stability_by_k={int(r["K"]): float(r["stability"]) for r in rows},
-               perm=perm_test(X, method, best["K"], Q["n_permutation"], rng, deg), n=int(len(X)))
+               perm=perm_test(X, method, best["K"], Q["n_permutation"], rng, deg), n=int(len(X)), **diag)
     if gen_labels is not None:
         # 「可推回比例」：分群結果對生成器標籤（型別＋子類別）的 ARI / NMI；高 = 重現生成器而非發現
         out["ari_vs_generator"] = float(adjusted_rand_score(gen_labels, lab))
         out["nmi_vs_generator"] = float(normalized_mutual_info_score(gen_labels, lab))
+        # 與生成器真實類別數比對（該層佔比 >= 2% 的生成器標籤數）；K 大於它 = 過度分裂
+        counts = np.bincount(gen_labels) / len(gen_labels)
+        out["n_true_labels"] = int((counts >= 0.02).sum())
+        out["over_split_by"] = int(best["K"] - out["n_true_labels"])
     # 代表性軌跡：各群平均序列，每 7 天取一點（供繪圖；避免 results.json 膨脹）
     out["mean_traj"] = [X[lab == k].mean(axis=0)[::7].astype(float).round(4).tolist() for k in range(best["K"])]
     return out

@@ -80,7 +80,7 @@ def reclassification(y, hs, hd):
                 static_high=float(hs.mean()), dynamic_high=float(hd.mean()))
 
 
-def run_prediction(C, P, seed, dropout=False):
+def run_prediction(C, P, seed, dropout=False, timing=True):
     Q = P["prediction"]
     T, n = C["T"], C["n"]
     Xobs = C["X_obs"] if dropout else C["X"]
@@ -115,6 +115,8 @@ def run_prediction(C, P, seed, dropout=False):
             row[f"reclass_{rule}"] = reclassification(yL, hs[rule][risk], hd)
         res["landmarks"][str(L)] = row
 
+    if not timing:
+        return res
     # ---- 建議介入時點位移：每 90 天一個地標（決定書 §8），靜態只在第 0 天判定一次 ----
     step = Q["timing_landmark_step_days"]
     Ls = list(range(step, T - step + 1, step))

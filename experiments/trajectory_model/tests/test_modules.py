@@ -38,9 +38,10 @@ def test_clustering_finds_two_planted_groups_and_not_more_on_noise():
     # 所以只有「時間形狀」造成的分群才會被置換檢定判為顯著——這正是該檢定能回答的問題。
     X = (slopes[:, None] * (t[None, :] - 0.5) + rng.normal(0, 0.05, (120, T))).astype(np.float32)
     for m in ("A", "B"):
-        r = cluster_stratum(X, m, Pq, rng)
+        r = cluster_stratum(X, m, Pq, rng, gen_labels=np.r_[np.zeros(60, int), np.ones(60, int)])
         assert r["K"] == 2, (m, r["K"], r["bic_by_k"], r["stability_by_k"])
         assert r["stability"] > 0.95 and r["perm"]["p"] < 0.1
+        assert r["n_true_labels"] == 2 and r["over_split_by"] == 0 and not r["k_ceiling_hit"]
     noise = rng.normal(0, 1, (120, T)).astype(np.float32)
     r = cluster_stratum(noise, "B", Pq, rng)
     assert r["K"] == 1 or r["perm"]["p"] > 0.05

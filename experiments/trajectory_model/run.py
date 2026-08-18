@@ -28,7 +28,7 @@ except Exception:
     pass
 
 from cohort import (load_params, _val, make_cohort, calibrate_delta_mu, calibrate_hazard, flip_timing_summary,
-                    stratum_type_mix, type_separability, provenance_report, static_auc)
+                    stratum_type_mix, type_separability, provenance_report, static_auc, with_events)
 from risk import fit_risk_coefficients, risk_score, stratify
 from clustering import run_clustering, generator_labels
 from prediction import run_prediction, _auc
@@ -46,7 +46,8 @@ def cohort_summary(C):
                 linear_class_shares=[float(v) for v in np.bincount(cls, minlength=3) / max(1, len(cls))],
                 egfr0_mean_by_type={"flip": float(C["egfr0"][f].mean()), "linear": float(C["egfr0"][~f].mean())},
                 flip_timing=flip_timing_summary(C), lam0=C["lam0"], beta=C["beta"], kappa=C["kappa"], delta_mu_median=C["delta_mu_median"],
-                type_separability_auc_first180=type_separability(C, 180))
+                type_separability_auc_first180=type_separability(C, 180),
+                type_separability_auc_pre_onset=type_separability(C, 180, pre_onset_only=True))
 
 
 def run_job(args):
@@ -64,7 +65,8 @@ def _run_job(args):
     t0 = time.time()
     C = make_cohort(P, seed, tau=variant["tau"], delta_mu_median=calib["delta_mu"]["delta_mu_median"],
                     lam0=calib["hazard"]["lambda0_per_day"], beta=calib["hazard"]["beta_per_10_egfr"],
-                    kappa=calib["hazard"]["kappa"], dropout=variant.get("dropout", False), start_mode=variant.get("start_mode"))
+                    kappa=calib["hazard"]["kappa"], dropout=variant.get("dropout", False), start_mode=variant.get("start_mode"),
+                    linear_onset=variant.get("linear_onset"))
     res = dict(variant=variant["name"], seed=int(seed), cohort=cohort_summary(C))
     if variant.get("module4_only"):
         res["prediction"] = run_prediction(C, P, seed, dropout=variant.get("dropout", False))
@@ -174,6 +176,7 @@ def make_figures(results, figdir):
     FG.fig4_timing_shift(fd["timing"], figdir)
     FG.fig5_leadtime(fd["fig5"], figdir)
     FG.fig6_tau_scan(results["tau_scans"], figdir)
+    FG.fig7_k_selection(fd["clustering_q5_A"], fd.get("clustering_q5_B"), figdir)
 
 
 # ------------------------------------------------------------------ 主程式
@@ -189,6 +192,7 @@ def build_variants(P, quick):
     for tgt in fl["flip_time_grid_days"]:
         if tgt != tgt0:
             V.append(dict(name=f"fliptime{tgt}", tau=tau0, target=tgt))
+    V.append(dict(name="linear_from_day0", tau=tau0, target=tgt0, linear_onset="day0"))
     V.append(dict(name="ohare_ranges", tau=tau0, target=tgt0, start_mode="ohare_ranges"))
     V.append(dict(name="dropout", tau=tau0, target=tgt0, dropout=True, module4_only=True))
     for m in _val(P["hazard"]["beta_sensitivity_multipliers"]):       # H2 增益對 β 的依賴（只跑模組四）
@@ -200,7 +204,7 @@ def build_variants(P, quick):
 def calibrate_variant(P, v, cache):
     """v1 §1 Δμ → v2 參 λ0/β → 模組二係數（pilot 世代）→ v2 捌 分層混合檢核。
     Δμ 不可達的變體回傳 None（標 unreachable 留白，不用替代值）。"""
-    key = (v["tau"], v["target"], v.get("start_mode"), v.get("beta_mult", 1.0))
+    key = (v["tau"], v["target"], v.get("start_mode"), v.get("beta_mult", 1.0), v.get("linear_onset"))
     if key in cache:
         return cache[key]
     print(f"\n=== 校準變體 {v['name']}（tau={v['tau']}，翻轉時程目標 {v['target']} 天{'，'+v['start_mode'] if v.get('start_mode') else ''}）===")
@@ -212,9 +216,10 @@ def calibrate_variant(P, v, cache):
     if v.get("beta_mult", 1.0) != 1.0:
         Pv = json.loads(json.dumps({k: x for k, x in P.items() if not k.startswith("_")}))
         Pv["hazard"]["beta_per_10_egfr"]["value"] = _val(P["hazard"]["beta_per_10_egfr"]) * v["beta_mult"]
-    hz = calibrate_hazard(Pv, dm["delta_mu_median"], tau=v["tau"], start_mode=v.get("start_mode"))
+    hz = calibrate_hazard(Pv, dm["delta_mu_median"], tau=v["tau"], start_mode=v.get("start_mode"), linear_onset=v.get("linear_onset"))
     pilot = make_cohort(P, P["sim"]["seed"] + 1000, n=1500, tau=v["tau"], delta_mu_median=dm["delta_mu_median"],
-                        lam0=hz["lambda0_per_day"], beta=hz["beta_per_10_egfr"], kappa=hz["kappa"], start_mode=v.get("start_mode"))
+                        lam0=hz["lambda0_per_day"], beta=hz["beta_per_10_egfr"], kappa=hz["kappa"], start_mode=v.get("start_mode"),
+                        linear_onset=v.get("linear_onset"))
     coefs = P["risk_score"]["coefficients"]["value"] or fit_risk_coefficients(pilot)
     score = risk_score(pilot, coefs)
     mix = {}
@@ -228,11 +233,39 @@ def calibrate_variant(P, v, cache):
           f"前 180 天型別可分辨 AUC {sep:.3f}；靜態 C {static_auc(pilot):.3f}；事件率 {pilot['event'].mean():.3f}")
     calib = dict(delta_mu=dm, hazard=hz, risk_coefs=coefs, pilot_flip_timing=flip_timing_summary(pilot),
                  pilot_stratum_mix=mix, pilot_type_separability_auc_first180=sep, unreachable=False)
-    if worst_all > _val(P["risk_score"]["stratum_single_type_max"]) and v.get("start_mode") != "ohare_ranges":
+    if worst_all > _val(P["risk_score"]["stratum_single_type_max"]) and v.get("start_mode") != "ohare_ranges" and v.get("linear_onset") != "day0":
         print(f"※ 警告：風險層內單一型別佔比 {worst_all:.2f} > 門檻，H1 無從檢驗——停止（v2 捌）。")
         sys.exit(2)
     cache[key] = calib
     return calib
+
+
+def run_gates(P, calib, n=4000, n_gate=12000):
+    """v2 附錄參：三道閘門（在 default 變體、獨立 seed 的檢核世代上），任一未過即中止。回傳 list[dict]。"""
+    v = calib["variant"]
+    C = make_cohort(P, P["sim"]["seed"] + 2000, n=n, tau=v["tau"], delta_mu_median=calib["delta_mu"]["delta_mu_median"],
+                    lam0=calib["hazard"]["lambda0_per_day"], beta=calib["hazard"]["beta_per_10_egfr"], kappa=calib["hazard"]["kappa"])
+    score = risk_score(C, calib["risk_coefs"])
+    worst = max(stratum_type_mix(C["is_flip"], stratify(score, q))[1] for q in P["risk_score"]["quantiles"])
+    thr1 = _val(P["risk_score"]["stratum_single_type_max"])
+    g1 = dict(gate="閘門一 風險層內單一型別佔比（全部層之最大值）", value=round(float(worst), 3),
+              criterion=f"<= {thr1}", passed=bool(worst <= thr1), fail_means="H1 被設定成偽，x0 重疊未生效")
+    # 閘門二：β=0 → 事件與 x(t) 無關。ΔC 在 n=1500 的抽樣雜訊約 ±0.02（兩個方向都有），
+    # 0.01 的門檻要在更大的檢核世代（n_gate）上、以三地標的「帶號平均」評估，才量得到結構性耦合而非雜訊。
+    Cg = make_cohort(P, P["sim"]["seed"] + 3000, n=n_gate, tau=v["tau"], delta_mu_median=calib["delta_mu"]["delta_mu_median"],
+                     lam0=calib["hazard"]["lambda0_per_day"], beta=0.0, kappa=calib["hazard"]["kappa"])
+    Cg = with_events(Cg, calib["hazard"]["lambda0_per_day"] * 2.5, 0.0, P)
+    Pq = dict(P); Pq["prediction"] = dict(P["prediction"], landmarks_days=[180, 365, 730])
+    r0 = run_prediction(Cg, Pq, 77, timing=False)
+    gains = {L: row["c_gain"] for L, row in r0["landmarks"].items()}
+    mean_signed = float(np.mean(list(gains.values())))
+    g2 = dict(gate=f"閘門二 β=0 時動態相對靜態的 C 增益 |ΔC|（n={n_gate}，三地標帶號平均；各地標見 detail）", value=round(abs(mean_signed), 4),
+              detail={L: round(g, 4) for L, g in gains.items()}, criterion="< 0.01", passed=bool(abs(mean_signed) < 0.01),
+              fail_means="結局仍與 x(t) 耦合，洩漏未解")
+    auc = type_separability(C, 180, pre_onset_only=True)
+    g3 = dict(gate="閘門三 僅取定態期資料（起始日 >= 180 天者之前 180 天）之型別分類 AUROC", value=round(float(auc), 3),
+              criterion="0.45–0.55", passed=bool(0.45 <= auc <= 0.55), fail_means="兩型在機制啟動前即可分，混淆未除")
+    return [g1, g2, g3]
 
 
 def main():
@@ -273,6 +306,7 @@ def main():
     variants = build_variants(P, a.quick)
     seeds = [P["sim"]["seed"] + i for i in range(P["sim"]["n_seeds"])]
     cache, jobs, calibrations, skipped = {}, [], {}, []
+    gates = None
     for v in variants:
         calib = calibrate_variant(P, v, cache)
         calibrations[v["name"]] = dict(variant=v, **calib)
@@ -280,6 +314,22 @@ def main():
             skipped.append(v["name"])
             print(f"    → 變體 {v['name']} 標 unreachable，留白不跑")
             continue
+        if v["name"] == "default":
+            # v2 附錄參：三道閘門，任一未過即中止
+            gates = run_gates(P, calibrations["default"], n=(1500 if a.quick else 4000), n_gate=(6000 if a.quick else 12000))
+            print("\n=== 放行閘門（v2 附錄參）===")
+            for g in gates:
+                print(f"  [{'通過' if g['passed'] else '未過'}] {g['gate']}：{g['value']}（條件 {g['criterion']}）"
+                      + (f"  detail={g['detail']}" if g.get("detail") else ""))
+            with open(os.path.join(a.out, "assumptions.md"), "a", encoding="utf-8") as f:
+                f.write("\n## 放行閘門（v2 附錄參）\n\n| 閘門 | 值 | 條件 | 結果 |\n|---|---|---|---|\n")
+                for g in gates:
+                    f.write(f"| {g['gate']} | {g['value']}{(' ' + str(g['detail'])) if g.get('detail') else ''} | {g['criterion']} | {'通過' if g['passed'] else '未過：' + g['fail_means']} |\n")
+            if not all(g["passed"] for g in gates):
+                print("※ 閘門未全過——中止，不跑完整格點（v2 附錄參）。")
+                with open(os.path.join(a.out, "gates.json"), "w", encoding="utf-8") as f:
+                    json.dump(dict(gates=gates, calibration=calibrations), f, ensure_ascii=False, indent=1, default=_json_default)
+                sys.exit(3)
         for i, s in enumerate(seeds):
             jobs.append((P, v, s, calib, v["name"] == "default" and i == 0))
     print(f"\n共 {len(jobs)} 個 job（{len(variants) - len(skipped)} 變體 × {len(seeds)} seed；留白 {skipped}），平行 {a.jobs} 程序 …")
@@ -307,10 +357,11 @@ def main():
     results = dict(meta=dict(date=time.strftime("%Y-%m-%d %H:%M"), seconds=time.time() - t0, quick=a.quick,
                              n=P["sim"]["n"], seeds=seeds, params_file=a.params, skipped_unreachable=skipped),
                    provenance=P["_provenance"], params={k: v for k, v in P.items() if not k.startswith("_")},
-                   calibration=calibrations, tau_scans=tau_scans, aggregate=agg, per_seed=per, leak_alert=leak)
+                   calibration=calibrations, gates=gates, tau_scans=tau_scans, aggregate=agg, per_seed=per, leak_alert=leak)
     if figdata:
         results["figure_setting"] = figdata["setting"]
-        results["figure_data"] = dict(**figdata, clustering_q5_A=fig_res["clustering"]["q5_A"], timing=fig_res["prediction"]["timing"])
+        results["figure_data"] = dict(**figdata, clustering_q5_A=fig_res["clustering"]["q5_A"],
+                                      clustering_q5_B=fig_res["clustering"]["q5_B"], timing=fig_res["prediction"]["timing"])
     with open(os.path.join(a.out, "results.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=1, default=_json_default)
     if figdata:

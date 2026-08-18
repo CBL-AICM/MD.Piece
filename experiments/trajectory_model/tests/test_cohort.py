@@ -99,6 +99,14 @@ def test_drift_onset_holds_mu_constant_before_onset():
     C = make_cohort(P, 3, n=400, **KW)
     f = C["is_flip"]
     assert (C["t_crit"][f & (C["t_crit"] >= 0)] > C["t_onset"][f & (C["t_crit"] >= 0)]).all()   # 臨界日必在起始日之後
+    # v2 附錄貳：線性型也有定態前期，起始日與翻轉型同分布；day0 變體則自第 0 天下降
+    from scipy.stats import ks_2samp
+    assert ks_2samp(C["t_onset"][f], C["t_onset"][~f]).pvalue > 0.01
+    i = np.where(~f)[0][0]; o = int(C["t_onset"][i])
+    early = C["X"][i, :max(o - 30, 30)]
+    assert abs(early.mean() - C["egfr0"][i]) < 6                        # 起始日前在基線附近定態
+    C0 = make_cohort(P, 3, n=100, linear_onset="day0", **KW)
+    assert (C0["t_onset"][~C0["is_flip"]] == 0).all()
 
 
 def test_linear_ou_and_flip_have_comparable_baseline_autocorrelation():
