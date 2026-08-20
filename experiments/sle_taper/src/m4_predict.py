@@ -77,8 +77,29 @@ def reclassification(y, hs, hd):
                 nri=float(nri_e + nri_n), static_high=float(hs.mean()), dynamic_high=float(hd.mean()))
 
 
-def run_predict(cohort, x_obs, landmarks, folds=5, seed=0, lookback=90, top=0.2, timing=True, timing_step=30):
-    """靜態（基線，配適一次）vs 地標動態。回傳 dict。timing=False 為 G2 最小版。"""
+def secondary_metrics(y, p, thresholds):
+    """次要指標（v2 伍之五）：AUROC、Brier、校準斜率／截距（logit 迴歸）、決策曲線淨效益、NNT（每找出一例事件需標記幾人）。"""
+    from sklearn.linear_model import LogisticRegression
+    y = np.asarray(y).astype(int); p = np.clip(np.asarray(p, float), 1e-6, 1 - 1e-6)
+    out = dict(auc=_auc(y, p), brier=float(brier_score_loss(y, p)), n=int(len(y)), event_rate=float(y.mean()))
+    if 0 < y.sum() < len(y):
+        lg = np.log(p / (1 - p))
+        m = LogisticRegression(C=1e6, max_iter=2000).fit(lg[:, None], y)
+        out["calibration_slope"] = float(m.coef_[0][0]); out["calibration_intercept"] = float(m.intercept_[0])
+        rate = y.mean(); dc = {}
+        for thr in thresholds:
+            flag = p >= thr
+            tp = float((flag & (y == 1)).mean()); fp = float((flag & (y == 0)).mean())
+            nb = tp - fp * thr / (1 - thr)
+            nb_all = rate - (1 - rate) * thr / (1 - thr)
+            nnt = float(flag.sum() / max((flag & (y == 1)).sum(), 1)) if flag.any() else None
+            dc[str(thr)] = dict(net_benefit=float(nb), net_benefit_treat_all=float(nb_all), flagged=float(flag.mean()), nnt_flag_per_event=nnt)
+        out["decision_curve"] = dc
+    return out
+
+
+def run_predict(cohort, x_obs, landmarks, folds=5, seed=0, lookback=90, top=0.2, timing=True, timing_step=30, secondary_thresholds=None):
+    """靜態（基線，配適一次）vs 地標動態。回傳 dict。timing=False 為最小版；secondary_thresholds 給定時附次要指標（Brier／校準／決策曲線／NNT）。"""
     te, T, onset = cohort["t_event"], cohort["T"], cohort["t_onset"]
     y_all = te >= 0
     p_static = static_cv_pred(cohort, y_all, folds, seed)
@@ -108,6 +129,9 @@ def run_predict(cohort, x_obs, landmarks, folds=5, seed=0, lookback=90, top=0.2,
             hd = _high(pd, rule, top, rate_L)
             row[f"reclass_{rule}"] = reclassification(yL, hs[rule][risk], hd)
             row[f"reclass_same_riskset_{rule}"] = reclassification(yL, _high(ps, rule, top, rate_L), hd)
+        if secondary_thresholds and len(yL):
+            row["secondary_static"] = secondary_metrics(yL, ps, secondary_thresholds)
+            row["secondary_dynamic"] = secondary_metrics(yL, pd, secondary_thresholds)
         res["landmarks"][str(L)] = row
     if not timing:
         return res

@@ -59,7 +59,7 @@ def check_cohort(C, verbose=True):
         for k, row in C[grp].items():
             if not row.get("source") or row.get("status") not in STATUSES:
                 missing.append(f"{grp}.{k}")
-    for k in ("susceptibility_link", "observation"):
+    for k in ("susceptibility_link", "biopsy_score", "observation_scenarios"):
         if not C[k].get("source"):
             missing.append(k)
     if verbose and missing:
@@ -87,7 +87,7 @@ def assumptions_markdown(P, C, calib=None, gates=None):
         for row in calib:
             L.append(f"| {row['step']} | {row['target']} | {row['achieved']} | {row.get('note','')} |")
     if gates:
-        L += ["", "## 四道閘門", "", "| 閘門 | 值 | 條件 | 結果 |", "|---|---|---|---|"]
+        L += ["", "## 品質關卡（v2 六道）", "", "| 關卡 | 值 | 條件 | 結果 |", "|---|---|---|---|"]
         for g in gates:
             L.append(f"| {g['gate']} | {g['value']} | {g['criterion']} | {'通過' if g['passed'] else '未過：' + g['fail_means']} |")
     return "\n".join(L) + "\n"

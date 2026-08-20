@@ -1,30 +1,36 @@
 {
   "_meta": {
-    "title": "世代生成設定（基線臨床特徵分布與易感度連結）",
-    "note": "數值界線一律引用 params/thresholds.json；本檔只放分布形狀與連結結構。每列含 source 與 status。減藥世代＝臨床完全緩解 ≥12 個月、免疫抑制 ≥36 個月（De Rosa 2018 納入條件），故蛋白尿與腎功能分布為『緩解中』的水準，不是 Ning 2026 切片時的水準。"
+    "title": "世代生成設定 v2（基線臨床特徵分布、易感度連結、切片評分、觀測情境）",
+    "note": "數值界線一律引用 params/thresholds.json；本檔放分布形狀與連結結構。減藥世代＝臨床緩解、正考慮停藥者（De Rosa／WIN-Lupus 納入條件）。"
   },
   "baseline_features": {
-    "upcr_g_per_g":       {"dist": "lognormal", "median": 0.25, "sigma_log": 0.5, "clip": [0.02, 0.5], "source": "本研究設定：完全緩解定義蛋白尿 <0.5 g/day（Ning 2026 定義；EULAR），中位數為假設", "status": "study_defined"},
-    "egfr":               {"dist": "normal", "mean": 95, "sd": 15, "clip": [45, 130], "source": "本研究設定：緩解世代腎功能；Ning 2026 Table 2 穩定型切片時中位 100 供參", "status": "study_defined"},
-    "c3_mg_dl":           {"dist": "normal", "mean": 100, "sd": 20, "clip": [50, 160], "source": "本研究設定：緩解時補體多正常；Ning 2026 Table 1 切片時 C3 中位 0.50 g/L 供參（活動期）", "status": "study_defined"},
-    "anti_dsdna_iu_ml":   {"dist": "lognormal", "median": 30, "sigma_log": 1.0, "clip": [1, 800], "source": "本研究設定：緩解時多低滴度；Ning 2026 Table 1 活動期中位 493 供參", "status": "study_defined"},
-    "disease_duration_yr":{"dist": "lognormal", "median": 6.0, "sigma_log": 0.4, "clip": [4, 30], "source": "本研究設定：下界 4 年由 De Rosa 2018 納入條件（≥36 個月治療＋≥12 個月緩解）推得", "status": "study_defined"},
-    "prior_flares":       {"dist": "poisson", "lam": 1.0, "clip": [0, 6], "source": "本研究設定", "status": "study_defined"}
+    "upcr_g_per_g":        {"dist": "lognormal", "median": 0.25, "sigma_log": 0.5, "clip": [0.02, 0.5], "source": "本研究設定：完全緩解 <0.5 g/day 內的分布", "status": "study_defined"},
+    "egfr":                {"dist": "normal", "mean": 95, "sd": 15, "clip": [45, 130], "source": "本研究設定", "status": "study_defined"},
+    "c3_mg_dl":            {"dist": "normal", "mean": 100, "sd": 20, "clip": [50, 160], "source": "本研究設定", "status": "study_defined"},
+    "anti_dsdna_iu_ml":    {"dist": "lognormal", "median": 30, "sigma_log": 1.0, "clip": [1, 800], "source": "本研究設定", "status": "study_defined"},
+    "disease_duration_yr": {"dist": "lognormal", "median": 6.0, "sigma_log": 0.4, "clip": [3, 30], "source": "本研究設定：下界由 WIN-Lupus（維持 2–3 年）與 De Rosa（≥36 個月＋≥12 個月緩解）納入條件推得", "status": "study_defined"},
+    "prior_flares":        {"dist": "poisson", "lam": 1.0, "clip": [0, 6], "source": "本研究設定", "status": "study_defined"},
+    "chronicity_index":    {"dist": "poisson", "lam": 1.5, "clip": [0, 12], "source": "本研究設定：Ning 2026 Table 1 切片時 CI 中位 0（0–2）供參；此為減藥前重複切片之慢性化", "status": "study_defined"}
   },
   "susceptibility_link": {
-    "note": "μ_intrinsic = mean + sd·s；s = kappa·u + sqrt(1−kappa²)·ε；u 為下列特徵標準化後的加權和（再標準化）。方向為假設：病程長、既往發作多、補體低、抗體高 → 內在驅動力高（De Rosa 2018：活性指數與病程為發作之獨立預測因子，方向未於摘要載明）。",
+    "note": "基線特徵只透過機制歸屬機率與結局相關：P(機制|s) ∝ share_m·exp(κ·tilt_m·s)，tilt=+1（分岔／越障／連續惡化）、−1（穩定）、0（其餘）；s 為基線特徵的加權標準化和；μ_i 純由機制決定。方向為假設。",
     "weights": {"disease_duration_yr": 1.0, "prior_flares": 1.0, "c3_mg_dl": -0.5, "anti_dsdna_iu_ml": 0.5},
     "log_transform": ["anti_dsdna_iu_ml", "disease_duration_yr", "upcr_g_per_g"],
     "source": "本研究設定", "status": "study_defined"
   },
-  "types": {
-    "note": "型別不是抽的：翻轉／穩定由 μ_intrinsic 與減藥排程共同決定（μ_intrinsic − g_end > μ_c 者翻轉）。逐步惡化型（Ning 持續下降型）為獨立的慢性損傷群，以 x 的線性上升表示，與減藥無關；其比例錨定 Ning 2026 的 5.1%，斜率待抽取（佔位）。",
-    "gradual_share": {"value": 0.051, "source": "Ning 2026, PMID 41611465 持續下降型 5.1%", "status": "anchored"},
-    "gradual_onset": {"value": "run_in_start", "source": "本研究設定：自序列起點即緩慢上升（慢性損傷非減藥引起）", "status": "study_defined"}
+  "biopsy_score": {
+    "note": "v2 肆之四：B = q[x(t0), μ_i, chronicity, duration] + εB；切片參考規則 = B 與病程的固定線性規則，效能於校準集內落在 De Rosa 計數推得的可信範圍",
+    "weights": {"mu": 1.0, "x0": 0.5, "chronicity_index": 0.1, "disease_duration_yr": 0.05},
+    "noise_sd": {"value": null, "scan": [0.1, 0.2, 0.4], "note": "εB 之 SD（x 單位）；null = 於校準集內選使敏感度／特異度落入可信範圍中點者"},
+    "source": "本研究設定", "status": "study_defined"
   },
-  "observation": {
-    "default_meas_error_level": "small",
-    "default_sampling_interval": "weekly",
-    "source": "本研究設定：主分析的非侵入臂觀測設定；四階×四頻在 H4 格點掃描", "status": "study_defined"
+  "observation_scenarios": {
+    "default": {"indicator": "x", "interval": "weekly", "meas_error": "small", "irregular": false, "symptom_driven": false, "treatment_intervention": false},
+    "list": ["default", "irregular", "symptom_driven", "treatment_intervention", "upcr_marker"],
+    "irregular": {"indicator": "x", "interval": "weekly", "meas_error": "small", "irregular": true, "symptom_driven": false, "treatment_intervention": false},
+    "symptom_driven": {"indicator": "x", "interval": "monthly", "meas_error": "small", "irregular": true, "symptom_driven": true, "treatment_intervention": false},
+    "treatment_intervention": {"indicator": "x", "interval": "weekly", "meas_error": "small", "irregular": false, "symptom_driven": false, "treatment_intervention": true},
+    "upcr_marker": {"indicator": "upcr", "interval": "weekly", "meas_error": "small", "irregular": false, "symptom_driven": false, "treatment_intervention": false},
+    "source": "本研究設定（v2 肆之三 觀測情境）", "status": "study_defined"
   }
 }
