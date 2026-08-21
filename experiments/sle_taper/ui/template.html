@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>狼瘡腎炎減藥翻轉預警——模型視覺化</title>
+<style>
+:root{--ink:#1a1a1a;--g1:#595959;--g2:#999;--g3:#d0d0d0;--bg:#fafafa;--card:#fff;--accent:#333}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:var(--bg);line-height:1.65}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
+header h1{font-size:22px;font-weight:700;letter-spacing:.02em}
+header .sub{color:var(--g1);font-size:13px;margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px}
+.chip{font-size:11.5px;border:1px solid var(--g3);border-radius:999px;padding:2px 10px;color:var(--g1);background:var(--card)}
+.chip.warn{border-color:var(--g1);color:var(--ink)}
+nav{display:flex;gap:4px;margin:18px 0 14px;border-bottom:1px solid var(--g3);flex-wrap:wrap}
+nav button{border:0;background:none;font:inherit;font-size:14px;padding:8px 14px;cursor:pointer;color:var(--g1);border-bottom:2px solid transparent}
+nav button.on{color:var(--ink);font-weight:700;border-bottom-color:var(--ink)}
+section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--g3);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+.card h2{font-size:15px;margin-bottom:6px}
+.card p.note{font-size:12.5px;color:var(--g1)}
+svg{display:block;width:100%;height:auto}
+.axis{stroke:#888;stroke-width:1}
+.tick{font-size:10px;fill:#666}
+.lbl{font-size:11px;fill:#444}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.ctrl{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+.ctrl label{font-size:13px;color:var(--g1)}
+input[type=range]{width:260px;accent-color:#333}
+.seg{display:flex;border:1px solid var(--g3);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--card);font:inherit;font-size:12.5px;padding:5px 12px;cursor:pointer;color:var(--g1)}
+.seg button.on{background:var(--ink);color:#fff}
+.mechsel{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.mechsel button{border:1px solid var(--g3);background:var(--card);border-radius:8px;font:inherit;font-size:12.5px;padding:4px 10px;cursor:pointer;color:var(--g1)}
+.mechsel button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+table{border-collapse:collapse;font-size:12.5px;width:100%}
+th,td{border-bottom:1px solid #eee;padding:5px 8px;text-align:left;vertical-align:top}
+th{color:var(--g1);font-weight:600;white-space:nowrap}
+.tag{font-size:10.5px;border-radius:4px;padding:1px 6px;border:1px solid var(--g3);color:var(--g1);white-space:nowrap}
+.tag.anchored{border-color:#555;color:#222}
+.tag.pending{background:#f2f2f2;border-style:dashed}
+.small{font-size:12px;color:var(--g1)}
+.kpi{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0}
+.kpi div{font-size:12.5px;color:var(--g1)}
+.kpi b{display:block;font-size:18px;color:var(--ink);font-weight:700}
+footer{margin-top:26px;font-size:11.5px;color:var(--g2);border-top:1px solid var(--g3);padding-top:10px}
+@media(max-width:720px){input[type=range]{width:170px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>狼瘡腎炎減藥翻轉預警——模型視覺化</h1>
+  <div class="sub">合成世代模擬・機制對照與警報操作特性・<span id="metaDate"></span>・參數雜湊 <span id="metaHash"></span></div>
+  <div class="chips" id="scopeChips"></div>
+  <div class="chips"><span class="chip warn" id="placeholderChip"></span></div>
+</header>
+<nav id="nav">
+  <button data-s="s1" class="on">機制｜為什麼會翻轉</button>
+  <button data-s="s2">資料｜六種病程長什麼樣</button>
+  <button data-s="s3">效能｜警報抓得到多少</button>
+  <button data-s="s4">邊界｜什麼條件下失效</button>
+  <button data-s="s5">參數出處</button>
+</nav>
+
+<section id="s1" class="on">
+  <div class="card">
+    <h2>位能地景：減藥把「谷」變淺</h2>
+    <p class="note">疾病活動度像一顆球，停在「緩解」山谷裡。免疫抑制把谷壓深；減藥使內在驅動力 μ 上升、谷底變淺。
+    μ 一旦超過臨界值 μc，緩解谷完全消失，球必然滾向「活動」側。谷越淺，球被擾動後回來得越慢——這個「恢復變慢」就是預警要偵測的訊號。</p>
+    <div class="ctrl">
+      <label>減藥進度（μ = μ內在 − 免疫抑制效果）</label>
+      <input type="range" id="muSlider" min="-1.1" max="0.75" step="0.01" value="-0.9">
+      <span class="small" id="muLabel"></span>
+    </div>
+    <svg id="svgLand" width="960" height="300" viewBox="0 0 960 300"></svg>
+    <p class="note" id="landNote"></p>
+  </div>
+</section>
+
+<section id="s2">
+  <div class="card">
+    <h2>機制展示廊：同樣的減藥，六種走法</h2>
+    <p class="note">每個機制取「發作日最接近該機制中位數」的代表個案（不挑訊號最漂亮的）。
+    點虛線＝減藥起始，實線＝發作日。滾動指標（AR(1)／SD）由觀測序列以固定時間窗計算。</p>
+    <div class="mechsel" id="mechSel"></div>
+    <p class="note" id="mechDesc" style="margin-bottom:8px"></p>
+    <svg id="svgGal" width="960" height="480" viewBox="0 0 960 480"></svg>
+  </div>
+</section>
+
+<section id="s3">
+  <div class="card">
+    <h2>固定假警報負擔下，各機制的警報表現</h2>
+    <p class="note" id="opNote"></p>
+    <div class="ctrl">
+      <div class="seg" id="ruleSeg">
+        <button data-r="ews" class="on">聯合警報（臨界減速）</button>
+        <button data-r="level_rule">水準規則（只看數值）</button>
+        <button data-r="trend_rule">趨勢規則（斜率外推）</button>
+      </div>
+    </div>
+    <div class="row">
+      <svg id="svgBars" width="560" height="330" viewBox="0 0 560 330"></svg>
+      <svg id="svgLead" width="380" height="330" viewBox="0 0 380 330"></svg>
+    </div>
+    <div class="kpi" id="opKpi"></div>
+    <p class="note" id="gateNote"></p>
+  </div>
+</section>
+
+<section id="s4">
+  <div class="card">
+    <h2>可辨識邊界：取樣密度 × 量測誤差</h2>
+    <p class="note">格值＝固定假警報負擔下，分岔翻轉機制在跳轉前收到警報的比例（Monte Carlo 平均）。
+    虛線等值線＝與「單次切片參考規則」敏感度相同的組合（若全圖低於它則不畫）。</p>
+    <div class="ctrl"><label>系統鬆弛時間 τx</label><div class="seg" id="tauSeg"></div></div>
+    <div id="identWrap"><svg id="svgIdent" width="640" height="330" viewBox="0 0 640 330"></svg></div>
+    <p class="note" id="identNote"></p>
+  </div>
+</section>
+
+<section id="s5">
+  <div class="card">
+    <h2>每個數字的出處</h2>
+    <p class="note">狀態說明：<span class="tag anchored">已錨定</span> 有文獻計數可回溯；
+    <span class="tag pending">待抽取（佔位）</span> 佔位值，補齊前產出不得對外；
+    <span class="tag">本研究設定</span> 無文獻可依，全部納入敏感度掃描。</p>
+    <div style="overflow-x:auto"><table id="provTable"><thead><tr><th>參數</th><th>狀態</th><th>值</th><th>出處</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<footer id="foot"></footer>
+</div>
+<script id="pack" type="application/json">__PACK_JSON__</script>
+<script>
+const PACK = JSON.parse(document.getElementById('pack').textContent);
+const $ = id => document.getElementById(id);
+const NS = 'http://www.w3.org/2000/svg';
+const fmt = (v,d=2) => v==null ? '—' : (+v).toFixed(d);
+
+/* ---------- 導覽 ---------- */
+$('nav').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===b.dataset.s));
+});
+$('metaDate').textContent = PACK.meta.date;
+$('metaHash').textContent = PACK.meta.params_hash;
+$('scopeChips').innerHTML = PACK.meta.scope.map(t=>`<span class="chip">${t}</span>`).join('');
+$('placeholderChip').textContent = '※ 佔位參數：' + PACK.meta.placeholders.join('、') + '——本頁全部數值不得對外引用';
+$('foot').textContent = '單一離線頁面；資料一律由 Python 匯出之資料包提供，頁面內不寫死任何係數或界線值。參數雜湊 ' + PACK.meta.params_hash + '。';
+
+/* ---------- SVG 工具 ---------- */
+function el(tag, attrs, parent){ const n=document.createElementNS(NS,tag); for(const k in attrs) n.setAttribute(k,attrs[k]); if(parent) parent.appendChild(n); return n; }
+function txt(parent,x,y,s,cls,anchor){ const t=el('text',{x,y,class:cls||'lbl','text-anchor':anchor||'start'},parent); t.textContent=s; return t; }
+function scaler(d0,d1,r0,r1){ return v => r0 + (v-d0)/(d1-d0)*(r1-r0); }
+function path(pts,attrs,parent){ if(!pts.length) return null; return el('path',Object.assign({d:'M'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L'),fill:'none'},attrs),parent); }
+
+/* ---------- 第 1 層：位能地景 ---------- */
+const MUC = PACK.landscape.mu_c;
+function V(x,mu){ return x*x*x*x/4 - x*x/2 - mu*x; }
+function roots(mu){ // x³ − x − μ = 0 的實根（由掃描近似）
+  const rs=[]; let prev=null;
+  for(let x=-2;x<=2;x+=0.001){ const f=x*x*x-x-mu; if(prev!==null && Math.sign(f)!==Math.sign(prev)) rs.push(x); prev=f; }
+  return rs;
+}
+function drawLand(){
+  const mu = +$('muSlider').value;
+  const svg=$('svgLand'); svg.innerHTML='';
+  const W=960,H=300,m={l:56,r:16,t:14,b:40};
+  const xs=[],vs=[]; for(let x=-1.85;x<=1.85;x+=0.01){ xs.push(x); vs.push(V(x,mu)); }
+  const vmin=Math.min(...vs), vmax=Math.max(...vs), pad=(vmax-vmin)*0.12;
+  const sx=scaler(-1.85,1.85,m.l,W-m.r), sy=scaler(vmin-pad,vmax+pad,H-m.b,m.t);
+  el('line',{x1:m.l,y1:H-m.b,x2:W-m.r,y2:H-m.b,class:'axis'},svg);
+  [-1,0,1].forEach(v=>{ el('line',{x1:sx(v),y1:H-m.b,x2:sx(v),y2:H-m.b+4,class:'axis'},svg); txt(svg,sx(v),H-m.b+16,v,'tick','middle'); });
+  txt(svg,(m.l+W-m.r)/2,H-6,'疾病活動度 x（左谷＝緩解，右谷＝活動）','lbl','middle');
+  txt(svg,14,H/2,'位能','lbl').setAttribute('transform',`rotate(-90 14 ${H/2})`);
+  path(xs.map((x,i)=>[sx(x),sy(vs[i])]),{stroke:'#1a1a1a','stroke-width':2},svg);
+  const rs=roots(mu); const inRem = mu < MUC;
+  const ball = inRem ? rs[0] : rs[rs.length-1];
+  el('circle',{cx:sx(ball),cy:sy(V(ball,mu))-8,r:8,fill:'#8c8c8c',stroke:'#1a1a1a','stroke-width':1.2},svg);
+  const curv = 3*ball*ball-1; // 谷底曲率 ∝ 回復速度
+  $('muLabel').textContent = `μ = ${mu.toFixed(2)}（μc = ${MUC.toFixed(3)}）`;
+  $('landNote').textContent = inRem
+    ? `在本模擬設定下：緩解谷仍存在。谷底曲率 ${curv.toFixed(2)}——數值越小谷越淺、受擾動後回復越慢；接近 μc 時趨向 0。`
+    : `μ 已超過 μc：緩解谷消失，系統只剩「活動」一個穩定狀態，翻轉不可避免。此後的問題不是會不會，而是何時被風險過程觸發。`;
+}
+$('muSlider').addEventListener('input',drawLand); drawLand();
+
+/* ---------- 第 2 層：機制展示廊 ---------- */
+let mechIdx=0;
+const msel=$('mechSel');
+PACK.gallery.forEach((g,i)=>{ const b=document.createElement('button'); b.textContent=`${g.zh}（發作率 ${fmt(g.rate)}）`; b.className=i===0?'on':''; b.onclick=()=>{mechIdx=i; msel.querySelectorAll('button').forEach((x,j)=>x.classList.toggle('on',j===i)); drawGal();}; msel.appendChild(b); });
+function panel(svg,x0,y0,w,h,tt,yy,opts){
+  const ok=[]; for(let i=0;i<tt.length;i++) if(yy[i]!=null&&isFinite(yy[i])) ok.push([tt[i],yy[i]]);
+  const g=PACK.gallery[mechIdx];
+  const tmin=-90, tmax=Math.max(...g.t);
+  let lo=opts.lo, hi=opts.hi;
+  if(lo==null){ const vs=ok.map(p=>p[1]); lo=Math.min(...vs); hi=Math.max(...vs); const p=(hi-lo)*0.1||0.1; lo-=p; hi+=p; }
+  const sx=scaler(tmin,tmax,x0+44,x0+w-6), sy=scaler(lo,hi,y0+h-18,y0+8);
+  el('line',{x1:x0+44,y1:y0+h-18,x2:x0+w-6,y2:y0+h-18,class:'axis'},svg);
+  [0,365,730].filter(v=>v<=tmax).forEach(v=>{ txt(svg,sx(v),y0+h-5,v,'tick','middle'); });
+  [lo,hi].forEach(v=>txt(svg,x0+40,sy(v)+3,(+v).toFixed(1),'tick','end'));
+  txt(svg,x0+6,y0+(h/2),opts.label,'lbl').setAttribute('transform',`rotate(-90 ${x0+12} ${y0+h/2})`);
+  el('line',{x1:sx(0),y1:y0+8,x2:sx(0),y2:y0+h-18,stroke:'#aaa','stroke-dasharray':'3 3'},svg);
+  if(g.t_event!=null) el('line',{x1:sx(g.t_event),y1:y0+8,x2:sx(g.t_event),y2:y0+h-18,stroke:'#1a1a1a','stroke-width':1.2},svg);
+  if(opts.dots) ok.forEach(p=>el('circle',{cx:sx(p[0]),cy:sy(p[1]),r:1.6,fill:'#666'},svg));
+  else path(ok.map(p=>[sx(p[0]),sy(p[1])]),{stroke:'#1a1a1a','stroke-width':1.2},svg);
+}
+function drawGal(){
+  const g=PACK.gallery[mechIdx];
+  $('mechDesc').textContent = `${g.zh}（此世代 n=${g.n}）：${g.desc}`;
+  const svg=$('svgGal'); svg.innerHTML='';
+  const W=960,h=150;
+  const yAll=PACK.gallery.flatMap(x=>x.y.filter(v=>v!=null));
+  const sdAll=PACK.gallery.flatMap(x=>x.sd.filter(v=>v!=null&&isFinite(v)));
+  panel(svg,0,0,W,h,g.t,g.y,{label:'觀測序列',dots:true,lo:Math.min(...yAll)-0.1,hi:Math.max(...yAll)+0.1});
+  panel(svg,0,h+10,W,h,g.eval_t,g.ar1,{label:'滾動 AR(1)',lo:-1,hi:1});
+  panel(svg,0,2*(h+10),W,h,g.eval_t,g.sd,{label:'滾動 SD',lo:0,hi:Math.max(...sdAll)*1.05});
+  txt(svg,W-8,14,'點虛線＝減藥起始；實線＝發作日','tick','end');
+}
+drawGal();
+
+/* ---------- 第 3 層：警報操作特性 ---------- */
+const OP=PACK.operating; let rule='ews';
+const MZH={bifurcation:'分岔翻轉',stochastic_escape:'隨機越障',continuous_deterioration:'連續惡化',exogenous_shock:'外生衝擊',noise_amplification:'雜訊放大',stable:'穩定未發作'};
+const MORDER=['bifurcation','stochastic_escape','continuous_deterioration','exogenous_shock','noise_amplification','stable'];
+$('opNote').textContent = `警報門檻在「校準集」以穩定機制序列鎖定：每病人年假警報負擔 ≤ ${OP.budget}（達成 ${fmt(OP.achieved[{ews:'S',level_rule:'level',trend_rule:'trend'}[rule]] ?? OP.achieved.S)}）；此處為獨立測試集 n=${OP.n}、Monte Carlo ${OP.mc} 個資料集的平均（誤差槓＝平均 ± 1 SE）。三種規則在同一負擔下比較。`;
+$('ruleSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; rule=b.dataset.r; document.querySelectorAll('#ruleSeg button').forEach(x=>x.classList.toggle('on',x===b)); drawOp(); });
+function drawOp(){
+  const S=OP.summary[rule];
+  const svg=$('svgBars'); svg.innerHTML='';
+  const W=560,H=330,m={l:52,r:10,t:24,b:58};
+  const sy=scaler(0,1,H-m.b,m.t);
+  el('line',{x1:m.l,y1:H-m.b,x2:W-m.r,y2:H-m.b,class:'axis'},svg);
+  [0,.25,.5,.75,1].forEach(v=>{ el('line',{x1:m.l-4,y1:sy(v),x2:m.l,y2:sy(v),class:'axis'},svg); txt(svg,m.l-8,sy(v)+3,v,'tick','end'); });
+  txt(svg,16,H/2,'警報比例','lbl').setAttribute('transform',`rotate(-90 16 ${H/2})`);
+  const bw=(W-m.l-m.r)/MORDER.length;
+  MORDER.forEach((mech,i)=>{
+    const r=S[mech]; if(!r) return;
+    const pre=r.sens_before_jump && r.sens_before_jump.mean!=null;
+    const v=pre ? r.sens_before_jump.mean : (r.alarm_rate?r.alarm_rate.mean:null);
+    const se=pre ? r.sens_before_jump.se : (r.alarm_rate?r.alarm_rate.se:null);
+    if(v==null) return;
+    const x=m.l+i*bw+bw*0.18, w=bw*0.64;
+    el('rect',{x,y:sy(v),width:w,height:sy(0)-sy(v),fill:pre?'#fff':'#d9d9d9',stroke:'#1a1a1a','stroke-width':1,...(pre?{'fill-opacity':1}:{})},svg);
+    if(pre){ for(let k=1;k<6;k++){ const xx=x+w*k/6; el('line',{x1:xx,y1:sy(v),x2:xx,y2:sy(0),stroke:'#888','stroke-width':0.7},svg);} }
+    if(se!=null){ el('line',{x1:x+w/2,y1:sy(Math.min(1,v+se)),x2:x+w/2,y2:sy(Math.max(0,v-se)),stroke:'#1a1a1a'},svg); }
+    txt(svg,x+w/2,sy(v)-5,fmt(v),'tick','middle');
+    txt(svg,x+w/2,H-m.b+16,MZH[mech],'tick','middle');
+    txt(svg,x+w/2,H-m.b+30,pre?'跳轉前':'觸發',(pre?'tick':'tick'),'middle');
+  });
+  const fa=S.stable && S.stable.alarm_rate ? S.stable.alarm_rate.mean : null;
+  if(fa!=null){ el('line',{x1:m.l,y1:sy(fa),x2:W-m.r,y2:sy(fa),stroke:'#1a1a1a','stroke-dasharray':'5 3'},svg); txt(svg,W-m.r,sy(fa)-18,'穩定機制觸發線 '+fmt(fa),'tick','end'); }
+  txt(svg,m.l,14,'斜線＝跳轉前警報比例（有跳轉的機制）；灰＝觸發比例（＝該機制的假警報）','tick');
+  // 提前期
+  const sv=$('svgLead'); sv.innerHTML='';
+  const W2=380,m2={l:52,r:12,t:24,b:58};
+  const Ls=MORDER.filter(k=>OP.leads[k]);
+  const qmax=Math.max(...Ls.map(k=>OP.leads[k].q[4]),100);
+  const sy2=scaler(0,qmax*1.06,H-m2.b,m2.t);
+  el('line',{x1:m2.l,y1:H-m2.b,x2:W2-m2.r,y2:H-m2.b,class:'axis'},sv);
+  for(let v=0;v<=qmax;v+=Math.ceil(qmax/5/50)*50){ el('line',{x1:m2.l-4,y1:sy2(v),x2:m2.l,y2:sy2(v),class:'axis'},sv); txt(sv,m2.l-8,sy2(v)+3,v,'tick','end'); }
+  txt(sv,16,H/2,'提前期（發作日−首次警報日，天）','lbl').setAttribute('transform',`rotate(-90 16 ${H/2})`);
+  if(rule!=='ews'){ txt(sv,(m2.l+W2)/2,H/2,'提前期分布僅就聯合警報匯出','tick','middle'); }
+  else if(!Ls.length){ txt(sv,(m2.l+W2)/2,H/2,'無足夠發作前警報個案','tick','middle'); }
+  else Ls.forEach((k,i)=>{
+    const q=OP.leads[k].q, bw2=(W2-m2.l-m2.r)/Ls.length, x=m2.l+i*bw2+bw2*0.5, w=bw2*0.42;
+    el('line',{x1:x,y1:sy2(q[0]),x2:x,y2:sy2(q[4]),stroke:'#1a1a1a'},sv);
+    el('rect',{x:x-w/2,y:sy2(q[3]),width:w,height:sy2(q[1])-sy2(q[3]),fill:'#d9d9d9',stroke:'#1a1a1a'},sv);
+    el('line',{x1:x-w/2,y1:sy2(q[2]),x2:x+w/2,y2:sy2(q[2]),stroke:'#1a1a1a','stroke-width':1.6},sv);
+    txt(sv,x,H-m2.b+16,MZH[k],'tick','middle'); txt(sv,x,H-m2.b+30,'n='+OP.leads[k].n,'tick','middle');
+  });
+  const b=S.bifurcation||{};
+  $('opKpi').innerHTML =
+    `<div><b>${fmt(b.sens_before_jump&&b.sens_before_jump.mean)}</b>分岔翻轉：跳轉前警報比例</div>`+
+    `<div><b>${b.lead_to_jump_median&&b.lead_to_jump_median.mean!=null?Math.round(b.lead_to_jump_median.mean)+' 天':'—'}</b>提前期中位（至跳轉）</div>`+
+    `<div><b>${b.lead_to_crit_median&&b.lead_to_crit_median.mean!=null?Math.round(b.lead_to_crit_median.mean)+' 天':'—'}</b>提前期中位（至跨臨界）</div>`+
+    `<div><b>${fmt(S.stable&&S.stable.fa_per_py&&S.stable.fa_per_py.mean)}</b>穩定機制假警報／病人年</div>`;
+  $('gateNote').textContent='品質關卡：'+OP.gates.map(g=>`${g.gate.split(' ')[0]} ${g.passed?'通過':'未過'}`).join('・')+'。在本模擬設定下，以上為固定假警報負擔之下的機制別表現；未發作機制的「觸發」即假警報。';
+}
+drawOp();
+
+/* ---------- 第 4 層：可辨識邊界 ---------- */
+const ID=PACK.identifiability;
+if(!ID){
+  $('identWrap').innerHTML='<p class="note">格點掃描尚未完成——此層待 results/grid.json 產生後重新匯出即補上。</p>';
+  $('tauSeg').style.display='none'; $('identNote').textContent='';
+}else{
+  const taus=[...new Set(ID.cells.map(c=>c.tau_x))].sort((a,b)=>a-b);
+  let tau=taus.includes(30)?30:taus[0];
+  taus.forEach(t=>{ const b=document.createElement('button'); b.textContent=t+' 天'; b.className=t===tau?'on':''; b.onclick=()=>{tau=t; document.querySelectorAll('#tauSeg button').forEach(x=>x.classList.toggle('on',x.textContent===t+' 天')); drawIdent();}; $('tauSeg').appendChild(b); });
+  function drawIdent(){
+    const svg=$('svgIdent'); svg.innerHTML='';
+    const ints=Object.keys(ID.intervals).filter(k=>ID.cells.some(c=>c.interval===k));
+    const errs=Object.keys(ID.errors).filter(k=>ID.cells.some(c=>c.meas_error===k));
+    const W=640,H=330,m={l:96,r:120,t:30,b:56};
+    const cw=(W-m.l-m.r)/ints.length, ch=(H-m.t-m.b)/errs.length;
+    errs.forEach((ek,i)=>ints.forEach((ik,j)=>{
+      const c=ID.cells.find(c=>c.tau_x===tau&&c.interval===ik&&c.meas_error===ek);
+      const v=c&&c.sens?c.sens.mean:null;
+      const shade=v==null?'#f5f5f5':`rgb(${Math.round(245-v*205)},${Math.round(245-v*205)},${Math.round(245-v*205)})`;
+      el('rect',{x:m.l+j*cw,y:m.t+i*ch,width:cw-2,height:ch-2,fill:shade,stroke:'#bbb'},svg);
+      txt(svg,m.l+j*cw+cw/2,m.t+i*ch+ch/2+4,v==null?'—':fmt(v),(v!=null&&v>0.55)?'tick':'tick','middle').setAttribute('fill',(v!=null&&v>0.55)?'#fff':'#333');
+    }));
+    ints.forEach((ik,j)=>txt(svg,m.l+j*cw+cw/2,H-m.b+18,ID.intervals[ik]+' 天','tick','middle'));
+    errs.forEach((ek,i)=>txt(svg,m.l-8,m.t+i*ch+ch/2+4,'誤差 '+fmt(ID.errors[ek]),'tick','end'));
+    txt(svg,(m.l+W-m.r)/2,H-10,'取樣間隔','lbl','middle');
+    txt(svg,m.l,m.t-10,`τx = ${tau} 天・每格 n=${ID.n}×MC${ID.mc}・格值＝分岔翻轉跳轉前警報比例`,'tick');
+    const mx=Math.max(...ID.cells.filter(c=>c.tau_x===tau).map(c=>c.sens&&c.sens.mean!=null?c.sens.mean:0));
+    $('identNote').textContent = ID.biopsy_sens!=null
+      ? (mx>=ID.biopsy_sens ? `虛線等值線＝切片參考規則敏感度 ${fmt(ID.biopsy_sens)}。`
+                            : `在本模擬設定下，此 τx 全部組合的跳轉前警報比例（最高 ${fmt(mx)}）皆低於切片參考規則的敏感度 ${fmt(ID.biopsy_sens)}——等值線不存在，如實不畫。`)
+      : '切片參考規則未達可信範圍（留白），無比較線。';
+  }
+  drawIdent();
+}
+
+/* ---------- 第 5 層：參數出處 ---------- */
+const tb=document.querySelector('#provTable tbody');
+const STAG={anchored:['anchored','已錨定'],pending_extraction:['pending','待抽取（佔位）'],study_defined:['','本研究設定']};
+PACK.provenance.forEach(r=>{
+  const tr=document.createElement('tr');
+  const [cls,zh]=STAG[r.status]||['',r.status];
+  tr.innerHTML=`<td><code>${r.key}</code></td><td><span class="tag ${cls}">${zh}</span></td>`+
+    `<td style="max-width:260px;word-break:break-all">${typeof r.value==='object'?JSON.stringify(r.value):r.value}</td>`+
+    `<td class="small">${r.source}</td>`;
+  tb.appendChild(tr);
+});
+</script>
+</body>
+</html>
