@@ -89,6 +89,21 @@ def build_pack(seed, n):
                      intervals={k: v for k, v in value(P, "sampling_intervals").items()},
                      errors={k: v for k, v in value(P, "meas_error_levels").items()},
                      biopsy_sens=locked["biopsy"]["sensitivity"] if locked.get("biopsy", {}).get("reachable") else None)
+    tp = value(P, "taper_schedule")
+    sim = dict(run_in=int(value(P, "run_in_days")), T=int(value(P, "T")), mu_c=float(value(P, "mu_c")), g0=float(value(P, "g0")),
+               tau_x=dict(value=value(P, "tau_x"), scan=P["tau_x"]["scan"]),
+               tau_xi=dict(value=value(P, "tau_xi"), scan=P["tau_xi"]["scan"]),
+               sigma_xi=dict(value=value(P, "sigma_xi"), scan=P["sigma_xi"]["scan"]),
+               mech_margins=dict(bif=value(P, "mu_bifurcation_margin"), esc=value(P, "mu_escape_margin"), low=value(P, "mu_low_dist")),
+               shock=value(P, "shock"), noise_amp=value(P, "noise_amplification"), cd_slope=value(P, "traj_slopes"),
+               hazard=value(P, "hazard"), x_threshold=value(P, "flare_definition_threshold")["x_threshold"],
+               taper=dict(default=tp["duration_days"], presets=sorted(set(p["duration_days"] for p in tp["presets"])), complete=tp["complete"]),
+               adherence=value(P, "adherence"), pkpd_lag=float(value(P, "pkpd_lag_days")),
+               sampling=value(P, "sampling_intervals"), errors=value(P, "meas_error_levels"),
+               window=dict(value=int(value(P, "window_days")), scan=P["window_days"]["scan"]),
+               budget=dict(value=float(value(P, "false_alarm_budget_per_py")), scan=P["false_alarm_budget_per_py"]["scan"]),
+               min_obs=int(value(P, "min_obs_per_window")), eval_every=int(value(P, "eval_every_days")),
+               n_null=120, n_mech=60)
     prov_keys = ("mu_c", "tau_x", "tau_xi", "sigma_xi", "window_days", "min_obs_per_window", "eval_every_days", "joint_alarm",
                  "false_alarm_budget_per_py", "surrogates", "mechanisms", "hazard", "flare_rate_24m_range", "flare_rate_52w",
                  "biopsy_rule_counts", "taper_schedule", "g0", "pkpd_lag_days", "adherence", "N", "T", "run_in_days", "mc_datasets", "seed_families")
@@ -101,6 +116,7 @@ def build_pack(seed, n):
                   scope=["全部為程式生成之合成序列，無任何真人資料", "使用佔位參數之產出不得對外引用",
                          "本頁不做診斷、不取代醫師判斷、不提供任何減藥時機或速度的判斷", "本頁不收集任何資料，離線可用"]),
         landscape=dict(mu_c=float(value(P, "mu_c")), g0=float(value(P, "g0"))),
+        sim=sim,
         gallery=gallery,
         operating=dict(summary=summary, thresholds=default["cell"]["lock"]["thresholds"], achieved=default["cell"]["lock"]["achieved"],
                        budget=default["cell"]["lock"]["budget"], mc=default["cell"]["mc"], n=default["cell"]["n"],

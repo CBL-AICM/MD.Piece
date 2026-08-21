@@ -34,4 +34,5 @@ v1 四道閘門中的 G1／G3 不在 v2 內（v2 以機制標籤取代分群、�
 
 - `params/thresholds.json`：唯一數值真相（value/source/status；pending_extraction 佔位三處標示；`_meta.design_changes_after_smoke_test` 記錄試跑後、正式跑前的規格退化修正）
 - 亂數一律經 `seeding.module_rng(master_seed, module, sub)`；禁 `np.random` 全域介面
+- `ui/`：單一離線 HTML（`python ui/export_ui_pack.py` 產生 index.html）；五分頁＋「模擬」分頁可輸入參數在頁內即時跑同構模型（小樣本、門檻依同批穩定序列即時鎖定）；前端不硬寫任何係數
 - 佔位參數（補齊前產出不得對外）：Ning 斜率、EULAR 減藥排程與監測、SELENA-SLEDAI 發作操作型門檻
