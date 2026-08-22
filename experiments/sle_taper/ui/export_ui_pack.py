@@ -22,9 +22,21 @@ except Exception:
 import numpy as np                                        # noqa: E402
 import m0_params as M0                                    # noqa: E402
 from m0_params import value                               # noqa: E402
+from m1_generator import simulate_cohort                  # noqa: E402
+from m2_risk import FEATURES, LOG_FEATURES, fit_static, score as risk_score  # noqa: E402
 from m5_ews import rolling_indicators                     # noqa: E402
+from calibrate import cal_seed                            # noqa: E402
 from figures import make_data, _representative, MECH_ORDER, MECH_ZH  # noqa: E402
 from run import params_hash, ews_cfg                      # noqa: E402
+
+FEAT_META = {
+    "upcr_g_per_g":        ("尿蛋白／肌酸酐比 UPCR", "g/g", 2),
+    "egfr":                ("估計腎絲球過濾率 eGFR", "mL/min/1.73m²", 0),
+    "c3_mg_dl":            ("補體 C3", "mg/dL", 0),
+    "anti_dsdna_iu_ml":    ("抗 dsDNA 抗體", "IU/mL", 0),
+    "disease_duration_yr": ("病程", "年", 1),
+    "prior_flares":        ("既往發作次數", "次", 0),
+}
 
 FORBIDDEN = re.compile(r"你的|您的|我的|紅燈|綠燈|黃燈|警示燈|等第|甲上|評級|建議減藥|建議停藥|應減藥|應停藥|單一分數|綜合分數|風險燈")
 MECH_DESC = {"bifurcation": "減藥途中緩慢跨越臨界點後翻轉——臨界減速理論上存在的正對照",
@@ -110,13 +122,42 @@ def build_pack(seed, n):
     provenance = [dict(key=k, status=P[k]["status"], source=P[k]["source"],
                        value=_clean(P[k]["value"] if P[k]["value"] is not None else P[k].get("placeholder")))
                   for k in prov_keys]
+    # 評估工作台：靜態模型於校準世代配適一次（係數、分位數、風險分組表全部由此匯出，前端只代入）
+    Ccal = simulate_cohort(P, Cj, cal_seed(P, seed))
+    coefs = fit_static(Ccal)
+    p_cal = risk_score(Ccal, coefs)
+    order = np.argsort(p_cal); groups = np.array_split(order, 5)
+    quint = [dict(lo=float(p_cal[gr].min()), hi=float(p_cal[gr].max()), event_rate=float(Ccal["event_24m"][gr].mean()), n=int(len(gr))) for gr in groups]
+    tmeans = {}
+    for k in FEATURES:
+        v = Ccal["features"][k].astype(float)
+        tmeans[k] = float(np.log(v).mean() if k in LOG_FEATURES else v.mean())
+    feat_rows = []
+    for k in FEATURES:
+        zh, unit, dec = FEAT_META[k]
+        clip = Cj["baseline_features"][k]["clip"]
+        feat_rows.append(dict(key=k, label=zh, unit=unit, decimals=dec, min=clip[0], max=clip[1],
+                              default=round(float(np.median(Ccal["features"][k])), dec), log=k in LOG_FEATURES))
+    ews_lock = default["cell"]["lock"]
+    bsum = default["cell"]["summary"]["ews"]
+    assess = dict(model=dict(intercept=coefs["intercept"], coef=coefs["coef"], features=coefs["features"], log_features=coefs["log_features"],
+                             tmeans=tmeans, cal_seed=cal_seed(P, seed), n_cal=int(Ccal["n"]),
+                             auc=default["cell"]["summary"]["predict"] and None or None),
+                  static_auc=json.load(open(os.path.join(res_dir, "locked.json"), encoding="utf-8"))["static"]["c"],
+                  prob_quantiles=[float(x) for x in np.quantile(p_cal, np.linspace(0, 1, 101))],
+                  quintiles=quint, features=feat_rows,
+                  ews=dict(threshold=ews_lock["thresholds"]["S"], achieved=ews_lock["achieved"]["S"], budget=ews_lock["budget"],
+                           window=ews_lock["cfg"]["window_days"], min_obs=ews_lock["cfg"]["min_obs"], eval_every=ews_lock["cfg"]["eval_every"],
+                           lock_hash=ews_lock["hash"]),
+                  perf=dict(sens_bif=bsum["bifurcation"]["sens_before_jump"], lead_bif=bsum["bifurcation"]["lead_to_jump_median"],
+                            fa_stable=bsum["stable"]["fa_per_py"], mc=default["cell"]["mc"], n=default["cell"]["n"]))
     return _clean(dict(
         meta=dict(title="狼瘡腎炎減藥翻轉預警——模型視覺化", date="2026-08-21", params_hash=params_hash(),
                   placeholders=[p["key"] for p in chk["placeholders"]],
                   scope=["全部為程式生成之合成序列，無任何真人資料", "使用佔位參數之產出不得對外引用",
                          "本頁不做診斷、不取代醫師判斷、不提供任何減藥時機或速度的判斷", "本頁不收集任何資料，離線可用"]),
         landscape=dict(mu_c=float(value(P, "mu_c")), g0=float(value(P, "g0"))),
-        sim=sim,
+        sim=sim, assess=assess,
         gallery=gallery,
         operating=dict(summary=summary, thresholds=default["cell"]["lock"]["thresholds"], achieved=default["cell"]["lock"]["achieved"],
                        budget=default["cell"]["lock"]["budget"], mc=default["cell"]["mc"], n=default["cell"]["n"],
@@ -131,15 +172,20 @@ def main():
     ap.add_argument("--n", type=int, default=1500)
     a = ap.parse_args()
     here = os.path.dirname(os.path.abspath(__file__))
-    tpl = open(os.path.join(here, "template.html"), encoding="utf-8").read()
-    bad = FORBIDDEN.findall(re.sub(r"<script[\s\S]*?</script>", "", tpl))
-    if bad:
-        raise SystemExit(f"[lint] 模板含禁用語彙：{sorted(set(bad))}")
     pack = build_pack(a.seed, a.n)
-    html = tpl.replace("__PACK_JSON__", json.dumps(pack, ensure_ascii=False, separators=(",", ":")))
-    out = os.path.join(here, "index.html")
-    open(out, "w", encoding="utf-8").write(html)
-    print(f"[ui] index.html {os.path.getsize(out)/1024:.0f} KB；佔位 {pack['meta']['placeholders']}；圖D {'含' if pack['identifiability'] else '待補'}")
+    pj = json.dumps(pack, ensure_ascii=False, separators=(",", ":"))
+    for tpl_name, out_name in (("template.html", "index.html"), ("assess_template.html", "assess.html")):
+        tpl_p = os.path.join(here, tpl_name)
+        if not os.path.exists(tpl_p):
+            continue
+        tpl = open(tpl_p, encoding="utf-8").read()
+        bad = FORBIDDEN.findall(re.sub(r"<script[\s\S]*?</script>", "", tpl))
+        if bad:
+            raise SystemExit(f"[lint] {tpl_name} 含禁用語彙：{sorted(set(bad))}")
+        out = os.path.join(here, out_name)
+        open(out, "w", encoding="utf-8").write(tpl.replace("__PACK_JSON__", pj))
+        print(f"[ui] {out_name} {os.path.getsize(out)/1024:.0f} KB")
+    print(f"[ui] 佔位 {pack['meta']['placeholders']}；圖D {'含' if pack['identifiability'] else '待補'}")
 
 
 if __name__ == "__main__":
