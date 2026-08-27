@@ -1,0 +1,97 @@
+{
+ "meta": {
+  "n": 250,
+  "T": 730,
+  "window_days": 150,
+  "generated": "2026-08-22",
+  "score_coupled": "滾動ARX恢復速率λ之下降趨勢(-Kendall tau)",
+  "score_single": "AR1與SD趨勢tau平均",
+  "note": "合成原型;耦合機制含四組:正對照/穩定/雜訊放大/全身活動但未耦合"
+ },
+ "rows": [
+  {
+   "interval": 7,
+   "error": 0.25,
+   "coupled": {
+    "detect": 0.609208,
+    "vs_noise": 0.55324,
+    "vs_systemic": 0.56544
+   },
+   "single": {
+    "detect": 0.582544,
+    "vs_noise": 0.264768,
+    "vs_systemic": 0.539296
+   }
+  },
+  {
+   "interval": 7,
+   "error": 0.5,
+   "coupled": {
+    "detect": 0.61648,
+    "vs_noise": 0.473392,
+    "vs_systemic": 0.589992
+   },
+   "single": {
+    "detect": 0.595192,
+    "vs_noise": 0.212056,
+    "vs_systemic": 0.566976
+   }
+  },
+  {
+   "interval": 14,
+   "error": 0.25,
+   "coupled": {
+    "detect": 0.60992,
+    "vs_noise": 0.601688,
+    "vs_systemic": 0.563384
+   },
+   "single": {
+    "detect": 0.596168,
+    "vs_noise": 0.311464,
+    "vs_systemic": 0.559312
+   }
+  },
+  {
+   "interval": 14,
+   "error": 0.5,
+   "coupled": {
+    "detect": 0.594,
+    "vs_noise": 0.569784,
+    "vs_systemic": 0.56756
+   },
+   "single": {
+    "detect": 0.567232,
+    "vs_noise": 0.264312,
+    "vs_systemic": 0.550656
+   }
+  },
+  {
+   "interval": 30,
+   "error": 0.25,
+   "coupled": {
+    "detect": 0.599464,
+    "vs_noise": 0.6458,
+    "vs_systemic": 0.578072
+   },
+   "single": {
+    "detect": 0.655736,
+    "vs_noise": 0.500504,
+    "vs_systemic": 0.618632
+   }
+  },
+  {
+   "interval": 30,
+   "error": 0.5,
+   "coupled": {
+    "detect": 0.599912,
+    "vs_noise": 0.644104,
+    "vs_systemic": 0.57884
+   },
+   "single": {
+    "detect": 0.647768,
+    "vs_noise": 0.491392,
+    "vs_systemic": 0.618552
+   }
+  }
+ ]
+}

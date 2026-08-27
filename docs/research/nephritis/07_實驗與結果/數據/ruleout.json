@@ -1,0 +1,1338 @@
+{
+ "meta": {
+  "process_sd": 0.11819251918126678,
+  "n_per_arm": 400,
+  "intervals": [
+   7,
+   14,
+   30,
+   60,
+   90
+  ],
+  "errors": [
+   0.0,
+   0.25,
+   0.5,
+   1.0
+  ],
+  "durations": [
+   180,
+   365,
+   540,
+   730
+  ],
+  "sens_targets": [
+   0.9,
+   0.95
+  ],
+  "generated": "2026-08-22",
+  "frame": "排除式：門檻設在保證敏感度達標處，回報可免除檢查的比例（特異度）與漏掉比例",
+  "note": "合成模型原型。可免除比例＝真正穩定者中被正確排除的百分比；漏掉＝需要檢查卻被排除者"
+ },
+ "cells": [
+  {
+   "duration": 180,
+   "interval": 7,
+   "n_obs": 25,
+   "window_pts": 9,
+   "window_eff_days": 63,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.3757,
+     "spared_stable": 0.077,
+     "spared_noise": 0.04,
+     "spared_all_nonevent": 0.059,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4485,
+     "spared_stable": 0.052,
+     "spared_noise": 0.015,
+     "spared_all_nonevent": 0.034,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 180,
+   "interval": 7,
+   "n_obs": 25,
+   "window_pts": 9,
+   "window_eff_days": 63,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.4191,
+     "spared_stable": 0.07,
+     "spared_noise": 0.04,
+     "spared_all_nonevent": 0.055,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4853,
+     "spared_stable": 0.05,
+     "spared_noise": 0.033,
+     "spared_all_nonevent": 0.041,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 180,
+   "interval": 7,
+   "n_obs": 25,
+   "window_pts": 9,
+   "window_eff_days": 63,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.3831,
+     "spared_stable": 0.085,
+     "spared_noise": 0.055,
+     "spared_all_nonevent": 0.07,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.493,
+     "spared_stable": 0.03,
+     "spared_noise": 0.033,
+     "spared_all_nonevent": 0.031,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 180,
+   "interval": 7,
+   "n_obs": 25,
+   "window_pts": 9,
+   "window_eff_days": 63,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.4051,
+     "spared_stable": 0.065,
+     "spared_noise": 0.065,
+     "spared_all_nonevent": 0.065,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4926,
+     "spared_stable": 0.035,
+     "spared_noise": 0.022,
+     "spared_all_nonevent": 0.029,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 180,
+   "interval": 14,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 112,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 14,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 112,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 14,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 112,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 14,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 112,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 30,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 30,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 30,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 30,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 60,
+   "n_obs": 3,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 60,
+   "n_obs": 3,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 60,
+   "n_obs": 3,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 60,
+   "n_obs": 3,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 90,
+   "n_obs": 2,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 90,
+   "n_obs": 2,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 90,
+   "n_obs": 2,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 180,
+   "interval": 90,
+   "n_obs": 2,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 7,
+   "n_obs": 52,
+   "window_pts": 17,
+   "window_eff_days": 119,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.3305,
+     "spared_stable": 0.142,
+     "spared_noise": 0.007,
+     "spared_all_nonevent": 0.075,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3906,
+     "spared_stable": 0.087,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.046,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 365,
+   "interval": 7,
+   "n_obs": 52,
+   "window_pts": 17,
+   "window_eff_days": 119,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.3716,
+     "spared_stable": 0.163,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.084,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.427,
+     "spared_stable": 0.107,
+     "spared_noise": 0.0,
+     "spared_all_nonevent": 0.054,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 365,
+   "interval": 7,
+   "n_obs": 52,
+   "window_pts": 17,
+   "window_eff_days": 119,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.3213,
+     "spared_stable": 0.207,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.109,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3938,
+     "spared_stable": 0.138,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.071,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 365,
+   "interval": 7,
+   "n_obs": 52,
+   "window_pts": 17,
+   "window_eff_days": 119,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.364,
+     "spared_stable": 0.115,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.062,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4271,
+     "spared_stable": 0.075,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.04,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 365,
+   "interval": 14,
+   "n_obs": 26,
+   "window_pts": 9,
+   "window_eff_days": 126,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.3536,
+     "spared_stable": 0.165,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.087,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4444,
+     "spared_stable": 0.068,
+     "spared_noise": 0.0,
+     "spared_all_nonevent": 0.034,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 365,
+   "interval": 14,
+   "n_obs": 26,
+   "window_pts": 9,
+   "window_eff_days": 126,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.3797,
+     "spared_stable": 0.14,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.075,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4706,
+     "spared_stable": 0.077,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.041,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 365,
+   "interval": 14,
+   "n_obs": 26,
+   "window_pts": 9,
+   "window_eff_days": 126,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.3464,
+     "spared_stable": 0.14,
+     "spared_noise": 0.013,
+     "spared_all_nonevent": 0.076,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4513,
+     "spared_stable": 0.075,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.039,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 365,
+   "interval": 14,
+   "n_obs": 26,
+   "window_pts": 9,
+   "window_eff_days": 126,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.366,
+     "spared_stable": 0.113,
+     "spared_noise": 0.015,
+     "spared_all_nonevent": 0.064,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4709,
+     "spared_stable": 0.062,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.033,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 365,
+   "interval": 30,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 30,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 30,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 30,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 60,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 60,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 60,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 60,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 90,
+   "n_obs": 4,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 90,
+   "n_obs": 4,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 90,
+   "n_obs": 4,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 365,
+   "interval": 90,
+   "n_obs": 4,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 540,
+   "interval": 7,
+   "n_obs": 77,
+   "window_pts": 26,
+   "window_eff_days": 182,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.2882,
+     "spared_stable": 0.195,
+     "spared_noise": 0.028,
+     "spared_all_nonevent": 0.111,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3748,
+     "spared_stable": 0.1,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.055,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 7,
+   "n_obs": 77,
+   "window_pts": 26,
+   "window_eff_days": 182,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.3599,
+     "spared_stable": 0.168,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.089,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4666,
+     "spared_stable": 0.098,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.051,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 7,
+   "n_obs": 77,
+   "window_pts": 26,
+   "window_eff_days": 182,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.3659,
+     "spared_stable": 0.14,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.075,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4928,
+     "spared_stable": 0.068,
+     "spared_noise": 0.007,
+     "spared_all_nonevent": 0.037,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 7,
+   "n_obs": 77,
+   "window_pts": 26,
+   "window_eff_days": 182,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.37,
+     "spared_stable": 0.113,
+     "spared_noise": 0.013,
+     "spared_all_nonevent": 0.062,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4687,
+     "spared_stable": 0.058,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.031,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 14,
+   "n_obs": 38,
+   "window_pts": 13,
+   "window_eff_days": 182,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.3172,
+     "spared_stable": 0.185,
+     "spared_noise": 0.022,
+     "spared_all_nonevent": 0.104,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3977,
+     "spared_stable": 0.092,
+     "spared_noise": 0.013,
+     "spared_all_nonevent": 0.052,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 14,
+   "n_obs": 38,
+   "window_pts": 13,
+   "window_eff_days": 182,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.3446,
+     "spared_stable": 0.18,
+     "spared_noise": 0.02,
+     "spared_all_nonevent": 0.1,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4131,
+     "spared_stable": 0.113,
+     "spared_noise": 0.007,
+     "spared_all_nonevent": 0.06,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 14,
+   "n_obs": 38,
+   "window_pts": 13,
+   "window_eff_days": 182,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.344,
+     "spared_stable": 0.147,
+     "spared_noise": 0.013,
+     "spared_all_nonevent": 0.08,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4402,
+     "spared_stable": 0.095,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.05,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 14,
+   "n_obs": 38,
+   "window_pts": 13,
+   "window_eff_days": 182,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.3231,
+     "spared_stable": 0.13,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.07,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.4278,
+     "spared_stable": 0.062,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.034,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 30,
+   "n_obs": 18,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.4689,
+     "spared_stable": 0.115,
+     "spared_noise": 0.015,
+     "spared_all_nonevent": 0.065,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.5778,
+     "spared_stable": 0.048,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.025,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 30,
+   "n_obs": 18,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.4444,
+     "spared_stable": 0.133,
+     "spared_noise": 0.018,
+     "spared_all_nonevent": 0.075,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.5344,
+     "spared_stable": 0.08,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.041,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 30,
+   "n_obs": 18,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.4889,
+     "spared_stable": 0.117,
+     "spared_noise": 0.02,
+     "spared_all_nonevent": 0.069,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.5778,
+     "spared_stable": 0.065,
+     "spared_noise": 0.0,
+     "spared_all_nonevent": 0.033,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 30,
+   "n_obs": 18,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.4444,
+     "spared_stable": 0.117,
+     "spared_noise": 0.022,
+     "spared_all_nonevent": 0.07,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.5333,
+     "spared_stable": 0.062,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.036,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 540,
+   "interval": 60,
+   "n_obs": 9,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 540,
+   "interval": 60,
+   "n_obs": 9,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 540,
+   "interval": 60,
+   "n_obs": 9,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 540,
+   "interval": 60,
+   "n_obs": 9,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 540,
+   "interval": 90,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 540,
+   "interval": 90,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 540,
+   "interval": 90,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 540,
+   "interval": 90,
+   "n_obs": 6,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 730,
+   "interval": 7,
+   "n_obs": 104,
+   "window_pts": 26,
+   "window_eff_days": 182,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.1866,
+     "spared_stable": 0.245,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.128,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.2609,
+     "spared_stable": 0.158,
+     "spared_noise": 0.007,
+     "spared_all_nonevent": 0.083,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 7,
+   "n_obs": 104,
+   "window_pts": 26,
+   "window_eff_days": 182,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.1949,
+     "spared_stable": 0.278,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.144,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3398,
+     "spared_stable": 0.155,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.079,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 7,
+   "n_obs": 104,
+   "window_pts": 26,
+   "window_eff_days": 182,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.2061,
+     "spared_stable": 0.26,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.131,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.2793,
+     "spared_stable": 0.177,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.09,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 7,
+   "n_obs": 104,
+   "window_pts": 26,
+   "window_eff_days": 182,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.1884,
+     "spared_stable": 0.255,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.13,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.2782,
+     "spared_stable": 0.145,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.074,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 14,
+   "n_obs": 52,
+   "window_pts": 13,
+   "window_eff_days": 182,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.1827,
+     "spared_stable": 0.255,
+     "spared_noise": 0.013,
+     "spared_all_nonevent": 0.134,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.2721,
+     "spared_stable": 0.163,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.084,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 14,
+   "n_obs": 52,
+   "window_pts": 13,
+   "window_eff_days": 182,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.1685,
+     "spared_stable": 0.287,
+     "spared_noise": 0.018,
+     "spared_all_nonevent": 0.152,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3359,
+     "spared_stable": 0.13,
+     "spared_noise": 0.0,
+     "spared_all_nonevent": 0.065,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 14,
+   "n_obs": 52,
+   "window_pts": 13,
+   "window_eff_days": 182,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.1481,
+     "spared_stable": 0.287,
+     "spared_noise": 0.018,
+     "spared_all_nonevent": 0.152,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.249,
+     "spared_stable": 0.185,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.098,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 14,
+   "n_obs": 52,
+   "window_pts": 13,
+   "window_eff_days": 182,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.2128,
+     "spared_stable": 0.198,
+     "spared_noise": 0.01,
+     "spared_all_nonevent": 0.104,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3133,
+     "spared_stable": 0.13,
+     "spared_noise": 0.007,
+     "spared_all_nonevent": 0.069,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 30,
+   "n_obs": 24,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.25,
+     "spared_stable": 0.217,
+     "spared_noise": 0.015,
+     "spared_all_nonevent": 0.116,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3754,
+     "spared_stable": 0.113,
+     "spared_noise": 0.003,
+     "spared_all_nonevent": 0.058,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 30,
+   "n_obs": 24,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.25,
+   "results": {
+    "0.90": {
+     "threshold": -0.2132,
+     "spared_stable": 0.275,
+     "spared_noise": 0.02,
+     "spared_all_nonevent": 0.147,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.3316,
+     "spared_stable": 0.14,
+     "spared_noise": 0.013,
+     "spared_all_nonevent": 0.076,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 30,
+   "n_obs": 24,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 0.5,
+   "results": {
+    "0.90": {
+     "threshold": -0.2059,
+     "spared_stable": 0.287,
+     "spared_noise": 0.018,
+     "spared_all_nonevent": 0.152,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.2724,
+     "spared_stable": 0.215,
+     "spared_noise": 0.007,
+     "spared_all_nonevent": 0.111,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 30,
+   "n_obs": 24,
+   "window_pts": 8,
+   "window_eff_days": 240,
+   "error": 1.0,
+   "results": {
+    "0.90": {
+     "threshold": -0.2434,
+     "spared_stable": 0.207,
+     "spared_noise": 0.018,
+     "spared_all_nonevent": 0.113,
+     "missed": 0.1
+    },
+    "0.95": {
+     "threshold": -0.361,
+     "spared_stable": 0.098,
+     "spared_noise": 0.005,
+     "spared_all_nonevent": 0.051,
+     "missed": 0.05
+    }
+   }
+  },
+  {
+   "duration": 730,
+   "interval": 60,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 730,
+   "interval": 60,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 730,
+   "interval": 60,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 730,
+   "interval": 60,
+   "n_obs": 12,
+   "window_pts": 8,
+   "window_eff_days": 480,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 730,
+   "interval": 90,
+   "n_obs": 8,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.0,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 730,
+   "interval": 90,
+   "n_obs": 8,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.25,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 730,
+   "interval": 90,
+   "n_obs": 8,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 0.5,
+   "results": null,
+   "reason": "資料點不足"
+  },
+  {
+   "duration": 730,
+   "interval": 90,
+   "n_obs": 8,
+   "window_pts": 8,
+   "window_eff_days": 720,
+   "error": 1.0,
+   "results": null,
+   "reason": "資料點不足"
+  }
+ ]
+}

@@ -1,0 +1,43 @@
+{
+ "meta": {
+  "design": "v11c 每日密度+多延遲擬合",
+  "generated": "2026-08-22"
+ },
+ "rows": [
+  {
+   "interval": 1,
+   "error": 0.25,
+   "window_days": 240,
+   "spearman": 0.143,
+   "n": 1574
+  },
+  {
+   "interval": 1,
+   "error": 0.5,
+   "window_days": 240,
+   "spearman": 0.129,
+   "n": 1574
+  },
+  {
+   "interval": 1,
+   "error": 1.0,
+   "window_days": 240,
+   "spearman": -0.02,
+   "n": 1524
+  },
+  {
+   "interval": 1,
+   "error": 0.25,
+   "window_days": 120,
+   "spearman": -0.046,
+   "n": 1677
+  },
+  {
+   "interval": 7,
+   "error": 0.25,
+   "window_days": 240,
+   "spearman": 0.083,
+   "n": 1275
+  }
+ ]
+}

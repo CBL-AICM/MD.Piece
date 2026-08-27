@@ -1,0 +1,154 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>減藥期間動態預警　監測可行性檢核</title>
+<style>
+:root{--ink:#1a1a1a;--mid:#5a5a5a;--line:#d4d4d4;--bg:#fbfbfa;--panel:#fff;
+--ok:#2f5d3f;--mid2:#7a6320;--bad:#7a2f2f;--na:#6b6b6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.65;
+font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px 64px}
+.banner{background:var(--ink);color:#fff;padding:11px 20px;font-size:13.5px;line-height:1.5}
+h1{font-size:23px;margin:26px 0 4px;font-weight:650}
+.sub{color:var(--mid);font-size:14px;margin-bottom:22px}
+h2{font-size:16.5px;margin:30px 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line);font-weight:620}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:18px 20px}
+.row{display:flex;gap:18px;flex-wrap:wrap}
+.fld{flex:1;min-width:190px;margin-bottom:14px}
+label{display:block;font-size:13.5px;color:var(--mid);margin-bottom:5px}
+select{width:100%;padding:8px 9px;font-size:14.5px;border:1px solid var(--line);
+border-radius:4px;background:#fff;color:var(--ink);font-family:inherit}
+.hint{font-size:12.5px;color:var(--mid);margin-top:4px}
+button{background:var(--ink);color:#fff;border:0;padding:10px 22px;border-radius:4px;
+font-size:14.5px;cursor:pointer;font-family:inherit}
+button:hover{background:#000}
+.verdict{padding:15px 18px;border-radius:5px;border:1px solid var(--line);
+background:#fff;margin-bottom:16px}
+.vlabel{font-size:19px;font-weight:660}
+.axes{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0}
+.axis{flex:1;min-width:230px;border:1px solid var(--line);border-radius:5px;padding:13px 15px;background:#fff}
+.axis .t{font-size:13px;color:var(--mid)}
+.axis .v{font-size:26px;font-weight:660;letter-spacing:-.5px}
+.axis .s{font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:13px;margin-top:8px}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:center}
+th{background:#f2f2f0;font-weight:600}
+td.k{text-align:left;background:#f7f7f5;font-weight:600;white-space:nowrap}
+.cell{cursor:pointer}.cell:hover{outline:2px solid var(--ink);outline-offset:-2px}
+.sel{outline:2px solid var(--ink);outline-offset:-2px}
+.ok{color:var(--ok)}.mm{color:var(--mid2)}.bad{color:var(--bad)}.na{color:var(--na)}
+.b-ok{background:#e7efe9}.b-mm{background:#f3eeda}.b-bad{background:#f4e6e6}.b-na{background:#eee}
+.note{font-size:13px;color:var(--mid);margin-top:10px}
+.src{font-size:12.5px;color:var(--mid);border-top:1px solid var(--line);margin-top:34px;padding-top:14px}
+code{background:#f0f0ee;padding:1px 5px;border-radius:3px;font-size:12.5px}
+.tag{display:inline-block;font-size:11.5px;border:1px solid var(--line);border-radius:3px;
+padding:1px 6px;color:var(--mid);margin-left:6px}
+ul{padding-left:20px;margin:8px 0}li{margin:4px 0}
+</style></head><body>
+<div class="banner">本工具以合成模型的模擬結果查表，用途為研究設計前的可行性檢核。非個人風險評估，不提供減藥建議，不做診斷，不取代醫師。</div>
+<div class="wrap">
+<h1>減藥期間動態預警　監測可行性檢核</h1>
+<div class="sub">輸入預計的監測時程與檢驗誤差，查詢在此條件下，臨界減速類指標是否有機會辨識出穩定性喪失。</div>
+
+<h2>一、輸入監測條件</h2>
+<div class="panel">
+<div class="row">
+<div class="fld"><label>監測總長度</label><select id="dur"></select>
+<div class="hint">自減藥起算的追蹤期間</div></div>
+<div class="fld"><label>取樣間隔</label><select id="int"></select>
+<div class="hint">兩次檢驗之間的天數</div></div>
+<div class="fld"><label>量測誤差</label><select id="err"></select>
+<div class="hint">以佔生理波動幅度的比例表示</div></div>
+</div>
+<button onclick="run()">查詢</button>
+</div>
+
+<h2>二、判定結果</h2>
+<div id="out"></div>
+
+<h2>三、整體地圖</h2>
+<div class="panel">
+<div class="note" style="margin:0 0 10px">下表為所有格點的綜合判定，可直接點選任一格帶入上方條件。列為取樣間隔，欄為量測誤差。</div>
+<div id="maps"></div>
+</div>
+
+<h2>四、這份結果怎麼讀</h2>
+<div class="panel">
+<p style="margin-top:0">判定分兩軸，兩軸的意義完全不同，不可只看其中一軸。</p>
+<ul>
+<li><b>偵測軸</b>：能不能看出「有事在變」。以分岔翻轉組相對穩定未發作組的 AUC 衡量。</li>
+<li><b>特異軸</b>：能不能分辨「真的失去穩定性」與「只是雜訊變大」。以分岔翻轉組相對雜訊放大組的 AUC 衡量。此值低於 0.50 代表雜訊假象的訊號反而更強。</li>
+</ul>
+<p>綜合判定取兩軸較差者，因為一個測得到但分不出真假的指標，在臨床上會製造假警報。</p>
+</div>
+
+<div class="src">
+<b>資料來源</b>　本工具查詢的是合成模型的模擬格點，非臨床資料。每格 250 位模擬個案 × 3 組（分岔翻轉／穩定未發作／雜訊放大）。
+評分方式為監測期末計算一次：對滾動一階自相關與滾動標準差各取與時間的 Kendall tau，兩者平均。
+自相關定義為去線性趨勢後之自協方差型 lag-1 自相關。<br><br>
+<b>不宣稱事項</b>　本工具不宣稱任何絕對提前天數、不宣稱可取代腎切片、不宣稱可用於個人決策。
+所有數值均為模擬設定下之相對比較。真實效度須待個人層級縱貫資料、機構審查核准與前瞻驗證。<br><br>
+<span id="meta"></span>
+</div>
+</div>
+<script>
+const G={"meta":{"process_sd":0.12088981746342509,"n_per_arm":250,"intervals":[3,7,14,30,60,90],"errors":[0.0,0.25,0.5,1.0],"durations":[180,365,540,730],"generated":"2026-08-21","ar1_def":"去線性趨勢後之自協方差型 lag-1 自相關","score":"AR(1) 與 SD 兩條時間趨勢 Kendall tau 之平均，於監測期末評分一次","verdict_rule":"兩軸分別判定。偵測軸：AUC(對穩定未發作) ≥0.70 佳、0.60–0.70 邊緣、<0.60 不足。特異軸：AUC(對雜訊放大) ≥0.65 佳、0.55–0.65 邊緣、<0.55 不足（<0.50 表示雜訊假象的訊號反而更強）。綜合判定取兩軸較差者。","note":"合成模型原型，AUC 為模擬設定下之區辨力，不構成臨床效能主張"},"cells":[{"duration":180,"interval":3,"window_days":60,"window_eff_days":60,"n_obs":60,"window_pts":20,"error":0.0,"auc_stable":0.474,"auc_noise":0.36,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":180,"interval":3,"window_days":60,"window_eff_days":60,"n_obs":60,"window_pts":20,"error":0.25,"auc_stable":0.457,"auc_noise":0.328,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":180,"interval":3,"window_days":60,"window_eff_days":60,"n_obs":60,"window_pts":20,"error":0.5,"auc_stable":0.508,"auc_noise":0.395,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":180,"interval":3,"window_days":60,"window_eff_days":60,"n_obs":60,"window_pts":20,"error":1.0,"auc_stable":0.463,"auc_noise":0.425,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":180,"interval":7,"window_days":60,"window_eff_days":63,"n_obs":25,"window_pts":9,"error":0.0,"auc_stable":0.458,"auc_noise":0.354,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":180,"interval":7,"window_days":60,"window_eff_days":63,"n_obs":25,"window_pts":9,"error":0.25,"auc_stable":0.464,"auc_noise":0.356,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":180,"interval":7,"window_days":60,"window_eff_days":63,"n_obs":25,"window_pts":9,"error":0.5,"auc_stable":0.514,"auc_noise":0.425,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":180,"interval":7,"window_days":60,"window_eff_days":63,"n_obs":25,"window_pts":9,"error":1.0,"auc_stable":0.476,"auc_noise":0.437,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":180,"interval":14,"window_days":60,"window_eff_days":112,"n_obs":12,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":180,"interval":14,"window_days":60,"window_eff_days":112,"n_obs":12,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":180,"interval":14,"window_days":60,"window_eff_days":112,"n_obs":12,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":180,"interval":14,"window_days":60,"window_eff_days":112,"n_obs":12,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":180,"interval":30,"window_days":60,"window_eff_days":240,"n_obs":6,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":30,"window_days":60,"window_eff_days":240,"n_obs":6,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":30,"window_days":60,"window_eff_days":240,"n_obs":6,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":30,"window_days":60,"window_eff_days":240,"n_obs":6,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":60,"window_days":60,"window_eff_days":480,"n_obs":3,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":60,"window_days":60,"window_eff_days":480,"n_obs":3,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":60,"window_days":60,"window_eff_days":480,"n_obs":3,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":60,"window_days":60,"window_eff_days":480,"n_obs":3,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":90,"window_days":60,"window_eff_days":720,"n_obs":2,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":90,"window_days":60,"window_eff_days":720,"n_obs":2,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":90,"window_days":60,"window_eff_days":720,"n_obs":2,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":180,"interval":90,"window_days":60,"window_eff_days":720,"n_obs":2,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":365,"interval":3,"window_days":121,"window_eff_days":120,"n_obs":121,"window_pts":40,"error":0.0,"auc_stable":0.51,"auc_noise":0.263,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":3,"window_days":121,"window_eff_days":120,"n_obs":121,"window_pts":40,"error":0.25,"auc_stable":0.501,"auc_noise":0.166,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":3,"window_days":121,"window_eff_days":120,"n_obs":121,"window_pts":40,"error":0.5,"auc_stable":0.502,"auc_noise":0.163,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":3,"window_days":121,"window_eff_days":120,"n_obs":121,"window_pts":40,"error":1.0,"auc_stable":0.488,"auc_noise":0.187,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":7,"window_days":121,"window_eff_days":119,"n_obs":52,"window_pts":17,"error":0.0,"auc_stable":0.503,"auc_noise":0.268,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":7,"window_days":121,"window_eff_days":119,"n_obs":52,"window_pts":17,"error":0.25,"auc_stable":0.518,"auc_noise":0.213,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":7,"window_days":121,"window_eff_days":119,"n_obs":52,"window_pts":17,"error":0.5,"auc_stable":0.49,"auc_noise":0.163,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":7,"window_days":121,"window_eff_days":119,"n_obs":52,"window_pts":17,"error":1.0,"auc_stable":0.511,"auc_noise":0.241,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":14,"window_days":121,"window_eff_days":126,"n_obs":26,"window_pts":9,"error":0.0,"auc_stable":0.494,"auc_noise":0.272,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":14,"window_days":121,"window_eff_days":126,"n_obs":26,"window_pts":9,"error":0.25,"auc_stable":0.516,"auc_noise":0.233,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":14,"window_days":121,"window_eff_days":126,"n_obs":26,"window_pts":9,"error":0.5,"auc_stable":0.469,"auc_noise":0.202,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":14,"window_days":121,"window_eff_days":126,"n_obs":26,"window_pts":9,"error":1.0,"auc_stable":0.533,"auc_noise":0.283,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":365,"interval":30,"window_days":121,"window_eff_days":240,"n_obs":12,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":365,"interval":30,"window_days":121,"window_eff_days":240,"n_obs":12,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":365,"interval":30,"window_days":121,"window_eff_days":240,"n_obs":12,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":365,"interval":30,"window_days":121,"window_eff_days":240,"n_obs":12,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":365,"interval":60,"window_days":121,"window_eff_days":480,"n_obs":6,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":365,"interval":60,"window_days":121,"window_eff_days":480,"n_obs":6,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":365,"interval":60,"window_days":121,"window_eff_days":480,"n_obs":6,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":365,"interval":60,"window_days":121,"window_eff_days":480,"n_obs":6,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":365,"interval":90,"window_days":121,"window_eff_days":720,"n_obs":4,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":365,"interval":90,"window_days":121,"window_eff_days":720,"n_obs":4,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":365,"interval":90,"window_days":121,"window_eff_days":720,"n_obs":4,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":365,"interval":90,"window_days":121,"window_eff_days":720,"n_obs":4,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":540,"interval":3,"window_days":180,"window_eff_days":180,"n_obs":180,"window_pts":60,"error":0.0,"auc_stable":0.585,"auc_noise":0.265,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":3,"window_days":180,"window_eff_days":180,"n_obs":180,"window_pts":60,"error":0.25,"auc_stable":0.594,"auc_noise":0.23,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":3,"window_days":180,"window_eff_days":180,"n_obs":180,"window_pts":60,"error":0.5,"auc_stable":0.593,"auc_noise":0.187,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":3,"window_days":180,"window_eff_days":180,"n_obs":180,"window_pts":60,"error":1.0,"auc_stable":0.514,"auc_noise":0.133,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":7,"window_days":180,"window_eff_days":182,"n_obs":77,"window_pts":26,"error":0.0,"auc_stable":0.585,"auc_noise":0.289,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":7,"window_days":180,"window_eff_days":182,"n_obs":77,"window_pts":26,"error":0.25,"auc_stable":0.58,"auc_noise":0.27,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":7,"window_days":180,"window_eff_days":182,"n_obs":77,"window_pts":26,"error":0.5,"auc_stable":0.574,"auc_noise":0.196,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":7,"window_days":180,"window_eff_days":182,"n_obs":77,"window_pts":26,"error":1.0,"auc_stable":0.607,"auc_noise":0.174,"verdict":"不可行","detect":"邊緣","specific":"不足"},{"duration":540,"interval":14,"window_days":180,"window_eff_days":182,"n_obs":38,"window_pts":13,"error":0.0,"auc_stable":0.576,"auc_noise":0.296,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":14,"window_days":180,"window_eff_days":182,"n_obs":38,"window_pts":13,"error":0.25,"auc_stable":0.568,"auc_noise":0.269,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":14,"window_days":180,"window_eff_days":182,"n_obs":38,"window_pts":13,"error":0.5,"auc_stable":0.551,"auc_noise":0.218,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":14,"window_days":180,"window_eff_days":182,"n_obs":38,"window_pts":13,"error":1.0,"auc_stable":0.541,"auc_noise":0.186,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":30,"window_days":180,"window_eff_days":240,"n_obs":18,"window_pts":8,"error":0.0,"auc_stable":0.548,"auc_noise":0.322,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":30,"window_days":180,"window_eff_days":240,"n_obs":18,"window_pts":8,"error":0.25,"auc_stable":0.542,"auc_noise":0.321,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":30,"window_days":180,"window_eff_days":240,"n_obs":18,"window_pts":8,"error":0.5,"auc_stable":0.544,"auc_noise":0.289,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":30,"window_days":180,"window_eff_days":240,"n_obs":18,"window_pts":8,"error":1.0,"auc_stable":0.517,"auc_noise":0.292,"verdict":"不可行","detect":"不足","specific":"不足"},{"duration":540,"interval":60,"window_days":180,"window_eff_days":480,"n_obs":9,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/1","detect":null,"specific":null},{"duration":540,"interval":60,"window_days":180,"window_eff_days":480,"n_obs":9,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/1","detect":null,"specific":null},{"duration":540,"interval":60,"window_days":180,"window_eff_days":480,"n_obs":9,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/1","detect":null,"specific":null},{"duration":540,"interval":60,"window_days":180,"window_eff_days":480,"n_obs":9,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/1","detect":null,"specific":null},{"duration":540,"interval":90,"window_days":180,"window_eff_days":720,"n_obs":6,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":540,"interval":90,"window_days":180,"window_eff_days":720,"n_obs":6,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":540,"interval":90,"window_days":180,"window_eff_days":720,"n_obs":6,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":540,"interval":90,"window_days":180,"window_eff_days":720,"n_obs":6,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":730,"interval":3,"window_days":180,"window_eff_days":180,"n_obs":243,"window_pts":60,"error":0.0,"auc_stable":0.683,"auc_noise":0.235,"verdict":"不可行","detect":"邊緣","specific":"不足"},{"duration":730,"interval":3,"window_days":180,"window_eff_days":180,"n_obs":243,"window_pts":60,"error":0.25,"auc_stable":0.76,"auc_noise":0.329,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":3,"window_days":180,"window_eff_days":180,"n_obs":243,"window_pts":60,"error":0.5,"auc_stable":0.746,"auc_noise":0.23,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":3,"window_days":180,"window_eff_days":180,"n_obs":243,"window_pts":60,"error":1.0,"auc_stable":0.72,"auc_noise":0.171,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":7,"window_days":180,"window_eff_days":182,"n_obs":104,"window_pts":26,"error":0.0,"auc_stable":0.696,"auc_noise":0.304,"verdict":"不可行","detect":"邊緣","specific":"不足"},{"duration":730,"interval":7,"window_days":180,"window_eff_days":182,"n_obs":104,"window_pts":26,"error":0.25,"auc_stable":0.753,"auc_noise":0.388,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":7,"window_days":180,"window_eff_days":182,"n_obs":104,"window_pts":26,"error":0.5,"auc_stable":0.74,"auc_noise":0.278,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":7,"window_days":180,"window_eff_days":182,"n_obs":104,"window_pts":26,"error":1.0,"auc_stable":0.701,"auc_noise":0.202,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":14,"window_days":180,"window_eff_days":182,"n_obs":52,"window_pts":13,"error":0.0,"auc_stable":0.714,"auc_noise":0.352,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":14,"window_days":180,"window_eff_days":182,"n_obs":52,"window_pts":13,"error":0.25,"auc_stable":0.747,"auc_noise":0.396,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":14,"window_days":180,"window_eff_days":182,"n_obs":52,"window_pts":13,"error":0.5,"auc_stable":0.728,"auc_noise":0.308,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":14,"window_days":180,"window_eff_days":182,"n_obs":52,"window_pts":13,"error":1.0,"auc_stable":0.694,"auc_noise":0.218,"verdict":"不可行","detect":"邊緣","specific":"不足"},{"duration":730,"interval":30,"window_days":180,"window_eff_days":240,"n_obs":24,"window_pts":8,"error":0.0,"auc_stable":0.725,"auc_noise":0.444,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":30,"window_days":180,"window_eff_days":240,"n_obs":24,"window_pts":8,"error":0.25,"auc_stable":0.721,"auc_noise":0.454,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":30,"window_days":180,"window_eff_days":240,"n_obs":24,"window_pts":8,"error":0.5,"auc_stable":0.706,"auc_noise":0.425,"verdict":"不可行","detect":"佳","specific":"不足"},{"duration":730,"interval":30,"window_days":180,"window_eff_days":240,"n_obs":24,"window_pts":8,"error":1.0,"auc_stable":0.66,"auc_noise":0.334,"verdict":"不可行","detect":"邊緣","specific":"不足"},{"duration":730,"interval":60,"window_days":180,"window_eff_days":480,"n_obs":12,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":730,"interval":60,"window_days":180,"window_eff_days":480,"n_obs":12,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":730,"interval":60,"window_days":180,"window_eff_days":480,"n_obs":12,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":730,"interval":60,"window_days":180,"window_eff_days":480,"n_obs":12,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/4","detect":null,"specific":null},{"duration":730,"interval":90,"window_days":180,"window_eff_days":720,"n_obs":8,"window_pts":8,"error":0.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":730,"interval":90,"window_days":180,"window_eff_days":720,"n_obs":8,"window_pts":8,"error":0.25,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":730,"interval":90,"window_days":180,"window_eff_days":720,"n_obs":8,"window_pts":8,"error":0.5,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null},{"duration":730,"interval":90,"window_days":180,"window_eff_days":720,"n_obs":8,"window_pts":8,"error":1.0,"auc_stable":null,"auc_noise":null,"verdict":"資料量不足","reason":"視窗需≥8點且視窗後需再有≥8點；此組合為 8/0","detect":null,"specific":null}]};
+const M=G.meta, cells=G.cells;
+const $=id=>document.getElementById(id);
+function opt(sel,arr,fmt,def){sel.innerHTML=arr.map(v=>`<option value="${v}"${v==def?' selected':''}>${fmt(v)}</option>`).join('')}
+opt($('dur'),M.durations,v=>v+' 天（約 '+Math.round(v/30)+' 個月）',730);
+opt($('int'),M.intervals,v=>'每 '+v+' 天一次',14);
+opt($('err'),M.errors,v=>v==0?'無誤差（理想）':(v*100)+'% 生理波動幅度',0.25);
+$('meta').textContent='模型版本 原型 v1　格點產生日 '+M.generated+'　每組 '+M.n_per_arm+' 人　判定規則：'+M.verdict_rule;
+const cls=v=>v=='佳'?'ok':v=='邊緣'?'mm':v=='不足'?'bad':'na';
+const bcls=v=>v=='可行'?'b-ok':v=='邊緣'?'b-mm':v=='不可行'?'b-bad':'b-na';
+function find(d,i,e){return cells.find(c=>c.duration==d&&c.interval==i&&Math.abs(c.error-e)<1e-9)}
+function run(){
+ const d=+$('dur').value,i=+$('int').value,e=+$('err').value;
+ const c=find(d,i,e); const o=$('out');
+ if(!c){o.innerHTML='<div class="panel">查無此組合。</div>';return}
+ if(c.auc_stable===null){
+  o.innerHTML=`<div class="verdict"><div class="vlabel na">資料量不足</div>
+  <div class="note">${c.reason||''}　此組合下可用的滾動視窗數不足以估計指標趨勢，並非方法失效，而是資料點太少。</div>
+  <div class="note">目前設定：監測 ${c.duration} 天，每 ${c.interval} 天一次，共 ${c.n_obs} 次檢驗；視窗需 ${c.window_pts} 點。</div></div>`;
+  drawMaps(d,i,e);return}
+ const advice=c.specific=='不足'&&c.auc_noise<0.5
+  ? '在此條件下，單純變異度增大所產生的訊號比真正的穩定性喪失更強。加密取樣或提高精度不會解決這一點，需要額外的區辨資訊（例如可識別的外生擾動、或與變異度無關的第二指標）。'
+  : (c.detect=='不足' ? '訊號強度不足以與穩定序列區分。可先延長監測長度，再考慮加密。'
+  : '兩軸皆達可用水準，建議仍以前瞻性固定取樣驗證。');
+ o.innerHTML=`
+ <div class="verdict"><div class="vlabel ${bcls(c.verdict).replace('b-','')==='ok'?'ok':bcls(c.verdict)==='b-mm'?'mm':'bad'}">綜合判定：${c.verdict}</div>
+ <div class="note">監測 ${c.duration} 天 ・ 每 ${c.interval} 天一次 ・ 誤差 ${(c.error*100).toFixed(0)}% ・ 共 ${c.n_obs} 次檢驗 ・ 有效視窗 ${c.window_eff_days} 天（${c.window_pts} 點）</div></div>
+ <div class="axes">
+  <div class="axis"><div class="t">偵測軸　與穩定未發作組區分</div>
+   <div class="v ${cls(c.detect)}">${c.auc_stable.toFixed(2)}</div>
+   <div class="s ${cls(c.detect)}">${c.detect}</div></div>
+  <div class="axis"><div class="t">特異軸　與雜訊放大組區分</div>
+   <div class="v ${cls(c.specific)}">${c.auc_noise.toFixed(2)}</div>
+   <div class="s ${cls(c.specific)}">${c.specific}${c.auc_noise<0.5?'　（雜訊假象訊號更強）':''}</div></div>
+ </div>
+ <div class="panel"><b>建議</b><div class="note" style="margin-top:6px">${advice}</div></div>`;
+ drawMaps(d,i,e);
+}
+function drawMaps(sd,si,se){
+ let h='';
+ for(const d of M.durations){
+  h+=`<div style="margin-bottom:16px"><b style="font-size:14px">監測 ${d} 天</b>
+  <table><tr><th>取樣間隔</th>${M.errors.map(e=>`<th>誤差 ${(e*100).toFixed(0)}%</th>`).join('')}</tr>`;
+  for(const i of M.intervals){
+   h+=`<tr><td class="k">每 ${i} 天</td>`;
+   for(const e of M.errors){
+    const c=find(d,i,e); const s=(d==sd&&i==si&&Math.abs(e-se)<1e-9)?' sel':'';
+    const txt=c.auc_stable===null?'—':c.auc_stable.toFixed(2)+' / '+c.auc_noise.toFixed(2);
+    h+=`<td class="cell ${bcls(c.verdict)}${s}" onclick="pick(${d},${i},${e})" title="${c.verdict}">${txt}</td>`;
+   }
+   h+='</tr>';
+  }
+  h+='</table></div>';
+ }
+ h+='<div class="note">每格顯示「偵測軸 AUC / 特異軸 AUC」。<span class="tag">綠＝可行</span><span class="tag">黃＝邊緣</span><span class="tag">紅＝不可行</span><span class="tag">灰＝資料量不足</span></div>';
+ $('maps').innerHTML=h;
+}
+function pick(d,i,e){$('dur').value=d;$('int').value=i;$('err').value=e;run()}
+run();
+</script></body></html>

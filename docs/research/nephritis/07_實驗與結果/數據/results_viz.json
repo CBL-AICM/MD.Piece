@@ -1,0 +1,70 @@
+{
+ "perf": {
+  "bifurcation": {
+   "label": "分岔翻轉（正對照）",
+   "event_rate": 0.585,
+   "sens": 0.06837606837606838,
+   "false": 0.0963855421686747,
+   "lead_med": 390.5,
+   "lead_q": [
+    311.25,
+    412.75
+   ]
+  },
+  "noise_escape": {
+   "label": "隨機越障",
+   "event_rate": 0.84,
+   "sens": 0.13095238095238096,
+   "false": 0.21875,
+   "lead_med": 123.5,
+   "lead_q": [
+    66.75,
+    314.25
+   ]
+  },
+  "gradual": {
+   "label": "連續惡化",
+   "event_rate": 1.0,
+   "sens": 0.23,
+   "false": 0.0,
+   "lead_med": 189.5,
+   "lead_q": [
+    150.5,
+    264.5
+   ]
+  },
+  "shock": {
+   "label": "外生衝擊",
+   "event_rate": 1.0,
+   "sens": 0.16,
+   "false": 0.0,
+   "lead_med": 267.5,
+   "lead_q": [
+    158.75,
+    340.0
+   ]
+  },
+  "noise_amp": {
+   "label": "雜訊放大",
+   "event_rate": 0.39,
+   "sens": 0.3076923076923077,
+   "false": 0.27049180327868855,
+   "lead_med": 297.0,
+   "lead_q": [
+    152.5,
+    364.25
+   ]
+  },
+  "stable": {
+   "label": "穩定未發作（虛無）",
+   "event_rate": 0.0,
+   "sens": 0.0,
+   "false": 0.235,
+   "lead_med": null,
+   "lead_q": null
+  }
+ },
+ "threshold": 0.8666666666666666,
+ "burden": 0.2,
+ "process_sd": 0.12104229126594798
+}
