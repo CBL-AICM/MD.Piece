@@ -290,6 +290,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=20260827)
     ap.add_argument("--n", type=int, default=4000, help="僅在 results 檔缺欄位時使用；正常情況沿用 results 檔的 n")
+    ap.add_argument("--publish", action="store_true", help="同時寫入 frontend/nephritis-model.html（＝準備上正式站）")
     a = ap.parse_args()
 
     pack = build(a.seed, a.n)
@@ -304,16 +305,17 @@ def main():
     out = os.path.join(HERE, "index.html")
     with open(out, "w", encoding="utf-8") as f:
         f.write(html)
-    # 同一份內容也寫進 frontend/，正式站由 vercel.json 的 frontend/** 靜態規則提供。
-    # 兩邊由同一次匯出產生，不手動複製——手動複製遲早會讓線上版本與模型脫節。
+    # --publish 才寫進 frontend/（正式站由 vercel.json 的 frontend/** 靜態規則提供）。
+    # 預設不寫：這頁一旦躺在 frontend/ 裡，任何一次為了別的理由合併 main 都會把它
+    # 一起推上公開醫療網域。要上線必須是明確的動作，不能是合併的副作用。
     pub = os.path.join(ROOT, "..", "..", "frontend", "nephritis-model.html")
-    if os.path.isdir(os.path.dirname(pub)):
+    if a.publish and os.path.isdir(os.path.dirname(pub)):
         with open(pub, "w", encoding="utf-8") as f:
             f.write(html)
     print(f"ui_pack.json  {os.path.getsize(pj) / 1024:.0f} KB")
     print(f"index.html    {os.path.getsize(out) / 1024:.0f} KB  （單一檔，可直接開啟）")
-    if os.path.isdir(os.path.dirname(pub)):
-        print(f"frontend/nephritis-model.html  已同步（正式站 /nephritis-model.html）")
+    if a.publish and os.path.isdir(os.path.dirname(pub)):
+        print("frontend/nephritis-model.html  已同步（正式站 /nephritis-model.html）")
 
 
 if __name__ == "__main__":
