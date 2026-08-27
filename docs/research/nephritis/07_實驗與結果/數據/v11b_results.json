@@ -1,0 +1,133 @@
+{
+ "meta": {
+  "design": "v11b 儀器校驗:窗內無跨越;中+晚兩窗;跨機制合併",
+  "generated": "2026-08-22"
+ },
+ "rows": [
+  {
+   "interval": 7,
+   "error": 0.25,
+   "window_days": 240,
+   "spearman": 0.109,
+   "n": 1579,
+   "fingerprint": {
+    "coupled_flip": [
+     0.0164,
+     0.0033
+    ],
+    "stable": [
+     0.0166,
+     0.0032
+    ],
+    "systemic_only": [
+     0.0156,
+     0.0031
+    ],
+    "noise_amp": [
+     0.0214,
+     0.0163
+    ]
+   }
+  },
+  {
+   "interval": 7,
+   "error": 0.5,
+   "window_days": 240,
+   "spearman": 0.078,
+   "n": 1565,
+   "fingerprint": {
+    "coupled_flip": [
+     0.0165,
+     0.0033
+    ],
+    "stable": [
+     0.0151,
+     0.0031
+    ],
+    "systemic_only": [
+     0.0119,
+     0.0031
+    ],
+    "noise_amp": [
+     0.0202,
+     0.0161
+    ]
+   }
+  },
+  {
+   "interval": 14,
+   "error": 0.25,
+   "window_days": 300,
+   "spearman": 0.227,
+   "n": 1550,
+   "fingerprint": {
+    "coupled_flip": [
+     0.0224,
+     0.0041
+    ],
+    "stable": [
+     0.0221,
+     0.0039
+    ],
+    "systemic_only": [
+     0.0232,
+     0.0037
+    ],
+    "noise_amp": [
+     0.0299,
+     0.0171
+    ]
+   }
+  },
+  {
+   "interval": 14,
+   "error": 0.5,
+   "window_days": 300,
+   "spearman": 0.102,
+   "n": 1507,
+   "fingerprint": {
+    "coupled_flip": [
+     0.0206,
+     0.0043
+    ],
+    "stable": [
+     0.0192,
+     0.004
+    ],
+    "systemic_only": [
+     0.0193,
+     0.0039
+    ],
+    "noise_amp": [
+     0.0296,
+     0.0169
+    ]
+   }
+  },
+  {
+   "interval": 30,
+   "error": 0.25,
+   "window_days": 420,
+   "spearman": 0.239,
+   "n": 605,
+   "fingerprint": {
+    "coupled_flip": [
+     0.0255,
+     0.0074
+    ],
+    "stable": [
+     0.0287,
+     0.0056
+    ],
+    "systemic_only": [
+     0.0277,
+     0.0052
+    ],
+    "noise_amp": [
+     0.0462,
+     0.0419
+    ]
+   }
+  }
+ ]
+}

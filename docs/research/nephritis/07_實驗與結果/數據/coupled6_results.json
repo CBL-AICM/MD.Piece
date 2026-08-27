@@ -1,0 +1,74 @@
+{
+ "meta": {
+  "n": 400,
+  "design": "訓練/測試各半;邏輯斯迴歸;特徵三組",
+  "generated": "2026-08-22"
+ },
+ "rows": [
+  {
+   "interval": 7,
+   "error": 0.25,
+   "trend_detect": 0.997,
+   "trend_vs_noise": 0.996,
+   "trend_vs_systemic": 0.951,
+   "dyn_detect": 0.916,
+   "dyn_vs_noise": 0.93,
+   "dyn_vs_systemic": 0.964,
+   "full_detect": 0.998,
+   "full_vs_noise": 0.997,
+   "full_vs_systemic": 0.972
+  },
+  {
+   "interval": 7,
+   "error": 0.5,
+   "trend_detect": 0.998,
+   "trend_vs_noise": 0.996,
+   "trend_vs_systemic": 0.954,
+   "dyn_detect": 0.911,
+   "dyn_vs_noise": 0.915,
+   "dyn_vs_systemic": 0.949,
+   "full_detect": 0.996,
+   "full_vs_noise": 0.996,
+   "full_vs_systemic": 0.967
+  },
+  {
+   "interval": 14,
+   "error": 0.25,
+   "trend_detect": 0.999,
+   "trend_vs_noise": 0.999,
+   "trend_vs_systemic": 0.969,
+   "dyn_detect": 0.919,
+   "dyn_vs_noise": 0.955,
+   "dyn_vs_systemic": 0.965,
+   "full_detect": 0.999,
+   "full_vs_noise": 1.0,
+   "full_vs_systemic": 0.977
+  },
+  {
+   "interval": 14,
+   "error": 0.5,
+   "trend_detect": 0.999,
+   "trend_vs_noise": 0.999,
+   "trend_vs_systemic": 0.967,
+   "dyn_detect": 0.902,
+   "dyn_vs_noise": 0.948,
+   "dyn_vs_systemic": 0.941,
+   "full_detect": 0.999,
+   "full_vs_noise": 0.999,
+   "full_vs_systemic": 0.971
+  },
+  {
+   "interval": 3,
+   "error": 0.25,
+   "trend_detect": 0.995,
+   "trend_vs_noise": 0.997,
+   "trend_vs_systemic": 0.94,
+   "dyn_detect": 0.935,
+   "dyn_vs_noise": 0.94,
+   "dyn_vs_systemic": 0.969,
+   "full_detect": 0.995,
+   "full_vs_noise": 0.998,
+   "full_vs_systemic": 0.973
+  }
+ ]
+}

@@ -1,0 +1,138 @@
+{
+ "meta": {
+  "n": 250,
+  "score": "時變ARX b1 t值",
+  "positives": "實際發生事件者",
+  "generated": "2026-08-22"
+ },
+ "rows": [
+  {
+   "interval": 3,
+   "error": 0.0,
+   "coverage": 1.0,
+   "detect_event": 0.7013103448275863,
+   "vs_noise": 0.88656,
+   "vs_systemic": 0.745024
+  },
+  {
+   "interval": 3,
+   "error": 0.25,
+   "coverage": 1.0,
+   "detect_event": 0.6051954022988506,
+   "vs_noise": 0.817968,
+   "vs_systemic": 0.608
+  },
+  {
+   "interval": 3,
+   "error": 0.5,
+   "coverage": 1.0,
+   "detect_event": 0.513632183908046,
+   "vs_noise": 0.58824,
+   "vs_systemic": 0.475168
+  },
+  {
+   "interval": 3,
+   "error": 1.0,
+   "coverage": 1.0,
+   "detect_event": 0.3946896551724138,
+   "vs_noise": 0.3712289156626506,
+   "vs_systemic": 0.368128
+  },
+  {
+   "interval": 7,
+   "error": 0.0,
+   "coverage": 1.0,
+   "detect_event": 0.6514794811429626,
+   "vs_noise": 0.8784098360655738,
+   "vs_systemic": 0.6955806451612904
+  },
+  {
+   "interval": 7,
+   "error": 0.25,
+   "coverage": 1.0,
+   "detect_event": 0.6125190416839773,
+   "vs_noise": 0.8487407407407408,
+   "vs_systemic": 0.6231935483870967
+  },
+  {
+   "interval": 7,
+   "error": 0.5,
+   "coverage": 1.0,
+   "detect_event": 0.49501454092230995,
+   "vs_noise": 0.6794918032786885,
+   "vs_systemic": 0.5113253012048192
+  },
+  {
+   "interval": 7,
+   "error": 1.0,
+   "coverage": 1.0,
+   "detect_event": 0.37891797073350875,
+   "vs_noise": 0.43040329218107,
+   "vs_systemic": 0.3631807228915663
+  },
+  {
+   "interval": 14,
+   "error": 0.0,
+   "coverage": 0.94,
+   "detect_event": 0.5696972744644474,
+   "vs_noise": 0.827367919006222,
+   "vs_systemic": 0.6116707130189232
+  },
+  {
+   "interval": 14,
+   "error": 0.25,
+   "coverage": 0.93,
+   "detect_event": 0.5219085205424003,
+   "vs_noise": 0.7754822136108329,
+   "vs_systemic": 0.5651519867206142
+  },
+  {
+   "interval": 14,
+   "error": 0.5,
+   "coverage": 0.94,
+   "detect_event": 0.4684626149540184,
+   "vs_noise": 0.653713298791019,
+   "vs_systemic": 0.48698559670781894
+  },
+  {
+   "interval": 14,
+   "error": 1.0,
+   "coverage": 0.94,
+   "detect_event": 0.3716763294682127,
+   "vs_noise": 0.45202879581151834,
+   "vs_systemic": 0.3967764060356653
+  },
+  {
+   "interval": 30,
+   "error": 0.0,
+   "coverage": 0.41,
+   "detect_event": 0.5131766381766382,
+   "vs_noise": 0.5348075348075348,
+   "vs_systemic": 0.5246201136759077
+  },
+  {
+   "interval": 30,
+   "error": 0.25,
+   "coverage": 0.41,
+   "detect_event": 0.5143043684710351,
+   "vs_noise": 0.5227914481645825,
+   "vs_systemic": 0.5240691335111936
+  },
+  {
+   "interval": 30,
+   "error": 0.5,
+   "coverage": 0.41,
+   "detect_event": 0.4457867897037397,
+   "vs_noise": 0.4867608581894296,
+   "vs_systemic": 0.48545625146610366
+  },
+  {
+   "interval": 30,
+   "error": 1.0,
+   "coverage": 0.41,
+   "detect_event": 0.3973538198890312,
+   "vs_noise": 0.3564213564213564,
+   "vs_systemic": 0.41787313215884647
+  }
+ ]
+}

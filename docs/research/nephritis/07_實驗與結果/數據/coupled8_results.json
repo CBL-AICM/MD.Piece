@@ -1,0 +1,121 @@
+{
+ "meta": {
+  "n": 400,
+  "generated": "2026-08-22",
+  "design": "v7地標式+交叉相關耦合特徵"
+ },
+ "rows": [
+  {
+   "landmark": 365,
+   "interval": 7,
+   "error": 0.25,
+   "dyn+x_detect": 0.484,
+   "dyn+x_vs_noise": 0.878,
+   "dyn+x_vs_systemic": 0.659,
+   "full+x_detect": 0.973,
+   "full+x_vs_noise": 0.991,
+   "full+x_vs_systemic": 0.646,
+   "xonly_detect": 0.548,
+   "xonly_vs_noise": 0.545,
+   "xonly_vs_systemic": 0.623
+  },
+  {
+   "landmark": 365,
+   "interval": 7,
+   "error": 0.5,
+   "dyn+x_detect": 0.491,
+   "dyn+x_vs_noise": 0.899,
+   "dyn+x_vs_systemic": 0.639,
+   "full+x_detect": 0.973,
+   "full+x_vs_noise": 0.995,
+   "full+x_vs_systemic": 0.645,
+   "xonly_detect": 0.52,
+   "xonly_vs_noise": 0.519,
+   "xonly_vs_systemic": 0.597
+  },
+  {
+   "landmark": 365,
+   "interval": 14,
+   "error": 0.25,
+   "dyn+x_detect": 0.474,
+   "dyn+x_vs_noise": 0.848,
+   "dyn+x_vs_systemic": 0.648,
+   "full+x_detect": 0.976,
+   "full+x_vs_noise": 0.991,
+   "full+x_vs_systemic": 0.639,
+   "xonly_detect": 0.512,
+   "xonly_vs_noise": 0.524,
+   "xonly_vs_systemic": 0.602
+  },
+  {
+   "landmark": 365,
+   "interval": 14,
+   "error": 0.5,
+   "dyn+x_detect": 0.515,
+   "dyn+x_vs_noise": 0.842,
+   "dyn+x_vs_systemic": 0.631,
+   "full+x_detect": 0.972,
+   "full+x_vs_noise": 0.986,
+   "full+x_vs_systemic": 0.645,
+   "xonly_detect": 0.508,
+   "xonly_vs_noise": 0.497,
+   "xonly_vs_systemic": 0.58
+  },
+  {
+   "landmark": 540,
+   "interval": 7,
+   "error": 0.25,
+   "dyn+x_detect": 0.5,
+   "dyn+x_vs_noise": 0.961,
+   "dyn+x_vs_systemic": 0.656,
+   "full+x_detect": 1.0,
+   "full+x_vs_noise": 1.0,
+   "full+x_vs_systemic": 0.662,
+   "xonly_detect": 0.512,
+   "xonly_vs_noise": 0.551,
+   "xonly_vs_systemic": 0.585
+  },
+  {
+   "landmark": 540,
+   "interval": 7,
+   "error": 0.5,
+   "dyn+x_detect": 0.442,
+   "dyn+x_vs_noise": 0.965,
+   "dyn+x_vs_systemic": 0.593,
+   "full+x_detect": 0.999,
+   "full+x_vs_noise": 1.0,
+   "full+x_vs_systemic": 0.613,
+   "xonly_detect": 0.438,
+   "xonly_vs_noise": 0.519,
+   "xonly_vs_systemic": 0.522
+  },
+  {
+   "landmark": 540,
+   "interval": 14,
+   "error": 0.25,
+   "dyn+x_detect": 0.451,
+   "dyn+x_vs_noise": 0.934,
+   "dyn+x_vs_systemic": 0.581,
+   "full+x_detect": 0.999,
+   "full+x_vs_noise": 1.0,
+   "full+x_vs_systemic": 0.595,
+   "xonly_detect": 0.542,
+   "xonly_vs_noise": 0.487,
+   "xonly_vs_systemic": 0.535
+  },
+  {
+   "landmark": 540,
+   "interval": 14,
+   "error": 0.5,
+   "dyn+x_detect": 0.485,
+   "dyn+x_vs_noise": 0.935,
+   "dyn+x_vs_systemic": 0.583,
+   "full+x_detect": 0.996,
+   "full+x_vs_noise": 1.0,
+   "full+x_vs_systemic": 0.615,
+   "xonly_detect": 0.555,
+   "xonly_vs_noise": 0.443,
+   "xonly_vs_systemic": 0.473
+  }
+ ]
+}

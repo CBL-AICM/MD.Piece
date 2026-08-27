@@ -1,0 +1,155 @@
+{
+ "meta": {
+  "K": 4,
+  "loads": [
+   1.0,
+   0.8,
+   0.6,
+   0.5
+  ],
+  "note": "v11韌性儀;判準:Spearman>=0.8與三指紋",
+  "generated": "2026-08-22"
+ },
+ "rows": [
+  {
+   "interval": 7,
+   "error": 0.25,
+   "spearman": -0.111,
+   "coverage": 0.95,
+   "fingerprint": {
+    "coupled_flip": [
+     0.039,
+     0.0017,
+     0.0659
+    ],
+    "stable": [
+     0.0389,
+     0.0013,
+     0.0629
+    ],
+    "noise_amp": [
+     0.0478,
+     0.0239,
+     0.2201
+    ],
+    "systemic_only": [
+     0.039,
+     0.001,
+     0.0558
+    ]
+   }
+  },
+  {
+   "interval": 7,
+   "error": 0.5,
+   "spearman": -0.063,
+   "coverage": 0.8,
+   "fingerprint": {
+    "coupled_flip": [
+     0.0315,
+     0.0021,
+     0.0914
+    ],
+    "stable": [
+     0.0474,
+     0.0014,
+     0.089
+    ],
+    "noise_amp": [
+     0.0448,
+     0.0235,
+     0.227
+    ],
+    "systemic_only": [
+     0.0341,
+     0.0009,
+     0.0832
+    ]
+   }
+  },
+  {
+   "interval": 14,
+   "error": 0.25,
+   "spearman": null,
+   "coverage": 0.0,
+   "fingerprint": {
+    "coupled_flip": [
+     NaN,
+     0.0019,
+     0.0654
+    ],
+    "stable": [
+     NaN,
+     0.0014,
+     0.063
+    ],
+    "noise_amp": [
+     NaN,
+     0.0284,
+     0.24
+    ],
+    "systemic_only": [
+     NaN,
+     0.0009,
+     0.0559
+    ]
+   }
+  },
+  {
+   "interval": 14,
+   "error": 0.5,
+   "spearman": null,
+   "coverage": 0.0,
+   "fingerprint": {
+    "coupled_flip": [
+     NaN,
+     0.0021,
+     0.0873
+    ],
+    "stable": [
+     NaN,
+     0.0015,
+     0.0844
+    ],
+    "noise_amp": [
+     NaN,
+     0.0271,
+     0.2506
+    ],
+    "systemic_only": [
+     NaN,
+     0.001,
+     0.0836
+    ]
+   }
+  },
+  {
+   "interval": 30,
+   "error": 0.25,
+   "spearman": null,
+   "coverage": 0.0,
+   "fingerprint": {
+    "coupled_flip": [
+     NaN,
+     0.0012,
+     0.0523
+    ],
+    "stable": [
+     NaN,
+     0.0009,
+     0.0467
+    ],
+    "noise_amp": [
+     NaN,
+     0.0149,
+     0.1876
+    ],
+    "systemic_only": [
+     NaN,
+     0.0008,
+     0.045
+    ]
+   }
+  }
+ ]
+}
