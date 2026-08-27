@@ -195,6 +195,19 @@ def misspecification_curve(seed, levels=(0.0, 0.10, 0.20, 0.35, 0.50), n=2500):
     return out
 
 
+def shortlist_accuracy(coh, res):
+    """量出「相容型態候選清單」到底多準——不量就顯示，等於請使用者自己腦補。"""
+    from attribution import load, pattern_shortlist
+    it = res["_internal"]
+    prof = np.array([p["driver_mean"] for p in load("patterns.json")["patterns"]])
+    order, _ = pattern_shortlist(it["sh"], prof, k=3)
+    truth = coh["label"][it["residual"]]
+    return dict(top1=float((order[:, 0] == truth).mean()),
+                top3=float(np.mean([t in o for t, o in zip(truth, order)])),
+                n=int(len(truth)),
+                note="呈現用候選清單，非以組織型態訓練的分類器；此數字必須與清單一起顯示。")
+
+
 def safety(coh, res):
     """安全終點必須拆開報，不可用平均 NPV 蓋過去。
 

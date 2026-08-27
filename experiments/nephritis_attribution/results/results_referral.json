@@ -2,7 +2,7 @@
   "seed": 20260827,
   "n": 6000,
   "casemix": "referral",
-  "params_hash": "5609e7b1451b143f",
+  "params_hash": "661fdeb3a9968fd1",
   "quality": {
     "missing": 145,
     "unit_error": 120,
@@ -136,6 +136,12 @@
     "tma_without_any_flag": 4,
     "tma_unflagged_rate": 0.020833333333333332
   },
+  "shortlist": {
+    "top1": 0.48279352226720645,
+    "top3": 0.8121457489878543,
+    "n": 4940,
+    "note": "呈現用候選清單，非以組織型態訓練的分類器；此數字必須與清單一起顯示。"
+  },
   "gates": [
     {
       "gate": "G1 L1 資料品質棄權率",
@@ -211,5 +217,67 @@
       "fail_means": "只要有一個加驗欄位進了模型特徵集，『零新增』這個賣點就不成立，成本結構的差異化也沒了"
     }
   ],
-  "all_gates_passed": true
+  "all_gates_passed": true,
+  "misspecification_curve": [
+    {
+      "mode": "magnitude",
+      "misspec": 0.0,
+      "top1_accuracy": 0.8287,
+      "offdiag_rmse": 0.3564
+    },
+    {
+      "mode": "magnitude",
+      "misspec": 0.1,
+      "top1_accuracy": 0.8282,
+      "offdiag_rmse": 0.3588
+    },
+    {
+      "mode": "magnitude",
+      "misspec": 0.2,
+      "top1_accuracy": 0.8264,
+      "offdiag_rmse": 0.3907
+    },
+    {
+      "mode": "magnitude",
+      "misspec": 0.35,
+      "top1_accuracy": 0.8255,
+      "offdiag_rmse": 0.4794
+    },
+    {
+      "mode": "magnitude",
+      "misspec": 0.5,
+      "top1_accuracy": 0.8255,
+      "offdiag_rmse": 0.5821
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.0,
+      "top1_accuracy": 0.8287,
+      "offdiag_rmse": 0.3564
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.1,
+      "top1_accuracy": 0.7726,
+      "offdiag_rmse": 0.5299
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.2,
+      "top1_accuracy": 0.7784,
+      "offdiag_rmse": 0.5182
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.35,
+      "top1_accuracy": 0.7621,
+      "offdiag_rmse": 0.5419
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.5,
+      "top1_accuracy": 0.7408,
+      "offdiag_rmse": 0.4908
+    }
+  ]
 }

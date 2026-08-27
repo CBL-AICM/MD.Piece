@@ -113,10 +113,11 @@ def main():
 
     # ---- 第四步：彙總 ----
     safety = MT.safety(coh, res)
+    shortlist = MT.shortlist_accuracy(coh, res)
     out = dict(seed=a.seed, n=a.n, casemix=a.casemix, params_hash=params_hash(),
                quality=qrep, l2=res["l2"], l3=dict(res["l3"], auroc=m1_auc),
                l4=dict(res["l4"], psi_offdiag_rmse=round(psi_rmse, 4)), l5=res["l5"],
-               m0_same_denominator=m0_res["immune_binary"], safety=safety,
+               m0_same_denominator=m0_res["immune_binary"], safety=safety, shortlist=shortlist,
                gates=[{k: v for k, v in g.items()} for g in gates],
                all_gates_passed=all(g["passed"] for g in gates))
     if a.curve:

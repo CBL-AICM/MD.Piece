@@ -175,3 +175,20 @@ def top_contributors(x, a, Lam, ind, k=3, eps=0.02):
         idx = np.argsort(-c)[:k]
         out[d] = [(ind[j]["name"], round(float(c[j]), 3)) for j in idx if c[j] > eps]
     return out
+
+
+def pattern_shortlist(shares, profiles, k=3):
+    """依驅動占比比對各組織型態的驅動輪廓，回傳最相容的前 k 個。
+
+    這是**呈現用的候選清單，不是分類器輸出**：它只是把 L4 的三個數字換一種說法，
+    沒有經過任何以組織型態為標籤的訓練或校準。因此
+      1) 介面上必須標示為「相容型態」而非「診斷」；
+      2) 它的 top-1／top-3 準確率必須一起量出來顯示（metrics.shortlist_accuracy），
+         不然使用者會把「排第一」讀成「就是這個」。
+    用餘弦相似度而非歐氏距離：要比的是機轉的**組成比例**，不是嚴重度。
+    """
+    P = profiles / np.maximum(np.linalg.norm(profiles, axis=1, keepdims=True), 1e-9)
+    v = shares / np.maximum(np.linalg.norm(shares, axis=-1, keepdims=True), 1e-9)
+    sim = v @ P.T
+    order = np.argsort(-sim, axis=-1)[..., :k]
+    return order, np.take_along_axis(sim, order, axis=-1)
