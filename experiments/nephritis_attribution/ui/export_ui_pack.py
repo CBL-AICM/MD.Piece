@@ -304,8 +304,16 @@ def main():
     out = os.path.join(HERE, "index.html")
     with open(out, "w", encoding="utf-8") as f:
         f.write(html)
+    # 同一份內容也寫進 frontend/，正式站由 vercel.json 的 frontend/** 靜態規則提供。
+    # 兩邊由同一次匯出產生，不手動複製——手動複製遲早會讓線上版本與模型脫節。
+    pub = os.path.join(ROOT, "..", "..", "frontend", "nephritis-model.html")
+    if os.path.isdir(os.path.dirname(pub)):
+        with open(pub, "w", encoding="utf-8") as f:
+            f.write(html)
     print(f"ui_pack.json  {os.path.getsize(pj) / 1024:.0f} KB")
     print(f"index.html    {os.path.getsize(out) / 1024:.0f} KB  （單一檔，可直接開啟）")
+    if os.path.isdir(os.path.dirname(pub)):
+        print(f"frontend/nephritis-model.html  已同步（正式站 /nephritis-model.html）")
 
 
 if __name__ == "__main__":
