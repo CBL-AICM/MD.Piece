@@ -1,0 +1,153 @@
+{
+  "casemix": "referral",
+  "n": 6000,
+  "seed": 20260827,
+  "n_residual": 4879,
+  "prevalence": 0.511,
+  "longitudinal_variants": {
+    "base": {
+      "auroc": 0.8987,
+      "threshold": 0.0461,
+      "ruleout_rate": 0.0639,
+      "npv": 0.9647,
+      "time_critical_miss": 0.004
+    },
+    "delta": {
+      "auroc": 0.9034,
+      "threshold": 0.0366,
+      "ruleout_rate": 0.0551,
+      "npv": 0.9628,
+      "time_critical_miss": 0.004
+    },
+    "slope": {
+      "auroc": 0.902,
+      "threshold": 0.0562,
+      "ruleout_rate": 0.0902,
+      "npv": 0.9568,
+      "time_critical_miss": 0.004
+    },
+    "both": {
+      "auroc": 0.9056,
+      "threshold": 0.0475,
+      "ruleout_rate": 0.0863,
+      "npv": 0.962,
+      "time_critical_miss": 0.004
+    },
+    "blup": {
+      "auroc": 0.9013,
+      "threshold": 0.0447,
+      "ruleout_rate": 0.0678,
+      "npv": 0.9637,
+      "time_critical_miss": 0.004
+    }
+  },
+  "formula3_shrinkage": {
+    "mean_shrink": 0.0599,
+    "min_shrink": 0.0,
+    "max_shrink": 0.1948,
+    "corr_blup_vs_simple_slope": 0.549,
+    "auroc_gain_over_simple": -0.0007
+  },
+  "formula3_design_requirement": {
+    "current_stt": 72.0,
+    "current_shrink": 0.0599,
+    "to_reach": {
+      "0.5": {
+        "required_stt": 1129.2,
+        "min_design": "3 個時間點 / 跨度 48 週"
+      },
+      "0.8": {
+        "required_stt": 4516.7,
+        "min_design": "3 個時間點 / 跨度 96 週"
+      }
+    }
+  },
+  "time_window_leak": {
+    "honest": {
+      "auroc": 0.902,
+      "threshold": 0.0562,
+      "ruleout_rate": 0.0902,
+      "npv": 0.9568,
+      "time_critical_miss": 0.004
+    },
+    "leaky": {
+      "auroc": 0.9005,
+      "threshold": 0.0426,
+      "ruleout_rate": 0.0664,
+      "npv": 0.963,
+      "time_critical_miss": 0.004
+    },
+    "auroc_inflation": -0.0015
+  },
+  "multiclass": {
+    "routine_only": {
+      "top1": 0.7315023570403771,
+      "top3": 0.9407665505226481,
+      "macro_auroc": 0.9395380395598614,
+      "ece": 0.013854031134743344,
+      "n": 4879
+    },
+    "with_longitudinal": {
+      "top1": 0.7599918015986883,
+      "top3": 0.954293912687026,
+      "macro_auroc": 0.9552216549569448,
+      "ece": 0.01735768399562847,
+      "n": 4879
+    },
+    "best_feature_set": "both",
+    "cosine_shortlist": {
+      "top1": 0.47735191637630664,
+      "top3": 0.8108218897315024
+    }
+  },
+  "binary_direct_vs_softmax": {
+    "direct": {
+      "auroc": 0.9056,
+      "threshold": 0.0475,
+      "ruleout_rate": 0.0863,
+      "npv": 0.962,
+      "time_critical_miss": 0.004
+    },
+    "via_softmax": {
+      "auroc": 0.9348,
+      "threshold": 0.0345,
+      "ruleout_rate": 0.1359,
+      "npv": 0.9744
+    }
+  },
+  "formula6_circularity": {
+    "routine_only": {
+      "top1": 0.7599918015986883,
+      "top3": 0.954293912687026,
+      "macro_auroc": 0.9552216549569448,
+      "ece": 0.01735768399562847,
+      "n": 4879
+    },
+    "with_pathology": {
+      "top1": 0.8593974175035868,
+      "top3": 0.9932363189178111,
+      "macro_auroc": 0.9853684345708051,
+      "ece": 0.01751977713784446,
+      "n": 4879
+    },
+    "top1_gain": 0.0994,
+    "verdict": "病理特徵一放進去分數就跳起來：若 Y 是組織型態，公式 6 這樣寫是循環的；若 Y 是病因亞型（狼瘡／IgA／ANCA…），則不循環但必須明講。"
+  },
+  "autoantibodies_in_model": {
+    "l2_only": {
+      "auroc": 0.9056,
+      "threshold": 0.0475,
+      "ruleout_rate": 0.0863,
+      "npv": 0.962,
+      "time_critical_miss": 0.004
+    },
+    "as_features": {
+      "auroc": 0.918,
+      "threshold": 0.0453,
+      "ruleout_rate": 0.0988,
+      "npv": 0.973,
+      "time_critical_miss": 0.004
+    },
+    "auroc_gain": 0.0124
+  }
+}

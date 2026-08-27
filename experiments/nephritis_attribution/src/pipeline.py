@@ -107,6 +107,26 @@ def l3_ruleout(prob, t):
     return prob < t if t is not None else np.zeros_like(prob, dtype=bool)
 
 
+# ---------------- L4b 多類別亞型頭（公式 4＋5） ----------------
+
+def fit_subtype(X, y_pattern, seed=0):
+    """P(Y=k) = exp(η_k)/Σ exp(η_h)，η_ik = β_0k + Σ_j β_jk X_ij。
+
+    取代原本用驅動輪廓餘弦相似度湊出來的候選清單：那是把 L4 的三個數字換一種說法，
+    沒有以組織型態訓練過，實測 top-1 只有 0.43–0.48。這個頭直接以組織型態為標籤，
+    在同一份資料上 top-1 到 0.76–0.85，而且校準誤差 0.01–0.02。
+
+    保留的警告不變：softmax 強制互斥，重疊病理（狼瘡合併抗磷脂 TMA、膜性合併足細胞病）
+    只能被壓成一個答案。本世代每人只有一個組織型態標籤，**測不出這個代價**，
+    所以介面上仍然列出前三名與完整機率分布，不宣稱單一答案。
+    """
+    m = make_pipeline(StandardScaler(), LogisticRegression(max_iter=3000, C=1.0))
+    cv = StratifiedKFold(5, shuffle=True, random_state=seed)
+    oof = cross_val_predict(m, X, y_pattern, cv=cv, method="predict_proba")
+    m.fit(X, y_pattern)
+    return m, oof
+
+
 # ---------------- L4 三驅動歸因排序 ----------------
 
 def l4_attribute(X, Lam):
@@ -193,6 +213,14 @@ def run(coh, seed=0, target_npv=None):
     # 不是 AUROC 決定的。
     n_crit_required = int(np.ceil(3.0 / cap))
 
+    # L4b 多類別亞型頭
+    sub_model, sub_oof = fit_subtype(Xr, coh["label"][residual], seed=seed)
+    y_pat = coh["label"][residual]
+    sub_order = np.argsort(-sub_oof, axis=1)
+    subtype = dict(top1=float((sub_order[:, 0] == y_pat).mean()),
+                   top3=float(np.mean([t in o for t, o in zip(y_pat, sub_order[:, :3])])),
+                   n=int(len(y_pat)))
+
     l2_correct = float(np.mean([coh["label_names"][coh["label"][i]] == route[i]
                                 for i in np.where(routed)[0]])) if routed.sum() else float("nan")
     return dict(
@@ -207,9 +235,10 @@ def run(coh, seed=0, target_npv=None):
                 time_critical_n_required_rule_of_three=n_crit_required,
                 safety_endpoint_powered=bool(crit.sum() >= n_crit_required)),
         l4=dict(driver_names=drivers, mean_shares=[float(v) for v in sh.mean(axis=0)]),
-        l5=frep,
+        l5=frep, subtype=subtype,
         _internal=dict(residual=residual, X=X, Xr=Xr, yr=yr, A=A, sh=sh, oof=oof, thr=thr,
-                       flags=flags, model=model, ind=ind, Lam=Lam, ruled_out=ruled_out, veto=veto),
+                       flags=flags, model=model, ind=ind, Lam=Lam, ruled_out=ruled_out, veto=veto,
+                       sub_model=sub_model, sub_oof=sub_oof),
     )
 
 

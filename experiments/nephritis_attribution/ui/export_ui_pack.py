@@ -37,6 +37,16 @@ N_PATIENTS = 24        # 病人卡樣本數：夠看出型態多樣性，又不�
 N_ROTATION = 60        # 旋轉演示的病人數：夠讓「重排」在畫面上看得出來
 
 
+def _f8(x):
+    """係數專用：不要為了省檔案大小犧牲精度。
+
+    係數四捨五入到 5 位時，前端重算的機率與模型端會差到 1e-5 —— 臨床上無關緊要，
+    但那讓自我校驗的容差卡在邊緣，等於把「介面有沒有漂移」的警報線調得沒有意義。
+    精度要補在係數上，不是補在容差上。
+    """
+    return None if not np.isfinite(float(x)) else round(float(x), 10)
+
+
 def _f(x):
     """np -> 可 JSON 化，且 NaN/Inf 一律變 None（前端才知道是「沒有」而不是 0）。"""
     if isinstance(x, (np.integer,)):
@@ -163,6 +173,37 @@ def rotation_demo(X, Lam, seed=0, n_show=N_ROTATION, n_rot=3):
     return out
 
 
+def softmax_coefficients(model):
+    """多類別亞型頭的係數（公式 4＋5）。前端只做 η_k = β_0k + Σ β_jk·z_j 再 softmax。"""
+    sc, lr = model.steps[0][1], model.steps[1][1]
+    return dict(mean=[_f8(v) for v in sc.mean_], scale=[_f8(v) for v in sc.scale_],
+                coef=[[_f8(v) for v in row] for row in lr.coef_],
+                intercept=[_f8(v) for v in lr.intercept_],
+                classes=[int(c) for c in lr.classes_])
+
+
+def longitudinal_variant(coh, it, veto, crit, cap, npv_target, seed):
+    """可部署的縱向變體：只要一次既往檢驗＋距今週數（公式 1＋2）。
+
+    刻意用「使用者拿得出來的形式」訓練，而不是評估時用的三面板理想形式。
+    """
+    import longitudinal as LG
+    res = it["residual"]
+    weeks = abs(load("patterns.json")["context"]["panel_weeks"][-2])   # 上一次面板距今週數
+    F = LG.build_deployable(it["Xr"], coh["prior_X"][-1][res], weeks)
+    model, thr, oof = PL.fit_l3(F, it["yr"], npv_target, seed=seed,
+                                veto=veto, y_critical=crit, crit_cap=cap)
+    neg = (oof < thr) & ~veto if thr is not None else np.zeros_like(oof, dtype=bool)
+    sc, lr = model.steps[0][1], model.steps[1][1]
+    return dict(weeks_trained_on=weeks,
+                mean=[_f8(v) for v in sc.mean_], scale=[_f8(v) for v in sc.scale_],
+                coef=[_f8(v) for v in lr.coef_[0]], intercept=_f8(float(lr.intercept_[0])),
+                threshold=_f8(thr),
+                auroc=_f(float(roc_auc_score(it["yr"], oof))),
+                ruleout_rate=_f(float(neg.mean())),
+                npv=_f(float((it["yr"][neg] == 0).mean())) if neg.sum() else None)
+
+
 def l3_coefficients(model, threshold):
     """把 L3 的標準化統計與邏輯迴歸係數原樣匯出。
 
@@ -170,9 +211,9 @@ def l3_coefficients(model, threshold):
     這樣前端就無法自己發明權重，而模型端改係數時介面會跟著改，不需要兩邊各改一次。
     """
     sc, lr = model.steps[0][1], model.steps[1][1]
-    return dict(mean=[_f(v) for v in sc.mean_], scale=[_f(v) for v in sc.scale_],
-                coef=[_f(v) for v in lr.coef_[0]], intercept=_f(float(lr.intercept_[0])),
-                threshold=_f(threshold))
+    return dict(mean=[_f8(v) for v in sc.mean_], scale=[_f8(v) for v in sc.scale_],
+                coef=[_f8(v) for v in lr.coef_[0]], intercept=_f8(float(lr.intercept_[0])),
+                threshold=_f8(threshold))
 
 
 def selftest_cases(coh, res, ind, n=12):
@@ -187,11 +228,11 @@ def selftest_cases(coh, res, ind, n=12):
     cases = []
     for li, g in enumerate(res_idx):
         cases.append(dict(
-            inputs={f: _f(coh["raw"][f][g]) for f in fields},
+            inputs={f: _f8(coh["raw"][f][g]) for f in fields},
             markers={m: dict(available=bool(coh["markers"][m + "_available"][g] > 0.5),
                              positive=bool(coh["markers"][m][g] > 0.5)) for m in MARKERS},
-            expect=dict(prob=_f(it["model"].predict_proba(it["Xr"][li:li + 1])[0, 1]),
-                        shares=[_f(v) for v in it["sh"][li]],
+            expect=dict(prob=_f8(it["model"].predict_proba(it["Xr"][li:li + 1])[0, 1]),
+                        shares=[_f8(v) for v in it["sh"][li]],
                         flags=sorted(it["flags"][li])),
         ))
     return cases
@@ -277,6 +318,15 @@ def build(seed, n):
             misspecification_curve=saved.get("misspecification_curve"),
             patients=patient_cards(coh, res, ind, Lam, drivers),
             scoring=l3_coefficients(it["model"], it["thr"]),
+            subtype_scoring=softmax_coefficients(it["sub_model"]),
+            subtype_accuracy=res["subtype"],
+            longitudinal=longitudinal_variant(
+                coh, it, it["veto"], (coh["time_critical"] & coh["immune_gn"])[it["residual"]],
+                DET.rules()["npv_targets"]["time_critical_miss_cap"],
+                DET.rules()["npv_targets"]["immune_gn_ruleout"], s_seed),
+            formula_eval=(json.load(open(os.path.join(ROOT, "results", f"formula_eval_{mix}.json"),
+                                         encoding="utf-8"))
+                          if os.path.exists(os.path.join(ROOT, "results", f"formula_eval_{mix}.json")) else None),
             narrative=R["narrative"],
             cohort_ref=dict(
                 prob_quantiles=[_f(v) for v in np.percentile(it["oof"], np.arange(0, 101))],

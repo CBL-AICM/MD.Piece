@@ -115,6 +115,14 @@ textarea{width:100%;min-height:150px;font:inherit;font-family:var(--mono);font-s
   .rpt h3{break-after:avoid}
   .disc{border:1px solid #999}
 }
+details.prior{border:1px solid var(--line);border-radius:9px;padding:0;margin:0 0 16px;background:var(--bg)}
+details.prior>summary{cursor:pointer;padding:11px 15px;font-size:13.5px;font-weight:600;color:var(--muted);list-style:none}
+details.prior>summary::-webkit-details-marker{display:none}
+details.prior>summary::before{content:"▸ ";color:var(--accent)}
+details.prior[open]>summary::before{content:"▾ "}
+details.prior .inner{padding:0 15px 15px}
+.modelbadge{font-size:11.5px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);
+  color:var(--accent);margin-left:8px;white-space:nowrap}
 .hl{background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:4px;padding:0 4px}
 </style>
 </head>
@@ -160,6 +168,15 @@ textarea{width:100%;min-height:150px;font:inherit;font-family:var(--mono);font-s
     <button class="btn" id="clearAll" type="button">清空</button>
     <span id="selftest" class="chip"></span>
   </div>
+<details class="prior" id="priorBox">
+    <summary>既往檢驗（可選）—— 填了就改用含變化率的模型</summary>
+    <div class="inner">
+      <p class="why" style="margin:0 0 10px">公式 1（ΔX）與公式 2（Slope）。只需要<b>一次</b>既往抽血與距今週數；
+        留白的項目不計入變化量。實測：基層族群可安全排除的比例從 9.3% 提高到 23.5%，轉介族群則幾乎沒有差別。
+        <b>只能填決策時點之前的檢驗</b> —— 填之後的會讓數字變好看但上線後掉下來。</p>
+      <div class="fgrid" id="priorGrid"></div>
+    </div>
+  </details>
   <form id="calcForm" onsubmit="return false"></form>
   <div style="margin-top:16px"><button class="btn primary" id="runCalc" type="button">計算</button></div>
   <div id="calcOut"></div>
@@ -409,7 +426,7 @@ function shortlist(sh,k){
     .sort((a,b)=>b.sim-a.sim).slice(0,k).map(o=>Object.assign({}, PACK.patterns[o.i], {sim:o.sim}));
 }
 
-function runPipeline(inp, mk){
+function runPipeline(inp, mk, prior){
   const q=l1(inp); if(!q.ok) return {stage:'L1', q};
   const rule=l2(inp,mk); if(rule) return {stage:'L2', q, rule};
   const sc=PACK.casemix[MIX].scoring, ap=PACK.casemix[MIX].applicability;
@@ -417,11 +434,17 @@ function runPipeline(inp, mk){
   // 適用範圍閘：完全沒有異常所見的人不在本模型的族群內，硬給機率等於憑空外推
   if(Math.max.apply(null,X)<1e-9) return {stage:'SCOPE', q};
   const outside=X.map((v,i)=>(v<ap.x_p01[i]-1e-9||v>ap.x_p99[i]+1e-9)?IND[i].zh:null).filter(Boolean);
-  const prob=l3(X,sc), a=nnls3(X), sh=toShares(a);
+  let prob=l3(X,sc), thr=sc.threshold, modelUsed='橫斷面模型（20 項常規指標）';
+  const pr=(prior===undefined)?null:prior;
+  if(pr){ const lgr=l3Longitudinal(X, priorX(pr,inp), pr.weeks);
+    if(lgr){ prob=lgr.prob; thr=lgr.threshold;
+      modelUsed='縱向模型（＋ΔX 與變化率，既往檢驗 '+pr.weeks+' 週前，'+pr.filled+'/'+IND.length+' 項）'; } }
+  const a=nnls3(X), sh=toShares(a);
   const flags=l5(sh,inp,X,mk), veto=isVetoed(inp,flags);
-  const ruled = prob < sc.threshold && !veto;
+  const ruled = prob < thr && !veto;
   const order=[0,1,2].sort((p,q2)=>sh[q2]-sh[p]);
-  return {stage:'L3', q, X, prob, threshold:sc.threshold, a, sh, flags, veto, ruled, outside,
+  return {stage:'L3', q, X, prob, threshold:thr, modelUsed:modelUsed,
+          subtypes:subtypeProbs(X), a, sh, flags, veto, ruled, outside,
           drivers:order.map(d=>({d, name:PACK.drivers[d], share:sh[d], why:whyFor(X,a,d)})),
           shortlist:shortlist(sh)};
 }
@@ -434,8 +457,8 @@ function selfTest(){
     if(r.stage!=='L3'){bad++;return;}
     worst=Math.max(worst, Math.abs(r.prob-c.expect.prob));
     r.sh.forEach((v,i)=>{worst=Math.max(worst, Math.abs(v-c.expect.shares[i]));});
-    if(Math.abs(r.prob-c.expect.prob)>1e-5) bad++;
-    else if(r.sh.some((v,i)=>Math.abs(v-c.expect.shares[i])>1e-4)) bad++;
+    if(Math.abs(r.prob-c.expect.prob)>1e-7) bad++;
+    else if(r.sh.some((v,i)=>Math.abs(v-c.expect.shares[i])>1e-6)) bad++;
     else if(JSON.stringify(r.flags.slice().sort())!==JSON.stringify(c.expect.flags)) bad++;
   });
   const e=$('#selftest');
@@ -483,6 +506,12 @@ function renderCalc(){
   $('#fillNormal').onclick=()=>{ FIELDS.forEach(x=>{ const i=document.getElementById('in_'+x.raw);
     if(i) i.value = x.raw==='cr_now'?1.0 : x.raw==='days_since_last_panel'?0 : (x.ref!=null?x.ref:0); }); doCalc(); };
   $('#clearAll').onclick=()=>{ f.querySelectorAll('input').forEach(i=>i.value=''); $('#calcOut').replaceChildren(); };
+
+  const pg=$('#priorGrid');
+  pg.replaceChildren(...IND.map(i=>el('label',null,
+    '<span>'+i.zh+'<small>'+(i.unit?' · '+i.unit:'')+'</small></span>'+
+    '<input type="number" step="any" id="pr_'+i.raw+'" placeholder="既往值">')),
+    el('label',null,'<span><b>距今幾週</b></span><input type="number" step="any" min="1" id="pr_weeks" placeholder="例如 6">'));
   $('#runCalc').onclick=doCalc;
   $('#batchSample').onclick=batchSample;
   $('#batchRun').onclick=runBatch;
@@ -498,7 +527,7 @@ function readForm(){
 }
 function doCalc(){
   const fm=readForm();
-  const r=runPipeline(fm.inp,fm.mk), A=PACK.actions, out=$('#calcOut');
+  const r=runPipeline(fm.inp,fm.mk,readPrior()), A=PACK.actions, out=$('#calcOut');
   // 報告與試算同一次計算產生，不重算——兩邊各算一次遲早會給出不同答案
   try{ $('#reportOut').innerHTML=renderReport(fm.inp,fm.mk,r); }catch(e){ $('#reportOut').innerHTML='<p class="note">報告產生失敗：'+e.message+'</p>'; }
   const jump='<div class="noprint" style="margin-top:14px"><button class="btn" onclick="showTab(\'report\')">檢視完整報告 →</button></div>';
@@ -524,10 +553,11 @@ function doCalc(){
       '<div class="bar" style="margin:5px 0 4px"><i style="width:'+(d.share*100).toFixed(1)+'%;background:'+DC[d.d]+'"></i></div>'+
       '<div class="why">'+(d.why.length? d.why.map(w=>w.indicator+'<span class="mono" style="opacity:.6">('+num(w.w,2)+')</span>').join('、')
         :'這位病人身上沒有支持此驅動的常規證據')+'</div></div>').join('');
-  const sl=PACK.casemix[MIX].shortlist;
-  const cands=r.shortlist.map((p,i)=>'<tr><td>'+(i+1)+'</td><td>'+p.zh+'</td>'+
-      '<td class="num mono">'+num(p.sim,3)+'</td><td>'+(p.immune_gn?'免疫介導':'非免疫介導')+
-      (p.time_critical?' · <b style="color:var(--bad)">時效性</b>':'')+'</td></tr>').join('');
+  const sa=PACK.casemix[MIX].subtype_accuracy;
+  const st=r.subtypes||[];
+  const cands=st.slice(0,5).map((o,i)=>'<tr><td>'+(i+1)+'</td><td>'+o.pat.zh+'</td>'+
+      '<td class="num mono">'+pct(o.p)+'</td><td>'+(o.pat.immune_gn?'免疫介導':'非免疫介導')+
+      (o.pat.time_critical?' · <b style="color:var(--bad)">時效性</b>':'')+'</td></tr>').join('');
   const rescued = r.veto && r.prob < r.threshold;   // 否決真的改變了結果，才叫被攔下
   const actMain = r.ruled ? A.RULED_OUT : (rescued ? A.VETOED : A.NOT_RULED_OUT);
   out.innerHTML=
@@ -535,17 +565,19 @@ function doCalc(){
       '<h3>'+(r.ruled?'可安全排除：免疫介導腎絲球腎炎不太可能':'不可排除：需免疫學套組／考慮切片')+'</h3>'+
       '<p class="mono" style="margin:4px 0 0">P(免疫介導 GN) = '+num(r.prob)+' ／ rule-out 門檻 '+num(r.threshold)+
         (rescued?' · <b>已被決定性安全否決攔下</b>':'')+'</p>'+
+      '<p class="why">判定所用模型：'+r.modelUsed+'</p>'+
       '<p class="act">'+actMain+'</p>'+
       '<p class="act">'+(A.DRIVER[r.drivers[0].name]||'')+'</p>'+
       r.flags.map(f=>'<p class="act flag"><b>'+f+'</b> '+(A.FLAG[f]||'')+'</p>').join('')+      (r.outside.length?'<p class="act flag"><b>外推警示</b> '+A.EXTRAPOLATION+'（'+r.outside.join('、')+'）</p>':'')+
     '</div>'+
     '<div class="grid2" style="margin-top:16px">'+
       '<div><h4 style="margin:0 0 6px">三驅動歸因排序</h4>'+bars+'</div>'+
-      '<div><h4 style="margin:0 0 6px">相容組織型態（候選，非診斷）</h4>'+
-        '<div class="scroll"><table><thead><tr><th>#</th><th>型態</th><th class="num">相似度</th><th>性質</th></tr></thead><tbody>'+cands+'</tbody></table></div>'+
-        '<p class="why" style="margin-top:8px">此清單只是把三驅動占比換一種說法去比對各型態的驅動輪廓，'+
-          '<b>沒有以組織型態訓練或校準過</b>。在殘餘子集上實測 top-1 <b>'+(sl?pct(sl.top1):'—')+'</b>、'+
-          'top-3 <b>'+(sl?pct(sl.top3):'—')+'</b>（n='+(sl?sl.n:'—')+'）—— 請當成鑑別順序的提示，不是分類結果。</p></div>'+
+      '<div><h4 style="margin:0 0 6px">組織型態機率 P(Y=k)（公式 4＋5）</h4>'+
+        '<div class="scroll"><table><thead><tr><th>#</th><th>型態</th><th class="num">機率</th><th>性質</th></tr></thead><tbody>'+cands+'</tbody></table></div>'+
+        '<p class="why" style="margin-top:8px">多類別 softmax，以組織型態為標籤訓練。'+
+          '實測 top-1 <b>'+(sa?pct(sa.top1):'—')+'</b>、top-3 <b>'+(sa?pct(sa.top3):'—')+'</b>（n='+(sa?sa.n:'—')+'）。'+
+          'softmax 強制各型態互斥，<b>無法表達重疊病理</b>（狼瘡合併抗磷脂 TMA、膜性合併足細胞病）；'+
+          '本世代每人只有一個組織型態標籤，測不出這個代價，因此仍列出完整分布而非單一答案。</p></div>'+
     '</div>';
 }
 
@@ -633,6 +665,7 @@ function renderReport(inp, mk, r){
   const pctl=pctlOfProb(r.prob);
   body+='<p><b>L3 二元免疫判定</b>　'+fill(N.L3,{nind:IND.length,prob:num(r.prob),thr:num(r.threshold),
         npv:cm.l3.target_npv!=null?cm.l3.target_npv:'0.95',cap:'0.5%',pctl:pctl})+'</p>'+
+        '<p style="color:var(--muted);font-size:13px">判定所用模型：'+r.modelUsed+'</p>'+
         '<div class="noprint" style="margin:6px 0 2px">'+ecdfStrip(r.prob,r.threshold)+'</div>';
   if(r.veto && r.prob<r.threshold) body+='<p><b>安全否決</b>　'+N.VETO+'</p>';
   const d0=r.drivers[0];
@@ -656,15 +689,15 @@ function renderReport(inp, mk, r){
     '<div style="margin-top:16px">'+deviationChart(r.X)+'</div>';
 
   // 6 鑑別順序
-  const sl=cm.shortlist;
-  body+='<h3><span class="no">6</span>相容組織型態（鑑別順序提示，非診斷）</h3>'+
-    '<div class="scroll"><table><thead><tr><th>#</th><th>型態</th><th class="num">相似度</th><th>性質</th></tr></thead><tbody>'+
-    r.shortlist.map((p,i)=>'<tr><td>'+(i+1)+'</td><td>'+p.zh+'</td><td class="num mono">'+num(p.sim,3)+'</td>'+
-      '<td>'+(p.immune_gn?'免疫介導':'非免疫介導')+(p.time_critical?' · <b style="color:var(--bad)">時效性</b>':'')+'</td></tr>').join('')+
+  const sa=cm.subtype_accuracy;
+  body+='<h3><span class="no">6</span>組織型態機率 P(Y=k)（公式 4＋5）</h3>'+
+    '<div class="scroll"><table><thead><tr><th>#</th><th>型態</th><th class="num">機率</th><th>性質</th></tr></thead><tbody>'+
+    (r.subtypes||[]).map((o,i)=>'<tr><td>'+(i+1)+'</td><td>'+o.pat.zh+'</td><td class="num mono">'+pct(o.p)+'</td>'+
+      '<td>'+(o.pat.immune_gn?'免疫介導':'非免疫介導')+(o.pat.time_critical?' · <b style="color:var(--bad)">時效性</b>':'')+'</td></tr>').join('')+
     '</tbody></table></div>'+
-    '<p style="color:var(--muted);font-size:13px">此清單是把三驅動占比拿去比對各型態的驅動輪廓，'+
-    '<b>沒有以組織型態訓練或校準過</b>。實測 top-1 '+(sl?pct(sl.top1):'—')+'、top-3 '+(sl?pct(sl.top3):'—')+
-    '（n='+(sl?sl.n:'—')+'）。top-1 不到五成，只能當鑑別順序的提示。</p>';
+    '<p style="color:var(--muted);font-size:13px">多類別 softmax（公式 4＋5），以組織型態為標籤訓練，'+
+    '實測 top-1 '+(sa?pct(sa.top1):'—')+'、top-3 '+(sa?pct(sa.top3):'—')+'（n='+(sa?sa.n:'—')+'）。'+
+    'softmax 強制互斥，無法表達重疊病理；本世代測不出這個代價，故列出完整分布而非單一答案。</p>';
 
   // 7 建議
   const rescued=r.veto&&r.prob<r.threshold;
@@ -770,6 +803,44 @@ function batchSample(){
     const l=p.labs.find(x=>x.name===c); return (l&&l.value!=null)?l.value:'';
   }).join('\t')));
   $('#batchIn').value=lines.join('\n');
+}
+
+/* ============ 公式 4＋5：多類別亞型頭 ============ */
+function subtypeProbs(X){
+  const sc=PACK.casemix[MIX].subtype_scoring;
+  if(!sc) return null;
+  const z=X.map((v,i)=>(v-sc.mean[i])/sc.scale[i]);
+  const eta=sc.coef.map((row,k)=>sc.intercept[k]+row.reduce((a,b,j)=>a+b*z[j],0));
+  const m=Math.max.apply(null,eta), ex=eta.map(e=>Math.exp(e-m)), t=ex.reduce((a,b)=>a+b,0);
+  return ex.map((e,k)=>({pat:PACK.patterns[sc.classes[k]], p:e/t}))
+           .sort((a,b)=>b.p-a.p);
+}
+
+/* ============ 公式 1＋2：既往檢驗（可選） ============ */
+function readPrior(){
+  const prev=[], w=+((document.getElementById('pr_weeks')||{}).value||0);
+  let filled=0;
+  IND.forEach(i=>{
+    const el=document.getElementById('pr_'+i.raw);
+    const v = (el && el.value!=='') ? +el.value : null;
+    if(v!=null) filled++;
+    prev.push(v);
+  });
+  if(!(w>0) || filled < IND.length*0.6) return null;   // 半數以上欄位有值才算數
+  return {prev:prev, weeks:w, filled:filled};
+}
+function priorX(pr, inp){
+  // 缺的既往欄位以「與現在相同」代入 → 該項變化量為 0，不會憑空製造趨勢
+  return IND.map((i,j)=>pr.prev[j]==null ? tx(i.kind,inp[i.raw],i.ref,i.scale)
+                                         : tx(i.kind,pr.prev[j],i.ref,i.scale));
+}
+function l3Longitudinal(X, Xp, weeks){
+  const lg=PACK.casemix[MIX].longitudinal; if(!lg) return null;
+  const d=X.map((v,i)=>v-Xp[i]);
+  const F=X.concat(d, d.map(v=>v/Math.max(weeks,1e-6)));
+  let z=lg.intercept;
+  for(let i=0;i<F.length;i++) z += lg.coef[i]*((F[i]-lg.mean[i])/lg.scale[i]);
+  return {prob:1/(1+Math.exp(-z)), threshold:lg.threshold};
 }
 
 /* ---------- 1. 漏斗 ---------- */

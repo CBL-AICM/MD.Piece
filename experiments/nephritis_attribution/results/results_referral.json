@@ -2,64 +2,64 @@
   "seed": 20260827,
   "n": 6000,
   "casemix": "referral",
-  "params_hash": "454c4fef1140bb43",
+  "params_hash": "6cb747fd62f3c5f1",
   "quality": {
-    "missing": 145,
-    "unit_error": 120,
+    "missing": 143,
+    "unit_error": 113,
     "impossible": 0,
-    "stale": 287,
-    "abstain_rate": 0.08899999999999997
+    "stale": 284,
+    "abstain_rate": 0.08766666666666667
   },
   "l2": {
-    "routed_rate": 0.08766666666666667,
-    "accuracy": 0.8726235741444867,
+    "routed_rate": 0.09916666666666667,
+    "accuracy": 0.8521008403361344,
     "by_rule": {
-      "R1_ANTI_GBM": 62,
-      "R2_PAUCI_RPGN": 103,
-      "R3_TMA": 189,
-      "R4_PLA2R_NS": 214
+      "R1_ANTI_GBM": 82,
+      "R2_PAUCI_RPGN": 105,
+      "R3_TMA": 218,
+      "R4_PLA2R_NS": 234
     }
   },
   "l3": {
-    "n": 4940,
-    "threshold": 0.0606,
-    "npv": 0.9714285714285714,
-    "ruleout_rate": 0.09210526315789473,
-    "sensitivity": 0.9948289578361177,
-    "prevalence": 0.5089068825910931,
+    "n": 4879,
+    "threshold": 0.0461,
+    "npv": 0.9647435897435898,
+    "ruleout_rate": 0.06394753023160483,
+    "sensitivity": 0.99558764540714,
+    "prevalence": 0.5109653617544578,
     "target_npv": 0.95,
-    "veto_rate": 0.10242914979757085,
+    "veto_rate": 0.10022545603607297,
     "ruleout_curve": [
       {
         "target_npv": 0.9,
         "achievable": true,
-        "threshold": 0.0606,
-        "ruleout_rate": 0.0921,
-        "npv": 0.9714,
-        "time_critical_miss": 0.0039
+        "threshold": 0.0461,
+        "ruleout_rate": 0.0639,
+        "npv": 0.9647,
+        "time_critical_miss": 0.004
       },
       {
         "target_npv": 0.95,
         "achievable": true,
-        "threshold": 0.0606,
-        "ruleout_rate": 0.0921,
-        "npv": 0.9714,
-        "time_critical_miss": 0.0039
+        "threshold": 0.0461,
+        "ruleout_rate": 0.0639,
+        "npv": 0.9647,
+        "time_critical_miss": 0.004
       },
       {
         "target_npv": 0.98,
         "achievable": true,
-        "threshold": 0.0447,
-        "ruleout_rate": 0.0626,
-        "npv": 0.9806,
+        "threshold": 0.029,
+        "ruleout_rate": 0.0336,
+        "npv": 0.9817,
         "time_critical_miss": 0.0
       },
       {
         "target_npv": 0.99,
         "achievable": true,
-        "threshold": 0.0108,
-        "ruleout_rate": 0.0067,
-        "npv": 1.0,
+        "threshold": 0.0221,
+        "ruleout_rate": 0.0213,
+        "npv": 0.9904,
         "time_critical_miss": 0.0
       }
     ],
@@ -67,41 +67,41 @@
       {
         "target_npv": 0.9,
         "achievable": true,
-        "threshold": 0.2173,
-        "ruleout_rate": 0.3057,
-        "npv": 0.9,
+        "threshold": 0.1893,
+        "ruleout_rate": 0.2669,
+        "npv": 0.9002,
         "time_critical_miss": null
       },
       {
         "target_npv": 0.95,
         "achievable": true,
-        "threshold": 0.0911,
-        "ruleout_rate": 0.1443,
-        "npv": 0.9509,
+        "threshold": 0.0625,
+        "ruleout_rate": 0.0902,
+        "npv": 0.95,
         "time_critical_miss": null
       },
       {
         "target_npv": 0.98,
         "achievable": true,
-        "threshold": 0.0447,
-        "ruleout_rate": 0.0626,
-        "npv": 0.9806,
+        "threshold": 0.029,
+        "ruleout_rate": 0.0336,
+        "npv": 0.9817,
         "time_critical_miss": null
       },
       {
         "target_npv": 0.99,
         "achievable": true,
-        "threshold": 0.0108,
-        "ruleout_rate": 0.0067,
-        "npv": 1.0,
+        "threshold": 0.0221,
+        "ruleout_rate": 0.0213,
+        "npv": 0.9904,
         "time_critical_miss": null
       }
     ],
-    "time_critical_n": 507,
+    "time_critical_n": 501,
     "time_critical_miss_cap": 0.005,
     "time_critical_n_required_rule_of_three": 600,
     "safety_endpoint_powered": false,
-    "auroc": 0.9001317272900774
+    "auroc": 0.8986728640696886
   },
   "l4": {
     "driver_names": [
@@ -110,51 +110,51 @@
       "D3_足細胞屏障"
     ],
     "mean_shares": [
-      0.299952882791478,
-      0.31236790863968933,
-      0.38767920856883314
+      0.30042600371184525,
+      0.31295368943274277,
+      0.38662030685541005
     ],
-    "psi_offdiag_rmse": 0.3288
+    "psi_offdiag_rmse": 0.3395
   },
   "l5": {
-    "mixed": 0.2993927125506073,
-    "tin": 0.05951417004048583,
-    "vasculitis": 0.030566801619433197,
-    "pending": 0.9198380566801619
+    "mixed": 0.2943226070916171,
+    "tin": 0.05636400901824144,
+    "vasculitis": 0.02930928468948555,
+    "pending": 0.9135068661610986
   },
   "m0_same_denominator": {
-    "auroc": 0.9993884207219456,
-    "npv": 0.9504911591355599,
-    "ruleout_rate": 0.5151821862348178,
-    "threshold": 0.8453
+    "auroc": 0.9995600422171182,
+    "npv": 0.9501396090945353,
+    "ruleout_rate": 0.5138348022135684,
+    "threshold": 0.8405
   },
   "safety": {
-    "immune_time_critical_n": 507,
+    "immune_time_critical_n": 501,
     "immune_time_critical_missed": 2,
-    "immune_time_critical_miss_rate": 0.0039447731755424065,
-    "tma_n": 192,
-    "tma_without_any_flag": 4,
-    "tma_unflagged_rate": 0.020833333333333332
+    "immune_time_critical_miss_rate": 0.003992015968063872,
+    "tma_n": 164,
+    "tma_without_any_flag": 3,
+    "tma_unflagged_rate": 0.018292682926829267
   },
   "shortlist": {
-    "top1": 0.48279352226720645,
-    "top3": 0.8121457489878543,
-    "n": 4940,
+    "top1": 0.47735191637630664,
+    "top3": 0.8108218897315024,
+    "n": 4879,
     "note": "呈現用候選清單，非以組織型態訓練的分類器；此數字必須與清單一起顯示。"
   },
   "gates": [
     {
       "gate": "G1 L1 資料品質棄權率",
-      "value": 0.089,
+      "value": 0.0877,
       "criterion": "0.01 <= r <= 0.50",
       "passed": true,
       "fail_means": "L1 沒在做事（=0）或把資料要求訂得不可能達成（過高），兩者都讓下游數字失去意義",
       "detail": {
-        "missing": 145,
-        "unit_error": 120,
+        "missing": 143,
+        "unit_error": 113,
         "impossible": 0,
-        "stale": 287,
-        "abstain_rate": 0.08899999999999997
+        "stale": 284,
+        "abstain_rate": 0.08766666666666667
       }
     },
     {
@@ -171,9 +171,9 @@
       "gate": "G3 旋轉不確定性",
       "value": {
         "max_offdiag_fit_deviation": 5.551115123125783e-16,
-        "mean_top1_agreement": 0.22724358974358974,
-        "mean_distinct_top_drivers": 2.9115384615384614,
-        "fixed_lambda_top1_accuracy": 0.8206477732793522
+        "mean_top1_agreement": 0.2267797362847578,
+        "mean_distinct_top_drivers": 2.9145316663250664,
+        "fixed_lambda_top1_accuracy": 0.8153310104529616
       },
       "criterion": "擬合偏差 < 1e-6 且 旋轉間排序一致率 <= 0.60 且 固定 Lambda 準確率 >= 0.55",
       "passed": true,
@@ -182,13 +182,13 @@
     {
       "gate": "G4 禁逐人標準化",
       "value": {
-        "A_absolute": 0.9001,
-        "B_person_norm_with_current": 0.7213,
-        "C_person_norm_past_only": 0.5884,
-        "leakage_inflation_B_minus_C": 0.1329,
-        "cost_vs_absolute_C_minus_A": -0.3117,
-        "weak_variant_cross_sectional_row_z": 0.8995,
-        "attribution_top1_absolute": 0.8206
+        "A_absolute": 0.8987,
+        "B_person_norm_with_current": 0.7274,
+        "C_person_norm_past_only": 0.6366,
+        "leakage_inflation_B_minus_C": 0.0908,
+        "cost_vs_absolute_C_minus_A": -0.262,
+        "weak_variant_cross_sectional_row_z": 0.8982,
+        "attribution_top1_absolute": 0.8153
       },
       "criterion": "A - C >= 0.05 且 B - C >= 0.02",
       "passed": true,
@@ -197,9 +197,9 @@
     {
       "gate": "G5 M0 洩漏基準為上界",
       "value": {
-        "m0_auroc": 0.9994,
-        "m1_auroc": 0.9001,
-        "gap": 0.0993
+        "m0_auroc": 0.9996,
+        "m1_auroc": 0.8987,
+        "gap": 0.1009
       },
       "criterion": "M0 - M1 >= 0.02",
       "passed": true,
@@ -222,62 +222,62 @@
     {
       "mode": "magnitude",
       "misspec": 0.0,
-      "top1_accuracy": 0.8287,
-      "offdiag_rmse": 0.3564
+      "top1_accuracy": 0.8271,
+      "offdiag_rmse": 0.3609
     },
     {
       "mode": "magnitude",
       "misspec": 0.1,
-      "top1_accuracy": 0.8282,
-      "offdiag_rmse": 0.3588
+      "top1_accuracy": 0.8156,
+      "offdiag_rmse": 0.3652
     },
     {
       "mode": "magnitude",
       "misspec": 0.2,
-      "top1_accuracy": 0.8264,
-      "offdiag_rmse": 0.3907
+      "top1_accuracy": 0.8173,
+      "offdiag_rmse": 0.3948
     },
     {
       "mode": "magnitude",
       "misspec": 0.35,
-      "top1_accuracy": 0.8255,
-      "offdiag_rmse": 0.4794
+      "top1_accuracy": 0.816,
+      "offdiag_rmse": 0.4797
     },
     {
       "mode": "magnitude",
       "misspec": 0.5,
-      "top1_accuracy": 0.8255,
-      "offdiag_rmse": 0.5821
+      "top1_accuracy": 0.8151,
+      "offdiag_rmse": 0.5746
     },
     {
       "mode": "structure",
       "misspec": 0.0,
-      "top1_accuracy": 0.8287,
-      "offdiag_rmse": 0.3564
+      "top1_accuracy": 0.8271,
+      "offdiag_rmse": 0.3609
     },
     {
       "mode": "structure",
       "misspec": 0.1,
-      "top1_accuracy": 0.7726,
-      "offdiag_rmse": 0.5299
+      "top1_accuracy": 0.7699,
+      "offdiag_rmse": 0.5353
     },
     {
       "mode": "structure",
       "misspec": 0.2,
-      "top1_accuracy": 0.7784,
-      "offdiag_rmse": 0.5182
+      "top1_accuracy": 0.78,
+      "offdiag_rmse": 0.5134
     },
     {
       "mode": "structure",
       "misspec": 0.35,
-      "top1_accuracy": 0.7621,
-      "offdiag_rmse": 0.5419
+      "top1_accuracy": 0.758,
+      "offdiag_rmse": 0.5437
     },
     {
       "mode": "structure",
       "misspec": 0.5,
-      "top1_accuracy": 0.7408,
-      "offdiag_rmse": 0.4908
+      "top1_accuracy": 0.7541,
+      "offdiag_rmse": 0.4899
     }
   ]
 }

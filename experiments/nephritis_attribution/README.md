@@ -214,6 +214,27 @@ cd experiments/nephritis_attribution && python ui/export_ui_pack.py --publish
 
 ---
 
+## 7.5 公式評估（`run_formulas.py`）
+
+```bash
+cd experiments/nephritis_attribution && python run_formulas.py --casemix primary --n 6000
+```
+
+對外部提出的六條公式做實測評估，完整結果見 [docs/公式可用性評估_v1.md](docs/公式可用性評估_v1.md)。
+
+| 公式 | 判定 | 關鍵數字 |
+|---|---|---|
+| 1 ΔX、2 Slope | **可用，已整合** | 基層族群可安全排除 9.2% → **23.6%** |
+| 3 線性混合模型 | **目前不可用** | 收縮係數 0.012–0.060；要有意義需追蹤跨度 48–114 週 |
+| 4 P(Y=k) softmax、5 η | **強烈可用，已整合** | 型態 top-1 0.43–0.48 → **0.76–0.85**，ECE 0.01–0.02 |
+| 6 Score | **需先定義 Y** | 放入病理特徵後 top-1 +0.099／+0.043 → Y 若是組織型態則循環 |
+
+公式 4 的採用**推翻了本文 4.5 節「二元輸出為主」的部分論證**：原本用餘弦相似度湊的候選清單
+top-1 只有 0.43–0.48，多類別頭到 0.76–0.85。原論證中「softmax 無法表達重疊病理」仍成立，
+但本世代每人只有一個組織型態標籤，測不出那個代價 —— 兩件事都寫在評估文件裡。
+
+---
+
 ## 8. 已知限制
 
 - 合成資料**不能**驗證文獻 Λ 是否正確、真實盛行率、真實 NPV。詳見 [results/assumptions.md](results/assumptions.md)。

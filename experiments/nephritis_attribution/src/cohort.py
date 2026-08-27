@@ -78,11 +78,21 @@ def simulate(seed, n=4000, misspec=0.0, misspec_mode="magnitude", casemix="refer
             X[m, name_to_col[iname]] += off
     X += rng.normal(0, C["noise_sd"], X.shape)
 
+    # 病程速率依組織型態而定（新月體型陡升、硬化型近乎持平）。
+    # 用 p_idx（真實組織型態）而非 prof_idx：軌跡形狀是疾病本身的性質。
+    decay = np.array([P["patterns"][k].get("trajectory_decay", C["prior_decay"]) for k in p_idx])[:, None]
+
     # 既往常規檢驗面板：同一個機轉、較輕的嚴重度（疾病在進展）。
     # 只有縱向資料才驗得了「逐人標準化」的真正問題（見 metrics.g4）。
-    prior = np.stack([A * np.exp(-C["prior_decay"] * k) * rng.lognormal(0, 0.15, (n, 1)) @ Lam_true.T
+    prior = np.stack([A * np.exp(-decay * k) * rng.lognormal(0, 0.15, (n, 1)) @ Lam_true.T
                       + rng.normal(0, C["noise_sd"], X.shape)
                       for k in range(C["n_prior_panels"], 0, -1)]) if C["n_prior_panels"] else None
+
+    # 決策點「之後」的一次面板：只給洩漏演示用（longitudinal.leak_demo），
+    # 絕不可進入任何模型特徵。公式 2 的 t2 - t1 沒有規定 t2 在決策點的哪一側，
+    # 那是這組公式最容易踩的坑，所以要能把踩下去的代價量出來。
+    future = (A * np.exp(decay * 1.0) * rng.lognormal(0, 0.15, (n, 1)) @ Lam_true.T
+              + rng.normal(0, C["noise_sd"], X.shape))
 
     raw = invert_transform(X, ind, rng, jitter=0.03)
 
@@ -129,7 +139,7 @@ def simulate(seed, n=4000, misspec=0.0, misspec_mode="magnitude", casemix="refer
     stale = rng.random(n) < Q["stale_rate"]
     raw["days_since_last_panel"] = np.where(stale, rng.integers(15, 90, n), raw["days_since_last_panel"])
 
-    return dict(raw=raw, X_true=X, A_true=A, prior_X=prior, label=p_idx, profile_idx=prof_idx, label_names=names,
+    return dict(raw=raw, X_true=X, A_true=A, prior_X=prior, future_X=future, label=p_idx, profile_idx=prof_idx, label_names=names,
                 markers=mk, leaky=leaky, Lam_true=Lam_true,
                 immune_gn=np.array([P["patterns"][k]["immune_gn"] for k in p_idx]),
                 time_critical=np.array([P["patterns"][k]["time_critical"] for k in p_idx]))

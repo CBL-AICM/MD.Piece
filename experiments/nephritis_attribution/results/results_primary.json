@@ -2,64 +2,64 @@
   "seed": 20260827,
   "n": 6000,
   "casemix": "primary",
-  "params_hash": "454c4fef1140bb43",
+  "params_hash": "6cb747fd62f3c5f1",
   "quality": {
-    "missing": 145,
-    "unit_error": 120,
+    "missing": 143,
+    "unit_error": 113,
     "impossible": 0,
-    "stale": 287,
-    "abstain_rate": 0.08899999999999997
+    "stale": 284,
+    "abstain_rate": 0.08766666666666667
   },
   "l2": {
-    "routed_rate": 0.027833333333333335,
-    "accuracy": 0.6586826347305389,
+    "routed_rate": 0.03133333333333333,
+    "accuracy": 0.6063829787234043,
     "by_rule": {
-      "R1_ANTI_GBM": 27,
-      "R2_PAUCI_RPGN": 15,
-      "R3_TMA": 81,
-      "R4_PLA2R_NS": 57
+      "R1_ANTI_GBM": 28,
+      "R2_PAUCI_RPGN": 16,
+      "R3_TMA": 75,
+      "R4_PLA2R_NS": 82
     }
   },
   "l3": {
-    "n": 5299,
-    "threshold": 0.0034,
-    "npv": 1.0,
-    "ruleout_rate": 0.05170786940932252,
-    "sensitivity": 1.0,
-    "prevalence": 0.15927533496886204,
+    "n": 5286,
+    "threshold": 0.0047,
+    "npv": 0.9979550102249489,
+    "ruleout_rate": 0.09250851305334847,
+    "sensitivity": 0.99880810488677,
+    "prevalence": 0.15872115020809685,
     "target_npv": 0.95,
-    "veto_rate": 0.05038686544631062,
+    "veto_rate": 0.051645856980703744,
     "ruleout_curve": [
       {
         "target_npv": 0.9,
         "achievable": true,
-        "threshold": 0.0034,
-        "ruleout_rate": 0.0517,
-        "npv": 1.0,
+        "threshold": 0.0047,
+        "ruleout_rate": 0.0925,
+        "npv": 0.998,
         "time_critical_miss": 0.0
       },
       {
         "target_npv": 0.95,
         "achievable": true,
-        "threshold": 0.0034,
-        "ruleout_rate": 0.0517,
-        "npv": 1.0,
+        "threshold": 0.0047,
+        "ruleout_rate": 0.0925,
+        "npv": 0.998,
         "time_critical_miss": 0.0
       },
       {
         "target_npv": 0.98,
         "achievable": true,
-        "threshold": 0.0034,
-        "ruleout_rate": 0.0517,
-        "npv": 1.0,
+        "threshold": 0.0047,
+        "ruleout_rate": 0.0925,
+        "npv": 0.998,
         "time_critical_miss": 0.0
       },
       {
         "target_npv": 0.99,
         "achievable": true,
-        "threshold": 0.0034,
-        "ruleout_rate": 0.0517,
-        "npv": 1.0,
+        "threshold": 0.0047,
+        "ruleout_rate": 0.0925,
+        "npv": 0.998,
         "time_critical_miss": 0.0
       }
     ],
@@ -67,41 +67,41 @@
       {
         "target_npv": 0.9,
         "achievable": true,
-        "threshold": 0.9078,
-        "ruleout_rate": 0.9045,
-        "npv": 0.9001,
+        "threshold": 0.8978,
+        "ruleout_rate": 0.9016,
+        "npv": 0.9003,
         "time_critical_miss": null
       },
       {
         "target_npv": 0.95,
         "achievable": true,
-        "threshold": 0.3311,
-        "ruleout_rate": 0.8273,
-        "npv": 0.9503,
+        "threshold": 0.3425,
+        "ruleout_rate": 0.8295,
+        "npv": 0.9501,
         "time_critical_miss": null
       },
       {
         "target_npv": 0.98,
         "achievable": true,
-        "threshold": 0.0548,
-        "ruleout_rate": 0.5782,
-        "npv": 0.9801,
+        "threshold": 0.0738,
+        "ruleout_rate": 0.6445,
+        "npv": 0.98,
         "time_critical_miss": null
       },
       {
         "target_npv": 0.99,
         "achievable": true,
-        "threshold": 0.022,
-        "ruleout_rate": 0.3589,
-        "npv": 0.99,
+        "threshold": 0.0286,
+        "ruleout_rate": 0.4389,
+        "npv": 0.9901,
         "time_critical_miss": null
       }
     ],
-    "time_critical_n": 63,
+    "time_critical_n": 69,
     "time_critical_miss_cap": 0.005,
     "time_critical_n_required_rule_of_three": 600,
     "safety_endpoint_powered": false,
-    "auroc": 0.9287466556028955
+    "auroc": 0.9336197240817757
   },
   "l4": {
     "driver_names": [
@@ -110,51 +110,51 @@
       "D3_足細胞屏障"
     ],
     "mean_shares": [
-      0.2448929206798241,
-      0.2762549506127456,
-      0.47885212870743016
+      0.24500538871175326,
+      0.28034301065144174,
+      0.4746516006368047
     ],
-    "psi_offdiag_rmse": 0.314
+    "psi_offdiag_rmse": 0.3194
   },
   "l5": {
-    "mixed": 0.29779203623325157,
-    "tin": 0.06114361200226458,
-    "vasculitis": 0.016795621815436874,
-    "pending": 0.9163993206265333
+    "mixed": 0.2985244040862656,
+    "tin": 0.060158910329171394,
+    "vasculitis": 0.016458569807037457,
+    "pending": 0.9046538024971623
   },
   "m0_same_denominator": {
-    "auroc": 0.9996773953330036,
-    "npv": 0.9500853242320819,
-    "ruleout_rate": 0.884695225514248,
-    "threshold": 0.9318
+    "auroc": 0.9994749443384714,
+    "npv": 0.9502136752136752,
+    "ruleout_rate": 0.8853575482406356,
+    "threshold": 0.9238
   },
   "safety": {
-    "immune_time_critical_n": 63,
+    "immune_time_critical_n": 69,
     "immune_time_critical_missed": 0,
     "immune_time_critical_miss_rate": 0.0,
-    "tma_n": 28,
-    "tma_without_any_flag": 2,
-    "tma_unflagged_rate": 0.07142857142857142
+    "tma_n": 39,
+    "tma_without_any_flag": 1,
+    "tma_unflagged_rate": 0.02564102564102564
   },
   "shortlist": {
-    "top1": 0.42479713153425175,
-    "top3": 0.7554255519909416,
-    "n": 5299,
+    "top1": 0.42565266742338254,
+    "top3": 0.7559591373439274,
+    "n": 5286,
     "note": "呈現用候選清單，非以組織型態訓練的分類器；此數字必須與清單一起顯示。"
   },
   "gates": [
     {
       "gate": "G1 L1 資料品質棄權率",
-      "value": 0.089,
+      "value": 0.0877,
       "criterion": "0.01 <= r <= 0.50",
       "passed": true,
       "fail_means": "L1 沒在做事（=0）或把資料要求訂得不可能達成（過高），兩者都讓下游數字失去意義",
       "detail": {
-        "missing": 145,
-        "unit_error": 120,
+        "missing": 143,
+        "unit_error": 113,
         "impossible": 0,
-        "stale": 287,
-        "abstain_rate": 0.08899999999999997
+        "stale": 284,
+        "abstain_rate": 0.08766666666666667
       }
     },
     {
@@ -170,10 +170,10 @@
     {
       "gate": "G3 旋轉不確定性",
       "value": {
-        "max_offdiag_fit_deviation": 3.885780586188048e-16,
-        "mean_top1_agreement": 0.22644995911178212,
-        "mean_distinct_top_drivers": 2.9069635780335914,
-        "fixed_lambda_top1_accuracy": 0.789582940177392
+        "max_offdiag_fit_deviation": 3.3306690738754696e-16,
+        "mean_top1_agreement": 0.22803159288687094,
+        "mean_distinct_top_drivers": 2.9088157396897465,
+        "fixed_lambda_top1_accuracy": 0.7877412031782066
       },
       "criterion": "擬合偏差 < 1e-6 且 旋轉間排序一致率 <= 0.60 且 固定 Lambda 準確率 >= 0.55",
       "passed": true,
@@ -182,13 +182,13 @@
     {
       "gate": "G4 禁逐人標準化",
       "value": {
-        "A_absolute": 0.9287,
-        "B_person_norm_with_current": 0.7702,
-        "C_person_norm_past_only": 0.6549,
-        "leakage_inflation_B_minus_C": 0.1153,
-        "cost_vs_absolute_C_minus_A": -0.2739,
-        "weak_variant_cross_sectional_row_z": 0.9266,
-        "attribution_top1_absolute": 0.7896
+        "A_absolute": 0.9336,
+        "B_person_norm_with_current": 0.8041,
+        "C_person_norm_past_only": 0.6432,
+        "leakage_inflation_B_minus_C": 0.1609,
+        "cost_vs_absolute_C_minus_A": -0.2904,
+        "weak_variant_cross_sectional_row_z": 0.9327,
+        "attribution_top1_absolute": 0.7877
       },
       "criterion": "A - C >= 0.05 且 B - C >= 0.02",
       "passed": true,
@@ -197,9 +197,9 @@
     {
       "gate": "G5 M0 洩漏基準為上界",
       "value": {
-        "m0_auroc": 0.9997,
-        "m1_auroc": 0.9287,
-        "gap": 0.0709
+        "m0_auroc": 0.9995,
+        "m1_auroc": 0.9336,
+        "gap": 0.0659
       },
       "criterion": "M0 - M1 >= 0.02",
       "passed": true,
@@ -222,62 +222,62 @@
     {
       "mode": "magnitude",
       "misspec": 0.0,
-      "top1_accuracy": 0.8287,
-      "offdiag_rmse": 0.3564
+      "top1_accuracy": 0.8271,
+      "offdiag_rmse": 0.3609
     },
     {
       "mode": "magnitude",
       "misspec": 0.1,
-      "top1_accuracy": 0.8282,
-      "offdiag_rmse": 0.3588
+      "top1_accuracy": 0.8156,
+      "offdiag_rmse": 0.3652
     },
     {
       "mode": "magnitude",
       "misspec": 0.2,
-      "top1_accuracy": 0.8264,
-      "offdiag_rmse": 0.3907
+      "top1_accuracy": 0.8173,
+      "offdiag_rmse": 0.3948
     },
     {
       "mode": "magnitude",
       "misspec": 0.35,
-      "top1_accuracy": 0.8255,
-      "offdiag_rmse": 0.4794
+      "top1_accuracy": 0.816,
+      "offdiag_rmse": 0.4797
     },
     {
       "mode": "magnitude",
       "misspec": 0.5,
-      "top1_accuracy": 0.8255,
-      "offdiag_rmse": 0.5821
+      "top1_accuracy": 0.8151,
+      "offdiag_rmse": 0.5746
     },
     {
       "mode": "structure",
       "misspec": 0.0,
-      "top1_accuracy": 0.8287,
-      "offdiag_rmse": 0.3564
+      "top1_accuracy": 0.8271,
+      "offdiag_rmse": 0.3609
     },
     {
       "mode": "structure",
       "misspec": 0.1,
-      "top1_accuracy": 0.7726,
-      "offdiag_rmse": 0.5299
+      "top1_accuracy": 0.7699,
+      "offdiag_rmse": 0.5353
     },
     {
       "mode": "structure",
       "misspec": 0.2,
-      "top1_accuracy": 0.7784,
-      "offdiag_rmse": 0.5182
+      "top1_accuracy": 0.78,
+      "offdiag_rmse": 0.5134
     },
     {
       "mode": "structure",
       "misspec": 0.35,
-      "top1_accuracy": 0.7621,
-      "offdiag_rmse": 0.5419
+      "top1_accuracy": 0.758,
+      "offdiag_rmse": 0.5437
     },
     {
       "mode": "structure",
       "misspec": 0.5,
-      "top1_accuracy": 0.7408,
-      "offdiag_rmse": 0.4908
+      "top1_accuracy": 0.7541,
+      "offdiag_rmse": 0.4899
     }
   ]
 }
