@@ -1,0 +1,86 @@
+{
+  "_meta": {
+    "version": "v1",
+    "label_definition": "主要標籤＝組織型態（腎切片型態學），不是臨床診斷名。臨床診斷名被血清學污染（用血清學特徵去預測用血清學下的診斷＝循環論證），組織型態是相對獨立的參考標準。",
+    "immune_gn_definition": "L3 二元判定的陽性集合＝免疫介導腎絲球腎炎（需要免疫學套組＋考慮切片）。TMA / 間質性腎炎 / 足細胞病 / 硬化型不在此集合，改由 L2 決定性標記與 L5 旗標處理。",
+    "casemix": "referral = 腎切片轉介族群（免疫性腎炎盛行率高）；primary = 一般腎臟科／基層蛋白尿血尿族群（以糖尿病腎病變為大宗）。NPV 端能不能落地，關鍵在部署在哪一段漏斗。",
+    "not_covered": ["單株免疫球蛋白相關腎病", "類澱粉沉積", "遺傳性腎絲球病（Alport 等）", "移植排斥"]
+  },
+  "patterns": [
+    {
+      "name": "IC_PROLIF", "zh": "免疫複合體增生型（IgA 腎病／狼瘡腎炎 III-IV／感染後 GN／MPGN）",
+      "prevalence": 0.28, "prevalence_primary": 0.12, "immune_gn": true, "time_critical": false,
+      "driver_mean": [1.30, 0.70, 0.55], "driver_sd": [0.35, 0.30, 0.30],
+      "offsets": {"dysmorphic_pct": 0.30, "c3_low": 0.25}
+    },
+    {
+      "name": "MEMBRANOUS", "zh": "膜性腎病（上皮下免疫複合體）",
+      "prevalence": 0.12, "prevalence_primary": 0.03, "immune_gn": true, "time_critical": false,
+      "driver_mean": [0.75, 0.15, 1.40], "driver_sd": [0.30, 0.15, 0.35],
+      "offsets": {"proteinuria": 0.50, "hematuria": -0.40, "rbc_cast": -0.30}
+    },
+    {
+      "name": "PAUCI_CRESCENTIC", "zh": "寡免疫新月體型（ANCA 相關血管炎）",
+      "prevalence": 0.10, "prevalence_primary": 0.015, "immune_gn": true, "time_critical": true,
+      "driver_mean": [0.25, 1.50, 0.35], "driver_sd": [0.20, 0.35, 0.25],
+      "offsets": {"crp_high": 0.60, "c3_low": -0.35}
+    },
+    {
+      "name": "ANTI_GBM", "zh": "抗腎絲球基底膜病",
+      "prevalence": 0.02, "prevalence_primary": 0.003, "immune_gn": true, "time_critical": true,
+      "driver_mean": [0.35, 1.70, 0.30], "driver_sd": [0.20, 0.35, 0.20],
+      "offsets": {"hematuria": 0.60, "rbc_cast": 0.50, "cr_slope": 0.70}
+    },
+    {
+      "name": "TMA", "zh": "血栓性微血管病",
+      "prevalence": 0.06, "prevalence_primary": 0.012, "immune_gn": false, "time_critical": true,
+      "driver_mean": [0.30, 1.45, 0.45], "driver_sd": [0.20, 0.35, 0.25],
+      "offsets": {"plt_low": 0.80, "ldh_high": 0.90, "hb_low": 0.70, "rbc_cast": -0.30}
+    },
+    {
+      "name": "PODOCYTOPATHY", "zh": "足細胞病（微小病變／局部節段性硬化）",
+      "prevalence": 0.14, "prevalence_primary": 0.09, "immune_gn": false, "time_critical": false,
+      "driver_mean": [0.15, 0.10, 1.55], "driver_sd": [0.12, 0.12, 0.35],
+      "offsets": {"chol_high": 0.50, "hematuria": -0.50, "rbc_cast": -0.35}
+    },
+    {
+      "name": "TIN", "zh": "腎小管間質性腎炎",
+      "prevalence": 0.10, "prevalence_primary": 0.1, "immune_gn": false, "time_critical": false,
+      "driver_mean": [0.35, 0.55, 0.25], "driver_sd": [0.20, 0.25, 0.18],
+      "offsets": {"pyuria": 1.20, "wbc_cast": 0.90, "proteinuria": -0.60, "rbc_cast": -0.30}
+    },
+    {
+      "name": "SCLEROTIC_NONINFLAM", "zh": "硬化／非發炎型（糖尿病腎病變、高血壓腎硬化）",
+      "prevalence": 0.18, "prevalence_primary": 0.63, "immune_gn": false, "time_critical": false,
+      "driver_mean": [0.10, 0.20, 0.75], "driver_sd": [0.10, 0.15, 0.30],
+      "offsets": {"sbp_high": 0.60, "hematuria": -0.50, "rbc_cast": -0.35, "dysmorphic_pct": -0.40}
+    }
+  ],
+  "markers": {
+    "_note": "決定性標記：若已在病歷中就用（L2 硬分流），但模型絕不因此加驗。available 機率代表決策當下結果是否已回。",
+    "available_prob": 0.55,
+    "anti_gbm":    {"spec_fp": 0.004, "sens": {"ANTI_GBM": 0.95}},
+    "anca":        {"spec_fp": 0.020, "sens": {"PAUCI_CRESCENTIC": 0.90, "IC_PROLIF": 0.05}},
+    "anti_pla2r":  {"spec_fp": 0.010, "sens": {"MEMBRANOUS": 0.75}},
+    "maha_triad":  {"spec_fp": 0.015, "sens": {"TMA": 0.85, "PAUCI_CRESCENTIC": 0.05}}
+  },
+  "context": {
+    "age_mean": 52.0, "age_sd": 16.0, "female_prob": 0.52,
+    "cr_baseline_mean": 1.15, "cr_baseline_sd": 0.35,
+    "noise_sd": 0.55,
+    "severity_log_sd": 0.50,
+    "atypical_frac": 0.12,
+    "n_prior_panels": 2,
+    "prior_decay": 0.35,
+    "psi_true": [[1.00, 0.28, 0.18], [0.28, 1.00, 0.12], [0.18, 0.12, 1.00]]
+  },
+  "quality": {
+    "_note": "L1 要真的會棄權，否則整條管線只是在猜。以下為刻意注入的資料缺陷率。",
+    "missing_rate_per_field": 0.045,
+    "required_fields": ["cr_now", "albumin", "upcr", "urine_rbc_hpf", "c3", "c4"],
+    "max_missing_allowed": 1,
+    "unit_error_rate": 0.02,
+    "stale_rate": 0.05,
+    "max_window_days": 14
+  }
+}

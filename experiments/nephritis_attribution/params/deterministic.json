@@ -1,0 +1,61 @@
+{
+  "_meta": {
+    "version": "v1",
+    "principle": "鐵則 5：狀態碼答得出來的問題，就用程式碼答。決定性標記命中即結束，不進模型、不算機率、不做加權。",
+    "order": "由上而下逐條比對，第一條命中即回傳；順序依後果嚴重度排序（延誤治療的代價越大者越前面）。"
+  },
+  "rules": [
+    {
+      "id": "R1_ANTI_GBM",
+      "route": "ANTI_GBM",
+      "when": {"anti_gbm": true},
+      "action": "立即腎臟科／血漿置換評估",
+      "why": "抗 GBM 抗體陽性對抗 GBM 病近乎專一，且延誤數日即不可逆；不存在需要機率加權的情境。"
+    },
+    {
+      "id": "R2_PAUCI_RPGN",
+      "route": "PAUCI_CRESCENTIC",
+      "when": {"anca": true, "cr_slope_per_week_min": 0.15, "active_sediment": true},
+      "action": "立即腎臟科／切片與免疫抑制評估",
+      "why": "ANCA 陽性＋快速進行性腎功能下降＋活動性尿沉渣＝寡免疫新月體型的臨床定義本身。"
+    },
+    {
+      "id": "R3_TMA",
+      "route": "TMA",
+      "when": {"maha_triad": true},
+      "action": "立即血液科／TMA 流程（不可先給免疫抑制）",
+      "why": "破碎紅血球＋血小板低下＋LDH 升高＋觸珠蛋白低下為 TMA 的既有常規判準，走的是完全不同的治療路徑。"
+    },
+    {
+      "id": "R4_PLA2R_NS",
+      "route": "MEMBRANOUS",
+      "when": {"anti_pla2r": true, "upcr_min": 3.0},
+      "action": "膜性腎病流程；符合條件者可免切片",
+      "why": "抗 PLA2R 陽性＋腎病症候群等級蛋白尿，現行指引已接受可不切片直接治療。"
+    }
+  ],
+  "active_sediment": {
+    "_note": "活動性尿沉渣的程式化定義（純門檻，非模型）",
+    "any_of": [{"rbc_cast": true}, {"urine_rbc_hpf_min": 20, "dysmorphic_rbc_pct_min": 40}]
+  },
+  "l5_flags": {
+    "mixed_driver": {"second_share_min": 0.30, "gap_max": 0.20,
+      "why": "第二驅動占比夠高且與第一名接近時，強制單一機轉會把重疊病理（狼瘡＋APS、膜性＋足細胞）壓成錯的單一答案。"},
+    "TUBULOINTERSTITIAL_SUSPECT": {"pyuria_min": 1.0, "proteinuria_max": 1.0, "rbc_cast": false,
+      "why": "無菌性膿尿／白血球柱＋蛋白尿不高＋無紅血球柱＝間質而非腎絲球，走的是停藥／類固醇而非腎絲球流程。"},
+    "VASCULITIS_PRIORITY": {"cr_slope_per_week_min": 0.15, "active_sediment": true, "proteinuria_max": 0.9,
+      "why": "腎功能掉很快但蛋白尿不成比例地低，是壞死性血管炎的典型錯配；即使 L4 排序不是 D2 也要升旗。"},
+    "SEROLOGY_PENDING": {"why": "決定性標記尚未回覆時明示告知，避免把『沒有標記』誤讀成『標記陰性』。"}
+  },
+  "safety_override": {
+    "_note": "只能取消 rule-out，不能製造 rule-out。機率層再有把握，也不該對一個肌酸酐每週爬 0.15 的人說『免疫性腎炎不太可能，檢查可以緩一緩』。",
+    "cr_slope_per_week_min": 0.15,
+    "or_flag": "VASCULITIS_PRIORITY"
+  },
+  "npv_targets": {
+    "immune_gn_ruleout": 0.95,
+    "time_critical_miss_cap": 0.005,
+    "_cap_note": "操作點由『時效性型態漏判率』與 NPV 共同決定，且前者是硬上限。平均 NPV 達標但漏掉抗 GBM，是這類系統最典型的失敗方式。",
+    "_note": "落地端＝NPV 端：『免疫介導腎絲球腎炎不太可能』才是可執行的輸出（免疫套組降階、切片延後）。陽性端只提供排序與旗標，不宣稱診斷。"
+  }
+}
