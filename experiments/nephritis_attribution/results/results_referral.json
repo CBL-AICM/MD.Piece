@@ -2,7 +2,7 @@
   "seed": 20260827,
   "n": 6000,
   "casemix": "referral",
-  "params_hash": "661fdeb3a9968fd1",
+  "params_hash": "454c4fef1140bb43",
   "quality": {
     "missing": 145,
     "unit_error": 120,

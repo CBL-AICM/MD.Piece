@@ -30,7 +30,7 @@ from sklearn.metrics import roc_auc_score                              # noqa: E
 
 import deterministic as DET                                           # noqa: E402
 import pipeline as PL                                                 # noqa: E402
-from attribution import _offdiag, load, spec, top_contributors        # noqa: E402
+from attribution import PARAMS_DIR, _offdiag, load, spec, top_contributors   # noqa: E402
 from cohort import MARKERS, simulate                                  # noqa: E402
 
 N_PATIENTS = 24        # 病人卡樣本數：夠看出型態多樣性，又不會把單檔撐大
@@ -201,7 +201,11 @@ def build(seed, n):
     ind, Lam, drivers = spec()
     P, R = load("patterns.json"), DET.rules()
     pack = dict(
-        meta=dict(seed=seed, n=n, title="腎炎機轉歸因模型"),
+        meta=dict(seed=seed, n=n, title="腎炎機轉歸因模型",
+                  params_hash=__import__("hashlib").sha256(
+                      b"".join(open(os.path.join(PARAMS_DIR, f), "rb").read()
+                               for f in ("loadings.json", "patterns.json", "deterministic.json"))
+                  ).hexdigest()[:16]),
         drivers=drivers,
         indicators=[dict(name=s["name"], raw=s["raw"], zh=s["zh"], unit=s["unit"], kind=s["kind"],
                          ref=s["ref"], scale=s["scale"], loadings=[_f(v) for v in s["loadings"]],
@@ -257,6 +261,7 @@ def build(seed, n):
             l3=dict(prevalence=_f(res["l3"]["prevalence"]), auroc=_f(m1_auc),
                     npv=_f(res["l3"]["npv"]), ruleout_rate=_f(res["l3"]["ruleout_rate"]),
                     veto_rate=_f(res["l3"]["veto_rate"]),
+                    target_npv=res["l3"]["target_npv"],
                     time_critical_n=res["l3"]["time_critical_n"],
                     n_required=res["l3"]["time_critical_n_required_rule_of_three"],
                     powered=res["l3"]["safety_endpoint_powered"]),
@@ -272,6 +277,14 @@ def build(seed, n):
             misspecification_curve=saved.get("misspecification_curve"),
             patients=patient_cards(coh, res, ind, Lam, drivers),
             scoring=l3_coefficients(it["model"], it["thr"]),
+            narrative=R["narrative"],
+            cohort_ref=dict(
+                prob_quantiles=[_f(v) for v in np.percentile(it["oof"], np.arange(0, 101))],
+                x_p10=[_f(v) for v in np.percentile(it["Xr"], 10, axis=0)],
+                x_p50=[_f(v) for v in np.percentile(it["Xr"], 50, axis=0)],
+                x_p90=[_f(v) for v in np.percentile(it["Xr"], 90, axis=0)],
+                note="殘餘子集的分布。報告用來回答「這個數字在同類病人裡算高還是低」——"
+                     "沒有這個參照，一個機率值對讀報告的人沒有意義。"),
             applicability=dict(
                 x_p01=[_f(v) for v in np.percentile(it["Xr"], 1, axis=0)],
                 x_p99=[_f(v) for v in np.percentile(it["Xr"], 99, axis=0)],
