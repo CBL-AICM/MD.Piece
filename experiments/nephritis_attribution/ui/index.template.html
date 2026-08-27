@@ -1,0 +1,1046 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>腎炎機轉歸因模型 — 視覺化</title>
+<style>
+:root{
+  --bg:#f7f8fa; --panel:#fff; --ink:#16181d; --muted:#63697a; --line:#e2e5ec;
+  --d1:#5b53c6; --d2:#c8442f; --d3:#0f8a7e;
+  --ok:#1f7a4d; --bad:#b3341f; --warn:#a86a12;
+  --accent:#2c5fd0; --chip:#eef1f7;
+  --mono:ui-monospace,SFMono-Regular,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101216; --panel:#181b21; --ink:#e8eaef; --muted:#98a0b3; --line:#282d37;
+  --d1:#8f88ee; --d2:#f0765d; --d3:#37bfae;
+  --ok:#4cc487; --bad:#ef7a63; --warn:#dda43e;
+  --accent:#6f9bff; --chip:#212630;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 80px;overflow-wrap:anywhere}
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:8px}
+h1{font-size:26px;margin:0;letter-spacing:-.01em}
+h2{font-size:17px;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13.5px;margin:2px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:18px 0}
+.panel>.sub{margin-bottom:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;color:var(--muted);padding:8px 15px;font:inherit;font-size:13.5px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.kv:last-child{border:0}
+.kv b{font-variant-numeric:tabular-nums;font-weight:600}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;background:var(--chip);color:var(--muted);
+  font-size:12px;margin:2px 4px 2px 0;white-space:nowrap}
+.chip.red{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.chip.green{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.chip.amber{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.mono{font-family:var(--mono);font-size:12.5px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.note{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 12px;margin:14px 0 0}
+.d1{color:var(--d1)}.d2{color:var(--d2)}.d3{color:var(--d3)}
+svg{display:block;max-width:100%;height:auto}
+select{font:inherit;font-size:14px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);max-width:100%}
+.bar{height:9px;border-radius:5px;background:var(--chip);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.why{font-size:12.5px;color:var(--muted);margin:3px 0 0}
+.gate{border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+.gate.pass{border-left:4px solid var(--ok)}.gate.fail{border-left:4px solid var(--bad)}
+.gate h3{margin:0 0 4px;font-size:14px}
+.btn{font:inherit;font-size:13.5px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:9px 22px}
+.fgroup{margin:0 0 16px}
+.fgroup h4{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:600}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,175px),1fr));gap:10px}
+.fgrid label{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.fgrid label span{color:var(--muted)}
+.fgrid label small{opacity:.75}
+.fgrid input,.fgrid select{font:inherit;font-size:14px;padding:7px 9px;border-radius:7px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.verdict{border-radius:10px;padding:15px 17px;margin-top:16px;border:1px solid var(--line)}
+.verdict h3{margin:0;font-size:16px}
+.verdict.ok{border-left:5px solid var(--ok)}.verdict.bad{border-left:5px solid var(--bad)}
+.verdict.warn{border-left:5px solid var(--warn)}.verdict.info{border-left:5px solid var(--accent)}
+.verdict ul{margin:8px 0 0;padding-left:20px;font-size:13.5px}
+.act{margin:10px 0 0;font-size:14px;line-height:1.7}
+.act.flag{font-size:13px;color:var(--muted)}
+.banner{background:color-mix(in srgb,var(--bad) 12%,var(--panel));
+  border:1px solid color-mix(in srgb,var(--bad) 45%,transparent);border-left:6px solid var(--bad);
+  border-radius:10px;padding:16px 18px;margin:0 0 22px}
+.banner h2{color:var(--bad);font-size:16px;margin:0 0 8px}
+.banner p{margin:6px 0 0;font-size:13.5px;line-height:1.7}
+.banner b{color:var(--bad)}
+#tabnav{display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid var(--line);margin:18px 0 0}
+#tabnav button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:14.5px;
+  font-weight:600;padding:11px 18px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+#tabnav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tabpanel{display:none}.tabpanel.active{display:block}
+.rpt{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px 28px;margin:18px 0}
+.rpt h2{font-size:20px;margin:0 0 2px}
+.rpt h3{font-size:15px;margin:26px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.rpt h3 .no{color:var(--muted);font-weight:400;margin-right:8px}
+.rpt p{margin:8px 0;font-size:14px;line-height:1.8}
+.rpt .lead{font-size:15px}
+.rpt ul{margin:8px 0;padding-left:22px;font-size:14px;line-height:1.8}
+.rpt-head{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between;align-items:flex-end;
+  padding-bottom:14px;border-bottom:2px solid var(--ink)}
+.rpt-meta{font-size:12px;color:var(--muted);text-align:right;line-height:1.7}
+.big{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.big.ok{color:var(--ok)}.big.bad{color:var(--bad)}.big.warn{color:var(--warn)}
+.dev-row{display:grid;grid-template-columns:112px 1fr 62px;gap:8px;align-items:center;font-size:12px;margin:3px 0}
+.dev-bar{position:relative;height:14px;background:var(--chip);border-radius:3px}
+.dev-bar i{position:absolute;left:0;top:0;height:100%;border-radius:3px;background:var(--accent);opacity:.85}
+.dev-bar u{position:absolute;top:-2px;width:2px;height:18px;background:var(--muted);opacity:.8}
+.dev-bar u.p90{background:var(--ink);opacity:.55}
+textarea{width:100%;min-height:150px;font:inherit;font-family:var(--mono);font-size:12px;
+  padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.disc{background:color-mix(in srgb,var(--bad) 8%,transparent);border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);
+  border-radius:8px;padding:12px 15px;font-size:12.5px;line-height:1.75;margin:14px 0}
+@media print{
+  body{background:#fff}
+  #tabnav,#mixToggle,.banner,header,#metaLine,.tabpanel:not(#tab-report),.noprint{display:none!important}
+  .rpt{border:0;padding:0;margin:0}
+  .rpt h3{break-after:avoid}
+  .disc{border:1px solid #999}
+}
+details.prior{border:1px solid var(--line);border-radius:9px;padding:0;margin:0 0 16px;background:var(--bg)}
+details.prior>summary{cursor:pointer;padding:11px 15px;font-size:13.5px;font-weight:600;color:var(--muted);list-style:none}
+details.prior>summary::-webkit-details-marker{display:none}
+details.prior>summary::before{content:"▸ ";color:var(--accent)}
+details.prior[open]>summary::before{content:"▾ "}
+details.prior .inner{padding:0 15px 15px}
+.modelbadge{font-size:11.5px;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);
+  color:var(--accent);margin-left:8px;white-space:nowrap}
+.hl{background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:4px;padding:0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="banner" role="alert">
+  <h2>研究用途；不是醫療器材，不得用於臨床決策</h2>
+  <p>本頁的模型<b>完全建立在合成資料上</b>，沒有任何真實病人資料參與訓練或驗證。
+     頁面上所有數字（AUROC、NPV、盛行率、準確率）都是合成世代的量測值，
+     <b>不代表真實世界效能</b>。</p>
+  <p>因此：不得用於任何診斷、分流、治療或檢查安排的決策；不得取代腎切片、血清學檢查或腎臟科醫師判斷。
+     此頁存在的目的是讓研究者與臨床顧問檢視模型的結構與假設，並指出哪裡是錯的。</p>
+  <p>要成為可用的臨床工具，還缺最關鍵的一步：<b>腎切片配對的真實世代驗證</b>。在那之前，
+     這裡的每一個輸出都只是一個假設的展示。</p>
+</div>
+
+<header>
+  <div>
+    <h1>腎炎機轉歸因模型</h1>
+    <p class="sub">從既有常規檢驗做<b>病因機轉歸因</b>（不是預後）。標籤＝腎切片組織型態，零新增檢驗。</p>
+  </div>
+  <div class="seg" id="mixToggle" role="group" aria-label="族群"></div>
+</header>
+<p class="sub mono" id="metaLine"></p>
+<div id="tabnav" role="tablist">
+  <button role="tab" data-tab="calc" aria-selected="true">試算</button>
+  <button role="tab" data-tab="report" aria-selected="false">完整報告</button>
+  <button role="tab" data-tab="batch" aria-selected="false">批次計算</button>
+  <button role="tab" data-tab="model" aria-selected="false">模型內部</button>
+</div>
+<div id="tab-calc" class="tabpanel active">
+
+<!-- 0. 試算器 -->
+<section class="panel" id="calcPanel">
+  <h2>機轉試算器：輸入常規檢驗 → 五層管線 → 分型評估與建議</h2>
+  <p class="sub">輸入的是<b>既有的常規檢驗值</b>，不需要加驗任何項目。留白＝這項沒驗，管線會當成「沒有證據」而不是「正常」。
+    本頁不含模型邏輯：所有轉換式、係數、門檻都由 <code class="mono">ui/export_ui_pack.py</code> 從模型端匯出，
+    載入時會用模型端的黃金案例自我校驗。</p>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">
+    <select id="preset" aria-label="載入範例病人"><option value="">— 載入範例病人 —</option></select>
+    <button class="btn" id="fillNormal" type="button">填入參考點（正常值）</button>
+    <button class="btn" id="clearAll" type="button">清空</button>
+    <span id="selftest" class="chip"></span>
+  </div>
+<details class="prior" id="priorBox">
+    <summary>既往檢驗（可選）—— 填了就改用含變化率的模型</summary>
+    <div class="inner">
+      <p class="why" style="margin:0 0 10px">公式 1（ΔX）與公式 2（Slope）。只需要<b>一次</b>既往抽血與距今週數；
+        留白的項目不計入變化量。實測：基層族群可安全排除的比例從 9.3% 提高到 23.5%，轉介族群則幾乎沒有差別。
+        <b>只能填決策時點之前的檢驗</b> —— 填之後的會讓數字變好看但上線後掉下來。</p>
+      <div class="fgrid" id="priorGrid"></div>
+    </div>
+  </details>
+  <form id="calcForm" onsubmit="return false"></form>
+  <div style="margin-top:16px"><button class="btn primary" id="runCalc" type="button">計算</button></div>
+  <div id="calcOut"></div>
+</section>
+
+</div><!-- /tab-calc -->
+
+<div id="tab-report" class="tabpanel">
+  <div id="reportOut"></div>
+</div>
+
+<div id="tab-batch" class="tabpanel">
+  <section class="panel">
+    <h2>批次計算</h2>
+    <p class="sub">貼上一份表格（TSV 或 CSV，第一列是欄位名），一次跑完所有病人。
+      欄位名用模型的原始欄位代號（見「模型內部 → 負載矩陣」那張表的第一欄），缺的欄位留空即可。
+      決定性標記欄位填 <code class="mono">pos</code>／<code class="mono">neg</code>／留空（＝未回覆）。</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <button class="btn" id="batchSample" type="button">貼上範例資料</button>
+      <button class="btn primary" id="batchRun" type="button">執行批次</button>
+      <button class="btn" id="batchCsv" type="button">下載結果 CSV</button>
+    </div>
+    <textarea id="batchIn" spellcheck="false" placeholder="c3&#9;c4&#9;upcr&#9;albumin&#9;urine_rbc_hpf&#9;...&#10;62&#9;9&#9;3.1&#9;2.8&#9;45&#9;..."></textarea>
+    <div id="batchOut"></div>
+  </section>
+</div>
+
+<div id="tab-model" class="tabpanel">
+
+<!-- 1. 管線 -->
+<section class="panel">
+  <h2>五層管線：每一層接住多少人</h2>
+  <p class="sub">兩層架構：決定性標記命中就在 L2 定案，不進模型；L3–L5 只處理標記缺席或還沒回來的人。
+    對外宣稱的效能一律報在「L1 通過且 L2 未命中」的殘餘子集上。</p>
+  <div id="funnel"></div>
+  <p class="note" id="funnelNote"></p>
+</section>
+
+<!-- 2. 病人卡 -->
+<section class="panel">
+  <h2>單一病人的輸出</h2>
+  <p class="sub">產品實際長這樣：一個二元 rule-out 判定、三驅動排序、以及<b>這位病人身上</b>支持該驅動的常規指標。
+    樣本刻意含 L2 誤分流、被安全否決、混合旗標的個案，不是精選集。</p>
+  <select id="patientSel" aria-label="選擇病人"></select>
+  <div id="patientCard"></div>
+</section>
+
+<!-- 3. 負載矩陣 -->
+<section class="panel">
+  <h2>負載矩陣 Λ（文獻固定，不自由估計）</h2>
+  <p class="sub">20 項常規指標 × 3 個機轉驅動。每一格都由文獻設定並附理由；模型不從資料裡估這些數字。
+    只用非對角元素擬合 Ψ，因為 Θ（各指標自己的量測誤差）是對角的，非對角擬合時整個消去。</p>
+  <div class="scroll"><table id="lambdaTbl"></table></div>
+</section>
+
+<!-- 4. 旋轉不確定性 -->
+<section class="panel">
+  <h2>為什麼 Λ 不能自由估計：旋轉不確定性</h2>
+  <p class="sub">下面每一個解對資料的擬合<b>完全相同</b>（非對角偏差見標籤），但同一批病人的機轉歸因整個重排。
+    因子在資料裡沒有名字 —— 命名是分析者事後看載荷猜的。歸因偏偏是要對被命名的機轉下結論。</p>
+  <div class="seg" id="rotToggle" role="group" aria-label="解"></div>
+  <div id="rotChart" style="margin-top:14px"></div>
+  <p class="note" id="rotNote"></p>
+</section>
+
+<!-- 5. NPV 權衡 -->
+<section class="panel">
+  <h2>NPV 端落地：能安全排除多少人</h2>
+  <p class="sub">實線＝只看 NPV 門檻；虛線＝再加上「時效性型態漏判率 ≤0.5%」的硬上限。
+    兩條線的距離就是安全約束的代價。</p>
+  <div id="tradeoff"></div>
+  <p class="note" id="tradeoffNote"></p>
+</section>
+
+<!-- 6. 誤設退化 -->
+<section class="panel">
+  <h2>文獻 Λ 錯了會怎樣</h2>
+  <p class="sub">兩種錯法必須分開看：<b>幅度誤設</b>（權重估錯大小）幾乎不影響排序，
+    <b>結構誤設</b>（指標歸錯驅動）才會真的壞。只跑前者會得到「Λ 怎麼錯都沒差」的錯誤結論。</p>
+  <div id="misspec"></div>
+  <p class="note">非對角 RMSE 在結構誤設 10% 時就跳起來 —— 它能在上線前偵測到這種錯，這正是「只用非對角」要它做的事。</p>
+</section>
+
+<!-- 7. 閘門 -->
+<section class="panel">
+  <h2>六道閘門</h2>
+  <p class="sub">任一未過，<code class="mono">run.py</code> 回傳非零，且效能數字不得引用。</p>
+  <div class="grid2" id="gates"></div>
+</section>
+
+</div><!-- /tab-model -->
+
+<p class="sub">資料由 <code class="mono">ui/export_ui_pack.py</code> 從模型端匯出；本頁不含任何模型邏輯與硬寫係數。
+  合成世代僅能驗證管線性質與數學事實，<b>不能</b>驗證文獻 Λ 是否正確、真實盛行率或真實 NPV。</p>
+
+</div>
+<script>
+const PACK = __UI_PACK__;
+const DC = ['var(--d1)','var(--d2)','var(--d3)'];
+const $ = s => document.querySelector(s);
+const el = (t,c,h) => { const n=document.createElement(t); if(c)n.className=c; if(h!==undefined)n.innerHTML=h; return n; };
+const pct = v => v==null ? '—' : (v*100).toFixed(1)+'%';
+const num = (v,d=3) => v==null ? '—' : (+v).toFixed(d);
+let MIX = 'referral';
+
+/* ---------- 小型 SVG 折線圖 ---------- */
+function lineChart(series, opt={}){
+  const W=opt.w||640, H=opt.h||230, m={t:14,r:14,b:34,l:46};
+  const xs = series.flatMap(s=>s.pts.map(p=>p[0])), ys = series.flatMap(s=>s.pts.map(p=>p[1]));
+  const x0=Math.min(...xs), x1=Math.max(...xs);
+  const y0=opt.y0!=null?opt.y0:0, y1=opt.y1!=null?opt.y1:Math.max(...ys)*1.1||1;
+  const X=v=>m.l+(v-x0)/((x1-x0)||1)*(W-m.l-m.r), Y=v=>H-m.b-(v-y0)/((y1-y0)||1)*(H-m.t-m.b);
+  let g=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${opt.aria||'chart'}">`;
+  for(let i=0;i<=4;i++){ const v=y0+(y1-y0)*i/4, y=Y(v);
+    g+=`<line x1="${m.l}" y1="${y}" x2="${W-m.r}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`;
+    g+=`<text x="${m.l-8}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--muted)">${opt.fy?opt.fy(v):num(v,2)}</text>`; }
+  (opt.xticks||xs.filter((v,i,a)=>a.indexOf(v)===i)).forEach(v=>{
+    g+=`<text x="${X(v)}" y="${H-12}" text-anchor="middle" font-size="11" fill="var(--muted)">${opt.fx?opt.fx(v):v}</text>`; });
+  series.forEach(s=>{
+    const d=s.pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+    g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.2"${s.dash?' stroke-dasharray="5 4"':''}/>`;
+    s.pts.forEach(p=>{ g+=`<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="3.4" fill="${s.color}"/>`; });
+  });
+  g+='</svg>';
+  const legend = series.map(s=>`<span class="chip" style="color:${s.color}">${s.dash?'┈':'━'} ${s.name}</span>`).join('');
+  return g+`<div style="margin-top:6px">${legend}</div>`;
+}
+
+/* ================= 前端只做算術：轉換式、係數、門檻全部來自 PACK ================= */
+const IND = PACK.indicators, LAM = IND.map(i=>i.loadings);
+const FIELDS = IND.concat(PACK.extra_fields);
+const MKS = Object.keys(PACK.casemix[MIX].patients[0].markers);
+
+function tx(kind, v, ref, sc){
+  if(v==null||!isFinite(v)) return 0;
+  if(kind==='deficit')   return Math.max(0,(ref-v)/sc);
+  if(kind==='excess')    return Math.max(0,(v-ref)/sc);
+  if(kind==='logexcess') return Math.log1p(Math.max(0,v-ref)/sc);
+  if(kind==='binary')    return v;
+  if(kind==='level')     return v/sc;
+  return 0;
+}
+const toX = inp => IND.map(i=>tx(i.kind, inp[i.raw], i.ref, i.scale));
+
+function l1(inp){
+  const Q=PACK.quality_rules, miss=Q.required_fields.filter(f=>inp[f]==null||!isFinite(inp[f]));
+  const r=[];
+  if(miss.length>Q.max_missing_allowed) r.push({code:'missing',msg:'必要檢驗缺 '+miss.length+' 項：'+miss.join('、')});
+  if(inp.cr_now>Q.cr_unit_max) r.push({code:'unit',msg:'肌酸酐 '+inp.cr_now+' 疑為 µmol/L 誤填為 mg/dL —— 不自動換算，請確認單位'});
+  if(inp.albumin>Q.albumin_max) r.push({code:'impossible',msg:'白蛋白 '+inp.albumin+' g/dL 不可能'});
+  if(inp.upcr<0) r.push({code:'impossible',msg:'UPCR 不可為負'});
+  if(inp.days_since_last_panel>Q.max_window_days)
+    r.push({code:'stale',msg:'距最近一次檢驗 '+inp.days_since_last_panel+' 天，超過 '+Q.max_window_days+' 天時間窗'});
+  return {ok:r.length===0, reasons:r, missing:miss};
+}
+
+function activeSediment(inp){
+  if(inp.rbc_cast>0.5) return true;
+  for(const c of PACK.active_sediment.any_of)
+    if('urine_rbc_hpf_min' in c && inp.urine_rbc_hpf>=c.urine_rbc_hpf_min
+       && inp.dysmorphic_rbc_pct>=c.dysmorphic_rbc_pct_min) return true;
+  return false;
+}
+function l2(inp, mk){
+  const sed=activeSediment(inp);
+  for(const r of PACK.rules){
+    let hit=true;
+    for(const kv of Object.entries(r.when)){
+      const k=kv[0], val=kv[1];
+      if(k==='active_sediment') hit = hit && (sed===val);
+      else if(k.endsWith('_min')){ const f=k.slice(0,-4); hit = hit && (inp[f]!=null && inp[f]>=val); }
+      else { const m=mk[k]; const pos = !!(m && m.available && m.positive); hit = hit && (pos===val); }
+      if(!hit) break;
+    }
+    if(hit) return r;
+  }
+  return null;
+}
+
+function l3(X, sc){
+  let z=sc.intercept;
+  for(let i=0;i<X.length;i++) z += sc.coef[i]*((X[i]-sc.mean[i])/sc.scale[i]);
+  return 1/(1+Math.exp(-z));
+}
+
+/* 3 變數 NNLS：列舉 8 個支撐集，取可行解中殘差最小者。精確解，不是迭代近似。 */
+function solveLin(A,b){
+  const n=b.length, M=A.map((r,i)=>r.concat([b[i]]));
+  for(let c=0;c<n;c++){
+    let p=c; for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p=r;
+    if(Math.abs(M[p][c])<1e-12) return null;
+    const t=M[c]; M[c]=M[p]; M[p]=t;
+    for(let r=0;r<n;r++){ if(r===c) continue; const f=M[r][c]/M[c][c];
+      for(let k=c;k<=n;k++) M[r][k]-=f*M[c][k]; }
+  }
+  return M.map((r,i)=>r[n]/M[i][i]);
+}
+function nnls3(X){
+  let best=[0,0,0], bestRes=Infinity;
+  for(let mask=0;mask<8;mask++){
+    const S=[0,1,2].filter(d=>mask&(1<<d));
+    const a=[0,0,0];
+    if(S.length){
+      const A=S.map(d1=>S.map(d2=>LAM.reduce((s,row)=>s+row[d1]*row[d2],0)));
+      const b=S.map(d=>LAM.reduce((s,row,j)=>s+row[d]*X[j],0));
+      const sol=solveLin(A,b);
+      if(!sol||sol.some(v=>!isFinite(v)||v<-1e-9)) continue;
+      S.forEach((d,i)=>a[d]=Math.max(0,sol[i]));
+    }
+    let res=0;
+    for(let j=0;j<LAM.length;j++){
+      const f=LAM[j][0]*a[0]+LAM[j][1]*a[1]+LAM[j][2]*a[2];
+      res+=(f-X[j])*(f-X[j]);
+    }
+    if(res<bestRes-1e-12){bestRes=res;best=a;}
+  }
+  return best;
+}
+const toShares = a => { const t=a[0]+a[1]+a[2]; return t>1e-9?a.map(v=>v/t):[1/3,1/3,1/3]; };
+
+function whyFor(X, a, d, k){
+  k=k||3;
+  return LAM.map((row,j)=>({indicator:IND[j].zh, w:Math.min(row[d]*a[d], Math.max(X[j],0))}))
+    .filter(o=>o.w>0.02).sort((p,q)=>q.w-p.w).slice(0,k);
+}
+
+function l5(sh, inp, X, mk){
+  const T=PACK.l5_thresholds, f=[];
+  const o=[0,1,2].sort((p,q)=>sh[q]-sh[p]);
+  const ix = n => IND.findIndex(i=>i.name===n);
+  if(sh[o[1]]>=T.mixed_driver.second_share_min && (sh[o[0]]-sh[o[1]])<=T.mixed_driver.gap_max) f.push('MIXED_DRIVER');
+  const t=T.TUBULOINTERSTITIAL_SUSPECT;
+  if(X[ix('pyuria')]>=t.pyuria_min && X[ix('proteinuria')]<=t.proteinuria_max && !(inp.rbc_cast>0.5)) f.push('TUBULOINTERSTITIAL_SUSPECT');
+  const v=T.VASCULITIS_PRIORITY;
+  if((inp.cr_slope_per_week||0)>=v.cr_slope_per_week_min && activeSediment(inp) && X[ix('proteinuria')]<=v.proteinuria_max) f.push('VASCULITIS_PRIORITY');
+  if(MKS.some(m=>!(mk[m]&&mk[m].available))) f.push('SEROLOGY_PENDING');
+  return f;
+}
+const isVetoed = (inp,flags) => (inp.cr_slope_per_week||0)>=PACK.safety_override.cr_slope_per_week_min
+                              || flags.indexOf(PACK.safety_override.or_flag)>=0;
+
+function shortlist(sh,k){
+  k=k||3;
+  const norm=v=>{const n=Math.hypot(v[0],v[1],v[2])||1e-9; return v.map(x=>x/n);};
+  const u=norm(sh);
+  return PACK.pattern_profiles.map((p,i)=>({i, sim:norm(p).reduce((s,v,d)=>s+v*u[d],0)}))
+    .sort((a,b)=>b.sim-a.sim).slice(0,k).map(o=>Object.assign({}, PACK.patterns[o.i], {sim:o.sim}));
+}
+
+function runPipeline(inp, mk, prior){
+  const q=l1(inp); if(!q.ok) return {stage:'L1', q};
+  const rule=l2(inp,mk); if(rule) return {stage:'L2', q, rule};
+  const sc=PACK.casemix[MIX].scoring, ap=PACK.casemix[MIX].applicability;
+  const X=toX(inp);
+  // 適用範圍閘：完全沒有異常所見的人不在本模型的族群內，硬給機率等於憑空外推
+  if(Math.max.apply(null,X)<1e-9) return {stage:'SCOPE', q};
+  const outside=X.map((v,i)=>(v<ap.x_p01[i]-1e-9||v>ap.x_p99[i]+1e-9)?IND[i].zh:null).filter(Boolean);
+  let prob=l3(X,sc), thr=sc.threshold, modelUsed='橫斷面模型（20 項常規指標）';
+  const pr=(prior===undefined)?null:prior;
+  if(pr){ const lgr=l3Longitudinal(X, priorX(pr,inp), pr.weeks);
+    if(lgr){ prob=lgr.prob; thr=lgr.threshold;
+      modelUsed='縱向模型（＋ΔX 與變化率，既往檢驗 '+pr.weeks+' 週前，'+pr.filled+'/'+IND.length+' 項）'; } }
+  const a=nnls3(X), sh=toShares(a);
+  const flags=l5(sh,inp,X,mk), veto=isVetoed(inp,flags);
+  const ruled = prob < thr && !veto;
+  const order=[0,1,2].sort((p,q2)=>sh[q2]-sh[p]);
+  return {stage:'L3', q, X, prob, threshold:thr, modelUsed:modelUsed,
+          subtypes:subtypeProbs(X), a, sh, flags, veto, ruled, outside,
+          drivers:order.map(d=>({d, name:PACK.drivers[d], share:sh[d], why:whyFor(X,a,d)})),
+          shortlist:shortlist(sh)};
+}
+
+/* ---- 自我校驗：前端與模型端不一致就自己說出來（鐵則 12 在介面上的實作） ---- */
+function selfTest(){
+  const cases=PACK.casemix[MIX].selftest||[]; let bad=0, worst=0;
+  cases.forEach(c=>{
+    const r=runPipeline(c.inputs, c.markers);
+    if(r.stage!=='L3'){bad++;return;}
+    worst=Math.max(worst, Math.abs(r.prob-c.expect.prob));
+    r.sh.forEach((v,i)=>{worst=Math.max(worst, Math.abs(v-c.expect.shares[i]));});
+    if(Math.abs(r.prob-c.expect.prob)>1e-7) bad++;
+    else if(r.sh.some((v,i)=>Math.abs(v-c.expect.shares[i])>1e-6)) bad++;
+    else if(JSON.stringify(r.flags.slice().sort())!==JSON.stringify(c.expect.flags)) bad++;
+  });
+  const e=$('#selftest');
+  e.className='chip '+(bad?'red':'green');
+  e.textContent = bad ? '⚠ 前端與模型端不一致：'+bad+'/'+cases.length+' 個黃金案例未通過（最大偏差 '+worst.toExponential(1)+'）'
+                      : '✓ 與模型端一致 '+cases.length+'/'+cases.length+'（最大偏差 '+worst.toExponential(1)+'）';
+  return bad===0;
+}
+
+/* ---- 表單 ---- */
+const GROUPS=[['血液',['c3','c4','globulin','ana_titer','esr','crp','platelet','ldh','hb','albumin','cholesterol']],
+              ['尿液',['upcr','urine_rbc_hpf','dysmorphic_rbc_pct','rbc_cast','urine_wbc_hpf','wbc_cast']],
+              ['生命徵象與病程',['sbp','edema_grade','cr_now','cr_slope_per_week','days_since_last_panel']]];
+function renderCalc(){
+  const f=$('#calcForm'); f.replaceChildren();
+  GROUPS.forEach(gr=>{
+    const box=el('div','fgroup','<h4>'+gr[0]+'</h4>');
+    const g=el('div','fgrid');
+    gr[1].forEach(k=>{
+      const meta=FIELDS.find(x=>x.raw===k); if(!meta) return;
+      g.appendChild(el('label',null,
+        '<span>'+meta.zh+'<small>'+(meta.unit?' · '+meta.unit:'')+'</small></span>'+
+        '<input type="number" step="any" id="in_'+k+'" data-f="'+k+'" placeholder="'+(meta.ref!=null?'參考點 '+meta.ref:'')+'">'));
+    });
+    box.appendChild(g); f.appendChild(box);
+  });
+  const mbox=el('div','fgroup','<h4>決定性標記 <small style="font-weight:400;color:var(--muted)">未回覆 ≠ 陰性，兩者是不同狀態</small></h4>');
+  const mg=el('div','fgrid');
+  MKS.forEach(m=>mg.appendChild(el('label',null,
+    '<span>'+m+'</span><select id="mk_'+m+'" data-m="'+m+'">'+
+    '<option value="pending">未驗／未回覆</option><option value="neg">陰性</option><option value="pos">陽性</option></select>')));
+  mbox.appendChild(mg); f.appendChild(mbox);
+
+  const sel=$('#preset');
+  sel.replaceChildren(el('option',null,'— 載入範例病人 —'),
+    ...PACK.casemix[MIX].patients.map((p,i)=>{const o=el('option'); o.value=i;
+      o.textContent='#'+p.id+' · '+p.truth; return o;}));
+  sel.onchange=()=>{ if(sel.value==='')return; const p=PACK.casemix[MIX].patients[+sel.value];
+    FIELDS.forEach(x=>{ const lab=p.labs.find(l=>l.name===x.raw);
+      const inp=document.getElementById('in_'+x.raw);
+      if(inp) inp.value = (lab && lab.value!=null) ? lab.value : ''; });
+    MKS.forEach(m=>{ const e=document.getElementById('mk_'+m), v=p.markers[m];
+      e.value = !v.available?'pending':(v.positive?'pos':'neg'); });
+    doCalc(); };
+  $('#fillNormal').onclick=()=>{ FIELDS.forEach(x=>{ const i=document.getElementById('in_'+x.raw);
+    if(i) i.value = x.raw==='cr_now'?1.0 : x.raw==='days_since_last_panel'?0 : (x.ref!=null?x.ref:0); }); doCalc(); };
+  $('#clearAll').onclick=()=>{ f.querySelectorAll('input').forEach(i=>i.value=''); $('#calcOut').replaceChildren(); };
+
+  const pg=$('#priorGrid');
+  pg.replaceChildren(...IND.map(i=>el('label',null,
+    '<span>'+i.zh+'<small>'+(i.unit?' · '+i.unit:'')+'</small></span>'+
+    '<input type="number" step="any" id="pr_'+i.raw+'" placeholder="既往值">')),
+    el('label',null,'<span><b>距今幾週</b></span><input type="number" step="any" min="1" id="pr_weeks" placeholder="例如 6">'));
+  $('#runCalc').onclick=doCalc;
+  $('#batchSample').onclick=batchSample;
+  $('#batchRun').onclick=runBatch;
+  $('#batchCsv').onclick=batchCsv;
+  selfTest();
+}
+function readForm(){
+  const inp={}; document.querySelectorAll('#calcForm input[data-f]').forEach(i=>{
+    inp[i.dataset.f] = i.value===''? null : +i.value; });
+  const mk={}; MKS.forEach(m=>{ const v=document.getElementById('mk_'+m).value;
+    mk[m]={available:v!=='pending', positive:v==='pos'}; });
+  return {inp:inp, mk:mk};
+}
+function doCalc(){
+  const fm=readForm();
+  const r=runPipeline(fm.inp,fm.mk,readPrior()), A=PACK.actions, out=$('#calcOut');
+  // 報告與試算同一次計算產生，不重算——兩邊各算一次遲早會給出不同答案
+  try{ $('#reportOut').innerHTML=renderReport(fm.inp,fm.mk,r); }catch(e){ $('#reportOut').innerHTML='<p class="note">報告產生失敗：'+e.message+'</p>'; }
+  const jump='<div class="noprint" style="margin-top:14px"><button class="btn" onclick="showTab(\'report\')">檢視完整報告 →</button></div>';
+  if(r.stage==='L1'){
+    out.innerHTML='<div class="verdict warn"><h3>L1 資料品質：棄權</h3><ul>'+
+      r.q.reasons.map(x=>'<li>'+x.msg+'</li>').join('')+'</ul><p class="act">'+A.L1_INSUFFICIENT+'</p></div>';
+    return;
+  }
+  if(r.stage==='SCOPE'){
+    out.innerHTML='<div class="verdict warn"><h3>不在本模型的適用範圍</h3>'+
+      '<p class="act">'+A.OUT_OF_SCOPE+'</p></div>'+jump;
+    return;
+  }
+  if(r.stage==='L2'){
+    out.innerHTML='<div class="verdict info"><h3>L2 決定性硬分流 → '+r.rule.route+'</h3>'+
+      '<p class="act">'+r.rule.action+'</p><p class="why">'+r.rule.why+'</p>'+
+      '<p class="why">此路徑不進模型、不算機率：確定的事用規則答完。</p></div>'+jump;
+    return;
+  }
+  const bars=r.drivers.map(d=>'<div style="margin:12px 0">'+
+      '<div style="display:flex;justify-content:space-between;font-size:14px">'+
+      '<b style="color:'+DC[d.d]+'">'+d.name+'</b><span class="mono">'+pct(d.share)+'</span></div>'+
+      '<div class="bar" style="margin:5px 0 4px"><i style="width:'+(d.share*100).toFixed(1)+'%;background:'+DC[d.d]+'"></i></div>'+
+      '<div class="why">'+(d.why.length? d.why.map(w=>w.indicator+'<span class="mono" style="opacity:.6">('+num(w.w,2)+')</span>').join('、')
+        :'這位病人身上沒有支持此驅動的常規證據')+'</div></div>').join('');
+  const sa=PACK.casemix[MIX].subtype_accuracy;
+  const st=r.subtypes||[];
+  const cands=st.slice(0,5).map((o,i)=>'<tr><td>'+(i+1)+'</td><td>'+o.pat.zh+'</td>'+
+      '<td class="num mono">'+pct(o.p)+'</td><td>'+(o.pat.immune_gn?'免疫介導':'非免疫介導')+
+      (o.pat.time_critical?' · <b style="color:var(--bad)">時效性</b>':'')+'</td></tr>').join('');
+  const rescued = r.veto && r.prob < r.threshold;   // 否決真的改變了結果，才叫被攔下
+  const actMain = r.ruled ? A.RULED_OUT : (rescued ? A.VETOED : A.NOT_RULED_OUT);
+  out.innerHTML=
+    '<div class="verdict '+(r.ruled?'ok':'bad')+'">'+
+      '<h3>'+(r.ruled?'可安全排除：免疫介導腎絲球腎炎不太可能':'不可排除：需免疫學套組／考慮切片')+'</h3>'+
+      '<p class="mono" style="margin:4px 0 0">P(免疫介導 GN) = '+num(r.prob)+' ／ rule-out 門檻 '+num(r.threshold)+
+        (rescued?' · <b>已被決定性安全否決攔下</b>':'')+'</p>'+
+      '<p class="why">判定所用模型：'+r.modelUsed+'</p>'+
+      '<p class="act">'+actMain+'</p>'+
+      '<p class="act">'+(A.DRIVER[r.drivers[0].name]||'')+'</p>'+
+      r.flags.map(f=>'<p class="act flag"><b>'+f+'</b> '+(A.FLAG[f]||'')+'</p>').join('')+      (r.outside.length?'<p class="act flag"><b>外推警示</b> '+A.EXTRAPOLATION+'（'+r.outside.join('、')+'）</p>':'')+
+    '</div>'+
+    '<div class="grid2" style="margin-top:16px">'+
+      '<div><h4 style="margin:0 0 6px">三驅動歸因排序</h4>'+bars+'</div>'+
+      '<div><h4 style="margin:0 0 6px">組織型態機率 P(Y=k)（公式 4＋5）</h4>'+
+        '<div class="scroll"><table><thead><tr><th>#</th><th>型態</th><th class="num">機率</th><th>性質</th></tr></thead><tbody>'+cands+'</tbody></table></div>'+
+        '<p class="why" style="margin-top:8px">多類別 softmax，以組織型態為標籤訓練。'+
+          '實測 top-1 <b>'+(sa?pct(sa.top1):'—')+'</b>、top-3 <b>'+(sa?pct(sa.top3):'—')+'</b>（n='+(sa?sa.n:'—')+'）。'+
+          'softmax 強制各型態互斥，<b>無法表達重疊病理</b>（狼瘡合併抗磷脂 TMA、膜性合併足細胞病）；'+
+          '本世代每人只有一個組織型態標籤，測不出這個代價，因此仍列出完整分布而非單一答案。</p></div>'+
+    '</div>';
+}
+
+/* ================= 分頁 ================= */
+function showTab(name){
+  document.querySelectorAll('#tabnav button').forEach(b=>b.setAttribute('aria-selected', b.dataset.tab===name));
+  document.querySelectorAll('.tabpanel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+name));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('#tabnav button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+/* ================= 報告用小圖 ================= */
+function deviationChart(X){
+  const c=PACK.casemix[MIX].cohort_ref;
+  const mx=Math.max(1e-6, Math.max.apply(null,X), Math.max.apply(null,c.x_p90));
+  const rows=X.map((v,j)=>({j,v})).sort((a,b)=>b.v-a.v);
+  return rows.map(r=>{
+    const j=r.j, p50=c.x_p50[j], p90=c.x_p90[j];
+    const above = r.v>p90 ? ' style="color:var(--bad);font-weight:600"' : '';
+    return '<div class="dev-row"><span'+above+'>'+IND[j].zh+'</span>'+
+      '<span class="dev-bar"><i style="width:'+(r.v/mx*100).toFixed(1)+'%"></i>'+
+      '<u style="left:'+(p50/mx*100).toFixed(1)+'%" title="世代中位數"></u>'+
+      '<u class="p90" style="left:'+(p90/mx*100).toFixed(1)+'%" title="世代第 90 百分位"></u></span>'+
+      '<span class="mono num" style="text-align:right">'+num(r.v,2)+'</span></div>';
+  }).join('');
+}
+function ecdfStrip(prob, thr){
+  const q=PACK.casemix[MIX].cohort_ref.prob_quantiles, W=640,H=64;
+  let d='';
+  q.forEach((v,i)=>{ const x=(i/100)*(W-20)+10; const h=6+38*Math.min(1,v);
+    d+='<rect x="'+x.toFixed(1)+'" y="'+(44-h).toFixed(1)+'" width="5" height="'+h.toFixed(1)+'" fill="var(--chip)"/>'; });
+  const pctlOf=p=>{ let i=0; while(i<100 && q[i]<p) i++; return i; };
+  const px=i=>(i/100)*(W-20)+10;
+  const pi=pctlOf(prob), ti=pctlOf(thr);
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="病人在世代中的位置">'+d+
+    '<line x1="'+px(ti)+'" y1="2" x2="'+px(ti)+'" y2="48" stroke="var(--muted)" stroke-width="2" stroke-dasharray="4 3"/>'+
+    '<text x="'+px(ti)+'" y="60" font-size="10" fill="var(--muted)" text-anchor="middle">門檻</text>'+
+    '<line x1="'+px(pi)+'" y1="0" x2="'+px(pi)+'" y2="48" stroke="var(--accent)" stroke-width="3"/>'+
+    '<text x="'+px(pi)+'" y="60" font-size="10" fill="var(--accent)" text-anchor="middle" font-weight="700">本例 P'+pi+'</text>'+
+    '</svg>';
+}
+const pctlOfProb = p => { const q=PACK.casemix[MIX].cohort_ref.prob_quantiles; let i=0; while(i<100 && q[i]<p) i++; return i; };
+
+/* ================= 完整報告 ================= */
+function fill(t, o){ return Object.keys(o).reduce((a,k)=>a.split('{'+k+'}').join(o[k]), t); }
+
+function renderReport(inp, mk, r){
+  const N=PACK.casemix[MIX].narrative, A=PACK.actions, Q=PACK.quality_rules, cm=PACK.casemix[MIX];
+  const stamp=new Date().toLocaleString('zh-TW',{hour12:false});
+  const present=Q.required_fields.filter(f=>inp[f]!=null&&isFinite(inp[f])).length;
+  const pend=MKS.filter(m=>!(mk[m]&&mk[m].available));
+
+  let body='';
+  // 3 輸入摘要
+  const labRows=FIELDS.map(x=>{ const v=inp[x.raw];
+    return '<tr><td>'+x.zh+'</td><td class="num mono">'+(v==null?'—':num(v,2))+'</td>'+
+      '<td class="num mono" style="color:var(--muted)">'+(x.ref!=null?num(x.ref,1):'—')+'</td>'+
+      '<td class="mono" style="color:var(--muted)">'+(x.unit||'')+'</td></tr>'; }).join('');
+  body+='<h3><span class="no">3</span>輸入摘要</h3>'+
+    '<div class="scroll"><table><thead><tr><th>常規檢驗</th><th class="num">本例</th>'+
+    '<th class="num">參考點</th><th>單位</th></tr></thead><tbody>'+labRows+'</tbody></table></div>'+
+    '<p>決定性標記：'+MKS.map(m=>m+'＝'+(!mk[m].available?'未回覆':(mk[m].positive?'陽性':'陰性'))).join('、')+'</p>';
+
+  // 4 逐層說明
+  body+='<h3><span class="no">4</span>五層管線逐層說明</h3>';
+  if(r.stage==='L1'){
+    body+='<p><b>L1 資料品質</b>　'+N.L1_FAIL+'</p><ul>'+r.q.reasons.map(x=>'<li>'+x.msg+'</li>').join('')+'</ul>';
+    body+='<p class="lead"><b>建議</b>　'+A.L1_INSUFFICIENT+'</p>';
+    return wrapReport(stamp, '資料不足，棄權', 'warn', body, r);
+  }
+  body+='<p><b>L1 資料品質</b>　'+fill(N.L1_PASS,{present:present,total:Q.required_fields.length,
+        days:(inp.days_since_last_panel==null?'未填':inp.days_since_last_panel),window:Q.max_window_days})+'</p>';
+  if(r.stage==='SCOPE'){
+    body+='<p><b>適用範圍</b>　'+A.OUT_OF_SCOPE+'</p>';
+    return wrapReport(stamp, '不在適用範圍', 'warn', body, r);
+  }
+  if(r.stage==='L2'){
+    body+='<p><b>L2 決定性標記</b>　'+fill(N.L2_HIT,{rule:r.rule.id,route:r.rule.route})+'</p>'+
+          '<p style="color:var(--muted)">'+r.rule.why+'</p>'+
+          '<p class="lead"><b>建議</b>　'+r.rule.action+'</p>';
+    return wrapReport(stamp, 'L2 硬分流 → '+r.rule.route, 'info', body, r);
+  }
+  const pendTxt = pend.length? fill(N.L2_PENDING,{list:pend.join('、')}) : '';
+  body+='<p><b>L2 決定性標記</b>　'+fill(N.L2_MISS,{pending:pendTxt})+'</p>';
+  const pctl=pctlOfProb(r.prob);
+  body+='<p><b>L3 二元免疫判定</b>　'+fill(N.L3,{nind:IND.length,prob:num(r.prob),thr:num(r.threshold),
+        npv:cm.l3.target_npv!=null?cm.l3.target_npv:'0.95',cap:'0.5%',pctl:pctl})+'</p>'+
+        '<p style="color:var(--muted);font-size:13px">判定所用模型：'+r.modelUsed+'</p>'+
+        '<div class="noprint" style="margin:6px 0 2px">'+ecdfStrip(r.prob,r.threshold)+'</div>';
+  if(r.veto && r.prob<r.threshold) body+='<p><b>安全否決</b>　'+N.VETO+'</p>';
+  const d0=r.drivers[0];
+  body+='<p><b>L4 三驅動歸因</b>　'+(d0.why.length
+      ? fill(N.L4,{top:d0.name,share:pct(d0.share),why:d0.why.map(w=>w.indicator).join('、')})
+      : N.L4_EMPTY)+'</p>';
+  if(r.flags.indexOf('MIXED_DRIVER')>=0)
+    body+='<p>'+fill(N.L4_MIXED,{second:r.drivers[1].name,sshare:pct(r.drivers[1].share),
+          gap:pct(r.drivers[0].share-r.drivers[1].share)})+'</p>';
+  body+='<p><b>L5 混合旗標</b>　'+(r.flags.length? fill(N.L5_SOME,{n:r.flags.length,list:r.flags.join('、')}) : N.L5_NONE)+'</p>';
+
+  // 5 視覺化
+  body+='<h3><span class="no">5</span>數據視覺化</h3>'+
+    '<p style="color:var(--muted);font-size:13px">上：三驅動組成。下：各項常規指標方向化後的偏離程度，'+
+    '灰線為世代中位數、深色線為世代第 90 百分位；超過第 90 百分位者以紅字標示。</p>'+
+    r.drivers.map(d=>'<div style="margin:10px 0">'+
+      '<div style="display:flex;justify-content:space-between;font-size:13.5px">'+
+      '<b style="color:'+DC[d.d]+'">'+d.name+'</b><span class="mono">'+pct(d.share)+'</span></div>'+
+      '<div class="bar" style="margin:4px 0"><i style="width:'+(d.share*100).toFixed(1)+'%;background:'+DC[d.d]+'"></i></div>'+
+      '<div class="why">'+(d.why.length?d.why.map(w=>w.indicator+'('+num(w.w,2)+')').join('、'):'無支持證據')+'</div></div>').join('')+
+    '<div style="margin-top:16px">'+deviationChart(r.X)+'</div>';
+
+  // 6 鑑別順序
+  const sa=cm.subtype_accuracy;
+  body+='<h3><span class="no">6</span>組織型態機率 P(Y=k)（公式 4＋5）</h3>'+
+    '<div class="scroll"><table><thead><tr><th>#</th><th>型態</th><th class="num">機率</th><th>性質</th></tr></thead><tbody>'+
+    (r.subtypes||[]).map((o,i)=>'<tr><td>'+(i+1)+'</td><td>'+o.pat.zh+'</td><td class="num mono">'+pct(o.p)+'</td>'+
+      '<td>'+(o.pat.immune_gn?'免疫介導':'非免疫介導')+(o.pat.time_critical?' · <b style="color:var(--bad)">時效性</b>':'')+'</td></tr>').join('')+
+    '</tbody></table></div>'+
+    '<p style="color:var(--muted);font-size:13px">多類別 softmax（公式 4＋5），以組織型態為標籤訓練，'+
+    '實測 top-1 '+(sa?pct(sa.top1):'—')+'、top-3 '+(sa?pct(sa.top3):'—')+'（n='+(sa?sa.n:'—')+'）。'+
+    'softmax 強制互斥，無法表達重疊病理；本世代測不出這個代價，故列出完整分布而非單一答案。</p>';
+
+  // 7 建議
+  const rescued=r.veto&&r.prob<r.threshold;
+  body+='<h3><span class="no">7</span>建議的下一步</h3>'+
+    '<p class="lead">'+(r.ruled?A.RULED_OUT:(rescued?A.VETOED:A.NOT_RULED_OUT))+'</p>'+
+    '<p>'+(A.DRIVER[d0.name]||'')+'</p>'+
+    r.flags.map(f=>'<p style="font-size:13px;color:var(--muted)"><b>'+f+'</b>　'+(A.FLAG[f]||'')+'</p>').join('')+
+    (r.outside&&r.outside.length?'<p style="font-size:13px;color:var(--warn)"><b>外推警示</b>　'+A.EXTRAPOLATION+
+      '（'+r.outside.join('、')+'）</p>':'');
+
+  // 8 限制
+  body+='<h3><span class="no">8</span>這份報告不能告訴你什麼</h3><p>'+N.LIMITS+'</p>';
+
+  return wrapReport(stamp, r.ruled?'可安全排除：免疫介導腎絲球腎炎不太可能':'不可排除：需免疫學套組／考慮切片',
+                    r.ruled?'ok':'bad', body, r);
+}
+
+function wrapReport(stamp, verdict, cls, body, r){
+  const cm=PACK.casemix[MIX];
+  return '<div class="rpt">'+
+    '<div class="rpt-head"><div><h2>腎炎機轉歸因評估報告</h2>'+
+      '<p style="margin:2px 0 0;color:var(--muted);font-size:13px">'+cm.label+'　·　五層管線 L1–L5</p></div>'+
+      '<div class="rpt-meta">產生時間 '+stamp+'<br>參數雜湊 <span class="mono">'+(PACK.meta.params_hash||'—')+'</span>'+
+      '<br>世代 seed '+PACK.meta.seed+'　n='+PACK.meta.n+'</div></div>'+
+    '<div class="disc"><b>研究用途；不是醫療器材，不得用於臨床決策。</b>'+
+      '本模型完全建立在合成資料上，未經任何真實病人驗證；報告內所有數字均為合成世代的量測值，不代表真實世界效能。</div>'+
+    '<h3><span class="no">1</span>結論</h3><p class="big '+cls+'">'+verdict+'</p>'+
+    (r.stage==='L3'?'<p class="mono">P(免疫介導 GN) = '+num(r.prob)+'　／　rule-out 門檻 '+num(r.threshold)+
+      '　／　世代第 '+pctlOfProb(r.prob)+' 百分位</p>':'')+
+    '<h3><span class="no">2</span>本報告怎麼產生的</h3>'+
+    '<p>輸入僅為既有的常規檢驗值，未加驗任何項目。管線依序為：資料品質檢查 → 決定性標記硬分流 →'+
+    ' 二元免疫判定（操作點壓在 NPV 端）→ 三驅動非負最小平方歸因 → 混合旗標與安全否決。'+
+    '負載矩陣由文獻固定、不自由估計（自由估計在旋轉不確定性下無法命名機轉）。</p>'+
+    body+
+    '<div class="noprint" style="margin-top:26px;padding-top:16px;border-top:1px solid var(--line)">'+
+      '<button class="btn primary" onclick="window.print()">列印／存成 PDF</button></div>'+
+  '</div>';
+}
+
+/* ================= 批次計算 ================= */
+let BATCH=[];
+function parseTable(txt){
+  const lines=txt.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2) return {err:'至少要有標題列與一列資料'};
+  const sep = lines[0].indexOf('\t')>=0 ? '\t' : ',';
+  const head=lines[0].split(sep).map(h=>h.trim());
+  const rows=lines.slice(1).map(l=>{
+    const c=l.split(sep), inp={}, mk={};
+    head.forEach((h,i)=>{
+      const v=(c[i]||'').trim();
+      if(MKS.indexOf(h)>=0) mk[h]={available:v==='pos'||v==='neg', positive:v==='pos'};
+      else if(v!=='') inp[h]= isNaN(+v)? null : +v;
+    });
+    MKS.forEach(m=>{ if(!mk[m]) mk[m]={available:false,positive:false}; });
+    return {inp:inp, mk:mk};
+  });
+  return {head:head, rows:rows};
+}
+function runBatch(){
+  const parsed=parseTable($('#batchIn').value);
+  if(parsed.err){ $('#batchOut').innerHTML='<p class="note">'+parsed.err+'</p>'; return; }
+  BATCH=parsed.rows.map((o,i)=>{
+    const r=runPipeline(o.inp,o.mk);
+    return {i:i+1, stage:r.stage,
+      l2:r.stage==='L2'?r.rule.route:'',
+      prob:r.stage==='L3'?r.prob:null,
+      ruled:r.stage==='L3'?r.ruled:null,
+      top:r.stage==='L3'?r.drivers[0].name:'',
+      share:r.stage==='L3'?r.drivers[0].share:null,
+      flags:r.stage==='L3'?r.flags.join(' '):'',
+      pat:r.stage==='L3'?r.shortlist[0].zh:''};
+  });
+  const n=BATCH.length, ruled=BATCH.filter(b=>b.ruled===true).length;
+  const stages={};
+  BATCH.forEach(b=>stages[b.stage]=(stages[b.stage]||0)+1);
+  $('#batchOut').innerHTML=
+    '<p class="note" style="margin-top:16px">共 '+n+' 例　·　'+
+      Object.keys(stages).map(k=>({L1:'L1 棄權',SCOPE:'不在適用範圍',L2:'L2 硬分流',L3:'進入模型'})[k]+' '+stages[k]).join('　·　')+
+      '　·　可安全排除 '+ruled+' 例（'+pct(ruled/n)+'）</p>'+
+    '<div class="scroll" style="margin-top:10px"><table><thead><tr><th>#</th><th>結束於</th><th>L2 分流</th>'+
+    '<th class="num">P</th><th>判定</th><th>主導驅動</th><th class="num">占比</th><th>旗標</th><th>首選型態</th></tr></thead><tbody>'+
+    BATCH.map(b=>'<tr><td>'+b.i+'</td><td>'+b.stage+'</td><td>'+b.l2+'</td>'+
+      '<td class="num mono">'+(b.prob==null?'—':num(b.prob))+'</td>'+
+      '<td>'+(b.ruled==null?'—':(b.ruled?'<span class="chip green">可排除</span>':'<span class="chip red">不可排除</span>'))+'</td>'+
+      '<td>'+b.top+'</td><td class="num mono">'+(b.share==null?'—':pct(b.share))+'</td>'+
+      '<td class="mono" style="font-size:11px">'+b.flags+'</td><td>'+b.pat+'</td></tr>').join('')+
+    '</tbody></table></div>';
+}
+function batchCsv(){
+  if(!BATCH.length){ alert('請先執行批次'); return; }
+  const head=['row','stage','l2_route','prob','ruled_out','top_driver','share','flags','top_pattern'];
+  const csv=[head.join(',')].concat(BATCH.map(b=>[b.i,b.stage,b.l2,b.prob==null?'':b.prob,
+    b.ruled==null?'':b.ruled,b.top,b.share==null?'':b.share,'"'+b.flags+'"',b.pat].join(','))).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='nephritis_batch.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+function batchSample(){
+  const ps=PACK.casemix[MIX].patients.slice(0,8);
+  const cols=FIELDS.map(f=>f.raw).concat(MKS);
+  const lines=[cols.join('\t')].concat(ps.map(p=>cols.map(c=>{
+    if(MKS.indexOf(c)>=0){ const v=p.markers[c]; return !v.available?'':(v.positive?'pos':'neg'); }
+    const l=p.labs.find(x=>x.name===c); return (l&&l.value!=null)?l.value:'';
+  }).join('\t')));
+  $('#batchIn').value=lines.join('\n');
+}
+
+/* ============ 公式 4＋5：多類別亞型頭 ============ */
+function subtypeProbs(X){
+  const sc=PACK.casemix[MIX].subtype_scoring;
+  if(!sc) return null;
+  const z=X.map((v,i)=>(v-sc.mean[i])/sc.scale[i]);
+  const eta=sc.coef.map((row,k)=>sc.intercept[k]+row.reduce((a,b,j)=>a+b*z[j],0));
+  const m=Math.max.apply(null,eta), ex=eta.map(e=>Math.exp(e-m)), t=ex.reduce((a,b)=>a+b,0);
+  return ex.map((e,k)=>({pat:PACK.patterns[sc.classes[k]], p:e/t}))
+           .sort((a,b)=>b.p-a.p);
+}
+
+/* ============ 公式 1＋2：既往檢驗（可選） ============ */
+function readPrior(){
+  const prev=[], w=+((document.getElementById('pr_weeks')||{}).value||0);
+  let filled=0;
+  IND.forEach(i=>{
+    const el=document.getElementById('pr_'+i.raw);
+    const v = (el && el.value!=='') ? +el.value : null;
+    if(v!=null) filled++;
+    prev.push(v);
+  });
+  if(!(w>0) || filled < IND.length*0.6) return null;   // 半數以上欄位有值才算數
+  return {prev:prev, weeks:w, filled:filled};
+}
+function priorX(pr, inp){
+  // 缺的既往欄位以「與現在相同」代入 → 該項變化量為 0，不會憑空製造趨勢
+  return IND.map((i,j)=>pr.prev[j]==null ? tx(i.kind,inp[i.raw],i.ref,i.scale)
+                                         : tx(i.kind,pr.prev[j],i.ref,i.scale));
+}
+function l3Longitudinal(X, Xp, weeks){
+  const lg=PACK.casemix[MIX].longitudinal; if(!lg) return null;
+  const d=X.map((v,i)=>v-Xp[i]);
+  const F=X.concat(d, d.map(v=>v/Math.max(weeks,1e-6)));
+  let z=lg.intercept;
+  for(let i=0;i<F.length;i++) z += lg.coef[i]*((F[i]-lg.mean[i])/lg.scale[i]);
+  return {prob:1/(1+Math.exp(-z)), threshold:lg.threshold};
+}
+
+/* ---------- 1. 漏斗 ---------- */
+function renderFunnel(){
+  const cm=PACK.casemix[MIX], f=cm.funnel, top=f[0].n;
+  const box=el('div');
+  f.forEach((s,i)=>{
+    const w=Math.max(1.5, s.n/top*100);
+    const col = i===0?'var(--muted)' : i===1?'var(--warn)' : i===2?'var(--accent)'
+              : i===3?'var(--ink)' : i===4?'var(--ok)':'var(--d2)';
+    const row=el('div',null,`
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin:12px 0 4px">
+        <span style="font-weight:600;font-size:14px">${s.layer}</span>
+        <span class="mono" style="color:var(--muted)">${s.n} 人 · ${pct(s.n/top)}</span></div>
+      <div style="height:15px;border-radius:5px;background:var(--chip)">
+        <div style="height:100%;width:${w}%;border-radius:5px;background:${col};opacity:.85"></div></div>
+      <div class="why">${s.note}${s.accuracy!=null?` · 分流正確率 <b>${pct(s.accuracy)}</b>`:''}</div>`);
+    box.appendChild(row);
+  });
+  $('#funnel').replaceChildren(box);
+  const l3=cm.l3;
+  $('#funnelNote').innerHTML =
+    `殘餘子集免疫性 GN 盛行率 <span class="hl">${pct(l3.prevalence)}</span>、AUROC <b>${num(l3.auroc)}</b>、
+     NPV <b>${num(l3.npv)}</b>、安全否決率 ${pct(l3.veto_rate)}。
+     時效性個案 ${l3.time_critical_n} 位，三法則下要證明漏判率 ≤0.5% 需 ≥${l3.n_required} 位 →
+     <b class="${l3.powered?'':'chip red'}">${l3.powered?'已足夠':'樣本量不足以支持安全宣稱'}</b>。`;
+}
+
+/* ---------- 2. 病人卡 ---------- */
+function renderPatientList(){
+  const sel=$('#patientSel');
+  sel.replaceChildren(...PACK.casemix[MIX].patients.map((p,i)=>{
+    const o=el('option'); o.value=i;
+    const tag = p.l2_route ? `L2→${p.l2_route}` : (p.ruled_out?'可排除':'不可排除');
+    o.textContent = `#${p.id} · 真實：${p.truth} · ${tag}`;
+    return o; }));
+  sel.onchange=()=>renderPatient(+sel.value);
+  renderPatient(0);
+}
+function renderPatient(i){
+  const p=PACK.casemix[MIX].patients[i];
+  const pat=PACK.patterns.find(x=>x.name===p.truth)||{};
+  const mk=Object.entries(p.markers).map(([k,v])=>
+    `<span class="chip ${v.available?(v.positive?'red':'green'):'amber'}">${k}：${v.available?(v.positive?'陽性':'陰性'):'未回覆'}</span>`).join('');
+
+  let head=`<div class="kv"><span>組織型態（真值）</span><b>${pat.zh||p.truth}</b></div>
+    <div class="kv"><span>是否免疫介導 GN</span><b>${p.immune_gn?'是':'否'}</b></div>
+    <div class="kv"><span>時效性</span><b>${p.time_critical?'是 — 延誤有不可逆後果':'否'}</b></div>
+    <div class="kv"><span>L1 資料品質</span><b>${p.l1_pass?'通過':'棄權（不猜）'}</b></div>`;
+
+  let body='';
+  if(p.l2_route){
+    const r=PACK.rules.find(x=>x.id===p.l2_rule)||{};
+    const hit = p.l2_route===p.truth;
+    body=`<div class="panel" style="margin:14px 0 0;border-left:4px solid var(--accent)">
+      <h3 style="margin:0 0 6px;font-size:15px">L2 決定性硬分流 → ${p.l2_route}
+        <span class="chip ${hit?'green':'red'}">${hit?'與真值相符':'與真值不符'}</span></h3>
+      <div class="why"><b>${r.action||''}</b><br>${r.why||''}</div>
+      <p class="why" style="margin-top:8px">此個案不進模型：確定的事用程式碼答完，不再乘一個機率把它弄糊。</p></div>`;
+  }else if(p.in_residual){
+    const bars=p.drivers.map(d=>{
+      const ci=PACK.drivers.indexOf(d.name);
+      const why=d.why.length? d.why.map(w=>`${w.indicator}<span class="mono" style="opacity:.65">(${num(w.weight,2)})</span>`).join('、')
+                           : '這位病人身上沒有支持此驅動的常規證據';
+      return `<div style="margin:12px 0">
+        <div style="display:flex;justify-content:space-between;font-size:14px">
+          <b style="color:${DC[ci]}">${d.name}</b><span class="mono">${pct(d.share)}</span></div>
+        <div class="bar" style="margin:5px 0 4px"><i style="width:${(d.share*100).toFixed(1)}%;background:${DC[ci]}"></i></div>
+        <div class="why">${why}</div></div>`;}).join('');
+    const verdict = p.ruled_out
+      ? `<span class="chip green">可安全排除：免疫介導腎絲球腎炎不太可能</span>`
+      : `<span class="chip red">不可排除：建議免疫學套組／考慮切片</span>`;
+    const rescued = p.vetoed && p.prob < p.threshold;   // 否決真的改變了結果，才叫被攔下
+    const vetoNote = rescued ? `<p class="why" style="margin-top:6px">⚠ 已被<b>決定性安全否決</b>攔下 —— ${PACK.safety_override.why}</p>`:'';
+    const flags = p.flags.length
+      ? p.flags.map(f=>`<span class="chip amber" title="${(PACK.flag_defs[f]||'').replace(/"/g,'')}">${f}</span>`).join('')
+      : '<span class="chip">無旗標</span>';
+    body=`<div style="margin-top:14px">${verdict}
+      <span class="mono chip">P(免疫 GN)=${num(p.prob)}，門檻 ${num(p.threshold)}</span>${vetoNote}
+      <div style="margin-top:10px">${flags}</div>
+      <div style="margin-top:6px">${bars}</div></div>`;
+  }else{
+    body=`<p class="note" style="margin-top:14px">此個案在 L1 被擋下，管線不對他做任何機轉宣稱。</p>`;
+  }
+
+  const labs=`<div class="scroll" style="margin-top:14px"><table><thead><tr>
+    <th>常規檢驗</th><th class="num">數值</th><th class="num">參考點</th><th>方向</th></tr></thead><tbody>${
+    p.labs.map(l=>`<tr><td class="mono">${l.name}</td><td class="num mono">${num(l.value,2)}</td>
+      <td class="num mono" style="color:var(--muted)">${l.ref==null?'—':num(l.ref,1)}</td>
+      <td style="color:var(--muted)">${({deficit:'低於參考點為異常',excess:'高於參考點為異常',logexcess:'高於參考點為異常',binary:'有／無',level:'分級'})[l.dir]||''}</td></tr>`).join('')
+    }</tbody></table></div>`;
+
+  $('#patientCard').innerHTML =
+    `<div class="grid2" style="margin-top:14px"><div>${head}</div>
+      <div><div style="margin-bottom:6px;font-size:13px;color:var(--muted)">決定性標記狀態（有就用，但模型從不加驗）</div>${mk}</div></div>
+     ${body}${labs}`;
+}
+
+/* ---------- 3. 負載矩陣 ---------- */
+function renderLambda(){
+  const mx=Math.max(...PACK.indicators.flatMap(i=>i.loadings));
+  const head=`<thead><tr><th>常規指標</th>${PACK.drivers.map((d,i)=>
+    `<th class="num" style="color:${DC[i]}">${d}</th>`).join('')}<th>文獻理由</th></tr></thead>`;
+  const rows=PACK.indicators.map(ind=>`<tr>
+    <td class="mono">${ind.name}<div class="why" style="white-space:normal">${ind.raw}</div></td>
+    ${ind.loadings.map((v,i)=>`<td class="num mono" style="background:color-mix(in srgb,${DC[i]} ${(v/mx*38).toFixed(0)}%,transparent)">${v.toFixed(2)}</td>`).join('')}
+    <td style="white-space:normal;color:var(--muted);font-size:12.5px;min-width:260px">${ind.rationale}</td></tr>`).join('');
+  $('#lambdaTbl').innerHTML=head+`<tbody>${rows}</tbody>`;
+}
+
+/* ---------- 4. 旋轉演示 ---------- */
+let ROT=0;
+function renderRotToggle(){
+  const g=$('#rotToggle'); g.replaceChildren(...PACK.rotation.solutions.map((s,i)=>{
+    const b=el('button',null,s.label); b.setAttribute('aria-pressed', i===ROT);
+    b.onclick=()=>{ROT=i;renderRotToggle();renderRotation();}; return b;}));
+}
+function renderRotation(){
+  const sol=PACK.rotation.solutions[ROT], n=sol.shares.length;
+  const W=660,H=170,bw=W/n;
+  let g=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="旋轉解下的機轉歸因">`;
+  sol.shares.forEach((sh,i)=>{ let y=0;
+    sh.forEach((v,d)=>{ const h=v*H;
+      g+=`<rect x="${(i*bw).toFixed(2)}" y="${y.toFixed(2)}" width="${(bw*0.86).toFixed(2)}" height="${h.toFixed(2)}" fill="${DC[d]}" opacity=".88"/>`;
+      y+=h; }); });
+  g+='</svg>';
+  $('#rotChart').innerHTML=g+`<div style="margin-top:6px">${PACK.drivers.map((d,i)=>
+    `<span class="chip" style="color:${DC[i]}">■ ${d}</span>`).join('')}</div>`;
+  $('#rotNote').innerHTML = ROT===0
+    ? `這是自由估計的原解。切到旋轉解看同一批 ${n} 位病人會發生什麼事。`
+    : `非對角擬合偏差 <span class="hl mono">${sol.fit_deviation===0?"0":sol.fit_deviation.toExponential(1)}</span>（＝與原解<b>完全相同</b>的擬合），
+       但主導驅動與原解只有 <span class="hl">${pct(sol.agreement)}</span> 一致。
+       擬合分不出這兩個解誰對，資料也分不出 —— 所以歸因必須靠外部錨定（文獻固定 Λ），不能靠估計。`;
+}
+
+/* ---------- 5. NPV 權衡 ---------- */
+function renderTradeoff(){
+  const s=[];
+  [['referral','var(--accent)'],['primary','var(--d3)']].forEach(([mix,c])=>{
+    const cm=PACK.casemix[mix];
+    const f=arr=>arr.filter(r=>r.achievable).map(r=>[r.target_npv,r.ruleout_rate]);
+    s.push({name:`${cm.label}（只看 NPV）`,color:c,pts:f(cm.ruleout_curve_npv_only)});
+    s.push({name:`${cm.label}（＋安全上限）`,color:c,dash:1,pts:f(cm.ruleout_curve)});
+  });
+  $('#tradeoff').innerHTML=lineChart(s.filter(x=>x.pts.length),{y0:0,y1:1,
+    fx:v=>v.toFixed(2), fy:v=>(v*100).toFixed(0)+'%', aria:'NPV 目標與可排除比例'});
+  const r=PACK.casemix.referral, p=PACK.casemix.primary;
+  $('#tradeoffNote').innerHTML =
+    `同一個模型：盛行率 <b>${pct(r.l3.prevalence)}</b> 的${r.label}只能安全排除少數人，
+     盛行率 <b>${pct(p.l3.prevalence)}</b> 的${p.label}可以排除絕大多數。
+     <b>NPV 端能不能落地，決定於部署在漏斗的哪一段，不是模型比較強。</b>
+     虛線與實線的落差則顯示：在時效性個案數不足時，安全上限實際等於「一個都不能漏」，操作點會被單一個案的位置決定。`;
+}
+
+/* ---------- 6. 誤設退化 ---------- */
+function renderMisspec(){
+  const c=PACK.casemix[MIX].misspecification_curve;
+  if(!c){ $('#misspec').innerHTML='<p class="sub">此族群未跑誤設曲線（<code class="mono">run.py --curve</code>）。</p>'; return; }
+  const by=m=>c.filter(r=>r.mode===m);
+  $('#misspec').innerHTML=lineChart([
+    {name:'幅度誤設 · top-1 準確率',color:'var(--accent)',pts:by('magnitude').map(r=>[r.misspec,r.top1_accuracy])},
+    {name:'結構誤設 · top-1 準確率',color:'var(--d2)',pts:by('structure').map(r=>[r.misspec,r.top1_accuracy])},
+    {name:'幅度誤設 · 非對角 RMSE',color:'var(--accent)',dash:1,pts:by('magnitude').map(r=>[r.misspec,r.offdiag_rmse])},
+    {name:'結構誤設 · 非對角 RMSE',color:'var(--d2)',dash:1,pts:by('structure').map(r=>[r.misspec,r.offdiag_rmse])},
+  ],{y0:0,y1:1,fx:v=>(v*100).toFixed(0)+'%',fy:v=>v.toFixed(2),aria:'Λ 誤設退化曲線'});
+}
+
+/* ---------- 7. 閘門 ---------- */
+function renderGates(){
+  const g=PACK.casemix[MIX].gates;
+  $('#gates').replaceChildren(...g.map(x=>{
+    const v = typeof x.value==='object'
+      ? Object.entries(x.value).map(([k,val])=>`<div class="kv"><span class="mono">${k}</span><b class="mono">${
+          typeof val==='number'?(Math.abs(val)<1e-3&&val!==0?val.toExponential(1):num(val,4)):
+          (Array.isArray(val)?(val.length?val.join(', '):'（空）'):String(val))}</b></div>`).join('')
+      : `<div class="kv"><span>值</span><b class="mono">${num(x.value,4)}</b></div>`;
+    return el('div','gate '+(x.passed?'pass':'fail'),
+      `<h3>${x.passed?'✓':'✗'} ${x.gate}</h3>
+       <div class="why">判準：<code class="mono">${x.criterion}</code></div>
+       <div style="margin-top:8px">${v}</div>
+       ${x.passed?'':`<p class="why" style="margin-top:8px;color:var(--bad)">未過代表：${x.fail_means}</p>`}`);
+  }));
+}
+
+/* ---------- 啟動 ---------- */
+function renderMixToggle(){
+  const g=$('#mixToggle');
+  g.replaceChildren(...Object.entries(PACK.casemix).map(([k,v])=>{
+    const b=el('button',null,v.label); b.setAttribute('aria-pressed',k===MIX);
+    b.onclick=()=>{MIX=k;try{localStorage.setItem('na_mix',k)}catch(e){};renderAll();}; return b;}));
+}
+function renderAll(){
+  renderMixToggle(); renderCalc(); renderFunnel(); renderPatientList(); renderTradeoff(); renderMisspec(); renderGates();
+  const cm=PACK.casemix[MIX];
+  $('#metaLine').textContent =
+    `seed ${PACK.meta.seed} · n=${PACK.meta.n} · M0 洩漏基準 AUROC ${num(cm.m0.auroc)} vs 誠實模型 M1 ${num(cm.l3.auroc)}`
+    + ` · 非對角擬合 RMSE ${num(cm.psi_offdiag_rmse)}`;
+}
+try{ const s=localStorage.getItem('na_mix'); if(s&&PACK.casemix[s]) MIX=s; }catch(e){}
+renderLambda(); renderRotToggle(); renderRotation(); renderAll();
+</script>
+</body>
+</html>

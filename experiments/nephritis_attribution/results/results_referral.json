@@ -1,0 +1,283 @@
+{
+  "seed": 20260827,
+  "n": 6000,
+  "casemix": "referral",
+  "params_hash": "6cb747fd62f3c5f1",
+  "quality": {
+    "missing": 143,
+    "unit_error": 113,
+    "impossible": 0,
+    "stale": 284,
+    "abstain_rate": 0.08766666666666667
+  },
+  "l2": {
+    "routed_rate": 0.09916666666666667,
+    "accuracy": 0.8521008403361344,
+    "by_rule": {
+      "R1_ANTI_GBM": 82,
+      "R2_PAUCI_RPGN": 105,
+      "R3_TMA": 218,
+      "R4_PLA2R_NS": 234
+    }
+  },
+  "l3": {
+    "n": 4879,
+    "threshold": 0.0461,
+    "npv": 0.9647435897435898,
+    "ruleout_rate": 0.06394753023160483,
+    "sensitivity": 0.99558764540714,
+    "prevalence": 0.5109653617544578,
+    "target_npv": 0.95,
+    "veto_rate": 0.10022545603607297,
+    "ruleout_curve": [
+      {
+        "target_npv": 0.9,
+        "achievable": true,
+        "threshold": 0.0461,
+        "ruleout_rate": 0.0639,
+        "npv": 0.9647,
+        "time_critical_miss": 0.004
+      },
+      {
+        "target_npv": 0.95,
+        "achievable": true,
+        "threshold": 0.0461,
+        "ruleout_rate": 0.0639,
+        "npv": 0.9647,
+        "time_critical_miss": 0.004
+      },
+      {
+        "target_npv": 0.98,
+        "achievable": true,
+        "threshold": 0.029,
+        "ruleout_rate": 0.0336,
+        "npv": 0.9817,
+        "time_critical_miss": 0.0
+      },
+      {
+        "target_npv": 0.99,
+        "achievable": true,
+        "threshold": 0.0221,
+        "ruleout_rate": 0.0213,
+        "npv": 0.9904,
+        "time_critical_miss": 0.0
+      }
+    ],
+    "ruleout_curve_npv_only": [
+      {
+        "target_npv": 0.9,
+        "achievable": true,
+        "threshold": 0.1893,
+        "ruleout_rate": 0.2669,
+        "npv": 0.9002,
+        "time_critical_miss": null
+      },
+      {
+        "target_npv": 0.95,
+        "achievable": true,
+        "threshold": 0.0625,
+        "ruleout_rate": 0.0902,
+        "npv": 0.95,
+        "time_critical_miss": null
+      },
+      {
+        "target_npv": 0.98,
+        "achievable": true,
+        "threshold": 0.029,
+        "ruleout_rate": 0.0336,
+        "npv": 0.9817,
+        "time_critical_miss": null
+      },
+      {
+        "target_npv": 0.99,
+        "achievable": true,
+        "threshold": 0.0221,
+        "ruleout_rate": 0.0213,
+        "npv": 0.9904,
+        "time_critical_miss": null
+      }
+    ],
+    "time_critical_n": 501,
+    "time_critical_miss_cap": 0.005,
+    "time_critical_n_required_rule_of_three": 600,
+    "safety_endpoint_powered": false,
+    "auroc": 0.8986728640696886
+  },
+  "l4": {
+    "driver_names": [
+      "D1_免疫沉積",
+      "D2_壞死內皮",
+      "D3_足細胞屏障"
+    ],
+    "mean_shares": [
+      0.30042600371184525,
+      0.31295368943274277,
+      0.38662030685541005
+    ],
+    "psi_offdiag_rmse": 0.3395
+  },
+  "l5": {
+    "mixed": 0.2943226070916171,
+    "tin": 0.05636400901824144,
+    "vasculitis": 0.02930928468948555,
+    "pending": 0.9135068661610986
+  },
+  "m0_same_denominator": {
+    "auroc": 0.9995600422171182,
+    "npv": 0.9501396090945353,
+    "ruleout_rate": 0.5138348022135684,
+    "threshold": 0.8405
+  },
+  "safety": {
+    "immune_time_critical_n": 501,
+    "immune_time_critical_missed": 2,
+    "immune_time_critical_miss_rate": 0.003992015968063872,
+    "tma_n": 164,
+    "tma_without_any_flag": 3,
+    "tma_unflagged_rate": 0.018292682926829267
+  },
+  "shortlist": {
+    "top1": 0.47735191637630664,
+    "top3": 0.8108218897315024,
+    "n": 4879,
+    "note": "呈現用候選清單，非以組織型態訓練的分類器；此數字必須與清單一起顯示。"
+  },
+  "gates": [
+    {
+      "gate": "G1 L1 資料品質棄權率",
+      "value": 0.0877,
+      "criterion": "0.01 <= r <= 0.50",
+      "passed": true,
+      "fail_means": "L1 沒在做事（=0）或把資料要求訂得不可能達成（過高），兩者都讓下游數字失去意義",
+      "detail": {
+        "missing": 143,
+        "unit_error": 113,
+        "impossible": 0,
+        "stale": 284,
+        "abstain_rate": 0.08766666666666667
+      }
+    },
+    {
+      "gate": "G2 L2 決定性",
+      "value": {
+        "reproducible": true,
+        "banned_tokens": []
+      },
+      "criterion": "重跑一致 且 無模型/隨機 token",
+      "passed": true,
+      "fail_means": "決定性層混進了機率或隨機性，違反鐵則 5，且同一份資料會給出不同分流"
+    },
+    {
+      "gate": "G3 旋轉不確定性",
+      "value": {
+        "max_offdiag_fit_deviation": 5.551115123125783e-16,
+        "mean_top1_agreement": 0.2267797362847578,
+        "mean_distinct_top_drivers": 2.9145316663250664,
+        "fixed_lambda_top1_accuracy": 0.8153310104529616
+      },
+      "criterion": "擬合偏差 < 1e-6 且 旋轉間排序一致率 <= 0.60 且 固定 Lambda 準確率 >= 0.55",
+      "passed": true,
+      "fail_means": "若擬合偏差不為零，代表這個演示沒抓到旋轉不變性；若一致率很高，代表旋轉幅度不夠，結論不成立；若固定 Lambda 準確率不高，代表文獻矩陣本身有問題"
+    },
+    {
+      "gate": "G4 禁逐人標準化",
+      "value": {
+        "A_absolute": 0.8987,
+        "B_person_norm_with_current": 0.7274,
+        "C_person_norm_past_only": 0.6366,
+        "leakage_inflation_B_minus_C": 0.0908,
+        "cost_vs_absolute_C_minus_A": -0.262,
+        "weak_variant_cross_sectional_row_z": 0.8982,
+        "attribution_top1_absolute": 0.8153
+      },
+      "criterion": "A - C >= 0.05 且 B - C >= 0.02",
+      "passed": true,
+      "fail_means": "若絕對刻度沒有比較好、或回溯版沒有被墊高，那禁逐人標準化這條規則在本資料上沒有證據支持，應該撤回而不是留著當信仰"
+    },
+    {
+      "gate": "G5 M0 洩漏基準為上界",
+      "value": {
+        "m0_auroc": 0.9996,
+        "m1_auroc": 0.8987,
+        "gap": 0.1009
+      },
+      "criterion": "M0 - M1 >= 0.02",
+      "passed": true,
+      "fail_means": "M1 逼近或超過 M0 有兩種可能：洩漏特徵其實沒資訊（M0 設計錯了），或 M1 自己也在洩漏（更危險）。兩者都必須先查清楚才能繼續。"
+    },
+    {
+      "gate": "G6 零新增檢驗",
+      "value": {
+        "model_fields": 20,
+        "overlap": [],
+        "tokens_in_source": []
+      },
+      "criterion": "交集為空 且 L3/L4 原始碼未出現加驗欄位",
+      "passed": true,
+      "fail_means": "只要有一個加驗欄位進了模型特徵集，『零新增』這個賣點就不成立，成本結構的差異化也沒了"
+    }
+  ],
+  "all_gates_passed": true,
+  "misspecification_curve": [
+    {
+      "mode": "magnitude",
+      "misspec": 0.0,
+      "top1_accuracy": 0.8271,
+      "offdiag_rmse": 0.3609
+    },
+    {
+      "mode": "magnitude",
+      "misspec": 0.1,
+      "top1_accuracy": 0.8156,
+      "offdiag_rmse": 0.3652
+    },
+    {
+      "mode": "magnitude",
+      "misspec": 0.2,
+      "top1_accuracy": 0.8173,
+      "offdiag_rmse": 0.3948
+    },
+    {
+      "mode": "magnitude",
+      "misspec": 0.35,
+      "top1_accuracy": 0.816,
+      "offdiag_rmse": 0.4797
+    },
+    {
+      "mode": "magnitude",
+      "misspec": 0.5,
+      "top1_accuracy": 0.8151,
+      "offdiag_rmse": 0.5746
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.0,
+      "top1_accuracy": 0.8271,
+      "offdiag_rmse": 0.3609
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.1,
+      "top1_accuracy": 0.7699,
+      "offdiag_rmse": 0.5353
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.2,
+      "top1_accuracy": 0.78,
+      "offdiag_rmse": 0.5134
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.35,
+      "top1_accuracy": 0.758,
+      "offdiag_rmse": 0.5437
+    },
+    {
+      "mode": "structure",
+      "misspec": 0.5,
+      "top1_accuracy": 0.7541,
+      "offdiag_rmse": 0.4899
+    }
+  ]
+}

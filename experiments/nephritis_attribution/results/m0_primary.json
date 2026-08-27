@@ -1,0 +1,59 @@
+{
+  "n": 5474,
+  "features": [
+    "if_deposit_intensity",
+    "crescent_pct",
+    "true_anti_gbm",
+    "true_anca",
+    "true_pla2r",
+    "immunosuppressant_started",
+    "icd_group",
+    "egfr_12m"
+  ],
+  "immune_binary": {
+    "auroc": 0.9993951833143108,
+    "npv": 0.9501675041876047,
+    "ruleout_rate": 0.8724881256850566,
+    "threshold": 0.9335
+  },
+  "histologic_pattern": {
+    "macro_auroc": 0.988861642652146,
+    "accuracy": 0.9333211545487761
+  },
+  "importances": [
+    [
+      "if_deposit_intensity",
+      0.4779
+    ],
+    [
+      "icd_group",
+      0.3035
+    ],
+    [
+      "immunosuppressant_started",
+      0.1177
+    ],
+    [
+      "crescent_pct",
+      0.0453
+    ],
+    [
+      "true_pla2r",
+      0.0254
+    ],
+    [
+      "egfr_12m",
+      0.0142
+    ],
+    [
+      "true_anca",
+      0.0121
+    ],
+    [
+      "true_anti_gbm",
+      0.0039
+    ]
+  ],
+  "note": "M0 僅供對照與絆線之用，任何情況下都不得部署。",
+  "params_hash": "6cb747fd62f3c5f1"
+}
