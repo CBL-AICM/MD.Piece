@@ -1,0 +1,203 @@
+{
+ "note": "各階段拒答門檻，於訓練集依作答率—正確率曲線選定後鎖定；測試集不得調整",
+ "rule": "最小門檻使訓練集作答者平衡正確率 ≥ 0.8（不可達→0.6 並標記）",
+ "thresholds": {
+  "1": {
+   "threshold": 0.6,
+   "reachable": true,
+   "train_balanced_accuracy": 0.9470551871560006,
+   "train_coverage": 0.9667738478027867,
+   "rule": "最小門檻使訓練集作答者平衡正確率 ≥ 0.8"
+  },
+  "2": {
+   "threshold": 0.6,
+   "reachable": true,
+   "train_balanced_accuracy": 0.9308604913457726,
+   "train_coverage": 0.9517684887459807,
+   "rule": "最小門檻使訓練集作答者平衡正確率 ≥ 0.8"
+  },
+  "3": {
+   "threshold": 0.6,
+   "reachable": true,
+   "train_balanced_accuracy": 0.8623617527116773,
+   "train_coverage": 0.8163629867809932,
+   "rule": "最小門檻使訓練集作答者平衡正確率 ≥ 0.8"
+  }
+ },
+ "curves": {
+  "1": [
+   {
+    "threshold": 0.6,
+    "coverage": 0.9667738478027867,
+    "balanced_accuracy": 0.9470551871560006,
+    "accuracy": 0.9497413155949741,
+    "n_answered": 2706
+   },
+   {
+    "threshold": 0.65,
+    "coverage": 0.9506966773847803,
+    "balanced_accuracy": 0.9523917811563557,
+    "accuracy": 0.9556557685080797,
+    "n_answered": 2661
+   },
+   {
+    "threshold": 0.7,
+    "coverage": 0.9321186137906395,
+    "balanced_accuracy": 0.9571050172670048,
+    "accuracy": 0.9593714066692219,
+    "n_answered": 2609
+   },
+   {
+    "threshold": 0.75,
+    "coverage": 0.9128260092890318,
+    "balanced_accuracy": 0.9632948433252294,
+    "accuracy": 0.9663405088062622,
+    "n_answered": 2555
+   },
+   {
+    "threshold": 0.8,
+    "coverage": 0.8888888888888888,
+    "balanced_accuracy": 0.9694236849669445,
+    "accuracy": 0.9722668810289389,
+    "n_answered": 2488
+   },
+   {
+    "threshold": 0.85,
+    "coverage": 0.84994640943194,
+    "balanced_accuracy": 0.9767393849048365,
+    "accuracy": 0.978562421185372,
+    "n_answered": 2379
+   },
+   {
+    "threshold": 0.9,
+    "coverage": 0.8099321186137907,
+    "balanced_accuracy": 0.9810584629891561,
+    "accuracy": 0.9819144243493604,
+    "n_answered": 2267
+   },
+   {
+    "threshold": 0.95,
+    "coverage": 0.722400857449089,
+    "balanced_accuracy": 0.9897494460155626,
+    "accuracy": 0.9906033630069239,
+    "n_answered": 2022
+   }
+  ],
+  "2": [
+   {
+    "threshold": 0.6,
+    "coverage": 0.9517684887459807,
+    "balanced_accuracy": 0.9308604913457726,
+    "accuracy": 0.9328078078078078,
+    "n_answered": 2664
+   },
+   {
+    "threshold": 0.65,
+    "coverage": 0.9303322615219721,
+    "balanced_accuracy": 0.9396438704383892,
+    "accuracy": 0.9408602150537635,
+    "n_answered": 2604
+   },
+   {
+    "threshold": 0.7,
+    "coverage": 0.9124687388352983,
+    "balanced_accuracy": 0.9457705432492198,
+    "accuracy": 0.947141738449491,
+    "n_answered": 2554
+   },
+   {
+    "threshold": 0.75,
+    "coverage": 0.8978206502322258,
+    "balanced_accuracy": 0.9528830056003054,
+    "accuracy": 0.9538400318344608,
+    "n_answered": 2513
+   },
+   {
+    "threshold": 0.8,
+    "coverage": 0.8753126116470168,
+    "balanced_accuracy": 0.9617310307317067,
+    "accuracy": 0.9628571428571429,
+    "n_answered": 2450
+   },
+   {
+    "threshold": 0.85,
+    "coverage": 0.8420864594498035,
+    "balanced_accuracy": 0.9751549088156147,
+    "accuracy": 0.972422571064913,
+    "n_answered": 2357
+   },
+   {
+    "threshold": 0.9,
+    "coverage": 0.8038585209003215,
+    "balanced_accuracy": 0.9790825200147687,
+    "accuracy": 0.9773333333333334,
+    "n_answered": 2250
+   },
+   {
+    "threshold": 0.95,
+    "coverage": 0.7173990710968203,
+    "balanced_accuracy": 0.9824365597296428,
+    "accuracy": 0.9815737051792829,
+    "n_answered": 2008
+   }
+  ],
+  "3": [
+   {
+    "threshold": 0.6,
+    "coverage": 0.8163629867809932,
+    "balanced_accuracy": 0.8623617527116773,
+    "accuracy": 0.8564551422319475,
+    "n_answered": 2285
+   },
+   {
+    "threshold": 0.65,
+    "coverage": 0.7617006073597713,
+    "balanced_accuracy": 0.881484482390313,
+    "accuracy": 0.8771106941838649,
+    "n_answered": 2132
+   },
+   {
+    "threshold": 0.7,
+    "coverage": 0.7102536620221508,
+    "balanced_accuracy": 0.894315248397046,
+    "accuracy": 0.8933601609657947,
+    "n_answered": 1988
+   },
+   {
+    "threshold": 0.75,
+    "coverage": 0.6513040371561272,
+    "balanced_accuracy": 0.9079288471754152,
+    "accuracy": 0.9089413055403182,
+    "n_answered": 1823
+   },
+   {
+    "threshold": 0.8,
+    "coverage": 0.5894962486602358,
+    "balanced_accuracy": 0.9224816841294091,
+    "accuracy": 0.926060606060606,
+    "n_answered": 1650
+   },
+   {
+    "threshold": 0.85,
+    "coverage": 0.5126831011075385,
+    "balanced_accuracy": 0.9299140275115725,
+    "accuracy": 0.9400696864111499,
+    "n_answered": 1435
+   },
+   {
+    "threshold": 0.9,
+    "coverage": 0.4280100035727045,
+    "balanced_accuracy": 0.9437754670611107,
+    "accuracy": 0.9549248747913188,
+    "n_answered": 1198
+   },
+   {
+    "threshold": 0.95,
+    "coverage": 0.32118613790639516,
+    "balanced_accuracy": 0.9643592571817063,
+    "accuracy": 0.9766407119021134,
+    "n_answered": 899
+   }
+  ]
+ }
+}
