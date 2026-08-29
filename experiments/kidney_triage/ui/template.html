@@ -305,7 +305,7 @@ function transformOne(panels){
   if(!pts.length){med[ch]=idx[ch]=slp[ch]=NaN;return;}
   const vs=pts.map(q=>q[1]).slice().sort((a,b)=>a-b);
   med[ch]=vs.length%2?vs[(vs.length-1)/2]:(vs[vs.length/2-1]+vs[vs.length/2])/2;
-  idx[ch]=pts.slice().sort((a,b)=>Math.abs(a[0])-Math.abs(b[0]))[0][1];
+  const inw=pts.filter(q=>Math.abs(q[0])<=MD.index_window);idx[ch]=inw.length?inw.slice().sort((a,b)=>Math.abs(a[0])-Math.abs(b[0]))[0][1]:NaN;
   const days=pts.map(q=>q[0]);
   if(pts.length>=minK&&Math.max(...days)>Math.min(...days)){
    const n=pts.length,mx=days.reduce((a,b)=>a+b,0)/n,my=pts.reduce((a,q)=>a+q[1],0)/n;

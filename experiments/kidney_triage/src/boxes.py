@@ -31,9 +31,9 @@ def recommend(P, box_pred):
             recs.append([])                                     # 不給建議，交回醫師
         else:
             recs.append(list(R[str(b)]["mandatory"]))
-    for b, r in zip(box_pred, recs):
-        if b == "R":
-            assert set(R["R"]["mandatory"]) <= set(r), "R 格硬性規則遭覆蓋——建置失敗"
+    # R 格硬性規則的驗證不在此處——這裡斷言自己剛建的清單是套套邏輯（稽核發現）。
+    # 獨立驗算：evaluate_recommendations 由 box_pred 與 recs 重新計算 R_five_items_when_routed_R，
+    # pipeline 對該量斷言 == 1.0。
     return recs
 
 

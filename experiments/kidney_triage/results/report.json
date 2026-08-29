@@ -8,84 +8,269 @@
   "rule": "至少 1 次成套且 ['Cr'] 至少一次有值"
  },
  "feature_sets": {
-  "M1": [
-   "L0_Cr",
-   "L0_BUN",
-   "L0_UPCR",
-   "L0_uRBC",
-   "L0_uWBC",
-   "L0_NLR",
-   "L0_CRP",
-   "L0_SBP",
-   "L0_alb",
-   "L0_eos",
-   "L0_PLT"
-  ],
-  "M2": [
-   "L_Cr",
-   "L_BUN",
-   "L_UPCR",
-   "L_uRBC",
-   "L_uWBC",
-   "L_NLR",
-   "L_CRP",
-   "L_SBP",
-   "L_alb",
-   "L_eos",
-   "L_PLT",
-   "S_Cr",
-   "S_BUN",
-   "S_UPCR",
-   "S_uRBC",
-   "S_uWBC",
-   "S_NLR",
-   "S_CRP",
-   "S_SBP",
-   "S_alb",
-   "S_eos",
-   "S_PLT",
-   "R_Cr_UPCR",
-   "R_UPCR_alb",
-   "R_UPCR_uRBC",
-   "R_BUN_Cr",
-   "R_CRP_alb"
-  ],
-  "M3": [
-   "L_Cr",
-   "L_BUN",
-   "L_UPCR",
-   "L_uRBC",
-   "L_uWBC",
-   "L_NLR",
-   "L_CRP",
-   "L_SBP",
-   "L_alb",
-   "L_eos",
-   "L_PLT",
-   "S_Cr",
-   "S_BUN",
-   "S_UPCR",
-   "S_uRBC",
-   "S_uWBC",
-   "S_NLR",
-   "S_CRP",
-   "S_SBP",
-   "S_alb",
-   "S_eos",
-   "S_PLT",
-   "R_Cr_UPCR",
-   "R_UPCR_alb",
-   "R_UPCR_uRBC",
-   "R_BUN_Cr",
-   "R_CRP_alb"
-  ],
+  "stages": {
+   "1": {
+    "M1": [
+     "L0_Cr",
+     "L0_BUN",
+     "L0_UPCR",
+     "L0_uRBC",
+     "L0_uRBC_dys",
+     "L0_uRBC_acan",
+     "L0_uRBC_cast",
+     "L0_uWBC",
+     "L0_NLR",
+     "L0_CRP",
+     "L0_SBP",
+     "L0_alb",
+     "L0_eos",
+     "L0_PLT"
+    ],
+    "M2": [
+     "L_Cr",
+     "L_BUN",
+     "L_UPCR",
+     "L_uRBC",
+     "L_uRBC_dys",
+     "L_uRBC_acan",
+     "L_uRBC_cast",
+     "L_uWBC",
+     "L_NLR",
+     "L_CRP",
+     "L_SBP",
+     "L_alb",
+     "L_eos",
+     "L_PLT",
+     "S_Cr",
+     "S_BUN",
+     "S_UPCR",
+     "S_uRBC",
+     "S_uRBC_dys",
+     "S_uRBC_acan",
+     "S_uRBC_cast",
+     "S_uWBC",
+     "S_NLR",
+     "S_CRP",
+     "S_SBP",
+     "S_alb",
+     "S_eos",
+     "S_PLT",
+     "R_Cr_UPCR",
+     "R_UPCR_alb",
+     "R_UPCR_uRBC",
+     "R_BUN_Cr",
+     "R_CRP_alb"
+    ],
+    "M3": [
+     "L_Cr",
+     "L_BUN",
+     "L_UPCR",
+     "L_uRBC",
+     "L_uRBC_dys",
+     "L_uRBC_acan",
+     "L_uRBC_cast",
+     "L_uWBC",
+     "L_NLR",
+     "L_CRP",
+     "L_SBP",
+     "L_alb",
+     "L_eos",
+     "L_PLT",
+     "S_Cr",
+     "S_BUN",
+     "S_UPCR",
+     "S_uRBC",
+     "S_uRBC_dys",
+     "S_uRBC_acan",
+     "S_uRBC_cast",
+     "S_uWBC",
+     "S_NLR",
+     "S_CRP",
+     "S_SBP",
+     "S_alb",
+     "S_eos",
+     "S_PLT",
+     "R_Cr_UPCR",
+     "R_UPCR_alb",
+     "R_UPCR_uRBC",
+     "R_BUN_Cr",
+     "R_CRP_alb"
+    ]
+   },
+   "2": {
+    "M1": [
+     "L0_Cr",
+     "L0_BUN",
+     "L0_UPCR",
+     "L0_uRBC",
+     "L0_uRBC_dys",
+     "L0_uRBC_acan",
+     "L0_uRBC_cast",
+     "L0_uWBC",
+     "L0_NLR",
+     "L0_CRP",
+     "L0_SBP",
+     "L0_alb",
+     "L0_eos",
+     "L0_PLT"
+    ],
+    "M2": [
+     "L_Cr",
+     "L_BUN",
+     "L_UPCR",
+     "L_uRBC",
+     "L_uRBC_dys",
+     "L_uRBC_acan",
+     "L_uRBC_cast",
+     "L_uWBC",
+     "L_NLR",
+     "L_CRP",
+     "L_SBP",
+     "L_alb",
+     "L_eos",
+     "L_PLT",
+     "S_Cr",
+     "S_BUN",
+     "S_UPCR",
+     "S_uRBC",
+     "S_uRBC_dys",
+     "S_uRBC_acan",
+     "S_uRBC_cast",
+     "S_uWBC",
+     "S_NLR",
+     "S_CRP",
+     "S_SBP",
+     "S_alb",
+     "S_eos",
+     "S_PLT",
+     "R_Cr_UPCR",
+     "R_UPCR_alb",
+     "R_UPCR_uRBC",
+     "R_BUN_Cr",
+     "R_CRP_alb"
+    ],
+    "M3": [
+     "L_Cr",
+     "L_BUN",
+     "L_UPCR",
+     "L_uRBC",
+     "L_uRBC_dys",
+     "L_uRBC_acan",
+     "L_uRBC_cast",
+     "L_uWBC",
+     "L_NLR",
+     "L_CRP",
+     "L_SBP",
+     "L_alb",
+     "L_eos",
+     "L_PLT",
+     "S_Cr",
+     "S_BUN",
+     "S_UPCR",
+     "S_uRBC",
+     "S_uRBC_dys",
+     "S_uRBC_acan",
+     "S_uRBC_cast",
+     "S_uWBC",
+     "S_NLR",
+     "S_CRP",
+     "S_SBP",
+     "S_alb",
+     "S_eos",
+     "S_PLT",
+     "R_Cr_UPCR",
+     "R_UPCR_alb",
+     "R_UPCR_uRBC",
+     "R_BUN_Cr",
+     "R_CRP_alb"
+    ]
+   },
+   "3": {
+    "M1": [
+     "L0_Cr",
+     "L0_BUN",
+     "L0_UPCR",
+     "L0_uRBC",
+     "L0_uWBC",
+     "L0_NLR",
+     "L0_CRP",
+     "L0_SBP",
+     "L0_alb",
+     "L0_eos",
+     "L0_PLT"
+    ],
+    "M2": [
+     "L_Cr",
+     "L_BUN",
+     "L_UPCR",
+     "L_uRBC",
+     "L_uWBC",
+     "L_NLR",
+     "L_CRP",
+     "L_SBP",
+     "L_alb",
+     "L_eos",
+     "L_PLT",
+     "S_Cr",
+     "S_BUN",
+     "S_UPCR",
+     "S_uRBC",
+     "S_uWBC",
+     "S_NLR",
+     "S_CRP",
+     "S_SBP",
+     "S_alb",
+     "S_eos",
+     "S_PLT",
+     "R_Cr_UPCR",
+     "R_UPCR_alb",
+     "R_UPCR_uRBC",
+     "R_BUN_Cr",
+     "R_CRP_alb"
+    ],
+    "M3": [
+     "L_Cr",
+     "L_BUN",
+     "L_UPCR",
+     "L_uRBC",
+     "L_uWBC",
+     "L_NLR",
+     "L_CRP",
+     "L_SBP",
+     "L_alb",
+     "L_eos",
+     "L_PLT",
+     "S_Cr",
+     "S_BUN",
+     "S_UPCR",
+     "S_uRBC",
+     "S_uWBC",
+     "S_NLR",
+     "S_CRP",
+     "S_SBP",
+     "S_alb",
+     "S_eos",
+     "S_PLT",
+     "R_Cr_UPCR",
+     "R_UPCR_alb",
+     "R_UPCR_uRBC",
+     "R_BUN_Cr",
+     "R_CRP_alb"
+    ]
+   }
+  },
   "proxy_mode": true,
-  "morph_ok_share": 0.2328664332166083
+  "morph_ok_share": 0.23111555777888945,
+  "morph_share_by_col": {
+   "uRBC_dys": 0.23111555777888945,
+   "uRBC_acan": 0.23161580790395198,
+   "uRBC_cast": 0.2313656828414207
+  }
  },
  "placeholders": [
   "generator"
  ],
- "m0_sealed_at": "2026-08-30 00:47:42",
+ "m0_sealed_at": "2026-08-30 01:31:04",
  "removed_axes": [],
  "stages": {
   "1": {
@@ -96,38 +281,38 @@
      "balanced_accuracy": 0.8122930293291676
     },
     "M1": {
-     "balanced_accuracy": 0.9039429515195239,
-     "accuracy": 0.9046087888531619
+     "balanced_accuracy": 0.893495888908101,
+     "accuracy": 0.8928188638799571
     },
     "M2": {
-     "balanced_accuracy": 0.9359438816577926,
-     "accuracy": 0.9378349410503751
+     "balanced_accuracy": 0.934735894393532,
+     "accuracy": 0.9374776705966417
     },
     "M3": {
-     "balanced_accuracy": 0.9359438816577926,
-     "accuracy": 0.9378349410503751
+     "balanced_accuracy": 0.934735894393532,
+     "accuracy": 0.9374776705966417
     },
     "verdicts": {
      "M2_vs_M0": {
-      "diff": 0.12424496892231089,
-      "lo": 0.10506365973533029,
-      "hi": 0.14193145338102642,
+      "diff": 0.12304544203230465,
+      "lo": 0.10411124936571518,
+      "hi": 0.14140637072803022,
       "significant": true,
       "n_boot": 1000,
       "verdict": "通過"
      },
      "M2_vs_M1": {
-      "diff": 0.03212163284782228,
-      "lo": 0.021404629147748606,
-      "hi": 0.04233150126610619,
+      "diff": 0.0411834852655838,
+      "lo": 0.029862091588744217,
+      "hi": 0.05277491265511554,
       "significant": true,
       "n_boot": 1000,
       "verdict": "有增額價值"
      },
      "M3_vs_random": {
-      "diff": 0.43610418561289715,
-      "lo": 0.42606700001528175,
-      "hi": 0.4460868140016915,
+      "diff": 0.43493033555755867,
+      "lo": 0.42490641558120223,
+      "hi": 0.4449374374675018,
       "significant": true,
       "n_boot": 1000,
       "verdict": "有獨立增益"
@@ -138,48 +323,48 @@
    "test": {
     "threshold": 0.6,
     "threshold_reachable": true,
-    "abstention_rate": 0.034195162635529575,
-    "answered_rate": 0.9658048373644704,
+    "abstention_rate": 0.030025020850708906,
+    "answered_rate": 0.9699749791492911,
     "answered": {
-     "accuracy": 0.959412780656304,
-     "balanced_accuracy": 0.9606644723808464,
+     "accuracy": 0.9613069647463457,
+     "balanced_accuracy": 0.9635675354549913,
      "per_class": {
       "0": {
-       "n": 797,
-       "prevalence": 0.6882556131260794,
-       "recall": 0.9573400250941029,
-       "specificity": 0.96398891966759,
-       "ppv": 0.9832474226804124,
-       "npv": 0.9109947643979057
+       "n": 802,
+       "prevalence": 0.6895958727429062,
+       "recall": 0.9576059850374065,
+       "specificity": 0.9695290858725761,
+       "ppv": 0.9858793324775352,
+       "npv": 0.9114583333333333
       },
       "1": {
        "n": 361,
-       "prevalence": 0.31174438687392053,
-       "recall": 0.96398891966759,
-       "specificity": 0.9573400250941029,
-       "ppv": 0.9109947643979056,
-       "npv": 0.9832474226804124
+       "prevalence": 0.3104041272570937,
+       "recall": 0.9695290858725761,
+       "specificity": 0.9576059850374065,
+       "ppv": 0.9114583333333333,
+       "npv": 0.9858793324775352
       }
      },
      "confusion": [
       [
-       763,
+       768,
        34
       ],
       [
-       13,
-       348
+       11,
+       350
       ]
      ],
      "labels": [
       "0",
       "1"
      ],
-     "n": 1158,
+     "n": 1163,
      "balanced_accuracy_ci": {
-      "mean": 0.9608981725632951,
-      "lo": 0.9485719292695342,
-      "hi": 0.9723854206705965,
+      "mean": 0.9635031753198824,
+      "lo": 0.9520647290524421,
+      "hi": 0.9741898681881952,
       "n_boot": 1000
      }
     }
@@ -193,38 +378,38 @@
      "balanced_accuracy": 0.7866917469885983
     },
     "M1": {
-     "balanced_accuracy": 0.9156931960284402,
-     "accuracy": 0.9124687388352983
+     "balanced_accuracy": 0.8838376439990263,
+     "accuracy": 0.8846016434440872
     },
     "M2": {
-     "balanced_accuracy": 0.9127154523707682,
-     "accuracy": 0.9149696320114327
+     "balanced_accuracy": 0.912386235083952,
+     "accuracy": 0.917470525187567
     },
     "M3": {
-     "balanced_accuracy": 0.9127154523707682,
-     "accuracy": 0.9149696320114327
+     "balanced_accuracy": 0.912386235083952,
+     "accuracy": 0.917470525187567
     },
     "verdicts": {
      "M2_vs_M0": {
-      "diff": 0.1264602051170031,
-      "lo": 0.10395382435611553,
-      "hi": 0.14967059993208093,
+      "diff": 0.12595484196609888,
+      "lo": 0.10349384409346798,
+      "hi": 0.14923902710290832,
       "significant": true,
       "n_boot": 1000,
       "verdict": "通過"
      },
      "M2_vs_M1": {
-      "diff": -0.0031015623306107484,
-      "lo": -0.014672618219587374,
-      "hi": 0.008677481579652232,
-      "significant": false,
+      "diff": 0.028311016985363983,
+      "lo": 0.012912167332598862,
+      "hi": 0.043889466176574486,
+      "significant": true,
       "n_boot": 1000,
-      "verdict": "無增額價值（不移除，照實報告）"
+      "verdict": "有增額價值"
      },
      "M3_vs_random": {
-      "diff": 0.5791390272683136,
-      "lo": 0.5643904991296439,
-      "hi": 0.5930418265482214,
+      "diff": 0.5789218067313486,
+      "lo": 0.5638892680460351,
+      "hi": 0.5925158676204013,
       "significant": true,
       "n_boot": 1000,
       "verdict": "有獨立增益"
@@ -235,52 +420,52 @@
    "test": {
     "threshold": 0.6,
     "threshold_reachable": true,
-    "abstention_rate": 0.048373644703919916,
-    "answered_rate": 0.9516263552960801,
+    "abstention_rate": 0.05087572977481236,
+    "answered_rate": 0.9491242702251876,
     "answered": {
-     "accuracy": 0.9272567922874672,
-     "balanced_accuracy": 0.9382171046925145,
+     "accuracy": 0.9349736379613357,
+     "balanced_accuracy": 0.9428909428909429,
      "per_class": {
       "腎小管間質": {
-       "n": 200,
-       "prevalence": 0.175284837861525,
-       "recall": 0.935,
-       "specificity": 0.9787460148777896,
-       "ppv": 0.9033816425120772,
-       "npv": 0.9860813704496788
+       "n": 198,
+       "prevalence": 0.17398945518453426,
+       "recall": 0.9646464646464646,
+       "specificity": 0.9787234042553191,
+       "ppv": 0.90521327014218,
+       "npv": 0.9924487594390506
       },
       "腎絲球": {
-       "n": 819,
-       "prevalence": 0.7177914110429447,
-       "recall": 0.9206349206349206,
-       "specificity": 0.9720496894409938,
-       "ppv": 0.9882044560943642,
-       "npv": 0.8280423280423279
+       "n": 814,
+       "prevalence": 0.7152899824253075,
+       "recall": 0.9275184275184275,
+       "specificity": 0.9753086419753086,
+       "ppv": 0.9895150720838795,
+       "npv": 0.8426666666666667
       },
       "血管": {
-       "n": 122,
-       "prevalence": 0.10692375109553023,
-       "recall": 0.9590163934426229,
-       "specificity": 0.9470068694798822,
-       "ppv": 0.6842105263157894,
-       "npv": 0.9948453608247423
+       "n": 126,
+       "prevalence": 0.11072056239015818,
+       "recall": 0.9365079365079365,
+       "specificity": 0.9545454545454546,
+       "ppv": 0.7195121951219514,
+       "npv": 0.9917864476386038
       }
      },
      "confusion": [
       [
-       187,
-       7,
-       6
+       191,
+       4,
+       3
       ],
       [
-       17,
-       754,
-       48
+       16,
+       755,
+       43
       ],
       [
-       3,
-       2,
-       117
+       4,
+       4,
+       118
       ]
      ],
      "labels": [
@@ -288,11 +473,11 @@
       "腎絲球",
       "血管"
      ],
-     "n": 1141,
+     "n": 1138,
      "balanced_accuracy_ci": {
-      "mean": 0.9380702776027949,
-      "lo": 0.920622284938075,
-      "hi": 0.9540732937441112,
+      "mean": 0.9427788109553237,
+      "lo": 0.9240457561625185,
+      "hi": 0.9591361803581268,
       "n_boot": 1000
      }
     }
@@ -306,8 +491,8 @@
      "balanced_accuracy": 0.7123774975089633
     },
     "M1": {
-     "balanced_accuracy": 0.7982771769738111,
-     "accuracy": 0.7859949982136477
+     "balanced_accuracy": 0.7391454351947415,
+     "accuracy": 0.7234726688102894
     },
     "M2": {
      "balanced_accuracy": 0.807864514733533,
@@ -327,12 +512,12 @@
       "verdict": "通過"
      },
      "M2_vs_M1": {
-      "diff": 0.009346004811923663,
-      "lo": -0.001637589550980878,
-      "hi": 0.019737487216780276,
-      "significant": false,
+      "diff": 0.06846798037681066,
+      "lo": 0.053077141017786426,
+      "hi": 0.08287292713867493,
+      "significant": true,
       "n_boot": 1000,
-      "verdict": "無增額價值（不移除，照實報告）"
+      "verdict": "有增額價值"
      },
      "M3_vs_random": {
       "diff": 0.5574531288394332,
@@ -421,9 +606,9 @@
      ],
      "n": 971,
      "balanced_accuracy_ci": {
-      "mean": 0.8559167476225523,
-      "lo": 0.8316558536158162,
-      "hi": 0.8780458185648473,
+      "mean": 0.8559032976447317,
+      "lo": 0.8337773722622033,
+      "hi": 0.8790467573799639,
       "n_boot": 1000
      }
     }
@@ -431,93 +616,93 @@
   }
  },
  "stage4": {
-  "decided_rate": 0.749791492910759,
+  "decided_rate": 0.7506255212677231,
   "answered": {
-   "accuracy": 0.8175750834260289,
-   "balanced_accuracy": 0.7892833780467218,
+   "accuracy": 0.8277777777777777,
+   "balanced_accuracy": 0.802697699220225,
    "per_class": {
     "A": {
-     "n": 96,
-     "prevalence": 0.1067853170189099,
-     "recall": 0.9375,
-     "specificity": 0.9788293897882939,
-     "ppv": 0.841121495327103,
-     "npv": 0.9924242424242424
+     "n": 95,
+     "prevalence": 0.10555555555555556,
+     "recall": 0.9789473684210527,
+     "specificity": 0.9801242236024845,
+     "ppv": 0.8532110091743123,
+     "npv": 0.9974715549936789
     },
     "A2": {
-     "n": 86,
-     "prevalence": 0.09566184649610679,
-     "recall": 0.813953488372093,
-     "specificity": 0.982779827798278,
-     "ppv": 0.8333333333333335,
-     "npv": 0.9803680981595092
+     "n": 82,
+     "prevalence": 0.09111111111111111,
+     "recall": 0.8414634146341463,
+     "specificity": 0.9841075794621027,
+     "ppv": 0.8414634146341464,
+     "npv": 0.9841075794621027
     },
     "C": {
      "n": 214,
-     "prevalence": 0.23804226918798665,
+     "prevalence": 0.23777777777777778,
      "recall": 0.9252336448598131,
-     "specificity": 0.9576642335766423,
-     "ppv": 0.8722466960352422,
-     "npv": 0.9761904761904762
+     "specificity": 0.9577259475218659,
+     "ppv": 0.8722466960352423,
+     "npv": 0.9762258543833581
     },
     "D": {
      "n": 117,
-     "prevalence": 0.13014460511679643,
-     "recall": 0.49572649572649574,
-     "specificity": 0.9680306905370843,
-     "ppv": 0.6987951807228913,
-     "npv": 0.9276960784313726
+     "prevalence": 0.13,
+     "recall": 0.5213675213675214,
+     "specificity": 0.9680715197956578,
+     "ppv": 0.7093023255813956,
+     "npv": 0.9312039312039313
     },
     "E": {
-     "n": 96,
-     "prevalence": 0.1067853170189099,
-     "recall": 0.53125,
-     "specificity": 0.9775840597758406,
-     "ppv": 0.739130434782609,
-     "npv": 0.9457831325301205
+     "n": 99,
+     "prevalence": 0.11,
+     "recall": 0.5151515151515151,
+     "specificity": 0.9812734082397003,
+     "ppv": 0.7727272727272723,
+     "npv": 0.9424460431654677
     },
     "F": {
-     "n": 94,
-     "prevalence": 0.10456062291434928,
-     "recall": 0.8723404255319149,
-     "specificity": 0.9515527950310559,
-     "ppv": 0.6776859504132233,
-     "npv": 0.9845758354755784
+     "n": 93,
+     "prevalence": 0.10333333333333333,
+     "recall": 0.8817204301075269,
+     "specificity": 0.9516728624535316,
+     "ppv": 0.677685950413223,
+     "npv": 0.9858793324775352
     },
     "R": {
-     "n": 196,
-     "prevalence": 0.21802002224694106,
-     "recall": 0.9489795918367347,
-     "specificity": 0.968705547652916,
-     "ppv": 0.8942307692307692,
-     "npv": 0.9855282199710563
+     "n": 200,
+     "prevalence": 0.2222222222222222,
+     "recall": 0.955,
+     "specificity": 0.9742857142857143,
+     "ppv": 0.9138755980861244,
+     "npv": 0.9869753979739507
     }
    },
    "confusion": [
     [
-     90,
-     2,
+     93,
      0,
      0,
      0,
      0,
-     4
+     0,
+     2
     ],
     [
-     11,
-     70,
+     10,
+     69,
      0,
      0,
-     5,
+     3,
      0,
      0
     ],
     [
      0,
-     1,
+     2,
      198,
      7,
-     6,
+     5,
      0,
      2
     ],
@@ -525,19 +710,19 @@
      0,
      0,
      15,
-     58,
+     61,
      5,
      31,
-     8
+     5
     ],
     [
-     3,
+     2,
      11,
      12,
-     6,
+     8,
      51,
      8,
-     5
+     7
     ],
     [
      0,
@@ -546,16 +731,16 @@
      5,
      2,
      82,
-     3
+     2
     ],
     [
-     3,
+     4,
      0,
      0,
-     7,
+     5,
      0,
      0,
-     186
+     191
     ]
    ],
    "labels": [
@@ -567,39 +752,39 @@
     "F",
     "R"
    ],
-   "n": 899
+   "n": 900
   },
   "balanced_accuracy_ci": {
-   "mean": 0.7886199140662336,
-   "lo": 0.7625859788857078,
-   "hi": 0.8132269967975038,
+   "mean": 0.8027925064295032,
+   "lo": 0.7777539703312911,
+   "hi": 0.8278468031270375,
    "n_boot": 1000
   }
  },
  "stage5": {
   "n": 1199,
-  "decided_rate": 0.749791492910759,
-  "undecided_rate": 0.25020850708924103,
-  "test_saving_rate_decided": 0.8414905450500556,
-  "test_saving_rate_all": 0.8811509591326105,
-  "mean_items_recommended": 2.2191323692992215,
+  "decided_rate": 0.7506255212677231,
+  "undecided_rate": 0.2493744787322769,
+  "test_saving_rate_decided": 0.8404761904761905,
+  "test_saving_rate_all": 0.8802573573215775,
+  "mean_items_recommended": 2.2333333333333334,
   "full_panel_items": 14,
-  "critical_omission_rate_all": 0.2618849040867389,
-  "critical_omission_rate_decided": 0.11457174638487208,
+  "critical_omission_rate_all": 0.2527105921601334,
+  "critical_omission_rate_decided": 0.10444444444444445,
   "R_true_n": 264,
-  "R_recall": 0.7045454545454546,
-  "R_critical_omission_rate": 0.29545454545454547,
+  "R_recall": 0.7234848484848485,
+  "R_critical_omission_rate": 0.2765151515151515,
   "R_five_items_when_routed_R": 1.0,
-  "hit_rate": 0.8230563002680965,
+  "hit_rate": 0.8311170212765957,
   "by_box": {
    "A": {
     "n": 108,
-    "recall": 0.8333333333333334,
-    "omission": 0.16666666666666666
+    "recall": 0.8611111111111112,
+    "omission": 0.1388888888888889
    },
    "A2": {
     "n": 105,
-    "recall": 0.6666666666666666,
+    "recall": 0.6571428571428571,
     "omission": 0.0
    },
    "C": {
@@ -609,8 +794,8 @@
    },
    "D": {
     "n": 202,
-    "recall": 0.2871287128712871,
-    "omission": 0.7128712871287128
+    "recall": 0.30198019801980197,
+    "omission": 0.698019801980198
    },
    "E": {
     "n": 166,
@@ -624,8 +809,8 @@
    },
    "R": {
     "n": 264,
-    "recall": 0.7045454545454546,
-    "omission": 0.29545454545454547
+    "recall": 0.7234848484848485,
+    "omission": 0.2765151515151515
    }
   }
  },
@@ -659,11 +844,11 @@
  "morphology_subgroups": {
   "morph_available": {
    "n": 279,
-   "box_balanced_accuracy": 0.7595335712469581
+   "box_balanced_accuracy": 0.7997359685123192
   },
   "morph_missing": {
    "n": 920,
-   "box_balanced_accuracy": 0.7997360902402919
+   "box_balanced_accuracy": 0.8043757401039374
   }
  },
  "test_n": 1199,

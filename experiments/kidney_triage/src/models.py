@@ -4,8 +4,11 @@
 模型固定為可解釋線性模型：SimpleImputer(median) → StandardScaler → LogisticRegression(l2, class_weight=balanced)。
 （補值器為必要之增補：缺值以 NaN 表示，線性模型無法直接吃 NaN；補值在 CV 折內進行，不外洩。）
 
-M0Ledger 實作「M0 必須先建、先定版」的**程式層強制**（指示 一之四）：
-主模型的任何效能計算都要先呼叫 require_sealed()，未定版即 raise。"""
+M0Ledger 實作「M0 必須先建、先定版」的**程式層強制**（指示 一之四），機制有二：
+  (1) 執行期硬擋：cv_proba/fit_full 接收 ledger；非 M0 呼叫發生在 seal() 之前即 raise（main_metric_event）。
+  (2) 事後驗序：ledger 記錄第一次主模型效能計算的時戳 first_main_at，
+      checks.check_m0_sealed_before 斷言 sealed_at < first_main_at。
+（稽核 2026-08-30：舊版僅在 seal() 之後呼叫一次 require_sealed()，結構上不可能失敗——已依發現改為上述雙重機制。）"""
 import json
 import os
 import time
@@ -26,8 +29,10 @@ def make_model(seed=0):
                      ("lr", LogisticRegression(class_weight="balanced", max_iter=4000, random_state=seed))])
 
 
-def cv_proba(X, y, folds, seed):
-    """5 折分層交叉驗證之 out-of-fold 機率。"""
+def cv_proba(X, y, folds, seed, ledger=None, m0=False):
+    """5 折分層交叉驗證之 out-of-fold 機率。ledger 給定且非 M0 呼叫時，會在 M0 未定版前直接 raise（指示 一之四）。"""
+    if ledger is not None and not m0:
+        ledger.main_metric_event()
     y = np.asarray(y)
     cv = StratifiedKFold(folds, shuffle=True, random_state=int(seed))
     model = make_model(seed)
@@ -36,7 +41,9 @@ def cv_proba(X, y, folds, seed):
     return proba, classes
 
 
-def fit_full(X, y, seed):
+def fit_full(X, y, seed, ledger=None):
+    if ledger is not None:
+        ledger.main_metric_event()
     m = make_model(seed).fit(X, np.asarray(y))
     return m
 
@@ -130,6 +137,14 @@ class M0Ledger:
         self.path = path
         self.stages = {}
         self.sealed_at = None
+        self.first_main_at = None                     # 第一次主模型效能計算的時戳（由 main_metric_event 記錄）
+
+    def main_metric_event(self):
+        """主模型效能計算的進入點必須經過這裡：M0 未定版即 raise；已定版則記錄第一次時戳。"""
+        if not self.sealed_at:
+            raise RuntimeError("違反指示 一之四：主模型效能計算發生在 M0 定版之前")
+        if self.first_main_at is None:
+            self.first_main_at = time.time()
 
     def record(self, stage, payload):
         if self.sealed_at:

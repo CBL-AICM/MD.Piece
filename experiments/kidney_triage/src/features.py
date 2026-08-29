@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """特徵建構（指示 三節）。三種讀法，全部**以全世代參數標準化**（指示 一之二：禁止逐人標準化）。
 
-  L0_<通道>  索引時點（day_from_index 最接近 0 之成套）之水準 → 全世代 z
+  L0_<通道>  索引窗內（|day_from_index| ≤ method.index_window_days）最接近索引日之水準 → 全世代 z
+             （稽核修正 2026-08-30：原「該通道最近一次有量到」會把索引後最長 364 天的追蹤值當基線，
+             使 M1 混入未來資訊並膨脹其表現；改為事前鎖定之索引窗，窗內無值即 NaN 交折內補值）
   L_<通道>   各成套對數值之中位數 → 全世代 z
   S_<通道>   對數值對天數之線性斜率，年化 → 除以全世代標準差（依指示原文不置中）
   R_<A>_<B> 兩通道水準之差（＝對數比值）→ 全世代 z
@@ -39,8 +41,10 @@ def patient_summaries(P, long_df, channels):
         med = df.groupby("pid")["v"].median()
         for p, m in med.items():
             out["median"][ch][idx_pos[p]] = m
-        df["absd"] = df["day"].abs()
-        first = df.sort_values(["pid", "absd"]).groupby("pid").first()
+        win = float(value(P, "method.index_window_days"))
+        dfw = df[df["day"].abs() <= win].copy()                  # 索引窗外不得當基線
+        dfw["absd"] = dfw["day"].abs()
+        first = dfw.sort_values(["pid", "absd"]).groupby("pid").first()
         for p, m in first["v"].items():
             out["index"][ch][idx_pos[p]] = m
         g = df.groupby("pid")
@@ -90,7 +94,9 @@ def transform_one(P, panels, params):
             continue
         days = np.array([q[0] for q in pts]); vals = _to_model_scale(P, ch, np.array([q[1] for q in pts]))
         raw_med[ch] = float(np.median(vals))
-        raw_idx[ch] = float(vals[np.argmin(np.abs(days))])
+        win = float(value(P, "method.index_window_days"))
+        inw = np.abs(days) <= win
+        raw_idx[ch] = float(vals[inw][np.argmin(np.abs(days[inw]))]) if inw.any() else np.nan
         raw_slope[ch] = float(np.polyfit(days, vals, 1)[0] * 365.0) if (len(pts) >= min_k and days.max() > days.min()) else np.nan
     for ch in ch_list:
         pi, pm, ps = params["level_index"][ch], params["level_median"][ch], params["slope"][ch]

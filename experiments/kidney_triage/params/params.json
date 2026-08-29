@@ -3,7 +3,7 @@
     "title": "腎損傷分流模型（Stage 0–5）參數檔——全案唯一的數值真相來源",
     "upstream": "建置指示 v11（2026-08-28）",
     "date": "2026-08-28",
-    "rule": "每列含 value / source / status。status ∈ {anchored, pending_extraction, study_defined}。無文獻依據者 value 一律 null，以 placeholder 佔位並於啟動時列印警告（指示 一之七）；程式其他地方不得硬寫數值。",
+    "rule": "每列含 value / source / status。status ∈ {anchored, pending_extraction, study_defined}。『無文獻依據的實質參數』（盛行率、效應量等）value 一律 null，以 placeholder 佔位並於啟動時列印警告（指示 一之七）；『事前鎖定的方法學設計參數』（分割比例、門檻網格、目標值、seed）標 study_defined 並於報告揭露。程式其他地方不得硬寫數值。",
     "critical_note": "本次建置無真實資料。整組『生成器』參數（盛行率、通道效應、可得比例、開立行為）皆無文獻依據，故 value 為 null。所有效能數字都是這些佔位假設的產物，不構成對任何真實族群的證據。"
   },
 
@@ -47,8 +47,9 @@
     "bootstrap_n": {"value": 1000, "source": "建置指示 v11 九之五『bootstrap ≥1000 次』", "status": "anchored"},
     "abstain_grid_start": {"value": 0.6, "source": "建置指示 v11 八節『預設起點 0.6』", "status": "anchored"},
     "abstain_grid": {"value": [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95], "source": "本研究設定：門檻網格", "status": "study_defined"},
-    "abstain_target_accuracy": {"value": 0.8, "source": "本研究設定（無文獻依據之目標值）：訓練集上取使『作答者平衡正確率 ≥ 0.80』之最小門檻；不可達則用 0.60 並標記 unreachable", "status": "study_defined"},
+    "abstain_target_accuracy": {"value": 0.8, "source": "本研究設定（事前鎖定之方法學設計參數；目標值本身無文獻依據，於 limitations 揭露）：訓練集上取使『作答者平衡正確率 ≥ 0.80』之最小門檻；不可達則用 0.60 並標記 unreachable", "status": "study_defined"},
     "morphology_availability_gate": {"value": 0.3, "source": "建置指示 v11 七節：形態欄位可得比例低於 30% 時改用代理特徵並標明", "status": "anchored"},
+    "index_window_days": {"value": 7, "source": "本研究設定（事前鎖定）：M1 索引時點窗 |day|<=7 天；窗外追蹤值不得作為基線（稽核修正：原最近一次取值混入未來資訊）", "status": "study_defined"},
     "slope_min_measurements": {"value": 3, "source": "建置指示 v11 三節：變化率需 ≥3 次測量且時間跨度 >0", "status": "anchored"},
     "stage0_required_channels": {"value": ["Cr"], "source": "本研究設定：索引成套至少須有 Cr，否則不進入管線", "status": "study_defined"},
     "stage0_min_panels": {"value": 1, "source": "本研究設定", "status": "study_defined"},

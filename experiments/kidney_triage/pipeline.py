@@ -53,31 +53,38 @@ def _dump(obj, name):
         json.dump(obj, f, ensure_ascii=False, indent=1, default=_jd)
 
 
-def stage_feature_sets(P, X, morph_ok_share):
-    """各層特徵欄位（指示 六節；Stage 1–3 只用 L1）。形態欄位可得 <30% 時 Stage 3 走代理路徑（指示 七節）。"""
+def stage_feature_sets(P, X, morph_share_by_col):
+    """各層×各階段特徵欄位（指示 六節；Stage 1–3 只用 L1）。
+    形態欄位可得（逐欄計算自三個形態欄，取最小值過閘）<30% 時，**只有 Stage 3** 走代理路徑
+    （指示 七節只授權 Stage 3；稽核修正：舊版連 Stage 1–2 一併剔除形態特徵，超出授權範圍）。"""
     L1 = value(P, "channels_L1")
     morph = ["uRBC_dys", "uRBC_acan", "uRBC_cast"]
     gate = float(value(P, "method.morphology_availability_gate"))
-    proxy = morph_ok_share < gate
+    share_min = float(min(morph_share_by_col.values()))
+    proxy = share_min < gate
     l0 = [f"L0_{c}" for c in L1]
     l_all = [f"L_{c}" for c in L1] + [f"S_{c}" for c in L1] + [c for c in X.columns if c.startswith("R_")]
-    if proxy:
-        drop = {f"{p}_{m}" for p in ("L0", "L", "S") for m in morph}
-        l0 = [c for c in l0 if c not in drop]
-        l_all = [c for c in l_all if c not in drop]
-    return dict(M1=l0, M2=l_all, M3=l_all, proxy_mode=bool(proxy), morph_ok_share=float(morph_ok_share))
+    drop = {f"{p}_{m}" for p in ("L0", "L", "S") for m in morph}
+    stages = {}
+    for st in ("1", "2", "3"):
+        use_proxy = proxy and st == "3"
+        stages[st] = dict(M1=[c for c in l0 if not (use_proxy and c in drop)],
+                          M2=[c for c in l_all if not (use_proxy and c in drop)])
+        stages[st]["M3"] = stages[st]["M2"]
+    return dict(stages=stages, proxy_mode=bool(proxy), morph_ok_share=share_min,
+                morph_share_by_col={k: float(v) for k, v in morph_share_by_col.items()})
 
 
-def m0_subgroups(pat_df, tr_ids, stage):
+def m0_subgroups(pat_df, tr_ids, stage, morph_measured):
     """M0 逐族群報告用的族群（指示 九之四）。
 
     **族群不得由該階段自身的標籤導出**——例如用「分流格」分層時，格內該軸標籤幾乎單一，
     平衡正確率無定義（退化）。故採用：資料密度、形態欄位可得性、以及**其他軸**的類別。"""
     d = pat_df.set_index("patient_id").loc[tr_ids]
     q = d["n_panels"].to_numpy()
+    mm = morph_measured.loc[tr_ids].to_numpy()                 # 由 long_df 三個形態欄計算，非生成器旗標
     sub = {"成套數 1–2": q <= 2, "成套數 3–4": (q >= 3) & (q <= 4), "成套數 ≥5": q >= 5,
-           "形態欄位可得": d["morph_available"].to_numpy() == 1,
-           "形態欄位不可得": d["morph_available"].to_numpy() == 0}
+           "形態欄位可得": mm, "形態欄位不可得": ~mm}
     other = {"1": "y_site", "2": "y_acute", "3": "y_site"}[stage]
     for v in sorted(map(str, d[other].unique())):
         lab = {"0": "非快速惡化", "1": "快速惡化"}.get(v, v) if other == "y_acute" else v
@@ -91,8 +98,12 @@ def run(seed, n, quick=False, verbose=True):
     assert not chk["bad"], f"參數檔錯誤：{chk['bad']}"
     folds = int(value(P, "method.cv_folds")); nboot = 200 if quick else int(value(P, "method.bootstrap_n"))
 
-    # ── 資料
+    # ── 資料（先做決定性自檢：同 seed 兩次模擬逐位元相同——指示 十一之八的資料層檢查）
+    da = datagen.simulate(P, seed=seed, n=120); db = datagen.simulate(P, seed=seed, n=120)
+    CK.check_determinism((da[0].to_json(), da[1].to_json()), (db[0].to_json(), db[1].to_json()))
     long_df, pat_df = datagen.simulate(P, seed=seed, n=n)
+    gen_truth = pat_df[["patient_id", "morph_available", "archetype"]].copy()   # 生成器內部真相，僅供對照，不進契約
+    pat_df = pat_df.drop(columns=["morph_available", "archetype"])              # 契約欄位以外一律移除（真實資料不會有）
     arch = value(P, "channels_archive"); L1 = value(P, "channels_L1"); L2 = value(P, "channels_L2")
 
     # ── Stage 0：資料品質與密度閘門
@@ -108,8 +119,13 @@ def run(seed, n, quick=False, verbose=True):
     CK.check_missing_is_nan(long_df, L1 + [c for c in L2 if long_df[c].notna().any()])
     X_all, fparams = F.fit_transform(P, long_df, L1 + L2, value(P, "priority_ratios"))
     X_all = X_all.loc[pat_df["patient_id"].to_numpy()]
-    morph_ok = float(pat_df["morph_available"].mean())
-    fs = stage_feature_sets(P, X_all, morph_ok)
+    # 形態欄位可得比例：依指示 七節，由三個形態欄逐欄計算（病人層級「至少一次非缺值」），不用任何生成器旗標
+    morph_cols = ["uRBC_dys", "uRBC_acan", "uRBC_cast"]
+    morph_by_col = {c: float(long_df.groupby("patient_id")[c].apply(lambda g: g.notna().any())
+                             .reindex(pat_df["patient_id"]).fillna(False).mean()) for c in morph_cols}
+    morph_measured = long_df.groupby("patient_id")[morph_cols].apply(lambda g: g.notna().any().any())                             .reindex(pat_df["patient_id"]).fillna(False)
+    morph_ok = float(min(morph_by_col.values()))
+    fs = stage_feature_sets(P, X_all, morph_by_col)
     ord_cols = [f"ord_{a}" for a in arch] + [f"ord_{t}" for t in L2]
     X_ord = pat_df.set_index("patient_id")[ord_cols].astype(float)
     if verbose:
@@ -134,12 +150,12 @@ def run(seed, n, quick=False, verbose=True):
     m0_proba, m0_pred = {}, {}
     for s, (col, zh) in STAGES.items():
         ytr = Y[s].loc[tr_ids].to_numpy()
-        proba, classes = M.cv_proba(X_ord.loc[tr_ids].to_numpy(), ytr, folds, seed)
+        proba, classes = M.cv_proba(X_ord.loc[tr_ids].to_numpy(), ytr, folds, seed, ledger=ledger, m0=True)
         pred = classes[proba.argmax(axis=1)]
         met = M.class_metrics(ytr, pred, classes)
         # 逐族群之 M0 洩漏（指示 九之四：不可只報整體——某些族群的洩漏會遠高於平均）
         by_sub = {}
-        for gname, gmask in m0_subgroups(pat_df, tr_ids, s).items():
+        for gname, gmask in m0_subgroups(pat_df, tr_ids, s, morph_measured).items():
             if gmask.sum() >= 30 and len(np.unique(ytr[gmask])) > 1:
                 by_sub[gname] = dict(n=int(gmask.sum()), balanced_accuracy=float(M.balanced_accuracy_score(ytr[gmask], pred[gmask])))
             else:
@@ -155,18 +171,18 @@ def run(seed, n, quick=False, verbose=True):
         if verbose:
             print(f"[M0] Stage {s} {zh}：平衡正確率 {met['balanced_accuracy']:.3f}（只用開立行為——這是洩漏下限）")
     m0_doc = ledger.seal(extra=dict(seed=seed, n=int(len(ids)), train_n=int(len(tr_ids))))
-    CK.check_m0_sealed_before(ledger)
 
     # ── 主模型階梯 M1 → M2 → M3（訓練集 CV）＋層間判定
     rng_boot = module_rng(seed, "bootstrap")
-    stages_report, removed_axes, ladder_preds = {}, [], {}
+    stages_report, removed_axes, ladder_preds, used_cols = {}, [], {}, {}
     for s, (col, zh) in STAGES.items():
         ytr = Y[s].loc[tr_ids].to_numpy()
         preds, metrics, aucless = {}, {}, {}
         for layer in ("M1", "M2", "M3"):
-            cols = fs[layer if layer != "M3" else "M2"]
+            cols = fs["stages"][s][layer]
+            used_cols[f"Stage{s}_{layer}"] = list(cols)       # 供封存集/L1 斷言逐層核對（稽核修正：舊版九個 frame 是同一份 M2 的別名）
             Xtr = X_all.loc[tr_ids, cols].to_numpy()          # M3＝M2 排除封存集與 ord_*（本管線兩者本就不在特徵中，故 M3≡M2，照實報告）
-            proba, classes = M.cv_proba(Xtr, ytr, folds, seed)
+            proba, classes = M.cv_proba(Xtr, ytr, folds, seed, ledger=ledger)
             pred = classes[proba.argmax(axis=1)]
             preds[layer] = pred
             metrics[layer] = M.class_metrics(ytr, pred, classes)
@@ -207,8 +223,8 @@ def run(seed, n, quick=False, verbose=True):
     final_models, te_out = {}, {}
     for s, (col, zh) in STAGES.items():
         removed = s in removed_axes
-        cols = fs["M2"]
-        model = M.fit_full(X_all.loc[tr_ids, cols].to_numpy(), Y[s].loc[tr_ids].to_numpy(), seed)
+        cols = fs["stages"][s]["M2"]
+        model = M.fit_full(X_all.loc[tr_ids, cols].to_numpy(), Y[s].loc[tr_ids].to_numpy(), seed, ledger=ledger)
         final_models[s] = dict(model=model, cols=cols)
         proba = model.predict_proba(X_all.loc[te_ids, cols].to_numpy())
         classes = model.classes_
@@ -243,16 +259,19 @@ def run(seed, n, quick=False, verbose=True):
     # ── Stage 5 建議與評估
     recs = BX.recommend(P, box_pred)
     stage5 = BX.evaluate_recommendations(P, yb_te, box_pred, recs)
+    if (box_pred == "R").any():                               # R 格硬性規則之獨立驗算（由 box_pred 與 recs 重算，非建構時斷言）
+        assert stage5["R_five_items_when_routed_R"] == 1.0, "R 格硬性規則遭覆蓋——凡判為 R 者五項必須全開（建置失敗）"
     if verbose:
         print(f"[Stage 4] 判定率 {decided.mean():.3f}；作答者平衡正確率 {box_met['balanced_accuracy']:.3f} [{box_ci['lo']:.3f},{box_ci['hi']:.3f}]")
         print(f"[Stage 5] 檢驗節省率 {stage5['test_saving_rate_decided']:.3f}；關鍵遺漏率(全) {stage5['critical_omission_rate_all']:.3f}；"
               f"R 格遺漏 {stage5['R_critical_omission_rate']:.3f}（真 R n={stage5['R_true_n']}，召回 {stage5['R_recall']:.3f}）；命中率 {stage5['hit_rate']:.3f}")
 
     # ── 指示 十一節 assert（其餘六條散在流程中，這裡補齊並統整）
-    frames = {f"Stage{s}_{L}": X_all[fs['M2']] for s in STAGES for L in ("M1", "M2", "M3")}
+    frames = {k: X_all[cols] for k, cols in used_cols.items()}    # 實際訓練用到的每一個 Stage×層（稽核修正）
     CK.check_archive_absent(P, frames, long_df, pat_df)
     CK.check_no_per_patient_scaling(P, long_df, X_all, fparams, ids, rng=module_rng(seed, "cv"))
-    CK.check_stage_features_L1(P, {s: fs["M2"] for s in STAGES})
+    CK.check_stage_features_L1(P, used_cols)
+    CK.check_m0_sealed_before(ledger)                             # 事後驗序：sealed_at 必早於第一次主模型效能計算
 
     # ── 特徵重要度（供「這項推測由哪些指標支持」）
     imp_rows = []
@@ -272,13 +291,13 @@ def run(seed, n, quick=False, verbose=True):
         for s in STAGES:
             ytr = Y[s].loc[tr_ids].to_numpy()
             Xr = X_all.loc[tr_ids, [col]].to_numpy()
-            proba, classes = M.cv_proba(Xr, ytr, folds, seed)
+            proba, classes = M.cv_proba(Xr, ytr, folds, seed, ledger=ledger)
             ratio_solo.setdefault(col, {})[s] = float(M.balanced_accuracy_score(ytr, classes[proba.argmax(axis=1)]))
 
     # 形態可得 vs 不可得子群（指示 七節）
     morph_sub = {}
     if fs["proxy_mode"]:
-        mv = pat_df.set_index("patient_id").loc[te_ids, "morph_available"].to_numpy() == 1
+        mv = morph_measured.loc[te_ids].to_numpy()
         for gname, gmask in (("morph_available", mv), ("morph_missing", ~mv)):
             m = gmask & decided
             morph_sub[gname] = dict(n=int(gmask.sum()),
@@ -287,7 +306,8 @@ def run(seed, n, quick=False, verbose=True):
     # ── 模型參數匯出（供離線 UI 個案分流：與 Python 完全同一組參數）
     models_doc = dict(stages={}, thresholds={s: thresholds[s]["threshold"] for s in STAGES},
                       stage_names={s: STAGES[s][1] for s in STAGES},
-                      fparams=fparams, feature_cols=fs["M2"],
+                      fparams=fparams, feature_cols=sorted({c for st in fs["stages"].values() for c in st["M2"]}),
+                      index_window=int(value(P, "method.index_window_days")),
                       slope_min=int(value(P, "method.slope_min_measurements")),
                       recommendations=value(P, "stage5_recommendations"),
                       demo_cases=[])
