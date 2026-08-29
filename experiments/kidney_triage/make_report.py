@@ -39,12 +39,23 @@ def main():
     L.append(f"M0 只用「哪些檢驗被開立」(`ord_*`) 之指示變數；定版時間 {R['m0_sealed_at']}（`m0_baseline.json`），"
              "**早於任何主模型效能計算**（程式以 M0Ledger 強制）。M0 不是隨機水準——它量化了開立行為本身攜帶的標籤資訊（醫師的臨床懷疑），主模型必須超越它才算有生理訊號。\n")
     m0 = json.load(open(os.path.join(ROOT, "results", "m0_baseline.json"), encoding="utf-8"))
-    L.append("| 階段 | M0 平衡正確率（訓練 CV） | 逐分流格（指示 九之四） |")
-    L.append("|---|---|---|")
+    L.append("| 階段 | M0 平衡正確率（訓練 CV） |")
+    L.append("|---|---|")
     for s, d in m0["stages"].items():
-        bb = "、".join(f"{k} {v:.2f}" for k, v in d["by_box_balanced_accuracy"].items())
-        L.append(f"| Stage {s} {d['stage']} | {d['cv_train']['balanced_accuracy']:.3f} | {bb} |")
-    L.append("")
+        L.append(f"| Stage {s} {d['stage']} | {d['cv_train']['balanced_accuracy']:.3f} |")
+    L.append("\n**逐族群 M0 洩漏**（指示 九之四；族群不得由該階段自身標籤導出，否則退化——"
+             "分流格分層即屬此類，故另存於 `m0_baseline.json` 之 `by_box_balanced_accuracy` 並多為 null）\n")
+    L.append("| 族群 | " + " | ".join(f"Stage {s} {d['stage']}" for s, d in m0["stages"].items()) + " |")
+    L.append("|---" * (1 + len(m0["stages"])) + "|")
+    groups = list(next(iter(m0["stages"].values()))["by_subgroup"])
+    allg = sorted({g for d in m0["stages"].values() for g in d["by_subgroup"]}, key=lambda g: (g not in groups, g))
+    for g in allg:
+        cells = []
+        for s, d in m0["stages"].items():
+            r = d["by_subgroup"].get(g)
+            cells.append("—" if not r or r["balanced_accuracy"] is None else f"{r['balanced_accuracy']:.3f}（n={r['n']}）")
+        L.append(f"| {g} | " + " | ".join(cells) + " |")
+    L.append("\n「—」＝該族群內此軸標籤單一或人數不足，平衡正確率無定義。\n")
 
     L.append("## 逐階段模型階梯與判定（訓練集 5 折 CV；配對 bootstrap）\n")
     L.append("| 階段 | M0 | M1（索引水準） | M2（＋斜率＋比值） | M2−M0（95% CI） | 判定 | M2−M1 | M3 |")

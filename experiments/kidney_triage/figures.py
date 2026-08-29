@@ -129,22 +129,27 @@ def figD(R):
 
 def figE(M0):
     stages = list(M0["stages"])
-    boxes = sorted({b for s in stages for b in M0["stages"][s]["by_box_balanced_accuracy"]})
-    fig, ax = plt.subplots(figsize=(7.2, 3.0))
+    groups = [g for g in M0["stages"][stages[0]]["by_subgroup"]
+              if any(M0["stages"][s]["by_subgroup"].get(g, {}).get("balanced_accuracy") is not None for s in stages)]
+    fig, ax = plt.subplots(figsize=(8.4, 3.2))
     w = 0.26
     for j, s in enumerate(stages):
-        d = M0["stages"][s]["by_box_balanced_accuracy"]
-        vals = [d.get(b, np.nan) for b in boxes]
-        ax.bar(np.arange(len(boxes)) + (j - 1) * w, vals, width=w * 0.9, color=G[j], edgecolor="0.0", lw=0.8,
+        d = M0["stages"][s]["by_subgroup"]
+        vals = [(d.get(g) or {}).get("balanced_accuracy") or np.nan for g in groups]
+        x = np.arange(len(groups)) + (j - 1) * w
+        ax.bar(x, vals, width=w * 0.9, color=G[j], edgecolor="0.0", lw=0.8,
                label=f"Stage {s} {STG[s]}（整體 {M0['stages'][s]['cv_train']['balanced_accuracy']:.2f}）")
+        for xi, v in zip(x, vals):
+            if np.isfinite(v):
+                ax.text(xi, v + 0.01, f"{v:.2f}", ha="center", fontsize=6.5)
     ax.axhline(0.5, color="0.4", lw=0.8, ls=(0, (4, 3)))
-    ax.set_xticks(range(len(boxes))); ax.set_xticklabels(boxes)
-    ax.set_xlabel("分流格（族群）"); ax.set_ylabel("M0 平衡正確率")
-    ax.set_title("只用「哪些檢驗被開立」就能達到的水準——洩漏下限，逐族群", fontsize=9)
-    ax.legend(fontsize=7.5, frameon=False, ncol=3)
+    ax.set_xticks(range(len(groups))); ax.set_xticklabels(groups, fontsize=8, rotation=12, ha="right")
+    ax.set_ylabel("M0 平衡正確率"); ax.set_ylim(0.4, 1.05)
+    ax.set_title("只用「哪些檢驗被開立」就能達到的水準——洩漏下限，逐族群（空缺＝該族群內標籤單一，無定義）", fontsize=9)
+    ax.legend(fontsize=7.5, frameon=False, ncol=3, loc="lower left")
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
-    save(fig, "figE_m0_by_box")
+    save(fig, "figE_m0_by_subgroup")
 
 
 if __name__ == "__main__":

@@ -194,7 +194,15 @@ $('verdicts').innerHTML='<table><thead><tr><th>階段</th><th>M2−M0（95% CI�
  Object.entries(R.stages).map(([s,r])=>{const v=r.train.verdicts;
   return `<tr><td>Stage ${s} ${STG[s]}</td><td>${v.M2_vs_M0.diff>=0?'+':''}${fmt(v.M2_vs_M0.diff)}［${fmt(v.M2_vs_M0.lo)}, ${fmt(v.M2_vs_M0.hi)}］</td>`+
    `<td>${v.M2_vs_M0.verdict}</td><td>${v.M2_vs_M1.verdict}</td><td>${v.M3_vs_random.verdict}</td></tr>`;}).join('')+'</tbody></table>';
-$('m0note').textContent='M0 逐分流格洩漏（訓練 CV）：'+Object.entries(PACK.m0.stages).map(([s,d])=>`Stage ${s}：`+Object.entries(d.by_box_balanced_accuracy).map(([b,v])=>`${b} ${fmt(v,2)}`).join('、')).join('｜')+'。定版時間 '+PACK.m0.sealed_at+'，早於一切主模型效能計算。';
+(function(){
+ const st=PACK.m0.stages, groups=Object.keys(st[Object.keys(st)[0]].by_subgroup);
+ let h='<p class="note" style="margin:8px 0 4px">M0 逐族群洩漏（訓練 CV）——族群不得由該階段自身標籤導出，否則退化（分流格分層即屬此類）：</p>';
+ h+='<table><thead><tr><th>族群</th>'+Object.entries(st).map(([s,d])=>`<th>Stage ${s} ${d.stage}</th>`).join('')+'</tr></thead><tbody>';
+ groups.forEach(g=>{h+=`<tr><td>${g}</td>`+Object.values(st).map(d=>{const r=d.by_subgroup[g];
+   return `<td>${!r||r.balanced_accuracy==null?'—':fmt(r.balanced_accuracy,3)+`<span class="sb"> (n=${r.n})</span>`}</td>`;}).join('')+'</tr>';});
+ h+='</tbody></table><p class="note">「—」＝該族群內此軸標籤單一或人數不足，平衡正確率無定義。定版時間 '+PACK.m0.sealed_at+'，早於一切主模型效能計算。</p>';
+ $('m0note').outerHTML='<div id="m0note">'+h+'</div>';
+})();
 
 /* ---- 係數 ---- */
 (function(){

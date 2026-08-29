@@ -1,6 +1,6 @@
 {
- "sealed_at_unix": 1787906544.147605,
- "sealed_at": "2026-08-28 16:42:24",
+ "sealed_at_unix": 1788022062.976882,
+ "sealed_at": "2026-08-30 00:47:42",
  "note": "M0＝只用 ord_*（哪些檢驗被開立）之洩漏基準。本檔於任何主模型效能計算之前寫入並定版。",
  "stages": {
   "1": {
@@ -42,7 +42,51 @@
     ],
     "n": 2799
    },
-   "by_box_balanced_accuracy": {},
+   "by_subgroup": {
+    "成套數 1–2": {
+     "n": 960,
+     "balanced_accuracy": 0.8259788189987163
+    },
+    "成套數 3–4": {
+     "n": 1347,
+     "balanced_accuracy": 0.7999730312837109
+    },
+    "成套數 ≥5": {
+     "n": 492,
+     "balanced_accuracy": 0.8193083573487032
+    },
+    "形態欄位可得": {
+     "n": 652,
+     "balanced_accuracy": 0.8207064075630253
+    },
+    "形態欄位不可得": {
+     "n": 2147,
+     "balanced_accuracy": 0.8097165991902834
+    },
+    "腎小管間質": {
+     "n": 496,
+     "balanced_accuracy": 0.6958756180067656
+    },
+    "腎絲球": {
+     "n": 1985,
+     "balanced_accuracy": 0.8125840583677502
+    },
+    "血管": {
+     "n": 318,
+     "balanced_accuracy": null,
+     "note": "退化：族群內該軸標籤單一或人數不足，平衡正確率無定義"
+    }
+   },
+   "by_box_balanced_accuracy": {
+    "A": null,
+    "A2": null,
+    "C": null,
+    "D": null,
+    "E": null,
+    "F": null,
+    "R": null
+   },
+   "by_box_note": "分流格由標籤導出，多數格內該軸標籤單一故為 null（退化）；有意義的族群見 by_subgroup",
    "features": "ord_* 指示變數（哪些檢驗被開立）",
    "n_features": 17
   },
@@ -101,9 +145,46 @@
     ],
     "n": 2799
    },
+   "by_subgroup": {
+    "成套數 1–2": {
+     "n": 960,
+     "balanced_accuracy": 0.7817060880697689
+    },
+    "成套數 3–4": {
+     "n": 1347,
+     "balanced_accuracy": 0.7904976560785929
+    },
+    "成套數 ≥5": {
+     "n": 492,
+     "balanced_accuracy": 0.7890806406286625
+    },
+    "形態欄位可得": {
+     "n": 652,
+     "balanced_accuracy": 0.8295298220844841
+    },
+    "形態欄位不可得": {
+     "n": 2147,
+     "balanced_accuracy": 0.7740945238330191
+    },
+    "非快速惡化": {
+     "n": 1930,
+     "balanced_accuracy": 0.7609873014020963
+    },
+    "快速惡化": {
+     "n": 869,
+     "balanced_accuracy": 0.7250352494404996
+    }
+   },
    "by_box_balanced_accuracy": {
+    "A": null,
+    "A2": null,
+    "C": null,
+    "D": null,
+    "E": null,
+    "F": null,
     "R": 0.7323941440020193
    },
+   "by_box_note": "分流格由標籤導出，多數格內該軸標籤單一故為 null（退化）；有意義的族群見 by_subgroup",
    "features": "ord_* 指示變數（哪些檢驗被開立）",
    "n_features": 17
   },
@@ -180,9 +261,51 @@
     ],
     "n": 2799
    },
+   "by_subgroup": {
+    "成套數 1–2": {
+     "n": 960,
+     "balanced_accuracy": 0.7059688557651747
+    },
+    "成套數 3–4": {
+     "n": 1347,
+     "balanced_accuracy": 0.730956103924333
+    },
+    "成套數 ≥5": {
+     "n": 492,
+     "balanced_accuracy": 0.6755330829337639
+    },
+    "形態欄位可得": {
+     "n": 652,
+     "balanced_accuracy": 0.7051187662424727
+    },
+    "形態欄位不可得": {
+     "n": 2147,
+     "balanced_accuracy": 0.7149125002200556
+    },
+    "腎小管間質": {
+     "n": 496,
+     "balanced_accuracy": null,
+     "note": "退化：族群內該軸標籤單一或人數不足，平衡正確率無定義"
+    },
+    "腎絲球": {
+     "n": 1985,
+     "balanced_accuracy": 0.6680539534964307
+    },
+    "血管": {
+     "n": 318,
+     "balanced_accuracy": 0.8053669724770642
+    }
+   },
    "by_box_balanced_accuracy": {
+    "A": null,
+    "A2": null,
+    "C": null,
+    "D": null,
+    "E": null,
+    "F": null,
     "R": 0.8166441005802707
    },
+   "by_box_note": "分流格由標籤導出，多數格內該軸標籤單一故為 null（退化）；有意義的族群見 by_subgroup",
    "features": "ord_* 指示變數（哪些檢驗被開立）",
    "n_features": 17
   }

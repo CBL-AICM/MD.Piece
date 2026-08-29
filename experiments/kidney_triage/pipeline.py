@@ -68,6 +68,23 @@ def stage_feature_sets(P, X, morph_ok_share):
     return dict(M1=l0, M2=l_all, M3=l_all, proxy_mode=bool(proxy), morph_ok_share=float(morph_ok_share))
 
 
+def m0_subgroups(pat_df, tr_ids, stage):
+    """M0 逐族群報告用的族群（指示 九之四）。
+
+    **族群不得由該階段自身的標籤導出**——例如用「分流格」分層時，格內該軸標籤幾乎單一，
+    平衡正確率無定義（退化）。故採用：資料密度、形態欄位可得性、以及**其他軸**的類別。"""
+    d = pat_df.set_index("patient_id").loc[tr_ids]
+    q = d["n_panels"].to_numpy()
+    sub = {"成套數 1–2": q <= 2, "成套數 3–4": (q >= 3) & (q <= 4), "成套數 ≥5": q >= 5,
+           "形態欄位可得": d["morph_available"].to_numpy() == 1,
+           "形態欄位不可得": d["morph_available"].to_numpy() == 0}
+    other = {"1": "y_site", "2": "y_acute", "3": "y_site"}[stage]
+    for v in sorted(map(str, d[other].unique())):
+        lab = {"0": "非快速惡化", "1": "快速惡化"}.get(v, v) if other == "y_acute" else v
+        sub[f"{lab}"] = d[other].astype(str).to_numpy() == v
+    return sub
+
+
 def run(seed, n, quick=False, verbose=True):
     P = PIO.load()
     chk = PIO.check(P, verbose=verbose)
@@ -120,14 +137,19 @@ def run(seed, n, quick=False, verbose=True):
         proba, classes = M.cv_proba(X_ord.loc[tr_ids].to_numpy(), ytr, folds, seed)
         pred = classes[proba.argmax(axis=1)]
         met = M.class_metrics(ytr, pred, classes)
-        # 逐族群（分流格）之 M0 洩漏（指示 九之四：不可只報整體）
-        by_box = {}
+        # 逐族群之 M0 洩漏（指示 九之四：不可只報整體——某些族群的洩漏會遠高於平均）
+        by_sub = {}
+        for gname, gmask in m0_subgroups(pat_df, tr_ids, s).items():
+            if gmask.sum() >= 30 and len(np.unique(ytr[gmask])) > 1:
+                by_sub[gname] = dict(n=int(gmask.sum()), balanced_accuracy=float(M.balanced_accuracy_score(ytr[gmask], pred[gmask])))
+            else:
+                by_sub[gname] = dict(n=int(gmask.sum()), balanced_accuracy=None,
+                                     note="退化：族群內該軸標籤單一或人數不足，平衡正確率無定義")
         yb = y_box_all.loc[tr_ids].to_numpy()
-        for b in np.unique(yb):
-            m = yb == b
-            if len(np.unique(ytr[m])) > 1:
-                by_box[str(b)] = float(M.balanced_accuracy_score(ytr[m], pred[m]))
-        ledger.record(s, dict(stage=zh, cv_train=met, by_box_balanced_accuracy=by_box,
+        by_box = {str(b): (float(M.balanced_accuracy_score(ytr[yb == b], pred[yb == b])) if len(np.unique(ytr[yb == b])) > 1 else None)
+                  for b in np.unique(yb)}
+        ledger.record(s, dict(stage=zh, cv_train=met, by_subgroup=by_sub, by_box_balanced_accuracy=by_box,
+                              by_box_note="分流格由標籤導出，多數格內該軸標籤單一故為 null（退化）；有意義的族群見 by_subgroup",
                               features="ord_* 指示變數（哪些檢驗被開立）", n_features=len(ord_cols)))
         m0_proba[s], m0_pred[s] = proba, pred
         if verbose:
