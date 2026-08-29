@@ -30,13 +30,14 @@ def fetch(key, url, retries=3):
         return dest
     for k in range(retries):
         try:
-            req = urllib.request.Request(url, headers=UA)
-            with urllib.request.urlopen(req, timeout=120) as r, open(dest + ".part", "wb") as f:
-                while True:
-                    b = r.read(1 << 20)
-                    if not b:
-                        break
-                    f.write(b)
+            # CDC 對非瀏覽器 UA 回 403（www 主機全擋、wwwn 接受瀏覽器 UA）——用 curl 帶瀏覽器標頭
+            import subprocess
+            r = subprocess.run(["curl", "-sfL", "--max-time", "300", "-A",
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+                                "-H", "Referer: https://wwwn.cdc.gov/nchs/nhanes/",
+                                "-o", dest + ".part", url])
+            if r.returncode != 0 or not os.path.exists(dest + ".part") or os.path.getsize(dest + ".part") < 1024:
+                raise RuntimeError(f"curl exit {r.returncode}")
             os.replace(dest + ".part", dest)
             rec = record(dest, url)
             print(f"[fetch] {key}  {rec['bytes']/1024:.0f} KB  sha256 {rec['sha256'][:16]}…")
