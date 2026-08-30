@@ -181,11 +181,13 @@ def run(seed, verbose=True):
     P = json.load(open(os.path.join(ROOT, "params", "design.json"), encoding="utf-8"))
     nboot = 1000
     C = build(P, verbose=verbose)
-    kd, features = C["secondary"], C["features"]
+    # Three-class analysis requires immune-label ascertainment for every participant.
+    # Using the full kidney cohort would silently treat ANA-untested people as immune-negative.
+    kd, all_kd, features = C["primary"], C["secondary"], C["features"]
     labels_zh = C["feature_labels"]
 
     # Level 1 主分析
-    main, sub, X, y = level1(kd, features, seed, nboot, "主分析（全部有標籤者）", verbose)
+    main, sub, X, y = level1(kd, features, seed, nboot, "主分析（ANA 實測、三類標籤可判定）", verbose)
     # 敏感度（事前列表）
     sens = {}
     feats_noglu = [f for f in features if f != "LBXSGL"]
@@ -208,7 +210,7 @@ def run(seed, verbose=True):
 
     l3 = level3_attribution(sub, X, y, features, labels_zh, seed, nboot, verbose)
     l2i = level2_immune(kd[kd["in_ana_subsample"]], verbose)
-    l2f = level2_infection(kd, C["counts"]["lab_meta"], verbose)
+    l2f = level2_infection(all_kd, C["counts"]["lab_meta"], verbose)
 
     # 預測輸出（供超音波佐證層以 SEQN≒patient_key 併接）
     proba, classes = oof_proba("HGB", X, y, seed)
@@ -223,7 +225,7 @@ def run(seed, verbose=True):
             "標籤是共病代理（問卷診斷＋血清學＋surplus sera 自體抗體），不是切片病因；免疫標籤僅在隨機 1/3 次樣本可判定。",
             "橫斷面資料：所有歸因為『關聯』，不是因果；『導致』需要縱貫或介入證據。",
             "未使用調查權重（目的是判別不是盛行率推估）——列為限制。",
-            "感染類 n=32：CI 寬，數字不穩定，照實報告。",
+            "三類主分析中的感染類僅 n=7：不適合穩健效能宣稱；全腎損傷世代的感染亞型只做描述。",
             "AUC 目標 0.9 只驅動設計；本報告數字為鎖定協定下的實跑結果，未做任何事後調整。"],
         cohort=C["counts"], features=dict(n=len(features), cols=features, archive=C["archive"]),
         level1=main, sensitivity=sens, level2_immune=l2i, level2_infection=l2f, level3=l3,

@@ -28,6 +28,11 @@ def f3(v):
     return "—" if v is None else f"{v:.3f}"
 
 
+def auc_triplet(block, model="HGB"):
+    return [block["models"][model]["ovr_auc"][cause]["auc"]
+            for cause in ("免疫性", "感染性", "代謝性")]
+
+
 def main():
     R = json.load(open(os.path.join(ROOT, "results", "report.json"), encoding="utf-8"))
     L = ["# 腎病病因階層模型（免疫／感染／代謝）——NHANES 1999–2004 真實資料分析報告\n",
@@ -60,8 +65,12 @@ def main():
     row("敏感度：排除血清葡萄糖", R["sensitivity"]["排除血清葡萄糖"])
     row("敏感度：排除重疊個案", R["sensitivity"]["排除重疊個案"])
     L.append("")
-    L.append("**對 AUC≥0.9 目標的照實回答**：主分析（HGB）0.812／0.873／0.832——**未達 0.9**。"
-             "排除重疊個案的敏感度分析達 0.871／0.929／0.901，但那是把難分個案拿掉後的樂觀版本，不是主結果。"
+    main_auc = auc_triplet(R["level1"])
+    no_overlap_auc = auc_triplet(R["sensitivity"]["排除重疊個案"])
+    L.append("**對 AUC≥0.9 目標的照實回答**：主分析（HGB）"
+             + "／".join(f3(value) for value in main_auc) + "——**未達 0.9**。"
+             "排除重疊個案的敏感度分析為 " + "／".join(f3(value) for value in no_overlap_auc)
+             + "，但那是把難分個案拿掉後的樂觀版本，不是主結果；其中感染類僅 n=5。"
              "到 0.9 的正路是更強的標籤（切片病因、臨床診斷碼）與更多感染/免疫樣本，不是在這份資料上調參。\n")
     cyc = R["sensitivity"].get("留一週期外測", {})
     if cyc:

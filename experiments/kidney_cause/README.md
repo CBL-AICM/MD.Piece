@@ -48,4 +48,12 @@ python fetch_data.py            # 下載 manifest 內的真實檔案 → data/ra
 python pipeline.py              # 閘門 → 標籤 → 封存集 → 特徵 → 巢狀 CV → Level 1/2/3 → 報告
 python figures.py               # 圖
 python ui/export_viz.py         # 離線視覺化
+python nephritis_proxy.py       # ANA 實測子世代：免疫相關腎損傷代理模型，5×5 重複巢狀評估＋完整模型封裝
 ```
+
+## 「腎炎」模型的可用邊界
+
+NHANES 沒有腎切片或臨床腎炎診斷，因此 `nephritis_proxy.py` 不把 ANA 陽性冒充為腎炎。
+它只在 **ANA 確實有檢測** 的腎損傷成人中，預測 ANA／特異自體抗體陽性的「免疫相關腎損傷代理」。
+輸出的 joblib 是可重現的研究模型，不可直接用於臨床診斷；完整限制、重複驗證與每折結果均寫入
+`results/nephritis_proxy_repeated_eval.json`。
