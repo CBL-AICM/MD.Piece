@@ -30,7 +30,7 @@ td.l{text-align:left}
 svg{display:block;width:100%;height:auto}
 .axis{stroke:#999;stroke-width:1}.tick{font-size:10px;fill:#777}.lbl{font-size:11px;fill:#555}
 .tag{font-size:10.5px;border-radius:4px;padding:1px 6px;border:1px solid var(--g3);color:var(--g1);white-space:nowrap}
-.tag.known{border-color:#4a6;color:#274}.tag.adj{background:#fdf3e7;border-color:#c99a55;color:#7a5320}.tag.cand{border-style:dashed}
+.tag.known{border-color:#4a6;color:#274}.tag.adj{background:#fdf3e7;border-color:#c99a55;color:#7a5320}.tag.cand{border-style:dashed}.tag.neg{border-color:#a33;color:#a33}.tag.obs{border-color:#57c;color:#35a}.tag.rev{background:#f2ecff;border-color:#86c;color:#639}.tag.conf{background:#ffe9e9;border-color:#a33;color:#922;font-weight:700}
 footer{max-width:1160px;margin:0 auto;padding:0 18px 30px;font-size:11px;color:var(--g2)}
 .small{font-size:12px;color:var(--g1)}
 </style>
@@ -52,6 +52,7 @@ footer{max-width:1160px;margin:0 auto;padding:0 18px 30px;font-size:11px;color:v
 </nav>
 
 <section id="s1" class="on">
+  <div class="card" id="proxyCard" style="border-color:#c99a55"><h2>⚠ 免疫代理標籤的修正（推翻 Level 1 的免疫欄位）</h2><div class="bd" id="proxyBox"></div></div>
   <div class="card"><h2>研究問題與誠實界線</h2><div class="bd">
     <p class="small">用「已知」（常規血液/尿液檢驗全景）找「未知」（哪些標記組合與哪一大類腎病病因相關），再往類內細項拆解。</p>
     <ul class="note" id="honList" style="margin:8px 0 0 18px"></ul>
@@ -72,9 +73,14 @@ footer{max-width:1160px;margin:0 auto;padding:0 18px 30px;font-size:11px;color:v
 
 <section id="s3">
   <div class="card"><h2>各病因的驅動標記（單變量 AUC 前十；關聯非因果）</h2><div class="bd">
-    <p class="note">標籤：<span class="tag known">已知重現/一致</span>＝文獻錨點（docs/literature_anchors.json，PMID 已逐條驗證）支持；
-    <span class="tag adj">標籤鄰近</span>＝與標籤定義的生物學直接相連（不算獨立發現）；
-    <span class="tag cand">候選</span>＝本資料之發現，待文獻與前瞻確認。</p>
+    <p class="note">證據等級（錨點逐條經 PubMed 摘要原文比對，見 docs/verified_anchors_2026-08-30.json）：
+    <span class="tag known">因果級（支持）</span>MR／RCT 陽性・
+    <span class="tag neg">因果級（反對）</span>MR 陰性或介入 RCT 陰性——關聯在、因果不在・
+    <span class="tag obs">僅觀察性</span>・
+    <span class="tag rev">反向因果警告</span>腎功能→標記・
+    <span class="tag adj">標籤鄰近</span>・
+    <span class="tag conf">與文獻方向相反</span>・
+    <span class="tag cand">候選</span>待確認</p>
     <div id="bio"></div>
     <p class="note" style="margin-top:6px">讀法警語：免疫性的「血糖低／TG 低」是組成效應（其餘類以糖尿病為大宗），不是免疫疾病降血糖。</p>
   </div></div>
@@ -161,7 +167,7 @@ function txt(p,x,y,s,cls,an){const t=el('text',{x,y,class:cls||'lbl','text-ancho
   });
   svg.setAttribute('viewBox',`0 0 ${W} ${y+40}`);
 })();
-$('aucNote').textContent='主分析（HGB）：免疫 '+fmt(R.level1.models.HGB.ovr_auc['免疫性'].auc)+'、感染 '+fmt(R.level1.models.HGB.ovr_auc['感染性'].auc)+'、代謝 '+fmt(R.level1.models.HGB.ovr_auc['代謝性'].auc)+'——未達 0.9。排除重疊個案可達 0.87–0.93，但那是移除難分個案後的樂觀版本，列為敏感度而非主結果。到 0.9 的正路：切片/診斷碼等更強標籤＋更多感染與免疫樣本。';
+$('aucNote').textContent='⚠ 免疫欄位受標籤污染影響，修正後僅 0.584（見總覽頁）。主分析（HGB）：免疫 '+fmt(R.level1.models.HGB.ovr_auc['免疫性'].auc)+'、感染 '+fmt(R.level1.models.HGB.ovr_auc['感染性'].auc)+'、代謝 '+fmt(R.level1.models.HGB.ovr_auc['代謝性'].auc)+'——未達 0.9。排除重疊個案可達 0.87–0.93，但那是移除難分個案後的樂觀版本，列為敏感度而非主結果。到 0.9 的正路：切片/診斷碼等更強標籤＋更多感染與免疫樣本。';
 (function(){
   const m=R.level1.models.HGB, cm=m.confusion;
   let h='<table><thead><tr><th>真實＼預測</th>'+CLS.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
@@ -171,15 +177,16 @@ $('aucNote').textContent='主分析（HGB）：免疫 '+fmt(R.level1.models.HGB.
 
 /* Level3 歸因 */
 (function(){
-  const KNOWN=K.known_tags||{};
+  const AN=K.anchors||{}, LV=K.anchor_levels||{};
+  const clsOf=lv=>lv==='causal_pos'?'known':lv==='causal_neg'?'neg':lv==='observational'?'obs':lv==='reverse'?'rev':lv==='adjacent'?'adj':lv==='conflict'?'conf':'cand';
+  const look=(c,f)=>AN[c+'|'+f]||AN['*|'+f]||{level:'candidate',level_zh:'候選（待確認）',note:'本資料之發現，待文獻與前瞻確認'};
   let h='';
   CLS.forEach(c=>{
-    h+=`<h3 style="font-size:13px;margin:10px 0 4px">${c}</h3><table><thead><tr><th>標記</th><th>方向</th><th>AUC</th><th>95% CI</th><th>對照</th></tr></thead><tbody>`;
+    h+=`<h3 style="font-size:13px;margin:10px 0 4px">${c}</h3><table><thead><tr><th>標記</th><th>方向</th><th>AUC</th><th>95% CI</th><th>證據等級</th><th>說明</th></tr></thead><tbody>`;
     (R.level3.univariate_top[c]||[]).slice(0,10).forEach(r=>{
-      const key=c+'|'+r.feature, tag=KNOWN[key];
-      const cls=tag?(tag.indexOf('標籤鄰近')===0?'adj':'known'):'cand';
-      const label=tag||'候選（待文獻/前瞻確認）';
-      h+=`<tr><td class="l">${r.label}</td><td>${r.direction}</td><td>${fmt(r.auc)}</td><td>[${fmt(r.lo)}, ${fmt(r.hi)}]</td><td class="l"><span class="tag ${cls}">${label}</span></td></tr>`;});
+      const a=look(c,r.feature);
+      h+=`<tr><td class="l">${r.label}</td><td>${r.direction}</td><td>${fmt(r.auc)}</td><td>[${fmt(r.lo)}, ${fmt(r.hi)}]</td>`+
+         `<td class="l"><span class="tag ${clsOf(a.level)}">${a.level_zh}</span></td><td class="l" style="font-size:11px;color:#585c64">${a.note}</td></tr>`;});
     h+='</tbody></table>';
   });
   $('bio').innerHTML=h;
@@ -193,6 +200,23 @@ $('aucNote').textContent='主分析（HGB）：免疫 '+fmt(R.level1.models.HGB.
     `</tbody></table><p class="note" style="margin-top:6px">${li.caveat}。</p>`;
   const lf=R.level2_infection;
   $('l2f').innerHTML=`<p class="small">n=${lf.n}：HBV ${lf.HBV}、HCV ${lf.HCV}（由封存之血清學標籤直接分流；此層不用模型）。</p>`;
+})();
+
+/* 免疫代理修正 */
+(function(){
+  const P=K.proxy;
+  if(!P){document.getElementById('proxyCard').style.display='none';return;}
+  let h=`<p class="small">三類模型把「未做 ANA 者」一併當成非免疫＝標籤污染（NHANES 只有 surplus sera 隨機次樣本做過 ANA，其餘是<b>未知</b>而非陰性）。`+
+        `改以「只納入實際做過 ANA 且有腎損傷者」重建二元代理（n=${P.cohort.n}，陽性 ${P.cohort.positive}／陰性 ${P.cohort.negative}），`+
+        `${P.protocol.repeats}×${P.protocol.outer_folds} 重複巢狀交叉驗證：</p>`;
+  h+='<table><thead><tr><th>模型</th><th>AUROC（95% CI）</th><th>AUPRC</th><th>平衡正確率</th></tr></thead><tbody>';
+  Object.entries(P.models).forEach(([mk,m])=>{h+=`<tr><td class="l">${mk}</td><td>${fmt(m.auroc)}（${fmt(m.ci[0])}–${fmt(m.ci[1])}）</td><td>${fmt(m.auprc)}</td><td>${fmt(m.balanced_accuracy)}</td></tr>`;});
+  h+='</tbody></table>';
+  const best=P.models.HGB||Object.values(P.models)[0];
+  h+=`<p class="note" style="margin-top:6px"><b>修正後免疫代理只有 AUROC ${fmt(best.auroc)}——接近隨機。</b>`+
+     `Level 1 表中的免疫欄位（0.81）是污染造成的樂觀值，<b>不應引用</b>。感染性／代謝性不受此影響。`+
+     (P.artifact&&P.artifact.path?` 研究用模型 <code>${P.artifact.path}</code>（SHA256 ${String(P.artifact.sha256).slice(0,24)}…），非活檢確診模型，不得臨床診斷。`:'')+'</p>';
+  document.getElementById('proxyBox').innerHTML=h;
 })();
 
 /* 標記研究 */
