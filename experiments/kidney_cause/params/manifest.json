@@ -3,7 +3,8 @@
   "note": "真實公開資料 manifest——每個 URL 皆於 2026-08-30 經 NHANES datapage 逐頁驗證（wwwn.cdc.gov 檢索頁）。SSANA 涵蓋 1999-2004 三週期 surplus sera（n=4532；628 位 3+/4+ 有滴度與特異抗體）。",
   "base": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public",
   "verified_via": "datapage.aspx?Component=Laboratory/Questionnaire&CycleBeginYear=1999/2001/2003 ＋ SSANA_A.htm 文件頁",
-  "extended": "2026-08-30 第二批：脂質盤/重金屬/營養素/維生素D/胱蛋白酶抑制素C——腎臟相關指數全景（datapage 逐頁驗證）"
+  "extended": "2026-08-30 第二批：脂質盤/重金屬/營養素/維生素D/胱蛋白酶抑制素C——腎臟相關指數全景（datapage 逐頁驗證）",
+  "extended_2005_2018": "2026-08-30 第三批：2005–2018 七個週期（T2/T3/T4 不需 ANA，可擴充樣本）。每個檔名皆以『HTTP 200 且內容開頭為 HEADER RECORD』實測驗證——注意 /Nchs/Nhanes/YYYY-YYYY/ 路徑對任何檔名都回 200＋HTML 錯誤頁，不可用於探測。CRP 僅至 2009-2010；hsCRP 自 2015-2016 起。"
  },
  "files": {
   "DEMO.xpt": {
@@ -215,6 +216,451 @@
    "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/SSCYST_B.xpt",
    "cycle": "2001-2002",
    "role": "cystatin_c_surplus"
+  },
+  "DEMO_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/DEMO_D.xpt",
+   "cycle": "2005-2006",
+   "role": "demographics"
+  },
+  "BIOPRO_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/BIOPRO_D.xpt",
+   "cycle": "2005-2006",
+   "role": "biochem"
+  },
+  "CBC_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/CBC_D.xpt",
+   "cycle": "2005-2006",
+   "role": "cbc"
+  },
+  "ALB_CR_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/ALB_CR_D.xpt",
+   "cycle": "2005-2006",
+   "role": "urine_acr"
+  },
+  "GHB_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/GHB_D.xpt",
+   "cycle": "2005-2006",
+   "role": "archive_metabolic_hba1c"
+  },
+  "DIQ_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/DIQ_D.xpt",
+   "cycle": "2005-2006",
+   "role": "archive_metabolic_diq"
+  },
+  "HEPBD_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/HEPBD_D.xpt",
+   "cycle": "2005-2006",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPC_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/HEPC_D.xpt",
+   "cycle": "2005-2006",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPB_S_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/HEPB_S_D.xpt",
+   "cycle": "2005-2006",
+   "role": "archive_infection_hepatitis"
+  },
+  "CRP_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/CRP_D.xpt",
+   "cycle": "2005-2006",
+   "role": "crp"
+  },
+  "TCHOL_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/TCHOL_D.xpt",
+   "cycle": "2005-2006",
+   "role": "lipids_tc"
+  },
+  "HDL_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/HDL_D.xpt",
+   "cycle": "2005-2006",
+   "role": "lipids_hdl"
+  },
+  "TRIGLY_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/TRIGLY_D.xpt",
+   "cycle": "2005-2006",
+   "role": "lipids_ldl_tg"
+  },
+  "DEMO_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/DEMO_E.xpt",
+   "cycle": "2007-2008",
+   "role": "demographics"
+  },
+  "BIOPRO_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/BIOPRO_E.xpt",
+   "cycle": "2007-2008",
+   "role": "biochem"
+  },
+  "CBC_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/CBC_E.xpt",
+   "cycle": "2007-2008",
+   "role": "cbc"
+  },
+  "ALB_CR_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/ALB_CR_E.xpt",
+   "cycle": "2007-2008",
+   "role": "urine_acr"
+  },
+  "GHB_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/GHB_E.xpt",
+   "cycle": "2007-2008",
+   "role": "archive_metabolic_hba1c"
+  },
+  "DIQ_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/DIQ_E.xpt",
+   "cycle": "2007-2008",
+   "role": "archive_metabolic_diq"
+  },
+  "HEPBD_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/HEPBD_E.xpt",
+   "cycle": "2007-2008",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPC_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/HEPC_E.xpt",
+   "cycle": "2007-2008",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPB_S_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/HEPB_S_E.xpt",
+   "cycle": "2007-2008",
+   "role": "archive_infection_hepatitis"
+  },
+  "CRP_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/CRP_E.xpt",
+   "cycle": "2007-2008",
+   "role": "crp"
+  },
+  "TCHOL_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/TCHOL_E.xpt",
+   "cycle": "2007-2008",
+   "role": "lipids_tc"
+  },
+  "HDL_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/HDL_E.xpt",
+   "cycle": "2007-2008",
+   "role": "lipids_hdl"
+  },
+  "TRIGLY_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/TRIGLY_E.xpt",
+   "cycle": "2007-2008",
+   "role": "lipids_ldl_tg"
+  },
+  "DEMO_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/DEMO_F.xpt",
+   "cycle": "2009-2010",
+   "role": "demographics"
+  },
+  "BIOPRO_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/BIOPRO_F.xpt",
+   "cycle": "2009-2010",
+   "role": "biochem"
+  },
+  "CBC_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/CBC_F.xpt",
+   "cycle": "2009-2010",
+   "role": "cbc"
+  },
+  "ALB_CR_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/ALB_CR_F.xpt",
+   "cycle": "2009-2010",
+   "role": "urine_acr"
+  },
+  "GHB_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/GHB_F.xpt",
+   "cycle": "2009-2010",
+   "role": "archive_metabolic_hba1c"
+  },
+  "DIQ_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/DIQ_F.xpt",
+   "cycle": "2009-2010",
+   "role": "archive_metabolic_diq"
+  },
+  "HEPBD_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/HEPBD_F.xpt",
+   "cycle": "2009-2010",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPC_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/HEPC_F.xpt",
+   "cycle": "2009-2010",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPB_S_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/HEPB_S_F.xpt",
+   "cycle": "2009-2010",
+   "role": "archive_infection_hepatitis"
+  },
+  "CRP_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/CRP_F.xpt",
+   "cycle": "2009-2010",
+   "role": "crp"
+  },
+  "TCHOL_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/TCHOL_F.xpt",
+   "cycle": "2009-2010",
+   "role": "lipids_tc"
+  },
+  "HDL_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/HDL_F.xpt",
+   "cycle": "2009-2010",
+   "role": "lipids_hdl"
+  },
+  "TRIGLY_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/TRIGLY_F.xpt",
+   "cycle": "2009-2010",
+   "role": "lipids_ldl_tg"
+  },
+  "DEMO_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/DEMO_G.xpt",
+   "cycle": "2011-2012",
+   "role": "demographics"
+  },
+  "BIOPRO_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/BIOPRO_G.xpt",
+   "cycle": "2011-2012",
+   "role": "biochem"
+  },
+  "CBC_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/CBC_G.xpt",
+   "cycle": "2011-2012",
+   "role": "cbc"
+  },
+  "ALB_CR_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/ALB_CR_G.xpt",
+   "cycle": "2011-2012",
+   "role": "urine_acr"
+  },
+  "GHB_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/GHB_G.xpt",
+   "cycle": "2011-2012",
+   "role": "archive_metabolic_hba1c"
+  },
+  "DIQ_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/DIQ_G.xpt",
+   "cycle": "2011-2012",
+   "role": "archive_metabolic_diq"
+  },
+  "HEPBD_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/HEPBD_G.xpt",
+   "cycle": "2011-2012",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPC_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/HEPC_G.xpt",
+   "cycle": "2011-2012",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPB_S_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/HEPB_S_G.xpt",
+   "cycle": "2011-2012",
+   "role": "archive_infection_hepatitis"
+  },
+  "TCHOL_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/TCHOL_G.xpt",
+   "cycle": "2011-2012",
+   "role": "lipids_tc"
+  },
+  "HDL_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/HDL_G.xpt",
+   "cycle": "2011-2012",
+   "role": "lipids_hdl"
+  },
+  "TRIGLY_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/TRIGLY_G.xpt",
+   "cycle": "2011-2012",
+   "role": "lipids_ldl_tg"
+  },
+  "DEMO_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/DEMO_H.xpt",
+   "cycle": "2013-2014",
+   "role": "demographics"
+  },
+  "BIOPRO_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/BIOPRO_H.xpt",
+   "cycle": "2013-2014",
+   "role": "biochem"
+  },
+  "CBC_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/CBC_H.xpt",
+   "cycle": "2013-2014",
+   "role": "cbc"
+  },
+  "ALB_CR_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/ALB_CR_H.xpt",
+   "cycle": "2013-2014",
+   "role": "urine_acr"
+  },
+  "GHB_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/GHB_H.xpt",
+   "cycle": "2013-2014",
+   "role": "archive_metabolic_hba1c"
+  },
+  "DIQ_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/DIQ_H.xpt",
+   "cycle": "2013-2014",
+   "role": "archive_metabolic_diq"
+  },
+  "HEPBD_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/HEPBD_H.xpt",
+   "cycle": "2013-2014",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPC_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/HEPC_H.xpt",
+   "cycle": "2013-2014",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPB_S_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/HEPB_S_H.xpt",
+   "cycle": "2013-2014",
+   "role": "archive_infection_hepatitis"
+  },
+  "TCHOL_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/TCHOL_H.xpt",
+   "cycle": "2013-2014",
+   "role": "lipids_tc"
+  },
+  "HDL_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/HDL_H.xpt",
+   "cycle": "2013-2014",
+   "role": "lipids_hdl"
+  },
+  "TRIGLY_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/TRIGLY_H.xpt",
+   "cycle": "2013-2014",
+   "role": "lipids_ldl_tg"
+  },
+  "DEMO_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/DEMO_I.xpt",
+   "cycle": "2015-2016",
+   "role": "demographics"
+  },
+  "BIOPRO_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/BIOPRO_I.xpt",
+   "cycle": "2015-2016",
+   "role": "biochem"
+  },
+  "CBC_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/CBC_I.xpt",
+   "cycle": "2015-2016",
+   "role": "cbc"
+  },
+  "ALB_CR_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/ALB_CR_I.xpt",
+   "cycle": "2015-2016",
+   "role": "urine_acr"
+  },
+  "GHB_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/GHB_I.xpt",
+   "cycle": "2015-2016",
+   "role": "archive_metabolic_hba1c"
+  },
+  "DIQ_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/DIQ_I.xpt",
+   "cycle": "2015-2016",
+   "role": "archive_metabolic_diq"
+  },
+  "HEPBD_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/HEPBD_I.xpt",
+   "cycle": "2015-2016",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPC_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/HEPC_I.xpt",
+   "cycle": "2015-2016",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPB_S_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/HEPB_S_I.xpt",
+   "cycle": "2015-2016",
+   "role": "archive_infection_hepatitis"
+  },
+  "HSCRP_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/HSCRP_I.xpt",
+   "cycle": "2015-2016",
+   "role": "crp"
+  },
+  "TCHOL_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/TCHOL_I.xpt",
+   "cycle": "2015-2016",
+   "role": "lipids_tc"
+  },
+  "HDL_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/HDL_I.xpt",
+   "cycle": "2015-2016",
+   "role": "lipids_hdl"
+  },
+  "TRIGLY_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/TRIGLY_I.xpt",
+   "cycle": "2015-2016",
+   "role": "lipids_ldl_tg"
+  },
+  "DEMO_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DEMO_J.xpt",
+   "cycle": "2017-2018",
+   "role": "demographics"
+  },
+  "BIOPRO_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BIOPRO_J.xpt",
+   "cycle": "2017-2018",
+   "role": "biochem"
+  },
+  "CBC_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/CBC_J.xpt",
+   "cycle": "2017-2018",
+   "role": "cbc"
+  },
+  "ALB_CR_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/ALB_CR_J.xpt",
+   "cycle": "2017-2018",
+   "role": "urine_acr"
+  },
+  "GHB_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/GHB_J.xpt",
+   "cycle": "2017-2018",
+   "role": "archive_metabolic_hba1c"
+  },
+  "DIQ_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DIQ_J.xpt",
+   "cycle": "2017-2018",
+   "role": "archive_metabolic_diq"
+  },
+  "HEPBD_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HEPBD_J.xpt",
+   "cycle": "2017-2018",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPC_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HEPC_J.xpt",
+   "cycle": "2017-2018",
+   "role": "archive_infection_hepatitis"
+  },
+  "HEPB_S_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HEPB_S_J.xpt",
+   "cycle": "2017-2018",
+   "role": "archive_infection_hepatitis"
+  },
+  "HSCRP_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HSCRP_J.xpt",
+   "cycle": "2017-2018",
+   "role": "crp"
+  },
+  "TCHOL_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/TCHOL_J.xpt",
+   "cycle": "2017-2018",
+   "role": "lipids_tc"
+  },
+  "HDL_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HDL_J.xpt",
+   "cycle": "2017-2018",
+   "role": "lipids_hdl"
+  },
+  "TRIGLY_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/TRIGLY_J.xpt",
+   "cycle": "2017-2018",
+   "role": "lipids_ldl_tg"
   }
  }
 }

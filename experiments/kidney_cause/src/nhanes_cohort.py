@@ -36,6 +36,40 @@ EXTRA_FILES = {
     "2001-2002": ["L13_B.xpt", "L13AM_B.xpt", "L06_B.xpt", "VID_B.xpt"],
     "2003-2004": ["L13_C.xpt", "L13AM_C.xpt", "L06BMT_C.xpt", "L06NB_C.xpt", "L06MH_C.xpt", "L06TFR_C.xpt", "VID_C.xpt"],
 }
+# ── 2005–2018 七個週期（僅供不需要 ANA 的任務：感染／代謝）
+# 檔名皆以「HTTP 200 且內容開頭為 HEADER RECORD」實測驗證——
+# 注意 /Nchs/Nhanes/YYYY-YYYY/ 這個路徑對任何檔名都回 200＋HTML 錯誤頁，不可用於探測存在性。
+CYCLES_EXT = {
+    "2005-2006": dict(demo="DEMO_D.xpt", biochem="BIOPRO_D.xpt", cbc="CBC_D.xpt", acr="ALB_CR_D.xpt",
+                      hba1c="GHB_D.xpt", diq="DIQ_D.xpt", hepb="HEPBD_D.xpt", hepc="HEPC_D.xpt", crp="CRP_D.xpt"),
+    "2007-2008": dict(demo="DEMO_E.xpt", biochem="BIOPRO_E.xpt", cbc="CBC_E.xpt", acr="ALB_CR_E.xpt",
+                      hba1c="GHB_E.xpt", diq="DIQ_E.xpt", hepb="HEPBD_E.xpt", hepc="HEPC_E.xpt", crp="CRP_E.xpt"),
+    "2009-2010": dict(demo="DEMO_F.xpt", biochem="BIOPRO_F.xpt", cbc="CBC_F.xpt", acr="ALB_CR_F.xpt",
+                      hba1c="GHB_F.xpt", diq="DIQ_F.xpt", hepb="HEPBD_F.xpt", hepc="HEPC_F.xpt", crp="CRP_F.xpt"),
+    "2011-2012": dict(demo="DEMO_G.xpt", biochem="BIOPRO_G.xpt", cbc="CBC_G.xpt", acr="ALB_CR_G.xpt",
+                      hba1c="GHB_G.xpt", diq="DIQ_G.xpt", hepb="HEPBD_G.xpt", hepc="HEPC_G.xpt"),
+    "2013-2014": dict(demo="DEMO_H.xpt", biochem="BIOPRO_H.xpt", cbc="CBC_H.xpt", acr="ALB_CR_H.xpt",
+                      hba1c="GHB_H.xpt", diq="DIQ_H.xpt", hepb="HEPBD_H.xpt", hepc="HEPC_H.xpt"),
+    "2015-2016": dict(demo="DEMO_I.xpt", biochem="BIOPRO_I.xpt", cbc="CBC_I.xpt", acr="ALB_CR_I.xpt",
+                      hba1c="GHB_I.xpt", diq="DIQ_I.xpt", hepb="HEPBD_I.xpt", hepc="HEPC_I.xpt", crp="HSCRP_I.xpt"),
+    "2017-2018": dict(demo="DEMO_J.xpt", biochem="BIOPRO_J.xpt", cbc="CBC_J.xpt", acr="ALB_CR_J.xpt",
+                      hba1c="GHB_J.xpt", diq="DIQ_J.xpt", hepb="HEPBD_J.xpt", hepc="HEPC_J.xpt", crp="HSCRP_J.xpt"),
+}
+EXTRA_FILES_EXT = {   # 脂質盤在新週期拆成三個檔
+    "2005-2006": ["TCHOL_D.xpt", "HDL_D.xpt", "TRIGLY_D.xpt"],
+    "2007-2008": ["TCHOL_E.xpt", "HDL_E.xpt", "TRIGLY_E.xpt"],
+    "2009-2010": ["TCHOL_F.xpt", "HDL_F.xpt", "TRIGLY_F.xpt"],
+    "2011-2012": ["TCHOL_G.xpt", "HDL_G.xpt", "TRIGLY_G.xpt"],
+    "2013-2014": ["TCHOL_H.xpt", "HDL_H.xpt", "TRIGLY_H.xpt"],
+    "2015-2016": ["TCHOL_I.xpt", "HDL_I.xpt", "TRIGLY_I.xpt"],
+    "2017-2018": ["TCHOL_J.xpt", "HDL_J.xpt", "TRIGLY_J.xpt"],
+}
+# 肌酸酐標準化校正係數（NHANES 官方分析注記，逐週期查證；未列者不需校正）
+SCR_CALIBRATION = {
+    "1999-2000": (-0.184, 0.960),
+    "2005-2006": (-0.016, 0.978),    # BIOPRO_D 文件明載「Correction ... is highly recommended」
+}
+
 ANA_FILES = ["SSANA_A.xpt", "SSANA2_A.xpt"]
 CYSTATIN_FILES = ["SSCYST_A.xpt", "SSCYST_B.xpt"]           # surplus sera 1999-2002，跨週期以 SEQN 併
 
@@ -128,9 +162,10 @@ def load_all(verbose=True):
             keep = [c for c in f.columns if c == "SEQN" or c in FEATURE_LABELS]
             if len(keep) > 1:
                 d = d.merge(f[keep].drop_duplicates("SEQN"), on="SEQN", how="left", suffixes=("", "_x"))
-        if cyc == "1999-2000" and "LBXSCR" in d.columns:
+        if cyc in SCR_CALIBRATION and "LBXSCR" in d.columns:
+            a, b = SCR_CALIBRATION[cyc]
             d["LBXSCR_raw"] = d["LBXSCR"]
-            d["LBXSCR"] = -0.184 + 0.960 * d["LBXSCR"]          # 肌酸酐標準化校正（僅 1999-2000）
+            d["LBXSCR"] = a + b * d["LBXSCR"]                   # 肌酸酐標準化校正（逐週期依官方注記）
         rows.append(d)
         if verbose:
             print(f"[cohort] {cyc}: n={len(d)}")
@@ -158,6 +193,81 @@ def load_all(verbose=True):
     if verbose:
         print(f"[cohort] 合併：n={len(df)}；SSANA 次樣本 {int(df['in_ana_subsample'].sum())}")
     return df, dict(ana_cols=ana_cols)
+
+
+def load_extended(verbose=True):
+    """2005–2018 七個週期。這些週期沒有 surplus sera ANA，故免疫狀態一律未知。"""
+    rows = []
+    for cyc, files in CYCLES_EXT.items():
+        demo = _read(files["demo"])
+        d = demo[["SEQN", "RIDAGEYR", "RIAGENDR"]].copy()
+        d.columns = ["SEQN", "age", "sex"]
+        d["cycle"] = cyc
+        for role, fn in files.items():
+            if role == "demo":
+                continue
+            f = _read(fn)
+            keep = [c for c in f.columns if c == "SEQN" or c in FEATURE_LABELS or
+                    c in ("LBXGH", "DIQ010", "LBDHBG", "LBXHBC", "LBXHCR", "LBDHCV", "LBXHCV", "LBDHCI")]
+            if len(keep) > 1:
+                d = d.merge(f[keep].drop_duplicates("SEQN"), on="SEQN", how="left", suffixes=("", "_x"))
+        for extra in EXTRA_FILES_EXT.get(cyc, []):
+            f = _read(extra)
+            keep = [c for c in f.columns if c == "SEQN" or c in FEATURE_LABELS]
+            if len(keep) > 1:
+                d = d.merge(f[keep].drop_duplicates("SEQN"), on="SEQN", how="left", suffixes=("", "_x"))
+        if cyc in SCR_CALIBRATION and "LBXSCR" in d.columns:
+            a, b = SCR_CALIBRATION[cyc]
+            d["LBXSCR_raw"] = d["LBXSCR"]
+            d["LBXSCR"] = a + b * d["LBXSCR"]
+        rows.append(d)
+        if verbose:
+            print(f"[cohort-ext] {cyc}: n={len(d)}")
+    df = pd.concat(rows, ignore_index=True)
+    df["in_ana_subsample"] = False
+    return df
+
+
+def build_extended(P, verbose=True):
+    """1999–2018 全週期世代，**僅供不需要 ANA 的任務**（感染／代謝）。
+
+    2005 年後沒有 ANA，免疫狀態是未知而非陰性——本函式回傳的世代不含可用的免疫標籤，
+    任何免疫任務都必須改用 build() 的 primary（ANA 實測子樣本）。"""
+    base, _ = load_all(verbose=verbose)
+    ext = load_extended(verbose=verbose)
+    df = pd.concat([base, ext], ignore_index=True, sort=False)
+    df = df[df["age"] >= P["population"]["value"]["age_min"]].copy()
+    female = df["sex"] == 2
+    df["eGFR"] = egfr_ckdepi2021(df["LBXSCR"].to_numpy(float), df["age"].to_numpy(float), female.to_numpy())
+    df["ACR"] = df["URXUMA"] / (df["URXUCR"] / 100.0)
+    df["kidney_damage"] = (df["eGFR"] < 60) | (df["ACR"] >= 30)
+    kd = df[df["kidney_damage"].fillna(False)].copy()
+    hbsag = _pick(kd, CAND["hbsag"], "hep", required=False)
+    hcv_rna = _pick(kd, CAND["hcv_rna"], "hep", required=False)
+    hcv_ab = _pick(kd, CAND["hcv_ab"], "hep", required=False)
+    kd["lab_metabolic"] = (kd["DIQ010"] == 1) | (kd["LBXGH"] >= 6.5)
+    inf = pd.Series(False, index=kd.index)
+    if hbsag:
+        inf |= kd[hbsag] == 1
+    if hcv_rna:
+        inf |= kd[hcv_rna] == 1
+    kd["lab_infection"] = inf
+    kd["cause"] = np.where(kd["lab_infection"], "感染性",
+                           np.where(kd["lab_metabolic"].fillna(False), "代謝性", "其他/未歸類"))
+    kd["NLR"] = kd["LBXNEPCT"] / kd["LBXLYPCT"].replace(0, np.nan)
+    archive = set(["LBXGH", "DIQ010"] + [c for c in kd.columns if c.startswith("SS")] +
+                  [v for v in (hbsag, hcv_rna, hcv_ab) if v] +
+                  [c for c in kd.columns if c.startswith(("LBXHB", "LBDHB", "LBXHC", "LBDHC", "LBXHA", "LBXHD", "LBDHD"))])
+    feats = [c for c in kd.columns if c in FEATURE_LABELS and c not in archive] + ["ACR", "eGFR", "NLR", "age", "sex"]
+    if verbose:
+        print(f"[cohort-ext] 全週期成人 {len(df)}；腎損傷 {len(kd)}；"
+              f"感染 {int(kd['lab_infection'].sum())}、代謝 {int(kd['lab_metabolic'].fillna(False).sum())}")
+        print(f"[cohort-ext] 逐週期腎損傷：{kd['cycle'].value_counts().sort_index().to_dict()}")
+    return dict(cohort=kd, features=feats, archive=sorted(archive),
+                counts=dict(n=len(kd), infection=int(kd["lab_infection"].sum()),
+                            metabolic=int(kd["lab_metabolic"].fillna(False).sum()),
+                            by_cycle={str(k): int(v) for k, v in kd["cycle"].value_counts().sort_index().items()}),
+                feature_labels={**FEATURE_LABELS, **DERIVED, "age": "年齡", "sex": "性別"})
 
 
 def build(P, verbose=True):

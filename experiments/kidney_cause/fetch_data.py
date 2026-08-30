@@ -38,6 +38,13 @@ def fetch(key, url, retries=3):
                                 "-o", dest + ".part", url])
             if r.returncode != 0 or not os.path.exists(dest + ".part") or os.path.getsize(dest + ".part") < 1024:
                 raise RuntimeError(f"curl exit {r.returncode}")
+            # 內容驗證：CDC 某些路徑對不存在的檔案回 200＋20KB HTML 錯誤頁，只看大小會把它存成資料。
+            # SAS XPORT 檔必以 "HEADER RECORD" 開頭（2026-08-30 稽核加入）。
+            with open(dest + ".part", "rb") as _f:
+                magic = _f.read(13)
+            if magic != b"HEADER RECORD":
+                os.remove(dest + ".part")
+                raise RuntimeError(f"回應不是 SAS XPORT（開頭為 {magic!r}）——可能是錯誤頁")
             os.replace(dest + ".part", dest)
             rec = record(dest, url)
             print(f"[fetch] {key}  {rec['bytes']/1024:.0f} KB  sha256 {rec['sha256'][:16]}…")
