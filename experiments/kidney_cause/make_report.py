@@ -131,6 +131,45 @@ def main():
         for n_ in lab.get("artifact_notes", []):
             L.append(f"> ⚠ **{n_['marker']}**：{n_['claim']} → **{n_['verdict']}**。{n_['dissection']}\n")
 
+    # ── 重新設定的二元任務（問題設定調整，非調參）
+    bt = load("binary_tasks.json")
+    if bt:
+        L.append("## 重新設定的二元任務（2026-08-30 調整）\n")
+        L.append(bt["rationale"])
+        L.append(f"\n{bt['no_holdout']}\n")
+        L.append("每個任務跑三個特徵集：**全部特徵**／**拔除標籤鄰近**（誠實主結果）／**腎臟專屬指標組**"
+                 "（eGFR・ACR・肌酸酐・BUN・Cystatin C・尿酸・白蛋白／球蛋白・CKD-MBD 磷鈣PTH維生素D・"
+                 "腎性貧血與鐵代謝・電解質酸鹼・發炎血球）。\n")
+        L.append("| 任務 | n（陽性） | 特徵集 | 模型 | AUROC（95% CI） | AUPRC（基準／提升） | 平衡正確率 |")
+        L.append("|---|---|---|---|---|---|---|")
+        vzh = {"all": "全部", "leak_free": "**拔除標籤鄰近**", "kidney_core": "腎臟專屬"}
+        for tname, t in bt["tasks"].items():
+            if "skipped" in t:
+                L.append(f"| {tname} | — | — | — | — | — | 跳過：{t['skipped']} |")
+                continue
+            first = True
+            for vname in ("all", "leak_free", "kidney_core"):
+                for mk in ("LR", "HGB"):
+                    r = t["variants"][vname][mk]
+                    head = f"{tname} | {r['n']}（{r['n_pos']}）" if first else " | "
+                    first = False
+                    L.append(f"| {head} | {vzh[vname]} | {mk} | {r['auroc']:.3f}"
+                             f" [{r['auroc_ci'][0]:.3f},{r['auroc_ci'][1]:.3f}] | "
+                             f"{r['auprc']:.3f}（{r['auprc_baseline']:.3f}／×{r['auprc_lift']:.1f}） | "
+                             f"{r['balanced_accuracy']:.3f} |")
+        L.append("")
+        for tname, t in bt["tasks"].items():
+            if "skipped" in t:
+                continue
+            h = t["headline"]
+            adj = t.get("label_adjacent_removed") or []
+            L.append(f"- **{tname}**：主結果（拔除標籤鄰近 {adj if adj else '（無）'}，{h['model']}）"
+                     f" AUROC **{h['auroc']:.3f}**（{h['auroc_ci'][0]:.3f}–{h['auroc_ci'][1]:.3f}）、"
+                     f"AUPRC {h['auprc']:.3f}（隨機基準 {h['auprc_baseline']:.3f}）。{t['note']}"
+                     f" 陽性個案之 KDIGO 風險組成：{t.get('kdigo_positive_mix', {})}")
+        L.append("\n**讀法**：極不平衡任務（T3 盛行率 1.6%）看 AUROC 會過度樂觀，應看 AUPRC 相對其基準線的提升倍數；"
+                 "「全部特徵」與「拔除標籤鄰近」的落差即為標籤洩漏的量化值。\n")
+
     # ── Level 3 歸因（帶證據等級）
     L.append("## Level 3　biomarker 歸因（關聯，非因果）\n")
     L.append("證據等級語彙：**因果級（支持）**＝MR／RCT 陽性；**因果級（反對）**＝MR 陰性或介入 RCT 陰性（關聯在、因果不在）；"

@@ -119,16 +119,24 @@ KIDNEY_CORE = [
 
 
 def kdigo(df):
-    """KDIGO 2012 分期：G1–G5（eGFR）× A1–A3（ACR），回傳 (G, A, 風險類別)。"""
-    g = np.select(
-        [df["eGFR"] >= 90, df["eGFR"] >= 60, df["eGFR"] >= 45, df["eGFR"] >= 30, df["eGFR"] >= 15],
-        ["G1", "G2", "G3a", "G3b", "G4"], default="G5")
-    a = np.select([df["ACR"] < 30, df["ACR"] < 300], ["A1", "A2"], default="A3")
+    """KDIGO 2012 分期：G1–G5（eGFR）× A1–A3（ACR），回傳 (G, A, 風險類別)。
+
+    缺值必須明確標為「未知」——np.select 的 default 會把 NaN 掃進最嚴重的一格
+    （本專案 eGFR 缺值 708 人會被誤判為 G5，實際 G5 僅 26 人）。"""
+    e, a_ = df["eGFR"].to_numpy(float), df["ACR"].to_numpy(float)
+    g = np.select([np.isnan(e), e >= 90, e >= 60, e >= 45, e >= 30, e >= 15],
+                  ["未知", "G1", "G2", "G3a", "G3b", "G4"], default="G5")
+    a = np.select([np.isnan(a_), a_ < 30, a_ < 300], ["未知", "A1", "A2"], default="A3")
     order_g = {"G1": 0, "G2": 1, "G3a": 2, "G3b": 3, "G4": 4, "G5": 5}
     order_a = {"A1": 0, "A2": 1, "A3": 2}
-    score = np.array([order_g[x] for x in g]) + np.array([order_a[x] for x in a])
-    risk = np.select([score <= 1, score <= 2, score <= 4], ["低", "中", "高"], default="極高")
-    return g, a, risk
+    risk = []
+    for gi, ai in zip(g, a):
+        if gi == "未知" or ai == "未知":
+            risk.append("無法分期")            # 任一軸缺值即不分期，不猜
+            continue
+        sc = order_g[gi] + order_a[ai]
+        risk.append("低" if sc <= 1 else "中" if sc <= 2 else "高" if sc <= 4 else "極高")
+    return g, a, np.array(risk, dtype=object)
 
 
 def run(seed=20260830, verbose=True):
