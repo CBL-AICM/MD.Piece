@@ -1,35 +1,220 @@
 {
-  "_meta": {
-    "note": "真實公開資料 manifest——每個 URL 皆於 2026-08-30 經 NHANES datapage 逐頁驗證（wwwn.cdc.gov 檢索頁）。SSANA 涵蓋 1999-2004 三週期 surplus sera（n=4532；628 位 3+/4+ 有滴度與特異抗體）。",
-    "base": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public",
-    "verified_via": "datapage.aspx?Component=Laboratory/Questionnaire&CycleBeginYear=1999/2001/2003 ＋ SSANA_A.htm 文件頁"
+ "_meta": {
+  "note": "真實公開資料 manifest——每個 URL 皆於 2026-08-30 經 NHANES datapage 逐頁驗證（wwwn.cdc.gov 檢索頁）。SSANA 涵蓋 1999-2004 三週期 surplus sera（n=4532；628 位 3+/4+ 有滴度與特異抗體）。",
+  "base": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public",
+  "verified_via": "datapage.aspx?Component=Laboratory/Questionnaire&CycleBeginYear=1999/2001/2003 ＋ SSANA_A.htm 文件頁",
+  "extended": "2026-08-30 第二批：脂質盤/重金屬/營養素/維生素D/胱蛋白酶抑制素C——腎臟相關指數全景（datapage 逐頁驗證）"
+ },
+ "files": {
+  "DEMO.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/DEMO.xpt",
+   "cycle": "1999-2000",
+   "role": "demographics"
   },
-  "files": {
-    "DEMO.xpt":     {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/DEMO.xpt",     "cycle": "1999-2000", "role": "demographics"},
-    "DEMO_B.xpt":   {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/DEMO_B.xpt",   "cycle": "2001-2002", "role": "demographics"},
-    "DEMO_C.xpt":   {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/DEMO_C.xpt",   "cycle": "2003-2004", "role": "demographics"},
-    "LAB18.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB18.xpt",    "cycle": "1999-2000", "role": "biochem"},
-    "L40_B.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L40_B.xpt",    "cycle": "2001-2002", "role": "biochem"},
-    "L40_C.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L40_C.xpt",    "cycle": "2003-2004", "role": "biochem"},
-    "LAB25.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB25.xpt",    "cycle": "1999-2000", "role": "cbc"},
-    "L25_B.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L25_B.xpt",    "cycle": "2001-2002", "role": "cbc"},
-    "L25_C.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L25_C.xpt",    "cycle": "2003-2004", "role": "cbc"},
-    "LAB11.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB11.xpt",    "cycle": "1999-2000", "role": "crp"},
-    "L11_B.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L11_B.xpt",    "cycle": "2001-2002", "role": "crp"},
-    "L11_C.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L11_C.xpt",    "cycle": "2003-2004", "role": "crp"},
-    "LAB16.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB16.xpt",    "cycle": "1999-2000", "role": "urine_acr"},
-    "L16_B.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L16_B.xpt",    "cycle": "2001-2002", "role": "urine_acr"},
-    "L16_C.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L16_C.xpt",    "cycle": "2003-2004", "role": "urine_acr"},
-    "LAB10.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB10.xpt",    "cycle": "1999-2000", "role": "archive_metabolic_hba1c"},
-    "L10_B.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L10_B.xpt",    "cycle": "2001-2002", "role": "archive_metabolic_hba1c"},
-    "L10_C.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L10_C.xpt",    "cycle": "2003-2004", "role": "archive_metabolic_hba1c"},
-    "LAB02.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB02.xpt",    "cycle": "1999-2000", "role": "archive_infection_hepatitis"},
-    "L02_B.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L02_B.xpt",    "cycle": "2001-2002", "role": "archive_infection_hepatitis"},
-    "L02_C.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L02_C.xpt",    "cycle": "2003-2004", "role": "archive_infection_hepatitis"},
-    "SSANA_A.xpt":  {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/SSANA_A.xpt",  "cycle": "1999-2004", "role": "archive_immune_ana"},
-    "SSANA2_A.xpt": {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/SSANA2_A.xpt", "cycle": "1999-2004", "role": "archive_immune_ana2"},
-    "DIQ.xpt":      {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/DIQ.xpt",      "cycle": "1999-2000", "role": "archive_metabolic_diq"},
-    "DIQ_B.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/DIQ_B.xpt",    "cycle": "2001-2002", "role": "archive_metabolic_diq"},
-    "DIQ_C.xpt":    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/DIQ_C.xpt",    "cycle": "2003-2004", "role": "archive_metabolic_diq"}
+  "DEMO_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/DEMO_B.xpt",
+   "cycle": "2001-2002",
+   "role": "demographics"
+  },
+  "DEMO_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/DEMO_C.xpt",
+   "cycle": "2003-2004",
+   "role": "demographics"
+  },
+  "LAB18.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB18.xpt",
+   "cycle": "1999-2000",
+   "role": "biochem"
+  },
+  "L40_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L40_B.xpt",
+   "cycle": "2001-2002",
+   "role": "biochem"
+  },
+  "L40_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L40_C.xpt",
+   "cycle": "2003-2004",
+   "role": "biochem"
+  },
+  "LAB25.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB25.xpt",
+   "cycle": "1999-2000",
+   "role": "cbc"
+  },
+  "L25_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L25_B.xpt",
+   "cycle": "2001-2002",
+   "role": "cbc"
+  },
+  "L25_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L25_C.xpt",
+   "cycle": "2003-2004",
+   "role": "cbc"
+  },
+  "LAB11.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB11.xpt",
+   "cycle": "1999-2000",
+   "role": "crp"
+  },
+  "L11_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L11_B.xpt",
+   "cycle": "2001-2002",
+   "role": "crp"
+  },
+  "L11_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L11_C.xpt",
+   "cycle": "2003-2004",
+   "role": "crp"
+  },
+  "LAB16.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB16.xpt",
+   "cycle": "1999-2000",
+   "role": "urine_acr"
+  },
+  "L16_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L16_B.xpt",
+   "cycle": "2001-2002",
+   "role": "urine_acr"
+  },
+  "L16_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L16_C.xpt",
+   "cycle": "2003-2004",
+   "role": "urine_acr"
+  },
+  "LAB10.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB10.xpt",
+   "cycle": "1999-2000",
+   "role": "archive_metabolic_hba1c"
+  },
+  "L10_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L10_B.xpt",
+   "cycle": "2001-2002",
+   "role": "archive_metabolic_hba1c"
+  },
+  "L10_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L10_C.xpt",
+   "cycle": "2003-2004",
+   "role": "archive_metabolic_hba1c"
+  },
+  "LAB02.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB02.xpt",
+   "cycle": "1999-2000",
+   "role": "archive_infection_hepatitis"
+  },
+  "L02_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L02_B.xpt",
+   "cycle": "2001-2002",
+   "role": "archive_infection_hepatitis"
+  },
+  "L02_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L02_C.xpt",
+   "cycle": "2003-2004",
+   "role": "archive_infection_hepatitis"
+  },
+  "SSANA_A.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/SSANA_A.xpt",
+   "cycle": "1999-2004",
+   "role": "archive_immune_ana"
+  },
+  "SSANA2_A.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/SSANA2_A.xpt",
+   "cycle": "1999-2004",
+   "role": "archive_immune_ana2"
+  },
+  "DIQ.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/DIQ.xpt",
+   "cycle": "1999-2000",
+   "role": "archive_metabolic_diq"
+  },
+  "DIQ_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/DIQ_B.xpt",
+   "cycle": "2001-2002",
+   "role": "archive_metabolic_diq"
+  },
+  "DIQ_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/DIQ_C.xpt",
+   "cycle": "2003-2004",
+   "role": "archive_metabolic_diq"
+  },
+  "LAB13.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB13.xpt",
+   "cycle": "1999-2000",
+   "role": "lipids_tc_hdl"
+  },
+  "L13_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L13_B.xpt",
+   "cycle": "2001-2002",
+   "role": "lipids_tc_hdl"
+  },
+  "L13_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L13_C.xpt",
+   "cycle": "2003-2004",
+   "role": "lipids_tc_hdl"
+  },
+  "LAB13AM.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB13AM.xpt",
+   "cycle": "1999-2000",
+   "role": "lipids_ldl_tg"
+  },
+  "L13AM_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L13AM_B.xpt",
+   "cycle": "2001-2002",
+   "role": "lipids_ldl_tg"
+  },
+  "L13AM_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L13AM_C.xpt",
+   "cycle": "2003-2004",
+   "role": "lipids_ldl_tg"
+  },
+  "LAB06.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB06.xpt",
+   "cycle": "1999-2000",
+   "role": "metals_nutrition"
+  },
+  "L06_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L06_B.xpt",
+   "cycle": "2001-2002",
+   "role": "metals_nutrition"
+  },
+  "L06BMT_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L06BMT_C.xpt",
+   "cycle": "2003-2004",
+   "role": "metals"
+  },
+  "L06NB_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L06NB_C.xpt",
+   "cycle": "2003-2004",
+   "role": "folate_b12"
+  },
+  "L06MH_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L06MH_C.xpt",
+   "cycle": "2003-2004",
+   "role": "homocysteine"
+  },
+  "L06TFR_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L06TFR_C.xpt",
+   "cycle": "2003-2004",
+   "role": "ferritin_tfr"
+  },
+  "VID_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/VID_B.xpt",
+   "cycle": "2001-2002",
+   "role": "vitamin_d"
+  },
+  "VID_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/VID_C.xpt",
+   "cycle": "2003-2004",
+   "role": "vitamin_d"
+  },
+  "SSCYST_A.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/SSCYST_A.xpt",
+   "cycle": "1999-2000",
+   "role": "cystatin_c_surplus"
+  },
+  "SSCYST_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/SSCYST_B.xpt",
+   "cycle": "2001-2002",
+   "role": "cystatin_c_surplus"
   }
+ }
 }

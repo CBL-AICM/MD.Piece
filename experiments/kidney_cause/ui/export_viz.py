@@ -25,8 +25,12 @@ KNOWN = {  # 「病因|特徵」→ 對照標籤（與 make_report.py 同步）
 
 R = json.load(open(os.path.join(ROOT, "results", "report.json"), encoding="utf-8"))
 prov = json.load(open(os.path.join(ROOT, "results", "provenance.json"), encoding="utf-8"))["files"]
+lab_p = os.path.join(ROOT, "results", "lab_report.json")
+lab = json.load(open(lab_p, encoding="utf-8")) if os.path.exists(lab_p) else None
+hold_p = os.path.join(ROOT, "results", "holdout_eval.json")
+hold = json.load(open(hold_p, encoding="utf-8")) if os.path.exists(hold_p) else None
 pack = dict(report=R, provenance_files={k: dict(url=v["url"], sha256=v["sha256"][:16], bytes=v["bytes"]) for k, v in sorted(prov.items())},
-            known_tags=KNOWN)
+            known_tags=KNOWN, lab=lab, holdout=hold)
 tpl = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
 out = tpl.replace("__PACK_JSON__", json.dumps(pack, ensure_ascii=False, separators=(",", ":")))
 open(os.path.join(HERE, "index.html"), "w", encoding="utf-8").write(out)

@@ -47,6 +47,7 @@ footer{max-width:1160px;margin:0 auto;padding:0 18px 30px;font-size:11px;color:v
   <button data-s="s2">三大病因判別（Level 1）</button>
   <button data-s="s3">biomarker 歸因（Level 3）</button>
   <button data-s="s4">類內細項（Level 2）</button>
+  <button data-s="s6">標記研究與疊代測試</button>
   <button data-s="s5">資料出處帳本</button>
 </nav>
 
@@ -85,6 +86,21 @@ footer{max-width:1160px;margin:0 auto;padding:0 18px 30px;font-size:11px;color:v
   <div class="card"><h2>超音波佐證層</h2><div class="bd">
     <p class="small">公開世界無上萬張可下載腎臟超音波。us_validation/ 已定義交換格式與一致性分析（Cohen's κ、逐類混淆、分歧解剖），
     醫院影像到位即與 results/predictions.csv 併接執行；到位前該層拒跑，不產生任何假數字。</p>
+  </div></div>
+</section>
+
+<section id="s6">
+  <div class="card"><h2>疊代測試機制（防自欺三件套）</h2><div class="bd">
+    <p class="small">① 25% 保留集依病因分層抽出後<strong>鎖定</strong>（SHA 驗證），battery 永不觸碰、最終設定只能評一次；
+    ② 每個 run 全部追加到 runs_log.jsonl，不挑好看的；③ 標記全表列出每一個特徵，不是只列前十。</p>
+    <div class="kpi" id="labKpi" style="margin-top:8px"></div>
+  </div></div>
+  <div class="card"><h2>群組增量（開發集；依序加入特徵群的一對其餘 AUROC）</h2><div class="bd"><div id="incT"></div></div></div>
+  <div class="card"><h2>穩定性與時間外推</h2><div class="bd"><div id="stabT"></div></div></div>
+  <div class="card"><h2>鎖定保留集（最終評估，一生一次）</h2><div class="bd" id="holdBox"></div></div>
+  <div class="card"><h2>標記全表（每個特徵 × 三病因；單變量 AUC，方向＝該類相對其餘）</h2><div class="bd">
+    <div id="artifactNotes"></div>
+    <div style="overflow-x:auto"><table id="markerT"><thead><tr><th>群組</th><th>標記</th><th>缺值率</th><th>免疫性</th><th>感染性</th><th>代謝性</th></tr></thead><tbody></tbody></table></div>
   </div></div>
 </section>
 
@@ -177,6 +193,36 @@ $('aucNote').textContent='主分析（HGB）：免疫 '+fmt(R.level1.models.HGB.
     `</tbody></table><p class="note" style="margin-top:6px">${li.caveat}。</p>`;
   const lf=R.level2_infection;
   $('l2f').innerHTML=`<p class="small">n=${lf.n}：HBV ${lf.HBV}、HCV ${lf.HCV}（由封存之血清學標籤直接分流；此層不用模型）。</p>`;
+})();
+
+/* 標記研究 */
+(function(){
+  const L=K.lab;
+  if(!L){ $('labKpi').innerHTML='<p class="note">尚未執行 test_lab.py battery。</p>'; return; }
+  $('labKpi').innerHTML=[['開發集',L.dev_n,Object.entries(L.dev_counts).map(([k,v])=>`${k} ${v}`).join('｜')],
+    ['保留集（鎖定）',L.holdout_n,'battery 不觸碰'],
+    ['標記數',L.marker_table.length,'六群組'],
+    ['runs 全記錄','runs_log.jsonl','含每個設定與種子']]
+    .map(([a,b,c])=>`<div class="stat"><div class="lb">${a}</div><div class="vl">${b}</div><div class="sb">${c}</div></div>`).join('');
+  let h='<table><thead><tr><th>步驟</th><th>特徵數</th><th>免疫性</th><th>感染性</th><th>代謝性</th><th>三類平均</th></tr></thead><tbody>';
+  L.incremental.forEach(r=>{h+=`<tr><td class="l">${r.step}</td><td>${r.n_features}</td>`+CLS.map(c=>`<td>${fmt(r.ovr_auc[c].auc)}</td>`).join('')+`<td><b>${fmt(r.mean_auc)}</b></td></tr>`;});
+  h+='</tbody></table><p class="note" style="margin-top:6px">群組移除（full−一群）：'+L.group_drop.map(d=>`−${d.dropped} → ${fmt(d.mean_auc)}`).join('；')+'。</p>';
+  $('incT').innerHTML=h;
+  let sh='<p class="small">五種子穩定性（full）：'+Object.entries(L.seed_stability).map(([c,v])=>`${c} ${fmt(v.mean)}±${fmt(v.sd)}`).join('、')+'</p>';
+  sh+='<p class="small" style="margin-top:4px">留一週期外測（full）：</p><table><thead><tr><th>留出週期</th>'+CLS.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
+  Object.entries(L.loco).forEach(([cy,d])=>{sh+=`<tr><td class="l">${cy}</td>`+CLS.map(c=>{const a=d[c];return `<td>${a&&a.auc!=null?fmt(a.auc)+' ['+fmt(a.lo)+','+fmt(a.hi)+']':'—'}</td>`;}).join('')+'</tr>';});
+  $('stabT').innerHTML=sh+'</tbody></table>';
+  const H=K.holdout;
+  $('holdBox').innerHTML=H?('<p class="small">已於 '+H.evaluated_once_at+' 評估設定 <code>'+H.config+'</code>（n='+H.holdout_n+'）：'+
+    CLS.map(c=>`${c} ${fmt(H.ovr_auc[c].auc)} [${fmt(H.ovr_auc[c].lo)},${fmt(H.ovr_auc[c].hi)}]`).join('、')+'；平衡正確率 '+fmt(H.balanced_accuracy)+'。此檔存在後不得再評。</p>')
+    :'<p class="note">尚未動用。疊代全部在開發集完成後，以 <code>python test_lab.py --final HGB_full</code> 評一次；評過即封存。</p>';
+  if(L.artifact_notes){$('artifactNotes').innerHTML=L.artifact_notes.map(n=>`<p class="note" style="background:#fdf3e7;border:1px solid #c99a55;border-radius:6px;padding:6px 10px;margin-bottom:6px">⚠ <b>${n.marker}</b>：${n.claim} → <b>${n.verdict}</b>。${n.dissection}</p>`).join('');}
+  const tb=document.querySelector('#markerT tbody');
+  L.marker_table.forEach(r=>{
+    const tr=document.createElement('tr');
+    const cell=c=>{const a=r[c];return a&&a.auc!=null?`${fmt(a.auc)}（${a.direction}）`:'—';};
+    tr.innerHTML=`<td class="l">${r.group}</td><td class="l">${r.label}</td><td>${(r.missing*100).toFixed(0)}%</td><td>${cell('免疫性')}</td><td>${cell('感染性')}</td><td>${cell('代謝性')}</td>`;
+    tb.appendChild(tr);});
 })();
 
 /* 出處帳本 */

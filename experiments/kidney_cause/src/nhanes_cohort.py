@@ -30,7 +30,14 @@ CYCLES = {  # 檔名 → 週期
     "2003-2004": dict(demo="DEMO_C.xpt", biochem="L40_C.xpt", cbc="L25_C.xpt", crp="L11_C.xpt",
                       acr="L16_C.xpt", hba1c="L10_C.xpt", hep="L02_C.xpt", diq="DIQ_C.xpt"),
 }
+# 第二批（腎臟相關指數全景）：脂質盤／重金屬（腎小管毒性）／營養素／維生素 D（CKD-MBD）／PTH 在 L11_C
+EXTRA_FILES = {
+    "1999-2000": ["LAB13.xpt", "LAB13AM.xpt", "LAB06.xpt"],
+    "2001-2002": ["L13_B.xpt", "L13AM_B.xpt", "L06_B.xpt", "VID_B.xpt"],
+    "2003-2004": ["L13_C.xpt", "L13AM_C.xpt", "L06BMT_C.xpt", "L06NB_C.xpt", "L06MH_C.xpt", "L06TFR_C.xpt", "VID_C.xpt"],
+}
 ANA_FILES = ["SSANA_A.xpt", "SSANA2_A.xpt"]
+CYSTATIN_FILES = ["SSCYST_A.xpt", "SSCYST_B.xpt"]           # surplus sera 1999-2002，跨週期以 SEQN 併
 
 # 變數候選（NHANES SAS 名；執行期驗證存在性）
 CAND = dict(
@@ -53,6 +60,14 @@ FEATURE_LABELS = {
     "LBXHCT": "血比容", "LBXMCVSI": "MCV", "LBXMC": "MCHC", "LBXMCHSI": "MCH", "LBXRDW": "RDW",
     "LBXPLTSI": "血小板", "LBXMPSI": "平均血小板體積", "LBXCRP": "CRP",
     "URXUMA": "尿白蛋白", "URXUCR": "尿肌酸酐",
+    # ── 第二批：腎臟相關指數全景
+    "LBXTC": "總膽固醇（脂質盤）", "LBDHDL": "HDL 膽固醇", "LBXHDD": "HDL 膽固醇（直接法）",
+    "LBDLDL": "LDL 膽固醇", "LBXTR": "三酸甘油酯（空腹）",
+    "LBXBPB": "血鉛", "LBXBCD": "血鎘", "LBXTHG": "血汞", "LBXCOT": "血清可丁尼（菸暴露）",
+    "LBXFER": "鐵蛋白", "LBXFOL": "血清葉酸", "LBXRBF": "紅血球葉酸", "LBXB12": "維生素 B12",
+    "LBXHCY": "同半胱胺酸", "LBXMMA": "甲基丙二酸",
+    "LBDVIDMS": "25-羥維生素 D（LC-MS）", "LBXPT21": "副甲狀腺素 PTH", "LBXBAP": "骨鹼性磷酸酶 BAP",
+    "SSCYPC": "胱蛋白酶抑制素 C（Cystatin C）",
 }
 # 衍生特徵
 DERIVED = dict(ACR="尿白蛋白/肌酸酐比（mg/g）", eGFR="估計腎絲球過濾率（CKD-EPI 2021）", NLR="嗜中性球/淋巴球比")
@@ -98,6 +113,11 @@ def load_all(verbose=True):
             keep = [c for c in f.columns if c == "SEQN" or c in FEATURE_LABELS or
                     any(c in CAND[k] for k in ("hba1c", "diq", "hbsag", "hbcab", "hcv_ab", "hcv_rna"))]
             d = d.merge(f[keep].drop_duplicates("SEQN"), on="SEQN", how="left", suffixes=("", f"_{role}"))
+        for extra in EXTRA_FILES.get(cyc, []):
+            f = _read(extra)
+            keep = [c for c in f.columns if c == "SEQN" or c in FEATURE_LABELS]
+            if len(keep) > 1:
+                d = d.merge(f[keep].drop_duplicates("SEQN"), on="SEQN", how="left", suffixes=("", "_x"))
         if cyc == "1999-2000" and "LBXSCR" in d.columns:
             d["LBXSCR_raw"] = d["LBXSCR"]
             d["LBXSCR"] = -0.184 + 0.960 * d["LBXSCR"]          # 肌酸酐標準化校正（僅 1999-2000）
@@ -106,6 +126,20 @@ def load_all(verbose=True):
             print(f"[cohort] {cyc}: n={len(d)}")
     df = pd.concat(rows, ignore_index=True)
 
+    # Cystatin C（surplus 1999-2002）：兩檔各覆蓋一段，SEQN 併接
+    for cf in CYSTATIN_FILES:
+        cy = _read(cf)
+        keep = [c for c in cy.columns if c in ("SEQN", "SSCYPC")]
+        if "SSCYPC" in keep:
+            df = df.merge(cy[keep].drop_duplicates("SEQN").rename(columns={"SSCYPC": f"SSCYPC_{cf[:8]}"}), on="SEQN", how="left")
+    cys_cols = [c for c in df.columns if c.startswith("SSCYPC_")]
+    if cys_cols:
+        df["SSCYPC"] = df[cys_cols].bfill(axis=1).iloc[:, 0]
+        df = df.drop(columns=cys_cols)
+    # HDL 名稱跨週期不同（99-01 LBDHDL、03-04 LBXHDD）→ 合併為單欄
+    if "LBXHDD" in df.columns:
+        df["LBDHDL"] = df.get("LBDHDL", pd.Series(np.nan, index=df.index)).fillna(df["LBXHDD"])
+        df = df.drop(columns=["LBXHDD"])
     ana = _read(ANA_FILES[0])
     ana_cols = [c for c in ana.columns if c != "SEQN"]
     df = df.merge(ana.drop_duplicates("SEQN"), on="SEQN", how="left", indicator="in_ana")
