@@ -67,12 +67,34 @@ OASBUD 原始 RF 档已通过官方 MD5，但 MAT 结构没有提供文献所述
 这些负结果显示自然影像固定特征无法直接迁移到甲状腺病理。Batch 2 尚未开启；
 下一项方法改良必须使用超音波专用预训练或端到端微调，而不是继续试 pooling 或翻转标签。
 
+USF-MAE 的 checksum 鎖定 ViT-B/16 pilot 同樣未通過門檻：patch-token mean AUROC `0.454`、
+CLS-token AUROC `0.447`。因此停止完整 6,005 張特徵抽取，Batch 2 仍未開啟。
+
+```powershell
+python thyroid_usf_mae_development.py --max-images-per-patient 3
+```
+
+## AUL 肝臟病灶開發
+
+- 來源：Zenodo DOI `10.5281/zenodo.7272660`；三個官方壓縮檔 MD5 均核對一致
+- 主任務：良性 vs 惡性，635 位病人各一張影像；先鎖定 127 人保留集，再做任何特徵抽取
+- 開發集：508 人；v4 共保留 64 組線性、RBF、HGB、ExtraTrees 與 HOG/radiomics 組合
+- 最佳：全圖＋ROI＋擴充 radiomics 的 RBF C=10，OOF AUROC `0.874`（95% CI `0.837–0.907`）
+- 結論：未達預設 `0.90` gate；鎖定保留集保持未評估，禁止執行 `--final`
+- 權利：Zenodo 頁面要求聯絡作者、引用與適當致謝；原始資料不得重新散布
+
+```powershell
+python aul_liver_development.py
+# 僅在模型鎖狀態已達 gate 並凍結後，才允許一次性執行：
+python aul_liver_development.py --final
+```
+
 ## 擴充路線
 
 詳見 `params/data_sources.json`。優先順序是：
 
 1. BUS-BRA 建立可重現的疾病分類基線。
-2. FMC-UIA 2026 多器官資料做共享超音波 encoder 預訓練，再回到各疾病任務驗證。
+2. 取得 GPU 後，在 AUL/甲狀腺開發分割做端到端或病灶定位式微調；不可使用鎖定集選模型。
 3. URI-CADS 真實腎臟病理影像、Open Kidney Dataset 與 EchoNet-Dynamic 需先完成各自的人工註冊／使用條款。
 4. 只有拿到「同一病人的檢驗＋超音波」資料後，才允許血液與影像融合。
 

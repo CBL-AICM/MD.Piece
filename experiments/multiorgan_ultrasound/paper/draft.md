@@ -29,6 +29,7 @@ Can a label-source-free, interpretable ultrasound lesion representation retain m
 | OASBUD | RF development only | patient mapping unavailable | 100 lesions / 2 RF planes | biopsy or two-year follow-up |
 | Thyroid pathology US Batch 1 | organ-expansion development | 601 | 6,005 images | direct histopathology |
 | Thyroid pathology US Batch 2 | locked external test | 241 eligible | 2,495 images | direct histopathology |
+| AUL liver ultrasound | organ-expansion development + sealed holdout | 635 | 635 lesion images | expert benign/malignant labels and masks |
 
 Four TCIA normal cases were excluded before evaluation because the task is lesion malignancy and they have no lesion mask. Four BUS-UCLM images from patient `HESN` were excluded because image and mask dimensions differ and no registration transform is supplied.
 
@@ -56,6 +57,15 @@ The expert mask contains clinically meaningful shape information, but it is not 
 
 Expansion to pathology-labeled thyroid ultrasound produced near-chance patient-level performance with frozen ImageNet features: whole-image weak-label aggregation AUROC 0.484 (95% CI 0.435–0.532) and nested gated-attention MIL AUROC 0.489 (95% CI 0.441–0.537). Fixed mean, max, and concatenated pooling ranged from 0.441 to 0.473. These negative results were retained. The independent thyroid Batch 2 remains unopened because the representation is not yet adequate.
 
+An additional checksum-locked ultrasound-specific representation did not solve this problem. We evaluated the official 100-epoch USF-MAE ViT-B/16 checkpoint, pretrained on the 46-dataset OpenUS collection, using a label-blind pilot of at most three evenly spaced images per Batch 1 patient (1,796 images; all 601 patients). Nested patient-level validation selected logistic-regression regularization inside each outer fold. Mean patch-token pooling achieved AUROC 0.454 (95% CI 0.408–0.500), and CLS-token pooling achieved 0.447 (95% CI 0.399–0.494). Because both failed the prespecified gate of improving on the 0.484 frozen ImageNet baseline, full-image extraction was stopped and Batch 2 remained unopened.
+
+For liver expansion, the checksum-verified AUL collection provided 200 benign and 435 malignant one-image-per-patient
+lesions. Before feature extraction, 127 patients (40 benign, 87 malignant) were deterministically locked as a same-source
+holdout. On the remaining 508 development patients, all 64 v4 configurations were retained. The best model combined
+whole-image and ROI embeddings with expanded morphology, intensity, gradient, ring, and GLCM radiomics in an RBF SVM
+(C=10), reaching OOF AUROC 0.874 (95% CI 0.837–0.907). Adding a dependency-free HOG representation did not improve the
+selection. Since the result failed the prespecified 0.90 development gate, the holdout was not evaluated.
+
 ## Next locked analysis
 
-Freeze a multi-source, patient-weighted breast representation using BUS-BRA, TCIA, and BUS-UCLM as development data. Use OASBUD only for RF method development because its public MAT file lacks the reported patient mapping. For thyroid, replace ImageNet fixed features with ultrasound-specific pretraining or end-to-end fine-tuning, validate only on Batch 1, and open Batch 2 once after the method is frozen. The target is AUROC 0.90 with a confidence interval reported regardless of outcome.
+Freeze a multi-source, patient-weighted breast representation using BUS-BRA, TCIA, and BUS-UCLM as development data. Use OASBUD only for RF method development because its public MAT file lacks the reported patient mapping. For thyroid, frozen ImageNet and frozen USF-MAE features have both failed; the next justified method is label-efficient end-to-end adaptation or lesion-localized supervision, validated only on Batch 1. For AUL, continue only with materially different GPU-based representation learning on the 508-patient development partition. Open either locked test set once, and only after its method is frozen and its development gate is met. The target is AUROC 0.90 with a confidence interval reported regardless of outcome.

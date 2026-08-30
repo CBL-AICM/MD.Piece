@@ -33,10 +33,18 @@ only modestly and does not establish nephritis detection.
 | BUS-UCLM domain-invariant mask features, grouped OOF | 35 | AUROC 0.925 (0.840–0.974) |
 | Thyroid Batch 1 frozen whole-image baseline | 601 | AUROC 0.484 (0.435–0.532) |
 | Thyroid Batch 1 nested gated-attention MIL | 601 | AUROC 0.489 (0.441–0.537) |
+| Thyroid Batch 1 frozen USF-MAE patch mean pilot | 601 | AUROC 0.454 (0.408–0.500) |
+| Thyroid Batch 1 frozen USF-MAE CLS pilot | 601 | AUROC 0.447 (0.399–0.494) |
+| AUL liver development, whole + ROI + expanded radiomics RBF | 508 | AUROC 0.874 (0.837–0.907) |
 
-The breast internal score above 0.90 did not transfer at that level to TCIA. Thyroid fixed ImageNet features failed
-near chance, so locked Thyroid Batch 2 remains unopened. OASBUD remains RF-method-development-only because its
+The breast internal score above 0.90 did not transfer at that level to TCIA. Thyroid fixed ImageNet features and a
+checksum-pinned ultrasound-specific USF-MAE encoder both failed near chance, so locked Thyroid Batch 2 remains unopened.
+OASBUD remains RF-method-development-only because its
 public MAT file lacks the patient mapping needed for strict patient-level evaluation.
+
+The AUL liver experiment evaluated all 64 recorded v4 configurations on a 508-patient development partition.
+HOG did not improve the selected model. Because the best development AUROC was 0.874 rather than the prespecified
+0.90 gate, the 127-patient same-source holdout (40 benign, 87 malignant) remains sealed and unevaluated.
 
 ## Interpretation
 

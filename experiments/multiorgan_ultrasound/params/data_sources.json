@@ -78,6 +78,36 @@
       "warning": "8 Batch 2 images from case number 200 have no pathology row and are excluded before evaluation"
     },
     {
+      "id": "aul_liver",
+      "organ": "liver",
+      "task": "normal, benign mass, malignant mass classification and segmentation",
+      "patients": 735,
+      "images": 735,
+      "source": "https://doi.org/10.5281/zenodo.7272660",
+      "archive_md5": {
+        "Benign.zip": "c37fef0cb2730236a79ef57e5315995e",
+        "Malignant.zip": "63894a9e5654a69c3b94bda84071dfb0",
+        "Normal.zip": "a7e16299b2cf12ca4a6c3468d2e4978f"
+      },
+      "access": "official_archives_downloaded_and_checksum_verified",
+      "role": "liver lesion development plus preregistered same-source patient holdout",
+      "rights_warning": "Zenodo record requests author contact, publication citation, and appropriate credit; do not redistribute raw data"
+    },
+    {
+      "id": "usf_mae_100ep",
+      "organ": "multi-organ ultrasound representation",
+      "task": "self-supervised frozen feature extraction",
+      "pretraining_images": 370000,
+      "pretraining_datasets": 46,
+      "source": "https://github.com/Yusufii9/USF-MAE",
+      "source_commit": "e58c29127e1a0e707fbc4e754db4eb67fbb964f6",
+      "checkpoint": "USF-MAE 100 epochs",
+      "checkpoint_sha256": "f815c629878c17136985af9f4fdc81c2cfa02a94e4d992c026699957f75ccb66",
+      "facebook_mae_commit": "efb2a8062c206524e35e47d04501ed4f544c0ae8",
+      "access": "official_checkpoint_downloaded_and_checksum_locked",
+      "role": "thyroid Batch 1 representation development only; Batch 2 remains locked"
+    },
+    {
       "id": "fmc_uia_2026",
       "organ": "multi-organ",
       "task": "27 ultrasound segmentation/classification/detection/regression tasks",
