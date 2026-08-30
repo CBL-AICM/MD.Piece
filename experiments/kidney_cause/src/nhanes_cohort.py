@@ -73,11 +73,21 @@ FEATURE_LABELS = {
 DERIVED = dict(ACR="尿白蛋白/肌酸酐比（mg/g）", eGFR="估計腎絲球過濾率（CKD-EPI 2021）", NLR="嗜中性球/淋巴球比")
 
 
+# 跨週期變數別名：同一檢驗在不同週期的 SAS 名不同，讀檔即統一
+#   LBDSCR  = 血清肌酸酐（2001-2002）；其餘週期為 LBXSCR
+#   （2026-08-30 稽核發現：漏了這個別名會讓整個 2001-2002 週期的肌酸酐被靜默丟棄，
+#     導致 708 人無 eGFR、753 人無法 KDIGO 分期——缺值看似是資料特性，實為合併缺陷）
+ALIASES = {"LBDSCR": "LBXSCR"}
+
+
 def _read(key):
     p = os.path.join(RAW, key)
     require_real(p)
     df = pd.read_sas(p, format="xport")
     df.columns = [c.upper() for c in df.columns]
+    for src, dst in ALIASES.items():
+        if src in df.columns and dst not in df.columns:
+            df = df.rename(columns={src: dst})
     return df
 
 
