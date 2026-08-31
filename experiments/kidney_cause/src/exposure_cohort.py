@@ -72,6 +72,12 @@ WEIGHT_PAT = ("WTS", "WTF", "WTM", "WTD", "WTI", "SDM", "SDD")
 # 內建陰性對照：砷貝他因為海鮮來源的**無毒**砷形式。
 # 若總砷關聯顯著而砷貝他因不顯著 → 支持真實毒性效應；若砷貝他因也顯著 → 是飲食混淆。
 ARSENIC_NEGATIVE_CONTROL = "URXUAB"
+# ── 結果定義所用之變數——**絕不可當暴露**（通道消耗規則）
+#   kidney_damage = (eGFR<60) | (ACR>=30)
+#   eGFR ← LBXSCR；ACR ← URXUMA / (URXUCR/100)
+#   2026-08-31 稽核：URXUCR 曾被納入暴露清單，且其 _percr 版本＝常數 100（完全退化）。
+OUTCOME_SOURCE_VARS = {"LBXSCR", "LBXSCR_raw", "URXUMA", "URXUCR", "URDUMA", "URDUCR",
+                       "eGFR", "ACR", "kidney_damage"}
 DRUG_NAME_VARS = ["RXDDRUG", "RXD240B", "RXDDRGID"]
 DRUG_DAYS_VARS = ["RXDDAYS", "RXD260"]
 
@@ -213,6 +219,10 @@ def build(P=None, verbose=True):
         if verbose:
             print(f"     納入 {added} 個變數（有值 >500 人且非二元）")
 
+    # 結果來源變數一律剔除（通道消耗規則）——必須在建校正版之前做
+    urinary = [c for c in urinary if c not in OUTCOME_SOURCE_VARS]
+    exposures = [c for c in exposures if c not in OUTCOME_SOURCE_VARS]
+
     # 尿液暴露的肌酸酐校正——**同時保留未校正值**
     # CKD 患者尿肌酸酐本身改變，校正後有系統性偏誤；兩者並列讓讀者看得到差異。
     if urinary and "URXUCR" in df.columns:
@@ -252,7 +262,11 @@ def build(P=None, verbose=True):
     covars += ["age", "sex", "race_black", "race_hisp"]
 
     exposures = [e for e in dict.fromkeys(exposures)                       # 去重、保序
-                 if not e.startswith(WEIGHT_PAT)]                          # 權重防呆（雙保險）
+                 if not e.startswith(WEIGHT_PAT)                           # 權重防呆（雙保險）
+                 and e not in OUTCOME_SOURCE_VARS                          # 結果來源防呆（雙保險）
+                 and e.replace("_percr", "") not in OUTCOME_SOURCE_VARS    # 其校正版亦然
+                 and df[e].notna().sum() >= 500                            # 有效樣本下限
+                 and df[e].nunique(dropna=True) > 8]                       # 排除退化／常數欄
     counts = dict(n_adults=int(len(df)), n_outcome_known=int(df["kidney_damage"].notna().sum()),
                   n_kidney_damage=int(df["kidney_damage"].sum()),
                   n_exposures=len(exposures), exposures=exposures, covariates=covars,
