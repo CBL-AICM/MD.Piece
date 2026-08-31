@@ -29,10 +29,16 @@
   盛行率 0.019）。故最終模型加保序回歸（isotonic）校準，**只在內層折上配適**。
 * **作業點**：篩檢用途，事前指定**作答者敏感度 ≥ 0.80**——漏掉一例感染的代價
   高於多開一張肝炎血清學單（該檢驗便宜、無創、無風險）。
-* **拒答帶**：雙門檻於內層折選定，限制條件為**拒答率 ≤ 30%**，在此限制下最大化
-  作答者平衡正確率。
-* **成功判準**：作答者敏感度 ≥ 0.80 **且** 拒答率 ≤ 30% **且** 保留集 AUROC 之
-  CI 下界 > 0.70。未達成則照實報告，不調參。
+* **拒答帶**：雙門檻只在**相異值**上搜尋（防保序回歸並列值造成退化區間），
+  且以**分半法樣本外驗證**——A 折選、B 折驗，兩邊都滿足條件才算可行解。
+* **成功判準（四項全過才算成立）**：作答者敏感度 ≥ 0.80、**特異度 ≥ 0.50**、
+  拒答率 ≤ 30%、保留集 AUROC 之 CI 下界 > 0.70。
+  未達成則照實報告，**不放寬條件、不退回單門檻、不調參**。
+  找不到可行作業點時直接輸出 `status="INFEASIBLE"`——這是有效的研究結論，不是失敗。
+
+> v1 曾以較寬的條件（無特異度下限、分位數選門檻、未做樣本外驗證）通過 2/3 項，
+> 但保留集特異度僅 0.241（標記幾乎所有人）、拒答率 57.3%。該結果已證實為
+> 實作缺陷所致，修正紀錄見下方程式碼註解。
 
 ## 關於保留集的誠實聲明
 
@@ -66,7 +72,7 @@ from sklearn.impute import SimpleImputer                        # noqa: E402
 from sklearn.linear_model import LogisticRegression             # noqa: E402
 from sklearn.metrics import (average_precision_score, balanced_accuracy_score,   # noqa: E402
                              brier_score_loss, roc_auc_score)
-from sklearn.model_selection import RepeatedStratifiedKFold, StratifiedKFold     # noqa: E402
+from sklearn.model_selection import StratifiedKFold                             # noqa: E402
 from sklearn.preprocessing import StandardScaler                # noqa: E402
 
 from nhanes_cohort import build_extended                        # noqa: E402
@@ -77,9 +83,26 @@ RESULTS = os.path.join(ROOT, "results")
 
 # ── 事前登錄常數，不得於見到結果後修改
 MIN_SENSITIVITY = 0.80        # 作答者敏感度下限（篩檢用途）
+MIN_SPECIFICITY = 0.50        # 作業者特異度下限——v2 新增，見下
 MAX_ABSTAIN = 0.30            # 拒答率上限
 MIN_HOLDOUT_CI_LOWER = 0.70   # 保留集 AUROC 之 CI 下界
+MIN_BAND_MASS_OUTSIDE = 0.70  # 帶外樣本比例下限（＝拒答率上限的另一種表述，用於並列值防呆）
 HOLDOUT_FRAC = 0.25
+N_DEPLOY_FOLDS = 5            # 部署用交叉配適集成的折數
+
+# ── v2 修正紀錄（2026-08-31）
+# v1 的作業點無法轉移：開發集拒答 24.9% → 保留集 57.3%，特異度 0.451 → 0.241。
+# 三個實作缺陷，逐一修正：
+#   ① 並列值：保序回歸輸出階梯函數，大量樣本共用同一數值。v1 以分位數選門檻，
+#      選出帶寬 0.001 的退化區間，保留集 57% 樣本恰落在單一並列值上全部被拒答。
+#      → v2 改為只在**相異值**上搜尋，並強制帶外樣本 ≥70%。
+#   ② 分數分布不匹配：v1 選門檻用 OOF 機率，部署卻用全開發集重配適的模型，
+#      後者分數系統性更極端，套用同一門檻即失準。
+#      → v2 部署端改用**交叉配適集成**（5 折模型取平均），與 OOF 同分布。
+#   ③ 門檻在選它的那份資料上驗證：v1 未做樣本外確認。
+#      → v2 以分半法（A 折選、B 折驗）只保留兩邊都滿足條件者。
+# 另新增特異度下限 0.50——v1 保留集特異度 0.241 等於標記幾乎所有人，
+# 這種規則即使敏感度 1.000 也沒有臨床意義，故列為硬條件。
 
 
 def _fit(Xtr, ytr, seed):
@@ -94,34 +117,57 @@ def _fit(Xtr, ytr, seed):
                  intercept=float(lr.intercept_[0])))
 
 
-def pick_bands(p, y, min_sens=MIN_SENSITIVITY, max_abstain=MAX_ABSTAIN):
-    """在內層機率上選雙門檻：拒答率≤上限、作答者敏感度≥下限，其中最大化作答者平衡正確率。
+def _band_metrics(p, y, lo, hi):
+    """給定雙門檻，回傳 (拒答率, 敏感度, 特異度, 平衡正確率)；無法計算時回 None。"""
+    ans = (p <= lo) | (p >= hi)
+    if ans.sum() < 30:
+        return None
+    ya, pa = y[ans], (p[ans] >= hi).astype(int)
+    if ya.sum() == 0 or (1 - ya).sum() == 0:
+        return None
+    return (float(1 - ans.mean()), float(pa[ya == 1].mean()), float(1 - pa[ya == 0].mean()),
+            float(balanced_accuracy_score(ya, pa)))
 
-    回傳 (t_low, t_high, 診斷資訊)。找不到可行解時回退為單門檻（拒答率 0）。"""
-    qs = np.quantile(p, np.linspace(0.01, 0.99, 60))
-    best, best_score = None, -1.0
-    for i, lo in enumerate(qs):
-        for hi in qs[i:]:
-            ans = (p <= lo) | (p >= hi)
-            ab = 1.0 - ans.mean()
-            if ab > max_abstain or ans.sum() < 30:
-                continue
-            ya, pa = y[ans], (p[ans] >= hi).astype(int)
-            if ya.sum() == 0 or (1 - ya).sum() == 0:
-                continue
-            sens = float(pa[ya == 1].mean())
-            if sens < min_sens:
-                continue
-            score = balanced_accuracy_score(ya, pa)
-            if score > best_score:
-                best_score, best = score, (float(lo), float(hi),
-                                           dict(abstain_rate=float(ab), sensitivity=sens,
-                                                balanced_accuracy=float(score), feasible=True))
-    if best is None:   # 無可行解：退為單門檻，如實標記
-        thr = float(np.quantile(p, 1 - min(0.5, max(0.05, y.mean() * 3))))
-        return thr, thr, dict(abstain_rate=0.0, feasible=False,
-                              note="事前限制條件下無可行雙門檻——退回單門檻並照實標記")
-    return best
+
+def pick_bands(p, y, seed, min_sens=MIN_SENSITIVITY, min_spec=MIN_SPECIFICITY,
+               max_abstain=MAX_ABSTAIN):
+    """雙門檻選擇——v2：只搜相異值（防並列退化）、分半驗證（防選它的那份資料上才成立）。
+
+    在 A 折上搜尋滿足全部條件者，逐一拿到 B 折驗證；只保留**兩邊都滿足**的候選，
+    取其中 B 折平衡正確率最高者。回傳 (t_low, t_high, 診斷)。"""
+    uniq = np.unique(p)
+    grid = uniq if len(uniq) <= 80 else uniq[np.linspace(0, len(uniq) - 1, 80).astype(int)]
+    folds = list(StratifiedKFold(2, shuffle=True, random_state=seed).split(p.reshape(-1, 1), y))
+    tried, feasible_both = 0, []
+    for ia, ib in folds:                                   # 兩個方向都做（A選B驗、B選A驗）
+        pa_, ya_, pb_, yb_ = p[ia], y[ia], p[ib], y[ib]
+        for i, lo in enumerate(grid):
+            for hi in grid[i:]:
+                tried += 1
+                ma = _band_metrics(pa_, ya_, lo, hi)
+                if ma is None:
+                    continue
+                ab_a, se_a, sp_a, _ = ma
+                if ab_a > max_abstain or se_a < min_sens or sp_a < min_spec:
+                    continue
+                mb = _band_metrics(pb_, yb_, lo, hi)       # 樣本外確認
+                if mb is None:
+                    continue
+                ab_b, se_b, sp_b, bacc_b = mb
+                if ab_b > max_abstain or se_b < min_sens or sp_b < min_spec:
+                    continue
+                feasible_both.append((bacc_b, float(lo), float(hi), ab_b, se_b, sp_b))
+    if not feasible_both:
+        return None, None, dict(feasible=False, n_tried=tried,
+                                note="全部條件（敏感度≥%.2f、特異度≥%.2f、拒答≤%.0f%%）"
+                                     "在分半驗證下無可行雙門檻——不退回單門檻，照實回報失敗"
+                                     % (min_sens, min_spec, max_abstain * 100))
+    feasible_both.sort(reverse=True)
+    bacc, lo, hi, ab, se, sp = feasible_both[0]
+    return lo, hi, dict(feasible=True, n_tried=tried, n_feasible=len(feasible_both),
+                        holdin_verified=dict(abstain_rate=ab, sensitivity=se, specificity=sp,
+                                             balanced_accuracy=bacc),
+                        band_mass_outside=float(((p <= lo) | (p >= hi)).mean()))
 
 
 def evaluate(y, p, t_low, t_high):
@@ -182,28 +228,43 @@ def run(seed=20260830, verbose=True):
     if verbose:
         print(f"[分割] 開發 {len(yd)}（陽性 {yd.sum()}）／保留 {len(yt)}（陽性 {yt.sum()}）")
 
-    # ── 開發集上：巢狀 CV 取 OOF 機率 → 校準 → 選拒答帶
+    # ── 部署用交叉配適集成：OOF 分數與部署分數同分布（v2 修正 ②）
     if verbose:
-        print("\n[訓練] 開發集 5×5 重複分層 CV → OOF 機率")
-    acc, cnt = np.zeros(len(yd)), np.zeros(len(yd))
-    for tr, va in RepeatedStratifiedKFold(n_splits=5, n_repeats=5, random_state=seed).split(Xd, yd):
-        f, _ = _fit(Xd[tr], yd[tr], seed)
-        acc[va] += f(Xd[va])
-        cnt[va] += 1
-    oof_raw = acc / np.maximum(cnt, 1)
+        print(f"\n[訓練] 開發集 {N_DEPLOY_FOLDS} 折交叉配適集成（部署端用同一批折模型取平均）")
+    oof_raw = np.zeros(len(yd))
+    fold_models, fold_params = [], []
+    for tr, va in StratifiedKFold(N_DEPLOY_FOLDS, shuffle=True, random_state=seed).split(Xd, yd):
+        f, pr = _fit(Xd[tr], yd[tr], seed)
+        oof_raw[va] = f(Xd[va])
+        fold_models.append(f)
+        fold_params.append(pr)
 
-    # 校準：內層 5 折上配適保序回歸，避免用同一筆資料既校準又評估
     if verbose:
-        print("[校準] 保序回歸（內層 5 折，不用同一筆資料既校準又評估）")
+        print("[校準] 保序回歸（內層 5 折配適，不用同一筆資料既校準又評估）")
     oof_cal = np.zeros(len(yd))
     for tr, va in StratifiedKFold(5, shuffle=True, random_state=seed).split(oof_raw.reshape(-1, 1), yd):
         iso = IsotonicRegression(out_of_bounds="clip").fit(oof_raw[tr], yd[tr])
         oof_cal[va] = iso.predict(oof_raw[va])
 
-    t_low, t_high, band_info = pick_bands(oof_cal, yd)
+    t_low, t_high, band_info = pick_bands(oof_cal, yd, seed)
+    if not band_info.get("feasible"):
+        if verbose:
+            print(f"\n❌ [作業點] {band_info['note']}")
+            print(f"   已試 {band_info['n_tried']} 組門檻組合。**不放寬條件、不退回單門檻。**")
+        PL._dump(dict(version="v2", status="INFEASIBLE", created=time.strftime("%Y-%m-%dT%H:%M:%S"),
+                      prereg=dict(min_sensitivity=MIN_SENSITIVITY, min_specificity=MIN_SPECIFICITY,
+                                  max_abstain=MAX_ABSTAIN),
+                      band_search=band_info,
+                      conclusion="在全部事前條件下無可行作業點——模型的判別力不足以同時滿足"
+                                 "敏感度、特異度與拒答率三項要求。照實回報，不放寬條件。"),
+                     "final_model.json")
+        return dict(status="INFEASIBLE", band_search=band_info)
     if verbose:
-        print(f"[作業點] 拒答帶 [{t_low:.4f}, {t_high:.4f})　可行={band_info.get('feasible')}"
-              f"　內層拒答率 {band_info.get('abstain_rate', 0):.1%}")
+        hv = band_info["holdin_verified"]
+        print(f"[作業點] 拒答帶 [{t_low:.5f}, {t_high:.5f})　可行解 {band_info['n_feasible']} 組"
+              f"（已通過分半樣本外驗證）")
+        print(f"          驗證折：拒答 {hv['abstain_rate']:.1%}｜敏感度 {hv['sensitivity']:.3f}"
+              f"｜特異度 {hv['specificity']:.3f}")
 
     dev_metrics = evaluate(yd, oof_cal, t_low, t_high)
     if verbose:
@@ -212,10 +273,13 @@ def run(seed=20260830, verbose=True):
               f"｜作答者敏感度 {dev_metrics.get('answered_sensitivity', float('nan')):.3f}"
               f"／特異度 {dev_metrics.get('answered_specificity', float('nan')):.3f}")
 
-    # ── 全開發集重配適 → 可攜出參數；並在保留集上評一次
-    predict, params = _fit(Xd, yd, seed)
+    # ── 保留集：以「折模型平均」評分，與 OOF 同分布（v2 修正 ②）
     iso_full = IsotonicRegression(out_of_bounds="clip").fit(oof_raw, yd)
-    p_te = iso_full.predict(predict(Xt))
+    p_te = iso_full.predict(np.mean([f(Xt) for f in fold_models], axis=0))
+    params = dict(ensemble_folds=fold_params, n_folds=N_DEPLOY_FOLDS,
+                  isotonic_x=iso_full.X_thresholds_.tolist(),
+                  isotonic_y=iso_full.y_thresholds_.tolist(),
+                  usage="對新樣本：各折模型各算一次機率取平均 → 以 isotonic_x/y 線性內插校準 → 比對拒答帶")
     rng = np.random.default_rng(seed)
     boots = [roc_auc_score(yt[b], p_te[b]) for b in
              (rng.integers(0, len(yt), len(yt)) for _ in range(1000)) if 0 < yt[b].sum() < len(b)]
@@ -233,21 +297,27 @@ def run(seed=20260830, verbose=True):
     # ── 事前判準判定（程式比對，不容事後詮釋）
     verdict = dict(
         sensitivity_ok=bool(ho.get("answered_sensitivity", 0) >= MIN_SENSITIVITY),
+        specificity_ok=bool(ho.get("answered_specificity", 0) >= MIN_SPECIFICITY),
         abstain_ok=bool(ho["abstain_rate"] <= MAX_ABSTAIN),
         holdout_ci_ok=bool(ho["auroc_ci"][0] > MIN_HOLDOUT_CI_LOWER))
     verdict["all_met"] = bool(all(verdict.values()))
 
     # ── 係數（可讀性；標準化尺度）
-    coefs = sorted(zip(ff, params["coef"]), key=lambda t: -abs(t[1]))[:15]
+    mean_coef = np.mean([fp["coef"] for fp in fold_params], axis=0)
+    coefs = sorted(zip(ff, mean_coef.tolist()), key=lambda t: -abs(t[1]))[:15]
 
     out = dict(
-        model="腎損傷者感染性病因分診（LR＋保序校準＋拒答帶）", seed=seed,
+        model="腎損傷者感染性病因分診（LR 交叉配適集成＋保序校準＋拒答帶）", version="v2",
+        seed=seed,
+        holdout_evaluation_number=2,
+        holdout_note="**這是同一保留集的第二次評估**。v1 因作業點實作缺陷失敗（並列值退化、分數分布不匹配、門檻未經樣本外驗證），v2 修正後重評。第二次評估不具「一生一次」的統計保證，須計入多重比較。",
         created=time.strftime("%Y-%m-%dT%H:%M:%S"),
         cohort=dict(source="NHANES 1999–2018（10 週期，131 檔真實檔案）", n=int(len(y)),
                     n_pos=int(y.sum()), prevalence=float(y.mean()),
                     n_dev=int(len(yd)), n_holdout=int(len(yt))),
         features=ff, n_features=len(ff), label_adjacent_removed=sorted(adj),
-        prereg=dict(min_sensitivity=MIN_SENSITIVITY, max_abstain=MAX_ABSTAIN,
+        prereg=dict(min_sensitivity=MIN_SENSITIVITY, min_specificity=MIN_SPECIFICITY,
+                    max_abstain=MAX_ABSTAIN,
                     min_holdout_ci_lower=MIN_HOLDOUT_CI_LOWER,
                     model_choice_reason="HGB 於本任務的優勢經證實為過擬合（見 TRAINING_SUMMARY §5.1）"),
         operating_point=dict(t_low=t_low, t_high=t_high, **band_info),
@@ -265,7 +335,7 @@ def run(seed=20260830, verbose=True):
                      "不構成臨床診斷工具"])
     PL._dump(out, "final_model.json")
     with open(os.path.join(RESULTS, "runs_log.jsonl"), "a", encoding="utf-8") as f:
-        f.write(json.dumps(dict(kind="FINAL_MODEL", at=out["created"], **verdict,
+        f.write(json.dumps(dict(kind="FINAL_MODEL_V2", holdout_eval_n=2, at=out["created"], **verdict,
                                 holdout_auroc=ho["auroc_all"], holdout_ci=ho["auroc_ci"],
                                 abstain=ho["abstain_rate"]), ensure_ascii=False) + "\n")
     if verbose:
