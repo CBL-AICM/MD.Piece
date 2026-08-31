@@ -107,14 +107,26 @@ def run(seed=20260830, verbose=True):
               r["exposure"] in ("URXUDMA", "URXUMMA")]
     arsenic_check = None
     if ab and as_tox:
+        # 2026-08-31 修正：先前只看顯著性不看**方向**。
+        # 毒性砷形式若呈「保護」方向（OR<1），那與毒性無關——
+        # 那是尿液排泄減少的假象（eGFR↓ → 尿中排出減少 → 濃度看似較低）。
         tox_sig = [r["exposure"] for r in as_tox if r["significant_fdr05"]]
+        tox_harmful = [r["exposure"] for r in as_tox
+                       if r["significant_fdr05"] and r["headline"]["or_per_sd"] > 1]
+        tox_protective = [r["exposure"] for r in as_tox
+                          if r["significant_fdr05"] and r["headline"]["or_per_sd"] < 1]
         arsenic_check = dict(
             arsenobetaine_significant=bool(ab["significant_fdr05"]),
             arsenobetaine_q=ab["q_bh"], toxic_species_significant=tox_sig,
+            toxic_species_harmful_direction=tox_harmful,
+            toxic_species_protective_direction=tox_protective,
             interpretation=(
                 "⚠️ 砷貝他因（無毒海鮮形式）也顯著——砷的訊號可能是飲食混淆而非毒性"
                 if ab["significant_fdr05"] else
-                "✅ 砷貝他因不顯著而毒性形式顯著——支持真實毒性效應" if tox_sig else
+                "✅ 砷貝他因不顯著、毒性形式呈有害方向——支持真實毒性效應" if tox_harmful else
+                "❌ 毒性形式雖顯著但呈**保護**方向——與毒性不符，"
+                "係尿液排泄減少之假象（eGFR↓→尿中濃度↓），不可解讀為砷無害或有益"
+                if tox_protective else
                 "毒性形式未達顯著——無可判讀之砷訊號"))
         if verbose:
             print(f"\n[砷內建對照] {arsenic_check['interpretation']}")

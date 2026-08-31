@@ -178,17 +178,28 @@ def scan(df, exposures, outcome="kidney_damage", seed=20260830, verbose=True):
     return rows
 
 
+# 對照組的**暴露名稱**（非藥品名）——exposure_cohort.DRUG_CLASSES 的鍵
+# 2026-08-31 修正：先前以藥品名（IBUPROFEN…）比對暴露名（藥_NSAID），永遠比不中，
+# 導致對照檢查恆回報「陽性對照未被掃出」。類別前綴已編碼對照身分，直接用它。
+POSITIVE_CONTROL_EXPOSURES = {"藥_NSAID", "藥_鋰鹽", "藥_PPI", "藥_胺基醣苷", "藥_鈣調磷酸酶"}
+NEGATIVE_CONTROL_PREFIX = "藥陰_"
+
+
 def control_check(rows, verbose=True):
     """陽性／陰性對照判定——決定其餘結果可不可信。"""
-    def _hit(names):
-        return [r for r in rows if r["significant_fdr05"] and
-                any(n in r["exposure"].upper() for n in names)]
-    pos_all = [n for v in POSITIVE_CONTROLS.values() for n in v]
-    neg_all = [n for v in NEGATIVE_CONTROLS.values() for n in v]
-    pos, neg = _hit(pos_all), _hit(neg_all)
+    pos = [r for r in rows if r["significant_fdr05"]
+           and r["exposure"] in POSITIVE_CONTROL_EXPOSURES]
+    neg = [r for r in rows if r["significant_fdr05"]
+           and r["exposure"].startswith(NEGATIVE_CONTROL_PREFIX)]
+    n_pos_scanned = sum(1 for r in rows if r["exposure"] in POSITIVE_CONTROL_EXPOSURES)
+    n_neg_scanned = sum(1 for r in rows if r["exposure"].startswith(NEGATIVE_CONTROL_PREFIX))
     verdict = dict(
         positive_hits=[r["exposure"] for r in pos], n_positive=len(pos),
+        n_positive_scanned=n_pos_scanned, n_negative_scanned=n_neg_scanned,
         negative_hits=[r["exposure"] for r in neg], n_negative=len(neg),
+        caveat_indication_bias=("陰性對照乾淨只排除**一般就醫行為**偏誤，"
+                                "**不排除適應症混淆**——為特定疾病開的藥仍會與該疾病的"
+                                "併發症關聯。判讀個別藥物時必須逐一評估其適應症。"),
         has_power=bool(pos),
         bias_free=not neg,
         interpretation=(
