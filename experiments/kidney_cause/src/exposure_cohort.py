@@ -82,6 +82,26 @@ DRUG_NAME_VARS = ["RXDDRUG", "RXD240B", "RXDDRGID"]
 DRUG_DAYS_VARS = ["RXDDAYS", "RXD260"]
 
 
+def _usable(col):
+    """可用暴露的判準。
+
+    **2026-08-31 修正**：先前用 `nunique > 8` 排除退化欄，但那會把**所有二元暴露**
+    （17 個藥物類別，nunique=2）一併砍掉——導致陽性對照根本沒被掃描，
+    對照檢查回報「方法無偵測力」，差點把自己的 bug 報成研究結論。
+
+    正確判準分兩種：
+      * 常數欄（nunique<2）一律排除——`URXUCR_percr`＝100 即屬此類
+      * 二元欄：少數類至少 50 例，否則統計上無意義
+      * 連續欄：相異值 >8（避免把類別編碼當連續處理）
+    """
+    v = col.dropna()
+    if len(v) < 500 or v.nunique() < 2:
+        return False
+    if v.nunique() == 2:                       # 二元暴露（藥物類別等）
+        return int(v.value_counts().min()) >= 50
+    return v.nunique() > 8
+
+
 def _files_by_channel(man, channel):
     return [k for k, v in man.get("files", {}).items() if v.get("channel") == channel]
 
@@ -211,7 +231,7 @@ def build(P=None, verbose=True):
         df = df.merge(f, on="SEQN", how="left", suffixes=("", f"_{ch}"))
         added = 0
         for c in cols:
-            if c in df.columns and df[c].notna().sum() > 500 and df[c].nunique() > 8:
+            if c in df.columns and _usable(df[c]):
                 exposures.append(c)
                 added += 1
                 if spec["matrix"] == "urine":
@@ -265,8 +285,7 @@ def build(P=None, verbose=True):
                  if not e.startswith(WEIGHT_PAT)                           # 權重防呆（雙保險）
                  and e not in OUTCOME_SOURCE_VARS                          # 結果來源防呆（雙保險）
                  and e.replace("_percr", "") not in OUTCOME_SOURCE_VARS    # 其校正版亦然
-                 and df[e].notna().sum() >= 500                            # 有效樣本下限
-                 and df[e].nunique(dropna=True) > 8]                       # 排除退化／常數欄
+                 and _usable(df[e])]                                       # 退化欄防呆（見 _usable）
     counts = dict(n_adults=int(len(df)), n_outcome_known=int(df["kidney_damage"].notna().sum()),
                   n_kidney_damage=int(df["kidney_damage"].sum()),
                   n_exposures=len(exposures), exposures=exposures, covariates=covars,
