@@ -140,8 +140,8 @@ def run(seed=20260830, verbose=True):
     if verbose:
         print("\n══ A. 單標記掃描（監督式單變量，雙尾＋BH-FDR）")
     C = build(P, verbose=False)
-    kd, feats = C["cohort"], C["features"]
-    ana = kd[kd["in_ana_subsample"]].copy() if "in_ana_subsample" in kd.columns else kd.copy()
+    feats = C["features"]
+    ana, kd = C["primary"], C["secondary"]   # primary＝ANA 實測者（三類皆可判定）；secondary＝全腎損傷
     for tag, col in (("免疫（ANA 實測者）", "lab_immune"), ("感染", "lab_infection"),
                      ("代謝", "lab_metabolic")):
         sub = ana if "免疫" in tag else kd
