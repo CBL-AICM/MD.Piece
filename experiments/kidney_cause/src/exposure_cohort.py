@@ -57,6 +57,21 @@ DRUG_CLASSES = {
 }
 METALS = {"LBXBPB": "血鉛", "LBXBCD": "血鎘", "LBXTHG": "血汞", "LBXBSE": "血硒",
           "LBDBPB": "血鉛", "LBDBCD": "血鎘", "LBDTHG": "血汞", "LBDBSE": "血硒"}
+
+# ── 化學品／尿液通道（除藥物與血金屬外的其餘暴露）
+#   前綴規則：URX*＝尿液濃度、LBX*＝血清濃度；LBD*／URD* 多為偵測極限旗標，排除。
+CHEM_CHANNELS = {
+    "塑化劑":  dict(prefix=("URX",), matrix="urine", note="鄰苯二甲酸酯代謝物"),
+    "PFAS":    dict(prefix=("LBX",), matrix="serum", note="全氟烷基物質"),
+    "農藥":    dict(prefix=("URX",), matrix="urine", note="農藥代謝物"),
+    "尿金屬":  dict(prefix=("URX",), matrix="urine", note="尿中重金屬"),
+    "尿砷":    dict(prefix=("URX",), matrix="urine", note="尿砷（含物種分析）"),
+}
+# 調查權重變數——**絕不可當暴露**（子樣本權重，與結果無因果關係）
+WEIGHT_PAT = ("WTS", "WTF", "WTM", "WTD", "WTI", "SDM", "SDD")
+# 內建陰性對照：砷貝他因為海鮮來源的**無毒**砷形式。
+# 若總砷關聯顯著而砷貝他因不顯著 → 支持真實毒性效應；若砷貝他因也顯著 → 是飲食混淆。
+ARSENIC_NEGATIVE_CONTROL = "URXUAB"
 DRUG_NAME_VARS = ["RXDDRUG", "RXD240B", "RXDDRGID"]
 DRUG_DAYS_VARS = ["RXDDAYS", "RXD260"]
 
@@ -172,6 +187,43 @@ def build(P=None, verbose=True):
                 if verbose:
                     print(f"     {METALS[c]:6s}({c}) 有值 {int(df[c].notna().sum()):,} 人")
 
+    # ── 化學品／尿液通道（塑化劑、PFAS、農藥、尿金屬、尿砷）
+    urinary = []
+    for ch, spec in CHEM_CHANNELS.items():
+        if verbose:
+            print(f"\n[通道] {ch}（{spec['note']}）")
+        f = _load_channel(man, ch,
+                          cols_filter=lambda c, p=spec["prefix"]: (
+                              c.startswith(p) and not c.startswith(WEIGHT_PAT)),
+                          verbose=verbose)
+        if f is None:
+            if verbose:
+                print("     無可用檔案")
+            continue
+        f = f.drop_duplicates("SEQN")
+        cols = [c for c in f.columns if c != "SEQN"]
+        df = df.merge(f, on="SEQN", how="left", suffixes=("", f"_{ch}"))
+        added = 0
+        for c in cols:
+            if c in df.columns and df[c].notna().sum() > 500 and df[c].nunique() > 8:
+                exposures.append(c)
+                added += 1
+                if spec["matrix"] == "urine":
+                    urinary.append(c)
+        if verbose:
+            print(f"     納入 {added} 個變數（有值 >500 人且非二元）")
+
+    # 尿液暴露的肌酸酐校正——**同時保留未校正值**
+    # CKD 患者尿肌酸酐本身改變，校正後有系統性偏誤；兩者並列讓讀者看得到差異。
+    if urinary and "URXUCR" in df.columns:
+        ucr = df["URXUCR"].replace(0, np.nan) / 100.0
+        for c in list(urinary):
+            df[f"{c}_percr"] = df[c] / ucr
+            exposures.append(f"{c}_percr")
+        if verbose:
+            print(f"\n[尿液校正] {len(urinary)} 個尿液暴露另建肌酸酐校正版（_percr）"
+                  f"——未校正與校正版並列，兩者在 CKD 中偏誤方向不同")
+
     # ── 共變項：體位、血壓、抽菸
     for ch, want, mk in (("體位", lambda c: c == "BMXBMI", None),
                          ("血壓", lambda c: c.startswith(("BPXSY", "BPXDI")), None),
@@ -199,9 +251,15 @@ def build(P=None, verbose=True):
             df[c] = 0.0          # DEMO 未載入種族變數時以 0 佔位，並於報告標明
     covars += ["age", "sex", "race_black", "race_hisp"]
 
+    exposures = [e for e in dict.fromkeys(exposures)                       # 去重、保序
+                 if not e.startswith(WEIGHT_PAT)]                          # 權重防呆（雙保險）
     counts = dict(n_adults=int(len(df)), n_outcome_known=int(df["kidney_damage"].notna().sum()),
                   n_kidney_damage=int(df["kidney_damage"].sum()),
-                  n_exposures=len(exposures), exposures=exposures, covariates=covars)
+                  n_exposures=len(exposures), exposures=exposures, covariates=covars,
+                  urinary_exposures=urinary,
+                  arsenic_negative_control=(ARSENIC_NEGATIVE_CONTROL
+                                            if ARSENIC_NEGATIVE_CONTROL in exposures else None),
+                  n_by_exposure={e: int(df[e].notna().sum()) for e in exposures})
     if verbose:
         print(f"\n[完成] 暴露 {len(exposures)} 個｜共變項 {len(covars)} 個")
     return dict(cohort=df, exposures=exposures, covariates=covars, counts=counts)
