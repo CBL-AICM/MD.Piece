@@ -200,8 +200,74 @@ def fig3_reverse():
     plt.close(fig)
 
 
+
+
+def fig4_traps():
+    """圖四：六項被攔截的方法學陷阱——虛報值 vs 實際值。"""
+    traps = [
+        ("未受檢者被當作\n免疫陰性", 0.812, 0.584, "標籤稽核"),
+        ("血糖未拔除\n（標籤下游）", 0.913, 0.816, "洩漏量化"),
+        ("小樣本樂觀\n（感染類）", 0.876, 0.819, "擴充樣本"),
+    ]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12.2, 4.6),
+                                 gridspec_kw={"width_ratios": [1, 1.15]})
+    import numpy as np
+    x = np.arange(len(traps))
+    w = .34
+    a1.bar(x - w / 2, [t[1] for t in traps], w, label="若未攔截（虛報值）",
+           color=BAD, alpha=.85)
+    a1.bar(x + w / 2, [t[2] for t in traps], w, label="實際值", color=OK, alpha=.85)
+    for i, t in enumerate(traps):
+        a1.text(i - w / 2, t[1] + .012, f"{t[1]:.3f}", ha="center", fontsize=9.5,
+                color=BAD, weight="bold")
+        a1.text(i + w / 2, t[2] + .012, f"{t[2]:.3f}", ha="center", fontsize=9.5,
+                color=OK, weight="bold")
+        a1.text(i, max(t[1], t[2]) + .042, f"降 {t[1]-t[2]:.3f}", ha="center",
+                fontsize=9.5, color=SUB, style="italic", weight="bold")
+    a1.axhline(.9, color=WARN, ls="--", lw=1.3)
+    a1.text(-.42, .908, "原始目標 0.90", fontsize=8.5, color=WARN, ha="left", va="bottom")
+    a1.set_xticks(x); a1.set_xticklabels([t[0] for t in traps], fontsize=9.5)
+    a1.set_ylabel("AUROC", fontsize=10.5); a1.set_ylim(.5, 1.02)
+    a1.legend(fontsize=9, loc="upper center", bbox_to_anchor=(.5, -.16),
+              ncol=2, frameon=False)
+    a1.set_title("(a) 三項可量化的陷阱", fontsize=11, weight="bold", loc="left", pad=12)
+    a1.grid(axis="y", alpha=.25); a1.spines[["top", "right"]].set_visible(False)
+
+    a2.axis("off")
+    rows = [("① 未受檢者當陰性", "免疫虛報 0.812", "標籤稽核"),
+            ("② 標籤下游未拔除", "代謝虛報 0.913", "洩漏量化"),
+            ("③ 變數別名漏列", "整週期資料靜默丟棄", "缺值型態檢查"),
+            ("④ 預設值吞噬缺值", "最重分期虛報 734 例", "分布合理性檢查"),
+            ("⑤ 二元變數被誤砍", "陽性對照未被掃描", "★ 陽性對照"),
+            ("⑥ 只驗顯著不驗方向", "保護方向誤報為毒性", "方向一致性檢查")]
+    a2.text(.02, 1.0, "(b) 六項陷阱與其攔截機制", fontsize=11, weight="bold",
+            transform=a2.transAxes, va="top")
+    for i, (name, harm, guard) in enumerate(rows):
+        yy = .845 - i * .137
+        hl = i == 4
+        a2.add_patch(FancyBboxPatch((.02, yy - .052), .96, .105,
+                                    boxstyle="round,pad=0.012",
+                                    fc="#fff3e0" if hl else "#fafafa",
+                                    ec=BAD if hl else "#dddddd",
+                                    lw=1.5 if hl else .9,
+                                    transform=a2.transAxes, clip_on=False))
+        a2.text(.05, yy, name, fontsize=9.6, transform=a2.transAxes, va="center",
+                weight="bold" if hl else "normal", color=INK)
+        a2.text(.42, yy, harm, fontsize=9, transform=a2.transAxes, va="center", color=BAD)
+        a2.text(.76, yy, guard, fontsize=9, transform=a2.transAxes, va="center",
+                color=BAD if hl else OK, weight="bold" if hl else "normal")
+    a2.text(.5, .012, "★ 第 ⑤ 項偽裝成乾淨的陰性結論；攔截它的不是研究者的謹慎，"
+                      "而是事前設置的陽性對照",
+            fontsize=9, transform=a2.transAxes, ha="center", color=BAD, style="italic")
+    fig.suptitle("圖四　六項被攔截的方法學陷阱——每一次修正都使結果變差",
+                 fontsize=12.5, weight="bold", y=1.05)
+    fig.savefig(os.path.join(FIG, "圖四_方法學陷阱.png"), dpi=220,
+                bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
 if __name__ == "__main__":
     fig1_cohort(); print("[完成] 圖一_世代建立流程.png")
     fig2_discrimination(); print("[完成] 圖二_三大病因判別能力.png")
     fig3_reverse(); print("[完成] 圖三_反向因果證據.png")
+    fig4_traps(); print("[完成] 圖四_方法學陷阱.png")
     print(f"→ {FIG}")
