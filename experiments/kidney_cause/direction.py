@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""方向判定工具：丟入常規檢驗數值 → 輸出三大病因的「大概方向」。
+"""方向判定工具：丟入常規檢驗數值 → 輸出感染／代謝兩軸的「大概方向」。
 
     python direction.py train                 # 訓練並存成可攜參數（一次）
     python direction.py predict values.json   # 對新病人判定
@@ -11,7 +11,10 @@
 |---|---|---|
 | 感染方向 | ✅ 大概方向 | AUROC 0.79–0.82，十週期外測穩定 |
 | 代謝方向 | ✅ 大概方向 | AUROC 0.82；**若你手上有 HbA1c，直接看它，不需要模型** |
-| 免疫方向 | ❌ **無法判定** | AUROC 0.58，60 標記僅「性別」有關；需 C3/C4/anti-dsDNA，常規檢驗無此訊號 |
+
+**免疫軸已自本工具移除**（2026-09-03）：常規檢驗對免疫性腎損傷無訊號（AUROC 0.575，
+60 標記僅「性別」通過 FDR），與其輸出「無法判定」佔版面，不如專注兩個有訊號的軸。
+免疫軸待醫院切片資料（含 C3/C4/anti-dsDNA）到位後另建。
 
 「大概方向」的意思：**排序有意義，但單一個人的判定可能錯**。
 它告訴你「這組數值比較像哪個方向」，不是「這個人是什麼病」。
@@ -19,7 +22,6 @@
 ## 輸出格式
 
 每個軸給三樣東西：校準機率、相對盛行率的倍數、三段判定（傾向／不確定／不傾向）。
-免疫軸**不給假機率**，直接標「無法判定」並說明原因——寧可空白，不給誤導。
 
 另附「主要依據」：哪幾個數值把這個人推向該方向。這是「根據那些數值」的可追溯部分。
 """
@@ -53,9 +55,6 @@ AXES = {
     "感染": dict(label="lab_infection", adjacent=LABEL_ADJACENT["infection"]),
     "代謝": dict(label="lab_metabolic", adjacent=LABEL_ADJACENT["metabolic"]),
 }
-IMMUNE_NOTE = ("無法判定——常規檢驗對免疫性腎損傷無訊號（AUROC 0.575；60 個標記中僅「性別」"
-               "通過偽發現率校正）。判定免疫方向需補體 C3/C4、免疫球蛋白、anti-dsDNA，"
-               "此資料集皆無。")
 
 
 def _fit(X, y, seed):
@@ -80,7 +79,7 @@ def train(seed=20260830, folds=5):
     E = build_extended(P, verbose=False)
     kd, feats = E["cohort"], E["features"]
     out = dict(seed=seed, n=int(len(kd)), axes={},
-               immune=dict(available=False, note=IMMUNE_NOTE))
+               scope="感染／代謝兩軸；免疫軸已移除（常規檢驗無訊號）")
     for name, spec in AXES.items():
         ff = [f for f in feats if f not in spec["adjacent"]]
         y = kd[spec["label"]].fillna(False).astype(bool).astype(int).to_numpy()
@@ -120,7 +119,7 @@ def train(seed=20260830, folds=5):
 def predict(values, model=None, top_k=4):
     """values: dict{變數代碼: 數值}。缺的變數以訓練集中位數補，並在輸出標明。"""
     M = model or json.load(open(PARAMS, encoding="utf-8"))
-    res = dict(input_n=len(values), axes={}, immune=M["immune"])
+    res = dict(input_n=len(values), axes={})
     for name, a in M["axes"].items():
         ff = a["features"]
         x = np.array([float(values.get(f, np.nan)) for f in ff])
@@ -162,8 +161,6 @@ def render(res):
             L.append(f"        {d['push']} {d['name']}={d['value']:.3g}")
         if a["n_missing"]:
             L.append(f"        ⚠ 缺 {a['n_missing']}/{a['n_features']} 項，以中位數補入")
-    L.append(f"  免疫方向  {'─' * 10}  無法判定")
-    L.append(f"        {res['immune']['note']}")
     return "\n".join(L)
 
 
