@@ -1,0 +1,285 @@
+# -*- coding: utf-8 -*-
+"""Obsidian 主稿（.md）→ 科展格式 Word，輸出於來源同目錄；圖以來源目錄為基準解析。
+用法：python -X utf8 md2docx.py <主稿.md>
+只用已裝的 python-docx；語法覆蓋這份稿子實際用到的：#～#### 標題、段落、**粗體**、`code`、
+[[wiki]]、[t](u)、> 引用、``` 圍欄、| 表格 |、1. 與 - 清單、![[figure/x.png]]、---。
+格式：A4、邊界 2.5 cm、內文 12 pt 標楷體＋Times New Roman、頁碼置中。"""
+import io, os, re, sys
+from docx import Document
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Cm, Pt, RGBColor
+
+sys.stdout.reconfigure(encoding="utf-8")
+if len(sys.argv) < 2:
+    sys.exit("用法：python -X utf8 md2docx.py <主稿.md>")
+SRC = sys.argv[1]
+OUT = os.path.splitext(SRC)[0] + ".docx"
+BASE = os.path.dirname(SRC)
+CJK, LATIN, MONO, MONO_CJK = "標楷體", "Times New Roman", "Consolas", "細明體"
+BODY_PT = 12
+
+doc = Document()
+sec = doc.sections[0]
+sec.page_width, sec.page_height = Cm(21.0), Cm(29.7)
+sec.left_margin = sec.right_margin = sec.top_margin = sec.bottom_margin = Cm(2.5)
+
+
+def rfonts(run, mono=False):
+    rpr = run._element.get_or_add_rPr()
+    rf = rpr.find(qn("w:rFonts"))
+    if rf is None:
+        rf = OxmlElement("w:rFonts")
+        rpr.insert(0, rf)
+    lat = MONO if mono else LATIN
+    for k in ("w:ascii", "w:hAnsi", "w:cs"):
+        rf.set(qn(k), lat)
+    rf.set(qn("w:eastAsia"), MONO_CJK if mono else CJK)
+
+
+def style_run(run, size=BODY_PT, bold=None, mono=False, color=None):
+    rfonts(run, mono)
+    run.font.size = Pt(size)
+    if bold is not None:
+        run.font.bold = bold
+    if color:
+        run.font.color.rgb = RGBColor.from_string(color)
+
+
+# Normal 樣式：12 pt、1.15 倍行距、段後 6 pt
+normal = doc.styles["Normal"]
+normal.font.size = Pt(BODY_PT)
+normal.font.name = LATIN
+normal.element.rPr.rFonts.set(qn("w:eastAsia"), CJK)
+normal.paragraph_format.line_spacing = 1.15
+normal.paragraph_format.space_after = Pt(6)
+
+INLINE = re.compile(r"(\*\*.+?\*\*|`[^`]+`|!?\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\))")
+
+
+def emit(par, text, size=BODY_PT, bold=False, mono=False):
+    """把一段含行內標記的文字寫進段落。"""
+    for tok in INLINE.split(text):
+        if not tok:
+            continue
+        if tok.startswith("**") and tok.endswith("**") and len(tok) > 4:
+            emit(par, tok[2:-2], size, True, mono)
+        elif tok.startswith("`") and tok.endswith("`") and len(tok) > 2:
+            style_run(par.add_run(tok[1:-1]), size, bold, True)
+        elif tok.startswith("[[") or tok.startswith("![["):
+            inner = tok[tok.index("[[") + 2:-2]
+            style_run(par.add_run(inner.split("|")[-1]), size, bold, mono)
+        elif tok.startswith("[") and "](" in tok:
+            style_run(par.add_run(tok[1:tok.index("](")]), size, bold, mono)
+        else:
+            style_run(par.add_run(tok), size, bold, mono)
+
+
+def shade(par, fill):
+    ppr = par._p.get_or_add_pPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear"), shd.set(qn("w:color"), "auto"), shd.set(qn("w:fill"), fill)
+    ppr.append(shd)
+
+
+def left_border(par):
+    ppr = par._p.get_or_add_pPr()
+    b = OxmlElement("w:pBdr")
+    l = OxmlElement("w:left")
+    for k, v in (("w:val", "single"), ("w:sz", "18"), ("w:space", "6"), ("w:color", "BFBFBF")):
+        l.set(qn(k), v)
+    b.append(l), ppr.append(b)
+
+
+def cell_shade(cell, fill):
+    tcpr = cell._tc.get_or_add_tcPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear"), shd.set(qn("w:color"), "auto"), shd.set(qn("w:fill"), fill)
+    tcpr.append(shd)
+
+
+def heading(text, level, center=False):
+    size = {1: 20, 2: 16, 3: 14, 4: 12}[level]
+    p = doc.add_paragraph()
+    p.paragraph_format.keep_with_next = True
+    p.paragraph_format.space_before = Pt({1: 0, 2: 18, 3: 12, 4: 6}[level])
+    p.paragraph_format.space_after = Pt(6)
+    if center:
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    emit(p, text, size, True)
+    return p
+
+
+def paragraph(text, center=False, indent=False):
+    p = doc.add_paragraph()
+    if center:
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    else:
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    if indent:
+        p.paragraph_format.first_line_indent = Cm(0.85)
+    emit(p, text)
+    return p
+
+
+def caption(text):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.keep_with_next = text.startswith("**表")
+    emit(p, text, 11)
+    return p
+
+
+def blockquote(lines):
+    p = doc.add_paragraph()
+    p.paragraph_format.left_indent = Cm(0.75)
+    left_border(p)
+    for i, l in enumerate(lines):
+        if i:
+            p.add_run().add_break()
+        emit(p, l, 11)
+
+
+def code_block(lines):
+    for i, l in enumerate(lines):
+        p = doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.line_spacing = 1.0
+        p.paragraph_format.left_indent = Cm(0.3)
+        shade(p, "F2F2F2")
+        style_run(p.add_run(l if l else " "), 9, mono=True)
+    doc.add_paragraph().paragraph_format.space_after = Pt(0)
+
+
+def list_item(text, marker):
+    p = doc.add_paragraph()
+    p.paragraph_format.left_indent = Cm(0.9)
+    p.paragraph_format.first_line_indent = Cm(-0.6)
+    p.paragraph_format.space_after = Pt(3)
+    style_run(p.add_run(marker + " "), BODY_PT)
+    emit(p, text)
+
+
+def table(rows):
+    cells = [[c.strip() for c in r.strip().strip("|").split("|")] for r in rows]
+    cells = [r for r in cells if not all(re.fullmatch(r":?-{2,}:?", c or "") for c in r)]
+    ncol = max(len(r) for r in cells)
+    fs = 10 if ncol >= 6 else 10.5
+    t = doc.add_table(rows=len(cells), cols=ncol)
+    t.style = "Table Grid"
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for i, r in enumerate(cells):
+        for j in range(ncol):
+            cell = t.cell(i, j)
+            cell.paragraphs[0].paragraph_format.space_after = Pt(0)
+            cell.paragraphs[0].paragraph_format.line_spacing = 1.0
+            emit(cell.paragraphs[0], r[j] if j < len(r) else "", fs, bold=(i == 0))
+            if i == 0:
+                cell_shade(cell, "D9D9D9")
+    doc.add_paragraph().paragraph_format.space_after = Pt(0)
+
+
+def image(path):
+    full = os.path.normpath(os.path.join(BASE, path))
+    assert os.path.exists(full), full
+    doc.add_picture(full, width=Cm(15.5))
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.paragraphs[-1].paragraph_format.keep_with_next = True
+
+
+def page_number(section):
+    p = section.footer.paragraphs[0]
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run()
+    for tag, attr in (("w:fldChar", ("w:fldCharType", "begin")), ("w:instrText", None),
+                      ("w:fldChar", ("w:fldCharType", "end"))):
+        el = OxmlElement(tag)
+        if attr:
+            el.set(qn(attr[0]), attr[1])
+        else:
+            el.set(qn("xml:space"), "preserve")
+            el.text = "PAGE"
+        run._r.append(el)
+    style_run(run, 10)
+
+
+# ---------------- 逐行解析 ----------------
+lines = io.open(SRC, encoding="utf-8").read().splitlines()
+i = 0
+if lines and lines[0].strip() == "---":                      # frontmatter
+    i = lines.index("---", 1) + 1
+title_block = True
+stats = dict(h=0, p=0, tbl=0, img=0, code=0, quote=0, li=0)
+buf = []
+
+
+def flush():
+    global buf
+    if buf:
+        txt = ""
+        for l in buf:
+            if txt and not (txt[-1] > "\u2e7f" or l[0] > "\u2e7f"):
+                txt += " "
+            txt += l
+        if txt.startswith("**表") or txt.startswith("**圖"):
+            caption(txt)
+        else:
+            paragraph(txt, center=title_block)
+        stats["p"] += 1
+        buf = []
+
+
+while i < len(lines):
+    ln = lines[i]
+    s = ln.strip()
+    if not s or s == "---":
+        flush(); i += 1; continue
+    if s.startswith("> [!"):                                  # Obsidian callout（導覽），Word 不要
+        flush(); i += 1
+        while i < len(lines) and lines[i].startswith(">"):
+            i += 1
+        continue
+    m = re.match(r"^(#{1,4})\s+(.*)$", s)
+    if m:
+        flush()
+        lvl, text = len(m.group(1)), m.group(2)
+        if lvl == 1:
+            heading(text, 1, center=True)
+        elif lvl == 2 and text.startswith("——"):
+            heading(text, 3, center=True)                     # 副標
+        else:
+            if lvl == 2:
+                title_block = False
+            heading(text, lvl)
+        stats["h"] += 1; i += 1; continue
+    if s.startswith("```"):
+        flush(); i += 1; blk = []
+        while i < len(lines) and not lines[i].strip().startswith("```"):
+            blk.append(lines[i]); i += 1
+        code_block(blk); stats["code"] += 1; i += 1; continue
+    if s.startswith("|"):
+        flush(); rows = []
+        while i < len(lines) and lines[i].strip().startswith("|"):
+            rows.append(lines[i]); i += 1
+        table(rows); stats["tbl"] += 1; continue
+    if s.startswith(">"):
+        flush(); q = []
+        while i < len(lines) and lines[i].strip().startswith(">"):
+            q.append(lines[i].strip()[1:].strip()); i += 1
+        blockquote(q); stats["quote"] += 1; continue
+    m = re.match(r"^!\[\[(.+?)\]\]$|^!\[[^\]]*\]\((.+?)\)$", s)
+    if m:
+        flush(); image(m.group(1) or m.group(2)); stats["img"] += 1; i += 1; continue
+    m = re.match(r"^(\d+)\.\s+(.*)$", s)
+    if m:
+        flush(); list_item(m.group(2), m.group(1) + "."); stats["li"] += 1; i += 1; continue
+    if s.startswith("- "):
+        flush(); list_item(s[2:], "•"); stats["li"] += 1; i += 1; continue
+    buf.append(s); i += 1
+flush()
+page_number(sec)
+doc.save(OUT)
+print(f"寫出 {OUT}\n元素統計 {stats}")
