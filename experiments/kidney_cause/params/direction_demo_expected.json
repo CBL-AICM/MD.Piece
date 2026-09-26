@@ -1,12 +1,36 @@
 {
- "感染": {
-  "cal": 0.07619,
-  "band": "傾向",
-  "miss": 15
+ "SEQN": 89459,
+ "cycle": "2015-2016",
+ "labels": {
+  "hep3": 1.0,
+  "hcv3": 1.0,
+  "hbv3": 0.0,
+  "dm3": 0.0
  },
- "代謝": {
-  "cal": 0.072464,
-  "band": "不傾向",
-  "miss": 15
+ "axes": {
+  "肝炎": {
+   "cal": 0.079498,
+   "band": "傾向",
+   "miss": 16,
+   "odds_ratio": 4.34,
+   "drivers": [
+    "LBXSTP",
+    "LBXTC",
+    "LBXSCH",
+    "LBXLYPCT"
+   ]
+  },
+  "糖尿病": {
+   "cal": 0.068421,
+   "band": "不傾向",
+   "miss": 16,
+   "odds_ratio": 0.1308,
+   "drivers": [
+    "LBXSASSI",
+    "LBXSATSI",
+    "LBXSCH",
+    "LBXLYPCT"
+   ]
+  }
  }
 }
