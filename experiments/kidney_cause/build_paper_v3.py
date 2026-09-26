@@ -22,6 +22,8 @@ XV, XPH, XAM = (J("results", "external_2021_2023.json"), J("results", "external_
                 J("params", "external_validation_amendment_1.json"))
 XC = J("results", "external_2021_2023_precheck.json")["versions"]["調和（修正一）"]["features"]
 RC = J("results", "direction_v3_1_recalibration.json")["axes"]
+DV = J("results", "design_variance.json")
+DV_COMMITS = dict(plan="9edd968", results="e7d16e4")
 EXT_COMMITS = dict(amend="44b0ace", results="a7c4af8")
 FIGS = ["圖1_分析樣本與三值標籤.png", "圖2_判別力與基準.png", "圖3_校準與分區.png", "圖4_回溯時間評估.png",
         "圖5_決策曲線.png", "圖6_暴露血尿比較.png", "圖7_外部確認.png", "圖S1_示範輸出.png"]
@@ -60,7 +62,6 @@ def axis_vals(key):
     cmp_, ab, tm = a["comparisons"], a["ablation_adjacent"], a["temporal"]["early_to_late"]
     ew = a["temporal"]["expanding_window"]
     ew_auc = {c: v["auroc"] for c, v in ew.items()}
-    w = a["survey_weighted"]
     d = lambda k: cmp_[k]["delta_vs_M3_repeat0"]
     return dict(
         n=n(t["n"]), pos=n(t["n_pos"]), prev=pct(t["prevalence"]), prev3=p3(t["prevalence"]),
@@ -98,9 +99,6 @@ def axis_vals(key):
         tl_cint=num(tm["calibration"]["intercept"], 2), tl_cslope=f"{tm['calibration']['slope']:.2f}",
         ew_min=p3(min(ew_auc.values())), ew_min_c=min(ew_auc, key=ew_auc.get),
         ew_max=p3(max(ew_auc.values())), ew_max_c=max(ew_auc, key=ew_auc.get),
-        w_prev=pct(w["weighted"]["prevalence"]), w_mp=pct(w["weighted"]["mean_pred"]), w_auc=p3(w["weighted"]["auroc"]),
-        w_ap=p3(w["weighted"]["ap"]), uw_prev=pct(w["unweighted"]["prevalence"]), uw_auc=p3(w["unweighted"]["auroc"]),
-        uw_ap=p3(w["unweighted"]["ap"]),
         ls=a["label_sensitivity"], dca={round(r["pt"], 3): r for r in a["decision_curve"]})
 
 
@@ -125,8 +123,7 @@ def ext_vals(part, key):
         low_n=n(bb["band"]["不傾向"]["n"]), low_pos=bb["six_cell"]["陽性_不傾向"],
         bauc=p3(b["auroc"]), bauc_ci=ci(b["ci95"]["auroc"]), dbf=sgn(b["auroc"] - m["auroc"]),
         dbf_ci=ci(r["basic_minus_full"]["d_auroc"]), bcint=num(b["calibration"]["intercept"], 2),
-        bcslope=f"{b['calibration']['slope']:.2f}", gauc=p3(g["auroc"]), gap=p3(g["ap"]),
-        wauc=p3(r["weighted_full"]["auroc"]), wprev=pct(r["weighted_full"]["prevalence"], d))
+        bcslope=f"{b['calibration']['slope']:.2f}", gauc=p3(g["auroc"]), gap=p3(g["ap"]))
 
 
 XH, XD = ext_vals("primary", "肝炎"), ext_vals("primary", "糖尿病")
@@ -136,6 +133,24 @@ PHH, PHD, HC = XPH["axes"]["肝炎"], XPH["axes"]["糖尿病"], XPH["hep_positiv
 ph = lambda r: (f"{p3(r['auroc_all_inputs'])} {'升' if r['delta_masked_minus_all'] >= 0 else '降'}為 {p3(r['auroc_masked'])}"
                 f"（差 {sgn(r['delta_masked_minus_all'])}，95% CI {ci(r['delta_ci95'])}）")
 xr = lambda f: f"{XC[f]['ratio']:.2f}"
+
+
+def dv(r):
+    """設計變異結果之格式化（盛行率為百分比，校準差為百分點）。"""
+    w, d = r["weighted"], 2 if r["weighted"]["prevalence"]["est"] < 0.05 else 1
+    pp = lambda x: num(100 * x, 2)
+    return dict(
+        prev=pct(w["prevalence"]["est"], d), prev_ci="–".join(pct(x, d) for x in w["prevalence"]["ci95"]),
+        deff=f"{w['prevalence']['deff']:.2f}", uw_prev=pct(r["unweighted"]["prevalence"], d),
+        auc=p3(w["auroc"]["est"]), auc_ci=ci(w["auroc"]["ci95"]), ap=p3(w["ap"]["est"]), ap_ci=ci(w["ap"]["ci95"]),
+        cd=pp(w["calib_diff"]["est"]), cd_ci=f"{pp(w['calib_diff']['ci95'][0])} 至 {pp(w['calib_diff']['ci95'][1])}",
+        cd_has0=w["calib_diff"]["ci95"][0] <= 0 <= w["calib_diff"]["ci95"][1], df=r["df"], n_rep=r["n_replicates"])
+
+
+DH, DD = dv(DV["internal"]["肝炎"]), dv(DV["internal"]["糖尿病"])
+FULL, BASIC_M = "v3_full_LR（部署）", "v3_basic_LR（常規套組候選）"
+XDH, XDD = dv(DV["external"]["肝炎"][FULL]), dv(DV["external"]["糖尿病"][FULL])
+max_se_gap = 100 * max(abs(x - 1) for x in DV["checks"]["jkn_taylor_se_ratio"])
 MK = J("results", "v3_markers.json")
 
 
@@ -310,7 +325,7 @@ PAPER = f"""# 常規檢驗能否提供腎臟指標異常的病因線索？
 
 在與部署模型相同的外層切分上比較：僅截距、僅年齡性別、常規套組、全特徵邏輯迴歸（單一模型）與全特徵梯度提升（深度 3、學習率 0.08、300 回合、L2 1.0）。與全特徵邏輯迴歸之差以同一批受試者重抽估計配對信賴區間。近端特徵消融亦以同一切分比較。
 
-時間外推以 1999–2008 年開發、2009–2018 年評估，並以擴展視窗逐週期評估（每週期只用更早週期訓練）；較晚週期先前已被檢視，屬回溯時間評估。調查權重以合併 20 年 MEC 權重（1999–2002 年四年權重 × 4/20，其後兩年權重 × 2/20）[@weight] 計算加權 AUROC、AP 與加權盛行率，只有點估計。標籤定義敏感度分別以僅 HBsAg、僅 HCV RNA、僅糖尿病問卷、僅 HbA1c、排除邊緣回答重跑。
+時間外推以 1999–2008 年開發、2009–2018 年評估，並以擴展視窗逐週期評估（每週期只用更早週期訓練）；較晚週期先前已被檢視，屬回溯時間評估。調查權重以合併 20 年 MEC 權重（1999–2002 年四年權重 × 4/20，其後兩年權重 × 2/20）[@weight] 計算加權盛行率、平均預測、AUROC 與 AP。設計變異依抽樣設計的分層（SDMVSTRA，各週期編號互不重複）與 PSU（SDMVPSU）估計：以刪一 PSU 摺刀法建立複製權重[@rustrao]，複製權重依全樣本設計建立，分析範圍以指示變數處理；比例之 95% CI 採 NCHS 比例呈現標準之 Korn–Graubard 法[@parker]，其他指標為估計值 ± t × 標準誤，自由度為分析範圍內 PSU 數減層數；加權盛行率另以泰勒線性化核對。此計畫於計算前提交（{DV_COMMITS['plan']}）；預測視為固定，不含模型重新配適的變異。標籤定義敏感度分別以僅 HBsAg、僅 HCV RNA、僅糖尿病問卷、僅 HbA1c、排除邊緣回答重跑。
 
 ### 2.8　決策曲線與每千人情境
 
@@ -414,7 +429,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 以 1999–2008 年開發、2009–2018 年評估，肝炎軸 AUROC {H['tl']}（95% CI {H['tl_ci']}；n {H['tl_n']}、陽性 {H['tl_pos']}），AP {H['tl_ap']}；糖尿病軸 {D['tl']}（{D['tl_ci']}），AP {D['tl_ap']}。兩軸都略低於巢狀外層估計。盛行率隨年代上升（肝炎 {H['tl_ptr']} → {H['tl_pte']}，糖尿病 {D['tl_ptr']} → {D['tl_pte']}），使較晚週期的平均預測偏低（校準截距 {H['tl_cint']} 與 {D['tl_cint']}）。擴展視窗中，肝炎軸逐週期 AUROC 由 {H['ew_min']}（{H['ew_min_c']}）到 {H['ew_max']}（{H['ew_max_c']}），單一週期陽性僅 15–29 人，區間很寬；糖尿病軸 {D['ew_min']}–{D['ew_max']}，相當穩定。
 
-以 MEC 權重加權後，肝炎軸加權盛行率 {H['w_prev']}（未加權 {H['uw_prev']}）、加權 AUROC {H['w_auc']}、AP {H['w_ap']}；糖尿病軸加權盛行率 {D['w_prev']}（未加權 {D['uw_prev']}），加權平均預測 {D['w_mp']}，加權 AUROC {D['w_auc']}。糖尿病軸在人口加權下平均預測高於實際約 {abs(E['糖尿病']['survey_weighted']['weighted']['mean_pred'] - E['糖尿病']['survey_weighted']['weighted']['prevalence']) * 100:.1f} 個百分點，顯示機率不能直接移植到抽樣組成不同的人群。
+以 MEC 權重加權，並依抽樣設計估計變異（{DV['design']['internal']['strata']} 層、{DV['design']['internal']['psu']} 個 PSU，自由度 {DH['df']}）：肝炎軸加權盛行率 {DH['prev']}（95% CI {DH['prev_ci']}；未加權 {DH['uw_prev']}；設計效應 {DH['deff']}），加權 AUROC {DH['auc']}（{DH['auc_ci']}），AP {DH['ap']}（{DH['ap_ci']}）；糖尿病軸加權盛行率 {DD['prev']}（{DD['prev_ci']}；未加權 {DD['uw_prev']}；設計效應 {DD['deff']}），加權 AUROC {DD['auc']}（{DD['auc_ci']}），AP {DD['ap']}（{DD['ap_ci']}）。糖尿病軸的加權平均預測高於加權盛行率 {DD['cd']} 個百分點（95% CI {DD['cd_ci']}），區間不含 0，顯示機率不能直接移植到抽樣組成不同的人群；肝炎軸的加權校準差為 {DH['cd']} 個百分點（{DH['cd_ci']}），區間包含 0。肝炎軸加權 AUROC 的設計區間（{DH['auc_ci']}）比未加權之受試者層重抽區間（{H['auc_ci']}）寬，反映抽樣設計的叢集與權重不均。加權盛行率之摺刀法與泰勒線性化標準誤相差不到 {max_se_gap:.2f}%。
 
 ### 3.5　決策曲線與每千人情境
 
@@ -482,11 +497,13 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 | 常規套組 − 部署：ΔAUROC（配對 95% CI） | {XH['dbf']}（{XH['dbf_ci']}） | {XD['dbf']}（{XD['dbf_ci']}） |
 | 常規套組 LR 校準截距／斜率 | {XH['bcint']}／{XH['bcslope']} | {XD['bcint']}／{XD['bcslope']} |
 | 全特徵梯度提升 AUROC／AP | {XH['gauc']}／{XH['gap']} | {XD['gauc']}／{XD['gap']} |
-| MEC 加權 AUROC（加權盛行率） | {XH['wauc']}（{XH['wprev']}） | {XD['wauc']}（{XD['wprev']}） |
+| MEC 加權盛行率（Korn–Graubard 95% CI） | {XDH['prev']}（{XDH['prev_ci']}） | {XDD['prev']}（{XDD['prev_ci']}） |
+| MEC 加權 AUROC（設計 95% CI） | {XDH['auc']}（{XDH['auc_ci']}） | {XDD['auc']}（{XDD['auc_ci']}） |
+| MEC 加權校準差，百分點（設計 95% CI） | {XDH['cd']}（{XDH['cd_ci']}） | {XDD['cd']}（{XDD['cd_ci']}） |
 | 敏感度：依凍結程式原樣 AUROC（95% CI） | {SH['auc']}（{SH['auc_ci']}） | {SD['auc']}（{SD['auc_ci']}） |
 | 敏感度：依凍結程式原樣 校準截距／斜率 | {SH['cint']}／{SH['cslope']} | {SD['cint']}／{SD['cslope']} |
 
-註：梯度提升依協定只評判別；差值由未四捨五入之值計算，配對信賴區間為同一批受試者重抽 1,000 次。
+註：梯度提升依協定只評判別；差值由未四捨五入之值計算，配對信賴區間為同一批受試者重抽 1,000 次。加權指標之信賴區間依 2021–2023 年抽樣設計（{DV['design']['external']['strata']} 層、{DV['design']['external']['psu']} 個 PSU，自由度 {XDH['df']}）以刪一 PSU 摺刀法估計，於一次性評估之後補算，預測與評估時相同。
 
 **糖尿病軸**　部署模型 AUROC {XD['auc']}（{XD['auc_ci']}），略低於內部估計 {D['auc']}，但內部估計仍在外部區間內；各區實際陽性率（{XD['rates']}）與內部相近，涵蓋率 {XD['covB']}。平均預測 {XD['meanpred']} 低於實際 {XD['obs']}（校準截距 {XD['cint']}、斜率 {XD['cslope']}），與回溯時間評估中盛行率上升造成的低估方向一致（3.4）。常規套組模型 AUROC {XD['bauc']}，比部署模型高 {XD['dbf'][1:]}（配對 95% CI {XD['dbf_ci']}）；梯度提升 {XD['gauc']}，非線性的優勢在新資料上仍然存在。
 
@@ -515,7 +532,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 1. 標籤為共存疾病的操作型定義，不是腎臟病理；單次檢驗不確認慢性性[@kdigo]。
 2. 1999–2018 年資料已在前一版反覆使用，本版為探索性重分析；保留集曾被評估兩次，本版不再宣稱一次性確認集（詳見版本紀錄）。確認性證據改由 2021–2023 年外部資料提供（3.7）。
 3. 肝炎陽性僅 {H['pos']} 人，逐週期評估的區間很寬；穩定性取決於事件數與候選參數，而非總樣本數[@riley]。外部確認只有 {XH['pos']} 個事件，肝炎軸的外部表現仍未確認。
-4. 權重分析只有點估計，未以 PSU 與分層估計設計變異；美國調查的機率不能直接移植至臺灣就醫族群。
+4. 設計變異已依 PSU 與分層估計，但預測視為固定，不含模型重新配適的變異；2021–2023 年依協定使用 MEC 權重，未使用 NCHS 為抽血項目另設的抽血權重。美國調查的機率不能直接移植至臺灣就醫族群。
 5. 預測特徵中的血中金屬只來自 1999–2004 年檢驗檔，2015 年後的高敏感度 CRP 未與舊 CRP 合併，這些特徵在其他週期以中位數補入；事後探索顯示這類特徵在新資料上會拖累判別（3.7）。另外，開發時 HDL 膽固醇因肝炎 D 抗體的變數字首規則被一併排除於特徵之外，屬過度排除、不造成洩漏，將於下一版修正。
 6. 暴露分析為單次橫斷面，無法建立時序。
 7. 外部資料的檢驗儀器與方法已變更，本研究於評估前以 CDC 官方回推式調和；回推式本身有估計誤差，且血中金屬與可丁尼沒有官方換算式。
@@ -535,7 +552,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 ## 研究聲明
 
-**資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）：分析計畫 bf269c5、結果 d5140a9、外部確認協定 9ca4e9f、圖 397c204、外部確認修正一 {EXT_COMMITS['amend']}、外部確認結果 {EXT_COMMITS['results']}。執行環境見 `requirements-lock.txt`（Python 3.14.3、scikit-learn 1.8.0、pandas 3.0.1、NumPy 2.4.3）。重現入口：`audit_v3.py` → `evaluate_v3.py` → `markers_v3.py` → `run_exwas.py` → `exwas_v3_checks.py` → `make_figures_v3.py` → `build_paper_v3.py`；外部確認為 `external_validation_2021.py`（`--precheck` → `--amend` → `--evaluate`，只允許評估一次），事後探索為 `external_posthoc_2021.py`；網頁工具 v3.1 之重新校準為 `recalibrate_v3_1.py`，網頁與 Python 之一致性以 `verify_direction_html.py` 檢查。
+**資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）：分析計畫 bf269c5、結果 d5140a9、外部確認協定 9ca4e9f、圖 397c204、外部確認修正一 {EXT_COMMITS['amend']}、外部確認結果 {EXT_COMMITS['results']}、設計變異計畫 {DV_COMMITS['plan']} 與結果 {DV_COMMITS['results']}。執行環境見 `requirements-lock.txt`（Python 3.14.3、scikit-learn 1.8.0、pandas 3.0.1、NumPy 2.4.3）。重現入口：`audit_v3.py` → `evaluate_v3.py` → `markers_v3.py` → `run_exwas.py` → `exwas_v3_checks.py` → `make_figures_v3.py` → `build_paper_v3.py`；外部確認為 `external_validation_2021.py`（`--precheck` → `--amend` → `--evaluate`，只允許評估一次），事後探索為 `external_posthoc_2021.py`；網頁工具 v3.1 之重新校準為 `recalibrate_v3_1.py`，網頁與 Python 之一致性以 `verify_direction_html.py` 檢查；設計變異為 `design_variance.py`。
 
 **研究倫理**　本研究使用公開去識別化資料；次級分析之倫理審查或免審認定，須由作者依所屬機構規定補列，本文不預先宣稱。
 
@@ -577,7 +594,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 ### 可重算之結果檔
 
-`results/v3_audit.json`（稽核）、`results/v3_eval.json`（評估）、`results/v3_markers.json`（單變量標記）、`results/v3_oof.csv.gz`（逐人外層預測）、`results/exwas_v3.json`、`results/exwas_v3_checks.json`、`params/external_validation_amendment_1.json`（外部確認修正一）、`results/external_2021_2023_precheck.json`（評估前資料核對）、`results/external_2021_2023.json`（外部確認）、`results/external_2021_2023_posthoc.json`（事後探索）、`params/direction_model_v3_1.json` 與 `results/direction_v3_1_recalibration.json`（網頁工具 v3.1 及其更新校準之表面值）、`docs/VERSION_LOG.md`（版本紀錄）。
+`results/v3_audit.json`（稽核）、`results/v3_eval.json`（評估）、`results/v3_markers.json`（單變量標記）、`results/v3_oof.csv.gz`（逐人外層預測）、`results/exwas_v3.json`、`results/exwas_v3_checks.json`、`params/external_validation_amendment_1.json`（外部確認修正一）、`results/external_2021_2023_precheck.json`（評估前資料核對）、`results/external_2021_2023.json`（外部確認）、`results/external_2021_2023_posthoc.json`（事後探索）、`params/direction_model_v3_1.json` 與 `results/direction_v3_1_recalibration.json`（網頁工具 v3.1 及其更新校準之表面值）、`params/design_variance_plan.json` 與 `results/design_variance.json`（設計變異）、`docs/VERSION_LOG.md`（版本紀錄）。
 """
 
 RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
@@ -647,7 +664,7 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 
 | 審查意見 | 執行結果 |
 |---|---|
-| 調查權重 | 20 年 MEC 權重（1999–2002 × 4/20、其後 × 2/20）；加權盛行率與 AUROC 見 3.4；設計變異估計未做（列為限制） |
+| 調查權重 | 20 年 MEC 權重（1999–2002 × 4/20、其後 × 2/20）；設計變異已依 {DV['design']['internal']['strata']} 層、{DV['design']['internal']['psu']} 個 PSU 以刪一 PSU 摺刀法估計（計畫 {DV_COMMITS['plan']} 先提交），比例採 Korn–Graubard 區間：肝炎軸加權 AUROC {DH['auc']}（{DH['auc_ci']}）、糖尿病軸 {DD['auc']}（{DD['auc_ci']}），糖尿病軸加權校準差 {DD['cd']} 個百分點（{DD['cd_ci']}）；外部 2021–2023 同法補算（表 7） |
 | 五層調整之完整共變數 | M0–M4 已逐層列出（2.9） |
 | 檢定家族 | M3 之 {X['n_scanned']} 個暴露共同校正；其他層級為敏感度，不跨層挑最小 p |
 | 檢出極限、偏態、有效樣本、量尺 | 鉛、鎘列出低於檢出極限比例；改用 log2；藥物 OR 改為使用 vs 未使用 |
@@ -657,7 +674,7 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 
 ## 七、文獻（審查 §九）
 
-依審查意見修正用途：Yang 2024 僅作未來病理標籤設計背景；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。另新增經 PubMed 查證之 Selvin 2007（肌酸酐校正）、Van Calster 2019（校準）、Vickers 2006（決策曲線）、Schillie 2020（HCV 普遍篩檢）、Barr 2005（尿肌酸酐調整）；外部確認再新增經 PubMed 查證之 Collins 2016（外部驗證樣本數）與 Vergouwe 2017（模型更新方法），以及 CDC 2021–2023 年資料文件三份（BIOPRO_L、ALB_CR_L、TRIGLY_L）。
+依審查意見修正用途：Yang 2024 僅作未來病理標籤設計背景；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。另新增經 PubMed 查證之 Selvin 2007（肌酸酐校正）、Van Calster 2019（校準）、Vickers 2006（決策曲線）、Schillie 2020（HCV 普遍篩檢）、Barr 2005（尿肌酸酐調整）；外部確認再新增經 PubMed 查證之 Collins 2016（外部驗證樣本數）與 Vergouwe 2017（模型更新方法），以及 CDC 2021–2023 年資料文件三份（BIOPRO_L、ALB_CR_L、TRIGLY_L）；設計變異新增經 PubMed 查證之 Rust & Rao 1996（複製權重變異估計）與 NCHS 比例呈現標準（Parker 2017）。
 
 ## 八、可交付成果（審查 §十）
 
@@ -686,13 +703,12 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 
 ## 十、尚未完成
 
-1. 以 PSU 與分層估計設計變異。
-2. 以另一批獨立資料驗證網頁工具 v3.1 更新後的校準（2021–2023 年資料已用於更新，不能再當驗證）；常規套組不含血中金屬與 CRP，原列之跨週期合併因此不再必要。
-3. 糖尿病軸非線性模型之校準評估與部署。
-4. 肝炎軸需更多事件之外部確認，B、C 型分開呈現。
-5. HDL 膽固醇被肝炎 D 抗體字首規則誤排除，下一版重訓時修正。
-6. 附錄三變數字典改寫。
-7. 倫理審查或免審之機構認定。
+1. 以另一批獨立資料驗證網頁工具 v3.1 更新後的校準（2021–2023 年資料已用於更新，不能再當驗證）；常規套組不含血中金屬與 CRP，原列之跨週期合併因此不再必要。
+2. 糖尿病軸非線性模型之校準評估與部署。
+3. 肝炎軸需更多事件之外部確認，B、C 型分開呈現。
+4. HDL 膽固醇被肝炎 D 抗體字首規則誤排除，下一版重訓時修正。
+5. 附錄三變數字典改寫。
+6. 倫理審查或免審之機構認定。
 """
 
 
@@ -723,6 +739,8 @@ REFS = dict(
     trigly_l="NCHS. NHANES August 2021–August 2023 Cholesterol – LDL & Triglycerides (TRIGLY_L): triglyceride method change. https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TRIGLY_L.htm",
     collins_ev="Collins GS, Ogundimu EO, Altman DG. Sample size considerations for the external validation of a multivariable prognostic model: a resampling study. Stat Med. 2016;35(2):214–226. https://doi.org/10.1002/sim.6787",
     vergouwe="Vergouwe Y, Nieboer D, Oostenbrink R, et al. A closed testing procedure to select an appropriate method for updating prediction models. Stat Med. 2017;36(28):4529–4539. https://doi.org/10.1002/sim.7179",
+    rustrao="Rust KF, Rao JNK. Variance estimation for complex surveys using replication techniques. Stat Methods Med Res. 1996;5(3):283–310. https://doi.org/10.1177/096228029600500305",
+    parker="Parker JD, Talih M, Malec DJ, et al. National Center for Health Statistics Data Presentation Standards for Proportions. Vital Health Stat 2. 2017;(175):1–22. PMID: 30248016",
 )
 
 
