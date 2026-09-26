@@ -64,11 +64,26 @@ EXTRA_FILES_EXT = {   # 脂質盤在新週期拆成三個檔
     "2015-2016": ["TCHOL_I.xpt", "HDL_I.xpt", "TRIGLY_I.xpt"],
     "2017-2018": ["TCHOL_J.xpt", "HDL_J.xpt", "TRIGLY_J.xpt"],
 }
-# 肌酸酐標準化校正係數（NHANES 官方分析注記，逐週期查證；未列者不需校正）
+# 肌酸酐標準化校正係數 standard = a + b × 原值（NHANES 官方分析注記，逐週期查證；未列者不需校正）
+# 2026-09-26 修正：1999-2000 原誤用 NHANES III（1988–94）的 (-0.184, 0.960)，使該週期肌酸酐被低估
+# （原值 1.0 → 0.776，應為 1.160），eGFR 高估、腎損傷少算。LAB18 文件：Y = 1.013 X + 0.147。
 SCR_CALIBRATION = {
-    "1999-2000": (-0.184, 0.960),
+    "1999-2000": (0.147, 1.013),     # LAB18 文件「Correction ... is highly recommended」
     "2005-2006": (-0.016, 0.978),    # BIOPRO_D 文件明載「Correction ... is highly recommended」
 }
+# 尿肌酸酐：2007 年起方法由 Beckman CX3 Jaffe 改為 Roche ModP 酵素法；ALB_CR_E 文件建議
+# 對 2007 年前的值（X, mg/dL）做分段轉換後才與 2007 起的值比較。
+UCR_PRE2007 = {"1999-2000", "2001-2002", "2003-2004", "2005-2006"}
+
+
+def adjust_ucr_pre2007(x):
+    """ALB_CR_E 官方分段式：X<75 → (1.02√X−0.36)²；75≤X<250 → (1.05√X−0.74)²；X≥250 → (1.01√X−0.10)²。"""
+    x = np.asarray(x, float)
+    s = np.sqrt(x)
+    return np.where(x < 75, (1.02 * s - 0.36) ** 2, np.where(x < 250, (1.05 * s - 0.74) ** 2, (1.01 * s - 0.10) ** 2))
+
+
+DESIGN = ["WTMEC2YR", "WTMEC4YR", "SDMVPSU", "SDMVSTRA"]    # 抽樣權重與設計變數（只作權重，不作特徵）
 
 ANA_FILES = ["SSANA_A.xpt", "SSANA2_A.xpt"]
 CYSTATIN_FILES = ["SSCYST_A.xpt", "SSCYST_B.xpt"]           # surplus sera 1999-2002，跨週期以 SEQN 併
@@ -151,6 +166,7 @@ def load_all(verbose=True):
         demo = _read(files["demo"])
         d = demo[["SEQN", _pick(demo, CAND["age"], files["demo"]), _pick(demo, CAND["sex"], files["demo"])]].copy()
         d.columns = ["SEQN", "age", "sex"]
+        d = d.merge(demo[["SEQN"] + [c for c in DESIGN if c in demo.columns]], on="SEQN", how="left")
         d["cycle"] = cyc
         for role in ("biochem", "cbc", "crp", "acr", "hba1c", "hep", "diq"):
             f = _read(files[role])
@@ -166,6 +182,9 @@ def load_all(verbose=True):
             a, b = SCR_CALIBRATION[cyc]
             d["LBXSCR_raw"] = d["LBXSCR"]
             d["LBXSCR"] = a + b * d["LBXSCR"]                   # 肌酸酐標準化校正（逐週期依官方注記）
+        if cyc in UCR_PRE2007 and "URXUCR" in d.columns:
+            d["URXUCR_raw"] = d["URXUCR"]
+            d["URXUCR"] = adjust_ucr_pre2007(d["URXUCR"])       # 2007 前尿肌酸酐方法轉換（ALB_CR_E）
         rows.append(d)
         if verbose:
             print(f"[cohort] {cyc}: n={len(d)}")
@@ -200,8 +219,8 @@ def load_extended(verbose=True):
     rows = []
     for cyc, files in CYCLES_EXT.items():
         demo = _read(files["demo"])
-        d = demo[["SEQN", "RIDAGEYR", "RIAGENDR"]].copy()
-        d.columns = ["SEQN", "age", "sex"]
+        d = demo[["SEQN", "RIDAGEYR", "RIAGENDR"] + [c for c in DESIGN if c in demo.columns]].copy()
+        d = d.rename(columns={"RIDAGEYR": "age", "RIAGENDR": "sex"})
         d["cycle"] = cyc
         for role, fn in files.items():
             if role == "demo":
@@ -220,6 +239,9 @@ def load_extended(verbose=True):
             a, b = SCR_CALIBRATION[cyc]
             d["LBXSCR_raw"] = d["LBXSCR"]
             d["LBXSCR"] = a + b * d["LBXSCR"]
+        if cyc in UCR_PRE2007 and "URXUCR" in d.columns:
+            d["URXUCR_raw"] = d["URXUCR"]
+            d["URXUCR"] = adjust_ucr_pre2007(d["URXUCR"])
         rows.append(d)
         if verbose:
             print(f"[cohort-ext] {cyc}: n={len(d)}")
@@ -267,6 +289,60 @@ def build_extended(P, verbose=True):
                 counts=dict(n=len(kd), infection=int(kd["lab_infection"].sum()),
                             metabolic=int(kd["lab_metabolic"].fillna(False).sum()),
                             by_cycle={str(k): int(v) for k, v in kd["cycle"].value_counts().sort_index().items()}),
+                feature_labels={**FEATURE_LABELS, **DERIVED, "age": "年齡", "sex": "性別"})
+
+
+def labels_v3(df):
+    """三值標籤（1 陽性／0 陰性／NaN 未知），2026-09-26 依審查意見重建。
+    規則：任一組成明確陽性 → 陽性；所有必要組成皆可排除 → 陰性；其餘 → 未知（不再以 False 代替）。
+      腎臟：eGFR<60 或 ACR≥30 → 1；兩者皆測且正常 → 0；一正常一缺、兩者皆缺 → 未知
+      B 肝：HBsAg（LBDHBG）1/2；未測 → 未知
+      C 肝：RNA（LBXHCR）1 → 1；2 或 3（2013 起 3＝抗體篩檢陰性）→ 0；RNA 缺且抗體（LBDHCV）陰性 → 0
+            （依檢驗流程抗體陰性不做 RNA）；抗體陽性／不確定而無 RNA（含 2003–04 全週期無 RNA）→ 未知
+      糖尿病：問卷 DIQ010＝1 → 1、2 或 3（邊緣）→ 0、7/9/缺 → 未知；HbA1c ≥6.5 → 1、<6.5 → 0
+            合成：任一為 1 → 1；兩者皆 0 → 0；其餘未知"""
+    idx = df.index
+    col = lambda c: df[c] if c in df.columns else pd.Series(np.nan, index=idx)
+    e, a = df["eGFR"], df["ACR"]
+    df["kidney3"] = np.select([(e < 60) | (a >= 30), (e >= 60) & (a < 30)], [1.0, 0.0], np.nan)
+    hbs = col("LBDHBG")
+    df["hbv3"] = np.select([hbs == 1, hbs == 2], [1.0, 0.0], np.nan)
+    rna, ab = col("LBXHCR"), col("LBDHCV")
+    df["hcv3"] = np.select([rna == 1, rna.isin([2, 3]), rna.isna() & (ab == 2)], [1.0, 0.0, 0.0], np.nan)
+    df["hep3"] = np.select([(df["hbv3"] == 1) | (df["hcv3"] == 1), (df["hbv3"] == 0) & (df["hcv3"] == 0)],
+                           [1.0, 0.0], np.nan)
+    q, g = col("DIQ010"), col("LBXGH")
+    df["dmq3"] = np.select([q == 1, q.isin([2, 3])], [1.0, 0.0], np.nan)
+    df["dma3"] = np.select([g >= 6.5, g < 6.5], [1.0, 0.0], np.nan)
+    df["dm3"] = np.select([(df["dmq3"] == 1) | (df["dma3"] == 1), (df["dmq3"] == 0) & (df["dma3"] == 0)],
+                          [1.0, 0.0], np.nan)
+    return df
+
+
+def build_v3(P, verbose=True):
+    """1999–2018 十週期、三值標籤版（2026-09-26）。回傳全體成人（稽核／權重用）與腎臟指標異常者。
+    與 build_extended 的差異：①1999-2000 血清肌酸酐公式更正 ②2007 前尿肌酸酐轉換 ③標籤三值、未知不再當陰性
+    ④封存規則改為明列肝炎變數，不再以字首誤封血比容（LBXHCT）。"""
+    base, _ = load_all(verbose=False)
+    ext = load_extended(verbose=False)
+    df = pd.concat([base, ext], ignore_index=True, sort=False)
+    df = df[df["age"] >= P["population"]["value"]["age_min"]].copy()
+    female = df["sex"] == 2
+    df["eGFR"] = egfr_ckdepi2021(df["LBXSCR"].to_numpy(float), df["age"].to_numpy(float), female.to_numpy())
+    df["ACR"] = df["URXUMA"] / (df["URXUCR"] / 100.0)
+    df["NLR"] = df["LBXNEPCT"] / df["LBXLYPCT"].replace(0, np.nan)
+    # 合併 20 年 MEC 權重（NHANES 教學：1999–2002 用 4 年權重 ×4/20，其後 2 年權重 ×2/20）
+    df["w_mec20"] = np.where(df["cycle"].isin(["1999-2000", "2001-2002"]), 0.2 * df["WTMEC4YR"], 0.1 * df["WTMEC2YR"])
+    labels_v3(df)
+    kd = df[df["kidney3"] == 1].copy()
+    hep_vars = [c for c in df.columns if c.startswith(("LBXHB", "LBDHB", "LBXHA", "LBXHD", "LBDHD", "SSHCV"))
+                or c in ("LBXHCV", "LBDHCV", "LBXHCR", "LBDHCR", "LBXHCG", "LBDHCI", "LBXHCVRNA")]
+    archive = set(["LBXGH", "DIQ010"] + [c for c in df.columns if c.startswith("SS")] + hep_vars)
+    feats = [c for c in kd.columns if c in FEATURE_LABELS and c not in archive] + ["ACR", "eGFR", "NLR", "age", "sex"]
+    if verbose:
+        print(f"[cohort-v3] 成人 {len(df):,}；腎臟 陽/陰/未知 = {int((df.kidney3 == 1).sum()):,}/"
+              f"{int((df.kidney3 == 0).sum()):,}/{int(df.kidney3.isna().sum()):,}；特徵 {len(feats)}")
+    return dict(adults=df, cohort=kd, features=feats, archive=sorted(archive),
                 feature_labels={**FEATURE_LABELS, **DERIVED, "age": "年齡", "sex": "性別"})
 
 

@@ -1,0 +1,773 @@
+{
+ "created": "2026-09-26T23:16:52",
+ "purpose": "v3 資料與標籤稽核（回應 2026-09-26 深度審查）",
+ "corrections": [
+  "1999-2000 血清肌酸酐：Y = 1.013X + 0.147（LAB18；原誤用 NHANES III 的 −0.184 + 0.960X）",
+  "2007 前尿肌酸酐：ALB_CR_E 分段轉換（1999–2006 四週期）",
+  "三值標籤：未知不再當陰性（腎臟、B 肝、C 肝、糖尿病）",
+  "封存規則改列名：血比容 LBXHCT 不再被 LBXHC 字首誤封"
+ ],
+ "old_rebuild": {
+  "n_adults": 55081,
+  "kidney": 8983,
+  "outcome_known_old_rule": 51792,
+  "hep": 169,
+  "dm": 3183,
+  "dm_excl_hep": 3113,
+  "union": 3282
+ },
+ "reclassification": {
+  "scr_fix_1999_2000": {
+   "egfr_lt60_old": 86,
+   "egfr_lt60_new": 340,
+   "kidney_gained": 161,
+   "kidney_lost": 0,
+   "scr_raw_1p0_old": 0.776,
+   "scr_raw_1p0_new": 1.16
+  },
+  "ucr_fix_pre2007": {
+   "acr_ge30_old": 6528,
+   "acr_ge30_new": 6632,
+   "acr_cross30_up": 105,
+   "acr_cross30_down": 1,
+   "acr_cross300_up": 18,
+   "acr_cross300_down": 0,
+   "kidney_gained": 92,
+   "kidney_lost": 1,
+   "median_ucr_change_pct": -3.5916617655297745
+  },
+  "combined": {
+   "kidney_old": 8983,
+   "kidney_new": 9234,
+   "gained": 252,
+   "lost": 1
+  }
+ },
+ "per_cycle": [
+  {
+   "cycle": "1999-2000",
+   "adults": 4880,
+   "dup_seqn": 0,
+   "scr_available": 4121,
+   "acr_available": 4324,
+   "kidney": {
+    "pos": 827,
+    "neg": 3304,
+    "unknown": 749
+   },
+   "kidney_unknown_one_normal_one_missing": 265,
+   "hep_in_kidney": {
+    "pos": 7,
+    "neg": 759,
+    "unknown": 61
+   },
+   "hbv_in_kidney": {
+    "pos": 3,
+    "neg": 772,
+    "unknown": 52
+   },
+   "hcv_in_kidney": {
+    "pos": 4,
+    "neg": 763,
+    "unknown": 60
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 50,
+    "hcv_antibody_pos_or_indet_without_rna": 10,
+    "other": 1
+   },
+   "dm_in_kidney": {
+    "pos": 249,
+    "neg": 556,
+    "unknown": 22
+   },
+   "dm_questionnaire": {
+    "pos": 214,
+    "neg": 612,
+    "unknown": 1
+   },
+   "dm_hba1c": {
+    "pos": 188,
+    "neg": 602,
+    "unknown": 37
+   },
+   "diq010_codes_in_kidney": {
+    "1": 214,
+    "2": 595,
+    "3": 17,
+    "9": 1
+   },
+   "axis_n": {
+    "hep": 766,
+    "dm": 805
+   }
+  },
+  {
+   "cycle": "2001-2002",
+   "adults": 5411,
+   "dup_seqn": 0,
+   "scr_available": 4698,
+   "acr_available": 4870,
+   "kidney": {
+    "pos": 900,
+    "neg": 3792,
+    "unknown": 719
+   },
+   "kidney_unknown_one_normal_one_missing": 257,
+   "hep_in_kidney": {
+    "pos": 25,
+    "neg": 836,
+    "unknown": 39
+   },
+   "hbv_in_kidney": {
+    "pos": 3,
+    "neg": 859,
+    "unknown": 38
+   },
+   "hcv_in_kidney": {
+    "pos": 22,
+    "neg": 839,
+    "unknown": 39
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 38,
+    "hcv_antibody_pos_or_indet_without_rna": 1,
+    "other": 0
+   },
+   "dm_in_kidney": {
+    "pos": 262,
+    "neg": 617,
+    "unknown": 21
+   },
+   "dm_questionnaire": {
+    "pos": 211,
+    "neg": 689,
+    "unknown": 0
+   },
+   "dm_hba1c": {
+    "pos": 191,
+    "neg": 683,
+    "unknown": 26
+   },
+   "diq010_codes_in_kidney": {
+    "1": 211,
+    "2": 666,
+    "3": 23
+   },
+   "axis_n": {
+    "hep": 861,
+    "dm": 879
+   }
+  },
+  {
+   "cycle": "2003-2004",
+   "adults": 5041,
+   "dup_seqn": 0,
+   "scr_available": 4455,
+   "acr_available": 4595,
+   "kidney": {
+    "pos": 878,
+    "neg": 3555,
+    "unknown": 608
+   },
+   "kidney_unknown_one_normal_one_missing": 251,
+   "hep_in_kidney": {
+    "pos": 6,
+    "neg": 818,
+    "unknown": 54
+   },
+   "hbv_in_kidney": {
+    "pos": 6,
+    "neg": 839,
+    "unknown": 33
+   },
+   "hcv_in_kidney": {
+    "pos": 0,
+    "neg": 824,
+    "unknown": 54
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 33,
+    "hcv_antibody_pos_or_indet_without_rna": 21,
+    "other": 0
+   },
+   "dm_in_kidney": {
+    "pos": 274,
+    "neg": 584,
+    "unknown": 20
+   },
+   "dm_questionnaire": {
+    "pos": 241,
+    "neg": 637,
+    "unknown": 0
+   },
+   "dm_hba1c": {
+    "pos": 196,
+    "neg": 656,
+    "unknown": 26
+   },
+   "diq010_codes_in_kidney": {
+    "1": 241,
+    "2": 621,
+    "3": 16
+   },
+   "axis_n": {
+    "hep": 824,
+    "dm": 858
+   }
+  },
+  {
+   "cycle": "2005-2006",
+   "adults": 4979,
+   "dup_seqn": 0,
+   "scr_available": 4463,
+   "acr_available": 4630,
+   "kidney": {
+    "pos": 846,
+    "neg": 3610,
+    "unknown": 523
+   },
+   "kidney_unknown_one_normal_one_missing": 238,
+   "hep_in_kidney": {
+    "pos": 15,
+    "neg": 791,
+    "unknown": 40
+   },
+   "hbv_in_kidney": {
+    "pos": 9,
+    "neg": 800,
+    "unknown": 37
+   },
+   "hcv_in_kidney": {
+    "pos": 6,
+    "neg": 800,
+    "unknown": 40
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 37,
+    "hcv_antibody_pos_or_indet_without_rna": 3,
+    "other": 0
+   },
+   "dm_in_kidney": {
+    "pos": 267,
+    "neg": 551,
+    "unknown": 28
+   },
+   "dm_questionnaire": {
+    "pos": 226,
+    "neg": 619,
+    "unknown": 1
+   },
+   "dm_hba1c": {
+    "pos": 181,
+    "neg": 629,
+    "unknown": 36
+   },
+   "diq010_codes_in_kidney": {
+    "1": 226,
+    "2": 597,
+    "3": 22,
+    "9": 1
+   },
+   "axis_n": {
+    "hep": 806,
+    "dm": 818
+   }
+  },
+  {
+   "cycle": "2007-2008",
+   "adults": 5935,
+   "dup_seqn": 0,
+   "scr_available": 5314,
+   "acr_available": 5525,
+   "kidney": {
+    "pos": 1049,
+    "neg": 4253,
+    "unknown": 633
+   },
+   "kidney_unknown_one_normal_one_missing": 332,
+   "hep_in_kidney": {
+    "pos": 18,
+    "neg": 967,
+    "unknown": 64
+   },
+   "hbv_in_kidney": {
+    "pos": 2,
+    "neg": 983,
+    "unknown": 64
+   },
+   "hcv_in_kidney": {
+    "pos": 17,
+    "neg": 968,
+    "unknown": 64
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 64,
+    "hcv_antibody_pos_or_indet_without_rna": 0,
+    "other": 0
+   },
+   "dm_in_kidney": {
+    "pos": 388,
+    "neg": 621,
+    "unknown": 40
+   },
+   "dm_questionnaire": {
+    "pos": 333,
+    "neg": 714,
+    "unknown": 2
+   },
+   "dm_hba1c": {
+    "pos": 267,
+    "neg": 720,
+    "unknown": 62
+   },
+   "diq010_codes_in_kidney": {
+    "1": 333,
+    "2": 691,
+    "3": 23,
+    "9": 2
+   },
+   "axis_n": {
+    "hep": 985,
+    "dm": 1009
+   }
+  },
+  {
+   "cycle": "2009-2010",
+   "adults": 6218,
+   "dup_seqn": 0,
+   "scr_available": 5683,
+   "acr_available": 5929,
+   "kidney": {
+    "pos": 945,
+    "neg": 4738,
+    "unknown": 535
+   },
+   "kidney_unknown_one_normal_one_missing": 308,
+   "hep_in_kidney": {
+    "pos": 18,
+    "neg": 884,
+    "unknown": 43
+   },
+   "hbv_in_kidney": {
+    "pos": 1,
+    "neg": 904,
+    "unknown": 40
+   },
+   "hcv_in_kidney": {
+    "pos": 17,
+    "neg": 885,
+    "unknown": 43
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 40,
+    "hcv_antibody_pos_or_indet_without_rna": 3,
+    "other": 0
+   },
+   "dm_in_kidney": {
+    "pos": 359,
+    "neg": 569,
+    "unknown": 17
+   },
+   "dm_questionnaire": {
+    "pos": 299,
+    "neg": 646,
+    "unknown": 0
+   },
+   "dm_hba1c": {
+    "pos": 254,
+    "neg": 657,
+    "unknown": 34
+   },
+   "diq010_codes_in_kidney": {
+    "1": 299,
+    "2": 620,
+    "3": 26
+   },
+   "axis_n": {
+    "hep": 902,
+    "dm": 928
+   }
+  },
+  {
+   "cycle": "2011-2012",
+   "adults": 5560,
+   "dup_seqn": 0,
+   "scr_available": 4889,
+   "acr_available": 5199,
+   "kidney": {
+    "pos": 918,
+    "neg": 3990,
+    "unknown": 652
+   },
+   "kidney_unknown_one_normal_one_missing": 349,
+   "hep_in_kidney": {
+    "pos": 21,
+    "neg": 849,
+    "unknown": 48
+   },
+   "hbv_in_kidney": {
+    "pos": 8,
+    "neg": 865,
+    "unknown": 45
+   },
+   "hcv_in_kidney": {
+    "pos": 13,
+    "neg": 857,
+    "unknown": 48
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 45,
+    "hcv_antibody_pos_or_indet_without_rna": 2,
+    "other": 1
+   },
+   "dm_in_kidney": {
+    "pos": 335,
+    "neg": 556,
+    "unknown": 27
+   },
+   "dm_questionnaire": {
+    "pos": 288,
+    "neg": 628,
+    "unknown": 2
+   },
+   "dm_hba1c": {
+    "pos": 251,
+    "neg": 632,
+    "unknown": 35
+   },
+   "diq010_codes_in_kidney": {
+    "1": 288,
+    "2": 600,
+    "3": 28,
+    "9": 2
+   },
+   "axis_n": {
+    "hep": 870,
+    "dm": 891
+   }
+  },
+  {
+   "cycle": "2013-2014",
+   "adults": 5769,
+   "dup_seqn": 0,
+   "scr_available": 5328,
+   "acr_available": 5468,
+   "kidney": {
+    "pos": 954,
+    "neg": 4356,
+    "unknown": 459
+   },
+   "kidney_unknown_one_normal_one_missing": 240,
+   "hep_in_kidney": {
+    "pos": 29,
+    "neg": 884,
+    "unknown": 41
+   },
+   "hbv_in_kidney": {
+    "pos": 7,
+    "neg": 913,
+    "unknown": 34
+   },
+   "hcv_in_kidney": {
+    "pos": 22,
+    "neg": 893,
+    "unknown": 39
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 32,
+    "hcv_antibody_pos_or_indet_without_rna": 0,
+    "other": 9
+   },
+   "dm_in_kidney": {
+    "pos": 338,
+    "neg": 594,
+    "unknown": 22
+   },
+   "dm_questionnaire": {
+    "pos": 292,
+    "neg": 660,
+    "unknown": 2
+   },
+   "dm_hba1c": {
+    "pos": 241,
+    "neg": 684,
+    "unknown": 29
+   },
+   "diq010_codes_in_kidney": {
+    "1": 292,
+    "2": 624,
+    "3": 36,
+    "9": 2
+   },
+   "axis_n": {
+    "hep": 913,
+    "dm": 932
+   }
+  },
+  {
+   "cycle": "2015-2016",
+   "adults": 5719,
+   "dup_seqn": 0,
+   "scr_available": 5148,
+   "acr_available": 5347,
+   "kidney": {
+    "pos": 915,
+    "neg": 4225,
+    "unknown": 579
+   },
+   "kidney_unknown_one_normal_one_missing": 281,
+   "hep_in_kidney": {
+    "pos": 15,
+    "neg": 827,
+    "unknown": 73
+   },
+   "hbv_in_kidney": {
+    "pos": 3,
+    "neg": 853,
+    "unknown": 59
+   },
+   "hcv_in_kidney": {
+    "pos": 12,
+    "neg": 830,
+    "unknown": 73
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 59,
+    "hcv_antibody_pos_or_indet_without_rna": 0,
+    "other": 14
+   },
+   "dm_in_kidney": {
+    "pos": 344,
+    "neg": 544,
+    "unknown": 27
+   },
+   "dm_questionnaire": {
+    "pos": 297,
+    "neg": 617,
+    "unknown": 1
+   },
+   "dm_hba1c": {
+    "pos": 264,
+    "neg": 618,
+    "unknown": 33
+   },
+   "diq010_codes_in_kidney": {
+    "1": 297,
+    "2": 592,
+    "3": 25,
+    "9": 1
+   },
+   "axis_n": {
+    "hep": 842,
+    "dm": 888
+   }
+  },
+  {
+   "cycle": "2017-2018",
+   "adults": 5569,
+   "dup_seqn": 0,
+   "scr_available": 4916,
+   "acr_available": 5127,
+   "kidney": {
+    "pos": 1002,
+    "neg": 3905,
+    "unknown": 662
+   },
+   "kidney_unknown_one_normal_one_missing": 309,
+   "hep_in_kidney": {
+    "pos": 16,
+    "neg": 928,
+    "unknown": 58
+   },
+   "hbv_in_kidney": {
+    "pos": 7,
+    "neg": 957,
+    "unknown": 38
+   },
+   "hcv_in_kidney": {
+    "pos": 9,
+    "neg": 935,
+    "unknown": 58
+   },
+   "hep_unknown_reason": {
+    "no_hepatitis_test": 38,
+    "hcv_antibody_pos_or_indet_without_rna": 0,
+    "other": 20
+   },
+   "dm_in_kidney": {
+    "pos": 417,
+    "neg": 565,
+    "unknown": 20
+   },
+   "dm_questionnaire": {
+    "pos": 364,
+    "neg": 638,
+    "unknown": 0
+   },
+   "dm_hba1c": {
+    "pos": 319,
+    "neg": 652,
+    "unknown": 31
+   },
+   "diq010_codes_in_kidney": {
+    "1": 364,
+    "2": 607,
+    "3": 31
+   },
+   "axis_n": {
+    "hep": 944,
+    "dm": 982
+   }
+  }
+ ],
+ "total": {
+  "adults": 55081,
+  "kidney": {
+   "pos": 9234,
+   "neg": 39728,
+   "unknown": 6119
+  },
+  "kidney_unknown_one_normal_one_missing": 2830,
+  "kidney_unknown_both_missing": 3289,
+  "hep_in_kidney": {
+   "pos": 170,
+   "neg": 8543,
+   "unknown": 521
+  },
+  "hbv_in_kidney": {
+   "pos": 49,
+   "neg": 8745,
+   "unknown": 440
+  },
+  "hcv_in_kidney": {
+   "pos": 122,
+   "neg": 8594,
+   "unknown": 518
+  },
+  "dm_in_kidney": {
+   "pos": 3233,
+   "neg": 5757,
+   "unknown": 244
+  },
+  "dmq_in_kidney": {
+   "pos": 2765,
+   "neg": 6460,
+   "unknown": 9
+  },
+  "dma_in_kidney": {
+   "pos": 2352,
+   "neg": 6533,
+   "unknown": 349
+  },
+  "both_hbv_and_hcv": 1
+ },
+ "two_label_crosstab_in_kidney": {
+  "未知": {
+   "未知": 227,
+   "陰性": 115,
+   "陽性": 179
+  },
+  "陰性": {
+   "未知": 17,
+   "陰性": 5543,
+   "陽性": 2983
+  },
+  "陽性": {
+   "未知": 0,
+   "陰性": 99,
+   "陽性": 71
+  }
+ },
+ "label_transition_old_to_new": {
+  "hep": {
+   "舊陰性": {
+    "未知": 521,
+    "陰性": 8543,
+    "陽性": 0
+   },
+   "舊陽性": {
+    "未知": 0,
+    "陰性": 0,
+    "陽性": 170
+   }
+  },
+  "dm": {
+   "舊陰性": {
+    "未知": 244,
+    "陰性": 5757,
+    "陽性": 0
+   },
+   "舊陽性": {
+    "未知": 0,
+    "陰性": 0,
+    "陽性": 3233
+   }
+  }
+ },
+ "features_v3": [
+  "LBXSAL",
+  "LBXSATSI",
+  "LBXSASSI",
+  "LBXSAPSI",
+  "LBXSBU",
+  "LBXSCA",
+  "LBXSCH",
+  "LBXSC3SI",
+  "LBXSGTSI",
+  "LBXSGL",
+  "LBXSIR",
+  "LBXSLDSI",
+  "LBXSPH",
+  "LBXSTB",
+  "LBXSTP",
+  "LBXSTR",
+  "LBXSUA",
+  "LBXSCR",
+  "LBXSNASI",
+  "LBXSKSI",
+  "LBXSCLSI",
+  "LBXSOSSI",
+  "LBXSGB",
+  "LBXWBCSI",
+  "LBXLYPCT",
+  "LBXMOPCT",
+  "LBXNEPCT",
+  "LBXEOPCT",
+  "LBXBAPCT",
+  "LBXRBCSI",
+  "LBXHGB",
+  "LBXHCT",
+  "LBXMCVSI",
+  "LBXMCHSI",
+  "LBXMC",
+  "LBXRDW",
+  "LBXPLTSI",
+  "LBXMPSI",
+  "LBXCRP",
+  "LBXBAP",
+  "URXUMA",
+  "URXUCR",
+  "LBXTC",
+  "LBXTR",
+  "LBDLDL",
+  "LBXBPB",
+  "LBXBCD",
+  "LBXFER",
+  "LBXFOL",
+  "LBXB12",
+  "LBXHCY",
+  "LBXMMA",
+  "LBXTHG",
+  "LBXRBF",
+  "LBXCOT",
+  "LBDVIDMS",
+  "LBXPT21",
+  "ACR",
+  "eGFR",
+  "NLR",
+  "age",
+  "sex"
+ ],
+ "n_features_v3": 62
+}
