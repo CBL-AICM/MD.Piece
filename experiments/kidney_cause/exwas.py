@@ -122,6 +122,10 @@ def _logit_or(df, expo, outcome, adj, seed):
         return None
     mu, sd = X.mean(0), X.std(0)
     sd[sd == 0] = 1.0
+    # 2026-09-26：0/1 暴露（藥物）不標準化，OR＝使用 vs 未使用；連續暴露維持每 1 SD（v2 對藥物也標準化，量尺不明）
+    binary = set(np.unique(X[:, 0])) <= {0.0, 1.0}
+    if binary:
+        mu[0], sd[0] = 0.0, 1.0
     Xs = (X - mu) / sd
     y = d[outcome].to_numpy(int)
     m = LogisticRegression(max_iter=4000, random_state=seed, C=1e6).fit(Xs, y)
@@ -139,8 +143,11 @@ def _logit_or(df, expo, outcome, adj, seed):
         return None
     from scipy.stats import norm
     z = beta / se
-    return dict(n=int(len(d)), n_pos=int(y.sum()), beta_per_sd=beta, se=se,
-                or_per_sd=float(np.exp(beta)),
+    return dict(n=int(len(d)), n_pos=int(y.sum()), beta=beta, se=se,
+                scale="使用 vs 未使用" if binary else "每 1 SD",
+                sd_exposure=None if binary else float(sd[0]),
+                n_exposed=int(X[:, 0].sum()) if binary else None,
+                OR=float(np.exp(beta)),
                 ci=[float(np.exp(beta - 1.96 * se)), float(np.exp(beta + 1.96 * se))],
                 p_two_sided=float(2 * norm.sf(abs(z))), z=float(z))
 

@@ -106,3 +106,7 @@
 {"kind": "FINAL_MODEL_V2", "holdout_eval_n": 2, "at": "2026-08-31T09:54:21", "sensitivity_ok": true, "specificity_ok": false, "abstain_ok": false, "holdout_ci_ok": true, "all_met": false, "holdout_auroc": 0.814946849883329, "holdout_ci": [0.7396117811235229, 0.8764717797688181], "abstain": 0.43766696349065004}
 {"kind": "EXWAS", "at": "2026-08-31T10:40:28", "n_exposures": 197, "n_sig": 12, "n_survive": 12, "control": "❌ 陽性對照未被掃出——方法缺乏偵測力，其餘結果不可信"}
 {"kind": "EXWAS", "at": "2026-08-31T10:41:55", "n_exposures": 213, "n_sig": 24, "n_survive": 24, "control": "❌ 陽性對照未被掃出——方法缺乏偵測力，其餘結果不可信"}
+{"kind": "EXWAS", "at": "2026-09-26T23:23:18", "n_exposures": 213, "n_sig": 25, "n_survive": 25, "control": "✅ 陽性對照被掃出、陰性對照未被掃出——結果可信度較高"}
+{"kind": "EXWAS", "at": "2026-09-26T23:26:54", "n_exposures": 213, "n_sig": 26, "n_survive": 26, "control": "✅ 陽性對照被掃出、陰性對照未被掃出——結果可信度較高"}
+{"kind": "v3_eval", "created": "2026-09-26T23:21:15", "axis": "肝炎", "plan_sha256": "3ed9a3142c1321f51f1ed2303d551c0376e8e04f2ffded210fe387dba9cd9884", "n": 8713, "n_pos": 170, "auroc": 0.7831768010961847, "ap": 0.11612645874004271}
+{"kind": "v3_eval", "created": "2026-09-26T23:21:15", "axis": "糖尿病", "plan_sha256": "3ed9a3142c1321f51f1ed2303d551c0376e8e04f2ffded210fe387dba9cd9884", "n": 8990, "n_pos": 3233, "auroc": 0.7650623259861271, "ap": 0.641248176593497}

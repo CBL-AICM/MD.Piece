@@ -214,10 +214,12 @@ def load_all(verbose=True):
     return df, dict(ana_cols=ana_cols)
 
 
-def load_extended(verbose=True):
-    """2005–2018 七個週期。這些週期沒有 surplus sera ANA，故免疫狀態一律未知。"""
+def load_extended(verbose=True, cycles=None, extra=None):
+    """2005–2018 七個週期（預設）。這些週期沒有 surplus sera ANA，故免疫狀態一律未知。
+    cycles／extra 可傳入其他週期（外部驗證 2021–2023 用），規則完全相同。"""
     rows = []
-    for cyc, files in CYCLES_EXT.items():
+    EXTRA_FILES_EXT_ = EXTRA_FILES_EXT if extra is None else extra
+    for cyc, files in (CYCLES_EXT if cycles is None else cycles).items():
         demo = _read(files["demo"])
         d = demo[["SEQN", "RIDAGEYR", "RIAGENDR"] + [c for c in DESIGN if c in demo.columns]].copy()
         d = d.rename(columns={"RIDAGEYR": "age", "RIAGENDR": "sex"})
@@ -230,7 +232,7 @@ def load_extended(verbose=True):
                     c in ("LBXGH", "DIQ010", "LBDHBG", "LBXHBC", "LBXHCR", "LBDHCV", "LBXHCV", "LBDHCI")]
             if len(keep) > 1:
                 d = d.merge(f[keep].drop_duplicates("SEQN"), on="SEQN", how="left", suffixes=("", "_x"))
-        for extra in EXTRA_FILES_EXT.get(cyc, []):
+        for extra in EXTRA_FILES_EXT_.get(cyc, []):
             f = _read(extra)
             keep = [c for c in f.columns if c == "SEQN" or c in FEATURE_LABELS]
             if len(keep) > 1:

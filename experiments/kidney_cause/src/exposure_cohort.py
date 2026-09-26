@@ -173,8 +173,9 @@ def build(P=None, verbose=True):
     df["eGFR"] = egfr_ckdepi2021(df["LBXSCR"].to_numpy(float), df["age"].to_numpy(float),
                                  female.to_numpy())
     df["ACR"] = df["URXUMA"] / (df["URXUCR"] / 100.0)
-    df["kidney_damage"] = ((df["eGFR"] < 60) | (df["ACR"] >= 30)).astype(float)
-    df.loc[df["eGFR"].isna() & df["ACR"].isna(), "kidney_damage"] = np.nan
+    # 三值（2026-09-26）：一項正常、另一項缺失者為未知，不再當陰性（v2 將 2,830 人誤列為對照組）
+    df["kidney_damage"] = np.select([(df["eGFR"] < 60) | (df["ACR"] >= 30), (df["eGFR"] >= 60) & (df["ACR"] < 30)],
+                                    [1.0, 0.0], np.nan)
     if verbose:
         print(f"\n[暴露世代] 成人 {len(df):,}｜腎損傷 {int(df['kidney_damage'].sum()):,}"
               f"（{df['kidney_damage'].mean():.1%}）｜結果可判定 {int(df['kidney_damage'].notna().sum()):,}")
@@ -207,6 +208,12 @@ def build(P=None, verbose=True):
                 met[dst] = met[dst].fillna(met[src]) if dst in met.columns else met[src]
                 met = met.drop(columns=[src])
         df = df.merge(met, on="SEQN", how="left", suffixes=("", "_m"))
+        # 2026-09-26 修正：LBXBPB/LBXBCD/LBXTHG 已由 1999–2004 檢驗檔（LAB06 等）載入，PBCD_D–J 合併時
+        # 撞名成 *_m 而被忽略——v2 的血中金屬只含 1999–2004、尿中金屬只含 2005–2018，兩者無任何共同受試者。
+        for c in ("LBXBPB", "LBXBCD", "LBXTHG", "LBXBSE"):
+            if f"{c}_m" in df.columns:
+                df[c] = df[c].fillna(df[f"{c}_m"]) if c in df.columns else df[f"{c}_m"]
+                df = df.drop(columns=[f"{c}_m"])
         for c in ("LBXBPB", "LBXBCD", "LBXTHG", "LBXBSE"):
             if c in df.columns and df[c].notna().sum() > 500:
                 exposures.append(c)

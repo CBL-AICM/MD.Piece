@@ -112,9 +112,9 @@ def run(seed=20260830, verbose=True):
         # 那是尿液排泄減少的假象（eGFR↓ → 尿中排出減少 → 濃度看似較低）。
         tox_sig = [r["exposure"] for r in as_tox if r["significant_fdr05"]]
         tox_harmful = [r["exposure"] for r in as_tox
-                       if r["significant_fdr05"] and r["headline"]["or_per_sd"] > 1]
+                       if r["significant_fdr05"] and r["headline"]["OR"] > 1]
         tox_protective = [r["exposure"] for r in as_tox
-                          if r["significant_fdr05"] and r["headline"]["or_per_sd"] < 1]
+                          if r["significant_fdr05"] and r["headline"]["OR"] < 1]
         arsenic_check = dict(
             arsenobetaine_significant=bool(ab["significant_fdr05"]),
             arsenobetaine_q=ab["q_bh"], toxic_species_significant=tox_sig,
@@ -149,7 +149,7 @@ def run(seed=20260830, verbose=True):
         created=time.strftime("%Y-%m-%dT%H:%M:%S"),
         cohort=dict(**E["counts"], race_adjustment_valid=race_ok),
         design=dict(population="全體成人（**不對結果條件化**）",
-                    outcome="kidney_damage＝eGFR<60 或 ACR≥30",
+                    outcome="kidney_damage＝eGFR<60 或 ACR≥30（三值：一正常一缺為未知並排除）",
                     adjustment_layers=list(exwas.ADJ_SETS),
                     fdr="Benjamini-Hochberg，於 M3 的雙尾 p 值上"),
         control_check=verdict, arsenic_builtin_control=arsenic_check,
@@ -159,7 +159,7 @@ def run(seed=20260830, verbose=True):
         results=rows,
         reporting_rule=("陽性對照未命中→整批不報個別發現；陰性對照命中→整批降級；"
                         "血中金屬即使顯著亦標反向因果高風險，不列為因果證據"))
-    PL._dump(out, "exwas.json")
+    PL._dump(out, "exwas_v3.json")
     with open(os.path.join(RESULTS, "runs_log.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps(dict(kind="EXWAS", at=out["created"], n_exposures=len(rows),
                                 n_sig=out["n_significant_fdr05"],
@@ -172,13 +172,13 @@ def run(seed=20260830, verbose=True):
             print(f"\n  前 15 個通過完整調整者：")
             for r in sig[:15]:
                 h = r["headline"]
-                print(f"   {r['exposure']:22s} OR {h['or_per_sd']:.3f} "
+                print(f"   {r['exposure']:22s} OR {h['OR']:.3f}（{h['scale']}） "
                       f"[{h['ci'][0]:.3f},{h['ci'][1]:.3f}]  q={r['q_bh']:.2e}  "
                       f"反向風險={r['reverse_causation_risk']}")
         else:
             print(f"\n  ⚠️ 對照檢查未通過，依報告紀律**不列出個別發現**。")
             print(f"     {verdict['interpretation']}")
-        print("\n[完成] results/exwas.json")
+        print("\n[完成] results/exwas_v3.json")
     return out
 
 
