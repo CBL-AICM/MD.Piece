@@ -18,8 +18,12 @@ J = lambda *p: json.load(open(os.path.join(ROOT, *p), encoding="utf-8"))
 A, EV, X, CK, PR = (J("results", "v3_audit.json"), J("results", "v3_eval.json"), J("results", "exwas_v3.json"),
                     J("results", "exwas_v3_checks.json"), J("params", "external_validation_protocol.json"))
 E = EV["axes"]
+XV, XPH, XAM = (J("results", "external_2021_2023.json"), J("results", "external_2021_2023_posthoc.json"),
+                J("params", "external_validation_amendment_1.json"))
+XC = J("results", "external_2021_2023_precheck.json")["versions"]["調和（修正一）"]["features"]
+EXT_COMMITS = dict(amend="44b0ace", results="a7c4af8")
 FIGS = ["圖1_分析樣本與三值標籤.png", "圖2_判別力與基準.png", "圖3_校準與分區.png", "圖4_回溯時間評估.png",
-        "圖5_決策曲線.png", "圖6_暴露血尿比較.png", "圖S1_示範輸出.png"]
+        "圖5_決策曲線.png", "圖6_暴露血尿比較.png", "圖7_外部確認.png", "圖S1_示範輸出.png"]
 
 
 def n(x):
@@ -100,6 +104,37 @@ def axis_vals(key):
 
 
 H, D = axis_vals("肝炎"), axis_vals("糖尿病")
+
+
+def ext_vals(part, key):
+    """外部確認一軸之數值（results/external_2021_2023.json）。"""
+    r = XV[part]["axes"][key]
+    ms = r["models"]
+    m, b, g = ms["v3_full_LR（部署）"], ms["v3_basic_LR（常規套組候選）"], ms["v3_full_HGB（比較，僅判別）"]
+    c, bb = m["calibration"], m["bands_B"]
+    d = 2 if key == "肝炎" else 1
+    return dict(
+        n=n(r["n"]), pos=r["n_pos"], prev=pct(r["prevalence"], d),
+        auc=p3(m["auroc"]), auc_ci=ci(m["ci95"]["auroc"]), ap=p3(m["ap"]), ap_ci=ci(m["ci95"]["ap"]),
+        ap_lift=f"{m['ap'] / r['prevalence']:.1f}", cint=num(c["intercept"], 2), cslope=f"{c['slope']:.2f}",
+        brier=f"{c['brier']:.4f}", bss=num(c["brier_skill"], 3), meanpred=pct(c["mean_pred"], d), obs=pct(c["observed"], d),
+        ratio_pred=f"{c['mean_pred'] / c['observed']:.1f}", insuff=n(m["insufficient_data_n"]),
+        covB=pct(bb["coverage"]), covA=pct(m["bands_A"]["coverage"]),
+        rates="／".join(pct(bb["band"][k]["observed_rate"]) for k in ("傾向", "不確定", "不傾向")),
+        low_n=n(bb["band"]["不傾向"]["n"]), low_pos=bb["six_cell"]["陽性_不傾向"],
+        bauc=p3(b["auroc"]), bauc_ci=ci(b["ci95"]["auroc"]), dbf=sgn(b["auroc"] - m["auroc"]),
+        dbf_ci=ci(r["basic_minus_full"]["d_auroc"]), bcint=num(b["calibration"]["intercept"], 2),
+        bcslope=f"{b['calibration']['slope']:.2f}", gauc=p3(g["auroc"]), gap=p3(g["ap"]),
+        wauc=p3(r["weighted_full"]["auroc"]), wprev=pct(r["weighted_full"]["prevalence"], d))
+
+
+XH, XD = ext_vals("primary", "肝炎"), ext_vals("primary", "糖尿病")
+SH, SD = ext_vals("sensitivity_as_frozen", "肝炎"), ext_vals("sensitivity_as_frozen", "糖尿病")
+XK, SK = XV["primary"]["kidney"], XV["sensitivity_as_frozen"]["kidney"]
+PHH, PHD, HC = XPH["axes"]["肝炎"], XPH["axes"]["糖尿病"], XPH["hep_positive_composition"]
+ph = lambda r: (f"{p3(r['auroc_all_inputs'])} {'升' if r['delta_masked_minus_all'] >= 0 else '降'}為 {p3(r['auroc_masked'])}"
+                f"（差 {sgn(r['delta_masked_minus_all'])}，95% CI {ci(r['delta_ci95'])}）")
+xr = lambda f: f"{XC[f]['ratio']:.2f}"
 MK = J("results", "v3_markers.json")
 
 
@@ -157,6 +192,20 @@ def dca_row(v, pt):
     return f"{pct(pt, 1)}：模型 {r['nb_model']:.4f}、全數送驗 {r['nb_test_all']:.4f}"
 
 
+def conv_table():
+    from nhanes_cohort import FEATURE_LABELS
+    rows = ["| 變數 | 檢驗 | 回推式（舊＝） | 來源 |", "|---|---|---|---|"]
+    for v, c in XAM["conversions"].items():
+        a, b = map(float, re.match(r"舊 = (\S+) \+ (\S+) × 新", c["equation"]).groups())
+        src = os.path.basename(c["source"]).replace(".htm", "")
+        fa = ("−" + f"{-a:g}") if a < 0 else f"{a:g}"          # 照官方文件之有效位數，不再四捨五入
+        rows.append(f"| {v} | {FEATURE_LABELS.get(v, v)} | {fa} ＋ {b:g} × 新值 | {src} |")
+    return "\n".join(rows)
+
+
+sha_amend = __import__("hashlib").sha256(open(os.path.join(ROOT, "params", "external_validation_amendment_1.json"), "rb").read()).hexdigest()
+
+
 def sig_table():
     rows = ["| 暴露 | OR（95% CI） | 量尺 | q 值 | n |", "|---|---|---|---|---|"]
     name = {"藥_利尿劑": "利尿劑", "藥_胰島素": "胰島素", "藥_別嘌醇": "別嘌醇", "LBXBCD": "血鎘", "LBXBPB": "血鉛",
@@ -174,7 +223,7 @@ def sig_table():
 
 PAPER = f"""# 常規檢驗能否提供腎臟指標異常的病因線索？
 
-## ——NHANES 1999–2018 肝炎病毒感染與糖尿病兩個共存標籤之重分析（v3）
+## ——肝炎病毒感染與糖尿病兩個共存標籤：NHANES 1999–2018 重分析與 2021–2023 外部確認（v3）
 
 作者　＿＿＿＿＿＿　　所屬單位　＿＿＿＿＿＿　　版本　v3（2026-09-27）
 
@@ -184,13 +233,13 @@ PAPER = f"""# 常規檢驗能否提供腎臟指標異常的病因線索？
 
 **背景與目的**　本研究的起點是一個臨床問題：腎臟指標異常時，能否只用已有的常規血液與尿液檢驗，指出病因的大概方向。公開健康調查沒有病理診斷，只能提供共存疾病標籤；共存疾病是候選病因，不等於病因。本研究評估兩個共存標籤（肝炎病毒感染、糖尿病）能被常規檢驗辨識到什麼程度，作為病因線索，並依 2026 年 9 月 26 日之外部方法學審查，以真實資料重建標籤與評估流程。
 
-**方法**　NHANES 1999–2018 十個週期成人 {n(old['n_adults'])} 人。更正 1999–2000 年血清肌酸酐校正式、依官方式轉換 2007 年前尿肌酸酐；腎臟指標與兩個標籤改採三值（陽性、陰性、未知），各軸排除未知者。部署模型為五折交叉配適邏輯迴歸集成加保序校準，以分層五折重複五次之巢狀外層評估（校準器與分區門檻只用外層訓練資料），並在同一切分比較人口學、常規套組與梯度提升模型；另做回溯時間評估、調查權重、標籤定義敏感度與決策曲線。分析計畫於執行前提交版本控制。
+**方法**　NHANES 1999–2018 十個週期成人 {n(old['n_adults'])} 人。更正 1999–2000 年血清肌酸酐校正式、依官方式轉換 2007 年前尿肌酸酐；腎臟指標與兩個標籤改採三值（陽性、陰性、未知），各軸排除未知者。部署模型為五折交叉配適邏輯迴歸集成加保序校準，以分層五折重複五次之巢狀外層評估（校準器與分區門檻只用外層訓練資料），並在同一切分比較人口學、常規套組與梯度提升模型；另做回溯時間評估、調查權重、標籤定義敏感度與決策曲線。分析計畫於執行前提交版本控制。外部確認以從未參與開發的 NHANES 2021–2023 一次評估；取用後、評估前發現檢驗儀器與方法變更，依 CDC 官方回推式把數值換回開發時的量尺，並於評估前提交此修正。
 
-**結果**　腎臟指標異常 {n(T['kidney']['pos'])} 人（原稿 {n(old['kidney'])} 人），另有 {n(T['kidney']['unknown'])} 人無法判定。肝炎標籤陽性 {H['pos']} 人、糖尿病標籤陽性 {D['pos']} 人。肝炎軸 AUROC {H['auc']}（95% CI {H['auc_ci']}）、平均精確率（AP）{H['ap']}（盛行率 {H['prev3']}），校準斜率 {H['cslope']}；糖尿病軸 AUROC {D['auc']}（{D['auc_ci']}）、AP {D['ap']}（盛行率 {D['prev3']}），校準斜率 {D['cslope']}。只用年齡與性別時為 {H['m1']} 與 {D['m1']}。以 1999–2008 年訓練、2009–2018 年評估，兩軸為 {H['tl']} 與 {D['tl']}。肝炎軸的訊號幾乎全來自 C 型肝炎：僅 C 肝標籤 AUROC {p3(hcv['auroc'])}，僅 B 肝標籤 {p3(hbv['auroc'])}。糖尿病軸的梯度提升模型比邏輯迴歸高 {D['d4'][1:]}（95% CI {D['d4ci']}）。
+**結果**　腎臟指標異常 {n(T['kidney']['pos'])} 人（原稿 {n(old['kidney'])} 人），另有 {n(T['kidney']['unknown'])} 人無法判定。肝炎標籤陽性 {H['pos']} 人、糖尿病標籤陽性 {D['pos']} 人。肝炎軸 AUROC {H['auc']}（95% CI {H['auc_ci']}）、平均精確率（AP）{H['ap']}（盛行率 {H['prev3']}），校準斜率 {H['cslope']}；糖尿病軸 AUROC {D['auc']}（{D['auc_ci']}）、AP {D['ap']}（盛行率 {D['prev3']}），校準斜率 {D['cslope']}。只用年齡與性別時為 {H['m1']} 與 {D['m1']}。以 1999–2008 年訓練、2009–2018 年評估，兩軸為 {H['tl']} 與 {D['tl']}。肝炎軸的訊號幾乎全來自 C 型肝炎：僅 C 肝標籤 AUROC {p3(hcv['auroc'])}，僅 B 肝標籤 {p3(hbv['auroc'])}。糖尿病軸的梯度提升模型比邏輯迴歸高 {D['d4'][1:]}（95% CI {D['d4ci']}）。在 2021–2023 年外部資料中，糖尿病軸 AUROC {XD['auc']}（{XD['auc_ci']}），只用常規套組的模型為 {XD['bauc']}、梯度提升為 {XD['gauc']}；肝炎軸只有 {XH['pos']} 名陽性，AUROC {XH['auc']}（{XH['auc_ci']}），區間過寬而無法確認，且平均預測為實際的 {XH['ratio_pred']} 倍。
 
-**結論**　常規檢驗對 C 型肝炎相關的肝炎標籤與糖尿病標籤有中等且校準良好的辨識力，可作為病因線索；對 B 型肝炎幾乎沒有訊號。辨識共存疾病不等於確定腎損傷病因，且在普遍篩檢的建議下，本工具不宜用來決定誰不必驗肝炎。未參與開發的新資料（NHANES 2021–2023）之確認協定與模型已先凍結，尚待取用資料後一次評估。
+**結論**　常規檢驗對 C 型肝炎相關的肝炎標籤與糖尿病標籤有中等且校準良好的辨識力，可作為病因線索；對 B 型肝炎幾乎沒有訊號。在未參與開發的新資料中，糖尿病軸大致維持判別力，只用常規套組的模型不輸全特徵模型；肝炎軸的外部事件太少，仍待確認，使用前須重新校準。辨識共存疾病不等於確定腎損傷病因，且在普遍篩檢的建議下，本工具不宜用來決定誰不必驗肝炎。
 
-**關鍵詞**：NHANES；腎臟指標異常；病因線索；C 型肝炎；糖尿病；預測模型；校準
+**關鍵詞**：NHANES；腎臟指標異常；病因線索；C 型肝炎；糖尿病；預測模型；校準；外部確認
 
 ---
 
@@ -198,11 +247,11 @@ PAPER = f"""# 常規檢驗能否提供腎臟指標異常的病因線索？
 
 **Background** We asked whether routine blood and urine tests can point toward the cause of abnormal kidney markers. Public survey data provide comorbidity labels, not etiology, so we evaluated how well routine tests identify two candidate-cause labels (hepatitis virus infection and diabetes) and rebuilt the analysis after an external methodological review.
 
-**Methods** Adults in NHANES 1999–2018 (n = {n(old['n_adults'])}). We corrected the 1999–2000 serum creatinine calibration, harmonized pre-2007 urine creatinine, and used three-valued labels (positive, negative, unknown). The deployed model (cross-fitted logistic ensemble with isotonic calibration) was evaluated by nested 5-fold cross-validation repeated five times, with calibration and thresholds learned only in outer training folds, and compared on identical splits with demographic, routine-panel and gradient-boosting models.
+**Methods** Adults in NHANES 1999–2018 (n = {n(old['n_adults'])}). We corrected the 1999–2000 serum creatinine calibration, harmonized pre-2007 urine creatinine, and used three-valued labels (positive, negative, unknown). The deployed model (cross-fitted logistic ensemble with isotonic calibration) was evaluated by nested 5-fold cross-validation repeated five times, with calibration and thresholds learned only in outer training folds, and compared on identical splits with demographic, routine-panel and gradient-boosting models. External confirmation used NHANES 2021–2023, evaluated once after a pre-evaluation amendment that applied the CDC's official backward equations for laboratory instrument and method changes.
 
-**Results** Kidney-marker abnormality was present in {n(T['kidney']['pos'])} adults. The hepatitis axis had an AUROC of {H['auc']} (95% CI {H['auc_ci']}) and an average precision of {H['ap']} at a prevalence of {H['prev3']}; the diabetes axis had {D['auc']} ({D['auc_ci']}) and {D['ap']} at {D['prev3']}. Calibration slopes were {H['cslope']} and {D['cslope']}. Training on 1999–2008 and testing on 2009–2018 gave {H['tl']} and {D['tl']}. The hepatitis signal came from hepatitis C (AUROC {p3(hcv['auroc'])}) rather than hepatitis B ({p3(hbv['auroc'])}).
+**Results** Kidney-marker abnormality was present in {n(T['kidney']['pos'])} adults. The hepatitis axis had an AUROC of {H['auc']} (95% CI {H['auc_ci']}) and an average precision of {H['ap']} at a prevalence of {H['prev3']}; the diabetes axis had {D['auc']} ({D['auc_ci']}) and {D['ap']} at {D['prev3']}. Calibration slopes were {H['cslope']} and {D['cslope']}. Training on 1999–2008 and testing on 2009–2018 gave {H['tl']} and {D['tl']}. The hepatitis signal came from hepatitis C (AUROC {p3(hcv['auroc'])}) rather than hepatitis B ({p3(hbv['auroc'])}). In NHANES 2021–2023, the diabetes axis had an AUROC of {XD['auc']} ({XD['auc_ci']}); a routine-panel model reached {XD['bauc']} and gradient boosting {XD['gauc']}. The hepatitis axis had only {XH['pos']} events (AUROC {XH['auc']}, 95% CI {XH['auc_ci']}) and over-predicted risk by a factor of {XH['ratio_pred']}.
 
-**Conclusions** Routine tests carry calibrated, moderate signal for hepatitis C–related and diabetes labels, usable as etiologic clues but not as diagnoses. A frozen protocol for one-time external confirmation on NHANES 2021–2023 is in place.
+**Conclusions** Routine tests carry calibrated, moderate signal for hepatitis C–related and diabetes labels, usable as etiologic clues but not as diagnoses. New data supported the diabetes axis and favored the routine-panel model; the hepatitis axis remains unconfirmed and needs recalibration.
 
 ---
 
@@ -218,7 +267,7 @@ PAPER = f"""# 常規檢驗能否提供腎臟指標異常的病因線索？
 2. 以校準與門檻完全留在訓練資料內的巢狀外層評估，報告兩軸工具的判別、校準與三段分區表現[@tripod,probast]；
 3. 以同一切分比較簡單基準、檢驗時間外推、調查權重與標籤定義的影響；
 4. 重新檢視上游暴露關聯，改在同一批受試者比較血中與尿中金屬；
-5. 在取用任何新資料之前，凍結外部確認的協定與模型。
+5. 在取用任何新資料之前凍結外部確認的協定與模型，再以 NHANES 2021–2023 一次評估。
 
 ## 2　材料與方法
 
@@ -275,6 +324,10 @@ PAPER = f"""# 常規檢驗能否提供腎臟指標異常的病因線索？
 ### 2.10　外部確認協定
 
 NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究任何決策。本版在取用前凍結三個模型（部署之全特徵邏輯迴歸、常規套組邏輯迴歸、全特徵梯度提升）與評估規則，記錄其 SHA256 與 17 個待取用檔案（約 {PR['total_bytes'] / 1e6:.1f} MB）；程式只允許評估一次，且不重新配適、不重新校準、不調整門檻（`params/external_validation_protocol.json`，提交 9ca4e9f）。
+
+經使用者同意，17 個檔案於 2026 年 9 月 27 日取用，大小與凍結紀錄一致。取用後、計算任何預測之前，逐檔核對 CDC 文件發現：生化儀器由 Cobas 6000 換為 Cobas 8000[@biopro_l]；尿白蛋白由螢光免疫法改為液相層析串聯質譜[@albcr_l]；空腹三酸甘油酯改為非甘油空白法並更名[@trigly_l]；維生素 D 亦更名。凍結時只核對了血清與尿肌酸酐（兩者官方皆不需轉換）。若照凍結程式原樣執行，兩個更名的特徵會整欄以中位數補入，尿白蛋白（因此 ACR 與腎臟標籤）與十餘項生化值也不在開發時的量尺上。
+
+因此於評估前提交修正一（`params/external_validation_amendment_1.json`，提交 {EXT_COMMITS['amend']}）。規則是：凡 CDC 文件建議用於與 2017–2020 年比較的回推式，對模型或標籤用到的變數一律套用（{len(XAM['conversions'])} 項，補充表 S3）；儀器計算的滲透壓、Friedewald LDL 與 ACR 由調整後的組成重算；同一分析物更名者對應回原名；其餘不動。肌酸酐、尿肌酸酐、HbA1c、總膽固醇、HDL、全血球計數與肝炎血清學，CDC 皆判定不需調整；血中金屬的方法有變但未提供換算式，依凍結協定使用原值。模型、校準、門檻與指標皆不變。評估前的資料核對只含標籤計數與特徵分布（`results/external_2021_2023_precheck.json`），評估程式先在開發資料上測試可執行。依凍結程式原樣、不調和的結果列為事前指定的敏感度分析。
 
 ## 3　結果
 
@@ -401,11 +454,52 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 在同一批人中，血鉛與血鎘對三種結果定義都呈正相關；尿中金屬的方向則取決於結果定義與寫法。對與尿肌酸酐無共同分母的 eGFR < 60，尿鉛原濃度即呈負相關（{orr(mo(Pb, 'egfr_lt60', '尿中_原濃度'))}），加入尿肌酸酐後更明顯——與「腎絲球過濾下降使尿中排出減少」相符。對 ACR ≧ 30，肌酸酐比值寫法的尿鎘明顯高於原濃度（{orr(mo(Cd, 'acr_ge30', '尿中_肌酸酐比值'))} vs {orr(mo(Cd, 'acr_ge30', '尿中_原濃度'))}），部分來自與 ACR 共用的尿肌酸酐分母。這些模式支持排泄與分母機制值得檢查，但單次橫斷面資料不能排除真實暴露效應、殘餘混雜或測量誤差，也不能把 {X['n_significant_fdr05']} 個關聯一律歸為反向因果。
 
+### 3.7　外部確認（NHANES 2021–2023）
+
+{{FIG7}}
+
+**圖7　外部確認。** (a) 內部（巢狀外層）與外部 AUROC；(b) 部署模型三段分區之實際陽性比例，外部標註陽性數／該區人數。
+
+2021–2023 年成人中，腎臟指標異常 {n(XK['pos'])} 人（依凍結程式原樣為 {n(SK['pos'])} 人，差異來自尿白蛋白回推），無法判定 {n(XK['unknown'])} 人。肝炎軸可判定 {XH['n']} 人、陽性 {XH['pos']} 人（HBsAg 陽性 {HC['hbsag_pos']}、HCV RNA 陽性 {HC['hcv_rna_pos']}）；糖尿病軸可判定 {XD['n']} 人、陽性 {XD['pos']} 人。
+
+**表7　外部確認結果（主要分析：修正一調和後）**
+
+| 項目 | 肝炎病毒感染標籤 | 糖尿病標籤 |
+|---|---|---|
+| n（陽性；盛行率） | {XH['n']}（{XH['pos']}；{XH['prev']}） | {XD['n']}（{XD['pos']}；{XD['prev']}） |
+| 部署模型 AUROC（95% CI） | **{XH['auc']}**（{XH['auc_ci']}） | **{XD['auc']}**（{XD['auc_ci']}） |
+| 內部參考 AUROC（巢狀外層） | {H['auc']} | {D['auc']} |
+| 部署模型 AP（95% CI） | {XH['ap']}（{XH['ap_ci']}） | {XD['ap']}（{XD['ap_ci']}） |
+| AP ÷ 盛行率 | {XH['ap_lift']} | {XD['ap_lift']} |
+| 校準截距／斜率 | {XH['cint']}／{XH['cslope']} | {XD['cint']}／{XD['cslope']} |
+| 平均預測／實際陽性比例 | {XH['meanpred']}／{XH['obs']} | {XD['meanpred']}／{XD['obs']} |
+| Brier（skill） | {XH['brier']}（{XH['bss']}） | {XD['brier']}（{XD['bss']}） |
+| 涵蓋率（勝算規則；舊規則） | {XH['covB']}；{XH['covA']} | {XD['covB']}；{XD['covA']} |
+| 各區實際陽性率：傾向／不確定／不傾向 | {XH['rates']} | {XD['rates']} |
+| 資料不足 | {XH['insuff']} | {XD['insuff']} |
+| 常規套組 LR AUROC（95% CI） | {XH['bauc']}（{XH['bauc_ci']}） | {XD['bauc']}（{XD['bauc_ci']}） |
+| 常規套組 − 部署：ΔAUROC（配對 95% CI） | {XH['dbf']}（{XH['dbf_ci']}） | {XD['dbf']}（{XD['dbf_ci']}） |
+| 常規套組 LR 校準截距／斜率 | {XH['bcint']}／{XH['bcslope']} | {XD['bcint']}／{XD['bcslope']} |
+| 全特徵梯度提升 AUROC／AP | {XH['gauc']}／{XH['gap']} | {XD['gauc']}／{XD['gap']} |
+| MEC 加權 AUROC（加權盛行率） | {XH['wauc']}（{XH['wprev']}） | {XD['wauc']}（{XD['wprev']}） |
+| 敏感度：依凍結程式原樣 AUROC（95% CI） | {SH['auc']}（{SH['auc_ci']}） | {SD['auc']}（{SD['auc_ci']}） |
+| 敏感度：依凍結程式原樣 校準截距／斜率 | {SH['cint']}／{SH['cslope']} | {SD['cint']}／{SD['cslope']} |
+
+註：梯度提升依協定只評判別；差值由未四捨五入之值計算，配對信賴區間為同一批受試者重抽 1,000 次。
+
+**糖尿病軸**　部署模型 AUROC {XD['auc']}（{XD['auc_ci']}），略低於內部估計 {D['auc']}，但內部估計仍在外部區間內；各區實際陽性率（{XD['rates']}）與內部相近，涵蓋率 {XD['covB']}。平均預測 {XD['meanpred']} 低於實際 {XD['obs']}（校準截距 {XD['cint']}、斜率 {XD['cslope']}），與回溯時間評估中盛行率上升造成的低估方向一致（3.4）。常規套組模型 AUROC {XD['bauc']}，比部署模型高 {XD['dbf'][1:]}（配對 95% CI {XD['dbf_ci']}）；梯度提升 {XD['gauc']}，非線性的優勢在新資料上仍然存在。
+
+**肝炎軸**　陽性只有 {XH['pos']} 人，遠低於外部驗證建議的至少 100 個事件[@collins_ev]；AUROC {XH['auc']} 的 95% CI 為 {XH['auc_ci']}，既不能確認也不能否定內部估計 {H['auc']}。平均預測 {XH['meanpred']} 是實際 {XH['obs']} 的 {XH['ratio_pred']} 倍（校準截距 {XH['cint']}、斜率 {XH['cslope']}），Brier skill 為負值（{XH['bss']}），未經重新校準的機率不應使用。陽性組成也改變了：HCV RNA 陽性占肝炎軸可判定者的比例，開發資料為 {pct(T['hcv_in_kidney']['pos'] / E['肝炎']['tool']['n'], 2)}，2021–2023 年只有 {pct(HC['hcv_rna_pos'] / XV['primary']['axes']['肝炎']['n'], 2)}；HBsAg 陽性則為 {pct(T['hbv_in_kidney']['pos'] / E['肝炎']['tool']['n'], 2)} 與 {pct(HC['hbsag_pos'] / XV['primary']['axes']['肝炎']['n'], 2)}。本工具的訊號幾乎全部來自 C 型肝炎（3.2），陽性組成偏向 B 型肝炎會直接壓低判別力。不傾向區 {XH['low_n']} 人中沒有陽性，但以 {XH['pos']} 個事件無法據此推論漏失率。
+
+**敏感度與事後探索**　依凍結程式原樣、不調和時，糖尿病軸 AUROC {SD['auc']}（{SD['auc_ci']}），校準截距 {SD['cint']}、斜率 {SD['cslope']}；肝炎軸 {SH['auc']}（{SH['auc_ci']}）。兩版的腎臟標籤與樣本不同（{n(SK['pos'])} 與 {n(XK['pos'])} 人），判別差異不大，但糖尿病軸的校準方向相反（原樣高估、調和後低估），顯示量尺調和主要影響機率的絕對值。以下為一次評估之後才進行的事後探索，不取代主要結果：部署模型含六項在開發資料中只有 1999–2004 年有值的非常規特徵（血鉛、血鎘、血汞、可丁尼、鐵蛋白、維生素 D），2021–2023 年腎臟指標異常者的中位數分別為開發時的 {xr('LBXBPB')}、{xr('LBXBCD')}、{xr('LBXTHG')}、{xr('LBXCOT')}、{xr('LBXFER')}、{xr('LBDVIDMS')} 倍。把這六項改為缺值（即開發資料中 2005–2018 年受試者的處理方式）後，糖尿病軸 AUROC 由 {ph(PHD)}，與常規套組模型相當；肝炎軸由 {ph(PHH)}。這支持一個解釋：開發資料中覆蓋不全、又隨年代大幅變動的特徵，在新資料上會拖累判別。
+
 ## 4　討論
 
 ### 4.1　主要發現
 
-常規檢驗能辨識兩個候選病因的共存標籤，程度中等且校準良好：肝炎軸 AUROC {H['auc']}、AP 為盛行率的 {H['ap_lift']} 倍；糖尿病軸 AUROC {D['auc']}。三項結果改變了對這個工具的理解。第一，肝炎軸實際上是 C 型肝炎軸：B 型肝炎表面抗原陽性者幾乎無法由常規檢驗辨識（AUROC {p3(hbv['auroc'])}），可能因多數慢性 B 型肝炎帶原者肝功能與血液檢驗接近正常（單變量掃描 {MK['僅B肝']['n_markers']} 個標記僅 {MK['僅B肝']['n_fdr05']} 個通過偽發現率校正）。C 型肝炎標籤者的型態則一致：球蛋白較高（單變量 AUROC {mk('僅C肝', 'LBXSGB')}）、白蛋白較低（{mk('僅C肝', 'LBXSAL')}）、血小板與總膽固醇較低（{mk_all('LBXPLTSI')}、{mk_all('LBXSCH')}），與慢性病毒性肝炎之血脂研究方向一致[@bashir]；可丁尼亦較高（{mk('僅C肝', 'LBXCOT')}，僅 {mk_n('LBXCOT')} 名陽性有值），提示部分訊號來自與感染風險相關的吸菸暴露，而不只是肝臟生理。第二，糖尿病軸的線性模型不足，梯度提升的優勢在同一樣本上重現，下一版應考慮非線性模型或加入交互項。第三，精簡為常規套組並未降低肝炎軸判別力，對實際使用有利。
+常規檢驗能辨識兩個候選病因的共存標籤，程度中等且校準良好：肝炎軸 AUROC {H['auc']}、AP 為盛行率的 {H['ap_lift']} 倍；糖尿病軸 AUROC {D['auc']}。三項結果改變了對這個工具的理解。第一，肝炎軸實際上是 C 型肝炎軸：B 型肝炎表面抗原陽性者幾乎無法由常規檢驗辨識（AUROC {p3(hbv['auroc'])}），可能因多數慢性 B 型肝炎帶原者肝功能與血液檢驗接近正常（單變量掃描 {MK['僅B肝']['n_markers']} 個標記僅 {MK['僅B肝']['n_fdr05']} 個通過偽發現率校正）。C 型肝炎標籤者的型態則一致：球蛋白較高（單變量 AUROC {mk('僅C肝', 'LBXSGB')}）、白蛋白較低（{mk('僅C肝', 'LBXSAL')}）、血小板與總膽固醇較低（{mk_all('LBXPLTSI')}、{mk_all('LBXSCH')}），與慢性病毒性肝炎之血脂研究方向一致[@bashir]；可丁尼亦較高（{mk('僅C肝', 'LBXCOT')}，僅 {mk_n('LBXCOT')} 名陽性有值），提示部分訊號來自與感染風險相關的吸菸暴露，而不只是肝臟生理。第二，糖尿病軸的線性模型不足，梯度提升的優勢在同一樣本上重現，下一版應考慮非線性模型或加入交互項。第三，精簡為常規套組並未降低肝炎軸判別力，對實際使用有利；在外部資料上，常規套組模型兩軸皆不低於部署模型，糖尿病軸更高（3.7）。
+
+外部確認的結果分成兩半。糖尿病軸在從未參與開發的 2021–2023 年資料上維持中等判別力，三段分區的實際陽性率也與內部相近，可視為初步確認。肝炎軸則因事件太少而無法確認，機率明顯高估，陽性組成也由以 C 型肝炎為主轉為 B、C 型各半；在以 C 型肝炎訊號為主的工具上，這個轉變本身就會降低判別力。
 
 ### 4.2　與前一版的差異
 
@@ -418,27 +512,29 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 ### 4.4　研究限制
 
 1. 標籤為共存疾病的操作型定義，不是腎臟病理；單次檢驗不確認慢性性[@kdigo]。
-2. 1999–2018 年資料已在前一版反覆使用，本版為探索性重分析；保留集曾被評估兩次，本版不再宣稱一次性確認集（詳見版本紀錄）。
-3. 肝炎陽性僅 {H['pos']} 人，逐週期評估的區間很寬；穩定性取決於事件數與候選參數，而非總樣本數[@riley]。
+2. 1999–2018 年資料已在前一版反覆使用，本版為探索性重分析；保留集曾被評估兩次，本版不再宣稱一次性確認集（詳見版本紀錄）。確認性證據改由 2021–2023 年外部資料提供（3.7）。
+3. 肝炎陽性僅 {H['pos']} 人，逐週期評估的區間很寬；穩定性取決於事件數與候選參數，而非總樣本數[@riley]。外部確認只有 {XH['pos']} 個事件，肝炎軸的外部表現仍未確認。
 4. 權重分析只有點估計，未以 PSU 與分層估計設計變異；美國調查的機率不能直接移植至臺灣就醫族群。
-5. 預測特徵中的血中金屬只來自 1999–2004 年檢驗檔，2015 年後的高敏感度 CRP 未與舊 CRP 合併，這些特徵在其他週期以中位數補入。
+5. 預測特徵中的血中金屬只來自 1999–2004 年檢驗檔，2015 年後的高敏感度 CRP 未與舊 CRP 合併，這些特徵在其他週期以中位數補入；事後探索顯示這類特徵在新資料上會拖累判別（3.7）。另外，開發時 HDL 膽固醇因肝炎 D 抗體的變數字首規則被一併排除於特徵之外，屬過度排除、不造成洩漏，將於下一版修正。
 6. 暴露分析為單次橫斷面，無法建立時序。
+7. 外部資料的檢驗儀器與方法已變更，本研究於評估前以 CDC 官方回推式調和；回推式本身有估計誤差，且血中金屬與可丁尼沒有官方換算式。
 
 ### 4.5　下一步
 
-1. **外部確認**：NHANES 2021–2023 協定與模型已凍結，取用資料後一次評估，報告 AP、AUROC、校準與六格表，並比較常規套組模型與梯度提升模型。
-2. **糖尿病軸改用非線性模型**：以凍結的梯度提升模型在新資料上確認後才部署。
-3. **病因研究**：取得具病理或臨床參考標準、診斷前檢驗與免疫檢驗之醫院資料，並處理只接受切片者的選擇偏差[@yang]。
+1. **部署改用常規套組模型並重新校準**：外部資料顯示常規套組模型兩軸皆不低於全特徵模型；肝炎軸在新資料上高估約 {XH['ratio_pred']} 倍，使用前須以新資料更新截距。
+2. **糖尿病軸改用非線性模型**：梯度提升在外部資料上仍達 {XD['gauc']}；下一步評估其校準，並限制於常規套組特徵。
+3. **肝炎軸的外部確認**：需要更多事件（例如合併之後的 NHANES 週期或醫院資料），並分開呈現 B 型與 C 型肝炎。
+4. **病因研究**：取得具病理或臨床參考標準、診斷前檢驗與免疫檢驗之醫院資料，並處理只接受切片者的選擇偏差[@yang]。
 
 ## 5　結論
 
-常規血液與尿液檢驗對腎臟指標異常成人中的 C 型肝炎相關肝炎標籤與糖尿病標籤，具有中等且校準良好的辨識力，可作為病因線索；對 B 型肝炎幾乎沒有訊號。這不等於病因診斷，也不支持用來省略肝炎篩檢。資料層級的錯誤已依官方文件更正，所有結果由同版結果檔生成；未參與開發之新資料的確認協定已先凍結。
+常規血液與尿液檢驗對腎臟指標異常成人中的 C 型肝炎相關肝炎標籤與糖尿病標籤，具有中等且校準良好的辨識力，可作為病因線索；對 B 型肝炎幾乎沒有訊號。在未參與開發的 2021–2023 年資料中，糖尿病軸維持中等判別力，只用常規套組的模型不輸全特徵模型；肝炎軸外部事件太少而無法確認，機率也須重新校準。這不等於病因診斷，也不支持用來省略肝炎篩檢。資料層級的錯誤已依官方文件更正，所有結果由同版結果檔生成。
 
 ---
 
 ## 研究聲明
 
-**資料與程式可得性**　資料為 NHANES 公開檔，來源網址與 SHA256 見 `params/manifest.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）：分析計畫 bf269c5、結果 d5140a9、外部確認協定 9ca4e9f、圖 397c204。執行環境見 `requirements-lock.txt`（Python 3.14.3、scikit-learn 1.8.0、pandas 3.0.1、NumPy 2.4.3）。重現入口：`audit_v3.py` → `evaluate_v3.py` → `markers_v3.py` → `run_exwas.py` → `exwas_v3_checks.py` → `make_figures_v3.py` → `build_paper_v3.py`。
+**資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）：分析計畫 bf269c5、結果 d5140a9、外部確認協定 9ca4e9f、圖 397c204、外部確認修正一 {EXT_COMMITS['amend']}、外部確認結果 {EXT_COMMITS['results']}。執行環境見 `requirements-lock.txt`（Python 3.14.3、scikit-learn 1.8.0、pandas 3.0.1、NumPy 2.4.3）。重現入口：`audit_v3.py` → `evaluate_v3.py` → `markers_v3.py` → `run_exwas.py` → `exwas_v3_checks.py` → `make_figures_v3.py` → `build_paper_v3.py`；外部確認為 `external_validation_2021.py`（`--precheck` → `--amend` → `--evaluate`，只允許評估一次），事後探索為 `external_posthoc_2021.py`。
 
 **研究倫理**　本研究使用公開去識別化資料；次級分析之倫理審查或免審認定，須由作者依所屬機構規定補列，本文不預先宣稱。
 
@@ -466,6 +562,12 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 |---|---|---|
 """ + "\n".join(f"| {k} | `{v['path'].replace(chr(92), '/')}` | {v['sha256'][:16]} |" for k, v in fm.items()) + f"""
 
+### 表 S3　外部確認修正一之官方回推式（2021–2023 年數值換回 2017–2020 年量尺）
+
+{conv_table()}
+
+註：另將 LBXTLG 對應為 LBXTR、LBXVIDMS 對應為 LBDVIDMS；滲透壓、Friedewald LDL 與 ACR 由調整後組成重算；回推值小於 0 者設為 0。修正一於評估前提交（{EXT_COMMITS['amend']}），檔案 SHA256 前 16 碼 {sha_amend[:16]}。
+
 ### 圖 S1　單一受試者輸出示範
 
 {{FIGS1}}
@@ -474,12 +576,12 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 ### 可重算之結果檔
 
-`results/v3_audit.json`（稽核）、`results/v3_eval.json`（評估）、`results/v3_markers.json`（單變量標記）、`results/v3_oof.csv.gz`（逐人外層預測）、`results/exwas_v3.json`、`results/exwas_v3_checks.json`、`docs/VERSION_LOG.md`（版本紀錄）。
+`results/v3_audit.json`（稽核）、`results/v3_eval.json`（評估）、`results/v3_markers.json`（單變量標記）、`results/v3_oof.csv.gz`（逐人外層預測）、`results/exwas_v3.json`、`results/exwas_v3_checks.json`、`params/external_validation_amendment_1.json`（外部確認修正一）、`results/external_2021_2023_precheck.json`（評估前資料核對）、`results/external_2021_2023.json`（外部確認）、`results/external_2021_2023_posthoc.json`（事後探索）、`docs/VERSION_LOG.md`（版本紀錄）。
 """
 
 RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 
-> 對應《深度審查與補強方案》（2026-09-26）。審查者沒有取得資料與程式，將重分析列為「待執行」；本表逐項說明以真實資料執行的內容與結果。數字皆出自 `results/v3_*.json` 與 `results/exwas_v3*.json`。
+> 對應《深度審查與補強方案》（2026-09-26）。審查者沒有取得資料與程式，將重分析列為「待執行」；本表逐項說明以真實資料執行的內容與結果。數字皆出自 `results/v3_*.json`、`results/exwas_v3*.json` 與 `results/external_2021_2023*.json`。
 > 主稿：[[研究論文_v3重分析]]｜版本紀錄：`experiments/kidney_cause/docs/VERSION_LOG.md`
 
 ## 一、概念與主張（審查 §三）
@@ -532,7 +634,7 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 
 | 審查意見 | 執行結果 |
 |---|---|
-| 分清探索與確認 | 1999–2018 重分析標為探索性；兩個保留集三次評估之日期與後續修改見版本紀錄；確認性評估改用 2021–2023 新資料（已凍結） |
+| 分清探索與確認 | 1999–2018 重分析標為探索性；兩個保留集三次評估之日期與後續修改見版本紀錄；確認性評估改用 2021–2023 新資料，已一次評估（論文 3.7、表 7，本表第九節）：糖尿病軸 AUROC {XD['auc']}（{XD['auc_ci']}）；肝炎軸僅 {XH['pos']} 個事件，無法確認 |
 | 全流程外層隔離 | 插補、標準化、集成、保序校準、門檻皆在外層訓練資料內完成（提交 bf269c5 之計畫） |
 | 事件／特徵比 | 肝炎 {H['pos']} 事件對 58 特徵，約 {E['肝炎']['tool']['n_pos'] / 58:.1f}；已列限制，並顯示常規套組（44 項）不降判別 |
 | 基準比較與配對差 | 僅截距、年齡性別、常規套組、全特徵 LR、梯度提升；配對 CI 見表 2 |
@@ -554,7 +656,7 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 
 ## 七、文獻（審查 §九）
 
-依審查意見修正用途：Yang 2024 僅作未來病理標籤設計背景；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。另新增經 PubMed 查證之 Selvin 2007（肌酸酐校正）、Van Calster 2019（校準）、Vickers 2006（決策曲線）、Schillie 2020（HCV 普遍篩檢）、Barr 2005（尿肌酸酐調整）。
+依審查意見修正用途：Yang 2024 僅作未來病理標籤設計背景；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。另新增經 PubMed 查證之 Selvin 2007（肌酸酐校正）、Van Calster 2019（校準）、Vickers 2006（決策曲線）、Schillie 2020（HCV 普遍篩檢）、Barr 2005（尿肌酸酐調整）；外部確認再新增經 PubMed 查證之 Collins 2016（外部驗證樣本數），以及 CDC 2021–2023 年資料文件三份（BIOPRO_L、ALB_CR_L、TRIGLY_L）。
 
 ## 八、可交付成果（審查 §十）
 
@@ -563,18 +665,32 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 | 樣本核對表 | 完成：`results/v3_audit.json`、表 S1 |
 | 資料字典 | 部分：特徵與封存清單已更新；舊附錄三（352 項）尚未改寫 |
 | 逐人預測表 | 完成：`results/v3_oof.csv.gz`（SEQN、週期、軸、重複、折、標籤、原始與校準分數、分區、權重） |
-| 評估摘要 | 完成：`results/v3_eval.json`；表圖皆由同版結果檔生成 |
+| 評估摘要 | 完成：`results/v3_eval.json`、外部確認 `results/external_2021_2023.json`；表圖皆由同版結果檔生成 |
 | 實驗歷史 | 完成：`docs/VERSION_LOG.md` |
 | 軟體一致性 | 完成：網頁與 Python 對示範受試者逐軸一致（`verify_direction_html.py`）；新增資料不足與超出範圍旗標 |
 
-## 九、尚未完成
+## 九、外部確認（2026-09-27 新增）
+
+| 步驟 | 內容 |
+|---|---|
+| 取用 | 使用者同意後下載 17 檔（約 {PR['total_bytes'] / 1e6:.1f} MB），大小與凍結紀錄一致，SHA256 入帳（`results/provenance.json`） |
+| 評估前發現 | CDC 更換生化儀器、尿白蛋白與空腹三酸甘油酯之方法，兩個特徵更名；凍結程式只核對了肌酸酐 |
+| 修正一（評估前提交 {EXT_COMMITS['amend']}） | 依 CDC 官方回推式把 {len(XAM['conversions'])} 項換回開發量尺，更名者對應回原名；模型、校準、門檻不變（論文 2.10、表 S3） |
+| 主要結果 | 糖尿病軸 AUROC {XD['auc']}（{XD['auc_ci']}），內部 {D['auc']}；肝炎軸 {XH['pos']} 個事件，AUROC {XH['auc']}（{XH['auc_ci']}），平均預測為實際的 {XH['ratio_pred']} 倍 |
+| 事前指定之比較 | 常規套組模型：糖尿病 {XD['bauc']}（較部署高 {XD['dbf'][1:]}，配對 CI {XD['dbf_ci']}）、肝炎 {XH['bauc']}；梯度提升：糖尿病 {XD['gauc']} |
+| 敏感度（依凍結程式原樣） | 糖尿病 {SD['auc']}、肝炎 {SH['auc']}；糖尿病軸校準方向相反（原樣高估、調和後低估） |
+| 事後探索（不取代主要結果） | 遮蔽六項開發時只有 1999–2004 年有值之非常規特徵：糖尿病軸 {p3(PHD['auroc_all_inputs'])} → {p3(PHD['auroc_masked'])}（{ci(PHD['delta_ci95'])}） |
+| 對部署的意涵 | 改用常規套組模型並以新資料重新校準；肝炎軸不作確認性結論 |
+
+## 十、尚未完成
 
 1. 以 PSU 與分層估計設計變異。
-2. 取用 NHANES 2021–2023 並執行已凍結之外部確認（需下載 17 個 CDC 公開檔，約 {PR['total_bytes'] / 1e6:.1f} MB）。
-3. 糖尿病軸改用非線性模型之部署（待外部確認）。
-4. 預測特徵之血中金屬（2005 年後）與高敏感度 CRP 之跨週期合併。
-5. 附錄三變數字典改寫。
-6. 倫理審查或免審之機構認定。
+2. 部署改用常規套組模型，並以新資料重新校準（肝炎軸外部高估約 {XH['ratio_pred']} 倍）；常規套組不含血中金屬與 CRP，原列之跨週期合併因此不再必要。
+3. 糖尿病軸非線性模型之校準評估與部署。
+4. 肝炎軸需更多事件之外部確認，B、C 型分開呈現。
+5. HDL 膽固醇被肝炎 D 抗體字首規則誤排除，下一版重訓時修正。
+6. 附錄三變數字典改寫。
+7. 倫理審查或免審之機構認定。
 """
 
 
@@ -600,6 +716,10 @@ REFS = dict(
     bashir="Bashir A, et al. Lipid abnormalities in chronic viral hepatitis: associations and machine learning-enhanced prediction. BMC Gastroenterol. 2026;26:365. https://doi.org/10.1186/s12876-026-04861-y",
     yang="Yang P, et al. Machine learning models predicts risk of proliferative lupus nephritis. Front Immunol. 2024;15:1413569. https://doi.org/10.3389/fimmu.2024.1413569",
     riley="Riley RD, et al. Calculating the sample size required for developing a clinical prediction model. BMJ. 2020;368:m441. https://doi.org/10.1136/bmj.m441",
+    biopro_l="NCHS. NHANES August 2021–August 2023 Standard Biochemistry Profile (BIOPRO_L): regression equations for the Cobas 6000 to Cobas 8000 change. https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm",
+    albcr_l="NCHS. NHANES August 2021–August 2023 Albumin & Creatinine – Urine (ALB_CR_L): urine albumin method change. https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/ALB_CR_L.htm",
+    trigly_l="NCHS. NHANES August 2021–August 2023 Cholesterol – LDL & Triglycerides (TRIGLY_L): triglyceride method change. https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TRIGLY_L.htm",
+    collins_ev="Collins GS, Ogundimu EO, Altman DG. Sample size considerations for the external validation of a multivariable prognostic model: a resampling study. Stat Med. 2016;35(2):214–226. https://doi.org/10.1002/sim.6787",
 )
 
 
