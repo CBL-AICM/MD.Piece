@@ -9,27 +9,27 @@
  },
  "axes": {
   "肝炎": {
-   "cal": 0.079498,
+   "cal": 0.040629,
    "band": "傾向",
-   "miss": 16,
-   "odds_ratio": 4.34,
+   "miss": 2,
+   "odds_ratio": 3.9309,
    "drivers": [
     "LBXSTP",
-    "LBXTC",
-    "LBXSCH",
-    "LBXLYPCT"
+    "LBXSIR",
+    "LBXLYPCT",
+    "LBXTC"
    ]
   },
   "糖尿病": {
-   "cal": 0.068421,
+   "cal": 0.036023,
    "band": "不傾向",
-   "miss": 16,
-   "odds_ratio": 0.1308,
+   "miss": 2,
+   "odds_ratio": 0.0577,
    "drivers": [
     "LBXSASSI",
     "LBXSATSI",
     "LBXSCH",
-    "LBXLYPCT"
+    "LBXSTR"
    ]
   }
  }

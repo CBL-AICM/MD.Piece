@@ -21,6 +21,7 @@ E = EV["axes"]
 XV, XPH, XAM = (J("results", "external_2021_2023.json"), J("results", "external_2021_2023_posthoc.json"),
                 J("params", "external_validation_amendment_1.json"))
 XC = J("results", "external_2021_2023_precheck.json")["versions"]["調和（修正一）"]["features"]
+RC = J("results", "direction_v3_1_recalibration.json")["axes"]
 EXT_COMMITS = dict(amend="44b0ace", results="a7c4af8")
 FIGS = ["圖1_分析樣本與三值標籤.png", "圖2_判別力與基準.png", "圖3_校準與分區.png", "圖4_回溯時間評估.png",
         "圖5_決策曲線.png", "圖6_暴露血尿比較.png", "圖7_外部確認.png", "圖S1_示範輸出.png"]
@@ -521,7 +522,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 ### 4.5　下一步
 
-1. **部署改用常規套組模型並重新校準**：外部資料顯示常規套組模型兩軸皆不低於全特徵模型；肝炎軸在新資料上高估約 {XH['ratio_pred']} 倍，使用前須以新資料更新截距。
+1. **部署改用常規套組模型並重新校準**：外部資料顯示常規套組模型兩軸皆不低於全特徵模型，肝炎軸在新資料上高估約 {XH['ratio_pred']} 倍。已於 2026-09-27 完成（網頁工具 v3.1，`params/direction_model_v3_1.json`）：依由簡到繁的更新原則[@vergouwe]，肝炎軸只有 {RC['肝炎']['n_pos']} 個事件，只更新截距（{num(RC['肝炎']['recalibration']['a'], 3)}）；糖尿病軸之斜率檢定 p ＝ {RC['糖尿病']['candidates']['slope_lr_test_p']:.3f}，更新截距與斜率（{num(RC['糖尿病']['recalibration']['a'], 3)}、{RC['糖尿病']['recalibration']['b']:.3f}）。事前機率改為 2021–2023 年之比例（肝炎 {pct(RC['肝炎']['after_apparent']['calibration']['observed'], 2)}、糖尿病 {pct(RC['糖尿病']['after_apparent']['calibration']['observed'])}），分區門檻依同一勝算規則重算。這批資料已用於更新，更新後的校準仍需另一批獨立資料驗證。
 2. **糖尿病軸改用非線性模型**：梯度提升在外部資料上仍達 {XD['gauc']}；下一步評估其校準，並限制於常規套組特徵。
 3. **肝炎軸的外部確認**：需要更多事件（例如合併之後的 NHANES 週期或醫院資料），並分開呈現 B 型與 C 型肝炎。
 4. **病因研究**：取得具病理或臨床參考標準、診斷前檢驗與免疫檢驗之醫院資料，並處理只接受切片者的選擇偏差[@yang]。
@@ -534,7 +535,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 ## 研究聲明
 
-**資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）：分析計畫 bf269c5、結果 d5140a9、外部確認協定 9ca4e9f、圖 397c204、外部確認修正一 {EXT_COMMITS['amend']}、外部確認結果 {EXT_COMMITS['results']}。執行環境見 `requirements-lock.txt`（Python 3.14.3、scikit-learn 1.8.0、pandas 3.0.1、NumPy 2.4.3）。重現入口：`audit_v3.py` → `evaluate_v3.py` → `markers_v3.py` → `run_exwas.py` → `exwas_v3_checks.py` → `make_figures_v3.py` → `build_paper_v3.py`；外部確認為 `external_validation_2021.py`（`--precheck` → `--amend` → `--evaluate`，只允許評估一次），事後探索為 `external_posthoc_2021.py`。
+**資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）：分析計畫 bf269c5、結果 d5140a9、外部確認協定 9ca4e9f、圖 397c204、外部確認修正一 {EXT_COMMITS['amend']}、外部確認結果 {EXT_COMMITS['results']}。執行環境見 `requirements-lock.txt`（Python 3.14.3、scikit-learn 1.8.0、pandas 3.0.1、NumPy 2.4.3）。重現入口：`audit_v3.py` → `evaluate_v3.py` → `markers_v3.py` → `run_exwas.py` → `exwas_v3_checks.py` → `make_figures_v3.py` → `build_paper_v3.py`；外部確認為 `external_validation_2021.py`（`--precheck` → `--amend` → `--evaluate`，只允許評估一次），事後探索為 `external_posthoc_2021.py`；網頁工具 v3.1 之重新校準為 `recalibrate_v3_1.py`，網頁與 Python 之一致性以 `verify_direction_html.py` 檢查。
 
 **研究倫理**　本研究使用公開去識別化資料；次級分析之倫理審查或免審認定，須由作者依所屬機構規定補列，本文不預先宣稱。
 
@@ -576,7 +577,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 ### 可重算之結果檔
 
-`results/v3_audit.json`（稽核）、`results/v3_eval.json`（評估）、`results/v3_markers.json`（單變量標記）、`results/v3_oof.csv.gz`（逐人外層預測）、`results/exwas_v3.json`、`results/exwas_v3_checks.json`、`params/external_validation_amendment_1.json`（外部確認修正一）、`results/external_2021_2023_precheck.json`（評估前資料核對）、`results/external_2021_2023.json`（外部確認）、`results/external_2021_2023_posthoc.json`（事後探索）、`docs/VERSION_LOG.md`（版本紀錄）。
+`results/v3_audit.json`（稽核）、`results/v3_eval.json`（評估）、`results/v3_markers.json`（單變量標記）、`results/v3_oof.csv.gz`（逐人外層預測）、`results/exwas_v3.json`、`results/exwas_v3_checks.json`、`params/external_validation_amendment_1.json`（外部確認修正一）、`results/external_2021_2023_precheck.json`（評估前資料核對）、`results/external_2021_2023.json`（外部確認）、`results/external_2021_2023_posthoc.json`（事後探索）、`params/direction_model_v3_1.json` 與 `results/direction_v3_1_recalibration.json`（網頁工具 v3.1 及其更新校準之表面值）、`docs/VERSION_LOG.md`（版本紀錄）。
 """
 
 RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
@@ -656,7 +657,7 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 
 ## 七、文獻（審查 §九）
 
-依審查意見修正用途：Yang 2024 僅作未來病理標籤設計背景；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。另新增經 PubMed 查證之 Selvin 2007（肌酸酐校正）、Van Calster 2019（校準）、Vickers 2006（決策曲線）、Schillie 2020（HCV 普遍篩檢）、Barr 2005（尿肌酸酐調整）；外部確認再新增經 PubMed 查證之 Collins 2016（外部驗證樣本數），以及 CDC 2021–2023 年資料文件三份（BIOPRO_L、ALB_CR_L、TRIGLY_L）。
+依審查意見修正用途：Yang 2024 僅作未來病理標籤設計背景；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。另新增經 PubMed 查證之 Selvin 2007（肌酸酐校正）、Van Calster 2019（校準）、Vickers 2006（決策曲線）、Schillie 2020（HCV 普遍篩檢）、Barr 2005（尿肌酸酐調整）；外部確認再新增經 PubMed 查證之 Collins 2016（外部驗證樣本數）與 Vergouwe 2017（模型更新方法），以及 CDC 2021–2023 年資料文件三份（BIOPRO_L、ALB_CR_L、TRIGLY_L）。
 
 ## 八、可交付成果（審查 §十）
 
@@ -681,11 +682,12 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 | 敏感度（依凍結程式原樣） | 糖尿病 {SD['auc']}、肝炎 {SH['auc']}；糖尿病軸校準方向相反（原樣高估、調和後低估） |
 | 事後探索（不取代主要結果） | 遮蔽六項開發時只有 1999–2004 年有值之非常規特徵：糖尿病軸 {p3(PHD['auroc_all_inputs'])} → {p3(PHD['auroc_masked'])}（{ci(PHD['delta_ci95'])}） |
 | 對部署的意涵 | 改用常規套組模型並以新資料重新校準；肝炎軸不作確認性結論 |
+| 部署更新（2026-09-27，使用者決定） | 網頁工具 v3.1 改用常規套組模型：肝炎軸只更新截距（{RC['肝炎']['n_pos']} 個事件），糖尿病軸更新截距與斜率（斜率檢定 p ＝ {RC['糖尿病']['candidates']['slope_lr_test_p']:.3f}）；事前機率改為 2021–2023 年比例；網頁與 Python 對示範受試者逐軸一致 |
 
 ## 十、尚未完成
 
 1. 以 PSU 與分層估計設計變異。
-2. 部署改用常規套組模型，並以新資料重新校準（肝炎軸外部高估約 {XH['ratio_pred']} 倍）；常規套組不含血中金屬與 CRP，原列之跨週期合併因此不再必要。
+2. 以另一批獨立資料驗證網頁工具 v3.1 更新後的校準（2021–2023 年資料已用於更新，不能再當驗證）；常規套組不含血中金屬與 CRP，原列之跨週期合併因此不再必要。
 3. 糖尿病軸非線性模型之校準評估與部署。
 4. 肝炎軸需更多事件之外部確認，B、C 型分開呈現。
 5. HDL 膽固醇被肝炎 D 抗體字首規則誤排除，下一版重訓時修正。
@@ -720,6 +722,7 @@ REFS = dict(
     albcr_l="NCHS. NHANES August 2021–August 2023 Albumin & Creatinine – Urine (ALB_CR_L): urine albumin method change. https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/ALB_CR_L.htm",
     trigly_l="NCHS. NHANES August 2021–August 2023 Cholesterol – LDL & Triglycerides (TRIGLY_L): triglyceride method change. https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TRIGLY_L.htm",
     collins_ev="Collins GS, Ogundimu EO, Altman DG. Sample size considerations for the external validation of a multivariable prognostic model: a resampling study. Stat Med. 2016;35(2):214–226. https://doi.org/10.1002/sim.6787",
+    vergouwe="Vergouwe Y, Nieboer D, Oostenbrink R, et al. A closed testing procedure to select an appropriate method for updating prediction models. Stat Med. 2017;36(28):4529–4539. https://doi.org/10.1002/sim.7179",
 )
 
 

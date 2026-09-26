@@ -15,6 +15,11 @@ results/v3_eval.json（本檔不再寫入樣本內的分區統計）。
 2. 分區改用勝算倍數：p 的勝算 ≥ 2×事前勝算 → 傾向；≤ 0.5× → 不傾向。v2 的「2×盛行率」在盛行率 >50% 時
    無法達成，且兩軸代表的證據強度不同；此規則於結果產生前決定（params/v3_analysis_plan.json）
 3. 新增「資料不足」：常規套組特徵有值 <50% 不給分區；另標出超出開發資料範圍的輸入值
+
+## v3.1（2026-09-27，NHANES 2021–2023 外部確認之後）
+網頁工具與 predict 預設改用常規套組模型（params/direction_model_v3_1.json，由 recalibrate_v3_1.py 產生）：
+保序校準之後再做一次邏輯重新校準 logit p' = a + b·logit p，事前機率改為 2021–2023 之盛行率。
+凍結之 v3 兩個模型檔不變（外部確認協定登錄其雜湊）；沒有 recalibration 欄位的模型行為與 v3 完全相同。
 """
 import json
 import os
@@ -38,10 +43,11 @@ from sklearn.model_selection import StratifiedKFold         # noqa: E402
 from sklearn.preprocessing import StandardScaler            # noqa: E402
 
 from binary_tasks import LABEL_ADJACENT                     # noqa: E402
-from evaluate_v3 import BASIC                               # noqa: E402
+from evaluate_v3 import BASIC, EPS                          # noqa: E402
 from nhanes_cohort import DERIVED, FEATURE_LABELS, build_v3  # noqa: E402
 
-PARAMS = os.path.join(ROOT, "params", "direction_model.json")
+PARAMS_FULL = os.path.join(ROOT, "params", "direction_model.json")     # v3 全特徵（凍結；外部確認時之部署模型）
+PARAMS = os.path.join(ROOT, "params", "direction_model_v3_1.json")     # 網頁工具 v3.1：常規套組＋2021–2023 重新校準
 LABEL = {**FEATURE_LABELS, **DERIVED, "age": "年齡", "sex": "性別"}
 AXES = {
     "肝炎": dict(label="hep3", adjacent=LABEL_ADJACENT["infection"], title="肝炎病毒感染（HBsAg 或 HCV RNA 陽性）"),
@@ -71,6 +77,15 @@ def _raw(fp, x):
     return float(1 / (1 + np.exp(-(z @ np.array(fp["coef"]) + fp["intercept"])))), z
 
 
+def recal(a, p):
+    """v3.1 邏輯重新校準（p 以 EPS 截斷，同 evaluate_v3.calib）；無 recalibration 欄位者原樣返回。"""
+    r = a.get("recalibration")
+    if not r:
+        return p
+    c = np.clip(p, EPS, 1 - EPS)
+    return 1 / (1 + np.exp(-(r["a"] + r["b"] * np.log(c / (1 - c)))))
+
+
 def predict_matrix(a, X):
     """一軸、多人（X: n×p，欄序＝a['features']，缺值 NaN）→ (raw, cal, band 2/1/0/-1)。-1＝資料不足。"""
     raws = []
@@ -79,14 +94,14 @@ def predict_matrix(a, X):
         z = (Xi - np.array(fp["mean"])) / np.array(fp["scale"])
         raws.append(1 / (1 + np.exp(-(z @ np.array(fp["coef"]) + fp["intercept"]))))
     raw = np.mean(raws, axis=0)
-    cal = np.interp(raw, a["isotonic_x"], a["isotonic_y"])
+    cal = recal(a, np.interp(raw, a["isotonic_x"], a["isotonic_y"]))
     ib = [a["features"].index(f) for f in a["basic_panel"]]
     band = np.where(cal >= a["t_high"], 2, np.where(cal <= a["t_low"], 0, 1))
     band = np.where((~np.isnan(X[:, ib])).mean(axis=1) < MIN_BASIC_PRESENT, -1, band)
     return raw, cal, band
 
 
-def train(seed=20260926, folds=5, feature_set="full", path=PARAMS):
+def train(seed=20260926, folds=5, feature_set="full", path=PARAMS_FULL):
     """feature_set：full＝全部特徵（部署版）；basic＝僅常規套組（比較用候選版，待新資料確認）。"""
     P = json.load(open(os.path.join(ROOT, "params", "design.json"), encoding="utf-8"))
     V = build_v3(P, verbose=False)
@@ -138,7 +153,7 @@ def predict(values, model=None, top_k=4):
             r, z = _raw(fp, x)
             raws.append(r)
             contribs += z * np.array(fp["coef"])
-        cal = float(np.interp(float(np.mean(raws)), a["isotonic_x"], a["isotonic_y"]))
+        cal = float(recal(a, np.interp(float(np.mean(raws)), a["isotonic_x"], a["isotonic_y"])))
         prev = a["prevalence"]
         odds_ratio = (cal / (1 - cal)) / (prev / (1 - prev)) if 0 < cal < 1 else (0.0 if cal <= 0 else float("inf"))
         if basic_present < MIN_BASIC_PRESENT:
