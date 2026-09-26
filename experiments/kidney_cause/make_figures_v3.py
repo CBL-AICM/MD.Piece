@@ -5,6 +5,7 @@ params/direction_model.json 生成，數字不手打。  python make_figures_v3.
 圖1 分析樣本與三值標籤      圖2 判別力：部署工具與同切分基準、標籤定義敏感度
 圖3 校準與分區              圖4 回溯時間評估（擴展視窗）
 圖5 決策曲線                圖6 暴露探索：同一批人血尿比較（鉛、鎘 × 三種結果定義）
+圖7 外部確認（NHANES 2021–2023；results/external_2021_2023.json）
 圖S1 單一受試者輸出示範（概似比量尺；僅展示）
 不畫「原始目標 0.90」參考線；差值一律由未四捨五入值計算並於圖說註明。
 """
@@ -342,8 +343,60 @@ def figS1():
     save(fig, "圖S1_示範輸出.png")
 
 
+def fig7():
+    """外部確認（results/external_2021_2023.json 主要分析）：判別（內部 vs 外部）與三段分區實際陽性比例。"""
+    X = J("results", "external_2021_2023.json")["primary"]["axes"]
+    mods = [("v3_full_LR（部署）", "部署模型（全特徵 LR）", "tool"), ("v3_basic_LR（常規套組候選）", "常規套組 LR", "M2_basic_panel"),
+            ("v3_full_HGB（比較，僅判別）", "全特徵梯度提升", "M4_full_HGB")]
+    fig, axs = plt.subplots(2, 2, figsize=(13, 8.8), gridspec_kw={"width_ratios": [1.05, 1.2]})
+    fig.subplots_adjust(wspace=0.36, hspace=0.62)
+    for r, key in enumerate(("肝炎", "糖尿病")):
+        x, t = X[key], E[key]["tool"]
+        ax = axs[r, 0]
+        for i, (mk, lab, ik) in enumerate(mods):
+            y = 2 - i
+            vi = t["repeats"]["mean"]["auroc_cal"] if ik == "tool" else E[key]["comparisons"][ik]["auroc_mean"]
+            m = x["models"][mk]
+            ax.plot(vi, y + 0.15, "o", color=GRAY, ms=8, mec="white", mew=1.2, label="內部：巢狀外層（1999–2018）" if i == 0 else None)
+            if ik == "tool":
+                ax.plot(t["ci95_repeat0"]["auroc_cal"], [y + 0.15] * 2, color=GRAY, lw=2)
+            ax.plot(m["auroc"], y - 0.15, "o", color=AX[key], ms=8, mec="white", mew=1.2, label="外部：2021–2023（主要分析）" if i == 0 else None)
+            if "ci95" in m:
+                ax.plot(m["ci95"]["auroc"], [y - 0.15] * 2, color=AX[key], lw=2)
+            ax.text(0.935, y - 0.15, f"{m['auroc']:.3f}", va="center", ha="right", fontsize=8.8, color=INK)
+            ax.text(0.935, y + 0.15, f"{vi:.3f}", va="center", ha="right", fontsize=8.8, color=SUB)
+        ax.axvline(0.5, color=MUTED, ls=":", lw=1)
+        ax.set_yticks([2, 1, 0]); ax.set_yticklabels([m[1] for m in mods], fontsize=9.4)
+        ax.set_xlim(0.45, 0.95); ax.set_ylim(-0.6, 2.8)
+        ax.set_xlabel("AUROC（線為 95% CI；梯度提升與內部基準只有點估計）", fontsize=9.2)
+        tidy(ax, "x")
+        ax.legend(fontsize=8.4, frameon=False, loc="upper left", bbox_to_anchor=(0, 1.02), ncol=1)
+        ax.set_title(f"(a{r + 1}) {NAME[key]}：外部 n = {x['n']:,}、陽性 {x['n_pos']}", fontsize=10.4, loc="left", weight="bold")
+        ax = axs[r, 1]
+        bands, w = ["傾向", "不確定", "不傾向"], 0.36
+        bi = t["bands_repeat0"]["B"]["band"]
+        eb = x["models"]["v3_full_LR（部署）"]["bands_B"]
+        for j, (src, lab, colr) in enumerate(((bi, "內部（巢狀外層）", GRAY), (eb["band"], "外部 2021–2023", AX[key]))):
+            xs = np.arange(3) + (j - 0.5) * w
+            rates = [src[b]["observed_rate"] or 0 for b in bands]
+            ax.bar(xs, rates, width=w - 0.03, color=colr, label=lab, alpha=0.9)
+            for xx, b, rt in zip(xs, bands, rates):
+                txt = f"{rt:.1%}\n{eb['six_cell']['陽性_' + b]}/{src[b]['n']:,}" if j == 1 else f"{rt:.1%}"
+                ax.text(xx, rt, txt, ha="center", va="bottom", fontsize=8.1, color=INK)
+        ax.axhline(x["prevalence"], color=MUTED, ls=":", lw=1.1, label=f"外部盛行率 {x['prevalence']:.1%}")
+        ax.set_xticks(range(3)); ax.set_xticklabels(bands, fontsize=9.6)
+        ax.set_ylabel("該區實際陽性比例", fontsize=9.6)
+        ax.set_ylim(0, max(max(bi[b]["observed_rate"] or 0 for b in bands), max(eb["band"][b]["observed_rate"] or 0 for b in bands)) * 1.4 + 0.01)
+        ax.legend(fontsize=8.6, frameon=False, loc="upper right")
+        ax.text(0.0, -0.2, f"外部涵蓋率 {eb['coverage']:.1%}；外部標註為「陽性數／該區人數」", transform=ax.transAxes, fontsize=8.8, color=SUB)
+        tidy(ax, "y")
+        ax.set_title(f"(b{r + 1}) {NAME[key]}：三段分區之實際陽性比例（部署模型）", fontsize=10.4, loc="left", weight="bold")
+    fig.suptitle("圖7　外部確認（NHANES 2021–2023，一次性評估；檢驗值已依 CDC 官方回推式換回開發量尺）", fontsize=12.2, weight="bold", y=0.995)
+    save(fig, "圖7_外部確認.png")
+
+
 if __name__ == "__main__":
-    fig1(); fig2(); fig3(); fig4(); fig5(); fig6(); figS1()
+    fig1(); fig2(); fig3(); fig4(); fig5(); fig6(); fig7(); figS1()
     if len(sys.argv) > 1:
         dst = sys.argv[1]
         os.makedirs(dst, exist_ok=True)
