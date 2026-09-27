@@ -296,11 +296,13 @@ def fig6():
     save(fig, "圖6_暴露血尿比較.png")
 
 
-def figS1():
+def figS1(model="direction_model.json", patient="direction_demo_patient_v3_1.json",
+          expected="direction_demo_expected_v3_1.json", prior_note="與開發樣本盛行率相同", save_fn=None):
+    """預設＝v3 論文圖 S1（v3 全特徵模型＋v3.1 當時之示範檔）；v3.2 由 make_figures_v3_2 帶入自己的參數。"""
     from direction import predict
-    M = J("params", "direction_model.json")
-    v = J("params", "direction_demo_patient_v3_1.json")      # v3 論文圖 S1：v3.1 當時之示範檔
-    exp = J("params", "direction_demo_expected_v3_1.json")
+    M = J("params", model)
+    v = J("params", patient)
+    exp = J("params", expected)
     res = predict(v, M)
     fig, axs = plt.subplots(2, 2, figsize=(13, 6.6), gridspec_kw={"width_ratios": [1.2, 1]})
     fig.subplots_adjust(hspace=0.75, wspace=0.42)
@@ -321,7 +323,7 @@ def figS1():
                 bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=AX[key], lw=1))
         ax.set_xlim(-2.2, 2.2); ax.set_ylim(0, 1); ax.set_yticks([])
         ax.set_xticks([-2, -1, 0, 1, 2]); ax.set_xticklabels(["×0.25", "×0.5", "×1", "×2", "×4"])
-        ax.set_xlabel("相對事前勝算（概似比，對數刻度；×1＝與開發樣本盛行率相同）", fontsize=9)
+        ax.set_xlabel(f"相對事前勝算（概似比，對數刻度；×1＝{prior_note}）", fontsize=9)
         ax.spines[["top", "right", "left"]].set_visible(False)
         ax.set_title(f"{a['title'].replace('≥', '≧')} → 「{a['band']}」", fontsize=10.4, loc="left", weight="bold", color=INK)
         ax = axs[r, 1]
@@ -340,7 +342,7 @@ def figS1():
         ax.set_title(f"主要依據（缺 {a['n_missing']}/{a['n_features']} 項以中位數補入）", fontsize=9.8, loc="left", weight="bold")
     fig.suptitle(f"圖S1　單一受試者輸出示範（SEQN {exp['SEQN']}，{exp['cycle']}；HCV RNA 陽性、無糖尿病）——僅展示，不代表準確率",
                  fontsize=11.6, weight="bold", y=1.0)
-    save(fig, "圖S1_示範輸出.png")
+    (save_fn or save)(fig, "圖S1_示範輸出.png")
 
 
 def fig7():

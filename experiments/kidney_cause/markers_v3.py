@@ -36,20 +36,22 @@ def scan(d, label, feats):
     return sorted(rows, key=lambda r: -abs(r["auc"] - 0.5))
 
 
-def main():
+def main(v32=False):
+    """v32=True（`python markers_v3.py v3.2`）：v3.2 修正後資料，另存全部標記 → results/v3_2_markers.json。"""
     P = json.load(open(os.path.join(ROOT, "params", "design.json"), encoding="utf-8"))
-    V = build_v3(P, verbose=False)
+    V = build_v3(P, verbose=False, fixes=v32)
     kd, feats = V["cohort"], V["features"]
     out = {}
     for name, lab, adj in (("肝炎（合成）", "hep3", "infection"), ("僅C肝", "hcv3", "infection"),
                            ("僅B肝", "hbv3", "infection"), ("糖尿病", "dm3", "metabolic")):
         ff = [f for f in feats if f not in LABEL_ADJACENT[adj]]
         rows = scan(kd[kd[lab].notna()], lab, ff)
-        out[name] = dict(n_markers=len(rows), n_fdr05=sum(r["q"] < 0.05 for r in rows), top=rows[:10])
+        out[name] = dict(n_markers=len(rows), n_fdr05=sum(r["q"] < 0.05 for r in rows), top=rows[:10], **({"all": rows} if v32 else {}))
         print(f"[{name}] 標記 {len(rows)}、FDR<0.05 {out[name]['n_fdr05']}｜前五：" +
               "；".join(f"{r['name']} {r['auc']:.3f}" for r in rows[:5]))
-    json.dump(out, open(os.path.join(ROOT, "results", "v3_markers.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    json.dump(out, open(os.path.join(ROOT, "results", "v3_2_markers.json" if v32 else "v3_markers.json"), "w", encoding="utf-8"),
+              ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":
-    main()
+    main(v32=len(sys.argv) > 1 and sys.argv[1] == "v3.2")

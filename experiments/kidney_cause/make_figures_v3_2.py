@@ -264,8 +264,15 @@ def fig8():
     save(fig, "圖8_重新校準交叉驗證.png")
 
 
+def figS1():
+    """研究論文 v3.2 圖 S1：網頁工具 v3.2 對示範受試者之輸出（事前＝2021–2023 年比例）。"""
+    from make_figures_v3 import figS1 as plot
+    plot(model="direction_model_v3_2.json", patient="direction_demo_patient.json", expected="direction_demo_expected.json",
+         prior_note="與事前機率相同（2021–2023 年比例）", save_fn=save)
+
+
 def main(dest=None):
-    fig1(); fig2(); fig3(); fig4(); fig5(); fig7(); fig8()
+    fig1(); fig2(); fig3(); fig4(); fig5(); fig7(); fig8(); figS1()
     shutil.copy2(os.path.join(ROOT, "figures", "v3", "圖6_暴露血尿比較.png"), os.path.join(FIG, "圖6_暴露血尿比較.png"))
     if dest:
         os.makedirs(dest, exist_ok=True)
