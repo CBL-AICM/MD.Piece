@@ -5,7 +5,8 @@
 [[wiki]]、[t](u)、> 引用、``` 圍欄、| 表格 |、1. 與 - 清單、![[figure/x.png]]、---。
 格式：A4、邊界 2.5 cm、內文 12 pt 標楷體＋Times New Roman、頁碼置中。
 --fair：全國中小學科展作品說明書格式（附件六、七）——邊界 2 cm、新細明體、1.5 倍行高、內文 12 級、
-主題（##）16 級粗體置中；「<<<分頁>>>」之前為封面（16 級、無頁碼），之後另起一節，頁碼自內文第一頁起算。"""
+主題（##）16 級粗體置中；「<!-- 分頁 -->」之前為封面（16 級、無頁碼），之後另起一節，頁碼自內文第一頁起算。
+*斜體*（APA 之期刊名與卷號）亦支援。"""
 import io, os, re, sys
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -44,9 +45,10 @@ def rfonts(run, mono=False):
     rf.set(qn("w:eastAsia"), MONO_CJK if mono else CJK)
 
 
-def style_run(run, size=BODY_PT, bold=None, mono=False, color=None):
+def style_run(run, size=BODY_PT, bold=None, mono=False, color=None, italic=False):
     rfonts(run, mono)
     run.font.size = Pt(size)
+    run.font.italic = italic or None
     if bold is not None:
         run.font.bold = bold
     if color:
@@ -61,7 +63,7 @@ normal.element.rPr.rFonts.set(qn("w:eastAsia"), CJK)
 normal.paragraph_format.line_spacing = 1.5 if FAIR else 1.15
 normal.paragraph_format.space_after = Pt(6)
 
-INLINE = re.compile(r"(\*\*.+?\*\*|`[^`]+`|!?\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\))")
+INLINE = re.compile(r"(\*\*.+?\*\*|\*[^*\s][^*]*?\*|`[^`]+`|!?\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\))")
 
 
 def emit(par, text, size=BODY_PT, bold=False, mono=False):
@@ -71,6 +73,8 @@ def emit(par, text, size=BODY_PT, bold=False, mono=False):
             continue
         if tok.startswith("**") and tok.endswith("**") and len(tok) > 4:
             emit(par, tok[2:-2], size, True, mono)
+        elif tok.startswith("*") and tok.endswith("*") and len(tok) > 2:
+            style_run(par.add_run(tok[1:-1]), size, bold, mono, italic=True)
         elif tok.startswith("`") and tok.endswith("`") and len(tok) > 2:
             style_run(par.add_run(tok[1:-1]), size, bold, True)
         elif tok.startswith("[[") or tok.startswith("![["):
@@ -117,10 +121,14 @@ def heading(text, level, center=False):
     return p
 
 
-def paragraph(text, center=False, indent=False, size=BODY_PT):
+def paragraph(text, center=False, indent=False, size=BODY_PT, hanging=False):
     p = doc.add_paragraph()
     if center:
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    elif hanging:                                         # APA 參考文獻：靠左、凸排
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p.paragraph_format.left_indent = Cm(0.85)
+        p.paragraph_format.first_line_indent = Cm(-0.85)
     else:
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     if indent:
@@ -176,7 +184,16 @@ def table(rows):
     t = doc.add_table(rows=len(cells), cols=ncol)
     t.style = "Table Grid"
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tblpr = t._tbl.tblPr                                  # 欄寬交給 Word 依內容自動調整，表寬＝版心寬
+    tw = tblpr.find(qn("w:tblW"))
+    if tw is None:
+        tw = OxmlElement("w:tblW"); tblpr.append(tw)
+    tw.set(qn("w:type"), "pct"); tw.set(qn("w:w"), "5000")
     for i, r in enumerate(cells):
+        trpr = t.rows[i]._tr.get_or_add_trPr()            # 列不跨頁；跨頁時重複表頭
+        trpr.append(OxmlElement("w:cantSplit"))
+        if i == 0:
+            trpr.append(OxmlElement("w:tblHeader"))
         for j in range(ncol):
             cell = t.cell(i, j)
             cell.paragraphs[0].paragraph_format.space_after = Pt(0)
@@ -184,13 +201,16 @@ def table(rows):
             emit(cell.paragraphs[0], r[j] if j < len(r) else "", fs, bold=(i == 0))
             if i == 0:
                 cell_shade(cell, "D9D9D9")
+            tcw = cell._tc.get_or_add_tcPr().find(qn("w:tcW"))
+            if tcw is not None:
+                tcw.set(qn("w:type"), "auto"); tcw.set(qn("w:w"), "0")
     doc.add_paragraph().paragraph_format.space_after = Pt(0)
 
 
 def image(path):
     full = os.path.normpath(os.path.join(BASE, path))
     assert os.path.exists(full), full
-    doc.add_picture(full, width=Cm(15.5))
+    doc.add_picture(full, width=Cm(17.0 if FAIR else 15.5))
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.paragraphs[-1].paragraph_format.keep_with_next = True
 
@@ -217,7 +237,8 @@ i = 0
 if lines and lines[0].strip() == "---":                      # frontmatter
     i = lines.index("---", 1) + 1
 title_block = True
-cover = FAIR and "<<<分頁>>>" in lines                       # 科展封面：分頁標記之前
+in_refs = False                                              # 「參考文獻」標題之後的段落改為凸排
+cover = FAIR and any(l.strip() in ("<!-- 分頁 -->", "<<<分頁>>>") for l in lines)   # 科展封面：分頁標記之前
 stats = dict(h=0, p=0, tbl=0, img=0, code=0, quote=0, li=0)
 buf = []
 
@@ -233,7 +254,7 @@ def flush():
         if txt.startswith("**表") or txt.startswith("**圖"):
             caption(txt)
         else:
-            paragraph(txt, center=title_block, size=16 if cover else BODY_PT)
+            paragraph(txt, center=title_block, size=16 if cover else BODY_PT, hanging=in_refs)
         stats["p"] += 1
         buf = []
 
@@ -243,7 +264,7 @@ while i < len(lines):
     s = ln.strip()
     if not s or s == "---":
         flush(); i += 1; continue
-    if s == "<<<分頁>>>":                                     # 封面結束：另起一節，頁碼自 1 起
+    if s in ("<!-- 分頁 -->", "<<<分頁>>>"):                   # 封面結束：另起一節，頁碼自 1 起
         flush()
         sec = doc.add_section()
         sec.footer.is_linked_to_previous = False
@@ -261,6 +282,7 @@ while i < len(lines):
     if m:
         flush()
         lvl, text = len(m.group(1)), m.group(2)
+        in_refs = "參考文獻" in text
         if lvl == 1:
             heading(text, 1, center=True)
         elif lvl == 2 and text.startswith("——"):
