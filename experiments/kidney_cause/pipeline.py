@@ -212,7 +212,7 @@ def run(seed, verbose=True):
     l2i = level2_immune(kd[kd["in_ana_subsample"]], verbose)
     l2f = level2_infection(all_kd, C["counts"]["lab_meta"], verbose)
 
-    # 預測輸出（供超音波佐證層以 SEQN≒patient_key 併接）
+    # 預測輸出
     proba, classes = oof_proba("HGB", X, y, seed)
     pd.DataFrame(dict(SEQN=sub["SEQN"].astype(int), cause_label=y,
                       **{f"p_{c}": proba[:, list(classes).index(c)] for c in CLASSES})) \

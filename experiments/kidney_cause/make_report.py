@@ -95,8 +95,8 @@ def main():
              "唯一有乾淨免疫標籤的子樣本裡幾乎沒有感染個案。\n")
     main_auc = [R["level1"]["models"]["HGB"]["ovr_auc"][c]["auc"] for c in CLS]
     L.append("**對 AUC≥0.9 目標的照實回答**：主分析（HGB）" + "／".join(f3(v) for v in main_auc) + "——**未達 0.9**；"
-             "且免疫欄位在修正標籤後掉到 0.584。到 0.9 的正路是更強的標籤（切片病因、臨床診斷碼）與更多感染／免疫樣本，"
-             "不是在這份資料上調參。\n")
+             "且免疫欄位在修正標籤後掉到 0.584。瓶頸在標籤：公開資料沒有切片病因或臨床診斷碼，"
+             "在這份資料上調參無法突破。\n")
     if hold:
         L.append(f"**鎖定保留集（一生一次，已於 {hold['evaluated_once_at']} 使用，n={hold['holdout_n']}）**："
                  + "、".join(f"{c} {f3(hold['ovr_auc'][c]['auc'])}"
@@ -200,9 +200,6 @@ def main():
     lf = R["level2_infection"]
     L.append(f"- 感染（n={lf['n']}）：HBV {lf['HBV']}、HCV {lf['HCV']}（標籤層資訊，僅供分流示意）\n")
 
-    L.append("## 超音波佐證層\n")
-    L.append("公開世界無上萬張可下載腎臟超音波；`us_validation/` 已定義交換格式與一致性分析（κ、逐類混淆、分歧解剖），"
-             "醫院影像到位即可與 results/predictions.csv 以個案鍵併接執行；到位前該層拒跑、不產生任何假數字。\n")
     open(os.path.join(ROOT, "results", "report.md"), "w", encoding="utf-8").write("\n".join(L))
     print("[report] results/report.md")
 

@@ -776,8 +776,7 @@ v3 修正了三類審查者無法看見的錯誤：1999–2000 年血清肌酸�
 
 1. **以另一批獨立資料驗證網頁工具 v3.2 的校準**：2021–2023 年資料已用於更新，不能再當驗證；交叉驗證顯示整體高低可靠、斜率更新不穩定。
 2. **保留糖尿病軸之非線性增益**：評估可解釋的非線性方法或事前指定的交互項，並以獨立資料驗證。
-3. **肝炎軸**：需要更多事件（例如之後的 NHANES 週期或醫院資料），並另建 B 型肝炎的模型。
-4. **病因研究**：取得具病理或臨床參考標準、診斷前檢驗與免疫檢驗之醫院資料，並處理只接受切片者的選擇偏差[@yang]。
+3. **肝炎軸**：需要更多事件（例如之後的 NHANES 週期），並另建 B 型肝炎的模型。
 
 ## 5　結論
 
@@ -789,7 +788,7 @@ v3 修正了三類審查者無法看見的錯誤：1999–2000 年血清肌酸�
 
 **資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）。v3：分析計畫 {CM['plan_v3']}、結果 {CM['res_v3']}、外部確認協定 {CM['proto']}、圖 {CM['figs_v3']}、修正一 {CM['amend']}、外部確認結果 {CM['ext']}、網頁工具 v3.1 {CM['tool_v31']}、設計變異計畫 {CM['dv_plan']} 與結果 {CM['dv_res']}。v3.2：計畫 {CM['plan_v32']}、結果 {CM['res_v32']}、稽核後更正 {CM['audit']}、補充分析 {CM['supp_plan']}（程式）與 {CM['supp_res']}（結果）、單變量標記 {CM['mk_plan']} 與 {CM['mk_res']}、暴露分析 {CM['exw_plan']}（計畫與程式）與 {CM['exw_res']}（結果）。執行環境見 `requirements-lock.txt`。v3.2 重現入口：`evaluate_v3_2.py` → `external_v3_2.py` → `supplement_v3_2.py` → `markers_v3.py v3.2` → `run_exwas.py v3.2` → `exwas_v3_checks.py v3.2` → `exwas_v3_2_compare.py` → `make_figures_v3_2.py` → `verify_direction_html.py` → `build_paper_v3_2.py`；v3 外部確認之程式見 v3 版。
 
-**研究倫理**　NHANES 之調查協定由 NCHS 倫理審查委員會核准[@erb]。本研究使用公開去識別化資料；次級分析之倫理審查或免審認定，須由作者依所屬機構規定補列，本文不預先宣稱。
+**研究倫理**　本研究只使用公開、去識別化之 NHANES 資料，未接觸可識別個人之資訊；NHANES 之調查協定由 NCHS 倫理審查委員會核准[@erb]。
 
 **AI 工具使用**　程式撰寫、資料核對與文件草擬使用 Claude（Anthropic）輔助；獨立稽核使用 Codex（OpenAI，唯讀）。所有數字由結果檔以程式產生，作者須確認後負責。
 
@@ -919,7 +918,7 @@ RESPONSE = f"""# 審查意見回應表（v3.2，2026-09-27）
 
 ## 七、文獻（審查 §九）
 
-依審查意見修正用途：Yang 2024 僅作未來病理標籤設計背景；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。v3 新增經 PubMed 查證之 Selvin 2007、Van Calster 2019、Vickers 2006、Schillie 2020、Barr 2005、Collins 2016、Vergouwe 2017、Rust & Rao 1996 與 NCHS 比例呈現標準（Parker 2017），以及 CDC 2021–2023 年資料文件三份。v3.2 新增 Christodoulou 2019（機器學習與邏輯迴歸之系統性回顧）與 CDC 資料文件 L40_B、BIOPRO_J、Lab13、GHB_F、CBC_H 及 NHANES 倫理審查頁；並依 CDC 頁面更正 LAB18（Standard Biochemistry Profile & Hormones）、HEPC_H（Hepatitis C: RNA and Genotype）與 TRIGLY_L 之標題，NCHS 文件加註發布或修訂日期。
+依審查意見修正用途：Yang 2024 僅作背景（免疫性病因需補體、自體抗體與病理，NHANES 無法評估）；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。v3 新增經 PubMed 查證之 Selvin 2007、Van Calster 2019、Vickers 2006、Schillie 2020、Barr 2005、Collins 2016、Vergouwe 2017、Rust & Rao 1996 與 NCHS 比例呈現標準（Parker 2017），以及 CDC 2021–2023 年資料文件三份。v3.2 新增 Christodoulou 2019（機器學習與邏輯迴歸之系統性回顧）與 CDC 資料文件 L40_B、BIOPRO_J、Lab13、GHB_F、CBC_H 及 NHANES 倫理審查頁；並依 CDC 頁面更正 LAB18（Standard Biochemistry Profile & Hormones）、HEPC_H（Hepatitis C: RNA and Genotype）與 TRIGLY_L 之標題，NCHS 文件加註發布或修訂日期。
 
 ## 八、可交付成果（審查 §十）
 
@@ -963,7 +962,7 @@ RESPONSE = f"""# 審查意見回應表（v3.2，2026-09-27）
 2. 保留糖尿病軸非線性增益之可解釋方法，並以獨立資料驗證。
 3. 肝炎軸需更多事件之外部確認，並另建 B 型肝炎模型。
 4. 舊附錄三變數字典（352 項）改寫。
-5. 倫理審查或免審之機構認定；作者資訊、貢獻與利益衝突。
+5. 作者資訊、貢獻與利益衝突。
 """
 
 REFS = dict(

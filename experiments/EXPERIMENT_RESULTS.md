@@ -59,5 +59,5 @@ For completeness, the corrected exploratory three-class analysis among the 238 A
 to immune, infection, or metabolic classes produced HGB AUROC 0.748 (immune), 0.694 (infection), and 0.771
 (metabolic), with balanced accuracy 0.460. Infection had only seven participants, so its confidence interval
 (0.465–0.903) is too wide for a stable claim. LR balanced accuracy was 0.534.
-- Achieving externally validated AUROC 0.90 for nephritis requires a new cohort with biopsy- or adjudication-based
-  renal diagnoses and an untouched institution-level external test.
+- Public data contain no biopsy- or adjudication-based renal diagnoses; this label ceiling bounds nephritis
+  performance. This project uses public data only.

@@ -541,8 +541,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 1. **部署改用常規套組模型並重新校準**：外部資料顯示常規套組模型兩軸皆不低於全特徵模型，肝炎軸在新資料上高估約 {XH['ratio_pred']} 倍。已於 2026-09-27 完成（網頁工具 v3.1，`params/direction_model_v3_1.json`）：依由簡到繁的更新原則[@vergouwe]，肝炎軸只有 {RC['肝炎']['n_pos']} 個事件，只更新截距（{num(RC['肝炎']['recalibration']['a'], 3)}）；糖尿病軸之斜率檢定 p ＝ {RC['糖尿病']['candidates']['slope_lr_test_p']:.3f}，更新截距與斜率（{num(RC['糖尿病']['recalibration']['a'], 3)}、{RC['糖尿病']['recalibration']['b']:.3f}）。事前機率改為 2021–2023 年之比例（肝炎 {pct(RC['肝炎']['after_apparent']['calibration']['observed'], 2)}、糖尿病 {pct(RC['糖尿病']['after_apparent']['calibration']['observed'])}），分區門檻依同一勝算規則重算。這批資料已用於更新，更新後的校準仍需另一批獨立資料驗證。
 2. **糖尿病軸改用非線性模型**：梯度提升在外部資料上仍達 {XD['gauc']}；下一步評估其校準，並限制於常規套組特徵。
-3. **肝炎軸的外部確認**：需要更多事件（例如合併之後的 NHANES 週期或醫院資料），並分開呈現 B 型與 C 型肝炎。
-4. **病因研究**：取得具病理或臨床參考標準、診斷前檢驗與免疫檢驗之醫院資料，並處理只接受切片者的選擇偏差[@yang]。
+3. **肝炎軸的外部確認**：需要更多事件（例如合併之後的 NHANES 週期），並分開呈現 B 型與 C 型肝炎。
 
 ## 5　結論
 
@@ -554,7 +553,7 @@ NHANES 2021–2023 年（週期 L）於 2024 年釋出，從未參與本研究�
 
 **資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）：分析計畫 bf269c5、結果 d5140a9、外部確認協定 9ca4e9f、圖 397c204、外部確認修正一 {EXT_COMMITS['amend']}、外部確認結果 {EXT_COMMITS['results']}、設計變異計畫 {DV_COMMITS['plan']} 與結果 {DV_COMMITS['results']}。執行環境見 `requirements-lock.txt`（Python 3.14.3、scikit-learn 1.8.0、pandas 3.0.1、NumPy 2.4.3）。重現入口：`audit_v3.py` → `evaluate_v3.py` → `markers_v3.py` → `run_exwas.py` → `exwas_v3_checks.py` → `make_figures_v3.py` → `build_paper_v3.py`；外部確認為 `external_validation_2021.py`（`--precheck` → `--amend` → `--evaluate`，只允許評估一次），事後探索為 `external_posthoc_2021.py`；網頁工具 v3.1 之重新校準為 `recalibrate_v3_1.py`，網頁與 Python 之一致性以 `verify_direction_html.py` 檢查；設計變異為 `design_variance.py`。
 
-**研究倫理**　本研究使用公開去識別化資料；次級分析之倫理審查或免審認定，須由作者依所屬機構規定補列，本文不預先宣稱。
+**研究倫理**　本研究只使用公開、去識別化之 NHANES 資料，未接觸可識別個人之資訊。
 
 **作者貢獻、資助與利益衝突**　須由作者確認後填列。
 
@@ -674,7 +673,7 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 
 ## 七、文獻（審查 §九）
 
-依審查意見修正用途：Yang 2024 僅作未來病理標籤設計背景；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。另新增經 PubMed 查證之 Selvin 2007（肌酸酐校正）、Van Calster 2019（校準）、Vickers 2006（決策曲線）、Schillie 2020（HCV 普遍篩檢）、Barr 2005（尿肌酸酐調整）；外部確認再新增經 PubMed 查證之 Collins 2016（外部驗證樣本數）與 Vergouwe 2017（模型更新方法），以及 CDC 2021–2023 年資料文件三份（BIOPRO_L、ALB_CR_L、TRIGLY_L）；設計變異新增經 PubMed 查證之 Rust & Rao 1996（複製權重變異估計）與 NCHS 比例呈現標準（Parker 2017）。
+依審查意見修正用途：Yang 2024 僅作背景（免疫性病因需補體、自體抗體與病理，NHANES 無法評估）；Lai 2025、Zhang 2026 不再作為本研究之重現證據而移除；Cao 2026 不再引用；Bashir 2026 修正 DOI 並限於背景機轉；PLA2R 與抗 GBM 文獻移除。另新增經 PubMed 查證之 Selvin 2007（肌酸酐校正）、Van Calster 2019（校準）、Vickers 2006（決策曲線）、Schillie 2020（HCV 普遍篩檢）、Barr 2005（尿肌酸酐調整）；外部確認再新增經 PubMed 查證之 Collins 2016（外部驗證樣本數）與 Vergouwe 2017（模型更新方法），以及 CDC 2021–2023 年資料文件三份（BIOPRO_L、ALB_CR_L、TRIGLY_L）；設計變異新增經 PubMed 查證之 Rust & Rao 1996（複製權重變異估計）與 NCHS 比例呈現標準（Parker 2017）。
 
 ## 八、可交付成果（審查 §十）
 
@@ -708,7 +707,6 @@ RESPONSE = f"""# 審查意見回應表（v3，2026-09-27）
 3. 肝炎軸需更多事件之外部確認，B、C 型分開呈現。
 4. HDL 膽固醇被肝炎 D 抗體字首規則誤排除，下一版重訓時修正。
 5. 附錄三變數字典改寫。
-6. 倫理審查或免審之機構認定。
 """
 
 
