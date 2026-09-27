@@ -1,0 +1,32 @@
+{
+ "title": "免疫方向（v3.2 資料）：以公開 ANA 次樣本回推腎炎（腎損傷）之免疫性病因方向（2026-09-28）",
+ "frozen_at": "2026-09-28，於撰寫程式後、執行任何計算之前提交 git；結果檔記錄本檔 SHA256",
+ "why": "使用者確認研究核心為「回推腎炎（腎損傷）的病因方向：感染、免疫、代謝」。感染（病毒性肝炎）與代謝（糖尿病）兩方向已在 v3.2 資料上評估；免疫方向只有 v3 資料修正前（v1、v2）之 ANA 次樣本結果，數字已不適用，故依 v3.2 修正重跑。只用公開資料。",
+ "pre_run_facts": {
+  "ANA_file": "SSANA_A（NHANES 1999–2004 剩餘血清 ANA 研究，公開檔）：4,532 人皆有 SSTOT（總 ANA 強度 0–4，1:80 稀釋）；SSTOT≥3 者 628 人",
+  "specific_antibodies": "20 項特異自體抗體（Sm、U1-RNP、Ro/SSA、La/SSB 等）只在 SSTOT≥3 的 628 人檢驗（反射檢驗），其餘 3,904 人缺值；故舊定義「SSTOT≥3 或任一特異抗體陽性」等同 SSTOT≥3",
+  "old_code_note": "舊程式以字首排除型態欄位時誤排除 SSMI_2（Mi-2 抗原）；Mi-2 無陽性，對標籤無影響",
+  "features": "build_v3 將所有 SS* 欄位列為封存、不作特徵；免疫軸無鄰近特徵（binary_tasks.LABEL_ADJACENT['immune'] 為空）"
+ },
+ "cohort": "build_v3(fixes=True) 之腎臟指標異常成人（kidney3＝1：eGFR<60 或 ACR≥30，作為腎炎／腎損傷之操作型定義）∩ SSANA 次樣本（1999–2004）",
+ "label": {
+  "imm3": "1＝SSTOT≥3（ANA 1:80 稀釋 3+／4+，該檔之陽性規則）；0＝SSTOT<3；不在次樣本或 SSTOT 缺值＝未知（排除）",
+  "note": "ANA 陽性是自體免疫的標記，不等於免疫性腎炎；與肝炎、糖尿病兩方向相同，回推的是方向（候選病因），不是確診"
+ },
+ "models": "與 v3.2 相同（evaluate_v3_2.MODELS）：LR_routine、LR_routine_noHDL、HGB_routine、LR_full、HGB_full，皆採部署工具結構；基準 M1_demographics（年齡＋性別）",
+ "evaluation": {
+  "scheme": "分層 5 折 × 5 次，seed 20260926（同 v3.2）",
+  "metrics": "AUROC、AP、校準截距與斜率、Brier、工具規則分區（常規套組有值 <50% 為資料不足）",
+  "paired": "第 0 次重複受試者層 bootstrap 1,000 次：HGB_routine−LR_routine、LR_routine−LR_full、LR_routine−LR_routine_noHDL；LR_routine、HGB_routine 各對 M1_demographics",
+  "decision_curve": "閾值 5%–30%（每 5%）"
+ },
+ "decision_rule": "免疫方向判為「可回推」之條件（事前寫定，與 H₁ 相同）：LR_routine 相對 M1_demographics 之配對 ΔAUROC（第 0 次重複）>0 且 95% CI 下界 >0；否則判為「無法可靠回推」。不論結果如何完整報告，不依結果更改方法。",
+ "not_done": {
+  "temporal": "只有 1999–2004 三個週期，不做時間外推",
+  "design_weight": "ANA 次樣本需用次樣本權重 WTANA6YR；本分析以判別為主，只報告未加權結果",
+  "external": "NHANES 2021–2023 沒有 ANA，無法外部評估",
+  "kidney_as_reported": "2017–2018 換算不影響 1999–2004，不做"
+ },
+ "descriptive": "逐週期與性別之人數；ANA 陽性者中與 SLE 相關之特異抗體（Sm、U1-RNP、Ro/SSA、La/SSB）陽性數",
+ "outputs": "results/immune_v3_2.json（python immune_v3_2.py）"
+}
