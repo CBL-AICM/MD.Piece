@@ -27,16 +27,18 @@ MK, R = J("results", "v3_2_markers.json"), J("results", "direction_v3_2_recalibr
 TOOL, BASE = J("params", "direction_model_v3_2.json")["axes"], J("params", "direction_model_v3_2_basic.json")["axes"]
 EXD, DEMO = J("params", "direction_demo_expected.json"), J("params", "direction_demo_patient.json")
 E, X, C = EV["axes"], XX["axes"], SU["counts"]
-# ── v3 結果（v2→v3 之更正、事前指定之外部確認、v3 設計變異、暴露分析——照原樣引用）
+# ── v3 結果（v2→v3 之更正、事前指定之外部確認、v3 設計變異——照原樣引用）
 A3 = J("results", "v3_audit.json")
 XV, XPH, XAM = (J("results", "external_2021_2023.json"), J("results", "external_2021_2023_posthoc.json"),
                 J("params", "external_validation_amendment_1.json"))
 XC = J("results", "external_2021_2023_precheck.json")["versions"]["調和（修正一）"]["features"]
-DV, EXW, CK, PR = (J("results", "design_variance.json"), J("results", "exwas_v3.json"), J("results", "exwas_v3_checks.json"),
-                   J("params", "external_validation_protocol.json"))
+DV, PR = J("results", "design_variance.json"), J("params", "external_validation_protocol.json")
+# ── 暴露分析 v3.2（計畫 6737bf5）；v3 之 exwas_v3*.json＝2017–2018 年用原發布肌酸酐之敏感度分析（見 EXC）
+EXW, CK, EXC = J("results", "exwas_v3_2.json"), J("results", "exwas_v3_2_checks.json"), J("results", "exwas_v3_2_compare.json")
 CM = dict(plan_v3="bf269c5", res_v3="d5140a9", proto="9ca4e9f", figs_v3="397c204", amend="44b0ace", ext="a7c4af8",
           tool_v31="59a2455", dv_plan="9edd968", dv_res="e7d16e4", plan_v32="f6abc91", res_v32="4d48842", audit="95e9db4",
-          supp_plan="0826af6", supp_res="8c69f65", mk_plan="30b28d6", mk_res="b643c1f")
+          supp_plan="0826af6", supp_res="8c69f65", mk_plan="30b28d6", mk_res="b643c1f",
+          exw_plan="6737bf5", exw_res="4cd396b")
 LR, HG, LRN, LF, HF = "LR_routine", "HGB_routine", "LR_routine_noHDL", "LR_full", "HGB_full"
 FIGS = {"FIG1": "圖1_分析樣本與資料修正.png", "FIG2": "圖2_判別力.png", "FIG3": "圖3_校準_線性與非線性.png", "FIG4": "圖4_穩健性.png",
         "FIG5": "圖5_決策曲線.png", "FIG6": "圖6_暴露血尿比較.png", "FIG7": "圖7_外部資料.png", "FIG8": "圖8_重新校準交叉驗證.png",
@@ -275,11 +277,29 @@ closer = [k for k in list(BRIDGE_J) + list(BRIDGE_J_LOG10)
           if abs(BM["2017-2018_DxC"][k] - BM["2015-2016"][k]) < abs(BM["2017-2018_reported"][k] - BM["2015-2016"][k])]
 X2 = C["two_label_crosstab_in_kidney"]
 
-# ── 暴露（v3，照原樣）
+# ── 暴露（v3.2 重跑；與 v3 之比較見 EXC）
+EC, ER = EXC["cohort_comparison"], EXC["results_comparison"]
+LC = {(t["v3"], t["v3_2"]): t["n"] for t in EC["label_changes"]["transitions"]}
+assert EC["v3_equals_v32_with_original_2017_2018_creatinine"], "v3 已不等於 2017–2018 原發布肌酸酐之敏感度分析"
+assert EC["label_changes"]["by_cycle"] == {"2017-2018": EC["label_changes"]["n_changed"]}
+assert set(LC) <= {("異常", "正常"), ("異常", "未知")}
+assert LC.get(("異常", "正常"), 0) == CH1718.get("1→0", 0) and LC.get(("異常", "未知"), 0) == CH1718.get("1→-1", 0)
+assert not ER["status_changed"] and EXW["plan_sha256"] == sha("params", "exwas_v3_2_plan.json")
+assert ER["max_abs_dlogOR"]["exposure"] == "URXUAS3"      # 文中稱「尿中亞砷酸」（UAS 檔標籤 Urinary arsenous acid）
+assert not any(m["cells_changing_p_below_05"] for m in EXC["checks_comparison"].values())
 Xr = {r["exposure"]: r for r in EXW["results"]}
 xo = lambda e: Xr[e]["headline"]
 Pb, Cd = CK["metals"]["鉛"], CK["metals"]["鎘"]
 mo = lambda M, o, k: M["models"][o][k]
+# 3.6 敘述之方向
+assert set(EXW["control_check"]["positive_hits"]) == {"藥_鈣調磷酸酶", "藥_PPI"} and not EXW["control_check"]["negative_hits"]
+assert not EXW["arsenic_builtin_control"]["arsenobetaine_significant"] and not EXW["arsenic_builtin_control"]["toxic_species_significant"]
+assert all(Xr[e]["significant_fdr05"] and xo(e)["OR"] > 1 for e in ("藥_利尿劑", "藥_胰島素", "藥_別嘌醇", "藥_ACEI_ARB"))
+assert Xr["藥_雙胍"]["significant_fdr05"] and xo("藥_雙胍")["OR"] < 1 and not Xr["藥_NSAID"]["significant_fdr05"]
+assert all(mo(M, o, "血中")["ci"][0] > 1 for M in (Pb, Cd) for o in ("kidney_damage", "egfr_lt60", "acr_ge30"))
+assert mo(Pb, "egfr_lt60", "尿中_原濃度")["ci"][1] < 1
+assert mo(Pb, "egfr_lt60", "尿中_原濃度＋尿肌酸酐共變數")["OR_per_doubling"] < mo(Pb, "egfr_lt60", "尿中_原濃度")["OR_per_doubling"]
+assert mo(Cd, "acr_ge30", "尿中_肌酸酐比值")["OR_per_doubling"] > mo(Cd, "acr_ge30", "尿中_原濃度")["OR_per_doubling"]
 orr = lambda m: f"{m['OR_per_doubling']:.2f}（{m['ci'][0]:.2f}–{m['ci'][1]:.2f}）"
 sig = sorted([r for r in EXW["results"] if r["significant_fdr05"]], key=lambda r: r["q_bh"])
 
@@ -450,11 +470,11 @@ v3.2 另更正兩項跨週期問題。第一，2001–2002 年之鹼性磷酸酶
 
 決策曲線以淨效益 NB ＝ TP/N − FP/N × pt/(1 − pt) 比較「依模型送驗」「全數送驗」「全不送驗」[@vickers]。閾值機率 pt 應反映實際檢驗的利弊；肝炎檢驗便宜、無創，且美國建議成人至少篩檢一次 C 型肝炎[@hcvscreen] 與 B 型肝炎[@hbv]，相當於極低的 pt。每千人情境直接取外層預測之分區結果，並套用資料不足規則。
 
-### 2.9　暴露關聯（探索性，沿用 v3）
+### 2.9　暴露關聯（探索性）
 
 以全體成人（不對腎臟結果條件化）掃描 {EXW['n_scanned']} 個暴露與三值腎臟結果之關聯。五層調整為 M0 未調整；M1 年齡、性別、種族；M2 再加 BMI 與吸菸；M3 再加糖尿病與高血壓；M4（僅藥物）再加總用藥數。多重比較的檢定家族定義為 M3 之 {EXW['n_scanned']} 個雙尾 p 值，以 Benjamini–Hochberg 法控制偽發現率[@bh]；其他層級只作敏感度。0/1 藥物暴露報告「使用 vs 未使用」之勝算比，連續暴露為每 1 SD。v2 比較血中與尿中金屬時，血中值只來自 1999–2004 年、尿中值只來自 2005–2018 年，沒有任何共同受試者；v3 修正合併，並在同時有血、尿值的同一批受試者中，以相同 M3 調整、log2 量尺（勝算比為濃度加倍），比較血中、尿中原濃度、原濃度加尿肌酸酐共變數[@barr]、肌酸酐比值四種寫法，對三種結果定義：腎臟指標異常、僅 eGFR < 60、僅 ACR ≧ 30。
 
-暴露分析未於 v3.2 重跑：其腎臟結果由獨立的暴露資料管線建立，未套用 2017–2018 年量尺換算；該換算只使 2017–2018 年 {CH1718.get('1→0', 0) + CH1718.get('1→-1', 0)} 人的腎臟結果改變（{CH1718.get('1→0', 0)} 人由異常改為正常、{CH1718.get('1→-1', 0)} 人改為未知）。
+暴露分析以 v3.2 之資料修正重跑（計畫與程式先提交 {CM['exw_plan']}）：只把 2017–2018 年生化換成 DxC 660i 量尺，方法、暴露清單、調整層、偽發現率與對照皆與 v3 相同；C1 改名之變數與肝炎封存都不在暴露分析的暴露、共變項或結果定義內。換算使 2017–2018 年 {EC['label_changes']['n_changed']} 人的腎臟結果改變（{LC.get(('異常', '正常'), 0)} 人由異常改為正常、{LC.get(('異常', '未知'), 0)} 人改為未知）；兩版資料的暴露與共變項逐格相同，因此 v3 之結果即「2017–2018 年沿用原發布肌酸酐」之敏感度分析。
 
 ### 2.10　外部資料：NHANES 2021–2023
 
@@ -597,9 +617,9 @@ v3.2 事後評估：v3.2 模型在修正後之開發資料重新訓練；2021–
 
 肝炎軸在 pt ＝ 0.5% 時，依模型送驗與全數送驗的淨效益幾乎相同（模型 {H['dca'][0.005]['nb_model']:.4f}、全數送驗 {H['dca'][0.005]['nb_test_all']:.4f}）；pt 為 1% 時模型較高（{H['dca'][0.01]['nb_model']:.4f} 對 {H['dca'][0.01]['nb_test_all']:.4f}）。由於肝炎血清檢驗便宜、無創，且指引建議成人普遍篩檢[@hbv,hcvscreen]，合理的 pt 很低，**本工具不宜用來決定誰可以不驗肝炎**。若只略過「不傾向」區（資料不足者照常送驗），每千人送驗 {H['m'][LR]['t1000']} 人、漏掉 {H['m'][LR]['m1000']} 名陽性（占陽性 {H['m'][LR]['mshare']}）。糖尿病軸在 pt {DM_DCA[0]:.0%}–{DM_DCA[1]:.0%} 的每個點，兩種模型的淨效益都高於全數送驗與全不送驗（{DM_DCA[0]:.0%} 時與全數送驗差距很小：{D['dca'][0.1]['nb_model']:.4f} 對 {D['dca'][0.1]['nb_test_all']:.4f}），且梯度提升都高於邏輯迴歸；若只略過不傾向區，每千人送驗 {D['m'][LR]['t1000']} 人、漏 {D['m'][LR]['m1000']} 名陽性（占 {D['m'][LR]['mshare']}）。以上為點估計。
 
-### 3.6　暴露關聯（探索性，沿用 v3）
+### 3.6　暴露關聯（探索性）
 
-暴露分析使用 v3 資料：結果可判定之成人 {n(EXW['cohort']['n_outcome_known'])} 人、腎臟指標異常 {n(EXW['cohort']['n_kidney_damage'])} 人。{EXW['n_scanned']} 個暴露中 {EXW['n_significant_fdr05']} 個於 M3 通過偽發現率 0.05；陽性對照命中 {len(EXW['control_check']['positive_hits'])}/{EXW['control_check']['n_positive_scanned']}（鈣調磷酸酶抑制劑、質子幫浦抑制劑），陰性對照 {len(EXW['control_check']['negative_hits'])}/{EXW['control_check']['n_negative_scanned']}；砷的毒性形式與砷貝他因皆未達顯著。
+結果可判定之成人 {n(EXW['cohort']['n_outcome_known'])} 人、腎臟指標異常 {n(EXW['cohort']['n_kidney_damage'])} 人。{EXW['n_scanned']} 個暴露中 {EXW['n_significant_fdr05']} 個於 M3 通過偽發現率 0.05；陽性對照命中 {len(EXW['control_check']['positive_hits'])}/{EXW['control_check']['n_positive_scanned']}（鈣調磷酸酶抑制劑、質子幫浦抑制劑），陰性對照 {len(EXW['control_check']['negative_hits'])}/{EXW['control_check']['n_negative_scanned']}；砷的毒性形式與砷貝他因皆未達顯著。與 v3（2017–2018 年用原發布之肌酸酐）相比，結果可判定者少 {ER['cohort']['v3']['n_outcome_known'] - ER['cohort']['v3_2']['n_outcome_known']} 人、腎臟指標異常少 {ER['cohort']['v3']['n_kidney_damage'] - ER['cohort']['v3_2']['n_kidney_damage']} 人；沒有任何暴露改變顯著與否，對數勝算比的最大變動為尿中亞砷酸之 {abs(ER['max_abs_dlogOR']['dlogOR']):.3f}（勝算比 {ER['max_abs_dlogOR']['OR_v3']:.3f} → {ER['max_abs_dlogOR']['OR_v3_2']:.3f}），對照與砷之判定、表 8 各格 p < 0.05 與否皆不變。
 
 **表7　偽發現率最低的 12 項暴露（M3）**
 
@@ -749,7 +769,7 @@ v3 修正了三類審查者無法看見的錯誤：1999–2000 年血清肌酸�
 3. 肝炎陽性僅 {H['pos']} 人，逐週期評估的區間很寬；穩定性取決於事件數與候選參數，而非總樣本數[@riley]。外部只有 {X['肝炎']['n_pos']} 個事件，肝炎軸的外部表現仍未確認，對 B 型肝炎幾乎沒有訊號。
 4. HbA1c 在 2007–2010 年分布右移而依 CDC 建議使用原值[@ghb_f]；2013–2014 週期起血球分析儀更換，CDC 無法回溯比對、沒有換算式[@cbc_h]；非常規特徵的跨週期方法差異未換算（這些特徵只用於全特徵模型）。
 5. 設計變異已依 PSU 與分層估計，但預測視為固定，不含模型重新配適的變異。美國調查的機率不能直接移植至臺灣就醫族群，輸入值也必須與開發資料的檢驗量尺一致。
-6. 暴露分析為單次橫斷面，無法建立時序；其結果變項未套用 2017–2018 年量尺換算（2.9）。
+6. 暴露分析為單次橫斷面，無法建立時序。
 7. 外部資料的檢驗儀器與方法已變更，本研究以 CDC 官方回推式兩段換算；回推式本身有估計誤差，且血中金屬與可丁尼沒有官方換算式。
 
 ### 4.6　下一步
@@ -767,7 +787,7 @@ v3 修正了三類審查者無法看見的錯誤：1999–2000 年血清肌酸�
 
 ## 研究聲明
 
-**資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）。v3：分析計畫 {CM['plan_v3']}、結果 {CM['res_v3']}、外部確認協定 {CM['proto']}、圖 {CM['figs_v3']}、修正一 {CM['amend']}、外部確認結果 {CM['ext']}、網頁工具 v3.1 {CM['tool_v31']}、設計變異計畫 {CM['dv_plan']} 與結果 {CM['dv_res']}。v3.2：計畫 {CM['plan_v32']}、結果 {CM['res_v32']}、稽核後更正 {CM['audit']}、補充分析 {CM['supp_plan']}（程式）與 {CM['supp_res']}（結果）、單變量標記 {CM['mk_plan']} 與 {CM['mk_res']}。執行環境見 `requirements-lock.txt`。v3.2 重現入口：`evaluate_v3_2.py` → `external_v3_2.py` → `supplement_v3_2.py` → `markers_v3.py v3.2` → `make_figures_v3_2.py` → `verify_direction_html.py` → `build_paper_v3_2.py`；暴露分析與 v3 外部確認之程式見 v3 版。
+**資料與程式可得性**　資料為 NHANES 公開檔，來源網址見 `params/manifest.json`，逐檔 SHA256 與位元組數見 `results/provenance.json`。程式與結果位於 https://github.com/CBL-AICM/MD.Piece （分支 claude/disease-trajectory-model-prompts-ad24d8，目錄 experiments/kidney_cause）。v3：分析計畫 {CM['plan_v3']}、結果 {CM['res_v3']}、外部確認協定 {CM['proto']}、圖 {CM['figs_v3']}、修正一 {CM['amend']}、外部確認結果 {CM['ext']}、網頁工具 v3.1 {CM['tool_v31']}、設計變異計畫 {CM['dv_plan']} 與結果 {CM['dv_res']}。v3.2：計畫 {CM['plan_v32']}、結果 {CM['res_v32']}、稽核後更正 {CM['audit']}、補充分析 {CM['supp_plan']}（程式）與 {CM['supp_res']}（結果）、單變量標記 {CM['mk_plan']} 與 {CM['mk_res']}、暴露分析 {CM['exw_plan']}（計畫與程式）與 {CM['exw_res']}（結果）。執行環境見 `requirements-lock.txt`。v3.2 重現入口：`evaluate_v3_2.py` → `external_v3_2.py` → `supplement_v3_2.py` → `markers_v3.py v3.2` → `run_exwas.py v3.2` → `exwas_v3_checks.py v3.2` → `exwas_v3_2_compare.py` → `make_figures_v3_2.py` → `verify_direction_html.py` → `build_paper_v3_2.py`；v3 外部確認之程式見 v3 版。
 
 **研究倫理**　NHANES 之調查協定由 NCHS 倫理審查委員會核准[@erb]。本研究使用公開去識別化資料；次級分析之倫理審查或免審認定，須由作者依所屬機構規定補列，本文不預先宣稱。
 
@@ -817,12 +837,12 @@ v3 修正了三類審查者無法看見的錯誤：1999–2000 年血清肌酸�
 
 ### 可重算之結果檔
 
-v3.2：`results/v3_2_cohort_audit.json`（資料修正之稽核）、`results/v3_2_eval.json`（內部評估）、`results/v3_2_oof.csv.gz`（逐人外層預測）、`results/v3_2_supplement.json`（補充分析）、`results/v3_2_markers.json`（單變量標記）、`results/v3_2_external.json`（2021–2023 事後評估與重新校準交叉驗證）、`params/direction_model_v3_2_basic.json` 與 `params/direction_model_v3_2.json`（網頁工具重新校準前、後）、`results/direction_v3_2_recalibration.json`（重新校準之表面值）。v3（照原樣）：`results/v3_audit.json`、`results/v3_eval.json`、`results/exwas_v3.json`、`results/exwas_v3_checks.json`、`params/external_validation_amendment_1.json`、`results/external_2021_2023_precheck.json`、`results/external_2021_2023.json`、`results/external_2021_2023_posthoc.json`、`results/design_variance.json`。版本紀錄：`docs/VERSION_LOG.md`。
+v3.2：`results/v3_2_cohort_audit.json`（資料修正之稽核）、`results/v3_2_eval.json`（內部評估）、`results/v3_2_oof.csv.gz`（逐人外層預測）、`results/v3_2_supplement.json`（補充分析）、`results/v3_2_markers.json`（單變量標記）、`results/v3_2_external.json`（2021–2023 事後評估與重新校準交叉驗證）、`params/direction_model_v3_2_basic.json` 與 `params/direction_model_v3_2.json`（網頁工具重新校準前、後）、`results/direction_v3_2_recalibration.json`（重新校準之表面值）、`results/exwas_v3_2.json` 與 `results/exwas_v3_2_checks.json`（暴露分析）、`results/exwas_v3_2_compare.json`（與 v3 暴露分析之比較）。v3（照原樣）：`results/v3_audit.json`、`results/v3_eval.json`、`results/exwas_v3.json`、`results/exwas_v3_checks.json`（暴露分析；＝2017–2018 年用原發布肌酸酐之敏感度分析）、`params/external_validation_amendment_1.json`、`results/external_2021_2023_precheck.json`、`results/external_2021_2023.json`、`results/external_2021_2023_posthoc.json`、`results/design_variance.json`。版本紀錄：`docs/VERSION_LOG.md`。
 """
 
 RESPONSE = f"""# 審查意見回應表（v3.2，2026-09-27）
 
-> 對應《深度審查與補強方案》（2026-09-26）。審查者沒有取得資料與程式，將重分析列為「待執行」；本表逐項說明以真實資料執行的內容與結果。v3 已完成主要重分析；v3.2 再修正三類資料錯誤、評估非線性模型的校準並更新網頁工具（第十節）。數字皆出自 `results/v3_2_*.json`（v3.2）與 `results/v3_*.json`、`results/exwas_v3*.json`、`results/external_2021_2023*.json`（v3，照原樣）。
+> 對應《深度審查與補強方案》（2026-09-26）。審查者沒有取得資料與程式，將重分析列為「待執行」；本表逐項說明以真實資料執行的內容與結果。v3 已完成主要重分析；v3.2 再修正三類資料錯誤、評估非線性模型的校準並更新網頁工具（第十節）。數字皆出自 `results/v3_2_*.json`、`results/exwas_v3_2*.json`（v3.2）與 `results/v3_*.json`、`results/external_2021_2023*.json`（v3，照原樣）。
 > 主稿：[[研究論文_v3.2]]｜前版：[[研究論文_v3重分析]]、[[審查意見回應_v3]]｜版本紀錄：`experiments/kidney_cause/docs/VERSION_LOG.md`
 
 ## 一、概念與主張（審查 §三）
@@ -895,7 +915,7 @@ RESPONSE = f"""# 審查意見回應表（v3.2，2026-09-27）
 | 尿液共同分母 | 比較原濃度、加尿肌酸酐共變數、比值三種寫法與三種結果定義（論文表 8、圖 6） |
 | 陰性／陽性對照之解讀 | 改為「可檢查特定流程錯誤與部分偏差」，不宣稱對照證明無混雜 |
 
-註：暴露分析沿用 v3，未套用 2017–2018 年量尺換算（影響 {CH1718.get('1→0', 0) + CH1718.get('1→-1', 0)} 人之腎臟結果）。
+註：暴露分析已以 v3.2 資料修正重跑（先提交 {CM['exw_plan']}、結果 {CM['exw_res']}）；2017–2018 年 {EC['label_changes']['n_changed']} 人腎臟結果改變，無任何暴露改變顯著與否（v3 結果即原發布肌酸酐之敏感度分析）。
 
 ## 七、文獻（審查 §九）
 
@@ -909,7 +929,7 @@ RESPONSE = f"""# 審查意見回應表（v3.2，2026-09-27）
 | 資料字典 | 部分：常規套組 {N_ROUTINE} 項之變數字典已完成（科展作品說明書 v3.2 附錄一）；舊附錄三（352 項）尚未改寫 |
 | 逐人預測表 | 完成：`results/v3_2_oof.csv.gz`（軸、模型、重複、SEQN、週期、標籤、校準後機率、分區） |
 | 評估摘要 | 完成：`results/v3_2_eval.json`、`results/v3_2_external.json`、`results/v3_2_supplement.json`；表圖皆由同版結果檔生成 |
-| 實驗歷史 | 完成：`docs/VERSION_LOG.md`（第九、十節為 v3.2） |
+| 實驗歷史 | 完成：`docs/VERSION_LOG.md`（第九至十二節為 v3.2） |
 | 軟體一致性 | 完成：網頁與 Python 對示範受試者逐軸一致（`verify_direction_html.py`）；資料不足與超出範圍旗標 |
 
 ## 九、外部確認（2026-09-27）
@@ -934,6 +954,7 @@ RESPONSE = f"""# 審查意見回應表（v3.2，2026-09-27）
 | 網頁工具 v3.2 | 常規套組邏輯迴歸（事前決定，保留逐項推動因子）；肝炎軸{TH['method']}、糖尿病軸{TD['method']}；事前 {TH['prior']}／{TD['prior']}；網頁與 Python 一致 |
 | 重新校準之交叉驗證 | 糖尿病軸測試半平均預測／實際 {CVD['oe']}（{CVD['oe_rng']}），不重新校準 {CVD['oen']}；斜率更新只在 {CVD['share']} 的切分發生，校準斜率中位數 {CVD['cs_r']}；肝炎軸 {CVH['oe']}（{CVH['oe_rng']}），無法判斷 |
 | 補充分析（依 v3 定義重跑） | 描述性計數、近端消融、擴展視窗、糖尿病標籤敏感度、梯形 PR-AUC、單變量標記（先提交 {CM['supp_plan']}、{CM['mk_plan']}） |
+| 暴露分析重跑 | 以 v3.2 資料修正重跑（先提交 {CM['exw_plan']}、結果 {CM['exw_res']}）：2017–2018 年 {EC['label_changes']['n_changed']} 人腎臟結果改變；{EXW['n_scanned']} 個暴露中通過偽發現率者 {EXW['n_significant_fdr05']} 個（v3 {ER['n_significant_fdr05']['v3']} 個），無任何暴露改變顯著與否，對數勝算比最大變動 {abs(ER['max_abs_dlogOR']['dlogOR']):.3f}；對照判定與血尿比較之結論不變 |
 | 獨立稽核（Codex，唯讀） | 程式無問題；文件三項（資料不足規則、外部基準、特徵數描述）查證屬實後更正（{CM['audit']}）；v3 文件之勘誤記於版本紀錄第十節 |
 
 ## 十一、尚未完成
@@ -941,9 +962,8 @@ RESPONSE = f"""# 審查意見回應表（v3.2，2026-09-27）
 1. 以另一批獨立資料驗證網頁工具 v3.2 更新後的校準（2021–2023 年資料已用於更新）。
 2. 保留糖尿病軸非線性增益之可解釋方法，並以獨立資料驗證。
 3. 肝炎軸需更多事件之外部確認，並另建 B 型肝炎模型。
-4. 暴露分析以 v3.2 之資料修正重跑（目前沿用 v3）。
-5. 舊附錄三變數字典（352 項）改寫。
-6. 倫理審查或免審之機構認定；作者資訊、貢獻與利益衝突。
+4. 舊附錄三變數字典（352 項）改寫。
+5. 倫理審查或免審之機構認定；作者資訊、貢獻與利益衝突。
 """
 
 REFS = dict(

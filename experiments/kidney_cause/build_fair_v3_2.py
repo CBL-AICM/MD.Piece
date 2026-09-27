@@ -24,7 +24,8 @@ R, TOOL, EX = J("results", "direction_v3_2_recalibration.json")["axes"], J("para
     J("params", "direction_demo_expected.json")
 X3 = J("results", "external_2021_2023.json")["primary"]["axes"]
 A3 = J("results", "v3_audit.json")
-EXW, CK = J("results", "exwas_v3.json"), J("results", "exwas_v3_checks.json")
+# 暴露分析 v3.2（計畫 6737bf5、結果 4cd396b）；與 v3 之比較見 exwas_v3_2_compare.json
+EXW, CK, EXC = J("results", "exwas_v3_2.json"), J("results", "exwas_v3_2_checks.json"), J("results", "exwas_v3_2_compare.json")
 PROV = J("results", "provenance.json")["files"]
 N_EXT = sum(k.endswith("_L.xpt") for k in PROV)
 N_ALL, N_DEV = len(PROV), len(PROV) - N_EXT
@@ -89,6 +90,11 @@ XS = XX["hepatitis_subtypes_tool_v3_2"]
 CH = AU["kidney_2017_2018_reported_vs_DxC"]
 AV = AU["feature_availability_in_kidney"]
 Pb = CK["metals"]["鉛"]
+EC = EXC["cohort_comparison"]
+assert EC["v3_equals_v32_with_original_2017_2018_creatinine"] and not EXC["results_comparison"]["status_changed"]
+assert EC["label_changes"]["by_cycle"] == {"2017-2018": EC["label_changes"]["n_changed"]}
+XW = {r["exposure"]: r for r in EXW["results"]}
+assert XW["藥_雙胍"]["significant_fdr05"] and XW["藥_雙胍"]["headline"]["OR"] < 1
 hdl_i = TOOL["肝炎"]["features"].index("LBDHDL")
 HDL_MED = sum(fp["medians"][hdl_i] for fp in TOOL["肝炎"]["ensemble"]) / len(TOOL["肝炎"]["ensemble"])
 DEMO_HDL = json.load(open(os.path.join(ROOT, "params", "direction_demo_patient.json"), encoding="utf-8"))["LBDHDL"]
@@ -389,7 +395,7 @@ NHANES 各週期的檢驗儀器與方法不同。本研究逐週期檢查每個�
 
 ### 八、決策曲線與暴露探索
 
-決策曲線比較「依模型送驗」「全數送驗」「全不送驗」三種做法的淨效益[@vickers]；肝炎檢驗便宜、無創，且指引建議成人普遍篩檢[@conners,schillie]，合理的閾值機率很低。暴露探索沿用 v3：以全體成人掃描 {EXW['n_scanned']} 個暴露，以 Benjamini–Hochberg 法控制偽發現率[@benjamini]，並在同時有血、尿值的同一批受試者中比較血中與尿中金屬。
+決策曲線比較「依模型送驗」「全數送驗」「全不送驗」三種做法的淨效益[@vickers]；肝炎檢驗便宜、無創，且指引建議成人普遍篩檢[@conners,schillie]，合理的閾值機率很低。暴露探索以 v3.2 資料修正重跑：以全體成人掃描 {EXW['n_scanned']} 個暴露，以 Benjamini–Hochberg 法控制偽發現率[@benjamini]，並在同時有血、尿值的同一批受試者中比較血中與尿中金屬。
 
 ### 九、外部資料：NHANES 2021–2023
 
@@ -489,13 +495,13 @@ NHANES 各週期的檢驗儀器與方法不同。本研究逐週期檢查每個�
 
 肝炎軸在閾值 0.5% 時，依模型送驗與全數送驗的淨效益幾乎相同（{dca0('肝炎', LR)['nb_model']:.4f} 對 {dca0('肝炎', LR)['nb_test_all']:.4f}）。若只略過「不傾向」區（資料不足者照常送驗），每千人送驗 {skip('肝炎', LR)['tested']:.0f} 人，但漏掉 {skip('肝炎', LR)['missed']:.1f} 名陽性，占陽性的 {pct(skip('肝炎', LR)['missed_share_of_pos'], 0)}。**因此本工具不能用來決定誰可以不驗肝炎。**糖尿病軸在閾值 {DM_DCA[0]:.0%}–{DM_DCA[1]:.0%} 的每個點，兩種模型的淨效益都高於全數送驗與全不送驗（{DM_DCA[0]:.0%} 時與全數送驗差距很小），且梯度提升都高於邏輯迴歸；以上為點估計。
 
-### 七、暴露關聯（探索性，沿用 v3）
+### 七、暴露關聯（探索性）
 
 {{FIG6}}
 
 **圖6　同一批受試者之血中與尿中鉛、鎘（勝算比為濃度加倍）**
 
-{EXW['n_scanned']} 個暴露中 {EXW['n_significant_fdr05']} 個通過偽發現率 0.05。藥物關聯與處方常規一致，例如腎功能差時應停用的雙胍類呈負相關，可由適應症與反向因果解釋，不能當作致病證據。前一版「血中升、尿中降就是反向因果的直接證據」建立在沒有共同受試者的比較上，已撤回；在同一批 {n(Pb['n_both'])} 人中，尿中金屬的方向取決於結果定義與寫法。
+{EXW['n_scanned']} 個暴露中 {EXW['n_significant_fdr05']} 個通過偽發現率 0.05。資料修正使 2017–2018 年 {EC['label_changes']['n_changed']} 人的腎臟結果改變；與修正前資料的結果相比，沒有任何暴露改變顯著與否。藥物關聯與處方常規一致，例如腎功能差時應停用的雙胍類呈負相關，可由適應症與反向因果解釋，不能當作致病證據。前一版「血中升、尿中降就是反向因果的直接證據」建立在沒有共同受試者的比較上，已撤回；在同一批 {n(Pb['n_both'])} 人中，尿中金屬的方向取決於結果定義與寫法。
 
 ### 八、2021–2023 年外部資料
 
