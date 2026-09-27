@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""重建示範受試者（v3 樣本）、產生 ui/direction.html，並以 node 執行網頁中的數學區塊，逐軸比對 Python。
+"""重建示範受試者（v3.2 修正後樣本）、產生 ui/direction.html，並以 node 執行網頁中的數學區塊，逐軸比對 Python。
     python verify_direction_html.py
 示範受試者 SEQN 89459（2015–2016，HCV RNA 陽性）僅作展示，不代表準確率。"""
 import json
@@ -25,7 +25,7 @@ EXPECTED = os.path.join(ROOT, "params", "direction_demo_expected.json")
 def main():
     M = json.load(open(PARAMS, encoding="utf-8"))
     P = json.load(open(os.path.join(ROOT, "params", "design.json"), encoding="utf-8"))
-    kd = build_v3(P, verbose=False)["cohort"]
+    kd = build_v3(P, verbose=False, fixes=True)["cohort"]      # v3.2 修正後資料（示範者 2015–2016 年，量尺換算不影響）
     row = kd[kd["SEQN"] == SEQN].iloc[0]
     allf = sorted({f for a in M["axes"].values() for f in a["features"]})
     vals = {f: float(row[f]) for f in allf if not np.isnan(row[f])}

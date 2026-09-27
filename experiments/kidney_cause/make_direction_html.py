@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""產生 ui/direction.html——單一離線網頁，內嵌部署模型（direction.PARAMS：v3.1 常規套組＋2021–2023 重新校準），
+"""產生 ui/direction.html——單一離線網頁，內嵌部署模型（direction.PARAMS：v3.2 修正後資料之常規套組＋2021–2023 重新校準），
 瀏覽器內直接計算。  python make_direction_html.py
 格式符合 Artifact 頁面規格（不自帶 html/head/body、淺深雙主題 token、手機先顯示結果、開啟即載入真實示範受試者），
 同一個檔案可離線開啟，也可直接發布成私人連結（2026-09-27 已發布）。
@@ -35,7 +35,7 @@ UNIT = {
     "LBXSCLSI": "mmol/L", "LBXSOSSI": "mmol/kg", "LBXSGB": "g/dL", "LBXWBCSI": "10³/uL",
     "LBXRBCSI": "10⁶/uL", "LBXHGB": "g/dL", "LBXMCVSI": "fL", "LBXMCHSI": "pg", "LBXMC": "g/dL",
     "LBXRDW": "%", "LBXPLTSI": "10³/uL", "LBXMPSI": "fL", "LBXCRP": "mg/dL", "LBXBAP": "ug/L",
-    "URXUMA": "ug/mL", "URXUCR": "mg/dL", "LBXTC": "mg/dL", "LBXTR": "mg/dL", "LBDLDL": "mg/dL",
+    "URXUMA": "ug/mL", "URXUCR": "mg/dL", "LBXTC": "mg/dL", "LBXTR": "mg/dL", "LBDLDL": "mg/dL", "LBDHDL": "mg/dL",
     "LBXBPB": "ug/dL", "LBXBCD": "ug/L", "LBXFER": "ng/mL", "LBXFOL": "ng/mL", "LBXB12": "pg/mL",
     "LBXMMA": "umol/L", "LBXTHG": "ug/L", "LBXRBF": "ng/mL", "LBXCOT": "ng/mL", "LBDVIDMS": "nmol/L",
     "LBXPT21": "pg/mL", "LBXHCT": "%", "LBXHCY": "umol/L", "ACR": "mg/g", "eGFR": "mL/min/1.73m²", "NLR": "比值", "age": "歲",
@@ -48,7 +48,7 @@ GROUPS = [
     ("血球", "LBXWBCSI LBXLYPCT LBXMOPCT LBXNEPCT LBXEOPCT LBXBAPCT LBXRBCSI LBXHGB LBXHCT LBXMCVSI "
              "LBXMCHSI LBXMC LBXRDW LBXPLTSI LBXMPSI".split()),
     ("尿液與腎功能", "URXUMA URXUCR ACR eGFR".split()),
-    ("脂質與發炎", "LBXTC LBXTR LBDLDL LBXCRP LBXBAP NLR".split()),
+    ("脂質與發炎", "LBXTC LBDHDL LBXTR LBDLDL LBXCRP LBXBAP NLR".split()),
     ("營養／微量元素", "LBXFER LBXFOL LBXB12 LBXMMA LBXHCY LBXRBF LBDVIDMS LBXPT21 LBXCOT LBXBPB LBXBCD LBXTHG".split()),
     ("人口學", "age sex".split()),
 ]
@@ -107,7 +107,7 @@ footer{color:var(--sub);font-size:12px;padding-block:14px 0;border-top:1px solid
 </style>
 <div class="page" lang="zh-Hant">
 <header><h1>腎臟指標異常之病因線索（肝炎病毒感染／糖尿病）</h1>
-<p>輸入常規檢驗數值，輸出兩個共存標籤的相對傾向：這組數值與肝炎病毒感染（HBsAg 或 HCV RNA 陽性）或糖尿病標籤者相比像不像。v3.1 只用常規檢驗（血球、生化、血脂、尿液與年齡性別），機率已依 NHANES 2021–2023 更新校準。共存標籤不等於腎損傷病因；留空項目以開發資料中位數補入並標明。非診斷工具。</p></header>
+<p>輸入常規檢驗數值，輸出兩個共存標籤的相對傾向：這組數值與肝炎病毒感染（HBsAg 或 HCV RNA 陽性）或糖尿病標籤者相比像不像。v3.2 只用常規檢驗（血球、生化、血脂、尿液與年齡性別；開發資料已依 CDC 文件修正跨週期量尺），機率已依 NHANES 2021–2023 更新校準。共存標籤不等於腎損傷病因；留空項目以開發資料中位數補入並標明。非診斷工具。</p></header>
 <main>
 <section class="card" aria-label="檢驗數值">
   <div class="bar"><button class="p" id="run">計算方向</button><button id="demo">載入示範數值</button><button id="clr">清除</button></div>
@@ -115,7 +115,7 @@ footer{color:var(--sub);font-size:12px;padding-block:14px 0;border-top:1px solid
 </section>
 <aside class="card" id="out" aria-live="polite"><div class="empty">尚未輸入數值</div></aside>
 </main>
-<footer>模型 v3.1（2026-09-27）：常規套組邏輯迴歸（肝炎軸 __NF_HEP__ 項、糖尿病軸 __NF_DM__ 項），以 NHANES 1999–2018 腎臟指標異常成人開發（肝炎軸 n=__N_HEP__、糖尿病軸 n=__N_DM__；標籤三值，未知者不納入）。判別：內部巢狀外層 AUROC 肝炎 __AUC_HEP__、糖尿病 __AUC_DM__；未參與開發之 NHANES 2021–2023 外部確認 AUROC 肝炎 __XAUC_HEP__（僅 __XPOS_HEP__ 名陽性，95% CI __XCI_HEP__）、糖尿病 __XAUC_DM__（95% CI __XCI_DM__）。外部確認後以同一批 2021–2023 資料更新校準：肝炎軸__RM_HEP__、糖尿病軸__RM_DM__；事前機率改為 2021–2023 腎臟指標異常成人之比例（肝炎 __PRIOR_HEP__、糖尿病 __PRIOR_DM__）。更新後之校準尚無獨立資料驗證。分區：傾向＝勝算達事前勝算 2 倍以上，不傾向＝0.5 倍以下（相當於概似比 2 與 0.5）；常規套組有值不足一半時標示「資料不足」。肝炎軸訊號幾乎全來自 C 型肝炎（僅 B 肝 AUROC __HBV_AUC__）。免疫軸因常規檢驗無訊號而未納入。輸出為排序線索，不構成診斷或建議。</footer>
+<footer>模型 v3.2（2026-09-27）：常規套組邏輯迴歸（肝炎軸 __NF_HEP__ 項、糖尿病軸 __NF_DM__ 項），以修正後之 NHANES 1999–2018 腎臟指標異常成人開發（肝炎軸 n=__N_HEP__、糖尿病軸 n=__N_DM__；標籤三值，未知者不納入；2017–2018 年生化值已依 CDC 回推式換回 1999–2016 年之量尺）。判別：內部巢狀外層 AUROC 肝炎 __AUC_HEP__、糖尿病 __AUC_DM__；NHANES 2021–2023（事後評估，此資料先前已用於 v3 之一次性外部確認與 v3.1 重新校準）AUROC 肝炎 __XAUC_HEP__（僅 __XPOS_HEP__ 名陽性，95% CI __XCI_HEP__）、糖尿病 __XAUC_DM__（95% CI __XCI_DM__）。以同一批 2021–2023 資料更新校準：肝炎軸__RM_HEP__、糖尿病軸__RM_DM__；事前機率改為 2021–2023 腎臟指標異常成人之比例（肝炎 __PRIOR_HEP__、糖尿病 __PRIOR_DM__）。依抽樣設計切半 200 次之交叉驗證，糖尿病軸測試半之平均預測／實際比例中位數 __CV_DM__；仍無獨立資料驗證。分區：傾向＝勝算達事前勝算 2 倍以上，不傾向＝0.5 倍以下（相當於概似比 2 與 0.5）；常規套組有值不足一半時標示「資料不足」。輸入值以開發資料之檢驗量尺為準，不同實驗室之方法可能有數個百分點差異。肝炎軸訊號幾乎全來自 C 型肝炎（僅 B 肝 AUROC __HBV_AUC__）。免疫軸因公開資料缺乏關鍵檢驗而未納入。輸出為排序線索，不構成診斷或建議。</footer>
 <script>
 const M=__MODEL__, L=__LABELS__, U=__UNITS__, G=__GROUPS__, DEMO=__DEMO__, DEMO_META=__DEMO_META__;
 const all=[...new Set(Object.values(M.axes).flatMap(a=>a.features))];
@@ -158,8 +158,10 @@ def main():
     from direction import PARAMS
     M = json.load(open(PARAMS, encoding="utf-8"))
     J = lambda *p: json.load(open(os.path.join(ROOT, *p), encoding="utf-8"))
-    E, X = J("results", "v3_eval.json")["axes"], J("results", "external_2021_2023.json")["primary"]["axes"]
-    xb = lambda k: X[k]["models"]["v3_basic_LR（常規套組候選）"]
+    E, XX = J("results", "v3_2_eval.json")["axes"], J("results", "v3_2_external.json")
+    X = XX["axes"]
+    xb = lambda k: X[k]["models"]["LR_routine"]
+    cv = XX["recalibration_cv"]["v3.2"]["糖尿病"]["random_summary"]["oe_recal"]
     rm = lambda k: {"截距更新": "只更新截距（事件太少，不估斜率）" if M["axes"][k]["recalibration"]["n_pos"] < 100 else "只更新截距",
                     "截距與斜率更新": "更新截距與斜率"}[M["axes"][k]["recalibration"]["method"]]
     feats = sorted({f for a in M["axes"].values() for f in a["features"]})
@@ -189,8 +191,9 @@ def main():
                 .replace("__NF_HEP__", str(len(M["axes"]["肝炎"]["features"])))
                 .replace("__NF_DM__", str(len(M["axes"]["糖尿病"]["features"])))
                 .replace("__N_HEP__", f"{M['axes']['肝炎']['n']:,}").replace("__N_DM__", f"{M['axes']['糖尿病']['n']:,}")
-                .replace("__AUC_HEP__", f"{E['肝炎']['comparisons']['M2_basic_panel']['auroc_mean']:.3f}")
-                .replace("__AUC_DM__", f"{E['糖尿病']['comparisons']['M2_basic_panel']['auroc_mean']:.3f}")
+                .replace("__AUC_HEP__", f"{E['肝炎']['models']['LR_routine']['repeats']['mean']['auroc']:.3f}")
+                .replace("__AUC_DM__", f"{E['糖尿病']['models']['LR_routine']['repeats']['mean']['auroc']:.3f}")
+                .replace("__CV_DM__", f"{cv['median']:.2f}（2.5–97.5 百分位 {cv['p2_5']:.2f}–{cv['p97_5']:.2f}）")
                 .replace("__XAUC_HEP__", f"{xb('肝炎')['auroc']:.3f}").replace("__XAUC_DM__", f"{xb('糖尿病')['auroc']:.3f}")
                 .replace("__XCI_HEP__", "–".join(f"{v:.3f}" for v in xb("肝炎")["ci95"]["auroc"]))
                 .replace("__XCI_DM__", "–".join(f"{v:.3f}" for v in xb("糖尿病")["ci95"]["auroc"]))
@@ -198,7 +201,7 @@ def main():
                 .replace("__RM_HEP__", rm("肝炎")).replace("__RM_DM__", rm("糖尿病"))
                 .replace("__PRIOR_HEP__", f"{100 * M['axes']['肝炎']['prevalence']:.2f}%")
                 .replace("__PRIOR_DM__", f"{100 * M['axes']['糖尿病']['prevalence']:.1f}%")
-                .replace("__HBV_AUC__", f"{E['肝炎']['label_sensitivity']['僅B肝_HBsAg']['auroc']:.3f}"))
+                .replace("__HBV_AUC__", f"{E['肝炎']['single_label_LR_routine']['僅B型_HBsAg']['auroc']:.3f}"))
     assert "__" not in html.split("<script>")[0], "頁面文字仍有未填入的欄位"
     os.makedirs(os.path.join(ROOT, "ui"), exist_ok=True)
     out = os.path.join(ROOT, "ui", "direction.html")

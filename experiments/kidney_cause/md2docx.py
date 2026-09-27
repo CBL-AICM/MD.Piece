@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Obsidian 主稿（.md）→ 科展格式 Word，輸出於來源同目錄；圖以來源目錄為基準解析。
-用法：python -X utf8 md2docx.py <主稿.md>
+用法：python -X utf8 md2docx.py <主稿.md> [--fair]
 只用已裝的 python-docx；語法覆蓋這份稿子實際用到的：#～#### 標題、段落、**粗體**、`code`、
 [[wiki]]、[t](u)、> 引用、``` 圍欄、| 表格 |、1. 與 - 清單、![[figure/x.png]]、---。
-格式：A4、邊界 2.5 cm、內文 12 pt 標楷體＋Times New Roman、頁碼置中。"""
+格式：A4、邊界 2.5 cm、內文 12 pt 標楷體＋Times New Roman、頁碼置中。
+--fair：全國中小學科展作品說明書格式（附件六、七）——邊界 2 cm、新細明體、1.5 倍行高、內文 12 級、
+主題（##）16 級粗體置中；「<<<分頁>>>」之前為封面（16 級、無頁碼），之後另起一節，頁碼自內文第一頁起算。"""
 import io, os, re, sys
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -13,18 +15,21 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 sys.stdout.reconfigure(encoding="utf-8")
-if len(sys.argv) < 2:
-    sys.exit("用法：python -X utf8 md2docx.py <主稿.md>")
-SRC = sys.argv[1]
+FAIR = "--fair" in sys.argv
+argv = [a for a in sys.argv[1:] if a != "--fair"]
+if not argv:
+    sys.exit("用法：python -X utf8 md2docx.py <主稿.md> [--fair]")
+SRC = argv[0]
 OUT = os.path.splitext(SRC)[0] + ".docx"
 BASE = os.path.dirname(SRC)
-CJK, LATIN, MONO, MONO_CJK = "標楷體", "Times New Roman", "Consolas", "細明體"
+CJK, LATIN, MONO, MONO_CJK = ("新細明體" if FAIR else "標楷體"), "Times New Roman", "Consolas", "細明體"
 BODY_PT = 12
+H_SIZE = {1: 16, 2: 16, 3: 14, 4: 12} if FAIR else {1: 20, 2: 16, 3: 14, 4: 12}
 
 doc = Document()
 sec = doc.sections[0]
 sec.page_width, sec.page_height = Cm(21.0), Cm(29.7)
-sec.left_margin = sec.right_margin = sec.top_margin = sec.bottom_margin = Cm(2.5)
+sec.left_margin = sec.right_margin = sec.top_margin = sec.bottom_margin = Cm(2.0 if FAIR else 2.5)
 
 
 def rfonts(run, mono=False):
@@ -53,7 +58,7 @@ normal = doc.styles["Normal"]
 normal.font.size = Pt(BODY_PT)
 normal.font.name = LATIN
 normal.element.rPr.rFonts.set(qn("w:eastAsia"), CJK)
-normal.paragraph_format.line_spacing = 1.15
+normal.paragraph_format.line_spacing = 1.5 if FAIR else 1.15
 normal.paragraph_format.space_after = Pt(6)
 
 INLINE = re.compile(r"(\*\*.+?\*\*|`[^`]+`|!?\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\))")
@@ -101,7 +106,7 @@ def cell_shade(cell, fill):
 
 
 def heading(text, level, center=False):
-    size = {1: 20, 2: 16, 3: 14, 4: 12}[level]
+    size = H_SIZE[level]
     p = doc.add_paragraph()
     p.paragraph_format.keep_with_next = True
     p.paragraph_format.space_before = Pt({1: 0, 2: 18, 3: 12, 4: 6}[level])
@@ -112,7 +117,7 @@ def heading(text, level, center=False):
     return p
 
 
-def paragraph(text, center=False, indent=False):
+def paragraph(text, center=False, indent=False, size=BODY_PT):
     p = doc.add_paragraph()
     if center:
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -120,7 +125,7 @@ def paragraph(text, center=False, indent=False):
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     if indent:
         p.paragraph_format.first_line_indent = Cm(0.85)
-    emit(p, text)
+    emit(p, text, size)
     return p
 
 
@@ -212,6 +217,7 @@ i = 0
 if lines and lines[0].strip() == "---":                      # frontmatter
     i = lines.index("---", 1) + 1
 title_block = True
+cover = FAIR and "<<<分頁>>>" in lines                       # 科展封面：分頁標記之前
 stats = dict(h=0, p=0, tbl=0, img=0, code=0, quote=0, li=0)
 buf = []
 
@@ -227,7 +233,7 @@ def flush():
         if txt.startswith("**表") or txt.startswith("**圖"):
             caption(txt)
         else:
-            paragraph(txt, center=title_block)
+            paragraph(txt, center=title_block, size=16 if cover else BODY_PT)
         stats["p"] += 1
         buf = []
 
@@ -237,6 +243,15 @@ while i < len(lines):
     s = ln.strip()
     if not s or s == "---":
         flush(); i += 1; continue
+    if s == "<<<分頁>>>":                                     # 封面結束：另起一節，頁碼自 1 起
+        flush()
+        sec = doc.add_section()
+        sec.footer.is_linked_to_previous = False
+        pg = OxmlElement("w:pgNumType")
+        pg.set(qn("w:start"), "1")
+        sec._sectPr.append(pg)
+        cover = False
+        i += 1; continue
     if s.startswith("> [!"):                                  # Obsidian callout（導覽），Word 不要
         flush(); i += 1
         while i < len(lines) and lines[i].startswith(">"):
@@ -253,7 +268,7 @@ while i < len(lines):
         else:
             if lvl == 2:
                 title_block = False
-            heading(text, lvl)
+            heading(text, lvl, center=FAIR and lvl == 2)
         stats["h"] += 1; i += 1; continue
     if s.startswith("```"):
         flush(); i += 1; blk = []

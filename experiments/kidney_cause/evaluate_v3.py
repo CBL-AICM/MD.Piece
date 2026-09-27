@@ -57,11 +57,11 @@ def hgb(seed):
                                           learning_rate=0.08, max_iter=300, l2_regularization=1.0)
 
 
-def fit_tool(X, y, seed=SEED):
-    """部署模型：5 折交叉配適 LR 集成 → 內層折外原始分數配適保序校準。"""
+def fit_tool(X, y, seed=SEED, make=lr):
+    """部署模型：5 折交叉配適集成（預設 LR；v3.2 亦用於 HGB）→ 內層折外原始分數配適保序校準。"""
     oof, models = np.zeros(len(y)), []
     for tr, va in StratifiedKFold(FOLDS, shuffle=True, random_state=seed).split(X, y):
-        m = lr(seed).fit(X[tr], y[tr])
+        m = make(seed).fit(X[tr], y[tr])
         oof[va] = m.predict_proba(X[va])[:, 1]
         models.append(m)
     return dict(models=models, iso=IsotonicRegression(out_of_bounds="clip").fit(oof, y), prev=float(y.mean()))

@@ -128,6 +128,31 @@ DERIVED = dict(ACR="尿白蛋白/肌酸酐比（mg/g）", eGFR="估計腎絲球�
 #     導致 708 人無 eGFR、753 人無法 KDIGO 分期——缺值看似是資料特性，實為合併缺陷）
 ALIASES = {"LBDSCR": "LBXSCR"}
 
+# ── v3.2 修正（params/v3_2_plan.json；2026-09-27 逐週期核對 CDC 文件後發現）
+# C1：2001–2002 兩家實驗室交叉比對後之調和值以 LBD 名發布（L40_B、L06_B、L11_B），2003–2004 鐵蛋白為 LBDFER；
+#     HDL 自 2005 年起名為 LBDHDD。單位皆與對應之 LBX／LBDHDL 相同。
+V32_RENAMES = {"LBDSAPSI": "LBXSAPSI", "LBDSLDSI": "LBXSLDSI", "LBDSPH": "LBXSPH", "LBDSTB": "LBXSTB",
+               "LBDHCY": "LBXHCY", "LBDBAP": "LBXBAP", "LBDFER": "LBXFER", "LBDHDD": "LBDHDL"}
+# C3：BIOPRO_J 回推式，2017–2018 Roche Cobas 6000 → 2015–2016 Beckman DxC 660i 量尺：X = a + b·Y
+BRIDGE_J = {"LBXSAL": (0.01128, 1.044), "LBXSASSI": (3.762, 1.018), "LBXSATSI": (2.688, 1.013),
+            "LBXSBU": (0.4488, 1.001), "LBXSCH": (-2.203, 1.046), "LBXSCR": (-0.06945, 1.051),
+            "LBXSGTSI": (2.363, 0.8042), "LBXSIR": (-4.494, 0.9776), "LBXSLDSI": (2.062, 0.8568),
+            "LBXSTR": (-7.02, 0.9655), "LBXSUA": (0.2326, 0.9323)}
+BRIDGE_J_LOG10 = {"LBXSAPSI": (-0.04294, 1.001)}     # log10 X = a + b·log10 Y
+
+
+def to_dxc(df, mask):
+    """C3：把 mask 列（Cobas 6000 量尺）換成 DxC 660i 量尺；換算值 <0 設為 0。
+    球蛋白＝總蛋白－白蛋白（資料中兩者完全相等）；滲透壓（1.86Na＋GLU/18＋BUN/2.8＋9）只有 BUN 被換算。"""
+    bun0 = df.loc[mask, "LBXSBU"].copy()
+    for c, (a, b) in BRIDGE_J.items():
+        df.loc[mask, c] = (a + b * df.loc[mask, c]).clip(lower=0)
+    for c, (a, b) in BRIDGE_J_LOG10.items():
+        df.loc[mask, c] = 10 ** (a + b * np.log10(df.loc[mask, c]))
+    df.loc[mask, "LBXSGB"] = df.loc[mask, "LBXSTP"] - df.loc[mask, "LBXSAL"]
+    df.loc[mask, "LBXSOSSI"] = df.loc[mask, "LBXSOSSI"] + ((df.loc[mask, "LBXSBU"] - bun0) / 2.8).fillna(0)
+    return df
+
 
 def _read(key):
     p = os.path.join(RAW, key)
@@ -321,24 +346,42 @@ def labels_v3(df):
     return df
 
 
-def build_v3(P, verbose=True):
+def build_v3(P, verbose=True, fixes=False):
     """1999–2018 十週期、三值標籤版（2026-09-26）。回傳全體成人（稽核／權重用）與腎臟指標異常者。
     與 build_extended 的差異：①1999-2000 血清肌酸酐公式更正 ②2007 前尿肌酸酐轉換 ③標籤三值、未知不再當陰性
-    ④封存規則改為明列肝炎變數，不再以字首誤封血比容（LBXHCT）。"""
-    base, _ = load_all(verbose=False)
-    ext = load_extended(verbose=False)
+    ④封存規則改為明列肝炎變數，不再以字首誤封血比容（LBXHCT）。
+    fixes=True 為 v3.2（C1 改名對應、C2 D 肝明列封存而保留 HDL、C3 2017–2018 生化換成 DxC 量尺）；
+    預設 False 與 v3 逐位相同。v3.2 另存 LBXSCR_rep（換算前之肌酸酐）與 kidney3_rep（依之判定）供敏感度分析。"""
+    saved = dict(ALIASES)
+    if fixes:
+        ALIASES.update(V32_RENAMES)     # ponytail: 借用讀檔的別名機制，只在這次讀取期間生效
+    try:
+        base, _ = load_all(verbose=False)
+        ext = load_extended(verbose=False)
+    finally:
+        ALIASES.clear()
+        ALIASES.update(saved)
     df = pd.concat([base, ext], ignore_index=True, sort=False)
     df = df[df["age"] >= P["population"]["value"]["age_min"]].copy()
     female = df["sex"] == 2
+    if fixes:
+        df["LBXSCR_rep"] = df["LBXSCR"]
+        df = to_dxc(df, df["cycle"] == "2017-2018")
+        e_rep = egfr_ckdepi2021(df["LBXSCR_rep"].to_numpy(float), df["age"].to_numpy(float), female.to_numpy())
     df["eGFR"] = egfr_ckdepi2021(df["LBXSCR"].to_numpy(float), df["age"].to_numpy(float), female.to_numpy())
     df["ACR"] = df["URXUMA"] / (df["URXUCR"] / 100.0)
     df["NLR"] = df["LBXNEPCT"] / df["LBXLYPCT"].replace(0, np.nan)
     # 合併 20 年 MEC 權重（NHANES 教學：1999–2002 用 4 年權重 ×4/20，其後 2 年權重 ×2/20）
     df["w_mec20"] = np.where(df["cycle"].isin(["1999-2000", "2001-2002"]), 0.2 * df["WTMEC4YR"], 0.1 * df["WTMEC2YR"])
     labels_v3(df)
+    if fixes:
+        a = df["ACR"]
+        df["kidney3_rep"] = np.select([(e_rep < 60) | (a >= 30), (e_rep >= 60) & (a < 30)], [1.0, 0.0], np.nan)
     kd = df[df["kidney3"] == 1].copy()
-    hep_vars = [c for c in df.columns if c.startswith(("LBXHB", "LBDHB", "LBXHA", "LBXHD", "LBDHD", "SSHCV"))
-                or c in ("LBXHCV", "LBDHCV", "LBXHCR", "LBDHCR", "LBXHCG", "LBDHCI", "LBXHCVRNA")]
+    prefixes = ("LBXHB", "LBDHB", "LBXHA", "SSHCV") if fixes else ("LBXHB", "LBDHB", "LBXHA", "LBXHD", "LBDHD", "SSHCV")
+    hep_vars = [c for c in df.columns if c.startswith(prefixes)
+                or c in ("LBXHCV", "LBDHCV", "LBXHCR", "LBDHCR", "LBXHCG", "LBDHCI", "LBXHCVRNA")
+                or (fixes and c in ("LBDHD", "LBXHD"))]
     archive = set(["LBXGH", "DIQ010"] + [c for c in df.columns if c.startswith("SS")] + hep_vars)
     feats = [c for c in kd.columns if c in FEATURE_LABELS and c not in archive] + ["ACR", "eGFR", "NLR", "age", "sex"]
     if verbose:

@@ -299,8 +299,8 @@ def fig6():
 def figS1():
     from direction import predict
     M = J("params", "direction_model.json")
-    v = J("params", "direction_demo_patient.json")
-    exp = J("params", "direction_demo_expected.json")
+    v = J("params", "direction_demo_patient_v3_1.json")      # v3 論文圖 S1：v3.1 當時之示範檔
+    exp = J("params", "direction_demo_expected_v3_1.json")
     res = predict(v, M)
     fig, axs = plt.subplots(2, 2, figsize=(13, 6.6), gridspec_kw={"width_ratios": [1.2, 1]})
     fig.subplots_adjust(hspace=0.75, wspace=0.42)

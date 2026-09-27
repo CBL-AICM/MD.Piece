@@ -21,7 +21,7 @@ LOCK = dict(l.split("==") for l in open(os.path.join(ROOT, "requirements-lock.tx
 PY = re.search(r"Python ([\d.]+)", open(os.path.join(ROOT, "requirements-lock.txt"), encoding="utf-8").read()).group(1)
 PKGS = "、".join(f"{k} {LOCK[k].strip()}" for k in ("scikit-learn", "pandas", "numpy", "scipy", "matplotlib", "python-docx"))
 NODE = "v24.14.0"   # 2026-09-27 `node --version`；網頁計算核對用
-EX = J("params", "direction_demo_expected.json")
+EX = J("params", "direction_demo_expected_v3_1.json")   # v3.1 示範輸出（v3.2 起另存）
 M31 = J("params", "direction_model_v3_1.json")["axes"]
 BAND_OF = lambda k: EX["axes"][k]["band"]
 FIGS = [f for f in bp.FIGS if not f.startswith("圖S1")]

@@ -20,6 +20,10 @@ results/v3_eval.json（本檔不再寫入樣本內的分區統計）。
 網頁工具與 predict 預設改用常規套組模型（params/direction_model_v3_1.json，由 recalibrate_v3_1.py 產生）：
 保序校準之後再做一次邏輯重新校準 logit p' = a + b·logit p，事前機率改為 2021–2023 之盛行率。
 凍結之 v3 兩個模型檔不變（外部確認協定登錄其雜湊）；沒有 recalibration 欄位的模型行為與 v3 完全相同。
+
+## v3.2（2026-09-27，資料修正之後；params/v3_2_plan.json）
+PARAMS 改為 params/direction_model_v3_2.json：在修正後的開發資料（2001–2002 改名對應、HDL、2017–2018 BIOPRO_J 換算）
+訓練之常規套組模型，依 v3.1 同一規則以 2021–2023 更新校準（external_v3_2.py）。v3.1 檔案保留不動。
 """
 import json
 import os
@@ -47,7 +51,7 @@ from evaluate_v3 import BASIC, EPS                          # noqa: E402
 from nhanes_cohort import DERIVED, FEATURE_LABELS, build_v3  # noqa: E402
 
 PARAMS_FULL = os.path.join(ROOT, "params", "direction_model.json")     # v3 全特徵（凍結；外部確認時之部署模型）
-PARAMS = os.path.join(ROOT, "params", "direction_model_v3_1.json")     # 網頁工具 v3.1：常規套組＋2021–2023 重新校準
+PARAMS = os.path.join(ROOT, "params", "direction_model_v3_2.json")     # 網頁工具 v3.2：修正後資料之常規套組＋2021–2023 重新校準（external_v3_2.py）
 LABEL = {**FEATURE_LABELS, **DERIVED, "age": "年齡", "sex": "性別"}
 AXES = {
     "肝炎": dict(label="hep3", adjacent=LABEL_ADJACENT["infection"], title="肝炎病毒感染（HBsAg 或 HCV RNA 陽性）"),
@@ -101,12 +105,13 @@ def predict_matrix(a, X):
     return raw, cal, band
 
 
-def train(seed=20260926, folds=5, feature_set="full", path=PARAMS_FULL):
-    """feature_set：full＝全部特徵（部署版）；basic＝僅常規套組（比較用候選版，待新資料確認）。"""
+def train(seed=20260926, folds=5, feature_set="full", path=PARAMS_FULL, fixes=False):
+    """feature_set：full＝全部特徵（部署版）；basic＝僅常規套組（比較用候選版，待新資料確認）。
+    fixes=True 用 v3.2 修正後之開發資料（nhanes_cohort.build_v3）。"""
     P = json.load(open(os.path.join(ROOT, "params", "design.json"), encoding="utf-8"))
-    V = build_v3(P, verbose=False)
+    V = build_v3(P, verbose=False, fixes=fixes)
     kd, feats = V["cohort"], V["features"]
-    out = dict(version="v3" if feature_set == "full" else "v3-basic", feature_set=feature_set, seed=seed,
+    out = dict(version=("v3.2" if fixes else "v3") + ("" if feature_set == "full" else "-basic"), feature_set=feature_set, seed=seed,
                performance="見 results/v3_eval.json（巢狀外層評估）",
                band_rule="勝算倍數：傾向 ≥2× 事前勝算、不傾向 ≤0.5×；常規套組有值 <50% → 資料不足", axes={})
     for name, spec in AXES.items():

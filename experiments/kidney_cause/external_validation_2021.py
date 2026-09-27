@@ -95,12 +95,16 @@ def harmonize(df):
     return df
 
 
-def load_2021(harmonized=True):
-    """與開發資料同規則建立 2021–2023 成人資料與三值標籤；harmonized=False 即凍結程式原樣。"""
+def load_2021(harmonized=True, dxc=False):
+    """與開發資料同規則建立 2021–2023 成人資料與三值標籤；harmonized=False 即凍結程式原樣。
+    dxc=True 為 v3.2（params/v3_2_plan.json C4）：修正一之後再以 BIOPRO_J 換成 DxC 660i 量尺，並讀入 HDL。"""
     import nhanes_cohort as nc
+    assert harmonized or not dxc, "DxC 量尺須先經修正一"
     saved = dict(nc.ALIASES)
     if harmonized:
         nc.ALIASES.update(RENAME)          # ponytail: 借用讀檔的別名機制，只在這次讀取期間生效
+    if dxc:
+        nc.ALIASES.update({"LBDHDD": "LBDHDL"})
     try:
         df = nc.load_extended(verbose=False, cycles=CYC, extra=EXTRA)
     finally:
@@ -109,6 +113,8 @@ def load_2021(harmonized=True):
     df = df[df["age"] >= 20].copy()
     if harmonized:
         df = harmonize(df)
+    if dxc:
+        df = nc.to_dxc(df, pd.Series(True, index=df.index))
     df["eGFR"] = nc.egfr_ckdepi2021(df["LBXSCR"].to_numpy(float), df["age"].to_numpy(float), (df["sex"] == 2).to_numpy())
     df["ACR"] = df["URXUMA"] / (df["URXUCR"] / 100.0)
     df["NLR"] = df["LBXNEPCT"] / df["LBXLYPCT"].replace(0, np.nan)
