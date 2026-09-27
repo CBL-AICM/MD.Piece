@@ -75,6 +75,7 @@ band = lambda ax, s: m(ax, s)["bands_tool_repeat0"]     # 工具實際輸出：�
 pair = lambda ax, k: E[ax]["paired_repeat0"][k]
 dauc = lambda ax, k: f"{sgn(pair(ax, k)['d_auroc'])}（95% CI {ci(pair(ax, k)['ci95']['d_auroc'])}）"
 dvd = lambda ax, s: (lambda p: f"{sgn(p['d_auroc'])}（95% CI {ci(p['ci95']['d_auroc'])}）")(E[ax]["paired_vs_demographics_repeat0"][f"{s}−M1_demographics"])
+mdiff = lambda ax, a, b: sgn(auc(ax, a) - (E[ax]["M1_demographics"]["auroc_mean"] if b == "M1" else auc(ax, b)))   # 五次重複平均之差
 xd = lambda ax, k: f"{sgn(X[ax]['paired'][k]['d_auroc'])}（95% CI {ci(X[ax]['paired'][k]['ci95']['d_auroc'])}）"
 tmp = lambda ax, s: E[ax]["temporal"][s]
 wt = lambda ax, s: E[ax]["design_weighted"][s]["weighted"]
@@ -373,7 +374,7 @@ NHANES 各週期的檢驗儀器與方法不同。本研究逐週期檢查每個�
 
 比較兩種模型：邏輯迴歸（線性）與梯度提升樹（HistGradientBoosting，最大深度 3、學習率 0.08、300 次迭代，沿用 v3 設定、不調參；非線性）。兩者都採網頁工具的結構：先以五折交叉配適得到五個模型並取平均，再用內層折外分數做保序校準。評估採分層五折、重複五次的巢狀外層評估：補值、標準化、配適、校準與門檻都只用外層訓練資料，被評估的人從未參與任何一步[@tripod,probast]。
 
-判別以 AUROC 與平均精確率（AP）報告，並列五次重複之平均；校準以校準截距、校準斜率與 Brier 分數報告[@vancalster]，校準曲線與三段分區取第一次重複。模型間差異以同一批受試者 bootstrap 1,000 次估計 95% 信賴區間。
+判別以 AUROC 與平均精確率（AP）報告，並列五次重複之平均；校準以校準截距、校準斜率與 Brier 分數報告[@vancalster]，校準曲線、三段分區、人口加權與決策曲線取第一次重複。模型間差異取第一次重複之外層預測計算配對差，並以同一批受試者 bootstrap 1,000 次估計 95% 信賴區間；配對差可能與五次重複平均之差略有不同，兩者並列。
 
 ### 六、三段分區
 
@@ -426,8 +427,8 @@ NHANES 各週期的檢驗儀器與方法不同。本研究逐週期檢查每個�
 | 全特徵・梯度提升 | {auc('肝炎', 'HGB_full'):.3f} | {ap('肝炎', 'HGB_full'):.3f} | {auc('糖尿病', 'HGB_full'):.3f} | {ap('糖尿病', 'HGB_full'):.3f} |
 
 1. 常規檢驗的判別明顯優於年齡、性別；肝炎軸 AP {ap('肝炎', LR):.3f} 是盛行率 {pct(E['肝炎']['prevalence'])} 的 {ap('肝炎', LR) / E['肝炎']['prevalence']:.1f} 倍。
-2. 糖尿病軸的梯度提升明顯較高：ΔAUROC {dauc('糖尿病', 'HGB_routine−LR_routine')}；肝炎軸則沒有差異：{dauc('肝炎', 'HGB_routine−LR_routine')}。
-3. 補回 HDL 的影響很小：糖尿病 {dauc('糖尿病', 'LR_routine−LR_routine_noHDL')}，肝炎 {dauc('肝炎', 'LR_routine−LR_routine_noHDL')}。
+2. 糖尿病軸的梯度提升明顯較高：第一次重複之配對 ΔAUROC {dauc('糖尿病', 'HGB_routine−LR_routine')}，五次重複平均差 {mdiff('糖尿病', HG, LR)}；肝炎軸則沒有優勢：配對差 {dauc('肝炎', 'HGB_routine−LR_routine')}，平均差 {mdiff('肝炎', HG, LR)}。
+3. 補回 HDL 的影響很小（配對差）：糖尿病 {dauc('糖尿病', 'LR_routine−LR_routine_noHDL')}，肝炎 {dauc('肝炎', 'LR_routine−LR_routine_noHDL')}。
 
 ### 三、校準：線性與非線性模型
 
@@ -543,7 +544,7 @@ NHANES 各週期的檢驗儀器與方法不同。本研究逐週期檢查每個�
 
 ### 一、假設的成立範圍
 
-H₁ 在糖尿病軸成立。內部 AUROC 邏輯迴歸 {auc('糖尿病', LR):.3f}、梯度提升 {auc('糖尿病', HG):.3f}，只用年齡、性別為 {E['糖尿病']['M1_demographics']['auroc_mean']:.3f}；同一批切分的配對差 ΔAUROC：邏輯迴歸 {dvd('糖尿病', LR)}、梯度提升 {dvd('糖尿病', HG)}。外部 AUROC 為 {xm('糖尿病', LR)['auroc']:.3f} 與 {xm('糖尿病', HG)['auroc']:.3f}，同一批人只用年齡、性別為 {X['糖尿病']['M1_demographics']['auroc']:.3f}；ΔAUROC：邏輯迴歸 {xd('糖尿病', 'LR_routine−M1_demographics')}、梯度提升 {xd('糖尿病', 'HGB_routine−M1_demographics')}，此外部比較為事後分析。肝炎軸的內部結果支持 H₁：{auc('肝炎', LR):.3f} 對 {E['肝炎']['M1_demographics']['auroc_mean']:.3f}，ΔAUROC {dvd('肝炎', LR)}。外部則沒有高於年齡、性別，ΔAUROC {xd('肝炎', 'LR_routine−M1_demographics')}，但只有 {X['肝炎']['n_pos']} 名陽性，無法確認或否定。因此 H₁ **部分成立**。
+H₁ 在糖尿病軸成立。內部 AUROC 邏輯迴歸 {auc('糖尿病', LR):.3f}、梯度提升 {auc('糖尿病', HG):.3f}，只用年齡、性別為 {E['糖尿病']['M1_demographics']['auroc_mean']:.3f}（五次重複平均差 {mdiff('糖尿病', LR, 'M1')} 與 {mdiff('糖尿病', HG, 'M1')}）；第一次重複之配對差 ΔAUROC：邏輯迴歸 {dvd('糖尿病', LR)}、梯度提升 {dvd('糖尿病', HG)}。外部 AUROC 為 {xm('糖尿病', LR)['auroc']:.3f} 與 {xm('糖尿病', HG)['auroc']:.3f}，同一批人只用年齡、性別為 {X['糖尿病']['M1_demographics']['auroc']:.3f}；ΔAUROC：邏輯迴歸 {xd('糖尿病', 'LR_routine−M1_demographics')}、梯度提升 {xd('糖尿病', 'HGB_routine−M1_demographics')}，此外部比較為事後分析。肝炎軸的內部結果支持 H₁：{auc('肝炎', LR):.3f} 對 {E['肝炎']['M1_demographics']['auroc_mean']:.3f}（平均差 {mdiff('肝炎', LR, 'M1')}），第一次重複之配對差 {dvd('肝炎', LR)}。外部則沒有高於年齡、性別，ΔAUROC {xd('肝炎', 'LR_routine−M1_demographics')}，但只有 {X['肝炎']['n_pos']} 名陽性，無法確認或否定。因此 H₁ **部分成立**。
 
 ### 二、非線性模型帶來什麼
 
