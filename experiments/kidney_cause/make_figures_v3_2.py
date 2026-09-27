@@ -129,7 +129,7 @@ def fig3():
         w = 0.36
         top = 0
         for j, (m, c) in enumerate(((LR, AX[key]), (HG, DARK[key]))):
-            bs = E[key]["models"][m]["bands_B_repeat0"]["band"]
+            bs = E[key]["models"][m]["bands_tool_repeat0"]["band"]     # 工具規則：資料不足者不給方向
             xs = np.arange(3) + (j - 0.5) * w
             rates = [bs[b]["observed_rate"] or 0 for b in bands]
             top = max(top, max(rates))
@@ -142,8 +142,10 @@ def fig3():
         ax.set_ylabel("該區實際陽性比例", fontsize=9.6)
         ax.set_ylim(0, top * 1.38 + 0.01)
         ax.legend(fontsize=8.4, frameon=False, loc="upper right")
-        cov = [E[key]["models"][m]["bands_B_repeat0"]["coverage"] for m in (LR, HG)]
-        ax.text(0.0, -0.2, f"能給出方向（傾向或不傾向）的比例：邏輯迴歸 {cov[0]:.1%}、梯度提升 {cov[1]:.1%}",
+        cov = [E[key]["models"][m]["bands_tool_repeat0"]["coverage"] for m in (LR, HG)]
+        n_ins = E[key]["models"][LR]["bands_tool_repeat0"]["band"]["資料不足"]["n"]
+        ax.text(0.0, -0.2, f"能給出方向（傾向或不傾向）的比例：邏輯迴歸 {cov[0]:.1%}、梯度提升 {cov[1]:.1%}"
+                           f"（分母為全部；資料不足 {n_ins:,} 人不給方向）",
                 transform=ax.transAxes, fontsize=8.8, color=SUB)
         tidy(ax, "y")
         ax.set_title(f"(b{r + 1}) {NAME[key]}：三段分區之實際陽性比例", fontsize=10.4, loc="left", weight="bold")
@@ -196,7 +198,7 @@ def fig5():
         ax.xaxis.set_major_formatter(plt.matplotlib.ticker.PercentFormatter(1.0, decimals=0 if key == "糖尿病" else 1))
         tidy(ax, "both")
         ax.legend(fontsize=8.4, frameon=False, loc="upper right")
-        b = E[key]["models"][LR]["bands_B_repeat0"]["per_1000_if_skip_low"]
+        b = E[key]["models"][LR]["bands_tool_repeat0"]["per_1000_if_skip_low"]     # 資料不足者照常送驗
         ax.set_title(NAME[key], fontsize=10.4, loc="left", weight="bold")
         hx, ha = (0.98, "right") if key == "肝炎" else (0.02, "left")      # 避開「全數送驗」線
         ax.text(hx, 0.04, f"若只略過「不傾向」區（邏輯迴歸）：\n每千人送驗 {b['tested']:.0f}、漏 {b['missed']:.1f} 名陽性\n（占陽性 {b['missed_share_of_pos']:.0%}）",
@@ -214,6 +216,7 @@ def fig7():
         rows = [("v3 全特徵 LR（事前指定，原資料）", m3["v3_full_LR（部署）"], GRAY),
                 ("v3 常規套組 LR（事前指定，原資料）", m3["v3_basic_LR（常規套組候選）"], GRAY),
                 ("v3 常規套組 LR（凍結，量尺對齊後）", xv["v3_basic_LR（凍結）"], MUTED),
+                ("只用年齡、性別（事後補做）", X["axes"][key]["M1_demographics"], MUTED),
                 (f"v3.2 {MLAB[LR]}（事後）", xv[LR], AX[key]),
                 (f"v3.2 {MLAB[HG]}（事後）", xv[HG], DARK[key])]
         y = np.arange(len(rows))[::-1]

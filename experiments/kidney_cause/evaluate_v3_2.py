@@ -106,15 +106,36 @@ def nested(X, y, sets, models, repeats=REPEATS):
 
 
 def demographics(X, y, sets):
-    out = []
+    """→ (摘要, 第 0 次重複之外層預測)；切分與候選模型相同，可做配對比較。"""
+    out, p0 = [], None
     for r in range(REPEATS):
         p = np.zeros(len(y))
         for tr, te in StratifiedKFold(FOLDS, shuffle=True, random_state=SEED + r).split(X, y):
             p[te] = lr(SEED).fit(X[tr][:, sets["demo"]], y[tr]).predict_proba(X[te][:, sets["demo"]])[:, 1]
         out.append((roc_auc_score(y, p), average_precision_score(y, p)))
+        p0 = p if r == 0 else p0
     a = np.array(out)
     return dict(auroc_mean=float(a[:, 0].mean()), auroc_range=[float(a[:, 0].min()), float(a[:, 0].max())],
-                ap_mean=float(a[:, 1].mean()), ap_range=[float(a[:, 1].min()), float(a[:, 1].max())])
+                ap_mean=float(a[:, 1].mean()), ap_range=[float(a[:, 1].min()), float(a[:, 1].max())]), p0
+
+
+def paired_auroc(y, a, b):
+    """a − b 之 ΔAUROC（同一批受試者）；年齡性別模型用 class_weight 未校準，故只比排序。"""
+    f = dict(d_auroc=lambda i: roc_auc_score(y[i], a[i]) - roc_auc_score(y[i], b[i]))
+    return dict(d_auroc=float(f["d_auroc"](np.arange(len(y)))), ci95=boot(y, f))
+
+
+def tool_bands(y, b, insufficient):
+    """網頁工具實際輸出：常規套組有值 <50% 為「資料不足」、不給方向。涵蓋率分母為全部受試者；
+    「只略過不傾向區」時，資料不足者照常送驗。（bands_B_repeat0 則把分區規則套在每個人身上。）"""
+    t = np.where(insufficient, -1, b)
+    low_pos = int(((t == 0) & (y == 1)).sum())
+    return dict(band={k: dict(n=int((t == v).sum()), n_pos=int(((t == v) & (y == 1)).sum()),
+                              observed_rate=float(y[t == v].mean()) if (t == v).any() else None)
+                      for k, v in (("傾向", 2), ("不確定", 1), ("不傾向", 0), ("資料不足", -1))},
+                coverage=float(np.isin(t, (0, 2)).mean()),
+                per_1000_if_skip_low=dict(tested=1000 * float((t != 0).mean()), missed=1000 * low_pos / len(y),
+                                          missed_share_of_pos=low_pos / max(int(y.sum()), 1)))
 
 
 def summarize(y, M, insufficient):
@@ -127,7 +148,8 @@ def summarize(y, M, insufficient):
     return dict(repeats=dict(mean=per.mean().to_dict(), min=per.min().to_dict(), max=per.max().to_dict()),
                 ci95_repeat0=ci, calibration_repeat0=calib(y, c0), calibration_curve_repeat0=curve(y, c0),
                 bands_B_repeat0=band_stats(y, b0), insufficient_data_n=int(insufficient.sum()),
-                bands_B_excluding_insufficient=band_stats(y[~insufficient], b0[~insufficient]))
+                bands_B_excluding_insufficient=band_stats(y[~insufficient], b0[~insufficient]),
+                bands_tool_repeat0=tool_bands(y, b0, insufficient))
 
 
 def paired(y, a, b):
@@ -155,9 +177,11 @@ def temporal(d, X, y, sets):
     return out
 
 
-def subtypes(d, y, cal, band):
-    """肝炎軸：C 型、B 型陽性各自對全部陰性者之 AUROC 與三區分布（合併感染兩邊都算，另列人數）。"""
+def subtypes(d, y, cal, band, insufficient):
+    """肝炎軸：C 型、B 型陽性各自對全部陰性者之 AUROC 與三區分布（合併感染兩邊都算，另列人數）。
+    bands 把分區規則套在每個人身上；bands_tool 依工具規則另列「資料不足」。"""
     hbv, hcv, neg = (d["hbv3"] == 1).to_numpy(), (d["hcv3"] == 1).to_numpy(), y == 0
+    tb = np.where(insufficient, -1, band)
     out = dict(coinfected=int((hbv & hcv).sum()))
     for k, m in (("C型_HCV_RNA", hcv), ("B型_HBsAg", hbv)):
         pos = m & (y == 1)
@@ -165,7 +189,8 @@ def subtypes(d, y, cal, band):
         pp = np.r_[cal[pos], cal[neg]]
         out[k] = dict(n_pos=int(pos.sum()), auroc=float(roc_auc_score(yy, pp)),
                       ci95=boot(yy, dict(auroc=lambda i: roc_auc_score(yy[i], pp[i]))),
-                      bands={n: int((band[pos] == v).sum()) for n, v in (("傾向", 2), ("不確定", 1), ("不傾向", 0))})
+                      bands={n: int((band[pos] == v).sum()) for n, v in (("傾向", 2), ("不確定", 1), ("不傾向", 0))},
+                      bands_tool={n: int((tb[pos] == v).sum()) for n, v in (("傾向", 2), ("不確定", 1), ("不傾向", 0), ("資料不足", -1))})
     return out
 
 
@@ -187,17 +212,19 @@ def run_axis(name, spec, kd, feats, adults, design):
     t0 = time.time()
     P = nested(X, y, sets, MODELS)
     insufficient = d[s["routine"]].notna().mean(axis=1).to_numpy() < 0.5
+    m1, p_m1 = demographics(X, y, sets)
     a = dict(label=spec["label"], n=int(len(y)), n_pos=int(y.sum()), prevalence=float(y.mean()),
              features=s["full"], routine_panel=s["routine"], models={m: summarize(y, P[m], insufficient) for m in MODELS},
-             M1_demographics=demographics(X, y, sets),
+             M1_demographics=m1,
              paired_repeat0={f"{a_}−{b_}": paired(y, P[a_]["cal"][0], P[b_]["cal"][0]) for a_, b_ in PAIRS},
+             paired_vs_demographics_repeat0={f"{m}−M1_demographics": paired_auroc(y, P[m]["cal"][0], p_m1) for m in MAIN},
              temporal=temporal(d, X, y, sets),
              decision_curve={m: dca(pd.DataFrame(dict(repeat=0, y=y, cal=P[m]["cal"][0])), GRIDS[name]) for m in MAIN})
     w = d["w_mec20"].to_numpy(float)
     h, j = d["SDMVSTRA"].to_numpy(int), d["SDMVPSU"].to_numpy(int)
     a["design_weighted"] = {m: dv.analyse(y.astype(float), P[m]["cal"][0], w, h, j, design) for m in MAIN}
     if name == "肝炎":
-        a["subtypes_LR_routine"] = subtypes(d, y, P["LR_routine"]["cal"][0], P["LR_routine"]["band"][0])
+        a["subtypes_LR_routine"] = subtypes(d, y, P["LR_routine"]["cal"][0], P["LR_routine"]["band"][0], insufficient)
         a["single_label_LR_routine"] = {k: single(kd, feats, spec, lab) for k, lab in (("僅B型_HBsAg", "hbv3"), ("僅C型_HCV_RNA", "hcv3"))}
     rep = adults[adults["kidney3_rep"] == 1]
     dr = rep[rep[spec["label"]].notna()].reset_index(drop=True)

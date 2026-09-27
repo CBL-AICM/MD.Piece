@@ -28,7 +28,7 @@ import direction                                                      # noqa: E4
 import external_validation_2021 as ev                                 # noqa: E402
 import nhanes_cohort as nc                                            # noqa: E402
 import recalibrate_v3_1 as rc                                         # noqa: E402
-from evaluate_v3 import band_stats, bands, boot, calib, fit_tool, tool_predict  # noqa: E402
+from evaluate_v3 import SEED, band_stats, bands, boot, calib, fit_tool, lr, tool_predict  # noqa: E402
 from evaluate_v3_2 import MODELS, PLAN, sets_for                      # noqa: E402
 
 BASE = os.path.join(ROOT, "params", "direction_model_v3_2_basic.json")
@@ -162,9 +162,16 @@ def main():
             a = json.load(open(fp, encoding="utf-8"))["axes"][name]
             _, cal, band = direction.predict_matrix(a, np.column_stack([col(dx, f) for f in a["features"]]))
             r["models"][fk] = metrics(yx, cal, band)
+        # 計畫外、事後（Codex 稽核後補做）：H₁ 的外部比較需要同一批受試者上的年齡性別基準；與內部 M1 同演算法，未校準故只比排序
+        di = [s["full"].index(f) for f in s["demo"]]
+        preds["M1_demographics"] = lr(SEED).fit(Xd[:, di], yd).predict_proba(Xx[:, di])[:, 1]
+        pm = preds["M1_demographics"]
+        r["M1_demographics"] = dict(note="計畫外：稽核後補做之事後比較基準", auroc=float(roc_auc_score(yx, pm)),
+                                    ci95=boot(yx, dict(auroc=lambda i: roc_auc_score(yx[i], pm[i]))))
         r["paired"] = {f"{a_}−{b_}": dict(d_auroc=float(roc_auc_score(yx, preds[a_]) - roc_auc_score(yx, preds[b_])),
                                            ci95=boot(yx, dict(d_auroc=lambda i: roc_auc_score(yx[i], preds[a_][i]) - roc_auc_score(yx[i], preds[b_][i]))))
-                       for a_, b_ in (("HGB_routine", "LR_routine"), ("LR_routine", "LR_full"))}
+                       for a_, b_ in (("HGB_routine", "LR_routine"), ("LR_routine", "LR_full"),
+                                      ("LR_routine", "M1_demographics"), ("HGB_routine", "M1_demographics"))}
         h, j = dx["SDMVSTRA"].to_numpy(int), dx["SDMVPSU"].to_numpy(int)
         ws = {wk: dx[wk].to_numpy(float) for wk in ("WTMEC2YR", "WTPH2YR")}
         r["weighted"] = {m: {wk: dict(n_weight_positive=int((w > 0).sum()),
