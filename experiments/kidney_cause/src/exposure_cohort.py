@@ -26,7 +26,8 @@ import pandas as pd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from nhanes_cohort import (RAW, egfr_ckdepi2021, load_all, load_extended, _read)   # noqa: E402
+from nhanes_cohort import (ALIASES, RAW, V32_RENAMES, egfr_ckdepi2021, load_all, load_extended,  # noqa: E402
+                          to_dxc, _read)
 from provenance import require_real                                                # noqa: E402
 
 # ── 藥物類別（事前指定；陽性／陰性對照見 exwas.py）
@@ -158,15 +159,26 @@ def build_drug_features(man, verbose=True):
     return out.merge(cnt, on="SEQN", how="left")
 
 
-def build(P=None, verbose=True):
-    """全體成人＋暴露。回傳 dict(cohort, exposures, covariates, counts)。"""
+def build(P=None, verbose=True, fixes=False):
+    """全體成人＋暴露。回傳 dict(cohort, exposures, covariates, counts)。
+    fixes=True 為 v3.2（params/exwas_v3_2_plan.json）：與 nhanes_cohort.build_v3(fixes=True) 相同，
+    讀檔時套 C1 改名、2017–2018 年生化換成 DxC 660i 量尺（C3）；預設 False＝v3。"""
     import json
     man = json.load(open(os.path.join(ROOT, "params", "manifest.json"), encoding="utf-8"))
-    base, _ = load_all(verbose=False)
-    ext = load_extended(verbose=False)
+    saved = dict(ALIASES)
+    if fixes:
+        ALIASES.update(V32_RENAMES)
+    try:
+        base, _ = load_all(verbose=False)
+        ext = load_extended(verbose=False)
+    finally:
+        ALIASES.clear()
+        ALIASES.update(saved)
     df = pd.concat([base, ext], ignore_index=True, sort=False)
     age_min = (P or {}).get("population", {}).get("value", {}).get("age_min", 20)
     df = df[df["age"] >= age_min].copy()
+    if fixes:
+        df = to_dxc(df, df["cycle"] == "2017-2018")
 
     # ── 結果變項（**不作為納入條件**）
     female = df["sex"] == 2

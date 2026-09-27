@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """v3.2 圖（科展作品說明書用）——全部由結果檔生成，數字不手打。  python make_figures_v3_2.py
-    results/v3_2_cohort_audit.json、v3_2_eval.json、v3_2_external.json、external_2021_2023.json、direction_v3_2_recalibration.json
+    results/v3_2_cohort_audit.json、v3_2_eval.json、v3_2_external.json、external_2021_2023.json、direction_v3_2_recalibration.json、
+    exwas_v3_2_checks.json
 
 圖1 分析樣本、三值標籤與 v3.2 資料修正     圖2 判別力：常規／全特徵 × 線性／非線性
 圖3 校準：線性與非線性模型                 圖4 穩健性：時間外推、人口加權、腎臟標籤定義
-圖5 決策曲線                               圖6 暴露探索（沿用 v3：figures/v3/圖6_暴露血尿比較.png）
+圖5 決策曲線                               圖6 暴露探索（v3.2 資料修正後重跑；params/exwas_v3_2_plan.json）
 圖7 2021–2023：v3 事前指定之一次評估與 v3.2 事後評估   圖8 重新校準之交叉驗證
 樣式沿用 make_figures_v3（驗證過之兩軸類別色、細線、2 px 間隔）。"""
 import json
@@ -271,9 +272,14 @@ def figS1():
          prior_note="與事前機率相同（2021–2023 年比例）", save_fn=save)
 
 
+def fig6():
+    """圖6：v3.2 資料修正後之鉛、鎘血尿比較（results/exwas_v3_2_checks.json）。"""
+    from make_figures_v3 import fig6 as plot
+    plot(checks="exwas_v3_2_checks.json", save_fn=save)
+
+
 def main(dest=None):
-    fig1(); fig2(); fig3(); fig4(); fig5(); fig7(); fig8(); figS1()
-    shutil.copy2(os.path.join(ROOT, "figures", "v3", "圖6_暴露血尿比較.png"), os.path.join(FIG, "圖6_暴露血尿比較.png"))
+    fig1(); fig2(); fig3(); fig4(); fig5(); fig6(); fig7(); fig8(); figS1()
     if dest:
         os.makedirs(dest, exist_ok=True)
         for f in sorted(os.listdir(FIG)):

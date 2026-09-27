@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """執行 ExWAS：全體成人、197 個暴露、四層調整、對照檢查優先。
     python run_exwas.py [--seed 20260830]
+    python run_exwas.py v3.2     # v3.2 資料修正（params/exwas_v3_2_plan.json）→ results/exwas_v3_2.json
 
 ## 執行順序（**對照檢查在看任何結果之前**）
 
@@ -19,6 +20,7 @@
 * 尿液暴露的未校正版與 `_percr` 版並列，方向不一致者標記
 """
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -78,10 +80,10 @@ def attach_race(df, man, verbose=True):
     return df, True
 
 
-def run(seed=20260830, verbose=True):
+def run(seed=20260830, verbose=True, v32=False):
     man = json.load(open(os.path.join(ROOT, "params", "manifest.json"), encoding="utf-8"))
     P = json.load(open(os.path.join(ROOT, "params", "design.json"), encoding="utf-8"))
-    E = build_exposure(P, verbose=verbose)
+    E = build_exposure(P, verbose=verbose, fixes=v32)
     df, exposures = E["cohort"], E["exposures"]
     df, race_ok = attach_race(df, man, verbose)
 
@@ -159,9 +161,14 @@ def run(seed=20260830, verbose=True):
         results=rows,
         reporting_rule=("陽性對照未命中→整批不報個別發現；陰性對照命中→整批降級；"
                         "血中金屬即使顯著亦標反向因果高風險，不列為因果證據"))
-    PL._dump(out, "exwas_v3.json")
+    name = "exwas_v3_2.json" if v32 else "exwas_v3.json"
+    if v32:
+        plan = os.path.join(ROOT, "params", "exwas_v3_2_plan.json")
+        out.update(data_corrections="v3.2：C1 改名對應、C3 2017–2018 年生化換成 DxC 660i 量尺（exposure_cohort.build(fixes=True)）",
+                   plan=os.path.relpath(plan, ROOT), plan_sha256=hashlib.sha256(open(plan, "rb").read()).hexdigest())
+    PL._dump(out, name)
     with open(os.path.join(RESULTS, "runs_log.jsonl"), "a", encoding="utf-8") as f:
-        f.write(json.dumps(dict(kind="EXWAS", at=out["created"], n_exposures=len(rows),
+        f.write(json.dumps(dict(kind="EXWAS_v3_2" if v32 else "EXWAS", at=out["created"], n_exposures=len(rows),
                                 n_sig=out["n_significant_fdr05"],
                                 n_survive=len(sig), control=verdict["interpretation"]),
                            ensure_ascii=False) + "\n")
@@ -178,11 +185,13 @@ def run(seed=20260830, verbose=True):
         else:
             print(f"\n  ⚠️ 對照檢查未通過，依報告紀律**不列出個別發現**。")
             print(f"     {verdict['interpretation']}")
-        print("\n[完成] results/exwas_v3.json")
+        print(f"\n[完成] results/{name}")
     return out
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
+    ap.add_argument("version", nargs="?", choices=["v3", "v3.2"], default="v3")
     ap.add_argument("--seed", type=int, default=20260830)
-    run(ap.parse_args().seed)
+    a = ap.parse_args()
+    run(a.seed, v32=a.version == "v3.2")

@@ -5,6 +5,7 @@
 尿液三種寫法：原濃度、原濃度＋log2 尿肌酸酐共變數、肌酸酐比值；結果三種定義：
   腎臟異常（eGFR<60 或 ACR≥30，ACR 分母含尿肌酸酐）、僅 eGFR<60（與尿肌酸酐無共同分母）、僅 ACR≥30。
 另報低於檢出極限（LC 碼＝1）的比例。輸出 results/exwas_v3_checks.json。
+`python exwas_v3_checks.py v3.2`：v3.2 資料修正（params/exwas_v3_2_plan.json）→ results/exwas_v3_2_checks.json。
 """
 import json
 import os
@@ -34,10 +35,10 @@ def per_doubling(df, col, outcome, adj):
                 ci=[float(np.exp(b - 1.96 * se)), float(np.exp(b + 1.96 * se))], p=r["p_two_sided"])
 
 
-def main():
+def main(v32=False):
     man = json.load(open(os.path.join(ROOT, "params", "manifest.json"), encoding="utf-8"))
     P = json.load(open(os.path.join(ROOT, "params", "design.json"), encoding="utf-8"))
-    df = build_exposure(P, verbose=False)["cohort"]
+    df = build_exposure(P, verbose=False, fixes=v32)["cohort"]
     df, _ = attach_race(df, man, False)
     lc_cols = {c for _, _, _, b, u in METALS for c in b + u}
     for ch in ("血金屬", "尿金屬"):
@@ -69,10 +70,11 @@ def main():
         for oname, mm in res["models"].items():
             print("   " + oname + "： " + "｜".join(
                 f"{k} {v['OR_per_doubling']:.2f} [{v['ci'][0]:.2f},{v['ci'][1]:.2f}]" for k, v in mm.items() if v))
-    json.dump(out, open(os.path.join(ROOT, "results", "exwas_v3_checks.json"), "w", encoding="utf-8"),
+    name = "exwas_v3_2_checks.json" if v32 else "exwas_v3_checks.json"
+    json.dump(out, open(os.path.join(ROOT, "results", name), "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
-    print("\n[存檔] results/exwas_v3_checks.json")
+    print(f"\n[存檔] results/{name}")
 
 
 if __name__ == "__main__":
-    main()
+    main(v32=len(sys.argv) > 1 and sys.argv[1] == "v3.2")

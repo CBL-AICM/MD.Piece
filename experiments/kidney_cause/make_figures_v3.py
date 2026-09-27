@@ -261,8 +261,10 @@ def fig5():
     save(fig, "圖5_決策曲線.png")
 
 
-def fig6():
-    X = J("results", "exwas_v3_checks.json")
+def fig6(checks="exwas_v3_checks.json", save_fn=None):
+    """預設＝v3（results/exwas_v3_checks.json）；v3.2 由 make_figures_v3_2 帶入 exwas_v3_2_checks.json。"""
+    X = J("results", checks)
+    cyc = sorted({c for m in X["metals"].values() for c in m["cycles"]})
     outs = [("kidney_damage", "腎臟指標異常\n（eGFR<60 或 ACR≧30）"), ("egfr_lt60", "僅 eGFR<60\n（與尿肌酸酐無共同分母）"),
             ("acr_ge30", "僅 ACR≧30")]
     meas = [("血中", "血中", "#2a78d6"), ("尿中_原濃度", "尿中（原濃度）", "#eb6834"),
@@ -292,8 +294,9 @@ def fig6():
             if cidx == 0:
                 ax.text(-0.62, 0.5, f"{metal}\nn={M['n_both']:,}", transform=ax.transAxes, fontsize=11, weight="bold", va="center")
         axs[1, 1].set_xlabel("勝算比（濃度加倍；M3 調整；95% CI，對數刻度）", fontsize=9.6)
-    fig.suptitle("圖6　探索性暴露關聯：同一批受試者（2005–2018，血、尿皆有值）之血中與尿中鉛、鎘", fontsize=12.2, weight="bold", y=1.0)
-    save(fig, "圖6_暴露血尿比較.png")
+    fig.suptitle(f"圖6　探索性暴露關聯：同一批受試者（{cyc[0][:4]}–{cyc[-1][-4:]}，血、尿皆有值）之血中與尿中鉛、鎘",
+                 fontsize=12.2, weight="bold", y=1.0)
+    (save_fn or save)(fig, "圖6_暴露血尿比較.png")
 
 
 def figS1(model="direction_model.json", patient="direction_demo_patient_v3_1.json",

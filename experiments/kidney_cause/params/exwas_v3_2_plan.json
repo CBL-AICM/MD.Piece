@@ -1,0 +1,39 @@
+{
+ "title": "ExWAS v3.2：以 v3.2 資料修正重跑暴露分析（2026-09-27）",
+ "frozen_at": "2026-09-27，於修改程式後、執行任何 v3.2 暴露分析計算之前提交 git；結果檔記錄本檔 SHA256",
+ "why": "v3.2 修正了開發資料的三類錯誤（params/v3_2_plan.json：C1 改名對應、C2 肝炎封存明列、C3 2017–2018 生化換成 DxC 660i 量尺）。論文與說明書中的暴露分析（results/exwas_v3.json、results/exwas_v3_checks.json）是在修正前的資料上算的，文中已標明『沿用 v3』。本檔在看到任何 v3.2 暴露分析結果之前寫定：只換資料修正，方法一律不變。",
+ "pre_run_audit": {
+  "affected": "C3 改變 2017–2018 年血清肌酸酐 → eGFR → 結果變項 kidney_damage（eGFR<60 或 ACR≥30），以及血尿比較檢查之 egfr_lt60；ACR 由尿液算出，不受影響。稽核時之初步計數：2017–2018 年約 16 人結果標籤改變（執行時重算並報告，不以此計數做任何決定）",
+  "not_affected": "C1 改名之變數（鹼性磷酸酶、LDH、磷、總膽紅素、同半胱胺酸、骨鹼性磷酸酶、鐵蛋白、HDL）與 C2 肝炎封存，都不在暴露分析的暴露、共變項或結果定義內。共變項＝年齡、性別、種族（RIDRETH1／RIDRETH3）、BMI、抽菸（SMQ020）、糖尿病（DIQ010＝1 或 HbA1c≥6.5）、高血壓（血壓平均）；藥物另有 M4（加總用藥數）",
+  "loading_check": "逐週期比對六個化學通道（塑化劑、PFAS、農藥、尿金屬、尿砷、血金屬）：原始檔中有值的暴露變數在暴露世代中皆有值；唯一例外 URXP09（2001–2002）原始檔僅 1 筆有值，屬 6 歲兒童（SEQN 14427），不在成人世代內",
+  "flags": "PFAS 之 LBD*L 與尿砷 URDUMMAL 為 0/1 註記碼（低於檢出極限），皆有對應之 LBX／URX 濃度變數，依原前綴規則排除，正確；血中金屬之 LBD*SI 為同一檢驗之 SI 單位重複值，未納入，正確；血錳（LBXBMN，2011–2018）不在事前指定之四種血中金屬內，維持不納入（範圍未變）",
+  "v3_reproduction": "未修正版本（fixes=False）之世代計數與 exwas_v3.json 相同：成人 55,081、結果可判定 48,962、腎臟指標異常 9,234"
+ },
+ "corrections_applied": {
+  "rule": "與 nhanes_cohort.build_v3(fixes=True) 相同：讀檔時套 C1 改名（V32_RENAMES），年齡篩選後以 to_dxc 把 2017–2018 年生化換成 DxC 660i 量尺，eGFR 以換算後肌酸酐計算",
+  "code": "src/exposure_cohort.build(fixes=True)；預設 fixes=False 維持 v3 行為不變"
+ },
+ "methods_unchanged": {
+  "population": "全體成人 ≥20 歲（不對結果條件化）；結果三值（一項正常、另一項缺失為未知並排除）",
+  "exposures": "同一套選取規則；預期與 exwas_v3.json 相同之 213 個暴露（程式中斷言相同，不同即停止並回報）",
+  "adjustment": "M0 粗關聯、M1 人口學、M2 ＋體位抽菸、M3 ＋糖尿病高血壓；藥物另跑 M4（＋總用藥數）",
+  "fdr": "Benjamini–Hochberg，於 M3 之雙尾 p 值上；seed 20260830",
+  "controls": "陽性對照（NSAID、鋰鹽、PPI、胺基醣苷、鈣調磷酸酶抑制劑）、陰性對照（外用皮膚、眼用、鼻用）、砷貝他因內建對照、尿液未校正與 _percr 一致性；報告紀律不變",
+  "checks": "鉛、鎘同一批人之血中與尿中比較（M3、log2、三種結果定義、四種尿液寫法；exwas_v3_checks.py 之 seed 20260926）"
+ },
+ "outputs": {
+  "exwas": "results/exwas_v3_2.json（python run_exwas.py v3.2）",
+  "checks": "results/exwas_v3_2_checks.json（python exwas_v3_checks.py v3.2）",
+  "compare": "results/exwas_v3_2_compare.json（python exwas_v3_2_compare.py）：逐週期結果標籤轉移；v3 與 v3.2 世代之暴露、共變項欄位是否逐格相同；逐暴露 M3 勝算比、q 值、顯著與否之比較，列出狀態改變者；對照檢查判定；血尿比較各格之比較",
+  "figure": "figures/v3_2/圖6_暴露血尿比較.png（由 exwas_v3_2_checks.json 重繪）"
+ },
+ "reporting": {
+  "primary": "論文與說明書之暴露分析改用 v3.2 結果；v3 結果檔不修改",
+  "sensitivity": "若 compare 確認兩版世代除 2017–2018 生化、eGFR 與結果標籤外逐格相同，v3 結果即等同『2017–2018 年用原發布之肌酸酐』之敏感度分析，照此標明並列；否則只標為『修正前資料之結果』",
+  "principles": [
+   "不依結果更改任何方法、門檻、調整集或暴露清單",
+   "所有改變不論方向完整報告",
+   "暴露分析仍屬探索性關聯，不作因果結論"
+  ]
+ }
+}
