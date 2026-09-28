@@ -2,7 +2,7 @@
 """Obsidian 主稿（.md）→ 科展格式 Word，輸出於來源同目錄；圖以來源目錄為基準解析。
 用法：python -X utf8 md2docx.py <主稿.md> [--fair]
 只用已裝的 python-docx；語法覆蓋這份稿子實際用到的：#～#### 標題、段落、**粗體**、`code`、
-[[wiki]]、[t](u)、> 引用、``` 圍欄、| 表格 |、1. 與 - 清單、![[figure/x.png]]、---。
+[[wiki]]、[t](u)、> 引用、``` 圍欄、| 表格 |、1. 與 - 清單、![[figure/x.png]]（![[figure/x.png|480]]＝寬 480 px，以 1/96 吋計，與 Obsidian 同義）、---。
 格式：A4、邊界 2.5 cm、內文 12 pt 標楷體＋Times New Roman、頁碼置中。
 --fair：全國中小學科展作品說明書格式（附件六、七）——邊界 2 cm、新細明體、1.5 倍行高、內文 12 級、
 主題（##）16 級粗體置中；「<!-- 分頁 -->」之前為封面（16 級、無頁碼），之後另起一節，頁碼自內文第一頁起算。
@@ -13,7 +13,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, Pt, RGBColor
+from docx.shared import Cm, Inches, Pt, RGBColor
 
 sys.stdout.reconfigure(encoding="utf-8")
 FAIR = "--fair" in sys.argv
@@ -198,6 +198,7 @@ def table(rows):
             cell = t.cell(i, j)
             cell.paragraphs[0].paragraph_format.space_after = Pt(0)
             cell.paragraphs[0].paragraph_format.line_spacing = 1.0
+            cell.paragraphs[0].paragraph_format.keep_with_next = i < len(cells) - 1 and len(cells) <= 15   # 短表不拆頁
             emit(cell.paragraphs[0], r[j] if j < len(r) else "", fs, bold=(i == 0))
             if i == 0:
                 cell_shade(cell, "D9D9D9")
@@ -207,10 +208,11 @@ def table(rows):
     doc.add_paragraph().paragraph_format.space_after = Pt(0)
 
 
-def image(path):
+def image(path, px=None):
     full = os.path.normpath(os.path.join(BASE, path))
     assert os.path.exists(full), full
-    doc.add_picture(full, width=Cm(17.0 if FAIR else 15.5))
+    width = Cm(17.0 if FAIR else 15.5)
+    doc.add_picture(full, width=min(width, Inches(int(px) / 96)) if px else width)
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.paragraphs[-1].paragraph_format.keep_with_next = True
 
@@ -307,9 +309,9 @@ while i < len(lines):
         while i < len(lines) and lines[i].strip().startswith(">"):
             q.append(lines[i].strip()[1:].strip()); i += 1
         blockquote(q); stats["quote"] += 1; continue
-    m = re.match(r"^!\[\[(.+?)\]\]$|^!\[[^\]]*\]\((.+?)\)$", s)
+    m = re.match(r"^!\[\[(.+?)(?:\|(\d+))?\]\]$|^!\[[^\]]*\]\((.+?)\)$", s)
     if m:
-        flush(); image(m.group(1) or m.group(2)); stats["img"] += 1; i += 1; continue
+        flush(); image(m.group(1) or m.group(3), m.group(2)); stats["img"] += 1; i += 1; continue
     m = re.match(r"^(\d+)\.\s+(.*)$", s)
     if m:
         flush(); list_item(m.group(2), m.group(1) + "."); stats["li"] += 1; i += 1; continue
