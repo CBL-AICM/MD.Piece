@@ -11,6 +11,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import zipfile
 
@@ -29,6 +30,9 @@ J = lambda *p: json.load(open(os.path.join(ROOT, *p), encoding="utf-8"))
 AU, IM, EXW = F.AU, F.IM, F.EXW
 FIGDATA = J("figures", "fair2", "fig_data.json")
 CN = "一二三四五六七八九十"
+git = lambda *a: subprocess.run(["git", *a], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
+# 固定版本網址：指向建置當下已推送的提交（公開儲存庫），不隨分支更動而改變
+REPO_URL = f"{git('remote', 'get-url', 'origin').removesuffix('.git')}/tree/{git('rev-parse', '--short', 'HEAD')}/experiments/kidney_cause"
 VERSION = re.compile(r"[vV]\s?3(\.\d)?|V3")
 
 
@@ -251,7 +255,7 @@ def appendix_md(cyc, imm, sig_rows):
 
 本研究只使用美國國家健康與營養調查（NHANES）公開、已去識別的資料檔，共 {F.N_ALL} 個檔案（開發資料 {F.N_DEV} 個、外部資料 {F.N_EXT} 個），每個檔案的來源網址、SHA256 雜湊與位元組數都記錄在出處帳本。分析程式與結果存放於 Git 儲存庫（目錄 experiments/kidney_cause）；每一項分析都先提交分析計畫、再執行，提交代碼見說明書表七。
 
-> ⚠️ **待確認**：是否附上儲存庫網址。網址與提交紀錄可能透露作者或學校，請依比賽規定決定。
+程式與結果網址（固定版本）：{REPO_URL}
 """
 
 
