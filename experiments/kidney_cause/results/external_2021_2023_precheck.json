@@ -1,0 +1,793 @@
+{
+ "note": "只含標籤計數與特徵分布；未計算任何預測、判別或校準指標",
+ "versions": {
+  "調和（修正一）": {
+   "n_adults": 7809,
+   "kidney": {
+    "pos": 1111,
+    "neg": 4371,
+    "unknown": 2327
+   },
+   "labels": {
+    "肝炎": {
+     "pos": 11,
+     "neg": 1021,
+     "unknown": 79
+    },
+    "糖尿病": {
+     "pos": 420,
+     "neg": 649,
+     "unknown": 42
+    }
+   },
+   "features": {
+    "LBXSAL": {
+     "present": 0.898,
+     "median_2021": 4.0,
+     "median_dev": 4.1,
+     "ratio": 0.976
+    },
+    "LBXSAPSI": {
+     "present": 0.896,
+     "median_2021": 79.26650000000001,
+     "median_dev": 73.0,
+     "ratio": 1.086
+    },
+    "LBXSBU": {
+     "present": 0.896,
+     "median_2021": 17.45086,
+     "median_dev": 16.0,
+     "ratio": 1.091
+    },
+    "LBXSCA": {
+     "present": 0.898,
+     "median_2021": 9.4,
+     "median_dev": 9.4,
+     "ratio": 1.0
+    },
+    "LBXSCH": {
+     "present": 0.896,
+     "median_2021": 175.0,
+     "median_dev": 190.0,
+     "ratio": 0.921
+    },
+    "LBXSC3SI": {
+     "present": 0.896,
+     "median_2021": 25.898,
+     "median_dev": 25.0,
+     "ratio": 1.036
+    },
+    "LBXSGL": {
+     "present": 0.896,
+     "median_2021": 98.8086,
+     "median_dev": 99.0,
+     "ratio": 0.998
+    },
+    "LBXSIR": {
+     "present": 0.898,
+     "median_2021": 75.6814,
+     "median_dev": 75.0,
+     "ratio": 1.009
+    },
+    "LBXSLDSI": {
+     "present": 0.64,
+     "median_2021": 168.89000000000001,
+     "median_dev": 140.0,
+     "ratio": 1.206
+    },
+    "LBXSPH": {
+     "present": 0.892,
+     "median_2021": 3.5,
+     "median_dev": 3.7,
+     "ratio": 0.946
+    },
+    "LBXSTP": {
+     "present": 0.898,
+     "median_2021": 7.1,
+     "median_dev": 7.2,
+     "ratio": 0.986
+    },
+    "LBXSTR": {
+     "present": 0.897,
+     "median_2021": 120.6654,
+     "median_dev": 135.0,
+     "ratio": 0.894
+    },
+    "LBXSUA": {
+     "present": 0.896,
+     "median_2021": 5.5,
+     "median_dev": 5.9,
+     "ratio": 0.932
+    },
+    "LBXSCR": {
+     "present": 0.896,
+     "median_2021": 1.05,
+     "median_dev": 1.0587,
+     "ratio": 0.992
+    },
+    "LBXSNASI": {
+     "present": 0.898,
+     "median_2021": 139.712,
+     "median_dev": 139.0,
+     "ratio": 1.005
+    },
+    "LBXSKSI": {
+     "present": 0.884,
+     "median_2021": 4.087400000000001,
+     "median_dev": 4.1,
+     "ratio": 0.997
+    },
+    "LBXSCLSI": {
+     "present": 0.896,
+     "median_2021": 101.956,
+     "median_dev": 103.0,
+     "ratio": 0.99
+    },
+    "LBXSOSSI": {
+     "present": 0.894,
+     "median_2021": 281.0245367619048,
+     "median_dev": 281.0,
+     "ratio": 1.0
+    },
+    "LBXSGB": {
+     "present": 0.898,
+     "median_2021": 3.1,
+     "median_dev": 3.1,
+     "ratio": 1.0
+    },
+    "LBXWBCSI": {
+     "present": 0.953,
+     "median_2021": 7.0,
+     "median_dev": 7.1,
+     "ratio": 0.986
+    },
+    "LBXLYPCT": {
+     "present": 0.949,
+     "median_2021": 27.4,
+     "median_dev": 27.5,
+     "ratio": 0.996
+    },
+    "LBXMOPCT": {
+     "present": 0.949,
+     "median_2021": 7.95,
+     "median_dev": 8.0,
+     "ratio": 0.994
+    },
+    "LBXNEPCT": {
+     "present": 0.949,
+     "median_2021": 60.9,
+     "median_dev": 60.6,
+     "ratio": 1.005
+    },
+    "LBXEOPCT": {
+     "present": 0.949,
+     "median_2021": 2.5,
+     "median_dev": 2.5,
+     "ratio": 1.0
+    },
+    "LBXBAPCT": {
+     "present": 0.949,
+     "median_2021": 0.8,
+     "median_dev": 0.6,
+     "ratio": 1.333
+    },
+    "LBXRBCSI": {
+     "present": 0.953,
+     "median_2021": 4.56,
+     "median_dev": 4.53,
+     "ratio": 1.007
+    },
+    "LBXHGB": {
+     "present": 0.953,
+     "median_2021": 13.6,
+     "median_dev": 13.7,
+     "ratio": 0.993
+    },
+    "LBXHCT": {
+     "present": 0.953,
+     "median_2021": 40.6,
+     "median_dev": 40.5,
+     "ratio": 1.002
+    },
+    "LBXMCVSI": {
+     "present": 0.953,
+     "median_2021": 89.6,
+     "median_dev": 90.3,
+     "ratio": 0.992
+    },
+    "LBXMCHSI": {
+     "present": 0.953,
+     "median_2021": 30.1,
+     "median_dev": 30.5,
+     "ratio": 0.987
+    },
+    "LBXMC": {
+     "present": 0.953,
+     "median_2021": 33.6,
+     "median_dev": 33.7,
+     "ratio": 0.997
+    },
+    "LBXRDW": {
+     "present": 0.953,
+     "median_2021": 14.0,
+     "median_dev": 13.3,
+     "ratio": 1.053
+    },
+    "LBXPLTSI": {
+     "present": 0.953,
+     "median_2021": 239.0,
+     "median_dev": 237.0,
+     "ratio": 1.008
+    },
+    "LBXMPSI": {
+     "present": 0.953,
+     "median_2021": 8.1,
+     "median_dev": 8.2,
+     "ratio": 0.988
+    },
+    "LBXCRP": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 0.3,
+     "ratio": null
+    },
+    "LBXBAP": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 17.0,
+     "ratio": null
+    },
+    "URXUMA": {
+     "present": 0.979,
+     "median_2021": 48.966785,
+     "median_dev": 45.8,
+     "ratio": 1.069
+    },
+    "URXUCR": {
+     "present": 0.979,
+     "median_2021": 109.5,
+     "median_dev": 100.0,
+     "ratio": 1.095
+    },
+    "LBXTC": {
+     "present": 0.9,
+     "median_2021": 174.0,
+     "median_dev": 190.0,
+     "ratio": 0.916
+    },
+    "LBXTR": {
+     "present": 0.492,
+     "median_2021": 95.44500000000001,
+     "median_dev": 121.0,
+     "ratio": 0.789
+    },
+    "LBDLDL": {
+     "present": 0.481,
+     "median_2021": 95.7636,
+     "median_dev": 108.0,
+     "ratio": 0.887
+    },
+    "LBXBPB": {
+     "present": 0.95,
+     "median_2021": 0.903,
+     "median_dev": 2.2,
+     "ratio": 0.41
+    },
+    "LBXBCD": {
+     "present": 0.95,
+     "median_2021": 0.352,
+     "median_dev": 0.5,
+     "ratio": 0.704
+    },
+    "LBXFER": {
+     "present": 0.09,
+     "median_2021": 56.25,
+     "median_dev": 104.0,
+     "ratio": 0.541
+    },
+    "LBXFOL": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 13.7,
+     "ratio": null
+    },
+    "LBXB12": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 480.0,
+     "ratio": null
+    },
+    "LBXHCY": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 10.62,
+     "ratio": null
+    },
+    "LBXMMA": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 0.17,
+     "ratio": null
+    },
+    "LBXTHG": {
+     "present": 0.95,
+     "median_2021": 0.505,
+     "median_dev": 0.9,
+     "ratio": 0.561
+    },
+    "LBXRBF": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 303.0,
+     "ratio": null
+    },
+    "LBXCOT": {
+     "present": 0.906,
+     "median_2021": 0.019,
+     "median_dev": 0.058,
+     "ratio": 0.328
+    },
+    "LBDVIDMS": {
+     "present": 0.916,
+     "median_2021": 84.7,
+     "median_dev": 53.9,
+     "ratio": 1.571
+    },
+    "LBXPT21": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 51.0,
+     "ratio": null
+    },
+    "ACR": {
+     "present": 0.979,
+     "median_2021": 45.77356272661349,
+     "median_dev": 46.98527572272491,
+     "ratio": 0.974
+    },
+    "eGFR": {
+     "present": 0.896,
+     "median_2021": 64.17372286917198,
+     "median_dev": 65.48214665593153,
+     "ratio": 0.98
+    },
+    "NLR": {
+     "present": 0.949,
+     "median_2021": 2.198165804783452,
+     "median_dev": 2.208955223880597,
+     "ratio": 0.995
+    },
+    "age": {
+     "present": 1.0,
+     "median_2021": 68.0,
+     "median_dev": 68.0,
+     "ratio": 1.0
+    },
+    "sex": {
+     "present": 1.0,
+     "median_2021": 2.0,
+     "median_dev": 2.0,
+     "ratio": 1.0
+    },
+    "LBXSATSI": {
+     "present": 0.895,
+     "median_2021": 16.066,
+     "median_dev": 19.0,
+     "ratio": 0.846
+    },
+    "LBXSASSI": {
+     "present": 0.892,
+     "median_2021": 21.0,
+     "median_dev": 23.0,
+     "ratio": 0.913
+    },
+    "LBXSGTSI": {
+     "present": 0.896,
+     "median_2021": 22.6947,
+     "median_dev": 22.0,
+     "ratio": 1.032
+    },
+    "LBXSTB": {
+     "present": 0.896,
+     "median_2021": 0.42273000000000005,
+     "median_dev": 0.6,
+     "ratio": 0.705
+    }
+   }
+  },
+  "依凍結程式": {
+   "n_adults": 7809,
+   "kidney": {
+    "pos": 1055,
+    "neg": 4418,
+    "unknown": 2336
+   },
+   "labels": {
+    "肝炎": {
+     "pos": 11,
+     "neg": 969,
+     "unknown": 75
+    },
+    "糖尿病": {
+     "pos": 398,
+     "neg": 616,
+     "unknown": 41
+    }
+   },
+   "features": {
+    "LBXSAL": {
+     "present": 0.901,
+     "median_2021": 4.0,
+     "median_dev": 4.1,
+     "ratio": 0.976
+    },
+    "LBXSAPSI": {
+     "present": 0.9,
+     "median_2021": 86.0,
+     "median_dev": 73.0,
+     "ratio": 1.178
+    },
+    "LBXSBU": {
+     "present": 0.9,
+     "median_2021": 17.0,
+     "median_dev": 16.0,
+     "ratio": 1.062
+    },
+    "LBXSCA": {
+     "present": 0.901,
+     "median_2021": 9.4,
+     "median_dev": 9.4,
+     "ratio": 1.0
+    },
+    "LBXSCH": {
+     "present": 0.9,
+     "median_2021": 174.0,
+     "median_dev": 190.0,
+     "ratio": 0.916
+    },
+    "LBXSC3SI": {
+     "present": 0.9,
+     "median_2021": 24.0,
+     "median_dev": 25.0,
+     "ratio": 0.96
+    },
+    "LBXSGL": {
+     "present": 0.899,
+     "median_2021": 103.0,
+     "median_dev": 99.0,
+     "ratio": 1.04
+    },
+    "LBXSIR": {
+     "present": 0.901,
+     "median_2021": 78.0,
+     "median_dev": 75.0,
+     "ratio": 1.04
+    },
+    "LBXSLDSI": {
+     "present": 0.643,
+     "median_2021": 170.0,
+     "median_dev": 140.0,
+     "ratio": 1.214
+    },
+    "LBXSPH": {
+     "present": 0.895,
+     "median_2021": 3.5,
+     "median_dev": 3.7,
+     "ratio": 0.946
+    },
+    "LBXSTP": {
+     "present": 0.901,
+     "median_2021": 7.1,
+     "median_dev": 7.2,
+     "ratio": 0.986
+    },
+    "LBXSTR": {
+     "present": 0.9,
+     "median_2021": 123.5,
+     "median_dev": 135.0,
+     "ratio": 0.915
+    },
+    "LBXSUA": {
+     "present": 0.9,
+     "median_2021": 5.5,
+     "median_dev": 5.9,
+     "ratio": 0.932
+    },
+    "LBXSCR": {
+     "present": 0.899,
+     "median_2021": 1.06,
+     "median_dev": 1.0587,
+     "ratio": 1.001
+    },
+    "LBXSNASI": {
+     "present": 0.901,
+     "median_2021": 140.0,
+     "median_dev": 139.0,
+     "ratio": 1.007
+    },
+    "LBXSKSI": {
+     "present": 0.887,
+     "median_2021": 4.2,
+     "median_dev": 4.1,
+     "ratio": 1.024
+    },
+    "LBXSCLSI": {
+     "present": 0.9,
+     "median_2021": 101.0,
+     "median_dev": 103.0,
+     "ratio": 0.981
+    },
+    "LBXSOSSI": {
+     "present": 0.897,
+     "median_2021": 282.0,
+     "median_dev": 281.0,
+     "ratio": 1.004
+    },
+    "LBXSGB": {
+     "present": 0.901,
+     "median_2021": 3.1,
+     "median_dev": 3.1,
+     "ratio": 1.0
+    },
+    "LBXWBCSI": {
+     "present": 0.955,
+     "median_2021": 6.9,
+     "median_dev": 7.1,
+     "ratio": 0.972
+    },
+    "LBXLYPCT": {
+     "present": 0.95,
+     "median_2021": 27.4,
+     "median_dev": 27.5,
+     "ratio": 0.996
+    },
+    "LBXMOPCT": {
+     "present": 0.95,
+     "median_2021": 8.0,
+     "median_dev": 8.0,
+     "ratio": 1.0
+    },
+    "LBXNEPCT": {
+     "present": 0.95,
+     "median_2021": 60.9,
+     "median_dev": 60.6,
+     "ratio": 1.005
+    },
+    "LBXEOPCT": {
+     "present": 0.95,
+     "median_2021": 2.5,
+     "median_dev": 2.5,
+     "ratio": 1.0
+    },
+    "LBXBAPCT": {
+     "present": 0.95,
+     "median_2021": 0.8,
+     "median_dev": 0.6,
+     "ratio": 1.333
+    },
+    "LBXRBCSI": {
+     "present": 0.955,
+     "median_2021": 4.56,
+     "median_dev": 4.53,
+     "ratio": 1.007
+    },
+    "LBXHGB": {
+     "present": 0.955,
+     "median_2021": 13.6,
+     "median_dev": 13.7,
+     "ratio": 0.993
+    },
+    "LBXHCT": {
+     "present": 0.955,
+     "median_2021": 40.6,
+     "median_dev": 40.5,
+     "ratio": 1.002
+    },
+    "LBXMCVSI": {
+     "present": 0.955,
+     "median_2021": 89.8,
+     "median_dev": 90.3,
+     "ratio": 0.994
+    },
+    "LBXMCHSI": {
+     "present": 0.955,
+     "median_2021": 30.1,
+     "median_dev": 30.5,
+     "ratio": 0.987
+    },
+    "LBXMC": {
+     "present": 0.955,
+     "median_2021": 33.6,
+     "median_dev": 33.7,
+     "ratio": 0.997
+    },
+    "LBXRDW": {
+     "present": 0.955,
+     "median_2021": 14.0,
+     "median_dev": 13.3,
+     "ratio": 1.053
+    },
+    "LBXPLTSI": {
+     "present": 0.955,
+     "median_2021": 239.0,
+     "median_dev": 237.0,
+     "ratio": 1.008
+    },
+    "LBXMPSI": {
+     "present": 0.955,
+     "median_2021": 8.1,
+     "median_dev": 8.2,
+     "ratio": 0.988
+    },
+    "LBXCRP": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 0.3,
+     "ratio": null
+    },
+    "LBXBAP": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 17.0,
+     "ratio": null
+    },
+    "URXUMA": {
+     "present": 0.978,
+     "median_2021": 42.425,
+     "median_dev": 45.8,
+     "ratio": 0.926
+    },
+    "URXUCR": {
+     "present": 0.978,
+     "median_2021": 107.5,
+     "median_dev": 100.0,
+     "ratio": 1.075
+    },
+    "LBXTC": {
+     "present": 0.903,
+     "median_2021": 173.0,
+     "median_dev": 190.0,
+     "ratio": 0.911
+    },
+    "LBXTR": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 121.0,
+     "ratio": null
+    },
+    "LBDLDL": {
+     "present": 0.484,
+     "median_2021": 92.0,
+     "median_dev": 108.0,
+     "ratio": 0.852
+    },
+    "LBXBPB": {
+     "present": 0.952,
+     "median_2021": 0.918,
+     "median_dev": 2.2,
+     "ratio": 0.417
+    },
+    "LBXBCD": {
+     "present": 0.952,
+     "median_2021": 0.3555,
+     "median_dev": 0.5,
+     "ratio": 0.711
+    },
+    "LBXFER": {
+     "present": 0.088,
+     "median_2021": 56.0,
+     "median_dev": 104.0,
+     "ratio": 0.538
+    },
+    "LBXFOL": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 13.7,
+     "ratio": null
+    },
+    "LBXB12": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 480.0,
+     "ratio": null
+    },
+    "LBXHCY": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 10.62,
+     "ratio": null
+    },
+    "LBXMMA": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 0.17,
+     "ratio": null
+    },
+    "LBXTHG": {
+     "present": 0.952,
+     "median_2021": 0.5,
+     "median_dev": 0.9,
+     "ratio": 0.556
+    },
+    "LBXRBF": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 303.0,
+     "ratio": null
+    },
+    "LBXCOT": {
+     "present": 0.908,
+     "median_2021": 0.019,
+     "median_dev": 0.058,
+     "ratio": 0.328
+    },
+    "LBDVIDMS": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 53.9,
+     "ratio": null
+    },
+    "LBXPT21": {
+     "present": 0.0,
+     "median_2021": null,
+     "median_dev": 51.0,
+     "ratio": null
+    },
+    "ACR": {
+     "present": 0.978,
+     "median_2021": 43.48104141184693,
+     "median_dev": 46.98527572272491,
+     "ratio": 0.925
+    },
+    "eGFR": {
+     "present": 0.899,
+     "median_2021": 59.93312895112101,
+     "median_dev": 65.48214665593153,
+     "ratio": 0.915
+    },
+    "NLR": {
+     "present": 0.95,
+     "median_2021": 2.198165804783452,
+     "median_dev": 2.208955223880597,
+     "ratio": 0.995
+    },
+    "age": {
+     "present": 1.0,
+     "median_2021": 69.0,
+     "median_dev": 68.0,
+     "ratio": 1.015
+    },
+    "sex": {
+     "present": 1.0,
+     "median_2021": 2.0,
+     "median_dev": 2.0,
+     "ratio": 1.0
+    },
+    "LBXSATSI": {
+     "present": 0.898,
+     "median_2021": 17.0,
+     "median_dev": 19.0,
+     "ratio": 0.895
+    },
+    "LBXSASSI": {
+     "present": 0.895,
+     "median_2021": 21.0,
+     "median_dev": 23.0,
+     "ratio": 0.913
+    },
+    "LBXSGTSI": {
+     "present": 0.9,
+     "median_2021": 23.0,
+     "median_dev": 22.0,
+     "ratio": 1.045
+    },
+    "LBXSTB": {
+     "present": 0.9,
+     "median_2021": 0.4,
+     "median_dev": 0.6,
+     "ratio": 0.667
+    }
+   }
+  }
+ }
+}

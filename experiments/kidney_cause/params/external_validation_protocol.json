@@ -1,0 +1,129 @@
+{
+ "title": "外部確認協定：NHANES 2021–2023（週期 L）",
+ "frozen_at": "2026-09-26T23:34:39",
+ "why_new": "週期 L 於 2024 年釋出；本專案帳本 params/manifest.json 在凍結時沒有任何 *_L 檔，未參與任何模型、特徵、門檻或規則決策",
+ "frozen_models": {
+  "v3_full_LR（部署）": {
+   "path": "params\\direction_model.json",
+   "sha256": "e840be9f9afdd928828136d194f477ce0159bd3270742be603919d5623afb9ae"
+  },
+  "v3_basic_LR（常規套組候選）": {
+   "path": "params\\direction_model_basic.json",
+   "sha256": "9d8807dd5e1ecd33c375b4185bfe33156f301a8d46839597f935cc4e890119c0"
+  },
+  "v3_full_HGB（比較，僅判別）": {
+   "path": "models\\v3_hgb.pkl",
+   "sha256": "7e13e6e8575dcdd1a9069d36a5755e9823e16859a8b6862614ab7aa6bf8d2976"
+  }
+ },
+ "data_files": [
+  {
+   "file": "DEMO_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DEMO_L.xpt",
+   "bytes": 2582160
+  },
+  {
+   "file": "BIOPRO_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.xpt",
+   "bytes": 2425520
+  },
+  {
+   "file": "CBC_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/CBC_L.xpt",
+   "bytes": 1609840
+  },
+  {
+   "file": "ALB_CR_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/ALB_CR_L.xpt",
+   "bytes": 545440
+  },
+  {
+   "file": "GHB_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/GHB_L.xpt",
+   "bytes": 174000
+  },
+  {
+   "file": "DIQ_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DIQ_L.xpt",
+   "bytes": 847600
+  },
+  {
+   "file": "HEPBD_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/HEPBD_L.xpt",
+   "bytes": 324160
+  },
+  {
+   "file": "HEPC_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/HEPC_L.xpt",
+   "bytes": 324160
+  },
+  {
+   "file": "HSCRP_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/HSCRP_L.xpt",
+   "bytes": 280560
+  },
+  {
+   "file": "TCHOL_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TCHOL_L.xpt",
+   "bytes": 259520
+  },
+  {
+   "file": "HDL_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/HDL_L.xpt",
+   "bytes": 259520
+  },
+  {
+   "file": "TRIGLY_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TRIGLY_L.xpt",
+   "bytes": 321840
+  },
+  {
+   "file": "PBCD_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/PBCD_L.xpt",
+   "bytes": 1190000
+  },
+  {
+   "file": "FERTIN_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/FERTIN_L.xpt",
+   "bytes": 83360
+  },
+  {
+   "file": "FOLATE_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/FOLATE_L.xpt",
+   "bytes": 280560
+  },
+  {
+   "file": "VID_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/VID_L.xpt",
+   "bytes": 700320
+  },
+  {
+   "file": "COT_L.xpt",
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/COT_L.xpt",
+   "bytes": 341200
+  }
+ ],
+ "total_bytes": 12549760,
+ "cohort_rules": "與 v3 相同：成人 ≥20、labels_v3 三值、各軸排除未知；不做肌酸酐或尿肌酸酐轉換（官方方法已一致）",
+ "primary": {
+  "model": "v3_full_LR（部署）",
+  "metrics": [
+   "AP 與 AUROC（受試者層 bootstrap 1,000 次 95% CI）",
+   "校準截距、斜率、Brier",
+   "勝算分區六格表、涵蓋率、各區實際陽性率、資料不足人數"
+  ]
+ },
+ "secondary": [
+  "v3_basic_LR：與部署模型之配對 ΔAUROC、ΔAP",
+  "v3_full_HGB：判別（AUROC、AP）",
+  "舊分區規則（2×／0.5× 盛行率）",
+  "MEC 權重加權指標"
+ ],
+ "rules": [
+  "只評一次；結果已存在則程式拒跑",
+  "不重新配適、不重新校準、不改門檻",
+  "無論結果如何皆完整報告",
+  "不設通過／不通過門檻；內部參考值（巢狀外層）：肝炎 AUROC 0.783、AP 0.116；糖尿病 AUROC 0.765、AP 0.641"
+ ],
+ "internal_reference": "results\\v3_eval.json"
+}

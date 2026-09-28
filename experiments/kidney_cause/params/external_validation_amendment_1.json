@@ -1,0 +1,111 @@
+{
+ "title": "外部確認協定修正一：2021–2023 資料與開發資料之量尺調和",
+ "amended_at": "2026-09-27T04:29:32",
+ "base_protocol": {
+  "path": "params\\external_validation_protocol.json",
+  "sha256": "a9be9c9337551707a6db21b9245b7aa01eb411d6181f4670b7bfa2262810d22d"
+ },
+ "status_at_amendment": "17 檔已下載並核對大小；已做資料核對（標籤計數與特徵分布）；尚未計算任何預測、判別或校準指標",
+ "why": "凍結時只核對血清與尿肌酸酐（官方不需轉換）。取用後逐檔核對 CDC 文件：2021–2023 生化儀器由 Cobas 6000 換為 8000，尿白蛋白由螢光免疫法改為 LC-MS/MS，空腹三酸甘油酯改為非甘油空白法並更名 LBXTLG，維生素 D 更名 LBXVIDMS；CDC 對需調整者提供回推至 2017–March 2020 量尺之官方式。不調和則部分特徵與腎臟標籤（ACR）不在開發時的量尺上，且兩個更名的特徵會被整欄以中位數補入。",
+ "rule": "凡 CDC 2021–2023 文件建議用於與 2017–March 2020 比較之回推式，對模型或標籤用到的變數一律套用；儀器計算值（滲透壓、Friedewald LDL）與 ACR 以文件公式由調整後組成重算；同一分析物更名者對應回原名；其餘不動。",
+ "conversions": {
+  "LBXSAPSI": {
+   "equation": "舊 = 0.6098 + 0.9041 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSATSI": {
+   "equation": "舊 = -1.529 + 1.035 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSBU": {
+   "equation": "舊 = 0.09386 + 1.021 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSC3SI": {
+   "equation": "舊 = 1.37 + 1.022 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSCLSI": {
+   "equation": "舊 = 9.137 + 0.919 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSGL": {
+   "equation": "舊 = -0.7821 + 0.9669 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSGTSI": {
+   "equation": "舊 = 0.9735 + 0.9444 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSIR": {
+   "equation": "舊 = -1.679 + 0.9918 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSKSI": {
+   "equation": "舊 = 0.2108 + 0.923 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSLDSI": {
+   "equation": "舊 = 2.46 + 0.979 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSNASI": {
+   "equation": "舊 = 41.95 + 0.6983 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSTB": {
+   "equation": "舊 = 0.01793 + 1.012 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXSTR": {
+   "equation": "舊 = -0.8463 + 0.9879 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.htm"
+  },
+  "LBXTR": {
+   "equation": "舊 = -12.19 + 0.9785 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TRIGLY_L.htm"
+  },
+  "URXUMA": {
+   "equation": "舊 = -1.643 + 1.189 × 新",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/ALB_CR_L.htm"
+  }
+ },
+ "renames": {
+  "LBXTLG": "LBXTR",
+  "LBXVIDMS": "LBDVIDMS"
+ },
+ "derived": [
+  "LBXSOSSI：加上 1.86×ΔNa＋ΔGLU/18＋ΔBUN/2.8",
+  "LBDLDL：加上 −ΔTG/5",
+  "ACR：以調整後尿白蛋白重算"
+ ],
+ "floor": "回推值 <0 設為 0（只在各檢驗量測下限附近發生）",
+ "not_converted": {
+  "LBXSCR、LBXSAL、LBXSASSI、LBXSCA、LBXSCH、LBXSPH、LBXSTP、LBXSUA": "BIOPRO_L：Adjustment Not Recommended",
+  "LBXSGB": "計算值（總蛋白－白蛋白），兩者皆不需調整",
+  "URXUCR": "ALB_CR_L：no adjustment is recommended",
+  "LBXGH": "GHB_L：did not have to be adjusted（糖尿病標籤不受影響）",
+  "LBXTC": "TCHOL_L：did not have to be adjusted",
+  "CBC 全部": "CBC_L：no changes to the lab method, lab equipment, or lab site",
+  "LBDHBG、LBXHCR": "HEPBD_L 無變更；HEPC_L 代碼 1／2／3 與 2013 年起相同",
+  "LBXFER": "FERTIN_L：no changes",
+  "LBXBPB、LBXBCD、LBXTHG": "PBCD_L 方法有變但未提供換算式 → 依凍結協定用原值",
+  "LBXCOT": "COT_L 未提供換算式 → 依凍結協定用原值",
+  "LBDRFO（紅血球葉酸）": "開發資料之 LBXRBF 為 1999–2004 放射免疫法，2021–2023 為微生物法，無一對一換算 → 不對應（同開發資料 2005–2018 缺值）",
+  "LBXHSCRP": "開發資料未合併高敏感度 CRP（2011–2018 同樣缺值）→ 不對應",
+  "LBDHDD（HDL）": "不是模型特徵（開發時被 D 肝變數字首規則一併封存，另列版本紀錄）"
+ },
+ "unchanged": [
+  "模型、校準、門檻、分區規則",
+  "主要與次要指標",
+  "只評一次、結果不論好壞完整報告"
+ ],
+ "analyses": {
+  "primary": "調和後資料（本修正）",
+  "sensitivity_prespecified": "依凍結程式原樣（不調和），顯示調和的影響"
+ },
+ "precheck": {
+  "path": "results\\external_2021_2023_precheck.json",
+  "sha256": "4e6b71577db326bafc74f1a6644fc17b6a075997ec308c96d9774a0b32213f96"
+ }
+}
