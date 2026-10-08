@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Obsidian 主稿（.md）→ 科展格式 Word，輸出於來源同目錄；圖以來源目錄為基準解析。
 用法：python -X utf8 md2docx.py <主稿.md> [--fair]
-只用已裝的 python-docx；語法覆蓋這份稿子實際用到的：#～#### 標題、段落、**粗體**、`code`、
+只用已裝的 python-docx；語法覆蓋這份稿子實際用到的：#～#### 標題、段落、**粗體**、==螢光標記==、`code`、
 [[wiki]]、[t](u)、> 引用、``` 圍欄、| 表格 |、1. 與 - 清單、![[figure/x.png]]（![[figure/x.png|480]]＝寬 480 px，以 1/96 吋計，與 Obsidian 同義）、---。
 格式：A4、邊界 2.5 cm、內文 12 pt 標楷體＋Times New Roman、頁碼置中。
 --fair：全國中小學科展作品說明書格式（附件六、七）——邊界 2 cm、新細明體、1.5 倍行高、內文 12 級、
@@ -10,7 +10,7 @@
 import io, os, re, sys
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX, WD_LINE_SPACING
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt, RGBColor
@@ -63,7 +63,7 @@ normal.element.rPr.rFonts.set(qn("w:eastAsia"), CJK)
 normal.paragraph_format.line_spacing = 1.5 if FAIR else 1.15
 normal.paragraph_format.space_after = Pt(6)
 
-INLINE = re.compile(r"(\*\*.+?\*\*|\*[^*\s][^*]*?\*|`[^`]+`|!?\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\))")
+INLINE = re.compile(r"(==.+?==|\*\*.+?\*\*|\*[^*\s][^*]*?\*|`[^`]+`|!?\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\))")
 
 
 def emit(par, text, size=BODY_PT, bold=False, mono=False):
@@ -71,7 +71,12 @@ def emit(par, text, size=BODY_PT, bold=False, mono=False):
     for tok in INLINE.split(text):
         if not tok:
             continue
-        if tok.startswith("**") and tok.endswith("**") and len(tok) > 4:
+        if tok.startswith("==") and tok.endswith("==") and len(tok) > 4:   # ==標記== → 黃色螢光
+            n0 = len(par.runs)
+            emit(par, tok[2:-2], size, bold, mono)
+            for r in par.runs[n0:]:
+                r.font.highlight_color = WD_COLOR_INDEX.YELLOW
+        elif tok.startswith("**") and tok.endswith("**") and len(tok) > 4:
             emit(par, tok[2:-2], size, True, mono)
         elif tok.startswith("*") and tok.endswith("*") and len(tok) > 2:
             style_run(par.add_run(tok[1:-1]), size, bold, mono, italic=True)
