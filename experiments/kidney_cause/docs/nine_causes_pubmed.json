@@ -1,0 +1,4815 @@
+{
+ "_meta": {
+  "source": "PubMed（NCBI），經 PubMed 連接器 get_article_metadata 取得，2026-10-09；只留書目欄位，不含摘要",
+  "n": 73
+ },
+ "articles": {
+  "36272764": {
+   "pmid": "36272764",
+   "doi": "10.1016/j.kint.2022.06.008",
+   "title": "KDIGO 2022 Clinical Practice Guideline for Diabetes Management in Chronic Kidney Disease.",
+   "authors": [],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "102",
+   "issue": "5S",
+   "pages": "S1-S127",
+   "article_types": [
+    "Practice Guideline",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2022",
+    "month": "Nov"
+   }
+  },
+  "28522654": {
+   "pmid": "28522654",
+   "doi": "10.2215/CJN.11491116",
+   "title": "Diabetic Kidney Disease: Challenges, Progress, and Possibilities.",
+   "authors": [
+    [
+     "Alicic",
+     "RZ"
+    ],
+    [
+     "Rooney",
+     "MT"
+    ],
+    [
+     "Tuttle",
+     "KR"
+    ]
+   ],
+   "journal": "Clinical journal of the American Society of Nephrology : CJASN",
+   "iso": "Clin J Am Soc Nephrol",
+   "volume": "12",
+   "issue": "12",
+   "pages": "2032-2045",
+   "article_types": [
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2017",
+    "month": "05",
+    "day": "18"
+   }
+  },
+  "27188921": {
+   "pmid": "27188921",
+   "doi": "10.1038/nrdp.2015.18",
+   "title": "Diabetic kidney disease.",
+   "authors": [
+    [
+     "Thomas",
+     "MC"
+    ],
+    [
+     "Brownlee",
+     "M"
+    ],
+    [
+     "Susztak",
+     "K"
+    ],
+    [
+     "Sharma",
+     "K"
+    ],
+    [
+     "Jandeleit-Dahm",
+     "KA"
+    ],
+    [
+     "Zoungas",
+     "S"
+    ],
+    [
+     "Rossing",
+     "P"
+    ],
+    [
+     "Groop",
+     "PH"
+    ],
+    [
+     "Cooper",
+     "ME"
+    ]
+   ],
+   "journal": "Nature reviews. Disease primers",
+   "iso": "Nat Rev Dis Primers",
+   "volume": "1",
+   "issue": null,
+   "pages": "15018",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "07",
+    "day": "30"
+   }
+  },
+  "27532915": {
+   "pmid": "27532915",
+   "doi": "10.1001/jama.2016.10924",
+   "title": "Clinical Manifestations of Kidney Disease Among US Adults With Diabetes, 1988-2014.",
+   "authors": [
+    [
+     "Afkarian",
+     "M"
+    ],
+    [
+     "Zelnick",
+     "LR"
+    ],
+    [
+     "Hall",
+     "YN"
+    ],
+    [
+     "Heagerty",
+     "PJ"
+    ],
+    [
+     "Tuttle",
+     "K"
+    ],
+    [
+     "Weiss",
+     "NS"
+    ],
+    [
+     "de Boer",
+     "IH"
+    ]
+   ],
+   "journal": "JAMA",
+   "iso": "JAMA",
+   "volume": "316",
+   "issue": "6",
+   "pages": "602-10",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2016",
+    "month": "Aug",
+    "day": "09"
+   }
+  },
+  "20167701": {
+   "pmid": "20167701",
+   "doi": "10.1681/ASN.2010010010",
+   "title": "Pathologic classification of diabetic nephropathy.",
+   "authors": [
+    [
+     "Tervaert",
+     "TW"
+    ],
+    [
+     "Mooyaart",
+     "AL"
+    ],
+    [
+     "Amann",
+     "K"
+    ],
+    [
+     "Cohen",
+     "AH"
+    ],
+    [
+     "Cook",
+     "HT"
+    ],
+    [
+     "Drachenberg",
+     "CB"
+    ],
+    [
+     "Ferrario",
+     "F"
+    ],
+    [
+     "Fogo",
+     "AB"
+    ],
+    [
+     "Haas",
+     "M"
+    ],
+    [
+     "de Heer",
+     "E"
+    ],
+    [
+     "Joh",
+     "K"
+    ],
+    [
+     "Noël",
+     "LH"
+    ],
+    [
+     "Radhakrishnan",
+     "J"
+    ],
+    [
+     "Seshan",
+     "SV"
+    ],
+    [
+     "Bajema",
+     "IM"
+    ],
+    [
+     "Bruijn",
+     "JA"
+    ]
+   ],
+   "journal": "Journal of the American Society of Nephrology : JASN",
+   "iso": "J Am Soc Nephrol",
+   "volume": "21",
+   "issue": "4",
+   "pages": "556-63",
+   "article_types": [
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2010",
+    "month": "02",
+    "day": "18"
+   }
+  },
+  "25249672": {
+   "pmid": "25249672",
+   "doi": "10.2337/dc14-1296",
+   "title": "Diabetic kidney disease: a report from an ADA Consensus Conference.",
+   "authors": [
+    [
+     "Tuttle",
+     "KR"
+    ],
+    [
+     "Bakris",
+     "GL"
+    ],
+    [
+     "Bilous",
+     "RW"
+    ],
+    [
+     "Chiang",
+     "JL"
+    ],
+    [
+     "de Boer",
+     "IH"
+    ],
+    [
+     "Goldstein-Fuchs",
+     "J"
+    ],
+    [
+     "Hirsch",
+     "IB"
+    ],
+    [
+     "Kalantar-Zadeh",
+     "K"
+    ],
+    [
+     "Narva",
+     "AS"
+    ],
+    [
+     "Navaneethan",
+     "SD"
+    ],
+    [
+     "Neumiller",
+     "JJ"
+    ],
+    [
+     "Patel",
+     "UD"
+    ],
+    [
+     "Ratner",
+     "RE"
+    ],
+    [
+     "Whaley-Connell",
+     "AT"
+    ],
+    [
+     "Molitch",
+     "ME"
+    ]
+   ],
+   "journal": "Diabetes care",
+   "iso": "Diabetes Care",
+   "volume": "37",
+   "issue": "10",
+   "pages": "2864-83",
+   "article_types": [
+    "Consensus Statement",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2014",
+    "month": "Oct"
+   }
+  },
+  "12472787": {
+   "pmid": "12472787",
+   "doi": "10.1046/j.1523-1755.2003.00712.x",
+   "title": "Development and progression of nephropathy in type 2 diabetes: the United Kingdom Prospective Diabetes Study (UKPDS 64).",
+   "authors": [
+    [
+     "Adler",
+     "AI"
+    ],
+    [
+     "Stevens",
+     "RJ"
+    ],
+    [
+     "Manley",
+     "SE"
+    ],
+    [
+     "Bilous",
+     "RW"
+    ],
+    [
+     "Cull",
+     "CA"
+    ],
+    [
+     "Holman",
+     "RR"
+    ]
+   ],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "63",
+   "issue": "1",
+   "pages": "225-32",
+   "article_types": [
+    "Clinical Trial",
+    "Journal Article",
+    "Randomized Controlled Trial",
+    "Research Support, Non-U.S. Gov't",
+    "Research Support, U.S. Gov't, P.H.S."
+   ],
+   "publication_date": {
+    "year": "2003",
+    "month": "Jan"
+   }
+  },
+  "23013602": {
+   "pmid": "23013602",
+   "doi": "10.1016/S0140-6736(12)61350-6",
+   "title": "Associations of kidney disease measures with mortality and end-stage renal disease in individuals with and without diabetes: a meta-analysis.",
+   "authors": [
+    [
+     "Fox",
+     "CS"
+    ],
+    [
+     "Matsushita",
+     "K"
+    ],
+    [
+     "Woodward",
+     "M"
+    ],
+    [
+     "Bilo",
+     "HJ"
+    ],
+    [
+     "Chalmers",
+     "J"
+    ],
+    [
+     "Heerspink",
+     "HJ"
+    ],
+    [
+     "Lee",
+     "BJ"
+    ],
+    [
+     "Perkins",
+     "RM"
+    ],
+    [
+     "Rossing",
+     "P"
+    ],
+    [
+     "Sairenchi",
+     "T"
+    ],
+    [
+     "Tonelli",
+     "M"
+    ],
+    [
+     "Vassalotti",
+     "JA"
+    ],
+    [
+     "Yamagishi",
+     "K"
+    ],
+    [
+     "Coresh",
+     "J"
+    ],
+    [
+     "de Jong",
+     "PE"
+    ],
+    [
+     "Wen",
+     "CP"
+    ],
+    [
+     "Nelson",
+     "RG"
+    ]
+   ],
+   "journal": "Lancet (London, England)",
+   "iso": "Lancet",
+   "volume": "380",
+   "issue": "9854",
+   "pages": "1662-73",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Research Support, Non-U.S. Gov't",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2012",
+    "month": "09",
+    "day": "24"
+   }
+  },
+  "11260414": {
+   "pmid": "11260414",
+   "doi": "10.1046/j.1523-1755.2001.0590041498.x",
+   "title": "Obesity-related glomerulopathy: an emerging epidemic.",
+   "authors": [
+    [
+     "Kambham",
+     "N"
+    ],
+    [
+     "Markowitz",
+     "GS"
+    ],
+    [
+     "Valeri",
+     "AM"
+    ],
+    [
+     "Lin",
+     "J"
+    ],
+    [
+     "D'Agati",
+     "VD"
+    ]
+   ],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "59",
+   "issue": "4",
+   "pages": "1498-509",
+   "article_types": [
+    "Comparative Study",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2001",
+    "month": "Apr"
+   }
+  },
+  "27263398": {
+   "pmid": "27263398",
+   "doi": "10.1038/nrneph.2016.75",
+   "title": "Obesity-related glomerulopathy: clinical and pathologic characteristics and pathogenesis.",
+   "authors": [
+    [
+     "D'Agati",
+     "VD"
+    ],
+    [
+     "Chagnac",
+     "A"
+    ],
+    [
+     "de Vries",
+     "AP"
+    ],
+    [
+     "Levi",
+     "M"
+    ],
+    [
+     "Porrini",
+     "E"
+    ],
+    [
+     "Herman-Edelstein",
+     "M"
+    ],
+    [
+     "Praga",
+     "M"
+    ]
+   ],
+   "journal": "Nature reviews. Nephrology",
+   "iso": "Nat Rev Nephrol",
+   "volume": "12",
+   "issue": "8",
+   "pages": "453-71",
+   "article_types": [
+    "Journal Article",
+    "Review",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2016",
+    "month": "06",
+    "day": "06"
+   }
+  },
+  "16389251": {
+   "pmid": "16389251",
+   "doi": "10.7326/0003-4819-144-1-200601030-00006",
+   "title": "Body mass index and risk for end-stage renal disease.",
+   "authors": [
+    [
+     "Hsu",
+     "CY"
+    ],
+    [
+     "McCulloch",
+     "CE"
+    ],
+    [
+     "Iribarren",
+     "C"
+    ],
+    [
+     "Darbinian",
+     "J"
+    ],
+    [
+     "Go",
+     "AS"
+    ]
+   ],
+   "journal": "Annals of internal medicine",
+   "iso": "Ann Intern Med",
+   "volume": "144",
+   "issue": "1",
+   "pages": "21-8",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural"
+   ],
+   "publication_date": {
+    "year": "2006",
+    "month": "Jan",
+    "day": "03"
+   }
+  },
+  "17928825": {
+   "pmid": "17928825",
+   "doi": "10.1038/sj.ki.5002586",
+   "title": "Association between obesity and kidney disease: a systematic review and meta-analysis.",
+   "authors": [
+    [
+     "Wang",
+     "Y"
+    ],
+    [
+     "Chen",
+     "X"
+    ],
+    [
+     "Song",
+     "Y"
+    ],
+    [
+     "Caballero",
+     "B"
+    ],
+    [
+     "Cheskin",
+     "LJ"
+    ]
+   ],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "73",
+   "issue": "1",
+   "pages": "19-33",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Research Support, N.I.H., Extramural",
+    "Systematic Review"
+   ],
+   "publication_date": {
+    "year": "2007",
+    "month": "10",
+    "day": "10"
+   }
+  },
+  "30630856": {
+   "pmid": "30630856",
+   "doi": "10.1136/bmj.k5301",
+   "title": "Adiposity and risk of decline in glomerular filtration rate: meta-analysis of individual participant data in a global consortium.",
+   "authors": [
+    [
+     "Chang",
+     "AR"
+    ],
+    [
+     "Grams",
+     "ME"
+    ],
+    [
+     "Ballew",
+     "SH"
+    ],
+    [
+     "Bilo",
+     "H"
+    ],
+    [
+     "Correa",
+     "A"
+    ],
+    [
+     "Evans",
+     "M"
+    ],
+    [
+     "Gutierrez",
+     "OM"
+    ],
+    [
+     "Hosseinpanah",
+     "F"
+    ],
+    [
+     "Iseki",
+     "K"
+    ],
+    [
+     "Kenealy",
+     "T"
+    ],
+    [
+     "Klein",
+     "B"
+    ],
+    [
+     "Kronenberg",
+     "F"
+    ],
+    [
+     "Lee",
+     "BJ"
+    ],
+    [
+     "Li",
+     "Y"
+    ],
+    [
+     "Miura",
+     "K"
+    ],
+    [
+     "Navaneethan",
+     "SD"
+    ],
+    [
+     "Roderick",
+     "PJ"
+    ],
+    [
+     "Valdivielso",
+     "JM"
+    ],
+    [
+     "Visseren",
+     "FLJ"
+    ],
+    [
+     "Zhang",
+     "L"
+    ],
+    [
+     "Gansevoort",
+     "RT"
+    ],
+    [
+     "Hallan",
+     "SI"
+    ],
+    [
+     "Levey",
+     "AS"
+    ],
+    [
+     "Matsushita",
+     "K"
+    ],
+    [
+     "Shalev",
+     "V"
+    ],
+    [
+     "Woodward",
+     "M"
+    ]
+   ],
+   "journal": "BMJ (Clinical research ed.)",
+   "iso": "BMJ",
+   "volume": "364",
+   "issue": null,
+   "pages": "k5301",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Research Support, N.I.H., Extramural"
+   ],
+   "publication_date": {
+    "year": "2019",
+    "month": "01",
+    "day": "10"
+   }
+  },
+  "10807594": {
+   "pmid": "10807594",
+   "doi": "10.1152/ajprenal.2000.278.5.F817",
+   "title": "Glomerular hemodynamics in severe obesity.",
+   "authors": [
+    [
+     "Chagnac",
+     "A"
+    ],
+    [
+     "Weinstein",
+     "T"
+    ],
+    [
+     "Korzets",
+     "A"
+    ],
+    [
+     "Ramadan",
+     "E"
+    ],
+    [
+     "Hirsch",
+     "J"
+    ],
+    [
+     "Gafter",
+     "U"
+    ]
+   ],
+   "journal": "American journal of physiology. Renal physiology",
+   "iso": "Am J Physiol Renal Physiol",
+   "volume": "278",
+   "issue": "5",
+   "pages": "F817-22",
+   "article_types": [
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2000",
+    "month": "May"
+   }
+  },
+  "23108588": {
+   "pmid": "23108588",
+   "doi": "10.1001/2013.jamainternmed.85",
+   "title": "Body mass index in 1.2 million adolescents and risk for end-stage renal disease.",
+   "authors": [
+    [
+     "Vivante",
+     "A"
+    ],
+    [
+     "Golan",
+     "E"
+    ],
+    [
+     "Tzur",
+     "D"
+    ],
+    [
+     "Leiba",
+     "A"
+    ],
+    [
+     "Tirosh",
+     "A"
+    ],
+    [
+     "Skorecki",
+     "K"
+    ],
+    [
+     "Calderon-Margalit",
+     "R"
+    ]
+   ],
+   "journal": "Archives of internal medicine",
+   "iso": "Arch Intern Med",
+   "volume": "172",
+   "issue": "21",
+   "pages": "1644-50",
+   "article_types": [
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2012",
+    "month": "Nov",
+    "day": "26"
+   }
+  },
+  "29496260": {
+   "pmid": "29496260",
+   "doi": "10.1053/j.ajkd.2017.12.009",
+   "title": "Hyperuricemia, Acute and Chronic Kidney Disease, Hypertension, and Cardiovascular Disease: Report of a Scientific Workshop Organized by the National Kidney Foundation.",
+   "authors": [
+    [
+     "Johnson",
+     "RJ"
+    ],
+    [
+     "Bakris",
+     "GL"
+    ],
+    [
+     "Borghi",
+     "C"
+    ],
+    [
+     "Chonchol",
+     "MB"
+    ],
+    [
+     "Feldman",
+     "D"
+    ],
+    [
+     "Lanaspa",
+     "MA"
+    ],
+    [
+     "Merriman",
+     "TR"
+    ],
+    [
+     "Moe",
+     "OW"
+    ],
+    [
+     "Mount",
+     "DB"
+    ],
+    [
+     "Sanchez Lozada",
+     "LG"
+    ],
+    [
+     "Stahl",
+     "E"
+    ],
+    [
+     "Weiner",
+     "DE"
+    ],
+    [
+     "Chertow",
+     "GM"
+    ]
+   ],
+   "journal": "American journal of kidney diseases : the official journal of the National Kidney Foundation",
+   "iso": "Am J Kidney Dis",
+   "volume": "71",
+   "issue": "6",
+   "pages": "851-865",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2018",
+    "month": "02",
+    "day": "27"
+   }
+  },
+  "25064611": {
+   "pmid": "25064611",
+   "doi": "10.1186/1471-2369-15-122",
+   "title": "Is hyperuricemia an independent risk factor for new-onset chronic kidney disease?: A systematic review and meta-analysis based on observational cohort studies.",
+   "authors": [
+    [
+     "Li",
+     "L"
+    ],
+    [
+     "Yang",
+     "C"
+    ],
+    [
+     "Zhao",
+     "Y"
+    ],
+    [
+     "Zeng",
+     "X"
+    ],
+    [
+     "Liu",
+     "F"
+    ],
+    [
+     "Fu",
+     "P"
+    ]
+   ],
+   "journal": "BMC nephrology",
+   "iso": "BMC Nephrol",
+   "volume": "15",
+   "issue": null,
+   "pages": "122",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Research Support, Non-U.S. Gov't",
+    "Systematic Review"
+   ],
+   "publication_date": {
+    "year": "2014",
+    "month": "07",
+    "day": "27"
+   }
+  },
+  "25889144": {
+   "pmid": "25889144",
+   "doi": "10.1186/s13075-015-0610-9",
+   "title": "Gout and risk of chronic kidney disease and nephrolithiasis: meta-analysis of observational studies.",
+   "authors": [
+    [
+     "Roughley",
+     "MJ"
+    ],
+    [
+     "Belcher",
+     "J"
+    ],
+    [
+     "Mallen",
+     "CD"
+    ],
+    [
+     "Roddy",
+     "E"
+    ]
+   ],
+   "journal": "Arthritis research & therapy",
+   "iso": "Arthritis Res Ther",
+   "volume": "17",
+   "issue": "1",
+   "pages": "90",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Research Support, Non-U.S. Gov't",
+    "Systematic Review"
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "04",
+    "day": "01"
+   }
+  },
+  "32579811": {
+   "pmid": "32579811",
+   "doi": "10.1056/NEJMoa1915833",
+   "title": "Effects of Allopurinol on the Progression of Chronic Kidney Disease.",
+   "authors": [
+    [
+     "Badve",
+     "SV"
+    ],
+    [
+     "Pascoe",
+     "EM"
+    ],
+    [
+     "Tiku",
+     "A"
+    ],
+    [
+     "Boudville",
+     "N"
+    ],
+    [
+     "Brown",
+     "FG"
+    ],
+    [
+     "Cass",
+     "A"
+    ],
+    [
+     "Clarke",
+     "P"
+    ],
+    [
+     "Dalbeth",
+     "N"
+    ],
+    [
+     "Day",
+     "RO"
+    ],
+    [
+     "de Zoysa",
+     "JR"
+    ],
+    [
+     "Douglas",
+     "B"
+    ],
+    [
+     "Faull",
+     "R"
+    ],
+    [
+     "Harris",
+     "DC"
+    ],
+    [
+     "Hawley",
+     "CM"
+    ],
+    [
+     "Jones",
+     "GRD"
+    ],
+    [
+     "Kanellis",
+     "J"
+    ],
+    [
+     "Palmer",
+     "SC"
+    ],
+    [
+     "Perkovic",
+     "V"
+    ],
+    [
+     "Rangan",
+     "GK"
+    ],
+    [
+     "Reidlinger",
+     "D"
+    ],
+    [
+     "Robison",
+     "L"
+    ],
+    [
+     "Walker",
+     "RJ"
+    ],
+    [
+     "Walters",
+     "G"
+    ],
+    [
+     "Johnson",
+     "DW"
+    ]
+   ],
+   "journal": "The New England journal of medicine",
+   "iso": "N Engl J Med",
+   "volume": "382",
+   "issue": "26",
+   "pages": "2504-2513",
+   "article_types": [
+    "Journal Article",
+    "Multicenter Study",
+    "Randomized Controlled Trial",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2020",
+    "month": "Jun",
+    "day": "25"
+   }
+  },
+  "32579810": {
+   "pmid": "32579810",
+   "doi": "10.1056/NEJMoa1916624",
+   "title": "Serum Urate Lowering with Allopurinol and Kidney Function in Type 1 Diabetes.",
+   "authors": [
+    [
+     "Doria",
+     "A"
+    ],
+    [
+     "Galecki",
+     "AT"
+    ],
+    [
+     "Spino",
+     "C"
+    ],
+    [
+     "Pop-Busui",
+     "R"
+    ],
+    [
+     "Cherney",
+     "DZ"
+    ],
+    [
+     "Lingvay",
+     "I"
+    ],
+    [
+     "Parsa",
+     "A"
+    ],
+    [
+     "Rossing",
+     "P"
+    ],
+    [
+     "Sigal",
+     "RJ"
+    ],
+    [
+     "Afkarian",
+     "M"
+    ],
+    [
+     "Aronson",
+     "R"
+    ],
+    [
+     "Caramori",
+     "ML"
+    ],
+    [
+     "Crandall",
+     "JP"
+    ],
+    [
+     "de Boer",
+     "IH"
+    ],
+    [
+     "Elliott",
+     "TG"
+    ],
+    [
+     "Goldfine",
+     "AB"
+    ],
+    [
+     "Haw",
+     "JS"
+    ],
+    [
+     "Hirsch",
+     "IB"
+    ],
+    [
+     "Karger",
+     "AB"
+    ],
+    [
+     "Maahs",
+     "DM"
+    ],
+    [
+     "McGill",
+     "JB"
+    ],
+    [
+     "Molitch",
+     "ME"
+    ],
+    [
+     "Perkins",
+     "BA"
+    ],
+    [
+     "Polsky",
+     "S"
+    ],
+    [
+     "Pragnell",
+     "M"
+    ],
+    [
+     "Robiner",
+     "WN"
+    ],
+    [
+     "Rosas",
+     "SE"
+    ],
+    [
+     "Senior",
+     "P"
+    ],
+    [
+     "Tuttle",
+     "KR"
+    ],
+    [
+     "Umpierrez",
+     "GE"
+    ],
+    [
+     "Wallia",
+     "A"
+    ],
+    [
+     "Weinstock",
+     "RS"
+    ],
+    [
+     "Wu",
+     "C"
+    ],
+    [
+     "Mauer",
+     "M"
+    ]
+   ],
+   "journal": "The New England journal of medicine",
+   "iso": "N Engl J Med",
+   "volume": "382",
+   "issue": "26",
+   "pages": "2493-2503",
+   "article_types": [
+    "Journal Article",
+    "Multicenter Study",
+    "Randomized Controlled Trial",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2020",
+    "month": "Jun",
+    "day": "25"
+   }
+  },
+  "12444207": {
+   "pmid": "12444207",
+   "doi": "10.1097/01.asn.0000034910.58454.fd",
+   "title": "A role for uric acid in the progression of renal disease.",
+   "authors": [
+    [
+     "Kang",
+     "DH"
+    ],
+    [
+     "Nakagawa",
+     "T"
+    ],
+    [
+     "Feng",
+     "L"
+    ],
+    [
+     "Watanabe",
+     "S"
+    ],
+    [
+     "Han",
+     "L"
+    ],
+    [
+     "Mazzali",
+     "M"
+    ],
+    [
+     "Truong",
+     "L"
+    ],
+    [
+     "Harris",
+     "R"
+    ],
+    [
+     "Johnson",
+     "RJ"
+    ]
+   ],
+   "journal": "Journal of the American Society of Nephrology : JASN",
+   "iso": "J Am Soc Nephrol",
+   "volume": "13",
+   "issue": "12",
+   "pages": "2888-97",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Research Support, U.S. Gov't, P.H.S."
+   ],
+   "publication_date": {
+    "year": "2002",
+    "month": "Dec"
+   }
+  },
+  "11711505": {
+   "pmid": "11711505",
+   "doi": "10.1161/hy1101.092839",
+   "title": "Elevated uric acid increases blood pressure in the rat by a novel crystal-independent mechanism.",
+   "authors": [
+    [
+     "Mazzali",
+     "M"
+    ],
+    [
+     "Hughes",
+     "J"
+    ],
+    [
+     "Kim",
+     "YG"
+    ],
+    [
+     "Jefferson",
+     "JA"
+    ],
+    [
+     "Kang",
+     "DH"
+    ],
+    [
+     "Gordon",
+     "KL"
+    ],
+    [
+     "Lan",
+     "HY"
+    ],
+    [
+     "Kivlighn",
+     "S"
+    ],
+    [
+     "Johnson",
+     "RJ"
+    ]
+   ],
+   "journal": "Hypertension (Dallas, Tex. : 1979)",
+   "iso": "Hypertension",
+   "volume": "38",
+   "issue": "5",
+   "pages": "1101-6",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Research Support, U.S. Gov't, P.H.S."
+   ],
+   "publication_date": {
+    "year": "2001",
+    "month": "Nov"
+   }
+  },
+  "23312548": {
+   "pmid": "23312548",
+   "doi": "10.1016/j.semarthrit.2012.09.009",
+   "title": "Association of kidney disease with prevalent gout in the United States in 1988-1994 and 2007-2010.",
+   "authors": [
+    [
+     "Juraschek",
+     "SP"
+    ],
+    [
+     "Kovell",
+     "LC"
+    ],
+    [
+     "Miller",
+     "ER"
+    ],
+    [
+     "Gelber",
+     "AC"
+    ]
+   ],
+   "journal": "Seminars in arthritis and rheumatism",
+   "iso": "Semin Arthritis Rheum",
+   "volume": "42",
+   "issue": "6",
+   "pages": "551-61",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2013",
+    "month": "01",
+    "day": "09"
+   }
+  },
+  "38182286": {
+   "pmid": "38182286",
+   "doi": "10.1016/j.kint.2023.09.002",
+   "title": "KDIGO 2024 Clinical Practice Guideline for the management of LUPUS NEPHRITIS.",
+   "authors": [],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "105",
+   "issue": "1S",
+   "pages": "S1-S69",
+   "article_types": [
+    "Practice Guideline",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2024",
+    "month": "Jan"
+   }
+  },
+  "26342222": {
+   "pmid": "26342222",
+   "doi": "10.1093/rheumatology/kev311",
+   "title": "The frequency and outcome of lupus nephritis: results from an international inception cohort study.",
+   "authors": [
+    [
+     "Hanly",
+     "JG"
+    ],
+    [
+     "O'Keeffe",
+     "AG"
+    ],
+    [
+     "Su",
+     "L"
+    ],
+    [
+     "Urowitz",
+     "MB"
+    ],
+    [
+     "Romero-Diaz",
+     "J"
+    ],
+    [
+     "Gordon",
+     "C"
+    ],
+    [
+     "Bae",
+     "SC"
+    ],
+    [
+     "Bernatsky",
+     "S"
+    ],
+    [
+     "Clarke",
+     "AE"
+    ],
+    [
+     "Wallace",
+     "DJ"
+    ],
+    [
+     "Merrill",
+     "JT"
+    ],
+    [
+     "Isenberg",
+     "DA"
+    ],
+    [
+     "Rahman",
+     "A"
+    ],
+    [
+     "Ginzler",
+     "EM"
+    ],
+    [
+     "Fortin",
+     "P"
+    ],
+    [
+     "Gladman",
+     "DD"
+    ],
+    [
+     "Sanchez-Guerrero",
+     "J"
+    ],
+    [
+     "Petri",
+     "M"
+    ],
+    [
+     "Bruce",
+     "IN"
+    ],
+    [
+     "Dooley",
+     "MA"
+    ],
+    [
+     "Ramsey-Goldman",
+     "R"
+    ],
+    [
+     "Aranow",
+     "C"
+    ],
+    [
+     "Alarcón",
+     "GS"
+    ],
+    [
+     "Fessler",
+     "BJ"
+    ],
+    [
+     "Steinsson",
+     "K"
+    ],
+    [
+     "Nived",
+     "O"
+    ],
+    [
+     "Sturfelt",
+     "GK"
+    ],
+    [
+     "Manzi",
+     "S"
+    ],
+    [
+     "Khamashta",
+     "MA"
+    ],
+    [
+     "van Vollenhoven",
+     "RF"
+    ],
+    [
+     "Zoma",
+     "AA"
+    ],
+    [
+     "Ramos-Casals",
+     "M"
+    ],
+    [
+     "Ruiz-Irastorza",
+     "G"
+    ],
+    [
+     "Lim",
+     "SS"
+    ],
+    [
+     "Stoll",
+     "T"
+    ],
+    [
+     "Inanc",
+     "M"
+    ],
+    [
+     "Kalunian",
+     "KC"
+    ],
+    [
+     "Kamen",
+     "DL"
+    ],
+    [
+     "Maddison",
+     "P"
+    ],
+    [
+     "Peschken",
+     "CA"
+    ],
+    [
+     "Jacobsen",
+     "S"
+    ],
+    [
+     "Askanase",
+     "A"
+    ],
+    [
+     "Theriault",
+     "C"
+    ],
+    [
+     "Thompson",
+     "K"
+    ],
+    [
+     "Farewell",
+     "V"
+    ]
+   ],
+   "journal": "Rheumatology (Oxford, England)",
+   "iso": "Rheumatology (Oxford)",
+   "volume": "55",
+   "issue": "2",
+   "pages": "252-62",
+   "article_types": [
+    "Journal Article",
+    "Multicenter Study",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "09",
+    "day": "05"
+   }
+  },
+  "14747370": {
+   "pmid": "14747370",
+   "doi": "10.1097/01.asn.0000108969.21691.5d",
+   "title": "The classification of glomerulonephritis in systemic lupus erythematosus revisited.",
+   "authors": [
+    [
+     "Weening",
+     "JJ"
+    ],
+    [
+     "D'Agati",
+     "VD"
+    ],
+    [
+     "Schwartz",
+     "MM"
+    ],
+    [
+     "Seshan",
+     "SV"
+    ],
+    [
+     "Alpers",
+     "CE"
+    ],
+    [
+     "Appel",
+     "GB"
+    ],
+    [
+     "Balow",
+     "JE"
+    ],
+    [
+     "Bruijn",
+     "JA"
+    ],
+    [
+     "Cook",
+     "T"
+    ],
+    [
+     "Ferrario",
+     "F"
+    ],
+    [
+     "Fogo",
+     "AB"
+    ],
+    [
+     "Ginzler",
+     "EM"
+    ],
+    [
+     "Hebert",
+     "L"
+    ],
+    [
+     "Hill",
+     "G"
+    ],
+    [
+     "Hill",
+     "P"
+    ],
+    [
+     "Jennette",
+     "JC"
+    ],
+    [
+     "Kong",
+     "NC"
+    ],
+    [
+     "Lesavre",
+     "P"
+    ],
+    [
+     "Lockshin",
+     "M"
+    ],
+    [
+     "Looi",
+     "LM"
+    ],
+    [
+     "Makino",
+     "H"
+    ],
+    [
+     "Moura",
+     "LA"
+    ],
+    [
+     "Nagata",
+     "M"
+    ]
+   ],
+   "journal": "Journal of the American Society of Nephrology : JASN",
+   "iso": "J Am Soc Nephrol",
+   "volume": "15",
+   "issue": "2",
+   "pages": "241-50",
+   "article_types": [
+    "Comment",
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2004",
+    "month": "Feb"
+   }
+  },
+  "29459092": {
+   "pmid": "29459092",
+   "doi": "10.1016/j.kint.2017.11.023",
+   "title": "Revision of the International Society of Nephrology/Renal Pathology Society classification for lupus nephritis: clarification of definitions, and modified National Institutes of Health activity and chronicity indices.",
+   "authors": [
+    [
+     "Bajema",
+     "IM"
+    ],
+    [
+     "Wilhelmus",
+     "S"
+    ],
+    [
+     "Alpers",
+     "CE"
+    ],
+    [
+     "Bruijn",
+     "JA"
+    ],
+    [
+     "Colvin",
+     "RB"
+    ],
+    [
+     "Cook",
+     "HT"
+    ],
+    [
+     "D'Agati",
+     "VD"
+    ],
+    [
+     "Ferrario",
+     "F"
+    ],
+    [
+     "Haas",
+     "M"
+    ],
+    [
+     "Jennette",
+     "JC"
+    ],
+    [
+     "Joh",
+     "K"
+    ],
+    [
+     "Nast",
+     "CC"
+    ],
+    [
+     "Noël",
+     "LH"
+    ],
+    [
+     "Rijnink",
+     "EC"
+    ],
+    [
+     "Roberts",
+     "ISD"
+    ],
+    [
+     "Seshan",
+     "SV"
+    ],
+    [
+     "Sethi",
+     "S"
+    ],
+    [
+     "Fogo",
+     "AB"
+    ]
+   ],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "93",
+   "issue": "4",
+   "pages": "789-796",
+   "article_types": [
+    "Consensus Statement",
+    "Journal Article",
+    "Practice Guideline",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2018",
+    "month": "02",
+    "day": "16"
+   }
+  },
+  "31974366": {
+   "pmid": "31974366",
+   "doi": "10.1038/s41572-019-0141-9",
+   "title": "Lupus nephritis.",
+   "authors": [
+    [
+     "Anders",
+     "HJ"
+    ],
+    [
+     "Saxena",
+     "R"
+    ],
+    [
+     "Zhao",
+     "MH"
+    ],
+    [
+     "Parodis",
+     "I"
+    ],
+    [
+     "Salmon",
+     "JE"
+    ],
+    [
+     "Mohan",
+     "C"
+    ]
+   ],
+   "journal": "Nature reviews. Disease primers",
+   "iso": "Nat Rev Dis Primers",
+   "volume": "6",
+   "issue": "1",
+   "pages": "7",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2020",
+    "month": "01",
+    "day": "23"
+   }
+  },
+  "26815601": {
+   "pmid": "26815601",
+   "doi": "10.1002/art.39594",
+   "title": "Risk of End-Stage Renal Disease in Patients With Lupus Nephritis, 1971-2015: A Systematic Review and Bayesian Meta-Analysis.",
+   "authors": [
+    [
+     "Tektonidou",
+     "MG"
+    ],
+    [
+     "Dasgupta",
+     "A"
+    ],
+    [
+     "Ward",
+     "MM"
+    ]
+   ],
+   "journal": "Arthritis & rheumatology (Hoboken, N.J.)",
+   "iso": "Arthritis Rheumatol",
+   "volume": "68",
+   "issue": "6",
+   "pages": "1432-41",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Systematic Review"
+   ],
+   "publication_date": {
+    "year": "2016",
+    "month": "Jun"
+   }
+  },
+  "31385462": {
+   "pmid": "31385462",
+   "doi": "10.1002/art.40930",
+   "title": "2019 European League Against Rheumatism/American College of Rheumatology Classification Criteria for Systemic Lupus Erythematosus.",
+   "authors": [
+    [
+     "Aringer",
+     "M"
+    ],
+    [
+     "Costenbader",
+     "K"
+    ],
+    [
+     "Daikh",
+     "D"
+    ],
+    [
+     "Brinks",
+     "R"
+    ],
+    [
+     "Mosca",
+     "M"
+    ],
+    [
+     "Ramsey-Goldman",
+     "R"
+    ],
+    [
+     "Smolen",
+     "JS"
+    ],
+    [
+     "Wofsy",
+     "D"
+    ],
+    [
+     "Boumpas",
+     "DT"
+    ],
+    [
+     "Kamen",
+     "DL"
+    ],
+    [
+     "Jayne",
+     "D"
+    ],
+    [
+     "Cervera",
+     "R"
+    ],
+    [
+     "Costedoat-Chalumeau",
+     "N"
+    ],
+    [
+     "Diamond",
+     "B"
+    ],
+    [
+     "Gladman",
+     "DD"
+    ],
+    [
+     "Hahn",
+     "B"
+    ],
+    [
+     "Hiepe",
+     "F"
+    ],
+    [
+     "Jacobsen",
+     "S"
+    ],
+    [
+     "Khanna",
+     "D"
+    ],
+    [
+     "Lerstrøm",
+     "K"
+    ],
+    [
+     "Massarotti",
+     "E"
+    ],
+    [
+     "McCune",
+     "J"
+    ],
+    [
+     "Ruiz-Irastorza",
+     "G"
+    ],
+    [
+     "Sanchez-Guerrero",
+     "J"
+    ],
+    [
+     "Schneider",
+     "M"
+    ],
+    [
+     "Urowitz",
+     "M"
+    ],
+    [
+     "Bertsias",
+     "G"
+    ],
+    [
+     "Hoyer",
+     "BF"
+    ],
+    [
+     "Leuchten",
+     "N"
+    ],
+    [
+     "Tani",
+     "C"
+    ],
+    [
+     "Tedeschi",
+     "SK"
+    ],
+    [
+     "Touma",
+     "Z"
+    ],
+    [
+     "Schmajuk",
+     "G"
+    ],
+    [
+     "Anic",
+     "B"
+    ],
+    [
+     "Assan",
+     "F"
+    ],
+    [
+     "Chan",
+     "TM"
+    ],
+    [
+     "Clarke",
+     "AE"
+    ],
+    [
+     "Crow",
+     "MK"
+    ],
+    [
+     "Czirják",
+     "L"
+    ],
+    [
+     "Doria",
+     "A"
+    ],
+    [
+     "Graninger",
+     "W"
+    ],
+    [
+     "Halda-Kiss",
+     "B"
+    ],
+    [
+     "Hasni",
+     "S"
+    ],
+    [
+     "Izmirly",
+     "PM"
+    ],
+    [
+     "Jung",
+     "M"
+    ],
+    [
+     "Kumánovics",
+     "G"
+    ],
+    [
+     "Mariette",
+     "X"
+    ],
+    [
+     "Padjen",
+     "I"
+    ],
+    [
+     "Pego-Reigosa",
+     "JM"
+    ],
+    [
+     "Romero-Diaz",
+     "J"
+    ],
+    [
+     "Rúa-Figueroa Fernández",
+     "Í"
+    ],
+    [
+     "Seror",
+     "R"
+    ],
+    [
+     "Stummvoll",
+     "GH"
+    ],
+    [
+     "Tanaka",
+     "Y"
+    ],
+    [
+     "Tektonidou",
+     "MG"
+    ],
+    [
+     "Vasconcelos",
+     "C"
+    ],
+    [
+     "Vital",
+     "EM"
+    ],
+    [
+     "Wallace",
+     "DJ"
+    ],
+    [
+     "Yavuz",
+     "S"
+    ],
+    [
+     "Meroni",
+     "PL"
+    ],
+    [
+     "Fritzler",
+     "MJ"
+    ],
+    [
+     "Naden",
+     "R"
+    ],
+    [
+     "Dörner",
+     "T"
+    ],
+    [
+     "Johnson",
+     "SR"
+    ]
+   ],
+   "journal": "Arthritis & rheumatology (Hoboken, N.J.)",
+   "iso": "Arthritis Rheumatol",
+   "volume": "71",
+   "issue": "9",
+   "pages": "1400-1412",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Intramural",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2019",
+    "month": "08",
+    "day": "06"
+   }
+  },
+  "23929771": {
+   "pmid": "23929771",
+   "doi": "10.1681/ASN.2013010026",
+   "title": "The pathogenesis of lupus nephritis.",
+   "authors": [
+    [
+     "Lech",
+     "M"
+    ],
+    [
+     "Anders",
+     "HJ"
+    ]
+   ],
+   "journal": "Journal of the American Society of Nephrology : JASN",
+   "iso": "J Am Soc Nephrol",
+   "volume": "24",
+   "issue": "9",
+   "pages": "1357-66",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2013",
+    "month": "08",
+    "day": "08"
+   }
+  },
+  "34556256": {
+   "pmid": "34556256",
+   "doi": "10.1016/j.kint.2021.05.021",
+   "title": "KDIGO 2021 Clinical Practice Guideline for the Management of Glomerular Diseases.",
+   "authors": [],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "100",
+   "issue": "4S",
+   "pages": "S1-S276",
+   "article_types": [
+    "Practice Guideline",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2021",
+    "month": "Oct"
+   }
+  },
+  "27189177": {
+   "pmid": "27189177",
+   "doi": "10.1038/nrdp.2016.1",
+   "title": "IgA nephropathy.",
+   "authors": [
+    [
+     "Lai",
+     "KN"
+    ],
+    [
+     "Tang",
+     "SC"
+    ],
+    [
+     "Schena",
+     "FP"
+    ],
+    [
+     "Novak",
+     "J"
+    ],
+    [
+     "Tomino",
+     "Y"
+    ],
+    [
+     "Fogo",
+     "AB"
+    ],
+    [
+     "Glassock",
+     "RJ"
+    ]
+   ],
+   "journal": "Nature reviews. Disease primers",
+   "iso": "Nat Rev Dis Primers",
+   "volume": "2",
+   "issue": null,
+   "pages": "16001",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2016",
+    "month": "02",
+    "day": "11"
+   }
+  },
+  "21949093": {
+   "pmid": "21949093",
+   "doi": "10.1681/ASN.2011050464",
+   "title": "The pathophysiology of IgA nephropathy.",
+   "authors": [
+    [
+     "Suzuki",
+     "H"
+    ],
+    [
+     "Kiryluk",
+     "K"
+    ],
+    [
+     "Novak",
+     "J"
+    ],
+    [
+     "Moldoveanu",
+     "Z"
+    ],
+    [
+     "Herr",
+     "AB"
+    ],
+    [
+     "Renfrow",
+     "MB"
+    ],
+    [
+     "Wyatt",
+     "RJ"
+    ],
+    [
+     "Scolari",
+     "F"
+    ],
+    [
+     "Mestecky",
+     "J"
+    ],
+    [
+     "Gharavi",
+     "AG"
+    ],
+    [
+     "Julian",
+     "BA"
+    ]
+   ],
+   "journal": "Journal of the American Society of Nephrology : JASN",
+   "iso": "J Am Soc Nephrol",
+   "volume": "22",
+   "issue": "10",
+   "pages": "1795-803",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2011",
+    "month": "09",
+    "day": "23"
+   }
+  },
+  "28341274": {
+   "pmid": "28341274",
+   "doi": "10.1016/j.kint.2017.02.003",
+   "title": "Oxford Classification of IgA nephropathy 2016: an update from the IgA Nephropathy Classification Working Group.",
+   "authors": [
+    [
+     "Trimarchi",
+     "H"
+    ],
+    [
+     "Barratt",
+     "J"
+    ],
+    [
+     "Cattran",
+     "DC"
+    ],
+    [
+     "Cook",
+     "HT"
+    ],
+    [
+     "Coppo",
+     "R"
+    ],
+    [
+     "Haas",
+     "M"
+    ],
+    [
+     "Liu",
+     "ZH"
+    ],
+    [
+     "Roberts",
+     "IS"
+    ],
+    [
+     "Yuzawa",
+     "Y"
+    ],
+    [
+     "Zhang",
+     "H"
+    ],
+    [
+     "Feehally",
+     "J"
+    ]
+   ],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "91",
+   "issue": "5",
+   "pages": "1014-1021",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2017",
+    "month": "03",
+    "day": "22"
+   }
+  },
+  "30980653": {
+   "pmid": "30980653",
+   "doi": "10.1001/jamainternmed.2019.0600",
+   "title": "Evaluating a New International Risk-Prediction Tool in IgA Nephropathy.",
+   "authors": [
+    [
+     "Barbour",
+     "SJ"
+    ],
+    [
+     "Coppo",
+     "R"
+    ],
+    [
+     "Zhang",
+     "H"
+    ],
+    [
+     "Liu",
+     "ZH"
+    ],
+    [
+     "Suzuki",
+     "Y"
+    ],
+    [
+     "Matsuzaki",
+     "K"
+    ],
+    [
+     "Katafuchi",
+     "R"
+    ],
+    [
+     "Er",
+     "L"
+    ],
+    [
+     "Espino-Hernandez",
+     "G"
+    ],
+    [
+     "Kim",
+     "SJ"
+    ],
+    [
+     "Reich",
+     "HN"
+    ],
+    [
+     "Feehally",
+     "J"
+    ],
+    [
+     "Cattran",
+     "DC"
+    ]
+   ],
+   "journal": "JAMA internal medicine",
+   "iso": "JAMA Intern Med",
+   "volume": "179",
+   "issue": "7",
+   "pages": "942-952",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Validation Study"
+   ],
+   "publication_date": {
+    "year": "2019",
+    "month": "Jul",
+    "day": "01"
+   }
+  },
+  "37055195": {
+   "pmid": "37055195",
+   "doi": "10.2215/CJN.0000000000000135",
+   "title": "Long-Term Outcomes in IgA Nephropathy.",
+   "authors": [
+    [
+     "Pitcher",
+     "D"
+    ],
+    [
+     "Braddon",
+     "F"
+    ],
+    [
+     "Hendry",
+     "B"
+    ],
+    [
+     "Mercer",
+     "A"
+    ],
+    [
+     "Osmaston",
+     "K"
+    ],
+    [
+     "Saleem",
+     "MA"
+    ],
+    [
+     "Steenkamp",
+     "R"
+    ],
+    [
+     "Wong",
+     "K"
+    ],
+    [
+     "Turner",
+     "AN"
+    ],
+    [
+     "Wang",
+     "K"
+    ],
+    [
+     "Gale",
+     "DP"
+    ],
+    [
+     "Barratt",
+     "J"
+    ]
+   ],
+   "journal": "Clinical journal of the American Society of Nephrology : CJASN",
+   "iso": "Clin J Am Soc Nephrol",
+   "volume": "18",
+   "issue": "6",
+   "pages": "727-738",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2023",
+    "month": "04",
+    "day": "13"
+   }
+  },
+  "21399633": {
+   "pmid": "21399633",
+   "doi": "10.1038/ng.787",
+   "title": "Genome-wide association study identifies susceptibility loci for IgA nephropathy.",
+   "authors": [
+    [
+     "Gharavi",
+     "AG"
+    ],
+    [
+     "Kiryluk",
+     "K"
+    ],
+    [
+     "Choi",
+     "M"
+    ],
+    [
+     "Li",
+     "Y"
+    ],
+    [
+     "Hou",
+     "P"
+    ],
+    [
+     "Xie",
+     "J"
+    ],
+    [
+     "Sanna-Cherchi",
+     "S"
+    ],
+    [
+     "Men",
+     "CJ"
+    ],
+    [
+     "Julian",
+     "BA"
+    ],
+    [
+     "Wyatt",
+     "RJ"
+    ],
+    [
+     "Novak",
+     "J"
+    ],
+    [
+     "He",
+     "JC"
+    ],
+    [
+     "Wang",
+     "H"
+    ],
+    [
+     "Lv",
+     "J"
+    ],
+    [
+     "Zhu",
+     "L"
+    ],
+    [
+     "Wang",
+     "W"
+    ],
+    [
+     "Wang",
+     "Z"
+    ],
+    [
+     "Yasuno",
+     "K"
+    ],
+    [
+     "Gunel",
+     "M"
+    ],
+    [
+     "Mane",
+     "S"
+    ],
+    [
+     "Umlauf",
+     "S"
+    ],
+    [
+     "Tikhonova",
+     "I"
+    ],
+    [
+     "Beerman",
+     "I"
+    ],
+    [
+     "Savoldi",
+     "S"
+    ],
+    [
+     "Magistroni",
+     "R"
+    ],
+    [
+     "Ghiggeri",
+     "GM"
+    ],
+    [
+     "Bodria",
+     "M"
+    ],
+    [
+     "Lugani",
+     "F"
+    ],
+    [
+     "Ravani",
+     "P"
+    ],
+    [
+     "Ponticelli",
+     "C"
+    ],
+    [
+     "Allegri",
+     "L"
+    ],
+    [
+     "Boscutti",
+     "G"
+    ],
+    [
+     "Frasca",
+     "G"
+    ],
+    [
+     "Amore",
+     "A"
+    ],
+    [
+     "Peruzzi",
+     "L"
+    ],
+    [
+     "Coppo",
+     "R"
+    ],
+    [
+     "Izzi",
+     "C"
+    ],
+    [
+     "Viola",
+     "BF"
+    ],
+    [
+     "Prati",
+     "E"
+    ],
+    [
+     "Salvadori",
+     "M"
+    ],
+    [
+     "Mignani",
+     "R"
+    ],
+    [
+     "Gesualdo",
+     "L"
+    ],
+    [
+     "Bertinetto",
+     "F"
+    ],
+    [
+     "Mesiano",
+     "P"
+    ],
+    [
+     "Amoroso",
+     "A"
+    ],
+    [
+     "Scolari",
+     "F"
+    ],
+    [
+     "Chen",
+     "N"
+    ],
+    [
+     "Zhang",
+     "H"
+    ],
+    [
+     "Lifton",
+     "RP"
+    ]
+   ],
+   "journal": "Nature genetics",
+   "iso": "Nat Genet",
+   "volume": "43",
+   "issue": "4",
+   "pages": "321-7",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2011",
+    "month": "03",
+    "day": "13"
+   }
+  },
+  "23782179": {
+   "pmid": "23782179",
+   "doi": "10.1056/NEJMra1206793",
+   "title": "IgA nephropathy.",
+   "authors": [
+    [
+     "Wyatt",
+     "RJ"
+    ],
+    [
+     "Julian",
+     "BA"
+    ]
+   ],
+   "journal": "The New England journal of medicine",
+   "iso": "N Engl J Med",
+   "volume": "368",
+   "issue": "25",
+   "pages": "2402-14",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2013",
+    "month": "Jun",
+    "day": "20"
+   }
+  },
+  "23045170": {
+   "pmid": "23045170",
+   "doi": "10.1002/art.37715",
+   "title": "2012 revised International Chapel Hill Consensus Conference Nomenclature of Vasculitides.",
+   "authors": [
+    [
+     "Jennette",
+     "JC"
+    ],
+    [
+     "Falk",
+     "RJ"
+    ],
+    [
+     "Bacon",
+     "PA"
+    ],
+    [
+     "Basu",
+     "N"
+    ],
+    [
+     "Cid",
+     "MC"
+    ],
+    [
+     "Ferrario",
+     "F"
+    ],
+    [
+     "Flores-Suarez",
+     "LF"
+    ],
+    [
+     "Gross",
+     "WL"
+    ],
+    [
+     "Guillevin",
+     "L"
+    ],
+    [
+     "Hagen",
+     "EC"
+    ],
+    [
+     "Hoffman",
+     "GS"
+    ],
+    [
+     "Jayne",
+     "DR"
+    ],
+    [
+     "Kallenberg",
+     "CG"
+    ],
+    [
+     "Lamprecht",
+     "P"
+    ],
+    [
+     "Langford",
+     "CA"
+    ],
+    [
+     "Luqmani",
+     "RA"
+    ],
+    [
+     "Mahr",
+     "AD"
+    ],
+    [
+     "Matteson",
+     "EL"
+    ],
+    [
+     "Merkel",
+     "PA"
+    ],
+    [
+     "Ozen",
+     "S"
+    ],
+    [
+     "Pusey",
+     "CD"
+    ],
+    [
+     "Rasmussen",
+     "N"
+    ],
+    [
+     "Rees",
+     "AJ"
+    ],
+    [
+     "Scott",
+     "DG"
+    ],
+    [
+     "Specks",
+     "U"
+    ],
+    [
+     "Stone",
+     "JH"
+    ],
+    [
+     "Takahashi",
+     "K"
+    ],
+    [
+     "Watts",
+     "RA"
+    ]
+   ],
+   "journal": "Arthritis and rheumatism",
+   "iso": "Arthritis Rheum",
+   "volume": "65",
+   "issue": "1",
+   "pages": "1-11",
+   "article_types": [
+    "Consensus Statement",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2013",
+    "month": "Jan"
+   }
+  },
+  "32855422": {
+   "pmid": "32855422",
+   "doi": "10.1038/s41572-020-0204-y",
+   "title": "ANCA-associated vasculitis.",
+   "authors": [
+    [
+     "Kitching",
+     "AR"
+    ],
+    [
+     "Anders",
+     "HJ"
+    ],
+    [
+     "Basu",
+     "N"
+    ],
+    [
+     "Brouwer",
+     "E"
+    ],
+    [
+     "Gordon",
+     "J"
+    ],
+    [
+     "Jayne",
+     "DR"
+    ],
+    [
+     "Kullman",
+     "J"
+    ],
+    [
+     "Lyons",
+     "PA"
+    ],
+    [
+     "Merkel",
+     "PA"
+    ],
+    [
+     "Savage",
+     "COS"
+    ],
+    [
+     "Specks",
+     "U"
+    ],
+    [
+     "Kain",
+     "R"
+    ]
+   ],
+   "journal": "Nature reviews. Disease primers",
+   "iso": "Nat Rev Dis Primers",
+   "volume": "6",
+   "issue": "1",
+   "pages": "71",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2020",
+    "month": "08",
+    "day": "27"
+   }
+  },
+  "38388102": {
+   "pmid": "38388102",
+   "doi": "10.1016/j.kint.2023.10.008",
+   "title": "KDIGO 2024 Clinical Practice Guideline for the Management of Antineutrophil Cytoplasmic Antibody (ANCA)-Associated Vasculitis.",
+   "authors": [],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "105",
+   "issue": "3S",
+   "pages": "S71-S116",
+   "article_types": [
+    "Practice Guideline",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2024",
+    "month": "Mar"
+   }
+  },
+  "20616173": {
+   "pmid": "20616173",
+   "doi": "10.1681/ASN.2010050477",
+   "title": "Histopathologic classification of ANCA-associated glomerulonephritis.",
+   "authors": [
+    [
+     "Berden",
+     "AE"
+    ],
+    [
+     "Ferrario",
+     "F"
+    ],
+    [
+     "Hagen",
+     "EC"
+    ],
+    [
+     "Jayne",
+     "DR"
+    ],
+    [
+     "Jennette",
+     "JC"
+    ],
+    [
+     "Joh",
+     "K"
+    ],
+    [
+     "Neumann",
+     "I"
+    ],
+    [
+     "Noël",
+     "LH"
+    ],
+    [
+     "Pusey",
+     "CD"
+    ],
+    [
+     "Waldherr",
+     "R"
+    ],
+    [
+     "Bruijn",
+     "JA"
+    ],
+    [
+     "Bajema",
+     "IM"
+    ]
+   ],
+   "journal": "Journal of the American Society of Nephrology : JASN",
+   "iso": "J Am Soc Nephrol",
+   "volume": "21",
+   "issue": "10",
+   "pages": "1628-36",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Validation Study"
+   ],
+   "publication_date": {
+    "year": "2010",
+    "month": "07",
+    "day": "08"
+   }
+  },
+  "25003769": {
+   "pmid": "25003769",
+   "doi": "10.1038/nrrheum.2014.103",
+   "title": "Pathogenesis of antineutrophil cytoplasmic autoantibody-mediated disease.",
+   "authors": [
+    [
+     "Jennette",
+     "JC"
+    ],
+    [
+     "Falk",
+     "RJ"
+    ]
+   ],
+   "journal": "Nature reviews. Rheumatology",
+   "iso": "Nat Rev Rheumatol",
+   "volume": "10",
+   "issue": "8",
+   "pages": "463-73",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2014",
+    "month": "07",
+    "day": "08"
+   }
+  },
+  "12666064": {
+   "pmid": "12666064",
+   "doi": "10.1016/s0272-6386(03)00025-8",
+   "title": "Outcome of ANCA-associated renal vasculitis: a 5-year retrospective study.",
+   "authors": [
+    [
+     "Booth",
+     "AD"
+    ],
+    [
+     "Almond",
+     "MK"
+    ],
+    [
+     "Burns",
+     "A"
+    ],
+    [
+     "Ellis",
+     "P"
+    ],
+    [
+     "Gaskin",
+     "G"
+    ],
+    [
+     "Neild",
+     "GH"
+    ],
+    [
+     "Plaisance",
+     "M"
+    ],
+    [
+     "Pusey",
+     "CD"
+    ],
+    [
+     "Jayne",
+     "DR"
+    ]
+   ],
+   "journal": "American journal of kidney diseases : the official journal of the National Kidney Foundation",
+   "iso": "Am J Kidney Dis",
+   "volume": "41",
+   "issue": "4",
+   "pages": "776-84",
+   "article_types": [
+    "Journal Article",
+    "Multicenter Study",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2003",
+    "month": "Apr"
+   }
+  },
+  "34853411": {
+   "pmid": "34853411",
+   "doi": "10.1038/s41584-021-00718-8",
+   "title": "Global epidemiology of vasculitis.",
+   "authors": [
+    [
+     "Watts",
+     "RA"
+    ],
+    [
+     "Hatemi",
+     "G"
+    ],
+    [
+     "Burns",
+     "JC"
+    ],
+    [
+     "Mohammad",
+     "AJ"
+    ]
+   ],
+   "journal": "Nature reviews. Rheumatology",
+   "iso": "Nat Rev Rheumatol",
+   "volume": "18",
+   "issue": "1",
+   "pages": "22-34",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2021",
+    "month": "12",
+    "day": "01"
+   }
+  },
+  "36927642": {
+   "pmid": "36927642",
+   "doi": "10.1136/ard-2022-223764",
+   "title": "EULAR recommendations for the management of ANCA-associated vasculitis: 2022 update.",
+   "authors": [
+    [
+     "Hellmich",
+     "B"
+    ],
+    [
+     "Sanchez-Alamo",
+     "B"
+    ],
+    [
+     "Schirmer",
+     "JH"
+    ],
+    [
+     "Berti",
+     "A"
+    ],
+    [
+     "Blockmans",
+     "D"
+    ],
+    [
+     "Cid",
+     "MC"
+    ],
+    [
+     "Holle",
+     "JU"
+    ],
+    [
+     "Hollinger",
+     "N"
+    ],
+    [
+     "Karadag",
+     "O"
+    ],
+    [
+     "Kronbichler",
+     "A"
+    ],
+    [
+     "Little",
+     "MA"
+    ],
+    [
+     "Luqmani",
+     "RA"
+    ],
+    [
+     "Mahr",
+     "A"
+    ],
+    [
+     "Merkel",
+     "PA"
+    ],
+    [
+     "Mohammad",
+     "AJ"
+    ],
+    [
+     "Monti",
+     "S"
+    ],
+    [
+     "Mukhtyar",
+     "CB"
+    ],
+    [
+     "Musial",
+     "J"
+    ],
+    [
+     "Price-Kuehne",
+     "F"
+    ],
+    [
+     "Segelmark",
+     "M"
+    ],
+    [
+     "Teng",
+     "YKO"
+    ],
+    [
+     "Terrier",
+     "B"
+    ],
+    [
+     "Tomasson",
+     "G"
+    ],
+    [
+     "Vaglio",
+     "A"
+    ],
+    [
+     "Vassilopoulos",
+     "D"
+    ],
+    [
+     "Verhoeven",
+     "P"
+    ],
+    [
+     "Jayne",
+     "D"
+    ]
+   ],
+   "journal": "Annals of the rheumatic diseases",
+   "iso": "Ann Rheum Dis",
+   "volume": "83",
+   "issue": "1",
+   "pages": "30-47",
+   "article_types": [
+    "Systematic Review",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2024",
+    "month": "01",
+    "day": "02"
+   }
+  },
+  "27797900": {
+   "pmid": "27797900",
+   "doi": "10.2215/CJN.09180816",
+   "title": "Viral-Associated GN: Hepatitis B and Other Viral Infections.",
+   "authors": [
+    [
+     "Kupin",
+     "WL"
+    ]
+   ],
+   "journal": "Clinical journal of the American Society of Nephrology : CJASN",
+   "iso": "Clin J Am Soc Nephrol",
+   "volume": "12",
+   "issue": "9",
+   "pages": "1529-1533",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2016",
+    "month": "10",
+    "day": "18"
+   }
+  },
+  "14988643": {
+   "pmid": "14988643",
+   "doi": "10.1159/000077065",
+   "title": "Hepatitis B virus-associated nephropathy.",
+   "authors": [
+    [
+     "Bhimma",
+     "R"
+    ],
+    [
+     "Coovadia",
+     "HM"
+    ]
+   ],
+   "journal": "American journal of nephrology",
+   "iso": "Am J Nephrol",
+   "volume": "24",
+   "issue": "2",
+   "pages": "198-211",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2004",
+    "month": "02",
+    "day": "25"
+   }
+  },
+  "28051791": {
+   "pmid": "28051791",
+   "doi": "10.5604/16652681.1226813",
+   "title": " Association between hepatitis B virus and chronic kidney disease: a systematic review and meta-analysis.",
+   "authors": [
+    [
+     "Fabrizi",
+     "F"
+    ],
+    [
+     "Donato",
+     "FM"
+    ],
+    [
+     "Messa",
+     "P"
+    ]
+   ],
+   "journal": "Annals of hepatology",
+   "iso": "Ann Hepatol",
+   "volume": "16",
+   "issue": "1",
+   "pages": "21-47",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Systematic Review"
+   ],
+   "publication_date": {}
+  },
+  "1968522": {
+   "pmid": "1968522",
+   "doi": "10.1038/ki.1990.32",
+   "title": "Hepatitis B infection and renal disease: clinical, immunopathogenetic and therapeutic considerations.",
+   "authors": [
+    [
+     "Johnson",
+     "RJ"
+    ],
+    [
+     "Couser",
+     "WG"
+    ]
+   ],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "37",
+   "issue": "2",
+   "pages": "663-76",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Research Support, U.S. Gov't, P.H.S.",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "1990",
+    "month": "Feb"
+   }
+  },
+  "2023605": {
+   "pmid": "2023605",
+   "doi": "10.1056/NEJM199105233242103",
+   "title": "Membranous nephropathy related to hepatitis B virus in adults.",
+   "authors": [
+    [
+     "Lai",
+     "KN"
+    ],
+    [
+     "Li",
+     "PK"
+    ],
+    [
+     "Lui",
+     "SF"
+    ],
+    [
+     "Au",
+     "TC"
+    ],
+    [
+     "Tam",
+     "JS"
+    ],
+    [
+     "Tong",
+     "KL"
+    ],
+    [
+     "Lai",
+     "FM"
+    ]
+   ],
+   "journal": "The New England journal of medicine",
+   "iso": "N Engl J Med",
+   "volume": "324",
+   "issue": "21",
+   "pages": "1457-63",
+   "article_types": [
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "1991",
+    "month": "May",
+    "day": "23"
+   }
+  },
+  "26311595": {
+   "pmid": "26311595",
+   "doi": "10.1053/j.ackd.2015.06.003",
+   "title": "Glomerular Diseases Associated With Hepatitis B and C.",
+   "authors": [
+    [
+     "Gupta",
+     "A"
+    ],
+    [
+     "Quigg",
+     "RJ"
+    ]
+   ],
+   "journal": "Advances in chronic kidney disease",
+   "iso": "Adv Chronic Kidney Dis",
+   "volume": "22",
+   "issue": "5",
+   "pages": "343-51",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "Sep"
+   }
+  },
+  "29405329": {
+   "pmid": "29405329",
+   "doi": "10.1002/hep.29800",
+   "title": "Update on prevention, diagnosis, and treatment of chronic hepatitis B: AASLD 2018 hepatitis B guidance.",
+   "authors": [
+    [
+     "Terrault",
+     "NA"
+    ],
+    [
+     "Lok",
+     "ASF"
+    ],
+    [
+     "McMahon",
+     "BJ"
+    ],
+    [
+     "Chang",
+     "KM"
+    ],
+    [
+     "Hwang",
+     "JP"
+    ],
+    [
+     "Jonas",
+     "MM"
+    ],
+    [
+     "Brown",
+     "RS"
+    ],
+    [
+     "Bzowej",
+     "NH"
+    ],
+    [
+     "Wong",
+     "JB"
+    ]
+   ],
+   "journal": "Hepatology (Baltimore, Md.)",
+   "iso": "Hepatology",
+   "volume": "67",
+   "issue": "4",
+   "pages": "1560-1599",
+   "article_types": [
+    "Journal Article",
+    "Practice Guideline"
+   ],
+   "publication_date": {
+    "year": "2018",
+    "month": "Apr"
+   }
+  },
+  "36410841": {
+   "pmid": "36410841",
+   "doi": "10.1016/j.kint.2022.07.013",
+   "title": "KDIGO 2022 Clinical Practice Guideline FOR the Prevention, Diagnosis, Evaluation, and Treatment of Hepatitis C in Chronic Kidney Disease.",
+   "authors": [],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "102",
+   "issue": "6S",
+   "pages": "S129-S205",
+   "article_types": [
+    "Practice Guideline",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2022",
+    "month": "Dec"
+   }
+  },
+  "7678440": {
+   "pmid": "7678440",
+   "doi": "10.1056/NEJM199302183280703",
+   "title": "Membranoproliferative glomerulonephritis associated with hepatitis C virus infection.",
+   "authors": [
+    [
+     "Johnson",
+     "RJ"
+    ],
+    [
+     "Gretch",
+     "DR"
+    ],
+    [
+     "Yamabe",
+     "H"
+    ],
+    [
+     "Hart",
+     "J"
+    ],
+    [
+     "Bacchi",
+     "CE"
+    ],
+    [
+     "Hartwell",
+     "P"
+    ],
+    [
+     "Couser",
+     "WG"
+    ],
+    [
+     "Corey",
+     "L"
+    ],
+    [
+     "Wener",
+     "MH"
+    ],
+    [
+     "Alpers",
+     "CE"
+    ]
+   ],
+   "journal": "The New England journal of medicine",
+   "iso": "N Engl J Med",
+   "volume": "328",
+   "issue": "7",
+   "pages": "465-70",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Research Support, U.S. Gov't, P.H.S."
+   ],
+   "publication_date": {
+    "year": "1993",
+    "month": "Feb",
+    "day": "18"
+   }
+  },
+  "26195311": {
+   "pmid": "26195311",
+   "doi": "10.1007/s10620-015-3801-y",
+   "title": "Hepatitis C Virus Infection Increases the Risk of Developing Chronic Kidney Disease: A Systematic Review and Meta-Analysis.",
+   "authors": [
+    [
+     "Fabrizi",
+     "F"
+    ],
+    [
+     "Verdesca",
+     "S"
+    ],
+    [
+     "Messa",
+     "P"
+    ],
+    [
+     "Martin",
+     "P"
+    ]
+   ],
+   "journal": "Digestive diseases and sciences",
+   "iso": "Dig Dis Sci",
+   "volume": "60",
+   "issue": "12",
+   "pages": "3801-13",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Research Support, Non-U.S. Gov't",
+    "Systematic Review"
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "07",
+    "day": "21"
+   }
+  },
+  "17592100": {
+   "pmid": "17592100",
+   "doi": "10.1001/archinte.167.12.1271",
+   "title": "Association of hepatitis C seropositivity with increased risk for developing end-stage renal disease.",
+   "authors": [
+    [
+     "Tsui",
+     "JI"
+    ],
+    [
+     "Vittinghoff",
+     "E"
+    ],
+    [
+     "Shlipak",
+     "MG"
+    ],
+    [
+     "Bertenthal",
+     "D"
+    ],
+    [
+     "Inadomi",
+     "J"
+    ],
+    [
+     "Rodriguez",
+     "RA"
+    ],
+    [
+     "O'Hare",
+     "AM"
+    ]
+   ],
+   "journal": "Archives of internal medicine",
+   "iso": "Arch Intern Med",
+   "volume": "167",
+   "issue": "12",
+   "pages": "1271-6",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural"
+   ],
+   "publication_date": {
+    "year": "2007",
+    "month": "Jun",
+    "day": "25"
+   }
+  },
+  "25529816": {
+   "pmid": "25529816",
+   "doi": "10.1002/hep.27664",
+   "title": "Association of hepatitis C viral infection with incidence and progression of chronic kidney disease in a large cohort of US veterans.",
+   "authors": [
+    [
+     "Molnar",
+     "MZ"
+    ],
+    [
+     "Alhourani",
+     "HM"
+    ],
+    [
+     "Wall",
+     "BM"
+    ],
+    [
+     "Lu",
+     "JL"
+    ],
+    [
+     "Streja",
+     "E"
+    ],
+    [
+     "Kalantar-Zadeh",
+     "K"
+    ],
+    [
+     "Kovesdy",
+     "CP"
+    ]
+   ],
+   "journal": "Hepatology (Baltimore, Md.)",
+   "iso": "Hepatology",
+   "volume": "61",
+   "issue": "5",
+   "pages": "1495-502",
+   "article_types": [
+    "Journal Article",
+    "Observational Study",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, U.S. Gov't, Non-P.H.S."
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "03",
+    "day": "20"
+   }
+  },
+  "30072738": {
+   "pmid": "30072738",
+   "doi": "10.1038/s41572-018-0009-4",
+   "title": "Cryoglobulinaemia.",
+   "authors": [
+    [
+     "Roccatello",
+     "D"
+    ],
+    [
+     "Saadoun",
+     "D"
+    ],
+    [
+     "Ramos-Casals",
+     "M"
+    ],
+    [
+     "Tzioufas",
+     "AG"
+    ],
+    [
+     "Fervenza",
+     "FC"
+    ],
+    [
+     "Cacoub",
+     "P"
+    ],
+    [
+     "Zignego",
+     "AL"
+    ],
+    [
+     "Ferri",
+     "C"
+    ]
+   ],
+   "journal": "Nature reviews. Disease primers",
+   "iso": "Nat Rev Dis Primers",
+   "volume": "4",
+   "issue": "1",
+   "pages": "11",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2018",
+    "month": "08",
+    "day": "02"
+   }
+  },
+  "19129320": {
+   "pmid": "19129320",
+   "doi": "10.2215/CJN.03710708",
+   "title": "Hepatitis C infection and chronic renal diseases.",
+   "authors": [
+    [
+     "Perico",
+     "N"
+    ],
+    [
+     "Cattaneo",
+     "D"
+    ],
+    [
+     "Bikbov",
+     "B"
+    ],
+    [
+     "Remuzzi",
+     "G"
+    ]
+   ],
+   "journal": "Clinical journal of the American Society of Nephrology : CJASN",
+   "iso": "Clin J Am Soc Nephrol",
+   "volume": "4",
+   "issue": "1",
+   "pages": "207-20",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2009",
+    "month": "01",
+    "day": "07"
+   }
+  },
+  "26474537": {
+   "pmid": "26474537",
+   "doi": "10.1002/hep.28297",
+   "title": "Treatment of hepatitis C virus-associated mixed cryoglobulinemia with direct-acting antiviral agents.",
+   "authors": [
+    [
+     "Sise",
+     "ME"
+    ],
+    [
+     "Bloom",
+     "AK"
+    ],
+    [
+     "Wisocky",
+     "J"
+    ],
+    [
+     "Lin",
+     "MV"
+    ],
+    [
+     "Gustafson",
+     "JL"
+    ],
+    [
+     "Lundquist",
+     "AL"
+    ],
+    [
+     "Steele",
+     "D"
+    ],
+    [
+     "Thiim",
+     "M"
+    ],
+    [
+     "Williams",
+     "WW"
+    ],
+    [
+     "Hashemi",
+     "N"
+    ],
+    [
+     "Kim",
+     "AY"
+    ],
+    [
+     "Thadhani",
+     "R"
+    ],
+    [
+     "Chung",
+     "RT"
+    ]
+   ],
+   "journal": "Hepatology (Baltimore, Md.)",
+   "iso": "Hepatology",
+   "volume": "63",
+   "issue": "2",
+   "pages": "408-17",
+   "article_types": [
+    "Clinical Study",
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "12",
+    "day": "11"
+   }
+  },
+  "29398134": {
+   "pmid": "29398134",
+   "doi": "10.1016/j.kint.2017.11.007",
+   "title": "Kidney disease in the setting of HIV infection: conclusions from a Kidney Disease: Improving Global Outcomes (KDIGO) Controversies Conference.",
+   "authors": [
+    [
+     "Swanepoel",
+     "CR"
+    ],
+    [
+     "Atta",
+     "MG"
+    ],
+    [
+     "D'Agati",
+     "VD"
+    ],
+    [
+     "Estrella",
+     "MM"
+    ],
+    [
+     "Fogo",
+     "AB"
+    ],
+    [
+     "Naicker",
+     "S"
+    ],
+    [
+     "Post",
+     "FA"
+    ],
+    [
+     "Wearne",
+     "N"
+    ],
+    [
+     "Winkler",
+     "CA"
+    ],
+    [
+     "Cheung",
+     "M"
+    ],
+    [
+     "Wheeler",
+     "DC"
+    ],
+    [
+     "Winkelmayer",
+     "WC"
+    ],
+    [
+     "Wyatt",
+     "CM"
+    ]
+   ],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "93",
+   "issue": "3",
+   "pages": "545-559",
+   "article_types": [
+    "Consensus Statement",
+    "Journal Article",
+    "Practice Guideline"
+   ],
+   "publication_date": {
+    "year": "2018",
+    "month": "02",
+    "day": "03"
+   }
+  },
+  "25234519": {
+   "pmid": "25234519",
+   "doi": "10.1093/cid/ciu617",
+   "title": "Clinical practice guideline for the management of chronic kidney disease in patients infected with HIV: 2014 update by the HIV Medicine Association of the Infectious Diseases Society of America.",
+   "authors": [
+    [
+     "Lucas",
+     "GM"
+    ],
+    [
+     "Ross",
+     "MJ"
+    ],
+    [
+     "Stock",
+     "PG"
+    ],
+    [
+     "Shlipak",
+     "MG"
+    ],
+    [
+     "Wyatt",
+     "CM"
+    ],
+    [
+     "Gupta",
+     "SK"
+    ],
+    [
+     "Atta",
+     "MG"
+    ],
+    [
+     "Wools-Kaloustian",
+     "KK"
+    ],
+    [
+     "Pham",
+     "PA"
+    ],
+    [
+     "Bruggeman",
+     "LA"
+    ],
+    [
+     "Lennox",
+     "JL"
+    ],
+    [
+     "Ray",
+     "PE"
+    ],
+    [
+     "Kalayjian",
+     "RC"
+    ]
+   ],
+   "journal": "Clinical infectious diseases : an official publication of the Infectious Diseases Society of America",
+   "iso": "Clin Infect Dis",
+   "volume": "59",
+   "issue": "9",
+   "pages": "e96-138",
+   "article_types": [
+    "Journal Article",
+    "Practice Guideline",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, U.S. Gov't, Non-P.H.S."
+   ],
+   "publication_date": {
+    "year": "2014",
+    "month": "09",
+    "day": "17"
+   }
+  },
+  "25686569": {
+   "pmid": "25686569",
+   "doi": "10.1038/nrneph.2015.9",
+   "title": "HIV-associated nephropathies: epidemiology, pathology, mechanisms and treatment.",
+   "authors": [
+    [
+     "Rosenberg",
+     "AZ"
+    ],
+    [
+     "Naicker",
+     "S"
+    ],
+    [
+     "Winkler",
+     "CA"
+    ],
+    [
+     "Kopp",
+     "JB"
+    ]
+   ],
+   "journal": "Nature reviews. Nephrology",
+   "iso": "Nat Rev Nephrol",
+   "volume": "11",
+   "issue": "3",
+   "pages": "150-60",
+   "article_types": [
+    "Journal Article",
+    "Review"
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "02",
+    "day": "17"
+   }
+  },
+  "21997394": {
+   "pmid": "21997394",
+   "doi": "10.1681/ASN.2011040388",
+   "title": "APOL1 genetic variants in focal segmental glomerulosclerosis and HIV-associated nephropathy.",
+   "authors": [
+    [
+     "Kopp",
+     "JB"
+    ],
+    [
+     "Nelson",
+     "GW"
+    ],
+    [
+     "Sampath",
+     "K"
+    ],
+    [
+     "Johnson",
+     "RC"
+    ],
+    [
+     "Genovese",
+     "G"
+    ],
+    [
+     "An",
+     "P"
+    ],
+    [
+     "Friedman",
+     "D"
+    ],
+    [
+     "Briggs",
+     "W"
+    ],
+    [
+     "Dart",
+     "R"
+    ],
+    [
+     "Korbet",
+     "S"
+    ],
+    [
+     "Mokrzycki",
+     "MH"
+    ],
+    [
+     "Kimmel",
+     "PL"
+    ],
+    [
+     "Limou",
+     "S"
+    ],
+    [
+     "Ahuja",
+     "TS"
+    ],
+    [
+     "Berns",
+     "JS"
+    ],
+    [
+     "Fryc",
+     "J"
+    ],
+    [
+     "Simon",
+     "EE"
+    ],
+    [
+     "Smith",
+     "MC"
+    ],
+    [
+     "Trachtman",
+     "H"
+    ],
+    [
+     "Michel",
+     "DM"
+    ],
+    [
+     "Schelling",
+     "JR"
+    ],
+    [
+     "Vlahov",
+     "D"
+    ],
+    [
+     "Pollak",
+     "M"
+    ],
+    [
+     "Winkler",
+     "CA"
+    ]
+   ],
+   "journal": "Journal of the American Society of Nephrology : JASN",
+   "iso": "J Am Soc Nephrol",
+   "volume": "22",
+   "issue": "11",
+   "pages": "2129-37",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, N.I.H., Intramural"
+   ],
+   "publication_date": {
+    "year": "2011",
+    "month": "10",
+    "day": "13"
+   }
+  },
+  "29659605": {
+   "pmid": "29659605",
+   "doi": "10.1371/journal.pone.0195443",
+   "title": "Chronic kidney disease in the global adult HIV-infected population: A systematic review and meta-analysis.",
+   "authors": [
+    [
+     "Ekrikpo",
+     "UE"
+    ],
+    [
+     "Kengne",
+     "AP"
+    ],
+    [
+     "Bello",
+     "AK"
+    ],
+    [
+     "Effa",
+     "EE"
+    ],
+    [
+     "Noubiap",
+     "JJ"
+    ],
+    [
+     "Salako",
+     "BL"
+    ],
+    [
+     "Rayner",
+     "BL"
+    ],
+    [
+     "Remuzzi",
+     "G"
+    ],
+    [
+     "Okpechi",
+     "IG"
+    ]
+   ],
+   "journal": "PloS one",
+   "iso": "PLoS One",
+   "volume": "13",
+   "issue": "4",
+   "pages": "e0195443",
+   "article_types": [
+    "Journal Article",
+    "Meta-Analysis",
+    "Research Support, Non-U.S. Gov't",
+    "Systematic Review"
+   ],
+   "publication_date": {
+    "year": "2018",
+    "month": "04",
+    "day": "16"
+   }
+  },
+  "25826420": {
+   "pmid": "25826420",
+   "doi": "10.1371/journal.pmed.1001809",
+   "title": "Development and validation of a risk score for chronic kidney disease in HIV infection using prospective cohort data from the D:A:D study.",
+   "authors": [
+    [
+     "Mocroft",
+     "A"
+    ],
+    [
+     "Lundgren",
+     "JD"
+    ],
+    [
+     "Ross",
+     "M"
+    ],
+    [
+     "Law",
+     "M"
+    ],
+    [
+     "Reiss",
+     "P"
+    ],
+    [
+     "Kirk",
+     "O"
+    ],
+    [
+     "Smith",
+     "C"
+    ],
+    [
+     "Wentworth",
+     "D"
+    ],
+    [
+     "Neuhaus",
+     "J"
+    ],
+    [
+     "Fux",
+     "CA"
+    ],
+    [
+     "Moranne",
+     "O"
+    ],
+    [
+     "Morlat",
+     "P"
+    ],
+    [
+     "Johnson",
+     "MA"
+    ],
+    [
+     "Ryom",
+     "L"
+    ]
+   ],
+   "journal": "PLoS medicine",
+   "iso": "PLoS Med",
+   "volume": "12",
+   "issue": "3",
+   "pages": "e1001809",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't",
+    "Validation Study"
+   ],
+   "publication_date": {
+    "year": "2015",
+    "month": "03",
+    "day": "31"
+   }
+  },
+  "23382571": {
+   "pmid": "23382571",
+   "doi": "10.1093/infdis/jit043",
+   "title": "Association between antiretroviral exposure and renal impairment among HIV-positive persons with normal baseline renal function: the D:A:D study.",
+   "authors": [
+    [
+     "Ryom",
+     "L"
+    ],
+    [
+     "Mocroft",
+     "A"
+    ],
+    [
+     "Kirk",
+     "O"
+    ],
+    [
+     "Worm",
+     "SW"
+    ],
+    [
+     "Kamara",
+     "DA"
+    ],
+    [
+     "Reiss",
+     "P"
+    ],
+    [
+     "Ross",
+     "M"
+    ],
+    [
+     "Fux",
+     "CA"
+    ],
+    [
+     "Morlat",
+     "P"
+    ],
+    [
+     "Moranne",
+     "O"
+    ],
+    [
+     "Smith",
+     "C"
+    ],
+    [
+     "Lundgren",
+     "JD"
+    ]
+   ],
+   "journal": "The Journal of infectious diseases",
+   "iso": "J Infect Dis",
+   "volume": "207",
+   "issue": "9",
+   "pages": "1359-69",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2013",
+    "month": "02",
+    "day": "04"
+   }
+  },
+  "11053484": {
+   "pmid": "11053484",
+   "doi": "10.1681/ASN.V11112079",
+   "title": "Renal epithelium is a previously unrecognized site of HIV-1 infection.",
+   "authors": [
+    [
+     "Bruggeman",
+     "LA"
+    ],
+    [
+     "Ross",
+     "MD"
+    ],
+    [
+     "Tanji",
+     "N"
+    ],
+    [
+     "Cara",
+     "A"
+    ],
+    [
+     "Dikman",
+     "S"
+    ],
+    [
+     "Gordon",
+     "RE"
+    ],
+    [
+     "Burns",
+     "GC"
+    ],
+    [
+     "D'Agati",
+     "VD"
+    ],
+    [
+     "Winston",
+     "JA"
+    ],
+    [
+     "Klotman",
+     "ME"
+    ],
+    [
+     "Klotman",
+     "PE"
+    ]
+   ],
+   "journal": "Journal of the American Society of Nephrology : JASN",
+   "iso": "J Am Soc Nephrol",
+   "volume": "11",
+   "issue": "11",
+   "pages": "2079-2087",
+   "article_types": [
+    "Journal Article",
+    "Research Support, U.S. Gov't, P.H.S."
+   ],
+   "publication_date": {
+    "year": "2000",
+    "month": "Nov"
+   }
+  },
+  "38490803": {
+   "pmid": "38490803",
+   "doi": "10.1016/j.kint.2023.10.018",
+   "title": "KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease.",
+   "authors": [],
+   "journal": "Kidney international",
+   "iso": "Kidney Int",
+   "volume": "105",
+   "issue": "4S",
+   "pages": "S117-S314",
+   "article_types": [
+    "Practice Guideline",
+    "Journal Article"
+   ],
+   "publication_date": {
+    "year": "2024",
+    "month": "Apr"
+   }
+  },
+  "34554658": {
+   "pmid": "34554658",
+   "doi": "10.1056/NEJMoa2102953",
+   "title": "New Creatinine- and Cystatin C-Based Equations to Estimate GFR without Race.",
+   "authors": [
+    [
+     "Inker",
+     "LA"
+    ],
+    [
+     "Eneanya",
+     "ND"
+    ],
+    [
+     "Coresh",
+     "J"
+    ],
+    [
+     "Tighiouart",
+     "H"
+    ],
+    [
+     "Wang",
+     "D"
+    ],
+    [
+     "Sang",
+     "Y"
+    ],
+    [
+     "Crews",
+     "DC"
+    ],
+    [
+     "Doria",
+     "A"
+    ],
+    [
+     "Estrella",
+     "MM"
+    ],
+    [
+     "Froissart",
+     "M"
+    ],
+    [
+     "Grams",
+     "ME"
+    ],
+    [
+     "Greene",
+     "T"
+    ],
+    [
+     "Grubb",
+     "A"
+    ],
+    [
+     "Gudnason",
+     "V"
+    ],
+    [
+     "Gutiérrez",
+     "OM"
+    ],
+    [
+     "Kalil",
+     "R"
+    ],
+    [
+     "Karger",
+     "AB"
+    ],
+    [
+     "Mauer",
+     "M"
+    ],
+    [
+     "Navis",
+     "G"
+    ],
+    [
+     "Nelson",
+     "RG"
+    ],
+    [
+     "Poggio",
+     "ED"
+    ],
+    [
+     "Rodby",
+     "R"
+    ],
+    [
+     "Rossing",
+     "P"
+    ],
+    [
+     "Rule",
+     "AD"
+    ],
+    [
+     "Selvin",
+     "E"
+    ],
+    [
+     "Seegmiller",
+     "JC"
+    ],
+    [
+     "Shlipak",
+     "MG"
+    ],
+    [
+     "Torres",
+     "VE"
+    ],
+    [
+     "Yang",
+     "W"
+    ],
+    [
+     "Ballew",
+     "SH"
+    ],
+    [
+     "Couture",
+     "SJ"
+    ],
+    [
+     "Powe",
+     "NR"
+    ],
+    [
+     "Levey",
+     "AS"
+    ]
+   ],
+   "journal": "The New England journal of medicine",
+   "iso": "N Engl J Med",
+   "volume": "385",
+   "issue": "19",
+   "pages": "1737-1749",
+   "article_types": [
+    "Journal Article",
+    "Research Support, N.I.H., Extramural"
+   ],
+   "publication_date": {
+    "year": "2021",
+    "month": "09",
+    "day": "23"
+   }
+  },
+  "21800283": {
+   "pmid": "21800283",
+   "doi": "10.1002/art.30520",
+   "title": "Prevalence of gout and hyperuricemia in the US general population: the National Health and Nutrition Examination Survey 2007-2008.",
+   "authors": [
+    [
+     "Zhu",
+     "Y"
+    ],
+    [
+     "Pandya",
+     "BJ"
+    ],
+    [
+     "Choi",
+     "HK"
+    ]
+   ],
+   "journal": "Arthritis and rheumatism",
+   "iso": "Arthritis Rheum",
+   "volume": "63",
+   "issue": "10",
+   "pages": "3136-41",
+   "article_types": [
+    "Journal Article",
+    "Research Support, Non-U.S. Gov't"
+   ],
+   "publication_date": {
+    "year": "2011",
+    "month": "Oct"
+   }
+  }
+ }
+}

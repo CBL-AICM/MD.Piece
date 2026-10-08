@@ -187,7 +187,7 @@ def render_citations(text):
             au = r["au"]
             disp = au
             if r.get("long") and au not in seen:
-                disp = r["long"] if n_cite[au] > 1 else r["long"].split(" [")[0]
+                disp = r["long"] if n_cite[au] > 1 else re.sub(r" \[[^\]]*\]", "", r["long"])   # 縮寫可能在中間（KDIGO … Work Group）
             seen.add(au)
             groups.setdefault(au, [disp, []])[1].append(r["date_full"])
         return "（" + "; ".join(f"{d}, {', '.join(sorted(ds, key=dkey))}" for d, ds in groups.values()) + "）"
