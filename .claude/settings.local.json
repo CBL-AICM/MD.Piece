@@ -21,7 +21,19 @@
       "Bash(cp \"/root/.claude/uploads/f47a538d-d67f-4336-b706-6d5b32aae09e/fa95afcf-20260506_1541186359790890536185082.jpg\" /home/user/MD.Piece/frontend/icons/xiaohe.jpg && ls -la /home/user/MD.Piece/frontend/icons/xiaohe.jpg)",
       "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__execute_sql",
       "mcp__0601da9f-1463-4ebe-a99f-2cd4258c5a84__get_logs",
-      "mcp__d8e8d98c-f4fa-4123-ad9c-2730c1d1f021__get_runtime_logs"
+      "mcp__d8e8d98c-f4fa-4123-ad9c-2730c1d1f021__get_runtime_logs",
+      "Bash(PYTHONIOENCODING=utf-8 nohup python -u run.py --jobs 12 --out results)",
+      "Bash(PYTHONIOENCODING=utf-8 python -u run.py --quick --n 1500 --jobs 1 --out results_quick)",
+      "Bash(PYTHONIOENCODING=utf-8 python pipeline.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python make_report.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python figures.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python ui/export_viz.py)",
+      "Bash(sed -n '/逐族群 M0/,/^## 逐階段/p' results/report.md)",
+      "Bash(mkdir -p C:/Users/tpc10/AppData/Local/Temp/claude/C--Users-tpc10-md-piece--claude-worktrees-unruffled-allen-2d7b1c/ba65747f-a5d3-4f2a-b66e-25975aee42ec/scratchpad)",
+      "Bash(cp -r C:/Users/tpc10/md.piece/.claude/worktrees/unruffled-allen-2d7b1c/experiments/kidney_triage C:/Users/tpc10/AppData/Local/Temp/claude/C--Users-tpc10-md-piece--claude-worktrees-unruffled-allen-2d7b1c/ba65747f-a5d3-4f2a-b66e-25975aee42ec/scratchpad/kt)",
+      "Bash(node --check ui/_check.js)",
+      "Bash(grep '~\\\\$')",
+      "Bash(mkdir -p C:/Users/tpc10/AppData/Local/Temp/claude/C--Users-tpc10-md-piece--claude-worktrees-unruffled-allen-2d7b1c/ba65747f-a5d3-4f2a-b66e-25975aee42ec/scratchpad/appendix_build)"
     ]
   }
 }
