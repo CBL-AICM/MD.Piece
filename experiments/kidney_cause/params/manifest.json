@@ -5,7 +5,8 @@
   "verified_via": "datapage.aspx?Component=Laboratory/Questionnaire&CycleBeginYear=1999/2001/2003 ＋ SSANA_A.htm 文件頁",
   "extended": "2026-08-30 第二批：脂質盤/重金屬/營養素/維生素D/胱蛋白酶抑制素C——腎臟相關指數全景（datapage 逐頁驗證）",
   "extended_2005_2018": "2026-08-30 第三批：2005–2018 七個週期（T2/T3/T4 不需 ANA，可擴充樣本）。每個檔名皆以『HTTP 200 且內容開頭為 HEADER RECORD』實測驗證——注意 /Nchs/Nhanes/YYYY-YYYY/ 路徑對任何檔名都回 200＋HTML 錯誤頁，不可用於探測。CRP 僅至 2009-2010；hsCRP 自 2015-2016 起。",
-  "exposure_expansion": "2026-08-31 加入 14 個暴露通道（藥物／金屬／化學品／職業／體位／問卷）——轉向從上游找原因；先前僅有血液生化即下游狀態"
+  "exposure_expansion": "2026-08-31 加入 14 個暴露通道（藥物／金屬／化學品／職業／體位／問卷）——轉向從上游找原因；先前僅有血液生化即下游狀態",
+  "nine_causes_hiv": "2026-10-09 第四批（九種病因計畫 params/nine_causes_plan.json）：HIV 抗體檢驗檔 1999–2018 十檔，檔名與變數依 CDC 各檔文件頁核對、HEAD 查詢皆 200（共約 0.96 MB）；須經使用者同意才下載"
  },
  "files": {
   "DEMO.xpt": {
@@ -1424,6 +1425,56 @@
    "cycle": "2017-2018",
    "role": "label_check",
    "channel": "醫療狀況"
+  },
+  "LAB03.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB03.xpt",
+   "cycle": "1999-2000",
+   "role": "nine_causes_hiv"
+  },
+  "L03_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L03_B.xpt",
+   "cycle": "2001-2002",
+   "role": "nine_causes_hiv"
+  },
+  "L03_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L03_C.xpt",
+   "cycle": "2003-2004",
+   "role": "nine_causes_hiv"
+  },
+  "HIV_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/HIV_D.xpt",
+   "cycle": "2005-2006",
+   "role": "nine_causes_hiv"
+  },
+  "HIV_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/HIV_E.xpt",
+   "cycle": "2007-2008",
+   "role": "nine_causes_hiv"
+  },
+  "HIV_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/HIV_F.xpt",
+   "cycle": "2009-2010",
+   "role": "nine_causes_hiv"
+  },
+  "HIV_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/HIV_G.xpt",
+   "cycle": "2011-2012",
+   "role": "nine_causes_hiv"
+  },
+  "HIV_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/HIV_H.xpt",
+   "cycle": "2013-2014",
+   "role": "nine_causes_hiv"
+  },
+  "HIV_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/HIV_I.xpt",
+   "cycle": "2015-2016",
+   "role": "nine_causes_hiv"
+  },
+  "HIV_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HIV_J.xpt",
+   "cycle": "2017-2018",
+   "role": "nine_causes_hiv"
   }
  }
 }
