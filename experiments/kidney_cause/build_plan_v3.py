@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 import build_fair_v3_2 as F
+from nine_causes_section import section as nine_section
 from build_fair_v3_2 import CK, E, EXW, HG, IM, IM1, IMD, IML, LR, SL, X, auc, ci, dca0, n, sgn
 
 VAULT_MD = os.path.join(F.VAULT, "研究計劃書V_3.md")
@@ -55,6 +56,7 @@ MILESTONES = [   # (階段, 內容, 提交)——日期取自 git
     ("獨立稽核", "工具規則之分區統計、外部年齡性別基準", ["95e9db4"]),
     ("暴露分析 v3.2", "以 v3.2 資料修正重跑", ["6737bf5", "4cd396b"]),
     ("只用公開資料", "研究範圍定為公開資料", ["a21cf7c"]),
+    ("九種病因", "已知腎損傷之九種病因：事前計畫 → 公開資料檢驗（含 HIV）", ["ad2bff1", "9c33ffb"]),
     ("免疫方向 v3.2", "以公開抗核抗體次樣本，在修正後資料上重跑", ["29e1d3b", "9eb8cf6"]),
 ]
 
@@ -80,6 +82,8 @@ def build(fmt):
     n_err = sum(1 for line in errs.split("\n") if line.startswith("| v3"))
     assert f"{CN[n_err]}項能通過雜湊檢查" in CONC, "錯誤項數與結論不一致"
     rows = "\n".join(f"| {v} | {day(c[-1])} | {d} | {' → '.join(c)} |" for v, d, c in MILESTONES)
+    assert "**圖8　" in RES and "**圖9　" not in RES and "**表6　" in RES and "**表7　" not in RES, "圖表編號已變，九種病因段落須改號"
+    N_METH, N_RES, N_CONC = nine_section(fmt, "plan", 9, 7, "### 十一、九種病因之公開資料檢驗", "### 十一、已知腎損傷，可能是哪一種病？")
     return f"""# {F.TITLE}
 
 ## ——研究計畫書（完整版）：只用公開資料，以常規抽血驗尿回推腎炎（腎損傷）的病因方向（感染、免疫、代謝）
@@ -112,8 +116,10 @@ def build(fmt):
 {EQUIP}
 ## 肆、研究過程或方法
 {METH}
+{N_METH}
 ## 伍、研究結果
 {RES}
+{N_RES}
 ## 陸、討論
 {DISC}
 ## 柒、結論
@@ -127,6 +133,8 @@ def build(fmt):
 5. **可靠度與用途（目的五）。** 糖尿病方向在 NHANES 2021–2023 年（事後評估）維持 {xa('糖尿病', LR):.3f}、{xa('糖尿病', HG):.3f}，同一批人只用年齡、性別為 {xm1('糖尿病'):.3f}；肝炎方向新資料只有 {X['肝炎']['n_pos']} 名陽性，邏輯迴歸 {xa('肝炎', LR):.3f} 未高於只用年齡、性別的 {xm1('肝炎'):.3f}，無法確認。肝炎軸在閾值 0.5% 時，依模型送驗與全數送驗的淨效益幾乎相同（{H0['nb_model']:.4f} 對 {H0['nb_test_all']:.4f}），因此不能用來省略肝炎檢驗。
 6. **找原因的邊界（目的六）。** {EXW['n_scanned']} 個上游暴露中 {EXW['n_significant_fdr05']} 個通過偽發現率校正，但單次橫斷面資料分不出誰先誰後：護腎藥 ACEI／ARB 呈正相關（OR {xo('藥_ACEI_ARB')['OR']:.2f}）、腎功能差時應停用的雙胍類呈負相關（OR {xo('藥_雙胍')['OR']:.2f}）；同一批人中，血鉛與 eGFR < 60 正相關（OR {pbm('血中')['OR_per_doubling']:.2f}），尿鉛卻呈負相關（OR {pbm('尿中_原濃度')['OR_per_doubling']:.2f}）。這些關聯不能當作原因，也不能一律歸為反向因果；公開資料沒有病因的標準答案，天花板在標籤，不在方法。
 7. **工具（目的七）。** 網頁工具 v3.2 採修正後資料訓練的常規套組邏輯迴歸，逐項顯示推動因子；重新校準在交叉驗證中大致維持，但仍需獨立資料驗證。
+
+**已知腎損傷，可能是哪一種病（伍之十一）。** {N_CONC}
 
 **下一步（只用公開資料）**：要從關聯走到因果，需要公開的縱貫資料或公開的基因摘要統計；在那之前，本研究的結論停在「病因方向」。
 
