@@ -1650,6 +1650,66 @@
    "sha256": "79a68f2eb693382e51fc3e95fac4a51b399ce3f589aa7fd14f8df91729be6d38",
    "bytes": 341200,
    "downloaded_at_utc": "2026-09-26T20:17:33Z"
+  },
+  "LAB03.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/1999/DataFiles/LAB03.xpt",
+   "sha256": "a24188eb0807a9394676dcc53d44f1b3f6049b93e7d4ad99109afc69c96f16b3",
+   "bytes": 91520,
+   "downloaded_at_utc": "2026-10-08T20:13:38Z"
+  },
+  "L03_B.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/L03_B.xpt",
+   "sha256": "e5456231e953bdceefeaed055f365c99f15e3ec4130d0434d42c7df82e837d92",
+   "bytes": 106880,
+   "downloaded_at_utc": "2026-10-08T20:13:39Z"
+  },
+  "L03_C.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2003/DataFiles/L03_C.xpt",
+   "sha256": "a10962ca2175329836c008fdbb3747b1205ac707df295905da2b82619783aa5e",
+   "bytes": 96560,
+   "downloaded_at_utc": "2026-10-08T20:13:39Z"
+  },
+  "HIV_D.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2005/DataFiles/HIV_D.xpt",
+   "sha256": "28e2d38d95ca85be452e28b204b8de5e89065be55aafdda012689f53e595b04c",
+   "bytes": 104160,
+   "downloaded_at_utc": "2026-10-08T20:13:39Z"
+  },
+  "HIV_E.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2007/DataFiles/HIV_E.xpt",
+   "sha256": "413ddfe4f465355589d4634fd8817afb81eabd08b73f3ad521202e322a638e37",
+   "bytes": 50000,
+   "downloaded_at_utc": "2026-10-08T20:13:40Z"
+  },
+  "HIV_F.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2009/DataFiles/HIV_F.xpt",
+   "sha256": "b4d69d41a1dbe3abe4324953a91f27e1fc95909e2e656f0d9dba6bf5c4a1fb99",
+   "bytes": 70720,
+   "downloaded_at_utc": "2026-10-08T20:13:40Z"
+  },
+  "HIV_G.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2011/DataFiles/HIV_G.xpt",
+   "sha256": "bcf649271655dc1ea25cb493a09d1b1c2e33f318c50ed2e0c7ce7ce46100d5dc",
+   "bytes": 63920,
+   "downloaded_at_utc": "2026-10-08T20:13:40Z"
+  },
+  "HIV_H.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2013/DataFiles/HIV_H.xpt",
+   "sha256": "0d35ee74b0ca80fd27263a8a656d915d2d308294f4ad0dc002b89b6724cbc65f",
+   "bytes": 67280,
+   "downloaded_at_utc": "2026-10-08T20:13:41Z"
+  },
+  "HIV_I.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2015/DataFiles/HIV_I.xpt",
+   "sha256": "d01841bc8ed4a12545691c518d70be94b509a0916283a9be38db8f2fcebf2bc0",
+   "bytes": 158480,
+   "downloaded_at_utc": "2026-10-08T20:13:41Z"
+  },
+  "HIV_J.xpt": {
+   "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HIV_J.xpt",
+   "sha256": "0b1da4ebec86aef55149b685f10cbc38ef614e44129a9140edd1e047f51edb08",
+   "bytes": 142080,
+   "downloaded_at_utc": "2026-10-08T20:13:41Z"
   }
  }
 }
