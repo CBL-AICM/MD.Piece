@@ -1,0 +1,64 @@
+{
+ "note": "事後探索：於一次性評估之後撰寫，不取代主要結果、不改模型",
+ "axes": {
+  "肝炎": {
+   "n": 1032,
+   "n_pos": 11,
+   "masked": [
+    "LBXBPB",
+    "LBXBCD",
+    "LBXFER",
+    "LBXTHG",
+    "LBXCOT",
+    "LBDVIDMS"
+   ],
+   "auroc_all_inputs": 0.7183688006410827,
+   "auroc_masked": 0.7420087258480991,
+   "delta_masked_minus_all": 0.02363992520701641,
+   "delta_ci95": [
+    -0.021685060144985658,
+    0.07046772875817002
+   ],
+   "calibration_masked": {
+    "intercept": -0.7786845975812874,
+    "slope": 0.6670583384881853,
+    "brier": 0.011445394706529827,
+    "brier_skill": -0.08535482609983291,
+    "mean_pred": 0.02222592282683065,
+    "observed": 0.01065891472868217
+   }
+  },
+  "糖尿病": {
+   "n": 1069,
+   "n_pos": 420,
+   "masked": [
+    "LBXBPB",
+    "LBXBCD",
+    "LBXFER",
+    "LBXTHG",
+    "LBXCOT",
+    "LBDVIDMS"
+   ],
+   "auroc_all_inputs": 0.7432276762785237,
+   "auroc_masked": 0.7685156651258346,
+   "delta_masked_minus_all": 0.02528798884731087,
+   "delta_ci95": [
+    0.001543328607745073,
+    0.050922127151106285
+   ],
+   "calibration_masked": {
+    "intercept": -0.17042191149340807,
+    "slope": 1.1644147329092316,
+    "brier": 0.1911830248302414,
+    "brier_skill": 0.1984866657934129,
+    "mean_pred": 0.4272565482423289,
+    "observed": 0.3928905519176801
+   }
+  }
+ },
+ "hep_positive_composition": {
+  "n": 11,
+  "hbsag_pos": 6,
+  "hcv_rna_pos": 5
+ }
+}

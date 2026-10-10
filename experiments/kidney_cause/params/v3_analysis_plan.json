@@ -1,0 +1,60 @@
+{
+  "title": "v3 重分析計畫（回應 2026-09-26《深度審查與補強方案》）",
+  "frozen_at": "2026-09-26，於執行 evaluate_v3.py 之前提交 git；本檔 SHA256 會寫入結果檔",
+  "status_of_data": "1999–2018 資料已於 v1/v2 反覆檢視，本次重分析屬探索性修訂，不是確認性驗證",
+  "cohort": {
+    "builder": "src/nhanes_cohort.py::build_v3",
+    "corrections": [
+      "1999-2000 血清肌酸酐 Y = 1.013X + 0.147（LAB18 文件；v2 誤用 NHANES III 的 −0.184 + 0.960X）",
+      "2007 前尿肌酸酐依 ALB_CR_E 分段轉換（1999–2006 四週期）",
+      "腎臟、B 肝、C 肝、糖尿病一律三值（陽性／陰性／未知）；未知不當陰性，各軸排除該軸未知者",
+      "封存規則改列名；血比容 LBXHCT、同半胱胺酸 LBXHCY 不再被 LBXHC 字首誤封"
+    ],
+    "axis_samples": {
+      "hepatitis": "kidney3==1 且 hep3 已知",
+      "diabetes": "kidney3==1 且 dm3 已知（含肝炎陽性者；v2 的『排除肝炎後糖尿病』任務不再作主分析）"
+    }
+  },
+  "deployed_model": {
+    "estimator": "median imputer → StandardScaler → LogisticRegression(class_weight=balanced, C=1.0, max_iter=4000)",
+    "ensemble": "5 折交叉配適，5 個模型之原始機率取平均",
+    "calibration": "IsotonicRegression(out_of_bounds=clip)，只用訓練資料之內層折外原始分數配適",
+    "features": "build_v3 特徵扣除該軸標籤鄰近項（肝炎：ALT、AST、GGT、總膽紅素；糖尿病：血糖、滲透壓）"
+  },
+  "outer_evaluation": {
+    "scheme": "分層 5 折 × 重複 5 次，seed 20260926；每次重複每人恰一個外層預測",
+    "summary": "指標逐重複計算，報告五次平均與最小–最大；95% CI 為第 0 次重複之受試者層 bootstrap 1,000 次（不含重新配適變異）",
+    "discrimination": "AP（sklearn average_precision_score，不內插之階梯和）與 AUROC；肝炎軸以 AP 為主要判別摘要並並列盛行率",
+    "calibration": "校準截距（logit(p) 為 offset）、校準斜率、Brier、Brier skill（相對僅用盛行率），p 以 0.001 截斷後取 logit",
+    "bands": {
+      "rule_A_prevalence_multiple": "v2 原規則：p ≥ 2π 傾向、p ≤ 0.5π 不傾向（π＝外層訓練集盛行率）",
+      "rule_B_odds_multiple": "p 的勝算 ≥ 2 × π 的勝算 → 傾向；≤ 0.5 × π 的勝算 → 不傾向；即相對事前勝算的概似比 ≥2 或 ≤0.5",
+      "deployed": "rule_B。理由與結果無關：rule_A 在 π>0.5 時 2π>1 無法達成，且兩軸代表的證據強度不一致（肝炎約 2 倍勝算、糖尿病約 4.4 倍）；rule_B 對任何 π 皆有定義，低盛行率時與 rule_A 幾乎相同",
+      "report": "兩規則皆報告六格表、涵蓋率、各區實際陽性率、落在不傾向區的陽性數"
+    },
+    "insufficient_data": "該軸『常規套組』特徵有值比例 < 50% → 資料不足，不給分區（評估時另列人數）"
+  },
+  "comparisons_same_splits": {
+    "models": {
+      "M0_intercept": "僅截距（AUROC 0.5、AP＝盛行率）",
+      "M1_demographics": "年齡＋性別 LR",
+      "M2_basic_panel": "常規套組 LR：血球＋標準生化＋血脂＋尿白蛋白／肌酸酐＋衍生（ACR、eGFR、NLR）＋年齡性別",
+      "M3_full": "全部特徵 LR（＝部署模型之原始集成分數）",
+      "M4_full_HGB": "全部特徵 HistGradientBoosting（max_depth=3, lr=0.08, max_iter=300, l2=1.0, class_weight=balanced）",
+      "M5_with_adjacent": "全部特徵＋標籤鄰近項 LR（近端特徵消融之對照）"
+    },
+    "extended_only_tests": "CRP、血鉛、血鎘、血汞、可丁尼、鐵蛋白、葉酸（血清／紅血球）、B12、同半胱胺酸、MMA、維生素 D、PTH、BAP——不屬常規套組",
+    "paired_inference": "與 M3 比較之 ΔAUROC、ΔAP：第 0 次重複同一批受試者 bootstrap 1,000 次"
+  },
+  "temporal": {
+    "split": "1999–2008（五週期）開發 → 2009–2018（五週期）評估；另做逐週期擴展視窗（2005–06 起，每週期只用更早週期訓練）",
+    "label": "回溯時間評估（較晚週期先前已被檢視，不是確認性驗證）"
+  },
+  "survey_weights": "w = 0.2×WTMEC4YR（1999–2002）或 0.1×WTMEC2YR（2003–2018）；加權 AUROC、AP、Brier、加權盛行率與加權平均預測；未處理 PSU／分層之變異估計",
+  "label_sensitivity": ["糖尿病僅問卷", "糖尿病僅 HbA1c", "排除 DIQ010＝3（邊緣）", "僅 B 肝（HBsAg）", "僅 C 肝（RNA）"],
+  "decision_curve": "淨效益 NB = TP/N − FP/N × pt/(1−pt)，行動＝對 p ≥ pt 者送驗；與全數送驗、全不送驗比較；肝炎 pt 0.5%–10%、糖尿病 pt 10%–60%。pt 需反映實際利弊，此處僅作範圍掃描",
+  "not_done_here": [
+    "未參與開發之新資料確認（NHANES 2021–2023）：需另行下載，流程凍結後才取用",
+    "設計為基礎之變異估計（PSU／分層）"
+  ]
+}

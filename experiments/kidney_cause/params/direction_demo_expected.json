@@ -1,0 +1,36 @@
+{
+ "SEQN": 89459,
+ "cycle": "2015-2016",
+ "labels": {
+  "hep3": 1.0,
+  "hcv3": 1.0,
+  "hbv3": 0.0,
+  "dm3": 0.0
+ },
+ "axes": {
+  "肝炎": {
+   "cal": 0.20446,
+   "band": "傾向",
+   "miss": 2,
+   "odds_ratio": 23.4812,
+   "drivers": [
+    "LBDHDL",
+    "LBXSTP",
+    "LBXLYPCT",
+    "LBXTC"
+   ]
+  },
+  "糖尿病": {
+   "cal": 0.032503,
+   "band": "不傾向",
+   "miss": 2,
+   "odds_ratio": 0.051,
+   "drivers": [
+    "LBXSASSI",
+    "LBXSATSI",
+    "LBDHDL",
+    "LBXSGB"
+   ]
+  }
+ }
+}

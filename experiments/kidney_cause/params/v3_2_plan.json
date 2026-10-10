@@ -1,0 +1,88 @@
+{
+ "title": "v3.2 計畫：資料修正後重建、非線性模型校準與其餘待辦（2026-09-27）",
+ "frozen_at": "2026-09-27，於撰寫與執行任何 v3.2 計算程式之前提交 git；結果檔記錄本檔 SHA256",
+ "why": "評估糖尿病軸非線性模型之前，依『資料準確性優先』逐週期核對特徵有值比例與 CDC 文件，發現 v3 另有三類資料錯誤（見 data_errors_found）。在錯誤資料上評估校準沒有意義，因此先修正資料，再以同一套規則重做全部分析。本檔在看到任何 v3.2 結果之前寫定。",
+ "data_errors_found": {
+  "E5_2001_2002_renamed": "2001–2002 年 L40_B 的鹼性磷酸酶、LDH、磷、總膽紅素以 LBDSAPSI、LBDSLDSI、LBDSPH、LBDSTB 發布（兩家實驗室交叉比對後之調和值，單位與他週期相同；L40_B 文件 Analytic Notes），v3 只對應了 LBDSCR，這四項常規檢驗在 2001–2002 整個週期被當成缺值、以中位數補入。非常規的 LBDHCY（同半胱胺酸，L06_B）、LBDBAP（骨鹼性磷酸酶，L11_B）與 2003–2004 年 LBDFER（鐵蛋白，L06TFR_C）同理。",
+  "E6_2017_2018_bridging": "2017–2018 年生化儀器由 Beckman DxC 660i 改為 Roche Cobas 6000，CDC 於 BIOPRO_J 文件提供 12 項本研究用到之檢驗的回推式（含血清肌酸酐），v3 未套用；開發資料因此混用兩種量尺。外部確認（修正一）把 2021–2023 年數值換回 Cobas 6000 量尺，也只對齊了開發資料的最後一個週期。",
+  "E7_HDL": "HDL 膽固醇：2005 年起變數名為 LBDHDD，讀檔時未對應（2005–2018 全缺），且 1999–2004 的 LBDHDL 被 D 型肝炎變數之字首封存規則排除；常規套組的事前定義包含 HDL（evaluate_v3.BASIC）。"
+ },
+ "checked_no_change": {
+  "HbA1c（糖尿病標籤）": "LAB10、L10_B、L10_C、GHB_D–J：CDC 明言分析應使用原始值、不使用交叉回歸（2005–2006 對 2003–2004 之回歸已撤回）；2007–2010 分布右移原因不明，資料未修改 → 照原值，列為限制",
+  "尿白蛋白與尿肌酸酐": "2007 年前尿肌酸酐已依 ALB_CR_E 轉換（v3）；其餘週期文件無調整建議",
+  "血脂（總膽固醇、三酸甘油酯、HDL）": "1999–2008 HDL 之方法偏差 CDC 已在發布資料中修正（LAB13 等），無進一步換算式；2007 與 2013 年儀器變更文件註明不需調整；HDL_L 不需調整",
+  "血球": "2007、2013 年儀器變更，文件無換算式（2013 年提醒 RDW、WBC、HCT、MCH、MCHC 可能有方法效應）→ 不調整，列為限制",
+  "生化 1999–2016": "1999–2000 與 2005–2006 肌酸酐校正（v3 已做）；2007 年肌酸酐已由 CDC 於發布資料中標準化；2001–2002 其餘四項見 E5；其餘週期文件無換算式"
+ },
+ "corrections_v3_2": {
+  "C1_renames": {"LBDSAPSI": "LBXSAPSI", "LBDSLDSI": "LBXSLDSI", "LBDSPH": "LBXSPH", "LBDSTB": "LBXSTB",
+                 "LBDHCY": "LBXHCY", "LBDBAP": "LBXBAP", "LBDFER": "LBXFER", "LBDHDD": "LBDHDL"},
+  "C2_archive": "肝炎封存改為明列；D 型肝炎抗體以完整變數名 LBDHD 封存（SSLBDHD 由 SS 規則封存），HDL（LBDHDL）不再被封存",
+  "C3_bridging_2017_2018": {
+   "rule": "2017–2018 年數值以 BIOPRO_J 回推式換成 DxC 660i（2015–2016 年）量尺：X(DxC) = a + b × Y(Cobas 6000)；鹼性磷酸酶為 log10 X = −0.04294 + 1.001 × log10 Y。換算值 <0 設為 0。以 1999–2016 年（九個週期）之量尺為開發資料的共同量尺。",
+   "source": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BIOPRO_J.htm",
+   "equations": {
+    "LBXSAL": [0.01128, 1.044], "LBXSASSI": [3.762, 1.018], "LBXSATSI": [2.688, 1.013], "LBXSBU": [0.4488, 1.001],
+    "LBXSCH": [-2.203, 1.046], "LBXSCR": [-0.06945, 1.051], "LBXSGTSI": [2.363, 0.8042], "LBXSIR": [-4.494, 0.9776],
+    "LBXSLDSI": [2.062, 0.8568], "LBXSTR": [-7.02, 0.9655], "LBXSUA": [0.2326, 0.9323], "LBXSAPSI_log10": [-0.04294, 1.001]
+   },
+   "not_recommended": "碳酸氫根、鈣、氯、血糖、鉀、鈉、磷、總膽紅素、總蛋白（BIOPRO_J：Adjustment Not Recommended）",
+   "derived": "球蛋白＝總蛋白－換算後白蛋白（資料中 LBXSGB 與 TP−ALB 完全相等）；滲透壓加上 ΔBUN/2.8（BIOPRO_J 與 BIOPRO_L 之滲透壓符合 1.86Na＋GLU/18＋BUN/2.8＋9）；eGFR 以換算後肌酸酐重算"
+  },
+  "C4_external_2021_2023": "先依修正一（BIOPRO_L、TRIGLY_L、ALB_CR_L）換回 Cobas 6000 量尺，再依 C3 換回 DxC 660i 量尺（兩段串接；肌酸酐在 BIOPRO_L 不需調整，於第二段換算）；HDL 以 LBDHDD 對應（HDL_L 不需調整）",
+  "not_harmonized": "非常規特徵之跨週期方法差異（鐵蛋白 BioRad／Hitachi、同半胱胺酸 IMX／AxSym、1999–2004 才有的金屬與營養素等）只修正變數名，不逐項換算；全特徵模型僅作比較、不部署"
+ },
+ "cohort": {
+  "rules": "與 v3 相同（成人 ≥20、labels_v3 三值、各軸排除未知、1999–2000 與 2005–2006 肌酸酐校正、2007 年前尿肌酸酐轉換），加上 C1–C3",
+  "kidney_label_primary": "以 C3 換算後之肌酸酐計算 eGFR（全部十個週期在同一量尺上判定腎臟指標）",
+  "kidney_label_sensitivity": "2017–2018 年以原發布之肌酸酐判定腎臟指標（v3 之做法），報告標籤改變人數與主要指標",
+  "audit": "修正後逐週期特徵有值比例（常規套組除空腹子樣本之三酸甘油酯與 LDL 外，每週期應有值）；與 v3 之逐週期標籤計數比較"
+ },
+ "models": {
+  "structure": "全部候選模型採部署工具結構：外層訓練資料內 5 折交叉配適 → 5 個基礎模型之原始機率平均 → 以內層折外原始分數配適保序校準",
+  "LR_routine": "常規套組（evaluate_v3.BASIC ∩ 該軸非鄰近特徵，含 HDL）邏輯迴歸——網頁工具 v3.2 之候選",
+  "LR_routine_noHDL": "同上但不含 HDL（量化 HDL 修正之影響）",
+  "HGB_routine": "常規套組 HistGradientBoosting（超參數與 v3 相同：max_depth=3、learning_rate=0.08、max_iter=300、l2=1.0、class_weight=balanced；不調參）——主要問題：非線性模型的校準",
+  "LR_full": "全部特徵邏輯迴歸",
+  "HGB_full": "全部特徵 HistGradientBoosting（同上超參數）",
+  "M1_demographics": "年齡＋性別邏輯迴歸（基準，不做交叉配適與校準）"
+ },
+ "internal_evaluation": {
+  "scheme": "與 v3 相同：分層 5 折 × 重複 5 次，seed 20260926（同一批外層切分供所有模型使用）",
+  "metrics": "AUROC、AP、校準截距、校準斜率、Brier、Brier skill、分位數校準曲線、勝算規則三區六格表與各區實際陽性率、決策曲線（糖尿病 10%–60%、肝炎 0.5%–10%）",
+  "paired": "第 0 次重複受試者層 bootstrap 1,000 次：HGB_routine − LR_routine（ΔAUROC、ΔAP、ΔBrier）、LR_routine − LR_full、LR_routine − LR_routine_noHDL",
+  "temporal": "1999–2008 開發 → 2009–2018 評估，LR_routine 與 HGB_routine，含校準",
+  "weights_design": "MEC 合併權重之加權盛行率、平均預測、校準差、AUROC；以刪一 PSU 摺刀法估計設計變異（同 design_variance.py），LR_routine 與 HGB_routine",
+  "hepatitis_subtypes": "肝炎軸 LR_routine 外層預測：C 型陽性對陰性、B 型陽性對陰性之 AUROC 與三區分布（合併感染另列）；另以 B 型單獨、C 型單獨為標籤各跑一次巢狀評估（1 次重複）"
+ },
+ "external_2021_2023": {
+  "status": "事後分析。2021–2023 年資料已用於 v3 之一次性外部確認（結果 a7c4af8，照原樣保留為事前指定之確認結果）與 v3.1 重新校準，不再是未使用過的資料",
+  "data": "C4 兩段換算後之資料；腎臟標籤依換算後肌酸酐",
+  "models": "五個候選模型以全部開發資料訓練後評估（AUROC、AP、校準、三區）；另報告凍結之 v3 兩個邏輯迴歸模型在 C4 資料上的結果（量尺對齊之影響）",
+  "subtypes": "肝炎陽性者分 B 型、C 型列出三區分布",
+  "weights": "WTMEC2YR 與 WTPH2YR（抽血權重）兩種加權結果並列，刪一 PSU 摺刀法 95% CI"
+ },
+ "tool_v3_2": {
+  "decision_rule": "網頁工具改為 LR_routine 在修正後開發資料上訓練之模型。理由與結果無關：v3.1 的訓練資料含 E5–E7 錯誤。模型族維持邏輯迴歸，理由亦與結果無關：工具必須逐項顯示推動因子（可解釋性），HGB_routine 只作為『非線性能多帶來多少』的比較基準。",
+  "recalibration": "與 v3.1 相同之規則：以 C4 之 2021–2023 資料，陽性 ≥100 且斜率概似比檢定 p<0.05 才同時更新斜率，否則只更新截距；事前機率取 2021–2023 該軸比例；分區門檻依勝算規則重算",
+  "verification": "網頁 JS 與 Python 以真實示範受試者（SEQN 89459）逐軸核對機率、分區、勝算倍數、缺值數與推動因子"
+ },
+ "recalibration_cv": {
+  "purpose": "估計『在 2021–2023 資料上重新校準』這個步驟的樂觀程度（v3.1 與 v3.2 之校準都只有表面值）",
+  "scheme": "依抽樣設計切半：每層兩個 PSU 中隨機一個進訓練半、另一個進測試半；隨機切法 200 次（seed 20260927），另報告固定切法（PSU 1 對 PSU 2）",
+  "procedure": "在訓練半依上述規則重新校準（含是否更新斜率之判斷）與重算事前機率、門檻；在測試半評估校準截距、斜率、平均預測／實際比例與三區實際陽性率；並列『不重新校準』",
+  "note": "仍是同一資料集內之交叉驗證，不等於獨立資料驗證；肝炎軸每半約 5 個事件，只作參考"
+ },
+ "principles": [
+  "不以任何 AUROC 目標決定方法；所有結果不論好壞完整報告",
+  "v3 之結果檔、凍結模型與外部確認結果不修改（v3.2 另存新檔）",
+  "事後分析一律標明"
+ ],
+ "outputs": {
+  "cohort_audit": "results/v3_2_cohort_audit.json",
+  "internal": "results/v3_2_eval.json、results/v3_2_oof.csv.gz",
+  "external": "results/v3_2_external.json",
+  "tool": "params/direction_model_v3_2.json、results/direction_v3_2_recalibration.json",
+  "recalibration_cv": "results/v3_2_recal_cv.json"
+ }
+}
