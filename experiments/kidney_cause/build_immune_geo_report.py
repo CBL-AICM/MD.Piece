@@ -37,7 +37,16 @@ assert not D["B2_immune_vs_metabolic"]["PANEL_LR"] and D["B2_immune_vs_metabolic
 assert D["免疫路徑專屬"] == {"B1_primary": False, "B3_SLE": True}
 assert not PRE["decision"]["回推成立"]
 assert PRE["T1_primary"]["holdout"]["GENE_LR"]["auroc"] < 0.05
-assert all(B["B5_multiclass"][b][m]["top2_mean"] > 0.8 for b in ["H7", "H5"] for m in ["PANEL_LR", "GENE_LR"])
+# 稽核指出：路徑模型在 H7 四類把 DN 全判錯、H5 三類把 FSGS 全判錯（第一次重複）
+assert B["B5_multiclass"]["H7"]["PANEL_LR"]["confusion_rep0"]["DN"]["DN"] == 0
+assert B["B5_multiclass"]["H5"]["PANEL_LR"]["confusion_rep0"]["FSGS"]["FSGS"] == 0
+assert B["B5_multiclass"]["H7"]["GENE_LR"]["confusion_rep0"]["DN"]["DN"] == 2
+assert B["B5_multiclass"]["H5"]["GENE_LR"]["confusion_rep0"]["FSGS"]["FSGS"] == 2
+
+
+def top2_base(groups):
+    v = sorted(groups.values(), reverse=True)
+    return (v[0] + v[1]) / sum(v)
 sle_ifn = B["B3_SLE"]["per_panel"]["interferon"]["auroc"]
 assert max(B["B3_SLE"]["per_panel"].values(), key=lambda v: v["auroc"]) is B["B3_SLE"]["per_panel"]["interferon"]
 
@@ -72,11 +81,11 @@ fig()
 
 
 # ---------- 準確度報告 ----------
-def acc_row(name, r, rep=None):
+def acc_row(name, r, rep, maj):
     t = r["threshold_prevalence_rep0"]
     return (f"| {name} | {f3(r['auroc_mean'])}（{f3(r['auroc_min_max'][0])}–{f3(r['auroc_min_max'][1])}） | "
             f"{ci(r['auroc_ci_rep0'])} | {pv(r['permutation_p']) if 'permutation_p' in r else '—'} | {pc(t['accuracy'])} | "
-            f"{pc(t['balanced_accuracy'])} | {pc(t['sensitivity'])} | {pc(t['specificity'])} | {r['brier_rep0']:.3f} | "
+            f"{pc(maj)} | {pc(t['balanced_accuracy'])} | {pc(t['sensitivity'])} | {pc(t['specificity'])} | {r['brier_rep0']:.3f} | "
             f"{f3(rep['auroc_mean']) if rep else '—'} |")
 
 
@@ -91,11 +100,12 @@ w("## 一、結論\n")
 b1, b2, b3 = B["B1_primary"], B["B2_immune_vs_metabolic"], B["B3_SLE"]
 w(f"1. 在同一處理批次內，免疫性腎病與非免疫腎病在腎臟組織有可區分的分子訊號。ANCA 血管炎對非免疫腎病，免疫路徑模型 AUROC "
   f"{f3(b1['PANEL_LR']['auroc_mean'])}、全基因模型 {f3(b1['GENE_LR']['auroc_mean'])}；紅斑性狼瘡腎炎對 FSGS，免疫路徑模型 "
-  f"{f3(b3['PANEL_LR']['auroc_mean'])}。三項任務皆通過修正一於計算前寫定的判定規則（B2 只有全基因模型通過），且在腎小管間質重現。")
+  f"{f3(b3['PANEL_LR']['auroc_mean'])}。三項任務皆通過修正一的判定規則，且在腎小管間質重現。B1、B3 比的是「免疫對非免疫」（足細胞病變與糖尿病腎病變），不是「免疫對代謝」。")
 w(f"2. 唯一能直接比較「免疫對代謝」的是 ANCA 對糖尿病腎病變（{b2['n_pos']} 對 {b2['n'] - b2['n_pos']} 例）："
   f"全基因模型 AUROC {f3(b2['GENE_LR']['auroc_mean'])}（95% CI {ci(b2['GENE_LR']['auroc_ci_rep0'])}），"
   f"但免疫路徑模型只有 {f3(b2['PANEL_LR']['auroc_mean'])}，未達顯著。這表示事前選的六條免疫路徑不足以區分這兩種病，"
-  "全基因模型的判別力主要來自路徑以外的基因。")
+  "全基因模型的判別力主要來自路徑以外的基因。注意：修正一「任一模型成立即可」的規則，是在已知此全基因結果之後寫入的；"
+  "原計畫對同一比較（T2）只檢定路徑模型，判定為不成立。因此本項屬事後分析，不是事前確認。")
 w(f"3. 狼瘡腎炎的訊號集中在干擾素路徑（單一路徑 AUROC {f3(sle_ifn)}），高於 1,000 組隨機基因集的第 95 百分位，"
   f"屬免疫路徑專屬；ANCA 的路徑模型則只在隨機基因集第 {B['B1_primary']['random_gene_sets']['percentile_of_panel']:.1f} 百分位，"
   "代表其與非免疫腎病之差異廣泛分布於全基因體，不專屬事前路徑。")
@@ -111,21 +121,24 @@ w("\n模型：免疫路徑模型＝六條事前路徑分數（干擾素、補體
   "全基因模型＝12,074 個基因＋強正則化邏輯迴歸。超參數固定、不調參。評估採分層五折、重複 20 次，"
   "所有標準化只用訓練折；分類門檻＝訓練折之陽性比例（事前機率）。\n")
 w("## 三、二元任務準確度\n")
-w("| 任務・模型 | AUROC 平均（最小–最大） | 95% CI | 置換 p | 準確率 | 平衡準確率 | 敏感度 | 特異度 | Brier | 腎小管間質 AUROC |")
-w("|---|---|---|---|---|---|---|---|---|---|")
+w("| 任務・模型 | AUROC 平均（最小–最大） | 95% CI | 置換 p | 準確率 | 全猜多數類 | 平衡準確率 | 敏感度 | 特異度 | Brier | 腎小管間質 AUROC |")
+w("|---|---|---|---|---|---|---|---|---|---|---|")
 for key, code, name, _ in TASKS:
+    maj = max(B[key]["n_pos"], B[key]["n"] - B[key]["n_pos"]) / B[key]["n"]
     for m in ["PANEL_LR", "GENE_LR"]:
-        w(acc_row(f"{code}・{MODEL_ZH[m]}", B[key][m], B["B4_replication"][code][m]))
+        w(acc_row(f"{code}・{MODEL_ZH[m]}", B[key][m], B["B4_replication"][code][m], maj))
 w("\n註：95% CI 與準確率、敏感度、特異度、Brier 取第一次重複之折外預測；置換檢定打亂標籤 1,000 次，"
-  "兩種模型以 Bonferroni 校正（p < 0.025 為顯著）。\n")
+  "兩種模型以 Bonferroni 校正（p < 0.025 為顯著）。"
+  "樣本不平衡時準確率會被多數類撐高（例如 B3 全猜狼瘡即有 80%），請以平衡準確率與 AUROC 判讀。"
+  "95% CI 只取一次重複、不含模型重新訓練的變異，會偏窄。\n")
 w("![[figure/fig_auroc.png|620]]\n")
 w("## 四、回推可能病因（多類別）\n")
-w("| 批次・模型 | 類別 | 準確率 | 平衡準確率 | 前二名命中率 | 全猜最多類之準確率 |\n|---|---|---|---|---|---|")
+w("| 批次・模型 | 類別 | 準確率 | 全猜最多類 | 平衡準確率 | 前二名命中率 | 全猜最多兩類 |\n|---|---|---|---|---|---|---|")
 for bt, cls in [("H7", "ANCA／DN／FSGS／MCD"), ("H5", "SLE／MN／FSGS")]:
     for m in ["PANEL_LR", "GENE_LR"]:
         r = B["B5_multiclass"][bt][m]
-        w(f"| {bt}・{MODEL_ZH[m]} | {cls} | {pc(r['accuracy_mean'])} | {pc(r['balanced_accuracy_mean'])} | "
-          f"{pc(r['top2_mean'])} | {pc(r['chance_majority'])} |")
+        w(f"| {bt}・{MODEL_ZH[m]} | {cls} | {pc(r['accuracy_mean'])} | {pc(r['chance_majority'])} | "
+          f"{pc(r['balanced_accuracy_mean'])} | {pc(r['top2_mean'])} | {pc(top2_base(B['B5_multiclass'][bt]['groups']))} |")
 for bt in ["H7", "H5"]:
     cm = B["B5_multiclass"][bt]["GENE_LR"]["confusion_rep0"]
     cls = list(cm)
@@ -133,8 +146,9 @@ for bt in ["H7", "H5"]:
     w("| 真實＼預測 | " + " | ".join(cls) + " |\n|---|" + "---|" * len(cls))
     for t in cls:
         w(f"| {t} | " + " | ".join(str(cm[t][p]) for p in cls) + " |")
-w("\n多類別的主要錯誤是樣本少的類別（H7 的 DN 7 例、H5 的 FSGS 8 例）常被歸到大類；前二名命中率高於八成，"
-  "適合作為「列出候選病因」而非「單一判定」。\n")
+w("\n多類別的錯誤集中在樣本少的類別：路徑模型在第一次重複把 H7 的 7 例糖尿病腎病變、H5 的 8 例 FSGS 全部判錯，"
+  "全基因模型也只對 2 例。類別只有三、四個時前二名命中率的基準本來就高（見「全猜最多兩類」），不宜單獨引用。"
+  "目前的模型能把樣本多的免疫病（ANCA、狼瘡腎炎、膜性腎病變）認出來，還不能可靠地回推少數類的病因。\n")
 w("## 五、哪些免疫路徑在區分\n")
 w("| 路徑 | B1 AUROC | B1 差（z） | B2 AUROC | B2 差（z） | B3 AUROC | B3 差（z） |\n|---|---|---|---|---|---|---|")
 for p, zh in PANEL_ZH.items():
@@ -149,7 +163,9 @@ w("\n差＝免疫組減對照組之路徑分數平均（z 單位）。ANCA 以�
   "提示免疫細胞路徑分數可能只對「發炎型」免疫腎病敏感。\n")
 w("## 六、事前計畫為何失效（照實報告）\n")
 w("GEO 樣本來源名稱中的 H 代碼是處理批次。GPL24120 平台上，糖尿病腎病變全在 H1、高血壓腎病變全在 H2、IgA 腎病變全在 H4、"
-  "狼瘡腎炎在 H5。事前計畫只注意到兩個晶片平台的混淆，漏看了批次，因此原定任務比較的其實是批次。")
+  "狼瘡腎炎在 H5。事前計畫只注意到兩個晶片平台的混淆，漏看了批次，因此原定任務比較的其實是批次。"
+  "GEO 的資料處理說明另寫明，各批次分別以 RMA 正規化後合併，再以 ComBat 做批次校正。批次與疾病完全重疊時，"
+  "ComBat 移除批次平均也會一併移除大部分疾病平均差（此為依資料型態的推論，存放者的 ComBat 設定無法取得）。")
 t1 = PRE["T1_primary"]
 w(f"徵兆是全基因模型 AUROC 遠低於 0.5：交叉驗證 {f3(t1['GENE_LR']['auroc_mean'])}、保留測試集 "
   f"{f3(t1['holdout']['GENE_LR']['auroc'])}，訓練集卻幾乎全對，屬於記憶批次。原計畫判定「回推成立」為否，"
@@ -160,11 +176,17 @@ w("## 七、限制\n")
 w("1. 這是確診後的切片組織，不是常規抽血驗尿；結果說明免疫性病因在腎臟本身可辨識，以及哪些路徑值得轉成血液或尿液檢驗，"
   "不能證明常規檢驗可回推免疫方向。")
 w("2. 樣本少（B2 只有 29 例，其中糖尿病腎病變 7 例），信賴區間寬；腎絲球與腎小管間質來自同一批切片，重現不是獨立驗證。")
-w("3. 沒有獨立的外部資料集；同批次內仍可能存在未記錄的處理差異。")
+w("3. 沒有獨立的外部資料集；同批次內仍可能存在未記錄的處理差異。各路徑單獨的 AUROC 未經交叉驗證與多重比較校正，只作描述。")
 w("4. ERCB 的糖尿病腎病變是臨床上需要切片的非典型個案，不代表一般糖尿病腎病變。")
-w("5. 沒有感染方向的資料；IgA 腎病變與高血壓腎病變無法評估。\n")
+w("5. 沒有感染方向的資料；IgA 腎病變與高血壓腎病變無法評估。")
+w("6. 一筆中繼資料互相矛盾：GSM2810968 標題為 H5-Tub-MGN303（膜性腎病），診斷欄為紅斑性狼瘡；程式依診斷欄歸為狼瘡，只影響腎小管間質重現的一例。\n")
 w("## 八、獨立檢驗\n")
-w("另一工作階段以自行撰寫的程式重算關鍵數字並檢查資料洩漏，報告見 `results/immune_geo_audit.md`。\n")
+w("另一工作階段以自行撰寫、不引用主程式的程式，從原始 GEO 檔重新解析與建模，重算事前計畫版 30 餘項數字與修正一全部二元任務、"
+  "多類別混淆矩陣，與結果檔全部一致；置換檢定、隨機基因集與 bootstrap 信賴區間只審查演算法、未獨立重算。"
+  "稽核另指出：批次與 ComBat 問題（第六節）；平台陰性對照若改成只用訓練折校正，AUROC 約 0.8，同樣不通過；"
+  "B2 判定規則於已知結果後訂定（第一節）；準確率須對照多數類基準。全文見 `results/immune_geo_audit.md`。")
+w("稽核建議、本報告尚未執行的同批次比較：代謝方向本身（H7 糖尿病腎病變對 FSGS／MCD；H1 糖尿病腎病變對 MCD／薄基底膜病），"
+  "以及 H5 狼瘡腎炎對膜性腎病變。若要做，須先提交修正二再執行。\n")
 w("## 九、重現方式\n")
 w("```\npython immune_geo.py            # 事前計畫版（結果已存在則拒跑）\npython immune_geo_batchsafe.py  # 修正一\n"
   "python -m pytest test_immune_geo.py\npython -X utf8 build_immune_geo_report.py\n```\n")
@@ -183,9 +205,11 @@ S = {
   f"（95% CI {ci(g1['auroc_ci_rep0'])}，置換檢定 p {pv(g1['permutation_p'])}），六條免疫路徑分數模型為 "
   f"{f3(b1['PANEL_LR']['auroc_mean'])}（95% CI {ci(b1['PANEL_LR']['auroc_ci_rep0'])}）；"
   f"ANCA 相關血管炎對糖尿病腎病變（{b2['n']} 例），全基因模型為 {f3(b2['GENE_LR']['auroc_mean'])}"
-  f"（95% CI {ci(b2['GENE_LR']['auroc_ci_rep0'])}），免疫路徑模型為 {f3(b2['PANEL_LR']['auroc_mean'])}，未達顯著；"
+  f"（95% CI {ci(b2['GENE_LR']['auroc_ci_rep0'])}），免疫路徑模型為 {f3(b2['PANEL_LR']['auroc_mean'])}，未達顯著"
+  "（此項的判定規則在已知全基因結果後訂定，屬事後分析）；"
   f"紅斑性狼瘡腎炎對局部節段性腎絲球硬化，免疫路徑模型為 {f3(g3['auroc_mean'])}"
   f"（95% CI {ci(g3['auroc_ci_rep0'])}），其中干擾素路徑單獨即達 {f3(sle_ifn)}。三項比較在腎小管間質皆重現。"
+  "前兩項比的是免疫病與非免疫腎病，唯一的免疫對代謝比較只有第二項。"
   "IgA 腎病變與高血壓腎病變在資料中各自只有一個處理批次、沒有同批次對照，無法評估。"),
  "discussion": (
   "腎臟切片轉錄體的結果顯示，免疫性病因在腎臟組織中有可辨識的分子訊號。在病理確診的切片裡，"
