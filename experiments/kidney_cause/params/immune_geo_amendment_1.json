@@ -1,0 +1,37 @@
+{
+ "title": "immune_geo 修正一：處理批次與診斷完全混淆，改為同批次內比較（2026-10-17，事後修正）",
+ "frozen_at": "2026-10-17，於 results/immune_geo.json 產生後、執行本修正任何計算之前提交 git；結果檔記錄本檔與原計畫之 SHA256",
+ "status": "事後修正（post hoc）。原計畫結果照原樣保留於 results/immune_geo.json，不刪不改；報告中原計畫結果須並列並標明失效原因",
+ "what_went_wrong": {
+  "batch": "GEO 來源名稱的 H 代碼是處理批次。GPL24120：DN 全在 H1、HT 全在 H2、IgAN 全在 H4、SLE／MN／FSGS／LD 在 H5、MCD 在 H1／H3、TN 在 H3；腎小管間質相同。GPL22945 全部為 H7。原計畫 pre_run_facts 只注意到平台混淆，漏看批次；原計畫 T1、T3、T5 比的是批次而非疾病，T1 的「免疫路徑專屬」判定亦無法解讀",
+  "symptom": "全基因模型在 T1 交叉驗證 AUROC 0.25、保留測試集 0.013、T3 0.11（遠低於 0.5），訓練集預測幾乎完美——記憶批次的典型表現；本修正前未被事前檢查攔下",
+  "negative_control_rule": "T4 平台陰性對照 AUROC 0.015 被判為通過，因門檻只看 CI 上界 <0.70；AUROC 遠低於 0.5 同樣代表兩平台可完全分開，平台校正實際上失敗，T4 不解讀"
+ },
+ "rule": "只比較同一處理批次內的診斷；IgAN（只在 H4）與 HT（只在 H2）在同批次內沒有對照，本資料無法評估，明確列為「無法評估」",
+ "tasks": {
+  "B1_primary": "H7 腎絲球：ANCA（免疫）對非免疫腎病（DN、FSGS、FSGS_MCD、MCD）。LD 與 TN 不是腎病，不納入",
+  "B2_immune_vs_metabolic": "H7 腎絲球：ANCA 對 DN——本資料唯一批次乾淨的「免疫對代謝」比較（等同原計畫 T2，以本修正之指標重算）",
+  "B3_SLE": "H5 腎絲球：SLE（免疫）對 FSGS（非免疫）",
+  "B4_replication": "腎小管間質同批次重做 B1、B2、B3（同一批切片，非獨立樣本，只作不同腎臟區域之重現）",
+  "B5_multiclass": "回推可能病因：H7 腎絲球 ANCA／DN／FSGS（含 FSGS_MCD）／MCD 四類；H5 腎絲球 SLE／MN／FSGS 三類",
+  "B6_exploratory": "H5 腎絲球 MN（抗體介導、發炎少）對 FSGS，只描述"
+ },
+ "models": "與原計畫相同：PANEL_LR（6 個事前路徑分數，C＝1.0）、GENE_LR（全基因，C＝0.01）；固定，不調參",
+ "evaluation": {
+  "cv": "分層 5 折 × 20 次，seed 20261017",
+  "threshold": "分類門檻＝訓練折的陽性比例（即事前機率；與網頁工具「相對事前勝算」一致），另列 0.5 門檻結果",
+  "metrics": "AUROC（20 次平均、最小最大、第 0 次重複 bootstrap 2,000 次 95% CI）、準確率、平衡準確率、敏感度、特異度、Brier",
+  "permutation": "B1、B2、B3 兩種模型各打亂標籤 1,000 次",
+  "random_gene_sets": "B1、B3 PANEL_LR：1,000 組同大小隨機基因集",
+  "per_panel": "B1、B2、B3：各路徑單獨 AUROC 與平均差",
+  "multiclass": "準確率、平衡準確率、前二名命中率、多數類比例（機率基準）、第 0 次重複混淆矩陣",
+  "no_holdout": "批次內樣本太少（B1 50 例、B3 40 例），不再切保留測試集；以重複交叉驗證＋置換檢定＋另一腎臟區域重現代替"
+ },
+ "decision_rule": {
+  "回推成立（每一任務）": "PANEL_LR 或 GENE_LR 之交叉驗證 AUROC 95% CI 下界 >0.5，且置換 p <0.025（兩個模型之 Bonferroni），且腎小管間質重現之同模型 AUROC 平均 >0.5",
+  "免疫路徑專屬": "PANEL_LR 第 0 次重複 AUROC 高於隨機基因集第 95 百分位",
+  "批次記憶警示": "任一模型交叉驗證 AUROC 平均 <0.40 即標示「可能仍有未知結構，結果不解讀」",
+  "報告": "不論結果如何完整報告"
+ },
+ "outputs": "results/immune_geo_batchsafe.json（python immune_geo_batchsafe.py）"
+}
