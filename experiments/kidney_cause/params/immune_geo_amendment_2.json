@@ -1,0 +1,33 @@
+{
+ "title": "immune_geo 修正二：代謝方向本身＋SLE 對 MN（同批次內比較，2026-10-17，事後修正）",
+ "frozen_at": "2026-10-17，於 results/immune_geo_batchsafe.json 與獨立稽核 results/immune_geo_audit.md 完成後、執行本修正任何計算之前提交 git；結果檔記錄本檔、修正一與原計畫之 SHA256",
+ "status": "事後修正（post hoc）。原計畫與修正一結果照原樣保留，不刪不改",
+ "motivation": "獨立稽核 results/immune_geo_audit.md 第 5.7 節建議（稽核者本身未計算）：(1) 代謝方向本身——修正一只有 B2（ANCA 對 DN）碰到代謝病，無法回答「代謝病能否和非免疫、非代謝的腎病分開」；補上之後，與 B1／B3 合起來才是「免疫／代謝／兩者皆非」三方向的完整圖像。(2) 免疫病之間——H5 SLE 對 MN 兩者都是免疫複合物沉積；若干擾素路徑在此仍分得開，B3 的干擾素訊號才較能說是狼瘡特有，而非一般發炎。稽核第 5.7 節第 3 點（MCD 在 H1 對 H3 之殘餘批次）不做，維持列為限制",
+ "pre_run_facts": "樣本數取自修正一結果檔 batch_table（只是樣本註記，非結果）：H7 腎絲球 DN 7、FSGS 10、FSGS_MCD 6、MCD 5；H7 腎小管間質 DN 7、FSGS 3、FSGS_MCD 4、MCD 4；H1 腎絲球 DN 5、MCD 4、TMD 3；H1 腎小管間質 DN 10、MCD 4、TMD 6；H5 腎絲球 SLE 32、MN 21；H5 腎小管間質 SLE 33、MN 17。DN 只有 5–10 例，分層 5 折時 H1 腎絲球每個測試折只有 1 例 DN；AUROC 的 bootstrap 95% CI 預期非常寬，照實報告",
+ "rule": "與修正一相同：只比較同一處理批次內的診斷",
+ "tasks": {
+  "C1_metabolic_H7": "H7 腎絲球：DN（代謝）對 FSGS＋FSGS_MCD＋MCD（非免疫、非代謝腎病）。陽性＝DN",
+  "C2_metabolic_H1": "H1 腎絲球：DN 對 MCD＋TMD。陽性＝DN",
+  "C3_SLE_vs_MN": "H5 腎絲球：SLE 對 MN（兩者皆免疫複合物）。陽性＝SLE",
+  "C4_replication": "腎小管間質同批次重做 C1、C2、C3（同一批切片的另一區域，非獨立樣本）"
+ },
+ "models": "與修正一相同：PANEL_LR（原計畫 6 個事前免疫路徑分數，C＝1.0）、GENE_LR（全基因，C＝0.01）；固定，不調參。原計畫沒有事前的代謝路徑，本修正不新增（新增即為看過資料後的選擇）；因此 C1／C2 的 PANEL_LR 只回答「免疫路徑分數是否不同」，全轉錄體問題由 GENE_LR 回答",
+ "evaluation": {
+  "cv": "與修正一相同：分層 5 折 × 20 次，seed 20261017",
+  "threshold": "與修正一相同：訓練折陽性比例；另列 0.5 門檻",
+  "metrics": "與修正一相同：AUROC（20 次平均、最小最大、第 0 次重複 bootstrap 2,000 次 95% CI）、準確率、平衡準確率、敏感度、特異度、Brier",
+  "permutation": "C1、C2、C3 兩種模型各打亂標籤 1,000 次（與修正一相同程式）",
+  "random_gene_sets": "C3 PANEL_LR：1,000 組同大小隨機基因集（與修正一 B1／B3 相同）",
+  "per_panel": "C1、C2、C3 與其腎小管間質重現：各路徑單獨 AUROC 與平均差",
+  "interferon_test": "C3 與 C3 腎小管間質：干擾素路徑單獨分數（非監督，未用標籤）之 AUROC、bootstrap 2,000 次 95% CI、打亂標籤 10,000 次之單側置換 p（seed 20261017）"
+ },
+ "decision_rule": {
+  "回推成立（C1、C2、C3 各自）": "與修正一相同：PANEL_LR 或 GENE_LR 之交叉驗證 AUROC 95% CI 下界 >0.5，且置換 p <0.025，且腎小管間質重現之同模型 AUROC 平均 >0.5，且未觸發批次記憶警示",
+  "免疫路徑專屬（C3）": "與修正一相同：PANEL_LR 第 0 次重複 AUROC 高於隨機基因集第 95 百分位",
+  "干擾素專屬狼瘡（C3）": "腎絲球干擾素單路徑 AUROC 之 95% CI 下界 >0.5，且置換 p <0.05，且腎小管間質干擾素單路徑 AUROC >0.5。干擾素是否為六條路徑中 AUROC 最高者另列，只描述、不作判定",
+  "批次記憶警示": "與修正一相同：任一模型交叉驗證 AUROC 平均 <0.40 即標示「可能仍有未知結構，結果不解讀」",
+  "多重比較": "修正二新增 3 個任務；跨任務不再校正（與修正一一致），報告須明說 C1／C2／C3 是事後新增、未校正跨任務多重比較",
+  "報告": "不論結果如何完整報告；本規則於計算前提交，看過結果後不得修改"
+ },
+ "outputs": "results/immune_geo_amendment2.json（python immune_geo_amendment2.py）；結果檔已存在時拒跑"
+}
