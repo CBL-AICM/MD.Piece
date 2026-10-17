@@ -5,6 +5,7 @@
 數字一律讀結果檔，不手抄。用法：python -X utf8 build_immune_geo_report.py"""
 import json
 import os
+import shutil
 
 import matplotlib
 
@@ -14,6 +15,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PRE = json.load(open(os.path.join(ROOT, "results", "immune_geo.json"), encoding="utf-8"))
 B = json.load(open(os.path.join(ROOT, "results", "immune_geo_batchsafe.json"), encoding="utf-8"))
+C = json.load(open(os.path.join(ROOT, "results", "immune_geo_amendment2.json"), encoding="utf-8"))
 DOC = os.path.join(ROOT, "docs", "immune_geo")
 os.makedirs(os.path.join(DOC, "figure"), exist_ok=True)
 plt.rcParams["font.family"] = ["Microsoft JhengHei"]
@@ -36,6 +38,10 @@ assert D["B1_primary"]["回推成立"] and D["B2_immune_vs_metabolic"]["回推�
 assert not D["B2_immune_vs_metabolic"]["PANEL_LR"] and D["B2_immune_vs_metabolic"]["GENE_LR"]
 assert D["免疫路徑專屬"] == {"B1_primary": False, "B3_SLE": True}
 assert not PRE["decision"]["回推成立"]
+DC = C["decision"]
+assert not DC["C1_metabolic_H7"]["回推成立"] and not DC["C2_metabolic_H1"]["回推成立"]
+assert DC["C3_SLE_vs_MN"]["回推成立"] and DC["干擾素專屬狼瘡_C3"] and DC["免疫路徑專屬_C3"]
+assert all(C[k]["per_panel"][p]["mean_diff_z"] > 0 for k in ("C1_metabolic_H7", "C2_metabolic_H1") for p in ("complement", "myeloid", "t_cell"))
 assert PRE["T1_primary"]["holdout"]["GENE_LR"]["auroc"] < 0.05
 # 稽核指出：路徑模型在 H7 四類把 DN 全判錯、H5 三類把 FSGS 全判錯（第一次重複）
 assert B["B5_multiclass"]["H7"]["PANEL_LR"]["confusion_rep0"]["DN"]["DN"] == 0
@@ -78,6 +84,7 @@ def fig():
 
 
 fig()
+shutil.copy(os.path.join(ROOT, "figures", "report", "圖10_免疫方向切片轉錄體.png"), os.path.join(DOC, "figure", "fig_three_direction.png"))
 
 
 # ---------- 準確度報告 ----------
@@ -110,7 +117,9 @@ w(f"3. 狼瘡腎炎的訊號集中在干擾素路徑（單一路徑 AUROC {f3(sl
   f"屬免疫路徑專屬；ANCA 的路徑模型則只在隨機基因集第 {B['B1_primary']['random_gene_sets']['percentile_of_panel']:.1f} 百分位，"
   "代表其與非免疫腎病之差異廣泛分布於全基因體，不專屬事前路徑。")
 w("4. IgA 腎病變與高血壓腎病變各自只在一個處理批次，同批次內沒有對照，本資料無法評估。")
-w("5. 事前計畫原定的主要任務（狼瘡腎炎＋IgA 腎病變對糖尿病＋高血壓腎病變）因診斷與處理批次完全重疊而失效（見第六節），"
+w("5. 事後修正二補上代謝方向本身與狼瘡腎炎對膜性腎病變（第六節）：糖尿病腎病變對既非免疫也非代謝的腎病未達判定（每批只有 5–7 例），"
+  f"狼瘡腎炎對膜性腎病變可以區分，干擾素路徑單獨 AUROC {f3(C['interferon_test']['glom']['auroc'])}。")
+w("6. 事前計畫原定的主要任務（狼瘡腎炎＋IgA 腎病變對糖尿病＋高血壓腎病變）因診斷與處理批次完全重疊而失效（見第六節），"
   "其數字不可引用。\n")
 w("## 二、任務與樣本\n")
 w("| 任務 | 比較 | 批次 | 腎絲球人數（陽性） | 腎小管間質人數（陽性） |\n|---|---|---|---|---|")
@@ -161,7 +170,38 @@ w("\n差＝免疫組減對照組之路徑分數平均（z 單位）。ANCA 以�
   f"探索性比較：膜性腎病變（抗體介導、發炎少）對 FSGS，補體路徑 AUROC "
   f"{f3(B['B6_exploratory_MN_vs_FSGS']['per_panel']['complement']['auroc'])}（方向相反），"
   "提示免疫細胞路徑分數可能只對「發炎型」免疫腎病敏感。\n")
-w("## 六、事前計畫為何失效（照實報告）\n")
+w("## 六、事後修正二：免疫／代謝／兩者皆非三方向並列\n")
+w("本節是**事後修正二**。動機來自獨立稽核（`results/immune_geo_audit.md` 第 5.7 節）：修正一只有 ANCA 對糖尿病腎病變碰到代謝病，"
+  "無法回答「代謝病能否和非免疫、非代謝的腎病分開」，也無法判斷狼瘡腎炎的干擾素訊號是否只是一般發炎。修正二 "
+  "`params/immune_geo_amendment_2.json` 於計算前提交（4325345），模型、交叉驗證、置換檢定、門檻與判定規則和修正一相同，"
+  "另加「干擾素專屬狼瘡」規則；結果見 `results/immune_geo_amendment2.json`。\n")
+ALL = [("免疫 對 非免疫", "B1", "ANCA 對 DN、FSGS、MCD", "H7", B["B1_primary"], B["B4_replication"]["B1"], B["decision"]["B1_primary"]),
+       ("免疫 對 非免疫", "B3", "SLE 對 FSGS", "H5", B["B3_SLE"], B["B4_replication"]["B3"], B["decision"]["B3_SLE"]),
+       ("免疫 對 代謝", "B2", "ANCA 對 DN", "H7", B["B2_immune_vs_metabolic"], B["B4_replication"]["B2"], B["decision"]["B2_immune_vs_metabolic"]),
+       ("代謝 對 兩者皆非", "C1", "DN 對 FSGS、FSGS_MCD、MCD", "H7", C["C1_metabolic_H7"], C["C4_replication"]["C1"], DC["C1_metabolic_H7"]),
+       ("代謝 對 兩者皆非", "C2", "DN 對 MCD、TMD", "H1", C["C2_metabolic_H1"], C["C4_replication"]["C2"], DC["C2_metabolic_H1"]),
+       ("免疫 對 免疫", "C3", "SLE 對 MN", "H5", C["C3_SLE_vs_MN"], C["C4_replication"]["C3"], DC["C3_SLE_vs_MN"])]
+w("| 方向 | 任務 | 比較（批次） | 陽性／對照 | 路徑模型 AUROC（95% CI） | 置換 p | 全基因模型 AUROC（95% CI） | 置換 p | 腎小管間質（路徑／全基因） | 判定 |")
+w("|---|---|---|---|---|---|---|---|---|---|")
+for dr, code, lab, bt, r, t, dec in ALL:
+    w(f"| {dr} | {code} | {lab}（{bt}） | {r['n_pos']}／{r['n'] - r['n_pos']} | {f3(r['PANEL_LR']['auroc_mean'])}（{ci(r['PANEL_LR']['auroc_ci_rep0'])}） | "
+      f"{pv(r['PANEL_LR']['permutation_p'])} | {f3(r['GENE_LR']['auroc_mean'])}（{ci(r['GENE_LR']['auroc_ci_rep0'])}） | "
+      f"{pv(r['GENE_LR']['permutation_p'])} | {f3(t['PANEL_LR']['auroc_mean'])}／{f3(t['GENE_LR']['auroc_mean'])} | "
+      f"{('成立（事後規則）' if code == 'B2' else '成立') if dec['回推成立'] else '不成立'} |")
+c1, c2, c3, itf = C["C1_metabolic_H7"], C["C2_metabolic_H1"], C["C3_SLE_vs_MN"], C["interferon_test"]
+w("\n95% CI 只取第一次重複；置換檢定 1,000 次（最小可能 p＝1/1001）。B1–B3 為修正一，C1–C3 為修正二；跨任務未校正多重比較。\n")
+w(f"1. **代謝方向本身未達判定。** C1 糖尿病腎病變 {c1['n_pos']} 例、C2 只有 {c2['n_pos']} 例；點估計 0.65–0.83、腎小管間質重做 0.76–0.84，"
+  f"但置換 p 都在 0.06 以上，C2 全基因模型 95% CI 下界只有 {c2['GENE_LR']['auroc_ci_rep0'][0]:.2f}。這是例數不足下的「無法確認」，不是「確認沒有差異」。")
+w(f"2. **糖尿病腎病變切片也有發炎。** 兩批都以補體、單核巨噬細胞、T 細胞路徑較高（C1 單路徑 AUROC "
+  f"{f3(c1['per_panel']['complement']['auroc'])}、{f3(c1['per_panel']['myeloid']['auroc'])}、{f3(c1['per_panel']['t_cell']['auroc'])}），"
+  f"干擾素反而較低（{f3(c1['per_panel']['interferon']['auroc'])}）。這與 B2 免疫路徑模型分不開 ANCA 與糖尿病腎病變一致，發炎路徑不能拿來區分免疫與代謝方向。")
+w(f"3. **干擾素訊號專屬狼瘡成立。** C3 路徑模型 {f3(c3['PANEL_LR']['auroc_mean'])}、全基因模型 {f3(c3['GENE_LR']['auroc_mean'])}；"
+  f"干擾素單路徑 {f3(itf['glom']['auroc'])}（95% CI {ci(itf['glom']['ci'])}，置換 10,000 次 p {pv(itf['glom']['permutation_p'])}），"
+  f"腎小管間質 {f3(itf['tubint']['auroc'])}；路徑模型高於隨機基因集第 95 百分位（{c3['random_gene_sets']['panel_auroc_rep0']:.3f} 對 "
+  f"{c3['random_gene_sets']['p95']:.3f}）。SLE 與 MN 同屬免疫複合體腎病，差在干擾素。")
+w("4. 三方向合起來看，免疫對非免疫可分；免疫對代謝只有全基因模型可分（事後規則）；代謝對兩者皆非未達判定；免疫病之間可由干擾素分開。\n")
+w("![[figure/fig_three_direction.png|620]]\n")
+w("## 七、事前計畫為何失效（照實報告）\n")
 w("GEO 樣本來源名稱中的 H 代碼是處理批次。GPL24120 平台上，糖尿病腎病變全在 H1、高血壓腎病變全在 H2、IgA 腎病變全在 H4、"
   "狼瘡腎炎在 H5。事前計畫只注意到兩個晶片平台的混淆，漏看了批次，因此原定任務比較的其實是批次。"
   "GEO 的資料處理說明另寫明，各批次分別以 RMA 正規化後合併，再以 ComBat 做批次校正。批次與疾病完全重疊時，"
@@ -172,7 +212,7 @@ w(f"徵兆是全基因模型 AUROC 遠低於 0.5：交叉驗證 {f3(t1['GENE_LR'
   f"「免疫路徑專屬」雖為是，但同樣無法解讀。平台陰性對照 AUROC "
   f"{f3(PRE['T4_pooled']['platform_negative_control']['auroc_mean'])} 被判為通過，是因為門檻只看信賴區間上界；"
   "AUROC 遠低於 0.5 同樣代表兩平台可完全分開，平台校正實際上失敗。原結果檔照原樣保留，未刪改。\n")
-w("## 七、限制\n")
+w("## 八、限制\n")
 w("1. 這是確診後的切片組織，不是常規抽血驗尿；結果說明免疫性病因在腎臟本身可辨識，以及哪些路徑值得轉成血液或尿液檢驗，"
   "不能證明常規檢驗可回推免疫方向。")
 w("2. 樣本少（B2 只有 29 例，其中糖尿病腎病變 7 例），信賴區間寬；腎絲球與腎小管間質來自同一批切片，重現不是獨立驗證。")
@@ -180,17 +220,16 @@ w("3. 沒有獨立的外部資料集；同批次內仍可能存在未記錄的�
 w("4. ERCB 的糖尿病腎病變是臨床上需要切片的非典型個案，不代表一般糖尿病腎病變。")
 w("5. 沒有感染方向的資料；IgA 腎病變與高血壓腎病變無法評估。")
 w("6. 一筆中繼資料互相矛盾：GSM2810968 標題為 H5-Tub-MGN303（膜性腎病），診斷欄為紅斑性狼瘡；程式依診斷欄歸為狼瘡，只影響腎小管間質重現的一例。\n")
-w("## 八、獨立檢驗\n")
+w("## 九、獨立檢驗\n")
 w("另一工作階段以自行撰寫、不引用主程式的程式，從原始 GEO 檔重新解析與建模，重算事前計畫版 30 餘項數字與修正一全部二元任務、"
   "多類別混淆矩陣，與結果檔全部一致；置換檢定、隨機基因集與 bootstrap 信賴區間只審查演算法、未獨立重算。"
   "稽核另指出：批次與 ComBat 問題（第六節）；平台陰性對照若改成只用訓練折校正，AUROC 約 0.8，同樣不通過；"
   "B2 判定規則於已知結果後訂定（第一節）；準確率須對照多數類基準。全文見 `results/immune_geo_audit.md`。")
-w("稽核建議、本報告尚未執行的同批次比較：代謝方向本身（H7 糖尿病腎病變對 FSGS／MCD；H1 糖尿病腎病變對 MCD／薄基底膜病），"
-  "以及 H5 狼瘡腎炎對膜性腎病變。若要做，須先提交修正二再執行。\n")
-w("## 九、重現方式\n")
-w("```\npython immune_geo.py            # 事前計畫版（結果已存在則拒跑）\npython immune_geo_batchsafe.py  # 修正一\n"
+w("稽核建議的同批次比較（代謝方向本身、狼瘡腎炎對膜性腎病變）已列為修正二並執行（第六節）；修正二的數字尚未經獨立重算。\n")
+w("## 十、重現方式\n")
+w("```\npython immune_geo.py            # 事前計畫版（結果已存在則拒跑）\npython immune_geo_batchsafe.py  # 修正一\npython immune_geo_amendment2.py  # 修正二\n"
   "python -m pytest test_immune_geo.py\npython -X utf8 build_immune_geo_report.py\n```\n")
-w(f"計畫 SHA256：{B['plan_sha256'][:16]}…；修正一 SHA256：{B['amendment_sha256'][:16]}…；資料五檔之 URL 與 SHA256 見 `results/provenance.json`。\n")
+w(f"計畫 SHA256：{B['plan_sha256'][:16]}…；修正一 SHA256：{B['amendment_sha256'][:16]}…；修正二 SHA256：{C['amendment_sha256'][:16]}…；資料五檔之 URL 與 SHA256 見 `results/provenance.json`。\n")
 open(os.path.join(DOC, "免疫方向GEO_模型準確度報告.md"), "w", encoding="utf-8").write("\n".join(L))
 
 # ---------- 研究報告三處待補段落 ----------
