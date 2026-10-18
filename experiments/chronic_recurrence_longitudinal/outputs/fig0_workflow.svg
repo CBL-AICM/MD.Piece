@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1560" viewBox="0 0 1600 1560">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#555"/></marker>
+    <style>
+      .zh{font-family:PMingLiU,'新細明體';fill:#222}.mix{font-family:'Times New Roman',PMingLiU,'新細明體';fill:#222}
+      .stage{fill:#fff;stroke:#555;stroke-width:2.5}.tag{fill:#2f6fae}.sub{fill:#f7f9fb;stroke:#777;stroke-width:1.7}.cell{fill:#fff;stroke:#888;stroke-width:1.5}
+      .title{font-size:27px;font-weight:bold}.body{font-size:21px}.small{font-size:18px}.white{fill:#fff}.line{fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1600" height="1500" fill="#fff"/>
+
+  <g>
+    <rect class="stage" style="fill:#fff;stroke:#555;stroke-width:2.5" x="90" y="35" width="1420" height="210" rx="6"/><rect class="tag" style="fill:#2f6fae" x="90" y="35" width="210" height="210" rx="5"/>
+    <text class="mix title white" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#fff;font-size:27px;font-weight:bold" x="195" y="126" text-anchor="middle">第 1–2 月</text>
+    <text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="345" y="82">合成資料與模型建立</text>
+    <text class="mix body" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:21px" x="345" y="125"><tspan x="345">以 Synthea 與自建數位雙生生成 3,200 位虛擬慢性病患</tspan><tspan x="345" dy="38">建立真相、MD. Piece 紀錄、病人回憶三種紀錄來源</tspan><tspan x="345" dy="38">訓練 Cox、隨機存活森林與 Logistic 模型，以 SHAP 解釋主因</tspan></text>
+  </g>
+  <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M800 245 V285"/>
+  <g>
+    <rect class="stage" style="fill:#fff;stroke:#555;stroke-width:2.5" x="90" y="285" width="1420" height="165" rx="6"/><rect class="tag" style="fill:#2f6fae" x="90" y="285" width="210" height="165" rx="5"/>
+    <text class="mix title white" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#fff;font-size:27px;font-weight:bold" x="195" y="353" text-anchor="middle">第 3 月</text>
+    <text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="345" y="332">溝通模擬與穩健性檢驗</text>
+    <text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="345" y="375"><tspan x="345">比較三種紀錄來源保留感染線索的比例</tspan><tspan x="345" dy="38">以置換虛無檢定確認沒有資料洩漏</tspan></text>
+  </g>
+  <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M800 450 V490"/>
+  <g>
+    <rect class="stage" style="fill:#fff;stroke:#555;stroke-width:2.5" x="90" y="490" width="1420" height="165" rx="6"/><rect class="tag" style="fill:#2f6fae" x="90" y="490" width="210" height="165" rx="5"/>
+    <text class="mix title white" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#fff;font-size:27px;font-weight:bold" x="195" y="558" text-anchor="middle">第 4 月</text>
+    <text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="345" y="537">競品分析與文獻查證</text>
+    <text class="mix body" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:21px" x="345" y="580"><tspan x="345">比較 9 款國際與台灣慢性病管理產品</tspan><tspan x="345" dy="38">以 PubMed 查證文獻並整理效果量</tspan></text>
+  </g>
+  <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M800 655 V695"/>
+
+  <g>
+    <rect class="stage" style="fill:#fff;stroke:#555;stroke-width:2.5" x="45" y="695" width="1510" height="630" rx="6"/><rect class="tag" style="fill:#2f6fae" x="45" y="695" width="175" height="630" rx="5"/>
+    <text class="mix title white" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#fff;font-size:27px;font-weight:bold" x="132" y="995.5" text-anchor="middle">第 5 月</text>
+    <text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="255" y="739.8">真實縱向資料驗證</text>
+    <rect class="sub" style="fill:#f7f9fb;stroke:#777;stroke-width:1.7" x="250" y="775" width="735" height="430" rx="4"/><rect class="sub" style="fill:#f7f9fb;stroke:#777;stroke-width:1.7" x="1010" y="775" width="500" height="430" rx="4"/>
+    <text class="mix body" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:21px" x="617" y="810.4" text-anchor="middle" font-weight="bold">主要資料：NHEFS（CDC）</text>
+    <text class="mix body" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:21px" x="1260" y="810.4" text-anchor="middle" font-weight="bold">輔助資料：Framingham（NIH）</text>
+
+    <rect class="cell" style="fill:#fff;stroke:#888;stroke-width:1.5" x="300" y="840" width="635" height="60" rx="3"/><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="617" y="860.3" text-anchor="middle">確診住院 6,669 人次（四種慢性病）</text>
+    <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M617 900 V920"/><rect class="cell" style="fill:#fff;stroke:#888;stroke-width:1.5" x="300" y="920" width="635" height="60" rx="3"/><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="617" y="940.3" text-anchor="middle">18 歲以上、資料完整、追蹤 3 至 10 年</text>
+    <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M617 980 V1000"/><rect class="cell" style="fill:#fff;stroke:#888;stroke-width:1.5" x="300" y="1000" width="635" height="60" rx="3"/><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="617" y="1020.3" text-anchor="middle">納入 2,486 位成人（3,615 筆患者與疾病組合）</text>
+    <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M617 1060 V1080"/><rect class="cell" style="fill:#fff;stroke:#888;stroke-width:1.5" x="300" y="1080" width="635" height="60" rx="3"/><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="617" y="1100.3" text-anchor="middle">22,429 個預測時點，預測未來 12 個月是否復發</text>
+    <text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="617" y="1172.3" text-anchor="middle">疾病：COPD 或氣喘、心衰竭、缺血性心臟病、糖尿病</text>
+
+    <rect class="cell" style="fill:#fff;stroke:#888;stroke-width:1.5" x="1045" y="850" width="430" height="65" rx="3"/><text class="zh small" style="font-family:PMingLiU,新細明體;fill:#222;font-size:19px" x="1260" y="873.2" text-anchor="middle">第 1 次檢查已有高血壓的成人</text>
+    <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M1260 915 V945"/><rect class="cell" style="fill:#fff;stroke:#888;stroke-width:1.5" x="1045" y="945" width="430" height="80" rx="3"/><text class="zh small" style="font-family:PMingLiU,新細明體;fill:#222;font-size:19px" x="1260" y="963.7" text-anchor="middle"><tspan x="1260">兩次檢查數值完整、</tspan><tspan x="1260" dy="24">檢查前無心血管事件</tspan></text>
+    <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M1260 1025 V1055"/><rect class="cell" style="fill:#fff;stroke:#888;stroke-width:1.5" x="1045" y="1055" width="430" height="65" rx="3"/><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="1260" y="1078.8" text-anchor="middle">納入 779 位，預測 10 年內心血管事件</text>
+
+    <rect class="sub" style="fill:#f7f9fb;stroke:#777;stroke-width:1.7" x="250" y="1235" width="1260" height="60" rx="3"/><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="880" y="1255.3" text-anchor="middle">比較 MD. Piece 引擎與三個對照模型，並以 Kaplan–Meier 與 Cox 模型分析復發時機</text>
+  </g>
+  <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M800 1325 V1365"/>
+  <g>
+    <rect class="stage" style="fill:#fff;stroke:#555;stroke-width:2.5" x="90" y="1365" width="1420" height="165" rx="6"/><rect class="tag" style="fill:#2f6fae" x="90" y="1365" width="210" height="165" rx="5"/>
+    <text class="mix title white" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#fff;font-size:27px;font-weight:bold" x="195" y="1433.9" text-anchor="middle">第 5 月</text>
+    <text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="345" y="1412">延伸實驗</text>
+    <text class="mix body" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:21px" x="345" y="1455"><tspan x="345">模擬使用 App 1 至 10 年，比較預測準確度與預警成功率</tspan><tspan x="345" dy="38">以 Cox 模型預測復發時間線，並與實際累積復發曲線比較</tspan></text>
+  </g>
+</svg>
