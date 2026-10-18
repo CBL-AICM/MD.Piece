@@ -1,0 +1,66 @@
+{
+  "event_rate": 0.6303125,
+  "rows": [
+    {
+      "cox_c_index": 0.6947413479332955,
+      "rf_auroc": 0.7663723846888116,
+      "lr_auroc": 0.7732095308996076,
+      "brier": 0.18733396568700134,
+      "cal_slope": 0.9882028582829117,
+      "cal_intercept": -0.10142310206870699,
+      "featureset": "full",
+      "arm": "GROUND_TRUTH"
+    },
+    {
+      "cox_c_index": 0.6939467573012627,
+      "rf_auroc": 0.7661622920196756,
+      "lr_auroc": 0.7705742380715319,
+      "brier": 0.18885153747914318,
+      "cal_slope": 0.9633410488183416,
+      "cal_intercept": -0.08575382018551289,
+      "featureset": "full",
+      "arm": "MDPIECE"
+    },
+    {
+      "cox_c_index": 0.6995422132681256,
+      "rf_auroc": 0.7802590533955085,
+      "lr_auroc": 0.7816771789121768,
+      "brier": 0.1846179123266153,
+      "cal_slope": 1.0267264698324483,
+      "cal_intercept": -0.12453879283416074,
+      "featureset": "full",
+      "arm": "PATIENT_RECALL"
+    },
+    {
+      "cox_c_index": 0.6549643972132938,
+      "rf_auroc": 0.69551863202269,
+      "lr_auroc": 0.7149065315983941,
+      "brier": 0.2064636441981949,
+      "cal_slope": 0.9139658627688814,
+      "cal_intercept": -0.07424841868989442,
+      "featureset": "record_only",
+      "arm": "GROUND_TRUTH"
+    },
+    {
+      "cox_c_index": 0.6003708944014682,
+      "rf_auroc": 0.6586907572927275,
+      "lr_auroc": 0.652319468739581,
+      "brier": 0.22299559001273905,
+      "cal_slope": 0.8046826775894573,
+      "cal_intercept": 0.00019509816850981233,
+      "featureset": "record_only",
+      "arm": "MDPIECE"
+    },
+    {
+      "cox_c_index": 0.5600582358037413,
+      "rf_auroc": 0.5948157350274719,
+      "lr_auroc": 0.5916689122223694,
+      "brier": 0.22881176351849866,
+      "cal_slope": 0.8957549715797847,
+      "cal_intercept": -0.06157738794487312,
+      "featureset": "record_only",
+      "arm": "PATIENT_RECALL"
+    }
+  ],
+  "null_auroc": 0.5096848153239766
+}

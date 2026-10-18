@@ -119,8 +119,7 @@ def main():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    plt.rcParams["font.family"] = ["Microsoft JhengHei"]
-    plt.rcParams["axes.unicode_minus"] = False
+    base.use_doc_fonts(plt)
 
     df = build().reset_index(drop=True)
     y, g = df.y.values, df.SEQNUM.values

@@ -70,6 +70,18 @@ DRIVERS = [
 EPOCH = datetime(1950, 1, 1)
 
 
+def use_doc_fonts(plt):
+    """圖中文字型與說明書一致：中文新細明體（自 mingliu.ttc 取出 PMingLiU）、英數 Times New Roman。"""
+    from matplotlib import font_manager as fm
+    ttf = os.path.join(RAW, "PMingLiU.ttf")
+    if not os.path.exists(ttf):
+        from fontTools.ttLib import TTCollection
+        TTCollection(r"C:\Windows\Fonts\mingliu.ttc").fonts[1].save(ttf)
+    fm.fontManager.addfont(ttf)
+    plt.rcParams["font.family"] = ["Times New Roman", "PMingLiU"]
+    plt.rcParams["axes.unicode_minus"] = False
+
+
 def compress(d, k):
     """真實日期 → 引擎時間（壓縮 k 倍），引擎常數不動。"""
     d = d if isinstance(d, datetime) else datetime(d.year, d.month, d.day)
@@ -286,8 +298,7 @@ def analyze():
     import matplotlib.pyplot as plt
     from lifelines import CoxPHFitter, KaplanMeierFitter
     from lifelines.statistics import multivariate_logrank_test
-    plt.rcParams["font.family"] = ["Microsoft JhengHei"]
-    plt.rcParams["axes.unicode_minus"] = False
+    use_doc_fonts(plt)
     res = {}
 
     flow, subj, ev, lm = run_nhefs()
