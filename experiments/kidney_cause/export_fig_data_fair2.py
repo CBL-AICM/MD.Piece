@@ -2,7 +2,7 @@
 """科展作品說明書（使用者修改版）圖二至圖九之數據——自結果檔取出每一個要畫的數字，交給繪圖者（Codex）。
     python export_fig_data_fair2.py   → figures/fair2/fig_data.json
 取數邏輯與 make_figures_v3_2 相同（同一批結果檔、同一欄位），只拿掉版本標記：
-圖六只留與表十五對應的五列（事前指定評估兩列、資料修正後之檢驗評估三列），圖九只留現行網頁工具（不重新校準／重新校準）。"""
+圖六只留與表十五對應的五列（事前指定評估兩列、資料修正後之事後評估三列），圖九只留現行網頁工具（不重新校準／重新校準）。"""
 import json
 import os
 import sys
@@ -115,7 +115,7 @@ def fig6():
         out[key] = {"title": AXIS[key], "groups": [
             {"name": "事前指定評估（資料修正前）", "n_pos": M.X3[key]["n_pos"], "n": M.X3[key]["n"],
              "rows": [row("全特徵邏輯迴歸", m3["v3_full_LR（部署）"], "gray"), row("常規套組邏輯迴歸", m3["v3_basic_LR（常規套組候選）"], "gray")]},
-            {"name": "檢驗評估（資料修正後）", "n_pos": xa["n_pos"], "n": xa["n"],
+            {"name": "事後評估（資料修正後）", "n_pos": xa["n_pos"], "n": xa["n"],
              "rows": [row("只用年齡、性別", xa["M1_demographics"], "baseline"), row("常規套組邏輯迴歸", xa["models"][LR], "axis"),
                       row("常規套組梯度提升", xa["models"][HG], "axis_dark")]}]}
     return out
