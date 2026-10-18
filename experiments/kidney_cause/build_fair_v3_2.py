@@ -33,7 +33,8 @@ IML, IMH, IM1 = (IM["models"]["LR_routine"]["repeats"]["mean"]["auroc"], IM["mod
 IMD = IM["paired_vs_demographics_repeat0"]["LR_routine−M1_demographics"]
 IMS = IM["models"]["LR_routine"]["calibration_repeat0"]["slope"]
 assert IM["decision"] == "無法可靠回推" and IML < IM1 and IMS < 0.5, "免疫方向之敘述不成立"
-PROV = J("results", "provenance.json")["files"]
+# 只算 NHANES（.xpt）；帳本另含 GEO 切片轉錄體與 NCBI 基因檔（immune_geo），不屬 NHANES 開發／外部資料
+PROV = {k: v for k, v in J("results", "provenance.json")["files"].items() if k.lower().endswith(".xpt")}
 N_EXT = sum(k.endswith("_L.xpt") for k in PROV)
 N_ALL, N_DEV = len(PROV), len(PROV) - N_EXT
 MB = sum(v["bytes"] for v in PROV.values()) / 1e6
