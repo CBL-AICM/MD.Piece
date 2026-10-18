@@ -56,6 +56,12 @@ def main():
 
     base.use_doc_fonts(plt)
     R = P["R"]
+    base.save_plot_data("圖十_數位雙生三種紀錄來源鑑別力", R.assign(紀錄來源=R.arm.map(ZH))[
+        ["featureset", "紀錄來源", "cox_c_index", "rf_auroc", "lr_auroc"]])
+    base.save_plot_data("圖十一_數位雙生校準曲線", pd.concat(
+        [P["calib"][a].assign(紀錄來源=ZH[a]).rename(columns={"pm": "預測風險", "ym": "實際惡化比例"}) for a in ARMS]))
+    base.save_plot_data("圖十三_感染線索保留率", C["C"].assign(紀錄來源=C["C"].arm.map(ZH))[
+        ["紀錄來源", "short_auroc", "clue_retention", "infection_attribution_sensitivity"]])
     fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.0), sharey=True)
     for ax, fs, ttl in zip(axes, ["full", "record_only"], ["含完整基線病歷", "只用就診間紀錄"]):
         g = R[R.featureset == fs].set_index("arm")
@@ -81,6 +87,7 @@ def main():
     cs = P["coefs"]["MDPIECE"]
     top = pd.concat([cs.head(8), cs.tail(8)])
     pd.DataFrame({"feature": top.index, "coef": top.values}).to_csv(os.path.join(OUT, "top_features_mdpiece.csv"), index=False)
+    base.save_plot_data("圖十二_主要預測特徵", pd.DataFrame({"特徵": [FEAT.get(n, n) for n in top.index], "標準化係數": top.values}))
     fig, ax = plt.subplots(figsize=(6.6, 5))
     ax.barh(range(len(top)), top.values, color=["#b5524a" if v < 0 else "#3a7d44" for v in top.values])
     ax.set_yticks(range(len(top))); ax.set_yticklabels([FEAT.get(n, n) for n in top.index], fontsize=8)

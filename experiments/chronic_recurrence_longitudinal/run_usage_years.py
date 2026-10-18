@@ -197,6 +197,7 @@ def main():
     tert = pd.qcut(risk10, 3, labels=["低", "中", "高"])
     km = KaplanMeierFitter()
     calib = {}
+    tl_rows = []
     fig, ax = plt.subplots(figsize=(6.4, 4.4))
     colors = {"低": "#3a7d44", "中": "#d08c2e", "高": "#c0392b"}
     for t_ in ("低", "中", "高"):
@@ -209,6 +210,9 @@ def main():
         calib[t_] = {f"{yy}y": {"observed": round(float(obs[yy * 10]), 3), "predicted": round(float(pred[yy * 10]), 3)}
                      for yy in (1, 3, 5)}
         calib[t_]["n"] = int(m.sum())
+        tl_rows.append(pd.DataFrame({"風險組": t_, "人數": int(m.sum()), "年": grid, "實際累積復發百分比": obs * 100,
+                                     "模型預測累積復發百分比": pred * 100}))
+    base.save_plot_data("圖八_復發時間線預測與實際", pd.concat(tl_rows).round(3))
     ax.set_xlabel("預測時點後經過年數"); ax.set_ylabel("累積復發比例（%）")
     ax.set_title("用滿 10 年紀錄預測的復發時間線：預測（虛線）與實際（實線）")
     ax.legend(fontsize=7.5, ncol=2); fig.tight_layout()
@@ -216,6 +220,12 @@ def main():
     res["timeline_calibration"] = calib
 
     u = pd.DataFrame(res["usage"])
+    base.save_plot_data("圖七_使用年數與AUROC", pd.DataFrame([
+        {"使用年數": r["years"], "長期紀錄模型AUROC": r["auc"][0], "下限": r["auc"][1], "上限": r["auc"][2],
+         "MD.Piece引擎AUROC": (r["engine_auc"][0] if "engine_auc" in r else None)} for r in res["usage"]]))
+    base.save_plot_data("表十六_預警成功率與命中率", pd.DataFrame([
+        {"使用年數": r["years"], "預警成功率百分比": round(r["sensitivity"] * 100, 1), "命中率百分比": round(r["ppv"] * 100, 1),
+         "隨機標記預警成功率百分比": TOP * 100} for r in res["usage"]]))
     fig, ax1 = plt.subplots(figsize=(6.4, 4.2))
     ax1.errorbar(u.years, [a[0] for a in u.auc], yerr=[[a[0] - a[1] for a in u.auc], [a[2] - a[0] for a in u.auc]],
                  marker="o", capsize=3, label="長期紀錄模型 AUROC")

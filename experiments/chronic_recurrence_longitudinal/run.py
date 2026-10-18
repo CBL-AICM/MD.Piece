@@ -82,6 +82,17 @@ def use_doc_fonts(plt):
     plt.rcParams["axes.unicode_minus"] = False
 
 
+def save_plot_data(name, df):
+    """每張圖實際畫出的數據另存 CSV（plot_data/），供其他繪圖工具重畫與逐值核對。"""
+    os.makedirs(os.path.join(OUT, "plot_data"), exist_ok=True)
+    df.to_csv(os.path.join(OUT, "plot_data", name + ".csv"), index=False, encoding="utf-8-sig")
+
+
+def km_table(km, group, n):
+    cd = km.cumulative_density_
+    return pd.DataFrame({"組別": group, "人數": n, "年": cd.index.values, "累積比例": cd.iloc[:, 0].values})
+
+
 def compress(d, k):
     """真實日期 → 引擎時間（壓縮 k 倍），引擎常數不動。"""
     d = d if isinstance(d, datetime) else datetime(d.year, d.month, d.day)
@@ -405,9 +416,14 @@ def analyze():
     # ── 圖 ──
     from sklearn.metrics import roc_curve
     fig, ax = plt.subplots(figsize=(6.2, 5))
+    roc_rows = []
+    grid01 = np.linspace(0, 1, 101)
     for name, s in [("MD.Piece 引擎（未訓練、原規則）", lm.engine_risk.values)] + list(preds.items()):
         fpr, tpr, _ = roc_curve(y, s)
         ax.plot(fpr, tpr, label=f"{name}  AUROC {aucs[name][0]:.2f}")
+        roc_rows.append(pd.DataFrame({"模型": name, "AUROC": round(aucs[name][0], 3), "偽陽性率": grid01,
+                                      "真陽性率": np.interp(grid01, fpr, tpr)}))
+    save_plot_data("圖三_NHEFS_ROC", pd.concat(roc_rows))
     ax.plot([0, 1], [0, 1], ls=":", c="grey")
     ax.set_xlabel("偽陽性率"); ax.set_ylabel("真陽性率"); ax.set_title("NHEFS 未來12個月復發預測 ROC")
     ax.legend(fontsize=8, loc="lower right"); fig.tight_layout(); fig.savefig(os.path.join(OUT, "figA_nhefs_roc.png"), dpi=200); plt.close(fig)
@@ -415,11 +431,14 @@ def analyze():
     fig, ax = plt.subplots(figsize=(6.2, 4.2))
     km = KaplanMeierFitter()
     names = {"low": "穩定（low）", "medium": "中度關注（medium）", "high": "較需留意（high）"}
+    kmB, kmE, kmF = [], [], []
     for b in ("low", "medium", "high"):
         m = first.engine_band == b
         if m.sum() >= 5:
             km.fit(first.t[m], first.e[m], label=f"{names[b]} n={int(m.sum())}")
             km.plot_cumulative_density(ax=ax, ci_show=False)
+            kmB.append(km_table(km, names[b], int(m.sum())))
+    save_plot_data("圖六_引擎分級與下一次復發時機", pd.concat(kmB))
     ax.set_xlabel("確診滿1年後經過年數"); ax.set_ylabel("累積復發比例"); ax.set_title(f"引擎分級與確診滿1年後的下一次復發時機（log-rank p={lr.p_value:.3g}）")
     fig.tight_layout(); fig.savefig(os.path.join(OUT, "figB_nhefs_km.png"), dpi=200); plt.close(fig)
 
@@ -427,6 +446,9 @@ def analyze():
     names_d = list(per.keys())
     xs = np.arange(len(names_d))
     e = [per[d]["engine_auc"] for d in names_d]; l = [per[d]["longterm_auc"] for d in names_d]
+    save_plot_data("圖四_四種慢性病AUROC", pd.DataFrame(
+        [{"疾病": d, "模型": mname, "AUROC": v[0], "下限": v[1], "上限": v[2]}
+         for d in names_d for mname, v in (("MD.Piece 引擎", per[d]["engine_auc"]), ("加入長期紀錄模型", per[d]["longterm_auc"]))]))
     ax.bar(xs - 0.18, [v[0] for v in e], 0.36, yerr=[[v[0] - v[1] for v in e], [v[2] - v[0] for v in e]], label="MD.Piece 引擎", capsize=3)
     ax.bar(xs + 0.18, [v[0] for v in l], 0.36, yerr=[[v[0] - v[1] for v in l], [v[2] - v[0] for v in l]], label="加入長期紀錄模型", capsize=3)
     ax.axhline(0.5, ls=":", c="grey"); ax.set_xticks(xs); ax.set_xticklabels(names_d); ax.set_ylim(0.3, 1)
@@ -435,6 +457,7 @@ def analyze():
 
     fig, ax = plt.subplots(figsize=(6.2, 3.8))
     qs = res["nhefs_longterm_quintile_rate"]
+    save_plot_data("圖五_風險五分組復發率", pd.DataFrame({"風險五分位": range(1, len(qs) + 1), "實際12個月復發率百分比": [round(v * 100, 1) for v in qs]}))
     ax.bar(range(1, len(qs) + 1), [v * 100 for v in qs], color="#4a7bb7")
     for i, v in enumerate(qs):
         ax.text(i + 1, v * 100 + 0.5, f"{v*100:.1f}%", ha="center", fontsize=9)
@@ -447,6 +470,8 @@ def analyze():
         if m.sum() >= 5:
             km.fit(fr.time_years[m], fr.event[m], label=f"{names[b]} n={int(m.sum())}")
             km.plot_cumulative_density(ax=ax, ci_show=False)
+            kmE.append(km_table(km, names[b], int(m.sum())))
+    save_plot_data("圖九_Framingham引擎分級與心血管事件", pd.concat(kmE))
     ax.set_xlabel("第2次檢查後經過年數"); ax.set_ylabel("累積心血管事件比例")
     ax.set_title(f"Framingham 高血壓者：引擎分級與發病時機（p={flr.p_value:.3g}）")
     fig.tight_layout(); fig.savefig(os.path.join(OUT, "figE_framingham_km.png"), dpi=200); plt.close(fig)
@@ -456,6 +481,8 @@ def analyze():
         m = first.lt_tertile == t_
         km.fit(first.t[m], first.e[m], label=f"長期紀錄風險{t_}三分之一 n={int(m.sum())}")
         km.plot_cumulative_density(ax=ax, ci_show=False)
+        kmF.append(km_table(km, f"長期紀錄風險{t_}", int(m.sum())))
+    save_plot_data("探索_長期紀錄風險三分組與復發時機", pd.concat(kmF))
     ax.set_xlabel("確診滿1年後經過年數"); ax.set_ylabel("累積復發比例")
     ax.set_title(f"長期紀錄風險分組與復發時機（探索性，p={lr_lt.p_value:.2g}）")
     fig.tight_layout(); fig.savefig(os.path.join(OUT, "figF_nhefs_km_longterm.png"), dpi=200); plt.close(fig)
