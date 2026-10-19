@@ -51,7 +51,7 @@ def fig9():
     a2 = fig.add_axes([.65, .2, .33, .64])
     for ax, t in ((a1, "腎損傷對無腎損傷"), (a2, "依腎臟型態對兩項皆正常者")):
         ax.set_xscale("log")
-        ax.set(xlim=(.6, 4) if ax is a1 else (.2, 12), ylim=(len(rows) - .45, -.55), yticks=[])
+        ax.set(xlim=(.6, 4) if ax is a1 else (.1, 12), ylim=(len(rows) - .45, -.55), yticks=[])  # 右圖下限 0.1：HIV 只有 eGFR<60 之 CI 下限 0.13
         ax.xaxis.set_major_locator(ticker.FixedLocator([.25, .5, 1, 2, 4, 8] if ax is a2 else [1, 2, 4]))
         ax.xaxis.set_major_formatter(ticker.FormatStrFormatter("%g"))
         ax.xaxis.set_minor_locator(ticker.NullLocator())
