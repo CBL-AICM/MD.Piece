@@ -1,0 +1,29 @@
+[
+  {
+    "arm": "GROUND_TRUTH",
+    "n_test": 6720,
+    "pos_rate": 0.09508928571428571,
+    "short_auroc": 0.7514520329232975,
+    "n_infection_driven_test": 57,
+    "clue_retention": 1.0,
+    "infection_attribution_sensitivity": 0.10526315789473684
+  },
+  {
+    "arm": "MDPIECE",
+    "n_test": 6720,
+    "pos_rate": 0.09508928571428571,
+    "short_auroc": 0.7122192858589532,
+    "n_infection_driven_test": 57,
+    "clue_retention": 0.3684210526315789,
+    "infection_attribution_sensitivity": 0.0
+  },
+  {
+    "arm": "PATIENT_RECALL",
+    "n_test": 6720,
+    "pos_rate": 0.09508928571428571,
+    "short_auroc": 0.7093229405117507,
+    "n_infection_driven_test": 57,
+    "clue_retention": 0.10526315789473684,
+    "infection_attribution_sensitivity": 0.0
+  }
+]

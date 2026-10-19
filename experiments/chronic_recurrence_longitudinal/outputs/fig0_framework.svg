@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#555"/></marker>
+    <style>
+      .zh{font-family:PMingLiU,'新細明體';fill:#222}.mix{font-family:'Times New Roman',PMingLiU,'新細明體';fill:#222}text{transform:translateY(-12px)}
+      .box{fill:#fff;stroke:#555;stroke-width:2}.accent{fill:#eef4fa;stroke:#2f6fae;stroke-width:2.5}.line{fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)}
+      .title{font-size:28px;font-weight:bold}.body{font-size:22px}.small{font-size:19px}.head{fill:#2f6fae}.white{fill:#fff}
+    </style>
+  </defs>
+  <rect width="1600" height="1000" fill="#fff"/>
+
+  <rect class="accent" style="fill:#eef4fa;stroke:#2f6fae;stroke-width:2.5" x="80" y="35" width="1440" height="82" rx="5"/>
+  <text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="800" y="74" text-anchor="middle">核心想法：把患者的長期紀錄整理成風險等級與近期主要變化，在看診前交給醫師與患者</text>
+
+  <path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M385 210 H445"/><path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M755 210 H815"/><path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M1125 210 H1185"/>
+  <g>
+    <rect class="box" style="fill:#fff;stroke:#555;stroke-width:2" x="75" y="145" width="310" height="130" rx="5"/><text class="zh title head" style="font-family:PMingLiU,新細明體;fill:#2f6fae;font-size:28px;font-weight:bold" x="230" y="170.3" text-anchor="middle">記錄</text>
+    <text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="230" y="218.7" text-anchor="middle"><tspan x="230">每日症狀、用藥、睡眠、</tspan><tspan x="230" dy="29">情緒與生理數值</tspan></text>
+    <rect class="box" style="fill:#fff;stroke:#555;stroke-width:2" x="445" y="145" width="310" height="130" rx="5"/><text class="zh title head" style="font-family:PMingLiU,新細明體;fill:#2f6fae;font-size:28px;font-weight:bold" x="600" y="178.3" text-anchor="middle">預測</text><text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="600" y="241.2" text-anchor="middle">計算復發風險等級</text>
+    <rect class="box" style="fill:#fff;stroke:#555;stroke-width:2" x="815" y="145" width="310" height="130" rx="5"/><text class="zh title head" style="font-family:PMingLiU,新細明體;fill:#2f6fae;font-size:28px;font-weight:bold" x="970" y="170.3" text-anchor="middle">解釋</text><text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="970" y="218.7" text-anchor="middle"><tspan x="970">列出貢獻最大的</tspan><tspan x="970" dy="29">近期變化</tspan></text>
+    <rect class="box" style="fill:#fff;stroke:#555;stroke-width:2" x="1185" y="145" width="310" height="130" rx="5"/><text class="zh title head" style="font-family:PMingLiU,新細明體;fill:#2f6fae;font-size:28px;font-weight:bold" x="1340" y="178.3" text-anchor="middle">摘要</text><text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="1340" y="241.2" text-anchor="middle">產生三段式診前報告</text>
+  </g>
+
+  <path style="fill:none;stroke:#555;stroke-width:2.5" d="M600 275 V305"/><path style="fill:none;stroke:#555;stroke-width:2.5" d="M970 275 V305 H600"/><path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M600 305 V330"/><path class="line" style="fill:none;stroke:#555;stroke-width:2.5;marker-end:url(#arrow)" d="M1340 275 V330"/>
+  <rect class="accent" style="fill:#eef4fa;stroke:#2f6fae;stroke-width:2.5" x="120" y="330" width="720" height="120" rx="5"/><text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="480" y="365.8" text-anchor="middle">假說二　復發預測</text><text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="480" y="413.7" text-anchor="middle">長期紀錄可預測復發與發生時機</text>
+  <rect class="accent" style="fill:#eef4fa;stroke:#2f6fae;stroke-width:2.5" x="880" y="330" width="600" height="120" rx="5"/><text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="1180" y="365.8" text-anchor="middle">假說一　醫病溝通</text><text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="1180" y="413.7" text-anchor="middle">診前報告縮小醫病之間的資訊落差</text>
+
+  <text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="800" y="478" text-anchor="middle">五種驗證方法</text>
+  <g>
+    <rect x="70" y="510" width="1460" height="390" fill="#fff" stroke="#555" stroke-width="2"/>
+    <rect x="70" y="510" width="1460" height="55" fill="#2f6fae"/>
+    <path d="M300 510 V900 M890 510 V900 M70 565 H1530 M70 632 H1530 M70 699 H1530 M70 766 H1530 M70 833 H1530" stroke="#777" stroke-width="1.5"/>
+    <text class="zh body white" style="font-family:PMingLiU,新細明體;fill:#fff;font-size:22px" x="185" y="538.2" text-anchor="middle">方法</text><text class="zh body white" style="font-family:PMingLiU,新細明體;fill:#fff;font-size:22px" x="595" y="538.2" text-anchor="middle">假說一</text><text class="zh body white" style="font-family:PMingLiU,新細明體;fill:#fff;font-size:22px" x="1210" y="538.2" text-anchor="middle">假說二</text>
+    <text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="185" y="598.2" text-anchor="middle">文獻驗證</text><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="595" y="599.8" text-anchor="middle">OpenNotes、診前表單研究</text><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="1210" y="588.8" text-anchor="middle"><tspan x="1210">行動應用預測 COPD</tspan><tspan x="1210" dy="24">急性惡化等研究</tspan></text>
+    <text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="185" y="666.2" text-anchor="middle">競品分析</text><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="595" y="667.8" text-anchor="middle">Previsit.ai 等診前摘要產品</text><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="1210" y="667.8" text-anchor="middle">Welldoc 等風險預測產品</text>
+    <text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="185" y="733.2" text-anchor="middle">數位雙生模擬</text><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="595" y="723.8" text-anchor="middle"><tspan x="595">感染線索保留：MD. Piece 37%，</tspan><tspan x="595" dy="24">病人回憶 11%</tspan></text><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="1210" y="735.8" text-anchor="middle">3,200 位虛擬病患，AUROC 約 0.77</text>
+    <text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="185" y="800.2" text-anchor="middle">真實縱向資料</text><text class="zh small" style="font-family:PMingLiU,新細明體;fill:#222;font-size:19px" x="595" y="801.2" text-anchor="middle">（無）</text><text class="mix small" style="font-family:Times New Roman,PMingLiU,新細明體;fill:#222;font-size:18px" x="1210" y="790.8" text-anchor="middle"><tspan x="1210">NHEFS 2,486 位成人，</tspan><tspan x="1210" dy="24">長期紀錄 AUROC 0.71</tspan></text>
+    <text class="zh body" style="font-family:PMingLiU,新細明體;fill:#222;font-size:22px" x="185" y="867.2" text-anchor="middle">量表研究</text><text class="zh small" style="font-family:PMingLiU,新細明體;fill:#222;font-size:19px" x="595" y="856.2" text-anchor="middle"><tspan x="595">醫護接受度與情境量表</tspan><tspan x="595" dy="24">（未來工作，須經倫理審查）</tspan></text><text class="zh small" style="font-family:PMingLiU,新細明體;fill:#222;font-size:19px" x="1210" y="869.2" text-anchor="middle">（無）</text>
+  </g>
+
+  <rect class="accent" style="fill:#eef4fa;stroke:#2f6fae;stroke-width:2.5" x="260" y="920" width="1080" height="65" rx="5"/><text class="zh title" style="font-family:PMingLiU,新細明體;fill:#222;font-size:28px;font-weight:bold" x="800" y="949.3" text-anchor="middle">系統定位為輔助工具，不做診斷、不取代醫師</text>
+</svg>

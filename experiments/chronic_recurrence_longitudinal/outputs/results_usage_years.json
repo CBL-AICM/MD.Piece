@@ -1,0 +1,306 @@
+{
+  "n_landmarks": 12976,
+  "n_patients": 2093,
+  "n_patient_disease": 2989,
+  "events": 707,
+  "rate": 0.0545,
+  "usage": [
+    {
+      "years": 1,
+      "auc": [
+        0.678,
+        0.654,
+        0.702
+      ],
+      "sensitivity": 0.427,
+      "ppv": 0.116,
+      "lift": 2.134,
+      "flagged": 2597,
+      "lead_months_median": 4.074,
+      "engine_auc": [
+        0.627,
+        0.602,
+        0.654
+      ],
+      "engine_sensitivity": 0.458
+    },
+    {
+      "years": 2,
+      "auc": [
+        0.695,
+        0.674,
+        0.716
+      ],
+      "sensitivity": 0.453,
+      "ppv": 0.123,
+      "lift": 2.262,
+      "flagged": 2596,
+      "lead_months_median": 4.287,
+      "engine_auc": [
+        0.59,
+        0.564,
+        0.617
+      ],
+      "engine_sensitivity": 0.433
+    },
+    {
+      "years": 3,
+      "auc": [
+        0.701,
+        0.68,
+        0.725
+      ],
+      "sensitivity": 0.472,
+      "ppv": 0.129,
+      "lift": 2.361,
+      "flagged": 2596,
+      "lead_months_median": 4.353,
+      "engine_auc": [
+        0.573,
+        0.547,
+        0.596
+      ],
+      "engine_sensitivity": 0.365
+    },
+    {
+      "years": 4,
+      "auc": [
+        0.705,
+        0.681,
+        0.727
+      ],
+      "sensitivity": 0.47,
+      "ppv": 0.128,
+      "lift": 2.347,
+      "flagged": 2596,
+      "lead_months_median": 4.254,
+      "engine_auc": [
+        0.558,
+        0.532,
+        0.584
+      ],
+      "engine_sensitivity": 0.314
+    },
+    {
+      "years": 5,
+      "auc": [
+        0.708,
+        0.684,
+        0.727
+      ],
+      "sensitivity": 0.482,
+      "ppv": 0.131,
+      "lift": 2.411,
+      "flagged": 2596,
+      "lead_months_median": 4.205,
+      "engine_auc": [
+        0.558,
+        0.529,
+        0.586
+      ],
+      "engine_sensitivity": 0.321
+    },
+    {
+      "years": 6,
+      "auc": [
+        0.71,
+        0.685,
+        0.736
+      ],
+      "sensitivity": 0.488,
+      "ppv": 0.133,
+      "lift": 2.439,
+      "flagged": 2596,
+      "lead_months_median": 4.238
+    },
+    {
+      "years": 7,
+      "auc": [
+        0.712,
+        0.685,
+        0.735
+      ],
+      "sensitivity": 0.495,
+      "ppv": 0.135,
+      "lift": 2.474,
+      "flagged": 2596,
+      "lead_months_median": 4.304
+    },
+    {
+      "years": 8,
+      "auc": [
+        0.714,
+        0.691,
+        0.738
+      ],
+      "sensitivity": 0.499,
+      "ppv": 0.136,
+      "lift": 2.496,
+      "flagged": 2596,
+      "lead_months_median": 4.369
+    },
+    {
+      "years": 9,
+      "auc": [
+        0.717,
+        0.693,
+        0.74
+      ],
+      "sensitivity": 0.508,
+      "ppv": 0.138,
+      "lift": 2.538,
+      "flagged": 2596,
+      "lead_months_median": 4.369
+    },
+    {
+      "years": 10,
+      "auc": [
+        0.718,
+        0.698,
+        0.74
+      ],
+      "sensitivity": 0.508,
+      "ppv": 0.138,
+      "lift": 2.538,
+      "flagged": 2596,
+      "lead_months_median": 4.336,
+      "engine_auc": [
+        0.558,
+        0.53,
+        0.585
+      ],
+      "engine_sensitivity": 0.321
+    }
+  ],
+  "timeline": {
+    "1": {
+      "c_index": [
+        0.621,
+        0.596,
+        0.644
+      ],
+      "time_auc": {
+        "1": 0.668,
+        "2": 0.632,
+        "3": 0.632,
+        "5": 0.642
+      }
+    },
+    "2": {
+      "c_index": [
+        0.623,
+        0.597,
+        0.646
+      ],
+      "time_auc": {
+        "1": 0.671,
+        "2": 0.622,
+        "3": 0.625,
+        "5": 0.635
+      }
+    },
+    "3": {
+      "c_index": [
+        0.634,
+        0.608,
+        0.658
+      ],
+      "time_auc": {
+        "1": 0.692,
+        "2": 0.64,
+        "3": 0.638,
+        "5": 0.639
+      }
+    },
+    "5": {
+      "c_index": [
+        0.64,
+        0.616,
+        0.665
+      ],
+      "time_auc": {
+        "1": 0.697,
+        "2": 0.652,
+        "3": 0.647,
+        "5": 0.646
+      }
+    },
+    "10": {
+      "c_index": [
+        0.662,
+        0.638,
+        0.682
+      ],
+      "time_auc": {
+        "1": 0.719,
+        "2": 0.689,
+        "3": 0.68,
+        "5": 0.696
+      }
+    }
+  },
+  "auc_gain_10y_vs": {
+    "1": [
+      0.04,
+      0.022,
+      0.056
+    ],
+    "3": [
+      0.017,
+      0.007,
+      0.028
+    ]
+  },
+  "timeline_n": {
+    "n": 2989,
+    "events": 527,
+    "fu_median": 4.0
+  },
+  "timeline_calibration": {
+    "低": {
+      "1y": {
+        "observed": 0.022,
+        "predicted": 0.033
+      },
+      "3y": {
+        "observed": 0.071,
+        "predicted": 0.083
+      },
+      "5y": {
+        "observed": 0.099,
+        "predicted": 0.122
+      },
+      "n": 996
+    },
+    "中": {
+      "1y": {
+        "observed": 0.046,
+        "predicted": 0.047
+      },
+      "3y": {
+        "observed": 0.125,
+        "predicted": 0.117
+      },
+      "5y": {
+        "observed": 0.183,
+        "predicted": 0.17
+      },
+      "n": 997
+    },
+    "高": {
+      "1y": {
+        "observed": 0.104,
+        "predicted": 0.093
+      },
+      "3y": {
+        "observed": 0.211,
+        "predicted": 0.212
+      },
+      "5y": {
+        "observed": 0.295,
+        "predicted": 0.293
+      },
+      "n": 996
+    }
+  }
+}
