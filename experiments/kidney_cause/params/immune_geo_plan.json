@@ -1,0 +1,74 @@
+{
+ "title": "免疫方向補強：以 NIH NCBI GEO 公開腎臟切片轉錄體回推腎損傷之免疫性病因方向（2026-10-17）",
+ "frozen_at": "2026-10-17，於撰寫程式後、執行任何模型計算之前提交 git；結果檔記錄本檔 SHA256",
+ "why": "NHANES 只有抗核抗體次樣本，免疫方向無法回推（immune_v3_2：AUROC 0.546）。紅斑性狼瘡、IgA 腎病變、ANCA 相關血管炎在 NHANES 沒有診斷、專項抗體或切片。NIH NCBI GEO 有公開、去識別、已由腎臟病理確診的歐洲腎臟 cDNA 庫（ERCB）切片轉錄體，可檢驗：在已確診的腎損傷中，免疫性病因與代謝性病因是否有可區分的分子訊號、訊號來自哪些免疫路徑，以及能否回推個別樣本的可能病因。只用公開資料。",
+ "data": {
+  "GSE104948": "腎絲球（glomeruli）轉錄體，GPL22945 71 例＋GPL24120 125 例，Affymetrix，ENTREZG 自訂 CDF（探針＝Entrez Gene ID＋_at），12,074 個基因，log2 已正規化之公開值",
+  "GSE104954": "腎小管間質（tubulointerstitium）轉錄體，GPL22945 60 例＋GPL24120 135 例，同上",
+  "gene_info": "NCBI Gene Homo_sapiens.gene_info（基因符號→Entrez ID）",
+  "provenance": "五檔皆以 src/provenance.record 登記 URL＋SHA256；程式以 require_real 驗證後才讀"
+ },
+ "pre_run_facts": {
+  "diagnosis_blank": "診斷欄空白者之來源名稱皆含 LD（活體捐贈者），列為 LD",
+  "platform_confounding": "ANCA 只在 GPL22945；SLE、IgAN、MN、HT 只在 GPL24120；DN、FSGS、MCD、TN、LD 兩平台都有。直接合併會讓模型學到平台而非疾病",
+  "same_patients": "腎絲球與腎小管間質多來自同一批切片，不是獨立樣本；兩者只作「不同腎臟區域之重現」，不作獨立驗證",
+  "no_routine_labs": "GEO 系列檔沒有年齡、性別、eGFR、蛋白尿或血液檢驗；本分析回答的是「切片分子層次」能否回推，不是常規抽血",
+  "panel_coverage": "兩平台共有 12,074 探針；事前清單中 EPSTI1、C1QC、C4A、C4B、FCGR3A 不在平台上，直接剔除，不以他基因替代"
+ },
+ "labels": {
+  "immune": "全身性紅斑狼瘡（SLE，狼瘡腎炎）、IgA 腎病變（IgAN）、ANCA 相關血管炎（ANCA）＝研究報告九種病因中的三種免疫病",
+  "metabolic": "糖尿病腎病變（DN）、高血壓腎病變（HT）",
+  "exploratory_only": "膜性腎病變（MN，自體抗體 anti-PLA2R 介導但發炎少）、FSGS、MCD、FSGS/MCD、薄基底膜病（TMD）、腫瘤腎切除（TN）、LD：不進入主要二元任務，只套用已訓練模型描述其預測分布",
+  "infection": "ERCB 沒有感染相關腎病（HBV／HCV／HIV），本分析不涉及感染方向"
+ },
+ "features": {
+  "panels": {
+   "interferon": ["IFI27", "IFI44L", "IFI44", "IFIT1", "IFIT3", "ISG15", "RSAD2", "MX1", "OAS1", "OAS3", "SIGLEC1", "HERC5", "IFI6"],
+   "complement": ["C1QA", "C1QB", "C1R", "C1S", "C2", "C3", "CFB", "C7"],
+   "b_plasma": ["IGKC", "IGHM", "JCHAIN", "MZB1", "CD79A", "MS4A1", "CD19", "TNFRSF17"],
+   "t_cell": ["CD3D", "CD3E", "CD2", "CD8A", "GZMA", "GZMB", "CD247"],
+   "myeloid": ["CD68", "CD163", "CD14", "ITGAM", "LYZ", "CSF1R"],
+   "neutrophil": ["S100A8", "S100A9", "FCGR3B", "CXCR2", "CSF3R"]
+  },
+  "panel_score": "每個基因在訓練折內標準化（z），路徑分數＝該路徑基因 z 值平均；標準化參數只用訓練折",
+  "full_genes": "12,074 基因全部，訓練折內標準化",
+  "panels_chosen_how": "依已知免疫路徑（干擾素、補體古典路徑、B 細胞／漿細胞、T 細胞、單核巨噬細胞、嗜中性球）事前列出，未看任何疾病差異"
+ },
+ "models": {
+  "PANEL_LR": "6 個路徑分數＋L2 邏輯迴歸（C＝1.0）——主要模型（可逐路徑解釋）",
+  "GENE_LR": "全基因 L2 邏輯迴歸（C＝0.01）——比較模型",
+  "hyperparameters": "固定，不調參"
+ },
+ "tasks": {
+  "T1_primary": "GPL24120 腎絲球：免疫（SLE＋IgAN）對代謝（DN＋HT）。單一平台，無批次混淆——主要結果",
+  "T2_ANCA": "GPL22945 腎絲球：ANCA 對 DN（該平台唯一的代謝類）",
+  "T3_tubulointerstitium": "GPL24120 腎小管間質：同 T1 定義，作不同腎臟區域之重現",
+  "T4_pooled": "兩平台腎絲球合併：免疫（SLE＋IgAN＋ANCA）對代謝（DN＋HT），先做平台校正（見 batch）；只有通過平台陰性對照才解讀",
+  "T5_multiclass": "回推可能病因：GPL24120 腎絲球之 SLE、IgAN、DN、HT 四類多項式邏輯迴歸（PANEL 與 GENE 兩版），報告準確率、平衡準確率、前二名命中率、混淆矩陣",
+  "T6_exploratory": "以 T1 PANEL_LR 全資料模型套用於 MN、FSGS、MCD、TN、LD，描述預測「免疫方向」機率之分布；不作判定"
+ },
+ "batch": {
+  "method": "每個平台內，以兩平台共有類別（LD、TN、DN、FSGS、MCD、FSGS/MCD）各類平均之平均作為參考，逐基因減去該參考；參考不含任何只在單一平台出現的疾病",
+  "negative_control": "校正後，在兩平台共有類別中以 GENE_LR 預測平台（GPL22945 對 GPL24120）：交叉驗證 AUROC 之 95% CI 上界 <0.70 才算校正可接受；否則 T4 不解讀，只報告 T1–T3"
+ },
+ "evaluation": {
+  "cv": "分層 5 折 × 20 次重複，seed 20261017；所有標準化與配適只用訓練折",
+  "holdout": "T1 另於任何配適前以 seed 20261017 分層抽出 25% 作保留測試集，只在 T1 開發完成後評估一次；開發用剩餘 75% 做交叉驗證",
+  "metrics": "AUROC、準確率、平衡準確率、敏感度、特異度（門檻 0.5）、Brier；AUROC 95% CI 以第 0 次重複之折外預測、受試者層 bootstrap 2,000 次",
+  "permutation": "T1、T2 PANEL_LR：打亂標籤 1,000 次（每次 5 折一次），p＝(≥觀察值次數＋1)／1,001",
+  "random_gene_sets": "T1：1,000 組隨機基因集（6 組，大小與事前路徑相同，從非路徑基因抽）取代路徑，同流程重算 AUROC；報告路徑模型 AUROC 在此分布的百分位——檢驗訊號是否專屬免疫路徑",
+  "per_panel": "T1：各路徑單獨的 AUROC 與兩組平均差（免疫減代謝，z 單位）"
+ },
+ "decision_rule": {
+  "回推成立": "T1 PANEL_LR 交叉驗證 AUROC 95% CI 下界 >0.5 且置換檢定 p <0.05，且保留測試集 AUROC >0.5",
+  "免疫路徑專屬": "另外若 PANEL_LR AUROC 高於隨機基因集分布第 95 百分位，判為「訊號專屬於事前免疫路徑」；否則判為「腎絲球疾病間普遍差異，非專屬免疫路徑」",
+  "報告": "不論結果如何完整報告，不依結果更改方法或路徑清單"
+ },
+ "limits_stated_in_advance": [
+  "切片轉錄體是確診後的組織資料，不是常規抽血；本分析只能說明免疫病因在腎臟本身有無可區分的分子型態，以及哪些路徑值得轉成血液或尿液檢驗",
+  "樣本數小（T1 約 79 例、T2 29 例），信賴區間會寬",
+  "DN 與 HT 在 ERCB 中多為臨床上需切片的非典型個案，不代表一般糖尿病或高血壓腎病",
+  "沒有感染方向的資料"
+ ],
+ "outputs": "results/immune_geo.json（python immune_geo.py）；測試 test_immune_geo.py"
+}

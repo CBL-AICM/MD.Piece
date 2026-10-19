@@ -1,0 +1,1001 @@
+{
+ "amendment_sha256": "08a221db3f59600f218a84e81409f828c0c3875d88f24a8b5d9ddb6ad0f2f6e3",
+ "plan_sha256": "00f836c42fcee687ab5e6c6549672f9c02dfb1b78fbadee93c950bdafa2a98ff",
+ "batch_table": {
+  "GSE104948-GPL22945": {
+   "H7": {
+    "ANCA": 22,
+    "DN": 7,
+    "FSGS": 10,
+    "FSGS_MCD": 6,
+    "LD": 18,
+    "MCD": 5,
+    "TN": 3
+   }
+  },
+  "GSE104948-GPL24120": {
+   "H1": {
+    "DN": 5,
+    "FSGS": 0,
+    "HT": 0,
+    "IgAN": 0,
+    "LD": 0,
+    "MCD": 4,
+    "MN": 0,
+    "SLE": 0,
+    "TMD": 3,
+    "TN": 0
+   },
+   "H2": {
+    "DN": 0,
+    "FSGS": 0,
+    "HT": 15,
+    "IgAN": 0,
+    "LD": 0,
+    "MCD": 0,
+    "MN": 0,
+    "SLE": 0,
+    "TMD": 0,
+    "TN": 0
+   },
+   "H3": {
+    "DN": 0,
+    "FSGS": 0,
+    "HT": 0,
+    "IgAN": 0,
+    "LD": 0,
+    "MCD": 5,
+    "MN": 0,
+    "SLE": 0,
+    "TMD": 0,
+    "TN": 2
+   },
+   "H4": {
+    "DN": 0,
+    "FSGS": 0,
+    "HT": 0,
+    "IgAN": 27,
+    "LD": 0,
+    "MCD": 0,
+    "MN": 0,
+    "SLE": 0,
+    "TMD": 0,
+    "TN": 0
+   },
+   "H5": {
+    "DN": 0,
+    "FSGS": 8,
+    "HT": 0,
+    "IgAN": 0,
+    "LD": 3,
+    "MCD": 0,
+    "MN": 21,
+    "SLE": 32,
+    "TMD": 0,
+    "TN": 0
+   }
+  },
+  "GSE104954-GPL22945": {
+   "H7": {
+    "ANCA": 21,
+    "DN": 7,
+    "FSGS": 3,
+    "FSGS_MCD": 4,
+    "LD": 18,
+    "MCD": 4,
+    "TN": 3
+   }
+  },
+  "GSE104954-GPL24120": {
+   "H1": {
+    "DN": 10,
+    "FSGS": 0,
+    "HT": 0,
+    "IgAN": 0,
+    "LD": 0,
+    "MCD": 4,
+    "MN": 0,
+    "SLE": 0,
+    "TMD": 6,
+    "TN": 0
+   },
+   "H2": {
+    "DN": 0,
+    "FSGS": 0,
+    "HT": 20,
+    "IgAN": 0,
+    "LD": 0,
+    "MCD": 0,
+    "MN": 0,
+    "SLE": 0,
+    "TMD": 0,
+    "TN": 0
+   },
+   "H3": {
+    "DN": 0,
+    "FSGS": 0,
+    "HT": 0,
+    "IgAN": 0,
+    "LD": 0,
+    "MCD": 5,
+    "MN": 0,
+    "SLE": 0,
+    "TMD": 0,
+    "TN": 2
+   },
+   "H4": {
+    "DN": 0,
+    "FSGS": 0,
+    "HT": 0,
+    "IgAN": 25,
+    "LD": 0,
+    "MCD": 0,
+    "MN": 0,
+    "SLE": 0,
+    "TMD": 0,
+    "TN": 0
+   },
+   "H5": {
+    "DN": 0,
+    "FSGS": 10,
+    "HT": 0,
+    "IgAN": 0,
+    "LD": 3,
+    "MCD": 0,
+    "MN": 17,
+    "SLE": 33,
+    "TMD": 0,
+    "TN": 0
+   }
+  }
+ },
+ "B1_primary": {
+  "groups": {
+   "ANCA": 22,
+   "FSGS": 10,
+   "DN": 7,
+   "FSGS_MCD": 6,
+   "MCD": 5
+  },
+  "n": 50,
+  "n_pos": 22,
+  "PANEL_LR": {
+   "auroc_mean": 0.7734577922077922,
+   "auroc_min_max": [
+    0.7207792207792207,
+    0.810064935064935
+   ],
+   "auroc_ci_rep0": [
+    0.6408668154761905,
+    0.8904991948470209
+   ],
+   "threshold_prevalence_rep0": {
+    "accuracy": 0.68,
+    "balanced_accuracy": 0.6801948051948052,
+    "sensitivity": 0.6818181818181818,
+    "specificity": 0.6785714285714286
+   },
+   "threshold_05_rep0": {
+    "accuracy": 0.68,
+    "balanced_accuracy": 0.6704545454545454,
+    "sensitivity": 0.5909090909090909,
+    "specificity": 0.75
+   },
+   "threshold_prevalence_mean20": {
+    "accuracy": 0.6739999999999999,
+    "balanced_accuracy": 0.671185064935065,
+    "sensitivity": 0.6477272727272727,
+    "specificity": 0.694642857142857
+   },
+   "brier_rep0": 0.2007391771205577,
+   "flag_below_040": false,
+   "permutation_p": 0.000999000999000999
+  },
+  "GENE_LR": {
+   "auroc_mean": 0.9268668831168831,
+   "auroc_min_max": [
+    0.8798701298701298,
+    0.9675324675324676
+   ],
+   "auroc_ci_rep0": [
+    0.8668831168831169,
+    0.9917921518137036
+   ],
+   "threshold_prevalence_rep0": {
+    "accuracy": 0.86,
+    "balanced_accuracy": 0.8555194805194806,
+    "sensitivity": 0.8181818181818182,
+    "specificity": 0.8928571428571429
+   },
+   "threshold_05_rep0": {
+    "accuracy": 0.84,
+    "balanced_accuracy": 0.8327922077922079,
+    "sensitivity": 0.7727272727272727,
+    "specificity": 0.8928571428571429
+   },
+   "threshold_prevalence_mean20": {
+    "accuracy": 0.835,
+    "balanced_accuracy": 0.8268668831168832,
+    "sensitivity": 0.759090909090909,
+    "specificity": 0.894642857142857
+   },
+   "brier_rep0": 0.09361165431171484,
+   "flag_below_040": false,
+   "permutation_p": 0.000999000999000999
+  },
+  "per_panel": {
+   "interferon": {
+    "auroc": 0.4691558441558441,
+    "mean_diff_z": -0.023764146420081726
+   },
+   "complement": {
+    "auroc": 0.8311688311688311,
+    "mean_diff_z": 0.8543640940468542
+   },
+   "b_plasma": {
+    "auroc": 0.5892857142857143,
+    "mean_diff_z": 0.3072206920955787
+   },
+   "t_cell": {
+    "auroc": 0.6185064935064934,
+    "mean_diff_z": 0.39732203473027095
+   },
+   "myeloid": {
+    "auroc": 0.8376623376623377,
+    "mean_diff_z": 1.0809075963338841
+   },
+   "neutrophil": {
+    "auroc": 0.7694805194805194,
+    "mean_diff_z": 0.8841851087350616
+   }
+  },
+  "random_gene_sets": {
+   "n": 1000,
+   "panel_auroc_rep0": 0.775974025974026,
+   "median": 0.6534090909090908,
+   "p95": 0.813392857142857,
+   "percentile_of_panel": 87.8
+  }
+ },
+ "B2_immune_vs_metabolic": {
+  "groups": {
+   "ANCA": 22,
+   "DN": 7
+  },
+  "n": 29,
+  "n_pos": 22,
+  "PANEL_LR": {
+   "auroc_mean": 0.5938311688311689,
+   "auroc_min_max": [
+    0.4935064935064935,
+    0.6818181818181819
+   ],
+   "auroc_ci_rep0": [
+    0.2592361111111111,
+    0.7319202898550724
+   ],
+   "threshold_prevalence_rep0": {
+    "accuracy": 0.4827586206896552,
+    "balanced_accuracy": 0.4642857142857143,
+    "sensitivity": 0.5,
+    "specificity": 0.4285714285714286
+   },
+   "threshold_05_rep0": {
+    "accuracy": 0.5862068965517241,
+    "balanced_accuracy": 0.43506493506493504,
+    "sensitivity": 0.7272727272727273,
+    "specificity": 0.1428571428571429
+   },
+   "threshold_prevalence_mean20": {
+    "accuracy": 0.5603448275862069,
+    "balanced_accuracy": 0.5568181818181818,
+    "sensitivity": 0.5636363636363637,
+    "specificity": 0.5499999999999999
+   },
+   "brier_rep0": 0.24477482892368221,
+   "flag_below_040": false,
+   "permutation_p": 0.21878121878121878
+  },
+  "GENE_LR": {
+   "auroc_mean": 0.8522727272727273,
+   "auroc_min_max": [
+    0.7662337662337663,
+    0.9155844155844156
+   ],
+   "auroc_ci_rep0": [
+    0.6832954545454546,
+    1.0
+   ],
+   "threshold_prevalence_rep0": {
+    "accuracy": 0.896551724137931,
+    "balanced_accuracy": 0.8344155844155845,
+    "sensitivity": 0.9545454545454546,
+    "specificity": 0.7142857142857143
+   },
+   "threshold_05_rep0": {
+    "accuracy": 0.7931034482758621,
+    "balanced_accuracy": 0.6201298701298701,
+    "sensitivity": 0.9545454545454546,
+    "specificity": 0.2857142857142857
+   },
+   "threshold_prevalence_mean20": {
+    "accuracy": 0.8706896551724139,
+    "balanced_accuracy": 0.7905844155844156,
+    "sensitivity": 0.9454545454545453,
+    "specificity": 0.6357142857142856
+   },
+   "brier_rep0": 0.12374910382629836,
+   "flag_below_040": false,
+   "permutation_p": 0.004995004995004995
+  },
+  "per_panel": {
+   "interferon": {
+    "auroc": 0.5584415584415584,
+    "mean_diff_z": 0.18623815462964216
+   },
+   "complement": {
+    "auroc": 0.6298701298701299,
+    "mean_diff_z": 0.2687725298528486
+   },
+   "b_plasma": {
+    "auroc": 0.45454545454545453,
+    "mean_diff_z": -0.16791978840896507
+   },
+   "t_cell": {
+    "auroc": 0.4090909090909091,
+    "mean_diff_z": -0.10143619443495137
+   },
+   "myeloid": {
+    "auroc": 0.5909090909090908,
+    "mean_diff_z": 0.4276017067524744
+   },
+   "neutrophil": {
+    "auroc": 0.7662337662337663,
+    "mean_diff_z": 0.810269573714118
+   }
+  }
+ },
+ "B3_SLE": {
+  "groups": {
+   "SLE": 32,
+   "FSGS": 8
+  },
+  "n": 40,
+  "n_pos": 32,
+  "PANEL_LR": {
+   "auroc_mean": 0.9376953125,
+   "auroc_min_max": [
+    0.8515625,
+    0.96484375
+   ],
+   "auroc_ci_rep0": [
+    0.8452008928571428,
+    0.9933333333333333
+   ],
+   "threshold_prevalence_rep0": {
+    "accuracy": 0.85,
+    "balanced_accuracy": 0.859375,
+    "sensitivity": 0.84375,
+    "specificity": 0.875
+   },
+   "threshold_05_rep0": {
+    "accuracy": 0.825,
+    "balanced_accuracy": 0.703125,
+    "sensitivity": 0.90625,
+    "specificity": 0.5
+   },
+   "threshold_prevalence_mean20": {
+    "accuracy": 0.8450000000000001,
+    "balanced_accuracy": 0.865625,
+    "sensitivity": 0.83125,
+    "specificity": 0.9
+   },
+   "brier_rep0": 0.08672915384872948,
+   "flag_below_040": false,
+   "permutation_p": 0.000999000999000999
+  },
+  "GENE_LR": {
+   "auroc_mean": 0.709765625,
+   "auroc_min_max": [
+    0.6484375,
+    0.81640625
+   ],
+   "auroc_ci_rep0": [
+    0.39067960349462366,
+    0.8627585018382352
+   ],
+   "threshold_prevalence_rep0": {
+    "accuracy": 0.8,
+    "balanced_accuracy": 0.640625,
+    "sensitivity": 0.90625,
+    "specificity": 0.375
+   },
+   "threshold_05_rep0": {
+    "accuracy": 0.825,
+    "balanced_accuracy": 0.5625,
+    "sensitivity": 1.0,
+    "specificity": 0.125
+   },
+   "threshold_prevalence_mean20": {
+    "accuracy": 0.7625,
+    "balanced_accuracy": 0.65234375,
+    "sensitivity": 0.8359375,
+    "specificity": 0.46875
+   },
+   "brier_rep0": 0.1453755438210206,
+   "flag_below_040": false,
+   "permutation_p": 0.06893106893106893
+  },
+  "per_panel": {
+   "interferon": {
+    "auroc": 0.9609375,
+    "mean_diff_z": 1.5335091819490263
+   },
+   "complement": {
+    "auroc": 0.72265625,
+    "mean_diff_z": 0.47098423088862607
+   },
+   "b_plasma": {
+    "auroc": 0.546875,
+    "mean_diff_z": 0.11195571276540302
+   },
+   "t_cell": {
+    "auroc": 0.51171875,
+    "mean_diff_z": -0.020342732691904883
+   },
+   "myeloid": {
+    "auroc": 0.82421875,
+    "mean_diff_z": 0.8545505327850282
+   },
+   "neutrophil": {
+    "auroc": 0.6875,
+    "mean_diff_z": 0.6099868163617219
+   }
+  },
+  "random_gene_sets": {
+   "n": 1000,
+   "panel_auroc_rep0": 0.93359375,
+   "median": 0.55078125,
+   "p95": 0.7734375,
+   "percentile_of_panel": 100.0
+  }
+ },
+ "B4_replication": {
+  "B1": {
+   "groups": {
+    "ANCA": 21,
+    "DN": 7,
+    "FSGS_MCD": 4,
+    "MCD": 4,
+    "FSGS": 3
+   },
+   "n": 39,
+   "n_pos": 21,
+   "PANEL_LR": {
+    "auroc_mean": 0.8130952380952381,
+    "auroc_min_max": [
+     0.7698412698412698,
+     0.8412698412698413
+    ],
+    "auroc_ci_rep0": [
+     0.668448494230228,
+     0.9365079365079365
+    ],
+    "threshold_prevalence_rep0": {
+     "accuracy": 0.7435897435897436,
+     "balanced_accuracy": 0.746031746031746,
+     "sensitivity": 0.7142857142857143,
+     "specificity": 0.7777777777777778
+    },
+    "threshold_05_rep0": {
+     "accuracy": 0.7692307692307693,
+     "balanced_accuracy": 0.7658730158730158,
+     "sensitivity": 0.8095238095238095,
+     "specificity": 0.7222222222222222
+    },
+    "threshold_prevalence_mean20": {
+     "accuracy": 0.717948717948718,
+     "balanced_accuracy": 0.7178571428571427,
+     "sensitivity": 0.7190476190476192,
+     "specificity": 0.7166666666666666
+    },
+    "brier_rep0": 0.17630977592150346,
+    "flag_below_040": false
+   },
+   "GENE_LR": {
+    "auroc_mean": 0.8785714285714287,
+    "auroc_min_max": [
+     0.7936507936507937,
+     0.9417989417989419
+    ],
+    "auroc_ci_rep0": [
+     0.7749864130434783,
+     0.9722482174688055
+    ],
+    "threshold_prevalence_rep0": {
+     "accuracy": 0.8205128205128205,
+     "balanced_accuracy": 0.8134920634920635,
+     "sensitivity": 0.9047619047619048,
+     "specificity": 0.7222222222222222
+    },
+    "threshold_05_rep0": {
+     "accuracy": 0.8205128205128205,
+     "balanced_accuracy": 0.8134920634920635,
+     "sensitivity": 0.9047619047619048,
+     "specificity": 0.7222222222222222
+    },
+    "threshold_prevalence_mean20": {
+     "accuracy": 0.8192307692307693,
+     "balanced_accuracy": 0.81765873015873,
+     "sensitivity": 0.8380952380952381,
+     "specificity": 0.7972222222222223
+    },
+    "brier_rep0": 0.14009719811254595,
+    "flag_below_040": false
+   },
+   "per_panel": {
+    "interferon": {
+     "auroc": 0.7248677248677249,
+     "mean_diff_z": 0.5177000285340942
+    },
+    "complement": {
+     "auroc": 0.8862433862433863,
+     "mean_diff_z": 1.1174232247278435
+    },
+    "b_plasma": {
+     "auroc": 0.664021164021164,
+     "mean_diff_z": 0.466103340229552
+    },
+    "t_cell": {
+     "auroc": 0.7777777777777778,
+     "mean_diff_z": 0.6421685728535398
+    },
+    "myeloid": {
+     "auroc": 0.7962962962962964,
+     "mean_diff_z": 0.8405776139316602
+    },
+    "neutrophil": {
+     "auroc": 0.7566137566137565,
+     "mean_diff_z": 0.6194514096552743
+    }
+   }
+  },
+  "B2": {
+   "groups": {
+    "ANCA": 21,
+    "DN": 7
+   },
+   "n": 28,
+   "n_pos": 21,
+   "PANEL_LR": {
+    "auroc_mean": 0.6863945578231292,
+    "auroc_min_max": [
+     0.5850340136054422,
+     0.7755102040816326
+    ],
+    "auroc_ci_rep0": [
+     0.3846153846153847,
+     0.8636363636363636
+    ],
+    "threshold_prevalence_rep0": {
+     "accuracy": 0.7142857142857143,
+     "balanced_accuracy": 0.7142857142857143,
+     "sensitivity": 0.7142857142857143,
+     "specificity": 0.7142857142857143
+    },
+    "threshold_05_rep0": {
+     "accuracy": 0.75,
+     "balanced_accuracy": 0.5952380952380952,
+     "sensitivity": 0.9047619047619048,
+     "specificity": 0.2857142857142857
+    },
+    "threshold_prevalence_mean20": {
+     "accuracy": 0.6624999999999999,
+     "balanced_accuracy": 0.6464285714285714,
+     "sensitivity": 0.6785714285714285,
+     "specificity": 0.6142857142857142
+    },
+    "brier_rep0": 0.19300730596756524,
+    "flag_below_040": false
+   },
+   "GENE_LR": {
+    "auroc_mean": 0.8299319727891156,
+    "auroc_min_max": [
+     0.7006802721088435,
+     0.9183673469387755
+    ],
+    "auroc_ci_rep0": [
+     0.602280701754386,
+     0.9565217391304348
+    ],
+    "threshold_prevalence_rep0": {
+     "accuracy": 0.7857142857142857,
+     "balanced_accuracy": 0.7142857142857142,
+     "sensitivity": 0.8571428571428571,
+     "specificity": 0.5714285714285714
+    },
+    "threshold_05_rep0": {
+     "accuracy": 0.7142857142857143,
+     "balanced_accuracy": 0.5238095238095238,
+     "sensitivity": 0.9047619047619048,
+     "specificity": 0.1428571428571429
+    },
+    "threshold_prevalence_mean20": {
+     "accuracy": 0.7821428571428573,
+     "balanced_accuracy": 0.6928571428571427,
+     "sensitivity": 0.8714285714285716,
+     "specificity": 0.5142857142857142
+    },
+    "brier_rep0": 0.17757259192775932,
+    "flag_below_040": false
+   },
+   "per_panel": {
+    "interferon": {
+     "auroc": 0.6938775510204082,
+     "mean_diff_z": 0.4307771304883638
+    },
+    "complement": {
+     "auroc": 0.7755102040816326,
+     "mean_diff_z": 0.7505818176623786
+    },
+    "b_plasma": {
+     "auroc": 0.44217687074829926,
+     "mean_diff_z": -0.08836796548850273
+    },
+    "t_cell": {
+     "auroc": 0.5578231292517006,
+     "mean_diff_z": 0.05111093002115117
+    },
+    "myeloid": {
+     "auroc": 0.6394557823129252,
+     "mean_diff_z": 0.40570272285650255
+    },
+    "neutrophil": {
+     "auroc": 0.653061224489796,
+     "mean_diff_z": 0.33424472966799273
+    }
+   }
+  },
+  "B3": {
+   "groups": {
+    "SLE": 33,
+    "FSGS": 10
+   },
+   "n": 43,
+   "n_pos": 33,
+   "PANEL_LR": {
+    "auroc_mean": 0.9257575757575756,
+    "auroc_min_max": [
+     0.8484848484848484,
+     0.9727272727272727
+    ],
+    "auroc_ci_rep0": [
+     0.6464042207792207,
+     0.9975985221674873
+    ],
+    "threshold_prevalence_rep0": {
+     "accuracy": 0.8372093023255814,
+     "balanced_accuracy": 0.8242424242424242,
+     "sensitivity": 0.8484848484848485,
+     "specificity": 0.8
+    },
+    "threshold_05_rep0": {
+     "accuracy": 0.9069767441860465,
+     "balanced_accuracy": 0.8348484848484848,
+     "sensitivity": 0.9696969696969697,
+     "specificity": 0.7
+    },
+    "threshold_prevalence_mean20": {
+     "accuracy": 0.8395348837209301,
+     "balanced_accuracy": 0.8606060606060607,
+     "sensitivity": 0.8212121212121211,
+     "specificity": 0.9
+    },
+    "brier_rep0": 0.10084021803363258,
+    "flag_below_040": false
+   },
+   "GENE_LR": {
+    "auroc_mean": 0.7648484848484849,
+    "auroc_min_max": [
+     0.7212121212121211,
+     0.8545454545454545
+    ],
+    "auroc_ci_rep0": [
+     0.5107517281105991,
+     0.9019607843137255
+    ],
+    "threshold_prevalence_rep0": {
+     "accuracy": 0.7441860465116279,
+     "balanced_accuracy": 0.5893939393939394,
+     "sensitivity": 0.8787878787878788,
+     "specificity": 0.30000000000000004
+    },
+    "threshold_05_rep0": {
+     "accuracy": 0.7441860465116279,
+     "balanced_accuracy": 0.5545454545454546,
+     "sensitivity": 0.9090909090909091,
+     "specificity": 0.19999999999999996
+    },
+    "threshold_prevalence_mean20": {
+     "accuracy": 0.7569767441860464,
+     "balanced_accuracy": 0.6552272727272728,
+     "sensitivity": 0.8454545454545455,
+     "specificity": 0.465
+    },
+    "brier_rep0": 0.18539413715503292,
+    "flag_below_040": false
+   },
+   "per_panel": {
+    "interferon": {
+     "auroc": 0.9727272727272727,
+     "mean_diff_z": 1.5109271360841634
+    },
+    "complement": {
+     "auroc": 0.5454545454545454,
+     "mean_diff_z": 0.168492430315363
+    },
+    "b_plasma": {
+     "auroc": 0.6090909090909091,
+     "mean_diff_z": 0.13351368825632998
+    },
+    "t_cell": {
+     "auroc": 0.5424242424242425,
+     "mean_diff_z": -0.1860478940665862
+    },
+    "myeloid": {
+     "auroc": 0.6363636363636364,
+     "mean_diff_z": 0.2122360758801306
+    },
+    "neutrophil": {
+     "auroc": 0.6121212121212121,
+     "mean_diff_z": 0.041796447092525536
+    }
+   }
+  }
+ },
+ "B5_multiclass": {
+  "H7": {
+   "groups": {
+    "ANCA": 22,
+    "FSGS": 16,
+    "DN": 7,
+    "MCD": 5
+   },
+   "PANEL_LR": {
+    "accuracy_mean": 0.5620000000000002,
+    "balanced_accuracy_mean": 0.5048579545454546,
+    "top2_mean": 0.8800000000000001,
+    "chance_majority": 0.44,
+    "confusion_rep0": {
+     "ANCA": {
+      "ANCA": 14,
+      "DN": 3,
+      "FSGS": 5,
+      "MCD": 0
+     },
+     "DN": {
+      "ANCA": 5,
+      "DN": 0,
+      "FSGS": 2,
+      "MCD": 0
+     },
+     "FSGS": {
+      "ANCA": 5,
+      "DN": 0,
+      "FSGS": 8,
+      "MCD": 3
+     },
+     "MCD": {
+      "ANCA": 0,
+      "DN": 0,
+      "FSGS": 1,
+      "MCD": 4
+     }
+    }
+   },
+   "GENE_LR": {
+    "accuracy_mean": 0.69,
+    "balanced_accuracy_mean": 0.5825771103896102,
+    "top2_mean": 0.853,
+    "chance_majority": 0.44,
+    "confusion_rep0": {
+     "ANCA": {
+      "ANCA": 19,
+      "DN": 1,
+      "FSGS": 2,
+      "MCD": 0
+     },
+     "DN": {
+      "ANCA": 2,
+      "DN": 2,
+      "FSGS": 3,
+      "MCD": 0
+     },
+     "FSGS": {
+      "ANCA": 1,
+      "DN": 1,
+      "FSGS": 11,
+      "MCD": 3
+     },
+     "MCD": {
+      "ANCA": 0,
+      "DN": 0,
+      "FSGS": 3,
+      "MCD": 2
+     }
+    }
+   }
+  },
+  "H5": {
+   "groups": {
+    "SLE": 32,
+    "MN": 21,
+    "FSGS": 8
+   },
+   "PANEL_LR": {
+    "accuracy_mean": 0.7975409836065575,
+    "balanced_accuracy_mean": 0.6320436507936507,
+    "top2_mean": 0.9647540983606557,
+    "chance_majority": 0.5245901639344263,
+    "confusion_rep0": {
+     "SLE": {
+      "SLE": 29,
+      "MN": 2,
+      "FSGS": 1
+     },
+     "MN": {
+      "SLE": 1,
+      "MN": 19,
+      "FSGS": 1
+     },
+     "FSGS": {
+      "SLE": 3,
+      "MN": 5,
+      "FSGS": 0
+     }
+    }
+   },
+   "GENE_LR": {
+    "accuracy_mean": 0.8270491803278688,
+    "balanced_accuracy_mean": 0.7014632936507936,
+    "top2_mean": 0.9286885245901638,
+    "chance_majority": 0.5245901639344263,
+    "confusion_rep0": {
+     "SLE": {
+      "SLE": 30,
+      "MN": 2,
+      "FSGS": 0
+     },
+     "MN": {
+      "SLE": 2,
+      "MN": 19,
+      "FSGS": 0
+     },
+     "FSGS": {
+      "SLE": 5,
+      "MN": 1,
+      "FSGS": 2
+     }
+    }
+   }
+  }
+ },
+ "B6_exploratory_MN_vs_FSGS": {
+  "groups": {
+   "MN": 21,
+   "FSGS": 8
+  },
+  "n": 29,
+  "n_pos": 21,
+  "PANEL_LR": {
+   "auroc_mean": 0.6967261904761906,
+   "auroc_min_max": [
+    0.6011904761904762,
+    0.7678571428571429
+   ],
+   "auroc_ci_rep0": [
+    0.41578434723171565,
+    0.9143181818181816
+   ],
+   "threshold_prevalence_rep0": {
+    "accuracy": 0.7586206896551724,
+    "balanced_accuracy": 0.7172619047619048,
+    "sensitivity": 0.8095238095238095,
+    "specificity": 0.625
+   },
+   "threshold_05_rep0": {
+    "accuracy": 0.7586206896551724,
+    "balanced_accuracy": 0.6398809523809523,
+    "sensitivity": 0.9047619047619048,
+    "specificity": 0.375
+   },
+   "threshold_prevalence_mean20": {
+    "accuracy": 0.7051724137931034,
+    "balanced_accuracy": 0.6745535714285715,
+    "sensitivity": 0.7428571428571429,
+    "specificity": 0.60625
+   },
+   "brier_rep0": 0.18663575497614568,
+   "flag_below_040": false
+  },
+  "GENE_LR": {
+   "auroc_mean": 0.8880952380952382,
+   "auroc_min_max": [
+    0.8095238095238095,
+    0.9642857142857143
+   ],
+   "auroc_ci_rep0": [
+    0.8130928853754941,
+    1.0
+   ],
+   "threshold_prevalence_rep0": {
+    "accuracy": 0.8620689655172413,
+    "balanced_accuracy": 0.8273809523809523,
+    "sensitivity": 0.9047619047619048,
+    "specificity": 0.75
+   },
+   "threshold_05_rep0": {
+    "accuracy": 0.8275862068965517,
+    "balanced_accuracy": 0.7261904761904762,
+    "sensitivity": 0.9523809523809523,
+    "specificity": 0.5
+   },
+   "threshold_prevalence_mean20": {
+    "accuracy": 0.8586206896551726,
+    "balanced_accuracy": 0.8133928571428571,
+    "sensitivity": 0.9142857142857143,
+    "specificity": 0.7125
+   },
+   "brier_rep0": 0.11130832556546762,
+   "flag_below_040": false
+  },
+  "per_panel": {
+   "interferon": {
+    "auroc": 0.5,
+    "mean_diff_z": -0.11034587349957545
+   },
+   "complement": {
+    "auroc": 0.20238095238095238,
+    "mean_diff_z": -0.7354487541406363
+   },
+   "b_plasma": {
+    "auroc": 0.35714285714285715,
+    "mean_diff_z": -0.48806955181199807
+   },
+   "t_cell": {
+    "auroc": 0.34523809523809523,
+    "mean_diff_z": -0.6020259107539916
+   },
+   "myeloid": {
+    "auroc": 0.26785714285714285,
+    "mean_diff_z": -0.7790240647444993
+   },
+   "neutrophil": {
+    "auroc": 0.4107142857142857,
+    "mean_diff_z": -0.13065902042729072
+   }
+  }
+ },
+ "not_evaluable": "IgAN 只在 H4、HT 只在 H2，同批次內無對照，本資料無法評估",
+ "decision": {
+  "B1_primary": {
+   "PANEL_LR": true,
+   "GENE_LR": true,
+   "回推成立": true
+  },
+  "B2_immune_vs_metabolic": {
+   "PANEL_LR": false,
+   "GENE_LR": true,
+   "回推成立": true
+  },
+  "B3_SLE": {
+   "PANEL_LR": true,
+   "GENE_LR": false,
+   "回推成立": true
+  },
+  "免疫路徑專屬": {
+   "B1_primary": false,
+   "B3_SLE": true
+  }
+ }
+}

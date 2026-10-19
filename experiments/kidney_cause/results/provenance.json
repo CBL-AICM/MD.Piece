@@ -1710,6 +1710,41 @@
    "sha256": "0b1da4ebec86aef55149b685f10cbc38ef614e44129a9140edd1e047f51edb08",
    "bytes": 142080,
    "downloaded_at_utc": "2026-10-08T20:13:41Z"
+  },
+  "GSE104948-GPL22945.txt.gz": {
+   "url": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE104nnn/GSE104948/matrix/GSE104948-GPL22945_series_matrix.txt.gz",
+   "sha256": "41eab0bc913e5bc4d567a157fea7e64e47f17fc7f4a47cc7ef6334fd20d6c260",
+   "bytes": 4730443,
+   "downloaded_at_utc": "2026-10-17T10:56:45Z",
+   "source": "NIH NCBI (GEO / Gene)"
+  },
+  "GSE104948-GPL24120.txt.gz": {
+   "url": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE104nnn/GSE104948/matrix/GSE104948-GPL24120_series_matrix.txt.gz",
+   "sha256": "e30dd515793fae9de709877af01b2c588f061af6b863f5b6f0e204a2b6060b62",
+   "bytes": 8237008,
+   "downloaded_at_utc": "2026-10-17T10:56:45Z",
+   "source": "NIH NCBI (GEO / Gene)"
+  },
+  "GSE104954-GPL22945.txt.gz": {
+   "url": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE104nnn/GSE104954/matrix/GSE104954-GPL22945_series_matrix.txt.gz",
+   "sha256": "e75273abc4de3daddbd46890e6bcc573aa8cadb461d6044e95178f8acedabfb8",
+   "bytes": 3997815,
+   "downloaded_at_utc": "2026-10-17T10:56:45Z",
+   "source": "NIH NCBI (GEO / Gene)"
+  },
+  "GSE104954-GPL24120.txt.gz": {
+   "url": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE104nnn/GSE104954/matrix/GSE104954-GPL24120_series_matrix.txt.gz",
+   "sha256": "8d971e942afdbd28ba7dcea0824fe876fe4f7c4a85ca5e2b2f3f555431b98c87",
+   "bytes": 8862256,
+   "downloaded_at_utc": "2026-10-17T10:56:45Z",
+   "source": "NIH NCBI (GEO / Gene)"
+  },
+  "Homo_sapiens.gene_info.gz": {
+   "url": "https://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz",
+   "sha256": "aa9f3684d9ff9844ff32cdf6112e0e14af145de15839d59734dea79f51699fd5",
+   "bytes": 5198963,
+   "downloaded_at_utc": "2026-10-17T10:56:45Z",
+   "source": "NIH NCBI (GEO / Gene)"
   }
  }
 }
