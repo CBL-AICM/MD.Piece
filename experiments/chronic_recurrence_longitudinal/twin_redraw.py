@@ -36,7 +36,7 @@ def run_original(name):
 
 ARMS = ["GROUND_TRUTH", "MDPIECE", "PATIENT_RECALL"]
 ZH = {"GROUND_TRUTH": "真相（上限）", "MDPIECE": "MD. Piece 紀錄", "PATIENT_RECALL": "病人回憶"}
-COL = {"GROUND_TRUTH": "#3a7d44", "MDPIECE": "#2f6fae", "PATIENT_RECALL": "#b5524a"}
+COL = {"GROUND_TRUTH": base.PALETTE["green"], "MDPIECE": base.PALETTE["navy"], "PATIENT_RECALL": base.PALETTE["brick"]}
 
 
 def main():
@@ -89,7 +89,7 @@ def main():
     pd.DataFrame({"feature": top.index, "coef": top.values}).to_csv(os.path.join(OUT, "top_features_mdpiece.csv"), index=False)
     base.save_plot_data("圖十二_主要預測特徵", pd.DataFrame({"特徵": [FEAT.get(n, n) for n in top.index], "標準化係數": top.values}))
     fig, ax = plt.subplots(figsize=(6.6, 5))
-    ax.barh(range(len(top)), top.values, color=["#b5524a" if v < 0 else "#3a7d44" for v in top.values])
+    ax.barh(range(len(top)), top.values, color=[base.PALETTE["brick"] if v < 0 else base.PALETTE["navy"] for v in top.values])
     ax.set_yticks(range(len(top))); ax.set_yticklabels([FEAT.get(n, n) for n in top.index], fontsize=8)
     ax.axvline(0, c="k", lw=0.8); ax.set_xlabel("標準化係數（正值推升風險，負值降低風險）")
     ax.set_title("只用就診間紀錄時影響預測最大的特徵（MD. Piece 紀錄）")
@@ -97,9 +97,9 @@ def main():
 
     Cd = C["C"]
     fig, ax = plt.subplots(figsize=(7.0, 4.2)); xp = np.arange(len(ARMS))
-    ax.bar(xp - 0.27, Cd.short_auroc, 0.27, label="短期惡化預測 AUROC", color="#888888")
-    ax.bar(xp, Cd.clue_retention, 0.27, label="感染線索保留率", color="#3a7d44")
-    ax.bar(xp + 0.27, Cd.infection_attribution_sensitivity, 0.27, label="模型指認感染為主因的比例", color="#d98ca0")
+    ax.bar(xp - 0.27, Cd.short_auroc, 0.27, label="短期惡化預測 AUROC", color=base.PALETTE["grey"])
+    ax.bar(xp, Cd.clue_retention, 0.27, label="感染線索保留率", color=base.PALETTE["navy"])
+    ax.bar(xp + 0.27, Cd.infection_attribution_sensitivity, 0.27, label="模型指認感染為主因的比例", color=base.PALETTE["gold"])
     for i, v in enumerate(Cd.clue_retention):
         ax.text(i, v + 0.02, f"{v*100:.0f}%", ha="center", fontsize=9)
     ax.set_xticks(xp); ax.set_xticklabels([ZH[a] for a in ARMS]); ax.set_ylim(0, 1.1)

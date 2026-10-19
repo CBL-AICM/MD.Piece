@@ -199,7 +199,7 @@ def main():
     calib = {}
     tl_rows = []
     fig, ax = plt.subplots(figsize=(6.4, 4.4))
-    colors = {"低": "#3a7d44", "中": "#d08c2e", "高": "#c0392b"}
+    colors = base.BAND_COLOR
     for t_ in ("低", "中", "高"):
         m = np.asarray(tert == t_)
         km.fit(fd.time[m], fd.event[m])
@@ -228,9 +228,9 @@ def main():
          "隨機標記預警成功率百分比": TOP * 100} for r in res["usage"]]))
     fig, ax1 = plt.subplots(figsize=(6.4, 4.2))
     ax1.errorbar(u.years, [a[0] for a in u.auc], yerr=[[a[0] - a[1] for a in u.auc], [a[2] - a[0] for a in u.auc]],
-                 marker="o", capsize=3, label="長期紀錄模型 AUROC")
+                 marker="o", capsize=3, color=base.PALETTE["navy"], label="長期紀錄模型 AUROC")
     e = u.dropna(subset=["engine_auc"]) if "engine_auc" in u else u.iloc[0:0]
-    ax1.plot(e.years, [a[0] for a in e.engine_auc], marker="s", ls="--", label="MD.Piece 引擎 AUROC")
+    ax1.plot(e.years, [a[0] for a in e.engine_auc], marker="s", ls="--", color=base.PALETTE["brick"], label="MD.Piece 引擎 AUROC")
     ax1.axhline(0.5, ls=":", c="grey"); ax1.set_ylim(0.45, 0.8)
     ax1.set_xlabel("App 已使用年數（模型可看到的紀錄長度）"); ax1.set_ylabel("AUROC（95% CI）")
     ax1.set_xticks(KS); ax1.legend(fontsize=8, loc="lower right")
@@ -238,8 +238,8 @@ def main():
     fig.savefig(os.path.join(OUT, "figG_usage_years_auc.png"), dpi=200); plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(6.4, 3.8))
-    ax.bar(u.years - 0.2, u.sensitivity * 100, 0.4, label="預警成功率（復發者事先被標出）")
-    ax.bar(u.years + 0.2, u.ppv * 100, 0.4, label="命中率（被標出者真的復發）")
+    ax.bar(u.years - 0.2, u.sensitivity * 100, 0.4, label="預警成功率（復發者事先被標出）", color=base.PALETTE["navy"])
+    ax.bar(u.years + 0.2, u.ppv * 100, 0.4, label="命中率（被標出者真的復發）", color=base.PALETTE["gold"])
     ax.axhline(TOP * 100, ls=":", c="grey", label="隨機標 20% 的預警成功率")
     ax.set_xticks(KS); ax.set_xlabel("App 已使用年數"); ax.set_ylabel("%")
     ax.set_ylim(0, 75); ax.set_title("標出風險最高 20% 時的預警成功率與命中率")

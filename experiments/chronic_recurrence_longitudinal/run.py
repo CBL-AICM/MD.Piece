@@ -68,6 +68,11 @@ DRIVERS = [
     {"maps_to": "labs", "weight": "high", "evidence": "血壓、膽固醇、血糖、肥胖為心血管事件的經典風險因子（Framingham）。"},
 ]
 EPOCH = datetime(1950, 1, 1)
+PALETTE = {"navy": "#2d5f8b", "brick": "#b5524a", "gold": "#d4a03a", "green": "#5b8e6d", "grey": "#8c8c8c"}
+MODEL_COLOR = {"MD.Piece 引擎（未訓練、原規則）": PALETTE["brick"], "無紀錄（年齡+性別+病別）": PALETTE["grey"],
+               "只用近12個月紀錄": PALETTE["gold"], "加入長期紀錄": PALETTE["navy"]}
+BAND_COLOR = {"low": PALETTE["green"], "medium": PALETTE["gold"], "high": PALETTE["brick"],
+              "低": PALETTE["green"], "中": PALETTE["gold"], "高": PALETTE["brick"]}
 
 
 def use_doc_fonts(plt):
@@ -80,6 +85,12 @@ def use_doc_fonts(plt):
     fm.fontManager.addfont(ttf)
     plt.rcParams["font.family"] = ["Times New Roman", "PMingLiU"]
     plt.rcParams["axes.unicode_minus"] = False
+    # 版型與圖一、圖二一致：去上右框、淡橫格線、固定配色
+    from cycler import cycler
+    plt.rcParams.update({"axes.spines.top": False, "axes.spines.right": False, "axes.grid": True,
+                         "axes.grid.axis": "y", "grid.color": "#d9d9d9", "grid.linewidth": 0.6,
+                         "axes.axisbelow": True, "axes.edgecolor": "#555555", "axes.titlesize": 12,
+                         "legend.frameon": False, "axes.prop_cycle": cycler(color=list(PALETTE.values()))})
 
 
 def save_plot_data(name, df):
@@ -420,7 +431,7 @@ def analyze():
     grid01 = np.linspace(0, 1, 101)
     for name, s in [("MD.Piece 引擎（未訓練、原規則）", lm.engine_risk.values)] + list(preds.items()):
         fpr, tpr, _ = roc_curve(y, s)
-        ax.plot(fpr, tpr, label=f"{name}  AUROC {aucs[name][0]:.2f}")
+        ax.plot(fpr, tpr, color=MODEL_COLOR[name], lw=1.8, label=f"{name}  AUROC {aucs[name][0]:.2f}")
         roc_rows.append(pd.DataFrame({"模型": name, "AUROC": round(aucs[name][0], 3), "偽陽性率": grid01,
                                       "真陽性率": np.interp(grid01, fpr, tpr)}))
     save_plot_data("圖三_NHEFS_ROC", pd.concat(roc_rows))
@@ -436,7 +447,7 @@ def analyze():
         m = first.engine_band == b
         if m.sum() >= 5:
             km.fit(first.t[m], first.e[m], label=f"{names[b]} n={int(m.sum())}")
-            km.plot_cumulative_density(ax=ax, ci_show=False)
+            km.plot_cumulative_density(ax=ax, ci_show=False, color=BAND_COLOR[b], lw=1.8)
             kmB.append(km_table(km, names[b], int(m.sum())))
     save_plot_data("圖六_引擎分級與下一次復發時機", pd.concat(kmB))
     ax.set_xlabel("確診滿1年後經過年數"); ax.set_ylabel("累積復發比例"); ax.set_title(f"引擎分級與確診滿1年後的下一次復發時機（log-rank p={lr.p_value:.3g}）")
@@ -449,16 +460,16 @@ def analyze():
     save_plot_data("圖四_四種慢性病AUROC", pd.DataFrame(
         [{"疾病": d, "模型": mname, "AUROC": v[0], "下限": v[1], "上限": v[2]}
          for d in names_d for mname, v in (("MD.Piece 引擎", per[d]["engine_auc"]), ("加入長期紀錄模型", per[d]["longterm_auc"]))]))
-    ax.bar(xs - 0.18, [v[0] for v in e], 0.36, yerr=[[v[0] - v[1] for v in e], [v[2] - v[0] for v in e]], label="MD.Piece 引擎", capsize=3)
-    ax.bar(xs + 0.18, [v[0] for v in l], 0.36, yerr=[[v[0] - v[1] for v in l], [v[2] - v[0] for v in l]], label="加入長期紀錄模型", capsize=3)
-    ax.axhline(0.5, ls=":", c="grey"); ax.set_xticks(xs); ax.set_xticklabels(names_d); ax.set_ylim(0.3, 1)
+    ax.bar(xs - 0.18, [v[0] for v in e], 0.36, yerr=[[v[0] - v[1] for v in e], [v[2] - v[0] for v in e]], label="MD.Piece 引擎", capsize=3, color=PALETTE["brick"])
+    ax.bar(xs + 0.18, [v[0] for v in l], 0.36, yerr=[[v[0] - v[1] for v in l], [v[2] - v[0] for v in l]], label="加入長期紀錄模型", capsize=3, color=PALETTE["navy"])
+    ax.axhline(0.5, ls=":", c="grey"); ax.set_xticks(xs); ax.set_xticklabels([d.replace("／", " 或 ") for d in names_d]); ax.set_ylim(0.3, 1)
     ax.set_ylabel("AUROC（95% CI）"); ax.set_title("四種慢性病的復發預測鑑別力"); ax.legend(fontsize=8)
     fig.tight_layout(); fig.savefig(os.path.join(OUT, "figC_nhefs_per_disease.png"), dpi=200); plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(6.2, 3.8))
     qs = res["nhefs_longterm_quintile_rate"]
     save_plot_data("圖五_風險五分組復發率", pd.DataFrame({"風險五分位": range(1, len(qs) + 1), "實際12個月復發率百分比": [round(v * 100, 1) for v in qs]}))
-    ax.bar(range(1, len(qs) + 1), [v * 100 for v in qs], color="#4a7bb7")
+    ax.bar(range(1, len(qs) + 1), [v * 100 for v in qs], color=PALETTE["navy"])
     for i, v in enumerate(qs):
         ax.text(i + 1, v * 100 + 0.5, f"{v*100:.1f}%", ha="center", fontsize=9)
     ax.set_xlabel("長期紀錄模型預測風險五分位（1 最低 → 5 最高）"); ax.set_ylabel("實際12個月復發率（%）")
@@ -469,7 +480,7 @@ def analyze():
         m = fr.engine_band == b
         if m.sum() >= 5:
             km.fit(fr.time_years[m], fr.event[m], label=f"{names[b]} n={int(m.sum())}")
-            km.plot_cumulative_density(ax=ax, ci_show=False)
+            km.plot_cumulative_density(ax=ax, ci_show=False, color=BAND_COLOR[b], lw=1.8)
             kmE.append(km_table(km, names[b], int(m.sum())))
     save_plot_data("圖九_Framingham引擎分級與心血管事件", pd.concat(kmE))
     ax.set_xlabel("第2次檢查後經過年數"); ax.set_ylabel("累積心血管事件比例")
@@ -480,7 +491,7 @@ def analyze():
     for t_ in ("低", "中", "高"):
         m = first.lt_tertile == t_
         km.fit(first.t[m], first.e[m], label=f"長期紀錄風險{t_}三分之一 n={int(m.sum())}")
-        km.plot_cumulative_density(ax=ax, ci_show=False)
+        km.plot_cumulative_density(ax=ax, ci_show=False, color=BAND_COLOR[t_], lw=1.8)
         kmF.append(km_table(km, f"長期紀錄風險{t_}", int(m.sum())))
     save_plot_data("探索_長期紀錄風險三分組與復發時機", pd.concat(kmF))
     ax.set_xlabel("確診滿1年後經過年數"); ax.set_ylabel("累積復發比例")
