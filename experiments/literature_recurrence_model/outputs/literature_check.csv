@@ -1,0 +1,44 @@
+﻿type,pmid,item,abstract_text_checked,found
+年復發率,19714602,systemic_lupus_erythematosus: Toronto 狼瘡世代，每年約三分之一患者 ≥1 次復發,One-third,True
+年復發率,28929239,systemic_lupus_erythematosus: 北京協和 6 年追蹤，每年復發比例 13.0–15.7%（取中點）,13.0-15.7%,True
+年復發率,36631164,systemic_lupus_erythematosus: HCQ 使用者 83 人，平均 14.8 個月內 16% 復發,16% / 14.8 months,True
+年復發率,35737642,rheumatoid_arthritis: 停用生物製劑後 0.36 次/人年,0.36 per person-year,True
+年復發率,29862047,rheumatoid_arthritis: OPTTIRA 減量試驗 12 個月內 41/97 人復發,Ninety-seven / Forty-one,True
+年復發率,33864158,rheumatoid_arthritis: BIOPURE 拉長給藥間隔，12 個月持續率 86.5%,86.5%,True
+年復發率,40774410,asthma: 吸入劑維持治療、臨床緩解組 0.17 次/年,0.17 events/year,True
+年復發率,40774410,asthma: 吸入劑維持治療、非緩解組 0.42 次/年,0.42 events/year,True
+年復發率,40321140,chronic_urticaria: 完全緩解後再發 10.6%，平均 1.96 年,10.6% / 1.96,True
+年復發率,34877757,chronic_urticaria: omalizumab 停藥後 45/124 人再發需重啟治療,45 patients / 124 patients,True
+年復發率,33864158,psoriatic_arthritis: BIOPURE 乾癬性關節炎 12 個月持續率 60.7%,60.7%,True
+年復發率,33864158,ankylosing_spondylitis: BIOPURE 中軸型脊椎關節炎 12 個月持續率 80%,80%,True
+年復發率,29724729,anca_vasculitis: MAINRITSAN azathioprine 組 60 個月無重大復發 49.4%,49.4%,True
+年復發率,29724729,anca_vasculitis: MAINRITSAN rituximab 組 60 個月無重大復發 71.9%,71.9%,True
+年復發率,40948107,behcet_disease: 葡萄膜炎 cyclosporine 組年化復發 0.95,0.95,True
+年復發率,40948107,behcet_disease: 葡萄膜炎 interferon 組年化復發 0.52,0.52,True
+年復發率,40948107,behcet_disease: 葡萄膜炎 adalimumab 組年化復發 0.28,0.28,True
+年復發率,20089952,multiple_sclerosis: FREEDOMS 安慰劑組年化復發率 0.40,0.40 with placebo,True
+年復發率,20089952,multiple_sclerosis: FREEDOMS fingolimod 0.5 mg 組 0.18,0.18 with 0.5 mg,True
+年復發率,25154681,inflammatory_bowel_disease: 丹麥新診斷克隆氏症第 1 年累積復發 40%,40%,True
+年復發率,25154681,inflammatory_bowel_disease: 丹麥新診斷潰瘍性結腸炎第 1 年累積復發 51%,51%,True
+年復發率,12543288,inflammatory_bowel_disease: 緩解期潰瘍性結腸炎 12 個月 19/86 復發,19 of 86,True
+年復發率,19101844,inflammatory_bowel_disease: IBSEN 10 年內 83% 有復發病程,83%,True
+年復發率,39292608,gout: NOR-Gout 第 5 年，服藥順從度最高四分位最近一年復發 9.5%,9.5%,True
+年復發率,39292608,gout: NOR-Gout 第 5 年，服藥順從度最低四分位最近一年復發 33.3%,33.3%,True
+年復發率,21319592,idiopathic_pulmonary_fibrosis: 急性惡化 1 年發生率 8.6%,8.6%,True
+年復發率,32205147,idiopathic_pulmonary_fibrosis: 切片確診者急性惡化 1 年發生率 7.6%,7.6%,True
+年復發率,32097488,igg4_related_disease: 北京 277 人 12 個月累積復發 12.86%,12.86%,True
+年復發率,33151477,igg4_related_disease: 上海 78 人中位追蹤 21 個月 29.5% 難治或復發,29.5% / 21 [6-111] months,True
+H1,16914299,氣喘: 近 3 個月曾嚴重惡化（校正人口與臨床因子）,3.77 / 2.62 / 5.43,True
+H1,36660650,氣喘: 控制不佳 vs 控制良好，3 年內惡化,6.34 / 1.14 / 35.21,True
+H1,29862047,類風濕性關節炎: 減量前 DAS28 每高 1 分,1.96 / 1.18 / 3.24,True
+H1,33020895,ANCA 血管炎: ANCA 長期反覆升高型（摘要未載明對照組）,3.7 / 1.5 / 9.1,True
+H1,40321140,慢性蕁麻疹: 首次發作到緩解 < 3 年,5.13 / 1.83 / 14.29,True
+H2,12543288,潰瘍性結腸炎: mesalamine 領藥 < 80%,5.5 / 2.3 / 13,True
+H2,9541091,紅斑性狼瘡: 停用 HCQ vs 繼續（原文 RR 0.43 取倒數）,"0.43 (95% CI: 0.17, 1.12)",True
+H2,33576768,紅斑性狼瘡: 停用低劑量類固醇 vs 繼續（17 篇統合）,1.38 / 1.01 / 1.89,True
+H3 曲線,35737642,類風濕性關節炎（停藥後）,45% at 1 year / 64% at 3 years / 80% at 5 years,True
+H3 曲線,25154681,克隆氏症（新診斷）,"40%, 63%, and 66% / 51%, 75%, and 79%",True
+H3 曲線,25154681,潰瘍性結腸炎（新診斷）,"40%, 63%, and 66% / 51%, 75%, and 79%",True
+H3 曲線,32097488,IgG4 相關疾病,"12.86%, 27.84% and 36.1%",True
+H3 曲線,21319592,特發性肺纖維化（急性惡化）,"8.6%, 12.6%, and 23.9%",True
+劑量反應,16344520,MS prior relapses,"0.59 for one, 0.91 for two, and 1.45 for three",True

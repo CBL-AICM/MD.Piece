@@ -1,0 +1,30 @@
+﻿disease,疾病,pmid,type,value,years,annual_p,note
+systemic_lupus_erythematosus,紅斑性狼瘡,19714602,prop,0.333,1.0,0.333,Toronto 狼瘡世代，每年約三分之一患者 ≥1 次復發
+systemic_lupus_erythematosus,紅斑性狼瘡,28929239,prop,0.144,1.0,0.144,北京協和 6 年追蹤，每年復發比例 13.0–15.7%（取中點）
+systemic_lupus_erythematosus,紅斑性狼瘡,36631164,cum,0.16,1.2333333333333334,0.1318298960233012,HCQ 使用者 83 人，平均 14.8 個月內 16% 復發
+rheumatoid_arthritis,類風濕性關節炎,35737642,rate,0.36,1.0,0.302323673928969,停用生物製劑後 0.36 次/人年
+rheumatoid_arthritis,類風濕性關節炎,29862047,cum,0.422680412371134,1.0,0.4226804123711341,OPTTIRA 減量試驗 12 個月內 41/97 人復發
+rheumatoid_arthritis,類風濕性關節炎,33864158,cum,0.135,1.0,0.135,BIOPURE 拉長給藥間隔，12 個月持續率 86.5%
+asthma,氣喘,40774410,rate,0.17,1.0,0.1563351834036163,吸入劑維持治療、臨床緩解組 0.17 次/年
+asthma,氣喘,40774410,rate,0.42,1.0,0.34295318018494325,吸入劑維持治療、非緩解組 0.42 次/年
+chronic_urticaria,慢性蕁麻疹,40321140,cum,0.106,1.96,0.05556471695101628,完全緩解後再發 10.6%，平均 1.96 年
+chronic_urticaria,慢性蕁麻疹,34877757,cum,0.3629032258064516,1.0,0.3629032258064516,omalizumab 停藥後 45/124 人再發需重啟治療
+psoriatic_arthritis,乾癬性關節炎,33864158,cum,0.393,1.0,0.393,BIOPURE 乾癬性關節炎 12 個月持續率 60.7%
+ankylosing_spondylitis,僵直性脊椎炎,33864158,cum,0.19999999999999996,1.0,0.19999999999999996,BIOPURE 中軸型脊椎關節炎 12 個月持續率 80%
+anca_vasculitis,ANCA 血管炎,29724729,cum,0.506,5.0,0.1315488596173453,MAINRITSAN azathioprine 組 60 個月無重大復發 49.4%
+anca_vasculitis,ANCA 血管炎,29724729,cum,0.281,5.0,0.06384927478139202,MAINRITSAN rituximab 組 60 個月無重大復發 71.9%
+behcet_disease,貝賽特氏症,40948107,rate,0.95,1.0,0.6132589765454988,葡萄膜炎 cyclosporine 組年化復發 0.95
+behcet_disease,貝賽特氏症,40948107,rate,0.52,1.0,0.4054794520298056,葡萄膜炎 interferon 組年化復發 0.52
+behcet_disease,貝賽特氏症,40948107,rate,0.28,1.0,0.24421625854427453,葡萄膜炎 adalimumab 組年化復發 0.28
+multiple_sclerosis,多發性硬化症,20089952,rate,0.4,1.0,0.3296799539643607,FREEDOMS 安慰劑組年化復發率 0.40
+multiple_sclerosis,多發性硬化症,20089952,rate,0.18,1.0,0.164729788588728,FREEDOMS fingolimod 0.5 mg 組 0.18
+inflammatory_bowel_disease,發炎性腸道疾病,25154681,cum,0.4,1.0,0.4,丹麥新診斷克隆氏症第 1 年累積復發 40%
+inflammatory_bowel_disease,發炎性腸道疾病,25154681,cum,0.51,1.0,0.51,丹麥新診斷潰瘍性結腸炎第 1 年累積復發 51%
+inflammatory_bowel_disease,發炎性腸道疾病,12543288,cum,0.22093023255813954,1.0,0.22093023255813948,緩解期潰瘍性結腸炎 12 個月 19/86 復發
+inflammatory_bowel_disease,發炎性腸道疾病,19101844,cum,0.83,10.0,0.16238413969899668,IBSEN 10 年內 83% 有復發病程
+gout,痛風,39292608,prop,0.095,1.0,0.095,NOR-Gout 第 5 年，服藥順從度最高四分位最近一年復發 9.5%
+gout,痛風,39292608,prop,0.333,1.0,0.333,NOR-Gout 第 5 年，服藥順從度最低四分位最近一年復發 33.3%
+idiopathic_pulmonary_fibrosis,特發性肺纖維化,21319592,cum,0.086,1.0,0.08599999999999997,急性惡化 1 年發生率 8.6%
+idiopathic_pulmonary_fibrosis,特發性肺纖維化,32205147,cum,0.076,1.0,0.07599999999999996,切片確診者急性惡化 1 年發生率 7.6%
+igg4_related_disease,IgG4 相關疾病,32097488,cum,0.1286,1.0,0.12860000000000005,北京 277 人 12 個月累積復發 12.86%
+igg4_related_disease,IgG4 相關疾病,33151477,cum,0.295,1.75,0.18106218767567916,上海 78 人中位追蹤 21 個月 29.5% 難治或復發
