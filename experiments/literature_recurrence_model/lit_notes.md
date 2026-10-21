@@ -1,0 +1,44 @@
+# 文獻擷取筆記（PubMed 摘要逐筆記錄）
+- 20843247 Hurst 2010 NEJM ECLIPSE COPD n=2138, 3y. Y1 rate/person: GOLD2 0.85, GOLD3 1.34, GOLD4 2.00. frequent(>=2/y) 22/33/47%. Best predictor = history of exacerbations; phenotype stable 3y.
+- 29463519 Eudy 2018 ARD Hopkins Lupus Cohort n=1349: pregnancy flare HR 1.59 (1.27-1.96); no HCQ 1.83, HCQ 1.26.
+- 9541091 Tsakonas 1998 Lupus: HCQ withdrawal RCT n=47, 42 mo: major flare placebo 11/22 (50%) vs HCQ 7/25 (28%); RR 0.43 (0.17-1.12).
+- 40232132 Mok 2025 review: withdrawal of immunosuppression -> flares; risk factors younger, renal, HCQ cessation, shorter remission, serology.
+- 19714602 Nikpour 2009 A&R Toronto Lupus Cohort: 1/3 of patients >=1 flare per year (SLEDAI-2K +4); flare prediction models performed poorly; PAD predictable 79%.
+- 19101844 Solberg 2009 IBSEN UC n=519 10y: relapsing disease 83%; 48% relapse-free last 5 years.
+- 25154681 Vester-Andersen 2014 Danish IBD inception: cumulative first recurrence 1/5/7y CD 40/63/66%, UC 51/75/79%.
+- 35737642 Mori 2022 PLoS One RA bDMARD discontinuation n=97: 0.36 flares/person-year; cum flare 45% 1y, 64% 3y, 80% 5y; median 1.6y; shorter remission -> flare.
+- 29862047 Bechman 2018 RMD Open OPTTIRA RA tapering n=97: 41 flared; DAS28 HR 1.96; SF-36 MH per10 HR 0.74.
+- 33367569 Monstad 2021 IBSEN UC 20y: mucosal healing 1y -> relapse HR 0.5.
+- 16914299 Miller 2007 Respir Med TENOR asthma n=2780 1.5y: recent severe exac (prior 3 mo) -> future exac OR 6.33 (4.57-8.76); adj 3.77 (2.62-5.43); control-adj 3.90 (2.77-5.50).
+- 36660650 He 2022 ATM asthma n=257 3y: uncontrolled OR 6.34 (1.14-35.21); ACQ AUC 0.68, AQLQ AUC 0.70.
+- 33020895 Oristrell 2021 AAV n=99 9y: recurrent ANCA pattern relapse HR 3.7 (1.5-9.1); persistent HR 2.9 (1.1-8.0).
+- 29724729 Terrier 2018 MAINRITSAN AAV n=115 60 mo: major relapse-free survival AZA 49.4%, RTX 71.9%.
+- 32097488 Liu 2020 IgG4-RD n=277: cumulative relapse 12.86% 12m, 27.84% 24m, 36.1% 36m.
+- 33151477 Zongfei 2021 IgG4-RD n=78 median 21 mo: 29.5% refractory/relapsed; drug withdrawal -> higher relapse.
+- 20123954 Cooksey 2010 AS n=134 1216 person-weeks: 71.4 flares/100 person-weeks (12 major, 59.4 minor); major preceded by minor flare 92%.
+- 33864158 Fornaro 2021 BIOPURE spacing: persistence RA 86.5%, axSpA 80%, PsA 60.7% (flare = failure).
+- 40382308 Snoeck Henkemans 2025 PsA n=451: DFR 22%, early flare 4.7%, late flare 5.3% median 1.7y.
+- 21319592 Kondoh 2010 IPF n=74: AE incidence 1y 8.6%, 2y 12.6%, 3y 23.9%.
+- 32205147 Kishaba 2020 IPF n=155: AE 1y 7.6%.
+- 40321140 Limphoka 2025 CSU n=179: recurrence after remission 10.6%, mean 1.96y; shorter remission (<3y) OR 5.13.
+- 16344520 Held 2005 Neurology MS placebo arms n=821: Poisson coef prior relapses (24 mo) 1:0.59, 2:0.91, >=3:1.45 (RR 1.80/2.48/4.26); confirmed in independent dataset.
+- 12543288 Kane 2003 Am J Med UC n=99: nonadherence (<80% refill) relapse HR 5.5 (2.3-13); 12 mo 19/86 recurrence (22%).
+- 40056480 Uhlig 2025 NOR-Gout n=211 5y: remission 4.6/22.1/42.8% at 1/2/5y.
+- 31043541 Alvarado-de la Barrera 2020 GRESGO gout n=500 5y: remission max 39% at 3-4y; obstacles poor adherence.
+- 36631164 Fasano 2023 LSM SLE HCQ n=83, 24 mo: 11 flares (16%) mean 14.8 mo; higher HCQ blood levels protective.
+- 28929239 Peng 2017 Clin Rheumatol SLE PUMCH n=254 6y: yearly flare proportion 13.0-15.7%; onset <=18 HR 2.14.
+- 39292608 Uhlig 2025 Rheumatology NOR-Gout n=163 5y: lowest vs highest MARS-5 quartile flare last year 33.3% vs 9.5% (RR ~3.5).
+- 36397162 Floris 2022 ART Behcet n=189 2y: >=1 relapse -> damage OR 3.15 (no direct rate).
+- 31585960 Bellou 2019 BMJ COPD prognostic models: 408 models, only 7 low risk of bias; exac models 10%.
+- 41487303 Niraula 2025 Front Digit Health AI/ML AECOPD: pooled AUC 0.77 (0.74-0.80), I2 99.5%; external 0.82, internal 0.76.
+- 34877757 Foti 2022 Dermatol Ther CSU omalizumab n=124: 45 (36%) retreated for relapse after discontinuation; no predictor found.
+- 33576768 Ji 2021 Rheumatology SLE GC withdrawal meta n=738 17 studies: pooled flare 24% (21-27), major 13%; time to flare 21.08 mo; RR 1.38 (1.01-1.89) vs continuation.
+- 38265945 Elhai 2022 Lancet Rheumatol EUSTAR SSc n=10711: progression-free survival AUC 0.70-0.71 (progressive, not flare).
+- 40948107 Zhong 2026 A&R Behcet uveitis n=1012: ARR 0.95 CsA, 0.52 IFN, 0.28 ADA.
+- 21138339 Edwards 2011 J Med Econ refractory chronic gout n=81: 8.8 flares/patient/year.
+- 31177284 Pascart 2019 GOSPEL gout n=1003: 487 experiencing flares at baseline; only few >=3 flares/yr.
+- 20089952 Kappos 2010 NEJM FREEDOMS MS n=1272: ARR placebo 0.40, fingolimod 0.18.
+- 16510744 Polman 2006 NEJM AFFIRM MS: natalizumab relapse rate -68% at 1y.
+- 8017890 Weinshenker 1994 Ann Neurol MS natural history: few attacks in first 2 years -> favorable course.
+- 40526294 Fernandez-Castro 2025 SjD n=314 9.5y: ESSDAI domains fluctuate (articular, pulmonary, hematologic); no flare rate.
+- 31987994 Thomas 2020 OAC editorial (no abstract): OA flare-ups concept.
